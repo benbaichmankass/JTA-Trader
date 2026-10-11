@@ -1,5 +1,7 @@
 {
   "tier": 1,
-  "landing": "self",
-  "why": "Roadmap loop (operator request 2026-10-11, row ROADMAP-LOOP). Docs, tooling and register edits only: docs/roadmap/milestones.yaml, scripts/ops/roadmap_map.py plus its guard registration in scripts/ci/run_guards.py, a generated block and token corrections in ROADMAP.md, a new section in docs/ARCHITECTURE-CANONICAL.md, the manager skill, CLAUDE.md and docs/CLAUDE-RULES-CANONICAL.md (kept in agreement), and a `roadmap` field backfilled on 169 live checklist rows (one file per row via scripts/ops/checklist.py). No src/, no config/, no order path, no VM mutation, no change to config/strategies.yaml or config/accounts.yaml."
+  "landing": "hold",
+  "why": "Roadmap loop (operator request 2026-10-11, row ROADMAP-LOOP). Docs, tooling and register edits only: docs/roadmap/milestones.yaml, scripts/ops/roadmap_map.py plus its guard registration in scripts/ci/run_guards.py, a generated block and token corrections in ROADMAP.md, a new section in docs/ARCHITECTURE-CANONICAL.md, the manager skill, CLAUDE.md and docs/CLAUDE-RULES-CANONICAL.md (kept in agreement), and a `roadmap` field backfilled on 169 live checklist rows (one file per row via scripts/ops/checklist.py). No src/, no config/, no order path, no VM mutation, no change to config/strategies.yaml or config/accounts.yaml.",
+  "hold_reason": "depends_on_unmerged_pr",
+  "hold_text": "Depends on #17553, which adds the ROADMAP-LOOP, ML-ROADMAP-LOOP and UI-UPGRADE-1 checklist rows this branch edits and still carries (its landing file makes the R12 landing-machinery rule refuse a self-land while it is unmerged). Once #17553 is on main, merge main into this branch, flip landing to self, and the diff no longer contains its landing file. Until then the manager merges."
 }
