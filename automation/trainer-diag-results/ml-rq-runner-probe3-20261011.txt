@@ -1,0 +1,43 @@
+=== trainer-diag-relay result ===
+request: ml-rq-runner-probe3-20261011
+state: ran
+remote_exit: 0
+run: https://github.com/benbaichmankass/Metis-Insights/actions/runs/38154551389
+=================================
+== BTCUSDT market_features
+v001
+v002
+v003
+v004
+v513
+v514
+v515
+v520
+== ETHUSDT market_features
+v002
+v003
+v521
+v901
+== SOLUSDT market_features
+v002
+v530
+== forecasts
+v001
+v002
+dir=datasets-out/market_features/BTCUSDT/15m/v520
+total 469356
+drwxrwxr-x  2 ubuntu ubuntu      4096 Jul  1 19:35 .
+drwxrwxr-x 10 ubuntu ubuntu      4096 Jul 31 15:08 ..
+-rw-rw-r--  1 ubuntu ubuntu 480607056 Jul  1 19:35 data.jsonl
+-rw-rw-r--  1 ubuntu ubuntu      3303 Jul 31 07:20 metadata.json
+file data.jsonl 480607056
+file metadata.json 3303
+metadata keys ['builder', 'builder_version', 'family', 'generated_at', 'generation_commit_sha', 'label_version', 'leakage_test_status', 'notes', 'row_count', 'schema', 'schema_version', 'source', 'symbol_scope', 'timeframe', 'timezone_name', 'version', 'build_params']
+{"row_count": 175272, "symbol_scope": "BTCUSDT", "timeframe": "15m"}
+jsonl head: {"dayofweek": 3, "direction_label": "up", "dxy_return": 0.0, "dxy_zscore": 0.0, "fc_q10_rel": -0.001800844295953617, "fc_q90_rel": 0.005582809013609026, "fc_range_rel": 0.0073976456817717, "fc_ret_med": 0.000304446449559558, "fc_skew": 0.4297427960799319, "fc_up_prob": 1.0, "forward_log_return": 0.0012514371330987453, "forward_log_return_vol": 0.00134247555336209, "funding_rate": 0.0, "funding_rate_abs_z": 0.0, "funding_rate_zscore": 0.0, "garman_klass_vol": 0.0029140125556095563, "hour_of_day": 4, "log_return": 0.0023908110985823784, "log_return_lag_1": 0.0011683267970313271, "log_return_lag_
+== shadow_predictions.jsonl
+68810 runtime_logs/shadow_predictions.jsonl
+{"predicted_at_utc": "2026-09-26T06:39:57.901828+00:00", "model_id": "btc-regime-15m-baseline-v1", "stage": "shadow", "score": 0.99395528690164, "row_keys": ["dayofweek", "event_source", "fc_q10_rel", "fc_q90_rel", "fc_range_rel", "fc_ret_med", "fc_skew", "fc_up_prob", "garman_klass_vol", "hour_of_day", "log_return", "log_return_lag_1", "log_return_lag_2", "parkinson_vol", "rogers_satchell_vol", "rolling_log_return_vol", "symbol", "timeframe", "vol_bucket", "yang_zhang_vol"], "feature_row": {"symbol": "BTCUSDT", "timeframe": "15m", "event_source": "per_bar", "rolling_log_return_vol": 0.0006205794630882191, "log_return": -0.00012152579221177784, "log_return_lag_1": 0.0005064549276982165, "log_return_lag_2": -0.00034799189959098907, "hour_of_day": 6, "dayofweek": 5, "parkinson_vol": 0.0006336797364954271, "garman_klass_vol": 0.0006373247189172676, "rogers_satchell_vol": 0.00065804109316753
+-rw-r--r-- 1 ubuntu ubuntu 61144799 Oct 11 05:05 runtime_logs/shadow_predictions.jsonl
+-rw-rw-r-- 1 ubuntu ubuntu  5378312 May 21 18:53 runtime_logs/shadow_predictions_backfill.jsonl
+
