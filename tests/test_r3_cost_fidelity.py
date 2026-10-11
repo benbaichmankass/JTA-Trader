@@ -99,3 +99,19 @@ def test_all_cells_insufficient_is_insufficient():
     cells = [_cell(r3.INSUFFICIENT, "market", "S2", "bybit_2"),
              _cell(r3.INSUFFICIENT, "simulator", "S1", "bybit_1")]
     assert r3._leg_verdict(cells)["verdict"] == r3.INSUFFICIENT
+
+
+def test_pairs_cell_with_no_exit_rows_says_it_is_structurally_ungradable():
+    """PAIRS-GAPS: pairs exits are spread exits with no price reference, so
+    accrual never supplies n_exit; the cell must say so, verdict untouched."""
+    from scripts.research import r3_cost_fidelity as r3
+    cell = r3.grade([1.0] * 157, [], None, 2.0)
+    out = r3.mark_pairs_exit_ungradable(
+        cell, "pairs_sol_eth_a", {"exit_measured_no_reference:pairs_stop": 66,
+                                  "exit_measured_no_reference:pairs_revert": 79,
+                                  "exit_measured_no_reference:vwap_cross": 35})
+    assert out["verdict"] == r3.INSUFFICIENT
+    assert out["structurally_ungradable"] == "exit"
+    assert "145 pairs exit rows" in out["why"]
+    other = r3.mark_pairs_exit_ungradable(r3.grade([1.0] * 12, [], None, 2.0), "eth_pullback_2h", {})
+    assert "structurally_ungradable" not in other
