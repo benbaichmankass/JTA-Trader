@@ -1,0 +1,11 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 surface: a NEW workflow that SSHes to the trainer VM with VM_SSH_KEY and runs allowlisted research scripts there (read-only w.r.t. the product: no registry, DB, deploy or config write), plus the dispatcher/collector/guard widening and one hand-written smoke unit. Approval sought: a manager merge of the trainer-runtime route, under operator directive ML-RQ-RUNNER (2026-10-11, quoted on the row). No order path, config, manifest or stage change. Observation that closes it: the smoke unit lands measured/pass via the trainer path.",
+  "recorded_decision": {
+    "kind": "operator_decision",
+    "ref": "ML-RQ-RUNNER"
+  },
+  "why": "OPERATOR DIRECTIVE 2026-10-11 ~15:30Z (verbatim on checklist row ML-RQ-RUNNER): the first sessions are high priority to get the workflow/infra sorted so ML research runs the same continuous research-test-improve flow as the strategies. This PR is that infra: a generic ML bake-off engine graded by the unit's registered rule, and a trainer-side twin of the token-free runner that lands through the existing collector. Merged is not observed: the smoke unit RQ-20261011-0ac8-01 must land a measured record through the trainer path."
+}
