@@ -30,6 +30,7 @@ contract-violating non-NULL pnl):
          OR COALESCE(notes,'') LIKE '%"intent_reduce": true%')   -- is_reduce_leg
     AND status = 'closed'
     AND pnl IS NOT NULL                                           -- the fabrication
+    AND notes.reduce_settlement != 'settled'                      -- PERF-FU-REDUCE-PNL
     AND COALESCE(reconcile_status,'') != 'superseded'            -- idempotent
 
 The ``entry==exit`` phantoms (zero price movement yet non-zero pnl) are the
@@ -41,7 +42,10 @@ write. ``--equal-only`` restricts the APPLY to just the ``entry==exit`` rows
 This is account-agnostic on purpose: the phantom is a data-correctness issue
 wherever a netting account sized into a partial close (real-money ``bybit_2``
 included). It is nonetheless pure journal hygiene — it NULLs no real trade's
-pnl (the parent close row keeps the realized pnl), opens/closes no exchange
+pnl (a FULLY consumed parent's close row keeps the realized pnl; a PARTIALLY
+consumed parent is shrunk and does NOT — that share is settled on the reduce
+leg by src/runtime/reduce_leg_settlement.py, PERF-FU-REDUCE-PNL, and excluded
+here), opens/closes no exchange
 position, deletes no row; it only flips ``reconcile_status`` + appends
 ``superseded_*`` to notes on the bookkeeping leg.
 
@@ -116,6 +120,9 @@ def _candidate_rows(
           AND status = 'closed'
           AND pnl IS NOT NULL
           AND COALESCE(reconcile_status, '') != 'superseded'
+          -- PERF-FU-REDUCE-PNL: a pnl written by the reduce-leg settlement is
+          -- the reduce's own realised PnL from two venue fills, not a phantom.
+          AND COALESCE(notes, '') NOT LIKE '%"reduce_settlement": "settled"%'
         """
     )
     params: list = []

@@ -48,8 +48,11 @@ evaluator_config:
   split_strategy: time_aware_holdout
   time_column: trade_created_at
   holdout_fraction: 0.2
-target_deployment_stage: shadow
+target_deployment_stage: candidate
 notes: |
+  STAGE 2026-10-11 (ML-STAGE-DECISIONS, operator 2026-10-08 "Soft-off"): shadow -> candidate.
+  Keeps training daily; emits no shadow rows. Reason: constant scorer -- the served row
+  lacks `audit_pattern`, so every prediction is the global rate (MEASURED shadow/stats 2026-10-11: 4685 retained rows since 2026-09-26, score_read_state constant).
   WS5-C-FU baseline. Per-`audit_pattern` mean R-multiple over the
   audit-joined dataset. Time-aware holdout on `trade_created_at`
   (latest 20 % of trades). Not a candidate for any live tier.
