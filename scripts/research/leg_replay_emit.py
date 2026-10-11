@@ -180,15 +180,15 @@ def _short_not_confirmed(f: Dict[str, Any]) -> bool:
 
 def grade_short_drag(per_leg: Dict[str, Dict[str, Any]], pooled: Dict[str, Any]) -> Dict[str, Any]:
     legs = list(per_leg)
-    conf = [l for l in legs if _short_confirmed(per_leg[l])]
-    pool_conf = _short_confirmed(pooled) and all(per_leg[l]["pooled_short_net_r"] <= 0 for l in legs)
+    conf = [lg for lg in legs if _short_confirmed(per_leg[lg])]
+    pool_conf = _short_confirmed(pooled) and all(per_leg[lg]["pooled_short_net_r"] <= 0 for lg in legs)
     if len(conf) == len(legs) or pool_conf:
         outcome = "CONFIRMED"
     elif conf:
         outcome = "MIXED"
-    elif all(_short_not_confirmed(per_leg[l]) for l in legs) and _short_not_confirmed(pooled):
+    elif all(_short_not_confirmed(per_leg[lg]) for lg in legs) and _short_not_confirmed(pooled):
         outcome = "NOT_CONFIRMED"
-    elif any(per_leg[l]["n_short"] < MIN_PER_DIRECTION for l in legs) or pooled["n_short"] < MIN_PER_DIRECTION:
+    elif any(per_leg[lg]["n_short"] < MIN_PER_DIRECTION for lg in legs) or pooled["n_short"] < MIN_PER_DIRECTION:
         outcome = "INDETERMINATE"
     else:
         outcome = "MIXED"        # legs disagree, none confirmed alone: no per-leg proposal
@@ -250,7 +250,7 @@ def _corr(x: List[float], y: List[float]) -> Optional[float]:
 
 def _max_dd(v: List[float]) -> "tuple[float, int, int]":
     """(depth >= 0, peak_idx, trough_idx) of the cumulative-R curve (starting from 0)."""
-    cum = best = 0.0
+    cum = 0.0
     peak_i, pk, tr = -1, (-1), -1
     peak = 0.0
     depth = 0.0
@@ -289,7 +289,7 @@ def grade_portfolio(series: Dict[str, Dict[str, float]], symbols: Dict[str, str]
     legs = list(series)
     if len(legs) < 2 or not cal:
         return {"verdict": "indeterminate", "outcome": "INDETERMINATE", "why": "fewer than 2 legs / no days"}
-    vecs = {l: _vec(series[l], cal) for l in legs}
+    vecs = {lg: _vec(series[lg], cal) for lg in legs}
     n = len(cal)
     oos_days = int(round(n * OOS_FRAC))
     total = _sum(list(vecs.values()))
@@ -303,12 +303,12 @@ def grade_portfolio(series: Dict[str, Dict[str, float]], symbols: Dict[str, str]
     # co-drawdown overlap: share of A's losing days that are also B's losing days
     codd = {a: {b: (sum(1 for x, y in zip(vecs[a], vecs[b]) if x < 0 and y < 0) /
                     max(1, sum(1 for x in vecs[a] if x < 0))) for b in legs} for a in legs}
-    net = {l: round(sum(vecs[l]), 4) for l in legs}
-    dd_share = {l: (round(-sum(vecs[l][pk + 1:tr + 1]) / dd, 4) if dd > 0 and pk >= -1 else None) for l in legs}
+    net = {lg: round(sum(vecs[lg]), 4) for lg in legs}
+    dd_share = {lg: (round(-sum(vecs[lg][pk + 1:tr + 1]) / dd, 4) if dd > 0 and pk >= -1 else None) for lg in legs}
     sym_net: Dict[str, List[float]] = {}
-    for l in legs:
-        s = symbols[l]
-        sym_net[s] = [a + b for a, b in zip(sym_net[s], vecs[l])] if s in sym_net else list(vecs[l])
+    for lg in legs:
+        s = symbols[lg]
+        sym_net[s] = [a + b for a, b in zip(sym_net[s], vecs[lg])] if s in sym_net else list(vecs[lg])
     var_t = sum((x - sum(total) / n) ** 2 for x in total)
     sym_var_share = {}
     for s, v in sym_net.items():
@@ -317,17 +317,17 @@ def grade_portfolio(series: Dict[str, Dict[str, float]], symbols: Dict[str, str]
     base = _loo(vecs, OOS_FRAC)
     alt = [_loo(vecs, OOS_FRAC + SPLIT_SHIFT), _loo(vecs, max(0.05, OOS_FRAC - SPLIT_SHIFT))]
     rest_corr = {}
-    for l in legs:
-        rest = _sum([v for k, v in vecs.items() if k != l])
-        rest_corr[l] = _corr(vecs[l], rest)
-    nz_shared = {l: min(shared[l][k] for k in legs if k != l) for l in legs}
+    for lg in legs:
+        rest = _sum([v for k, v in vecs.items() if k != lg])
+        rest_corr[lg] = _corr(vecs[lg], rest)
+    nz_shared = {lg: min(shared[lg][k] for k in legs if k != lg) for lg in legs}
     proposals = []
-    for l in legs:
-        corr_ok = rest_corr[l] is not None and rest_corr[l] >= CORR_TRIGGER and nz_shared[l] >= MIN_OOS_DAYS
-        dd_ok = dd_share[l] is not None and dd_share[l] > DD_SHARE_TRIGGER
-        robust = base[l]["improves"] and all(a[l]["improves"] for a in alt)
+    for lg in legs:
+        corr_ok = rest_corr[lg] is not None and rest_corr[lg] >= CORR_TRIGGER and nz_shared[lg] >= MIN_OOS_DAYS
+        dd_ok = dd_share[lg] is not None and dd_share[lg] > DD_SHARE_TRIGGER
+        robust = base[lg]["improves"] and all(a[lg]["improves"] for a in alt)
         if robust and (corr_ok or dd_ok):
-            proposals.append(l)
+            proposals.append(lg)
     reduce_syms = [s for s, v in sym_var_share.items() if v is not None and v > SYMBOL_VAR_TRIGGER]
     if oos_days < MIN_OOS_DAYS:
         outcome, verdict = "INDETERMINATE", "indeterminate"
@@ -343,7 +343,7 @@ def grade_portfolio(series: Dict[str, Dict[str, float]], symbols: Dict[str, str]
             "corr": {a: {b: (None if c is None else round(c, 4)) for b, c in r.items()} for a, r in corr.items()},
             "nonzero_shared_days": shared, "co_drawdown_overlap": {a: {b: round(x, 4) for b, x in r.items()}
                                                                     for a, r in codd.items()},
-            "corr_to_rest": {l: (None if c is None else round(c, 4)) for l, c in rest_corr.items()},
+            "corr_to_rest": {lg: (None if c is None else round(c, 4)) for lg, c in rest_corr.items()},
             "loo_oos": base, "loo_oos_split_plus10": alt[0], "loo_oos_split_minus10": alt[1]}
 
 
@@ -354,16 +354,16 @@ def write_verdict(out: Path, v: Dict[str, Any]) -> None:
 
 def assemble(legs: List[str], emits: Dict[str, str], strategies: Dict[str, Any], rule: str,
              out: Path, window: str) -> Dict[str, Any]:
-    per_leg = {l: leg_folds([emits[l]], l) for l in legs if l in emits}
-    per_leg = {l: f for l, f in per_leg.items() if not f.get("error")}
-    series = {l: daily_r(emits[l]) for l in per_leg}
+    per_leg = {lg: leg_folds([emits[lg]], lg) for lg in legs if lg in emits}
+    per_leg = {lg: f for lg, f in per_leg.items() if not f.get("error")}
+    series = {lg: daily_r(emits[lg]) for lg in per_leg}
     (out / "daily_r").mkdir(parents=True, exist_ok=True)
-    for l, s in series.items():
-        (out / "daily_r" / f"{l}.json").write_text(json.dumps(s, indent=0) + "\n")
-    pooled = leg_folds([emits[l] for l in per_leg], "pooled:" + "+".join(per_leg)) if per_leg else {}
+    for lg, s in series.items():
+        (out / "daily_r" / f"{lg}.json").write_text(json.dumps(s, indent=0) + "\n")
+    pooled = leg_folds([emits[lg] for lg in per_leg], "pooled:" + "+".join(per_leg)) if per_leg else {}
     n = sum(f["total_trades"] for f in per_leg.values())
     meas: Dict[str, Any] = {"window": window, "folds": FOLDS, "per_leg": per_leg, "pooled": pooled,
-                            "side_constraints": {l: side_constraint(strategies[l]) for l in per_leg}}
+                            "side_constraints": {lg: side_constraint(strategies[lg]) for lg in per_leg}}
     note = "leg-replay-emit: config-exact harness replay (base_args), net_r per trade"
     if not per_leg:
         return dict(verdict="not_applicable", read_state="no_data", n=None,
@@ -373,7 +373,7 @@ def assemble(legs: List[str], emits: Dict[str, str], strategies: Dict[str, Any],
     elif rule == "trend-asym":
         g = grade_trend_asym(per_leg, meas["side_constraints"])
     elif rule == "portfolio":
-        syms = {l: str((strategies[l].get("symbols") or ["?"])[0]) for l in per_leg}
+        syms = {lg: str((strategies[lg].get("symbols") or ["?"])[0]) for lg in per_leg}
         g = grade_portfolio(series, syms)
     else:
         g = {"verdict": "indeterminate", "outcome": "UNGRADED (no --rule)"}
@@ -405,7 +405,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         write_verdict(out, dict(verdict="not_applicable", read_state="producer_failed", n=None,
                                 population=f"cannot read config/strategies.yaml: {exc}"))
         return 0
-    missing = [l for l in legs if l not in strategies]
+    missing = [lg for lg in legs if lg not in strategies]
     if missing:
         write_verdict(out, dict(verdict="not_applicable", read_state="producer_failed", n=None,
                                 population=f"legs not in config/strategies.yaml: {missing}"))
@@ -417,16 +417,16 @@ def main(argv: Optional[List[str]] = None) -> int:
     emits: Dict[str, str] = {}
     failed: Dict[str, str] = {}
     if a.from_emits:
-        for l in legs:
-            p = Path(a.from_emits) / f"{l}.jsonl"
-            (emits.__setitem__(l, str(p)) if p.exists() else failed.__setitem__(l, "no emit file"))
+        for lg in legs:
+            p = Path(a.from_emits) / f"{lg}.jsonl"
+            (emits.__setitem__(lg, str(p)) if p.exists() else failed.__setitem__(lg, "no emit file"))
     else:
         data_dir = Path(a.data_dir) if a.data_dir else out / "data"
         fetch_start = (start_d - timedelta(days=WARMUP_DAYS)).isoformat()
-        for l in legs:
-            r = run_leg(l, strategies[l], data_dir, out, start_d.isoformat(), end_d.isoformat(),
+        for lg in legs:
+            r = run_leg(lg, strategies[lg], data_dir, out, start_d.isoformat(), end_d.isoformat(),
                         fetch=lambda s, t, d, _s, _e: fetch_candles(s, t, d, fetch_start, end_d.isoformat()))
-            (emits.__setitem__(l, r["emit"]) if r["ok"] else failed.__setitem__(l, r["reason"]))
+            (emits.__setitem__(lg, r["emit"]) if r["ok"] else failed.__setitem__(lg, r["reason"]))
     if failed:
         # A leg that did not replay makes every cross-leg statistic a statement about a different roster.
         write_verdict(out, dict(verdict="not_applicable", read_state="producer_failed", n=None,

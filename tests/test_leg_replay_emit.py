@@ -124,11 +124,10 @@ def test_build_cmd_refuses_missing_data_and_non_emit_family(tmp_path):
 
 
 def test_main_from_emits_writes_contract_verdict_and_daily_r(tmp_path):
-    st = lre.load_strategies()
     legs = ["xrp_pullback_2h", "trend_donchian_eth_4h"]
     em = tmp_path / "em"
-    for l in legs:
-        write_emit(em / f"{l}.jsonl", l, drag_rows())
+    for lg in legs:
+        write_emit(em / f"{lg}.jsonl", lg, drag_rows())
     out = tmp_path / "out"
     assert lre.main(["--legs", ",".join(legs), "--from-emits", str(em), "--rule", "short-drag",
                      "--out", str(out)]) == 0
