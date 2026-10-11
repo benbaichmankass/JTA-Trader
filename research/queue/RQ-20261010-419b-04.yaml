@@ -3,7 +3,7 @@ title: >-
   Portfolio: on the live Bybit roster (bybit_2: xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h,
   ada_pullback_2h) and the prop book, which leg's removal or de-concentration would have raised trailing
   net R / cut co-drawdown? (perf-followup 2026-W41 Track 4)
-status: blocked
+status: queued
 cadence: once
 theme: live_strategy
 priority: 2
@@ -69,44 +69,32 @@ routing:
   basis: >-
     Runner, one leg-replay-emit invocation (harness over 1830 d binance_vision candles, stdlib folds).
     An estimate, not a measurement.
-blocked_on:
-- what: >-
-    No queue-runnable instrument replays a live roster's legs config-exact and keeps per-trade rows: m20_fleet_exit_sweep.py
-
-    keeps only summaries, mi307_offline_mfe.py --run discards `rows`, direction_walkforward.py needs a
-    pre-made
-
-    --emit-trades JSONL, regime_cell_walkforward.py is a debt-roster (Yahoo-feed) workflow and not queue-dispatchable,
-    and
-
-    nbook_portfolio.py needs a --data/--roster the runner does not stage. LEVER NAME: `leg-replay-emit`
-    -- a
-
-    scripts/research/ script (research-script-run.yml-compatible: writes {out_dir}/verdict.json) that,
-    for a named leg list, builds the
-
-    config-exact harness args, runs backtest_trend.py / backtest_pullback.py with --emit-trades over the
-    1830 d binance_vision
-
-    window, keeps the emits under {out_dir}, then (a) runs direction_walkforward per leg and (b) writes
-    per-leg daily-R series for
-
-    portfolio replay.
-  ref: PERF-FU-LEG-REPLAY (docs/claude/work/checklist/)
-  clears_when: >-
-    `python3 scripts/research/leg_replay_emit.py --legs <csv> --out <dir>` writes verdict.json with per-leg,
-    per-direction fold
-
-    results for at least xrp_pullback_2h, ada_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h;
-    then `git mv` this file to
-
-    research/queue/ and set run.workflow to research-script-run.yml with run.command pointing at it and
-    lands.store research/results/.
 run:
-  workflow: null
-  note: Deliberately null until blocked_on clears (instrument PERF-FU-LEG-REPLAY).
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/leg_replay_emit.py
+  - --legs
+  - xrp_pullback_2h,trend_donchian_eth_4h,trend_donchian_xrp_4h,ada_pullback_2h
+  - --days
+  - '1830'
+  - --rule
+  - portfolio
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261010-419b-04
+  note: >-
+    Unblocked 2026-10-11 by PERF-FU-LEG-REPLAY: scripts/research/leg_replay_emit.py replays the legs config-exact
+    (m20_fleet_exit_sweep.base_args) over 1830 d of binance_vision candles, runs direction_walkforward per leg
+    and pooled, writes per-leg daily-R series, and grades with this unit's decision_rule thresholds verbatim
+    (--rule portfolio). The decision_rule block is unchanged from registration.
 lands:
-  store: research/results/ (once promoted)
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: research/results/RQ-20261010-419b-04/<run_id>.jsonl (E5 contract); raw emits, daily_r series and replay.json land under comms/research/RQ-20261010-419b-04/<run_id>/.
 related:
 - comms/perf_followup/perf-followup-20261010-191000.json
 - scripts/research/nbook_portfolio.py
