@@ -275,6 +275,18 @@ async def _drain_one_ping_dir(context, chat_id: str, pings_dir: str,
             prefix = _PRIORITY_ICONS.get(priority, _PRIORITY_ICONS["normal"])
             text = f"{prefix} {body}"
 
+        # TELEGRAM-CHANNELS (2026-10-11): a producer may stamp the CHANNEL its
+        # ping belongs to (src/runtime/telegram_channels.py owns the table) —
+        # trade lifecycle pings carry ``channel: trades``. When that channel's
+        # route is its own bot, deliver there; on ANY failure fall through to
+        # this drainer's own bot (SYSTEM), so the move can never lose a ping.
+        if await _deliver_via_channel(payload, text, parse_mode, name):
+            try:
+                os.unlink(path)
+            except OSError:
+                pass
+            continue
+
         try:
             await (bot or context.bot).send_message(
                 chat_id=chat_id, text=text,
@@ -289,6 +301,36 @@ async def _drain_one_ping_dir(context, chat_id: str, pings_dir: str,
             os.unlink(path)
         except OSError:
             pass
+
+
+async def _deliver_via_channel(payload: dict, text: str, parse_mode, name: str) -> bool:
+    """Deliver a ping stamped with a non-SYSTEM ``channel`` via that channel's
+    own bot. Returns True only on a CONFIRMED send; False means "not mine to
+    deliver here / failed" and the caller delivers it on its own bot instead.
+    Never raises."""
+    channel = str(payload.get("channel") or "").strip().lower()
+    if channel not in ("trades", "manager"):
+        return False
+    try:
+        import asyncio
+
+        from src.runtime import telegram_channels as _tc
+        from src.runtime.notify import send_telegram_direct
+
+        kind = str(payload.get("kind") or "")
+        if kind and not _tc.enabled(kind):
+            logger.info("ping inbox: %s (kind %s) muted in settings — dropped", name, kind)
+            return True  # deliberately not sent; the file is consumed
+        route = _tc.channel_route(channel)
+        if not (route.deliverable and route.isolated):
+            return False  # the channel IS this bot today — deliver normally
+        return bool(await asyncio.to_thread(
+            send_telegram_direct, text, parse_mode=parse_mode, mirror_to_fcm=False,
+            bot_token=route.token, chat_id=route.chat_id))
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("ping inbox: %s channel send failed for %s (%s) — delivering "
+                       "on the SYSTEM bot instead", channel, name, type(exc).__name__)
+        return False
 
 
 async def _drain_pending_pings(context, chat_id: str | None = None,

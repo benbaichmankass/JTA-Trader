@@ -109,9 +109,13 @@ def format_trade_event_message(kind: str, payload: dict[str, Any]) -> str:
 def _send_telegram(kind: str, payload: dict[str, Any]) -> None:
     """Telegram line for a trade event. Best-effort; runs on a worker thread."""
     try:
-        from src.runtime.notify import send_telegram_direct
+        # TELEGRAM-CHANNELS (2026-10-11): trade lifecycle -> the TRADES channel
+        # via the one routing table (falls back to SYSTEM if TRADES cannot
+        # deliver, so a trade event is never dropped by the move).
+        from src.runtime import telegram_channels
 
-        send_telegram_direct(
+        telegram_channels.send(
+            kind,
             format_trade_event_message(kind, payload),
             parse_mode=None,
             # We already fired the typed FCM push below — disable the
