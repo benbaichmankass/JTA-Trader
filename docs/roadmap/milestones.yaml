@@ -13,6 +13,7 @@ version: 1
 reviewed: 2026-10-11          # date of the last full weekly pass
 review_cadence_days: 8        # report flags a milestone whose `reviewed` is older than this
 enforce_from_seq: 400         # checklist rows with _seq >= this must carry `roadmap` (+ `writeback` when closed) -- only when the diff touches them
+row_fallback: docs/roadmap/backfill-2026-10-11.json  # rows without their own `roadmap` field resolve here (explicit field wins); `--backfill` materialises it
 enforce_units_from: "20261012"  # new queue units with an id date >= this must carry `roadmap`
 
 goals:
@@ -356,6 +357,7 @@ queue_rules:
   - {milestone: M16,     title_re: '(?i)\bM16\b'}
   - {milestone: L-REGIME, title_re: '(?i)regime head|regime weight|soft weight|trend_vol regime|regime-transition|regime cell|funding-augmented regime|Regime head as entry'}
   - {milestone: M28,     title_re: '(?i)NEWS-VETO|PM-SURPRISE'}
+  - {milestone: M25,     title_re: '(?i)^Frontier:'}
   - {milestone: L-PROP,  title_re: '(?i)NEW FAMILY'}
   - {milestone: M22,     title_re: '(?i)short-timeframe discovery'}
   - {milestone: M20,     title_re: '(?i)flip-exit'}

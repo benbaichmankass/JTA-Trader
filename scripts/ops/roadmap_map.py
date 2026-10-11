@@ -19,7 +19,7 @@ COMMANDS
   --render                    print the generated block for ROADMAP.md
   --write-roadmap             rewrite the block between the markers in ROADMAP.md
   --check [--base REF]        the guard (whole-store checks + diff-scoped enforcement)
-  --backfill FILE             set `roadmap` on live rows that lack it, from {row id: milestone} JSON
+  --backfill FILE             materialise the fallback mapping: set `roadmap` on live rows that lack it
                               (idempotent; goes through checklist.py)
   --self-test                 synthetic proof that every failure mode fails
 """
@@ -96,12 +96,30 @@ def unit_milestones(u: dict, rules: list[dict]) -> list[str]:
 
 
 # ── the mapping ────────────────────────────────────────────────────────────
-def build(spec: dict, rows: list[dict], units: list[dict]) -> dict:
+def row_refs(r: dict, fallback: dict) -> list[str]:
+    """The row's own `roadmap` field wins; the committed fallback mapping covers rows nobody tagged yet."""
+    own = as_list(r.get("roadmap"))
+    if own:
+        return own
+    fb = fallback.get(r["id"])
+    return [fb] if fb else []
+
+
+def load_fallback(spec: dict) -> dict:
+    rel = spec.get("row_fallback")
+    if not rel:
+        return {}
+    f = REPO / rel
+    return json.loads(f.read_text(encoding="utf-8")) if f.exists() else {}
+
+
+def build(spec: dict, rows: list[dict], units: list[dict], fallback: dict | None = None) -> dict:
+    fallback = load_fallback(spec) if fallback is None else fallback
     ms = {m["id"]: m for m in spec["milestones"]}
     per = {i: {"rows_live": [], "rows_closed": [], "units_open": [], "units_done": []} for i in ms}
     orphan_rows, orphan_units, dangling = [], [], []
     for r in rows:
-        refs = as_list(r.get("roadmap"))
+        refs = row_refs(r, fallback)
         st = r.get("state")
         for ref in refs:
             if ref not in ms:
