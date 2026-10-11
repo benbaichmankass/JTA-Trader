@@ -1,9 +1,7 @@
 # UI-UPGRADE-1 — site sign-in (Google + passkey) and the Keys admin tab
 
-> **Doc status:** `live` · category `design` · last verified `2026-10-11` ·
-> referenced by checklist rows `UI-UPGRADE-1` and `UI-UPGRADE-1-AUTH`.
-> Operator asks, verbatim from the row: items (7) and (9). Popup answers:
-> login **"Google + passkey"**, keys **"View + edit, passkey each time"**.
+> **Doc status:** `unknown` · category `architecture` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../docs/DOCUMENT-INDEX.md) · **nobody has verified this document's status — do not act on it as current**
+> Referenced by checklist rows `UI-UPGRADE-1` and `UI-UPGRADE-1-AUTH`. Operator asks, verbatim from the row: items (7) and (9). Popup answers: login **"Google + passkey"**, keys **"View + edit, passkey each time"**.
 
 Every statement below is marked MEASURED (read this session, with where), or
 INFERRED / PROPOSED.
