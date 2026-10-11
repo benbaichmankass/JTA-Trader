@@ -607,6 +607,13 @@ plumbing validation, ≥1 new idea per run, roadmap + work-queue write-back, run
 `comms/ml-plan/`) is step 9 of the Sunday `/ml-review` — see `ml-review` § "The ML plan loop"
 and `manager` § "Weekly: the ML plan loop". It is a recurring step of existing routines, not a new cron.
 
+**The frontier scan is the other half of that loop** (operator, 2026-10-11): the mandate is *better models,
+not variations of the first good one* — a weekly scan of outside open-source models/methods (and
+strategy ideas) that turns every kept idea into a pre-registered queue unit, plus a model-family
+diversity check (`python3 scripts/ops/ml_plan_status.py --diversity`; 78% of registered models were
+GBDT on 2026-10-11). Skill: [`.claude/skills/frontier-research/SKILL.md`](.claude/skills/frontier-research/SKILL.md);
+row `FRONTIER-RESEARCH`; first scan `docs/research/frontier-scan-2026-10-11.md`.
+
 Workflows live under [`.claude/skills/`](.claude/skills/). **Skill-first lookup
 is binding** — before generating any task output, scan the catalog; if a skill
 matches, derive from it rather than from a precedent artifact. Precedents are

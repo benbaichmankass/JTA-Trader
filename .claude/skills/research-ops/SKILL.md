@@ -172,6 +172,11 @@ the verdict beside the roadmap's "AI trader (ML) — build plan" measured-state 
 `python3 scripts/ops/ml_plan_status.py` before pushing (it must show no `ORPHAN`/`CLOSED-OPEN`
 for what you touched). The weekly `/ml-review` owns the wider plan review
 (`ml-review` § "The ML plan loop"); you only keep the plan honest about what you graded.
+**Family history:** if the graded plan item carries a `family:`, also append the verdict
+(`PASS`/`FAIL`/`INDETERMINATE`) to `families.<family>.history` in the same file — that history is
+what `ml_plan_status.py --diversity` reads for `FAIL-STREAK`, and what the weekly frontier scan
+(`.claude/skills/frontier-research/SKILL.md`) uses to decide whether a family is exhausted or merely
+untested. A FAIL records the exact configuration tested; it does not close the family.
 
 **Generate the follow-ups, both kinds:** research → queue units (step E rules); otherwise →
 checklist rows / pipeline items for builds, bugs and tooling gaps. Every result ends in a
