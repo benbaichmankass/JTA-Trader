@@ -19,7 +19,7 @@
 > checks it in CI (diff-scoped, in the `guards` job); `--all` is the standing
 > audit and `--list` prints measured coverage.
 >
-> **Coverage, computed rather than counted: 126 of 126 routes documented (100%).**
+> **Coverage, computed rather than counted: 139 of 139 routes documented (100%).**
 > *Population — every `@router.<verb>("...")` under `src/web/api/routers/`
 > joined to its `APIRouter(prefix=...)`. Verified against the live FastAPI
 > route table (`app.routes`): the enumerator finds exactly those 96 with no
@@ -236,6 +236,31 @@ is moved in — which is what happened to the two `db` rows below.
 
 The `PUBLIC_ROUTES` set in `src/web/api/auth.py` enumerates the routes that opt
 out of `require_session`. Adding a route there is a code change reviewed in a PR.
+
+### 2a-bis — Google + passkey sign-in and device sessions (UI-UPGRADE-1-AUTH, 2026-10-11)
+
+**Tier 2 (auth surface).** Source: `routers/auth_google.py`; store: `web_sessions` in
+`trade_journal.db` (operator OK = decision D1, row `UI-UPGRADE-1-AUTH`); design:
+`docs/plans/ui-upgrade-1-auth-and-keys-design.md`. The routes under `/api/auth/`
+are public at the *site gate* (they are the sign-in); the session-management
+ones add `require_device_session`, which is ALWAYS on, flag or no flag.
+`SITE_AUTH_ENFORCE` (default OFF) arms the app-level `require_site_session`
+gate over everything else — `/api/health`, `/api/auth/*`, `/api/diag/*`,
+`/api/bot/prop/report`, `/api/bot/prop/phone/*` and CORS preflight stay public.
+
+| Endpoint | Source | Notes |
+|---|---|---|
+| `GET /api/auth/config` | `routers/auth_google.py` | Public. Google client id (ships in the SPA anyway) + whether the site gate is armed. |
+| `POST /api/auth/google` | `routers/auth_google.py` | Google ID token → 5-min PRE-AUTH ticket (not a session). `verify_oauth2_token`, `aud == GOOGLE_OAUTH_CLIENT_ID`, `email_verified`, `email == ALLOWED_EMAIL`. Failure-rate-limited per IP. 503 `auth_unavailable` when unconfigured. |
+| `POST /api/auth/passkey/register/begin` | `routers/auth_google.py` | WebAuthn registration options. Needs a live device session, OR a pre-auth ticket + one-time enrolment code (burned here). |
+| `POST /api/auth/passkey/register/finish` | `routers/auth_google.py` | Verifies the attestation, stores the public key. First-device path also returns a device session. |
+| `POST /api/auth/passkey/assert/begin` | `routers/auth_google.py` | Pre-auth ticket → assertion options. 409 `no_passkey_enrolled` when none. |
+| `POST /api/auth/passkey/assert/finish` | `routers/auth_google.py` | Verifies the assertion (challenge single-use, sign counter must advance, UV required) → 30-day sliding device session (`ws_…` bearer; only an HMAC of it is stored). |
+| `GET /api/auth/me` | `routers/auth_google.py` | Current device session. `require_device_session`. |
+| `GET /api/auth/sessions` | `routers/auth_google.py` | Device sessions (handle, label, UA, IP, created/last-seen/expiry, `current`). Never returns tokens or hashes. `require_device_session`. |
+| `DELETE /api/auth/sessions/{handle}`, `POST /api/auth/sessions/{handle}/revoke` | `routers/auth_google.py` | Revoke one session. The POST twin exists because the API's CORS allow-list is GET/POST only (untouched). `require_device_session`. |
+| `DELETE /api/auth/sessions`, `POST /api/auth/sessions/revoke-others` | `routers/auth_google.py` | "Sign out everywhere": revoke all but the current session. `require_device_session`. |
+| `POST /api/auth/ws-ticket` | `routers/auth_google.py` | 60 s single-use ticket for `WS /ws/market?ticket=` (a browser WebSocket cannot send `Authorization`). `require_device_session`. |
 
 ### 2b — `DASHBOARD_API_TOKEN` bearer (writes + client management)
 
