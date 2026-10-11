@@ -169,6 +169,11 @@ Output is one of:
   data is missing is a `NEEDS_DATA` research unit, not a question to the operator
   (manager skill § "classify the decision").
 
+**ML-shaped lessons go in the ML plan.** A lesson or extrapolation whose answer needs a model,
+a feature, a label source or a regime/gate head (not a strategy parameter) is filed as a queue
+unit **and** added as an item under track N/R/X of `docs/plans/ml-plan-items.yaml` (the unit id
+or lever row as its `ref`), so the weekly ML plan loop (`ml-review` § "The ML plan loop") sees it.
+
 ## Filing a queue unit (valid and auto-dispatchable)
 
 1. Read `research/queue/README.md` (fields, power gate, `decision_rule`, scheduling), look
