@@ -150,6 +150,8 @@ def _prop_menu_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📋 Prop report prompt", callback_data=CB_PROP_PROMPT)],
         [InlineKeyboardButton("❓ Report format", callback_data=CB_PROP_HELP)],
+        # TELEGRAM-CHANNELS part C: shared settings menu, TRADES channel.
+        [InlineKeyboardButton("⚙️ Settings", callback_data="ns:open:trades")],
     ])
 
 
@@ -469,6 +471,11 @@ def main() -> None:
     app.add_handler(CommandHandler("start", start_cmd))
     app.add_handler(CommandHandler("menu", menu_cmd))
     app.add_handler(CommandHandler("testexpiry", testexpiry_cmd))
+    # TELEGRAM-CHANNELS part C: this bot polls the TRADES channel; the ONE
+    # settings menu is mounted before the catch-all so `ns:` taps reach it.
+    from src.bot.notification_settings_menu import register as _register_settings
+
+    _register_settings(app, "trades", service="ict-claude-bridge")
     app.add_handler(CallbackQueryHandler(on_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, _on_operator_message))
     app.add_handler(MessageHandler(filters.PHOTO, _on_operator_photo))

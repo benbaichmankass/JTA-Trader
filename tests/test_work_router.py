@@ -340,7 +340,7 @@ def test_real_brief_route_serves_all_six_sections_over_http():
     above. Confirms the route wiring, the cache, and that the module's six
     sections actually reach an HTTP response — `test_render_daily_brief.py`
     covers the module's own logic in depth and is not duplicated here."""
-    wk._brief_cache = None
+    wk._BRIEF_SWR.clear()
     client = TestClient(app)
     r = client.get("/api/bot/work/brief")
     assert r.status_code == 200

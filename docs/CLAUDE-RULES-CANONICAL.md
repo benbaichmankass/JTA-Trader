@@ -1027,6 +1027,15 @@ what this system needs to measure is learning. `ROADMAP.md` carries its own
 header saying nobody has verified its status — it is context, not instruction.
 Levels 3 and 4 are now the plan and the checklist.
 
+⚠️ **Amended 2026-10-11 (operator, ROADMAP-LOOP).** `ROADMAP.md` stays at level 8 as an
+instruction source, but its generated **"Live roadmap" block** (source
+`docs/roadmap/milestones.yaml`) is the high-level plan the work queue is built and prioritised
+FROM: every checklist row and research-queue unit carries a `roadmap` milestone ref, and a closing
+row writes its outcome back to the roadmap and to `docs/ARCHITECTURE-CANONICAL.md` (`writeback`
+field). The roadmap informs what is built and authorizes nothing; it is not a third category of
+work (a build is a checklist row, a question is a queue unit). Contract:
+`.claude/skills/manager/SKILL.md` § "The roadmap loop"; guard `roadmap-map-guard`.
+
 Historical notes remain available for context only. **Newer canonical
 documents override older materials.**
 

@@ -33,6 +33,22 @@ An unknown kind routes to SYSTEM; a channel that cannot deliver falls back to
 SYSTEM; a failed TRADES/MANAGER send is retried on SYSTEM prefixed
 `[meant for …]`. Alert kinds can never be retired or muted.
 
+### 0.1 Periodic updates are split by CONTENT, at the operator's cadence (part C, 2026-10-11)
+
+| Channel | Periodic update (kind) | Producer | Content — and ONLY this |
+|---|---|---|---|
+| SYSTEM | Health check (`system_health`) | `scripts/send_hourly_now.py` → `hourly_report.render_system_health` | ticks, errors, health checks, training, account REACHABILITY, deploy sha / restart pending, alert ledgers raised/cleared, standing close wedges |
+| TRADES | Performance snapshot (`trades_snapshot`) | `scripts/send_hourly_now.py` → `src/runtime/trades_snapshot.py` | opened / closed (won · lost · R · $ · exit reason), open positions + broker unrealised, realized P&L per account + total (MEASURED / ESTIMATED / unpriced never folded), rejects, stop repairs |
+| MANAGER | Manager update (`manager_update`) | `scripts/ops/work_digest_now.py` | needs-you, research queue (`research_digest.py`), WORK (`work_section.py`: shipped · verified · didn't work · blocked · coming up) |
+
+Cadence and type toggles: ONE store + ONE gate (`src/runtime/telegram_settings.py`,
+`runtime_state/telegram_settings.json`), ONE menu (`src/bot/notification_settings_menu.py`,
+`/settings` + ⚙️ button, callback prefix `ns:`) mounted in all three polling bots. Choices:
+hourly · every 4h · twice a day · once a day · off (aligned UTC slots; a missed slot is caught
+up once). Defaults = hourly, nothing muted. `telegram_channels.UNMUTABLE` kinds (alerts, red
+flags, restarts, decisions, system-action outcomes, `claude_ping`) have no toggle and the
+store refuses them.
+
 ## 1. Two bots, two jobs
 
 | Bot | Token | Service | Job |

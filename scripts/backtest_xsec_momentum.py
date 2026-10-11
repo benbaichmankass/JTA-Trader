@@ -99,17 +99,18 @@ from src.runtime import execution_costs  # noqa: E402  (the shared SLIPPAGE term
 TRADING_DAYS_PER_YEAR = 252
 FEE_BPS_ROUNDTRIP = execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP  # per-rebalance round-trip cost on |delta weight|
 
-# Execution-realism (P1 § 3.B, checklist E3): SLIPPAGE only, wired through the
-# SAME turnover-cost mechanism as the fee (both are a bps-of-|delta weight|
-# drag charged on rebalance — the natural unit for a book-return harness, unlike
-# the per-trade R harnesses). FUNDING is deliberately NOT wired here: this
-# harness holds WEIGHTS across a multi-symbol universe with no per-position
-# entry/exit accounting, so there is no clean per-leg hold-duration to charge a
-# funding drag against (unlike a single-instrument harness's Trade.entry_time/
-# exit_time). The book trades a crypto-perp universe, so funding IS a real,
-# currently-unpriced cost here — filed to the pipeline as remaining work
-# (checklist E3) rather than approximated incorrectly.
-SLIPPAGE_BPS_ROUNDTRIP = 0.0
+# Execution-realism (P1 § 3.B, checklist E3 + FRONTIER-LEVER-HARNESS-COSTS): the
+# FULL cost stack, resolved per symbol through
+# ``execution_costs.resolve_cost_policy`` — fee (``--fee-bps-roundtrip`` x
+# ``--fee-multiplier``) and venue-aware SLIPPAGE are charged on the rebalance
+# turnover |delta weight| (the natural unit for a book-return harness), and
+# FUNDING is charged each held day on |weight| for every perp leg:
+# ``|w| * funding_bps_per_window * FUNDING_WINDOWS_PER_DAY`` (daily bars, 8h
+# windows -> 3 per day; directionless drag, like every other harness).
+# ``None`` means "nobody chose" and resolves to the venue-aware policy; an
+# explicit 0 is the fee-only comparison arm and is recorded as such in
+# ``summary.params.cost_policy`` — never a silent zero.
+FUNDING_WINDOWS_PER_DAY = 24.0 / execution_costs.FUNDING_WINDOW_HOURS
 
 
 # --------------------------------------------------------------------------- #
@@ -254,18 +255,51 @@ def _target_weights(form: Dict[str, float], quantile: float) -> Dict[str, float]
 
 
 def _turnover_cost(prev_w: Dict[str, float], new_w: Dict[str, float], *,
-                   fee_bps: float, fee_mult: float) -> float:
-    """One-off fractional drag = fee * sum|delta weight| over the union of names."""
-    cost_per_unit = (fee_bps / 10_000.0) * fee_mult
+                   fee_bps: float, fee_mult: float,
+                   slip_bps: Optional[Dict[str, float]] = None) -> float:
+    """One-off fractional drag over the union of names:
+    ``sum_s |delta w_s| * (fee_bps*fee_mult + slip_bps[s]) / 1e4``.
+    ``slip_bps`` is the per-symbol round-trip slippage (absent = 0.0: the
+    fee-only arm); slippage is NOT scaled by ``fee_mult``."""
     syms = set(prev_w) | set(new_w)
-    dturn = sum(abs(new_w.get(s, 0.0) - prev_w.get(s, 0.0)) for s in syms)
-    return dturn * cost_per_unit
+    fee_unit = (fee_bps / 10_000.0) * fee_mult
+    slip = slip_bps or {}
+    return sum(abs(new_w.get(s, 0.0) - prev_w.get(s, 0.0))
+               * (fee_unit + slip.get(s, 0.0) / 10_000.0) for s in syms)
+
+
+def resolve_book_costs(symbols: Sequence[str], *,
+                       slippage_bps: Optional[float] = None,
+                       funding_bps_per_window: Optional[float] = None,
+                       venue: str = "auto") -> Dict[str, Any]:
+    """Per-symbol cost policy for the book, via ``resolve_cost_policy``.
+
+    ``None`` -> venue-aware default for that symbol; an explicit value (incl. 0)
+    wins for every symbol. ``venue='perp'`` forces perp classification (use when
+    the universe is crypto perps but the panel names are bare tickers that
+    ``execution_costs.is_perp`` cannot classify); ``'auto'`` classifies each name.
+    """
+    slip: Dict[str, float] = {}
+    fund: Dict[str, float] = {}
+    for sym in symbols:
+        key = f"{sym}USDT" if venue == "perp" and not str(sym).upper().endswith("USDT") else sym
+        sl, fu = execution_costs.resolve_cost_policy(
+            key, slippage_bps_roundtrip=slippage_bps,
+            funding_bps_per_window=funding_bps_per_window)
+        slip[sym], fund[sym] = sl, fu
+    return {"slippage_bps_roundtrip": slip, "funding_bps_per_window": fund,
+            "venue": venue,
+            "slippage_override": slippage_bps, "funding_override": funding_bps_per_window,
+            "n_symbols": len(slip),
+            "n_perp_funding_symbols": sum(1 for v in fund.values() if v > 0)}
 
 
 def run_backtest(panel: pd.DataFrame, *, formation: int, skip: int,
                  rebalance: int, quantile: float, fee_bps: float,
                  fee_mult: float,
-                 slippage_bps: float = 0.0,
+                 slippage_bps: Optional[float] = None,
+                 funding_bps_per_window: Optional[float] = None,
+                 venue: str = "auto",
                  btc_risk_off: Optional[pd.Series] = None,
                  funding: Optional[Dict[str, pd.Series]] = None,
                  funding_threshold: float = 0.0,
@@ -285,6 +319,13 @@ def run_backtest(panel: pd.DataFrame, *, formation: int, skip: int,
     cols = list(panel.columns)
     close = panel.to_numpy(dtype=float)  # shape (n, n_syms); NaN where absent
     col_idx = {s: i for i, s in enumerate(cols)}
+    # Full cost stack, resolved ONCE per symbol (None -> venue-aware; explicit wins).
+    costs = resolve_book_costs(cols, slippage_bps=slippage_bps,
+                               funding_bps_per_window=funding_bps_per_window,
+                               venue=venue)
+    slip_map = costs["slippage_bps_roundtrip"]
+    fund_map = costs["funding_bps_per_window"]
+    funding_total = 0.0
 
     daily: List[Tuple[date, float, int]] = []
     rebal_records: List[Dict[str, Any]] = []
@@ -336,7 +377,8 @@ def run_backtest(panel: pd.DataFrame, *, formation: int, skip: int,
                 if dropped:
                     weeks_funding_skips += 1
             rebal_cost_fee_only = _turnover_cost(prev_w, new_w, fee_bps=fee_bps, fee_mult=fee_mult)
-            rebal_cost = _turnover_cost(prev_w, new_w, fee_bps=fee_bps + slippage_bps, fee_mult=fee_mult)
+            rebal_cost = _turnover_cost(prev_w, new_w, fee_bps=fee_bps, fee_mult=fee_mult,
+                                        slip_bps=slip_map)
             turnover_total_fee_only += rebal_cost_fee_only
             turnover_total += rebal_cost
             cur_w = new_w
@@ -354,6 +396,7 @@ def run_backtest(panel: pd.DataFrame, *, formation: int, skip: int,
         # Daily book return using the weights set at the last rebalance.
         book_r = 0.0
         n_legs = 0
+        funding_cost = 0.0
         if t > 0 and cur_w:
             for s, w in cur_w.items():
                 if w == 0.0:
@@ -365,8 +408,12 @@ def run_backtest(panel: pd.DataFrame, *, formation: int, skip: int,
                         and c_prev > 0):
                     book_r += w * (c_now / c_prev - 1.0)
                     n_legs += 1
+                    # Perp funding on the held notional, one daily bar = 3 windows.
+                    funding_cost += (abs(w) * fund_map.get(s, 0.0) / 10_000.0
+                                     * FUNDING_WINDOWS_PER_DAY)
         gross_sum += book_r
-        net_r = book_r - rebal_cost
+        funding_total += funding_cost
+        net_r = book_r - rebal_cost - funding_cost
         net_r_fee_only = book_r - rebal_cost_fee_only
         net_sum += net_r
         net_sum_fee_only += net_r_fee_only
@@ -377,6 +424,13 @@ def run_backtest(panel: pd.DataFrame, *, formation: int, skip: int,
                                  "rebalance_days": rebalance, "quantile": quantile,
                                  "fee_bps_roundtrip": fee_bps, "fee_multiplier": fee_mult,
                                  "slippage_bps_roundtrip": slippage_bps,
+                                 "cost_policy": {
+                                     **costs,
+                                     "fee_bps_roundtrip": fee_bps,
+                                     "fee_multiplier": fee_mult,
+                                     "funding_windows_per_day": FUNDING_WINDOWS_PER_DAY,
+                                     "source": "execution_costs.resolve_cost_policy",
+                                 },
                                  "btc_gate": btc_risk_off is not None,
                                  "funding_aware": funding_aware})
     summary.update({
@@ -391,6 +445,7 @@ def run_backtest(panel: pd.DataFrame, *, formation: int, skip: int,
         # BEFORE slippage, so a fee-only run is visible, not silent.
         "net_total_return_fee_only": round(net_sum_fee_only, 8),
         "turnover_cost_total": round(turnover_total, 8),
+        "funding_cost_total": round(funding_total, 8),
         "turnover_cost_total_fee_only": round(turnover_total_fee_only, 8),
         "mean_gross_exposure": round(
             statistics.fmean([r["gross_weight"] for r in rebal_records]), 6)
@@ -488,7 +543,9 @@ def _run_for_panel(panel: pd.DataFrame, *, fee_mult: float, cfg: Dict[str, Any]
         panel, formation=cfg["formation"], skip=cfg["skip"],
         rebalance=cfg["rebalance"], quantile=cfg["quantile"],
         fee_bps=cfg["fee_bps"], fee_mult=fee_mult,
-        slippage_bps=cfg.get("slippage_bps", 0.0),
+        slippage_bps=cfg.get("slippage_bps"),
+        funding_bps_per_window=cfg.get("funding_bps_per_window"),
+        venue=cfg.get("venue", "auto"),
         btc_risk_off=cfg.get("btc_risk_off"), funding=cfg.get("funding"),
         funding_threshold=cfg.get("funding_threshold", 0.0),
         funding_aware=cfg.get("funding_aware", False))
@@ -650,7 +707,7 @@ def _fmt(out: Dict[str, Any]) -> str:
         f"Sharpe(ann)={s['sharpe_annualized']} vol(ann)={s['annualized_vol']} "
         f"maxDD={s['max_drawdown']}",
         f"  weeks={s['weeks_total']} gated={s['weeks_gated']} "
-        f"funding_skips={s['weeks_funding_skips']}  turnover_cost={s['turnover_cost_total']}",
+        f"funding_skips={s['weeks_funding_skips']}  turnover_cost={s['turnover_cost_total']}  funding_cost={s['funding_cost_total']}",
         f"  mean_gross_exposure={s['mean_gross_exposure']} "
         f"mean_net_exposure={s['mean_net_exposure']} (~0 = dollar-neutral)",
         "  by_year:",
@@ -772,12 +829,18 @@ def main(argv: List[str]) -> int:
     p.add_argument("--fee-multiplier", type=float, default=1.0,
                    help="scale the fee (gate runs full-period at 2x). Default 1.0.")
     p.add_argument("--slippage-bps-roundtrip", type=float, default=None,
-                   help="Execution-realism: round-trip slippage bps charged on the same "
-                        "per-rebalance |delta weight| turnover as the fee. DEFAULT (unset) "
-                        "= venue-aware (execution_costs.slippage_bps_roundtrip_for, ~5 bps, "
-                        "uniform across venues). Pass 0 for the fee-only comparison arm. "
-                        "(No funding flag: this book-weight harness has no per-position "
-                        "hold-duration to charge a funding drag against — see module note.)")
+                   help="Round-trip slippage bps charged on the per-rebalance |delta weight| "
+                        "turnover. DEFAULT (unset) = per-symbol venue-aware "
+                        "(execution_costs.resolve_cost_policy: perp 3.0, else 5.0). "
+                        "Pass 0 for the fee-only comparison arm.")
+    p.add_argument("--funding-bps-per-window", type=float, default=None,
+                   help="Perp funding bps per 8h window, charged each held day on |weight| "
+                        "(3 windows/day). DEFAULT (unset) = per-symbol venue-aware "
+                        "(1.0 for a perp, 0 for a non-perp). Pass 0 for the no-funding arm.")
+    p.add_argument("--venue", choices=["auto", "perp"], default="auto",
+                   help="'auto' classifies each panel name via execution_costs.is_perp; "
+                        "'perp' treats the whole universe as crypto perps (use when the "
+                        "panel names are bare tickers like BTC that is_perp cannot classify).")
     p.add_argument("--btc-gate", metavar="PATH", default=None,
                    help="BTC daily CSV; risk-off (flat) the week BTC < its 50d SMA.")
     p.add_argument("--btc-sma-days", type=int, default=50,
@@ -807,15 +870,11 @@ def main(argv: List[str]) -> int:
     if args.self_test:
         return _self_test()
 
-    # Mandatory venue-aware cost policy (slippage only — see module note on why
-    # funding is excluded). Unset resolves to the venue-aware default; an
-    # explicit value (incl. 0 for the fee-only comparison arm) always wins.
-    # NOTE (E60): slippage_bps_roundtrip_for is per-venue since 2026-09-24 (perp
-    # 3.0, else 5.0). This multi-asset book passes None, so it still resolves the
-    # 5.0 non-perp default although its universe is crypto perps — kept as-is in
-    # E60 (no harness default changes); see pipeline item for the re-pricing.
-    slippage_bps = (execution_costs.slippage_bps_roundtrip_for(None)
-                    if args.slippage_bps_roundtrip is None else args.slippage_bps_roundtrip)
+    # Mandatory full cost stack: per-symbol, resolved inside run_backtest through
+    # execution_costs.resolve_cost_policy. Unset (None) -> venue-aware default;
+    # an explicit value (incl. 0 = the fee-only comparison arm) always wins.
+    slippage_bps = args.slippage_bps_roundtrip
+    funding_bpw = args.funding_bps_per_window
 
     specs = _resolve_universe(args)
     if len(specs) < 2:
@@ -857,7 +916,8 @@ def main(argv: List[str]) -> int:
         panel, formation=args.formation_days, skip=args.skip_days,
         rebalance=args.rebalance_days, quantile=args.quantile,
         fee_bps=args.fee_bps_roundtrip, fee_mult=args.fee_multiplier,
-        slippage_bps=slippage_bps,
+        slippage_bps=slippage_bps, funding_bps_per_window=funding_bpw,
+        venue=args.venue,
         btc_risk_off=btc_risk_off, funding=funding,
         funding_threshold=args.funding_short_threshold,
         funding_aware=args.funding_aware)
@@ -866,6 +926,7 @@ def main(argv: List[str]) -> int:
         cfg = {"formation": args.formation_days, "skip": args.skip_days,
                "rebalance": args.rebalance_days, "quantile": args.quantile,
                "fee_bps": args.fee_bps_roundtrip, "slippage_bps": slippage_bps,
+               "funding_bps_per_window": funding_bpw, "venue": args.venue,
                "btc_risk_off": btc_risk_off, "funding": funding,
                "funding_threshold": args.funding_short_threshold,
                "funding_aware": args.funding_aware}
@@ -874,6 +935,11 @@ def main(argv: List[str]) -> int:
                                holdout_frac=args.holdout_frac, cfg=cfg,
                                trend_book=trend_book)
 
+    _cp = res["summary"]["params"]["cost_policy"]
+    if _cp["n_perp_funding_symbols"] == 0 and funding_bpw is None:
+        print("WARNING: no panel symbol classified as a perp -> funding charged 0.0 "
+              "(pass --venue perp for a bare-ticker crypto universe, or "
+              "--funding-bps-per-window N).", file=sys.stderr)
     print(_fmt(res))
 
     if args.emit_daily:
