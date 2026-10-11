@@ -12,7 +12,12 @@
   "prs": [],
   "blocked_on": [],
   "note": "Operator 2026-10-11, frontier infra first. Both harnesses now resolve fee/slippage/funding through execution_costs.resolve_cost_policy and record cost_policy in summary.params / params; explicit 0 is the comparison arm. Tests: tests/test_frontier_lever_harness_costs.py. landed_unproven until a research-queue run emits a result JSON carrying params.cost_policy with non-zero terms. backtest_orb.py and src/backtest/backtester.py deliberately untouched (still out of scope for any promotion corpus).  [!] NOT DONE (inputs absent): RQ-20261011-9da8-05/-06 are not on origin/main (PR #17600 had not landed at 2026-10-11 lane time; git ls-tree origin/main shows no 9da8 unit). Once it lands, move both from research/queue/blocked/ to research/queue/ (decision rule unchanged) -- the harness inputs are now satisfied, so nothing else gates them. Ref: manager session_01Uq7MrjPQDRWqbhCjwuMava.",
-  "updated_at": "2026-10-11T15:45:32Z",
+  "updated_at": "2026-10-11T15:50:22Z",
   "updated_by": "session_01EroThbDn9eYt2t6SuMFVMG",
+  "observation": {
+    "what": "a research-queue run of backtest_xsec_momentum or backtest_vol_target emits a result JSON whose params.cost_policy carries non-zero fee, slippage and (perp) funding",
+    "how_to_check": "open the first comms/research result JSON for either harness after merge and read summary.params.cost_policy (xsec) / params.cost_policy (vol_target)",
+    "due_by": "2026-10-18"
+  },
   "_seq": 406
 }
