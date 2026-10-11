@@ -1,0 +1,69 @@
+{
+ "run": "ML-REVIEW-20261011 (session_01TJm8DkoUfBts46QxZqzm7j), cycle 2 -- first SCHEDULED cycle",
+ "finished_at": "2026-10-11T21:00:00Z",
+ "plan_items": 26,
+ "open": 22,
+ "flags": [
+  "ML-REVIEW-20261011 UNPLANNED -> fixed in ml_plan_status.py (name-pattern exemption)",
+  "plan_items 28 in the cycle-1 record vs 25 counted by the checker -> corrected, checker is truth"
+ ],
+ "plumbing_findings": [
+  {
+   "finding": "BUILDS-FAILED-24H 1 (ok 119, last rc 1)",
+   "disposition": "NOTE (single; a repeat becomes a row). Family still not readable from mirror."
+  },
+  {
+   "finding": "TRAINING-STALENESS stale 6 never_trained 2 of 76",
+   "disposition": "names NOT read: trainer pull #17581 never ran. Carry to next run."
+  },
+  {
+   "finding": "4 silent exit heads, 4 constant scorers, 3 demoted un-served heads",
+   "disposition": "all already tracked via plumbing.tracked (ML-EXIT-HEAD-LIVENESS, ML-STAGE-DECISIONS, ML-PRODUCERS); no new silence"
+  },
+  {
+   "finding": "sol-regime-15m-lgbm-fc-pcv-v2 (advisory) drift significant",
+   "disposition": "NEW: idea ML-N5 + unit RQ-20261011-6e85-01 + row ML-DRIFT-SPLIT-INSTRUMENT"
+  },
+  {
+   "finding": "trainer-vm-diag runner queued 30+ min",
+   "disposition": "skill text updated: fire the trainer pull first"
+  }
+ ],
+ "results_read": [
+  {
+   "unit": "(none new in plan refs since 20261011T1700Z)",
+   "verdict": "n/a",
+   "plan_item": "-"
+  }
+ ],
+ "ideas": [
+  {
+   "id": "RQ-20261011-6e85-01",
+   "source": "a (surfaced by the drift read: sol advisory drift significant, nothing separates mix from decay)",
+   "rule_registered": true,
+   "lever_row": "ML-DRIFT-SPLIT-INSTRUMENT"
+  }
+ ],
+ "writebacks": [
+  "ROADMAP.md (update line)",
+  "docs/plans/ml-plan-items.yaml (ML-N5, pending-stages comment)",
+  ".claude/skills/ml-review/SKILL.md",
+  "scripts/ops/ml_plan_status.py"
+ ],
+ "rows_filed": [
+  "ML-DRIFT-SPLIT-INSTRUMENT"
+ ],
+ "units_filed": [
+  "RQ-20261011-6e85-01 (blocked/, hold PR)"
+ ],
+ "next_by_value_per_cost": [
+  "Re-run the trainer pull (completes stage-guard/gate-check/parity) ~$0.5",
+  "ML-PARITY-HARNESS and ML-EXIT-HEAD-LIVENESS (lane ML-PLUMBING-1, running)",
+  "ML 3WM5HADW-0004/-0005 code lane (HIGH, unowned 14d)",
+  "ML-DRIFT-SPLIT-INSTRUMENT ~$3"
+ ],
+ "handoff": [
+  "Manager: merge #17580, run its promote-stage block, then update plumbing.expected_registry_stages to shadow 21 / candidate 71.",
+  "Next cycle 2026-10-18: read stale/never_trained names from the cycle log; eth RG4 re-gate; check ML-EXIT-HEAD-LIVENESS verdict."
+ ]
+}

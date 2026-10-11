@@ -429,6 +429,8 @@ walk-forward, nothing more (edge is decided offline against a rule registered be
 **Honest limits.** No frontier model has been run yet. Licences were read from Hub cards (TabPFN weights are `license:other` /
 non-commercial: research evaluation only, serving is an operator licence decision). Benchmark ranks cited by the scan are self-reported.
 
+**Update 2026-10-11 (weekly ml-review, `comms/reviews/ml-review-20261011-*.json`, `comms/ml-plan/20261011T2100Z.json`):** mes-regime-5m-lgbm-v2 macro_f1 0.7103 vs its baseline 0.6656 (margin 4.47 pts, up from 3.66 on 10-04; `GET /api/bot/ml/registry`); advisory drift 10-04..10-11: mes `minor` (KS 0.072), btc-15m-fc `moderate` (KS 0.123), **sol-15m-fc `significant` (KS 0.230, PSI 0.200)** (`GET /api/bot/shadow/drift`) -> idea ML-N5 / `RQ-20261011-6e85-01`; the drift endpoint now reads 4 rotated archives. Stage decisions (ML-R3) are in hold PR #17580; registry still reads the old stages.
+
 **Order of work (value per cost, from the evidence above):** P0 → X4 → D2 → P1 (cheap, unblocks or closes whole lines) → X1 → R1 first wave → N1 → X2 → R2/R4 → rest. Anything that needs a decision no data would settle goes to the operator through the classified popup path; anything that needs data becomes a unit.
 
 **What would change this plan:** an advisory head failing the V1 audit (reprioritise P/V above everything); a new information class passing a veto/exit unit (reopen S1/S2 and unpark S3 adapter work); the label-wall census returning GO for any cell (author per-cell meta-head units); the regime program returning a gate that separates a leg's good from bad trades net of cost (that becomes the first Tier-3 regime proposal).
