@@ -1072,8 +1072,13 @@ def _pkg_link(db, opid):
 
 
 def _seed_real_leg_and_package(db, *, real_status="open"):
+    # RELATIVE to now, never a calendar date: #17491 refuses an orphan
+    # attribution to a package older than ORPHAN_PACKAGE_MAX_AGE_DAYS (14), so
+    # a hard-coded 2026-09-27 package turned these tests red at 2026-10-11T10:00Z
+    # with no code change. One day old is well inside the window.
+    seeded = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
     real_id = int(db.insert_trade({
-        "timestamp": "2026-09-27T10:00:00+00:00", "symbol": "ETHUSDT",
+        "timestamp": seeded, "symbol": "ETHUSDT",
         "direction": "long", "entry_price": 2500.0, "position_size": 1.0,
         "setup_type": "trend", "status": real_status, "is_backtest": 0,
         "strategy_name": "eth_trend_1h", "account_id": "bybit_2",
@@ -1083,7 +1088,7 @@ def _seed_real_leg_and_package(db, *, real_status="open"):
         "order_package_id": "pkg-1", "strategy_name": "eth_trend_1h",
         "symbol": "ETHUSDT", "direction": "long", "entry": 2500.0,
         "sl": 2400.0, "tp": 2700.0, "status": "open",
-        "linked_trade_id": real_id, "created_at": "2026-09-27T10:00:00Z",
+        "linked_trade_id": real_id, "created_at": seeded,
     })
     return real_id
 
