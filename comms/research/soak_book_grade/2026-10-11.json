@@ -1,5 +1,5 @@
 {
-  "as_of": "2026-10-11T08:05:55.935017+00:00",
+  "as_of": "2026-10-11T09:54:29.128697+00:00",
   "by_disposition": {
     "healthy": 0,
     "insufficient-data": 18,
@@ -176,8 +176,8 @@
         "account_id": "bybit_1",
         "has_open_position": true,
         "held_back": 0,
-        "intent_episodes": 23,
-        "intents": 403,
+        "intent_episodes": 25,
+        "intents": 445,
         "received": 2,
         "same_symbol_live_contenders": [
           "trend_donchian_xrp_4h"
@@ -210,24 +210,24 @@
         "why": "entry n=2, exit n=1; need >= 10 each"
       },
       "disposition": "insufficient-data",
-      "eta": "next scheduled run",
+      "eta": "wait for a signal; re-check next scheduled pass",
       "execution": "live",
       "mechanics": {
         "account_class": "paper",
         "account_id": "alpaca_paper",
         "has_open_position": false,
         "held_back": 0,
-        "intent_episodes": null,
-        "intents": null,
+        "intent_episodes": 0,
+        "intents": 0,
         "received": 0,
         "same_symbol_live_contenders": [],
-        "state": "unreadable",
+        "state": "no_intents",
         "strategy": "gdx_pullback_1d",
         "unmapped": null,
         "unmapped_statuses": []
       },
       "n_needed": null,
-      "reason": "mechanics read_state=unreadable (could not query intents and/or received source this run) \u2014 we did not look, not 'nothing happened'",
+      "reason": "no_intents: the strategy produced zero actionable signals this window \u2014 nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either",
       "strategy": "gdx_pullback_1d"
     },
     {
@@ -325,24 +325,24 @@
         "why": "entry n=1, exit n=0; need >= 10 each"
       },
       "disposition": "insufficient-data",
-      "eta": "next scheduled run",
+      "eta": "re-check next scheduled pass",
       "execution": "live",
       "mechanics": {
         "account_class": "paper",
         "account_id": "alpaca_paper",
         "has_open_position": true,
         "held_back": 0,
-        "intent_episodes": null,
-        "intents": null,
+        "intent_episodes": 2,
+        "intents": 95,
         "received": 0,
         "same_symbol_live_contenders": [],
-        "state": "unreadable",
+        "state": "starved",
         "strategy": "ief_pullback_1d",
         "unmapped": null,
         "unmapped_statuses": []
       },
-      "n_needed": null,
-      "reason": "mechanics read_state=unreadable (could not query intents and/or received source this run) \u2014 we did not look, not 'nothing happened'",
+      "n_needed": "an entry signal observed while this leg is FLAT (no open position), in some future window",
+      "reason": "starved (95 intent(s), 0 received) but ALREADY HOLDING a position opened before the window \u2014 leg_flow_report's own caveat: this is NOT reliably 'unreached', it may simply have needed no new entry this window while flat-to-in-position. Cannot be graded kill from this window alone.",
       "strategy": "ief_pullback_1d"
     },
     {
