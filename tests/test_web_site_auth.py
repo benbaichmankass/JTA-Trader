@@ -76,10 +76,10 @@ def google(monkeypatch):
     monkeypatch.setattr(g, "_fetch_certs", lambda request, url: {KID: pub})
 
     def mint(*, signer=None, aud=CLIENT_ID, email=EMAIL, verified=True,
-             iss="https://accounts.google.com", exp_delta=3600):
+             iss="https://accounts.google.com", exp_delta=3600, iat_delta=0):
         now = int(time.time())
         claims = {"iss": iss, "aud": aud, "sub": "1", "email": email,
-                  "email_verified": verified, "iat": now, "exp": now + exp_delta}
+                  "email_verified": verified, "iat": now + iat_delta, "exp": now + exp_delta}
         return pyjwt.encode(claims, signer or key, algorithm="RS256", headers={"kid": KID})
 
     return mint
@@ -177,6 +177,17 @@ def test_google_forged_signature_rejected(client, google):
 
 def test_google_expired_token_rejected(client, google):
     r = client.post("/api/auth/google", json={"id_token": google(exp_delta=-3600)})
+    assert r.status_code == 401
+
+
+def test_google_token_issued_5s_in_the_future_is_accepted(client, google):
+    """A VM clock a few seconds behind Google's must not reject a fresh token."""
+    r = client.post("/api/auth/google", json={"id_token": google(iat_delta=5)})
+    assert r.status_code == 200, r.text
+
+
+def test_google_token_issued_far_in_the_future_still_rejected(client, google):
+    r = client.post("/api/auth/google", json={"id_token": google(iat_delta=120)})
     assert r.status_code == 401
 
 

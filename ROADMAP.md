@@ -213,7 +213,7 @@
 
 | milestone | status | where we are | next | work (live rows · open units) |
 |---|---|---|---|---|
-| **M6** Web app UI (Svelte SPA) and Telegram channels | 🔄 active | SPA is the only consumer; Workflow page serves the checklist and daily brief; overview shows prop equity and open trades. TELEGRAM-CHANNELS (3 channels) is in flight; UI-UPGRADE-1 queued. | Telegram channel re-plumb; fast overview, work-queue snapshot, prop uPnL, nav order (UI-UPGRADE-1). | 7 · 0 |
+| **M6** Web app UI (Svelte SPA) and Telegram channels | 🔄 active | SPA is the only consumer; Workflow page serves the checklist and daily brief; overview shows prop equity and open trades. TELEGRAM-CHANNELS (3 channels) is in flight; UI-UPGRADE-1 queued. | Telegram channel re-plumb; fast overview, work-queue snapshot, prop uPnL, nav order (UI-UPGRADE-1). | 8 · 0 |
 
 **Unmapped right now:** 0 live checklist rows and 0 open queue units carry no milestone (backfill is part of the weekly pass).
 

@@ -36,6 +36,7 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 logger = logging.getLogger(__name__)
 
 RP_NAME = "Metis Insights"
+GOOGLE_CLOCK_SKEW_SECONDS = 10
 _DEFAULT_ORIGIN = "https://benbaichmankass.github.io"
 
 
@@ -102,7 +103,10 @@ def _verify_google_token(token: str, audience: str) -> dict[str, Any]:
     from google.auth.transport import requests as g_requests
     from google.oauth2 import id_token as g_id_token
 
-    return g_id_token.verify_oauth2_token(token, g_requests.Request(), audience)
+    # 10 s skew: the library default is 0, so a VM clock slightly behind Google's
+    # would reject a fresh token as "used too early" with no visible cause.
+    return g_id_token.verify_oauth2_token(
+        token, g_requests.Request(), audience, clock_skew_in_seconds=GOOGLE_CLOCK_SKEW_SECONDS)
 
 
 class GoogleRequest(BaseModel):
