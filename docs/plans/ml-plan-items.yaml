@@ -29,9 +29,9 @@ items:
 - {id: ML-X1, track: X, title: "ml2-live-leg-corpus lever (per-trade emits for the six live legs; mfe_r baselines)", state: open, ref: ML-LEG-CORPUS, close: "ml2_bracket_train_eval --per-leg prints four baselines per quantile; RQ-20261009-900 leaves blocked/.", tier: 1}
 - {id: ML-X2, track: X, title: "TP doctrine predict-head: step 1 sharper-than-baseline, step 2 net-of-cost overlay", state: open, ref: TP-PREDICT-HEAD, close: "RQ-20261009-900 and -901 graded; head built only if both pass, else closed as 'B4 is enough'.", tier: 3}
 - {id: ML-X3, track: X, title: "Exit-head transfer to pullback (driver lever)", state: open, ref: EXIT-HEAD-PULLBACK-DRIVER, close: "RQ-20261008-901 out of blocked/ with run.workflow set.", tier: 1}
-- {id: ML-X4, track: X, title: "Exit-head shadow liveness: rows stopped 2026-10-04/05", state: open, ref: ML-EXIT-HEAD-LIVENESS, close: "Verdict no-open-leg vs emit-broken written with trade ids.", tier: 1}
+- {id: ML-X4, track: X, title: "Exit-head shadow liveness: rows stopped 2026-10-04/05", state: done, ref: ML-EXIT-HEAD-LIVENESS, close: "Verdict written 2026-10-11 with trade ids: NO emit bug. 5m + donchian heads = no scorable open leg since the last one closed; 15m head = ETH 15m leg 6400 aged past the 200-bar monitor window (entry-not-in-window guard), xrp_15m 6451 closed before 2 closed in-trade bars.", tier: 1}
 # ---- Track P: serve-parity and signal-time producers (ML-PRODUCERS milestones) ----
-- {id: ML-P0, track: P, title: "Replay-parity harness (M0)", state: open, ref: ML-PARITY-HARNESS, close: "Harness merged and reproduces the known svble funding gap in a recorded trainer run.", tier: 1}
+- {id: ML-P0, track: P, title: "Replay-parity harness (M0)", state: open, ref: ML-PARITY-HARNESS, close: "[scripts/ml/replay_parity.py merged; synthetic planted-gap test passes] still needs the recorded trainer run: harness merged and reproduces the known svble funding gap in a recorded trainer run.", tier: 1}
 - {id: ML-P1, track: P, title: "Funding producer for btc-regime-1h-lgbm-funding-svble-v1 (M1)", state: open, ref: ML-PRODUCER-FUNDING, close: "Live shadow row with all declared features non-null AND non-default.", tier: 2}
 - {id: ML-P2, track: P, title: "Flow feasibility, flow producer, retire setup-quality-lgbm-v2, conviction label gate (M2-M5)", state: open, ref: ML-PRODUCERS, close: "M2 go/stop note, M3 only if M2 passes, M4 operator decision, M5 answered by ML-D2.", tier: 2}
 # ---- Track D: data, labels, hygiene ----
@@ -67,7 +67,7 @@ plumbing:
     mes-trade-outcome-winrate-baseline-v0:      {why: "constant + silent; retire decided 2026-10-08", by: ML-STAGE-DECISIONS}
     execution-quality-baseline-v0:              {why: "constant by construction (reference denominator)", by: ML-HYGIENE}
     setup-quality-audit-baseline-v0:            {why: "constant; soft-off proposed 2026-10-04", by: ML-STAGE-DECISIONS}
-    exit-head-ict_scalp-15m-v1:                 {why: "no rows since 2026-10-04T17:00Z; cause unknown", by: ML-EXIT-HEAD-LIVENESS}
-    exit-head-ict_scalp-5m-v1:                  {why: "no rows since 2026-10-05T01:30Z; cause unknown", by: ML-EXIT-HEAD-LIVENESS}
-    exit-head-donchian-1h-v1:                   {why: "no rows since 2026-10-05T04:05Z; cause unknown", by: ML-EXIT-HEAD-LIVENESS}
-    exit-head-donchian-peak-1h-v1:              {why: "no rows since 2026-10-05T04:05Z; cause unknown", by: ML-EXIT-HEAD-LIVENESS}
+    exit-head-ict_scalp-15m-v1:                 {why: "no rows since 2026-10-04T17:00Z: leg 6400 (ETH 15m) outlived the 200-bar monitor window; no scorable open 15m leg since (ML-EXIT-HEAD-LIVENESS verdict 2026-10-11)", by: ML-EXIT-HEAD-LIVENESS}
+    exit-head-ict_scalp-5m-v1:                  {why: "no rows since 2026-10-05T01:30Z: last open 5m leg (6449 XRP) closed 01:31; none since", by: ML-EXIT-HEAD-LIVENESS}
+    exit-head-donchian-1h-v1:                   {why: "no rows since 2026-10-05T04:05Z: last open 1h donchian legs (6433 SOL, 6444 BTC) closed 04:11-04:24; the open donchian legs since are 4h (no head)", by: ML-EXIT-HEAD-LIVENESS}
+    exit-head-donchian-peak-1h-v1:              {why: "no rows since 2026-10-05T04:05Z: same cause as donchian-1h-v1 (no open 1h donchian leg)", by: ML-EXIT-HEAD-LIVENESS}

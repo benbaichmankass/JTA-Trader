@@ -290,6 +290,24 @@ def _reset_intent_emission_debounce():
     _clear()
 
 
+# UI-UPGRADE-1: /api/bot/positions and /api/bot/work/brief serve a
+# stale-while-revalidate snapshot held in module state; without a reset one
+# test's fixture DB would be served to the next.
+@pytest.fixture(autouse=True)
+def _reset_swr_snapshots():
+    def _clear() -> None:
+        for name, attr in (("src.web.api.routers.dashboard", "_POSITIONS_SWR"),
+                           ("src.web.api.routers.work", "_BRIEF_SWR")):
+            mod = sys.modules.get(name)
+            cache = getattr(mod, attr, None) if mod is not None else None
+            if cache is not None:
+                cache.clear()
+
+    _clear()
+    yield
+    _clear()
+
+
 # RESTART-SAFE: the decision-bar ledger is ON DISK by design (it must survive a
 # restart), so every test gets its own empty one — otherwise one test's decided
 # bar would read as "already evaluated by a previous process" in the next.
