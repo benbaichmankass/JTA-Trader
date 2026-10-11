@@ -67,7 +67,10 @@ PENDING_PINGS_DIR = _RUNTIME_LOGS / "pending_pings"
 PENDING_CLAUDE_PINGS_DIR = _RUNTIME_LOGS / "pending_claude_pings"
 
 VALID_PRIORITIES = ("urgent", "high", "normal", "low")
-VALID_TARGETS = ("trader", "claude")
+# TELEGRAM-CHANNELS (2026-10-11): ``system`` / ``manager`` are the channel
+# names for the same two inboxes (src/runtime/telegram_channels.py owns the
+# table). ``trader`` and ``claude`` stay valid so no producer breaks.
+VALID_TARGETS = ("trader", "claude", "system", "manager")
 
 logger = logging.getLogger("send_ping")
 
@@ -78,9 +81,9 @@ def _inbox_for(target: str) -> Path:
     ``trader`` → @bict_trading_bot's inbox (trade alerts).
     ``claude`` → @claude_ict_comms_bot's inbox (Claude session pings).
     """
-    if target == "trader":
+    if target in ("trader", "system"):
         return PENDING_PINGS_DIR
-    if target == "claude":
+    if target in ("claude", "manager"):
         return PENDING_CLAUDE_PINGS_DIR
     raise ValueError(
         f"invalid target {target!r}; must be one of {VALID_TARGETS}"
@@ -89,6 +92,7 @@ def _inbox_for(target: str) -> Path:
 
 def enqueue(
     body: str, priority: str = "normal", target: str = "trader",
+    parse_mode: Optional[str] = None,
 ) -> Path:
     """Atomically write a ping JSON file. Returns the path of the
     final (committed) file. Atomic via tmp + rename so the bot's
@@ -118,6 +122,10 @@ def enqueue(
     path = inbox / name
     tmp = path.with_suffix(".json.tmp")
     payload = {"priority": priority, "body": body}
+    if parse_mode:
+        # A self-titled HTML body (e.g. the sectioned manager update): the
+        # drainers send it with this parse_mode and WITHOUT the priority prefix.
+        payload["parse_mode"] = parse_mode
     with tmp.open("w", encoding="utf-8") as fh:
         json.dump(payload, fh, ensure_ascii=False)
     os.rename(tmp, path)

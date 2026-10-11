@@ -204,7 +204,8 @@ red_flag() {
     log "RED FLAG: ${reason} (exit ${rc}); backing off, next login attempt in ${delay}s (cap ${BACKOFF_CAP_S}s)"
     record_audit "prop-feed" "backoff_red_flag" \
         "{\"account\": \"${ACCOUNT}\", \"exit\": ${rc}, \"consecutive_failures\": ${n}, \"next_attempt_in_s\": ${delay}, \"reason\": \"${reason}\"}" >/dev/null || true
-    "${PING_PY}" "${REPO_DIR}/scripts/send_ping.py" --target claude --priority high \
+    # TELEGRAM-CHANNELS (2026-10-11): prop executor/feed red flags are SYSTEM alerts (trader bot), not manager updates.
+    "${PING_PY}" "${REPO_DIR}/scripts/send_ping.py" --target system --priority high \
         --kind state_change \
         --why "the 5-min ${ACCOUNT} account_status feed keeps failing; it is retrying on a capped backoff" \
         "[prop-feed] ${ACCOUNT} feed BACKING OFF: ${reason} (exit ${rc}, ${n} consecutive failure(s)). It keeps retrying: next login attempt in ${delay}s, backoff capped at ${BACKOFF_CAP_S}s. One-time flag; a recovery notice follows when a tick succeeds. To retry sooner: ${RESET_HINT}." \
@@ -251,7 +252,7 @@ record_success() {
         log "RECOVERED: the feed succeeded after ${BO_FAILS} consecutive failure(s) (backing off since ${BO_SINCE:-?}, flagged ${BO_FLAGGED_AT:-?})"
         record_audit "prop-feed" "recovered" \
             "{\"account\": \"${ACCOUNT}\", \"after_failures\": ${BO_FAILS}, \"since\": \"${BO_SINCE}\"}" >/dev/null || true
-        "${PING_PY}" "${REPO_DIR}/scripts/send_ping.py" --target claude --priority normal \
+        "${PING_PY}" "${REPO_DIR}/scripts/send_ping.py" --target system --priority normal \
             --kind state_change \
             --why "the ${ACCOUNT} account_status feed is posting again" \
             "[prop-feed] ${ACCOUNT} feed RECOVERED: account_status posted after ${BO_FAILS} consecutive failure(s) (backing off since ${BO_SINCE:-?})." \
@@ -335,7 +336,7 @@ for tfile in "${STATE_DIR}"/ticks-*; do
         log "UTC day ${d} ended with $(cat "${tfile}") tick(s) and ZERO reused sessions"
         record_audit "prop-feed" "no_reuse_day" \
             "{\"account\": \"${ACCOUNT}\", \"day_utc\": \"${d}\", \"ticks\": $(cat "${tfile}" 2>/dev/null || echo 0)}" >/dev/null || true
-        "${PING_PY}" "${REPO_DIR}/scripts/send_ping.py" --target claude --priority normal \
+        "${PING_PY}" "${REPO_DIR}/scripts/send_ping.py" --target system --priority normal \
             --kind state_change \
             --why "session reuse may not be working: no tick that day reused a saved session" \
             "[prop-feed] ${ACCOUNT}: UTC day ${d} had ticks but no reused session. One-time notice; the ${MAX_RELOGINS}/day relogin ceiling still applies." \
@@ -405,7 +406,7 @@ case "${layout_line}" in
             log "LAYOUT: ${layout_line} (first tick missing; pinging once)"
             record_audit "prop-feed" "layout_watchlist_missing" \
                 "{\"account\": \"${ACCOUNT}\"}" >/dev/null || true
-            "${PING_PY}" "${REPO_DIR}/scripts/send_ping.py" --target claude --priority high \
+            "${PING_PY}" "${REPO_DIR}/scripts/send_ping.py" --target system --priority high \
                 --kind state_change \
                 --why "the terminal layout lost its watchlist; no ticket can open until it is back" \
                 "[prop-feed] ${ACCOUNT}: the watchlist widget is MISSING from the terminal (no Symbol/Bid/Ask table). Ticket openers have nothing to act on. Fix: breakout-login-check account: ${ACCOUNT} apply: add-watchlist-widget." \

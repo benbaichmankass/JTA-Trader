@@ -15,6 +15,24 @@ boundary between the two is described here.
 
 ---
 
+## 0. Three channels, one purpose each (TELEGRAM-CHANNELS, 2026-10-11) — supersedes §1
+
+⚠️ §1 below is the 2026-05 two-bot model and is **superseded** for routing.
+The field is `src/runtime/telegram_channels.py` (`EVENT_CHANNEL` maps every
+event kind to one channel; `SENDERS` maps every file that sends;
+`tests/test_telegram_channels.py` fails on an unmapped sender). Operator spec
+2026-10-09, reprioritised 2026-10-11 as operational stability:
+
+| Channel | Bot (token resolution: `src/bot/telegram_routes.py`) | Carries |
+|---|---|---|
+| **TRADES** | ex-PROP bot — `TELEGRAM_PROP_TRADE_BOT` (→ legacy prop names → trader bot) | trade OPENED / CLOSED / UPDATED, all accounts; prop fills + open-position updates. **No prop ticket prompts** (retired). |
+| **SYSTEM** | trader bot — `TELEGRAM_BOT_TOKEN` | hourly system update, restarts, deploy failures, every alert / watchdog, NO-HALT red flags, per-trade refusals (Prime Directive rule 4). |
+| **MANAGER** | Claude bot — `TELEGRAM_CLAUDE_BOT_SECRET` (→ trader bot) | hourly manager update (sectioned, incl. RESEARCH QUEUE), PR merges, decisions, session + system-action outcomes. |
+
+An unknown kind routes to SYSTEM; a channel that cannot deliver falls back to
+SYSTEM; a failed TRADES/MANAGER send is retried on SYSTEM prefixed
+`[meant for …]`. Alert kinds can never be retired or muted.
+
 ## 1. Two bots, two jobs
 
 | Bot | Token | Service | Job |
