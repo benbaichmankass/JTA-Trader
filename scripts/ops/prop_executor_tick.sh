@@ -127,7 +127,8 @@ if [ "${n_alerts:-0}" -gt 0 ]; then
     first="$(grep -m1 '^{"alert"' "${OUT}" | head -c 300)"
     record_audit "prop-executor" "alert" \
         "{\"account\": \"${ACCOUNT}\", \"alerts\": ${n_alerts}, \"exit\": ${rc}}" >/dev/null || true
-    "${PING_PY}" "${REPO_DIR}/scripts/send_ping.py" --target claude --priority high \
+    # TELEGRAM-CHANNELS (2026-10-11): prop executor/feed red flags are SYSTEM alerts (trader bot), not manager updates.
+    "${PING_PY}" "${REPO_DIR}/scripts/send_ping.py" --target system --priority high \
         --kind state_change --why "the ${ACCOUNT} prop executor raised ${n_alerts} alert(s)" \
         "[prop-executor] ${ACCOUNT}: ${n_alerts} alert(s), exit ${rc}. First: ${first}" \
         >/dev/null 2>&1 || log "ping enqueue failed (audit record still written)"

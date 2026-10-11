@@ -506,10 +506,11 @@ def _send_alert(message: str) -> None:
     same shape ``silent_refusal_alert`` uses, so this lands beside its siblings
     rather than inventing a second alert style for one class."""
     try:
-        from src.prop.breakout_notify import _prop_bot_token
-        from src.runtime.notify import send_telegram_direct
-        send_telegram_direct(message, parse_mode=None, mirror_to_fcm=False,
-                             bot_token=_prop_bot_token())
+        # TELEGRAM-CHANNELS (2026-10-11): an alert -> SYSTEM, not the TRADES
+        # (ex-prop) bot, which now carries only trade lifecycle events.
+        from src.runtime import telegram_channels
+        telegram_channels.send("prop_alert", message, parse_mode=None,
+                               mirror_to_fcm=False)
     except Exception as exc:  # noqa: BLE001
         logger.warning("prop_fills_staleness: telegram send failed: %s", exc)
     try:

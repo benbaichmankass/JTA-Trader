@@ -782,7 +782,8 @@ def enqueue_demo_trade_notification(
             f"Symbol: {symbol} | Side: {side} | Qty: {qty_str}\n"
             f"Detail: {detail}"
         )[:1024]
-        payload = {"priority": priority, "body": body}
+        payload = {"priority": priority, "body": body,
+                   "kind": "demotrade", "channel": _channel_for("demotrade")}
         PENDING_PINGS_DIR.mkdir(parents=True, exist_ok=True)
         name = f"{int(uuid.uuid4().int % 10**12):012d}-demotrade.json"
         path = PENDING_PINGS_DIR / name
@@ -1324,10 +1325,23 @@ def _fmt_signed(value: object) -> str:
     return f"{'-' if v < 0 else '+'}${abs(v):,.2f}"
 
 
+def _channel_for(kind: str) -> str:
+    """The channel the drainer should deliver *kind* to (TELEGRAM-CHANNELS).
+    Every other enqueue here carries no ``channel`` and drains to SYSTEM, the
+    trader bot, exactly as before."""
+    try:
+        from src.runtime.telegram_channels import channel_for
+
+        return channel_for(kind)
+    except Exception:  # noqa: BLE001 — routing must never break an enqueue
+        return "system"
+
+
 def _enqueue_html_ping(body_html: str, *, kind: str, priority: str) -> Optional[Path]:
     """Atomically enqueue a self-titled HTML ping to the trader inbox."""
     try:
-        payload = {"priority": priority, "body": body_html, "parse_mode": "HTML"}
+        payload = {"priority": priority, "body": body_html, "parse_mode": "HTML",
+                   "kind": kind, "channel": _channel_for(kind)}
         PENDING_PINGS_DIR.mkdir(parents=True, exist_ok=True)
         name = f"{int(uuid.uuid4().int % 10**12):012d}-{kind}.json"
         path = PENDING_PINGS_DIR / name

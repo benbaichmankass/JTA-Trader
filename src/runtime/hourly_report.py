@@ -1045,7 +1045,10 @@ def render_combined_report(report: Dict[str, Any]) -> str:
     in one Telegram message (the verbose tail is collapsed in expandable
     blockquotes and truncated last if the hour is unusually noisy).
     """
-    from src.units.ui.telegram_format import render_html
+    # TELEGRAM-CHANNELS (2026-10-11): FITTED — a noisy hour trims section
+    # bodies with an explicit "N more line(s) not shown" count instead of
+    # cutting whole trailing sections (the accounts half) off the message.
+    from src.units.ui.telegram_format import render_html_fitted as render_html
 
     now: datetime = report["now_utc"]
     health = report["health"]
