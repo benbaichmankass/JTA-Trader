@@ -68,7 +68,10 @@ paragraph exists; the mechanism changed, the obligation did not.)
 9. **Run the ML plan loop** — plan vs measured progress, plumbing
    validation, new ideas, roadmap + work-queue write-back (§ "The ML plan
    loop"). **Weekly, every run.** This is the step that keeps the ML build
-   from getting a burst of work only when someone remembers.
+   from getting a burst of work only when someone remembers. It includes the
+   **frontier scan** (`frontier-research` skill: outside models/methods →
+   pre-registered units, plus `ml_plan_status.py --diversity`) — operator,
+   2026-10-11: the mandate is *better models*, not variations of the first good one.
 10. **Emit the response JSON** + **post a one-line update to the Claude
    channel** (§ "Output" + § "Posting to the Claude channel").
 
@@ -522,7 +525,13 @@ the observation that closes it) · `scripts/ops/ml_plan_status.py` (the checker)
    head pair training to identical metrics, a unit that passed on one stratum), (b) the plan's
    "what would change this plan" list, (c) a bounded outside-in look (a technique or information
    class the registry has never tried: label sources, cross-asset or breadth features, consensus
-   across heads, non-price information). Each idea becomes a `research/queue/` unit with a
+   across heads, non-price information), and (d) **the frontier scan** — read the previous
+   `frontier` block, run `python3 scripts/ops/ml_plan_status.py --diversity`, and run the weekly
+   scan of outside models/methods per `.claude/skills/frontier-research/SKILL.md` (the manager
+   dispatches it as its own `FRONTIER-SCAN-<date>` lane the same day; if that lane has not run,
+   run Steps 0–5 of the skill here). A `CONCENTRATION` or `FAIL-STREAK` finding is resolved in the
+   run like any plan flag: re-point capacity to an untested family or retire the line by its
+   registered exhaustion rule — never queue another variation of a crowded family. Each idea becomes a `research/queue/` unit with a
    decision rule registered **before** the run (see `perf-followup` § "Filing a queue unit"), or —
    if its instrument is missing — a checklist row for the lever plus the unit in
    `research/queue/blocked/` naming it. A new hand-written unit holds for a human merge (E57);
@@ -535,7 +544,8 @@ the observation that closes it) · `scripts/ops/ml_plan_status.py` (the checker)
 6. **Record.** Write `comms/ml-plan/<stamp>.json`:
    `{"run": "<session>", "finished_at": "...", "plan_items": N, "open": N, "flags": [...],
    "plumbing_findings": [...], "results_read": [{"unit": "...", "verdict": "...", "plan_item": "..."}],
-   "ideas": [{"id": "RQ-…|row", "source": "a|b|c", "rule_registered": true}] or "none: <because>",
+   "ideas": [{"id": "RQ-…|row", "source": "a|b|c|d", "rule_registered": true}] or "none: <because>",
+   "frontier": {…the block defined in the frontier-research skill § "The run record"…},
    "writebacks": ["ROADMAP.md", "ml-plan-items.yaml", ...], "rows_filed": [], "units_filed": [],
    "next_by_value_per_cost": ["…"], "handoff": ["…"]}`
    and cite its path in the response JSON's `sources` and in the ping.

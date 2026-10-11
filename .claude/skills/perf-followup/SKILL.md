@@ -137,7 +137,15 @@ is dropped), `population`, `confidence ∈ measured | suggestive | anecdote`, an
    file it as a Stage-0 unit under theme `new_strategy_prop`, citing the lesson id. A
    new-strategy hypothesis is a *question*; building it is a separate row filed only if
    the unit passes.
-3. **Structural:** if the lesson is a tooling/methodology gap affecting several legs, file
+3. **Frontier (strategies, weekly):** don't only extrapolate from our own trades — run the
+   strategy half of `.claude/skills/frontier-research/SKILL.md` § "Strategy frontier": scan
+   quant literature, open-source quant repos and new market-structure research for a mechanism
+   with an economic reason to exist, diff it against `config/strategies.yaml`'s gaps, and file
+   ≤ 3 Stage-0 units per week by the same rule (existing harness whose cost stack is complete,
+   else a lever row; placebo/shared-beta control where the mechanism could be plain beta).
+   The 2026-10-11 first scan is the worked example (`docs/research/frontier-scan-2026-10-11.md`
+   § 5). Operator, 2026-10-11: same mandate as ML — don't keep the first good thing.
+4. **Structural:** if the lesson is a tooling/methodology gap affecting several legs, file
    the tooling fix as a checklist row (the "pattern of demote proposals is the tell"
    rule in performance-review).
 
