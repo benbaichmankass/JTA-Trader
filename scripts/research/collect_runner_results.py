@@ -60,8 +60,12 @@ sys.path.insert(0, str(_REPO))
 
 WORKFLOW = "research-script-run.yml"
 WORKFLOW_NAME = "research-script-run"
+#: ML-RQ-RUNNER (2026-10-11): the trainer-side twin lands through this SAME collector. Its artifact is
+#: named research-script-run-trainer-<unit>-<run_id>; the E5 record's `--workflow` is the run's own name.
+TRAINER_WORKFLOW = "research-script-run-trainer.yml"
+COLLECTED_WORKFLOWS = (WORKFLOW, TRAINER_WORKFLOW)
 RECORD_INPUTS = "record-inputs.json"
-_ARTIFACT_RE = re.compile(r"^research-script-run-(RQ-\d{8}-(?:\d{3}|[0-9a-f]{4}-\d{2}))-(\d+)$")
+_ARTIFACT_RE = re.compile(r"^research-script-run(?:-trainer)?-(RQ-\d{8}-(?:\d{3}|[0-9a-f]{4}-\d{2}))-(\d+)$")
 _EMIT_FIELDS = ("research_unit", "power_state", "decision_rule_id", "decision_rule_registered_at",
                 "verdict", "read_state", "population", "n", "tool", "measurement_file",
                 "records_file", "artifact_store", "artifact_locator", "note")
@@ -76,15 +80,24 @@ def _gh(args: List[str], *, timeout: int = 120) -> Optional[str]:
 
 
 def completed_runs(limit: int = 100) -> Optional[List[Dict[str, Any]]]:
-    out = _gh(["run", "list", "--workflow", WORKFLOW, "--status", "completed", "--limit", str(limit),
-               "--json", "databaseId,conclusion,headSha,createdAt,url"])
-    if out is None:
-        return None
-    try:
-        rows = json.loads(out or "[]")
-    except ValueError:
-        return None
-    return rows if isinstance(rows, list) else None
+    """Completed runs of every collected workflow, each tagged with its `_workflow_name`. Any one listing
+    failing is `None` (could not look) — never a partial list passed off as the whole population."""
+    merged: List[Dict[str, Any]] = []
+    for wf in COLLECTED_WORKFLOWS:
+        out = _gh(["run", "list", "--workflow", wf, "--status", "completed", "--limit", str(limit),
+                   "--json", "databaseId,conclusion,headSha,createdAt,url"])
+        if out is None:
+            return None
+        try:
+            rows = json.loads(out or "[]")
+        except ValueError:
+            return None
+        if not isinstance(rows, list):
+            return None
+        for r in rows:
+            r["_workflow_name"] = wf[:-len(".yml")]
+        merged.extend(rows)
+    return merged
 
 
 def run_artifacts(repo_slug: str, run_id: int) -> Optional[List[Dict[str, Any]]]:
@@ -120,7 +133,7 @@ def emit_record(root: Path, rec: Dict[str, Any], *, run: Dict[str, Any], repo_sl
     """Write the E5 record through research_result.py; returns its repo path."""
     run_id = str(run["databaseId"])
     cmd = [sys.executable, str(root / "scripts/research/research_result.py"), "--emit",
-           "--workflow", WORKFLOW_NAME, "--run-id", run_id, "--run-attempt", "1",
+           "--workflow", str(run.get("_workflow_name") or WORKFLOW_NAME), "--run-id", run_id, "--run-attempt", "1",
            "--run-url", str(run.get("url") or f"https://github.com/{repo_slug}/actions/runs/{run_id}"),
            "--commit-sha", str(run.get("headSha") or "")]
     for k in _EMIT_FIELDS:
@@ -174,7 +187,7 @@ def collect(root: Path, *, repo_slug: str, runs: Optional[List[Dict[str, Any]]] 
                 hit = (a, m.group(1))
                 break
         if hit is None:
-            out["skipped"].append({"run_id": run_id, "why": "no research-script-run artifact (not a unit run)"})
+            out["skipped"].append({"run_id": run_id, "why": "no research-script-run[-trainer] artifact (not a unit run)"})
             continue
         art, unit = hit
         dest = root / "comms" / "research" / unit / str(run_id)
@@ -294,6 +307,12 @@ def _self_test() -> int:
         # nothing to collect at all is a clean cycle
         res5 = collect(root, repo_slug="o/r", runs=runs2[:1], artifacts_for=arts2, downloader=lambda *a: False)
         assert not (res5["lost"] or res5["unreadable"] or res5["read_error"] or res5["landed"]), res5
+    # ML-RQ-RUNNER: the trainer twin's artifact name resolves to the same (unit, run id) pair
+    m = _ARTIFACT_RE.match("research-script-run-trainer-RQ-20261011-9da8-01-123456")
+    assert m and m.group(1) == "RQ-20261011-9da8-01" and m.group(2) == "123456", m
+    m = _ARTIFACT_RE.match("research-script-run-RQ-20261011-9da8-01-123456")
+    assert m and m.group(1) == "RQ-20261011-9da8-01", m
+    assert _ARTIFACT_RE.match("research-script-runner-RQ-20261011-001-1") is None
     print("collect_runner_results self-test OK")
     return 0
 
