@@ -1,5 +1,5 @@
 {
-  "as_of": "2026-10-11T04:22:51.600148+00:00",
+  "as_of": "2026-10-11T06:13:39.448479+00:00",
   "by_disposition": {
     "healthy": 0,
     "insufficient-data": 18,
@@ -28,24 +28,24 @@
         "why": "entry n=22, exit n=6; need >= 10 each"
       },
       "disposition": "insufficient-data",
-      "eta": "next scheduled run",
+      "eta": "re-check next scheduled pass",
       "execution": "live",
       "mechanics": {
         "account_class": "paper",
         "account_id": "bybit_1",
         "has_open_position": true,
         "held_back": 0,
-        "intent_episodes": null,
-        "intents": null,
+        "intent_episodes": 38,
+        "intents": 308,
         "received": 4,
         "same_symbol_live_contenders": [],
-        "state": "unreadable",
+        "state": "flowing",
         "strategy": "ada_pullback_2h",
         "unmapped": null,
         "unmapped_statuses": []
       },
-      "n_needed": null,
-      "reason": "mechanics read_state=unreadable (could not query intents and/or received source this run) \u2014 we did not look, not 'nothing happened'",
+      "n_needed": "needs 0 more entry fill(s) and 4 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=22, exit=6); no fill-rate basis to date an ETA from this run alone \u2014 re-check next scheduled pass",
+      "reason": "flowing; cost fidelity insufficient_n (entry n=22, exit n=6; need >= 10 each)",
       "strategy": "ada_pullback_2h"
     },
     {
@@ -177,7 +177,7 @@
         "has_open_position": true,
         "held_back": 0,
         "intent_episodes": 21,
-        "intents": 319,
+        "intents": 365,
         "received": 2,
         "same_symbol_live_contenders": [
           "trend_donchian_xrp_4h"
