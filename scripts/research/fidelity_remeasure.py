@@ -102,7 +102,7 @@ def measure(leg: str, cfg: Dict[str, Any], record: Dict[str, Any], out: Path) ->
     try:
         rdm._fetch_csv(feed, FETCH_DAYS, csv)
         row["bars"] = _trim(csv, start, end)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001  # allow-silent: not silent — the leg grades read_state=no_data with the exception text, never pass/fail
         row.update(verdict="indeterminate", read_state="no_data",
                    note=f"fetch failed: {type(e).__name__}: {e}")
         return row
