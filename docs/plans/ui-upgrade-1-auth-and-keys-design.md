@@ -116,9 +116,11 @@ issues a long-lived, revocable, per-device session; every route requires it.**
   consumer that builds its URL from a variable in another file, or a caller
   outside this repo (a laptop `curl`, a bookmark, another repo's workflow),
   would be missed. **24 h of real traffic is the completeness check, and ⚠️ MEASURED
-  2026-10-11: `deploy/caddy/Caddyfile` has no `log` directive, so there is NO
-  Caddy access log to read today** (uvicorn's access lines go to the journal,
-  whose retention is ~30 min). It needs a Tier-2 Caddyfile change first. Filed as
+  2026-10-11: `deploy/caddy/Caddyfile` (the repo copy; the file says the VM copy is
+  overwritten from it, but the VM copy was NOT read this session) has no `log`
+  directive, so there is probably NO Caddy access log to read today** (uvicorn's
+  access lines go to the journal, whose retention `docs/reference/env-vars.md`
+  records as ~30 min — not re-measured here). It needs a Tier-2 Caddyfile change first. Filed as
   pipeline row `PI-20261011-CFUJ7YFR-0001` (`due_when` + `origin.rerun`); do not
   flip `SITE_AUTH_ENFORCE` before it reports. The bearer retrofit into the 26
   anonymous groups is `PI-20261011-CFUJ7YFR-0002`.
