@@ -1554,9 +1554,10 @@ EXIT_CELL_MANDATE_ID = "MD-SOAK-EXIT-CELL-PATHB"
 BRACKET_CORPUS_REL = "docs/research/e35-bracket-corpus.jsonl"
 #: The corpus `family` -> harness map that carries a venue-aware slippage
 #: resolution (docs/research/d1-cost-stack-verification-2026-09-25.md). Anything
-#: else -- and above all the four families that lack a full stack
-#: (backtest_orb.py, src/backtest/backtester.py, backtest_xsec_momentum.py,
-#: backtest_vol_target.py), none of which is reachable from a bracket-corpus
+#: else -- and above all the families that lack a full stack
+#: (backtest_orb.py, src/backtest/backtester.py; xsec_momentum and vol_target
+#: were wired 2026-10-11 but are still not bracket-corpus families), none of
+#: which is reachable from a bracket-corpus
 #: family today -- is REFUSEd, so a harness added later starts OUT of scope.
 EXIT_CELL_COST_COMPLETE_FAMILIES = frozenset({"pullback", "donchian"})
 PATHB_VERDICT = "path_b_wf_pass"
