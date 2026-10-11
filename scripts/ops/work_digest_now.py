@@ -281,6 +281,25 @@ def _research_prepare():
         return {"error": f"{type(exc).__name__}: {exc}"}, None
 
 
+def route_attention(prep: dict) -> tuple[str, str, str]:
+    """Split the attention pass's messages by WHO acts (operator, 2026-10-11):
+    ``Needs you`` holds ONLY genuine operator decisions (❓ ask_operator);
+    research units needing a read (🔎 needs_review) are research-ops' job and
+    ride the research section; everything else (soaks, blocker-watch, silence
+    alarms, the daily summary) is the manager's and rides "Manager watch".
+    Returns ``(needs_you, research_ops, watch)``."""
+    msgs = prep.get("msgs")
+    if msgs is None:   # an older prepare() without the split: keep its block
+        return str(prep.get("block") or "—"), "", ""
+    ask = [m for m in msgs if m.startswith("❓")]
+    rops = [m for m in msgs if m.startswith("🔎")]
+    rest = [m for m in msgs if not m.startswith(("❓", "🔎"))]
+    n_open = (prep.get("receipt") or {}).get("ask_operator_open")
+    tail = f"open ask_operator items: {'—' if n_open is None else n_open} (GET /api/bot/work/report)"
+    needs = ("\n".join(ask) + "\n" + tail) if ask else f"🟢 No new decisions for you · {tail}"
+    return needs, "\n".join(rops), "\n\n".join(rest)
+
+
 def compose_update(hour: str, prep: dict, work_text: str, digest: dict,
                    research: dict | None, work: dict | None = None) -> str:
     """The MANAGER channel's regular status update — operator 2026-10-11:
@@ -291,8 +310,8 @@ def compose_update(hour: str, prep: dict, work_text: str, digest: dict,
     from scripts.ops import research_digest  # noqa: PLC0415
     from src.units.ui.telegram_format import Section, render_html_fitted  # noqa: PLC0415
 
-    block = str(prep.get("block") or "")
-    attention_line = (block.splitlines() or ["—"])[0][:200]
+    needs, research_ops, watch = route_attention(prep)
+    attention_line = (needs.splitlines() or ["—"])[0][:200]
     if research is None or "error" in (research or {}):
         r_head = "🔬 research: ⛔ section FAILED to build — queue NOT checked"
         r_body = ("⛔ The research-queue section failed to build "
@@ -317,12 +336,17 @@ def compose_update(hour: str, prep: dict, work_text: str, digest: dict,
                   f"(state {digest.get('digestState') or '—'}) follows:\n" + work_text)
     header = "\n".join([f"🧭 Manager update · {hour[:10]} {hour[11:13]}:00Z",
                         attention_line, f"{r_head} · {w_head}"])
+    if research_ops:
+        r_body = (r_body + "\n\n🔎 For research-ops (not you):\n" + research_ops).strip()
     sections = [
-        Section(summary="Needs you — attention", body=block, priority=10),
+        Section(summary="Needs you — decisions only", body=needs, priority=10),
         Section(summary="Research queue — new since last update", body=r_body, priority=20),
         Section(summary="Work — done · verified · blocked · didn't work · next",
                 body=w_body, priority=30),
     ]
+    if watch:
+        sections.append(Section(summary="Manager watch — FYI, the manager acts on these",
+                                body=watch, priority=40))
     return render_html_fitted(header=header, sections=sections)
 
 

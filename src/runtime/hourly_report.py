@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -1180,10 +1181,64 @@ def deploy_and_alerts(since: datetime, now: datetime) -> Dict[str, Any]:
     except OSError:
         pass
     try:
-        from scripts.ops.work_digest import render_standing_wedges, standing_wedges
-        out["wedges_lines"] = render_standing_wedges(standing_wedges(), now)
+        from scripts.ops.work_digest import standing_wedges
+        out["wedges_lines"] = wedge_lines(standing_wedges(), now, _decided_wedges())
     except Exception:  # noqa: BLE001  # allow-silent: None renders as "could not look"
         pass
+    return out
+
+
+def _decided_wedges() -> List[Dict[str, Any]]:
+    """Closed pipeline items about a close wedge (state done/killed with a
+    terminal_reason) — the operator's recorded decisions. [] when unreadable."""
+    try:
+        from scripts.ops import pipeline
+        res = pipeline.load()
+        items = res.items.values() if isinstance(res.items, dict) else res.items
+    except Exception:  # noqa: BLE001  # allow-silent: no decisions known -> rows render undecided (the louder side)
+        return []
+    out = []
+    for i in items:
+        if i.get("state") not in ("done", "killed") or not i.get("terminal_reason"):
+            continue
+        # Only an OPERATOR's decision counts: the item asked the operator, or
+        # its terminal_reason records one.
+        if not (i.get("next_action") == "ask_operator"
+                or "operator decision" in str(i["terminal_reason"]).lower()):
+            continue
+        text = f"{i.get('what') or ''} {(i.get('origin') or {}).get('ref') or ''}"
+        if "wedge" in text.lower() or "zombie oco" in text.lower():
+            out.append({"id": i.get("id"), "text": text, "reason": i["terminal_reason"]})
+    return out
+
+
+def wedge_lines(sw: Dict[str, Any], now: datetime,
+                decided: List[Dict[str, Any]]) -> List[str]:
+    """The standing-wedge block for the SYSTEM health check. Non-``read`` states
+    use the digest's own wording; a wedge the operator ALREADY decided renders
+    as decided (with the decision's id), never as an operator ask
+    (operator feedback 2026-10-11 on the first live manager update)."""
+    from scripts.ops.work_digest import _age_days, render_standing_wedges
+
+    rows = sw.get("wedges") or []
+    if sw.get("wedgeState") != "read" or not rows:
+        return render_standing_wedges(sw, now)
+    open_rows, out = [], [f"🧱 Standing close wedges: {len(rows)} (ledger: {sw.get('source')})"]
+    for w in rows:
+        acct, sym = str(w.get("account") or ""), str(w.get("symbol") or "")
+        hit = next((d for d in decided if acct and sym and acct in d["text"]
+                    and re.search(rf"\b{re.escape(sym)}\b", d["text"])), None)
+        head = (f"  • {acct or '—'}/{sym or '—'} {w.get('side') or '—'} · standing "
+                f"{_age_days(w.get('first_seen'), now)}")
+        if hit:
+            out.append(f"{head} · DECIDED ({hit['id']}): {str(hit['reason'])[:140]}"
+                       " — kept open, flagged, excluded from evidence; no action needed")
+        else:
+            open_rows.append(w)
+            out.append(f"{head} · {str(w.get('detail') or w.get('evidence') or '')[:140]}")
+    if open_rows:
+        out.append(f"  {len(open_rows)} undecided — need OPERATOR or VENUE action; the bot has "
+                   "no lever (raised in MANAGER as a decision when filed ask_operator).")
     return out
 
 

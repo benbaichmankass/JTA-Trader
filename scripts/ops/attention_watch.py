@@ -803,7 +803,10 @@ def prepare(dry_run: bool = False, digest_now: bool = False) -> dict:
                             "alarms_breached": sorted(k for k, p in v["probes"].items()
                                                       if p["status"] == BREACHED)}}
     return {"block": block, "priority": pri, "state": new_state,
-            "receipt": receipt, "log": log_entry, "dry_run": dry_run}
+            "receipt": receipt, "log": log_entry, "dry_run": dry_run,
+            # TELEGRAM-CHANNELS: the planned messages, so the manager update can
+            # route each to its section (only ❓ asks are "Needs you").
+            "msgs": [b for _, b in msgs]}
 
 
 def commit(prep: dict, outcome: str) -> None:
