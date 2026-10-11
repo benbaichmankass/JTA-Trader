@@ -204,14 +204,13 @@ def render(spec: dict, built: dict) -> str:
         for m in spec["milestones"]:
             if m["goal"] != gid:
                 continue
-            p = built["per"][m["id"]]
             # no counts here: they drift with every queue PR (see roadmap-guard-stale); --report has them
             work = f"**none yet** — {m.get('no_rows_reason', '')}" if m.get("no_rows_reason") else "—"
             L.append(f"| **{m['id']}** {m['name']} | {GLYPH[m['status']]} {m['status']} | "
                      f"{_cell(m['where'])} | {_cell(m['next'])} | {_cell(work)} |")
         L.append("")
-    L += ["**Unmapped work** (live rows / open units with no milestone) is counted live by "
-          "`python3 scripts/ops/roadmap_map.py --report`; backfill is part of the weekly pass.", "", END]
+    L += [("**Unmapped work** (live rows / open units with no milestone) is counted live by "
+           "`python3 scripts/ops/roadmap_map.py --report`; backfill is part of the weekly pass."), "", END]
     return "\n".join(L)
 
 
