@@ -351,6 +351,17 @@ GUARDS: List[Dict[str, Any]] = [
                   ["python3", "scripts/ci/check_checklist_readers.py"]],
     },
     {
+        # ROADMAP-LOOP (operator, 2026-10-11): milestone <-> checklist row <-> queue unit is a FIELD
+        # (`roadmap`), closing rows carry `writeback`, and the ROADMAP.md live block is generated.
+        # Whole-store checks always; enforcement on rows/units the DIFF touches only.
+        "name": "roadmap-map-guard",
+        "when": {"globs": ["docs/roadmap/**", "ROADMAP.md", "docs/claude/work/checklist/**",
+                            "research/queue/**", "scripts/ops/roadmap_map.py",
+                            "docs/ARCHITECTURE-CANONICAL.md"]},
+        "steps": [["python3", "scripts/ops/roadmap_map.py", "--self-test"],
+                  ["python3", "scripts/ops/roadmap_map.py", "--check", "--base", "origin/main"]],
+    },
+    {
         # PI-20261005-4GA8WQPA-0002 (the lapse wave): a pipeline item whose
         # next-due date moves LATER with its state unchanged must carry a
         # `redate` block holding a NEW observation. Diff-scoped.
