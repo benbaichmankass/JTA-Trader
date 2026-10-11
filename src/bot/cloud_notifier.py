@@ -287,14 +287,22 @@ async def _drain_one_ping_dir(context, chat_id: str, pings_dir: str,
                 pass
             continue
 
-        try:
-            await (bot or context.bot).send_message(
-                chat_id=chat_id, text=text,
-                parse_mode=parse_mode,
-                disable_web_page_preview=True,
-            )
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("ping inbox: send failed for %s — %s", name, exc)
+        # TELEGRAM-CHANNELS (2026-10-11): split an oversized body into <=4096
+        # parts delivered in order (resume after a partial failure); a repeated
+        # non-length 4xx -> .broken + ONE red flag on SYSTEM. Before this a
+        # too-long ping failed here every 5 s forever ("Message is too long").
+        from src.runtime import telegram_split
+
+        sender = bot or context.bot
+
+        async def _send(part: str) -> bool:
+            await sender.send_message(chat_id=chat_id, text=part, parse_mode=parse_mode,
+                                      disable_web_page_preview=True)
+            return True
+
+        outcome = await telegram_split.process_ping_async(
+            path, payload, text, parse_mode, _send, where=f"ping inbox {pings_dir}")
+        if outcome != "sent":
             continue
 
         try:
@@ -324,9 +332,17 @@ async def _deliver_via_channel(payload: dict, text: str, parse_mode, name: str) 
         route = _tc.channel_route(channel)
         if not (route.deliverable and route.isolated):
             return False  # the channel IS this bot today — deliver normally
-        return bool(await asyncio.to_thread(
-            send_telegram_direct, text, parse_mode=parse_mode, mirror_to_fcm=False,
-            bot_token=route.token, chat_id=route.chat_id))
+        from src.runtime.telegram_split import split_message
+
+        # Oversized bodies are split (TELEGRAM-CHANNELS 2026-10-11). Partial
+        # delivery here falls through to the SYSTEM bot, which may repeat the
+        # parts already sent — a duplicate, never a loss.
+        for part in split_message(text, parse_mode):
+            if not await asyncio.to_thread(
+                    send_telegram_direct, part, parse_mode=parse_mode, mirror_to_fcm=False,
+                    bot_token=route.token, chat_id=route.chat_id):
+                return False
+        return True
     except Exception as exc:  # noqa: BLE001
         logger.warning("ping inbox: %s channel send failed for %s (%s) — delivering "
                        "on the SYSTEM bot instead", channel, name, type(exc).__name__)

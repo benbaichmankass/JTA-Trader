@@ -158,7 +158,7 @@
 
 | milestone | status | where we are | next | work (live rows · open units) |
 |---|---|---|---|---|
-| **L-PROP** Prop accounts -- automate, protect, qualify | 🔄 active | Three prop accounts execute automatically (breakout_2 via the phone executor, tradeify_1 and velotrade_1 via DXtrade REST); ~30 'Stage-0 breadth for the prop book' units are queued. Open: per-leg sizing (PROP-PER-LEG-SIZING, PROP-PER-LEG-EV-GRID), the exit-price gap on venue SL/TP closes (PROP-EXIT-READ), ticket supersede/reissue (in flight), Tradeify other platforms. | Get the first prop closes gradable (PROP-EXIT-READ); then read the breadth units into a candidate pool; keep the EV question (B6) ahead of drawdown avoidance. | 35 · 38 |
+| **L-PROP** Prop accounts -- automate, protect, qualify | 🔄 active | Three prop accounts execute automatically (breakout_2 via the phone executor, tradeify_1 and velotrade_1 via DXtrade REST); ~30 'Stage-0 breadth for the prop book' units are queued. Open: per-leg sizing (PROP-PER-LEG-SIZING, PROP-PER-LEG-EV-GRID), the exit-price gap on venue SL/TP closes (PROP-EXIT-READ), ticket supersede/reissue (in flight), Tradeify other platforms. | Get the first prop closes gradable (PROP-EXIT-READ); then read the breadth units into a candidate pool; keep the EV question (B6) ahead of drawdown avoidance. | 35 · 46 |
 
 ### G3 — Trustworthy plumbing
 
@@ -167,7 +167,7 @@
 
 | milestone | status | where we are | next | work (live rows · open units) |
 |---|---|---|---|---|
-| **M39** Measurement integrity and invariant enforcement | 🔄 active | The audit findings (FIX-CA-*, FIX-SA-*, PROTECTION-HARDENING, RECON*, GATE-SCOPE, RESTART-SAFE, LIVE-PARITY) are mostly merged and waiting on observation (landed_unproven). E53 had already noted this work lands as rows that never name M39. | Drive each landed_unproven row to its named observation or close it; do not add new guards without a measured failure. | 34 · 0 |
+| **M39** Measurement integrity and invariant enforcement | 🔄 active | The audit findings (FIX-CA-*, FIX-SA-*, PROTECTION-HARDENING, RECON*, GATE-SCOPE, RESTART-SAFE, LIVE-PARITY) are mostly merged and waiting on observation (landed_unproven). E53 had already noted this work lands as rows that never name M39. | Drive each landed_unproven row to its named observation or close it; do not add new guards without a measured failure. | 35 · 0 |
 | **M31** Position telemetry (peak-R between entry and exit) | 📋 dormant | Hook observed working on the live fleet 2026-09-07; peak_r sentinel data clean 2026-09-12; offline MFE distribution at stated n 2026-09-18 (E53). Feeds the TP/trail work under M20. | Consumed by M20 trail-decay and TP-prediction units; no separate build open. | **none yet** — telemetry shipped and observed; consumers are M20 rows |
 
 ### G4 — AI trader (ML and regime knowledge)
