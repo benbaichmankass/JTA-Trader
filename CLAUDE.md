@@ -108,6 +108,19 @@ page** on the SPA (`GET /api/bot/work/checklist`), which reads the file from the
 VM's working tree; `ict-git-sync` pulls `main` every ~5 min, so the page is
 exactly as fresh as the last push **to `main`**. **Push, then answer.**
 
+### The roadmap loop — the plan the two categories are built from (operator, 2026-10-11, binding)
+
+[`ROADMAP.md`](ROADMAP.md) opens with a **generated "Live roadmap" block** (source:
+[`docs/roadmap/milestones.yaml`](docs/roadmap/milestones.yaml)): 7 goals, each with a measure and
+a dated baseline, and the milestones that serve them. It is the high-level plan — it informs what
+is built and **authorizes nothing** (tiers and mandates unchanged), and it is not a third category
+of work. **Checklist rows and queue units are built and prioritised FROM its milestones** — each
+carries a `roadmap` ref — and **a closing row writes its outcome back** to the milestone and to
+[`docs/ARCHITECTURE-CANONICAL.md`](docs/ARCHITECTURE-CANONICAL.md) (`writeback` field). Cadence:
+per merge (the lane), every daily review (`python3 scripts/ops/roadmap_map.py --report`), and a
+weekly roadmap pass. Contract: [`.claude/skills/manager/SKILL.md`](.claude/skills/manager/SKILL.md)
+§ "The roadmap loop"; guard `roadmap-map-guard`.
+
 ### The follow-through pipeline — what exists, and what does not
 
 **`docs/claude/work/PIPELINE.jsonl` is the intake for anything that will need
@@ -304,14 +317,18 @@ run_backtest_vwap harnesses) resolve slippage and funding through
 `execution_costs.resolve_cost_policy()`'s venue-aware non-zero defaults, not a
 silent `0.0` — verified in
 [`docs/research/d1-cost-stack-verification-2026-09-25.md`](docs/research/d1-cost-stack-verification-2026-09-25.md).
-`MD-PROMOTE-S1-S2` is armed at `cost_tolerance_bps: 2.0`. **Four harness
+`MD-PROMOTE-S1-S2` is armed at `cost_tolerance_bps: 2.0`. **Two harness
 families still lack a full cost stack and stay out of scope for any promotion
 corpus until fixed:** `scripts/backtest_orb.py` (fee only, in points; no
-slippage or funding term), `src/backtest/backtester.py` (its own hardcoded
-cost dict, disconnected from the canonical venue decisions; no funding term),
-`scripts/backtest_xsec_momentum.py` (slippage wired, but no funding term for a
-held perp leg), and `scripts/backtest_vol_target.py` (turnover-bps drag only,
-no fee/slippage/funding split — currently backs no scored leg). The
+slippage or funding term) and `src/backtest/backtester.py` (its own hardcoded
+cost dict, disconnected from the canonical venue decisions; no funding term).
+`scripts/backtest_xsec_momentum.py` and `scripts/backtest_vol_target.py` were
+removed from this list on 2026-10-11 (checklist `FRONTIER-LEVER-HARNESS-COSTS`):
+both now resolve fee + slippage + perp funding through
+`execution_costs.resolve_cost_policy()` and record the policy in their result
+(`params.cost_policy`), with tests in
+`tests/test_frontier_lever_harness_costs.py`. That is `landed_unproven` until a
+queue run emits a result carrying it. The
 `derisk_only` mandates carry no such block.
 
 ⚠️ **A mandate is not a third execution gate** — see § "The two execution

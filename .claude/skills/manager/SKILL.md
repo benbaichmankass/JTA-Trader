@@ -626,6 +626,38 @@ fresh as the last **push to `main`** plus that interval.
 message and a page that disagree with it, and the page is the artifact they
 keep.
 
+## The roadmap loop (operator, 2026-10-11, binding)
+
+*Operator, close paraphrase: the roadmap is for high-level planning — highly detailed, but a tool for seeing the bigger picture of where we are on the way to the system goals. Build and prioritise the work queue FROM it, then keep it up to date with the outcomes of work. The architecture map is part of the same loop.*
+
+Three artefacts, one loop. **Derive → prioritise → build → write back.**
+
+| Artefact | Is | Lives in |
+|---|---|---|
+| **Roadmap** | the plan: 7 goals (G1..G7), each with a measure and a dated baseline, and the milestones that serve them | `docs/roadmap/milestones.yaml`, rendered into the generated "Live roadmap" block at the top of `ROADMAP.md` |
+| **Work queue** | what is built (checklist rows) and what is asked (queue units), built FROM milestones | `docs/claude/work/checklist/`, `research/queue/` |
+| **Architecture map** | what exists: components, paths, contracts | `docs/ARCHITECTURE-CANONICAL.md` |
+
+This is not a third category of work. A build is a checklist row and a question is a queue unit, exactly as in CLAUDE.md; the roadmap is the parent both point at. The roadmap informs what gets built and authorizes nothing (tiers and mandates are unchanged).
+
+**The link is a field, so it is checkable.**
+- Every checklist row carries `roadmap: ["<milestone id>"]` from creation (`checklist.py add ... roadmap='["M20"]'`); every queue unit carries `roadmap: <id>`. If no milestone fits, that is a roadmap gap: add the milestone in the same PR (new milestones go under a goal in `milestones.yaml`; never reword another lane's entry), do not leave the work unparented.
+- Closing a row (`done` or `landed_unproven`) sets `writeback: {"roadmap": "<what you changed in the milestone's where/next | none: reason>", "arch": "<ARCHITECTURE section you changed | none: reason>"}`. The lane that closes the row does the edit in the same PR. A change to a component, path or contract that leaves the architecture map unedited is a defect; a "none" needs its reason.
+- `python3 scripts/ops/roadmap_map.py --report` lists, per milestone, live rows, closed rows and open units, plus rows and units with no milestone. A milestone with neither a live row nor an open unit must carry `no_rows_reason` (it says why none exists yet). Guard `roadmap-map-guard` fails: a dangling ref, an empty milestone with no reason, a stale `ROADMAP.md` block, an `architecture:` ref that is not a heading, and — on the diff only, so an old row never reddens an unrelated PR — a new row (`_seq` >= `enforce_from_seq`) or new queue unit without a ref, or a closing row without `writeback`.
+
+**Cadence.**
+1. **Per merge (the lane).** Write-back rule above. Reviews follow it too: a `/health-review`, `/performance-review` or `/ml-review` closes its row with a `writeback` naming the milestones its findings moved, and `/perf-followup` and `research-ops` units carry `roadmap` (the guard refuses the unit otherwise).
+2. **Every daily review (05:52Z and 17:52Z): the roadmap hook.** Run the report and work what it shows, in the same turn, like blocker_watch: orphan live rows or open units get a milestone; an `active` milestone with no work gets rows or is set `dormant` with a reason; a milestone past `review_cadence_days` makes the weekly pass due today. Do not dispatch from memory when the report is a command away.
+3. **Weekly roadmap pass (the first daily review of each ISO week; row `ROADMAP-PASS-<YYYYWNN>`, owner manager, may be handed to one bounded Sonnet lane).** Each pass, in order:
+   1. *Re-measure* every goal baseline and every active milestone's `where` with its own command (`check_tp_doctrine.py`, `config/accounts.yaml` counts, queue counts by theme, `--report`). A dated claim not re-measured is marked "not re-measured", never copied forward.
+   2. *Read the week's outcomes*: rows closed since `reviewed`, results landed in `research/results/`, merged PRs. Rewrite `where` and `next` from them; set `reviewed`.
+   3. *Derive*: every `next` with no row or unit gets one (with the ref); every ask the operator made since the last pass is placed under a milestone or becomes one.
+   4. *Prioritise*: order what the manager dispatches by goal (a live-money defect under G3 first, then G1/G2 evidence, then the rest), and compare `research/THEMES.yaml` weights with where the open units actually sit; a theme weighted high with no runnable units is a finding, filed as a row (the weights themselves change only by a PR citing evidence, per `research/queue/PLANNING.md`).
+   5. *Dormant sweep*: a milestone dormant with no work for two passes is closed or kept with a fresh reason; a milestone cannot just age.
+   6. *Architecture check*: for each active milestone, does its `architecture:` list still describe what exists? Fix the map or the list.
+   7. `python3 scripts/ops/roadmap_map.py --write-roadmap`, commit with the yaml, and file next week's `ROADMAP-PASS` row (due date in its note). The pass's output is its PR plus the rows and units it created or re-prioritised, named in the row's note.
+4. **Slices plug in, they do not fork.** A lane that owns one slice (ML-ROADMAP-LOOP for G4, REGIME-PROGRAM for L-REGIME) adds and edits its own milestones under its goal in `milestones.yaml` and runs steps 1-7 for them inside the same weekly pass; the report and guard cover it with no extra wiring.
+
 ## Standing authorizations — the ladder is fully automated
 
 **The whole ladder fires on evidence, with no human in the path** (operator
@@ -847,6 +879,8 @@ incident.
    `{report_id, reviewed_at, by, counts: {dispatched, closed, decided, carried}}`
    on the checklist (`checklist.py header last_review '<json>'` after the cutover), then push. Per-item dispositions live on the
    pipeline items, so the next review sees what is new.
+
+**Roadmap hook (2026-10-11).** After step 5, run `python3 scripts/ops/roadmap_map.py --report` and work its findings per § "The roadmap loop" (orphans, empty active milestones, an overdue weekly pass).
 
 ### Manager ↔ lane: PUSH plus POLL (operator directive 2026-10-04, binding)
 
