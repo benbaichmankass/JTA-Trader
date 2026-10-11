@@ -1,0 +1,477 @@
+From e80f88827f6fb0c89247270c9bdb54888aa5e8eb Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 11 Oct 2026 13:03:38 +0000
+Subject: [PATCH] =?UTF-8?q?UI-UPGRADE-1:=20live=20Overview=20(render=20per?=
+ =?UTF-8?q?=20call,=2015s=20refresh),=20work-queue=20glance,=20prop=20uPnL?=
+ =?UTF-8?q?,=20accounts=20real=E2=86=92paper=E2=86=92prop,=20today's=20bri?=
+ =?UTF-8?q?ef=20in=20Reports,=20Roadmap=20folded=20into=20Work,=20Signals?=
+ =?UTF-8?q?=20Catalog=20placeholder?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01McHbeefghxRy9AJPfinTeQ
+---
+ webapp/src/App.svelte                    |  18 ++-
+ webapp/src/components/ExecSummary.svelte |  16 ++-
+ webapp/src/components/Placeholder.svelte |   6 +-
+ webapp/src/lib/api.ts                    |   4 +
+ webapp/src/lib/nav.ts                    |  14 ++-
+ webapp/src/routes/Accounts.svelte        |   6 +-
+ webapp/src/routes/Overview.svelte        | 135 +++++++++++++++++------
+ webapp/src/routes/Reports.svelte         |  31 +++++-
+ 8 files changed, 180 insertions(+), 50 deletions(-)
+
+diff --git a/webapp/src/App.svelte b/webapp/src/App.svelte
+index e2378cd..e1897d8 100644
+--- a/webapp/src/App.svelte
++++ b/webapp/src/App.svelte
+@@ -11,6 +11,7 @@
+   import OrderPackages from "./routes/OrderPackages.svelte";
+   import Insights from "./routes/Insights.svelte";
+   import Roadmap from "./routes/Roadmap.svelte";
++  import Segmented from "./components/Segmented.svelte";
+   import Work from "./routes/Work.svelte";
+   import Prop from "./routes/Prop.svelte";
+   import Health from "./routes/Health.svelte";
+@@ -35,6 +36,16 @@
+ 
+   let showSettings = $state(false);
+ 
++  // Work + Roadmap share one tab (UI-UPGRADE-1). An old `#/Roadmap` link opens
++  // the Roadmap view; parseHash() already maps the section onto Work.
++  const WORK_VIEWS = [
++    { value: "work", label: "Work" },
++    { value: "roadmap", label: "Roadmap" },
++  ];
++  let workView = $state(
++    typeof location !== "undefined" && location.hash.replace(/^#\/?/, "").startsWith("Roadmap") ? "roadmap" : "work",
++  );
++
+   // A gated read that came back 401/403 raises `authPrompt`; opening Settings
+   // is how the form gets in front of the operator. This is the whole "401
+   // handler returns the viewer to the form" path — the store is set in
+@@ -133,10 +144,10 @@
+     <main>
+       {#if $nav.section === "Overview"}
+         <Overview />
+-      {:else if $nav.section === "Roadmap"}
+-        <Roadmap />
+       {:else if $nav.section === "Work"}
+-        <Work />
++        <!-- UI-UPGRADE-1: Roadmap folded into Work — one tab, two views. -->
++        <div class="worktabs"><Segmented options={WORK_VIEWS} bind:value={workView} /></div>
++        {#if workView === "roadmap"}<Roadmap />{:else}<Work />{/if}
+       {:else if isSpecial($nav.section)}
+         <Placeholder page={$nav.section} />
+       {:else if $nav.detail == null}
+@@ -230,4 +241,5 @@
+     .ham { display: inline-flex; align-items: center; justify-content: center; }
+     .scrim { display: block; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 20; border: none; }
+   }
++  .worktabs { margin-bottom: 12px; }
+ </style>
+diff --git a/webapp/src/components/ExecSummary.svelte b/webapp/src/components/ExecSummary.svelte
+index 21d531f..b8c6038 100644
+--- a/webapp/src/components/ExecSummary.svelte
++++ b/webapp/src/components/ExecSummary.svelte
+@@ -58,12 +58,16 @@
+   // "Paper" keeps only the portfolio-mirror books, not the soak roster.
+   // Prop open trades come from the prop journal via /api/bot/prop/overview
+   // (the manual bridge has no broker positions). Mapped to the Position shape
+-  // the shared table renders; uPnL is genuinely unknown (no mark feed) -> null.
++  // the shared table renders. uPnL (UI-UPGRADE-1) is the venue number the prop
++  // executors report, which the bot attaches to a trade ONLY when it is that
++  // account's sole open trade; otherwise null -> "—", never 0.
+   const propOpen = $derived<Position[]>(
+     (propOverview?.open_trades ?? []).map((t: any) => ({
+       id: `prop-${t.id}`, symbol: t.symbol, side: t.side === "short" ? "sell" : "buy",
+       qty: t.qty, entryPrice: t.entry_price, pattern: "prop", account: t.account_id,
+-      unrealizedPnl: null, openedAt: t.opened_at, accountClass: "prop",
++      unrealizedPnl: typeof t.unrealized_pnl === "number" ? t.unrealized_pnl : null,
++      unrealizedPnlSource: t.unrealized_provenance ?? null,
++      openedAt: t.opened_at, accountClass: "prop",
+     }) as unknown as Position),
+   );
+   const segOpen = $derived(
+@@ -74,6 +78,14 @@
+         : positions.filter((p) => fundingOf(p) === funding),
+   );
+   const openUpnl = $derived.by(() => {
++    // Prop: the bot's book total is the honest figure — it is the sum of the
++    // venue-reported account numbers, null when ANY account could not be read.
++    // Summing per-trade numbers instead would drop an account with two open
++    // trades (its number cannot be split) and read as a partial total.
++    if (funding === "prop") {
++      const t = propOverview?.unrealized_pnl;
++      return { sum: typeof t === "number" ? t : null, known: typeof t === "number" ? 1 : 0 };
++    }
+     let sum = 0, known = 0;
+     for (const p of segOpen) if (typeof p.unrealizedPnl === "number") { sum += p.unrealizedPnl; known++; }
+     return { sum: known ? sum : null, known };
+diff --git a/webapp/src/components/Placeholder.svelte b/webapp/src/components/Placeholder.svelte
+index 4a745ce..acdcee2 100644
+--- a/webapp/src/components/Placeholder.svelte
++++ b/webapp/src/components/Placeholder.svelte
+@@ -7,7 +7,11 @@
+   <h2>{page}</h2>
+   <div class="panel pad">
+     <p>{PAGE_DESC[page] ?? ""}</p>
+-    <p class="muted">This screen is being ported from the Streamlit dashboard — coming soon.</p>
++    {#if page === "Signals Catalog"}
++      <p class="muted">Not built yet — a placeholder so the catalog has a home (UI-UPGRADE-1).</p>
++    {:else}
++      <p class="muted">This screen is being ported from the Streamlit dashboard — coming soon.</p>
++    {/if}
+   </div>
+ </section>
+ 
+diff --git a/webapp/src/lib/api.ts b/webapp/src/lib/api.ts
+index b911d25..4e151b9 100644
+--- a/webapp/src/lib/api.ts
++++ b/webapp/src/lib/api.ts
+@@ -267,6 +267,10 @@ export const api = {
+   // 5xx — and `inputs` carries a three-way read state per source
+   // (read/absent/unreadable) that must not be collapsed. Read-only.
+   workBrief: (signal?: AbortSignal) => get<any>("/api/bot/work/brief", signal),
++  // UI-UPGRADE-1: the Overview's work-queue glance (~6 KB; the full checklist is
++  // ~435 KB). closedRecent / openNow / next / waitingOnOperator, `present:false`
++  // with a reason when the store is unreadable — never empty lists as "no work".
++  workSnapshot: (signal?: AbortSignal) => get<any>("/api/bot/work/snapshot", signal),
+ 
+   // The work schedule (A9) — cadenced sessions (the daily sync, the three
+   // project-level reviews) · decisions owed · monitoring coming due · cron
+diff --git a/webapp/src/lib/nav.ts b/webapp/src/lib/nav.ts
+index 22e9884..a7dbc15 100644
+--- a/webapp/src/lib/nav.ts
++++ b/webapp/src/lib/nav.ts
+@@ -18,10 +18,11 @@ import { writable } from "svelte/store";
+ export const SECTIONS: Record<string, string[]> = {
+   Overview: [],
+   Performance: ["Performance", "Insights", "Reports"],
+-  "Strategies & Models": ["Strategies", "Models", "GPU Spend", "Exit Ladder", "Backtesting", "Promotion", "News"],
++  "Strategies & Models": ["Strategies", "Models", "Signals Catalog", "GPU Spend", "Exit Ladder", "Backtesting", "Promotion", "News"],
+   Accounts: ["Accounts", "Prop"],
+   Activity: ["Positions", "Trades", "Order Packages", "Signals"],
+-  Roadmap: [],
++  // UI-UPGRADE-1: Roadmap folded into Work (one tab; Roadmap is a toggle on it).
++  // `#/Roadmap` links still resolve — parseHash() maps them onto Work.
+   Work: [],
+   Learning: [],
+   Admin: ["Data Explorer", "Logs", "Health", "Runbooks"],
+@@ -35,6 +36,7 @@ export const PAGE_DESC: Record<string, string> = {
+   Reports: "Consolidated /system-report executive reports (health + trading + ML).",
+   Strategies: "Live-runtime per-strategy status, routing, P&L curve, review packet.",
+   Models: "ML fleet — per-model stage, training metric, drift.",
++  "Signals Catalog": "Every signal family the system can emit — inputs, owner strategy, status. Placeholder: the catalog is not built yet (UI-UPGRADE-1 item 8).",
+   "GPU Spend": "Spot-GPU training cost — per-session + monthly total vs the $10 cap.",
+   "Exit Ladder": "ExitPlan laddered-vs-single-target soak (observe-only).",
+   Backtesting: "Trainer-VM sweeps + on-demand /test runs.",
+@@ -50,8 +52,7 @@ export const PAGE_DESC: Record<string, string> = {
+   Logs: "Merged pipeline + outcome log feed.",
+   Health: "VM / service health + last-tick + snapshot checks.",
+   Runbooks: "Operating schematic, the coordination board, and what is due today.",
+-  Roadmap: "Product-roadmap progress — milestones → sprints → work-session notes.",
+-  Work: "THE live workflow page. Today's daily brief (what came due, and the unrouted count) at the top, then the manager checklist as the managers keep it (collapsed by default — open a row for full detail), the decisions waiting on you, the live work sessions with how stale each reading is, and the work store underneath. Read-only; carries its own as-of stamp, so it is as fresh as the last push plus ict-git-sync's ~5-minute pull.",
++  Work: "THE live workflow page — with the product roadmap one toggle away (Roadmap was folded in here). Today's daily brief (what came due, and the unrouted count) at the top, then the manager checklist as the managers keep it (collapsed by default — open a row for full detail), the decisions waiting on you, the live work sessions with how stale each reading is, and the work store underneath. Read-only; carries its own as-of stamp, so it is as fresh as the last push plus ict-git-sync's ~5-minute pull.",
+   Learning: "Trading + AI curriculum with per-resource progress.",
+ };
+ 
+@@ -81,7 +82,7 @@ export const IMPLEMENTED_PAGES = new Set<string>([
+   "Runbooks",
+ ]);
+ 
+-const SPECIAL_SECTIONS = new Set(["Overview", "Roadmap", "Learning"]);
++const SPECIAL_SECTIONS = new Set(["Overview", "Learning"]);
+ export function isSpecial(section: string): boolean {
+   return SPECIAL_SECTIONS.has(section);
+ }
+@@ -95,7 +96,8 @@ export interface Nav {
+ 
+ function parseHash(): Nav {
+   const raw = typeof location !== "undefined" ? decodeURIComponent(location.hash.replace(/^#\/?/, "")) : "";
+-  const [sec, det] = raw.split("/");
++  const [rawSec, det] = raw.split("/");
++  const sec = rawSec === "Roadmap" ? "Work" : rawSec; // folded into Work
+   const section = SECTION_NAMES.includes(sec) ? sec : "Overview";
+   const detail = det && SECTIONS[section]?.includes(det) ? det : null;
+   return { section, detail };
+diff --git a/webapp/src/routes/Accounts.svelte b/webapp/src/routes/Accounts.svelte
+index aad081b..6c0eb42 100644
+--- a/webapp/src/routes/Accounts.svelte
++++ b/webapp/src/routes/Accounts.svelte
+@@ -40,7 +40,11 @@
+         accountClass: cfgAccts[id]?.account_class ?? null,
+         mode: cfgAccts[id]?.mode ?? null,
+       }));
+-      rows.sort((a, b) => a.id.localeCompare(b.id));
++      // UI-UPGRADE-1 (operator): real money first, then paper, then prop;
++      // anything unclassified last. Alphabetical inside each class.
++      const rank = (c: string | null) =>
++        ({ real_money: 0, real: 0, paper: 1, prop: 2 } as Record<string, number>)[(c ?? "").toLowerCase()] ?? 3;
++      rows.sort((a, b) => rank(a.accountClass) - rank(b.accountClass) || a.id.localeCompare(b.id));
+     } catch (e) {
+       error = e instanceof Error ? e.message : String(e);
+       rows = [];
+diff --git a/webapp/src/routes/Overview.svelte b/webapp/src/routes/Overview.svelte
+index 42d0148..478f943 100644
+--- a/webapp/src/routes/Overview.svelte
++++ b/webapp/src/routes/Overview.svelte
+@@ -28,6 +28,8 @@
+   let news = $state<any>(null);
+   let reports = $state<any>(null);
+   let propOverview = $state<any>(null); // /api/bot/prop/overview (Prop book only)
++  let workSnap = $state<any>(null); // /api/bot/work/snapshot (UI-UPGRADE-1 item 2)
++  let workSnapError = $state<string | null>(null);
+   let pnl30 = $state<Array<{ date?: string; pnl?: number | null }>>([]);
+   let candlesBySymbol = $state<Record<string, Candle[]>>({});
+   let wsStatus = $state<MarketStatus>("connecting");
+@@ -98,40 +100,47 @@
+   // here so the open-trades table/count is populated even when the market
+   // WebSocket can't connect (sandbox, or a flaky mobile network) — the WS's
+   // onPositions still overwrites this with the live snapshot when it's up.
++  // UI-UPGRADE-1 item 1. This used to be ONE Promise.all over nine calls, so
++  // nothing rendered until the slowest returned — measured 2026-10-11:
++  // /positions 5-12 s cold, /signals ~3.3 s, the other seven 0.3-0.9 s. Each
++  // call now assigns its own slice the moment it lands, the previous value stays
++  // on screen while a refresh is in flight (show-stale-then-refresh), and a
++  // failed slice keeps its last good value instead of blanking the page.
++  // `apiError` is raised only when the core reads (stats + positions) fail.
++  let inflight = 0;
+   async function poll() {
++    if (inflight > 0) return; // never stack polls behind a slow call
++    inflight = 1;
++    const slices: Array<Promise<unknown>> = [
++      api.stats().then((v) => { stats = v; }),
++      (() => { const w = win; return api.performance(w).then((v) => { if (w === win) perf = v; }); })(),
++      // REST is authoritative for the row SET — the WS only refreshes uPnL below
++      api.positions().then((v) => { positions = v; }),
++      api.balances().then((v) => { balances = v; }),
++      api.config().then((v) => { config = v; }),
++      api.strategies().then((v) => { strategies = v; }),
++      api.signals().then((sig: any) => {
++        signals = Array.isArray(sig) ? sig : (sig?.signals ?? sig?.records ?? []);
++      }),
++      api.closedTrades({ includePaper: true, limit: 100 }).then((v) => {
++        closedTrades = Array.isArray(v) ? v : [];
++      }),
++      // Prop lives in its own journal; a failure here must not blank the rest.
++      (() => { const w = win; return api.propOverview(w).then((v) => { if (w === win) propOverview = v; }); })(),
++      api.workSnapshot().then((v) => { workSnap = v; workSnapError = null; })
++        .catch((e) => { workSnapError = e instanceof Error ? e.message : String(e); throw e; }),
++      // Glance-card + sparkline data — each degrades to its own empty state.
++      api.news(8).then((v) => { news = v; }),
++      api.reports().then((v) => { reports = v; }),
++      api.pnlHistory(30).then((h) => { pnl30 = Array.isArray(h) ? h : []; }),
++    ];
++    const core = Promise.all([slices[0], slices[2]]);
++    core.then(() => { apiError = null; lastUpdated = Date.now(); })
++      .catch((e) => { apiError = e instanceof Error ? e.message : String(e); });
+     try {
+-      const [s, p, pos, bal, cfg, strat, sig, closed, propOv] = await Promise.all([
+-        api.stats(),
+-        api.performance(win),
+-        api.positions(),
+-        api.balances(),
+-        api.config(),
+-        api.strategies(),
+-        api.signals(),
+-        api.closedTrades({ includePaper: true, limit: 100 }),
+-        // Prop lives in its own journal; a failure here must not blank the rest.
+-        api.propOverview(win).catch(() => null),
+-      ]);
+-      // Glance-card + sparkline data — non-blocking: a failure here must not
+-      // blank the core overview (each degrades to its own empty state).
+-      Promise.all([
+-        api.news(8).catch(() => null),
+-        api.reports().catch(() => null),
+-        api.pnlHistory(30).catch(() => []),
+-      ]).then(([n, r, h]) => { news = n; reports = r; pnl30 = Array.isArray(h) ? h : []; });
+-      stats = s;
+-      perf = p;
+-      positions = pos; // REST is authoritative — the WS only refreshes uPnL below
+-      balances = bal;
+-      propOverview = propOv;
+-      config = cfg;
+-      strategies = strat;
+-      signals = Array.isArray(sig) ? sig : (sig?.signals ?? sig?.records ?? []);
+-      closedTrades = Array.isArray(closed) ? closed : [];
+-      apiError = null;
+-      lastUpdated = Date.now();
+-    } catch (e) {
+-      apiError = e instanceof Error ? e.message : String(e);
++      await Promise.allSettled(slices);
++    } finally {
++      inflight = 0;
+     }
+   }
+ 
+@@ -148,10 +157,13 @@
+     }
+   }
+ 
+-  // Re-poll performance when the window changes (control tap → fresh window).
++  // Window change → re-fetch ONLY the windowed reads, at once. Not via poll():
++  // its in-flight guard would drop the tap while a slow call is outstanding.
++  // A late answer for a window the user has already left is discarded.
+   $effect(() => {
+-    win;
+-    poll();
++    const w = win;
++    api.performance(w).then((v) => { if (w === win) perf = v; }).catch(() => {});
++    api.propOverview(w).then((v) => { if (w === win) propOverview = v; }).catch(() => {});
+   });
+ 
+   function fundingOf(p: Position): string {
+@@ -337,11 +349,18 @@
+ 
+   onMount(() => {
+     poll();
+-    pollTimer = setInterval(poll, 30000);
++    // 15 s (was 30 s): /positions is now a server-side snapshot, so a poll is
++    // cheap. Skipped while the tab is hidden; refreshed at once when it returns.
++    pollTimer = setInterval(() => { if (!document.hidden) poll(); }, 15000);
++    document.addEventListener("visibilitychange", onVisible);
+     startStream();
+   });
++  function onVisible() {
++    if (!document.hidden) poll();
++  }
+   onDestroy(() => {
+     if (pollTimer) clearInterval(pollTimer);
++    if (typeof document !== "undefined") document.removeEventListener("visibilitychange", onVisible);
+     stream?.stop();
+   });
+ 
+@@ -390,6 +409,41 @@
+ 
+   <ExecSummary {stats} {perf} {positions} {balances} {config} {strategies} {funding} {win} {propOverview} />
+ 
++  <!-- UI-UPGRADE-1 item 2: work-queue glance from /api/bot/work/snapshot.
++       `present:false` is "we could not read the checklist", shown as such —
++       never as an empty queue. -->
++  <div class="panel workq">
++    <div class="ph">Work queue <a class="wlink" href="#/Work">open Work →</a></div>
++    {#if workSnap && workSnap.present === false}
++      <div class="err pad">Checklist unreadable: <span class="mono">{workSnap.reason ?? DASH}</span></div>
++    {:else if !workSnap && workSnapError}
++      <div class="err pad">Couldn't load the work queue: <span class="mono">{workSnapError}</span></div>
++    {:else if !workSnap}
++      <div class="muted pad">Loading…</div>
++    {:else}
++      <div class="wbox" class:wempty={!(workSnap.waitingOnOperator ?? []).length}>
++        <div class="wh">⏳ Waiting on you · {(workSnap.waitingOnOperator ?? []).length}</div>
++        {#each workSnap.waitingOnOperator ?? [] as r (r.id)}
++          <div class="wrow"><span class="mono wid">{r.id}</span> {(r.asks ?? []).map((a: any) => a.what).filter(Boolean).join(" · ") || r.title}</div>
++        {:else}
++          <div class="muted small">Nothing is blocked on an operator decision.</div>
++        {/each}
++      </div>
++      <div class="wgrid">
++        {#each [["Open now", workSnap.openNow], ["Next up", workSnap.next], ["Recently closed", workSnap.closedRecent]] as [label, rows] (label)}
++          <div>
++            <div class="wh">{label} · {(rows ?? []).length}</div>
++            {#each rows ?? [] as r (r.id)}
++              <div class="wrow" title={r.title ?? ""}><span class="mono wid">{r.id}</span> <span class="muted">{r.state}</span></div>
++            {:else}
++              <div class="muted small">—</div>
++            {/each}
++          </div>
++        {/each}
++      </div>
++    {/if}
++  </div>
++
+   <div class="glances">
+     {#if latestReport}
+       <a class="glance panel" href="#/Performance/Reports">
+@@ -620,4 +674,13 @@
+     font-size: 13px;
+   }
+   .refresh:disabled { opacity: 0.6; cursor: default; }
++  .workq { padding: 4px 12px 12px; }
++  .wlink { float: right; font-weight: 400; font-size: 12px; color: var(--accent); text-decoration: none; }
++  .wbox { border: 1px solid var(--accent); border-radius: 8px; padding: 8px 10px; margin: 4px 0 10px; }
++  .wbox.wempty { border-color: var(--border); }
++  .wgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
++  @media (max-width: 720px) { .wgrid { grid-template-columns: 1fr; } }
++  .wh { font-weight: 600; font-size: 12.5px; margin-bottom: 4px; }
++  .wrow { font-size: 12.5px; line-height: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++  .wid { font-weight: 600; }
+ </style>
+diff --git a/webapp/src/routes/Reports.svelte b/webapp/src/routes/Reports.svelte
+index 3caa81a..8de1bc0 100644
+--- a/webapp/src/routes/Reports.svelte
++++ b/webapp/src/routes/Reports.svelte
+@@ -12,9 +12,20 @@
+   let html = $state<string | null>(null);
+   let loadingBody = $state(false);
+ 
++  // UI-UPGRADE-1 item 5: the Work page's "today's brief" rides in this roster
++  // too, at the top (it is usually the newest thing to read). It is a different
++  // document — markdown from /api/bot/work/brief, not a rendered system report —
++  // so it carries its own id and is shown as text. Fetched beside the index and
++  // never allowed to block it: a brief failure just leaves it out.
++  const BRIEF_ID = "__todays_brief__";
++  let brief = $state<any | null>(null);
++
+   async function load() {
+     loading = true;
+     error = null;
++    api.workBrief()
++      .then((b) => { brief = b?.present ? b : null; })
++      .catch(() => { brief = null; });
+     try {
+       const raw = await api.reports();
+       reports = raw?.reports ?? [];
+@@ -33,6 +44,11 @@
+ 
+   async function open(id: string) {
+     selectedId = id;
++    if (id === BRIEF_ID) {
++      html = null;
++      loadingBody = false;
++      return;
++    }
+     loadingBody = true;
+     html = null;
+     try {
+@@ -65,6 +81,16 @@
+   {:else}
+     <div class="split">
+       <div class="list panel">
++        {#if brief}
++          <button class="rowbtn" class:active={selectedId === BRIEF_ID} onclick={() => open(BRIEF_ID)}>
++            <div class="r1">
++              <span class="dot warn"></span>
++              <span class="w">Today's brief</span>
++              <span class="when muted">{brief.snapshot?.ageSeconds != null ? `rendered ${Math.round(brief.snapshot.ageSeconds)}s ago` : "live"}</span>
++            </div>
++            <div class="hl">Daily brief from the Work page — what came due, decisions for you, what moved</div>
++          </button>
++        {/if}
+         {#each reports as r (r.id)}
+           <button class="rowbtn" class:active={r.id === selectedId} onclick={() => open(r.id)}>
+             <div class="r1">
+@@ -77,7 +103,9 @@
+         {/each}
+       </div>
+       <div class="viewer panel">
+-        {#if loadingBody}
++        {#if selectedId === BRIEF_ID && brief}
++          <pre class="md">{brief.markdown ?? ""}</pre>
++        {:else if loadingBody}
+           <div class="muted pad">Loading report…</div>
+         {:else if html}
+           <iframe title="system report" srcdoc={html}></iframe>
+@@ -108,5 +136,6 @@
+   .viewer { padding: 0; overflow: hidden; }
+   iframe { width: 100%; height: 70vh; border: 0; background: #fff; }
+   .pad { padding: 16px; }
++  .md { margin: 0; padding: 16px; max-height: 70vh; overflow: auto; white-space: pre-wrap; font-size: 13px; line-height: 1.45; }
+   .err { padding: 10px 12px; color: var(--neg); }
+ </style>
+-- 
+2.43.0
+

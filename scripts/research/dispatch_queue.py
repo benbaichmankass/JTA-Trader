@@ -208,7 +208,7 @@ def config_problem(entry: Dict[str, Any], repo: Optional[Path] = None) -> Option
     if bad:
         return f"misconfigured: run.inputs {bad} hold an unresolved placeholder ('NOT YET DECIDED'/TBD/TODO)"
     declared = declared_inputs(workflow, repo=repo or _REPO)
-    if declared is None or workflow.split("/")[-1] == "research-script-run.yml":
+    if declared is None or workflow.split("/")[-1] in ("research-script-run.yml", "research-script-run-trainer.yml"):
         return None
     inputs, _ = dispatch_inputs(entry, power_state="x", repo=repo or _REPO)
     unknown = sorted(k for k in inputs if k not in declared)
@@ -540,7 +540,7 @@ def dispatch_inputs(entry: Dict[str, Any], *, power_state: str = "",
         inputs["research_unit"] = str(entry["id"])
     if inputs.get("research_unit") and power_state:
         inputs["power_state"] = power_state
-    if declared is None or workflow != "research-script-run.yml":
+    if declared is None or workflow not in ("research-script-run.yml", "research-script-run-trainer.yml"):
         return inputs, []
     dropped = sorted(k for k in inputs if k not in declared)
     return {k: v for k, v in inputs.items() if k in declared}, dropped
@@ -842,7 +842,7 @@ def _fire(entry: Dict[str, Any], *, route: str, ref: str,
     # RQ-RUN (2026-09-28): the token-free runner reads the unit's command from
     # its YAML. Refuse here what the runner would refuse there, so a bad unit
     # is a DISPATCH_FAILED row instead of a spent runner + a stamped unit.
-    if workflow == "research-script-run.yml":
+    if workflow in ("research-script-run.yml", "research-script-run-trainer.yml"):
         from scripts.research import script_run
         preflight = script_run.plan(str(entry.get("id")), run_id="preflight")
         if not preflight.ok:
