@@ -1,0 +1,21 @@
+{
+  "id": "TEST-REVERSE-RECON-DATE-DECAY",
+  "title": "tests/test_reverse_reconciler.py: 4 tests fail on main since fixtures aged past the 14-day orphan-attribution window (fixture dates 2026-09-27 are hard-coded)",
+  "phase": "W41",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-11 ROADMAP-LOOP lane] Reproduced on origin/main locally (3 of the 4 fail without my diff; CI pytest-run on #17557 shows 4 failed / 22338 passed). Log: order_monitor._recover_orphan_attribution REFUSED attribution - package pkg-1 is 14.0 days old (> 14). Fix: make the fixtures relative to now, not a code change to the 14-day rule. Red CI on main blocks every PR.",
+  "updated_at": "2026-10-11T10:57:46Z",
+  "updated_by": "session_01AULroJXfiHJzkAtxgcSz83",
+  "roadmap": [
+    "M39"
+  ],
+  "_seq": 402
+}
