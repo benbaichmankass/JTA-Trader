@@ -1,0 +1,42 @@
+{
+  "run": "RESEARCH-OPS-20261011-1447",
+  "finished_at": "2026-10-11T15:05:00Z",
+  "by": "research-ops-1447",
+  "baseline": "comms/research/ops/20261011T0900Z.json",
+  "floor": 25,
+  "throughput": {"runnable_before": 22, "runnable_after": 27, "queued": 144, "fired_24h": 23, "fired_7d": 226, "results_landed_24h": 37, "hours_since_last_dispatch": 2.5, "idle_alarm": false, "as_of": "2026-10-11T14:48Z"},
+  "mechanism": {
+    "dispatch_receipt": "ok (fresh, 1.18h)", "collector": "ok",
+    "stranded_stamp_prs": [17562],
+    "incident": null,
+    "stamp_race": "STAMP-RACE still landed_unproven: run 38126707017 (08:58Z) stamps reached no PR and no main commit, so RQ-20261010-353c-14/15/16 were re-fired by run 38131113151 (10:13Z) = two identical result files per unit. Their only stamp is in open #17562 (<3h old at the 12:17Z dispatch, so not yet adoptable); still null on main at 14:50Z. Noted on STAMP-RACE.",
+    "closed_prs": {"17546": "batch content on main", "17552": "stamps adopted via #17572", "17496": "stamps older/equal on main", "17383": "stale grading branch, regenerated idempotently", "17526": "soak-book-grade pointer, superseded", "17503": "soak-book-grade pointer, superseded", "17551": "soak-book-grade pointer, superseded", "17554": "soak-book-grade pointer, superseded"},
+    "left_open": {"17562": "holds the only stamps for 353c-14..16; do NOT close until the dispatcher adopts them", "17591-17594": "fresh (<1h) receipt/result PRs, auto-landing"}
+  },
+  "results_read": {"pass": 3, "fail": 6, "indeterminate": 0, "units": [
+    {"unit": "RQ-20261010-353c-14", "verdict": "pass", "n": 529, "net_total_r": 56.7809, "note": "squeeze FIL 1h, 0.107 R/trade; Stage-0 evidence only. Ran twice (duplicate, see stamp_race)"},
+    {"unit": "RQ-20261010-353c-15", "verdict": "pass", "n": 535, "net_total_r": 4.224, "note": "squeeze BNB 1h, 0.0079 R/trade ~ zero edge; passes the rule, Stage-0 evidence only"},
+    {"unit": "RQ-20261010-353c-16", "verdict": "fail", "n": 417, "net_total_r": -42.4554, "note": "pullback BNB 1h; rule: one pass, re-queue confirmatory -> RQ-20261011-1fce-01"},
+    {"unit": "RQ-20261011-6897-01", "verdict": "fail", "n": 389, "net_total_r": -13.7782, "note": "trend BNB 2h; confirmatory -> RQ-20261011-1fce-02"},
+    {"unit": "RQ-20261011-6897-02", "verdict": "pass", "n": 291, "net_total_r": 1.0784, "note": "squeeze BNB 2h, 0.0037 R/trade ~ zero edge; passes the rule, Stage-0 evidence only"},
+    {"unit": "RQ-20261011-6897-03", "verdict": "fail", "n": 1822, "net_total_r": -80.9707, "note": "trend ADA 15m; confirmatory -> RQ-20261011-1fce-03"},
+    {"unit": "RQ-20261010-419b-02", "verdict": "fail", "note": "NOT_CONFIRMED: short side positive for both pullback_2h legs (ada +11.39R, xrp +9.88R, n_short 155 each); honest_negative, claim closed. Side finding: LONG negative 3/4 folds on both (ada -18.74R, xrp -25.15R) -> PI-20261011-HOPS1447-0001"},
+    {"unit": "RQ-20261010-419b-03", "verdict": "fail", "note": "NOT_CONFIRMED + COUNTER_EXAMPLE_STABLE_POSITIVE_SHORT on trend_donchian_eth_4h (short +17.88R, 3/4 folds positive): ends the family claim; eth_prop not confirmed; sol_prop/xrp_4h are controls"},
+    {"unit": "RQ-20261010-419b-04", "verdict": "no_action_warranted", "note": "NO ACTION: the leave-one-out/concentration rule produced no PROPOSE or REDUCE-CONCENTRATION"},
+    {"unit": "RQ-20261010-419b-01", "verdict": "fail", "n": 49, "note": "e35 reachable-TP gate, 24 gated cells, base_oos_trades 49: no finite tp_r<=4 cell is_oos_pass (OOS d_net -3.2..-6.4R); honest_negative, never a demotion. Dispositioned in the e35 ledger (no_action_warranted). RQ-20261006-060 retired as superseded. Doctrine answer stays with RQ-20261009-900 / PI-20261006-5FUGHVX8-0001"}],
+    "disposition": "mechanical rules only; no Tier-3 proposal, no config edit. power_state reads 'accruing' on every harness-dispatch record (the dispatcher's default label), so passes are Stage-0 evidence and nothing more; 6897-02 and 353c-15 pass on <=0.008 R/trade, i.e. not an edge in any practical sense. Confirmatory re-runs cannot be disjoint-window: research-harness-dispatch.yml has no window input (RQ-20261007-033 lever, PI-20261004-APBY4NTV-0001), so 1fce-01..03 test reproducibility only - said in each unit's question.",
+    "ledger": "research-disposition-ledger.jsonl: one e35 row recorded via research_disposition.py --record (419b-01); queue units are graded by research-queue-grade.yml. e35/m20 'unread' rows remain accruing/not_queue_dispatched: cannot answer yet."},
+  "unlocked": [],
+  "retired": [{"unit": "RQ-20261006-060", "reason": "superseded by RQ-20261010-419b-01 (same question, widened gate), which returned honest_negative"}],
+  "blocked_audit": "36 files in research/queue/blocked/ read: each names its lever and owner (RQ-20260930-901 uses blocked_reason: accrual to ~2027-06, unblock = manager when a dry sweep shows base_oos >= 25). No lever landed since 08:47Z. NEEDS_LANE session-bound units unchanged (RQ-20260928-001, RQ-20261007-022/023/025/030). The window-input lever blocks RQ-20261007-033 and now the reproducibility limit of 1fce-01..03.",
+  "levers_filed": [{"lever": "pullback LONG-side drag exploratory read + long-drag rule in leg_replay_emit.py + disjoint-window unit", "ref": "PI-20261011-HOPS1447-0001"}],
+  "units_authored": ["RQ-20261011-1fce-01 pullback BNB 1h (confirms 353c-16)", "-02 trend BNB 2h (confirms 6897-01)", "-03 trend ADA 15m (confirms 6897-03)", "-04 squeeze ADA 15m", "-05 squeeze DOGE 15m"],
+  "followups_filed": ["PI-20261011-HOPS1447-0001", "STAMP-RACE note"],
+  "not_run": ["pytest tests/test_research_queue.py (pytest not installed here; decision-rule and id-band guards ran)", "RQ-20260930-602 accrual read (m16 script prints no n figure here; COULD NOT LOOK)", "ML plan write-back: no result touched an ml-plan-items.yaml ref"],
+  "handoff": [
+    "Next pass: confirm #17562's stamps for 353c-14..16 reached main (adoption) or fired a third time; that decides STAMP-RACE.",
+    "Next pass: read 1fce-01..05, 6897-04..08, 8025-01..06, 353c-17..20, fc31-01..06 as they land (6897-04/05 and RQ-20261003-011 results are in open #17592-#17594).",
+    "Manager: decide whether the window input on research-harness-dispatch.yml (RQ-20261007-033 / PI-20261004-APBY4NTV-0001) is worth a Tier-1 lane; it gates every disjoint-window confirmation.",
+    "Older stranded PRs not touched here: #17085, #17170, #17287, #17138 (results), #17326/#17339 (replenish), #17342/#17346 (corpus/receipt) - manager decision from the 08:47Z handoff stands."
+  ]
+}

@@ -15,6 +15,12 @@ and, with --plumbing, reads the PUBLIC read-only API (/api/bot/ml/status, /api/b
 and reports trainer/registry/shadow-log findings. A silent or constant head is a finding unless
 `plumbing.tracked` names the row that owns it.
 
+With --diversity it also answers the FRONTIER question (frontier-research skill): is the ML work spread over
+genuinely different model FAMILIES, or piling onto one? It counts trainable manifests (and, when the public
+registry is reachable, live/shadow/candidate models) and the open ML plan items by family, and flags
+CONCENTRATION (> `diversity.max_family_share` of open units in one family) and FAIL-STREAK (a family whose last
+`diversity.max_fail_streak` graded units all failed that is still getting new units).
+
 EXIT CODES. 0 clean, 1 findings, 2 COULD NOT MEASURE (e.g. API unreachable) -- never 0 when
 nothing was checked (RULES-CANONICAL: red-or-green while measuring nothing is the same sin).
 Read-only. No writes anywhere.
@@ -217,6 +223,103 @@ def plumbing(plan: dict, status: dict, stats: dict, now=None) -> list[str]:
     return f
 
 
+TRAINER_FAMILY = {
+    "LightGBMMulticlassTrainer": "gbdt",
+    "LightGBMRegressionTrainer": "gbdt",
+    "CausalHMMRegimeTrainer": "bayesian_probabilistic",
+    "RegimeClassifierTrainer": "rule_baseline",
+    "PerStrategyWinRateTrainer": "rule_baseline",
+    "ConstantBaselineTrainer": "rule_baseline",
+    "ConstantPredictionTrainer": "rule_baseline",
+    "TorchSequenceTrainer": "deep_sequence",
+    "SSLCorpusEncoderTrainer": "ssl_representation",
+}
+# The taxonomy the frontier scan reasons in. A family with zero manifests AND zero open units is the signal
+# the scan exists to act on, so every name here is reported even at 0.
+FAMILIES = (
+    "gbdt",
+    "linear_logit",
+    "deep_sequence",
+    "ts_foundation_model",
+    "tabular_foundation_model",
+    "rl_bandit",
+    "bayesian_probabilistic",
+    "conformal_calibration",
+    "ssl_representation",
+    "ensemble_stack",
+    "rule_baseline",
+)
+
+
+def manifest_families(repo: Path = REPO) -> dict:
+    """model_id -> family for every trainable manifest (ml/configs/*.yaml, retired/ excluded)."""
+    out = {}
+    for p in sorted((repo / "ml/configs").glob("*.yaml")):
+        try:
+            d = yaml.safe_load(p.read_text()) or {}
+        except (OSError, yaml.YAMLError) as e:
+            print(f"WARN unreadable manifest {p.name}: {e}", file=sys.stderr)
+            continue
+        t = str(d.get("trainer", "")).rsplit(".", 1)[-1]
+        out[str(d.get("model_id", p.stem))] = TRAINER_FAMILY.get(t, "UNMAPPED:" + t)
+    return out
+
+
+def diversity(plan: dict, mf: dict, registry_stages: dict | None = None) -> tuple[list[str], dict]:
+    """Return (findings, table). `registry_stages` is model_id -> stage when the registry was readable."""
+    cfg = plan.get("diversity") or {}
+    share_max = float(cfg.get("max_family_share", 0.6))
+    streak_max = int(cfg.get("max_fail_streak", 3))
+    fams = {f: {"manifests": 0, "live_shadow": 0 if registry_stages else None, "open_units": 0, "history": []} for f in FAMILIES}
+    findings = []
+    for mid, fam in mf.items():
+        fams.setdefault(fam, {"manifests": 0, "live_shadow": 0 if registry_stages else None, "open_units": 0, "history": []})
+        fams[fam]["manifests"] += 1
+        if registry_stages and registry_stages.get(mid) in ("SHADOW", "LIVE"):
+            fams[fam]["live_shadow"] += 1
+    unmapped = sorted({f for f in mf.values() if f.startswith("UNMAPPED:")})
+    if unmapped:
+        findings.append(f"UNMAPPED-TRAINER: {', '.join(unmapped)} (add to TRAINER_FAMILY)")
+    for it in plan["items"]:
+        if it.get("state") != "open" or not it.get("family"):
+            continue
+        fam = it["family"]
+        if fam not in fams:
+            findings.append(f"UNKNOWN-FAMILY: item {it['id']} names '{fam}' (not in FAMILIES)")
+            continue
+        fams[fam]["open_units"] += 1
+    for fam, h in (plan.get("families") or {}).items():
+        if fam in fams:
+            fams[fam]["history"] = list(h.get("history") or [])
+    n_open = sum(f["open_units"] for f in fams.values())
+    untagged = [i["id"] for i in plan["items"] if i.get("state") == "open" and not i.get("family")]
+    if untagged:
+        findings.append(f"NOTE {len(untagged)} open plan items carry no `family:` tag (not counted): {', '.join(untagged)}")
+    if n_open:
+        for fam, f in fams.items():
+            if f["open_units"] / n_open > share_max:
+                findings.append(
+                    f"CONCENTRATION: {fam} holds {f['open_units']}/{n_open} open family-tagged plan items "
+                    f"(> {share_max:.0%})"
+                )
+    for fam, f in fams.items():
+        tail = f["history"][-streak_max:]
+        if len(tail) == streak_max and all(v == "FAIL" for v in tail) and f["open_units"]:
+            findings.append(
+                f"FAIL-STREAK: {fam} last {streak_max} graded units all FAIL and {f['open_units']} new "
+                "unit(s) still open -- retire the line by its exhaustion rule or change the lever class"
+            )
+    n_man = sum(f["manifests"] for f in fams.values())
+    if n_man:
+        for fam, f in fams.items():
+            if f["manifests"] / n_man > share_max:
+                findings.append(
+                    f"MANIFEST-CONCENTRATION: {fam} is {f['manifests']}/{n_man} registered models "
+                    f"(> {share_max:.0%}) -- reported, not failed: the registry predates the frontier scan"
+                )
+    return findings, fams
+
+
 def self_test() -> int:
     now = datetime(2026, 10, 11, 12, tzinfo=timezone.utc)
     plan = {
@@ -295,8 +398,26 @@ def self_test() -> int:
     assert any("ADVISORY-CONSTANT(UNTRACKED): u-head" in x for x in out), out
     assert not any(": ok " in x for x in out), out
     assert any(x.startswith("CYCLE-STALE") for x in out), out
+    dplan = {
+        "diversity": {"max_family_share": 0.6, "max_fail_streak": 3},
+        "families": {"deep_sequence": {"history": ["PASS", "FAIL", "FAIL", "FAIL"]}},
+        "items": [
+            {"id": "a", "state": "open", "family": "gbdt"},
+            {"id": "b", "state": "open", "family": "gbdt"},
+            {"id": "c", "state": "open", "family": "gbdt"},
+            {"id": "d", "state": "open", "family": "deep_sequence"},
+            {"id": "e", "state": "open", "family": "nonsense"},
+            {"id": "f", "state": "done", "family": "rl_bandit"},
+        ],
+    }
+    dfind, dtab = diversity(dplan, {"m1": "gbdt", "m2": "gbdt", "m3": "UNMAPPED:XTrainer"})
+    assert any(x.startswith("CONCENTRATION: gbdt") for x in dfind), dfind
+    assert any(x.startswith("FAIL-STREAK: deep_sequence") for x in dfind), dfind
+    assert any(x.startswith("UNKNOWN-FAMILY") and "nonsense" in x for x in dfind), dfind
+    assert any(x.startswith("UNMAPPED-TRAINER") for x in dfind), dfind
+    assert dtab["rl_bandit"]["open_units"] == 0 and dtab["ts_foundation_model"]["manifests"] == 0
     print(
-        "ml_plan_status self-test: OK (5 plan flags + 4 plumbing findings planted and detected, clean item stays clean)"
+        "ml_plan_status self-test: OK (5 plan flags + 4 plumbing findings + 4 diversity findings planted and detected, clean item stays clean)"
     )
     return 0
 
@@ -309,6 +430,11 @@ def main() -> int:
         "--plumbing",
         action="store_true",
         help="also read the public API and check trainer/registry/shadow-log",
+    )
+    ap.add_argument(
+        "--diversity",
+        action="store_true",
+        help="count manifests/models/open plan items by model FAMILY and flag concentration (frontier scan)",
     )
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--self-test", action="store_true")
@@ -327,8 +453,23 @@ def main() -> int:
         ) as e:  # could not look != nothing found (URLError is an OSError)
             print(f"COULD NOT MEASURE plumbing: {e!r}", file=sys.stderr)
             rc = 2
+    dfind, dtab = [], {}
+    if a.diversity:
+        stages, mf = None, manifest_families()
+        try:  # the registry covers retired models too (96 vs 73 manifests); deployment_bucket is the stage
+            reg = _get("ml/registry")["rows"]
+            mf = {
+                str(r["model_id"]): TRAINER_FAMILY.get(
+                    str(r.get("trainer", "")).rsplit(".", 1)[-1], "UNMAPPED:" + str(r.get("trainer"))
+                )
+                for r in reg
+            }
+            stages = {str(r["model_id"]): r.get("deployment_bucket") for r in reg}
+        except (OSError, ValueError, KeyError, TypeError) as e:  # fall back to manifests; stage column = "-"
+            print(f"NOTE registry unreadable ({e!r}); using manifests, live/shadow not measured", file=sys.stderr)
+        dfind, dtab = diversity(plan, mf, stages)
     if a.json:
-        print(json.dumps({"plan": res, "plumbing": plumb}, indent=1, default=str))
+        print(json.dumps({"plan": res, "plumbing": plumb, "diversity": {"findings": dfind, "families": dtab}}, indent=1, default=str))
     else:
         print(f"{'id':8} {'trk':3} {'plan':7} {'ref':34} {'ref_state':14} flags")
         for r in res:
@@ -341,7 +482,19 @@ def main() -> int:
         )
         for p in plumb:
             print("PLUMBING", p)
-    bad = any(r["flags"] for r in res) or any(not p.startswith("NOTE ") for p in plumb)
+        if a.diversity:
+            print(f"\n{'family':26} {'manifests':>9} {'live/shadow':>11} {'open items':>10}  graded history")
+            for fam, f in sorted(dtab.items(), key=lambda kv: -kv[1]["manifests"]):
+                print(
+                    f"{fam:26} {f['manifests']:9} {f['live_shadow'] if f['live_shadow'] is not None else '-':>11} {f['open_units']:10}  {','.join(f['history'])}"
+                )
+            for d in dfind:
+                print("DIVERSITY", d)
+    bad = (
+        any(r["flags"] for r in res)
+        or any(not p.startswith("NOTE ") for p in plumb)
+        or any(not d.startswith(("MANIFEST-CONCENTRATION", "NOTE ")) for d in dfind)
+    )
     return rc or (1 if bad else 0)
 
 

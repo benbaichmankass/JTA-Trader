@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "due_date": "2026-10-18",
+    "kind": "date"
+  },
+  "id": "PI-20261011-YJAYF7GD-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "PERF-FU-REDUCE-PNL lane session_012h5mfFx5doTB4cYjaYF7gd",
+    "rerun": "python3 scripts/ops/backfill_intent_reduce_pnl.py (dry-run, on the VM via system-action backfill-intent-reduce-pnl) and read the fill_qty_mismatch refusals"
+  },
+  "routed_to": "manager",
+  "state": "queued",
+  "what": "intent_reduce reduce legs whose venue fill qty is far below the qty the journal allocated to parents: 9 of 81 unsettled legs (MEASURED 2026-10-11, diag journal + /api/bot/pnl/exchange/fills 90d; e.g. bybit_1 4518 SOLUSDT filled 4.6 of 1543.2, 4418 ETH 0.32 of 71.75, 4358 BTC 0.01 of 0.839; bybit_portfolio 4102 XRP 40530 of 56210.9). execute.py::_log_trade_to_journal passes reduce_qty=order['qty'] (REQUESTED) to apply_intent_reduce_partial_close, so parents are shrunk by units the venue never closed -> journal/venue position divergence. Root-cause whether these were partial fills or reduce-only clamps, and size the shrink from the FILLED qty (order path: Tier-3 merge). The reduce-leg settlement refuses these rows (fill_qty_mismatch) rather than price unfilled units."
+}

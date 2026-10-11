@@ -13835,6 +13835,67 @@ def _exit_anchor_fetches_per_tick() -> int:
         return 3
 
 
+#: Reduce legs closed within this window are settled by the monitor sweep.
+#: Older rows are the backfill's (scripts/ops/backfill_intent_reduce_pnl.py),
+#: which prints its diff before writing — so deploying this sweep cannot
+#: silently rewrite history the dry-run has not shown.
+_REDUCE_SETTLE_WINDOW_DAYS = 3
+#: A refusal is only RECORDED once the close is this old. Before that the fill
+#: may simply not be pulled yet (the Bybit fills puller is hourly), so the row
+#: is left unstamped and retried next tick — "not pulled yet" is not
+#: "unverifiable".
+_REDUCE_SETTLE_REFUSAL_GRACE_MS = 24 * 3600 * 1000
+
+
+def _sweep_settle_intent_reduce_legs(db) -> Dict[str, int]:
+    """Book an ``intent_reduce`` leg's realised PnL from its venue fills.
+
+    PERF-FU-REDUCE-PNL: a reduce that PARTIALLY consumes a parent shrinks the
+    parent row, so the reduced units' realised PnL sat on no row (the
+    ``deferred_intent_reduce`` marker assumed the parent carried it; a shrunk
+    parent does not). This settles it on the reduce audit row from two MEASURED
+    venue fills — see :mod:`src.runtime.reduce_leg_settlement`. Local SQLite
+    reads only (journal + fills store), no broker call, never raises.
+    """
+    summary: Dict[str, int] = {"scanned": 0, "settled": 0, "absorbed": 0,
+                               "unverified": 0, "retry_later": 0, "errors": 0}
+    try:
+        from src.runtime import reduce_leg_settlement as rls
+        conn = db.connect()
+        try:
+            cand = rls.select_candidates(
+                conn, window_days=_REDUCE_SETTLE_WINDOW_DAYS, limit=50)
+        finally:
+            conn.close()
+        if not cand["rows"]:
+            return summary
+        fills = rls.fills_by_order_from_store(cand["order_ids"])
+    except Exception as exc:  # noqa: BLE001 — incl. FillsStoreUnavailable: we did not look, so stamp nothing
+        logger.warning("_sweep_settle_intent_reduce_legs: scan failed: %s", exc)
+        summary["errors"] += 1
+        return summary
+
+    now = datetime.now(timezone.utc)
+    now_ms = int(now.timestamp() * 1000)
+    for row in cand["rows"]:
+        summary["scanned"] += 1
+        try:
+            plan = rls.plan_settlement(row, cand["parents_by_id"], fills)
+            if plan.state == rls.UNVERIFIED_STATE:
+                closed_ms = _isoformat_to_ms(row.get("closed_at") or row.get("created_at"))
+                if closed_ms is None or now_ms - closed_ms < _REDUCE_SETTLE_REFUSAL_GRACE_MS:
+                    summary["retry_later"] += 1
+                    continue
+            rls.apply_settlement(db, row, plan, now_iso=now.isoformat())
+            summary[{rls.SETTLED_STATE: "settled",
+                     rls.ABSORBED_STATE: "absorbed"}.get(plan.state, "unverified")] += 1
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("_sweep_settle_intent_reduce_legs: trade %s failed: %s",
+                           row.get("id"), exc)
+            summary["errors"] += 1
+    return summary
+
+
 def _sweep_local_pnl_for_unpriced(db) -> Dict[str, int]:
     """Local-compute the realised ``pnl`` the broker can't provide — the
     **universal fallback** half of the bot's PnL-resolution contract.
@@ -15096,6 +15157,19 @@ def run_reconciliation_tick(
     except Exception as exc:  # noqa: BLE001
         logger.warning(
             "run_monitor_tick: local-pnl sweep raised: %s", exc,
+        )
+
+    # PERF-FU-REDUCE-PNL: settle intent_reduce legs' realised PnL from venue
+    # fills (a partially-consumed parent is shrunk, so nothing else books it).
+    try:
+        with _phase("sweep_settle_intent_reduce_legs"):
+            reduce_settle = _sweep_settle_intent_reduce_legs(db)
+        if reduce_settle.get("settled") or reduce_settle.get("unverified") \
+                or reduce_settle.get("errors"):
+            summaries["__reduce_leg_settlement__"] = reduce_settle
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "run_monitor_tick: reduce-leg settlement sweep raised: %s", exc,
         )
 
     # EXIT-CLUSTER: a close whose own stop/target ORDER has a venue fill is an
