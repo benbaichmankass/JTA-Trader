@@ -306,6 +306,11 @@ def _diff_inputs(base: str):
 
 
 def check(base: str | None) -> int:
+    # The diff-scoped verdict is about the COMMITTED tree; say so when that is
+    # not the tree you edited (shared notice, see check_document_index.py).
+    sys.path.insert(0, str(REPO / "scripts" / "ci"))
+    import _dirty_tree
+    _dirty_tree.warn()
     spec = load_spec()
     built = build(spec, load_rows(), load_units())
     bad = static_problems(spec, built, ARCH.read_text(encoding="utf-8"), ROADMAP.read_text(encoding="utf-8"))
