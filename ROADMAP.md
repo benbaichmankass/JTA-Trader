@@ -193,7 +193,7 @@
 | milestone | status | where we are | next | work (live rows · open units) |
 |---|---|---|---|---|
 | **M40** Research and testing workflow (landing, grading, throughput) | 🔄 active | The queue runs end to end (dispatcher, runner, collector) but it is lopsided: the open queue is dominated by generated monthly M20/E35 sweeps and prop breadth units; 17 hand-written units ran and sit without a verdict (RESEARCH-GRADE-PILE); blocked units lacking an owning row are tracked in BLOCKED-UNIT-ORPHANS. | Grade the pile; fix the tooling gaps that stop auto-grading (RESEARCH-TOOLING-GAPS); make queue themes follow THEMES.yaml weights (see L-REGIME). | 20 · 0 |
-| **L-OPS** Manager loop, work system, cost discipline | 🔄 active | Reset of 2026-09-21 done; pipeline pull connected; daily review twice a day; weekly pace tracked (PACE-W40). This roadmap loop is the newest part (ROADMAP-LOOP). Open: cost meter (A1), brief length discipline (E14), register-only PR cost (E49), 17 unrouted pipeline items triaged 2026-10-11. | Run the weekly roadmap pass; keep landed_unproven rows moving to done or killed. | 24 · 0 |
+| **L-OPS** Manager loop, work system, cost discipline | 🔄 active | Reset of 2026-09-21 done; pipeline pull connected; daily review twice a day; weekly pace tracked (PACE-W40). This roadmap loop is the newest part (ROADMAP-LOOP). Open: cost meter (A1), brief length discipline (E14), register-only PR cost (E49), 17 unrouted pipeline items triaged 2026-10-11. | Run the weekly roadmap pass; keep landed_unproven rows moving to done or killed. | 25 · 0 |
 
 ### G6 — Macro and value sleeve
 
