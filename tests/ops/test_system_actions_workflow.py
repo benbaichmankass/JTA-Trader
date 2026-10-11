@@ -268,6 +268,7 @@ EXPECTED_ACTIONS = {
     # backup; optional ids: / equal_only: narrowing. Void-flags ONLY the reduce
     # leg, never the parent close.
     "supersede-intent-reduce-phantom-pnl": "supersede_intent_reduce_phantom_pnl_action.sh",
+    "backfill-intent-reduce-pnl": "backfill_intent_reduce_pnl_action.sh",
     # 2026-07-06 — one-shot repair of the mis-linked ETH prop close
     # (BL-20260706-PROP-CLOSE-MISLINK; root cause fixed in #5744): relink the
     # close fill to the real position ticket, close it, restore the phantom.
@@ -434,6 +435,7 @@ TIER_2_ACTIONS = {
     "supersede-options-adoption-artifacts",
     "supersede-reset-orphan-artifacts",
     "supersede-intent-reduce-phantom-pnl",
+    "backfill-intent-reduce-pnl",
     "fix-prop-mislinked-close",
     "prop-ticket-expire",
     "prop-ticket-reissue",

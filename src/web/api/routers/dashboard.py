@@ -22,11 +22,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Response, status
 
 from src.utils.paths import runtime_logs_dir, trade_journal_db_path
 from src.web.api._account_read_executor import run_account_read
 from src.web.api._asset_class import asset_class_for_symbol
+from src.web.api._swr import SWRCache, snapshot_headers
 from src.web.api._clean_trades import (
     account_class_wire,
     exclude_reconciler_predicate,
@@ -474,13 +475,46 @@ def _pnl_stats() -> tuple[float, float, int, float]:
     return _pnl_stats_for(_NOT_PAPER_PREDICATE)
 
 
+_TAIL_CHUNK = 64 * 1024
+
+
+def _tail_lines(path: Path, n: int) -> list[str]:
+    """The last ``n`` lines of ``path``, read BACKWARDS from the end.
+
+    UI-UPGRADE-1: this used to be ``fh.readlines()[-n:]`` — the whole file read
+    and split to keep 50 lines. Measured 2026-10-11, ``/api/bot/signals`` took
+    3.1-3.5 s on every request because ``signal_audit.jsonl`` only grows. Reads
+    64 KiB blocks from the end until ``n`` complete lines are in hand, so the
+    cost is bounded by the size of the tail, not of the file. Same result as
+    the old read, including a final line without a trailing newline.
+    """
+    if n <= 0:
+        return []
+    with path.open("rb") as fh:
+        fh.seek(0, 2)
+        pos = fh.tell()
+        buf = b""
+        while pos > 0 and buf.count(b"\n") <= n:
+            step = min(_TAIL_CHUNK, pos)
+            pos -= step
+            fh.seek(pos)
+            buf = fh.read(step) + buf
+    # Split on b"\n" only, as readlines() does — str.splitlines() would also
+    # break on U+2028 etc. inside a JSON string written with ensure_ascii=False.
+    parts = buf.split(b"\n")
+    if pos > 0:
+        parts = parts[1:]  # the first piece may be the back half of a line
+    if parts and parts[-1] == b"":
+        parts = parts[:-1]
+    return [p.decode("utf-8", errors="replace") for p in parts[-n:]]
+
+
 def _tail_jsonl(path: Path, n: int) -> list[dict]:
     if not path.exists():
         return []
     lines: list[str] = []
     try:
-        with path.open(encoding="utf-8", errors="replace") as fh:
-            lines = fh.readlines()
+        lines = _tail_lines(path, n)
     except OSError as exc:
         # S-067 borderline: was silently `return []`. Keep the
         # empty-list shape (the dashboard's logs/signals panels
@@ -834,6 +868,7 @@ def _r_block(rec: dict[str, Any] | None) -> dict[str, Any] | None:
 async def get_positions(
     include_paper: bool = Query(False),
     include_demo: bool = Query(False),
+    response: Response = None,  # type: ignore[assignment]  # FastAPI injects it; direct callers (market_ws) pass nothing
 ) -> list[dict[str, Any]]:
     """Open positions (real-money by default). Each row carries
     ``accountClass`` ("paper" | "real_money") plus the legacy ``isDemo``
@@ -842,6 +877,25 @@ async def get_positions(
     for ``include_paper`` (effective include = include_paper OR include_demo).
     """
     effective_include = include_paper or include_demo
+    # UI-UPGRADE-1: served from a stale-while-revalidate snapshot. Measured
+    # 2026-10-11 against the public API: 5-12 s cold for include_paper=true
+    # (one serial broker read per open row), which held the SPA Overview's
+    # whole Promise.all. A snapshot <= 5 s old is served as is; up to 120 s old
+    # it is served at once while ONE background refresh runs; older than that
+    # it is rebuilt in the request. The age rides on X-Snapshot-Age-S so the
+    # value is never presented as live when it is not. The market WebSocket
+    # calls this function directly every tick and gets the same snapshot.
+    rows, age_s, state = await _POSITIONS_SWR.aget(
+        bool(effective_include), lambda: _build_positions(bool(effective_include)))
+    if response is not None:
+        response.headers.update(snapshot_headers(age_s, state))
+    return rows
+
+
+_POSITIONS_SWR = SWRCache(name="positions", fresh_s=5.0, stale_s=120.0)
+
+
+async def _build_positions(effective_include: bool) -> list[dict[str, Any]]:
     # Offload the blocking sqlite read to a worker thread so it never runs on
     # uvicorn's event loop (this route stays async for the awaited broker read
     # below). RISK-3 / BL-20260707-HEALTHAPI-ACCTBAL-BLOCKING-DB.

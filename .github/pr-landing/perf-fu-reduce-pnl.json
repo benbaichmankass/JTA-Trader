@@ -1,0 +1,11 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "why": "Runtime monitor sweep (src/runtime/order_monitor.py run_monitor_tick) + a new pure module src/runtime/reduce_leg_settlement.py + a dry-run-first Tier-2 system-action (backfill-intent-reduce-pnl). Writes pnl/pnl_percent/exit_price/notes on exit_reason='intent_reduce_executed' audit rows ONLY, from two MEASURED venue fills (exchange_fills store). No order path, no venue call, no parent row, no config/strategies.yaml or accounts.yaml change.",
+  "recorded_decision": {
+    "kind": "operator_decision",
+    "ref": "PERF-FU-REDUCE-PNL"
+  },
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 runtime change + DB data-mutation action: held for the manager to merge, deploy, run the backfill dry-run, then apply."
+}
