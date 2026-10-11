@@ -168,7 +168,7 @@ def test_every_bot_mounts_the_same_menu():
                      ("src/bot/claude_decision_bot.py", '"manager"')):
         src = (root / path).read_text()
         assert "notification_settings_menu import register" in src, path
-        assert f"_register_settings(app" in src or "_register_settings(application" in src
+        assert "_register_settings(app" in src or "_register_settings(application" in src
         assert ch in src
 
 

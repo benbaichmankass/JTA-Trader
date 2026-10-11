@@ -313,7 +313,8 @@ def compose_update(hour: str, prep: dict, work_text: str, digest: dict,
         w_head = "🛠 work: ⛔ section FAILED to build — checklist NOT checked"
         w_body = ("⛔ The work section failed to build "
                   f"({(work or {}).get('error', 'not built')}). This is 'we could not "
-                  "look', NOT 'nothing new'. Legacy register diff follows:\n" + work_text)
+                  "look', NOT 'nothing new'. Legacy register diff "
+                  f"(state {digest.get('digestState') or '—'}) follows:\n" + work_text)
     header = "\n".join([f"🧭 Manager update · {hour[:10]} {hour[11:13]}:00Z",
                         attention_line, f"{r_head} · {w_head}"])
     sections = [

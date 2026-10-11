@@ -26,7 +26,7 @@ import logging
 import sqlite3
 from collections import defaultdict
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -34,20 +34,20 @@ _REJECTED = ("rejected", "exchange_rejected", "rejected_too_small")
 _MAX_LINES = 12
 
 
-def _money(v: Optional[float]) -> str:
+def _money(v: float | None) -> str:
     if v is None:
         return "—"
     return f"{'-' if v < 0 else '+'}${abs(v):,.2f}"
 
 
-def _f(v: Any) -> Optional[float]:
+def _f(v: Any) -> float | None:
     try:
         return None if v is None else float(v)
     except (TypeError, ValueError):
         return None
 
 
-def _r(row: dict) -> Optional[float]:
+def _r(row: dict) -> float | None:
     try:
         from src.runtime.local_pnl import contract_value_usd_for
         from src.runtime.r_provenance import r_multiple_provenanced
@@ -58,7 +58,7 @@ def _r(row: dict) -> Optional[float]:
         return None
 
 
-def gather(since: datetime, now: datetime, db_path: Optional[str] = None) -> dict[str, Any]:
+def gather(since: datetime, now: datetime, db_path: str | None = None) -> dict[str, Any]:
     """Read the journal. Never raises: ``read_state`` = ``read`` · ``absent`` ·
     ``error: …`` — "could not look" is never an empty window."""
     from src.runtime.provenance import ESTIMATED, MEASURED, classify_pnl
@@ -89,20 +89,31 @@ def gather(since: datetime, now: datetime, db_path: Optional[str] = None) -> dic
         join = (" LEFT JOIN order_packages op ON op.order_package_id = t.order_package_id"
                 if meta_sel else "")
         base = f"SELECT t.*{meta_sel} FROM trades t{join} WHERE COALESCE(t.is_backtest,0)=0"
-        q = lambda where, args: [dict(r) for r in conn.execute(f"{base} AND {where}", args)]  # noqa: E731
-        created = "COALESCE(t.created_at, t.timestamp)"
-        closed_ts = "COALESCE(t.closed_at, t.timestamp)" if "closed_at" in cols else "t.timestamp"
+
+        def q(where: str, args: tuple) -> list[dict]:
+            return [dict(r) for r in conn.execute(f"{base} AND {where}", args)]
+        from src.utils.closed_at import closed_at_norm_sql
+
+        # Both sides through datetime(): the journal mixes ISO-T+offset,
+        # space-separated and epoch-ms encodings (src/utils/closed_at.py).
+        created = "datetime(COALESCE(t.created_at, t.timestamp))"
+        closed_ts = (f"datetime(COALESCE({closed_at_norm_sql('t.closed_at')}, t.timestamp))"
+                     if "closed_at" in cols else "datetime(t.timestamp)")
         out["opened"] = q(f"COALESCE(t.status,'open') NOT IN {_REJECTED + ('orphaned',)} "
-                          f"AND {created} >= ? AND {created} < ?", (s, e))
-        out["closed"] = q(f"t.status = 'closed' AND {closed_ts} >= ? AND {closed_ts} < ?", (s, e))
+                          f"AND {created} >= datetime(?) AND {created} < datetime(?)", (s, e))
+        out["closed"] = q(f"t.status = 'closed' AND {closed_ts} >= datetime(?) "
+                          f"AND {closed_ts} < datetime(?)", (s, e))
         out["open"] = q("t.status = 'open'", ())
-        out["rejects"] = q(f"t.status IN {_REJECTED} AND {created} >= ? AND {created} < ?", (s, e))
+        out["rejects"] = q(f"t.status IN {_REJECTED} AND {created} >= datetime(?) "
+                           f"AND {created} < datetime(?)", (s, e))
         if "protection_repair_last_at" in cols:
-            out["repairs"] = q("t.protection_repair_last_at >= ? AND t.protection_repair_last_at < ?",
-                               (s, e))
+            out["repairs"] = q("datetime(t.protection_repair_last_at) >= datetime(?) "
+                               "AND datetime(t.protection_repair_last_at) < datetime(?)", (s, e))
         try:
             out["prop_closed"] = [dict(r) for r in conn.execute(
-                "SELECT * FROM prop_fills WHERE closed_at >= ? AND closed_at < ?", (s, e))]
+                "SELECT * FROM prop_fills WHERE " + closed_at_norm_sql("closed_at")
+                + " >= datetime(?) AND " + closed_at_norm_sql("closed_at")
+                + " < datetime(?)", (s, e))]
         except sqlite3.Error:
             out["prop_state"] = "absent"
     except sqlite3.Error as exc:
@@ -137,7 +148,7 @@ def _closed_line(t: dict) -> str:
             f"{t.get('direction') or '—'} · {r_s} · {pnl_s} · exit {t.get('exit_reason') or '—'}")
 
 
-def build_sections(data: dict, accounts: Optional[list] = None):
+def build_sections(data: dict, accounts: list | None = None):
     """``(headline, [Section…])`` for the snapshot."""
     from src.units.ui.telegram_format import Section
 
@@ -241,7 +252,7 @@ def build_sections(data: dict, accounts: Optional[list] = None):
 
 
 def render(data: dict, *, since: datetime, now: datetime,
-           accounts: Optional[list] = None) -> str:
+           accounts: list | None = None) -> str:
     from src.units.ui.telegram_format import render_html_fitted
 
     head, secs = build_sections(data, accounts)
