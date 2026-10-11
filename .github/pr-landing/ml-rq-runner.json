@@ -1,8 +1,8 @@
 {
   "tier": 2,
   "landing": "hold",
-  "hold_reason": "unvouchable_paths",
-  "hold_text": "Adds a NEW workflow (research-script-run-trainer.yml) that SSHes to the trainer VM with VM_SSH_KEY and runs allowlisted research scripts there, widens script_run/dispatch_queue/collector/guard to a second workflow, and adds one hand-written queue unit (RQ-20261011-0ac8-01, the smoke). Trainer-runtime surface: the manager merges; nothing here changes an order path, config, manifest or stage.",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 surface: a NEW workflow that SSHes to the trainer VM with VM_SSH_KEY and runs allowlisted research scripts there (read-only w.r.t. the product: no registry, DB, deploy or config write), plus the dispatcher/collector/guard widening and one hand-written smoke unit. Approval sought: a manager merge of the trainer-runtime route, under operator directive ML-RQ-RUNNER (2026-10-11, quoted on the row). No order path, config, manifest or stage change. Observation that closes it: the smoke unit lands measured/pass via the trainer path.",
   "recorded_decision": {
     "kind": "operator_decision",
     "ref": "ML-RQ-RUNNER"
