@@ -2,7 +2,7 @@
   "id": "ML-STAGE-DECISIONS",
   "title": "Apply operator ML stage decisions of 2026-10-08 (MES baselines retire + 15m twin demote; audit baseline soft-off; prop-mission awaiting_source)",
   "phase": null,
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": null,
   "model": null,
@@ -11,8 +11,20 @@
   "tier": 3,
   "prs": [],
   "blocked_on": [],
-  "note": "[2026-10-08T06:55Z manager] Operator popups 06:35Z verbatim: MES \"Retire baselines, keep 5m only\"; audit \"Soft-off\"; prop-mission not retired (see PROP-MISSION-MODEL). Applied by the Sun 10-11 ML-review lane as one held Tier-3 PR. [2026-10-11 ROUTE-AND-ASK-TRIAGE] PI-20260929-K85Q64SF-0005 (MES baselines silent) routed here 2026-10-11: already answered by the operator's 2026-10-08 retire decision",
-  "updated_at": "2026-10-11T06:01:21Z",
-  "updated_by": "session_01BFAVovnP4UK5phrpVWnYsR",
+  "note": "[2026-10-08T06:55Z manager] Operator popups 06:35Z verbatim: MES \"Retire baselines, keep 5m only\"; audit \"Soft-off\"; prop-mission not retired (see PROP-MISSION-MODEL). Applied by the Sun 10-11 ML-review lane as one held Tier-3 PR. [2026-10-11 ROUTE-AND-ASK-TRIAGE] PI-20260929-K85Q64SF-0005 (MES baselines silent) routed here 2026-10-11: already answered by the operator's 2026-10-08 retire decision [2026-10-11 ML-STAGE-FLIPS lane] Applied on trainer via relay issues #17633 (promote-stage x4) and #17635 (verify): trainer registry shows all 4 at candidate, stage_history shadow->candidate by claude-ml-review-20261011 at 21:28Z. Mirror not yet synced at 21:30Z -> landed_unproven. deployment_bucket is derived in src/web/api/routers/training_center.py::_compute_deployment_bucket from target_deployment_stage (+linked_strategies), not stage_history.",
+  "updated_at": "2026-10-11T21:30:15Z",
+  "updated_by": "session_01Tek3WNMpDTChWtLP51vFYb",
+  "roadmap": [
+    "M25"
+  ],
+  "writeback": {
+    "roadmap": "M25: stage decisions applied on trainer 2026-10-11 (4 heads shadow->candidate); milestone text updates when the mirror confirms",
+    "arch": "none: stage change in the registry, no contract change"
+  },
+  "observation": {
+    "what": "GET /api/bot/ml/registry shows target_deployment_stage=candidate and a stage_history entry by=claude-ml-review-20261011 for all 4 ids (mirror still showed shadow 21:30Z, ~90s after the trainer flip); and /api/bot/shadow/stats gets no rows after 2026-10-11T21:28Z for them",
+    "how_to_check": "curl https://ict-bot.duckdns.org/api/bot/ml/registry, filter rows by model_id; curl /api/bot/shadow/stats, compare last_seen/count per id with 2026-10-11 pre-flip values (setup-quality-audit 4763 / mes-regime-15m-lgbm-v2 1277 / mes-setup-quality 268 / mes-trade-outcome-winrate 268)",
+    "due_by": "2026-10-12T12:00Z"
+  },
   "_seq": 349
 }
