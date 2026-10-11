@@ -1,0 +1,73 @@
+# docs/plans/ml-plan-items.yaml -- the machine-readable ML / AI-trader build plan.
+#
+# The human-readable plan is ROADMAP.md § "AI trader (ML) -- build plan". THIS file is what the
+# recurring ML plan loop (.claude/skills/ml-review/SKILL.md § "The ML plan loop") checks:
+# every item names the checklist row or research/queue unit that carries it, the observation
+# that closes it, and (for recurring items) the skill that re-asks. scripts/ops/ml_plan_status.py
+# resolves each ref and flags an orphan (ref does not exist), a closed ref with an open item, an
+# open ref whose item is marked done, and a stale item (no movement past `review_days`).
+# An item with no resolvable ref is not a plan item -- it is a memo.
+#
+# Edit rules: add/close items ONLY with the row/unit that carries them. `state` here is the PLAN's
+# view (open | done | killed | parked); the ref's own state is read live, never copied.
+schema: 1
+updated: '2026-10-11'
+review_days: 14          # an open item whose ref has not moved in this long is flagged STALE
+items:
+# ---- Track S: the independent-AI-trader spine (operator goal 2026-07-01: one model that reads everything) ----
+- {id: ML-S1, track: S, title: "Veto line (S1): market-state veto of a leg's own trades", state: parked, ref: M19-S1, close: "Reopen only with a NEW information class (see ML-N2, ML-N3). S1 FAILED twice at declared power (RQ-20260928-002/-003, 2026-09-29): killed S2-sizing and the S3 adapter by their registered rules.", tier: 3}
+- {id: ML-S2, track: S, title: "Exit line (S2-exit): is there ANY leg family where an exit head beats the baseline net of cost?", state: open, ref: RQ-20261008-901, close: "Three negatives so far: donchian FAIL (RQ-20260927-002, -14.66R OOS), S2-exit INDETERMINATE/REFINE (RQ-20260929-401: SOL -4.30, XRP +0.21, ETH -1.16), XRP multi-fold FAIL (RQ-20261008-900, k=1 of 3, pooled -1.94R). Last registered lever: the pullback-family transfer (this unit, via ML-X3). Line is exhausted on current features if it fails; then S2 reopens only with a new information class (ML-N2/N3).", tier: 1}
+- {id: ML-S3, track: S, title: "Proposer line (S3): a model that proposes trades", state: parked, ref: R-M19, close: "Gate: S1 or S2 PASS (PI-20260928-VNMMNBJH-0002 killed 2026-10-04, reopen only on a PASS). The staged-path doc is docs/research/M19-ai-trader-postmortem-and-staged-path-2026-09-28.md.", tier: 3}
+# ---- Track R: regime / WHEN to apply each strategy ----
+- {id: ML-R1, track: R, title: "Regime program: check-in, wide approach study, good-vs-bad trade conditions, baseline momentum model, work plan", state: open, ref: REGIME-PROGRAM, close: "Check-in with measured state written; queue units landed; first wave run and read out.", tier: 1}
+- {id: ML-R2, track: R, title: "Regime soft-weight variants (unblocks RQ-20260927-006..009)", state: open, ref: REGIME-WEIGHT-VARIANTS, close: "The four units are out of research/queue/blocked/ and dispatchable.", tier: 1}
+- {id: ML-R5, track: R, title: "Regime scope: history, impact scoping, next units (child of the regime program)", state: open, ref: REGIME-SCOPE, close: "Absorbed by REGIME-PROGRAM deliverables 1 and 5; row closes when its units are in the queue.", tier: 1}
+- {id: ML-R3, track: R, title: "Regime-head stage decisions (MES baselines, 15m twin, audit baseline soft-off)", state: open, ref: ML-STAGE-DECISIONS, close: "One held Tier-3 PR landed by the operator and the stage change OBSERVED on the trainer registry.", tier: 3}
+- {id: ML-R4, track: R, title: "ETH/SOL funding/OI-joined datasets (unblocks RQ-20260929-109/110)", state: open, ref: FUNDING-OI-DATASETS-ETH-SOL, close: "Datasets build on the trainer and both units leave blocked/.", tier: 1}
+- {id: ML-N1J, track: R, title: "Lever for ML-N1: shadow-log -> realized vol joiner", state: open, ref: ML-HEAD-AGREEMENT-JOIN, close: "Joiner merged, unit moved out of blocked/.", tier: 1}
+# ---- Track X: exit and take-profit heads ----
+- {id: ML-X1, track: X, title: "ml2-live-leg-corpus lever (per-trade emits for the six live legs; mfe_r baselines)", state: open, ref: ML-LEG-CORPUS, close: "ml2_bracket_train_eval --per-leg prints four baselines per quantile; RQ-20261009-900 leaves blocked/.", tier: 1}
+- {id: ML-X2, track: X, title: "TP doctrine predict-head: step 1 sharper-than-baseline, step 2 net-of-cost overlay", state: open, ref: TP-PREDICT-HEAD, close: "RQ-20261009-900 and -901 graded; head built only if both pass, else closed as 'B4 is enough'.", tier: 3}
+- {id: ML-X3, track: X, title: "Exit-head transfer to pullback (driver lever)", state: open, ref: EXIT-HEAD-PULLBACK-DRIVER, close: "RQ-20261008-901 out of blocked/ with run.workflow set.", tier: 1}
+- {id: ML-X4, track: X, title: "Exit-head shadow liveness: rows stopped 2026-10-04/05", state: open, ref: ML-EXIT-HEAD-LIVENESS, close: "Verdict no-open-leg vs emit-broken written with trade ids.", tier: 1}
+# ---- Track P: serve-parity and signal-time producers (ML-PRODUCERS milestones) ----
+- {id: ML-P0, track: P, title: "Replay-parity harness (M0)", state: open, ref: ML-PARITY-HARNESS, close: "Harness merged and reproduces the known svble funding gap in a recorded trainer run.", tier: 1}
+- {id: ML-P1, track: P, title: "Funding producer for btc-regime-1h-lgbm-funding-svble-v1 (M1)", state: open, ref: ML-PRODUCER-FUNDING, close: "Live shadow row with all declared features non-null AND non-default.", tier: 2}
+- {id: ML-P2, track: P, title: "Flow feasibility, flow producer, retire setup-quality-lgbm-v2, conviction label gate (M2-M5)", state: open, ref: ML-PRODUCERS, close: "M2 go/stop note, M3 only if M2 passes, M4 operator decision, M5 answered by ML-D2.", tier: 2}
+# ---- Track D: data, labels, hygiene ----
+- {id: ML-D1, track: D, title: "setup_labels killzone/bias fix proven end to end", state: open, ref: ML-DATASET-FIXES, close: "dataset_audit ok for setup-quality-lgbm-v2 with nan_fraction<0.99 on both columns and a fresh registered run.", tier: 1}
+- {id: ML-D2, track: D, title: "Label wall: per-cell labels vs the n>=300 / n>=1000 gates", state: open, ref: ML-LABEL-WALL, close: "Cell-vs-gate table committed and RQ-20261011-17f4-02 graded.", tier: 1}
+- {id: ML-D4, track: D, title: "ML hygiene: constant baselines, calibrator holdout, MES margin watch", state: open, ref: ML-HYGIENE, close: "PI-20261004-AHCVAAF5-0001/-0002 dispositioned; constant baselines soft-off or tagged as reference.", tier: 1}
+- {id: ML-D5, track: D, title: "Trainer disk and capacity", state: done, ref: TRAINER-DISK, close: "Trainer disk used_pct < 85 (read 43.8% on 2026-10-11).", tier: 2}
+# ---- Track N: open-ended new ideas and information classes (standing quota: >=1 per weekly cycle) ----
+- {id: ML-N2, track: N, title: "Information class: news layer veto (WEPE G1)", state: open, ref: RQ-20261009-902, close: "Join script exists; unit graded.", tier: 1}
+- {id: ML-N3, track: N, title: "Information class: prediction-market surprise (WEPE G2)", state: open, ref: RQ-20261009-903, close: "Unit graded.", tier: 1}
+- {id: ML-N4, track: N, title: "ML research lane: exit-head expansion, regime-head gates (BTC/SOL/MES)", state: done, ref: ML-RESEARCH-W41, close: "Units authored; their results are read by research-ops.", tier: 1}
+# ---- Track V: plumbing validation (recurring) ----
+- {id: ML-V2, track: V, title: "Weekly plumbing check: trainer cycle, builds, registry, shadow-log liveness, advisory parity", state: open, ref: recurring:ml-review, close: "Recurring: scripts/ops/ml_plan_status.py --plumbing is run by every ml-review and the result is in the review record.", tier: 1}
+- {id: ML-L1, track: V, title: "The ML plan loop itself (this file reviewed against measured progress every cycle)", state: open, ref: ML-ROADMAP-LOOP, close: "Row done when two consecutive weekly cycles ran without an operator reminder.", tier: 1}
+# Plumbing expectations (read by `ml_plan_status.py --plumbing`). A silent or constant shadow head is a
+# FINDING unless it appears here with the row/PI that tracks it -- so a new silence cannot hide.
+plumbing:
+  max_cycle_age_hours: 36
+  max_silent_hours: 6          # a logging head with no row for this long is SILENT
+  max_disk_used_pct: 85
+  expected_registry_stages: {advisory: 3, shadow: 25, candidate: 67, research_only: 1}   # MEASURED 2026-10-11 (api/bot/ml/status); a change must be explained by a recorded decision
+  expected_refusing:          # manifests the trainer's dataset audit REFUSES (enforced) -- MEASURED 2026-10-11 api/bot/ml/status refusing_manifests_24h
+    ml/configs/baseline-prop-mission-policy.yaml: ML-STAGE-DECISIONS
+    ml/configs/btc-regime-15m-lgbm-base-vt003-pcv-v1.yaml: ML-HYGIENE
+    ml/configs/setup-candidates-metalabel-xsym-yz-v1.yaml: ML-LABEL-WALL
+    ml/configs/setup-quality-lgbm-v2.yaml: ML-DATASET-FIXES
+  tracked:
+    conviction-meta-v1:                         {why: "demoted to candidate 2026-09-29 (ML-DEMOTE); un-served", by: ML-PRODUCERS}
+    setup-quality-lgbm-v2:                      {why: "demoted 2026-09-29; retire proposed (M4)", by: ML-PRODUCERS}
+    btc-regime-1h-lgbm-funding-svble-v1:        {why: "demoted 2026-09-29; funding producer pending", by: ML-PRODUCER-FUNDING}
+    btc-regime-5m-lgbm-flow-v1-offload:         {why: "demoted 2026-09-29; flow feasibility pending", by: ML-PRODUCERS}
+    mes-setup-quality-baseline-v0:              {why: "constant + silent; retire decided 2026-10-08", by: ML-STAGE-DECISIONS}
+    mes-trade-outcome-winrate-baseline-v0:      {why: "constant + silent; retire decided 2026-10-08", by: ML-STAGE-DECISIONS}
+    execution-quality-baseline-v0:              {why: "constant by construction (reference denominator)", by: ML-HYGIENE}
+    setup-quality-audit-baseline-v0:            {why: "constant; soft-off proposed 2026-10-04", by: ML-STAGE-DECISIONS}
+    exit-head-ict_scalp-15m-v1:                 {why: "no rows since 2026-10-04T17:00Z; cause unknown", by: ML-EXIT-HEAD-LIVENESS}
+    exit-head-ict_scalp-5m-v1:                  {why: "no rows since 2026-10-05T01:30Z; cause unknown", by: ML-EXIT-HEAD-LIVENESS}
+    exit-head-donchian-1h-v1:                   {why: "no rows since 2026-10-05T04:05Z; cause unknown", by: ML-EXIT-HEAD-LIVENESS}
+    exit-head-donchian-peak-1h-v1:              {why: "no rows since 2026-10-05T04:05Z; cause unknown", by: ML-EXIT-HEAD-LIVENESS}

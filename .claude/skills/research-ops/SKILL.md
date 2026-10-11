@@ -166,6 +166,13 @@ keeps the refusals; **never hand-write the ledger**). Template-generated and
 `grading: {auto: true}` units are graded by `research-queue-grade.yml` — check they were,
 and handle only `grading.needs_review: true` ones (`grep -l "needs_review: true" research/queue/*.yaml`).
 
+**ML plan write-back.** If a result's unit id (or the checklist row a lever clears) is a `ref` in
+`docs/plans/ml-plan-items.yaml`, set that plan item's `state`/`close` text in the same PR and note
+the verdict beside the roadmap's "AI trader (ML) — build plan" measured-state table; run
+`python3 scripts/ops/ml_plan_status.py` before pushing (it must show no `ORPHAN`/`CLOSED-OPEN`
+for what you touched). The weekly `/ml-review` owns the wider plan review
+(`ml-review` § "The ML plan loop"); you only keep the plan honest about what you graded.
+
 **Generate the follow-ups, both kinds:** research → queue units (step E rules); otherwise →
 checklist rows / pipeline items for builds, bugs and tooling gaps. Every result ends in a
 unit id, a `PI-…`/checklist id, or `no action, because …`. A finding in chat or a memo is
