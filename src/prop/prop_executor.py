@@ -656,6 +656,32 @@ def open_from_fills(fills: Sequence[Mapping[str, Any]]) -> List[Dict[str, Any]]:
             if str(r.get("status") or "").lower() in ("open", "filled")]
 
 
+def unpriced_closes_from_fills(fills: Sequence[Mapping[str, Any]], account_id: str) -> List[Dict[str, Any]]:
+    """Closes THIS executor reported without an exit (reason
+    :data:`CLOSE_UNREAD_REASON`, no ``exit_price``) on ``account_id``, each
+    merged with its ticket's open row for what a match needs (``opened_at``,
+    ``sl``, ``tp``, ``entry_price``). These ARE the watch list of
+    :func:`_reprice_unread_closes`: the journal, not executor state, so a
+    close written off before VELO-CLOSE-RECON is re-read too."""
+    opens: Dict[str, Mapping[str, Any]] = {}
+    for r in fills:
+        if str(r.get("status") or "").lower() in ("open", "filled") and r.get("ticket_id"):
+            opens.setdefault(str(r["ticket_id"]), r)
+    out = []
+    for r in fills:
+        if (str(r.get("account_id") or "") != account_id or str(r.get("status") or "").lower() != "closed"
+                or r.get("exit_price") is not None or not r.get("ticket_id")
+                or str(r.get("reason") or "") != CLOSE_UNREAD_REASON):
+            continue
+        o = opens.get(str(r["ticket_id"])) or {}
+        merged = {k: o.get(k) for k in ("opened_at", "sl", "tp", "entry_price", "created_at")}
+        merged.update({k: v for k, v in r.items() if v is not None and k not in ("opened_at", "created_at")})
+        merged["opened_at"] = o.get("opened_at") or o.get("created_at") or r.get("opened_at")
+        merged["closed_row_at"] = r.get("created_at")
+        out.append(merged)
+    return out
+
+
 class LocalApi:
     """The executor's only line to the system: the local FastAPI (§ 3.1).
     ``transport(method, path, body) -> dict`` is injectable for tests."""
@@ -690,11 +716,19 @@ class LocalApi:
             raise RuntimeError("ticket store not readable (present:false)")
         return list(got.get("tickets") or [])
 
-    def open_fills(self, account_id: str) -> List[Dict[str, Any]]:
+    def _fills(self, account_id: str) -> List[Dict[str, Any]]:
         got = self._transport("GET", f"/api/bot/prop/fills?account_id={account_id}&limit=500", None)
         if not got.get("present", True):
             raise RuntimeError("fills store not readable (present:false)")
-        return open_from_fills(got.get("fills") or [])
+        return list(got.get("fills") or [])
+
+    def open_fills(self, account_id: str) -> List[Dict[str, Any]]:
+        return open_from_fills(self._fills(account_id))
+
+    def unpriced_closes(self, account_id: str) -> List[Dict[str, Any]]:
+        """VELO-CLOSE-RECON: this account's executor closes whose exit was not
+        read (:func:`unpriced_closes_from_fills`)."""
+        return unpriced_closes_from_fills(self._fills(account_id), account_id)
 
     def post_report(self, body: Dict[str, Any]) -> Dict[str, Any]:
         return self._transport("POST", "/api/bot/prop/report", body)
@@ -1165,14 +1199,29 @@ def _run_cycle(*, adapter: Any, page: Any, api: Any, cfg: ExecutorConfig, mode: 
     # 4. reconcile the journal against the terminal
     if journal_open is not None:
         reader = getattr(adapter, "read_trade_history", None)
+        # ONE venue history read per cycle, shared by the close report and the
+        # re-read of earlier unpriced closes; a failed read raises in both.
+        hist_memo: Dict[str, Any] = {}
+
+        def _history_once() -> Sequence[Mapping[str, Any]]:
+            if "rows" not in hist_memo:
+                try:
+                    hist_memo["rows"], hist_memo["exc"] = list(reader(page)), None
+                except Exception as exc:
+                    hist_memo["rows"], hist_memo["exc"] = None, exc
+            if hist_memo["exc"] is not None:
+                raise hist_memo["exc"]
+            return hist_memo["rows"]
+
+        read_history = _history_once if reader else None
         naked: List[Tuple[Mapping[str, Any], Position, List[str], int]] = []
         # An orphan / unmappable terminal position is a failure (alerted,
         # red-flagged if it persists) but holds NO entries: it is not ours to
         # touch, and every ticket still passes the busy-symbol and open-risk
         # guards, which see it.
         orphan = _reconcile_journal(res, cfg, st, positions, journal_open, ledger, claimed_keys, post,
-                                    read_history=(lambda: reader(page)) if reader else None,
-                                    now=now, naked=naked)
+                                    read_history=read_history, now=now, naked=naked)
+        _reprice_unread_closes(res, cfg, st, api, read_history, post, now)
         if orphan:
             _fail(res, orphan)
         for j, p, missing, n_reads in naked:
@@ -3062,6 +3111,149 @@ def match_exit(j: Mapping[str, Any], history: Sequence[Mapping[str, Any]],
     return dict(hits[0]), "matched"
 
 
+def _vwap(rows: Sequence[Mapping[str, Any]]) -> Tuple[Optional[float], float]:
+    qty = sum(_f(r.get("volume")) or 0.0 for r in rows)
+    if qty <= 0:
+        return None, 0.0
+    px = sum((_f(r.get("price")) or 0.0) * (_f(r.get("volume")) or 0.0) for r in rows) / qty
+    return round(px, 10), qty
+
+
+def venue_exit(j: Mapping[str, Any], history: Sequence[Mapping[str, Any]],
+               now: Optional[datetime] = None, cvpp: Optional[float] = None
+               ) -> Tuple[Optional[Dict[str, Any]], str]:
+    """The exit of journal position ``j`` read from the venue history, or
+    ``(None, why)``. VELO-CLOSE-RECON.
+
+    1. ORDER IDENTITY first: closing fills of the ticket's own bracket
+       children (``<base>-S`` stop, ``<base>-T`` target; ``dxtrade_api.
+       client_ids``) name the reason outright -- ``sl`` / ``tp`` -- whatever
+       the price (a trailed stop fills above the entry stop). They must add up
+       to the journaled size; a partial is ``None``, never a guess.
+    2. Else the time / size match (:func:`match_exit`) with the reason
+       INFERRED from the exit price (``exit_reason``): a manual or bulk close,
+       or a venue whose history carries no client id (the browser terminal).
+
+    P&L: the venue's own net closed P&L when it sent one; otherwise COMPUTED
+    from the venue fills, ``(exit - entry) x size x cvpp`` with the entry at
+    the ticket's own opening fill (``<base>-E``) when the history has it, else
+    the journaled entry. Gross: the REST history carries no commission or
+    financing (MEASURED, #17505), and ``pnl_basis`` says so. No ``cvpp`` ->
+    no P&L (never assumed 1)."""
+    from src.prop.platform.dxtrade_api import client_ids
+    from src.prop.symbol_map import to_bot_symbol
+
+    sym = str(j.get("symbol") or "").upper()
+    d = _dir(j.get("direction"))
+    qty = _f(j.get("qty"))
+    tid = str(j.get("ticket_id") or "")
+    if not sym or d is None:
+        return None, "journal row has no symbol/direction"
+    close_side = "short" if d == "long" else "long"
+
+    def same_sym(r: Mapping[str, Any]) -> bool:
+        return str(to_bot_symbol(r.get("symbol")) or r.get("symbol") or "").upper() == sym
+
+    ids = client_ids(tid) if tid else {}
+    by_leg = {ids.get("sl"): "sl", ids.get("tp"): "tp"} if tid else {}
+    mine = [r for r in history if tid and r.get("client_id") in by_leg and r.get("effect") == "closing"
+            and r.get("side") == close_side and same_sym(r) and r.get("ts") is not None
+            and (now is None or r["ts"] <= now)]
+    if mine:
+        px, got = _vwap(mine)
+        if qty is None or not _close(got, qty, 1e-6):
+            return None, f"bracket closed {got} of {qty} (partial; not priced)"
+        legs = {by_leg[r["client_id"]] for r in mine}
+        hit: Dict[str, Any] = {
+            "price": px, "ts": max(r["ts"] for r in mine),
+            "reason": legs.pop() if len(legs) == 1 else "sl+tp",
+            "exit_source": "venue order history (reason by order identity: the ticket's own "
+                           + "/".join(sorted(by_leg[r["client_id"]] for r in mine)) + " order filled)",
+            "net_closed_pnl": None, "closed_pnl": None,
+            "commission": None,
+        }
+    else:
+        m, why = match_exit(j, history, now)
+        if m is None:
+            return None, why
+        hit = {**m, "reason": exit_reason(d, _f(m.get("price")), _f(j.get("sl")), _f(j.get("tp"))),
+               "exit_source": "terminal Trade History (reason inferred from exit vs SL/TP)"}
+    hit["exit_price"] = _f(hit.get("price"))
+    entry_rows = [r for r in history if tid and r.get("client_id") == ids.get("entry")
+                  and r.get("effect") == "opening" and same_sym(r)]
+    entry, _ = _vwap(entry_rows) if entry_rows else (_f(j.get("entry_price")), 0.0)
+    hit["entry_fill"] = entry if entry_rows else None
+    if _f(hit.get("net_closed_pnl")) is not None:
+        hit["pnl"], hit["pnl_basis"] = _f(hit.get("net_closed_pnl")), "venue net closed P&L"
+    elif entry is not None and qty is not None and cvpp is not None and hit["exit_price"] is not None:
+        sign = 1.0 if d == "long" else -1.0
+        hit["pnl"] = round((hit["exit_price"] - entry) * sign * qty * cvpp, 2)
+        hit["pnl_basis"] = ("venue fills: (exit - " + ("entry fill" if entry_rows else "journaled entry")
+                            + ") x size x contract value; gross of commission/financing (not in the history)")
+    else:
+        hit["pnl"], hit["pnl_basis"] = None, "not computable (entry, size or contract value unknown)"
+    return hit, "matched"
+
+
+def _close_exit_fields(hit: Mapping[str, Any]) -> Dict[str, Any]:
+    """The close-report fields for an exit :func:`venue_exit` read."""
+    return {"exit_price": hit.get("exit_price"), "pnl": hit.get("pnl"), "reason": hit.get("reason"),
+            "closed_at": hit["ts"].isoformat(), "exit_source": hit.get("exit_source"),
+            "pnl_basis": hit.get("pnl_basis"), "entry_fill": hit.get("entry_fill"),
+            "closed_pnl_gross": _f(hit.get("closed_pnl")), "commission": _f(hit.get("commission"))}
+
+
+def _cvpp(cfg: ExecutorConfig, sym: str) -> Optional[float]:
+    return _f((cfg.symbols.get(str(sym or "").upper()) or {}).get("cvpp"))
+
+
+def _reprice_unread_closes(res: CycleResult, cfg: ExecutorConfig, st: Dict[str, Any], api: Any,
+                           read_history: Optional[Callable[[], Sequence[Mapping[str, Any]]]], post: Any,
+                           now: Optional[datetime]) -> None:
+    """VELO-CLOSE-RECON: a close reported WITHOUT its exit is never written
+    off. Every cycle, each of this account's unpriced executor closes (the
+    journal's own list, ``api.unpriced_closes``) is matched against the venue
+    history again; when it matches, the close is re-reported with its exit,
+    reason and P&L, and the journal UPDATES the unpriced row in place
+    (``prop_journal.insert_fill``). While it does not, every cycle is a
+    failure: alerted the first time, ONE red flag on the RED_FLAG_AFTER-th
+    consecutive cycle (``settle_failures``). Nothing is held: the position is
+    already gone from the terminal."""
+    lister = getattr(api, "unpriced_closes", None)
+    if lister is None:
+        return
+    try:
+        rows = list(lister(cfg.account_id))
+    except Exception as exc:
+        _fail(res, f"unpriced-close list unreadable ({type(exc).__name__}); retrying next cycle")
+        return
+    if not rows:
+        return
+    if read_history is None:
+        _fail(res, f"{len(rows)} close(s) without an exit and no venue history reader on this adapter")
+        return
+    try:
+        hist: Optional[Sequence[Mapping[str, Any]]] = list(read_history())
+        why_all = None
+    except Exception as exc:
+        hist, why_all = None, f"history read failed ({type(exc).__name__})"
+    for j in rows:
+        tid = str(j.get("ticket_id"))
+        hit, why = (None, why_all) if hist is None else venue_exit(j, hist, now, _cvpp(cfg, j.get("symbol")))
+        if hit is None:
+            res.log("close_exit_unread", ticket_id=tid, why=why)
+            _fail(res, f"{tid}: close exit still unread ({why}); re-reading the venue history every cycle")
+            continue
+        body = {"kind": "fill", "status": "closed", "account_id": cfg.account_id, "ticket_id": tid,
+                "symbol": j.get("symbol"), "direction": _dir(j.get("direction")), "qty": j.get("qty"),
+                "entry_price": j.get("entry_price"), "opened_at": j.get("opened_at"),
+                "source": "prop_executor", "repriced": "exit read from the venue after an unpriced close",
+                **_close_exit_fields(hit)}
+        res.log("close_repriced", ticket_id=tid, exit_price=body["exit_price"], reason=body["reason"],
+                pnl=body["pnl"], closed_at=body["closed_at"])
+        _report(res, post, body)
+
+
 def _reconcile_journal(res: CycleResult, cfg: ExecutorConfig, st: Dict[str, Any],
                        positions: Sequence[Position], journal_open: Sequence[Mapping[str, Any]],
                        ledger: IntentLedger, claimed_keys: set, post: Any,
@@ -3120,18 +3312,9 @@ def _reconcile_journal(res: CycleResult, cfg: ExecutorConfig, st: Dict[str, Any]
                 rows, why = history()
                 hit = None
                 if rows is not None:
-                    hit, why = match_exit(j, rows, now)
+                    hit, why = venue_exit(j, rows, now, _cvpp(cfg, key[0]))
                 if hit is not None:
-                    px = _f(hit.get("price"))
-                    body.update({
-                        "exit_price": px,
-                        "pnl": _f(hit.get("net_closed_pnl")),
-                        "reason": exit_reason(key[1], px, _f(j.get("sl")), _f(j.get("tp"))),
-                        "closed_at": hit["ts"].isoformat(),
-                        "exit_source": "terminal Trade History (reason inferred from exit vs SL/TP)",
-                        "closed_pnl_gross": _f(hit.get("closed_pnl")),
-                        "commission": _f(hit.get("commission")),
-                    })
+                    body.update(_close_exit_fields(hit))
                 res.log("closed_on_terminal", key=k, exit_read=why,
                         exit_price=body.get("exit_price"), reason=body["reason"])
                 _report(res, post, body)

@@ -451,14 +451,25 @@ class DXtradeApiAdapter(PropPlatformAdapter):
         return _history_rows(r.body)
 
     def read_trade_history(self, page: Any = None, restore: Optional[str] = None,
-                           query: str = "period=today") -> List[Dict[str, Any]]:
+                           query: str = "") -> List[Dict[str, Any]]:
         """READ-ONLY (``GET .../orders/history``): executed trades in the shape
         ``prop_executor.match_exit`` consumes from the browser adapter's Trade
-        History read (:func:`trade_history_rows`). ``page`` / ``restore`` are
-        accepted and ignored. Raises ``RuntimeError`` on a non-200 (the caller
-        then keeps the close unread, never guessed); ``[]`` means the read
-        succeeded and found no executions."""
-        r = self._request("GET", f"/accounts/{self._acct()}/orders/history?{query}")
+        History read (:func:`trade_history_rows`), plus each row's own
+        ``client_id`` so the executor names the exit by ORDER IDENTITY
+        (``<base>-S`` stop / ``<base>-T`` target, :func:`client_ids`).
+        ``page`` / ``restore`` are accepted and ignored. Raises
+        ``RuntimeError`` on a non-200 (the caller then keeps the close unread,
+        never guessed); ``[]`` means the read succeeded and found no executions.
+
+        The default is NO ``period`` (VELO-CLOSE-RECON, MEASURED on velotrade_1,
+        issues #17076 / #17459 / #17505): ``period=today`` returned 0 orders at
+        2026-10-11 05:57Z for a close at 03:52Z the same UTC day (its bracket
+        orders were issued 2026-10-10; which field "today" filters on is not
+        established), ``period=yesterday`` is a 400 (error 32),
+        and the unfiltered read returned the 2026-10-06 round trip five days
+        later alongside the 2026-10-11 close."""
+        path = f"/accounts/{self._acct()}/orders/history" + (f"?{query}" if query else "")
+        r = self._request("GET", path)
         if not r.ok:
             raise RuntimeError(f"trade history read failed {self.redact(json.dumps(r.error()))}")
         return trade_history_rows(r.body)
@@ -674,8 +685,10 @@ def trade_history_rows(js: Any) -> List[Dict[str, Any]]:
     (``lastQuantity``), ``price`` (``lastPrice``), ``commission``,
     ``closed_pnl`` and ``net_closed_pnl`` (None unless the venue sent them: the
     REST order model is not known to carry realized P&L, and an absent figure is
-    never filled in). Order and account identifiers are NOT carried. An
-    execution without a usable price or quantity is skipped, not defaulted."""
+    never filled in), ``client_id`` (the order's ``clientOrderId`` -- OUR id,
+    derived from the ticket by :func:`client_ids`, or None) and ``order_type``.
+    The venue's own order code and the account are NOT carried. An execution
+    without a usable price or quantity is skipped, not defaulted."""
     orders = js.get("orders") if isinstance(js, dict) else js
     out: List[Dict[str, Any]] = []
     for o in orders or []:
@@ -701,6 +714,8 @@ def trade_history_rows(js: Any) -> List[Dict[str, Any]]:
                 "commission": _f(e.get("commission")),
                 "closed_pnl": _f(e.get("closedPnl") if e.get("closedPnl") is not None else e.get("closedPL")),
                 "net_closed_pnl": _f(e.get("netClosedPnl")),
+                "client_id": str(o.get("clientOrderId") or e.get("clientOrderId") or "") or None,
+                "order_type": str(o.get("type") or "").lower() or None,
             })
     out.sort(key=lambda r: (r["ts"] is None, r["ts"] or datetime.min.replace(tzinfo=timezone.utc)))
     return out

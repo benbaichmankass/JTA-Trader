@@ -257,6 +257,54 @@ Verifying them is itself now a ranked task (**T-11**) in
 this census rather than guessed at. **Do not read a blank verdict as a pass** — there are
 no blank verdicts here, deliberately.
 
+### AI trader (ML) — build plan (ML-ROADMAP-LOOP, written 2026-10-11)
+
+> **What this is.** The one place the ML / AI-trader work is laid out end to end — research *and* infra — with
+> measured current state, the milestones, and the row or queue unit that carries each. **Machine-readable form:**
+> [`docs/plans/ml-plan-items.yaml`](docs/plans/ml-plan-items.yaml) (28 items; every one names its checklist row or
+> `research/queue/` unit and the observation that closes it). **Checked, not trusted:**
+> `python3 scripts/ops/ml_plan_status.py --plumbing` flags orphans, stale items, closed-but-open items, work outside
+> the plan, and trainer/registry/shadow-log findings. **Reviewed every week** by the ML plan loop
+> ([`ml-review` skill § "The ML plan loop"](.claude/skills/ml-review/SKILL.md)); outcomes are written back here.
+> Ladder, tiers and the promotion rules are unchanged: nothing past `shadow` without the operator (Tier-3); edge is decided
+> offline, net of the full cost stack, against a rule registered before the run.
+>
+> **Goal (operator, 2026-07-01, restated 2026-09-28):** an independent AI trader — one overall model that reads everything.
+> **Standing rule (operator, 2026-09-27):** never kill an idea after one bad pass; kill a *line* only when its registered
+> exhaustion condition fires.
+
+**Measured state, 2026-10-11** (locators: `GET /api/bot/ml/status`, `/api/bot/ml/registry`, `/api/bot/shadow/stats`, read 2026-10-11 ~09:45Z; `comms/reviews/ml-review-20261004-125000.json`):
+
+| what | state |
+|---|---|
+| registry | **96 models** = advisory 3 · shadow 25 · candidate 67 · research_only 1 (identical to the 2026-10-04 review; 27 models were last trained 43–142 d ago — mostly the retired M19 experiments plus the 4 audit-refused/demoted heads — MEASURED from `latest_run.at` in the registry dump) |
+| advisory (order-influencing) | `btc-regime-15m-lgbm-fc-pcv-v2` macro_f1 0.573 · `sol-regime-15m-lgbm-fc-pcv-v2` 0.541 · `mes-regime-5m-lgbm-v2` 0.710 (n_eval 87,636 / 87,444 / 9,022). All **volatility-regime** heads. No head predicts a trade outcome in production. |
+| trainer | timer fired 2026-10-11 00:56Z, cycles 2 in 24 h, last `complete_with_refusals` rc=0, 0 failed, 4 audit-refused manifests; disk 43.8% of 103.9 GB; dataset builds 119 ok / 1 failed (a `market_raw` Bybit kline `retCode 10016` at 05:33Z; whether the next cycle recovers it is not yet checked) |
+| shadow log | 36 models, 69,706 retained rows (since 2026-09-26). **Silent:** 4 demoted heads (by decision), 2 MES baselines, and **four exit heads with no row since 2026-10-04/05 — cause not established** (`ML-EXIT-HEAD-LIVENESS`). **Constant output:** 4 baselines (2 by construction/decision) |
+| AI-trader spine | S1 veto line **FAILED twice at declared power** (RQ-20260928-002/-003) → S2-sizing and the S3 adapter killed by their own rules · S2-exit line: donchian FAIL (RQ-20260927-002, −14.66 R OOS), RQ-20260929-401 INDETERMINATE/REFINE (SOL −4.30, XRP +0.21, ETH −1.16 R), XRP multi-fold FAIL (RQ-20261008-900, k=1 of 3, pooled −1.94 R) · S3 not started (gate: an S1/S2 PASS) |
+| what the 13 retired manifests taught | price-only representations (embeddings, TCN, SSL encoder) add ≤ +0.05 macro_f1 and no direction signal; the binding constraint is **labels** (~99 closed BTC trades → n_eval 20), not compute (`docs/research/M19-ai-trader-postmortem-and-staged-path-2026-09-28.md`) |
+
+**The inference the plan rests on (INFERRED from the table above — check it each cycle):** the only ML that has earned an order-influencing role is
+*when is volatility high*; every attempt to make a model say *what to do* on price-derived inputs has failed offline. So the plan has two halves:
+**(1) make the regime half trustworthy and useful for choosing *when* to apply each strategy**, and **(2) find a new information class or a
+label source that changes the answer for veto/exit/proposer lines**, rather than re-fitting the same inputs.
+
+#### Tracks and milestones
+
+| track | milestone (done when…) | carried by | tier |
+|---|---|---|---|
+| **R — Regime: WHEN to apply each strategy** | **R1** check-in with measured state + wide approach study + good-vs-bad trade study + baseline momentum model + work-plan units landed and first wave read out · **R2** soft-weight variants built, four blocked units dispatchable · **R3** stage decisions applied (MES baselines, 15m twin, audit baseline) · **R4** ETH/SOL funding/OI datasets, two blocked units run · **R5** regime-scope units · **N1** NEW: multi-timeframe head *agreement* beats the best single head (zero-training-cost consensus signal) | `REGIME-PROGRAM`, `REGIME-WEIGHT-VARIANTS`, `ML-STAGE-DECISIONS`, `FUNDING-OI-DATASETS-ETH-SOL`, `REGIME-SCOPE`, `RQ-20261011-17f4-03` + `ML-HEAD-AGREEMENT-JOIN` | 1 (3 for stage flips) |
+| **P — Serve parity and signal-time producers** | **P0** replay-parity harness reproduces the known funding gap · **P1** funding producer for the svble head (fail-closed `None`, never `0.0`) → live row with every declared feature non-null *and* non-default · **P2** flow feasibility → flow producer only if ≥30 volatile bars in the eval fold; retire `setup-quality-lgbm-v2`; conviction stays parked · **V1** all three advisory heads pass a *value-equal* parity audit (today's check is presence-only) | `ML-PARITY-HARNESS`, `ML-PRODUCER-FUNDING`, `ML-PRODUCERS`, `RQ-20261011-17f4-01`; plan: [`docs/plans/ml-producers-milestones-2026-10-08.md`](docs/plans/ml-producers-milestones-2026-10-08.md) | 1 (P0), 2 (P1) |
+| **X — Exit and take-profit heads** | **X1** `ml2-live-leg-corpus` lever (per-trade emits for the six live legs + mfe_r baselines) · **X2** TP-doctrine predict-head step 1 (sharper than four naive baselines) then step 2 (net-of-cost overlay) — build the head only if both pass, else close as "B4 is enough" · **X3** pullback-family transfer of the exit head · **X4** the four silent exit heads: no-open-leg vs broken emit | `ML-LEG-CORPUS`, `TP-PREDICT-HEAD` (`RQ-20261009-900/-901`), `EXIT-HEAD-PULLBACK-DRIVER` (`RQ-20261008-901`), `ML-EXIT-HEAD-LIVENESS` | 1 (3 to apply) |
+| **D — Data, labels, hygiene** | **D1** `setup_labels` killzone/bias fix proven (dataset audit ok, fresh run) · **D2/D3** label wall counted per cell against the n≥300 pooled / n≥1,000 conviction gates → GO / PARK / NEEDS-BACKFILL · **D4** constant baselines soft-off or tagged as reference; calibrator holdout; MES margin watch | `ML-DATASET-FIXES`, `ML-LABEL-WALL`, `RQ-20261011-17f4-02`, `ML-HYGIENE` | 1 |
+| **S — The independent-trader spine** | S1 parked until a **new information class** exists · S2-exit open for one last lever (pullback transfer) · S3 parked behind an S1/S2 PASS | `M19-S1`, `RQ-20261008-901`, `R-M19` | 3 |
+| **N — Open-ended new ideas / information classes** | **Standing quota: ≥1 new idea filed per weekly cycle, or a written "none, because".** Open now: news-layer veto (WEPE G1), prediction-market surprise (WEPE G2), N1 above. Candidates to author as evidence arrives: label sources beyond closed trades (backtest-augmented under parity), frozen time-series-foundation-model features for the *regime* head only (the M19 embedding result was positive on volatility, null on direction), cross-asset breadth features. | `RQ-20261009-902/-903`, `RQ-20261011-17f4-03` | 1 |
+| **V — Plumbing validation** | **Weekly:** `ml_plan_status.py --plumbing` run by every `/ml-review`; every silent or constant head is either tracked by a named row or a finding. **L1:** this loop itself — done after two weekly cycles with no operator reminder. | `recurring:ml-review`, `ML-ROADMAP-LOOP` | 1 |
+
+**Order of work (value per cost, from the evidence above):** P0 → X4 → D2 → P1 (cheap, unblocks or closes whole lines) → X1 → R1 first wave → N1 → X2 → R2/R4 → rest. Anything that needs a decision no data would settle goes to the operator through the classified popup path; anything that needs data becomes a unit.
+
+**What would change this plan:** an advisory head failing the V1 audit (reprioritise P/V above everything); a new information class passing a veto/exit unit (reopen S1/S2 and unpark S3 adapter work); the label-wall census returning GO for any cell (author per-cell meta-head units); the regime program returning a gate that separates a leg's good from bad trades net of cost (that becomes the first Tier-3 regime proposal).
+
 ### M9 / M10 — AI traders workstreams (WS1–WS10)
 
 > Master plan: [`docs/AI-TRADERS-ROADMAP.md`](docs/AI-TRADERS-ROADMAP.md).
