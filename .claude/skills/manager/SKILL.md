@@ -330,7 +330,7 @@ The manager keeps a recurring routine that dispatches **one** lane, `RESEARCH-OP
 (~$5 target), checklist row written before dispatch. It is the research *operations* check
 (pipeline flowing, runnable floor, blocked units, results read, follow-ups filed); it does not
 replace topic lanes such as `PERF-FOLLOWUP-<week>`. **Skip a slot while the previous
-research-ops lane still runs** (check the checklist row / `get_session`; never stack two). When a
+research-ops lane still runs** (check the checklist row / `get_session`; never stack two). **A running topic research lane (`RESEARCH-NIGHT-*`, `PERF-FOLLOWUP-*`, `REGIME-*`, ML, readouts) never causes a skip** (operator, 2026-10-11): those lanes do not do the operations work, so research-ops runs alongside them, told which topic lanes are live so it does not collide with their units. When a
 lane reports, land and archive it per § "Archive protocol"; its record is
 `comms/research/ops/<stamp>.json` and its one-line report goes in the daily brief's
 "what moved". Apply any Tier-3 proposal it leaves as a checklist note per § "Before any operator
