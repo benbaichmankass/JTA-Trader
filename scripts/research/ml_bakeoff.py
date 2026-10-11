@@ -22,7 +22,8 @@ THE UNIT BLOCK (``ml_bakeoff:`` in the unit YAML — registered BEFORE the run, 
       metric: macro_f1                # macro_f1 | f1_class:<label> | accuracy | logloss | brier | auc_ovr | mae | rmse
       higher_is_better: true          # default true for f1/accuracy/auc, false for logloss/brier/mae/rmse
       dataset:
-        kind: parquet|csv|synthetic   # path may be a glob; relative paths resolve from $ML_DATA_ROOT, then the repo
+        kind: parquet|csv|jsonl|synthetic   # path may be a glob; relative paths resolve from $ML_DATA_ROOT, then the repo
+                                    # (trainer shards: datasets-out/market_features/<SYM>/<tf>/<vNNN>/data.jsonl; tail_rows: N keeps the last N)
         path: ...                     # or per-group: groups: {BTCUSDT: {path: ...}, ETHUSDT: {path: ...}}
         ts_col: ts
         target: regime_label
@@ -323,9 +324,29 @@ def load_groups(ds: Dict[str, Any]) -> Dict[str, Any]:
             out[str(g)] = synthetic_frame(int(ds.get("n", 3000)), int(ds.get("seed", 7)) + i,
                                           float(ds.get("signal", 1.5)))
         return out
+    want = [c for c in dict.fromkeys([ds.get("ts_col", "ts"), ds["target"], *list(ds["features"]),
+                                      *([ds["group_col"]] if ds.get("group_col") else []),
+                                      *list(ds.get("extra_columns") or [])])]
+
     def read(path: str):
         p = _resolve_path(path)
-        return pd.read_parquet(p) if str(p).endswith(".parquet") else pd.read_csv(p)
+        sp = str(p)
+        if sp.endswith(".parquet"):
+            return pd.read_parquet(p, columns=[c for c in want if c])
+        if sp.endswith((".jsonl", ".json")):
+            # Trainer dataset shards are data.jsonl (BTC 15m v520 = 480 MB): stream line by line and keep ONLY the
+            # declared columns so a 6 GB box never holds the full width. A column missing from a row is NaN, never
+            # silently dropped from the frame (a declared-but-absent feature is the 'dead column' bug class).
+            rows = []
+            with open(p, encoding="utf-8") as fh:
+                for line in fh:
+                    if not line.strip():
+                        continue
+                    r = json.loads(line)
+                    rows.append({c: r.get(c) for c in want})
+            tail = int(ds.get("tail_rows") or 0)
+            return pd.DataFrame(rows[-tail:] if tail else rows)
+        return pd.read_csv(p, usecols=lambda c: c in set(want))
     if isinstance(ds.get("groups"), dict):
         for g, gs in ds["groups"].items():
             out[str(g)] = read(gs["path"])

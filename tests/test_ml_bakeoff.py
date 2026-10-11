@@ -220,3 +220,21 @@ def test_self_test_passes():
     proc = subprocess.run([sys.executable, str(REPO / "scripts/research/ml_bakeoff.py"), "--self-test"],
                           capture_output=True, text=True, timeout=120)
     assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def test_jsonl_shard_is_read_column_pruned_and_missing_columns_are_nan(tmp_path):
+    p = tmp_path / "data.jsonl"
+    rng = np.random.default_rng(3)
+    rows = []
+    for i in range(600):
+        x = float(rng.normal())
+        rows.append({"ts": f"2025-01-01T{(i // 60) % 24:02d}:{i % 60:02d}:00Z", "x0": x, "huge": "y" * 200,
+                     "label": int(x > 0)} | ({"x1": 1.0} if i % 2 else {}))
+    p.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+    g = mb.load_groups({"kind": "jsonl", "path": str(p), "ts_col": "ts", "target": "label", "features": ["x0", "x1"]})
+    df = g["ALL"]
+    assert list(df.columns) == ["ts", "label", "x0", "x1"] and len(df) == 600      # 'huge' is never held
+    assert df["x1"].isna().sum() == 300                                             # absent -> NaN, not dropped
+    g2 = mb.load_groups({"kind": "jsonl", "path": str(p), "ts_col": "ts", "target": "label", "features": ["x0"],
+                         "tail_rows": 100})
+    assert len(g2["ALL"]) == 100
