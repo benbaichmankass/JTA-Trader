@@ -700,7 +700,7 @@ def test_alive_orphan_with_recoverable_package_reattached_not_flattened(tmp_db, 
         "order_package_id": "op-btc", "strategy_name": "trend_donchian",
         "symbol": "BTCUSDT", "direction": "long", "entry": 80700.0,
         "sl": 79000.0, "tp": 83000.0, "status": "closed",
-        "created_at": "2026-06-15T06:00:00Z",
+        "created_at": (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(),
     })
 
     with patch(
