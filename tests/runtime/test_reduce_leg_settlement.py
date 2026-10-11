@@ -267,3 +267,61 @@ def test_action_wrapper_passes_the_canonical_fills_path():
     src = Path("scripts/ops/backfill_intent_reduce_pnl_action.sh").read_text()
     assert 'FILLS_DB="$(fills_store_path)"' in src
     assert '--fills-db "${FILLS_DB}"' in src
+
+
+def test_legacy_allocation_without_closed_key_is_classified_from_the_parent(db, fills):
+    """Pre-`closed`-key allocations (81 of 104 live, 2026-10-11). Reading the
+    absence as 'partial' double-counted 29 fully-consumed parents (e.g. 4217 ->
+    4162, which already books its full 86,102.5 units): the legacy writer closed
+    the parent with exit_reason=intent_reduce, at its full size, in the same call.
+    """
+    t = _iso(30)
+    full_parent = db.insert_trade({
+        "timestamp": t, "symbol": "XRPUSDT", "direction": "short",
+        "entry_price": 1.40, "position_size": 1000.0, "status": "closed",
+        "exit_reason": "intent_reduce", "closed_at": t, "pnl": 50.0,
+        "is_backtest": 0, "account_id": "bybit_1", "broker_order_id": "P-F",
+        "notes": json.dumps({"trade_id": "P-F"}), "created_at": t,
+    })
+    part_parent = _parent(db, size=9000.0, order="P-P")
+    tid = db.insert_trade({
+        "timestamp": t, "symbol": "XRPUSDT", "direction": "long",
+        "entry_price": 1.35, "position_size": 2000.0, "setup_type": "intent_reduce",
+        "exit_reason": "intent_reduce_executed", "status": "closed", "closed_at": t,
+        "is_backtest": 0, "account_id": "bybit_1", "created_at": t,
+        "notes": json.dumps({"trade_id": "R-1", "intent_reduce": True,
+                             "pnl_source": "deferred_intent_reduce",
+                             "intent_reduce_allocations": [
+                                 {"parent_id": full_parent, "consumed": 1000.0},
+                                 {"parent_id": part_parent, "consumed": 1000.0}]}),
+    })
+    fills("P-F", 1.40, 1000.0)
+    fills("P-P", 1.40, 10000.0)
+    fills("R-1", 1.35, 2000.0)
+    _, plan = _plan(db, tid)
+    assert plan.state == rls.SETTLED_STATE
+    assert plan.consumed_full == pytest.approx(1000.0)
+    assert plan.consumed_partial == pytest.approx(1000.0)
+    assert plan.gross_pnl == pytest.approx(50.0)  # NOT 100: the full parent already books its 50
+    assert [p["parent_id"] for p in plan.parents] == [part_parent]
+
+
+def test_legacy_same_size_but_different_close_time_is_partial(db, fills):
+    """Partial first, the same size later closed by ANOTHER reduce: the earlier
+    reduce's allocation must stay partial (its units are not on the parent)."""
+    early = _iso(40)
+    pid = db.insert_trade({
+        "timestamp": early, "symbol": "XRPUSDT", "direction": "short",
+        "entry_price": 1.40, "position_size": 500.0, "status": "closed",
+        "exit_reason": "intent_reduce", "closed_at": _iso(1), "pnl": 5.0,
+        "is_backtest": 0, "account_id": "bybit_1", "broker_order_id": "P-1",
+        "notes": json.dumps({"trade_id": "P-1"}), "created_at": early,
+    })
+    tid = _reduce(db, None, qty=500.0, hours_ago=30, extra_notes={
+        "trade_id": "R-1", "intent_reduce": True,
+        "intent_reduce_allocations": [{"parent_id": pid, "consumed": 500.0}]})
+    fills("P-1", 1.40, 1000.0)
+    fills("R-1", 1.35, 500.0)
+    _, plan = _plan(db, tid)
+    assert plan.state == rls.SETTLED_STATE
+    assert plan.gross_pnl == pytest.approx(25.0)
