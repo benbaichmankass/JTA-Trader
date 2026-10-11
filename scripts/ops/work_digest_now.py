@@ -155,6 +155,13 @@ def run(dry_run: bool = False, force: bool = False) -> int:
                        lastSentHour=prior.get("lastSentHour"))
         return 0
 
+    due, why = _cadence_gate(force)
+    if not due:
+        print(f"work-digest-now: not due at the operator's cadence ({why}) — not sending")
+        _write_receipt(outcome="skipped_cadence", hour=hour, cadence=why,
+                       lastSentHour=prior.get("lastSentHour"))
+        return 0
+
     base, basis = _resolve_base()
     if base is None:
         # We could not establish a window. That is NOT a quiet hour, and it must
@@ -172,7 +179,8 @@ def run(dry_run: bool = False, force: bool = False) -> int:
     digest = build_digest(base, "HEAD")
     aw, prep = _attention_prepare(dry_run)
     research, rsnap = _research_prepare()
-    message = compose_update(hour, prep, render(digest), digest, research)
+    work, wsnap = _work_prepare()
+    message = compose_update(hour, prep, render(digest), digest, research, work)
     priority = prep["priority"]
     print(message)
 
@@ -210,6 +218,10 @@ def run(dry_run: bool = False, force: bool = False) -> int:
     if rsnap is not None:
         from scripts.ops import research_digest  # noqa: PLC0415
         research_digest.commit(rsnap, path=RESEARCH_CURSOR)
+    if wsnap is not None:
+        from scripts.ops import work_section  # noqa: PLC0415
+        work_section.commit(wsnap, path=WORK_CURSOR)
+    _mark_sent()
     print(f"work-digest-now: queued {path} — the bot drains within ~5s")
     return 0 if aw else 1
 
@@ -217,6 +229,42 @@ def run(dry_run: bool = False, force: bool = False) -> int:
 #: TELEGRAM-CHANNELS (2026-10-11): the research-queue section's cursor. Module
 #: attribute so tests can point it at a tmp dir; advanced only after a send.
 RESEARCH_CURSOR = REPO_ROOT / "runtime_logs" / "research_digest_cursor.json"
+
+
+#: TELEGRAM-CHANNELS (2026-10-11): the WORK section's cursor (same pattern).
+WORK_CURSOR = REPO_ROOT / "runtime_logs" / "work_section_cursor.json"
+
+
+def _work_prepare():
+    """``(section_data, snapshot)`` for the WORK section, or an error dict —
+    a failure is SAID in the message, never rendered as "nothing new"."""
+    try:
+        from scripts.ops import work_section  # noqa: PLC0415
+        d = work_section.build(prev=work_section.read_cursor(WORK_CURSOR))
+        return d, d["snapshot"]
+    except Exception as exc:  # noqa: BLE001
+        print(f"work-digest-now: work section FAILED: {exc}")
+        return {"error": f"{type(exc).__name__}: {exc}"}, None
+
+
+def _cadence_gate(force: bool) -> tuple[bool, str]:
+    """Part C: the ONE shared gate (src/runtime/telegram_settings.is_due)
+    decides whether the MANAGER update is due at the operator's cadence."""
+    if force:
+        return True, "forced"
+    try:
+        from src.runtime import telegram_settings  # noqa: PLC0415
+        return telegram_settings.is_due("manager_update")
+    except Exception as exc:  # noqa: BLE001 — a broken gate SENDS
+        return True, f"gate unreadable ({type(exc).__name__}) — sending"
+
+
+def _mark_sent() -> None:
+    try:
+        from src.runtime import telegram_settings  # noqa: PLC0415
+        telegram_settings.mark_sent("manager_update")
+    except Exception as exc:  # noqa: BLE001
+        print(f"work-digest-now: WARNING could not stamp cadence: {exc}")
 
 
 def _research_prepare():
@@ -234,7 +282,7 @@ def _research_prepare():
 
 
 def compose_update(hour: str, prep: dict, work_text: str, digest: dict,
-                   research: dict | None) -> str:
+                   research: dict | None, work: dict | None = None) -> str:
     """The MANAGER channel's regular status update — operator 2026-10-11:
     *"divided into clear collapsible sections"*. A visible 1–3 line headline,
     then named expandable sections; fitted to Telegram's 4096-char cap by
@@ -253,16 +301,26 @@ def compose_update(hour: str, prep: dict, work_text: str, digest: dict,
     else:
         r_head = research_digest.headline(research)
         r_body = research_digest.render_body(research)
-    n_changes = len(digest.get("events") or []) + len(digest.get("changes") or [])
-    state = digest.get("digestState") or "—"
-    w_head = (f"🛠 work: {n_changes} state change(s)" if state not in (
-        "window_unresolved", "sources_unreadable") else "🛠 work: ⚠️ registers NOT read")
+    # TELEGRAM-CHANNELS (2026-10-11): the WORK section carries the same detail
+    # as the research one (scripts/ops/work_section.py). The legacy register
+    # diff (``work_text``) is the fallback only when that section failed —
+    # its standing close-wedge block now rides the SYSTEM health check.
+    from scripts.ops import work_section  # noqa: PLC0415
+    if work is not None and "error" not in work:
+        w_head = work_section.headline(work)
+        w_body = work_section.render_body(work)
+    else:
+        w_head = "🛠 work: ⛔ section FAILED to build — checklist NOT checked"
+        w_body = ("⛔ The work section failed to build "
+                  f"({(work or {}).get('error', 'not built')}). This is 'we could not "
+                  "look', NOT 'nothing new'. Legacy register diff follows:\n" + work_text)
     header = "\n".join([f"🧭 Manager update · {hour[:10]} {hour[11:13]}:00Z",
                         attention_line, f"{r_head} · {w_head}"])
     sections = [
         Section(summary="Needs you — attention", body=block, priority=10),
         Section(summary="Research queue — new since last update", body=r_body, priority=20),
-        Section(summary="Work — what changed", body=work_text, priority=30),
+        Section(summary="Work — done · verified · blocked · didn't work · next",
+                body=w_body, priority=30),
     ]
     return render_html_fitted(header=header, sections=sections)
 

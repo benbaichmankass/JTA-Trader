@@ -426,3 +426,12 @@ def pytest_sessionfinish(session, exitstatus):
                 f"test-isolation audit: {len(undeclared)} undeclared harmful finding(s). "
                 "Restore what the test changed, or declare it in tests/isolation_baseline.py."
             )
+
+
+# TELEGRAM-CHANNELS part C: the notification-settings store is ON DISK (it must
+# survive restarts), so every test gets its own — otherwise one test's mute or
+# cadence stamp leaks into the next and into the checkout's runtime_state/.
+@pytest.fixture(autouse=True)
+def _isolate_telegram_settings(tmp_path, monkeypatch):
+    monkeypatch.setenv("TELEGRAM_SETTINGS_PATH", str(tmp_path / "telegram_settings.json"))
+    yield

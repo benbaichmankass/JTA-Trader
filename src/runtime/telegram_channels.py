@@ -71,6 +71,7 @@ EVENT_CHANNEL: Final[dict[str, str]] = {
     "demotrade": TRADES,             # execution_diagnostics.enqueue_demo_trade_notification
     "prop_fill": TRADES,             # a prop ticket placed / closed (executor report)
     "prop_monitor": TRADES,          # open prop position update (pulse / consolidated)
+    "trades_snapshot": TRADES,       # periodic PERFORMANCE SNAPSHOT (send_hourly_now, part C cadence)
 
     # ── RETIRED by the operator, 2026-10-09: "NO tickets there any more" ───
     # Machine-flow accounts already sent none of these; only a manual-flow
@@ -82,7 +83,8 @@ EVENT_CHANNEL: Final[dict[str, str]] = {
     "prop_invalidation_prompt": RETIRED,
 
     # ── SYSTEM: the machine — hourly update, restarts, alerts, red flags ───
-    "hourly_report": SYSTEM,         # hourly_report / outcomes / send_hourly_now
+    "hourly_report": SYSTEM,         # hourly_report / outcomes (legacy combined path)
+    "system_health": SYSTEM,         # periodic HEALTH CHECK (send_hourly_now, part C cadence)
     "daily_heartbeat": SYSTEM,
     "pipeline_result": SYSTEM,       # outcomes.report (tick results, refusals)
     "news_veto": SYSTEM,             # pipeline.py
@@ -152,7 +154,7 @@ SENDERS: Final[dict[str, tuple[str, ...]]] = {
     "scripts/check_web_api.py": ("alert",),
     "scripts/db_integrity_alert.py": ("alert",),
     "scripts/daily_heartbeat.py": ("daily_heartbeat",),
-    "scripts/send_hourly_now.py": ("hourly_report",),
+    "scripts/send_hourly_now.py": ("system_health", "trades_snapshot", "hourly_report"),
     "scripts/startup_env_check.py": ("alert",),
     "scripts/secret_scan.py": ("alert",),
     "scripts/ops/system_action_cancel_guard.py": ("alert",),
@@ -276,10 +278,19 @@ def send(kind: str, text: str, *, parse_mode: Optional[str] = None,
 
 
 def enabled(kind: str) -> bool:
-    """Settings hook (TELEGRAM-CHANNELS part C). Until the settings store
-    lands every kind is enabled; alerts can never be muted (see
-    :func:`mutable`)."""
-    return True
+    """Settings hook (TELEGRAM-CHANNELS part C): False only when the operator
+    muted *kind* in ``src/runtime/telegram_settings.py``. An UNMUTABLE kind is
+    always enabled, and a settings read that FAILS enables (over-send, never
+    silence)."""
+    if kind in UNMUTABLE:
+        return True
+    try:
+        from src.runtime import telegram_settings
+
+        return not telegram_settings.is_muted(kind)
+    except Exception:  # noqa: BLE001 — a broken store must not silence anything
+        logger.warning("telegram_channels: settings read failed — %r enabled", kind)
+        return True
 
 
 def mutable(kind: str) -> bool:
@@ -292,6 +303,9 @@ def mutable(kind: str) -> bool:
 UNMUTABLE: Final[frozenset[str]] = frozenset({
     "alert", "execution_alert", "prop_alert", "red_flag", "restart",
     "decision", "system_action",
+    # claude_ping carries the manager's questions to the operator ("needs
+    # you") — muting it would hide asks, not noise (part C, 2026-10-11).
+    "claude_ping",
 })
 
 

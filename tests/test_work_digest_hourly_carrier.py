@@ -29,6 +29,8 @@ def _load(monkeypatch, tmp_path):
     spec.loader.exec_module(mod)
     monkeypatch.setattr(mod, "RECEIPT", tmp_path / "work_digest_receipt.json")
     monkeypatch.setattr(mod, "RESEARCH_CURSOR", tmp_path / "research_digest_cursor.json")
+    monkeypatch.setattr(mod, "WORK_CURSOR", tmp_path / "work_section_cursor.json")
+    monkeypatch.setenv("TELEGRAM_SETTINGS_PATH", str(tmp_path / "telegram_settings.json"))
     # WORK-SYSTEM: the carrier also runs the attention pass, which has its own
     # tests (tests/test_attention_watch.py). Isolated here so these tests count
     # only the digest's own sends; the call itself is asserted below.
@@ -229,7 +231,7 @@ def test_one_message_carries_the_attention_block_first_and_commits_after_send(mo
     assert body.splitlines()[1] == "🟢 No new actionable items"
     order = [body.index(h) for h in ("Needs you — attention",
                                      "Research queue — new since last update",
-                                     "Work — what changed")]
+                                     "Work — done · verified")]
     assert order == sorted(order) and len(body) <= 4096
     assert kw.get("target") == "manager" and kw.get("parse_mode") == "HTML"
     assert mod._attention_calls == ["sent"]
