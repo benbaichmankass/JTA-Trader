@@ -507,7 +507,10 @@ def test_tick_carries_a_quiet_prop_account_across_its_reset(tick_env, monkeypatc
 def test_prop_risk_manager_carries_quiescent_reading(monkeypatch, tmp_path):
     monkeypatch.setattr(dd, "prop_quiescent_since", lambda name, since, now=None: True)
     monkeypatch.setattr(dd, "prop_equity_reading",
-                        lambda aid, now=None: (5_000.0, datetime.now(timezone.utc) - timedelta(days=1)))
+                        # 2 days back, not 1: breakout_2 resets at 00:30Z and a reading within the
+                        # 2 h carry window before the day boundary counts as today's, so "now - 1 day"
+                        # failed every day 22:30Z-00:30Z (row DD-SWITCH-TEST-CLOCK).
+                        lambda aid, now=None: (5_000.0, datetime.now(timezone.utc) - timedelta(days=2)))
     accounts = yaml.safe_load((_REPO / "config/accounts.yaml").read_text())["accounts"]
     rm = PropRiskManager.__new__(PropRiskManager)
     rm.account_name = "breakout_2"
