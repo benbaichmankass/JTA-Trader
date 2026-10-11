@@ -98,3 +98,58 @@ def test_retired_account_excluded(monkeypatch):
         assert [t["account_id"] for t in o["open_trades"]] == ["velotrade_1"]
     finally:
         EQ.pop("breakout_1", None)
+
+
+# ── UI-UPGRADE-1 item 3: unrealized P&L projected from the status snapshots ──
+
+def _patch_ur(monkeypatch, fills, ur, fresh=None):
+    fresh = fresh or {a: "ok" for a in ur}
+    monkeypatch.setattr(pj, "latest_account_status",
+                        lambda a: {"equity": 1000.0, "unrealized": ur.get(a),
+                                   "reported_at": "2026-10-10T15:59:00+00:00"})
+    monkeypatch.setattr(pr, "compute_rule_distance",
+                        lambda a, s=None: {"status_freshness": fresh.get(a, "ok"),
+                                           "status_age_hours": 0.1})
+    monkeypatch.setattr(pj, "list_fills",
+                        lambda account_id=None, limit=100: [f for f in fills if f["account_id"] == account_id])
+
+
+def test_unrealized_sums_venue_numbers_and_flat_accounts(monkeypatch):
+    fills = [_fill(95, "tradeify_1", "open", tkt="A")]
+    _patch_ur(monkeypatch, fills, {"tradeify_1": -13.31, "velotrade_1": None, "breakout_2": None})
+    o = po.build_overview("7d", accounts=ACCTS, now=NOW)
+    states = {a["account_id"]: (a["unrealized"], a["unrealized_state"], a["unrealized_provenance"])
+              for a in o["equity"]["accounts"]}
+    assert states["tradeify_1"] == (-13.31, "venue_snapshot", "measured")
+    assert states["velotrade_1"] == (0.0, "no_open_trades", "estimated")
+    assert o["unrealized_pnl"] == -13.31 and o["unrealized"]["accounts_unknown"] == 0
+    t = o["open_trades"][0]
+    assert (t["unrealized_pnl"], t["unrealized_provenance"]) == (-13.31, "measured")
+    assert "_unrealized_raw" not in o["equity"]["accounts"][0]
+
+
+def test_unrealized_total_is_null_when_any_account_unknown(monkeypatch):
+    fills = [_fill(1, "velotrade_1", "open", tkt="A")]
+    _patch_ur(monkeypatch, fills, {"tradeify_1": 5.0, "velotrade_1": None, "breakout_2": None})
+    o = po.build_overview("7d", accounts=ACCTS, now=NOW)
+    vt = [a for a in o["equity"]["accounts"] if a["account_id"] == "velotrade_1"][0]
+    assert (vt["unrealized"], vt["unrealized_state"]) == (None, "not_reported")
+    assert o["unrealized_pnl"] is None and o["unrealized"]["accounts_unknown"] == 1
+    assert o["open_trades"][0]["unrealized_pnl"] is None
+
+
+def test_stale_snapshot_number_is_not_used(monkeypatch):
+    _patch_ur(monkeypatch, [], {"tradeify_1": 50.0, "velotrade_1": 1.0, "breakout_2": 2.0},
+              fresh={"tradeify_1": "stale"})
+    o = po.build_overview("7d", accounts=ACCTS, now=NOW)
+    t1 = [a for a in o["equity"]["accounts"] if a["account_id"] == "tradeify_1"][0]
+    assert (t1["unrealized"], t1["unrealized_state"]) == (None, "stale")
+    assert o["unrealized_pnl"] is None
+
+
+def test_two_open_trades_do_not_split_the_account_number(monkeypatch):
+    fills = [_fill(1, "tradeify_1", "open", tkt="A"), _fill(2, "tradeify_1", "open", tkt="B")]
+    _patch_ur(monkeypatch, fills, {"tradeify_1": 20.0, "velotrade_1": None, "breakout_2": None})
+    o = po.build_overview("7d", accounts=ACCTS, now=NOW)
+    assert o["unrealized_pnl"] == 20.0
+    assert [t["unrealized_pnl"] for t in o["open_trades"]] == [None, None]
