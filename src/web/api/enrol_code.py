@@ -8,6 +8,8 @@ wraps this and pings the code to the private SYSTEM chat)::
 Needs ``WEB_SESSION_PEPPER`` (codes are stored hashed). The code is valid for
 15 minutes and single use; it is printed once and never logged.
 """
+# wiring: manual-only - run on the web-api host to mint a one-time passkey enrolment code; the
+# Tier-1 `passkey-enrol-code` system-action that will wrap it is not built yet (row UI-UPGRADE-1-AUTH).
 from __future__ import annotations
 
 import sys

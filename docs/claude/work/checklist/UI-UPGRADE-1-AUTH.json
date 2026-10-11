@@ -20,7 +20,10 @@
     }
   ],
   "note": "Design + build order: docs/plans/ui-upgrade-1-auth-and-keys-design.md (UI-UPGRADE-1 items 7+9; operator popup answers 'Google + passkey', 'View + edit, passkey each time'). Blocked on: operator decisions D1 (new web_sessions table), D2 (Keys Save path A: API writes the GitHub Actions secret then set-env, needs GH_SECRETS_WRITE_TOKEN | B: VM file only, flagged diverged), D3 (30d sliding); and the operator creating GOOGLE_OAUTH_CLIENT_ID (Web application client; no client secret used). Rollout: ship auth routes + SPA sign-in with the gate off, operator enrols a passkey, then flip SITE_AUTH_ENFORCE via set-env and verify anon 401 / signed-in 200. Inventory non-browser /api/bot/* consumers first.  || 2026-10-11 (lane session_011uiQyRqUbP23WPcfuj7Yfr, dispatched by Manager Session 2026-10-11): D1 = new web_sessions table in trade_journal.db (declared with # data-wiring:), D2 = Keys Save writes the GitHub Actions secret then set-env (step 5, NOT this lane), D3 = 30-day sliding sessions - as relayed in the manager's dispatch; main's row still read 'blocked on D1-D3' when this lane started, so this note is where they are recorded. Steps 1-3 in flight: API PR (steps 1-2) + SPA patch under comms/ (step 3). Follow-ups: PI-20261011-CFUJ7YFR-0001 (Caddy has no access log - 24h consumer confirmation needs a Tier-2 Caddyfile change first), PI-20261011-CFUJ7YFR-0002 (service-bearer retrofit, 26 anonymous consumer groups).",
-  "updated_at": "2026-10-11T18:53:45Z",
+  "updated_at": "2026-10-11T19:01:47Z",
   "updated_by": "session_011uiQyRqUbP23WPcfuj7Yfr",
+  "roadmap": [
+    "M6"
+  ],
   "_seq": 406
 }

@@ -130,7 +130,8 @@ def google_signin(body: GoogleRequest, request: Request) -> dict[str, Any]:
 
     try:
         claims = _verify_google_token(body.id_token, audience)
-    except Exception:                      # forged / expired / wrong aud|iss / malformed
+    except Exception as exc:  # allow-silent: fail-closed 401, logged by type (never the token)
+        logger.info("google token rejected: %s", type(exc).__name__)
         raise _fail(ip, status.HTTP_401_UNAUTHORIZED, "invalid_google_token")
     if claims.get("aud") != audience:      # belt and braces on top of the library
         raise _fail(ip, status.HTTP_401_UNAUTHORIZED, "invalid_google_token")
@@ -242,13 +243,15 @@ def register_finish(body: RegisterFinish, request: Request) -> dict[str, Any]:
             expected_origin=_origins(),
             require_user_verification=True,
         )
-    except Exception:
+    except Exception as exc:  # allow-silent: fail-closed 400, logged by type
+        logger.info("passkey registration rejected: %s", type(exc).__name__)
         raise _fail(ip, status.HTTP_400_BAD_REQUEST, "registration_failed")
 
     cred_id = bytes_to_base64url(v.credential_id)
     try:
         ws.add_passkey(cred_id, v.credential_public_key, v.sign_count, email, state["label"])
-    except Exception:
+    except Exception as exc:  # allow-silent: duplicate credential id (UNIQUE) -> 409, logged by type
+        logger.info("passkey store refused: %s", type(exc).__name__)
         raise _fail(ip, status.HTTP_409_CONFLICT, "credential_already_registered")
 
     out: dict[str, Any] = {"ok": True, "credential_id": cred_id}
@@ -328,7 +331,8 @@ def assert_finish(body: AssertFinish, request: Request) -> dict[str, Any]:
             credential_current_sign_count=key["sign_count"],     # library rejects regression
             require_user_verification=True,
         )
-    except Exception:
+    except Exception as exc:  # allow-silent: fail-closed 401, logged by type
+        logger.info("passkey assertion rejected: %s", type(exc).__name__)
         raise _fail(ip, status.HTTP_401_UNAUTHORIZED, "assertion_failed")
     # Compare-and-set so two racing copies of one assertion cannot both win.
     if not ws.advance_sign_count(cred_id, v.new_sign_count):
