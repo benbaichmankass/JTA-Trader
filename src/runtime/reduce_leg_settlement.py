@@ -66,6 +66,7 @@ __all__ = [
     "plan_settlement",
     "apply_settlement",
     "fills_by_order_from_store",
+    "FillsStoreUnavailable",
     "select_candidates",
 ]
 
@@ -350,13 +351,25 @@ def select_candidates(
             "order_ids": {o for o in order_ids if o}}
 
 
+class FillsStoreUnavailable(RuntimeError):
+    """The exchange-fills store could not be opened: we did NOT look.
+
+    Distinct from "looked, no fill for this order" on purpose. Collapsing the
+    two stamped rows ``unverified`` without reading the real store: the first
+    VM dry-run (issue #17598, 2026-10-11) ran from a system-action shell with no
+    DATA_DIR, resolved ``<repo>/runtime_state/`` (BL-20260717-FILLS-STORE-PATH-
+    SPLIT), found "0 of 167" fills and planned 76 refusals that an apply would
+    have written.
+    """
+
+
 def fills_by_order_from_store(
     order_ids: Iterable[str], *, conn_factory: Optional[Callable[[], Any]] = None,
 ) -> Dict[str, List[Dict[str, Any]]]:
     """Read the stored venue fills for *order_ids* (read-only, local SQLite).
 
-    Returns ``{}`` when the store does not exist — the caller then refuses each
-    row with ``no_reduce_fill_in_store``, which is the truth: we could not look.
+    Raises :class:`FillsStoreUnavailable` when the store file does not exist
+    (we could not look). ``{}`` means we looked and no order matched.
     """
     ids = sorted({str(o) for o in order_ids if o})
     if not ids:
@@ -368,7 +381,7 @@ def fills_by_order_from_store(
 
         path = get_fills_db_path()
         if not path.exists():
-            return {}
+            raise FillsStoreUnavailable(f"exchange fills store absent at {path}")
         conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
     out: Dict[str, List[Dict[str, Any]]] = {}
     try:

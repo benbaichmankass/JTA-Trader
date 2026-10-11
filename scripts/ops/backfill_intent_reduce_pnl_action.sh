@@ -46,7 +46,12 @@ fi
 PY="${REPO_DIR}/.venv/bin/python3"
 [ -x "${PY}" ] || PY="python3"
 
-ARGS=(--db "${DB_PATH}")
+# The fills store lives under DATA_DIR/runtime_state; this SSH shell does not
+# carry DATA_DIR, so python's resolver would fall back to <repo>/runtime_state
+# and find nothing (BL-20260717-FILLS-STORE-PATH-SPLIT; first dry-run, #17598).
+FILLS_DB="$(fills_store_path)"
+echo ">>> fills store: ${FILLS_DB}"
+ARGS=(--db "${DB_PATH}" --fills-db "${FILLS_DB}")
 if [ -n "${ACTION_IDS// }" ]; then
     ARGS+=(--ids "${ACTION_IDS}")
 fi

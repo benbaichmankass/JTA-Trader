@@ -13870,7 +13870,7 @@ def _sweep_settle_intent_reduce_legs(db) -> Dict[str, int]:
         if not cand["rows"]:
             return summary
         fills = rls.fills_by_order_from_store(cand["order_ids"])
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001 — incl. FillsStoreUnavailable: we did not look, so stamp nothing
         logger.warning("_sweep_settle_intent_reduce_legs: scan failed: %s", exc)
         summary["errors"] += 1
         return summary

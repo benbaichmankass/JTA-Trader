@@ -243,3 +243,27 @@ def test_supersede_script_skips_settled_reduce_legs(db, fills):
         assert sup._candidate_rows(conn, ids=None) == []
     finally:
         conn.close()
+
+
+def test_absent_fills_store_refuses_instead_of_planning_unverified(db, tmp_path, monkeypatch):
+    """First VM dry-run (#17598): the wrapper shell resolved a fills path that did
+    not exist, read it as 'no fills', and planned every row unverified. An absent
+    store is 'we could not look' — the backfill refuses, the sweep stamps nothing."""
+    from scripts.ops import backfill_intent_reduce_pnl as bf
+    monkeypatch.setenv("EXCHANGE_FILLS_DB", str(tmp_path / "absent.sqlite"))
+    pid = _parent(db)
+    tid = _reduce(db, [{"parent_id": pid, "consumed": 1.0, "closed": False}],
+                  qty=1.0, hours_ago=30)
+    assert bf.run(db.db_path, apply=True) == 2
+    assert bf.run(db.db_path, apply=True,
+                  fills_db=str(tmp_path / "also-absent.sqlite")) == 2
+    s = _sweep_settle_intent_reduce_legs(db)
+    assert s["errors"] == 1 and s["unverified"] == 0
+    assert "reduce_settlement" not in json.loads(_row(db, tid)["notes"])
+
+
+def test_action_wrapper_passes_the_canonical_fills_path():
+    from pathlib import Path
+    src = Path("scripts/ops/backfill_intent_reduce_pnl_action.sh").read_text()
+    assert 'FILLS_DB="$(fills_store_path)"' in src
+    assert '--fills-db "${FILLS_DB}"' in src
