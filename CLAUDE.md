@@ -108,6 +108,19 @@ page** on the SPA (`GET /api/bot/work/checklist`), which reads the file from the
 VM's working tree; `ict-git-sync` pulls `main` every ~5 min, so the page is
 exactly as fresh as the last push **to `main`**. **Push, then answer.**
 
+### The roadmap loop — the plan the two categories are built from (operator, 2026-10-11, binding)
+
+[`ROADMAP.md`](ROADMAP.md) opens with a **generated "Live roadmap" block** (source:
+[`docs/roadmap/milestones.yaml`](docs/roadmap/milestones.yaml)): 7 goals, each with a measure and
+a dated baseline, and the milestones that serve them. It is the high-level plan — it informs what
+is built and **authorizes nothing** (tiers and mandates unchanged), and it is not a third category
+of work. **Checklist rows and queue units are built and prioritised FROM its milestones** — each
+carries a `roadmap` ref — and **a closing row writes its outcome back** to the milestone and to
+[`docs/ARCHITECTURE-CANONICAL.md`](docs/ARCHITECTURE-CANONICAL.md) (`writeback` field). Cadence:
+per merge (the lane), every daily review (`python3 scripts/ops/roadmap_map.py --report`), and a
+weekly roadmap pass. Contract: [`.claude/skills/manager/SKILL.md`](.claude/skills/manager/SKILL.md)
+§ "The roadmap loop"; guard `roadmap-map-guard`.
+
 ### The follow-through pipeline — what exists, and what does not
 
 **`docs/claude/work/PIPELINE.jsonl` is the intake for anything that will need
