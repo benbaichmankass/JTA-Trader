@@ -107,7 +107,7 @@ cost to try / **kill criterion**) into `docs/research/frontier-scan-<date>.md`. 
 
 ## Step 5 — every kept idea becomes a unit (never a memo)
 
-Follow `perf-followup` § "Filing a queue unit": mint the id with `python3
+Follow `perf-followup` § "Filing a queue unit" (an ML bake-off adds an `ml_bakeoff:` block and routes to the trainer or a runner — see § "The research → test → improve loop" below): mint the id with `python3
 scripts/research/next_rq_id.py --fetch`; required fields; **`decision_rule` registered before the run**
 with every branch (PASS / FAIL / underpowered) and a **declared baseline it must beat NET of the full
 cost stack** (a feature-lift gate says so explicitly and routes any live use through the downstream
@@ -121,6 +121,80 @@ new hand-written unit lands in a hold PR (E57). Add the plan item to `docs/plans
 ⚠️ **Lever rows are the failure mode of this scheme** — blocked units can sit forever. The weekly run
 re-reads the lever rows it filed; one still `queued` after two scans is raised to the manager as the
 blocker, not re-filed.
+
+## The research → test → improve loop (ML) — the ONE place it is described
+
+> **Operator, 2026-10-11:** *"…we need to have the same continuous research-test-improve flow we have for the
+> strategies to push the roadmap forward."* ML units now run the **same** pipeline strategy units run
+> (`research/queue/README.md`): nothing below is a parallel system. Other skills point here; they do not restate it.
+
+```
+ SCAN      weekly: /ml-review step 9 → this skill (Steps 0-5)  ·  perf-followup Track 3 (strategy half)
+   │       → a pre-registered research/queue unit (decision_rule + ml_bakeoff block) or a lever row
+   ▼
+ RUN       research-queue-dispatch.yml (hourly) fires the unit:
+   │         run.workflow: research-script-run-trainer.yml   (needs the trainer: datasets, venv, model cache)
+   │                    or research-script-run.yml            (CPU-only, data in the repo: free runner)
+   │         run.command: [python3, scripts/research/ml_bakeoff.py, --unit, '{unit}', --out, '{out_dir}']
+   │       the engine writes verdict.json; the collector lands the E5 record under research/results/<unit>/
+   ▼
+ READ      research-ops (02:47/08:47/14:47/20:47 UTC) § D: reads the record, checks n / arm_status first,
+   │       applies the unit's decision_rule VERBATIM (research_disposition.py --record, never a hand-written ledger)
+   ▼
+ IMPROVE   the verdict decides the follow-up (table below); the family history is written back to
+   │       docs/plans/ml-plan-items.yaml so the NEXT scan sees what was and was not tested
+   ▼
+ SCAN      Step 0 of the next scan reads the previous record's units' verdicts and `ml_plan_status.py --diversity`
+```
+
+**Who runs which part (no new cron — each is a step of a routine that already runs):**
+
+| part | routine | cadence |
+|---|---|---|
+| scan, register units, file lever rows | `ml-review` step 9 → `frontier-research` | weekly (Sunday) |
+| fire the unit | `research-queue-dispatch.yml` | hourly |
+| read result, apply rule, file follow-up | `research-ops` § D | 4×/day |
+| plan vs field, plumbing, roadmap write-back | `ml-review` § "The ML plan loop" | weekly |
+| strategy half of the scan | `perf-followup` Track 3 | after each performance review |
+
+### Authoring an ML unit (a registered question, not a script)
+
+A unit is a normal queue unit (`research/queue/README.md` § Fields) plus an **`ml_bakeoff:`** block that is the *machine form of
+the rule written in `decision_rule.rule`* — both committed in the same PR, before any run. The engine
+(`scripts/research/ml_bakeoff.py`, docstring is the schema) takes: a **learner list** (`kind` ∈ prior · numpy_logit · lightgbm ·
+catboost · sklearn_hgb · tabicl · tabpfn, optional `feature_blocks` ∈ har_rv · join_columns), a **dataset** (parquet/csv glob,
+per-group or `group_col`, `holdout_after`), **purged walk-forward folds with an embargo**, a **metric**, a **baseline**, optional
+**controls** (e.g. HAR-RV — a control that matches the incumbent is the headline), the **candidates**, and the **rule**:
+`pass_if` (a candidate passes iff *all* clauses hold), `fail_if_no_candidate_reaches` (the floor), `min_folds`, `headline_checks`.
+Deltas are signed so positive = learner better (lower-is-better metrics flip), each with a paired t-interval over folds and `n`.
+
+- **Where it runs.** Needs trainer-resident data, the trainer venv or its model cache → `research-script-run-trainer.yml`
+  + `routing.needs_trainer_resident_data: true` (peak ≤ 6 GB or the router refuses it as the OOM shape). Everything else → the
+  free runner (`research-script-run.yml`, 4 vCPU / 16 GB). One trainer run at a time (the dispatcher serializes it); the engine
+  takes the shared heavy-job lock.
+- **Never silently fewer arms.** A learner whose library/weights are unavailable is recorded `unavailable` with the reason and
+  **never scored**; a **FAIL requires every declared candidate evaluated** (otherwise INDETERMINATE — a FAIL closes only what was
+  tested). An unavailable *baseline* is `producer_failed`, never a verdict. Install the missing library on the trainer (Tier-2) and
+  re-queue; do not edit the rule.
+- **Licence and provenance ride in the result** (`measurement.licences`): TabPFN weights are non-commercial (`research_only`) —
+  an evaluation arm only; serving one live is an operator licence decision. Record model id + revision for TSFM weights in the
+  learner's `weights_note`.
+- **A feature-lift PASS is not edge.** It earns a candidate manifest and the downstream net-of-cost regime-cell walk-forward.
+
+### Follow-ups — what research-ops files for each verdict (the rule decides; this is what "applies it" means)
+
+| verdict | action (all filed, none a memo) |
+|---|---|
+| **pass** | (1) a **Tier-3 proposal as a note on the owning checklist row** — "candidate manifest for `<model>`" (never an `ml/configs` or stage edit by research-ops); (2) the next unit the scan's kill/advance table names (longer holdout, the net-of-cost walk-forward, LoRA fine-tune only after a zero-shot pass); (3) plan item `state`/`close` and `families.<family>.history: PASS`. |
+| **fail** | `families.<family>.history: FAIL` **with the exact configuration tested** (checkpoint, input, target, horizon) and what was *not* tested; retire units whose `requires_result` can no longer be met; **the diversity check then stops feeding the family** (`FAIL-STREAK` after `max_fail_streak` consecutive FAILs) — a FAIL closes the configuration, never the family. |
+| **indeterminate** | one line + a unit that extends n / redesigns. If the note says `UNAVAILABLE ARMS`: file the install/lever once (checklist row, Tier-2) and re-queue. |
+| **producer_failed / no_data** | not a verdict. Read `run-manifest.json`, `logs/`, `trainer-session.log` in `comms/research/<unit>/<run_id>/`; fix the route or the unit; the failing mechanism is the first incident of the run (research-ops § A). |
+
+### Proof state of the route (update this line when it changes)
+
+Merged ≠ deployed ≠ observed. The route is **observed** only when the smoke unit `RQ-20261011-0ac8-01` has landed a
+`measured/pass` record through `research-script-run-trainer.yml` and a research-ops record lists it in `results_read`
+(checklist `ML-RQ-RUNNER`). Until then treat the trainer path as merged-only.
 
 ## Strategy frontier (the lighter half — run by `perf-followup` Track 3, or here when no review ran)
 
