@@ -171,7 +171,8 @@ def run(dry_run: bool = False, force: bool = False) -> int:
 
     digest = build_digest(base, "HEAD")
     aw, prep = _attention_prepare(dry_run)
-    message = prep["block"] + "\n\n— what changed —\n" + render(digest)
+    research, rsnap = _research_prepare()
+    message = compose_update(hour, prep, render(digest), digest, research)
     priority = prep["priority"]
     print(message)
 
@@ -186,7 +187,10 @@ def run(dry_run: bool = False, force: bool = False) -> int:
     from send_ping import enqueue  # noqa: PLC0415
 
     try:
-        path = enqueue(message, priority=priority, target="claude")
+        # TELEGRAM-CHANNELS: the MANAGER channel (the Claude bot), sent as
+        # Telegram HTML so its sections collapse.
+        path = enqueue(message, priority=priority, target="manager",
+                       parse_mode="HTML")
     except (OSError, ValueError) as exc:
         print(f"work-digest-now: FAILED to enqueue: {exc}")
         _write_receipt(outcome="enqueue_failed", hour=hour, base=base,
@@ -203,8 +207,64 @@ def run(dry_run: bool = False, force: bool = False) -> int:
                    queued=str(path), attention="committed" if aw else "failed")
     if aw:
         aw.commit(prep, "sent")
+    if rsnap is not None:
+        from scripts.ops import research_digest  # noqa: PLC0415
+        research_digest.commit(rsnap, path=RESEARCH_CURSOR)
     print(f"work-digest-now: queued {path} — the bot drains within ~5s")
     return 0 if aw else 1
+
+
+#: TELEGRAM-CHANNELS (2026-10-11): the research-queue section's cursor. Module
+#: attribute so tests can point it at a tmp dir; advanced only after a send.
+RESEARCH_CURSOR = REPO_ROOT / "runtime_logs" / "research_digest_cursor.json"
+
+
+def _research_prepare():
+    """``(section_data, snapshot)`` for the RESEARCH QUEUE section, or
+    ``(None, None)`` when building it failed — which the message then SAYS
+    (a failure here must not stop the update, nor read as "nothing new")."""
+    try:
+        from scripts.ops import research_digest  # noqa: PLC0415
+        prev = research_digest.read_cursor(RESEARCH_CURSOR)
+        d = research_digest.build(prev=prev)
+        return d, d["snapshot"]
+    except Exception as exc:  # noqa: BLE001 — loud, in the message itself
+        print(f"work-digest-now: research section FAILED: {exc}")
+        return {"error": f"{type(exc).__name__}: {exc}"}, None
+
+
+def compose_update(hour: str, prep: dict, work_text: str, digest: dict,
+                   research: dict | None) -> str:
+    """The MANAGER channel's regular status update — operator 2026-10-11:
+    *"divided into clear collapsible sections"*. A visible 1–3 line headline,
+    then named expandable sections; fitted to Telegram's 4096-char cap by
+    trimming section bodies with an explicit count of what was dropped.
+    """
+    from scripts.ops import research_digest  # noqa: PLC0415
+    from src.units.ui.telegram_format import Section, render_html_fitted  # noqa: PLC0415
+
+    block = str(prep.get("block") or "")
+    attention_line = (block.splitlines() or ["—"])[0][:200]
+    if research is None or "error" in (research or {}):
+        r_head = "🔬 research: ⛔ section FAILED to build — queue NOT checked"
+        r_body = ("⛔ The research-queue section failed to build "
+                  f"({(research or {}).get('error', 'unknown')}). This is 'we could "
+                  "not look', NOT 'nothing new'.")
+    else:
+        r_head = research_digest.headline(research)
+        r_body = research_digest.render_body(research)
+    n_changes = len(digest.get("events") or []) + len(digest.get("changes") or [])
+    state = digest.get("digestState") or "—"
+    w_head = (f"🛠 work: {n_changes} state change(s)" if state not in (
+        "window_unresolved", "sources_unreadable") else "🛠 work: ⚠️ registers NOT read")
+    header = "\n".join([f"🧭 Manager update · {hour[:10]} {hour[11:13]}:00Z",
+                        attention_line, f"{r_head} · {w_head}"])
+    sections = [
+        Section(summary="Needs you — attention", body=block, priority=10),
+        Section(summary="Research queue — new since last update", body=r_body, priority=20),
+        Section(summary="Work — what changed", body=work_text, priority=30),
+    ]
+    return render_html_fitted(header=header, sections=sections)
 
 
 def _attention_prepare(dry_run: bool):
