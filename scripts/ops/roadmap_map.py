@@ -187,7 +187,7 @@ def _d(v) -> dt.date:
     return v if isinstance(v, dt.date) else dt.date.fromisoformat(str(v))
 
 
-def render(spec: dict, built: dict) -> str:
+def render(spec: dict) -> str:
     L = [BEGIN, "",
          "## Live roadmap — where we are on the way to the system goals", "",
          (f"> **Reviewed {spec['reviewed']} by the roadmap loop** "
@@ -261,7 +261,7 @@ def static_problems(spec: dict, built: dict, arch_text: str, roadmap_text: str |
         if r.get("milestone") not in seen:
             bad.append(f"queue_rules: milestone {r.get('milestone')!r} unknown")
     if roadmap_text is not None:
-        want = render(spec, built)
+        want = render(spec)
         if BEGIN not in roadmap_text or want not in roadmap_text:
             bad.append("ROADMAP.md live block is stale -- run: python3 scripts/ops/roadmap_map.py --write-roadmap")
     return bad
@@ -369,7 +369,7 @@ def self_test() -> int:
     spec["milestones"][0].pop("architecture")
     stale = static_problems(spec, built, "", "no block here")
     assert any("stale" in b for b in stale), stale
-    ok_text = "pre\n" + render(spec, built) + "\npost"
+    ok_text = "pre\n" + render(spec) + "\npost"
     assert static_problems(spec, built, "", ok_text) == []
     # (b) count-only drift (queue PRs add/retire units, orphan counts move) must NOT report stale
     more = units[:1] + [{"id": "RQ-20261001-3", "status": "queued", "title": "alpha two"},
@@ -428,9 +428,9 @@ def main() -> int:
     spec = load_spec()
     built = build(spec, load_rows(), load_units())
     if a.render:
-        print(render(spec, built))
+        print(render(spec))
     elif a.write_roadmap:
-        write_roadmap(render(spec, built))
+        write_roadmap(render(spec))
         print("ROADMAP.md live block written")
     else:
         print(report(spec, built, dt.datetime.now(dt.timezone.utc).date()))
