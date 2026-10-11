@@ -1,6 +1,6 @@
 id: RQ-20261011-001
 title: Do the three approximate alpaca_live pullback legs still clear Stage 0 once trail_decay is simulated?
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -117,3 +117,23 @@ related:
   - 'pipeline PI-20260928-HK3BKCKE-0001'
   - 'research/queue/RQ-20260922-004.yaml (xrp_pullback_2h, same omission class)'
 last_dispatched_at: null
+result: >-
+  GRADED 2026-10-11 by lane GUARD-FIDELITY (session_0138CvwpMuWStDp1Ys3usyJQ),
+  rule RULE-RQ1011-001-FAITHFUL-STAGE0 (registered and committed f50c640
+  BEFORE the run). RAN SESSION-LOCALLY (yfinance daily, each record's own
+  window, harness-resolved cost stack fees=0.0 / slippage=5.0 bps rt /
+  funding=0.0); outputs at comms/research/RQ-20261011-001/local-20261011/.
+  INSTRUMENT CONTROL held on all three: the approximate arm reproduced each
+  committed record (ief n=3 +4.3125R vs record +4.3238R; slv n=11 +2.4841R vs
+  +2.4842R; iaum n=7 +7.6621R vs +7.6621R).
+  FAITHFUL ARM (trail_decay_stall_bars + trail_decay_tight_mult at live values):
+  ief_pullback_1d +2.3254R over n=8 (delta -1.99R; the tighter trail closes
+  trades sooner, freeing the slot for 5 more entries) -> PASS;
+  slv_pullback_1d +2.4841R over n=11 (delta 0.00R, verified real: all 11
+  trades exit by TP/stop/timeout, none by trail, so the tighter trail never
+  binds) -> PASS;
+  iaum_pullback_1d +9.8512R over n=8 (delta +2.19R) -> PASS.
+  VERDICT pass on all three: the omission did not flip the sign of RULE-D1 on
+  any leg. NOT evidence of edge at n=8/11/8 (see power.basis). No demotion
+  filed. The legs stay on FIDELITY_BASELINE until their records are
+  regenerated faithful (PI-20261011-YS3USYJQ-0001).
