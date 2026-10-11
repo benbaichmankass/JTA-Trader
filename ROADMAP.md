@@ -158,7 +158,7 @@
 
 | milestone | status | where we are | next | work (live rows · open units) |
 |---|---|---|---|---|
-| **L-PROP** Prop accounts -- automate, protect, qualify | 🔄 active | Three prop accounts execute automatically (breakout_2 via the phone executor, tradeify_1 and velotrade_1 via DXtrade REST); ~30 'Stage-0 breadth for the prop book' units are queued. Open: per-leg sizing (PROP-PER-LEG-SIZING, PROP-PER-LEG-EV-GRID), the exit-price gap on venue SL/TP closes (PROP-EXIT-READ), ticket supersede/reissue (in flight), Tradeify other platforms. | Get the first prop closes gradable (PROP-EXIT-READ); then read the breadth units into a candidate pool; keep the EV question (B6) ahead of drawdown avoidance. | 35 · 46 |
+| **L-PROP** Prop accounts -- automate, protect, qualify | 🔄 active | Three prop accounts execute automatically (breakout_2 via the phone executor, tradeify_1 and velotrade_1 via DXtrade REST); ~30 'Stage-0 breadth for the prop book' units are queued. Open: per-leg sizing (PROP-PER-LEG-SIZING, PROP-PER-LEG-EV-GRID), the exit-price gap on venue SL/TP closes (PROP-EXIT-READ), ticket supersede/reissue (in flight), Tradeify other platforms. | Get the first prop closes gradable (PROP-EXIT-READ); then read the breadth units into a candidate pool; keep the EV question (B6) ahead of drawdown avoidance. | 32 · 46 |
 
 ### G3 — Trustworthy plumbing
 
@@ -167,7 +167,7 @@
 
 | milestone | status | where we are | next | work (live rows · open units) |
 |---|---|---|---|---|
-| **M39** Measurement integrity and invariant enforcement | 🔄 active | The audit findings (FIX-CA-*, FIX-SA-*, PROTECTION-HARDENING, RECON*, GATE-SCOPE, RESTART-SAFE, LIVE-PARITY) are mostly merged and waiting on observation (landed_unproven). E53 had already noted this work lands as rows that never name M39. | Drive each landed_unproven row to its named observation or close it; do not add new guards without a measured failure. | 35 · 0 |
+| **M39** Measurement integrity and invariant enforcement | 🔄 active | The audit findings (FIX-CA-*, FIX-SA-*, PROTECTION-HARDENING, RECON*, GATE-SCOPE, RESTART-SAFE, LIVE-PARITY) are mostly merged and waiting on observation (landed_unproven). E53 had already noted this work lands as rows that never name M39. | Drive each landed_unproven row to its named observation or close it; do not add new guards without a measured failure. | 34 · 0 |
 | **M31** Position telemetry (peak-R between entry and exit) | 📋 dormant | Hook observed working on the live fleet 2026-09-07; peak_r sentinel data clean 2026-09-12; offline MFE distribution at stated n 2026-09-18 (E53). Feeds the TP/trail work under M20. | Consumed by M20 trail-decay and TP-prediction units; no separate build open. | **none yet** — telemetry shipped and observed; consumers are M20 rows |
 
 ### G4 — AI trader (ML and regime knowledge)
@@ -192,7 +192,7 @@
 
 | milestone | status | where we are | next | work (live rows · open units) |
 |---|---|---|---|---|
-| **M40** Research and testing workflow (landing, grading, throughput) | 🔄 active | The queue runs end to end (dispatcher, runner, collector) but it is lopsided: the open queue is dominated by generated monthly M20/E35 sweeps and prop breadth units; 17 hand-written units ran and sit without a verdict (RESEARCH-GRADE-PILE); blocked units lacking an owning row are tracked in BLOCKED-UNIT-ORPHANS. | Grade the pile; fix the tooling gaps that stop auto-grading (RESEARCH-TOOLING-GAPS); make queue themes follow THEMES.yaml weights (see L-REGIME). | 21 · 0 |
+| **M40** Research and testing workflow (landing, grading, throughput) | 🔄 active | The queue runs end to end (dispatcher, runner, collector) but it is lopsided: the open queue is dominated by generated monthly M20/E35 sweeps and prop breadth units; 17 hand-written units ran and sit without a verdict (RESEARCH-GRADE-PILE); blocked units lacking an owning row are tracked in BLOCKED-UNIT-ORPHANS. | Grade the pile; fix the tooling gaps that stop auto-grading (RESEARCH-TOOLING-GAPS); make queue themes follow THEMES.yaml weights (see L-REGIME). | 20 · 0 |
 | **L-OPS** Manager loop, work system, cost discipline | 🔄 active | Reset of 2026-09-21 done; pipeline pull connected; daily review twice a day; weekly pace tracked (PACE-W40). This roadmap loop is the newest part (ROADMAP-LOOP). Open: cost meter (A1), brief length discipline (E14), register-only PR cost (E49), 17 unrouted pipeline items triaged 2026-10-11. | Run the weekly roadmap pass; keep landed_unproven rows moving to done or killed. | 23 · 0 |
 
 ### G6 — Macro and value sleeve
