@@ -80,9 +80,20 @@ def run(db_path: str, *, apply: bool, ids: Optional[List[int]] = None,
     finally:
         conn.close()
     rows = cand["rows"]
+    if fills_db and not os.path.exists(fills_db):
+        print(f"error: fills store not found at {fills_db} — refusing: an absent "
+              "store would read as 'no fills' and plan every row unverified "
+              "(BL-20260717-FILLS-STORE-PATH-SPLIT).", file=sys.stderr)
+        return 2
     factory = (lambda: sqlite3.connect(f"file:{fills_db}?mode=ro", uri=True)) \
         if fills_db else None
-    fills = rls.fills_by_order_from_store(cand["order_ids"], conn_factory=factory)
+    try:
+        fills = rls.fills_by_order_from_store(cand["order_ids"], conn_factory=factory)
+    except rls.FillsStoreUnavailable as exc:
+        print(f"error: {exc} — refusing (pass --fills-db; the system-action wrapper "
+              "passes $(fills_store_path)).", file=sys.stderr)
+        return 2
+    print(f"fills store: {fills_db or 'resolver default'}")
     print(f"population: {len(rows)} unsettled reduce leg(s) "
           f"(exit_reason=intent_reduce_executed, closed, pnl NULL, non-backtest, "
           f"not superseded, not yet looked at) · {len(cand['parents_by_id'])} parent "
