@@ -1,9 +1,9 @@
 {
-  "as_of": "2026-10-11T04:22:51.600148+00:00",
+  "as_of": "2026-10-11T07:06:17.770869+00:00",
   "by_disposition": {
     "healthy": 0,
-    "insufficient-data": 18,
-    "kill": 1,
+    "insufficient-data": 16,
+    "kill": 3,
     "tweak": 0
   },
   "cost_fidelity_read_state": "measured",
@@ -177,7 +177,7 @@
         "has_open_position": true,
         "held_back": 0,
         "intent_episodes": 21,
-        "intents": 319,
+        "intents": 387,
         "received": 2,
         "same_symbol_live_contenders": [
           "trend_donchian_xrp_4h"
@@ -324,13 +324,13 @@
         "verdict": "insufficient_n",
         "why": "entry n=1, exit n=0; need >= 10 each"
       },
-      "disposition": "insufficient-data",
-      "eta": "re-check next scheduled pass",
+      "disposition": "kill",
+      "eta": null,
       "execution": "live",
       "mechanics": {
         "account_class": "paper",
         "account_id": "alpaca_paper",
-        "has_open_position": true,
+        "has_open_position": false,
         "held_back": 0,
         "intent_episodes": 2,
         "intents": 95,
@@ -341,8 +341,8 @@
         "unmapped": null,
         "unmapped_statuses": []
       },
-      "n_needed": "an entry signal observed while this leg is FLAT (no open position), in some future window",
-      "reason": "starved (95 intent(s), 0 received) but ALREADY HOLDING a position opened before the window \u2014 leg_flow_report's own caveat: this is NOT reliably 'unreached', it may simply have needed no new entry this window while flat-to-in-position. Cannot be graded kill from this window alone.",
+      "n_needed": null,
+      "reason": "starved: 95 actionable intent(s) (2 episode(s)) in the window, 0 order(s)/ticket(s) received, held_back=0, no open position held. This leg's soak purpose (prove the pipeline works) is unmet: it never reaches an order regardless of what cost fidelity reads.",
       "strategy": "ief_pullback_1d"
     },
     {
@@ -616,13 +616,13 @@
         "verdict": "insufficient_n",
         "why": "entry n=1, exit n=0; need >= 10 each"
       },
-      "disposition": "insufficient-data",
-      "eta": "re-check next scheduled pass",
+      "disposition": "kill",
+      "eta": null,
       "execution": "live",
       "mechanics": {
         "account_class": "paper",
         "account_id": "alpaca_paper",
-        "has_open_position": true,
+        "has_open_position": false,
         "held_back": 2,
         "intent_episodes": 2,
         "intents": 182,
@@ -633,8 +633,8 @@
         "unmapped": null,
         "unmapped_statuses": []
       },
-      "n_needed": "an entry signal observed while this leg is FLAT (no open position), in some future window",
-      "reason": "starved (182 intent(s), 0 received) but ALREADY HOLDING a position opened before the window \u2014 leg_flow_report's own caveat: this is NOT reliably 'unreached', it may simply have needed no new entry this window while flat-to-in-position. Cannot be graded kill from this window alone.",
+      "n_needed": null,
+      "reason": "starved: 182 actionable intent(s) (2 episode(s)) in the window, 0 order(s)/ticket(s) received, held_back=2, no open position held. This leg's soak purpose (prove the pipeline works) is unmet: it never reaches an order regardless of what cost fidelity reads.",
       "strategy": "spy_trend_long_1d"
     },
     {
@@ -752,7 +752,7 @@
       },
       "ict_scalp_avax_5m": {
         "last_created_at": "2026-10-04T22:14:07.712731+00:00",
-        "n": 3
+        "n": 1
       },
       "ict_scalp_sol_5m": {
         "last_created_at": null,
