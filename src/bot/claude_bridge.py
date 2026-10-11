@@ -390,12 +390,13 @@ async def _drain_pending_claude_pings(context: ContextTypes.DEFAULT_TYPE) -> Non
         # is byte-for-byte the previous behaviour. The change cannot lose a ping;
         # at worst it delivers exactly where it delivered yesterday.
         route = _claude_route()
-        try:
-            from src.runtime.notify import send_telegram_direct
+        from src.runtime import telegram_split
+        from src.runtime.notify import send_telegram_direct
 
+        def _send(part: str) -> bool:
             try:
-                sent = send_telegram_direct(
-                    text, parse_mode=parse_mode, mirror_to_fcm=False,
+                return send_telegram_direct(
+                    part, parse_mode=parse_mode, mirror_to_fcm=False,
                     bot_token=route.token, chat_id=route.chat_id,
                 )
             except Exception:  # noqa: BLE001
@@ -405,26 +406,22 @@ async def _drain_pending_claude_pings(context: ContextTypes.DEFAULT_TYPE) -> Non
                 # the inbox forever: deliver it once as PLAIN text instead.
                 logger.warning("claude ping inbox: %s HTML send failed — "
                                "retrying as plain text", name)
-                sent = send_telegram_direct(
-                    _html_to_plain(text), parse_mode=None, mirror_to_fcm=False,
+                return send_telegram_direct(
+                    _html_to_plain(part), parse_mode=None, mirror_to_fcm=False,
                     bot_token=route.token, chat_id=route.chat_id,
                 )
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(
-                "claude ping inbox: send failed for %s via %s — %s",
-                name, route.describe(), exc,
-            )
-            continue   # leave file in place; retry next tick
 
-        # Only delete on a CONFIRMED send. send_telegram_direct returns False
-        # (no raise) when credentials are missing — pre-2026-06-23 that silent
-        # skip was treated as success and the file was deleted, silently losing
-        # the ping. Keep the file so a transient creds gap retries instead.
-        if not sent:
-            logger.warning(
-                "claude ping inbox: send skipped (creds missing?) for %s — "
-                "keeping for retry", name,
-            )
+        # TELEGRAM-CHANNELS (2026-10-11): an oversized body is SPLIT into
+        # <=4096-char parts and delivered in order (resuming after a partial
+        # failure); a repeated non-length 4xx moves the file aside as .broken
+        # with ONE red flag on SYSTEM. Before this, a too-long ping failed every
+        # 5 s forever (measured: ~660 failures/hour on one ~50h-old file).
+        # Only a CONFIRMED send of every part deletes the file — an unconfirmed
+        # send (creds missing) keeps it for retry, as before.
+        outcome = telegram_split.process_ping(
+            path, payload, text, parse_mode, _send,
+            where=f"ict-claude-bridge via {route.describe()}")
+        if outcome != "sent":
             continue
 
         try:

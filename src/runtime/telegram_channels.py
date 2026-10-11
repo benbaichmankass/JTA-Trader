@@ -115,6 +115,7 @@ SENDERS: Final[dict[str, tuple[str, ...]]] = {
     # transport / plumbing (route whatever they are handed)
     "src/runtime/notify.py": ("alert",),
     "src/runtime/telegram_channels.py": ("alert",),
+    "src/runtime/telegram_split.py": ("red_flag",),   # .broken ping flag (oversize fix)
     "src/bot/telegram_routes.py": ("alert",),
     "src/bot/cloud_notifier.py": ("execution_alert", "trade-open", "claude_ping"),
     "src/bot/claude_bridge.py": ("claude_ping", "command_reply"),

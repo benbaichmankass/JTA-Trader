@@ -65,7 +65,8 @@ ACCOUNTS = {"accounts": {
 }}
 
 
-def _record(leg, cfg, *, slippage=5.0, n=56, folds_net=(4.8583, 2.2583, 8.3058, 3.5996)):
+def _record(leg, cfg, *, slippage=5.0, n=56, folds_net=(4.8583, 2.2583, 8.3058, 3.5996),
+            fidelity="faithful"):
     net = round(sum(folds_net), 4)
     return {
         "strategy": leg, "config_fingerprint": mr.b1.config_fingerprint(cfg),
@@ -78,6 +79,7 @@ def _record(leg, cfg, *, slippage=5.0, n=56, folds_net=(4.8583, 2.2583, 8.3058, 
                           "registered_at": "2026-09-22T05:34:08Z", "verdict": "pass"},
         "generated_at": "2026-09-24T12:41:53+00:00",
         "source_run": f"comms/strategy_evidence/runs/x/{leg}__trades.jsonl",
+        "fidelity": fidelity,
     }
 
 
@@ -212,6 +214,28 @@ def test_equity_leg_with_no_decisive_verdict_is_needs_data_not_fire(repo):
 def test_fire_s0_to_s1(repo):
     root = repo(accounts={"accounts": {**ACCOUNTS["accounts"],
                                        "bybit_1": _acct("paper", "bybit", ["l1", "l2", "l3"])}})
+    res = mr.resolve(LEG, "S0", "S1", "bybit_1", root=root)
+    assert res["verdict"] == "FIRE", res
+    assert res["proposal"]["roster_add"] == {"bybit_1": [LEG]}
+
+
+# ── C5 fidelity (operator 2026-10-11, GUARD-FIDELITY) ─────────────────────
+def test_real_money_promotion_on_an_approximate_record_refuses_on_b1_c5(repo):
+    rec = _record(LEG, LEG_CFG, fidelity="approximate")
+    rec["omitted_levers"] = ["trail_decay_stall_bars", "trail_decay_tight_mult"]
+    res = _s1s2(repo(records={LEG: rec}))
+    _refused(res, "R-B1-C5")
+    assert "trail_decay_stall_bars" in res["detail"]
+
+
+def test_paper_promotion_on_an_approximate_record_is_not_refused_by_c5(repo):
+    """C5 binds a NEW RISK-BEARING add only (the operator's words: Stage-0
+    evidence for a real-money roster add). S0 -> S1 lands on a paper soak
+    account, which is exactly where an approximate leg should go to be learned
+    from -- so the same record that refuses above must FIRE here."""
+    root = repo(accounts={"accounts": {**ACCOUNTS["accounts"],
+                                       "bybit_1": _acct("paper", "bybit", ["l1", "l2", "l3"])}},
+                records={LEG: _record(LEG, LEG_CFG, fidelity="approximate")})
     res = mr.resolve(LEG, "S0", "S1", "bybit_1", root=root)
     assert res["verdict"] == "FIRE", res
     assert res["proposal"]["roster_add"] == {"bybit_1": [LEG]}
