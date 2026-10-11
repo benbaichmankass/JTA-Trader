@@ -56,8 +56,11 @@ evaluator_config:
   split_strategy: time_aware_holdout
   time_column: ts
   holdout_fraction: 0.2
-target_deployment_stage: shadow
+target_deployment_stage: candidate
 notes: |
+  STAGE 2026-10-11 (ML-STAGE-DECISIONS, operator 2026-10-08 "Retire baselines, keep 5m only"):
+  the 15m twin is demoted shadow -> candidate; the 5m advisory head (mes-regime-5m-lgbm-v2)
+  is the single MES regime head. Keeps retraining daily; re-stage if the 5m margin does not recover.
   v2 LightGBM head, MES @ 15m. Direct A/B vs the per-bucket-modal
   baseline-v1 (same dataset, same split). MES 15m bars are resampled from a
   rolling ~60d ES=F 5m yfinance base (deeper IBKR feed is operator-gated).
