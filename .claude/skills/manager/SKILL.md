@@ -350,6 +350,19 @@ record's `next_by_value_per_cost`, dispatch ML rows by capacity under the one-la
 queue units the loop authors arrive in a hold PR — land them, they are pre-registered. If the lane
 reports a cadence need (e.g. a mid-week plumbing check), schedule it; the lane does not.
 
+### Weekly: the frontier scan (operator, 2026-10-11)
+
+The ML mandate is **better models, not variations of the first good one** (operator, 2026-10-11).
+Weekly, the same day as the Sunday `/ml-review`, dispatch one `FRONTIER-SCAN-<date>` lane (Sonnet,
+ceiling ~$8) running `.claude/skills/frontier-research/SKILL.md`: outside sources → relevance triage →
+pre-registered units, the family-diversity check (`ml_plan_status.py --diversity`), and its strategy
+half for `perf-followup`. Your part: (1) put it in the dispatch prompt; (2) land the hold PR its new
+units arrive in; (3) **dispatch the lever rows it files** (`FRONTIER-LEVER-*`) by capacity — a lever row
+still `queued` after two scans is a blocker to clear, not to re-file; (4) read the `frontier` block of
+the run record and put any *preference* decision it raises (e.g. a non-commercial model licence
+for live serving) to the operator through the classified popup path. **The next manager binds the weekly
+dispatch to the routine it already runs — no new cron.**
+
 ### Model by task class
 
 | Task | Model |

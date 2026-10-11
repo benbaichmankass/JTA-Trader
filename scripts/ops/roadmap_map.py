@@ -19,6 +19,8 @@ COMMANDS
   --render                    print the generated block for ROADMAP.md
   --write-roadmap             rewrite the block between the markers in ROADMAP.md
   --check [--base REF]        the guard (whole-store checks + diff-scoped enforcement)
+  --backfill FILE             set `roadmap` on live rows that lack it, from {row id: milestone} JSON
+                              (idempotent; goes through checklist.py)
   --self-test                 synthetic proof that every failure mode fails
 """
 from __future__ import annotations
@@ -366,6 +368,20 @@ def self_test() -> int:
     return 0
 
 
+def backfill(path: str) -> int:
+    mapping = json.loads(Path(path).read_text(encoding="utf-8"))
+    ids = {m["id"] for m in load_spec()["milestones"]}
+    done = 0
+    for r in load_rows():
+        ms = mapping.get(r["id"])
+        if r.get("state") in LIVE_ROW and ms in ids and not as_list(r.get("roadmap")):
+            subprocess.run([sys.executable, str(REPO / "scripts/ops/checklist.py"), "set", r["id"],
+                            f'roadmap=["{ms}"]', "--by", "roadmap_map.backfill"], check=True, capture_output=True)
+            done += 1
+    print(f"backfill: set roadmap on {done} live rows")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--report", action="store_true")
@@ -373,8 +389,11 @@ def main() -> int:
     ap.add_argument("--write-roadmap", action="store_true")
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--base")
+    ap.add_argument("--backfill", metavar="FILE")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args()
+    if a.backfill:
+        return backfill(a.backfill)
     if a.self_test:
         return self_test()
     if a.check:
