@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Re-measure an `approximate` Stage-0 evidence record FAITHFULLY.
 
-RQ-20261011-001 (GUARD-FIDELITY, operator decision 2026-10-11). A record in
+RQ-20261011-6707-01 (GUARD-FIDELITY, operator decision 2026-10-11). A record in
 `comms/strategy_evidence/<leg>.json` graded `fidelity: approximate` names the
 config levers its harness run omitted. For the pullback family the omission is
 `trail_decay_stall_bars` / `trail_decay_tight_mult`: `scripts/backtest_pullback.py`
