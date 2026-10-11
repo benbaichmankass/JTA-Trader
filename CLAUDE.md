@@ -304,14 +304,18 @@ run_backtest_vwap harnesses) resolve slippage and funding through
 `execution_costs.resolve_cost_policy()`'s venue-aware non-zero defaults, not a
 silent `0.0` — verified in
 [`docs/research/d1-cost-stack-verification-2026-09-25.md`](docs/research/d1-cost-stack-verification-2026-09-25.md).
-`MD-PROMOTE-S1-S2` is armed at `cost_tolerance_bps: 2.0`. **Four harness
+`MD-PROMOTE-S1-S2` is armed at `cost_tolerance_bps: 2.0`. **Two harness
 families still lack a full cost stack and stay out of scope for any promotion
 corpus until fixed:** `scripts/backtest_orb.py` (fee only, in points; no
-slippage or funding term), `src/backtest/backtester.py` (its own hardcoded
-cost dict, disconnected from the canonical venue decisions; no funding term),
-`scripts/backtest_xsec_momentum.py` (slippage wired, but no funding term for a
-held perp leg), and `scripts/backtest_vol_target.py` (turnover-bps drag only,
-no fee/slippage/funding split — currently backs no scored leg). The
+slippage or funding term) and `src/backtest/backtester.py` (its own hardcoded
+cost dict, disconnected from the canonical venue decisions; no funding term).
+`scripts/backtest_xsec_momentum.py` and `scripts/backtest_vol_target.py` were
+removed from this list on 2026-10-11 (checklist `FRONTIER-LEVER-HARNESS-COSTS`):
+both now resolve fee + slippage + perp funding through
+`execution_costs.resolve_cost_policy()` and record the policy in their result
+(`params.cost_policy`), with tests in
+`tests/test_frontier_lever_harness_costs.py`. That is `landed_unproven` until a
+queue run emits a result carrying it. The
 `derisk_only` mandates carry no such block.
 
 ⚠️ **A mandate is not a third execution gate** — see § "The two execution
