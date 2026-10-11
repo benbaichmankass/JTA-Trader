@@ -181,7 +181,8 @@ FAITHFUL = "faithful"
 #: on an `approximate` record when C5 landed (2026-10-11), each citing the unit
 #: that re-measured it with the omitted lever(s) SIMULATED. Measured by parsing
 #: config/accounts.yaml + comms/strategy_evidence on main 2026-10-11: exactly
-#: these four slots, out of 13 risk-bearing slots. Remove an entry when the
+#: these three slots, out of 13 risk-bearing slots
+#: (bybit_2/xrp_pullback_2h's record already reads `faithful` on main). Remove an entry when the
 #: leg's record is regenerated `fidelity: faithful`. Do not add one without a
 #: faithful re-measure that cleared the leg's original Stage-0 rule.
 FIDELITY_BASELINE: Dict[Tuple[str, str], str] = {
@@ -191,10 +192,6 @@ FIDELITY_BASELINE: Dict[Tuple[str, str], str] = {
     ("alpaca_live", "ief_pullback_1d"): "RQ-20261011-001",
     ("alpaca_live", "slv_pullback_1d"): "RQ-20261011-001",
     ("alpaca_live", "iaum_pullback_1d"): "RQ-20261011-001",
-    # bybit_2 — omitted trail_decay_arm_r / trail_decay_tight_mult.
-    # RQ-20260922-004: every lever-simulated cell kept net_r_oos > 0
-    # (+5.73R .. +14.35R, n=49).
-    ("bybit_2", "xrp_pullback_2h"): "RQ-20260922-004",
 }
 
 

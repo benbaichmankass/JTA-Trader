@@ -81,8 +81,8 @@ decision_rule:
     _PB_LEVER_FLAG mapping fix).
   what_it_does_not_do: >-
     It does not change any lever, roster or record. It does not grade edge
-    (see power.basis). It does not re-measure xrp_pullback_2h, which
-    RQ-20260922-004 already measured with the lever simulated.
+    (see power.basis). It does not re-measure xrp_pullback_2h, whose record
+    already reads `fidelity: faithful` on main (regenerated 2026-10-08).
 
 routing:
   needs_trainer_resident_data: false
@@ -139,3 +139,6 @@ result: >-
   any leg. NOT evidence of edge at n=8/11/8 (see power.basis). No demotion
   filed. The legs stay on FIDELITY_BASELINE until their records are
   regenerated faithful (PI-20261011-YS3USYJQ-0001).
+  RE-VERIFIED 2026-10-11 ~07:10Z after merging origin/main (the first run used
+  a 5-day-stale base; scripts/backtest_pullback.py had changed since): re-run
+  on current main code, every output byte-identical apart from run timestamps.
