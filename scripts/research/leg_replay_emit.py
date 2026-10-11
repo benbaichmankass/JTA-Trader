@@ -401,7 +401,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     legs = [s.strip() for s in a.legs.split(",") if s.strip()]
     try:
         strategies = load_strategies()
-    except Exception as exc:  # noqa: BLE001 -- reported as producer_failed, never raised
+    except (OSError, KeyError, ValueError, UnicodeDecodeError, __import__("yaml").YAMLError) as exc:  # reported as producer_failed
         write_verdict(out, dict(verdict="not_applicable", read_state="producer_failed", n=None,
                                 population=f"cannot read config/strategies.yaml: {exc}"))
         return 0
