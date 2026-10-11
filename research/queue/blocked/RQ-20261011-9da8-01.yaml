@@ -15,7 +15,7 @@ why_this_matters: 'Only ONE TSFM (Chronos-Bolt-Tiny) has ever been tested, froze
   its fc features are the one durable win and are advisory today (macro_f1 0.573 BTC / 0.541 SOL). Two things are UNTESTED,
   not closed: (1) larger / newer / finance-native forecasters; (2) whether fc beats a classical HAR-RV control at all (no
   record of that comparison was found in ROADMAP.md T0.4 or docs/research/T0.4-*). Operator 2026-10-11: do not let the first
-  good thing dictate scope. Kronos pretraining includes crypto exchange data, so the registered rule also reads a post-2025-09-01
+  good thing dictate scope. Kronos is reported (secondary source, unverified) to be pretrained on 45 exchanges incl. crypto, so the registered rule also reads a post-2025-09-01
   holdout where overlap with pretraining is least likely (the pretraining cutoff is UNVERIFIED).'
 power:
   expected_n: 3
@@ -24,7 +24,7 @@ power:
   design: paired
   alpha: 0.05
   power: 0.8
-  basis: 3 symbols x 5 purged folds on ~175k rows per symbol (BTC dataset v003); the registered quantity is the paired fold-level
+  basis: 3 symbols x 5 purged folds on ~175k rows for BTC (dataset v003; ETH/SOL sizes not re-measured here); the registered quantity is the paired fold-level
     difference in macro_f1 vs the incumbent. 5 folds is thin for an interval, which is why the rule requires the SAME sign
     on all three symbols rather than a significance test on one.
   feasibility:
