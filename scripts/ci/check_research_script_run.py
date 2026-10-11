@@ -56,7 +56,6 @@ TRAINER_WORKFLOW = _REPO / ".github" / "workflows" / script_run.TRAINER_WORKFLOW
 
 def check(queue_dir: Path = _REPO / "research" / "queue", workflow: Path = WORKFLOW,
           repo: Path = _REPO, trainer_workflow: Optional[Path] = TRAINER_WORKFLOW) -> List[str]:
-    import yaml
     problems: List[str] = []
 
     # R1 — every unit targeting the runner plans cleanly.

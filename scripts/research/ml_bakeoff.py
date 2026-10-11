@@ -177,7 +177,7 @@ class Unavailable(Exception):
     pass
 
 
-def _fit_prior(Xtr, ytr, Xte, k, params):
+def _fit_prior(Xtr, ytr, Xte, k, params):  # inert: Xtr, params — the class prior ignores features and has no parameters (shared learner signature)
     freq = np.bincount(ytr.astype(int), minlength=k).astype(float)
     freq = freq / max(freq.sum(), 1.0)
     return np.tile(freq, (len(Xte), 1))
@@ -284,7 +284,7 @@ def probe_learner(kind: str, params: Dict[str, Any]) -> Optional[str]:
             probe(dict(params or {}))
     except Unavailable as e:
         return str(e)
-    except Exception as e:  # constructor refused the params
+    except Exception as e:  # allow-silent: returned as the arm's `unavailable` reason in the result, never dropped
         return f"{type(e).__name__}: {e}"
     return None
 
@@ -299,6 +299,9 @@ def _resolve_path(p: str) -> Path:
     for c in cand:
         hits = sorted(glob.glob(str(c)))
         if hits:
+            # A glob resolves to the alphabetically-last match (newest version dir). Say which, every time, and
+            # record it: an implicit input is how a bake-off silently grades a different dataset than intended.
+            print(f"ml_bakeoff: dataset {p!r} -> {hits[-1]} (1 of {len(hits)} match(es))", file=sys.stderr)
             return Path(hits[-1])
     raise FileNotFoundError(f"dataset path {p!r} not found (tried {[str(c) for c in cand]})")
 
@@ -422,7 +425,7 @@ def run_group(df, spec: Dict[str, Any], learner_specs: Dict[str, Dict[str, Any]]
                 arm["windows"][wname] = {"fold_metric": vals, "n_test_rows": ntest}
         except Unavailable as e:
             arm = {"status": "unavailable", "reason": str(e)}
-        except Exception as e:  # one arm breaking is contained; it is reported, never hidden
+        except Exception as e:  # allow-silent: one arm breaking is contained and recorded as status=error + reason in the result
             arm = {"status": "error", "reason": f"{type(e).__name__}: {e}"}
         res["arms"][name] = arm
     return res
@@ -634,11 +637,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         sys.path.insert(0, str(_REPO))
         from scripts.ml._heavy_queue import take_heavy_queue
         _lock = take_heavy_queue(f"ml-bakeoff:{a.unit}")   # noqa: F841 — held for the process lifetime
-    except Exception as e:
+    except Exception as e:  # allow-silent: fail-open by design (the helper is inert off-trainer); stderr line printed
         print(f"ml_bakeoff: heavy-queue helper unavailable ({type(e).__name__}); proceeding unlocked", file=sys.stderr)
     try:
         verdict = run_spec(load_unit_spec(a.unit, Path(a.queue_dir) if a.queue_dir else None), unit=a.unit)
-    except Exception as e:   # contained: the runner derives producer_failed from the missing verdict
+    except Exception as e:  # allow-silent: error.txt + stderr + exit 1; script_run derives producer_failed
         (out / "error.txt").write_text(f"{type(e).__name__}: {e}\n", encoding="utf-8")
         print(f"ml_bakeoff: {type(e).__name__}: {e}", file=sys.stderr)
         return 1

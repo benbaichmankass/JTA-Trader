@@ -21,6 +21,8 @@ sys.path.insert(0, str(REPO))
 from scripts.research import collect_runner_results as collector  # noqa: E402
 from scripts.research import dispatch_queue, ml_bakeoff as mb, research_queue, script_run  # noqa: E402
 
+# collapsed-state: not_applicable — E5 VERDICT vocabulary asserted on a producer_failed fixture (the baseline-unavailable
+# case), not a research_queue.power_state branch; this file branches on no power state at all.
 SMOKE = "RQ-20261011-0ac8-01"
 
 
