@@ -39,7 +39,7 @@ import argparse
 import re
 import sys
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 _REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_REPO))
@@ -51,8 +51,11 @@ ALLOWED_INPUTS = {"research_unit", "power_state"}
 _SECRET_RE = re.compile(r"secrets\.([A-Za-z_][A-Za-z0-9_]*)")
 
 
+TRAINER_WORKFLOW = _REPO / ".github" / "workflows" / script_run.TRAINER_WORKFLOW
+
+
 def check(queue_dir: Path = _REPO / "research" / "queue", workflow: Path = WORKFLOW,
-          repo: Path = _REPO) -> List[str]:
+          repo: Path = _REPO, trainer_workflow: Optional[Path] = TRAINER_WORKFLOW) -> List[str]:
     import yaml
     problems: List[str] = []
 
@@ -63,11 +66,21 @@ def check(queue_dir: Path = _REPO / "research" / "queue", workflow: Path = WORKF
         for e in p.errors:
             problems.append(f"R1 {unit}: {e}")
 
-    # R2/R3 — the workflow's own surface.
+    # R2/R3 — each workflow's own surface. The trainer twin holds VM_SSH_KEY (reaching the trainer IS the
+    # point) and nothing else; the runner holds nothing beyond GITHUB_TOKEN.
+    problems += _check_workflow(workflow, {"GITHUB_TOKEN"})
+    if trainer_workflow is not None:
+        problems += _check_workflow(trainer_workflow, {"GITHUB_TOKEN", "VM_SSH_KEY"})
+    return problems
+
+
+def _check_workflow(workflow: Path, allowed_secrets) -> List[str]:
+    import yaml
+    problems: List[str] = []
     try:
         wf = yaml.safe_load(workflow.read_text(encoding="utf-8"))
     except (OSError, yaml.YAMLError) as exc:
-        return problems + [f"R2 {workflow.name}: unreadable — {exc}"]
+        return [f"R2 {workflow.name}: unreadable — {exc}"]
     trig = wf.get("on", wf.get(True)) or {}
     inputs = set(((trig.get("workflow_dispatch") or {}).get("inputs") or {}).keys())
     if inputs != ALLOWED_INPUTS:
@@ -89,10 +102,9 @@ def check(queue_dir: Path = _REPO / "research" / "queue", workflow: Path = WORKF
                         "persist-credentials: false so the unit's script holds no credential")
     run_text = yaml.safe_dump(run_job)
     for name in sorted(set(_SECRET_RE.findall(run_text))):
-        if name != "GITHUB_TOKEN":
+        if name not in allowed_secrets:
             problems.append(f"R3 {workflow.name}: the `run` job references secrets.{name} — "
-                            "the job that executes the unit's command may hold nothing beyond "
-                            "GITHUB_TOKEN")
+                            f"this workflow may hold only {sorted(allowed_secrets)}")
     return problems
 
 
@@ -148,6 +160,17 @@ def _self_test() -> int:
         assert any("persist-credentials" in p for p in probs), probs
         assert any("secrets.BRANCH_PROTECTION_TOKEN" in p for p in probs), probs
 
+        # ML-RQ-RUNNER: the trainer twin is held to the same surface, and may hold ONLY VM_SSH_KEY extra.
+        twf = yaml.safe_load(TRAINER_WORKFLOW.read_text())
+        twf.get("on", twf.get(True))["workflow_dispatch"]["inputs"]["command"] = {"description": "x"}
+        tbad = repo / "twf-input.yml"
+        tbad.write_text(yaml.safe_dump(twf))
+        assert any(p.startswith("R2") and "inputs" in p for p in check(qdir, WORKFLOW, repo, tbad))
+        twf = yaml.safe_load(TRAINER_WORKFLOW.read_text())
+        twf["jobs"]["run"]["steps"][0]["env"] = {"X": "${{ secrets.BRANCH_PROTECTION_TOKEN }}"}
+        tbad.write_text(yaml.safe_dump(twf))
+        assert any("BRANCH_PROTECTION_TOKEN" in p for p in check(qdir, WORKFLOW, repo, tbad))
+
         # An unreadable workflow is reported, not skipped.
         bad.write_text(": : :\n[")
         assert any(p.startswith("R2") for p in check(qdir, bad, repo))
@@ -167,10 +190,9 @@ def main(argv=None) -> int:
         for p in problems:
             print(f"::error::research-script-run-guard: {p}")
         print(f"research-script-run-guard: FAIL — {len(problems)} problem(s) over "
-              f"{len(units)} unit(s) targeting {script_run.WORKFLOW}")
+              f"{len(units)} unit(s) targeting {script_run.WORKFLOWS}")
         return 1
-    print(f"research-script-run-guard: OK — {len(units)} unit(s) target {script_run.WORKFLOW} "
-          f"({', '.join(units) or 'none'}); workflow inputs = {sorted(ALLOWED_INPUTS)}")
+    print(f"research-script-run-guard: OK — {len(units)} unit(s) target {script_run.WORKFLOWS}; workflow inputs = {sorted(ALLOWED_INPUTS)}")
     return 0
 
 

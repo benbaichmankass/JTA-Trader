@@ -95,6 +95,11 @@ _REPO = Path(__file__).resolve().parents[2]
 _DEFAULT_QUEUE = _REPO / "research" / "queue"
 
 WORKFLOW = "research-script-run.yml"
+#: ML-RQ-RUNNER (2026-10-11): the SAME contract executed ON THE TRAINER VM over SSH — for units that need
+#: trainer-resident data, torch/lightgbm weights or the trainer's disk. Same unit shape, same verdict.json,
+#: same artifact -> collector -> record path; only WHERE the command runs differs.
+TRAINER_WORKFLOW = "research-script-run-trainer.yml"
+WORKFLOWS = (WORKFLOW, TRAINER_WORKFLOW)
 OUT_ROOT = Path("comms") / "research"
 
 #: The only script families the runner will execute. Anchored, no `..`, no
@@ -207,8 +212,8 @@ def plan(unit: str, *, run_id: str, queue_dir: Path = _DEFAULT_QUEUE,
     if not isinstance(run, dict):
         errs.append("`run` must be a mapping")
         run = {}
-    if str(run.get("workflow") or "").strip() != WORKFLOW:
-        errs.append(f"run.workflow must be {WORKFLOW!r} for this runner, got "
+    if str(run.get("workflow") or "").strip() not in WORKFLOWS:
+        errs.append(f"run.workflow must be one of {WORKFLOWS!r} for this runner, got "
                     f"{run.get('workflow')!r}")
     if "command" in run and "commands" in run:
         errs.append("declare `run.command` (one argv) OR `run.commands` (a list of argv), not both")
@@ -263,7 +268,7 @@ def units_targeting_runner(queue_dir: Path = _DEFAULT_QUEUE) -> List[str]:
         except (OSError, UnicodeDecodeError, yaml.YAMLError):
             continue
         run = raw.get("run") if isinstance(raw, dict) else None
-        if isinstance(run, dict) and str(run.get("workflow") or "").strip() == WORKFLOW:
+        if isinstance(run, dict) and str(run.get("workflow") or "").strip() in WORKFLOWS:
             out.append(p.stem)
     return out
 
