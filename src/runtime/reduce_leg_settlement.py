@@ -171,6 +171,48 @@ def _vwap(fills: Iterable[Mapping[str, Any]]) -> Optional[Dict[str, float]]:
     return {"price": px_qty / qty, "qty": qty, "fee": fee}
 
 
+def _ts(v: Any) -> Optional[float]:
+    from datetime import datetime  # noqa: PLC0415
+
+    try:
+        return datetime.fromisoformat(str(v).replace("Z", "+00:00")).timestamp()
+    except (TypeError, ValueError):
+        return None
+
+
+#: A legacy reduce and the parent it fully consumed are written in the same
+#: ``apply_intent_reduce_partial_close`` call, so their close stamps agree to
+#: well under a second.
+_LEGACY_SAME_CLOSE_S = 5.0
+
+
+def _legacy_fully_consumed(row: Any, parent: Any, consumed: float) -> Optional[bool]:
+    """Was a pre-``closed``-key allocation a FULL consumption of its parent?
+
+    Allocations written before the ``closed`` key existed (81 of 104 on the
+    live journal, 2026-10-11) say nothing about it, and reading the absence as
+    "partial" double-counts: a fully consumed parent is closed with
+    ``exit_reason='intent_reduce'`` at its full size and the local sweep books
+    its pnl over those units (29 such allocations, e.g. reduce 4217 -> parent
+    4162: 86,102.5 units already booked +998.79 on the parent). The legacy
+    writer closed the parent IN THE SAME CALL without shrinking it, so all
+    three hold: exit_reason ``intent_reduce``, size == consumed, and the same
+    close time. ``None`` = parent row missing (caller refuses).
+    """
+    if parent is None:
+        return None
+    if str(_get(parent, "exit_reason") or "") != "intent_reduce":
+        return False
+    size = _f(_get(parent, "position_size")) or 0.0
+    if abs(size - consumed) > 1e-6 * max(1.0, consumed):
+        return False
+    t_red = _ts(_get(row, "closed_at") or _get(row, "timestamp"))
+    t_par = _ts(_get(parent, "closed_at"))
+    if t_red is None or t_par is None:
+        return True  # same size + intent_reduce close: the conservative call (books nothing)
+    return abs(t_red - t_par) <= _LEGACY_SAME_CLOSE_S
+
+
 def plan_settlement(
     row: Any,
     parents_by_id: Mapping[int, Any],
@@ -207,7 +249,14 @@ def plan_settlement(
         except (KeyError, TypeError, ValueError):
             s.reason = "malformed_allocation"
             return s
-        (full if a.get("closed") else partial).append((pid, consumed))
+        if "closed" in a:
+            is_full = bool(a["closed"])
+        else:
+            is_full = _legacy_fully_consumed(row, parents_by_id.get(pid), consumed)
+            if is_full is None:
+                s.reason = f"legacy_allocation_parent_{pid}_not_found"
+                return s
+        (full if is_full else partial).append((pid, consumed))
     s.consumed_full = sum(c for _, c in full)
     s.consumed_partial = sum(c for _, c in partial)
 
@@ -341,7 +390,8 @@ def select_candidates(
     for i in range(0, len(pl), 500):
         chunk = pl[i:i + 500]
         for p in conn.execute(
-            "SELECT id, direction, broker_order_id, notes, account_id, symbol "
+            "SELECT id, direction, broker_order_id, notes, account_id, symbol, "
+            "exit_reason, position_size, closed_at "
             f"FROM trades WHERE id IN ({','.join('?' * len(chunk))})", chunk,
         ).fetchall():
             parents[int(p["id"])] = dict(p)
