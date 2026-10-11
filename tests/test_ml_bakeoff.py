@@ -240,3 +240,35 @@ def test_jsonl_shard_is_read_column_pruned_and_missing_columns_are_nan(tmp_path)
     g2 = mb.load_groups({"kind": "jsonl", "path": str(p), "ts_col": "ts", "target": "label", "features": ["x0"],
                          "tail_rows": 100})
     assert len(g2["ALL"]) == 100
+
+
+def test_stale_checkout_guard_ignores_only_the_dispatcher_stamp(tmp_path):
+    """The trainer must hold the bytes the runner validated -- but the dispatcher's own post-fire stamp
+    (last_dispatched_at) lands on main after the run starts and must NOT read as a stale checkout."""
+    q = tmp_path / "research" / "queue"
+    q.mkdir(parents=True)
+    unit = q / "RQ-20300101-001.yaml"
+    unit.write_text("id: RQ-20300101-001\nrule: a\nlast_dispatched_at: null\n")
+    h0 = script_run.content_hash(unit)
+    unit.write_text("id: RQ-20300101-001\nrule: a\nlast_dispatched_at: '2026-10-11T17:00:00Z'\n")
+    assert script_run.content_hash(unit) == h0                     # stamp-only change: same content
+    unit.write_text("id: RQ-20300101-001\nrule: b\nlast_dispatched_at: null\n")
+    assert script_run.content_hash(unit) != h0                     # a RULE change is stale
+    # the manifest verifier: match, mismatch, missing file, malformed token
+    py = tmp_path / "scripts" / "research"
+    py.mkdir(parents=True)
+    (py / "x.py").write_text("print(1)\n")
+    good = f"{script_run.content_hash(py / 'x.py')}:scripts/research/x.py"
+    assert script_run.verify_manifest([good], repo=tmp_path) == []
+    (py / "x.py").write_text("print(2)\n")
+    assert script_run.verify_manifest([good], repo=tmp_path) == ["scripts/research/x.py"]
+    assert script_run.verify_manifest([f"{'0' * 64}:scripts/research/missing.py"], repo=tmp_path) == ["scripts/research/missing.py"]
+    assert script_run.verify_manifest(["nothex:../etc/passwd"], repo=tmp_path) != []
+
+
+def test_hash_manifest_covers_unit_runner_and_scripts():
+    p = script_run.plan(SMOKE, run_id="t")
+    rels = [t.split(":", 1)[1] for t in script_run.hash_manifest(p)]
+    assert set(rels) == {f"research/queue/{SMOKE}.yaml", "scripts/research/script_run.py",
+                         "scripts/research/ml_bakeoff.py", "scripts/ml/_heavy_queue.py"}
+    assert script_run.verify_manifest(script_run.hash_manifest(p)) == []

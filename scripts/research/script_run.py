@@ -273,6 +273,55 @@ def units_targeting_runner(queue_dir: Path = _DEFAULT_QUEUE) -> List[str]:
     return out
 
 
+# ── trainer stale-checkout guard (research-script-run-trainer.yml) ──────────
+#: Keys the dispatcher rewrites AFTER firing (the stamp PR). They are excluded from a unit's content hash:
+#: the runner hashes the unit at dispatch, the trainer may sync a moment after the stamp lands, and a raw
+#: byte hash would then never match -- a stall that looks like a stale checkout but is only the stamp.
+_STAMP_KEYS = ("last_dispatched_at",)
+
+
+def content_hash(path: Path) -> str:
+    """sha256 of a file's bytes; for a queue-unit YAML, of its canonical JSON minus the dispatcher's stamp."""
+    import hashlib
+    data = path.read_bytes()
+    if path.suffix in (".yaml", ".yml") and path.parent.name in ("queue", "blocked"):
+        import yaml
+        raw = yaml.safe_load(data.decode("utf-8")) or {}
+        if isinstance(raw, dict):
+            for k in _STAMP_KEYS:
+                raw.pop(k, None)
+        data = json.dumps(raw, sort_keys=True, default=str).encode("utf-8")
+    return hashlib.sha256(data).hexdigest()
+
+
+def hash_manifest(p: Plan, *, repo: Path = _REPO) -> List[str]:
+    """``<sha256>:<repo-relative path>`` for the unit, this runner and every script the plan will execute."""
+    paths = {f"research/queue/{p.unit}.yaml", "scripts/research/script_run.py"}
+    for argv in p.commands:
+        paths.add(argv[1])
+        if argv[1].endswith("ml_bakeoff.py"):
+            paths.add("scripts/ml/_heavy_queue.py")
+    return [f"{content_hash(repo / rel)}:{rel}" for rel in sorted(paths)]
+
+
+def verify_manifest(tokens: List[str], *, repo: Path = _REPO) -> List[str]:
+    """Return the paths whose local content hash differs from (or is missing against) the manifest."""
+    bad: List[str] = []
+    for tok in tokens:
+        want, _, rel = tok.partition(":")
+        if not rel or ".." in rel or rel.startswith("/") or not re.fullmatch(r"[0-9a-f]{64}", want):
+            bad.append(rel or tok)
+            continue
+        try:
+            have = content_hash(repo / rel)
+        except OSError:
+            bad.append(rel)
+            continue
+        if have != want:
+            bad.append(rel)
+    return bad
+
+
 # ── execution ───────────────────────────────────────────────────────────────
 def _tail(path: Path, limit: int = LOG_TAIL_BYTES) -> None:
     """Keep a log committable: truncate to its last `limit` bytes."""
@@ -584,11 +633,23 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--derive-record", action="store_true",
                     help="print (and append to $GITHUB_OUTPUT) the research-result inputs, and write them "
                          "to <out_dir>/record-inputs.json so the batch collector can land the record")
+    ap.add_argument("--hashes", action="store_true",
+                    help="print the content-hash manifest (<sha256>:<path> ...) the trainer must match before it runs")
+    ap.add_argument("--verify-hashes", default=None, metavar="MANIFEST",
+                    help="exit 0 iff every '<sha256>:<path>' token matches this checkout; exit 6 and list the "
+                         "differing paths otherwise (the trainer's stale-checkout guard)")
     ap.add_argument("--power-state", default="",
                     help="the dispatcher's computed R4 label, recorded verbatim in record-inputs.json")
     args = ap.parse_args(argv)
     if args.self_test:
         return _self_test()
+    if args.verify_hashes is not None:
+        bad = verify_manifest(args.verify_hashes.split())
+        if bad:
+            print("STALE_CHECKOUT: not byte-identical:" + " ".join(bad))
+            return 6
+        print("checkout matches the manifest")
+        return 0
     if not args.unit:
         ap.error("--unit is required")
     p = plan(args.unit, run_id=args.run_id, queue_dir=Path(args.queue_dir).resolve())
@@ -596,6 +657,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         for e in p.errors:
             print(f"::error::{args.unit}: {e}", file=sys.stderr)
         return 1
+    if args.hashes:
+        print(" ".join(hash_manifest(p)))
+        return 0
     if args.check:
         print(f"{args.unit}: OK — {len(p.commands)} command(s), timeout {p.timeout_minutes} min, "
               f"out {p.out_dir.as_posix()}, rule {p.rule_id} ({p.rule_registered_at})")

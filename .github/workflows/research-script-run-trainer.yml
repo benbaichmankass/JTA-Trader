@@ -72,21 +72,9 @@ jobs:
           set -euo pipefail
           python3 scripts/research/script_run.py --self-test
           python3 scripts/research/script_run.py --unit "${UNIT}" --run-id "${GITHUB_RUN_ID}" --check
-          # Content hashes the trainer must match before it runs anything (stale-checkout guard).
-          python3 - <<'PY' >> "$GITHUB_OUTPUT"
-          import hashlib, os, sys
-          sys.path.insert(0, ".")
-          from scripts.research import script_run
-          p = script_run.plan(os.environ["UNIT"], run_id=os.environ["GITHUB_RUN_ID"])
-          paths = {f"research/queue/{p.unit}.yaml", "scripts/research/script_run.py"}
-          for argv in p.commands:
-              paths.add(argv[1])
-          if "scripts/research/ml_bakeoff.py" in paths or any("ml_bakeoff" in a for c in p.commands for a in c):
-              paths.add("scripts/ml/_heavy_queue.py")
-          h = " ".join(f"{hashlib.sha256(open(x,'rb').read()).hexdigest()}:{x}" for x in sorted(paths))
-          print(f"hashes={h}")
-          print(f"timeout={p.timeout_minutes}")
-          PY
+          # Content hashes the trainer must match before it runs anything (stale-checkout guard). The unit is
+          # hashed WITHOUT the dispatcher's last_dispatched_at stamp, which lands on main after this run starts.
+          echo "hashes=$(python3 scripts/research/script_run.py --unit "${UNIT}" --run-id "${GITHUB_RUN_ID}" --hashes)" >> "$GITHUB_OUTPUT"
       - name: Install SSH key
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
@@ -117,14 +105,10 @@ jobs:
           # SAME bytes the runner validated. Running old code under a new registered rule is the failure.
           deadline=$(( $(date +%s) + 1500 ))
           while :; do
-            bad=""
-            for ent in $HASHES; do
-              want="${ent%%:*}"; f="${ent#*:}"
-              have="$(sha256sum "$f" 2>/dev/null | cut -d' ' -f1)"
-              [ "$have" = "$want" ] || bad="$bad $f"
-            done
-            [ -z "$bad" ] && break
-            if [ "$(date +%s)" -ge "$deadline" ]; then echo "STALE_CHECKOUT: trainer lacks byte-identical:$bad"; exit 6; fi
+            # The trainer's own script_run.py does the comparing; a copy too old to know --verify-hashes fails
+            # the same way a mismatch does, and the loop simply waits for the next git-sync.
+            if out="$($PY scripts/research/script_run.py --verify-hashes "$HASHES" 2>&1)"; then break; fi
+            if [ "$(date +%s)" -ge "$deadline" ]; then echo "$out" | tail -3; echo "STALE_CHECKOUT: trainer never reached the dispatching commit's bytes"; exit 6; fi
             sleep 60
           done
           echo "== trainer git: $(git rev-parse --short HEAD) python: $($PY -V 2>&1)"
