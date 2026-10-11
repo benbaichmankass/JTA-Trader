@@ -9,6 +9,11 @@
   "id": "PI-20260929-YGGMZWK7-0001",
   "jitter_2026_10_05": "[BACKLOG-BURNDOWN-3 2026-10-05] cadence jittered to spread the lapse wave (<= 24 due per day); NO re-read this pass -- observation unchanged (last read 2026-10-04); new next-due 2026-10-26",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-25",
+    "how_to_check": "python3 scripts/ops/pipeline.py --due | grep AMMAZHNZ; PR #17193 state via GitHub",
+    "what": "AMMAZHNZ-0001 parity observation cleared (>=20 vol_trail_shadow rows with atr_pctl_closed non-null post-#17216), then #17193 merged or declined"
+  },
   "origin": {
     "kind": "research",
     "ref": "research/queue/RQ-20260928-019.yaml + research/results/RQ-20260928-019/36505251734.jsonl",

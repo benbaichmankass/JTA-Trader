@@ -8,6 +8,11 @@
   },
   "id": "PI-20261010-JD1HZX7C-0002",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-25",
+    "how_to_check": "grep -n ict_scalp_sol_15m config/accounts.yaml; python3 scripts/ops/pipeline.py --due | grep JD1HZX7C-0003",
+    "what": "ict_scalp_sol_15m is on an account roster and JD1HZX7C-0003 label verify has cleared"
+  },
   "origin": {
     "kind": "session",
     "ref": "ML-RESEARCH-W41 / RQ-20261008-903",
