@@ -1,0 +1,29 @@
+{
+  "id": "UI-UPGRADE-1-AUTH",
+  "title": "Site sign-in: Google ID token + WebAuthn passkey, 30d revocable device sessions, whole-site gate; Keys admin tab with per-action passkey step-up",
+  "phase": "W41",
+  "state": "blocked",
+  "owner": "build lane (manager dispatch)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [
+    {
+      "kind": "operator_decision",
+      "ref": "docs/plans/ui-upgrade-1-auth-and-keys-design.md#5",
+      "what": "decide D1 (web_sessions table), D2 (Keys Save path A or B), D3 (session lifetime)"
+    },
+    {
+      "kind": "operator",
+      "ref": "docs/plans/ui-upgrade-1-auth-and-keys-design.md#4",
+      "what": "create the Google OAuth Web client and store GOOGLE_OAUTH_CLIENT_ID as an Actions secret"
+    }
+  ],
+  "note": "Design + build order: docs/plans/ui-upgrade-1-auth-and-keys-design.md (UI-UPGRADE-1 items 7+9; operator popup answers 'Google + passkey', 'View + edit, passkey each time'). Blocked on: operator decisions D1 (new web_sessions table), D2 (Keys Save path A: API writes the GitHub Actions secret then set-env, needs GH_SECRETS_WRITE_TOKEN | B: VM file only, flagged diverged), D3 (30d sliding); and the operator creating GOOGLE_OAUTH_CLIENT_ID (Web application client; no client secret used). Rollout: ship auth routes + SPA sign-in with the gate off, operator enrols a passkey, then flip SITE_AUTH_ENFORCE via set-env and verify anon 401 / signed-in 200. Inventory non-browser /api/bot/* consumers first.",
+  "updated_at": "2026-10-11T13:05:12Z",
+  "updated_by": "session_01McHbeefghxRy9AJPfinTeQ",
+  "_seq": 406
+}
