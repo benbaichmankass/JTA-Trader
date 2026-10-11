@@ -64,6 +64,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from datetime import date, datetime, timedelta, timezone
@@ -76,6 +77,8 @@ for _p in (REPO_ROOT, REPO_ROOT / "scripts"):
         sys.path.insert(0, str(_p))
 
 from scripts.ops import pipeline  # noqa: E402
+from scripts.ops import prop_trail_watch  # noqa: E402
+from scripts.ops import prop_silence  # noqa: E402
 
 # ⚠️ Anchored to the repo root, like work_digest_now.py: the unit carries no
 # data-dir drop-in and diag reads the receipt through repo_root().
@@ -211,6 +214,60 @@ def read_soak_states() -> tuple[str, list[dict]]:
     return "read", out
 
 
+QUEUE_DIR = REPO_ROOT / "research" / "queue"
+
+
+def read_needs_review(queue_dir: Path | None = None) -> tuple[str, list[dict]]:
+    """Units whose mechanical grading could not decide (``grading.needs_review: true``).
+
+    PI-20261006-LCEVL8D5-0003: this bucket was only ``grep -l 'needs_review: true'
+    research/queue/*.yaml`` -- reachable only by a session that thought to run it.
+    Returns ``("read", rows)`` / ``("absent", [])`` (no queue dir) /
+    ``("unreadable", [])`` -- never an empty list for a failed read.
+    """
+    d = queue_dir or QUEUE_DIR
+    if not d.is_dir():
+        return "absent", []
+    try:
+        import yaml
+    except ImportError:
+        return "unreadable", []
+    rows: list[dict] = []
+    for f in sorted(d.glob("*.yaml")):
+        try:
+            text = f.read_text(encoding="utf-8")
+            if "needs_review: true" not in text:
+                continue
+            u = yaml.safe_load(text)
+        except (OSError, yaml.YAMLError):
+            return "unreadable", []
+        g = (u or {}).get("grading") if isinstance(u, dict) else None
+        if isinstance(g, dict) and g.get("needs_review") is True:
+            rows.append({"id": str(u.get("id") or f.stem), "graded_at": str(g.get("graded_at") or ""),
+                         "reason": g.get("reason") or g.get("note") or ""})
+    return "read", rows
+
+
+def _age_days(graded_at: str, today: date) -> int | None:
+    try:
+        return (today - date.fromisoformat(graded_at[:10])).days
+    except ValueError:
+        return None
+
+
+def _needs_review_line(v: dict) -> str | None:
+    read, rows = v.get("needs_review_read", "absent"), v.get("needs_review", [])
+    if read == "unreadable":
+        return "❔ needs_review bucket: research/queue UNREADABLE (not zero — not measured)"
+    if read != "read" or not rows:
+        return None
+    ages = [a for a in (_age_days(r["graded_at"], v["today"]) for r in rows) if a is not None]
+    oldest = f", oldest flagged {max(ages)}d ago" if ages else ""
+    ids = ", ".join(r["id"] for r in rows[:4])
+    return (f"🔎 {len(rows)} research unit(s) need a read (grading.needs_review){oldest}: "
+            f"{ids}{' …' if len(rows) > 4 else ''}")
+
+
 def _soak_key(r: dict) -> str:
     return str(r.get("id") or f"{r.get('account', '?')}:{r.get('leg', '?')}")
 
@@ -246,13 +303,100 @@ def probe_research(now: datetime, shallow: bool | None) -> dict:
 
 
 def probe_manager(now: datetime) -> dict:
-    t = _last_commit_time(str(CHECKLIST.relative_to(REPO_ROOT)))
+    # The register is the per-row store since the 2026-10-08 cutover; the
+    # monolith was deleted then, so probing it alone read the deletion commit
+    # and the alarm grew without bound. Newest commit over BOTH paths
+    # (checklist_store.HISTORY_PATHS) so either layout counts as a write.
+    from src.runtime import checklist_store as _ck  # noqa: PLC0415
+    times = [t for t in (_last_commit_time(p) for p in _ck.HISTORY_PATHS) if t]
+    t = max(times) if times else None
     if t is None:
         return {"status": UNKNOWN, "detail": "could not read the checklist's last commit"}
     hours = (now - t).total_seconds() / 3600
     st = BREACHED if hours > MANAGER_SILENT_HOURS else OK
     return {"status": st, "detail": f"checklist last written {hours:.0f}h ago "
                                     f"(bound {MANAGER_SILENT_HOURS}h — no daily review?)"}
+
+
+def _retired_accounts() -> set:
+    """Accounts marked ``retired: true`` in config/accounts.yaml (fail-open: unreadable -> none)."""
+    try:
+        sys.path.insert(0, str(REPO_ROOT))
+        from src.config.accounts_loader import load_accounts_dict
+        from src.prop.prop_identity import is_retired_account
+        return {a for a, c in (load_accounts_dict() or {}).items() if is_retired_account(c)}
+    except Exception:  # noqa: BLE001  # allow-silent: an unreadable config must not hide a live account's trip
+        return set()
+
+
+def _drop_retired(probes: dict) -> dict:
+    """Per-account probes (``<kind>_<account>``) minus those of retired accounts."""
+    ret = _retired_accounts()
+    return {k: v for k, v in probes.items() if not any(k.endswith("_" + a) for a in ret)}
+
+
+PROP_BACKOFF_MAX_HOURS = 2   # the red-flag ping fires once; a feed still flagged 2h later re-pages
+
+
+def _read_feed_backoff(path: Path) -> dict:
+    """The key=value backoff state scripts/ops/prop_feed_tick.sh writes."""
+    out = {}
+    for line in path.read_text(errors="replace").splitlines():
+        k, sep, v = line.partition("=")
+        if sep:
+            out[k.strip()] = v.strip()
+    return out
+
+
+def probe_prop_feed(now: datetime) -> dict:
+    """A prop feed that keeps failing (red-flagged: 3+ consecutive failures, a
+    feasibility stop, or the relogin ceiling) is retrying on a capped backoff
+    and not refreshing its account's saved session, so that account's executor
+    runs on a session nobody renews; the silence probe cannot see it (it keys
+    on fills). Since NO-HALT (2026-10-09) the feed never stops, so there is no
+    `tripped` marker to read: this reads each ``feed/backoff`` state file.
+    No base dir, or a state file that cannot be read, is UNKNOWN (we could not
+    look), never OK; a backoff below the red-flag threshold is OK (retrying
+    normally)."""
+    base = Path(os.environ.get("PROP_BROWSER_BASE") or Path.home() / ".cache" / "metis-prop-browser")
+    if not base.is_dir():
+        return {"status": UNKNOWN, "detail": f"no prop browser base dir ({base.name})"}
+    states = [*base.glob("accounts/*/feed/backoff"), base / "feed" / "backoff"]
+    flagged, unreadable = [], []
+    for f in states:
+        name = "breakout_1" if f.parent.parent == base else f.parent.parent.name
+        if not f.exists():
+            continue
+        if name in _retired_accounts():
+            continue  # a retired account's stale state must never page (OPS-DECISIONS-1009)
+        try:
+            st = _read_feed_backoff(f)
+        except OSError:
+            unreadable.append(name)
+            continue
+        if st.get("flagged") != "1":
+            continue
+        try:
+            at = datetime.strptime(st.get("flagged_at", ""), "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        except ValueError:
+            try:
+                at = datetime.fromtimestamp(f.stat().st_mtime, timezone.utc)
+            except OSError:
+                unreadable.append(name)
+                continue
+        age = (now - at).total_seconds() / 3600
+        flagged.append((age, f"{name} ({age:.0f}h, {st.get('consecutive_failures', '?')} failure(s), "
+                             f"next try {st.get('next_attempt_at_utc', '?')}: {st.get('reason', '')[:90]})"))
+    old = [d for a, d in flagged if a >= PROP_BACKOFF_MAX_HOURS]
+    if old:
+        return {"status": BREACHED,
+                "detail": "feed failing, retrying on backoff: " + "; ".join(old)
+                          + " — fix the cause; to retry sooner: breakout-login-check apply: reset-feed"}
+    if unreadable:
+        return {"status": UNKNOWN, "detail": "could not read the backoff state of: " + ", ".join(unreadable)}
+    return {"status": OK,
+            "detail": f"{len(flagged)} prop feed(s) red-flagged under {PROP_BACKOFF_MAX_HOURS}h" if flagged
+            else "no prop feed red-flagged"}
 
 
 REPORT_MAX_AGE_HOURS = 26     # daily 05:30Z + grace
@@ -318,14 +462,32 @@ def probe_inflight(now: datetime, shallow: bool | None) -> dict:
     which makes a stale row look FRESH — so a shallow clone reads ``unknown``.
     """
     try:
-        d = json.loads(CHECKLIST.read_text(encoding="utf-8"))
-        text_lines = CHECKLIST.read_text(encoding="utf-8").splitlines()
+        from src.runtime import checklist_store as _ck  # noqa: PLC0415
+        d = _ck.load_path(CHECKLIST)
+        text_lines = ([] if _ck.seeded(CHECKLIST)
+                      else CHECKLIST.read_text(encoding="utf-8").splitlines())
     except (OSError, ValueError) as exc:
         return {"status": UNKNOWN, "detail": f"checklist unreadable: {exc}", "rows": []}
     inflight = [r for r in d.get("items", []) if r.get("state") == "in_flight"]
     if shallow:
         return {"status": UNKNOWN, "detail": f"{len(inflight)} in_flight rows; clone is "
                 "shallow so row age cannot be read", "rows": []}
+    if not text_lines:  # per-row store: a row's activity is the last commit on ITS file
+        stale = []
+        for r in inflight:
+            out = _git("log", "-1", "--format=%ct", "--",
+                       f"docs/claude/work/checklist/{r.get('id')}.json")
+            if not out or not out.strip().isdigit():
+                continue
+            age = (now - datetime.fromtimestamp(int(out.strip()), tz=timezone.utc)).total_seconds() / 86400
+            if age >= INFLIGHT_STALE_DAYS:
+                stale.append({"id": r.get("id"), "days": round(age, 1), "lane": r.get("lane")})
+        stale.sort(key=lambda x: -x["days"])
+        return {"status": BREACHED if stale else OK, "rows": stale,
+                "detail": f"{len(stale)} of {len(inflight)} in_flight rows untouched "
+                          f">= {INFLIGHT_STALE_DAYS}d (per-row history)"
+                          + (": " + ", ".join(f"{s['id']} {s['days']:.0f}d" for s in stale[:6])
+                             if stale else "")}
     blame = _git("blame", "--line-porcelain", "--", str(CHECKLIST.relative_to(REPO_ROOT)))
     if blame is None:
         return {"status": UNKNOWN, "detail": "git blame failed", "rows": []}
@@ -352,6 +514,20 @@ def probe_inflight(now: datetime, shallow: bool | None) -> dict:
                          if stale else "")}
 
 
+def read_blocker_watch() -> tuple[str, list[dict]]:
+    """BLOCKER-WATCH findings (``scripts/ops/blocker_watch.py``) as
+    ``(read_state, findings)``. ``unreadable`` = we could not look; it never
+    reads as 'no findings' and never clears a seen key."""
+    try:
+        from scripts.ops import blocker_watch  # noqa: PLC0415
+        rep = blocker_watch.build(_now())
+    except Exception:  # noqa: BLE001 — unreadable is a state, not a crash
+        return "unreadable", []
+    if not rep.get("readable"):
+        return "unreadable", []
+    return "read", list(rep["findings"])
+
+
 # ── the pass ─────────────────────────────────────────────────────────────────
 def build(now: datetime | None = None) -> dict:
     now = now or _now()
@@ -360,7 +536,11 @@ def build(now: datetime | None = None) -> dict:
     items = list(res.items.values())
     shallow = _is_shallow()
     soak_read, soaks = read_soak_states()
+    nr_read, nr_rows = read_needs_review()
+    bw_read, bw_rows = read_blocker_watch()
     return {
+        "blocker_read": bw_read, "blocker_findings": bw_rows,
+        "needs_review_read": nr_read, "needs_review": nr_rows,
         "now": now, "today": today, "pipeline_readable": res.healthy,
         "pipeline_unreadable": len(res.unreadable),
         "stats": pipeline.stats(res, today),
@@ -373,6 +553,16 @@ def build(now: datetime | None = None) -> dict:
             "inflight": probe_inflight(now, shallow),
             "manager": probe_manager(now),
             "report": probe_report(now),
+            # TRAIL-PAUSE-PULSE: prop_trail_paused_<account>, one per executor
+            # account with a state dir on this host; see prop_trail_watch.py.
+            # a retired account (breakout_1, operator 2026-10-09: "shouldn't be
+            # coming up again") gets no probe at all -- not even "unknown".
+            **_drop_retired(prop_trail_watch.all_probes(now)),
+            # PROP-SILENCE-ALERTS: idle-fill (warn 14 d / urgent 21 d) per prop
+            # account + breakout_2's phone heartbeat. Each carries `level` and
+            # `priority`; see scripts/ops/prop_silence.py.
+            **_drop_retired(prop_silence.all_probes(now)),
+            "prop_feed": probe_prop_feed(now),
         },
     }
 
@@ -383,6 +573,9 @@ PROBE_LABEL = {
     "inflight": "in_flight rows gone quiet",
     "manager": "manager's register not written",
     "report": "scheduled work report missing or broken",
+    **prop_trail_watch.LABELS,
+    **prop_silence.LABELS,
+    "prop_feed": "a prop account feed keeps failing (red-flagged; retrying on a capped backoff)",
 }
 
 
@@ -405,6 +598,9 @@ def render_digest(v: dict) -> str:
         L.append("Soaks: " + (" · ".join(f"{k} {n}" for k, n in sorted(by.items())) or "none"))
     else:
         L.append(f"Soaks: state source {v['soak_read'].upper()} (not zero — not measured)")
+    nr_line = _needs_review_line(v)
+    if nr_line:
+        L.append(nr_line)
     bad = [k for k, p in v["probes"].items() if p["status"] != OK]
     for k in bad:
         p = v["probes"][k]
@@ -476,19 +672,72 @@ def plan_messages(v: dict, state: dict, digest_now: bool = False) -> tuple[list[
             new["seed_soaks_sent_at"] = now.isoformat()
         new["soak_states"] = cur_s
 
+    # (b3) research units newly needing a read — edge-triggered, same seeding rule
+    # as (b1): the first pass sends ONE count line, never silently, never per item.
+    if v.get("needs_review_read") == "read":
+        cur_nr = {r["id"]: r for r in v.get("needs_review", [])}
+        seen_nr = set(state.get("seen_needs_review", []))
+        fresh_nr = [cur_nr[k] for k in sorted(cur_nr) if k not in seen_nr]
+        if fresh_nr and "seen_needs_review" in state:
+            L = [f"🔎 {len(fresh_nr)} research unit(s) newly need a read (needs_review):"]
+            for r in fresh_nr[:6]:
+                L.append(f"• {r['id']}: {_short(r.get('reason'), 140)}")
+            if len(fresh_nr) > 6:
+                L.append(f"…and {len(fresh_nr) - 6} more — see the daily digest.")
+            msgs.append(("normal", "\n".join(L)))
+        if "seed_needs_review_sent_at" not in state:
+            msgs.append(("normal", f"🔎 needs_review at deploy: {len(cur_nr)} research unit(s) flagged "
+                                   f"(listed in the daily digest)"))
+            new["seed_needs_review_sent_at"] = now.isoformat()
+        new["seen_needs_review"] = sorted(cur_nr)
+
+    # (b4) BLOCKER-WATCH: a blocked row whose blocker is gone, a queued unit that is
+    # not being dispatched, an operator wait > 7 d, a landed_unproven past due.
+    # ONE alert per NEW finding, keyed row+kind (+edge); a key that is still
+    # present is never re-sent. A key that disappears is forgotten, so a finding
+    # that recurs after being fixed alerts again. Same seeding rule as (b1)/(b3):
+    # the first pass sends ONE count line, never silently and never per item.
+    if v.get("blocker_read") == "read":
+        cur_bw = {f["key"]: f for f in v.get("blocker_findings", [])}
+        seen_bw = set(state.get("seen_blocker_findings", []))
+        fresh_bw = [cur_bw[k] for k in sorted(cur_bw) if k not in seen_bw]
+        if fresh_bw and "seen_blocker_findings" in state:
+            L = [f"🧱 {len(fresh_bw)} new blocker-watch finding(s) — act this turn "
+                 f"(unblock, re-queue, dispatch, or drop with a reason):"]
+            for f in fresh_bw[:6]:
+                L.append(f"• {f['kind']} {f['id']}: {_short(f.get('evidence'), 150)}")
+            if len(fresh_bw) > 6:
+                L.append(f"…and {len(fresh_bw) - 6} more — python3 scripts/ops/blocker_watch.py")
+            msgs.append(("high" if any(f["kind"] == "STALE_BLOCK" for f in fresh_bw) else "normal",
+                         "\n".join(L)))
+        if "seed_blocker_watch_sent_at" not in state:
+            by: dict[str, int] = {}
+            for f in cur_bw.values():
+                by[f["kind"]] = by.get(f["kind"], 0) + 1
+            msgs.append(("normal", "🧱 blocker-watch at deploy: " +
+                         (" · ".join(f"{k} {n}" for k, n in sorted(by.items())) or "no findings") +
+                         " (listed in the daily brief; only NEW findings alert from here)"))
+            new["seed_blocker_watch_sent_at"] = now.isoformat()
+        new["seen_blocker_findings"] = sorted(cur_bw)
+
     # (c) silence alarms — send on breach, re-send every REALERT_HOURS, one clear.
     alarms = dict(state.get("alarms", {}))
     for k, p in v["probes"].items():
         a = alarms.get(k, {})
         if p["status"] == BREACHED:
             last = a.get("last_sent")
-            due = (last is None or
+            level = p.get("level")
+            # A warn -> urgent step is a NEW fact: send it now, not in 24 h.
+            escalated = bool(a.get("breached")) and level is not None and a.get("level") != level
+            due = (last is None or escalated or
                    now - datetime.fromisoformat(last) >= timedelta(hours=REALERT_HOURS))
             if due:
-                msgs.append(("high", f"🔕 Expected signal missing — {PROBE_LABEL[k]}: {p['detail']}"))
-                a = {"status": BREACHED, "breached": True, "last_sent": now.isoformat()}
+                msgs.append((p.get("priority", "high"),
+                             f"🔕 Expected signal missing — {PROBE_LABEL[k]}: {p['detail']}"))
+                a = {"status": BREACHED, "breached": True, "last_sent": now.isoformat(),
+                     "level": level}
             else:
-                a = {**a, "status": BREACHED, "breached": True}
+                a = {**a, "status": BREACHED, "breached": True, "level": level}
         elif p["status"] == OK:
             if a.get("breached"):
                 msgs.append(("normal", f"✅ Cleared — {PROBE_LABEL[k]}: {p['detail']}"))
@@ -517,7 +766,8 @@ def compose_block(v: dict, msgs: list[tuple[str, str]]) -> tuple[str, str, list[
     so a new actionable thing is unmissable and the steady state is quiet."""
     summary = [b for _, b in msgs if b.startswith("📋")]
     new = [b for _, b in msgs if not b.startswith("📋")]
-    pri = "high" if any(p == "high" for p, b in msgs if not b.startswith("📋")) else "normal"
+    pris = {p for p, b in msgs if not b.startswith("📋")}
+    pri = "urgent" if "urgent" in pris else "high" if "high" in pris else "normal"
     L: list[str] = []
     if new:
         L.append(f"🆕 NEW since last digest ({len(new)}):")
@@ -670,6 +920,34 @@ def _self_test() -> int:
     early = view(now=now.replace(hour=2))
     check("no digest before DIGEST_HOUR_UTC",
           not any(b.startswith("📋") for _, b in plan_messages(early, {})[0]), "")
+    nr1 = {"id": "RQ-1", "graded_at": "2026-10-02", "reason": "n 9 < 39"}
+    nr2 = {"id": "RQ-2", "graded_at": "2026-10-04", "reason": "mixed"}
+    nseed, nst = plan_messages(view(needs_review_read="read", needs_review=[nr1]), st2)
+    check("first needs_review read sends ONE count line, not one per unit",
+          [b for _, b in nseed if "needs_review at deploy" in b] == [
+              "🔎 needs_review at deploy: 1 research unit(s) flagged (listed in the daily digest)"], nseed)
+    nnew, nst2 = plan_messages(view(needs_review_read="read", needs_review=[nr1, nr2]), nst)
+    check("a newly flagged unit alerts once, naming it",
+          len(nnew) == 1 and "RQ-2" in nnew[0][1] and "RQ-1" not in nnew[0][1], nnew)
+    check("…and is quiet on the next pass",
+          plan_messages(view(needs_review_read="read", needs_review=[nr1, nr2]), nst2)[0] == [], "")
+    check("an UNREADABLE queue neither alerts nor burns the seed marker",
+          plan_messages(view(needs_review_read="unreadable"), st2)[1].get("seed_needs_review_sent_at") is None, "")
+    dig = render_digest(view(needs_review_read="read", needs_review=[nr1, nr2]))
+    check("the digest carries a loud line with count, age and ids",
+          "🔎 2 research unit(s) need a read" in dig and "oldest flagged 2d ago" in dig and "RQ-1" in dig, dig)
+    check("unreadable is said, not rendered as zero",
+          "UNREADABLE" in render_digest(view(needs_review_read="unreadable")), "")
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        (Path(td) / "RQ-9.yaml").write_text("id: RQ-9\ngrading:\n  needs_review: true\n  graded_at: '2026-10-01'\n  reason: r\n")
+        (Path(td) / "RQ-8.yaml").write_text("id: RQ-8\ngrading:\n  needs_review: false\n")
+        rd, rows = read_needs_review(Path(td))
+        check("the reader finds the flagged unit and skips the unflagged one",
+              rd == "read" and [r["id"] for r in rows] == ["RQ-9"], (rd, rows))
+        (Path(td) / "RQ-7.yaml").write_text("id: [unclosed\nneeds_review: true\n")
+        check("a corrupt unit makes the read UNREADABLE, never a shorter list",
+              read_needs_review(Path(td))[0] == "unreadable", "")
     blk, pri, new_items = compose_block(view(), [])
     check("nothing new → ONE quiet line", blk.startswith("🟢") and "\n" not in blk and not new_items, blk)
     blk2, pri2, _ = compose_block(view(), [("high", "❓ 1 new decision"), ("normal", "📋 Daily")])

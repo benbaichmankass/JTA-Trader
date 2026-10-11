@@ -23,17 +23,40 @@ never delays a ticket:
    still sits on the safe side of the current price, amend the SL through the
    adapter's ``modify_bracket`` (TP is not touched), then re-read and confirm.
    A stop is never loosened, never removed, and no close control is clicked.
+4. TP doctrine B1 (operator 2026-10-06): on a tick with no SL step due, a leg
+   that DECLARES a ``tp_revision`` rule has its resting TP moved to the rule's
+   current prediction (``src/runtime/tp_revision.py::plan_tp_revision`` -- the
+   same function the exchange ``monitor()`` and the harness use), as a TP-only
+   ``modify_bracket(page, p, None, tp)``, then re-read and confirmed. Only an
+   adapter declaring ``TP_AMEND_SUPPORTED`` is asked (``dxtrade_api``); the
+   browser ``dxtrade`` adapter's rollout guard admits SL-only tightens, so it
+   is skipped with a logged reason. The phone path (breakout_2) receives the
+   same ``plan_tp_revision`` output through its own amend channel (lane
+   PROP-TRAIL-PHONE), never through this function.
 
 ROLLOUT (manager 2026-10-02 23:30Z, DIALOG-MEASURE #15693/#15705). Every
-armed step goes through ``modify_bracket(..., rollout=ModifyRollout(...))`` on
-the account's ONE modify-rollout latch (``<state dir>/modify_rollout.json``,
-the same file the executor's containment uses). The guard admits only a
-single SL-only tighten of at most ``ROLLOUT_MAX_TIGHTEN_FRACTION`` of the
-stop's distance from the venue price, so a replayed target further than that
-is STEPPED toward (never past it), and after any armed step -- verified or
-not -- the latch stays set and the trail PAUSES for every ticket until a
-person reviews it and runs ``executor-clear-rollout``. One watched step per
-clear is the first-week rollout; the trail never clears the latch itself.
+armed step goes through ``modify_bracket(..., rollout=ModifyRollout(...))``.
+The guard admits only an SL-only tighten of at most
+``ROLLOUT_MAX_TIGHTEN_FRACTION`` of the stop's distance from the venue price,
+so a replayed target further than that is STEPPED toward (never past it), and
+the very next read must show the new stop. Each step's outcome is recorded
+(``<state dir>/modify_rollout_last.json``) as evidence only.
+
+NO HALTING (operator 2026-10-09: "There is no halting."). Until then any armed
+step -- verified or not -- left a per-account latch (``modify_rollout.json``)
+that PAUSED the trail for every ticket until ``executor-clear-rollout``, and a
+failed verify or a loosened SL LOCKED the ticket's trail for good. Both are
+gone: a step that is refused, not confirmed, fails its verify or reads back
+looser is THAT step's failure. It alerts once, the ticket retries on the next
+cycle (from the second consecutive failure on a capped backoff, see
+:func:`retry_wait_s`), every other ticket carries on, and after
+``RED_FLAG_AFTER`` consecutive failures ONE red flag is raised while it keeps
+retrying; the first success after a red flag announces the recovery once. The
+next step plans from the RESTING SL, so a stop that came back looser is
+re-tightened by an ordinary tighten-only step -- a stop is still never
+loosened by this module. A stale latch file is moved aside by
+``ModifyRollout`` and a stale per-ticket ``locked`` flag is dropped, each with
+a log line.
 
 Levers this step cannot apply by an SL amend are never approximated:
 
@@ -60,6 +83,8 @@ from src.prop.platform.base import Position
 from src.prop.platform.dxtrade import ROLLOUT_MAX_TIGHTEN_FRACTION, ModifyRollout
 from src.prop.prop_executor import CycleResult, ExecutorConfig, _dir, _f, _parse_ts, _report
 from src.research.trail_levers import effective_trail_mult
+from src.runtime.monitor_verdict import MEANINGFUL_MODIFY_REL_TOL
+from src.runtime.tp_revision import declared_rule, plan_tp_revision
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 STRATEGIES_PATH = _REPO_ROOT / "config" / "strategies.yaml"
@@ -236,10 +261,16 @@ def _save_state(state_dir: Path, st: Mapping[str, Any]) -> None:
     tmp.replace(p)
 
 
-MAX_ATTEMPTS_PER_TARGET = 2
-# Every armed edit walk on one ticket, confirmed or not (a 1h leg ratchets at
-# most once a bar, so this is hours of trailing, not a retry budget).
-MAX_ARMED_ATTEMPTS_PER_TICKET = 24
+# NO-HALT (operator 2026-10-09): a failing ticket is never given up on. ONE red
+# flag after this many CONSECUTIVE failed steps on a ticket (SL and TP counted
+# separately); it keeps retrying.
+RED_FLAG_AFTER = 3
+# Retry spacing for a failing ticket: the first two retries are the next
+# cycles (the executor runs every 5 min); from the third consecutive failure
+# it waits BASE x 2^(n-3), capped -- an armed click on a real-money terminal
+# is not hammered, and is never stopped.
+RETRY_BACKOFF_BASE_S = 600
+RETRY_BACKOFF_CAP_S = 3600
 # The new stop must clear the venue quote by this many entry-ATRs.
 QUOTE_BUFFER_ATR = 0.1
 # The rollout guard bounds one step to ROLLOUT_MAX_TIGHTEN_FRACTION of the
@@ -268,6 +299,52 @@ def bounded_rollout_sl(side: str, resting_sl: float, target_sl: float, price: fl
     return sl if tighter else None
 
 
+def retry_wait_s(streak: int) -> float:
+    """Pure: seconds a ticket waits after its ``streak``-th consecutive failed
+    step. 0 (the next cycle) for the first two, then RETRY_BACKOFF_BASE_S x
+    2^(n-3) capped at RETRY_BACKOFF_CAP_S. Never infinite: there is no halting."""
+    if streak <= 2:
+        return 0.0
+    return float(min(RETRY_BACKOFF_CAP_S, RETRY_BACKOFF_BASE_S * 2 ** (streak - 3)))
+
+
+def _in_backoff(tst: Mapping[str, Any], prefix: str, now: datetime) -> Optional[float]:
+    """Seconds left before ``prefix``'s next retry, or None when it may run."""
+    nxt = _f(tst.get(prefix + "next_try_at"))
+    left = None if nxt is None else nxt - now.timestamp()
+    return left if left is not None and left > 0 else None
+
+
+def _step_failed(res: CycleResult, tst: Dict[str, Any], prefix: str, tid: Any, msg: str,
+                 now: datetime) -> None:
+    """Record one failed step on a ticket: alert on the FIRST failure of a
+    streak, ONE red flag at RED_FLAG_AFTER consecutive failures, log the rest.
+    Sets the next retry time; never locks the ticket."""
+    n = int(tst.get(prefix + "fail_streak") or 0) + 1
+    wait = retry_wait_s(n)
+    tst[prefix + "fail_streak"] = n
+    tst[prefix + "last_fail"] = msg
+    tst[prefix + "next_try_at"] = now.timestamp() + wait
+    res.log("trail_step_failed", ticket_id=tid, kind=prefix.rstrip("_") or "sl", streak=n,
+            retry_in_s=wait, why=msg)
+    if n == 1:
+        res.alerts.append(f"{tid}: {msg}; retrying next cycle")
+    elif n >= RED_FLAG_AFTER and not tst.get(prefix + "red_flagged"):
+        tst[prefix + "red_flagged"] = True
+        res.alerts.append(f"🚩 RED FLAG {tid}: trail {'TP ' if prefix else ''}step failed {n} consecutive "
+                          f"times (last: {msg}); still retrying (backoff up to {RETRY_BACKOFF_CAP_S // 60} min) "
+                          "— needs a look")
+
+
+def _step_ok(res: CycleResult, tst: Dict[str, Any], prefix: str, tid: Any) -> None:
+    """A step succeeded: clear the streak; announce recovery once after a red flag."""
+    n = int(tst.get(prefix + "fail_streak") or 0)
+    if tst.get(prefix + "red_flagged"):
+        res.alerts.append(f"✅ {tid}: trail {'TP ' if prefix else ''}step recovered after {n} consecutive failures")
+    for k in ("fail_streak", "last_fail", "next_try_at", "red_flagged"):
+        tst.pop(prefix + k, None)
+
+
 def run_trail_step(*, adapter: Any, page: Any, api: Any, cfg: ExecutorConfig, mode: str,
                    state_dir: Path, candles_fn: Callable[[str, str], Optional[pd.DataFrame]],
                    res: Optional[CycleResult] = None, now: Optional[datetime] = None,
@@ -294,7 +371,16 @@ def run_trail_step(*, adapter: Any, page: Any, api: Any, cfg: ExecutorConfig, mo
         return res
     st = _load_state(state_dir)
     rollout = ModifyRollout(Path(state_dir) / ROLLOUT_FILE)
-    jr = {(str(j.get("symbol") or "").upper(), _dir(j.get("direction"))): j for j in journal}
+    if rollout.stale_retired:
+        # NO-HALT: the retired per-account latch, left by the old code, is
+        # ignored and moved aside (ModifyRollout did it on construction).
+        res.log("trail_stale_latch_removed", **rollout.stale_retired)
+    for k, v in st.items():
+        # NO-HALT: a per-ticket permanent lock written by the old code is
+        # dropped -- that ticket is trailed again from its resting SL.
+        if isinstance(v, dict) and v.pop("locked", None):
+            res.log("trail_stale_lock_removed", ticket_id=k)
+    jr ={(str(j.get("symbol") or "").upper(), _dir(j.get("direction"))): j for j in journal}
 
     def _one(p: Position) -> None:
         venue = p.symbol.upper()
@@ -331,7 +417,12 @@ def run_trail_step(*, adapter: Any, page: Any, api: Any, cfg: ExecutorConfig, mo
                 f"(open_r={plan.detail.get('open_r')}); a resting-SL amend cannot reproduce a "
                 "bar-close exit, so the prop trail does NOT apply it — operator decides")
             tst["close_lever_alerted"] = True
-        if plan.action != "tighten" or tst.get("locked"):
+        if plan.action != "tighten":
+            # TP doctrine B1: with no SL step due this tick, the leg's declared
+            # TP-revision rule may move the resting TP (one modify per ticket
+            # per tick; the protective SL step always goes first).
+            _tp_step(p=p, leg=leg, tid=tid, venue=venue, bot_sym=bot_sym, entry=entry,
+                     initial_sl=isl, signal_time=sig_t, candles=candles, tst=tst)
             return
         # Through-price guard on the VENUE's own quote (the plan only saw the
         # Bybit feed): a long stop must sit a buffer under the bid, a short
@@ -347,16 +438,14 @@ def run_trail_step(*, adapter: Any, page: Any, api: Any, cfg: ExecutorConfig, mo
             return
         target = plan.sl
         if live:
-            # ROLLOUT: one watched step per reviewed clear (module docstring).
-            blocked = rollout.blocked()
-            if blocked:
-                res.log("trail_skip", ticket_id=tid, why="rollout latch set: " + blocked, new_sl=plan.sl)
-                if not tst.get("rollout_paused_alerted"):
-                    res.alerts.append(f"{tid}: trail PAUSED at SL {p.stop_loss} (target {plan.sl}): one watched "
-                                      "modify step per reviewed clear; review it, then executor-clear-rollout")
-                    tst["rollout_paused_alerted"] = True
+            wait = _in_backoff(tst, "", now)
+            if wait is not None:
+                res.log("trail_skip", ticket_id=tid, why=f"retry backoff after {tst.get('fail_streak')} consecutive "
+                        f"failed step(s); next try in {int(wait)}s", new_sl=plan.sl)
                 return
-            tst.pop("rollout_paused_alerted", None)
+            # ROLLOUT: one bounded, tighten-only step from the RESTING SL
+            # (module docstring). Nothing latches between steps.
+            tst.pop("rollout_paused_alerted", None)     # retired flag (NO-HALT)
             px = bid if p.side == "long" else ask
             target = bounded_rollout_sl(p.side, float(p.stop_loss), plan.sl, float(px), step)
             if target is None:
@@ -366,54 +455,47 @@ def run_trail_step(*, adapter: Any, page: Any, api: Any, cfg: ExecutorConfig, mo
             if target != plan.sl:
                 res.log("trail_bounded", ticket_id=tid, target=plan.sl, step_sl=target,
                         fraction=ROLLOUT_STEP_MARGIN * ROLLOUT_MAX_TIGHTEN_FRACTION)
-        if int(tst.get("armed_attempts") or 0) >= MAX_ARMED_ATTEMPTS_PER_TICKET:
-            res.log("trail_skip", ticket_id=tid, why=f"{MAX_ARMED_ATTEMPTS_PER_TICKET} armed attempts used for this ticket")
-            return
-        tries = tst.get("tries") if tst.get("target") == target else 0
-        if (tries or 0) >= MAX_ATTEMPTS_PER_TARGET:
-            res.log("trail_skip", ticket_id=tid, why=f"amend to {target} already tried {tries}x; alerted")
-            return
         r = adapter.modify_bracket(page, p, target, None, arm=live, rollout=rollout)
         res.log("trail_amend", ticket_id=tid, venue=venue, sl=target, result=r)
         if not live:
             return
+        # Retired fields of the old per-target / per-ticket caps (NO-HALT).
+        for k in ("tries", "target", "refused_alerted"):
+            tst.pop(k, None)
         if isinstance(r, dict) and not r.get("clicked"):
-            # Refused before any click (e.g. the edit dialog is unmeasured):
-            # nothing changed on the venue. One alert per ticket, no count.
-            if not tst.get("refused_alerted"):
-                res.alerts.append(f"{tid}: trail amend to {target} refused by the adapter ({r.get('why')})")
-                tst["refused_alerted"] = True
+            # Refused before any click (e.g. the guard's bound moved with the
+            # quote): nothing changed on the venue. A failed step, retried.
+            _step_failed(res, tst, "", tid, f"trail amend to {target} refused by the adapter ({r.get('why')})", now)
             return
-        tst.update(target=target, tries=(tries or 0) + 1,
-                   armed_attempts=int(tst.get("armed_attempts") or 0) + 1)
+        tst["armed_attempts"] = int(tst.get("armed_attempts") or 0) + 1     # evidence only, never a cap
         if isinstance(r, dict) and r.get("rollout") == "verify_failed":
-            # The guard's own next-read check failed and its latch halts every
-            # further modify: a "restore" would be a second blind modify the
-            # rollout forbids. Lock this ticket and leave it to the reviewer.
-            tst["locked"] = True
-            res.alerts.append(f"{tid}: trail step to {target}: {r.get('why')}; trail locked for this ticket, "
-                              "the reviewer decides (containment acts only if the SL or TP goes missing)")
+            # The guard's own next-read check failed: THIS step failed. No
+            # lock -- the next cycle plans again from whatever SL then rests
+            # and passes the same tighten-only guard (containment acts at once
+            # if the SL or TP goes missing).
+            _step_failed(res, tst, "", tid, f"trail step to {target}: {r.get('why')}", now)
             return
         confirmed = _confirm(adapter, page, p, target, step)
         if confirmed is None and _loosened(adapter, page, p):
-            # A stop that came back LOOSER than before is NOT restored: the
-            # step just used the account's single rollout modify (its latch
-            # refuses a second one, and a move back to a looser SL is not a
-            # tighten). The trail locks for this ticket; containment and the
-            # reviewer decide (manager review of #15316, 2026-10-03).
-            tst["locked"] = True
-            res.alerts.append(f"{tid}: SL LOOSENED after the trail amend to {target} (was {p.stop_loss}); "
-                              "NOT restored — the rollout latch forbids a second modify; the reviewer decides "
-                              "(containment acts only if the SL or TP goes missing); trail locked")
+            # A stop that came back LOOSER than before is NOT "restored" to
+            # the old value here (that would be a second blind modify in the
+            # same breath). The next cycle replans from the looser RESTING SL,
+            # and re-tightening from it is an ordinary tighten-only step -- a
+            # stop is never loosened by this module.
+            _step_failed(res, tst, "", tid, f"SL LOOSENED after the trail amend to {target} (was {p.stop_loss}); "
+                         "the next step re-tightens from the resting SL (containment acts if the SL or TP "
+                         "goes missing)", now)
             return
         if confirmed is None:
-            res.alerts.append(f"{tid}: trail amend to {target} not confirmed on re-read (result: {r.get('why') if isinstance(r, dict) else r})")
+            _step_failed(res, tst, "", tid, f"trail amend to {target} not confirmed on re-read "
+                         f"(result: {r.get('why') if isinstance(r, dict) else r})", now)
             return
         if confirmed.take_profit is None and p.take_profit is not None:
             res.alerts.append(f"{tid}: TP missing after the trail amend — the executor's journal reconcile "
                                   "reads it as NAKED and contains it (one repair, else close at market) once "
                                   "two consecutive reads agree")
-        tst.update(applied_sl=target, tries=0)
+        _step_ok(res, tst, "", tid)
+        tst.update(applied_sl=target)
         _report(res, post, {"kind": "amend", "account_id": cfg.account_id, "ticket_id": tid,
                             "symbol": bot_sym, "direction": p.side, "sl": confirmed.stop_loss,
                             "tp": confirmed.take_profit,
@@ -421,6 +503,80 @@ def run_trail_step(*, adapter: Any, page: Any, api: Any, cfg: ExecutorConfig, mo
                                       f"(bars={plan.bars}, mfe_r={plan.detail.get('mfe_r')}"
                                       + (f", rollout step toward {plan.sl}" if target != plan.sl else "") + ")",
                             "source": "prop_trail"})
+    def _tp_step(*, p: Position, leg: Mapping[str, Any], tid: Any, venue: str, bot_sym: Any,
+                 entry: float, initial_sl: float, signal_time: datetime,
+                 candles: Optional[pd.DataFrame], tst: Dict[str, Any]) -> None:
+        """Move the resting TP to the leg's revised prediction (TP doctrine,
+        clause 2). Fails CLOSED per step: an amend that is refused or
+        unconfirmed on the re-read keeps the resting TP, alerts once and is
+        retried on the next cycles (capped backoff, one red flag after
+        RED_FLAG_AFTER in a row -- NO-HALT); one that disturbs the SL is
+        alerted. Nothing here can loosen or remove the stop."""
+        if declared_rule(leg) is None:
+            return
+        if not getattr(adapter, "TP_AMEND_SUPPORTED", False):
+            # dxtrade (browser): the rollout guard admits SL-only tightens, so a
+            # TP amend would be refused before any click. Logged, never alerted:
+            # it is a known path limit, measured by tp-doctrine-guard.
+            res.log("trail_tp_skip", ticket_id=tid, venue=venue,
+                    why=f"adapter {getattr(adapter, 'platform', '?')!r} cannot amend a TP")
+            return
+        if candles is None or len(candles) == 0 or "timestamp" not in candles:
+            res.log("trail_tp_skip", ticket_id=tid, why="no candles")
+            return
+        tf_min = _TF_MINUTES.get(str(leg.get("timeframe") or "1h"))
+        if tf_min is None:
+            return
+        q = adapter.read_quote(page, venue) or {}
+        ref = _f(q.get("bid")) if p.side == "long" else _f(q.get("ask"))
+        if ref is None:
+            res.log("trail_tp_skip", ticket_id=tid, why="no venue quote: could not look, no TP amend")
+            return
+        bars = _closed_bars(candles, datetime(1970, 1, 1, tzinfo=timezone.utc), tf_min, now)
+        rev = plan_tp_revision(leg=leg, direction=p.side or "", entry=entry,
+                               risk=abs(entry - initial_sl), bars=bars,
+                               entry_time=signal_time, ref_price=ref)
+        if rev is None:
+            res.log("trail_tp_hold", ticket_id=tid, why="rule produced no placeable target")
+            return
+        cur = p.take_profit
+        if cur is not None and abs(rev.tp - cur) <= max(abs(cur) * MEANINGFUL_MODIFY_REL_TOL, 1e-8):
+            res.log("trail_tp_hold", ticket_id=tid, why="target unchanged", tp=cur)
+            return
+        if live:
+            wait = _in_backoff(tst, "tp_", now)
+            if wait is not None:
+                res.log("trail_tp_skip", ticket_id=tid, why=f"retry backoff after {tst.get('tp_fail_streak')} "
+                        f"consecutive failed TP step(s); next try in {int(wait)}s")
+                return
+        r = adapter.modify_bracket(page, p, None, rev.tp, arm=live, rollout=rollout)
+        res.log("trail_tp_amend", ticket_id=tid, venue=venue, tp=rev.tp, from_tp=cur,
+                reason=rev.reason, result=r)
+        if not live:
+            return
+        # Retired fields of the old per-target cap (NO-HALT).
+        for k in ("tp_tries", "tp_target", "tp_refused_alerted"):
+            tst.pop(k, None)
+        if isinstance(r, dict) and not r.get("ok"):
+            _step_failed(res, tst, "tp_", tid, f"TP amend to {rev.tp} refused ({r.get('why')}); resting TP kept", now)
+            return
+        step = _f((cfg.symbols.get(bot_sym) or {}).get("price_step"))
+        got = _confirm_tp(adapter, page, p, rev.tp, step)
+        if got is None:
+            _step_failed(res, tst, "tp_", tid, f"TP amend to {rev.tp} not confirmed on re-read "
+                         "(containment acts if the TP or SL goes missing)", now)
+            return
+        if p.stop_loss is not None and (got.stop_loss is None or not math.isclose(
+                float(got.stop_loss), float(p.stop_loss), rel_tol=1e-6, abs_tol=(step or 0.0) / 2 + 1e-9)):
+            res.alerts.append(f"{tid}: SL reads {got.stop_loss} after the TP amend (was {p.stop_loss}); "
+                              "the reviewer decides")
+        _step_ok(res, tst, "tp_", tid)
+        tst.update(applied_tp=rev.tp)
+        _report(res, post, {"kind": "amend", "account_id": cfg.account_id, "ticket_id": tid,
+                            "symbol": bot_sym, "direction": p.side, "sl": got.stop_loss,
+                            "tp": got.take_profit, "reason": f"tp revision: {rev.reason}",
+                            "source": "prop_trail_tp"})
+
     for p in positions:
         try:
             _one(p)
@@ -446,6 +602,19 @@ def _confirm(adapter: Any, page: Any, p: Position, sl: float, step: Optional[flo
         for q in adapter.read_positions(page):
             if q.symbol.upper() == p.symbol.upper() and q.side == p.side and q.stop_loss is not None \
                     and abs(q.stop_loss - sl) <= max(tol, abs(sl) * 1e-7):
+                return q
+    except Exception:  # noqa: BLE001 — an unread confirm is reported as not confirmed
+        return None
+    return None
+
+
+def _confirm_tp(adapter: Any, page: Any, p: Position, tp: float, step: Optional[float]) -> Optional[Position]:
+    """The position re-read with its TP at ``tp`` (within half a step), or None."""
+    tol = (step or 0.0) / 2 + 1e-9
+    try:
+        for q in adapter.read_positions(page):
+            if q.symbol.upper() == p.symbol.upper() and q.side == p.side and q.take_profit is not None \
+                    and abs(q.take_profit - tp) <= max(tol, abs(tp) * 1e-7):
                 return q
     except Exception:  # noqa: BLE001 — an unread confirm is reported as not confirmed
         return None
@@ -480,4 +649,4 @@ def default_candles_fn(limit: int = 300) -> Callable[[str, str], Optional[pd.Dat
 
 
 __all__ = ["TrailPlan", "plan_trail", "run_trail_step", "default_candles_fn", "bounded_rollout_sl",
-           "MAX_ATTEMPTS_PER_TARGET"]
+           "retry_wait_s", "RED_FLAG_AFTER"]

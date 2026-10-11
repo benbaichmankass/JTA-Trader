@@ -139,6 +139,14 @@ _HOLE = {
 
 def read_json(path: Path, root: Path | None = None) -> tuple[Any, str]:
     p = (root or REPO_ROOT) / path
+    from src.runtime import checklist_store as _ck  # noqa: PLC0415
+    if _ck.is_checklist_path(p):  # rows are the truth once the store is seeded
+        if not _ck.exists(p):
+            return None, "absent"
+        try:
+            return _ck.load_path(p), "read"
+        except (OSError, ValueError, UnicodeDecodeError):
+            return None, "unreadable"
     if not p.exists():
         return None, "absent"
     try:
@@ -506,7 +514,14 @@ def build(*, today: date | None = None, root: Path | None = None) -> dict[str, A
 
     mandates_doc, mandates_state = read_yaml(_MANDATES, root)
 
+    try:  # BLOCKER-WATCH: do the blocked / 'running' claims still hold?
+        from scripts.ops import blocker_watch  # noqa: PLC0415
+        bw = blocker_watch.build(repo=root)
+    except Exception:  # noqa: BLE001 — unreadable is a state, not a crash
+        bw = None
+
     return {
+        "blockerWatch": bw,
         "schemaVersion": 1,
         "forDate": today.isoformat(),
         "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
@@ -534,7 +549,14 @@ def build(*, today: date | None = None, root: Path | None = None) -> dict[str, A
 def _section0(b: dict) -> list[str]:
     # `section0_lines` emits its own "## §0 —" header. Due-ness comes from
     # pipeline.py (`due`, `due_bucket`), never re-derived here.
-    return list(b["pipeline"]["section0Lines"]) + [""]
+    L = list(b["pipeline"]["section0Lines"]) + [""]
+    bw = b.get("blockerWatch")
+    if bw is not None:
+        from scripts.ops import blocker_watch  # noqa: PLC0415
+        L += blocker_watch.render_lines(bw)
+    elif "blockerWatch" in b:
+        L += ["### 🧱 BLOCKER-WATCH — COULD NOT BE RUN (we did not look; this is not zero)", ""]
+    return L
 
 
 def _section1(b: dict) -> list[str]:

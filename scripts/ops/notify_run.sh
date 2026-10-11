@@ -70,7 +70,7 @@ if [ "${action}" = "send-ping" ]; then
 fi
 
 case "${action}" in
-    status-check|list-listening-ports|gateway-logs|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|generate-strategy-review-packets|send-prop-test-ping|grade-closed-trades|net-r-regrade|get-env)
+    status-check|list-listening-ports|gateway-logs|gateway-forensics|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|generate-strategy-review-packets|send-prop-test-ping|phone-dry-test|grade-closed-trades|net-r-regrade|get-env)
         tier=1
         if [ "${exit_code}" -eq 0 ]; then
             result="ok"
@@ -180,6 +180,26 @@ case "${action}" in
             *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
         esac
         ;;
+    prop-ticket-expire)
+        # Moves ONE dead prop ticket on a REST account to `expired`
+        # (VELOTRADE-TICKET). Exit 3 is a guarded REFUSAL, nothing written.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok — ticket expired (or dry-run plan printed; see run log)"; priority="normal" ;;
+            3) result="refused — nothing written (see run log for the reason)"; priority="high" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
+    prop-ticket-reissue)
+        # Re-issues ONE suppressed prop ticket as `emitted`, rebuilt with the
+        # emission sizing (PROP-REISSUE). Exit 3 is a guarded REFUSAL, nothing written.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok — ticket re-issued (or dry-run plan printed; see run log)"; priority="normal" ;;
+            3) result="refused — nothing written (see run log for the reason)"; priority="high" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
     breakout-terminal-probe)
         # READ-ONLY measurement of Breakout's proprietary terminal (PROP-TERM).
         # Exit 4 is a FEASIBILITY finding, not a crash.
@@ -192,7 +212,18 @@ case "${action}" in
             *) result="FAILED (exit ${exit_code})"; priority="high" ;;
         esac
         ;;
-    egress-landing-probe|velotrade-api-probe)
+    velotrade-api-roundtrip)
+        # ONE live-or-dry REST round trip on velotrade_1 (VELOTRADE-API-EXEC).
+        tier=2
+        case "${exit_code}" in
+            0) result="ok — round trip passed (or dry), account flat"; priority="normal" ;;
+            3) result="STOP RULE tripped — flattened and verified flat (see run log)"; priority="high" ;;
+            4) result="STOP RULE tripped — NOT verified flat: check velotrade_1 NOW"; priority="high" ;;
+            5) result="refused before any send (preflight / latch / confirm)"; priority="normal" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="high" ;;
+        esac
+        ;;
+    egress-landing-probe|velotrade-api-probe|velotrade-trade-history-read)
         # READ-ONLY landing-page reachability probe of a fixed host allowlist.
         # Any HTTP outcome is a measurement; only an environment fault fails.
         tier=2

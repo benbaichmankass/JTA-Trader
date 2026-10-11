@@ -3,7 +3,7 @@ name: manager
 description: The manager-session contract. Read this at the start of any session that spawns or supervises other sessions. Defines the one job, the one register, spawn rules, the model table, the budget, and the daily-sync brief.
 ---
 
-> **Doc status:** `live` · category `instruction` · last verified `2026-10-04` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
+> **Doc status:** `live` · category `instruction` · last verified `2026-10-10` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
 # The manager contract
 
@@ -135,8 +135,8 @@ a dispute of operator authority") and does not file it anywhere else.
    that cost is acceptable. A merge, a deploy, a spawn, recording an operator
    decision — those are management. `src/`, `tests/`, `scripts/`,
    `.github/workflows/`, `config/`, `deploy/` are not.
-2. **Maintain more than one register.** `docs/claude/work/MANAGER-CHECKLIST.json`
-   is the only one. The lease, work store, session registry, merge queue,
+2. **Maintain more than one register.** The checklist (`docs/claude/work/MANAGER-CHECKLIST.json`,
+   rows under `docs/claude/work/checklist/` after the cutover) is the only one. The lease, work store, session registry, merge queue,
    coordination board, due-list, constraint readout and the four backlogs are
    retired and archived under `docs/archive/2026-09-21-operating-reset/`.
 3. **Write narrative observations about its own state.** Three timestamped
@@ -231,7 +231,110 @@ Headroom this leaves is available for **depth** when a task warrants it
 audits). It is not a target to hit, and never a reason to move work off the model
 its risk demands.
 
+## Hibernating before a usage-limit outage
+
+> **Operator, 2026-10-07 (verbatim):** "you did a good job of 'hibernating' the
+> work ahead of the usage limit outage, so I want us to add to the manager skill
+> instructions for how to prepare for that properly."
+
+Run this when the weekly bar nears its limit (Settings → Usage) or a lane reports
+*"You've hit your weekly limit"*. It takes about 15 minutes. It is written from
+what happened on 2026-10-06/07; the items marked "measured" are observations, not
+design intent.
+
+### Before the limit — what worked
+
+1. **Arm GitHub auto-merge on every PR that would otherwise wait on the manager**:
+   `gh api -X PUT repos/<owner>/<repo>/pulls/<n>/ccr/auto_merge -f merge_method=squash`.
+   Merges then happen on green with nobody in the loop. Tier-2/3 PRs stay held by
+   design — do not arm those.
+2. **Tell every live lane, by trigger, that the manager may go silent**: arm
+   auto-merge on their own PRs, finish and close out without waiting, report after
+   the reset.
+3. **Put the pick-up list in a reminder bound to the manager session**, firing
+   about 5 minutes after the reset (`send_later` / `create_trigger` with
+   `run_once_at`). It names the routines to re-enable, the lanes to read, the
+   live-money checks, the research results to read and the items to dispatch.
+   **Update it as the list changes** — a stale pick-up prompt is the first thing
+   the resumed manager meets.
+4. **Pause the check-in and review routines** (`update_trigger` `enabled=false`) so
+   they do not burn the last budget on empty passes, and **name them in the pick-up
+   list** so they are re-enabled.
+5. **Confirm every register change is ON MAIN, not just pushed.** A commit pushed
+   to a branch whose PR already merged is stranded. Measured 2026-10-06: two
+   checklist commits pushed to `claude/mgr-pairs-review` after #16721 merged
+   (10:32:49Z) were lost until re-landed on 2026-10-07. After any merge, branch
+   again from `origin/main`.
+6. **Archive finished lanes; record final spends** on their checklist rows.
+7. **Leave live money in a state that needs no session**: executors on VM timers,
+   alerts routed to the operator's Telegram, kill switches documented on the rows.
+8. **Tell the operator in one message** what keeps running, what waits, and when
+   the pick-up fires.
+
+### What still broke — check these first on return
+
+- **Lanes die mid-task at the limit** with status "You've hit your weekly limit"
+  and **no wake**. Measured: RQ-FIX had pushed its branch but not opened its PR;
+  PHONE-DRYTEST-ACTION had merged but not run its proof. On return:
+  `list_sessions(mine=true)`, read `status_bucket` and `post_turn_summary` of every
+  unarchived lane, then finish or re-dispatch each.
+- **"Keeps running" is not "keeps producing."** The research queue kept running
+  (cron + PAT auto-merge), but a defect it carried (PyYAML missing on the result
+  job) meant it produced no verdicts for 29 hours — `PI-20261006-APBY4NTV-0010`.
+  Put a **result-quality check** (verdict distribution, double fires) in the
+  pick-up list.
+- **A lane's self-land arming can be refused by the classifier**; those PRs wait
+  for the manager. Arm their auto-merge yourself before going dark — #16782 was
+  armed that way and merged at 14:01Z while the manager was out.
+- **A `hold` PR is the one that stays open.** RQ-FIX's fix PR #16791 landed
+  `hold` (`changes_landing_machinery`: R12 counts `queue_grade.py` as landing
+  machinery), so it could not self-land and still needed the manager. Its
+  register PR #16783, which the manager had armed, merged on green at 13:52Z
+  with nobody in the loop. List the `hold` PRs in the pick-up list.
+
+### On return — the order that worked
+
+1. Read notifications.
+2. Re-enable the paused routines.
+3. Verify stranded register commits (compare each lane/manager branch to `main`).
+4. Read lane states (as above).
+5. Check live-money tickets since the last operator message.
+6. Verify the research queue produced real verdicts, not just runs.
+7. Then report to the operator and dispatch.
+
 ## Spawning
+
+### How lane PRs land
+
+A Tier-1 lane self-lands its PR using a fixed process: create `.github/pr-landing/<slug>.json` with `tier: 1` and `landing: self`, create `.github/pr-automerge-requests/<slug>.txt`, run `python3 scripts/ops/claim_merge_slot.py --branch-claim --branch <branch> --held-by <session_id>` to claim the merge slot, and arm GitHub auto-merge with `gh api -X PUT repos/<owner>/<repo>/pulls/<n>/ccr/auto_merge -f merge_method=squash`. If Claude Code's classifier refuses the auto-merge arming (returns "Merge Without Review"), the lane re-declares the PR with `landing: hold` and `hold_reason: operator_asked_to_hold`, reports the exact refused command to the manager in one line, and the manager lands the PR. Tier-2/3 lane PRs always carry `landing: hold` — the manager (Tier 2) or operator's recorded approval (Tier 3) lands them. Measured precedent: PR #16719.
+
+- **Tier-1 lanes:** self-land when the classifier arms auto-merge; report blocked arming to the manager in one line; manager lands if blocked.
+- **Tier-2/3 lanes:** hold for manager (T2) or operator approval (T3); never self-land.
+
+### After a `/performance-review` merges: dispatch `PERF-FOLLOWUP-<week>` (operator, 2026-10-10)
+
+When a `/performance-review` PR merges, dispatch **one** lane, `PERF-FOLLOWUP-<week>`
+(`<week>` = ISO week of the review, e.g. `PERF-FOLLOWUP-2026W41`), on the
+`perf-followup` skill (`.claude/skills/perf-followup/SKILL.md`): **Sonnet**, ceiling
+**$6**, checklist row written before dispatch, prompt naming the review file
+(`comms/reviews/performance-review-<stamp>.json`). Its Step 0 reads the previous run's
+units, so do not dispatch a second run for the same review. When it reports, apply what
+its pre-registered rules decide and surface its Tier-3 proposals per § "Before any
+operator popup" — they are classified, not forwarded.
+
+### Routine: `RESEARCH-OPS-<date>-<slot>` four times a day (operator, 2026-10-10)
+
+The manager keeps a recurring routine that dispatches **one** lane, `RESEARCH-OPS-<date>-<slot>`
+(e.g. `RESEARCH-OPS-2026-10-11-0247`), at **02:47, 08:47, 14:47 and 20:47 UTC**, on the
+`research-ops` skill (`.claude/skills/research-ops/SKILL.md`): **Sonnet**, ceiling **$6**
+(~$5 target), checklist row written before dispatch. It is the research *operations* check
+(pipeline flowing, runnable floor, blocked units, results read, follow-ups filed); it does not
+replace topic lanes such as `PERF-FOLLOWUP-<week>`. **Skip a slot while the previous
+research-ops lane still runs** (check the checklist row / `get_session`; never stack two). When a
+lane reports, land and archive it per § "Archive protocol"; its record is
+`comms/research/ops/<stamp>.json` and its one-line report goes in the daily brief's
+"what moved". Apply any Tier-3 proposal it leaves as a checklist note per § "Before any operator
+popup".
 
 ### Model by task class
 
@@ -425,7 +528,36 @@ reason**. A successor reads the reasoning, not just the value.
 
 ## The checklist
 
-One file: `docs/claude/work/MANAGER-CHECKLIST.json`. Row schema:
+### How to edit it — the recipe (PI-20261004-APBY4NTV-0003)
+
+**Before the cutover** (it happened 2026-10-08; the monolith `docs/claude/work/MANAGER-CHECKLIST.json` is deleted) the register was one file.
+**From the cutover** (the day `docs/claude/work/checklist/_header.json` exists -- it does) it is
+**one file per row** under `docs/claude/work/checklist/<ROW-ID>.json`, and **no
+session edits it with ad-hoc python again** — a single shared array is why every
+concurrent row edit conflicted on GitHub (measured: 20 of 41 commits appended a row,
+11 touched the shared header). Use the CLI; it writes ONE row file atomically,
+checks the row against the file's own declared `states`, and never touches the
+shared header:
+
+```bash
+python3 scripts/ops/checklist.py add  NEW-ROW --title "one line" --state queued --owner me --tier 1 --by "$SESSION"
+python3 scripts/ops/checklist.py set  A3 state=in_flight lane=session_01... ceiling_usd=25 --by "$SESSION"
+python3 scripts/ops/checklist.py set  A3 prs='[123,456]' blocked_on='[]'     # values parse as JSON, else string
+python3 scripts/ops/checklist.py note A3 "what is true about this row"        # --append to add to it
+python3 scripts/ops/checklist.py archive-lane A3                              # lane -> lane_history, lane = null
+python3 scripts/ops/checklist.py header last_review '{"report_id": "...", "reviewed_at": "..."}'   # rare: the header is shared
+```
+
+A refused edit (state outside `states`, duplicate id, unknown row, `state`/`status`
+disagreement, path-shaped id) prints `checklist: refused -- <why>` and writes
+nothing. Rows carry their own `updated_at` / `updated_by`; the top-level
+`updated_at` / `updated_by` are no longer maintained. **Read** the register with
+`from src.runtime import checklist_store; checklist_store.load_path(path)` (or
+`load_at(repo, ref)` for history) — never parse the path yourself
+(`checklist-readers-guard`). History of a row is `git log -- docs/claude/work/checklist/<ID>.json`.
+`python3 scripts/ops/checklist.py --render` prints the served shape.
+
+One file: `docs/claude/work/MANAGER-CHECKLIST.json` (rows under `docs/claude/work/checklist/` after the cutover). Row schema:
 
 ```json
 {
@@ -662,7 +794,19 @@ incident.
      else.
    - So is an empty `digestLog` across 12h, because it means the carrier is
      down.
-2. **Work every item: dispatch, close, or decide.**
+2. **Run `python3 scripts/ops/blocker_watch.py` and work its findings with the rest.**
+   Every finding is unblocked, re-queued, dispatched to a lane, or dropped with
+   a stated reason in that same turn — a stale block is never left standing.
+   It checks the claims the register makes about itself: a `blocked` row whose
+   blocker is finished (`STALE_BLOCK`), a `queued` research unit never
+   dispatched or not for 48 h (`NOT_RUNNING`, `NEEDS_LANE` when nothing will
+   ever fire it), an operator wait past 7 days (`OPERATOR_WAIT`), a
+   `landed_unproven` row past its `due_by` (`UNPROVEN_OVERDUE`). Operator,
+   2026-10-10: *"if most of the things here aren't actually blocked, then
+   that's a problem that they were still marked as blocked and weren't put into
+   a work queue."* New findings also page once each (`attention_watch`) and
+   sit under §0 of the brief.
+3. **Work every item: dispatch, close, or decide.**
    - Dispatch: route it to a lane. Set `state: routed` and `routed_to: <session>`
      on the pipeline item, and give a build a checklist row.
    - Close: `done` or `killed`, with a `terminal_reason`.
@@ -670,11 +814,11 @@ incident.
 
    A `routed` item that is still due means its lane has not delivered. Check
    the lane, then re-dispatch or kill.
-3. **Every silence alarm gets a fix lane the same day.** Anything due at a known
+4. **Every silence alarm gets a fix lane the same day.** Anything due at a known
    time gets a `send_later` wake.
-4. **Record the review.** Set the top-level `last_review` =
+5. **Record the review.** Set the top-level `last_review` =
    `{report_id, reviewed_at, by, counts: {dispatched, closed, decided, carried}}`
-   on `MANAGER-CHECKLIST.json`, then push. Per-item dispositions live on the
+   on the checklist (`checklist.py header last_review '<json>'` after the cutover), then push. Per-item dispositions live on the
    pipeline items, so the next review sees what is new.
 
 ### Manager ↔ lane: PUSH plus POLL (operator directive 2026-10-04, binding)

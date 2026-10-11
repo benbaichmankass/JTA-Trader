@@ -1,0 +1,18 @@
+{
+  "id": "M20-DECLARE-FOLLOWUPS",
+  "title": "M20 follow-ups on paper-only legs: gld_pullback_1d trail5 fold-level check; check_lever_wiring has no exit_ladder/bank entry",
+  "phase": null,
+  "state": "queued",
+  "owner": "exit-refinement lane",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-11 ROUTE-AND-ASK-TRIAGE] Owns PI-20260929-YGGMZWK7-0003 and PI-20260929-EXITOPS-0003. (1) gld_pullback_1d trail5 passed the P2 gate (research/results/RQ-20260928-022/36505258498.jsonl, n_OOS 49) but its fold-level walk-forward was never checked for inertness the way the gdx/ada/spy cells were; the 2026-09-29 run's corpus rows live on claude/m20-sweep-corpus, not main. The leg routes only to alpaca_paper (config/accounts.yaml parse, 2026-10-11), so no real money is at stake. Do the fold check, then ship or decline. (2) ict_scalp_sol_15m bank0.5@1R is an orphaned declare: bank_frac/bank_at_r have no live consumer, and scripts/ci/check_lever_wiring.py LEVERS does not list exit_ladder/bank. Add it with an explicit runnable_exempt entry. The leg is on no account roster today. Closes when each item's clears_when holds.",
+  "updated_at": "2026-10-11T05:59:25Z",
+  "updated_by": "session_01BFAVovnP4UK5phrpVWnYsR",
+  "_seq": 394
+}

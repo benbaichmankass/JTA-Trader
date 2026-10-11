@@ -411,7 +411,14 @@ def read_file_commit(
     run = git or _default_git(repo)
     ref = now or datetime.now(timezone.utc)
 
-    out, err = run(["log", "-1", "--format=%H%x09%cI", "--", relpath])
+    # The checklist's last change is the newest commit on the monolith OR (after the
+    # per-row cutover) on any row file, so the Workflow page's freshness stamp is
+    # unchanged by the move.
+    paths = [relpath]
+    if relpath == CHECKLIST_RELPATH:
+        paths.append(CHECKLIST_STORE_RELPATH)
+
+    out, err = run(["log", "-1", "--format=%H%x09%cI", "--", *paths])
     if out is None:
         return FileCommit(FILE_COMMIT_UNKNOWN,
                           note=f"could not read the file log ({err or 'no output'})")
@@ -425,7 +432,7 @@ def read_file_commit(
     age = (max(0.0, (ref - parsed).total_seconds() / 3600.0)
            if parsed is not None else None)
 
-    status, status_err = run(["status", "--porcelain", "--", relpath])
+    status, status_err = run(["status", "--porcelain", "--", *paths])
     dirty: Optional[bool] = None if status is None else bool(status.strip())
 
     return FileCommit(
@@ -441,6 +448,7 @@ def read_file_commit(
 # ═════════════════════════════════════════════════════════════════════════════
 
 CHECKLIST_RELPATH = "docs/claude/work/MANAGER-CHECKLIST.json"
+CHECKLIST_STORE_RELPATH = "docs/claude/work/checklist"
 SESSIONS_RELPATH = "docs/claude/work/SESSIONS.json"
 
 #: Display order for the checklist's own declared `states` vocabulary.
@@ -645,14 +653,16 @@ class FileRead:
 
 
 def read_json_file(path: Path) -> FileRead:
+    from src.runtime import checklist_store  # noqa: PLC0415
+    from_store = checklist_store.is_checklist_path(path)  # rows are the truth once seeded
     try:
-        if not path.exists():
+        if not (checklist_store.exists(path) if from_store else path.exists()):
             return FileRead("absent", error=f"{path} does not exist")
-        raw = path.read_text(encoding="utf-8")
+        raw = None if from_store else path.read_text(encoding="utf-8")
     except OSError as exc:
         return FileRead("unreadable", error=str(exc)[:160])
     try:
-        data = json.loads(raw)
+        data = checklist_store.load_path(path) if from_store else json.loads(raw)
     except ValueError as exc:
         return FileRead("unreadable", error=f"malformed JSON: {exc}"[:160])
     if not isinstance(data, dict):
