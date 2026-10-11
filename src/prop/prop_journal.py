@@ -604,6 +604,20 @@ def insert_fill(fill: Dict[str, Any]) -> int:
             ).fetchone()
             if r:
                 existing_id = int(r[0])
+        if (existing_id is None and status == "closed" and ticket_id is not None
+                and exit_price is not None):
+            # VELO-CLOSE-RECON: a PRICED close of a ticket whose close was
+            # journaled WITHOUT an exit (the executor could not read it yet)
+            # is the correction of that row, not a second close: the
+            # fallback key above carries exit_price, so it never matched, and
+            # an append would count the one close twice.
+            r = conn.execute(
+                "SELECT id FROM prop_fills WHERE account_id=? AND ticket_id=? AND "
+                "status='closed' AND exit_price IS NULL ORDER BY id DESC LIMIT 1",
+                (account_id, ticket_id),
+            ).fetchone()
+            if r:
+                existing_id = int(r[0])
 
         if existing_id is not None:
             # sl/tp are COALESCEd (E66): a re-report that omits the stop must
