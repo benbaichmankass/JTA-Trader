@@ -67,7 +67,8 @@ def test_since_cursor_buckets_and_transitions(tmp_path):
     assert [x.split(" ")[0] for x in t["unblocked"]] == ["RQ-4"]
     assert [x.split(" ")[0] for x in t["run"]] == ["RQ-2"]
     assert [x.split(" ")[0] for x in t["done"]] == ["RQ-2"]
-    assert rd.headline(d).startswith("🔬 research: 0 pass · 1 fail · 2 further")
+    # counts equal the listed lines (operator feedback 2026-10-11)
+    assert rd.headline(d).startswith("🔬 research: 3 result(s) — 0 pass · 1 fail · 2 further")
 
 
 def test_nothing_new_is_said_and_differs_from_could_not_look(tmp_path):
@@ -89,7 +90,9 @@ def test_missing_fields_render_dash(tmp_path):
     f.parent.mkdir(parents=True)
     f.write_text(json.dumps({"verdict": "pass", "generated_at": NOW.isoformat()}) + "\n")
     d = rd.build(root=r, prev=None, now=NOW)
-    assert d["buckets"][rd.PASSED] == ["RQ-9 — pass: —"]
+    # never a bare "—" summary: the line says what is missing and where to look
+    assert d["buckets"][rd.PASSED] == [
+        "RQ-9: pass (row carries no measurement — open the result file)"]
 
 
 def test_cursor_round_trip(tmp_path):
