@@ -554,6 +554,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/decision-brief-2026-10-04.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/soak-decisions-2026-10-04.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/soak-verdicts-2026-10-04.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/plans/ui-upgrade-1-auth-and-keys-design.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/plans/work-system-2026-10-04.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/proposals/tier2-sweep-candle-anchoring-2026-07-30.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reference/backtest-data-loading.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
