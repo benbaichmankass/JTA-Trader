@@ -1,0 +1,11 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "why": "Fixes the backfill-intent-reduce-pnl system-action reading the wrong fills store (BL-20260717-FILLS-STORE-PATH-SPLIT): the wrapper now passes --fills-db $(fills_store_path), and an absent store is a refusal (exit 2 / sweep stamps nothing) instead of 'no fills'. Touches src/runtime/order_monitor.py (one comment) + src/runtime/reduce_leg_settlement.py (raise on absent store). No order path, no config.",
+  "recorded_decision": {
+    "kind": "operator_decision",
+    "ref": "PERF-FU-REDUCE-PNL"
+  },
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 runtime module + data-mutation action wrapper: held for the manager to merge before the backfill dry-run is re-run."
+}

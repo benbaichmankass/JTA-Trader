@@ -330,6 +330,16 @@ it; re-run those rather than quoting these counts.
 | queued units the dispatcher can never fire (`run.workflow` is a human note) or the grader can never close (hand-written, no `grading.auto`) | 2 session-bound + 4 session-graded of 308 files | `PI-20261006-LCEVL8D5-0002` |
 | the `needs_review` bucket surfaces only to a session that thinks to grep for it | 11 flagged (all statuses) | `PI-20261006-LCEVL8D5-0003` |
 
+## ML units — the same queue, a trainer-side runner (ML-RQ-RUNNER, 2026-10-11)
+
+An ML test (learner bake-off, conformal evaluation, control comparison) is an ordinary unit with an `ml_bakeoff:` block (the machine
+form of its `decision_rule`, registered with it) and `run.workflow: research-script-run-trainer.yml` (needs the trainer) or
+`research-script-run.yml` (CPU-only, data in the repo), `run.command: [python3, scripts/research/ml_bakeoff.py, --unit, '{unit}',
+--out, '{out_dir}']`. The trainer twin SSHes to the trainer, refuses to run until the trainer's checkout holds byte-identical copies
+of the unit and its scripts, runs `script_run.py` there under the venv, and uploads the same artifact the collector already lands
+(`research-script-run-trainer-<unit>-<run_id>`). Engine schema: `scripts/research/ml_bakeoff.py` docstring. The loop around it:
+`.claude/skills/frontier-research/SKILL.md` § "The research → test → improve loop".
+
 ## `run.workflow` DECLARED vs. actually `gh workflow run`-DISPATCHABLE
 
 > **RQ-RUN (2026-09-28): a session-local unit now has a token-free route.**

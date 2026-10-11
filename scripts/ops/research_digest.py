@@ -30,6 +30,7 @@ Missing fields render "—".
 from __future__ import annotations
 
 import json
+import re as _re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -158,6 +159,116 @@ def _new_rows(root: Path, snap: dict, prev: Optional[dict], now: datetime) -> tu
     return rows, unreadable
 
 
+_RQ_RE = _re.compile(r"(RQ-\d{8}-[A-Za-z0-9]+(?:-\d{2})?)")
+
+
+def _attribute(r: dict) -> Optional[str]:
+    """The unit a row belongs to: its own ``research_unit``, else its results
+    directory, else an RQ id inside its rule id, else the producing check named
+    by rule (e.g. the soak-book grade). ``None`` only when nothing names it."""
+    unit = r.get("research_unit")
+    if unit:
+        return str(unit)
+    d = str(r.get("_unit_dir") or "")
+    if d and not d.startswith("_"):
+        return d
+    rule = str((r.get("decision_rule") or {}).get("id") or "")
+    m = _RQ_RE.search(rule)
+    if m:
+        return m.group(1)
+    if rule:
+        return rule.removeprefix("RULE-")
+    tool = (r.get("produced_by") or {}).get("tool")
+    return str(tool) if tool else None
+
+
+def _unit_meta(root: Path, unit: str, cache: dict) -> dict:
+    if unit in cache:
+        return cache[unit]
+    meta: dict = {}
+    f = root / "research" / "queue" / f"{unit}.yaml"
+    try:
+        import yaml  # noqa: PLC0415
+        d = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
+        title = _re.sub(r"\([^)]*\)", "", str(d.get("title") or d.get("question") or ""))
+        title = title.split(": ", 1)[-1] if ": " in title else title
+        meta["title"] = " ".join(title.split())[:60]
+        rule = d.get("decision_rule") or {}
+        meta["rule"] = str(rule.get("rule") or "") if isinstance(rule, dict) else ""
+    except Exception:  # noqa: BLE001 — a missing unit yaml just means less context
+        pass
+    cache[unit] = meta
+    return meta
+
+
+def _fmt(v: Any) -> str:
+    return f"{v:+.2f}" if isinstance(v, float) else str(v)
+
+
+def _metric(r: dict) -> str:
+    """The key numbers of a result row, in a fixed precedence. "" when none."""
+    m = r.get("measurement") if isinstance(r.get("measurement"), dict) else {}
+    pop_n = (r.get("population") or {}).get("n") if isinstance(r.get("population"), dict) else None
+    parts: list[str] = []
+    if "net_total_r" in m:
+        parts.append(f"net {_fmt(m['net_total_r'])}R")
+        if "net_expectancy_r" in m:
+            parts.append(f"{_fmt(m['net_expectancy_r'])}R/trade")
+        parts.append(f"n={m.get('total_trades', pop_n if pop_n is not None else '—')}")
+    elif "base_net_r_OOS" in m:
+        parts.append(f"OOS base {_fmt(m['base_net_r_OOS'])}R n={m.get('base_trades_OOS', '—')}")
+        if "cells_passed" in m:
+            parts.append(f"cells {m['cells_passed']}/{m.get('cells_swept', '—')} passed")
+    elif "net_r_pooled" in m:
+        parts.append(f"pooled {_fmt(m['net_r_pooled'])}R")
+        if "net_r_half1" in m:
+            parts.append(f"halves {_fmt(m['net_r_half1'])}/{_fmt(m.get('net_r_half2'))}R")
+    elif isinstance(m.get("by_disposition"), dict):
+        parts.append(" · ".join(f"{k} {v}" for k, v in m["by_disposition"].items()))
+    for k, v in m.items():
+        if "delta" in k.lower() and not isinstance(v, (dict, list)):
+            parts.append(f"{k} {_fmt(v)}")
+            break
+    if not parts and pop_n is not None:
+        parts.append(f"n={pop_n}")
+    return ", ".join(parts)
+
+
+def _next_step(rule_text: str, verdict: str) -> str:
+    """What the unit's OWN registered rule says follows this verdict (the text
+    after ``--`` in its clause), else ""."""
+    if not rule_text or not verdict:
+        return ""
+    m = _re.search(rf"{_re.escape(verdict)}\s+IF[^-]*?--\s*([^.]+)", rule_text, _re.I)
+    return " ".join(m.group(1).split())[:90] if m else ""
+
+
+def summarise_row(r: dict, root: Path = REPO_ROOT, cache: Optional[dict] = None) -> Optional[str]:
+    """``unit — leg/question: verdict · key metric → next`` for one row, or
+    None when the row cannot be attributed. Never a bare "—" summary: when the
+    row has no note the line is built from the unit yaml + measurement."""
+    unit = _attribute(r)
+    if unit is None:
+        return None
+    meta = _unit_meta(root, unit, cache if cache is not None else {})
+    verdict = _dash(r.get("verdict"))
+    ps = str(r.get("power_state") or "")
+    metric = _metric(r)
+    note = " ".join(str(r.get("note") or (r.get("measurement") or {}).get("note") or "").split())
+    nxt = _next_step(meta.get("rule", ""), verdict)
+    head = f"{unit}" + (f" — {meta['title']}" if meta.get("title") else "")
+    body = verdict + (f" · {metric}" if metric else "")
+    if ps and ps in _UNDERPOWERED:
+        body += f" · power {ps}"
+    if not metric and note:
+        body += f": {note[:_NOTE_CHARS]}"
+    if nxt:
+        body += f" → {nxt}"
+    if not metric and not note and not nxt:
+        body += " (row carries no measurement — open the result file)"
+    return f"{head}: {body}"
+
+
 def build(root: Path = REPO_ROOT, prev: Optional[dict] = None,
           now: Optional[datetime] = None, snap: Optional[dict] = None) -> dict[str, Any]:
     """The section's data: new results bucketed + unit transitions."""
@@ -165,13 +276,17 @@ def build(root: Path = REPO_ROOT, prev: Optional[dict] = None,
     snap = snap or snapshot(root)
     rows, bad_rows = _new_rows(root, snap, prev, now)
     buckets: dict[str, list[str]] = {PASSED: [], FAILED: [], FURTHER: [], OTHER: []}
+    cache: dict = {}
+    unattributed = 0
+    run_ids: set[str] = set()
     for r in rows:
-        unit = _dash(r.get("research_unit") or r.get("_unit_dir"))
-        verdict = _dash(r.get("verdict"))
-        ps = r.get("power_state")
-        note = " ".join(str(r.get("note") or "").split())[:_NOTE_CHARS] or "—"
-        extra = f" · power {ps}" if ps else ""
-        buckets[_bucket(r)].append(f"{unit} — {verdict}{extra}: {note}")
+        line = summarise_row(r, root, cache)
+        if line is None:
+            unattributed += 1
+            continue
+        rid = (r.get("produced_by") or {}).get("run_id") if isinstance(r.get("produced_by"), dict) else None
+        run_ids.add(str(rid or f"{_attribute(r)}@{r.get('generated_at')}"))
+        buckets[_bucket(r)].append(line)
 
     trans = {"run": [], "newly_queued": [], "newly_blocked": [], "unblocked": [],
              "done": [], "retired": []}
@@ -197,6 +312,14 @@ def build(root: Path = REPO_ROOT, prev: Optional[dict] = None,
                     trans["done"].append(f"{uid} — {title}")
                 elif u["status"] == "retired":
                     trans["retired"].append(f"{uid} — {title}")
+    else:
+        # No cursor: count the units FIRED inside the same fixed window the
+        # results are drawn from, so the headline's run count matches the list.
+        since = now - timedelta(hours=FIRST_RUN_WINDOW_H)
+        for uid, u in sorted(snap["units"].items()):
+            t = _parse_ts(u.get("last_dispatched_at"))
+            if t and t >= since:
+                trans["run"].append(f"{uid} — fired {u['last_dispatched_at'][:16]}")
     statuses: dict[str, int] = {}
     for u in snap["units"].values():
         statuses[u["status"]] = statuses.get(u["status"], 0) + 1
@@ -205,6 +328,7 @@ def build(root: Path = REPO_ROOT, prev: Optional[dict] = None,
             "buckets": buckets, "transitions": trans, "statuses": statuses,
             "queue_state": snap["queue_state"], "results_state": snap["results_state"],
             "unreadable": snap["unreadable_units"] + snap["unreadable_results"] + bad_rows,
+            "unattributed": unattributed, "runs_in_window": len(run_ids),
             "snapshot": snap}
 
 
@@ -221,23 +345,30 @@ def headline(d: dict) -> str:
     if d["queue_state"] != "read" or d["results_state"] != "read":
         return "🔬 research: ⚠️ queue/results NOT READ — could not look"
     b, t = d["buckets"], d["transitions"]
-    return (f"🔬 research: {len(b[PASSED])} pass · {len(b[FAILED])} fail · "
-            f"{len(b[FURTHER])} further · {len(t['run'])} run · "
-            f"{len(t['newly_queued'])} queued · {len(t['newly_blocked'])} blocked")
+    n = sum(len(v) for v in b.values())
+    # Every count here is the length of a list the section prints, so the
+    # headline and the body cannot disagree (operator, 2026-10-11: "0 run"
+    # beside 24 listed results).
+    return (f"🔬 research: {n} result(s) — {len(b[PASSED])} pass · {len(b[FAILED])} fail · "
+            f"{len(b[FURTHER])} further · {len(b[OTHER])} other · "
+            f"{len(t['run'])} unit(s) fired · {len(t['newly_queued'])} queued · "
+            f"{len(t['newly_blocked'])} blocked")
 
 
 def render_body(d: dict) -> str:
     """Plain-text body for the expandable section (escaped by the renderer)."""
     L: list[str] = []
     if d["mode"] == "first_run_window":
-        L.append(f"No prior cursor — showing results generated in the last "
-                 f"{d['window_h']}h (fixed window). Status transitions start next update.")
+        L.append(f"No prior cursor — showing results generated and units fired in the "
+                 f"last {d['window_h']}h (fixed window). Status transitions start next update.")
     else:
         L.append(f"New since the last update ({_dash(d['since'])[:16]}Z).")
     if d["queue_state"] != "read":
         L.append("⚠️ research/queue NOT READ — we could not look; this is NOT 'nothing new'.")
     if d["results_state"] != "read":
         L.append("⚠️ research/results NOT READ — we could not look; this is NOT 'nothing new'.")
+    if d.get("unattributed"):
+        L.append(f"· {d['unattributed']} result row(s) name no unit, rule or tool — omitted.")
     if d["unreadable"]:
         L.append(f"⚠️ {d['unreadable']} unreadable file(s)/row(s) skipped.")
     nothing = True
@@ -252,7 +383,9 @@ def render_body(d: dict) -> str:
         if items:
             nothing = False
             L.append(f"{label} ({len(items)}):")
-            L += [f"  {x}" for x in items]
+            L += [f"  {x}" for x in items[:8]]
+            if len(items) > 8:
+                L.append(f"  … +{len(items) - 8} more")
     if nothing and d["queue_state"] == "read" and d["results_state"] == "read":
         L.append("Nothing new — queue and results were read; no new result rows "
                  "and no unit status change.")

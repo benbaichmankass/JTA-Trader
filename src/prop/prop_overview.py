@@ -19,7 +19,20 @@ Contract (never collapse "unread" into 0):
     is inside the window; ``pnl`` null rows are counted in ``closed_unpriced``
     and excluded from P&L / win rate. ``win_rate`` / ``profit_factor`` are null
     when there is nothing to compute them over.
-  * Unrealized P&L is null: the manual bridge has no mark feed.
+  * Unrealized P&L (UI-UPGRADE-1, 2026-10-11) is projected from the SAME
+    ``prop_account_status`` snapshots the equity comes from: the executors write
+    the venue's own ``unrealized`` there on every status pass (measured
+    2026-10-11: tradeify_1 -13.31 with equity - balance = -13.31). Each account
+    carries one of four ``unrealized_state`` values, never collapsed:
+      - ``venue_snapshot``  fresh snapshot with a number -> MEASURED;
+      - ``no_open_trades``  fresh snapshot, no number, and the journal holds no
+                            open trade on it -> 0.0, ESTIMATED (an inference
+                            from our own journal, not a venue read);
+      - ``not_reported``    fresh snapshot, no number, open trades -> null;
+      - ``stale``           no fresh snapshot -> null (we could not look).
+    The book total is a sum only when EVERY account is in one of the first two
+    states; otherwise it is null and ``accounts_unknown`` says how many are
+    missing. Until then the overview served ``unrealized_pnl: null`` always.
 """
 from __future__ import annotations
 
@@ -85,6 +98,54 @@ def split_fills(fills: List[Dict[str, Any]]):
     return open_rows, closed
 
 
+def _account_unrealized(row: Dict[str, Any], open_rows: List[Dict[str, Any]]) -> tuple:
+    """-> (value, state, provenance) for one account row. See the module doc."""
+    if row.get("status_freshness") != "ok":
+        return None, "stale", "unverified"
+    if row.get("_unrealized_raw") is not None:
+        return row["_unrealized_raw"], "venue_snapshot", "measured"
+    if not any(f.get("account_id") == row["account_id"] for f in open_rows):
+        return 0.0, "no_open_trades", "estimated"
+    return None, "not_reported", "unverified"
+
+
+def _unrealized_block(acct_rows: List[Dict[str, Any]],
+                      open_rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+    known, unknown, total = 0, 0, 0.0
+    for row in acct_rows:
+        val, state, prov = _account_unrealized(row, open_rows)
+        row["unrealized"] = round(val, 2) if val is not None else None
+        row["unrealized_state"] = state
+        row["unrealized_provenance"] = prov
+        if val is None:
+            unknown += 1
+        else:
+            known += 1
+            total += val
+    for row in acct_rows:
+        row.pop("_unrealized_raw", None)
+    return {
+        "total_usd": round(total, 2) if acct_rows and unknown == 0 else None,
+        "accounts_known": known,
+        "accounts_unknown": unknown,
+        "source": "prop_account_status.unrealized (venue-reported by the prop executors)",
+    }
+
+
+def _trade_unrealized(f: Dict[str, Any], acct_rows: List[Dict[str, Any]],
+                      open_rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """A trade's uPnL is the account's venue number only when it is the
+    account's ONLY open trade; with two or more the venue number cannot be
+    split honestly, so it is null."""
+    acct = next((r for r in acct_rows if r["account_id"] == f.get("account_id")), None)
+    siblings = sum(1 for o in open_rows if o.get("account_id") == f.get("account_id"))
+    if acct and acct.get("unrealized_state") == "venue_snapshot" and siblings == 1:
+        return {"unrealized_pnl": acct["unrealized"], "unrealized_provenance": "measured",
+                "unrealized_as_of": acct.get("reported_at")}
+    return {"unrealized_pnl": None, "unrealized_provenance": "unverified",
+            "unrealized_as_of": None}
+
+
 def build_overview(window: str = "7d", *, accounts: Optional[Dict[str, Any]] = None,
                    now: Optional[datetime] = None) -> Dict[str, Any]:
     from src.prop import prop_journal, prop_reconcile
@@ -108,15 +169,19 @@ def build_overview(window: str = "7d", *, accounts: Optional[Dict[str, Any]] = N
         if counted:
             total += float(eq)
             fresh_n += 1
+        ur = (snap or {}).get("unrealized")
         acct_rows.append({
             "account_id": aid, "mode": (accounts[aid] or {}).get("mode"),
             "equity": eq if isinstance(eq, (int, float)) else None,
             "status_freshness": fresh, "status_age_hours": rd.get("status_age_hours"),
             "counted_in_total": counted,
+            "_unrealized_raw": float(ur) if isinstance(ur, (int, float)) else None,
+            "reported_at": (snap or {}).get("reported_at"),
         })
         all_fills.extend(prop_journal.list_fills(account_id=aid, limit=_FILL_LIMIT))
 
     open_rows, closed = split_fills(all_fills)
+    unrealized = _unrealized_block(acct_rows, open_rows)
     cutoff = None if WINDOWS[window] is None else now - WINDOWS[window]
     in_win = []
     for f in closed:
@@ -141,6 +206,7 @@ def build_overview(window: str = "7d", *, accounts: Optional[Dict[str, Any]] = N
         "sl": f.get("sl"), "tp": f.get("tp"), "ticket_id": f.get("ticket_id"),
         "opened_at": f.get("opened_at") or f.get("reported_at"),
         "status": f.get("status"),
+        **_trade_unrealized(f, acct_rows, open_rows),
     } for f in open_rows]
     return {
         "generated_at": now.isoformat(),
@@ -151,7 +217,8 @@ def build_overview(window: str = "7d", *, accounts: Optional[Dict[str, Any]] = N
         },
         "open_trades": open_trades,
         "realized": realized,
-        "unrealized_pnl": None,
+        "unrealized_pnl": unrealized["total_usd"],
+        "unrealized": unrealized,
         "population": (f"{len(ids)} prop accounts; equity summed over {fresh_n} with a fresh "
                        f"operator-reported snapshot; realized over {len(in_win)} closed fills "
                        f"in {window} (last {_FILL_LIMIT} fills per account)"),
