@@ -74,9 +74,11 @@ issues a long-lived, revocable, per-device session; every route requires it.**
      possible. That is a bigger move; recorded as option B in §5.
 
 ### 2b. "Covering the WHOLE site"
-- `require_session` becomes **default-on for every router** via
-  `app.include_router(..., dependencies=[Depends(require_session)])`. Only
-  this stays public:
+- A new `require_site_session` (the existing `require_session` keeps its three
+  routes) is attached **once, as an app-level dependency**
+  (`FastAPI(dependencies=[...])`) so it covers every router and `WS /ws/market`,
+  and is a no-op while `SITE_AUTH_ENFORCE` is unset (**BUILT** in the
+  `UI-UPGRADE-1-AUTH` API PR). Only this stays public:
   - `/api/health`;
   - the auth routes themselves;
   - the CORS preflight `OPTIONS` (CORS **must** stay intact: the middleware
@@ -100,13 +102,81 @@ issues a long-lived, revocable, per-device session; every route requires it.**
   This is a *rollout* switch for an auth surface, not a trading capability, so
   it is outside the "no third gate" rule; it is removed once enforcement has
   been observed.
-- **Other non-browser consumers that read `/api/bot/*` must be inventoried
-  before the flip** (INFERRED, not yet measured): the Telegram bot, `diag`
-  relays that proxy through, `ict-git-sync`-adjacent scripts, and any
-  Actions workflow that curls the public API. Each gets the existing
-  `DASHBOARD_API_TOKEN` bearer as a service credential. Step 1 of the build
-  row is that inventory, grepped and then confirmed from the Caddy access log
-  over 24 h.
+- **Other non-browser consumers that read `/api/bot/*` — INVENTORIED 2026-10-11
+  (build step 1, row `UI-UPGRADE-1-AUTH`).** ⚠️ **METHOD AND LIMIT.** This is a
+  *static* inventory: a `grep` of the repo for the API host forms
+  (`ict-bot.duckdns.org`, `127.0.0.1:8001`, `localhost:8001`, `BOT_API_URL`,
+  `BOT_API_BASE`, `DIAG_BASE_URL`) and for `/api/bot/`, `/api/pnl`,
+  `/api/status`, `/ws/market` in `*.py`, `*.sh`, `*.yml`, then read to separate
+  files that *issue a request* from files that merely *mention* a route in a
+  docstring or comment (e.g. `scripts/ci/check_collapsed_states.py`,
+  `src/main.py`, `scripts/notify_on_pull.py`, `render_daily_brief.py`,
+  `work_report.py` were all excluded after reading the matching lines). It
+  proves these consumers EXIST; it does **not** prove the list is complete — a
+  consumer that builds its URL from a variable in another file, or a caller
+  outside this repo (a laptop `curl`, a bookmark, another repo's workflow),
+  would be missed. **24 h of real traffic is the completeness check, and ⚠️ MEASURED
+  2026-10-11: `deploy/caddy/Caddyfile` has no `log` directive, so there is NO
+  Caddy access log to read today** (uvicorn's access lines go to the journal,
+  whose retention is ~30 min). It needs a Tier-2 Caddyfile change first. Filed as
+  pipeline row `PI-20261011-CFUJ7YFR-0001` (`due_when` + `origin.rerun`); do not
+  flip `SITE_AUTH_ENFORCE` before it reports. The bearer retrofit into the 26
+  anonymous groups is `PI-20261011-CFUJ7YFR-0002`.
+
+  **33 consumer groups, 42+ named files** (B20 is one group of 7 research scripts, B14 is a family of 5 that share `probe_lib`). **26 of the 33 groups read `/api/bot/*` ANONYMOUSLY today and are marked "needs the service bearer": each would 401 the moment the gate is on unless it sends a credential.** The other 7 already carry a bearer, are public by path, or only hit CORS preflight / `/api/health`. What this lane built for that:
+  `require_site_session` accepts `Authorization: Bearer <DASHBOARD_API_TOKEN>`
+  as a **read-only (GET/HEAD) service credential**; any non-GET with it is
+  refused. Retrofitting the bearer into each consumer (and into `probe_lib` /
+  `diag_fetch.sh` / `vm-diag-snapshot.yml` first, which cover the most) is a
+  follow-up build row, not part of this lane.
+
+| # | consumer | routes | transport | credential today | after the flip |
+|---|---|---|---|---|---|
+| A1 | `src/runtime/telegram_decisions.py` (the decision-prompt sweep; `telegram_query_bot` calls it) | `GET/POST /api/bot/work/decisions` | VM loopback `127.0.0.1:8001` (`WORK_DECISION_API_BASE`) | GET anonymous; POST sends a `DASHBOARD_API_TOKEN` bearer (line ~1036) | GET needs the service bearer |
+| A2 | `src/prop/prop_executor.py` | `/api/bot/prop/*` | VM loopback | `DASHBOARD_API_TOKEN` bearer | unchanged for `report`/`phone/*`; reads need the bearer (already sent) |
+| A3 | `src/prop/phone_executor.py` | `/api/bot/prop/phone/*` | public HTTPS (phone) | own bearer | public by prefix — unchanged |
+| A4 | `scripts/prop/prop_executor_tick.py` | `/api/bot/prop/*` | VM loopback `--api-base` | bearer | as A2 |
+| A5 | `scripts/prop/breakout_login_check.py` | `/api/bot/prop/*` | VM loopback | bearer | as A2 |
+| A6 | `scripts/ops/prop_silence.py` | `/api/bot/prop/*` | VM loopback (`PROP_SILENCE_API_BASE`) | anonymous | **needs the service bearer** |
+| A7 | `scripts/ops/reattach_stranded_package_legs_action.sh` | `/api/bot/positions` | VM loopback over SSH | anonymous | **needs the service bearer** |
+| A8 | `.github/workflows/deploy-candidate.yml` | `/api/bot/stats` (+ `/api/health`) | VM loopback over SSH | anonymous | **needs the service bearer** (health stays public) |
+| A9 | `.github/workflows/vm-caddy-deploy.yml` | `/api/bot/stats` CORS preflight + `/api/health` | public HTTPS | preflight only | unchanged (preflight and health stay public) |
+| A10 | `.github/workflows/live-replay-parity.yml` + `scripts/ops/live_replay_parity.py` | `/api/bot/candles` (+ `/api/diag/*`) | SSH tunnel to `:8001` | anonymous for `/api/bot/candles` | **needs the service bearer** |
+| A11 | `.github/workflows/prop-report.yml` | `POST /api/bot/prop/report` | VM loopback over SSH | `DASHBOARD_API_TOKEN` bearer | public by path — unchanged |
+| A12 | `.github/workflows/work-decision-commit.yml` | `/api/bot/work/*` (+ `/api/diag/log_file`) | VM loopback over SSH | anonymous for `/api/bot/work/*` | **needs the service bearer** |
+| A13 | `.github/workflows/vm-diag-snapshot.yml` + `scripts/ops/diag_fetch.sh` (the session-facing relay) | arbitrary `/api/bot/*` paths a session asks for (`order-packages`, `performance`, `pnl`, `trades`, `work`, `stats` …) + `/api/diag/*` | relay: runner → VM loopback, or session → public HTTPS | `/api/diag/*` carries `DIAG_READ_TOKEN`; `/api/bot/*` anonymous | **the biggest one — every session read of `/api/bot/*` goes through it; needs the service bearer or sessions go blind** |
+| B1 | `.github/workflows/account-broker-reconcile.yml` | `/api/bot/positions`, `/prop`, `/trades` | public HTTPS (`BOT_API_BASE`) | anonymous | **needs the service bearer** |
+| B2 | `.github/workflows/broker-bracket-reconcile.yml` + `scripts/ops/broker_bracket_reconcile.py` | `/api/bot/positions` | public HTTPS | anonymous | **needs the service bearer** |
+| B3 | `.github/workflows/broker-truth-freshness.yml` | `/api/bot/pnl/broker-truth`, `/api/bot/trades/closed` | public HTTPS | anonymous | **needs the service bearer** |
+| B4 | `.github/workflows/gld-compat-matrix.yml` | `/api/bot/accounts/balances` | public HTTPS | anonymous | **needs the service bearer** |
+| B5 | `.github/workflows/r4-demotion-gate.yml` | `/api/bot/performance/recent` | public HTTPS | anonymous | **needs the service bearer** |
+| B6 | `.github/workflows/sunset-pass.yml` | `/api/bot/performance` | public HTTPS | anonymous | **needs the service bearer** |
+| B7 | `.github/workflows/dashboard-edge-watch.yml` + `scripts/ops/dashboard_edge_watch.py` | `/api/bot/stats` CORS preflight + `/api/health` | public HTTPS | preflight only | unchanged |
+| B8 | `scripts/ops/constraint_readout.py` | `/api/bot/performance`, `/api/bot/work/*` | public HTTPS | anonymous | **needs the service bearer** |
+| B9 | `scripts/ops/error_feed_digest.py` | `/api/bot/logs`, `/api/bot/notifications` | public HTTPS | anonymous | **needs the service bearer** |
+| B10 | `scripts/ops/exit_mechanics_audit.py` | `/api/bot/db/*`, `/api/bot/positions` | public HTTPS (`--api`) | anonymous (`/db/*` already needs the JWT) | **needs the service bearer** |
+| B11 | `scripts/ops/journal_venue_audit.py` | `/api/bot/positions` | public HTTPS | anonymous | **needs the service bearer** |
+| B12 | `scripts/ops/leg_flow_report.py` | `/api/bot/config`, `/prop`, `/strategies` | public HTTPS (`BOT_API_URL`) | anonymous | **needs the service bearer** |
+| B13 | `scripts/ops/ml_plan_status.py` | `/api/bot/ml*`, `/api/bot/shadow*` | public HTTPS | anonymous | **needs the service bearer** |
+| B14 | `scripts/ops/probe_api.py` + `probe_lib.py` (used by `probes.yml`, `run_probes.py`, `soak_alarm.py`, `probe_soak.py`) | `/api/bot/config`, `/logs`, `/trades` … | public HTTPS (`BOT_API_URL`) | anonymous | **needs the service bearer** (one change in `probe_lib` covers the family) |
+| B15 | `scripts/ops/snapshot_soak_state_for_mandate.py` | `/api/bot/work/brief` | public HTTPS | anonymous | **needs the service bearer** |
+| B16 | `scripts/ops/strategy_liveness.py` | `/api/bot/config`, `/strategies` | public HTTPS (`BOT_API_URL`) | anonymous | **needs the service bearer** |
+| B17 | `scripts/ops/target_expectation_coverage.py` | `/api/bot/positions` | public HTTPS | anonymous | **needs the service bearer** |
+| B18 | `scripts/ops/verify_running_roster.py` | `/api/bot/runtime-config` | public HTTPS | anonymous | **needs the service bearer** |
+| B19 | `scripts/prop/trade_quality_review.py` | `/api/bot/prop/*` | public HTTPS | anonymous | **needs the service bearer** |
+| B20 | `scripts/research/{partial_close_reachability, prop_baseline_reconcile, expectancyr_correction_matrix, r_sign_split_basis, real_money_close_attribution, realized_slippage, geometry_amend_census}.py` (7 files) | `/api/bot/{config,db,prop,performance,trades,pnl}` | public HTTPS | anonymous | **need the service bearer** (7 files, one pattern) |
+
+  Not consumers of the gated surface, listed so nobody re-checks them:
+  `/api/diag/*` callers (`system-actions.yml`, `sync-vm-secrets.yml`,
+  `set-diag-token.yml`, `rotate-account-keys.yml`, `cutover-live.yml`, …) carry
+  `DIAG_READ_TOKEN` and the gate leaves `/api/diag/*` alone;
+  `/api/health` callers (`vm-web-api-recover.yml`, `ci-settled.yml`,
+  `scripts/check_web_api.py`, `restart_web_api.sh`, …) hit a public path.
+  `/docs`, `/redoc` and `/openapi.json` are **not** covered by the app-level
+  dependency (they are not router routes) and remain public when the gate is on
+  — they list route names, not data; closing them is a one-line follow-up.
+  `trainer-diag-relay.yml` mentions `/api/bot/ml` against the **trainer** VM, a
+  different service.
 
 ### 2c. Devices admin (revocable list)
 - `GET /api/auth/sessions` lists device sessions (label, last-seen, created).
@@ -215,6 +285,15 @@ password login is removed, not kept as a back door.
   HttpOnly cookie. Not needed for the first version.
 
 ## 6. Build order (row `UI-UPGRADE-1-AUTH`)
+
+> **Status 2026-10-11:** steps 1–2 are built in the API PR (inventory in §2b;
+> `routers/auth_google.py`, `web_sessions.py`, `auth.py::require_site_session`,
+> `tests/test_web_site_auth.py`); step 3 is the SPA patch (separate repo / `comms/`).
+> Two deliberate deviations from the sketch above: the Devices admin revokes
+> through `POST /api/auth/sessions/{handle}/revoke` (the API's CORS allow-list is
+> GET/POST only and was left untouched) with a `DELETE` twin for non-browser
+> callers; and DELETE does **not** yet need passkey step-up (step-up is built
+> with the Keys tab, step 5).
 
 1. Inventory the non-browser consumers of `/api/bot/*` (24 h of the Caddy
    access log, plus a grep).
