@@ -4958,6 +4958,39 @@ class _OrphanAttribution:
     detail: str = ""
 
 
+#: An orphan can only be the position of a package that is still plausibly
+#: live. MEASURED 2026-10-11 over every reverse-reconciler reattach in the live
+#: journal (21 trades, 6,566-row journal): 16 attached packages <= 6 days old;
+#: 5 ib_paper MES trades (5830, 5835, 5852, 5853, 5856) attached packages 44-106
+#: days old. 14 days sits in the empty 6-44 day gap.
+ORPHAN_PACKAGE_MAX_AGE_DAYS = 14.0
+
+
+def _orphan_package_stale(package: dict, *, now: Optional[datetime] = None) -> Optional[str]:
+    """Reason string when *package* is too old to own a fresh orphan, else ``None``.
+
+    An unparseable/absent ``created_at`` returns ``None``: "could not look" is
+    not "stale", so the previous (age-blind) behaviour is kept for that row.
+    """
+    raw = package.get("created_at")
+    if not raw:
+        return None
+    try:
+        created = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+    age_days = ((now or datetime.now(timezone.utc)) - created).total_seconds() / 86400.0
+    if age_days > ORPHAN_PACKAGE_MAX_AGE_DAYS:
+        return (
+            f"package {package.get('order_package_id')} is {age_days:.1f} days old "
+            f"(> {ORPHAN_PACKAGE_MAX_AGE_DAYS:g}); price match alone cannot "
+            f"prove it opened this position"
+        )
+    return None
+
+
 def _recover_orphan_attribution(
     *, db, symbol: str, direction: str, entry_price: float,
     max_rel_diff: float = 0.02, limit: int = 30,
@@ -5024,6 +5057,23 @@ def _recover_orphan_attribution(
                 continue
         except (TypeError, ValueError, ZeroDivisionError):
             continue
+
+        stale = _orphan_package_stale(c)
+        if stale:
+            # STALE IS A REFUSAL, NOT "NO CANDIDATE" (same reasoning as the
+            # size refusal below): a candidate exists, so the position is not
+            # flattened for a bookkeeping reason; it stays a bare orphan on its
+            # static stop. Applies to the size-ungated callers too -- the
+            # PROV-IB incident (ib_paper 5830/5852/5853/5856, MES) reattached a
+            # 106-day-old package by price alone.
+            claimed = str(c.get("strategy_name") or "")
+            logger.warning(
+                "_recover_orphan_attribution: %s REFUSED attribution to %r - %s",
+                symbol, claimed, stale,
+            )
+            return _OrphanAttribution(
+                refused=True, refused_strategy=claimed, detail=stale,
+            )
 
         if position_size is None:
             return _OrphanAttribution(package=c, detail="price match, size ungated")
