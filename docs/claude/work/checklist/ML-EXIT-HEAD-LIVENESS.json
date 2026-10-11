@@ -1,0 +1,18 @@
+{
+  "id": "ML-EXIT-HEAD-LIVENESS",
+  "title": "ML plumbing: exit-head shadow rows stopped 2026-10-04/05 -- confirm no-open-leg vs broken emit",
+  "phase": "W41",
+  "state": "queued",
+  "owner": "manager (dispatch by capacity)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-11 ML-ROADMAP-LOOP cycle 1] MEASURED /api/bot/shadow/stats read 2026-10-11T09:45Z: exit-head-ict_scalp-15m-v1 last_seen 2026-10-04T17:00, exit-head-ict_scalp-5m-v1 2026-10-05T01:30, exit-head-donchian-1h-v1 and exit-head-donchian-peak-1h-v1 2026-10-05T04:05, while every regime head logs within the hour. The 10-04 ml-review noted donchian fires on every 1h close of an OPEN leg, so silence can be 'no open position'. NOT established which. Task: for each of the four heads, list the open/closed trades of its leg in the window 2026-10-05..now (diag trades) and the exit-head emit log; verdict = no-open-leg (record, close) or emit-broken (fix, Tier-1/2). Sonnet, ceiling $3. Observation that would close: the verdict written on this row with the trade ids it rests on.",
+  "updated_at": "2026-10-11T09:49:00Z",
+  "updated_by": "session_01BQ281YMGGWKPqyfDWbrKCb",
+  "_seq": 403
+}
