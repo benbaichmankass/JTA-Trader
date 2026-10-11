@@ -1,5 +1,5 @@
 {
-  "as_of": "2026-10-11T06:13:39.448479+00:00",
+  "as_of": "2026-10-11T08:05:55.935017+00:00",
   "by_disposition": {
     "healthy": 0,
     "insufficient-data": 18,
@@ -28,24 +28,24 @@
         "why": "entry n=22, exit n=6; need >= 10 each"
       },
       "disposition": "insufficient-data",
-      "eta": "re-check next scheduled pass",
+      "eta": "next scheduled run",
       "execution": "live",
       "mechanics": {
         "account_class": "paper",
         "account_id": "bybit_1",
         "has_open_position": true,
         "held_back": 0,
-        "intent_episodes": 38,
-        "intents": 308,
+        "intent_episodes": null,
+        "intents": null,
         "received": 4,
         "same_symbol_live_contenders": [],
-        "state": "flowing",
+        "state": "unreadable",
         "strategy": "ada_pullback_2h",
         "unmapped": null,
         "unmapped_statuses": []
       },
-      "n_needed": "needs 0 more entry fill(s) and 4 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=22, exit=6); no fill-rate basis to date an ETA from this run alone \u2014 re-check next scheduled pass",
-      "reason": "flowing; cost fidelity insufficient_n (entry n=22, exit n=6; need >= 10 each)",
+      "n_needed": null,
+      "reason": "mechanics read_state=unreadable (could not query intents and/or received source this run) \u2014 we did not look, not 'nothing happened'",
       "strategy": "ada_pullback_2h"
     },
     {
@@ -90,24 +90,24 @@
         "why": "entry n=11, exit n=0; need >= 10 each"
       },
       "disposition": "insufficient-data",
-      "eta": "re-check next scheduled pass",
+      "eta": "next scheduled run",
       "execution": "live",
       "mechanics": {
         "account_class": "paper",
         "account_id": "bybit_1",
         "has_open_position": true,
         "held_back": 0,
-        "intent_episodes": 2,
-        "intents": 70,
+        "intent_episodes": null,
+        "intents": null,
         "received": 1,
         "same_symbol_live_contenders": [],
-        "state": "flowing",
+        "state": "unreadable",
         "strategy": "trend_donchian_eth_4h",
         "unmapped": null,
         "unmapped_statuses": []
       },
-      "n_needed": "needs 0 more entry fill(s) and 10 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=11, exit=0); no fill-rate basis to date an ETA from this run alone \u2014 re-check next scheduled pass",
-      "reason": "flowing; cost fidelity insufficient_n (entry n=11, exit n=0; need >= 10 each)",
+      "n_needed": null,
+      "reason": "mechanics read_state=unreadable (could not query intents and/or received source this run) \u2014 we did not look, not 'nothing happened'",
       "strategy": "trend_donchian_eth_4h"
     },
     {
@@ -176,8 +176,8 @@
         "account_id": "bybit_1",
         "has_open_position": true,
         "held_back": 0,
-        "intent_episodes": 21,
-        "intents": 365,
+        "intent_episodes": 23,
+        "intents": 403,
         "received": 2,
         "same_symbol_live_contenders": [
           "trend_donchian_xrp_4h"
@@ -210,24 +210,24 @@
         "why": "entry n=2, exit n=1; need >= 10 each"
       },
       "disposition": "insufficient-data",
-      "eta": "wait for a signal; re-check next scheduled pass",
+      "eta": "next scheduled run",
       "execution": "live",
       "mechanics": {
         "account_class": "paper",
         "account_id": "alpaca_paper",
         "has_open_position": false,
         "held_back": 0,
-        "intent_episodes": 0,
-        "intents": 0,
+        "intent_episodes": null,
+        "intents": null,
         "received": 0,
         "same_symbol_live_contenders": [],
-        "state": "no_intents",
+        "state": "unreadable",
         "strategy": "gdx_pullback_1d",
         "unmapped": null,
         "unmapped_statuses": []
       },
       "n_needed": null,
-      "reason": "no_intents: the strategy produced zero actionable signals this window \u2014 nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either",
+      "reason": "mechanics read_state=unreadable (could not query intents and/or received source this run) \u2014 we did not look, not 'nothing happened'",
       "strategy": "gdx_pullback_1d"
     },
     {
@@ -325,24 +325,24 @@
         "why": "entry n=1, exit n=0; need >= 10 each"
       },
       "disposition": "insufficient-data",
-      "eta": "re-check next scheduled pass",
+      "eta": "next scheduled run",
       "execution": "live",
       "mechanics": {
         "account_class": "paper",
         "account_id": "alpaca_paper",
         "has_open_position": true,
         "held_back": 0,
-        "intent_episodes": 2,
-        "intents": 95,
+        "intent_episodes": null,
+        "intents": null,
         "received": 0,
         "same_symbol_live_contenders": [],
-        "state": "starved",
+        "state": "unreadable",
         "strategy": "ief_pullback_1d",
         "unmapped": null,
         "unmapped_statuses": []
       },
-      "n_needed": "an entry signal observed while this leg is FLAT (no open position), in some future window",
-      "reason": "starved (95 intent(s), 0 received) but ALREADY HOLDING a position opened before the window \u2014 leg_flow_report's own caveat: this is NOT reliably 'unreached', it may simply have needed no new entry this window while flat-to-in-position. Cannot be graded kill from this window alone.",
+      "n_needed": null,
+      "reason": "mechanics read_state=unreadable (could not query intents and/or received source this run) \u2014 we did not look, not 'nothing happened'",
       "strategy": "ief_pullback_1d"
     },
     {
@@ -752,7 +752,7 @@
       },
       "ict_scalp_avax_5m": {
         "last_created_at": "2026-10-04T22:14:07.712731+00:00",
-        "n": 3
+        "n": 1
       },
       "ict_scalp_sol_5m": {
         "last_created_at": null,
