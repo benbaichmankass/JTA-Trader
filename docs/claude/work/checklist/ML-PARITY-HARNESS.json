@@ -12,7 +12,12 @@
   "prs": [],
   "blocked_on": [],
   "note": "[2026-10-11 ML-ROADMAP-LOOP] Plan item ML-P0 (= ML-PRODUCERS milestone M0, docs/plans/ml-producers-milestones-2026-10-08.md). Build on scripts/ml/_feature_parity_probe.py. Sonnet lane, ceiling $2. GO test: it reproduces the known funding gap on btc-regime-1h-lgbm-funding-svble-v1 (funding x3 absent). STOP if it cannot run on the trainer without the OOM noted in S-ML-FEATURE-GAPS (then do M1 parity inline). Observation that would close: harness merged AND one run printing per-feature present%/non-default%/max-abs-diff for the svble head, trainer-vm-diag issue number recorded here. Landed_unproven until that run is read. [2026-10-11 lane session_01Q3TKbDwLym8fEtnZ79Kuki] scripts/ml/replay_parity.py + tests/test_replay_parity.py written (train row = MarketFeaturesBuilder.iter_rows, live row = regime_shadow.feature_row_for_predictor on the trailing 200-bar window; per-feature live present%/non-default%/train non-default%/max_abs_diff/verdict). Planted-gap test: funding x3 train-filled but never live-emitted -> ABSENT/DEFAULT_LIVE, other 6 columns OK on 250 paired bars. landed_unproven until the trainer run is read: python3 scripts/ml/replay_parity.py --model-id btc-regime-1h-lgbm-funding-svble-v1 --symbol BTCUSDT --timeframe 1h --market-raw <market_raw dir> --funding-oi <funding_oi dir> via trainer-vm-diag after merge.",
-  "updated_at": "2026-10-11T12:34:44Z",
+  "updated_at": "2026-10-11T12:43:24Z",
   "updated_by": "session_01Q3TKbDwLym8fEtnZ79Kuki",
+  "observation": {
+    "what": "one recorded trainer run of replay_parity.py on btc-regime-1h-lgbm-funding-svble-v1 printing per-feature verdicts with funding_rate/zscore/abs_z not OK (ABSENT_LIVE or DEFAULT_LIVE)",
+    "how_to_check": "after the PR merges, open a trainer-vm-diag issue with cmd: python3 scripts/ml/replay_parity.py --model-id btc-regime-1h-lgbm-funding-svble-v1 --symbol BTCUSDT --timeframe 1h --market-raw <market_raw dir> --funding-oi <funding_oi dir>; record the issue number on the row",
+    "due_by": "2026-10-18"
+  },
   "_seq": 400
 }

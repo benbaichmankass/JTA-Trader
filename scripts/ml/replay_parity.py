@@ -37,6 +37,7 @@ is pure so it is unit-tested without a trainer.
       --symbol BTCUSDT --timeframe 1h --market-raw datasets-out/market_raw/BTCUSDT/1h/<ver> \
       --funding-oi datasets-out/funding_oi/BTCUSDT/<ver> --bars 600
 """
+# wiring: manual-only - run on demand through trainer-vm-diag (cmd: python3 scripts/ml/replay_parity.py ...); an investigation tool, not a scheduled job
 from __future__ import annotations
 
 import argparse
