@@ -50,15 +50,13 @@ decision_rule:
 blocked_on:
 - kind: work_item
   ref: FRONTIER-LEVER-TSFM
-  what: build_forecasts.py is hard-wired to Chronos-Bolt-Tiny; there is no backend switch for Chronos-2 / TimesFM-2.5 / TiRex-2
-    / Kronos and no HAR-RV control columns.
-  clears_when: scripts/ml/build_forecasts.py takes --backend {chronos-bolt-tiny,chronos-2,timesfm-2.5,tirex-2,kronos} + a
-    HAR-RV control producer, a test pins the six fc_* column names/shape per backend, and one backend has produced a non-zero
-    side-stream on the trainer. Then git mv to research/queue/ and fill run.
+  what: 'The RUNNER now exists (ML-RQ-RUNNER: scripts/research/ml_bakeoff.py via research-script-run-trainer.yml; the HAR-RV control is its `har_rv` feature block). Still missing, MEASURED on the trainer 2026-10-11: (1) no Chronos-2 / TimesFM / TiRex / Kronos forecast side-stream builder -- scripts/ml/build_forecasts.py is hard-wired to Chronos-Bolt-Tiny (chronos-forecasting 2.3.0 IS in the trainer venv, so Chronos-2 needs only a backend; timesfm, tirex and the Kronos code are NOT installed -- a Tier-2 pip or those arms report `unavailable`); (2) fc side-streams per backend for BTC/ETH/SOL 15m joined to a dataset (shards are datasets-out/market_features/<SYM>/15m/<vNNN>/data.jsonl; BTC has v002/v003, ETH v002/v003, SOL only v002/v530 -- confirm a v003 SOL shard); (3) the `ml_bakeoff:` block + run.* below filled in. NOTE routing.peak_memory_gb was 8.0 > the 6 GB trainer, which the router REFUSES (unroutable); lowered to 5.5 with the loader reading only declared columns (tail_rows) -- re-declare from the first run.'
+  clears_when: build_forecasts.py takes --backend (chronos-2 at minimum) + a test pins the six fc_* names/shape per backend, a side-stream exists on the trainer for BTC/ETH/SOL 15m, and the unit carries an ml_bakeoff block. Then git mv to research/queue/ and fill run.workflow (research-script-run-trainer.yml), run.command, lands.store.
+
 routing:
   needs_trainer_resident_data: true
   needs_gpu: false
-  peak_memory_gb: 8.0
+  peak_memory_gb: 5.5
   est_minutes: 240
   basis: Estimate from the sibling fc / harness runs; the first run replaces it.
 run:
