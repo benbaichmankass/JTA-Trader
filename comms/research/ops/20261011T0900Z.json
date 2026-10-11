@@ -1,0 +1,38 @@
+{
+  "run": "RESEARCH-OPS-20261011-0847",
+  "finished_at": "2026-10-11T09:00:00Z",
+  "by": "research-ops-0847",
+  "baseline": "comms/research/ops/20261011T0300Z.json",
+  "floor": 25,
+  "throughput": {"runnable_before": 20, "runnable_after": 28, "queued": 139, "fired_24h": 29, "fired_7d": 226, "results_landed_24h": 26, "hours_since_last_dispatch": 2.7, "idle_alarm": false, "as_of": "2026-10-11T08:49Z"},
+  "mechanism": {
+    "dispatch_receipt": "ok (fresh, 2.7h)", "collector": "ok",
+    "stranded_stamp_prs": [17496],
+    "incident": "RQ-20261010-353c-11 (run 38120314582) and -13 (run 38120317341): INFRA. research_result job timeout-minutes 45 < commit-to-main verify-timeout default 80. Result PRs #17527/#17529 merged at 08:23Z/08:28Z (74 min after open) so both results ARE on main; the Land step was cancelled at 07:54Z/07:55Z. No unit or harness bug (build jobs green). No re-fire needed (results landed); fixed the budget on 7 land-only jobs 45->110. Side effect: the dispatcher re-fired 353c-11/12/13 before the rows reached main, giving duplicate result PRs #17536/#17537/#17539.",
+    "stranded_result_prs": "#17085 (RQ-20261007-004), #17170 (RQ-20261005-814), #17503, #17526 (_unattributed): results not on main, noted on RQ-INFRA; same class as PI-20261006-LCEVL8D5-0001"
+  },
+  "results_read": {"pass": 5, "fail": 2, "indeterminate": 0, "units": [
+    {"unit": "RQ-20261010-353c-07", "verdict": "pass", "n": 678, "net_total_r": 45.7523, "note": "trend ADA 1h; Stage-0 evidence only"},
+    {"unit": "RQ-20261010-353c-08", "verdict": "pass", "n": 751, "net_total_r": 23.2597, "note": "trend AVAX 1h; Stage-0 evidence only"},
+    {"unit": "RQ-20261010-353c-09", "verdict": "pass", "n": 748, "net_total_r": 33.9654, "note": "trend TRX 1h; Stage-0 evidence only"},
+    {"unit": "RQ-20261010-353c-10", "verdict": "fail", "n": 715, "net_total_r": -1.746, "note": "trend AAVE 1h; rule: one pass, re-queue confirmatory -> RQ-20261011-6897-07"},
+    {"unit": "RQ-20261010-353c-11", "verdict": "pass", "n": 721, "net_total_r": 33.7985, "note": "trend DOGE 1h; Stage-0 evidence only"},
+    {"unit": "RQ-20261010-353c-12", "verdict": "fail", "n": 532, "net_total_r": -32.7817, "note": "squeeze AAVE 1h; rule: one pass, re-queue confirmatory -> RQ-20261011-6897-08"},
+    {"unit": "RQ-20261010-353c-13", "verdict": "pass", "n": 477, "net_total_r": 20.925, "note": "squeeze TRX 1h; Stage-0 evidence only"}],
+    "disposition": "mechanical rules only; no Tier-3 proposal, no config edit. Caveat: the harness is deterministic over a trailing window that moves by days, so a confirmatory re-run mostly re-measures the same sample; a kill should wait for a different-window or different-parameter read. 'unread' rows in research_disposition.py are e35/m20 evidence ledgers, all power=accruing or not_queue_dispatched: cannot answer yet, not dispositioned. RQ-20261010-419b-01 (eth 4h reachable-TP gate) has no result file yet.",
+    "ledger": "none hand-written; queue units are graded by research-queue-grade.yml"},
+  "unlocked": [],
+  "retired": [],
+  "blocked_audit": "36 files in research/queue/blocked/ read; each still names its lever and owner; no lever landed since 03:00Z. NEEDS_LANE session-bound units unchanged (RQ-20260928-001, RQ-20261007-022/023/025/030). The 19 other NOT_RUNNING hits are queued-and-unfired units, not blocked. RQ-20260930-602 accrual check (n>=2828) could not be run: m16_within_leg_confidence.py printed no n figure in this environment (COULD NOT LOOK, not 'no change').",
+  "levers_filed": [{"lever": "land-job timeout budget vs verify-merged wait (fixed in this PR)", "ref": "RQ-INFRA note"}],
+  "units_authored": ["RQ-20261011-6897-01 trend BNB 2h", "-02 squeeze BNB 2h", "-03 trend ADA 15m", "-04 trend DOGE 15m", "-05 trend BNB 15m", "-06 pullback ADA 15m", "-07 trend AAVE 1h (confirmatory of 353c-10)", "-08 squeeze AAVE 1h (confirmatory of 353c-12)"],
+  "followups_filed": [],
+  "not_run": ["checklist row RESEARCH-OPS-20261011-0847 note (row not on main until #17543 lands; findings noted on RQ-INFRA instead)", "pytest tests/test_research_queue.py (pytest not installed here; decision-rule guard and id-band guard ran)", "RQ-20260930-602 accrual read"],
+  "handoff": [
+    "Manager: close duplicate result PRs #17536/#17537/#17539 after confirming rows on main; close #17496 (stale stamp PR) if its units already show fresh stamps on main; decide #17085/#17170/#17503/#17526 (results not on main).",
+    "Next pass: confirm the first research_result job with a >45 min merge wait ends green after this PR lands (RQ-INFRA observation).",
+    "Next pass: read 6897-01..08 and 8025-01..06, 353c-14..20, fc31-01..06 as they land; RQ-20261010-419b-01 reachable-TP gate result is a Tier-3 input if it passes.",
+    "Remaining uncovered declared cells after this pass: trend 3 (ETH 5m, BNB 5m, ...), pullback 3 (5m/15m), squeeze 4; 5m cells may exceed the 30-min build timeout, so a topic lane should decide whether they are worth a longer route.",
+    "REGIME-PROGRAM candidate units (not started): blocked RQ-20260927-006..009 regime-lever builds are the natural first backlog for that row."
+  ]
+}
