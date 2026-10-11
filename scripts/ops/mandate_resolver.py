@@ -985,8 +985,16 @@ def _add_risk(leg: str, frm: str, to: str, account: str, exchange: str,
         raise _Refuse("R-SOURCE-RUN-ABSENT", f"source_run {record.get('source_run')!r} is not a "
                                              "committed file in the repo")
 
-    # ── B1's four clauses + identity, verbatim ──────────────────────────────
-    for clause, ok, detail in b1.clause_verdicts(record):
+    # ── B1's clauses + identity, verbatim ───────────────────────────────────
+    # C5 (fidelity, operator 2026-10-11) binds only a NEW RISK-BEARING add: the
+    # operator's rule is "Stage-0 evidence for a real-money roster add", so a
+    # Stage-0 -> Stage-1 move onto a paper soak account is not refused on it.
+    # `account`/`leg` are passed so the guard's FIDELITY_BASELINE applies to the
+    # slot actually being edited. Same risk-bearing predicate the guard uses.
+    c5_binds = b1.is_risk_bearing(rosters[account]["class"])
+    for clause, ok, detail in b1.clause_verdicts(record, account, leg):
+        if clause == "C5" and not c5_binds:
+            continue
         if not ok:
             raise _Refuse(f"R-B1-{clause}", detail)
     strategies = (_yaml(root, STRATEGIES_REL) or {}).get("strategies") or {}

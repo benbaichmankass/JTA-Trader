@@ -1,0 +1,8 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 runtime notification-path fix (oversized Telegram ping retried forever in both drainers, measured live by the manager 2026-10-11 08:35Z). Manager-dispatched under TELEGRAM-CHANNELS; held for the manager to merge and deploy. Restart after merge: ict-claude-bridge, ict-telegram-bot (both drainers); send_ping is per-invocation.",
+  "recorded_decision": {"kind": "operator_decision", "ref": "TELEGRAM-CHANNELS"},
+  "why": "One shared splitter (src/runtime/telegram_split.py) used by both ping drainers and send_ping.enqueue: bodies over 4096 chars are split into ordered parts (HTML-safe), delivered with resume, and a repeated non-length 4xx moves the file aside as .broken with ONE red flag on SYSTEM. No order path, no config change."
+}
