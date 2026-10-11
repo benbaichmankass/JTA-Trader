@@ -156,6 +156,13 @@ but nothing passes eval) — that's a `concern`, not silent.
 
 ---
 
+## Testing a model idea vs training a model (ML-RQ-RUNNER)
+
+Training a manifest is this skill. **Comparing learners/features against a baseline under a pre-registered rule** (a bake-off,
+a conformal evaluation, a control) is a *research queue unit*, not a one-off script and not a training cycle: write the unit with an
+`ml_bakeoff:` block, route it to `research-script-run-trainer.yml`, and let the queue run it and research-ops read it — see
+`.claude/skills/frontier-research/SKILL.md` § "The research → test → improve loop". Nothing a bake-off does registers or promotes a model.
+
 ## Definition of done — a capability is not shipped until something RUNS it
 
 *(Operator directive 2026-08-20, binding on every build skill: "we don't keep

@@ -70,7 +70,7 @@ paragraph exists; the mechanism changed, the obligation did not.)
    loop"). **Weekly, every run.** This is the step that keeps the ML build
    from getting a burst of work only when someone remembers. It includes the
    **frontier scan** (`frontier-research` skill: outside models/methods →
-   pre-registered units, plus `ml_plan_status.py --diversity`) — operator,
+   pre-registered units, plus `ml_plan_status.py --diversity`; the whole scan → run → read → improve loop is written once in that skill, § "The research → test → improve loop") — operator,
    2026-10-11: the mandate is *better models*, not variations of the first good one.
 10. **Emit the response JSON** + **post a one-line update to the Claude
    channel** (§ "Output" + § "Posting to the Claude channel").

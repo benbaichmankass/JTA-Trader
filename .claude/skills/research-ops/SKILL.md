@@ -121,6 +121,7 @@ Group each unit by **reason** and name it in the run record:
 |---|---|---|
 | `requires_result` unmet | `research/results/<unit>/*.jsonl` for a `read_state: measured` record with the required verdict | the prerequisite landed with that verdict → it unlocks itself; if it landed with the *other* verdict, retire (moot) |
 | precondition (prose `dispatch_precondition`) | it is **not evaluated** — a prose gate is not a gate | convert to `requires_result` or drop the prose; say which |
+| ML unit, arm `unavailable` | `measurement.arm_status` / the engine note (`UNAVAILABLE ARMS`) names the missing library or weights | the library is installed on the trainer venv (Tier-2 lever row, filed once) → re-queue with `last_dispatched_at: null`; the rule is never edited |
 | missing driver / lever | the harness or script the unit needs does not exist yet (the `blocked/` `blocked_on` block) | the build landed (`git log -- <path>`, checklist row `done`) → `git mv` out of `blocked/`, fill `run.workflow` + `lands.store` |
 | gate | `power_state` `undeclared` / `unverifiable` (fix the declaration), route `unroutable` (declare peak memory / drop the GPU+trainer conflict) | the declaration is repaired |
 | bad route | `run.workflow` is prose (`NEEDS_LANE`) — the dispatcher can never fire it | re-declare `research-script-run.yml` + `run.command` (README § RQ-RUN), or hand to a lane |
@@ -165,6 +166,16 @@ Record each disposition with `research_disposition.py --record` (it routes to `a
 keeps the refusals; **never hand-write the ledger**). Template-generated and
 `grading: {auto: true}` units are graded by `research-queue-grade.yml` — check they were,
 and handle only `grading.needs_review: true` ones (`grep -l "needs_review: true" research/queue/*.yaml`).
+
+**ML results (units with an `ml_bakeoff:` block, run by `scripts/research/ml_bakeoff.py` on the trainer or a runner).**
+Read them exactly like strategy results, plus three checks that are specific to them: (1) `measurement.arm_status` —
+an `unavailable` candidate means the verdict covers only the arms that ran (a FAIL with an unavailable arm is already
+INDETERMINATE by the engine; do not upgrade it), file the install lever once; (2) `measurement.headline_checks` and the
+control rows — if a no-neural control (HAR-RV) matches the incumbent, that is the headline and goes in the note;
+(3) `measurement.licences` — a `research_only` arm that wins puts the **licence question to the manager**, never a serve proposal.
+The follow-up per verdict (pass → Tier-3 candidate-manifest note + next unit; fail → exact configuration into
+`families.<f>.history`; indeterminate → extend/redesign; `producer_failed`/`no_data` → not a verdict, fix the route) is the table in
+`.claude/skills/frontier-research/SKILL.md` § "The research → test → improve loop" — the one place it is written.
 
 **ML plan write-back.** If a result's unit id (or the checklist row a lever clears) is a `ref` in
 `docs/plans/ml-plan-items.yaml`, set that plan item's `state`/`close` text in the same PR and note
