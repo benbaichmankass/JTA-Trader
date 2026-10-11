@@ -118,18 +118,32 @@ def enqueue(
 
     inbox = _inbox_for(target)
     inbox.mkdir(parents=True, exist_ok=True)
-    name = f"{int(uuid.uuid4().int % 10**12):012d}-{priority}.json"
-    path = inbox / name
-    tmp = path.with_suffix(".json.tmp")
-    payload = {"priority": priority, "body": body}
-    if parse_mode:
-        # A self-titled HTML body (e.g. the sectioned manager update): the
-        # drainers send it with this parse_mode and WITHOUT the priority prefix.
-        payload["parse_mode"] = parse_mode
-    with tmp.open("w", encoding="utf-8") as fh:
-        json.dump(payload, fh, ensure_ascii=False)
-    os.rename(tmp, path)
-    return path
+    # FIT AT WRITE TIME (TELEGRAM-CHANNELS 2026-10-11): a body over Telegram's
+    # 4096-char cap is split here into ordered part files, so a producer can
+    # never enqueue an unsendable ping. Same splitter the drainers use
+    # (src/runtime/telegram_split.py). Part files share a prefix and sort in
+    # order; the FIRST path is returned.
+    try:
+        from src.runtime.telegram_split import split_message
+        parts = split_message(body, parse_mode)
+    except Exception:  # noqa: BLE001 — the drainers split anyway
+        parts = [body]
+    stem = f"{int(uuid.uuid4().int % 10**12):012d}-{priority}"
+    first = None
+    for i, part in enumerate(parts, 1):
+        suffix = "" if len(parts) == 1 else f"-p{i:02d}of{len(parts):02d}"
+        path = inbox / f"{stem}{suffix}.json"
+        tmp = path.with_suffix(".json.tmp")
+        payload = {"priority": priority, "body": part}
+        if parse_mode:
+            # A self-titled HTML body (e.g. the sectioned manager update): the
+            # drainers send it with this parse_mode and WITHOUT the priority prefix.
+            payload["parse_mode"] = parse_mode
+        with tmp.open("w", encoding="utf-8") as fh:
+            json.dump(payload, fh, ensure_ascii=False)
+        os.rename(tmp, path)
+        first = first or path
+    return first
 
 
 def main(argv: Optional[list] = None) -> int:

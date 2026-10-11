@@ -65,7 +65,11 @@ paragraph exists; the mechanism changed, the obligation did not.)
 7. **Propose AI experiments** — new manifests, new features, new
    datasets, new model families to try (§ "Experiment proposals").
 8. **Drain the ml-review backlog** (§ "Draining the backlog").
-9. **Emit the response JSON** + **post a one-line update to the Claude
+9. **Run the ML plan loop** — plan vs measured progress, plumbing
+   validation, new ideas, roadmap + work-queue write-back (§ "The ML plan
+   loop"). **Weekly, every run.** This is the step that keeps the ML build
+   from getting a burst of work only when someone remembers.
+10. **Emit the response JSON** + **post a one-line update to the Claude
    channel** (§ "Output" + § "Posting to the Claude channel").
 
 ## Out of scope (DO NOT do here)
@@ -473,6 +477,78 @@ and carry what `scripts/ops/pipeline.py::validate` demands: `id`, `what`,
 `origin{kind,ref,rerun}`, `due_when{kind,clears_when|due_date,check_every_days}`,
 `next_action`, `state` (plus `tier`/`severity`); a `done`/`killed` record
 needs a `terminal_reason`.
+
+## The ML plan loop — plan vs measured, every run (operator, 2026-10-11, binding)
+
+**Why it exists.** The ML / AI-trader build is a long program (research *and* infra). Without a
+recurring review the plan decays into a memo: units sit blocked on levers nobody filed, heads go
+silent unnoticed, and the roadmap describes a state that no longer exists. Operator, 2026-10-11:
+the ML plan must be *"in the work and research queues"* with *"mechanisms … for manual (Claude)
+review and adjustment of ML research and infra progress … open-ended research for new ideas/builds,
+validating the plumbing, updating the roadmap and work queue from results."* This section is that
+mechanism. It is part of this review, not a second review: **do not duplicate** the lifecycle,
+promotion and soak-integrity work above — the loop *consumes* it (its findings are the plumbing
+and measured-state inputs) and turns it into plan movement.
+
+**The artefacts (all committed; the loop edits only these):**
+`ROADMAP.md` § "AI trader (ML) — build plan" (human plan + measured-state table) ·
+`docs/plans/ml-plan-items.yaml` (every plan item → its checklist row or `research/queue/` unit +
+the observation that closes it) · `scripts/ops/ml_plan_status.py` (the checker) ·
+`comms/ml-plan/<YYYYMMDDTHHMMZ>.json` (the run record the next run reads as its baseline).
+
+**Steps — in this order; each ends in a filed row/unit, a write-back, or "none, because":**
+
+1. **Check the plan against the field.** `python3 scripts/ops/ml_plan_status.py --plumbing`
+   (exit 0 clean · 1 findings · 2 *could not look* — a 2 is an incident, never "clean").
+   Every `ORPHAN` / `CLOSED-OPEN` / `OPEN-DONE` / `STALE` / `UNPLANNED` flag is resolved in this
+   run: re-point the item to a live row, close it with the row's terminal reason, or file the
+   missing row. An `UNPLANNED` ML row is either folded into the plan or killed.
+2. **Read the results that landed** since the last record (`git log --since=<last record>
+   -- research/results comms/research`, filtered to plan refs). research-ops grades them; *you*
+   read what they mean for the plan: set the item's state, update the roadmap's measured-state
+   table with the new numbers **and their locators**, and re-check the plan's INFERRED statement
+   ("only the volatility regime earns an order-influencing role") against them. A line is killed
+   only by its registered exhaustion condition, never by one bad pass (operator, 2026-09-27).
+3. **Validate the plumbing** (the `--plumbing` output plus the lifecycle audit above). A silent or
+   constant head with no tracking row is a finding: fix it (in tier), file a row with an
+   observation that closes it, or put the Tier-3 call to the operator via the classified popup path.
+   Add a newly *explained* silence to `plumbing.tracked` **with the owning row** so it stops
+   re-alarming without being forgotten. The weekly question the plumbing section answers:
+   *can a signal go from raw data to a graded, served, logged prediction and back to a label
+   without a hole?* — trainer cycle, dataset builds, registry stage, served-feature parity
+   (present AND non-default AND equal), shadow-log liveness, label coverage, drift reference.
+4. **Generate ideas — the standing quota is at least one new idea or build per run, or a written
+   "none, because".** Sources, in order: (a) what step 2/3 just surfaced (a surprising number, a
+   head pair training to identical metrics, a unit that passed on one stratum), (b) the plan's
+   "what would change this plan" list, (c) a bounded outside-in look (a technique or information
+   class the registry has never tried: label sources, cross-asset or breadth features, consensus
+   across heads, non-price information). Each idea becomes a `research/queue/` unit with a
+   decision rule registered **before** the run (see `perf-followup` § "Filing a queue unit"), or —
+   if its instrument is missing — a checklist row for the lever plus the unit in
+   `research/queue/blocked/` naming it. A new hand-written unit holds for a human merge (E57);
+   put it in a hold PR with `recorded_decision: {kind: operator_decision, ref: <row>}`.
+5. **Write back and re-prioritise.** Update `ml-plan-items.yaml` (add/close items *only* with
+   their row or unit), the roadmap table's "Measured state" block (date + locators) and its
+   "Order of work" line if the evidence moved it. Close, kill or re-dispatch stale rows with a
+   stated terminal reason. Tell the manager which rows are next by value per cost — the manager
+   dispatches; this review does not spawn lanes or schedule anything.
+6. **Record.** Write `comms/ml-plan/<stamp>.json`:
+   `{"run": "<session>", "finished_at": "...", "plan_items": N, "open": N, "flags": [...],
+   "plumbing_findings": [...], "results_read": [{"unit": "...", "verdict": "...", "plan_item": "..."}],
+   "ideas": [{"id": "RQ-…|row", "source": "a|b|c", "rule_registered": true}] or "none: <because>",
+   "writebacks": ["ROADMAP.md", "ml-plan-items.yaml", ...], "rows_filed": [], "units_filed": [],
+   "next_by_value_per_cost": ["…"], "handoff": ["…"]}`
+   and cite its path in the response JSON's `sources` and in the ping.
+
+**Cheap daily/between-run touchpoints (no lane, no cost):** the manager's twice-daily review runs
+`python3 scripts/ops/ml_plan_status.py` (no `--plumbing`) and works any flag; research-ops, on
+reading a result whose unit is a plan ref, sets the plan item's state in the same PR
+(`research-ops` § D); `perf-followup` files ML-shaped lessons under the plan's track N.
+
+**Hard limits (unchanged):** the loop never promotes a model past `shadow`, never edits
+`config/strategies.yaml` / `config/accounts.yaml`, never places an order, never creates a
+cron/trigger. A change to cadence is a request to the manager, written in the run record's
+`handoff`.
 
 ## Posting to the Claude channel
 

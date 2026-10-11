@@ -1,0 +1,20 @@
+{
+  "id": "ML-PRODUCER-FUNDING",
+  "title": "ML plan P1: funding signal-time producer for btc-regime-1h-lgbm-funding-svble-v1 (no retrain, fail-closed to None)",
+  "phase": "W41",
+  "state": "queued",
+  "owner": "manager (dispatch by capacity)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [
+    "ML-PARITY-HARNESS"
+  ],
+  "note": "[2026-10-11 ML-ROADMAP-LOOP] Plan item ML-P1 (= ML-PRODUCERS M1). Blocked on ML-PARITY-HARNESS. Tier-2: touches the live signal builder (observe-only but order-path adjacent). Fail closed -> None, never 0.0. GO to shadow only if every funding column non-default% >= 99 and max abs diff <= 1e-6 on >=500 bars incl. a settlement boundary. Observation that would close: >=1 live shadow row with all 10 declared features non-null AND non-default (shadow/stats row_keys_seen + parity probe), read on a later cycle. Promotion past shadow is Tier-3.",
+  "updated_at": "2026-10-11T09:49:05Z",
+  "updated_by": "session_01BQ281YMGGWKPqyfDWbrKCb",
+  "_seq": 401
+}
