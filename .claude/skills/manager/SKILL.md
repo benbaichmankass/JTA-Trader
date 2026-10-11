@@ -336,6 +336,20 @@ lane reports, land and archive it per § "Archive protocol"; its record is
 "what moved". Apply any Tier-3 proposal it leaves as a checklist note per § "Before any operator
 popup".
 
+### Weekly: the ML plan loop rides the Sunday `/ml-review` (operator, 2026-10-11)
+
+The ML / AI-trader build plan lives in `ROADMAP.md` § "AI trader (ML) — build plan" and
+`docs/plans/ml-plan-items.yaml` (every item carries its checklist row or queue unit). The weekly
+Sunday `/ml-review` lane runs it as step 9 of its own skill (`ml-review` § "The ML plan loop"):
+plan vs measured state, plumbing validation, the ≥1-new-idea quota, write-back to the roadmap and
+work queue, and a run record at `comms/ml-plan/<stamp>.json`. **No new routine exists for it.**
+Your part: (1) put the plan loop in that lane's dispatch prompt and ceiling (budget ~$4 on top of
+the review); (2) in the twice-daily review run `python3 scripts/ops/ml_plan_status.py` and work any
+flag the same turn (it is the cheap check that an item has not lost its row); (3) from the run
+record's `next_by_value_per_cost`, dispatch ML rows by capacity under the one-lane rule; (4) new
+queue units the loop authors arrive in a hold PR — land them, they are pre-registered. If the lane
+reports a cadence need (e.g. a mid-week plumbing check), schedule it; the lane does not.
+
 ### Model by task class
 
 | Task | Model |

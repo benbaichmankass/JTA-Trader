@@ -608,6 +608,14 @@ autonomously; Tier-2 after an operator OK in chat. Allowlist:
 
 **`research-ops`** (`.claude/skills/research-ops/SKILL.md`) is the routine research-operations pass — 4×/day, bounded Sonnet lane dispatched by the manager: pipeline health, runnable floor, blocked-unit audit, results read, follow-ups filed. It keeps research flowing; it does not replace topic research (`perf-followup`, ML, readouts).
 
+**The ML / AI-trader build plan is reviewed every week, not when someone remembers** (operator,
+2026-10-11). Plan: `ROADMAP.md` § "AI trader (ML) — build plan"; machine-readable form
+`docs/plans/ml-plan-items.yaml` (every item → its checklist row or `research/queue/` unit);
+checker `python3 scripts/ops/ml_plan_status.py --plumbing`. The loop (plan vs measured progress,
+plumbing validation, ≥1 new idea per run, roadmap + work-queue write-back, run record in
+`comms/ml-plan/`) is step 9 of the Sunday `/ml-review` — see `ml-review` § "The ML plan loop"
+and `manager` § "Weekly: the ML plan loop". It is a recurring step of existing routines, not a new cron.
+
 Workflows live under [`.claude/skills/`](.claude/skills/). **Skill-first lookup
 is binding** — before generating any task output, scan the catalog; if a skill
 matches, derive from it rather than from a precedent artifact. Precedents are

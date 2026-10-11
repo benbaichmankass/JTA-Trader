@@ -1,0 +1,21 @@
+{
+  "id": "ML-PARITY-HARNESS",
+  "title": "ML plan P0: replay-parity harness (train row vs live row on identical bars; per-feature present%, non-default%, max abs diff) shared by every producer",
+  "phase": "W41",
+  "state": "queued",
+  "owner": "manager (dispatch by capacity)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-11 ML-ROADMAP-LOOP] Plan item ML-P0 (= ML-PRODUCERS milestone M0, docs/plans/ml-producers-milestones-2026-10-08.md). Build on scripts/ml/_feature_parity_probe.py. Sonnet lane, ceiling $2. GO test: it reproduces the known funding gap on btc-regime-1h-lgbm-funding-svble-v1 (funding x3 absent). STOP if it cannot run on the trainer without the OOM noted in S-ML-FEATURE-GAPS (then do M1 parity inline). Observation that would close: harness merged AND one run printing per-feature present%/non-default%/max-abs-diff for the svble head, trainer-vm-diag issue number recorded here. Landed_unproven until that run is read.",
+  "updated_at": "2026-10-11T12:21:09Z",
+  "updated_by": "session_01AULroJXfiHJzkAtxgcSz83",
+  "roadmap": [
+    "M25"
+  ],
+  "_seq": 400
+}
