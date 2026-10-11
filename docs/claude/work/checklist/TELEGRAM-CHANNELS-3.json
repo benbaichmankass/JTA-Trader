@@ -1,0 +1,21 @@
+{
+  "id": "TELEGRAM-CHANNELS-3",
+  "title": "Telegram manager-update format fixes + TELEGRAM-CHANNELS doc write-back",
+  "phase": null,
+  "state": "queued",
+  "owner": "lane (not dispatched; operator 10-11: later)",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 5,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-11T18:45Z manager session_01G16FfyYSmDPQuuW55BuTmK] Scope from handoff \u00a72 (operator said no need yet; dispatch when capacity allows). (1) In the MANAGER update, order Blocked / In flight / Next before Shipped / Verified, and cap the last two at ~5 lines: the 4096 trim cut the Blocked item at 14:00Z. (2) Verified lines must state the outcome, not the row title. (3) The '0 queued' headline label is ambiguous. (4) The duplicate 'No new decisions' line. Also check that updates from 15:01Z show real transitions. (5) TELEGRAM-CHANNELS doc write-back, which the manager may not do. (a) docs/ARCHITECTURE-CANONICAL.md \u00a7 Operator Communication Pipeline: add a 'Telegram channels' subsection covering the three channels, routing src/runtime/telegram_channels.py, split src/runtime/telegram_split.py, settings src/runtime/telegram_settings.py + src/bot/notification_settings_menu.py, and builders scripts/ops/work_section.py and src/runtime/trades_snapshot.py. (b) Update M6 where/next in docs/roadmap/milestones.yaml, then run roadmap_map.py --write-roadmap. Draft text is in commit 79f342b9 (PR #17622).",
+  "updated_at": "2026-10-11T18:40:24Z",
+  "updated_by": "session_01G16FfyYSmDPQuuW55BuTmK",
+  "roadmap": [
+    "M6"
+  ],
+  "_seq": 414
+}
