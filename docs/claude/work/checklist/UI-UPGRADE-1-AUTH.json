@@ -2,11 +2,11 @@
   "id": "UI-UPGRADE-1-AUTH",
   "title": "Site sign-in: Google ID token + WebAuthn passkey, 30d revocable device sessions, whole-site gate; Keys admin tab with per-action passkey step-up",
   "phase": "W41",
-  "state": "blocked",
+  "state": "in_flight",
   "owner": "build lane (manager dispatch)",
-  "lane": null,
-  "model": null,
-  "ceiling_usd": null,
+  "lane": "session_011uiQyRqUbP23WPcfuj7Yfr",
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 25,
   "spend_usd": null,
   "tier": 3,
   "prs": [],
@@ -22,8 +22,11 @@
       "what": "create the Google OAuth Web client and store GOOGLE_OAUTH_CLIENT_ID as an Actions secret"
     }
   ],
-  "note": "Design + build order: docs/plans/ui-upgrade-1-auth-and-keys-design.md (UI-UPGRADE-1 items 7+9; operator popup answers 'Google + passkey', 'View + edit, passkey each time'). Blocked on: operator decisions D1 (new web_sessions table), D2 (Keys Save path A: API writes the GitHub Actions secret then set-env, needs GH_SECRETS_WRITE_TOKEN | B: VM file only, flagged diverged), D3 (30d sliding); and the operator creating GOOGLE_OAUTH_CLIENT_ID (Web application client; no client secret used). Rollout: ship auth routes + SPA sign-in with the gate off, operator enrols a passkey, then flip SITE_AUTH_ENFORCE via set-env and verify anon 401 / signed-in 200. Inventory non-browser /api/bot/* consumers first.",
-  "updated_at": "2026-10-11T13:05:12Z",
-  "updated_by": "session_01McHbeefghxRy9AJPfinTeQ",
+  "note": "Design + build order: docs/plans/ui-upgrade-1-auth-and-keys-design.md (UI-UPGRADE-1 items 7+9; operator popup answers 'Google + passkey', 'View + edit, passkey each time'). Blocked on: operator decisions D1 (new web_sessions table), D2 (Keys Save path A: API writes the GitHub Actions secret then set-env, needs GH_SECRETS_WRITE_TOKEN | B: VM file only, flagged diverged), D3 (30d sliding); and the operator creating GOOGLE_OAUTH_CLIENT_ID (Web application client; no client secret used). Rollout: ship auth routes + SPA sign-in with the gate off, operator enrols a passkey, then flip SITE_AUTH_ENFORCE via set-env and verify anon 401 / signed-in 200. Inventory non-browser /api/bot/* consumers first. [2026-10-11T18:35Z manager session_01G16FfyYSmDPQuuW55BuTmK] OPERATOR DECISIONS (popup, verbatim choices): D1 'New DB table (Recommended)' = web_sessions in trade_journal.db with a data-wiring declaration (this is the operator OK for the new table); D2 'GitHub secret + VM (Recommended)' = Save writes the Actions secret, then set-env; needs GH_SECRETS_WRITE_TOKEN (fine-grained, this repo, Secrets r/w only, 90d); D3 '30-day sliding (Recommended)'. D4 (same-origin SPA) not asked; first version stays bearer. Build order per docs/plans/ui-upgrade-1-auth-and-keys-design.md \u00a76. [2026-10-11T18:36Z manager] Dispatched steps 1-3 (gate OFF) to a FRESH Sonnet lane (auth surface, not order path; the design is on disk, so no resume is needed), ceiling $25.",
+  "updated_at": "2026-10-11T18:36:01Z",
+  "updated_by": "session_01G16FfyYSmDPQuuW55BuTmK",
+  "roadmap": [
+    "M6"
+  ],
   "_seq": 406
 }
