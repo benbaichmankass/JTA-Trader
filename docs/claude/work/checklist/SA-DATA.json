@@ -15,5 +15,10 @@
   ],
   "blocked_on": [],
   "note": "2026-09-29 ~11:55Z (manager session_01HYq6XtfesZ57VyaQrK6CL1): sonnet per model table (no order path). Pipeline PI-20260929-TWEW1FZJ-0001. Also trade_scores archive read (SA-AUD-4 row). || 2026-09-29 ~12:20Z (manager session_01HYq6XtfesZ57VyaQrK6CL1): #14159 (replay reads archives; empty -> error state) and #14163 (trade_scores reads archives) reviewed, merge on green. 2026-09-29 ~17:00Z (manager session_01HYq6XtfesZ57VyaQrK6CL1): lane archived. Both PRs are on main: #14159 58c0c862 and #14163 3ae86fcd. Half of PI-20260929-TWEW1FZJ-0001's clears_when is checked: scripts/ml/replay_pregate_live.py imports and calls iter_records_with_archives (lines 42, 239). The other half is not: tests/ml/test_replay_pregate_live_archives.py was SKIPPED here because pandas is not installed. Closes when that test passes in CI, or when a trainer-side labels_accruing/RG4 run reads the archives; the pipeline record then closes.",
+  "roadmap": [
+    "M39"
+  ],
+  "updated_at": "2026-10-11T09:51:48Z",
+  "updated_by": "session_01AULroJXfiHJzkAtxgcSz83",
   "_seq": 203
 }

@@ -15,5 +15,10 @@
   ],
   "blocked_on": [],
   "note": "2026-09-29 ~11:55Z (manager session_01HYq6XtfesZ57VyaQrK6CL1): RECON lane archived; reuse src/web/api/_clean_trades.exclude_reduce_leg_predicate, never a second predicate; other NULL-pnl rows stay could_not_look. 2026-09-29 ~17:00Z (manager session_01HYq6XtfesZ57VyaQrK6CL1): lane archived. #14183 on main as 08a52c74 (account_broker_reconcile excludes intent_reduce legs; reads realizedPnl before the NULL-pnl refusal). The related #14232 is 647d2d19. The re-run of the bybit_2 journal-vs-broker comparison is NOT recorded as observed. PI-20260929-PXGMJYTX-0001 (queued, due 2026-10-02) says that comparison sets two different windows against each other (last-20 closes vs days=90), so any agree/divergent result is not a finding until the windows match. Closes on a post-deploy account-broker-reconcile bybit_2 run with reduce legs excluded AND matched windows.",
+  "roadmap": [
+    "M39"
+  ],
+  "updated_at": "2026-10-11T09:51:48Z",
+  "updated_by": "session_01AULroJXfiHJzkAtxgcSz83",
   "_seq": 202
 }
