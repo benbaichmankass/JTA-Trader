@@ -300,6 +300,35 @@ label source that changes the answer for veto/exit/proposer lines**, rather than
 | **S — The independent-trader spine** | S1 parked until a **new information class** exists · S2-exit open for one last lever (pullback transfer) · S3 parked behind an S1/S2 PASS | `M19-S1`, `RQ-20261008-901`, `R-M19` | 3 |
 | **N — Open-ended new ideas / information classes** | **Standing quota: ≥1 new idea filed per weekly cycle, or a written "none, because".** Open now: news-layer veto (WEPE G1), prediction-market surprise (WEPE G2), N1 above. Candidates to author as evidence arrives: label sources beyond closed trades (backtest-augmented under parity), frozen time-series-foundation-model features for the *regime* head only (the M19 embedding result was positive on volatility, null on direction), cross-asset breadth features. | `RQ-20261009-902/-903`, `RQ-20261011-17f4-03` | 1 |
 | **V — Plumbing validation** | **Weekly:** `ml_plan_status.py --plumbing` run by every `/ml-review`; every silent or constant head is either tracked by a named row or a finding. **L1:** this loop itself — done after two weekly cycles with no operator reminder. | `recurring:ml-review`, `ML-ROADMAP-LOOP` | 1 |
+| **F — Model frontier program** (operator, 2026-10-11) | **F0** the weekly frontier scan runs unprompted · **F-infra** ML units run the same dispatcher → runner → record → rule → follow-up flow as strategy units (`ML-RQ-RUNNER`) · **F1–F5** the seven scan units are graded (see § "Model frontier program" below) | `FRONTIER-RESEARCH`, `ML-RQ-RUNNER`, `FRONTIER-LEVER-*`, `RQ-20261011-9da8-01..07` | 1 (runner: 2) |
+
+#### Model frontier program (Track F — operator, 2026-10-11: *"get all of this into the roadmap and into the work que … the first couple of sessions should be high priority to get the work flow/infra sorted out, then we need to have the same continuous research-test-improve flow we have for the strategies to push the roadmap forward"*)
+
+**Why a track.** Everything above re-fits the model family we picked first (75 of 96 registered models are GBDT;
+`ml_plan_status.py --diversity`). The mandate is *better* models and methods, tested as genuinely different things, on a
+recurring basis. First scan: [`docs/research/frontier-scan-2026-10-11.md`](docs/research/frontier-scan-2026-10-11.md); recurring
+canon and the full loop: [`frontier-research` skill](.claude/skills/frontier-research/SKILL.md) § "The research → test → improve loop".
+
+**Order — infra first, then units.** Infra gates everything: a unit with no dispatchable route is a memo.
+
+| step | what | carried by | done when |
+|---|---|---|---|
+| **0 (HIGH, rank 1)** | **ML research runner** — ML units flow dispatcher → trainer-side runner → E5 result record → research-ops applies the registered rule → follow-up, exactly like a strategy unit. Generic engine `scripts/research/ml_bakeoff.py` (learner list + dataset + metric + baseline + machine-form rule), trainer twin of the token-free runner `research-script-run-trainer.yml`, landing through the existing collector | checklist `ML-RQ-RUNNER`; plan item `ML-F6`; smoke unit `RQ-20261011-0ac8-01` | the smoke unit lands `measured/pass` via the trainer path and research-ops lists it in `results_read` |
+| **1 (HIGH, rank 2)** | TSFM forecaster bake-off (Chronos-2, TimesFM-2.5, TiRex-2, Kronos vs the shipped Chronos-Bolt-Tiny `fc_*`, **HAR-RV control**) | `FRONTIER-LEVER-TSFM` → `RQ-20261011-9da8-01` (`ML-F1`) | unit graded; the HAR-RV-vs-fc headline recorded either way |
+| **2 (HIGH, rank 3)** | Conformal abstention on the advisory regime heads vs a plain threshold at matched coverage (cheapest family-diversity test) | `FRONTIER-LEVER-CONFORMAL` → `RQ-20261011-9da8-03` (`ML-F3`) | unit graded |
+| **3 (HIGH, rank 4)** | Small-n tabular bake-off (LightGBM vs CatBoost vs TabICL vs TabPFN-class, research-eval only) on the meta-label dataset | `FRONTIER-LEVER-TABULAR` → `RQ-20261011-9da8-02` (`ML-F2`) | unit graded at n ≥ 300; licence question to the operator if a TabPFN arm wins |
+| **4 (HIGH, rank 5)** | Strategy frontier, Stage 0 on a full cost stack: TSMOM vol-target, cross-sectional momentum with funding | `FRONTIER-LEVER-HARNESS-COSTS` (parallel lane) → `RQ-20261011-9da8-05`, `-06` (`ML-F5`) | cost lever done, units graded |
+| **5 (normal)** | Offline contextual bandit over the exit-ladder arms; BTC→alt lead-lag with a placebo | `ML-LEG-CORPUS` → `RQ-20261011-9da8-04` (`ML-F4`); `FRONTIER-LEVER-LEADLAG` → `RQ-20261011-9da8-07` | units graded |
+
+**The loop (one place, not re-described here):** weekly scan (`/ml-review` step 9 → `frontier-research`) *registers* units with their
+rule → the research-queue dispatcher *runs* them hourly (trainer or runner) → `research-ops` (4×/day) *reads* each result and applies
+the rule verbatim → a PASS files its follow-up (candidate-manifest proposal as a Tier-3 note, or the next unit), a FAIL is written to
+`families.<family>.history` so the diversity check stops feeding a dead family, INDETERMINATE extends or redesigns → the next scan reads
+that history first. Nothing here promotes a model: a bake-off PASS earns a candidate manifest and the downstream net-of-cost
+walk-forward, nothing more (edge is decided offline against a rule registered before the run).
+
+**Honest limits.** No frontier model has been run yet. Licences were read from Hub cards (TabPFN weights are `license:other` /
+non-commercial: research evaluation only, serving is an operator licence decision). Benchmark ranks cited by the scan are self-reported.
 
 **Order of work (value per cost, from the evidence above):** P0 → X4 → D2 → P1 (cheap, unblocks or closes whole lines) → X1 → R1 first wave → N1 → X2 → R2/R4 → rest. Anything that needs a decision no data would settle goes to the operator through the classified popup path; anything that needs data becomes a unit.
 
