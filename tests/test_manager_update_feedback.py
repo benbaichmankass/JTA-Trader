@@ -89,13 +89,13 @@ def _root(tmp_path):
     (r / "RQ-20261010-353c-01").mkdir(parents=True)
     (r / "RQ-20261010-353c-01" / "1.jsonl").write_text(json.dumps({
         "generated_at": (NOW - timedelta(hours=9)).isoformat(), "note": "", "verdict": "pass",
-        "power_state": "accruing", "research_unit": "RQ-20261010-353c-01",
+        "power_state": "accruing", "research_unit": "RQ-20261010-353c-01",  # collapsed-state: accruing — fixture shaped like the 2026-10-11 rows
         "produced_by": {"run_id": "38092213492"},
         "measurement": {"net_total_r": 43.6911, "net_expectancy_r": 0.0658, "total_trades": 664}}) + "\n")
     (r / "_unattributed").mkdir()
     (r / "_unattributed" / "2.jsonl").write_text(
         json.dumps({"generated_at": (NOW - timedelta(hours=3)).isoformat(), "verdict": "fail",
-                    "power_state": "accruing", "decision_rule": {"id": "RULE-R5-SOAK-BOOK-GRADE-v1"},
+                    "power_state": "accruing", "decision_rule": {"id": "RULE-R5-SOAK-BOOK-GRADE-v1"},  # collapsed-state: accruing — fixture
                     "produced_by": {"run_id": "777"},
                     "measurement": {"by_disposition": {"healthy": 0, "kill": 1}}}) + "\n"
         + json.dumps({"generated_at": (NOW - timedelta(hours=2)).isoformat(), "verdict": "fail"}) + "\n")
@@ -107,7 +107,7 @@ def test_research_lines_carry_the_finding_never_a_bare_dash(tmp_path):
     line = d["buckets"][rd.PASSED][0]
     assert line.startswith("RQ-20261010-353c-01 — trend harness on ZECUSDT 1h: pass")
     assert "net +43.69R" in line and "n=664" in line and "→ Stage-0 evidence only" in line
-    assert "power accruing: —" not in rd.render_body(d)
+    assert "power accruing: —" not in rd.render_body(d)  # collapsed-state: accruing — fixture value; asserts the old bare-dash line is gone, no branch on state
 
 
 def test_unattributed_rows_are_attributed_or_counted(tmp_path):
