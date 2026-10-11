@@ -1,6 +1,6 @@
 # Manager handoff — 2026-10-11 ~18:00Z
 
-> **Doc status:** `live` · category `instruction` · last verified `2026-10-11` · registered in [`docs/DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md)
+> **Doc status:** `historical` · category `history` · last verified `2026-10-11` · registered in [`docs/DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md)
 
 Outgoing manager: `session_01Uq7MrjPQDRWqbhCjwuMava` ("Manager Session 2026-10-08"). It is retiring because its context is
 nearly full (~80% of 1M). The operator chose to hand off after the evening review (popup 2026-10-11 ~12:27Z).
