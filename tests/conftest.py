@@ -431,7 +431,15 @@ def pytest_sessionfinish(session, exitstatus):
 # TELEGRAM-CHANNELS part C: the notification-settings store is ON DISK (it must
 # survive restarts), so every test gets its own — otherwise one test's mute or
 # cadence stamp leaks into the next and into the checkout's runtime_state/.
+# Plain os.environ, NOT monkeypatch: requesting `monkeypatch` in an autouse
+# fixture instantiates it first and so tears it down LAST, which reorders other
+# fixtures' teardown (test_news_events' reload_calendar ran while still patched).
 @pytest.fixture(autouse=True)
-def _isolate_telegram_settings(tmp_path, monkeypatch):
-    monkeypatch.setenv("TELEGRAM_SETTINGS_PATH", str(tmp_path / "telegram_settings.json"))
+def _isolate_telegram_settings(tmp_path):
+    prior = os.environ.get("TELEGRAM_SETTINGS_PATH")
+    os.environ["TELEGRAM_SETTINGS_PATH"] = str(tmp_path / "telegram_settings.json")
     yield
+    if prior is None:
+        os.environ.pop("TELEGRAM_SETTINGS_PATH", None)
+    else:
+        os.environ["TELEGRAM_SETTINGS_PATH"] = prior
