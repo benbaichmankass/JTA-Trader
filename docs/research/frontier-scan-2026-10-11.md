@@ -1,6 +1,6 @@
 # Frontier scan #1 — better models and strategy ideas (2026-10-11)
 
-> **Doc status:** `live` · category `evidence` · last verified `2026-10-11` · registered in [`docs/DOCUMENT-INDEX.md`](DOCUMENT-INDEX.md)
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · **nobody has verified this document's status — do not act on it as current**
 
 First run of the weekly scan defined in [`.claude/skills/frontier-research/SKILL.md`](../../.claude/skills/frontier-research/SKILL.md).
 Operator directive (2026-10-11): don't let early choices cap the project; test genuinely different things.
