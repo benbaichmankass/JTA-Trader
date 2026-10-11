@@ -29,3 +29,31 @@ def test_every_plan_item_has_a_close_condition_and_unique_id():
     ids = [i["id"] for i in plan["items"]]
     assert len(ids) == len(set(ids))
     assert all(i.get("close") and i.get("ref") for i in plan["items"])
+
+
+def test_diversity_flags_concentration_and_fail_streak():
+    plan = {
+        "diversity": {"max_family_share": 0.6, "max_fail_streak": 3},
+        "families": {"deep_sequence": {"history": ["FAIL", "FAIL", "FAIL"]}},
+        "items": [
+            {"id": "a", "state": "open", "family": "gbdt"},
+            {"id": "b", "state": "open", "family": "gbdt"},
+            {"id": "c", "state": "open", "family": "deep_sequence"},
+            {"id": "d", "state": "open"},
+        ],
+    }
+    findings, table = m.diversity(plan, {"x": "gbdt"})
+    assert any(f.startswith("CONCENTRATION: gbdt") for f in findings), findings
+    assert any(f.startswith("FAIL-STREAK: deep_sequence") for f in findings), findings
+    assert any(f.startswith("NOTE 1 open plan items") for f in findings), findings
+    assert table["ts_foundation_model"]["open_units"] == 0  # absent families are reported at 0, not omitted
+
+
+def test_every_committed_trainer_maps_to_a_family():
+    findings, _ = m.diversity(m.load_plan(), m.manifest_families())
+    assert not [f for f in findings if f.startswith("UNMAPPED-TRAINER")], findings
+
+
+def test_committed_plan_family_tags_are_known():
+    findings, _ = m.diversity(m.load_plan(), m.manifest_families())
+    assert not [f for f in findings if f.startswith("UNKNOWN-FAMILY")], findings

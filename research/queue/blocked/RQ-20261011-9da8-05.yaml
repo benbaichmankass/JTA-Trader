@@ -1,0 +1,60 @@
+id: RQ-20261011-9da8-05
+title: 'Frontier strategy: time-series momentum with volatility targeting on the liquid crypto perps (Stage-0, full cost stack)'
+status: blocked
+cadence: once
+theme: new_strategy_prop
+priority: 2
+kind: experiment
+question: Does a volatility-targeted time-series-momentum position (sign of trailing return over a registered lookback set,
+  size inversely to realised vol) on BTCUSDT, ETHUSDT and SOLUSDT daily bars show positive net R after fees + slippage + funding
+  over the trailing window in scripts/ops/fetch_backtest_corpus.py?
+why_this_matters: 'Time-series momentum with vol scaling is the best-documented diversifier in managed futures and is structurally
+  different from every entry family on the roster (breakout / pullback / ICT / pairs): it holds for weeks, trades rarely,
+  and is sized by risk, not signal. scripts/backtest_vol_target.py exists but books turnover-bps drag only (CLAUDE.md harness
+  list) and backs no scored leg -- so a PASS today would be fee-light evidence. Hence blocked until the cost split exists.'
+power:
+  expected_n: 40
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: d=0.45 -> 39 trades at alpha 0.05 / power 0.8 (repo E35 floor). Daily TSMOM yields tens of re-balances per symbol
+    over 3y; if n < 39 the verdict is INDETERMINATE.
+  feasibility:
+    source: none
+    accrual_basis: ''
+decision_rule:
+  id: RULE-RQ1011-9DA8-05-TSMOM-VOLTARGET
+  registered_at: '2026-10-11'
+  registered_before_run: true
+  statistic: 'net_total_r and n_trades per symbol from the harness summary, with fees + slippage + funding applied via execution_costs.resolve_cost_policy;
+    also reported: gross vs net and the turnover.'
+  rule: PASS IF net_total_r > 0 AND n_trades >= 39 on at least two of three symbols; FAIL IF net_total_r <= 0 with n >= 39
+    on two or more (one pass -> re-queue a confirmatory run before reading as a kill); INDETERMINATE IF n < 39.
+  what_it_does_not_do: Does not touch config/strategies.yaml or accounts.yaml and proposes no leg. A PASS is Stage-0 evidence
+    for a build row.
+blocked_on:
+- kind: work_item
+  ref: FRONTIER-LEVER-HARNESS-COSTS
+  what: vol_target harness has no fee/slippage/funding split (turnover-bps drag only) and xsec_momentum has no funding term.
+  clears_when: Both harnesses read costs via execution_costs.resolve_cost_policy including funding for held perp legs, a test
+    pins non-zero cost on a fixture, and CLAUDE.md's harness-gap list is edited to remove them.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 15
+  basis: Estimate from the sibling fc / harness runs; the first run replaces it.
+run:
+  workflow: null
+  note: 'Deliberately null: the instrument does not exist yet (see blocked_on). Fill in when the lever row closes.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/backtest_vol_target.py
+- docs/research/frontier-scan-2026-10-11.md
+- FRONTIER-RESEARCH
+last_dispatched_at: null
