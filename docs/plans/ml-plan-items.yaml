@@ -43,6 +43,7 @@ items:
 - {id: ML-N2, track: N, title: "Information class: news layer veto (WEPE G1)", state: open, ref: RQ-20261009-902, close: "Join script exists; unit graded.", tier: 1}
 - {id: ML-N3, track: N, title: "Information class: prediction-market surprise (WEPE G2)", state: open, ref: RQ-20261009-903, close: "Unit graded.", tier: 1}
 - {id: ML-N4, track: N, title: "ML research lane: exit-head expansion, regime-head gates (BTC/SOL/MES)", state: done, ref: ML-RESEARCH-W41, close: "Units authored; their results are read by research-ops.", tier: 1}
+- {id: ML-N5, track: N, title: "Idea 2026-10-11: split advisory-head score drift into regime-mix vs capability loss (instrument + blocked unit RQ-20261011-6e85-01)", state: open, ref: ML-DRIFT-SPLIT-INSTRUMENT, close: "scripts/research/drift_regime_mix.py merged AND one run's verdict read for the sol + btc advisory heads, run id recorded on the row.", tier: 1}
 # ---- Track V: plumbing validation (recurring) ----
 - {id: ML-V2, track: V, title: "Weekly plumbing check: trainer cycle, builds, registry, shadow-log liveness, advisory parity", state: open, ref: recurring:ml-review, close: "Recurring: scripts/ops/ml_plan_status.py --plumbing is run by every ml-review and the result is in the review record.", tier: 1}
 - {id: ML-L1, track: V, title: "The ML plan loop itself (this file reviewed against measured progress every cycle)", state: open, ref: ML-ROADMAP-LOOP, close: "Row done when two consecutive weekly cycles ran without an operator reminder.", tier: 1}
@@ -52,6 +53,7 @@ plumbing:
   max_cycle_age_hours: 36
   max_silent_hours: 6          # a logging head with no row for this long is SILENT
   max_disk_used_pct: 85
+  # PENDING PR #17580 + trainer promote-stage run: 4 shadow->candidate flips => expect {advisory: 3, shadow: 21, candidate: 71, research_only: 1}; update this line in the run that OBSERVES it.
   expected_registry_stages: {advisory: 3, shadow: 25, candidate: 67, research_only: 1}   # MEASURED 2026-10-11 (api/bot/ml/status); a change must be explained by a recorded decision
   expected_refusing:          # manifests the trainer's dataset audit REFUSES (enforced) -- MEASURED 2026-10-11 api/bot/ml/status refusing_manifests_24h
     ml/configs/baseline-prop-mission-policy.yaml: ML-STAGE-DECISIONS

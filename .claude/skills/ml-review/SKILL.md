@@ -545,6 +545,19 @@ the observation that closes it) · `scripts/ops/ml_plan_status.py` (the checker)
 reading a result whose unit is a plan ref, sets the plan item's state in the same PR
 (`research-ops` § D); `perf-followup` files ML-shaped lessons under the plan's track N.
 
+**First scheduled cycle, corrections (2026-10-11 run, fixed in this text):**
+- Name the lane's own checklist row `ML-REVIEW-<YYYYMMDD>`. Before this run the checker flagged it
+  `UNPLANNED` (only `ML-ROADMAP-LOOP` was exempt); `ml_plan_status.py` now exempts that name pattern (plan item `ML-V2`).
+- Fire the one batched trainer-vm-diag issue FIRST, before the direct-HTTPS pulls and the backlog walk:
+  the Actions runner queued it for 20+ minutes on 2026-10-11, and everything stage-guard/gate-check-shaped
+  waits on it. Direct HTTPS (`/api/bot/ml/{registry,status,cycle}`, `shadow/{stats,drift}`) answered in seconds.
+- `scripts.ops.pipeline.load()` returns a `LoadResult`, not a list: iterate `.items` (dict by id). Record a re-read
+  of a still-open row with `python3 scripts/ops/pipeline.py --redate <id> --observation ... --next-due ...`
+  (or `pipeline.redate()`); close with `append(rec, intent="update", based_on=read_log(STORE).sources[id])`.
+- When a stage decision lands, update `plumbing.expected_registry_stages` in `docs/plans/ml-plan-items.yaml`
+  in the same PR/run that observes the registry change, or the next `--plumbing` run flags it.
+- The cycle-1 record says `plan_items: 28`; the yaml and the checker count 25. Trust the checker.
+
 **Hard limits (unchanged):** the loop never promotes a model past `shadow`, never edits
 `config/strategies.yaml` / `config/accounts.yaml`, never places an order, never creates a
 cron/trigger. A change to cadence is a request to the manager, written in the run record's

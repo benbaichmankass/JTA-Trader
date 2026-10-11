@@ -136,6 +136,7 @@ def analyse(plan: dict, rowmap: dict, repo: Path = REPO, now=None) -> list[dict]
             and r.get("state") not in CLOSED
             and rid not in planned
             and rid != "ML-ROADMAP-LOOP"
+            and not re.fullmatch(r"ML-REVIEW-\d{8}", rid)  # the weekly ml-review lane's own dated row (plan item ML-V2)
         ):
             out.append(
                 {
