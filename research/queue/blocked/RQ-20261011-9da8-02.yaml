@@ -44,11 +44,9 @@ decision_rule:
 blocked_on:
 - kind: work_item
   ref: FRONTIER-LEVER-TABULAR
-  what: No runner compares learners on one fold set for the meta-label dataset; tabicl / catboost are not in the trainer's
-    pinned deps.
-  clears_when: scripts/research/tabular_bakeoff.py (purged folds shared across learners, writes verdict.json with the registered
-    statistic) exists, deps are pinned on the trainer, and a smoke run on a synthetic dataset passes. Then git mv and fill
-    run. Also blocked on RQ-20261011-17f4-02 reporting >= 300 labelled setups in some cell.
+  what: 'The comparison instrument now exists and is GENERIC (ML-RQ-RUNNER: scripts/research/ml_bakeoff.py has lightgbm / catboost / tabicl / tabpfn learner kinds on shared purged folds, tabpfn flagged research_only) -- NO bespoke tabular_bakeoff.py is needed. MEASURED on the trainer 2026-10-11: catboost, tabicl and tabpfn are NOT installed in its venv (lightgbm 4.6, sklearn 1.8 are); an uninstalled arm reports `unavailable` and downgrades a FAIL to INDETERMINATE. ALSO: routing.peak_memory_gb is 8.0 > the 6 GB trainer, which the router REFUSES (unroutable) -- re-declare from the first measured run (small-n tabular is far below it).'
+  clears_when: catboost + tabicl (+ tabpfn for the research-eval arm) are installed in the trainer venv (Tier-2 lever row), the unit carries an ml_bakeoff block pointing at the meta-label dataset, and RQ-20261011-17f4-02 reports >= 300 labelled setups in some cell. Then git mv and fill run.workflow (research-script-run-trainer.yml), run.command, lands.store.
+
 routing:
   needs_trainer_resident_data: true
   needs_gpu: false

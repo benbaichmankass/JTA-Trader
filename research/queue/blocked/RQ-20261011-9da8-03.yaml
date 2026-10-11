@@ -42,10 +42,9 @@ decision_rule:
 blocked_on:
 - kind: work_item
   ref: FRONTIER-LEVER-CONFORMAL
-  what: No script joins the shadow log scores to realised labels and evaluates a conformal rule.
-  clears_when: scripts/research/conformal_abstain_eval.py reads the shadow-log mirror, implements split-conformal + the plain-threshold
-    baseline, writes verdict.json with the registered statistic, and has a test on a synthetic exchangeable stream where coverage
-    is provably nominal.
+  what: 'Conformal evaluates a SCORE STREAM, not a learner list, so it needs its own scorer (the ml_bakeoff engine does not cover it). MEASURED on the trainer 2026-10-11: the shadow log is runtime_logs/shadow_predictions.jsonl (68,810 rows, 61 MB, TRAINER-resident -> run via research-script-run-trainer.yml); rows carry model_id, stage, score and feature_row but NO realised label -- the shadow-log -> realised-vol joiner is the open lever ML-HEAD-AGREEMENT-JOIN (ML-N1J).'
+  clears_when: scripts/research/conformal_abstain_eval.py (split-conformal + plain-threshold baseline at matched coverage, rolling-window coverage; writes verdict.json in the E5 shape) exists with a synthetic-exchangeable test, AND the realised-label joiner exists (ML-HEAD-AGREEMENT-JOIN). Then git mv and fill run.workflow, run.command, lands.store.
+
 routing:
   needs_trainer_resident_data: false
   needs_gpu: false
