@@ -11,8 +11,10 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "Unblocks RQ-20261011-9da8-02. Done when: scripts/research/tabular_bakeoff.py writes verdict.json with the registered statistic, deps pinned on trainer, synthetic smoke passes. TabPFN weights are license:other (non-commercial for 2.5) -- research eval only; serving needs an operator licence decision. Parent: FRONTIER-RESEARCH.",
-  "updated_at": "2026-10-11T14:28:06Z",
-  "updated_by": "session_01QM1jZsvaXCmA8Dwoaawm2H",
+  "note": "Unblocks RQ-20261011-9da8-02. Done when: scripts/research/tabular_bakeoff.py writes verdict.json with the registered statistic, deps pinned on trainer, synthetic smoke passes. TabPFN weights are license:other (non-commercial for 2.5) -- research eval only; serving needs an operator licence decision. Parent: FRONTIER-RESEARCH.  [2026-10-11 ML-RQ-RUNNER, priority HIGH rank 4] SUPERSEDED SHAPE: do not write scripts/research/tabular_bakeoff.py. The generic engine scripts/research/ml_bakeoff.py already has lightgbm/catboost/tabicl/tabpfn learner kinds (tabpfn flagged research_only; an unavailable arm is reported, never scored) and purged folds shared across learners. Remaining work: install tabicl/tabpfn/catboost in the trainer venv (Tier-2), point the unit's ml_bakeoff.dataset at the meta-label dataset, and add the n>=300 power guard. Done = RQ-20261011-9da8-02 leaves blocked/.",
+  "updated_at": "2026-10-11T15:57:15Z",
+  "updated_by": "session_01QRNxMhicEy4xbthzaZ9su7",
+  "priority": "high",
+  "priority_rank": 4,
   "_seq": 407
 }
