@@ -1,0 +1,25 @@
+{
+  "based_on": "20261005T040215808112Z-d23b9f3a.json",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "the ib_fill_to_row mapper no longer emits realized_pnl=0.0 for a fill whose CommissionReport was never populated, verified on a fresh ib_paper close, or the finding is killed with a measured reason",
+    "kind": "event",
+    "last_checked": "2026-10-11"
+  },
+  "id": "PI-20260929-HXO9WPVH-0001",
+  "jitter_2026_10_05": "[BACKLOG-BURNDOWN-3 2026-10-05] cadence jittered to spread the lapse wave (<= 24 due per day); NO re-read this pass -- observation unchanged (last read 2026-10-04); new next-due 2026-10-21",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "docs/audits/system-audit-2026-09-29.md#fix-sa-04",
+    "rerun": "diag relay (db read) on ib_paper: SELECT exec_id, json_extract(raw,'$.realized_pnl'), fee, exec_time FROM exchange_fills WHERE account_id='ib_paper' AND side IS NOT NULL ORDER BY exec_time DESC; expect realized_pnl 0.0 with fee 0.0 on the fills behind the ib_execution rows; then python3 -c classify_pnl over journal rows with exit_price_source=ib_execution and pnl=0 (should be UNVERIFIED after #14172)"
+  },
+  "redate": {
+    "evidence": "https://pypi.org/project/ib-insync/0.9.86/ wrapper.py L475,L496; /api/bot/trades/closed?account_id=ib_paper",
+    "observation": "PROV-IB 2026-10-11: CONFIRMED from ib_insync 0.9.86 wheel source (not the live raw store -- exchange_fills is not served by a diag route): wrapper.execDetails builds Fill(contract, execution, CommissionReport(), time) with default execId='' realizedPNL=0.0 commission=0.0; wrapper.commissionReport overwrites by execId and coerces UNSET_DOUBLE realizedPNL to 0.0. So an execId-less report = 'IB has not reported'. Live: ib_paper closed rows in the 22-row window since 2026-09-10 -- 18 carry pnl 0.0 with pnlProvenance=unverified (SA-PROV demotion holds), 4 carry estimated. FIX (Tier-2 runtime mapper, hold): exchange_fills_ib.ib_fill_to_row sets raw.realized_pnl=None and commission=None when the report's execId is empty, so exit_from_fills(require_realized=True) returns None and the resolver falls back instead of stamping ib_execution 0.0. Historical 0.0 rows are NOT rewritten (relabel-only decision 2026-07-30). Not deployed/observed. Close when: a post-deploy ib_paper close either has realized_pnl from a populated report or a non-ib_execution pnl_source with no 0.0.",
+    "observed_at": "2026-10-11"
+  },
+  "routed_to": "PROV-IB | BACKLOG-BURNDOWN-2 2026-10-04 re-read at HEAD: still applies — exchange_fills_ib.py:234-239 only maps sentinel >1e17 to None; realizedPNL=0.0 from default CommissionReport still emitted as 0.0",
+  "state": "routed",
+  "what": "IB realizedPNL reads 0.0 on closing fills (root cause of SA-AUD-3 ib_execution zero-pnl rows, FIX-SA-04 #14172 only demotes the symptom). Read from ib_insync 0.9.86 source, NOT confirmed on the live raw store: Fill is built with a default CommissionReport() (realizedPNL=0.0, execId=''), and wrapper.commissionReport coerces IB's UNSET_DOUBLE to 0.0 before src/runtime/exchange_fills_ib.py::ib_fill_to_row's `abs(realized) > 1e17` sentinel check can see it (that check is dead for ib_insync). So 0.0 means 'no commission report yet' or 'not applicable', not break-even. Proposed fix (Tier-2, runtime mapper): in ib_fill_to_row treat a report with empty execId as absent (realized=None) so fills_pnl.exit_from_fills(require_realized=True) returns None and the resolver falls back instead of stamping ib_execution with 0.0. Before fixing: confirm on ib_paper that the 18 zero rows' raw fills carry commission_report execId ''."
+}
