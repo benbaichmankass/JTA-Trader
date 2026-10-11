@@ -62,7 +62,7 @@ def as_list(v) -> list[str]:
 
 
 def load_rows() -> list[dict]:
-    from src.runtime import checklist_store  # noqa: PLC0415
+    from src.runtime import checklist_store
     return checklist_store.load()["items"]
 
 
@@ -170,13 +170,13 @@ def _d(v) -> dt.date:
 def render(spec: dict, built: dict) -> str:
     L = [BEGIN, "",
          "## Live roadmap — where we are on the way to the system goals", "",
-         f"> **Reviewed {spec['reviewed']} by the roadmap loop** "
-         "([`manager` skill § The roadmap loop](.claude/skills/manager/SKILL.md)). "
-         "This block is **generated** from [`docs/roadmap/milestones.yaml`](docs/roadmap/milestones.yaml) "
-         "plus the `roadmap` field on checklist rows and queue units — the counts are computed, never typed. "
-         "A milestone with no work says so and why; a live row with no milestone is a defect "
-         "(`python3 scripts/ops/roadmap_map.py --report`). The historical record below this block is "
-         "kept intact and is **context**; this block is the plan.", ""]
+         (f"> **Reviewed {spec['reviewed']} by the roadmap loop** "
+          "([`manager` skill § The roadmap loop](.claude/skills/manager/SKILL.md)). "
+          "This block is **generated** from [`docs/roadmap/milestones.yaml`](docs/roadmap/milestones.yaml) "
+          "plus the `roadmap` field on checklist rows and queue units — the counts are computed, never typed. "
+          "A milestone with no work says so and why; a live row with no milestone is a defect "
+          "(`python3 scripts/ops/roadmap_map.py --report`). The historical record below this block is "
+          "kept intact and is **context**; this block is the plan."), ""]
     for gid, g in spec["goals"].items():
         L += [f"### {gid} — {g['name']}", "", f"**Measure.** {g['measure']}  ", f"**Baseline.** {g['baseline']}", ""]
         L += ["| milestone | status | where we are | next | work (live rows · open units) |", "|---|---|---|---|---|"]
@@ -189,9 +189,9 @@ def render(spec: dict, built: dict) -> str:
             L.append(f"| **{m['id']}** {m['name']} | {GLYPH[m['status']]} {m['status']} | "
                      f"{_cell(m['where'])} | {_cell(m['next'])} | {_cell(work)} |")
         L.append("")
-    L += [f"**Unmapped right now:** {len(built['orphan_rows'])} live checklist rows and "
-          f"{len(built['orphan_units'])} open queue units carry no milestone "
-          "(backfill is part of the weekly pass).", "", END]
+    L += [(f"**Unmapped right now:** {len(built['orphan_rows'])} live checklist rows and "
+           f"{len(built['orphan_units'])} open queue units carry no milestone "
+           "(backfill is part of the weekly pass)."), "", END]
     return "\n".join(L)
 
 
@@ -382,7 +382,7 @@ def main() -> int:
         write_roadmap(render(spec, built))
         print("ROADMAP.md live block written")
     else:
-        print(report(spec, built, dt.date.today()))
+        print(report(spec, built, dt.datetime.now(dt.timezone.utc).date()))
     return 0
 
 

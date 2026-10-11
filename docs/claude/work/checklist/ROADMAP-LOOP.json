@@ -12,7 +12,7 @@
   "prs": [],
   "blocked_on": [],
   "note": "[2026-10-11T09:40Z operator request, close paraphrase, HIGH priority] Review the roadmap, then add to the manager skill the relationship between the roadmap and the work queue. The roadmap is for high-level planning: highly detailed, but a tool for seeing the bigger picture of where we are on the way to the system goals. Build and maintain an effective, consistent process for BUILDING and PRIORITISING the work queue FROM the roadmap, then keeping the roadmap UP TO DATE with the outcomes of work items. The architecture map (docs/ARCHITECTURE-CANONICAL.md) is part of the same loop. Done = roadmap reviewed and corrected against measured state; the loop written into .claude/skills/manager/SKILL.md (+ a CLAUDE.md line) with a recurring step (e.g. in the daily review / evening review) that (a) derives/re-prioritises checklist rows from roadmap milestones, (b) writes outcomes back to the roadmap + architecture map; proven by running it once. [2026-10-11 lane session_01AULroJXfiHJzkAtxgcSz83] started: branch claude/roadmap-loop (based on #17553 head). Plan: docs/roadmap/milestones.yaml + scripts/ops/roadmap_map.py (report+guard) + ROADMAP.md live section + manager SKILL section + CLAUDE.md/CANONICAL line. [2026-10-11 lane session_01AULroJXfiHJzkAtxgcSz83] DONE (code/docs): docs/roadmap/milestones.yaml (7 goals, 25 milestones), scripts/ops/roadmap_map.py (--report/--check/--write-roadmap/--self-test), guard roadmap-map-guard, ROADMAP.md live block (generated) + 6 re-tokened milestones + M16 correction, ARCHITECTURE-CANONICAL \u00a7 Promotion ladder, mandates and the roadmap loop, manager SKILL \u00a7 The roadmap loop (+ daily-review hook), CLAUDE.md + CANONICAL paragraphs. First cycle: 169 live rows backfilled with roadmap refs; filed ROADMAP-PASS-2026W43 and QUEUE-THEME-ALIGN. landed_unproven: closes when the W43 pass (due 2026-10-19) runs from the skill and files W44, and roadmap-map-guard has run green on a later lane PR. Spend ~ $5 (ESTIMATE, no meter in-session).",
-  "updated_at": "2026-10-11T09:56:16Z",
+  "updated_at": "2026-10-11T10:08:43Z",
   "updated_by": "session_01AULroJXfiHJzkAtxgcSz83",
   "roadmap": [
     "L-OPS"
@@ -21,6 +21,11 @@
   "writeback": {
     "roadmap": "L-OPS where/next + new milestones.yaml (25 milestones, 7 goals); six stale tokens and the M16 cell corrected in ROADMAP.md",
     "arch": "added \u00a7 Promotion ladder, mandates and the roadmap loop + change-log row"
+  },
+  "observation": {
+    "what": "the W43 weekly roadmap pass runs from the manager skill, rewrites milestone where/next, files ROADMAP-PASS-2026W44, and roadmap-map-guard has passed on a later lane PR that closed a row with a writeback",
+    "how_to_check": "git log on docs/roadmap/milestones.yaml for a commit dated >= 2026-10-19; checklist row ROADMAP-PASS-2026W44 exists; python3 scripts/ops/roadmap_map.py --check --base origin/main",
+    "due_by": "2026-10-20T00:00Z"
   },
   "_seq": 397
 }
