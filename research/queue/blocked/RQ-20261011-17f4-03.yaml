@@ -15,20 +15,24 @@ why_this_matters: Each head is soaked and judged alone. A consensus signal costs
   three already log) and could lift f1_volatile without a new model -- the REGIME-PROGRAM 'when to apply
   each strategy' lever with zero training spend. Plan item ML-N1.
 power:
-  expected_n: 3000
+  expected_n: 15
   min_detectable_effect: 0.03
   effect_units: AUC
   design: two_sample
   alpha: 0.05
   power: 0.8
-  basis: 'ESTIMATE (not measured): ~15 days x 96 15m bars = ~1,440 overlapping-window bars in the retained
-    log plus 4 archives folded by the drift reader; autocorrelated, so the effective n is lower and this
-    unit may land underpowered, which is a runnable verdict (queue README). Re-estimate from the joiner
-    output before dispatch.'
+  basis: 'ESTIMATE (not measured): expected_n counts independent 1-day blocks (the bootstrap block), NOT
+    bars: ~15 retained days. Bars within a day are autocorrelated, so counting them would overstate n.
+    sd=0.1 is an ASSUMED standard deviation of the AUC difference under block bootstrap (not measured);
+    the effect 0.03 is 0.3 sd, so the floor is (1.96+0.8416)^2/0.3^2 = 87 independent blocks, i.e. ~87
+    days of 1-day blocks -- the retained log covers ~15, so this unit will most likely land UNDERPOWERED
+    (descriptive AUC difference only) until more days accrue. That is stated now, not discovered later.'
   feasibility:
-    source: shadow_log_retained_window
-    accrual_basis: forward-only by schedule but rotated archives exist (log_coverage); more rows accrue
-      every 15 min
+    source: none
+    accrual_basis: 'ESTIMATE: ~15 day-blocks retained in the shadow log (oldest_retained 2026-09-26, /api/bot/shadow/stats
+      log_coverage, read 2026-10-11) plus 4 archived windows folded by the drift reader; +1 day-block
+      per day. Needs ~87; the unit is expected to land underpowered first and is re-dispatchable.'
+  sd: 0.1
 decision_rule:
   id: RULE-RQ1011-17F4-03-HEAD-AGREEMENT
   registered_at: '2026-10-11'
@@ -37,8 +41,9 @@ decision_rule:
     for each single head; difference in AUC with a block bootstrap (block = 1 day) 95% interval.
   rule: PASS IF consensus AUC exceeds the best single head's AUC by >=0.03 with the bootstrap interval
     excluding 0, on the held-out 40%, AND the lift holds in each half of that 40%. FAIL IF the interval
-    includes 0 or the sign flips in a half. UNDERPOWERED IF fewer than 800 held-out bars after the joiner
-    (report the AUC difference descriptively only). Never re-cut the split after seeing results.
+    includes 0 or the sign flips in a half. UNDERPOWERED IF fewer than 87 independent held-out day-blocks
+    exist after the joiner (the power floor above) (report the AUC difference descriptively only). Never
+    re-cut the split after seeing results.
   what_it_does_not_do: A PASS is a research finding that justifies a Tier-3 proposal to serve a consensus
     feature; it changes no head, gate, or order path.
 routing:
@@ -55,6 +60,8 @@ blocked_on:
 run:
   workflow: null
   note: Deliberately null until blocked_on clears.
+  inputs:
+    research_unit: RQ-20261011-17f4-03
 lands:
   store: research/results/ (once promoted)
 related:

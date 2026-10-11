@@ -6,6 +6,8 @@ cadence: once
 theme: ml_health
 priority: 1
 kind: deterministic
+why_not_inferential: Equality audit of two deterministic pipelines on identical inputs; the statistic
+  is a count of mismatches, not an estimate.
 question: 'Before any advisory head is trusted another week, on >=500 identical closed bars per head (btc-regime-15m-lgbm-fc-pcv-v2,
   sol-regime-15m-lgbm-fc-pcv-v2, mes-regime-5m-lgbm-v2): does the live feature row (feature_row_for_predictor)
   reproduce the offline training row (market_features) for every declared feature, in the sense that each
@@ -21,8 +23,6 @@ power:
   design: deterministic
   basis: 'kind: deterministic -- a per-feature equality audit over a fixed bar set, no inference. 500
     bars includes >=1 funding-settlement boundary and >=1 session boundary on every head.'
-  why_not_inferential: Equality audit of two deterministic pipelines on identical inputs; the statistic
-    is a count of mismatches, not an estimate.
 decision_rule:
   id: RULE-RQ1011-17F4-01-ADVISORY-VALUE-PARITY
   registered_at: '2026-10-11'
