@@ -193,25 +193,25 @@ def render(spec: dict, built: dict) -> str:
          (f"> **Reviewed {spec['reviewed']} by the roadmap loop** "
           "([`manager` skill § The roadmap loop](.claude/skills/manager/SKILL.md)). "
           "This block is **generated** from [`docs/roadmap/milestones.yaml`](docs/roadmap/milestones.yaml) "
-          "plus the `roadmap` field on checklist rows and queue units — the counts are computed, never typed. "
-          "A milestone with no work says so and why; a live row with no milestone is a defect "
-          "(`python3 scripts/ops/roadmap_map.py --report`). The historical record below this block is "
+          "plus the `roadmap` field on checklist rows and queue units. Row/unit counts are deliberately NOT "
+          "in this block — they move with every research-queue PR and would leave it stale; read them live with "
+          "`python3 scripts/ops/roadmap_map.py --report`. A milestone with no work says so and why; "
+          "a live row with no milestone is a defect. The historical record below this block is "
           "kept intact and is **context**; this block is the plan."), ""]
     for gid, g in spec["goals"].items():
         L += [f"### {gid} — {g['name']}", "", f"**Measure.** {g['measure']}  ", f"**Baseline.** {g['baseline']}", ""]
-        L += ["| milestone | status | where we are | next | work (live rows · open units) |", "|---|---|---|---|---|"]
+        L += ["| milestone | status | where we are | next | work note |", "|---|---|---|---|---|"]
         for m in spec["milestones"]:
             if m["goal"] != gid:
                 continue
             p = built["per"][m["id"]]
-            work = (f"{len(p['rows_live'])} · {len(p['units_open'])}" if has_work(p)
-                    else f"**none yet** — {m.get('no_rows_reason', '')}")
+            # no counts here: they drift with every queue PR (see roadmap-guard-stale); --report has them
+            work = f"**none yet** — {m.get('no_rows_reason', '')}" if m.get("no_rows_reason") else "—"
             L.append(f"| **{m['id']}** {m['name']} | {GLYPH[m['status']]} {m['status']} | "
                      f"{_cell(m['where'])} | {_cell(m['next'])} | {_cell(work)} |")
         L.append("")
-    L += [(f"**Unmapped right now:** {len(built['orphan_rows'])} live checklist rows and "
-           f"{len(built['orphan_units'])} open queue units carry no milestone "
-           "(backfill is part of the weekly pass)."), "", END]
+    L += ["**Unmapped work** (live rows / open units with no milestone) is counted live by "
+          "`python3 scripts/ops/roadmap_map.py --report`; backfill is part of the weekly pass.", "", END]
     return "\n".join(L)
 
 
@@ -372,6 +372,16 @@ def self_test() -> int:
     assert any("stale" in b for b in stale), stale
     ok_text = "pre\n" + render(spec, built) + "\npost"
     assert static_problems(spec, built, "", ok_text) == []
+    # (b) count-only drift (queue PRs add/retire units, orphan counts move) must NOT report stale
+    more = units[:1] + [{"id": "RQ-20261001-3", "status": "queued", "title": "alpha two"},
+                        {"id": "RQ-20261001-4", "status": "queued", "title": "stray"}]
+    drift = build(spec, rows[:1] + [{"id": "R9", "state": "queued"}], more)
+    assert drift["per"]["A"]["units_open"] != built["per"]["A"]["units_open"] and drift["orphan_units"] != built["orphan_units"]
+    assert not any("stale" in b for b in static_problems(spec, drift, "", ok_text)), "count drift reported stale"
+    # (a) a milestones.yaml text change must still report stale
+    spec["milestones"][0]["where"] = "changed text"
+    assert any("stale" in b for b in static_problems(spec, built, "", ok_text))
+    spec["milestones"][0]["where"] = "w"
     # diff-scoped enforcement
     new = {"N1": {"id": "N1", "state": "queued"}}
     assert any("no `roadmap`" in b for b in diff_problems(spec, new, {}, {}, {}, {"N1": 20}))
