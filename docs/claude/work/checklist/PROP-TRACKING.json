@@ -8,10 +8,12 @@
   "ceiling_usd": 35,
   "spend_usd": null,
   "tier": 2,
-  "prs": [],
+  "prs": [
+    17745
+  ],
   "blocked_on": [],
-  "note": "[2026-10-12 lane session_01FNBC34jaQwH3Z1gNRbKigG, dispatched by manager session_01G16FfyYSmDPQuuW55BuTmK] OPERATOR 2026-10-12 verbatim: 'we need to be able to track the prop trades - no upnl isn't a solution to the issue'. Scope: (1) phone APK reads Breakout terminal balance + open positions + closes, MEASURED; (2) server stores + reconciles journal vs venue positions (closed_unpriced, unconfirmed+alert); (3) ESTIMATED mark-based uPnL fallback labelled 'mark_estimate' on /api/bot/prop/overview + SPA. Landing hold, Tier 2, manager merges. Ceiling $35.",
-  "updated_at": "2026-10-12T11:05:10Z",
+  "note": "[2026-10-12 lane session_01FNBC34jaQwH3Z1gNRbKigG, dispatched by manager session_01G16FfyYSmDPQuuW55BuTmK] OPERATOR 2026-10-12 verbatim: 'we need to be able to track the prop trades - no upnl isn't a solution to the issue'. Scope: (1) phone APK reads Breakout terminal balance + open positions + closes, MEASURED; (2) server stores + reconciles journal vs venue positions (closed_unpriced, unconfirmed+alert); (3) ESTIMATED mark-based uPnL fallback labelled 'mark_estimate' on /api/bot/prop/overview + SPA. Landing hold, Tier 2, manager merges. Ceiling $35. [2026-10-12T11:30Z lane session_01FNBC34jaQwH3Z1gNRbKigG] BUILT, HOLD for manager: bot PR #17745 (Tier 2, landing hold; phone exec.js/Api.kt/MainActivity.kt + server phone_reconcile.py/record_report/overview; tests/test_prop_tracking.py 21 pass, prop+phone+breakout suites 1708 pass locally, exec_check.js all pass); SPA PR ict-trader-dashboard#224 (prop per-trade + book uPnL rendered, 'est.' label; it had hard-coded null). No order-path change. NOT YET: merged/deployed/observed. Mark-ESTIMATE fallback goes live on deploy; MEASURED needs the operator to install the APK built from main after merge, then PI-20261012-GNRBKIGG-0001 (first clean Positions read). Day P&L follow-up: PI-20261012-GNRBKIGG-0002.",
+  "updated_at": "2026-10-12T11:27:53Z",
   "updated_by": "session_01FNBC34jaQwH3Z1gNRbKigG",
   "roadmap": [
     "L-PROP"
