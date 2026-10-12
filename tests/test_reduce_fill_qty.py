@@ -18,11 +18,12 @@ from types import SimpleNamespace
 
 import pytest
 
-from tests.test_intent_reduce_partial_close import (  # noqa: F401 — fixture
-    FakeDB,
-    _signed_net,
-    db,
-)
+from tests.test_intent_reduce_partial_close import FakeDB, _signed_net
+
+
+@pytest.fixture()
+def db(tmp_path):
+    return FakeDB(str(tmp_path / "trades.db"))
 
 
 class FakeBybit:
