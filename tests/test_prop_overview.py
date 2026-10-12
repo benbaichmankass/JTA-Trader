@@ -115,13 +115,14 @@ def _patch_ur(monkeypatch, fills, ur, fresh=None):
 
 
 def test_unrealized_sums_venue_numbers_and_flat_accounts(monkeypatch):
+    monkeypatch.setattr(po, "_is_phone_account", lambda a: False)  # journal vouches for flat on VM executors
     fills = [_fill(95, "tradeify_1", "open", tkt="A")]
     _patch_ur(monkeypatch, fills, {"tradeify_1": -13.31, "velotrade_1": None, "breakout_2": None})
     o = po.build_overview("7d", accounts=ACCTS, now=NOW)
     states = {a["account_id"]: (a["unrealized"], a["unrealized_state"], a["unrealized_provenance"])
               for a in o["equity"]["accounts"]}
     assert states["tradeify_1"] == (-13.31, "venue_snapshot", "measured")
-    assert states["velotrade_1"] == (0.0, "no_open_trades", "estimated")
+    assert states["velotrade_1"] == (0.0, "no_open_trades", "journal")
     assert o["unrealized_pnl"] == -13.31 and o["unrealized"]["accounts_unknown"] == 0
     t = o["open_trades"][0]
     assert (t["unrealized_pnl"], t["unrealized_provenance"]) == (-13.31, "measured")
@@ -129,6 +130,7 @@ def test_unrealized_sums_venue_numbers_and_flat_accounts(monkeypatch):
 
 
 def test_unrealized_total_is_null_when_any_account_unknown(monkeypatch):
+    monkeypatch.setattr(po, "_is_phone_account", lambda a: False)
     fills = [_fill(1, "velotrade_1", "open", tkt="A")]
     _patch_ur(monkeypatch, fills, {"tradeify_1": 5.0, "velotrade_1": None, "breakout_2": None})
     o = po.build_overview("7d", accounts=ACCTS, now=NOW)
@@ -148,8 +150,37 @@ def test_stale_snapshot_number_is_not_used(monkeypatch):
 
 
 def test_two_open_trades_do_not_split_the_account_number(monkeypatch):
+    monkeypatch.setattr(po, "_is_phone_account", lambda a: False)
     fills = [_fill(1, "tradeify_1", "open", tkt="A"), _fill(2, "tradeify_1", "open", tkt="B")]
     _patch_ur(monkeypatch, fills, {"tradeify_1": 20.0, "velotrade_1": None, "breakout_2": None})
     o = po.build_overview("7d", accounts=ACCTS, now=NOW)
     assert o["unrealized_pnl"] == 20.0
     assert [t["unrealized_pnl"] for t in o["open_trades"]] == [None, None]
+
+
+def test_phone_executed_account_with_no_venue_number_is_not_reported_never_zero(monkeypatch):
+    """BREAKOUT-UNRECORDED: breakout_2 held two live positions the journal never saw, and the overview said
+    0.0 'estimated'. A phone-executed account's journal cannot vouch for flat: null + not_reported."""
+    monkeypatch.setattr(po, "_is_phone_account", lambda a: a == "breakout_2")
+    _patch_ur(monkeypatch, [], {"tradeify_1": 5.0, "velotrade_1": None, "breakout_2": None})
+    o = po.build_overview("7d", accounts=ACCTS, now=NOW)
+    by = {a["account_id"]: a for a in o["equity"]["accounts"]}
+    b2 = by["breakout_2"]
+    assert (b2["unrealized"], b2["unrealized_state"], b2["unrealized_provenance"]) == (None, "not_reported", "unverified")
+    assert by["velotrade_1"]["unrealized"] == 0.0 and by["velotrade_1"]["unrealized_provenance"] == "journal"
+    assert o["unrealized_pnl"] is None and o["unrealized"]["accounts_unknown"] == 1
+    assert "_phone_executed" not in b2
+
+
+def test_phone_executed_account_with_a_venue_number_still_reports_it(monkeypatch):
+    monkeypatch.setattr(po, "_is_phone_account", lambda a: a == "breakout_2")
+    _patch_ur(monkeypatch, [], {"tradeify_1": 5.0, "velotrade_1": None, "breakout_2": 51.0})
+    o = po.build_overview("7d", accounts=ACCTS, now=NOW)
+    b2 = [a for a in o["equity"]["accounts"] if a["account_id"] == "breakout_2"][0]
+    assert (b2["unrealized"], b2["unrealized_state"], b2["unrealized_provenance"]) == (51.0, "venue_snapshot", "measured")
+
+
+def test_unreadable_platform_config_never_reads_as_flat(monkeypatch):
+    import src.prop.phone_executor as pe
+    monkeypatch.setattr(pe, "is_phone_account", lambda a: (_ for _ in ()).throw(OSError("no config")))
+    assert po._is_phone_account("velotrade_1") is True
