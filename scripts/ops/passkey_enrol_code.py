@@ -9,7 +9,6 @@ code: stdout/stderr (which the action posts to a PUBLIC issue comment) carry onl
 # (scripts/ops/passkey_enrol_code_action.sh); not imported by the runtime.
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
