@@ -1,0 +1,21 @@
+{
+  "id": "PROP-TRACKING",
+  "title": "Prop trade tracking: phone executor reports balance + open positions + closes; server reconciles journal; ESTIMATED mark-based uPnL fallback",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "lane (session_01FNBC34jaQwH3Z1gNRbKigG)",
+  "lane": "session_01FNBC34jaQwH3Z1gNRbKigG",
+  "ceiling_usd": 35,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-12 lane session_01FNBC34jaQwH3Z1gNRbKigG, dispatched by manager session_01G16FfyYSmDPQuuW55BuTmK] OPERATOR 2026-10-12 verbatim: 'we need to be able to track the prop trades - no upnl isn't a solution to the issue'. Scope: (1) phone APK reads Breakout terminal balance + open positions + closes, MEASURED; (2) server stores + reconciles journal vs venue positions (closed_unpriced, unconfirmed+alert); (3) ESTIMATED mark-based uPnL fallback labelled 'mark_estimate' on /api/bot/prop/overview + SPA. Landing hold, Tier 2, manager merges. Ceiling $35.",
+  "updated_at": "2026-10-12T11:05:10Z",
+  "updated_by": "session_01FNBC34jaQwH3Z1gNRbKigG",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "priority": "critical",
+  "_seq": 433
+}
