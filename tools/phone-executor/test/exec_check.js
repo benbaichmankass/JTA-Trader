@@ -472,6 +472,20 @@ document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__su
   const qP7 = await onHost(posTable("Positions", "<tr><td>ETHUSD</td><td>-1.5</td><td>2600</td><td>2550</td><td>3000</td><td>−75.00</td><td>-</td></tr>", "<p>x</p>"));
   let e7 = await qP7.evaluate("__ex.positionsRead()");
   eq([e7.state, e7.rows[0].side, e7.rows[0].qty, e7.rows[0].upnl], ["read", "short", 1.5, -75], "positions: signed size gives the side; unicode minus uPnL");
+  // REVIEW OF #17745 (blocking 1): "no positions" text ANYWHERE on the page is not a flat read; only the tab's own
+  // count of 0 or the ONE visible tab panel saying so.
+  const qF1 = await onHost(`<!doctype html><html><body><div role=tablist><button role=tab>Positions</button></div><p>You have no positions in your watchlist alerts</p></body></html>`);
+  eq((await qF1.evaluate("__ex.positionsRead()")).state, "no_table", "flat refused: page-wide 'no positions' text is not the Positions panel");
+  const qF2 = await onHost(`<!doctype html><html><body><div role=tablist><button role=tab>Positions (0)</button></div><p>whatever</p></body></html>`);
+  let f2 = await qF2.evaluate("__ex.positionsRead()");
+  eq([f2.state, f2.rows], ["read", []], "flat accepted: the tab's own count is 0");
+  const qF3 = await onHost(`<!doctype html><html><body><div role=tablist><button role=tab>Positions</button></div><div role=tabpanel>No open positions</div></body></html>`);
+  eq((await qF3.evaluate("__ex.positionsRead()")).state, "read", "flat accepted: the one visible tab panel says no positions");
+  // REVIEW OF #17745 (blocking 2): more rows than the cap are refused, never truncated (a dropped row would read as closed)
+  const many = Array.from({length: 16}, (_, i) => `<tr><td>ETH Long</td><td>${i + 1}</td><td>2500</td><td>2501</td><td>2000</td><td>1</td><td>-</td></tr>`).join("");
+  const qF4 = await onHost(posTable("Positions", many));
+  let f4 = await qF4.evaluate("__ex.positionsRead()");
+  eq([f4.state, f4.n_rows, f4.rows], ["too_many_rows", 16, undefined], "16 positions -> too_many_rows, nothing sent");
   const closedT = `<!doctype html><html><body><div role=tablist><button role=tab>Positions</button><button role=tab>Closed orders</button></div>
 <table><tr><th>Time</th><th>Symbol</th><th>Side</th><th>Type</th><th>Filled</th><th>Avg. price</th><th>Status</th><th>Realized PnL</th></tr>
 <tr><td>2026-10-12 12:01:05</td><td>ETH</td><td>Sell</td><td>Take profit</td><td>1.1758</td><td>2,655.40</td><td>Filled</td><td>+150.03</td></tr>

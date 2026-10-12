@@ -19,6 +19,7 @@ from src.prop import prop_journal
 from src.prop import prop_overview as po
 
 TOKEN = "t" * 43
+_DECLARED_MODE = rc.reconcile_mode   # the real YAML-backed mode, before the fixture pins `write`
 ACCTS = {"breakout_2": {"account_class": "prop", "mode": "live"}}
 
 
@@ -35,6 +36,9 @@ def env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr("src.runtime.notify.send_telegram_direct", lambda m, **k: sent.append(m) or True)
     monkeypatch.setattr("src.prop.breakout_notify.emit_prop_fill", lambda f, **k: {"push": False, "telegram": False})
     monkeypatch.setattr("src.runtime.local_pnl.last_mark_price", lambda *a, **k: None)
+    # the repo's YAML declares breakout_2 `reconcile: report_only` (review of #17745); these tests exercise the
+    # write path unless a test says otherwise (test_report_only_* below read the real declared mode)
+    monkeypatch.setattr(rc, "reconcile_mode", lambda a: "write")
     return sent
 
 
@@ -189,7 +193,7 @@ def test_venue_position_without_a_journal_row_is_journaled_unconfirmed_once(env)
     _status([SOL])
     rows = [f for f in prop_journal.list_fills(account_id="breakout_2") if f["status"] == "open"]
     assert len(rows) == 1
-    assert rows[0]["ticket_id"] == "venue-breakout_2-SOLUSDT-long-111.16" and rows[0]["reason"].startswith("unconfirmed")
+    assert rows[0]["ticket_id"].startswith("venue-breakout_2-SOLUSDT-long-") and rows[0]["reason"].startswith("unconfirmed")
     assert (rows[0]["qty"], rows[0]["entry_price"]) == (17.26, 111.16)
     assert len(env) == 1 and "UNCONFIRMED" in env[0]
 
@@ -218,6 +222,77 @@ def test_an_unmapped_venue_position_freezes_closes(monkeypatch):
         monkeypatch.setattr(rc, "_now", lambda i=i: t0 + timedelta(seconds=90 * i))
         r = _status([odd])
     assert r["reconcile"]["pending_close"] == [str(jid)] and _open_ids() == [jid]
+
+
+# ---- review of #17745 ----
+
+def test_report_only_is_the_declared_mode_and_writes_nothing(monkeypatch, env):
+    monkeypatch.setattr(rc, "reconcile_mode", _DECLARED_MODE)
+    assert rc.reconcile_mode("breakout_2") == "report_only"           # config/prop_platforms.yaml declares it
+    jid = _open("prop-manual-f79")
+    t0 = datetime.now(timezone.utc)
+    for i in range(4):
+        monkeypatch.setattr(rc, "_now", lambda i=i: t0 + timedelta(seconds=90 * i))
+        r = _status([SOL])                                            # ETH absent, SOL unjournaled
+    assert r["reconcile"]["mode"] == "report_only"
+    assert _open_ids() == [jid]                                       # nothing closed
+    assert all(f["symbol"] != "SOLUSDT" for f in prop_journal.list_fills(account_id="breakout_2"))   # nothing opened
+    would = [m for m in env if "REPORT-ONLY" in m]
+    assert len([m for m in would if "close journal row" in m]) == 1   # ONE alert per decision, not per read
+    assert len([m for m in would if "UNCONFIRMED open row" in m]) == 1
+
+
+def test_a_closing_order_listed_before_the_row_went_missing_is_not_its_exit(monkeypatch):
+    jid = _open("prop-manual-f79")
+    old_close = {"symbol": "ETH", "side": "short", "qty": 1.1758, "price": 2400.0, "status": "Filled"}
+    t0 = datetime.now(timezone.utc)
+    monkeypatch.setattr(rc, "_now", lambda: t0)
+    _status([ETH], closed=[old_close])                                # an earlier trade's close, listed while ETH is open
+    for i in (1, 2):
+        monkeypatch.setattr(rc, "_now", lambda i=i: t0 + timedelta(minutes=30 * i))
+        r = _status([], closed=[old_close])
+    assert r["reconcile"]["closed_unpriced"] == [str(jid)]            # never priced at the old close
+
+
+def test_a_closing_order_timed_before_the_row_opened_is_not_its_exit(monkeypatch):
+    jid = _open("prop-manual-f79", minutes_ago=60)
+    stale = {"symbol": "ETH", "side": "short", "qty": 1.1758, "price": 2400.0, "status": "Filled",
+             "time": "2026-01-01 00:00:00"}
+    t0 = datetime.now(timezone.utc)
+    for i in range(2):
+        monkeypatch.setattr(rc, "_now", lambda i=i: t0 + timedelta(seconds=90 * i))
+        r = _status([], closed=[stale])
+    assert r["reconcile"]["closed_unpriced"] == [str(jid)]
+
+
+def test_synthetic_id_is_per_position_lifetime_and_the_alert_is_not_repeated(monkeypatch, env):
+    t0 = datetime.now(timezone.utc)
+    monkeypatch.setattr(rc, "_now", lambda: t0)
+    _status([SOL])
+    first = [f["ticket_id"] for f in prop_journal.list_fills(account_id="breakout_2") if f["status"] == "open"]
+    for i in (1, 2, 3):                                               # gone: closed after two reads
+        monkeypatch.setattr(rc, "_now", lambda i=i: t0 + timedelta(minutes=5 * i))
+        _status([])
+    assert _open_ids() == []
+    monkeypatch.setattr(rc, "_now", lambda: t0 + timedelta(minutes=30))
+    _status([SOL])                                                    # same symbol + entry again: a NEW position
+    opens = [f["ticket_id"] for f in prop_journal.list_fills(account_id="breakout_2") if f["status"] == "open"]
+    assert len(opens) == 2 and opens[0] != opens[1] and first[0] in opens
+    assert len(_open_ids()) == 1
+    assert len([m for m in env if "is OPEN on the terminal" in m]) == 2   # one per position, not per read
+
+
+def test_size_mismatch_is_alerted_once(monkeypatch, env):
+    _open("prop-manual-f79")
+    for _ in range(3):
+        r = _status([{**ETH, "qty": 0.5}])
+    assert r["reconcile"]["qty_mismatch"][0]["venue_qty"] == 0.5
+    assert len([m for m in env if "size differs" in m]) == 1
+
+
+def test_mark_source_is_derived_from_the_instrument_profile():
+    assert po._mark_source("SOLUSDT") == "bybit_last_close_5m"
+    assert po._mark_source("NOSUCHSYMBOL") == "bot_feed_last_close_5m"
 
 
 # ---- overview ----

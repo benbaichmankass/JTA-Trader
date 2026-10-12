@@ -347,6 +347,10 @@ phone_accounts:
     # on the phone's next claim, ONE always-dry ETH test ticket is written for this id. Change the id to ask again.
     # Faster, no CI run: the Tier-1 `phone-dry-test` system-action (docs/claude/system-actions.md) writes the same ticket.
     dry_test_request: 2026-10-06-bg-2   # overlay granted; retest of the self bring-to-front (#16764, PI-20261006-APBY4NTV-0006)
+    # PROP-TRACKING journal reconcile against the terminal's Positions list (src/prop/phone_reconcile.py):
+    # report_only = compute + alert what WOULD be closed/opened, write nothing (review of #17745: no live capture
+    # of Breakout's Positions DOM yet). Flip to `write` after the first clean live read: PI-20261012-GNRBKIGG-0004.
+    reconcile: report_only
     instruments:
       ETHUSDT: {venue: ETHUSD, qty_step: 0.01, price_step: 0.01}
       SOLUSDT: {venue: SOLUSD, qty_step: 0.01, price_step: 0.01}

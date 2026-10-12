@@ -233,6 +233,7 @@
     ["side", /^(side|direction|dir)$/i], ["qty", /^(size|qty|quantity|amount|filled)\b/i],
     ["type", /^(type|order type)$/i], ["status", /^status$/i], ["time", /time|date|closed|updated/i],
     ["symbol", /^(symbol|market|instrument|contract|asset|pair|coin|name)$/i]];
+  var ROW_CAP = 15;   // phone_reconcile._MAX_ROWS (40) is above it
   function colKey(h, cols) { for (var i = 0; i < cols.length; i++) if (cols[i][1].test((h || "").trim())) return cols[i][0]; return null; }
   function firstNumber(s) {   // "1.1758 ETH" -> 1.1758; "+31.27 USD (1.2%)" -> 31.27; "−31.27" -> -31.27; none -> null
     var m = /([-+−]?)\s*\$?\s*(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?/.exec((s || "").replace(/–/g, "-"));
@@ -243,7 +244,7 @@
     var c = all("button,[role=tab],[role=button],a").filter(function (x) { return re.test(t(x)); });
     if (c.length !== 1) return null; var m = /\(?\s*(\d+)\s*\)?\s*$/.exec(t(c[0]).replace(re, "")); return m ? parseInt(m[1], 10) : null;
   }
-  function readTable(cols, need, emptyRe, tabRe) {   // need: the keys every row must carry; a table is ours when it has a symbol column and a qty/price/entry column
+  function readTable(cols, need, emptyRe, tabRe, strict) {   // need: the keys every row must carry; a table is ours when it has a symbol column and a qty/price/entry column
     var hits = [];
     all("table,[role=table],[role=grid]").forEach(function (tb) {
       var hs = Array.prototype.slice.call(tb.querySelectorAll("th,[role=columnheader]")).map(t);
@@ -253,8 +254,11 @@
     var masked = function (hs) { return hs.map(function (h) { return h.replace(/\d/g, "#").slice(0, 24); }).slice(0, 20); };
     var count = tabCount(tabRe);
     if (hits.length !== 1) {
-      var bodyEmpty = hits.length === 0 && emptyRe.test(t(document.body));
-      if (bodyEmpty && (count === null || count === 0)) return {state: "read", rows: [], count: count, headers: []};
+      // No table: flat ONLY on the panel's own evidence -- the tab's count says 0, or the ONE visible tab panel says
+      // "no positions". Page-wide text is never enough (review of #17745: a "no positions" string elsewhere would
+      // read as flat and close every open journal row).
+      var panels = all("[role=tabpanel]"), panelEmpty = panels.length === 1 && emptyRe.test(t(panels[0]));
+      if (hits.length === 0 && (count === 0 || (count === null && panelEmpty))) return {state: "read", rows: [], count: count, headers: []};
       return {state: hits.length ? "ambiguous" : "no_table", tables: hits.length, count: count,
         headers: hits.length ? masked(hits[0].hs) : [], controls: all("button,[role=tab],[role=button]").map(function (x) { return t(x).replace(/\d/g, "#").slice(0, 30); }).filter(Boolean).slice(0, 30)};
     }
@@ -277,7 +281,10 @@
       if (o.symbol) o.symbol = o.symbol.replace(/\b(long|short|buy|sell)\b/ig, "").replace(/\d+(\.\d+)?\s*[x×]/ig, "").trim();
       out.push(o);
     });
-    var rows = out.slice(0, 15);
+    // every parsed row is sent, never a prefix: a row the server does not see would read as gone (review of #17745);
+    // a strict list longer than the cap is refused instead of truncated
+    if (strict && out.length > ROW_CAP) return {state: "too_many_rows", n_rows: out.length, count: count, headers: masked(h.hs)};
+    var rows = out.slice(0, ROW_CAP);
     if (bad || out.some(function (o) { return need.some(function (k) { return o[k] == null || o[k] === ""; }); }))
       return {state: "unparsed", n_rows: out.length + bad, count: count, headers: masked(h.hs)};
     if (count !== null && count !== out.length) return {state: "count_mismatch", n_rows: out.length, count: count, headers: masked(h.hs)};
@@ -835,13 +842,13 @@
     // UNMEASURED: no capture has shown Breakout's Positions table; headers come back digit-masked for a miss dump.
     positionsRead: function () {
       if (!hostOk()) return {state: "bad_host"};
-      return readTable(POS_COLS, ["symbol", "side", "qty"], /no (open )?positions|you have no (open )?positions/i, /^positions\b/i);
+      return readTable(POS_COLS, ["symbol", "side", "qty"], /no (open )?positions|you have no (open )?positions/i, /^positions\b/i, true);
     },
     // CLOSED ORDERS READ (PROP-TRACKING): the shown Closed orders / Trades table, newest rows as the page orders
     // them, max 15. Only OUR orders' symbol, side, qty, price, status, time and realized P&L columns; nothing else.
     closedRead: function () {
       if (!hostOk()) return {state: "bad_host"};
-      return readTable(CLOSED_COLS, ["symbol", "side"], /no (closed )?orders|no (trades|history)/i, /^(closed orders|trades)\b/i);
+      return readTable(CLOSED_COLS, ["symbol", "side"], /no (closed )?orders|no (trades|history)/i, /^(closed orders|trades)\b/i, false);
     },
     rowClose: function (sym, sideRe) {
       var n = norm(sym); var rx = new RegExp(sideRe, "i");

@@ -26,6 +26,12 @@ Rules (each one is a way a reconcile can lie, refused):
   symbol and side exists, the position is that order having filled (``open`` on its ticket). Otherwise it is an
   ``open`` row on a synthetic id (``venue-<account>-<symbol>-<side>-<entry>``, no ticket row, so it can never
   advance an unrelated ticket) with reason ``unconfirmed`` and ONE operator ping.
+* **REPORT-ONLY until a live read is observed** (review of #17745): no capture of Breakout's Positions DOM exists
+  yet, so ``config/prop_platforms.yaml`` declares ``reconcile: report_only`` for the account. Every decision is
+  computed and returned, and ONE alert per decision says what WOULD be written; the journal is untouched. Flipping
+  the key to ``write`` is follow-up PI-20261012-GNRBKIGG-0004, after the first clean live read.
+* A closing order is a row's exit only if it was first listed no earlier than the row went missing (minus one read
+  gap) and its own time, when it parses, is not before the row opened: a re-entry never takes an old close's price.
 * Provenance: venue values are ``MEASURED`` (read off the venue's own terminal); a close with no readable exit is
   ``UNVERIFIED``. P&L is the venue's realized figure or null -- never computed here (fee-blind).
 """
@@ -36,7 +42,7 @@ import logging
 import math
 import re
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -49,6 +55,9 @@ MISS_MIN_S = 60       # ...spanning at least this long
 GRACE_S = 120         # a row journaled this recently is never closed (the venue list may lag the submit)
 QTY_TOL = 0.02        # relative size tolerance when matching a venue position / a closing order to a journal row
 _MAX_ROWS = 40
+SEEN_SLACK = timedelta(minutes=10)   # a closing order seen up to one account-read gap (5 min) before the row went missing
+TZ_SLACK = timedelta(hours=14)       # the terminal's time zone is unmeasured: any UTC offset
+PING_REPEAT = timedelta(hours=24)    # a deduplicated alert may repeat after this long if its condition still holds
 _LOCK = threading.Lock()
 _DEAD = re.compile(r"cancel|reject|expire|fail", re.I)
 
@@ -190,12 +199,48 @@ def _qty_close(a: Optional[float], b: Optional[float]) -> bool:
     return abs(a - b) <= QTY_TOL * max(abs(a), abs(b))
 
 
-def _pick_exit(row: Dict[str, Any], closed: List[Dict[str, Any]], used: set) -> tuple:
-    """-> (closing order or None, n candidates). The closing side is the opposite of the position."""
+def _parse_venue_time(s: Any) -> Optional[datetime]:
+    """The terminal's own time text ("2026-10-12 12:01:05"); its zone is UNMEASURED, so a naive value is read as UTC
+    and only used with :data:`TZ_SLACK` either side."""
+    m = re.search(r"(\d{4})[-/.](\d{2})[-/.](\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?", str(s or ""))
+    if not m:
+        return None
+    y, mo, d, h, mi, se = (int(x) if x else 0 for x in m.groups())
+    try:
+        return datetime(y, mo, d, h, mi, se, tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+def _pick_exit(row: Dict[str, Any], closed: List[Dict[str, Any]], used: List[str],
+               seen: Dict[str, str], first_absent: Optional[datetime]) -> tuple:
+    """-> (closing order or None, n candidates). The closing side is the opposite of the position.
+
+    A closing order is this row's exit only if it could not belong to an EARLIER trade (review of #17745: a re-entry
+    could take an old close's price, labelled MEASURED):
+      * it was first SEEN no earlier than one read-gap before the row went missing (a close already listed while the
+        position was still on the venue is someone else's), and
+      * when its own time text parses, it is not before the row opened (minus :data:`TZ_SLACK`, the terminal's zone
+        being unmeasured).
+    Anything that fails a bound is not a candidate; with no candidate the close is journaled unpriced, never guessed."""
     want = "short" if _side(row.get("direction")) == "long" else "long"
+    opened = _parse(row.get("opened_at")) or _parse(row.get("reported_at"))
+
+    def ok(c: Dict[str, Any]) -> bool:
+        sig = _close_sig(c)
+        if sig in used:
+            return False
+        fs = _parse(seen.get(sig))
+        if first_absent is not None and fs is not None and fs < first_absent - SEEN_SLACK:
+            return False
+        vt = _parse_venue_time(c.get("time"))
+        if vt is not None and opened is not None and vt < opened - TZ_SLACK:
+            return False
+        return True
+
     cands = [c for c in closed if c["symbol"] == str(row.get("symbol") or "").upper() and c["side"] == want
              and c.get("price") is not None and not _DEAD.search(c.get("status") or "")
-             and _qty_close(c.get("qty"), _num(row.get("qty"))) and _close_sig(c) not in used]
+             and _qty_close(c.get("qty"), _num(row.get("qty"))) and ok(c)]
     return (cands[0] if len(cands) == 1 else None), len(cands)
 
 
@@ -220,16 +265,45 @@ def _ping(msg: str, send=None) -> None:
     phone_executor._ping(msg, send)
 
 
+def reconcile_mode(account_id: str) -> str:
+    """``write`` or ``report_only`` from ``config/prop_platforms.yaml`` ``phone_accounts.<acct>.reconcile``.
+
+    Declared in YAML, never an env flag: review of #17745 asked that auto-close and auto-open stay REPORT-ONLY
+    until one clean live Positions read of Breakout's terminal is observed (no capture of its DOM exists yet).
+    An absent or unknown value reads as ``report_only`` -- the mode that writes nothing -- and the account's
+    YAML states it explicitly; flipping it to ``write`` is the follow-up PI-20261012-GNRBKIGG-0004."""
+    from src.prop import phone_executor
+
+    v = str((phone_executor.phone_config(account_id) or {}).get("reconcile") or "").strip().lower()
+    return "write" if v == "write" else "report_only"
+
+
+def _once(st: Dict[str, Any], key: str, now: datetime) -> bool:
+    """True when the alert ``key`` has not fired in the last :data:`PING_REPEAT` (and records it)."""
+    sent = st.setdefault("pinged", {})
+    last = _parse(sent.get(key))
+    if last is not None and now - last < PING_REPEAT:
+        return False
+    sent[key] = now.isoformat()
+    return True
+
+
 def reconcile(account_id: str, positions: List[Dict[str, Any]], closed: List[Dict[str, Any]], *,
-              now: Optional[datetime] = None, send=None) -> Dict[str, Any]:
+              now: Optional[datetime] = None, send=None, mode: Optional[str] = None) -> Dict[str, Any]:
     """Reconcile the account's journal against ONE clean venue Positions read. Returns a summary (also kept in the
-    snapshot's raw by the caller). Never raises past a logged warning: the account_status itself is already stored."""
+    snapshot's raw by the caller). Never raises past a logged warning: the account_status itself is already stored.
+
+    ``report_only`` (the default until the follow-up flips it): every decision is computed exactly as in ``write``
+    mode and returned, and ONE alert per decision says what WOULD be written ("would close row N ..."); nothing
+    is written to the journal."""
     from src.prop import prop_journal
     from src.prop.prop_overview import split_fills
     from src.prop.prop_report import ingest_report
 
     now = now or _now()
-    out: Dict[str, Any] = {"closed": [], "closed_unpriced": [], "pending_close": [], "opened": [],
+    mode = mode or reconcile_mode(account_id)
+    write = mode == "write"
+    out: Dict[str, Any] = {"mode": mode, "closed": [], "closed_unpriced": [], "pending_close": [], "opened": [],
                            "unconfirmed": [], "unmapped": [], "matched": 0}
     with _LOCK:
         fills = prop_journal.list_fills(account_id=account_id, limit=500)
@@ -237,11 +311,29 @@ def reconcile(account_id: str, positions: List[Dict[str, Any]], closed: List[Dic
         open_rows = [f for f in open_rows if f.get("account_id") == account_id]
         st = _load_state(account_id)
         missing = st.get("missing") if isinstance(st.get("missing"), dict) else {}
-        used = set(st.get("used_closes") or [])
+        used: List[str] = [u for u in (st.get("used_closes") or []) if isinstance(u, str)]
+        seen: Dict[str, str] = st.get("seen_closes") if isinstance(st.get("seen_closes"), dict) else {}
+        for c in closed:   # when each closing order was FIRST listed (bounds which trade it can belong to)
+            seen.setdefault(_close_sig(c), now.isoformat())
 
         venue = [p for p in positions if p.get("symbol")]
         out["unmapped"] = [p["venue_symbol"] for p in positions if not p.get("symbol")]
         claimed: set = set()   # venue positions accounted for by journal rows
+
+        def act(report: Dict[str, Any], alert_key: str, alert: str) -> bool:
+            """Write the report (write mode) or alert what would be written (report-only). False = write failed."""
+            if write:
+                try:
+                    ingest_report(report)
+                except Exception:  # noqa: BLE001  # allow-silent: logged + kept pending; the next read retries
+                    logger.warning("phone_reconcile: write failed %s %s", account_id, alert_key, exc_info=True)
+                    return False
+                if alert:
+                    _ping(alert, send)
+                return True
+            if _once(st, "would:" + alert_key, now):
+                _ping(f"📱 phone {account_id} [reconcile REPORT-ONLY, nothing written]: WOULD " + alert_key.split("|", 1)[-1], send)
+            return True
 
         # 1. journal-open rows vs the venue list (grouped by symbol + side: the venue nets same-side entries)
         groups: Dict[tuple, List[Dict[str, Any]]] = {}
@@ -254,10 +346,14 @@ def reconcile(account_id: str, positions: List[Dict[str, Any]], closed: List[Dic
                 claimed.add(hit)
                 out["matched"] += len(rows)
                 jq = sum(_num(f.get("qty")) or 0.0 for f in rows)
-                if not _qty_close(jq, venue[hit]["qty"]):
-                    # a partial close or an add the journal did not see: reported in the summary, never auto-resized
+                vq = venue[hit]["qty"]
+                if not _qty_close(jq, vq):
+                    # a partial close or an add the journal did not see: reported + ONE alert, never auto-resized
                     out.setdefault("qty_mismatch", []).append({"symbol": key[0], "side": key[1],
-                                                               "journal_qty": jq, "venue_qty": venue[hit]["qty"]})
+                                                               "journal_qty": jq, "venue_qty": vq})
+                    if _once(st, f"qty:{key[0]}:{key[1]}:{vq:g}", now):
+                        _ping(f"📱 phone {account_id}: {key[0]} {key[1]} size differs: journal {jq:g} vs terminal "
+                              f"{vq:g} (partial close or unjournaled add?). CHECK; nothing was resized.", send)
                 continue
             for f in rows:
                 rid = _row_id(f)
@@ -282,13 +378,12 @@ def reconcile(account_id: str, positions: List[Dict[str, Any]], closed: List[Dic
                     # split_fills keys a close on ticket/external id; a row with neither cannot be closed by any
                     # report. Kept visible, flagged once, never silently left looking open-and-fine.
                     new_missing[rid] = m
-                    if not m.get("flagged"):
-                        m["flagged"] = True
+                    if _once(st, f"noid:{rid}", now):
                         _ping(f"📱 phone {account_id}: journal row {rid} ({f.get('symbol')} {f.get('direction')}) is "
                               f"not on the terminal's Positions list but has no ticket/order id to close it under. "
                               f"CHECK and report the close.", send)
                     continue
-                c, n = _pick_exit(f, closed, used)
+                c, n = _pick_exit(f, closed, used, seen, first)
                 reason = _close_reason(f, c)
                 report = {
                     "kind": "fill", "status": "closed", "account_id": account_id,
@@ -301,25 +396,31 @@ def reconcile(account_id: str, positions: List[Dict[str, Any]], closed: List[Dic
                     "reconcile": {"absent_reads": m["n"], "first_absent": m["first"], "exit_candidates": n,
                                   "closing_order": c},
                 }
-                try:
-                    ingest_report(report)
-                except Exception:  # noqa: BLE001  # allow-silent: logged + kept pending; the next read retries
-                    logger.warning("phone_reconcile: close write failed %s row %s", account_id, rid, exc_info=True)
+                what = (f"close|close journal row {rid} ({f.get('symbol')} {f.get('direction')}) at "
+                        + (f"{c['price']:g} ({reason})" if c else f"NO exit price ({n} matching closing orders read)"))
+                alert = "" if c else (f"📱 phone {account_id}: {f.get('symbol')} {f.get('direction')} (journal row {rid}) "
+                                      f"is no longer on the terminal's Positions list; journaled CLOSED without an exit "
+                                      f"price ({n} matching closing orders read). Report the exit if you can see it.")
+                if not act(report, what, alert):
                     new_missing[rid] = m
                     continue
+                if not write:
+                    new_missing[rid] = m   # nothing written: the row stays open, and stays counted as missing
                 if c:
-                    used.add(_close_sig(c))
+                    if write:
+                        used.append(_close_sig(c))
                     out["closed"].append({"id": rid, "exit": c["price"], "reason": reason})
                 else:
                     out["closed_unpriced"].append(rid)
-                    _ping(f"📱 phone {account_id}: {f.get('symbol')} {f.get('direction')} (journal row {rid}) is no "
-                          f"longer on the terminal's Positions list; journaled CLOSED without an exit price "
-                          f"({n} matching closing orders read). Report the exit if you can see it.", send)
 
         # 2. venue positions with no journal row
         placed = [f for f in fills if str(f.get("status") or "").lower() == "placed" and f.get("ticket_id")
                   and not any(o.get("ticket_id") == f.get("ticket_id") for o in open_rows + closed_rows)]
+        synth = st.get("synthetic") if isinstance(st.get("synthetic"), dict) else {}
+        live_keys = set()
         for i, p in enumerate(venue):
+            pkey = f"{p['symbol']}|{p['direction']}"
+            live_keys.add(pkey)
             if i in claimed:
                 continue
             w = next((f for f in placed if (str(f.get("symbol") or "").upper(), _side(f.get("direction")))
@@ -329,33 +430,38 @@ def reconcile(account_id: str, positions: List[Dict[str, Any]], closed: List[Dic
                     "opened_at": now.isoformat(), "source": "phone_reconcile", "provenance": MEASURED,
                     "venue_position": p}
             if w is not None:
-                placed.remove(w)
                 rep = {**base, "ticket_id": w["ticket_id"], "sl": w.get("sl"), "tp": w.get("tp"),
                        "reason": "filled: the placed working order is now on the terminal's Positions list"}
-                bucket = "opened"
+                bucket, what, alert = "opened", f"open|journal ticket {w['ticket_id']} as OPEN (its working order filled)", ""
             else:
-                ent = p.get("entry")
-                rep = {**base, "ticket_id": f"venue-{account_id}-{p['symbol']}-{p['direction']}-"
-                                            f"{'na' if ent is None else format(ent, 'g')}",
+                # one synthetic id per POSITION LIFETIME (review of #17745): it is minted when the position first
+                # appears unmatched and dropped when it leaves the venue list, so a later position with the same
+                # entry is a new row, and an already-journaled one is never re-alerted on every read
+                sid = synth.get(pkey) or (f"venue-{account_id}-{p['symbol']}-{p['direction']}-"
+                                          f"{now.strftime('%Y%m%dT%H%M')}")
+                synth[pkey] = sid
+                rep = {**base, "ticket_id": sid,
                        "reason": "unconfirmed: on the terminal's Positions list with no journal row"}
                 bucket = "unconfirmed"
-            try:
-                ingest_report(rep)
-            except Exception:  # noqa: BLE001  # allow-silent: logged; the next clean read retries it
-                logger.warning("phone_reconcile: open write failed %s %s", account_id, p, exc_info=True)
+                what = (f"open|journal {p['symbol']} {p['direction']} qty {p['qty']:g} (entry {p.get('entry')}) as an "
+                        f"UNCONFIRMED open row {sid}")
+                alert = (f"📱 phone {account_id}: {p['symbol']} {p['direction']} qty {p['qty']:g} is OPEN on the terminal "
+                         f"with no journal row; journaled as UNCONFIRMED (entry {p.get('entry')}). CHECK it is ours."
+                         if _once(st, f"unconf:{sid}", now) else "")
+            if not act(rep, what, alert):
                 continue
+            if w is not None and write:
+                placed.remove(w)
             out[bucket].append(f"{p['symbol']} {p['direction']}")
-            if bucket == "unconfirmed":
-                _ping(f"📱 phone {account_id}: {p['symbol']} {p['direction']} qty {p['qty']:g} is OPEN on the terminal "
-                      f"with no journal row; journaled as UNCONFIRMED (entry {p.get('entry')}). CHECK it is ours.", send)
+        st["synthetic"] = {k: v for k, v in synth.items() if k in live_keys}
         for vs in out["unmapped"]:
-            if vs not in (st.get("unmapped_flagged") or []):
-                st.setdefault("unmapped_flagged", []).append(vs)
+            if _once(st, f"unmapped:{vs}", now):
                 _ping(f"📱 phone {account_id}: the terminal shows a position in '{vs}', which is not a declared phone "
                       f"instrument; NOT journaled. CHECK the terminal.", send)
 
         st["missing"] = new_missing
-        st["used_closes"] = sorted(used)[-200:]
+        st["used_closes"] = used[-200:]   # insertion order = recency
+        st["seen_closes"] = dict(sorted(seen.items(), key=lambda kv: kv[1])[-500:])
         st["last_read"] = now.isoformat()
         _save_state(account_id, st)
     return out

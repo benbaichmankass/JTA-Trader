@@ -49,8 +49,9 @@ Contract (never collapse "unread" into 0):
         takes that position's uPnL, provenance ``measured``.
       - **a labelled ESTIMATE when no venue figure exists** (until the new APK
         is installed, or when a read is not clean): ``(mark - entry) x qty``,
-        signed by side, with the mark from the bot's own Bybit feed
-        (``src.runtime.local_pnl.last_mark_price``). Provenance ``estimated``,
+        signed by side, with the mark from the bot's own candle feed for the
+        symbol (``src.runtime.local_pnl.last_mark_price``; source labelled from
+        the instrument profile's exchange). Provenance ``estimated``,
         trade/account state ``mark_estimate``. An estimate is NEVER summed into
         ``total_usd``: it is in ``total_incl_estimates_usd`` beside
         ``accounts_estimated``, so the measured total stays honest.
@@ -202,6 +203,18 @@ def _venue_positions(snap: Optional[Dict[str, Any]], fresh: Any) -> Optional[Lis
     return raw["positions"]
 
 
+def _mark_source(symbol: str) -> str:
+    """Where the estimate's mark came from: the instrument profile's exchange (the same routing
+    ``market_data.connector_for_symbol`` uses for ``local_pnl.last_mark_price``), never a hard-coded venue."""
+    try:
+        from src.core.profile_loader import load_instrument_profiles
+        ex = getattr((load_instrument_profiles() or {}).get(str(symbol).upper()), "exchange", None)
+    except Exception:  # noqa: BLE001  # allow-silent: an unread profile is labelled, not guessed
+        logger.warning("prop_overview: instrument profile read failed for %s", symbol, exc_info=True)
+        ex = None
+    return f"{str(ex).lower() if ex else 'bot_feed'}_last_close_5m"
+
+
 def _mark_estimate(f: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """(mark - entry) x qty, signed by side, mark from the bot's own Bybit feed. ESTIMATED: a different venue's
     price, no fees, no funding. None when any term is missing (never 0)."""
@@ -220,7 +233,7 @@ def _mark_estimate(f: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         return None
     return {"unrealized_pnl": round((float(mark) - float(entry)) * float(qty) * sign, 2),
             "unrealized_provenance": "estimated", "unrealized_state": "mark_estimate",
-            "unrealized_mark": float(mark), "unrealized_mark_source": "bybit_last_close_5m",
+            "unrealized_mark": float(mark), "unrealized_mark_source": _mark_source(f["symbol"]),
             "unrealized_as_of": datetime.now(timezone.utc).isoformat()}
 
 
