@@ -556,6 +556,13 @@ class MainActivity : Activity() {
         val closed = if (pos?.optString("state") == "read") readView(p, "^(closed orders|trades)\\b", "__ex.closedRead()") else null
         if (closed != null) { p.js("__ex.clickText(${q("^positions\\b")})"); delay(600) }
         val ps = pos?.optString("state") ?: "unanswered"
+        // A Closed orders read that was not clean is dumped like a Positions miss (state prefixed "closed_"), so its
+        // layout can be fixed from evidence; the server keeps the latest miss per account.
+        val cs = closed?.optString("state")
+        if (closed != null && cs != "read" && System.currentTimeMillis() - lastPosMissMs >= POS_MISS_MS) {
+            lastPosMissMs = System.currentTimeMillis()
+            api.positionsMiss("closed_$cs", closed.optJSONArray("headers") ?: JSONArray(), closed.optJSONArray("controls") ?: JSONArray())
+        }
         if (ps != "read" && System.currentTimeMillis() - lastPosMissMs >= POS_MISS_MS) {
             lastPosMissMs = System.currentTimeMillis()
             api.positionsMiss(ps, pos?.optJSONArray("headers") ?: JSONArray(), pos?.optJSONArray("controls") ?: JSONArray())

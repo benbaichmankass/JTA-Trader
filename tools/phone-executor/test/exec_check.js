@@ -534,6 +534,17 @@ document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__su
   eq((await gNoSide.evaluate("__ex.positionsRead()")).state, "unparsed", "div grid: no readable side -> unparsed, never guessed");
   const gNoTabs = await onHost(`<!doctype html><html><body><div id=hdr><div>Market</div><div>UP&amp;L</div><div>Side</div><div>Value</div><div>Opening price</div><div>Current price</div></div><p>Start trading with leverage</p></body></html>`);
   eq((await gNoTabs.evaluate("__ex.positionsRead()")).state, "empty_unconfirmed", "div grid: no tab bar to bound the panel -> no flat evidence");
+  // CLOSED ORDERS as a DIV GRID (layout UNMEASURED; synthetic): the generic reader maps by header label too.
+  const cRow = (m, side, typ, qty, px, st, tm, pnl) => `<div class=r><div>${m}</div><div>${side}</div><div>${typ}</div><div>${qty}</div><div>${px}</div><div>${st}</div><div>${tm}</div><div>${pnl}</div></div>`;
+  const closedGrid = (tab, body) => `<!doctype html><html><body><div id=tabs><button>Open orders</button><button>Positions</button><button>${tab}</button><button>Trades</button></div>
+<div id=panel><div id=hdr><div>Market</div><div>Side</div><div>Type</div><div>Size</div><div>Avg. price</div><div>Status</div><div>Time</div><div>Net P&amp;L</div></div>${body}</div></body></html>`;
+  const cg = await onHost(closedGrid("Closed orders", cRow("SOLUSD", "Sell", "Stop", "17.26", "111.39", "Filled", "2026-10-12 16:30:05", "+3.97 USD") +
+    cRow("SOLUSD", "Buy", "Limit", "17.26", "111.16", "Filled", "2026-10-11 18:51:24", "-")));
+  let cgr = await cg.evaluate("__ex.closedRead()");
+  eq([cgr.state, cgr.layout, cgr.rows.length], ["read", "div_grid", 2], "closed div grid: two orders read");
+  eq([cgr.rows[0].side, cgr.rows[0].qty, cgr.rows[0].price, cgr.rows[0].status, cgr.rows[0].netpnl, cgr.rows[0].time], ["short", 17.26, 111.39, "Filled", 3.97, "2026-10-12 16:30:05"], "closed div grid: the exit row mapped by header");
+  const cgBad = await onHost(closedGrid("Closed orders", cRow("SOLUSD", "Sell", "Stop", "17.26", "111.39", "Filled", "2026-10-12 16:30:05", "+3.97 USD") + "<div class=r><div>SOLUSD 12</div><div>Buy</div></div>"));
+  eq((await cgBad.evaluate("__ex.closedRead()")).state, "unparsed", "closed div grid: a misaligned row is unparsed");
   const closedT = `<!doctype html><html><body><div role=tablist><button role=tab>Positions</button><button role=tab>Closed orders</button></div>
 <table><tr><th>Time</th><th>Symbol</th><th>Side</th><th>Type</th><th>Filled</th><th>Avg. price</th><th>Status</th><th>Realized PnL</th></tr>
 <tr><td>2026-10-12 12:01:05</td><td>ETH</td><td>Sell</td><td>Take profit</td><td>1.1758</td><td>2,655.40</td><td>Filled</td><td>+150.03</td></tr>

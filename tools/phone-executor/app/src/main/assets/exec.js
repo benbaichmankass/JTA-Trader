@@ -233,8 +233,11 @@
     ["sl", /^(sl|s\/l|stop)/i], ["tp", /^(tp|t\/p|take)/i], ["side", /^(side|direction|dir)$/i],
     ["qty", /^(size|qty|quantity|amount|position|contracts?)\b/i], ["lev", /^lev/i],
     ["symbol", /^(symbol|market|instrument|contract|asset|pair|coin|name)$/i], ["time", /time|date|opened/i]];
-  var CLOSED_COLS = [["skip", /^actions?$|fee|reduce/i], ["pnl", /pnl|p\s*&\s*l|profit/i],
-    ["price", /avg|average|fill(ed)? price|exec|^price$/i], ["trigger", /trigger|stop price/i],
+  // Closed orders: UNMEASURED layout (no live capture yet); the div-grid reader below is generic, and a miss posts
+  // its digit-masked headers (closed_ prefix) exactly like Positions.
+  var CLOSED_COLS = [["skip", /^actions?$|fee|reduce|^tp\s*\/\s*sl/i], ["netpnl", /^net\s*p\s*&?\s*l/i], ["pnl", /pnl|p\s*&\s*l|profit/i],
+    ["value", /^(position |order )?value$|^notional/i],
+    ["price", /avg|average|(fill(ed)?|clos(e|ed|ing)|exit|exec(uted)?)\s*price|^price$/i], ["trigger", /trigger|stop price/i],
     ["side", /^(side|direction|dir)$/i], ["qty", /^(size|qty|quantity|amount|filled)\b/i],
     ["type", /^(type|order type)$/i], ["status", /^status$/i], ["time", /time|date|closed|updated/i],
     ["symbol", /^(symbol|market|instrument|contract|asset|pair|coin|name)$/i]];
@@ -265,8 +268,8 @@
     if (typeof o.qty === "number") o.qty = Math.abs(o.qty);
     // NO size column (Breakout's Positions grid shows Value, not contracts): qty = |Value| / Current price, marked
     // qty_src so the server and a reader know it is DERIVED (rounded Value, so only approximately the placed size)
-    if (keys.indexOf("qty") < 0 && keys.indexOf("value") >= 0 && typeof o.value === "number" && typeof o.mark === "number" && o.mark > 0 && o.value !== 0) {
-      o.qty = Math.round(Math.abs(o.value) / o.mark * 1e8) / 1e8; o.qty_src = "value/mark";
+    if (keys.indexOf("qty") < 0 && keys.indexOf("value") >= 0 && typeof o.value === "number" && typeof (o.mark != null ? o.mark : o.price) === "number" && (o.mark != null ? o.mark : o.price) > 0 && o.value !== 0) {
+      o.qty = Math.round(Math.abs(o.value) / (o.mark != null ? o.mark : o.price) * 1e8) / 1e8; o.qty_src = "value/mark";
     }
     if (o.symbol) o.symbol = o.symbol.replace(/\b(long|short|buy|sell)\b/ig, "").replace(/\d+(\.\d+)?\s*[x×]/ig, "").trim();
     return o;
@@ -300,7 +303,8 @@
     labels.forEach(function (l) {
       for (var a = l.parentElement, d = 0; a && d < 6 && a !== document.body; a = a.parentElement, d++) {
         var ks = {}; labels.forEach(function (m) { if (a.contains(m)) ks[colKey(t(m), cols)] = 1; });
-        if (Object.keys(ks).length >= 4 && ks.side && (ks.entry || ks.mark)) { if (found.indexOf(a) < 0) found.push(a); return; }
+        var okShape = cols === CLOSED_COLS ? (ks.side && ks.symbol && (ks.price || ks.qty || ks.pnl)) : (ks.side && (ks.entry || ks.mark));
+        if (Object.keys(ks).length >= 4 && okShape) { if (found.indexOf(a) < 0) found.push(a); return; }
       }
     });
     return innermost(found);
