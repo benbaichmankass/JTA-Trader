@@ -43,7 +43,7 @@ asset class, horizon or regime — and is any of it tradeable **net of the full 
 
 | source | verdict | why |
 |---|---|---|
-| **GDELT 2.0 GKG** (full columns) | **KEPT** → NEWS-ALPHA-CORPUS | free, keyless, 15-min files since 2015-02; ingest time `V2.1DATE` gives a no-lookahead availability stamp; **V2Tone is computed by GDELT over the full article text**, so dropping to titles was a fetch choice, not a source limit; also themes / organisations / GCAM. [GDELT GCAM](https://blog.gdeltproject.org/?p=1044) (primary) |
+| **GDELT 2.0 GKG** (full columns) | **KEPT** → NEWS-ALPHA-CORPUS | free, keyless, 15-min files since 2015-02; ingest time `V2.1DATE` gives a no-lookahead availability stamp; **V2Tone is, per GDELT's documentation as recalled (UNVERIFIED this session — the CORPUS lever confirms it from the codebook and a fixture), computed over the full article text**, so dropping to titles would be a fetch choice, not a source limit; also themes / organisations / GCAM. [GDELT GCAM](https://blog.gdeltproject.org/?p=1044) (primary) |
 | **Prediction-market price MOVES** (Kalshi backfill + collector) | **KEPT** → U09 | already on the trainer; derived-only output (third-party terms unread, operator 2026-10-08) |
 | **FOMC statement text** (federalreserve.gov) | **KEPT** → NEWS-ALPHA-SRC-FOMC, U11 | free, exactly timed, ~23 years — n not bounded by our corpus |
 | **SEC EDGAR 8-K** | **KEPT** → NEWS-ALPHA-SRC-EDGAR, U12 | free (10 req/s fair access); acceptance-datetime field location **not yet confirmed** — verify on a runner first |

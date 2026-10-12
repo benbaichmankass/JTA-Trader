@@ -11,8 +11,8 @@
   "tier": 2,
   "prs": [],
   "blocked_on": [],
-  "note": "[2026-10-12 lane NEWS-ALPHA-PROGRAM] Extends scripts/research/news_hist_fetch.py (NEWS-HIST-REPLAY, branch claude/news-hist-replay) -- reuse its ledger/availability rule (available_at = V2.1DATE ingest; publisher time never gates), do not fork it. FINDING: the NEWS-HIST-REPLAY corpus (1.42M items, 519 MB) was written to that session's scratch /tmp/gd/corpus and is NOT persisted anywhere a runner or later session can read; and it kept only PAGE_TITLE, while GKG's V2Tone is computed by GDELT over the FULL article text, so the 'title-only' limit is a fetch choice, not a source limit. Tier 2 only for the trainer timer (forward append); the backfill itself is an off-VM one-shot. Off the live VM (macro-research invariant 1). Serves units listed in docs/research/news-alpha-program-2026-10-12.md; program row NEWS-ALPHA-PROGRAM.",
-  "updated_at": "2026-10-12T14:01:52Z",
+  "note": "[2026-10-12 lane NEWS-ALPHA-PROGRAM] Extends scripts/research/news_hist_fetch.py (NEWS-HIST-REPLAY, branch claude/news-hist-replay) -- reuse its ledger/availability rule (available_at = V2.1DATE ingest; publisher time never gates), do not fork it. FINDING: the NEWS-HIST-REPLAY corpus (1.42M items, 519 MB) was written to that session's scratch /tmp/gd/corpus and is NOT persisted anywhere a runner or later session can read; and it kept only PAGE_TITLE, while GKG's V2Tone is (UNVERIFIED this session; confirm from the GKG 2.1 codebook) computed by GDELT over the full article text -- if so the 'title-only' limit is a fetch choice, not a source limit. Tier 2 only for the trainer timer (forward append); the backfill itself is an off-VM one-shot. Off the live VM (macro-research invariant 1). Serves units listed in docs/research/news-alpha-program-2026-10-12.md; program row NEWS-ALPHA-PROGRAM.",
+  "updated_at": "2026-10-12T14:09:58Z",
   "updated_by": "session_01SPre8cB96Nn4sUTry1KAiX",
   "roadmap": [
     "M28"
