@@ -1,0 +1,11 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "why": "Read path only (src/prop/prop_overview.py + its test). /api/bot/prop/overview no longer returns unrealized 0.0 with provenance 'estimated' for a phone-executed account (breakout_2) whose journal cannot vouch for flat: it returns null with state 'not_reported'. VM-executed accounts keep the journal-vouched 0.0, now labelled provenance 'journal' instead of 'estimated'. No order path, config, or write. Re-declared hold: check_pr_landing R5 cannot vouch for src/prop/prop_overview.py.",
+  "recorded_decision": {
+    "kind": "operator_decision",
+    "ref": "BREAKOUT-UNRECORDED (manager incident dispatch 2026-10-12, item 5)"
+  },
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Read-path change in src/prop/prop_overview.py, which the landing guard names Tier-2 so it will not self-land; the manager merges it under the data-backed standing authorization."
+}
