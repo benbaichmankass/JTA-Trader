@@ -268,11 +268,11 @@ document.querySelectorAll('[data-edit]').forEach(function(x){x.onclick=function(
   const acctA = `<!doctype html><html><body><button>Positions</button><button>Open orders</button>
 <button id=pf>Portfolio 98,123.45 USD</button><button>Turbo Eval 1</button><div><span>Balance</span><span>97,000.10</span></div><div>Equity: 98,123.45</div></body></html>`;
   const acctpA = await onHost(acctA);
-  eq(await acctpA.evaluate("__ex.accountPanel()"), {balance: 97000.1, equity: 98123.45, portfolio: 98123.45, n: {balance: 1, equity: 1, portfolio: 1}}, "account panel: balance/equity/portfolio read by label");
+  eq(await acctpA.evaluate("__ex.accountPanel()"), {balance: 97000.1, equity: 98123.45, portfolio: 98123.45, unrealized: null, n: {balance: 1, equity: 1, portfolio: 1, unrealized: 0}}, "account panel: balance/equity/portfolio read by label");
   const acctpB = await onHost(`<!doctype html><html><body><button>Portfolio 10,000.00 USD</button><button>Turbo Eval 5</button></body></html>`);
-  eq(await acctpB.evaluate("__ex.accountPanel()"), {balance: null, equity: null, portfolio: 10000, n: {balance: 0, equity: 0, portfolio: 1}}, "account panel: only Portfolio shown -> balance/equity absent (null), portfolio read");
+  eq(await acctpB.evaluate("__ex.accountPanel()"), {balance: null, equity: null, portfolio: 10000, unrealized: null, n: {balance: 0, equity: 0, portfolio: 1, unrealized: 0}}, "account panel: only Portfolio shown -> balance/equity absent (null), portfolio read");
   const acctpC = await onHost(`<!doctype html><html><body><button>Portfolio 1.00 USD</button><span>Portfolio 2.00 USD</span><button>Balance</button></body></html>`);
-  eq(await acctpC.evaluate("__ex.accountPanel()"), {balance: null, equity: null, portfolio: null, n: {balance: 0, equity: 0, portfolio: 2}}, "account panel: two different values or no value -> null, never guessed");
+  eq(await acctpC.evaluate("__ex.accountPanel()"), {balance: null, equity: null, portfolio: null, unrealized: null, n: {balance: 0, equity: 0, portfolio: 2, unrealized: 0}}, "account panel: two different values or no value -> null, never guessed");
   eq(await acctpC.evaluate("window.__submitted || 0"), 0, "account panel: read-only");
 
   // Fixture H (SOL-PICKER, MEASURED 2026-10-06 dry-fill dumps): the real "Select market" chip (div role=button,
@@ -441,5 +441,51 @@ document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__su
   // regression: the original lineup still reads exactly as before under the broadened reader
   await lg("/lineup");
   eq((await lp.evaluate("__ex.loginChoices()")).n, 3, "lineup: still exactly three candidates");
+  // POSITIONS + CLOSED ORDERS READ (PROP-TRACKING, 2026-10-12). SYNTHETIC tables in the shape the 2026-10-12 operator
+  // screenshot described ("ETH 5x ... uPnL +31.27 USD"); they prove the mapping and the fail-closed states, NOT
+  // Breakout's real headers (the first live read measures those; a miss posts the masked headers).
+  const posTable = (tab, rows, extra) => `<!doctype html><html><head><meta charset=utf-8></head><body><div role=tablist><button role=tab>${tab}</button><button role=tab>Open orders</button><button role=tab>Closed orders</button></div>
+<div id=wrap><table><thead><tr><th>Symbol</th><th>Size</th><th>Entry price</th><th>Mark price</th><th>Liq. price</th><th>Unrealized PnL</th><th>TP/SL</th></tr></thead>
+<tbody>${rows}</tbody></table>${extra || ""}</div></body></html>`;
+  const ROWS2 = "<tr><td>ETH 5x Long</td><td>1.1758 ETH</td><td>2,527.80</td><td>2,554.40</td><td>2,100.00</td><td>+31.27 USD (1.05%)</td><td>2655.4 / 2506.5</td></tr>" +
+    "<tr><td>SOL 5x Long</td><td>17.26 SOL</td><td>111.16</td><td>112.30</td><td>90.10</td><td>+19.67 USD</td><td>-</td></tr>";
+  const qP = await onHost(posTable("Positions (2)", ROWS2));
+  let qpr2 = await qP.evaluate("__ex.positionsRead()");
+  eq(qpr2.state, "read", "positions: two rows read");
+  eq(qpr2.rows.map((r) => [r.symbol, r.side, r.qty, r.entry, r.mark, r.upnl]),
+    [["ETH", "long", 1.1758, 2527.8, 2554.4, 31.27], ["SOL", "long", 17.26, 111.16, 112.3, 19.67]], "positions: symbol/side/qty/entry/mark/uPnL mapped by header");
+  eq(qpr2.count, 2, "positions: the tab's own count read");
+  eq(Object.keys(qpr2.rows[0]).includes("liq"), false, "positions: liquidation price not read as anything");
+  const qP2 = await onHost(posTable("Positions (3)", ROWS2));
+  eq((await qP2.evaluate("__ex.positionsRead()")).state, "count_mismatch", "positions: tab count 3 vs 2 rows -> not read");
+  const qP3 = await onHost(posTable("Positions", "", ""));
+  eq((await qP3.evaluate("__ex.positionsRead()")).state, "empty_unconfirmed", "positions: header with no rows and no empty text is NOT flat");
+  const qP4 = await onHost(posTable("Positions", "<tr><td colspan=7>No open positions</td></tr>"));
+  let e4 = await qP4.evaluate("__ex.positionsRead()");
+  eq([e4.state, e4.rows], ["read", []], "positions: explicit 'No open positions' row reads as flat");
+  const qP5 = await onHost(posTable("Positions", "<tr><td>ETH</td><td>1.17</td><td>2527.8</td><td>2554</td><td>2100</td><td>31</td><td>-</td></tr>"));
+  eq((await qP5.evaluate("__ex.positionsRead()")).state, "unparsed", "positions: a row with no readable side is unparsed, never guessed");
+  const qP6 = await onHost(`<!doctype html><html><body><div role=tablist><button role=tab>Positions</button></div><div class=card>ETH 5x uPnL +31.27</div></body></html>`);
+  let e6 = await qP6.evaluate("__ex.positionsRead()");
+  eq([e6.state, e6.controls.includes("Positions")], ["no_table", true], "positions: card layout (no table) -> no_table with the masked controls dump");
+  eq(/31/.test(JSON.stringify(e6)), false, "positions miss dump carries no value");
+  const qP7 = await onHost(posTable("Positions", "<tr><td>ETHUSD</td><td>-1.5</td><td>2600</td><td>2550</td><td>3000</td><td>−75.00</td><td>-</td></tr>", "<p>x</p>"));
+  let e7 = await qP7.evaluate("__ex.positionsRead()");
+  eq([e7.state, e7.rows[0].side, e7.rows[0].qty, e7.rows[0].upnl], ["read", "short", 1.5, -75], "positions: signed size gives the side; unicode minus uPnL");
+  const closedT = `<!doctype html><html><body><div role=tablist><button role=tab>Positions</button><button role=tab>Closed orders</button></div>
+<table><tr><th>Time</th><th>Symbol</th><th>Side</th><th>Type</th><th>Filled</th><th>Avg. price</th><th>Status</th><th>Realized PnL</th></tr>
+<tr><td>2026-10-12 12:01:05</td><td>ETH</td><td>Sell</td><td>Take profit</td><td>1.1758</td><td>2,655.40</td><td>Filled</td><td>+150.03</td></tr>
+<tr><td>2026-10-11 15:50:48</td><td>ETH</td><td>Buy</td><td>Limit</td><td>1.1758</td><td>2,527.80</td><td>Filled</td><td>-</td></tr></table></body></html>`;
+  const qC = await onHost(closedT);
+  let qcr = await qC.evaluate("__ex.closedRead()");
+  eq(qcr.state, "read", "closed orders read");
+  eq([qcr.rows[0].symbol, qcr.rows[0].side, qcr.rows[0].qty, qcr.rows[0].price, qcr.rows[0].type, qcr.rows[0].status, qcr.rows[0].pnl, qcr.rows[0].time],
+    ["ETH", "short", 1.1758, 2655.4, "Take profit", "Filled", 150.03, "2026-10-12 12:01:05"], "closed orders: the TP fill row mapped");
+  eq(qcr.rows[1].pnl, null, "closed orders: '-' P&L stays null, never 0");
+  // ACCOUNT PANEL on the Portfolio tab (PROP-TRACKING): balance + the terminal's own unrealized P&L, signed
+  const qA = await onHost(`<!doctype html><html><head><meta charset=utf-8></head><body><button>Portfolio 5,099.14 USD</button><div role=tablist><button role=tab>Portfolio</button></div>
+<dl><dt>Balance</dt><dd>5,048.20</dd><dt>Unrealized PnL</dt><dd>\u221212.06</dd></dl></body></html>`);
+  let ap = await qA.evaluate("__ex.accountPanel()");
+  eq([ap.balance, ap.portfolio, ap.unrealized], [5048.2, 5099.14, -12.06], "account panel: balance, portfolio and signed unrealized read by label");
   await b.close(); console.log("exec_check: all passed");
 })().catch((e) => { console.error(e); process.exit(1); });
