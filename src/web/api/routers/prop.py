@@ -146,6 +146,12 @@ def _phone_heartbeat(acct: str) -> dict[str, Any] | None:
     return phone_executor.last_heartbeat(acct) if phone_executor.is_phone_account(acct) else None
 
 
+def _phone_positions_diag(acct: str) -> dict[str, Any] | None:
+    from src.prop import phone_executor
+
+    return phone_executor.last_positions_diag(acct) if phone_executor.is_phone_account(acct) else None
+
+
 def _phone_events(acct: str) -> list[dict[str, Any]] | None:
     from src.prop import phone_executor
 
@@ -179,6 +185,8 @@ def get_status(account_id: str | None = None) -> dict[str, Any]:
             # the phone's last ~40 events (login_started/login_failed/... with the scrubbed reason), oldest first
             # (null = none posted since the log existed)
             "phone_events": _phone_events(acct),
+            # PROP-TRACKING: the latest Positions read that was NOT clean (state + masked headers/controls; null = none)
+            "phone_positions_diag": _phone_positions_diag(acct),
         }
     except Exception:  # noqa: BLE001  # allow-silent: degrade to present:false, not a 500
         logger.warning("prop: /status read failed; degrading to present:false", exc_info=True)
