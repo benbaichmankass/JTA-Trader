@@ -1,6 +1,6 @@
 # REDUCE-FILL-QTY — why intent-reduce legs filled short, and what PR #17691 changes (2026-10-12)
 
-> **Doc status:** `live` · category `evidence` · last verified `2026-10-12` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · **nobody has verified this document's status — do not act on it as current**
 
 Written 2026-10-12 by lane `REDUCE-FILL-QTY` (session_013PGJqGxzyzKVSSFydXA9U5,
 dispatched by manager session_01G16FfyYSmDPQuuW55BuTmK). Pipeline item
