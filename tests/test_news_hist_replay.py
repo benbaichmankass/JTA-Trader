@@ -227,3 +227,20 @@ def test_broad_population_widens_domains_but_keeps_point_in_time():
 def test_broad_domains_exclude_aggregators_and_include_live_feeds():
     assert "biztoc.com" not in fetch.BROAD_DOMAINS and "wkrb13.com" not in fetch.BROAD_DOMAINS
     assert fetch.feed_domain_allowlist() <= (fetch.BROAD_DOMAINS | fetch.feed_domain_allowlist())
+
+
+def test_archive_row_schema_and_leakage_guarantee():
+    cols = [""] * 27
+    cols[0], cols[1], cols[3], cols[4] = "x-1", "20240301120000", "Reuters.com", "https://r/u"
+    cols[7] = "ECON_INFLATION,12;TAX_FNCACT,5;ECON_INFLATION,99"
+    cols[9] = "1#United States#US#US#38#-97#US#1;1#Germany#GM#GM#51#9#GM#2"
+    cols[11], cols[13] = "jerome powell", "federal reserve;sec"
+    cols[15] = "-2.5,1.0,3.5,4.5,20.1,2.0,300"
+    cols[26] = ("<PAGE_PRECISEPUBTIMESTAMP>20240301130000</PAGE_PRECISEPUBTIMESTAMP>"  # future-dated vs ingest
+                "<PAGE_TITLE>Fed   holds</PAGE_TITLE>")
+    [r] = list(fetch.archive_rows(["\t".join(cols) + "\n"]))
+    assert r["a"] == "2024-03-01T12:00:00Z" and r["p"] == r["a"] and r["pb"] == "i"   # p never later than a
+    assert r["d"] == "reuters.com" and len(r["u"]) == 16 and r["ti"] == "Fed holds"
+    assert r["th"] == ["ECON_INFLATION", "TAX_FNCACT"] and r["pe"] == ["jerome powell"] and r["or"] == ["federal reserve", "sec"]
+    assert r["cc"] == ["GM", "US"] and r["tone"][:3] == [-2.5, 1.0, 3.5] and len(r["tone"]) == 7
+    assert list(fetch.archive_rows(["short\trow\n"])) == []

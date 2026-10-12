@@ -55,6 +55,8 @@ such -- "no items" and "file not fetched" are different states and never collaps
 from __future__ import annotations
 
 import argparse
+import gzip
+import hashlib
 import io
 import json
 import re
@@ -194,6 +196,62 @@ def parse_gkg_rows(
         }
 
 
+
+# ── ARCHIVE profile (NEWS-ALPHA reuse): EVERY GKG row, compact metadata, no keyword/domain filter ─────
+# The default profile above keeps only title-bearing rows the live scorer could count (a slice built for the
+# G1-offline replay). A standalone-edge research family needs the whole point-in-time stream: per item the
+# publish/ingest timestamps, source domain, URL hash (dedup key), GDELT tone vector, theme / person / org /
+# country entities, and the headline. Schema version ARCHIVE_SCHEMA; one gz JSONL shard per UTC availability day.
+ARCHIVE_SCHEMA = "gkg-archive-v1"
+C_THEMES, C_LOCS, C_PERSONS, C_ORGS, C_TONE = 7, 9, 11, 13, 15
+
+
+def _names(field: str, cap: int = 40) -> List[str]:
+    out, seen = [], set()
+    for x in field.split(";"):
+        x = x.split(",")[0].strip()          # themes carry ",offset"; persons/orgs are bare names
+        if x and x not in seen:
+            seen.add(x)
+            out.append(x)
+            if len(out) >= cap:
+                break
+    return out
+
+
+def archive_rows(fh: Iterable[str]) -> Iterator[Dict[str, Any]]:
+    """Yield one compact record per GKG row. ``a`` (ingest) is the availability time; ``p`` <= ``a`` always."""
+    for line in fh:
+        r = line.rstrip("\r\n").split("\t")
+        if len(r) < 27:
+            continue
+        try:
+            avail = parse_ts14(r[C_DATE])
+        except ValueError:
+            continue
+        pub, basis = avail, "ingest"
+        pm = _PRECISE_RE.search(r[C_EXTRAS])
+        if pm:
+            try:
+                pp = parse_ts14(pm.group(1))
+                if pp <= avail:
+                    pub, basis = pp, "precise"
+            except ValueError:
+                pass
+        tm = _TITLE_RE.search(r[C_EXTRAS])
+        tone = []
+        for x in r[C_TONE].split(",")[:7]:
+            try:
+                tone.append(round(float(x), 3))
+            except ValueError:
+                tone.append(None)
+        countries = sorted({b.split("#")[2] for b in r[C_LOCS].split(";") if b.count("#") >= 3 and b.split("#")[2]})
+        yield {"a": iso_z(avail), "p": iso_z(pub), "pb": basis[0], "d": r[C_DOMAIN].lower(),
+               "u": hashlib.sha1(r[C_URL].encode("utf-8", "replace")).hexdigest()[:16],
+               "tone": tone,  # [tone, positive, negative, polarity, activity_ref_density, selfgroup_density, wordcount]
+               "th": _names(r[C_THEMES]), "pe": _names(r[C_PERSONS], 15), "or": _names(r[C_ORGS], 15),
+               "cc": countries[:15], "ti": re.sub(r"\s+", " ", tm.group(1)).strip() if tm else ""}
+
+
 def floor15(dt: datetime) -> datetime:
     return dt.replace(minute=dt.minute - dt.minute % 15, second=0, microsecond=0)
 
@@ -249,7 +307,7 @@ def _download(url: str, tries: int = 4) -> Optional[bytes]:
     raise RuntimeError(f"download failed {url}: {err}")
 
 
-def fetch_one(ts: datetime, domains: Optional[Set[str]], keywords: Sequence[str]) -> Tuple[datetime, str, List[Dict[str, Any]], int]:
+def fetch_one(ts: datetime, domains: Optional[Set[str]], keywords: Sequence[str], archive: bool = False) -> Tuple[datetime, str, List[Dict[str, Any]], int]:
     """-> (ts, status, items, rows_scanned). status: ok | missing | error:<msg>."""
     url = GKG_URL.format(ts=ts.strftime("%Y%m%d%H%M%S"))
     try:
@@ -270,7 +328,8 @@ def fetch_one(ts: datetime, domains: Optional[Set[str]], keywords: Sequence[str]
                     n += 1
                     yield line
 
-            items = list(parse_gkg_rows(counted(text), domains=domains, keywords=keywords))
+            items = (list(archive_rows(counted(text))) if archive else
+                     list(parse_gkg_rows(counted(text), domains=domains, keywords=keywords)))
     except Exception as e:  # noqa: BLE001  # allow-silent: recorded as status error:<msg> in the ledger, never counted ok
         return ts, f"error:{e}"[:200], [], 0
     return ts, "ok", items, n
@@ -292,13 +351,14 @@ def load_ledger(out: Path) -> Dict[str, Dict[str, Any]]:
     return led
 
 
-def build_manifest(out: Path, domains: Optional[Set[str]], keywords: Sequence[str]) -> Dict[str, Any]:
+def build_manifest(out: Path, domains: Optional[Set[str]], keywords: Sequence[str], archive: bool = False) -> Dict[str, Any]:
     led = load_ledger(out)
     ok = [r for r in led.values() if r["status"] == "ok"]
     ts = sorted(led)
     return {
         "source": "GDELT 2.0 GKG (https://data.gdeltproject.org/gdeltv2/)",
-        "schema": "raw normalizer-shaped article + available_at + pub_basis",
+        "schema": ARCHIVE_SCHEMA if archive else "raw normalizer-shaped article + available_at + pub_basis",
+        "profile": "archive" if archive else "replay-slice",
         "generated_at": iso_z(datetime.now(timezone.utc)),
         "files_listed": len(led),
         "files_ok": len(ok),
@@ -328,6 +388,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--sources", choices=["live", "broad", "all"], default="live",
                     help="live = domains of the LIVE feed config; broad = live + BROAD_DOMAINS (superset: the replay "
                          "filters back down to live per symbol); all = no domain filter")
+    ap.add_argument("--archive", action="store_true",
+                    help="ARCHIVE profile: every row, compact tone/theme/entity metadata, gz shards (no keyword/domain filter)")
     ap.add_argument("--workers", type=int, default=12, help="processes (download + parse are CPU-heavy)")
     ap.add_argument("--manifest", help="write manifest JSON here (commit this, not the data)")
     ap.add_argument("--dry-run", action="store_true", help="list how many files would be fetched")
@@ -358,23 +420,30 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     done = 0
     with ProcessPoolExecutor(max_workers=a.workers) as ex, open(out / "_ledger.jsonl", "a", encoding="utf-8") as lf:
-        futs = [ex.submit(fetch_one, f, domains, kws) for f in todo]
+        futs = [ex.submit(fetch_one, f, domains, kws, a.archive) for f in todo]
         for fu in as_completed(futs):
             ts, status, items, nrows = fu.result()
             by_shard: Dict[Path, List[str]] = {}
             for it in items:
-                by_shard.setdefault(shard_path(out, it["available_at"]), []).append(json.dumps(it, ensure_ascii=False))
+                sp = shard_path(out, it["a" if a.archive else "available_at"])
+                if a.archive:
+                    sp = sp.with_suffix(".jsonl.gz")
+                by_shard.setdefault(sp, []).append(json.dumps(it, ensure_ascii=False, separators=(",", ":")))
             for sp, lines in by_shard.items():
                 sp.parent.mkdir(parents=True, exist_ok=True)
-                with open(sp, "a", encoding="utf-8") as sf:
-                    sf.write("\n".join(lines) + "\n")
+                if a.archive:  # concatenated gzip members are one valid stream
+                    with gzip.open(sp, "at", encoding="utf-8") as sf:
+                        sf.write("\n".join(lines) + "\n")
+                else:
+                    with open(sp, "a", encoding="utf-8") as sf:
+                        sf.write("\n".join(lines) + "\n")
             lf.write(json.dumps({"file": ts.strftime("%Y%m%d%H%M%S"), "status": status,
                                  "rows": nrows, "kept": len(items)}) + "\n")
             lf.flush()
             done += 1
             if done % 50 == 0:
                 print(f"  {done}/{len(todo)}", flush=True)
-    man = build_manifest(out, domains, kws)
+    man = build_manifest(out, domains, kws, a.archive)
     print(json.dumps(man, indent=2))
     if a.manifest:
         Path(a.manifest).parent.mkdir(parents=True, exist_ok=True)
