@@ -385,7 +385,7 @@ def positions_from_tables(tables: Sequence[Mapping[str, Any]]) -> Optional[List[
             if side is None and qty is not None:
                 side = "short" if qty < 0 else "long"
             out.append(Position(
-                symbol=sym, side=side,
+                symbol=canonical_symbol(sym) or sym, side=side,
                 quantity=abs(qty) if qty is not None else None,
                 entry_price=parse_number(_cell(row, c_open)),
                 stop_loss=parse_number(_cell(row, c_sl)),
@@ -420,7 +420,7 @@ def orders_from_tables(tables: Sequence[Mapping[str, Any]]) -> Optional[List[Wor
             qty = parse_number(_cell(row, c_qty))
             oid = (_cell(row, c_id) or "").strip() or None
             out.append(WorkingOrder(
-                symbol=sym, side=_side(_cell(row, c_side)),
+                symbol=canonical_symbol(sym) or sym, side=_side(_cell(row, c_side)),
                 order_type=(_cell(row, c_type) or "").strip() or None,
                 quantity=abs(qty) if qty is not None else None,
                 price=parse_number(_cell(row, c_px)),
@@ -483,7 +483,7 @@ def trade_history_from_tables(tables: Sequence[Mapping[str, Any]]) -> Optional[L
             out.append({
                 "time": (_cell(row, c_time) or "").strip(),
                 "ts": parse_history_time(_cell(row, c_time)),
-                "symbol": sym,
+                "symbol": canonical_symbol(sym) or sym,
                 "side": _side(_cell(row, c_side)),
                 "effect": "opening" if eff.startswith("open") else "closing" if eff.startswith("clos") else None,
                 "volume": abs(vol) if vol is not None else None,
@@ -713,6 +713,10 @@ def render_page_shape(shape: Mapping[str, Any], page_text: str,
 
 _EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
 _TOKENISH_RE = re.compile(r"[A-Za-z0-9_\-.=+/]{24,}")
+#: Our OWN log keys that are 24+ characters long, and so match the token rule
+#: (TRADEIFY-SOL-SIZE 2026-10-04: #16311/#16313 printed this action as
+#: "<token>"). Exact matches only; nothing derived from the page is listed.
+_SAFE_LONG_WORDS = frozenset({"quote_after_submit_check"})
 _URL_RE = re.compile(r"((?:https?|wss?)://[^\s/?#'\"]+)([/?#][^\s'\"]*)?", re.IGNORECASE)
 # A query string can carry a session id even with no scheme in front of it
 # (a bare "host.tld/path?sid=..." — _URL_RE only matches scheme://...).
@@ -744,7 +748,7 @@ def redact_text(text: str, *secrets: str) -> str:
     # any leftover query string on its own.
     out = _QUERY_STRING_RE.sub("?<query>", out)
     out = _EMAIL_RE.sub("<email>", out)
-    return _TOKENISH_RE.sub("<token>", out)
+    return _TOKENISH_RE.sub(lambda m: m.group(0) if m.group(0) in _SAFE_LONG_WORDS else "<token>", out)
 
 
 def render_structure(struct: Mapping[str, Any], frames: Sequence[Mapping[str, Any]],
@@ -2524,6 +2528,53 @@ SUBMIT_JS = r"""
 }
 """
 
+# The ticket COLUMN's visible text when the submit refuses (TRADEIFY-SOL-SIZE
+# 2026-10-04): the SOLUSD submit is disabled at 0.01 and 1.0 lot with every
+# field read back exactly, and nothing recorded WHY. A validation / warning
+# line (quantity, margin, market status) would sit somewhere in the sidebar
+# column, often in the footer OUTSIDE the panel, so this reads every visible
+# element whose box lies inside the column of the ticket's BUY button, keeps
+# only those with their OWN text, and records that text with the same
+# redaction as TICKET_PANEL_DUMP_JS: every digit is '#', emails are '<email>',
+# a user/profile/account/login element is skipped, input values are never
+# read, tables are skipped. Clicks nothing.
+SIDEBAR_TEXT_JS = r"""
+() => {
+  const mask = v => String(v || '').trim().replace(/\s+/g, ' ').replace(/\S+@\S+/g, '<email>').replace(/\d/g, '#').slice(0, 80);
+  const personal = /user|profile|account|login|email/i;
+  const buys = document.querySelectorAll('[data-test-id=BUY]');
+  if (buys.length !== 1) return {found: false, why: buys.length + ' [data-test-id=BUY] elements (need exactly 1)'};
+  let col = null;
+  for (let e = buys[0].parentElement; e && e !== document.body; e = e.parentElement) {
+    if (e.querySelector('[data-test-id=SELL]') && e.querySelector('[data-test-id=symbol_input]')) { col = e; break; }
+  }
+  if (!col) return {found: false, why: 'no ancestor of BUY holds SELL and symbol_input'};
+  const cr = col.getBoundingClientRect();
+  const rows = [];
+  for (const el of document.querySelectorAll('body *')) {
+    if (el.closest('table') || el.closest('svg')) continue;
+    const r = el.getBoundingClientRect();
+    if (r.width === 0 || r.height === 0) continue;
+    if (r.left < cr.left - 10 || r.right > cr.right + 10 || r.top < cr.top - 10) continue;
+    const tid = el.getAttribute('data-test-id') || '';
+    const cls = typeof el.className === 'string' ? el.className : '';
+    if (personal.test(tid) || personal.test(cls)) continue;
+    const own = [...el.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join(' ');
+    const t = mask(own);
+    const hint = /error|warn|invalid|alert|disabled|notice|message/i.test(cls + ' ' + (el.getAttribute('role') || '')) ;
+    if (!t && !hint) continue;
+    rows.push({tag: el.tagName.toLowerCase(), tid: mask(tid) || undefined, text: t || undefined,
+               role: el.getAttribute('role') || undefined, hint: hint || undefined,
+               cls: hint ? mask(cls) : undefined,
+               disabled: (el.disabled || el.getAttribute('aria-disabled') === 'true') || undefined,
+               box: [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)]});
+    if (rows.length >= 120) break;
+  }
+  return {found: true, column: [Math.round(cr.left), Math.round(cr.top), Math.round(cr.width), Math.round(cr.height)],
+          n: rows.length, truncated: rows.length >= 120, rows};
+}
+"""
+
 # What the submit click PRODUCED (live test #13987, 2026-09-29: submit was
 # clicked, then no position and no order appeared, and the run log could not
 # say what the terminal showed). "tag": mark every visible button present
@@ -2570,10 +2621,23 @@ POST_SUBMIT_JS = r"""
 # that control data-metis-row-action. Never clicks.
 ROW_ACTION_JS = r"""
 (args) => {
-  const [kind, keyCol, key, actionPat] = args;
+  const [kind, keyCol, key, actionPat, iconPat] = args;
 """ + _PAIRED_TABLES_HELPER_JS + r"""
   const norm = s => s.replace(/\s+/g, ' ').trim().toLowerCase();
   document.querySelectorAll('[data-metis-row-action]').forEach(e => e.removeAttribute('data-metis-row-action'));
+  document.querySelectorAll('[data-metis-action-row]').forEach(e => e.removeAttribute('data-metis-action-row'));
+  // A text-less icon button names itself only by the icon it draws
+  // (MEASURED tradeify_1 2026-10-08, PROP-CANCEL-FIX, run 37810774267: the
+  // Orders row holds two <button class="button button-icon
+  // grid-orders_control"> with no text / title / aria-label, one drawing
+  // <use xlink:href="#icon-replace-context"> (modify), the other
+  // "#icon-close-order" (cancel)). iconPat is ANCHORED and is tested against
+  // each icon reference INSIDE a pressable (button / role=button) only --
+  // never against a class, never against a non-pressable.
+  const icon = iconPat ? new RegExp(iconPat, 'i') : null;
+  const iconRefs = b => [...b.querySelectorAll('use, svg, [data-icon]')].flatMap(u =>
+    ['xlink:href', 'href', 'data-icon'].map(a => (u.getAttribute(a) || '').trim()).filter(Boolean));
+  const iconHit = b => !!icon && b.matches('button, [role=button]') && iconRefs(b).some(r => icon.test(r));
   const want = kind === 'orders' ? /^(order id|sts)$/ : /^(position volume|position id|open price|avg fill price|open p&l|fill price)$/;
   const act = new RegExp(actionPat, 'i');
   let rows = [], ctl = [], why = null;
@@ -2589,8 +2653,10 @@ ROW_ACTION_JS = r"""
   }
   if (rows.length === 1) {
     const row = rows[0];
+    row.setAttribute('data-metis-action-row', '1');
     ctl = [...row.querySelectorAll('button, [role=button], [title], [aria-label]')].filter(b =>
-      act.test(txt(b)) || act.test(b.getAttribute('aria-label') || '') || act.test(b.getAttribute('title') || ''));
+      act.test(txt(b)) || act.test(b.getAttribute('aria-label') || '') || act.test(b.getAttribute('title') || '')
+      || iconHit(b));
     // The chart draws the position and its legs as overlays with their own
     // x controls (close / cancel a leg): a row control must be INSIDE this
     // row of the positions table, boxed within it, and nowhere near a
@@ -2676,6 +2742,7 @@ CLOSE_ROW_JS = r"""
         QUAL_RE = /(^|\s)all(\s|$)|(^|\s)close\s+(?!(icon|btn|button|svg|position|x|×|✕)(\s|$))\S/i;
   const isQualified = el => [...labelParts(el), ...calledParts(el)].some(s => QUAL_RE.test(s));
   const isClose = el => (CLOSE_RE.test(label(el)) || CLOSE_NAME_RE.test(called(el))) && !BAD_RE.test(hint(el)) && !isQualified(el);
+  const symKey = v => String(v == null ? '' : v).trim().toUpperCase().replace(/^([A-Z0-9]{2,10})\/([A-Z0-9]{2,10})$/, '$1$2');
   if (op === 'locate') {
     document.querySelectorAll('[data-metis-close-row]').forEach(e => e.removeAttribute('data-metis-close-row'));
     const posWords = /^(position volume|position id|open price|avg fill price|open p&l|fill price)$/;
@@ -2686,7 +2753,9 @@ CLOSE_ROW_JS = r"""
       const ci = hs.indexOf('symbol'); if (ci < 0) continue;
       for (const r of p.trs) {
         const cells = [...r.querySelectorAll('td')].filter(c => c.closest('table') === r.closest('table')).map(txt);
-        if ((cells[ci] || '').toUpperCase() === String(symbol).toUpperCase()) rows.push({r, hs, cells});
+        // tradeify_1 shows ETH/USD for ETHUSD (OPS-AUDIT 2026-10-04 OA-02): ONE slash
+        // between two alphanumeric parts is dropped on both sides, as __metisSym does.
+        if (symKey(cells[ci]) === symKey(symbol)) rows.push({r, hs, cells});
       }
     }
     if (rows.length !== 1) return {ok: false, rows: rows.length, why: 'need exactly 1 row for ' + symbol + ' (found ' + rows.length + ')'};
@@ -2898,7 +2967,8 @@ EDIT_DIALOG_JS = r"""
     d.setAttribute('data-metis-edit-dialog', '1');
     const text = (d.innerText || '').replace(/\s+/g, ' ');
     const sym = String(symbol || '').toUpperCase();
-    const names_symbol = !!sym && new RegExp('(^|[^A-Z0-9])' + sym + '([^A-Z0-9]|$)').test(text.toUpperCase());
+    const names_symbol = !!sym && new RegExp('(^|[^A-Z0-9])' + sym + '([^A-Z0-9]|$)').test(
+      text.toUpperCase().replace(/([A-Z0-9]{2,10})\/([A-Z0-9]{2,10})/g, '$1$2'));  // ETH/USD names ETHUSD (OA-02)
     const prevLabel = inp => {
       const a = attr(inp, 'aria-label'); if (a) return a.trim();
       if (inp.id) { const l = document.querySelector(`label[for="${CSS.escape(inp.id)}"]`); if (l) return txt(l); }
@@ -3376,8 +3446,8 @@ def watchlist_diff(before: Mapping[str, Any], after: Mapping[str, Any]) -> Dict[
 # hover, immediately before the click; a REFUSED panel is never click-closed
 # (one Escape, then abort); record the linked symbol first and RESTORE it on
 # every exit path while no dialog is open -- a skipped or failed restore is an
-# alert, a non-zero exit AND the executor's AUTO-REVERT latch, so no executor
-# tick trades until it is re-selected and cleared; the watchlist symbol set
+# alert and a non-zero exit (never a latch since NO-HALT 2026-10-09: the
+# order form's symbol check refuses a wrong-symbol ticket); the watchlist symbol set
 # must read the same before and after. A DOUBLE-click on a watchlist row
 # opens the order ticket (open_order_ticket): this probe only ever issues a
 # single click, on the Symbol cell, never on a Bid/Ask cell.
@@ -4482,11 +4552,11 @@ def info_probe_one_click_off(one_click: Optional[Mapping[str, Any]]) -> bool:
 
 
 def info_probe_restore_latch_reason(got: Mapping[str, Any]) -> Optional[str]:
-    """The AUTO-REVERT latch reason to write when the probe may have left
-    the terminal's linked symbol changed, else None. Written by the tick
-    into the executor's own ``halted`` latch, which every executor tick
-    reads before trading (refuses every new entry, alerts) until the
-    manager/operator clears it with ``executor-clear-halt``."""
+    """The ALERT text when the probe may have left the terminal's linked
+    symbol changed, else None. NO-HALT (operator 2026-10-09): it is alerted
+    only; until then the tick wrote it into the executor's ``halted`` latch.
+    A wrong linked symbol cannot place a wrong order: the order form checks
+    the symbol at open and at read-back (:func:`form_names_symbol`)."""
     rest = got.get("restore") or {}
     if got.get("mode") != "click" or not rest:
         return None
@@ -4498,14 +4568,14 @@ def info_probe_restore_latch_reason(got: Mapping[str, Any]) -> Optional[str]:
     # tick's ``fresh_page_check``, manager-approved 2026-09-30 18:00Z) reads
     # the original symbol with no dialog open, the run alerts only and no
     # latch is written. Anything else -- no check, unreadable, another
-    # symbol, a dialog -- latches as before.
+    # symbol, a dialog -- alerts (NO-HALT 2026-10-09: never a latch).
     fp = got.get("fresh_page_check") or {}
     if (fp.get("readable") is True and rest.get("original")
             and fp.get("linked_symbol") == rest.get("original") and fp.get("dialogs") == 0):
         return None
-    return ("AUTO-REVERT: instrument-info-probe left the linked symbol unverified "
+    return ("PROBE-RESTORE-UNVERIFIED: instrument-info-probe left the linked symbol unverified "
             f"(should be {rest.get('original')!r}; restore attempted={rest.get('attempted')}); "
-            "re-select it on the terminal, then executor-clear-halt")
+            "re-select it on the terminal")
 
 
 #: A quote whose spread is wider than this is not believed (a mis-aligned
@@ -5134,35 +5204,81 @@ def rollout_verify_mismatch(before: "Position", after: Optional["Position"], new
     return bad
 
 
+#: The RETIRED per-account latch. Until NO-HALT (operator 2026-10-09, "There
+#: is no halting.") its existence blocked every further armed modify on the
+#: account until ``executor-clear-rollout``. Nothing reads it as a block now;
+#: a copy left by the old code is moved aside on sight (:class:`ModifyRollout`).
+ROLLOUT_LATCH_FILE = "modify_rollout.json"
+#: The NON-blocking evidence record of the account's latest armed modify step.
+ROLLOUT_LAST_FILE = "modify_rollout_last.json"
+
+
 class ModifyRollout:
-    """The per-account latch of the modify rollout (a JSON file in the
-    executor's state dir). Its EXISTENCE blocks every further armed modify:
-    the single watched step has been used ("in_progress" written BEFORE the
-    click, so a crash cannot buy a second), "verified" or "verify_failed".
-    Only a reviewed removal of the file allows the next step: the
-    ``executor-clear-rollout`` system-action, which names this latch alone
-    (``executor-clear-halt`` never touches it)."""
+    """Evidence record of the account's armed modify steps -- NOT a latch.
+
+    Each armed step still passes the per-step guards in ``modify_bracket``
+    (tighten-only and bounded, ``rollout_tighten_mismatch``; the next-read
+    verify, ``rollout_verify_mismatch``), and its outcome is written to
+    ``<state dir>/modify_rollout_last.json``: "in_progress" BEFORE the click
+    (so a crash mid-step leaves evidence), then "verified" / "verify_failed" /
+    "refused". That file never blocks the next step: a failed step is that
+    step's failure, retried on the next cycle by its caller (NO-HALT, operator
+    2026-10-09: "There is no halting.").
+
+    ``path`` is the account's legacy latch path (``<state dir>/modify_rollout.json``,
+    what every caller passes); the evidence file sits beside it. A legacy latch
+    left by the old code is ignored and moved aside to
+    ``modify_rollout.json.retired-<UTC stamp>`` on construction, with a log line;
+    :attr:`stale_retired` says what was moved (None when nothing was)."""
 
     def __init__(self, path: Any) -> None:
         from pathlib import Path
-        self.path = Path(path)
+        self.latch_path = Path(path)
+        self.path = self.latch_path.with_name(ROLLOUT_LAST_FILE)
+        self.stale_retired: Optional[Dict[str, Any]] = self.retire_stale_latch()
 
-    def blocked(self) -> Optional[str]:
-        if not self.path.exists():
-            return None
+    def retire_stale_latch(self) -> Optional[Dict[str, Any]]:
+        """Move a legacy latch file aside (never raises). Returns
+        ``{"from", "to", "prior"}`` when one was moved, else None."""
+        import logging
         try:
-            state = json.loads(self.path.read_text()).get("state")
+            if not self.latch_path.exists():
+                return None
+            try:
+                prior = self.latch_path.read_text()[:500]
+            except OSError:
+                prior = "unreadable"
+            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            dest = self.latch_path.with_name(f"{self.latch_path.name}.retired-{stamp}")
+            self.latch_path.replace(dest)
+        except OSError as exc:
+            logging.getLogger(__name__).warning(
+                "modify-rollout: stale latch %s could not be moved aside (%s); it is ignored either way",
+                self.latch_path, type(exc).__name__)
+            return None
+        logging.getLogger(__name__).warning(
+            "modify-rollout: stale latch %s from the retired rollout latch moved aside to %s (NO-HALT); "
+            "it no longer blocks any modify", self.latch_path, dest.name)
+        return {"from": str(self.latch_path), "to": str(dest), "prior": prior}
+
+    def last(self) -> Optional[Dict[str, Any]]:
+        """The latest step's record, or None when absent/unreadable."""
+        try:
+            data = json.loads(self.path.read_text())
         except (OSError, ValueError):
-            state = "unreadable"
-        return (f"rollout: the single watched modify step is used (state {state!r}); "
-                f"further modifies are halted until {self.path.name} is reviewed and cleared "
-                "(executor-clear-rollout)")
+            return None
+        return data if isinstance(data, dict) else None
 
     def record(self, state: str, **facts: Any) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = self.path.with_suffix(".tmp")
-        tmp.write_text(json.dumps({"state": state, "at": time.time(), **facts}, default=str))
-        tmp.replace(self.path)
+        try:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = self.path.with_suffix(".tmp")
+            tmp.write_text(json.dumps({"state": state, "at": time.time(), **facts}, default=str))
+            tmp.replace(self.path)
+        except OSError:
+            # Evidence only: an unwritable record must not stop the step's
+            # own guards from deciding (they do not read it).
+            pass
 
 def check_bracket_spec(spec: BracketSpec) -> List[str]:
     """Pure structural check of one bracket before any click: both legs, a
@@ -5604,8 +5720,9 @@ class DXtradeAdapter(PropPlatformAdapter):
         logged in ``tried``: a form already open; ONE click on the Symbol cell
         (kept only when the form then names the symbol); a ticket-opener
         button; the RESOLVED watchlist row's double-click (#13898 / #15139),
-        skipped only on a positive one-click ON read; a Symbol-cell
-        double-click."""
+        run only on a positive one-click OFF read (OA-04); a Symbol-cell
+        double-click. With ``ask_opener`` set, the Ask button is the only
+        opener after the Symbol click: a decline returns ``refused``."""
         out: Dict[str, Any] = {"opened": False, "via": None, "one_click": self.read_one_click(page), "form": {}}
         form = self._find_form(page)
         if form.get("found"):
@@ -5642,12 +5759,16 @@ class DXtradeAdapter(PropPlatformAdapter):
             if ask.get("form"):
                 out.update(opened=True, via="ask_button", form=ask["form"])
                 return out
-            if ask.get("clicked"):
-                # Clicked but no form naming the symbol: never try further
-                # openers on top of an unknown surface.
-                out["form"] = self._find_form(page)
-                out["refused"] = f"ask_button: {ask.get('why')}"
-                return out
+            # Clicked but no form naming the symbol, OR declined without a
+            # click: either way NO further opener runs. OA-04
+            # (PI-20261004-GCFA5DOR-0002): a decline used to fall through to
+            # the later openers, including the watchlist-row double-click,
+            # which on a one-click toggle that is ON but reads ``unknown``
+            # can fire an instant, UNBRACKETED market order. The Ask button
+            # is the only measured opener on an ask_opener terminal.
+            out["form"] = self._find_form(page)
+            out["refused"] = f"ask_button: {ask.get('why')}"
+            return out
         for name in TICKET_OPENER_NAMES:
             try:
                 loc = page.get_by_role("button", name=name, exact=True)
@@ -5669,11 +5790,12 @@ class DXtradeAdapter(PropPlatformAdapter):
         # read. And only on the ONE row INFO_PROBE_RESOLVE_JS resolved inside
         # the watchlist (``data-metis-wl-row``), never a page-wide row search
         # that could hit a Positions / Orders row (manager review 5932126267).
-        # It is SKIPPED only on a positive one-click ON read (the instant-trade
-        # case). An unreadable toggle does NOT skip it: live #15187 (dry run on
-        # 9f51c275) never reached it with one-click reading OFF at the start,
-        # and a trade must never be missed for want of an opener (manager
-        # 5931584062; before #15138 this opener ran with no one-click check).
+        # It runs ONLY on a positive one-click OFF read. OA-04
+        # (PI-20261004-GCFA5DOR-0002, OPS-FIXES 2026-10-04) reverses the
+        # earlier "an unreadable toggle does NOT skip it" (manager 5931584062,
+        # #15138): with one-click actually ON but read ``unknown``, the row
+        # centre is an instant-trade price cell, i.e. an UNBRACKETED market
+        # order. A ticket missed for want of an opener is the smaller harm.
         # Why it ran or not is RECORDED in ``last_resort``. It runs BEFORE the
         # Symbol-cell double-click: live #15214 (on 0e8d6e3de) resolved the
         # target row cleanly for both Symbol openers, then found it gone
@@ -5682,8 +5804,9 @@ class DXtradeAdapter(PropPlatformAdapter):
         oc = self.read_one_click(page)
         lr: Dict[str, Any] = {"one_click": {k: oc.get(k) for k in ("state", "via")}}
         out["last_resort"] = lr
-        if oc.get("state") == "on":
-            lr["skipped"] = "one-click reads ON: the row centre may be an instant-trade price cell"
+        if oc.get("state") != "off":
+            lr["skipped"] = (f"one-click reads {str(oc.get('state') or 'unknown').upper()}, not a positive OFF: "
+                             "the row centre may be an instant-trade price cell")
         else:
             try:
                 res = page.evaluate(INFO_PROBE_RESOLVE_JS, [[sym]]) or {}
@@ -5889,6 +6012,13 @@ class DXtradeAdapter(PropPlatformAdapter):
         except Exception as exc:
             return {"found": False, "error": type(exc).__name__}
 
+    def sidebar_text(self, page: Any) -> Dict[str, Any]:
+        """Read-only, digit-masked visible text of the ticket column (SIDEBAR_TEXT_JS)."""
+        try:
+            return page.evaluate(SIDEBAR_TEXT_JS) or {"found": False}
+        except Exception as exc:
+            return {"found": False, "error": type(exc).__name__}
+
     def ticket_panel_dump(self, page: Any) -> Dict[str, Any]:
         """Read-only, redacted structure of the order-ticket sidebar (TICKET_PANEL_DUMP_JS)."""
         try:
@@ -6078,9 +6208,9 @@ class DXtradeAdapter(PropPlatformAdapter):
         close it and confirm it is gone. On EVERY exit path (success, abort,
         exception) it re-selects the originally linked symbol and verifies
         it, unless a dialog is open. ``alerts`` is non-empty whenever the
-        terminal may have been left changed; an unverified restore is also
-        the executor's AUTO-REVERT latch (info_probe_restore_latch_reason,
-        written by the tick).
+        terminal may have been left changed; an unverified restore is
+        alerted by the tick (info_probe_restore_latch_reason; never a latch
+        since NO-HALT 2026-10-09).
         """
         want = list(dict.fromkeys(s.strip().upper() for s in symbols if s and s.strip()))
         out: Dict[str, Any] = {"mode": "click" if click else "dry", "symbols": want,
@@ -7780,7 +7910,8 @@ class DXtradeAdapter(PropPlatformAdapter):
             # the run log never shows one_click: null once the form has opened
             # (TRADEIFY-EXECUTOR 2026-10-03: both SOL dry walks read null only
             # because the read sat after this return). Diagnostic, as below.
-            return refuse(why, {**form, "one_click": self.read_one_click(page), "submit": submit_info})
+            return refuse(why, {**form, "one_click": self.read_one_click(page), "submit": submit_info,
+                                "sidebar_text": self.sidebar_text(page)})
         # Diagnostic only: the toggle's reading right before submit travels
         # with the attempt so the run log shows it. Nothing is gated on it.
         form = {**form, "one_click": self.read_one_click(page), "submit": submit_info, "fill_trace": trace}
@@ -8109,33 +8240,101 @@ class DXtradeAdapter(PropPlatformAdapter):
         return False
 
     def _row_action(self, page: Any, kind: str, key_col: str, key: str,
-                    action_re: str, arm: bool) -> Dict[str, Any]:
+                    action_re: str, arm: bool, icon_re: Optional[str] = None,
+                    confirm_re: Optional[str] = None) -> Dict[str, Any]:
         """Find exactly one row of the orders/positions table whose ``key_col``
         cell equals ``key`` and exactly one control in it matching
-        ``action_re``; click it only when ``arm``."""
+        ``action_re`` (its text / aria-label / title) or, for a text-less
+        icon button, ``icon_re`` (an anchored pattern over the icon it draws);
+        click it only when ``arm``. The row is HOVERED and re-read before
+        the decision, since a terminal may render or show row controls only
+        under the pointer (a hover is not a click)."""
+        args = [kind, key_col, key, action_re, icon_re]
         try:
-            got = page.evaluate(ROW_ACTION_JS, [kind, key_col, key, action_re]) or {}
+            got = page.evaluate(ROW_ACTION_JS, args) or {}
+            if got.get("rows") == 1:
+                try:
+                    page.hover("[data-metis-action-row]", timeout=3_000)
+                    page.wait_for_timeout(300)
+                    got = page.evaluate(ROW_ACTION_JS, args) or {}
+                except Exception:
+                    pass  # the un-hovered read stands
         except Exception as exc:
             return {"ok": False, "clicked": False, "why": f"probe failed ({type(exc).__name__})"}
         if got.get("rows") != 1 or got.get("controls") != 1:
-            return {"ok": False, "clicked": False,
-                    "why": f"need exactly 1 row and 1 control (rows={got.get('rows')}, controls={got.get('controls')})"}
+            why = f"need exactly 1 row and 1 control (rows={got.get('rows')}, controls={got.get('controls')})"
+            if got.get("why"):
+                why += f": {got.get('why')}"
+            return {"ok": False, "clicked": False, "why": why}
         if not arm:
             return {"ok": True, "clicked": False, "why": "disarmed: stopped before the click"}
+        try:
+            page.evaluate(POST_SUBMIT_JS, ["tag"])
+        except Exception:
+            pass
         try:
             page.click("[data-metis-row-action]", timeout=5_000)
         except Exception as exc:
             return {"ok": True, "clicked": True, "why": f"click raised {type(exc).__name__}; outcome unknown"}
-        self._confirm_dialog(page)
-        return {"ok": True, "clicked": True, "why": "clicked"}
+        # What the click PRODUCED (PROP-CANCEL-FIX 2026-10-08: on tradeify_1
+        # the measured cancel icon was clicked at 18:13Z and 18:18Z, no
+        # role=dialog was left open, and the order was still there on the next
+        # read). Every button that appeared, the overlay holding them, and
+        # whether the row is still there, are returned so the journal says
+        # what the terminal showed (digit runs of 5+ masked).
+        appeared: Dict[str, Any] = {}
+        pressed = None
+        try:
+            page.wait_for_timeout(1_000)
+            appeared = page.evaluate(POST_SUBMIT_JS, ["diff"]) or {}
+            new = [b for b in (appeared.get("new_buttons") or []) if not b.get("disabled")]
+            hits = [b for b in new if confirm_re and re.match(confirm_re, str(b.get("text") or "").strip(), re.I)]
+            # Press a confirmation ONLY when the overlay that appeared says
+            # "cancel" and exactly one of its new buttons is an anchored
+            # confirm label; anything else is reported, never pressed.
+            if confirm_re and len(hits) == 1 and re.search(r"\bcancel", str(appeared.get("overlay_text") or ""), re.I):
+                page.click(f"[data-metis-new=\"{hits[0]['i']}\"]", timeout=5_000)
+                pressed = hits[0].get("text")
+                page.wait_for_timeout(1_000)
+        except Exception as exc:
+            appeared = {**appeared, "error": type(exc).__name__}
+        confirmed = bool(pressed) or self._confirm_dialog(page)
+        why = "clicked" + (f"; confirm pressed ({pressed})" if pressed else "; confirm dialog pressed" if confirmed else "")
+        try:
+            after = page.evaluate(ROW_ACTION_JS, args) or {}
+            why += f"; row still present={after.get('rows') == 1}"
+        except Exception:
+            pass
+        if appeared.get("new_buttons") or appeared.get("overlay_text"):
+            why += (f"; appeared buttons={[b.get('text') for b in appeared.get('new_buttons') or []][:6]}"
+                    f" overlay={str(appeared.get('overlay_text') or '')[:200]!r}")
+        else:
+            why += "; nothing new appeared"
+        try:
+            # A dialog still open after the click is reported, never pressed
+            # further: the next cycle's re-read decides whether it took.
+            left = page.evaluate("() => [...document.querySelectorAll('[role=dialog], [role=alertdialog]')]"
+                                 ".filter(d => d.offsetWidth || d.offsetHeight).flatMap(d => [...d.querySelectorAll("
+                                 "'button, [role=button]')].map(b => (b.innerText || b.getAttribute('aria-label') || '')"
+                                 ".trim().slice(0, 30)))") or []
+            if left:
+                why += f"; a dialog is still open (buttons {left[:6]})"
+        except Exception:
+            pass
+        return {"ok": True, "clicked": True, "why": why}
 
     def cancel_order(self, page: Any, order: WorkingOrder, *, arm: bool = False) -> Dict[str, Any]:
         """Cancel ONE working order, identified by its terminal Order ID."""
         if not order or not order.order_id:
             return {"ok": False, "clicked": False, "why": "no order_id: refusing to guess which row"}
         self._show_tab(page, "tab_orders")
+        # icon_re: tradeify_1's cancel is a text-less button drawing
+        # #icon-close-order (MEASURED 2026-10-08, PROP-CANCEL-FIX); the row's
+        # other button draws #icon-replace-context (modify) and never matches.
         return self._row_action(page, "orders", "Order ID", str(order.order_id),
-                                r"^(cancel|cancel order|×|✕|x|remove)$", arm)
+                                r"^(cancel|cancel order|×|✕|x|remove)$", arm,
+                                icon_re=r"^#?icon-(close|cancel)-order$",
+                                confirm_re=r"^(confirm|ok|yes|yes, cancel|cancel order|yes, cancel order)$")
 
     def flatten(self, page: Any, symbol: Optional[str] = None, *, arm: bool = False,
                 side: Optional[str] = None, quantity: Optional[float] = None,
@@ -8232,15 +8431,21 @@ class DXtradeAdapter(PropPlatformAdapter):
     # no quantity field); modify_bracket targets exactly that surface (#15673).
     # Flipped True on the operator's answer "Merge and switch on together"
     # (2026-10-03, with the PROP-TRAIL merge #15316). Every armed modify still
-    # passes the ROLLOUT guard below (#15693): one watched, tighten-only SL
-    # step per reviewed executor-clear-rollout. Setting this back to False is
-    # the kill switch: an armed modify then refuses before any click.
+    # passes the ROLLOUT guard below (#15693): a tighten-only, bounded SL
+    # step, verified on the next read. Setting this back to False is the kill
+    # switch: an armed modify then refuses before any click.
     EDIT_DIALOG_MEASURED = True
-    # When armed, the first modifies on a real-money book are a ROLLOUT
-    # (manager 2026-10-02 21:30Z): one watched, tighten-only step per reviewed
-    # clear of the per-account latch (ModifyRollout, cleared only by
-    # executor-clear-rollout, never by executor-clear-halt). Every armed modify is gated by it.
+    # When armed, every modify on a real-money book is a ROLLOUT step
+    # (manager 2026-10-02 21:30Z): tighten-only, at most
+    # ROLLOUT_MAX_TIGHTEN_FRACTION of the stop distance, TP untouched, verified
+    # on the next read. Since NO-HALT (operator 2026-10-09) there is no
+    # per-account latch: ModifyRollout records each step's outcome as evidence
+    # and a failed step is retried by its caller. Every armed modify is gated by it.
     ROLLOUT_GUARD = True
+    # TP doctrine B1: the rollout guard refuses any TP change
+    # (`rollout_tighten_mismatch`), so this adapter cannot move a TP while it
+    # is set. Flip only together with a measured TP-amend rollout step.
+    TP_AMEND_SUPPORTED = False
 
     def _locate_edit_control(self, page: Any, symbol: str, side: Optional[str],
                              quantity: Optional[float]) -> Dict[str, Any]:
@@ -8473,14 +8678,13 @@ class DXtradeAdapter(PropPlatformAdapter):
             return {"ok": False, "clicked": False, **seen, "why": "position side / size unknown: refusing"}
         guarded = bool(self.ROLLOUT_GUARD)
         if guarded:
-            # ROLLOUT: a single watched TIGHTEN-ONLY step, refused before any
-            # click unless the latch is clear and the move is bounded.
+            # ROLLOUT guard: every armed step is a TIGHTEN-ONLY, bounded SL
+            # step, refused before any click otherwise. Its record is evidence
+            # only -- a previous step's outcome never blocks this one (NO-HALT,
+            # operator 2026-10-09: "There is no halting.").
             if rollout is None:
                 return {"ok": False, "clicked": False, **seen,
-                        "why": "refused: rollout guard needs the account's modify-rollout latch"}
-            blocked = rollout.blocked()
-            if blocked:
-                return {"ok": False, "clicked": False, **seen, "why": blocked}
+                        "why": "refused: rollout guard needs the account's modify-rollout record"}
             try:
                 quote = self.read_quote(page, position.symbol)
             except Exception:
@@ -8538,8 +8742,10 @@ class DXtradeAdapter(PropPlatformAdapter):
         if not guarded:
             return {"ok": True, "clicked": True, **seen, "panel": panel, "why": "Modify Position clicked"}
         # ROLLOUT verify: the very next positions read must show the NEW stop,
-        # the UNCHANGED take profit and size -- else alert loudly and keep the
-        # latch (no further modify until it is reviewed and cleared).
+        # the UNCHANGED take profit and size -- else THIS step failed and says
+        # so loudly. Nothing is latched: the caller retries on its next cycle,
+        # and that step passes the same tighten-only guard from whatever SL
+        # then rests (NO-HALT, operator 2026-10-09).
         page.wait_for_timeout(1_500)
         try:
             rows = [p for p in self.read_positions(page) if canonical_symbol(p.symbol) == canonical_symbol(position.symbol)]
@@ -8551,7 +8757,7 @@ class DXtradeAdapter(PropPlatformAdapter):
             rollout.record("verify_failed", why="; ".join(bad))
             return {"ok": False, "clicked": True, **seen, "panel": panel, "rollout": "verify_failed",
                     "why": "ROLLOUT VERIFY FAILED after Modify Position: " + "; ".join(bad)
-                           + " -- further modifies halted"}
+                           + " -- this step failed; the next cycle retries"}
         rollout.record("verified", sl=float(stop_loss))
         return {"ok": True, "clicked": True, **seen, "panel": panel, "rollout": "verified",
                 "why": "Modify Position clicked; next read shows the new SL with TP and size unchanged"}

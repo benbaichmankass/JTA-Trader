@@ -525,6 +525,25 @@ def _build_monitor_ohlcv_fetcher(settings: dict):
     except Exception:  # noqa: BLE001
         _per_strategy_tf = {}
 
+    # Per-strategy candle LIMIT. 200 for every leg (unchanged) EXCEPT a leg
+    # running the vol_trail ATR percentile (declared, or the shadow
+    # instrument's leg): there 200 minus the forming bar left 199 < the
+    # 200-bar window, so the percentile was never computable live and the
+    # lever silently returned the base mult (PR #17212 P5 parity, measured
+    # 56/76 null closed percentiles on ada_pullback_2h). Sized from the leg's
+    # own params by trail_vol.monitor_fetch_limit; IB-routed legs get the same
+    # number, and _duration_str scales the request to it. Best-effort: a
+    # config-load failure leaves the map empty → 200 everywhere, as before.
+    try:
+        from src.units.strategies import load_strategy_config
+        from src.runtime.trail_vol import monitor_fetch_limit
+        _per_strategy_limit = {
+            name: monitor_fetch_limit(name, cfg or {})
+            for name, cfg in (load_strategy_config() or {}).items()
+        }
+    except Exception:  # noqa: BLE001
+        _per_strategy_limit = {}
+
     # --- The per-pass IB circuit breaker (R2, Tier-2, operator-approved
     # DEC-20260910-EXIT-EVAL-60S-REMEDY, chosen `r2_only`, 2026-09-10T07:52Z) --
     #
@@ -620,7 +639,7 @@ def _build_monitor_ohlcv_fetcher(settings: dict):
             symbol, timeframe,
             settings=settings,
             exchange_client=client,
-            limit=200,
+            limit=_per_strategy_limit.get(strategy_name, 200),
         )
 
         if ib_routed:
@@ -1183,6 +1202,18 @@ def main() -> None:
                 run_macro_thesis_tick(settings)
             except Exception:  # noqa: BLE001
                 logger.exception("macro_thesis_tick failed")
+
+            # Account-level daily-DD switch (operator 2026-10-09, rule 7's one
+            # sanctioned off): fold one on-disk equity reading per ARMED
+            # account every tick, so day-start equity, the trip alert and the
+            # reset alert do not wait for a signal. OBSERVE-ONLY — the refusal
+            # stays in RiskManager.evaluate. No broker call; best-effort.
+            try:
+                from src.units.accounts.daily_dd_switch import observe_armed_accounts
+                with _tick_hook("daily_dd_switch"):
+                    observe_armed_accounts()
+            except Exception:  # noqa: BLE001
+                logger.exception("daily_dd_switch tick observe failed")
 
             # Prop trades are a manual bridge (no broker feed), so the
             # order_monitor above never sees them. Emit a periodic

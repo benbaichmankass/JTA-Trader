@@ -130,12 +130,34 @@ def repo_facts(root: Path) -> Dict[str, Any]:
 
 
 # ── expansion ───────────────────────────────────────────────────────────────
+def root_data_dir() -> Path:
+    """`plan_legs` needs a data dir only to resolve candles, which `ignore_missing_data`
+    waives; the scope decision it returns here is config-only."""
+    return Path("data")
+
+
 def _leg_source(name: str, tpl: Dict[str, Any], facts: Dict[str, Any]) -> List[Dict[str, Any]]:
     legs, ev = facts["legs"], facts["evidence"]
     out: List[Dict[str, Any]] = []
     if name == "live_roster_legs":
         for leg, info in legs.items():
             out.append({"leg": leg, **info})
+    elif name == "live_roster_legs_e35_sweepable":
+        # ⚠️ THE E35 SWEEP HAS A SCOPE, AND THE TEMPLATE MUST ASK IT RATHER THAN RESTATE IT.
+        # `live_roster_legs` fed `ict_scalp_*` legs to e35-bracket-sweep.yml, whose planner
+        # refuses the `scalp`/`fvg` families (out_of_scope_family): the run died in its
+        # `plan` job after ~90 s with "shard-plan produced ZERO jobs", the dispatcher had
+        # already stamped the unit, and the corpus stopped growing -- MEASURED 2026-10-04:
+        # RQ-20261002-001 (ict_scalp_mgc_15m) and RQ-20261003-001 (ict_scalp_sol_15m), runs
+        # 37086544045 / 37106772916, both red in `plan`; RQ-20260929-005 and -20261003-006
+        # carry the same legs. The sweep's OWN resolver (`plan_legs`) is the one scope, so
+        # a leg it would refuse is never generated.
+        from scripts.research.e35_bracket_geometry_sweep import plan_legs
+        runnable, _skipped = plan_legs(root_data_dir(), None, 0.099, ignore_missing_data=True)
+        sweepable = {r["leg"] for r in runnable}
+        for leg, info in legs.items():
+            if leg in sweepable:
+                out.append({"leg": leg, **info})
     elif name == "evidence_legs_with_breakout_market":
         markets = tpl.get("markets") or {}
         for leg, info in legs.items():
@@ -154,12 +176,53 @@ def _leg_source(name: str, tpl: Dict[str, Any], facts: Dict[str, Any]) -> List[D
     return out
 
 
+def _int_or_none(v: Any) -> Optional[int]:
+    if isinstance(v, bool):
+        return None
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def min_n_trades(tpl: Dict[str, Any]) -> Optional[int]:
+    """The template's declared `min_n_trades` floor, or None if it declares none.
+
+    When the template's run command also passes `--n-floor`, the two MUST agree:
+    a generator floor that differs from the one the unit grades against would
+    re-open exactly the gap this exists to close.
+    """
+    if "min_n_trades" not in tpl:
+        return None
+    floor = _int_or_none(tpl.get("min_n_trades"))
+    if floor is None or floor < 0:
+        raise ValueError(f"template {tpl.get('family')!r}: min_n_trades must be a non-negative int")
+    cmd = (tpl.get("run") or {}).get("command") or []
+    if isinstance(cmd, list) and "--n-floor" in cmd:
+        i = cmd.index("--n-floor")
+        graded = _int_or_none(cmd[i + 1]) if i + 1 < len(cmd) else None
+        if graded != floor:
+            raise ValueError(f"template {tpl.get('family')!r}: min_n_trades {floor} != "
+                             f"run.command --n-floor {graded!r}")
+    return floor
+
+
 def expand(tpl: Dict[str, Any], facts: Dict[str, Any]) -> List[Dict[str, Any]]:
     """All parameter points of a family, each a flat dict of placeholders."""
     grid = dict(tpl.get("grid") or {})
     points: List[Dict[str, Any]] = [{}]
     if "legs" in grid:
         points = _leg_source(str(grid.pop("legs")), tpl, facts)
+    floor = min_n_trades(tpl)
+    if floor is not None:
+        # ⚠️ A unit whose committed n is below its OWN registered n-floor can only
+        # ever grade UNDERPOWERED (PI-20261004-FOJGFIZF-0002: 33 prop-fit-breakout
+        # runs, legs at n=57 vs the 88 floor, zero decisions). Such a leg is not
+        # minted; because `point_key` excludes n_trades, it is minted on the first
+        # replenish after its committed evidence reaches the floor -- accruing,
+        # not dropped. A point with no readable n cannot show it clears the floor.
+        points = [p for p in points if _int_or_none(p.get("n_trades")) is not None
+                  and _int_or_none(p.get("n_trades")) >= floor]
     for axis in sorted(grid):
         values = grid[axis]
         if not isinstance(values, list) or not values:
@@ -283,8 +346,12 @@ def existing_units(root: Path) -> Tuple[Dict[str, Dict[str, Any]], List[str]]:
     return units, bad
 
 
-#: The dispatcher's cron is `20 */6 * * *` (research-queue-dispatch.yml), so a
-#: unit that becomes due within six hours fires on the next cycle.
+#: The REPLENISH HORIZON, not the dispatcher's cadence. The dispatcher's cron
+#: is HOURLY (`20 * * * *`, research-queue-dispatch.yml, operator 2026-10-06:
+#: the git infrastructure keeps the queue moving, not a session); it was
+#: `20 */6 * * *` until then. This stays 6.0 so "runnable" keeps meaning
+#: "would fire within the next six hours" and the daily refill target of 25
+#: runnable units is measured over the same window as before the change.
 DISPATCH_CYCLE_HOURS = 6.0
 
 
@@ -338,11 +405,25 @@ def allocate(deficit: int, weights: Dict[str, int], available: Dict[str, int]) -
     return alloc
 
 
+#: Numbers 900-999 of every day are RESERVED for hand-authored units (next_rq_id.py mints
+#: there); this generator mints only 001-899. PI-20261005-RQ-ID-RACE-0001: both used to mint
+#: max+1 from the same counter, and the generator -- which cannot see an open PR -- caught up to
+#: ids a lane had already put on a branch (the 2026-10-05 653..661 collision). Disjoint bands
+#: make that collision impossible rather than unlikely. scripts/ci/check_research_queue_id_bands.py
+#: enforces the split on every unit a PR adds. DECIDED by lane RQ-INFRA 2026-10-07; reverse by
+#: moving this constant and next_rq_id.HAND_FLOOR together.
+HAND_FLOOR = 900
+
+
 def next_ids(units: Dict[str, Dict[str, Any]], day: str, count: int) -> List[str]:
+    """Up to ``count`` ids in the GENERATED band. Returns FEWER when the band is full (the caller
+    zips against it, so the day simply stops minting) -- a full day must not crash the replenisher,
+    because a replenisher that cannot run is a queue that waits on a session."""
     compact = day.replace("-", "")
-    used = [int(m.group(2)) for uid in units if (m := _ID_RE.match(uid)) and m.group(1) == compact]
+    used = [int(m.group(2)) for uid in units
+            if (m := _ID_RE.match(uid)) and m.group(1) == compact and int(m.group(2)) < HAND_FLOOR]
     start = (max(used) if used else 0) + 1
-    return [f"RQ-{compact}-{n:03d}" for n in range(start, start + count)]
+    return [f"RQ-{compact}-{n:03d}" for n in range(start, min(start + count, HAND_FLOOR))]
 
 
 def plan(root: Path, *, day: str, target: int, now: Optional[datetime] = None) -> Dict[str, Any]:
@@ -511,6 +592,28 @@ def _self_test() -> int:
                 (q / f"{u['id']}.yaml").write_text(u["text"])
                 pl = script_run.plan(u["id"], run_id="st", queue_dir=q, repo=root)
                 assert pl.ok, (u["id"], pl.errors)
+    # PI-20261004-FOJGFIZF-0002: a leg below the template's own n-floor is never minted
+    # (planted: 57 < 88 skipped, 88 and 169 kept, unreadable n skipped), and a floor that
+    # disagrees with the run's --n-floor is refused rather than silently diverging.
+    ftpl = {"family": "f", "grid": {"legs": "evidence_legs_with_breakout_market"},
+            "markets": {"X": {"market": "XM", "swap_model": "s"}}, "min_n_trades": 88,
+            "run": {"command": ["p", "--n-floor", "88"]}}
+    ffacts = {"legs": {a: {"symbol": "X", "timeframe": "1h"} for a in ("lo", "eq", "hi", "bad")},
+              "evidence": {"lo": {"trades_file": "t", "n_trades": 57}, "eq": {"trades_file": "t", "n_trades": 88},
+                           "hi": {"trades_file": "t", "n_trades": 169}, "bad": {"trades_file": "t", "n_trades": "x"}}}
+    assert sorted(p["leg"] for p in expand(ftpl, ffacts)) == ["eq", "hi"], expand(ftpl, ffacts)
+    assert len(expand({k: v for k, v in ftpl.items() if k != "min_n_trades"}, ffacts)) == 4
+    try:
+        expand({**ftpl, "run": {"command": ["p", "--n-floor", "39"]}}, ffacts)
+    except ValueError as e:
+        assert "--n-floor" in str(e), e
+    else:
+        raise AssertionError("min_n_trades disagreeing with --n-floor was not refused")
+    for tpl_path_f, _sha_f, tpl_f in load_templates(root):
+        fl = min_n_trades(tpl_f)
+        if fl is not None:
+            for pt in expand(tpl_f, repo_facts(root)):
+                assert int(pt["n_trades"]) >= fl, (tpl_path_f, pt["leg"], pt["n_trades"], fl)
     # no live template leaves a placeholder unresolved (prop-fit-breakout did on 2026-09-28)
     for u in p1["new_units"]:
         assert unresolved_placeholders(u["text"]) == [], (u["id"], unresolved_placeholders(u["text"]))

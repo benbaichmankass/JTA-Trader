@@ -1,0 +1,41 @@
+{
+  "run": "FRONTIER-RESEARCH first scan (session_01QM1jZsvaXCmA8Dwoaawm2H) -- a frontier-only record; the weekly ML plan loop cycle for 2026-10-18 reads this as its Step-0 baseline",
+  "finished_at": "2026-10-11T19:00:00Z",
+  "frontier": {
+    "run": "session_01QM1jZsvaXCmA8Dwoaawm2H",
+    "finished_at": "2026-10-11T19:00:00Z",
+    "previous_scan_read": [],
+    "diversity": {
+      "command": "python3 scripts/ops/ml_plan_status.py --diversity",
+      "measured": "registry 96 models via GET /api/bot/ml/registry: gbdt 75 (78%), rule_baseline 14, bayesian_probabilistic 5, deep_sequence 1, ssl_representation 1; linear_logit / ts_foundation_model / tabular_foundation_model / rl_bandit / conformal_calibration / ensemble_stack 0. live+shadow 28: gbdt 19, rule_baseline 9.",
+      "findings": ["CONCENTRATION: gbdt 8/12 open family-tagged plan items (67%) -- the regime program (ML-R1..R5) is GBDT work already under way and continues; the new ML-F1..F4 add four other families", "MANIFEST-CONCENTRATION: gbdt 75/96 registered", "NOTE 14 open plan items untagged (S2/X*/P0/P2/D2/D4/N2/N3 -- learner class not verified, left untagged rather than guessed)"]
+    },
+    "sources_checked": [
+      {"source": "hf-model-search + hub_repo_details", "date": "2026-10-11", "note": "chronos-2, timesfm-2.5, TiRex, TiRex-2, Toto, Moirai-2.0, TTM-r2, Kronos-base, TabPFN-2.5/3/v2, TabICL listings; licence field read per repo"},
+      {"source": "hf-papers-trending", "date": "2026-10-11", "note": "nothing time-series/finance relevant beyond Kronos (2508.02739)"},
+      {"source": "web-search arXiv/model cards/vendor posts", "date": "2026-10-11", "note": "TSFM benchmarks (self-reported), TabPFN-3, conformal abstention, offline RL for exits, perp liquidation/funding literature"},
+      {"source": "NOT CHECKED", "date": "2026-10-11", "note": "Kaggle write-ups, GitHub trending, SSRN/practitioner blogs -- next scan"}
+    ],
+    "candidates": [
+      {"name": "TSFM bake-off (Chronos-2/TimesFM-2.5/TiRex-2/Kronos) + HAR-RV control", "family": "ts_foundation_model", "licence": "apache-2.0 x3, MIT (primary: Hub)", "gate_failed": "none", "kept": true, "unit_or_row": "RQ-20261011-9da8-01 / FRONTIER-LEVER-TSFM", "baseline": "incumbent fc (Chronos-Bolt-Tiny) head and HAR-RV; feature-lift gate, downstream net-of-cost walk-forward", "kill": "no candidate > +0.005 macro_f1 over incumbent on any symbol"},
+      {"name": "Small-n tabular bake-off (TabICL/TabPFN/CatBoost)", "family": "tabular_foundation_model", "licence": "TabPFN other/non-commercial (primary: Hub); TabICL unverified", "gate_failed": "licence (serving) -- research eval only", "kept": true, "unit_or_row": "RQ-20261011-9da8-02 / FRONTIER-LEVER-TABULAR", "baseline": "incumbent LightGBM meta-label head + per-setup_type baseline", "kill": "n>=300 and every challenger CI contains 0"},
+      {"name": "Conformal abstention", "family": "conformal_calibration", "licence": "own code / MAPIE unverified", "gate_failed": "none", "kept": true, "unit_or_row": "RQ-20261011-9da8-03 / FRONTIER-LEVER-CONFORMAL", "baseline": "plain probability threshold at matched coverage", "kill": "no gain on >=2/3 heads or coverage drifts >3pt"},
+      {"name": "Offline bandit over exit arms", "family": "rl_bandit", "licence": "own code", "gate_failed": "data (needs ML-LEG-CORPUS)", "kept": true, "unit_or_row": "RQ-20261011-9da8-04 / ML-LEG-CORPUS", "baseline": "live ladder and best fixed ladder", "kill": "n>=150 and policy <= best fixed"},
+      {"name": "TSFM LoRA fine-tune", "family": "ts_foundation_model", "kept": false, "reason": "conditional on bake-off PASS; fine-tuning a zero-shot loser is a variation"},
+      {"name": "Chronos-2/TiRex-2 covariates (funding, OI)", "family": "ts_foundation_model", "kept": false, "reason": "blocked on FUNDING-OI-DATASETS-ETH-SOL (ML-R4); revisit when datasets exist"},
+      {"name": "PatchTST/iTransformer/Mamba", "family": "deep_sequence", "kept": false, "reason": "same price-only input class as the closed TCN; lesson is labels/information not depth; reopen with a new information class"},
+      {"name": "Contrastive/SSL", "family": "ssl_representation", "kept": false, "reason": "MAE negative; remaining variant not worth capacity before the bake-offs report"}
+    ],
+    "strategy_ideas": [
+      {"name": "TSMOM vol-target", "unit_or_row": "RQ-20261011-9da8-05 / FRONTIER-LEVER-HARNESS-COSTS"},
+      {"name": "Cross-sectional momentum with funding", "unit_or_row": "RQ-20261011-9da8-06 / FRONTIER-LEVER-HARNESS-COSTS"},
+      {"name": "BTC->alt lead-lag 5m with placebo", "unit_or_row": "RQ-20261011-9da8-07 / FRONTIER-LEVER-LEADLAG"}
+    ],
+    "none_because": null,
+    "next_scan_should": ["check the three unchecked source classes", "re-read the five FRONTIER-LEVER rows -- any still queued is a blocker for the manager", "append graded verdicts to families.*.history"]
+  },
+  "writebacks": ["docs/plans/ml-plan-items.yaml (ML-F0..F5, diversity, families)", "docs/research/frontier-scan-2026-10-11.md", ".claude/skills/frontier-research/SKILL.md"],
+  "rows_filed": ["FRONTIER-RESEARCH", "FRONTIER-LEVER-TSFM", "FRONTIER-LEVER-TABULAR", "FRONTIER-LEVER-CONFORMAL", "FRONTIER-LEVER-HARNESS-COSTS", "FRONTIER-LEVER-LEADLAG"],
+  "units_filed": ["RQ-20261011-9da8-01", "RQ-20261011-9da8-02", "RQ-20261011-9da8-03", "RQ-20261011-9da8-04", "RQ-20261011-9da8-05", "RQ-20261011-9da8-06", "RQ-20261011-9da8-07"],
+  "handoff": ["manager: land the hold PR (new hand-written units, E57); dispatch the FRONTIER-LEVER-* rows by capacity (TSFM and CONFORMAL first: cheapest, unlock the most-informative units)", "manager: bind the weekly FRONTIER-SCAN dispatch to the Sunday ml-review routine", "operator (preference, later): licence stance on non-commercial model weights for live serving, only if a TabPFN arm wins"]
+}

@@ -1,13 +1,14 @@
 {
  "schema": "stage_aware_v1",
- "generated_at": "2026-10-02T07:56:52.092808+00:00",
- "utc_date": "2026-10-02",
+ "generated_at": "2026-10-11T05:22:19.764829+00:00",
+ "utc_date": "2026-10-11",
  "generated_by": "scripts/ops/strategy_review_stage_aware.py",
- "graded": 52,
- "verdict_reached": 0,
- "actionable": 0,
+ "graded": 26,
+ "verdict_reached": 1,
+ "actionable": 1,
  "by_action": {
-  "S1:insufficient-data": 45,
+  "S1:insufficient-data": 18,
+  "S1:kill": 1,
   "S2:abstain": 7
  },
  "question": "Per leg, graded with the instrument its STAGE calls for: Stage 2 (bybit_2/alpaca_live + mirrors) on MONEY via R4's demotion verdict; Stage 1 (bybit_1, alpaca_paper) on MECHANICS + COST FIDELITY via R5 -- never expectancy, per root CLAUDE.md's promotion ladder ('a live or paper book never establishes edge').",
@@ -31,13 +32,27 @@
   ],
   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
   "window_hours": 168,
-  "n_legs": 45,
-  "verdict_reached": 0,
-  "actionable": 0,
+  "n_legs": 19,
+  "verdict_reached": 1,
+  "actionable": 1,
   "mechanics_read_state": "measured",
-  "cost_fidelity_read_state": "producer_failed"
+  "cost_fidelity_read_state": "measured"
  },
  "rows": [
+  {
+   "stage": "S1",
+   "account": "alpaca_paper",
+   "strategy": "qqq_trend_long_1d",
+   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
+   "proposed_action": "S1:kill",
+   "verdict_reached": true,
+   "actionable": true,
+   "disposition": "kill",
+   "execution": "live",
+   "n_needed": null,
+   "eta": null,
+   "reason": "starved: 226 actionable intent(s) (1 episode(s)) in the window, 0 order(s)/ticket(s) received, held_back=2, no open position held. This leg's soak purpose (prove the pipeline works) is unmet: it never reaches an order regardless of what cost fidelity reads."
+  },
   {
    "stage": "S1",
    "account": "bybit_1",
@@ -48,79 +63,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
-  },
-  {
-   "stage": "S1",
-   "account": "bybit_1",
-   "strategy": "avax_pullback_2h",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "shadow",
-   "n_needed": null,
-   "eta": "becomes gradeable if this leg's strategies.yaml execution flips to 'live'",
-   "reason": "execution=shadow: this leg places no live order or ticket by design (root CLAUDE.md's execution gate), so neither mechanics (order routing) nor cost fidelity (realized fills) is gradeable the way a routed leg's is — this is NOT a data-read failure"
-  },
-  {
-   "stage": "S1",
-   "account": "bybit_1",
-   "strategy": "eth_pullback_2h",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
-  },
-  {
-   "stage": "S1",
-   "account": "bybit_1",
-   "strategy": "eth_pullback_prop_2h",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "shadow",
-   "n_needed": null,
-   "eta": "becomes gradeable if this leg's strategies.yaml execution flips to 'live'",
-   "reason": "execution=shadow: this leg places no live order or ticket by design (root CLAUDE.md's execution gate), so neither mechanics (order routing) nor cost fidelity (realized fills) is gradeable the way a routed leg's is — this is NOT a data-read failure"
-  },
-  {
-   "stage": "S1",
-   "account": "bybit_1",
-   "strategy": "fade_breakout_4h",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "shadow",
-   "n_needed": null,
-   "eta": "becomes gradeable if this leg's strategies.yaml execution flips to 'live'",
-   "reason": "execution=shadow: this leg places no live order or ticket by design (root CLAUDE.md's execution gate), so neither mechanics (order routing) nor cost fidelity (realized fills) is gradeable the way a routed leg's is — this is NOT a data-read failure"
-  },
-  {
-   "stage": "S1",
-   "account": "bybit_1",
-   "strategy": "fvg_range_15m",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "shadow",
-   "n_needed": null,
-   "eta": "becomes gradeable if this leg's strategies.yaml execution flips to 'live'",
-   "reason": "execution=shadow: this leg places no live order or ticket by design (root CLAUDE.md's execution gate), so neither mechanics (order routing) nor cost fidelity (realized fills) is gradeable the way a routed leg's is — this is NOT a data-read failure"
+   "n_needed": "needs 0 more entry fill(s) and 4 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=22, exit=6); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=22, exit n=6; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -133,8 +78,8 @@
    "disposition": "insufficient-data",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "eta": "wait for a signal; re-check next scheduled pass",
+   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
   },
   {
    "stage": "S1",
@@ -147,36 +92,8 @@
    "disposition": "insufficient-data",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
-  },
-  {
-   "stage": "S1",
-   "account": "alpaca_paper",
-   "strategy": "gld_pullback_1h",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
-  },
-  {
-   "stage": "S1",
-   "account": "bybit_1",
-   "strategy": "htf_pullback_trend_2h",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "shadow",
-   "n_needed": null,
-   "eta": "becomes gradeable if this leg's strategies.yaml execution flips to 'live'",
-   "reason": "execution=shadow: this leg places no live order or ticket by design (root CLAUDE.md's execution gate), so neither mechanics (order routing) nor cost fidelity (realized fills) is gradeable the way a routed leg's is — this is NOT a data-read failure"
+   "eta": "wait for a signal; re-check next scheduled pass",
+   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
   },
   {
    "stage": "S1",
@@ -189,106 +106,8 @@
    "disposition": "insufficient-data",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
-  },
-  {
-   "stage": "S1",
-   "account": "bybit_1",
-   "strategy": "ict_scalp_5m",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "shadow",
-   "n_needed": null,
-   "eta": "becomes gradeable if this leg's strategies.yaml execution flips to 'live'",
-   "reason": "execution=shadow: this leg places no live order or ticket by design (root CLAUDE.md's execution gate), so neither mechanics (order routing) nor cost fidelity (realized fills) is gradeable the way a routed leg's is — this is NOT a data-read failure"
-  },
-  {
-   "stage": "S1",
-   "account": "bybit_1",
-   "strategy": "ict_scalp_avax_5m",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "shadow",
-   "n_needed": null,
-   "eta": "becomes gradeable if this leg's strategies.yaml execution flips to 'live'",
-   "reason": "execution=shadow: this leg places no live order or ticket by design (root CLAUDE.md's execution gate), so neither mechanics (order routing) nor cost fidelity (realized fills) is gradeable the way a routed leg's is — this is NOT a data-read failure"
-  },
-  {
-   "stage": "S1",
-   "account": "bybit_1",
-   "strategy": "ict_scalp_eth_15m",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
-  },
-  {
-   "stage": "S1",
-   "account": "bybit_1",
-   "strategy": "ict_scalp_sol_15m",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
-  },
-  {
-   "stage": "S1",
-   "account": "bybit_1",
-   "strategy": "ict_scalp_sol_5m",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "shadow",
-   "n_needed": null,
-   "eta": "becomes gradeable if this leg's strategies.yaml execution flips to 'live'",
-   "reason": "execution=shadow: this leg places no live order or ticket by design (root CLAUDE.md's execution gate), so neither mechanics (order routing) nor cost fidelity (realized fills) is gradeable the way a routed leg's is — this is NOT a data-read failure"
-  },
-  {
-   "stage": "S1",
-   "account": "bybit_1",
-   "strategy": "ict_scalp_xrp_15m",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
-  },
-  {
-   "stage": "S1",
-   "account": "bybit_1",
-   "strategy": "ict_scalp_xrp_5m",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "eta": "wait for a signal; re-check next scheduled pass",
+   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
   },
   {
    "stage": "S1",
@@ -300,9 +119,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "an entry signal observed while this leg is FLAT (no open position), in some future window",
+   "eta": "re-check next scheduled pass",
+   "reason": "starved (95 intent(s), 0 received) but ALREADY HOLDING a position opened before the window — leg_flow_report's own caveat: this is NOT reliably 'unreached', it may simply have needed no new entry this window while flat-to-in-position. Cannot be graded kill from this window alone."
   },
   {
    "stage": "S1",
@@ -315,8 +134,8 @@
    "disposition": "insufficient-data",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "eta": "wait for a signal; re-check next scheduled pass",
+   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
   },
   {
    "stage": "S1",
@@ -328,37 +147,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
-  },
-  {
-   "stage": "S1",
-   "account": "alpaca_paper",
-   "strategy": "qqq_pullback_1h",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
-  },
-  {
-   "stage": "S1",
-   "account": "alpaca_paper",
-   "strategy": "qqq_trend_long_1d",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "an entry signal observed while this leg is FLAT (no open position), in some future window",
+   "eta": "re-check next scheduled pass",
+   "reason": "starved (209 intent(s), 0 received) but ALREADY HOLDING a position opened before the window — leg_flow_report's own caveat: this is NOT reliably 'unreached', it may simply have needed no new entry this window while flat-to-in-position. Cannot be graded kill from this window alone."
   },
   {
    "stage": "S1",
@@ -371,8 +162,8 @@
    "disposition": "insufficient-data",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "eta": "wait for a signal; re-check next scheduled pass",
+   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
   },
   {
    "stage": "S1",
@@ -385,8 +176,8 @@
    "disposition": "insufficient-data",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "eta": "wait for a signal; re-check next scheduled pass",
+   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
   },
   {
    "stage": "S1",
@@ -404,20 +195,6 @@
   },
   {
    "stage": "S1",
-   "account": "bybit_1",
-   "strategy": "sol_pullback_2h",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
-  },
-  {
-   "stage": "S1",
    "account": "alpaca_paper",
    "strategy": "splg_trend_long_1d",
    "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
@@ -427,22 +204,8 @@
    "disposition": "insufficient-data",
    "execution": "live",
    "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
-  },
-  {
-   "stage": "S1",
-   "account": "alpaca_paper",
-   "strategy": "spy_pullback_1h",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "eta": "wait for a signal; re-check next scheduled pass",
+   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
   },
   {
    "stage": "S1",
@@ -454,23 +217,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
-  },
-  {
-   "stage": "S1",
-   "account": "bybit_1",
-   "strategy": "squeeze_breakout_4h",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "an entry signal observed while this leg is FLAT (no open position), in some future window",
+   "eta": "re-check next scheduled pass",
+   "reason": "starved (182 intent(s), 0 received) but ALREADY HOLDING a position opened before the window — leg_flow_report's own caveat: this is NOT reliably 'unreached', it may simply have needed no new entry this window while flat-to-in-position. Cannot be graded kill from this window alone."
   },
   {
    "stage": "S1",
@@ -482,23 +231,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
-  },
-  {
-   "stage": "S1",
-   "account": "alpaca_paper",
-   "strategy": "tlt_pullback_1h",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "an entry signal observed while this leg is FLAT (no open position), in some future window",
+   "eta": "re-check next scheduled pass",
+   "reason": "starved (76 intent(s), 0 received) but ALREADY HOLDING a position opened before the window — leg_flow_report's own caveat: this is NOT reliably 'unreached', it may simply have needed no new entry this window while flat-to-in-position. Cannot be graded kill from this window alone."
   },
   {
    "stage": "S1",
@@ -510,23 +245,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
-  },
-  {
-   "stage": "S1",
-   "account": "bybit_1",
-   "strategy": "trend_donchian",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "an entry signal observed while this leg is FLAT (no open position), in some future window",
+   "eta": "re-check next scheduled pass",
+   "reason": "starved (227 intent(s), 0 received) but ALREADY HOLDING a position opened before the window — leg_flow_report's own caveat: this is NOT reliably 'unreached', it may simply have needed no new entry this window while flat-to-in-position. Cannot be graded kill from this window alone."
   },
   {
    "stage": "S1",
@@ -545,48 +266,6 @@
   {
    "stage": "S1",
    "account": "bybit_1",
-   "strategy": "trend_donchian_ada_4h",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "shadow",
-   "n_needed": null,
-   "eta": "becomes gradeable if this leg's strategies.yaml execution flips to 'live'",
-   "reason": "execution=shadow: this leg places no live order or ticket by design (root CLAUDE.md's execution gate), so neither mechanics (order routing) nor cost fidelity (realized fills) is gradeable the way a routed leg's is — this is NOT a data-read failure"
-  },
-  {
-   "stage": "S1",
-   "account": "bybit_1",
-   "strategy": "trend_donchian_avax_4h",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "shadow",
-   "n_needed": null,
-   "eta": "becomes gradeable if this leg's strategies.yaml execution flips to 'live'",
-   "reason": "execution=shadow: this leg places no live order or ticket by design (root CLAUDE.md's execution gate), so neither mechanics (order routing) nor cost fidelity (realized fills) is gradeable the way a routed leg's is — this is NOT a data-read failure"
-  },
-  {
-   "stage": "S1",
-   "account": "bybit_1",
-   "strategy": "trend_donchian_eth",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
-  },
-  {
-   "stage": "S1",
-   "account": "bybit_1",
    "strategy": "trend_donchian_eth_4h",
    "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
    "proposed_action": "S1:insufficient-data",
@@ -594,37 +273,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
-  },
-  {
-   "stage": "S1",
-   "account": "bybit_1",
-   "strategy": "trend_donchian_sol",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
-  },
-  {
-   "stage": "S1",
-   "account": "bybit_1",
-   "strategy": "trend_donchian_sol_4h",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "shadow",
-   "n_needed": null,
-   "eta": "becomes gradeable if this leg's strategies.yaml execution flips to 'live'",
-   "reason": "execution=shadow: this leg places no live order or ticket by design (root CLAUDE.md's execution gate), so neither mechanics (order routing) nor cost fidelity (realized fills) is gradeable the way a routed leg's is — this is NOT a data-read failure"
+   "n_needed": "needs 0 more entry fill(s) and 10 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=11, exit=0); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=11, exit n=0; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -636,23 +287,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
-  },
-  {
-   "stage": "S1",
-   "account": "alpaca_paper",
-   "strategy": "uso_trend_1h",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "needs 7 more entry fill(s) and 10 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=3, exit=0); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=3, exit n=0; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -664,9 +301,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "next scheduled run",
-   "reason": "could not measure: cost fidelity (the realized_slippage diag pull failed this run) — distinct from 'measured and found nothing'; re-check next scheduled pass"
+   "n_needed": "needs 0 more entry fill(s) and 9 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=14, exit=1); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=14, exit n=1; need >= 10 each)"
   },
   {
    "stage": "S2",
@@ -678,17 +315,17 @@
    "actionable": false,
    "r4_status": "abstain_thin",
    "chosen_source": "real_money",
-   "n_closed": 11,
-   "pnl_coverage_measured": 1.0,
+   "n_closed": 14,
+   "pnl_coverage_measured": 0.9286,
    "coverage_floor": 0.6,
    "min_trades": 40,
-   "net_usd_measured": -30.0567,
-   "net_r_net_of_full_cost": -7.7496,
-   "r_population": 11,
+   "net_usd_measured": -24.8417,
+   "net_r_net_of_full_cost": -6.0436,
+   "r_population": 14,
    "t3_windows_r": [],
    "t3_p10": -4.38314,
-   "abstain": "stale",
-   "reason": "STALE PAYLOAD -- newest close 2026-09-28T13:36:31+00:00 is 90.3h old > the stated 72h bound; the same trades are not new evidence"
+   "abstain": "thin",
+   "reason": "fewer than 40 closed trades on either book: 14 closed rows < min_trades 40"
   },
   {
    "stage": "S2",
@@ -709,8 +346,8 @@
    "r_population": 1,
    "t3_windows_r": [],
    "t3_p10": 11.30573,
-   "abstain": "stale",
-   "reason": "STALE PAYLOAD -- newest close 2026-09-28T13:36:31+00:00 is 90.3h old > the stated 72h bound; the same trades are not new evidence"
+   "abstain": "thin",
+   "reason": "fewer than 40 closed trades on either book: 1 closed rows < min_trades 40"
   },
   {
    "stage": "S2",
@@ -730,9 +367,9 @@
    "net_r_net_of_full_cost": -0.4772,
    "r_population": 1,
    "t3_windows_r": [],
-   "t3_p10": 12.064,
-   "abstain": "stale",
-   "reason": "STALE PAYLOAD -- newest close 2026-09-28T13:36:31+00:00 is 90.3h old > the stated 72h bound; the same trades are not new evidence"
+   "t3_p10": 14.9357,
+   "abstain": "thin",
+   "reason": "fewer than 40 closed trades on either book: 1 closed rows < min_trades 40"
   },
   {
    "stage": "S2",
@@ -753,8 +390,8 @@
    "r_population": 1,
    "t3_windows_r": [],
    "t3_p10": -3.33349,
-   "abstain": "stale",
-   "reason": "STALE PAYLOAD -- newest close 2026-09-28T13:36:31+00:00 is 90.3h old > the stated 72h bound; the same trades are not new evidence"
+   "abstain": "thin",
+   "reason": "fewer than 40 closed trades on either book: 1 closed rows < min_trades 40"
   },
   {
    "stage": "S2",
@@ -775,8 +412,8 @@
    "r_population": 11,
    "t3_windows_r": [],
    "t3_p10": -6.94652,
-   "abstain": "stale",
-   "reason": "STALE PAYLOAD -- newest close 2026-09-28T13:36:31+00:00 is 90.3h old > the stated 72h bound; the same trades are not new evidence"
+   "abstain": "thin",
+   "reason": "fewer than 40 closed trades on either book: 11 closed rows < min_trades 40"
   },
   {
    "stage": "S2",
@@ -788,17 +425,17 @@
    "actionable": false,
    "r4_status": "abstain_thin",
    "chosen_source": "real_money",
-   "n_closed": 5,
-   "pnl_coverage_measured": 0.4,
+   "n_closed": 6,
+   "pnl_coverage_measured": 0.3333,
    "coverage_floor": 0.6,
    "min_trades": 40,
-   "net_usd_measured": -6.6688,
-   "net_r_net_of_full_cost": -1.5846,
-   "r_population": 5,
+   "net_usd_measured": -9.7812,
+   "net_r_net_of_full_cost": -2.5659,
+   "r_population": 6,
    "t3_windows_r": [],
    "t3_p10": 2.31519,
-   "abstain": "stale",
-   "reason": "STALE PAYLOAD -- newest close 2026-09-28T13:36:31+00:00 is 90.3h old > the stated 72h bound; the same trades are not new evidence"
+   "abstain": "thin",
+   "reason": "fewer than 40 closed trades on either book: 6 closed rows < min_trades 40"
   },
   {
    "stage": "S2",
@@ -818,9 +455,9 @@
    "net_r_net_of_full_cost": -7.3331,
    "r_population": 14,
    "t3_windows_r": [],
-   "t3_p10": -4.4319,
-   "abstain": "stale",
-   "reason": "STALE PAYLOAD -- newest close 2026-09-28T13:36:31+00:00 is 90.3h old > the stated 72h bound; the same trades are not new evidence"
+   "t3_p10": -5.95372,
+   "abstain": "thin",
+   "reason": "fewer than 40 closed trades on either book: 14 closed rows < min_trades 40"
   }
  ]
 }

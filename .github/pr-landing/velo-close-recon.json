@@ -1,0 +1,8 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 prop close-reconcile change (src/prop: executor reconcile, dxtrade_api history read, prop_journal close dedup); reads only at the venue, no order endpoint added. The manager merges under VELO-CLOSE-RECON.",
+  "recorded_decision": {"kind": "operator_decision", "ref": "VELO-CLOSE-RECON"},
+  "why": "VELO-CLOSE-RECON: velotrade_1 prop-manual-6fbebc711fa6 (ETH long 3.44 @ 2509.40) closed at the venue 2026-10-11 03:52:42Z (SELL 3.44 @ 2499.37, MEASURED issue #17505) but was journaled UNPRICED: the REST history read asked for period=today, which the venue answered with 0 orders for a same-UTC-day close. Fix: read the unfiltered history; name the exit by ORDER IDENTITY (the ticket's own -S/-T child); compute P&L from venue fills; re-read every unpriced executor close each cycle (never written off; alert, then one red flag on a streak); a priced close of a ticket corrects its unpriced journal row in place instead of appending a second close."
+}

@@ -64,7 +64,9 @@ Session (``--login``):
   the operator's) session. For a manual run only.
 
 Prints JSON lines, redacted like the login check (no credentials, cookies,
-URL paths or tokens). Exit: 0 ok · 3 read did not parse / halted · 4
+URL paths or tokens). Exit: 0 ok (the executor cycle ALWAYS exits 0 unless the
+process crashed: NO-HALT, operator 2026-10-09) · 3 a measurement / round trip
+failed · 4
 feasibility stop (incl. ``feasibility: canvas_ticket``) · 5 environment ·
 6 no reusable session · 1 other.
 """
@@ -74,6 +76,7 @@ import argparse
 import json
 import os
 import sys
+import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -82,7 +85,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from src.prop import prop_executor as pe  # noqa: E402
-from src.prop.platform import FeasibilityError, adapter_for_platform, load_platform_config  # noqa: E402
+from src.prop.platform import API_PLATFORMS, FeasibilityError, adapter_for_platform, load_platform_config  # noqa: E402
 
 EXIT_OK, EXIT_ERROR, EXIT_UNPARSED, EXIT_FEASIBILITY, EXIT_ENV, EXIT_NO_SESSION = 0, 1, 3, 4, 5, 6
 # A secondary test that stood aside for a live ticket (the tick wins).
@@ -127,14 +130,12 @@ def resolve_mode(args: argparse.Namespace, env: Optional[Dict[str, str]] = None)
     2026-09-30): ``off`` is the EXECUTOR's kill switch (no cycle, no ticket,
     no submit, no reconcile), while a probe is a manual, one-shot,
     operator/manager-dispatched measurement that places nothing and writes
-    nothing to the API. The one exception to "nothing in the executor's state
-    dir": ``instrument_info_probe`` (click mode) writes the executor's
-    AUTO-REVERT ``halted`` latch -- armed before its first click, removed
-    only after a VERIFIED restore, kept with the reason otherwise
-    (``arm_info_probe_latch`` / ``latch_info_probe``). That latch only ever
-    BLOCKS entries. Blocking it under
-    ``off`` would block measurement exactly when the executor has been
-    reverted. ``probe`` opens and closes the order form but types nothing;
+    nothing to the API. ``instrument_info_probe`` (click mode) used to write
+    the executor's ``halted`` latch when it could not verify the linked-symbol
+    restore; since NO-HALT (operator 2026-10-09) it ALERTS instead and writes
+    nothing: the order form checks the symbol at open AND at read-back
+    (``form_names_symbol``), so a wrong linked symbol refuses that one ticket,
+    it never needed a halt. ``probe`` opens and closes the order form but types nothing;
     the other two never reach the order form."""
     base = pe.executor_mode(env, getattr(args, "account", pe.PRIMARY_ACCOUNT) or pe.PRIMARY_ACCOUNT)
     if args.probe_ticket:
@@ -267,23 +268,19 @@ def emit_info_probe(got: Dict[str, Any], *secrets: str) -> int:
     return EXIT_UNPARSED if got.get("alerts") else EXIT_OK
 
 
-#: The pre-click latch text. A process killed mid-click (SIGTERM, timeout)
-#: never reaches its ``finally`` restore, so the latch goes down FIRST and is
-#: removed only after a verified restore (manager re-review of #14645).
+#: Kept for log readers: the text the pre-NO-HALT probe wrote as its
+#: in-progress latch. Nothing writes it any more.
 INFO_PROBE_ARMED = ("AUTO-REVERT: instrument-info-probe IN PROGRESS -- if this persists the probe "
                     "was killed mid-run and the linked symbol is UNVERIFIED; re-select it on the "
                     "terminal, then executor-clear-halt")
 
 
 def arm_info_probe_latch(state_dir: Path) -> bool:
-    """Write the in-progress latch before any click. Returns True only when
-    THIS call wrote it; an already-present latch (a real executor trip) is
-    left exactly as it is and is never removed by the probe."""
-    st = pe.ExecutorState(state_dir)
-    if st.halted():
-        return False
-    st.halt(INFO_PROBE_ARMED)
-    return True
+    """NO-HALT (operator 2026-10-09): writes nothing and returns False. The
+    probe no longer latches the executor; the shared login.lock already keeps
+    a tick from running during it, and the order form's own symbol check
+    (open + read-back) refuses a ticket on a wrong linked symbol."""
+    return False
 
 
 def fresh_page_recheck(got: Dict[str, Any], adapter: Any, context: Any, page: Any, login_url: str) -> None:
@@ -312,24 +309,17 @@ def fresh_page_recheck(got: Dict[str, Any], adapter: Any, context: Any, page: An
 
 def latch_info_probe(got: Dict[str, Any], state_dir: Path, *, armed: bool = False) -> Optional[str]:
     """A click-mode info probe that could not VERIFY the linked-symbol restore
-    leaves the executor's own AUTO-REVERT ``halted`` latch in place with the
-    reason (manager review of #14645): the next executor tick reads it before
-    trading and refuses every new entry, alerting, until the symbol is
-    re-selected and ``executor-clear-halt`` runs. The reason is appended to
-    ``alerts`` too. With ``armed`` (this run wrote the in-progress latch), a
-    clean run removes that latch -- only if it still holds the in-progress
-    text -- and an unclean one replaces its text with the reason."""
+    ALERTS with the reason (NO-HALT, operator 2026-10-09; until then it wrote
+    the executor's ``halted`` latch). Nothing is written to the state dir:
+    the executor keeps trading, and a ticket typed into a form showing the
+    wrong symbol is refused at open / read-back by ``form_names_symbol``.
+    ``armed`` is accepted for older callers and ignored."""
     from src.prop.platform.dxtrade import info_probe_restore_latch_reason
-    st = pe.ExecutorState(state_dir)
     reason = info_probe_restore_latch_reason(got)
-    ours = armed and INFO_PROBE_ARMED in (st.halted() or "")
     if reason:
-        if ours:
-            st.halt_file.unlink()
-        st.halt(reason)
-        got.setdefault("alerts", []).append(f"executor halt latch written: {reason}")
-    elif ours:
-        st.halt_file.unlink()
+        got.setdefault("alerts", []).append(
+            f"linked symbol unverified after the probe (no latch; the order form's symbol check refuses a "
+            f"wrong-symbol ticket): {reason}")
     return reason
 
 
@@ -358,6 +348,135 @@ def _code_sha() -> str:
     except Exception:
         return "unknown"
 
+
+
+def emit_trail_pulse(account: str, state_dir: Path, *secrets: str) -> None:
+    """TRAIL-PAUSE-PULSE: one pulse per tick carrying ``trail_paused_since``
+    (null = latch absent, ISO = the RETIRED latch file is present -- since
+    NO-HALT 2026-10-09 nothing blocks on it and the trail moves it aside, so a
+    deployed host reads null; "unknown" = could not read the file).
+    Written to ``<state dir>/prop_monitor_pulse.json`` for the attention watch
+    and emitted to the journal. Never raises: a pulse failure must not touch
+    the cycle or the trail step."""
+    try:
+        from src.prop import trail_pause
+        pulse = trail_pause.build_pulse(account, state_dir)
+        pulse["written"] = trail_pause.write_pulse(state_dir, pulse)
+        emit({"pulse": pulse}, *secrets)
+    except Exception as exc:  # noqa: BLE001
+        emit({"pulse": {"account": account, "trail_paused_since": "unknown",
+                        "error": type(exc).__name__}}, *secrets)
+
+
+def run_cycle_and_trail(*, adapter, page, api, cfg, mode, args, state_dir, secrets, sleep,
+                        save_session=None) -> int:
+    """One executor cycle plus the PROP-TRAIL step, shared by the browser tick
+    and the REST tick (VELOTRADE-GOLIVE). ``page`` is None on a REST platform."""
+    res = pe.run_cycle(
+        adapter=adapter, page=page, api=api, cfg=cfg, mode=mode,
+        ledger=pe.IntentLedger(state_dir / "intent_ledger.jsonl"),
+        state=pe.ExecutorState(state_dir),
+        walk_form=args.dry_run,
+        max_lots=cfg.watched_click_max_lots if args.watched_click else None,
+        only_ticket_id=args.ticket_id or None,
+        sleep=sleep)
+    # The cycle's reads / actions / reports / alerts are emitted and the
+    # session saved BEFORE the trail step (manager re-review of #15316):
+    # a trail step that hangs past the wrapper's wall clock must not
+    # lose this tick's alert lines or its ping.
+    emit({"reads": res.reads}, *secrets)
+    for a in res.actions:
+        emit({"action": a}, *secrets)
+    for r in res.reports:
+        emit({"report": r}, *secrets)
+    for al in res.alerts:
+        emit({"alert": al}, *secrets)
+    emit({"executor": "done", "mode": res.mode, "halted": res.halted}, *secrets)
+    emit_trail_pulse(args.account, state_dir, *secrets)
+    if save_session is not None:
+        save_session()
+    if not (args.watched_click or args.ticket_id):
+        # PROP-TRAIL: the leg's declared trail, by amending the resting
+        # SL. AFTER the cycle and its output, so it never delays a
+        # ticket or an alert; same mode (read_only walks to the edit
+        # control and stops). Fully contained: an exception here must
+        # not reach the outer handler (record_tick_error counts it as a
+        # crashed tick). Its own reports / alerts are emitted after it.
+        # ACTIONS INCLUDED (ACTIVE-GEOMETRY lane, 2026-10-06): run_trail_step
+        # records every per-position decision through ``res.log``
+        # (``trail_amend`` / ``trail_skip`` -> res.actions), and res.actions was
+        # emitted ONLY above, before the step ran, so the trail's evidence never
+        # reached the journal (0 such lines in 2000 journal lines of
+        # ict-prop-executor@tradeify_1, deps line on every tick).
+        n_act, n_rep, n_al = len(res.actions), len(res.reports), len(res.alerts)
+        try:
+            # PROP-TRAIL-VENV: import the trail's deps EXPLICITLY (the
+            # candle feed builds its ccxt client lazily, per call) and
+            # emit a POSITIVE line, so executor-dry-run proves the venv
+            # rather than relying on an absent alert.
+            import ccxt  # noqa: F401
+            import pandas  # noqa: F401
+
+            from src.prop import prop_trail
+            candles_fn = prop_trail.default_candles_fn()
+            emit({"trail": {"deps": "importable (pandas, ccxt)", "mode": res.mode}})
+            prop_trail.run_trail_step(adapter=adapter, page=page, api=api, cfg=cfg, mode=res.mode,
+                                      state_dir=state_dir, candles_fn=candles_fn, res=res)
+        except ImportError as exc:
+            res.alerts.append(f"trail: step failed ({type(exc).__name__}: {exc.name or exc}) -- "
+                              "PROP-TRAIL-VENV: the executor venv cannot import the trail's deps; "
+                              "entries unaffected")
+        except Exception as exc:  # noqa: BLE001
+            res.alerts.append(f"trail: step failed ({type(exc).__name__}); entries unaffected")
+        for a in res.actions[n_act:]:
+            emit({"action": a}, *secrets)
+        for r in res.reports[n_rep:]:
+            emit({"report": r}, *secrets)
+        for al in res.alerts[n_al:]:
+            emit({"alert": al}, *secrets)
+    # NO-HALT (operator 2026-10-09): a cycle that ran exits 0 whatever it
+    # contained or held; its alerts are what reach a person.
+    return EXIT_OK
+
+
+def run_api_tick(*, args, mode, cfg, cfg_plat, username, password, secrets) -> int:
+    """The executor tick for a REST platform (``dxtrade_api``; VELOTRADE-GOLIVE).
+
+    No browser: a FRESH REST login every tick (the feed's saved browser session
+    means nothing to a REST host, so ``--login reuse`` is ignored), then the
+    SAME ``run_cycle`` + trail step as the browser tick with ``page=None``.
+    Only the executor modes run here; every probe/round-trip mode is a browser
+    measurement and is refused."""
+    if mode not in ("live", "read_only"):
+        emit({"feasibility": "api_platform",
+              "why": f"mode {mode!r} is a browser measurement; {cfg_plat['platform']} runs live/read_only only"})
+        return EXIT_FEASIBILITY
+    if not username or not password:
+        emit({"feasibility": "no_credentials"})
+        return EXIT_FEASIBILITY
+    adapter = adapter_for_platform(cfg_plat["platform"])
+    try:
+        adapter.login(None, cfg_plat["login_url"], username, password)
+    except FeasibilityError as fe:
+        emit({"feasibility": fe.reason, "detail": fe.detail}, *secrets)
+        return EXIT_FEASIBILITY
+    secrets = tuple(secrets) + tuple(getattr(adapter, "_secrets", ()))
+    emit({"session": "rest_login"})
+    api = pe.LocalApi(args.api_base, os.environ.get("DASHBOARD_API_TOKEN", "").strip())
+    try:
+        return run_cycle_and_trail(adapter=adapter, page=None, api=api, cfg=cfg, mode=mode, args=args,
+                                   state_dir=Path(args.state_dir), secrets=secrets, sleep=time.sleep)
+    except Exception as exc:
+        emit({"error": f"{type(exc).__name__}: {str(exc)[:300]}"}, *secrets)
+        trip = pe.record_tick_error(Path(args.state_dir), mode == "live", type(exc).__name__)
+        if trip:
+            emit({"alert": trip}, *secrets)
+        return EXIT_ERROR
+    finally:
+        try:
+            adapter.logout()
+        except Exception:
+            pass
 
 def main(argv: Optional[list] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
@@ -437,6 +556,9 @@ def main(argv: Optional[list] = None) -> int:
     ap.add_argument("--ticket-id", default="", help="watched click: act on this ticket only")
     ap.add_argument("--order-type", choices=("market", "limit"), default="market",
                     help="round trip only: 'limit' walks the ticket path's LIMIT form, DRY only")
+    ap.add_argument("--limit-offset-pct", type=float, default=None,
+                    help="DRY LIMIT round trip only: limit this many percent from the touch "
+                         "(negative = below the ask for a long); refused with --live")
     args = ap.parse_args(argv)
     if not args.state_dir:
         args.state_dir = str(default_state_dir(args.account))
@@ -457,7 +579,7 @@ def main(argv: Optional[list] = None) -> int:
     if mode == "off":
         emit({"executor": "off", "why": f"{mode_env}=off — nothing read, nothing clicked"})
         return EXIT_OK
-    if args.login == "reuse" and not args.storage_state:
+    if args.login == "reuse" and not args.storage_state and cfg_plat["platform"] not in API_PLATFORMS:
         emit({"session": "none", "why": "--login reuse needs --storage-state (the feed's session file)"})
         return EXIT_NO_SESSION
     if args.login == "fresh" and (not username or not password):
@@ -487,6 +609,9 @@ def main(argv: Optional[list] = None) -> int:
             emit({"deferred": f"{len(waiting)} live ticket(s) waiting ({', '.join(waiting[:3])}); "
                               f"the executor tick wins -- re-dispatch this {mode} after it is placed"})
             return EXIT_DEFERRED
+    if cfg_plat["platform"] in API_PLATFORMS:
+        return run_api_tick(args=args, mode=mode, cfg=cfg, cfg_plat=cfg_plat,
+                            username=username, password=password, secrets=secrets)
     adapter = adapter_for_platform(cfg_plat["platform"])
     if hasattr(adapter, "timeout_ms"):
         adapter.timeout_ms = args.timeout_s * 1000
@@ -689,6 +814,7 @@ def main(argv: Optional[list] = None) -> int:
                         ledger=pe.IntentLedger(state_dir / "intent_ledger.jsonl"),
                         venue_symbol=args.round_trip, side=args.side, lots=args.lots,
                         arm=(mode == "round_trip_live"), order_type=args.order_type,
+                        limit_offset_pct=args.limit_offset_pct,
                         sleep=lambda s: page.wait_for_timeout(int(s * 1000)))
                 code = emit_round_trip(res, *secrets)
                 if args.login == "reuse":
@@ -697,71 +823,25 @@ def main(argv: Optional[list] = None) -> int:
                     except Exception as exc:
                         emit({"session": f"state NOT re-saved ({type(exc).__name__})"})
                 return code
-            res = pe.run_cycle(
-                adapter=adapter, page=page, api=api, cfg=cfg, mode=mode,
-                ledger=pe.IntentLedger(state_dir / "intent_ledger.jsonl"),
-                state=pe.ExecutorState(state_dir),
-                walk_form=args.dry_run,
-                max_lots=cfg.watched_click_max_lots if args.watched_click else None,
-                only_ticket_id=args.ticket_id or None,
-                sleep=lambda s: page.wait_for_timeout(int(s * 1000)))
-            # The cycle's reads / actions / reports / alerts are emitted and the
-            # session saved BEFORE the trail step (manager re-review of #15316):
-            # a trail step that hangs past the wrapper's wall clock must not
-            # lose this tick's alert lines or its ping.
-            emit({"reads": res.reads}, *secrets)
-            for a in res.actions:
-                emit({"action": a}, *secrets)
-            for r in res.reports:
-                emit({"report": r}, *secrets)
-            for al in res.alerts:
-                emit({"alert": al}, *secrets)
-            emit({"executor": "done", "mode": res.mode, "halted": res.halted}, *secrets)
-            if args.login == "reuse":
-                try:
-                    save_storage_state(context, args.storage_state)
-                except Exception as exc:
-                    emit({"session": f"state NOT re-saved ({type(exc).__name__})"})
-            if not (args.watched_click or args.ticket_id):
-                # PROP-TRAIL: the leg's declared trail, by amending the resting
-                # SL. AFTER the cycle and its output, so it never delays a
-                # ticket or an alert; same mode (read_only walks to the edit
-                # control and stops). Fully contained: an exception here must
-                # not reach the outer handler, whose record_tick_error trips
-                # the entry halt. Its own reports / alerts are emitted after it.
-                n_rep, n_al = len(res.reports), len(res.alerts)
-                try:
-                    # PROP-TRAIL-VENV: import the trail's deps EXPLICITLY (the
-                    # candle feed builds its ccxt client lazily, per call) and
-                    # emit a POSITIVE line, so executor-dry-run proves the venv
-                    # rather than relying on an absent alert.
-                    import ccxt  # noqa: F401
-                    import pandas  # noqa: F401
+            def _save_session():
+                if args.login == "reuse":
+                    try:
+                        save_storage_state(context, args.storage_state)
+                    except Exception as exc:
+                        emit({"session": f"state NOT re-saved ({type(exc).__name__})"})
 
-                    from src.prop import prop_trail
-                    candles_fn = prop_trail.default_candles_fn()
-                    emit({"trail": {"deps": "importable (pandas, ccxt)", "mode": res.mode}})
-                    prop_trail.run_trail_step(adapter=adapter, page=page, api=api, cfg=cfg, mode=res.mode,
-                                              state_dir=state_dir, candles_fn=candles_fn, res=res)
-                except ImportError as exc:
-                    res.alerts.append(f"trail: step failed ({type(exc).__name__}: {exc.name or exc}) -- "
-                                      "PROP-TRAIL-VENV: the executor venv cannot import the trail's deps; "
-                                      "entries unaffected")
-                except Exception as exc:  # noqa: BLE001
-                    res.alerts.append(f"trail: step failed ({type(exc).__name__}); entries unaffected")
-                for r in res.reports[n_rep:]:
-                    emit({"report": r}, *secrets)
-                for al in res.alerts[n_al:]:
-                    emit({"alert": al}, *secrets)
-            return EXIT_UNPARSED if res.halted else EXIT_OK
+            return run_cycle_and_trail(adapter=adapter, page=page, api=api, cfg=cfg, mode=mode, args=args,
+                                       state_dir=state_dir, secrets=secrets,
+                                       sleep=lambda s: page.wait_for_timeout(int(s * 1000)),
+                                       save_session=_save_session)
         except Exception as exc:
             emit({"error": f"{type(exc).__name__}: {str(exc)[:300]}"}, *secrets)
             if mode in ("live", "read_only"):
-                # A raised tick is an executor error; two in a row trip the
-                # auto-revert latch (live only), and the alert is pinged.
+                # A raised tick is an executor error: counted, never latched;
+                # the RED_FLAG_AFTER-th in a row raises one red flag (live).
                 trip = pe.record_tick_error(Path(args.state_dir), mode == "live", type(exc).__name__)
                 if trip:
-                    emit({"alert": trip + " — new entries halted until cleared"}, *secrets)
+                    emit({"alert": trip}, *secrets)
             return EXIT_ERROR
         finally:
             browser.close()

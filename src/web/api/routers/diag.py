@@ -277,6 +277,10 @@ _CANONICAL_UNITS: tuple[str, ...] = (
     # alive?" for the timer as well as the run.
     "ict-work-digest.service",
     "ict-work-digest.timer",
+    # WORK-SYSTEM (2026-10-04). The daily 05:30Z work-report GENERATOR (sends
+    # nothing; the hourly digest above is the one Telegram carrier).
+    "ict-work-report.service",
+    "ict-work-report.timer",
     "ict-health-snapshot.service",
     "ict-health-snapshot.timer",
     # 2026-06-28 (full-system audit Workstream B) — two recurring trader-VM
@@ -342,6 +346,13 @@ _CANONICAL_UNITS: tuple[str, ...] = (
     # journal (account, env_mode) without SSH.
     "ict-prop-executor@tradeify_1.service",
     "ict-prop-executor@tradeify_1.timer",
+    # 2026-10-04 (VELOTRADE-WIRE) — the same two template instances for
+    # velotrade_1, queryable before either is enabled so a session can
+    # confirm they are off.
+    "ict-prop-feed@velotrade_1.service",
+    "ict-prop-feed@velotrade_1.timer",
+    "ict-prop-executor@velotrade_1.service",
+    "ict-prop-executor@velotrade_1.timer",
     "ict-exchange-funding-pull.service",
     "ict-exchange-funding-pull.timer",
     "ict-mes-ibkr-pull.service",
@@ -378,6 +389,7 @@ _CONVICTION_ARBITRATION_LOG = runtime_logs_dir() / "conviction_arbitration.jsonl
 _EXIT_LADDER_SOAK_LOG = runtime_logs_dir() / "exit_ladder_soak.jsonl"
 _FC_GEOMETRY_SOAK_LOG = runtime_logs_dir() / "fc_geometry_soak.jsonl"
 _EXIT_LEVER_SOAK_LOG = runtime_logs_dir() / "exit_lever_soak.jsonl"
+_VOL_TRAIL_SHADOW_LOG = runtime_logs_dir() / "vol_trail_shadow.jsonl"
 _TARGET_EXTENSION_SOAK_LOG = runtime_logs_dir() / "target_extension_soak.jsonl"
 # The protection RE-ASSERT soak (2026-08-23). At the default `annotate` mode
 # this is the exact row list to review before flipping PROTECTION_REASSERT_MODE
@@ -488,7 +500,7 @@ _PROP_TICKET_RISK_SOAK_LOG = (
 # always the same: "the mechanism stopped firing" and "the mechanism fired and
 # the condition simply persists" are indistinguishable from outside, so a
 # broken cadence looks exactly like a quiet one.
-_DAILY_CAP_ALERT_STATE = runtime_logs_dir() / "daily_cap_alert_state.json"
+_DAILY_DD_SWITCH_STATE = runtime_logs_dir() / "daily_dd_switch_state.json"
 _EXIT_LOOP_HEALTH_ALERT_STATE = (
     runtime_logs_dir() / "exit_loop_health_alert_state.json"
 )
@@ -535,12 +547,41 @@ _WORK_DIGEST_RECEIPT = (
     Path(repo_root()) / "runtime_logs" / "work_digest_receipt.json"
 )
 
+# WORK-SYSTEM (2026-10-04). The attention pass's receipt — stamped on every
+# pass. The pass rides ict-work-digest (no unit of its own), so it is anchored
+# to repo_root() for the same reason as the entry above.
+_ATTENTION_WATCH_RECEIPT = (
+    Path(repo_root()) / "runtime_logs" / "attention_watch_receipt.json"
+)
+
+# TRAIL-OBSERVABILITY (2026-10-07, PI-20261006-KX6ZKFNA-0003). The prop trail's
+# former pause latch (`modify_rollout.json`; retired by NO-HALT 2026-10-09, so
+# present only if old code wrote it -- the next trail pass moves it aside), its
+# last armed step's NON-blocking record (`modify_rollout_last.json`) and the
+# per-ticket replay state (`trail_state.json`: fail_streak / next_try_at /
+# red_flagged per ticket) live in the executor's state dir on the VM, outside
+# runtime_logs/, so a relay-bound session could not otherwise read them. The path mirrors
+# the WRITER's resolver (scripts/prop/prop_executor_tick.py::default_state_dir
+# and scripts/ops/prop_executor_tick.sh): breakout_1 keeps `<base>/executor`,
+# every other account is `<base>/accounts/<account>/executor`. Contents carry no
+# secret: the latch is {state, at, symbol, side, from_sl, to_sl, quote | why |
+# sl} (why is _mask_public_text-masked) and the state is per-ticket flags.
+def _prop_executor_state_dir(account: str) -> Path:
+    base = Path(os.environ.get("PROP_BROWSER_BASE")
+                or Path.home() / ".cache" / "metis-prop-browser")
+    if account == "breakout_1":
+        return base / "executor"
+    return base / "accounts" / account / "executor"
+
+
 _LOG_FILES: dict[str, Path] = {
     "audit": _AUDIT_LOG,
     # MI-83. "Has the hourly digest actually fired?" — answerable by READING,
     # not by trusting an `OnCalendar=` line. This repo has measured that a
     # declared cadence is not a run.
     "work_digest_receipt": _WORK_DIGEST_RECEIPT,
+    # WORK-SYSTEM. "Did the attention watch run, and what did it send?"
+    "attention_watch_receipt": _ATTENTION_WATCH_RECEIPT,
     "status": _STATUS_JSON,
     "heartbeat": _HEARTBEAT,
     "bot_log": _BOT_LOG,
@@ -605,6 +646,7 @@ _LOG_FILES: dict[str, Path] = {
     # docs/research/M20-exit-refinement-2026-07-12.md § 5). Absent until the
     # first would-fire trade.
     "exit_lever_soak": _EXIT_LEVER_SOAK_LOG,
+    "vol_trail_shadow": _VOL_TRAIL_SHADOW_LOG,
     "target_extension_soak": _TARGET_EXTENSION_SOAK_LOG,
     "protection_reassert_soak": _PROTECTION_REASSERT_SOAK_LOG,
     "stray_oca_soak": _STRAY_OCA_SOAK_LOG,
@@ -836,10 +878,12 @@ _LOG_FILES: dict[str, Path] = {
     #
     #   * `heartbeat_check_state.json`  <- scripts/check_heartbeat.py, the EXTERNAL
     #     dead-man switch behind ict-liveness-watchdog.timer. Its state keys are
-    #     `autoheal_attempts`, `autoheal_exhausted_alerted`,
-    #     `last_autoheal_attempt_ts`. THIS is the restart budget. Once exhausted
-    #     the watchdog goes alert-only and stops auto-restarting the trader, so
-    #     without a read surface "the watchdog will restart the trader if it
+    #     `autoheal_attempts`, `autoheal_red_flag_alerted`,
+    #     `autoheal_next_backoff_s`, `last_autoheal_attempt_ts`. THIS is the
+    #     restart pacing. Since 2026-10-09 (NO-HALT) it never stops restarting:
+    #     past --max-restarts it raises one red flag and backs off up to
+    #     --max-backoff-min (until then it went EXHAUSTED and alert-only).
+    #     Without a read surface "the watchdog will restart the trader if it
     #     stalls" is an assumption, not an observation.
     #
     #   * `liveness_watchdog_state.json` <- src/runtime/liveness_watchdog.py, a
@@ -853,7 +897,7 @@ _LOG_FILES: dict[str, Path] = {
         runtime_logs_dir() / "heartbeat_check_state.json",
     "liveness_watchdog_state":
         runtime_logs_dir() / "liveness_watchdog_state.json",
-    "daily_cap_alert_state": _DAILY_CAP_ALERT_STATE,
+    "daily_dd_switch_state": _DAILY_DD_SWITCH_STATE,
     # THE OPERATOR-ALERT RING (BL-20260901-OPERATOR-ALERTS-HAS-NO-READ-SURFACE).
     # `execution_diagnostics._append_operator_alert` writes every alert that
     # reaches the `/api/bot/notifications` banner feed here -- close_failure,
@@ -941,6 +985,30 @@ _LOG_FILES: dict[str, Path] = {
         runtime_logs_dir() / "silent_refusal_alert_state.json",
     "prop_fills_staleness_state":
         runtime_logs_dir() / "prop_fills_staleness_state.json",
+    "prop_trail_latch_breakout_1":
+        _prop_executor_state_dir("breakout_1") / "modify_rollout.json",
+    "prop_trail_last_step_breakout_1":
+        _prop_executor_state_dir("breakout_1") / "modify_rollout_last.json",
+    "prop_trail_state_breakout_1":
+        _prop_executor_state_dir("breakout_1") / "trail_state.json",
+    "prop_trail_latch_breakout_2":
+        _prop_executor_state_dir("breakout_2") / "modify_rollout.json",
+    "prop_trail_last_step_breakout_2":
+        _prop_executor_state_dir("breakout_2") / "modify_rollout_last.json",
+    "prop_trail_state_breakout_2":
+        _prop_executor_state_dir("breakout_2") / "trail_state.json",
+    "prop_trail_latch_tradeify_1":
+        _prop_executor_state_dir("tradeify_1") / "modify_rollout.json",
+    "prop_trail_last_step_tradeify_1":
+        _prop_executor_state_dir("tradeify_1") / "modify_rollout_last.json",
+    "prop_trail_state_tradeify_1":
+        _prop_executor_state_dir("tradeify_1") / "trail_state.json",
+    "prop_trail_latch_velotrade_1":
+        _prop_executor_state_dir("velotrade_1") / "modify_rollout.json",
+    "prop_trail_last_step_velotrade_1":
+        _prop_executor_state_dir("velotrade_1") / "modify_rollout_last.json",
+    "prop_trail_state_velotrade_1":
+        _prop_executor_state_dir("velotrade_1") / "trail_state.json",
     "target_naked_alert_state":
         runtime_logs_dir() / "target_naked_alert_state.json",
     # Registered IN THE SAME COMMIT that ships its writer. #8778 shipped
@@ -1078,6 +1146,12 @@ _LOG_FILES: dict[str, Path] = {
     # were still sent. A reader may conclude a hash PRESENT here was enqueued;
     # a reader may NOT conclude that a hash missing here was not.
     "pending_pings_delivered": _PENDING_PINGS_DELIVERED,
+    # OA-16(b) (PI-20261004-GCFA5DOR-0010): FIX-SA-08's OnFailure handler
+    # (scripts/ops/notify_unit_failure.py) appends one row per failed unit
+    # here, pinged or suppressed. Without this entry a session could not
+    # observe that the handler fired. ABSENT = no unit failure recorded on
+    # this VM since the file was last reset (VM-local, not in git).
+    "unit_failures": runtime_logs_dir() / "unit_failures.jsonl",
 }
 
 _DEFAULT_LIMIT = 100
@@ -2209,7 +2283,25 @@ def get_journalctl(
 # Paths deploy_pull_restart.sh does NOT restart for (its RUNTIME_CHANGES filter).
 # Keep in lock-step with that regex: `restart_pending` must mean "a commit the
 # deploy would restart for is not loaded", not "the shas differ".
-_NON_RUNTIME_PATHS_RE = re.compile(r"^(docs/|tests/|\.claude/|\.github/|[^/]+\.md$)")
+# #15830 widened the deploy's set and this copy was not updated, so
+# restart_pending read True on research-only commits (OPS-AUDIT 2026-10-04,
+# OA-14); tests/test_diag_restart_pending_lockstep.py now pins the two equal.
+_NON_RUNTIME_PATHS_RE = re.compile(
+    r"^(docs/|tests/|\.claude/|\.github/|[^/]+\.md$|research/|runtime_logs/"
+    r"|scripts/research/|scripts/ci/|comms/research/|comms/strategy_evidence/|comms/macro/)"
+)
+# ...except these scripts/research modules, which the web-api's brief imports
+# in-process (OA-16(d), PI-20261004-GCFA5DOR-0010). They stay runtime. Mirrors
+# the deploy's IN_PROCESS_CHANGES grep. Same lock-step test as above.
+_IN_PROCESS_RUNTIME_PATHS_RE = re.compile(
+    r"^scripts/research/(dispatch_queue|e35_bracket_geometry_sweep|m20_fleet_exit_sweep|m20_wf_effective|queue_grade|queue_replenish|queue_throughput|research_queue)\.py$"
+)
+
+
+def _is_runtime_path(line: str) -> bool:
+    return bool(line) and (
+        not _NON_RUNTIME_PATHS_RE.match(line) or bool(_IN_PROCESS_RUNTIME_PATHS_RE.match(line))
+    )
 
 
 def _restart_pending(running: str, on_disk: str) -> bool | None:
@@ -2224,7 +2316,7 @@ def _restart_pending(running: str, on_disk: str) -> bool | None:
         return False
     try:
         out = subprocess.run(
-            ["git", "diff", "--name-only", running, on_disk],
+            ["git", "diff", "--no-renames", "--name-only", running, on_disk],
             cwd=str(repo_root()),
             capture_output=True, text=True, timeout=5, check=False,
         )
@@ -2233,10 +2325,7 @@ def _restart_pending(running: str, on_disk: str) -> bool | None:
         return None
     if out.returncode != 0:
         return None
-    return any(
-        line and not _NON_RUNTIME_PATHS_RE.match(line)
-        for line in out.stdout.splitlines()
-    )
+    return any(_is_runtime_path(line) for line in out.stdout.splitlines())
 
 
 @router.get("/version")
@@ -2309,6 +2398,137 @@ def get_log_file(
         "size_bytes": path.stat().st_size,
         "lines": [ln.rstrip("\n") for ln in content[-n:]],
     }
+
+
+# ---------------------------------------------------------------------------
+# /log_aggregate (PI-20261004-4GA8WQPA-0003) -- the multi-day reader a 1000-line
+# /log_file TAIL cannot be. bybit_coverage_soak.jsonl (83 MB) and
+# position_read_state_soak.jsonl (136 MB) grow far faster than 1000 lines per
+# day, so their tail spans ONE UTC day while their closing criteria are
+# multi-day ("rows across >= 3 distinct UTC days", "at least one
+# verdicts_differ=true row"). Until this existed those soaks could only be
+# graded could-not-look. It streams the WHOLE file once and returns counts only
+# -- never row content -- so it is no wider a read than /log_file.
+# ---------------------------------------------------------------------------
+_AGG_FIELD_RE = re.compile(r"^[A-Za-z0-9_]{1,64}$")
+_AGG_MAX_FIELDS = 6
+_AGG_MAX_VALUES = 20          # distinct values kept per field before "(other)"
+_AGG_TIME_BUDGET_S = 25.0     # whole-file scan must not hold a worker forever
+_AGG_DAY_KEYS = ("logged_at_utc", "ts", "logged_at", "timestamp")
+
+
+def _agg_day(row: dict) -> str | None:
+    for k in _AGG_DAY_KEYS:
+        v = row.get(k)
+        if isinstance(v, str) and len(v) >= 10 and v[4] == "-" and v[7] == "-":
+            return v[:10]
+    return None
+
+
+def aggregate_jsonl(path: Path, fields: list[str], count_true: list[str],
+                    account_key: str = "account_id",
+                    time_budget_s: float = _AGG_TIME_BUDGET_S) -> dict[str, Any]:
+    """Stream ``path`` once; per UTC day count rows, per account, the value
+    distribution of each of ``fields`` and the rows where each of ``count_true``
+    is truthy-and-nonzero.
+
+    ``read_state`` is ``complete`` or ``time_budget_hit``; the latter means the
+    counts are a LOWER BOUND over the lines scanned, never the whole file, and a
+    caller must not read an absent day as "no rows that day". Lines that are not
+    a JSON object are counted in ``unparseable_lines`` and rows with no
+    parseable timestamp in ``rows_without_day`` -- neither is silently dropped.
+    """
+    t0 = time.monotonic()
+    days: dict[str, dict[str, Any]] = {}
+    scanned = unparseable = no_day = 0
+    state = "complete"
+    with path.open("rb") as fh:
+        for raw in fh:
+            scanned += 1
+            if scanned % 2000 == 0 and time.monotonic() - t0 > time_budget_s:
+                state = "time_budget_hit"
+                break
+            try:
+                row = json.loads(raw)
+            except ValueError:
+                unparseable += 1
+                continue
+            if not isinstance(row, dict):
+                unparseable += 1
+                continue
+            day = _agg_day(row)
+            if day is None:
+                no_day += 1
+                continue
+            d = days.setdefault(day, {"rows": 0, "by_account": {}, "values": {}, "true_counts": {}})
+            d["rows"] += 1
+            acct = row.get(account_key)
+            if acct is not None:
+                d["by_account"][str(acct)] = d["by_account"].get(str(acct), 0) + 1
+            for f in fields:
+                if f in row:
+                    bucket = d["values"].setdefault(f, {})
+                    key = json.dumps(row[f], sort_keys=True) if not isinstance(row[f], str) else row[f]
+                    if key not in bucket and len(bucket) >= _AGG_MAX_VALUES:
+                        key = "(other)"
+                    bucket[key] = bucket.get(key, 0) + 1
+            for f in count_true:
+                v = row.get(f)
+                if v is True or (isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0):
+                    d["true_counts"][f] = d["true_counts"].get(f, 0) + 1
+    return {
+        "read_state": state,
+        "scanned_lines": scanned,
+        "unparseable_lines": unparseable,
+        "rows_without_day": no_day,
+        "distinct_utc_days": len(days),
+        "first_day": min(days) if days else None,
+        "last_day": max(days) if days else None,
+        "days": {k: days[k] for k in sorted(days)},
+        "elapsed_s": round(time.monotonic() - t0, 3),
+    }
+
+
+@router.get("/log_aggregate")
+def get_log_aggregate(
+    request: Request,
+    name: str,
+    fields: str = "",
+    count_true: str = "",
+    account_key: str = "account_id",
+) -> dict[str, Any]:
+    """Whole-file, counts-only aggregate of an allowlisted ``.jsonl`` log,
+    grouped by UTC day (see the block comment above). ``fields`` and
+    ``count_true`` are CSV lists of top-level keys (``[A-Za-z0-9_]``, at most 6
+    each); e.g. ``name=bybit_coverage_soak&fields=mode,binding&count_true=
+    verdicts_differ``. Row content is never returned."""
+    _require_diag_token(request)
+    if name not in _LOG_FILES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": "unknown_log_file", "allowed": sorted(_LOG_FILES.keys())},
+        )
+    f_list = [x.strip() for x in fields.split(",") if x.strip()]
+    t_list = [x.strip() for x in count_true.split(",") if x.strip()]
+    for k in (*f_list, *t_list, account_key):
+        if not _AGG_FIELD_RE.match(k):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail={"error": "bad_field_name", "field": k})
+    if len(f_list) > _AGG_MAX_FIELDS or len(t_list) > _AGG_MAX_FIELDS:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail={"error": "too_many_fields", "max": _AGG_MAX_FIELDS})
+    path = _LOG_FILES[name]
+    if not path.exists():
+        return {"name": name, "path": str(path), "present": False}
+    if path.suffix != ".jsonl":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail={"error": "not_jsonl", "name": name})
+    try:
+        agg = aggregate_jsonl(path, f_list, t_list, account_key)
+    except OSError as exc:
+        return {"name": name, "path": str(path), "present": True, "error": str(exc)}
+    return {"name": name, "path": str(path), "present": True,
+            "size_bytes": path.stat().st_size, **agg}
 
 
 @router.get("/shadow_stats")
@@ -2996,6 +3216,7 @@ def get_bybit_wallet_truth(
     request: Request,
     account_id: str | None = None,
     days: int = 30,
+    by_day: bool = False,
 ) -> dict[str, Any]:
     """**Live** account-level wallet truth for Bybit, from the venue's own
     transaction log — the read surface for the API figure that replaced a
@@ -3066,6 +3287,10 @@ def get_bybit_wallet_truth(
                 window_start_ms=start_ms, window_end_ms=end_ms,
             )
             d = v.as_dict()
+            if by_day:
+                # Per-UTC-day series for the journal-vs-wallet delta
+                # (LEDGER-REFRESH); sums to the headline `realized_usd`.
+                d["daily"] = _wt.daily_buckets(rows)
             if not rows:
                 # The store holding nothing for this account is ambiguous from
                 # the store alone: never pulled, or pulled and genuinely empty.

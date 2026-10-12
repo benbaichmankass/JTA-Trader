@@ -28,11 +28,14 @@
 #                    print every extracted table (kind, headers, row count,
 #                    first rows with ids masked) and how the readers classify
 #                    it (live test #13987: a filled position read back as 0).
-#     reset-feed   — re-arm the scheduled feed (deploy/ict-prop-feed.timer,
-#                    scripts/ops/prop_feed_tick.sh) after it TRIPPED: clears
-#                    its trip marker and failure count AFTER this check exits
-#                    0, still under the shared lock. A failed check leaves it
-#                    tripped.
+#     reset-feed   — clear the scheduled feed's BACKOFF state
+#                    (deploy/ict-prop-feed.timer, scripts/ops/prop_feed_tick.sh)
+#                    so its next tick tries at once, AFTER this check exits 0,
+#                    still under the shared lock. Never required: the feed
+#                    retries on its own capped backoff and never stops
+#                    (NO-HALT, 2026-10-09). A failed check leaves the backoff
+#                    as it was, so a refused login is not retried early. Also
+#                    removes a stale `tripped` marker left by the old code.
 #   Step-3 executor modes (PROP-EXEC 2026-09-28). Each REPLACES the login
 #   check with ONE run of scripts/prop/prop_executor_tick.py --login reuse
 #   (the feed's saved session; no credential login), under the same lock;
@@ -166,20 +169,22 @@
 #                              and `systemctl enable --now` it. Go-live is
 #                              THIS plus `set-env PROP_EXECUTOR_MODE=live`
 #                              (service: none; the tick re-reads .env).
-#     executor-clear-halt    — clear ONLY the executor's AUTO-REVERT latch
-#                              (executor/halted). Manager/operator only; the
-#                              issue's `reason:` is required and recorded with
-#                              the prior latch reason; the file is moved aside.
-#     executor-clear-rollout — clear ONLY the modify-rollout latch
-#                              (executor/modify_rollout.json: one watched
-#                              tighten-only modify per clear), same rules. The
-#                              only way that latch is ever cleared.
+#     executor-clear-halt    — HARMLESS NO-OP since NO-HALT (operator
+#                              2026-10-09): the executor no longer latches and
+#                              removes a stale executor/halted itself on start.
+#                              If the file is still there it is moved aside and
+#                              recorded; absent, it logs and exits 0.
+#     executor-clear-rollout — moves executor/modify_rollout.json aside when
+#                              present (no reason required any more); absent,
+#                              it logs and exits 0.
 #     executor-disable-timer — `systemctl disable --now` the timer. The instant
 #                              revert is `set-env PROP_EXECUTOR_MODE=off`
 #                              (which also stops reconciling in-flight
 #                              `submitted` rows: containment is manual after).
 #   Per-account feed timer (TRADEIFY-WIRE 2026-09-30; any account EXCEPT
-#   breakout_1, whose feed is the non-templated ict-prop-feed.timer):
+#   breakout_1, whose feed is the non-templated ict-prop-feed.timer. For
+#   breakout_1 ONLY feed-disable-timer is accepted, and only once the account
+#   is RETIRED: strategies == [] and mode != live in config/accounts.yaml):
 #     feed-enable-timer   — install deploy/ict-prop-feed@.service +
 #                           deploy/opt-in/ict-prop-feed@.timer and
 #                           `systemctl enable --now ict-prop-feed@<account>.timer`
@@ -258,47 +263,48 @@ case ",${APPLY}," in *",limit,"*)
         exit 1
     fi ;;
 esac
+# `lim-below` / `lim-above` (TRADEIFY-SOL-SIZE 2026-10-04): a DRY LIMIT walk
+# with the limit 0.5% below / above the touch. Only with round-trip-dry AND
+# limit; refused otherwise, before anything runs.
+LIMIT_OFFSET=""
+case ",${APPLY}," in *",lim-below,"*) LIMIT_OFFSET="-0.5" ;; esac
+case ",${APPLY}," in *",lim-above,"*)
+    if [ -n "${LIMIT_OFFSET}" ]; then log "lim-below/lim-above: refused — pick one"; exit 1; fi
+    LIMIT_OFFSET="0.5" ;;
+esac
+if [ -n "${LIMIT_OFFSET}" ]; then
+    case ",${APPLY}," in *",limit,"*) ;; *) log "lim-below/lim-above: refused — needs 'limit'"; exit 1 ;; esac
+    if [ "${EXEC_MODE}" != "round-trip-dry" ]; then
+        log "lim-below/lim-above: refused — valid only with round-trip-dry (got mode '${EXEC_MODE:-none}')"
+        exit 1
+    fi
+fi
 if [ "${EXEC_MODE}" = "executor-clear-halt" ] || [ "${EXEC_MODE}" = "executor-clear-rollout" ]; then
-    # Clear ONE named executor latch, never both (manager 2026-10-02: clearing
-    # an unrelated halt must not silently re-arm a modify step):
-    #   executor-clear-halt    -> the AUTO-REVERT latch executor/halted ONLY
-    #                             (manager / operator decision, 2026-09-28);
-    #   executor-clear-rollout -> the MODIFY-ROLLOUT latch
-    #                             executor/modify_rollout.json ONLY (one watched
-    #                             tighten-only modify per reviewed clear). It is
-    #                             cleared by naming it and in no other way.
-    # Never cleared from inside the executor. Refuses without a reason, when
-    # the named latch is absent, or when it records nothing (that needs a
-    # person to look first). The prior latch is logged and appended to
-    # halt_clears.jsonl, and the file is moved aside, never deleted.
+    # NO-HALT (operator directive 2026-10-09, docs/CLAUDE-RULES-CANONICAL.md
+    # § Prime Directive rule 7): the executor no longer writes or reads
+    # `halted`, so clear-halt is a harmless no-op kept for old issue
+    # templates. Either action moves its file aside when present and records
+    # it in halt_clears.jsonl; absent, it logs and exits 0. Never refuses.
     if [ "${EXEC_MODE}" = "executor-clear-rollout" ]; then
         latch="${X_STATE_DIR}/modify_rollout.json"
     else
         latch="${X_STATE_DIR}/halted"
     fi
-    if [ -z "${ACTION_REASON// }" ]; then
-        log "${EXEC_MODE}: refused — a reason is required (who clears it and why)"
-        exit 1
-    fi
     if [ ! -f "${latch}" ]; then
-        log "${EXEC_MODE}: no latch set at ${latch}; nothing to clear"
-        exit 1
+        log "${EXEC_MODE}: no-op — ${latch} is absent (NO-HALT 2026-10-09)"
+        exit 0
     fi
     prior="$(head -c 500 "${latch}" | tr -d '\r')"
-    if [ -z "${prior// }" ]; then
-        log "${EXEC_MODE}: refused — the latch carries no recorded reason; inspect ${latch} first"
-        exit 1
-    fi
     stamp="$(date -u +%Y%m%dT%H%M%SZ)"
     name="$(basename "${latch}")"
-    log "${EXEC_MODE}: prior latch: ${prior} [${name}]"
+    log "${EXEC_MODE}: moving ${name} aside: ${prior:-(empty)}"
     mv "${latch}" "${latch}.cleared-${stamp}"
-    PRIOR="${prior}" KIND="${name}" ACTOR="${ACTION_ACTOR:-unknown}" ISSUE="${ACTION_ISSUE:-}" WHY="${ACTION_REASON}" \
+    PRIOR="${prior}" KIND="${name}" ACTOR="${ACTION_ACTOR:-unknown}" ISSUE="${ACTION_ISSUE:-}" WHY="${ACTION_REASON:-NO-HALT stale latch}" \
         python3 -c 'import json,os,datetime;print(json.dumps({"ts":datetime.datetime.now(datetime.timezone.utc).isoformat(),"latch":os.environ["KIND"],"actor":os.environ["ACTOR"],"issue":os.environ["ISSUE"],"reason":os.environ["WHY"],"prior":os.environ["PRIOR"]}))' \
-        >> "${X_STATE_DIR}/halt_clears.jsonl"
+        >> "${X_STATE_DIR}/halt_clears.jsonl" || true
     record_audit "breakout-login-check" "${EXEC_MODE}" \
         "{\"account\": \"${ACCOUNT}\", \"moved_to\": \"${name}.cleared-${stamp}\"}" >/dev/null || true
-    log "${EXEC_MODE}: cleared ${name} by ${ACTION_ACTOR:-unknown} (issue #${ACTION_ISSUE:-?}); reason: ${ACTION_REASON}"
+    log "${EXEC_MODE}: moved ${name} aside (${name}.cleared-${stamp})"
     exit 0
 fi
 
@@ -367,15 +373,29 @@ fi
 if [ "${EXEC_MODE}" = "feed-enable-timer" ] || [ "${EXEC_MODE}" = "feed-disable-timer" ]; then
     # Per-account account_status feed (templated unit, TRADEIFY-WIRE). breakout_1
     # keeps its own non-templated ict-prop-feed.timer, untouched by this.
+    FEED_UNIT="ict-prop-feed@${ACCOUNT}"
     if [ "${ACCOUNT}" = "breakout_1" ]; then
-        log "${EXEC_MODE}: refused for breakout_1 — its feed is ict-prop-feed.timer (unchanged)"
-        exit 1
+        # breakout_1's feed is the non-templated ict-prop-feed.timer. It may be
+        # DISABLED (never enabled here) once the account is RETIRED: roster
+        # cleared in config/accounts.yaml (BREAKOUT1-RETIRE, 2026-10-07).
+        if [ "${EXEC_MODE}" = "feed-disable-timer" ] \
+           && (cd "${REPO_DIR}" && python3 - <<'PY'
+import sys, yaml
+a = (yaml.safe_load(open("config/accounts.yaml")) or {})
+a = a.get("accounts", a)["breakout_1"]
+sys.exit(0 if (a.get("strategies") or []) == [] and a.get("mode") != "live" else 1)
+PY
+           ); then
+            FEED_UNIT="ict-prop-feed"
+        else
+            log "${EXEC_MODE}: refused for breakout_1 — its feed is ict-prop-feed.timer (unchanged); only feed-disable-timer is allowed, and only once breakout_1 is retired (empty roster, not live)"
+            exit 1
+        fi
     fi
     if ! sudo -n true >/dev/null 2>&1; then
         log "environment: ${EXEC_MODE} needs passwordless sudo"
         exit 5
     fi
-    FEED_UNIT="ict-prop-feed@${ACCOUNT}"
     if [ "${EXEC_MODE}" = "feed-enable-timer" ]; then
         [ -f "${REPO_DIR}/deploy/opt-in/ict-prop-feed@.timer" ] || { log "missing deploy/opt-in/ict-prop-feed@.timer"; exit 1; }
         sudo -n install -m 0644 "${REPO_DIR}/deploy/ict-prop-feed@.service" /etc/systemd/system/ict-prop-feed@.service
@@ -594,7 +614,8 @@ if [ -n "${EXEC_MODE}" ]; then
         watched-click)       EARGS+=(--watched-click) ;;
         round-trip-dry)      EARGS+=(--round-trip "${RT_SYMBOL}")
                              # `limit` in apply: walk the ticket path's LIMIT form (dry only).
-                             case ",${APPLY}," in *",limit,"*) EARGS+=(--order-type limit) ;; esac ;;
+                             case ",${APPLY}," in *",limit,"*) EARGS+=(--order-type limit) ;; esac
+                             if [ -n "${LIMIT_OFFSET}" ]; then EARGS+=(--limit-offset-pct "${LIMIT_OFFSET}"); fi ;;
         round-trip-live)     EARGS+=(--round-trip "${RT_SYMBOL}" --live) ;;
         close-position)      EARGS+=(--close-position "${RT_SYMBOL}") ;;
         close-position-live) EARGS+=(--close-position "${RT_SYMBOL}" --live) ;;
@@ -643,17 +664,18 @@ set +e
 rc=$?
 set -e
 
-# reset-feed re-arms the scheduled feed ONLY on a clean check (exit 0), and
+# reset-feed clears the feed's backoff ONLY on a clean check (exit 0), and
 # still under the lock taken above (fd 9 stays open until this script exits),
-# so a tick can never start between the proof and the re-arm. A failed check
-# leaves the feed tripped.
+# so a tick can never start between the proof and the clear. A failed check
+# leaves the backoff as it was (the feed keeps retrying on it regardless).
 if [ "${WANT_RESET}" = "1" ]; then
     if [ "${rc}" = "0" ]; then
-        [ -f "${FEED_DIR}/tripped" ] && log "reset-feed: was tripped: $(head -c 300 "${FEED_DIR}/tripped")"
-        rm -f "${FEED_DIR}/tripped" "${FEED_DIR}/consecutive_failures"
-        log "reset-feed: feed re-armed (the check above passed)"
+        [ -f "${FEED_DIR}/backoff" ] && log "reset-feed: was backing off: $(sed -n 's/^reason=//p' "${FEED_DIR}/backoff" | head -c 300)"
+        [ -f "${FEED_DIR}/tripped" ] && log "reset-feed: removing a stale pre-NO-HALT trip marker: $(head -c 300 "${FEED_DIR}/tripped")"
+        rm -f "${FEED_DIR}/backoff" "${FEED_DIR}/tripped" "${FEED_DIR}/consecutive_failures"
+        log "reset-feed: backoff cleared (the check above passed); the next feed tick tries at once"
     else
-        log "reset-feed: NOT re-armed — the check exited ${rc}; the feed stays tripped"
+        log "reset-feed: backoff NOT cleared — the check exited ${rc}; the feed keeps retrying on its own backoff"
     fi
 fi
 

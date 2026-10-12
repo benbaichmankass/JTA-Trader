@@ -1,0 +1,18 @@
+{
+  "id": "PROP-PER-LEG-EV-GRID",
+  "title": "Data task: mixed-risk arm for breakout_2 per-leg prop sizing (ETH $25 / SOL $50) so the held config can be decided",
+  "phase": null,
+  "state": "queued",
+  "owner": "research lane",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-11 ROUTE-AND-ASK-TRIAGE] Owns PI-20261005-YUVCGTMJ-0006. The mechanism is merged (#16958, sizing.flat.per_leg_risk_usd, unset = unchanged); the ETH $25 / SOL $50 config stays unapplied because both source records RQ-20261005-853/854 are indeterminate (P(net>0) < 0.7), per the PROP-PER-LEG-SIZING row note. Per the 2026-09-29 operator ruling this is a data task, not a popup: run a prop_ev_grid with a mixed-risk arm, with the decision rule registered before the run. Closes when a record clears P(net>0) >= 0.7 for the mixed arm (then Tier-3 data-backed apply) or fails (then kill the proposal).",
+  "updated_at": "2026-10-11T05:59:25Z",
+  "updated_by": "session_01BFAVovnP4UK5phrpVWnYsR",
+  "_seq": 395
+}
