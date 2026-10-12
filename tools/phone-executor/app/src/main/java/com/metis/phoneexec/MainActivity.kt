@@ -93,6 +93,7 @@ class MainActivity : Activity() {
     private var busy = false
     private var lastHbMs = 0L
     private var lastAcctMs = 0L
+    private var lastPosMissMs = 0L
     private var lastStatus = ""
     // HOTFIX 2026-10-05 (manual login was being reset by the loop): any touch/key on the screen holds every
     // automatic navigation (reload, re-login) for USER_HOLD_MS; "Pause" holds everything until the page reads
@@ -133,6 +134,7 @@ class MainActivity : Activity() {
         const val TICK_MS = 30_000L
         const val HEARTBEAT_MS = 120_000L
         const val ACCT_MS = 300_000L
+        const val POS_MISS_MS = 1_800_000L   // a Positions read that failed is reported (masked dump) at most every 30 min
         const val USER_HOLD_MS = 5 * 60_000L
         const val PAUSE_MAX_MS = 10 * 60_000L
         const val JS_TIMEOUT_MS = Page.JS_TIMEOUT_MS
@@ -529,14 +531,44 @@ class MainActivity : Activity() {
     private suspend fun readAccount(p: Page): String {
         val tm = p.obj("__ex.terminal()") ?: return "busy"
         if (!tm.optBoolean("ready") || tm.optBoolean("ticketOpen")) return "busy"
-        val a = p.obj("__ex.accountPanel()") ?: return "unread"
-        val bal = if (a.isNull("balance")) null else a.optDouble("balance")
-        val eqRead = if (a.isNull("equity")) null else a.optDouble("equity")
-        val pf = if (a.isNull("portfolio")) null else a.optDouble("portfolio")
+        var a = p.obj("__ex.accountPanel()") ?: return "unread"
+        fun d(o: JSONObject, k: String): Double? = if (o.isNull(k)) null else o.optDouble(k).takeIf { !it.isNaN() }
+        // PROP-TRACKING (operator 2026-10-12 "we need to be able to track the prop trades"): the headline shows only
+        // "Portfolio", so balance + the terminal's own uPnL are read on the Portfolio TAB of the bottom panel when the
+        // headline did not show them. Tab clicks only (read-only views); never inside a ticket (checked above).
+        if (d(a, "balance") == null || d(a, "unrealized") == null) {
+            if (p.js("__ex.clickText(${q("^portfolio$")}, '[role=tab],button,[role=button]')") == "clicked") {
+                delay(1200); p.ensure()
+                p.obj("__ex.accountPanel()")?.let { b2 -> a = JSONObject().put("balance", d(a, "balance") ?: d(b2, "balance") ?: JSONObject.NULL)
+                    .put("equity", d(a, "equity") ?: d(b2, "equity") ?: JSONObject.NULL)
+                    .put("portfolio", d(a, "portfolio") ?: d(b2, "portfolio") ?: JSONObject.NULL)
+                    .put("unrealized", d(a, "unrealized") ?: d(b2, "unrealized") ?: JSONObject.NULL) }
+            }
+        }
+        val bal = d(a, "balance")
+        val eqRead = d(a, "equity")
+        val pf = d(a, "portfolio")
         val eq = eqRead ?: pf   // "Portfolio" is the terminal's headline account value; the label is posted so the server records which one
         if (bal == null && eq == null) return "unread"
-        api.accountStatus(bal, eq, if (eqRead != null) "equity" else "portfolio")
-        return "posted"
+        // Positions every read (the server reconciles the journal against it); Closed orders only once Positions read
+        // cleanly (they carry the exit of a position that disappeared). The Positions view is left up afterwards.
+        val pos = readView(p, "^positions\\b", "__ex.positionsRead()")
+        val closed = if (pos?.optString("state") == "read") readView(p, "^(closed orders|trades)\\b", "__ex.closedRead()") else null
+        if (closed != null) { p.js("__ex.clickText(${q("^positions\\b")})"); delay(600) }
+        val ps = pos?.optString("state") ?: "unanswered"
+        if (ps != "read" && System.currentTimeMillis() - lastPosMissMs >= POS_MISS_MS) {
+            lastPosMissMs = System.currentTimeMillis()
+            api.positionsMiss(ps, pos?.optJSONArray("headers") ?: JSONArray(), pos?.optJSONArray("controls") ?: JSONArray())
+        }
+        api.accountStatus(bal, eq, if (eqRead != null) "equity" else "portfolio", d(a, "unrealized"), pos, closed)
+        return if (ps == "read") "posted" else "posted_pos_$ps"
+    }
+
+    /** Show one bottom-panel view by its tab label and read it. Null when the tab is missing or the page did not answer. */
+    private suspend fun readView(p: Page, tabRe: String, reader: String): JSONObject? {
+        if (p.js("__ex.clickText(${q(tabRe)})") != "clicked") return JSONObject().put("state", "no_tab")
+        delay(1200); p.ensure()
+        return p.obj(reader)
     }
 
     /** Where "back to the terminal" goes: the last account terminal seen while logged in, else the host root. */
