@@ -146,6 +146,60 @@ def exit_signal(close_a: Sequence[float], close_b: Sequence[float],
     return None
 
 
+def reversion_target_spread(close_a: Sequence[float], close_b: Sequence[float],
+                            params: PairParams, direction: str) -> Optional[Dict[str, float]]:
+    """The spread level the REVERSION exit predicts, measured against the window
+    the NEXT bar's z will use, plus the current spread and beta.
+
+    The harness's revert exit fires at ``|z| <= exit_z``; for a long_spread
+    (entered at z <= -entry_z) the nearest such level is ``mean - exit_z*std``,
+    for a short_spread ``mean + exit_z*std``. ``mean``/``std`` here are the
+    rolling(lookback) stats INCLUDING the latest bar — exactly the shift-1
+    window the next bar's z is computed against — so the level is a prediction
+    of where the exit will fire, re-estimable every bar (TP doctrine clause 2).
+    Returns ``{target_spread, spread_now, beta}`` or None when not computable.
+    """
+    import pandas as pd
+    if len(close_a) != len(close_b) or len(close_a) <= params.lookback + 1:
+        return None
+    spread, _, _, beta = compute_spread_z(close_a, close_b, params.lookback, params.hedge_beta)
+    sp = pd.Series(spread)
+    mean = float(sp.rolling(params.lookback).mean().iloc[-1])
+    std = float(sp.rolling(params.lookback).std(ddof=0).iloc[-1])
+    s_now = float(spread[-1])
+    if not (np.isfinite(mean) and np.isfinite(std) and std > 0 and np.isfinite(s_now)):
+        return None
+    band = float(params.exit_z) * std
+    target = mean - band if direction == "long_spread" else mean + band
+    return {"target_spread": target, "spread_now": s_now, "beta": float(beta[-1])}
+
+
+def leg_target_prices(direction: str, price_a: float, price_b: float,
+                      spread_now: float, target_spread: float,
+                      beta: float) -> Optional[Dict[str, float]]:
+    """Per-leg take-profit prices implied by the spread reaching ``target_spread``.
+
+    Each leg's TP is the price at which THAT leg alone closes the predicted
+    spread gap (the other leg unchanged): leg A moves the spread one-for-one,
+    leg B by ``-beta`` per unit of log-price. A TP that fires on one leg
+    therefore means the predicted reversion happened — the thesis, not a
+    sentinel. Returns None when the gap is not in the trade's favour (the
+    spread is already at/through the target: nothing left to predict) or any
+    input is degenerate.
+    """
+    if not (price_a > 0 and price_b > 0):
+        return None
+    gap = float(target_spread) - float(spread_now)       # log-spread still to travel
+    if direction == "long_spread" and gap <= 0:
+        return None
+    if direction == "short_spread" and gap >= 0:
+        return None
+    b = abs(float(beta)) if np.isfinite(beta) and abs(float(beta)) > 0 else 1.0
+    tp_a = float(price_a) * float(np.exp(gap))           # A carries the gap directly
+    tp_b = float(price_b) * float(np.exp(-gap / b))      # B carries it inverted, / beta
+    return {"tp_a": tp_a, "tp_b": tp_b, "gap": gap}
+
+
 def leg_directions(spread_direction: str) -> Dict[str, str]:
     """Map a spread verdict to per-leg order directions.
     long_spread  = long A / short B (spread = logA - beta*logB expected to rise).

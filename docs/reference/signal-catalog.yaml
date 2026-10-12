@@ -186,10 +186,10 @@ strategy_modules:
     candle_columns: []
     runtime_imports: []
     legs:
-      pair_sleeves: 4
-      live: 2
+      pair_sleeves: 5
+      live: 3
       shadow: 2
-      account: config/pairs.yaml::account_id (bybit_1)
+      account: config/pairs.yaml::account_id (bybit_1) + per-pair account_id (pairs_gld_gdx -> alpaca_paper)
       note: isolated order path via run_pairs_tick; not in strategies.yaml or any accounts.yaml roster
   pairs_executor:
     file: src/units/strategies/pairs_executor.py
@@ -205,20 +205,34 @@ strategy_modules:
     - src.runtime.provenance
     - src.runtime.runtime_flags
     legs:
-      pair_sleeves: 4
-      live: 2
+      pair_sleeves: 5
+      live: 3
       shadow: 2
-      account: config/pairs.yaml::account_id (bybit_1)
+      account: config/pairs.yaml::account_id (bybit_1) + per-pair account_id (pairs_gld_gdx -> alpaca_paper)
+      note: isolated order path via run_pairs_tick; not in strategies.yaml or any accounts.yaml roster
+  pairs_venue:
+    file: src/units/strategies/pairs_venue.py
+    candle_columns:
+    - close
+    - timestamp
+    runtime_imports:
+    - src.runtime.broker_shorting_gate
+    - src.runtime.market_data
+    legs:
+      pair_sleeves: 5
+      live: 3
+      shadow: 2
+      account: config/pairs.yaml::account_id (bybit_1) + per-pair account_id (pairs_gld_gdx -> alpaca_paper)
       note: isolated order path via run_pairs_tick; not in strategies.yaml or any accounts.yaml roster
   pairs_sizing:
     file: src/units/strategies/pairs_sizing.py
     candle_columns: []
     runtime_imports: []
     legs:
-      pair_sleeves: 4
-      live: 2
+      pair_sleeves: 5
+      live: 3
       shadow: 2
-      account: config/pairs.yaml::account_id (bybit_1)
+      account: config/pairs.yaml::account_id (bybit_1) + per-pair account_id (pairs_gld_gdx -> alpaca_paper)
       note: isolated order path via run_pairs_tick; not in strategies.yaml or any accounts.yaml roster
   regime:
     file: src/units/strategies/regime.py

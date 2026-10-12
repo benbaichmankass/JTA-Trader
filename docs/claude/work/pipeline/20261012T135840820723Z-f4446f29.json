@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 14,
+    "clears_when": "at least 10 pairs_gld_gdx closes on alpaca_paper have been read with the rerun split and the decision (keep / backstop-only) is put to the operator with that evidence",
+    "kind": "observation",
+    "last_checked": "2026-10-12"
+  },
+  "id": "PI-20261012-HQ8T7BZU-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "PAIRS-ALPACA-BUILD lane, session_01P1PVxyfLMUtw6WhQ8T7BZu, manager review of PR #17747 (items 4, 5)",
+    "rerun": "In the pairs soak (/api/bot/pairs/soak) + journal: count pairs_gld_gdx closes whose exit_reason is pairs_half_open_cleanup preceded by a venue TP fill on the other leg, vs pairs_revert/stop/timeout closes. Divergence holds while that count > 0; its R impact = realized R of those closes vs the harness R for the same entries."
+  },
+  "state": "queued",
+  "what": "PAIRS-ALPACA-BUILD review item 5 (KNOWN live/backtest divergence, by design of PR #17747): with leg_tp: spread_target each leg carries a resting TP at the price where THAT leg alone closes the predicted reversion gap. If one leg's TP fills intraday, the pair is half-open and the next tick's cleanup closes the other leg at market -- an exit the harness (scripts/backtest_pairs.py, close-basis |z| <= exit_z) never takes. It can fire earlier than the harness (intraday touch) and at a different spread. Decide (Tier-3, operator): keep spread_target (doctrine-compliant, divergence measured), or make pairs leg TPs backstop-only (wide) with the spread target carried as a non-resting prediction -- which needs a TP-doctrine ruling for 2-leg sleeves."
+}
