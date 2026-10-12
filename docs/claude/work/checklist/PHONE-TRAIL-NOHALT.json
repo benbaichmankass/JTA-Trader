@@ -1,0 +1,21 @@
+{
+  "id": "PHONE-TRAIL-NOHALT",
+  "title": "phone_trail: replace the permanent _lock/ended stop-trailing latch with per-attempt retry + one red flag after 3 (NO-HALT)",
+  "phase": null,
+  "state": "queued",
+  "owner": "unowned (manager dispatches)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-12 ROUTE-20261012] Owns PI-20261009-72XUJX8U-0004 (NO-HALT row is done; this item was filed after its scope). src/prop/phone_trail.py _lock (~:131,:203,:440,:447,:452) and ended stop trailing a breakout_2 ticket for good after an unreported claimed amend, 2 refusals, an unverified amend or N misses. No verbatim operator permission names the lock. Fix: per-attempt failure, retry next cycle, one red flag after 3; keep the human-moved-stop deferral. Prop order path = Tier-2/3: hold PR with tests.",
+  "updated_at": "2026-10-12T06:03:28Z",
+  "updated_by": "session_01J5MrX74iaf4XaTW17dJLhP",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "_seq": 425
+}
