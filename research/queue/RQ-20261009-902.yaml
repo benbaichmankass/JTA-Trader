@@ -3,7 +3,7 @@ title: >-
   NEWS-VETO-EVAL (WEPE gate G1): does the live news layer (src/news/news_score.py) add net R -- is the
   vetoed-signal counterfactual worse than the taken book, and does the boost/reduce adjustment rank-predict
   taken-trade net R? -- BLOCKED on the log-to-journal join lever; the veto arm is structurally underpowered today
-status: blocked
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -91,13 +91,13 @@ blocked_on:
       writes a verdict.json this rule can grade. Then git mv to research/queue/, status queued, and fill
       run.workflow with a session-local or trainer route.
 run:
-  workflow: null
+  workflow: 'none -- session-local run of scripts/research/news_veto_eval.py (committed with this unit; reads the live journal via scripts/ops/diag_fetch.sh)'
   note: >-
     SESSION-LOCAL until the lever exists. First measurement to take with no new code: the distinct-signal count
     of the 13 veto rows and of the 369 reduce+boost rows (group by strategy, symbol, side, ts rounded to the tick),
     because it decides whether Arm A can be graded at all.
 lands:
-  store: research/results/
+  store: research/results/RQ-20261009-902/news_veto_eval-2026-10-12.json
   assert_field: read_state
   min_rows: 1
 related:
@@ -106,3 +106,19 @@ related:
 - docs/claude/work/checklist/NEWS-VETO-EVAL.json
 - docs/claude/work/checklist/WEPE-BUILDOUT.json
 last_dispatched_at: null
+result_2026_10_12: >-
+  LANDED (session-local run; lever scripts/research/news_veto_eval.py, tests/test_news_veto_eval.py).
+  Join is EXACT, not fuzzy: pipeline.py stamps meta.news on every actionable signal, so order_packages.meta
+  carries the adjustment and joins to trades on order_package_id (5,414 packages, 2,456 stamped, 6,582 trades,
+  pulled 2026-10-12). POPULATION: closed non-backtest trades with a stamped package and cost_source in
+  {broker, estimate}, net R = journal fees+funding plus modelled round-trip slippage; paper 601 / real_money 33.
+  19 rows with |net R| > 20 (broken risk basis, e.g. mhg_pullback_1d -2666R) excluded and reported both ways.
+  ARM A under RULE-RQ1009-902-NEWS-VETO-NET-R: distinct-taken n = 634 (>= 49, so graded): Spearman IC =
+  -0.014, one-sided p = 0.64 (unfiltered n=653: -0.016, p=0.66) -> FAIL (IC <= 0 at n >= 49). Bucket means
+  (n small): boost +1.17R (n=12), reduce -0.65R (n=11), neutral +0.58R (n=611); reduce does not exceed boost.
+  ARM B: UNDERPOWERED, not graded -- 13 veto log rows over 124 days (5 days), floor 25 reachable no earlier
+  than ~2027-02-04 (rows, an upper bound on accrual speed); counterfactual replay out of scope.
+  UNIT-LEVEL G1 READ per the registered rule: RETIRE_OR_REPLACE (Arm A FAIL). Caveats: the 634 packages are
+  per-account and not independent signals; 373 of 634 rows carry a nonzero adjustment but only 23 are
+  labelled boost/reduce (the other ~350 are small neutral-labelled tilts). This is an operator decision, not an action: no config touched and
+  NEWS_VETO_ENABLED unchanged.
