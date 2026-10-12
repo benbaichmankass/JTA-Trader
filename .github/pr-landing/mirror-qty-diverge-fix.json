@@ -1,0 +1,12 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Lane MIRROR-QTY-DIVERGE (manager session_01G16FfyYSmDPQuuW55BuTmK, 2026-10-12). Tier-3 order-path change in Coordinator.multi_account_execute. HELD for the manager to ship under the data-backed authorization; no auto-merge requested.",
+  "why": "pkg-63b56da53bfe4d64 (xrp_pullback_2h short, 2026-10-09T06:02Z): intent-mode top-up deltas bybit_2 0.5 XRP (57.4 target - 56.9 held) vs bybit_portfolio 160.9 (17428.1 - 17267.2); Bybit refused the $0.70 order (110094, min value 5 USDT), the mirror filled, and when the donchian SL fired the mirror kept a short live never had. Fix: (1) a Stage-2 mirror dispatches a package only if its primary placed it in the same call (primaries ordered first; reverse direction alerts at ERROR); (2) opening deltas below the venue min order value are a benign intent_sub_min_notional_delta noop; (3) exchange_rejected rows journal the qty sent, target in notes; (4) mirror-orphan-watch gets pipefail (it printed ORPHAN and went green on 2026-10-11).",
+  "recorded_decision": {
+    "kind": "standing_authorization",
+    "ref": "MIRROR-QTY-DIVERGE 2026-09-27 data-backed standing authorization; manager approval 2026-10-12T07:25Z",
+    "evidence": "docs/research/mirror-qty-diverge-2026-10-12.md"
+  }
+}
