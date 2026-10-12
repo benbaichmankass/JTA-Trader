@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-3 strategy/order-path build (checklist PAIRS-ALPACA-BUILD). The operator decision is recorded on the checklist row (2026-10-12 popup 'Build, paper soak'); the manager adds recorded_decision and lands it. The lane does not merge.",
+  "why": "Isolated Alpaca pairs executor for GLD/GDX only, routed to alpaca_paper (Stage-1 soak). Evidence RQ-20261007-025 PASS (OOS n=69 +5.25R, 8/10 years, 8/9 cells; fee 7.5 + slip 5.0 bps/leg). Reuses pairs_engine / decide_pair / run_pairs_tick; adds the session-venue adapter src/units/strategies/pairs_venue.py, AlpacaClient.clock + asset_short_status reads, the spread-target leg TP + per-bar TP revision, the account daily-DD switch read for new pairs, and the pairs_gld_gdx entry in config/pairs.yaml with the registered params. No real-money or mirror account; no new *_ENABLED flag; no self-halt."
+}
