@@ -28,11 +28,14 @@ STUBS = {
 
 @pytest.fixture()
 def sim(tmp_path: Path):
-    bin_dir = tmp_path / "bin"; bin_dir.mkdir()
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
     for name, body in STUBS.items():
         p = bin_dir / name
-        p.write_text("#!/usr/bin/env bash\n" + body + "\n"); p.chmod(0o755)
-    repo = tmp_path / "repo"; repo.mkdir()
+        p.write_text("#!/usr/bin/env bash\n" + body + "\n")
+        p.chmod(0o755)
+    repo = tmp_path / "repo"
+    repo.mkdir()
     (tmp_path / "argv.log").write_text("")
     web_env = tmp_path / "web-api.env"
     env = dict(os.environ, PATH=f"{bin_dir}:{os.environ['PATH']}", SIM=str(tmp_path),
@@ -106,7 +109,8 @@ def test_enrol_code_goes_only_to_system_ping(tmp_path, monkeypatch, capsys):
     sent = []
     monkeypatch.setattr(send_ping, "enqueue", lambda body, priority="normal", target="trader", **k: sent.append((body, target)))
     spec = importlib.util.spec_from_file_location("passkey_enrol_code", ENROL_PY)
-    mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
     assert mod.main() == 0
     out = capsys.readouterr()
     assert out.out.strip() == "sent, valid 15 min"
@@ -124,7 +128,8 @@ def test_enrol_code_without_pepper_reports_unavailable(tmp_path, monkeypatch, ca
     monkeypatch.syspath_prepend(str(REPO))
     monkeypatch.syspath_prepend(str(REPO / "scripts"))
     spec = importlib.util.spec_from_file_location("passkey_enrol_code", ENROL_PY)
-    mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
     assert mod.main() == 2
     assert "auth_unavailable" in capsys.readouterr().out
 
