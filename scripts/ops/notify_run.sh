@@ -269,6 +269,20 @@ case "${action}" in
             *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
         esac
         ;;
+    init-web-session-pepper)
+        tier=2
+        case "${exit_code}" in
+            0) result="ok"; priority="normal" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
+    passkey-enrol-code)
+        tier=1
+        case "${exit_code}" in
+            0) result="ok"; priority="low" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="high" ;;
+        esac
+        ;;
     unset-env)
         tier=2
         case "${exit_code}" in
