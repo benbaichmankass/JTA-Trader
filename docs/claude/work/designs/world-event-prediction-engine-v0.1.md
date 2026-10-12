@@ -554,7 +554,7 @@ published_at: "2026-10-08T12:05:00Z"
 
 ## Appendix B: Definitions
 
-- **Calibration:** Whether events assigned a probability of, for example, 70% occur about 70% of the time over many comparable forecasts.
+- **Calibration:** Whether events assigned a probability of, for example, 70% occur about 70% of the time over many comparable forecasts. <!-- population-ok: definition, not a measured figure -->
 - **Point-in-time correctness:** Ensuring a historical forecast uses only data actually available at that moment.
 - **Resolution:** The process of assigning an outcome using predeclared rules and evidence.
 - **Provenance:** A record of where data came from, when it was collected, and how it was transformed.

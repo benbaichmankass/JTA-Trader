@@ -319,6 +319,7 @@ verify-the-source-before-you-build.
 | Question | Instrument |
 |---|---|
 | **Can point-in-time Kalshi prices be backfilled for PAST releases (CPI / NFP / FOMC), so the PM-SURPRISE-EVAL n floor is not gated on ~2028 collection?** One-shot, resumable fetch of hourly yes bid/ask candles over [close-168h, close+1h] for every settled market of KXCPI / KXPAYROLLS / KXFEDDECISION, live + historical endpoints, >=2.5 s per call. Every row carries its own `candle_end_utc`, so a consumer using only rows at or before the release instant cannot look ahead. **Third-party data, output stays off-repo** (`<data_dir>/pm_backfill/kalshi/`, trainer-side). Fetches only; it grades nothing | `scripts/research/pm_backfill_kalshi.py` (PM-BACKFILL; feeds `RQ-20261009-903`) |
+| **Can a WEPE-style question-contract + resolution ledger be built on PAST CPI / core CPI / FOMC releases and scored (Brier, log-loss) against the base rate and the Kalshi market at matched as-of times, with leakage checks?** Fixed as-of = release - 3 h, point-in-time consensus, forecaster v0 declared, release-clustered bootstrap; the market arm reads the trainer-resident backfill and the public ledger omits market fields (queue unit RQ-20261012-904, row WEPE-G3-BACKFILL). | `scripts/research/wepe_g3_ledger.py` |
 
 ## 9. Robustness / significance gates (run these BEFORE proposing a live change)
 

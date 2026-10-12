@@ -71,9 +71,9 @@ def test_probability_in_unit_interval():
 
 
 # ── market leg (needs scripts/macro/pm_surprise.py from PM-SURPRISE-JOIN) ─────────────────────────────
-import json  # noqa: E402
+import json
 
-import pytest  # noqa: E402
+import pytest
 
 
 def _row(mid, strike, ce, close, bid, ask, stype="greater", series="KXCPI"):
@@ -121,9 +121,11 @@ def test_public_ledger_omits_market_fields(tmp_path):
 
 def test_nsa_index_level_rows_are_excluded(tmp_path):
     macro = tmp_path
-    mk = lambda name, cons, act: {"kind": "cpi_mom", "status": "resolved", "event_name": name,  # noqa: E731
-                                  "scheduled_for": "2026-01-01", "scheduled_at": "2026-01-01T13:30:00Z",
-                                  "expected": {"consensus": cons, "prior": 0.0}, "realized_outcome": {"actual": act}}
+    def mk(name, cons, act):
+        return {"kind": "cpi_mom", "status": "resolved", "event_name": name,
+                "scheduled_for": "2026-01-01", "scheduled_at": "2026-01-01T13:30:00Z",
+                "expected": {"consensus": cons, "prior": 0.0}, "realized_outcome": {"actual": act}}
+
     (macro / g.SNAP_FILES[0]).write_text(json.dumps(mk("CPI (MoM)", 0.2, 0.3)) + "\n" +
                                          json.dumps(mk("CPI n.s.a (MoM)", 334.7, 333.9)) + "\n")
     (r,) = g.load_releases(macro)

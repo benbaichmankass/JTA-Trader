@@ -33,7 +33,7 @@ import math
 import random
 import sys
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 REPO = Path(__file__).resolve().parents[2]
 MACRO = REPO / "comms" / "macro"
