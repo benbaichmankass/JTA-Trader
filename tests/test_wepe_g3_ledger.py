@@ -1,8 +1,11 @@
 """Offline tests for scripts/research/wepe_g3_ledger.py (WEPE gate G3 on history)."""
 import copy
 import datetime as _dt
+import json
 import os
 import sys
+
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts", "research"))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts", "macro"))
@@ -71,11 +74,6 @@ def test_probability_in_unit_interval():
 
 
 # ── market leg (needs scripts/macro/pm_surprise.py from PM-SURPRISE-JOIN) ─────────────────────────────
-import json
-
-import pytest
-
-
 def _row(mid, strike, ce, close, bid, ask, stype="greater", series="KXCPI"):
     return {"market_id": mid, "event_ticker": "KXCPI-26SEP", "strike_type": stype, "floor_strike": strike,
             "close_time": close, "candle_end_utc": ce, "yes_bid_close": bid, "yes_ask_close": ask}
