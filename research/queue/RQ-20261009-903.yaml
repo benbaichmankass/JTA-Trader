@@ -2,8 +2,8 @@ id: RQ-20261009-903
 title: >-
   PM-SURPRISE-EVAL (WEPE gate G2): do macro-release surprises measured against prediction-market implied
   probabilities rank-predict post-release returns better than consensus surprises at the same releases and
-  horizons? -- gated on release accrual: the pooled n floor is not reachable by collection before ~2028-04
-status: blocked
+  horizons? -- UNBLOCKED 2026-10-12: graded on the Kalshi backfill (PM-SURPRISE-JOIN), not on collector accrual
+status: queued
 cadence: once
 kind: experiment
 theme: macro
@@ -25,10 +25,10 @@ why_this_matters: >-
   before anyone waits on accrual (macro-research invariant 4): the answer below is that collection alone cannot
   power this comparison inside a planning horizon, which changes what G2 should ask for.
 power:
-  expected_n: 5
+  expected_n: 100
   min_detectable_effect: 0.4
   effect_units: sd
-  design: paired
+  design: one_sample   # a paired IC difference is one sample of per-release differences; "paired" is not a grade_power design
   alpha: 0.05
   power: 0.8
   basis: >-
@@ -39,12 +39,15 @@ power:
     12/yr): 49 releases = ~4.1 yr, ~2030-11. The 30-day collector gate (WEPE G2 clause 1) lands ~2026-11-07 with
     about 5-6 releases in the window, n far below the floor. Not cleared by one more month of waiting.
   feasibility:
-    source: trainer-resident pm_snapshots (collector) + comms/macro/econ_calendar_snapshots*.jsonl (consensus)
+    source: none
     accrual_basis: >-
-      2.7 pooled releases a month from 2026-10-08. FASTER ROUTE, UNVERIFIED: settled Kalshi markets may expose
-      price history that would backfill point-in-time implied expectations for past releases and remove the wait;
-      whether the history is deep enough, point-in-time, and permitted by the unread third-party terms is NOT
-      established -- verify the source before building (macro-research invariant 3).
+      The admission gate's only non-corpus source is `none`, which it labels `accruing`; the label is a gate artifact
+      here, NOT a claim that n is short. The observed data is NOT a trade corpus: it is the trainer-resident Kalshi
+      backfill (pm_backfill/kalshi, PM-BACKFILL-BUILD #17207/#17225) joined to comms/macro/econ_calendar_snapshots*.jsonl.
+      MEASURED on the trainer 2026-10-09 (date-tolerant join, 0-1 day): CPI 60 / NFP 41 / FOMC 27 = 128 pooled
+      overlap releases against the 49 floor; the exact-date, within-6 h graded population is counted by the first
+      run's join diagnostics (scorecard.json join_graded) and is what the rule grades. Collector accrual is no longer
+      the route (the original 2028-04 arithmetic above applies only to pm_snapshots, which this unit no longer reads).
 decision_rule:
   id: RULE-RQ1009-903-PM-SURPRISE-VS-CONSENSUS
   registered_at: '2026-10-09'
@@ -77,28 +80,26 @@ routing:
   basis: >-
     Reads the trainer-resident pm_snapshots plus committed comms/macro consensus; one Spearman per horizon.
     Trainer route via the trainer-vm-diag relay (research-script-run.yml's runner cannot see the snapshots).
-blocked_on:
-  - what: >-
-      LEVER ONLY (accrual blocker CLEARED 2026-10-09 by PM-BACKFILL-BUILD, PRs #17207 and #17225): nothing joins the
-      trainer-resident backfill (pm_backfill/kalshi/*.jsonl) to resolved releases, and scripts/macro/econ_event_study.py
-      has no PM-surprise input. Measured on the trainer 2026-10-09: releases with a two-sided Kalshi quote at or before
-      the release close: KXCPI 63 of 63 events (45 with the last quote within 6 h), KXPAYROLLS 43 of 43 (35 within 6 h),
-      KXFEDDECISION 28 of 28 (28 within 6 h). Overlap with a resolved consensus in comms/macro/econ_calendar_snapshots*.jsonl
-      (release date within 0-1 day of the Kalshi close, not yet an exact within-6 h join): CPI 60, NFP 41, FOMC 27 = 128
-      pooled releases against the 49 floor. Per kind CPI alone clears 49.
-    ref: >-
-      scripts/research/pm_backfill_kalshi.py; docs/claude/work/checklist/PM-SURPRISE-JOIN.json;
-      docs/claude/work/checklist/PM-SURPRISE-EVAL.json
-    clears_when: >-
-      A PM-surprise builder exists (probability-weighted strike ladder for CPI / NFP, implied rate change for FOMC, using
-      only backfill rows with candle_end_utc <= the release instant) and econ_event_study.py can take it as an input at the
-      registered horizons. Then git mv to research/queue/, fill run.workflow and lands.store, status queued. The decision
-      rule below is UNCHANGED.
-run:
-  workflow: null
+blocked_on: []
+unblocked:
+  at: '2026-10-12'
+  by: PM-SURPRISE-JOIN
   note: >-
-    TRAINER-SIDE, session-local via trainer-vm-diag (label trainer-vm-diag-request). Data stays on the trainer
-    VM; only the scorecard JSON is committed.
+    The lever exists: scripts/macro/pm_surprise.py (builder: probability-weighted strike ladder for CPI / NFP,
+    implied rate change for FOMC, last usable two-sided yes mid with candle_end_utc <= close_time),
+    scripts/macro/econ_event_study.py (--pm-surprise input + paired_ic_comparison) and
+    scripts/research/pm_surprise_eval.py (this unit's command; applies decision_rule below mechanically).
+    The decision_rule block is UNCHANGED. Where the rule is silent the script reports indeterminate and says so.
+run:
+  workflow: research-script-run-trainer.yml
+  command: [python3, scripts/research/pm_surprise_eval.py, --out, '{out_dir}']
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261009-903
+  note: >-
+    TRAINER-SIDE (the Kalshi backfill is off-repo by operator decision; third-party terms unread). The command
+    reads <data_dir>/pm_backfill/kalshi/*.jsonl and the committed consensus, and writes ONLY derived files
+    (scorecard.json, paired.jsonl, verdict.json) under {out_dir}. No quote is committed.
 lands:
   store: research/results/
   assert_field: read_state
@@ -109,4 +110,4 @@ related:
 - config/pm_markets.yaml
 - docs/claude/work/checklist/PM-SURPRISE-EVAL.json
 - docs/claude/work/checklist/WEPE-BUILDOUT.json
-last_dispatched_at: null
+last_dispatched_at: '2026-10-12T13:52:20+00:00'

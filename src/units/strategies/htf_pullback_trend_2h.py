@@ -1,10 +1,17 @@
-"""HTF trend-pullback continuation — units-layer adapter (SCAFFOLD, not wired).
+"""HTF trend-pullback continuation — units-layer adapter (LIVE-WIRED).
 
 Rank-2 candidate from the new-strategy research pass
-(docs/research/new-strategy-candidates-2026-05-31.md). **Not yet wired** into
-``strategy_signal_builders.py``, ``intents.py``, or ``config/strategies.yaml``
-(registration is explicit; no auto-discovery) — inert until the Tier-3
-activation PR. Backtested via ``scripts/backtest_pullback.py`` first.
+(docs/research/new-strategy-candidates-2026-05-31.md). **Wired and live-path:**
+``strategy_signal_builders.py`` calls this unit's ``order_package()`` and
+``intent_multiplexer.py`` dispatches ``htf_pullback_trend_2h_signal_builder``
+for every enabled ``config/strategies.yaml`` block that names it (the base BTC 2h
+leg traded real money on ``bybit_2`` from 2026-06-02 until it was demoted to
+``execution: shadow`` on 2026-08-23). Treat edits here as order-path changes
+(Tier 2/3), not scaffold work. ⚠️ The enabled-leg and live/shadow counts move
+with every roster edit — read ``config/strategies.yaml``, do not quote a number.
+(The pre-2026-10-12 header called this a "SCAFFOLD, not wired … inert until the
+Tier-3 activation PR"; false in the field — CA-A05-006.) Backtested via
+``scripts/backtest_pullback.py`` first.
 
 Strategy summary
 ----------------

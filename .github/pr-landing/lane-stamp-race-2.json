@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "changes_landing_machinery",
+  "hold_text": "R12 bars a LANDING_MACHINERY diff from self-landing, and .github/actions/commit-to-main/action.yml is one of its entries; the dispatch asked for a self-landing PR and R12 does not permit it for this file, so this declares hold and routes to the manager rather than defeating the refusal. NEEDS A MANAGER/HUMAN MERGE CLICK. REVIEW FIRST: (1) the new worktree block after the `git commit -m` line; (2) the refresh gate (WANT_REFRESH) - it never merges main while the head's checks are in flight or green, and merges at once if the PR CONFLICTS; (3) scripts/ops/resolve_stamp_conflicts.py is all-or-nothing and only touches research/queue/*.yaml differing solely in last_dispatched_at. Proof: tests/test_commit_to_main_stamp_race.py runs the action's real blocks in scratch repos; the 5 pre-existing commit-to-main test files still pass (76 tests). CANNOT BE PROVEN BY CI: the live behaviour - the row is landed_unproven until two consecutive dispatcher cycles land their stamp + result PRs inside 60 min.",
+  "why": "STAMP-RACE-2 / roadmap M40. Measured over 14 red dispatcher land jobs 2026-10-10/11: the stale-branch refresh at the one-third mark cancels the half-run pytest-run (cancel-in-progress) and restarts a ~45 min suite inside an 80 min wait; a caller's dirty tree broke the replay checkout and the refresh merge; two stamp PRs on one unit conflicted on last_dispatched_at. Timeouts are not raised."
+}
