@@ -1,0 +1,299 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "n": 2880,
+  "population": "2 group(s) ['G0', 'G1']; baseline prior; candidates ['logit']; metric macro_f1; n = baseline OOS test rows summed over groups; cv folds per group >= 4",
+  "note": "candidate(s) ['logit'] meet every pass_if clause",
+  "measurement": {
+    "engine": "scripts/research/ml_bakeoff.py",
+    "metric": "macro_f1",
+    "higher_is_better": true,
+    "delta_sign": "positive = learner better than reference",
+    "baseline": "prior",
+    "controls": [
+      "lightgbm"
+    ],
+    "candidates": [
+      "logit"
+    ],
+    "arm_status": {
+      "prior": "ok",
+      "logit": "ok",
+      "lightgbm": "ok"
+    },
+    "groups": {
+      "G0": {
+        "n_rows": 2400,
+        "classes": [
+          "0",
+          "1",
+          "2"
+        ],
+        "arms": {
+          "prior": {
+            "status": "ok",
+            "features": [
+              "x0",
+              "x1",
+              "x2",
+              "x3"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.16874135546334715,
+                  0.17687074829931973,
+                  0.15819209039548024,
+                  0.16033755274261605
+                ],
+                "n_test_rows": 1440
+              }
+            }
+          },
+          "logit": {
+            "status": "ok",
+            "features": [
+              "x0",
+              "x1",
+              "x2",
+              "x3"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.30163763586035125,
+                  0.3595969413451108,
+                  0.3359108879554977,
+                  0.3013024575108693
+                ],
+                "n_test_rows": 1440
+              }
+            }
+          },
+          "lightgbm": {
+            "status": "ok",
+            "features": [
+              "x0",
+              "x1",
+              "x2",
+              "x3"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.6506978763615933,
+                  0.6246778300160005,
+                  0.5960711557350212,
+                  0.6350468532459146
+                ],
+                "n_test_rows": 1440
+              }
+            }
+          }
+        }
+      },
+      "G1": {
+        "n_rows": 2400,
+        "classes": [
+          "0",
+          "1",
+          "2"
+        ],
+        "arms": {
+          "prior": {
+            "status": "ok",
+            "features": [
+              "x0",
+              "x1",
+              "x2",
+              "x3"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.15926708949964766,
+                  0.16457461645746166,
+                  0.15602836879432624,
+                  0.16033755274261605
+                ],
+                "n_test_rows": 1440
+              }
+            }
+          },
+          "logit": {
+            "status": "ok",
+            "features": [
+              "x0",
+              "x1",
+              "x2",
+              "x3"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.26646818020918134,
+                  0.2764496480285954,
+                  0.34789665770265077,
+                  0.28566716641679163
+                ],
+                "n_test_rows": 1440
+              }
+            }
+          },
+          "lightgbm": {
+            "status": "ok",
+            "features": [
+              "x0",
+              "x1",
+              "x2",
+              "x3"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.5981331854668356,
+                  0.6126241316114733,
+                  0.6104552337919779,
+                  0.6914900688684243
+                ],
+                "n_test_rows": 1440
+              }
+            }
+          }
+        }
+      }
+    },
+    "deltas": {
+      "G0": {
+        "cv": {
+          "logit": {
+            "prior": {
+              "n_folds": 4,
+              "mean": 0.15857654394276646,
+              "ci95": [
+                0.11833465076827208,
+                0.19881843711726083
+              ],
+              "sign_consistent": true
+            },
+            "lightgbm": {
+              "n_folds": 4,
+              "mean": -0.30201144817167513,
+              "ci95": [
+                -0.37512798965495436,
+                -0.2288949066883959
+              ],
+              "sign_consistent": true
+            }
+          },
+          "lightgbm": {
+            "prior": {
+              "n_folds": 4,
+              "mean": 0.4605879921144416,
+              "ci95": [
+                0.4270249002978795,
+                0.49415108393100377
+              ],
+              "sign_consistent": true
+            },
+            "lightgbm": {
+              "n_folds": 4,
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "sign_consistent": false
+            }
+          }
+        }
+      },
+      "G1": {
+        "cv": {
+          "logit": {
+            "prior": {
+              "n_folds": 4,
+              "mean": 0.1340685062157919,
+              "ci95": [
+                0.07155488250151797,
+                0.1965821299300658
+              ],
+              "sign_consistent": true
+            },
+            "lightgbm": {
+              "n_folds": 4,
+              "mean": -0.334055241845373,
+              "ci95": [
+                -0.42715514026899387,
+                -0.24095534342175212
+              ],
+              "sign_consistent": true
+            }
+          },
+          "lightgbm": {
+            "prior": {
+              "n_folds": 4,
+              "mean": 0.46812374806116486,
+              "ci95": [
+                0.40050334537663046,
+                0.5357441507456993
+              ],
+              "sign_consistent": true
+            },
+            "lightgbm": {
+              "n_folds": 4,
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "sign_consistent": false
+            }
+          }
+        }
+      }
+    },
+    "rule_evaluation": {
+      "verdict": "pass",
+      "why": "candidate(s) ['logit'] meet every pass_if clause",
+      "passing": [
+        "logit"
+      ],
+      "candidates": {
+        "logit": {
+          "evaluated": true,
+          "passes_all": true,
+          "clauses": [
+            {
+              "holds": true,
+              "what": "['G0', 'G1'] >= 0.05 vs prior/cv"
+            }
+          ]
+        }
+      }
+    },
+    "headline_checks": [],
+    "licences": {
+      "prior": {
+        "kind": "prior",
+        "licence": "n/a",
+        "research_only": false,
+        "weights": ""
+      },
+      "logit": {
+        "kind": "numpy_logit",
+        "licence": "n/a",
+        "research_only": false,
+        "weights": ""
+      },
+      "lightgbm": {
+        "kind": "lightgbm",
+        "licence": "MIT",
+        "research_only": false,
+        "weights": ""
+      }
+    },
+    "n_folds_cv_min_over_groups": 4,
+    "seconds": 3.4
+  }
+}

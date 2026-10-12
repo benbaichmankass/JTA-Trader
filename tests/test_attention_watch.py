@@ -99,3 +99,42 @@ def test_report_route_since_returns_sent_digest_blocks(tmp_path, monkeypatch):
     out = work.get_work_report(since="2026-10-05T06:00:00+00:00")
     assert out["digestLogState"] == "read" and out["digestLog"][0]["new"] == ["🔕 x"]
     assert "digestLog" not in work.get_work_report()
+
+
+def test_prop_feed_probe_unknown_ok_then_breached(tmp_path, monkeypatch):
+    """NO-HALT (2026-10-09): the feed never trips; the probe reads its backoff
+    state. Could-not-look stays distinct from not-in-backoff."""
+    from datetime import datetime, timezone
+    now = datetime(2026, 10, 7, 21, 0, tzinfo=timezone.utc)
+    monkeypatch.setenv("PROP_BROWSER_BASE", str(tmp_path / "missing"))
+    assert a.probe_prop_feed(now)["status"] == a.UNKNOWN          # could not look != ok
+    monkeypatch.setenv("PROP_BROWSER_BASE", str(tmp_path))
+    assert a.probe_prop_feed(now)["status"] == a.OK
+    d = tmp_path / "accounts" / "tradeify_1" / "feed"
+    d.mkdir(parents=True)
+    # A stale pre-NO-HALT marker is not a signal any more.
+    (d / "tripped").write_text("2026-10-06T18:27:45Z rc=4 feasibility stop")
+    assert a.probe_prop_feed(now)["status"] == a.OK
+    st = d / "backoff"
+    # Below the red-flag threshold: retrying normally, OK.
+    st.write_text("consecutive_failures=1\nnext_attempt_at=0\nflagged=0\nreason=error\n")
+    assert a.probe_prop_feed(now)["status"] == a.OK
+    st.write_text("consecutive_failures=3\nflagged=1\nflagged_at=2026-10-07T20:00:00Z\n"
+                  "next_attempt_at_utc=2026-10-07T21:05:00Z\nreason=3 consecutive failures\n")
+    assert a.probe_prop_feed(now)["status"] == a.OK                # inside the grace
+    st.write_text("consecutive_failures=9\nflagged=1\nflagged_at=2026-10-06T18:00:00Z\n"
+                  "next_attempt_at_utc=2026-10-07T22:00:00Z\nreason=feasibility stop\n")
+    r = a.probe_prop_feed(now)
+    assert r["status"] == a.BREACHED and "tradeify_1" in r["detail"] and "reset-feed" in r["detail"]
+    assert "retrying" in r["detail"]
+
+
+def test_prop_feed_probe_unreadable_state_is_unknown_not_ok(tmp_path, monkeypatch):
+    from datetime import datetime, timezone
+    now = datetime(2026, 10, 7, 21, 0, tzinfo=timezone.utc)
+    monkeypatch.setenv("PROP_BROWSER_BASE", str(tmp_path))
+    # tradeify_1, not breakout_1: breakout_1 is retired (OPS-DECISIONS-1009) and a
+    # retired account's feed state is skipped, never paged.
+    (tmp_path / "accounts" / "tradeify_1" / "feed" / "backoff").mkdir(parents=True)  # a dir: read_text raises
+    r = a.probe_prop_feed(now)
+    assert r["status"] == a.UNKNOWN and "tradeify_1" in r["detail"]

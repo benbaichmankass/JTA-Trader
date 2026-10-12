@@ -16,8 +16,12 @@
 #     session is not accepted the tick exits 6 and waits for the feed's next
 #     tick (<= 5 min) to log in again. So the executor adds ZERO credential
 #     logins: the feed's relogin ceiling stays the only counter that matters.
-#   - a TRIPPED feed means nobody is maintaining the session: the executor
-#     does not run either.
+#   - the feed's BACKOFF never stops the executor (NO-HALT, operator
+#     directive 2026-10-09: "There is no halting."; PI-20261009-72XUJX8U-0002).
+#     Until then a `feed/tripped` marker made this tick exit 0 without
+#     running. Now it always runs on the saved session; if that session is
+#     no longer accepted it exits 6 (harmless) and the feed's next allowed
+#     login refreshes it. A `feed/backoff` state is only logged here.
 #
 # Alerts the cycle prints ({"alert": ...}) are pinged once per tick.
 #
@@ -27,7 +31,7 @@
 # breakout_1 EVERY path and key is that account's own, the SAME ones its
 # feed (ict-prop-feed@<account>) and breakout-login-check use:
 #   - session  ${BASE}/accounts/<account>/feed/session_state.json
-#   - trip     ${BASE}/accounts/<account>/feed/tripped
+#   - backoff  ${BASE}/accounts/<account>/feed/backoff (logged, never a stop)
 #   - state    ${BASE}/accounts/<account>/executor
 #   - lock     ${BASE}/accounts/<account>/login.lock (never breakout_1's)
 #   - kill switch PROP_EXECUTOR_MODE_<ACCOUNT> (never the global
@@ -63,6 +67,10 @@ else
     STATE_DIR="${BASE}/accounts/${ACCOUNT}/executor"
     LOCK_FILE="${BASE}/accounts/${ACCOUNT}/login.lock"
     MODE_KEY="PROP_EXECUTOR_MODE_$(printf '%s' "${ACCOUNT}" | tr 'a-z' 'A-Z' | tr -c 'A-Z0-9\n' '_')"
+    # The account's own login keys (the same two the feed exports). A REST
+    # platform (dxtrade_api, VELOTRADE-GOLIVE) logs in fresh every tick, so its
+    # tick needs them; a browser tick reuses the feed's session and ignores them.
+    LOGIN_KEYS="$(cd "${REPO_DIR}" && python3 scripts/prop/prop_env_keys.py "${ACCOUNT}" | awk '{print $1, $2}')"
 fi
 SESSION_STATE="${FEED_DIR}/session_state.json"
 TIMEOUT_S="${PROP_EXECUTOR_TIMEOUT_S:-150}"
@@ -73,7 +81,7 @@ chmod 700 "${STATE_DIR}"
 
 # Kill switch from the VM .env (values of the credential keys never echoed).
 if [ -f "${REPO_DIR}/.env" ]; then
-    for ckey in ${MODE_KEY} DASHBOARD_API_TOKEN; do
+    for ckey in ${MODE_KEY} ${LOGIN_KEYS:-} DASHBOARD_API_TOKEN; do
         cval="$(grep -E "^${ckey}=" "${REPO_DIR}/.env" | tail -n1 | cut -d= -f2-)" || true
         if [ -n "${cval}" ]; then
             cval="${cval%\"}"; cval="${cval#\"}"
@@ -88,9 +96,8 @@ if [ "${!MODE_KEY:-read_only}" = "off" ]; then
     exit 0
 fi
 
-if [ -f "${FEED_DIR}/tripped" ]; then
-    log "feed is TRIPPED ($(head -c 200 "${FEED_DIR}/tripped")); the executor does not run without a maintained session"
-    exit 0
+if [ -f "${FEED_DIR}/backoff" ]; then
+    log "feed is backing off ($(sed -n 's/^reason=//p' "${FEED_DIR}/backoff" 2>/dev/null | head -c 200)); running on the saved session anyway (exit 6 if it is not accepted)"
 fi
 
 exec 9>"${LOCK_FILE}"
@@ -120,7 +127,8 @@ if [ "${n_alerts:-0}" -gt 0 ]; then
     first="$(grep -m1 '^{"alert"' "${OUT}" | head -c 300)"
     record_audit "prop-executor" "alert" \
         "{\"account\": \"${ACCOUNT}\", \"alerts\": ${n_alerts}, \"exit\": ${rc}}" >/dev/null || true
-    "${PING_PY}" "${REPO_DIR}/scripts/send_ping.py" --target claude --priority high \
+    # TELEGRAM-CHANNELS (2026-10-11): prop executor/feed red flags are SYSTEM alerts (trader bot), not manager updates.
+    "${PING_PY}" "${REPO_DIR}/scripts/send_ping.py" --target system --priority high \
         --kind state_change --why "the ${ACCOUNT} prop executor raised ${n_alerts} alert(s)" \
         "[prop-executor] ${ACCOUNT}: ${n_alerts} alert(s), exit ${rc}. First: ${first}" \
         >/dev/null 2>&1 || log "ping enqueue failed (audit record still written)"

@@ -60,6 +60,8 @@ function eq(a, b, m) { if (JSON.stringify(a) !== JSON.stringify(b)) { console.er
     "/en/account/A1/trade-ready": "<div><button>Order</button><div role=tablist><button role=tab>Buy</button><button role=tab>Sell</button></div></div>",
     "/": "<div><h1>Your accounts</h1><a href='/en/account/A1/trade'>Turbo 5K</a></div>",
     "/two": "<div><a href='/en/account/A1/trade'>One</a><a href='/en/account/B2/trade'>Two</a></div>",
+    "/en/account/A2/trade": "<div><div role=tablist><button role=tab>Positions</button><button role=tab>Open orders</button><button role=tab>History</button></div><span>Buy</span> 85,225 <span>Sell</span> 85,220</div>",
+    "/en/account/A3/trade": "<div><span>Buy</span> <span>Sell</span></div>",
     "/login": "<form><input type=email><button>Continue</button></form>",
   };
   await p2.route("https://trade.breakoutprop.com/**", (route) => {
@@ -79,6 +81,13 @@ function eq(a, b, m) { if (JSON.stringify(a) !== JSON.stringify(b)) { console.er
   eq(await p2.evaluate("__ex.terminalHref()"), "https://trade.breakoutprop.com/en/account/A1/trade", "terminal URL derived from the current account path");
   await st("/en/account/A1/trade-ready");
   eq(await p2.evaluate("__ex.terminal().ready"), true, "terminal with Order control + Buy/Sell tabs is ready");
+  // TERMINAL WITH THE TICKET CLOSED (fix 06:17Z, "terminal did not load" on the real terminal): no Order control,
+  // no Buy/Sell tabs, but the 1a probe classifier (trade host, /trade path, buy+sell markers, tabs>=3) says ready.
+  await st("/en/account/A2/trade");
+  eq(await p2.evaluate("[__ex.terminal().ready, __ex.terminal().probe, __ex.terminal().orderControl]"), [true, true, false], "terminal with the ticket closed is ready via the probe classifier");
+  eq(await p2.evaluate("__ex.controls()"), ["Positions", "Open orders", "History"], "controls(): the page's control texts for the miss event");
+  await st("/en/account/A3/trade");
+  eq(await p2.evaluate("__ex.terminal().ready"), false, "buy/sell words alone (no tabs, no inputs) are not the terminal");
   s1 = await st("/login");
   eq([s1.loggedIn, s1.email], [false, true], "login form is never logged in");
   // LABEL-BASED FIELDS (fix 2026-10-05 ~22:40Z): price and quantity are set and read back BY LABEL, never by index,
@@ -152,5 +161,285 @@ document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__su
   const pC = await onHost(strip("BTCUSD").replace(/<div id=strip>.*?<\/div>/, ""));
   eq(await pC.evaluate("__ex.symbolStep('ETHUSD')"), "none", "no selector: none (app refuses 'symbol ETH not on the submit label')");
   eq(await pC.evaluate("__ex.symbolOnTicket()"), "BTC", "no selector: ticket unchanged");
+  // Fixture D (fix 06:24Z, am-2 "symbol route: none"): a watchlist whose rows are plain divs with the symbol in a
+  // leaf span and the click handler on the row. Route 1b clicks the ONE exact leaf; the read-back verifies.
+  const wl = strip("BTCUSD").replace(/<div id=strip>.*?<\/div>/, "<div id=wl><div class=r data-s=BTCUSD><span>BTCUSD</span><span>85,225.0</span></div><div class=r data-s=ETHUSD><span>ETHUSD</span><span>2,612.4</span></div></div>")
+    .replace("document.querySelectorAll('#strip button').forEach(function(b){b.onclick=function(){var s=b.textContent;", "document.querySelectorAll('#wl .r').forEach(function(b){b.onclick=function(){var s=b.getAttribute('data-s');");
+  const pD = await onHost(wl);
+  eq(await pD.evaluate("__ex.symbolStep('ETHUSD')"), "clicked_label", "watchlist: exact leaf label clicked, row handler fires");
+  eq(await pD.evaluate("__ex.symbolOnTicket()"), "ETH", "watchlist: submit label now names ETH");
+  eq(await pD.evaluate("__ex.symbolStep('ETHUSD')"), "done", "watchlist: then done");
+  const cands = await pD.evaluate("__ex.symbolCandidates().map(function(c){return c.text})");
+  eq(cands.includes("BTCUSD") && cands.includes("ETHUSD") && !cands.some(function (c) { return /\d/.test(c); }), true, "symbolCandidates lists the watchlist symbols, digits masked");
+  eq(await pD.evaluate("Array.isArray(__ex.ticket().symbolCandidates)"), true, "refusal dump carries symbolCandidates");
+  eq(await pD.evaluate("window.__submitted || 0"), 0, "watchlist: nothing submitted");
+  // Fixture E (MEASURED 2026-10-06 08:58Z terminal_miss): the real PANEL-layout terminal with the order form CLOSED:
+  // no tabs, no inputs, no buy/sell text; an "Order form" toggle, Positions / Open orders panels, an open-instrument
+  // chip "BTC x" and a watchlist of "<BASE> <signed %>" buttons. Opening the form shows the usual ticket.
+  const panel = `<!doctype html><html><body>
+<button>Trade</button><button id=chip>BTC x</button><button>Market chart</button><button id=of>Order form</button>
+<button>Open orders</button><button>Positions</button><button>Order book</button>
+<div id=wl><button data-s=BTC>BTC -1.2%</button><button data-s=ETH>ETH -0.5%</button><button data-s=SOL>SOL +2.0%</button></div>
+<div id=panel></div>
+<script>var cur='BTC';
+function form(){return '<form id=f><div role=tablist><button type=button role=tab aria-selected=false>Market</button><button type=button role=tab aria-selected=true>Limit</button></div><div role=tablist><button type=button role=tab aria-selected=true>Buy</button><button type=button role=tab aria-selected=false>Sell</button></div><label for=lp>Limit price</label><input id=lp type=text value=1><label for=q>Quantity</label><input id=q type=text value=0><button type=button id=qu aria-label=\"Toggle quantity unit\">USD</button><div id=tps>TP/SL</div><div id=tpbox></div><button type=submit id=sub>Long (buy) '+cur+'</button></form>';}
+document.getElementById('of').onclick=function(){document.getElementById('panel').innerHTML=form();document.getElementById('qu').onclick=function(){this.textContent=this.textContent==='USD'?cur:'USD';};document.getElementById('tps').onclick=function(){document.getElementById('tpbox').innerHTML='<label for=tp>Take profit price</label><input id=tp type=text><label for=sl>Stop loss price</label><input id=sl type=text>';};document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__submitted=(window.__submitted||0)+1};};
+document.querySelectorAll('#wl button').forEach(function(b){b.onclick=function(){cur=b.getAttribute('data-s');document.getElementById('chip').textContent=cur+' x';var sb=document.getElementById('sub');if(sb)sb.textContent='Long (buy) '+cur;};});
+</script></body></html>`;
+  const pE = await onHost(panel);
+  const rE = (code) => pE.evaluate(code);
+  eq(await rE("[__ex.terminal().ready, __ex.terminal().panels, __ex.terminal().tabs, __ex.terminal().inputs]"), [true, true, 0, 0], "panel terminal, form closed: ready via panels (the 08:58Z miss)");
+  eq(await rE("__ex.symbolShown()"), "BTC", "panel: shown symbol read from the one 'BTC x' chip");
+  eq(await rE("__ex.symbolStep('ETHUSD')"), "clicked_watch", "panel: the ONE 'ETH -0.5%' watchlist button clicked");
+  eq(await rE("__ex.symbolStep('ETHUSD')"), "done", "panel: chip now 'ETH x' -> done");
+  eq(await rE("__ex.openTicket()"), "clicked", "panel: 'Order form' opens the ticket");
+  eq(await rE("__ex.symbolOnTicket()"), "ETH", "panel: submit label names ETH");
+  // QUANTITY UNIT + TP/SL (MEASURED am-3 09:16Z): "Toggle quantity unit" button reads USD; "TP/SL" control hides the TP/SL inputs.
+  eq(await rE("__ex.qtyUnit()"), "USD", "panel: quantity unit toggle reads USD");
+  eq(await rE("__ex.toggleQtyUnit()"), "clicked", "panel: unit toggled once");
+  eq(await rE("__ex.qtyUnit()"), "ETH", "panel: quantity unit now ETH");
+  eq(await rE("__ex.readByLabel('take ?profit|\\btp\\b','price').n"), 0, "panel: TP field hidden before the TP/SL control");
+  eq(await rE("__ex.openTpsl(0)"), "expanded", "panel: TP/SL control clicked");
+  eq(await rE("__ex.openTpsl()"), "ok", "panel: TP/SL now open");
+  eq(await rE("[__ex.readByLabel('take ?profit|\\btp\\b','price').n, __ex.readByLabel('stop ?loss|\\bsl\\b','price').n]"), [1, 1], "panel: TP and SL fields unique by label");
+  eq(await rE("window.__submitted || 0"), 0, "panel: nothing submitted");
+  // Fixture F (MEASURED am-4 09:48Z): TP/SL checkbox already CHECKED, section still collapsed behind a "TP/SL" header.
+  const tpF = `<!doctype html><html><body><form id=f><div role=tablist><button type=button role=tab aria-selected=true>Buy</button></div>
+<label for=lp>Limit price</label><input id=lp type=text><label><input type=checkbox id=cb checked>TP/SL</label>
+<div id=hdr aria-expanded=false>TP/SL</div><div id=box></div><button type=submit>Long (buy) ETH</button></form>
+<script>document.getElementById('hdr').onclick=function(){document.getElementById('box').innerHTML='<label for=tp>Take profit price</label><input id=tp type=text><label for=sl>Stop loss price</label><input id=sl type=text>';};
+document.getElementById('cb').onclick=function(){window.__cbClicks=(window.__cbClicks||0)+1};</script></body></html>`;
+  const pF = await onHost(tpF);
+  eq(await pF.evaluate("__ex.openTpsl(0)"), "expanded", "checked box + collapsed section: header expanded, box untouched");
+  eq(await pF.evaluate("[__ex.openTpsl(), document.getElementById('cb').checked, window.__cbClicks || 0]"), ["ok", true, 0], "then ok; checkbox never toggled off");
+  // Fixture G: the "TP/SL" text is a plain span; the handler sits on a text-less role=switch beside it.
+  const tpG = `<!doctype html><html><body><form id=f><label for=lp>Limit price</label><input id=lp type=text>
+<div><span id=txt>TP/SL</span><button type=button role=switch id=sw aria-checked=false></button></div><div id=box></div>
+<button type=submit>Long (buy) ETH</button></form>
+<script>document.getElementById('sw').onclick=function(){this.setAttribute('aria-checked','true');document.getElementById('box').innerHTML='<label for=tp>Take profit price</label><input id=tp type=text><label for=sl>Stop loss price</label><input id=sl type=text>';};</script></body></html>`;
+  const pG = await onHost(tpG);
+  eq(await pG.evaluate("__ex.openTpsl(0)"), "expanded", "switch layout: text clicked first (no effect)");
+  eq(await pG.evaluate("__ex.openTpsl(1)"), "switched", "switch layout: the text-less switch beside it is clicked");
+  eq(await pG.evaluate("__ex.openTpsl(2)"), "ok", "switch layout: TP/SL inputs now shown");
+  eq(await pG.evaluate("__ex.tpslArea()[0].node.text"), "TP/SL", "tpslArea dump names the TP/SL element");
+  // POSITION AMEND (PROP-TRAIL-PHONE): SYNTHETIC Positions table + edit dialog. Proves the helpers' mechanics, NOT
+  // Breakout's real edit UI (never captured): unique row, never a close control, dialog fields by label, one save.
+  const posH = (cols, rowBtns, extraRow) => `<!doctype html><html><body><button>Positions</button><button>Open orders</button>
+<table><thead><tr>${cols.map((c) => "<th>" + c + "</th>").join("")}</tr></thead><tbody>
+<tr id=r1><td>ETHUSD</td><td>Buy</td><td>0.50</td><td>2,500.00</td>${cols.includes("SL") ? "<td id=csl>2,450.00</td><td id=ctp>2,800.00</td>" : ""}<td>${rowBtns}</td></tr>${extraRow || ""}
+</tbody></table><div id=dl></div>
+<script>window.__closed=0;window.__saved=0;
+document.querySelectorAll('[data-close]').forEach(function(x){x.onclick=function(){window.__closed++}});
+document.querySelectorAll('[data-edit]').forEach(function(x){x.onclick=function(){
+ var sl=(document.getElementById('csl')||{}).textContent||window.__sl||'2450.00', tp=(document.getElementById('ctp')||{}).textContent||window.__tp||'2800.00';
+ document.getElementById('dl').innerHTML='<div role=dialog><h3>Edit position</h3><label for=dsl>Stop loss price</label><input id=dsl type=text value="'+sl.replace(/,/g,'')+'"><label for=dslp>Stop loss %</label><input id=dslp type=text><label for=dtp>Take profit price</label><input id=dtp type=text value="'+tp.replace(/,/g,'')+'"><button id=sv>Save</button><button id=cx>Cancel</button><button>Close position</button></div>';
+ document.getElementById('sv').onclick=function(){window.__saved++;var a=document.getElementById('dsl').value,b2=document.getElementById('dtp').value;if(document.getElementById('csl')){document.getElementById('csl').textContent=a;document.getElementById('ctp').textContent=b2}else{window.__sl=a;window.__tp=b2}document.getElementById('dl').innerHTML=''};
+ document.getElementById('cx').onclick=function(){document.getElementById('dl').innerHTML=''};}});
+</script></body></html>`;
+  const COLS = ["Symbol", "Side", "Qty", "Entry", "SL", "TP", ""];
+  const pP = await onHost(posH(COLS, "<button data-edit aria-label='Edit'>✎</button><button data-close>Close</button>"));
+  const rP = (c) => pP.evaluate(c);
+  let pi = await rP("__ex.posInfo('ETHUSD','long|buy')");
+  eq([pi.n, pi.sl, pi.tp], [1, "2,450.00", "2,800.00"], "amend: one ETH long row, SL/TP columns read");
+  eq((await rP("__ex.posInfo('ETHUSD','short|sell')")).n, 0, "amend: no short row");
+  eq(await rP("__ex.posEdit('ETHUSD','long|buy')"), "clicked", "amend: the row's ONE edit control clicked");
+  eq(await rP("window.__closed"), 0, "amend: close control never clicked");
+  eq((await rP("__ex.editDialog()")).n, 1, "amend: one dialog");
+  eq((await rP("__ex.dlgRead('stop ?loss|\\bsl\\b','')")).n, 2, "amend: SL label ambiguous (price + %) without prefer");
+  eq((await rP("__ex.dlgRead('stop ?loss|\\bsl\\b','price')")).value, "2450.00", "amend: dialog SL read by label");
+  eq((await rP("__ex.dlgSet('stop ?loss|\\bsl\\b','price','2530.00')")).value, "2530.00", "amend: dialog SL typed + read back");
+  eq((await rP("__ex.dlgRead('take ?profit|\\btp\\b','price')")).value, "2800.00", "amend: kept TP unchanged");
+  eq(await rP("__ex.dlgCancel()"), "clicked", "amend (dry): cancelled, not saved");
+  eq([await rP("window.__saved"), (await rP("__ex.editDialog()")).n, (await rP("__ex.posInfo('ETHUSD','long|buy')")).sl], [0, 0, "2,450.00"], "amend (dry): nothing saved, row unchanged");
+  await rP("__ex.posEdit('ETHUSD','long|buy')");
+  await rP("__ex.dlgSet('stop ?loss|\\bsl\\b','price','2530.00')");
+  eq(await rP("__ex.dlgSave()"), "clicked", "amend (live): the ONE save button (never 'Close position')");
+  eq([await rP("window.__saved"), await rP("window.__closed"), (await rP("__ex.posInfo('ETHUSD','long|buy')")).sl], [1, 0, "2530.00"], "amend (live): saved, row read back with the new SL");
+  // no SL/TP columns: the read-back re-opens the dialog; a row with only a close control has no edit route
+  const pQ = await onHost(posH(["Symbol", "Side", "Qty", "Entry", ""], "<button data-edit title='Modify TP/SL'></button><button data-close>Close</button>"));
+  eq([(await pQ.evaluate("__ex.posInfo('ETHUSD','long|buy')")).sl, await pQ.evaluate("__ex.posEdit('ETHUSD','long|buy')")], [null, "clicked"], "amend: no SL column -> null; edit found by title");
+  const pR = await onHost(posH(["Symbol", "Side", "Qty", "Entry", ""], "<button data-close>Close</button><button data-close aria-label='Close position'>x</button>"));
+  eq([await pR.evaluate("__ex.posEdit('ETHUSD','long|buy')"), await pR.evaluate("window.__closed")], ["no_edit", 0], "amend: only close controls -> no_edit, nothing clicked");
+  const pS = await onHost(posH(COLS, "<button data-edit>Edit</button>", "<tr><td>ETHUSD</td><td>Buy</td><td>0.10</td><td>2,400</td><td>2,300</td><td>2,900</td><td><button data-edit>Edit</button></td></tr>"));
+  eq(await pS.evaluate("__ex.posEdit('ETHUSD','long|buy')"), "rows_2", "amend: two ETH long rows -> refused, nothing clicked");
+  eq(await pS.evaluate("__ex.dlgSave()"), "none", "amend: no dialog -> no save");
+
+  // ACCOUNT PANEL READ (PHONE-BALANCE-READ): label-anchored, one distinct number or null.
+  const acctA = `<!doctype html><html><body><button>Positions</button><button>Open orders</button>
+<button id=pf>Portfolio 98,123.45 USD</button><button>Turbo Eval 1</button><div><span>Balance</span><span>97,000.10</span></div><div>Equity: 98,123.45</div></body></html>`;
+  const acctpA = await onHost(acctA);
+  eq(await acctpA.evaluate("__ex.accountPanel()"), {balance: 97000.1, equity: 98123.45, portfolio: 98123.45, n: {balance: 1, equity: 1, portfolio: 1}}, "account panel: balance/equity/portfolio read by label");
+  const acctpB = await onHost(`<!doctype html><html><body><button>Portfolio 10,000.00 USD</button><button>Turbo Eval 5</button></body></html>`);
+  eq(await acctpB.evaluate("__ex.accountPanel()"), {balance: null, equity: null, portfolio: 10000, n: {balance: 0, equity: 0, portfolio: 1}}, "account panel: only Portfolio shown -> balance/equity absent (null), portfolio read");
+  const acctpC = await onHost(`<!doctype html><html><body><button>Portfolio 1.00 USD</button><span>Portfolio 2.00 USD</span><button>Balance</button></body></html>`);
+  eq(await acctpC.evaluate("__ex.accountPanel()"), {balance: null, equity: null, portfolio: null, n: {balance: 0, equity: 0, portfolio: 2}}, "account panel: two different values or no value -> null, never guessed");
+  eq(await acctpC.evaluate("window.__submitted || 0"), 0, "account panel: read-only");
+
+  // Fixture H (SOL-PICKER, MEASURED 2026-10-06 dry-fill dumps): the real "Select market" chip (div role=button,
+  // aria-label "Select market", text "ETH 20x"), watchlist buttons WITH a price ("SOL 150.23 -1.23%"), the ticket open on
+  // ETH. The list the chip opens is UNMEASURED: H = a role=dialog of plain div rows (handler on the row, symbol in a
+  // leaf span, a "SOLV" decoy); I = the same rows with NO popup role, SOL first (found as "appeared after the click");
+  // J = the chip opens nothing -> watchlist fallback; K = two SOL rows -> ambiguous, nothing picked, watchlist fallback.
+  const market = (mode) => `<!doctype html><html><body>
+<div role=button id=chip aria-label="Select market">ETH 20x</div><button>Order form</button><button>Open orders</button><button>Positions</button>
+<div id=wl><button data-s=BTC>BTC 62,410.5 -1.20%</button><button data-s=ETH>ETH 2,612.40 -0.50%</button><button data-s=SOL>SOL 150.23 -1.23%</button></div>
+<div id=list></div>
+<form id=f><div role=tablist><button type=button role=tab aria-selected=false>Market</button><button type=button role=tab aria-selected=true>Limit</button></div>
+<div role=tablist><button type=button role=tab aria-selected=true>Buy</button><button type=button role=tab aria-selected=false>Sell</button></div>
+<label for=lp>Limit price</label><input id=lp type=text><label for=q>Quantity</label><input id=q type=text>
+<button type=button aria-label="Toggle quantity unit">USD</button><button type=submit id=sub>Long (buy) ETH</button></form>
+<script>var MODE='${mode}';var LEV={BTC:50,ETH:20,SOL:10,SOLV:5,XRP:5};
+function pick(s){document.getElementById('chip').textContent=s+' '+LEV[s]+'x';document.getElementById('sub').textContent='Long (buy) '+s;close();}
+function close(){document.getElementById('list').innerHTML='';}
+function row(s,name){var d=document.createElement('div');d.className='r';d.innerHTML='<span>'+s+'</span><span>'+name+'</span>';d.onclick=function(){window.__picks=(window.__picks||0)+1;pick(s.split(/[-\/]/)[0])};return d;}
+document.getElementById('chip').onclick=function(){if(MODE==='J')return;var l=document.getElementById('list');var box=l;
+ if(MODE!=='I'){box=document.createElement('div');box.setAttribute('role','dialog');l.appendChild(box);}
+ var rs=MODE==='I'?[['SOL','Solana'],['BTC','Bitcoin'],['ETH','Ethereum']]:[['BTC','Bitcoin'],['ETH','Ethereum'],['SOLV','Solv'],['SOL','Solana'],['XRP','Ripple']];
+ if(MODE==='K')rs.push(['SOL-PERP','Solana perp']);
+ rs.forEach(function(r){box.appendChild(row(r[0],r[1]))});};
+document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
+document.querySelectorAll('#wl button').forEach(function(b){b.onclick=function(){window.__wl=(window.__wl||0)+1;pick(b.getAttribute('data-s'));};});
+document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__submitted=(window.__submitted||0)+1};</script></body></html>`;
+  for (const [mode, route] of [["H", ["opened_market", "picked_market"]], ["I", ["opened_market", "picked_market"]],
+    ["J", ["opened_market", "market_no_row", "clicked_watch"]], ["K", ["opened_market", "market_ambiguous", "clicked_watch"]]]) {
+    const pM = await onHost(market(mode)); const rM = (code) => pM.evaluate(code);
+    eq([await rM("__ex.marketShown()"), await rM("__ex.symbolShown()")], ["ETH", "ETH"], `market ${mode}: chip 'ETH 20x' read as ETH, ticket on ETH`);
+    eq(await rM("__ex.symbolReset()"), "ok", `market ${mode}: picker state reset per ticket`);
+    const got = []; for (let i = 0; i < route.length; i++) got.push(await rM("__ex.symbolStep('SOLUSD')"));
+    eq(got, route, `market ${mode}: route ${route.join(">")}`);
+    eq(await rM("__ex.symbolStep('SOLUSD')"), "done", `market ${mode}: then done`);
+    eq([await rM("__ex.symbolOnTicket()"), await rM("__ex.marketShown()")], ["SOL", "SOL"], `market ${mode}: submit label AND chip name SOL`);
+    eq([await rM("window.__picks || 0"), await rM("window.__wl || 0")], mode === "J" || mode === "K" ? [0, 1] : [1, 0], `market ${mode}: exactly one selection click (${mode === "J" || mode === "K" ? "watchlist" : "picker row"})`);
+    eq(await rM("window.__submitted || 0"), 0, `market ${mode}: nothing submitted`);
+    eq(await rM("[__ex.symbolStep('ETHUSD'), __ex.symbolStep('ETHUSD')]"), ["opened_market", mode === "J" ? "market_no_row" : "picked_market"], `market ${mode}: and back to ETH from SOL`);
+  }
+  // SERVER READ-BACK (PHONE-GO-TOKEN, design 3.4): the app builds the read-back from these page reads (MainActivity.kt
+  // readBack: SELECTED tabs, the submit label + disabled state, the TP/SL box, the by-label values) and hashes
+  // "key=value" lines in READBACK_FIELDS order (== src/prop/phone_executor.py). Mirrors the app; proves the page reads
+  // it depends on, and that any change to the form between verify and click changes the hash (no click).
+  const crypto = require("crypto");
+  const FIELDS = ["ticket_id", "symbol", "side", "order_type", "price", "qty", "qty_unit", "tp", "sl", "submit_label", "submit_disabled", "tpsl"];
+  await r("__ex.setByLabel('take ?profit', 'price', '2600.00')"); await r("__ex.setByLabel('stop ?loss', 'price', '2450.00')");
+  const readBack = async () => {
+    const tk = await r("__ex.ticket()");
+    const sel = (re) => { const h = tk.tabs.filter((x) => x.selected && re.test(x.text.trim())); return h.length === 1 ? h[0].text.trim() : ""; };
+    const val = async (re, pref) => ((await r(`__ex.readByLabel(${JSON.stringify(re)}, ${JSON.stringify(pref)})`)).value || "").trim();
+    return {ticket_id: "t1", symbol: tk.symbol.trim(), side: sel(/^(buy|sell)$/i), order_type: sel(/^(market|limit|trigger|stop)$/i),
+      price: await val("limit price", "limit price"), qty: await val("quantity", "quantity"), qty_unit: "ETH",
+      tp: await val("take ?profit|\\btp\\b", "price"), sl: await val("stop ?loss|\\bsl\\b", "price"),
+      submit_label: tk.submit.text.trim(), submit_disabled: String(tk.submit.disabled), tpsl: tk.tpsl === null ? "" : String(tk.tpsl)};
+  };
+  const hash = (rb) => crypto.createHash("sha256").update(FIELDS.map((k) => k + "=" + String(rb[k]).trim()).join("\n")).digest("hex");
+  const rb1 = await readBack();
+  eq([rb1.symbol, rb1.side, rb1.order_type, rb1.price, rb1.qty, rb1.tp, rb1.sl, rb1.submit_label, rb1.submit_disabled, rb1.tpsl],
+    ["ETHUSD", "Buy", "Limit", "2500.10", "0.01", "2600.00", "2450.00", "Long (buy) ETHUSD", "false", "true"], "read-back: what the page shows");
+  eq(hash(await readBack()), hash(rb1), "re-read of an unchanged form hashes the same (go allowed)");
+  await r("__ex.setByLabel('quantity', '', '0.02')");
+  eq(hash(await readBack()) === hash(rb1), false, "a changed quantity changes the hash (no click)");
+  await r("__ex.setByLabel('quantity', '', '0.01')"); await r("__ex.tab('Sell')");
+  const rbS = await readBack();
+  eq([rbS.side, /short/i.test(rbS.submit_label), hash(rbS) === hash(rb1)], ["Sell", true, false], "a flipped side changes side, label and hash");
+  await r("__ex.tab('Buy')");
+  eq(await r("window.__submitted || 0"), 0, "nothing submitted by the read-back path");
+
+  // LOGIN LINEUP (PHONE-AUTOLOGIN-2, operator 2026-10-10: "choose the correct 2 digit number from a line up of 3").
+  // Synthetic shapes, not Breakout's real page: the mechanics of reading the choices and tapping exactly one.
+  const lp = await b.newPage();
+  await lp.route("https://app.breakoutprop.com/**", (route) => route.fulfill({ status: 200, contentType: "text/html", body:
+    "<!doctype html><html><body>" + ({
+      "/lineup": "<p>Check your email and select the matching number</p><div style='font-size:12px'>Step 2</div>" +
+        "<div id=c><button style='font-size:32px' onclick='window.__picked=\"a\"'><span>47</span></button>" +
+        "<button style='font-size:32px' onclick='window.__picked=\"b\"'><span>12</span></button>" +
+        "<button style='font-size:32px' onclick='window.__picked=\"c\"'><span>83</span></button></div>",
+      "/single": "<p>Check your email and tap the number</p><h1 style='font-size:48px'>47</h1><p style='font-size:10px'>Expires in 10</p>",
+      "/dup": "<p>select the number</p><button>47</button><button>47</button><button>12</button>",
+      "/box": "<p>select the number</p><div style='cursor:pointer' onclick='window.__picked=\"box\"'><span>47</span><span>12</span><span>83</span></div>",
+    }[new URL(route.request().url()).pathname] || "") + "</body></html>" }));
+  const lg = async (path) => { await lp.goto("https://app.breakoutprop.com" + path); await lp.addScriptTag({ content: src }); };
+  await lg("/lineup");
+  let ch = await lp.evaluate("__ex.loginChoices()");
+  eq([ch.n, ch.top.sort(), ch.btn.sort()], [3, ["12", "47", "83"], ["12", "47", "83"]], "lineup: three tappable choices at the top size");
+  eq(await lp.evaluate("__ex.state().codeWait"), true, "lineup page reads as the code step");
+  eq(await lp.evaluate("__ex.loginNumber()"), "", "lineup: no SINGLE number (the 12:30Z/12:40Z failure shape)");
+  eq(await lp.evaluate("__ex.loginPick('12')"), "clicked", "lineup: the matching choice is tapped");
+  eq(await lp.evaluate("window.__picked"), "b", "lineup: exactly the matching control was tapped");
+  eq(await lp.evaluate("__ex.loginPick('99')"), "none", "lineup: a number not on the page taps nothing");
+  await lg("/single");
+  ch = await lp.evaluate("__ex.loginChoices()");
+  eq([ch.top, ch.btn], [["47"], []], "single-number page: one top number, no tappable lineup");
+  eq(await lp.evaluate("__ex.loginNumber()"), "47", "single-number page: loginNumber still reads it");
+  await lg("/dup");
+  eq(await lp.evaluate("__ex.loginPick('47')"), "ambiguous", "two controls with the same number: nothing tapped");
+  await lg("/box");
+  eq(await lp.evaluate("__ex.loginChoices().btn"), [], "one clickable box holding all three numbers is not a lineup control");
+
+  // PHONE-AUTOLOGIN-3 (live 2026-10-10 13:52Z/13:56Z: page_n=0 for 90 s on portal.breakoutprop.com). One synthetic
+  // page per hypothesis; each must now be READ (or, for (c), described) instead of reading as zero.
+  const lp3 = await b.newPage();
+  await lp3.route("https://portal.breakoutprop.com/**", (route) => route.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body:
+    "<!doctype html><html><body>" + ({
+      // (b) numbers with an icon child, split digit spans, zero-width characters
+      "/icons": "<p>Select the matching number</p>" +
+        "<button onclick='window.__picked=\"a\"'>47<svg width=8 height=8></svg></button>" +
+        "<button onclick='window.__picked=\"b\"'><span>1</span><span>2</span></button>" +
+        "<button onclick='window.__picked=\"c\"'>​83​</button>",
+      // (b) radios whose number is only in value / aria-label, with a separate text label
+      "/radios": "<p>Choose the number from your email</p>" +
+        "<label><input type=radio name=n value=47 onclick='window.__picked=\"a\"'><span>47</span></label>" +
+        "<label><input type=radio name=n value=12 onclick='window.__picked=\"b\"'><span>12</span></label>" +
+        "<label><input type=radio name=n value=83 onclick='window.__picked=\"c\"'><span>83</span></label>",
+      "/aria": "<p>select</p><div role=button aria-label=47 style='width:20px;height:20px' onclick='window.__picked=\"a\"'></div>" +
+        "<div role=button aria-label=12 style='width:20px;height:20px' onclick='window.__picked=\"b\"'></div>" +
+        "<div role=button aria-label=83 style='width:20px;height:20px' onclick='window.__picked=\"c\"'></div>",
+      // (b) a shadow root and a same-origin iframe
+      "/shadow": "<p>Select the number</p><x-pick id=h></x-pick><script>var r=document.getElementById('h').attachShadow({mode:'open'});" +
+        "r.innerHTML='<button onclick=\"window.__picked=1\">47</button><button onclick=\"window.__picked=2\">12</button><button onclick=\"window.__picked=3\">83</button>';</script>",
+      "/frame": "<p>Select the number</p><iframe src='/inner' style='width:300px;height:200px'></iframe>",
+      "/inner": "<button onclick='parent.__picked=\"f\"'>47</button><button onclick='parent.__picked=\"g\"'>12</button><button>83</button>",
+      // (c) the page only says "check your email": nothing numeric to read, the structure must say so
+      "/check": "<h1>Check your email</h1><p>We sent a sign-in link to b***@example.com. It expires in 15 minutes.</p>" +
+        "<a href='https://portal.breakoutprop.com/help/42'>Need help?</a><button>Resend email</button>",
+      // (a) an email form whose FIRST matching button is a social login; the real submit is in the form
+      "/email": "<button onclick='window.__social=1'>Continue with Google</button><form id=f onsubmit='event.preventDefault()'>" +
+        "<input type=email><button type=submit onclick='window.__sent=1'>Continue</button></form>",
+      // (a) a form with NO button: only Enter submits it
+      "/enter": "<form id=f onsubmit='event.preventDefault();window.__sent=1'><input type=email></form>",
+    }[new URL(route.request().url()).pathname] || "") + "</body></html>" }));
+  const lg3 = async (path) => { await lp3.goto("https://portal.breakoutprop.com" + path); await lp3.waitForTimeout(150); await lp3.addScriptTag({ content: src }); };
+  for (const [path, want, pick] of [["/icons", ["12", "47", "83"], "b"], ["/radios", ["12", "47", "83"], "b"], ["/aria", ["12", "47", "83"], "b"],
+    ["/shadow", ["12", "47", "83"], 2]]) {
+    await lg3(path);
+    ch = await lp3.evaluate("__ex.loginChoices()");
+    eq(ch.btn.sort(), want, `${path}: three tappable choices read`);
+    eq(await lp3.evaluate("__ex.loginPick('12')"), "clicked", `${path}: the one matching choice tapped`);
+    eq(await lp3.evaluate("window.__picked"), pick, `${path}: exactly that control`);
+  }
+  await lg3("/frame");
+  eq((await lp3.evaluate("__ex.loginChoices()")).btn.sort(), ["12", "47", "83"], "/frame: choices read inside a same-origin iframe");
+  eq(await lp3.evaluate("__ex.loginPick('47')"), "clicked", "/frame: tapped inside the iframe");
+  eq(await lp3.evaluate("window.__picked"), "f", "/frame: exactly that control");
+  let pr = await lp3.evaluate("__ex.loginProbe()");
+  eq([pr.frames, pr.frames_xo], [1, 0], "/frame: probe counts one readable iframe");
+  await lg3("/check");
+  eq((await lp3.evaluate("__ex.loginChoices()")).n, 0, "/check: nothing numeric on a check-your-email page");
+  pr = await lp3.evaluate("__ex.loginProbe()");
+  eq([pr.phrases.includes("check_email"), pr.phrases.includes("we_sent"), pr.cands], [true, true, 0], "/check: probe names the shape");
+  eq(/\d|@|example|http/.test(JSON.stringify(pr.texts)), false, "/check: probe texts carry no digit, email or link");
+  eq(pr.texts.includes("Check your email"), true, "/check: heading text kept (scrubbed)");
+  eq(pr.numtok > 0 && typeof pr.sig === "string", true, "/check: numeric tokens COUNTED, sig present");
+  await lg3("/email");
+  const sig0 = (await lp3.evaluate("__ex.loginProbe()")).sig;
+  eq(await lp3.evaluate("__ex.loginEmail('a@b.co')"), "clicked", "/email: submitted");
+  eq(await lp3.evaluate("[window.__social || 0, window.__sent || 0]"), [0, 1], "/email: the form's Continue, never the social button");
+  eq((await lp3.evaluate("__ex.loginSubmitInfo()")).where, "form", "/email: submit info says form");
+  await lp3.evaluate("document.body.insertAdjacentHTML('beforeend', '<p>Check your email</p>')");
+  eq((await lp3.evaluate("__ex.loginProbe()")).sig !== sig0, true, "/email: sig changes when the page advances");
+  await lg3("/enter");
+  eq(await lp3.evaluate("__ex.loginEmail('a@b.co')"), "submitted", "/enter: no button -> form submitted");
+  eq(await lp3.evaluate("__ex.loginEnter()"), "enter+submit", "/enter: Enter path available");
+  eq(await lp3.evaluate("window.__sent"), 1, "/enter: form submitted");
+  // regression: the original lineup still reads exactly as before under the broadened reader
+  await lg("/lineup");
+  eq((await lp.evaluate("__ex.loginChoices()")).n, 3, "lineup: still exactly three candidates");
   await b.close(); console.log("exec_check: all passed");
 })().catch((e) => { console.error(e); process.exit(1); });

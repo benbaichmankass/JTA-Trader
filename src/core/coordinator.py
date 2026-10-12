@@ -1048,6 +1048,16 @@ class Coordinator:
             except Exception:  # noqa: BLE001 — never break sizing on a probe
                 return str(getattr(acc, "exchange", "")).lower() == "breakout"
 
+        def _is_phone_flow(account_id: str) -> bool:
+            """True when *account_id* is a ``phone_accounts`` entry in
+            config/prop_platforms.yaml (ticket flow ``phone``). An unreadable
+            file reads as not-phone, keeping the refusal (the old behaviour)."""
+            try:
+                from src.prop.platform import FLOW_PHONE, ticket_flow
+                return ticket_flow(account_id) == FLOW_PHONE
+            except Exception:  # noqa: BLE001 — never break sizing on a probe
+                return False
+
         def _prop_sizing_balance_or_refuse(acc, notify: bool = True) -> float:
             """A declared prop account's sizing basis — or a refusal.
 
@@ -1744,7 +1754,28 @@ class Coordinator:
             available_basis_kind = None
             margin_basis: dict = {}
             try:
-                if _is_declared_prop:
+                if _is_declared_prop and _is_prop_bridge and _is_phone_flow(account.name):
+                    # PHONE-FLOW BRIDGE (PROP-B2-STARVED, 2026-10-09): the
+                    # snapshot's only machine source is the phone itself, which
+                    # reads the account panel only while it is foregrounded on
+                    # the terminal -- and it foregrounds only for a waiting
+                    # ticket. Refusing on a missing snapshot is therefore a
+                    # DEADLOCK, not a per-trade refusal: MEASURED, breakout_2
+                    # refused all 7 trend_donchian_eth_prop signals
+                    # 2026-10-07..08 (prop_balance_absent) while tradeify_1 /
+                    # velotrade_1 emitted. The bridge does not size off this
+                    # number (0.0 basis -> ruleset below), so the refusal still
+                    # PAGES (one red flag, NO-HALT) and the ticket emits.
+                    try:
+                        _prop_sizing_balance_or_refuse(
+                            account, notify=not effective_dry)
+                    except RuntimeError as _snap_exc:
+                        logger.warning(
+                            "multi_account_execute: %s phone-flow emits without a "
+                            "fresh snapshot (the phone reads it at placement): %s",
+                            account.name, _snap_exc)
+                    balance = 0.0
+                elif _is_declared_prop:
                     _prop_balance = _prop_sizing_balance_or_refuse(
                         account, notify=not effective_dry)
                     balance = 0.0 if _is_prop_bridge else _prop_balance
@@ -2118,40 +2149,19 @@ class Coordinator:
 
             sized_qty_by_account[account.name] = sized_qty
 
-            # Latching daily-loss-cap notification (operator-approved
-            # 2026-05-28). Fire ONE Telegram when an account first exhausts
-            # its daily-loss cap and ONE when it next clears — not per-tick.
-            # Runs every dispatch (so it catches both the cross-into and the
-            # cross-out-of cap, incl. the 00:00 UTC auto-reset on the next
-            # day's first tick); the latch in daily_cap_alert self-dedups.
-            # The cap-exhaustion check uses the same equity basis the sizer
-            # used. Best-effort — never blocks dispatch.
-            # Skipped for the prop bridge: its balance is a sentinel 0.0 (no
-            # broker API), so the cap math would misfire a spurious exhaustion
-            # alert. Prop daily-loss is governed by the prop ruleset + the
-            # rule-distance panel, not this RiskManager cap.
-            if not _is_prop_bridge:
-                try:
-                    from src.runtime.daily_cap_alert import note_account_cap_state
-                    _equity_basis = (
-                        total_account_usd if total_account_usd is not None else balance
-                    )
-                    note_account_cap_state(
-                        account.name,
-                        exhausted=account.risk_manager.is_daily_cap_exhausted(
-                            _equity_basis
-                        ),
-                        daily_pnl=account.risk_manager.daily_pnl,
-                        cap_usd=account.risk_manager.effective_daily_loss_usd(
-                            _equity_basis
-                        ),
-                        demo=getattr(account, "demo", False),
-                    )
-                except Exception as _cap_exc:  # noqa: BLE001
-                    logger.debug(
-                        "multi_account_execute: daily-cap note failed for %s: %s",
-                        account.name, _cap_exc,
-                    )
+            # Daily-DD switch equity feed (operator directive 2026-10-09). The
+            # latching daily-loss-cap ping that lived here was retired with the
+            # DAILY_LOSS_CAP it reported on; the switch sends its own ONE trip
+            # and ONE reset alert. Only a TOTAL-equity reading is fed (Bybit
+            # linear ``totalEquity``); otherwise the switch reads the balance
+            # snapshot (prop: the reported status row). Best-effort.
+            try:
+                account.risk_manager.note_live_equity(total_account_usd)
+            except Exception as _dd_exc:  # noqa: BLE001
+                logger.debug(
+                    "multi_account_execute: dd-switch equity feed failed for %s: %s",
+                    account.name, _dd_exc,
+                )
 
             # 2. Refuse to forward a zero-qty order. This branch fires
             # for ANY sized_qty <= 0 outcome from the RiskManager —
@@ -2259,6 +2269,7 @@ class Coordinator:
                         current_net_position_qty,
                         get_existing_position_info,
                         has_open_trade_for_strategy,
+                        note_open_trade_read,
                         position_netting_guard_active_for,
                     )
                     current_signed_qty = current_net_position_qty(
@@ -2274,6 +2285,10 @@ class Coordinator:
                             "[coordinator] net position unreadable for %s/%s "
                             "— refusing package (not treating as flat)",
                             account.name, pkg.symbol,
+                        )
+                        note_open_trade_read(
+                            account.name, pkg.symbol, pkg.strategy,
+                            unreadable=True,
                         )
                         from src.units.accounts.execute import log_rejection_to_journal
                         log_rejection_to_journal(
@@ -2351,10 +2366,22 @@ class Coordinator:
                         and delta.action in ("open", "increase")
                         else False
                     )
+                    # NO-HALT round 2 (2026-10-09): a missing OR unreadable
+                    # journal is "could not look" (None). Refuse THIS add for
+                    # THIS dispatch only — the next dispatch re-reads; one red
+                    # flag after 3 consecutive "could not look" refusals on
+                    # either read (net position above, or this one), no latch.
+                    # Reaching here with a non-None read clears the streak.
+                    note_open_trade_read(
+                        account.name, pkg.symbol, pkg.strategy,
+                        unreadable=_holds_open is None,
+                    )
                     if _holds_open is None:
                         logger.warning(
-                            "[coordinator] open-trade read unreadable for "
-                            "%s/%s/%s — refusing %s (not treating as flat)",
+                            "[coordinator] open-trade read unreadable "
+                            "(journal missing or read failed) for "
+                            "%s/%s/%s — refusing %s this dispatch (not "
+                            "treating as flat; next dispatch re-reads)",
                             account.name, pkg.symbol, pkg.strategy, delta.action,
                         )
                         from src.units.accounts.execute import log_rejection_to_journal
@@ -2667,7 +2694,16 @@ class Coordinator:
                             f"{pkg.symbol} position — skipping new order"
                         )
 
-                ok, reason = account.risk_manager.evaluate(pkg)
+                # A pure reduce/close (every leg reduce-only) is not a NEW
+                # entry: the daily-DD switch must let a tripped account exit.
+                _opening = not (
+                    intent_legs
+                    and all(bool(_l.get("reduce_only")) for _l in intent_legs)
+                )
+                ok, reason = (
+                    account.risk_manager.evaluate(pkg) if _opening
+                    else account.risk_manager.evaluate(pkg, opening=False)
+                )
                 if not ok:
                     risk_reason = reason or "risk_gate_refused"
                     raise RiskBreach(

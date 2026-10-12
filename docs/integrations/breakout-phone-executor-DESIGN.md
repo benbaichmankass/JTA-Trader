@@ -172,6 +172,17 @@ The VM executor's order is: kill switch → read the terminal → reconcile → 
 | Submit | Re-hashes the live form; clicks **only if** it equals the verified hash and the token is unexpired | Never. Network loss between verify and click ⇒ **no click** (fail closed). |
 | Confirm | Re-reads positions/orders; classifies `confirmed / partial_no_sl_tp / absent` | Receives the report; `partial_no_sl_tp` triggers containment and an alert. |
 
+**Built (PHONE-GO-TOKEN, 2026-10-07; PI-20261005-YUVCGTMJ-0003).** `POST /api/bot/prop/phone/verify` and
+`POST /api/bot/prop/phone/go` (`src/prop/phone_executor.py::verify_readback` / `redeem_go_token`). As built, it differs
+from the table above in two stated ways: (1) the phone's own phase-1b checks are KEPT and run first; the server check is a
+second, independent one over the raw strings the page shows (symbol, selected side and order-type tabs, price, qty and
+its unit, TP, SL, submit label and its enabled state, TP/SL state), not a port of `check_form_shape`, because the
+proprietary terminal's form is not the DXtrade shape that function reads; (2) the 30 s token is REDEEMED on the server
+(`/phone/go`, consumed once, refused on replay, on a changed form hash, on expiry, or when the account / kill switch is
+no longer live) instead of being compared on the phone only. A `meta.test` ticket, a `dry_run` account or the kill
+switch get a `dry` token whose redeem always answers `go: false`; the dry path redeems it too, so a dry test exercises
+the whole route without a click.
+
 Why server-side for read-back: it keeps one tested implementation and means a fix lands without shipping an APK. The cost
 is that the phone cannot place an order while offline; that is correct, since it could not report either. The click
 guard on the phone is deliberately dumb (an equality check on a hash).
@@ -278,7 +289,7 @@ The go-live rules for the VM executor (`prop_executor.py`, and the manager's reg
 | **Fail closed** | Any unread, null, stale, unparsed or unexpected state is a refusal, never a guess or a `0`. | Collapsed-state guard analogue. |
 | **Kill switch** | Server mode, default `read_only`, typo ⇒ `read_only`. | As `executor_mode`. |
 | **One executor per account** | The server refuses a phone claim while the VM executor is `live` for that account, and vice versa. | Test. |
-| **No private data in logs** | Never log: the device token, pairing code, Breakout credentials, cookies, URL paths, position or order ids, balances, account ids or IP addresses. Logs carry ticket id, state, and refusal code only. Crash reports and screenshots are off by default (Android `FLAG_SECURE` on the WebView window). The WebView's storage is app-private; `android:allowBackup=false`. | A CI grep over the build for logging calls; a log-capture test during the soak that scans for the account id and any 6+ digit id. |
+| **No private data in logs** | Never log: the device token, pairing code, Breakout credentials, cookies, URL paths, position or order ids, balances, account ids or IP addresses. Logs carry ticket id, state, and refusal code only. Screenshots are blocked (Android `FLAG_SECURE`) on every credential-bearing screen -- login, code step, challenge, unread state, Setup dialog -- and allowed ONLY on the logged-in trading terminal (balances/positions, never a credential; operator 2026-10-06). `FLAG_SECURE` is set fail-closed (on at create, on at any page off the trade host) and cleared only after the state machine reads `logged_in`. The WebView's storage is app-private; `android:allowBackup=false`. | A CI grep over the build for logging calls; a log-capture test during the soak that scans for the account id and any 6+ digit id. |
 | **No challenge handling** | Challenge/captcha/2FA/email-code ⇒ stop and alert; no automated solve, no UA change, no reload loop. | Test with a challenge fixture page. |
 | **No credentials in the app** | The operator types the password and any code **in the WebView by hand**. The app does not save, autofill or read them. | Review + test. |
 | **Public repo hygiene** | The APK repo and this repo carry no secret, address, package signing key or account id. | `run_secret_scanning` + review. |
@@ -628,9 +639,9 @@ By the criteria registered before the run, that is 2 of 4: **NOT-YET** by the le
 |---|---|---|
 | Per-device auth | `config/prop_phone_devices.yaml`, `src/prop/phone_executor.py::authenticate` | The phone mints a 256-bit token. Only its SHA-256 **fingerprint** leaves the phone (the "Share ID" button) and is committed; a fingerprint is not a secret. Each device is pinned to one account. Revoke = `revoked: true`. This **replaces the § 3.2 pairing-code / new-table design**: no `prop_devices` table, no Telegram code and no new secret, and pairing is a git-visible change. |
 | Routes | `POST /api/bot/prop/phone/{claim,report,event,test-ticket}` (`routers/prop.py`, `docs/api-tier-policy.md`) | `claim` is the atomic `emitted -> claimed`, and it runs the 3-minute watchdog. `report` forces `account_id` from the token. `ticket_result` keeps the phone's form dump in `meta.phone.result`, which is how the unread TP/SL labels will be read. `event` pings Telegram with links, emails and 6+ digit runs scrubbed. `test-ticket` is always dry. |
-| Submit decision | `phone_executor.submit_mode` | `live` only if the account's `accounts.yaml` mode is `live`, `PROP_PHONE_MODE_<ACCOUNT>` is not `off` or `dry` (an unparseable value counts as `dry`), and the ticket is not a test. The phone also needs its own **ARMED** switch (default off). |
+| Submit decision | `phone_executor.submit_mode` | `live` only if the account's `accounts.yaml` mode is `live`, `PROP_PHONE_MODE_<ACCOUNT>` is not `off` or `dry` (an unparseable value counts as `dry`), and the ticket is not a test. This is the **only** live/dry decision: the phone's device-local ARMED switch was removed on 2026-10-06 (operator: *"not have the feature on the app where I need to arm it manually … extra gates that are unnecessary … actually less safe than we think"*; § 7.15). |
 | Account | `config/accounts.yaml::breakout_2` (`mode: dry_run`), `config/prop_platforms.yaml::phone_accounts.breakout_2`, `config/prop_rulesets/breakout_turbo_1step.yaml` | `phone_accounts` is a separate section, so the VM executor and the login check never load it. |
-| App | `tools/phone-executor/` (`com.metis.phoneexec`), CI `phone-executor-apk.yml` | Kiosk WebView, stock UA. Claim every 30 s. Fill: Limit tab, side tab, limit price, quantity (unit must name the base asset), TP/SL. Read every field back; the submit label must carry the side. In dry mode it does not submit; in live mode it submits, then reads Open orders / Positions back and flattens any opposite-side position. Fsynced intent ledger with no retry after a restart. Auto re-login: dedicated inbox, newest `breakoutprop.com` mail, the ONE link whose text equals the page's number, opened in the same WebView, 2 failures then latch and ping. Foreground service + boot receiver + "display over other apps" to come back after a reboot. |
+| App | `tools/phone-executor/` (`com.metis.phoneexec`), CI `phone-executor-apk.yml` | Kiosk WebView, stock UA. Claim every 30 s. Fill: Limit tab, side tab, limit price, quantity (unit must name the base asset), TP/SL. Read every field back; the submit label must carry the side. In dry mode it does not submit; in live mode it submits, then reads Open orders / Positions back and flattens any opposite-side position. Fsynced intent ledger with no retry after a restart. Auto re-login: dedicated inbox, newest `breakoutprop.com` mail, the ONE link whose text equals the page's number, opened in the same WebView. ~~2 failures then latch and ping~~ (superseded 2026-10-10, § 7.16: no latch; retried with backoff forever, ONE red flag after 3 in a row, and a backgrounded app comes forward every 30 min to check its login). Foreground service + boot receiver + "display over other apps" to come back after a reboot. |
 | Stable signing | `phone-executor-apk.yml` | The first run generates a keystore into Actions secrets (`PHONE_EXEC_KEYSTORE_*`) through the existing `BRANCH_PROTECTION_TOKEN`; it is never printed and never in git. Later builds install over the old app and keep the session. **New applicationId**, so the 1a probe and its session under measurement are untouched. |
 
 **Deviation from the dispatch, stated:** the inbox is read over **IMAP with a Gmail app password**, not the Gmail API with OAuth.
@@ -667,10 +678,10 @@ Every one of these is a **refusal with the form dump**, never a guess, so the fi
    - the new Gmail address;
    - the app password, typed into the app only, never into chat.
    - Tap "Allow restart after reboot", "Ignore battery optimisation" and "Allow notifications".
-4. Leave the app open. It loads the terminal and should log itself in through the inbox; that first login is the first test of auto re-login. If it latches, log in by hand in the app and tap "Reset login".
+4. Leave the app open. It loads the terminal and should log itself in through the inbox; that first login is the first test of auto re-login. *(Superseded 2026-10-10, § 7.16: there is no latch and no "Reset login"; a failed login is retried by itself, and "Retry login" only skips the current wait.)*
 5. Tap **Share ID** and send the line to the manager. It is a fingerprint, not a secret. We commit it, which pairs the phone.
 6. Tap **Dry test**. The app fills one ETH ticket, reads it back, does **not** submit, and the VM pings the result.
-7. Keep the phone on charge with the app on screen. Do **not** tap ARMED until the go-live message.
+7. Keep the phone on charge with the app on screen. *(Superseded 2026-10-06, § 7.15: there is no ARMED button any more; live vs dry is decided by the server.)*
 
 ### 7.12 First dry ticket on the phone (2026-10-05 22:20Z): refused on the symbol, and what that measured
 
@@ -703,6 +714,263 @@ still unmeasured: the next dry test is what measures it, and its refusal reason,
 `dry_test_request` bump comes AFTER the operator installs the new APK** (manager, 2026-10-05 22:45Z): the old app stays logged in
 overnight and claims every 30 s, so a bump merged before the install would be claimed and refused the old way within minutes. This PR
 leaves `dry_test_request: 2026-10-05-night-1` (already served); the manager bumps it in a separate PR once the install is confirmed.
+
+### 7.13 The "Select market" picker route (2026-10-07, lane SOL-PICKER, PI-20261006-APBY4NTV-0007)
+
+**MEASURED** (the 2026-10-06 dry-fill dumps on `GET /api/bot/prop/tickets?account_id=breakout_2`, `form.controls` and
+`form.symbolCandidates`, digits masked by the app): the terminal's instrument picker is ONE `div role=button` with
+`aria-label "Select market"` and text `"ETH #x"` (base + leverage); the watchlist buttons read `"SOL ###.## -#.##%"` (base,
+price, change). Two consequences in the code before this fix: `chipSymbol()` only matched `"ETH x"` (no digits), so the chip
+was never read; and `watchControls()` only matched `"<BASE> <signed %>"`, so the watchlist route missed whenever the price was
+shown. A SOL ticket (breakout_2 carries `trend_donchian_sol_prop`) with the terminal on ETH therefore refused
+`symbol SOL not on the submit label` — safe, but a missed trade. (INFERRED from the code paths; no SOL ticket has been served.)
+
+**Fix:** `symbolStep()` route 0 = the chip: open it once per symbol, then pick exactly ONE row whose text starts with the base as
+a whole word (`SOL`, `SOL/USD`, `SOLUSD`; never `SOLV…`). The list it opens is **UNMEASURED**, so rows are found by text: inside
+a `dialog`/`listbox`/`menu` when the page marks one, else among elements that APPEARED after the click (snapshot taken just
+before it), so the always-visible watchlist never competes. One typed search of the base is allowed if the list has a search box
+and no row. Two rows = `market_ambiguous`, none = `market_no_row`: nothing is clicked, the list is closed (Escape) and the
+watchlist route (regex now accepts the price) runs next. The app then verifies exactly as before — the submit label must name the
+base before anything is typed — and additionally refuses if the chip, when there is exactly one, names a different base.
+`symbolReset()` clears the picker state at the start of each ticket; `selectSymbol` allows 8 moves (was 6).
+
+`exec_check.js` fixtures H–K (dialog rows / unmarked rows with SOL first / chip opens nothing / two SOL rows) all start on ETH,
+end on SOL with the chip and the submit label agreeing, make exactly one selection click, and submit nothing. They prove
+mechanics on synthetic DOM, **not** Breakout's real list: the proof is one `phone-dry-test` for `SOLUSDT` on breakout_2 with
+the terminal on ETH, after the operator installs the APK built from this change; its refusal reason, if any, names the route.
+
+### 7.14 Trail amends on the phone path (PROP-TRAIL-PHONE, 2026-10-07)
+
+**Why:** the prop trail (`src/prop/prop_trail.py::run_trail_step`) runs only in the VM executor tick, so breakout_2's
+`*_prop` legs traded a static SL+TP bracket while their Stage-0 record assumed the chandelier trail (§ 5.3 already named
+"no trailing amendments" as a cost of the phone path).
+
+**Server** (`src/prop/phone_trail.py`): the trail is planned with the same `plan_trail` replay, once per closed bar, for every
+`placed`/`filled` ticket. One amend is published in a single slot on the parent ticket (`meta.phone_trail`), so at most one
+is ever outstanding. The claim serves it ONLY to an app that posts `accepts: ["amend"]`. `submit` is the entry path's
+`submit_mode` (no device-local switch on top, § 7.15). TP revisions travel through the same slot (`request_tp_amend`).
+
+**Phone** (`executeAmend`, `exec.js` `posInfo` / `posEdit` / `editDialog` / `dlg*`):
+1. Find the ONE Positions row for the symbol and side.
+2. The terminal must show the stop (and target) the server believes is resting. If it shows anything else, report
+   `human_moved` and never override it.
+3. Click the row's ONE edit control (text, aria-label or title naming edit / modify / TP-SL). Never a close control.
+4. Find the ONE dialog, then the SL (and TP) fields by label. Type the values and read every one back; the kept TP must
+   read back unchanged.
+5. **DRY:** cancel and report `dry_amended`. **LIVE:** click the ONE save button, then read the result back on the terminal:
+   the row's SL/TP columns, or else the dialog re-opened read-only and cancelled.
+
+Anything unverified before the save is `refused`; after it, `mismatch`. **No halting** (operator directive 2026-10-09,
+*"There is no halting."*; until then the server LOCKED the ticket's trail for good on these): a `refused`, a `mismatch`
+or a claimed amend with no report fails THAT attempt only. The ticket backs off 1, 2, 4, 8 (cap) closed bars and is
+re-planned; the next amend still carries the stop the server believes is resting (after a `mismatch`, the stop the
+terminal read back, when it read one), so the phone's pre-click check decides before any click. The first failure of a
+streak pings; 3 in a row raise ONE red flag; the first success after it announces recovery once. A `no_position` read is
+a miss, never an end: re-checked with backoff (6 never-seen reads raise one red flag). `human_moved` still HOLDS the
+ticket's trail (the trail never fights a human's stop) until the human's `{kind: amend}` report puts their levels on
+record, then resumes from them. A `locked`/`ended` state left by the old code is ignored on load with a log line (an old
+human-moved lock is kept as the hold). The trail only ever tightens.
+
+**UNMEASURED:** no capture has shown Breakout's Positions row edit control or its dialog. The headless fixtures
+(`test/exec_check.js`, "amend") prove the helpers' mechanics on synthetic DOM only. The first real amend, dry or live,
+either passes or refuses with the dump (row headers and controls, dialog inputs and buttons) that names the label to fix.
+
+### 7.15 The device-local ARMED switch is removed: live vs dry is decided only by the server (2026-10-06, lane ARMED-GATE)
+
+**Operator decision (2026-10-06 ~07:50Z, verbatim):** *"not have the feature on the app where I need to arm it manually. That falls
+into the category of extra gates that are unnecessary and then make it harder to manage the system correctly and are actually less
+safe than we think".* It is the same rule as CLAUDE.md § "The two execution gates": no hidden, default-off third gate.
+
+**What changed:**
+- **App:** the ARMED button, its confirm dialog, `Store.ARMED` and `armed()` are gone. `execute()` submits exactly when the claim says
+  `submit: live` and the ticket is not `meta.test`. The heartbeat no longer carries `armed`; the idle status line no longer shows it;
+  the dry reason is `test ticket (always dry)` or `server mode dry`.
+- **Server:** `submit_mode` is unchanged and is now the only decision: `live` iff `accounts.yaml` mode is `live`, the kill switch
+  `PROP_PHONE_MODE_<ACCOUNT>` is not `off`/`dry`, and the ticket is not a test. A leg with `strategies.yaml` `execution: shadow` never
+  reaches a ticket (`execute_pkg` emits none for a dry/shadow leg). `"armed"` left the heartbeat allowlist, so an old APK's value is
+  dropped instead of displayed as if it still decided anything.
+- **Unchanged:** the terminal gate, symbol verification, field read-back, the submit-label side check, the fsynced ledger with no retry,
+  the busy-symbol check, and the opposite-side flatten.
+
+**How to stop live submits now:** set `PROP_PHONE_MODE_<ACCOUNT>` to `dry` (or `off`), or set the account's `mode: dry_run` through
+`set-account-mode`. Both are server-side and visible. The app's Pause button is not a stop: it lapses at login or after 10 minutes.
+
+**Until the new APK is installed** the old app still requires its own ARMED flag. On 2026-10-06 the phone was already armed, so
+installing the new APK does not change what it does today; it removes the way for the phone to silently drift to dry.
+
+### 7.16 Auto re-login without a human: no latch, background login check (PHONE-AUTOLOGIN, 2026-10-10)
+
+**Operator, verbatim (2026-10-10, relayed by the manager):** *"the login cannot depend on manual input from me, and the
+system was able to login autonomously already - that's why we set up the dedicated inbox"*. Binding with it: the
+2026-10-09 *"There is no halting"* directive (CLAUDE.md, Prime Directive rule 7).
+
+**MEASURED by the manager (live, 2026-10-10):** breakout_2's phone posted no `account_status` after 2026-10-09T15:01Z.
+`/api/bot/prop/status?account_id=breakout_2` `phone_events` showed `logout_seen` at 08:19:27Z ("logged out; trying auto
+re-login") and then no `login_started` for 7+ minutes, while heartbeats read `st=background, fg=false`. Root causes read
+from `MainActivity.kt` (build before this PR):
+
+| # | cause | fix (this PR) |
+|---|---|---|
+| 1 | `relogin()` returned while `userActive()` (5 min after the operator's last tap). The operator opened the app (a tap), it went to the background, background ticks never read the page, so re-login never ran: **opening the app prevented the login.** | Re-login is deferred only while the screen is being touched (60 s, `RELOGIN_DEFER_MS`) and only while resumed; the 5-min hold still guards navigation reloads. |
+| 2 | A backgrounded app never read the page, so a logout overnight was invisible (`PI-20261010-GKFNZSH4-0001`). | The background tick brings the Activity forward (the existing `bringToFront()` / BG_WAKE mechanism) every 30 min (`LOGIN_CHECK_MS`), when a re-login retry is due, or when `GET /phone/pending` says `status_age_hours` >= 1 h (at most every 10 min); the resumed tick reads the page, re-logs in if needed, posts `account_status`, and the task goes back unless the operator touched it. |
+| 3 | Two failures set `RELOGIN_LATCHED`, stopping auto re-login until a human tapped "Reset login": a self-halt the no-halt directive forbids. | No latch. Retry after 2, 5, 10, 20, then every 30 min, forever. Retries are logged as the quiet `login_retry` event; the 3rd consecutive failure sends ONE `login_failed` ("STILL RETRYING"), the recovery ONE `login_ok` ("RECOVERED"). An older build's persisted latch is cleared at start. "Reset login" became "Retry login", which only skips the current wait. |
+| 4 | Mail was searched only since now-60 s, so a code page left by an earlier attempt (ours or the operator's) could never be answered. | A code page this attempt reached is answered by mail since its own email submit (-60 s); a code page it FOUND by mail up to 30 min old. The newest 5 Breakout mails are scanned newest first; the link must still be the ONE whose text is the shown number. |
+
+**Challenge pages** are still never solved or interacted with. What changed: the challenge no longer stops the loop for
+good; the app reloads the terminal every 30 min to re-check it (one `error` event on first sight). A challenge on the
+login host is a login failure, so it follows the same backoff.
+
+**Server side.** `scripts/ops/prop_silence.py::probe_phone_login` (`phone_login_breakout_2`, hourly attention-watch
+carrier) raises ONE urgent alarm, deduped and cleared by the existing edge class, when the phone's heartbeat is alive
+but `status_age_hours` > 3 h on a live account: a silent logout surfaces even if the app's own red flag never arrives.
+A dead heartbeat stays the heartbeat probe's alarm.
+
+**Not verified (landed_unproven until observed):** that Android resumes the Activity from the background on this
+phone when the screen is off/locked (the ticket wake shares the same limit), and the observation that closes checklist
+row `PHONE-AUTOLOGIN`: breakout_2 `phone_events` shows `login_started` -> logged in and a fresh `account_status` after
+the new APK is installed.
+
+### 7.17 The lineup login, waited for properly, and a background engine (PHONE-AUTOLOGIN-2, 2026-10-10)
+
+**Operator, verbatim (2026-10-10, watching the phone, relayed by the manager):** *"it's a login check that verifies you
+can choose the correct 2 digit number from a line up of 3"* and *"it's way not waiting long enough to see the email.
+That can take at least up to a minute. It needs to wait longer to see the email and see if it comes up with one of the
+numbers that is the correct one."* And on the background: *"it would be more stable if it could do it in the
+background ... the more automated and backgrounded it could be, the better."*
+
+**MEASURED (this lane, live `/api/bot/prop/status?account_id=breakout_2` `phone_events`, 2026-10-10):**
+`login_started` 12:30:35Z -> `login_retry` "failed (1): no single number on the waiting page" at 12:30:41Z; attempt 2
+12:40:45Z -> the same failure at 12:40:51Z. Both failed **6 s** after the start. The build in front of this PR waited a
+fixed `delay(6000)` after the email submit, read `__ex.loginNumber()` ONCE, and required one prominent number; that
+function returns `""` when there are several numbers at the same size, which is the lineup shape. The 18 x 10 s inbox
+poll was never reached. Also measured: a retry due ~12:32:41Z did not run (`"background: bring-to-front already
+requested"` at 12:33:03Z): the wake window from 12:30:31Z outlived the failed attempt. `status_age_hours` read 21.7.
+
+**Which side shows the lineup is NOT established from the repo.** The only recorded flow (§ 7.9, 2026-10-05) is "the
+operator tapped the number link in Breakout's email" (page shows one number, the mail carries numbered links); the
+operator's 2026-10-10 words read as the page showing three numbers and the mail naming the right one. Both are
+supported, and the PAGE decides which applies (`LoginMatch.kt`, pure, JVM-tested):
+
+| page shows | mail carries | action | fail closed when |
+|---|---|---|---|
+| >= 2 numbers (tappable controls, else the >= 2 at the top font size) | a number on its own (whole element / whole line), else one bound to "number/code/select/tap/choose/matching" | tap the ONE page choice the mail names (`__ex.loginPick`) | 0 or > 1 of the page's choices appear in the newest deciding mail |
+| exactly one number | numbered https links | open the ONE link whose text is that number (the 1b behaviour) | 0 or > 1 such links |
+
+Timing: after the submit the page is polled every 3 s for up to **90 s** for the number(s); the inbox (newest 5
+`breakoutprop.com` mails after the submit, -60 s slack; 30 min for a code page found already open) every 10 s for up to
+**5 min**; then up to 30 s for the page to finish on its own, else the terminal is loaded and must read logged in within
+45 s. Values (numbers, links, addresses) stay in memory only.
+
+**Diagnosable from the VM.** Every attempt posts ONE quiet `login_diag` event (kept in `phone_events`, not pinged;
+server-scrubbed again): engine, step reached, `page_n/page_top/page_btn` (how many numeric candidates the page showed),
+`shape`, `mails`, `polls`, `match` (candidates in the deciding mail), `tier`, `mail_err` (exception class only),
+seconds at each stage, and the host at failure. Never a value.
+
+**Background engine (`Page.kt::BgWeb`).** A second WebView owned by the process (kept alive by the existing foreground
+service), sharing the kiosk WebView's cookie store and site storage, runs the login check, the re-login and the
+account-panel read while the Activity is backgrounded: every 15 min while logged in, when a retry is due, and on the
+VM's stale-`account_status` hint. For each job it is attached to a full-screen, alpha-0, not-touchable, not-focusable
+overlay window (the "Display over other apps" permission already granted for the boot restart) so Chromium treats it as
+visible and keeps its JS running, and it is detached when the job ends so no overlay lingers over what the operator is
+doing. Without that permission it runs detached at screen size. **Tickets never run in the engine**: orders stay on the
+foreground path (bring-to-front), unchanged. If two engine jobs in a row get no answer from the page, the login check
+falls back to bring-to-front once and the engine is tried again afterwards. A successful re-login was also given the
+wake window back on failure (the 12:33Z skip). Heartbeat fields: `bg` (overlay / detached / ""), `bg_runs`, `bg_ok`,
+`bg_last` (e.g. `logged_in+posted`, `login_ok`, `login_fail`, `no_answer`), `bg_last_min`; the server now also keeps
+`relogin_failures / relogin_flagged / relogin_next_min`, which it silently dropped before.
+
+**Not verified (landed_unproven, checklist `PHONE-AUTOLOGIN-2`):** the real page and mail shapes (the tests are
+synthetic), that this phone's WebView keeps running JS in an alpha-0 overlay, and that the session is shared between
+the two WebViews on this device. The observation that closes it: breakout_2 `phone_events` shows `login_started` ->
+`login_ok` without operator input and a fresh `account_status`. If the engine reports `bg_last=no_answer` repeatedly,
+the next step is moving the whole loop into the service (pipeline item filed with this PR).
+
+### 7.18 Zero numbers after the email click: diagnose, broaden, verify the submit (PHONE-AUTOLOGIN-3, 2026-10-10)
+
+**MEASURED (live `/api/bot/prop/status?account_id=breakout_2` `phone_events`, read by this lane).** The PHONE-AUTOLOGIN-2
+build, installed ~13:50Z, ran in the background engine (`bg=overlay`). Attempt 1: `login_started` 13:50:53Z ->
+`login_diag "eng=overlay email=clicked page_n=0 page_top=0 page_btn=0 step=page host=portal.breakoutprop.com"` 13:52:24Z
+-> `login_retry "no number or lineup on the waiting page within 90 s"`. Attempt 2 (13:54:31Z -> 13:56:03Z) the same. So
+`loginEmail` reported a click, and then for 90 s the page had **zero** visible leaf elements whose whole text was a 1-3
+digit number. The mail step was never reached (it was gated on the page), so nothing is known about the mail either.
+
+**The cause is NOT established.** Three hypotheses, none ruled out by that diag line:
+
+| | hypothesis | what the old build could not see | what this build does |
+|---|---|---|---|
+| a | the click did not submit (wrong control: the old code clicked the FIRST page button matching `continue/next/...`, which on a sign-in page can be "Continue with Google"; or the form needs Enter / a second step) | whether the page changed at all | looks for the continue control in the email field's own form first, never a social/passkey button; then **verifies** the page moved within 12 s (email field gone, code page, or a text-signature change), else presses Enter and waits again. Diag: `sub_where` (form/page/none), `sub_btns`, `sub_label` (scrubbed), `enter`, `adv`, `changed` |
+| b | the numbers are there but the reader missed them | only `div/span/...` leaves with NO child element, raw text | a candidate is the innermost element whose text with all whitespace and zero-width characters removed is a 1-3 digit number (icon children and split digit spans no longer hide it), or a radio/button/option whose `aria-label`/`value` is one; searched in open shadow roots and same-origin iframes; nested candidates resolve to the control (a row of choices) or the whole number (split digits) |
+| c | the page only says "check your email"; the choices are in the mail | what the mail carried | the inbox is polled **in parallel** from the submit on; the page wait stretches to 150 s while no mail has arrived; the diag reports `mails`, `mail_first_s`, `mshape` (`none / numbered_links / numbers / one_login_link / links / text`) and per-shape counts of the newest mail. A `one_login_link` mail is **reported, not opened**: the LINK rule still needs the page's single number |
+
+My lean, stated as an inference: **(c) or (a) are likelier than (b)**. The only flow ever observed (§ 7.9, 2026-10-05)
+was the operator tapping "the number link in Breakout's email" with the waiting page as the other half, and a portal
+sign-in page commonly carries a social-login button that the old selector could pick first. (b) would require all three
+numbers to be hidden from a leaf-text read at once, which is possible (icon children, split digits) but less common.
+The next attempt's diag decides it; this build fixes (a) and (b) where they apply and describes (c).
+
+**The structure snapshot (`exec.js::loginProbe`, posted on every attempt).** Tag histogram (top 15), open shadow roots,
+iframes and cross-origin (unreadable) iframes, visible input types, which phrases are present (check_email, we_sent,
+select, choose, verify, number, code, link, tap, expired, error, social), the COUNT of numeric tokens in the readable
+text (document + shadow roots + same-origin iframes), the number of candidates the reader found, and up to 20
+button / heading / label / alert texts of at most 40 chars with **every digit replaced by `N`** and emails / links
+replaced by `EML` / `URL`. Never a value. Because the server keeps 160 chars of `[A-Za-z0-9 _.:/()=+-]` per event
+(`src/prop/phone_executor.py::record_event`), the diag is posted as up to 7 numbered `login_diag` parts (`d1/N ...`),
+core line first; no server change was needed.
+
+**Tests (synthetic, not Breakout's page):** `tools/phone-executor/test/exec_check.js` adds one page per hypothesis (icon
+children / split digits / zero-width; radios by value; `aria-label`-only controls; a shadow root; a same-origin iframe;
+a check-your-email page whose probe must carry no digit, email or link; a social button before the form's Continue; a
+form with no button) and re-checks the PHONE-AUTOLOGIN-2 lineup. `LoginMatchTest` adds the mail shapes, incl. that a
+magic-link mail is never acted on.
+
+**Not verified (`landed_unproven`):** the real page and mail shapes. The observation that closes the diagnosis: the next
+breakout_2 `login_diag d1..dN` parts with `adv`, `changed`, `cands`, `ph`, `mshape`. The observation that closes the
+row: `login_started` -> `login_ok` without operator input.
+
+### 7.19 The dedicated inbox refuses the login: say why, test it in seconds, stop hammering (PHONE-AUTOLOGIN-2, 2026-10-10)
+
+**Reported to this lane by the manager, not re-read here:** every attempt (14:53Z, 15:01Z, 15:19Z, 15:26Z, 15:57Z,
+16:04Z) reached the waiting page and then logged `mail_err=AuthenticationFailedException mails=0 polls=24-28`. The
+operator generated a new Gmail app password twice (~14:58Z, ~15:54Z), states it is the dedicated address and the right
+password, and IMAP is enabled in that Gmail. Taken as fact.
+
+**What the code review found (read, not run on the phone):**
+
+| checked | finding |
+|---|---|
+| stale value in memory | none: `relogin()` reads `INBOX_USER`/`INBOX_PASS` from the store on every attempt |
+| encryption mismatch | not the cause: a value that cannot be decrypted reads as `null` (Store.get catches) and shows "not configured", never an auth failure |
+| wrong key | none: Setup writes and relogin reads the same two keys |
+| mechanism | javamail 1.6 uses AUTHENTICATE PLAIN when Gmail advertises it; XOAUTH2 is off by default. Gmail accepts PLAIN with an app password |
+| **password normalisation** | **Setup removed only the ASCII space** (`replace(" ", "")`). An app password copied from Google's page or a password manager can carry a no-break / narrow space, a zero-width char or a newline in its gaps; any one left in makes a 17-19 char password that Gmail refuses with `Invalid credentials`, however right the 16 letters are. Re-entering it the same way reproduces it. |
+| **hammering** | after a refusal the poller retried the same credential every 10 s for 5 min: 24-28 refused logins per attempt, ~150 in an hour. Gmail throttles an account that does that, and a throttled account refuses even a correct password for a while. |
+| **opacity** | only the exception CLASS was reported, so `Invalid credentials`, `Application-specific password required`, `Please log in via your web browser` and javamail's own `no password specified` all read the same |
+
+**Likely cause (an inference, MEDIUM-LOW confidence):** the normalisation gap, compounded by the hammering. It is the only
+code path that turns a right password into a wrong one; it is NOT proven, because the old build could not say what Gmail
+answered. The `inbox` diag line below settles it: `plen=16 p_other=0` with `Invalid credentials` points away from it
+(then: throttle, or the password/address really do not pair); `plen` 17-19 or `p_other>0` on the OLD stored value
+confirms it.
+
+**What changed (`Creds.kt`, `Mail.kt`, `MainActivity.kt`):**
+- `Creds.pass` removes every whitespace / invisible / control char anywhere; applied at Setup save AND at every read in
+  `Mail.scan`, so a value an older build stored is cleaned without re-entry. `Creds.user` likewise for the address.
+- `Mail.scan` connects with PLAIN, and on a refusal tries the IMAP LOGIN command once (both refused = the credential, not
+  the mechanism); `ssl.enable` and `auth.xoauth2.disable` are explicit.
+- On a refusal the attempt stops polling (one check per attempt, not 24-28) and fails at once with a stated reason.
+- A quiet `login_diag "i1/N inbox err=... mech=... srv=(Gmail's words, scrubbed) ulen= uat= udom= plen= p_upper= p_other="`
+  is posted on the first error and on any refusal. `Creds.scrub` removes the user and password values, any address and
+  any link, and keeps only the server's diag charset. Shapes are counts and booleans, never a value.
+- Setup gains **Test inbox**: one IMAP connect now with what is typed (a blank password = the stored one), the scrubbed
+  result in a dialog and as `login_diag "i1/N inbox_test src=typed|stored ok|FAIL ..."`.
+- Setup save takes effect immediately: the backoff wait is cleared and the running attempt's poller re-reads the store
+  on every poll.
+
+**Tests:** `CredsTest` (synthetic): NBSP / narrow space / zero-width / BOM / newline stripped; the old normalisation
+leaves the NBSP in (19 chars); shapes carry no value; scrub keeps Gmail's words and drops address, password and link.
+
+**Not verified (`landed_unproven`):** that this is the cause. Closing observation: the operator taps **Test inbox** on
+the new build (or the next attempt posts its `inbox` line) and it reads `ok`, then `login_started` -> `login_ok`.
 
 ## 8. Open questions for the operator / manager
 

@@ -95,7 +95,7 @@ def test_registered_and_velotrade_1_uses_it():
     v = load_platform_config("velotrade_1")
     assert v["platform"] == "dxtrade_api"
     assert v["login_url"] == "https://dx.velotrade.com/dxsca-web"
-    assert v["executor"]["enabled_venue_symbols"] == []   # acts on nothing
+    assert set(v["executor"]["enabled_venue_symbols"]) <= set(v["executor"]["lots"])   # only measured venues
 
 
 def test_api_platform_needs_an_explicit_login_url(tmp_path):
@@ -395,26 +395,129 @@ def test_call_log_and_redaction_carry_no_secret():
         assert secret not in text
 
 
-# ── the browser scripts refuse an API platform ─────────────────────────────
+# ── the REST feed + tick (VELOTRADE-GOLIVE): no browser on a REST platform ─
 
 
-def test_browser_login_check_refuses_api_platform(monkeypatch, capsys):
+def _rest_adapter_factory(server):
+    real = load_platform_config("velotrade_1")["login_url"].rstrip("/")
+
+    def transport(method, url, data, headers, timeout):
+        return server(method, url.replace(real, BASE), data, headers, timeout)
+
+    return lambda platform: DXtradeApiAdapter(transport=transport, sleep=lambda _: None)
+
+
+def _flat(server):
+    server.on(("GET", f"{A}/metrics"), 200, {"metrics": [{"balance": 5000, "equity": 5000, "openPl": 0}]})
+    server.on(("GET", f"{A}/portfolio"), 200, {"portfolios": [{"positions": []}]})
+    server.on(("GET", f"{A}/orders"), 200, [], {"ETag": "v1"})
+    return server
+
+
+def test_feed_reads_and_emits_status_over_rest(monkeypatch, capsys):
     from scripts.prop import breakout_login_check as blc
-    monkeypatch.setenv("VELOTRADE_DX_USERNAME", "u")
-    monkeypatch.setenv("VELOTRADE_DX_PASSWORD", "p")
-    monkeypatch.setattr(blc, "adapter_for_platform",
-                        lambda p: (_ for _ in ()).throw(AssertionError("no browser adapter")))
-    assert blc.main(["--account", "velotrade_1"]) == blc.EXIT_FEASIBILITY
-    assert "feasibility: api_platform" in capsys.readouterr().out
+    s = _flat(FakeServer())
+    monkeypatch.setenv("VELOTRADE_DX_USERNAME", "trader")
+    monkeypatch.setenv("VELOTRADE_DX_PASSWORD", "pw-SECRET")
+    monkeypatch.setattr(blc, "adapter_for_platform", _rest_adapter_factory(s))
+    posted = []
+    monkeypatch.setattr(blc, "post_status", lambda report, base: posted.append(report) or {"id": 1})
+    assert blc.main(["--account", "velotrade_1", "--emit-status"]) == blc.EXIT_OK
+    out = capsys.readouterr().out
+    assert "login: ok (rest)" in out and "positions: 0" in out and "emit_status: ok id=1" in out
+    assert len(posted) == 1 and posted[0]["balance"] == 5000.0
+    assert "pw-SECRET" not in out and "SECRETACCT77" not in out
+    assert s.sent("POST", "/logout")
 
 
-def test_browser_tick_refuses_api_platform(monkeypatch, capsys, tmp_path):
+def test_tick_runs_a_read_only_cycle_over_rest_without_a_browser(monkeypatch, capsys, tmp_path):
+    from scripts.prop import prop_executor_tick as tick
+    s = _flat(FakeServer())
+    monkeypatch.setenv("VELOTRADE_DX_USERNAME", "trader")
+    monkeypatch.setenv("VELOTRADE_DX_PASSWORD", "pw-SECRET")
+    monkeypatch.setattr(tick, "adapter_for_platform", _rest_adapter_factory(s))
+    monkeypatch.setattr(tick.pe, "pending_live_tickets", lambda *a, **k: [])
+    calls = []
+    monkeypatch.setattr(tick, "run_cycle_and_trail", lambda **kw: calls.append(kw) or tick.EXIT_OK)
+    rc = tick.main(["--account", "velotrade_1", "--login", "reuse", "--state-dir", str(tmp_path)])
+    out = capsys.readouterr().out
+    assert rc == tick.EXIT_OK and '"session": "rest_login"' in out
+    assert len(calls) == 1 and calls[0]["page"] is None and calls[0]["mode"] == "read_only"
+    assert not s.sent("POST", "/orders") and s.sent("POST", "/logout")
+
+
+def test_rest_tick_refuses_browser_measurement_modes(monkeypatch, capsys, tmp_path):
     from scripts.prop import prop_executor_tick as tick
     monkeypatch.setenv("VELOTRADE_DX_USERNAME", "u")
     monkeypatch.setenv("VELOTRADE_DX_PASSWORD", "p")
     monkeypatch.setattr(tick, "adapter_for_platform",
-                        lambda p: (_ for _ in ()).throw(AssertionError("no browser adapter")))
-    monkeypatch.setattr(tick.pe, "pending_live_tickets", lambda *a, **k: [])
-    rc = tick.main(["--account", "velotrade_1", "--login", "fresh", "--state-dir", str(tmp_path)])
-    assert rc == tick.EXIT_FEASIBILITY
-    assert '"feasibility": "api_platform"' in capsys.readouterr().out
+                        lambda p: (_ for _ in ()).throw(AssertionError("no adapter for a refused mode")))
+    rc = tick.main(["--account", "velotrade_1", "--login", "fresh", "--probe-ticket", "ETHUSD",
+                    "--state-dir", str(tmp_path)])
+    assert rc == tick.EXIT_FEASIBILITY and '"feasibility": "api_platform"' in capsys.readouterr().out
+
+
+# ── read_trade_history (VELOTRADE-RECON) ────────────────────────────────
+# Fixture follows the REST spec's Order model (orders[].legs[], executions[]
+# with lastPrice / lastQuantity). Re-record from the live read (system-action
+# velotrade-trade-history-read) if a field name differs.
+HISTORY = {"orders": [
+    {"clientOrderId": "vtrt-E", "orderCode": "s:1", "type": "MARKET", "instrument": "ETHUSD", "side": "BUY",
+     "status": "COMPLETED", "finalStatus": "COMPLETED", "issueTime": "2026-10-06T10:18:01Z",
+     "legs": [{"positionEffect": "OPEN", "filledQuantity": 0.01, "averagePrice": 2450.5}],
+     "executions": [{"lastPrice": "2450.5", "lastQuantity": "0.01", "executionTime": "2026-10-06T10:18:02.250Z"}]},
+    {"clientOrderId": "x-Bulk", "orderCode": "s:2", "type": "MARKET", "instrument": "ETHUSD", "side": "SELL",
+     "status": "COMPLETED", "finalStatus": "COMPLETED", "issueTime": "2026-10-06T10:18:30Z",
+     "legs": [{"positionEffect": "CLOSE", "filledQuantity": 0.01, "averagePrice": 2449.9}],
+     "executions": [{"lastPrice": 2449.9, "lastQuantity": 0.01, "commission": 0.0147,
+                     "executionTime": "2026-10-06T10:18:31+00:00"}]},
+    {"clientOrderId": "tp-never", "type": "LIMIT", "instrument": "ETHUSD", "side": "SELL", "status": "CANCELED",
+     "finalStatus": "CANCELED", "legs": [{"positionEffect": "CLOSE"}], "executions": []},
+]}
+
+
+def test_read_trade_history_returns_the_browser_row_shape_read_only():
+    s = FakeServer()
+    s.on(("GET", f"{A}/orders/history"), 200, HISTORY)
+    a, _ = _adapter(s)
+    rows = a.read_trade_history(None)
+    assert [r["effect"] for r in rows] == ["opening", "closing"]      # canceled TP has no execution
+    close = rows[1]
+    assert (close["symbol"], close["side"], close["volume"], close["price"]) == ("ETHUSD", "short", 0.01, 2449.9)
+    assert close["ts"].isoformat() == "2026-10-06T10:18:31+00:00" and close["commission"] == 0.0147
+    assert close["net_closed_pnl"] is None and close["closed_pnl"] is None   # never fabricated
+    assert rows[0]["side"] == "long" and rows[0]["ts"].minute == 18
+    assert [r["method"] for r in s.requests if "history" in r["path"]] == ["GET"]
+    assert "SECRETACCT77" not in json.dumps(rows, default=str)
+
+
+def test_read_trade_history_feeds_match_exit_and_exit_reason():
+    from datetime import datetime, timezone
+    from src.prop.prop_executor import exit_reason, match_exit
+    s = FakeServer()
+    s.on(("GET", f"{A}/orders/history"), 200, HISTORY)
+    a, _ = _adapter(s)
+    j = {"symbol": "ETHUSDT", "direction": "long", "qty": 0.01, "opened_at": "2026-10-06T10:18:05+00:00",
+         "sl": 1960.0, "tp": 2940.0}
+    hit, why = match_exit(j, a.read_trade_history(None), datetime(2026, 10, 6, 10, 30, tzinfo=timezone.utc))
+    assert why == "matched" and hit["price"] == 2449.9
+    assert exit_reason("long", hit["price"], 1960.0, 2940.0) == "manual"   # a Bulk Close, between SL and TP
+    assert exit_reason("long", 1959.0, 1960.0, 2940.0) == "sl" and exit_reason("long", 2941.0, 1960.0, 2940.0) == "tp"
+
+
+def test_read_trade_history_non_200_raises_and_empty_is_empty():
+    s = FakeServer()
+    s.on(("GET", f"{A}/orders/history"), 500, {"errorCode": 1})
+    a, _ = _adapter(s)
+    with pytest.raises(RuntimeError):
+        a.read_trade_history(None)
+    s.on(("GET", f"{A}/orders/history"), 200, {"orders": []})
+    assert a.read_trade_history(None) == []
+
+
+def test_unparseable_execution_is_skipped_not_defaulted():
+    from src.prop.platform.dxtrade_api import trade_history_rows
+    rows = trade_history_rows({"orders": [{"instrument": "ETHUSD", "side": "SELL", "legs": [{"positionEffect": "CLOSE"}],
+                                           "executions": [{"lastPrice": "n/a", "lastQuantity": 1},
+                                                          {"lastPrice": 5, "lastQuantity": 0}]}]})
+    assert rows == []

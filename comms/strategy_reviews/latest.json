@@ -1,7 +1,7 @@
 {
  "schema": "stage_aware_v1",
- "generated_at": "2026-10-06T05:19:00.104125+00:00",
- "utc_date": "2026-10-06",
+ "generated_at": "2026-10-11T05:22:19.764829+00:00",
+ "utc_date": "2026-10-11",
  "generated_by": "scripts/ops/strategy_review_stage_aware.py",
  "graded": 26,
  "verdict_reached": 1,
@@ -51,7 +51,7 @@
    "execution": "live",
    "n_needed": null,
    "eta": null,
-   "reason": "starved: 247 actionable intent(s) (3 episode(s)) in the window, 0 order(s)/ticket(s) received, held_back=2, no open position held. This leg's soak purpose (prove the pipeline works) is unmet: it never reaches an order regardless of what cost fidelity reads."
+   "reason": "starved: 226 actionable intent(s) (1 episode(s)) in the window, 0 order(s)/ticket(s) received, held_back=2, no open position held. This leg's soak purpose (prove the pipeline works) is unmet: it never reaches an order regardless of what cost fidelity reads."
   },
   {
    "stage": "S1",
@@ -63,9 +63,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": "needs 0 more entry fill(s) and 6 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=20, exit=4); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "n_needed": "needs 0 more entry fill(s) and 4 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=22, exit=6); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
    "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity insufficient_n (entry n=20, exit n=4; need >= 10 each)"
+   "reason": "flowing; cost fidelity insufficient_n (entry n=22, exit n=6; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -119,9 +119,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "wait for a signal; re-check next scheduled pass",
-   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
+   "n_needed": "an entry signal observed while this leg is FLAT (no open position), in some future window",
+   "eta": "re-check next scheduled pass",
+   "reason": "starved (95 intent(s), 0 received) but ALREADY HOLDING a position opened before the window — leg_flow_report's own caveat: this is NOT reliably 'unreached', it may simply have needed no new entry this window while flat-to-in-position. Cannot be graded kill from this window alone."
   },
   {
    "stage": "S1",
@@ -149,7 +149,7 @@
    "execution": "live",
    "n_needed": "an entry signal observed while this leg is FLAT (no open position), in some future window",
    "eta": "re-check next scheduled pass",
-   "reason": "starved (162 intent(s), 0 received) but ALREADY HOLDING a position opened before the window — leg_flow_report's own caveat: this is NOT reliably 'unreached', it may simply have needed no new entry this window while flat-to-in-position. Cannot be graded kill from this window alone."
+   "reason": "starved (209 intent(s), 0 received) but ALREADY HOLDING a position opened before the window — leg_flow_report's own caveat: this is NOT reliably 'unreached', it may simply have needed no new entry this window while flat-to-in-position. Cannot be graded kill from this window alone."
   },
   {
    "stage": "S1",
@@ -219,7 +219,7 @@
    "execution": "live",
    "n_needed": "an entry signal observed while this leg is FLAT (no open position), in some future window",
    "eta": "re-check next scheduled pass",
-   "reason": "starved (24 intent(s), 0 received) but ALREADY HOLDING a position opened before the window — leg_flow_report's own caveat: this is NOT reliably 'unreached', it may simply have needed no new entry this window while flat-to-in-position. Cannot be graded kill from this window alone."
+   "reason": "starved (182 intent(s), 0 received) but ALREADY HOLDING a position opened before the window — leg_flow_report's own caveat: this is NOT reliably 'unreached', it may simply have needed no new entry this window while flat-to-in-position. Cannot be graded kill from this window alone."
   },
   {
    "stage": "S1",
@@ -231,9 +231,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "wait for a signal; re-check next scheduled pass",
-   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
+   "n_needed": "an entry signal observed while this leg is FLAT (no open position), in some future window",
+   "eta": "re-check next scheduled pass",
+   "reason": "starved (76 intent(s), 0 received) but ALREADY HOLDING a position opened before the window — leg_flow_report's own caveat: this is NOT reliably 'unreached', it may simply have needed no new entry this window while flat-to-in-position. Cannot be graded kill from this window alone."
   },
   {
    "stage": "S1",
@@ -245,9 +245,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": "needs 9 more entry fill(s) and 10 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=1, exit=0); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "n_needed": "an entry signal observed while this leg is FLAT (no open position), in some future window",
    "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity insufficient_n (entry n=1, exit n=0; need >= 10 each)"
+   "reason": "starved (227 intent(s), 0 received) but ALREADY HOLDING a position opened before the window — leg_flow_report's own caveat: this is NOT reliably 'unreached', it may simply have needed no new entry this window while flat-to-in-position. Cannot be graded kill from this window alone."
   },
   {
    "stage": "S1",
@@ -273,9 +273,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "wait for a signal; re-check next scheduled pass",
-   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
+   "n_needed": "needs 0 more entry fill(s) and 10 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=11, exit=0); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=11, exit n=0; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -287,9 +287,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "wait for a signal; re-check next scheduled pass",
-   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
+   "n_needed": "needs 7 more entry fill(s) and 10 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=3, exit=0); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=3, exit n=0; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -301,9 +301,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": null,
-   "eta": "wait for a signal; re-check next scheduled pass",
-   "reason": "no_intents: the strategy produced zero actionable signals this window — nothing to grade mechanics or cost fidelity against yet, and this is NOT evidence of health either"
+   "n_needed": "needs 0 more entry fill(s) and 9 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=14, exit=1); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=14, exit n=1; need >= 10 each)"
   },
   {
    "stage": "S2",
@@ -315,17 +315,17 @@
    "actionable": false,
    "r4_status": "abstain_thin",
    "chosen_source": "real_money",
-   "n_closed": 11,
-   "pnl_coverage_measured": 1.0,
+   "n_closed": 14,
+   "pnl_coverage_measured": 0.9286,
    "coverage_floor": 0.6,
    "min_trades": 40,
-   "net_usd_measured": -30.0567,
-   "net_r_net_of_full_cost": -7.7496,
-   "r_population": 11,
+   "net_usd_measured": -24.8417,
+   "net_r_net_of_full_cost": -6.0436,
+   "r_population": 14,
    "t3_windows_r": [],
    "t3_p10": -4.38314,
-   "abstain": "stale",
-   "reason": "STALE PAYLOAD -- newest close 2026-09-28T13:36:31+00:00 is 183.7h old > the stated 72h bound; the same trades are not new evidence"
+   "abstain": "thin",
+   "reason": "fewer than 40 closed trades on either book: 14 closed rows < min_trades 40"
   },
   {
    "stage": "S2",
@@ -346,8 +346,8 @@
    "r_population": 1,
    "t3_windows_r": [],
    "t3_p10": 11.30573,
-   "abstain": "stale",
-   "reason": "STALE PAYLOAD -- newest close 2026-09-28T13:36:31+00:00 is 183.7h old > the stated 72h bound; the same trades are not new evidence"
+   "abstain": "thin",
+   "reason": "fewer than 40 closed trades on either book: 1 closed rows < min_trades 40"
   },
   {
    "stage": "S2",
@@ -368,8 +368,8 @@
    "r_population": 1,
    "t3_windows_r": [],
    "t3_p10": 14.9357,
-   "abstain": "stale",
-   "reason": "STALE PAYLOAD -- newest close 2026-09-28T13:36:31+00:00 is 183.7h old > the stated 72h bound; the same trades are not new evidence"
+   "abstain": "thin",
+   "reason": "fewer than 40 closed trades on either book: 1 closed rows < min_trades 40"
   },
   {
    "stage": "S2",
@@ -390,8 +390,8 @@
    "r_population": 1,
    "t3_windows_r": [],
    "t3_p10": -3.33349,
-   "abstain": "stale",
-   "reason": "STALE PAYLOAD -- newest close 2026-09-28T13:36:31+00:00 is 183.7h old > the stated 72h bound; the same trades are not new evidence"
+   "abstain": "thin",
+   "reason": "fewer than 40 closed trades on either book: 1 closed rows < min_trades 40"
   },
   {
    "stage": "S2",
@@ -412,8 +412,8 @@
    "r_population": 11,
    "t3_windows_r": [],
    "t3_p10": -6.94652,
-   "abstain": "stale",
-   "reason": "STALE PAYLOAD -- newest close 2026-09-28T13:36:31+00:00 is 183.7h old > the stated 72h bound; the same trades are not new evidence"
+   "abstain": "thin",
+   "reason": "fewer than 40 closed trades on either book: 11 closed rows < min_trades 40"
   },
   {
    "stage": "S2",
@@ -425,17 +425,17 @@
    "actionable": false,
    "r4_status": "abstain_thin",
    "chosen_source": "real_money",
-   "n_closed": 5,
-   "pnl_coverage_measured": 0.4,
+   "n_closed": 6,
+   "pnl_coverage_measured": 0.3333,
    "coverage_floor": 0.6,
    "min_trades": 40,
-   "net_usd_measured": -6.6688,
-   "net_r_net_of_full_cost": -1.5846,
-   "r_population": 5,
+   "net_usd_measured": -9.7812,
+   "net_r_net_of_full_cost": -2.5659,
+   "r_population": 6,
    "t3_windows_r": [],
    "t3_p10": 2.31519,
-   "abstain": "stale",
-   "reason": "STALE PAYLOAD -- newest close 2026-09-28T13:36:31+00:00 is 183.7h old > the stated 72h bound; the same trades are not new evidence"
+   "abstain": "thin",
+   "reason": "fewer than 40 closed trades on either book: 6 closed rows < min_trades 40"
   },
   {
    "stage": "S2",
@@ -455,9 +455,9 @@
    "net_r_net_of_full_cost": -7.3331,
    "r_population": 14,
    "t3_windows_r": [],
-   "t3_p10": -4.4319,
-   "abstain": "stale",
-   "reason": "STALE PAYLOAD -- newest close 2026-09-28T13:36:31+00:00 is 183.7h old > the stated 72h bound; the same trades are not new evidence"
+   "t3_p10": -5.95372,
+   "abstain": "thin",
+   "reason": "fewer than 40 closed trades on either book: 14 closed rows < min_trades 40"
   }
  ]
 }

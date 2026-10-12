@@ -43,7 +43,7 @@ on:
         required: false
         default: '0.099'
       levers:
-        description: "CSV of matrix lever columns to sweep (stale_stop,giveback_stop,trail_geometry,trail_decay,vol_trail). Empty = all."
+        description: "CSV of matrix lever columns to sweep (stale_stop,giveback_stop,trail_geometry,trail_decay,vol_trail,momentum_trail,momentum_stale). Empty = all. momentum_trail / momentum_stale read ADX (a stop keyed to momentum, not price path). GEOM-B1: tp_extend and tp_retarget (a take-profit that MOVES; donchian / pullback / scalp legs) are OPT-IN -- their cells exist only when named here, so an empty value never grows. Pair with tp_cap_pct=0.099 and split_mode=oos-trades."
         required: false
         default: ''
       split:
@@ -872,7 +872,7 @@ jobs:
     if: always() && needs.plan.outputs.proceed == 'true'
     runs-on: ubuntu-latest
     # MUST OUTLAST `commit-to-main`'s `verify-merged` wait (30m default).
-    timeout-minutes: 45
+    timeout-minutes: 110  # was 45: commit-to-main verify-merged waits up to 80 min (W41 raised callers; this one was missed, 2026-10-11 RQ-353c-11/13)
     permissions:
       contents: write
       pull-requests: write

@@ -458,6 +458,8 @@ to stop admitting un-workable rows and to give every row an exit.
    the reset, so nothing ran it at all. **The rule survives the reset; its
    subject moved.** The live register whose open count the operator reads is
    [`docs/claude/work/MANAGER-CHECKLIST.json`](claude/work/MANAGER-CHECKLIST.json)
+   (after the per-row cutover: `docs/claude/work/checklist/<ROW-ID>.json`, read
+   through `src/runtime/checklist_store.py`)
    — it *is* the Workflow page — and its field is `state`. That is what the
    guard now grades, whole-file, and it additionally fails when the file's own
    `states` block and the enum disagree (*field beats comment*).
@@ -1007,7 +1009,10 @@ it).
 3. `docs/plans/OPERATING-PLAN-2026-09-21.md` — the promotion ladder, the
    research loop, and how work is chosen. Adopted 2026-09-21.
 4. `docs/claude/work/MANAGER-CHECKLIST.json` — what is actually being worked
-   right now, and by whom.
+   right now, and by whom. Once `docs/claude/work/checklist/` exists the rows live
+   there, one file per row, and are edited ONLY through
+   `scripts/ops/checklist.py add|set|note|archive-lane` and read through
+   `src/runtime/checklist_store.py` (guard: `checklist-readers-guard`).
 5. Skills under `.claude/skills/` (binding, composable workflows) — the manager
    contract is `.claude/skills/manager/SKILL.md`.
 6. The root `CLAUDE.md` — repo orientation and pointers.
@@ -1021,6 +1026,15 @@ logs dropped from levels 3–4 to level 8: milestones measure construction, and
 what this system needs to measure is learning. `ROADMAP.md` carries its own
 header saying nobody has verified its status — it is context, not instruction.
 Levels 3 and 4 are now the plan and the checklist.
+
+⚠️ **Amended 2026-10-11 (operator, ROADMAP-LOOP).** `ROADMAP.md` stays at level 8 as an
+instruction source, but its generated **"Live roadmap" block** (source
+`docs/roadmap/milestones.yaml`) is the high-level plan the work queue is built and prioritised
+FROM: every checklist row and research-queue unit carries a `roadmap` milestone ref, and a closing
+row writes its outcome back to the roadmap and to `docs/ARCHITECTURE-CANONICAL.md` (`writeback`
+field). The roadmap informs what is built and authorizes nothing; it is not a third category of
+work (a build is a checklist row, a question is a queue unit). Contract:
+`.claude/skills/manager/SKILL.md` § "The roadmap loop"; guard `roadmap-map-guard`.
 
 Historical notes remain available for context only. **Newer canonical
 documents override older materials.**
@@ -1164,6 +1178,51 @@ decides whether to intervene.
    - **What was removed:** the fold, its reader, the file and the API field.
    - **Why no account changed mode:** every entry read `dry_run: false` on main and on the VM at retirement.
    - **Result:** the two gates above are the only execution gates, and `canonical-doc-coherence` requires any such fold that returns to be named here.
+
+7. **There is no halting (operator directive 2026-10-09, binding).** The
+   operator, verbatim:
+
+   > "I never asked for a functionality for it to halt myself, nor was it made clear to me in any design spec that that's something that would happen. There is no halting. If something doesn't work, it tries to figure it out and try again. If it consistently is incapable, then yes, it obviously needs to raise a red flag so that somebody knows to help it. But there is, this is going back to the same thing as adding more and more gates that don't need to be there. Under absolutely no circumstances does any pipeline halt training on its own without getting verbatim permission from me, the operator. That should not happen under any circumstances. There is no halting. There's no halting."
+
+   What it means, for **every** pipeline — trading, prop execution,
+   training, research and data:
+   - **No pipeline halts itself.** No latch, breaker, kill-switch file, trip
+     marker, quarantine or "gave up" state that makes a pipeline stop doing
+     its job until a person clears it. This is rule 2 extended from account
+     mode to every pipeline.
+   - **A failure is retried, with diagnosis.** Contain the specific bad item
+     (cancel an unprotected resting order; protect or flatten a genuinely
+     naked position, every cycle until it is resolved), mark THAT item failed
+     with its cause, and try again on the next cycle. A refusal is per item,
+     as in rule 3.
+   - **Persistent failure raises a red flag and keeps trying.** When the same
+     failure repeats (e.g. three consecutive cycles or items), ONE red flag
+     reaches the operator with the evidence. The pipeline keeps running and
+     keeps retrying; the flag asks for help, it does not stop anything.
+   - **Any self-halt needs the operator's verbatim permission, recorded in
+     the repo** (a quoted sentence on a checklist row, a PR body or this
+     file) naming that halt. A paraphrase, a manager decision, a PR-level
+     "merge it" or a design-doc label is not that permission.
+   - **What this changed.** The prop executor's AUTO-REVERT `halted` latch
+     (`src/prop/prop_executor.py`) is gone: failures are per ticket, entries
+     are held for the one cycle whose read predates a containment, a stale
+     `halted` file is removed on start, and `executor-clear-halt` is a
+     harmless no-op. The inventory of the other self-halts, and which carry
+     verbatim permission, is on checklist row `NO-HALT`.
+   - **The ONE sanctioned exception: the account-level daily drawdown
+     switch** (operator, 2026-10-09, same day). Verbatim:
+
+     > "I overreacted regarding the halting. There is one thing that I want to take back, and that is the daily drawdown on at the account level. That's the only place I want there to be like a automatic off switch, basically, where if we lose more than a defined amount from the account in a day, then the account automatically turns off until it resets the next day. But that should be a default off. We'll arm all of them, but I, the default for when it's built should be off so that like we know that it's something that has to actively be done and turned on. And the default setting should be, for the prop accounts, obviously it should be like the prop accounts daily drawdown with a buffer. And for the other accounts, it should be 3%."
+
+     Popup answers the same day: **keep open, block new** (open positions
+     keep their SL/TP; only new entries are refused until the daily reset;
+     one alert on trip, one on reset) and a prop buffer of **20% of the <!-- population-ok: an operator-chosen config parameter, not a measurement -->
+     firm's limit** (limit = 0.8 × the firm's daily limit, at the firm's
+     reset time). Config: `config/accounts.yaml::<acct>.risk.daily_dd_switch`;
+     `armed` defaults to `false` in code and arming is an explicit
+     per-account YAML act. It is a per-trade `RiskManager` refusal (rule 3),
+     never a `mode:` flip (rule 2). Checklist row `DAILY-DD-SWITCH`. It
+     sanctions no other self-halt.
 
 ### What this rules out (queued for the safeguards PR follow-on)
 

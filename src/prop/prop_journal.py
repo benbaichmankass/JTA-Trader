@@ -276,6 +276,34 @@ def set_ticket_status(
         conn.close()
 
 
+def transition_ticket_status(
+    ticket_id: str, to_status: str, *, from_statuses: Any,
+    account_id: Optional[str] = None,
+) -> int:
+    """Compare-and-set a ticket's status: the UPDATE applies only while the row
+    is still in one of ``from_statuses`` (and, with ``account_id``, belongs to
+    that account). Returns the rows changed, 0 when the ticket moved on first,
+    so a sweep or a Telegram tap can never overwrite a claim, a placement or a
+    fill that landed in between (PROP-FLOW-SEPARATION, 2026-10-07)."""
+    froms = [str(s) for s in (from_statuses or ())]
+    if not froms:
+        return 0
+    conn = _connect()
+    try:
+        ensure_tables(conn)
+        sql = (f"UPDATE prop_tickets SET status = ? WHERE ticket_id = ? "
+               f"AND status IN ({','.join('?' * len(froms))})")
+        params: List[Any] = [to_status, ticket_id, *froms]
+        if account_id:
+            sql += " AND account_id = ?"
+            params.append(account_id)
+        cur = conn.execute(sql, params)
+        conn.commit()
+        return cur.rowcount
+    finally:
+        conn.close()
+
+
 def list_tickets(
     *, account_id: Optional[str] = None, status: Optional[str] = None,
     limit: int = 100,
@@ -353,6 +381,17 @@ def _phone_result(meta: Any) -> Optional[Dict[str, Any]]:
         return None
     res = (meta.get("phone") or {}).get("result")
     return res if isinstance(res, dict) else None
+
+
+def _supersede_meta(meta: Any) -> Optional[Dict[str, Any]]:
+    """A suppressed ticket's supersede candidate (PROP-SUPERSEDE), or None."""
+    if isinstance(meta, str):
+        try:
+            meta = json.loads(meta)
+        except (TypeError, ValueError):
+            return None
+    cand = meta.get("supersede") if isinstance(meta, dict) else None
+    return cand if isinstance(cand, dict) else None
 
 
 def list_outbound_tickets(
@@ -462,6 +501,9 @@ def list_outbound_tickets(
             # Phone executor read-back (PHONE-EXEC-1B): result + reason + the ticket form the phone read (control
             # labels and our own typed values only). Without it a refusal's reason was invisible on this API.
             "phone_result": _phone_result(tk.get("meta")),
+            # PROP-SUPERSEDE: the candidate a suppressed ticket carries (the
+            # executor reads it here; it never opens the DB).
+            "supersede": _supersede_meta(tk.get("meta")),
         }
 
     for r in op_rows:
@@ -559,6 +601,20 @@ def insert_fill(fill: Dict[str, Any]) -> int:
                 "SELECT id FROM prop_fills WHERE account_id=? AND ticket_id=? AND "
                 "status=? AND qty IS ? AND exit_price IS ? ORDER BY id DESC LIMIT 1",
                 (account_id, ticket_id, status, qty, exit_price),
+            ).fetchone()
+            if r:
+                existing_id = int(r[0])
+        if (existing_id is None and status == "closed" and ticket_id is not None
+                and exit_price is not None):
+            # VELO-CLOSE-RECON: a PRICED close of a ticket whose close was
+            # journaled WITHOUT an exit (the executor could not read it yet)
+            # is the correction of that row, not a second close: the
+            # fallback key above carries exit_price, so it never matched, and
+            # an append would count the one close twice.
+            r = conn.execute(
+                "SELECT id FROM prop_fills WHERE account_id=? AND ticket_id=? AND "
+                "status='closed' AND exit_price IS NULL ORDER BY id DESC LIMIT 1",
+                (account_id, ticket_id),
             ).fetchone()
             if r:
                 existing_id = int(r[0])
