@@ -11833,6 +11833,13 @@ def _bybit_position_protection(client, category: str, symbol: str,
         # the venue's own value will not parse — *we could not look*, never
         # "the price is fine", and never a fabricated 0.0.
         _px = _bybit_sl_leg_trigger({"price": pos_sl})
+        if _px is None:
+            # CA-A01-056: an unparseable stopLoss is "we could not look" -- it
+            # must not grade FULLY covered. Refuse (None => callers SKIP, never
+            # re-arm on an unconfirmed read).
+            if refusal is not None:
+                refusal["state"] = "stop_unparseable"
+            return None
         return {
             "size": size, "side": side, "covered_qty": size,
             "source": "full_position_stop",

@@ -2,7 +2,7 @@
   "id": "VELOTRADE-QUALDAYS",
   "title": "velotrade_1 evaluation rules the executor does not track: qualifying-day counter (>= 0.8% of initial balance), minimum trading days, the rules' effective dates",
   "phase": "W6",
-  "state": "landed_unproven",
+  "state": "done",
   "owner": "lane VELOTRADE-QUALDAYS",
   "lane": "session_01VdUmHTU3XjyH6mnEZL5Jfv",
   "model": "claude-sonnet-5-5",
@@ -13,9 +13,9 @@
     16976
   ],
   "blocked_on": [],
-  "note": "[2026-10-07T23:27Z manager] #16976 green but conflicts with main (register file); lane woken 23:28Z to drop its register edit and merge main. || [2026-10-07T20:14Z manager] #16976 at 2/3 required checks; watcher re-armed. Tracking-only (qualifying-day counter on rule_distance/ack line, ruleset effective dates), no order path -> manager merges on green as observability; executor picks it up on the next tick. NOTE the PR edits docs/claude/work/MANAGER-CHECKLIST.json (lane wrote the register) -> expect a row-wise reconcile against #16941. || [2026-10-07T19:05Z manager] PR #16976 held Tier-2: src/prop/qualifying_days.py, qualifying_days on rule_distance, ack-line suffix, rule_effective_dates in the ruleset. Threshold $40/day (0.8% x $5k), 5 days required. Verified on fixtures only; live standing unknown until deployed. Not built: digest prop line, payout scheduler, overexposure cap. || [2026-10-07T18:30Z manager] Second post-reset wave, dispatched 18:33Z (all 13 WORKING at creation) (operator: 'what other items were pushed till after the reset ... kick off now'). Pipeline: PI-20261004-KQIWJZWX-0002. Model by risk; auto mode; Tier-2/3 PRs land on hold for the manager/operator. [2026-10-08T06:55Z manager] OPERATOR \"OK all five\" (Tier-2 batch): merged 05:0xZ, lane archived; deploy rides git-sync.",
-  "updated_at": "2026-10-08T06:54:57Z",
-  "updated_by": "session_01MM8o5js6TcDFeNAPBY4Ntv",
+  "note": "[2026-10-07T23:27Z manager] #16976 green but conflicts with main (register file); lane woken 23:28Z to drop its register edit and merge main. || [2026-10-07T20:14Z manager] #16976 at 2/3 required checks; watcher re-armed. Tracking-only (qualifying-day counter on rule_distance/ack line, ruleset effective dates), no order path -> manager merges on green as observability; executor picks it up on the next tick. NOTE the PR edits docs/claude/work/MANAGER-CHECKLIST.json (lane wrote the register) -> expect a row-wise reconcile against #16941. || [2026-10-07T19:05Z manager] PR #16976 held Tier-2: src/prop/qualifying_days.py, qualifying_days on rule_distance, ack-line suffix, rule_effective_dates in the ruleset. Threshold $40/day (0.8% x $5k), 5 days required. Verified on fixtures only; live standing unknown until deployed. Not built: digest prop line, payout scheduler, overexposure cap. || [2026-10-07T18:30Z manager] Second post-reset wave, dispatched 18:33Z (all 13 WORKING at creation) (operator: 'what other items were pushed till after the reset ... kick off now'). Pipeline: PI-20261004-KQIWJZWX-0002. Model by risk; auto mode; Tier-2/3 PRs land on hold for the manager/operator. [2026-10-08T06:55Z manager] OPERATOR \"OK all five\" (Tier-2 batch): merged 05:0xZ, lane archived; deploy rides git-sync. [2026-10-12 UNPROVEN-SWEEP-2 pass 2 session_01Khx64L6tHdG52Srbh2NVdT] DONE. MEASURED GET /api/bot/prop/status?account_id=velotrade_1 2026-10-12: rule_distance.qualifying_days.state = 'measured' (basis prop_fills closed pnl grouped by closed_at 00:30Z day, qualifying_days 0 of required 5, threshold_usd 40.0, phase evaluation). Note tradeify_1/breakout_2 differ (breakout_2 reads state 'not_declared').",
+  "updated_at": "2026-10-12T06:07:28Z",
+  "updated_by": "session_01Khx64L6tHdG52Srbh2NVdT",
   "observation": {
     "what": "/api/bot/prop/status?account_id=velotrade_1 shows the qualifying-day counter and effective dates as measured (not unknown) after #16976 deploy",
     "how_to_check": "GET /api/bot/prop/status?account_id=velotrade_1 -> qualifying_days read_state measured",

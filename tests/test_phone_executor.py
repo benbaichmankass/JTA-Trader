@@ -376,6 +376,8 @@ def test_account_status_from_phone_is_measured_and_absent_stays_absent():
     {"kind": "account_status", "balance": float("nan")},
     {"kind": "account_status", "equity": -1},
     {"kind": "account_status", "equity": True},
+    {"kind": "account_status", "equity": 5000.0, "unrealized": "31.27"},
+    {"kind": "account_status", "equity": 5000.0, "unrealized": float("inf")},
 ])
 def test_account_status_unread_or_invalid_is_refused(body):
     with pytest.raises(ValueError):
@@ -537,3 +539,66 @@ def test_readback_hash_matches_the_phone_canonical_form():
     src = Path("tools/phone-executor/app/src/main/java/com/metis/phoneexec/MainActivity.kt").read_text()
     order = src.split("READBACK_FIELDS = listOf(")[1].split(")")[0]
     assert [x.strip().strip('"') for x in order.split(",") if x.strip()] == list(pe.READBACK_FIELDS)
+
+
+# --- BREAKOUT-UNRECORDED (2026-10-12): a redeemed LIVE go-token that never gets a report is not "skipped" ---
+
+def _go_live(tmp_path, monkeypatch, tid: str = "t1") -> str:
+    _live(tmp_path, monkeypatch)
+    _claimed(tid)
+    v = _verify(tid)
+    assert pe.redeem_go_token(_dev(), {"ticket_id": tid, "token": v["token"],
+                                       "readback_sha256": v["readback_sha256"]})["go"] is True
+    return tid
+
+
+def test_live_go_without_report_is_journaled_placed_not_skipped(tmp_path, monkeypatch, _iso):
+    tid = _go_live(tmp_path, monkeypatch)
+    later = datetime.now(timezone.utc) + timedelta(seconds=pe.CLAIM_TIMEOUT_S + 5)
+    assert pe.expire_stale_claims("breakout_2", now=later) == []  # not in the "marked skipped" alert list
+    assert prop_journal.get_ticket(tid)["status"] == "placed"
+    fills = prop_journal.list_fills(account_id="breakout_2")
+    assert len(fills) == 1
+    f = fills[0]
+    assert (f["status"], f["ticket_id"], f["direction"], f["symbol"]) == ("placed", tid, "long", "ETHUSDT")
+    assert (f["entry_price"], f["qty"], f["sl"], f["tp"]) == (2500.0, 0.5, 2450.0, 2700.0)
+    assert "UNVERIFIED" in (f.get("raw") or "") and "unconfirmed live submit" in (f.get("reason") or "")
+    assert any("never confirmed" in m for m in _iso)
+    # idempotent: a second pass finds no claimed ticket and writes nothing more
+    pe.expire_stale_claims("breakout_2", now=later)
+    assert len(prop_journal.list_fills(account_id="breakout_2")) == 1
+
+
+def test_late_phone_report_corrects_the_unconfirmed_row_in_place(tmp_path, monkeypatch):
+    tid = _go_live(tmp_path, monkeypatch)
+    later = datetime.now(timezone.utc) + timedelta(seconds=pe.CLAIM_TIMEOUT_S + 5)
+    pe.expire_stale_claims("breakout_2", now=later)
+    pe.record_report(_dev(), {"kind": "fill", "status": "placed", "ticket_id": tid, "symbol": "ETHUSDT",
+                              "direction": "long", "entry": 2500.0, "sl": 2450.0, "tp": 2700.0, "qty": 0.5})
+    assert len(prop_journal.list_fills(account_id="breakout_2")) == 1
+
+
+def test_claim_without_a_live_go_is_still_skipped(tmp_path, monkeypatch):
+    _live(tmp_path, monkeypatch)
+    _claimed("t2")
+    _verify("t2")  # token issued but never redeemed: nothing was clicked
+    later = datetime.now(timezone.utc) + timedelta(seconds=pe.CLAIM_TIMEOUT_S + 5)
+    assert pe.expire_stale_claims("breakout_2", now=later) == ["t2"]
+    assert prop_journal.get_ticket("t2")["status"] == "skipped"
+    assert prop_journal.list_fills(account_id="breakout_2") == []
+
+
+def test_refused_go_is_still_skipped(tmp_path, monkeypatch):
+    _live(tmp_path, monkeypatch)
+    _claimed("t3")
+    v = _verify("t3")
+    assert pe.redeem_go_token(_dev(), {"ticket_id": "t3", "token": v["token"], "readback_sha256": "bad"})["go"] is False
+    later = datetime.now(timezone.utc) + timedelta(seconds=pe.CLAIM_TIMEOUT_S + 5)
+    assert pe.expire_stale_claims("breakout_2", now=later) == ["t3"]
+
+
+def test_account_status_unrealized_is_kept_when_read_and_null_when_not():
+    pe.record_report(_dev(), {"kind": "account_status", "equity": 5056.86, "unrealized": -12.5})
+    assert prop_journal.latest_account_status("breakout_2")["unrealized"] == -12.5
+    pe.record_report(_dev(), {"kind": "account_status", "equity": 5056.86})
+    assert prop_journal.latest_account_status("breakout_2")["unrealized"] is None  # unread is NULL, never 0
