@@ -141,7 +141,20 @@ def test_load_pairs_config_missing_is_noop():
 def test_load_real_pairs_config_on_bybit_1():
     cfg = px._load_pairs_config("config/pairs.yaml")
     pairs = cfg.get("pairs") or []
-    assert len(pairs) == 4
+    # 4 Bybit crypto pairs + pairs_gld_gdx on alpaca_paper (operator decision
+    # 2026-10-12, checklist PAIRS-ALPACA-BUILD).
+    assert len(pairs) == 5
+    # Every pair resolves (per-pair account_id, else the top-level default) to a
+    # PAPER account: "not on real money" stays structural.
+    import yaml
+    accts = yaml.safe_load(open("config/accounts.yaml", encoding="utf-8"))
+    accts = accts.get("accounts", accts)
+    for p in pairs:
+        acct = str(p.get("account_id") or cfg.get("account_id"))
+        assert accts[acct].get("account_class") == "paper", (p["name"], acct)
+        # ...and not a Stage-2 mirror (the runtime refuses those too:
+        # pairs_venue.pairs_account_refusal).
+        assert accts[acct].get("paper_role") != "portfolio", (p["name"], acct)
     # RE-FLIPPED to live 2026-07-16 (operator-approved, Tier-3) after the executor
     # placement bugs were fixed: (1) qty=0 re-size (_place_pair passes qty_override),
     # (2) blown-up leg SL/TP (the pairs_sizing backstop clamp, #6549), and

@@ -1,0 +1,31 @@
+{
+  "id": "NEWS-ALPHA-SRC-FOMC",
+  "title": "Lever: FOMC statement text collector (federalreserve.gov archive 2003-.. + forward), release timestamp, frozen hawk/dove lexicon + novelty score",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-12 lane NEWS-ALPHA-PROGRAM] Verify-before-build: capture a real archive page fixture on a runner first. Release times have varied historically (UNVERIFIED recollection: 2:15 pm ET earlier, 2:00 pm later) -- capture and store the observed release time per statement, never an assumed one. Serves units listed in docs/research/news-alpha-program-2026-10-12.md; program row NEWS-ALPHA-PROGRAM.",
+  "updated_at": "2026-10-12T14:09:58Z",
+  "updated_by": "session_01SPre8cB96Nn4sUTry1KAiX",
+  "roadmap": [
+    "M28"
+  ],
+  "priority": "high",
+  "writeback": {
+    "roadmap": "none: lever row; M28 write-back happens on NEWS-ALPHA-PROGRAM",
+    "arch": "none: research tooling, no runtime contract"
+  },
+  "observation": {
+    "what": "Statements 2003..today collected with timestamps and the lexicon committed before any outcome",
+    "how_to_check": "wc -l comms/macro/fomc_statements.jsonl; fixture under tests/fixtures/",
+    "due_by": "2026-11-09"
+  },
+  "_seq": 438
+}
