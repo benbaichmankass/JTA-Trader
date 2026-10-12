@@ -486,6 +486,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/claude/work/README.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/SOAK-REPORT-observations.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/SOAK-REPORT.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/claude/work/designs/world-event-prediction-engine-v0.1.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/findings/E18-starved-triage-post-E35-20260926.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/triage-2026-09-28.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/workplan.md` | plan | historical | — | 2026-09-07 | `name:workplan-is-a-forward-commitment / mi159:plan-status-header:historical` | — |
