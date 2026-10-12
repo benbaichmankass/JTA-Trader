@@ -896,6 +896,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/mi295-active-management-focus-2026-09-17.md` | plan | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/mi298-winner-label-recovery-2026-09-17.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/mi301-stop-term-robustness-2026-09-17.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/mirror-qty-diverge-2026-10-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-buildout-strategy-2026-06-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-strategies-deep-review-2026-06-25.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml2-predictive-bracket-2026-09-06.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
