@@ -1908,12 +1908,21 @@ class TestStuckStrategyWatchdog:
         ), patch(
             "src.units.accounts.clients.account_closed_pnl_for_trade",
             return_value=None,
-        ):
+        ), patch(
+            "src.runtime.order_monitor._cancel_resting_protection_after_flat",
+        ) as cancel_spy:
             summary = _watchdog_to_close(tmp_db)
 
         assert summary["auto_cleared"] == 1
         assert summary["recovered_closed"] == 0
         assert summary["closed_local_unmatched"] == 1
+        # CA-A01-001 / PI-20260927-JT7JW9CR-0001: finalising a flat row must
+        # also cancel its resting broker protection (trade 5836 left
+        # oca-protect-t5836 resting GTC). Exactly once, scoped to this trade.
+        assert cancel_spy.call_count == 1
+        args, kwargs = cancel_spy.call_args
+        assert args[:2] == ("bybit_2", "BTCUSDT")
+        assert kwargs.get("trade_id") == trade_id
         assert summary["errors"] == 0
 
         trade = _read_trade_full(tmp_db, trade_id)

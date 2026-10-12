@@ -327,8 +327,13 @@ def test_stage0_p10_is_deterministic_and_seeded(repo):
 
 def test_real_stage2_thresholds_match_the_operators_pricing():
     """The operator was told xrp_4h, ief and iaum have POSITIVE p10 and the
-    other Stage-2 legs negative (SIGNAL-0005). Pin that on the real records."""
-    for leg, positive in (("trend_donchian_xrp_4h", True), ("ief_pullback_1d", True),
+    other Stage-2 legs negative (SIGNAL-0005). Pin that on the real records.
+
+    Re-stated 2026-10-12 (RQ-20261007-023 PASS, RULE-RQ1007-XRP4H-STAGE0-1460D):
+    the 1460d xrp_4h record (n=46, p10 -3.885) replaced the 365d n=16 one, and its
+    p10 is NEGATIVE, so xrp_4h now pins False. SIGNAL-0005's pricing is reported
+    to the operator as changed, not silently kept."""
+    for leg, positive in (("trend_donchian_xrp_4h", False), ("ief_pullback_1d", True),
                           ("iaum_pullback_1d", True), ("xrp_pullback_2h", False),
                           ("ada_pullback_2h", False), ("trend_donchian_eth_4h", False),
                           ("slv_pullback_1d", False)):

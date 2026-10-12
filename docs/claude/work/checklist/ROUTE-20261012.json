@@ -1,0 +1,25 @@
+{
+  "id": "ROUTE-20261012",
+  "title": "Route the 19 due-but-unrouted pipeline items (routing alarm, oldest 15d)",
+  "phase": null,
+  "state": "done",
+  "owner": "lane (session_01J5MrX74iaf4XaTW17dJLhP)",
+  "lane": "session_01J5MrX74iaf4XaTW17dJLhP",
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 5,
+  "spend_usd": 2,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-12T06:00Z manager session_01G16FfyYSmDPQuuW55BuTmK, review WR-20261012-0530Z] Report sections.due: 154 due, 19 unrouted, ROUTING ALARM oldest PI-20260927-JT7JW9CR-0004 (15d). ROUTE-AND-ASK-TRIAGE (#17511) claimed all 17 unrouted routed yesterday, yet JT7JW9CR-0001..4 / CAA05-0004 / CAB02-0001 (all 09-27) are still state=queued: find why its routing did not stick and fix that. Manager mapping: JT7JW9CR-0001..4 + CAA05-0004 + CAB02-0001 -> AUDIT-TEST-GAPS (lane dispatched); CJWUMAVA-0002 + ULTSLAND-0001 -> STAMP-RACE-2; YJAYF7GD-0003 -> REDUCE-FILL-QTY; CFUJ7YFR-0001/2 -> UI-UPGRADE-1-AUTH-HARDEN; HZAZ9SU7-0001 -> research-ops; OAKGATE1-0003, JOHNSXDJ-0003, XQ5RTZKZ-0001 (check_observation) -> UNPROVEN-SWEEP-2; F4CD9293-0001, HJPL5ABP-0002 -> research/queue unit (author or link); BFOAI4ZM-0002, 72XUJX8U-0004 -> new or existing rows. [2026-10-12T06:00Z manager] Dispatched lane session_01J5MrX74iaf4XaTW17dJLhP. [2026-10-12 lane session_01J5MrX74iaf4XaTW17dJLhP] DONE: all 19 routed (pipeline records, state=routed); unrouted() == 0 re-measured after the writes. 4 new rows: PROP-EXIT-UNITS, COVERAGE-SOAK-MODE-SPLIT, PHONE-TRAIL-NOHALT, REDUCE-READERS-INCLUDE; 2 items link existing queue units. ROOT CAUSE of 'did not stick': it did not un-stick. JT7JW9CR-0001..4/CAA05-0004/CAB02-0001 carry last_checked 2026-09-27 + check_every_days 15, so is_due() was False on 2026-10-11 (re-measured: unrouted(today=10-11) = 4, none of them) and True only from 2026-10-12; #17511 routed all 33 ids it touched, and none of them reappear. TOOLING GAP found and fixed: records with routed_to but state=queued (PI-20261011-YJAYF7GD-000x) stay unrouted; append() now refuses that on new writes (self-test added). Rows referenced by routed_to that exist only on PR #17681 (AUDIT-TEST-GAPS, STAMP-RACE-2, UNPROVEN-SWEEP-2, REDUCE-FILL-QTY) land with it; routed_to is not validated against rows.",
+  "updated_at": "2026-10-12T06:54:05Z",
+  "updated_by": "session_01J5MrX74iaf4XaTW17dJLhP",
+  "roadmap": [
+    "M40"
+  ],
+  "writeback": {
+    "roadmap": "none: pipeline-routing housekeeping, no milestone outcome",
+    "arch": "none: no architecture change; pipeline.append() guard is tooling"
+  },
+  "_seq": 422
+}
