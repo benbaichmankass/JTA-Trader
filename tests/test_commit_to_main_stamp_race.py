@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ACTION = ROOT / ".github/actions/commit-to-main/action.yml"
 RESOLVER = ROOT / "scripts/ops/resolve_stamp_conflicts.py"
 sys.path.insert(0, str(ROOT / "scripts/ops"))
-import resolve_stamp_conflicts as rsc
+import resolve_stamp_conflicts as rsc  # noqa: E402
 
 TEXT = ACTION.read_text(encoding="utf-8")
 
@@ -104,7 +104,7 @@ def test_replay_in_a_clean_worktree_survives_the_callers_dirty_tree(tmp_path):
     start, end = "PRODUCED_WT=", "# CUT THE THROWAWAY BRANCH"
     assert start in TEXT and end in TEXT
     snippet = TEXT[TEXT.index(start):TEXT.index(end)]
-    snippet = "\n".join(l for l in snippet.splitlines() if not l.lstrip().startswith("#"))
+    snippet = "\n".join(ln for ln in snippet.splitlines() if not ln.lstrip().startswith("#"))
     w = _repo(tmp_path)
     (w / "q.yaml").write_text("stamp: 0\n")
     _git(w, "add", "-A")
