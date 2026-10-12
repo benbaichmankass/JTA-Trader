@@ -306,10 +306,27 @@ class TestBybitPathActuallyRuns:
             self._client({"size": "10", "side": "Buy", "stopLoss": "banana"}, []),
             "linear", "SOLUSDT",
         )
-        # "banana" is non-empty and not "0", so the LEGACY string test still
-        # grades it covered — the quantity verdict is deliberately unchanged.
+        # PINS TODAY'S BEHAVIOUR, NOT THE DESIRED ONE (CA-A01-056 /
+        # PI-20260927-JT7JW9CR-0003): "banana" is non-empty and not "0", so the
+        # LEGACY string test still grades it covered. The detector for the
+        # desired verdict is the strict xfail below; when the fix lands that
+        # xfail XPASSes (strict => fails) and this assertion must be deleted.
         assert out["covered_qty"] == 10.0
         assert out["stop_prices"] == []            # never [0.0]
+
+    @pytest.mark.xfail(
+        strict=True,
+        reason="CA-A01-056: an unparseable stopLoss is graded FULLY covered; "
+               "fix is a runtime change held for the manager (HOLD PR).",
+    )
+    def test_full_mode_with_an_unparseable_stop_is_NOT_graded_covered(self):
+        from src.runtime.order_monitor import _bybit_position_protection
+        refusal: dict = {}
+        out = _bybit_position_protection(
+            self._client({"size": "10", "side": "Buy", "stopLoss": "banana"}, []),
+            "linear", "SOLUSDT", refusal=refusal,
+        )
+        assert out is None or out["covered_qty"] == 0.0
 
     def test_partial_mode_sums_qty_and_collects_each_leg_trigger(self):
         from src.runtime.order_monitor import _bybit_position_protection
