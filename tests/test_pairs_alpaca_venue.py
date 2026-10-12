@@ -719,6 +719,7 @@ def test_half_open_cleanup_only_sends_in_regular_hours(tmp_path, monkeypatch, is
         px.run_pairs_tick({})
     assert len(env_closes) == expect_closes
     assert env["placed"] == []
+    # collapsed-state: half_open — this test SELECTS the half-open soak rows to count their cadence; it decides nothing for the other events, which are asserted elsewhere in this file.
     rows = [r for r in env["soak"] if r["event"] == "half_open"]
     assert len(rows) == 1                                     # cadence: once per hour
     if expect_closes == 0:
