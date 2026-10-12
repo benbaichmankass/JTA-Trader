@@ -212,7 +212,7 @@ def files_in_range(start: datetime, end: datetime, stride: int = 1) -> List[date
 
 def _read_times(path: Path) -> List[datetime]:
     txt = path.read_text(encoding="utf-8").strip()
-    rows = json.loads(txt) if txt.startswith("[") else [json.loads(l) for l in txt.splitlines() if l.strip()]
+    rows = json.loads(txt) if txt.startswith("[") else [json.loads(ln) for ln in txt.splitlines() if ln.strip()]
     out = []
     for r in rows:
         v = r.get("entry_time") if isinstance(r, dict) else r
@@ -243,7 +243,7 @@ def _download(url: str, tries: int = 4) -> Optional[bytes]:
             if e.code == 404:
                 return None
             err = e
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:  # noqa: BLE001  # allow-silent: recorded as status error:<msg> in the ledger, never counted ok
             err = e
         time.sleep(2 ** (k + 1))
     raise RuntimeError(f"download failed {url}: {err}")
@@ -254,7 +254,7 @@ def fetch_one(ts: datetime, domains: Optional[Set[str]], keywords: Sequence[str]
     url = GKG_URL.format(ts=ts.strftime("%Y%m%d%H%M%S"))
     try:
         blob = _download(url)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001  # allow-silent: recorded as status error:<msg> in the ledger, never counted ok
         return ts, f"error:{e}"[:200], [], 0
     if blob is None:
         return ts, "missing", [], 0
@@ -271,7 +271,7 @@ def fetch_one(ts: datetime, domains: Optional[Set[str]], keywords: Sequence[str]
                     yield line
 
             items = list(parse_gkg_rows(counted(text), domains=domains, keywords=keywords))
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001  # allow-silent: recorded as status error:<msg> in the ledger, never counted ok
         return ts, f"error:{e}"[:200], [], 0
     return ts, "ok", items, n
 

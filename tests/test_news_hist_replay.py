@@ -5,7 +5,6 @@ becomes available 1s AFTER the signal must not influence it, even if it would ot
 """
 from __future__ import annotations
 
-import json
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path

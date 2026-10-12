@@ -92,7 +92,7 @@ def frozen_clock(t: datetime) -> Iterator[None]:
         try:
             pub = to_dt(published_at)
             return max(0.0, round((t - pub).total_seconds() / 60.0, 1))
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # allow-silent: mirrors live normalizer, unparseable timestamp = maximally stale
             return 9999.0
 
     _nn._freshness_minutes = _at
@@ -192,7 +192,7 @@ def net_r_for(row: Dict[str, Any]) -> Tuple[float, float, Optional[float]]:
 
 def load_trades(path: Path) -> List[Dict[str, Any]]:
     txt = path.read_text(encoding="utf-8").strip()
-    return json.loads(txt) if txt.startswith("[") else [json.loads(l) for l in txt.splitlines() if l.strip()]
+    return json.loads(txt) if txt.startswith("[") else [json.loads(ln) for ln in txt.splitlines() if ln.strip()]
 
 
 # ── stats (no scipy in the runner image) ───────────────────────────────────

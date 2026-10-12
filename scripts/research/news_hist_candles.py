@@ -31,7 +31,7 @@ def fetch(symbol: str, interval: str, start: datetime, end: datetime):
                 with urllib.request.urlopen(URL.format(s=symbol, i=interval, st=st, en=en), timeout=30) as r:
                     batch = json.loads(r.read())
                 break
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # allow-silent: retried with backoff, re-raised on the 4th failure
                 if k == 3:
                     raise
                 time.sleep(2 ** (k + 1))
