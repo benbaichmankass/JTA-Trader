@@ -2542,6 +2542,7 @@ def log_rejection_to_journal(
     is_dry: bool = False,
     margin_basis: Optional[dict] = None,
     dry_cause: Optional[str] = None,
+    extra_notes: Optional[dict] = None,
 ) -> bool:
     """Public wrapper: log a refusal event to the trade journal.
 
@@ -2597,6 +2598,8 @@ def log_rejection_to_journal(
             _extra["margin_basis"] = margin_basis
         if dry_cause:
             _extra["dry_cause"] = str(dry_cause)
+        if extra_notes:
+            _extra.update(extra_notes)
         return _log_trade_to_journal(
             pkg, account_cfg, order,
             trade_id=None, is_dry=is_dry,
