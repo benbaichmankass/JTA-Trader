@@ -1,5 +1,7 @@
 {
   "tier": 2,
-  "landing": "self",
-  "why": "Trainer-VM-only dependency pins (requirements-trainer-frontier.txt), a constraints-protected install step in scripts/ops/trainer_bootstrap.sh and a read-only capability probe. Tier-2 per the checklist row FRONTIER-LEVER-TRAINER-DEPS; authorized by the manager as data-backed (the capability probe shows the missing arms block RQ-20261011-9da8-01/-02), revertible, and it does not touch the live trader, orders, config/strategies.yaml, config/accounts.yaml or risk/sizing."
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "Trainer-VM-only dependency pins (requirements-trainer-frontier.txt), a constraints-protected install step in scripts/ops/trainer_bootstrap.sh and a read-only capability probe. Tier-2 per checklist row FRONTIER-LEVER-TRAINER-DEPS; the manager authorized it as data-backed in the lane dispatch, but no approval record exists on main for the guard (R15a), so the manager merges. Does not touch the live trader, orders, config/strategies.yaml, config/accounts.yaml or risk/sizing.",
+  "hold_text": "Tier-2 trainer-only dependency change. Manager authorized it in the lane dispatch, but no approval record is on main for R15(a); manager merges, then the trainer bootstrap runs."
 }
