@@ -1,0 +1,21 @@
+{
+  "id": "REDUCE-READERS-INCLUDE",
+  "title": "Include settled reduce legs in attribution.py and account_broker_reconcile.py (backfill applied 2026-10-11)",
+  "phase": null,
+  "state": "queued",
+  "owner": "unowned (manager dispatches)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-12 ROUTE-20261012] Owns PI-20261011-YJAYF7GD-0003. The backfill-intent-reduce-pnl apply is DONE (PERF-FU-REDUCE-PNL, issue #17647); the remaining clause is the two readers: src/web/api/routers/attribution.py:125 (exclude_reduce_leg_predicate) and scripts/ops/account_broker_reconcile.py (_is_reduce_row) still drop reduce legs wholesale (re-grepped 2026-10-12). Include rows with notes.reduce_settlement='settled', attributed to the PARENT strategy via notes.reduce_settlement_parents; keep unsettled/superseded excluded. Read paths only.",
+  "updated_at": "2026-10-12T06:03:28Z",
+  "updated_by": "session_01J5MrX74iaf4XaTW17dJLhP",
+  "roadmap": [
+    "M39"
+  ],
+  "_seq": 426
+}

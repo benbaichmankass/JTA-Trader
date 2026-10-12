@@ -565,6 +565,17 @@ def append(item: dict, store: Path = STORE, *, intent: str,
     a caller mid-transition cannot silently start a second store.
     """
     validate(item)
+    # ROUTE-20261012: `routed_to` on a non-routed item is invisible to
+    # unrouted() (which keys on state alone), so the item stays "unrouted"
+    # while its record claims an owner (PI-20261011-YJAYF7GD-0001..4 were
+    # filed that way). Refused on NEW writes only; legacy records are not
+    # re-validated for it, so --check stays green.
+    if str(item.get("routed_to") or "").strip() and \
+            item["state"] not in ("routed",) + tuple(TERMINAL_STATES):
+        raise PipelineError(
+            f"id {item['id']!r}: routed_to={item['routed_to']!r} but "
+            f"state={item['state']!r} -- unrouted() keys on state, so this item "
+            f"would still count as unrouted. Set state='routed' (or drop routed_to).")
     if intent not in ("new", "update"):
         raise PipelineError(f"intent: must be 'new' or 'update', got {intent!r}")
 
@@ -1315,6 +1326,13 @@ def _selftest() -> int:
         append(base(id="X", state="routed", routed_to="A7"), store, intent="update",
                based_on=version_of("X", store))
         append(base(id="Y"), store, intent="new")
+        try:
+            append(base(id="Z", state="queued", routed_to="A7"), store, intent="new")
+        except PipelineError as exc:
+            check("routed_to on a non-routed item is refused on append (ROUTE-20261012)",
+                  "unrouted" in str(exc))
+        else:
+            check("routed_to on a non-routed item is refused on append (ROUTE-20261012)", False)
         res = read_log(store)
         check("two records for one id fold to the LAST (append-only state)",
               res.items["X"]["state"] == "routed")
