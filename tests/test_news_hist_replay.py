@@ -215,3 +215,16 @@ def test_grading_rule_registered_branches():
     assert g(_pooled(p=0.02))["arm_r"] == "INCONCLUSIVE"                       # p >= 0.01
     assert g(_pooled(sym_ic=(0.1, -0.1, -0.05)))["arm_r"] == "INCONCLUSIVE"    # <2 symbols positive
     assert g(_pooled(n_scored=10))["g1_offline"] == "PASS"                     # E pass, R insufficient is not a FAIL
+
+
+def test_broad_population_widens_domains_but_keeps_point_in_time():
+    mes_item = _item(T - timedelta(minutes=5), domain="coindesk.com")
+    assert _decide([mes_item], symbol="MES")["n_visible"] == 0  # live: coindesk is not an index-future feed
+    c = rp.Corpus([mes_item, _item(T + timedelta(seconds=1), domain="coindesk.com")])
+    d = rp.decide(c, "MES", "buy", T, domains={"coindesk.com"})
+    assert d["n_visible"] == 1  # broad: domain admitted, the future item still excluded
+
+
+def test_broad_domains_exclude_aggregators_and_include_live_feeds():
+    assert "biztoc.com" not in fetch.BROAD_DOMAINS and "wkrb13.com" not in fetch.BROAD_DOMAINS
+    assert fetch.feed_domain_allowlist() <= (fetch.BROAD_DOMAINS | fetch.feed_domain_allowlist())

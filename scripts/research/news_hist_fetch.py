@@ -32,7 +32,8 @@ Data is large and lives OFF-REPO (trainer VM, ``--out`` of your choice); only th
 PRE-FILTER (never drops anything the live scorer would count)
 -------------------------------------------------------------
 Keep a row iff its source domain is in the allow-list derived from the LIVE feed config
-(``config/news_feeds.yaml``, every feed URL's registrable domain + a small alias map) AND
+(``config/news_feeds.yaml``, every feed URL's registrable domain + a small alias map; ``--sources broad`` adds
+``BROAD_DOMAINS``, a superset the replay filters back down) AND
 its title contains any relevance keyword the live normalizer could match (every
 ``news_symbols.yaml`` symbol keyword + the shared macro keywords + the built-in crypto map)
 -- the same lower-cased substring test ``news_normalizer._relevance_breakdown`` uses, so
@@ -82,6 +83,19 @@ DOMAIN_ALIASES: Dict[str, List[str]] = {
     "feeds.content.dowjones.io": ["marketwatch.com", "wsj.com", "barrons.com"],
     "federalreserve.gov": ["federalreserve.gov"],
 }
+
+# Credible financial / crypto / commodity press beyond the live RSS set (--sources broad). Chosen BEFORE any
+# outcome was computed, from the domains present in a one-day all-source GKG sample (2024-03-05) minus
+# press-release aggregators / auto-generated ticker sites (biztoc, wkrb13, tickerreport, openpr, ...).
+BROAD_DOMAINS = frozenset("""
+reuters.com bloomberg.com bnnbloomberg.ca ft.com wsj.com barrons.com marketwatch.com cnbc.com forbes.com
+businessinsider.com benzinga.com seekingalpha.com fool.com investing.com fxstreet.com forexlive.com yahoo.com
+cnn.com apnews.com rttnews.com streetinsider.com marketscreener.com finanznachrichten.de thestreet.com
+zerohedge.com fortune.com nasdaq.com investopedia.com tradingview.com financialexpress.com moneycontrol.com
+livemint.com theglobeandmail.com coindesk.com cointelegraph.com decrypt.co theblock.co bitcoinist.com newsbtc.com
+cryptoslate.com cryptonews.com u.today beincrypto.com ambcrypto.com cryptopotato.com bitcoinmagazine.com
+coingape.com cryptobriefing.com dailyhodl.com bitcoin.com oilprice.com kitco.com mining.com federalreserve.gov
+""".split())
 
 _PRECISE_RE = re.compile(r"<PAGE_PRECISEPUBTIMESTAMP>(\d{14})")
 _TITLE_RE = re.compile(r"<PAGE_TITLE>(.*?)</PAGE_TITLE>", re.S)
@@ -295,6 +309,7 @@ def build_manifest(out: Path, domains: Optional[Set[str]], keywords: Sequence[st
         "first_file": ts[0] if ts else None,
         "last_file": ts[-1] if ts else None,
         "domain_allowlist": sorted(domains) if domains is not None else "ALL",
+        "live_feed_domains": sorted(feed_domain_allowlist()),
         "n_keywords": len(keywords),
         "availability_rule": "available_at = GDELT ingest time (V2.1DATE); replay requires available_at < signal_ts",
         "note": "gaps (missing/error files) are listed in _ledger.jsonl; absence of items in a window with a gap is NOT evidence of no news",
@@ -310,14 +325,17 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--signal-times", help="trades JSON/JSONL with entry_time: fetch only the windows that can influence them")
     ap.add_argument("--max-age-min", type=float, default=120.0, help="live NEWS_MAX_AGE_MINUTES")
     ap.add_argument("--slack-min", type=float, default=15.0)
-    ap.add_argument("--all-sources", action="store_true", help="skip the live-feed domain allow-list")
+    ap.add_argument("--sources", choices=["live", "broad", "all"], default="live",
+                    help="live = domains of the LIVE feed config; broad = live + BROAD_DOMAINS (superset: the replay "
+                         "filters back down to live per symbol); all = no domain filter")
     ap.add_argument("--workers", type=int, default=12, help="processes (download + parse are CPU-heavy)")
     ap.add_argument("--manifest", help="write manifest JSON here (commit this, not the data)")
     ap.add_argument("--dry-run", action="store_true", help="list how many files would be fetched")
     a = ap.parse_args(argv)
 
     out = Path(a.out)
-    domains = None if a.all_sources else feed_domain_allowlist()
+    domains = (None if a.sources == "all" else
+               feed_domain_allowlist() | (BROAD_DOMAINS if a.sources == "broad" else frozenset()))
     kws = relevance_keywords()
 
     if a.signal_times:

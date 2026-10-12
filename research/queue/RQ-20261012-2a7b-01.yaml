@@ -19,6 +19,10 @@ question: >-
   depend on which strategy fired): after the news state the live veto blocks, is the net-of-cost 24h LONG return
   lower than at baseline? ARM R (rank): does the signed adjustment rank-predict the next-24h return? ARM T (trade
   books, descriptive): the same replay at the entry times of the committed comms/strategy_evidence trade books.
+  TWO POPULATIONS, same arms and same rule: LIVE (primary; per symbol only the domains the live path reads,
+  feeds_for_tags) and BROAD (secondary; live feeds plus a fixed list of credible finance / crypto / commodity press,
+  news_hist_fetch.BROAD_DOMAINS, for every symbol) -- BROAD exists because GKG recall of the live feeds' own domains is
+  thin (see amendment).
 why_this_matters: >-
   WEPE gate G1 requires the news layer to be shown measurable and net-positive, or retired/replaced; the live arm
   cannot reach its n floor before ~2027. The promotion ladder decides edge OFFLINE: a layer that gates live money
@@ -48,8 +52,15 @@ decision_rule:
   id: RULE-RQ20261012-2A7B-NEWS-OFFLINE-G1
   registered_at: '2026-10-12'
   registered_before_run: true
+  amendment: >-
+    AMENDED 2026-10-12, before the corpus build finished and before ANY return or net-R statistic was computed.
+    Original text: one population (LIVE). Reason: a plumbing run of the harness on the first 1,972 BTCUSDT decision
+    bars (2023-10-01..12-22; printed only bar counts and decision counts, no outcome) showed 5 non-neutral decisions
+    (4 boost, 1 reduce, 0 veto) -- GKG recall of the live feeds' own domains is far below the live RSS volume
+    (~15 coindesk and ~16 cointelegraph items/day measured on the first 85 days), so LIVE alone is likely to read
+    INSUFFICIENT_BASE. BROAD was added as a second population with the identical rule; the rule thresholds are unchanged.
   statistic: >-
-    POPULATION (stated in the verdict): hourly decision bars (decision at bar CLOSE; forward return close[i+24]/close[i]
+    POPULATIONS (stated in the verdict): LIVE and BROAD (above), each over hourly decision bars (decision at bar CLOSE; forward return close[i+24]/close[i]
     - 1) for BTCUSDT, ETHUSDT, SOLUSDT, 2023-10-01..2026-10-11, EXCLUDING any bar whose look-back window (max_age 120 min
     + 15 min) contains a GDELT file not confirmed ok in the fetch ledger (a gap is not "no news"). Cost: execution_costs
     fee 7.5 bps round trip + resolve_cost_policy(symbol) slippage + perp funding x (24h / 8h windows), applied to both
@@ -70,7 +81,9 @@ decision_rule:
     than 0.05 because the three symbols are not independent) AND IC > 0 on at least 2 of 3 symbols. Else INCONCLUSIVE.
     UNIT-LEVEL READ, written now: G1-OFFLINE PASSES iff ARM E = PASS and ARM R != FAIL. RETIRE_OR_REPLACE_REVIEW iff
     either arm is FAIL (surfaced to the manager; nothing is switched off by this unit). Anything else leaves G1-OFFLINE
-    OPEN with the n and the reason. Whether an offline PASS substitutes for the live arm of G1 is the manager's and
+    OPEN with the n and the reason. The unit-level read uses the LIVE population only. The BROAD population is graded by
+    the identical rule and reported as g1_offline_broad: it answers "would widening the live feed set be worth it", it
+    cannot pass G1 and cannot rescue a LIVE FAIL. Whether an offline PASS substitutes for the live arm of G1 is the manager's and
     operator's call, not this unit's. FINDING (reported, not graded): if the veto_short diff is > 0 with CI lower bound
     > 0 at n >= 25, the side-blind veto is also blocking profitable shorts -- file it.
   what_it_does_not_do: >-
@@ -91,9 +104,9 @@ routing:
 run:
   workflow: none -- session-local run of scripts/research/news_hist_fetch.py then scripts/research/news_hist_replay.py
   commands:
-    - python3 scripts/research/news_hist_fetch.py --out $CORPUS --start 2023-10-01T00:00 --end 2026-10-12T06:00 --workers 12 --manifest research/news_hist/MANIFEST.json
+    - python3 scripts/research/news_hist_fetch.py --out $CORPUS --sources broad --start 2023-10-01T00:00 --end 2026-10-12T06:00 --workers 12 --manifest research/news_hist/MANIFEST.json
     - python3 scripts/research/news_hist_candles.py --symbol BTCUSDT --interval 1h --start 2023-09-01 --end 2026-10-12 --out $CANDLES/BTCUSDT_1h.csv   # likewise ETHUSDT, SOLUSDT
-    - python3 scripts/research/news_hist_replay.py --corpus $CORPUS --event-study BTCUSDT=$CANDLES/BTCUSDT_1h.csv ETHUSDT=$CANDLES/ETHUSDT_1h.csv SOLUSDT=$CANDLES/SOLUSDT_1h.csv --bar-minutes 60 --horizon-bars 24 --trades comms/strategy_evidence/runs/*/*__trades.jsonl --out comms/research/RQ-20261012-2a7b-01/verdict.json
+    - python3 scripts/research/news_hist_replay.py --corpus $CORPUS --event-study BTCUSDT=$CANDLES/BTCUSDT_1h.csv ETHUSDT=$CANDLES/ETHUSDT_1h.csv SOLUSDT=$CANDLES/SOLUSDT_1h.csv --sources live broad --bar-minutes 60 --horizon-bars 24 --trades comms/strategy_evidence/runs/*/*__trades.jsonl --out comms/research/RQ-20261012-2a7b-01/verdict.json
 lands:
   store: research/results/
   assert_field: read_state

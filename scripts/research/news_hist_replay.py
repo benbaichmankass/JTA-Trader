@@ -152,10 +152,14 @@ def feed_domains(symbol: str) -> set:
 
 # ── per-signal decision ────────────────────────────────────────────────────
 def decide(corpus: Corpus, symbol: str, side: str, t: datetime, *, settings: Optional[Dict[str, Any]] = None,
-           max_age_min: float = DEFAULT_MAX_AGE_MIN, policy: Optional[NewsInfluencePolicy] = None) -> Dict[str, Any]:
+           max_age_min: float = DEFAULT_MAX_AGE_MIN, policy: Optional[NewsInfluencePolicy] = None,
+           domains: Optional[set] = None) -> Dict[str, Any]:
+    """``domains``: None -> the domains the LIVE path reads for ``symbol`` (population "live");
+    a set -> exactly those (population "broad": live feeds + broad financial press, every symbol)."""
     settings = dict(settings or {})
     settings.setdefault("NEWS_MAX_AGE_MINUTES", max_age_min)
-    domains = feed_domains(symbol)
+    if domains is None:
+        domains = feed_domains(symbol)
     vis = [i for i in corpus.visible(t, max_age_min)
            if i["available_at"] < t.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
            and (_registrable(i["source"]["name"]) in domains or i["source"]["name"] in domains)]
@@ -334,7 +338,8 @@ def round_trip_cost_bps(symbol: str, hold_hours: float) -> float:
 
 def event_study(corpus: Corpus, candles, symbol: str, *, bar_minutes: int, horizon_bars: int,
                 max_age_min: float = DEFAULT_MAX_AGE_MIN, ok_files: Optional[set] = None,
-                start: Optional[datetime] = None, end: Optional[datetime] = None) -> Dict[str, Any]:
+                start: Optional[datetime] = None, end: Optional[datetime] = None,
+                domains: Optional[set] = None) -> Dict[str, Any]:
     """Decision at each bar CLOSE t (= open + bar_minutes); forward return close[i+H]/close[i] - 1.
 
     ``candles``: DataFrame with ``timestamp`` (bar OPEN, tz-aware) and ``close``. Overlap is handled by
@@ -360,7 +365,7 @@ def event_study(corpus: Corpus, candles, symbol: str, *, bar_minutes: int, horiz
                 f += STEP
             if gap:
                 continue
-        d = decide(corpus, symbol, "buy", t, max_age_min=max_age_min)
+        d = decide(corpus, symbol, "buy", t, max_age_min=max_age_min, domains=domains)
         ret = (close[i + H] / close[i] - 1.0) * 1e4
         obs.append({"i": i, "t": t, "ret_bps": ret, **d})
     veto_eps: List[Dict[str, Any]] = []
@@ -473,6 +478,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--trades", nargs="+", help="harness --emit-trades JSONL file(s) (trade arm)")
     ap.add_argument("--event-study", nargs="+", metavar="SYMBOL=CANDLES.csv",
                     help="signal-agnostic arm: SYMBOL=path pairs (candle CSV with timestamp,close)")
+    ap.add_argument("--sources", nargs="+", choices=["live", "broad"], default=["live"],
+                    help="event-study populations: live = the feeds the live path reads per symbol; broad = live + "
+                         "BROAD_DOMAINS press for every symbol (secondary; cannot pass G1 by itself)")
     ap.add_argument("--bar-minutes", type=int, default=60)
     ap.add_argument("--horizon-bars", type=int, default=24)
     ap.add_argument("--corpus", required=True, help="news_hist_fetch.py output root")
@@ -510,16 +518,25 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if a.event_study and verdict["read_state"] == "measured":
             sys.path.insert(0, str(REPO / "scripts"))
             import candle_io
-            verdict["event_arm"] = {}
-            for pair in a.event_study:
-                sym, path = pair.split("=", 1)
-                df = candle_io.load_candles(path)
-                verdict["event_arm"][sym] = event_study(corpus, df, sym, bar_minutes=a.bar_minutes,
-                                                        horizon_bars=a.horizon_bars, max_age_min=a.max_age_min, ok_files=ok)
-            verdict["event_pooled"] = pool_event_arm(verdict["event_arm"])
-            verdict["grades"] = grade_event_arm(verdict["event_pooled"])
-            for d in verdict["event_arm"].values():
-                d.pop("_raw", None)
+            from news_hist_fetch import BROAD_DOMAINS, feed_domain_allowlist
+            verdict["populations"] = {}
+            for pop in a.sources:
+                doms = None if pop == "live" else set(BROAD_DOMAINS) | feed_domain_allowlist()
+                arm = {}
+                for pair in a.event_study:
+                    sym, path = pair.split("=", 1)
+                    df = candle_io.load_candles(path)
+                    arm[sym] = event_study(corpus, df, sym, bar_minutes=a.bar_minutes, horizon_bars=a.horizon_bars,
+                                           max_age_min=a.max_age_min, ok_files=ok, domains=doms)
+                pooled = pool_event_arm(arm)
+                grades = grade_event_arm(pooled)
+                for d in arm.values():
+                    d.pop("_raw", None)
+                verdict["populations"][pop] = {"event_arm": arm, "event_pooled": pooled, "grades": grades}
+            if "live" in verdict["populations"]:
+                verdict["grades"] = verdict["populations"]["live"]["grades"]  # the graded read is the LIVE population
+            if "broad" in verdict["populations"]:
+                verdict["g1_offline_broad"] = verdict["populations"]["broad"]["grades"]["g1_offline"]  # informational only
         verdict["corpus"] = str(root)
         verdict["decision_lag_s"] = a.decision_lag_s
         verdict["max_age_min"] = a.max_age_min
