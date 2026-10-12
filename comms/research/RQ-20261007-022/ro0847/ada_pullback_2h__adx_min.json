@@ -1,0 +1,843 @@
+{
+  "schema": "strategy_tune_result/v1",
+  "generated_at": "2026-10-12T08:52:08.230171+00:00",
+  "strategy": "ada_pullback_2h",
+  "param": "adx_min",
+  "target": "config/strategies.yaml::ada_pullback_2h.adx_min",
+  "harness": "scripts/backtest_pullback.py",
+  "fixed_args": [
+    "--timeframe",
+    "2h",
+    "--symbol",
+    "ADAUSDT",
+    "--trend-lookback",
+    "40",
+    "--pullback-lookback",
+    "10",
+    "--pullback-frac",
+    "0.5",
+    "--atr-period",
+    "14",
+    "--trail-mult",
+    "5.0",
+    "--tp-r",
+    "4",
+    "--vol-skip-below-pctl",
+    "0.1",
+    "--min-confidence",
+    "0.0",
+    "--slippage-bps-roundtrip",
+    "3.0",
+    "--funding-bps-per-window",
+    "1.0",
+    "--atr-stop-mult",
+    "1.5"
+  ],
+  "data": {
+    "source": "explicit",
+    "path": "data/ADAUSDT_2h.csv",
+    "rows": 9252,
+    "first_ts": "2024-09-01 00:00:00+00:00",
+    "last_ts": "2026-10-11 22:00:00+00:00"
+  },
+  "fee_bps_roundtrip": 7.5,
+  "evidence_window_days": 730,
+  "metric_basis": "oos",
+  "walk_forward": {
+    "scheme": "kfold_anchored",
+    "wf_start": "2024-10-12",
+    "wf_end": "2026-10-11",
+    "folds": 4,
+    "train_frac": 0.4,
+    "fold_windows": [
+      {
+        "train": [
+          "2024-10-12",
+          "2025-07-31"
+        ],
+        "oos": [
+          "2025-07-31",
+          "2025-11-17"
+        ]
+      },
+      {
+        "train": [
+          "2024-10-12",
+          "2025-11-17"
+        ],
+        "oos": [
+          "2025-11-17",
+          "2026-03-06"
+        ]
+      },
+      {
+        "train": [
+          "2024-10-12",
+          "2026-03-06"
+        ],
+        "oos": [
+          "2026-03-06",
+          "2026-06-24"
+        ]
+      },
+      {
+        "train": [
+          "2024-10-12",
+          "2026-06-24"
+        ],
+        "oos": [
+          "2026-06-24",
+          "2026-10-11"
+        ]
+      }
+    ]
+  },
+  "note": "",
+  "current_value": 28.0,
+  "grid": [
+    {
+      "value": 22.0,
+      "trades": 77.0,
+      "win_rate_pct": 29.41,
+      "net_total": 30.4471,
+      "net_expectancy": 0.529225,
+      "max_drawdown": 12.4025,
+      "train": {
+        "trades": 323.0,
+        "win_rate_pct": 17.9075,
+        "net_total": 11.7272,
+        "net_expectancy": -0.008175000000000005,
+        "max_drawdown": 34.4471
+      },
+      "folds_positive": 3,
+      "n_folds": 4,
+      "folds": [
+        {
+          "oos_start": "2025-07-31",
+          "oos_end": "2025-11-17",
+          "oos": {
+            "trades": 15.0,
+            "win_rate_pct": 40.0,
+            "net_total": 32.9726,
+            "net_expectancy": 2.1982,
+            "max_drawdown": 5.5143
+          },
+          "train": {
+            "trades": 55.0,
+            "win_rate_pct": 12.73,
+            "net_total": -22.976,
+            "net_expectancy": -0.4177,
+            "max_drawdown": 31.6007
+          }
+        },
+        {
+          "oos_start": "2025-11-17",
+          "oos_end": "2026-03-06",
+          "oos": {
+            "trades": 19.0,
+            "win_rate_pct": 26.32,
+            "net_total": 0.0185,
+            "net_expectancy": 0.001,
+            "max_drawdown": 5.221
+          },
+          "train": {
+            "trades": 71.0,
+            "win_rate_pct": 18.31,
+            "net_total": 7.4953,
+            "net_expectancy": 0.1056,
+            "max_drawdown": 34.4471
+          }
+        },
+        {
+          "oos_start": "2026-03-06",
+          "oos_end": "2026-06-24",
+          "oos": {
+            "trades": 19.0,
+            "win_rate_pct": 26.32,
+            "net_total": 2.1606,
+            "net_expectancy": 0.1137,
+            "max_drawdown": 12.4025
+          },
+          "train": {
+            "trades": 89.0,
+            "win_rate_pct": 20.22,
+            "net_total": 13.892,
+            "net_expectancy": 0.1561,
+            "max_drawdown": 34.4471
+          }
+        },
+        {
+          "oos_start": "2026-06-24",
+          "oos_end": "2026-10-11",
+          "oos": {
+            "trades": 24.0,
+            "win_rate_pct": 25.0,
+            "net_total": -4.7046,
+            "net_expectancy": -0.196,
+            "max_drawdown": 7.4131
+          },
+          "train": {
+            "trades": 108.0,
+            "win_rate_pct": 20.37,
+            "net_total": 13.3159,
+            "net_expectancy": 0.1233,
+            "max_drawdown": 34.4471
+          }
+        }
+      ]
+    },
+    {
+      "value": 25.0,
+      "trades": 65.0,
+      "win_rate_pct": 28.557499999999997,
+      "net_total": 0.8131000000000004,
+      "net_expectancy": 0.07255,
+      "max_drawdown": 10.2041,
+      "train": {
+        "trades": 268.0,
+        "win_rate_pct": 19.6175,
+        "net_total": -56.358999999999995,
+        "net_expectancy": -0.240525,
+        "max_drawdown": 28.5792
+      },
+      "folds_positive": 2,
+      "n_folds": 4,
+      "folds": [
+        {
+          "oos_start": "2025-07-31",
+          "oos_end": "2025-11-17",
+          "oos": {
+            "trades": 9.0,
+            "win_rate_pct": 44.44,
+            "net_total": 3.4315,
+            "net_expectancy": 0.3813,
+            "max_drawdown": 2.6859
+          },
+          "train": {
+            "trades": 47.0,
+            "win_rate_pct": 14.89,
+            "net_total": -20.0478,
+            "net_expectancy": -0.4265,
+            "max_drawdown": 28.3462
+          }
+        },
+        {
+          "oos_start": "2025-11-17",
+          "oos_end": "2026-03-06",
+          "oos": {
+            "trades": 17.0,
+            "win_rate_pct": 17.65,
+            "net_total": -2.272,
+            "net_expectancy": -0.1336,
+            "max_drawdown": 5.2133
+          },
+          "train": {
+            "trades": 57.0,
+            "win_rate_pct": 21.05,
+            "net_total": -15.9457,
+            "net_expectancy": -0.2797,
+            "max_drawdown": 28.3462
+          }
+        },
+        {
+          "oos_start": "2026-03-06",
+          "oos_end": "2026-06-24",
+          "oos": {
+            "trades": 17.0,
+            "win_rate_pct": 29.41,
+            "net_total": 4.359,
+            "net_expectancy": 0.2564,
+            "max_drawdown": 10.2041
+          },
+          "train": {
+            "trades": 73.0,
+            "win_rate_pct": 20.55,
+            "net_total": -11.8395,
+            "net_expectancy": -0.1622,
+            "max_drawdown": 28.3462
+          }
+        },
+        {
+          "oos_start": "2026-06-24",
+          "oos_end": "2026-10-11",
+          "oos": {
+            "trades": 22.0,
+            "win_rate_pct": 22.73,
+            "net_total": -4.7054,
+            "net_expectancy": -0.2139,
+            "max_drawdown": 7.4131
+          },
+          "train": {
+            "trades": 91.0,
+            "win_rate_pct": 21.98,
+            "net_total": -8.526,
+            "net_expectancy": -0.0937,
+            "max_drawdown": 28.5792
+          }
+        }
+      ]
+    },
+    {
+      "value": 28.0,
+      "trades": 50.0,
+      "win_rate_pct": 38.41,
+      "net_total": 14.9697,
+      "net_expectancy": 0.4501,
+      "max_drawdown": 6.3495,
+      "train": {
+        "trades": 205.0,
+        "win_rate_pct": 21.447499999999998,
+        "net_total": -3.094199999999999,
+        "net_expectancy": -0.05729999999999999,
+        "max_drawdown": 20.0838
+      },
+      "folds_positive": 3,
+      "n_folds": 4,
+      "folds": [
+        {
+          "oos_start": "2025-07-31",
+          "oos_end": "2025-11-17",
+          "oos": {
+            "trades": 8.0,
+            "win_rate_pct": 50.0,
+            "net_total": 3.3337,
+            "net_expectancy": 0.4167,
+            "max_drawdown": 1.6182
+          },
+          "train": {
+            "trades": 36.0,
+            "win_rate_pct": 13.89,
+            "net_total": -10.7304,
+            "net_expectancy": -0.2981,
+            "max_drawdown": 20.0838
+          }
+        },
+        {
+          "oos_start": "2025-11-17",
+          "oos_end": "2026-03-06",
+          "oos": {
+            "trades": 13.0,
+            "win_rate_pct": 23.08,
+            "net_total": 1.9116,
+            "net_expectancy": 0.147,
+            "max_drawdown": 4.1655
+          },
+          "train": {
+            "trades": 45.0,
+            "win_rate_pct": 22.22,
+            "net_total": -6.7261,
+            "net_expectancy": -0.1495,
+            "max_drawdown": 20.0838
+          }
+        },
+        {
+          "oos_start": "2026-03-06",
+          "oos_end": "2026-06-24",
+          "oos": {
+            "trades": 9.0,
+            "win_rate_pct": 55.56,
+            "net_total": 12.2803,
+            "net_expectancy": 1.3645,
+            "max_drawdown": 2.2828
+          },
+          "train": {
+            "trades": 57.0,
+            "win_rate_pct": 22.81,
+            "net_total": 1.5637,
+            "net_expectancy": 0.0274,
+            "max_drawdown": 20.0838
+          }
+        },
+        {
+          "oos_start": "2026-06-24",
+          "oos_end": "2026-10-11",
+          "oos": {
+            "trades": 20.0,
+            "win_rate_pct": 25.0,
+            "net_total": -2.5559,
+            "net_expectancy": -0.1278,
+            "max_drawdown": 6.3495
+          },
+          "train": {
+            "trades": 67.0,
+            "win_rate_pct": 26.87,
+            "net_total": 12.7986,
+            "net_expectancy": 0.191,
+            "max_drawdown": 20.0838
+          }
+        }
+      ]
+    },
+    {
+      "value": 32.0,
+      "trades": 32.0,
+      "win_rate_pct": 39.0775,
+      "net_total": 20.4651,
+      "net_expectancy": 0.7591249999999999,
+      "max_drawdown": 3.1874,
+      "train": {
+        "trades": 155.0,
+        "win_rate_pct": 23.57,
+        "net_total": 18.9039,
+        "net_expectancy": 0.07415,
+        "max_drawdown": 19.024
+      },
+      "folds_positive": 4,
+      "n_folds": 4,
+      "folds": [
+        {
+          "oos_start": "2025-07-31",
+          "oos_end": "2025-11-17",
+          "oos": {
+            "trades": 7.0,
+            "win_rate_pct": 57.14,
+            "net_total": 4.4056,
+            "net_expectancy": 0.6294,
+            "max_drawdown": 1.0371
+          },
+          "train": {
+            "trades": 28.0,
+            "win_rate_pct": 14.29,
+            "net_total": -7.2686,
+            "net_expectancy": -0.2596,
+            "max_drawdown": 19.024
+          }
+        },
+        {
+          "oos_start": "2025-11-17",
+          "oos_end": "2026-03-06",
+          "oos": {
+            "trades": 8.0,
+            "win_rate_pct": 37.5,
+            "net_total": 6.5934,
+            "net_expectancy": 0.8242,
+            "max_drawdown": 3.1119
+          },
+          "train": {
+            "trades": 36.0,
+            "win_rate_pct": 25.0,
+            "net_total": -2.1924,
+            "net_expectancy": -0.0609,
+            "max_drawdown": 19.024
+          }
+        },
+        {
+          "oos_start": "2026-03-06",
+          "oos_end": "2026-06-24",
+          "oos": {
+            "trades": 5.0,
+            "win_rate_pct": 20.0,
+            "net_total": 6.8066,
+            "net_expectancy": 1.3613,
+            "max_drawdown": 2.1036
+          },
+          "train": {
+            "trades": 43.0,
+            "win_rate_pct": 27.91,
+            "net_total": 10.7792,
+            "net_expectancy": 0.2507,
+            "max_drawdown": 19.024
+          }
+        },
+        {
+          "oos_start": "2026-06-24",
+          "oos_end": "2026-10-11",
+          "oos": {
+            "trades": 12.0,
+            "win_rate_pct": 41.67,
+            "net_total": 2.6595,
+            "net_expectancy": 0.2216,
+            "max_drawdown": 3.1874
+          },
+          "train": {
+            "trades": 48.0,
+            "win_rate_pct": 27.08,
+            "net_total": 17.5857,
+            "net_expectancy": 0.3664,
+            "max_drawdown": 19.024
+          }
+        }
+      ]
+    },
+    {
+      "value": 36.0,
+      "trades": 25.0,
+      "win_rate_pct": 49.8825,
+      "net_total": 21.3582,
+      "net_expectancy": 1.262225,
+      "max_drawdown": 3.1119,
+      "train": {
+        "trades": 139.0,
+        "win_rate_pct": 24.275,
+        "net_total": 27.3892,
+        "net_expectancy": 0.152275,
+        "max_drawdown": 17.9385
+      },
+      "folds_positive": 4,
+      "n_folds": 4,
+      "folds": [
+        {
+          "oos_start": "2025-07-31",
+          "oos_end": "2025-11-17",
+          "oos": {
+            "trades": 6.0,
+            "win_rate_pct": 66.67,
+            "net_total": 5.5143,
+            "net_expectancy": 0.9191,
+            "max_drawdown": 1.0362
+          },
+          "train": {
+            "trades": 26.0,
+            "win_rate_pct": 15.38,
+            "net_total": -5.1349,
+            "net_expectancy": -0.1975,
+            "max_drawdown": 17.9385
+          }
+        },
+        {
+          "oos_start": "2025-11-17",
+          "oos_end": "2026-03-06",
+          "oos": {
+            "trades": 7.0,
+            "win_rate_pct": 42.86,
+            "net_total": 7.6386,
+            "net_expectancy": 1.0912,
+            "max_drawdown": 3.1119
+          },
+          "train": {
+            "trades": 33.0,
+            "win_rate_pct": 24.24,
+            "net_total": -0.6692,
+            "net_expectancy": -0.0203,
+            "max_drawdown": 17.9385
+          }
+        },
+        {
+          "oos_start": "2026-03-06",
+          "oos_end": "2026-06-24",
+          "oos": {
+            "trades": 2.0,
+            "win_rate_pct": 50.0,
+            "net_total": 5.5451,
+            "net_expectancy": 2.7726,
+            "max_drawdown": 1.0456
+          },
+          "train": {
+            "trades": 39.0,
+            "win_rate_pct": 28.21,
+            "net_total": 13.8241,
+            "net_expectancy": 0.3545,
+            "max_drawdown": 17.9385
+          }
+        },
+        {
+          "oos_start": "2026-06-24",
+          "oos_end": "2026-10-11",
+          "oos": {
+            "trades": 10.0,
+            "win_rate_pct": 40.0,
+            "net_total": 2.6602,
+            "net_expectancy": 0.266,
+            "max_drawdown": 2.1248
+          },
+          "train": {
+            "trades": 41.0,
+            "win_rate_pct": 29.27,
+            "net_total": 19.3692,
+            "net_expectancy": 0.4724,
+            "max_drawdown": 17.9385
+          }
+        }
+      ]
+    }
+  ],
+  "best_by_net_total": {
+    "value": 22.0,
+    "trades": 77.0,
+    "win_rate_pct": 29.41,
+    "net_total": 30.4471,
+    "net_expectancy": 0.529225,
+    "max_drawdown": 12.4025,
+    "train": {
+      "trades": 323.0,
+      "win_rate_pct": 17.9075,
+      "net_total": 11.7272,
+      "net_expectancy": -0.008175000000000005,
+      "max_drawdown": 34.4471
+    },
+    "folds_positive": 3,
+    "n_folds": 4,
+    "folds": [
+      {
+        "oos_start": "2025-07-31",
+        "oos_end": "2025-11-17",
+        "oos": {
+          "trades": 15.0,
+          "win_rate_pct": 40.0,
+          "net_total": 32.9726,
+          "net_expectancy": 2.1982,
+          "max_drawdown": 5.5143
+        },
+        "train": {
+          "trades": 55.0,
+          "win_rate_pct": 12.73,
+          "net_total": -22.976,
+          "net_expectancy": -0.4177,
+          "max_drawdown": 31.6007
+        }
+      },
+      {
+        "oos_start": "2025-11-17",
+        "oos_end": "2026-03-06",
+        "oos": {
+          "trades": 19.0,
+          "win_rate_pct": 26.32,
+          "net_total": 0.0185,
+          "net_expectancy": 0.001,
+          "max_drawdown": 5.221
+        },
+        "train": {
+          "trades": 71.0,
+          "win_rate_pct": 18.31,
+          "net_total": 7.4953,
+          "net_expectancy": 0.1056,
+          "max_drawdown": 34.4471
+        }
+      },
+      {
+        "oos_start": "2026-03-06",
+        "oos_end": "2026-06-24",
+        "oos": {
+          "trades": 19.0,
+          "win_rate_pct": 26.32,
+          "net_total": 2.1606,
+          "net_expectancy": 0.1137,
+          "max_drawdown": 12.4025
+        },
+        "train": {
+          "trades": 89.0,
+          "win_rate_pct": 20.22,
+          "net_total": 13.892,
+          "net_expectancy": 0.1561,
+          "max_drawdown": 34.4471
+        }
+      },
+      {
+        "oos_start": "2026-06-24",
+        "oos_end": "2026-10-11",
+        "oos": {
+          "trades": 24.0,
+          "win_rate_pct": 25.0,
+          "net_total": -4.7046,
+          "net_expectancy": -0.196,
+          "max_drawdown": 7.4131
+        },
+        "train": {
+          "trades": 108.0,
+          "win_rate_pct": 20.37,
+          "net_total": 13.3159,
+          "net_expectancy": 0.1233,
+          "max_drawdown": 34.4471
+        }
+      }
+    ]
+  },
+  "best_by_net_expectancy_minN": {
+    "value": 36.0,
+    "trades": 25.0,
+    "win_rate_pct": 49.8825,
+    "net_total": 21.3582,
+    "net_expectancy": 1.262225,
+    "max_drawdown": 3.1119,
+    "train": {
+      "trades": 139.0,
+      "win_rate_pct": 24.275,
+      "net_total": 27.3892,
+      "net_expectancy": 0.152275,
+      "max_drawdown": 17.9385
+    },
+    "folds_positive": 4,
+    "n_folds": 4,
+    "folds": [
+      {
+        "oos_start": "2025-07-31",
+        "oos_end": "2025-11-17",
+        "oos": {
+          "trades": 6.0,
+          "win_rate_pct": 66.67,
+          "net_total": 5.5143,
+          "net_expectancy": 0.9191,
+          "max_drawdown": 1.0362
+        },
+        "train": {
+          "trades": 26.0,
+          "win_rate_pct": 15.38,
+          "net_total": -5.1349,
+          "net_expectancy": -0.1975,
+          "max_drawdown": 17.9385
+        }
+      },
+      {
+        "oos_start": "2025-11-17",
+        "oos_end": "2026-03-06",
+        "oos": {
+          "trades": 7.0,
+          "win_rate_pct": 42.86,
+          "net_total": 7.6386,
+          "net_expectancy": 1.0912,
+          "max_drawdown": 3.1119
+        },
+        "train": {
+          "trades": 33.0,
+          "win_rate_pct": 24.24,
+          "net_total": -0.6692,
+          "net_expectancy": -0.0203,
+          "max_drawdown": 17.9385
+        }
+      },
+      {
+        "oos_start": "2026-03-06",
+        "oos_end": "2026-06-24",
+        "oos": {
+          "trades": 2.0,
+          "win_rate_pct": 50.0,
+          "net_total": 5.5451,
+          "net_expectancy": 2.7726,
+          "max_drawdown": 1.0456
+        },
+        "train": {
+          "trades": 39.0,
+          "win_rate_pct": 28.21,
+          "net_total": 13.8241,
+          "net_expectancy": 0.3545,
+          "max_drawdown": 17.9385
+        }
+      },
+      {
+        "oos_start": "2026-06-24",
+        "oos_end": "2026-10-11",
+        "oos": {
+          "trades": 10.0,
+          "win_rate_pct": 40.0,
+          "net_total": 2.6602,
+          "net_expectancy": 0.266,
+          "max_drawdown": 2.1248
+        },
+        "train": {
+          "trades": 41.0,
+          "win_rate_pct": 29.27,
+          "net_total": 19.3692,
+          "net_expectancy": 0.4724,
+          "max_drawdown": 17.9385
+        }
+      }
+    ]
+  },
+  "baseline_row": {
+    "value": 28.0,
+    "trades": 50.0,
+    "win_rate_pct": 38.41,
+    "net_total": 14.9697,
+    "net_expectancy": 0.4501,
+    "max_drawdown": 6.3495,
+    "train": {
+      "trades": 205.0,
+      "win_rate_pct": 21.447499999999998,
+      "net_total": -3.094199999999999,
+      "net_expectancy": -0.05729999999999999,
+      "max_drawdown": 20.0838
+    },
+    "folds_positive": 3,
+    "n_folds": 4,
+    "folds": [
+      {
+        "oos_start": "2025-07-31",
+        "oos_end": "2025-11-17",
+        "oos": {
+          "trades": 8.0,
+          "win_rate_pct": 50.0,
+          "net_total": 3.3337,
+          "net_expectancy": 0.4167,
+          "max_drawdown": 1.6182
+        },
+        "train": {
+          "trades": 36.0,
+          "win_rate_pct": 13.89,
+          "net_total": -10.7304,
+          "net_expectancy": -0.2981,
+          "max_drawdown": 20.0838
+        }
+      },
+      {
+        "oos_start": "2025-11-17",
+        "oos_end": "2026-03-06",
+        "oos": {
+          "trades": 13.0,
+          "win_rate_pct": 23.08,
+          "net_total": 1.9116,
+          "net_expectancy": 0.147,
+          "max_drawdown": 4.1655
+        },
+        "train": {
+          "trades": 45.0,
+          "win_rate_pct": 22.22,
+          "net_total": -6.7261,
+          "net_expectancy": -0.1495,
+          "max_drawdown": 20.0838
+        }
+      },
+      {
+        "oos_start": "2026-03-06",
+        "oos_end": "2026-06-24",
+        "oos": {
+          "trades": 9.0,
+          "win_rate_pct": 55.56,
+          "net_total": 12.2803,
+          "net_expectancy": 1.3645,
+          "max_drawdown": 2.2828
+        },
+        "train": {
+          "trades": 57.0,
+          "win_rate_pct": 22.81,
+          "net_total": 1.5637,
+          "net_expectancy": 0.0274,
+          "max_drawdown": 20.0838
+        }
+      },
+      {
+        "oos_start": "2026-06-24",
+        "oos_end": "2026-10-11",
+        "oos": {
+          "trades": 20.0,
+          "win_rate_pct": 25.0,
+          "net_total": -2.5559,
+          "net_expectancy": -0.1278,
+          "max_drawdown": 6.3495
+        },
+        "train": {
+          "trades": 67.0,
+          "win_rate_pct": 26.87,
+          "net_total": 12.7986,
+          "net_expectancy": 0.191,
+          "max_drawdown": 20.0838
+        }
+      }
+    ]
+  },
+  "recommendation": {
+    "tier": 3,
+    "action": "propose_value",
+    "proposed_value": 36.0,
+    "yaml_line": "config/strategies.yaml::ada_pullback_2h.adx_min : 36.0",
+    "beats_baseline": true,
+    "chosen_net_total": 21.3582,
+    "chosen_is_profitable": true,
+    "any_grid_value_profitable": true,
+    "metric_basis": "oos",
+    "train_oos_consistent": true,
+    "folds_positive": 4,
+    "n_folds": 4,
+    "robust": true,
+    "detail": "ADVISORY \u2014 applying this is a Tier-3 config/strategies.yaml change the operator approves; this harness never writes config. Metric basis: OOS (k-fold walk-forward)."
+  }
+}
