@@ -1,0 +1,24 @@
+{
+  "based_on": "20261010T190921694730Z-792cd8f4.json",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "the 5 unmatched legs are each attributed by pairs_group_id to a named mechanism (strand, never-executed sibling, reconciler close) with a fix PR or a stated reason not to fix; and the a/b counts over the following 30 days differ by 0",
+    "kind": "event",
+    "last_checked": "2026-10-11"
+  },
+  "id": "PI-20261007-N6TXSAL6-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane PAIRS-STOCKTAKE session_011BUSVxr9kPZvkNn6TXSaL6, manager session_01MM8o5js6TcDFeNAPBY4Ntv, docs/research/pairs-stocktake-2026-10-07.md",
+    "rerun": "python3 - <<'X'\nimport json,urllib.request,urllib.parse\nfrom collections import Counter\nrows=[];off=0\nwhile True:\n    q=urllib.parse.urlencode(dict(limit=200,offset=off,since='2026-08-01T00:00:00Z',account_id='bybit_1',include_paper='true',include_demo='true'))\n    b=json.load(urllib.request.urlopen('https://ict-bot.duckdns.org/api/bot/trades/closed?'+q,timeout=40))\n    if not b: break\n    rows+=b; off+=len(b)\n    if len(b)<200: break\np=[r for r in rows if str(r.get('pattern','')).startswith('pairs_')]\nprint(Counter(r['pattern'] for r in p)); print(Counter(r['closeReason'] for r in p))\nX"
+  },
+  "redate": {
+    "evidence": "journal pull via scripts/ops/diag_fetch.sh journal?table=trades|order_packages, grouped on order_packages.signal_logic.pairs_group_id",
+    "observation": "PAIRS-GAPS 2026-10-11: attributed by pairs_group_id over trades+order_packages (journal, strategy_name pairs_*, ts>=2026-08-01, 611 rows, a=307/b=304): 304 groups, 4 not a clean a+b. Net unmatched = 3 'a' legs (sol_eth +2: pair-0f7fda8201c1 5724 half_open_cleanup, pair-d55e5fb6dbe9 5288 pairs_stop after a reconciler_filled 5276; bnb_btc +1: pair-d09ea31b4309 5463 half_open_cleanup); pair-84b4cf66d344 is a+a+b+b (orphan-reattach duplicate, 5453 = BL-20260908 size-gate incident). Mechanism: b leg never executed/stranded -> pairs_half_open_cleanup or reconciler_filled. Every group after 2026-09-12 is balanced (29 days). The item's 5 differs from 3: it used /trades/closed incl. demo rows -- population not reproducible here. Fix: none warranted by this data (no recurrence); 30-day zero-difference clause not yet met.",
+    "observed_at": "2026-10-11"
+  },
+  "routed_to": "PAIRS-GAPS | [PIPELINE-ROUTE 2026-10-09] new row created this lane to own it.",
+  "state": "routed",
+  "what": "[health][performance] Pairs leg closes on bybit_1 are NOT balanced and 80 of 591 ended `reconciler`. MEASURED 2026-10-07 ~18:10Z via GET /api/bot/trades/closed?account_id=bybit_1&since=2026-08-01&include_paper=true&include_demo=true (paged, 1,034 rows): pairs_sol_eth_a 153 / _b 152, pairs_bnb_btc_a 145 / _b 141 (4 unmatched), closeReason other 511 / reconciler 80, pnlProvenance unverified 115. A market-neutral pair must close both legs together; an unmatched leg is a strand or a never-executed sibling (PI-20261004-ZBHFJG6X-0002 names two never-executed bnb_btc a-legs; this count says the class is wider than two). Soak 09-30..10-07 also shows 2 open_failed + 4 skip_size on bnb_btc and 1 half_open on sol_eth. Root-cause the 5 unmatched legs by pairs_group_id from the journal (order_packages.meta) and name the mechanism; the 80 reconciler closes need the same treatment PI-20260930-AQRK6CL1-0002 gives the paper books."
+}

@@ -70,7 +70,29 @@ inputs:
       day on a genuinely stranded branch. Give the calling job a
       `timeout-minutes` above this or the job dies mid-wait — research-queue
       dispatch carries 35 for exactly that reason.
-    default: "30"
+
+      ⚠️ RAISED 30 -> 50 (lane OPS-FIXES 2026-10-04, PI-20261004-PUQ1APTH-0008,
+      PI-20261004-FOJGFIZF-0003). The suite grew ~2.4x since the 30 was sized:
+      MEASURED pytest-run 37 min on #16198 (07:29:38-08:06:35Z, auto-merged
+      08:06:56Z, verify failed at its 30-min deadline 08:00Z) and 34.6 min on
+      #16240 (21204 passed); dispatcher runs 37184231129 and 37166184601 went
+      red the same way after their PRs merged. The one-shot re-check after the
+      deadline (STAMP-RACE, below) cannot rescue a merge that lands minutes
+      later. 50 = ~37 run + queue time + margin. Every caller's job budget was
+      raised by the same 20 min so the work allowance each had is unchanged.
+
+      ⚠️ RAISED 50 -> 80 (HEALTH-REVIEW-W41, 2026-10-09; RQ-COLLECTOR residual).
+      The 2026-10-04 sizing was outgrown in 5 days. MEASURED over the 20
+      completed `pytest-run` pushes on main 2026-10-09 (Actions run durations):
+      29-64 min, 12 of 20 above 44 min. Dispatcher run 37965310081 went red
+      because its batch PR #17287's own `pytest-run` took 44 min
+      (17:21:15-18:05:59Z) and the 50 min wait expired at 18:11Z, ~5 min after
+      CI went green. The collector was NOT the cause (its step succeeded and
+      "Fail the job if the collector lost a run's rows" was skipped). 80 =
+      observed worst 64 + queue. Every caller's job budget was raised by the
+      same 30 min. ⚠️ A FIXED NUMBER WILL BE OUTGROWN AGAIN; the real fix is a
+      faster `pytest-run` (pipeline row filed by this review).
+    default: "80"
   refresh-command:
     description: >
       A shell command that RE-DERIVES this caller's generated file(s), run after
@@ -380,6 +402,76 @@ runs:
                    ".github/pr-automerge-requests/${SLUG}.txt" \
                    ".github/merge-slots"
         git commit -m "${MESSAGE}"
+        # CUT THE THROWAWAY BRANCH FROM `main`, NOT FROM THE DISPATCH REF
+        # (2026-10-04, lane CI-AUTOMERGE). Until now the commit above sat on
+        # whatever the CALLER checked out. A run dispatched on a session branch
+        # therefore pushed that whole branch: MEASURED 2026-10-04 on #16457
+        # (m20-exit-lever-sweep run 37222250087, dispatched on
+        # `claude/research-run-units`) — 1 result file plus 19 unmerged session
+        # commits and 57 files, including pre-registered queue units and that
+        # branch's own `hold` declaration, so `check_pr_landing` refused it under
+        # R5 + R12 and it could never land. 21 open research-result PRs had the
+        # same shape. The fix: replay ONLY the produced commit onto `main`.
+        #
+        # ⚠️ Only when the job did not run on `main` (GITHUB_REF), so a scheduled
+        # or main-dispatched caller is byte-for-byte unchanged. A conflicted
+        # `*.jsonl` is an append-only store: it resolves to main's file plus
+        # EXACTLY the lines this commit added — never the dispatch branch's own
+        # rows, which land (or not) with that branch's PR. Any other conflict
+        # falls back to the old behaviour, LOUDLY: the rows are kept on a PR
+        # that will need a human, rather than lost.
+        #
+        # ⚠️ WIDENED 2026-10-07 (lane RQ-INFRA, PI-20261006-LCEVL8D5-0001) FROM
+        # "ran off main" TO "this commit's parent is not main's tip". The old
+        # condition left a scheduled caller's SECOND call in one job cut from
+        # the FIRST call's commit: `research-queue-dispatch.yml` calls this
+        # action for the liveness receipt and then for the stamps, so every
+        # stamp branch carried the receipt commit under it. MEASURED 2026-10-07
+        # on #16900: `commits: 2`, `mergeable_state: dirty` -- the receipt PR
+        # squash-merged, the next run's receipt moved `research-queue-
+        # dispatch-receipt.json` again, and the stacked branch conflicted
+        # forever. A CONFLICTING PR gets no `pull_request` workflow runs at all
+        # (#16900 and #16850: zero check runs hours after opening), so its
+        # required checks never exist, auto-merge never fires, and the
+        # `last_dispatched_at` stamp it carries never lands -- the unit
+        # re-fires. A caller whose parent already IS main's tip is unchanged.
+        if [ "${GITHUB_REF:-refs/heads/main}" != "refs/heads/main" ] \
+           || [ "$(git rev-parse HEAD~1 2>/dev/null || true)" != "$(git ls-remote origin refs/heads/main 2>/dev/null | cut -f1)" ]; then
+          PRODUCED="$(git rev-parse HEAD)"
+          if git fetch -q --no-tags origin main; then
+            git checkout -q --detach FETCH_HEAD
+            REPLAYED=false
+            if git cherry-pick --allow-empty "${PRODUCED}" >/dev/null 2>&1; then
+              REPLAYED=true
+            else
+              RESOLVED=true
+              for f in $(git diff --name-only --diff-filter=U); do
+                case "$f" in
+                  *.jsonl)
+                    { git show "FETCH_HEAD:$f" 2>/dev/null || true
+                      git diff --no-color --unified=0 "${PRODUCED}~1" "${PRODUCED}" -- "$f" \
+                        | grep -E '^\+' | grep -vE '^\+\+\+ ' | cut -c2- ; } > "$f.cm-tmp"
+                    mv "$f.cm-tmp" "$f"
+                    git add -- "$f" ;;
+                  *) RESOLVED=false ;;
+                esac
+              done
+              if [ "${RESOLVED}" = "true" ] && GIT_EDITOR=true git cherry-pick --continue >/dev/null 2>&1; then
+                REPLAYED=true
+              else
+                git cherry-pick --abort || true
+              fi
+            fi
+            if [ "${REPLAYED}" = "true" ]; then
+              echo "commit-to-main: ran on ${GITHUB_REF}; replayed the produced commit onto main so ${BR} carries only this run's paths."
+            else
+              git checkout -q --detach "${PRODUCED}"
+              echo "::warning::commit-to-main: ran on ${GITHUB_REF} and the produced commit does not replay cleanly onto main. Falling back to the dispatch ref as the base, so ${BR} ALSO carries that ref's unmerged commits and will likely need a human to land."
+            fi
+          else
+            echo "::warning::commit-to-main: could not fetch main to replay onto; ${BR} is cut from ${GITHUB_REF} and carries its unmerged commits."
+          fi
+        fi
         # Push the throwaway branch. The calling job checked out with the PAT, so
         # `origin` is PAT-authenticated → the PR opened below triggers the required
         # checks (a GITHUB_TOKEN-opened PR would not).
@@ -774,13 +866,36 @@ runs:
         # COMMITTED on main, byte-identical to what we wrote? That is
         # squash-safe, needs no `gh`, and is the claim itself rather than a
         # proxy for it.
-        LANDED="unknown"
-        if git fetch -q origin main 2>/dev/null; then
-          # shellcheck disable=SC2086 — PATHS is a space-separated pathspec list.
-          if git diff --quiet HEAD FETCH_HEAD -- ${PATHS} 2>/dev/null; then
+        landed_on_main() {
+          LANDED="unknown"
+          if git fetch -q origin main 2>/dev/null; then
+            # shellcheck disable=SC2086 — PATHS is a space-separated pathspec list.
+            if git diff --quiet HEAD FETCH_HEAD -- ${PATHS} 2>/dev/null; then
+              LANDED="yes"
+            else
+              LANDED="no"
+            fi
+          fi
+          [ "${LANDED}" = "yes" ]
+        }
+        # ⚠️ ONE FINAL RE-CHECK, AFTER A SETTLE (research-queue-dispatch run
+        # 36910217777, 2026-10-01): stamp PR #15276 MERGED 13 s AFTER the 30m wait
+        # expired (its pytest-run took 28.5m), and the single check above ran at
+        # the expiry instant, so the job failed on a stamp that landed seconds
+        # later. The last poll is up to a full 30 s `sleep` stale, so an immediate
+        # second look would miss the same race: wait one poll interval, then
+        # re-read the PR state and the main paths exactly once. This does NOT
+        # extend the timeout (it is one bounded, non-looping look) and does not
+        # change which checks run; a PR that is still not merged fails as before.
+        if ! landed_on_main; then
+          sleep 45
+          FINAL_STATE="$(gh pr view "${PR_URL}" --json state --jq .state 2>/dev/null || echo UNKNOWN)"
+          [ "${FINAL_STATE}" = "UNKNOWN" ] || STATE_EVER_READ=1
+          if [ "${FINAL_STATE}" = "MERGED" ]; then
+            git fetch -q origin main 2>/dev/null || true
             LANDED="yes"
           else
-            LANDED="no"
+            landed_on_main || true
           fi
         fi
 

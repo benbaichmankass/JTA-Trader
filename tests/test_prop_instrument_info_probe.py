@@ -37,14 +37,27 @@ def page_html(*, margin="$0", order_rows="", one_click="", panel_names=None, dia
               close_btn=True, no_close=False, sym_cell_extra="", link_breaks_for="",
               panel_role="", orders_hidden=False, one_click_unreadable=False, panel_extra="",
               hover_button_for="", outside_table="", orders_headers=None, no_panel_for="",
-              toggle_attrs=""):
+              toggle_attrs="", orders_depth=1, stray_for="", late_ms=0):
     rows = "".join(
         f'<tr class="instrument" data-row-id="{i}"><td class="sym">{s}{sym_cell_extra if s == "SOLUSD" else ""}</td>'
         f'<td><button class="px" onclick="window.__trade=(window.__trade||0)+1">100.1</button></td>'
         f'<td><button class="px" onclick="window.__trade=(window.__trade||0)+1">100.2</button></td></tr>'
         for i, s in enumerate(["ETHUSD", "SOLUSD", "BTCUSD", "AVAXUSD"]))
+    # The MEASURED toggle (issues #14714/#14754): a div with data-value and a
+    # knob sibling (left = off). ``one_click="checked"`` renders the ON shape
+    # (UNMEASURED on the live terminal: knob right, data-value true).
+    on = one_click == "checked"
     toggle = (f'<div {toggle_attrs}><span>One-click trading</span></div>' if one_click_unreadable else
-              f'<label><input type="checkbox" {one_click}><span>One-click trading</span></label>')
+              f'<div style="position:relative;height:17px">'
+              f'<div data-test-id="one_click_trading" data-value="{"true" if on else "false"}" '
+              f'style="position:absolute;left:0;top:0;width:26px;height:16px"></div>'
+              f'<div style="position:absolute;left:{"12px" if on else "2px"};top:2px;width:12px;height:12px"></div>'
+              f'<div style="margin-left:30px">One-click trading</div></div>')
+    # The live Orders button sits 9 wrappers below its widgetNew__container
+    # (container at ancestor level 10, issue #14754); ``orders_depth`` nests it.
+    menu = '<button data-test-id="widget_menu_ORDERS">Orders</button>'
+    for _ in range(orders_depth - 1):
+        menu = f"<div>{menu}</div>"
     heads = "".join(f"<th>{h}</th>" for h in (orders_headers or ["Symbol", "Side", "Order Type", "Order ID"]))
     return f"""<html><body>
 <div class="metrics"><div><span>Balance</span><div>$5,024</div></div>
@@ -59,7 +72,7 @@ def page_html(*, margin="$0", order_rows="", one_click="", panel_names=None, dia
   <div class="instrument-details"><button data-test-id="instrument_info_button"><svg><use href="#icon-info"></use></svg></button></div>
 </div></div>
 <div class="widget__container___Or1 widgetNew__container orders-widget" {'style="display:none"' if orders_hidden else ''}>
-  <button data-test-id="widget_menu_ORDERS">Orders</button>
+  {menu}
   <table><thead><tr>{heads}</tr></thead><tbody>{order_rows}</tbody></table></div>
 {outside_table}
 <script>
@@ -93,6 +106,12 @@ document.querySelector('[data-test-id=instrument_info_button]').addEventListener
   const open = document.querySelector('.info-panel');
   if (open) {{ if (!{json.dumps(no_close)}) open.remove(); return; }}
   const s = document.querySelector('[data-test-id=symbol_input]').value;
+  if (s === {json.dumps(stray_for)}) {{
+    // a small new element that is NOT panel-sized and ignores Escape (a
+    // tooltip-like stand-in for the one live #14831 recorded)
+    const t = document.createElement('div'); t.className = 'stray'; t.textContent = 'Info';
+    t.style.cssText = 'width:60px;height:20px'; document.body.appendChild(t); return;
+  }}
   if (s === {json.dumps(no_panel_for)}) return;
   const name = PANEL_NAMES ? PANEL_NAMES : s;
   const p = document.createElement('div'); p.className = 'info-panel';
@@ -103,7 +122,7 @@ document.querySelector('[data-test-id=instrument_info_button]').addEventListener
     + ({json.dumps(close_btn)} ? '<button class="close" aria-label="Close">x</button>' : '');
   const btn = p.querySelector('button.close');
   if (btn) btn.addEventListener('click', () => {{ if (!{json.dumps(no_close)}) p.remove(); }});
-  document.body.appendChild(p);
+  if ({late_ms}) setTimeout(() => document.body.appendChild(p), {late_ms}); else document.body.appendChild(p);
 }});
 // Escape dismisses an open info panel (a refused panel is closed this way,
 // never by a click).
@@ -173,7 +192,7 @@ def test_restore_latch_reason_is_set_only_for_an_unverified_click_mode_restore()
     assert info_probe_restore_latch_reason({"mode": "click", "restore": {"verified": True}}) is None
     why = info_probe_restore_latch_reason({"mode": "click", "restore": {
         "original": "SOLUSD", "attempted": False, "verified": False}})
-    assert why.startswith("AUTO-REVERT") and "'SOLUSD'" in why and "executor-clear-halt" in why
+    assert why.startswith("PROBE-RESTORE-UNVERIFIED") and "'SOLUSD'" in why and "executor-clear-halt" not in why
 
 
 # ── dry mode clicks nothing ────────────────────────────────────────────────
@@ -239,7 +258,6 @@ def test_a_dialog_typed_info_panel_is_dumped_and_closed(browser):
 @pytest.mark.parametrize("kw,why", [
     ({"margin": "$12.50"}, "Used Margin reads 12.5"),
     ({"order_rows": "<tr><td>SOLUSD</td><td>Buy</td><td>Limit</td><td>77</td></tr>"}, "1 working order"),
-    ({"one_click": "checked"}, "one-click trading does not read OFF (reads 'on')"),
     ({"sym_cell_extra": '<a href="#"></a>'}, "original symbol SOLUSD's watchlist cell is not cleanly clickable"),
 ])
 def test_refuses_before_any_click(browser, kw, why):
@@ -249,23 +267,29 @@ def test_refuses_before_any_click(browser, kw, why):
     never_traded(st)
 
 
-def test_fix1_an_unreadable_one_click_toggle_refuses_and_records_its_structure(browser):
-    # Review fix 1: the live terminal reads 'unknown' (#13711). The guard
-    # fails CLOSED -- only a positive "off" passes -- and dry mode records the
-    # toggle's structure so a reader can be built from it.
+# One-click is informational, never a refusal (operator directive 2026-10-01,
+# manager comment 5930025023 on #14947; it was fail-closed since review fix 1).
+def test_an_unreadable_one_click_toggle_is_recorded_with_its_structure_and_never_refuses(browser):
     got, st = run(browser, page_html(one_click_unreadable=True))
-    assert got["one_click"]["state"] == "unknown"
-    assert "does not read OFF (reads 'unknown')" in got["refused"]
-    assert "one_click_dump" in got and st["clicks"] == []
+    assert got["one_click"]["state"] == "unknown" and got["refused"] is None
+    assert "one_click_dump" in got and not any("one-click" in a for a in got["alerts"])
+    never_traded(st)
     dry, _ = run(browser, page_html(one_click_unreadable=True), click=False)
-    assert dry["refused"] and "one_click_dump" in dry
+    assert dry["refused"] is None and "one_click_dump" in dry
+
+
+def test_one_click_on_probes_anyway_alerts_once_and_never_trades(browser):
+    got, st = run(browser, page_html(one_click="checked"))
+    assert got["one_click"]["state"] == "on" and got["refused"] is None
+    assert sum("one-click trading reads ON" in a for a in got["alerts"]) == 1
+    never_traded(st)
 
 
 def test_refuses_without_the_orders_widget(browser):
     html = re.sub(r'<div class="widget__container___Or1.*?</table></div>', "", page_html(), flags=re.S)
     assert "widget_menu_ORDERS" not in html
     got, st = run(browser, html)
-    assert "0 visible widget_menu_ORDERS" in got["refused"] and st["clicks"] == []
+    assert "0 widget_menu_ORDERS" in got["refused"] and st["clicks"] == []
 
 
 HISTORY_TABLE = ('<div class="history"><table><thead><tr><th>Symbol</th><th>Order ID</th><th>Order Type</th>'
@@ -303,7 +327,7 @@ def test_a_dialog_after_a_row_click_aborts_and_restore_is_skipped_loudly(browser
     assert "AVAXUSD" not in got["results"]
     assert got["restore"]["attempted"] is False and got["restore"]["verified"] is False
     assert any("restore NOT attempted" in a for a in got["alerts"])
-    assert info_probe_restore_latch_reason(got).startswith("AUTO-REVERT")
+    assert info_probe_restore_latch_reason(got).startswith("PROBE-RESTORE-UNVERIFIED")
     never_traded(st)
 
 
@@ -325,16 +349,55 @@ def _no_restore_click(st):
     assert st["clicks"].count("sym") == 1, st["clicks"]
 
 
-def test_r3a_a_not_found_panel_gets_no_restore_click_and_latches(browser, tmp_path):
+def test_r3a_a_not_found_panel_with_a_new_element_left_gets_no_restore_click_and_latches(browser, tmp_path):
     # Round-3 review: found:false after the info click can mean unidentified
-    # new elements -- an open panel. No further click; the latch is written.
+    # new elements -- an open panel. When one is STILL VISIBLE after the one
+    # Escape, no further click; the latch is written.
     from scripts.prop.prop_executor_tick import latch_info_probe
-    got, st = run(browser, page_html(no_panel_for="BTCUSD"), symbols=("BTCUSD", "ETHUSD"))
+    got, st = run(browser, page_html(stray_for="BTCUSD"), symbols=("BTCUSD", "ETHUSD"))
     assert any("aborted before any close click" in a for a in got["alerts"])
-    assert got["results"]["BTCUSD"]["panel_open"] is True
+    r = got["results"]["BTCUSD"]
+    assert r["panel_open"] is True and r["panel_retry"] is True
+    assert r["after_escape"] == {"readable": True, "n_visible": 1} and st["keys"] == ["Escape"]
     assert got["restore"]["attempted"] is False and "unverified" in got["restore"]["why"]
     _no_restore_click(st)
-    assert latch_info_probe(got, tmp_path) and (tmp_path / "halted").exists()
+    never_traded(st)
+    assert latch_info_probe(got, tmp_path) and not (tmp_path / "halted").exists()
+
+
+def test_step5_a_not_found_panel_with_nothing_left_restores_and_does_not_latch(browser, tmp_path):
+    # Live -probe #14831 (manager step 5): the restore was skipped with no way
+    # back. When the one Escape leaves NO unidentified new element visible,
+    # the measured Symbol-cell restore runs and verifies; nothing latches.
+    from scripts.prop.prop_executor_tick import latch_info_probe
+    got, st = run(browser, page_html(no_panel_for="BTCUSD"), symbols=("BTCUSD", "ETHUSD"))
+    r = got["results"]["BTCUSD"]
+    assert r["panel_open"] is False and r["closed_via"] == "escape_nothing_left"
+    assert r["new_elements"]["readable"] is True and r["new_elements"]["n_visible"] == 0
+    assert "ETHUSD" not in got["results"]                         # still aborts the run
+    assert got["restore"] == {"original": "SOLUSD", "attempted": True, "clicked": True, "verified": True}
+    assert st["linked"] == "SOLUSD" and st["clicks"].count("sym") == 2 and st["keys"] == ["Escape"]
+    never_traded(st)
+    assert latch_info_probe(got, tmp_path) is None and not (tmp_path / "halted").exists()
+
+
+def test_step5_the_new_element_dump_is_masked_and_clicks_nothing(browser):
+    got, st = run(browser, page_html(stray_for="BTCUSD"), symbols=("BTCUSD",))
+    el = got["results"]["BTCUSD"]["new_elements"]["elements"]
+    assert el == [{"tag": "div", "role": "", "cls": ["stray"], "w": 60, "h": 20, "visible": True,
+                   "n_leaves": 1}]
+    assert st["clicks"] == ["sym", "instrument_info_button"]      # the Escape is a key, not a click
+
+
+def test_step5_a_panel_that_renders_late_is_found_on_the_retry(browser):
+    # 125ms sits mid-window between the first read (settle 50ms + overhead)
+    # and the retry (a further 3 x 50ms); 90ms raced the first read and
+    # flaked (1 in 3 on main, 2026-10-01).
+    got, st = run(browser, page_html(late_ms=125), symbols=("BTCUSD",))
+    r = got["results"]["BTCUSD"]
+    assert r["panel_retry"] is True and r["panel"]["found"] is True and r["closed"] is True
+    assert any("0.001" in leaf for leaf in r["leaves"]) and got["restore"]["verified"] is True
+    assert got["alerts"] == []
 
 
 def test_r3b_an_exception_in_the_close_step_gets_no_restore_click_and_latches(browser, tmp_path):
@@ -355,7 +418,7 @@ def test_r3b_an_exception_in_the_close_step_gets_no_restore_click_and_latches(br
     assert got["results"]["BTCUSD"]["panel_open"] is True and "ETHUSD" not in got["results"]
     assert got["restore"]["attempted"] is False
     assert clicks == ["sym", "instrument_info_button"], clicks
-    assert latch_info_probe(got, tmp_path) and (tmp_path / "halted").exists()
+    assert latch_info_probe(got, tmp_path) and not (tmp_path / "halted").exists()
 
 
 def test_an_unclosed_panel_skips_the_restore_and_latches(browser):
@@ -364,20 +427,19 @@ def test_an_unclosed_panel_skips_the_restore_and_latches(browser):
     got, st = run(browser, page_html(no_close=True), symbols=("BTCUSD", "ETHUSD"))
     assert any("did not close" in a for a in got["alerts"]) and "ETHUSD" not in got["results"]
     assert got["restore"]["attempted"] is False and "unclosed" in got["restore"]["why"]
-    assert info_probe_restore_latch_reason(got).startswith("AUTO-REVERT")
+    assert info_probe_restore_latch_reason(got).startswith("PROBE-RESTORE-UNVERIFIED")
     assert st["clicks"].count("sym") == 1                      # no restore click
 
 
-def test_fix3_a_failed_restore_writes_the_executor_halt_latch(browser, tmp_path):
+def test_fix3_a_failed_restore_alerts_and_writes_no_latch(browser, tmp_path):
     from scripts.prop.prop_executor_tick import latch_info_probe
     from src.prop import prop_executor as pe
     got, st = run(browser, page_html(link_breaks_for="SOLUSD"), symbols=("BTCUSD",))
     assert got["restore"]["verified"] is False
     assert any(a.startswith("RESTORE FAILED") for a in got["alerts"])
     reason = latch_info_probe(got, tmp_path)
-    halted = pe.ExecutorState(tmp_path).halted()
-    assert reason and halted and "AUTO-REVERT: instrument-info-probe" in halted
-    assert any(a.startswith("executor halt latch written") for a in got["alerts"])
+    assert reason and "instrument-info-probe" in reason and not pe.ExecutorState(tmp_path).halt_file.exists()
+    assert any(a.startswith("linked symbol unverified") for a in got["alerts"])
     # a verified restore writes nothing
     ok, _ = run(browser, page_html(), symbols=("BTCUSD",))
     assert latch_info_probe(ok, tmp_path / "clean") is None
@@ -393,7 +455,7 @@ def test_fix4_a_panel_naming_another_symbol_is_escaped_never_click_closed(browse
     # a REFUSED panel stops all further clicks, the restore included (re-review A)
     assert got["restore"]["attempted"] is False and st["panels"] == 0
     assert st["clicks"] == ["sym", "instrument_info_button"], st["clicks"]
-    assert info_probe_restore_latch_reason(got).startswith("AUTO-REVERT")
+    assert info_probe_restore_latch_reason(got).startswith("PROBE-RESTORE-UNVERIFIED")
 
 
 def test_fix4_a_panel_with_a_confirm_button_is_refused_and_its_buttons_never_clicked(browser):
@@ -442,7 +504,7 @@ def test_reA_a_non_dialog_buy_sell_panel_that_ignores_escape_gets_no_further_cli
     assert got["restore"]["attempted"] is False and "ETHUSD" not in got["results"]
     never_traded(st)
     assert latch_info_probe(got, tmp_path)
-    assert "AUTO-REVERT: instrument-info-probe" in pe.ExecutorState(tmp_path).halted()
+    assert not pe.ExecutorState(tmp_path).halt_file.exists()
 
 
 def test_reB_the_one_click_dump_masks_ids_beside_the_toggle(browser):
@@ -454,33 +516,24 @@ def test_reB_the_one_click_dump_masks_ids_beside_the_toggle(browser):
     assert '"data-state": "off"' in dump and "########" in dump      # still useful, just masked
 
 
-def test_pre_click_latch_is_armed_then_removed_or_replaced(tmp_path):
-    from scripts.prop.prop_executor_tick import INFO_PROBE_ARMED, arm_info_probe_latch, latch_info_probe
+def test_the_probe_never_latches_the_executor(tmp_path):
+    # NO-HALT (operator 2026-10-09): no in-progress latch, no restore latch.
+    from scripts.prop.prop_executor_tick import arm_info_probe_latch, latch_info_probe
     from src.prop import prop_executor as pe
     st = pe.ExecutorState(tmp_path)
-    # clean run: armed before the click, removed after a verified restore
-    assert arm_info_probe_latch(tmp_path) is True and INFO_PROBE_ARMED in st.halted()
+    assert arm_info_probe_latch(tmp_path) is False and not st.halt_file.exists()
     assert latch_info_probe({"mode": "click", "restore": {"verified": True}}, tmp_path, armed=True) is None
-    assert st.halted() is None
-    # unverified: the in-progress text is REPLACED by the reason
-    arm_info_probe_latch(tmp_path)
-    why = latch_info_probe({"mode": "click", "restore": {"original": "SOLUSD", "verified": False}},
-                           tmp_path, armed=True)
-    assert why and why in st.halted() and INFO_PROBE_ARMED not in st.halted()
-    # a killed run never reaches latch_info_probe: the in-progress latch stays
-    st.halt_file.unlink()
-    arm_info_probe_latch(tmp_path)
-    assert INFO_PROBE_ARMED in st.halted()
-    # a REAL executor trip already present is never touched or removed
-    st.halt_file.write_text("2026-09-30T00:00:00+00:00 AUTO-REVERT: real trip\n")
-    assert arm_info_probe_latch(tmp_path) is False
-    assert latch_info_probe({"mode": "click", "restore": {"verified": True}}, tmp_path, armed=False) is None
-    assert "real trip" in st.halted()
+    got = {"mode": "click", "restore": {"original": "SOLUSD", "verified": False}}
+    why = latch_info_probe(got, tmp_path, armed=True)
+    assert why and not st.halt_file.exists()
+    assert any("linked symbol unverified" in a and "no latch" in a for a in got["alerts"])
 
 
-def test_tick_docstring_names_the_latch_exception():
+def test_tick_docstring_says_the_probe_alerts_instead_of_latching():
     from scripts.prop.prop_executor_tick import resolve_mode
-    assert "writes the executor's\n    AUTO-REVERT ``halted`` latch" in resolve_mode.__doc__
+    # Whitespace-normalised: Python >= 3.13 dedents docstrings at compile time.
+    doc = " ".join(resolve_mode.__doc__.split())
+    assert "it ALERTS instead and writes nothing" in doc
 
 
 SPEC_VALUES = ["100000", "Max qty 10000", "0.00001", "25.00000", "0.01-1000.00", "1000000.00", "tick 0.01"]
@@ -545,3 +598,423 @@ def test_action_and_workflow_accept_the_modes():
     wf = (REPO / ".github" / "workflows" / "system-actions.yml").read_text()
     assert wf.count("|instrument-info-dry|instrument-info-probe|") == 2
     assert '*",instrument-info-dry,"*|*",instrument-info-probe,"*)' in wf
+
+
+# ── manager 2026-09-30 18:00Z: re-check on a FRESH page before latching ────
+
+
+def _unverified(original="SOLUSD", **fp):
+    got = {"mode": "click", "alerts": [], "restore": {"original": original, "attempted": False, "verified": False}}
+    if fp:
+        got["fresh_page_check"] = fp
+    return got
+
+
+@pytest.mark.parametrize("fp,latches", [
+    ({}, True),                                                                        # no check -> latch
+    ({"readable": True, "linked_symbol": "SOLUSD", "dialogs": 0}, False),              # original -> alert only
+    ({"readable": True, "linked_symbol": "BTCUSD", "dialogs": 0}, True),               # changed
+    ({"readable": True, "linked_symbol": "SOLUSD", "dialogs": 1}, True),               # a dialog open
+    ({"readable": False, "why": "session relogin_needed"}, True),                      # could not look
+    ({"readable": True, "linked_symbol": "SOLUSD"}, True),                             # dialogs unread
+])
+def test_fresh_page_check_decides_the_latch(fp, latches):
+    assert bool(info_probe_restore_latch_reason(_unverified(**fp))) is latches
+
+
+class _FakeAdapter:
+    def __init__(self, chk):
+        self.chk, self.calls = chk, []
+
+    def fresh_page_linked_check(self, context, login_url, original):
+        self.calls.append((login_url, original))
+        return dict(self.chk)
+
+
+class _FakePage:
+    closed = False
+
+    def close(self):
+        self.closed = True
+
+
+def test_fresh_page_recheck_reading_the_original_alerts_and_writes_no_latch(tmp_path):
+    from scripts.prop.prop_executor_tick import fresh_page_recheck, latch_info_probe
+    got, ad, pg = _unverified(), _FakeAdapter({"readable": True, "linked_symbol": "SOLUSD", "dialogs": 0}), _FakePage()
+    fresh_page_recheck(got, ad, object(), pg, "https://x/")
+    assert pg.closed and ad.calls == [("https://x/", "SOLUSD")]
+    assert any("fresh page reads the original linked symbol 'SOLUSD'" in a for a in got["alerts"])
+    assert latch_info_probe(got, tmp_path) is None and not (tmp_path / "halted").exists()
+
+
+def test_fresh_page_recheck_reading_another_symbol_still_alerts(tmp_path):
+    from scripts.prop.prop_executor_tick import fresh_page_recheck, latch_info_probe
+    got = _unverified()
+    fresh_page_recheck(got, _FakeAdapter({"readable": True, "linked_symbol": "BTCUSD", "dialogs": 0}),
+                       object(), _FakePage(), "https://x/")
+    assert latch_info_probe(got, tmp_path).startswith("PROBE-RESTORE-UNVERIFIED")
+    assert not (tmp_path / "halted").exists()
+
+
+def test_fresh_page_recheck_is_skipped_after_a_verified_restore():
+    from scripts.prop.prop_executor_tick import fresh_page_recheck
+    got = {"mode": "click", "restore": {"original": "SOLUSD", "verified": True}}
+    ad, pg = _FakeAdapter({}), _FakePage()
+    fresh_page_recheck(got, ad, object(), pg, "https://x/")
+    assert ad.calls == [] and not pg.closed and "fresh_page_check" not in got
+
+
+def test_fresh_page_linked_check_reads_the_linked_symbol_and_clicks_nothing(browser):
+    html = page_html()
+
+    class Fresh(DXtradeAdapter):
+        def resume_session(self, page, login_url, login_form_grace_ms=5_000):
+            page.set_content(html)
+            return "logged_in"
+
+        def wait_ready(self, page, timeout_ms=None):
+            return True
+
+    ctx = browser.new_context()
+    chk = Fresh(timeout_ms=3_000).fresh_page_linked_check(ctx, "https://x/", "SOLUSD")
+    assert chk == {"readable": True, "original": "SOLUSD", "linked_symbol": "SOLUSD", "dialogs": 0, "why": None}
+    assert ctx.pages == []                                             # the fresh page was closed
+    ctx.close()
+
+
+def test_fresh_page_linked_check_is_unreadable_when_the_session_is_not_accepted(browser):
+    class NoSession(DXtradeAdapter):
+        def resume_session(self, page, login_url, login_form_grace_ms=5_000):
+            return "login_form"
+
+    ctx = browser.new_context()
+    chk = NoSession(timeout_ms=3_000).fresh_page_linked_check(ctx, "https://x/", "SOLUSD")
+    assert chk["readable"] is False and chk["why"] == "session login_form" and ctx.pages == []
+    ctx.close()
+
+
+# ── independent review of #14841: nits (b) and (d) ─────────────────────────
+
+
+def test_review_d_the_new_element_dump_emits_no_text_even_for_a_balance(browser):
+    from src.prop.platform.dxtrade import INFO_PROBE_NEW_ELEMENTS_JS, INFO_PROBE_SNAPSHOT_JS
+    p = browser.new_page()
+    p.set_content(page_html())
+    p.evaluate(INFO_PROBE_SNAPSHOT_JS)
+    p.evaluate("() => { const d = document.createElement('div'); d.className = 'acct-4724 tip';"
+               " d.innerHTML = '<span>Balance</span><span>$4,724.00</span><span>ID 5821</span>';"
+               " d.style.cssText = 'width:80px;height:30px'; document.body.appendChild(d); }")
+    got = p.evaluate(INFO_PROBE_NEW_ELEMENTS_JS)
+    p.close()
+    dump = json.dumps(got)
+    assert got["n_visible"] == 1 and got["elements"][0]["n_leaves"] == 3
+    assert got["elements"][0]["cls"] == ["acct-####", "tip"]
+    for leak in ("Balance", "4724", "4,724", "5821", "$"):
+        assert leak not in dump, leak
+
+
+def test_review_b_the_not_found_alert_says_recovered_or_not(browser):
+    got, _ = run(browser, page_html(no_panel_for="BTCUSD"), symbols=("BTCUSD",))
+    assert any("Escape pressed, recovered: nothing unidentified left visible" in a for a in got["alerts"])
+    got, _ = run(browser, page_html(stray_for="BTCUSD"), symbols=("BTCUSD",))
+    assert any("Escape pressed, NOT recovered: unidentified element(s) still visible: 1" in a for a in got["alerts"])
+
+
+# ── click-free watchlist dump on a refused resolve (TRADEIFY-WIRE, issue #15033) ──
+
+
+def test_breakout_layout_resolves_as_before_and_records_no_watchlist_dump(browser):
+    got, st = run(browser, page_html(), symbols=("BTCUSD",), click=False)
+    assert got["refused"] is None and "watchlist_dump" not in got
+    assert "column_headers" not in got["resolve"]     # the <th> path resolved; the fallback never ran
+    assert st["clicks"] == [] and never_traded(st) is None
+
+
+def test_a_non_table_watchlist_is_refused_and_measured_click_free(browser):
+    # Tradeify-like stand-in: the watchlist is a div grid, so there is no
+    # Symbol/Bid/Ask <table>; the 6+ digit id in a header must be masked.
+    html = page_html().replace(
+        "<table><thead><tr><th>Symbol</th><th>Bid</th><th>Ask</th></tr></thead>",
+        '<div data-test-id="watchlist_grid"><div class="hdr"><span>Symbol</span><span>Sell</span>'
+        '<span>Buy</span><span>Spread 1234567</span></div></div><table><thead><tr><th>X</th></tr></thead>')
+    got, st = run(browser, html, symbols=("ETHUSD",), click=False)
+    assert "0 Symbol/Bid/Ask tables" in (got["refused"] or "")
+    dump = got["watchlist_dump"]
+    assert any(d["headers"][:3] == ["symbol", "sell", "buy"] for d in dump["divgrids"])
+    assert "watchlist_grid" in dump["watchlist_test_ids"]
+    assert all("1234567" not in h for d in dump["divgrids"] for h in d["headers"])
+    assert dump["iframes"] == 0 and isinstance(dump["instrument_rows_total"], int)
+    assert st["clicks"] == [] and never_traded(st) is None
+
+
+def test_the_tick_prints_the_watchlist_dump_on_its_own_line(capsys):
+    import scripts.prop.prop_executor_tick as tick
+
+    tick.emit_info_probe({"mode": "dry", "alerts": [], "refused": "0 Symbol/Bid/Ask tables (need exactly 1)",
+                          "watchlist_dump": {"tables": [], "iframes": 0}})
+    out = capsys.readouterr().out.strip().splitlines()
+    assert out[0].startswith('{"watchlist_dump"') and out[-1].startswith('{"instrument_info_summary"')
+
+
+# ── the column-header fallback (TRADEIFY-WIRE T4, MEASURED #15067) ─────────
+# tradeify_1's watchlist <table> has NO <th> text: 23 ``tr.instrument`` rows
+# under column headers carrying ``table_column_*`` test-ids outside it.
+
+BREAKOUT_HEADER = "<table><thead><tr><th>Symbol</th><th>Bid</th><th>Ask</th></tr></thead><tbody>"
+
+
+def tradeify_layout(html, cols=("symbol", "bid", "ask"), width=120):
+    """The fixture page with Breakout's <th> header table swapped for
+    Tradeify's shape: a div header row of ``table_column_*`` cells above a
+    header-less table whose 120px cells sit under them."""
+    hdr = "".join(f'<div data-test-id="table_column_{c}" style="flex:none;width:{width}px">{c.title()}</div>'
+                  for c in cols)
+    assert html.count(BREAKOUT_HEADER) == 1
+    return html.replace(BREAKOUT_HEADER,
+                        '<style>.wl td{width:120px;padding:0;overflow:hidden}</style>'
+                        f'<div class="wl-hdr" style="display:flex">{hdr}</div>'
+                        '<table class="wl" style="border-spacing:0;table-layout:fixed"><tbody>')
+
+
+def test_tradeify_layout_resolves_every_target_through_the_column_headers_and_clicks_nothing(browser):
+    got, st = run(browser, tradeify_layout(page_html()), click=False)
+    assert got["refused"] is None and got["alerts"] == [] and "watchlist_dump" not in got
+    r = got["resolve"]
+    assert r["column_headers"] == {"found": 1, "why": []}
+    assert r["linked_symbol"] == "SOLUSD" and all(r["targets"][s]["clean"] for s in ("BTCUSD", "ETHUSD", "AVAXUSD"))
+    assert got["watchlist_diff"]["changed"] is False
+    assert st["clicks"] == [] and st["tags"] == 0 and never_traded(st) is None
+
+
+def test_tradeify_misaligned_columns_are_refused_and_measured(browser):
+    got, st = run(browser, tradeify_layout(page_html(), width=200), symbols=("ETHUSD",), click=False)
+    assert "0 Symbol/Bid/Ask tables" in got["refused"]
+    assert got["resolve"]["column_headers"]["why"] == ["column 1 (bid) does not sit over its cell"]
+    dump = got["watchlist_dump"]
+    assert [c["tid"] for c in dump["columns"]] == ["table_column_symbol", "table_column_bid", "table_column_ask"]
+    assert [len(h["cells"]) for h in dump["header_less"]] == [3]
+    assert st["clicks"] == [] and never_traded(st) is None
+
+
+def test_tradeify_column_count_mismatch_is_refused(browser):
+    got, st = run(browser, tradeify_layout(page_html(), cols=("symbol", "bid", "ask", "change")),
+                  symbols=("ETHUSD",), click=False)
+    assert got["resolve"]["column_headers"]["why"] == ["4 columns [symbol,bid,ask,change] vs 3 cells"]
+    assert st["clicks"] == []
+
+
+def test_tradeify_columns_without_bid_and_ask_are_refused(browser):
+    got, _ = run(browser, tradeify_layout(page_html(), cols=("symbol", "sell", "buy")), symbols=("ETHUSD",),
+                 click=False)
+    assert got["resolve"]["column_headers"]["why"] == ["columns [symbol,sell,buy] lack symbol/bid/ask"]
+
+
+def test_tradeify_quote_rows_read_through_the_column_headers(browser):
+    from src.prop.platform.dxtrade import WATCHLIST_ROWS_JS, quote_from_watchlist_rows
+
+    p = browser.new_page()
+    p.set_content(tradeify_layout(page_html()))
+    got = p.evaluate(WATCHLIST_ROWS_JS, ["ETHUSD"])
+    p.close()
+    assert got["headers"] == ["symbol", "bid", "ask"]
+    assert quote_from_watchlist_rows(got, "ETHUSD") == {"bid": 100.1, "ask": 100.2}
+
+
+# ── manager review of #15075 (BLOCK 1): the fallback itself excludes trade tables ──
+
+WL_BOX = 'class="widget__container___Ab1 widgetNew__container"'
+
+
+@pytest.mark.parametrize("swap, why", [
+    # a Positions-shaped table with no widget container: refused, never tagged
+    ((WL_BOX, 'class="positions-ish"'), "3-cell rows: no widget container within 12 ancestors"),
+    # the same table inside a widget that also carries an Orders/Positions menu
+    ((WL_BOX, WL_BOX + '><button data-test-id="widget_menu_POSITIONS">Positions</button'),
+     "3-cell rows: widget holds an Orders / Positions menu"),
+    # a hidden (zero-width) table never qualifies
+    (('<table class="wl" style="', '<table class="wl" style="display:none;'), "3-cell rows: table has no width"),
+])
+def test_review_the_fallback_refuses_container_less_trade_scoped_and_hidden_tables(browser, swap, why):
+    html = tradeify_layout(page_html())
+    assert html.count(swap[0]) == 1
+    got, st = run(browser, html.replace(*swap), symbols=("ETHUSD",), click=False)
+    assert "0 Symbol/Bid/Ask tables" in got["refused"]
+    assert got["resolve"]["column_headers"] == {"found": 0, "why": [why]}
+    assert st["clicks"] == [] and st["tags"] == 0 and never_traded(st) is None
+
+
+def test_review_the_dump_records_header_words_only_and_the_widget_facts(browser):
+    html = tradeify_layout(page_html(), width=200).replace(
+        '>Symbol</div>', '>Symbol 1234567 $5,024</div>')  # a non-header-like text is never emitted
+    got, _ = run(browser, html, symbols=("ETHUSD",), click=False)
+    dump = got["watchlist_dump"]
+    assert [c["text"] for c in dump["columns"]] == [None, "bid", "ask"]
+    assert dump["header_less"][0]["widget_depth"] == 1 and dump["header_less"][0]["widget_has_trade_menu"] is False
+
+
+# ── slash-named symbols (TRADEIFY-WIRE T4, operator screenshots 2026-10-01) ──
+# tradeify_1 shows ``ETH/USD`` where the API symbol is ``ETHUSD`` (#14993).
+
+
+def slashed(html):
+    for s in ("ETHUSD", "SOLUSD", "BTCUSD", "AVAXUSD"):
+        old = f'<td class="sym">{s}'
+        assert html.count(old) == 1
+        html = html.replace(old, f'<td class="sym">{s[:-3]}/{s[-3:]}')
+    return html
+
+
+def test_canonical_symbol_drops_one_slash_only():
+    from src.prop.platform.dxtrade import canonical_symbol
+
+    assert canonical_symbol(" eth/usd ") == "ETHUSD" == canonical_symbol("ETHUSD")
+    assert canonical_symbol("ETH/USD/X") == "" and canonical_symbol("ETH USD") == ""
+    assert canonical_symbol("$5,024") == "" and canonical_symbol(None) == ""
+
+
+@pytest.mark.parametrize("layout", [lambda h: h, tradeify_layout])
+def test_slash_named_rows_resolve_every_target_click_free(browser, layout):
+    got, st = run(browser, layout(slashed(page_html())), click=False)
+    r = got["resolve"]
+    assert all(r["targets"][s]["clean"] for s in ("BTCUSD", "ETHUSD", "AVAXUSD"))
+    assert r["watchlist"] == ["AVAXUSD", "BTCUSD", "ETHUSD", "SOLUSD"]
+    assert st["clicks"] == [] and never_traded(st) is None
+
+
+def test_slash_named_quote_rows_read(browser):
+    from src.prop.platform.dxtrade import WATCHLIST_QUOTE_RAW_JS, WATCHLIST_ROWS_JS, quote_from_watchlist_rows
+
+    p = browser.new_page()
+    p.set_content(tradeify_layout(slashed(page_html())))
+    rows = p.evaluate(WATCHLIST_ROWS_JS, ["ETHUSD"])
+    raw = p.evaluate(WATCHLIST_QUOTE_RAW_JS, ["ETHUSD"])
+    p.close()
+    assert quote_from_watchlist_rows(rows, "ETHUSD") == {"bid": 100.1, "ask": 100.2}
+    assert raw["rows"] == [["ETH/USD", "100.1", "100.2"]]
+
+
+def test_any_refused_resolve_records_row_shapes_click_free(browser):
+    # rows whose cell count does not match the 3 headers: 0 accepted rows
+    html = slashed(page_html()).replace('<td class="sym">', '<td>x</td><td class="sym">')
+    got, st = run(browser, html, symbols=("ETHUSD",), click=False)
+    assert got["refused"] and st["clicks"] == []
+    diag = got["watchlist_dump"]["row_diag"]
+    assert diag[0]["th"] == ["symbol", "bid", "ask"]
+    assert diag[0]["rows"][0] == [4, 1, "ETH/USD"]
+
+
+# ── manager review of #15101 (BLOCK) ──────────────────────────────────────
+
+POSITIONS_ROW = ('<tr class="instrument"><td>358201947</td><td>25</td><td>ETHUSD</td>'
+                 '<td>100.1</td></tr>')
+
+
+def test_review_row_diag_never_prints_an_id_or_a_trade_widgets_rows(browser):
+    # the watchlist rows mismatch their headers -> a refusal -> the dump runs
+    base = slashed(page_html()).replace('<td class="sym">', '<td>x</td><td class="sym">')
+    in_widget = ('<div class="widgetNew__container"><button data-test-id="widget_menu_POSITIONS">P</button>'
+                 f'<table><tbody>{POSITIONS_ROW}</tbody></table></div>')
+    loose = f'<div class="loose"><table><tbody>{POSITIONS_ROW}</tbody></table></div>'
+    html = base.replace("</body>", in_widget + loose + "</body>")
+    got, st = run(browser, html, symbols=("ETHUSD",), click=False)
+    diag = got["watchlist_dump"]["row_diag"]
+    blob = json.dumps(diag)
+    assert "358201947" not in blob and "358" not in blob
+    assert len(diag) == 2                                   # watchlist + the container-less table only
+    assert diag[1]["rows"] == [[4, 2, "ETHUSD"]]            # a letter is required: the id cell is skipped
+    assert st["clicks"] == []
+
+
+def test_review_row_diag_masks_digit_runs_in_a_symbol_like_cell(browser):
+    base = slashed(page_html()).replace('<td class="sym">', '<td>x</td><td class="sym">')
+    html = base.replace("</body>", '<div class="loose"><table><tbody><tr class="instrument">'
+                                   '<td>AB12345</td></tr></tbody></table></div></body>')
+    got, _ = run(browser, html, symbols=("ETHUSD",), click=False)
+    assert got["watchlist_dump"]["row_diag"][-1]["rows"] == [[1, 0, "AB#####"]]
+
+
+def test_review_quote_refuses_an_empty_canonical_and_a_second_distinct_row():
+    from src.prop.platform.dxtrade import quote_from_tables
+
+    hdr = ["Symbol", "Bid", "Ask"]
+    assert quote_from_tables([{"headers": hdr, "rows": [["Ethereum vs US dollar", "100.1", "100.2"]]}],
+                             "XAU/USD/X") is None
+    two = [["ETH/USD", "100.1", "100.2"], ["ETHUSD", "100.1", "100.2"]]
+    assert quote_from_tables([{"headers": hdr, "rows": two}], "ETHUSD") is None
+    same = [{"headers": hdr, "rows": [["ETH/USD", "100.1", "100.2"]]},
+            {"headers": hdr, "rows": [["ETH/USD", "100.1", "100.2"]]}]   # one row read twice
+    assert quote_from_tables(same, "ETHUSD") == {"bid": 100.1, "ask": 100.2}
+    assert quote_from_tables([{"headers": hdr, "rows": [["ETHUSD", "100.1", "100.2"]]}],
+                             "ETHUSD") == {"bid": 100.1, "ask": 100.2}
+
+
+# ── tradeify_1's split watchlist with no widget(New)__container (#15126) ──
+# The Symbol/Bid/Ask header table and its rows table are separate (as on
+# Breakout) and no ancestor carries the widget class; the watchlist widget is
+# marked by its widget_menu_WATCHLIST button.
+
+
+def tradeify_split(html, menus=1, trade_menu=False):
+    assert html.count(WL_BOX) == 1 and html.count(BREAKOUT_HEADER) == 1
+    extra = '<button data-test-id="widget_menu_WATCHLIST">W</button>' * menus
+    if trade_menu:
+        extra += '<button data-test-id="widget_menu_POSITIONS">P</button>'
+    html = html.replace(WL_BOX, 'class="wl-root">' + extra + '<div class="wl-inner"')
+    html = html.replace(BREAKOUT_HEADER, "<table><thead><tr><th>Symbol</th><th>Bid</th><th>Ask</th></tr></thead>"
+                                         "</table></div><table><tbody>")
+    return html
+
+
+def test_split_watchlist_without_widget_class_resolves_through_its_watchlist_menu(browser):
+    got, st = run(browser, tradeify_split(slashed(page_html())), click=False)
+    r = got["resolve"]
+    assert r["watchlist"] == ["AVAXUSD", "BTCUSD", "ETHUSD", "SOLUSD"]
+    assert all(r["targets"][s]["clean"] for s in ("BTCUSD", "ETHUSD", "AVAXUSD"))
+    assert st["clicks"] == [] and never_traded(st) is None
+
+
+def test_split_watchlist_quote_raw_reads_through_its_watchlist_menu(browser):
+    from src.prop.platform.dxtrade import WATCHLIST_QUOTE_RAW_JS
+
+    p = browser.new_page()
+    p.set_content(tradeify_split(slashed(page_html())))
+    raw = p.evaluate(WATCHLIST_QUOTE_RAW_JS, ["ETHUSD"])
+    p.close()
+    assert raw["rows"] == [["ETH/USD", "100.1", "100.2"]]
+
+
+@pytest.mark.parametrize("kw", [dict(menus=2), dict(menus=0)])
+def test_split_watchlist_with_no_single_watchlist_menu_reads_no_rows(browser, kw):
+    got, st = run(browser, tradeify_split(slashed(page_html()), **kw), symbols=("ETHUSD",), click=False)
+    assert got["resolve"]["targets"]["ETHUSD"]["n_rows"] == 0 and st["clicks"] == []
+
+
+def test_split_watchlist_menu_scope_holding_a_trade_menu_refuses(browser):
+    got, st = run(browser, tradeify_split(slashed(page_html()), trade_menu=True), symbols=("ETHUSD",),
+                  click=False)
+    assert got["resolve"]["why"] == "the watchlist scope also holds an Orders / Positions widget"
+    assert st["clicks"] == [] and st["tags"] == 0
+
+
+# ── tradeify_1 price cells carry their button's hidden label (TRADEIFY-DRY) ──
+
+def test_quote_reads_price_cells_that_carry_the_hidden_buy_sell_label():
+    # MEASURED, symbol-switch-dry #15901 run 37117766658: bid "Sell 2,680.940",
+    # ask "Buy 2,680.940"; read_quote returned None before the label was stripped.
+    from src.prop.platform.dxtrade import quote_from_watchlist_rows
+    hdr = ["symbol", "bid", "ask"]
+    got = quote_from_watchlist_rows({"headers": hdr, "rows": [["ETH/USD", "Sell 2,680.940", "Buy 2,680.950"]]},
+                                    "ETHUSD")
+    assert got == {"bid": 2680.94, "ask": 2680.95}
+    # breakout_1's unlabelled cells are unchanged.
+    assert quote_from_watchlist_rows({"headers": hdr, "rows": [["ETHUSD", "2,683.58", "2,683.59"]]},
+                                     "ETHUSD") == {"bid": 2683.58, "ask": 2683.59}
+
+
+def test_quote_refuses_a_price_cell_whose_label_belongs_to_the_other_column():
+    # "Buy" under Bid / "Sell" under Ask means the cells are not where the
+    # headers say: could not look, never a swapped quote.
+    from src.prop.platform.dxtrade import quote_from_watchlist_rows
+    hdr = ["symbol", "bid", "ask"]
+    assert quote_from_watchlist_rows({"headers": hdr, "rows": [["ETH/USD", "Buy 2,680.940", "Sell 2,680.950"]]},
+                                     "ETHUSD") is None

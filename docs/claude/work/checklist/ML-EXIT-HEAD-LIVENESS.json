@@ -1,0 +1,18 @@
+{
+  "id": "ML-EXIT-HEAD-LIVENESS",
+  "title": "ML plumbing: exit-head shadow rows stopped 2026-10-04/05 -- confirm no-open-leg vs broken emit",
+  "phase": "W41",
+  "state": "done",
+  "owner": "manager (dispatch by capacity)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-11 ML-ROADMAP-LOOP cycle 1] MEASURED /api/bot/shadow/stats read 2026-10-11T09:45Z: exit-head-ict_scalp-15m-v1 last_seen 2026-10-04T17:00, exit-head-ict_scalp-5m-v1 2026-10-05T01:30, exit-head-donchian-1h-v1 and exit-head-donchian-peak-1h-v1 2026-10-05T04:05, while every regime head logs within the hour. The 10-04 ml-review noted donchian fires on every 1h close of an OPEN leg, so silence can be 'no open position'. NOT established which. Task: for each of the four heads, list the open/closed trades of its leg in the window 2026-10-05..now (diag trades) and the exit-head emit log; verdict = no-open-leg (record, close) or emit-broken (fix, Tier-1/2). Sonnet, ceiling $3. Observation that would close: the verdict written on this row with the trade ids it rests on. [2026-10-11 VERDICT, lane session_01Q3TKbDwLym8fEtnZ79Kuki] NOT emit-broken; each silence has a measured cause (population: ict_scalp + donchian trades in the 1000-row journal tail, 2026-10-01..10-11, joined to /api/bot/trades/scores and ict_scalp_exit_head_soak). (1) exit-head-ict_scalp-5m-v1 last row 10-05T01:30 = trade 6449 (ict_scalp_xrp_5m) closed 01:31; no 5m ict_scalp leg opened since. (2) exit-head-donchian-1h-v1 and -peak-1h-v1 last row 10-05T04:05 = trades 6433 (SOL, closed 04:24) and 6444 (BTC, closed 04:15); open donchian legs since are 4h (6488-6490 eth_4h, 6527-6529 xrp_4h) and no 4h head exists. (3) exit-head-ict_scalp-15m-v1 last row 10-04T17:00: trade 6400 (ict_scalp_eth_15m, opened 10-02T15:02, closed 10-07T02:06) outlived the 200-bar monitor window (200 x 15m = 50h; 15:02+50h = 10-04T17:02): exit_head_shadow returns None when the entry bar is not in the fetched window, and ict_scalp_exit_head_soak shows 1000/1000 tail rows decision_state=not_scored for it on 10-06/07. Trade 6451 (xrp_15m, 10-05 06:16-06:47) never had the 2 closed in-trade bars _feature_row needs. Residual: a 15m leg held >50h is silently unscored; shadow-only heads, no apply path, so NOT changed (a monitor fetch-limit change is Tier-2 on a live path). Not unverified: the mirror artifact dir is not on the diag allowlist, so artifact mtime/stage was not read; the window arithmetic matches to 2 minutes.",
+  "updated_at": "2026-10-11T12:34:44Z",
+  "updated_by": "session_01Q3TKbDwLym8fEtnZ79Kuki",
+  "_seq": 403
+}

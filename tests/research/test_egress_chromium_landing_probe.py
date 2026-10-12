@@ -52,23 +52,56 @@ class _Resp:
         self.status, self.headers = status, headers
 
 
+class _Req:
+    def is_navigation_request(self):
+        return True
+
+
+class _NavResp(_Resp):
+    def __init__(self, status, headers, frame):
+        super().__init__(status, headers)
+        self.request, self.frame = _Req(), frame
+
+
 class _Page:
     def __init__(self, world):
-        self.w, self.cur = world, None
+        self.w, self.cur, self.main_frame = world, None, object()
+        self.elapsed, self.clear_at, self.then, self.listeners = 0, None, None, []
+
+    def on(self, event, cb):
+        self.listeners.append(cb)
 
     def goto(self, url, **kw):
         self.w.navigations.append(url)
-        route = self.w.routes.get(url)
+        route = self.w.routes.get(url) or {"status": 404, "body": ""}
         if isinstance(route, Exception):
             raise route
-        self.cur = route
+        self.cur, self.elapsed = route, 0
+        self.clear_at, self.then = route.get("clears_after_ms"), route.get("then")
         return _Resp(route.get("status", 200), route.get("headers", {"server": "cloudflare"}))
 
+    def _tick(self):
+        if self.clear_at is not None and self.elapsed >= self.clear_at:
+            self.cur, self.clear_at = self.then, None  # the challenge cleared: the page navigated again
+            for cb in self.listeners:
+                cb(_NavResp(self.cur.get("status", 200), self.cur.get("headers", {"server": "cloudflare"}), self.main_frame))
+
     def wait_for_timeout(self, ms):
-        pass
+        self.elapsed += ms
+        self._tick()
 
     def title(self):
         return self.cur.get("title", "")
+
+    def evaluate(self, js):
+        self.w.evaluated.append(js)
+        return dict(self.w.signals)
+
+    def reload(self, **kw):
+        self.w.reloads += 1
+
+    def close(self):
+        pass
 
     def inner_text(self, sel):
         return self.cur.get("body", "")
@@ -79,6 +112,8 @@ class _Page:
     def query_selector(self, sel):
         if sel == "body":
             return object()
+        if sel.startswith("iframe"):
+            return object() if self.cur.get("widget") else None
         if sel.startswith("input[type=password]"):
             return object() if self.cur.get("login") else None
         return object() if self.cur.get("login") else None
@@ -92,6 +127,9 @@ class _Ctx:
         if self.w.new_page_error:
             raise self.w.new_page_error
         return _Page(self.w)
+
+    def cookies(self):
+        return list(self.w.cookies)
 
     def close(self):
         if self.w.ctx_close_error:
@@ -116,6 +154,12 @@ class _Chromium:
     def __init__(self, world):
         self.w = world
 
+    def launch_persistent_context(self, user_data_dir, **kw):
+        self.w.persistent.append((user_data_dir, kw))
+        if self.w.persistent_error:
+            raise self.w.persistent_error
+        return _Ctx(self.w)
+
     def launch(self, **kw):
         self.w.launches.append(kw)
         if self.w.launch_error:
@@ -138,6 +182,10 @@ class World:
     def __init__(self):
         self.launches, self.navigations, self.routes, self.launch_error = [], [], {}, None
         self.new_context_error = self.new_page_error = self.ctx_close_error = self.browser_close_error = None
+        self.cookies = []
+        self.persistent, self.persistent_error, self.evaluated, self.reloads = [], None, [], 0
+        self.signals = {"webdriver": False, "headless_ua": False, "timezone": "America/New_York",
+                        "webgl_renderer": f"leak-test {HOST}"}
 
 
 def served():
@@ -147,7 +195,7 @@ def served():
 @pytest.fixture
 def world(monkeypatch):
     w = World()
-    monkeypatch.setattr(probe, "_load_playwright", lambda: (lambda: _PW(w), FakeError))
+    monkeypatch.setattr(probe, "_load_playwright", lambda *a: (lambda: _PW(w), FakeError))
 
     def _no_direct():
         raise AssertionError("the direct route was asked for the egress organisation")
@@ -296,6 +344,9 @@ def test_direct_mode_is_unchanged(world, monkeypatch, tmp_path, capsys):
 def test_schedule_is_gated(world, monkeypatch, tmp_path, capsys):
     monkeypatch.setenv("GITHUB_EVENT_NAME", "schedule")
     monkeypatch.delenv("EGRESS_PROBE_PROXY", raising=False)
+    # Pin the window open: the real SCHEDULE_ACTIVE_UNTIL is a calendar date, and
+    # this half of the test failed on every PR once the wall clock passed it.
+    monkeypatch.setattr(probe, "SCHEDULE_ACTIVE_UNTIL", datetime(2999, 1, 1, tzinfo=timezone.utc))
     code, text, _ = probe.main(["--out", str(tmp_path / "r.json")]), capsys.readouterr().out, None
     assert code == 0 and "schedule_skipped" in text and world.launches == []
     monkeypatch.setattr(probe, "SCHEDULE_ACTIVE_UNTIL", datetime(2020, 1, 1, tzinfo=timezone.utc))
@@ -487,8 +538,9 @@ def test_workflow_handles_the_secret_safely():
         for m in re.finditer(r"EGRESS_PROBE_PROXY", step["run"]):
             assert step["run"][max(0, m.start() - 6):m.start()] in (' -z "$',), "the variable may only be tested with -z"
     assert any("egress_chromium_landing_probe.py" in s["run"] for s in holders)
-    assert "cron" in json.dumps(wf.get(True, wf.get("on", {})))  # the temporary hourly schedule exists...
-    assert "2026-10-04" in text  # ...and is bounded
+    on = wf.get(True, wf.get("on", {}))
+    assert "schedule" not in on and "cron" not in json.dumps(on)  # PROP-TERM egress is PARKED: no standing cron
+    assert {"pull_request", "workflow_dispatch"} <= set(on)       # ...a re-run is a dispatch (or a request-file PR)
 
 
 def test_workflow_withholds_the_secret_from_pull_requests_and_only_reads_main():
@@ -528,3 +580,258 @@ def test_only_the_main_job_references_the_environment_and_pr_runs_never_do():
     assert pr["if"] == "github.event_name == 'pull_request'"
     assert "EGRESS_PROBE_PROXY" not in json.dumps(pr) and "secrets." not in json.dumps(pr)
     assert "--evaluate" not in json.dumps(pr)
+
+
+# ---------------------------------------------------------------- levers (variants): wait it out, new headless, headed
+TRACE = "https://www.cloudflare.com/cdn-cgi/trace"
+TRACE_BODY = "fl=1f1\nh=www.cloudflare.com\nip=203.0.113.77\nts=1.0\nvisit_scheme=https\nuag=x\ncolo=EWR\nhttp=http/2\nloc=US\ntls=TLSv1.3\n"
+
+
+def challenged(clears_after_ms=None, widget=False):
+    page = {"status": 403, "headers": {"cf-mitigated": "challenge", "server": "cloudflare"}, "title": "Just a moment...",
+            "body": "Just a moment", "login": False, "widget": widget}
+    if clears_after_ms is not None:
+        page.update(clears_after_ms=clears_after_ms, then=served())
+    return page
+
+
+def run_variants(monkeypatch, tmp_path, capsys, variants, secret=RAW_URL):
+    monkeypatch.setenv("EGRESS_PROBE_PROXY", secret)
+    d = tmp_path / "out"
+    code = probe.main(["--variants", variants, "--out-dir", str(d)])
+    cap = capsys.readouterr()
+    return code, cap.out + cap.err, d
+
+
+def load(d, name):
+    return json.loads((d / f"probe-result-{name}.json").read_text())
+
+
+def test_exit_country_is_read_and_the_address_is_never_kept(world, monkeypatch, tmp_path, capsys):
+    world.routes["https://ipinfo.io/org"] = {"body": ORG}
+    world.routes[TRACE] = {"body": TRACE_BODY}
+    world.routes[APP], world.routes[WSS] = served(), served()
+    code, text, out = run_main(monkeypatch, tmp_path, capsys, RAW_URL)
+    r = json.loads(out.read_text())
+    assert r["exit_country"] == "US" and "exit_colo" not in r
+    for kept in (text, out.read_text()):   # ONLY loc= is kept: not ip=, not colo=, not the user-agent line
+        assert "203.0.113.77" not in kept and "EWR" not in kept and "uag" not in kept
+    assert "exit_country=US" in text
+
+
+def test_an_unreadable_trace_page_is_unknown_not_a_failure(world, monkeypatch, tmp_path, capsys):
+    world.routes["https://ipinfo.io/org"] = {"body": ORG}
+    world.routes[APP], world.routes[WSS] = served(), served()  # no trace route: the fake answers 404
+    _, _, out = run_main(monkeypatch, tmp_path, capsys, RAW_URL)
+    r = json.loads(out.read_text())
+    assert r["exit_country"] == "unknown" and r["proxy_state"] == "ok"
+
+
+def test_wait_variant_records_the_clearing_time_and_can_pass_where_baseline_fails(world, monkeypatch, tmp_path, capsys):
+    world.routes["https://ipinfo.io/org"] = {"body": ORG}
+    world.routes[APP] = challenged(clears_after_ms=12_000)
+    world.routes[WSS] = served()
+    code, text, d = run_variants(monkeypatch, tmp_path, capsys, "baseline,wait")
+    base, wait = load(d, "baseline"), load(d, "wait")
+    app_b, app_w = base["hosts"]["app.breakoutprop.com"], wait["hosts"]["app.breakoutprop.com"]
+    assert base["app_pass"] is False and app_b["challenged_at_first_load"] is True and app_b["cleared_after_s"] is None
+    assert wait["app_pass"] is True and app_w["challenged_at_first_load"] is True and app_w["cleared_after_s"] == 12
+    assert app_w["first_http_status"] == "403" and app_w["first_cf_mitigated"] == "challenge"   # both views are kept
+    assert app_w["http_status"] == "200" and app_w["challenge_kind"] == "none"
+    assert "variant=wait" in text and "cleared_after_s=12" in text and "per-lever summary" in text
+    assert base["variant"] == "baseline" and wait["variant"] == "wait" and code == 0
+
+
+def test_a_challenge_that_never_clears_is_reported_as_never(world, monkeypatch, tmp_path, capsys):
+    world.routes["https://ipinfo.io/org"] = {"body": ORG}
+    world.routes[APP], world.routes[WSS] = challenged(), served()
+    _, text, d = run_variants(monkeypatch, tmp_path, capsys, "wait")
+    app = load(d, "wait")["hosts"]["app.breakoutprop.com"]
+    assert app["cleared_after_s"] is None and app["challenge_kind"] == "js_or_managed" and load(d, "wait")["app_pass"] is False
+    assert "cleared_after_s=never" in text
+
+
+def test_an_interactive_widget_is_classified_and_never_clicked(world, monkeypatch, tmp_path, capsys):
+    world.routes["https://ipinfo.io/org"] = {"body": ORG}
+    world.routes[APP], world.routes[WSS] = challenged(widget=True), served()
+    _, text, d = run_variants(monkeypatch, tmp_path, capsys, "wait")
+    assert load(d, "wait")["hosts"]["app.breakoutprop.com"]["challenge_kind"] == "interactive_widget"
+    assert "challenge_kind=interactive_widget" in text
+
+
+def test_clearance_cookie_is_recorded_by_name_only(world, monkeypatch, tmp_path, capsys):
+    world.routes["https://ipinfo.io/org"] = {"body": ORG}
+    world.routes[APP], world.routes[WSS] = served(), served()
+    world.cookies = [{"name": "cf_clearance", "value": "SECRETCOOKIEVALUE123"}]
+    _, text, d = run_variants(monkeypatch, tmp_path, capsys, "wait")
+    assert load(d, "wait")["hosts"]["app.breakoutprop.com"]["cf_clearance_set"] is True
+    assert "SECRETCOOKIEVALUE123" not in text and "SECRETCOOKIEVALUE123" not in (d / "probe-result-wait.json").read_text()
+
+
+def test_every_lever_launches_the_unmodified_browser_with_only_the_documented_options(world, monkeypatch, tmp_path, capsys):
+    """Baseline: as before. newheadless: channel chromium. headed: a real window. None hides automation."""
+    world.routes["https://ipinfo.io/org"] = {"body": ORG}
+    world.routes[APP], world.routes[WSS] = served(), served()
+    code, text, d = run_variants(monkeypatch, tmp_path, capsys, "baseline,wait,newheadless,headed")
+    launches = {i: kw for i, kw in enumerate(world.launches)}
+    assert len(world.launches) == 4 and code == 0
+    assert launches[0]["headless"] is True and "channel" not in launches[0]
+    assert launches[1]["headless"] is True and "channel" not in launches[1]
+    assert launches[2]["headless"] is True and launches[2]["channel"] == "chromium"
+    assert launches[3]["headless"] is False and launches[3]["channel"] == "chromium"
+    for kw in world.launches:
+        assert set(kw) <= {"headless", "channel", "proxy"}, "no args / user_agent / init-script options: nothing hides automation"
+        assert kw["proxy"]["server"] == f"http://{HOST}:{PORT}"
+    assert sorted(p.name for p in d.iterdir()) == ["probe-result-baseline.json", "probe-result-headed.json",
+                                                    "probe-result-newheadless.json", "probe-result-wait.json"]
+    assert_clean(text)
+    assert all_clean_files(d)
+
+
+def all_clean_files(d):
+    for f in d.iterdir():
+        assert_clean(f.read_text())
+    return True
+
+
+def test_unknown_variant_is_refused_without_launching(world, monkeypatch, tmp_path, capsys):
+    code, text, _ = run_variants(monkeypatch, tmp_path, capsys, "wait,stealth")
+    assert code == 2 and "unknown_variant" in text and world.launches == []
+
+
+def test_a_lever_that_cannot_start_is_its_own_error_result_and_the_run_is_not_failed(world, monkeypatch, tmp_path, capsys):
+    """Only the headed lever needs a display; here every launch fails, so all levers record `error` and the run exits 1."""
+    world.launch_error = FakeError(f"browserType.launch: no display; proxy {RAW_URL} {HOST}")
+    code, text, d = run_variants(monkeypatch, tmp_path, capsys, "baseline,headed")
+    assert code == 1
+    for name in ("baseline", "headed"):
+        assert load(d, name)["proxy_state"] == "error"
+    assert_clean(text)
+    assert all_clean_files(d)
+
+
+def test_malformed_secret_with_variants_stores_a_failing_result_per_lever(world, monkeypatch, tmp_path, capsys):
+    code, text, d = run_variants(monkeypatch, tmp_path, capsys, "baseline,wait", secret=f"{HOST}:{PORT} {USER}")
+    assert code == 2 and world.launches == []
+    assert load(d, "baseline")["proxy_state"] == "format_invalid" and load(d, "wait")["proxy_state"] == "format_invalid"
+    assert_clean(text)
+
+
+def test_a_crash_between_levers_stores_an_error_for_every_lever_not_yet_run(world, monkeypatch, tmp_path, capsys):
+    world.routes["https://ipinfo.io/org"] = {"body": ORG}
+    world.routes[APP], world.routes[WSS] = served(), served()
+    world.browser_close_error = FakeError(f"boom {RAW_URL} {PW}")   # raised outside the per-URL try: escapes to main()
+    code, text, d = run_variants(monkeypatch, tmp_path, capsys, "baseline,wait")
+    assert code == 1 and "unexpected failure" in text
+    assert load(d, "baseline")["proxy_state"] == "error" and load(d, "wait")["proxy_state"] == "error"
+    assert_clean(text)
+    assert all_clean_files(d)
+
+
+def test_evaluate_judges_one_variant_at_a_time():
+    """A `wait` lever pass must not be counted as a baseline pass, and a baseline FAIL must not end the wait lever."""
+    base_fail = rec(0, ok=False)                                # no variant field = baseline (old results stay valid)
+    waits = [dict(rec(m), variant="wait") for m in (0, 61, 125)]
+    assert probe.evaluate([base_fail] + waits, now=NOW, variant="wait")[0] == "PASS"
+    assert probe.evaluate([base_fail] + waits, now=NOW)[0] == "FAIL"
+    assert probe.evaluate(waits, now=NOW)[0] == "NO_PROXY_RUNS"
+
+
+def test_evaluate_cli_takes_a_variant(tmp_path, capsys):
+    now = datetime.now(timezone.utc)
+    for i, m in enumerate((300, 200, 100)):
+        d = tmp_path / f"run{i}"
+        d.mkdir()
+        r = dict(rec(0), variant="newheadless")
+        r["ts"] = (now - timedelta(minutes=m)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        (d / "probe-result-newheadless.json").write_text(json.dumps(r))
+    assert probe.main(["--evaluate", str(tmp_path), "--variant", "newheadless"]) == 0
+    assert "verdict=PASS" in capsys.readouterr().out
+    assert probe.main(["--evaluate", str(tmp_path)]) == 0
+    assert "verdict=NO_PROXY_RUNS" in capsys.readouterr().out
+
+
+def test_workflow_takes_a_variants_input_and_judges_the_first_lever():
+    import yaml
+    text = (ROOT / ".github" / "workflows" / "egress-chromium-landing-probe.yml").read_text()
+    wf = yaml.safe_load(text)
+    on = wf.get(True, wf.get("on"))
+    assert on["workflow_dispatch"]["inputs"]["variants"]["default"] == "baseline"
+    steps = wf["jobs"]["probe-main"]["steps"]
+    probe_step = next(x for x in steps if x.get("name", "").startswith("Landing-only probe"))
+    assert '--variants "${VARIANTS:-baseline}"' in probe_step["run"] and "xvfb-run -a" in probe_step["run"]
+    assert probe_step["env"]["VARIANTS"] == "${{ inputs.variants }}"          # via env: never interpolated into the command
+    ev = next(x for x in steps if "--evaluate prior" in x.get("run", ""))["run"]
+    assert '--variant "${eval_variant}"' in ev and "eval_variant=baseline" in ev   # the rule counts ONLY the default variant
+    assert "VARIANTS" not in next(x for x in steps if "--evaluate prior" in x.get("run", "")).get("env", {})
+    assert "probe-out/*.json" in json.dumps(steps)
+    # the pull_request job is the direct measurement: unchanged, no secret, no variants
+    pr_job = json.dumps(wf["jobs"]["probe"])
+    assert "EGRESS_PROBE_PROXY" not in pr_job and "--variants" not in pr_job and "secrets." not in pr_job
+
+
+def test_a_clearance_cookie_also_ends_the_wait_once_the_challenge_page_is_gone(world, monkeypatch, tmp_path, capsys):
+    """Some post-challenge pages have no login form we recognise: a cf_clearance cookie plus a non-challenge title is 'cleared'."""
+    world.routes["https://ipinfo.io/org"] = {"body": ORG}
+    page = challenged(clears_after_ms=12_000)
+    page["then"] = {"status": 200, "headers": {"server": "cloudflare"}, "title": "Breakout", "body": "welcome", "login": False}
+    world.routes[APP], world.routes[WSS] = page, served()
+    world.cookies = [{"name": "cf_clearance", "value": "V"}]
+    _, _, d = run_variants(monkeypatch, tmp_path, capsys, "wait")
+    app = load(d, "wait")["hosts"]["app.breakoutprop.com"]
+    assert app["cleared_after_s"] == 12 and app["login_form_rendered"] is False and app["cf_clearance_set"] is True
+
+
+# ---------------------------------------------------------------- hardened levers (operator decision 2026-10-04)
+def test_hardened_lever_uses_real_chrome_persistent_profile_and_matches_timezone(world, monkeypatch, tmp_path, capsys):
+    world.routes["https://ipinfo.io/org"] = {"body": ORG}
+    world.routes[TRACE] = {"body": TRACE_BODY}
+    world.routes[APP], world.routes[WSS] = served(), served()
+    code, text, d = run_variants(monkeypatch, tmp_path, capsys, "hardened")
+    assert code == 0
+    # the plain lookup browser (fail-closed org/country read) + ONE persistent real-Chrome context
+    assert len(world.launches) == 1 and len(world.persistent) == 1
+    _dir, kw = world.persistent[0]
+    assert kw["channel"] == "chrome" and kw["headless"] is False
+    assert "--disable-blink-features=AutomationControlled" in kw["args"]
+    assert kw["ignore_default_args"] == ["--enable-automation"]
+    assert kw["timezone_id"] == "America/New_York" and kw["locale"] == "en-US"
+    assert kw["proxy"]["server"] == f"http://{HOST}:{PORT}"
+    assert "user_agent" not in kw, "no UA override: a spoofed UA is itself a mismatch"
+    r = load(d, "hardened")
+    app = r["hosts"]["app.breakoutprop.com"]
+    assert r["timezone_applied"] == "America/New_York" and r["app_pass"] is True
+    assert app["signals"]["webdriver"] is False and app["reload_served"] is True
+    assert "signals=" in text and "reload_served=yes" in text
+    assert_clean(text)   # a signal value that echoes the proxy host is scrubbed
+    assert all_clean_files(d)
+
+
+def test_hardened_lever_is_fail_closed_on_an_unusable_proxy(world, monkeypatch, tmp_path, capsys):
+    world.routes["https://ipinfo.io/org"] = FakeError(f"net::ERR_PROXY_CONNECTION_FAILED {RAW_URL}")
+    code, text, d = run_variants(monkeypatch, tmp_path, capsys, "hardened,patchright")
+    assert world.persistent == [], "no hardened browser is opened when the proxy cannot be used"
+    assert APP not in world.navigations
+    assert load(d, "hardened")["proxy_state"] == "proxy_unreachable"
+    assert_clean(text)
+
+
+def test_hardened_launch_failure_is_a_token_and_never_goes_direct(world, monkeypatch, tmp_path, capsys):
+    world.routes["https://ipinfo.io/org"] = {"body": ORG}
+    world.persistent_error = FakeError(f"chrome not found; --proxy-server={HOST}:{PORT} {PW}")
+    code, text, d = run_variants(monkeypatch, tmp_path, capsys, "hardened")
+    assert code == 1 and load(d, "hardened")["proxy_state"] == "error"
+    assert APP not in world.navigations
+    assert_clean(text)
+    assert all_clean_files(d)
+
+
+def test_hardened_never_clicks_a_turnstile_widget(world, monkeypatch, tmp_path, capsys):
+    world.routes["https://ipinfo.io/org"] = {"body": ORG}
+    world.routes[APP], world.routes[WSS] = challenged(widget=True), served()
+    code, text, d = run_variants(monkeypatch, tmp_path, capsys, "hardened")
+    r = load(d, "hardened")
+    app = r["hosts"]["app.breakoutprop.com"]
+    assert app["challenge_kind"] == "interactive_widget" and r["app_pass"] is False
+    assert "reload_served" not in app          # only measured once served
+    assert not hasattr(_Page, "click") and not hasattr(_Page, "fill"), "the fake has no click/fill: any call would raise"

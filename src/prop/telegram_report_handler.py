@@ -42,9 +42,15 @@ def default_prop_account() -> Optional[str]:
     """The account a bare command targets when no ``acct=`` override is given.
 
     ``PROP_DEFAULT_ACCOUNT`` wins; otherwise resolve the single prop account
-    from ``accounts.yaml`` (when exactly one exists — the common case today). If
-    several prop accounts exist and none is pinned, returns ``None`` so the
-    handler asks the operator to disambiguate rather than guess.
+    from ``accounts.yaml`` (when exactly one exists). With several, the single
+    one in ``mode: live`` (a ``dry_run`` account places nothing, so a bare
+    report cannot be about it — TRADEIFY-WIRE: tradeify_1 at dry_run must not
+    take the default away from the live breakout_1). Accounts executed over
+    REST or by the phone (``src.prop.platform.auto_executed_accounts``) take
+    no manual report-back, so they never count (VELOTRADE-GOLIVE: velotrade_1
+    live beside tradeify_1 leaves tradeify_1 the default). If that is still not
+    exactly one and none is pinned, returns ``None`` so the handler asks the
+    operator to disambiguate rather than guess.
     """
     pinned = os.environ.get("PROP_DEFAULT_ACCOUNT")
     if pinned:
@@ -61,7 +67,28 @@ def default_prop_account() -> Optional[str]:
         aid for aid, a in accts.items()
         if isinstance(a, dict) and is_prop_account(a)
     ]
-    return prop_ids[0] if len(prop_ids) == 1 else None
+    if len(prop_ids) == 1:
+        return prop_ids[0]
+    # `mode` defaults to live (the account gate is default-permissive).
+    live = [aid for aid in prop_ids
+            if str(accts[aid].get("mode") or "live").strip().lower() == "live"]
+    # VELOTRADE-GOLIVE: an account executed over REST (dxtrade_api) or by the
+    # phone never takes a MANUAL report-back, so it cannot be what a bare
+    # Telegram report is about -- it must not make the default ambiguous.
+    from src.prop.platform import auto_executed_accounts
+    auto = auto_executed_accounts()
+    manual_live = [aid for aid in live if aid not in auto]
+    if len(manual_live) == 1:
+        return manual_live[0]
+    if manual_live:
+        live = manual_live
+    if len(live) == 1:
+        return live[0]
+    # Several LIVE prop accounts (tradeify_1 beside breakout_1 after go-live):
+    # the one declaring `report_default: true` in accounts.yaml takes a bare
+    # report; none or several declaring it → None (ask, never guess).
+    flagged = [aid for aid in live if accts[aid].get("report_default") is True]
+    return flagged[0] if len(flagged) == 1 else None
 
 
 def resolve_open_ticket(account_id: str, canonical_symbol: str) -> Tuple[
@@ -278,9 +305,13 @@ def _confirm_json(report: Dict[str, Any], out: Dict[str, Any],
     kind = out.get("kind")
     if kind == "account_status":
         rd = out.get("rule_distance") or {}
+        from src.prop.qualifying_days import standing_line
+
+        qd = standing_line(rd.get("qualifying_days"))
         return (f"✅ account status recorded [{report.get('account_id')}] · "
                 f"to daily-loss {_cushion(rd.get('distance_to_daily_loss_usd'))} · "
-                f"to DD-floor {_cushion(rd.get('distance_to_dd_floor_usd'))}")
+                f"to DD-floor {_cushion(rd.get('distance_to_dd_floor_usd'))}"
+                + (f" · {qd}" if qd else ""))
     if kind == "amend":
         return (f"✅ recorded STOP/TARGET MOVE {report.get('symbol')} "
                 f"(fill #{out.get('id')}) · sl {out.get('sl_before', '—')} → "

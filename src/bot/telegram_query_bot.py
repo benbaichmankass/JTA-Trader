@@ -61,14 +61,14 @@ load_dotenv()
 
 REPO_ROOT = _repo_root()
 
-# Canonical journal-DB path (resolver first, repo-root as existence fallback).
-_DB_CANDIDATES = [
-    _trade_journal_db_path(),
-    os.path.join(REPO_ROOT, "trade_journal.db"),
-]
-DB_PATH = next(
-    (p for p in _DB_CANDIDATES if p and os.path.exists(p)), _trade_journal_db_path()
-)
+# Canonical journal-DB path — the resolver, and nothing else.
+# The repo-root existence fallback was REMOVED 2026-10-01 (ORDER-AUDIT-2 item 9,
+# AUD-20260927-CA-A15-db-loaders-stray-trade-journal-fallback): with DATA_DIR
+# set but $DATA_DIR/trade_journal.db not yet present, `next(... exists ...)`
+# silently picked a stray <repo>/trade_journal.db. The resolver already falls
+# back to repo root when no env is set, so the second candidate only ever
+# changed the answer in that wrong case.
+DB_PATH = _trade_journal_db_path()
 
 STRATEGIES_YAML = os.path.join(REPO_ROOT, "config", "strategies.yaml")
 SET_ACCOUNT_MODE_SH = os.path.join(REPO_ROOT, "scripts", "ops", "set_account_mode.sh")
@@ -837,6 +837,12 @@ def main():
     # asked for and the one `answerable_route()` resolves to. This absence is
     # asserted by test; do not re-add it without withdrawing the constraint.
 
+    # TELEGRAM-CHANNELS part C: the ONE settings menu, SYSTEM channel. Mounted
+    # BEFORE the catch-all handler so `ns:` taps reach it.
+    from src.bot.notification_settings_menu import register as _register_settings
+
+    _register_settings(application, "system", service="ict-telegram-bot")
+
     application.add_handler(CallbackQueryHandler(callback_handler))
 
     # ── declare what THIS process polls, now that the handlers are attached ───
@@ -865,7 +871,7 @@ def main():
         record_poll,
     )
 
-    _polled_prefixes = (CB_PREFIX, "propexp")
+    _polled_prefixes = (CB_PREFIX, "propexp", "ns")
 
     async def _register_poll(_ctx) -> None:
         await asyncio.to_thread(

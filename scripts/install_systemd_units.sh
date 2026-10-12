@@ -72,7 +72,18 @@ heal_devnull() {
 heal_devnull || true
 
 changed=0
-_VM_ROLE_EARLY="$(tr -d '[:space:]' < /etc/ict-vm-role 2>/dev/null || true)"
+# Host role marker (/etc/ict-vm-role; "gateway" on the IB-Gateway VM, ABSENT on
+# the live trader). PI-20261004-PUQ1APTH-0007: the read used to be
+# `tr ... < /etc/ict-vm-role 2>/dev/null`. bash applies redirections left to
+# right, so the failing `<` was reported on the ORIGINAL stderr before the
+# `2>/dev/null` took effect -- one "No such file or directory" line in the
+# ict-git-sync journal on every unit refresh of the live VM. The `{ ...; }`
+# group puts the stderr redirect OUTSIDE the input redirect, so a missing file
+# is silent and the role reads empty (= non-gateway), exactly as before.
+# VM_ROLE_FILE is overridable for tests only.
+VM_ROLE_FILE=${VM_ROLE_FILE:-/etc/ict-vm-role}
+_read_vm_role() { { tr -d '[:space:]' < "$VM_ROLE_FILE"; } 2>/dev/null || true; }
+_VM_ROLE_EARLY="$(_read_vm_role)"
 
 # ---------------------------------------------------------------------------
 # Select the data-dir drop-in flavor by mount topology.
@@ -470,7 +481,7 @@ _GATEWAY_ONLY_TIMERS=" ict-ib-gateway-watchdog.timer ict-ib-gateway-reset.timer 
 # ict-web-api (crash-looping) + several timer services (failed) on the gateway.
 _GATEWAY_ALLOWED_TIMERS=" ict-ib-gateway-watchdog.timer ict-ib-gateway-reset.timer ict-git-sync.timer ict-devnull-guard.timer "
 _GATEWAY_ALLOWED_SERVICES=" ict-ib-gateway-watchdog.service ict-ib-gateway-reset.service ict-git-sync.service ict-devnull-guard.service "
-_VM_ROLE="$(tr -d '[:space:]' < /etc/ict-vm-role 2>/dev/null || true)"
+_VM_ROLE="$(_read_vm_role)"  # same silent read as _VM_ROLE_EARLY above
 
 # Gateway isolation pruning: on the gateway VM, actively disable/stop any
 # non-allowlisted ict-* unit a prior run or a stray deploy left
@@ -500,7 +511,17 @@ fi
 # unit files are kept (inert) so re-enabling is trivial and nothing that
 # references them breaks; this block ACTIVELY disables an already-enabled timer
 # on the VM, and the enable loop below SKIPS it so a deploy never re-enables it.
-_RETIRED_TIMERS=" ict-heartbeat.timer "
+#
+# breakout_1 (2026-10-09, OPS-DECISIONS-1009): the account is retired (#16981,
+# roster []; operator 2026-10-09 "it shouldn't be coming up again"). Its feed
+# timer deploy/ict-prop-feed.timer is NOT opt-in, so every deploy re-enabled it
+# after the 2026-10-08 feed-disable-timer (MEASURED 2026-10-09 via
+# diag_fetch.sh services: ict-prop-feed.timer=active, ict-prop-executor.service
+# =failed). Listing it here makes the retirement survive deploys; its leftover
+# `failed` service state is cleared below so it stops reading as a live fault.
+# tests/test_breakout1_retired.py pins the empty roster this list assumes.
+_RETIRED_TIMERS=" ict-heartbeat.timer ict-prop-feed.timer "
+_RETIRED_FAILED_SERVICES=" ict-prop-feed.service ict-prop-executor.service "
 for _rt in $_RETIRED_TIMERS; do
     # Unconditional idempotent disable — `disable --now` on an already-disabled
     # timer is a harmless no-op. Deliberately NOT guarded on `is-enabled` AND
@@ -509,8 +530,13 @@ for _rt in $_RETIRED_TIMERS; do
     # that guard's restart), so ANY `>/dev/null` here fails to open the fd and
     # bash skips the command before it runs. Let the output land in the deploy
     # log instead. `|| true` keeps a genuinely-absent unit from failing the deploy.
-    echo ">>> install_systemd_units: retiring $_rt (superseded by the hourly snapshot)"
+    echo ">>> install_systemd_units: retiring $_rt"
     "${SUDO[@]}" systemctl disable --now "$_rt" || true
+done
+for _rs in $_RETIRED_FAILED_SERVICES; do
+    # A retired unit's stale `failed` state still reads as a fault on
+    # /api/diag/services; clear it (no-op when not failed).
+    "${SUDO[@]}" systemctl reset-failed "$_rs" || true
 done
 
 shopt -s nullglob
@@ -521,7 +547,7 @@ for timer_path in deploy/*.timer; do
     fi
     # Retired timers are never (re-)enabled — disabled once above, kept inert.
     if [[ "$_RETIRED_TIMERS" == *" $timer_name "* ]]; then
-        echo ">>> install_systemd_units: skip enable $timer_name (retired; superseded by hourly snapshot)"
+        echo ">>> install_systemd_units: skip enable $timer_name (retired)"
         continue
     fi
     if [ "$_VM_ROLE" = "gateway" ]; then

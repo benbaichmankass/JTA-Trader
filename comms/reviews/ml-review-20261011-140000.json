@@ -1,0 +1,2162 @@
+{
+ "request_id": "ml-review-20261011",
+ "reviewed_at": "2026-10-11T14:10:00Z",
+ "reviewer": "claude",
+ "session": "session_01TJm8DkoUfBts46QxZqzm7j (lane of manager session_01Uq7MrjPQDRWqbhCjwuMava)",
+ "window_start": "2026-10-04T12:50:00Z",
+ "window_end": "2026-10-11T14:00:00Z",
+ "sources": [
+  "GET /api/bot/ml/registry, ml/status, ml/cycle, shadow/stats, shadow/drift (mes-regime-5m-lgbm-v2, btc-regime-15m-lgbm-fc-pcv-v2, sol-regime-15m-lgbm-fc-pcv-v2), trades/scores?limit=200 -- direct HTTPS, read 2026-10-11 ~13:00Z",
+  "python3 scripts/ops/ml_plan_status.py --plumbing",
+  "trainer-vm-diag issue #17581 (queued, never ran): NOT LOOKED AT: trainer-vm-diag #17581 (stage-guard, gate-check, cycle-log names) stayed queued on the Actions runner for 30+ min",
+  "comms/ml-plan/20261011T2100Z.json"
+ ],
+ "overall_assessment": "caution",
+ "_headline": "Three advisory heads, 96 models, trainer healthy (2 cycles/24h, 0 failed, disk 43.8%). One advisory head needs attention: sol-regime-15m-lgbm-fc-pcv-v2 drift is SIGNIFICANT (KS 0.230, PSI 0.200, ref n 3207 vs cur n 750) -- HOLD, diagnose before any demote (new unit RQ-20261011-6e85-01). MES 5m advisory margin over its baseline recovering (4.47 pts, was 3.66; bar 5). stage-guard / gate-check / serve-parity / label-coverage were NOT re-measured: the trainer relay never ran.",
+ "trainer_findings": {
+  "trainer_service": {
+   "status": "ok",
+   "note": "ml/status: timer active, last trigger 10-11T00:56Z, next 10-12T00:37Z; last cycle_end 06:04Z rc=0 (already_done 76, trained 0 -- a catch-up cycle), cycles_24h 2, manifests_24h ok 69 failed 0. Service unit disabled/inactive is the timer-driven oneshot, as before."
+  },
+  "trainer_datasets": {
+   "status": "watch",
+   "note": "builds 119 ok / 1 failed / 2 skipped in 24h (last_overall_rc 1 at 06:04Z); family of the failure not readable from the mirror; a repeat becomes a row (plan rule)."
+  },
+  "trainer_registry": {
+   "status": "ok",
+   "note": "96 models: advisory 3, shadow 25, candidate 67, research_only 1 (ml/registry count 96 == ml/status 96)."
+  },
+  "trainer_models": {
+   "status": "watch",
+   "note": "12 of 96 latest runs degraded vs prior (btc-regime-15m-lgbm-v2, mes-regime-5m-lgbm-macro-v1/yz-v1, mes-regime-15m-baseline-v1, eth-regime-1h x2 ...) -- all shadow/candidate; no advisory head degraded on training metric. Sol advisory head is the live-data concern (drift)."
+  }
+ },
+ "model_status": [
+  {
+   "model_id": "btc-c1-base-v903",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20260702T061058Z",
+    "at": "2026-07-02T06:10:58.897539+00:00",
+    "code_revision": "af9a5ecee",
+    "headline_metric": "macro_f1=0.5571 acc=0.626",
+    "n_eval": 87636.0,
+    "trend_vs_prior_run": "first_run"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-c1-base-v905",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20260702T061426Z",
+    "at": "2026-07-02T06:14:26.507009+00:00",
+    "code_revision": "af9a5ecee",
+    "headline_metric": "macro_f1=0.5918 acc=0.890",
+    "n_eval": 87636.0,
+    "trend_vs_prior_run": "first_run"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-c1-macro-v903",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20260702T061215Z",
+    "at": "2026-07-02T06:12:15.731025+00:00",
+    "code_revision": "af9a5ecee",
+    "headline_metric": "macro_f1=0.5871 acc=0.691",
+    "n_eval": 87636.0,
+    "trend_vs_prior_run": "first_run"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-c1-macro-v905",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20260702T061546Z",
+    "at": "2026-07-02T06:15:46.226187+00:00",
+    "code_revision": "af9a5ecee",
+    "headline_metric": "macro_f1=0.5623 acc=0.921",
+    "n_eval": 87636.0,
+    "trend_vs_prior_run": "first_run"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-direction-15m-lgbm-base-v003",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T013809Z",
+    "at": "2026-10-11T01:38:09.884065+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "macro_f1=0.3450 acc=0.518",
+    "n_eval": 87636.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-direction-15m-lgbm-emb-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20260806T010956Z",
+    "at": "2026-08-06T01:09:56.491612+00:00",
+    "code_revision": "7485fd5f5",
+    "headline_metric": "macro_f1=0.3490 acc=0.524",
+    "n_eval": 87636.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-direction-15m-lgbm-fc-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T013945Z",
+    "at": "2026-10-11T01:39:45.858455+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "macro_f1=0.3438 acc=0.516",
+    "n_eval": 87636.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-regime-15m-baseline-v1",
+   "stage": "shadow",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T015030Z",
+    "at": "2026-10-11T01:50:30.752589+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "macro_f1=0.4926 acc=0.971",
+    "n_eval": 35054.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 1750,
+    "score_summary": "mean=0.9795 read_state=varying last=2026-10-11T13:01Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "ok"
+  },
+  {
+   "model_id": "btc-regime-15m-c1-base",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20260702T052815Z",
+    "at": "2026-07-02T05:28:15.806176+00:00",
+    "code_revision": "af9a5ecee",
+    "headline_metric": "macro_f1=0.5571 acc=0.626",
+    "n_eval": 87636.0,
+    "trend_vs_prior_run": "first_run"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-regime-15m-c1-macro",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20260702T052934Z",
+    "at": "2026-07-02T05:29:35.004083+00:00",
+    "code_revision": "af9a5ecee",
+    "headline_metric": "macro_f1=0.5871 acc=0.691",
+    "n_eval": 87636.0,
+    "trend_vs_prior_run": "first_run"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-regime-15m-hmm-cw-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T014015Z",
+    "at": "2026-10-11T01:40:15.198691+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "macro_f1=0.5841 acc=0.889",
+    "n_eval": 87636.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-regime-15m-hmm-fc-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T014047Z",
+    "at": "2026-10-11T01:40:47.731352+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "macro_f1=0.4908 acc=0.964",
+    "n_eval": 87636.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-regime-15m-hmm-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T014117Z",
+    "at": "2026-10-11T01:41:17.188411+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "macro_f1=0.4908 acc=0.964",
+    "n_eval": 87636.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-regime-15m-lgbm-base-pcv-v003",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T014221Z",
+    "at": "2026-10-11T01:42:21.651453+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "macro_f1=0.5600 acc=0.630",
+    "n_eval": 87636.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-regime-15m-lgbm-base-v003",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T014249Z",
+    "at": "2026-10-11T01:42:49.463707+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "macro_f1=0.5761 acc=0.671",
+    "n_eval": 35054.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-regime-15m-lgbm-base-vt003-pcv-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20260726T052933Z",
+    "at": "2026-07-26T05:29:33.335230+00:00",
+    "code_revision": "47747d174",
+    "headline_metric": "macro_f1=0.4800 acc=0.526",
+    "n_eval": 107919.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-regime-15m-lgbm-corpusemb-pcv-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20260806T011550Z",
+    "at": "2026-08-06T01:15:50.367051+00:00",
+    "code_revision": "7485fd5f5",
+    "headline_metric": "macro_f1=0.5600 acc=0.630",
+    "n_eval": 87636.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-regime-15m-lgbm-emb-pca-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20260806T011633Z",
+    "at": "2026-08-06T01:16:33.292518+00:00",
+    "code_revision": "7485fd5f5",
+    "headline_metric": "macro_f1=0.6159 acc=0.732",
+    "n_eval": 35054.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-regime-15m-lgbm-emb-pcv-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20260806T011843Z",
+    "at": "2026-08-06T01:18:43.397213+00:00",
+    "code_revision": "7485fd5f5",
+    "headline_metric": "macro_f1=0.6125 acc=0.706",
+    "n_eval": 87636.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-regime-15m-lgbm-emb-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20260806T011926Z",
+    "at": "2026-08-06T01:19:26.370798+00:00",
+    "code_revision": "7485fd5f5",
+    "headline_metric": "macro_f1=0.6172 acc=0.734",
+    "n_eval": 35054.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-regime-15m-lgbm-fc-pcv-v1",
+   "stage": "shadow",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T014410Z",
+    "at": "2026-10-11T01:44:10.606226+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "macro_f1=0.6031 acc=0.911",
+    "n_eval": 87636.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 1750,
+    "score_summary": "mean=0.9649 read_state=varying last=2026-10-11T13:01Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "ok"
+  },
+  {
+   "model_id": "btc-regime-15m-lgbm-fc-pcv-v2",
+   "stage": "advisory",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T014530Z",
+    "at": "2026-10-11T01:45:30.196021+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "macro_f1=0.5728 acc=0.914",
+    "n_eval": 87636.0,
+    "trend_vs_prior_run": "improved"
+   },
+   "live_shadow": {
+    "influence": "advisory",
+    "predictions": 1746,
+    "score_summary": "mean=0.9767 read_state=varying last=2026-10-11T13:01Z",
+    "drift": "see drift block",
+    "realized": "n/a"
+   },
+   "note": "ok"
+  },
+  {
+   "model_id": "btc-regime-15m-lgbm-fc-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T014606Z",
+    "at": "2026-10-11T01:46:06.487046+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "macro_f1=0.5761 acc=0.671",
+    "n_eval": 35054.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-regime-15m-lgbm-fcemb-pcv-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20260806T012458Z",
+    "at": "2026-08-06T01:24:58.218297+00:00",
+    "code_revision": "7485fd5f5",
+    "headline_metric": "macro_f1=0.6054 acc=0.932",
+    "n_eval": 87636.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-regime-15m-lgbm-v2",
+   "stage": "shadow",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T014632Z",
+    "at": "2026-10-11T01:46:32.782144+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "macro_f1=0.5827 acc=0.908",
+    "n_eval": 35054.0,
+    "trend_vs_prior_run": "degraded"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 1750,
+    "score_summary": "mean=0.9527 read_state=varying last=2026-10-11T13:01Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "ok"
+  },
+  {
+   "model_id": "btc-regime-15m-lgbm-v2-gpuburst",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20260702T204526Z",
+    "at": "2026-07-02T21:54:32.464455+00:00",
+    "code_revision": "gpu-burst",
+    "headline_metric": "macro_f1=0.5821 acc=0.898",
+    "n_eval": 35054.0,
+    "trend_vs_prior_run": "first_run"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-regime-15m-lgbm-vt003-pin-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T014738Z",
+    "at": "2026-10-11T01:47:38.244291+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "macro_f1=0.6692 acc=0.793",
+    "n_eval": 87636.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-regime-15m-lgbm-vt004-pcv-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20260731T013508Z",
+    "at": "2026-07-31T01:35:08.053349+00:00",
+    "code_revision": "44e8710e4",
+    "headline_metric": "macro_f1=0.6275 acc=0.727",
+    "n_eval": 87636.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-regime-15m-lgbm-vt004-pin-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T014843Z",
+    "at": "2026-10-11T01:48:43.829660+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "macro_f1=0.6288 acc=0.853",
+    "n_eval": 87636.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-regime-15m-lgbm-vt005-pin-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T014949Z",
+    "at": "2026-10-11T01:49:49.372829+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "macro_f1=0.5981 acc=0.902",
+    "n_eval": 87636.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-regime-15m-lgbm-yz-v1",
+   "stage": "shadow",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T015017Z",
+    "at": "2026-10-11T01:50:17.567850+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "macro_f1=0.5950 acc=0.907",
+    "n_eval": 35054.0,
+    "trend_vs_prior_run": "improved"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 1750,
+    "score_summary": "mean=0.9580 read_state=varying last=2026-10-11T13:01Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "ok"
+  },
+  {
+   "model_id": "btc-regime-15m-tcn-v1-gpuburst",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20260703T063353Z",
+    "at": "2026-07-03T06:34:01.699038+00:00",
+    "code_revision": "4c791fad1",
+    "headline_metric": "macro_f1=0.5344 acc=0.835",
+    "n_eval": 87605.0,
+    "trend_vs_prior_run": "first_run"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-regime-1h-hmm-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T015035Z",
+    "at": "2026-10-11T01:50:35.202390+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "macro_f1=0.5657 acc=0.808",
+    "n_eval": 8760.0,
+    "trend_vs_prior_run": "improved"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-regime-1h-lgbm-base-pcv-v003",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T015055Z",
+    "at": "2026-10-11T01:50:55.412752+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "macro_f1=0.5172 acc=0.591",
+    "n_eval": 21900.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-regime-1h-lgbm-emb-pcv-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20260806T013032Z",
+    "at": "2026-08-06T01:30:32.277934+00:00",
+    "code_revision": "7485fd5f5",
+    "headline_metric": "macro_f1=0.5343 acc=0.595",
+    "n_eval": 21900.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-regime-1h-lgbm-funding-svble-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T015104Z",
+    "at": "2026-10-11T01:51:04.048784+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "macro_f1=0.6533 acc=0.764",
+    "n_eval": 8760.0,
+    "trend_vs_prior_run": "improved"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 178,
+    "score_summary": "mean=0.8943 read_state=varying last=2026-09-29T11:45Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "ok"
+  },
+  {
+   "model_id": "btc-regime-1h-lgbm-funding-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T015112Z",
+    "at": "2026-10-11T01:51:12.849073+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "macro_f1=0.6533 acc=0.764",
+    "n_eval": 8760.0,
+    "trend_vs_prior_run": "improved"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-regime-1h-lgbm-v2",
+   "stage": "shadow",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T015121Z",
+    "at": "2026-10-11T01:51:21.115073+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "macro_f1=0.6584 acc=0.759",
+    "n_eval": 8760.0,
+    "trend_vs_prior_run": "degraded"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 803,
+    "score_summary": "mean=0.8261 read_state=varying last=2026-10-11T12:17Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "ok"
+  },
+  {
+   "model_id": "btc-regime-1h-lgbm-yz-v1",
+   "stage": "shadow",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T015129Z",
+    "at": "2026-10-11T01:51:29.854577+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "macro_f1=0.6676 acc=0.762",
+    "n_eval": 8760.0,
+    "trend_vs_prior_run": "improved"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 803,
+    "score_summary": "mean=0.8561 read_state=varying last=2026-10-11T12:17Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "ok"
+  },
+  {
+   "model_id": "btc-regime-1h-trend-lgbm-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T015138Z",
+    "at": "2026-10-11T01:51:38.936038+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "macro_f1=0.3377 acc=0.348",
+    "n_eval": 8760.0,
+    "trend_vs_prior_run": "degraded"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-regime-5m-baseline-v1",
+   "stage": "shadow",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T015627Z",
+    "at": "2026-10-11T01:56:27.733477+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.4990 acc=0.996",
+    "n_eval": 105173.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 4582,
+    "score_summary": "mean=0.9958 read_state=varying last=2026-10-11T13:01Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "ok"
+  },
+  {
+   "model_id": "btc-regime-5m-lgbm-flow-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T015315Z",
+    "at": "2026-10-11T01:53:15.078473+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "macro_f1=0.5535 acc=0.985",
+    "n_eval": 105173.0,
+    "trend_vs_prior_run": "improved"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "btc-regime-5m-lgbm-flow-v1-offload",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20260828T072009Z",
+    "at": "2026-08-28T19:39:27.903708+00:00",
+    "code_revision": "7774d1c3",
+    "headline_metric": "macro_f1=0.5644 acc=0.995",
+    "n_eval": 22978.0,
+    "trend_vs_prior_run": "first_run"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 956,
+    "score_summary": "mean=0.9913 read_state=varying last=2026-09-29T11:55Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "ok"
+  },
+  {
+   "model_id": "btc-regime-5m-lgbm-v2",
+   "stage": "shadow",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T015428Z",
+    "at": "2026-10-11T01:54:28.278479+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "macro_f1=0.5535 acc=0.985",
+    "n_eval": 105173.0,
+    "trend_vs_prior_run": "improved"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 4582,
+    "score_summary": "mean=0.9898 read_state=varying last=2026-10-11T13:01Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "ok"
+  },
+  {
+   "model_id": "btc-regime-5m-lgbm-yz-v1",
+   "stage": "shadow",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T015549Z",
+    "at": "2026-10-11T01:55:49.996809+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "macro_f1=0.5570 acc=0.986",
+    "n_eval": 105173.0,
+    "trend_vs_prior_run": "improved"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 4582,
+    "score_summary": "mean=0.9930 read_state=varying last=2026-10-11T13:01Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "ok"
+  },
+  {
+   "model_id": "conviction-meta-base-btc-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T015629Z",
+    "at": "2026-10-11T01:56:29.550069+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.5611 acc=0.650",
+    "n_eval": 20.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "conviction-meta-emb-btc-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20260806T013551Z",
+    "at": "2026-08-06T01:35:51.469035+00:00",
+    "code_revision": "7485fd5f5",
+    "headline_metric": "macro_f1=0.6000 acc=0.700",
+    "n_eval": 20.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "conviction-meta-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T015633Z",
+    "at": "2026-10-11T01:56:33.961047+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.4533 acc=0.541",
+    "n_eval": 270.0,
+    "trend_vs_prior_run": "improved"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 754,
+    "score_summary": "mean=0.7457 read_state=varying last=2026-09-29T09:27Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "ok"
+  },
+  {
+   "model_id": "conviction-meta-v1-bt",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T015631Z",
+    "at": "2026-10-11T01:56:31.755092+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.4533 acc=0.541",
+    "n_eval": 270.0,
+    "trend_vs_prior_run": "improved"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "corpus-ssl-encoder-mae-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20260726T055204Z",
+    "at": "2026-07-26T05:52:04.769759+00:00",
+    "code_revision": "47747d174",
+    "headline_metric": "{'embedding_dim': 16.0, 'n_eval': 851.0, 'n_series': 13.0, '",
+    "n_eval": 851.0,
+    "trend_vs_prior_run": "first_run"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "eth-direction-1h-lgbm-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T015644Z",
+    "at": "2026-10-11T01:56:44.275922+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.3416 acc=0.513",
+    "n_eval": 8760.0,
+    "trend_vs_prior_run": "degraded"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "eth-direction-1h-lgbm-xasset-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T015656Z",
+    "at": "2026-10-11T01:56:56.716792+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.3488 acc=0.525",
+    "n_eval": 8760.0,
+    "trend_vs_prior_run": "improved"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "eth-regime-15m-hmm-cw-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T015724Z",
+    "at": "2026-10-11T01:57:24.627170+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.4552 acc=0.547",
+    "n_eval": 87636.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "eth-regime-15m-lgbm-base-pcv-v003",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T015829Z",
+    "at": "2026-10-11T01:58:29.491484+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.4596 acc=0.468",
+    "n_eval": 87636.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "eth-regime-15m-lgbm-emb-pcv-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20260806T013950Z",
+    "at": "2026-08-06T01:39:50.747342+00:00",
+    "code_revision": "7485fd5f5",
+    "headline_metric": "macro_f1=0.5173 acc=0.524",
+    "n_eval": 87636.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "eth-regime-15m-lgbm-fc-pcv-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T015948Z",
+    "at": "2026-10-11T01:59:48.781158+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.5840 acc=0.763",
+    "n_eval": 87636.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "eth-regime-15m-lgbm-selfonly-v901ctrl",
+   "stage": "shadow",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020020Z",
+    "at": "2026-10-11T02:00:20.531162+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.4576 acc=0.458",
+    "n_eval": 35054.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 1738,
+    "score_summary": "mean=0.8141 read_state=varying last=2026-10-11T13:01Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "ok"
+  },
+  {
+   "model_id": "eth-regime-15m-lgbm-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020101Z",
+    "at": "2026-10-11T02:01:01.773014+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.6163 acc=0.838",
+    "n_eval": 35054.0,
+    "trend_vs_prior_run": "improved"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "eth-regime-15m-lgbm-xasset-v1",
+   "stage": "shadow",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020135Z",
+    "at": "2026-10-11T02:01:35.561774+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.4817 acc=0.482",
+    "n_eval": 35054.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 1738,
+    "score_summary": "mean=0.8163 read_state=varying last=2026-10-11T13:01Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "ok"
+  },
+  {
+   "model_id": "eth-regime-1h-lgbm-v1",
+   "stage": "shadow",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020144Z",
+    "at": "2026-10-11T02:01:44.377704+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.5834 acc=0.584",
+    "n_eval": 8760.0,
+    "trend_vs_prior_run": "degraded"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 1015,
+    "score_summary": "mean=0.7288 read_state=varying last=2026-10-11T12:18Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "ok"
+  },
+  {
+   "model_id": "eth-regime-1h-lgbm-xasset-v1",
+   "stage": "shadow",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020154Z",
+    "at": "2026-10-11T02:01:54.906012+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.5776 acc=0.578",
+    "n_eval": 8760.0,
+    "trend_vs_prior_run": "degraded"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 1015,
+    "score_summary": "mean=0.7395 read_state=varying last=2026-10-11T12:18Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "ok"
+  },
+  {
+   "model_id": "eth-regime-5m-lgbm-v1",
+   "stage": "shadow",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020324Z",
+    "at": "2026-10-11T02:03:24.795305+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.5588 acc=0.929",
+    "n_eval": 105173.0,
+    "trend_vs_prior_run": "improved"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 4572,
+    "score_summary": "mean=0.9547 read_state=varying last=2026-10-11T13:01Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "ok"
+  },
+  {
+   "model_id": "execution-quality-baseline-v0",
+   "stage": "shadow",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T013648Z",
+    "at": "2026-10-11T01:36:48.929383+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "mae=3.2638",
+    "n_eval": 65.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 4685,
+    "score_summary": "mean=-0.2017 read_state=constant last=2026-10-11T13:02Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "constant scorer -> insufficient_data, not a fail (ML-HYGIENE #17189)"
+  },
+  {
+   "model_id": "mes-regime-15m-baseline-v1",
+   "stage": "shadow",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020336Z",
+    "at": "2026-10-11T02:03:36.317126+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.5399 acc=0.656",
+    "n_eval": 3014.0,
+    "trend_vs_prior_run": "degraded"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 1268,
+    "score_summary": "mean=0.6550 read_state=varying last=2026-10-11T12:18Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "ok"
+  },
+  {
+   "model_id": "mes-regime-15m-lgbm-v2",
+   "stage": "shadow",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020330Z",
+    "at": "2026-10-11T02:03:30.127058+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.7115 acc=0.728",
+    "n_eval": 3014.0,
+    "trend_vs_prior_run": "improved"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 1268,
+    "score_summary": "mean=0.7421 read_state=varying last=2026-10-11T12:18Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "operator stage decision 2026-10-08 -> candidate (PR #17580)"
+  },
+  {
+   "model_id": "mes-regime-15m-lgbm-yz-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020334Z",
+    "at": "2026-10-11T02:03:34.585903+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.6991 acc=0.712",
+    "n_eval": 3014.0,
+    "trend_vs_prior_run": "improved"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "mes-regime-1d-lgbm-v2",
+   "stage": "shadow",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020338Z",
+    "at": "2026-10-11T02:03:38.573894+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.6643 acc=0.664",
+    "n_eval": 587.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 831,
+    "score_summary": "mean=0.7558 read_state=varying last=2026-10-11T12:18Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "ok"
+  },
+  {
+   "model_id": "mes-regime-5m-baseline-v1",
+   "stage": "shadow",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020408Z",
+    "at": "2026-10-11T02:04:08.520575+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.6656 acc=0.725",
+    "n_eval": 9022.0,
+    "trend_vs_prior_run": "improved"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 2914,
+    "score_summary": "mean=0.6783 read_state=varying last=2026-10-11T12:18Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "ok"
+  },
+  {
+   "model_id": "mes-regime-5m-lgbm-macro-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020347Z",
+    "at": "2026-10-11T02:03:47.698725+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.6671 acc=0.682",
+    "n_eval": 9022.0,
+    "trend_vs_prior_run": "degraded"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "mes-regime-5m-lgbm-v2",
+   "stage": "advisory",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020355Z",
+    "at": "2026-10-11T02:03:55.991937+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.7103 acc=0.725",
+    "n_eval": 9022.0,
+    "trend_vs_prior_run": "improved"
+   },
+   "live_shadow": {
+    "influence": "advisory",
+    "predictions": 2914,
+    "score_summary": "mean=0.7153 read_state=varying last=2026-10-11T12:18Z",
+    "drift": "see drift block",
+    "realized": "n/a"
+   },
+   "note": "ok"
+  },
+  {
+   "model_id": "mes-regime-5m-lgbm-yz-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020404Z",
+    "at": "2026-10-11T02:04:04.650045+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.6879 acc=0.695",
+    "n_eval": 9022.0,
+    "trend_vs_prior_run": "degraded"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "mes-regime-classifier-baseline-v0",
+   "stage": "research_only",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20260522T090539Z",
+    "at": "2026-05-22T09:05:39.094403+00:00",
+    "code_revision": "c0b14ff18",
+    "headline_metric": "macro_f1=0.6845 acc=0.748",
+    "n_eval": 1292.0,
+    "trend_vs_prior_run": "first_run"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "ok"
+  },
+  {
+   "model_id": "mes-setup-quality-baseline-v0",
+   "stage": "shadow",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020408Z",
+    "at": "2026-10-11T02:04:08.961659+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "mae=0.9989",
+    "n_eval": 7.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 268,
+    "score_summary": "mean=0.8378 read_state=constant last=2026-10-06T22:13Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "constant scorer -> insufficient_data, not a fail (ML-HYGIENE #17189); operator stage decision 2026-10-08 -> candidate (PR #17580); SILENT since 2026-10-06"
+  },
+  {
+   "model_id": "mes-trade-outcome-winrate-baseline-v0",
+   "stage": "shadow",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020409Z",
+    "at": "2026-10-11T02:04:09.376179+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "brier=0.244 f1=0.75",
+    "n_eval": 5.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 268,
+    "score_summary": "mean=0.6667 read_state=constant last=2026-10-06T22:13Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "constant scorer -> insufficient_data, not a fail (ML-HYGIENE #17189); operator stage decision 2026-10-08 -> candidate (PR #17580); SILENT since 2026-10-06"
+  },
+  {
+   "model_id": "prop-mission-policy-baseline-v0",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20260726T052008Z",
+    "at": "2026-07-26T05:20:08.944097+00:00",
+    "code_revision": "47747d174",
+    "headline_metric": "brier=0.000 f1=0.00",
+    "n_eval": 53.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "regime-classifier-baseline-v0",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T013652Z",
+    "at": "2026-10-11T01:36:52.652553+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "macro_f1=0.4491 acc=0.815",
+    "n_eval": 8760.0,
+    "trend_vs_prior_run": "improved"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "setup-candidates-metalabel-backtest-c1-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020411Z",
+    "at": "2026-10-11T02:04:11.189287+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "brier=0.174 f1=0.00",
+    "n_eval": 376.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "setup-candidates-metalabel-backtest-c2-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020413Z",
+    "at": "2026-10-11T02:04:13.217047+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "mae=1.3916",
+    "n_eval": 376.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "setup-candidates-metalabel-backtest-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020415Z",
+    "at": "2026-10-11T02:04:15.253009+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "brier=0.212 f1=0.20",
+    "n_eval": 376.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "setup-candidates-metalabel-p2pool-c1-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020417Z",
+    "at": "2026-10-11T02:04:17.522106+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "brier=0.155 f1=0.00",
+    "n_eval": 324.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "setup-candidates-metalabel-p2pool-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020419Z",
+    "at": "2026-10-11T02:04:19.765749+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "brier=0.208 f1=0.27",
+    "n_eval": 324.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "setup-candidates-metalabel-siglog-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020422Z",
+    "at": "2026-10-11T02:04:22.193425+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "brier=0.212 f1=0.20",
+    "n_eval": 376.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "setup-candidates-metalabel-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020424Z",
+    "at": "2026-10-11T02:04:24.220050+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "brier=0.212 f1=0.20",
+    "n_eval": 376.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "setup-candidates-metalabel-xsym-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020427Z",
+    "at": "2026-10-11T02:04:27.413061+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "brier=0.220 f1=0.23",
+    "n_eval": 354.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "setup-candidates-metalabel-xsym-yz-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20260726T060147Z",
+    "at": "2026-07-26T06:01:47.468005+00:00",
+    "code_revision": "47747d174",
+    "headline_metric": "brier=0.220 f1=0.23",
+    "n_eval": 354.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "setup-quality-audit-baseline-v0",
+   "stage": "shadow",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T013653Z",
+    "at": "2026-10-11T01:36:53.106235+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "mae=0.0650",
+    "n_eval": 49.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 4685,
+    "score_summary": "mean=-0.0572 read_state=constant last=2026-10-11T13:02Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "constant scorer -> insufficient_data, not a fail (ML-HYGIENE #17189); operator stage decision 2026-10-08 -> candidate (PR #17580)"
+  },
+  {
+   "model_id": "setup-quality-baseline-v0",
+   "stage": "shadow",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T013653Z",
+    "at": "2026-10-11T01:36:53.576427+00:00",
+    "code_revision": "50ac86ced",
+    "headline_metric": "mae=0.9147",
+    "n_eval": 538.0,
+    "trend_vs_prior_run": "improved"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 4685,
+    "score_summary": "mean=-0.1661 read_state=varying last=2026-10-11T13:02Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "ok"
+  },
+  {
+   "model_id": "setup-quality-lgbm-v2",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20260726T060149Z",
+    "at": "2026-07-26T06:01:49.304066+00:00",
+    "code_revision": "47747d174",
+    "headline_metric": "mae=1.4907",
+    "n_eval": 153.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 754,
+    "score_summary": "mean=-0.1379 read_state=varying last=2026-09-29T09:27Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "operator: retire (2026-10-09); already candidate"
+  },
+  {
+   "model_id": "sol-regime-15m-lgbm-base-pcv-v530",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020534Z",
+    "at": "2026-10-11T02:05:34.621187+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.5044 acc=0.553",
+    "n_eval": 82788.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "sol-regime-15m-lgbm-fc-pcv-v1",
+   "stage": "shadow",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020646Z",
+    "at": "2026-10-11T02:06:46.504325+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.5491 acc=0.614",
+    "n_eval": 82788.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 1734,
+    "score_summary": "mean=0.8341 read_state=varying last=2026-10-11T13:01Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "ok"
+  },
+  {
+   "model_id": "sol-regime-15m-lgbm-fc-pcv-v2",
+   "stage": "advisory",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020805Z",
+    "at": "2026-10-11T02:08:05.647920+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.5408 acc=0.629",
+    "n_eval": 87444.0,
+    "trend_vs_prior_run": "improved"
+   },
+   "live_shadow": {
+    "influence": "advisory",
+    "predictions": 1734,
+    "score_summary": "mean=0.8383 read_state=varying last=2026-10-11T13:01Z",
+    "drift": "see drift block",
+    "realized": "n/a"
+   },
+   "note": "ok"
+  },
+  {
+   "model_id": "sol-regime-15m-lgbm-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T020832Z",
+    "at": "2026-10-11T02:08:32.139845+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.5440 acc=0.668",
+    "n_eval": 34978.0,
+    "trend_vs_prior_run": "degraded"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "sol-regime-5m-lgbm-v1",
+   "stage": "shadow",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T021002Z",
+    "at": "2026-10-11T02:10:02.330903+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.5587 acc=0.896",
+    "n_eval": 104942.0,
+    "trend_vs_prior_run": "degraded"
+   },
+   "live_shadow": {
+    "influence": "none(shadow)",
+    "predictions": 4510,
+    "score_summary": "mean=0.9385 read_state=varying last=2026-10-11T13:01Z",
+    "drift": "n/a (not read this run)",
+    "realized": "n/a"
+   },
+   "note": "ok"
+  },
+  {
+   "model_id": "trade-outcome-global-baseline-v0",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20260628T010834Z",
+    "at": "2026-06-28T01:08:34.965894+00:00",
+    "code_revision": "5a2db1f27",
+    "headline_metric": "brier=0.144 f1=0.00",
+    "n_eval": 73.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "trade-outcome-lgbm-v1",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20261011T021004Z",
+    "at": "2026-10-11T02:10:04.826991+00:00",
+    "code_revision": "496b12efb",
+    "headline_metric": "macro_f1=0.4571 acc=0.576",
+    "n_eval": 538.0,
+    "trend_vs_prior_run": "degraded"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  },
+  {
+   "model_id": "trade-outcome-winrate-baseline-v0",
+   "stage": "candidate",
+   "registry_status": "candidate",
+   "last_training": {
+    "run_id": "20260628T010835Z",
+    "at": "2026-06-28T01:08:35.292521+00:00",
+    "code_revision": "5a2db1f27",
+    "headline_metric": "brier=0.145 f1=0.00",
+    "n_eval": 73.0,
+    "trend_vs_prior_run": "flat"
+   },
+   "live_shadow": {
+    "influence": "none",
+    "predictions": 0,
+    "score_summary": "no predictions yet",
+    "drift": "n/a",
+    "realized": "n/a"
+   },
+   "note": "candidate: trains, not served"
+  }
+ ],
+ "soak_audit": [
+  {
+   "head": "mes-regime-5m-lgbm-v2 (advisory)",
+   "parity": "NOT RE-MEASURED (NOT LOOKED AT: trainer-vm-diag #17581 (stage-guard, gate-check, cycle-log names) stayed queued on the Actions runner for 30+ min); last measured 2026-10-04 (probe #16327 / 10-04 record)",
+   "label_coverage": "not re-measured",
+   "evidence_destination": "Gate 2 demotion signal for MES advisory head; margin vs baseline 4.47 pts, drift minor (KS 0.072 PSI 0.028, ref 5381 / cur 1460) -> accruing, healthy"
+  },
+  {
+   "head": "btc-regime-15m-lgbm-fc-pcv-v2 (advisory)",
+   "parity": "NOT RE-MEASURED",
+   "label_coverage": "not re-measured",
+   "evidence_destination": "regime read for BTC strategies; drift moderate (KS 0.123, PSI 0.006) -> accruing; watch"
+  },
+  {
+   "head": "sol-regime-15m-lgbm-fc-pcv-v2 (advisory)",
+   "parity": "NOT RE-MEASURED",
+   "label_coverage": "not re-measured",
+   "evidence_destination": "drift SIGNIFICANT (KS 0.230 PSI 0.200; mean score 0.811 -> 0.877) -> HOLD + diagnosis unit RQ-20261011-6e85-01 (regime-mix vs capability loss)"
+  },
+  {
+   "head": "four exit heads (ict_scalp 15m/5m, donchian 1h/peak)",
+   "parity": "n/a",
+   "label_coverage": "n/a",
+   "evidence_destination": "SILENT since 2026-10-04/05 (shadow/stats last_seen) -- owned by ML-EXIT-HEAD-LIVENESS (lane ML-PLUMBING-1); not duplicated here"
+  }
+ ],
+ "promotion_recommendations": [
+  {
+   "model_id": "mes-regime-15m-lgbm-v2",
+   "current_stage": "shadow",
+   "proposed_stage": "candidate",
+   "direction": "demote",
+   "tier": 3,
+   "evidence": "Operator decision 2026-10-08 ('keep 5m only'); macro_f1 0.7115 vs 5m advisory 0.7103 same label.",
+   "risk_note": "APPLIED as manifest in hold PR #17580; registry flip is a trainer run for the manager."
+  },
+  {
+   "model_id": "mes-setup-quality-baseline-v0 | mes-trade-outcome-winrate-baseline-v0 | setup-quality-audit-baseline-v0",
+   "current_stage": "shadow",
+   "proposed_stage": "candidate",
+   "direction": "demote",
+   "tier": 3,
+   "evidence": "Operator decisions 2026-10-08. shadow/stats: all constant (268 / 268 / 4685 rows). Constant => insufficient_data, not a fail.",
+   "risk_note": "Nothing live reads these scores. Hold PR #17580."
+  },
+  {
+   "model_id": "setup-quality-lgbm-v2",
+   "current_stage": "candidate",
+   "proposed_stage": "candidate",
+   "direction": "demote",
+   "tier": 3,
+   "evidence": "Operator 'Retire it' 2026-10-09. Registry already candidate; manifest moved to retired/ in #17580.",
+   "risk_note": "No stage action exists."
+  }
+ ],
+ "_promotion_recommendations_note": "No promotion past shadow recommended. HOLD (no change) on sol-regime-15m-lgbm-fc-pcv-v2: drift significant, diagnose before any demote (RQ-20261011-6e85-01).",
+ "decisions_for_operator": [
+  "None new. The five 2026-10-08/09 stage decisions are applied in hold PR #17580; the manager merges and runs the promote-stage block in its body."
+ ],
+ "experiments_proposed": [
+  {
+   "kind": "new_target",
+   "name": "drift-regime-mix-vs-capability-split",
+   "rationale": "sol advisory drift is significant; nothing in the repo separates input-mix shift from capability loss, so each review re-argues demote.",
+   "input_changes": "shadow log (active+gz) joined to realised regime labels, two windows.",
+   "expected_metric_signal": "delta_volatile_share >= 0.05 with delta_auc >= -0.03 => regime_mix; delta_auc < -0.03 => capability_loss",
+   "tier": 1,
+   "next_step": "row ML-DRIFT-SPLIT-INSTRUMENT builds the script; blocked unit RQ-20261011-6e85-01 (hold PR)"
+  }
+ ],
+ "ten_04_experiments_status": {
+  "setup-labels-killzone-bias-at-build": "NOT re-proposed: head retired by operator 2026-10-09; builder fix tracked by ML-DATASET-FIXES (landed_unproven)",
+  "conviction-meta-v1-bt expected_optional cleanup": "DONE 2026-10-09 by ML-HYGIENE lane 11 (item 3)",
+  "conviction-lens-producer-at-signal-time": "became ML-PRODUCERS milestone M5 / operator 'Keep build-all-four'",
+  "mes-5m-margin-watch": "is PI-20261004-AHCVAAF5-0001 (re-read this run)",
+  "eth-regime-rg4-regate": "still OPEN on MB-20260627-003 and NOT yet run -- needs the trainer; due again in 14d"
+ },
+ "unified_confidence": {
+  "conviction_meta": "conviction-meta-v1 candidate, un-served (last row 09-29T09:27Z); operator keeps build-all-four; formulaic blend stays live.",
+  "calibrators": "not re-pulled this run; open question PI-20261004-AHCVAAF5-0002 (holdout ece) unchanged in repo.",
+  "lens_roles": "regime heads -> c_reg; execution-quality -> sizing; constant baselines (execution-quality, setup-quality-audit, mes setup/winrate) are weak/zero-information inputs, reported insufficient_data."
+ },
+ "backlog_coverage": {
+  "open_at_start": 21,
+  "triaged": 21,
+  "resolved": 0,
+  "fixed_now": 0,
+  "closed_stale": 4,
+  "kept_open": 17,
+  "not_an_ml_row": 0,
+  "count_untriaged": 0,
+  "population_rule": "origin.ref names ml-review OR routed_to starts ML OR what starts [ml]/[refinement], state not done/killed; MEASURED via pipeline.read_log() items at session start (21). Closed(killed): MB-20260704-T12-SSL-NEGATIVE, BL-20260911-SETUP-QUALITY-LGBM-V2-..., PI-20260924-JQHBBTOS-0003, PI-20260929-UAOAYGBB-0003. 17 redated with a read observation; 5 of those say plainly NOT re-validated (trainer relay queued)."
+ },
+ "new_pipeline_rows": [],
+ "new_checklist_rows": [
+  "ML-REVIEW-20261011",
+  "ML-DRIFT-SPLIT-INSTRUMENT"
+ ],
+ "anomalies": [
+  "trainer-vm-diag issue #17581 queued 30+ min on the Actions runner and never ran; stage-guard, gate-check, serve-parity, label coverage, cycle-log stale/never names are therefore unmeasured this week -- an INCOMPLETE section of this review, not a clean one.",
+  "PI-20260927-3WM5HADW-0004/-0005 (HIGH code-audit: served multiclass score = max-proba; yz vol_bucket edges wrong basis) unowned 14 days; advisory heads' served score is affected -> recommend the manager dispatch one ML code lane.",
+  "ml_plan_status flagged the review lane's own row UNPLANNED (fixed: name-pattern exemption); cycle-1 record said plan_items 28 vs checker 25 (fixed in skill text).",
+  "stage-guard-style demote trigger reasoning for sol uses shadow/drift directly, not stage-guard output."
+ ],
+ "recommended_action": "Merge #17580 and run its promote-stage block on the trainer; re-run the trainer pull (issue #17581 or a fresh one) to complete stage-guard / gate-check / parity; dispatch ML-DRIFT-SPLIT-INSTRUMENT.",
+ "operator_attention_required": false,
+ "claude_channel_ping": {
+  "delivered_via": "not sent from this lane (no send-ping dispatched; manager relays)",
+  "message": "/ml-review 2026-10-11 -- 96 models, 0 promotions, 4 demotes+2 retires pending (PR #17580), 1 experiment, 21/21 backlog triaged. trainer=ok/watch. sol advisory drift SIGNIFICANT -> HOLD+diagnose; trainer relay queued, stage-guard unmeasured."
+ }
+}

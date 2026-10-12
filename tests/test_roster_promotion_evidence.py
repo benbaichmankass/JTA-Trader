@@ -192,11 +192,34 @@ def test_a_compliant_record_clears_the_bar(tmp_path):
         "decision_rule": {"id": "DR-X", "rule": "net_r_oos > 0",
                           "registered_at": "2026-09-01T00:00:00+00:00", "verdict": "pass"},
         "generated_at": "2026-09-10T00:00:00+00:00",
+        "fidelity": "faithful",
         "config_fingerprint": G.config_fingerprint(REAL_STRATEGIES[leg]),
     }
     (tmp_path / f"{leg}.json").write_text(json.dumps(rec), encoding="utf-8")
     found = G.promotions(REAL_ACCOUNTS, _with_leg("alpaca_live", leg))
     assert G.grade(found, REAL_STRATEGIES, tmp_path) == []
+
+
+def test_research_grading_fail_overrides_a_d1_pass():
+    """A D1 `pass` must not clear the bar over a research unit's own FAIL.
+
+    `ict_scalp_xrp_15m` reads D1 pass at 365d (net +4.07R, n=76) while
+    RQ-20261002-701 graded it FAIL at its pre-registered 730d escalation
+    (-4.60R, 1/4 folds). Re-adding it to `tradeify_1` (prop, risk-bearing)
+    must be refused on C4.
+    """
+    leg = "ict_scalp_xrp_15m"
+    rec = json.loads((EVIDENCE / f"{leg}.json").read_text(encoding="utf-8"))
+    assert rec["decision_rule"]["verdict"] == "pass"
+    assert rec["research_grading"]["powered_verdict"] == "fail"
+    found = G.promotions(REAL_ACCOUNTS, _with_leg("tradeify_1", leg))
+    findings = G.grade(found, REAL_STRATEGIES, EVIDENCE)
+    assert len(findings) == 1 and "C4 FAIL" in findings[0] and "research_grading" in findings[0]
+
+    # The same record with the block reading pass clears C4; malformed blocks.
+    ok = dict(rec, research_grading=dict(rec["research_grading"], powered_verdict="pass"))
+    assert all(c_ok for _, c_ok, _ in G.clause_verdicts(ok))
+    assert not dict((c, o) for c, o, _ in G.clause_verdicts(dict(rec, research_grading="x")))["C4"]
 
 
 def test_n_equals_eight_passes_because_there_is_no_minimum():
@@ -209,8 +232,86 @@ def test_n_equals_eight_passes_because_there_is_no_minimum():
            "cost_stack": {"fees": 1.0, "slippage": 1.0, "funding": 0.0},
            "decision_rule": {"id": "d", "rule": "r", "registered_at": "2026-01-01",
                              "verdict": "pass"},
-           "generated_at": "2026-02-01"}
-    assert [ok for _, ok, _ in G.clause_verdicts(rec)] == [True, True, True, True]
+           "generated_at": "2026-02-01", "fidelity": "faithful"}
+    assert [ok for _, ok, _ in G.clause_verdicts(rec)] == [True, True, True, True, True]
+
+
+# --------------------------------------------------------------------------
+# C5 — fidelity (operator, 2026-10-11, GUARD-FIDELITY: "Add it, re-measure the 3 now").
+# --------------------------------------------------------------------------
+def _compliant(leg: str, **over):
+    rec = {"strategy": leg, "coverage_state": "measured", "harness": "pullback",
+           "n_trades_oos": 8, "cost_stack": {"fees": 0.0, "slippage": 5.0, "funding": 0.0},
+           "decision_rule": {"id": "DR-X", "rule": "net_r_oos > 0",
+                             "registered_at": "2026-09-01T00:00:00+00:00", "verdict": "pass"},
+           "generated_at": "2026-09-10T00:00:00+00:00", "fidelity": "faithful",
+           "config_fingerprint": G.config_fingerprint(REAL_STRATEGIES[leg])}
+    rec.update(over)
+    return rec
+
+
+def test_c5_refuses_a_new_real_money_add_on_an_approximate_record(tmp_path):
+    """The positive control: a NEW add on an `approximate` record fails C5 ALONE."""
+    leg = "gld_pullback_1d"  # approximate on main, on no risk-bearing roster
+    rec = _compliant(leg, fidelity="approximate",
+                     omitted_levers=["trail_decay_stall_bars", "trail_decay_tight_mult"])
+    (tmp_path / f"{leg}.json").write_text(json.dumps(rec), encoding="utf-8")
+    for acct in ("alpaca_live", "bybit_2"):
+        findings = G.grade(G.promotions(REAL_ACCOUNTS, _with_leg(acct, leg)),
+                           REAL_STRATEGIES, tmp_path)
+        assert len(findings) == 1, acct
+        assert "C5 FAIL" in findings[0] and "trail_decay_stall_bars" in findings[0]
+        assert all(f"{c} PASS" in findings[0] for c in ("C1", "C2", "C3", "C4"))
+
+
+@pytest.mark.parametrize("fidelity", [None, "", "unknown"])
+def test_c5_fails_closed_on_absent_or_unknown_fidelity(fidelity):
+    rec = _compliant("tlt_pullback_1d", fidelity=fidelity)
+    assert not dict((c, ok) for c, ok, _ in G.clause_verdicts(rec, "alpaca_live", "x"))["C5"]
+
+
+def test_c5_passes_a_faithful_record(tmp_path):
+    leg = "gld_pullback_1d"
+    (tmp_path / f"{leg}.json").write_text(json.dumps(_compliant(leg)), encoding="utf-8")
+    found = G.promotions(REAL_ACCOUNTS, _with_leg("alpaca_live", leg))
+    assert G.grade(found, REAL_STRATEGIES, tmp_path) == []
+
+
+def test_c5_baseline_entries_pass_on_their_real_committed_records():
+    """Every baseline slot is on its roster TODAY, on a record that still reads
+    approximate, and clears every clause on the REAL committed record. When a
+    record is regenerated faithful this test fails on the `approximate`
+    assertion — that is the signal to delete the baseline entry, not to edit
+    the test."""
+    accounts = G.rosters(REAL_ACCOUNTS)
+    assert G.FIDELITY_BASELINE, "an empty baseline makes this probe vacuous"
+    for (acct, leg), unit in G.FIDELITY_BASELINE.items():
+        assert leg in accounts[acct]["legs"], f"{acct}/{leg} is no longer rostered"
+        assert (REPO / "research/queue" / f"{unit}.yaml").is_file(), unit
+        rec = json.loads((EVIDENCE / f"{leg}.json").read_text(encoding="utf-8"))
+        assert rec["fidelity"] == "approximate", f"{leg} is faithful now — drop its baseline entry"
+        verdicts = {c: ok for c, ok, _ in G.clause_verdicts(rec, acct, leg)}
+        assert all(verdicts.values()), (acct, leg, verdicts)
+        # ...and the SAME record does NOT pass C5 outside its baselined slot.
+        assert not dict((c, ok) for c, ok, _ in G.clause_verdicts(rec))["C5"]
+
+
+def test_c5_baseline_is_exactly_the_approximate_risk_bearing_slots():
+    """The baseline is MEASURED, not curated: it equals the set of risk-bearing
+    roster slots whose committed record reads approximate. A new approximate
+    slot cannot appear without a promotion this guard would refuse, and a
+    baseline entry cannot outlive its approximate record."""
+    accounts = G.rosters(REAL_ACCOUNTS)
+    approx = set()
+    for acct, cfg in accounts.items():
+        if not G.is_risk_bearing(cfg["class"]):
+            continue
+        for leg in cfg["legs"]:
+            rec = G.load_record(leg, EVIDENCE)
+            if rec is not None and rec.get("fidelity") == "approximate":
+                approx.add((acct, leg))
+    assert approx, "no approximate risk-bearing slot found — probe cannot see a positive"
+    assert approx == set(G.FIDELITY_BASELINE)
 
 
 # --------------------------------------------------------------------------
@@ -241,3 +342,42 @@ def test_population_census_is_computable_and_reports_its_denominator():
     assert rep["roster_slots"] == rep["passing"] + rep["failing"]
     assert rep["roster_slots"] > 0, "a census over zero slots would be vacuous"
     assert rep["risk_bearing_accounts"], "the derivation found no risk-bearing account"
+
+
+# --------------------------------------------------------------------------
+# The pairs sleeve's SECOND routing line: a per-pair `account_id` override.
+# `run_pairs_tick` reads `pair.get("account_id") or default_account`, so an
+# override under ONE pair routes that pair without touching the top-level
+# line the guard read until 2026-10-07 (PAIRS-STOCKTAKE lane).
+# --------------------------------------------------------------------------
+REAL_PAIRS = (REPO / "config/pairs.yaml").read_text(encoding="utf-8")
+
+
+def _pairs_with_override(pair_name: str, account: str) -> str:
+    data = yaml.safe_load(REAL_PAIRS)
+    hit = [p for p in data["pairs"] if p.get("name") == pair_name]
+    assert hit, f"{pair_name} must exist in the real config/pairs.yaml"
+    hit[0]["account_id"] = account
+    return yaml.safe_dump(data)
+
+
+def test_real_pairs_config_is_clean_against_itself():
+    assert G.promotions(REAL_ACCOUNTS, REAL_ACCOUNTS, REAL_PAIRS, REAL_PAIRS) == []
+
+
+def test_per_pair_account_override_onto_real_money_is_caught():
+    """The top-level `account_id: bybit_1` is untouched; ONE live pair gains
+    `account_id: bybit_2`. The executor would honour it; so must the guard."""
+    head = _pairs_with_override("pairs_sol_eth", "bybit_2")
+    found = G.promotions(REAL_ACCOUNTS, REAL_ACCOUNTS, REAL_PAIRS, head)
+    assert [(f["kind"], f["leg"], f["account"]) for f in found] == [
+        ("pairs_repoint", "pairs_sol_eth", "bybit_2")]
+    # and it is REFUSED: no pairs leg carries a committed evidence record today
+    # (checklist E37), so the clause verdicts must fail rather than pass by absence.
+    findings = G.grade(found, REAL_STRATEGIES, EVIDENCE)
+    assert len(findings) == 1 and "pairs_sol_eth -> bybit_2" in findings[0]
+
+
+def test_per_pair_override_onto_paper_is_free():
+    head = _pairs_with_override("pairs_sol_eth", "bybit_1")
+    assert G.promotions(REAL_ACCOUNTS, REAL_ACCOUNTS, REAL_PAIRS, head) == []

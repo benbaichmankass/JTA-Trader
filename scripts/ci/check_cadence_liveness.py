@@ -205,7 +205,6 @@ CADENCE_REGISTRY: dict[str, dict] = {
     #    scheduled workflows contain a commit-to-main / git push step. Naming
     #    the output path for each is the obvious next shrink of this file.
     "grading-freshness-alert.yml": {"receipt": None, "why": "quiet by design when grading is fresh: it commits nothing and its only output is a Telegram ping on stale/unreadable; a dead run is caught by claude-run-failure-alert (GRADE-ALERT 2026-09-29)"},
-    "egress-chromium-landing-probe.yml": {"receipt": None, "why": "temporary hourly measurement aid (PROP-TERM 2026-09-30): it does nothing unless the EGRESS_PROBE_PROXY secret is set and stops for good on 2026-10-04; each run's result is a 7-day workflow artifact and its verdict is read from the run log by the manager and recorded on the PROP-TERM checklist row, so no in-repo receipt exists by design; a dead run is caught by claude-run-failure-alert"},
     "schedule-keeper.yml": {"receipt": None, "why": "no in-repo trace by design: it reads the Actions API and dispatches; it also fires on every push to main, so its own cron is only the night-time floor (W6-OPS-R 2026-09-27)"},
     "exit-cell-mandate.yml": {"receipt": None, "why": "writes to git ONLY on a FIRE (a held PR on an automation/ branch) or a NEEDS-DATA row that no open row already names; a quiet run commits nothing by design, so no receipt path exists -- a dead run is caught by claude-run-failure-alert"},
     "r4-demotion-gate.yml": {"receipt": None, "why": "writes to git ONLY on a FIRE (a held PR on an automation/ branch); a quiet run commits nothing by design, so no receipt path exists -- a dead run is caught by claude-run-failure-alert"},
@@ -268,20 +267,17 @@ CADENCE_REGISTRY: dict[str, dict] = {
                "only advances on a run that reached a real verdict",
     },
     "soak-book-grade-weekly.yml": {
-        "receipt": None,
-        "why": "CORRECTED 2026-09-28: the dated measurement file "
-               "(comms/research/soak_book_grade/<date>.json) is written "
-               "to the runner's checkout but this workflow's own steps "
-               "never commit it -- only the research-result composite "
-               "action's pointer record lands, at a run_id-keyed path "
-               "under research/results/_unattributed/ that is new every "
-               "run and so cannot serve as a fixed receipt either. The "
-               "2026-09-26 measurement file that IS in git history landed "
-               "through an unrelated stray-file sweep commit (#13553), not "
-               "through this workflow. Adding a real commit step for the "
-               "measurement file is a workflow-behavior change, not a "
-               "registry declaration, and is left as a follow-up rather "
-               "than rushed here.",
+        "receipt": "comms/research/soak_book_grade",
+        "why": "FIXED 2026-10-04 (SOAK-WATCH): the dated per-leg record "
+               "(comms/research/soak_book_grade/<date>.json) now lands in "
+               "the same commit as its research-result pointer "
+               "(`extra-paths`), so the STORE DIRECTORY's last commit "
+               "advances on every run that graded. Until then only the "
+               "pointer landed and this entry was `receipt: None` (the "
+               "2026-09-26 record arrived via a stray-file sweep, #13553). "
+               "Residual: a session sweep committing into this directory "
+               "would also refresh it -- the workflow's own verify-landed "
+               "job (scripts/ops/soak_grade_landed.py) is the per-run check.",
     },
     "research-queue-dispatch.yml": {
         "receipt": "docs/claude/work/research-queue-dispatch-receipt.json",
@@ -299,6 +295,11 @@ CADENCE_REGISTRY: dict[str, dict] = {
                "does not itself commit to main, so no receipt path exists "
                "to declare",
     },
+    "live-replay-parity.yml": {
+        "receipt": "comms/live_parity/latest.json",
+        "why": "LIVE-PARITY 2026-10-03: the run overwrites this fixed path on "
+               "every main-ref run and lands it via commit-to-main",
+    },
     "strategy-review-packets.yml": {
         "receipt": "comms/strategy_reviews/latest.json",
         "why": "as of 2026-09-28 the 'Select what to commit' step also "
@@ -313,7 +314,10 @@ CADENCE_REGISTRY: dict[str, dict] = {
     "account-broker-reconcile.yml": {"receipt": None, "why": "no in-repo trace; Actions API only "
                                      "-- same record-every-run/comment-on-change tracking-issue "
                                      "design as broker-bracket-reconcile.yml below"},
+    "broker-truth-freshness.yml": {"receipt": None, "why": "no in-repo trace; Actions API only "
+                                  "-- tracking-issue design like account-broker-reconcile.yml (LEDGER-REFRESH)"},
     "alpaca-settlement-soak-watch.yml": {"receipt": None, "why": "no in-repo trace; Actions API only"},
+    "mirror-orphan-watch.yml": {"receipt": None, "why": "read-only check; result lives in the Actions run and claude-run-failure-alert"},
     "broker-bracket-reconcile.yml": {"receipt": None, "why": "no in-repo trace; Actions API only"},
     "dashboard-edge-watch.yml": {
         "receipt": None,
@@ -355,6 +359,7 @@ CADENCE_REGISTRY: dict[str, dict] = {
     "ict-trainer-git-sync.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
     "ict-web-api-watchdog.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
     "ict-work-digest.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
+    "ict-work-report.timer": {"receipt": None, "why": "VM-side (WORK-SYSTEM); its receipt is the report itself, runtime_logs/work_reports/latest.json, served by GET /api/bot/work/report and alarmed by attention_watch probe_report"},
 }
 
 #: The day-one debt, by name and the state it held on 2026-09-22.
@@ -372,6 +377,8 @@ CADENCE_REGISTRY: dict[str, dict] = {
 REGISTERED_AFTER_BASELINE: frozenset[str] = frozenset({
     "research-loss-detector.yml",   # E57, 2026-09-24
     "account-broker-reconcile.yml",  # RECON, 2026-09-29
+    "broker-truth-freshness.yml",    # LEDGER-REFRESH, 2026-10-10
+    "soak-book-grade-weekly.yml",    # SOAK-WATCH, 2026-10-04 (was receipt: None)
 })
 
 BASELINE_2026_09_22: dict[str, str] = {
