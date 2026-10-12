@@ -1,0 +1,22 @@
+{
+  "id": "BREAKOUT-UNRECORDED",
+  "title": "breakout_2: live trades placed by the phone executor are not recorded (0 fills in journal, overview shows no open trades / $0 uPnL)",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "lane",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 10,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-12T06:25Z manager session_01G16FfyYSmDPQuuW55BuTmK] OPERATOR-REPORTED 06:20Z: live Breakout trades are visible in the terminal and were placed by the bot/phone (operator popup answer). MEASURED 06:16Z: /api/bot/prop/fills?account_id=breakout_2 count 0; last 7 tickets (10-10..10-11) suppressed/skipped/expired; prop_account_status reports equity 5056.86 with unrealized NULL; /prop/overview renders breakout_2 unrealized 0.0 state no_open_trades provenance estimated (collapsed state: not-reported shown as 0). Scope: (1) reconstruct which tickets the phone executor actually placed (phone_result events, executor journal, ticket statuses vs venue) and why no fill/close was written back; (2) fix the write-back so placed trades are journaled (Tier-2 prop executor path: hold PR for manager); (3) journal the currently open trades (MD-PROP-JOURNAL-FROM-OPERATOR or reconcile path) so overview/uPnL show them; (4) overview: unrealized must be null/'not_reported' when the venue reports none, never 0 (Tier-1). Also check tradeify_1 uPnL renders on the SPA prop overview (API returns 186.41). [2026-10-12T06:20Z operator screenshot, Breakout terminal 'Turbo Eval 1', balance 5,048.20 USD] Positions 2: ETH 5x uPnL +31.27 USD, SOL 5x uPnL +19.67 USD; Open orders 4 (likely the two SL/TP brackets); phone banner 'background: no ticket waiting'. Neither position exists in our journal.",
+  "updated_at": "2026-10-12T06:18:57Z",
+  "updated_by": "session_01G16FfyYSmDPQuuW55BuTmK",
+  "roadmap": [
+    "M39"
+  ],
+  "priority": "critical",
+  "_seq": 424
+}
