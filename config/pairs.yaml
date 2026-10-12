@@ -108,3 +108,37 @@ pairs:
     stop_z: 2.0
     max_hold_bars: 20
     hedge_beta: rolling
+
+  # ── GLD/GDX daily — Alpaca, Stage-1 SOAK on alpaca_paper (PAPER money) ──────
+  # OPERATOR DECISION 2026-10-12 (popup "Build, paper soak"; checklist row
+  # PAIRS-ALPACA-BUILD, roadmap M22). Evidence: RQ-20261007-025 PASS
+  # (research/results/RQ-20261007-025/ro0847-RQ-20261007-025.jsonl): OOS
+  # 2022-01..2026-10 n=69 net +5.25R; 8/10 years positive; 8/9 neighbourhood
+  # cells positive; costs fee 7.5 + slip 5.0 bps round-trip per leg. The params
+  # below are EXACTLY the registered defaults that run used (scripts/
+  # backtest_pairs.py: lookback 20, entry_z 2.0, exit_z 0.5, stop_z 2.0,
+  # max_hold_bars 20, hedge_beta one, cooldown_bars 1). Not on any real-money or
+  # mirror account; promotion follows the ladder (Gate 2 = realized cost vs the
+  # 12.5 bps/leg the backtest assumed).
+  # Session venue (src/units/strategies/pairs_venue.py): decides in the last
+  # `decision_window_minutes` of the RTH session on the forming daily bar (the
+  # harness fills at the close), counts max_hold/cooldown in TRADING bars,
+  # whole shares, short-borrow + buying-power + directional-netting checks
+  # before any leg is sent. leg_tp: spread_target = each leg's TP is the price
+  # that closes the predicted reversion gap, re-estimated every bar (TP doctrine).
+  # Rollback: set execution: shadow (or delete this entry).
+  - name: pairs_gld_gdx
+    account_id: alpaca_paper
+    symbol_a: GLD
+    symbol_b: GDX
+    execution: live      # PAPER (operator decision 2026-10-12, Tier-3): alpaca_paper is paper money.
+    timeframe: 1d
+    lookback: 20
+    entry_z: 2.0
+    exit_z: 0.5
+    stop_z: 2.0
+    max_hold_bars: 20
+    hedge_beta: one
+    cooldown_bars: 1
+    leg_tp: spread_target
+    decision_window_minutes: 10

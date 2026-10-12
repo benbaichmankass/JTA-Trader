@@ -1,0 +1,20 @@
+{
+  "due_when": {
+    "due_date": "2026-10-16",
+    "kind": "date"
+  },
+  "id": "PI-20261012-GNRBKIGG-0004",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-16",
+    "how_to_check": "the rerun command above, plus the phone_events / Telegram 'REPORT-ONLY' lines",
+    "what": "a clean live Positions read on breakout_2 (positions_state == read) whose positions match the terminal, and the REPORT-ONLY 'WOULD ...' alerts that follow it agreeing with what actually happened; then the YAML key flipped to write in a Tier-2 PR"
+  },
+  "origin": {
+    "kind": "audit",
+    "ref": "review of PR #17745 (manager 2026-10-12T15:05Z), blocking item 1",
+    "rerun": "grep -n -A1 'reconcile:' config/prop_platforms.yaml; curl -s 'https://ict-bot.duckdns.org/api/bot/prop/status?account_id=breakout_2' | jq '.status.raw|fromjson|.positions_state' -- holds while the key reads report_only."
+  },
+  "state": "queued",
+  "what": "PROP-TRACKING reconcile is REPORT-ONLY (config/prop_platforms.yaml phone_accounts.breakout_2.reconcile: report_only, review of #17745): it alerts what it WOULD close/open but writes nothing, because no live capture of Breakout's Positions DOM existed. Flip to `write` once the first clean live Positions read is observed and its 'WOULD ...' alerts match the terminal."
+}
