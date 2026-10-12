@@ -1,0 +1,21 @@
+{
+  "id": "DEPLOY-PIP-VENV",
+  "title": "deploy_pull_restart.sh pip-installs into /usr/bin/python3, not the repo .venv the services import from",
+  "phase": "build",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OBSERVED 2026-10-12T10:55Z: POST /api/auth/passkey/register/begin -> 500 ModuleNotFoundError: webauthn; traceback site-packages = /home/ubuntu/ict-trading-bot/.venv/lib/python3.11 while scripts/deploy_pull_restart.sh:420 runs '/usr/bin/python3 -m pip install -r requirements.txt'. So any NEW requirement never reaches ict-web-api (and likely other .venv units: deploy/*.service ExecStart .venv/bin/python). Immediate unblock: install-web-api-deps action (this PR). Build: make the deploy install into the interpreter each unit runs (or the .venv), with a test; audit which other requirements.txt entries are missing from the .venv (import-check every top-level req against .venv).",
+  "updated_at": "2026-10-12T10:59:02Z",
+  "updated_by": "session_01G16FfyYSmDPQuuW55BuTmK",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 429
+}
