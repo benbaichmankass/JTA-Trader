@@ -192,10 +192,17 @@ def _meta(row: sqlite3.Row) -> Dict[str, Any]:
 
 def expire_stale_claims(account_id: str, now: Optional[datetime] = None) -> list:
     """Watchdog (§ 3.3): a claim with no report within CLAIM_TIMEOUT_S becomes
-    ``skipped`` (never re-emitted) and is returned so the caller alerts."""
+    ``skipped`` (never re-emitted) and is returned so the caller alerts.
+
+    EXCEPTION (BREAKOUT-UNRECORDED, 2026-10-12): a claim whose LIVE go-token was redeemed (``go.go`` true) is NOT
+    skipped. The phone was told to click submit, so an order may be resting or filled on the terminal: calling that
+    "skipped" is a false record (breakout_2 ETH + SOL, 2026-10-11, both real positions while the journal said
+    skipped). It is journaled ``placed`` (unconfirmed) via :func:`_journal_unconfirmed_submit` and is not returned
+    here (the caller's "marked skipped" alert would be wrong for it)."""
     now = now or _now()
     conn = prop_journal._connect()
     out = []
+    unconfirmed = []
     try:
         prop_journal.ensure_tables(conn)
         rows = conn.execute(
@@ -205,6 +212,10 @@ def expire_stale_claims(account_id: str, now: Optional[datetime] = None) -> list
             m = _meta(r)
             claimed = _parse((m.get("phone") or {}).get("claimed_at"))
             if claimed and (now - claimed).total_seconds() > CLAIM_TIMEOUT_S:
+                go = (m.get("phone") or {}).get("go") or {}
+                if go.get("go") is True and go.get("mode") == "live":
+                    unconfirmed.append(prop_journal._ticket_row(r))
+                    continue
                 m.setdefault("phone", {})["skipped_reason"] = "claimed_no_report"
                 cur = conn.execute(
                     "UPDATE prop_tickets SET status = 'skipped', meta = ? "
@@ -215,7 +226,57 @@ def expire_stale_claims(account_id: str, now: Optional[datetime] = None) -> list
         conn.commit()
     finally:
         conn.close()
+    for t in unconfirmed:
+        _journal_unconfirmed_submit(account_id, t)
     return out
+
+
+def _journal_unconfirmed_submit(account_id: str, ticket: Dict[str, Any], *, send=None) -> None:
+    """A live go-token was redeemed and the phone never closed the claim: journal the order as ``placed``.
+
+    ``placed`` is the working-order state (not an open position): it claims only what the server KNOWS, that the
+    submit was authorised and clicked, never that it filled. Levels come from the form the server itself verified
+    before the token (``meta.phone.go.form``), else the ticket. ``provenance: UNVERIFIED`` and the reason say it was
+    never confirmed on the terminal, so a later operator/phone report (open, closed, skipped) corrects it in place.
+    Never fatal: a failed journal write is logged and pinged, and the next watchdog pass retries (the claim stays)."""
+    tid = str(ticket.get("ticket_id") or "")
+    m = ticket.get("meta") if isinstance(ticket.get("meta"), dict) else {}
+    form = ((m.get("phone") or {}).get("go") or {}).get("form") or {}
+
+    def pick(k: str, fk: str) -> Any:
+        v = form.get(fk)
+        return v if v is not None else ticket.get(k)
+
+    report = {
+        "kind": "fill", "status": "placed", "account_id": account_id, "ticket_id": tid,
+        "symbol": ticket.get("symbol"), "direction": ticket.get("direction"),
+        "entry_price": pick("entry", "price"), "qty": pick("qty", "qty"),
+        "sl": pick("sl", "sl"), "tp": pick("tp", "tp"),
+        "source": "phone_executor_unconfirmed", "provenance": "UNVERIFIED",
+        "reason": "unconfirmed live submit: go-token redeemed, no placed/open report from the phone "
+                  "(entry/qty/sl/tp are the server-verified form values, not a venue read)",
+    }
+    try:
+        from src.prop.prop_report import ingest_report
+        ingest_report(report)
+        prop_journal.transition_ticket_status(tid, "placed", from_statuses=("claimed",), account_id=account_id)
+        logger.warning("phone_executor: unconfirmed live submit journaled placed %s %s", account_id, tid)
+        _ping(f"📱 phone {account_id}: [{_scrub(tid, 64)}] live submit was authorised but never confirmed by the "
+              f"phone: journaled as PLACED (unverified). CHECK the terminal and report open/skipped if it differs.",
+              send)
+    except Exception:  # noqa: BLE001  # allow-silent: logged + pinged; the claim stays so the next pass retries
+        logger.warning("phone_executor: unconfirmed-submit journaling failed %s %s", account_id, tid, exc_info=True)
+        if not (m.get("phone") or {}).get("unconfirmed_failed"):  # one flag, not one per 30 s claim poll
+            m.setdefault("phone", {})["unconfirmed_failed"] = True
+            conn = prop_journal._connect()
+            try:
+                conn.execute("UPDATE prop_tickets SET meta = ? WHERE ticket_id = ? AND status = 'claimed'",
+                             (json.dumps(m), tid))
+                conn.commit()
+            finally:
+                conn.close()
+            _ping(f"📱 phone {account_id}: [{_scrub(tid, 64)}] live submit unconfirmed AND the journal write failed. "
+                  f"CHECK the terminal for a position.", send)
 
 
 def claim_next(device: PhoneDevice, now: Optional[datetime] = None,
@@ -311,9 +372,17 @@ def record_report(device: PhoneDevice, body: Dict[str, Any]) -> Dict[str, Any]:
         if clean["balance"] is None and clean["equity"] is None:
             raise ValueError("account_status needs balance or equity")
         label = "portfolio" if str(body.get("equity_label") or "") == "portfolio" else "equity"
+        body_in = body
         body = {"kind": "account_status", "account_id": device.account_id, "balance": clean["balance"],
                 "equity": clean["equity"], "source": "phone_executor", "provenance": "MEASURED",
                 "equity_label": label}
+        # The terminal's own unrealized P&L (BREAKOUT-UNRECORDED): optional, may be negative, and absent stays
+        # absent -- the overview shows "not_reported", never 0. The app does not send it yet (filed).
+        ur = body_in.get("unrealized")
+        if ur is not None:
+            if isinstance(ur, bool) or not isinstance(ur, (int, float)) or not math.isfinite(ur):
+                raise ValueError("account_status.unrealized invalid")
+            body["unrealized"] = float(ur)
     from src.prop.prop_report import ingest_report
     res = ingest_report(body)
     tid = body.get("ticket_id")
@@ -807,7 +876,10 @@ def verify_readback(device: PhoneDevice, body: Dict[str, Any], *, now: Optional[
         token = secrets.token_urlsafe(24)
         expires = now + timedelta(seconds=GO_TOKEN_TTL_S)
         ph["go"] = {"token_sha256": _token_sha(token), "readback_sha256": rb_hash, "mode": mode,
-                    "issued_at": now.isoformat(), "expires_at": expires.isoformat(), "used": False}
+                    "issued_at": now.isoformat(), "expires_at": expires.isoformat(), "used": False,
+                    "form": {k: v for k, v in {"price": _num(fields.get("price")), "qty": _num(fields.get("qty")),
+                                               "sl": _num(fields.get("sl")), "tp": _num(fields.get("tp"))}.items()
+                             if v is not None}}
         ph["verify"] = {"at": now.isoformat(), "ok": True, "mode": mode}
         m["phone"] = ph
         cur = conn.execute("UPDATE prop_tickets SET meta = ? WHERE ticket_id = ? AND status = 'claimed' AND meta = ?",
