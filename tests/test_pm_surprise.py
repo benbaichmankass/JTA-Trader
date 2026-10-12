@@ -136,7 +136,9 @@ def mk(h, n, diff, lo, hi, halves):
 
 
 def test_grade_is_the_registered_rule():
-    ok = lambda: [mk(3, 60, 0.2, 0.05, 0.4, [0.1, 0.3]), mk(5, 58, 0.25, 0.02, 0.5, [0.2, 0.3])]
+    def ok():
+        return [mk(3, 60, 0.2, 0.05, 0.4, [0.1, 0.3]), mk(5, 58, 0.25, 0.02, 0.5, [0.2, 0.3])]
+
     g = ev.grade(ok())
     assert g["verdict"] == "pass" and g["n"] == 58
     under = ev.grade([mk(3, 48, 0.9, 0.5, 1.0, [1, 1]), mk(5, 60, 0.9, 0.5, 1.0, [1, 1])])

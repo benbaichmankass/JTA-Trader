@@ -574,7 +574,7 @@ def main(argv: Optional[list] = None) -> int:
     events = load_resolved_events(args.snapshots, args.kind)
     if args.pm_surprise:
         with open(args.pm_surprise, encoding="utf-8") as fh:
-            events = attach_pm_surprise(events, [json.loads(l) for l in fh if l.strip()], args.kind)
+            events = attach_pm_surprise(events, [json.loads(ln) for ln in fh if ln.strip()], args.kind)
     elif args.value_key == "pm_surprise":
         print("--value-key pm_surprise needs --pm-surprise PATH", file=sys.stderr)
         return 1
