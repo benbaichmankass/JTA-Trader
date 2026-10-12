@@ -7,6 +7,11 @@
   },
   "id": "PI-20261012-7DJDHERY-0001",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-18",
+    "how_to_check": "scripts/ops/diag_fetch.sh 'journal?table=trades&limit=60' and read ids 6565/6566 pnl + notes",
+    "what": "bybit_2 trade 6565 and mirror 6566 carry broker-truth pnl (-3.28194216 / -996.54256355) with notes.bybit_closed_pnl after PR #17768 deploys"
+  },
   "origin": {
     "kind": "operator",
     "ref": "checklist CLOSE-PNL-NULL; PR #17768",
