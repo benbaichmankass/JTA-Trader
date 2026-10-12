@@ -97,6 +97,7 @@ _SIDE_MAP = {
 # `reconciler`; the four-known-reasons union matches the dashboard's
 # `ClosedTrade.closeReason` type so renderers can switch on it.
 _KNOWN_REASONS = {"tp", "sl", "manual"}
+_CROSS_REASONS = {"sl_cross": "sl", "tp_cross": "tp"}
 
 
 def _normalise_side(direction: Any) -> str:
@@ -111,6 +112,11 @@ def _normalise_close_reason(exit_reason: Any) -> Optional[str]:
     raw = exit_reason.strip().lower()
     if raw in _KNOWN_REASONS:
         return raw
+    # A monitor-decided close at the stop/target level is still a stop/target
+    # exit; `strategies.py` already folds them the same way. Without this the
+    # SPA labelled bybit_2 trade 6565 (an `sl_cross`) "other" (CLOSE-PNL-NULL).
+    if raw in _CROSS_REASONS:
+        return _CROSS_REASONS[raw]
     if raw.startswith("reconciler"):
         return "reconciler"
     return "other"
