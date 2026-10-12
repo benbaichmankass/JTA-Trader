@@ -512,6 +512,11 @@ document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__su
   eq([ge.state, ge.rows], ["read", []], "div grid: empty-state INSIDE the Positions panel is flat");
   const gE2 = await onHost(gridPage("Positions", "", "<p>Start trading with leverage</p>"));
   eq((await gE2.evaluate("__ex.positionsRead()")).state, "empty_unconfirmed", "div grid: empty-state text elsewhere on the page is NOT flat");
+  const gO = await onHost(gridPage("Positions", gridRow("ETHUSD 5x", "+31.27 USD", "Long", "3,003.30 USD", "2,527.80", "2,554.40", "-", "+30.10 USD"), "<p>Start trading with leverage</p>"));
+  let go = await gO.evaluate("__ex.positionsRead()");
+  eq([go.state, go.rows.length, go.rows[0].symbol], ["read", 1, "ETHUSD"], "div grid: 1 open position + 'Start trading' text elsewhere reads the position, not flat");
+  const gO2 = await onHost(gridPage("Positions", gridRow("ETHUSD 5x", "+31.27 USD", "Long", "3,003.30 USD", "2,527.80", "2,554.40", "-", "+30.10 USD") + "<p>Start trading with leverage</p>"));
+  eq((await gO2.evaluate("__ex.positionsRead()")).rows.length, 1, "div grid: a row present wins over stray empty text inside the panel");
   const gE3 = await onHost(gridPage("Positions", "", ""));
   eq((await gE3.evaluate("__ex.positionsRead()")).state, "empty_unconfirmed", "div grid: header with no rows and no empty text is NOT flat");
   const gE4 = await onHost(gridPage("Positions (0)", ""));
