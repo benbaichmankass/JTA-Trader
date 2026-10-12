@@ -1,21 +1,21 @@
 {
   "id": "REDUCE-FILL-QTY",
-  "title": "intent_reduce shrinks parents by REQUESTED not FILLED qty (PI-20261011-YJAYF7GD-0001)",
-  "phase": "build",
+  "title": "intent_reduce shrinks parents by REQUESTED qty, not FILLED qty -> journal/venue divergence (PI-20261011-YJAYF7GD-0001)",
+  "phase": null,
   "state": "in_flight",
-  "owner": "session_013PGJqGxzyzKVSSFydXA9U5",
+  "owner": "lane (session_013PGJqGxzyzKVSSFydXA9U5)",
   "lane": "session_013PGJqGxzyzKVSSFydXA9U5",
-  "model": null,
-  "ceiling_usd": null,
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 15,
   "spend_usd": null,
   "tier": 3,
-  "prs": [
-    17691
-  ],
+  "prs": 17691,
   "blocked_on": [],
-  "note": "Row absent on main at dispatch; added by the lane. VERIFIED 2026-10-12: 9/9 short fills are Bybit reduce-only cuts (venue before = filled, after = 0.0) from phantom journal parents; 0 of 35 matched reduce legs since 2026-08-08; current journal-vs-venue divergence 0 on all 7 open bybit (acct,symbol). PR #17691 (Tier-3 HOLD, not armed): shrink sized from filled qty via read_reduce_fill; unknown -> requested. No position backfill needed; phantom-parent P&L filed PI-20261012-FYDXA9U5-0001. CLOSES WHEN: #17691 merged + deployed and a reduce leg closed after deploy carries notes.reduce_fill_state.",
-  "updated_at": "2026-10-12T07:08:39Z",
+  "note": "[2026-10-12T05:58Z manager session_01G16FfyYSmDPQuuW55BuTmK, review WR-20261012-0530Z] Dispatched from PI-20261011-YJAYF7GD-0001 (PERF-FU-REDUCE-PNL lane). 9 of 81 unsettled reduce legs have venue fill qty far below the journal-allocated qty (e.g. bybit_1 4518 SOLUSDT 4.6 of 1543.2). execute.py::_log_trade_to_journal passes reduce_qty=order['qty'] (requested). Root-cause partial fill vs reduce-only clamp from venue data, then prepare the fix (size the shrink from FILLED qty) as a HOLD PR with tests; order path = Tier-3, manager decides landing with the evidence. Also quantify the current journal-vs-venue position divergence per account. [2026-10-12T05:59Z manager session_01G16FfyYSmDPQuuW55BuTmK] Dispatched lane session_013PGJqGxzyzKVSSFydXA9U5. [2026-10-12T08:05Z lane session_013PGJqGxzyzKVSSFydXA9U5] VERIFIED 2026-10-12: 9/9 short fills are Bybit reduce-only cuts (venue position before = filled qty, after = exactly 0.0; one fill each), caused by phantom journal parents the venue had already closed (e.g. 4324 venue-closed 2026-08-02 13:39, journal open 33h). 0 of 35 matched reduce legs since 2026-08-08 short-filled. Current journal-vs-venue divergence 0 on all 7 open bybit (acct,symbol). PR #17691: shrink sized from the filled qty via read_reduce_fill; unknown -> requested (old behaviour). Operator account marked #17691 ready + enabled auto-merge 07:25Z. No position backfill needed; phantom-parent P&L filed PI-20261012-FYDXA9U5-0001. CLOSES WHEN: #17691 merged + deployed and a reduce leg closed after deploy carries notes.reduce_fill_state.",
+  "updated_at": "2026-10-12T08:02:08Z",
   "updated_by": "session_013PGJqGxzyzKVSSFydXA9U5",
-  "roadmap": "M39",
-  "_seq": 418
+  "roadmap": [
+    "M39"
+  ],
+  "_seq": 421
 }
