@@ -1,0 +1,33 @@
+{
+  "id": "MIRROR-QTY-DIVERGE",
+  "title": "bybit_2 vs bybit_portfolio mirror divergence: bybit_2 XRP short sent qty 0.5 (intended 57.4) -> rejected <5USDT min; mirror holds the trade since 10-09; qty ratios inconsistent across legs",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "lane (session_01Vtqkf7hNHtVFYZLfDSWfcG)",
+  "lane": "session_01Vtqkf7hNHtVFYZLfDSWfcG",
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 15,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [
+    17696
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-12T06:30Z manager session_01G16FfyYSmDPQuuW55BuTmK] OPERATOR-RAISED 06:25Z: any open-trade mismatch between bybit_2 and bybit_portfolio is an issue. MEASURED 06:20Z (diag journal trades limit 1000 + /api/diag/exchange_positions): journal and venue agree; bybit_2 venue = ADAUSDT Buy 548; bybit_portfolio venue = ADAUSDT Buy 166397 + XRPUSDT Sell 160.9 (uPnL -9.47). Divergence = xrp_pullback_2h short 2026-10-09T06:02Z: row 6545 bybit_portfolio filled 160.9; row 6544 bybit_2 intended position_size 57.4 but the POST to /v5/order/create carried qty '0.5' (tpSize/slSize 0.5) -> ErrCode 110094 min order value 5USDT -> exchange_rejected. Also: same-trade qty ratios portfolio/bybit_2 = ADA 303.6x vs XRP 2.8x (identical entry/stop) -> a sizing path differs per leg or account. Scope: root-cause 57.4->0.5 (qty step/precision/margin clamp?), check how often a real-money order qty differed from its journal size (all bybit_2 rows 90d), explain the ratio inconsistency, prepare the fix as a HOLD PR, and decide the open XRP mirror position (mirror carries a trade live does not). [manager 12:25Z] #17696 merged+deployed. XRP mirror short left on its SL/TP; mirror-orphan-watch expected red until row 6545 closes. Lane session_01Vtqkf7 archived, spend $12.45 (Opus).",
+  "updated_at": "2026-10-12T12:20:35Z",
+  "updated_by": "session_01G16FfyYSmDPQuuW55BuTmK",
+  "roadmap": [
+    "M39"
+  ],
+  "priority": "critical",
+  "observation": {
+    "what": "next bybit_2 top-up below the venue minimum is a no-op on BOTH bybit_2 and bybit_portfolio; mirror-orphan-watch green after XRP row 6545 closes",
+    "how_to_check": "diag exchange_positions bybit_2 vs bybit_portfolio + mirror-orphan-watch run",
+    "due_by": "2026-10-19"
+  },
+  "writeback": {
+    "roadmap": "none: owed at close (M39)",
+    "arch": "none: owed at close; mirror placement rule in ARCHITECTURE-CANONICAL Stage 2"
+  },
+  "_seq": 425
+}

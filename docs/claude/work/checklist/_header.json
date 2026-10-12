@@ -22,23 +22,24 @@
   "updated_at": "2026-10-07T18:50:00Z",
   "updated_by": "session_01MM8o5js6TcDFeNAPBY4Ntv",
   "last_review": {
-    "report_id": "WR-20261011-0530Z",
-    "reviewed_at": "2026-10-11T05:55:00Z",
-    "by": "session_01Uq7MrjPQDRWqbhCjwuMava",
+    "report_id": "WR-20261012-0530Z",
+    "reviewed_at": "2026-10-12T06:00:00Z",
+    "by": "session_01G16FfyYSmDPQuuW55BuTmK",
     "counts": {
-      "due": 110,
-      "unrouted": 17,
-      "ask_operator": 19,
+      "due": 154,
+      "unrouted": 19,
+      "ask_operator": 0,
       "soaks_accruing": 17,
       "soaks_ready": 0,
-      "soaks_overdue": 0,
       "soaks_dead": 0,
       "alarms_breached": [],
-      "alarms_unknown": [
-        "prop_idle_breakout_2"
-      ]
+      "blocker_watch_findings": 43,
+      "stale_block": 1,
+      "not_running": 18,
+      "unproven_overdue": 24,
+      "lanes_dispatched": 7
     },
-    "note": "05:52Z review. Report present, no errored sections, digest 12 blocks through 05:01Z. Routing alarm (oldest unrouted 19d) + 19 ask_operator -> lane ROUTE-AND-ASK-TRIAGE. velotrade_1 6fbebc711fa6 closed overnight, close unpriced (dxtrade_api lacks read_trade_history, PI-20261006-ZRM27CBW-0001) -> lane VELO-CLOSE-RECON (Opus). Overnight merged: #17442 #17455 #17461 #17462 #17463 #17467 #17468 #17469 #17470 #17476 #17477 #17478 #17491 #17492 #17499 #17500 #17501."
+    "note": "05:52Z review. Report present, no errored sections, digest through 05:01Z. ROUTING ALARM (19 unrouted, oldest 15d; ROUTE-AND-ASK-TRIAGE routing did not stick) -> ROUTE-20261012 + AUDIT-TEST-GAPS. blocker_watch: FRONTIER-RESEARCH stale block cleared (#17600 merged); 24 overdue landed_unproven -> UNPROVEN-SWEEP-2; 18 NOT_RUNNING units -> 08:47Z research-ops pass; dispatcher landing failures -> STAMP-RACE-2; ~45 stale open PRs -> PR-TRIAGE-20261012; PI-20261011-YJAYF7GD-0001 (reduce shrink uses requested qty, Tier-3 order path) -> REDUCE-FILL-QTY (Opus, hold PR); FRONTIER-LEVER-TRAINER-DEPS dispatched. UI-UPGRADE-1-AUTH -> landed_unproven (gate off, closes on operator sign-in)."
   },
   "cycle": "CY-20260921-OPERATING-RESET",
   "cycle_intent": "Make the promotion ladder mechanical and the research loop terminate in a decision. Edge is decided offline; a book only ever checks mechanics and cost.",

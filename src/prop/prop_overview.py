@@ -25,10 +25,16 @@ Contract (never collapse "unread" into 0):
     2026-10-11: tradeify_1 -13.31 with equity - balance = -13.31). Each account
     carries one of four ``unrealized_state`` values, never collapsed:
       - ``venue_snapshot``  fresh snapshot with a number -> MEASURED;
-      - ``no_open_trades``  fresh snapshot, no number, and the journal holds no
-                            open trade on it -> 0.0, ESTIMATED (an inference
-                            from our own journal, not a venue read);
-      - ``not_reported``    fresh snapshot, no number, open trades -> null;
+      - ``no_open_trades``  fresh snapshot, no number, the journal holds no
+                            open trade AND the journal can vouch for flat (a
+                            VM-executed account, whose executor journals fills
+                            from the terminal) -> 0.0, provenance ``journal``
+                            (never ``estimated``);
+      - ``not_reported``    fresh snapshot, no number, and open trades OR a
+                            PHONE-executed account (its journal depends on
+                            write-backs that can be lost: breakout_2 held two
+                            live positions the journal never saw,
+                            2026-10-12) -> null, never 0;
       - ``stale``           no fresh snapshot -> null (we could not look).
     The book total is a sum only when EVERY account is in one of the first two
     states; otherwise it is null and ``accounts_unknown`` says how many are
@@ -98,14 +104,26 @@ def split_fills(fills: List[Dict[str, Any]]):
     return open_rows, closed
 
 
+def _is_phone_account(account_id: str) -> bool:
+    """True for a phone-executed account. An unreadable config answers True: when we cannot tell, the journal
+    must not vouch for flat (None is the honest outcome)."""
+    try:
+        from src.prop import phone_executor
+        return bool(phone_executor.is_phone_account(account_id))
+    except Exception:  # noqa: BLE001  # allow-silent: "could not look" must not read as flat
+        logger.warning("prop_overview: phone-account lookup failed for %s", account_id, exc_info=True)
+        return True
+
+
 def _account_unrealized(row: Dict[str, Any], open_rows: List[Dict[str, Any]]) -> tuple:
     """-> (value, state, provenance) for one account row. See the module doc."""
     if row.get("status_freshness") != "ok":
         return None, "stale", "unverified"
     if row.get("_unrealized_raw") is not None:
         return row["_unrealized_raw"], "venue_snapshot", "measured"
-    if not any(f.get("account_id") == row["account_id"] for f in open_rows):
-        return 0.0, "no_open_trades", "estimated"
+    if (not row.get("_phone_executed")
+            and not any(f.get("account_id") == row["account_id"] for f in open_rows)):
+        return 0.0, "no_open_trades", "journal"
     return None, "not_reported", "unverified"
 
 
@@ -124,6 +142,7 @@ def _unrealized_block(acct_rows: List[Dict[str, Any]],
             total += val
     for row in acct_rows:
         row.pop("_unrealized_raw", None)
+        row.pop("_phone_executed", None)
     return {
         "total_usd": round(total, 2) if acct_rows and unknown == 0 else None,
         "accounts_known": known,
@@ -176,6 +195,7 @@ def build_overview(window: str = "7d", *, accounts: Optional[Dict[str, Any]] = N
             "status_freshness": fresh, "status_age_hours": rd.get("status_age_hours"),
             "counted_in_total": counted,
             "_unrealized_raw": float(ur) if isinstance(ur, (int, float)) else None,
+            "_phone_executed": _is_phone_account(aid),
             "reported_at": (snap or {}).get("reported_at"),
         })
         all_fills.extend(prop_journal.list_fills(account_id=aid, limit=_FILL_LIMIT))
