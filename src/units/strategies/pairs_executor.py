@@ -1423,6 +1423,50 @@ def _clock_streak(account_id: str, *, failing: bool) -> None:
         logger.error("pairs: clock streak/alert failed for %s: %s", account_id, exc)
 
 
+_non_paper_alerted: set = set()
+
+
+def _refuse_non_paper(pair: Dict[str, Any], account_id: str, acct_cfg: dict,
+                      execution: str, refusal: str, record, build) -> None:
+    """Report a pairs.yaml entry routed to a non-paper account: ONE CRITICAL
+    alert and ONE soak row per pair per process (the refusal itself repeats
+    every tick, silently). Never raises."""
+    name = str(pair.get("name") or "")
+    logger.error("pairs: %s refused (%s) — account %s account_class=%r paper_role=%r",
+                 name, refusal, account_id, acct_cfg.get("account_class"),
+                 acct_cfg.get("paper_role"))
+    key = f"{name}|{account_id}"
+    if key in _non_paper_alerted:
+        return
+    _non_paper_alerted.add(key)
+    try:
+        from src.runtime.outcomes import Level, report
+        report("pairs_non_paper_account", "refused", level=Level.CRITICAL,
+               reason=(f"pairs {name}: config/pairs.yaml routes it to {account_id} "
+                       f"(account_class={acct_cfg.get('account_class')!r}, "
+                       f"paper_role={acct_cfg.get('paper_role')!r}: {refusal}); the pairs "
+                       f"sleeve trades plain PAPER accounts only — refused every tick, "
+                       f"nothing placed. Other pairs keep running"),
+               pair=name, account_id=account_id, refusal=refusal,
+               account_class=acct_cfg.get("account_class"))
+    except Exception as exc:  # noqa: BLE001 — an alert must never break the tick
+        logger.error("pairs: non-paper alert failed for %s: %s", name, exc)
+    try:
+        record(build(event="skip_non_paper_account", pair=name,
+                     symbol_a=str(pair.get("symbol_a")), symbol_b=str(pair.get("symbol_b")),
+                     account_id=account_id, execution_mode=execution,
+                     account_class=acct_cfg.get("account_class"), refusal=refusal))
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _session_open(clock: Optional[Dict[str, Any]]) -> Optional[bool]:
+    """The venue clock's ``is_open`` — True / False, or None when unreadable."""
+    if isinstance(clock, dict) and isinstance(clock.get("is_open"), bool):
+        return clock["is_open"]
+    return None
+
+
 def _session_bars_held(pair: Dict[str, Any], account_id: str, db_path: str,
                        stamps: Sequence[datetime]) -> tuple:
     """``(bars_held | None, basis)`` counted in TRADING bars off the candle
@@ -1694,6 +1738,18 @@ def run_pairs_tick(settings: Optional[Dict[str, Any]] = None) -> None:
             params = _params_from_cfg(pair)
             limit = max(60, params.lookback + 40)
             from src.units.strategies import pairs_venue as pv
+            # PAPER-ONLY, IN CODE (operator 2026-07-16 "not on real money";
+            # 2026-10-12 "paper soak"). A pairs.yaml entry whose account is not
+            # account_class: paper (alpaca_live, alpaca_portfolio, bybit_2, an
+            # unknown id) — or a Stage-2 mirror (paper_role: portfolio, alpaca_portfolio)
+            # — is refused here, per pair, every tick — nothing else
+            # in this order path checks the account class. One alert per pair
+            # per process; the sleeve and every other pair keep running.
+            refusal = pv.pairs_account_refusal(acct_cfg)
+            if refusal is not None:
+                _refuse_non_paper(pair, account_id, acct_cfg, execution, refusal,
+                                  record_pairs_soak, build_pairs_soak_record)
+                continue
             session = pv.is_session_venue(acct_cfg)
             stamps: List[datetime] = []
             if session:
@@ -1786,7 +1842,18 @@ def run_pairs_tick(settings: Optional[Dict[str, Any]] = None) -> None:
                         account_id, sym, strat, db_path=db_path)
                 ]
                 cleaned = False
-                if execution == "live":
+                cleanup_deferred = None
+                if execution == "live" and session:
+                    # SESSION venue: send the cleanup close only in regular
+                    # hours. Overnight / pre-market a close cannot fill as a
+                    # market order (AlpacaClient.close defers, or works a
+                    # marketable extended-hours limit); repeating that every
+                    # tick buys nothing, so nothing is sent until the venue
+                    # clock reads open. The stranded leg keeps its resting
+                    # broker SL/TP meanwhile, and the CRITICAL still reports.
+                    if _session_open(_clock_for(account_id)) is not True:
+                        cleanup_deferred = "market_not_open"
+                if execution == "live" and cleanup_deferred is None:
                     # _close_pair skips a leg with no open row, so on a
                     # half-open pair it closes exactly the stranded one.
                     cleaned = bool(_close_pair(
@@ -1806,7 +1873,8 @@ def run_pairs_tick(settings: Optional[Dict[str, Any]] = None) -> None:
                             str(pair["symbol_a"]), str(pair["symbol_b"])),
                         symbol_a=str(pair["symbol_a"]), symbol_b=str(pair["symbol_b"]),
                         account_id=account_id, execution_mode=execution,
-                        stranded_legs=stranded, cleanup_confirmed=cleaned)
+                        stranded_legs=stranded, cleanup_confirmed=cleaned,
+                        cleanup_deferred=cleanup_deferred)
                     record_pairs_soak(rec)
                 continue
 
@@ -1822,6 +1890,19 @@ def run_pairs_tick(settings: Optional[Dict[str, Any]] = None) -> None:
                 _clock_streak(account_id, failing=(win == "unreadable"))
                 if win != "in_window":
                     continue
+                # The decision bar must be TODAY's session bar (the harness
+                # decides on the close of the bar it fills on). If the fetch
+                # stops at the previous session, today's is appended from the
+                # latest trades; if that cannot be read, no decision this tick.
+                bar_source, closes_a, closes_b, stamps = pv.ensure_session_bar(
+                    str(pair["symbol_a"]), str(pair["symbol_b"]),
+                    closes_a, closes_b, stamps, _clock_for(account_id),
+                    _client_for(account_id))
+                if bar_source == "stale":
+                    logger.warning("pairs: %s no current-session bar on %s this tick "
+                                   "— no decision, retried next tick", name, account_id)
+                    continue
+                bar_key = f"{stamps[-1].isoformat()}|{stamps[-1].isoformat()}"
                 if leg_state == "flat" and decision_bars.get(name) != bar_key:
                     strat_a_cd, _ = _leg_strats(pair)
                     cd = pv.cooldown_state(
@@ -1938,6 +2019,8 @@ def run_pairs_tick(settings: Optional[Dict[str, Any]] = None) -> None:
                 execution_mode=execution, corr_factor=corr_factor,
                 backstop_mult=backstop_mult, min_leg_notional_usd=min_leg_notional_usd,
                 whole_units=session, leg_tp=str(pair.get("leg_tp", "backstop")))
+            if session:
+                decision.soak["decision_bar_source"] = bar_source
             if is_open:
                 # Where the open-state came from, on every in-position row, so
                 # a hold/close decided off a REBUILT state is never read as one

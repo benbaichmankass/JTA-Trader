@@ -32,6 +32,17 @@ def _params(**kw):
     return pe.PairParams("GLD", "GDX", **{**REG, **kw})
 
 
+def _stamps_ending(n, end="2026-10-12"):
+    """n weekday daily stamps whose LAST is session *end* (the fake clock's day)."""
+    d = datetime.fromisoformat(end).replace(hour=4, tzinfo=timezone.utc)
+    out = []
+    while len(out) < n:
+        if d.weekday() < 5:
+            out.append(d)
+        d -= timedelta(days=1)
+    return out[::-1]
+
+
 def _daily_stamps(n, start="2026-01-02"):
     # Alpaca daily bars are stamped at the session date's 04:00Z (00:00 ET).
     d0 = datetime.fromisoformat(start).replace(hour=4, tzinfo=timezone.utc)
@@ -302,7 +313,7 @@ def _session_env(tmp_path, monkeypatch, *, client, jam=0.15, execute=None, close
     """Wire run_pairs_tick for ONE live GLD/GDX pair on alpaca_paper."""
     from tests.test_pairs_executor import _empty_journal
     ca, cb = _jammed(jam=jam)
-    stamps = _daily_stamps(len(ca))
+    stamps = _stamps_ending(len(ca))      # last bar = the fake clock's session
     soak, placed, closes, saved = [], [], [], []
     monkeypatch.setattr(px, "_load_pairs_config", lambda path=None: {
         "account_id": "bybit_1", "pairs_risk_fraction": 1.0,
@@ -561,3 +572,233 @@ def test_session_bars_held_reads_open_time_from_leg_rows(tmp_path):
                                       "symbol_b": "GDX"}, "alpaca_paper", str(db), stamps)
     assert basis == "leg_rows"
     assert n == sum(1 for t in stamps if t > datetime(2026, 10, 1, 19, 52, tzinfo=timezone.utc))
+
+
+# ── REVIEW #17747 item 1: paper-only is enforced IN CODE, at runtime ───────
+
+def _real_account(acct_id):
+    import yaml
+    d = yaml.safe_load(open("config/accounts.yaml", encoding="utf-8"))
+    d = d.get("accounts", d)
+    return dict(d[acct_id])
+
+
+@pytest.mark.parametrize("acct_id,refusal", [
+    ("alpaca_live", "not_paper"),          # real money
+    ("alpaca_portfolio", "stage2_mirror"),  # paper, but the Stage-2 mirror
+    ("bybit_2", "not_paper"),
+    ("no_such_account", "not_paper"),       # unknown id fails closed
+])
+def test_tick_refuses_a_pair_routed_to_a_non_soak_account(tmp_path, monkeypatch,
+                                                          acct_id, refusal):
+    env = _session_env(tmp_path, monkeypatch, client=_FakeAlpaca())
+    import src.config.accounts_loader as _al
+    real = {} if acct_id == "no_such_account" else {acct_id: _real_account(acct_id)}
+    monkeypatch.setattr(_al, "load_accounts_dict", lambda *a, **k: real)
+    monkeypatch.setattr(px, "_load_pairs_config", lambda path=None: {
+        "pairs": [{"name": "pairs_gld_gdx", "account_id": acct_id, "symbol_a": "GLD",
+                   "symbol_b": "GDX", "execution": "live", "timeframe": "1d",
+                   "leg_tp": "spread_target", **REG}]})
+    px._non_paper_alerted.clear()
+    for _ in range(3):
+        px.run_pairs_tick({})
+    assert env["placed"] == [] and env["closes"] == []
+    assert [r["event"] for r in env["soak"]] == ["skip_non_paper_account"]
+    assert env["soak"][0]["refusal"] == refusal
+    crit = [k for a, k in env["alerts"] if a[0] == "pairs_non_paper_account"]
+    assert len(crit) == 1                          # one alert, not one per tick
+
+
+def test_pairs_account_refusal_is_fail_closed():
+    assert pv.pairs_account_refusal({"account_class": "paper"}) is None
+    assert pv.pairs_account_refusal({"account_class": "paper",
+                                     "paper_role": "portfolio"}) == "stage2_mirror"
+    assert pv.pairs_account_refusal({"account_class": "real_money"}) == "not_paper"
+    assert pv.pairs_account_refusal({}) == "not_paper"
+    assert pv.pairs_account_refusal(None) == "not_paper"
+
+
+# ── REVIEW item 3: the daily-DD switch now also gates NEW Bybit pairs ──────
+
+def _bybit_env(tmp_path, monkeypatch, *, dd_trip):
+    from tests.test_pairs_executor import _empty_journal, _extended_spread
+    ca, cb = _extended_spread()
+    soak, placed = [], []
+    monkeypatch.setattr(px, "_load_pairs_config", lambda path=None: {
+        "account_id": "bybit_1", "pairs_risk_fraction": 1.0,
+        "pairs": [{"name": "pairs_sol_btc", "symbol_a": "SOLUSDT", "symbol_b": "BTCUSDT",
+                   "execution": "live", "timeframe": "1h", "hedge_beta": "one"}]})
+    monkeypatch.setattr(px, "_fetch_leg",
+                        lambda sym, tf, lim, s: (list(ca) if sym == "SOLUSDT" else list(cb), "T1"))
+    monkeypatch.setattr(px, "_save_decision_bars", lambda state: None)
+    monkeypatch.setattr(px, "_load_decision_bars", lambda: {})
+    monkeypatch.setattr(pv, "build_client", lambda acct: object())
+    import src.units.accounts.execute as _exec
+    monkeypatch.setattr(_exec, "_fetch_balance", lambda *a, **k: 100000.0)
+    monkeypatch.setattr(_exec, "execute_pkg",
+                        lambda pkg, acct, **k: placed.append(pkg.symbol) or "T")
+    import src.core.coordinator as _coord
+    monkeypatch.setattr(_coord, "_log_new_order_package", lambda pkg: None)
+    import src.units.accounts.qty_legalize as _ql
+    monkeypatch.setattr(_ql, "legalize_qty",
+                        lambda qty, *, symbol, **k: _ql.LegalizedQty(
+                            qty=qty, ok=True, reason="", venue_min=0.001, step=0.001,
+                            source="instrument_profile"))
+    import src.config.accounts_loader as _al
+    monkeypatch.setattr(_al, "load_accounts_dict", lambda *a, **k: {
+        "bybit_1": {"exchange": "bybit", "account_class": "paper",
+                    "risk": {"risk_pct": 0.015,
+                             "daily_dd_switch": {"armed": True, "limit_pct": 0.03}}}})
+    import src.utils.paths as _paths
+    monkeypatch.setattr(_paths, "trade_journal_db_path", lambda: str(tmp_path / "j.db"))
+    _empty_journal(tmp_path / "j.db")
+    import src.runtime.pairs_soak as _soak
+    monkeypatch.setattr(_soak, "record_pairs_soak", lambda rec: soak.append(rec) or True)
+    # Pin the REAL _dd_switch_blocks -> RiskManager.check_dd_switch wiring.
+    import src.units.accounts.risk as _risk
+    seen = {}
+
+    def _check(self):
+        seen["account_id"] = self.account_id
+        seen["equity"] = self._live_equity
+        return dd_trip
+    monkeypatch.setattr(_risk.RiskManager, "check_dd_switch", _check)
+    return soak, placed, seen
+
+
+def test_dd_switch_tripped_blocks_new_bybit_pairs(tmp_path, monkeypatch):
+    """BEHAVIOUR CHANGE on the existing Bybit sleeve (intended, PR #17747): a
+    tripped account daily-DD switch now refuses NEW pairs on bybit_1 too."""
+    soak, placed, seen = _bybit_env(tmp_path, monkeypatch, dd_trip=True)
+    px.run_pairs_tick({})
+    assert placed == []
+    assert soak[0]["event"] == "skip_daily_dd_switch"
+    assert seen == {"account_id": "bybit_1", "equity": 100000.0}
+
+
+def test_dd_switch_untripped_leaves_bybit_pairs_unchanged(tmp_path, monkeypatch):
+    soak, placed, _ = _bybit_env(tmp_path, monkeypatch, dd_trip=False)
+    px.run_pairs_tick({})
+    assert soak[0]["event"] == "open" and placed == ["SOLUSDT", "BTCUSDT"]
+
+
+# ── REVIEW item 6: half-open cleanup sends nothing outside RTH ─────────────
+
+def _seed_one_open_leg(db):
+    import sqlite3
+    from tests.test_pairs_executor import _real_trades_ddl
+    conn = sqlite3.connect(db)
+    conn.execute(_real_trades_ddl())
+    conn.execute(
+        "INSERT INTO trades (timestamp, symbol, direction, entry_price, position_size, "
+        "status, strategy_name, account_id, is_backtest) VALUES (?,?,?,?,?,?,?,?,0)",
+        ("2026-10-09T19:52:00+00:00", "GLD", "short", 300.0, 10, "open",
+         "pairs_gld_gdx_a", "alpaca_paper"))
+    conn.commit()
+    conn.close()
+
+
+@pytest.mark.parametrize("is_open,minutes,clock_ok,expect_closes", [
+    (False, 5, True, 0),        # overnight / weekend: nothing sent, every tick
+    (True, 300, True, 3),       # RTH (even outside the decision window): cleaned each tick
+    (True, 5, False, 0),        # clock unreadable: nothing sent
+])
+def test_half_open_cleanup_only_sends_in_regular_hours(tmp_path, monkeypatch, is_open,
+                                                       minutes, clock_ok, expect_closes):
+    env = _session_env(tmp_path, monkeypatch,
+                       client=_FakeAlpaca(is_open=is_open, minutes_to_close=minutes,
+                                          clock_ok=clock_ok),
+                       closer=lambda c, a, *, symbol, side, qty, **k: (
+                           env_closes.append((symbol, side, qty)) or {"ok": False,
+                                                                     "error": "unfilled"}))
+    env_closes: list = []
+    (tmp_path / "j.db").unlink()
+    _seed_one_open_leg(tmp_path / "j.db")
+    px._state_alert_last.clear()
+    for _ in range(3):
+        px.run_pairs_tick({})
+    assert len(env_closes) == expect_closes
+    assert env["placed"] == []
+    rows = [r for r in env["soak"] if r["event"] == "half_open"]
+    assert len(rows) == 1                                     # cadence: once per hour
+    if expect_closes == 0:
+        assert rows[0]["cleanup_deferred"] == "market_not_open"
+    else:
+        assert "cleanup_deferred" not in rows[0]
+
+
+# ── REVIEW item 7: the decision bar is TODAY's session bar ─────────────────
+
+class _Trades:
+    def __init__(self, px_map, age=10.0):
+        self.px, self.age = px_map, age
+
+    def latest_trade(self, symbol):
+        p = self.px.get(symbol)
+        return None if p is None else {"price": p, "age_s": self.age}
+
+
+def test_ensure_session_bar_forming_bar_present_is_used_as_is():
+    st = _stamps_ending(3)
+    src, ca, cb, ts = pv.ensure_session_bar("GLD", "GDX", [1.0, 2, 3], [4.0, 5, 6], st,
+                                            _clock(True), _Trades({}))
+    assert src == "forming_bar" and ts == st and ca == [1.0, 2, 3]
+
+
+def test_ensure_session_bar_appends_today_from_latest_trade_edt_and_est():
+    st = _stamps_ending(3, end="2026-10-09")               # completed bars only (Fri)
+    src, ca, cb, ts = pv.ensure_session_bar("GLD", "GDX", [1.0, 2, 3], [4.0, 5, 6], st,
+                                            _clock(True), _Trades({"GLD": 301.5, "GDX": 61.2}))
+    assert src == "latest_trade"
+    assert ca[-1] == 301.5 and cb[-1] == 61.2
+    assert ts[-1] == datetime(2026, 10, 12, 4, 0, tzinfo=timezone.utc)   # EDT midnight
+    winter = {"is_open": True, "timestamp": "2026-12-14T20:52:00+00:00",
+              "next_close": "2026-12-14T21:00:00+00:00"}
+    src, _, _, ts = pv.ensure_session_bar("GLD", "GDX", [1.0], [2.0],
+                                          _stamps_ending(1, end="2026-12-11"), winter,
+                                          _Trades({"GLD": 1.0, "GDX": 2.0}))
+    assert src == "latest_trade" and ts[-1] == datetime(2026, 12, 14, 5, 0, tzinfo=timezone.utc)
+
+
+@pytest.mark.parametrize("trades", [_Trades({"GLD": 301.5}),          # one leg unreadable
+                                    _Trades({"GLD": 1.0, "GDX": 2.0}, age=3600.0),  # stale print
+                                    object()])                         # no reader at all
+def test_ensure_session_bar_stale_when_today_cannot_be_read(trades):
+    st = _stamps_ending(3, end="2026-10-09")
+    src, ca, _, ts = pv.ensure_session_bar("GLD", "GDX", [1.0, 2, 3], [4.0, 5, 6], st,
+                                           _clock(True), trades)
+    assert src == "stale" and ts == st and ca == [1.0, 2, 3]
+
+
+class _FakeAlpacaTrades(_FakeAlpaca):
+    def __init__(self, prices, **kw):
+        super().__init__(**kw)
+        self._prices = prices
+
+    def latest_trade(self, symbol):
+        p = self._prices.get(symbol)
+        return None if p is None else {"price": p, "age_s": 5.0}
+
+
+def test_tick_completed_bars_only_decides_on_latest_trade(tmp_path, monkeypatch):
+    ca, cb = _jammed(jam=0.15)
+    client = _FakeAlpacaTrades({"GLD": ca[-1], "GDX": cb[-1]})
+    env = _session_env(tmp_path, monkeypatch, client=client)
+    # The fetch ends at the PREVIOUS session; today's bar must come from trades.
+    stamps = _stamps_ending(len(ca) - 1, end="2026-10-09")
+    monkeypatch.setattr(pv, "fetch_leg_frame",
+                        lambda sym, tf, lim, s: ((ca[:-1] if sym == "GLD" else cb[:-1]), stamps))
+    px.run_pairs_tick({})
+    assert env["soak"][0]["event"] == "open"
+    assert env["soak"][0]["decision_bar_source"] == "latest_trade"
+
+
+def test_tick_completed_bars_only_without_trades_decides_nothing(tmp_path, monkeypatch):
+    ca, cb = _jammed(jam=0.15)
+    env = _session_env(tmp_path, monkeypatch, client=_FakeAlpacaTrades({}))
+    stamps = _stamps_ending(len(ca) - 1, end="2026-10-09")
+    monkeypatch.setattr(pv, "fetch_leg_frame",
+                        lambda sym, tf, lim, s: ((ca[:-1] if sym == "GLD" else cb[:-1]), stamps))
+    px.run_pairs_tick({})
+    assert env["soak"] == [] and env["placed"] == []
+    assert env["saved"] == []            # bar not consumed: next tick retries

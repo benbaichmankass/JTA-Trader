@@ -57,6 +57,25 @@ def exchange_of(acct_cfg: Dict[str, Any]) -> str:
     return str((acct_cfg or {}).get("exchange") or "").strip().lower()
 
 
+def pairs_account_refusal(acct_cfg: Dict[str, Any]) -> Optional[str]:
+    """Why the pairs sleeve may NOT trade this account, or None when it may.
+
+    ``not_paper`` — ``config/accounts.yaml`` does not declare
+    ``account_class: paper`` (real money, absent, unknown: fail closed).
+    ``stage2_mirror`` — a paper account with ``paper_role: portfolio`` is the
+    Stage-2 mirror of a real-money book (roster/trade equality with it is
+    enforced by tests/test_paper_portfolio_accounts.py); a soak leg there
+    would break that equality. The sleeve is a Stage-1 soak by operator
+    decision, so only plain paper accounts qualify. This is the CODE check;
+    the yaml test is the second line."""
+    cfg = acct_cfg or {}
+    if str(cfg.get("account_class") or "").strip().lower() != "paper":
+        return "not_paper"
+    if str(cfg.get("paper_role") or "").strip().lower() == "portfolio":
+        return "stage2_mirror"
+    return None
+
+
 def is_session_venue(acct_cfg: Dict[str, Any]) -> bool:
     return exchange_of(acct_cfg) in SESSION_EXCHANGES
 
@@ -160,6 +179,75 @@ def decision_window_state(clock: Optional[Dict[str, Any]], *,
     if timedelta(0) <= remaining <= timedelta(minutes=int(window_minutes)):
         return "in_window"
     return "open_outside_window"
+
+
+def session_date(moment: datetime):
+    """The US-equity SESSION date of *moment* (America/New_York calendar day)."""
+    from zoneinfo import ZoneInfo
+    m = moment if moment.tzinfo is not None else moment.replace(tzinfo=timezone.utc)
+    return m.astimezone(ZoneInfo("America/New_York")).date()
+
+
+def session_bar_stamp(day) -> datetime:
+    """The UTC timestamp Alpaca stamps a daily bar for session *day* with
+    (local midnight, America/New_York — 04:00Z in EDT, 05:00Z in EST)."""
+    from zoneinfo import ZoneInfo
+    local = datetime(day.year, day.month, day.day, tzinfo=ZoneInfo("America/New_York"))
+    return local.astimezone(timezone.utc)
+
+
+#: A latest trade older than this does not stand in for today's close.
+MAX_LATEST_TRADE_AGE_S = 900.0
+
+
+def ensure_session_bar(symbol_a: str, symbol_b: str,
+                       closes_a: List[float], closes_b: List[float],
+                       stamps: List[datetime], clock: Optional[Dict[str, Any]],
+                       client: Any) -> Tuple[str, List[float], List[float], List[datetime]]:
+    """Make the LAST bar the CURRENT session's (forming) daily bar.
+
+    ``(source, closes_a, closes_b, stamps)`` where ``source`` is:
+
+    * ``forming_bar`` — the fetch already carried today's session bar; used
+      as is.
+    * ``latest_trade`` — the fetch ended at an EARLIER session (a completed-
+      bars-only response): today's bar is appended from each leg's latest
+      trade (``AlpacaClient.latest_trade``, at most
+      ``MAX_LATEST_TRADE_AGE_S`` old), stamped like an Alpaca daily bar.
+      Without this the in-window decision would run on the previous close —
+      a day stale, i.e. a different strategy from the harness.
+    * ``stale`` — today's bar is missing and a fresh latest trade could not
+      be read for both legs. The caller takes NO decision this tick and does
+      not consume the bar.
+
+    Which of the first two the venue actually serves is not assumed: both are
+    handled, and the soak row records which one decided. Never raises.
+    """
+    try:
+        now = _parse_ts(clock.get("timestamp")) if isinstance(clock, dict) else None
+        today = session_date(now or datetime.now(timezone.utc))
+        if stamps and session_date(stamps[-1]) == today:
+            return ("forming_bar", closes_a, closes_b, stamps)
+        if stamps and session_date(stamps[-1]) > today:
+            return ("stale", closes_a, closes_b, stamps)
+        reader = getattr(client, "latest_trade", None)
+        if not callable(reader):
+            return ("stale", closes_a, closes_b, stamps)
+        px: List[float] = []
+        for sym in (symbol_a, symbol_b):
+            t = reader(sym)
+            if not isinstance(t, dict):
+                return ("stale", closes_a, closes_b, stamps)
+            price, age = t.get("price"), t.get("age_s")
+            if (price is None or not math.isfinite(float(price)) or float(price) <= 0
+                    or age is None or float(age) > MAX_LATEST_TRADE_AGE_S):
+                return ("stale", closes_a, closes_b, stamps)
+            px.append(float(price))
+        return ("latest_trade", list(closes_a) + [px[0]], list(closes_b) + [px[1]],
+                list(stamps) + [session_bar_stamp(today)])
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("pairs_venue: session-bar check failed: %s", exc)
+        return ("stale", closes_a, closes_b, stamps)
 
 
 # ── trading-bar counts (bars held, cooldown) ───────────────────────────────

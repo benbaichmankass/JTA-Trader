@@ -152,6 +152,9 @@ def test_load_real_pairs_config_on_bybit_1():
     for p in pairs:
         acct = str(p.get("account_id") or cfg.get("account_id"))
         assert accts[acct].get("account_class") == "paper", (p["name"], acct)
+        # ...and not a Stage-2 mirror (the runtime refuses those too:
+        # pairs_venue.pairs_account_refusal).
+        assert accts[acct].get("paper_role") != "portfolio", (p["name"], acct)
     # RE-FLIPPED to live 2026-07-16 (operator-approved, Tier-3) after the executor
     # placement bugs were fixed: (1) qty=0 re-size (_place_pair passes qty_override),
     # (2) blown-up leg SL/TP (the pairs_sizing backstop clamp, #6549), and
