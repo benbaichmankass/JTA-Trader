@@ -1,0 +1,21 @@
+{
+  "id": "REDUCE-FILL-QTY",
+  "title": "intent_reduce shrinks parents by REQUESTED qty, not FILLED qty -> journal/venue divergence (PI-20261011-YJAYF7GD-0001)",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "lane (session_013PGJqGxzyzKVSSFydXA9U5)",
+  "lane": "session_013PGJqGxzyzKVSSFydXA9U5",
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 15,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-12T05:58Z manager session_01G16FfyYSmDPQuuW55BuTmK, review WR-20261012-0530Z] Dispatched from PI-20261011-YJAYF7GD-0001 (PERF-FU-REDUCE-PNL lane). 9 of 81 unsettled reduce legs have venue fill qty far below the journal-allocated qty (e.g. bybit_1 4518 SOLUSDT 4.6 of 1543.2). execute.py::_log_trade_to_journal passes reduce_qty=order['qty'] (requested). Root-cause partial fill vs reduce-only clamp from venue data, then prepare the fix (size the shrink from FILLED qty) as a HOLD PR with tests; order path = Tier-3, manager decides landing with the evidence. Also quantify the current journal-vs-venue position divergence per account. [2026-10-12T05:59Z manager session_01G16FfyYSmDPQuuW55BuTmK] Dispatched lane session_013PGJqGxzyzKVSSFydXA9U5.",
+  "updated_at": "2026-10-12T05:58:50Z",
+  "updated_by": "session_01G16FfyYSmDPQuuW55BuTmK",
+  "roadmap": [
+    "M39"
+  ],
+  "_seq": 421
+}
