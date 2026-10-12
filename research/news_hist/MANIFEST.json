@@ -1,0 +1,73 @@
+{
+  "unit": "RQ-20261012-2a7b-01",
+  "row": "NEWS-HIST-REPLAY",
+  "source_chosen": "GDELT 2.0 GKG 15-min files (PAGE_TITLE + PAGE_PRECISEPUBTIMESTAMP in the Extras field)",
+  "history_depth": "corpus built 2023-10-01..2026-10-12 (3.0y); source archive reaches 2015-02-18",
+  "source_evaluation": [
+    {
+      "source": "GDELT 2.0 GKG",
+      "verdict": "CHOSEN",
+      "coverage": "global crawl; live-feed domains present but at far below RSS volume (MEASURED: ~15 coindesk and ~16 cointelegraph items/day over first 85 days)",
+      "depth": "2015-02-18+",
+      "timestamps": "ingest time per row (V2.1DATE, never early) + publisher time for ~40-45% of rows (MEASURED 992/2235 in one file)",
+      "licence_cost": "free, keyless; verified reachable 2026-10-12",
+      "limitation": "title only, no summary/body: the veto thresholds (sentiment<-0.6 AND impact>0.7 on one item) are unreachable on titles (MEASURED: 0 of 87,305 relevant sampled items; 4 had sentiment<-0.6, none impact>0.7)"
+    },
+    {
+      "source": "GDELT DOC 2.0 API",
+      "verdict": "rejected",
+      "reason": "rolling ~3 month window (documented behaviour; not re-tested here)"
+    },
+    {
+      "source": "NewsAPI",
+      "verdict": "rejected",
+      "reason": "historical depth is plan-gated/paid (documented; not tested here)"
+    },
+    {
+      "source": "RSS archives (Wayback captures of the live feeds)",
+      "verdict": "not tested",
+      "reason": "expected sparse and with unverifiable capture-vs-publication timing"
+    },
+    {
+      "source": "Common Crawl CC-NEWS",
+      "verdict": "not evaluated",
+      "reason": "free, 2016+, WARC-scale; candidate for a summary/body-bearing corpus"
+    },
+    {
+      "source": "Bigdata.com connector (attached to this session)",
+      "verdict": "not evaluated",
+      "reason": "licensed point-in-time corpus with body text; cost/licence unknown; candidate for the body-bearing follow-up"
+    }
+  ],
+  "fetch_manifest": {
+    "source": "GDELT 2.0 GKG (https://data.gdeltproject.org/gdeltv2/)",
+    "schema": "raw normalizer-shaped article + available_at + pub_basis",
+    "generated_at": "2026-10-12T13:11:02Z",
+    "files_listed": 106297,
+    "files_ok": 104607,
+    "files_missing": 1690,
+    "files_error": 0,
+    "rows_scanned": 135120827,
+    "items_kept": 1424028,
+    "first_file": "20231001000000",
+    "last_file": "20261012060000",
+    "n_keywords": 130,
+    "availability_rule": "available_at = GDELT ingest time (V2.1DATE); replay requires available_at < signal_ts",
+    "note": "gaps (missing/error files) are listed in _ledger.jsonl; absence of items in a window with a gap is NOT evidence of no news"
+  },
+  "live_feed_domains": [
+    "barrons.com",
+    "cnbc.com",
+    "coindesk.com",
+    "cointelegraph.com",
+    "decrypt.co",
+    "dowjones.io",
+    "federalreserve.gov",
+    "marketwatch.com",
+    "oilprice.com",
+    "wsj.com"
+  ],
+  "broad_domains_note": "news_hist_fetch.BROAD_DOMAINS",
+  "data_location": "off-repo (session scratch /tmp/gd/corpus, 519 MB filtered JSONL; not committed)",
+  "rerun": "see run.commands in research/queue/RQ-20261012-2a7b-01.yaml"
+}

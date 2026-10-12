@@ -3,7 +3,7 @@ title: >-
   NEWS-HIST-REPLAY (WEPE gate G1, OFFLINE arm): does the live news layer (src/news/news_score.py) add net R when
   replayed over 3 years of point-in-time GDELT headlines -- do longs earn less after the state the veto blocks, and
   does the signed adjustment rank-predict the next-24h return, net of the full cost stack?
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -119,4 +119,14 @@ related:
 - docs/claude/work/checklist/NEWS-HIST-REPLAY.json
 - docs/claude/work/checklist/WEPE-BUILDOUT.json
 - research/queue/blocked/RQ-20261009-902.yaml
-last_dispatched_at: null
+last_dispatched_at: '2026-10-12T13:35:00+00:00'
+result:
+  run: session-local, 2026-10-12 (lane NEWS-HIST-REPLAY)
+  record: research/results/RQ-20261012-2a7b-01/session-local-20261012.jsonl
+  grades: {arm_e: INSUFFICIENT_BASE, arm_r: FAIL, g1_offline: RETIRE_OR_REPLACE_REVIEW, g1_offline_broad: OPEN}
+  reading: >-
+    The FAIL on arm R is the registered rule applied mechanically (IC <= 0); IC = -0.0073, one-sided p = 0.61, n = 1,436
+    -- no detectable directional skill, not a demonstrated negative. Arm E could not be graded: 0 veto episodes in 78,252
+    bars, because the corpus carries titles only and the veto's single-item thresholds are unreachable on titles
+    (0 of 87,305 relevant items). So this run measures TITLE-ONLY sentiment, and says nothing about the live
+    title+summary veto. Follow-up filed in the pipeline.

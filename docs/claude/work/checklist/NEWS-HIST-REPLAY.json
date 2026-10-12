@@ -2,7 +2,7 @@
   "id": "NEWS-HIST-REPLAY",
   "title": "Make the news layer BACKTESTABLE: point-in-time historical news corpus (GDELT GKG) + replay harness running the live news_score/news_influence code over historical signals; G1-offline pre-registered unit",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": "NEWS-HIST-REPLAY",
   "model": null,
@@ -11,11 +11,20 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "[2026-10-12 lane NEWS-HIST-REPLAY] Operator 2026-10-12 (verbatim): \"We need to be able to build that sleeve on backtesting not just live testing\" (re WEPE-BUILDOUT). Edge is decided OFFLINE (promotion ladder); G1 was measurable only from the live news_decisions log (13 veto rows/121d). Scope: Tier-1 research tooling only (scripts/research/, tests, research/queue unit); no src/ change. Ceiling $18 Sonnet.",
-  "updated_at": "2026-10-12T11:08:42Z",
+  "note": "[2026-10-12 lane NEWS-HIST-REPLAY] Operator 2026-10-12 (verbatim): \"We need to be able to build that sleeve on backtesting not just live testing\" (re WEPE-BUILDOUT). Edge is decided OFFLINE (promotion ladder); G1 was measurable only from the live news_decisions log (13 veto rows/121d). Scope: Tier-1 research tooling only (scripts/research/, tests, research/queue unit); no src/ change. Ceiling $18 Sonnet. [2026-10-12 RESULT] Built: scripts/research/news_hist_{fetch,replay,candles}.py + tests (22 pass). Corpus: GDELT GKG, 106,297 files 2023-10-01..2026-10-12 (off-repo, 519MB). Unit RQ-20261012-2a7b-01 (rule registered before run; one pre-run amendment disclosed). Replayed 78,252 hourly decision bars (BTC/ETH/SOL) x 2 populations + 333 committed evidence trades (317 gapless). Grades: arm E INSUFFICIENT_BASE (0 veto episodes: title-only corpus cannot trip the veto), arm R FAIL by rule (IC -0.0073, p 0.61, n 1436 = null, not negative), g1_offline RETIRE_OR_REPLACE_REVIEW (rule-mechanical), broad OPEN. Reading: measures title-only sentiment; says nothing about the live title+summary veto. Follow-ups PI-20261012-UFJZ63WF-0001/-0002. Merged != deployed != observed: PR is HOLD, manager merges.",
+  "updated_at": "2026-10-12T13:31:38Z",
   "updated_by": "session_01WXLa6RcvP6XnbXuFjz63wF",
   "roadmap": [
     "M28"
   ],
+  "observation": {
+    "what": "PR merged by the manager; then arm E re-run on a body-bearing corpus (PI-20261012-UFJZ63WF-0001)",
+    "how_to_check": "git log main -- scripts/research/news_hist_replay.py; jq .grades comms/research/RQ-20261012-2a7b-01/verdict.json",
+    "due_by": "2026-10-19T00:00Z"
+  },
+  "writeback": {
+    "roadmap": "M28 next: offline G1 veto arm unmeasurable on title-only corpus; body-bearing corpus needed",
+    "arch": "none: research tooling only"
+  },
   "_seq": 433
 }
