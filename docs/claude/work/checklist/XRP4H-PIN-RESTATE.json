@@ -2,17 +2,19 @@
   "id": "XRP4H-PIN-RESTATE",
   "title": "Re-state the mandate-resolver real-Stage-2 pin from the 1460d xrp_4h record (Tier-1 test edit)",
   "phase": "research",
-  "state": "landed_unproven",
+  "state": "in_flight",
   "owner": "manager",
   "lane": null,
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    17722
+  ],
   "blocked_on": [],
   "note": "[RESEARCH-OPS-20261012-0847] RQ-20261007-023 PASS (RULE-RQ1007-XRP4H-STAGE0-1460D): comms/strategy_evidence/trend_donchian_xrp_4h.json now holds the 1460d record (n_oos 46, exp +0.177R, 3/4 folds, faithful), replacing the 365d n=16 one. Rule: tests/test_mandate_resolver.py::test_real_stage2_thresholds_match_the_operators_pricing is re-stated from it in a separate Tier-1 PR, and SIGNAL-0005 pricing is reported to the operator as a report, not a question. PI-20261002-84ZIQNJD-0001 closes on the same evidence. The roster keeps trend_donchian_xrp_4h (leg is not cut).  [UPDATE] Pin re-stated IN PR #17722 (CI pytest-run failed otherwise: the 1460d record's p10 is -3.88511 so the pin flips to False). The operator's SIGNAL-0005 pricing (xrp_4h positive p10) is therefore CHANGED: xrp_4h's own Stage-0 block p10 is now negative on the powered record (n=46). Report this to the operator; the roster is not edited by research-ops.",
-  "updated_at": "2026-10-12T10:04:13Z",
+  "updated_at": "2026-10-12T10:12:47Z",
   "updated_by": "session_01K3YNoSWcFrHPY45DzknGf4",
   "roadmap": [
     "L-PROP"
