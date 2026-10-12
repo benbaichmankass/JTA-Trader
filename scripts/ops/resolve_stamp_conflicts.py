@@ -20,11 +20,11 @@ import re
 import subprocess
 import sys
 
-_STAMP = re.compile(r"^last_dispatched_at:\s*(.*?)\s*$", re.M)
+_STAMP = re.compile(r"^last_dispatched_at:\s*(.*?)\s*$", re.MULTILINE)
 
 
 def _stage(n: int, path: str) -> str | None:
-    r = subprocess.run(["git", "show", f":{n}:{path}"], capture_output=True, text=True)
+    r = subprocess.run(["git", "show", f":{n}:{path}"], capture_output=True, text=True, check=False)
     return r.stdout if r.returncode == 0 else None
 
 

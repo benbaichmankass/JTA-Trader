@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ACTION = ROOT / ".github/actions/commit-to-main/action.yml"
 RESOLVER = ROOT / "scripts/ops/resolve_stamp_conflicts.py"
 sys.path.insert(0, str(ROOT / "scripts/ops"))
-import resolve_stamp_conflicts as rsc  # noqa: E402
+import resolve_stamp_conflicts as rsc
 
 TEXT = ACTION.read_text(encoding="utf-8")
 
@@ -59,14 +59,17 @@ def test_resolver_cli_resolves_a_real_merge_conflict(tmp_path):
     f = w / "research/queue/RQ-1.yaml"
     f.parent.mkdir(parents=True)
     f.write_text(_unit("2026-10-11T20:00:00+00:00"))
-    _git(w, "add", "-A"); _git(w, "commit", "-qm", "base")
+    _git(w, "add", "-A")
+    _git(w, "commit", "-qm", "base")
     _git(w, "checkout", "-qb", "br")
-    f.write_text(_unit("2026-10-11T21:00:00+00:00")); _git(w, "commit", "-qam", "br")
+    f.write_text(_unit("2026-10-11T21:00:00+00:00"))
+    _git(w, "commit", "-qam", "br")
     _git(w, "checkout", "-q", "main")
-    f.write_text(_unit("2026-10-11T22:00:00+00:00")); _git(w, "commit", "-qam", "main")
+    f.write_text(_unit("2026-10-11T22:00:00+00:00"))
+    _git(w, "commit", "-qam", "main")
     _git(w, "checkout", "-q", "br")
     assert _git(w, "merge", "main", check=False).returncode != 0
-    r = subprocess.run([sys.executable, str(RESOLVER), "research/queue/RQ-1.yaml"], cwd=w)
+    r = subprocess.run([sys.executable, str(RESOLVER), "research/queue/RQ-1.yaml"], cwd=w, check=False)
     assert r.returncode == 0
     assert "22:00:00" in f.read_text() and "<<<<" not in f.read_text()
 
@@ -77,7 +80,8 @@ def test_resolver_cli_is_all_or_nothing(tmp_path):
     q.mkdir(parents=True)
     for n in ("RQ-1", "RQ-2"):
         (q / f"{n}.yaml").write_text(_unit("2026-10-11T20:00:00+00:00"))
-    _git(w, "add", "-A"); _git(w, "commit", "-qm", "base")
+    _git(w, "add", "-A")
+    _git(w, "commit", "-qm", "base")
     _git(w, "checkout", "-qb", "br")
     (q / "RQ-1.yaml").write_text(_unit("2026-10-11T21:00:00+00:00"))
     (q / "RQ-2.yaml").write_text(_unit("2026-10-11T21:00:00+00:00", "x: 1\n"))
@@ -90,7 +94,7 @@ def test_resolver_cli_is_all_or_nothing(tmp_path):
     _git(w, "merge", "main", check=False)
     before = (q / "RQ-1.yaml").read_text()
     r = subprocess.run([sys.executable, str(RESOLVER), "research/queue/RQ-1.yaml",
-                        "research/queue/RQ-2.yaml"], cwd=w)
+                        "research/queue/RQ-2.yaml"], cwd=w, check=False)
     assert r.returncode == 1
     assert (q / "RQ-1.yaml").read_text() == before
 
@@ -103,20 +107,23 @@ def test_replay_in_a_clean_worktree_survives_the_callers_dirty_tree(tmp_path):
     snippet = "\n".join(l for l in snippet.splitlines() if not l.lstrip().startswith("#"))
     w = _repo(tmp_path)
     (w / "q.yaml").write_text("stamp: 0\n")
-    _git(w, "add", "-A"); _git(w, "commit", "-qm", "base")
+    _git(w, "add", "-A")
+    _git(w, "commit", "-qm", "base")
     base = _git(w, "rev-parse", "HEAD").stdout.strip()
     _git(w, "checkout", "-q", "--detach", base)
     (w / "r.json").write_text("1\n")
-    _git(w, "add", "-A"); _git(w, "commit", "-qm", "produced")
+    _git(w, "add", "-A")
+    _git(w, "commit", "-qm", "produced")
     produced = _git(w, "rev-parse", "HEAD").stdout.strip()
     # main moves the file the caller has dirty
     _git(w, "checkout", "-q", "-B", "main", base)
-    (w / "q.yaml").write_text("stamp: 9\n"); _git(w, "commit", "-qam", "main moved")
+    (w / "q.yaml").write_text("stamp: 9\n")
+    _git(w, "commit", "-qam", "main moved")
     _git(w, "checkout", "-q", "--detach", produced)
     (w / "q.yaml").write_text("stamp: 5\n")          # caller's dirty edit
     script = f"set -euo pipefail\nRUNNER_TEMP={tmp_path}\n{snippet}\n" \
              "git checkout -q --detach main\ngit pwd 2>/dev/null || pwd\n"
-    r = subprocess.run(["bash", "-c", script], cwd=w, capture_output=True, text=True)
+    r = subprocess.run(["bash", "-c", script], cwd=w, capture_output=True, text=True, check=False)
     assert r.returncode == 0, r.stderr
     assert (w / "q.yaml").read_text() == "stamp: 5\n"   # caller's tree untouched
     # control: the same checkout in the dirty tree is the failure we measured
