@@ -1,0 +1,20 @@
+{
+  "id": "REDUCE-FILL-QTY",
+  "title": "intent_reduce shrinks parents by REQUESTED not FILLED qty (PI-20261011-YJAYF7GD-0001)",
+  "phase": "build",
+  "state": "in_flight",
+  "owner": "session_013PGJqGxzyzKVSSFydXA9U5",
+  "lane": "session_013PGJqGxzyzKVSSFydXA9U5",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [
+    17691
+  ],
+  "blocked_on": [],
+  "note": "Row absent on main at dispatch; added by the lane. VERIFIED 2026-10-12: 9/9 short fills are Bybit reduce-only cuts (venue before = filled, after = 0.0) from phantom journal parents; 0 of 35 matched reduce legs since 2026-08-08; current journal-vs-venue divergence 0 on all 7 open bybit (acct,symbol). PR #17691 (Tier-3 HOLD, not armed): shrink sized from filled qty via read_reduce_fill; unknown -> requested. No position backfill needed; phantom-parent P&L filed PI-20261012-FYDXA9U5-0001. CLOSES WHEN: #17691 merged + deployed and a reduce leg closed after deploy carries notes.reduce_fill_state.",
+  "updated_at": "2026-10-12T06:16:01Z",
+  "updated_by": "session_013PGJqGxzyzKVSSFydXA9U5",
+  "_seq": 418
+}
