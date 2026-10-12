@@ -62,9 +62,28 @@ class Api(private val c: Context) {
     suspend fun terminalMiss(reason: String, controls: JSONArray) =
         post("event", JSONObject().put("event", "terminal_miss").put("reason", reason.take(150)).put("controls", controls))
 
-    /** Account panel read (balance / equity as MEASURED off the terminal). Null fields stay absent, never 0. */
-    suspend fun accountStatus(balance: Double?, equity: Double?, equityLabel: String) =
+    /** Account panel read (balance / equity as MEASURED off the terminal). Null fields stay absent, never 0.
+     *  PROP-TRACKING (2026-10-12): plus the terminal's own unrealized P&L when it labels one, the Positions read
+     *  (state + rows: symbol, side, qty, entry, mark, uPnL) and the Closed orders read. The server owns every derivation
+     *  (account uPnL, journal reconcile); the phone only reports what the page showed and the state of each read. */
+    suspend fun accountStatus(balance: Double?, equity: Double?, equityLabel: String,
+                              unrealized: Double? = null, positions: JSONObject? = null, closed: JSONObject? = null) =
         post("report", JSONObject().put("kind", "account_status").put("source", "phone_executor")
             .put("provenance", "MEASURED").put("equity_label", equityLabel)
-            .put("balance", balance ?: JSONObject.NULL).put("equity", equity ?: JSONObject.NULL))
+            .put("balance", balance ?: JSONObject.NULL).put("equity", equity ?: JSONObject.NULL)
+            .apply { if (unrealized != null) put("unrealized", unrealized) }
+            .put("positions_state", positions?.optString("state")?.ifEmpty { null } ?: "not_read")
+            .apply {
+                if (positions != null && positions.optString("state") == "read") {
+                    put("positions", positions.optJSONArray("rows") ?: JSONArray())
+                    if (positions.has("count") && !positions.isNull("count")) put("positions_count", positions.optInt("count"))
+                }
+                if (closed != null && closed.optString("state") == "read") put("closed_orders", closed.optJSONArray("rows") ?: JSONArray())
+            })
+
+    /** Positions read that was NOT "read": the state + digit-masked headers / control texts (no value), so the next
+     *  build can be fixed from the dump. The server keeps the latest per account. */
+    suspend fun positionsMiss(state: String, headers: JSONArray, controls: JSONArray) =
+        post("event", JSONObject().put("event", "positions_miss").put("reason", state.take(40))
+            .put("headers", headers).put("controls", controls))
 }
