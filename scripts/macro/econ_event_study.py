@@ -155,6 +155,103 @@ def _num(v: object) -> Optional[float]:
         return None
 
 
+def load_resolved_events_multi(paths: list[str], kind: str) -> list[dict]:
+    """``load_resolved_events`` over several snapshot files (live + backfill + survey backfill), one row per
+    release date; the same preference rule decides between files (a defined surprise, then earliest
+    ``observed_at``)."""
+    best: dict[str, dict] = {}
+    for path in paths:
+        for e in load_resolved_events(path, kind):
+            prev = best.get(e["date"])
+            if prev is None or _better(e, prev):
+                best[e["date"]] = e
+    return [best[d] for d in sorted(best)]
+
+
+def attach_pm_surprise(events: list[dict], pm_rows: list[dict], kind: str) -> list[dict]:
+    """Add ``pm_surprise`` (see scripts/macro/pm_surprise.py) to ``events`` of ``kind`` by EXACT release date.
+    ``pm_rows`` are paired records ``{kind, date, pm_surprise, ...}``. Events with no PM row keep
+    ``pm_surprise = None`` (excluded from that stat, never zero-filled). Returns new dicts."""
+    by_date = {r["date"]: r for r in pm_rows if r.get("kind") == kind and r.get("pm_surprise") is not None}
+    out = []
+    for e in events:
+        row = by_date.get(e["date"])
+        out.append({**e, "pm_surprise": None if row is None else float(row["pm_surprise"])})
+    return out
+
+
+def _paired_ics(pairs: list[tuple]) -> tuple[Optional[float], Optional[float]]:
+    """(IC_a, IC_b) over ``pairs`` of ``(a, b, ret)``."""
+    rets = [p[2] for p in pairs]
+    return _spearman([p[0] for p in pairs], rets), _spearman([p[1] for p in pairs], rets)
+
+
+def paired_ic_comparison(
+    events: list[dict], panel: list[tuple[str, float]], *, horizons: list[int],
+    key_a: str = "pm_surprise", key_b: str = "surprise", n_boot: int = 2000, seed: int = 20261012,
+    alpha: float = 0.05, group_key: Optional[str] = None,
+) -> list[dict]:
+    """Paired IC comparison at the SAME releases: per horizon, Spearman(key_a, fwd return) vs
+    Spearman(key_b, fwd return) over releases that have BOTH values and a forward bar, the difference
+    ``ic_a - ic_b``, a percentile bootstrap interval (resampling releases with replacement, seeded), and the
+    sign of the difference on each date half. Right-censored / missing releases are excluded per horizon,
+    never zero-filled.
+
+    ``group_key``: when set (e.g. ``'kind'``) each value is replaced by its within-group percentile rank before
+    pooling, so releases whose surprises are in different units (pp vs thousands of jobs vs bps) are
+    comparable. The forward return is left raw."""
+    import random
+    fwd = make_forward_return(panel)
+    rows: list[dict] = []
+    for h in horizons:
+        cand = []
+        for e in events:
+            a, b, r = e.get(key_a), e.get(key_b), fwd(e["date"], h)
+            if a is None or b is None or r is None:
+                continue
+            cand.append((e["date"], float(a), float(b), float(r), e.get(group_key) if group_key else None))
+        if group_key:
+            for g in {c[4] for c in cand}:
+                idx = [i for i, c in enumerate(cand) if c[4] == g]
+                for pos in (1, 2):
+                    rk = _rank([cand[i][pos] for i in idx])
+                    for i, v in zip(idx, rk):
+                        c = list(cand[i])
+                        c[pos] = v / len(idx)
+                        cand[i] = tuple(c)
+        cand.sort(key=lambda c: c[0])
+        pairs = [(c[1], c[2], c[3]) for c in cand]
+        n = len(pairs)
+        ic_a, ic_b = _paired_ics(pairs)
+        diff = None if ic_a is None or ic_b is None else ic_a - ic_b
+        lo = hi = None
+        if n >= 5 and diff is not None:
+            rng = random.Random(seed + h)
+            ds = []
+            for _ in range(n_boot):
+                samp = [pairs[rng.randrange(n)] for _ in range(n)]
+                x, y = _paired_ics(samp)
+                if x is not None and y is not None:
+                    ds.append(x - y)
+            ds.sort()
+            if ds:
+                lo = ds[int(len(ds) * (alpha / 2))]
+                hi = ds[min(len(ds) - 1, int(len(ds) * (1 - alpha / 2)))]
+        halves = []
+        if n >= 6:
+            mid = n // 2
+            for part in (pairs[:mid], pairs[mid:]):
+                x, y = _paired_ics(part)
+                halves.append(None if x is None or y is None else _r(x - y))
+        rows.append({
+            "horizon_days": h, "n_paired": n, "ic_a": _r(ic_a), "ic_b": _r(ic_b), "diff": _r(diff),
+            "abs_ic_diff": None if ic_a is None or ic_b is None else _r(abs(ic_a) - abs(ic_b)),
+            "boot_lo": _r(lo), "boot_hi": _r(hi), "n_boot": n_boot, "half_diffs": halves,
+            "key_a": key_a, "key_b": key_b,
+        })
+    return rows
+
+
 def make_forward_return(panel: list[tuple[str, float]]) -> Callable[[str, int], Optional[float]]:
     """Build ``forward_return(date_iso, horizon_trading_days)`` over one ascending
     daily-close panel ``[(YYYY-MM-DD, close), ...]``.
@@ -445,8 +542,12 @@ def main(argv: Optional[list] = None) -> int:
     ap.add_argument("--candles-dir", default=None,
                     help="dir of per-symbol daily-close CSVs (default: off-VM live fetch)")
     ap.add_argument("--horizons", default=None, help="CSV of forward trading-day horizons (default 1,3,5,10,21)")
-    ap.add_argument("--value-key", default="surprise", choices=["surprise", "surprise_pct", "change"],
+    ap.add_argument("--value-key", default="surprise", choices=["surprise", "surprise_pct", "change", "pm_surprise"],
                     help="release field correlated with forward return (default surprise)")
+    ap.add_argument("--pm-surprise", default=None,
+                    help="JSONL of paired PM-surprise records (scripts/research/pm_surprise_eval.py "
+                         "--emit-paired); attaches `pm_surprise` by exact release date, usable with "
+                         "--value-key pm_surprise")
     ap.add_argument("--t-flag", type=float, default=2.0, help="|IC_t| threshold to flag a horizon (default 2.0)")
     ap.add_argument("--min-honest-n", type=int, default=MIN_HONEST_N,
                     help=f"max_n must EXCEED this for a non-provisional verdict (default {MIN_HONEST_N})")
@@ -471,6 +572,12 @@ def main(argv: Optional[list] = None) -> int:
         return 1
 
     events = load_resolved_events(args.snapshots, args.kind)
+    if args.pm_surprise:
+        with open(args.pm_surprise, encoding="utf-8") as fh:
+            events = attach_pm_surprise(events, [json.loads(ln) for ln in fh if ln.strip()], args.kind)
+    elif args.value_key == "pm_surprise":
+        print("--value-key pm_surprise needs --pm-surprise PATH", file=sys.stderr)
+        return 1
     panel = _resolve_panel(symbol, args.candles_dir)
     rows = event_study(events, panel, horizons=horizons, value_key=args.value_key)
     summary = summarize(rows, t_flag=args.t_flag, min_honest_n=args.min_honest_n)

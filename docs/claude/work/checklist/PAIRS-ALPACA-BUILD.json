@@ -1,0 +1,21 @@
+{
+  "id": "PAIRS-ALPACA-BUILD",
+  "title": "Build an isolated Alpaca pairs executor for GLD/GDX (Stage-1 soak on alpaca_paper)",
+  "phase": "build",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR DECISION 2026-10-12T10:40Z (popup, verbatim choice 'Build, paper soak (Recommended)'): build an isolated Alpaca pairs executor for GLD/GDX ONLY, routed to alpaca_paper (Stage 1 soak); promotion follows the normal ladder (Gate 2 needs realized-cost match). Evidence: RQ-20261007-025 PASS (OOS 2022-01..2026-10 n=69 net +5.25R; 8/10 years positive; 8/9 neighbourhood cells positive; fee 7.5 + slip 5.0 bps/leg). SPY/QQQ 1h sibling FAILED -121.96R -> not in scope. Constraints: mirror pattern of src.units.strategies.pairs_executor (isolated 2-leg path, gate in config/pairs.yaml, single-account by construction E36); no real-money account; TP doctrine applies to legs; no new *_ENABLED flag. Source question row PAIRS-ALPACA-BUILD-QUESTION (on #17722).",
+  "updated_at": "2026-10-12T10:42:12Z",
+  "updated_by": "session_01G16FfyYSmDPQuuW55BuTmK",
+  "roadmap": [
+    "M22"
+  ],
+  "_seq": 429
+}

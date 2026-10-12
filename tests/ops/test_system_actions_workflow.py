@@ -159,6 +159,7 @@ EXPECTED_ACTIONS = {
     "init-diag-token": "init_diag_token.sh",
     # UI-UPGRADE-1-AUTH-CONFIG (2026-10-12): site sign-in provisioning.
     "init-web-session-pepper": "init_web_session_pepper.sh",   # Tier 2
+    "install-web-api-deps": "install_web_api_deps.sh",         # Tier 2
     "passkey-enrol-code": "passkey_enrol_code_action.sh",       # Tier 1
     # 2026-05-24 bots overhaul — autonomous Claude infra.
     "send-ping": "send_ping_action.sh",   # Tier 1: immediate ping, no restart
@@ -287,6 +288,7 @@ EXPECTED_ACTIONS = {
     # executor's intake (band, expiry, guards) decides placement. DRY-RUN by
     # default; apply gated + DB backup; every other case refused.
     "prop-ticket-reissue": "prop_ticket_reissue_action.sh",
+    "prop-report-close": "prop_report_close_action.sh",
     # 2026-08-20 — prop-journal hygiene for fills admitted with NO direction
     # (BL-20260820-PROP-FILL-DIRECTION-ADMISSION-GAP). _position_key needs
     # (account, symbol, direction) but ingest_report only validates the first
@@ -419,6 +421,7 @@ TIER_2_ACTIONS = {
     "rotate-account-keys",
     "init-diag-token",
     "init-web-session-pepper",
+    "install-web-api-deps",
     "set-env",
     "unset-env",
     "scrub-env-noncompliant",
@@ -443,6 +446,7 @@ TIER_2_ACTIONS = {
     "fix-prop-mislinked-close",
     "prop-ticket-expire",
     "prop-ticket-reissue",
+    "prop-report-close",
     "repair-prop-fill-direction",
     "breakout-login-check",
     "breakout-terminal-probe",

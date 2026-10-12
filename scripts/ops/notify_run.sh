@@ -190,6 +190,16 @@ case "${action}" in
             *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
         esac
         ;;
+    prop-report-close)
+        # Journals the CLOSE of ONE open prop position (exit optional). Exit 3 is a
+        # guarded REFUSAL, nothing written.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok — close journaled (or dry-run plan printed; see run log)"; priority="normal" ;;
+            3) result="refused — nothing written (see run log for the reason)"; priority="high" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
     prop-ticket-reissue)
         # Re-issues ONE suppressed prop ticket as `emitted`, rebuilt with the
         # emission sizing (PROP-REISSUE). Exit 3 is a guarded REFUSAL, nothing written.
@@ -269,7 +279,7 @@ case "${action}" in
             *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
         esac
         ;;
-    init-web-session-pepper)
+    init-web-session-pepper|install-web-api-deps)
         tier=2
         case "${exit_code}" in
             0) result="ok"; priority="normal" ;;
