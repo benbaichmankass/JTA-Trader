@@ -20,12 +20,19 @@ def simple_backtest(
     exit_policy(sig, future_bars) -> (exit_price, reason).
     """
     trades: list = []
+    # AUD-20260927-CA-B02: a build_signal() that RAISES is not "no setup found".
+    # Count and keep the first error so the result can tell them apart.
+    signal_errors = 0
+    first_error: str | None = None
     i = lookback_bars
     while i < len(candles) - max_hold_bars - 1:
         window = candles.iloc[i - lookback_bars : i]
         try:
             sig = build_signal(window)
-        except Exception:
+        except Exception as exc:  # noqa: BLE001 — recorded, surfaced in the result
+            signal_errors += 1
+            if first_error is None:
+                first_error = f"{type(exc).__name__}: {exc}"
             sig = None
         if not sig:
             i += 1
@@ -45,8 +52,10 @@ def simple_backtest(
             "r_mult": r_mult, "ts": candles["timestamp"].iloc[i],
         })
         i += max(1, max_hold_bars // 8)
+    err = {"build_signal_errors": signal_errors, "build_signal_first_error": first_error}
     if not trades:
-        return {"trades": 0, "expectancy_r": 0.0, "win_rate": 0.0, "sharpe": 0.0, "max_dd_r": 0.0}
+        return {"trades": 0, "expectancy_r": 0.0, "win_rate": 0.0, "sharpe": 0.0,
+                "max_dd_r": 0.0, **err}
     rs = pd.Series([t["r_mult"] for t in trades])
     equity = rs.cumsum()
     dd = (equity - equity.cummax()).min()
@@ -56,6 +65,7 @@ def simple_backtest(
         "win_rate": float((rs > 0).mean()),
         "sharpe": float(rs.mean() / rs.std() * np.sqrt(len(rs))) if rs.std() > 0 else 0.0,
         "max_dd_r": float(dd),
+        **err,
     }
 
 
