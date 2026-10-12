@@ -300,33 +300,17 @@ class TestBybitPathActuallyRuns:
         assert out["covered_qty"] == 10.0          # quantity verdict unchanged
         assert out["stop_prices"] == [95.5]        # and now the price too
 
-    def test_full_mode_with_an_unparseable_stop_yields_NO_price_not_zero(self):
-        from src.runtime.order_monitor import _bybit_position_protection
-        out = _bybit_position_protection(
-            self._client({"size": "10", "side": "Buy", "stopLoss": "banana"}, []),
-            "linear", "SOLUSDT",
-        )
-        # PINS TODAY'S BEHAVIOUR, NOT THE DESIRED ONE (CA-A01-056 /
-        # PI-20260927-JT7JW9CR-0003): "banana" is non-empty and not "0", so the
-        # LEGACY string test still grades it covered. The detector for the
-        # desired verdict is the strict xfail below; when the fix lands that
-        # xfail XPASSes (strict => fails) and this assertion must be deleted.
-        assert out["covered_qty"] == 10.0
-        assert out["stop_prices"] == []            # never [0.0]
-
-    @pytest.mark.xfail(
-        strict=True,
-        reason="CA-A01-056: an unparseable stopLoss is graded FULLY covered; "
-               "fix is a runtime change held for the manager (HOLD PR).",
-    )
-    def test_full_mode_with_an_unparseable_stop_is_NOT_graded_covered(self):
+    def test_full_mode_with_an_unparseable_stop_is_refused_not_graded_covered(self):
+        # CA-A01-056 / PI-20260927-JT7JW9CR-0003: "banana" is "we could not
+        # look" -- never FULLY covered, never a fabricated 0.0 price.
         from src.runtime.order_monitor import _bybit_position_protection
         refusal: dict = {}
         out = _bybit_position_protection(
             self._client({"size": "10", "side": "Buy", "stopLoss": "banana"}, []),
             "linear", "SOLUSDT", refusal=refusal,
         )
-        assert out is None or out["covered_qty"] == 0.0
+        assert out is None
+        assert refusal.get("state") == "stop_unparseable"
 
     def test_partial_mode_sums_qty_and_collects_each_leg_trigger(self):
         from src.runtime.order_monitor import _bybit_position_protection
