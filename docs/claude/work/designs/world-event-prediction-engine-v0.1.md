@@ -1,5 +1,7 @@
 # World Event Prediction Engine
 
+> **Doc status:** `unknown` · category `plan` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../../DOCUMENT-INDEX.md) · checklist rows **WEPE-BUILDOUT**, **WEPE-G3-BACKFILL** · operator attachment 2026-10-08 (gated build-out; the design is free to change where the gates show it should)
+
 **Status:** Draft v0.1  
 **Owner:** Independent Analyst Project  
 **Last updated:** 2026-10-08  
