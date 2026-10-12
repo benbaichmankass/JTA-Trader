@@ -1,0 +1,22 @@
+{
+  "id": "CLOSE-PNL-NULL",
+  "title": "Decided closes on Bybit left pnl NULL: pending-pnl sweep matched broker closed-pnl on the journal's intended entry (bybit_2 #6565 shown '\u2014')",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "lane (session_01MnEwSE9MJ4ePnc7DjDhEry)",
+  "lane": "session_01MnEwSE9MJ4ePnc7DjDhEry",
+  "model": null,
+  "ceiling_usd": 15,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-12 lane session_01MnEwSE9MJ4ePnc7DjDhEry, dispatched by manager session_01G16FfyYSmDPQuuW55BuTmK] Operator screenshot: bybit_2 trade 6565 P&L '\u2014'. ROOT CAUSE: order_monitor._sweep_pending_pnl_from_bybit passed trades.entry_price (intended 0.2492) to the closed-pnl matcher; venue record avgEntryPrice is the fill 0.2489 (12 bps > 10 bps tolerance) so the venue's own SL record (order 71c1cc1e, exit 0.2432, closedPnl -3.28194216) was refused every tick. WATCHDOG-PAST-STOP (2026-10-10) fixed the other two callers only. Fix: retry on miss with the venue entry fill; same in scripts/ops/backfill_monitor_closed_pnl.py; /trades/closed maps sl_cross/tp_cross to sl/tp (was 'other'). Landing hold.",
+  "updated_at": "2026-10-12T15:10:34Z",
+  "updated_by": "session_01MnEwSE9MJ4ePnc7DjDhEry",
+  "roadmap": [
+    "M39"
+  ],
+  "priority": "high",
+  "_seq": 434
+}
