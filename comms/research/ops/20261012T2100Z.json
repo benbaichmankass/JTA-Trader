@@ -1,0 +1,191 @@
+{
+  "run": "RESEARCH-OPS-20261012-2047",
+  "finished_at": "2026-10-12T21:05:00Z",
+  "by": "session_016F9Q3yiYHGv5UEHfzMn6Dz",
+  "baseline": "comms/research/ops/20261012T1500Z.json",
+  "floor": 25,
+  "throughput": {
+    "runnable_before": 0,
+    "runnable_after": 6,
+    "queued": 173,
+    "fired_24h": 36,
+    "fired_7d": 236,
+    "results_landed_24h": 41,
+    "hours_since_last_dispatch": 2.9,
+    "idle_alarm": false,
+    "as_of": "2026-10-12T20:53Z",
+    "note": "runnable_before 0 MEASURED 20:48Z (check_research_queue_throughput.py; health check H1 'templates hold only 1 point(s) for a deficit of 25'). runnable_after 6 MEASURED on the branch tree after authoring 6 confirmatory units (d8e0-01..06); RQ-20261009-903 re-armed is not counted as runnable by that script until its stamp is read. Floor 25 NOT met. QUEUE-FILL-W41 (#17795, other lane) adds 15 regime + 12 ml_health units and is the intended closer; not touched."
+  },
+  "mechanism": {
+    "dispatch_receipt": "ok (liveness 'fresh', 13.61h old at 20:48Z; last_dispatched_at 2026-10-12T17:54:15Z, 2.9 h; hourly dispatch continues)",
+    "collector": "ok: result commits for 158e-01, ca47-01..06, 1469-01..04, 904 landed on main since 15:05Z; grade run #17790 landed",
+    "stranded_stamp_prs": [
+      17652
+    ],
+    "stranded_automation_prs": {
+      "population": "open PRs with head automation/research* at 20:55Z = 10 (17796 and 17794 are <1 h old stamps, not stranded)",
+      "unchanged_since_1447": [
+        "17652",
+        "17674",
+        "17698",
+        "17702",
+        "17717",
+        "17731",
+        "17085"
+      ],
+      "owners": "CI-PYTEST-TIMEOUT-HEADROOM, RESULTS-STORE-R3-ARTIFACTS, PI-20261006-LCEVL8D5-0001, STAMP-RACE-2"
+    },
+    "incident": "RQ-20261009-903 (WEPE G2) landed as read_state producer_failed (cmd exit 1 in 0.3 s) - not a verdict. Cause reproduced: ICT_OFFVM_BUILD_HOST guard in fetch_macro_candles raised before any data was read; unit argv cannot carry env and the trainer workflow does not set it. Fixed in scripts/research/pm_surprise_eval.py (setdefault when --candles-dir absent); unit stamp reset to null so it fires once. Whether the trainer then reaches stooq/yfinance is UNVERIFIED from here (sandbox cannot)."
+  },
+  "results_read": {
+    "pass": 3,
+    "fail": 9,
+    "indeterminate": 0,
+    "not_a_verdict": 1,
+    "units": [
+      {
+        "unit": "RQ-20261012-158e-01",
+        "verdict": "fail",
+        "net_total_r": -5.2673,
+        "n": 261,
+        "note": "squeeze LINK 2h confirmatory, SECOND fail: cell closed (rule: a second FAIL closes the cell)"
+      },
+      {
+        "unit": "RQ-20261012-1469-01",
+        "verdict": "fail",
+        "net_total_r": -314.2152,
+        "n": 1601,
+        "note": "pullback BNB 5m first fail -> re-queued as d8e0-01"
+      },
+      {
+        "unit": "RQ-20261012-1469-02",
+        "verdict": "fail",
+        "net_total_r": -526.7478,
+        "n": 1898,
+        "note": "squeeze BNB 5m first fail -> re-queued as d8e0-02"
+      },
+      {
+        "unit": "RQ-20261012-1469-03",
+        "verdict": "fail",
+        "net_total_r": -7.7581,
+        "n": 63,
+        "note": "pullback BTC 1h confirmatory, SECOND fail: cell closed"
+      },
+      {
+        "unit": "RQ-20261012-1469-04",
+        "verdict": "fail",
+        "net_total_r": -1.7747,
+        "n": 191,
+        "note": "trend BNB 4h confirmatory, SECOND fail: cell closed"
+      },
+      {
+        "unit": "RQ-20261012-ca47-01",
+        "verdict": "fail",
+        "net_total_r": -7.9628,
+        "n": 62,
+        "note": "trend SOL 2h confirmatory, SECOND fail: cell closed"
+      },
+      {
+        "unit": "RQ-20261012-ca47-02",
+        "verdict": "fail",
+        "net_total_r": -519.8232,
+        "n": 2119,
+        "note": "squeeze ETH 5m first fail -> re-queued as d8e0-03"
+      },
+      {
+        "unit": "RQ-20261012-ca47-03",
+        "verdict": "pass",
+        "net_total_r": 78.6186,
+        "n": 1006,
+        "note": "pullback DOGE 15m Stage-0 pass, expectancy +0.0781R; rule names no follow-up; prop-fit pricing noted on PROP-FIT-DONORS-PB-SQ, no unit authored"
+      },
+      {
+        "unit": "RQ-20261012-ca47-04",
+        "verdict": "fail",
+        "net_total_r": -783.3177,
+        "n": 3088,
+        "note": "trend ETH 5m first fail -> re-queued as d8e0-04"
+      },
+      {
+        "unit": "RQ-20261012-ca47-05",
+        "verdict": "fail",
+        "net_total_r": -337.1637,
+        "n": 1548,
+        "note": "pullback ETH 5m first fail -> re-queued as d8e0-05"
+      },
+      {
+        "unit": "RQ-20261012-ca47-06",
+        "verdict": "fail",
+        "net_total_r": -878.1475,
+        "n": 3245,
+        "note": "trend BNB 5m first fail -> re-queued as d8e0-06"
+      },
+      {
+        "unit": "RQ-20261012-904",
+        "verdict": "pass",
+        "n": 830,
+        "note": "WEPE G3 instrument: leakage clean, 830 questions, 82 market-matched, all arms scored. Claims (separate, not promoted): fomc_model_vs_base model_better; market_vs_base_pooled model_better; cpi_family_model_vs_base and model_vs_market_pooled not_distinguishable. Rule feeds nothing; G4 needs its own pre-registered unit (WEPE-BUILDOUT owns). Noted on WEPE-BUILDOUT."
+      },
+      {
+        "unit": "RQ-20261009-903",
+        "verdict": "not_applicable",
+        "note": "producer_failed, NOT a verdict (see mechanism.incident); re-armed"
+      }
+    ],
+    "rule_applied": "each unit's registered rule verbatim (harness_dispatch_result.py mechanical grade). 'Cell closed' = the confirmatory rule's 'a second FAIL closes the cell (kill, stated reason)'. No news/WEPE retire/kill follow-up filed (operator 2026-10-12).",
+    "not_read": "research_disposition.py --unread-only still lists the e35/m20 leg-level corpus rows (not queue results), unchanged since 08:47Z."
+  },
+  "unlocked": [
+    {
+      "unit": "RQ-20261009-903",
+      "how": "run fixed (script), last_dispatched_at reset to null; rule unchanged"
+    }
+  ],
+  "retired": [],
+  "levers_filed": [
+    {
+      "lever": "Tier-2 landing:self needs approvals/ record on main",
+      "ref": "LANDING-TIER2-APPROVALS"
+    },
+    {
+      "lever": "net_r_label IB futures multiplier fallback",
+      "ref": "NETR-IB-RISK-BASIS"
+    },
+    {
+      "lever": "failed-run logs/ not landed",
+      "ref": "RESULTS-LOGS-NOT-LANDED"
+    }
+  ],
+  "units_authored": [
+    "RQ-20261012-d8e0-01",
+    "RQ-20261012-d8e0-02",
+    "RQ-20261012-d8e0-03",
+    "RQ-20261012-d8e0-04",
+    "RQ-20261012-d8e0-05",
+    "RQ-20261012-d8e0-06"
+  ],
+  "authoring_note": "d8e0-01..06 = rule-mandated confirmatory re-runs of the six first-fail 5m cells, cloned from 158e-01's shape. Hand-authored => landing hold (unvouchable_paths).",
+  "routing": {
+    "unrouted_before": 8,
+    "unrouted_after": 0,
+    "routed": {
+      "PI-20261012-RXNHREPJ-0001/0002/0003": "BREAKOUT-UNRECORDED",
+      "PI-20261012-LFDSWFCG-0001": "MIRROR-QTY-DIVERGE",
+      "PI-20261012-42HAX6NV-0001": "LANDING-TIER2-APPROVALS (new row)",
+      "PI-20261012-CMUZ8SWC-0001": "NEWS-VETO-EVAL",
+      "PI-20261012-CMUZ8SWC-0002": "NETR-IB-RISK-BASIS (new row)",
+      "PI-20261012-TRY1KAIX-0001": "NEWS-ALPHA-PROGRAM"
+    },
+    "note": "dispatch said 7 unrouted; MEASURED 8 at 20:53Z (TRY1KAIX-0001 filed since)"
+  },
+  "followups_filed": [],
+  "not_run": [
+    "blocker_watch.py / dispatch_queue.py dry run audit of blocked/ (not run: budget; handoff)",
+    "top-up beyond the 6 mandated units: intake sources exhausted; QUEUE-FILL-W41 (#17795) owns the fill"
+  ],
+  "handoff": [
+    "Next pass: read RQ-20261009-903 (G2) against its rule verbatim once it re-fires; if producer_failed again read the cause via trainer-vm-diag (RESULTS-LOGS-NOT-LANDED).",
+    "Next pass: grade d8e0-01..06 (second FAIL closes the cell) as they fire.",
+    "Manager: PROP-FIT-DONORS-PB-SQ decision on pricing pullback DOGE 15m; LANDING-TIER2-APPROVALS decision; #17795 landing closes the floor gap."
+  ]
+}
