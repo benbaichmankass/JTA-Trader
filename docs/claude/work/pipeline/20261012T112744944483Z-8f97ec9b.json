@@ -1,0 +1,22 @@
+{
+ "due_when": {
+  "check_every_days": 1,
+  "clears_when": "breakout_2's latest account_status raw has positions_state == \"read\" with the terminal's open positions listed, AND /api/bot/prop/overview shows breakout_2 trades with unrealized_state venue_position or venue_snapshot (measured). If phone_positions_diag shows a miss instead, fix the reader in tools/phone-executor/app/src/main/assets/exec.js from that dump.",
+  "kind": "observation",
+  "last_checked": "2026-10-12"
+ },
+ "id": "PI-20261012-GNRBKIGG-0001",
+ "next_action": "check_observation",
+ "observation": {
+  "due_by": "2026-10-15",
+  "how_to_check": "curl -s 'https://ict-bot.duckdns.org/api/bot/prop/status?account_id=breakout_2' | jq '.status.raw|fromjson|.positions_state' ; and .phone_positions_diag for a miss dump",
+  "what": "breakout_2's first clean phone Positions read after the PROP-TRACKING APK is installed (status.raw.positions_state == 'read'; overview trades measured)"
+ },
+ "origin": {
+  "kind": "audit",
+  "ref": "checklist PROP-TRACKING; PR #17745 (bot), ict-trader-dashboard #224",
+  "rerun": "curl -s 'https://ict-bot.duckdns.org/api/bot/prop/status?account_id=breakout_2' | jq '{ps:(.status.raw|fromjson|.positions_state), pos:(.status.raw|fromjson|.positions), diag:.phone_positions_diag}' -- holds while positions_state != \"read\"."
+ },
+ "state": "queued",
+ "what": "PROP-TRACKING landed_unproven: the phone APK built from #17745 must be installed and its FIRST live Positions read observed. Until then breakout_2 per-trade uPnL is a mark ESTIMATE only, and the journal is not reconciled against the terminal (closes on the venue still write nothing back). The Positions/Closed-orders table shape on Breakout is UNMEASURED: the reader maps by header text and fails closed (no_table/unparsed/count_mismatch/empty_unconfirmed) with a masked dump."
+}

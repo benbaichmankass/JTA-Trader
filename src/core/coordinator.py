@@ -1271,6 +1271,12 @@ class Coordinator:
                     stage="pre_loop_eligibility",
                 )
         accounts = _eligible
+        # MIRROR-QTY-DIVERGE: a Stage-2 mirror dispatches AFTER its real-money
+        # primary so the mirror gate below can follow the primary's outcome.
+        from src.runtime import mirror_pairs as _mirror_pairs
+        accounts = _mirror_pairs.order_primaries_first(
+            accounts, lambda a: str(getattr(a, "name", "")),
+        )
         logger.info(
             "[coordinator.dispatch] trace_id=%s strategy=%s symbol=%s eligible_accounts=%d",
             getattr(pkg, "trace_id", "?"), pkg.strategy, pkg.symbol, len(accounts),
@@ -1345,6 +1351,54 @@ class Coordinator:
                 # without a category and fall back to is_demo only.
                 "account_class": getattr(account, "account_class", "real_money"),
             }
+
+            # MIRROR-QTY-DIVERGE (Stage 2 = IDENTICAL trades): a mirror places
+            # this package only if its primary placed it in this call. Without
+            # this, bybit_2's 0.5 XRP top-up was refused by the venue (110094)
+            # while bybit_portfolio's 160.9 filled, and the mirror carried a
+            # trade the real-money account never had (pkg-63b56da53bfe4d64).
+            _mv, _mreason = _mirror_pairs.follow_decision(
+                str(getattr(account, "name", "")), results, excluded_by_account,
+            )
+            if _mv == _mirror_pairs.SKIP:
+                logger.warning(
+                    "[coordinator] mirror gate: %s skips %s/%s — %s",
+                    account.name, pkg.strategy, pkg.symbol, _mreason,
+                )
+                try:
+                    from src.runtime.outcomes import Level, report
+                    report(
+                        "mirror_gate", "mirror_skipped_primary_not_placed",
+                        level=Level.WARN, reason=str(_mreason),
+                        account_id=str(account.name),
+                        strategy=pkg.strategy, symbol=pkg.symbol,
+                    )
+                except Exception:  # noqa: BLE001 — observability never blocks
+                    logger.debug("mirror gate outcome report failed", exc_info=True)
+                try:
+                    from src.units.accounts.execute import log_rejection_to_journal
+                    log_rejection_to_journal(
+                        pkg, _early_account_cfg,
+                        reason=str(_mreason), status="rejected", sized_qty=0.0,
+                    )
+                except Exception:  # noqa: BLE001
+                    logger.debug("mirror gate journal write failed", exc_info=True)
+                results.append({
+                    "name": account.name,
+                    "exchange": account.exchange,
+                    "account_type": account.account_type,
+                    "trade_id": None,
+                    "sized_qty": 0.0,
+                    "error": str(_mreason),
+                })
+                continue
+            if _mv == _mirror_pairs.UNOBSERVED:
+                logger.warning(
+                    "[coordinator] mirror gate: %s dispatching %s/%s with its "
+                    "primary absent from this call (%s) — trade equality "
+                    "cannot be enforced here", account.name, pkg.strategy,
+                    pkg.symbol, _mreason,
+                )
 
             # Build account_cfg, resolve effective_dry and exchange client
             # BEFORE sizing so the direction-aware balance override (spot
@@ -2232,6 +2286,11 @@ class Coordinator:
             # un-mangled token to the rejection-journal helper (post-CP-13
             # observability — every refusal lands a row in trade_journal.db).
             risk_reason: Optional[str] = None
+            # Bound before the try so the exchange-rejection journal write
+            # records the qty actually SENT (an intent-mode delta), not the
+            # risk-sized target (MIRROR-QTY-DIVERGE: row 6544 said 57.4 while
+            # the POST carried 0.5).
+            effective_qty = sized_qty
             try:
                 # 1. Per-account risk gate (local check, since execute_pkg
                 #    does not call account.risk_manager.approve()). Honour
@@ -2664,6 +2723,52 @@ class Coordinator:
                             "error": "intent_sub_min_qty_delta",
                         })
                         continue
+                    # Venue minimum order VALUE (MIRROR-QTY-DIVERGE). The qty
+                    # check above passed bybit_2's 0.5 XRP delta (>= 0.1 lot)
+                    # worth $0.70, which Bybit refused with 110094 "minimum
+                    # order value 5USDT". Opening legs only: a reduce-only
+                    # order is never refused for value by the venue.
+                    if delta.action in ("open", "increase"):
+                        try:
+                            from src.units.accounts.qty_legalize import (
+                                venue_min_notional,
+                            )
+                            _min_notional = venue_min_notional(
+                                account_cfg=account_cfg, symbol=pkg.symbol,
+                                client=client,
+                            )
+                        except Exception:  # noqa: BLE001
+                            _min_notional = None
+                        _delta_notional = float(delta.qty_delta) * float(pkg.entry or 0.0)
+                        if (
+                            _min_notional is not None
+                            and pkg.entry
+                            and _delta_notional < _min_notional
+                        ):
+                            logger.info(
+                                "[coordinator] intent-mode sub-min-notional "
+                                "delta for %s/%s (delta=%s notional=%.4f < "
+                                "venue min %.4f) — treating as noop",
+                                account.name, pkg.symbol, delta.qty_delta,
+                                _delta_notional, _min_notional,
+                            )
+                            from src.units.accounts.execute import log_rejection_to_journal
+                            log_rejection_to_journal(
+                                pkg, account_cfg,
+                                reason="intent_sub_min_notional_delta",
+                                status="rejected",
+                                sized_qty=0.0,
+                                margin_basis=margin_basis or None,
+                            )
+                            results.append({
+                                "name": account.name,
+                                "exchange": account.exchange,
+                                "account_type": account.account_type,
+                                "trade_id": None,
+                                "sized_qty": 0.0,
+                                "error": "intent_sub_min_notional_delta",
+                            })
+                            continue
                     effective_qty = float(delta.qty_delta)
                     # Build leg list for the dispatcher. The vast
                     # majority of ticks produce a single "open"/"increase"
@@ -2868,12 +2973,18 @@ class Coordinator:
                     demo=getattr(account, "demo", False),
                 )
                 from src.units.accounts.execute import log_rejection_to_journal
+                _sent_vs_sized = (
+                    {"risk_sized_qty": sized_qty,
+                     "execution_delta": (pkg.meta or {}).get("execution_delta")}
+                    if effective_qty != sized_qty else None
+                )
                 log_rejection_to_journal(
                     pkg, account_cfg,
                     reason=f"{type(exc).__name__}: {exc}",
                     status="exchange_rejected",
-                    sized_qty=sized_qty,
+                    sized_qty=effective_qty,
                     margin_basis=margin_basis or None,
+                    extra_notes=_sent_vs_sized,
                 )
                 results.append({
                     "name": account.name,
@@ -2928,6 +3039,10 @@ class Coordinator:
             return (
                 err.startswith("intent_noop:")
                 or err == "intent_sub_min_qty_delta"
+                or err == "intent_sub_min_notional_delta"
+                # A mirror following its primary's non-placement. The
+                # primary's own row decides whether the roll-up fires.
+                or err.startswith("mirror_primary_")
                 # Sub-lot-minimum refusal (BL-20260716-BYBIT2-SUBMIN-QTY) —
                 # covers both the exact ``below_venue_min_qty`` from the
                 # execute_pkg-catch benign path and the sized-path pre-check's
@@ -2944,6 +3059,22 @@ class Coordinator:
                 # policy refusal, not a dispatch failure (2026-09-28).
                 or err == "broker_shorting_disabled"
             )
+
+        # MIRROR-QTY-DIVERGE: the direction the mirror gate cannot prevent —
+        # the primary's order is on the venue and the mirror failed. Never
+        # silent: ERROR reaches the operator.
+        for _div in _mirror_pairs.divergences(results):
+            try:
+                self.push_alert(
+                    f"Stage-2 mirror divergence: {_div['primary']} placed "
+                    f"{pkg.strategy} {pkg.direction} {pkg.symbol} "
+                    f"(trade {_div['primary_trade_id']}) but mirror "
+                    f"{_div['mirror']} did not: {_div['mirror_error']}",
+                    source="accounts", level="error",
+                    account=_div["mirror"], mirror_divergence=_div,
+                )
+            except Exception as _alert_exc:  # noqa: BLE001
+                logger.warning("mirror divergence alert raised: %s", _alert_exc)
 
         any_trade_placed = any(r.get("trade_id") is not None for r in results)
         all_benign_noop = bool(results) and all(_is_benign_noop(r) for r in results)
