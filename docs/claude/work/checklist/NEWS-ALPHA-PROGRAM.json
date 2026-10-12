@@ -1,0 +1,31 @@
+{
+  "id": "NEWS-ALPHA-PROGRAM",
+  "title": "Research program: does news / open-source unstructured data carry STANDALONE predictive edge (returns, vol, volume; any asset class, horizon, regime), net of cost? 14 pre-registered units, 600-test family budget, sealed holdout",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "lane (session session_01SPre8cB96Nn4sUTry1KAiX)",
+  "lane": null,
+  "model": "opus",
+  "ceiling_usd": 30,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-12 lane NEWS-ALPHA-PROGRAM, dispatched by Manager Session 2026-10-11 session_01G16FfyYSmDPQuuW55BuTmK] OPERATOR DIRECTIVE 2026-10-12 (binding, verbatim): \"testing it against trades that were made or would have been traded by our strategies is a good first test, but it obviously doesn't tell us anything about if we can build new strategies based on the predictive power of news and open-source unstructured data. We need to see not just if it correlates with our trades, but if it shows an edge, if it correlates to different market movements, if there are other ways to discern a usable correlation from that feed. This is just the first sample of signals \u2014 there are many types of samples, many types of securities, many market conditions. We're far from having exhausted the research needed to make even a first-level retire decision; we are not close to retiring this.\" => G1 FAIL (RQ-20261009-902/#17740) and G2 FAIL (RQ-20261009-903/#17744) answer only the narrow overlay questions; retirement of the news layer is OFF the table. Index: docs/research/news-alpha-program-2026-10-12.md. Units RQ-20261012-5bd1-01..14 (research/queue/blocked/). Levers: NEWS-ALPHA-CORPUS, -FEATURES, -HARNESS, -SRC-FOMC, -SRC-EDGAR, -SRC-WIKI. [2026-10-12] (directive recorded above in this row's opening note.)",
+  "updated_at": "2026-10-12T14:02:02Z",
+  "updated_by": "session_01SPre8cB96Nn4sUTry1KAiX",
+  "roadmap": [
+    "M28"
+  ],
+  "priority": "high",
+  "writeback": {
+    "roadmap": "owed at close: M28 where/next gets the program line when the first readout lands",
+    "arch": "none: research-only program, no contract change until a unit PASSes"
+  },
+  "observation": {
+    "what": "The first program readout: >=5 NEWS-ALPHA units have measured records under research/results/ and the readout applies each unit rule plus the family BH over all landed cells",
+    "how_to_check": "ls research/results/ | grep RQ-20261012-5bd1; wc -l research/news_alpha/TEST-LEDGER.jsonl",
+    "due_by": "2026-11-09"
+  },
+  "_seq": 434
+}
