@@ -73,7 +73,7 @@ _FP_RE = re.compile(r"^[0-9a-f]{64}$")
 _EVENT_KINDS = {
     "login_ok", "login_failed", "logout_seen", "login_started", "login_retry", "refusal",
     "mismatch", "flattened", "dry_fill_ok", "submitted", "app_started", "error", "terminal_miss", "heartbeat",
-    "login_diag",
+    "login_diag", "positions_miss",
 }
 # terminal_miss carries the control texts the page showed (our own UI labels, scrubbed like a reason) so the
 # next "terminal did not load" is self-diagnosing; only the LATEST one per account is kept, beside the journal.
@@ -377,14 +377,45 @@ def record_report(device: PhoneDevice, body: Dict[str, Any]) -> Dict[str, Any]:
                 "equity": clean["equity"], "source": "phone_executor", "provenance": "MEASURED",
                 "equity_label": label}
         # The terminal's own unrealized P&L (BREAKOUT-UNRECORDED): optional, may be negative, and absent stays
-        # absent -- the overview shows "not_reported", never 0. The app does not send it yet (filed).
+        # absent -- the overview shows "not_reported", never 0. Sent when the terminal labels one (PROP-TRACKING build).
         ur = body_in.get("unrealized")
         if ur is not None:
             if isinstance(ur, bool) or not isinstance(ur, (int, float)) or not math.isfinite(ur):
                 raise ValueError("account_status.unrealized invalid")
             body["unrealized"] = float(ur)
+            body["unrealized_source"] = "terminal_panel"
+        # PROP-TRACKING (operator 2026-10-12): the terminal's Positions list. Only a CLEAN read ("read") is stored as
+        # positions and reconciled; any other state is kept as a label so "we could not look" stays visible.
+        from src.prop import phone_reconcile
+        pstate = re.sub(r"[^a-z_]", "", str(body_in.get("positions_state") or "not_read"))[:24] or "not_read"
+        body["positions_state"] = pstate
+        positions = closed = None
+        if pstate == "read":
+            positions = phone_reconcile.clean_positions(device.account_id, body_in.get("positions"))
+            closed = phone_reconcile.clean_closed(device.account_id, body_in.get("closed_orders"))
+            body["positions"] = positions
+            body["closed_orders"] = closed
+            pc = body_in.get("positions_count")
+            if isinstance(pc, int) and not isinstance(pc, bool):
+                body["positions_count"] = pc
+            if "unrealized" not in body:
+                # the venue's own per-position figures, summed (0.0 when the terminal says flat): MEASURED
+                derived = phone_reconcile.account_unrealized(positions)
+                if derived is not None:
+                    body["unrealized"] = derived
+                    body["unrealized_source"] = "positions_sum"
+        if (body.get("unrealized") is None and label == "equity" and clean["balance"] is not None
+                and clean["equity"] is not None):
+            body["unrealized"] = round(clean["equity"] - clean["balance"], 2)
+            body["unrealized_source"] = "equity_minus_balance"
     from src.prop.prop_report import ingest_report
     res = ingest_report(body)
+    if body.get("kind") == "account_status" and body.get("positions_state") == "read":
+        try:
+            res["reconcile"] = phone_reconcile.reconcile(device.account_id, body["positions"], body["closed_orders"])
+        except Exception:  # noqa: BLE001  # allow-silent: logged; the snapshot is stored and the next read retries
+            logger.warning("phone_executor: positions reconcile failed for %s", device.account_id, exc_info=True)
+            res["reconcile"] = None
     tid = body.get("ticket_id")
     if tid and str(body.get("kind") or "") == "amend":
         # The human {kind: amend} path ("moved stop/target"): the phone trail's resting levels follow it.
@@ -559,11 +590,13 @@ def record_event(device: PhoneDevice, body: Dict[str, Any], *, send=None) -> Dic
         _write_diag(device.account_id, reason, body.get("controls"))
     if kind == "heartbeat":
         _write_heartbeat(device.account_id, reason, body.get("state"))
+    if kind == "positions_miss":
+        _write_positions_diag(device.account_id, reason, body.get("headers"), body.get("controls"))
     # login_retry: an auto re-login attempt/failure inside a streak (PHONE-AUTOLOGIN, no latch, retried forever) is
     # logged in phone_events but not pinged; the phone sends ONE login_failed red flag after 3 in a row instead.
     # login_diag (PHONE-AUTOLOGIN-2): one scrubbed structure snapshot per re-login attempt -- step reached, how many
     # numeric candidates the page / mail showed, timings; never a value -- kept in phone_events, not pinged.
-    quiet = (kind == "app_started" and not body.get("ping")) or kind in ("terminal_miss", "heartbeat", "login_retry", "login_diag")
+    quiet = (kind == "app_started" and not body.get("ping")) or kind in ("terminal_miss", "heartbeat", "login_retry", "login_diag", "positions_miss")
     sent = False
     if not quiet:
         try:
@@ -592,6 +625,30 @@ def _write_diag(account_id: str, reason: str, controls: Any) -> None:
             {"at": _now().isoformat(), "reason": reason, "controls": [c for c in ctl if c]}))
     except OSError:  # allow-silent: diagnostics only; the event is still acknowledged
         logger.warning("phone_executor: diag write failed", exc_info=True)
+
+
+# positions_miss (PROP-TRACKING): a Positions read that was not clean -- its state plus the table's digit-masked
+# headers and the page's control texts -- so the next build is fixed from evidence. Latest per account only.
+def _positions_diag_path(account_id: str) -> Path:
+    return _diag_path(account_id).with_name(f"prop_phone_posdiag_{re.sub(r'[^a-z0-9_]', '', account_id)}.json")
+
+
+def _write_positions_diag(account_id: str, state: str, headers: Any, controls: Any) -> None:
+    def lst(v: Any) -> list:
+        return [x for x in (_scrub(c, 40).strip() for c in (v if isinstance(v, list) else [])[:_DIAG_MAX]) if x]
+    try:
+        _positions_diag_path(account_id).write_text(json.dumps(
+            {"at": _now().isoformat(), "state": state, "headers": lst(headers), "controls": lst(controls)}))
+    except OSError:  # allow-silent: diagnostics only; the event is still acknowledged
+        logger.warning("phone_executor: positions diag write failed", exc_info=True)
+
+
+def last_positions_diag(account_id: str) -> Optional[Dict[str, Any]]:
+    """The latest positions_miss dump for the account, or None when none was ever posted."""
+    try:
+        return json.loads(_positions_diag_path(account_id).read_text())
+    except (OSError, ValueError):
+        return None
 
 
 # heartbeat (2026-10-06 08:15Z: the phone went silent for an hour with no claim and no event, because every

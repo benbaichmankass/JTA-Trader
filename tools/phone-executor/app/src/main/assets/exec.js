@@ -221,6 +221,79 @@
     return {headers: hs, map: out, n: cells.length};
   }
   function col(map, re) { var rx = new RegExp(re, "i"), ks = Object.keys(map).filter(function (k) { return rx.test(k); }); return ks.length === 1 ? map[ks[0]] : null; }
+  // ---- TABLE READS (PROP-TRACKING, 2026-10-12): Positions + Closed orders, mapped by header text. First match wins,
+  // so the more specific patterns come first ("Mark price" is not "Market", "Realized PnL" is not unrealized).
+  var POS_COLS = [["skip", /liq|margin|value|notional|^realized|funding|^tp\s*\/\s*sl|^sl\s*\/\s*tp|\broe\b|^actions?$/i],
+    ["upnl", /u\.?\s*pnl|unreali[sz]ed|^p\s*&\s*l|^pnl/i], ["mark", /^mark|^last/i], ["entry", /entry|avg|average|open price/i],
+    ["sl", /^(sl|s\/l|stop)/i], ["tp", /^(tp|t\/p|take)/i], ["side", /^(side|direction|dir)$/i],
+    ["qty", /^(size|qty|quantity|amount|position|contracts?)\b/i], ["lev", /^lev/i],
+    ["symbol", /^(symbol|market|instrument|contract|asset|pair|coin|name)$/i], ["time", /time|date|opened/i]];
+  var CLOSED_COLS = [["skip", /^actions?$|fee|reduce/i], ["pnl", /pnl|p\s*&\s*l|profit/i],
+    ["price", /avg|average|fill(ed)? price|exec|^price$/i], ["trigger", /trigger|stop price/i],
+    ["side", /^(side|direction|dir)$/i], ["qty", /^(size|qty|quantity|amount|filled)\b/i],
+    ["type", /^(type|order type)$/i], ["status", /^status$/i], ["time", /time|date|closed|updated/i],
+    ["symbol", /^(symbol|market|instrument|contract|asset|pair|coin|name)$/i]];
+  var ROW_CAP = 15;   // phone_reconcile._MAX_ROWS (40) is above it
+  function colKey(h, cols) { for (var i = 0; i < cols.length; i++) if (cols[i][1].test((h || "").trim())) return cols[i][0]; return null; }
+  function firstNumber(s) {   // "1.1758 ETH" -> 1.1758; "+31.27 USD (1.2%)" -> 31.27; "−31.27" -> -31.27; none -> null
+    var m = /([-+−]?)\s*\$?\s*(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?/.exec((s || "").replace(/–/g, "-"));
+    if (!m) return null; var v = parseFloat((m[2] + (m[3] || "")).replace(/,/g, "")); return (m[1] === "-" || m[1] === "−") ? -v : v;
+  }
+  function sideOf(s) { var m = /\b(long|short|buy|sell)\b/i.exec(s || ""); if (!m) return null; return /long|buy/i.test(m[1]) ? "long" : "short"; }
+  function tabCount(re) {   // "Positions (2)" / "Positions 2" -> 2; a bare label -> null (the page did not say)
+    var c = all("button,[role=tab],[role=button],a").filter(function (x) { return re.test(t(x)); });
+    if (c.length !== 1) return null; var m = /\(?\s*(\d+)\s*\)?\s*$/.exec(t(c[0]).replace(re, "")); return m ? parseInt(m[1], 10) : null;
+  }
+  function readTable(cols, need, emptyRe, tabRe, strict) {   // need: the keys every row must carry; a table is ours when it has a symbol column and a qty/price/entry column
+    var hits = [];
+    all("table,[role=table],[role=grid]").forEach(function (tb) {
+      var hs = Array.prototype.slice.call(tb.querySelectorAll("th,[role=columnheader]")).map(t);
+      var keys = hs.map(function (h) { return colKey(h, cols); });
+      if (keys.indexOf("symbol") >= 0 && keys.some(function (k) { return k === "qty" || k === "price" || k === "entry"; })) hits.push({tb: tb, hs: hs, keys: keys});
+    });
+    var masked = function (hs) { return hs.map(function (h) { return h.replace(/\d/g, "#").slice(0, 24); }).slice(0, 20); };
+    var count = tabCount(tabRe);
+    if (hits.length !== 1) {
+      // No table: flat ONLY on the panel's own evidence -- the tab's count says 0, or the ONE visible tab panel says
+      // "no positions". Page-wide text is never enough (review of #17745: a "no positions" string elsewhere would
+      // read as flat and close every open journal row).
+      var panels = all("[role=tabpanel]"), panelEmpty = panels.length === 1 && emptyRe.test(t(panels[0]));
+      if (hits.length === 0 && (count === 0 || (count === null && panelEmpty))) return {state: "read", rows: [], count: count, headers: []};
+      return {state: hits.length ? "ambiguous" : "no_table", tables: hits.length, count: count,
+        headers: hits.length ? masked(hits[0].hs) : [], controls: all("button,[role=tab],[role=button]").map(function (x) { return t(x).replace(/\d/g, "#").slice(0, 30); }).filter(Boolean).slice(0, 30)};
+    }
+    var h = hits[0], out = [], bad = 0;
+    innermost(Array.prototype.slice.call(h.tb.querySelectorAll("tr,[role=row]")).filter(vis)).forEach(function (r) {
+      if (r.querySelector("th,[role=columnheader]")) return;
+      var cells = Array.prototype.slice.call(r.querySelectorAll("td,[role=cell],[role=gridcell]")).map(t);
+      if (cells.length === 1 && emptyRe.test(cells[0])) return;   // the table's own "no positions" row
+      if (cells.length !== h.hs.length) { bad += 1; return; }
+      var o = {}, rowText = cells.join(" ");
+      cells.forEach(function (c, i) {
+        var k = h.keys[i]; if (!k || k === "skip" || o[k] !== undefined) return;
+        o[k] = (k === "symbol" || k === "status" || k === "type" || k === "time") ? c.slice(0, 40) : (k === "side" ? sideOf(c) : firstNumber(c));
+      });
+      if (o.side == null) o.side = sideOf(o.symbol) || sideOf(rowText);
+      // a size carries the side only when it is SIGNED ("-1.5" short, "+1.5" long); an unsigned size is not a long
+      var qc = h.keys.indexOf("qty") >= 0 ? (cells[h.keys.indexOf("qty")] || "").trim() : "";
+      if (o.side == null && typeof o.qty === "number" && o.qty !== 0 && /^[-+\u2212]/.test(qc)) o.side = o.qty > 0 ? "long" : "short";
+      if (typeof o.qty === "number") o.qty = Math.abs(o.qty);
+      if (o.symbol) o.symbol = o.symbol.replace(/\b(long|short|buy|sell)\b/ig, "").replace(/\d+(\.\d+)?\s*[x×]/ig, "").trim();
+      out.push(o);
+    });
+    // every parsed row is sent, never a prefix: a row the server does not see would read as gone (review of #17745);
+    // a strict list longer than the cap is refused instead of truncated
+    if (strict && out.length > ROW_CAP) return {state: "too_many_rows", n_rows: out.length, count: count, headers: masked(h.hs)};
+    var rows = out.slice(0, ROW_CAP);
+    if (bad || out.some(function (o) { return need.some(function (k) { return o[k] == null || o[k] === ""; }); }))
+      return {state: "unparsed", n_rows: out.length + bad, count: count, headers: masked(h.hs)};
+    if (count !== null && count !== out.length) return {state: "count_mismatch", n_rows: out.length, count: count, headers: masked(h.hs)};
+    // flat needs POSITIVE evidence (the tab says 0, or the table's container says "no positions"): a header row with
+    // no data rows may be a table still rendering, and a false "flat" would close live journal rows.
+    if (!out.length && count !== 0 && !emptyRe.test(t(h.tb.parentElement || h.tb)))
+      return {state: "empty_unconfirmed", n_rows: 0, count: count, headers: masked(h.hs)};
+    return {state: "read", rows: rows, n_rows: out.length, count: count, headers: masked(h.hs)};
+  }
   function dialogs() { return all("[role=dialog],[role=alertdialog],dialog[open]"); }
   function dlg() { var d = dialogs(); return d.length === 1 ? d[0] : null; }
   function dlgByLabel(re, prefer) {
@@ -615,7 +688,7 @@
     // else null (absent is never 0, never guessed). "Portfolio" is reported separately so the app can say which label
     // the equity came from. Numbers only; no account id, no other text.
     accountPanel: function () {
-      function num(s) { var m = /^[-+]?\$?\s*(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?\s*(USD[TC]?)?$/i.exec((s || "").trim()); return m ? parseFloat(m[0].replace(/[^\d.\-]/g, "")) : null; }
+      function num(s) { var m = /^[-+]?\$?\s*(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?\s*(USD[TC]?)?$/i.exec((s || "").replace(/\u2212/g, "-").trim()); return m ? parseFloat(m[0].replace(/[^\d.\-]/g, "")) : null; }
       function pick(label) {
         var rx = new RegExp("^" + label + "\\s*:?\\s*(.*)$", "i"), found = {};
         all("button,[role=button],[role=tab],div,span,p,td,li,dt,strong,b,h1,h2,h3,h4").forEach(function (x) {
@@ -631,7 +704,9 @@
         var k = Object.keys(found); return {n: k.length, v: k.length === 1 ? parseFloat(k[0]) : null};
       }
       var b = pick("balance"), e = pick("equity"), p = pick("portfolio");
-      return {balance: b.v, equity: e.v, portfolio: p.v, n: {balance: b.n, equity: e.n, portfolio: p.n}};
+      // the terminal's own account-level unrealized P&L when it labels one (PROP-TRACKING); signed, absent = null
+      var u = pick("(?:unreali[sz]ed\\s*(?:pnl|p\\s*&\\s*l)?|u\\.?\\s*pnl)");   // non-capturing: pick() reads group 1
+      return {balance: b.v, equity: e.v, portfolio: p.v, unrealized: u.v, n: {balance: b.n, equity: e.n, portfolio: p.n, unrealized: u.n}};
     },
     setInput: function (k, v) {
       var i = inputs(form() || document)[k]; if (!i) return null;
@@ -758,6 +833,22 @@
       d.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", code: "Escape", keyCode: 27, bubbles: true}));
       document.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", code: "Escape", keyCode: 27, bubbles: true}));
       return "escape";
+    },
+    // POSITIONS READ (PROP-TRACKING, 2026-10-12, read-only; operator: "we need to be able to track the prop trades").
+    // The Positions view must already be shown (the app clicks the tab). Columns are mapped BY HEADER TEXT; a
+    // value the page does not show stays null, never 0. state: read (positions [] means the terminal SAYS flat:
+    // a recognised header row with no data rows, or an explicit "no positions" text) | no_table | unparsed |
+    // count_mismatch (the tab's own count disagrees with the rows parsed). Anything but "read" reconciles nothing.
+    // UNMEASURED: no capture has shown Breakout's Positions table; headers come back digit-masked for a miss dump.
+    positionsRead: function () {
+      if (!hostOk()) return {state: "bad_host"};
+      return readTable(POS_COLS, ["symbol", "side", "qty"], /no (open )?positions|you have no (open )?positions/i, /^positions\b/i, true);
+    },
+    // CLOSED ORDERS READ (PROP-TRACKING): the shown Closed orders / Trades table, newest rows as the page orders
+    // them, max 15. Only OUR orders' symbol, side, qty, price, status, time and realized P&L columns; nothing else.
+    closedRead: function () {
+      if (!hostOk()) return {state: "bad_host"};
+      return readTable(CLOSED_COLS, ["symbol", "side"], /no (closed )?orders|no (trades|history)/i, /^(closed orders|trades)\b/i, false);
     },
     rowClose: function (sym, sideRe) {
       var n = norm(sym); var rx = new RegExp(sideRe, "i");
