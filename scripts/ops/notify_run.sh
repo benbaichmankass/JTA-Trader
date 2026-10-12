@@ -269,7 +269,7 @@ case "${action}" in
             *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
         esac
         ;;
-    init-web-session-pepper)
+    init-web-session-pepper|install-web-api-deps)
         tier=2
         case "${exit_code}" in
             0) result="ok"; priority="normal" ;;
