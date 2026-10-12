@@ -225,6 +225,8 @@ def test_side_mapping(db, client, direction, expected_side):
         ("reconciler_filled", "reconciler"),
         ("reconciler_orphaned", "reconciler"),
         ("trail_hit", "other"),
+        ("sl_cross", "sl"),
+        ("tp_cross", "tp"),
         ("", None),
         (None, None),
     ],

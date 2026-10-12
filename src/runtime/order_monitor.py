@@ -13495,6 +13495,37 @@ def _check_naked_positions(db) -> Dict[str, int]:
     return summary
 
 
+#: trade id -> the entry order's venue avg fill price (or None when the venue
+#: could not say). The pending-pnl sweep runs every tick and a row the broker
+#: can never match stays selected for 7 days; without this, each such row would
+#: cost one extra entry-order status call per tick. Bounded; cleared when full.
+_SWEEP_VENUE_ENTRY_CACHE: Dict[Any, Optional[float]] = {}
+_SWEEP_VENUE_ENTRY_CACHE_MAX = 500
+
+
+def _sweep_venue_entry(cfg: Optional[Dict[str, Any]],
+                       row: Dict[str, Any]) -> Optional[float]:
+    """The venue's entry fill for *row*, or ``None`` — cached per trade id.
+
+    Only the venue's own ``avg_price`` is returned (never the journal value):
+    the caller already tried the journal entry and needs a DIFFERENT target.
+    """
+    key = row.get("id")
+    if key in _SWEEP_VENUE_ENTRY_CACHE:
+        return _SWEEP_VENUE_ENTRY_CACHE[key]
+    status = _entry_order_status_for(cfg, row)
+    avg = _safe_float((status or {}).get("avg_price"))
+    value = avg if avg and avg > 0 else None
+    if len(_SWEEP_VENUE_ENTRY_CACHE) >= _SWEEP_VENUE_ENTRY_CACHE_MAX:
+        _SWEEP_VENUE_ENTRY_CACHE.clear()
+    if key is not None and status is not None:
+        # Cache only an ANSWER (a fill or a fill-less status). A failed read
+        # (`status is None`) is retried next tick — "we could not ask" must
+        # not be remembered as "the venue had no fill".
+        _SWEEP_VENUE_ENTRY_CACHE[key] = value
+    return value
+
+
 def _sweep_pending_pnl_from_bybit(db) -> Dict[str, int]:
     """Fill ``pnl`` / ``exit_price`` / the broker-PnL note for any DB-closed
     trade that hasn't yet been reconciled against its broker's authoritative
@@ -13631,6 +13662,7 @@ def _sweep_pending_pnl_from_bybit(db) -> Dict[str, int]:
                 summary["still_pending"] += 1
                 continue
 
+            journal_entry = _safe_float(row.get("entry_price"))
             try:
                 rec = account_closed_pnl_for_trade(
                     cfg,
@@ -13638,8 +13670,33 @@ def _sweep_pending_pnl_from_bybit(db) -> Dict[str, int]:
                     direction=str(row.get("direction") or ""),
                     opened_at_ms=opened_at_ms,
                     qty=_safe_float(row.get("position_size")),
-                    entry_price=_safe_float(row.get("entry_price")),
+                    entry_price=journal_entry,
                 )
+                # CLOSE-PNL-NULL (2026-10-12): WATCHDOG-PAST-STOP (2026-10-10)
+                # taught the reconciler and the watchdog to match the venue's
+                # record against the venue's entry FILL (`_venue_entry_price`)
+                # and missed this, the third caller — the one that prices every
+                # monitor-decided close. MEASURED on bybit_2 (real money): trade
+                # 6565 ADAUSDT closed `sl_cross` with journal entry 0.2492; the
+                # venue's own SL order 71c1cc1e filled at 0.2432 and booked a
+                # closed-pnl record (closedPnl -3.28194216) whose avgEntryPrice
+                # is the fill, 0.2489 — 12 bps off, past the matcher's 10 bps,
+                # so the record was refused every tick and the row showed "—".
+                # Retry ONCE on a miss with the venue's entry fill; the journal
+                # value stays the first try so a matching row costs no extra
+                # call, and the tolerance and opened_at filter are unchanged.
+                if rec is None or not rec.get("avg_exit_price"):
+                    venue_entry = _sweep_venue_entry(cfg, row)
+                    if (venue_entry and venue_entry > 0
+                            and venue_entry != journal_entry):
+                        rec = account_closed_pnl_for_trade(
+                            cfg,
+                            symbol=str(row.get("symbol") or ""),
+                            direction=str(row.get("direction") or ""),
+                            opened_at_ms=opened_at_ms,
+                            qty=_safe_float(row.get("position_size")),
+                            entry_price=venue_entry,
+                        )
             except Exception as exc:  # noqa: BLE001
                 logger.warning(
                     "_sweep_pending_pnl_from_bybit: closed-pnl lookup "
