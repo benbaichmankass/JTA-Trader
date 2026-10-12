@@ -180,7 +180,7 @@ def attach_pm_surprise(events: list[dict], pm_rows: list[dict], kind: str) -> li
     return out
 
 
-def _paired_ics(pairs: list[tuple], idx_a: int = 0, idx_b: int = 1) -> tuple[Optional[float], Optional[float]]:
+def _paired_ics(pairs: list[tuple]) -> tuple[Optional[float], Optional[float]]:
     """(IC_a, IC_b) over ``pairs`` of ``(a, b, ret)``."""
     rets = [p[2] for p in pairs]
     return _spearman([p[0] for p in pairs], rets), _spearman([p[1] for p in pairs], rets)

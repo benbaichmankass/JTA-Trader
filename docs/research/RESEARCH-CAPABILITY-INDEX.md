@@ -319,6 +319,7 @@ verify-the-source-before-you-build.
 | Question | Instrument |
 |---|---|
 | **Can point-in-time Kalshi prices be backfilled for PAST releases (CPI / NFP / FOMC), so the PM-SURPRISE-EVAL n floor is not gated on ~2028 collection?** One-shot, resumable fetch of hourly yes bid/ask candles over [close-168h, close+1h] for every settled market of KXCPI / KXPAYROLLS / KXFEDDECISION, live + historical endpoints, >=2.5 s per call. Every row carries its own `candle_end_utc`, so a consumer using only rows at or before the release instant cannot look ahead. **Third-party data, output stays off-repo** (`<data_dir>/pm_backfill/kalshi/`, trainer-side). Fetches only; it grades nothing | `scripts/research/pm_backfill_kalshi.py` (PM-BACKFILL; feeds `RQ-20261009-903`) |
+| **Do prediction-market-implied expectations (Kalshi CPI / NFP strike ladders, FOMC hike/cut ladder) rank-predict post-release returns better than the calendar consensus at the same releases?** Builds PM-expected from the last usable two-sided yes mid with `candle_end_utc <= close_time`, PM-surprise = realized - PM-expected, exact-date join to `comms/macro/econ_calendar_snapshots*.jsonl`, paired Spearman IC difference with bootstrap + date halves, graded against RULE-RQ1009-903. TRAINER-side (backfill is off-repo). | `scripts/research/pm_surprise_eval.py` (queue unit RQ-20261009-903), library `scripts/macro/pm_surprise.py`, input to `scripts/macro/econ_event_study.py --pm-surprise` |
 
 ## 9. Robustness / significance gates (run these BEFORE proposing a live change)
 

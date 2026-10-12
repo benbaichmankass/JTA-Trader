@@ -93,7 +93,6 @@ def test_build_series_and_exact_date_join_and_staleness():
 
 def synthetic(n=80, pm_informative=True, seed=3):
     rng = random.Random(seed)
-    events, dates = [], []
     import datetime as dt
     d0 = dt.date(2024, 1, 2)
     panel, px = [], 100.0
@@ -108,7 +107,6 @@ def test_paired_ic_comparison_detects_better_expectation_and_halves():
     rng, d0, panel = synthetic()
     # make forward returns depend on the PM surprise, not on the consensus surprise
     events = []
-    closes = [c for _, c in panel]
     for i in range(0, 300, 3):
         date = (d0 + dt.timedelta(days=i)).isoformat()
         pm = rng.gauss(0, 1)
@@ -117,7 +115,7 @@ def test_paired_ic_comparison_detects_better_expectation_and_halves():
         for j in range(i, min(i + 8, 399)):
             panel[j + 1] = (panel[j + 1][0], panel[j][1] * (1 + 0.004 * pm + rng.gauss(0, 0.002)))
     rows = ees.paired_ic_comparison(events, panel, horizons=[1, 3, 5], n_boot=300, group_key="kind")
-    r5 = [r for r in rows if r["horizon_days"] == 5][0]
+    r5 = next(r for r in rows if r["horizon_days"] == 5)
     assert r5["n_paired"] > 40 and r5["diff"] > 0 and r5["boot_lo"] > 0
     assert len(r5["half_diffs"]) == 2 and all(h > 0 for h in r5["half_diffs"])
     again = ees.paired_ic_comparison(events, panel, horizons=[5], n_boot=300, group_key="kind")[0]
@@ -138,16 +136,19 @@ def mk(h, n, diff, lo, hi, halves):
 
 
 def test_grade_is_the_registered_rule():
-    ok = lambda: [mk(3, 60, 0.2, 0.05, 0.4, [0.1, 0.3]), mk(5, 58, 0.25, 0.02, 0.5, [0.2, 0.3])]  # noqa: E731
+    ok = lambda: [mk(3, 60, 0.2, 0.05, 0.4, [0.1, 0.3]), mk(5, 58, 0.25, 0.02, 0.5, [0.2, 0.3])]
     g = ev.grade(ok())
     assert g["verdict"] == "pass" and g["n"] == 58
     under = ev.grade([mk(3, 48, 0.9, 0.5, 1.0, [1, 1]), mk(5, 60, 0.9, 0.5, 1.0, [1, 1])])
     assert under["verdict"] == "indeterminate" and "UNDERPOWERED" in under["note"]  # never pass below 49
-    spans = ok(); spans[1] = mk(5, 58, 0.25, -0.1, 0.5, [0.2, 0.3])
+    spans = ok()
+    spans[1] = mk(5, 58, 0.25, -0.1, 0.5, [0.2, 0.3])
     assert ev.grade(spans)["verdict"] == "fail"
-    neg = ok(); neg[0] = mk(3, 60, -0.01, -0.2, 0.1, [0.1, 0.3])
+    neg = ok()
+    neg[0] = mk(3, 60, -0.01, -0.2, 0.1, [0.1, 0.3])
     assert ev.grade(neg)["verdict"] == "fail"
-    gap = ok(); gap[1] = mk(5, 58, 0.25, 0.02, 0.5, [0.2, -0.3])
+    gap = ok()
+    gap[1] = mk(5, 58, 0.25, 0.02, 0.5, [0.2, -0.3])
     g2 = ev.grade(gap)
     assert g2["verdict"] == "indeterminate" and "RULE SILENT" in g2["note"]
 
@@ -160,7 +161,8 @@ def test_attach_pm_surprise_exact_date_only():
 
 def test_end_to_end_on_fixture_files(tmp_path):
     import datetime as dt
-    bdir = tmp_path / "kalshi"; bdir.mkdir()
+    bdir = tmp_path / "kalshi"
+    bdir.mkdir()
     cal = tmp_path / "cal.jsonl"
     rng = random.Random(9)
     rows, calrows = [], []
