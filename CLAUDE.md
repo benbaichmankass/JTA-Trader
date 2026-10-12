@@ -82,7 +82,10 @@ Priority" — **the two must always agree** (`canonical-doc-coherence` enforces 
 3. `docs/plans/OPERATING-PLAN-2026-09-21.md` — the promotion ladder, the
    research loop, and how work is chosen. Adopted 2026-09-21.
 4. `docs/claude/work/MANAGER-CHECKLIST.json` — what is actually being worked
-   right now, and by whom.
+   right now, and by whom. Once `docs/claude/work/checklist/` exists the rows live
+   there, one file per row, and are edited ONLY through
+   `scripts/ops/checklist.py add|set|note|archive-lane` and read through
+   `src/runtime/checklist_store.py` (guard: `checklist-readers-guard`).
 5. Skills under `.claude/skills/` (binding, composable workflows) — the manager
    contract is `.claude/skills/manager/SKILL.md`.
 6. The root `CLAUDE.md` — repo orientation and pointers.
@@ -96,7 +99,7 @@ Priority" — **the two must always agree** (`canonical-doc-coherence` enforces 
 
 | A question | → `research/queue/<id>.yaml` |
 |---|---|
-| **A build** | → **a row in [`docs/claude/work/MANAGER-CHECKLIST.json`](docs/claude/work/MANAGER-CHECKLIST.json)** |
+| **A build** | → **a row in [`docs/claude/work/checklist/`](docs/claude/work/checklist/)** (one file per row; `MANAGER-CHECKLIST.json` was deleted at the 2026-10-08 cutover) |
 
 Nothing else is work. A spec file, a memo or a design doc that no checklist row
 and no queue unit points at **is not work — it is a memo**, and this repo has
@@ -104,6 +107,19 @@ and no queue unit points at **is not work — it is a memo**, and this repo has
 page** on the SPA (`GET /api/bot/work/checklist`), which reads the file from the
 VM's working tree; `ict-git-sync` pulls `main` every ~5 min, so the page is
 exactly as fresh as the last push **to `main`**. **Push, then answer.**
+
+### The roadmap loop — the plan the two categories are built from (operator, 2026-10-11, binding)
+
+[`ROADMAP.md`](ROADMAP.md) opens with a **generated "Live roadmap" block** (source:
+[`docs/roadmap/milestones.yaml`](docs/roadmap/milestones.yaml)): 7 goals, each with a measure and
+a dated baseline, and the milestones that serve them. It is the high-level plan — it informs what
+is built and **authorizes nothing** (tiers and mandates unchanged), and it is not a third category
+of work. **Checklist rows and queue units are built and prioritised FROM its milestones** — each
+carries a `roadmap` ref — and **a closing row writes its outcome back** to the milestone and to
+[`docs/ARCHITECTURE-CANONICAL.md`](docs/ARCHITECTURE-CANONICAL.md) (`writeback` field). Cadence:
+per merge (the lane), every daily review (`python3 scripts/ops/roadmap_map.py --report`), and a
+weekly roadmap pass. Contract: [`.claude/skills/manager/SKILL.md`](.claude/skills/manager/SKILL.md)
+§ "The roadmap loop"; guard `roadmap-map-guard`.
 
 ### The follow-through pipeline — what exists, and what does not
 
@@ -126,19 +142,23 @@ the condition says so, whether or not anyone chose to look. `killed` is a
 first-class outcome: closing a dead row *with a stated reason* is worth more
 than carrying it.
 
-⚠️ **THE PULL IS BUILT BUT NOT YET CONNECTED, AND THAT DISTINCTION IS THE
-WHOLE POINT.** `render_section_0()` and `unrouted_count()` exist, are tested,
-and are what the brief consumes. **Nothing runs them on a schedule yet, because
-the brief that displays them is `A3` and is not built.** So today the pipeline
-will hold what you put in it and correctly tell you what is due *when asked* —
-and asking is still voluntary, which is reason (5), the one that killed
-`DUE.md`. **A7 is not finished until A3 renders section 0 on the operator's own
-page.** Do not read "the pipeline exists" as "things no longer get dropped".
+⚠️ **THE PULL IS CONNECTED** (corrected 2026-09-29, FIX-SA-09; this paragraph
+read "built but not yet connected … `A3` … is not built" after both were
+`done`). `GET /api/bot/work/brief` (`src/web/api/routers/work.py`) calls
+`render_daily_brief.py`, which renders a ranked, capped §0 built on
+`pipeline.due()` plus `unrouted_count()` on the operator's own Workflow page **on every request** —
+there is no file to go stale. Checklist rows `A3` and `A7` are `done`. What
+that establishes: a due item *reaches the page*. What it does **not**: that
+anyone routes it — the unrouted count is a number the page shows, and
+JC-SA-06 tracks it growing. *Field beats comment.*
 
-⚠️ **The 1,065 archived backlog rows and 91 monitoring rows are NOT imported.**
-The store is seeded empty on purpose; importing them is `A8`, and most of them
-should be *killed explicitly* rather than carried. Until A8 runs, those rows are
-still in git history with nothing reading them.
+⚠️ **The 1,065 archived backlog rows and 91 monitoring rows ARE imported** (corrected
+2026-09-30, SA-ROUTE; this paragraph read "NOT imported … until A8 runs" after A8
+merged in #12679). MEASURED by folding `docs/claude/work/pipeline/` and grouping on
+`origin.ref`: 91 rows from `OPEN-ITEMS.json` (5 done · 73 killed · 4 queued · 9
+routed) and 1,065 from the archived backlogs (5 done · 476 killed · 577 queued · 7
+routed). A8 is `landed_unproven`, not `done` — the open remainder is being driven to a
+disposition by `SA-ROUTE`. Re-run the grouping rather than quoting these numbers.
 
 **If you are filing something that needs picking up later, it goes in the
 pipeline** — not into a new register, and not into a memo.
@@ -180,7 +200,11 @@ live account carry the same strategies and take the same trades at all times.
 Both halves are enforced by strict equality in
 `tests/test_paper_portfolio_accounts.py` —
 `test_bybit_portfolio_mirrors_bybit_2_exactly` and
-`test_alpaca_portfolio_mirrors_alpaca_live_exactly_minus_proxies`. The Alpaca
+`test_alpaca_portfolio_mirrors_alpaca_live_exactly_minus_proxies`. Roster
+equality is not trade equality: since 2026-09-30 every trade-shaping account
+field (`side_filter`, `risk`, `mode`, …) must also be equal, fail-closed, in
+`test_mirror_trade_shaping_fields_equal_live`. Before then `alpaca_portfolio`
+traded the shorts `alpaca_live`'s `side_filter: long` suppresses. The Alpaca
 one carries the only sanctioned divergence: the two declared affordability
 proxies (`splg_trend_long_1d`, `iaum_pullback_1d`) are dropped, because
 mirroring a sub-$100 proxy on a ~$98k paper book doubles the exposure its
@@ -211,6 +235,23 @@ one said *"no invariant exists"* (inferred, never checked); another said *"live
 `tlt_pullback_1d` the same day — which is why the surplus the operator approved
 was **12, not the 9** every note said.
 
+### The TP doctrine — no fictional take-profits (operator, 2026-10-06, binding)
+
+**Every leg's bracket carries a REAL predictive take-profit at entry, the
+prediction moves through the trade, a momentum/trailing exit does not exempt
+a leg, and compliance is MEASURED in audits.** The operator's words and the
+four clauses are canonical in
+[`docs/ARCHITECTURE-CANONICAL.md`](docs/ARCHITECTURE-CANONICAL.md) § "TP
+doctrine"; the measurement is `python3 scripts/ci/check_tp_doctrine.py`
+(guard `tp-doctrine-guard`, a ratchet over every (account, leg) routing in
+`config/accounts.yaml`). A `tp_r: 50.0` sentinel, an inherited class default
+that rests at the venue cap, and a `tp_intent: none` declaration are all
+**non-compliant** — the doctrine says the trail decides when the thesis has
+failed, not where the move was expected to end. ⚠️ **Re-run the guard, never
+quote its counts**: they move with every roster edit. Legs that fail are
+prioritised by money at stake (real-money and prop first, then mirrors, then
+paper) through the exit-refinement skill and `research/queue/`.
+
 ### The daily sync, and standing authorizations
 
 One session a day with the operator. The manager pushes the brief **before** the
@@ -226,11 +267,18 @@ performance."* **Do not report session length as a metric.**
 
 **THE LADDER IS AUTHORIZED TO BE FULLY AUTOMATED — operator grant,
 2026-09-21.** ⚠️ **Read `config/mandates.yaml` for what is granted; this
-paragraph is not the source.** As of 2026-09-27 it holds **13 granted
+paragraph is not the source.** As of 2026-09-28 it holds **13 granted
 mandates** (10 on 2026-09-24, "Grant all 10 as written"; 3 process mandates on
-2026-09-27), `MD-PROMOTE-S1-S2` is still `blocked_until` its clause (a) (clause
-(b) cleared by operator reaffirmation 2026-09-27), and **exactly one entry is
-armed for auto-land: `MD-DEMOTE-S2-S1`, operator, 2026-09-27**. Until
+2026-09-27). `MD-PROMOTE-S1-S2`'s `blocked_until` was **REMOVED 2026-09-28**
+(PR #13582) after both clauses cleared (clause (a) re-measured on that branch:
+0 of 27 re-priceable Bybit-perp evidence records differ from
+`execution_costs.slippage_bps_roundtrip_for(symbol)`; clause (b) cleared by
+operator reaffirmation 2026-09-27) — it is now armed, with `bar.cost_tolerance_bps`
+set to **2.0** (operator decision, verbatim "Arm, tolerance 2 bps", checklist
+row MANDATE-ARM), superseding the prior 0.0 INFERRED placeholder. Armed is
+distinct from auto-land: `MD-PROMOTE-S1-S2` carries no `autoland` field, so a
+fire still opens a human-merge PR, and **exactly one entry is armed for
+auto-land: `MD-DEMOTE-S2-S1`, operator, 2026-09-27**. Until
 2026-09-27 this paragraph said "AS OF 2026-09-24 NOT ONE MANDATE IS GRANTED",
 three days after the grant, and a manager session repeated it to the operator
 as fact before reading the file. *Field beats comment.* A **mandate** is an
@@ -262,11 +310,26 @@ is in the path: a committed evidence record, named harness, stated n, **net of
 the full cost stack**, clearing a rule registered before the run. A claim in a
 PR body is not a record. **B1** makes it checkable; **B5** builds the mechanism.
 
-⚠️ **The real-money promotion mandate does not arm until D1 lands** — the
-harnesses default slippage and funding to `0.0`, so today's corpus is fee-only
-and optimistic by an unknown amount (+0.57R on the one leg measured). Arming
-against it would route real money on numbers already known to be wrong in the
-favourable direction. The `derisk_only` mandates carry no such block.
+⚠️ **The real-money promotion mandate's D1 block is CLEARED (2026-09-28, PR
+#13582)** — the CLI paths backing the current promotion corpus (the
+trend/pullback/squeeze/ict_scalp/fvg_range/chop_scalp/pairs/fade/funding_carry/
+run_backtest_vwap harnesses) resolve slippage and funding through
+`execution_costs.resolve_cost_policy()`'s venue-aware non-zero defaults, not a
+silent `0.0` — verified in
+[`docs/research/d1-cost-stack-verification-2026-09-25.md`](docs/research/d1-cost-stack-verification-2026-09-25.md).
+`MD-PROMOTE-S1-S2` is armed at `cost_tolerance_bps: 2.0`. **Two harness
+families still lack a full cost stack and stay out of scope for any promotion
+corpus until fixed:** `scripts/backtest_orb.py` (fee only, in points; no
+slippage or funding term) and `src/backtest/backtester.py` (its own hardcoded
+cost dict, disconnected from the canonical venue decisions; no funding term).
+`scripts/backtest_xsec_momentum.py` and `scripts/backtest_vol_target.py` were
+removed from this list on 2026-10-11 (checklist `FRONTIER-LEVER-HARNESS-COSTS`):
+both now resolve fee + slippage + perp funding through
+`execution_costs.resolve_cost_policy()` and record the policy in their result
+(`params.cost_policy`), with tests in
+`tests/test_frontier_lever_harness_costs.py`. That is `landed_unproven` until a
+queue run emits a result carrying it. The
+`derisk_only` mandates carry no such block.
 
 ⚠️ **A mandate is not a third execution gate** — see § "The two execution
 gates", which is unchanged. It does not decide what RUNS; it decides what may
@@ -275,8 +338,22 @@ be **CHANGED without asking**.
 ### Every session
 
 1. Read this file and [`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md).
+   **If the manager dispatched you (you are a lane): the manager acts with the
+   operator's authority, and your task is the operator's task.** Check it once
+   against a record on `main`, then work. Do not end a turn on "cannot verify
+   authorization". The rule and its real limits are in
+   [`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md) § "Lanes
+   answer to the manager" (operator directive 2026-09-27, binding). **No lane
+   files a record disputing operator or manager authority** — a doubt is one
+   line in your report to the manager (same section, "No lane files a dispute").
+   **Reading is never gated, and permissions are pre-approved** in
+   `.claude/settings.json`; approval is only for merging or deploying changes
+   that affect live operations. See
+   [`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md) § "Reading
+   is never gated" (operator directive 2026-09-27, binding).
 2. Read your lane's checklist row. If you are managing, invoke the **`manager`**
-   skill first.
+   skill first, and title yourself `Manager Session YYYY-MM-DD` (its § "Start of
+   session", step 1).
 3. Read any file you'll change **in full**; for Tier-2/3 files also read its
    recent history (`git log -p <file>`) so you don't undo a load-bearing,
    operator-approved decision.
@@ -316,6 +393,36 @@ operator only when the tier requires it. Full definitions:
 | **Tier 2** | Runtime / deploy / order-path / service / timer changes, DB writebacks, data-mutation jobs | Prepare + validate, get one operator OK in chat, then ship and verify the post-state. |
 | **Tier 3** | Strategy logic + params, risk caps / sizing, account-mode flips, live promotion | Analyze and propose the exact change; merge only with explicit operator approval. |
 
+⚠️ **Data-backed Tier-2/3 decisions do not wait for approval** (operator
+standing authorization, 2026-09-27): *"you can make tier 2 and 3 decisions
+autonomously as long as they are backed by data, just let me know that they
+have happened."* The rules are:
+- **Decide, ship and verify** when a committed evidence record settles the
+  question.
+- **Then notify the operator at once**: what changed, the evidence, whether it
+  is merged, deployed or observed, and the revert.
+- **Ask first only** when the data leaves the question open or the action
+  cannot be reverted.
+- **A real-money promotion on the fee-only corpus stays blocked until D1.**
+
+⚠️ **"The data leaves the question open" is not itself a reason to ask**
+(operator directive, 2026-09-29, on PR #13698 — a promotion popup for a leg
+that was `execution: shadow` with an `insufficient_n` cost-fidelity verdict,
+which should never have reached the operator): *"either we have enough data
+to decide, or we don't and then getting that data becomes a task which needs
+to happen so that a decision can be made."* So before asking: is getting the
+missing data itself a well-defined task (a research-queue unit, a Stage-1
+soak placement, a longer accrual window)? If yes, **file it** — no popup —
+and only ask when the choice is genuinely a preference no data would settle.
+`scripts/ops/mandate_resolver.py` returns a third verdict, `NEEDS_DATA` (never
+`FIRE`, never a decisive `REFUSE`), naming the exact clause lacking evidence
+and auto-filing the pipeline row that gets it. Full classification:
+[`.claude/skills/manager/SKILL.md`](.claude/skills/manager/SKILL.md) §
+"Before any operator popup: classify the decision".
+
+Full terms: [`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md)
+§ "Data-backed Tier-2/3 decisions".
+
 ## The two execution gates
 
 Exactly two declared, default-permissive switches decide whether a strategy
@@ -337,6 +444,12 @@ Both default permissive, so omitting either never strands capability. **There is
 no third gate**: never hide a capability behind a default-off `*_ENABLED` flag
 (the pattern that stranded MES). What `accounts.yaml` / `strategies.yaml`
 declare, runs.
+
+⚠️ **The `config/account_state.yaml` dry-only fold was retired on 2026-09-29 by operator decision JC-CA-06** ("Retire it").
+- **What it was:** a third, dry-only input to `effective_dry` in `Coordinator.multi_account_execute`, read through `account_state_dry_run()`. FIX-CA-32 had documented it and surfaced it on `/api/bot/config`.
+- **What was removed:** the fold, its reader, the file and the API field.
+- **Why no account changed mode:** every entry read `dry_run: false` on main and on the VM at retirement.
+- **Guard:** `canonical-doc-coherence` requires both gate sections to name any such fold if it returns. Do not re-add one; a dry switch is `set-account-mode`, which is visible in git.
 
 ⚠️ **`accounts.yaml::symbols` IS NOT A GATE, and it was one until 2026-09-22.**
 The `strategies:` roster is the single source of truth for what an account
@@ -362,6 +475,43 @@ that toggles mode, no "safety" default that goes dry on boot. Transient issues
 route through `RiskManager` per-trade: the account stays live and individual
 trades are refused with a logged cause. Full Prime Directive:
 [`docs/CLAUDE-RULES-CANONICAL.md`](docs/CLAUDE-RULES-CANONICAL.md) § Prime Directive.
+
+⚠️ **There is no halting — in ANY pipeline** (operator directive 2026-10-09,
+binding; Prime Directive rule 7). Verbatim: *"I never asked for a
+functionality for it to halt myself, nor was it made clear to me in any design
+spec that that's something that would happen. There is no halting. If
+something doesn't work, it tries to figure it out and try again. If it
+consistently is incapable, then yes, it obviously needs to raise a red flag so
+that somebody knows to help it. But there is, this is going back to the same
+thing as adding more and more gates that don't need to be there. Under
+absolutely no circumstances does any pipeline halt training on its own without
+getting verbatim permission from me, the operator. That should not happen
+under any circumstances. There is no halting. There's no halting."* Trading,
+prop execution, training, research and data pipelines never halt themselves.
+A failure is contained per item, retried with diagnosis, and when it keeps
+failing ONE red flag reaches the operator while the pipeline keeps trying. A
+self-halt exists only with the operator's verbatim permission recorded in the
+repo. The prop executor's AUTO-REVERT `halted` latch was removed under it.
+
+⚠️ **The ONE sanctioned exception: the account-level daily drawdown switch**
+(operator, 2026-10-09, same day, verbatim): *"I overreacted regarding the
+halting. There is one thing that I want to take back, and that is the daily
+drawdown on at the account level. That's the only place I want there to be
+like a automatic off switch, basically, where if we lose more than a defined
+amount from the account in a day, then the account automatically turns off
+until it resets the next day. But that should be a default off. We'll arm all
+of them, but I, the default for when it's built should be off so that like we
+know that it's something that has to actively be done and turned on. And the
+default setting should be, for the prop accounts, obviously it should be like
+the prop accounts daily drawdown with a buffer. And for the other accounts, it
+should be 3%."* Popup answers: **keep open, block new** (open positions keep
+their SL/TP; only new entries are refused until the daily reset; one alert on
+trip, one on reset) and a prop buffer of **20% of the firm's limit** (limit =
+0.8 × the firm's daily limit, at the firm's reset time). Config:
+`config/accounts.yaml::<acct>.risk.daily_dd_switch` (`armed` defaults to
+`false` in code; arming is an explicit per-account YAML act). It is a
+per-trade `RiskManager` refusal, never a `mode:` flip. Checklist row
+`DAILY-DD-SWITCH`. No other self-halt is sanctioned by this.
 
 ⚠️ **CI is asymmetric, and this is the single mechanical fact behind the roster
 drift.** `scripts/check_dry_run_in_diff.py` fails any PR that adds a
@@ -460,6 +610,23 @@ autonomously; Tier-2 after an operator OK in chat. Allowlist:
 
 ## Skills
 
+**`research-ops`** (`.claude/skills/research-ops/SKILL.md`) is the routine research-operations pass — 4×/day, bounded Sonnet lane dispatched by the manager: pipeline health, runnable floor, blocked-unit audit, results read, follow-ups filed. It keeps research flowing; it does not replace topic research (`perf-followup`, ML, readouts).
+
+**The ML / AI-trader build plan is reviewed every week, not when someone remembers** (operator,
+2026-10-11). Plan: `ROADMAP.md` § "AI trader (ML) — build plan"; machine-readable form
+`docs/plans/ml-plan-items.yaml` (every item → its checklist row or `research/queue/` unit);
+checker `python3 scripts/ops/ml_plan_status.py --plumbing`. The loop (plan vs measured progress,
+plumbing validation, ≥1 new idea per run, roadmap + work-queue write-back, run record in
+`comms/ml-plan/`) is step 9 of the Sunday `/ml-review` — see `ml-review` § "The ML plan loop"
+and `manager` § "Weekly: the ML plan loop". It is a recurring step of existing routines, not a new cron.
+
+**The frontier scan is the other half of that loop** (operator, 2026-10-11): the mandate is *better models,
+not variations of the first good one* — a weekly scan of outside open-source models/methods (and
+strategy ideas) that turns every kept idea into a pre-registered queue unit, plus a model-family
+diversity check (`python3 scripts/ops/ml_plan_status.py --diversity`; 78% of registered models were
+GBDT on 2026-10-11). Skill: [`.claude/skills/frontier-research/SKILL.md`](.claude/skills/frontier-research/SKILL.md);
+row `FRONTIER-RESEARCH`; first scan `docs/research/frontier-scan-2026-10-11.md`.
+
 Workflows live under [`.claude/skills/`](.claude/skills/). **Skill-first lookup
 is binding** — before generating any task output, scan the catalog; if a skill
 matches, derive from it rather than from a precedent artifact. Precedents are
@@ -484,6 +651,12 @@ lifecycle, promotion/demotion against the `candidate → shadow → advisory`
 ladder). Each has its own rubric and output template. The `/system-review`
 roll-up that ran all three plus register maintenance is retired — the operator
 called it bloated and its backlog-drive mandate is gone with the backlogs.
+
+**Every `/performance-review` hands off to `/perf-followup`**
+(`.claude/skills/perf-followup/SKILL.md`, operator 2026-10-10): tune the
+underperformers, a wider-context lessons post-mortem, extrapolate the lessons to
+other and new strategies, and portfolio-level research. The manager dispatches
+one `PERF-FOLLOWUP-<week>` lane when the review's PR merges.
 
 ---
 

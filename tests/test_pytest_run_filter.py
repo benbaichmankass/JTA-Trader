@@ -130,6 +130,13 @@ COVERED = {
         "spawn edits this file) and included anyway: a register write-back IS the "
         "diff that can revert a field, so excluding it would exempt exactly the "
         "change the guard exists for",
+    "docs/archive/2026-09-21-operating-reset/work/SESSIONS.json":
+        "test_session_reaper_trigger_liveness (FIX-CA-17) asserts this ARCHIVED "
+        "file exists at this exact path, as the evidence that session-reaper.yml's "
+        "old push-trigger `paths:` filter (which named the pre-archive location) "
+        "was permanently dead. Near-zero ongoing cost -- this tree is frozen by "
+        "convention -- but a moved/deleted file would falsify the test's premise "
+        "on a green tick from a run that executed nothing",
     "docs/claude/work/objects/WO-20260908-BUILD-THE-N-BOOK-RANKING-KEY-HARNESS.yaml":
         "test_decision_subject reads this REAL object AND globs the whole "
         "objects/ directory, asserting no live decision_request declares a "
@@ -222,9 +229,12 @@ COVERED = {
         "segmented spelling for the same file. Population: 1 of the 1188 files "
         "under tests/ uses that spelling today. Filed as "
         "BL-20260917-THE-PYTEST-RUN-COMMITTED-READER-SCANS-ARE-BLIND-TO-THE-OS-PATH-JOIN-SPELLING-SO-AN-UNCOVERED-READER-WAS-FOUND-BY-ACCIDENT",
-    "docs/claude/work/MANAGER-CHECKLIST.json":
-        "tests/ops/test_merge_json_register.py::test_real_register_merge_produces_valid_json "
-        "reads THIS REAL file via os.path.join(ROOT, ...) — the Call-node "
+    "docs/claude/work/checklist/_header.json":
+        "(was MANAGER-CHECKLIST.json until the per-row seed cutover; the rows now live "
+        "one file each under docs/claude/work/checklist/, so a manager's row-only commit "
+        "touches THIS tree alone) tests/ops/test_merge_json_register.py::"
+        "test_real_register_merge_produces_valid_json and test_manager_wake's brief test "
+        "read THE REAL checklist (rendered back from the store) — the Call-node "
         "spelling that motivated the fix above — and feeds it through the real "
         "merge driver, asserting the output still parses. Found while grading "
         "that same row: the general AST scan below now resolves Call-node "

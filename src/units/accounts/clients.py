@@ -28,8 +28,9 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -1407,6 +1408,25 @@ def _bybit_book_key(raw: Any) -> Any:
         return ("unparsed", str(raw))
 
 
+class OpenPositions(list):
+    """A position list that also says which symbols it could NOT look at.
+
+    FIX-CA-08 (CA-A03, 2026-09-27). A Bybit symbol the ``settleCoin`` page
+    omitted, whose symbol-scoped cross-check then RAISED, used to be simply
+    absent from the list — byte-identical to "the venue says it is flat" — so
+    ``closed_flat_invariant`` graded it ``flat`` and ``_reconcile_open_trades``
+    closed an open journal row on it. ``unreadable_symbols`` carries those
+    symbols without collapsing the whole read to ``None`` (a per-symbol hiccup
+    must not blind every other symbol). Still a ``list``: every existing caller
+    is unchanged unless it opts in via ``getattr(positions,
+    "unreadable_symbols", ())``.
+    """
+
+    def __init__(self, rows=(), *, unreadable_symbols=()):
+        super().__init__(rows)
+        self.unreadable_symbols: frozenset = frozenset(unreadable_symbols)
+
+
 def account_open_positions(
     account: Dict[str, Any],
 ) -> Optional[list]:
@@ -1535,8 +1555,19 @@ def account_open_positions(
                 # through spot now.
                 return []
             resp = client.get_positions(category=category, settleCoin="USDT")
-            raw = resp.get("result", {}).get("list", []) if isinstance(resp, dict) else []
+            if not isinstance(resp, dict):
+                # FIX-CA-08: a non-dict page is a FAILED read, not an empty
+                # account — returning [] here graded every symbol flat.
+                logger.warning(
+                    "account_open_positions(%s): settleCoin page returned a "
+                    "non-dict (%s) — could not read, returning None",
+                    account.get("account_id") or "unknown", type(resp).__name__,
+                )
+                return None
+            raw = resp.get("result", {}).get("list", [])
             out: list = []
+            # FIX-CA-08: symbols whose required read FAILED this pass.
+            unreadable: set = set()
             # TWO sets, and conflating them is the defect this change repairs.
             #
             # ``seen_books`` keys the EMIT dedupe on ``(symbol, book)`` -- the
@@ -1686,6 +1717,7 @@ def account_open_positions(
                         "row_count": None,
                         "error": repr(exc)[:200],
                     })
+                    unreadable.add(sym)
                     continue
                 obs["queries"].append({
                     "scope": "symbol_scoped",
@@ -1748,6 +1780,9 @@ def account_open_positions(
                         "books_missing_from_page": missing,
                         "error": repr(exc)[:200],
                     })
+                    # The sibling book is unknown — the symbol cannot be
+                    # graded flat on that side either.
+                    unreadable.add(sym)
                     continue
                 returned = sorted(
                     {_bybit_book_key(p.get("positionIdx"))
@@ -1776,7 +1811,7 @@ def account_open_positions(
                         continue
                     _emit(p)
             _record_position_read_observation(obs)
-            return out
+            return OpenPositions(out, unreadable_symbols=unreadable)
         if ex == "alpaca":
             # Dry alpaca accounts are never dialled from the read path
             # (mirrors the IB branch above) — return None ("could not read")
@@ -3287,6 +3322,48 @@ def account_alpaca_open_orders(account: Dict[str, Any]) -> Optional[Dict[str, An
             if isinstance(leg, dict):
                 _emit(leg, parent_id=o.get("id"))
 
+    # FILLED-BRACKET CHILDREN (PI-20261005-APBY4NTV-0002). `status=open` never
+    # returns a `held` stop at top level, and a bracket's PARENT (the market
+    # entry) is `filled`, so it is not returned at all -- its held stop child is
+    # reachable only through the parent's `legs` on a `status=closed` read. A
+    # fully bracketed position therefore read as unprotected here. Same recipe
+    # as AlpacaClient._open_orders_for_symbol (FIX-SA-03), bounded to ONE page:
+    # a full page is reported `truncated`, a failed read `could_not_look` --
+    # neither is ever rendered as "no held legs". The open read above already
+    # answered the main question, so this sub-read degrades the payload's
+    # `held_legs_state` rather than nulling it.
+    held_legs_state = "read"
+    _resting = ("new", "accepted", "held", "partially_filled", "pending_new",
+                "pending_replace", "accepted_for_bidding", "calculated")
+    try:
+        from datetime import datetime, timedelta, timezone
+        after = (datetime.now(timezone.utc) - timedelta(days=91)).strftime(
+            "%Y-%m-%dT%H:%M:%SZ")
+        page_limit = 500
+        env2 = client._request(
+            "GET", f"/v2/orders?status=closed&nested=true&direction=desc"
+                   f"&limit={page_limit}&after={after}")
+    except Exception as exc:  # noqa: BLE001  # allow-silent: logged; surfaced as held_legs_state="could_not_look", never as "no held legs"
+        logger.warning("account_alpaca_open_orders(%s): closed-parent read raised: %s", aid, exc)
+        env2 = None
+    if not isinstance(env2, dict) or env2.get("retCode") != 0:
+        held_legs_state = "could_not_look"
+    else:
+        closed = [o for o in (env2.get("result") or []) if isinstance(o, dict)]
+        if len(closed) >= page_limit:
+            held_legs_state = "truncated"
+        seen_ids = {o.get("order_id") for o in orders}
+        for parent in closed:
+            if str(parent.get("status") or "").lower() not in ("filled", "partially_filled"):
+                continue
+            for leg in (parent.get("legs") or []):
+                if not isinstance(leg, dict) or leg.get("id") in seen_ids:
+                    continue
+                if str(leg.get("status") or "").lower() not in _resting:
+                    continue
+                seen_ids.add(leg.get("id"))
+                _emit(leg, parent_id=parent.get("id"))
+
     # POSITIONS SECOND -- context, not the answer. `positions()` already returns
     # None on a read failure rather than [], so that distinction is preserved
     # rather than re-derived here.
@@ -3311,6 +3388,171 @@ def account_alpaca_open_orders(account: Dict[str, Any]) -> Optional[Dict[str, An
         "orders": orders,
         "positions": positions,
         "positions_state": positions_state,
+        # "read" | "truncated" | "could_not_look": whether `held` bracket legs
+        # of FILLED parents were enumerated (they are invisible to status=open).
+        "held_legs_state": held_legs_state,
         # Stated so a consumer never mistakes the shape for the Bybit one.
         "position_level_protection_supported": False,
+    }
+
+
+#: Alpaca order ids are UUIDs; anything else is refused before it reaches a URL.
+_ALPACA_ORDER_ID_RE = re.compile(r"^[0-9a-fA-F-]{36}$")
+_ALPACA_SYMBOL_RE = re.compile(r"^[A-Z][A-Z0-9.]{0,9}$")
+_ALPACA_ISO_RE = re.compile(
+    r"^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})?)?$")
+
+#: Every timestamp Alpaca publishes on an order. A leg's life is read off
+#: these -- ``canceled_at`` is when it stopped resting, ``replaced_at`` when a
+#: PATCH superseded it -- so none is dropped, and an absent one stays ``None``.
+_ALPACA_ORDER_TS_FIELDS = (
+    "created_at", "submitted_at", "updated_at", "filled_at", "canceled_at",
+    "expired_at", "replaced_at", "failed_at",
+)
+
+
+def account_alpaca_order_history(
+    account: Dict[str, Any],
+    *,
+    order_ids: Optional[List[str]] = None,
+    after: Optional[str] = None,
+    until: Optional[str] = None,
+    symbols: Optional[List[str]] = None,
+    limit: int = 100,
+) -> Optional[Dict[str, Any]]:
+    """Alpaca order HISTORY -- every status, bracket legs nested -- or ``None``.
+
+    FIX-SA-03 step 1 (E75 audit, SA-AUD-1-alpaca-order-history-unreadable).
+    :func:`account_alpaca_open_orders` answers *what rests NOW*; nothing
+    answered *what rested THEN*. That made one question unanswerable: after 17
+    of 20 Alpaca entries (all 3 real-money ``alpaca_live`` ones) the naked sweep
+    re-armed protection 6-7 minutes later, and whether the entry bracket's stop
+    leg was resting in those minutes could not be read from anywhere.
+
+    This reads ``/v2/orders?status=all&nested=true`` (or, per id,
+    ``/v2/orders/{id}?nested=true``) and returns each order with its legs and
+    EVERY lifecycle timestamp, unreduced: ``status`` (``new`` / ``held`` /
+    ``accepted`` / ``replaced`` / ``canceled`` / ``filled`` ...),
+    ``canceled_at``, ``replaced_by``. A stop leg whose ``status`` is
+    ``canceled`` with ``canceled_at`` at the re-arm instant rested until the
+    re-arm cancelled it; one that was never created, or was rejected, did not.
+
+    Three-state, matching its siblings:
+
+    * ``None``  -- could not look (not Alpaca, creds missing, or the LIST read
+      failed). Never the same as "no orders".
+    * ``{...}`` -- a clean read. Per-id lookups fail independently: each id
+      reports its own ``read_state`` (``order_read`` / ``not_found`` /
+      ``could_not_look``) in ``by_id`` so one bad id does not blind the rest,
+      and a 404 is not collapsed into a read failure.
+
+    Arguments are validated here (UUID ids, ticker symbols, ISO timestamps)
+    and a malformed one raises ``ValueError`` -- the route turns that into a
+    400 rather than sending an unvetted string to the broker. Read-only:
+    places, patches and cancels nothing. Never raises on a broker failure.
+    """
+    if not isinstance(account, dict):
+        return None
+    if (account.get("exchange") or "unknown").lower() != "alpaca":
+        return None
+    ids = [str(i).strip() for i in (order_ids or []) if str(i).strip()]
+    for oid in ids:
+        if not _ALPACA_ORDER_ID_RE.match(oid):
+            raise ValueError(f"order_id {oid!r} is not an Alpaca order id")
+    syms = [str(s).strip().upper() for s in (symbols or []) if str(s).strip()]
+    for sym in syms:
+        if not _ALPACA_SYMBOL_RE.match(sym):
+            raise ValueError(f"symbol {sym!r} is not a ticker")
+    for name, val in (("after", after), ("until", until)):
+        if val is not None and not _ALPACA_ISO_RE.match(str(val)):
+            raise ValueError(f"{name} {val!r} is not an ISO-8601 timestamp")
+    try:
+        lim = max(1, min(500, int(limit)))
+    except (TypeError, ValueError):
+        raise ValueError(f"limit {limit!r} is not an integer") from None
+
+    aid = account.get("account_id") or "unknown"
+    client = alpaca_client_for(account)
+    if client is None:
+        return None
+
+    def _num(value: Any) -> Optional[float]:
+        if value is None or str(value).strip() == "":
+            return None
+        try:
+            num = float(value)
+        except (TypeError, ValueError):
+            return None
+        return None if num == 0.0 else num
+
+    def _shape(o: Dict[str, Any]) -> Dict[str, Any]:
+        row: Dict[str, Any] = {
+            "order_id": o.get("id"),
+            "client_order_id": o.get("client_order_id"),
+            "symbol": o.get("symbol"),
+            "order_class": o.get("order_class"),
+            "order_type": o.get("type") or o.get("order_type"),
+            "side": o.get("side"),
+            "qty": _num(o.get("qty")),
+            "filled_qty": _num(o.get("filled_qty")),
+            "filled_avg_price": _num(o.get("filled_avg_price")),
+            "stop_price": _num(o.get("stop_price")),
+            "limit_price": _num(o.get("limit_price")),
+            "time_in_force": o.get("time_in_force"),
+            "status": o.get("status"),
+            "replaced_by": o.get("replaced_by"),
+            "replaces": o.get("replaces"),
+        }
+        for key in _ALPACA_ORDER_TS_FIELDS:
+            row[key] = o.get(key)
+        row["legs"] = [_shape(leg) for leg in (o.get("legs") or [])
+                       if isinstance(leg, dict)]
+        return row
+
+    orders: Optional[List[Dict[str, Any]]] = None
+    list_state = "not_requested"
+    if not ids or after or until or syms:
+        path = f"/v2/orders?status=all&nested=true&direction=asc&limit={lim}"
+        if after:
+            path += f"&after={after}"
+        if until:
+            path += f"&until={until}"
+        if syms:
+            path += "&symbols=" + ",".join(syms)
+        try:
+            env = client._request("GET", path)
+        except Exception as exc:  # noqa: BLE001  # allow-silent: logged; None = "could not look"
+            logger.warning("account_alpaca_order_history(%s): list read raised: %s", aid, exc)
+            return None
+        if (env or {}).get("retCode") != 0:
+            logger.warning("account_alpaca_order_history(%s): list read failed: %s",
+                           aid, (env or {}).get("retMsg"))
+            return None
+        orders = [_shape(o) for o in (env.get("result") or []) if isinstance(o, dict)]
+        list_state = "orders_read"
+
+    by_id: Dict[str, Dict[str, Any]] = {}
+    for oid in ids:
+        try:
+            env = client._request("GET", f"/v2/orders/{oid}?nested=true")
+        except Exception as exc:  # noqa: BLE001  # allow-silent: per-id could_not_look, logged
+            logger.warning("account_alpaca_order_history(%s): %s raised: %s", aid, oid, exc)
+            env = {"retCode": -1, "retMsg": str(exc)}
+        rc = (env or {}).get("retCode")
+        if rc == 0 and isinstance(env.get("result"), dict):
+            by_id[oid] = {"read_state": "order_read", "order": _shape(env["result"])}
+        elif rc == 404:
+            by_id[oid] = {"read_state": "not_found", "order": None}
+        else:
+            by_id[oid] = {"read_state": "could_not_look", "order": None,
+                          "error": str((env or {}).get("retMsg") or "")}
+
+    return {
+        "list_state": list_state,
+        "orders": orders,
+        # null, never 0, when the list was not read.
+        "order_count": (len(orders) if orders is not None else None),
+        "limit": lim,
+        "truncated": (orders is not None and len(orders) >= lim),
+        "by_id": by_id,
     }

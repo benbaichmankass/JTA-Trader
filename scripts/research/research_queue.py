@@ -208,7 +208,7 @@ DISPATCH_FAILED = "dispatch_failed"
 RUNNER_MEMORY_GB = 16.0
 TRAINER_MEMORY_GB = 6.0
 
-_ID_RE = re.compile(r"^RQ-\d{8}-[0-9]{3}$")
+_ID_RE = re.compile(r"^RQ-\d{8}-(?:[0-9]{3}|[0-9a-f]{4}-[0-9]{2})$")
 _CADENCES = ("once", "daily", "weekly", "monthly")
 _LOG = logging.getLogger(__name__)
 
@@ -646,14 +646,65 @@ def grade_route(entry: Dict[str, Any]) -> RouteVerdict:
     return RouteVerdict(RUNNER, f"no VM-resident state, no GPU, {mem:g} GB fits a runner")
 
 
-def validate(entry: Dict[str, Any], *, path: Optional[Path] = None) -> List[str]:
+THEMES_PATH = Path(__file__).resolve().parents[2] / "research" / "THEMES.yaml"
+PRIORITIES = (1, 2, 3)
+
+
+def load_themes(path: Optional[Path] = None) -> Dict[str, Any]:
+    """research/THEMES.yaml as {share_window_hours, aging_hours, themes:{name:{weight,..}}}.
+    Raises on an unreadable or malformed file: weights are the scheduler's only input, and a silent
+    default would hide a broken scheduler behind a plausible order."""
+    import yaml  # noqa: PLC0415
+    try:
+        doc = yaml.safe_load((path or THEMES_PATH).read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError as exc:
+        raise ValueError(f"THEMES.yaml: not valid YAML: {exc}") from exc
+    if not isinstance(doc, dict):
+        raise ValueError("THEMES.yaml: top level must be a mapping")
+    themes = doc.get("themes")
+    if not isinstance(themes, dict) or not themes:
+        raise ValueError("THEMES.yaml: `themes` must be a non-empty mapping")
+    for name, t in themes.items():
+        w = t.get("weight") if isinstance(t, dict) else None
+        if isinstance(w, bool) or not isinstance(w, (int, float)) or w <= 0:
+            raise ValueError(f"THEMES.yaml: theme {name!r} needs a positive numeric weight, got {w!r}")
+    for k in ("share_window_hours", "aging_hours"):
+        if not isinstance(doc.get(k), (int, float)) or doc[k] <= 0:
+            raise ValueError(f"THEMES.yaml: {k} must be a positive number")
+    return doc
+
+
+def new_unit_stamp_errors(entry: Dict[str, Any]) -> List[str]:
+    """A NEW unit that is still `queued` has never run, so it cannot carry a stamp.
+
+    ⚠️ PI-20261001-1MX1RCZS-0004: RQ-20260930-703 was registered `queued` with a
+    `last_dispatched_at` copied from the unit it was cloned from. Every guard
+    passed it and `dispatch_queue._is_due` then read cadence=once + a stamp as
+    "already ran", so it could never fire and nothing flagged it. "New" is a fact
+    about the branch (absent at the merge-base), so the caller supplies it.
+    """
+    if entry.get("status") == "queued" and entry.get("last_dispatched_at") is not None:
+        return [f"a NEW unit with status `queued` must not carry `last_dispatched_at` "
+                f"(got {entry.get('last_dispatched_at')!r}): it has never run, so the "
+                "stamp was copied from another unit and would make a cadence=once "
+                "unit read as already dispatched"]
+    return []
+
+
+def validate(entry: Dict[str, Any], *, path: Optional[Path] = None,
+             is_new: bool = False) -> List[str]:
     """Structural errors in one entry. An empty list means structurally valid.
+
+    ``is_new`` (default False, so every existing caller is unchanged) adds the
+    checks that only apply to a unit not present on the base.
 
     ⚠️ A malformed job is an ERROR, never a skip. A dispatcher that silently
     drops an unparseable entry reports "nothing to do" for a queue that has work
     in it — the `filter_state` collapse, one layer up.
     """
     errs: List[str] = []
+    if is_new:
+        errs.extend(new_unit_stamp_errors(entry))
     jid = entry.get("id")
     if not isinstance(jid, str) or not _ID_RE.match(jid):
         errs.append(f"id must match RQ-YYYYMMDD-NNN, got {jid!r}")
@@ -669,6 +720,23 @@ def validate(entry: Dict[str, Any], *, path: Optional[Path] = None) -> List[str]
     status = entry.get("status")
     if status not in _STATUSES:
         errs.append(f"status must be one of {_STATUSES}, got {status!r}")
+    if status in ("queued", "running", "blocked"):
+        # A unit that can still run needs a home in the scheduler. `done`/`retired` units are exempt.
+        known: Dict[str, Any] = {}
+        try:
+            known = load_themes()["themes"]
+        except (OSError, ValueError) as exc:
+            errs.append(f"cannot read research/THEMES.yaml: {exc}")
+        if known and entry.get("theme") not in known:
+            errs.append(f"`theme` is required and must be one of {sorted(known)}, got {entry.get('theme')!r}")
+        prio = entry.get("priority")
+        if isinstance(prio, bool) or prio not in PRIORITIES:
+            errs.append(f"`priority` is required and must be one of {PRIORITIES} (1 = most urgent within "
+                        f"its theme), got {prio!r}")
+    req = entry.get("requires_result")
+    if req is not None and not (isinstance(req, dict) and _ID_RE.match(str(req.get("unit") or ""))
+                                and set(req) <= {"unit", "verdict"}):
+        errs.append("`requires_result` must be {unit: RQ-YYYYMMDD-NNN[, verdict: pass|fail|...]}")
     run = entry.get("run")
     if not isinstance(run, dict) or not run.get("workflow"):
         errs.append("`run.workflow` is required — the dispatcher fires a workflow, "

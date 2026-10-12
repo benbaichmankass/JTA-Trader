@@ -66,6 +66,8 @@ on:
           - orb
           - pullback
           - squeeze
+          - trend
+          - ict_scalp
           - funding_carry
           - pairs
           - xsec_momentum
@@ -107,7 +109,18 @@ jobs:
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
-          pip install numpy pandas pyyaml requests
+          # yfinance>=1.7.0 (never lower -- MI-287: 0.2.x is silently starved
+          # by Yahoo's curl-UA 429, see requirements-backtest.txt's own note)
+          # is required for the xsec_momentum dispatch's daily-ETF basket
+          # fetch (fetch_backtest_candles.py --source yfinance); every other
+          # harness here only reaches the crypto/Binance-vision path and would
+          # run without it, but installing it unconditionally is one line
+          # against a silent BL-20260813-shaped failure the next harness added
+          # to this family would otherwise hit the same way xsec_momentum did
+          # on its first real dispatch (run 36300787082: producer_failed,
+          # "No such file or directory: 'data/SPY_1d.csv'" -- the fetch step
+          # degraded to a GAP rather than installing its own dependency).
+          pip install numpy pandas pyyaml requests "yfinance>=1.7.0"
 
       - name: Fetch corpus and run the harness
         id: run
@@ -127,7 +140,12 @@ jobs:
           }
 
           case "$HARNESS" in
-            chop_scalp|fade|fvg_range|orb|pullback|squeeze)
+            # trend / ict_scalp joined 2026-10-07 (PI-20261006-TPQQDKFF-0002): the
+            # prop book's own families, with the same --symbol/--timeframe/--json/
+            # --emit-trades shape. Run on SPY 1d locally: exit 0, total_trades +
+            # net_total_r present. src/backtest/run_backtest_vwap.py is NOT here --
+            # it hardcodes its symbol, reads BACKTEST_DATA_PATH and has no --json.
+            chop_scalp|fade|fvg_range|orb|pullback|squeeze|trend|ict_scalp)
               fetch "$SYM" "$TF"
               python3 "scripts/backtest_${HARNESS}.py" \
                 --symbol "$SYM" --timeframe "$TF" \
@@ -213,7 +231,7 @@ jobs:
     needs: [build]
     if: always()
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 110  # was 45: commit-to-main verify-merged waits up to 80 min (W41 raised callers; this one was missed, 2026-10-11 RQ-353c-11/13)
     permissions:
       contents: write
       pull-requests: write
@@ -234,18 +252,36 @@ jobs:
           name: research-harness-dispatch-${{ inputs.harness }}-${{ github.run_id }}
           path: collected
 
+      # The mapper below reads the queue unit's YAML to apply ITS rule. This
+      # job never installed PyYAML, so every unit-attached dispatch since
+      # #16388 (2026-10-04) landed `wiring_only` with the note "queue file is
+      # missing/unreadable" while the file was present at every commit
+      # (MEASURED: 8 of 358 result rows across 6 units; run 37454118580's log
+      # carries the `ModuleNotFoundError: No module named 'yaml'` warning).
+      # Installed here, and the mapper now FAILS this step (exit 2) rather
+      # than landing a non-decision when the import is missing. Same install
+      # line as research-exit-head-build.yml / research-script-run.yml.
+      - name: Install deps (the mapper reads the queue unit's YAML)
+        run: pip install --quiet pyyaml
+
       - name: Derive the result record from this run's own output
         id: derive
         env:
           IN_HARNESS: ${{ inputs.harness }}
           IN_SYMBOL: ${{ inputs.harness == 'xsec_momentum' && 'SPY,QQQ,GLD,TLT,IWM' || inputs.symbol }}
           IN_TF: ${{ inputs.harness == 'xsec_momentum' && '1d' || inputs.timeframe }}
+          IN_UNIT: ${{ inputs.research_unit }}
+        # With a research_unit, the mapper applies THAT unit's pre-registered
+        # rule (pass/fail/indeterminate under its own rule id) or lands
+        # `wiring_only` -- never the bare E7 `no_action_warranted`
+        # (PI-20261004-FOJGFIZF-0004). The rule id it graded under is an output.
         run: |
           set -euo pipefail
           python3 scripts/research/harness_dispatch_result.py \
             --harness "${IN_HARNESS}" --symbol "${IN_SYMBOL}" --timeframe "${IN_TF}" \
             --build-result "${{ needs.build.result }}" \
             --result-json collected/result.json \
+            --research-unit "${IN_UNIT}" \
             --out-dir rr
 
       - name: Land the result on main
@@ -254,8 +290,8 @@ jobs:
           token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
           research-unit: ${{ inputs.research_unit }}
           power-state: ${{ inputs.power_state }}
-          decision-rule-id: RULE-E7-HARNESS-DISPATCHABLE
-          decision-rule-registered-at: '2026-09-27'
+          decision-rule-id: ${{ steps.derive.outputs.decision_rule_id }}
+          decision-rule-registered-at: ${{ steps.derive.outputs.decision_rule_registered_at }}
           verdict: ${{ steps.derive.outputs.verdict }}
           read-state: ${{ steps.derive.outputs.read_state }}
           population: ${{ steps.derive.outputs.population }}

@@ -62,7 +62,7 @@ EQUITY = "yfinance"
 PAIRS: dict[tuple[str, str], tuple[str, str, int]] = {
     # --- crypto (Bybit USDT linear perps; Binance-vision futures/um proxy) ---
     ("BTCUSDT", "1h"): (CRYPTO, "60", 180), ("BTCUSDT", "2h"): (CRYPTO, "120", 180),
-    ("BTCUSDT", "4h"): (CRYPTO, "240", 180), ("BTCUSDT", "15m"): (CRYPTO, "15", 90),
+    ("BTCUSDT", "4h"): (CRYPTO, "240", 180), ("BTCUSDT", "15m"): (CRYPTO, "15", 1095),
     ("BTCUSDT", "5m"): (CRYPTO, "5", 30),
     ("ETHUSDT", "1h"): (CRYPTO, "60", 180), ("ETHUSDT", "2h"): (CRYPTO, "120", 180),
     ("ETHUSDT", "4h"): (CRYPTO, "240", 180), ("ETHUSDT", "15m"): (CRYPTO, "15", 90),
@@ -95,6 +95,45 @@ PAIRS: dict[tuple[str, str], tuple[str, str, int]] = {
     ("MGC", "1d"): (EQUITY, "D", 3650),
     ("MES", "1d"): (EQUITY, "D", 3650),
     ("MHG", "1d"): (EQUITY, "D", 3650),
+}
+
+# ⚠️ STAGE-0 CANDIDATE PAIRS -- NOT the roster. `PAIRS` is locked to the live roster by
+# `--roster-only` (drift in either direction fails), so a research-queue unit that asks a
+# harness about an instrument NO rostered leg trades was refused here by construction:
+# `no declared pair for symbol='BNBUSDT' timeframe='2h'` (exit 2 in the dispatch `build`
+# job). MEASURED 2026-10-04: RQ-20260929-101/-102/-103/-104 (BNBUSDT 2h/4h/4h/1h) and
+# RQ-20260929-108 (ETHUSDT 5m) all died there and landed `producer_failed`, five days after
+# being queued. A candidate is fetched ONLY when named with --symbol/--timeframe, never by the
+# default run, and never enters the manifest/roster drift check. Add a pair here when a queue
+# unit needs data for an instrument that is not (yet) on a roster.
+CANDIDATE_PAIRS: dict[tuple[str, str], tuple[str, str, int]] = {
+    # Windows lengthened 2026-10-04 (PI-20261004-APBY4NTV-0001): at 180 d / 30 d the five
+    # RQ-20260929-101/102/103/107/108 runs landed n=6..37 against their 39-trade floor, i.e.
+    # INDETERMINATE ("could not answer"), not "no edge". Rules are unchanged; only n grows.
+    ("BNBUSDT", "1h"): (CRYPTO, "60", 1095), ("BNBUSDT", "2h"): (CRYPTO, "120", 1095),
+    ("BNBUSDT", "4h"): (CRYPTO, "240", 1095),
+    ("ETHUSDT", "5m"): (CRYPTO, "5", 365),
+    # PI-20261006-APBY4NTV-0001 slice 1 (lane RQ-PROP-SEED, 2026-10-06): shorter-timeframe Stage-0
+    # cells on prop-listed crypto beyond ETH/SOL (Breakout lists XRP/ADA/BNB/DOGE/LINK --
+    # docs/integrations/breakout-instruments-2026-09-27.md). Windows follow the BNBUSDT precedent
+    # above: long enough that a 39-trade E35 floor is reachable, so the run can answer rather
+    # than land INDETERMINATE. Units: RQ-20261006-005..028.
+    ("XRPUSDT", "1h"): (CRYPTO, "60", 1095),
+    ("ADAUSDT", "1h"): (CRYPTO, "60", 1095), ("ADAUSDT", "15m"): (CRYPTO, "15", 730),
+    ("BNBUSDT", "15m"): (CRYPTO, "15", 730), ("BNBUSDT", "5m"): (CRYPTO, "5", 365),
+    ("DOGEUSDT", "1h"): (CRYPTO, "60", 1095), ("DOGEUSDT", "15m"): (CRYPTO, "15", 730),
+    ("LINKUSDT", "1h"): (CRYPTO, "60", 1095),
+    # PI-20261006-APBY4NTV-0001 batch 2 (lane PROP-STRATEGY-SEARCH, 2026-10-07): breadth at the bars that
+    # cleared the cost stack in batch 1 (1h) and the 2h step from a 1h PASS. Symbols are Breakout-listed
+    # (docs/integrations/breakout-instruments-2026-09-27.md) or on bybit_1's own symbols list (AVAX), and
+    # every one already fetched from data.binance.vision in the P2r2 screen (RQ-20261001-*). Units:
+    # RQ-20261007-224..239. `tests/test_fetch_corpus_candidate_pairs.py` refuses a dispatch unit without
+    # its pair here, which is why these lines ride the same PR as the units.
+    ("ZECUSDT", "1h"): (CRYPTO, "60", 1095), ("UNIUSDT", "1h"): (CRYPTO, "60", 1095),
+    ("FILUSDT", "1h"): (CRYPTO, "60", 1095), ("SUIUSDT", "1h"): (CRYPTO, "60", 1095),
+    ("HYPEUSDT", "1h"): (CRYPTO, "60", 1095), ("AVAXUSDT", "1h"): (CRYPTO, "60", 1095),
+    ("TRXUSDT", "1h"): (CRYPTO, "60", 1095), ("AAVEUSDT", "1h"): (CRYPTO, "60", 1095),
+    ("DOGEUSDT", "2h"): (CRYPTO, "120", 1095), ("LINKUSDT", "2h"): (CRYPTO, "120", 1095),
 }
 
 PROXY_WRITE_NAME = {"MGC": "GC_F", "MES": "ES_F", "MHG": "HG_F"}
@@ -165,7 +204,7 @@ def main(argv=None) -> int:
 
     targets = PAIRS
     if args.symbol:
-        targets = {k: v for k, v in PAIRS.items()
+        targets = {k: v for k, v in {**CANDIDATE_PAIRS, **PAIRS}.items()
                   if k[0] == args.symbol and (not args.timeframe or k[1] == args.timeframe)}
         if not targets:
             print(f"no declared pair for symbol={args.symbol!r} timeframe={args.timeframe!r}")

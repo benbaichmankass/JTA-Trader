@@ -468,26 +468,81 @@ def test_db_info_401_without_token(client, fake_runtime):
 # ``git_sha`` is now bound at import; the live resolve is ``git_sha_on_disk``.
 
 
+def _two_real_commits(tmp_path, monkeypatch, *, changed_path):
+    """A throwaway git repo with two REAL commits, the second touching
+    ``changed_path``. ``restart_pending`` is computed from ``git diff``, so the
+    shas must exist in a repo the router is pointed at -- fake shas make the diff
+    fail, which is (correctly) ``None``, not the state under test."""
+    import subprocess
+
+    def git(*a):
+        return subprocess.run(["git", *a], cwd=tmp_path, check=True,
+                              capture_output=True, text=True).stdout.strip()
+
+    git("init", "-q")
+    git("config", "user.email", "t@t")
+    git("config", "user.name", "t")
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "a.py").write_text("1")
+    git("add", ".")
+    git("commit", "-qm", "base")
+    running = git("rev-parse", "--short", "HEAD")
+    target = tmp_path / changed_path
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("2")
+    git("add", ".")
+    git("commit", "-qm", "next")
+    on_disk = git("rev-parse", "--short", "HEAD")
+    monkeypatch.setattr(diag_router, "repo_root", lambda: tmp_path)
+    monkeypatch.setattr(diag_router, "_RUNNING_GIT_SHA", running)
+    monkeypatch.setattr(diag_router, "_resolve_git_sha", lambda: on_disk)
+    return running, on_disk
+
+
 def test_version_reports_the_RUNNING_sha_not_a_live_resolve(
-    client, fake_runtime, monkeypatch
+    client, fake_runtime, monkeypatch, tmp_path
 ):
     """THE REGRESSION. A live resolve must NOT be able to move ``git_sha``."""
-    monkeypatch.setattr(diag_router, "_RUNNING_GIT_SHA", "aaaaaaa")
-    monkeypatch.setattr(diag_router, "_resolve_git_sha", lambda: "bbbbbbb")
+    running, on_disk = _two_real_commits(
+        tmp_path, monkeypatch, changed_path="src/a.py")   # a RUNTIME-path change
     resp = client.get("/api/diag/version", headers=_bearer(_TOKEN))
     assert resp.status_code == 200
     body = resp.json()
-    assert body["git_sha"] == "aaaaaaa", (
+    assert body["git_sha"] == running, (
         "git_sha must be the sha the PROCESS was loaded from; if a live "
         "resolve can move it, the endpoint is reporting disk again"
     )
-    assert body["git_sha_on_disk"] == "bbbbbbb"
+    assert body["git_sha_on_disk"] == on_disk
+    assert running != on_disk
     assert body["restart_pending"] is True, (
         "disk ahead of the running process IS the 2026-05-09 stale-code state"
     )
     assert "captured_at" in body
     # ISO-8601 UTC.
     assert body["captured_at"].endswith("+00:00") or body["captured_at"].endswith("Z")
+
+
+def test_version_docs_only_diff_is_not_restart_pending(
+    client, fake_runtime, monkeypatch, tmp_path
+):
+    """FIX-SA-11: the shas differ but only by files deploy_pull_restart.sh does
+    not restart for -> nothing stale is being served."""
+    running, on_disk = _two_real_commits(
+        tmp_path, monkeypatch, changed_path="docs/note.md")
+    body = client.get("/api/diag/version", headers=_bearer(_TOKEN)).json()
+    assert body["git_sha"] != body["git_sha_on_disk"]
+    assert body["restart_pending"] is False
+
+
+def test_version_restart_pending_is_none_when_the_diff_cannot_be_read(
+    client, fake_runtime, monkeypatch
+):
+    """Shas that exist in no repo: we could not look, which is not "no restart
+    pending". Pins the None state at the endpoint, not only the helper."""
+    monkeypatch.setattr(diag_router, "_RUNNING_GIT_SHA", "aaaaaaa")
+    monkeypatch.setattr(diag_router, "_resolve_git_sha", lambda: "bbbbbbb")
+    body = client.get("/api/diag/version", headers=_bearer(_TOKEN)).json()
+    assert body["restart_pending"] is None
 
 
 def test_version_reports_no_restart_pending_when_they_agree(
@@ -827,3 +882,47 @@ def test_journal_snapshot_still_serves_bare_lists(client, fake_runtime):
     body = client.get("/api/diag/snapshot?limit=5", headers=_bearer(_TOKEN)).json()
     assert isinstance(body["trades"], list)
     assert [r["id"] for r in body["trades"]] == [3, 2, 1]
+
+
+# ── /log_aggregate (PI-20261004-4GA8WQPA-0003) ──────────────────────────────
+def _soak_rows(path: Path, rows: list[dict]) -> None:
+    path.write_text("\n".join(json.dumps(r) for r in rows) + "\nnot json\n", encoding="utf-8")
+
+
+def test_log_aggregate_counts_across_utc_days_not_just_the_tail(client, fake_runtime, monkeypatch):
+    soak = fake_runtime["runtime_logs"] / "bybit_coverage_soak.jsonl"
+    rows = (
+        [{"logged_at_utc": f"2026-10-0{d}T0{h}:00:00+00:00", "account_id": "bybit_1",
+          "mode": "annotate", "verdicts_differ": False} for d in (1, 2, 3) for h in range(3)]
+        + [{"logged_at_utc": "2026-10-03T09:00:00+00:00", "account_id": "bybit_2",
+            "mode": "apply", "verdicts_differ": True}]
+        + [{"no_timestamp": 1}]
+    )
+    _soak_rows(soak, rows)
+    monkeypatch.setitem(diag_router._LOG_FILES, "bybit_coverage_soak", soak)
+    r = client.get("/api/diag/log_aggregate?name=bybit_coverage_soak&fields=mode&count_true=verdicts_differ",
+                   headers=_bearer(_TOKEN))
+    assert r.status_code == 200, r.text
+    b = r.json()
+    assert b["read_state"] == "complete"
+    assert b["distinct_utc_days"] == 3 and (b["first_day"], b["last_day"]) == ("2026-10-01", "2026-10-03")
+    assert b["days"]["2026-10-03"]["rows"] == 4
+    assert b["days"]["2026-10-03"]["by_account"] == {"bybit_1": 3, "bybit_2": 1}
+    assert b["days"]["2026-10-03"]["values"]["mode"] == {"annotate": 3, "apply": 1}
+    assert b["days"]["2026-10-03"]["true_counts"] == {"verdicts_differ": 1}
+    assert "true_counts" in b["days"]["2026-10-01"] and b["days"]["2026-10-01"]["true_counts"] == {}
+    assert b["unparseable_lines"] == 1 and b["rows_without_day"] == 1, "nothing is silently dropped"
+
+
+def test_log_aggregate_time_budget_is_reported_not_hidden(tmp_path):
+    p = tmp_path / "x.jsonl"
+    p.write_text("\n".join(json.dumps({"logged_at_utc": "2026-10-01T00:00:00+00:00"}) for _ in range(5000)))
+    out = diag_router.aggregate_jsonl(p, [], [], time_budget_s=-1.0)
+    assert out["read_state"] == "time_budget_hit" and out["scanned_lines"] < 5000
+
+
+def test_log_aggregate_rejects_unknown_name_bad_field_and_no_token(client, fake_runtime):
+    h = _bearer(_TOKEN)
+    assert client.get("/api/diag/log_aggregate?name=/etc/passwd", headers=h).status_code == 400
+    assert client.get("/api/diag/log_aggregate?name=audit&fields=a;b", headers=h).status_code == 400
+    assert client.get("/api/diag/log_aggregate?name=audit").status_code in (401, 403)

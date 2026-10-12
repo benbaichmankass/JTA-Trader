@@ -10,6 +10,7 @@ Covers _adopt_orphan_position's two paths:
 from __future__ import annotations
 
 import sqlite3
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from src.runtime.order_monitor import (
@@ -23,6 +24,10 @@ from tests.fixtures.real_schema_db import (
     insert_trade as _insert_trade,
     make_canonical_db,
 )
+
+# Fresh, not a fixed date: the orphan matcher refuses packages older than
+# ORPHAN_PACKAGE_MAX_AGE_DAYS (PROV-IB).
+_FRESH = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
 
 
 def _orphan_adopt_trade(db: Database, **over) -> int:
@@ -72,7 +77,7 @@ def test_reattaches_orphan_to_originating_strategy(tmp_path: Path):
         db.db_path, order_package_id="op-mhg", strategy_name="mhg_pullback_1d",
         symbol="MHG", direction="long", entry=6.40, sl=6.05, tp=7.03,
         status="closed", close_reason="reconciler",
-        created_at="2026-06-14T06:00:00Z",
+        created_at=_FRESH,
     )
 
     tid = _adopt_orphan_position(
@@ -98,7 +103,7 @@ def test_direction_normalised_buy_matches_long(tmp_path: Path):
     _insert_package(
         db.db_path, order_package_id="op-buy", strategy_name="trend_donchian",
         symbol="BTCUSDT", direction="buy", entry=80000.0, sl=79000.0, tp=82000.0,
-        status="closed", created_at="2026-06-14T06:00:00Z",
+        status="closed", created_at=_FRESH,
     )
     tid = _adopt_orphan_position(
         db=db, account_id="bybit_2", symbol="BTCUSDT", direction="long",
@@ -113,7 +118,7 @@ def test_no_confident_match_falls_back_to_orphan_adopt(tmp_path: Path):
     _insert_package(
         db.db_path, order_package_id="op-far", strategy_name="mhg_pullback_1d",
         symbol="MHG", direction="long", entry=5.00, sl=4.80, tp=5.50,
-        status="closed", created_at="2026-06-14T06:00:00Z",
+        status="closed", created_at=_FRESH,
     )
     tid = _adopt_orphan_position(
         db=db, account_id="ib_paper", symbol="MHG", direction="long",
@@ -136,7 +141,7 @@ def test_self_heal_reattaches_existing_orphan_adopt_row(tmp_path: Path):
     _insert_package(
         db.db_path, order_package_id="op-mhg", strategy_name="mhg_pullback_1d",
         symbol="MHG", direction="long", entry=6.40, sl=6.05, tp=7.03,
-        status="closed", created_at="2026-06-14T06:00:00Z",
+        status="closed", created_at=_FRESH,
     )
     summary: dict = {}
     _reattach_adopted_orphans(db, summary)
@@ -201,7 +206,7 @@ def test_recovered_branch_paper_account_stamps_paper_and_links_package(tmp_path:
     _insert_package(
         db.db_path, order_package_id="op-mhg", strategy_name="mhg_pullback_1d",
         symbol="MHG", direction="long", entry=6.40, sl=6.05, tp=7.03,
-        status="closed", created_at="2026-06-14T06:00:00Z",
+        status="closed", created_at=_FRESH,
     )
     tid = _adopt_orphan_position(
         db=db, account_id="ib_paper", symbol="MHG", direction="long",
@@ -224,7 +229,7 @@ def test_recovered_branch_real_money_account_stamps_real_and_links_package(tmp_p
     _insert_package(
         db.db_path, order_package_id="op-btc", strategy_name="trend_donchian",
         symbol="BTCUSDT", direction="long", entry=80000.0, sl=79000.0, tp=82000.0,
-        status="closed", created_at="2026-06-14T06:00:00Z",
+        status="closed", created_at=_FRESH,
     )
     tid = _adopt_orphan_position(
         db=db, account_id="bybit_2", symbol="BTCUSDT", direction="long",
@@ -272,7 +277,7 @@ def test_wrong_direction_does_not_match(tmp_path: Path):
     _insert_package(
         db.db_path, order_package_id="op-short", strategy_name="mhg_pullback_1d",
         symbol="MHG", direction="short", entry=6.40, sl=6.75, tp=5.80,
-        status="closed", created_at="2026-06-14T06:00:00Z",
+        status="closed", created_at=_FRESH,
     )
     tid = _adopt_orphan_position(
         db=db, account_id="ib_paper", symbol="MHG", direction="long",

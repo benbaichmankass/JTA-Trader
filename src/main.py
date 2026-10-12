@@ -58,7 +58,7 @@ class _AlertManagerAdapter:
         self._am = alert_manager
 
     def send_message(self, message: str):
-        self._am.send_alert(message)
+        return self._am.send_alert(message)
 
 
 def _build_telegram_client():
@@ -525,6 +525,25 @@ def _build_monitor_ohlcv_fetcher(settings: dict):
     except Exception:  # noqa: BLE001
         _per_strategy_tf = {}
 
+    # Per-strategy candle LIMIT. 200 for every leg (unchanged) EXCEPT a leg
+    # running the vol_trail ATR percentile (declared, or the shadow
+    # instrument's leg): there 200 minus the forming bar left 199 < the
+    # 200-bar window, so the percentile was never computable live and the
+    # lever silently returned the base mult (PR #17212 P5 parity, measured
+    # 56/76 null closed percentiles on ada_pullback_2h). Sized from the leg's
+    # own params by trail_vol.monitor_fetch_limit; IB-routed legs get the same
+    # number, and _duration_str scales the request to it. Best-effort: a
+    # config-load failure leaves the map empty → 200 everywhere, as before.
+    try:
+        from src.units.strategies import load_strategy_config
+        from src.runtime.trail_vol import monitor_fetch_limit
+        _per_strategy_limit = {
+            name: monitor_fetch_limit(name, cfg or {})
+            for name, cfg in (load_strategy_config() or {}).items()
+        }
+    except Exception:  # noqa: BLE001
+        _per_strategy_limit = {}
+
     # --- The per-pass IB circuit breaker (R2, Tier-2, operator-approved
     # DEC-20260910-EXIT-EVAL-60S-REMEDY, chosen `r2_only`, 2026-09-10T07:52Z) --
     #
@@ -620,7 +639,7 @@ def _build_monitor_ohlcv_fetcher(settings: dict):
             symbol, timeframe,
             settings=settings,
             exchange_client=client,
-            limit=200,
+            limit=_per_strategy_limit.get(strategy_name, 200),
         )
 
         if ib_routed:
@@ -868,6 +887,9 @@ def run_one_tick(settings: dict, exchange_client, telegram_client) -> dict:
     return {"multi_symbol": True, "results": results}
 
 
+_CRITICAL_ALERT_MAX_ATTEMPTS = 5
+
+
 def _drain_critical_alerts(telegram_client) -> None:
     """Forward queued critical alerts to Telegram, then drain.
 
@@ -885,18 +907,44 @@ def _drain_critical_alerts(telegram_client) -> None:
     Drain on every tick so operator notification latency is bounded
     by ``TICK_INTERVAL_SECONDS``. Best-effort — never let a
     notification failure break the trader loop.
+
+    FIX-CA-13: ``pop_alerts()`` is destructive, so a failed send (raised,
+    or the client returned ``False``) re-queues the alert for the next
+    tick, up to ``_CRITICAL_ALERT_MAX_ATTEMPTS`` attempts; after that it
+    is logged at ERROR as UNDELIVERED with its full text. A client that
+    returns ``None`` (no delivery signal) is treated as sent.
     """
     try:
-        from src.units.dashboards.alerts import pop_alerts
+        from src.units.dashboards.alerts import pop_alerts, push_alert
         for alert in pop_alerts():
             if str(alert.get("level", "")).lower() != "critical":
                 continue
             source = alert.get("source") or "unknown"
             msg = alert.get("message") or ""
             try:
-                telegram_client.send_message(f"[CRITICAL][{source}] {msg}")
+                ok = telegram_client.send_message(f"[CRITICAL][{source}] {msg}")
             except Exception:  # noqa: BLE001
                 logger.exception("alert_drainer: telegram send failed")
+                ok = False
+            if ok is not False:
+                continue
+            attempts = int(alert.get("delivery_attempts") or 0) + 1
+            if attempts >= _CRITICAL_ALERT_MAX_ATTEMPTS:
+                logger.error(
+                    "alert_drainer: critical alert UNDELIVERED after %d "
+                    "attempts [%s] %s", attempts, source, msg,
+                )
+                continue
+            extra = {k: v for k, v in alert.items()
+                     if k not in ("ts", "source", "level", "message",
+                                  "delivery_attempts")}
+            push_alert(msg, source=source, level="critical",
+                       delivery_attempts=attempts, **extra)
+            logger.warning(
+                "alert_drainer: critical alert send failed (attempt %d/%d); "
+                "re-queued for next tick", attempts,
+                _CRITICAL_ALERT_MAX_ATTEMPTS,
+            )
     except Exception:  # noqa: BLE001
         logger.exception("alert_drainer: pop_alerts failed")
 
@@ -1154,6 +1202,18 @@ def main() -> None:
                 run_macro_thesis_tick(settings)
             except Exception:  # noqa: BLE001
                 logger.exception("macro_thesis_tick failed")
+
+            # Account-level daily-DD switch (operator 2026-10-09, rule 7's one
+            # sanctioned off): fold one on-disk equity reading per ARMED
+            # account every tick, so day-start equity, the trip alert and the
+            # reset alert do not wait for a signal. OBSERVE-ONLY — the refusal
+            # stays in RiskManager.evaluate. No broker call; best-effort.
+            try:
+                from src.units.accounts.daily_dd_switch import observe_armed_accounts
+                with _tick_hook("daily_dd_switch"):
+                    observe_armed_accounts()
+            except Exception:  # noqa: BLE001
+                logger.exception("daily_dd_switch tick observe failed")
 
             # Prop trades are a manual bridge (no broker feed), so the
             # order_monitor above never sees them. Emit a periodic

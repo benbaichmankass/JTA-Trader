@@ -268,6 +268,9 @@ CATEGORY_EXPLICIT: Dict[str, Tuple[str, str]] = {
     # obeyed as one. Read in full by MI-162; no directory or name rule reaches
     # it, so it graded `unknown` until assigned here.
     "docs/claude/TASK-PRIORITY-2026-09-07.md": ("plan", "read:ranks-tasks-under-the-current-cycle-priority"),
+    # Evidence: a stated-population measurement (the triage of the first gitleaks
+    # full-history run), authored by the session that took it. No name rule reaches it.
+    "docs/security/gitleaks-baseline.md": ("evidence", "read:SA-SEC-lane-authored-the-triage-2026-09-29"),
 }
 
 # ---------------------------------------------------------------------------
@@ -326,6 +329,22 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
         "evidence closing BL-20260816-CORPUS-CONFLICT-REDERIVE-RUNS-THE-STALE-BRANCH-EXTRACTOR; "
         "goes historical once the dispatched-sha stamp lands",
     ),
+    # Written 2026-10-07 by lane PAIRS-STOCKTAKE, the same session that took
+    # every measurement in it (paged /trades/closed and /pairs/soak reads,
+    # config/pairs.yaml, the executor, the mandate store, the prop lot
+    # tables), each figure MEASURED/INFERRED/DECIDED-marked with its locator,
+    # so the status is ESTABLISHED rather than inferred. No other rung can see
+    # it (not imported by rule 1, not in ACTIVE_DOCS, not a skill, not
+    # `history`), so without this entry it reads `unknown`, which it is not.
+    # ⚠️ It goes `historical` once RQ-20261007-005..008 land measured records:
+    # its verdict table's "no Stage-0 evidence" column is then a statement
+    # about the past, and the live answer lives in those records.
+    "docs/research/pairs-stocktake-2026-10-07.md": (
+        "live",
+        "read:PAIRS-STOCKTAKE-lane-authored-and-measured-it-2026-10-07",
+        "operator question 2026-10-06 (PI-20261006-APBY4NTV-0004); goes historical once "
+        "RQ-20261007-005..008 land measured records",
+    ),
     # Written 2026-09-22 by the E24 OPS lane, the same session that took every
     # measurement in it, so the status is ESTABLISHED rather than inferred. Each
     # figure was read this session against a stated population, and every
@@ -349,6 +368,17 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
         "the 2026-09-22 review could not produce; verdict `watch` -- 2 of 5 "
         "sources swept clean, 1 partial, 2 `could_not_look` with named reasons; "
         "superseded by the next sweep, and its windows are short by construction",
+    ),
+    # SA-SEC lane, 2026-09-29: authored by the session that measured it (fresh full
+    # clone, 12,301 commits, 1,501 branches; count cross-checked against CI run
+    # 36584026733) and pinned by tests/test_gitleaks_baseline.py. It goes stale the
+    # moment `.gitleaks-baseline.json` is regenerated without updating it.
+    "docs/security/gitleaks-baseline.md": (
+        "live",
+        "read:SA-SEC-lane-authored-and-measured-it-2026-09-29",
+        "what .gitleaks-baseline.json accepts and why: 352 first-run findings "
+        "classified by value shape, 4 named known-revoked entries, and the "
+        "planted-key proof; count pinned by tests/test_gitleaks_baseline.py",
     ),
     "docs/claude/TASK-PRIORITY-2026-09-07.md": (
         "live",
@@ -391,6 +421,16 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
         "read:MI-294-authored-it-this-session-review-record",
         "the 2026-09-17 review record, weighted to performance-7d and soak "
         "monitoring; goes historical at the next system review",
+    ),
+    # Authored and read in full by lane BREAKOUT-TERMS-READ, 2026-10-08. It states
+    # its own coverage: the FAQ Center was read, the binding agreements were 403
+    # (section 0 lists every URL), so the doc is live as a record of what was and
+    # was not read -- not as a reading of Breakout's contracts.
+    "docs/integrations/breakout-terms-read-2026-10-08.md": (
+        "live",
+        "read:BREAKOUT-TERMS-READ-authored-it-this-session-terms-read-record",
+        "the 2026-10-08 read of Breakout's FAQ Center terms; goes historical "
+        "when the Evaluation Agreement / Program Rules are read at source",
     ),
 }
 

@@ -6,8 +6,8 @@
 `walkforward()` iterates it WITHOUT reading the cell's own `split`, so
 `wf_summary` is a fixed-calendar robustness panel rather than an out-of-sample
 walk-forward — and a delta originating in a year no fold examined reads as
-walk-forward-confirmed. 5 of the 133 fold-carrying corpus rows have uncovered
-OOS years and **all five PASSED**.
+walk-forward-confirmed. 5 of the 133 fold-carrying corpus rows (as measured 2026-08-17; 6 of 136 after PR #14356 added qqq_trend_long_1d vt_hot90_t2) have uncovered
+OOS years and **all of them PASSED**.
 
 WHAT EACH TEST IS FOR, since three of them pin failure modes rather than the
 happy path:
@@ -47,11 +47,32 @@ PANEL = [{"fold": str(y)} for y in (2021, 2022, 2023, 2024, 2025, 2026)]
 
 # Measured 2026-08-17 over the committed corpus.
 EXPECTED_UNCOVERED = {
-    ("ief_pullback_1d", "vt_hot80_t2.5"): [2017, 2018, 2019, 2020],
-    ("ief_pullback_1d", "decay_stall10_t2.5"): [2017, 2018, 2019, 2020],
+    # RE-MEASURED 2026-10-02 (lane M20-EXITS-4): the 2026-10-02 re-sweep derived the
+    # ief split at 2015-12-10 (OOS n=39) but its walk-forward folds are still
+    # 2021-2026, so 2015-2020 of the OOS span were never examined. This is a REAL
+    # caveat on the ief_pullback_1d PASS cells, not a pin to loosen.
+    ("ief_pullback_1d", "vt_hot80_t2.5"): [2015, 2016, 2017, 2018, 2019, 2020],
+    ("ief_pullback_1d", "decay_stall10_t2.5"): [2015, 2016, 2017, 2018, 2019, 2020],
+    ("ief_pullback_1d", "rrfloor0.75"): [2015, 2016, 2017, 2018, 2019, 2020],
     ("tlt_pullback_1d", "decay_stall6_t2.5"): [2019, 2020],
     ("tlt_pullback_1d", "decay_arm1.5R_stall6_t2.5"): [2019, 2020],
     ("splg_trend_long_1d", "vt_hot80_t2"): [2019, 2020],
+    # PR #14356: added a qqq_trend_long_1d vt_hot90_t2 PASS row (split
+    # 2017-07-19, folds 2021-2026 only), so 2017-2020 of its OOS span were never
+    # examined. Its two sibling cells added by the same PR carry no folds
+    # (wf_folds == []) and so are not in this set.
+    ("qqq_trend_long_1d", "vt_hot90_t2"): [2017, 2018, 2019, 2020],
+    # 2026-10-04 (RESEARCH-RUN, RQ-20261004-772/674 coverage-gap sweeps): MEASURED by re-running
+    # fold_coverage over the committed corpus. scha_trend_long_1d's OOS split is 2017-11-21 but the
+    # walk-forward folds start in 2021, so OOS years 2017-2020 were never examined for all five of its
+    # passing / near-passing cells (this includes vt_hot90_t2 wf 6/6). spy_trend_long_1d decay_stall6_t2
+    # (wf 5/6) leaves 2020 unexamined.
+    ("scha_trend_long_1d", "decay_arm1.5R_stall6_t2"): [2017, 2018, 2019, 2020],
+    ("scha_trend_long_1d", "decay_stall10_t2"): [2017, 2018, 2019, 2020],
+    ("scha_trend_long_1d", "decay_stall6_t2"): [2017, 2018, 2019, 2020],
+    ("scha_trend_long_1d", "trail5"): [2017, 2018, 2019, 2020],
+    ("scha_trend_long_1d", "vt_hot90_t2"): [2017, 2018, 2019, 2020],
+    ("spy_trend_long_1d", "decay_stall6_t2"): [2020],
 }
 
 

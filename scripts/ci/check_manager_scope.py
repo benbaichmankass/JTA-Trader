@@ -468,6 +468,7 @@ defect in a throwaway repo and prove the guard fails on it.
 from __future__ import annotations
 
 import argparse
+import collections
 import fnmatch
 import json
 import os
@@ -495,6 +496,8 @@ EXCEPTION_REL = "docs/claude/work/manager-scope-exception.yaml"
 #: `lane` to a session other than its own is a management act — see the module
 #: docstring for the false-positive / false-negative measurement.
 CHECKLIST_REL = "docs/claude/work/MANAGER-CHECKLIST.json"
+#: After the per-row cutover a row's history is its own file under here.
+STORE_REL = "docs/claude/work/checklist"
 
 #: The PER-BRANCH merge-slot claim `scripts/ops/claim_merge_slot.py
 #: --branch-claim` writes, and the faithful successor of the
@@ -713,6 +716,14 @@ def lease_holders(root: Path) -> set[str]:
 # --------------------------------------------------------------------------
 #: An added `"lane": "session_…"` line in the checklist's patch.
 LANE_ADD = re.compile(r'^\+\s*"lane"\s*:\s*"(session_[A-Za-z0-9]+)"')
+#: A removed one. A lane that is removed and re-added in the SAME commit is a
+#: row that MOVED (a reorder, or a restore over a merge driver's output), not a
+#: new assignment. MEASURED 2026-10-04: lane CI-AUTOMERGE's ebe3539f2 restored
+#: main's checklist over its jsonregister-merged copy, and the reorder re-added
+#: BACKLOG-BURNDOWN-2's lane line. The line-level reader then admitted the lane
+#: session as a manager. `dispatch_observations_exact` (row vs every parent)
+#: never counted it.
+LANE_DEL = re.compile(r'^-\s*"lane"\s*:\s*"(session_[A-Za-z0-9]+)"')
 
 #: How far either side of its observed dispatch acts a manager is taken to have
 #: been in office.
@@ -758,7 +769,7 @@ def dispatch_observations(root: Path) -> tuple[list[tuple[datetime, str]], list[
     notes: list[str] = []
     rc, raw = _git(root, "log", "--all", "--reverse", "--unified=0", "-p",
                    "--pretty=format:%x00COMMIT%x00%H%x00%aI%x00%B%x00ENDMSG%x00",
-                   "--", CHECKLIST_REL)
+                   "--", CHECKLIST_REL, STORE_REL)
     if rc != 0:
         return [], [f"{CHECKLIST_REL} history unreadable — no dispatch "
                     f"observation could be derived (we could not look)"]
@@ -777,11 +788,19 @@ def dispatch_observations(root: Path) -> tuple[list[tuple[datetime, str]], list[
         body = "\x00".join(parts[2:])
         trailer = SESSION_TRAILER.findall(body)
         author = trailer[-1] if trailer else None
-        added = set()
+        plus: collections.Counter = collections.Counter()
+        minus: collections.Counter = collections.Counter()
         for line in patch.splitlines():
             m = LANE_ADD.match(line)
             if m:
-                added.add(m.group(1))
+                plus[m.group(1)] += 1
+                continue
+            m = LANE_DEL.match(line)
+            if m:
+                minus[m.group(1)] += 1
+        # NET-new only: a lane value added no more times than it is removed
+        # in the same patch moved rows; it was not handed to anyone.
+        added = {lane for lane, n in plus.items() if n > minus[lane]}
         if not added:
             continue
         if author is None:
@@ -831,7 +850,7 @@ def dispatch_observations_exact(root: Path) -> tuple[list[tuple[datetime, str]],
     MEASUREMENT, and this function is what makes it one.
     """
     notes: list[str] = []
-    rc, out = _git(root, "log", "--all", "--pretty=%H", "--", CHECKLIST_REL)
+    rc, out = _git(root, "log", "--all", "--pretty=%H", "--", CHECKLIST_REL, STORE_REL)
     if rc != 0:
         return [], [f"{CHECKLIST_REL} history unreadable — nothing compared"]
     shas = [x for x in out.split() if x]
@@ -962,6 +981,17 @@ def _json_at(root: Path, ref: str, rel: str) -> tuple[str, Optional[dict]]:
     Three states, never two: *the file was not there* and *we could not read
     what was there* are different facts, and only `ok` may be reasoned from.
     """
+    if rel == CHECKLIST_REL:  # the monolith before the per-row cutover, row files after
+        import sys as _sys  # noqa: PLC0415
+        _repo = str(Path(__file__).resolve().parents[2])
+        if _repo not in _sys.path:
+            _sys.path.insert(0, _repo)
+        from src.runtime import checklist_store  # noqa: PLC0415
+        try:
+            obj = checklist_store.load_at(root, ref)
+        except (ValueError, OSError):
+            return ("unreadable", None)
+        return ("absent", None) if obj is None else ("ok", obj)
     rc, out = _git(root, "show", f"{ref}:{rel}")
     if rc != 0:
         return ("absent", None)
@@ -1735,6 +1765,8 @@ IDENTITY_SOURCES = (
 def _subject_state(root: Path, rel: str) -> str:
     """Is `rel` present at HEAD? `live` / `retired` — never guessed."""
     rc, _ = _git(root, "cat-file", "-e", f"HEAD:{rel}")
+    if rc != 0 and rel == CHECKLIST_REL:  # cut over: the store is the live subject
+        rc, _ = _git(root, "cat-file", "-e", f"HEAD:{STORE_REL}/_header.json")
     return SRC_LIVE if rc == 0 else SRC_RETIRED
 
 
@@ -2161,6 +2193,8 @@ def check(root: Path, base: str, today: Optional[str] = None,
 # --------------------------------------------------------------------------
 MANAGER = "session_01SELFTESTMANAGER0000"
 WORKER = "session_01SELFTESTWORKER00000"
+#: A second lane session: the target of a real dispatch in the row-move control.
+WORKER2 = "session_01SELFTESTWORKER20000"
 
 #: A manager the LEASE HISTORY HAS NEVER HEARD OF — identified only because it
 #: DISPATCHED. This is the 2026-09-21 regression's own shape: the lease was
@@ -2517,6 +2551,35 @@ def self_test() -> int:
         assert not fails, fails
         cases.append(("a session assigning a lane to ITSELF is not a manager "
                       "-> off the roster, its src/ commit not graded", st, ""))
+
+        # -- 2i'. CONTROL: a ROW MOVE is not dispatch. Must PASS.
+        #    MANAGER2 hands X1 to WORKER2 (a real dispatch); later WORKER
+        #    reorders the checklist (its own row X2 first, X1 after), as a
+        #    restore over a merge driver's output does. The line patch then
+        #    shows X1's lane removed AND re-added, and before 2026-10-04 that
+        #    admitted WORKER as a manager (lane CI-AUTOMERGE, ebe3539f2).
+        shutil.rmtree(root)
+        root = _fixture(tmp)
+        _archive_lease(root)
+        _dispatch(root, MANAGER2, WORKER2)                      # [X1:W2]
+        _write(root, CHECKLIST_REL, _checklist([("X0", WORKER), ("X1", WORKER2)]))
+        _commit(root, "worker: claim own row", WORKER)          # self only
+        # Reorder + a new own row. git renders this patch as X1's lane line
+        # REMOVED and RE-ADDED (+W2 -W2 +W) -- the exact shape that misfired.
+        _write(root, CHECKLIST_REL, _checklist(
+            [("X1", WORKER2), ("X0", WORKER), ("X2", WORKER)]))
+        _commit(root, "worker: add own row; checklist reordered by a restore", WORKER)
+        holders, _w, _s, _n = manager_roster(root)
+        assert WORKER not in holders, (
+            "a commit that only MOVES another session's row (its lane removed "
+            "and re-added in the same patch) must not admit its author as a "
+            "manager", sorted(holders))
+        assert MANAGER2 in holders, (
+            "positive control: the real dispatch must still admit MANAGER2",
+            sorted(holders))
+        cases.append(("a row MOVE (lane removed and re-added in one patch) is "
+                      "not dispatch -> mover off the roster, real dispatcher on",
+                      "ok", ""))
 
         # -- 2j. CONTROL: the per-branch merge-slot claim. R13's PREFERRED
         #    route since the reset archived session-board.json. Must PASS.

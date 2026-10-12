@@ -427,6 +427,27 @@ The audit findings appear in `compliance_audit` in the response JSON:
 This rotation does NOT touch artifacts outside the day's section — the
 weekly cycle is the coverage guarantee, not a per-session full sweep.
 
+**Standing measurement on EVERY rotation day (operator directive 2026-10-06
+— the TP doctrine, `docs/ARCHITECTURE-CANONICAL.md` § "TP doctrine"):** run
+
+```bash
+python3 scripts/ci/check_tp_doctrine.py --strict --json
+```
+
+and put its `summary.by_class` block into `compliance_audit` as a finding
+named `tp-doctrine` (`rule: "ARCHITECTURE-CANONICAL § TP doctrine"`), with the
+per-class `entry_tp` / `tp_revision` FAIL counts beside their denominators.
+`--strict` exits 1 while ANY baselined debt remains — that is the audit shape,
+because the audit asks whether the debt SHRANK, not whether it grew (the PR
+guard asks the latter). Three dispositions, by class, real-money and prop
+first: a routing that became compliant → remove its `BASELINE_2026_10_06` line
+in the same PR (the guard fails on a stale line); a routing still failing →
+confirm it is carried by `PI-20261006-5FUGHVX8-0001` or a successor pipeline
+row / `research/queue/` unit; a routing that is NEW and failing → the guard
+already failed its PR, so the finding is how it got in. Exit 2 is *could not
+look* and is reported as such, never as clean.
+
+
 ## New-work compliance audit (MANDATORY — 2026-07-19)
 
 Operator directive: **everything built since the last review gets audited
@@ -739,7 +760,9 @@ to be found first; it is one break with four instances.
 |---|---|---|---|
 | `/health-review` | `health-review-backlog.json` | **no** | **repointed above** |
 | `/performance-review` | `performance-review-backlog.json`, `research-review-backlog.json` | **no**, **no** | **still broken** — its own § "Draining the backlog" demands the same `count_untriaged == 0` |
-| `/ml-review` | `ml-review-backlog.json` | **no** | **still broken** — same |
+| `/ml-review` | `ml-review-backlog.json` (archived) | **no** | **still broken** — same |
+
+> **Update 2026-09-29 (FIX-SA-09):** the live instruction lines in `/ml-review`, `sprint-format` and `doc-freshness` now point at `docs/claude/work/PIPELINE.jsonl`; the `retired-backlog-paths` guard fails any new live reference under `.claude/`.
 
 Both siblings carry the identical *"HARD COMPLETION GATE (not a sample)"*
 heading and the identical `backlog_coverage.count_untriaged` output contract
@@ -835,8 +858,7 @@ the operator can verify fast.
 - Touch `src/`, `config/`, or any live-path file. Reviews don't trade.
 - Append to `comms/claude_strategy_scores.jsonl` (that belongs to
   `/performance-review` now).
-- Modify `docs/claude/performance-review-backlog.json` or
-  `docs/claude/ml-review-backlog.json` (those belong to their
+- Close the performance or ML rows in `docs/claude/work/PIPELINE.jsonl` (those belong to their
   respective skills).
 - Modify `comms/follow_ups.json` (deferred until the comms cleanup
   session).

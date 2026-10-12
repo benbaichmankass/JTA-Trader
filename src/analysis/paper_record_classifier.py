@@ -63,15 +63,49 @@ _CLEAN_EXIT_REASONS = frozenset({"sl", "tp", "sl_cross", "tp_cross", "exit_head"
 
 # Reconciler / watchdog closes that are NOT a classified bracket hit. A FULL
 # position closed here (and not a reduce/orphan) is broker-truncated → bucket C.
+#
+# `protection_rearm_exhausted` (FIX-SA-03 / #14241): the naked sweep's re-arm
+# budget ran out and it closed the row at market — a protection-plumbing
+# close, not the strategy's exit decision, so it is reconstructed, never graded.
 _TRUNCATING_EXIT_REASONS = frozenset({
     "reconciler_filled", "reconciler", "stuck_strategy_watchdog",
+    "protection_rearm_exhausted",
 })
+
+# `exit_reason_source` values whose `sl` label came from a MONITOR-initiated
+# market exit rather than the venue's own bracket fill. Such a row is gradeable
+# only when the exit price is a recorded venue fill; unpriced, it is
+# reconstructed (bucket C), never a clean exit on a null price (REVIEW-14241).
+_MONITOR_EXIT_REASON_SOURCES = frozenset({"rearm_preflight"})
 
 # Closes that are themselves a technical artifact regardless of bracket levels.
 _ARTIFACT_EXIT_REASONS = frozenset({
     "adopted_orphan_disappeared", "exit_coverage_no_strategy",
     "exchange_flat_reconciled",
 })
+
+# The M22 pairs sleeve's own bilateral management exit (bucket P). Verified
+# against src/units/strategies/pairs_engine.py::exit_signal (the only writer
+# of `outcome`: "revert" | "stop" | "timeout") and
+# pairs_executor.py::_close_pair / the half-open-cleanup path, which both write
+# `exit_reason = f"pairs_{outcome}"` — so every legitimate pairs-executor close
+# carries the literal prefix "pairs_", never an enumerated finite set (the
+# executor's own M39(B) comment: a fix keyed to named reasons alone left a
+# third, `pairs_timeout`, silently unstamped — match the PREFIX, not a
+# frozenset, so a future outcome value is covered by construction). Journal
+# `strategy_name` for a pairs leg is `f"{pair_config_name}_a"` / `"_b"`
+# (`_leg_strats`), and every configured pair name in `config/pairs.yaml`
+# already starts with `pairs_` (`pairs_sol_btc`, `pairs_bnb_btc`,
+# `pairs_eth_btc`, `pairs_sol_eth`) — verified 2026-09-27 against the live
+# journal via `/api/diag/journal?table=trades` (see
+# ``tests/test_paper_record_classifier.py`` for the exact population). A
+# `reconciler_filled` / `stuck_strategy_watchdog` close on a pairs leg does
+# NOT match this prefix, so it correctly falls through to the ordinary
+# truncating-reconciler (C) check below — a broker/reconciler-forced close on
+# a pairs leg is still a genuine artifact needing reconstruction, not the
+# executor's own decision.
+_PAIRS_STRATEGY_PREFIX = "pairs_"
+_PAIRS_EXIT_REASON_PREFIX = "pairs_"
 
 # Rejection-reason substrings (in notes.reason) that mark a decision/plumbing
 # row that never opened a real position → bucket B.
@@ -93,7 +127,7 @@ class ClassifiedRecord:
     account_class: Optional[str]
     status: Optional[str]
     exit_reason: Optional[str]
-    bucket: str                 # 'A' | 'B' | 'C'
+    bucket: str                 # 'A' | 'B' | 'C' | 'P'
     category: str               # fine-grained sub-reason
     gradeable: bool             # bucket A
     reconstructable: bool       # bucket C
@@ -139,11 +173,12 @@ def _str(v: Any) -> str:
 
 
 def classify_record(rec: Dict[str, Any]) -> ClassifiedRecord:
-    """Classify a single trade-journal record into bucket A / B / C.
+    """Classify a single trade-journal record into bucket A / B / C / P.
 
     Precedence (first match wins): backtest/smoke → orphan/flap → refusal →
-    intent reduce/flip → clean SL/TP (A) → truncating reconciler close (C) →
-    open-at-window-edge (C) → unclassified (B).
+    intent reduce/flip → pairs bilateral management exit (P) → clean SL/TP (A)
+    → truncating reconciler close (C) → open-at-window-edge (C) →
+    unclassified (B).
     """
     notes = _decode_notes(rec.get("notes"))
     status = _str(rec.get("status"))
@@ -206,6 +241,42 @@ def classify_record(rec: Dict[str, Any]) -> ClassifiedRecord:
                    f"intent-layer {intent_action or 'reduce'} leg — partial "
                    "position adjustment, not a gradeable round-trip")
 
+    # 3.5. PAIRS BILATERAL MANAGEMENT EXIT — the M22 pairs sleeve's own joint
+    #      spread-exit decision (pairs_executor._close_pair), not a technical
+    #      artifact. Matched structurally (both the leg's journal strategy
+    #      name and its exit_reason carry the executor's own "pairs_" prefix)
+    #      rather than on an enumerated exit-reason set, so it does not
+    #      silently miss a future outcome value the way a frozenset would
+    #      (see the M39(B) comment in pairs_executor.py this mirrors).
+    #      PI-20260927-YZRZQ725-0004 / review-pack item D4.
+    if (
+        status == "closed"
+        and rec.get("strategy_name")
+        and _str(rec.get("strategy_name")).startswith(_PAIRS_STRATEGY_PREFIX)
+        and exit_reason.startswith(_PAIRS_EXIT_REASON_PREFIX)
+    ):
+        return out("P", f"pairs_bilateral_exit:{exit_reason}", False, False,
+                   f"pairs sleeve's own bilateral management exit ({exit_reason}) "
+                   "— a deliberate strategy-level close, not a technical artifact; "
+                   "excluded from the single-leg scorecard because the true P&L "
+                   "is the sum of both legs of the spread, not either leg alone")
+
+    # 4a. A monitor-initiated stop exit with no recorded fill price — never
+    #     grade a null exit price as a clean exit.
+    if (
+        status == "closed"
+        and exit_reason in _CLEAN_EXIT_REASONS
+        and _str(notes.get("exit_reason_source")) in _MONITOR_EXIT_REASON_SOURCES
+        and rec.get("exit_price") in (None, "", 0, 0.0)
+    ):
+        src = _str(notes.get("exit_reason_source"))
+        if _has_bracket(rec):
+            return out("C", f"truncated:{src}_unpriced", False, True,
+                       f"{src} {exit_reason} exit with no recorded fill price — "
+                       "reconstruct, do not grade")
+        return out("B", f"truncated_no_bracket:{src}_unpriced", False, False,
+                   f"{src} {exit_reason} exit with no fill price and no usable bracket")
+
     # 4. GRADEABLE — opened and reached a genuine SL/TP exit.
     if status == "closed" and exit_reason in _CLEAN_EXIT_REASONS:
         return out("A", f"clean_exit:{exit_reason}", True, False,
@@ -247,14 +318,14 @@ def classify_records(records: Iterable[Dict[str, Any]]) -> Dict[str, Any]:
     much of each strategy's record set is gradeable.
     """
     classified: List[ClassifiedRecord] = [classify_record(r) for r in (records or [])]
-    by_bucket: Dict[str, int] = {"A": 0, "B": 0, "C": 0}
+    by_bucket: Dict[str, int] = {"A": 0, "B": 0, "C": 0, "P": 0}
     by_category: Dict[str, int] = {}
     by_strategy: Dict[str, Dict[str, int]] = {}
     for c in classified:
         by_bucket[c.bucket] = by_bucket.get(c.bucket, 0) + 1
         by_category[c.category] = by_category.get(c.category, 0) + 1
         s = c.strategy or "(unknown)"
-        by_strategy.setdefault(s, {"A": 0, "B": 0, "C": 0})
+        by_strategy.setdefault(s, {"A": 0, "B": 0, "C": 0, "P": 0})
         by_strategy[s][c.bucket] += 1
     total = len(classified)
     return {

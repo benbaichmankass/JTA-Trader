@@ -229,6 +229,8 @@ def analyze_exit_head(
     exit_fee_r: float = 0.0,
     n_trials: int = 1,
     fdr_alpha: float = 0.1,
+    cost_bps: float = 0.0,
+    exit_fee_bps: float = 0.0,
 ) -> Dict[str, Any]:
     feats = _dense_feats(rows, manifest)
     label_cfg = (manifest or {}).get("label_config", {}) if manifest else {}
@@ -250,6 +252,9 @@ def analyze_exit_head(
             "embargo_bars": embargo_bars,
             "exit_threshold": exit_threshold,
             "exit_fee_r": exit_fee_r,
+            "cost_bps": cost_bps,
+            "exit_fee_bps": exit_fee_bps,
+            "cost_basis": _cost_basis(usable, cost_bps, exit_fee_bps, exit_fee_r),
             "n_trials": n_trials,
             "fdr_alpha": fdr_alpha,
         },
@@ -282,7 +287,8 @@ def analyze_exit_head(
     policy_delta_r: List[float] = []
     imp_drop: Dict[str, List[float]] = {c: [] for c in feats}
 
-    for train_idx, test_idx in folds:
+    policy_by_fold: List[Dict[str, Any]] = []
+    for fold_pos, (train_idx, test_idx) in enumerate(folds):
         xt = _np.array([[float(usable[i][c]) for c in feats] for i in train_idx])
         yt = _np.array([float(usable[i]["label_hold"]) for i in train_idx])
         advt = _np.array([float(usable[i].get("advantage_r") or 0.0) for i in train_idx])
@@ -321,22 +327,54 @@ def analyze_exit_head(
                 r2_folds.append(1.0 - ss_res / ss_tot)
 
         # ---- net-of-fee exit-policy sim (per test trade) ----
+        n_before = len(policy_delta_r)
         _policy_sim(
             usable, test_idx, beta, mu, sd, feats,
             exit_threshold, exit_fee_r,
             policy_head_r, policy_base_r, policy_delta_r,
+            cost_bps=cost_bps, exit_fee_bps=exit_fee_bps,
         )
+        policy_by_fold.append(_fold_policy_entry(
+            fold_pos, len(folds), policy_delta_r[n_before:]))
 
     report["regression"] = _summarize_regression(auc_folds, r2_folds, imp_drop, feats)
     report["exit_policy"] = _summarize_policy(
         policy_head_r, policy_base_r, policy_delta_r, n_trials=n_trials
     )
+    if report["exit_policy"].get("computed"):
+        report["exit_policy"]["by_fold"] = policy_by_fold
+        report["exit_policy"]["final_fold"] = _final_fold_entry(policy_by_fold)
     report["verdict"] = _verdict(report)
     return report
 
 
+def _cost_basis(rows, cost_bps, exit_fee_bps, exit_fee_r) -> str:
+    """Say which cost basis the policy sim actually ran on.
+
+    ``gross`` is the zero-cost case the pipeline silently ran on until
+    FIX-CA-28 (both flags defaulted to 0.0 and the workflow never set them).
+    ``gross_panel_lacks_r_per_bp`` means bps costs were asked for but the panel
+    predates the per-row ``r_per_bp`` column, so they could not be applied —
+    reported rather than quietly read as net.
+    """
+    if not (cost_bps or exit_fee_bps):
+        return "net_flat_r" if exit_fee_r else "gross"
+    if not any(r.get("r_per_bp") is not None for r in rows):
+        return "gross_panel_lacks_r_per_bp"
+    return "net_venue_bps"
+
+
 def _policy_sim(usable, test_idx, beta, mu, sd, feats, threshold, fee_r,
-                head_r, base_r, delta_r):
+                head_r, base_r, delta_r, *, cost_bps=0.0, exit_fee_bps=0.0):
+    """Per test trade: the head's realized R vs the fixed-exit baseline.
+
+    Costs (FIX-CA-28): ``cost_bps`` is the venue ROUND-TRIP cost (fee +
+    slippage) charged to BOTH arms — every trade pays it whichever way it
+    exits — so it lowers the levels, Sharpe and PSR but cancels in the delta.
+    ``exit_fee_bps`` and the flat ``fee_r`` are charged only when the head
+    exits early: the extra cost of a discretionary market exit over the
+    resting bracket. bps are converted with the row's own ``r_per_bp``.
+    """
     by_trade: Dict[Any, List[int]] = defaultdict(list)
     for i in test_idx:
         by_trade[usable[i].get("trade_id")].append(i)
@@ -345,7 +383,10 @@ def _policy_sim(usable, test_idx, beta, mu, sd, feats, threshold, fee_r,
         base = usable[idxs[0]].get("trade_realized_r")
         if base is None:
             continue
-        base = float(base)
+        r_per_bp = usable[idxs[0]].get("r_per_bp")
+        r_per_bp = float(r_per_bp) if r_per_bp is not None else 0.0
+        rt_cost = float(cost_bps) * r_per_bp
+        base = float(base) - rt_cost
         xe = _np.array([[float(usable[i][c]) for c in feats] for i in idxs])
         p_hold = _predict_p(beta, (xe - mu) / sd)
         realized = base  # if the head never exits, keep the fixed-exit R
@@ -353,11 +394,41 @@ def _policy_sim(usable, test_idx, beta, mu, sd, feats, threshold, fee_r,
             if p_hold[k] < threshold:  # head says EXIT NOW at this bar
                 upnl = usable[i].get("feat_upnl_r")
                 if upnl is not None:
-                    realized = float(upnl) - float(fee_r)
+                    realized = (float(upnl) - rt_cost - float(fee_r)
+                                - float(exit_fee_bps) * r_per_bp)
                 break
         head_r.append(realized)
         base_r.append(base)
         delta_r.append(realized - base)
+
+
+def _fold_policy_entry(fold_pos: int, n_folds_total: int,
+                       deltas: Sequence[float]) -> Dict[str, Any]:
+    """One fold's paired exit-policy result: n and recovered R (sum of head-minus-baseline).
+
+    ``is_last_block`` marks the fold that tests the LATEST time block (trained only
+    on everything earlier) — the slice RQ-20260928-005's rule registers.
+    """
+    return {
+        "fold": fold_pos,
+        "is_last_block": fold_pos == n_folds_total - 1,
+        "n_oos": len(deltas),
+        "recovered_r": round(float(sum(deltas)), 4),
+        "mean_net_r_improvement": (round(float(sum(deltas)) / len(deltas), 4)
+                                   if deltas else None),
+    }
+
+
+def _final_fold_entry(by_fold: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+    """The last-block fold's entry, or an explicit not-computed state.
+
+    A last block that was skipped (single-class train labels, no fit) must read
+    as not scored, never as the previous fold standing in for it.
+    """
+    for e in by_fold:
+        if e.get("is_last_block"):
+            return dict(e, computed=True)
+    return {"computed": False, "reason": "last time block produced no scored fold"}
 
 
 def _summarize_regression(auc_folds, r2_folds, imp_drop, feats) -> Dict[str, Any]:  # inert: feats — the ranked importance is keyed off imp_drop, which already carries the feature names; feats is redundant
@@ -494,7 +565,16 @@ def main(argv: Optional[List[str]] = None) -> int:
     p.add_argument("--n-folds", type=int, default=5)
     p.add_argument("--embargo-bars", type=int, default=None)
     p.add_argument("--exit-threshold", type=float, default=0.5)
-    p.add_argument("--exit-fee-r", type=float, default=0.0)
+    p.add_argument("--exit-fee-r", type=float, default=0.0,
+                   help="Flat extra R charged on an early exit. Prefer the bps "
+                        "flags, which convert per trade.")
+    p.add_argument("--cost-bps", type=float, default=0.0,
+                   help="Venue ROUND-TRIP cost (fee+slippage, bps of notional) "
+                        "charged to both arms. 0.0 = GROSS; the exit-head "
+                        "workflow resolves it from src.runtime.execution_costs.")
+    p.add_argument("--exit-fee-bps", type=float, default=0.0,
+                   help="Extra cost (bps) of a discretionary early exit over "
+                        "the resting bracket, charged to the head arm only.")
     p.add_argument("--n-trials", type=int, default=1)
     p.add_argument("--fdr-alpha", type=float, default=0.1)
     p.add_argument("--out", default=None)
@@ -506,6 +586,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         rows, manifest, n_folds=args.n_folds, embargo_bars=args.embargo_bars,
         exit_threshold=args.exit_threshold, exit_fee_r=args.exit_fee_r,
         n_trials=args.n_trials, fdr_alpha=args.fdr_alpha,
+        cost_bps=args.cost_bps, exit_fee_bps=args.exit_fee_bps,
     )
 
     # PBO across the config grid, if extra panels supplied.
@@ -514,6 +595,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             [args.panel, *args.config_panels],
             n_folds=args.n_folds, embargo_bars=args.embargo_bars,
             exit_threshold=args.exit_threshold, exit_fee_r=args.exit_fee_r,
+            cost_bps=args.cost_bps, exit_fee_bps=args.exit_fee_bps,
         )
 
     out_path = Path(args.out) if args.out else Path(args.panel).with_suffix(".exit_head.json")
@@ -540,7 +622,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     return 0
 
 
-def _pbo_across_configs(panel_paths, *, n_folds, embargo_bars, exit_threshold, exit_fee_r):
+def _pbo_across_configs(panel_paths, *, n_folds, embargo_bars, exit_threshold, exit_fee_r,
+                        cost_bps=0.0, exit_fee_bps=0.0):
     """Per-trade realized-head-R matrix across configs → PBO (CSCV)."""
     per_config: List[List[float]] = []
     for pp in panel_paths:
@@ -564,7 +647,8 @@ def _pbo_across_configs(panel_paths, *, n_folds, embargo_bars, exit_threshold, e
             if beta is None:
                 continue
             h, b, d = [], [], []
-            _policy_sim(usable, test_idx, beta, mu, sd, feats, exit_threshold, exit_fee_r, h, b, d)
+            _policy_sim(usable, test_idx, beta, mu, sd, feats, exit_threshold, exit_fee_r, h, b, d,
+                        cost_bps=cost_bps, exit_fee_bps=exit_fee_bps)
             by_trade = defaultdict(list)
             for i in test_idx:
                 by_trade[usable[i].get("trade_id")].append(i)

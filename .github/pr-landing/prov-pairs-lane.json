@@ -1,0 +1,8 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "why": "Runtime surfaces: src/runtime/order_monitor.py (_recover_orphan_attribution refuses a package older than 14 days -> bare orphan, never flattened) and src/runtime/exchange_fills_ib.py (an IB commission report with empty execId maps to realized_pnl=None, not 0.0). No order placement, no mode, no config, no strategy/risk change. Also a research-script annotation (r3_cost_fidelity), tests, pipeline and checklist rows.",
+  "recorded_decision": {"kind": "operator_decision", "ref": "PAIRS-GAPS"},
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 runtime read/attribution paths; the manager merges."
+}

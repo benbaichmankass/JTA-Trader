@@ -52,7 +52,11 @@ class _Execution:
 
 
 class _Report:
-    def __init__(self, commission=0.62, currency="USD", realized_pnl=None):
+    def __init__(self, commission=0.62, currency="USD", realized_pnl=None,
+                 exec_id="0001"):
+        # A REPORTED commission report carries its execId; ib_insync's default
+        # placeholder (never reported) carries ''. See ib_fill_to_row.
+        self.execId = exec_id
         self.commission = commission
         self.currency = currency
         self.realizedPNL = realized_pnl
@@ -161,6 +165,18 @@ def test_zero_realized_pnl_is_preserved_as_zero():
     row = ib_fill_to_row(_Fill(report=_Report(realized_pnl=0.0)), "ib_paper")
     assert row["raw"]["realized_pnl"] == 0.0
     assert realized_pnl_from_raw(row["raw"]) == 0.0
+
+
+def test_unreported_default_commission_report_is_absent_not_zero():
+    """PROV-IB: ib_insync's placeholder ``CommissionReport()`` (execId='',
+    realizedPNL=0.0, commission=0.0) must not read as a measured break-even."""
+    row = ib_fill_to_row(
+        _Fill(report=_Report(commission=0.0, realized_pnl=0.0, exec_id="")),
+        "ib_paper",
+    )
+    assert row["raw"]["realized_pnl"] is None
+    assert realized_pnl_from_raw(row["raw"]) is None
+    assert row["fee"] == 0.0
 
 
 # --------------------------------------------------------------------------

@@ -266,6 +266,10 @@ _CANONICAL_UNITS: tuple[str, ...] = (
     # rationale as the watchdog / bridge / insights pairs above.
     "ict-hourly-snapshot.service",
     "ict-hourly-snapshot.timer",
+    # FIX-SA-12 (2026-09-29): pushes when the TRAINER root is >= 90% used, read
+    # from the published mirror. Queryable so a session can confirm it is firing.
+    "ict-trainer-disk-alarm.service",
+    "ict-trainer-disk-alarm.timer",
     # MI-83 (2026-09-02). The hourly work digest, moved off GitHub Actions
     # cron onto the VM's own clock: work-digest.yml declares `20 * * * *` and
     # fired 5 times in a day at :19/:10/:33/:47 over its complete run history.
@@ -273,6 +277,10 @@ _CANONICAL_UNITS: tuple[str, ...] = (
     # alive?" for the timer as well as the run.
     "ict-work-digest.service",
     "ict-work-digest.timer",
+    # WORK-SYSTEM (2026-10-04). The daily 05:30Z work-report GENERATOR (sends
+    # nothing; the hourly digest above is the one Telegram carrier).
+    "ict-work-report.service",
+    "ict-work-report.timer",
     "ict-health-snapshot.service",
     "ict-health-snapshot.timer",
     # 2026-06-28 (full-system audit Workstream B) — two recurring trader-VM
@@ -310,6 +318,41 @@ _CANONICAL_UNITS: tuple[str, ...] = (
     # rationale as the watchdog / insights / snapshot pairs above.
     "ict-exchange-fills-pull.service",
     "ict-exchange-fills-pull.timer",
+    # 2026-09-27 (FIX-CA-OPS2) — Alpaca fills, split off
+    # ict-exchange-fills-pull.service so an Alpaca-side failure can never
+    # skip the Bybit wallet ledger sharing that unit's ExecStart chain. Same
+    # rationale as its Bybit sibling above: queryable so a session can verify
+    # the pull is firing on cadence and tail its journal.
+    "ict-alpaca-fills-pull.service",
+    "ict-alpaca-fills-pull.timer",
+    # 2026-09-28 (W6-PROP-FEED) — the 5-min read-only breakout_1
+    # account_status feed; queryable so its tick journal (redacted output,
+    # trip/backoff lines) can be tailed without SSH.
+    "ict-prop-feed.service",
+    "ict-prop-feed.timer",
+    # 2026-09-30 (TRADEIFY-WIRE) — the per-account feed INSTANCE for
+    # tradeify_1 (template deploy/ict-prop-feed@.service, opt-in timer);
+    # queryable so a session can confirm it is on and tail its journal.
+    "ict-prop-feed@tradeify_1.service",
+    "ict-prop-feed@tradeify_1.timer",
+    # 2026-09-28 (PROP-EXEC) — the breakout_1 step-3 executor. Ships NOT
+    # enabled (its timer is in deploy/opt-in/); queryable so a session can
+    # confirm it is off, and tail its redacted cycle journal once enabled.
+    "ict-prop-executor.service",
+    "ict-prop-executor.timer",
+    # 2026-10-03 (TRADEIFY-EXECUTOR) — the per-account executor INSTANCE for
+    # tradeify_1 (template deploy/ict-prop-executor@.service, opt-in timer);
+    # queryable so a session can confirm it is on/off and tail its cycle
+    # journal (account, env_mode) without SSH.
+    "ict-prop-executor@tradeify_1.service",
+    "ict-prop-executor@tradeify_1.timer",
+    # 2026-10-04 (VELOTRADE-WIRE) — the same two template instances for
+    # velotrade_1, queryable before either is enabled so a session can
+    # confirm they are off.
+    "ict-prop-feed@velotrade_1.service",
+    "ict-prop-feed@velotrade_1.timer",
+    "ict-prop-executor@velotrade_1.service",
+    "ict-prop-executor@velotrade_1.timer",
     "ict-exchange-funding-pull.service",
     "ict-exchange-funding-pull.timer",
     "ict-mes-ibkr-pull.service",
@@ -346,6 +389,7 @@ _CONVICTION_ARBITRATION_LOG = runtime_logs_dir() / "conviction_arbitration.jsonl
 _EXIT_LADDER_SOAK_LOG = runtime_logs_dir() / "exit_ladder_soak.jsonl"
 _FC_GEOMETRY_SOAK_LOG = runtime_logs_dir() / "fc_geometry_soak.jsonl"
 _EXIT_LEVER_SOAK_LOG = runtime_logs_dir() / "exit_lever_soak.jsonl"
+_VOL_TRAIL_SHADOW_LOG = runtime_logs_dir() / "vol_trail_shadow.jsonl"
 _TARGET_EXTENSION_SOAK_LOG = runtime_logs_dir() / "target_extension_soak.jsonl"
 # The protection RE-ASSERT soak (2026-08-23). At the default `annotate` mode
 # this is the exact row list to review before flipping PROTECTION_REASSERT_MODE
@@ -456,7 +500,7 @@ _PROP_TICKET_RISK_SOAK_LOG = (
 # always the same: "the mechanism stopped firing" and "the mechanism fired and
 # the condition simply persists" are indistinguishable from outside, so a
 # broken cadence looks exactly like a quiet one.
-_DAILY_CAP_ALERT_STATE = runtime_logs_dir() / "daily_cap_alert_state.json"
+_DAILY_DD_SWITCH_STATE = runtime_logs_dir() / "daily_dd_switch_state.json"
 _EXIT_LOOP_HEALTH_ALERT_STATE = (
     runtime_logs_dir() / "exit_loop_health_alert_state.json"
 )
@@ -503,12 +547,41 @@ _WORK_DIGEST_RECEIPT = (
     Path(repo_root()) / "runtime_logs" / "work_digest_receipt.json"
 )
 
+# WORK-SYSTEM (2026-10-04). The attention pass's receipt — stamped on every
+# pass. The pass rides ict-work-digest (no unit of its own), so it is anchored
+# to repo_root() for the same reason as the entry above.
+_ATTENTION_WATCH_RECEIPT = (
+    Path(repo_root()) / "runtime_logs" / "attention_watch_receipt.json"
+)
+
+# TRAIL-OBSERVABILITY (2026-10-07, PI-20261006-KX6ZKFNA-0003). The prop trail's
+# former pause latch (`modify_rollout.json`; retired by NO-HALT 2026-10-09, so
+# present only if old code wrote it -- the next trail pass moves it aside), its
+# last armed step's NON-blocking record (`modify_rollout_last.json`) and the
+# per-ticket replay state (`trail_state.json`: fail_streak / next_try_at /
+# red_flagged per ticket) live in the executor's state dir on the VM, outside
+# runtime_logs/, so a relay-bound session could not otherwise read them. The path mirrors
+# the WRITER's resolver (scripts/prop/prop_executor_tick.py::default_state_dir
+# and scripts/ops/prop_executor_tick.sh): breakout_1 keeps `<base>/executor`,
+# every other account is `<base>/accounts/<account>/executor`. Contents carry no
+# secret: the latch is {state, at, symbol, side, from_sl, to_sl, quote | why |
+# sl} (why is _mask_public_text-masked) and the state is per-ticket flags.
+def _prop_executor_state_dir(account: str) -> Path:
+    base = Path(os.environ.get("PROP_BROWSER_BASE")
+                or Path.home() / ".cache" / "metis-prop-browser")
+    if account == "breakout_1":
+        return base / "executor"
+    return base / "accounts" / account / "executor"
+
+
 _LOG_FILES: dict[str, Path] = {
     "audit": _AUDIT_LOG,
     # MI-83. "Has the hourly digest actually fired?" — answerable by READING,
     # not by trusting an `OnCalendar=` line. This repo has measured that a
     # declared cadence is not a run.
     "work_digest_receipt": _WORK_DIGEST_RECEIPT,
+    # WORK-SYSTEM. "Did the attention watch run, and what did it send?"
+    "attention_watch_receipt": _ATTENTION_WATCH_RECEIPT,
     "status": _STATUS_JSON,
     "heartbeat": _HEARTBEAT,
     "bot_log": _BOT_LOG,
@@ -573,6 +646,7 @@ _LOG_FILES: dict[str, Path] = {
     # docs/research/M20-exit-refinement-2026-07-12.md § 5). Absent until the
     # first would-fire trade.
     "exit_lever_soak": _EXIT_LEVER_SOAK_LOG,
+    "vol_trail_shadow": _VOL_TRAIL_SHADOW_LOG,
     "target_extension_soak": _TARGET_EXTENSION_SOAK_LOG,
     "protection_reassert_soak": _PROTECTION_REASSERT_SOAK_LOG,
     "stray_oca_soak": _STRAY_OCA_SOAK_LOG,
@@ -790,6 +864,9 @@ _LOG_FILES: dict[str, Path] = {
     # line-wrapped id as a reference resolving to NOTHING, which is what a
     # 'tracked by BL-X' that tracks nobody looks like to that guard.)
     "prop_ticket_risk_soak": _PROP_TICKET_RISK_SOAK_LOG,
+    # 2026-09-28 (PROP-EXEC): one row per trade RiskManager let through a
+    # breach because its account is breach_guards: report (breakout_1).
+    "breach_accepted": runtime_logs_dir() / "breach_accepted.jsonl",
     "exit_loop_health_alert_state": _EXIT_LOOP_HEALTH_ALERT_STATE,
     # Daily-cap alert latch.
     # ── The two "liveness watchdog" state files. THEY ARE DIFFERENT THINGS AND
@@ -801,10 +878,12 @@ _LOG_FILES: dict[str, Path] = {
     #
     #   * `heartbeat_check_state.json`  <- scripts/check_heartbeat.py, the EXTERNAL
     #     dead-man switch behind ict-liveness-watchdog.timer. Its state keys are
-    #     `autoheal_attempts`, `autoheal_exhausted_alerted`,
-    #     `last_autoheal_attempt_ts`. THIS is the restart budget. Once exhausted
-    #     the watchdog goes alert-only and stops auto-restarting the trader, so
-    #     without a read surface "the watchdog will restart the trader if it
+    #     `autoheal_attempts`, `autoheal_red_flag_alerted`,
+    #     `autoheal_next_backoff_s`, `last_autoheal_attempt_ts`. THIS is the
+    #     restart pacing. Since 2026-10-09 (NO-HALT) it never stops restarting:
+    #     past --max-restarts it raises one red flag and backs off up to
+    #     --max-backoff-min (until then it went EXHAUSTED and alert-only).
+    #     Without a read surface "the watchdog will restart the trader if it
     #     stalls" is an assumption, not an observation.
     #
     #   * `liveness_watchdog_state.json` <- src/runtime/liveness_watchdog.py, a
@@ -818,7 +897,7 @@ _LOG_FILES: dict[str, Path] = {
         runtime_logs_dir() / "heartbeat_check_state.json",
     "liveness_watchdog_state":
         runtime_logs_dir() / "liveness_watchdog_state.json",
-    "daily_cap_alert_state": _DAILY_CAP_ALERT_STATE,
+    "daily_dd_switch_state": _DAILY_DD_SWITCH_STATE,
     # THE OPERATOR-ALERT RING (BL-20260901-OPERATOR-ALERTS-HAS-NO-READ-SURFACE).
     # `execution_diagnostics._append_operator_alert` writes every alert that
     # reaches the `/api/bot/notifications` banner feed here -- close_failure,
@@ -906,6 +985,30 @@ _LOG_FILES: dict[str, Path] = {
         runtime_logs_dir() / "silent_refusal_alert_state.json",
     "prop_fills_staleness_state":
         runtime_logs_dir() / "prop_fills_staleness_state.json",
+    "prop_trail_latch_breakout_1":
+        _prop_executor_state_dir("breakout_1") / "modify_rollout.json",
+    "prop_trail_last_step_breakout_1":
+        _prop_executor_state_dir("breakout_1") / "modify_rollout_last.json",
+    "prop_trail_state_breakout_1":
+        _prop_executor_state_dir("breakout_1") / "trail_state.json",
+    "prop_trail_latch_breakout_2":
+        _prop_executor_state_dir("breakout_2") / "modify_rollout.json",
+    "prop_trail_last_step_breakout_2":
+        _prop_executor_state_dir("breakout_2") / "modify_rollout_last.json",
+    "prop_trail_state_breakout_2":
+        _prop_executor_state_dir("breakout_2") / "trail_state.json",
+    "prop_trail_latch_tradeify_1":
+        _prop_executor_state_dir("tradeify_1") / "modify_rollout.json",
+    "prop_trail_last_step_tradeify_1":
+        _prop_executor_state_dir("tradeify_1") / "modify_rollout_last.json",
+    "prop_trail_state_tradeify_1":
+        _prop_executor_state_dir("tradeify_1") / "trail_state.json",
+    "prop_trail_latch_velotrade_1":
+        _prop_executor_state_dir("velotrade_1") / "modify_rollout.json",
+    "prop_trail_last_step_velotrade_1":
+        _prop_executor_state_dir("velotrade_1") / "modify_rollout_last.json",
+    "prop_trail_state_velotrade_1":
+        _prop_executor_state_dir("velotrade_1") / "trail_state.json",
     "target_naked_alert_state":
         runtime_logs_dir() / "target_naked_alert_state.json",
     # Registered IN THE SAME COMMIT that ships its writer. #8778 shipped
@@ -952,6 +1055,20 @@ _LOG_FILES: dict[str, Path] = {
     # on the one surface a relay-bound session can reach.
     "partial_stop_coverage_alert_state":
         runtime_logs_dir() / "partial_stop_coverage_alert_state.json",
+    # REVIEW-14123 (FIX-SA-03): `_note_protection_unreadable` pages CRITICAL
+    # when an Alpaca position's resting-order state stays unreadable, through
+    # `_cooldown_admits("alpaca_protection_unreadable", ...)`. Registered in
+    # the same commit as its writer, like every sibling above.
+    "alpaca_protection_unreadable_alert_state":
+        runtime_logs_dir() / "alpaca_protection_unreadable_alert_state.json",
+    # PI-20260929-PR6YRTQY-0005: the durable per-row re-arm attempt budget
+    # (`_record_rearm_attempt`) and the refusal-page cooldown
+    # (`_cooldown_admits("alpaca_rearm_refused", ...)`) — both suppress or
+    # gate a money-path action, so both must be readable from outside.
+    "alpaca_rearm_attempts_alert_state":
+        runtime_logs_dir() / "alpaca_rearm_attempts_alert_state.json",
+    "alpaca_rearm_refused_alert_state":
+        runtime_logs_dir() / "alpaca_rearm_refused_alert_state.json",
     # MI-276. ⚠️ THE FIRST PUSH REGISTERED ONLY THE TWO COOLDOWN FILES WHILE
     # THIS COMMENT ALREADY CLAIMED ALL FOUR, AND THE TWO IT OMITTED WERE THE
     # ONES THAT MATTER: `OI-20260911-THE-TWO-DETECTORS-...`'s clears_when
@@ -1029,6 +1146,12 @@ _LOG_FILES: dict[str, Path] = {
     # were still sent. A reader may conclude a hash PRESENT here was enqueued;
     # a reader may NOT conclude that a hash missing here was not.
     "pending_pings_delivered": _PENDING_PINGS_DELIVERED,
+    # OA-16(b) (PI-20261004-GCFA5DOR-0010): FIX-SA-08's OnFailure handler
+    # (scripts/ops/notify_unit_failure.py) appends one row per failed unit
+    # here, pinged or suppressed. Without this entry a session could not
+    # observe that the handler fired. ABSENT = no unit failure recorded on
+    # this VM since the file was last reset (VM-local, not in git).
+    "unit_failures": runtime_logs_dir() / "unit_failures.jsonl",
 }
 
 _DEFAULT_LIMIT = 100
@@ -1087,6 +1210,56 @@ def _require_diag_token(request: Request) -> None:
             detail={"error": "invalid_token"},
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+def _diag_accounts(
+    route: str,
+    list_accounts: Any,
+    account_id: str | None = None,
+    *,
+    require_known: bool = True,
+) -> list[dict[str, Any]]:
+    """The configured accounts for a venue-truth diag route, or an HTTP error.
+
+    FIX-CA-12 (CA-A08): these routes used to swallow a failed account read to
+    ``accounts = []`` and answer 200, and to answer 200 ``accounts: []`` for an
+    ``account_id`` that matches nothing — so *could not look* and *wrong id*
+    read exactly like *looked, the venue holds nothing*. Now:
+
+    * ``list_accounts()`` raised, or returned ``[]`` because ``accounts.yaml``
+      failed to read -> 503 ``accounts_unreadable``;
+    * ``require_known`` and ``account_id`` matches no configured account ->
+      404 ``unknown_account_id``.
+    """
+    try:
+        accounts = list_accounts() or []
+        unreadable: str | None = None
+        if not accounts:
+            from src.units.ui.data_loaders import accounts_yaml_read_errors
+            errs = accounts_yaml_read_errors()
+            if errs:
+                unreadable = "; ".join(
+                    str(e.get("error") or e) for e in errs)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: logged + re-raised as 503 (not swallowed)
+        unreadable = f"{type(exc).__name__}: {exc}"
+    if unreadable is not None:
+        logger.warning("%s: list_accounts failed: %s", route, unreadable)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"error": "accounts_unreadable", "detail": unreadable},
+        )
+    if require_known and account_id and not any(
+            (a or {}).get("account_id") == account_id for a in accounts):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": "unknown_account_id",
+                "account_id": account_id,
+                "configured": sorted(
+                    str((a or {}).get("account_id")) for a in accounts),
+            },
+        )
+    return accounts
 
 
 def _clamp(value: int | None, default: int, max_: int) -> int:
@@ -2107,6 +2280,54 @@ def get_journalctl(
     )
 
 
+# Paths deploy_pull_restart.sh does NOT restart for (its RUNTIME_CHANGES filter).
+# Keep in lock-step with that regex: `restart_pending` must mean "a commit the
+# deploy would restart for is not loaded", not "the shas differ".
+# #15830 widened the deploy's set and this copy was not updated, so
+# restart_pending read True on research-only commits (OPS-AUDIT 2026-10-04,
+# OA-14); tests/test_diag_restart_pending_lockstep.py now pins the two equal.
+_NON_RUNTIME_PATHS_RE = re.compile(
+    r"^(docs/|tests/|\.claude/|\.github/|[^/]+\.md$|research/|runtime_logs/"
+    r"|scripts/research/|scripts/ci/|comms/research/|comms/strategy_evidence/|comms/macro/)"
+)
+# ...except these scripts/research modules, which the web-api's brief imports
+# in-process (OA-16(d), PI-20261004-GCFA5DOR-0010). They stay runtime. Mirrors
+# the deploy's IN_PROCESS_CHANGES grep. Same lock-step test as above.
+_IN_PROCESS_RUNTIME_PATHS_RE = re.compile(
+    r"^scripts/research/(dispatch_queue|e35_bracket_geometry_sweep|m20_fleet_exit_sweep|m20_wf_effective|queue_grade|queue_replenish|queue_throughput|research_queue)\.py$"
+)
+
+
+def _is_runtime_path(line: str) -> bool:
+    return bool(line) and (
+        not _NON_RUNTIME_PATHS_RE.match(line) or bool(_IN_PROCESS_RUNTIME_PATHS_RE.match(line))
+    )
+
+
+def _restart_pending(running: str, on_disk: str) -> bool | None:
+    """True when a RUNTIME path differs between the loaded sha and the checkout.
+
+    Three-way: None means we could not look (unknown sha, or the diff failed,
+    e.g. the running sha is absent from a shallow clone) -- never False.
+    """
+    if running == "unknown" or on_disk == "unknown":
+        return None
+    if running == on_disk:
+        return False
+    try:
+        out = subprocess.run(
+            ["git", "diff", "--no-renames", "--name-only", running, on_disk],
+            cwd=str(repo_root()),
+            capture_output=True, text=True, timeout=5, check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.debug("restart_pending: git diff could not run: %s", exc)
+        return None
+    if out.returncode != 0:
+        return None
+    return any(_is_runtime_path(line) for line in out.stdout.splitlines())
+
+
 @router.get("/version")
 def get_version(request: Request) -> dict[str, Any]:
     """Diagnostic — git SHA + captured timestamp of the running web-api
@@ -2123,13 +2344,8 @@ def get_version(request: Request) -> dict[str, Any]:
     """
     _require_diag_token(request)
     on_disk = _resolve_git_sha()
-    # Three-way, never collapsed. "unknown" on either side means we could not
-    # look, which is NOT the same as "they agree" -- so restart_pending is None
-    # rather than False when either sha is unresolvable.
-    if _RUNNING_GIT_SHA == "unknown" or on_disk == "unknown":
-        restart_pending = None
-    else:
-        restart_pending = _RUNNING_GIT_SHA != on_disk
+    # Three-way, never collapsed: None = we could not look (see _restart_pending).
+    restart_pending = _restart_pending(_RUNNING_GIT_SHA, on_disk)
     return {
         # The sha the RUNNING process was loaded from -- captured once at
         # import. This is what the field name and this endpoint's whole
@@ -2139,9 +2355,10 @@ def get_version(request: Request) -> dict[str, Any]:
         # The sha currently checked out in the working tree, resolved live.
         # A pull advances this WITHOUT restarting anything.
         "git_sha_on_disk": on_disk,
-        # True when the tree has moved ahead of the running process, i.e. code
-        # was pulled and nothing restarted -- the 2026-05-09 incident state.
-        # None when either side is unknown (we could not look).
+        # True when a RUNTIME-path change (not docs/tests/.claude/.github/
+        # top-level md) sits between the running sha and the checkout -- the
+        # 2026-05-09 incident state. False when the shas differ only by files
+        # the deploy skips restarts for (FIX-SA-11). None = could not look.
         "restart_pending": restart_pending,
         "captured_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -2181,6 +2398,137 @@ def get_log_file(
         "size_bytes": path.stat().st_size,
         "lines": [ln.rstrip("\n") for ln in content[-n:]],
     }
+
+
+# ---------------------------------------------------------------------------
+# /log_aggregate (PI-20261004-4GA8WQPA-0003) -- the multi-day reader a 1000-line
+# /log_file TAIL cannot be. bybit_coverage_soak.jsonl (83 MB) and
+# position_read_state_soak.jsonl (136 MB) grow far faster than 1000 lines per
+# day, so their tail spans ONE UTC day while their closing criteria are
+# multi-day ("rows across >= 3 distinct UTC days", "at least one
+# verdicts_differ=true row"). Until this existed those soaks could only be
+# graded could-not-look. It streams the WHOLE file once and returns counts only
+# -- never row content -- so it is no wider a read than /log_file.
+# ---------------------------------------------------------------------------
+_AGG_FIELD_RE = re.compile(r"^[A-Za-z0-9_]{1,64}$")
+_AGG_MAX_FIELDS = 6
+_AGG_MAX_VALUES = 20          # distinct values kept per field before "(other)"
+_AGG_TIME_BUDGET_S = 25.0     # whole-file scan must not hold a worker forever
+_AGG_DAY_KEYS = ("logged_at_utc", "ts", "logged_at", "timestamp")
+
+
+def _agg_day(row: dict) -> str | None:
+    for k in _AGG_DAY_KEYS:
+        v = row.get(k)
+        if isinstance(v, str) and len(v) >= 10 and v[4] == "-" and v[7] == "-":
+            return v[:10]
+    return None
+
+
+def aggregate_jsonl(path: Path, fields: list[str], count_true: list[str],
+                    account_key: str = "account_id",
+                    time_budget_s: float = _AGG_TIME_BUDGET_S) -> dict[str, Any]:
+    """Stream ``path`` once; per UTC day count rows, per account, the value
+    distribution of each of ``fields`` and the rows where each of ``count_true``
+    is truthy-and-nonzero.
+
+    ``read_state`` is ``complete`` or ``time_budget_hit``; the latter means the
+    counts are a LOWER BOUND over the lines scanned, never the whole file, and a
+    caller must not read an absent day as "no rows that day". Lines that are not
+    a JSON object are counted in ``unparseable_lines`` and rows with no
+    parseable timestamp in ``rows_without_day`` -- neither is silently dropped.
+    """
+    t0 = time.monotonic()
+    days: dict[str, dict[str, Any]] = {}
+    scanned = unparseable = no_day = 0
+    state = "complete"
+    with path.open("rb") as fh:
+        for raw in fh:
+            scanned += 1
+            if scanned % 2000 == 0 and time.monotonic() - t0 > time_budget_s:
+                state = "time_budget_hit"
+                break
+            try:
+                row = json.loads(raw)
+            except ValueError:
+                unparseable += 1
+                continue
+            if not isinstance(row, dict):
+                unparseable += 1
+                continue
+            day = _agg_day(row)
+            if day is None:
+                no_day += 1
+                continue
+            d = days.setdefault(day, {"rows": 0, "by_account": {}, "values": {}, "true_counts": {}})
+            d["rows"] += 1
+            acct = row.get(account_key)
+            if acct is not None:
+                d["by_account"][str(acct)] = d["by_account"].get(str(acct), 0) + 1
+            for f in fields:
+                if f in row:
+                    bucket = d["values"].setdefault(f, {})
+                    key = json.dumps(row[f], sort_keys=True) if not isinstance(row[f], str) else row[f]
+                    if key not in bucket and len(bucket) >= _AGG_MAX_VALUES:
+                        key = "(other)"
+                    bucket[key] = bucket.get(key, 0) + 1
+            for f in count_true:
+                v = row.get(f)
+                if v is True or (isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0):
+                    d["true_counts"][f] = d["true_counts"].get(f, 0) + 1
+    return {
+        "read_state": state,
+        "scanned_lines": scanned,
+        "unparseable_lines": unparseable,
+        "rows_without_day": no_day,
+        "distinct_utc_days": len(days),
+        "first_day": min(days) if days else None,
+        "last_day": max(days) if days else None,
+        "days": {k: days[k] for k in sorted(days)},
+        "elapsed_s": round(time.monotonic() - t0, 3),
+    }
+
+
+@router.get("/log_aggregate")
+def get_log_aggregate(
+    request: Request,
+    name: str,
+    fields: str = "",
+    count_true: str = "",
+    account_key: str = "account_id",
+) -> dict[str, Any]:
+    """Whole-file, counts-only aggregate of an allowlisted ``.jsonl`` log,
+    grouped by UTC day (see the block comment above). ``fields`` and
+    ``count_true`` are CSV lists of top-level keys (``[A-Za-z0-9_]``, at most 6
+    each); e.g. ``name=bybit_coverage_soak&fields=mode,binding&count_true=
+    verdicts_differ``. Row content is never returned."""
+    _require_diag_token(request)
+    if name not in _LOG_FILES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": "unknown_log_file", "allowed": sorted(_LOG_FILES.keys())},
+        )
+    f_list = [x.strip() for x in fields.split(",") if x.strip()]
+    t_list = [x.strip() for x in count_true.split(",") if x.strip()]
+    for k in (*f_list, *t_list, account_key):
+        if not _AGG_FIELD_RE.match(k):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail={"error": "bad_field_name", "field": k})
+    if len(f_list) > _AGG_MAX_FIELDS or len(t_list) > _AGG_MAX_FIELDS:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail={"error": "too_many_fields", "max": _AGG_MAX_FIELDS})
+    path = _LOG_FILES[name]
+    if not path.exists():
+        return {"name": name, "path": str(path), "present": False}
+    if path.suffix != ".jsonl":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail={"error": "not_jsonl", "name": name})
+    try:
+        agg = aggregate_jsonl(path, f_list, t_list, account_key)
+    except OSError as exc:
+        return {"name": name, "path": str(path), "present": True, "error": str(exc)}
+    return {"name": name, "path": str(path), "present": True,
+            "size_bytes": path.stat().st_size, **agg}
 
 
 @router.get("/shadow_stats")
@@ -2291,11 +2639,7 @@ async def get_exchange_positions(
             detail={"error": "data_loaders_unavailable", "detail": str(exc)},
         ) from exc
 
-    try:
-        accounts = list_accounts() or []
-    except Exception as exc:  # noqa: BLE001  # allow-silent: read-only diag; logged, returns empty accounts so the call still answers
-        logger.warning("get_exchange_positions: list_accounts failed: %s", exc)
-        accounts = []
+    accounts = _diag_accounts("get_exchange_positions", list_accounts, account_id)
 
     out: list[dict[str, Any]] = []
     for acc in accounts:
@@ -2335,6 +2679,10 @@ async def get_exchange_positions(
                     logger.warning(
                         "get_exchange_positions: %s symbol read %s raised %s",
                         aid, want_symbol, exc)
+            # collapsed-state: could_not_look — forwards the venue helper's
+            # `query_state` VERBATIM into `symbol_read` (rows_returned / no_rows
+            # reach the response unchanged); the one branch of its own is the
+            # raised-read `could_not_look`.
             row["symbol_read"] = (
                 "not_bybit" if not is_bybit
                 else (books or {}).get("query_state") if isinstance(books, dict)
@@ -2409,11 +2757,7 @@ async def get_venue_session(
             detail={"error": "data_loaders_unavailable", "detail": str(exc)},
         ) from exc
 
-    try:
-        accounts = list_accounts() or []
-    except Exception as exc:  # noqa: BLE001  # allow-silent: read-only diag; logged, returns empty accounts so the call still answers
-        logger.warning("get_venue_session: list_accounts failed: %s", exc)
-        accounts = []
+    accounts = _diag_accounts("get_venue_session", list_accounts, account_id)
 
     out: list[dict[str, Any]] = []
     for acc in accounts:
@@ -2535,11 +2879,7 @@ async def get_ib_open_orders(
             detail={"error": "data_loaders_unavailable", "detail": str(exc)},
         ) from exc
 
-    try:
-        accounts = list_accounts() or []
-    except Exception as exc:  # noqa: BLE001  # allow-silent: read-only diag; logged, returns empty accounts so the call still answers
-        logger.warning("get_ib_open_orders: list_accounts failed: %s", exc)
-        accounts = []
+    accounts = _diag_accounts("get_ib_open_orders", list_accounts, account_id)
 
     out: list[dict[str, Any]] = []
     for acc in accounts:
@@ -2722,11 +3062,7 @@ def get_broker_account_status(
             detail={"error": "loaders_unavailable", "detail": str(exc)},
         ) from exc
 
-    try:
-        accounts = list_accounts() or []
-    except Exception as exc:  # noqa: BLE001  # allow-silent: read-only diag; logged, empty accounts so the call still answers
-        logger.warning("get_broker_account_status: list_accounts failed: %s", exc)
-        accounts = []
+    accounts = _diag_accounts("get_broker_account_status", list_accounts, account_id)
 
     out: list[dict[str, Any]] = []
     for acc in accounts:
@@ -2880,6 +3216,7 @@ def get_bybit_wallet_truth(
     request: Request,
     account_id: str | None = None,
     days: int = 30,
+    by_day: bool = False,
 ) -> dict[str, Any]:
     """**Live** account-level wallet truth for Bybit, from the venue's own
     transaction log — the read surface for the API figure that replaced a
@@ -2950,6 +3287,10 @@ def get_bybit_wallet_truth(
                 window_start_ms=start_ms, window_end_ms=end_ms,
             )
             d = v.as_dict()
+            if by_day:
+                # Per-UTC-day series for the journal-vs-wallet delta
+                # (LEDGER-REFRESH); sums to the headline `realized_usd`.
+                d["daily"] = _wt.daily_buckets(rows)
             if not rows:
                 # The store holding nothing for this account is ambiguous from
                 # the store alone: never pulled, or pulled and genuinely empty.
@@ -3240,11 +3581,7 @@ async def get_bybit_open_orders(
             detail={"error": "data_loaders_unavailable", "detail": str(exc)},
         ) from exc
 
-    try:
-        accounts = list_accounts() or []
-    except Exception as exc:  # noqa: BLE001  # allow-silent: read-only diag; logged, returns empty accounts so the call still answers
-        logger.warning("get_bybit_open_orders: list_accounts failed: %s", exc)
-        accounts = []
+    accounts = _diag_accounts("get_bybit_open_orders", list_accounts, account_id)
 
     out: list[dict[str, Any]] = []
     for acc in accounts:
@@ -3334,11 +3671,10 @@ async def get_bybit_raw_order_history(
             detail={"error": "data_loaders_unavailable", "detail": str(exc)},
         ) from exc
 
-    try:
-        accounts = list_accounts() or []
-    except Exception as exc:  # noqa: BLE001  # allow-silent: read-only diag; logged, still answers
-        logger.warning("get_bybit_raw_order_history: list_accounts failed: %s", exc)
-        accounts = []
+    # Unknown account_id keeps its explicit read_state below; only an
+    # unreadable account list is an error here (FIX-CA-12).
+    accounts = _diag_accounts("get_bybit_raw_order_history", list_accounts, account_id,
+                              require_known=False)
 
     acc = next((a for a in accounts if (a or {}).get("account_id") == account_id), None)
     if acc is None:
@@ -3432,11 +3768,10 @@ async def get_bybit_raw_closed_pnl(
             detail={"error": "data_loaders_unavailable", "detail": str(exc)},
         ) from exc
 
-    try:
-        accounts = list_accounts() or []
-    except Exception as exc:  # noqa: BLE001  # allow-silent: read-only diag; logged, still answers
-        logger.warning("get_bybit_raw_closed_pnl: list_accounts failed: %s", exc)
-        accounts = []
+    # Unknown account_id keeps its explicit read_state below; only an
+    # unreadable account list is an error here (FIX-CA-12).
+    accounts = _diag_accounts("get_bybit_raw_closed_pnl", list_accounts, account_id,
+                              require_known=False)
 
     acc = next((a for a in accounts if (a or {}).get("account_id") == account_id), None)
     if acc is None:
@@ -3554,11 +3889,7 @@ async def get_bybit_raw_positions(
             detail={"error": "data_loaders_unavailable", "detail": str(exc)},
         ) from exc
 
-    try:
-        accounts = list_accounts() or []
-    except Exception as exc:  # noqa: BLE001  # allow-silent: read-only diag; logged, returns empty accounts so the call still answers
-        logger.warning("get_bybit_raw_positions: list_accounts failed: %s", exc)
-        accounts = []
+    accounts = _diag_accounts("get_bybit_raw_positions", list_accounts, account_id)
 
     out: list[dict[str, Any]] = []
     for acc in accounts:
@@ -3596,6 +3927,89 @@ async def get_bybit_raw_positions(
         "requested_account_id": account_id,
         "count": len(out),
         "accounts": out,
+    }
+
+
+@router.get("/alpaca_order_history")
+async def get_alpaca_order_history(
+    request: Request,
+    account_id: str,
+    order_ids: str | None = None,
+    after: str | None = None,
+    until: str | None = None,
+    symbols: str | None = None,
+    limit: int = 100,
+) -> dict[str, Any]:
+    """Read-only **Alpaca order history**: every status, bracket legs nested.
+
+    FIX-SA-03 step 1 (E75 audit). ``/alpaca_open_orders`` says what rests NOW;
+    this says what rested THEN -- each order's ``status`` and lifecycle
+    timestamps (``canceled_at``, ``replaced_at``, ``filled_at`` ...) with its
+    bracket/OCO legs under ``legs``. It is the read that decides whether a
+    position the naked sweep re-armed was actually naked at the broker.
+
+    Params: ``account_id`` (required, one Alpaca account), ``order_ids``
+    (comma-separated Alpaca order ids, looked up one by one), ``after`` /
+    ``until`` (ISO-8601), ``symbols`` (comma-separated), ``limit`` (1-500).
+    A malformed argument is a **400**, never forwarded to the broker.
+
+    ``read_state``: ``not_alpaca`` / ``could_not_look`` (``result: null``) /
+    ``orders_read``. Per-id lookups carry their own read_state in
+    ``result.by_id``. Places, patches and cancels NOTHING. Tier 2.5.
+    """
+    _require_diag_token(request)
+    try:
+        from src.units.accounts.clients import account_alpaca_order_history
+        from src.units.ui.data_loaders import list_accounts
+    except Exception as exc:  # noqa: BLE001  # allow-silent: logged + re-raised as 503 (not swallowed)
+        logger.warning("get_alpaca_order_history: import failed: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"error": "data_loaders_unavailable", "detail": str(exc)},
+        ) from exc
+
+    accounts = _diag_accounts("get_alpaca_order_history", list_accounts, account_id)
+    acc = next((a for a in accounts if (a or {}).get("account_id") == account_id), None)
+    if acc is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "unknown_account", "account_id": account_id},
+        )
+    is_alpaca = ((acc or {}).get("exchange") or "unknown").lower() == "alpaca"
+    ids = [i for i in (order_ids or "").split(",") if i.strip()]
+    syms = [s for s in (symbols or "").split(",") if s.strip()]
+    result: Any = None
+    err: str | None = None
+    if is_alpaca:
+        try:
+            result = await run_account_read(
+                functools.partial(
+                    account_alpaca_order_history, order_ids=ids, after=after,
+                    until=until, symbols=syms, limit=limit,
+                ),
+                acc,
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"error": "bad_argument", "detail": str(exc)},
+            ) from exc
+        except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced in the payload (error + result=null), logged
+            err = f"{type(exc).__name__}: {exc}"
+            logger.warning("get_alpaca_order_history: %s raised %s", account_id, exc)
+    return {
+        "captured_at": datetime.now(timezone.utc).isoformat(),
+        "account_id": account_id,
+        "exchange": (acc or {}).get("exchange"),
+        "mode": (acc or {}).get("mode"),
+        "account_class": (acc or {}).get("account_class"),
+        "read_state": (
+            "not_alpaca" if not is_alpaca
+            else "orders_read" if isinstance(result, dict)
+            else "could_not_look"
+        ),
+        "result": result,
+        "error": err,
     }
 
 
@@ -3657,11 +4071,7 @@ async def get_alpaca_open_orders(
             detail={"error": "data_loaders_unavailable", "detail": str(exc)},
         ) from exc
 
-    try:
-        accounts = list_accounts() or []
-    except Exception as exc:  # noqa: BLE001  # allow-silent: read-only diag; logged, returns empty accounts so the call still answers
-        logger.warning("get_alpaca_open_orders: list_accounts failed: %s", exc)
-        accounts = []
+    accounts = _diag_accounts("get_alpaca_open_orders", list_accounts, account_id)
 
     out: list[dict[str, Any]] = []
     for acc in accounts:

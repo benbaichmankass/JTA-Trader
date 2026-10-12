@@ -293,6 +293,7 @@ GEOMETRY_LIVE_PARITY = "live_parity"
 GEOMETRY_SENSITIVE_LEVERS = frozenset({
     "trail_geometry", "stale_stop", "giveback_stop", "trail_decay",
     "vol_trail", "exit_ladder", "regime_flip_exit", "exit_head_ml",
+    "momentum_trail", "momentum_stale",
     # `bracket_geometry` (2026-08-20) is not a ninth lever but it belongs here
     # for the strongest possible reason: it SWEEPS the take-profit, so a cell
     # measured before the harness could place the live capped TP is not merely
@@ -300,6 +301,9 @@ GEOMETRY_SENSITIVE_LEVERS = frozenset({
     # cells were measured net-of-fees WITH the cap applied, so none is stale
     # today — the entry states the RULE, not a current condition.
     "bracket_geometry",
+    # GEOM-B1 (2026-10-07): the two TP-geometry columns sweep the take-profit
+    # itself, so a verdict on either is conditioned on the geometry modelled.
+    "tp_extend", "tp_retarget",
 })
 
 _DATE = re.compile(r"20\d{2}-\d{2}-\d{2}")
@@ -718,7 +722,7 @@ CORPUS_HARNESS_UNFIXED = "harness_never_modelled_the_tp"
 # to say it rather than let someone discover it at the console.
 COLUMNS_WITH_A_SWEEP_PRODUCER = frozenset({
     "stale_stop", "giveback_stop", "trail_decay", "vol_trail",
-    "trail_geometry",
+    "trail_geometry", "momentum_trail", "momentum_stale",
 })
 # Declared rather than introspected, because regexing `cells_for`'s source for
 # lever literals is a probe adjacent to the question. Kept honest by a test
@@ -733,6 +737,12 @@ _COLUMNS_WITH_THEIR_OWN_DRIVER = frozenset({
     "exit_head_ml",       # scripts/research/m20_exit_head_round.py
     "regime_flip_exit",   # scripts/research/m20_flip_replay_sweep.py
     "bracket_geometry",   # scripts/research/e35_bracket_geometry_sweep.py
+    # GEOM-B1 (2026-10-07): emitted by m20_fleet_exit_sweep.cells_for ONLY when
+    # `--levers` names them (opt-in, so no existing sweep grows), which is why
+    # the DEFAULT-emission probe in COLUMNS_WITH_A_SWEEP_PRODUCER does not list
+    # them. They have a driver; nothing has run it yet.
+    "tp_extend",          # scripts/research/m20_fleet_exit_sweep.py --levers tp_extend
+    "tp_retarget",        # scripts/research/m20_fleet_exit_sweep.py --levers tp_retarget
 })
 
 

@@ -85,8 +85,17 @@ on:
 # NEVER be cancelled by a `pull_request` run on the same ref, or the merge queue
 # stalls on a required check that reports `cancelled`. Same shape as guards.yml.
 concurrency:
+#
+# PUSH TO MAIN IS NOT CANCELLED (2026-09-29, PI-20260929-AQRK6CL1-0003). The
+# group is per-ref, so with `cancel-in-progress: true` every merge cancelled the
+# previous main run: measured 15 of the last 19 completed push-to-main runs were
+# `cancelled`, so main rarely finished a post-merge run and a semantic break
+# between two PRs each green on an older base went uncaught. Cancellation stays
+# for pull_request/merge_group/dispatch; for push the running run finishes and
+# GitHub keeps at most ONE pending run in the group (a newer push replaces the
+# pending one), bounding cost at one running + one pending instead of one per merge.
   group: pytest-run-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name != 'push' }}
 
 permissions:
   contents: read
@@ -94,7 +103,14 @@ permissions:
 jobs:
   pytest-run:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # 30 -> 50 (2026-10-03, lane CI-TIMEOUT). The full suite had no headroom:
+    # of the last 100 completed runs on this workflow (run ids 37104578054..
+    # 37115481899, one page of the API, 2026-10-03 06:54Z-10:10Z) 26 ran longer
+    # than 8 min. Of the full-suite runs that reached the end, 11 succeeded at
+    # a median of 26.5 min (range 19.4-30.0, the slowest AT the old limit), and
+    # 6 pull_request runs (attempts 1-2 of run 37110623445 among them) were
+    # cancelled at 30.4-30.6 min by this limit. 50 gives ~1.7x the median.
+    timeout-minutes: 50
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -241,6 +257,21 @@ jobs:
           #     SESSIONS.json, so those PRs now run the full suite. Included anyway —
           #     a register write-back IS the diff that can revert a field, so excluding
           #     it would exempt exactly the change the guard exists for.
+          #   docs/archive/2026-09-21-operating-reset/work/SESSIONS.json
+          #     test_session_reaper_trigger_liveness (FIX-CA-17, CA-A14-session-reaper-
+          #     dead-trigger) asserts this ARCHIVED file exists at this exact path, as
+          #     the evidence that session-reaper.yml's old push-trigger `paths:` filter
+          #     (which named the pre-archive location) was permanently dead. Near-zero
+          #     ongoing cost — this tree is frozen by convention — but a future PR that
+          #     moved or deleted it would otherwise falsify the test's premise on a
+          #     green tick from a run that executed nothing.
+          #   .gitleaks-baseline.json, docs/security/gitleaks-baseline.md
+          #     tests/test_gitleaks_baseline.py (PI-20260929-SASEC-0001) reads BOTH: the
+          #     baseline is the accepted-findings list the weekly secret scan trusts, and
+          #     the test pins that the four known-revoked entries stay baselined AND named
+          #     in the notes doc and that no vendor-token shape hides in the file. A PR
+          #     touching only them would otherwise pass having run none of that. Cost:
+          #     the baseline changes only when someone re-baselines on purpose.
           #
           # THE COST IS REAL AND IS BEING PAID DELIBERATELY. ARCHITECTURE-
           # CANONICAL.md is edited by many docs-only PRs, and each now pays a
@@ -254,7 +285,7 @@ jobs:
           # on the backlog row; it is a bigger change than this one.
           #
           # Pinned in tests/test_pytest_run_filter.py::COVERED.
-          if echo "$FILES" | grep -Eq '\.py$|requirements(-test)?\.txt$|pytest\.ini$|setup\.cfg$|pyproject\.toml$|^config/|^\.github/workflows/|^\.github/actions/|^scripts/|^deploy/|^comms/|^docs/research/exit-refinement-coverage\.json$|^docs/research/m20-sweep-corpus\.jsonl$|^docs/claude/system-actions\.md$|^docs/ARCHITECTURE-CANONICAL\.md$|^docs/research/m20-exit-head-rounds\.jsonl$|^docs/research/m20-fold-dispersion-arms-consolidated\.jsonl$|^docs/research/m20-fold-dispersion-2026-08-15\.md$|^docs/claude/impossibility-claim-baseline\.json$|^docs/claude/SUNSET-DISPOSITIONS\.json$|^docs/claude/CONSTRAINT\.json$|^docs/claude/diag-relay\.md$|^docs/claude/work/SESSIONS\.json$|^docs/claude/session-board\.json$|^docs/claude/work/objects/WO-20260901-PHASE-G\.yaml$|^docs/research/e35-bracket-corpus\.jsonl$|^docs/research/research-disposition-ledger\.jsonl$|^ml/|^automation/|^research/|^\.claude/|^\.env\.example$|^tests/|^data/backtest_candles\.csv$|^data/btc_1m_sample\.csv$|^data/ict_validate_manifest\.csv$|^docs/claude/soak-doctrine-exceptions\.json$|^docs/claude/system-review-checklist\.json$|^docs/research/data/backtest-mfe-reference-2026-09-07\.json$|^docs/claude/work/objects/|^docs/api-tier-policy\.md$|^docs/CLAUDE-RULES-CANONICAL\.md$|^docs/sprint-logs|^docs/claude/health-review-backlog\.json$|^docs/claude/OPEN-ITEMS\.json$|^docs/claude/work/MANAGER-CHECKLIST\.json$|^docs/claude/work/PIPELINE\.jsonl$|^docs/claude/work/OPEN-PRS\.json$'; then
+          if echo "$FILES" | grep -Eq '\.py$|requirements(-test)?\.txt$|pytest\.ini$|setup\.cfg$|pyproject\.toml$|^config/|^\.github/workflows/|^\.github/actions/|^scripts/|^deploy/|^comms/|^docs/research/exit-refinement-coverage\.json$|^docs/research/m20-sweep-corpus\.jsonl$|^docs/claude/system-actions\.md$|^docs/ARCHITECTURE-CANONICAL\.md$|^docs/research/m20-exit-head-rounds\.jsonl$|^docs/research/m20-fold-dispersion-arms-consolidated\.jsonl$|^docs/research/m20-fold-dispersion-2026-08-15\.md$|^docs/claude/impossibility-claim-baseline\.json$|^docs/claude/SUNSET-DISPOSITIONS\.json$|^docs/claude/CONSTRAINT\.json$|^docs/claude/diag-relay\.md$|^docs/claude/work/SESSIONS\.json$|^docs/archive/2026-09-21-operating-reset/work/SESSIONS\.json$|^docs/claude/session-board\.json$|^docs/claude/work/objects/WO-20260901-PHASE-G\.yaml$|^docs/research/e35-bracket-corpus\.jsonl$|^docs/research/research-disposition-ledger\.jsonl$|^ml/|^automation/|^research/|^\.claude/|^\.env\.example$|^tests/|^data/backtest_candles\.csv$|^data/btc_1m_sample\.csv$|^data/ict_validate_manifest\.csv$|^docs/claude/soak-doctrine-exceptions\.json$|^docs/claude/system-review-checklist\.json$|^docs/research/data/backtest-mfe-reference-2026-09-07\.json$|^docs/claude/work/objects/|^docs/api-tier-policy\.md$|^docs/CLAUDE-RULES-CANONICAL\.md$|^docs/sprint-logs|^docs/claude/health-review-backlog\.json$|^docs/claude/OPEN-ITEMS\.json$|^docs/claude/work/checklist/|^docs/claude/work/PIPELINE\.jsonl$|^docs/claude/work/OPEN-PRS\.json$|^\.gitleaks-baseline\.json$|^docs/security/gitleaks-baseline\.md$'; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"

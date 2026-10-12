@@ -44,6 +44,7 @@ Metrics per model (all pure-stdlib, no numpy/scipy):
 """
 from __future__ import annotations
 
+import itertools
 import json
 import logging
 import sqlite3
@@ -52,7 +53,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Mapping
 
-from ..shadow.inspector import ShadowRecord, iter_records
+from ..shadow.inspector import ShadowRecord, iter_records, iter_records_with_archives
 
 logger = logging.getLogger(__name__)
 
@@ -352,6 +353,11 @@ class ModelAttribution:
     brier: float | None
     baseline_brier: float | None
     brier_lift: float | None
+    # True when every logged score is identical (score_min == score_max over
+    # n >= 2). Such a head carries no information: its AUC is exactly 0.5 by
+    # ties and its Brier is the base-rate Brier, so every metric below reads as a
+    # grade when it is not a measurement (ML-HYGIENE item 2).
+    constant_scorer: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -366,6 +372,7 @@ class ModelAttribution:
             "brier": self.brier,
             "baseline_brier": self.baseline_brier,
             "brier_lift": self.brier_lift,
+            "constant_scorer": self.constant_scorer,
         }
 
 
@@ -402,6 +409,7 @@ def aggregate_attribution(joined: Iterable[JoinedScore]) -> list[ModelAttributio
             brier=brier,
             baseline_brier=baseline_brier,
             brier_lift=brier_lift,
+            constant_scorer=n >= 2 and min(scores) == max(scores),
         ))
     return sorted(out, key=lambda a: (-a.n, a.model_id))
 
@@ -416,8 +424,12 @@ def compute_attribution(
 ) -> list[ModelAttribution]:
     """End-to-end: load trades + shadow records, join, aggregate."""
     trades = load_closed_trades(db_path, limit=trade_limit, include_demo=include_demo)
-    paths = [shadow_log] + ([backfill_log] if backfill_log else [])
-    # Stream the shadow log (never materialize it) — BL-20260715.
-    records = iter_shadow_records(*paths)
+    # Stream the shadow log (never materialize it) — BL-20260715 — through
+    # its rotated archives too, or every trade older than the last rotation
+    # drops out of n (FIX-CA-20 / PI-20260927-3WM5HADW-0001).
+    records = itertools.chain(
+        iter_records_with_archives(shadow_log),
+        iter_shadow_records(backfill_log) if backfill_log else (),
+    )
     joined = join_scores_to_trades(trades, records)
     return aggregate_attribution(joined)

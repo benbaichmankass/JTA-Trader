@@ -38,7 +38,7 @@ QUEUE_DIR = REPO / "research" / "queue"
 def _entry(**kw):
     base = {
         "id": "RQ-20260827-999", "title": "t", "question": "q",
-        "cadence": "once", "status": "queued",
+        "cadence": "once", "status": "queued", "theme": "infra", "priority": 2,
         "kind": "experiment",
         # `feasibility` is required since the admission guard landed: `basis` is
         # prose and cannot be checked, so expected_n must ALSO name observed data.
@@ -72,6 +72,16 @@ def _observing(mapping):
         yield
     finally:
         _rq.observed_n_by_leg = original
+
+
+@pytest.fixture(autouse=True)
+def _quiet_runner_pool(monkeypatch):
+    """Backpressure (2026-09-29) counts queued/in-progress runs via gh before a
+    --fire; this module's fire tests are about stamping and power labels, so
+    they run against an EMPTY pool. tests/test_research_backpressure.py owns
+    the cap's own behaviour, including 'could not count' -> defer."""
+    from scripts.research import dispatch_queue as _dq
+    monkeypatch.setattr(_dq, "gh_runs", lambda status, limit=200: [])
 
 
 # --------------------------------------------------------------------------
@@ -468,7 +478,7 @@ def test_gpu_dispatches_are_capped_per_run(tmp_path):
     """The ledger cap is MONTHLY; it cannot bound a loop inside one run."""
     for n in (11, 12):
         (tmp_path / f"RQ-20260827-0{n}.yaml").write_text(
-            f"id: RQ-20260827-0{n}\ntitle: t\nquestion: q\ncadence: once\nstatus: queued\n"
+            f"id: RQ-20260827-0{n}\ntitle: t\nquestion: q\ncadence: once\nstatus: queued\ntheme: infra\npriority: 2\n"
             "kind: deterministic\nwhy_not_inferential: fixed re-grade\n"
             "routing: {needs_gpu: true, peak_memory_gb: 8.0}\n"
             "run: {workflow: gpu-burst-train.yml}\n"
@@ -495,7 +505,7 @@ def test_the_gpu_cap_actually_stops_the_second_burst(tmp_path, monkeypatch):
 
     for n in (21, 22, 23):
         (tmp_path / f"RQ-20260827-0{n}.yaml").write_text(
-            f"id: RQ-20260827-0{n}\ntitle: t\nquestion: q\ncadence: once\nstatus: queued\n"
+            f"id: RQ-20260827-0{n}\ntitle: t\nquestion: q\ncadence: once\nstatus: queued\ntheme: infra\npriority: 2\n"
             "kind: deterministic\nwhy_not_inferential: fixed re-grade\n"
             "routing: {needs_gpu: true, peak_memory_gb: 8.0}\n"
             "run: {workflow: gpu-burst-train.yml}\n"
@@ -518,7 +528,7 @@ def test_a_failed_fire_is_not_stamped(tmp_path, monkeypatch):
 
     job = tmp_path / "RQ-20260827-031.yaml"
     job.write_text(
-        "id: RQ-20260827-031\ntitle: t\nquestion: q\ncadence: daily\nstatus: queued\n"
+        "id: RQ-20260827-031\ntitle: t\nquestion: q\ncadence: daily\nstatus: queued\ntheme: infra\npriority: 2\n"
         "kind: deterministic\nwhy_not_inferential: fixed re-grade\n"
         "routing: {peak_memory_gb: 2.0}\n"
         "run: {workflow: w.yml}\n"
@@ -537,7 +547,7 @@ def test_a_successful_fire_is_stamped(tmp_path, monkeypatch):
 
     job = tmp_path / "RQ-20260827-032.yaml"
     job.write_text(
-        "id: RQ-20260827-032\ntitle: t\nquestion: q\ncadence: daily\nstatus: queued\n"
+        "id: RQ-20260827-032\ntitle: t\nquestion: q\ncadence: daily\nstatus: queued\ntheme: infra\npriority: 2\n"
         "kind: deterministic\nwhy_not_inferential: fixed re-grade\n"
         "routing: {peak_memory_gb: 2.0}\n"
         "run: {workflow: w.yml}\n"
@@ -985,9 +995,15 @@ def test_w4_the_workflow_declares_research_unit_and_power_state(unit_id, workflo
 def test_w4_unit_is_queued_and_threads_its_own_identity(unit_id, workflow_path):
     job = _load_w4_unit(unit_id)
     assert job.valid, f"{unit_id}: {job.errors}"
-    assert job.status == "queued", (
-        f"{unit_id} must be flipped to queued once its blocker clears; "
-        f"got status={job.status!r}"
+    # `done` is the unit's legitimate END, not a regression: RQ-20260922-003
+    # was answered offline on 2026-09-27 (W6-PROP-O1). What W4 protects is
+    # that the unit never slides back to `blocked`.
+    # A bare `status: done` is not accepted — it must carry the `result:`
+    # block that says what the run found.
+    completed = job.status == "done" and bool(str(job.raw.get("result") or "").strip())
+    assert job.status == "queued" or completed, (
+        f"{unit_id} must be flipped to queued once its blocker clears "
+        f"(or be done WITH a result block); got status={job.status!r}"
     )
     declared = ((job.raw.get("run") or {}).get("inputs") or {}).get("research_unit")
     assert declared == unit_id, (
@@ -1066,9 +1082,28 @@ def test_w4_dispatcher_dry_run_selects_the_unit(unit_id, _wf):
         row["outcome"] == "not_due"
         and str(row.get("reason", "")).startswith("cadence=") and "it ran at" in row.get("reason", "")
     )
-    assert row["outcome"] == "would_dispatch" or already_fired, (
+    completed = (row["outcome"] == "not_due" and row.get("reason") == "status=done"
+                 and bool(str(_load_w4_unit(unit_id).raw.get("result") or "").strip()))
+    assert row["outcome"] == "would_dispatch" or already_fired or completed, (
         f"{unit_id} should be selected on a dry run, or already have fired "
         f"once under its own cadence; got {row}"
     )
     if row["outcome"] == "would_dispatch":
         assert row["power_state"] == ACCRUING
+
+
+def test_a_new_queued_unit_must_not_carry_a_dispatch_stamp():
+    """PI-20261001-1MX1RCZS-0004: RQ-20260930-703 was registered `queued` with a
+    stamp copied from its clone source; with cadence=once it could never fire and
+    every guard passed it."""
+    stamped = _entry(status="queued", last_dispatched_at="2026-10-01T07:29:51+00:00")
+    assert any("last_dispatched_at" in e for e in validate(stamped, is_new=True))
+    # positive controls: the same entry is fine when not new (grandfathered /
+    # an existing unit the dispatcher legitimately stamped), and a new unit with
+    # a null stamp is fine.
+    assert not any("last_dispatched_at" in e for e in validate(stamped))
+    clean = _entry(status="queued", last_dispatched_at=None)
+    assert not any("last_dispatched_at" in e for e in validate(clean, is_new=True))
+    # only `queued` is refused: a done unit legitimately carries its stamp.
+    done = _entry(status="done", last_dispatched_at="2026-10-01T07:29:51+00:00")
+    assert not any("last_dispatched_at" in e for e in validate(done, is_new=True))

@@ -1,6 +1,6 @@
 id: RQ-20260922-007
 title: Is trend_donchian's net-negative verdict the leg, or a harness blind to its exit head?
-status: queued
+status: done
 cadence: once
 kind: experiment
 
@@ -191,4 +191,52 @@ lands:
 related:
   - 'checklist C5 / R4 (this unit is one of the ten)'
   - 'docs/CLAUDE-RULES-CANONICAL.md § "Tune before demote" (the rule this unit satisfies with an artifact)'
-last_dispatched_at: null
+last_dispatched_at: '2026-09-27T12:13:17+00:00'
+
+result: >-
+  CLOSED BY CITATION, not by running this unit's own registered rule.
+  `status` stays `queued` rather than flipping to `done`: `cadence: once` plus
+  the already-stamped `last_dispatched_at` already make the dispatcher grade
+  this `not_due` on every future dry run (verified), and
+  `tests/test_research_queue.py::test_w4_unit_is_queued_and_threads_its_own_identity`
+  hard-asserts `status == "queued"` for this exact unit as its own regression
+  guard for the W4 routing fix -- flipping it to `done` was tried and reverted
+  after that test (and its `already_fired` companion) failed; the precedent
+  set by RQ-20260927-001/002 (which DO flip to `done`) is not universal and a
+  committed test wins over a precedent per Generation Discipline Rule 2. The
+  question this unit asks -- does simulating trend_donchian's live exit head
+  recover the cost stack's loss -- was superseded by a harder, population-
+  corrected pair of units and is answered there: RQ-20260927-001 (single
+  embargoed walk-forward split, PASS, recovered_R_oos +1.3127 over n=119
+  genuinely out-of-sample trades, +0.011R/trade -- read by its own author as
+  "marginal support... not a decisive result") and RQ-20260927-002 (the
+  robustness follow-up RQ-001 itself called for: 3 independent embargoed
+  folds over the same population, FAIL, pooled recovered_R_oos -14.6597 over
+  n_oos_total=1041, only 1 of 3 folds individually positive). RQ-002
+  explicitly REVERSES RQ-001's single-split PASS: RQ-001's split
+  (2025-01-06 onward) falls entirely inside RQ-002's one positive fold (fold
+  3), so the marginal pass was one favourable draw, not a generalizable edge
+  -- confirmed by reading both units' own landed `result:` blocks in full
+  before writing this citation (RULE ONE: do not repeat a headline number
+  without checking what superseded it). RQ-002's own `what_it_does_not_do`
+  names itself, not RQ-001, as "the one to cite going forward for 'does this
+  generalize'". attributable_to: strategy -- trend_donchian's net-negative
+  Stage-0 verdict is NOT a measurement artifact of an unmodelled exit head;
+  on a robust multi-fold basis the head does not recover the loss, and this
+  leg should proceed to R2/D2 as a normally-evidenced demotion candidate,
+  with RQ-001+RQ-002 attached as the tuning-attempt artifact "tune before
+  demote" requires. Separately, this unit's OWN full-window statistic
+  (RULE-RQ0922-007-EXIT-HEAD-ATTRIBUTION, in-sample-contaminated per
+  PI-20260926-96NDZSOD-0002) kept being re-run by the automated dispatcher
+  independently of this session -- research/results/RQ-20260922-007/
+  36257896539.jsonl (2026-09-26, recovered_r 3.7796) and 36318264512.jsonl
+  (2026-09-27, recovered_r 3.8848) both read "pass" -- but neither is a fresh
+  or informative signal: both replay the same full-window population RQ-001
+  was built specifically to correct, so they are not read as evidence here
+  and this unit is closed on RQ-001+RQ-002's OOS-only, embargoed measurement
+  instead. This unit's own `run:` (research-exit-head-replay-trainer.yml) was
+  therefore NOT separately re-dispatched for this citation, per the
+  dispatch's explicit instruction not to re-run it.
+
+  GRADED 2026-09-28 by lane RQ-RUN (session_0179hCBVrY5PJMaHhK3BKcKe, manager session_01KAQRJxRbRwpYTkPgBjNVyQ) against the pre-registered rule, from committed results only.
+  VERDICT: attributable_to: omitted_exit_head (clause 1). SOURCE: two research-exit-head-replay-trainer runs, research/results/RQ-20260922-007/36257896539.jsonl (n=353) and 36318264512.jsonl (n=352), both `pass`/`measured`, live-faithful backtest_trend.py replay of the PUBLISHED exit head on BTCUSDT 1h (1830d), NET OF THE FULL VENUE COST STACK (fee 7.5 + slippage 3.0 bps roundtrip + funding 1.0 bps/8h via src.runtime.execution_costs): head_simulated_net_r_oos +8.3813 and +8.4865 vs the evidence record's +4.6017 (n_trades_oos=73) -- the head-simulated arm is > 0 on both runs, so the RULE-D1 fail is NOT carried to R2/D2 as a demotion input. CAVEAT, stated: the head-BUILD run in the same unit (36239257289, RULE-EXIT-HEAD-CLEARS-BAR, backtest_system WF-CV, n=300) FAILED its own bar (OOS AUC 0.607 but mean net-R improvement -0.1958/trade); the two harnesses disagree on whether the head adds value per trade, and this unit's rule keys on the replay arm only. The leg is NOT promoted by this (a head-simulated pass at n=73 is a Stage-0 pass like any other). DELIVERABLE per the rule: a request to re-run this leg's evidence record with the exit head simulated so comms/strategy_evidence/trend_donchian.json stops misgrading it -- filed as a pipeline item in the same PR.
