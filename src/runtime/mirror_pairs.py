@@ -23,19 +23,27 @@ guard) → mirror skips with a named reason. The reverse (primary placed, mirror
 failed) cannot be undone from here; it is reported as an ERROR-level alert so
 the divergence is never silent.
 
-``MIRROR_PAIRS`` is pinned to ``config/accounts.yaml`` (every
-``paper_role: portfolio`` account must appear) by
+``MIRROR_PAIRS`` is derived from ``strategy_monocle.STAGE2_PAIRS``; that every
+``paper_role: portfolio`` account appears in it is pinned by
 ``tests/test_mirror_pairs.py``.
+
+Complements, does not replace: the monocle gate (PAIR-COUPLED, one open
+package per pair) decides whether the pair may open at all;
+``scripts/ops/check_mirror_orphans.py`` flags an orphan within a day. Neither
+sees the per-account VENUE outcome of a dispatch, which is where this
+divergence was born.
 """
 from __future__ import annotations
 
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple
 
-#: mirror account -> its real-money primary.
-MIRROR_PAIRS: Dict[str, str] = {
-    "bybit_portfolio": "bybit_2",
-    "alpaca_portfolio": "alpaca_live",
-}
+from src.runtime.strategy_monocle import STAGE2_PAIRS
+
+#: mirror account -> its real-money primary. DERIVED from the one src-side
+#: pairing constant (``strategy_monocle.STAGE2_PAIRS``, itself tied to
+#: ``mandate_resolver.MIRROR_OF`` and the mirror-equality tests by
+#: ``tests/test_monocle_gate_per_account.py``) — not a second list.
+MIRROR_PAIRS: Dict[str, str] = {mirror: live for live, mirror in STAGE2_PAIRS}
 
 #: Follow verdicts. Never collapsed: each is a different log/alert path.
 FOLLOW = "follow"                  # primary placed -> dispatch the mirror
