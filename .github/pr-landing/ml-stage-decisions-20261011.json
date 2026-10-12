@@ -1,0 +1,8 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Applies the operator's own ML stage decisions, already given: 2026-10-08 ~06:35Z popup answers (MES 'Retire baselines, keep 5m only'; audit baseline 'Soft-off'; prop-mission NOT retired) and 2026-10-09 ~05:00Z (setup-quality-lgbm-v2 'Retire it'), verbatim on checklist rows ML-STAGE-DECISIONS and ML-PRODUCERS. Manager merges, then runs the promote-stage block in the PR body on the trainer VM.",
+  "recorded_decision": {"kind": "operator_decision", "ref": "ML-STAGE-DECISIONS"},
+  "why": "Tier-3 by path (ml/configs/*.yaml manifests). Manifest-only: three manifests move to ml/configs/retired/ (out of the daily training cycle), three manifests' target_deployment_stage and notes change (shadow -> candidate; one training-wait waiver line). No src/, config/strategies.yaml, config/accounts.yaml or order-path change. The registry stage itself is a trainer-VM write (python -m ml promote-stage), NOT done by this PR or this lane."
+}

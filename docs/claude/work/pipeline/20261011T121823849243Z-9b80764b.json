@@ -1,0 +1,22 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "no self-halt latch fires anywhere after #17251/#17253/#17254: prop trail retries instead of latching, prop feed uses capped backoff, trainer retries every cycle with one red flag",
+    "kind": "observation"
+  },
+  "id": "PI-20261011-CJWUMAVA-0002",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-11",
+    "how_to_check": "diag journalctl ict-prop-executor@*/ict-prop-feed@*/trainer: grep for 'latch'/'halted'/'quarantine' vs 'red_flag' after 2026-10-11",
+    "what": "no self-halt latch fires anywhere after #17251/#17253/#17254: prop trail retries instead of latching, prop feed uses capped backoff, trainer retries every cycle with one red flag"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "checklist NO-HALT closed 2026-10-11 by manager session_01Uq7MrjPQDRWqbhCjwuMava",
+    "rerun": "diag journalctl ict-prop-executor@*/ict-prop-feed@*/trainer: grep for 'latch'/'halted'/'quarantine' vs 'red_flag' after 2026-10-11"
+  },
+  "routed_to": "manager session_01Uq7MrjPQDRWqbhCjwuMava: checked at lane check-ins",
+  "state": "routed",
+  "what": "NO-HALT residual: merged, not yet observed live — no self-halt latch fires anywhere after #17251/#17253/#17254: prop trail retries instead of latching, prop feed uses capped backoff, trainer retries every cycle with one red flag."
+}

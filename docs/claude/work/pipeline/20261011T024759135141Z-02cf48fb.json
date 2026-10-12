@@ -1,0 +1,29 @@
+{
+  "based_on": "20261009T075059118401Z-a5411d76.json",
+  "due_when": {
+    "check_every_days": 10,
+    "clears_when": "research/results/RQ-20261007-005/ and RQ-20261007-006/ each hold a measured record AND a dated comms/research/r3_cost_fidelity record carries a pairs cell -> read the soak against it (ready); OR /api/bot/pairs/soak?event=open&limit=50 shows no live-pair open in 14 days (dead); OR killed when both live pairs are moved to shadow",
+    "kind": "observation",
+    "last_checked": "2026-10-11"
+  },
+  "id": "PI-20261007-N6TXSAL6-0003",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-21",
+    "how_to_check": "ls research/results/RQ-20261007-005 research/results/RQ-20261007-006; ls comms/research/r3_cost_fidelity/ | tail -1; curl -sS 'https://ict-bot.duckdns.org/api/bot/pairs/soak?event=open&limit=50' | python3 -c \"import json,sys;r=json.load(sys.stdin)['records'];print(r[0]['logged_at_utc'] if r else 'NO OPENS')\"",
+    "what": "The pairs paper soak can be READ: research/results/RQ-20261007-005/ and RQ-20261007-006/ hold measured records and a dated comms/research/r3_cost_fidelity record carries a pairs cell (ready); or no live-pair `open` event for 14 days (dead); or the live pairs were moved to shadow (killed)"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane PAIRS-STOCKTAKE session_011BUSVxr9kPZvkNn6TXSaL6, manager session_01MM8o5js6TcDFeNAPBY4Ntv, docs/research/pairs-stocktake-2026-10-07.md",
+    "rerun": "curl -sS 'https://ict-bot.duckdns.org/api/bot/pairs/soak?limit=1000' | python3 -c \"import json,sys;from collections import Counter;r=json.load(sys.stdin)['records'];print(r[-1]['logged_at_utc'],'->',r[0]['logged_at_utc']);print(Counter((x['pair'],x['execution_mode'],x['event']) for x in r).most_common(12))\""
+  },
+  "redate": {
+    "evidence": "comms/research/RQ-20261007-00{5,6,7,8}/*/verdict.json on origin/main; curl /api/bot/pairs/soak",
+    "observation": "PAIRS-GAPS 2026-10-11: Stage-0 verdicts landed on main, all 'pass' at configured params, net of fee+slippage+funding (3.0 bps roundtrip slippage per leg): 005 sol_eth n=304 net 53.4R exp 0.176R; 006 bnb_btc n=274 net 102.4R exp 0.374R; 007 sol_btc n=286 +92.6R; 008 eth_btc n=273 +51.8R. Soak (/api/bot/pairs/soak limit=1000, 2026-10-02T20:05Z..10-11T02:06Z = 8.3d): live opens sol_eth 19, bnb_btc 21 = 2.3 and 2.5/day vs backtest 1.71 and 1.54/day (1.3-1.6x); shadow sol_btc 8 / eth_btc 6 opens. Not dead (last live open 2026-10-10). Cost fidelity cannot be read: Gate-1 pairs cells are entry-only (n_exit=0, structurally) -- see PI-20261011-6ZFRKKPC-0001. Entry slippage means -1.75..+0.43 bps, inside the modelled cost.",
+    "observed_at": "2026-10-11"
+  },
+  "routed_to": "PAIRS-GAPS | [PIPELINE-ROUTE 2026-10-09] new row created this lane to own it.",
+  "state": "routed",
+  "what": "SOAK ALARM for the pairs paper soak (runtime_logs/pairs_soak.jsonl on the live VM, served at /api/bot/pairs/soak; grandfathered pre-2026-09-02 in check_soak_registered.py, so no row registered it until now). pairs_sol_eth and pairs_bnb_btc trade live on bybit_1 paper for EXECUTION validation (config/pairs.yaml note), not PnL. READY in data: the Stage-0 verdicts at the configured parameters (RQ-20261007-005..008) have landed AND a Gate-1 cost-fidelity cell for the two live pairs exists (PI-20261007-N6TXSAL6-0001), so the soak can be read `consistent`/`divergent` against a modelled slippage. DEAD: no `open` row for a live pair in 14 days (MEASURED baseline 2026-09-30..10-07: 19 + 23 opens). Until then the soak is `accruing` and must stay quiet."
+}

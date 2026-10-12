@@ -105,7 +105,7 @@ EX_CONFIG = 78
 #: them below does not widen this tuple. Widening it would make the poll claim
 #: assert a tap this bot does not handle, which is the exact failure the
 #: registry exists to catch.
-HANDLED_PREFIXES: tuple[str, ...] = (CB_PREFIX,)
+HANDLED_PREFIXES: tuple[str, ...] = (CB_PREFIX, "ns")  # ns: settings menu (part C)
 
 #: This bot's operator-facing slash surface: `/start` plus the two operator
 #: PULLS. A command absent from `set_my_commands` is one the operator has to
@@ -143,8 +143,17 @@ async def start_cmd(update: Update, _: ContextTypes.DEFAULT_TYPE) -> None:
         "Work decisions that are waiting on you arrive here as questions with "
         "buttons. Tapping one SUBMITS your answer — it is not committed until a "
         "committer writes it into the work object in the repo, and the "
-        "confirmation says so."
+        "confirmation says so.\n\n⚙️ /settings — notification types and cadence.",
+        reply_markup=_settings_markup(),
     )
+
+
+def _settings_markup():
+    """The ⚙️ button into the shared settings menu (TELEGRAM-CHANNELS part C)."""
+    from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+
+    return InlineKeyboardMarkup([[InlineKeyboardButton(
+        "⚙️ Settings", callback_data="ns:open:manager")]])
 
 
 async def on_callback(update: Update, _: ContextTypes.DEFAULT_TYPE) -> None:
@@ -366,6 +375,10 @@ def main() -> None:
     # Pattern-scoped: this bot claims the `wdec` prefix and nothing else, so the
     # poll claim it registers below is true of exactly what it handles.
     app.add_handler(CallbackQueryHandler(on_callback, pattern=rf"^{CB_PREFIX}:"))
+    # TELEGRAM-CHANNELS part C: the ONE settings menu, MANAGER channel.
+    from src.bot.notification_settings_menu import register as _register_settings
+
+    _register_settings(app, "manager", service=SERVICE_NAME)
 
     async def _post_init(a: Application) -> None:
         await publish_command_surface(a.bot)
