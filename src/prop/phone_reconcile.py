@@ -20,6 +20,8 @@ Rules (each one is a way a reconcile can lie, refused):
   (one unused closing-side row for the symbol, size within :data:`QTY_TOL`); with none, or more than one, the row
   is closed with ``exit_price`` null and reason ``closed_unpriced`` and the operator is pinged. A later priced
   close corrects it in place (``prop_journal.insert_fill``'s VELO-CLOSE-RECON branch).
+* **A position the terminal shows under a symbol we cannot map freezes every close on that read** (it may be a
+  journal row under an unmapped label) and is flagged once; it is never journaled.
 * **A venue position with no journal row is JOURNALED, as unconfirmed.** If a ``placed`` working order of the same
   symbol and side exists, the position is that order having filled (``open`` on its ticket). Otherwise it is an
   ``open`` row on a synthetic id (``venue-<account>-<symbol>-<side>-<entry>``, no ticket row, so it can never
@@ -259,6 +261,13 @@ def reconcile(account_id: str, positions: List[Dict[str, Any]], closed: List[Dic
                 continue
             for f in rows:
                 rid = _row_id(f)
+                if out["unmapped"]:
+                    # the venue shows a position we could not name: it may BE this row under a label we do not
+                    # map, so nothing is closed on this read (the absence count is held, not advanced)
+                    if rid in missing:
+                        new_missing[rid] = missing[rid]
+                    out["pending_close"].append(rid)
+                    continue
                 opened = _parse(f.get("opened_at")) or _parse(f.get("reported_at"))
                 if opened is not None and (now - opened).total_seconds() < GRACE_S:
                     continue

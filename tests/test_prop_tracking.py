@@ -210,6 +210,16 @@ def test_an_undeclared_instrument_is_flagged_once_and_never_journaled(env):
     assert len(env) == 1 and "DOGE" in env[0]
 
 
+def test_an_unmapped_venue_position_freezes_closes(monkeypatch):
+    jid = _open("prop-manual-f79")
+    t0 = datetime.now(timezone.utc)
+    odd = {"symbol": "ETHUSD Perpetual", "side": "long", "qty": 1.1758, "entry": 2527.8}
+    for i in range(3):
+        monkeypatch.setattr(rc, "_now", lambda i=i: t0 + timedelta(seconds=90 * i))
+        r = _status([odd])
+    assert r["reconcile"]["pending_close"] == [str(jid)] and _open_ids() == [jid]
+
+
 # ---- overview ----
 
 def _overview():
