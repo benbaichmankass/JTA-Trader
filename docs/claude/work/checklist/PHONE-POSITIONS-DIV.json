@@ -1,0 +1,22 @@
+{
+  "id": "PHONE-POSITIONS-DIV",
+  "title": "Phone executor: parse Breakout's DIV-grid Positions view (no <table>) by header label, fail-closed",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "lane (session_01EqHit5H4VJTYvnjEWJhaPZ)",
+  "lane": "session_01EqHit5H4VJTYvnjEWJhaPZ",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-12 lane, dispatched by manager session_01G16FfyYSmDPQuuW55BuTmK] First live read (19:40Z) gave positions_state=no_table: Positions is a div grid, headers Market|UP&L|Side|Value|Opening price|Current price|TP / SL|Net P&L, empty state 'Start trading with leverage'. exec.js readTable now falls back to a div-grid reader (header row = smallest ancestor with >=4 mapped labels incl side+entry/mark; rows = same-child-count siblings; flat only with empty text INSIDE the tab-bounded panel or tab count 0). No size column: qty derived Value/Current price (qty_src=value/mark, UNMEASURED which price Value uses). upnl = UP&L only; Net P&L -> netpnl. Reconcile stays report_only. closedRead unchanged: no Closed-orders diag exists yet (app only reads it after Positions=read). landed_unproven until a live read after the new APK returns positions_state=read.",
+  "updated_at": "2026-10-12T19:46:24Z",
+  "updated_by": "session_01EqHit5H4VJTYvnjEWJhaPZ",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "priority": "critical",
+  "_seq": 441
+}
