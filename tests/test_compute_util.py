@@ -84,3 +84,13 @@ def test_network_is_never_derived_to_a_percentage():
     r = next(x for x in rows if x["host"] == "trainer" and x["date"] < TODAY)
     assert r["net_p95_pct_of_shape"] is None and r["read_state"]["net"] == "could_not_look"
     assert r["net_in_p95_raw"] is not None      # raw kept for a later unit check
+
+
+def test_merge_drops_legacy_network_percentage():
+    legacy = cu.build_rows(TODAY, _metrics(trainer=_days(1, 8, 10)), {})
+    for r in legacy:
+        r["net_p95_pct_of_shape"] = 571.0      # first-run bogus value
+        r["net_p95_bps"] = 1.0
+    out = cu.merge_ledger(legacy, cu.build_rows(TODAY, _metrics(trainer=_days(1, 8, 10)), {}))
+    assert all(r["net_p95_pct_of_shape"] is None and "net_p95_bps" not in r and r["read_state"]["net"] == "could_not_look"
+               for r in out)

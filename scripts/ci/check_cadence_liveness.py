@@ -190,11 +190,9 @@ CADENCE_REGISTRY: dict[str, dict] = {
     #    IS the receipt. (Its reviewed_at age is ALSO graded, more tightly,
     #    by check_grading_freshness.py.)
     "compute-util-telemetry.yml": {
-        "receipt": None,
-        "why": "ledger comms/cloud/compute_util_ledger.jsonl does not exist until "
-               "the first run lands it (a seeded empty file would be a receipt "
-               "cheaper to lie to than to satisfy); re-point at it in the "
-               "follow-up PR once it has been written (row COMPUTE-UTIL-TELEMETRY)",
+        "receipt": "comms/cloud/compute_util_ledger.jsonl",
+        "why": "the workflow rewrites the ledger every day and lands it through "
+               "commit-to-main; the last commit touching it IS the receipt",
     },
     "grade-closed-trades.yml": {
         "receipt": "comms/claude_strategy_scores.jsonl",
