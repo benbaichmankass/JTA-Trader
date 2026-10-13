@@ -17,10 +17,22 @@ Exit price is OPTIONAL. Absent -> the close row carries ``exit_price`` NULL,
 ``closed_unpriced``); nothing is guessed. Present -> ``pnl`` is the GROSS
 (entry/exit/qty, before fees) figure, ``provenance: ESTIMATED``.
 
+``--from-placed`` (opt-in, LIVE-SILENCE-DIAG 2026-10-13): also accept a ``placed``
+fill row as the row being closed, when the ticket itself is ``placed``. The case:
+breakout_2 ETHUSDT short ``prop-manual-762f959676fd`` was journaled ``placed``
+(UNVERIFIED, go-token redeemed, phone never confirmed), filled and stopped out on
+the terminal, and the phone's clean Positions read then showed the account flat.
+``fill_inference`` treats a flat clean read as "not filled", so the row stays
+``placed`` for ever, and ``placed`` blocks every later same-key ticket with no
+time window (``breakout_executor`` reticket guard); supersede needs a resting
+order, which no longer exists. Without the flag a ``placed`` row is refused as
+before: closing the record of an order that is still resting would hide its fill.
+
 Refused (exit 3, nothing written), fail-closed:
   * ``account`` is not configured in ``config/prop_platforms.yaml``;
   * the ticket is missing or belongs to another account;
-  * the ticket has no ``open``/``filled`` fill row, or already has a ``closed`` one;
+  * the ticket has no ``open``/``filled`` fill row (nor, with ``--from-placed``, a
+    ``placed`` row on a ``placed`` ticket), or already has a ``closed`` one;
   * a NEWER fill row exists for the same position key (the open row is stale);
   * ``exit_price`` is not a positive number, ``closed_at`` is not ISO-8601.
 
@@ -45,6 +57,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 OPEN_STATUSES = ("open", "filled")
+PLACED_STATUS = "placed"
 SOURCE = "prop_report_close_action"
 
 
@@ -88,7 +101,7 @@ def _canon_dir(d: Any) -> str:
 
 def plan(conn: sqlite3.Connection, *, account_id: str, ticket_id: str,
          exit_price: Optional[str], closed_at: Optional[str], reason: str,
-         accounts: Set[str], now: datetime) -> Dict[str, Any]:
+         accounts: Set[str], now: datetime, from_placed: bool = False) -> Dict[str, Any]:
     """The decision, without writing: ``{"ok", "why", "ticket", "open_fill", "report"}``."""
     out: Dict[str, Any] = {"ok": False, "account_id": account_id, "ticket_id": ticket_id,
                            "ticket": None, "open_fill": None, "report": None}
@@ -126,6 +139,8 @@ def plan(conn: sqlite3.Connection, *, account_id: str, ticket_id: str,
         out["why"] = "ticket already has a closed prop_fills row -- already closed"
         return out
     opens = [f for f in fills if str(f.get("status") or "").lower() in OPEN_STATUSES]
+    if not opens and from_placed and str(tk.get("status") or "").lower() == PLACED_STATUS:
+        opens = [f for f in fills if str(f.get("status") or "").lower() == PLACED_STATUS]
     if not opens:
         out["why"] = ("no open/filled prop_fills row references this ticket "
                       f"(ticket status {tk['status']!r}, {len(fills)} fill row(s)) -- nothing to close")
@@ -210,6 +225,8 @@ def main(argv: Optional[list] = None) -> int:
     ap.add_argument("--closed-at", default=None)
     ap.add_argument("--reason", default="")
     ap.add_argument("--apply", action="store_true")
+    ap.add_argument("--from-placed", action="store_true",
+                    help="also close a `placed` fill row on a `placed` ticket (filled + closed off-journal)")
     ap.add_argument("--platforms", default=None, help="prop_platforms.yaml (tests)")
     ap.add_argument("--now", default=None, help="ISO time (tests)")
     a = ap.parse_args(argv)
@@ -220,7 +237,8 @@ def main(argv: Optional[list] = None) -> int:
     try:
         decision = plan(conn, account_id=a.account, ticket_id=a.ticket_id,
                         exit_price=a.exit_price, closed_at=a.closed_at, reason=a.reason,
-                        accounts=configured_accounts(Path(a.platforms) if a.platforms else None), now=now)
+                        accounts=configured_accounts(Path(a.platforms) if a.platforms else None), now=now,
+                        from_placed=a.from_placed)
     finally:
         conn.close()
     decision["mode"] = "apply" if a.apply else "dry_run"
