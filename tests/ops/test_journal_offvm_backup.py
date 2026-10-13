@@ -56,8 +56,8 @@ def test_remote_snapshot_is_consistent_verified_and_leaves_source_untouched(tmp_
     db = tmp_path / "live.db"
     con = sqlite3.connect(db)
     con.execute("PRAGMA journal_mode=WAL")
-    con.execute("CREATE TABLE trades (id INTEGER PRIMARY KEY, v TEXT)")
-    con.executemany("INSERT INTO trades(v) VALUES (?)", [("x",)] * 50)
+    con.execute("CREATE TABLE trades (id INTEGER PRIMARY KEY, symbol TEXT)")
+    con.executemany("INSERT INTO trades(symbol) VALUES (?)", [("x",)] * 50)
     con.commit()  # leave the connection open: a live WAL DB with -wal present
     out = subprocess.run(
         [sys.executable, str(ROOT / "scripts/ops/journal_snapshot_remote.py"),

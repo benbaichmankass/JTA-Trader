@@ -90,7 +90,7 @@ def _ns():
     return _oci("os", "ns", "get")["data"]
 
 
-def cmd_ensure_bucket(a):
+def cmd_ensure_bucket(_a):
     ns = _ns()
     r = _oci("os", "bucket", "get", "--namespace-name", ns, "--bucket-name", BUCKET, check=False)
     if getattr(r, "returncode", 0) != 0:
@@ -147,7 +147,7 @@ def _list_names(ns, prefix=""):
     return [o["name"] for o in r.get("data", [])] if isinstance(r, dict) else []
 
 
-def cmd_prune(a):
+def cmd_prune(_a):
     ns = _ns()
     today = dt.datetime.now(dt.timezone.utc).date()
     doomed = prune_candidates(_list_names(ns), today)
@@ -165,7 +165,7 @@ def cmd_prune(a):
     return 0
 
 
-def cmd_status(a):
+def cmd_status(_a):
     ns = _ns()
     today = dt.datetime.now(dt.timezone.utc).date()
     names = _list_names(ns)
