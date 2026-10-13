@@ -3,7 +3,6 @@ import json
 
 import pytest
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
 from scripts.research import research_watchdog as w
 
@@ -115,7 +114,9 @@ def test_collector_states():
 
 # ── stamps ──
 def test_stamps_states():
-    pr = lambda n, m, ref="automation/research-queue-stamp-1": {"number": n, "created_at": ago(m), "head": {"ref": ref}}
+    def pr(n, m, ref="automation/research-queue-stamp-1"):
+        return {"number": n, "created_at": ago(m), "head": {"ref": ref}}
+
     assert w.check_stamps([pr(1, 30)], NOW, TH)["state"] == w.OK
     v = w.check_stamps([pr(2, 400), pr(3, 400, "feature/x")], NOW, TH)
     assert v["state"] == w.BAD and v["evidence"]["stranded"] == [2]
@@ -195,7 +196,7 @@ def test_dry_run_has_no_effects_and_no_ledger(tmp_path):
 
 def test_ledger_rows_written_live(tmp_path):
     cycle(fixture(), tmp_path)
-    rows = [json.loads(l) for l in (tmp_path / "l.jsonl").read_text().splitlines()]
+    rows = [json.loads(ln) for ln in (tmp_path / "l.jsonl").read_text().splitlines()]
     assert rows and all({"ts", "event", "check", "incident", "detail"} <= set(r) for r in rows)
 
 

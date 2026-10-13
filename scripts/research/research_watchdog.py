@@ -337,7 +337,7 @@ class GhProbe:
                     with urllib.request.urlopen(urllib.request.Request(f"https://api.telegram.org/bot{tok}/sendMessage", data=data), timeout=30) as r:
                         if r.status == 200 and json.loads(r.read().decode()).get("ok"):
                             return True
-                except Exception:  # retried, then falls back below -- never swallowed into "sent"
+                except (OSError, ValueError):  # URLError/HTTPError are OSError; retried, then falls back below -- never reported as sent
                     pass
                 time.sleep(2 * (i + 1))
         else:
@@ -415,7 +415,7 @@ def queue_facts(root: Path, now: datetime) -> Optional[dict]:
                 "backend_workflows": {n: b["workflow"] for n, b in cfg["backends"].items()},
                 "router_style_due_not_counted_by_dispatchable": uncounted,
                 "kaggle_floor_hours": float((cfg["backends"].get("kaggle", {}).get("quota") or {}).get("floor_hours") or 0)}
-    except Exception as exc:  # reported, never swallowed: the caller turns None into could_not_look
+    except Exception as exc:  # allow-silent: printed to stderr, and the None return becomes a could_not_look verdict, never an ok
         print(f"watchdog: queue facts unreadable: {type(exc).__name__}: {exc}", file=sys.stderr)
         return None
 
@@ -472,7 +472,7 @@ def parse_events(comments: Optional[list], mk: str) -> List[dict]:
 
 def read_ledger(path: Path = LEDGER) -> List[dict]:
     try:
-        return [json.loads(l) for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
+        return [json.loads(ln) for ln in path.read_text(encoding="utf-8").splitlines() if ln.strip()]
     except (OSError, ValueError):
         return []
 
