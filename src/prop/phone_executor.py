@@ -416,6 +416,11 @@ def record_report(device: PhoneDevice, body: Dict[str, Any]) -> Dict[str, Any]:
         except Exception:  # noqa: BLE001  # allow-silent: logged; the snapshot is stored and the next read retries
             logger.warning("phone_executor: positions reconcile failed for %s", device.account_id, exc_info=True)
             res["reconcile"] = None
+        try:   # fills in the exit of rows ALREADY closed unpriced; independent of the reconcile mode (see its doc)
+            res["fill_in"] = phone_reconcile.fill_unpriced_closes(device.account_id, body["closed_orders"])
+        except Exception:  # noqa: BLE001  # allow-silent: logged; the next clean read retries
+            logger.warning("phone_executor: closed-order fill-in failed for %s", device.account_id, exc_info=True)
+            res["fill_in"] = None
     tid = body.get("ticket_id")
     if tid and str(body.get("kind") or "") == "amend":
         # The human {kind: amend} path ("moved stop/target"): the phone trail's resting levels follow it.
