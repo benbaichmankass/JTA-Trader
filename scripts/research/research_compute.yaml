@@ -65,7 +65,7 @@ backends:
 
 # Datasets published OFF the trainer (ML-DATA-OFF-TRAINER, 2026-10-13). A unit that sets `routing.published_data: <name>`
 # reads its shards from this dataset instead of trainer-resident files, so it can run on a runner or Kaggle. The router
-# CHECKS the claim: every ml_bakeoff.dataset path of the unit must be in scripts/ml/market_data_export.py::ALLOW.
+# CHECKS the claim: every ml_bakeoff.dataset path of the unit must be in scripts/research/market_data_export.py::ALLOW.
 # Market data only; OURS (trades, fills, signals, account, outcome labels) is never published. Private Kaggle dataset.
 published_data:
   metis-market-data:

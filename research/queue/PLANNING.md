@@ -55,7 +55,7 @@ run:
   A unit whose backend is full or out of quota is `deferred` with the reason and retried next cycle; it does not
   block units bound for other backends.
 
-- **Published data (ML-DATA-OFF-TRAINER, 2026-10-13).** A unit whose `ml_bakeoff.dataset` paths are all in `scripts/ml/market_data_export.py::ALLOW`
+- **Published data (ML-DATA-OFF-TRAINER, 2026-10-13).** A unit whose `ml_bakeoff.dataset` paths are all in `scripts/research/market_data_export.py::ALLOW`
   (BTC/ETH/SOL 15m+1h `market_features`/`market_raw`, published daily as the private Kaggle dataset `metis-market-data`) declares
   `routing: {needs_trainer_resident_data: false, published_data: metis-market-data}` and `compute: auto`, with no `run.workflow`. The router CHECKS
   the claim (a path outside the allowlist is `BLOCKED_ROUTE`) and sends it to `research-script-run-data.yml` (runner + dataset fetch) or, with

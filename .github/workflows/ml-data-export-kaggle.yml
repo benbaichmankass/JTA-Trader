@@ -4,7 +4,7 @@ name: ml-data-export-kaggle
 # dataset (`metis-market-data`), so ML/frontier units can run on Kaggle or a GitHub runner instead of queueing on
 # the saturated 1-OCPU trainer. Operator direction 2026-10-13 ~15:50Z (recorded_decision operator_decision): export
 # MARKET data; anything OURS (trades, fills, order packages, signals, account/PnL, outcome labels) is NOT approved
-# for publication and is not in the allowlist (scripts/ml/market_data_export.py::ALLOW; classification in
+# for publication and is not in the allowlist (scripts/research/market_data_export.py::ALLOW; classification in
 # docs/research/ml-data-classification-2026-10-13.md).
 #
 # HOW. The RUNNER pulls the allowlisted files over the existing trainer SSH route (the same key research-script-run-
@@ -58,7 +58,7 @@ jobs:
           python-version: "3.11"
       - run: pip install "kaggle>=2.0"
       - name: Self-test the exporter
-        run: python3 scripts/ml/market_data_export.py self-test
+        run: python3 scripts/research/market_data_export.py self-test
       - name: Pull the allowlisted shards from the trainer
         run: |
           set -uo pipefail
@@ -66,7 +66,7 @@ jobs:
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
           printf '%s\n' "${VM_SSH_KEY}" > ~/.ssh/trainer_key && chmod 600 ~/.ssh/trainer_key
           SSH="ssh -i $HOME/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
-          python3 scripts/ml/market_data_export.py list-paths > /tmp/files.txt
+          python3 scripts/research/market_data_export.py list-paths > /tmp/files.txt
           for attempt in 1 2; do
             BUSY=$($SSH "${TRAINER_USER}@${TRAINER_IP}" "cd /home/ubuntu/ict-trading-bot/datasets-out && find market_features market_raw -name data.jsonl -mmin -10 | wc -l" 2>/dev/null | tr -d ' ')
             [ "${BUSY:-x}" = "0" ] && break
@@ -96,7 +96,7 @@ jobs:
           [ -n "$USERNAME" ] || { echo "::error::token did not resolve to a Kaggle user"; exit 1; }
           echo "::add-mask::$USERNAME"
           scrub() { sed "s|$USERNAME|<user>|g"; }
-          python3 scripts/ml/market_data_export.py build --src /tmp/src --out /tmp/stage --username "$USERNAME" | tee /tmp/build.json
+          python3 scripts/research/market_data_export.py build --src /tmp/src --out /tmp/stage --username "$USERNAME" | tee /tmp/build.json
           if kaggle datasets status "$USERNAME/metis-market-data" >/dev/null 2>&1; then
             kaggle datasets version -p /tmp/stage -r zip -m "export $(date -u +%Y-%m-%dT%H:%MZ) run ${GITHUB_RUN_ID}" 2>&1 | scrub | grep -v "it/s\|B/s" | tail -5
           else
@@ -145,7 +145,7 @@ jobs:
           echo "::add-mask::$USERNAME"
           mkdir -p /tmp/dl
           kaggle datasets download -d "$USERNAME/metis-market-data" -p /tmp/dl --unzip 2>&1 | sed "s|$USERNAME|<user>|g" | tail -3
-          python3 scripts/ml/market_data_export.py verify --root /tmp/dl | tee verify-runner.json
+          python3 scripts/research/market_data_export.py verify --root /tmp/dl | tee verify-runner.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:

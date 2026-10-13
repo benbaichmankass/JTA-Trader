@@ -27,7 +27,7 @@ from typing import Any, Dict, Optional
 _REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_REPO))
 
-from scripts.ml import market_data_export as mde  # noqa: E402
+from scripts.research import market_data_export as mde  # noqa: E402
 from scripts.research import compute_router as cr  # noqa: E402
 
 

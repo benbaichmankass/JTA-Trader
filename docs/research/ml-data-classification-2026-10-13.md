@@ -16,7 +16,7 @@
 | ETHUSDT 15m | 175,272 | 449 MB | 2021-10-13 | 2026-10-12 | 2026-10-13 05:39Z |
 | SOLUSDT 15m | 63,976 | 169 MB | 2021-10-15 | **2023-08-12** | 2026-10-13 05:44Z |
 
-Each shard has the same 130-odd columns. Every one is on the list below; **none** names a trade, fill, order, account, balance, signal, strategy or PnL. (`order_imbalance` is the per-bar taker buy/sell volume imbalance from the public trade feed. `scripts/ml/market_data_export.py` refuses any column that matches an OURS pattern, and a self-test proves `order_imbalance` passes while `pnl`, `order_package_id`, `account_id` do not.)
+Each shard has the same 130-odd columns. Every one is on the list below; **none** names a trade, fill, order, account, balance, signal, strategy or PnL. (`order_imbalance` is the per-bar taker buy/sell volume imbalance from the public trade feed. `scripts/research/market_data_export.py` refuses any column that matches an OURS pattern, and a self-test proves `order_imbalance` passes while `pnl`, `order_package_id`, `account_id` do not.)
 
 Columns, grouped by source: bar features (`log_return`, `rolling_log_return_vol`, `vol_bucket`, `hour_of_day`, `dayofweek`, `log_return_lag_*`, four range-based vol estimators) from Bybit public klines · labels (`regime_label`, `trend_regime_label`, `direction_label`, `forward_log_return*`) from FORWARD market returns/vol, not from any outcome of ours · funding/OI (`funding_rate*`, `open_interest_change*`) from Bybit public · order flow (`ofi*`, `vpin`, `order_imbalance`, `rel_spread_mean`, `microprice_dev`) captured from Bybit public order book + trades · macro (`vix_*`, `dxy_*`, `ust*`) from third-party feeds · peer-asset (`xa_*`) from the other symbols' bars · embeddings/forecasts (`tsfm_emb_*`, `fc_*`) from a frozen pretrained model run on the close series · `corpus_emb_*` from the public macro corpus encoder.
 
@@ -43,7 +43,7 @@ Not classified in this pass: `RQ-20261009-903` (`pm_surprise_eval.py`) and `RQ-2
 
 * **Approved by the operator's message (recorded as `operator_decision`):** exporting MARKET data to a Kaggle dataset and making it readable from GitHub runners. Done as **private**.
 * **Not approved, not done:** publishing anything OURS in any form; making any dataset public. A public release would also redistribute third-party macro series (VIX/DXY/UST), which is a licence question this lane did not settle.
-* `scripts/ml/market_data_export.py::ALLOW` is the single list of shippable paths. Widening it is a reviewed edit, and the router reads the same list.
+* `scripts/research/market_data_export.py::ALLOW` is the single list of shippable paths. Widening it is a reviewed edit, and the router reads the same list.
 
 ## Freshness / integrity finding (a bug, not a classification)
 
@@ -57,4 +57,4 @@ MEASURED (trainer, 2026-10-13 ~16:10Z, issue #17894): the **BTC and SOL 15m `mar
 
 The two counts are round numbers, and the file was rewritten ~4.5 h after the metadata was stamped, so a second writer replaced a whole file with a prefix of it. `market_features` and `forecasts` for BTC/SOL were then rebuilt from the cut file at 05:18–05:44Z, which is why they end on the same dates. The 05:18Z BTC and 05:42Z SOL times fall in the `ict-trainer-catchup` hour (busy fraction 1.96 at 05Z in `trainer-workload-2026-10-13.md`); **that is a correlation, not a cause**: the writer was not identified. Every BTC/SOL regime unit and the BTC/SOL regime-head training read cut data, which is why `RQ-20261012-75b2-22` found `n_test_rows=0`.
 
-What this lane did about it: `scripts/ml/market_data_export.py` compares each `market_raw` shard with its own metadata and each `market_features` shard with its raw's `row_count`, **withholds** any shard that disagrees (listed under `MANIFEST.withheld` with the reason), and records `last_ts`/`stale_days` for the rest. So the first export ships ETH and withholds BTC/SOL 15m; units that read a withheld shard fail closed with the reason (`published_data.py fetch`, exit 7) rather than run on a cut file. Finding the writer and repairing the shards is checklist row `ML-SHARD-TRUNCATED`.
+What this lane did about it: `scripts/research/market_data_export.py` compares each `market_raw` shard with its own metadata and each `market_features` shard with its raw's `row_count`, **withholds** any shard that disagrees (listed under `MANIFEST.withheld` with the reason), and records `last_ts`/`stale_days` for the rest. So the first export ships ETH and withholds BTC/SOL 15m; units that read a withheld shard fail closed with the reason (`published_data.py fetch`, exit 7) rather than run on a cut file. Finding the writer and repairing the shards is checklist row `ML-SHARD-TRUNCATED`.

@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts.ml import market_data_export as mde
+from scripts.research import market_data_export as mde
 from scripts.research import compute_router as cr
 
 REPO = Path(__file__).resolve().parents[1]

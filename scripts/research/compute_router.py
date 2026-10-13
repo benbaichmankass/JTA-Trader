@@ -142,7 +142,7 @@ def unit_dataset_paths(entry: Dict[str, Any]) -> List[str]:
 def published_problem(entry: Dict[str, Any], cfg: Dict[str, Any]) -> Optional[str]:
     """None when the unit does not claim published data, or the claim holds. Otherwise why the claim is false.
     ML-DATA-OFF-TRAINER (2026-10-13): a unit may leave the trainer only when EVERY dataset path it reads is in the
-    exporter's allowlist (scripts/ml/market_data_export.py::ALLOW) -- the claim is checked, never trusted."""
+    exporter's allowlist (scripts/research/market_data_export.py::ALLOW) -- the claim is checked, never trusted."""
     name = (entry.get("routing") or {}).get("published_data")
     if not name:
         return None
@@ -152,7 +152,7 @@ def published_problem(entry: Dict[str, Any], cfg: Dict[str, Any]) -> Optional[st
     paths = unit_dataset_paths(entry)
     if not paths:
         return "routing.published_data is set but the unit declares no ml_bakeoff.dataset path to check it against"
-    from scripts.ml import market_data_export as mde  # noqa: PLC0415
+    from scripts.research import market_data_export as mde  # noqa: PLC0415
     bad = [p for p in paths if not mde.covers(p)]
     return (f"routing.published_data {name!r} but these dataset paths are NOT in the published allowlist: {bad}") if bad else None
 
