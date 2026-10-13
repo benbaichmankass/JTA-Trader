@@ -140,7 +140,9 @@ def test_absent_row_closes_only_after_two_reads_a_minute_apart_with_the_venue_ex
     jid = _open("prop-manual-f79")
     t0 = datetime.now(timezone.utc)
     tp_fill = {"symbol": "ETH", "side": "short", "qty": 1.1758, "price": 2655.4, "pnl": 150.03,
-               "type": "Take profit", "status": "Filled", "time": "2026-10-12 12:01:05"}
+               "type": "Take profit", "status": "Filled",
+               # derived from t0, never a literal date: the reconciler rejects fills older than the row minus TZ_SLACK
+               "time": (t0 + timedelta(seconds=5)).strftime("%Y-%m-%d %H:%M:%S")}
     entry_fill = {"symbol": "ETH", "side": "long", "qty": 1.1758, "price": 2527.8, "status": "Filled"}
     monkeypatch.setattr(rc, "_now", lambda: t0)
     r1 = _status([], closed=[tp_fill, entry_fill])
