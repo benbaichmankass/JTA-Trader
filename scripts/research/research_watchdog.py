@@ -42,6 +42,7 @@ import os
 import subprocess
 import sys
 import time
+import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
@@ -243,6 +244,21 @@ def check_stamps(prs: Optional[list], now: datetime, th: dict) -> Dict[str, Any]
     return verdict("stamps", OK, f"{len(stamp)} open stamp PR(s), none older than {hrs:g} h", evidence=ev)
 
 
+def check_phone_heartbeat(res: Optional[dict], th: dict) -> Dict[str, Any]:
+    """breakout_2's phone executor heartbeat, graded by scripts/ops/prop_silence.probe_phone_heartbeat (the SAME probe and
+    the SAME 'live' definition -- config/accounts.yaml mode == live -- as the hourly attention watch). `res` is that probe's
+    {status, detail} dict, or None when it could not be run. unknown is could_not_look, never ok."""
+    lim = float(th["phone_heartbeat_max_minutes"])
+    if not isinstance(res, dict) or res.get("status") not in ("ok", "breached", "unknown"):
+        return verdict("phone_heartbeat", CNL, "phone-heartbeat probe could not be run")
+    ev = {"limit_min": lim, "probe_detail": res.get("detail")}
+    if res["status"] == "breached":
+        return verdict("phone_heartbeat", BAD, f"{res.get('detail')} (watchdog limit {lim:g} min)", evidence=ev)
+    if res["status"] == "unknown":
+        return verdict("phone_heartbeat", CNL, str(res.get("detail")), evidence=ev)
+    return verdict("phone_heartbeat", OK, str(res.get("detail")), evidence=ev)
+
+
 # ── probes: every fact comes through here, so tests/fixtures replace all of GitHub ──────────────────────────
 class GhProbe:
     """`gh`-backed. Each read retries (2 s, 4 s) before it returns None = could not look."""
@@ -293,6 +309,27 @@ class GhProbe:
         for x in res["landed"]:
             x["age_minutes"] = _age_min(born.get(int(x["run_id"])), now)
         return res
+
+    def phone_probe(self, now: datetime) -> Optional[dict]:
+        """prop_silence's own probe, reading the public API (GET /api/bot/prop/status is a public read)."""
+        from scripts.ops import prop_silence as ps
+        base = os.environ.get("WATCHDOG_API_BASE", "https://ict-bot.duckdns.org")
+
+        def fetch(path: str):
+            last = ("unreadable", "no attempt")
+            for i in range(3):
+                try:
+                    with urllib.request.urlopen(base + path, timeout=15) as r:  # noqa: S310
+                        return "read", json.loads(r.read().decode("utf-8"))
+                except (OSError, ValueError) as exc:    # URLError is an OSError; retried, then reported as unreadable
+                    last = ("unreadable", f"{type(exc).__name__}: {exc}")
+                time.sleep(2 * (i + 1))
+            return last
+        try:
+            return ps.probe_phone_heartbeat(now, fetch)
+        except (ImportError, KeyError, AttributeError) as exc:
+            print(f"watchdog: phone probe unavailable: {type(exc).__name__}: {exc}", file=sys.stderr)
+            return None
 
     def kaggle_quota(self) -> dict:
         from scripts.research import compute_router as cr
@@ -368,6 +405,9 @@ class FixtureProbe:
 
     def collector_status(self, window_hours: float, now: datetime):  # inert: window_hours — mirrors GhProbe's signature; inert: now — same
         return self._get("collector")
+
+    def phone_probe(self, now: datetime):  # inert: now — mirrors GhProbe's signature
+        return self._get("phone_probe")
 
     def kaggle_quota(self) -> dict:
         return self._get("kaggle_quota") or {"note": "no quota in fixture"}
@@ -448,6 +488,7 @@ def evaluate(probe: Any, cfg: dict, now: datetime, facts: Optional[dict]) -> Lis
                                  probe.workflow_runs(facts["backend_workflows"][be], 10) if facts else None, now, th, quota))
     out.append(check_collector(probe.collector_status(float(th["collector_window_hours"]), now), th))
     out.append(check_stamps(probe.open_prs(), now, th))
+    out.append(check_phone_heartbeat(probe.phone_probe(now), th))
     return out
 
 
@@ -584,10 +625,22 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--now", help="ISO time to evaluate at (fixtures)")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--run-url", default=os.environ.get("RUN_URL", ""))
+    ap.add_argument("--open-incidents", action="store_true",
+                    help="print the JSON list of checks with an OPEN watchdog incident (ledger + ops-flags comments) and exit; "
+                         "other alerters read this to stay silent while the watchdog already told the operator")
     ap.add_argument("--test-alert", action="store_true", help="send ONE labelled test message through the live alert path and exit")
     ap.add_argument("--rows-out", help="also write this run's new ledger rows here (the workflow lands them)")
     a = ap.parse_args(argv)
     cfg = load_config()
+    if a.open_incidents:
+        gp = GhProbe()
+        pr = gp.ops_flags_pr(cfg["ops_flags"]["title"])
+        com = gp.pr_comments(pr) if pr else None
+        if com is None and not read_ledger():
+            print(json.dumps({"read_state": "could_not_look", "open": None}))
+            return 2
+        print(json.dumps({"read_state": "measured", "open": sorted(open_incidents(parse_events(com, marker(cfg)) + read_ledger()))}))
+        return 0
     if a.test_alert:
         ok = GhProbe().ping("research-watchdog: test alert, no action needed")
         print(f"test alert {'SENT' if ok else 'NOT SENT'}")

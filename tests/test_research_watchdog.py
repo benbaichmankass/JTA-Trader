@@ -123,6 +123,46 @@ def test_stamps_states():
     assert w.check_stamps(None, NOW, TH)["state"] == w.CNL
 
 
+# ── phone heartbeat ──
+def test_phone_heartbeat_maps_the_shared_probe_and_never_passes_unknown():
+    assert w.check_phone_heartbeat({"status": "ok", "detail": "fresh"}, TH)["state"] == w.OK
+    v = w.check_phone_heartbeat({"status": "breached", "detail": "breakout_2: last phone heartbeat 31 min ago"}, TH)
+    assert v["state"] == w.BAD and "31 min" in v["detail"] and v["heal"] is None
+    assert w.check_phone_heartbeat({"status": "unknown", "detail": "mode unreadable"}, TH)["state"] == w.CNL
+    assert w.check_phone_heartbeat(None, TH)["state"] == w.CNL
+    assert w.check_phone_heartbeat({"status": "weird"}, TH)["state"] == w.CNL
+
+
+def test_phone_limit_equals_the_probe_limit_and_probe_agrees_with_it():
+    from datetime import timedelta as td
+
+    from scripts.ops import prop_silence as ps
+    assert TH["phone_heartbeat_max_minutes"] == ps.HEARTBEAT_MAX_MIN
+    now = NOW
+    def fetch(age):
+        return lambda path: ("read", {"phone_heartbeat": {"at": (now - td(minutes=age)).isoformat()}})
+    live = lambda acct: "live"            # noqa: E731
+    assert ps.probe_phone_heartbeat(now, fetch(3), live)["status"] == ps.OK
+    assert ps.probe_phone_heartbeat(now, fetch(25), live)["status"] == ps.BREACHED
+    assert ps.probe_phone_heartbeat(now, fetch(25), lambda a: "dry_run")["status"] == ps.OK     # not live -> not required
+
+
+def test_phone_breach_escalates_once_then_recovery_resolves(tmp_path):
+    fx = fixture(dispatch_age=5)
+    fx["phone_probe"] = {"status": "breached", "detail": "breakout_2: last phone heartbeat 40 min ago"}
+    p, res = cycle(fx, tmp_path)
+    ev = [e for e in res["events"] if e["check"] == "phone_heartbeat"]
+    assert len(ev) == 1 and ev[0]["event"] == "escalated"
+    assert sum(1 for e in p.effects if "ping" in e and "phone_heartbeat" in e["ping"]) == 1      # ONE telegram
+    cm = [{"body": e["body"]} for e in p.effects if "post_comment" in e]
+    again, res2 = cycle(dict(fixture(dispatch_age=5, comments=cm), phone_probe=fx["phone_probe"]), tmp_path / "z")
+    assert not [e for e in res2["events"] if e["check"] == "phone_heartbeat"]                    # deduped
+    ok_fx = dict(fixture(dispatch_age=5, comments=cm), phone_probe={"status": "ok", "detail": "fresh"})
+    rec, res3 = cycle(ok_fx, tmp_path / "y")
+    assert [e for e in res3["events"] if e["check"] == "phone_heartbeat" and e["event"] == "resolved"]
+    assert any("resolved" in e.get("ping", "") for e in rec.effects)
+
+
 # ── incident machine ──
 class P(w.FixtureProbe):
     def __init__(self, fx):
@@ -134,7 +174,8 @@ def fixture(*, dispatch_age=300, comments=None, pr=77):
     return {"workflow_runs": {w.DISPATCH_WORKFLOW: [run(1, dispatch_age)],
                               **{wf: [run(10 + i, 5)] for i, wf in enumerate(w.RESEARCH_WORKFLOWS)}},
             "run_jobs": {"1": [job(dispatch_age)]}, "open_prs": [], "collector": {"landed": []},
-            "ops_flags_pr": pr, "pr_comments": comments if comments is not None else []}
+            "ops_flags_pr": pr, "pr_comments": comments if comments is not None else [],
+            "phone_probe": {"status": "ok", "detail": "fresh"}}
 
 
 HEALTHY = {"runnable": 30, "by_backend": {}, "unplaceable": 0, "units_total": 99, "unreadable_units": 0, "backends": [],
