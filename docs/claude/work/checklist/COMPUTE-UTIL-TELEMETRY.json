@@ -2,25 +2,31 @@
   "id": "COMPUTE-UTIL-TELEMETRY",
   "title": "COMPUTE-UTIL-TELEMETRY: compute review recommendation",
   "phase": "process",
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": null,
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    17858
+  ],
   "blocked_on": [],
   "note": "Record daily CPU/mem/disk/load p95 for live, trainer and gateway VMs (live vm_health and trainer mirror already carry single samples; gateway has none). A gateway reader touches a VM = Tier 2 step. Source: docs/plans/COMPUTE-ARCH-REVIEW-2026-10-13.md (ranked recommendations).  | 2026-10-13 lane: built as workflow compute-util-telemetry + scripts/ops/compute_util.py (PR #17858). Gateway is read via OCI Monitoring (no VM touch) plus a read-only df//proc SSH sample via ProxyJump - read-only, no change to the VM, so treated as Tier 1. Unproven until first run.",
-  "updated_at": "2026-10-13T11:29:20Z",
-  "updated_by": "session_01KKBMQzaGaDYCtbtCskjDJk",
+  "updated_at": "2026-10-13T11:29:33Z",
+  "updated_by": "session_01EexLtAgHjQJ2ZpCWhqaeoQ",
   "roadmap": [
     "L-OPS"
   ],
   "observation": {
-    "what": "Record daily CPU/mem/disk/load p95 for live, trainer and gateway VMs (live vm_health and trainer mirror already carry single samples; gateway has none)",
-    "how_to_check": "a 7-day p95 series per VM exists and is readable without SSH; docs/plans/COMPUTE-ARCH-REVIEW-2026-10-13.md A1 filled in with it",
-    "due_by": "2026-10-27"
+    "what": "7-day p95 series per VM (cpu/mem/net, disk point sample) readable without SSH from comms/cloud/compute_util_ledger.jsonl, gateway included; first run also records comms/cloud/oci_limits.json",
+    "how_to_check": "git log comms/cloud/compute_util_ledger.jsonl; read_state fields; then fill COMPUTE-ARCH-REVIEW A1 and vm-topology.md",
+    "due_by": "2026-10-20"
+  },
+  "writeback": {
+    "roadmap": "none: telemetry/limits read only; milestone L-OPS measure unchanged until first run lands values",
+    "arch": "none: Tier-1 read path; documented in docs/reference/vm-topology.md"
   },
   "_seq": 449
 }
