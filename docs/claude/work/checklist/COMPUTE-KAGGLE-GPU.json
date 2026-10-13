@@ -10,9 +10,11 @@
   "spend_usd": null,
   "tier": 1,
   "prs": [],
-  "blocked_on": [],
-  "note": "Workflow kaggle-gpu-pilot.yml landed; closes when a dispatched run returns nvidia-smi + quota; result in docs/plans/COMPUTE-KAGGLE-GPU-PILOT-2026-10-13.md. Proposed in COMPUTE-ARCH-REVIEW (PR #17833).",
-  "updated_at": "2026-10-13T09:21:08Z",
+  "blocked_on": [
+    "operator: repo Actions secret KAGGLE_API_TOKEN resolves empty to the workflow"
+  ],
+  "note": "[2026-10-13T10:28Z lane] PR #17843 merged. Run 38382717680 FAILED at auth: KAGGLE_API_TOKEN reached the job EMPTY (never contacted Kaggle; not a phone-verification result). Operator must confirm a REPOSITORY Actions secret named exactly KAGGLE_API_TOKEN with a non-empty value, then re-dispatch kaggle-gpu-pilot. Results: docs/plans/COMPUTE-KAGGLE-GPU-PILOT-2026-10-13.md.",
+  "updated_at": "2026-10-13T10:28:37Z",
   "updated_by": "session_01QS1CMBmvoizdwGo1vLF3zk",
   "roadmap": [
     "M25"
