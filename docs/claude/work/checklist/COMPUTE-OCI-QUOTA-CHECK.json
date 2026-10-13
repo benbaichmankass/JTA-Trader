@@ -1,0 +1,26 @@
+{
+  "id": "COMPUTE-OCI-QUOTA-CHECK",
+  "title": "COMPUTE-OCI-QUOTA-CHECK: compute review recommendation",
+  "phase": "process",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Resolve the Always-Free discrepancy (Oracle page: Ampere 2 OCPU/12 GB; repo: 4/24 full) and the 7-day idle-reclaim exposure (CPU p95<20%, net<20%, A1 mem<20%) for each A1 instance. Read-only; any VM change is Tier 2. Source: docs/plans/COMPUTE-ARCH-REVIEW-2026-10-13.md (ranked recommendations).",
+  "updated_at": "2026-10-13T08:44:11Z",
+  "updated_by": "session_01KKBMQzaGaDYCtbtCskjDJk",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "observation": {
+    "what": "Resolve the Always-Free discrepancy (Oracle page: Ampere 2 OCPU/12 GB; repo: 4/24 full) and the 7-day idle-reclaim exposure (CPU p95<20%, net<20%, A1 mem<20%) for each A1 instance",
+    "how_to_check": "tenancy limits and account type recorded in docs/reference/vm-topology.md; per-instance 7-day p95 vs the reclaim thresholds",
+    "due_by": "2026-10-27"
+  },
+  "_seq": 450
+}
