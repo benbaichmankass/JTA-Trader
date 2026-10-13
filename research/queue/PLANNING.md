@@ -20,6 +20,41 @@ recurring planning session does.
 - Every unit says what it does not do. An upper-bound or scoping unit says it is not a promotion case.
 - Units that need a prior result to be worth running use `requires_result`, not prose.
 
+## 1b. A unit declares WHAT KIND of test it is and what it is WORTH — never WHERE it runs (RESEARCH-ROUTER, 2026-10-13)
+Operator, 2026-10-13: Claude writes the unit (id + test structure); a dispatcher that spends no Claude tokens sends
+it to the right compute and spends scarce resources on the highest-value work. The policy is data:
+[`scripts/research/research_compute.yaml`](../../scripts/research/research_compute.yaml); the code is `scripts/research/compute_router.py`
+(placement + value) called by `dispatch_queue.py`. **A session authoring a unit writes four things for this:**
+
+```yaml
+compute: cpu_light      # cpu_light | cpu_long | needs_vm_data | gpu | gpu_preferred | auto   (auto = derive from routing:)
+routing: {needs_gpu: false, needs_trainer_resident_data: false, peak_memory_gb: 2.0, est_minutes: 20}   # as before
+value:                  # optional; every field optional; omitted fields fall back to priority-derived defaults
+  usd_at_stake_per_month: 400   # expected net-P&L impact / money at stake if the answer is acted on (state the basis)
+  confidence: 0.4               # P(the result changes a decision), 0..1
+  bucket: own_losses            # own_losses | structural | information | ai_trader | frontier  (STRATEGY-REALIGN mix 30/25/20/15/10)
+  basis: "one line: where the dollar figure comes from"
+run:
+  command: ["python3", "scripts/research/<harness>.py", "--out", "{out_dir}"]
+  inputs: {research_unit: RQ-...}      # no run.workflow: the router fills it
+```
+
+- **Classes:** `cpu_light` (<= ~30 min) and `cpu_long` (to 5.5 h) -> GitHub-hosted runner; `needs_vm_data` -> the
+  trainer VM (only when the unit reads trainer-resident data and fits 6 GB); `gpu` -> Kaggle GPU (waits for the
+  weekly quota, never runs on CPU); `gpu_preferred` -> Kaggle, else the runner (the script must support both).
+  A class that contradicts the unit's own `routing:` block is refused (`BLOCKED_ROUTE`), not guessed.
+- **`run.workflow:` still works and beats `compute:`** (every existing unit keeps its hard-coded runner). Do not
+  add one to a new unit: picking a runner by hand is exactly what this replaces. RunPod (`gpu-burst-train.yml`) is
+  never auto-routed; it stays an explicit, operator-armed, ledger-capped choice.
+- **Ranking** (within a theme; theme weights stay the operator's across themes):
+  `score = usd_per_month x confidence x bucket_boost x hand_written_boost x age_boost / ((1 + est_hours) x backend cost_weight)`.
+  Every dry-run line prints its derivation. A unit waiting past `value.starve_hours` sorts first in its theme.
+  `bucket_boost` = target share / observed share of the unit's bucket over the share window (clamped 0.5-2.0), which is how the 30/25/20/15/10
+  mix steers fires. A dollar figure is an estimate with a stated basis, never a measurement.
+- **Capacity** is per backend (`max_concurrent`) plus a total, and the Kaggle weekly GPU quota has a floor.
+  A unit whose backend is full or out of quota is `deferred` with the reason and retried next cycle; it does not
+  block units bound for other backends.
+
 ## 2. Weights
 - `research/THEMES.yaml` is the only place weights live. They are a share of fire slots, not an order.
 - Set at the operator's direction (2026-09-30: regime 5, live_strategy 4, ml_health 3, new_strategy_prop 2,
