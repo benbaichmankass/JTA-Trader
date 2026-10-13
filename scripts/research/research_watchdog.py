@@ -329,7 +329,9 @@ class GhProbe:
         fall back to the send-ping system-action (the claude comms bot), so a flag is never dropped silently."""
         import urllib.parse
         import urllib.request
-        tok, chat = os.environ.get("TELEGRAM_BOT_TOKEN", ""), os.environ.get("TELEGRAM_CHAT_ID", "")
+        # same resolution as src/bot/telegram_routes.system_route(): the trader bot token, TELEGRAM_SYSTEM_CHAT_ID if set else the shared chat
+        tok = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+        chat = os.environ.get("TELEGRAM_SYSTEM_CHAT_ID") or os.environ.get("TELEGRAM_CHAT_ID", "")
         if tok and chat:
             for i in range(3):
                 try:

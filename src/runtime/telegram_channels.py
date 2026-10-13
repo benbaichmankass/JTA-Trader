@@ -123,6 +123,7 @@ SENDERS: Final[dict[str, tuple[str, ...]]] = {
     "src/utils/log_redact.py": ("alert",),
     "scripts/send_ping.py": ("claude_ping", "execution_alert"),
     "scripts/ops/send_route_test_ping.py": ("alert",),
+    "scripts/research/research_watchdog.py": ("alert",),   # RESEARCH-WATCHDOG escalations/resolutions -> SYSTEM (direct sendMessage)
     # TRADES
     "src/runtime/mobile_push/trade_events.py": ("trade_opened", "trade_closed", "trade_updated"),
     "src/runtime/execution_diagnostics.py": (
