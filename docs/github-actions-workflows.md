@@ -299,12 +299,19 @@ As of 2026-08-21 there are **three**:
 | mode | when | what runs |
 |---|---|---|
 | `none` | no changed path matches the relevance filter in the workflow (`tests/test_pytest_run_filter.py`) | nothing; the summary says it passed without running tests, by design |
-| `data` | every suite-relevant changed path is on the explicit data allowlist: `docs/claude/work/checklist/`, `docs/claude/work/pipeline/`, `docs/claude/work/PIPELINE.jsonl`, `research/queue/*.yaml`, `research/results/`, `comms/` (not `comms/schema/`), `.github/pr-landing/`, `.github/pr-automerge-requests/`, `.github/merge-slots/` | every test file whose text mentions those trees (`--select-tests`; 249 of ~1,440 files on 2026-10-13), selected by content, never by a hand list |
+| `data` | every suite-relevant changed path is on the explicit data allowlist: `docs/claude/work/checklist/`, `docs/claude/work/pipeline/`, `docs/claude/work/PIPELINE.jsonl`, `research/queue/*.yaml`, `research/results/`, `comms/` (not `comms/schema/`), `.github/pr-landing/`, `.github/pr-automerge-requests/`, `.github/merge-slots/` | every test file whose text mentions those trees (`--select-tests`; 155 of ~1,440 files on 2026-10-13), selected by content, never by a hand list |
 | `full` | anything else: `.py`, `config/`, `src/`, `scripts/`, `tests/`, `.github/workflows/`, `comms/schema/`, the enumerated docs the suite reads (`docs/ARCHITECTURE-CANONICAL.md`, ...) | the whole suite, as before |
 
 Measured motive: 179 of 233 commits that landed on `main` in the 48h to 2026-10-13 (77%) were data-only and each paid the
 full ~36-minute suite twice (PR, then push). The `guards` job is not scoped by this and still runs on every PR and push.
 Widening the allowlist widens what skips the full suite; state why in the PR.
+
+Both `full` and `data` runs execute under `pytest-xdist` (`-n auto --dist loadfile`, 4 vCPU on the hosted runner): the same
+tests, scheduled across workers with every test file kept whole on one worker. Measured on three probe runs of the full
+suite: 11.7 / 13.0 / 20.5 min wall against 33-46 min serial. It is a scheduling change only (pinned by
+`tests/test_pytest_run_scope.py`: no `-k`/`-m`/`--deselect`); parallel scheduling exposed two cross-test pollution bugs
+(a `sys.modules` deletion and a Bybit tick/lot cache poisoned by mock clients), fixed in the tests rather than by
+deselecting. A new order-dependent test will now fail intermittently: fix the test's isolation, do not rerun until green.
 
 
 > ⚠️ **This mirror said "15 required contexts" until 2026-08-21 and had been

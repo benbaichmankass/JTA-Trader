@@ -259,12 +259,20 @@ def test_the_map_loads_without_the_ml_package():
     `ml/datasets/__init__` -> `.registry` -> fourteen family builders (one of
     which imports `yaml`). Asserted by the ABSENCE of `ml.datasets` from
     sys.modules after the load, not by the load merely succeeding."""
-    for name in [n for n in sys.modules if n.startswith("ml.datasets")]:
-        del sys.modules[name]
-    syms = _puller()._load_yf_symbols()
-    assert syms._DEFAULT_TICKER_MAP["SPY"] == "SPY"
-    assert "ml.datasets" not in sys.modules, (
-        "the by-path load executed the ml.datasets package after all")
+    # Snapshot + restore: deleting these WITHOUT putting them back leaves a second copy of
+    # ml.datasets to be re-imported by whichever test runs next in the same process, so
+    # `isinstance(get_builder(..), XBuilder)` in tests/ml fails on class identity whenever this
+    # file is scheduled before them (pytest-xdist; the serial alphabetical order hid it).
+    saved = {n: sys.modules.pop(n) for n in [n for n in sys.modules if n.startswith("ml.datasets")]}
+    try:
+        syms = _puller()._load_yf_symbols()
+        assert syms._DEFAULT_TICKER_MAP["SPY"] == "SPY"
+        assert "ml.datasets" not in sys.modules, (
+            "the by-path load executed the ml.datasets package after all")
+    finally:
+        for n in [n for n in sys.modules if n.startswith("ml.datasets")]:
+            del sys.modules[n]
+        sys.modules.update(saved)
 
 
 # --------------------------------------------------------------------------

@@ -348,7 +348,7 @@ jobs:
         run: |
           python3 scripts/ci/pytest_run_scope.py --select-tests > /tmp/data-tests.txt
           echo "selected $(wc -l < /tmp/data-tests.txt) test files"
-          pytest -q $(cat /tmp/data-tests.txt) \
+          pytest -q -n auto --dist loadfile $(cat /tmp/data-tests.txt) \
             --ignore=tests/test_main_loop.py \
             --junitxml=pytest-report.xml
 
@@ -367,7 +367,14 @@ jobs:
           # a multi-round guess (the 2026-05-28 time-bomb-test incident: a
           # clock-relative insights test reddened pytest-run and it took a
           # full local-repro to name it).
-          pytest -q tests/ \
+          # -n auto --dist loadfile (CI-DIET, 2026-10-13): the hosted runner has 4 vCPUs and the
+          # serial suite used one. MEASURED on 3 probe runs of this exact suite: 14.4 min vs 33-46
+          # min serial. loadfile keeps every test FILE on one worker, in file order, so intra-file
+          # state sharing behaves as before. No test is skipped or deselected; the junit report and
+          # the failure summary below work unchanged. Cross-file order dependencies surfaced by
+          # parallel scheduling are fixed in the tests (tests/conftest.py autouse resets), never
+          # by deselecting.
+          pytest -q -n auto --dist loadfile tests/ \
             --ignore=tests/test_main_loop.py \
             --junitxml=pytest-report.xml
 
