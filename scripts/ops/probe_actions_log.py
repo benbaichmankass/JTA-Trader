@@ -131,7 +131,7 @@ def _api(path: str, token: str) -> tuple[object | None, str]:
                  "User-Agent": "metis-probe-actions-log"},
     )
     try:
-        with _OPENER.open(req, timeout=TIMEOUT_S) as r:
+        with _OPENER.open(req, timeout=TIMEOUT_S) as r:  # noqa: S310
             return json.loads(r.read().decode("utf-8", "replace")), ""
     except urllib.error.HTTPError as exc:
         # The host ANSWERED and refused. Never an empty result.
@@ -148,7 +148,7 @@ def _job_log(repo: str, job_id: int, token: str) -> tuple[str | None, str]:
                  "User-Agent": "metis-probe-actions-log"},
     )
     try:
-        with _OPENER.open(req, timeout=TIMEOUT_S) as r:
+        with _OPENER.open(req, timeout=TIMEOUT_S) as r:  # noqa: S310
             return r.read(MAX_LOG_BYTES).decode("utf-8", "replace"), ""
     except urllib.error.HTTPError as exc:
         # 410 = the log has EXPIRED (GitHub retains ~90 days). That is an
@@ -371,7 +371,7 @@ def _self_test() -> int:
     # which is how the real storage behaves and is the whole point of the
     # stripping handler. Without this control the handler is decorative.
     class Blob(http.server.BaseHTTPRequestHandler):
-        def do_GET(self):
+        def do_GET(self):  # noqa: N802
             if "Authorization" in self.headers:
                 self.send_response(400)
                 self.end_headers()
