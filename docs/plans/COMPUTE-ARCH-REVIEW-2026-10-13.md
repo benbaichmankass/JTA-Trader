@@ -1,6 +1,6 @@
 # Compute architecture review — 2026-10-13
 
-> **Doc status:** `live` · category `plan` · last verified `2026-10-13` · lane `COMPUTE-ARCH-REVIEW` (read-only review; nothing built, no VM/config/order change) · parent row `STRATEGY-REALIGN`
+> **Doc status:** `unknown` · category `plan` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../docs/DOCUMENT-INDEX.md) · nobody has verified this document's status. Lane `COMPUTE-ARCH-REVIEW` (read-only review; nothing built, no VM/config/order change); parent row `STRATEGY-REALIGN`. Its figures are dated 2026-10-13 and are single samples.
 
 **Question (operator, 2026-10-13, voice paraphrase):** with Claude effort and compute moving to research (exploration, backtests, the AI trader, frontier models), is compute allocated well? Can training consolidate onto one VM? What else is free? The VMs stay as they are for the continuous pipelines; bursty research may belong elsewhere; GPU bursts should be part of the workflow.
 
