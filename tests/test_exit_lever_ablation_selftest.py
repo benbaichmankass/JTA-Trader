@@ -16,13 +16,13 @@ sys.path.insert(0, str(REPO))
 
 def test_self_test_passes():
     r = subprocess.run([sys.executable, str(REPO / "scripts/research/exit_lever_ablation.py"), "--self-test"],
-                       capture_output=True, text=True, cwd=REPO)
+                       capture_output=True, text=True, cwd=REPO, check=False)
     assert r.returncode == 0, r.stdout + r.stderr
 
 
 def test_ablated_arm_drops_lever_and_keeps_window_independent_of_live_config():
-    import yaml
     import exit_lever_ablation as e
+    import yaml
     legs = yaml.safe_load((REPO / "config/strategies.yaml").read_text(encoding="utf-8"))["strategies"]
     cfg = {**legs["trend_donchian_eth_prop"], "stale_exit_bars": 12, "stale_exit_below_r": 0.0}
     base, _ = e.build_arm_argv("trend_donchian_eth_prop", cfg, "<d>", "1h", "<e>", "<j>", [], None, None)
