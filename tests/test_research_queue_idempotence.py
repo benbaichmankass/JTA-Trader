@@ -365,3 +365,69 @@ def test_adoption_never_moves_a_newer_stamp_backwards(tmp_path, monkeypatch):
                                   [(UID, {"last_dispatched_at": "2030-01-10T05:00:00+00:00"})],
                                   pending={UID: "PR #7 (automation/research-queue-stamp-1-1)"})
     assert stamps[UID] == "2030-01-10T05:00:00+00:00"
+
+
+# ── 5. non-verdict rows do not consume a once-unit (RQ-REARM-PRODUCER-FAILED) ──
+
+def _state_row(read_state: str, generated_at: str) -> str:
+    return json.dumps({"research_unit": UID, "verdict": "indeterminate", "read_state": read_state,
+                       "generated_at": generated_at})
+
+
+def _stamped_now_minus(days: int) -> str:
+    return (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+
+def test_a_producer_failed_only_once_unit_with_a_cleared_stamp_refires(tmp_path, monkeypatch):
+    now = datetime.now(timezone.utc)
+    monkeypatch.setattr(dq, "RESULTS_ROOT", _results(
+        tmp_path, UID, [_state_row("producer_failed", (now - timedelta(hours=3)).isoformat())]))
+    due, why = dq._is_due(_entry(last_dispatched_at=None), now)
+    assert due is True and "re-armed" in why
+    assert dq.stamp_lost(_entry(last_dispatched_at=None)) is None   # not undone by the repair
+
+
+def test_the_stamp_still_blocks_a_producer_failed_once_unit(tmp_path, monkeypatch):
+    now = datetime.now(timezone.utc)
+    monkeypatch.setattr(dq, "RESULTS_ROOT", _results(
+        tmp_path, UID, [_state_row("producer_failed", (now - timedelta(hours=3)).isoformat())]))
+    due, why = dq._is_due(_entry(last_dispatched_at=_stamped_now_minus(0)), now)
+    assert due is False and "cadence=once" in why
+
+
+def test_a_real_verdict_keeps_a_once_unit_done_even_beside_a_failed_row(tmp_path, monkeypatch):
+    now = datetime.now(timezone.utc)
+    rows = [_state_row("producer_failed", (now - timedelta(hours=5)).isoformat()),
+            _row((now - timedelta(hours=3)).isoformat(), run_id="2", verdict="pass")]
+    monkeypatch.setattr(dq, "RESULTS_ROOT", _results(tmp_path, UID, rows))
+    due, why = dq._is_due(_entry(last_dispatched_at=None), now)
+    assert due is False and "result-based idempotence" in why
+
+
+def test_the_retry_cap_stops_the_refire_and_is_flagged(tmp_path, monkeypatch, capsys):
+    now = datetime.now(timezone.utc)
+    ok = dq.MAX_NONVERDICT_RETRIES   # rows == cap -> one more retry allowed
+    rows = [_state_row("producer_failed", (now - timedelta(hours=10 - i)).isoformat()) for i in range(ok)]
+    monkeypatch.setattr(dq, "RESULTS_ROOT", _results(tmp_path, UID, rows))
+    assert dq._is_due(_entry(last_dispatched_at=None), now)[0] is True
+    rows.append(_state_row("no_data", (now - timedelta(hours=1)).isoformat()))
+    monkeypatch.setattr(dq, "RESULTS_ROOT", _results(tmp_path, UID, rows))
+    due, why = dq._is_due(_entry(last_dispatched_at=None), now)
+    assert due is False and dq.RETRY_CAP_MARK in why
+
+
+def test_main_warns_when_a_unit_is_at_the_retry_cap(tmp_path, monkeypatch, capsys):
+    now = datetime.now(timezone.utc)
+    rows = [_state_row("producer_failed", (now - timedelta(hours=10 - i)).isoformat())
+            for i in range(dq.MAX_NONVERDICT_RETRIES + 1)]
+    _results(tmp_path, UID, rows)
+    fired, dec, _stamps = _cycle(tmp_path, monkeypatch, [(UID, {})], pending={})
+    assert fired == [] and dq.RETRY_CAP_MARK in dec[UID]["reason"]
+    assert f"::warning::{UID}" in capsys.readouterr().err
+
+
+def test_main_refires_a_cleared_producer_failed_unit(tmp_path, monkeypatch):
+    now = datetime.now(timezone.utc)
+    _results(tmp_path, UID, [_state_row("producer_failed", (now - timedelta(hours=2)).isoformat())])
+    fired, _dec, stamps = _cycle(tmp_path, monkeypatch, [(UID, {})], pending={})
+    assert fired == [f"research_unit={UID}"] and stamps[UID]

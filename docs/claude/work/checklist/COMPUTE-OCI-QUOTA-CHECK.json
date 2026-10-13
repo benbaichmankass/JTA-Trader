@@ -1,0 +1,26 @@
+{
+  "id": "COMPUTE-OCI-QUOTA-CHECK",
+  "title": "COMPUTE-OCI-QUOTA-CHECK: resolve 4/24 vs 2/12 and idle-reclaim exposure",
+  "phase": "process",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OCI-STATE-CHECK 2026-10-13 (docs/plans/OCI-STATE-CHECK-2026-10-13.md): inventory 2026-10-12 clean (3 A1 match 4/24, MEASURED). Live+trainer not idle at sampled instants; GATEWAY UNMEASURED (trainer lacks SSH key; needs ProxyJump read). Account type + 7d p95 not readable from repo OCI path. Open: add limits+monitoring read to oci_inventory.py (T1), gateway read probe (T1), versioned trade_journal.db backup (T2; only copy is the trainer's unversioned daily pull). Row stays queued until limits and gateway p95 are read.",
+  "updated_at": "2026-10-13T09:19:57Z",
+  "updated_by": "session_01AvNeburKCUJsd6qVbfGjSJ",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "observation": {
+    "what": "Account type, A1 limits, and 7-day p95 CPU/mem/net for all three A1 VMs (gateway first) are read and recorded",
+    "how_to_check": "oci-inventory run output with limits+metrics, recorded in docs/reference/vm-topology.md",
+    "due_by": "2026-10-27"
+  },
+  "_seq": 447
+}
