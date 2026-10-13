@@ -30,6 +30,14 @@ Rules (each one is a way a reconcile can lie, refused):
   yet, so ``config/prop_platforms.yaml`` declares ``reconcile: report_only`` for the account. Every decision is
   computed and returned, and ONE alert per decision says what WOULD be written; the journal is untouched. Flipping
   the key to ``write`` is follow-up PI-20261012-GNRBKIGG-0004, after the first clean live read.
+* **FILL-IN of an already-closed unpriced row WRITES even while ``report_only``** (operator, 2026-10-12: *"we need
+  to verify that the app can fulfill this function"* -- the exits of two Breakout closes are to come off the
+  terminal, not from the operator). :func:`fill_unpriced_closes` only adds the venue's exit price + realized P&L
+  (``MEASURED``) to a journal row that is ALREADY ``closed`` with ``exit_price`` NULL. It decides nothing about
+  whether a trade is open or closed, so it cannot be the false close the report-only mode guards against. It
+  demands exactly ONE matching closing-side row (symbol, opposite side, size within :data:`QTY_TOL`, a PARSED time
+  not before the row opened, status not cancelled), a CLEAN Closed-orders read, and an unused venue row; any doubt
+  writes nothing.
 * A closing order is a row's exit only if it was first listed no earlier than the row went missing (minus one read
   gap) and its own time, when it parses, is not before the row opened: a re-entry never takes an old close's price.
 * Provenance: venue values are ``MEASURED`` (read off the venue's own terminal); a close with no readable exit is
@@ -142,7 +150,8 @@ def clean_closed(account_id: str, rows: Any) -> List[Dict[str, Any]]:
         if side is None or sym is None:
             continue
         out.append({"symbol": sym, "side": side, "qty": _num(r.get("qty"), signed=False),
-                    "price": _num(r.get("price"), signed=False), "pnl": _num(r.get("pnl")),
+                    "price": _num(r.get("price"), signed=False),
+                    "pnl": _num(r.get("pnl")) if r.get("pnl") is not None else _num(r.get("netpnl")),   # the venue's own realized figure, never computed
                     "type": str(r.get("type") or "")[:30], "status": str(r.get("status") or "")[:20],
                     "time": str(r.get("time") or "")[:40]})
     return out
@@ -463,5 +472,71 @@ def reconcile(account_id: str, positions: List[Dict[str, Any]], closed: List[Dic
         st["used_closes"] = used[-200:]   # insertion order = recency
         st["seen_closes"] = dict(sorted(seen.items(), key=lambda kv: kv[1])[-500:])
         st["last_read"] = now.isoformat()
+        _save_state(account_id, st)
+    return out
+
+
+def fill_unpriced_closes(account_id: str, closed: List[Dict[str, Any]], *, now: Optional[datetime] = None,
+                         send=None) -> Dict[str, Any]:
+    """Fill the exit price + realized P&L of journal rows ALREADY closed without an exit from a CLEAN Closed orders
+    read (``closed_orders`` only reaches here when the phone's Closed read was ``read``). See the module doc: this
+    writes regardless of ``reconcile`` mode because it never decides open-vs-closed. Returns a summary; never raises
+    past a logged warning (the account_status is already stored)."""
+    from src.prop import prop_journal
+    from src.prop.prop_report import ingest_report
+
+    now = now or _now()
+    out: Dict[str, Any] = {"filled": [], "ambiguous": [], "no_match": []}
+    if not closed:
+        return out
+    with _LOCK:
+        fills = prop_journal.list_fills(account_id=account_id, limit=500)
+        rows = [f for f in fills if f.get("account_id") == account_id and str(f.get("status") or "").lower() == "closed"
+                and f.get("exit_price") is None and f.get("ticket_id")]
+        st = _load_state(account_id)
+        used: List[str] = [u for u in (st.get("used_closes") or []) if isinstance(u, str)]
+        for f in rows:
+            rid = _row_id(f)
+            want = "short" if _side(f.get("direction")) == "long" else "long"
+            jq = _num(f.get("qty"))
+            opened = _parse(f.get("opened_at")) or _parse(f.get("reported_at"))
+
+            def ok(c: Dict[str, Any]) -> bool:
+                vt = _parse_venue_time(c.get("time"))
+                return (_close_sig(c) not in used and c.get("price") is not None and c.get("qty") is not None
+                        and jq is not None and _qty_close(c.get("qty"), jq) and vt is not None
+                        and opened is not None and vt >= opened - TZ_SLACK and vt <= now + TZ_SLACK)
+
+            cands = [c for c in closed if c["symbol"] == str(f.get("symbol") or "").upper() and c["side"] == want
+                     and not _DEAD.search(c.get("status") or "") and ok(c)]
+            if len(cands) != 1:
+                (out["ambiguous"] if cands else out["no_match"]).append(rid)
+                if cands and _once(st, f"fillin_ambig:{rid}", now):
+                    _ping(f"📱 phone {account_id}: {len(cands)} Closed-orders rows could be the exit of journal row "
+                          f"{rid} ({f.get('symbol')} {f.get('direction')}); NOT filled in. CHECK.", send)
+                continue
+            c = cands[0]
+            report = {
+                "kind": "fill", "status": "closed", "account_id": account_id, "ticket_id": f.get("ticket_id"),
+                "external_order_id": f.get("external_order_id"), "symbol": f.get("symbol"),
+                "direction": f.get("direction"), "qty": f.get("qty"), "entry_price": f.get("entry_price"),
+                "sl": f.get("sl"), "tp": f.get("tp"), "exit_price": c["price"], "pnl": c.get("pnl"),
+                "opened_at": f.get("opened_at"),
+                "closed_at": f.get("closed_at"),   # kept: the terminal's time zone is unmeasured, its text is in raw
+                "reason": _close_reason(f, c), "source": "phone_reconcile_fill_in", "provenance": MEASURED,
+                "reconcile": {"fills_in_row": rid, "closing_order": c,
+                              "note": "exit + realized P&L read off the terminal's Closed orders; closed_at kept"},
+            }
+            try:
+                ingest_report(report)
+            except Exception:  # noqa: BLE001  # allow-silent: logged; the next clean read retries
+                logger.warning("phone_reconcile: fill-in failed %s row %s", account_id, rid, exc_info=True)
+                continue
+            used.append(_close_sig(c))
+            out["filled"].append({"id": rid, "exit": c["price"], "pnl": c.get("pnl")})
+            _ping(f"📱 phone {account_id}: filled the exit of {f.get('symbol')} {f.get('direction')} (journal row "
+                  f"{rid}) from the terminal's Closed orders: exit {c['price']:g}"
+                  + (f", realized P&L {c['pnl']:g}" if c.get("pnl") is not None else "") + " (MEASURED).", send)
+        st["used_closes"] = used[-200:]
         _save_state(account_id, st)
     return out
