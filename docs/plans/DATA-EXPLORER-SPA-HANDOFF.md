@@ -1,6 +1,6 @@
 # Data Explorer SPA — handoff for the dashboard session
 
-> **Doc status:** `live` · category `plan` · written `2026-10-13` by lane DATA-EXPLORER (checklist row `DATA-EXPLORER`). Not yet registered in `docs/DOCUMENT-INDEX.md`.
+> **Doc status:** `historical` · category `history` · last verified `2026-10-13` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · handoff written by lane DATA-EXPLORER (checklist row `DATA-EXPLORER`); a record of the state on 2026-10-13, not maintained.
 
 Target repo: `benbaichmankass/ict-trader-dashboard` (Svelte 5 + Vite, SPA under `webapp/`, ONE network chokepoint `webapp/src/lib/api.ts`, auth in `lib/auth.ts`, CI checkers `webapp/tests/*.mjs`; `auth-bearer.mjs` must stay green). Read that repo's `CLAUDE.md` first. Public repos: never commit secrets, IPs or balances. Deploy = merge to `main` (`pages.yml`), then verify the deployed bundle contains your strings **with a negative control**. A human must confirm it renders.
 
