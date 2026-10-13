@@ -45,6 +45,11 @@ jobs:
           script: |
             const LABELS = [
               {
+                name: 'journal-backup-request',
+                color: '0e8a16',
+                description: 'Dispatch journal-offvm-backup (backup | status | restore-test via a `mode:` body line). Read-only on the live VM.',
+              },
+              {
                 name: 'prune-merged-branch',
                 color: 'c2e0c6',
                 description: 'Ask prune-merged-claude-branch.yml to delete a stray claude/** branch whose content is already on main. Dry-run by default.',
