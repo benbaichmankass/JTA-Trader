@@ -1,6 +1,6 @@
 # OCI state check — 2026-10-13
 
-> **Doc status:** `live` · category `plan` · last verified `2026-10-13` · lane `OCI-STATE-CHECK` (read-only; no VM, config or service change). Row: `COMPUTE-OCI-QUOTA-CHECK`, roadmap `L-OPS`.
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · lane `OCI-STATE-CHECK` (read-only; no VM, config or service change). Row: `COMPUTE-OCI-QUOTA-CHECK`, roadmap `L-OPS`.
 
 Operator ask (2026-10-13): *"verify the state of the oracle vm — we don't want to lose any resources."*
 
@@ -44,7 +44,7 @@ Oracle rule (same page): a VM is idle when, over **7 days**, ALL of: CPU p95 < 2
 - **`trade_journal.db` (live, the money DB).** The only copy found off the live VM is the trainer's daily pull: `data/trade_journal.db`, 2.0 GB, mtime 2026-10-13 05:00, written by `sync_trainer_data.sh` (log: `sync_done overall_rc 0` at 05:03Z). It is **one overwritten replica, not a versioned backup**: a corruption on the live DB propagates to it at the next pull. Up to ~24 h of trades would be missing on a restore.
 - **No scheduled backup workflow exists.** Searched `.github/workflows/` and `deploy/` for backup/offsite/snapshot; the `.backup` calls found are one-off pre-mutation copies inside prop/repair scripts (stored on the VM itself). Whether an OCI boot-volume backup policy exists is a console setting and was **not read**.
 - **Trainer store / registry.** `trainer_store.db` was not found at the two paths probed (location not established this session); the trainer's model registry is on the trainer only. Not verified either way.
-- **Live VM disk 75.6 %** (separate from reclaim): the boot volume is the only home of the journal's live copy; headroom is a real operational risk.
+- **Live VM root-filesystem use 75.6 %** (one `vm_health` sample, 2026-10-13 09:17Z; separate from reclaim): the boot volume is the only home of the journal's live copy; headroom is a real operational risk.
 - **Gateway:** stateless by design (Dockerised, reproducible from `vm-ib-gateway-deploy`); loss costs IBKR connectivity and re-login, not data. Not verified this session.
 
 ## Recommendations, ranked
