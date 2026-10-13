@@ -37,6 +37,8 @@ name: claude-run-failure-alert
 on:
   workflow_run:
     workflows:
+      # ML-DATA-OFF-TRAINER (2026-10-13): the daily market-data export; its death would leave ML units on a stale dataset.
+      - ml-data-export-kaggle
       # LEDGER-REFRESH (2026-10-10): the broker-truth freshness grader; its death
       # would silently end the only alarm on a stale ledger.
       - broker-truth-freshness
