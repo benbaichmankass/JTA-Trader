@@ -119,3 +119,10 @@ def test_measured_open_row_is_never_touched():
                    "opened_at": T0.isoformat(), "source": "phone_reconcile", "provenance": "measured"})
     r = fi.infer(ACCT, now=T0 + timedelta(hours=3), bars_fn=_bars((5, 2600, 2300)))
     assert r == {"filled": [], "closed": [], "measured": [], "flagged": []}
+
+
+def test_filled_and_stopped_between_two_looks_is_journaled_in_one_pass():
+    _placed()
+    r = fi.infer(ACCT, now=T0 + timedelta(hours=3), bars_fn=_bars((5, 2500, 2480), (60, 2540, 2495)))   # fill, then SL 2535.25
+    assert r["filled"] == ["prop-manual-x1"] and r["closed"] == ["prop-manual-x1"]
+    assert po.split_fills(prop_journal.list_fills(account_id=ACCT))[0] == []

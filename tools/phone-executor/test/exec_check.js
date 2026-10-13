@@ -565,6 +565,34 @@ document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__su
   eq([qcr.rows[0].symbol, qcr.rows[0].side, qcr.rows[0].qty, qcr.rows[0].price, qcr.rows[0].type, qcr.rows[0].status, qcr.rows[0].pnl, qcr.rows[0].time],
     ["ETH", "short", 1.1758, 2655.4, "Take profit", "Filled", 150.03, "2026-10-12 12:01:05"], "closed orders: the TP fill row mapped");
   eq(qcr.rows[1].pnl, null, "closed orders: '-' P&L stays null, never 0");
+  // LIVE CLOSED-ORDERS LAYOUT (operator screenshot 2026-10-13, transcribed; synthetic values): the tab strip scrolls
+  // horizontally and "Closed orders" is the LAST, clipped chip; the panel header is Market | Side | Type | ... with
+  // more columns off to the right; the Side cell is "Long" + a separate "(Reduce)" span; a bracketed trade leaves a
+  // TP and an SL row, one Filled and one Cancelled; the entry row is a plain "Short Limit".
+  const reduce = (w) => `<span>${w}</span> <span>(Reduce)</span>`;
+  const liveClosed = (withChip) => `<!doctype html><html><body>
+<div id=strip style="width:180px;overflow-x:auto;white-space:nowrap"><button>Depth chart</button><button>Favorites</button><button>Order book</button><button>Portfolio</button>${withChip ? "<button>Closed orders</button>" : ""}</div>
+<div role=tablist><button role=tab>Open orders 2</button><button role=tab>Positions 1</button></div>
+<div id=panel><div id=hdr><div>Market</div><div>Side</div><div>Type</div><div>Size</div><div>Price</div><div>Status</div><div>Time</div><div>Net P&amp;L</div></div>
+${cRow("ETH", reduce("Long"), "Stop loss", "0.571", "2535.25", "Filled", "2026-10-13 05:20:00", "-25.57 USD")}
+${cRow("ETH", reduce("Long"), "Take profit", "0.571", "2244.81", "Cancelled", "2026-10-13 05:20:00", "-")}
+${cRow("ETH", "Short", "Limit", "0.571", "2491.47", "Filled", "2026-10-13 04:10:00", "-")}
+${cRow("SOL", reduce("Short"), "Take profit", "17.26", "111.39", "Filled", "2026-10-12 16:30:05", "+3.97 USD")}
+</div></body></html>`;
+  const lc = await onHost(liveClosed(true));
+  eq(await lc.evaluate("__ex.clickTab('^closed orders\\\\b')"), "clicked", "closed orders: the clipped last chip is found and clicked");
+  eq(await lc.evaluate("document.getElementById('strip').scrollLeft > 0"), true, "closed orders: the chip was scrolled into view");
+  const lcr = await lc.evaluate("__ex.closedRead()");
+  eq([lcr.state, lcr.rows.length], ["read", 4], "closed orders: live layout read (div grid)");
+  eq(lcr.rows.map((r) => [r.symbol, r.side, r.reduce, r.type, r.status, r.price]),
+    [["ETH", "long", true, "Stop loss", "Filled", 2535.25], ["ETH", "long", true, "Take profit", "Cancelled", 2244.81],
+     ["ETH", "short", false, "Limit", "Filled", 2491.47], ["SOL", "short", true, "Take profit", "Filled", 111.39]],
+    "closed orders: Reduce suffix -> reduce=true with the side word kept; TP/SL pair keeps Filled vs Cancelled; entry row reduce=false");
+  const lcNo = await onHost(liveClosed(false));
+  eq(await lcNo.evaluate("__ex.clickTab('^closed orders\\\\b')"), "none", "closed orders: no chip -> none (miss, never a silent empty)");
+  // the POSITIONS grid still on screen is NOT Closed orders (no Type/Status column): no_table, not an empty list
+  const posOnly = await onHost(`<!doctype html><html><body><div role=tablist><button role=tab>Positions</button><button role=tab>Closed orders</button></div><div id=hdr><div>Market</div><div>UP&amp;L</div><div>Side</div><div>Value</div><div>Opening price</div><div>Current price</div><div>TP / SL</div><div>Net P&amp;L</div></div><p>Start trading with leverage</p></body></html>`);
+  eq((await posOnly.evaluate("__ex.closedRead()")).state, "no_table", "closed orders: a still-shown Positions grid is not read as an empty Closed orders list");
   // ACCOUNT PANEL on the Portfolio tab (PROP-TRACKING): balance + the terminal's own unrealized P&L, signed
   const qA = await onHost(`<!doctype html><html><head><meta charset=utf-8></head><body><button>Portfolio 5,099.14 USD</button><div role=tablist><button role=tab>Portfolio</button></div>
 <dl><dt>Balance</dt><dd>5,048.20</dd><dt>Unrealized PnL</dt><dd>\u221212.06</dd></dl></body></html>`);

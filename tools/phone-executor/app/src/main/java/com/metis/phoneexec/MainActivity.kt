@@ -599,7 +599,14 @@ class MainActivity : Activity() {
                 .put("detail", "d${d.optInt("path_depth")} c${d.optInt("chips")} t${if (d.optBoolean("trade")) 1 else 0}")
         }
         delay(1200); p.ensure()
-        return p.obj(reader)
+        var r = p.obj(reader)
+        // the panel fills in after the click: no table yet / header but no rows yet are re-read a few times before
+        // they count as a miss (a flat Positions view is only believed on positive evidence, never on "not rendered")
+        var tries = 0
+        while (tries < 4 && r?.optString("state").let { it == "no_table" || it == "empty_unconfirmed" }) {
+            delay(1500); tries += 1; p.ensure(); r = p.obj(reader) ?: r
+        }
+        return r
     }
 
     /** Where "back to the terminal" goes: the last account terminal seen while logged in, else the host root. */

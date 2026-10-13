@@ -211,6 +211,11 @@ def infer(account_id: str, *, now: Optional[datetime] = None, bars_fn: Optional[
             except Exception:  # noqa: BLE001  # allow-silent: logged; one bad row never blocks the rest
                 logger.warning("fill_inference: fill inference failed for %s %s", account_id, tid, exc_info=True)
 
+        if out["filled"]:   # placed -> filled -> closed between two looks: judge the new open rows in the SAME pass
+            fills = prop_journal.list_fills(account_id=account_id, limit=500)
+            open_rows, _ = split_fills(fills)
+            open_rows = [f for f in open_rows if f.get("account_id") == account_id]
+
         # 2. inferred-open rows: the venue overrides; else SL/TP crossed by a LATER bar closes (ESTIMATED)
         for f in open_rows:
             if not is_inferred(f):
