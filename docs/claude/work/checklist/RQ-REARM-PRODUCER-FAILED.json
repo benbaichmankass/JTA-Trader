@@ -1,0 +1,25 @@
+{
+  "id": "RQ-REARM-PRODUCER-FAILED",
+  "title": "Re-arm path for producer_failed once-units: a landed producer_failed row trips result-based idempotence, nulling the stamp does not re-fire",
+  "phase": "research",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "MEASURED 2026-10-13 02:55Z with python3 scripts/research/dispatch_queue.py (dry run): RQ-20261009-903 (stamp null since #17797) and RQ-20261012-75b2-19 both read 'cadence=once and research/results/<uid>/ already holds 1 row(s): result-based idempotence', i.e. not_due. Both rows are read_state producer_failed (903: env guard, fixed in #17797; 75b2-19: cmd timed out at the 45 min limit on research-script-run-trainer.yml, no outputs). dispatch_queue._is_due counts any landed row as 'ran'; only grader-set confirmatory_run re-queues. So #17797's re-arm of 903 was ineffective and neither unit can run. Proposed fix (Tier-1, scripts/research/dispatch_queue.py + tests/test_research_queue_idempotence.py): in _is_due, ignore rows with read_state in {producer_failed,no_data} when stamp is null (keep stamp_lost semantics; the dispatcher's own stamp stops a loop). Done when: dry run shows 903 and 75b2-19 would_dispatch and one lands read_state measured. Do NOT hand-write grading.confirmatory_run to force it (a later FAIL would auto-close the cell/G2).",
+  "updated_at": "2026-10-13T02:52:14Z",
+  "updated_by": "research-ops-lane-20261013-0247",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "none: tooling",
+    "arch": "none"
+  },
+  "_seq": 446
+}
