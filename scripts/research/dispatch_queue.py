@@ -114,6 +114,57 @@ def latest_result_at(uid: str, results_root: Optional[Path] = None) -> tuple:
     return latest, rows
 
 
+#: `read_state` values of a landed row that mean the run produced NO verdict for
+#: infrastructure reasons (the declared command crashed, timed out, or found no
+#: data). `collect_runner_results` writes `producer_failed` for a failed or
+#: timed-out command. Such a row is not a result of the experiment, so it must
+#: not consume a `cadence: once` unit (RQ-REARM-PRODUCER-FAILED, 2026-10-13).
+NON_VERDICT_READ_STATES = frozenset({"producer_failed", "no_data"})
+
+#: Re-dispatches allowed after the first run when every landed row is a
+#: non-verdict outcome. Attempts are counted from the rows themselves (no new
+#: field). Past the cap the unit is not due and `RETRY_CAP_MARK` is in its
+#: reason, which `main()` surfaces as a `::warning::` -- a human decides.
+MAX_NONVERDICT_RETRIES = 2
+RETRY_CAP_MARK = "retry cap reached"
+
+
+def nonverdict_attempts(uid: str, results_root: Optional[Path] = None) -> int:
+    """How many landed rows there are when EVERY row is a non-verdict outcome, else 0.
+
+    0 means "no rows" or "at least one real verdict (or an unreadable
+    read_state) is among them" -- the unit stays done. Only a unit whose whole
+    history is infrastructure failure is re-armable."""
+    rdir = (results_root if results_root is not None else RESULTS_ROOT) / uid
+    rows = 0
+    for f in sorted(rdir.glob("*.jsonl")) if rdir.is_dir() else []:
+        try:
+            lines = f.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            return 0
+        for ln in lines:
+            if not ln.strip():
+                continue
+            try:
+                r = json.loads(ln)
+            except ValueError:
+                continue
+            if not isinstance(r, dict):
+                continue
+            if str(r.get("read_state") or "") not in NON_VERDICT_READ_STATES:
+                return 0
+            rows += 1
+    return rows
+
+
+def rearmable(entry: Dict[str, Any]) -> bool:
+    """A stamp-cleared unit whose only landed rows are non-verdict outcomes and
+    that is still under the retry cap."""
+    uid = str(entry.get("id") or "")
+    n = nonverdict_attempts(uid) if uid else 0
+    return 0 < n <= MAX_NONVERDICT_RETRIES
+
+
 def _display_path(path: Path) -> str:
     """Repo-relative when possible, absolute otherwise — never raises.
 
@@ -253,6 +304,8 @@ def stamp_lost(entry: Dict[str, Any]) -> Optional[datetime]:
     result_at, rows = latest_result_at(uid) if uid else (None, 0)
     if not rows or result_at is None or confirmatory_requeue(entry, result_at):
         return None
+    if rearmable(entry):
+        return None   # a cleared stamp on a producer_failed-only unit is a deliberate re-arm
     return result_at
 
 
@@ -296,6 +349,14 @@ def _is_due(entry: Dict[str, Any], now: datetime) -> tuple:
         return True, (f"re-queued for a confirmatory run by the grader at "
                       f"{(entry.get('grading') or {}).get('graded_at')} (the {result_rows} landed "
                       "row(s) were already read)")
+    if not last and result_rows and nonverdict_attempts(uid):
+        attempts = nonverdict_attempts(uid)
+        if attempts <= MAX_NONVERDICT_RETRIES:
+            return True, (f"re-armed: all {attempts} landed row(s) are non-verdict outcomes "
+                          f"({'/'.join(sorted(NON_VERDICT_READ_STATES))}); retry "
+                          f"{attempts}/{MAX_NONVERDICT_RETRIES}")
+        return False, (f"{RETRY_CAP_MARK}: {attempts} landed rows are all non-verdict outcomes "
+                       f"(max {MAX_NONVERDICT_RETRIES} retries) -- needs a human")
     if cadence == "once":
         if last:
             return False, f"cadence=once and it ran at {last}"
@@ -1027,6 +1088,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         due, due_reason = _is_due(entry, now)
         if not due:
             row.update(outcome=NOT_DUE, reason=due_reason)
+            if RETRY_CAP_MARK in due_reason:
+                print(f"::warning::{job.id}: {due_reason}", file=sys.stderr)
             if args.fire and not pressure["block"]:
                 # A deferred cycle (backpressure) touches NOTHING, repairs
                 # included: the repair lands via the stamp PR, which such a
