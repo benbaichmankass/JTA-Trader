@@ -93,6 +93,11 @@ jobs:
           UNIT: ${{ inputs.research_unit }}
           HASHES: ${{ steps.plan.outputs.hashes }}
         run: |
+          # COMPUTE-GH-FIRST (2026-10-13): GitHub's default shell is `bash -e`; `set -uo pipefail` does NOT clear -e, so a
+          # non-zero ssh (the unit's command failing or timing out on the trainer) exited this step at the ssh line and
+          # skipped the `rc=` output and the `tail /tmp/out.txt` below -- MEASURED: runs 38329024424 / 38336079476 /
+          # 38353918962 reported "(rc=)" and no trainer output. `set +e` keeps the diagnostics the step exists to print.
+          set +e
           set -uo pipefail
           case "$UNIT" in RQ-[0-9]*) ;; *) echo "::error::bad unit id"; exit 1;; esac
           case "$UNIT" in *[!A-Za-z0-9-]*) echo "::error::bad unit id chars"; exit 1;; esac

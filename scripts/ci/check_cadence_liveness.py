@@ -189,6 +189,11 @@ CADENCE_REGISTRY: dict[str, dict] = {
     #    and lands it through commit-to-main, so the last commit touching it
     #    IS the receipt. (Its reviewed_at age is ALSO graded, more tightly,
     #    by check_grading_freshness.py.)
+    "compute-util-telemetry.yml": {
+        "receipt": "comms/cloud/compute_util_ledger.jsonl",
+        "why": "the workflow rewrites the ledger every day and lands it through "
+               "commit-to-main; the last commit touching it IS the receipt",
+    },
     "grade-closed-trades.yml": {
         "receipt": "comms/claude_strategy_scores.jsonl",
         "why": "the workflow appends and commits the score file itself via "
@@ -218,6 +223,7 @@ CADENCE_REGISTRY: dict[str, dict] = {
     # writes nothing on purpose -- its report is deleted so no artifact can carry a
     # matched value on this PUBLIC repo -- so there is no receipt path to name. A dead
     # run is caught by claude-run-failure-alert (it is on that list).
+    "journal-offvm-backup.yml": {"receipt": None, "why": "writes to a private OCI bucket, not the repo, by design (public repo); liveness is read with a `mode: status` issue (consecutive_daily) and a dead run is caught by claude-run-failure-alert + the workflow's own Telegram flag (JOURNAL-OFFVM-BACKUP 2026-10-13)"},
     "gitleaks-history-weekly.yml": {"receipt": None, "why": "writes nothing by design (report deleted; public repo); outcome is the run's pass/fail + job summary, and a dead run is caught by claude-run-failure-alert"},
     "research-queue-replenish.yml": {"receipt": None, "why": "commits only when it generated units; a full queue is a no-op by design -- a dead run is caught by claude-run-failure-alert, a dry queue by the dispatcher's queue-health alarm"},
     "research-queue-grade.yml": {"receipt": None, "why": "commits only when a unit's grade changed; nothing-to-grade is a no-op by design -- a dead run is caught by claude-run-failure-alert"},

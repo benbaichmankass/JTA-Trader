@@ -259,6 +259,7 @@
     var o = {}, rowText = cells.join(" ");
     cells.forEach(function (c, i) {
       var k = keys[i]; if (!k || k === "skip" || o[k] !== undefined) return;
+      if (k === "side") o.reduce = /reduce/i.test(c);   // "Long (Reduce)": the span after the side word; closes a SHORT
       o[k] = (k === "symbol" || k === "status" || k === "type" || k === "time") ? c.slice(0, 40) : (k === "side" ? sideOf(c) : firstNumber(c));
     });
     if (o.side == null) o.side = sideOf(o.symbol) || sideOf(rowText);
@@ -303,11 +304,15 @@
     labels.forEach(function (l) {
       for (var a = l.parentElement, d = 0; a && d < 6 && a !== document.body; a = a.parentElement, d++) {
         var ks = {}; labels.forEach(function (m) { if (a.contains(m)) ks[colKey(t(m), cols)] = 1; });
-        var okShape = cols === CLOSED_COLS ? (ks.side && ks.symbol && (ks.price || ks.qty || ks.pnl)) : (ks.side && (ks.entry || ks.mark));
+        var okShape = cols === CLOSED_COLS ? (ks.side && ks.symbol && (ks.type || ks.status) && (ks.price || ks.qty || ks.pnl || ks.status)) : (ks.side && (ks.entry || ks.mark));
         if (Object.keys(ks).length >= 4 && okShape) { if (found.indexOf(a) < 0) found.push(a); return; }
       }
     });
     return innermost(found);
+  }
+  function leafTabs() {
+    return all("button,[role=tab],[role=button],a,div,span,li").filter(function (x) { return TAB_LABEL.test(t(x)); })
+      .filter(function (x, i, a) { return !a.some(function (y) { return y !== x && x.contains(y); }); });
   }
   function gridPanel(h) {
     var tabs = all("button,[role=tab],[role=button],a,div,span,li").filter(function (x) { return TAB_LABEL.test(t(x)); });
@@ -661,7 +666,38 @@
     clickText: function (re, roleSel) {
       var rx = new RegExp(re, "i");
       var b = all(roleSel || "button,[role=tab],[role=button],a").filter(function (x) { return rx.test(t(x)); })[0];
-      if (!b) return "none"; b.click(); return "clicked";
+      if (!b) return "none";
+      // the tab strip scrolls horizontally on a phone ("Closed orders" is the last chip, clipped): bring it into view
+      try { b.scrollIntoView({block: "nearest", inline: "center"}); } catch (e) { }
+      b.click(); return "clicked";
+    },
+    // POSITIONS-READ CONTEXT (PHONE-POSITIONS-READ-CONTEXT, 2026-10-13). The bottom-panel tab chips render AFTER the
+    // document is "complete" (SPA), so the app waits on this before clicking. Names + counts only, never values.
+    tabChips: function () {
+      var n = leafTabs().length, path = location.pathname || "/";
+      return {chips: n, path_depth: path.split("/").length, trade: /\/trade(\/|$)/.test(path), acct_href: window.__ex.terminalHref() ? 1 : 0};
+    },
+    // Like clickText, but also finds a chip that is a plain div/span/li (no button/role): the LEAF element whose
+    // whole text is the label. Read-only view switch, same as clickText.
+    clickTab: function (re) {
+      if (window.__ex.clickText(re) === "clicked") return "clicked";
+      var rx = new RegExp(re, "i");
+      var b = all("div,span,li").filter(function (x) { var s = t(x); return s.length > 0 && s.length <= 30 && rx.test(s) && TAB_LABEL.test(s); })
+        .filter(function (x, i, a) { return !a.some(function (y) { return y !== x && x.contains(y); }); })[0];
+      if (!b) return "none";
+      try { b.scrollIntoView({block: "nearest", inline: "center"}); } catch (e) { }
+      b.click(); return "clicked";
+    },
+    // The miss dump for a tab that could not be found: where we are (path depth, /trade or not), how many chips, the
+    // buttons/tabs, and a short list of the leaf texts that ARE on the page. Digits masked, first 25, no links.
+    missDump: function () {
+      var seen = {}, out = [];
+      all("*").forEach(function (x) {
+        if (out.length >= 25 || x.children.length > 0) return;
+        var s = t(x).replace(/\d/g, "#").slice(0, 30); if (s && !seen[s]) { seen[s] = 1; out.push(s); }
+      });
+      var tc = window.__ex.tabChips();
+      return {path_depth: tc.path_depth, trade: tc.trade, chips: tc.chips, headers: out, controls: window.__ex.controls()};
     },
     openTicket: function () {
       if (submitBtn()) return "open";

@@ -1,0 +1,36 @@
+{
+  "as_of": "2026-10-13T13:48:35+00:00",
+  "consumer": "research router (config/research_compute.yaml), trainer backend = hosts.trainer",
+  "hosts": {
+    "gateway": {
+      "basis": "shape x (1 - max daily p95 over last 7 complete days)",
+      "days_measured": 7,
+      "display_name": "ict-ib-gateway",
+      "memory_gb": 6.0,
+      "ocpus": 1.0,
+      "read_state": "measured",
+      "spare_memory_gb": 4.208,
+      "spare_ocpus": 0.273
+    },
+    "live": {
+      "basis": "shape x (1 - max daily p95 over last 7 complete days)",
+      "days_measured": 7,
+      "display_name": "ict-bot-arm",
+      "memory_gb": 12.0,
+      "ocpus": 2.0,
+      "read_state": "measured",
+      "spare_memory_gb": 9.332,
+      "spare_ocpus": 0.247
+    },
+    "trainer": {
+      "basis": "shape x (1 - max daily p95 over last 7 complete days)",
+      "days_measured": 7,
+      "display_name": "ict-trainer-vm",
+      "memory_gb": 6.0,
+      "ocpus": 1.0,
+      "read_state": "measured",
+      "spare_memory_gb": 0.527,
+      "spare_ocpus": 0.0
+    }
+  }
+}

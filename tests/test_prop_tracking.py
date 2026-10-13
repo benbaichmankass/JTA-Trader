@@ -128,6 +128,15 @@ def test_positions_miss_event_is_quiet_scrubbed_and_kept(env):
     assert env == []
 
 
+def test_positions_miss_no_tab_detail_is_kept_scrubbed(env):
+    pe.record_event(_dev(), {"event": "positions_miss", "reason": "no_tab d6 c0 t1",
+                             "headers": ["Loading", "Menu"], "controls": ["Menu"]})
+    d = pe.last_positions_diag("breakout_2")
+    assert d["state"] == "no_tab d6 c0 t1" and d["headers"] == ["Loading", "Menu"]
+    pe.record_event(_dev(), {"event": "positions_miss", "reason": "no_tab https://x.y/z <b>1234567</b>"})
+    assert "https" not in json.dumps(pe.last_positions_diag("breakout_2")) and "<" not in pe.last_positions_diag("breakout_2")["state"]
+
+
 # ---- reconcile ----
 
 def test_matching_positions_change_nothing():
@@ -419,3 +428,42 @@ def test_fill_in_never_runs_on_an_unclean_closed_read():
     r = _status([], closed=None)    # the phone sends closed_orders only when its Closed read was `read`
     assert r["fill_in"] == {"filled": [], "ambiguous": [], "no_match": []}
     assert _fills()["t-sol"]["exit_price"] is None
+
+
+# ---- Closed orders: live layout (operator screenshot 2026-10-13): reduce flag, Filled vs Cancelled pair ----
+
+def _live_co(side, typ, status, price, reduce=True, qty=0.571, hours_ago=1):
+    return {**_co("ETH", side, qty, price, None, hours_ago, status=status, typ=typ), "reduce": reduce}
+
+
+def test_clean_closed_keeps_the_reduce_flag_and_only_a_bool():
+    rows = rc.clean_closed("breakout_2", [{"symbol": "ETH", "side": "long", "reduce": True, "price": 1},
+                                           {"symbol": "ETH", "side": "long", "reduce": "yes", "price": 1}])
+    assert [r["reduce"] for r in rows] == [True, None]
+
+
+def test_fill_in_takes_the_filled_reduce_row_of_a_tp_sl_pair_and_ignores_the_entry_row():
+    _unpriced("t-eth", "ETHUSDT", "short", 0.571, 2491.47)
+    r = _status([], closed=[_live_co("long", "Stop loss", "Filled", 2535.25),
+                            _live_co("long", "Take profit", "Cancelled", 2244.81),
+                            _live_co("long", "Limit", "Filled", 2490.0, reduce=False)])   # a long ENTRY, not an exit
+    assert [x["exit"] for x in r["fill_in"]["filled"]] == [2535.25]
+    assert _fills()["t-eth"]["exit_price"] == 2535.25
+
+
+def test_fill_in_overrides_an_inferred_close_with_the_measured_exit():
+    from src.prop import fill_inference as fi
+    from src.prop.prop_report import ingest_report
+    ingest_report({"kind": "fill", "status": "open", "account_id": "breakout_2", "ticket_id": "t-inf", "symbol": "ETHUSDT",
+                   "direction": "short", "qty": 0.571, "entry_price": 2491.47, "sl": 2535.25, "tp": 2244.81,
+                   "external_order_id": "inferred-t-inf", "source": fi.SOURCE, "provenance": "estimated", "inferred": True,
+                   "opened_at": (datetime.now(timezone.utc) - timedelta(hours=3)).isoformat()})
+    ingest_report({"kind": "fill", "status": "closed", "account_id": "breakout_2", "ticket_id": "t-inf", "symbol": "ETHUSDT",
+                   "direction": "short", "qty": 0.571, "entry_price": 2491.47, "exit_price": 2535.25,
+                   "external_order_id": "inferred-t-inf", "source": fi.SOURCE, "provenance": "estimated", "inferred": True,
+                   "closed_at": (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()})
+    r = _status([], closed=[_live_co("long", "Stop loss", "Filled", 2536.1)])
+    assert [x["exit"] for x in r["fill_in"]["filled"]] == [2536.1]
+    c = _fills()["t-inf"]
+    assert c["exit_price"] == 2536.1 and json.loads(c["raw"])["provenance"].lower() == "measured"
+    assert len(_fills()) == 1

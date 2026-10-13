@@ -1,0 +1,51 @@
+{
+  "as_of": "2026-10-13",
+  "hosts": {
+    "gateway": {
+      "cpu_days_measured": 7,
+      "days_in_window": 7,
+      "host": "gateway",
+      "max_daily_p95": {
+        "cpu_pct": 72.66952196011974,
+        "mem_pct": 29.864611202804426,
+        "net_pct_of_shape": 571.0887
+      },
+      "mem_days_measured": 7,
+      "net_days_measured": 7,
+      "net_unmeasured": false,
+      "reason": "max daily p95 over 7d: cpu 72.7% mem 29.9% net 571.089% vs Oracle idle < 20% (watch < 30%)",
+      "status": "ok"
+    },
+    "live": {
+      "cpu_days_measured": 7,
+      "days_in_window": 7,
+      "host": "live",
+      "max_daily_p95": {
+        "cpu_pct": 87.66068093323389,
+        "mem_pct": 22.23359469064236,
+        "net_pct_of_shape": 900.6541
+      },
+      "mem_days_measured": 7,
+      "net_days_measured": 7,
+      "net_unmeasured": false,
+      "reason": "max daily p95 over 7d: cpu 87.7% mem 22.2% net 900.654% vs Oracle idle < 20% (watch < 30%)",
+      "status": "ok"
+    },
+    "trainer": {
+      "cpu_days_measured": 7,
+      "days_in_window": 7,
+      "host": "trainer",
+      "max_daily_p95": {
+        "cpu_pct": 100.0,
+        "mem_pct": 91.21065350209274,
+        "net_pct_of_shape": 1228.1751
+      },
+      "mem_days_measured": 7,
+      "net_days_measured": 7,
+      "net_unmeasured": false,
+      "reason": "max daily p95 over 7d: cpu 100.0% mem 91.2% net 1228.175% vs Oracle idle < 20% (watch < 30%)",
+      "status": "ok"
+    }
+  },
+  "rule": "Oracle idle: CPU p95<20% & net<20% & mem<20% over 7d (A1)"
+}

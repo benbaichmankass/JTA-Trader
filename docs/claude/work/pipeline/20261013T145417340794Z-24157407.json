@@ -1,0 +1,23 @@
+{
+  "based_on": "20261013T145403503463Z-958c1c41.json",
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "a re-armed producer_failed unit keeps a null last_dispatched_at until its next real dispatch",
+    "kind": "observation"
+  },
+  "id": "PI-20261013-HOPS1447-0001",
+  "next_action": "dispatch_lane",
+  "observation": {
+    "due_by": "2026-10-16",
+    "how_to_check": "python3 scripts/research/dispatch_queue.py | grep -E '20261009-903|75b2-19'  # would_dispatch, not 'ran at'",
+    "what": "a re-armed producer_failed unit keeps a null last_dispatched_at until its next real dispatch"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261013-1447 research-ops lane",
+    "rerun": "git log --format='%h %ad %s' -4 -- research/queue/RQ-20261012-75b2-19.yaml  # a stamp commit after re-arm commit 0edfd7a1 shows the race"
+  },
+  "routed_to": "RQ-REARM-PRODUCER-FAILED",
+  "state": "routed",
+  "what": "STAMP RACE UNDOES RE-ARMS: stamp PR #17853 (run 38379540767, merged 2026-10-13T14:34Z) re-stamped RQ-20261009-903 and RQ-20261012-75b2-19 with their pre-re-arm last_dispatched_at, undoing the re-arm landed by #17829 (RQ-REARM-PRODUCER-FAILED) two hours earlier; the dry run read them not_due again. This pass cleared both stamps again, but the cause stands: a stamp PR from a run started before a re-arm overwrites the cleared stamp. The stamp writer must skip a unit whose stamp was cleared after the run began."
+}

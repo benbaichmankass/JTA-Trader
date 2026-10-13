@@ -643,7 +643,7 @@ def _write_positions_diag(account_id: str, state: str, headers: Any, controls: A
         return [x for x in (_scrub(c, 40).strip() for c in (v if isinstance(v, list) else [])[:_DIAG_MAX]) if x]
     try:
         _positions_diag_path(account_id).write_text(json.dumps(
-            {"at": _now().isoformat(), "state": state, "headers": lst(headers), "controls": lst(controls)}))
+            {"at": _now().isoformat(), "state": _scrub(state, 60), "headers": lst(headers), "controls": lst(controls)}))
     except OSError:  # allow-silent: diagnostics only; the event is still acknowledged
         logger.warning("phone_executor: positions diag write failed", exc_info=True)
 

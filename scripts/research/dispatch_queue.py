@@ -41,6 +41,19 @@ from typing import Any, Dict, List, Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+
+
+class _LazyRouter:
+    """compute_router, imported on first use. The web-api brief imports this module in-process and the deploy's
+    in-process allowlist (Tier-2 scripts/deploy_pull_restart.sh) does not name the router: loading it only when
+    the dispatcher actually routes keeps the brief's import closure exactly what it was."""
+
+    def __getattr__(self, name: str) -> Any:
+        import importlib  # noqa: PLC0415
+        return getattr(importlib.import_module("scripts.research.compute_router"), name)
+
+
+cr = _LazyRouter()
 from scripts.research.research_queue import (  # noqa: E402
     BLOCKED_POWER, BLOCKED_ROUTE, DISPATCHED, DISPATCH_FAILED, GPU, INVALID,
     NOT_DUE, grade_power, grade_route, load_queue, load_themes,
@@ -112,6 +125,57 @@ def latest_result_at(uid: str, results_root: Optional[Path] = None) -> tuple:
             if ts and (latest is None or ts > latest):
                 latest = ts
     return latest, rows
+
+
+#: `read_state` values of a landed row that mean the run produced NO verdict for
+#: infrastructure reasons (the declared command crashed, timed out, or found no
+#: data). `collect_runner_results` writes `producer_failed` for a failed or
+#: timed-out command. Such a row is not a result of the experiment, so it must
+#: not consume a `cadence: once` unit (RQ-REARM-PRODUCER-FAILED, 2026-10-13).
+NON_VERDICT_READ_STATES = frozenset({"producer_failed", "no_data"})
+
+#: Re-dispatches allowed after the first run when every landed row is a
+#: non-verdict outcome. Attempts are counted from the rows themselves (no new
+#: field). Past the cap the unit is not due and `RETRY_CAP_MARK` is in its
+#: reason, which `main()` surfaces as a `::warning::` -- a human decides.
+MAX_NONVERDICT_RETRIES = 2
+RETRY_CAP_MARK = "retry cap reached"
+
+
+def nonverdict_attempts(uid: str, results_root: Optional[Path] = None) -> int:
+    """How many landed rows there are when EVERY row is a non-verdict outcome, else 0.
+
+    0 means "no rows" or "at least one real verdict (or an unreadable
+    read_state) is among them" -- the unit stays done. Only a unit whose whole
+    history is infrastructure failure is re-armable."""
+    rdir = (results_root if results_root is not None else RESULTS_ROOT) / uid
+    rows = 0
+    for f in sorted(rdir.glob("*.jsonl")) if rdir.is_dir() else []:
+        try:
+            lines = f.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            return 0
+        for ln in lines:
+            if not ln.strip():
+                continue
+            try:
+                r = json.loads(ln)
+            except ValueError:
+                continue
+            if not isinstance(r, dict):
+                continue
+            if str(r.get("read_state") or "") not in NON_VERDICT_READ_STATES:
+                return 0
+            rows += 1
+    return rows
+
+
+def rearmable(entry: Dict[str, Any]) -> bool:
+    """A stamp-cleared unit whose only landed rows are non-verdict outcomes and
+    that is still under the retry cap."""
+    uid = str(entry.get("id") or "")
+    n = nonverdict_attempts(uid) if uid else 0
+    return 0 < n <= MAX_NONVERDICT_RETRIES
 
 
 def _display_path(path: Path) -> str:
@@ -208,7 +272,8 @@ def config_problem(entry: Dict[str, Any], repo: Optional[Path] = None) -> Option
     if bad:
         return f"misconfigured: run.inputs {bad} hold an unresolved placeholder ('NOT YET DECIDED'/TBD/TODO)"
     declared = declared_inputs(workflow, repo=repo or _REPO)
-    if declared is None or workflow.split("/")[-1] in ("research-script-run.yml", "research-script-run-trainer.yml"):
+    if declared is None or workflow.split("/")[-1] in ("research-script-run.yml", "research-script-run-trainer.yml",
+                                                                "research-script-run-kaggle.yml"):
         return None
     inputs, _ = dispatch_inputs(entry, power_state="x", repo=repo or _REPO)
     unknown = sorted(k for k in inputs if k not in declared)
@@ -253,6 +318,8 @@ def stamp_lost(entry: Dict[str, Any]) -> Optional[datetime]:
     result_at, rows = latest_result_at(uid) if uid else (None, 0)
     if not rows or result_at is None or confirmatory_requeue(entry, result_at):
         return None
+    if rearmable(entry):
+        return None   # a cleared stamp on a producer_failed-only unit is a deliberate re-arm
     return result_at
 
 
@@ -296,6 +363,14 @@ def _is_due(entry: Dict[str, Any], now: datetime) -> tuple:
         return True, (f"re-queued for a confirmatory run by the grader at "
                       f"{(entry.get('grading') or {}).get('graded_at')} (the {result_rows} landed "
                       "row(s) were already read)")
+    if not last and result_rows and nonverdict_attempts(uid):
+        attempts = nonverdict_attempts(uid)
+        if attempts <= MAX_NONVERDICT_RETRIES:
+            return True, (f"re-armed: all {attempts} landed row(s) are non-verdict outcomes "
+                          f"({'/'.join(sorted(NON_VERDICT_READ_STATES))}); retry "
+                          f"{attempts}/{MAX_NONVERDICT_RETRIES}")
+        return False, (f"{RETRY_CAP_MARK}: {attempts} landed rows are all non-verdict outcomes "
+                       f"(max {MAX_NONVERDICT_RETRIES} retries) -- needs a human")
     if cadence == "once":
         if last:
             return False, f"cadence=once and it ran at {last}"
@@ -346,7 +421,8 @@ def effective_priority(entry: Dict[str, Any], uid: str, now: datetime, aging_hou
     return max(0, prio - steps)
 
 
-def fair_order(jobs: List[Any], now: datetime, themes_doc: Dict[str, Any]) -> List[Any]:
+def fair_order(jobs: List[Any], now: datetime, themes_doc: Dict[str, Any],
+               cfg: Optional[Dict[str, Any]] = None) -> List[Any]:
     """Dispatch order: weighted fair share across themes, aged priority within a theme.
 
     Repeatedly pick the theme with the lowest (fired in the last `share_window_hours` + picked so far)
@@ -354,7 +430,12 @@ def fair_order(jobs: List[Any], now: datetime, themes_doc: Dict[str, Any]) -> Li
     priority, then id). Stateless: the only memory is the stamps already on the units. A theme with
     runnable work and no recent fire has usage 0, so it is served before any theme over its share:
     low weight means fewer slots, never none. Jobs that are not due (done, cadence not elapsed, unmet
-    precondition, session-bound, invalid) keep id order after the candidates, unchanged."""
+    precondition, session-bound, invalid) keep id order after the candidates, unchanged.
+
+    RESEARCH-ROUTER (2026-10-13): with ``cfg`` (scripts/research/research_compute.yaml) a theme's candidates are
+    ordered by VALUE per unit cost (compute_router.score) instead of by effective priority alone; a unit
+    that has waited past ``value.starve_hours`` sorts first. Each ranked job carries ``raw['_rank']`` (score +
+    derivation) for the decision line. Without ``cfg`` the order is the pre-router one, unchanged."""
     themes = themes_doc["themes"]
     window = timedelta(hours=float(themes_doc["share_window_hours"]))
     aging = float(themes_doc["aging_hours"])
@@ -371,10 +452,33 @@ def fair_order(jobs: List[Any], now: datetime, themes_doc: Dict[str, Any]) -> Li
         e = j.raw
         th = str(e.get("theme") or "")
         wf = str((e.get("run") or {}).get("workflow") or "")
+        if not wf and cfg is not None:     # compute-only unit: fireable iff its class resolves
+            _p = cr.plan(e, cfg)
+            wf = _p.workflow if _p.ok else ""
         fireable = (j.valid and j.status == "queued" and th in themes and wf.endswith((".yml", ".yaml"))
                     and not any(ch.isspace() for ch in wf) and _is_due(e, now)[0])
         (cand.setdefault(th, []) if fireable else rest).append(j)
-    for th in cand:
+    if cfg is not None:
+        fires: Dict[str, float] = {}
+        for j in jobs:
+            ts = _parse_ts(j.raw.get("last_dispatched_at"))
+            if ts and now - ts <= window:
+                b = cr.bucket_of(j.raw, cfg)
+                if b:
+                    fires[b] = fires.get(b, 0.0) + 1
+        starve = timedelta(hours=float(cfg["value"]["starve_hours"]))
+        for th in cand:
+            def _key(x, _fires=fires):
+                since = _waiting_since(x.raw, x.id)
+                waited = (now - since) if since else timedelta(0)
+                steps = int(max(0.0, waited.total_seconds()) // (aging * 3600))
+                r = cr.score(x.raw, cfg, aging_steps=steps, fires=_fires)
+                r["starved"] = waited > starve
+                r["waited_h"] = round(waited.total_seconds() / 3600.0, 1)
+                x.raw["_rank"] = r
+                return (not r["starved"], -r["rank_value"], x.id)
+            cand[th].sort(key=_key)
+    for th in cand if cfg is None else ():
         # Within one effective priority a hand-written unit (someone ASKED this question) goes
         # before a template-generated one (the refill keeps the queue stocked): MEASURED
         # 2026-10-04, RQ-20260929-101..108 -- eight pre-registered Stage-0 units the operator
@@ -540,7 +644,8 @@ def dispatch_inputs(entry: Dict[str, Any], *, power_state: str = "",
         inputs["research_unit"] = str(entry["id"])
     if inputs.get("research_unit") and power_state:
         inputs["power_state"] = power_state
-    if declared is None or workflow not in ("research-script-run.yml", "research-script-run-trainer.yml"):
+    if declared is None or workflow not in ("research-script-run.yml", "research-script-run-trainer.yml",
+                                            "research-script-run-kaggle.yml"):
         return inputs, []
     dropped = sorted(k for k in inputs if k not in declared)
     return {k: v for k, v in inputs.items() if k in declared}, dropped
@@ -604,6 +709,10 @@ def research_workflow_names(jobs: List[Any], repo: Path = _REPO) -> Dict[str, st
     to, plus the token-free runner. A run counts as research compute when its
     workflowName is one of these names (gh run list reports names, not files)."""
     files = {"research-script-run.yml"}
+    try:   # every routable backend's workflow counts as research compute, even with no unit naming it yet
+        files |= {b["workflow"] for b in cr.load_config()["backends"].values()}
+    except (OSError, ValueError):
+        pass
     for job in jobs:
         wf = str(((getattr(job, "raw", None) or {}).get("run") or {}).get("workflow") or "")
         if wf.endswith((".yml", ".yaml")) and not any(ch.isspace() for ch in wf):
@@ -701,7 +810,11 @@ def backpressure(research_names: Dict[str, str], *, max_inflight: int, max_queue
     queued, inprog = fresh(queued_all), fresh(inprog_all)
     stale = (len(queued_all) - len(queued)) + (len(inprog_all) - len(inprog))
     inflight = sum(1 for r in queued + inprog if str(r.get("workflowName")) in names)
-    out = {"inflight_research": inflight, "repo_queued": len(queued), "stale_ignored": stale, "block": None,
+    by_name: Dict[str, int] = {}
+    for r in queued + inprog:
+        if str(r.get("workflowName")) in names:
+            by_name[str(r["workflowName"])] = by_name.get(str(r["workflowName"]), 0) + 1
+    out = {"inflight_research": inflight, "by_name": by_name, "repo_queued": len(queued), "stale_ignored": stale, "block": None,
            "detail": f"research compute in flight {inflight} (cap {max_inflight}); repo runs queued "
                      f"{len(queued)} (cap {max_queued}); {stale} stuck run(s) older than "
                      f"{stale_after_hours:g} h ignored"}
@@ -842,7 +955,8 @@ def _fire(entry: Dict[str, Any], *, route: str, ref: str,
     # RQ-RUN (2026-09-28): the token-free runner reads the unit's command from
     # its YAML. Refuse here what the runner would refuse there, so a bad unit
     # is a DISPATCH_FAILED row instead of a spent runner + a stamped unit.
-    if workflow in ("research-script-run.yml", "research-script-run-trainer.yml"):
+    if workflow in ("research-script-run.yml", "research-script-run-trainer.yml",
+                    "research-script-run-kaggle.yml"):
         from scripts.research import script_run
         preflight = script_run.plan(str(entry.get("id")), run_id="preflight")
         if not preflight.ok:
@@ -900,9 +1014,14 @@ def main(argv: Optional[List[str]] = None) -> int:
                          "(see stranded_stamp_adoptions)")
     ap.add_argument("--ref", default=os.environ.get("GITHUB_REF_NAME") or "main")
     ap.add_argument("--only", default=None, help="dispatch just this job id")
-    ap.add_argument("--max-research-inflight", type=int, default=3,
+    ap.add_argument("--max-research-inflight", type=int, default=None,
                     help="defer every fire while this many research compute runs are already "
-                         "queued or in progress (counted via gh; see backpressure())")
+                         "queued or in progress (counted via gh; see backpressure()). Default: "
+                         "scripts/research/research_compute.yaml limits.max_total_inflight; the per-backend "
+                         "max_concurrent there is the finer cap")
+    ap.add_argument("--kaggle-quota-file", default=None,
+                    help="text of `kaggle quota` (the dispatch workflow writes it). Absent/unparsable = quota "
+                         "UNKNOWN: GPU units wait, they are never routed blind (compute_router.parse_quota)")
     ap.add_argument("--pressure-stale-hours", type=float, default=STALE_PRESSURE_HOURS,
                     help="a run still queued/in progress this many hours after creation is stuck, "
                          "not load, and counts against neither cap (see STALE_PRESSURE_HOURS)")
@@ -917,6 +1036,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--max-gpu-dispatches-per-run", type=int, default=1,
                     help="per-RUN cap on GPU bursts; the ledger cap is monthly and "
                          "cannot bound a loop inside one run")
+    ap.add_argument("--utilization-dir", default=None,
+                    help="fire path: write this cycle's per-backend utilization record (measured vs could-not-look) "
+                         "to <dir>/<run_id>.json (research_utilization.py). The summary line always prints.")
     ap.add_argument("--json", action="store_true", help="emit the decisions as JSON")
     args = ap.parse_args(argv)
 
@@ -938,8 +1060,26 @@ def main(argv: Optional[List[str]] = None) -> int:
     # Fire order: weighted fair share across themes (research/THEMES.yaml), aged priority within
     # a theme. load_queue returns files sorted by id, which made this a pure FIFO: a cycle fires at
     # most --max-research-inflight units, so the newest ids waited behind every older one.
+    cfg: Optional[Dict[str, Any]] = None
     try:
-        jobs = fair_order(jobs, now, load_themes())
+        cfg = cr.load_config()
+    except (OSError, ValueError) as exc:
+        print(f"::error::research-queue: COULD NOT READ scripts/research/research_compute.yaml -- {exc}. Compute classes and "
+              "value ranking are OFF this cycle (explicit run.workflow units still fire); this is a broken "
+              "router, not a quiet one.", file=sys.stderr)
+    if cfg is not None:
+        for _j in jobs:
+            if not _j.valid:
+                continue
+            _p = cr.plan(_j.raw, cfg)
+            _j.raw["_plan"] = _p
+            if _p.ok and not str((_j.raw.get("run") or {}).get("workflow") or "").strip():
+                _j.raw.setdefault("run", {})["workflow"] = _p.workflow   # in memory only: _stamp edits the file text
+                _j.raw["_injected_workflow"] = True
+    max_inflight = args.max_research_inflight if args.max_research_inflight is not None else \
+        int((cfg or {}).get("limits", {}).get("max_total_inflight", 3))
+    try:
+        jobs = fair_order(jobs, now, load_themes(), cfg)
     except (OSError, ValueError) as exc:
         print(f"::error::research-queue: COULD NOT READ research/THEMES.yaml — {exc}. Falling back "
               "to id order; this is a broken scheduler, not a quiet one.", file=sys.stderr)
@@ -949,13 +1089,29 @@ def main(argv: Optional[List[str]] = None) -> int:
     # against the in-flight cap so one cycle cannot fan the whole queue out.
     pressure: Dict[str, Any] = {"block": None, "inflight_research": 0, "detail": "dry run: not counted"}
     if args.fire:
-        pressure = backpressure(research_workflow_names(jobs), max_inflight=args.max_research_inflight,
+        wf_names = research_workflow_names(jobs)
+        pressure = backpressure(wf_names, max_inflight=max_inflight,
                                 max_queued=args.max_repo_queued,
                                 stale_after_hours=args.pressure_stale_hours)
         print(f"backpressure: {pressure.get('detail') or pressure.get('block')}", file=sys.stderr)
         if pressure["block"]:
             print(f"::notice::research-queue-dispatch deferred every fire: {pressure['block']}", file=sys.stderr)
     inflight = int(pressure.get("inflight_research") or 0)
+    # Per-backend load: runs in flight by workflow NAME (gh reports names) mapped back to backends.
+    state = cr.BackendState(total_inflight=inflight)
+    _q: Dict[str, Any] = {"remaining": None, "note": "no quota read"}
+    if cfg is not None:
+        name_to_backend = {}
+        for _f, _n in (research_workflow_names(jobs) if args.fire else {}).items():
+            _b = cr.backend_for_workflow(_f, cfg)
+            if _b:
+                name_to_backend[_n] = _b
+        for _n, _c in (pressure.get("by_name") or {}).items():
+            if _n in name_to_backend:
+                state.inflight[name_to_backend[_n]] = state.busy(name_to_backend[_n]) + int(_c)
+        _qres = (cfg["backends"].get("kaggle", {}).get("quota") or {}).get("resource", "GPU")
+        _q = cr.read_quota_file(args.kaggle_quota_file, _qres)
+        state.quota_hours, state.quota_refresh, state.quota_note = _q["remaining"], _q.get("refresh", ""), _q.get("note", "")
     # Open stamp PRs are read ONCE per cycle, fire path only, and only when the
     # caller opted in with --check-open-stamp-prs (the workflow always does; a
     # dry run makes no gh calls). None = GitHub could not be asked: every due
@@ -1004,6 +1160,30 @@ def main(argv: Optional[List[str]] = None) -> int:
             if pending:
                 print("pending stamps (open stamp PRs, treated as dispatched): "
                       + ", ".join(f"{u} <- {p}" for u, p in sorted(pending.items())), file=sys.stderr)
+    # IDLE-CAPACITY FILL (RESEARCH-ROUTER, operator 2026-10-13: "get the most out of all the resources"): when a backend
+    # has more free slots than units due for it, pull forward recurring units that opted in with `idle_fill: true`
+    # and are waiting only on their cadence. Fire path only (a dry run has no occupancy to fill), lowest priority
+    # (they sort after every due unit), and capped by the free slots.
+    fill_ids: set = set()
+    if args.fire and cfg is not None and pressure.get("by_name") is not None and not pressure["block"]:
+        due_by_be: Dict[str, int] = {}
+        waiting: List[Any] = []
+        for j in jobs:
+            if not j.valid or j.status != "queued" or not isinstance(j.raw.get("_plan"), cr.Resolution) or not j.raw["_plan"].ok:
+                continue
+            be = j.raw["_plan"].backend
+            ok_due, why = _is_due(j.raw, now)
+            if ok_due:
+                due_by_be[be] = due_by_be.get(be, 0) + 1
+            elif j.raw.get("idle_fill") is True and "not yet elapsed" in why:
+                waiting.append((be, j))
+        for be, j in waiting:
+            b = cfg["backends"].get(be)
+            if b is None or not b.get("auto_route", True):
+                continue
+            if int(b["max_concurrent"]) - state.busy(be) - due_by_be.get(be, 0) > 0:
+                fill_ids.add(j.id)
+                due_by_be[be] = due_by_be.get(be, 0) + 1
     gpu_fired = 0
     fired_by_workflow: Dict[str, int] = {}
     for job in jobs:
@@ -1025,8 +1205,13 @@ def main(argv: Optional[List[str]] = None) -> int:
             continue
 
         due, due_reason = _is_due(entry, now)
+        if not due and job.id in fill_ids:
+            due, due_reason = True, "idle-capacity fill (opted in; " + due_reason + ")"
+            row["idle_fill"] = True
         if not due:
             row.update(outcome=NOT_DUE, reason=due_reason)
+            if RETRY_CAP_MARK in due_reason:
+                print(f"::warning::{job.id}: {due_reason}", file=sys.stderr)
             if args.fire and not pressure["block"]:
                 # A deferred cycle (backpressure) touches NOTHING, repairs
                 # included: the repair lands via the stamp PR, which such a
@@ -1057,6 +1242,11 @@ def main(argv: Optional[List[str]] = None) -> int:
             decisions.append(row)
             continue
 
+        _plan = entry.get("_plan")
+        if _plan is not None and not _plan.ok:
+            row.update(outcome=BLOCKED_ROUTE, route_state="unroutable", route_reason="compute: " + _plan.error)
+            decisions.append(row)
+            continue
         # A session-bound note (`run.workflow` is prose, not a workflow file)
         # can never be fired. Until 2026-09-30 it reached _fire(), returned
         # DISPATCH_FAILED on EVERY cycle and turned each firing run red
@@ -1084,14 +1274,30 @@ def main(argv: Optional[List[str]] = None) -> int:
             row["outcome"] = BLOCKED_ROUTE
             decisions.append(row)
             continue
-        if route.state == GPU and gpu_fired >= args.max_gpu_dispatches_per_run:
+        res = cr.resolve(entry, cfg, state) if cfg is not None else None
+        if res is not None and res.ok:
+            row.update(compute_class=res.cls or None, backend=res.backend, compute_source=res.source,
+                       placement=res.reason)
+            if res.workflow and not res.wait:
+                entry.setdefault("run", {})["workflow"] = res.workflow   # a fallback backend changes the target
+        if entry.get("_rank"):
+            row["value_score"] = round(entry["_rank"]["rank_value"], 2)
+            row["value_derivation"] = entry["_rank"]["derivation"]
+        if res is not None and res.ok and res.wait:
+            row.update(outcome=DEFERRED, reason=f"waiting for compute: {res.reason}")
+            decisions.append(row)
+            continue
+        _managed_gpu = route.state == GPU and (res is None or res.backend != "kaggle")
+        if _managed_gpu and gpu_fired >= args.max_gpu_dispatches_per_run:
             row.update(outcome=NOT_DUE,
                        reason=f"per-run GPU cap {args.max_gpu_dispatches_per_run} reached")
             decisions.append(row)
             continue
 
         if not args.fire:
-            row.update(outcome="would_dispatch", detail=f"route={route.state} (dry run)")
+            row.update(outcome="would_dispatch",
+                       detail=(f"route={route.state} backend={res.backend} ({res.source}) (dry run)"
+                               if res is not None and res.ok else f"route={route.state} (dry run)"))
             decisions.append(row)
             continue
         if pressure["block"]:
@@ -1104,9 +1310,9 @@ def main(argv: Optional[List[str]] = None) -> int:
                               "unit was already dispatched by a previous cycle; due again next cycle")
             decisions.append(row)
             continue
-        if inflight >= args.max_research_inflight:
+        if inflight >= max_inflight:
             row.update(outcome=DEFERRED,
-                       reason=f"research compute cap {args.max_research_inflight} reached this cycle "
+                       reason=f"research compute cap {max_inflight} reached this cycle "
                               f"({inflight} in flight incl. fires above) -- due again next cycle")
             decisions.append(row)
             continue
@@ -1123,6 +1329,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                            power_state=power.state)
         if ok:
             inflight += 1
+            if res is not None and res.ok and res.backend in (cfg or {}).get("backends", {}):
+                state.took(res.backend)
             fired_by_workflow[wf_file] = fired_by_workflow.get(wf_file, 0) + 1
         row.update(outcome=DISPATCHED if ok else DISPATCH_FAILED, detail=detail)
         if ok:
@@ -1136,13 +1344,35 @@ def main(argv: Optional[List[str]] = None) -> int:
                 print(f"::warning::{job.id} fired but its last_dispatched_at could "
                       f"NOT be stamped ({stamp_err}) — it will re-fire next run",
                       file=sys.stderr)
-            if route.state == GPU:
+            if _managed_gpu:
                 gpu_fired += 1
         decisions.append(row)
 
     counts: Dict[str, int] = {}
     for row in decisions:
         counts[row["outcome"]] = counts.get(row["outcome"], 0) + 1
+
+    # UTILIZATION (RESEARCH-ROUTER): measure what this cycle used of each backend, with explicit read-state.
+    if cfg is not None:
+        from scripts.research import research_utilization as ru
+        try:
+            _n2b = {}
+            for _f, _n in research_workflow_names(jobs).items():
+                _b = cr.backend_for_workflow(_f, cfg)
+                if _b:
+                    _n2b[_n] = _b
+            util = ru.measure(cfg=cfg, by_name_to_backend=_n2b, pressure=pressure,
+                              quota=_q,
+                              decisions=decisions, now=now, run_id=os.environ.get("GITHUB_RUN_ID", now.strftime("%Y%m%dT%H%M%S")),
+                              fired=bool(args.fire))
+            print(ru.one_line(util), file=sys.stderr)
+            for _fl in util["flags"]:
+                print(f"::warning::research-capacity {_fl}", file=sys.stderr)
+            if args.fire and args.utilization_dir:
+                ru.write(util, Path(args.utilization_dir))
+        except (OSError, ValueError, KeyError) as exc:
+            print(f"::warning::utilization could not be recorded ({type(exc).__name__}: {exc}); dispatch is unaffected",
+                  file=sys.stderr)
 
     if args.json:
         print(json.dumps({"generated_at": now.isoformat(), "queue_dir": str(queue_dir),
@@ -1160,6 +1390,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                     else row.get("route_reason")
             if row["outcome"] == INVALID:
                 extra = "; ".join(row.get("errors") or [])
+            if row.get("value_derivation") and row["outcome"] in ("would_dispatch", DISPATCHED, DEFERRED):
+                extra = f"{extra}  | {row['value_derivation']}"
             print(f"  {row['id']:<18} {row['outcome']:<15} {extra}")
         summary = " · ".join(f"{k}={v}" for k, v in sorted(counts.items()))
         # `"  " + summary or fallback` would be truthy even when summary is
