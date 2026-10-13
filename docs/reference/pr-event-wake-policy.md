@@ -9,7 +9,7 @@
 ## The problem
 
 `subscribe_pr_activity` delivers every review, CI result, merge and push on the PR as a wake. A session that subscribes to every
-PR it opens or watches spends a model turn on events that need no decision. The plan estimated ~8% of the manager's mechanical
+PR it opens or watches spends a model turn on events that need no decision. The plan estimated ~8% of the manager's mechanical <!-- population-ok: quoted estimate from the inventory plan act M-d, not a measurement -->
 effort and rated it low confidence (an ESTIMATE, not a measurement).
 
 ## What a wake costs and what it buys
