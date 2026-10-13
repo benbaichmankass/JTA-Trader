@@ -323,6 +323,25 @@ def stamp_lost(entry: Dict[str, Any]) -> Optional[datetime]:
     return result_at
 
 
+def cleared_on_purpose(entry: Dict[str, Any]) -> bool:
+    """Is this unit's missing stamp a DELIBERATE re-arm, not a dropped stamp?
+
+    True for a null stamp that a person (or the grader) cleared so the unit runs again: a unit whose
+    only landed rows are non-verdict outcomes and that is under the retry cap (`rearmable`), or one the
+    grader re-queued for a confirmatory run. Anything that WRITES a stamp from old evidence (the
+    stranded-PR adoption in `main()`, the `stamp_lost` repair) must leave such a unit alone: writing the
+    old stamp back is what undid #17829's re-arm of RQ-20261009-903 / RQ-20261012-75b2-19 (PR #17853
+    restored `14:51:40` / `02:15:56`, the stamps of an OPEN stranded stamp PR, #17809, onto units whose
+    null was the re-arm). PI-20261013-HOPS1447-0001."""
+    if entry.get("last_dispatched_at"):
+        return False
+    uid = str(entry.get("id") or "")
+    result_at, rows = latest_result_at(uid) if uid else (None, 0)
+    if not rows:
+        return False
+    return rearmable(entry) or confirmatory_requeue(entry, result_at)
+
+
 def _is_due(entry: Dict[str, Any], now: datetime) -> tuple:
     """(due, reason). A job with no recorded run has never run and IS due."""
     met, why = precondition_met(entry)
@@ -1141,6 +1160,14 @@ def main(argv: Optional[List[str]] = None) -> int:
                     cur = _parse_ts(job.raw.get("last_dispatched_at"))
                     if cur is not None and cur >= when:
                         pending.pop(uid, None)   # main already carries this stamp or newer
+                        continue
+                    if cleared_on_purpose(job.raw):
+                        # A null on main here is a re-arm, not a dropped stamp: adopting the old stamp
+                        # would silently undo it (PI-20261013-HOPS1447-0001). The stranded PR stays
+                        # inert for this unit; the unit is due again on its own terms.
+                        pending.pop(uid, None)
+                        print(f"::notice::{uid}: not adopting the stranded stamp from {src} -- its null "
+                              "stamp is a deliberate re-arm", file=sys.stderr)
                         continue
                     err = _stamp(job.path, when)
                     if err:

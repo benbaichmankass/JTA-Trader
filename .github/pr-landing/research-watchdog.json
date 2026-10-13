@@ -1,0 +1,12 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "touches src/runtime/telegram_channels.py (ONE data row: registers scripts/research/research_watchdog.py as an 'alert' sender; 'alert' already routes to SYSTEM, test_every_sender_is_mapped requires it); needs one manager/operator OK to merge",
+  "why": "everything else is Tier-1 (CI workflow, research tooling, tests, comms ledger, skill docs); the single src/runtime routing-table row is Tier-2 by path and changes no routing",
+  "recorded_decision": {
+    "kind": "operator_decision",
+    "ref": "RESEARCH-WATCHDOG",
+    "text": "Operator 2026-10-13 ~16:20Z: 'make sure that I also get an alert on the Telegram channel, like the system channel should alert me' - the one src/runtime row registers the watchdog as an alert sender to SYSTEM."
+  }
+}

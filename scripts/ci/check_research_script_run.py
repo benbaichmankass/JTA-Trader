@@ -26,6 +26,10 @@ WHAT IT CHECKS
       (allowed script family, script exists, argv shape, placeholders,
       timeout bound, rule id + registered_at, `run.inputs.research_unit`).
   R2  the workflow declares exactly the inputs {research_unit, power_state}.
+  R4  every committed `comms/research/<unit>/<run_id>/run-manifest.json` names that same unit and run_id
+      (all backends: runner, trainer, kaggle). A manifest that disagrees with its directory means the files are
+      another run's -- 2026-10-13, two Kaggle results carried the PREVIOUS run's manifest because the kernel mounted
+      a stale dataset version (fixed in kaggle_run.py / kernel_main.py; the two found were corrected in place).
   R3  the workflow's `run` job checks out with `persist-credentials: false`
       and references no `secrets.` other than GITHUB_TOKEN; the PAT lives
       only in the `land` job, which never runs the unit's command.
@@ -57,8 +61,21 @@ KAGGLE_WORKFLOW = _REPO / ".github" / "workflows" / script_run.KAGGLE_WORKFLOW
 
 def check(queue_dir: Path = _REPO / "research" / "queue", workflow: Path = WORKFLOW,
           repo: Path = _REPO, trainer_workflow: Optional[Path] = TRAINER_WORKFLOW,
-          kaggle_workflow: Optional[Path] = KAGGLE_WORKFLOW) -> List[str]:
+          kaggle_workflow: Optional[Path] = KAGGLE_WORKFLOW,
+          results_root: Path = _REPO / "comms" / "research") -> List[str]:
     problems: List[str] = []
+
+    # R4 -- population is every committed manifest, whatever backend wrote it.
+    import json
+    for mf in sorted(results_root.glob("*/*/run-manifest.json")):
+        unit, run_id = mf.parent.parent.name, mf.parent.name
+        try:
+            m = json.loads(mf.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            problems.append(f"R4 {unit}/{run_id}: run-manifest.json unreadable -- {exc}")
+            continue
+        for why in script_run.manifest_mismatch(m, unit, run_id):
+            problems.append(f"R4 {unit}/{run_id}: {why}")
 
     # R1 — every unit targeting the runner plans cleanly.
     units = script_run.units_targeting_runner(queue_dir)
@@ -134,11 +151,20 @@ def _self_test() -> int:
         qdir.mkdir()
         unit(qdir, "RQ-20260101-001", ["python3", "scripts/research/ok.py"])
         # The live workflow file is the positive control for R2/R3.
-        assert check(qdir, WORKFLOW, repo) == [], check(qdir, WORKFLOW, repo)
+        assert check(qdir, WORKFLOW, repo, results_root=repo / "none") == [], check(qdir, WORKFLOW, repo, results_root=repo / "none")
+
+        # R4 -- a manifest naming another run is red; the matching one is green.
+        rr = repo / "res"
+        (rr / "RQ-20260101-001" / "55").mkdir(parents=True)
+        (rr / "RQ-20260101-001" / "55" / "run-manifest.json").write_text('{"unit":"RQ-20260101-001","run_id":"55"}')
+        assert check(qdir, WORKFLOW, repo, results_root=rr) == [], check(qdir, WORKFLOW, repo, results_root=rr)
+        (rr / "RQ-20260101-001" / "55" / "run-manifest.json").write_text('{"unit":"RQ-20260101-002","run_id":"44"}')
+        r4 = [x for x in check(qdir, WORKFLOW, repo, results_root=rr) if x.startswith("R4")]
+        assert len(r4) == 2, r4
 
         # R1 turns red on a unit naming a script outside the families.
         unit(qdir, "RQ-20260101-002", ["python3", "scripts/ops/bad.py"])
-        probs = check(qdir, WORKFLOW, repo)
+        probs = check(qdir, WORKFLOW, repo, results_root=repo / "none")
         assert any(p.startswith("R1 RQ-20260101-002") for p in probs), probs
         (qdir / "RQ-20260101-002.yaml").unlink()
 

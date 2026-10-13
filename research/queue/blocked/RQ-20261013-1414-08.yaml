@@ -1,0 +1,78 @@
+id: RQ-20261013-1414-08
+title: 'Frontier / TSFM LoRA: does a LoRA fine-tune of the winning forecaster beat its own frozen zero-shot features on the 15m volatility-regime
+  head? (conditional on RQ-20261011-9da8-01 PASS)'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 3
+kind: experiment
+question: Conditional on RQ-20261011-9da8-01 naming a winning forecaster, does a LoRA fine-tune of that exact checkpoint on the training
+  folds beat the SAME checkpoint frozen, by >= +0.010 macro-F1 on BTC and the same sign on ETH and SOL, on identical purged folds and
+  the post-2025-09-01 holdout?
+why_this_matters: 'Frontier-scan idea #5 ("No unit yet - conditional on #1 PASS: a fine-tune of a zero-shot loser is a variation, not
+  a test"). Frozen has been the only mode ever tried on our data. Filing it now with requires_result means it becomes due the moment
+  9da8-01 passes, instead of waiting for someone to remember the scan row, and it is GPU-class work that Kaggle (2 x T4, 30 h/week)
+  can take without touching the 1 OCPU trainer.'
+power:
+  expected_n: 3
+  min_detectable_effect: 0.01
+  effect_units: sd
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 3 symbols x 5 purged folds; the registered quantity is the paired fold-level macro-F1 difference vs the zero-shot arm. 5 folds
+    is thin for an interval, so the rule requires the SAME sign on all three symbols rather than a significance test on one.
+  feasibility:
+    source: none
+    accrual_basis: 'A conditional unit: it cannot run until its blocker clears, and its sample is the same fixed 15m shards as RQ-20261011-9da8-01;
+      nothing accrues by waiting.'
+decision_rule:
+  id: RULE-RQ20261013-1414-08-TSFM-LORA-VS-FROZEN
+  registered_at: '2026-10-13'
+  registered_before_run: true
+  statistic: 'Per symbol: paired purged-CV delta macro_f1 (LoRA-fine-tuned fc_* head minus the same checkpoint frozen) on identical
+    rows, and the same on the post-2025-09-01 holdout.'
+  rule: PASS IF delta macro_f1 >= +0.010 on BTC AND > 0 on ETH and SOL AND the holdout delta is > 0 on BTC. FAIL IF delta macro_f1 <=
+    +0.003 on every symbol (closes only LoRA at this rank/learning-rate on this checkpoint). INDETERMINATE otherwise.
+  min_n: 3 usable CV folds per symbol; fine-tune folds must exclude the embargoed test window (pretraining/fine-tune leakage is checked,
+    not assumed).
+  what_it_does_not_do: Does not run unless 9da8-01 PASSED; serves nothing (a fine-tuned model is a trainer-side mirror-publish artifact
+    only); a feature-lift PASS is not edge and is judged downstream net of cost. Touches no config or registry.
+compute: gpu
+value:
+  bucket: frontier
+  usd_at_stake_per_month: 150
+  confidence: 0.1
+  basis: 'stand-in: the upside case for TSFM features if frozen zero-shot already passes; zero if 9da8-01 fails; not a measured P&L'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: true
+  peak_memory_gb: 5.5
+  est_minutes: 240
+  basis: 'Estimate from the sibling fc bake-off; re-declare from the first run. Kaggle internet is off and the shards are trainer-resident,
+    so the run needs a data-bundle path: that is part of the blocker.'
+blocked_on:
+- kind: work_item
+  ref: FRONTIER-LEVER-TSFM
+  what: The zero-shot bake-off 9da8-01 is itself blocked on build_forecasts.py backends; this unit additionally needs a LoRA fine-tune
+    script (scripts/research, GPU-capable, Kaggle-allowlisted) and a trainer-shard-to-Kaggle data bundle (Kaggle internet is off, the
+    shards live on the trainer).
+  clears_when: RQ-20261011-9da8-01 has landed a measured PASS, a fine-tune script with a CPU smoke test exists, and a sanitized shard
+    bundle path to the Kaggle kernel exists (or the unit is re-routed to the trainer GPU-less path with a stated cost).
+roadmap:
+- M25
+related:
+- RQ-20261011-9da8-01
+- docs/research/frontier-scan-2026-10-11.md
+- FRONTIER-LEVER-TSFM
+last_dispatched_at: null
+requires_result:
+  unit: RQ-20261011-9da8-01
+  verdict: pass
+run:
+  workflow: null
+  note: 'Deliberately null: the instrument does not exist yet (see blocked_on). Fill in when the blocker clears.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1

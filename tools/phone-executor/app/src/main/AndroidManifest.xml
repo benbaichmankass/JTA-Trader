@@ -9,6 +9,9 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- PHONE-KEEPALIVE watchdog: an AlarmManager chain independent of the service and the Activity (exact when the OS allows,
+         else the Doze-tolerant inexact alarm; the app checks canScheduleExactAlarms). -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <!-- Granted once by the operator ("Display over other apps"): it is what lets the boot service bring the
          kiosk Activity back after a restart (Android blocks background activity starts otherwise). -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
@@ -38,6 +41,7 @@
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Keeps the operator's own trade-execution kiosk running on a dedicated phone." />
         </service>
+        <receiver android:name=".WatchdogReceiver" android:exported="false" />
         <receiver android:name=".BootReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

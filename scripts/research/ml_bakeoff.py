@@ -168,8 +168,16 @@ def block_join_columns(df, spec: Dict[str, Any]) -> Dict[str, np.ndarray]:
     return {pre + c: merged[c].to_numpy(dtype=float) for c in spec["columns"]}
 
 
+def block_df_columns(df, spec: Dict[str, Any]) -> Dict[str, np.ndarray]:
+    """Give ONE learner extra columns that ride in the dataset itself (declare them in ``dataset.extra_columns`` so
+    the loader reads them but the shared base feature list does not include them) -- e.g. the shard's own ``fc_*``
+    Chronos columns for the arm that tests them, against an arm that does not get them. A column missing from the
+    shard is NaN (the loader's rule), so a dead side-stream shows up as a dead feature, never as a silent drop."""
+    return {c: np.asarray(df[c], dtype=float) for c in spec["columns"]}
+
+
 FEATURE_BLOCKS: Dict[str, Callable[..., Dict[str, np.ndarray]]] = {
-    "har_rv": block_har_rv, "join_columns": block_join_columns}
+    "har_rv": block_har_rv, "join_columns": block_join_columns, "df_columns": block_df_columns}
 
 
 # ── learners ─────────────────────────────────────────────────────────────────
@@ -244,6 +252,33 @@ def _mk_hgb(p):
     return HistGradientBoostingClassifier(**p)
 
 
+def _mk_extratrees(p):
+    """Bagged randomised trees (variance reduction, not boosting) -- a different inductive bias from the GBDT family."""
+    try:
+        from sklearn.ensemble import ExtraTreesClassifier
+        from sklearn.impute import SimpleImputer
+        from sklearn.pipeline import make_pipeline
+    except ImportError as e:
+        raise Unavailable(f"scikit-learn not importable: {e}")
+    return make_pipeline(SimpleImputer(strategy="median"),
+                         ExtraTreesClassifier(**{"n_estimators": 300, "min_samples_leaf": 20, "n_jobs": 1,
+                                                 "random_state": 0, **p}))
+
+
+def _mk_mlp(p):
+    """Small standardised MLP (the neural tabular family; CPU, seeded, early-stopped)."""
+    try:
+        from sklearn.impute import SimpleImputer
+        from sklearn.neural_network import MLPClassifier
+        from sklearn.pipeline import make_pipeline
+        from sklearn.preprocessing import StandardScaler
+    except ImportError as e:
+        raise Unavailable(f"scikit-learn not importable: {e}")
+    return make_pipeline(SimpleImputer(strategy="median"), StandardScaler(),
+                         MLPClassifier(**{"hidden_layer_sizes": (32, 16), "alpha": 1e-3, "max_iter": 200,
+                                          "early_stopping": True, "random_state": 0, **p}))
+
+
 def _mk_tabicl(p):
     try:
         from tabicl import TabICLClassifier
@@ -267,6 +302,8 @@ LEARNERS: Dict[str, Tuple[Callable, str, bool]] = {
     "lightgbm": (_fit_sklearn_like(_mk_lightgbm), "MIT", False),
     "catboost": (_fit_sklearn_like(_mk_catboost), "Apache-2.0", False),
     "sklearn_hgb": (_fit_sklearn_like(_mk_hgb), "BSD-3-Clause", False),
+    "sklearn_extratrees": (_fit_sklearn_like(_mk_extratrees), "BSD-3-Clause", False),
+    "sklearn_mlp": (_fit_sklearn_like(_mk_mlp), "BSD-3-Clause", False),
     "tabicl": (_fit_sklearn_like(_mk_tabicl), "BSD-3-Clause (verify on the Hub)", False),
     # Prior Labs weights are `license:other` (non-commercial): offline research evaluation ONLY.
     "tabpfn": (_fit_sklearn_like(_mk_tabpfn), "Prior Labs non-commercial (license:other)", True),
@@ -279,7 +316,7 @@ def probe_learner(kind: str, params: Dict[str, Any]) -> Optional[str]:
         return f"unknown learner kind {kind!r} (known: {sorted(LEARNERS)})"
     try:
         probe = {"lightgbm": _mk_lightgbm, "catboost": _mk_catboost, "sklearn_hgb": _mk_hgb,
-                 "tabicl": _mk_tabicl, "tabpfn": _mk_tabpfn}.get(kind)
+                 "sklearn_extratrees": _mk_extratrees, "sklearn_mlp": _mk_mlp, "tabicl": _mk_tabicl, "tabpfn": _mk_tabpfn}.get(kind)
         if probe:
             probe(dict(params or {}))
     except Unavailable as e:

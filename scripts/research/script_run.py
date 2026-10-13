@@ -394,6 +394,23 @@ def execute(p: Plan, *, repo: Path = _REPO) -> Dict[str, Any]:
 
 
 # ── record derivation ───────────────────────────────────────────────────────
+def manifest_mismatch(manifest: Any, unit: str, run_id: str) -> List[str]:
+    """Why a run-manifest does NOT belong to `comms/research/<unit>/<run_id>/` (empty = it does).
+
+    The one predicate behind the kaggle runner's post-fetch verify and the guard's R4 (all backends). A
+    manifest is written from the plan's own unit and out_dir, so a disagreement with the directory it sits in
+    means the files came from another run -- 2026-10-13: a Kaggle kernel that mounted a stale dataset version
+    executed the PREVIOUS run's spec and its output was filed under the new run's directory."""
+    if not isinstance(manifest, dict):
+        return ["run-manifest.json is not a JSON object"]
+    out = []
+    if manifest.get("unit") != unit:
+        out.append(f"manifest unit {manifest.get('unit')!r} != directory unit {unit!r}")
+    if str(manifest.get("run_id")) != str(run_id):
+        out.append(f"manifest run_id {manifest.get('run_id')!r} != directory run_id {run_id!r}")
+    return out
+
+
 def _read_json(path: Path) -> Optional[Dict[str, Any]]:
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
