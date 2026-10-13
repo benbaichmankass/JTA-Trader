@@ -1,8 +1,8 @@
 {
   "id": "COMPUTE-UTIL-TELEMETRY",
-  "title": "COMPUTE-UTIL-TELEMETRY: daily CPU/mem/net/disk ledger for 3 VMs + Oracle idle-reclaim alert + spare capacity + OCI limits read",
+  "title": "COMPUTE-UTIL-TELEMETRY: compute review recommendation",
   "phase": "process",
-  "state": "landed_unproven",
+  "state": "queued",
   "owner": "manager",
   "lane": null,
   "model": null,
@@ -11,20 +11,16 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "Built 2026-10-13: workflow compute-util-telemetry + scripts/ops/compute_util.py + tests/test_compute_util.py; ledger/spare/state/limits under comms/cloud/. Untested against live OCI (no creds in session) - first run is the proof.",
-  "updated_at": "2026-10-13T11:06:16Z",
-  "updated_by": "session_01EexLtAgHjQJ2ZpCWhqaeoQ",
+  "note": "Record daily CPU/mem/disk/load p95 for live, trainer and gateway VMs (live vm_health and trainer mirror already carry single samples; gateway has none). A gateway reader touches a VM = Tier 2 step. Source: docs/plans/COMPUTE-ARCH-REVIEW-2026-10-13.md (ranked recommendations).  | 2026-10-13 lane: built as workflow compute-util-telemetry + scripts/ops/compute_util.py (PR #17858). Gateway is read via OCI Monitoring (no VM touch) plus a read-only df//proc SSH sample via ProxyJump - read-only, no change to the VM, so treated as Tier 1. Unproven until first run.",
+  "updated_at": "2026-10-13T11:29:20Z",
+  "updated_by": "session_01KKBMQzaGaDYCtbtCskjDJk",
   "roadmap": [
     "L-OPS"
   ],
   "observation": {
-    "what": "First workflow run lands ledger rows with read_state measured for cpu+mem on all 3 hosts (gateway included) and oci_limits.json has a measured standard-a1-core-count",
-    "how_to_check": "git log comms/cloud/compute_util_ledger.jsonl; jq read_state; vm-topology.md section filled",
-    "due_by": "2026-10-20"
+    "what": "Record daily CPU/mem/disk/load p95 for live, trainer and gateway VMs (live vm_health and trainer mirror already carry single samples; gateway has none)",
+    "how_to_check": "a 7-day p95 series per VM exists and is readable without SSH; docs/plans/COMPUTE-ARCH-REVIEW-2026-10-13.md A1 filled in with it",
+    "due_by": "2026-10-27"
   },
-  "writeback": {
-    "roadmap": "none: telemetry/limits read only; milestone L-OPS measure unchanged until first run lands values",
-    "arch": "none: Tier-1 read path; documented in docs/reference/vm-topology.md"
-  },
-  "_seq": 464
+  "_seq": 449
 }
