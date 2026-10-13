@@ -310,6 +310,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-test.txt
+          pip install pytest-xdist==3.6.1
 
       - name: Run tests
         if: steps.changed.outputs.relevant == 'true'
@@ -326,7 +327,8 @@ jobs:
           # a multi-round guess (the 2026-05-28 time-bomb-test incident: a
           # clock-relative insights test reddened pytest-run and it took a
           # full local-repro to name it).
-          pytest -q tests/ \
+          nproc
+          time pytest -q tests/ -n 4 --dist loadfile \
             --ignore=tests/test_main_loop.py \
             --junitxml=pytest-report.xml
 
