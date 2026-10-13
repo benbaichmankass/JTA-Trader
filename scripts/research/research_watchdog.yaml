@@ -26,6 +26,8 @@ thresholds:
   collector_window_hours: 48
   # an open automation/research-queue-stamp-* PR older than this is stranded (dispatch_queue.STRANDED_STAMP_HOURS).
   stranded_stamp_hours: 3.0
+  # breakout_2 phone executor heartbeat older than this while the account is live (prop_silence.HEARTBEAT_MAX_MIN; a test pins them equal).
+  phone_heartbeat_max_minutes: 10
   # after a self-heal, wait this long for the re-fired run to start before re-checking.
   recheck_wait_seconds: 150
 
