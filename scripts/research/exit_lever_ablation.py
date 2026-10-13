@@ -536,8 +536,12 @@ def _self_test() -> int:
     # the argv builder reproduces the evidence builder's argv and applies the arm's edits
     import yaml
     legs = yaml.safe_load((REPO / "config" / "strategies.yaml").read_text(encoding="utf-8"))["strategies"]
+    # The fixture is the live leg PLUS the levers the ablation removes, set explicitly: the live
+    # config is not a stable fixture (EXIT-LEVER-STRIP #17002 removed stale_exit_bars from
+    # trend_donchian_eth_prop on 2026-10-07, which made this check fail with the builder intact).
     eth = legs.get("trend_donchian_eth_prop")
     if isinstance(eth, dict):
+        eth = {**eth, "stale_exit_bars": 12, "stale_exit_below_r": 0.0}
         base_argv, _ = build_arm_argv("trend_donchian_eth_prop", eth, "<d>", "1h", "<e>", "<j>", [], None, None)
         x_cfg = arm_cfg(eth, {}, ["stale_exit_bars", "stale_exit_below_r"])
         x_argv, _ = build_arm_argv("trend_donchian_eth_prop", x_cfg, "<d>", "1h", "<e>", "<j>",

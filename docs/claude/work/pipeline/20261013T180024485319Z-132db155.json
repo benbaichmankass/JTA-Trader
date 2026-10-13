@@ -1,0 +1,23 @@
+{
+  "based_on": "20261013T152625069741Z-86edef78.json",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "python3 scripts/research/exit_lever_ablation.py --self-test prints 'self-test: ok' (or the failing case is shown to be a stale assertion and fixed)",
+    "kind": "observation"
+  },
+  "id": "PI-20261013-407C-0001",
+  "next_action": "dispatch_lane",
+  "observation": {
+    "due_by": "2026-10-20",
+    "how_to_check": "python3 scripts/research/exit_lever_ablation.py --self-test",
+    "what": "self-test result on main"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-1013 session_01SzsfmkqkXFpt6KsLgBNJSX, 2026-10-13",
+    "rerun": "python3 scripts/research/exit_lever_ablation.py --self-test"
+  },
+  "state": "done",
+  "terminal_reason": "FIXED lane PI-407C 2026-10-13: root cause was the self-test fixture, not the arm builder. EXIT-LEVER-STRIP (#17002, 2026-10-07/08) removed stale_exit_bars/stale_exit_below_r from live trend_donchian_eth_prop; the self-test read that live config and asserted the declared arm carries --stale-exit-bars. Fixture now sets the levers explicitly; builder re-verified (declared arm carries the flag, ablated arm drops it and pins --start/--end/--timeout-bars). --self-test PASS; tests/test_exit_lever_ablation_selftest.py added. No 407c result existed (research/results has 0 entries) and no 407c unit uses a -key arm or the prop leg, so no verdict was affected.",
+  "what": "scripts/research/exit_lever_ablation.py --self-test FAILS on main (found by lane QUEUE-FILL-1013 before any edit of mine): 'self-test FAIL: trend arm argv: declared leg carries --stale-exit-bars, the ablated arm does not and pins the window'. The instrument backs queued research units; a failing self-test means arm-argv construction for an unset key (-key) is unproven. Not fixed here: this lane only widened the harness allow-list to ict_scalp (the failure pre-dates that edit)."
+}
