@@ -3,7 +3,7 @@ name: manager
 description: The manager-session contract. Read this at the start of any session that spawns or supervises other sessions. Defines the one job, the one register, spawn rules, the model table, the budget, and the daily-sync brief.
 ---
 
-> **Doc status:** `live` · category `instruction` · last verified `2026-10-10` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
+> **Doc status:** `live` · category `instruction` · last verified `2026-10-13` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
 # The manager contract
 
@@ -953,6 +953,84 @@ arrives twice in the same shape is raised as *"should this become a mandate?"*
    before anything else.
 5. Run the review. Clear `ask_operator` items first, by classification, not by
    forwarding. Record `last_review`, push, then answer.
+
+## Manager handover (rotation)
+
+> **Operator, 2026-10-13 (verbatim):** "we need to add a section to the manager skill to streamline handover - basically, I want the manager to handoff at their own discretion, we just need to make sure it's clear how to validate a complete handoff to the new manager before the current one turns off".
+
+The manager rotates **at its own discretion**; no operator OK is needed to start. What is not discretionary is the proof: **the old manager stays responsible until V1–V5 below have all passed, with evidence in the handoff doc.** `old` = outgoing manager, `new` = incoming.
+
+### When
+
+Typical reasons:
+- **Context past ~300k tokens.** Cost per turn scales with context; the 2026-10-11 session reached 730k tokens and $165 by 2026-10-13.
+- **A natural boundary**, such as after a weekly planning pass or a review.
+- **Degraded recall.**
+
+**Never mid-incident, and never with a merge or deploy half-done.** Finish or hold it first.
+
+### Steps
+
+**1. PREPARE.** Write `docs/claude/work/handoffs/<YYYY-MM-DD>-<old-short>-to-new.md` (`<old-short>` = the first 8 characters of the old session id) containing:
+- live lanes: session id, checklist row, what each is doing, what it owes;
+- open PRs that need the manager (held, Tier-2/3, awaiting review);
+- operator asks and decisions in flight, in their exact wording;
+- every trigger and `send_later` that targets the old session (from `list_triggers`), by id and name;
+- artifacts and PRs the old session watches;
+- budget and pacing state (today's spend against the daily budget);
+- operator directives from this session **not yet in checklist rows**: put them in rows first, then list the row ids;
+- the new manager's first actions;
+- the handover checklist block below, copied in.
+
+Commit it through a self-land PR (§ "How lane PRs land").
+
+**2. CREATE.** `create_session` with:
+- `model`: **Opus** (the manager stays on Opus, operator); pass it explicitly;
+- the same `environment_id`; `source_url` set; `permission_mode: "auto"`;
+- tags `["manager", "predecessor:<old id>"]`;
+- title `Manager Session YYYY-MM-DD`;
+- prompt: read `CLAUDE.md`, this skill and the handoff doc; then perform V1 and **wait for the old manager's diff**. Do not start routine work yet.
+
+**3. REWIRE.** `update_trigger` **cannot change a trigger's target session**, so:
+- (a) For every trigger whose `persistent_session_id` is the old session: `create_trigger` the same name, cron and prompt with `persistent_session_id=<new>`, then `update_trigger(enabled=false)` on the old one. Do not delete the old ones until step 5.
+- (b) Update every prompt that **names the old session id**: the research-ops routine, the assistant-manager charter and routines, the review and check-in routines, any live lane's brief. Routines: `update_trigger(prompt=...)`. Live lanes and the assistant manager: a fired trigger message (reply channel in § "Every spawn carries provenance"; `fire_trigger` takes no `text`) naming the new id as the wake target.
+- (c) Re-subscribe the new session to the PRs it must watch (`subscribe_pr_activity`).
+- (d) Point the checklist at the new manager. There is no dedicated "manager" header field: `checklist.py header last_review` carries `by` (the new manager sets it at its first review), and any row `note` or `owner` naming the old manager as escalation target is updated with `checklist.py note`/`set`. Push to `main`.
+
+**4. VALIDATE.** All five must pass, each with its evidence written into the handoff doc.
+
+| # | Check | Pass means |
+|---|---|---|
+| **V1** | **Read-back** | The new manager restates, **from its own reading** (checklist, `list_sessions`, `list_triggers`, the handoff doc), the live lanes, pending operator decisions and the next 24 h of scheduled events. The old manager diffs this against its own list; every mismatch is fixed and re-read. |
+| **V2** | **Trigger audit** | `list_triggers` shows **zero enabled** triggers targeting the old session id. Every recurring routine, by name, exists, is enabled and targets the new one. Counts match the pre-handover list from step 1. |
+| **V3** | **Id sweep** | No enabled trigger prompt, assistant-manager charter or live lane brief still names the old session id as the escalation target. Grep the prompts from `list_triggers` / `get_trigger` for the old id. |
+| **V4** | **Wake round-trips** | (a) old → new: a test trigger is answered by a trigger back. (b) assistant manager → new: the assistant fires its escalation path and the new manager answers. (c) one live lane, if any, is told the new id and acknowledges. |
+| **V5** | **Operator notified, in one message** | New session link, what moved, and anything **not** moved with the reason. |
+
+A grep that returns nothing proves nothing until the same grep is shown to find the old id on a known positive (RULE ONE): run V3's search on the pre-rewire prompt list first.
+
+**5. STAND DOWN.** Only after V1–V5 pass:
+- the old manager takes no further actions;
+- its last message points to the new session;
+- the **new** manager archives the old session (§ "Archive protocol") **after confirming nothing still wakes it**, for example a fired `send_later` lands in the new session. Then it deletes the disabled old triggers.
+
+**If any check fails, the old manager stays responsible and fixes it. It never goes quiet with a check open.** A handover that stops partway is a HANDOFF with the gaps named in the handoff doc, not a completion.
+
+### Handover checklist (the old manager copies this into the handoff doc and ticks it with evidence)
+
+```
+- [ ] Handoff doc committed and merged to main (PR #__)
+- [ ] New session created: <id / link>, Opus, tags manager + predecessor:<old id>
+- [ ] Triggers recreated against the new session; old ones disabled (n recreated = __, pre-handover n = __)
+- [ ] Prompts naming the old id updated; checklist references updated and pushed
+- [ ] New manager subscribed to the PRs it must watch
+- [ ] V1 read-back diffed against the old manager's list; mismatches fixed: <evidence>
+- [ ] V2 trigger audit: 0 enabled triggers on old id; recurring routines present, enabled, on new id: <list_triggers evidence>
+- [ ] V3 id sweep: grep of prompts / charters / lane briefs for old id finds none (positive control shown): <evidence>
+- [ ] V4 wake round-trips: (a) old->new <trigger id>  (b) assistant->new <evidence>  (c) lane ack <lane id>
+- [ ] V5 operator told in one message: new link, what moved, what did not and why
+- [ ] STAND DOWN: old manager's last message points to the new session; new manager has archived the old one after a wake landed in the new session
+```
 
 ## The ladder the manager is moving things along
 
