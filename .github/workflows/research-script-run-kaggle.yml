@@ -114,21 +114,36 @@ jobs:
             sleep 15
           done
           if [ "$READY" != "1" ]; then echo "DATASET NEVER BECAME READY" | tee -a "$OUT/kaggle-session.log"; exit 12; fi
-          timeout 300 kaggle kernels push -p /tmp/kb/bundle-kernel 2>&1 | scrub | tee /tmp/kb/push.txt | tee -a "$OUT/kaggle-session.log"
-          if grep -qi "error\|fail" /tmp/kb/push.txt; then echo "PUSH FAILED"; exit 11; fi
-          TIMEOUT_MIN=$(python3 -c "import json,sys;print(json.loads(open('/tmp/kb/info.json').read())['timeout_minutes'])" 2>/dev/null || echo 120)
-          deadline=$(( $(date +%s) + (TIMEOUT_MIN + 10) * 60 ))
-          while :; do
-            s=$(timeout 90 kaggle kernels status "$USERNAME/metis-research-run" 2>&1 | scrub)
-            echo "$(date -u +%H:%M:%S) $s"
-            case "$s" in *COMPLETE*|*ERROR*|*CANCEL*) break;; esac
-            if [ "$(date +%s)" -gt "$deadline" ]; then echo "TIMEOUT waiting for the kernel" | tee -a "$OUT/kaggle-session.log"; break; fi
-            sleep 30
+          # STALE-MOUNT GUARD (2026-10-13): twice the kernel mounted the PREVIOUS dataset version although `datasets status`
+          # said ready, executed the previous run's spec and filed it under this run (manifest named the wrong unit/run).
+          # kernel_main.py now refuses a spec that is not this run's (EXPECTED, injected by `bundle`), and `verify`
+          # below re-checks the fetched manifest; on a stale mount we wait and re-push the kernel (it re-mounts the
+          # latest version), and a result that never verifies is NOT copied into $OUT.
+          VERIFIED=0
+          for ATTEMPT in 1 2 3; do
+            rm -rf /tmp/kb/kout
+            echo "# attempt ${ATTEMPT}" >> /tmp/kb/bundle-kernel/kernel_main.py
+            timeout 300 kaggle kernels push -p /tmp/kb/bundle-kernel 2>&1 | scrub | tee /tmp/kb/push.txt | tee -a "$OUT/kaggle-session.log"
+            if grep -qi "error\|fail" /tmp/kb/push.txt; then echo "PUSH FAILED"; exit 11; fi
+            TIMEOUT_MIN=$(python3 -c "import json,sys;print(json.loads(open('/tmp/kb/info.json').read())['timeout_minutes'])" 2>/dev/null || echo 120)
+            deadline=$(( $(date +%s) + (TIMEOUT_MIN + 10) * 60 ))
+            while :; do
+              s=$(timeout 90 kaggle kernels status "$USERNAME/metis-research-run" 2>&1 | scrub)
+              echo "$(date -u +%H:%M:%S) $s"
+              case "$s" in *COMPLETE*|*ERROR*|*CANCEL*) break;; esac
+              if [ "$(date +%s)" -gt "$deadline" ]; then echo "TIMEOUT waiting for the kernel" | tee -a "$OUT/kaggle-session.log"; break; fi
+              sleep 30
+            done
+            echo "kernel final status (attempt ${ATTEMPT}): $s" >> "$OUT/kaggle-session.log"
+            timeout 300 kaggle kernels output "$USERNAME/metis-research-run" -p /tmp/kb/kout 2>&1 | scrub | tee -a "$OUT/kaggle-session.log" || true
+            cp /tmp/kb/kout/*.log "$OUT/kaggle-kernel.log" 2>/dev/null || true
+            python3 scripts/research/kaggle_run.py verify --dir /tmp/kb/kout/result --unit "$UNIT" --run-id "$GITHUB_RUN_ID" | tee -a "$OUT/kaggle-session.log"
+            VRC=${PIPESTATUS[0]}
+            if [ "$VRC" = "0" ]; then VERIFIED=1; break; fi
+            if [ "$VRC" = "20" ] && [ "$ATTEMPT" != "3" ]; then echo "stale dataset mount; waiting 120s then re-pushing the kernel" | tee -a "$OUT/kaggle-session.log"; sleep 120; continue; fi
+            break
           done
-          echo "kernel final status: $s" >> "$OUT/kaggle-session.log"
-          timeout 300 kaggle kernels output "$USERNAME/metis-research-run" -p /tmp/kb/kout 2>&1 | scrub | tee -a "$OUT/kaggle-session.log" || true
-          if [ -d /tmp/kb/kout/result ]; then cp -r /tmp/kb/kout/result/. "$OUT/"; fi
-          cp /tmp/kb/kout/*.log "$OUT/kaggle-kernel.log" 2>/dev/null || true
+          if [ "$VERIFIED" = "1" ]; then cp -r /tmp/kb/kout/result/. "$OUT/"; else echo "RESULT NOT VERIFIED AS THIS RUN'S -- nothing copied" | tee -a "$OUT/kaggle-session.log"; fi
           kaggle quota 2>&1 | tee "$OUT/kaggle-quota-after.txt" || true
           grep -rl "$USERNAME" "$OUT" 2>/dev/null | xargs -r sed -i "s|$USERNAME|<user>|g"
           # show the kernel's own log in this job's log (the kernel is a black box otherwise); username already scrubbed
