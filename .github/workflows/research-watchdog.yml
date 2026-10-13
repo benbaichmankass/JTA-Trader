@@ -12,10 +12,10 @@ name: research-watchdog
 # Each cycle: check -> self-heal once per incident (re-fire ONE dispatch run; the dispatcher also adopts stranded
 # stamps) -> re-check -> escalate only if still bad (or immediately for queue-below-floor): ONE comment on the
 # standing draft PR "ops-flags (do not merge)" (the manager subscribes to its activity, so each comment wakes it),
-# ONE Telegram ping via the send-ping system-action, ONE row in comms/research/ops/watchdog_incidents.jsonl.
+# ONE Telegram message on the operator SYSTEM channel (direct sendMessage; send-ping only as a fallback), ONE row in comms/research/ops/watchdog_incidents.jsonl.
 # NO HALTING: nothing here disables or stops any pipeline.
 #
-# Tier-1: reads GitHub, dispatches two research workflows and system-actions (send-ping), comments on one PR.
+# Tier-1: reads GitHub, dispatches two research workflows (and system-actions send-ping only as a Telegram fallback), comments on one PR.
 
 on:
   schedule:

@@ -27,7 +27,7 @@ CHECKS, each with an explicit read_state -- `could_not_look` is never `ok`:
 SELF-HEAL FIRST, ONCE PER INCIDENT: re-fire ONE dispatch run (it also adopts stranded stamps -- dispatch_queue.py
 stranded_stamp_adoptions, the existing re-land path), wait, re-check. Still bad (or `queue`, immediately) ->
 ESCALATE: one comment on the standing "ops-flags (do not merge)" PR (the manager subscribes to its activity, so each
-comment wakes it), one Telegram ping through the existing send-ping system-action, one row in
+comment wakes it), one Telegram message on the operator SYSTEM channel (direct sendMessage with TELEGRAM_BOT_TOKEN + TELEGRAM_SYSTEM_CHAT_ID/TELEGRAM_CHAT_ID; send-ping only as a fallback if that fails), one row in
 comms/research/ops/watchdog_incidents.jsonl. A later run that finds the check healthy posts ONE resolved comment +
 ping. No halting: nothing here disables or stops any pipeline; an unreadable probe is retried, then flagged once.
 
