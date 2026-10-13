@@ -2,7 +2,7 @@
 import io
 import json
 from contextlib import redirect_stdout
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -206,7 +206,6 @@ def _dry(tmp_path, monkeypatch, units, quota=None, fire=False, runs=None):
 
 GPU_ROUTE = {"needs_gpu": True, "needs_trainer_resident_data": False, "peak_memory_gb": 4, "est_minutes": 60}
 CPU_ROUTE = {"needs_gpu": False, "needs_trainer_resident_data": False, "peak_memory_gb": 2, "est_minutes": 10}
-POWER = {"power": {"state": "cleared"}}
 
 
 def test_dispatcher_dry_run_routes_each_class_and_prints_the_derivation(tmp_path, monkeypatch):

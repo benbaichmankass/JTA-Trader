@@ -22,11 +22,13 @@ import tarfile
 
 specs = sorted(glob.glob("/kaggle/input/**/spec.json", recursive=True))
 if not specs:
-    print("NO_SPEC: bundle dataset not mounted"); sys.exit(3)
+    print("NO_SPEC: bundle dataset not mounted")
+    sys.exit(3)
 spec = json.load(open(specs[-1]))
 unit, run_id = str(spec.get("unit", "")), str(spec.get("run_id", ""))
 if not re.fullmatch(r"RQ-\d{8}-(?:\d{3}|[0-9a-f]{4}-\d{2})", unit) or not re.fullmatch(r"[A-Za-z0-9_\-]{1,64}", run_id):
-    print("BAD_SPEC", unit, run_id); sys.exit(4)
+    print("BAD_SPEC", unit, run_id)
+    sys.exit(4)
 bundle = os.path.join(os.path.dirname(specs[-1]), "repo.tar.gz")
 repo = "/tmp/repo"
 shutil.rmtree(repo, ignore_errors=True)
@@ -34,7 +36,8 @@ os.makedirs(repo)
 with tarfile.open(bundle) as tf:
     for m in tf.getmembers():           # no absolute paths / traversal out of the unpack dir
         if m.name.startswith("/") or ".." in m.name.split("/"):
-            print("BAD_MEMBER", m.name); sys.exit(5)
+            print("BAD_MEMBER", m.name)
+            sys.exit(5)
     tf.extractall(repo)
 print("== gpu:", subprocess.run(["nvidia-smi", "-L"], capture_output=True, text=True, check=False).stdout.strip())
 env = dict(os.environ, PYTHONPATH=repo, GITHUB_SHA=str(spec.get("commit_sha", "")))
