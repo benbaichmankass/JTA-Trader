@@ -50,10 +50,11 @@ IDLE_PCT = 20.0          # Oracle: each of CPU p95 / network / memory below 20 %
 WATCH_PCT = 30.0         # "trending toward": every condition within 1.5x of idle
 WINDOW_DAYS = 7
 MIN_DAYS = 3             # fewer measured complete days => verdict ``insufficient``
-# ASSUMED, not read from Oracle: A1.Flex network bandwidth is 1 Gbps per OCPU.
-# Oracle's page does not say what "network utilization" is a percentage of.
-GBPS_PER_OCPU = 1.0
-SAMPLE_SECONDS = 60.0    # ASSUMED: oci_computeagent publishes 1-minute samples
+# NETWORK IS NOT GATED. The first live run (2026-10-13) converted NetworksBytesIn/Out
+# p95 to a % of an assumed 1 Gbps/OCPU and got 570-1,240 % on every host, so the
+# unit/aggregation of the raw value is not what was assumed (and Oracle's page does
+# not define "network utilisation"). The raw p95 is kept in the ledger for a later
+# unit check; the % is ``null`` / ``could_not_look`` and the idle verdict says so.
 
 NS = "oci_computeagent"
 LIMIT_NAMES = ("standard-a1-core-count", "standard-a1-memory-count")
@@ -145,6 +146,33 @@ def fetch_limits(tenancy: str, compartment: str, instances: list[dict]) -> dict:
     return out
 
 
+
+def fetch_hosts(compartment: str, instances: list[dict]) -> dict[str, dict]:
+    """{alias: {"public_ip", "private_ip"}} from the OCI API, so no address is ever
+    committed to this public repo. Best-effort: a host that cannot be resolved is
+    simply absent (its disk then reads ``could_not_look``)."""
+    import oci
+    cfg = _cfg()
+    compute, net = oci.core.ComputeClient(cfg), oci.core.VirtualNetworkClient(cfg)
+    by_name = {i["display_name"]: i for i in instances}
+    out: dict[str, dict] = {}
+    for alias, name in HOSTS.items():
+        inst = by_name.get(name)
+        if not inst or inst.get("lifecycle_state") != "RUNNING":
+            continue
+        try:
+            atts = compute.list_vnic_attachments(compartment_id=compartment, instance_id=inst["ocid"]).data
+            for a in atts:
+                if a.lifecycle_state != "ATTACHED":
+                    continue
+                v = net.get_vnic(a.vnic_id).data
+                if getattr(v, "is_primary", True):
+                    out[alias] = {"public_ip": v.public_ip, "private_ip": v.private_ip}
+                    break
+        except Exception as exc:  # noqa: BLE001 - absence is the recorded outcome
+            print(f"host lookup failed for {alias}: {type(exc).__name__}")
+    return out
+
 # ------------------------------------------------------------------ ledger
 def build_rows(date_today: str, metrics: dict[str, dict], ssh: dict[str, dict]) -> list[dict]:
     """One ledger row per (host, date). Every host appears every run, measured or not."""
@@ -157,18 +185,14 @@ def build_rows(date_today: str, metrics: dict[str, dict], ssh: dict[str, dict]) 
         dates = set(m.get("days", {})) | {date_today}
         for d in sorted(dates):
             v = m.get("days", {}).get(d, {})
-            net_bps = None
-            if v.get("net_in_p95") is not None or v.get("net_out_p95") is not None:
-                net_bps = max(v.get("net_in_p95") or 0.0, v.get("net_out_p95") or 0.0) * 8.0 / SAMPLE_SECONDS
-            net_pct = (round(net_bps / (GBPS_PER_OCPU * 1e9 * ocpus) * 100.0, 4)
-                       if net_bps is not None and ocpus else None)
             row = {
                 "date": d, "host": alias, "display_name": name,
                 "partial_day": d >= date_today,
                 "ocpus": ocpus, "memory_gb": inst.get("memory_gb"),
                 "cpu_p95": v.get("cpu_p95"), "cpu_max": v.get("cpu_max"),
                 "mem_p95": v.get("mem_p95"), "mem_max": v.get("mem_max"),
-                "net_p95_bps": net_bps, "net_p95_pct_of_shape": net_pct,
+                "net_in_p95_raw": v.get("net_in_p95"), "net_out_p95_raw": v.get("net_out_p95"),
+                "net_p95_pct_of_shape": None,   # unit unverified - see header note
                 # disk is a point sample taken today; earlier days cannot be back-filled.
                 "disk_pct": s.get("disk_pct") if d == date_today else None,
                 "ssh_load1": s.get("load1") if d == date_today else None,
@@ -177,7 +201,7 @@ def build_rows(date_today: str, metrics: dict[str, dict], ssh: dict[str, dict]) 
             row["read_state"] = {
                 "cpu": "measured" if row["cpu_p95"] is not None else "could_not_look",
                 "mem": "measured" if row["mem_p95"] is not None else "could_not_look",
-                "net": "measured" if net_pct is not None else "could_not_look",
+                "net": "could_not_look",   # raw bytes recorded; % of shape not derivable
                 "disk": "measured" if row["disk_pct"] is not None else "could_not_look",
             }
             errs = {k: e for k, e in m.get("errors", {}).items()}
@@ -314,12 +338,26 @@ def cmd_evaluate(rows: list[dict], today: str, write: bool) -> dict:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("cmd", choices=["collect", "evaluate"])
+    ap.add_argument("cmd", choices=["collect", "evaluate", "hosts"])
+    ap.add_argument("--out", default=None, help="hosts: where to write the address map")
     ap.add_argument("--ssh-samples", default=None, help="JSON {alias: {disk_pct, load1, mem_used_pct}}")
     ap.add_argument("--gh-output", default=os.environ.get("GITHUB_OUTPUT"))
     a = ap.parse_args()
     now = dt.datetime.now(dt.timezone.utc)
     today = now.strftime("%Y-%m-%d")
+
+    if a.cmd == "hosts":
+        sys.path.insert(0, str(Path(__file__).parent))
+        from oci_inventory import fetch_live
+        comp = os.environ.get("OCI_COMPARTMENT_OCID") or os.environ["OCI_CLI_TENANCY"]
+        hosts = fetch_hosts(comp, fetch_live(comp))
+        for h in hosts.values():          # logs of a public repo are public: mask first
+            for ip in h.values():
+                if ip:
+                    print(f"::add-mask::{ip}")
+        Path(a.out or "/tmp/cu/hosts.json").write_text(json.dumps(hosts))
+        print("host addresses resolved for:", sorted(hosts))
+        return 0
 
     if a.cmd == "collect":
         comp = os.environ.get("OCI_COMPARTMENT_OCID") or os.environ["OCI_CLI_TENANCY"]

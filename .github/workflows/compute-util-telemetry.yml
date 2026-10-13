@@ -67,6 +67,19 @@ jobs:
       - name: Install OCI SDK
         run: pip install --quiet oci
 
+      - name: Resolve host addresses from the OCI API (masked; nothing committed)
+        continue-on-error: true
+        env:
+          OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
+          OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_CLI_KEY_CONTENT }}
+          OCI_CLI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
+          OCI_CLI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
+          OCI_CLI_REGION: ${{ secrets.OCI_CLI_REGION }}
+          OCI_COMPARTMENT_OCID: ${{ secrets.OCI_COMPARTMENT_OCID }}
+        run: |
+          mkdir -p /tmp/cu && echo '{}' > /tmp/cu/hosts.json
+          python3 scripts/ops/compute_util.py hosts --out /tmp/cu/hosts.json
+
       - name: Sample disk / load / memory over SSH (best-effort, read-only)
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
@@ -81,6 +94,10 @@ jobs:
           mem=$(awk '/MemTotal/{t=$2} /MemAvailable/{a=$2} END{printf "%.1f", (t-a)*100/t}' /proc/meminfo)
           printf '{"disk_pct": %s, "load1": %s, "mem_used_pct": %s}' "$disk" "$load" "$mem"
           PROBE
+          addr() { python3 -c "import json,sys; print(json.load(open('/tmp/cu/hosts.json')).get('$1',{}).get('$2') or '')"; }
+          [ -z "$LIVE_HOST" ] && LIVE_HOST=$(addr live public_ip)
+          [ -z "$TRAINER_HOST" ] && TRAINER_HOST=$(addr trainer public_ip)
+          [ -z "$GATEWAY_HOST" ] && GATEWAY_HOST=$(addr gateway private_ip)
           SSHO="-o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15"
           probe() {  # $1=alias $2=target-host $3..=extra ssh args
             local alias="$1" host="$2"; shift 2
