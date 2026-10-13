@@ -1,0 +1,30 @@
+{
+  "id": "RESEARCH-WATCHDOG",
+  "title": "Token-free research watchdog: self-checking pipeline that escalates to the manager",
+  "phase": "R",
+  "state": "landed_unproven",
+  "owner": "lane RESEARCH-WATCHDOG",
+  "lane": "session_017xQiTePSWnwXJvec3R4Cvq",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR 2026-10-13: dispatcher started nothing 12:50Z-16:01Z and nobody noticed until a Claude check. BUILT: .github/workflows/research-watchdog.yml (cron */15, own workflow) + scripts/research/research_watchdog.py + research_watchdog.yaml (thresholds: dispatcher no-start 75 min, backend idle 60 min, runnable floor 25) + tests/test_research_watchdog.py. Checks (explicit read_state, could_not_look never ok): dispatcher (dispatch JOB start, stuck job), dispatcher_fires, queue floor (immediate), per-backend idle-while-runnable, collector, stranded stamps. Self-heal once per incident (re-fire one dispatch / replenish), re-check, escalate: ONE comment on standing draft PR 'ops-flags (do not merge)' (manager subscribes -> wake), ONE Telegram ping via send-ping, row in comms/research/ops/watchdog_incidents.jsonl. WHY THE OLD GUARD (check_research_queue_dispatch_liveness, RQ-OPS-2) MISSED IT: it is a step inside research-queue-dispatch.yml (silent when that workflow does not run), grades a 48 h receipt, and the receipt proves a run happened not that the dispatch job started or fired anything. First offline replay on real state at 15:58Z: dispatcher bad (187 min), fires bad, queue 10<25, trainer idle with 5 runnable. NOT PROVEN: a scheduled live run; escalation comment reaching the manager.",
+  "updated_at": "2026-10-13T16:13:04Z",
+  "updated_by": "session_017xQiTePSWnwXJvec3R4Cvq",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "writeback": {
+    "roadmap": "L-OPS where/next: the research pipeline flags its own stalls to the manager within ~15-90 min with no Claude tokens",
+    "arch": "docs/ARCHITECTURE-CANONICAL.md: none -- Tier-1 research tooling; research-ops skill carries the contract"
+  },
+  "observation": {
+    "what": "a scheduled research-watchdog run executes live; an induced or real incident produces exactly one ops-flags PR comment + one Telegram ping + one ledger row and one resolved pair after recovery",
+    "how_to_check": "gh run list --workflow research-watchdog.yml; comments on the ops-flags PR; comms/research/ops/watchdog_incidents.jsonl",
+    "due_by": "2026-10-15T00:00Z"
+  },
+  "_seq": 466
+}
