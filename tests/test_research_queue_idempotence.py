@@ -377,7 +377,7 @@ def test_a_stranded_stamp_is_never_adopted_over_a_deliberate_rearm(tmp_path, mon
     src = "PR #7 (automation/research-queue-stamp-1-1)"
     monkeypatch.setattr(dq, "stranded_stamp_adoptions", lambda now, hours=3.0, api=None: {UID: (old, src)})
     assert dq.cleared_on_purpose(_entry(last_dispatched_at=None)) is True
-    fired, dec, stamps = _cycle(tmp_path, monkeypatch, [(UID, {})], pending={UID: src})
+    fired, _dec, stamps = _cycle(tmp_path, monkeypatch, [(UID, {})], pending={UID: src})
     assert fired == [f"research_unit={UID}"]        # the re-arm is honoured: the unit runs again ...
     assert stamps[UID] != old.isoformat()           # ... and carries THIS fire's stamp, never the old one
 
