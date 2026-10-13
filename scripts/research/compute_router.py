@@ -395,7 +395,10 @@ def resolve(entry: Dict[str, Any], cfg: Dict[str, Any], st: Optional[BackendStat
     room. `wait=True` (not an error) when all are full: the unit stays due and is retried next cycle."""
     base = plan(entry, cfg)
     if not base.ok or base.source == "explicit" or st is None:
-        if base.ok and base.source == "explicit" and st is not None and base.backend in cfg["backends"]:
+        # An explicit run.workflow naming a `fallback` backend (gpu-burst-train.yml) keeps its old behaviour: governed by its
+        # own gates (ledger preflight, GPU_BURST_ARMED, the per-run cap), not by the class-fallback request check.
+        if base.ok and base.source == "explicit" and st is not None and base.backend in cfg["backends"] \
+                and cfg["backends"][base.backend].get("auto_route") != "fallback":
             why = _available(base.backend, entry, cfg, st)
             if why:
                 base.wait, base.reason = True, why
