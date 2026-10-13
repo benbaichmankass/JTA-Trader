@@ -46,7 +46,7 @@ jobs:
         github.event.issue.user.login == 'github-actions[bot]') &&
        contains(github.event.issue.labels.*.name, 'compute-util-telemetry'))
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 110  # commit-to-main verify-merged waits up to 80 min (tests/test_commit_to_main_callers.py)
     env:
       LIVE_HOST: ${{ vars.VM_SSH_HOST }}
       TRAINER_HOST: ${{ vars.TRAINER_VM_IP }}
@@ -123,15 +123,6 @@ jobs:
             echo; echo '### tenancy limits'; echo '```json'; cat comms/cloud/oci_limits.json; echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Land ledger / spare / state / limits on main
-        uses: ./.github/actions/commit-to-main
-        with:
-          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
-          paths: comms/cloud/compute_util_ledger.jsonl comms/cloud/compute_spare.json comms/cloud/compute_reclaim_state.json comms/cloud/oci_limits.json
-          message: "compute-util-telemetry: daily utilisation ledger"
-          pr-title: "compute-util-telemetry: daily ledger"
-          pr-body: "Automated daily data commit (auto-merge): comms/cloud utilisation ledger, spare capacity, reclaim state, OCI limits."
-
       - name: Red alert — a VM trends toward Oracle's idle-reclaim criteria
         id: operator_ping
         continue-on-error: true
@@ -149,6 +140,16 @@ jobs:
       - name: Operator ping confirmed sent [operator-ping]
         if: steps.operator_ping.outcome == 'success'
         run: echo "Telegram accepted the operator ping."
+
+      - name: Land ledger / spare / state / limits on main
+        uses: ./.github/actions/commit-to-main
+        with:
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          paths: comms/cloud/compute_util_ledger.jsonl comms/cloud/compute_spare.json comms/cloud/compute_reclaim_state.json comms/cloud/oci_limits.json
+          message: "compute-util-telemetry: daily utilisation ledger"
+          pr-title: "compute-util-telemetry: daily ledger"
+          pr-body: "Automated daily data commit (auto-merge): comms/cloud utilisation ledger, spare capacity, reclaim state, OCI limits."
+          verify-merged: "true"
 
       - name: Fail the run if any host could not be measured
         # A host we could not read is a finding, not a pass. Runs last so the
