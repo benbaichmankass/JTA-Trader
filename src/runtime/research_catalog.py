@@ -391,8 +391,10 @@ def query_catalog(units: list[dict[str, Any]], *, q: str = "", filters: dict[str
 def stay_on_top(units: list[dict[str, Any]], since: str | None, now: datetime | None = None) -> dict[str, Any]:
     """The operator's first-look block: what is new, stuck, due, and the latest verdicts."""
     since_dt = _ts(since)
-    slim = lambda u: {k: u[k] for k in ("id", "title", "theme", "status", "verdict", "lastActivity",
-                                        "stuckReason", "createdAt")}
+
+    def slim(u: dict[str, Any]) -> dict[str, Any]:
+        keys = ("id", "title", "theme", "status", "verdict", "lastActivity", "stuckReason", "createdAt")
+        return {k: u[k] for k in keys}
     new = [u for u in units if since_dt and (
         (_ts(u["createdAt"]) and _ts(u["createdAt"]) > since_dt) or
         (_ts(u["latestResultAt"]) and _ts(u["latestResultAt"]) > since_dt))]
@@ -400,7 +402,9 @@ def stay_on_top(units: list[dict[str, Any]], since: str | None, now: datetime | 
     due = [u for u in units if u["status"] == "due"]
     verdicts = sorted((u for u in units if u["verdict"] and u["latestResultAt"]),
                       key=lambda u: u["latestResultAt"], reverse=True)
-    cap = lambda xs: [slim(u) for u in xs[:12]]
+    def cap(xs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return [slim(u) for u in xs[:12]]
+
     return {
         "since": _iso(since_dt),
         "sinceKnown": since_dt is not None,   # False => 'new' is NOT computed (first visit), not 'nothing new'
