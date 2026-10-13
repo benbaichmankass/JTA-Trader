@@ -122,6 +122,7 @@ def test_live_tree_positive_control():
 
 def test_router_endpoints():
     from fastapi.testclient import TestClient
+
     from src.web.api.main import app
     c = TestClient(app)
     r = c.get("/api/bot/research/catalog", params={"limit": 5, "status": "result"})

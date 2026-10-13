@@ -22,7 +22,7 @@ import logging
 import re
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -49,32 +49,32 @@ def _get() -> dict[str, Any]:
     return data
 
 
-def _csv(values: Optional[List[str]]) -> List[str]:
+def _csv(values: list[str] | None) -> list[str]:
     return [p for v in (values or []) for p in v.split(",") if p]
 
 
 @router.get("/catalog")
 def get_catalog(
     q: str = Query("", max_length=200),
-    theme: Optional[List[str]] = Query(None),
-    status: Optional[List[str]] = Query(None),
-    verdict: Optional[List[str]] = Query(None),
-    goal: Optional[List[str]] = Query(None),
-    backend: Optional[List[str]] = Query(None),
-    kind: Optional[List[str]] = Query(None),
-    stuck: Optional[List[str]] = Query(None),
+    theme: Annotated[list[str] | None, Query()] = None,
+    status: Annotated[list[str] | None, Query()] = None,
+    verdict: Annotated[list[str] | None, Query()] = None,
+    goal: Annotated[list[str] | None, Query()] = None,
+    backend: Annotated[list[str] | None, Query()] = None,
+    kind: Annotated[list[str] | None, Query()] = None,
+    stuck: Annotated[list[str] | None, Query()] = None,
     sort: str = Query("lastActivity"),
     order: str = Query("desc", pattern="^(asc|desc)$"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    since: Optional[str] = Query(None, max_length=40),
-    created_from: Optional[str] = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
-    created_to: Optional[str] = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    since: str | None = Query(None, max_length=40),
+    created_from: str | None = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    created_to: str | None = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
 ) -> dict[str, Any]:
     """Search/filter/sort/paginate the catalog. Multi-value facets accept repeats or CSV."""
     try:
         cat = _get()
-    except Exception as exc:  # noqa: BLE001 -- "could not look" must not read as "empty"
+    except Exception as exc:  # noqa: BLE001  # allow-silent: surfaced as readState "unreadable" + exception type, never as an empty list
         logger.warning("research catalog build failed: %s", exc)
         return {"present": False, "readState": "unreadable", "reason": type(exc).__name__,
                 "total": None, "matched": None, "items": [], "facets": {}, "readErrors": []}

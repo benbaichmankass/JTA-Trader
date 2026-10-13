@@ -21,9 +21,10 @@ from __future__ import annotations
 import json
 import logging
 import re
+from collections.abc import Iterable
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any
 
 import yaml
 
@@ -43,7 +44,7 @@ SORT_KEYS = ("id", "title", "theme", "status", "verdict", "priority", "lastActiv
 STATUS_ORDER = ("due", "running", "dispatched", "queued", "blocked", "result", "retired")
 
 
-def _ts(raw: Any) -> Optional[datetime]:
+def _ts(raw: Any) -> datetime | None:
     if not raw:
         return None
     try:
@@ -53,11 +54,11 @@ def _ts(raw: Any) -> Optional[datetime]:
     return d if d.tzinfo else d.replace(tzinfo=timezone.utc)
 
 
-def _iso(d: Optional[datetime]) -> Optional[str]:
+def _iso(d: datetime | None) -> str | None:
     return d.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") if d else None
 
 
-def _text(v: Any, limit: int = 600) -> Optional[str]:
+def _text(v: Any, limit: int = 600) -> str | None:
     if v is None:
         return None
     s = " ".join(str(v).split())
@@ -66,7 +67,7 @@ def _text(v: Any, limit: int = 600) -> Optional[str]:
     return s if len(s) <= limit else s[: limit - 1] + "…"
 
 
-def _created(uid: str) -> Optional[datetime]:
+def _created(uid: str) -> datetime | None:
     m = _ID_DATE_RE.match(uid)
     if not m:
         return None
@@ -76,7 +77,7 @@ def _created(uid: str) -> Optional[datetime]:
         return None
 
 
-def _load_yaml(path: Path) -> Tuple[Optional[dict], Optional[str]]:
+def _load_yaml(path: Path) -> tuple[dict | None, str | None]:
     try:
         doc = yaml.safe_load(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, yaml.YAMLError) as exc:
@@ -86,13 +87,13 @@ def _load_yaml(path: Path) -> Tuple[Optional[dict], Optional[str]]:
     return doc, None
 
 
-def _roadmap_index(root: Path) -> Dict[str, Dict[str, Any]]:
+def _roadmap_index(root: Path) -> dict[str, dict[str, Any]]:
     """milestone id -> {name, goal, goalName, status}. {} when unreadable."""
-    doc, err = _load_yaml(root / "docs" / "roadmap" / "milestones.yaml")
+    doc, _err = _load_yaml(root / "docs" / "roadmap" / "milestones.yaml")
     if doc is None:
         return {}
     goals = doc.get("goals") or {}
-    out: Dict[str, Dict[str, Any]] = {}
+    out: dict[str, dict[str, Any]] = {}
     for m in doc.get("milestones") or []:
         if not isinstance(m, dict) or not m.get("id"):
             continue
@@ -105,11 +106,11 @@ def _roadmap_index(root: Path) -> Dict[str, Dict[str, Any]]:
     return out
 
 
-def read_results(uid: str, results_root: Path) -> Tuple[List[Dict[str, Any]], List[str]]:
+def read_results(uid: str, results_root: Path) -> tuple[list[dict[str, Any]], list[str]]:
     """(rows newest-first, result file names). Unparseable lines are skipped, counted by absence."""
     rdir = results_root / uid
-    rows: List[Dict[str, Any]] = []
-    files: List[str] = []
+    rows: list[dict[str, Any]] = []
+    files: list[str] = []
     if not rdir.is_dir():
         return rows, files
     for f in sorted(rdir.glob("*.jsonl")):
@@ -132,21 +133,19 @@ def read_results(uid: str, results_root: Path) -> Tuple[List[Dict[str, Any]], Li
     return rows, files
 
 
-def _metrics(measurement: Any, limit: int = 14) -> Dict[str, Any]:
+def _metrics(measurement: Any, limit: int = 14) -> dict[str, Any]:
     if not isinstance(measurement, dict):
         return {}
-    out: Dict[str, Any] = {}
+    out: dict[str, Any] = {}
     for k, v in measurement.items():
-        if isinstance(v, _SCALAR) or v is None:
-            out[str(k)] = v
-        elif isinstance(v, list) and all(isinstance(x, _SCALAR) for x in v) and len(v) <= 8:
+        if isinstance(v, _SCALAR) or v is None or isinstance(v, list) and all(isinstance(x, _SCALAR) for x in v) and len(v) <= 8:
             out[str(k)] = v
         if len(out) >= limit:
             break
     return out
 
 
-def _data_used(entry: dict, row: Optional[dict]) -> Dict[str, Any]:
+def _data_used(entry: dict, row: dict | None) -> dict[str, Any]:
     run = entry.get("run") if isinstance(entry.get("run"), dict) else {}
     inputs = run.get("inputs") if isinstance(run.get("inputs"), dict) else {}
     hinted = {str(k): v for k, v in inputs.items()
@@ -164,7 +163,7 @@ def _data_used(entry: dict, row: Optional[dict]) -> Dict[str, Any]:
     }
 
 
-def _route_backend(entry: dict) -> Optional[str]:
+def _route_backend(entry: dict) -> str | None:
     r = entry.get("routing") if isinstance(entry.get("routing"), dict) else {}
     if not r:
         return None
@@ -175,16 +174,16 @@ def _route_backend(entry: dict) -> Optional[str]:
     return "runner"
 
 
-def _roadmap_refs(entry: dict, index: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
+def _roadmap_refs(entry: dict, index: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     raw = entry.get("roadmap")
     ids = [raw] if isinstance(raw, str) else [x for x in raw if isinstance(x, str)] if isinstance(raw, list) else []
     return [index.get(i) or {"id": i, "name": None, "goal": None, "goalName": None, "status": None} for i in ids]
 
 
-def _due(entry: dict, now: datetime) -> Tuple[str, Optional[str]]:
+def _due(entry: dict, now: datetime) -> tuple[str, str | None]:
     """('due'|'not_due'|'unknown', reason) from the dispatcher's own predicate."""
     try:
-        from scripts.research.dispatch_queue import _is_due  # noqa: PLC0415
+        from scripts.research.dispatch_queue import _is_due
         due, why = _is_due(entry, now)
     except Exception as exc:  # noqa: BLE001 -- surfaced as 'unknown', never as 'not due'
         logger.warning("research_catalog: due-state unavailable for %s: %s", entry.get("id"), exc)
@@ -193,7 +192,7 @@ def _due(entry: dict, now: datetime) -> Tuple[str, Optional[str]]:
 
 
 def build_unit(entry: dict, *, path: Path, blocked_dir: bool, root: Path, results_root: Path,
-               roadmap: Dict[str, Dict[str, Any]], now: datetime) -> Dict[str, Any]:
+               roadmap: dict[str, dict[str, Any]], now: datetime) -> dict[str, Any]:
     uid = str(entry.get("id") or path.stem)
     rows, files = read_results(uid, results_root)
     latest = rows[0] if rows else None
@@ -204,8 +203,8 @@ def build_unit(entry: dict, *, path: Path, blocked_dir: bool, root: Path, result
     grading = entry.get("grading") if isinstance(entry.get("grading"), dict) else {}
 
     due_state, due_reason = ("not_due", None)
-    stuck_reason: Optional[str] = None
-    blocked_reason: Optional[str] = None
+    stuck_reason: str | None = None
+    blocked_reason: str | None = None
     if blocked_dir or file_status == "blocked":
         status = "blocked"
         bo = entry.get("blocked_on")
@@ -285,15 +284,15 @@ def build_unit(entry: dict, *, path: Path, blocked_dir: bool, root: Path, result
     }
 
 
-def build_catalog(root: Path, *, now: Optional[datetime] = None,
-                  results_root: Optional[Path] = None) -> Dict[str, Any]:
+def build_catalog(root: Path, *, now: datetime | None = None,
+                  results_root: Path | None = None) -> dict[str, Any]:
     """Every unit, plus the read errors. ``readErrors`` non-empty means we could not look at those files."""
     now = now or datetime.now(timezone.utc)
     results_root = results_root or (root / "research" / "results")
     qdir = root / "research" / "queue"
     roadmap = _roadmap_index(root)
-    units: List[Dict[str, Any]] = []
-    errors: List[Dict[str, str]] = []
+    units: list[dict[str, Any]] = []
+    errors: list[dict[str, str]] = []
     if not qdir.is_dir():
         return {"units": [], "readErrors": [{"path": "research/queue", "error": "directory missing"}],
                 "roadmapAvailable": bool(roadmap)}
@@ -314,7 +313,7 @@ def build_catalog(root: Path, *, now: Optional[datetime] = None,
 _FACETS = ("theme", "status", "verdict", "goal", "backend", "kind", "stuck")
 
 
-def _facet_value(u: Dict[str, Any], facet: str) -> Optional[str]:
+def _facet_value(u: dict[str, Any], facet: str) -> str | None:
     if facet == "goal":
         goals = {r.get("goal") for r in u["roadmap"] if r.get("goal")}
         return ",".join(sorted(goals)) if goals else None
@@ -324,7 +323,7 @@ def _facet_value(u: Dict[str, Any], facet: str) -> Optional[str]:
     return None if v is None else str(v)
 
 
-def _matches(u: Dict[str, Any], facet: str, wanted: Iterable[str]) -> bool:
+def _matches(u: dict[str, Any], facet: str, wanted: Iterable[str]) -> bool:
     wanted = set(wanted)
     if not wanted:
         return True
@@ -334,7 +333,7 @@ def _matches(u: Dict[str, Any], facet: str, wanted: Iterable[str]) -> bool:
     return bool(set(val.split(",")) & wanted)
 
 
-def _haystack(u: Dict[str, Any]) -> str:
+def _haystack(u: dict[str, Any]) -> str:
     parts = [u["id"], u["title"], u["summary"], u["theme"], u["verdict"], u["resultNote"],
              u["blockedReason"], u["stuckReason"], (u["dataUsed"] or {}).get("workflow"),
              json.dumps((u["dataUsed"] or {}).get("dataInputs") or {}),
@@ -342,27 +341,25 @@ def _haystack(u: Dict[str, Any]) -> str:
     return " ".join(str(p) for p in parts if p).lower()
 
 
-def query_catalog(units: List[Dict[str, Any]], *, q: str = "", filters: Optional[Dict[str, List[str]]] = None,
+def query_catalog(units: list[dict[str, Any]], *, q: str = "", filters: dict[str, list[str]] | None = None,
                   sort: str = "lastActivity", order: str = "desc", limit: int = 50, offset: int = 0,
-                  created_from: Optional[str] = None, created_to: Optional[str] = None) -> Dict[str, Any]:
+                  created_from: str | None = None, created_to: str | None = None) -> dict[str, Any]:
     filters = filters or {}
     terms = [t for t in q.lower().split() if t]
 
-    def base(u: Dict[str, Any]) -> bool:
+    def base(u: dict[str, Any]) -> bool:
         if terms and not all(t in _haystack(u) for t in terms):
             return False
         if created_from and (u["createdAt"] or "") < created_from:
             return False
-        if created_to and (u["createdAt"] or "9") > created_to + "T99":
-            return False
-        return True
+        return not (created_to and (u["createdAt"] or "9") > created_to + "T99")
 
     pool = [u for u in units if base(u)]
     matched = [u for u in pool if all(_matches(u, f, filters.get(f, [])) for f in _FACETS)]
 
-    facets: Dict[str, Dict[str, int]] = {}
+    facets: dict[str, dict[str, int]] = {}
     for f in _FACETS:   # a facet's counts ignore its own selection so the operator can still widen it
-        counts: Dict[str, int] = {}
+        counts: dict[str, int] = {}
         for u in pool:
             if all(_matches(u, g, filters.get(g, [])) for g in _FACETS if g != f):
                 for v in (_facet_value(u, f) or "none").split(","):
@@ -372,7 +369,7 @@ def query_catalog(units: List[Dict[str, Any]], *, q: str = "", filters: Optional
     key = sort if sort in SORT_KEYS else "lastActivity"
     rev = order != "asc"
 
-    def sk(u: Dict[str, Any]) -> Tuple[int, Any]:
+    def sk(u: dict[str, Any]) -> tuple[int, Any]:
         if key == "created":
             v = u["createdAt"]
         elif key == "status":
@@ -391,10 +388,10 @@ def query_catalog(units: List[Dict[str, Any]], *, q: str = "", filters: Optional
             "items": ordered[offset: offset + limit]}
 
 
-def stay_on_top(units: List[Dict[str, Any]], since: Optional[str], now: Optional[datetime] = None) -> Dict[str, Any]:
+def stay_on_top(units: list[dict[str, Any]], since: str | None, now: datetime | None = None) -> dict[str, Any]:
     """The operator's first-look block: what is new, stuck, due, and the latest verdicts."""
     since_dt = _ts(since)
-    slim = lambda u: {k: u[k] for k in ("id", "title", "theme", "status", "verdict", "lastActivity",  # noqa: E731
+    slim = lambda u: {k: u[k] for k in ("id", "title", "theme", "status", "verdict", "lastActivity",
                                         "stuckReason", "createdAt")}
     new = [u for u in units if since_dt and (
         (_ts(u["createdAt"]) and _ts(u["createdAt"]) > since_dt) or
@@ -403,7 +400,7 @@ def stay_on_top(units: List[Dict[str, Any]], since: Optional[str], now: Optional
     due = [u for u in units if u["status"] == "due"]
     verdicts = sorted((u for u in units if u["verdict"] and u["latestResultAt"]),
                       key=lambda u: u["latestResultAt"], reverse=True)
-    cap = lambda xs: [slim(u) for u in xs[:12]]  # noqa: E731
+    cap = lambda xs: [slim(u) for u in xs[:12]]
     return {
         "since": _iso(since_dt),
         "sinceKnown": since_dt is not None,   # False => 'new' is NOT computed (first visit), not 'nothing new'
