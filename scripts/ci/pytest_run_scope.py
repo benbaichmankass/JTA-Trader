@@ -63,13 +63,25 @@ DATA_ALLOWLIST: tuple[str, ...] = (
 )
 DATA_RE = re.compile("|".join(DATA_ALLOWLIST))
 
-# A test file is a "data reader" if its text mentions any of these (case
-# insensitive).  Deliberately broad ("pipeline", "comms") -- over-selecting only
-# costs minutes; under-selecting would be the 'green tick that ran nothing'
-# failure this repo has paid for four times.
+# A test file is a "data reader" if its text names one of the data trees: by path
+# literal, by the module that loads it, or by the quoted path SEGMENT a
+# `Path(...) / "comms" / ...` join spells.  Segment spellings are included on
+# purpose: the repo has already been bitten by a reader (`os.path.join`) that
+# the literal-path scan could not see (tests/test_pytest_run_filter.py).  The
+# bare words "checklist" / "pipeline" / "comms" are NOT tokens -- they appear in
+# ~190 files that only talk about those things (the ML/trade "pipeline"), and
+# selecting on them ran 25% of the suite, measured 2026-10-13 (5,650 tests,
+# 21 min) for no added coverage of the data trees.  Over-selecting costs minutes;
+# under-selecting is the 'green tick that ran nothing' failure.
 TEST_TOKENS = re.compile(
-    r"checklist|pipeline|research[/_]queue|research[/_]results|comms"
-    r"|pr[-_]landing|pr[-_]automerge|merge[-_]slot|automerge",
+    r"work/checklist|checklist_store|checklist\.py|MANAGER-CHECKLIST|[\"']checklist[\"']|\bchecklist/"
+    r"|PIPELINE\.jsonl|work/pipeline|ops/pipeline|ops import pipeline|ops\.pipeline|import pipeline"
+    r"|[\"']pipeline[\"']|pipeline\.py"
+    r"|research/queue|research_queue|research/results|[\"']queue[\"']|[\"']results[\"']"
+    r"|queue_loader|dispatch_queue"
+    r"|comms/|[\"']comms[\"']"
+    r"|pr-landing|pr-automerge|merge-slots|merge_slot|pr_landing|pr_automerge"
+    r"|check_pr_landing|claim_merge",
     re.IGNORECASE,
 )
 ALWAYS = (
@@ -95,12 +107,12 @@ def classify(files: list[str], relevant_re: str) -> tuple[str, str]:
     if blocking:
         shown = ", ".join(blocking[:3]) + (" ..." if len(blocking) > 3 else "")
         return "full", f"{len(blocking)} changed file(s) outside the data allowlist ({shown}) -> full suite"
-    return (
-        "data",
+    reason = (
         f"all {len(relevant)} suite-relevant changed file(s) are data-only "
         "(checklist/pipeline/research queue+results/comms/pr-landing/merge-slot/automerge) "
-        "-> ran every test file that reads those trees; guards run separately",
+        "-> ran every test file that reads those trees; guards run separately"
     )
+    return "data", reason
 
 
 def select_tests(tests_dir: Path | None = None) -> list[str]:
