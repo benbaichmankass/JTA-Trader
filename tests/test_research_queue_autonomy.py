@@ -265,3 +265,18 @@ def test_generated_ids_never_enter_the_hand_band():
     full = {"RQ-20300101-897": {}}
     assert qr.next_ids(full, day, 5) == ["RQ-20300101-898", "RQ-20300101-899"]
     assert qr.next_ids({"RQ-20300101-899": {}}, day, 3) == []
+
+
+def test_router_class_units_count_as_dispatchable_not_prose_notes():
+    """QUEUE-FILL-1013: a unit declaring `compute:` and NO `run.workflow` (PLANNING.md 1b) is
+    runnable to the census exactly when the router can place it. It read as 0 before, so the
+    25-unit floor and the health alarm were blind to every router-era unit."""
+    from scripts.research.queue_replenish import dispatchable
+    base = {"status": "queued", "cadence": "once"}
+    assert dispatchable({**base, "compute": "cpu_light", "run": {"command": ["python3", "x.py"]}})
+    assert dispatchable({**base, "compute": "auto", "routing": {"est_minutes": 10, "peak_memory_gb": 1}})
+    assert not dispatchable({**base, "compute": "no_such_class"})                      # unplaceable class
+    assert not dispatchable({**base, "compute": "cpu_light", "routing": {"needs_gpu": True}})   # class contradicts routing
+    assert not dispatchable({**base, "compute": "cpu_light", "run": {"workflow": "none -- session-local"}})  # author said: no runner
+    assert not dispatchable({**base})                                                   # neither workflow nor class
+    assert not dispatchable({"status": "done", "compute": "cpu_light"})

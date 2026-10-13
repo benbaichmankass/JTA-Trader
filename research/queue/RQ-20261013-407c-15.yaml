@@ -15,10 +15,10 @@ question: >-
   as the evidence builder, does skipping any one block (signal-bar open hour, UTC) beat the declared entry by a material margin,
   with no worse drawdown and in at least 3 of 4 calendar folds?
 why_this_matters: >-
-  Session structure is a cross-asset claim, not a per-leg one: the same three blocks are run on six crypto legs in six sibling
-  units (RQ-20261013-407c-10..15) so a real session effect must reproduce across legs and timeframes, while a lone pass is
-  read as noise. Fees, funding and liquidity all vary by session; if one block is consistently the drag it is a portfolio-wide
-  entry filter, the cheapest structural lever there is.
+  Session structure is a cross-asset claim, not a per-leg one: the same three blocks are run on seven crypto legs in seven
+  sibling units (RQ-20261013-407c-10..15 and -19) so a real session effect must reproduce across legs and timeframes, while
+  a lone pass is read as noise. Fees, funding and liquidity all vary by session; if one block is consistently the drag it
+  is a portfolio-wide entry filter, the cheapest structural lever there is.
 power:
   expected_n: 110
   min_detectable_effect: 0.45
@@ -58,8 +58,8 @@ decision_rule:
     the 39 floor are not changed after any result.
   what_it_does_not_do: >-
     Does not mine hours: the three blocks are fixed here and may not be edited after seeing any result. Does not edit config.
-    A single-leg pass is a LEAD only; a Tier-3 session filter is proposed only if the same block passes on >= 3 of the 6 sibling
-    units (RQ-20261013-407c-10..15), counted by research-ops from the landed verdicts.
+    A single-leg pass is a LEAD only; a Tier-3 session filter is proposed only if the same block passes on >= 4 of the 7 sibling
+    units (RQ-20261013-407c-10..15 and -19), counted by research-ops from the landed verdicts.
 compute: cpu_light
 value:
   usd_at_stake_per_month: 60
@@ -130,3 +130,4 @@ related:
 - RQ-20261013-407c-12
 - RQ-20261013-407c-13
 - RQ-20261013-407c-14
+- RQ-20261013-407c-19

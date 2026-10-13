@@ -356,9 +356,22 @@ DISPATCH_CYCLE_HOURS = 6.0
 
 
 def dispatchable(u: Dict[str, Any]) -> bool:
-    """Routed to a real *.yml workflow (not a session note) and still queued."""
+    """Routed to a real *.yml workflow (not a session note) and still queued -- or, since
+    RESEARCH-ROUTER (2026-10-13), declaring no workflow but a `compute:` class the token-free
+    router can place (PLANNING.md 1b: a new unit must NOT name a runner). Until QUEUE-FILL-1013
+    this read only `run.workflow`, so every router-style unit was queued-but-invisible: the
+    dispatcher's dry run would fire it (`would_dispatch`) while this census, the 25-unit floor,
+    the health alarm and the refill all counted it as 0. An explicit non-yml `run.workflow` (a
+    session note) stays NOT dispatchable: it is the author's word that no runner exists."""
+    if u.get("status") != "queued":
+        return False
     wf = str((u.get("run") or {}).get("workflow") or "")
-    return u.get("status") == "queued" and wf.endswith((".yml", ".yaml")) and not any(c.isspace() for c in wf)
+    if wf:
+        return wf.endswith((".yml", ".yaml")) and not any(c.isspace() for c in wf)
+    if not u.get("compute"):
+        return False
+    from scripts.research import compute_router
+    return bool(compute_router.plan(u, compute_router.load_config()).ok)
 
 
 def runnable(units: Dict[str, Dict[str, Any]], *, now: Optional[datetime] = None,

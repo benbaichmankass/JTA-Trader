@@ -15,10 +15,10 @@ question: >-
   as the evidence builder, does skipping any one block (signal-bar open hour, UTC) beat the declared entry by a material margin,
   with no worse drawdown and in at least 3 of 4 calendar folds?
 why_this_matters: >-
-  Session structure is a cross-asset claim, not a per-leg one: the same three blocks are run on six crypto legs in six sibling
-  units (RQ-20261013-407c-10..15) so a real session effect must reproduce across legs and timeframes, while a lone pass is
-  read as noise. Fees, funding and liquidity all vary by session; if one block is consistently the drag it is a portfolio-wide
-  entry filter, the cheapest structural lever there is.
+  Session structure is a cross-asset claim, not a per-leg one: the same three blocks are run on seven crypto legs in seven
+  sibling units (RQ-20261013-407c-10..15 and -19) so a real session effect must reproduce across legs and timeframes, while
+  a lone pass is read as noise. Fees, funding and liquidity all vary by session; if one block is consistently the drag it
+  is a portfolio-wide entry filter, the cheapest structural lever there is.
 power:
   expected_n: 120
   min_detectable_effect: 0.45
@@ -46,7 +46,8 @@ decision_rule:
     the evidence builder's own, plus the arm's raw tokens; full cost stack: fee + resolved slippage + funding, never a zero
     default): total_trades, net_total_r, max_drawdown_r, plus net_r per fold over FOUR equal calendar spans of the window
     (same date boundaries every arm). Arms: B = leg as declared, SA = --skip-hours=0,1,2,3,4,5,6,7, SU = --skip-hours=12,13,14,15,16,
-    SL = --skip-hours=20,21,22,23. Per candidate C in {SA, SU, SL}: dR = net_r(C) - net_r(B); dDD = maxDD(C) - maxDD(B); fold_wins
+    SL = --skip-hours=20,21,22,23. POSITIVE CONTROL, first: B must reproduce the committed record (total_trades within 2%,
+    net_total_r within 0.5 R). Per candidate C in {SA, SU, SL}: dR = net_r(C) - net_r(B); dDD = maxDD(C) - maxDD(B); fold_wins
     = folds in which C out-earns B.
   rule: >-
     indeterminate IF the positive control fails or n(B) < 39 (underpowered: no verdict, extend the window or redesign; never
@@ -58,8 +59,8 @@ decision_rule:
     the 39 floor are not changed after any result.
   what_it_does_not_do: >-
     Does not mine hours: the three blocks are fixed here and may not be edited after seeing any result. Does not edit config.
-    A single-leg pass is a LEAD only; a Tier-3 session filter is proposed only if the same block passes on >= 3 of the 6 sibling
-    units (RQ-20261013-407c-10..15), counted by research-ops from the landed verdicts.
+    A single-leg pass is a LEAD only; a Tier-3 session filter is proposed only if the same block passes on >= 4 of the 7 sibling
+    units (RQ-20261013-407c-10..15 and -19), counted by research-ops from the landed verdicts.
 compute: cpu_light
 value:
   usd_at_stake_per_month: 60
@@ -95,6 +96,12 @@ run:
   - '2024-10-05'
   - --end
   - 2026-10-04 23:59
+  - --control
+  - B=comms/strategy_evidence/runs/2026-10-05-730d-expand/trend_donchian_sol__bt.json
+  - --control-tol-n
+  - '0.02'
+  - --control-tol-r
+  - '0.5'
   - --grade
   - sweep
   - --baseline
@@ -130,3 +137,4 @@ related:
 - RQ-20261013-407c-13
 - RQ-20261013-407c-14
 - RQ-20261013-407c-15
+- RQ-20261013-407c-19
