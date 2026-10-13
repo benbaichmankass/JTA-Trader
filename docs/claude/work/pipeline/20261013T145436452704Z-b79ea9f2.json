@@ -1,0 +1,23 @@
+{
+  "based_on": "20261013T105906650768Z-3a459ec5.json",
+  "due_when": {
+    "check_every_days": 14,
+    "clears_when": "operator confirms scope for the private-repo/VM dispatcher, or kills it with a reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261013-UOCIHAGG-0001",
+  "next_action": "ask_operator",
+  "observation": {
+    "due_by": "2026-10-27",
+    "how_to_check": "python3 scripts/research/dispatch_queue.py ; checklist row RESEARCH-ROUTER",
+    "what": "RESEARCH-ROUTER has run on Actions for 2 weeks; list its measured limits (utilization ledger, failed fires)"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-ROUTER session_0152EFvvZYHZhJrsuocihAGg, 2026-10-13",
+    "rerun": "git log --oneline -5 -- scripts/research/research_compute.yaml scripts/research/dispatch_queue.py"
+  },
+  "routed_to": "RESEARCH-ROUTER",
+  "state": "routed",
+  "what": "Operator long-run direction (2026-10-13 ~10:45Z via manager): a PRIVATE repo that holds more of the research-dispatch/compute functions, running on the VM. NOT built: the dispatcher stays on the GitHub Actions cron (RESEARCH-ROUTER). When revisited, decide what moves (dispatcher, collector, utilization ledger), what stays public, and the credential/egress cost of a private repo."
+}
