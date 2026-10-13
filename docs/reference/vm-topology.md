@@ -105,5 +105,25 @@ wire-up. See trainer-vm-mode.md § 5 for the full lifecycle.
   Migration tooling (`provision-live-vm`, `cutover-live`, `terminate-instance`)
   remains for rollback / future moves.
 
+## Utilisation telemetry, idle-reclaim check and tenancy limits (added 2026-10-13)
+
+Rows `COMPUTE-UTIL-TELEMETRY` + `COMPUTE-OCI-QUOTA-CHECK`. Workflow `compute-util-telemetry`
+(daily 06:37 UTC, or a `compute-util-telemetry`-labelled issue); logic in `scripts/ops/compute_util.py`.
+
+- **Ledger** `comms/cloud/compute_util_ledger.jsonl` — one row per (host, UTC day), 60 d rolling: CPU / memory
+  daily p95 and max and network p95 from the OCI Monitoring API (`oci_computeagent`; covers the gateway with no SSH),
+  disk % + load from a read-only SSH sample (gateway via ProxyJump through the live VM). Each metric carries
+  `read_state` `measured | could_not_look`; an unread host is `null`, never 0, and still gets a row.
+- **Oracle idle rule** (docs.oracle.com Always Free Resources, fetched 2026-10-13): idle if over 7 days CPU p95 < 20 %,
+  network < 20 %, and (A1 only) memory < 20 %. `max(daily p95)` is a conservative upper bound on the 7-day p95.
+  Verdicts per host in `comms/cloud/compute_reclaim_state.json`: `at_risk` (all < 20 %), `watch` (all < 30 %), `ok`,
+  `insufficient`/`unknown` (not enough measured days; fails the run). ONE Telegram alert per host per status change.
+  ⚠️ Network "% utilisation" is undefined on Oracle's page; the code ASSUMES 1 Gbps per OCPU and 60 s samples.
+- **Spare capacity for the research router** `comms/cloud/compute_spare.json` (reader: `compute_util.get_spare("trainer")`):
+  `spare_ocpus` / `spare_memory_gb` = shape x (1 - max daily p95, 7 d); `null` + `read_state: could_not_look` when unread.
+- **Tenancy limits** `comms/cloud/oci_limits.json` — `standard-a1-core-count` / `standard-a1-memory-count` from the
+  Limits API (`list_limit_values` + `get_resource_availability`): the answer to 2/12 (Oracle page) vs 4/24 (repo).
+  **UNREAD until the first workflow run lands; this section is updated with the value and run id then.**
+
 When in doubt about scope, default to the **live-VM** rules and ask.
 

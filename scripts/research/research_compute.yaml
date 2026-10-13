@@ -1,0 +1,86 @@
+# scripts/research/research_compute.yaml -- the ONE place research compute is described (RESEARCH-ROUTER, 2026-10-13).
+#
+# A queue unit declares WHAT KIND of test it is (`compute: <class>`) and, optionally, what it is WORTH
+# (`value:` block). Everything below -- which backend runs it, how much of that backend may be busy,
+# how a due unit ranks against another -- is decided HERE by scripts/research/compute_router.py and
+# scripts/research/dispatch_queue.py, with no Claude tokens. Claude authors the unit; it never picks a
+# runner by hand. A unit that still names an explicit `run.workflow` keeps it (back-compat): `workflow:`
+# beats `compute:`.
+#
+# Authoring contract: research/queue/PLANNING.md § "Compute class and value" and
+# .claude/skills/research-ops/SKILL.md § E.
+#
+# Not a gate on trading: this decides where RESEARCH runs. Nothing here touches a book, a roster or a risk cap.
+
+backends:
+  github_runner:
+    workflow: research-script-run.yml
+    max_concurrent: 3          # == the dispatcher's historical --max-research-inflight 3, unchanged
+    cost_weight: 1.0           # relative cost of one hour here (free, but it shares the repo's runner pool)
+    what: "GitHub-hosted runner: free, ~20 concurrent repo-wide, 6 h/job"
+  trainer:
+    workflow: research-script-run-trainer.yml
+    max_concurrent: 1          # 1 OCPU / 6 GB; the workflow's own concurrency group is global
+    cost_weight: 3.0           # scarce: shares the box with the daily cycle and promotion sweep
+    what: "trainer VM over SSH: only for units that read trainer-resident data"
+  kaggle:
+    workflow: research-script-run-kaggle.yml
+    max_concurrent: 1
+    cost_weight: 5.0           # GPU hours are the scarcest budget we have
+    # Weekly GPU quota, read from `kaggle quota` by the dispatch workflow (docs/plans/COMPUTE-KAGGLE-GPU-PILOT-2026-10-13.md).
+    # Below `floor_hours` remaining no GPU unit is routed here: it WAITS (deferred, with the refresh time) or, for a
+    # class that lists a fallback, goes to the next backend. The queue itself never halts.
+    quota: {resource: GPU, floor_hours: 3.0, default_unit_hours: 1.0}
+    what: "Kaggle kernel, 2x T4, ~30 GPU h/week, internet off; code travels as a private dataset bundle"
+  runpod:
+    workflow: gpu-burst-train.yml
+    max_concurrent: 1
+    cost_weight: 8.0
+    auto_route: false          # takes an issue-shaped request and a $10/month ledger; selected only by an explicit workflow:
+    what: "RunPod spot GPU burst (M19): operator-armed, ledger-capped"
+
+# Class -> ordered backend preference. The first backend that is not over capacity / quota wins.
+# A class with one backend WAITS when it is full; listing a second backend is the declared fallback.
+classes:
+  cpu_light:      {backends: [github_runner], what: "<= ~30 min, public data / repo data, no GPU"}
+  cpu_long:       {backends: [github_runner], what: "30 min .. 5.5 h, public data / repo data, no GPU"}
+  needs_vm_data:  {backends: [trainer],       what: "reads trainer-resident data / weights; fits in 6 GB"}
+  gpu:            {backends: [kaggle],        what: "needs a GPU; waits for quota rather than running on CPU"}
+  gpu_preferred:  {backends: [kaggle, github_runner], what: "GPU if quota allows, else the CPU path (the script must support both)"}
+
+# Dispatcher-wide ceilings. The per-backend max_concurrent above is the ONE capacity statement per backend;
+# these bound the sum, so research can never saturate the runner pool a system-action waits in.
+limits:
+  max_total_inflight: 5        # runner 3 + trainer 1 + kaggle 1
+  max_repo_queued: 10          # unchanged from the dispatcher's flag default
+
+# Value ranking. score = usd_per_month * confidence * bucket_boost * hand_written_boost * age_boost / cost
+#   usd_per_month  unit.value.usd_at_stake_per_month, else priority_usd[declared priority]
+#   confidence     unit.value.confidence, else default_confidence      (P(the answer changes a decision), 0..1)
+#   bucket_boost   target_share / observed_share of the unit's bucket over the share window, clamped to [min,max]
+#   hand_written   someone ASKED this question; a template refill did not (kept from the 2026-10-04 measurement)
+#   age_boost      1 + age_step per aging step waited (aging_hours in THEMES.yaml)
+#   cost           (1 + est_hours) * backend.cost_weight   -- est_hours from routing.est_minutes
+# starve_hours: a unit waiting longer than this sorts ahead of every score inside its theme. Nothing starves.
+value:
+  default_confidence: 0.3
+  priority_usd: {1: 300, 2: 100, 3: 30}     # stand-ins when a unit carries no value block; derived from priority only
+  hand_written_boost: 1.25
+  age_step: 0.5
+  starve_hours: 240
+  bucket_boost: {min: 0.5, max: 2.0}
+  # The STRATEGY-REALIGN research mix (operator 2026-10-13, ~07:30Z): the target SHARE of fires per bucket.
+  buckets:
+    own_losses: 0.30
+    structural: 0.25
+    information: 0.20
+    ai_trader: 0.15
+    frontier: 0.10
+  # Used only when a unit declares no value.bucket. A unit's own bucket always wins.
+  theme_bucket:
+    live_strategy: own_losses
+    regime: structural
+    new_strategy_prop: structural
+    macro: information
+    ml_health: ai_trader
+    infra: information

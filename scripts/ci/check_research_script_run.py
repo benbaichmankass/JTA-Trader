@@ -52,10 +52,12 @@ _SECRET_RE = re.compile(r"secrets\.([A-Za-z_][A-Za-z0-9_]*)")
 
 
 TRAINER_WORKFLOW = _REPO / ".github" / "workflows" / script_run.TRAINER_WORKFLOW
+KAGGLE_WORKFLOW = _REPO / ".github" / "workflows" / script_run.KAGGLE_WORKFLOW
 
 
 def check(queue_dir: Path = _REPO / "research" / "queue", workflow: Path = WORKFLOW,
-          repo: Path = _REPO, trainer_workflow: Optional[Path] = TRAINER_WORKFLOW) -> List[str]:
+          repo: Path = _REPO, trainer_workflow: Optional[Path] = TRAINER_WORKFLOW,
+          kaggle_workflow: Optional[Path] = KAGGLE_WORKFLOW) -> List[str]:
     problems: List[str] = []
 
     # R1 — every unit targeting the runner plans cleanly.
@@ -70,6 +72,9 @@ def check(queue_dir: Path = _REPO / "research" / "queue", workflow: Path = WORKF
     problems += _check_workflow(workflow, {"GITHUB_TOKEN"})
     if trainer_workflow is not None:
         problems += _check_workflow(trainer_workflow, {"GITHUB_TOKEN", "VM_SSH_KEY"})
+    # RESEARCH-ROUTER: the Kaggle GPU twin holds KAGGLE_API_TOKEN (the kernel itself receives no secret).
+    if kaggle_workflow is not None:
+        problems += _check_workflow(kaggle_workflow, {"GITHUB_TOKEN", "KAGGLE_API_TOKEN"})
     return problems
 
 
