@@ -35,7 +35,7 @@ def _placed(tid="prop-manual-x1", side="short", limit=2491.47, sl=2535.25, tp=22
 
 def _bars(*rows):
     """rows: (minutes after T0, high, low)"""
-    out = [(T0 + timedelta(minutes=m), h, l) for m, h, l in rows]
+    out = [(T0 + timedelta(minutes=m), hi, lo) for m, hi, lo in rows]
     return lambda sym, since, now: out
 
 
