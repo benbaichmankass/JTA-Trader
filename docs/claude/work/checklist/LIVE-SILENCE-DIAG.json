@@ -1,0 +1,18 @@
+{
+  "id": "LIVE-SILENCE-DIAG",
+  "title": "Real-money + prop accounts silent ~1 day (operator 2026-10-13 21:05Z): verify running properly, fix any pipeline bug under pre-authorization",
+  "phase": "floor",
+  "state": "in_flight",
+  "owner": "lane (session_01BdcEyUMZD1P1cCSdr6xtGo)",
+  "lane": "session_01BdcEyUMZD1P1cCSdr6xtGo",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-13T21:40Z lane session_01BdcEyUMZD1P1cCSdr6xtGo] MEASURED (diag direct, 21:05-21:35Z): trader active, last tick 21:05:12Z, boot 20:15:31Z, accounts.yaml digest VM == main. bybit_2/bybit_portfolio: last entry 10-12T23:06Z trend_donchian_eth_4h short (closed sl_cross 10-13T03:33Z); 20:00Z 4h close: all 4 legs evaluated, rejected by strategy (no breakout / no pullback setup / ADX 27.49<28); bybit_1 paper shows the same single directional trade in 24h -> MARKET SILENCE. alpaca_live: last package 09-23 (iaum); RTH 13:32Z today ief/slv/iaum each 'no trend-pullback-confirmation setup'; positive control spy_pullback_1h emitted a signal same window -> MARKET SILENCE. daily_dd_switch: armed, tripped=false on all 13 accounts. BUG (prop, breakout_2): ticket prop-manual-762f959676fd (ETH short 2491.47, SL 2535.25) journaled placed/UNVERIFIED 10-13T04:43Z by the unconfirmed-submit watchdog; ETH 1h 05:00Z high 2538.67 > SL; balance 4947.72 -> 4921.50 (-26.22 ~ 0.5% risk + fees); phone clean read = flat. fill_inference refuses (clean flat read = not filled), supersede needs a resting order -> placed blocks every later breakout_2 ETHUSDT short ticket with no time window. Fix: prop-report-close from_placed opt-in (this PR), then close the ticket ESTIMATED at the SL.",
+  "updated_at": "2026-10-13T21:15:41Z",
+  "updated_by": "session_01BdcEyUMZD1P1cCSdr6xtGo",
+  "_seq": 467
+}
