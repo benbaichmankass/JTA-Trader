@@ -26,6 +26,10 @@ on:
         description: "Perform effects (dispatch / comment / ping / ledger). false = read-only report."
         type: boolean
         default: true
+      test_alert:
+        description: "Send ONE labelled test message through the operator system Telegram channel, then stop."
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -46,6 +50,8 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GITHUB_REPOSITORY: ${{ github.repository }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - uses: actions/checkout@v4
@@ -69,8 +75,13 @@ jobs:
           fi
           if [ -s /tmp/kaggle-quota.txt ]; then echo "KAGGLE_QUOTA_FILE=/tmp/kaggle-quota.txt" >> "$GITHUB_ENV"; fi
 
+      - name: Test alert (manual only)
+        if: github.event_name == 'workflow_dispatch' && inputs.test_alert == true
+        run: python3 scripts/research/research_watchdog.py --test-alert
+
       - name: Watch
         id: run
+        if: "!(github.event_name == 'workflow_dispatch' && inputs.test_alert == true)"
         run: |
           set -uo pipefail
           LIVE=""

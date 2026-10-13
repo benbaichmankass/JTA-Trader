@@ -324,6 +324,24 @@ class GhProbe:
         return self._gh(["workflow", "run", DISPATCH_WORKFLOW]) is not None
 
     def ping(self, message: str) -> bool:
+        """Operator SYSTEM channel: TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID by direct sendMessage -- the exact path
+        claude-run-failure-alert.yml, research-loss-detector.yml and guards.yml use. Only if that send fails does it
+        fall back to the send-ping system-action (the claude comms bot), so a flag is never dropped silently."""
+        import urllib.parse
+        import urllib.request
+        tok, chat = os.environ.get("TELEGRAM_BOT_TOKEN", ""), os.environ.get("TELEGRAM_CHAT_ID", "")
+        if tok and chat:
+            for i in range(3):
+                try:
+                    data = urllib.parse.urlencode({"chat_id": chat, "text": message[:3900]}).encode()
+                    with urllib.request.urlopen(urllib.request.Request(f"https://api.telegram.org/bot{tok}/sendMessage", data=data), timeout=30) as r:
+                        if r.status == 200 and json.loads(r.read().decode()).get("ok"):
+                            return True
+                except Exception:  # retried, then falls back below -- never swallowed into "sent"
+                    pass
+                time.sleep(2 * (i + 1))
+        else:
+            print("::warning::TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID not set: falling back to send-ping", file=sys.stderr)
         return self._gh(["workflow", "run", "system-actions.yml", "-f", "action=send-ping", "-f", f"message={message}",
                          "-f", "priority=high", "-f", "target=claude"]) is not None
 
@@ -564,9 +582,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--now", help="ISO time to evaluate at (fixtures)")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--run-url", default=os.environ.get("RUN_URL", ""))
+    ap.add_argument("--test-alert", action="store_true", help="send ONE labelled test message through the live alert path and exit")
     ap.add_argument("--rows-out", help="also write this run's new ledger rows here (the workflow lands them)")
     a = ap.parse_args(argv)
     cfg = load_config()
+    if a.test_alert:
+        ok = GhProbe().ping("research-watchdog: test alert, no action needed")
+        print(f"test alert {'SENT' if ok else 'NOT SENT'}")
+        return 0 if ok else 1
     now = _ts(a.now) if a.now else datetime.now(timezone.utc)
     probe: Any = FixtureProbe(json.loads(Path(a.fixture).read_text())) if a.fixture else GhProbe()
     res = run_cycle(probe, cfg, now=now, live=a.live and not a.fixture, run_url=a.run_url)
