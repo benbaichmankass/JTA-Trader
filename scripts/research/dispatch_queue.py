@@ -41,7 +41,19 @@ from typing import Any, Dict, List, Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from scripts.research import compute_router as cr  # noqa: E402
+
+
+class _LazyRouter:
+    """compute_router, imported on first use. The web-api brief imports this module in-process and the deploy's
+    in-process allowlist (Tier-2 scripts/deploy_pull_restart.sh) does not name the router: loading it only when
+    the dispatcher actually routes keeps the brief's import closure exactly what it was."""
+
+    def __getattr__(self, name: str) -> Any:
+        import importlib  # noqa: PLC0415
+        return getattr(importlib.import_module("scripts.research.compute_router"), name)
+
+
+cr = _LazyRouter()
 from scripts.research.research_queue import (  # noqa: E402
     BLOCKED_POWER, BLOCKED_ROUTE, DISPATCHED, DISPATCH_FAILED, GPU, INVALID,
     NOT_DUE, grade_power, grade_route, load_queue, load_themes,

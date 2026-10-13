@@ -691,6 +691,21 @@ def new_unit_stamp_errors(entry: Dict[str, Any]) -> List[str]:
     return []
 
 
+def _compute_doc() -> Dict[str, Any]:
+    """scripts/research/research_compute.yaml as a bare mapping ({} if unreadable).
+
+    Read directly instead of importing compute_router: the web-api's daily brief loads this module in-process,
+    and the deploy restarts the API only for the scripts/research files on its allowlist
+    (scripts/deploy_pull_restart.sh IN_PROCESS_CHANGES, Tier-2). Keeping the router out of that closure
+    means this validation needs no deploy-script change."""
+    import yaml  # noqa: PLC0415
+    try:
+        doc = yaml.safe_load((Path(__file__).resolve().parent / "research_compute.yaml").read_text(encoding="utf-8"))
+    except (OSError, yaml.YAMLError):
+        return {}
+    return doc if isinstance(doc, dict) else {}
+
+
 def validate(entry: Dict[str, Any], *, path: Optional[Path] = None,
              is_new: bool = False) -> List[str]:
     """Structural errors in one entry. An empty list means structurally valid.
@@ -742,13 +757,11 @@ def validate(entry: Dict[str, Any], *, path: Optional[Path] = None,
     if compute is not None:
         # RESEARCH-ROUTER: a compute class stands in for `run.workflow`; the class table is
         # scripts/research/research_compute.yaml and the router, not the author, picks the backend.
-        try:
-            from scripts.research import compute_router as _cr  # noqa: PLC0415
-            known = _cr.class_names()
-        except (OSError, ValueError, ImportError) as exc:
-            known = []
-            errs.append(f"cannot read scripts/research/research_compute.yaml: {exc}")
-        if known and compute not in known:
+        known = _compute_doc().get("classes")
+        known = sorted(known) + ["auto"] if isinstance(known, dict) else []
+        if not known:
+            errs.append("cannot read scripts/research/research_compute.yaml")
+        elif compute not in known:
             errs.append(f"`compute` must be one of {known}, got {compute!r}")
     val = entry.get("value")
     if val is not None:
@@ -761,12 +774,9 @@ def validate(entry: Dict[str, Any], *, path: Optional[Path] = None,
             if c is not None and (isinstance(c, bool) or not isinstance(c, (int, float)) or not 0 <= c <= 1):
                 errs.append("value.confidence must be a number in [0, 1]")
             if val.get("bucket") is not None:
-                try:
-                    from scripts.research import compute_router as _cr  # noqa: PLC0415
-                    if val["bucket"] not in _cr.load_config()["value"]["buckets"]:
-                        errs.append(f"value.bucket {val['bucket']!r} is not a bucket in scripts/research/research_compute.yaml")
-                except (OSError, ValueError, ImportError):
-                    pass
+                buckets = (_compute_doc().get("value") or {}).get("buckets")
+                if isinstance(buckets, dict) and val["bucket"] not in buckets:
+                    errs.append(f"value.bucket {val['bucket']!r} is not a bucket in scripts/research/research_compute.yaml")
     if not (isinstance(run, dict) and run.get("workflow")) and not compute:
         errs.append("`run.workflow` or `compute:` is required — the dispatcher fires a workflow, "
                     "so a job that names neither cannot be dispatched")
