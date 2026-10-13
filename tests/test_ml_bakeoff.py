@@ -272,3 +272,25 @@ def test_hash_manifest_covers_unit_runner_and_scripts():
     assert set(rels) == {f"research/queue/{SMOKE}.yaml", "scripts/research/script_run.py",
                          "scripts/research/ml_bakeoff.py", "scripts/ml/_heavy_queue.py"}
     assert script_run.verify_manifest(script_run.hash_manifest(p)) == []
+
+
+def test_non_boosting_learners_run_through_the_engine_and_beat_the_prior_on_planted_signal():
+    pytest.importorskip("sklearn")
+    """QUEUE-FILL-1013B: sklearn_extratrees (bagging) and sklearn_mlp (neural tabular) are first-class arms."""
+    spec = _spec(candidates=["et", "mlp"],
+                 learners={"prior": {"kind": "prior"},
+                           "et": {"kind": "sklearn_extratrees", "params": {"n_estimators": 60}},
+                           "mlp": {"kind": "sklearn_mlp", "params": {"max_iter": 80}}})
+    res = mb.run_spec(spec, unit="(test)")["measurement"]
+    assert res["arm_status"]["et"] == "ok" and res["arm_status"]["mlp"] == "ok", res["arm_status"]
+    for cand in ("et", "mlp"):
+        assert res["deltas"]["A"]["cv"][cand]["prior"]["mean"] > 0.05, cand
+    assert res["licences"]["et"]["research_only"] is False
+
+
+def test_df_columns_block_gives_one_arm_its_own_extra_columns():
+    """QUEUE-FILL-1013B: an arm with `df_columns` sees columns the shared feature list does not (a with/without test)."""
+    import pandas as pd
+    df = pd.DataFrame({"x0": np.arange(10.0), "fc_a": np.arange(10.0) * 2})
+    out = mb.FEATURE_BLOCKS["df_columns"](df, {"columns": ["fc_a"]})
+    assert list(out) == ["fc_a"] and out["fc_a"][3] == 6.0
