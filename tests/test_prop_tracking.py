@@ -342,3 +342,78 @@ def test_short_mark_estimate_sign_and_no_mark_is_not_reported(monkeypatch):
     o = _overview()
     assert (o["open_trades"][0]["unrealized_pnl"], o["open_trades"][0]["unrealized_state"]) == (None, "not_reported")
     assert o["equity"]["accounts"][0]["unrealized_state"] == "not_reported"
+
+
+# ---- FILL-IN of rows already closed unpriced (PHONE-POSITIONS-DIV; writes even while report_only) ----
+
+def _unpriced(tid, symbol, direction, qty, entry, hours_ago_open=20, hours_ago_close=6):
+    from src.prop.prop_report import ingest_report
+    n = datetime.now(timezone.utc)
+    return ingest_report({"kind": "fill", "status": "closed", "account_id": "breakout_2", "ticket_id": tid,
+                          "symbol": symbol, "direction": direction, "qty": qty, "entry_price": entry,
+                          "exit_price": None, "pnl": None, "provenance": "UNVERIFIED", "reason": "closed_unpriced",
+                          "opened_at": (n - timedelta(hours=hours_ago_open)).isoformat(),
+                          "closed_at": (n - timedelta(hours=hours_ago_close)).isoformat()})["id"]
+
+
+def _vt(hours_ago):
+    return (datetime.now(timezone.utc) - timedelta(hours=hours_ago)).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _co(symbol, side, qty, price, pnl, hours_ago, status="Filled", typ="Stop"):
+    return {"symbol": symbol, "side": side, "qty": qty, "price": price, "pnl": pnl, "type": typ, "status": status,
+            "time": _vt(hours_ago)}
+
+
+def _fills():
+    return {f["ticket_id"]: f for f in prop_journal.list_fills(account_id="breakout_2", limit=500)
+            if str(f.get("status")).lower() == "closed"}
+
+
+def test_fill_in_prices_both_unpriced_closes_while_reconcile_is_report_only(monkeypatch):
+    monkeypatch.setattr(rc, "reconcile_mode", _DECLARED_MODE)
+    assert rc.reconcile_mode("breakout_2") == "report_only"
+    _unpriced("t-sol", "SOLUSDT", "long", 17.26263867, 111.16)
+    _unpriced("t-eth", "ETHUSDT", "long", 1.17577895, 2527.8, hours_ago_close=2)
+    r = _status([], closed=[_co("SOL", "short", 17.26, 111.39, 3.97, 6), _co("ETH", "short", 1.1758, 2531.2, 3.99, 2),
+                            _co("SOL", "long", 17.26, 111.16, None, 20, typ="Limit")])
+    assert sorted(x["exit"] for x in r["fill_in"]["filled"]) == [111.39, 2531.2]
+    f = _fills()
+    assert (f["t-sol"]["exit_price"], f["t-sol"]["pnl"]) == (111.39, 3.97)
+    assert (f["t-eth"]["exit_price"], f["t-eth"]["pnl"]) == (2531.2, 3.99)
+    assert json.loads(f["t-sol"]["raw"])["provenance"].lower() == "measured"
+    assert len(_fills()) == 2   # corrected in place, not appended
+
+
+def test_closed_row_with_only_a_net_pnl_column_still_carries_the_venue_pnl():
+    rows = rc.clean_closed("breakout_2", [{"symbol": "SOL", "side": "short", "qty": 17.26, "price": 111.39, "netpnl": 3.97}])
+    assert rows[0]["pnl"] == 3.97
+
+
+def test_fill_in_does_not_match_the_wrong_side_size_time_or_a_cancelled_order(monkeypatch):
+    monkeypatch.setattr(rc, "reconcile_mode", _DECLARED_MODE)
+    _unpriced("t-sol", "SOLUSDT", "long", 17.26263867, 111.16)
+    r = _status([], closed=[_co("SOL", "long", 17.26, 112.0, 1.0, 6),                      # same side: an entry
+                            _co("SOL", "short", 9.0, 112.0, 1.0, 6),                       # size off
+                            _co("SOL", "short", 17.26, 112.0, 1.0, 60),                    # before the row opened
+                            _co("SOL", "short", 17.26, 112.0, 1.0, 6, status="Cancelled")])
+    assert r["fill_in"]["filled"] == [] and r["fill_in"]["no_match"]
+    assert _fills()["t-sol"]["exit_price"] is None
+
+
+def test_fill_in_with_two_candidates_writes_nothing_and_pings_once(env, monkeypatch):
+    monkeypatch.setattr(rc, "reconcile_mode", _DECLARED_MODE)
+    _unpriced("t-sol", "SOLUSDT", "long", 17.26263867, 111.16)
+    co = [_co("SOL", "short", 17.26, 111.39, 3.9, 6), _co("SOL", "short", 17.26, 110.0, -20.0, 5)]
+    r = _status([], closed=co)
+    assert r["fill_in"]["filled"] == [] and len(r["fill_in"]["ambiguous"]) == 1
+    _status([], closed=co)
+    assert _fills()["t-sol"]["exit_price"] is None
+    assert len([m for m in env if "could be the exit" in m]) == 1
+
+
+def test_fill_in_never_runs_on_an_unclean_closed_read():
+    _unpriced("t-sol", "SOLUSDT", "long", 17.26263867, 111.16)
+    r = _status([], closed=None)    # the phone sends closed_orders only when its Closed read was `read`
+    assert r["fill_in"] == {"filled": [], "ambiguous": [], "no_match": []}
+    assert _fills()["t-sol"]["exit_price"] is None

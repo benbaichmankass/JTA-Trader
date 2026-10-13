@@ -223,13 +223,21 @@
   function col(map, re) { var rx = new RegExp(re, "i"), ks = Object.keys(map).filter(function (k) { return rx.test(k); }); return ks.length === 1 ? map[ks[0]] : null; }
   // ---- TABLE READS (PROP-TRACKING, 2026-10-12): Positions + Closed orders, mapped by header text. First match wins,
   // so the more specific patterns come first ("Mark price" is not "Market", "Realized PnL" is not unrealized).
-  var POS_COLS = [["skip", /liq|margin|value|notional|^realized|funding|^tp\s*\/\s*sl|^sl\s*\/\s*tp|\broe\b|^actions?$/i],
-    ["upnl", /u\.?\s*pnl|unreali[sz]ed|^p\s*&\s*l|^pnl/i], ["mark", /^mark|^last/i], ["entry", /entry|avg|average|open price/i],
+  // Breakout's Positions grid (read live 2026-10-12): Market | UP&L | Side | Value | Opening price | Current price |
+  // TP / SL | Net P&L. There is NO size column, so qty is derived (see parseRow). "UP&L" is the unrealized P&L and is
+  // the ONLY source of upnl; "Net P&L" is kept as net_pnl and never substituted for it.
+  var POS_COLS = [["skip", /liq|margin|^realized|funding|^tp\s*\/\s*sl|^sl\s*\/\s*tp|\broe\b|^actions?$/i],
+    ["value", /^(position )?value$|^notional/i], ["netpnl", /^net\s*p\s*&?\s*l/i],
+    ["upnl", /^u\.?\s*p\s*&\s*l|u\.?\s*pnl|unreali[sz]ed|^p\s*&\s*l|^pnl/i], ["mark", /^mark(?!et)|^last|^current/i],
+    ["entry", /entry|avg|average|open(ing)? price/i],
     ["sl", /^(sl|s\/l|stop)/i], ["tp", /^(tp|t\/p|take)/i], ["side", /^(side|direction|dir)$/i],
     ["qty", /^(size|qty|quantity|amount|position|contracts?)\b/i], ["lev", /^lev/i],
     ["symbol", /^(symbol|market|instrument|contract|asset|pair|coin|name)$/i], ["time", /time|date|opened/i]];
-  var CLOSED_COLS = [["skip", /^actions?$|fee|reduce/i], ["pnl", /pnl|p\s*&\s*l|profit/i],
-    ["price", /avg|average|fill(ed)? price|exec|^price$/i], ["trigger", /trigger|stop price/i],
+  // Closed orders: UNMEASURED layout (no live capture yet); the div-grid reader below is generic, and a miss posts
+  // its digit-masked headers (closed_ prefix) exactly like Positions.
+  var CLOSED_COLS = [["skip", /^actions?$|fee|reduce|^tp\s*\/\s*sl/i], ["netpnl", /^net\s*p\s*&?\s*l/i], ["pnl", /pnl|p\s*&\s*l|profit/i],
+    ["value", /^(position |order )?value$|^notional/i],
+    ["price", /avg|average|(fill(ed)?|clos(e|ed|ing)|exit|exec(uted)?)\s*price|^price$/i], ["trigger", /trigger|stop price/i],
     ["side", /^(side|direction|dir)$/i], ["qty", /^(size|qty|quantity|amount|filled)\b/i],
     ["type", /^(type|order type)$/i], ["status", /^status$/i], ["time", /time|date|closed|updated/i],
     ["symbol", /^(symbol|market|instrument|contract|asset|pair|coin|name)$/i]];
@@ -244,6 +252,94 @@
     var c = all("button,[role=tab],[role=button],a").filter(function (x) { return re.test(t(x)); });
     if (c.length !== 1) return null; var m = /\(?\s*(\d+)\s*\)?\s*$/.exec(t(c[0]).replace(re, "")); return m ? parseInt(m[1], 10) : null;
   }
+  function masked(hs) { return hs.map(function (h) { return h.replace(/\d/g, "#").slice(0, 24); }).slice(0, 20); }
+  function controlsDump() { return all("button,[role=tab],[role=button]").map(function (x) { return t(x).replace(/\d/g, "#").slice(0, 30); }).filter(Boolean).slice(0, 30); }
+  // one row's cells -> {symbol, side, qty, ...}; cells are aligned to keys (null / "skip" columns ignored)
+  function parseRow(cells, keys) {
+    var o = {}, rowText = cells.join(" ");
+    cells.forEach(function (c, i) {
+      var k = keys[i]; if (!k || k === "skip" || o[k] !== undefined) return;
+      o[k] = (k === "symbol" || k === "status" || k === "type" || k === "time") ? c.slice(0, 40) : (k === "side" ? sideOf(c) : firstNumber(c));
+    });
+    if (o.side == null) o.side = sideOf(o.symbol) || sideOf(rowText);
+    // a size carries the side only when it is SIGNED ("-1.5" short, "+1.5" long); an unsigned size is not a long
+    var qc = keys.indexOf("qty") >= 0 ? (cells[keys.indexOf("qty")] || "").trim() : "";
+    if (o.side == null && typeof o.qty === "number" && o.qty !== 0 && /^[-+−]/.test(qc)) o.side = o.qty > 0 ? "long" : "short";
+    if (typeof o.qty === "number") o.qty = Math.abs(o.qty);
+    // NO size column (Breakout's Positions grid shows Value, not contracts): qty = |Value| / Current price, marked
+    // qty_src so the server and a reader know it is DERIVED (rounded Value, so only approximately the placed size)
+    if (keys.indexOf("qty") < 0 && keys.indexOf("value") >= 0 && typeof o.value === "number" && typeof (o.mark != null ? o.mark : o.price) === "number" && (o.mark != null ? o.mark : o.price) > 0 && o.value !== 0) {
+      o.qty = Math.round(Math.abs(o.value) / (o.mark != null ? o.mark : o.price) * 1e8) / 1e8; o.qty_src = "value/mark";
+    }
+    if (o.symbol) o.symbol = o.symbol.replace(/\b(long|short|buy|sell)\b/ig, "").replace(/\d+(\.\d+)?\s*[x×]/ig, "").trim();
+    return o;
+  }
+  // every parsed row is sent, never a prefix: a row the server does not see would read as gone (review of #17745);
+  // a strict list longer than the cap is refused instead of truncated. `emptyOk` = positive evidence the view is empty.
+  function finishRead(out, bad, hs, count, need, strict, emptyOk) {
+    if (strict && out.length > ROW_CAP) return {state: "too_many_rows", n_rows: out.length, count: count, headers: masked(hs)};
+    var rows = out.slice(0, ROW_CAP);
+    if (bad || out.some(function (o) { return need.some(function (k) { return o[k] == null || o[k] === ""; }); }))
+      return {state: "unparsed", n_rows: out.length + bad, count: count, headers: masked(hs)};
+    if (count !== null && count !== out.length) return {state: "count_mismatch", n_rows: out.length, count: count, headers: masked(hs)};
+    // flat needs POSITIVE evidence (the tab says 0, or the table's / panel's container says "no positions"): a header
+    // row with no data rows may be a table still rendering, and a false "flat" would close live journal rows.
+    if (!out.length && count !== 0 && !emptyOk) return {state: "empty_unconfirmed", n_rows: 0, count: count, headers: masked(hs)};
+    return {state: "read", rows: rows, n_rows: out.length, count: count, headers: masked(hs)};
+  }
+  // ---- DIV GRID (PHONE-POSITIONS-DIV, 2026-10-12): the live Positions view has NO <table>/<tr>/[role=row]. Headers are
+  // plain elements (they surface as controls: Market, UP&L, Side, Value, Opening price, Current price, TP / SL,
+  // Net P&L). The HEADER ROW is the smallest ancestor holding >= 4 distinct mapped labels incl. side and an entry /
+  // mark column; its children are the columns, in document order. DATA ROWS are the following siblings of that header
+  // (or of its wrapper, up to 3 levels, or those siblings' children) with the SAME child count. The PANEL is the
+  // highest ancestor of the header that holds no tab label (Positions / Open orders / Closed orders / ...): the empty
+  // state counts only INSIDE it, and a panel that reaches <body> proves nothing.
+  var TAB_LABEL = /^(open orders|positions|portfolio|closed orders|trades)(\s*\(?\s*\d+\s*\)?)?$/i;
+  function kids(e) { return Array.prototype.slice.call(e.children).filter(vis); }
+  function gridHeaders(cols) {
+    var labels = innermost(all("div,span,p,button,[role=button],[role=columnheader],th,li,a,label")).filter(function (e) {
+      var s = t(e); return s && s.length <= 24 && colKey(s, cols);
+    }), found = [];
+    labels.forEach(function (l) {
+      for (var a = l.parentElement, d = 0; a && d < 6 && a !== document.body; a = a.parentElement, d++) {
+        var ks = {}; labels.forEach(function (m) { if (a.contains(m)) ks[colKey(t(m), cols)] = 1; });
+        var okShape = cols === CLOSED_COLS ? (ks.side && ks.symbol && (ks.price || ks.qty || ks.pnl)) : (ks.side && (ks.entry || ks.mark));
+        if (Object.keys(ks).length >= 4 && okShape) { if (found.indexOf(a) < 0) found.push(a); return; }
+      }
+    });
+    return innermost(found);
+  }
+  function gridPanel(h) {
+    var tabs = all("button,[role=tab],[role=button],a,div,span,li").filter(function (x) { return TAB_LABEL.test(t(x)); });
+    var p = h;
+    while (p.parentElement && p.parentElement !== document.body && p.parentElement !== document.documentElement &&
+           !tabs.some(function (x) { return p.parentElement.contains(x); })) p = p.parentElement;
+    return (p === document.body || p === document.documentElement || tabs.some(function (x) { return p.contains(x); })) ? null : p;
+  }
+  function readGrid(cols, need, emptyRe, count, strict, hdrs) {
+    var h = hdrs[0], hc = kids(h), hs = hc.map(t), keys = hs.map(function (s) { return colKey(s, cols); });
+    var rows = [], bad = 0, node = h, found = false, sib;
+    for (var lvl = 0; lvl < 4 && node.parentElement && !found; lvl++, node = node.parentElement) {
+      sib = kids(node.parentElement).filter(function (x) { return x !== node; });
+      var direct = sib.filter(function (x) { return kids(x).length === hc.length; });
+      var nested = []; sib.forEach(function (x) { if (direct.indexOf(x) < 0) kids(x).forEach(function (y) { if (kids(y).length === hc.length) nested.push(y); }); });
+      var pool = direct.length ? direct : nested;
+      if (pool.length) {
+        rows = pool; found = true;
+        // anything else in the same container that looks like a row but has another cell count is a row we cannot align
+        sib.forEach(function (x) {
+          if (direct.indexOf(x) >= 0 || emptyRe.test(t(x)) || !/\d/.test(t(x))) return;
+          if (!direct.length) return;
+          if (kids(x).length >= 2) bad += 1;
+        });
+      }
+    }
+    var out = rows.map(function (r) { return parseRow(kids(r).map(t), keys); });
+    var panel = gridPanel(h), emptyOk = !!(panel && emptyRe.test(t(panel)));
+    var r = finishRead(out, bad, hs, count, need, strict, emptyOk);
+    r.layout = "div_grid";
+    return r;
+  }
   function readTable(cols, need, emptyRe, tabRe, strict) {   // need: the keys every row must carry; a table is ours when it has a symbol column and a qty/price/entry column
     var hits = [];
     all("table,[role=table],[role=grid]").forEach(function (tb) {
@@ -251,8 +347,12 @@
       var keys = hs.map(function (h) { return colKey(h, cols); });
       if (keys.indexOf("symbol") >= 0 && keys.some(function (k) { return k === "qty" || k === "price" || k === "entry"; })) hits.push({tb: tb, hs: hs, keys: keys});
     });
-    var masked = function (hs) { return hs.map(function (h) { return h.replace(/\d/g, "#").slice(0, 24); }).slice(0, 20); };
     var count = tabCount(tabRe);
+    if (hits.length === 0) {
+      var g = gridHeaders(cols);
+      if (g.length === 1) return readGrid(cols, need, emptyRe, count, strict, g);
+      if (g.length > 1) return {state: "ambiguous", tables: g.length, count: count, headers: masked(g[0] ? kids(g[0]).map(t) : []), controls: controlsDump()};
+    }
     if (hits.length !== 1) {
       // No table: flat ONLY on the panel's own evidence -- the tab's count says 0, or the ONE visible tab panel says
       // "no positions". Page-wide text is never enough (review of #17745: a "no positions" string elsewhere would
@@ -260,7 +360,7 @@
       var panels = all("[role=tabpanel]"), panelEmpty = panels.length === 1 && emptyRe.test(t(panels[0]));
       if (hits.length === 0 && (count === 0 || (count === null && panelEmpty))) return {state: "read", rows: [], count: count, headers: []};
       return {state: hits.length ? "ambiguous" : "no_table", tables: hits.length, count: count,
-        headers: hits.length ? masked(hits[0].hs) : [], controls: all("button,[role=tab],[role=button]").map(function (x) { return t(x).replace(/\d/g, "#").slice(0, 30); }).filter(Boolean).slice(0, 30)};
+        headers: hits.length ? masked(hits[0].hs) : [], controls: controlsDump()};
     }
     var h = hits[0], out = [], bad = 0;
     innermost(Array.prototype.slice.call(h.tb.querySelectorAll("tr,[role=row]")).filter(vis)).forEach(function (r) {
@@ -268,31 +368,9 @@
       var cells = Array.prototype.slice.call(r.querySelectorAll("td,[role=cell],[role=gridcell]")).map(t);
       if (cells.length === 1 && emptyRe.test(cells[0])) return;   // the table's own "no positions" row
       if (cells.length !== h.hs.length) { bad += 1; return; }
-      var o = {}, rowText = cells.join(" ");
-      cells.forEach(function (c, i) {
-        var k = h.keys[i]; if (!k || k === "skip" || o[k] !== undefined) return;
-        o[k] = (k === "symbol" || k === "status" || k === "type" || k === "time") ? c.slice(0, 40) : (k === "side" ? sideOf(c) : firstNumber(c));
-      });
-      if (o.side == null) o.side = sideOf(o.symbol) || sideOf(rowText);
-      // a size carries the side only when it is SIGNED ("-1.5" short, "+1.5" long); an unsigned size is not a long
-      var qc = h.keys.indexOf("qty") >= 0 ? (cells[h.keys.indexOf("qty")] || "").trim() : "";
-      if (o.side == null && typeof o.qty === "number" && o.qty !== 0 && /^[-+\u2212]/.test(qc)) o.side = o.qty > 0 ? "long" : "short";
-      if (typeof o.qty === "number") o.qty = Math.abs(o.qty);
-      if (o.symbol) o.symbol = o.symbol.replace(/\b(long|short|buy|sell)\b/ig, "").replace(/\d+(\.\d+)?\s*[x×]/ig, "").trim();
-      out.push(o);
+      out.push(parseRow(cells, h.keys));
     });
-    // every parsed row is sent, never a prefix: a row the server does not see would read as gone (review of #17745);
-    // a strict list longer than the cap is refused instead of truncated
-    if (strict && out.length > ROW_CAP) return {state: "too_many_rows", n_rows: out.length, count: count, headers: masked(h.hs)};
-    var rows = out.slice(0, ROW_CAP);
-    if (bad || out.some(function (o) { return need.some(function (k) { return o[k] == null || o[k] === ""; }); }))
-      return {state: "unparsed", n_rows: out.length + bad, count: count, headers: masked(h.hs)};
-    if (count !== null && count !== out.length) return {state: "count_mismatch", n_rows: out.length, count: count, headers: masked(h.hs)};
-    // flat needs POSITIVE evidence (the tab says 0, or the table's container says "no positions"): a header row with
-    // no data rows may be a table still rendering, and a false "flat" would close live journal rows.
-    if (!out.length && count !== 0 && !emptyRe.test(t(h.tb.parentElement || h.tb)))
-      return {state: "empty_unconfirmed", n_rows: 0, count: count, headers: masked(h.hs)};
-    return {state: "read", rows: rows, n_rows: out.length, count: count, headers: masked(h.hs)};
+    return finishRead(out, bad, h.hs, count, need, strict, emptyRe.test(t(h.tb.parentElement || h.tb)));
   }
   function dialogs() { return all("[role=dialog],[role=alertdialog],dialog[open]"); }
   function dlg() { var d = dialogs(); return d.length === 1 ? d[0] : null; }
@@ -842,7 +920,7 @@
     // UNMEASURED: no capture has shown Breakout's Positions table; headers come back digit-masked for a miss dump.
     positionsRead: function () {
       if (!hostOk()) return {state: "bad_host"};
-      return readTable(POS_COLS, ["symbol", "side", "qty"], /no (open )?positions|you have no (open )?positions/i, /^positions\b/i, true);
+      return readTable(POS_COLS, ["symbol", "side", "qty"], /no (open )?positions|you have no (open )?positions|start trading with leverage/i, /^positions\b/i, true);
     },
     // CLOSED ORDERS READ (PROP-TRACKING): the shown Closed orders / Trades table, newest rows as the page orders
     // them, max 15. Only OUR orders' symbol, side, qty, price, status, time and realized P&L columns; nothing else.
