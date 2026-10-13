@@ -30,7 +30,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import check_pr_landing as cpl
+import check_pr_landing as cpl  # noqa: E402
 
 HOLD_LABEL = "landing:hold"
 MAX_UPDATES = 10
