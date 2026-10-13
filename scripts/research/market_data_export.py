@@ -90,8 +90,8 @@ def _jsonl_facts(path: Path) -> Dict[str, Any]:
             rows += 1
     if first is None:
         return {"rows": 0, "columns": [], "first_ts": None, "last_ts": None}
-    f, l = json.loads(first), json.loads(last)
-    return {"rows": rows, "columns": sorted(f), "first_ts": f.get("ts"), "last_ts": l.get("ts")}
+    f, lst = json.loads(first), json.loads(last)
+    return {"rows": rows, "columns": sorted(f), "first_ts": f.get("ts"), "last_ts": lst.get("ts")}
 
 
 def column_violations(columns: List[str]) -> List[str]:

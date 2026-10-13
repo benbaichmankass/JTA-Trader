@@ -1,8 +1,6 @@
 """ML-DATA-OFF-TRAINER: market-only export allowlist + router published-data routing."""
 from __future__ import annotations
 
-import copy
-import json
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -10,6 +8,7 @@ import pytest
 
 from scripts.research import market_data_export as mde
 from scripts.research import compute_router as cr
+from scripts.research import trainer_queue as tq
 
 REPO = Path(__file__).resolve().parents[1]
 BTC = "datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl"
@@ -92,7 +91,6 @@ def test_every_published_unit_in_the_queue_passes_the_router():
 
 
 # ── trainer as its own queue ─────────────────────────────────────────────────────────────────────────────
-from scripts.research import trainer_queue as tq
 
 
 def _at(h, m=0):
