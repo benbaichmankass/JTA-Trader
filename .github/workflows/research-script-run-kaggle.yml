@@ -131,6 +131,8 @@ jobs:
           cp /tmp/kb/kout/*.log "$OUT/kaggle-kernel.log" 2>/dev/null || true
           kaggle quota 2>&1 | tee "$OUT/kaggle-quota-after.txt" || true
           grep -rl "$USERNAME" "$OUT" 2>/dev/null | xargs -r sed -i "s|$USERNAME|<user>|g"
+          # show the kernel's own log in this job's log (the kernel is a black box otherwise); username already scrubbed
+          echo "== kaggle kernel log (tail) =="; tail -c 6000 "$OUT/kaggle-kernel.log" 2>/dev/null || echo "(no kernel log downloaded)"
           test -s "$OUT/run-manifest.json"
       - name: Derive the result record
         if: always()
