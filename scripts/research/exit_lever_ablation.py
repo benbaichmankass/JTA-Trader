@@ -154,9 +154,12 @@ def build_arm_argv(leg: str, cfg: dict[str, Any], csv: str, resample: str, emit:
     arm's raw flags and the pinned window. Returns (argv, omitted_levers)."""
     import regime_debt_matrix as rdm
     harness = rdm.classify(cfg)
-    if harness not in ("trend", "pullback"):
-        raise ValueError(f"{leg}: harness {harness!r} -- this ablation covers the trend and pullback "
-                         "harnesses (the two with the exit levers in question)")
+    # ict_scalp joined 2026-10-13 (QUEUE-FILL-1013): its argv builder is the same
+    # rdm.build_harness_cmd branch the evidence builder runs, and the arm tokens it
+    # needs (--cooldown-bars, --timeout-bars, --min-confidence) are plain raw flags.
+    if harness not in ("trend", "pullback", "ict_scalp"):
+        raise ValueError(f"{leg}: harness {harness!r} -- this ablation covers the trend, pullback and "
+                         "ict_scalp harnesses")
     argv, _faithful, omitted = rdm.build_harness_cmd(leg, cfg, harness, csv, resample, emit, jout)
     argv = list(argv)
     i = 0
