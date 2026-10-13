@@ -99,7 +99,9 @@ WORKFLOW = "research-script-run.yml"
 #: trainer-resident data, torch/lightgbm weights or the trainer's disk. Same unit shape, same verdict.json,
 #: same artifact -> collector -> record path; only WHERE the command runs differs.
 TRAINER_WORKFLOW = "research-script-run-trainer.yml"
-WORKFLOWS = (WORKFLOW, TRAINER_WORKFLOW)
+#: RESEARCH-ROUTER (2026-10-13): the Kaggle GPU twin -- the same contract executed inside a Kaggle kernel.
+KAGGLE_WORKFLOW = "research-script-run-kaggle.yml"
+WORKFLOWS = (WORKFLOW, TRAINER_WORKFLOW, KAGGLE_WORKFLOW)
 OUT_ROOT = Path("comms") / "research"
 
 #: The only script families the runner will execute. Anchored, no `..`, no
@@ -212,7 +214,12 @@ def plan(unit: str, *, run_id: str, queue_dir: Path = _DEFAULT_QUEUE,
     if not isinstance(run, dict):
         errs.append("`run` must be a mapping")
         run = {}
-    if str(run.get("workflow") or "").strip() not in WORKFLOWS:
+    wf_decl = str(run.get("workflow") or "").strip()
+    # A unit may declare `compute:` instead of a workflow; the dispatcher picks the backend, and every
+    # backend of a script-run class runs this same contract, so the command is checked either way.
+    if wf_decl == "" and raw.get("compute"):
+        pass
+    elif wf_decl not in WORKFLOWS:
         errs.append(f"run.workflow must be one of {WORKFLOWS!r} for this runner, got "
                     f"{run.get('workflow')!r}")
     if "command" in run and "commands" in run:
