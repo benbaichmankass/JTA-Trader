@@ -48,7 +48,7 @@ def test_crossed_limit_becomes_estimated_open():
     _placed()
     r = fi.infer(ACCT, now=T0 + timedelta(hours=1), bars_fn=_bars((5, 2480, 2470), (10, 2500, 2480)))
     assert r["filled"] == ["prop-manual-x1"]
-    o = [f for f in prop_journal.list_fills(account_id=ACCT) if f["status"] == "open"][0]
+    o = next(f for f in prop_journal.list_fills(account_id=ACCT) if f["status"] == "open")
     raw = json.loads(o["raw"])
     assert o["entry_price"] == 2491.47 and raw["provenance"] == "estimated" and raw["inferred"] is True
     assert o["reason"].startswith("INFERRED") and o["external_order_id"] == "inferred-prop-manual-x1"
@@ -76,7 +76,7 @@ def test_tp_crossed_later_closes_estimated_and_sl_for_long():
     fi.infer(ACCT, now=T0 + timedelta(hours=1), bars_fn=_bars((5, 2500, 2480)))
     r = fi.infer(ACCT, now=T0 + timedelta(hours=3), bars_fn=_bars((5, 2500, 2480), (60, 2490, 2200)))
     assert r["closed"] == ["prop-manual-x1"]
-    c = [f for f in prop_journal.list_fills(account_id=ACCT) if f["status"] == "closed"][0]
+    c = next(f for f in prop_journal.list_fills(account_id=ACCT) if f["status"] == "closed")
     assert c["exit_price"] == 2244.81 and c["pnl"] is None and c["reason"].startswith("INFERRED tp")
     assert json.loads(c["raw"])["provenance"] == "estimated"
     assert po.split_fills(prop_journal.list_fills(account_id=ACCT))[0] == []
