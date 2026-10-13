@@ -259,3 +259,11 @@ def test_ledger_alone_carries_open_state_when_pr_comments_unreadable(tmp_path):
 
 def test_config_has_the_operator_thresholds():
     assert TH["dispatcher_no_start_minutes"] == 75 and TH["backend_idle_minutes"] == 60 and TH["runnable_floor"] == 25
+
+
+def test_backend_underutilised_is_a_non_alerting_reading():
+    v = w.check_backend("github_runner", 4, [run(1, 1, "in_progress")], NOW, TH, max_concurrent=3)
+    assert v["state"] == w.OK and v["evidence"]["underutilised"] is True and v["heal"] is None
+    full = [run(i, 1, "in_progress") for i in range(3)]
+    assert "underutilised" not in w.check_backend("github_runner", 4, full, NOW, TH, max_concurrent=3)["evidence"]
+    assert "underutilised" not in w.check_backend("github_runner", 4, full, NOW, TH)["evidence"]
