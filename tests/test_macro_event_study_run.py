@@ -27,7 +27,7 @@ def test_end_to_end_on_fixtures(tmp_path):
     rnd = random.Random(3)
     from datetime import date, timedelta
     d0 = date(2020, 1, 2)
-    px, snaps, price = [], [], 100.0
+    px, price = [], 100.0
     for i in range(1200):
         px.append((d0 + timedelta(days=i)).isoformat())
     closes = {}
