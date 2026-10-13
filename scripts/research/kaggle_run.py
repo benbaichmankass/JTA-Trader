@@ -5,7 +5,7 @@
 The workflow shells out to the ``kaggle`` CLI; the parts that need judgement live here so they are testable:
 
   bundle    build the private-dataset bundle (repo.tar.gz + spec.json + dataset-metadata.json) and the kernel dir
-  gate      read ``kaggle quota`` text and decide go / no-go against the floor in config/research_compute.yaml
+  gate      read ``kaggle quota`` text and decide go / no-go against the floor in scripts/research/research_compute.yaml
   info      the unit's timeout, for the poll loop
 
 CONTRACT (identical to research-script-run.yml / -trainer.yml): the workflow's only inputs are

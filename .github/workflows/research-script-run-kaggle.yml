@@ -1,7 +1,7 @@
 name: research-script-run-kaggle
 
 # RESEARCH-ROUTER (2026-10-13): the KAGGLE GPU twin of research-script-run.yml / -trainer.yml.
-# A unit with `compute: gpu` is sent here by the token-free dispatcher (config/research_compute.yaml);
+# A unit with `compute: gpu` is sent here by the token-free dispatcher (scripts/research/research_compute.yaml);
 # nothing about the unit changes shape: same two inputs (research_unit, power_state), the command is read from
 # research/queue/<id>.yaml on this ref and re-checked by script_run.plan (allowlist: python3 scripts/research/*.py
 # or scripts/backtest*.py, no shell). What differs is WHERE it runs: a private Kaggle GPU kernel (2x T4,
@@ -15,7 +15,7 @@ name: research-script-run-kaggle
 # artifact -> collector -> research/results/<unit>/ path lands it (artifact research-script-run-kaggle-<unit>-<run_id>).
 #
 # QUOTA. The weekly GPU quota (`kaggle quota`; 30 h/week observed 2026-10-13) is the budget. The dispatcher
-# already declines to route here below the floor in config/research_compute.yaml; this workflow re-checks, so a
+# already declines to route here below the floor in scripts/research/research_compute.yaml; this workflow re-checks, so a
 # hand dispatch cannot overspend, and a refusal lands as an honest `producer_failed` naming the quota -- never a
 # fabricated verdict. The queue itself never halts: a unit that waits for quota is retried every cycle.
 #

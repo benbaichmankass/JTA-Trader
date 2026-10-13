@@ -229,10 +229,10 @@ Draw new units from, in this order, until the floor is met or sources are exhaus
   needs_vm_data | gpu | gpu_preferred | auto`, a consistent `routing:` block and, when you can state it, a
   `value:` block (`usd_at_stake_per_month`, `confidence`, `bucket`, `basis`). Do **not** write
   `run.workflow` on a new unit: the token-free dispatcher resolves class -> backend from
-  `config/research_compute.yaml` (runner / trainer / Kaggle GPU), enforces each backend's capacity and the
+  `scripts/research/research_compute.yaml` (runner / trainer / Kaggle GPU), enforces each backend's capacity and the
   Kaggle weekly quota, and ranks due units by value per cost. GPU work goes to Kaggle through
   `research-script-run-kaggle.yml` and comes back through the same collector, so a result is read exactly like
-  any other. A class change or a capacity edit is a `config/research_compute.yaml` change (Tier 1, reviewed),
+  any other. A class change or a capacity edit is a `scripts/research/research_compute.yaml` change (Tier 1, reviewed),
   not a unit edit.
 - Cap authoring per run (~6 units) — this is operations, not a research session. Excess goes
   to the run record's `handoff` list for the next pass or a topic lane.

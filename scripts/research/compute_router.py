@@ -5,7 +5,7 @@
 THE SPLIT (operator, 2026-10-13, voice): Claude writes the research unit -- id, hypothesis, pre-registered
 rule, a *kind of test* and what it is worth. A dispatcher that spends NO Claude tokens sends each unit to the
 right compute and spends the scarce resources on the highest-value work. This module is the policy half of
-that dispatcher; ``config/research_compute.yaml`` is the data it reads (nothing about backends is hard-coded
+that dispatcher; ``scripts/research/research_compute.yaml`` is the data it reads (nothing about backends is hard-coded
 here), and ``dispatch_queue.py`` is the mechanism that calls it.
 
 WHAT A UNIT DECLARES
@@ -20,7 +20,7 @@ WHAT A UNIT DECLARES
 neither is an error. ``compute: auto`` derives the class from the unit's own ``routing:`` block, so the two
 cannot disagree: a class that contradicts ``routing`` is refused, not guessed.
 
-THE VALUE FORMULA (config/research_compute.yaml § value; every decision line prints its derivation)
+THE VALUE FORMULA (scripts/research/research_compute.yaml § value; every decision line prints its derivation)
     score = usd_per_month * confidence * bucket_boost * hand_written_boost * age_boost / cost
     cost  = (1 + est_hours) * backend.cost_weight
 It orders units WITHIN a theme. Theme weights (research/THEMES.yaml) stay the operator's across themes, and a
@@ -35,7 +35,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 _REPO = Path(__file__).resolve().parents[2]
-CONFIG_PATH = _REPO / "config" / "research_compute.yaml"
+CONFIG_PATH = _REPO / "scripts" / "research" / "research_compute.yaml"
 
 #: Where a Kaggle weekly quota is read from (the dispatch workflow writes `kaggle quota` here).
 KAGGLE_QUOTA_FILE = "kaggle-quota.txt"
@@ -44,7 +44,7 @@ _cfg_cache: Dict[str, Any] = {}
 
 
 def load_config(path: Optional[Path] = None) -> Dict[str, Any]:
-    """config/research_compute.yaml, validated. Raises ValueError on a malformed file: this is the
+    """scripts/research/research_compute.yaml, validated. Raises ValueError on a malformed file: this is the
     scheduler's only policy input, so a silent default would hide a broken scheduler behind a plausible order."""
     import yaml  # noqa: PLC0415
     p = Path(path) if path else CONFIG_PATH
@@ -261,7 +261,7 @@ def plan(entry: Dict[str, Any], cfg: Dict[str, Any]) -> Resolution:
         return Resolution(False, error="compute: auto needs an unambiguous `routing:` block (no GPU+trainer "
                                        "conflict, no empty block)")
     if cls not in cfg["classes"]:
-        return Resolution(False, error=f"compute: {cls!r} is not a class in config/research_compute.yaml "
+        return Resolution(False, error=f"compute: {cls!r} is not a class in scripts/research/research_compute.yaml "
                                        f"(have {class_names(cfg)})")
     conflict = class_routing_conflict(cls, entry, cfg)
     if conflict:

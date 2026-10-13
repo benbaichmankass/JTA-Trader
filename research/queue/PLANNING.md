@@ -23,7 +23,7 @@ recurring planning session does.
 ## 1b. A unit declares WHAT KIND of test it is and what it is WORTH — never WHERE it runs (RESEARCH-ROUTER, 2026-10-13)
 Operator, 2026-10-13: Claude writes the unit (id + test structure); a dispatcher that spends no Claude tokens sends
 it to the right compute and spends scarce resources on the highest-value work. The policy is data:
-[`config/research_compute.yaml`](../../config/research_compute.yaml); the code is `scripts/research/compute_router.py`
+[`scripts/research/research_compute.yaml`](../../scripts/research/research_compute.yaml); the code is `scripts/research/compute_router.py`
 (placement + value) called by `dispatch_queue.py`. **A session authoring a unit writes four things for this:**
 
 ```yaml

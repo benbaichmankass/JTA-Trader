@@ -741,13 +741,13 @@ def validate(entry: Dict[str, Any], *, path: Optional[Path] = None,
     compute = entry.get("compute")
     if compute is not None:
         # RESEARCH-ROUTER: a compute class stands in for `run.workflow`; the class table is
-        # config/research_compute.yaml and the router, not the author, picks the backend.
+        # scripts/research/research_compute.yaml and the router, not the author, picks the backend.
         try:
             from scripts.research import compute_router as _cr  # noqa: PLC0415
             known = _cr.class_names()
         except (OSError, ValueError, ImportError) as exc:
             known = []
-            errs.append(f"cannot read config/research_compute.yaml: {exc}")
+            errs.append(f"cannot read scripts/research/research_compute.yaml: {exc}")
         if known and compute not in known:
             errs.append(f"`compute` must be one of {known}, got {compute!r}")
     val = entry.get("value")
@@ -764,7 +764,7 @@ def validate(entry: Dict[str, Any], *, path: Optional[Path] = None,
                 try:
                     from scripts.research import compute_router as _cr  # noqa: PLC0415
                     if val["bucket"] not in _cr.load_config()["value"]["buckets"]:
-                        errs.append(f"value.bucket {val['bucket']!r} is not a bucket in config/research_compute.yaml")
+                        errs.append(f"value.bucket {val['bucket']!r} is not a bucket in scripts/research/research_compute.yaml")
                 except (OSError, ValueError, ImportError):
                     pass
     if not (isinstance(run, dict) and run.get("workflow")) and not compute:

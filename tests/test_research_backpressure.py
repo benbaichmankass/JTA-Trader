@@ -101,9 +101,14 @@ def test_self_tests_pass():
         assert proc.returncode == 0, proc.stdout + proc.stderr
 
 
-@pytest.mark.parametrize("flag", ["--max-research-inflight", "--max-repo-queued"])
-def test_the_dispatcher_workflow_passes_both_caps(flag):
-    assert flag in (REPO / ".github/workflows/research-queue-dispatch.yml").read_text()
+def test_the_dispatcher_workflow_passes_both_caps():
+    """--max-repo-queued rides the command line; the in-flight caps (total + per backend) moved to
+    scripts/research/research_compute.yaml with RESEARCH-ROUTER (2026-10-13) -- both must be present."""
+    from scripts.research import compute_router as cr
+    assert "--max-repo-queued" in (REPO / ".github/workflows/research-queue-dispatch.yml").read_text()
+    cfg = cr.load_config()
+    assert cfg["limits"]["max_total_inflight"] >= 1
+    assert all(b["max_concurrent"] >= 1 for b in cfg["backends"].values())
 
 
 # ── stuck runs are not load (measured 2026-09-29 06:56Z, first fired cycle after #13907) ──

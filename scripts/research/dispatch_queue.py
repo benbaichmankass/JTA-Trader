@@ -420,7 +420,7 @@ def fair_order(jobs: List[Any], now: datetime, themes_doc: Dict[str, Any],
     low weight means fewer slots, never none. Jobs that are not due (done, cadence not elapsed, unmet
     precondition, session-bound, invalid) keep id order after the candidates, unchanged.
 
-    RESEARCH-ROUTER (2026-10-13): with ``cfg`` (config/research_compute.yaml) a theme's candidates are
+    RESEARCH-ROUTER (2026-10-13): with ``cfg`` (scripts/research/research_compute.yaml) a theme's candidates are
     ordered by VALUE per unit cost (compute_router.score) instead of by effective priority alone; a unit
     that has waited past ``value.starve_hours`` sorts first. Each ranked job carries ``raw['_rank']`` (score +
     derivation) for the decision line. Without ``cfg`` the order is the pre-router one, unchanged."""
@@ -1005,7 +1005,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--max-research-inflight", type=int, default=None,
                     help="defer every fire while this many research compute runs are already "
                          "queued or in progress (counted via gh; see backpressure()). Default: "
-                         "config/research_compute.yaml limits.max_total_inflight; the per-backend "
+                         "scripts/research/research_compute.yaml limits.max_total_inflight; the per-backend "
                          "max_concurrent there is the finer cap")
     ap.add_argument("--kaggle-quota-file", default=None,
                     help="text of `kaggle quota` (the dispatch workflow writes it). Absent/unparsable = quota "
@@ -1049,7 +1049,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     try:
         cfg = cr.load_config()
     except (OSError, ValueError) as exc:
-        print(f"::error::research-queue: COULD NOT READ config/research_compute.yaml -- {exc}. Compute classes and "
+        print(f"::error::research-queue: COULD NOT READ scripts/research/research_compute.yaml -- {exc}. Compute classes and "
               "value ranking are OFF this cycle (explicit run.workflow units still fire); this is a broken "
               "router, not a quiet one.", file=sys.stderr)
     if cfg is not None:
