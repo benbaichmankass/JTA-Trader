@@ -738,9 +738,38 @@ def validate(entry: Dict[str, Any], *, path: Optional[Path] = None,
                                 and set(req) <= {"unit", "verdict"}):
         errs.append("`requires_result` must be {unit: RQ-YYYYMMDD-NNN[, verdict: pass|fail|...]}")
     run = entry.get("run")
-    if not isinstance(run, dict) or not run.get("workflow"):
-        errs.append("`run.workflow` is required — the dispatcher fires a workflow, "
-                    "so a job that names none cannot be dispatched")
+    compute = entry.get("compute")
+    if compute is not None:
+        # RESEARCH-ROUTER: a compute class stands in for `run.workflow`; the class table is
+        # config/research_compute.yaml and the router, not the author, picks the backend.
+        try:
+            from scripts.research import compute_router as _cr  # noqa: PLC0415
+            known = _cr.class_names()
+        except (OSError, ValueError, ImportError) as exc:
+            known = []
+            errs.append(f"cannot read config/research_compute.yaml: {exc}")
+        if known and compute not in known:
+            errs.append(f"`compute` must be one of {known}, got {compute!r}")
+    val = entry.get("value")
+    if val is not None:
+        if not isinstance(val, dict) or not set(val) <= {"usd_at_stake_per_month", "confidence", "bucket", "basis"}:
+            errs.append("`value` must be a mapping of usd_at_stake_per_month / confidence / bucket / basis")
+        else:
+            u, c = val.get("usd_at_stake_per_month"), val.get("confidence")
+            if u is not None and (isinstance(u, bool) or not isinstance(u, (int, float)) or u < 0):
+                errs.append("value.usd_at_stake_per_month must be a number >= 0")
+            if c is not None and (isinstance(c, bool) or not isinstance(c, (int, float)) or not 0 <= c <= 1):
+                errs.append("value.confidence must be a number in [0, 1]")
+            if val.get("bucket") is not None:
+                try:
+                    from scripts.research import compute_router as _cr  # noqa: PLC0415
+                    if val["bucket"] not in _cr.load_config()["value"]["buckets"]:
+                        errs.append(f"value.bucket {val['bucket']!r} is not a bucket in config/research_compute.yaml")
+                except (OSError, ValueError, ImportError):
+                    pass
+    if not (isinstance(run, dict) and run.get("workflow")) and not compute:
+        errs.append("`run.workflow` or `compute:` is required — the dispatcher fires a workflow, "
+                    "so a job that names neither cannot be dispatched")
     lands = entry.get("lands")
     if not isinstance(lands, dict) or not lands.get("store"):
         errs.append("`lands.store` is required — R2: a run's deliverable is a LANDED "

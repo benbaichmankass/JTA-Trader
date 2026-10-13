@@ -63,9 +63,12 @@ WORKFLOW_NAME = "research-script-run"
 #: ML-RQ-RUNNER (2026-10-11): the trainer-side twin lands through this SAME collector. Its artifact is
 #: named research-script-run-trainer-<unit>-<run_id>; the E5 record's `--workflow` is the run's own name.
 TRAINER_WORKFLOW = "research-script-run-trainer.yml"
-COLLECTED_WORKFLOWS = (WORKFLOW, TRAINER_WORKFLOW)
+#: RESEARCH-ROUTER (2026-10-13): the Kaggle GPU twin lands through the same collector too; its artifact is
+#: research-script-run-kaggle-<unit>-<run_id>.
+KAGGLE_WORKFLOW = "research-script-run-kaggle.yml"
+COLLECTED_WORKFLOWS = (WORKFLOW, TRAINER_WORKFLOW, KAGGLE_WORKFLOW)
 RECORD_INPUTS = "record-inputs.json"
-_ARTIFACT_RE = re.compile(r"^research-script-run(?:-trainer)?-(RQ-\d{8}-(?:\d{3}|[0-9a-f]{4}-\d{2}))-(\d+)$")
+_ARTIFACT_RE = re.compile(r"^research-script-run(?:-trainer|-kaggle)?-(RQ-\d{8}-(?:\d{3}|[0-9a-f]{4}-\d{2}))-(\d+)$")
 _EMIT_FIELDS = ("research_unit", "power_state", "decision_rule_id", "decision_rule_registered_at",
                 "verdict", "read_state", "population", "n", "tool", "measurement_file",
                 "records_file", "artifact_store", "artifact_locator", "note")

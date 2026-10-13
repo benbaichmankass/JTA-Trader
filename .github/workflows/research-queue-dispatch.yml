@@ -47,7 +47,7 @@ on:
     # at the next :20 instead of waiting up to 6 h. The 06:20 slot still
     # follows the IB gateway's 06:05 reset window. schedule-keeper reads these
     # crons from this file, so its dedupe/keep logic follows the change with no
-    # edit of its own; `--max-research-inflight 3`, `--max-repo-queued 10`,
+    # edit of its own; `--max-repo-queued 10` (the in-flight caps moved to config/research_compute.yaml),
     # the per-run GPU cap and the monthly ledger cap are UNCHANGED and bind
     # each run exactly as before (24 runs/day x cap 1 is the per-day GPU
     # ceiling — the ledger's $10/month still binds first). The replenisher's
@@ -205,13 +205,22 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
         run: |
           set -euo pipefail
-          # Backpressure (manager review 2026-09-29): defer every fire while
-          # >= 3 research compute runs are queued/in progress or > 10 runs are
-          # queued repo-wide; dispatch_queue.py counts via gh and says why.
+          # Backpressure (manager review 2026-09-29): defer every fire while the
+          # research compute runs queued/in progress reach the total cap, or > 10 runs
+          # are queued repo-wide; dispatch_queue.py counts via gh and says why.
+          # RESEARCH-ROUTER (2026-10-13): the TOTAL cap and each backend's own
+          # max_concurrent (runner 3, trainer 1, kaggle 1) now live in
+          # config/research_compute.yaml, not on this command line.
           ARGS=(--ref "${{ github.ref_name }}" --max-gpu-dispatches-per-run "${{ inputs.max_gpu || '1' }}"
-                --max-research-inflight 3 --max-repo-queued 10)
+                --max-repo-queued 10)
+          # Kaggle weekly GPU quota (token-free): unreadable = GPU units WAIT, never routed blind.
+          if [ -n "${KAGGLE_API_TOKEN:-}" ]; then
+            pip install --quiet "kaggle>=2.0" && kaggle quota > /tmp/kaggle-quota.txt 2>/dev/null || true
+            if [ -s /tmp/kaggle-quota.txt ]; then ARGS+=(--kaggle-quota-file /tmp/kaggle-quota.txt); fi
+          fi
           # --check-open-stamp-prs rides with the fire flag (same FIRE gate): a
           # unit stamped by an OPEN stamp PR is already dispatched (lane RQ-FIX,
           # 2026-10-06); if gh cannot list PRs the cycle defers every fire

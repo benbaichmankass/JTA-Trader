@@ -90,7 +90,7 @@ def test_a_fired_cycle_under_pressure_dispatches_nothing_and_stamps_nothing(tmp_
 
     monkeypatch.setattr(dq, "gh_runs", lambda status, limit=200: _runs(["research-script-run"] * 3) if status == "in_progress" else [])
     monkeypatch.setattr(dq.subprocess, "run", fake_run)
-    rc = dq.main(["--queue-dir", str(q), "--fire", "--ref", "main", "--json"])
+    rc = dq.main(["--queue-dir", str(q), "--fire", "--ref", "main", "--json", "--max-research-inflight", "3"])
     assert rc == 0 and calls == []
     assert "last_dispatched_at: null" in (q / "RQ-20260928-012.yaml").read_text()
 

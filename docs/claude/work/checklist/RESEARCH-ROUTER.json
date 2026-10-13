@@ -1,0 +1,30 @@
+{
+  "id": "RESEARCH-ROUTER",
+  "title": "Token-free research router: compute classes, Kaggle GPU adapter, capacity- and value-aware allocation",
+  "phase": "R",
+  "state": "in_flight",
+  "owner": "lane RESEARCH-ROUTER",
+  "lane": "session_0152EFvvZYHZhJrsuocihAGg",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR 2026-10-13 (voice, paraphrased by the manager): Claude writes the research unit (id + test structure); a dispatcher that uses NO Claude tokens sends each unit to the right compute by test kind and allocates resources toward the highest-priority, highest-value work; ready for planning Wed, running from Wed night. BUILD: config/research_compute.yaml (backends runner/trainer/kaggle/runpod, classes cpu_light|cpu_long|needs_vm_data|gpu|gpu_preferred, capacity, value formula, STRATEGY-REALIGN mix 30/25/20/15/10); scripts/research/compute_router.py (resolver + value score); dispatch_queue.py (class->workflow, per-backend capacity, Kaggle quota floor, value-ranked order within a theme, derivation on every line; dry-run default; explicit run.workflow still wins); research-script-run-kaggle.yml + kaggle_run.py + kaggle_unit/kernel_main.py (Kaggle GPU runner landing through the same collector); docs: PLANNING.md 1b + research-ops skill. DESIGN CALL: the dispatcher stays on the GitHub Actions cron, not a VM: it is token-free either way, a cron keeps load off the 1-OCPU trainer and the money box, needs no new service/Tier-2 change, and already holds the gh auth + stamp/collector path. Waits (never halts) when a backend is full or Kaggle quota is under the floor.",
+  "updated_at": "2026-10-13T10:53:48Z",
+  "updated_by": "session_0152EFvvZYHZhJrsuocihAGg",
+  "_seq": 464,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "writeback": {
+    "roadmap": "L-OPS where/next: research units are routed by compute class and value, not by hand; Kaggle GPU is a routable backend",
+    "arch": "docs/ARCHITECTURE-CANONICAL.md: none -- Tier-1 research tooling; research-ops skill + research/queue/PLANNING.md 1b carry the contract"
+  },
+  "observation": {
+    "what": "(1) a real queue unit with compute: gpu is dispatched by research-queue-dispatch to research-script-run-kaggle.yml and lands research/results/<unit>/<run_id>.jsonl through the collector; (2) the dispatcher dry-run on the live queue prints class->backend and a value derivation per line",
+    "how_to_check": "research/results/<unit>/ ; python3 scripts/research/dispatch_queue.py --kaggle-quota-file <kaggle quota text>",
+    "due_by": "2026-10-15T00:00Z"
+  }
+}
