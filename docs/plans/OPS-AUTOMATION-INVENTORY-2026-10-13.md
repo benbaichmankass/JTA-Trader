@@ -99,8 +99,8 @@ Model mix of the recorded lane dollars: Sonnet $388, Opus $269, Fable $221, none
 
 | Case | ops | builds | research | basis |
 |---|---|---|---|---|
-| Today (recorded basis, est.) | ~56% | ~18% | ~16% | table above |
-| Target | 10% | 20% | **70%** | if the weekly allowance is held fixed |
+| Today (recorded basis, est.) | ~56% | ~18% | ~16% | table above (population: 256 rows touched since 2026-09-29, 67 with spend, plus manager anchor) |
+| Target | 10% | 20% | **70%** | operator-accepted split; assumes the weekly allowance is held fixed (population: n/a, a target) |
 | After wave 1 (S items + assistant manager), est. | ~34% | ~20% | ~46% | §C |
 | After wave 2 (all 15), est. | ~10% | ~20% | ~70% | §C, optimistic |
 
