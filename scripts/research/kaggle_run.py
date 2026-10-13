@@ -57,6 +57,17 @@ def bundle(unit: str, run_id: str, username: str, out: Path, *, repo: Path = _RE
         if not isinstance(e, str) or ".." in e or e.startswith("/") or \
                 not any(e == r or e.startswith(r + "/") for r in EXTRA_ROOTS):
             raise SystemExit(f"run.bundle_paths entry {e!r} must be a repo-relative path under {EXTRA_ROOTS}")
+    # ML-DATA-OFF-TRAINER: a unit that reads published ML data gets that private dataset mounted beside the bundle.
+    published = []
+    name = (raw.get("routing") or {}).get("published_data")
+    if name:
+        pcfg = cr.load_config().get("published_data") or {}
+        if name not in pcfg:
+            raise SystemExit(f"routing.published_data {name!r} is not declared in research_compute.yaml::published_data")
+        problem = cr.published_problem(raw, cr.load_config())
+        if problem:
+            raise SystemExit("kaggle bundle refused: " + problem)
+        published.append(pcfg[name]["kaggle_dataset"])
     files = sorted(set(_tracked([*BUNDLE_ROOTS, f"research/queue/{unit}.yaml", *extra], repo)))
     out.mkdir(parents=True, exist_ok=True)
     tgz = out / "repo.tar.gz"
@@ -77,9 +88,10 @@ def bundle(unit: str, run_id: str, username: str, out: Path, *, repo: Path = _RE
         "id": f"{username}/{KERNEL_SLUG}", "title": KERNEL_SLUG, "code_file": "kernel_main.py",
         "language": "python", "kernel_type": "script", "is_private": "true", "enable_gpu": "true",
         "enable_tpu": "false", "enable_internet": "false",
-        "dataset_sources": [f"{username}/{DATASET_SLUG}"], "competition_sources": [],
+        "dataset_sources": [f"{username}/{DATASET_SLUG}", *[f"{username}/{d}" for d in published]],
+        "competition_sources": [],
         "kernel_sources": [], "model_sources": []}, indent=1) + "\n")
-    return {"files": len(files), "bundle_mb": round(size_mb, 2), "timeout_minutes": p.timeout_minutes,
+    return {"published_data": published, "files": len(files), "bundle_mb": round(size_mb, 2), "timeout_minutes": p.timeout_minutes,
             "kernel_dir": str(kdir)}
 
 

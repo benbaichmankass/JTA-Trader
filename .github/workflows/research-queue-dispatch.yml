@@ -70,6 +70,7 @@ on:
 permissions:
   contents: read
   actions: write   # `gh workflow run` on the routed workflow
+  issues: write    # `gh issue create --label gpu-burst-train`: the RunPod fallback is issue-triggered (ML-DATA-OFF-TRAINER)
 
 jobs:
   # schedule-keeper (scripts/ops/schedule_keeper.py, RQ-OPS-2 2026-09-28):

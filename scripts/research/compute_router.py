@@ -77,8 +77,10 @@ def load_config(path: Optional[Path] = None) -> Dict[str, Any]:
         bl = (c or {}).get("backends") if isinstance(c, dict) else None
         if not (isinstance(bl, list) and bl and all(b in backends for b in bl)):
             errs.append(f"class {name!r}: `backends` must be a non-empty list of declared backends")
-        elif any(not backends[b].get("auto_route", True) for b in bl):
+        elif any(backends[b].get("auto_route", True) is False for b in bl):
             errs.append(f"class {name!r}: lists a backend with auto_route: false (select it with an explicit workflow:)")
+        elif any(backends[b].get("auto_route") == "fallback" and i == 0 for i, b in enumerate(bl)):
+            errs.append(f"class {name!r}: a `fallback` backend cannot be the class's first choice")
     val = doc.get("value")
     if not isinstance(val, dict):
         errs.append("`value` block is required")
@@ -126,16 +128,50 @@ def est_hours(entry: Dict[str, Any]) -> float:
     return max(m, 5.0) / 60.0 if m is not None else 1.0
 
 
+def unit_dataset_paths(entry: Dict[str, Any]) -> List[str]:
+    """Every dataset path an ml_bakeoff unit reads (single `dataset.path` and per-group `groups.*.path`)."""
+    ds = (entry.get("ml_bakeoff") or {}).get("dataset") or {}
+    out = [str(ds["path"])] if ds.get("path") else []
+    groups = ds.get("groups")
+    for g in (groups.values() if isinstance(groups, dict) else []):     # a list of group names (synthetic data) has no paths
+        if isinstance(g, dict) and g.get("path"):
+            out.append(str(g["path"]))
+    return out
+
+
+def published_problem(entry: Dict[str, Any], cfg: Dict[str, Any]) -> Optional[str]:
+    """None when the unit does not claim published data, or the claim holds. Otherwise why the claim is false.
+    ML-DATA-OFF-TRAINER (2026-10-13): a unit may leave the trainer only when EVERY dataset path it reads is in the
+    exporter's allowlist (scripts/ml/market_data_export.py::ALLOW) -- the claim is checked, never trusted."""
+    name = (entry.get("routing") or {}).get("published_data")
+    if not name:
+        return None
+    reg = cfg.get("published_data") or {}
+    if str(name) not in reg:
+        return f"routing.published_data {name!r} is not declared in research_compute.yaml::published_data (have {sorted(reg)})"
+    paths = unit_dataset_paths(entry)
+    if not paths:
+        return "routing.published_data is set but the unit declares no ml_bakeoff.dataset path to check it against"
+    from scripts.ml import market_data_export as mde  # noqa: PLC0415
+    bad = [p for p in paths if not mde.covers(p)]
+    return (f"routing.published_data {name!r} but these dataset paths are NOT in the published allowlist: {bad}") if bad else None
+
+
+def uses_published_data(entry: Dict[str, Any], cfg: Dict[str, Any]) -> bool:
+    return bool((entry.get("routing") or {}).get("published_data")) and published_problem(entry, cfg) is None
+
+
 def derive_class(entry: Dict[str, Any]) -> Optional[str]:
     """`compute: auto` -> a class from the unit's own routing block (never a guess: no routing, no class)."""
     r = entry.get("routing")
     if not isinstance(r, dict) or not r:
         return None
-    if r.get("needs_gpu") and r.get("needs_trainer_resident_data"):
+    vm = bool(r.get("needs_trainer_resident_data")) and not r.get("published_data")
+    if r.get("needs_gpu") and vm:
         return None
     if r.get("needs_gpu"):
         return "gpu"
-    if r.get("needs_trainer_resident_data"):
+    if vm:
         return "needs_vm_data"
     m = _num(r.get("est_minutes"))
     return "cpu_long" if (m is not None and m > 30) else "cpu_light"
@@ -154,7 +190,14 @@ def class_routing_conflict(cls: str, entry: Dict[str, Any], cfg: Dict[str, Any])
     r = entry.get("routing")
     if not isinstance(r, dict) or not r:
         return None
-    gpu, vm = bool(r.get("needs_gpu")), bool(r.get("needs_trainer_resident_data"))
+    pub = published_problem(entry, cfg)
+    if pub:
+        return pub
+    gpu = bool(r.get("needs_gpu"))
+    # published data lifts the trainer requirement (the claim was just checked above)
+    vm = bool(r.get("needs_trainer_resident_data")) and not r.get("published_data")
+    if cls == "needs_vm_data" and r.get("published_data"):
+        return "compute: needs_vm_data but the unit's data is published (routing.published_data) -- it need not wait for the trainer"
     bl = cfg["classes"][cls]["backends"]
     if cls == "gpu" and not gpu:
         return "compute: gpu but routing.needs_gpu is not true"
@@ -175,6 +218,7 @@ class BackendState:
     quota_refresh: str = ""
     quota_note: str = "quota not read"
     total_inflight: int = 0
+    now: Optional[datetime] = None                              # set by the dispatcher; None = do not gate on windows
 
     def busy(self, backend: str) -> int:
         return int(self.inflight.get(backend, 0))
@@ -225,13 +269,80 @@ class Resolution:
     error: str = ""
 
 
+def parse_windows(windows: List[str]) -> List[tuple]:
+    """["03:00-05:00", "07:00-24:00"] -> [(180, 300), (420, 1440)] minutes from 00:00 UTC."""
+    out = []
+    for w in windows:
+        a, b = str(w).split("-")
+        ah, am = (int(x) for x in a.split(":"))
+        bh, bm = (int(x) for x in b.split(":"))
+        out.append((ah * 60 + am, bh * 60 + bm))
+    return out
+
+
+def window_problem(backend: str, entry: Dict[str, Any], cfg: Dict[str, Any], now: Optional[datetime]) -> Optional[str]:
+    """None when `backend` has no window policy, `now` is unknown, or the unit fits an open window starting now."""
+    q = (cfg["backends"][backend].get("queue") or {})
+    if not q.get("windows_utc") or now is None:
+        return None
+    wins = parse_windows(q["windows_utc"])
+    t = now.hour * 60 + now.minute
+    need = est_hours(entry) * 60.0 * float(q.get("safety_factor", 1.0))
+    for a, b in wins:
+        if a <= t < b:
+            if t + need <= b:
+                return None
+            return f"{backend} queue: ~{need:.0f} min (est x{q.get('safety_factor', 1.0):g}) does not fit before the window closes at {b // 60:02d}:{b % 60:02d}Z"
+    nxt = min((a for a, _ in wins if a > t), default=wins[0][0])
+    return f"{backend} queue: {now:%H:%M}Z is in a training/busy window; next idle window opens {nxt // 60:02d}:{nxt % 60:02d}Z"
+
+
+def ledger_month_to_date(cfg: Dict[str, Any], backend: str, now: Optional[datetime], repo: Path = _REPO) -> Dict[str, Any]:
+    """{spent, budget} from the backend's spend ledger, or {error} -- 'could not look' is never zero spend."""
+    import json  # noqa: PLC0415
+    try:
+        d = json.loads((repo / cfg["backends"][backend]["ledger"]).read_text(encoding="utf-8"))
+        month = (now or utcnow()).strftime("%Y-%m")
+        spent = sum(float(r.get("cost_usd") or 0) for r in d.get("runs", [])
+                    if str(r.get("ended_at") or r.get("started_at") or "").startswith(month))
+        return {"spent": spent, "budget": float(d["budget_usd_per_month"])}
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        return {"error": f"{type(exc).__name__}: {exc}"}
+
+
+def fallback_problem(backend: str, entry: Dict[str, Any], cfg: Dict[str, Any], st: BackendState,
+                     repo: Path = _REPO) -> Optional[str]:
+    """None when a `fallback` backend (RunPod) can take the unit: it declared a request, capacity is free and the
+    estimated spend fits the monthly ledger cap. Otherwise why not -- the unit then WAITS (never runs on CPU)."""
+    b = cfg["backends"][backend]
+    req = (entry.get("routing") or {}).get(backend)
+    if not (isinstance(req, dict) and req.get("manifest")):
+        return f"{backend} fallback: unit declares no routing.{backend}.manifest (the pod trains a registered manifest, not a script)"
+    if st.busy(backend) >= int(b["max_concurrent"]):
+        return f"{backend} at capacity ({st.busy(backend)}/{b['max_concurrent']} in flight)"
+    est = _num(req.get("est_cost_usd"))
+    if est is None:
+        est = est_hours(entry) * float(b.get("rate_usd_per_h", 0.0)) * float(b.get("estimate_margin", 1.0))
+    led = ledger_month_to_date(cfg, backend, st.now, repo)
+    if "error" in led:
+        return f"{backend} fallback: spend ledger unreadable ({led['error']}); not routed blind"
+    if led["spent"] + est > led["budget"]:
+        return f"{backend} fallback: ${led['spent']:.2f} spent + ~${est:.2f} would exceed the ${led['budget']:g}/month cap"
+    return None
+
+
 def _available(backend: str, entry: Dict[str, Any], cfg: Dict[str, Any], st: BackendState) -> Optional[str]:
     """None when `backend` can take one more unit now, else why not."""
     b = cfg["backends"][backend]
+    if b.get("auto_route") == "fallback":
+        return fallback_problem(backend, entry, cfg, st)
     if not b.get("auto_route", True):
         return None     # governed by its own gates (e.g. the RunPod ledger + --max-gpu-dispatches-per-run), not by this table
     if st.busy(backend) >= int(b["max_concurrent"]):
         return f"{backend} at capacity ({st.busy(backend)}/{b['max_concurrent']} in flight)"
+    wp = window_problem(backend, entry, cfg, st.now)
+    if wp:
+        return wp
     q = b.get("quota")
     if q:
         if st.quota_hours is None:
@@ -243,6 +354,13 @@ def _available(backend: str, entry: Dict[str, Any], cfg: Dict[str, Any], st: Bac
             return (f"{backend} {q.get('resource', 'GPU')} quota {st.quota_hours:.2f} h left, unit needs ~{need:.2f} h, "
                     f"floor {floor:g} h (refreshes {st.quota_refresh or 'unknown'})")
     return None
+
+
+def effective_backend(be: str, entry: Dict[str, Any], cfg: Dict[str, Any]) -> str:
+    """A backend may name a `published_variant`: the twin a unit uses when it reads published data (the plain runner
+    holds no secret, so the dataset fetch lives in its twin). Only a unit whose published-data claim CHECKS gets it."""
+    v = cfg["backends"][be].get("published_variant")
+    return v if v and uses_published_data(entry, cfg) and v in cfg["backends"] else be
 
 
 def plan(entry: Dict[str, Any], cfg: Dict[str, Any]) -> Resolution:
@@ -266,7 +384,7 @@ def plan(entry: Dict[str, Any], cfg: Dict[str, Any]) -> Resolution:
     conflict = class_routing_conflict(cls, entry, cfg)
     if conflict:
         return Resolution(False, cls=cls, error=conflict + " -- the class and the routing block must agree")
-    be = cfg["classes"][cls]["backends"][0]
+    be = effective_backend(cfg["classes"][cls]["backends"][0], entry, cfg)
     return Resolution(True, be, cfg["backends"][be]["workflow"], cls,
                       "auto" if str(raw).strip() == "auto" else "class",
                       reason=f"compute: {raw} -> class {cls} -> prefers {be}")
@@ -283,7 +401,7 @@ def resolve(entry: Dict[str, Any], cfg: Dict[str, Any], st: Optional[BackendStat
                 base.wait, base.reason = True, why
         return base
     why_not: List[str] = []
-    for be in cfg["classes"][base.cls]["backends"]:
+    for be in (effective_backend(b, entry, cfg) for b in cfg["classes"][base.cls]["backends"]):
         why = _available(be, entry, cfg, st)
         if why is None:
             return Resolution(True, be, cfg["backends"][be]["workflow"], base.cls, base.source,

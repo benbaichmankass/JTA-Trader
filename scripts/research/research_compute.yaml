@@ -17,12 +17,28 @@ backends:
     workflow: research-script-run.yml
     max_concurrent: 3          # == the dispatcher's historical --max-research-inflight 3, unchanged
     cost_weight: 1.0           # relative cost of one hour here (free, but it shares the repo's runner pool)
+    published_variant: github_runner_data   # a unit with routing.published_data runs on this backend's data twin instead
     what: "GitHub-hosted runner: free, ~20 concurrent repo-wide, 6 h/job"
+  github_runner_data:
+    workflow: research-script-run-data.yml
+    max_concurrent: 2          # shares the runner pool with github_runner; each run downloads ~1.5 GB, so it is capped lower
+    cost_weight: 1.0
+    what: "GitHub-hosted runner + the private published ML dataset (ML-DATA-OFF-TRAINER): a unit that sets routing.published_data"
   trainer:
     workflow: research-script-run-trainer.yml
     max_concurrent: 1          # 1 OCPU / 6 GB; the workflow's own concurrency group is global
     cost_weight: 3.0           # scarce: shares the box with the daily cycle and promotion sweep
     what: "trainer VM over SSH: only for units that read trainer-resident data"
+    # The trainer is its OWN queue (ML-DATA-OFF-TRAINER, operator 2026-10-13): a unit bound here is released only into an
+    # IDLE WINDOW, never into the training cycle. Windows are DERIVED from the measured hour-of-day occupancy of the
+    # trainer's own services (comms/cloud/trainer_workload_profile.json, 7 days to 2026-10-13 16:00Z); a test fails if
+    # a window here opens an hour the profile says is busy. A unit must FIT: start + est_minutes x safety_factor <= window end.
+    # Same dispatcher, not a second cron: stamping, landing and the liveness receipt are single-writer, and a second
+    # dispatcher could fire the same unit twice.
+    queue:
+      windows_utc: ["03:00-05:00", "07:00-24:00"]
+      safety_factor: 1.5
+      profile: comms/cloud/trainer_workload_profile.json
   kaggle:
     workflow: research-script-run-kaggle.yml
     max_concurrent: 1
@@ -36,8 +52,27 @@ backends:
     workflow: gpu-burst-train.yml
     max_concurrent: 1
     cost_weight: 8.0
-    auto_route: false          # takes an issue-shaped request and a $10/month ledger; selected only by an explicit workflow:
-    what: "RunPod spot GPU burst (M19): operator-armed, ledger-capped"
+    # "fallback" (ML-DATA-OFF-TRAINER, operator 2026-10-13 (d)): never a class's first choice. Reached only when every earlier
+    # backend of the class is out of quota/capacity AND the unit declares a request it can serve (`routing.runpod:
+    # {manifest, est_cost_usd}` -- the pod trains a registered ML manifest; it does not run arbitrary scripts) AND the
+    # spend fits the ledger cap. GPU_BURST_ARMED still decides whether a pod launches at all. An explicit
+    # run.workflow: gpu-burst-train.yml keeps working exactly as before.
+    auto_route: fallback
+    ledger: comms/gpu_spend_ledger.json     # month-to-date + estimate must stay <= its budget_usd_per_month ($10)
+    rate_usd_per_h: 0.22                    # RTX 3090 spot, July 2026 ledger
+    estimate_margin: 2.0                    # estimate = est_hours x rate x margin when the unit declares no est_cost_usd
+    what: "RunPod spot GPU burst (M19): operator-armed, ledger-capped; GPU fallback when Kaggle quota is short"
+
+# Datasets published OFF the trainer (ML-DATA-OFF-TRAINER, 2026-10-13). A unit that sets `routing.published_data: <name>`
+# reads its shards from this dataset instead of trainer-resident files, so it can run on a runner or Kaggle. The router
+# CHECKS the claim: every ml_bakeoff.dataset path of the unit must be in scripts/ml/market_data_export.py::ALLOW.
+# Market data only; OURS (trades, fills, signals, account, outcome labels) is never published. Private Kaggle dataset.
+published_data:
+  metis-market-data:
+    kaggle_dataset: metis-market-data      # owner = the KAGGLE_API_TOKEN user
+    exporter: .github/workflows/ml-data-export-kaggle.yml
+    refresh: "daily 06:40Z, after the nightly shard rebuild"
+    env: ML_DATA_ROOT                      # the dir that CONTAINS datasets-out/ ; ml_bakeoff resolves relative paths from it
 
 # Class -> ordered backend preference. The first backend that is not over capacity / quota wins.
 # A class with one backend WAITS when it is full; listing a second backend is the declared fallback.
@@ -45,13 +80,13 @@ classes:
   cpu_light:      {backends: [github_runner], what: "<= ~30 min, public data / repo data, no GPU"}
   cpu_long:       {backends: [github_runner], what: "30 min .. 5.5 h, public data / repo data, no GPU"}
   needs_vm_data:  {backends: [trainer],       what: "reads trainer-resident data / weights; fits in 6 GB"}
-  gpu:            {backends: [kaggle],        what: "needs a GPU; waits for quota rather than running on CPU"}
+  gpu:            {backends: [kaggle, runpod], what: "needs a GPU; Kaggle first, RunPod burst (ledger-capped, manifest requests only) when Kaggle quota is short; never runs on CPU"}
   gpu_preferred:  {backends: [kaggle, github_runner], what: "GPU if quota allows, else the CPU path (the script must support both)"}
 
 # Dispatcher-wide ceilings. The per-backend max_concurrent above is the ONE capacity statement per backend;
 # these bound the sum, so research can never saturate the runner pool a system-action waits in.
 limits:
-  max_total_inflight: 5        # runner 3 + trainer 1 + kaggle 1
+  max_total_inflight: 7        # runner 3 + runner_data 2 + trainer 1 + kaggle 1
   max_repo_queued: 10          # unchanged from the dispatcher's flag default
 
 # Value ranking. score = usd_per_month * confidence * bucket_boost * hand_written_boost * age_boost / cost

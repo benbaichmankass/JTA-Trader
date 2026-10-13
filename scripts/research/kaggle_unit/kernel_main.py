@@ -64,6 +64,13 @@ else:
     shutil.copytree(root, repo)
 print("== gpu:", subprocess.run(["nvidia-smi", "-L"], capture_output=True, text=True, check=False).stdout.strip())
 env = dict(os.environ, PYTHONPATH=repo, GITHUB_SHA=str(spec.get("commit_sha", "")))
+# ML-DATA-OFF-TRAINER: a unit with routing.published_data has the private market-data dataset mounted too; the dir that
+# holds its MANIFEST.json is the one that CONTAINS datasets-out/, which is what ml_bakeoff resolves relative paths from.
+_pub = sorted(m for m in glob.glob("/kaggle/input/**/MANIFEST.json", recursive=True)
+              if os.path.isdir(os.path.join(os.path.dirname(m), "datasets-out")))
+if _pub:
+    env["ML_DATA_ROOT"] = os.path.dirname(_pub[0])
+    print("== ML_DATA_ROOT:", env["ML_DATA_ROOT"])
 rc = subprocess.run([sys.executable, "scripts/research/script_run.py", "--unit", unit, "--run-id", run_id, "--run"],
                     cwd=repo, env=env).returncode
 print("== script_run exit:", rc)
