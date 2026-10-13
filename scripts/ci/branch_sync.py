@@ -30,7 +30,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import check_pr_landing as cpl  # noqa: E402
+import check_pr_landing as cpl
 
 HOLD_LABEL = "landing:hold"
 MAX_UPDATES = 10
@@ -78,7 +78,7 @@ class Gh:
         cmd = ["gh", "api", "-X", method, f"repos/{self.repo}/{path}"]
         for k, v in fields.items():
             cmd += ["-f", f"{k}={v}"]
-        p = subprocess.run(cmd, capture_output=True, text=True)
+        p = subprocess.run(cmd, capture_output=True, text=True, check=False)
         if p.returncode:
             raise RuntimeError(p.stderr.strip() or p.stdout.strip())
         return json.loads(p.stdout) if p.stdout.strip() else None
@@ -96,8 +96,8 @@ def landing_decl(gh, pr: dict) -> dict | None:
 def run(gh, repo: str, have_pat: bool, sleep=time.sleep, dry_run: bool = False) -> list[str]:
     log: list[str] = []
     if not have_pat:
-        return ["REFUSED: BRANCH_PROTECTION_TOKEN absent. A GITHUB_TOKEN update would leave the new head "
-                "with no checks, so nothing was updated."]
+        return [("REFUSED: BRANCH_PROTECTION_TOKEN absent. A GITHUB_TOKEN update would leave the new head "
+                 "with no checks, so nothing was updated.")]
     updated = 0
     for item in gh.api("GET", "pulls?state=open&base=main&per_page=100") or []:
         n = item["number"]
