@@ -17,7 +17,7 @@ Observation window: one run, one account, one moment. Queue time (≈90 s) and t
 
 ### First dispatch, for the record (run 38382717680, 10:20Z)
 
-Failed in 1 s: `KAGGLE_API_TOKEN` reached the job as an empty string before any Kaggle call (the repository secret was missing or mis-scoped). The operator re-saved it as a repository secret and the second dispatch passed. The cleanup/upload steps of that first run produced noise because the username never resolved; they are now skipped when `USERNAME` is empty.
+Failed in 1 s: `KAGGLE_API_TOKEN` reached the job as an empty string before any Kaggle call (why was never established: a session cannot list secrets, so "missing", "wrong scope" and "saved empty" are all untested). The operator re-saved it as a repository secret and the second dispatch passed. The cleanup/upload steps of that first run produced noise because the username never resolved; they are now skipped when `USERNAME` is empty.
 
 ## What is established about the client (read from `kaggle==2.2.4` source, 2026-10-13)
 
