@@ -1,10 +1,17 @@
-"""HTF trend-pullback continuation — units-layer adapter (SCAFFOLD, not wired).
+"""HTF trend-pullback continuation — units-layer adapter (LIVE-WIRED).
 
 Rank-2 candidate from the new-strategy research pass
-(docs/research/new-strategy-candidates-2026-05-31.md). **Not yet wired** into
-``strategy_signal_builders.py``, ``intents.py``, or ``config/strategies.yaml``
-(registration is explicit; no auto-discovery) — inert until the Tier-3
-activation PR. Backtested via ``scripts/backtest_pullback.py`` first.
+(docs/research/new-strategy-candidates-2026-05-31.md). **Wired and live-path:**
+``strategy_signal_builders.py`` calls this unit's ``order_package()`` and
+``intent_multiplexer.py`` dispatches ``htf_pullback_trend_2h_signal_builder``
+for every enabled ``config/strategies.yaml`` block that names it (the base BTC 2h
+leg traded real money on ``bybit_2`` from 2026-06-02 until it was demoted to
+``execution: shadow`` on 2026-08-23). Treat edits here as order-path changes
+(Tier 2/3), not scaffold work. ⚠️ The enabled-leg and live/shadow counts move
+with every roster edit — read ``config/strategies.yaml``, do not quote a number.
+(The pre-2026-10-12 header called this a "SCAFFOLD, not wired … inert until the
+Tier-3 activation PR"; false in the field — CA-A05-006.) Backtested via
+``scripts/backtest_pullback.py`` first.
 
 Strategy summary
 ----------------
@@ -728,6 +735,7 @@ def monitor(cfg, candles_df, open_pkg):
     # (rolling(win, min_periods=win).rank(pct=True)) are identical to the
     # trend_donchian helpers resolve_vol_trail_mult reuses, so live == train
     # for the pullback family too. Fail-safe to base_mult; never raises.
+    _pre_vol_mult = trail_mult
     try:
         from src.runtime.trail_vol import resolve_vol_trail_mult
 
@@ -735,6 +743,17 @@ def monitor(cfg, candles_df, open_pkg):
                                             trail_mult, direction,
                                             open_pkg=open_pkg)
     except Exception:  # noqa: BLE001 — the lever must never break the trail
+        pass
+    # P5 live-parity instrument (M20-EXITS): LOG-ONLY shadow of the vol_trail
+    # reference cell, never feeds trail_mult; see src/runtime/trail_vol_shadow.py.
+    try:
+        from src.runtime.trail_vol_shadow import record_vol_trail_shadow
+
+        record_vol_trail_shadow(
+            meta=meta, cfg_dict=cfg_dict, open_pkg=open_pkg,
+            candles_df=candles_df, window=window, live_mult=_pre_vol_mult,
+            atr=atr, sl=sl, current_price=current_price, direction=direction)
+    except Exception:  # noqa: BLE001 — observe-only
         pass
     # M31 P2 — position telemetry (observe-only); see trend_donchian.monitor
     # for the contract. Hooked here because `window` is already the since-entry

@@ -55,7 +55,7 @@ import tempfile
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable
 
@@ -70,6 +70,7 @@ _RESEARCH_QUEUE = Path("research/queue")
 _SUNSET_DIR = Path("comms/sunset")
 _SUNSET_DISPOSITIONS = Path("docs/claude/SUNSET-DISPOSITIONS.json")
 _PROBES = Path("docs/claude/PROBES.json")
+_ROUTING_AGE_TOOL = Path("scripts/ops/checklist_routing_age.py")
 _ROUTING_AGE = Path("docs/claude/work/CHECKLIST-ROUTING-AGE.json")
 _ERROR_FEED = Path("docs/claude/ERROR-FEED-DIGEST.json")
 # How many error-level cause groups the due-list renders inline. A RENDERING
@@ -85,6 +86,15 @@ _ERROR_FEED_MAX_ROWS = 10
 # missed run plus a retry without absorbing a whole day.
 _ERROR_FEED_STALE_AFTER_H = 6.0
 _PROBES_WORKFLOW = Path(".github/workflows/probes.yml")
+
+#: The stuck-automation-branch receipt, written by the same `probes` run.
+#: Its carrier is `scripts/ops/stuck_automation_branches.py --receipt`.
+_STUCK_RECEIPT = Path("docs/claude/STUCK-BRANCHES.json")
+_STUCK_CARRIER = "stuck_automation_branches.py"
+_OPEN_PR_RECORD_TOOL = Path("scripts/ops/open_pr_record.py")
+_OPEN_PR_RECORD = Path("docs/claude/work/OPEN-PRS.json")
+_QUEUE_WATCH_GUARD = Path("scripts/ci/check_manager_queue_watch.py")
+_QUEUE_WATCH_RECEIPT = Path("docs/claude/work/MANAGER-QUEUE-WATCH.json")
 # Slack on top of the declared cadence before a report is called stale. The
 # probes job carries `timeout-minutes: 60`, so a run that starts on time can
 # still be committing an hour later; 6h absorbs that plus a retry without
@@ -139,6 +149,105 @@ def _day(v: Any) -> date | None:
         return None
 
 
+#: The tracking-id prefixes `scripts/ops/check_backlog_refs.py::REF` matches.
+#:
+#: ⚠️ DELIBERATELY A COPY, NOT AN IMPORT, AND THE DRIFT IS CLOSED BY A TEST.
+#: `check_backlog_refs.py` is a CI guard with its own argv/exit contract, and
+#: importing it here to read one regex would put a guard's module-scope work on
+#: the hot path of the renderer that guard grades. `tests/test_due_list_id_safe_
+#: truncation.py` parses `REF` out of that file and asserts this set equals it,
+#: so the two cannot diverge silently — which is the only failure a copy has.
+_ID_PREFIXES = ("BL", "MB", "FU")
+
+#: A register id left DANGLING by a cut: the id shape, anchored to the end of
+#: the clipped string. The trailing `-?` matters — a cut can land on the hyphen
+#: itself, and a cut ending `…-BYBIT2-` is just as dangling as one ending
+#: `…-PAGE-R`. (The examples are written WITHOUT their date digits on
+#: purpose — see the note in `_clip`'s docstring.)
+_ID_TAIL = re.compile(
+    r"\b(?:" + "|".join(_ID_PREFIXES) + r")-\d{0,8}(?:-[A-Z0-9]+)*-?[A-Z0-9]*$"
+)
+
+
+def _clip(text: Any, limit: int) -> str:
+    """`text` truncated to `limit`, NEVER leaving a partial tracking id behind.
+
+    ⚠️ THIS IS NOT COSMETIC — A TRUNCATED ID IS A REFERENCE THAT RESOLVES TO
+    NOTHING, AND IT TOOK THE DUE-LIST OFF THE AIR FOR FOUR DAYS. A bare
+    ``[:200]`` over register-supplied prose cuts wherever 200 characters land.
+    On 2026-09-12 that happened to land inside a filed id, so from the next
+    render onward every ``DUE.json``/``DUE.md`` carried
+    a 37-character prefix of the real ``BL-<YYYYMMDD>-BYBIT2-SETTLE-COIN-PAGE-``
+    row — a reference that matches nothing. ``check_backlog_refs.py`` then
+    correctly refused the
+    commit, so **the producer generated output its own repo could never accept**
+    and `error-feed-digest.yml` landed 0 of 22 runs. A generated artifact that
+    CI must reject is a self-strangling loop, not a flake.
+
+    ⚠️ THE CLASS WAS KNOWN AND THE FIX DID NOT REACH THE PRODUCER. This file
+    already carried a comment (at the `src_probes` hand-off) saying an id is
+    kept on one line *because* wrapping truncates it; and
+    `check_backlog_refs.py::suggest_for` records measuring n=3 truncations on
+    2026-09-13 and concluding the failure mode is REFORMATTING. Both readings
+    were right and both looked only at **hand-written prose**. Neither asked
+    whether anything truncates ids *programmatically* — and something did,
+    hourly, into a committed artifact.
+
+    The rule is: **the whole id, or none of it.**
+
+    - Cut lands in ordinary text → plain truncation, unchanged behaviour.
+    - Cut lands inside an id → cut again *before* that id starts.
+    - …and that would leave nothing (the id begins at offset 0 and is itself
+      longer than `limit`) → keep the id WHOLE and overrun `limit`.
+
+    That last branch is the one worth defending: it is the only case where this
+    returns more than `limit` characters. Ids are bounded (~150 chars on the
+    live register), an over-long row is a readability cost, and the alternative
+    — emitting a fragment — is the defect. A row that reads as tracked while
+    being tracked by nobody is the exact crack the 2026-07-30 operator directive
+    names, and it is worse than a long line.
+
+    ⚠️ THE EXAMPLES ABOVE ARE DELIBERATELY WRITTEN WITHOUT THEIR DATE DIGITS,
+    AND RESTORING THEM RE-BREAKS THIS FILE. ``check_backlog_refs.py`` scans
+    ``scripts/`` as well as ``docs/``, and its ``REF`` needs ``\d{8}`` to
+    match — so spelling a truncated id literally here makes THIS docstring a
+    dangling reference and fails the guard. Writing the explanation re-created
+    the finding it explains; that is recorded rather than quietly worked
+    around, because it is the same shape as the bug.
+
+    ⚠️ IT NEVER REWRITES, ONLY CLIPS. Nothing here repairs a dangling id that
+    was already dangling in the register — that is the author's to fix, and
+    `check_backlog_refs.py` still says so. This only guarantees the renderer
+    does not MANUFACTURE one.
+    """
+    text = str(text if text is not None else "")
+    if limit <= 0 or len(text) <= limit:
+        return text
+
+    cut = text[:limit]
+    # Does the boundary fall INSIDE a token? If the next character cannot
+    # continue an id, nothing was split and the plain cut is correct.
+    nxt = text[limit]
+    if not (nxt.isalnum() or nxt == "-"):
+        return cut
+
+    m = _ID_TAIL.search(cut)
+    if m is None:
+        return cut
+
+    head = cut[:m.start()].rstrip()
+    if head:
+        return head
+
+    # The id starts at offset 0 and does not fit. Emit it whole rather than
+    # emit a fragment — see the docstring's third bullet.
+    whole = re.match(
+        r"\b(?:" + "|".join(_ID_PREFIXES) + r")-\d{8}-[A-Z0-9]+(?:-[A-Z0-9]+)*",
+        text,
+    )
+    return whole.group(0) if whole else cut
+
+
 # ── sources ────────────────────────────────────────────────────────────────
 
 def src_open_items(root: Path, today: date) -> SourceResult:
@@ -158,7 +267,7 @@ def src_open_items(root: Path, today: date) -> SourceResult:
     rows = []
     for it in items:
         ident = it.get("id", "(no id)")
-        title = (it.get("summary") or "")[:200]
+        title = _clip(it.get("summary"), 200)
         loud = bool(it.get("loud"))
         # Both spellings occur in the live register; neither is authoritative.
         last = _day(it.get("verified_at")) or _day(it.get("last_checked"))
@@ -271,7 +380,7 @@ def src_soaks(root: Path, today: date) -> SourceResult:
             # nobody can read is not a soak that has been checked, and silently
             # dropping it would make a typo look like a row with no soak.
             tally["unknown"] += 1
-            rows.append(_row("soaks", ident, (it.get("summary") or "")[:200],
+            rows.append(_row("soaks", ident, _clip(it.get("summary"), 200),
                              "soak declaration is UNGRADEABLE — " + "; ".join(bad)))
             continue
 
@@ -291,7 +400,7 @@ def src_soaks(root: Path, today: date) -> SourceResult:
         if not v.surfaces:
             context.append(f"{ident}: {v.state}")
             continue
-        rows.append(_row("soaks", ident, (it.get("summary") or "")[:200],
+        rows.append(_row("soaks", ident, _clip(it.get("summary"), 200),
                          f"soak {v.state.upper()} — {v.why}",
                          age_days=v.days_since_declared, loud=v.escalates))
 
@@ -366,7 +475,7 @@ def src_operator_owed(root: Path, today: date) -> SourceResult:
                f"{sorted(open_statuses | terminal_statuses)} — ungradeable, "
                f"surfaced rather than dropped")
         rows.append(_row("operator_owed", it.get("id", "(no id)"),
-                         (it.get("title") or "")[:200],
+                         _clip(it.get("title"), 200),
                          why,
                          age_days=(today - opened).days if opened else None,
                          loud=True))
@@ -537,7 +646,7 @@ def src_probes(
             continue
         if state == "fail":
             rows.append(_row("probes", r.get("id", "(no id)"),
-                             (r.get("checks") or "")[:200],
+                             _clip(r.get("checks"), 200),
                              "probe FAILED — its declared observation did not hold" + stamp,
                              loud=True))
         elif state == "could_not_run" and r.get("reason") != "no_probe_declared":
@@ -590,7 +699,7 @@ def src_research_queue(
                 elif s.startswith("title:") and not title:
                     title = s.split(":", 1)[1].strip()
             if status == "queued":
-                rows.append(_row("research_queue", f.stem, title[:200],
+                rows.append(_row("research_queue", f.stem, _clip(title, 200),
                                  "research job still queued"))
     except OSError as exc:
         return SourceResult("research_queue", "could_not_read", note=f"OSError: {exc}")
@@ -642,6 +751,324 @@ def src_red_crons(
     return SourceResult("red_crons", "read", rows)
 
 
+#: Conclusions that are NOT a finding on a push-to-`main` run.
+#:
+#: ⚠️ `cancelled` IS IN HERE AND `src_red_crons` DELIBERATELY DOES NOT EXCLUDE
+#: IT, because the two sources watch different things. `guards.yml`'s
+#: concurrency group on a push is `guards-push-refs/heads/main` -- the SAME
+#: string for every commit -- with `cancel-in-progress: true`, so each merge
+#: cancels the previous commit's run. MEASURED 2026-09-13: 3 of the 15 most
+#: recent push-on-`main` guard runs concluded `cancelled`. Treating those as
+#: findings would put a row on the due list for ordinary merge traffic, which
+#: is the desensitised-alarm failure this repo calls its own worst.
+#:
+#: ⚠️ AND CANCELLING LOSES NO COVERAGE, which is why it is safe to ignore:
+#: `main` is linear, so a later commit's run grades the whole tree including
+#: the earlier commit's content. A cancelled run is a DELAY -- median
+#: inter-merge gap 2.7 min -- not a gap.
+_PUSH_RUN_NOT_A_FINDING = (None, "success", "cancelled", "skipped")
+
+
+#: Three never-collapsed answers to "how far behind `main`'s tip was the commit
+#: this verdict actually graded?". `distance_unknown` is *we could not look* and
+#: is NEVER folded into `at_tip` — the whole defect being repaired here is a
+#: verdict that read as a statement about the tip without having graded it.
+GRADE_AT_TIP = "at_tip"
+GRADE_BEHIND_TIP = "behind_tip"
+GRADE_DISTANCE_UNKNOWN = "distance_unknown"
+
+
+def grade_distance(main_shas: list[str],
+                   graded_sha: str | None) -> tuple[str, int | None]:
+    """How many commits on `main` are NEWER than the one a run graded.
+
+    `main_shas` is newest-first, as the commits API returns it, so the INDEX is
+    the distance: index 0 is the tip and therefore distance 0.
+
+    ⚠️ A sha that is not in the list returns `distance_unknown`, NEVER
+    `len(main_shas)`. The list is one page, so absence means *the commit is
+    older than the page* OR *it is not on `main` at all* — two different facts,
+    and inventing a number for either would put a fabricated denominator on a
+    verdict whose whole defect was having none.
+    """
+    if not graded_sha or not main_shas:
+        return GRADE_DISTANCE_UNKNOWN, None
+    try:
+        idx = main_shas.index(graded_sha)
+    except ValueError:
+        return GRADE_DISTANCE_UNKNOWN, None
+    return (GRADE_AT_TIP if idx == 0 else GRADE_BEHIND_TIP), idx
+
+
+def _placement_phrase(state: str, dist: int | None) -> str:
+    """Render one graded commit's placement for a human, denominator attached."""
+    if state == GRADE_AT_TIP:
+        return "`main`'s tip"
+    if state == GRADE_BEHIND_TIP:
+        return f"{dist} commit(s) behind `main`'s tip"
+    return "distance from the tip UNKNOWN — we could not look"
+
+
+def _red_main_note(placements: dict[str, tuple[str, int | None]],
+                   red_n: int, commits_note: str) -> str:
+    """State the population a `red_main_runs` verdict rests on.
+
+    ⚠️ THE ZERO-ROW CASE IS WHY THIS EXISTS. The source emits a row only on a
+    real failure, so a green run renders as no rows at all — which reads as
+    *the default branch is clean* while what was established is only *the most
+    recent commit anyone graded was clean*. MEASURED 2026-09-17: `main`'s tip
+    was `00045e5d3` while the newest COMPLETED push-to-main `guards` run had
+    graded `88de5e156`, **4 commits back, all 4 of them touching a register** —
+    the class that turned `main` red twice that day. `main` happened to be
+    clean; the point is that this source could not tell the two apart.
+    """
+    graded = len(placements)
+    behind = [d for (s, d) in placements.values()
+              if s == GRADE_BEHIND_TIP and d is not None]
+    unknown = sum(1 for (s, _d) in placements.values()
+                  if s == GRADE_DISTANCE_UNKNOWN)
+    at_tip = sum(1 for (s, _d) in placements.values() if s == GRADE_AT_TIP)
+    parts = [
+        f"{graded} workflow(s) graded, {red_n} red",
+        f"{at_tip} graded at `main`'s tip",
+        (f"worst distance {max(behind)} commit(s) behind"
+         if behind else "none graded behind the tip"),
+        f"{unknown} with distance_unknown",
+    ]
+    if commits_note:
+        parts.append(commits_note)
+    parts.append(
+        "⚠️ ZERO RED ROWS IS NOT A CLEAN NEGATIVE ABOUT THE TIP — each verdict "
+        "is the latest COMPLETED push run, and an auto-merged PR produces no "
+        "push run at all, so the tip is routinely ungraded")
+    return " · ".join(parts)
+
+
+def src_red_main_runs(
+    root: Path,  # inert: root — every source shares ONE signature so `collect` dispatches them uniformly; this one has no use for it
+    today: date,  # inert: today — every source shares ONE signature so `collect` dispatches them uniformly; this one has no use for it
+    *,
+    token: str | None = None,
+) -> SourceResult:
+    """Push-to-`main` runs whose latest conclusion is a real failure.
+
+    ⚠️ WHY THIS EXISTS BESIDE `src_red_crons`, WHICH LOOKS LIKE IT ALREADY
+    COVERS IT. That source queries `?event=schedule` and nothing else; its own
+    docstring calls its class *"a nightly nobody is waiting on"*. A run on the
+    DEFAULT BRANCH is a different class and was read by nothing.
+
+    MEASURED 2026-09-13, every link:
+      * `main` at `2a6c1b24d` carried a duplicated register id -- 1575 rows,
+        one id twice.
+      * `check_register_ids.py` at that commit exits 1. R1 (whole-file
+        uniqueness) needs no `--base`, so a push run had everything it needed.
+      * `guards.yml` carries `push: branches: [main]` (1370 runs) and
+        `register-id-guard` is `when: None`, always-on.
+      * So `main` was red-capable, and the duplicate was nonetheless found by
+        an unrelated PR author tripping over it --
+        `BL-20260913-A-DUPLICATE-ROW-ID-REACHED-MAIN-AND-TURNED-REGISTER-ID-GUARD-RED-FOR-EVERY-BACKLOG-TOUCHING-PR-IN-THE-REPO`.
+
+    That row asks for a CADENCE against the default branch. The cadence was
+    already there; what was missing is that its RED reached nobody. Building a
+    cron would have added a mechanism beside a working one and left the gap
+    open -- the `RC-BUILT-A-MECHANISM-THAT-ALREADY-EXISTED` shape.
+
+    ⚠️ NOT OBSERVED, AND SAID RATHER THAN IMPLIED: I did not enumerate
+    historical red push runs, so *that specific run went red rather than being
+    cancelled* is inferred. The gap holds either way -- a cancelled run is
+    superseded by the next, and nothing routed that one either.
+
+    ⚠️ LATEST PER WORKFLOW, NOT EVERY FAILURE. `main` takes hundreds of commits
+    a day; listing every historical red would be a backlog, not a signal. What
+    is actionable is whether the default branch is red NOW.
+    """
+    token = token if token is not None else os.environ.get("GITHUB_TOKEN", "")
+    if not token:
+        return SourceResult("red_main_runs", "could_not_read",
+                            note="no GITHUB_TOKEN — cannot query the Actions API")
+    try:
+        data = _gh(f"/repos/{REPO}/actions/runs"
+                   f"?event=push&branch=main&per_page=100", token)
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        return SourceResult("red_main_runs", "could_not_read",
+                            note=f"{type(exc).__name__}: {exc}")
+
+    #: `main`'s recent commits, newest-first, so every verdict can name the
+    #: commit it graded and how far back that is.
+    #: ⚠️ A FAILURE HERE MUST NOT SUPPRESS A RED ROW. The point of this source
+    #: is the red; losing it because the denominator could not be read would be
+    #: strictly worse than the unprovenanced verdict this repairs. On failure
+    #: every placement degrades to `distance_unknown` and the reds still ship.
+    main_shas: list[str] = []
+    commits_note = ""
+    try:
+        commits = _gh(f"/repos/{REPO}/commits?sha=main&per_page=100", token)
+        main_shas = [c.get("sha", "") for c in commits if isinstance(c, dict)]
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        commits_note = (f"could not read `main`'s commit list "
+                        f"({type(exc).__name__}) — every distance below reads "
+                        f"`distance_unknown`")
+
+    latest: dict[str, dict] = {}
+    for run in data.get("workflow_runs", []):
+        if run.get("status") != "completed":
+            continue                      # still running is not yet an answer
+        name = run.get("name") or run.get("path", "?")
+        if name not in latest:            # the API returns newest-first
+            latest[name] = run
+
+    rows = []
+    placements: dict[str, tuple[str, int | None]] = {}
+    for name, run in sorted(latest.items()):
+        sha = run.get("head_sha") or ""
+        placements[name] = grade_distance(main_shas, sha)
+        if run.get("conclusion") in _PUSH_RUN_NOT_A_FINDING:
+            continue
+        rows.append(_row("red_main_runs", name, name,
+                         f"the latest push-to-main run of {name} concluded "
+                         f"{run.get('conclusion')!r} — the DEFAULT BRANCH is "
+                         f"red, and until 2026-09-13 nothing read this. Graded "
+                         f"at {sha[:9] or '(no sha)'}, "
+                         f"{_placement_phrase(*placements[name])}",
+                         loud=True, link=run.get("html_url", "")))
+    return SourceResult("red_main_runs", "read", rows,
+                        note=_red_main_note(placements, len(rows), commits_note))
+
+
+
+def _declared_workflow_names(root: Path) -> tuple[dict[str, str], list[str], int]:
+    """Map `.github/workflows/<f>` -> the `name:` the FILE declares.
+
+    Returns (declared, unreadable, no_name_count).
+
+    ⚠️ THE `no_name` BUCKET IS THE WHOLE REASON THIS READS THE FILES AT ALL.
+    GitHub reports a workflow's `name` as its PATH in two completely different
+    situations: when the file declares no `name:` (correct, ordinary), and when
+    GitHub could not parse the file (the defect). Without the local declaration
+    there is no way to tell them apart, and a source that skipped this step
+    would raise a loud row for every name-less workflow in the repo.
+    """
+    declared: dict[str, str] = {}
+    unreadable: list[str] = []
+    no_name = 0
+    wf_dir = root / ".github" / "workflows"
+    if not wf_dir.is_dir():
+        return declared, unreadable, no_name
+    try:
+        import yaml
+    except ImportError:                 # handled by the caller; never silent
+        raise
+    for f in sorted(list(wf_dir.glob("*.yml")) + list(wf_dir.glob("*.yaml"))):
+        rel = f".github/workflows/{f.name}"
+        try:
+            doc = yaml.safe_load(f.read_text(encoding="utf-8"))
+        except Exception:
+            unreadable.append(rel)
+            continue
+        if isinstance(doc, dict) and isinstance(doc.get("name"), str) and doc["name"].strip():
+            declared[rel] = doc["name"]
+        else:
+            no_name += 1
+    return declared, unreadable, no_name
+
+
+def src_unparseable_workflows(
+    root: Path,
+    today: date,  # inert: today — every source shares ONE signature so `collect` dispatches them uniformly; this one has no use for it
+    *,
+    token: str | None = None,
+) -> SourceResult:
+    """Workflows GitHub holds but has never been able to PARSE.
+
+    A workflow file that is valid YAML can still be invalid to Actions. When it
+    is, GitHub fails EVERY run of it at startup — zero jobs, zero duration — and
+    reports the workflow's `name` as its PATH, because it never read a `name:`
+    out of the file.
+
+    MEASURED 2026-09-17, which is why this exists:
+      * `.github/workflows/ranking-key-ab.yml` has **3,393 completed runs**; the
+        newest 100, spanning 2.6 hours, are 100/100 `failure`, 100/100 zero
+        duration, `total_jobs: 0`. ~38 failing runs an hour.
+      * GET /actions/workflows/ranking-key-ab.yml returns
+        `name: '.github/workflows/ranking-key-ab.yml'` with `state: active`,
+        while the file itself declares `name: ranking-key-ab` on its first line.
+      * NOTHING PAGED ON IT. `claude-run-failure-alert.yml` scopes to CRON'D
+        workflows and this one declares no `schedule:`, so it is correctly out
+        of that guard's reach — and that guard's premise ("on a relay someone is
+        waiting") does not hold for an ordinary push-triggered workflow.
+      * It was found only because `src_red_main_runs` happened to surface it.
+
+    ⚠️ THIS REPORTS THE CONDITION, NOT ITS CAUSE, and says so in the row. Three
+    hypotheses for `ranking-key-ab` are already refuted with positive controls
+    (the 10-input `workflow_dispatch` cap — `system-actions.yml` has 14 and
+    parses; input description length — `m20-exit-lever-sweep.yml` is longer and
+    parses; an empty concurrency group — the group is always populated). A
+    fourth guess dressed as a cause would be worse than the open question.
+    """
+    token = token if token is not None else os.environ.get("GITHUB_TOKEN", "")
+    if not token:
+        return SourceResult("unparseable_workflows", "could_not_read",
+                            note="no GITHUB_TOKEN — cannot ask GitHub what it parsed")
+    try:
+        declared, unreadable, no_name = _declared_workflow_names(root)
+    except ImportError:
+        return SourceResult("unparseable_workflows", "could_not_read",
+                            note="PyYAML is absent, so the declared names could "
+                                 "not be read — and without them a path-named "
+                                 "workflow cannot be told from an unparseable one")
+    if not declared:
+        return SourceResult("unparseable_workflows", "could_not_read",
+                            note="no workflow file declares a name — that is a "
+                                 "missing denominator, not a clean repo")
+
+    #: ⚠️ PAGINATED DELIBERATELY. The repo carries ~143 workflow files against a
+    #: 100-per-page API, so a single page would silently grade two thirds of
+    #: them and report the rest as clean.
+    seen: dict[str, str] = {}
+    page = 1
+    while page <= 10:
+        try:
+            data = _gh(f"/repos/{REPO}/actions/workflows"
+                       f"?per_page=100&page={page}", token)
+        except (urllib.error.URLError, OSError, ValueError) as exc:
+            return SourceResult("unparseable_workflows", "could_not_read",
+                                note=f"page {page}: {type(exc).__name__}: {exc}")
+        batch = data.get("workflows", [])
+        if not batch:
+            break
+        for wf in batch:
+            p = wf.get("path") or ""
+            if p and p not in seen:
+                seen[p] = wf.get("name") or ""
+        if len(batch) < 100:
+            break
+        page += 1
+
+    rows = []
+    graded = 0
+    for path, declared_name in sorted(declared.items()):
+        github_name = seen.get(path)
+        if github_name is None:
+            continue                      # GitHub holds no record for it yet
+        graded += 1
+        if github_name == path:
+            rows.append(_row(
+                "unparseable_workflows", path, path,
+                f"GitHub reports this workflow's name as its PATH while the file "
+                f"declares `name: {declared_name}` — so GitHub has never parsed "
+                f"it, and EVERY run of it fails at startup with zero jobs. The "
+                f"CONDITION is the finding; the CAUSE is not established here and "
+                f"a guess would be worse than the open question",
+                loud=True,
+                link=f"https://github.com/{REPO}/actions/workflows/{path.split('/')[-1]}"))
+
+    note = (f"{len(seen)} workflow(s) known to GitHub · {len(declared)} local "
+            f"file(s) declare a name · {graded} gradeable (both sides present) · "
+            f"{no_name} skipped because the file declares NO name, where a "
+            f"path-valued name is CORRECT rather than a defect · "
+            f"{len(unreadable)} local file(s) unreadable as YAML")
+    return SourceResult("unparseable_workflows", "read", rows, note=note)
+
 def src_unlanded_automation(
     root: Path,  # inert: root — every source shares ONE signature so `collect` dispatches them uniformly; this one has no use for it
     today: date,
@@ -665,7 +1092,7 @@ def src_unlanded_automation(
             continue
         opened = _day(pr.get("created_at"))
         rows.append(_row("unlanded_automation", f"#{pr.get('number')}",
-                         (pr.get("title") or "")[:200],
+                         _clip(pr.get("title"), 200),
                          "producer output opened a PR that has not landed",
                          age_days=(today - opened).days if opened else None,
                          loud=True, link=pr.get("html_url", "")))
@@ -767,7 +1194,7 @@ def src_error_feed(
             "ERRFEED-" + hashlib.sha1(
                 g.get("cause", "").encode("utf-8")).hexdigest()[:8],
             f"[{g.get('level')}] {'NEW ' if g.get('is_new') else ''}"
-            f"x{g.get('count')} {g.get('cause', '')[:140]}",
+            f"x{g.get('count')} {_clip(g.get('cause'), 140)}",
             f"error-level condition on `{g.get('feed')}`, "
             + ("FIRST SEEN since the last digest — " if g.get("is_new")
                else "STANDING (predates the last digest) — ")
@@ -871,7 +1298,7 @@ def src_sunset_dispositions(root: Path, today: date) -> SourceResult:
     return SourceResult("sunset", "read", rows)
 
 
-def src_checklist_unrouted(root: Path, today: date) -> SourceResult:  # inert: today — the ages are derived at the register's OWN `generated_at`, not at render time, so using `today` here would silently re-date somebody else's measurement. That gap (a register whose producer has stopped running still renders as today's answer) is real and is filed as BL-20260911-THE-UNROUTED-ROW-REGISTER-CARRIES-GENERATED-AT-AND-NOTHING-GRADES-ITS-OWN-FRESHNESS — it is fixed by grading the register's age into its own STALE state, never by quietly stamping a fresh date onto a stale reading.
+def src_checklist_unrouted(root: Path, today: date) -> SourceResult:  # inert: today — the ages are derived at the register's OWN `generated_at`, not at render time, so using `today` here would silently re-date somebody else's measurement. The register's own AGE is graded separately, by `checklist_routing_age.register_freshness` (imported, never restated), and a stale register earns its own LOUD row — never a quietly re-dated reading.
     """MI-246 — manager-checklist rows that were FILED and never ROUTED.
 
     WHY THIS IS A SOURCE. This renderer's own docstring names the defect it
@@ -909,11 +1336,69 @@ def src_checklist_unrouted(root: Path, today: date) -> SourceResult:  # inert: t
         return SourceResult("checklist_unrouted", "could_not_read",
                             note=f"{_ROUTING_AGE}: {type(exc).__name__}: {exc}")
 
+    # ⚠️ THE REGISTER'S OWN AGE, GRADED BEFORE ITS CONTENT — and as a SEPARATE
+    # fact from `history_state`. That field grades the DERIVATION; this grades
+    # whether anyone has re-run it. A producer that stops leaves this surface
+    # rendering last week's reading with a fresh look, which is the defect this
+    # whole module exists to refuse one level up
+    # (BL-20260911-THE-UNROUTED-ROW-REGISTER-CARRIES-GENERATED-AT-AND-NOTHING-GRADES-ITS-OWN-FRESHNESS).
+    #
+    # ⚠️ THE VERDICT IS `checklist_routing_age.register_freshness`, IMPORTED —
+    # it owns the cadence (read from its producer's cron) and defers the
+    # arithmetic to `probe_freshness` above. Three definitions of "is this file
+    # current?" would be two too many.
+    stale_rows: list[dict] = []
+    fresh_state, age_h = "grader_unavailable", None
+    tool = root / _ROUTING_AGE_TOOL
+    if tool.exists():
+        try:
+            import importlib.util
+            import sys as _sys
+            _n = "_routing_age_due"
+            _spec = importlib.util.spec_from_file_location(_n, tool)
+            _m = importlib.util.module_from_spec(_spec)
+            _sys.modules[_n] = _m
+            try:
+                _spec.loader.exec_module(_m)
+                fresh_state, age_h = _m.register_freshness(reg)
+            finally:
+                _sys.modules.pop(_n, None)
+        except Exception:  # noqa: BLE001 — any failure is `we could not look`
+            fresh_state, age_h = "grader_unavailable", None
+    if fresh_state == "stale":
+        stale_rows.append(_row(
+            "checklist_unrouted", "checklist-register-stale",
+            f"the unrouted-row register is {age_h:.0f}h old — its producer has not run",
+            (f"{_ROUTING_AGE} was generated at "
+             f"{reg.get('generated_at') or '(unrecorded)'}, and "
+             f"`.github/workflows/constraint-readout.yml` writes it on a DAILY cron. "
+             f"⚠️ EVERY ROW BELOW IS THAT READING, NOT TODAY'S: anything that crossed "
+             f"the threshold since is absent, and a row listed as newly stalled may "
+             f"since have been routed. This is not the same fact as "
+             f"`history_state` — that grades whether the ages could be DERIVED; this "
+             f"says the derivation succeeded and nobody re-ran it. Regenerate: "
+             f"`python3 scripts/ops/checklist_routing_age.py --write`."),
+            age_days=int(age_h // 24) if age_h else None,
+            loud=True, link=str(_ROUTING_AGE)))
+    elif fresh_state != "fresh":
+        stale_rows.append(_row(
+            "checklist_unrouted", "checklist-register-age-ungradeable",
+            f"the unrouted-row register's age could not be established ({fresh_state})",
+            (f"`{fresh_state}` is *we could not look*, **NOT** a fresh reading — "
+             f"`undateable` means no readable `generated_at`, `cadence_unknown` means "
+             f"no declared cadence, and `grader_unavailable` means the freshness "
+             f"check itself could not run, which is the same defect one level up. "
+             f"Do not read the rows below as today's answer."),
+            loud=True, link=str(_ROUTING_AGE)))
+
     hist = reg.get("history_state")
     if hist != "derived":
-        return SourceResult("checklist_unrouted", "could_not_read",
+        # ⚠️ The staleness row still rides, because "the derivation failed" and
+        # "nobody re-ran it" are different facts and a reader needs both.
+        return SourceResult("checklist_unrouted", "could_not_read", stale_rows,
                             note=f"history_state={hist!r}: "
-                                 f"{reg.get('history_note', 'no reason recorded')}")
+                                 f"{reg.get('history_note', 'no reason recorded')}"
+                                 f" · register_freshness={fresh_state}")
 
     thr = reg.get("threshold_hours", "?")
     # ⚠️ BRANCH ON THE VOCABULARY, NOT ON THE SHAPE OF A LIST. `stall_counts` is
@@ -933,7 +1418,7 @@ def src_checklist_unrouted(root: Path, today: date) -> SourceResult:  # inert: t
     for r in reg.get("newly_stalled") or []:
         rows.append(_row(
             "checklist_unrouted", str(r.get("id", "(no id)")),
-            str(r.get("title") or "(no title)")[:140],
+            _clip(r.get("title") or "(no title)", 140),
             f"FILED AND NEVER ROUTED — {r.get('unrouted_hours', '?')}h with "
             f"owner `{r.get('owner', '?')}` and status `{r.get('status', '?')}`, past the "
             f"measured {thr}h threshold. Route it, disposition it, or record why it stays "
@@ -968,17 +1453,432 @@ def src_checklist_unrouted(root: Path, today: date) -> SourceResult:  # inert: t
         # `within` is the ONLY state that means nothing is owed, and an empty
         # list here has to be attributable to it rather than to a source that
         # quietly found nothing to say.
-        return SourceResult("checklist_unrouted", "read", [],
+        # ⚠️ `stale_rows`, not `[]`. "Nothing is due per this register" and
+        # "this register is a day old" are compatible and the second is what
+        # tells a reader how much the first is worth.
+        return SourceResult("checklist_unrouted", "read", stale_rows,
                             note=f"nothing due: {n_newly} new crossing(s), "
                                  f"{n_standing} standing, {n_within} within {thr}h, "
-                                 f"{n_unknown} ungradeable")
-    return SourceResult("checklist_unrouted", "read", rows)
+                                 f"{n_unknown} ungradeable "
+                                 f"· register_freshness={fresh_state}")
+    return SourceResult("checklist_unrouted", "read", stale_rows + rows,
+                        note=f"register_freshness={fresh_state}")
+
+
+def src_stuck_branches(
+    root: Path,
+    today: date,  # inert: today — every source shares ONE signature so `collect` dispatches them uniformly; this one grades against `now`, which carries the time of day `today` throws away
+    *,
+    now: datetime | None = None,
+) -> SourceResult:
+    """Automation BRANCHES that never landed — the TRANSITION, not the count.
+
+    ⚠️ THIS IS A DIFFERENT POPULATION FROM ``src_unlanded_automation``, which
+    lists open PRs. A branch whose PR was closed, or that never had one, is
+    invisible to that source by construction — and most of them are: measured
+    2026-09-12 on a full clone, 184 stuck branches against the handful of open
+    `automation/*` PRs the PR source sees.
+
+    ⚠️ AND IT DELIBERATELY EMITS NO ROW FOR THE STANDING COUNT. 184 rows every
+    morning is the desensitised alarm this repo already pays for; the count
+    lives in this source's ``note``, where a reader meets it without being
+    paged by it. What earns a row is a CHANGE, a receipt that has gone STALE
+    (the carrier stopped), or a carrier running DEGRADED — i.e. the instrument
+    failing, which is the thing a standing count cannot tell you.
+
+    ⚠️ A ROW LASTS ONE CADENCE PERIOD. ``last_transition`` is the last run's
+    delta and is superseded by the next run's ``no_change``, so a new stranding
+    is surfaced once. The durable record of every change is the receipt's own
+    git history. Stated rather than papered over.
+    """
+    now = now or datetime.now(timezone.utc)
+
+    try:
+        declared = _STUCK_CARRIER in (root / _PROBES_WORKFLOW).read_text(encoding="utf-8")
+    except OSError:
+        declared = False
+
+    p = root / _STUCK_RECEIPT
+    if not p.exists():
+        if not declared:
+            return SourceResult("stuck_branches", "not_applicable",
+                                note=f"{_STUCK_RECEIPT} absent and no workflow "
+                                     f"declares the carrier")
+        # DECLARED AND NEVER PRODUCED is not "nothing to report" — it is the
+        # exact state the receipt was built to end, one level up.
+        return SourceResult("stuck_branches", "could_not_read",
+                            note=f"{_PROBES_WORKFLOW} declares {_STUCK_CARRIER} "
+                                 f"and no receipt has ever landed at "
+                                 f"{_STUCK_RECEIPT} — the carrier is armed and "
+                                 f"has produced nothing")
+    try:
+        doc = _load_json(p)
+    except (OSError, ValueError) as exc:
+        return SourceResult("stuck_branches", "could_not_read",
+                            note=f"{_STUCK_RECEIPT}: {type(exc).__name__}: {exc}")
+    if not isinstance(doc, dict):
+        return SourceResult("stuck_branches", "could_not_read",
+                            note=f"{_STUCK_RECEIPT} is not an object")
+
+    rows: list[dict] = []
+    stuck = doc.get("stuck")
+    n_stuck = len(stuck) if isinstance(stuck, list) else None
+
+    cadence_h, basis = probe_cadence_hours(root)
+    fresh, age_h = probe_freshness(doc.get("generated_at"), cadence_h, now)
+    if fresh != "fresh":
+        rows.append(_row(
+            "stuck_branches", "stuck-branches-receipt-" + fresh,
+            f"the stuck-branch receipt is {fresh}",
+            (f"age {age_h:.1f}h against {basis}. " if age_h is not None
+             else "the receipt carries no readable generated_at. ")
+            + "A receipt that is not current cannot tell you whether a branch "
+              "stranded today — and the carrier going quiet looks exactly like "
+              "a quiet week. Check the `probes` workflow run history.",
+            age_days=int(age_h // 24) if age_h is not None else None,
+            loud=True, link=str(_STUCK_RECEIPT)))
+
+    if doc.get("read_state") != "complete":
+        rows.append(_row(
+            "stuck_branches", "stuck-branches-degraded",
+            "the stuck-branch carrier is running DEGRADED",
+            f"read_state={doc.get('read_state')!r}: {doc.get('read_note', 'no note')}. "
+            "The usual cause is a checkout without fetch-depth: 0, on which "
+            "containment is not computable. Until it is fixed this receipt "
+            "cannot be read as a count of anything.",
+            loud=True, link=str(_STUCK_RECEIPT)))
+
+    tr = doc.get("last_transition")
+    tr = tr if isinstance(tr, dict) else {}
+    tstate = tr.get("state")
+    added = tr.get("added") if isinstance(tr.get("added"), list) else []
+    cleared = tr.get("cleared") if isinstance(tr.get("cleared"), list) else []
+    if tstate == "changed":
+        rows.append(_row(
+            "stuck_branches", "stuck-branches-changed",
+            f"{len(added)} automation branch(es) newly stranded, "
+            f"{len(cleared)} cleared",
+            (", ".join(added[:5]) + ("…" if len(added) > 5 else "")
+             if added else "nothing newly stranded") +
+            ". A stranded automation branch is a producer whose output never "
+            "landed; a red check on a base that has since been fixed will "
+            "NEVER re-run on its own, so nothing recovers it without a push.",
+            loud=bool(added), link=str(_STUCK_RECEIPT)))
+    elif tstate in ("degraded", "baseline_unreadable"):
+        rows.append(_row(
+            "stuck_branches", f"stuck-branches-{tstate}",
+            f"the stuck-branch comparison could not be made ({tstate})",
+            str(tr.get("note", "no note")),
+            loud=True, link=str(_STUCK_RECEIPT)))
+
+    if not rows:
+        # The standing count belongs HERE and not in a row — see the docstring.
+        how_many = "an unreadable number of" if n_stuck is None else str(n_stuck)
+        return SourceResult(
+            "stuck_branches", "read", [],
+            note=(f"nothing due: {how_many} branch(es) standing, unchanged "
+                  f"since the last run; receipt {fresh}"))
+    return SourceResult("stuck_branches", "read", rows,
+                        note=f"{n_stuck} branch(es) standing")
+
+
+def src_settled_disposition_owed(
+    root: Path,
+    today: date,  # inert: today — every source shares ONE signature so `collect` dispatches them uniformly; this source grades a record's CONTENT, which carries no age
+) -> SourceResult:
+    """A PR that was CLOSED WITHOUT MERGING and nobody said why.
+
+    ⚠️ **THIS IS THE (c) OF A ROW THAT NAMED ITS OWN THREE CANDIDATE FIXES.**
+    `BL-20260905-AN-UNDISPOSITIONED-CLOSED-PR-DEADLOCKS-EVERY-RECONCILE-PR-AND-THEY-STACK-UNBOUNDEDLY`
+    proposes *"(c) a `disposition_owed` signal surfaced where a manager will see
+    it before five PRs accumulate."* This is that surface. It is **not** (a) —
+    the automated job still cannot be mergeable without a hand-written field —
+    so the row stays open on its own criterion.
+
+    ⚠️ **THE VERDICT IS NOT COMPUTED HERE.** It is
+    `scripts/ops/open_pr_record.py::grade_settled`, imported, because a second
+    definition of "does this settled row owe a reason?" is free to drift from
+    the one CI refuses on — and the two disagreeing about a blockage is worse
+    than either being wrong alone. This source decides only WHICH verdicts earn
+    a row.
+
+    ⚠️ **WHY LOUD, WHERE `src_sunset_dispositions` IS DELIBERATELY NOT.** That
+    source argues — correctly — that ten permanently-due candidates become the
+    thing sessions scroll past. This population is the opposite shape on BOTH
+    terms, and the difference is measured rather than asserted: on 2026-09-12
+    the record holds **94 settled rows and ZERO findings**, and the 2026-09-05
+    incident was **one** row. It arrives one at a time because the reconciler
+    moves a PR as it closes. And it is not a standing backlog to work through —
+    while it stands, `open_pr_record.py --strict` refuses, so **every**
+    automation PR in the repo is red: five `automation/reconcile-open-prs-*`
+    PRs stacked unmergeable in 3h20m, and the blockage was found only because a
+    manager happened to read a failing guard log.
+
+    ⚠️ **IT DOES NOT PROPOSE A DISPOSITION AND MUST NOT.** 'superseded', 'the
+    operator refused it' and 'the author gave up' are opposite next actions; the
+    row that names the gap is the whole contribution, and back-filling a reason
+    nobody gave is what that backlog row explicitly rules out.
+    """
+    tool = root / _OPEN_PR_RECORD_TOOL
+    if not tool.exists():
+        return SourceResult("settled_disposition_owed", "not_applicable",
+                            note=f"{_OPEN_PR_RECORD_TOOL} absent — nothing in "
+                                 f"this tree grades the settled record")
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("_open_pr_record_due", tool)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        doc, readable = mod.read_record(root / _OPEN_PR_RECORD)
+        v = mod.grade_settled(doc, readable)
+    except Exception as exc:  # noqa: BLE001 — any failure is `we could not look`
+        return SourceResult("settled_disposition_owed", "could_not_read",
+                            note=f"{_OPEN_PR_RECORD_TOOL}: "
+                                 f"{type(exc).__name__}: {exc}")
+
+    state = v.get("state")
+    rows: list[dict] = []
+    if state == "undispositioned":
+        owed = [str(f.get("pr")) for f in (v.get("findings") or [])]
+        rows.append(_row(
+            "settled_disposition_owed", "settled-prs-disposition-owed",
+            f"{len(owed) or 'some'} closed-unmerged PR(s) record no reason",
+            (f"PR(s) {', '.join(owed) or '(unnamed)'} ended without reaching "
+             f"`main` and nobody said why. ⚠️ THIS IS BLOCKING RIGHT NOW, not a "
+             f"backlog item: `open_pr_record.py --strict` refuses while it "
+             f"stands, so every automation PR in the repo is red, and the "
+             f"reconciler keeps opening more — five stacked unmergeable in "
+             f"3h20m on 2026-09-05. Write the reason into that row's "
+             f"`disposition` in {_OPEN_PR_RECORD}; do NOT invent one, and do "
+             f"NOT relax the guard."),
+            loud=True, link=str(_OPEN_PR_RECORD)))
+    elif state == "unreadable":
+        rows.append(_row(
+            "settled_disposition_owed", "settled-prs-unreadable",
+            "the open-PR record could not be read",
+            f"{v.get('why') or _OPEN_PR_RECORD} — so whether a closed PR owes a "
+            f"reason is UNESTABLISHED. That is `we did not look`, never `none "
+            f"is owed`.",
+            loud=True, link=str(_OPEN_PR_RECORD)))
+
+    pop = v.get("population") or {}
+    return SourceResult("settled_disposition_owed", "read", rows,
+                        note=f"settled record grades {state} "
+                             f"({pop.get('settled', '?')} settled row(s))")
+
+
+_DECISION_ANSWERS_GUARD = Path("scripts/ci/check_decision_answers.py")
+_WORK_OBJECTS = Path("docs/claude/work/objects")
+
+
+def src_spent_decision_edges(
+    root: Path,
+    today: date,  # inert: today — every source shares ONE signature so `collect` dispatches them uniformly; this source grades an edge's REFERENT, and the edge's own `since` already rides the row
+) -> SourceResult:
+    """An object `waiting` on an operator decision that was ALREADY answered.
+
+    ⚠️ **THE VERDICT IS `check_decision_answers.py::spent_edge_rows`, IMPORTED.**
+    That guard's R3 already owns this question and landed in #12035. This source
+    added NOTHING to the definition and must never re-derive it — a first draft
+    of this source shipped its own grader in `scripts/ops/spent_decision_edges.py`
+    before its author checked whether one existed, which is
+    `RC-BUILT-A-MECHANISM-THAT-ALREADY-EXISTED` and is why `CLAUDE.md` prescribes
+    a one-line existence check. That file is deleted; this is the surface.
+
+    ⚠️ **WHAT THIS ADDS IS THE SURFACE, AND THE FILTER.** R3 prints on a guard
+    run, which a session reads only when a PR is red — never while PLANNING. And
+    it reports every spent edge, which is eleven today: a list that long trains a
+    reader to scroll past it. This carries the **actively parked** subset — spent
+    or unresolvable AND `lifecycle: waiting` — because a spent edge on a `done`
+    object is residue while one on a `waiting` object is work that is not
+    happening.
+
+    ⚠️ **`spent` AND `unresolvable` GET SEPARATE ROWS, NEVER A POOLED ONE.** A
+    spent edge is discharged by re-grading or re-pointing it; an unresolvable one
+    can never be discharged by anything that matches on ids, so the object is
+    parked with no way out. Opposite remedies.
+
+    ⚠️ **AND AN ANSWER IS NOT ALWAYS A CHOICE.** Measured 2026-09-12, every
+    actively-parked edge names a request the operator REJECTED as mis-framed, so
+    the question may still be open under a SUCCESSOR request. Told to delete the
+    spent edge a reader would erase a real blocker; the row says RE-POINT.
+
+    ⚠️ **IT PROPOSES NO EDIT.** Re-grading a `lifecycle` is the object owner's or
+    the manager's call — it changes what the WIP ceiling and the constraint
+    readout compute over.
+
+    ⚠️ **THE LINK IS BUILT FROM THE OBJECT KEY, WHICH IS THE FILE STEM.**
+    `load_objects` keys on `path.stem`, not on the YAML `id:` field, so a link
+    built from `id:` would 404 wherever the two differ. A control pins it.
+    """
+    guard = root / _DECISION_ANSWERS_GUARD
+    if not (root / _WORK_OBJECTS).is_dir():
+        return SourceResult("spent_decision_edges", "not_applicable",
+                            note=f"{_WORK_OBJECTS} absent — no work store here")
+    if not guard.exists():
+        return SourceResult("spent_decision_edges", "not_applicable",
+                            note=f"{_DECISION_ANSWERS_GUARD} absent — nothing in "
+                                 f"this tree grades a decision edge")
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("_decision_answers_due", guard)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        objects, unparsed = mod.load_objects(root / _WORK_OBJECTS)
+        edges = mod.spent_edge_rows(objects)
+    except Exception as exc:  # noqa: BLE001 — any failure is `we could not look`
+        return SourceResult("spent_decision_edges", "could_not_read",
+                            note=f"{_DECISION_ANSWERS_GUARD}: "
+                                 f"{type(exc).__name__}: {exc}")
+
+    parked = [e for e in edges if e.get("lifecycle") == "waiting"]
+    rows: list[dict] = []
+    for e in sorted(parked, key=lambda x: str(x.get("object"))):
+        obj, ref = e.get("object"), e.get("ref")
+        link = f"{_WORK_OBJECTS}/{obj}.yaml"
+        if e.get("state") == mod.EDGE_UNRESOLVABLE:
+            rows.append(_row(
+                "spent_decision_edges", f"stranded-edge-{obj}",
+                f"{obj} is `waiting` on an UNRESOLVABLE edge",
+                (f"Its `blocked_on` ref is {_clip(ref, 120)!r}, graded "
+                 f"{mod.EDGE_UNRESOLVABLE} — no decision request in the store "
+                 f"declares that id. ⚠️ THIS IS NOT SPENT AND THE REMEDY IS THE "
+                 f"OPPOSITE: a spent edge is discharged by re-pointing or "
+                 f"re-grading it, while nothing matching on ids can ever "
+                 f"discharge this one, so the object is parked with no way out "
+                 f"and no consumer can say what it is waiting for. A typed edge "
+                 f"whose ref is prose is untyped. ⚠️ Fixing it is the object "
+                 f"owner's or the manager's call."),
+                loud=True, link=link))
+            continue
+        rows.append(_row(
+            "spent_decision_edges", f"spent-edge-{obj}",
+            f"{obj} is `waiting` on an answered decision",
+            (f"Its `blocked_on` names {ref}, which carries a readable answer "
+             f"({e.get('answered_at') or 'date not recorded'}) — the edge has "
+             f"not been a blocker since. " +
+             ("⚠️ THE ANSWER CHOSE NO OPTION (rejected / mis-framed), so the "
+              "question may still be genuinely open under a SUCCESSOR request: "
+              "RE-POINT the edge, do not delete it. "
+              if not e.get("answer_is_a_choice") else "") +
+             "⚠️ Re-grading `lifecycle` or editing an edge is the object "
+             "owner's or the manager's call — it changes what the WIP ceiling "
+             "and the constraint readout compute over. This row reports the "
+             "disagreement; it does not propose the edit."),
+            loud=True, link=link))
+
+    if unparsed:
+        rows.append(_row(
+            "spent_decision_edges", "spent-edge-objects-unparseable",
+            f"{len(unparsed)} work object(s) did not parse",
+            (f"{_clip('; '.join(unparsed), 400)} — so every count below is over the "
+             f"PARSED set only. A loader silently skipping a file understates "
+             f"the spent set, which is the direction nobody re-checks."),
+            loud=True, link=str(_WORK_OBJECTS)))
+
+    spent_n = sum(1 for e in edges if e.get("state") == mod.EDGE_SPENT)
+    return SourceResult(
+        "spent_decision_edges", "read", rows,
+        note=(f"{len(objects)} object(s) read, {len(unparsed)} unparseable; "
+              f"{len(edges)} reported edge(s): {spent_n} spent, "
+              f"{len(edges) - spent_n} unresolvable; "
+              f"{len(parked)} on a `waiting` object"))
+def src_manager_queue_watch(
+    root: Path,
+    today: date,  # inert: today — every source shares ONE signature so `collect` dispatches them uniformly; this one grades against `now`, which carries the time of day `today` throws away
+    *,
+    now: datetime | None = None,
+) -> SourceResult:
+    """The MANAGER-QUEUE-WATCH Routine's own liveness — carried where it is READ.
+
+    ⚠️ **THE VERDICT IS NOT COMPUTED HERE.** It is
+    ``scripts/ci/check_manager_queue_watch.py::grade``, imported, because a
+    second definition of "is the watchdog alive?" is free to drift from the one
+    CI grades — and the two disagreeing about a watchdog is strictly worse than
+    either being wrong alone. This source decides only WHICH verdicts earn a
+    row.
+
+    ⚠️ **WHY A DUE-LIST ROW AND NOT A RED CI CHECK.** The guard deliberately
+    PASSES on ``never_ran_overdue``: only the Routine can write that receipt, a
+    Routine-fired session holds no ``mcp__*`` tools, and a hand-written receipt
+    would arm the freshness grading against a file nobody maintains — a
+    healthy-looking watch forever. A red no contributor can clear is how a guard
+    gets disabled instead of fixed. So the escalation lands here, on the surface
+    a session reads when it asks *what is due*.
+
+    ⚠️ **AND `fresh` EARNS NO ROW.** A watchdog that is working is not work. The
+    standing fact belongs in ``note``, where a reader meets it without being
+    paged by it — the same rule ``src_stuck_branches`` follows for its 184.
+    """
+    now = now or datetime.now(timezone.utc)
+
+    guard_path = root / _QUEUE_WATCH_GUARD
+    if not guard_path.exists():
+        return SourceResult("manager_queue_watch", "not_applicable",
+                            note=f"{_QUEUE_WATCH_GUARD} absent — nothing declares "
+                                 f"the watchdog in this tree")
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "_mqw_guard", guard_path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+    except Exception as exc:  # noqa: BLE001 — any import failure is `could not look`
+        return SourceResult("manager_queue_watch", "could_not_read",
+                            note=f"{_QUEUE_WATCH_GUARD}: {type(exc).__name__}: {exc}")
+
+    try:
+        receipt, read_state = mod.read_receipt(root / _QUEUE_WATCH_RECEIPT)
+        v = mod.grade(receipt, read_state, now)
+    except Exception as exc:  # noqa: BLE001
+        return SourceResult("manager_queue_watch", "could_not_read",
+                            note=f"grading {_QUEUE_WATCH_RECEIPT} raised "
+                                 f"{type(exc).__name__}: {exc}")
+
+    state = v.get("state")
+    rows: list[dict] = []
+    if state == mod.NEVER_RAN_OVERDUE:
+        rows.append(_row(
+            "manager_queue_watch", "manager-queue-watch-never-ran-overdue",
+            "the Manager Queue Watch Routine has never written its receipt",
+            (f"armed {v.get('owed_hours')}h ago, on the order of "
+             f"{v.get('expected_firings')} expected firings, and ZERO receipts "
+             f"have ever been committed. The Routine reports SUCCEEDED, so "
+             f"nothing else reads as wrong. This is NOT `it has not fired yet`. "
+             f"Only the Routine can clear it — a hand-written receipt would arm "
+             f"the freshness grading against a file nobody maintains and report "
+             f"a healthy watch forever. Decide: fire it and confirm it can "
+             f"write, fold the escalation into the manager tick (which HAS a "
+             f"persistent session with tools), or RECORD the decision to retire "
+             f"it together with what then grades the manager's inaction."),
+            age_days=int((v.get("owed_hours") or 0) // 24) or None,
+            loud=True, link=str(_QUEUE_WATCH_RECEIPT)))
+    elif state == mod.STALE:
+        rows.append(_row(
+            "manager_queue_watch", "manager-queue-watch-stale",
+            "the Manager Queue Watch Routine HAS run and has STOPPED",
+            f"newest recorded run {v.get('age_hours')}h old. {v.get('why')}",
+            age_days=int((v.get("age_hours") or 0) // 24) or None,
+            loud=True, link=str(_QUEUE_WATCH_RECEIPT)))
+    elif state == mod.UNREADABLE:
+        rows.append(_row(
+            "manager_queue_watch", "manager-queue-watch-unreadable",
+            "the Manager Queue Watch receipt cannot be read",
+            f"{v.get('why')} A watchdog receipt we cannot read is not evidence "
+            f"about the Routine at all.",
+            loud=True, link=str(_QUEUE_WATCH_RECEIPT)))
+
+    return SourceResult("manager_queue_watch", "read", rows,
+                        note=f"watchdog receipt grades {state}")
 
 
 SOURCES: tuple[Callable, ...] = (
     src_open_items, src_soaks, src_operator_owed, src_research_queue, src_probes,
-    src_red_crons, src_unlanded_automation, src_error_feed,
-    src_sunset_dispositions, src_checklist_unrouted,
+    src_red_crons, src_red_main_runs, src_unparseable_workflows,
+    src_unlanded_automation, src_error_feed,
+    src_sunset_dispositions, src_checklist_unrouted, src_stuck_branches,
+    src_settled_disposition_owed, src_spent_decision_edges,
+    src_manager_queue_watch,
 )
 
 
@@ -1028,7 +1928,8 @@ def collect(root: Path, today: date, *, token: str | None = None) -> list[Source
     out = []
     for fn in SOURCES:
         try:
-            if fn in (src_red_crons, src_unlanded_automation):
+            if fn in (src_red_crons, src_red_main_runs, src_unlanded_automation,
+                      src_unparseable_workflows):
                 out.append(fn(root, today, token=token))
             else:
                 out.append(fn(root, today))
@@ -1058,6 +1959,44 @@ def render_markdown(env: dict) -> str:
 
 
 # ── self-test: planted controls, so a vacuous pass is impossible ───────────
+
+def _state_and_cause(got: "SourceResult") -> str:
+    """The assertion message for a source that did not read — WITH its cause.
+
+    ⚠️ **THIS EXISTS BECAUSE A MESSAGE THAT NAMED NO CAUSE COST FOUR DAYS.**
+    The three `state == "read"` assertions below used to fail as bare
+    ``AssertionError: could_not_read``. That is UNPROVENANCED DIAGNOSTIC OUTPUT
+    sub-class A (`CLAUDE.md` § "Diagnostic provenance"): the label names the
+    grade and says nothing about the derivation, and a reader takes it as a
+    statement about the SOURCE LOGIC the assertion appears to be testing.
+
+    It was not the source logic. Measured over `due-list.yml`'s complete run
+    history, runs #104-#107 (2026-09-13 .. 2026-09-16, all `event=schedule`)
+    concluded `failure` **4 of 4**, each in seconds at this gate, on
+
+        scripts/ci/check_decision_answers.py: ModuleNotFoundError: No module named 'yaml'
+
+    — a dependency the runner does not install, nothing to do with the grading.
+    `SourceResult.note` already carried that string and the assertion dropped it
+    on the floor, so the run log showed only the grade.
+
+    ⚠️ **THIS DOES NOT WEAKEN THE GATE, AND MUST NOT BE MADE TO.** The
+    assertion still requires `read`; only what it PRINTS on the way out
+    changes. `constraint-readout.yml`'s note on the same failure class is
+    right — *"THE GATE WAS NOT THE BUG — IT WORKED"* — and a run that skipped
+    it would commit a due-list whose parked-edge source diagnosed nothing.
+
+    ⚠️ **THE NAME IS DELIBERATELY NOT `_why`.** `_self_test` rebinds `_why` as a
+    loop variable partway through its own body, which makes that name LOCAL for
+    the whole function — so a helper called `_why` resolves to the leftover
+    string at every assertion site and dies as `TypeError: 'str' object is not
+    callable`, replacing one uninformative message with a worse one. Caught by
+    running this file with `yaml` blocked; a run without the block never reaches
+    the line, so a green self-test would not have found it.
+    """
+    note = (getattr(got, "note", "") or "").strip()
+    return f"{got.state} — {note}" if note else f"{got.state} (no note recorded)"
+
 
 def _self_test() -> int:
     r_ok = SourceResult("a", "read", [_row("a", "1", "t", "w")])
@@ -1100,6 +2039,15 @@ def _self_test() -> int:
 
     # the GitHub sources must refuse rather than invent an empty answer
     assert src_red_crons(Path("."), today, token="").state == "could_not_read"
+    # The same contract for the default-branch source: without a token we say
+    # we could not look. It must NEVER report "main is green" from silence.
+    assert src_red_main_runs(Path("."), today, token="").state == "could_not_read"
+    assert src_red_main_runs in SOURCES, \
+        "src_red_main_runs is not registered in SOURCES — a source nothing calls"
+
+    assert src_unparseable_workflows(Path("."), today, token="").state == "could_not_read"
+    assert src_unparseable_workflows in SOURCES, \
+        "src_unparseable_workflows is not registered in SOURCES — a source nothing calls"
     assert src_unlanded_automation(Path("."), today, token="").state == "could_not_read"
 
     # ── PROBE FRESHNESS: the gap this renderer shipped with ────────────────
@@ -1257,9 +2205,25 @@ def _self_test() -> int:
          "keep reporting a probe fail as a due row, never to lose a signal")
 
     # ── MI-246: checklist rows filed and never routed ──────────────────────
+    _cra_tool = Path(__file__).resolve().parent / "checklist_routing_age.py"
+
+    def _fresh_stamp(hours_ago: float = 1.0) -> str:
+        return (datetime.now(timezone.utc)
+                - timedelta(hours=hours_ago)).isoformat(timespec="seconds")
+
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
         (root / "docs/claude/work").mkdir(parents=True)
+        # The REAL freshness grader, so the register's age is graded through the
+        # same import path production uses rather than a restatement of it.
+        (root / "scripts/ops").mkdir(parents=True)
+        import shutil as _shutil0
+        _shutil0.copy(_cra_tool, root / _ROUTING_AGE_TOOL)
+        # …and THIS module too: `register_freshness` resolves the arithmetic
+        # (`probe_freshness`) relative to its OWN file, so a copied grader needs
+        # its sibling or it correctly reports `grader_unavailable` — which would
+        # make every control below pass for the wrong reason.
+        _shutil0.copy(Path(__file__).resolve(), root / "scripts/ops/render_due_list.py")
         # an ABSENT register is `could_not_read`, never a clean empty list
         na = src_checklist_unrouted(root, today)
         assert na.state == "could_not_read" and na.rows == [], \
@@ -1269,11 +2233,28 @@ def _self_test() -> int:
         # history_state other than `derived` is *we did not look*
         (root / _ROUTING_AGE).write_text(json.dumps(
             {"schema_version": 1, "history_state": "could_not_read",
+             "generated_at": _fresh_stamp(),
              "history_note": "the clone is SHALLOW"}), encoding="utf-8")
         sh = src_checklist_unrouted(root, today)
         assert sh.state == "could_not_read", \
             "a truncated git history reports every row as young — that is not a read"
         assert "SHALLOW" in sh.note, "and the reason travels with the verdict"
+        assert "register_freshness=fresh" in sh.note, \
+            "the register's own age is graded even when the DERIVATION failed"
+        assert sh.rows == [], "a fresh-but-underived register earns no staleness row"
+
+        # ⚠️ THE TWO FACTS ARE INDEPENDENT AND BOTH MUST SURVIVE. A register that
+        # BOTH failed to derive AND is a week old owes the reader both lines; an
+        # early `return` that dropped the staleness row would lose the one that
+        # says the producer is dead.
+        (root / _ROUTING_AGE).write_text(json.dumps(
+            {"schema_version": 1, "history_state": "could_not_read",
+             "generated_at": _fresh_stamp(24 * 7),
+             "history_note": "the clone is SHALLOW"}), encoding="utf-8")
+        both = src_checklist_unrouted(root, today)
+        assert both.state == "could_not_read", both.state
+        assert {r["id"] for r in both.rows} == {"checklist-register-stale"}, both.rows
+        assert "SHALLOW" in both.note and "register_freshness=stale" in both.note
 
         # a real crossing becomes a DUE row; the stock stays ONE row
         (root / _ROUTING_AGE).write_text(json.dumps({
@@ -1282,6 +2263,7 @@ def _self_test() -> int:
                                "owner": "unassigned", "status": "ready",
                                "unrouted_hours": 49.0}],
             "standing_count": 60, "seeded_count": 8, "within_count": 3,
+            "generated_at": _fresh_stamp(),
             "ungradeable_count": 2}), encoding="utf-8")
         got = src_checklist_unrouted(root, today)
         ids = {r["id"] for r in got.rows}
@@ -1303,8 +2285,345 @@ def _self_test() -> int:
         stand = next(r for r in got.rows if r["id"] == "checklist-unrouted-standing")
         assert "68" in stand["title"], \
             "standing + seeded are ONE stock — a seeded row is still unrouted"
+        assert "register_freshness=fresh" in got.note, \
+            "a fresh register says so, or `fresh` is indistinguishable from unread"
 
-    print("due-list: self-test OK — 51 planted controls all fire")
+        # ── the register's OWN age ─────────────────────────────────────────
+        # A producer that stops running leaves this surface rendering last
+        # week's reading with a fresh look. THE ROWS STILL RIDE — the reading is
+        # not discarded, it is DATED — because discarding it would lose real
+        # unrouted rows to fix a labelling defect.
+        _stale_reg = json.loads((root / _ROUTING_AGE).read_text(encoding="utf-8"))
+        _stale_reg["generated_at"] = _fresh_stamp(24 * 5)
+        (root / _ROUTING_AGE).write_text(json.dumps(_stale_reg), encoding="utf-8")
+        st = src_checklist_unrouted(root, today)
+        ids = {r["id"] for r in st.rows}
+        assert "checklist-register-stale" in ids, \
+            "a 5-day-old register must say so — its producer runs DAILY"
+        assert "MI-999" in ids, \
+            "the rows still ride: the reading is DATED, never discarded"
+        srow = next(r for r in st.rows if r["id"] == "checklist-register-stale")
+        assert srow["loud"], \
+            ("LOUD, unlike the unrouted rows themselves: 'this whole surface is "
+             "out of date' is not the same kind of thing as one item being due")
+        assert "not the same fact as" in srow["why_due"], \
+            "it must distinguish itself from `history_state`, or the two collapse"
+
+        # A register whose age CANNOT be established is *we could not look*,
+        # never `fresh`. Three distinct ways in, and none may render as clean.
+        for _bad, _why in ((None, "no generated_at at all"),
+                           ("not-a-timestamp", "an unparseable stamp")):
+            _r = dict(_stale_reg)
+            if _bad is None:
+                _r.pop("generated_at", None)
+            else:
+                _r["generated_at"] = _bad
+            (root / _ROUTING_AGE).write_text(json.dumps(_r), encoding="utf-8")
+            ug = src_checklist_unrouted(root, today)
+            assert "checklist-register-age-ungradeable" in {r["id"] for r in ug.rows}, \
+                f"{_why} must not read as a fresh register"
+            assert next(r for r in ug.rows
+                        if r["id"] == "checklist-register-age-ungradeable")["loud"]
+
+        # …and if the GRADER itself cannot be imported, that is its own state and
+        # is reported — a freshness check that silently stops running is the
+        # same defect one level up from the one it grades.
+        (root / _ROUTING_AGE).write_text(json.dumps(_stale_reg), encoding="utf-8")
+        (root / _ROUTING_AGE_TOOL).write_text("def (", encoding="utf-8")
+        gu = src_checklist_unrouted(root, today)
+        _g = next(r for r in gu.rows
+                  if r["id"] == "checklist-register-age-ungradeable")
+        assert "grader_unavailable" in _g["title"], _g["title"]
+        assert "grader_unavailable" in gu.note, gu.note
+        _shutil0.copy(_cra_tool, root / _ROUTING_AGE_TOOL)
+
+    # ── the settled-disposition source ─────────────────────────────────────
+    # ⚠️ Every control builds its OWN tree and copies the REAL grader into it,
+    # so the source is exercised through the same import path it uses in
+    # production. Calling `grade_settled` directly here would stay green after
+    # somebody re-implemented the verdict inline in this file, which is the
+    # drift this source exists to avoid.
+    import shutil as _shutil2
+    _opr = Path(__file__).resolve().parent / "open_pr_record.py"
+
+    def _opr_tree(td: str, doc):
+        root = Path(td)
+        (root / "scripts/ops").mkdir(parents=True)
+        _shutil2.copy(_opr, root / _OPEN_PR_RECORD_TOOL)
+        (root / "docs/claude/work").mkdir(parents=True)
+        if doc is not None:
+            (root / _OPEN_PR_RECORD).write_text(
+                doc if isinstance(doc, str) else json.dumps(doc), encoding="utf-8")
+        return root
+
+    def _settled(**kw):
+        return {"schema_version": 3, "open_prs": [], "settled_prs": [dict(kw)]}
+
+    with tempfile.TemporaryDirectory() as td:
+        root = _opr_tree(td, _settled(pr=4242, terminal="closed_unmerged"))
+        got = src_settled_disposition_owed(root, today)
+        assert got.state == "read", _state_and_cause(got)
+        ids = {r["id"] for r in got.rows}
+        assert ids == {"settled-prs-disposition-owed"}, ids
+        row = got.rows[0]
+        assert row["loud"], "a live CI blockage is loud"
+        assert "4242" in row["why_due"], row["why_due"]
+        assert "do NOT invent one" in row["why_due"], \
+            "the row must refuse to manufacture a reason, or it invites the " \
+            "one fix the backlog row rules out"
+
+    with tempfile.TemporaryDirectory() as td:
+        root = _opr_tree(td, _settled(pr=4242, terminal="closed_unmerged",
+                                      disposition="superseded by #4243"))
+        got = src_settled_disposition_owed(root, today)
+        assert got.state == "read" and got.rows == [], \
+            "a dispositioned row is settled business and must earn no row"
+
+    with tempfile.TemporaryDirectory() as td:
+        got = src_settled_disposition_owed(_opr_tree(td, "{not json"), today)
+        ids = {r["id"] for r in got.rows}
+        assert ids == {"settled-prs-unreadable"}, ids
+        assert got.rows[0]["loud"], \
+            "`we could not look` at a blocking condition is loud, never quiet"
+
+    # THE VERDICT MUST COME FROM THE GRADER, NOT FROM A COPY OF ITS RULES.
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        (root / "docs/claude/work").mkdir(parents=True)
+        assert src_settled_disposition_owed(root, today).state == "not_applicable"
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        (root / "scripts/ops").mkdir(parents=True)
+        (root / _OPEN_PR_RECORD_TOOL).write_text("def (", encoding="utf-8")
+        (root / "docs/claude/work").mkdir(parents=True)
+        got = src_settled_disposition_owed(root, today)
+        assert got.state == "could_not_read", got.state
+        assert "SyntaxError" in got.note, got.note
+
+    # ── the manager-queue-watch source ─────────────────────────────────────
+    # ⚠️ Every control below builds its OWN tree and copies the real guard into
+    # it, so the source is exercised through the SAME import path it uses in
+    # production. A control that called `mod.grade` directly would stay green
+    # after somebody re-implemented the verdict inline here, which is the exact
+    # drift this source exists to avoid.
+    import shutil as _shutil
+    _guard_src = Path(__file__).resolve().parents[1] / "ci" / "check_manager_queue_watch.py"
+    _now = datetime(2026, 9, 12, 18, 0, tzinfo=timezone.utc)
+
+    def _mqw_tree(td: str, receipt: str | None):
+        root = Path(td)
+        (root / "scripts/ci").mkdir(parents=True)
+        _shutil.copy(_guard_src, root / _QUEUE_WATCH_GUARD)
+        (root / "docs/claude/work").mkdir(parents=True)
+        if receipt is not None:
+            (root / _QUEUE_WATCH_RECEIPT).write_text(receipt, encoding="utf-8")
+        return root
+
+    def _stamp(hours_ago: float) -> str:
+        return json.dumps({"generated_at": (
+            _now - timedelta(hours=hours_ago)).strftime("%Y-%m-%dT%H:%M:%SZ")})
+
+    with tempfile.TemporaryDirectory() as td:
+        got = src_manager_queue_watch(_mqw_tree(td, None), today, now=_now)
+        assert got.state == "read", _state_and_cause(got)
+        ids = {r["id"] for r in got.rows}
+        assert ids == {"manager-queue-watch-never-ran-overdue"}, ids
+        row = got.rows[0]
+        assert row["loud"], "a watchdog that has never written its receipt is loud"
+        assert "ZERO receipts" in row["why_due"], row["why_due"]
+        assert "not `it has not fired yet`" in row["why_due"].replace("NOT", "not"), \
+            "the row must SAY it is not the benign reading, or it reads as one"
+
+    with tempfile.TemporaryDirectory() as td:
+        got = src_manager_queue_watch(_mqw_tree(td, _stamp(1)), today, now=_now)
+        assert got.state == "read" and got.rows == [], \
+            "a WORKING watchdog is not work — a fresh receipt must earn no row"
+        assert "fresh" in got.note, got.note
+
+    with tempfile.TemporaryDirectory() as td:
+        got = src_manager_queue_watch(_mqw_tree(td, _stamp(9)), today, now=_now)
+        ids = {r["id"] for r in got.rows}
+        assert ids == {"manager-queue-watch-stale"}, ids
+        assert got.rows[0]["loud"], "a watchdog that STOPPED is loud"
+
+    with tempfile.TemporaryDirectory() as td:
+        got = src_manager_queue_watch(_mqw_tree(td, "{not json"), today, now=_now)
+        ids = {r["id"] for r in got.rows}
+        assert ids == {"manager-queue-watch-unreadable"}, ids
+
+    # THE VERDICT MUST COME FROM THE GUARD, NOT FROM A COPY OF ITS LOGIC.
+    # If the guard is missing the source must say `not_applicable`; if it is
+    # present but unimportable it must say `could_not_read`. An inline
+    # re-implementation would happily answer in both cases.
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        (root / "docs/claude/work").mkdir(parents=True)
+        got = src_manager_queue_watch(root, today, now=_now)
+        assert got.state == "not_applicable", got.state
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        (root / "scripts/ci").mkdir(parents=True)
+        (root / _QUEUE_WATCH_GUARD).write_text("def (", encoding="utf-8")
+        (root / "docs/claude/work").mkdir(parents=True)
+        got = src_manager_queue_watch(root, today, now=_now)
+        assert got.state == "could_not_read", got.state
+        assert "SyntaxError" in got.note, got.note
+
+    # …and it must actually be WIRED, or every control above grades a function
+    # nothing calls — the `registered but never executed` shape.    assert src_manager_queue_watch in SOURCES, \
+        "src_manager_queue_watch is not registered in SOURCES"
+
+    assert src_settled_disposition_owed in SOURCES, \
+        "src_settled_disposition_owed is not registered in SOURCES"
+
+    # ── the spent-decision-edge source ─────────────────────────────────────
+    # ⚠️ Every control builds its OWN tree and copies the REAL guard into it, so
+    # the source is exercised through the import path it uses in production.
+    # Asserting against a local restatement of "is this edge spent?" would stay
+    # green after the two definitions diverged — which is the whole reason this
+    # source imports `check_decision_answers.py` instead of owning a grader.
+    _cda = Path(__file__).resolve().parents[1] / "ci" / "check_decision_answers.py"
+
+    _REPO_ROOT = Path(__file__).resolve().parents[2]
+
+    def _sde_tree(td: str, objects: dict, *, with_guard: str | None = "real"):
+        root = Path(td)
+        (root / "scripts/ci").mkdir(parents=True)
+        # SYMLINKED: the guard resolves REPO from its OWN path and imports
+        # `src.runtime.work_decisions` — the canonical normaliser it shares with
+        # R1 and R2. Without `src/` beside it the copy raises ModuleNotFoundError
+        # and every control below grades `could_not_read`, i.e. passes for the
+        # wrong reason. Same trap, same remedy as the research-tree fixture.
+        (root / "src").symlink_to(_REPO_ROOT / "src")
+        if with_guard == "real":
+            _shutil2.copy(_cda, root / _DECISION_ANSWERS_GUARD)
+        elif with_guard is not None:
+            (root / _DECISION_ANSWERS_GUARD).write_text(with_guard, encoding="utf-8")
+        (root / _WORK_OBJECTS).mkdir(parents=True)
+        for name, body in objects.items():
+            (root / _WORK_OBJECTS / name).write_text(body, encoding="utf-8")
+        return root
+
+    _WAITING_SPENT = """
+id: WO-TEST-PARKED
+lifecycle: waiting
+blocked_on:
+  - {kind: operator_decision, ref: DEC-20260101-ANSWERED, since: '2026-01-01'}
+decision_requests:
+  - id: DEC-20260101-ANSWERED
+    answer: {chosen: option_a, answered_at: '2026-01-02', answered_by: operator}
+"""
+    _WAITING_LIVE = """
+id: WO-TEST-LIVE
+lifecycle: waiting
+blocked_on:
+  - {kind: operator_decision, ref: DEC-20260101-OPEN, since: '2026-01-01'}
+decision_requests:
+  - id: DEC-20260101-OPEN
+    question: 'still open?'
+"""
+    _WAITING_REJECTED = """
+id: WO-TEST-REJECTED
+lifecycle: waiting
+blocked_on:
+  - {kind: operator_decision, ref: DEC-20260101-REJ, since: '2026-01-01'}
+decision_requests:
+  - id: DEC-20260101-REJ
+    answer: {chosen: null, free_text: 'REJECTED AS MALFORMED', answered_by: operator}
+"""
+    _DONE_SPENT = """
+id: WO-TEST-DONE
+lifecycle: done
+blocked_on:
+  - {kind: operator_decision, ref: DEC-20260101-ANSWERED2, since: '2026-01-01'}
+decision_requests:
+  - id: DEC-20260101-ANSWERED2
+    answer: {chosen: option_a, answered_at: '2026-01-02'}
+"""
+    _WAITING_PROSE = """
+id: WO-TEST-STRANDED
+lifecycle: waiting
+blocked_on:
+  - {kind: operator_decision, ref: 'originate a key, then a Tier-2 set-env', since: '2026-01-01'}
+"""
+
+    with tempfile.TemporaryDirectory() as td:
+        got = src_spent_decision_edges(_sde_tree(td, {"WO-TEST-PARKED.yaml": _WAITING_SPENT}), today)
+        assert got.state == "read", _state_and_cause(got)
+        assert {r["id"] for r in got.rows} == {"spent-edge-WO-TEST-PARKED"}, got.rows
+        assert got.rows[0]["loud"], "a parked object is loud, not a footnote"
+        assert got.rows[0]["link"] == f"{_WORK_OBJECTS}/WO-TEST-PARKED.yaml", \
+            "the link must point at the FILE — the guard keys objects by stem, " \
+            "not by the `id:` field, and a link built from `id:` would 404"
+        assert "does not propose the edit" in got.rows[0]["why_due"], \
+            "the row must refuse to propose a lifecycle edit — that is the " \
+            "manager's call and it moves the WIP ceiling"
+
+    with tempfile.TemporaryDirectory() as td:
+        got = src_spent_decision_edges(_sde_tree(td, {"WO-TEST-LIVE.yaml": _WAITING_LIVE}), today)
+        assert got.state == "read" and got.rows == [], \
+            "a genuinely unanswered decision is a REAL blocker and earns no row"
+        assert "0 spent" in got.note, got.note
+
+    # A REJECTION IS AN ANSWER, AND THE ROW MUST SAY SO DIFFERENTLY — this is
+    # the state every actually-parked edge in the live store is in.
+    with tempfile.TemporaryDirectory() as td:
+        got = src_spent_decision_edges(_sde_tree(td, {"WO-TEST-REJECTED.yaml": _WAITING_REJECTED}), today)
+        assert got.rows, "a rejected question still spends the edge"
+        assert "RE-POINT the edge, do not delete it" in got.rows[0]["why_due"], \
+            "deleting an edge whose question was rejected erases a real blocker"
+    # …and a CHOSEN answer must NOT carry that advice, or it is decoration.
+    with tempfile.TemporaryDirectory() as td:
+        got = src_spent_decision_edges(_sde_tree(td, {"WO-TEST-PARKED.yaml": _WAITING_SPENT}), today)
+        assert "RE-POINT" not in got.rows[0]["why_due"], got.rows[0]["why_due"]
+
+    # A spent edge on a NON-waiting object is residue, not work not happening.
+    with tempfile.TemporaryDirectory() as td:
+        got = src_spent_decision_edges(_sde_tree(td, {"WO-TEST-DONE.yaml": _DONE_SPENT}), today)
+        assert got.state == "read" and got.rows == [], got.rows
+        assert "1 spent" in got.note and "0 on a `waiting` object" in got.note, got.note
+
+    # STRANDED IS NOT SPENT, AND POOLING THEM WOULD APPLY THE WRONG REMEDY.
+    with tempfile.TemporaryDirectory() as td:
+        got = src_spent_decision_edges(_sde_tree(td, {"WO-TEST-STRANDED.yaml": _WAITING_PROSE}), today)
+        ids = {r["id"] for r in got.rows}
+        assert ids == {"stranded-edge-WO-TEST-STRANDED"}, ids
+        assert got.rows[0]["loud"]
+        # ⚠️ THE GRADED STATE ITSELF, not a phrase the surrounding prose also
+        # supplies. An earlier version asserted `"NOT SPENT" in why_due` and a
+        # planted defect that relabelled the row `spent` stayed GREEN, because
+        # that phrase occurs in the caveat two sentences later. A control whose
+        # needle the rest of the string provides grades nothing.
+        why = got.rows[0]["why_due"]
+        assert "graded unresolvable" in why, why
+        assert "graded spent" not in why, \
+            "an unresolvable edge must not be labelled with the spent verdict"
+
+    # AN UNPARSEABLE OBJECT IS REPORTED, NEVER SKIPPED.
+    with tempfile.TemporaryDirectory() as td:
+        got = src_spent_decision_edges(
+            _sde_tree(td, {"WO-TEST-PARKED.yaml": _WAITING_SPENT, "b.yaml": "\tnot: [yaml"}), today)
+        assert "spent-edge-objects-unparseable" in {r["id"] for r in got.rows}
+
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        (root / "scripts/ci").mkdir(parents=True)
+        _shutil2.copy(_cda, root / _DECISION_ANSWERS_GUARD)
+        assert src_spent_decision_edges(root, today).state == "not_applicable", \
+            "no work store is `not_applicable`, never a clean zero"
+    with tempfile.TemporaryDirectory() as td:
+        root = _sde_tree(td, {"WO-TEST-PARKED.yaml": _WAITING_SPENT}, with_guard=None)
+        assert src_spent_decision_edges(root, today).state == "not_applicable"
+    with tempfile.TemporaryDirectory() as td:
+        root = _sde_tree(td, {"WO-TEST-PARKED.yaml": _WAITING_SPENT}, with_guard="def (")
+        got = src_spent_decision_edges(root, today)
+        assert got.state == "could_not_read", got.state
+        assert "SyntaxError" in got.note, got.note
+
+    assert src_spent_decision_edges in SOURCES, \
+        "src_spent_decision_edges is not registered in SOURCES"
+
+    print("due-list: self-test OK — 112 planted controls all fire")
     return 0
 
 

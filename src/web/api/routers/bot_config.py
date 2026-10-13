@@ -5,11 +5,21 @@ dashboard's Settings tab. Tier 1 (no session — see
 ``docs/api-tier-policy.md``).
 
 Reads ``config/accounts.yaml`` and ``config/strategies.yaml`` directly
-from disk and overlays the live per-account dry/live state from
+from disk and overlays the per-account dry/live state from
 ``runtime_logs/runtime_status.json`` (which the pipeline writes per
 tick — see ``src/web/runtime_status.py``). The web API process and
 the pipeline process are separate; the runtime-status file is the
-only signal the API has into Telegram-driven runtime overrides.
+only channel between them.
+
+⚠️ **THIS ENDPOINT IS LAYER 5 OF THE VERIFICATION MAPPING — THE FILE — AND
+UNTIL 2026-09-22 ITS ``note`` CLAIMED OTHERWISE.** The note read
+*"live_per_account is the pipeline's runtime view"*. It is not: the pipeline
+computes that value by re-parsing ``config/accounts.yaml``, so it reports the
+file, exactly as the honestly-named ``yaml_mode`` does. The field name was
+right and the prose was wrong (*field beats comment*). Corrected under E31;
+the missing capability was then BUILT rather than the claim merely deleted —
+``GET /api/bot/runtime-config`` is layer 4, the state the process holds. See
+``docs/reference/verifying-what-is-trading.md``.
 
 **Secret handling.** Allowlist for accounts (we only surface fields
 in ``_ACCOUNT_PUBLIC_FIELDS``) and recursive denylist for
@@ -67,11 +77,20 @@ _HALT_FLAG_PATH = None
 
 # Account fields the endpoint is allowed to surface. Anything outside
 # this set (notably ``api_key_env`` / ``api_secret_env``) is dropped.
-# ``symbols`` (2026-06-11): the per-account instrument list is the
-# canonical "what does the system trade" enumeration — consumers
+# ``symbols`` (2026-06-11): the per-account DATA-PULL list — consumers
 # (the Svelte SPA — the only live consumer since 2026-09-01) derive their symbol selectors from
 # it instead of hardcoding, so a new instrument shows up without an app
 # change.
+# ⚠️ CORRECTED 2026-09-22 (E42): this comment used to call it "the canonical
+# 'what does the system trade' enumeration". It is not, and reading it that way
+# is what made it a de-facto execution gate for four months. ``strategies`` is
+# the roster and is the single source of truth for what trades; ``symbols`` is
+# an ADDITIVE pull list that legitimately names instruments no leg trades (21
+# such entries on 2026-09-22). A selector built from it is therefore a
+# SUPERSET of the traded set, and a rostered symbol absent from it is a bug in
+# the pull list — never a reason the leg does not trade.
+# The field name is kept deliberately: renaming it would break the SPA, which
+# reads it from this endpoint and lives in another repo.
 _ACCOUNT_PUBLIC_FIELDS = frozenset({
     "type", "exchange", "market_type", "strategies", "symbols", "risk",
     "enabled",
@@ -193,7 +212,28 @@ def _public_account(name: str, cfg: Dict[str, Any]) -> Dict[str, Any]:
     # Default `enabled` to True so the dashboard doesn't have to carry
     # the implicit-default rule.
     out.setdefault("enabled", True)
+    # `account_state_dry_run` (FIX-CA-32) was removed 2026-09-29 with the
+    # config/account_state.yaml fold it surfaced — operator decision
+    # JC-CA-06 retired that fold. The dashboard SPA never read the field.
+    out["daily_dd_switch"] = _dd_switch_status(name, cfg)
     return out
+
+
+def _dd_switch_status(name: str, cfg: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """The account-level daily-DD switch (operator directive 2026-10-09):
+    armed, limit, day-start equity, tripped. Config is read from the YAML
+    this API sees; day state from ``runtime_logs/daily_dd_switch_state.json``
+    the trading process writes. ``read_state: not_observed`` = the trader has
+    not folded an equity reading for this account yet (we did not look), not
+    "no loss". ``None`` for a retired account (it has no switch)."""
+    if cfg.get("retired") is True:
+        return None
+    try:
+        from src.units.accounts.daily_dd_switch import switch_for_account
+        return switch_for_account(name, cfg).status()
+    except Exception as exc:  # noqa: BLE001  # allow-silent: logged and surfaced as an `error` field, never an empty status
+        logger.warning("bot_config: daily_dd_switch status failed for %s: %s", name, exc)
+        return {"error": f"{type(exc).__name__}: {exc}"}
 
 
 def build_config(
@@ -246,10 +286,15 @@ def build_config(
             "halted": os.path.exists(h_path),
             "live_per_account": live_per_account,
             "note": (
-                "yaml_mode is the static config; live_per_account is the "
-                "pipeline's runtime view (per-account mode flips via the "
-                "set-account-mode system-action land here — the only "
-                "sanctioned mode-write wire). Empty when the pipeline "
+                "BOTH FIELDS REPORT THE FILE ON THIS VM, NOT THE RUNNING "
+                "PROCESS. yaml_mode is config/accounts.yaml::mode read by "
+                "this API; live_per_account is the same field read by the "
+                "trading process (src/web/runtime_status.py::"
+                "_read_live_per_account parses config/accounts.yaml on every "
+                "tick). The pipeline WRITING it is not the pipeline USING it. "
+                "For the gates the process actually holds — and whether the "
+                "file has moved since it loaded them — call "
+                "GET /api/bot/runtime-config (E31). Empty when the pipeline "
                 "hasn't written a status snapshot yet."
             ),
         },

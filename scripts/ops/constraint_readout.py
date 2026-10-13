@@ -72,6 +72,7 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import inspect
 import json
 import os
 import sys
@@ -206,16 +207,49 @@ def grade_blocked_on(obj: dict) -> tuple[str, list[dict]]:
                          was made. This is a CLAIM that nothing blocks it.
     - ``unstated``     — the list is empty and the basis says ``NOT_ASSESSED``,
                          or there is no basis key at all. **Nobody has looked.**
-    - ``malformed``    — ``blocked_on`` is present but is not a list.
+    - ``malformed``    — ``blocked_on`` is present but is not a list, **or it is
+                         a list carrying an entry that is not a typed edge**.
 
     ⚠️ ``declared_none`` and ``unstated`` are the whole point. Reading the
     second as the first is how a false *ready* appears, and across this store it
     would turn 578 unexamined rows into 578 confident all-clears.
+
+    ⚠️ **A NON-DICT ENTRY USED TO BE SILENTLY DROPPED, AND THAT PRODUCED THE
+    STRONGEST WRONG ANSWER THIS FUNCTION CAN GIVE.** The filter below reads
+    ``isinstance(e, dict)``; an entry that is a bare string fell out of it, the
+    surviving list was empty, and the function then fell through to the basis
+    check — so an object with a hand-written ASSESSED basis graded
+    ``declared_none``, *"a CLAIM that nothing blocks this"*. Not ``unstated``,
+    which would at least say nobody looked: a confident all-clear.
+
+    MEASURED 2026-09-12 over all 185 YAML files under ``docs/claude/work/``
+    (0 unparseable, stated as the control): **one** object,
+    ``WO-20260908-RE-DISPATCH-THE-MGC-REMEDIATION-AGAINST-THE``, whose
+    ``blocked_on`` is ``["WO-20260907-ROOT-CAUSE-THE-43-PHANTOM-MGC-LOTS"]`` —
+    a bare string. Its own ``blocked_on_basis`` reads *"This is a TRUE edge, not
+    a placeholder"* and explains that proceeding under the wrong attribution
+    would strip protection off the only real MGC position at the venue, citing
+    ``BL-20260820-OVERCOVER-REMEDIATION-CANCELLED-THE-JOURNAL-MATCHING-LEG``. It
+    is ``lifecycle: ready`` — queued. The author wrote the blocker; the
+    computation read *nothing blocks it*.
+
+    ⚠️ **n = 1 of 185, and the MECHANISM is the finding, not the count.** One
+    silent drop is all it takes, and a reader of the readout could not tell this
+    object from the 58 that genuinely claim nothing blocks them.
+
+    ⚠️ **``malformed`` DOES NOT COUNT AS ASSESSED** (``assessed = blocked +
+    declared_none``), so this change moves the object out of the coverage
+    numerator, which is correct: we did not read its edge.
     """
     raw = obj.get("blocked_on", None)
     if raw is not None and not isinstance(raw, list):
         return "malformed", []
-    edges = [e for e in (raw or []) if isinstance(e, dict)]
+    entries = list(raw or [])
+    edges = [e for e in entries if isinstance(e, dict)]
+    if len(edges) != len(entries):
+        # SOMETHING WAS DECLARED AND WE COULD NOT READ IT. Never fall through to
+        # the basis check — that is the path that manufactures `declared_none`.
+        return "malformed", edges
     if edges:
         return "blocked", edges
     basis = obj.get("blocked_on_basis")
@@ -225,6 +259,54 @@ def grade_blocked_on(obj: dict) -> tuple[str, list[dict]]:
     if basis.strip().upper().startswith("NOT_ASSESSED"):
         return "unstated", []
     return "declared_none", []
+
+
+#: A `lifecycle` and a `blocked_on` basis that disagree. FOUR states, never
+#: collapsed — each names a DIFFERENT wrong reading of the store, and two of
+#: them point in opposite directions.
+CONTRADICTION_NONE = "consistent"
+#: `waiting` + `declared_none` — assessed as unblocked and parked anyway. This
+#: inflates the held-up set the operator is asked to read as "held up", in the
+#: direction that HIDES real queue depth.
+CONTRADICTION_PARKED = "parked_though_unblocked"
+#: `ready` / `in_flight` + `blocked` — queued or being worked while a live typed
+#: blocker is declared. The opposite direction and the more dangerous one: a
+#: session taking a `ready` object walks into a blocker its own file declares.
+CONTRADICTION_QUEUED = "queued_though_blocked"
+#: `done` / `accepted` + `blocked` — residue. Harmless to the queue, but it
+#: keeps a spent edge in the graph, so it is named rather than swept in with the
+#: other two.
+CONTRADICTION_CLOSED = "closed_though_blocked"
+CONTRADICTION_STATES = (CONTRADICTION_NONE, CONTRADICTION_PARKED,
+                        CONTRADICTION_QUEUED, CONTRADICTION_CLOSED)
+
+_QUEUED_LIFECYCLES = ("ready", "in_flight")
+_CLOSED_LIFECYCLES = ("done", "accepted")
+
+
+def grade_lifecycle_contradiction(lifecycle: object, basis_state: str) -> str:
+    """Does this object's lifecycle disagree with its own edge basis?
+
+    A pure function, so the policy is arguable in tests rather than against the
+    live store — and so the two directions cannot quietly become one.
+
+    ⚠️ **`unstated` IS NEVER A CONTRADICTION, and that is the load-bearing
+    exclusion.** An empty `blocked_on` with `NOT_ASSESSED` is *nobody looked*;
+    calling that a disagreement would turn the store's own coverage gap (94
+    objects, measured 2026-09-12) into 94 findings and bury the 21 real ones.
+    The coverage story is already told by `assessed_coverage`.
+
+    ⚠️ **`malformed` IS NOT ONE EITHER.** *We could not read the edge* cannot
+    disagree with anything; it is reported on its own terms.
+    """
+    lc = str(lifecycle or "")
+    if basis_state == "declared_none" and lc == "waiting":
+        return CONTRADICTION_PARKED
+    if basis_state == "blocked" and lc in _QUEUED_LIFECYCLES:
+        return CONTRADICTION_QUEUED
+    if basis_state == "blocked" and lc in _CLOSED_LIFECYCLES:
+        return CONTRADICTION_CLOSED
+    return CONTRADICTION_NONE
 
 
 def grade_edge(edge: dict, by_id: dict[str, dict]) -> dict:
@@ -329,6 +411,8 @@ def diagnose(objects: list[dict], read_errors: list[dict]) -> dict:
     blocked_objects: list[dict] = []
     edge_kinds: dict[str, int] = {}
     hold_states: dict[str, int] = {}
+    contradiction_counts: dict[str, int] = {s: 0 for s in CONTRADICTION_STATES}
+    contradictions: list[dict] = []
 
     for obj in objects:
         state, edges = grade_blocked_on(obj)
@@ -344,6 +428,14 @@ def diagnose(objects: list[dict], read_errors: list[dict]) -> dict:
         )
         life = str(obj.get("lifecycle") or "(unstated)")
         lifecycle_counts[life] = lifecycle_counts.get(life, 0) + 1
+        contra = grade_lifecycle_contradiction(obj.get("lifecycle"), state)
+        contradiction_counts[contra] = contradiction_counts.get(contra, 0) + 1
+        if contra != CONTRADICTION_NONE:
+            contradictions.append({
+                "id": obj.get("id"), "file_lifecycle": life,
+                "basis_state": state, "contradiction": contra,
+                "title": obj.get("title"),
+            })
         if state != "blocked":
             continue
         graded = [grade_edge(e, by_id) for e in edges]
@@ -434,6 +526,13 @@ def diagnose(objects: list[dict], read_errors: list[dict]) -> dict:
         "stage_basis_counts": stage_basis_counts,
         "stage_counts_by_basis": stage_counts_by_basis,
         "lifecycle_counts": lifecycle_counts,
+        # WRITTEN AND READ. `declared_none` and `lifecycle` were both already
+        # computed here and their INTERSECTION was reported nowhere, which is
+        # the written-and-never-read shape `provenance-consumer-guard` exists
+        # for one subsystem over: a reviewer sees the fields and assumes
+        # something acts on them.
+        "lifecycle_contradiction_counts": contradiction_counts,
+        "lifecycle_contradictions": contradictions,
         "chain_stages_with_no_objects": chain_empty,
         "held_up_candidates": held,
         "holds_on_waiting_targets": holds_on_waiting,
@@ -448,8 +547,50 @@ def diagnose(objects: list[dict], read_errors: list[dict]) -> dict:
 
 
 def _one_line(v: Any, limit: int = 160) -> str:
+    """`v`, collapsed to one line and clipped to `limit` — NEVER leaving a
+    partial BL-/MB-/FU- tracking id behind.
+
+    ⚠️ THIS IS THE SAME BUG CLASS THAT TOOK `constraint-readout.yml` OFF THE
+    AIR TWICE. `render_due_list.py`'s own bare `[:200]` slice over
+    register-supplied prose landed inside a filed tracking id on 2026-09-12
+    and manufactured a reference that resolves to nothing —
+    `check_backlog_refs.py` correctly refused the commit (see that guard's
+    `REF` and `render_due_list._clip`'s docstring for the full incident). It
+    was fixed there in #12378 (2026-09-17), id-safe up to 200 chars. But this
+    function used to apply a SECOND, NARROWER re-clip (140/180 chars at this
+    file's own call sites) to text that had already survived the FIRST clip —
+    so an already-id-safe 200-char title could still be cut a second time, at
+    a different boundary, inside the same id. Measured live:
+    `constraint-readout.yml` kept failing `artifact-validity-guard` on
+    exactly this shape through run #15 (2026-09-16), one day AFTER #12378
+    merged, on a title that survived render_due_list's clip at 200 but not
+    THIS module's own second clip at 180. See the MI-270 checklist row and
+    its tracked_by backlog id (health-review-backlog.json, filed 2026-09-11)
+    — spelled there rather than here so this docstring does not itself
+    become the next line-wrapped dangling reference `check_backlog_refs.py`
+    would refuse (SEARCH_DIRS covers `scripts/`; #12378 hit exactly this).
+
+    Delegates the actual cut to `render_due_list._clip` (via `_due_lib()`,
+    the one importer this file already uses for that sibling — a second copy
+    of the id-safe primitive is exactly how the two passes would drift back
+    apart). A cut that would land inside a filed reference is moved to BEFORE
+    the id, or — if the id starts at offset 0 and does not fit — the id is
+    kept whole and `limit` is overrun rather than emitting a fragment.
+
+    Falls back to the old naive slice ONLY if the sibling import failed (the
+    self-test asserts it does not) — degraded, not crashed, and never
+    pretending the fallback is id-safe.
+    """
     s = " ".join(str(v or "").split())
-    return s if len(s) <= limit else s[: limit - 1] + "…"
+    if len(s) <= limit:
+        return s
+    try:
+        clip = _due_lib()._clip
+    except Exception:  # noqa: BLE001 — degrade, never crash a readout render
+        clip = None
+    if clip is not None:
+        return clip(s, limit - 1).rstrip() + "…"
+    return s[: limit - 1] + "…"
 
 
 def money_block(fetch: bool = True) -> dict:
@@ -911,6 +1052,58 @@ def render_due_section(du: dict) -> list[str]:
     return L
 
 
+def render_contradictions(c: dict, unstated: int) -> list[str]:
+    """The lifecycle-vs-basis disagreement block.
+
+    Its OWN function so the controls can render it without assembling the
+    whole report envelope (which reaches a money feed and the due list). A
+    block only reachable through an end-to-end run is one whose controls
+    quietly stop covering it.
+    """
+    L: list[str] = []
+    _cc = c.get("lifecycle_contradiction_counts") or {}
+    _n = sum(v for k, v in _cc.items() if k != CONTRADICTION_NONE)
+    if _n:
+        L.append(f"⚠️ **{_n} object(s) disagree with their OWN edge basis.** Both "
+                 f"halves were already computed and their INTERSECTION was reported "
+                 f"nowhere — a signal written and never read.")
+        L.append("")
+        L.append("| contradiction | n | what it means |")
+        L.append("|---|---|---|")
+        if _cc.get(CONTRADICTION_PARKED):
+            L.append(f"| `{CONTRADICTION_PARKED}` | {_cc[CONTRADICTION_PARKED]} | "
+                     "`waiting` with an ASSESSED basis saying nothing blocks it. That "
+                     "is `ready`. It inflates the set the operator reads as *held up*, "
+                     "in the direction that HIDES real queue depth. |")
+        if _cc.get(CONTRADICTION_QUEUED):
+            L.append(f"| `{CONTRADICTION_QUEUED}` | {_cc[CONTRADICTION_QUEUED]} | "
+                     "`ready`/`in_flight` while a live typed blocker is declared. The "
+                     "opposite direction and the more dangerous one — a session taking "
+                     "it walks into a blocker its own file declares. |")
+        if _cc.get(CONTRADICTION_CLOSED):
+            L.append(f"| `{CONTRADICTION_CLOSED}` | {_cc[CONTRADICTION_CLOSED]} | "
+                     "`done`/`accepted` with a live blocker — residue. Harmless to the "
+                     "queue, but it keeps a spent edge in the graph. |")
+        L.append("")
+        L.append("⚠️ **`unstated` is deliberately NOT a contradiction.** *Nobody looked* "
+                 "cannot disagree with a lifecycle, and counting it would turn the "
+                 f"store's coverage gap ({unstated} objects) into "
+                 f"{unstated} findings and bury these. Nor is `malformed`: "
+                 "*we could not read the edge* cannot disagree with anything either.")
+        L.append("")
+        L.append("⚠️ **This decides nothing.** A lifecycle is its object owner's or the "
+                 "manager's to re-grade, and moving one changes what the WIP ceiling "
+                 "and this readout compute over. Each row below names the object; the "
+                 "judgement is theirs.")
+        L.append("")
+        for r in sorted(c.get("lifecycle_contradictions") or [],
+                        key=lambda x: (x["contradiction"], str(x["id"]))):
+            L.append(f"- `{r['id']}` — **{r['contradiction']}** "
+                     f"(`{r['file_lifecycle']}` + basis `{r['basis_state']}`)")
+        L.append("")
+    return L
+
+
 def render_md(d: dict) -> str:
     c, m, f, o = d["constraint"], d["money"], d["flight"], d["operator"]
     du = d.get("due") or {}
@@ -947,6 +1140,7 @@ def render_md(d: dict) -> str:
              "claim that nothing blocks the object. Reading the second as the first is "
              "how a false *ready* appears.")
     L.append("")
+    L += render_contradictions(c, b["unstated"])
     if c["chain_stages_with_no_objects"]:
         L.append("⚠️ **Chain coverage is PARTIAL: "
                  + ", ".join(f"`{s}`" for s in c["chain_stages_with_no_objects"])
@@ -1249,6 +1443,103 @@ def _self_test() -> int:
           grade_blocked_on({"blocked_on": [{"kind": "object", "ref": "X"}]})[0], "blocked")
     check("a non-list blocked_on grades `malformed`",
           grade_blocked_on({"blocked_on": "soon"})[0], "malformed")
+    # ⚠️ THE SILENT DROP, WHICH PRODUCED THE STRONGEST WRONG ANSWER THIS
+    # FUNCTION CAN GIVE. A bare-string entry used to fall out of the isinstance
+    # filter, leave an empty list, and fall through to the basis check — so an
+    # object with a hand-written ASSESSED basis graded `declared_none`, a CLAIM
+    # that nothing blocks it. Measured live on
+    # WO-20260908-RE-DISPATCH-THE-MGC-REMEDIATION-AGAINST-THE, whose own basis
+    # says "This is a TRUE edge, not a placeholder".
+    check("a bare-string edge beside an ASSESSED basis grades `malformed`, "
+          "NEVER `declared_none`",
+          grade_blocked_on({"blocked_on": ["WO-SOMETHING"],
+                            "blocked_on_basis": "ASSESSED 2026-09-08 on evidence"})[0],
+          "malformed")
+    # …and the readable half is still RETURNED, so a mixed list is not also a
+    # data loss on top of a misgrade.
+    _mixed_state, _mixed_edges = grade_blocked_on(
+        {"blocked_on": ["WO-SOMETHING", {"kind": "object", "ref": "Y"}],
+         "blocked_on_basis": "ASSESSED"})
+    check("a mixed list grades `malformed`", _mixed_state, "malformed")
+    check("a mixed list still returns its readable edge(s)",
+          [e["ref"] for e in _mixed_edges], ["Y"])
+    # POSITIVE CONTROL on the other side: an empty list with an ASSESSED basis
+    # is STILL the claim it always was. The fix must not turn every assessed
+    # all-clear into `malformed`.
+    check("an empty list with an ASSESSED basis is still `declared_none`",
+          grade_blocked_on({"blocked_on": [],
+                            "blocked_on_basis": "ASSESSED — nothing blocks"})[0],
+          "declared_none")
+
+    # ── lifecycle vs its own edge basis ───────────────────────────────────
+    # BOTH DIRECTIONS, because they are opposite harms and a single "mismatch"
+    # verdict would let a reader apply the wrong remedy. And the two deliberate
+    # EXCLUSIONS, because including either would bury the real findings under
+    # the store's own coverage gap.
+    check("`waiting` + `declared_none` is `parked_though_unblocked`",
+          grade_lifecycle_contradiction("waiting", "declared_none"),
+          CONTRADICTION_PARKED)
+    check("`ready` + `blocked` is `queued_though_blocked`",
+          grade_lifecycle_contradiction("ready", "blocked"), CONTRADICTION_QUEUED)
+    check("`in_flight` + `blocked` is `queued_though_blocked` too",
+          grade_lifecycle_contradiction("in_flight", "blocked"),
+          CONTRADICTION_QUEUED)
+    check("`done` + `blocked` is RESIDUE, not a queue problem",
+          grade_lifecycle_contradiction("done", "blocked"), CONTRADICTION_CLOSED)
+    check("`waiting` + `blocked` is the CORRECT state and is not a finding",
+          grade_lifecycle_contradiction("waiting", "blocked"), CONTRADICTION_NONE)
+    check("`ready` + `declared_none` is the CORRECT state and is not a finding",
+          grade_lifecycle_contradiction("ready", "declared_none"),
+          CONTRADICTION_NONE)
+    # ⚠️ THE EXCLUSIONS. `unstated` is *nobody looked* and cannot disagree with a
+    # lifecycle; counting it would make every one of the store's 94 unassessed
+    # objects a finding and bury the 21 real ones. `malformed` is *we could not
+    # read the edge*, same argument.
+    for _lc in ("waiting", "ready", "in_flight", "done"):
+        check(f"`{_lc}` + `unstated` is NOT a contradiction",
+              grade_lifecycle_contradiction(_lc, "unstated"), CONTRADICTION_NONE)
+        check(f"`{_lc}` + `malformed` is NOT a contradiction",
+              grade_lifecycle_contradiction(_lc, "malformed"), CONTRADICTION_NONE)
+    check("an absent lifecycle is not a contradiction either",
+          grade_lifecycle_contradiction(None, "blocked"), CONTRADICTION_NONE)
+
+    # WIRING: the counts and the rows must ride the diagnosis dict, or the
+    # number is computed and shown to nobody — which is the state this closes.
+    _d = diagnose([
+        {"id": "A", "lifecycle": "waiting", "blocked_on": [],
+         "blocked_on_basis": "ASSESSED — nothing blocks"},
+        {"id": "B", "lifecycle": "ready", "blocked_on_basis": "ASSESSED",
+         "blocked_on": [{"kind": "operator_decision", "ref": "DEC-X"}]},
+        {"id": "C", "lifecycle": "waiting", "blocked_on_basis": "ASSESSED",
+         "blocked_on": [{"kind": "operator_decision", "ref": "DEC-Y"}]},
+    ], [])
+    check("the contradiction counts ride the diagnosis dict",
+          {k: v for k, v in _d["lifecycle_contradiction_counts"].items() if v},
+          {CONTRADICTION_NONE: 1, CONTRADICTION_PARKED: 1, CONTRADICTION_QUEUED: 1})
+    check("only the contradicting objects are listed, and they are NAMED",
+          sorted(str(r["id"]) for r in _d["lifecycle_contradictions"]), ["A", "B"])
+    # …and it must be PRINTED, not merely carried. A count computed and shown to
+    # nobody is exactly the state this closes: both halves were already in this
+    # dict and their intersection reached no reader.
+    _md = "\n".join(render_contradictions(_d, _d["basis_counts"]["unstated"]))
+    check("the readout PRINTS the contradiction count",
+          "disagree with their OWN edge basis" in _md, True)
+    check("the readout NAMES each contradicting object",
+          ("`A`" in _md and "`B`" in _md), True)
+    check("…and does NOT name the consistent one", "`C`" in _md, False)
+    check("both directions are named, never pooled into one 'mismatch'",
+          (CONTRADICTION_PARKED in _md and CONTRADICTION_QUEUED in _md), True)
+    check("the readout refuses to propose the re-grade",
+          "This decides nothing" in _md, True)
+    check("…and it states WHY `unstated` is excluded, with the number it would add",
+          "cannot disagree with a lifecycle" in _md, True)
+    _clean = diagnose(
+        [{"id": "Z", "lifecycle": "waiting", "blocked_on_basis": "ASSESSED",
+          "blocked_on": [{"kind": "operator_decision", "ref": "DEC-Z"}]}], [])
+    check("a store with NO contradiction prints no contradiction block",
+          render_contradictions(_clean, 0), [])
+    check("render_contradictions is WIRED into render_md",
+          "render_contradictions(c," in inspect.getsource(render_md), True)
 
     # Edge grading: a done target holds nothing; a non-object ref is not dangling.
     by_id = {"A": {"id": "A", "lifecycle": "done"}, "B": {"id": "B", "lifecycle": "waiting"}}
@@ -1515,6 +1806,56 @@ def _self_test() -> int:
         _has = False
     check("the real render_due_list is importable and exposes collect+verdict_for",
           _has, True)
+    check("...and it exposes the id-safe _clip `_one_line` now delegates to",
+          callable(getattr(_lib, "_clip", None)) if _has else False, True)
+
+    # ── `_one_line` must never MANUFACTURE a dangling tracking id ──────────
+    # THE LIVE 2026-09-12 SUMMARY, VERBATIM — the string that took this
+    # workflow's `artifact-validity-guard` red through run #15 (2026-09-16),
+    # one day AFTER render_due_list.py's own copy of this bug was fixed
+    # (#12378), because `_one_line`'s SECOND, narrower clip at 180 chars cut
+    # into an id the first clip (at 200) had already left whole. See the
+    # module-level note on `_one_line` and MI-270.
+    #
+    # ⚠️ THE REAL FILED ID BELOW IS KEPT WHOLE ON ONE LINE, DELIBERATELY.
+    # `check_backlog_refs.py` scans `scripts/` per ADDED LINE
+    # (refs_in_added_lines), not per logical Python string value, so an id
+    # split across two source lines — even inside one Python string literal —
+    # reads as two dangling fragments. This is the exact trap #12378's own
+    # PR hit writing its docstring, and the reason this self-test never
+    # spells a TRUNCATED fragment as literal source text either (below).
+    _live_summary = (
+        "OPERATOR-RAISED 2026-09-12: a real-money ETHUSDT SHORT 0.05 on "
+        "bybit_2 open at the venue with no stop and no take-profit, "
+        "invisible to every bot surface. Filed as "
+        "BL-20260912-BYBIT2-SETTLE-COIN-PAGE-RETURNS-FEWER-POSITIONS-THAN-THE-VENUE-HOLDS-SO-A-REAL-MONEY-HEDGE-BOOK-IS-NEVER-FETCHED-AND-SITS-NAKED"
+        " (severity critical, Tier-2)."
+    )
+    # POSITIVE CONTROL, WITHOUT SPELLING THE DANGLING FRAGMENT: the old naive
+    # `s[:limit-1]` cuts at a fixed character offset, so it lands INSIDE the
+    # tracking id above rather than at a word boundary — the char right after
+    # the cut continues the id instead of starting new prose. That is the
+    # shape the fix removes; no fragment needs to appear in this file's own
+    # source to prove it.
+    _old_naive = _live_summary[:179] + "…"
+    check("POSITIVE CONTROL: the old naive cut lands INSIDE the tracking "
+          "id, not at a word boundary",
+          _live_summary[179] in "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-", True)
+    _clipped = _one_line(_live_summary, 180)
+    check("_one_line(180) does NOT reproduce the old naive mid-id cut",
+          _clipped != _old_naive, True)
+    check("...it cuts BEFORE the tracking id entirely and keeps the prose",
+          _clipped == ("OPERATOR-RAISED 2026-09-12: a real-money ETHUSDT "
+                        "SHORT 0.05 on bybit_2 open at the venue with no "
+                        "stop and no take-profit, invisible to every bot "
+                        "surface. Filed as…"),
+          True)
+    check("a short string under the limit is returned unchanged (no ellipsis)",
+          _one_line("short text", 160), "short text")
+    check("an id starting at offset 0, longer than the limit, is kept WHOLE "
+          "rather than fragmented (may overrun `limit`)",
+          _one_line("BL-20260912-" + "A" * 200 + " trailing prose", 50),
+          "BL-20260912-" + "A" * 200 + "…")
 
     print(f"\n{'ALL PASS' if not failures else str(len(failures)) + ' FAILURE(S)'}")
     return 1 if failures else 0

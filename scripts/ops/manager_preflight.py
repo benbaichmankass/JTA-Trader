@@ -132,12 +132,15 @@ import json
 import re
 import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import github_equivalent_merge as gem  # noqa: E402
+import predicted_register_integrity as pri  # noqa: E402
 import manager_lease  # noqa: E402
 import session_registry as sr  # noqa: E402
 
@@ -156,6 +159,7 @@ REGISTERS: Tuple[str, ...] = (
     "docs/claude/OPEN-ITEMS.json",
     "docs/claude/work/SESSIONS.json",
     "docs/claude/work/MANAGER-CHECKLIST.json",
+    "docs/claude/work/checklist",
     "docs/claude/work/OPEN-PRS.json",
     "docs/claude/work/MANAGER-LEASE.json",
     "docs/claude/health-review-backlog.json",
@@ -957,6 +961,150 @@ def edge_has_evidence(item: Dict[str, Any], edge: Dict[str, Any]) -> bool:
     return bool(re.search(r"\d{4}-\d{2}-\d{2}", blob))
 
 
+def predict_branches(branches: Sequence[str], base: str = "origin/main",
+                     *, predictor=None, inspect=pri.inspect_tree
+                     ) -> Dict[str, Dict[str, Any]]:
+    """One prediction per branch, SHARED by the two checks that read it.
+
+    ⚠️ **It exists so the branches are merged ONCE, not twice.** Each prediction
+    builds a throwaway un-armed clone and merges a multi-megabyte register; the
+    conflict question and the would-it-duplicate question are different
+    verdicts, but they are two readings of the SAME merge, and predicting twice
+    to answer them separately would double a real cost for nothing.
+    """
+    predict = predictor or gem.predict
+    out: Dict[str, Dict[str, Any]] = {}
+    for br in branches:
+        try:
+            out[br] = predict(str(Path.cwd()), base, br, inspect=inspect)
+        except TypeError:
+            # A predictor that predates the inspect hook (every existing
+            # self-test stub is one). Its conflict verdict is still usable; the
+            # register question simply goes unanswered, which is `unknown` at
+            # the check below and never a pass.
+            try:
+                out[br] = predict(str(Path.cwd()), base, br)
+            except Exception as exc:  # pragma: no cover - defensive
+                out[br] = {"state": f"{gem.COULD_NOT_LOOK}: {exc}"}
+        except Exception as exc:  # pragma: no cover - defensive
+            out[br] = {"state": f"{gem.COULD_NOT_LOOK}: {exc}"}
+    return out
+
+
+def check_predicted_register_integrity(
+        predictions: Optional[Dict[str, Dict[str, Any]]]) -> Optional[Dict[str, Any]]:
+    """Would merging land a DUPLICATE register id on `main`? — the OTHER question.
+
+    ⚠️ **A CLEAN MERGE IS NOT A CORRECT ONE, AND THIS REPO HAS PAID FOR READING
+    THEM AS THE SAME THING TWICE IN ONE DAY.** GitHub's squash cannot run the
+    row-aware register driver, so `.gitattributes` falls back to `union`, which
+    keeps a row present on both sides at different positions. That merge does
+    not conflict; it emits a duplicate id and reddens `main`.
+    `check_github_mergeability` above answers the conflict question and returns
+    `clean` for exactly this case, correctly — which is why this is a SEPARATE
+    check rather than a widening of that one. The remedies differ: a conflict is
+    fixed by merging the base in, and a duplicate is NOT.
+
+    ⚠️ **`unknown` COVERS "NOTHING WAS MERGEABLE TO INSPECT" AND IS NOT A PASS.**
+    A branch that would conflict produces no tree, so the register question goes
+    genuinely unanswered for it — reporting that as clean content would be the
+    collapsed state this whole module family exists to refuse.
+    """
+    if not predictions:
+        return None
+    verdicts: Dict[str, str] = {}
+    findings: List[str] = []
+    for br, res in predictions.items():
+        if res.get("state") != gem.CLEAN:
+            verdicts[br] = "not_mergeable_no_tree"
+            continue
+        ins = res.get("inspection") or {}
+        st = ins.get("state")
+        if st == pri.WOULD_DUPLICATE:
+            verdicts[br] = pri.WOULD_DUPLICATE
+            findings.extend(f"{br}: {f}" for f in (ins.get("findings") or []))
+        elif st == pri.CLEAN:
+            verdicts[br] = pri.CLEAN
+        else:
+            verdicts[br] = ins.get("reason") and f"{pri.COULD_NOT_LOOK}: {ins['reason']}" \
+                or pri.COULD_NOT_LOOK
+    if findings:
+        return _c("predicted_register_integrity", FAIL,
+                  f"Merging would land {len(findings)} DUPLICATE register id(s) on "
+                  f"`main`. The merge itself is CLEAN — GitHub's squash falls back "
+                  f"to `union` because it cannot run the row-aware driver, so this "
+                  f"is NOT fixed by merging the base in: "
+                  + " | ".join(findings)[:600],
+                  verdicts=verdicts)
+    graded = [v for v in verdicts.values() if v == pri.CLEAN]
+    if not graded:
+        return _c("predicted_register_integrity", UNKNOWN,
+                  "no named branch produced a mergeable tree to inspect, so the "
+                  "duplicate-id question went UNANSWERED — this is not a pass.",
+                  verdicts=verdicts)
+    return _c("predicted_register_integrity", PASS,
+              f"{len(graded)} of {len(verdicts)} branch(es) merge clean AND land no "
+              f"duplicate register id.", verdicts=verdicts)
+
+
+def check_github_mergeability(branches: Sequence[str], base: str = "origin/main",
+                              *, predictor=None,
+                              predictions: Optional[Dict[str, Dict[str, Any]]] = None
+                              ) -> Optional[Dict[str, Any]]:
+    """Will GitHub call these branches conflicted? — asked the ONE way that predicts it.
+
+    ⚠️ **THIS IS THE OTHER HALF OF `check_merge_driver` ABOVE, AND THEY PULL IN
+    OPPOSITE DIRECTIONS.** That check FAILS an un-armed clone, because un-armed
+    you pay hand-resolutions you did not need. Armed, `git merge` resolves the
+    register locally and reports success for a pair GitHub grades ``dirty`` —
+    so the very arming that check demands is what makes a local test merge lie.
+
+    `BL-20260910-AN-ARMED-CLONES-LOCAL-TEST-MERGE-IS-A-FALSE-NEGATIVE-ON-GITHUB-MERGEABILITY`
+    is a manager doing exactly that: test-merged locally, got *"Automatic merge
+    went well"*, called the merge, received **HTTP 405 "Pull Request has merge
+    conflicts"**. Its resolution asks for a check the merge-queue duty ACTUALLY
+    CALLS rather than prose — prose one file away is what did not reach the
+    moment of use.
+
+    ⚠️ **IT IS OMITTED ENTIRELY WHEN NO BRANCH IS NAMED**, and that is not
+    laziness. A check that reported `UNKNOWN` on every ordinary invocation would
+    make `readiness` unknown for every manager who did not pass the flag — the
+    desensitised alarm, with a readiness verdict attached. The question was not
+    asked, so nothing is answered.
+
+    ⚠️ **A `PASS` HERE MEANS *NO CONFLICT*, NEVER *MERGEABLE NOW*.** It cannot
+    see required checks, reviews or branch protection. `mergeable_state` from
+    GitHub remains authoritative; this predicts it when GitHub has not computed
+    it yet, which is precisely when a session reaches for a local merge.
+    """
+    if not branches:
+        return None
+    results = predictions if predictions is not None else predict_branches(
+        branches, base, predictor=predictor)
+    per: Dict[str, str] = {b: r.get("state", gem.COULD_NOT_LOOK)
+                           for b, r in results.items()}
+    conflicted = [b for b, v in per.items() if v == gem.WOULD_CONFLICT]
+    unknown = [b for b, v in per.items() if not v.startswith((gem.CLEAN, gem.WOULD_CONFLICT))]
+    if conflicted:
+        return _c("github_mergeability", FAIL,
+                  f"{len(conflicted)} of {len(per)} branch(es) would CONFLICT on "
+                  f"GitHub against `{base}`: {', '.join(conflicted)}. The remedy "
+                  f"belongs to the PR's author — merge the base branch in — and a "
+                  f"manager cannot discharge it by clicking merge.",
+                  verdicts=per)
+    if unknown:
+        return _c("github_mergeability", UNKNOWN,
+                  f"{len(unknown)} of {len(per)} branch(es) COULD NOT BE GRADED: "
+                  f"{', '.join(unknown)}. That is 'we did not look', not 'no "
+                  f"conflict'.", verdicts=per)
+    return _c("github_mergeability", PASS,
+              f"{len(per)} branch(es) merge cleanly against `{base}` in an "
+              f"UN-ARMED clone, which is the state GitHub's server is in. "
+              f"A clean prediction is not a claim that the merge button is "
+              f"enabled — checks and protection are separate.",
+              verdicts=per)
+
+
 def check_blocked_claims(ck_doc: Optional[Any], ck_readable: bool) -> Dict[str, Any]:
     if not ck_readable or not isinstance(ck_doc, dict):
         return _c("blocked_claims", UNKNOWN,
@@ -990,6 +1138,40 @@ def check_blocked_claims(ck_doc: Optional[Any], ck_readable: bool) -> Dict[str, 
                   f"claim. {pop}", population=pop)
     return _c("blocked_claims", PASS,
               f"every live-state blockage carries a dated observation. {pop}",
+              population=pop)
+
+
+def check_blocker_watch(report: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Do the blocked / 'running' claims still hold? (BLOCKER-WATCH)
+
+    FAIL only on what is cheap and unambiguous to fix at session start: a
+    STALE_BLOCK (a row marked blocked whose blocker is finished or unresolvable)
+    or an OPERATOR_WAIT past its bound. NOT_RUNNING / UNPROVEN_OVERDUE are a
+    standing queue the review works through, so they are counted in the message
+    and carried in ``findings`` but do not by themselves hold the manager.
+    ``report`` is ``blocker_watch.build()``'s dict, or None when it could not run."""
+    if not isinstance(report, dict) or not report.get("readable"):
+        return _c("blocker_watch", UNKNOWN,
+                  "blocker_watch could not read every input "
+                  f"({(report or {}).get('sources')}), so blocked rows could not be checked "
+                  "against their blockers. WE DID NOT LOOK.")
+    c, d = report["counts"], report["denominators"]
+    pop = (f"population: {d['blocked_rows']} blocked row(s) of {d['rows_scanned']}; "
+           f"{d['research_units_queued']} queued research unit(s) of {d['research_units_scanned']}; "
+           f"{d['landed_unproven_rows']} landed_unproven row(s) "
+           f"({d['landed_unproven_no_observation']} with no observation)")
+    tail = (f" Also standing: NOT_RUNNING {c['NOT_RUNNING']}, UNPROVEN_OVERDUE "
+            f"{c['UNPROVEN_OVERDUE']} (work them in the review: python3 scripts/ops/blocker_watch.py).")
+    hard = [f for f in report["findings"] if f["kind"] in ("STALE_BLOCK", "OPERATOR_WAIT")]
+    if hard:
+        return _c("blocker_watch", FAIL,
+                  f"{len(hard)} blocked row(s) are not actually holding work: "
+                  + "; ".join(f"{f['kind']} {f['id']}" for f in hard[:8])
+                  + ". Unblock, re-queue, dispatch to a lane, or drop with a stated reason "
+                    "this turn — a stale block is never left standing. " + pop + tail,
+                  findings=hard, population=pop)
+    return _c("blocker_watch", PASS,
+              "every blocked row is held by a blocker that still stands. " + pop + tail,
               population=pop)
 
 
@@ -1029,10 +1211,19 @@ def grade(checks: List[Dict[str, Any]]) -> str:
     return "ready"
 
 
+def _blocker_report() -> Optional[Dict[str, Any]]:
+    try:
+        import blocker_watch  # noqa: PLC0415 — flat import, like the other scripts/ops siblings
+        return blocker_watch.build()
+    except Exception:  # noqa: BLE001 — unreadable is a state, not a crash
+        return None
+
+
 def run(observation: Optional[Any] = None, manager_session_id: Optional[str] = None,
         base: str = "origin/main", open_prs: Optional[List[Dict[str, Any]]] = None,
         enforced: Sequence[str] = ("working",),
         threshold: int = DIGEST_THRESHOLD,
+        predict_merge: Sequence[str] = (),
         skip_self_test: bool = False) -> Dict[str, Any]:
     checks: List[Dict[str, Any]] = []
     if not skip_self_test:
@@ -1068,8 +1259,18 @@ def run(observation: Optional[Any] = None, manager_session_id: Optional[str] = N
         check_register_edits(base, open_prs),
         check_merge_driver(),
         check_blocked_claims(ck, ck_ok),
+        check_blocker_watch(_blocker_report()),
         check_lease(lease, lease_ok, manager_session_id),
     ]
+    # Omitted entirely when no branch is named — see the check's docstring.
+    _predictions = predict_branches(predict_merge, base) if predict_merge else {}
+    _mergeability = check_github_mergeability(predict_merge, base,
+                                              predictions=_predictions or None)
+    if _mergeability is not None:
+        checks.append(_mergeability)
+    _reg_integrity = check_predicted_register_integrity(_predictions or None)
+    if _reg_integrity is not None:
+        checks.append(_reg_integrity)
     return {"readiness": grade(checks), "checks": checks}
 
 
@@ -1105,6 +1306,93 @@ def _self_test(quiet: bool = False) -> Tuple[bool, List[str]]:
     check("any FAIL -> not_ready", grade([P, F]), "not_ready")
     check("any UNKNOWN, no fail -> unknown, NEVER ready", grade([P, U]), "unknown")
     check("FAIL dominates UNKNOWN", grade([U, F]), "not_ready")
+
+    # 0 · github_mergeability — the check added with github_equivalent_merge.py.
+    # ⚠️ IT MUST APPEAR HERE OR THE self_test CHECK'S OWN CLAIM GOES FALSE. That
+    # claim is "every check below has been shown THIS RUN to be able to fail",
+    # and a check with no planted case has not been shown anything.
+    _gm_ok = lambda repo, base, br: {"state": gem.CLEAN}          # noqa: E731
+    _gm_bad = lambda repo, base, br: {"state": gem.WOULD_CONFLICT}  # noqa: E731
+    _gm_blind = lambda repo, base, br: {"state": gem.COULD_NOT_LOOK}  # noqa: E731
+    check("no branch named -> the check is OMITTED, not a pass",
+          check_github_mergeability((), "origin/main", predictor=_gm_ok), None)
+    check("a clean prediction PASSES",
+          check_github_mergeability(("b",), "origin/main",
+                                    predictor=_gm_ok)["state"], PASS)
+    check("A PREDICTED CONFLICT FAILS — the manager cannot merge it",
+          check_github_mergeability(("b",), "origin/main",
+                                    predictor=_gm_bad)["state"], FAIL)
+    check("could-not-look is UNKNOWN, never a pass",
+          check_github_mergeability(("b",), "origin/main",
+                                    predictor=_gm_blind)["state"], UNKNOWN)
+    check("one conflict among several still FAILS",
+          check_github_mergeability(("a", "b"), "origin/main",
+                                    predictor=lambda r, ba, br: {
+                                        "state": gem.WOULD_CONFLICT if br == "b"
+                                        else gem.CLEAN})["state"], FAIL)
+    check("a raising predictor is UNKNOWN, never a pass",
+          check_github_mergeability(
+              ("b",), "origin/main",
+              predictor=lambda r, ba, br: (_ for _ in ()).throw(RuntimeError("x"))
+          )["state"], UNKNOWN)
+
+    # 0b · predicted_register_integrity — the check that separates "will it
+    # conflict" from "will the result be correct". ⚠️ Its cases MUST be here as
+    # well as in tests/, because `run_guards.py` invokes `--self-test` while
+    # `pytest-run` short-circuits on diffs it judges irrelevant: a control only
+    # the skippable job runs is a control that can be skipped.
+    _clean_tree = {"state": pri.CLEAN, "findings": [], "note": "10 read"}
+    _dup_tree = {"state": pri.WOULD_DUPLICATE,
+                 "findings": ["health-review-backlog.json::items[id]: id 'BL-X' "
+                              "appears at rows 1596 AND 1598."]}
+    _blind_tree = {"state": pri.COULD_NOT_LOOK, "findings": [],
+                   "reason": "no register could be read"}
+    check("no prediction -> the check is OMITTED, not a pass",
+          check_predicted_register_integrity(None), None)
+    check("a clean merge with a clean tree PASSES",
+          check_predicted_register_integrity(
+              {"b": {"state": gem.CLEAN, "inspection": _clean_tree}})["state"], PASS)
+    check("A CLEAN MERGE THAT WOULD DUPLICATE AN ID FAILS — the whole point",
+          check_predicted_register_integrity(
+              {"b": {"state": gem.CLEAN, "inspection": _dup_tree}})["state"], FAIL)
+    check("...and the FAILURE says it is not fixed by merging the base in",
+          "is NOT fixed by merging the base in" in
+          check_predicted_register_integrity(
+              {"b": {"state": gem.CLEAN, "inspection": _dup_tree}})["message"], True)
+    check("one duplicating branch among several still FAILS",
+          check_predicted_register_integrity(
+              {"a": {"state": gem.CLEAN, "inspection": _clean_tree},
+               "b": {"state": gem.CLEAN, "inspection": _dup_tree}})["state"], FAIL)
+    check("a CONFLICTED branch yields no tree -> UNKNOWN, never a pass",
+          check_predicted_register_integrity(
+              {"b": {"state": gem.WOULD_CONFLICT}})["state"], UNKNOWN)
+    check("a clean merge whose tree could not be read is UNKNOWN, never a pass",
+          check_predicted_register_integrity(
+              {"b": {"state": gem.CLEAN, "inspection": _blind_tree}})["state"], UNKNOWN)
+    check("a clean merge with NO inspection at all is UNKNOWN, never a pass",
+          check_predicted_register_integrity(
+              {"b": {"state": gem.CLEAN}})["state"], UNKNOWN)
+    # ⚠️ The four below cover the PURE half in the context `run_guards` runs.
+    # Without them the defect that matters most — a would-duplicate verdict
+    # collapsing back onto `clean` — is caught only by `pytest-run`, which
+    # short-circuits on diffs it judges irrelevant.
+    _mk = lambda ins: {"state": gem.CLEAN, "head": "h", "base": "b",  # noqa: E731
+                       "conflict_paths": [], "reason": None, "drivers": [],
+                       "source_clone_armed": False, "inspection": ins}
+    check("overall_state: a clean merge that WOULD DUPLICATE does not exit 0",
+          gem.EXIT[gem.overall_state(_mk({"state": pri.WOULD_DUPLICATE,
+                                          "findings": ["x"]}))], 1)
+    check("overall_state: a clean merge with a clean tree exits 0",
+          gem.EXIT[gem.overall_state(_mk({"state": pri.CLEAN}))], 0)
+    check("overall_state: an uninspectable tree is could-not-look, never 0",
+          gem.EXIT[gem.overall_state(_mk({"state": pri.COULD_NOT_LOOK,
+                                          "reason": "r"}))], 2)
+    check("inspect_tree: ZERO registers read is could-not-look, not clean",
+          pri.inspect_tree(tempfile.mkdtemp())["state"], pri.COULD_NOT_LOOK)
+    check("the two questions stay APART: a conflict is not a duplicate finding",
+          check_github_mergeability(
+              ("b",), "origin/main",
+              predictions={"b": {"state": gem.WOULD_CONFLICT}})["state"], FAIL)
 
     # 1 · work_has_parent
     objs = {"WO-REAL"}
@@ -1340,6 +1628,23 @@ def _self_test(quiet: bool = False) -> Tuple[bool, List[str]]:
           [len(_norm_edges([{"kind": "object"}])), len(_norm_edges({"kind": "object"})),
            len(_norm_edges("a string"))], [1, 1, 1])
 
+    # 9b · blocker_watch
+    _bw = lambda **kw: {"readable": True, "sources": {}, "findings": kw.get("f", []),  # noqa: E731
+                        "counts": {"STALE_BLOCK": 0, "NOT_RUNNING": 0, "OPERATOR_WAIT": 0,
+                                   "UNPROVEN_OVERDUE": 0},
+                        "denominators": {"blocked_rows": 1, "rows_scanned": 9, "research_units_queued": 2,
+                                         "research_units_scanned": 5, "landed_unproven_rows": 1,
+                                         "landed_unproven_no_observation": 0}}
+    check("a STALE_BLOCK finding FAILS the preflight",
+          check_blocker_watch(_bw(f=[{"kind": "STALE_BLOCK", "id": "X"}]))["state"], FAIL)
+    check("an OPERATOR_WAIT finding FAILS the preflight",
+          check_blocker_watch(_bw(f=[{"kind": "OPERATOR_WAIT", "id": "X"}]))["state"], FAIL)
+    check("standing NOT_RUNNING alone does not hold the manager, and says so",
+          check_blocker_watch(_bw(f=[{"kind": "NOT_RUNNING", "id": "RQ-1"}]))["state"], PASS)
+    check("an unreadable blocker_watch is UNKNOWN, never a pass",
+          [check_blocker_watch(None)["state"], check_blocker_watch({"readable": False})["state"]],
+          [UNKNOWN, UNKNOWN])
+
     # 9 · lease
     mine = {"state": "held", "holder": "S1",
             "heartbeat_at": manager_lease._iso(manager_lease._now())}
@@ -1418,11 +1723,24 @@ def main(argv=None) -> int:
                          "Needed for the artifact-cap candidates and the register "
                          "conflict surface.")
     ap.add_argument("--base", default="origin/main")
+    ap.add_argument("--predict-merge", default=None,
+                    help="CSV of branch refs to test-merge against --base the "
+                         "way GITHUB would (an un-armed clone). Omitted "
+                         "entirely when unset: the question was not asked.")
     ap.add_argument("--enforce-states", default="working",
                     help="CSV of SESSIONS.json states counted as live (default: working)")
     ap.add_argument("--digest-threshold", type=int, default=DIGEST_THRESHOLD)
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
+    # The verdict below is about the COMMITTED tree. Say so when that is
+    # not the tree you edited. See
+    # BL-20260917-THE-DIRTY-TREE-NOTICE-LIVES-ONLY-IN-RUN-GUARDS-SO-ALL-18-DIRECTLY-INVOCABLE-DIFF-SCOPED-GUARDS-STILL-GRADE-THE-WRONG-TREE-SILENTLY
+    import pathlib  # noqa: PLC0415 — local, so importing this module stays free
+    import sys as _sys  # noqa: PLC0415
+    _sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "ci"))
+    import _dirty_tree  # noqa: E402,PLC0415 — path shim above
+    _dirty_tree.warn()
+
     if a.self_test:
         ok, _ = _self_test()
         return 0 if ok else 1
@@ -1431,7 +1749,8 @@ def main(argv=None) -> int:
               manager_session_id=a.session_id, base=a.base,
               open_prs=_normalise_prs(_load_json_arg(a.open_prs)),
               enforced=tuple(s.strip() for s in a.enforce_states.split(",") if s.strip()),
-              threshold=a.digest_threshold)
+              threshold=a.digest_threshold,
+              predict_merge=tuple(b.strip() for b in (a.predict_merge or "").split(",") if b.strip()))
     for c in res["checks"]:
         icon = {PASS: "PASS", FAIL: "FAIL", UNKNOWN: "????"}[c["state"]]
         print(f"manager-preflight: [{icon}] {c['check']}: {c['message']}")

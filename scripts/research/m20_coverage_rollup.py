@@ -101,7 +101,29 @@ MATRIX = REPO / "docs" / "research" / "exit-refinement-coverage.json"
 
 # The three cuts, widest-numerator last. `blocked` is deliberately the only
 # difference between HEADLINE and DONE — see the module docstring.
-RESOLVED = ("shipped", "honest_negative", "n/a")
+#
+# ⚠️ THESE ARE INCLUSION LISTS OVER LITERALS, AND THE DENOMINATOR IS NOT.
+# `total_cells` is every cell in the matrix, so a status added to the legend and
+# NOT added here leaves the cell in the denominator while dropping it from every
+# numerator — the coverage figure falls and nothing says why. MEASURED 2026-09-25
+# (E48) by running this script over the matrix with one cell flipped
+# `shipped` -> `stripped_unreachable` before adding it below: resolved 327 -> 326,
+# validated 341 -> 340, headline 388 -> 387, `total_cells` 396 throughout. The
+# done-condition was unmoved (it is computed from OPEN_STATUSES), so the erosion
+# was visible ONLY in the three progress cuts, which is the half nobody re-derives.
+# ADD A NEW LEGEND STATUS TO EXACTLY ONE OF THESE TUPLES, OR TO OPEN_STATUSES,
+# and say which in the legend entry. (`scripts/research/m20_coverage_rollup.py`
+# is the only consumer that enumerates statuses positively;
+# `check_matrix_corpus_agreement.py`'s NEGATIVE_STATUSES / NO_OUTCOME_STATUSES
+# are exclusion sets and need no entry for a closed, non-negative status.)
+#
+# `stripped_unreachable` belongs in RESOLVED and not in VALIDATED-only: the
+# lever question for that leg is CLOSED, not awaiting anyone — it was validated,
+# shipped, then removed by a Tier-3 decision once measured unreachable under the
+# leg's current bracket. That is a resolved outcome in exactly the sense
+# `shipped` and `honest_negative` are, which is why the counts above return to
+# their pre-flip values with it listed here.
+RESOLVED = ("shipped", "honest_negative", "n/a", "stripped_unreachable")
 VALIDATED = RESOLVED + ("passed_unshipped", "shipped_gate_failed")
 HEADLINE = VALIDATED + ("blocked",)
 
@@ -271,6 +293,7 @@ GEOMETRY_LIVE_PARITY = "live_parity"
 GEOMETRY_SENSITIVE_LEVERS = frozenset({
     "trail_geometry", "stale_stop", "giveback_stop", "trail_decay",
     "vol_trail", "exit_ladder", "regime_flip_exit", "exit_head_ml",
+    "momentum_trail", "momentum_stale",
     # `bracket_geometry` (2026-08-20) is not a ninth lever but it belongs here
     # for the strongest possible reason: it SWEEPS the take-profit, so a cell
     # measured before the harness could place the live capped TP is not merely
@@ -278,6 +301,9 @@ GEOMETRY_SENSITIVE_LEVERS = frozenset({
     # cells were measured net-of-fees WITH the cap applied, so none is stale
     # today — the entry states the RULE, not a current condition.
     "bracket_geometry",
+    # GEOM-B1 (2026-10-07): the two TP-geometry columns sweep the take-profit
+    # itself, so a verdict on either is conditioned on the geometry modelled.
+    "tp_extend", "tp_retarget",
 })
 
 _DATE = re.compile(r"20\d{2}-\d{2}-\d{2}")
@@ -696,7 +722,7 @@ CORPUS_HARNESS_UNFIXED = "harness_never_modelled_the_tp"
 # to say it rather than let someone discover it at the console.
 COLUMNS_WITH_A_SWEEP_PRODUCER = frozenset({
     "stale_stop", "giveback_stop", "trail_decay", "vol_trail",
-    "trail_geometry",
+    "trail_geometry", "momentum_trail", "momentum_stale",
 })
 # Declared rather than introspected, because regexing `cells_for`'s source for
 # lever literals is a probe adjacent to the question. Kept honest by a test
@@ -711,6 +737,12 @@ _COLUMNS_WITH_THEIR_OWN_DRIVER = frozenset({
     "exit_head_ml",       # scripts/research/m20_exit_head_round.py
     "regime_flip_exit",   # scripts/research/m20_flip_replay_sweep.py
     "bracket_geometry",   # scripts/research/e35_bracket_geometry_sweep.py
+    # GEOM-B1 (2026-10-07): emitted by m20_fleet_exit_sweep.cells_for ONLY when
+    # `--levers` names them (opt-in, so no existing sweep grows), which is why
+    # the DEFAULT-emission probe in COLUMNS_WITH_A_SWEEP_PRODUCER does not list
+    # them. They have a driver; nothing has run it yet.
+    "tp_extend",          # scripts/research/m20_fleet_exit_sweep.py --levers tp_extend
+    "tp_retarget",        # scripts/research/m20_fleet_exit_sweep.py --levers tp_retarget
 })
 
 
@@ -784,6 +816,66 @@ def stale_corpus_state(matrix: dict[str, Any]) -> dict[str, Any]:
             "corpus_base_oos": (hit or {}).get("base_trades_OOS"),
         })
     return out
+
+
+#: Whether the corpus-passed-negatives count could be TAKEN, never whether it
+#: was zero. `unavailable` carries `count: None` — a missing resolver or a
+#: missing corpus is *we could not look*, and printing `0` there would assert
+#: the clean negative this whole roll-up exists to refuse.
+CORPUS_PASS_MEASURED = "measured"
+CORPUS_PASS_UNAVAILABLE = "unavailable"
+
+
+def negative_cells_the_corpus_passed(matrix: dict[str, Any]) -> dict[str, Any]:
+    """How many NEGATIVE cells has the sweep corpus already passed?
+
+    ⚠️ **THIS IS THE WHOLE POPULATION, AND THAT IS THE POINT.**
+    `stale_corpus_state` answers the same question and is restricted to
+    `evidence_vintage`'s STALE cells, behind `--stale-corpus-state`. So a cell
+    whose evidence is perfectly fresh, whose status reads `honest_negative`, and
+    which the corpus has since PASSED on a walk-forward, appeared in no aggregate
+    at all — which is
+    BL-20260906-MATRIX-STATUS-COLLAPSES-A-PASSING-SWEEP-CELL-INTO-HONEST-NEGATIVE-RECURRENCE-AT-35
+    in one sentence, and why that row is a RECURRENCE: its predecessor measured
+    9 on 2026-08-14, was marked resolved, and it was 35 three weeks later.
+
+    ⚠️ **IT CHANGES NO STATUS AND PROPOSES NO DISPOSITION.** A passing cell is
+    not a passing lever disposition, and a live leg's status is Tier-3. The
+    defect this closes is that the number was INVISIBLE to an aggregate, not
+    that the statuses are wrong — the guard reports OK and every disagreement is
+    already acknowledged in the cell's own ref prose.
+
+    ⚠️ **THE TWO PREDICATES ARE THE GUARD'S, IMPORTED.** `NEGATIVE_STATUSES` and
+    `newest_floor_clearing_pass` come from `check_matrix_corpus_agreement.py`
+    via `_corpus_resolver`, for the reason that function's own docstring gives:
+    two copies of a predicate drift, and the drift is silent.
+    """
+    mod = _corpus_resolver()
+    corpus = REPO / "docs" / "research" / "m20-sweep-corpus.jsonl"
+    if mod is None or not corpus.is_file():
+        return {"state": CORPUS_PASS_UNAVAILABLE, "count": None,
+                "negatives": None, "rows": [],
+                "why": (f"resolver_present={mod is not None} "
+                        f"corpus_present={corpus.is_file()}")}
+    rows = [json.loads(x) for x in corpus.read_text().splitlines() if x.strip()]
+    hits: list[dict[str, Any]] = []
+    negatives = 0
+    for row, lever, status in cells(matrix):
+        if base(status) not in mod.NEGATIVE_STATUSES:
+            continue
+        negatives += 1
+        leg = row["strategy"]
+        hit = mod.newest_floor_clearing_pass(rows, leg, lever)
+        if hit is None:
+            continue
+        hits.append({
+            "leg": leg, "lever": lever, "status": status,
+            "corpus_cell": hit.get("cell"), "corpus_verdict": hit.get("verdict"),
+            "corpus_run": (hit.get("run_id") or "")[:10] or None,
+            "corpus_base_oos": hit.get("base_trades_OOS"),
+        })
+    return {"state": CORPUS_PASS_MEASURED, "count": len(hits),
+            "negatives": negatives, "rows": hits}
 
 
 def load(path: Path) -> dict[str, Any]:
@@ -1336,6 +1428,10 @@ def rollup(matrix: dict[str, Any]) -> dict[str, Any]:
         "lever_columns": len(matrix["lever_columns"]),
         "total_cells": total,
         "per_status": dict(per_status),
+        # Computed HERE rather than in `render`, so it rides the same dict the
+        # `--json` consumer reads. A count printed only in prose is one an
+        # aggregate still cannot see, which is the defect this closes.
+        "corpus_passed_negatives": negative_cells_the_corpus_passed(matrix),
         "per_lever": {k: dict(v) for k, v in per_lever.items()},
         "per_lever_reason": {k: dict(v) for k, v in per_lever_reason.items()},
         "fold_reachability": _reach,
@@ -1595,6 +1691,29 @@ def render(r: dict[str, Any]) -> str:
         out[2:2] = block
     for s, n in sorted(r["per_status"].items(), key=lambda kv: -kv[1]):
         out.append(f"    {s:<22} {n:>4}")
+    # ⚠️ PRINTED ON EVERY DEFAULT RUN, WHICH IS THE WHOLE FIX. The same question
+    # was already answerable via `--stale-corpus-state`, over STALE cells only,
+    # behind a flag — so a fresh-evidence cell the corpus had since passed was in
+    # no aggregate at all. That is the row's own criterion in its own words: "a
+    # roll-up run PRINTS the number ... so it can never again be invisible to an
+    # aggregate".
+    cp = r.get("corpus_passed_negatives") or {
+        "state": CORPUS_PASS_UNAVAILABLE, "count": None, "negatives": None,
+        "why": "the roll-up carried no corpus_passed_negatives block"}
+    if cp["state"] == CORPUS_PASS_UNAVAILABLE:
+        out += ["", "  corpus-passed negatives: COULD NOT LOOK — "
+                f"{cp.get('why')}. This is NOT zero."]
+    else:
+        out += ["", f"  corpus-passed negatives   {cp['count']:>4}  of "
+                f"{cp['negatives']} negative cell(s) — the sweep corpus holds a "
+                f"floor-clearing PASS for them."]
+        if cp["count"]:
+            out.append("    ⚠️ A PASSING CELL IS NOT A PASSING LEVER "
+                       "DISPOSITION, and a live leg's status is Tier-3. This "
+                       "counts what is UNSAID by the status word, not what is "
+                       "wrong with it — every one is already acknowledged in "
+                       "its cell's ref prose. List them with "
+                       "`--corpus-passed-negatives`.")
     out += ["", "per-lever open cells (pending + blocked):"]
     for lever, counts in r["per_lever"].items():
         opened = sum(counts.get(s, 0) for s in OPEN_STATUSES)
@@ -1653,6 +1772,8 @@ def main(argv: list[str]) -> int:
                     help="list the CLOSED cells that are not negatives and whose "
                          "evidence predates the TP-parity cutover — live decisions "
                          "resting on a number never reproduced under live geometry")
+    ap.add_argument("--corpus-passed-negatives", action="store_true",
+                    help="list the negative cells the sweep corpus has passed")
     ap.add_argument("--stale-corpus-state", action="store_true",
                     help="for every stale cell, say whether the CORPUS already "
                          "answers it: no live-parity row / agrees / DISAGREES. "
@@ -1724,6 +1845,24 @@ def main(argv: list[str]) -> int:
                       f"newest-ref {dt or '(undated)'}  (cutover {cut})  "
                       f"routing={routing}")
                 print(f"      why: {why or '(reason not recorded)'}")
+        if a.corpus_passed_negatives:
+            cp = negative_cells_the_corpus_passed(matrix)
+            print("\ncorpus-passed negatives — the sweep holds a floor-clearing "
+                  "PASS and the status word does not say so:")
+            if cp["state"] == CORPUS_PASS_UNAVAILABLE:
+                print(f"  COULD NOT LOOK — {cp.get('why')}. NOT zero.")
+            elif not cp["rows"]:
+                print(f"  (0 of {cp['negatives']} negative cell(s) — a real "
+                      "reading over a real population, not an empty one)")
+            else:
+                print("  ⚠️ ADJUDICATE; do NOT auto-flip — a passing cell is not "
+                      "a passing lever disposition and a live-leg status change "
+                      "is Tier-3.")
+                for r_ in sorted(cp["rows"], key=lambda x: (x["leg"], x["lever"])):
+                    print(f"    {r_['leg']:<26} {r_['lever']:<16} "
+                          f"{str(r_['status']):<18} vs {r_['corpus_cell']} "
+                          f"{r_['corpus_verdict']} {r_['corpus_run']} "
+                          f"base_OOS={r_['corpus_base_oos']}")
         if a.stale_corpus_state:
             cs = stale_corpus_state(matrix)
             if not cs["available"]:

@@ -1,0 +1,223 @@
+id: RQ-20260922-009
+title: Can eth_pullback_2h be graded at all, under any cost assumption the data supports?
+status: done
+cadence: once
+kind: experiment
+
+question: >-
+  eth_pullback_2h fails Stage 0 by 1.75R and passes it fee-only by 0.85R. Over
+  57 trades that is a per-trade edge of +0.0149R before slippage and funding,
+  and -0.0308R after. Is there ANY cost assumption under which this leg is
+  distinguishable from zero at the power the data supports — or is the honest
+  finding that this leg cannot be graded, and the RULE-D1 verdict on it, in
+  either direction, carries no information?
+
+why_this_matters: >-
+  MEASURED, comms/strategy_evidence/eth_pullback_2h.json on main at f3746ab:
+  net_r_oos -1.7548, net_r_oos_fee_only +0.8487, n_trades_oos 57,
+  expectancy_r_oos -0.0308, folds_positive 2 of 4, cost_stack {7.5, 5.0, 1.0}
+  bps, `fidelity: approximate`, `omitted_levers: [trail_decay_stall_bars,
+  trail_decay_tight_mult]`.
+  ⚠️ THIS UNIT IS DELIBERATELY A QUESTION ABOUT THE INSTRUMENT, NOT ABOUT THE
+  STRATEGY, and the dispatch bar for this batch asks that such a question say
+  so rather than be quietly asked anyway. The effect of interest here is on
+  the order of 0.015-0.03R per trade. Sizing that honestly: at n=57 the
+  smallest standardised effect detectable at alpha=0.05 / power=0.80 is
+  sqrt(7.849/57) = 0.371 sd. Whether 0.03R is anywhere near 0.371 sd cannot be
+  computed, because the evidence records carry expectancy and a pooled total
+  and NO per-trade dispersion field at all — the same gap RQ-20260922-005
+  names. For a strategy whose per-trade R routinely spans -1 to +3, a
+  plausible sd is of order 1R, which would put 0.03R at roughly 0.03 sd and
+  the required n in the tens of thousands. That arithmetic is INFERRED from an
+  assumed sd and is exactly what this unit must establish rather than assume.
+  The reason this matters operationally: eth_pullback_2h is on bybit_2, a
+  real-money account, and is one of the three legs R1's re-run flipped. It is
+  a live demotion candidate. Demoting it on a number that carries no
+  information is not better than keeping it on one.
+
+power:
+  expected_n: 57
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    ⚠️ THIS UNIT DECLARES ITSELF UNDERPOWERED ON PURPOSE AND THAT IS ITS
+    ENTIRE CONTENT. The floor at d=0.10 is (1.96+0.8416)^2 / 0.10^2 = 784.9,
+    and expected_n = 57 falls short of it by 728. So `power_state` should
+    grade `underpowered`, which RUNS under the 2026-08-31 leniency directive
+    while barring any terminal disposition
+    (research_disposition.append refuses to close an `underpowered` unit
+    `actioned` or `no_action_warranted`).
+    d=0.10 is chosen because it is the scale of the effect the question is
+    ABOUT — the leg's per-trade edge is 0.015-0.031R and the whole RULE-D1
+    verdict turns on it. Declaring d=0.40 instead would clear the floor at
+    n=57 and grade `cleared`, which would be the target-restated-as-a-
+    measurement substitution: the design would then be powered to detect an
+    effect forty times larger than the one being argued about, and the
+    `cleared` stamp would certify a verdict the data cannot support. The
+    canonical rules are explicit that a pre-registered bar is never lowered to
+    manufacture a verdict; declaring the bar the question actually needs, and
+    failing it visibly, is the other half of that rule.
+    expected_n is the ACHIEVED `n_trades_oos: 57` on the evidence record, not
+    a target. ⚠️ The e35 corpus records base_oos_trades = 58 for this leg
+    (MEASURED 2026-09-22 via research_disposition --report) — a different
+    measurement, and the one the run below will produce. The conclusion is
+    unchanged at either value: 785 is two orders of magnitude away from both,
+    which is why this unit does not turn on which count is used.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      DECLARED, and the accrual is real rather than bookkeeping. n=57 is
+      observed and committed (comms/strategy_evidence/eth_pullback_2h.json,
+      generated 2026-09-22T05:35Z). It is `source: none` because
+      comms/strategy_evidence is not a registered corpus in
+      research_disposition.CORPORA (e35, m20, gld_compat — read 2026-09-22).
+      WHAT WOULD CHANGE THIS, in order of plausibility and stated so this does
+      not become an indefinite wait:
+        (1) Record per-trade R dispersion on the evidence record, which turns
+            the 784.9 floor from an assumption into a computed number and may
+            move it by an order of magnitude in either direction. Cheap, and
+            filed as PI-20260922-EVIDENCE-RECORDS-CARRY-NO-PER-TRADE-DISPERSION.
+        (2) Pool the ETH/XRP/SOL/ADA/AVAX 2h pullback family into ONE
+            cross-sectional test. That changes the unit of analysis from the
+            trade to the leg and needs its own design, but it is the only
+            route to a powered answer this decade.
+        (3) Accept a much larger min_detectable_effect for this leg family
+            specifically — the option RQ-20260831-002 names for the thin 1d
+            equity legs. It makes the test coarse but real.
+        (4) Wait. At this leg's observed rate, 785 OOS trades is not reachable
+            on available history; this is NOT a forward-soak question.
+
+decision_rule:
+  id: RULE-RQ0922-009-GRADEABILITY
+  registered_at: '2026-09-22'
+  registered_before_run: true
+  statistic: >-
+    required_n = (1.96+0.8416)^2 / d_observed^2, where d_observed =
+    |expectancy_r_oos| / sd(per-trade net_r) computed from the leg's own OOS
+    trade rows at the modelled cost stack. Compared against the achieved
+    n_trades_oos.
+  rule: >-
+    IF required_n > 10 * n_trades_oos, the leg is recorded
+    `stage0_verdict_uninformative: true`, and RULE-D1's verdict on it — in
+    EITHER direction — may not be cited as evidence for a roster change. The
+    deliverable is a statement to the operator that bybit_2 carries a leg
+    whose Stage-0 grade is noise, together with options (1)-(3) above. That is
+    a Gate-2 input, not a demotion and not a clean bill of health; recording
+    it as either is the `unknown`-vs-`not_writing` collapse the canonical
+    rules forbid.
+    IF required_n <= n_trades_oos, the verdict IS informative, the
+    -1.7548R fail stands as a real measurement, and the leg goes to R2/D2 as a
+    normally-evidenced demotion candidate.
+    IF n_trades_oos < required_n <= 10 * n_trades_oos, the verdict is recorded
+    `stage0_verdict_weak` with both numbers attached, and the decision on this
+    leg waits on option (2) rather than on more calendar time.
+    ⚠️ THE THRESHOLD IS 10x AND IT IS ARBITRARY. It is registered here, before
+    the run, precisely so it cannot be chosen after seeing required_n. If a
+    later session thinks 10x is wrong, it changes the rule and says so — it
+    does not reinterpret this run's output against a different number.
+  what_it_does_not_do: >-
+    It does not demote eth_pullback_2h, does not touch config/accounts.yaml or
+    config/strategies.yaml, and does not lower any existing bar. Its most
+    likely output is the sentence "this leg cannot be graded on the data that
+    exists", which is a finding and not a failure.
+
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  basis: >-
+    Runner. The statistic needs this leg's per-trade OOS rows at the modelled
+    cost stack, which the pullback harness emits; e35-bracket-sweep.yml
+    schedules eth_pullback_2h (family pullback, ETHUSDT, binance_vision —
+    verified 2026-09-22) and fetches its own candles. No VM, no
+    trainer-resident data.
+    ⚠️ Whether the e35 corpus rows carry a per-trade DISPERSION field, as
+    opposed to a pooled expectancy, was NOT verified this session. If they do
+    not, this run produces the same gap it is trying to close and the unit
+    reduces to blocker (1) in accrual_basis. Check the corpus schema before
+    firing.
+
+run:
+  workflow: e35-bracket-sweep.yml
+  inputs:
+    only: eth_pullback_2h
+    research_unit: RQ-20260922-009
+    power_state: underpowered
+    days: '1830'
+    gate_top: '2'
+    singles_only: 'false'
+    max_parallel: '1'
+  note: >-
+    `power_state: underpowered` is passed explicitly so the stamp lands on
+    every corpus row this run produces. The workflow declares that input for
+    exactly this purpose, and a unit that knows it is underpowered and does
+    not say so on its own rows is how an unpowered number gets re-quoted six
+    runs later as a measurement.
+
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: >-
+    CORRECTED, this session, same reasoning RQ-20260922-007 already applied to
+    its own `lands:` block: `scripts/ci/check_research_results.py` and
+    `.github/actions/research-result` land every result at
+    `research/results/<research_unit>/<run_id>.jsonl` regardless of producing
+    workflow, so `docs/research/e35-bracket-corpus.jsonl` was never this
+    unit's actual landing surface. Also: the e35 route named in `run:` below
+    was CHECKED before use (see the landed result's
+    `measurement.e35_corpus_schema_check`) and confirmed to carry no per-trade
+    dispersion field — firing it would have reproduced the exact gap
+    `routing.basis` warned about, not closed it. This unit's statistic instead
+    used the already-committed per-trade rows behind
+    `comms/strategy_evidence/eth_pullback_2h.json`
+    (`comms/strategy_evidence/runs/2026-09-25/eth_pullback_2h__trades.jsonl`),
+    which is the leg's own OOS trade rows the decision rule calls for and
+    needed no new dispatch.
+
+related:
+  - 'checklist C5 / R4 (this unit is one of the ten)'
+  - 'RQ-20260922-008 (the same leg, compared against its prop sibling)'
+  - 'RQ-20260831-002 (the precedent for a unit that declares it cannot answer, and says what would change that)'
+last_dispatched_at: '2026-09-24T11:58:37+00:00'
+
+result: >-
+  LANDED research/results/RQ-20260922-009/manual-20260927-gradeability-check.jsonl
+  (manual analysis, 2026-09-27, commit d6b9f13). INDETERMINATE under
+  RULE-RQ0922-009-GRADEABILITY: computed d_observed and required_n from the
+  leg's own 62 OOS per-trade rows (comms/strategy_evidence/runs/2026-09-25/
+  eth_pullback_2h__trades.jsonl, the source behind the CURRENT evidence record
+  -- note this supersedes the unit's own citation of n=57 /
+  net_r_oos_fee_only=+0.8487 / cost_stack {7.5,5.0,1.0}bps at commit f3746ab,
+  2026-09-22; the record was regenerated 2026-09-25 to n=62 /
+  net_r_oos_fee_only=+0.4682 / cost_stack {7.5,3.0,1.0}bps -- field beats
+  comment, and the shift is immaterial to the verdict below either way).
+  FULL COST STACK: mean -0.028R/trade, sd 1.6851R, d_observed=0.0166 sd,
+  required_n=28,343. FEE-ONLY: mean +0.0076R/trade, sd 1.6981R,
+  d_observed=0.0045 sd, required_n=396,887. Both exceed 10x n_trades_oos=620
+  by two to three orders of magnitude, so `stage0_verdict_uninformative: true`
+  under BOTH cost assumptions tested -- there is no cost assumption under
+  which this leg's Stage-0 verdict is distinguishable from zero at this n.
+  RULE-D1's fail on eth_pullback_2h may NOT be cited as evidence for a
+  bybit_2 roster change in either direction (Gate-2 input, not a demotion and
+  not a clean bill of health). NOT killed: per the operator's standing
+  principle that an idea is never killed after one bad pass, this is a
+  cannot-be-graded-at-this-n finding, not a fail. What would settle it, most
+  plausible first: (1) record per-trade R dispersion on every evidence record
+  (PI-20260922-EVIDENCE-RECORDS-CARRY-NO-PER-TRADE-DISPERSION) so this
+  computation is automatic rather than one-off; (2) pool the
+  ETH/XRP/SOL/ADA/AVAX 2h pullback family into one cross-sectional test
+  (changes the unit of analysis, needs its own design); (3) accept a much
+  coarser min_detectable_effect for this leg family specifically. Waiting on
+  more history does not help: at this leg's observed rate (~62 OOS
+  trades/365d), 620 OOS trades -- let alone 28,343 -- is not reachable this
+  decade. Also confirmed while running this: `e35-bracket-sweep.yml` (the
+  route this unit's own `run:` block names) lands to
+  `docs/research/e35-bracket-corpus.jsonl`, whose schema carries pooled
+  net_total_r/net_expectancy_r per (leg, cell) only -- no per-trade dispersion
+  field -- so it would not have answered this question; `lands:` above is
+  corrected accordingly.

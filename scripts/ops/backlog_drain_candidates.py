@@ -55,6 +55,9 @@ import subprocess
 import sys
 from typing import Any
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import _backlog  # noqa: E402  (the ONE owner of "when was this row opened?")
+
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 BACKLOGS = {
     "health": ROOT / "docs/claude/health-review-backlog.json",
@@ -112,7 +115,7 @@ def _is_shallow() -> bool:
 _SHALLOW = _is_shallow()
 
 
-def _added_after(rel: str, opened_at: str) -> bool | None:
+def _added_after(rel: str, when: "_backlog.RowDate") -> bool | None:
     """Was *rel* first added to the tree AFTER the row was opened?
 
     This is the signal `path_exists` should have been. A criterion naming a file
@@ -130,17 +133,88 @@ def _added_after(rel: str, opened_at: str) -> bool | None:
     """
     if _SHALLOW:
         return None
-    if not opened_at:
-        return False
+    if not when.ok:
+        # ⚠️ `None`, NOT `False`. This used to return False -- a definite "the
+        # file was NOT added since" -- for a row whose open date had never been
+        # established, which is the same collapse the `_SHALLOW` branch two
+        # lines up exists to avoid. MEASURED 2026-09-12 over 982 LIVE rows
+        # across the three backlogs: a reader keyed on `opened_at` alone can
+        # date 587 (59.8%), so the definite negative was being handed out for
+        # up to 40.2% of the corpus. `row_date` reaches 94.7% and says
+        # `unstated` for the rest. Filed as
+        # BL-20260823-BACKLOG-TRIAGE-SEES-47-PERCENT-OF-THE-LIVE-ROWS.
+        return None
     try:
         res = subprocess.run(
             ["git", "log", "--diff-filter=A", "--format=%cI", "-1", "--", rel],
             cwd=ROOT, capture_output=True, text=True, timeout=25,
         )
         first = (res.stdout or "").strip()
-        return bool(first) and first > opened_at
     except Exception:  # noqa: BLE001
-        return False
+        # ⚠️ `None`, NOT `False`, AND THIS FUNCTION ALREADY ARGUED THE POINT
+        # TWICE, TWENTY LINES UP. Both branches above return `None` precisely
+        # because a definite negative that nobody established is worse than an
+        # admitted gap — and then this handler, for the STRICTLY worse case of
+        # git not answering AT ALL (a 25s timeout, git missing, the subprocess
+        # dying), handed out exactly that definite negative.
+        #
+        # It is load-bearing rather than cosmetic: the caller keeps
+        # `[s for s in signals if s["ok"] is not None]`, so `None` is dropped
+        # as undecidable while `False` COUNTS as a decided "nothing shipped".
+        # A timeout therefore did not make a row unshortlistable — it silently
+        # ARGUED AGAINST it, and a narrowed candidate list reads identically to
+        # a clean one.
+        #
+        # Same class as the `check_backlog_refs._git` defect fixed by PR
+        # #12379, found in the same sweep: a read that could not happen must
+        # never be returned as a read that found nothing. (Cited by PR number,
+        # not by its backlog id, ON PURPOSE -- that row is filed by #12379 and
+        # is not on `main` until it lands, so naming the id here would make
+        # THIS file carry a reference that resolves to nothing and fail
+        # `artifact-validity-guard`. A PR number cannot dangle.)
+        return None
+    first_day = _backlog._as_day(first)
+    if first_day is None:
+        # git answered with something that is not a date. We looked and cannot
+        # read it -- not evidence that nothing shipped.
+        return None
+    # STRICTLY after, compared by DAY. A file added the same day the row was
+    # filed is not evidence the row was addressed, and grading it `True` would
+    # manufacture a candidate out of the row's own filing commit.
+    return first_day > when.day
+
+
+def criterion_context(crit: str, needle: str, width: int = 260) -> str:
+    """The sentence of *crit* that mentions *needle*, or "" if it does not.
+
+    WHY A SIGNAL CARRIES ITS OWN CONTEXT (2026-09-13). A signal that says only
+    `OK path_added_since_filing: scripts/research/m20_corpus_schema_census.py`
+    reads as evidence FOR closing. On
+    BL-20260912-THE-SWEEP-CORPUS-RECORDS-NO-DISPATCHED-SHA-SO-A-MISSING-FIELD-CANNOT-BE-TOLD-FROM-ONE-THE-EXTRACTOR-COULD-NOT-EMIT
+    the criterion names that exact path in the clause *"DO NOT close it on the
+    census alone -- the census REPORTS the ambiguity, it does not remove it"*.
+    The path was added after filing, so the signal is literally true and points
+    the wrong way.
+
+    THIS IS NOT A CLASSIFIER AND DELIBERATELY DOES NOT TRY TO BE. Detecting
+    negation lexically would be a confident wrong answer of its own -- the
+    UNPROVENANCED DIAGNOSTIC class this repo has a guard for. It shows the
+    criterion's OWN WORDS beside the signal and lets the reader decide, which
+    is what the tool's docstring already promises: it shortlists, it never
+    decides.
+    """
+    if not needle or needle not in crit:
+        return ""
+    # Split on sentence-ish boundaries. `.` is deliberately NOT a boundary on
+    # its own: every path in these criteria contains one, so splitting on it
+    # would cut the needle in half and match nothing.
+    parts = re.split(r"(?<=[.;])\s+(?=[A-Z(\u26a0])|\n", crit)
+    for part in parts:
+        if needle in part:
+            out = " ".join(part.split())
+            return out if len(out) <= width else out[: width - 1] + "\u2026"
+    out = " ".join(crit.split())
+    return out if len(out) <= width else out[: width - 1] + "\u2026"
 
 
 def assess(row: dict[str, Any], diag_src: str) -> dict[str, Any]:
@@ -149,15 +223,18 @@ def assess(row: dict[str, Any], diag_src: str) -> dict[str, Any]:
 
     for m in set(_LOGNAME.findall(crit)):
         signals.append({"kind": "diag_log_name", "needle": m,
-                        "ok": f'"{m}"' in diag_src})
+                        "ok": f'"{m}"' in diag_src,
+                        "context": criterion_context(crit, m)})
     for m in set(_PATH.findall(crit)):
         # A path merely EXISTING proves nothing -- most criteria name files that
         # already existed when the row was filed (docs/CLAUDE-RULES-CANONICAL.md
         # is in dozens of them). The discriminating question is whether it was
         # CREATED AFTER the row was opened, i.e. something shipped since.
         exists = (ROOT / m).exists()
-        added = _added_after(m, str(row.get("opened_at") or "")) if exists else False
-        signals.append({"kind": "path_added_since_filing", "needle": m, "ok": added})
+        added = _added_after(m, _backlog.row_date(row)) if exists else False
+        signals.append({"kind": "path_added_since_filing", "needle": m,
+                        "ok": added,
+                        "context": criterion_context(crit, m)})
     decidable = [s for s in signals if s["ok"] is not None]
     if not decidable:
         # Either nothing was extractable, or every extracted signal is
@@ -205,6 +282,11 @@ def main(argv: list[str]) -> int:
         for s in v["signals"]:
             mark = "?? " if s["ok"] is None else ("OK " if s["ok"] else "NO ")
             print(f"      {mark}{s['kind']}: {s['needle']}")
+            if s.get("context"):
+                # The criterion's OWN words about this needle, so an `OK`
+                # that the criterion itself calls insufficient cannot read
+                # as evidence for closing.
+                print(f"         criterion says: {s['context']}")
     return 0
 
 

@@ -67,7 +67,7 @@ def _open_fill() -> Dict[str, Any]:
     }
 
 
-def test_pings_when_no_snapshot_ever(isolated_env: Path, captured) -> None:
+def test_pings_when_no_snapshot_ever(isolated_env: Path, captured, declared) -> None:
     from src.prop import prop_journal
     from src.prop.prop_status_request import run_prop_status_request
 
@@ -77,7 +77,7 @@ def test_pings_when_no_snapshot_ever(isolated_env: Path, captured) -> None:
     assert captured[0]["age_hours"] is None  # never reported
 
 
-def test_fresh_snapshot_suppresses(isolated_env: Path, captured) -> None:
+def test_fresh_snapshot_suppresses(isolated_env: Path, captured, declared) -> None:
     from src.prop import prop_journal
     from src.prop.prop_status_request import run_prop_status_request
 
@@ -89,7 +89,7 @@ def test_fresh_snapshot_suppresses(isolated_env: Path, captured) -> None:
     assert captured == []
 
 
-def test_cooldown_prevents_nagging(isolated_env: Path, captured) -> None:
+def test_cooldown_prevents_nagging(isolated_env: Path, captured, declared) -> None:
     from src.prop import prop_journal
     from src.prop.prop_status_request import run_prop_status_request
 
@@ -100,7 +100,7 @@ def test_cooldown_prevents_nagging(isolated_env: Path, captured) -> None:
     assert len(captured) == 1
 
 
-def test_reasks_after_cooldown(isolated_env: Path, captured) -> None:
+def test_reasks_after_cooldown(isolated_env: Path, captured, declared) -> None:
     from src.prop import prop_journal
     from src.prop.prop_status_request import run_prop_status_request
 
@@ -217,7 +217,10 @@ def test_real_config_declares_the_live_prop_account() -> None:
 
     ids = declared_prop_account_ids(live_only=True)
     assert ids is not None, "accounts.yaml must be readable from the repo root"
-    assert "breakout_1" in ids
+    # 2026-10-05: breakout_1 is dry_run (operator), so the live-only set is
+    # tradeify_1; the dry_run account is enumerated only without live_only.
+    assert "tradeify_1" in ids and "breakout_1" not in ids
+    assert "breakout_1" in (declared_prop_account_ids(live_only=False) or [])
 
 
 def test_pause_knob(isolated_env: Path, captured,
@@ -248,7 +251,7 @@ def test_template_contains_both_reply_formats(isolated_env: Path) -> None:
 
 
 def test_stale_snapshot_reasks(isolated_env: Path, captured,
-                               monkeypatch: pytest.MonkeyPatch) -> None:
+                               monkeypatch: pytest.MonkeyPatch, declared) -> None:
     from src.prop import prop_journal
     from src.prop.prop_status_request import run_prop_status_request
 

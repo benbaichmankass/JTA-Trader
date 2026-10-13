@@ -1,0 +1,22 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "journal rows 6565 and 6566 carry notes.bybit_closed_pnl and pnl equal to the venue closedPnl (-3.28194216 / -996.54256355)",
+    "kind": "observation",
+    "last_checked": "2026-10-12"
+  },
+  "id": "PI-20261012-7DJDHERY-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-18",
+    "how_to_check": "scripts/ops/diag_fetch.sh 'journal?table=trades&limit=60' and read ids 6565/6566 pnl + notes",
+    "what": "bybit_2 trade 6565 and mirror 6566 carry broker-truth pnl (-3.28194216 / -996.54256355) with notes.bybit_closed_pnl after PR #17768 deploys"
+  },
+  "origin": {
+    "kind": "operator",
+    "ref": "checklist CLOSE-PNL-NULL; PR #17768",
+    "rerun": "scripts/ops/diag_fetch.sh 'journal?table=trades&limit=40' and read ids 6565/6566 pnl + notes; compare scripts/ops/diag_fetch.sh 'bybit_raw_closed_pnl?account_id=bybit_2&symbol=ADAUSDT&start_ms=1791676800000&end_ms=1791817394000'"
+  },
+  "state": "queued",
+  "what": "CLOSE-PNL-NULL landed_unproven: after PR #17768 merges+deploys, confirm bybit_2 trade 6565 carries broker-truth pnl -3.28194216 / exit 0.2432 with exit_price_source bybit_closed_pnl (and mirror 6566 -996.54256355). If the local sweep booked a fee-blind estimate first (close+6h = 2026-10-12T20:39Z), run system-action backfill-monitor-closed-pnl (dry-run, then apply: true) before 2026-10-18 (7-day window keyed on created_at 2026-10-11)."
+}

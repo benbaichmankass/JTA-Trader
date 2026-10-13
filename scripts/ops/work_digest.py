@@ -59,6 +59,20 @@ Usage::
     python3 scripts/ops/work_digest.py --base origin/main~20 --head HEAD
     python3 scripts/ops/work_digest.py --base <ref> --head HEAD --write
     python3 scripts/ops/work_digest.py --self-test
+
+⚠️ **THE `--base` REF IS READ AS GIVEN — THE TIP — AND A MERGE BASE WOULD BE
+MEANINGLESS HERE. DO NOT "FIX" IT.** This script takes BOTH `--base` and
+`--head` and compares two ARBITRARY refs over a WINDOW; it is not a
+diff-scoper asking *"did this branch do X?"*, so there is no branch whose fork
+point would be the right reference. Resolving a merge base between two
+arbitrary refs would silently move one end of the window.
+
+It is listed among the tip-readers by `scripts/ops/base_resolution_census.py`,
+which says in terms that that is **a count of a pattern, not a list of
+defects**. The per-script audit is in
+`scripts/ops/check_backlog_criteria.py::_load_at_ref` and names this script
+under **"RIGHT BY DESIGN, DO NOT 'FIX' THESE"**. This note exists locally
+because a warning in another file does not reach someone reading this one.
 """
 # wiring: .github/workflows/work-digest.yml (cron "20 2,6,10,14,18,22 * * *" +
 # workflow_dispatch) -> `--base <24h ago> --head main --write`, then
@@ -381,7 +395,8 @@ def render_standing_wedges(sw: dict[str, Any], now: datetime) -> list[str]:
         ]
     if state == "unreadable":
         return [
-            "⚠️ STANDING CLOSE WEDGES: ledger present but UNREADABLE "
+            "⚠️ STANDING CLOSE WEDGES: ledger present but UNREADABLE at "
+            f"{sw.get('source')} "
             f"({sw.get('reason') or 'no reason recorded'}). We looked and could "
             "not see — this is NOT 'nothing is wedged'."
         ]
@@ -398,27 +413,38 @@ def render_standing_wedges(sw: dict[str, Any], now: datetime) -> list[str]:
         if freshness == "fresh":
             return [
                 "Standing close wedges: none (ledger read, 0 entries, refreshed "
-                f"{_age_words(sw.get('ageSeconds'))} ago) — a real observation, "
-                "not an absence of one."
+                f"{_age_words(sw.get('ageSeconds'))} ago at {sw.get('source')}) "
+                "— a real observation, not an absence of one."
             ]
         if freshness == "undeclared":
             return [
                 "Standing close wedges: none (ledger read, 0 entries, stamped "
-                f"{_age_words(sw.get('ageSeconds'))} ago) — but the ledger "
+                f"{_age_words(sw.get('ageSeconds'))} ago at {sw.get('source')}) "
+                "— but the ledger "
                 "declares NO refresh cadence, so it predates the writer "
                 "heartbeat and was graded against this reader's fallback. Treat "
                 "as probably-current, not as confirmed-current."
             ]
         return [
-            "⚠️ Standing close wedges: none (ledger read, 0 entries) — but its "
+            "⚠️ Standing close wedges: none (ledger read, 0 entries at "
+            f"{sw.get('source')}) — but its "
             "`updated_at` is MISSING OR UNDATEABLE, so we cannot tell a fresh "
             "look from a stale file. This is NOT a confirmed 'nothing is "
             "wedged'."
         ]
+    # ⚠️ THE SOURCE PATH RIDES ON EVERY BRANCH, NOT ONLY THE BROKEN ONES.
+    # Until 2026-09-12 only `stale` and `not_fetched` named it, so the path was
+    # printed exactly when the ledger was NOT working and never when it was.
+    # That made OI-20260903-CLOSE-WEDGE-LEDGER-...'s clause (2) -- "a work-digest
+    # run NAMES the resolved path and that path is under /data/bot-data/",
+    # written to prove DATA_DIR resolution ON THE VM rather than the
+    # repo-relative agreement that holds on a runner -- satisfiable ONLY while
+    # the thing it verifies is broken. Measured: 0 of 184 rows in
+    # docs/claude/pending-pings.jsonl name /data/bot-data.
     out = [
         f"🧱 STANDING CLOSE WEDGES: {len(rows)} — confirmed unclearable by any "
         f"bot-side lever, downgraded out of the pager and carried HERE until the "
-        f"state changes:"
+        f"state changes (ledger: {sw.get('source')}):"
     ]
     for w in rows:
         out.append(
@@ -477,13 +503,49 @@ class Source(NamedTuple):
     removed_verb: str
 
 
-#: A terminal disposition on a review backlog. `docs/CLAUDE-RULES-CANONICAL.md`
-#: § "Backlog governance" declares five ways a row ends; the on-disk files also
-#: carry the historical spellings, and all of them are verdicts.
+#: The NON-terminal half of the enforced `status` enum. Everything else in that
+#: enum is a verdict, so `BACKLOG_TERMINAL` is DERIVED rather than listed —
+#: a value added to the enum later becomes terminal here automatically, which is
+#: the failure mode a second hand-written list has (it goes stale silently and
+#: the digest stops reporting a real transition).
+BACKLOG_NON_TERMINAL = frozenset({"open", "kept_open"})
+
+#: A terminal `status` on a review backlog.
+#:
+#: ⚠️ DECOUPLED 2026-09-22 (E45), AND THE REASON MATTERS. This used to be
+#: DERIVED from `scripts/check_claim_basis.py::STATUS_ENUM`, when that enum was
+#: the four review backlogs' `status` vocabulary. Those four backlogs are
+#: ARCHIVED under `docs/archive/2026-09-21-operating-reset/`, and that guard has
+#: been re-pointed at the live registers, so its enum is now the CHECKLIST's
+#: `state` vocabulary — a different field on a different file. Continuing to
+#: derive from it would have silently made every backlog status "terminal".
+#: The six values below are the LAST MEASURED contents of the archived field
+#: (2026-09-12, 1,803 rows across all four backlogs) and are historical by
+#: construction: nothing writes them any more, so there is no enum for them to
+#: drift from. That is why a literal is correct here and was not before.
+#:
+#: ⚠️ THIS SET USED TO CARRY FOUR MEMBERS THE FIELD CANNOT HOLD, and the comment
+#: above it asserted the opposite of what the files say. It read "the on-disk
+#: files also carry the historical spellings" and listed `fixed`,
+#: `closed_answered`, `closed_unfixable` and `promoted_to_roadmap` beside the
+#: enum values. MEASURED 2026-09-12 across all four backlogs (1,803 rows):
+#: `status` holds ONLY the six enum values — `resolved` 776, `open` 770,
+#: `kept_open` 229, `superseded` 14, `wont_fix` 10, `invalid` 4 — and the four
+#: extra members appear on ZERO rows. They were unreachable predicates: no
+#: transition could ever match them, and the digest was not broken by them
+#: because the reachable half covers every terminal transition that exists.
+#:
+#: ⚠️ WHERE THOSE FOUR WORDS DO LIVE, so this is a correction and not a deletion:
+#: `disposition`, a DIFFERENT field — 103 row-level and 794 update-level entries,
+#: carrying `snoozed`, `CLOSE_ANSWERED`, `promoted_to_roadmap`, `do_now`,
+#: `CLOSE_UNFIXABLE` and `fixed`. That field has no enum and no guard, and its
+#: update-level vocabulary has already drifted to 35 distinct values including
+#: free text. Tracked at
+#: BL-20260912-THE-BACKLOG-DISPOSITION-FIELD-HAS-NO-ENUM-AND-HAS-DRIFTED-TO-35-VALUES-INCLUDING-FREE-TEXT
+#: and deliberately NOT fixed here — a second vocabulary is a second migration.
 BACKLOG_TERMINAL = frozenset({
-    "resolved", "fixed", "wont_fix", "superseded", "invalid",
-    "closed_answered", "closed_unfixable", "promoted_to_roadmap",
-})
+    "resolved", "wont_fix", "superseded", "invalid",
+}) - BACKLOG_NON_TERMINAL
 
 #: A checklist item reaching one of these is a decision the operator wants.
 #: `queued` and `triage` are deliberately absent: scoping an item is work in
@@ -494,19 +556,39 @@ CHECKLIST_EVENTS = frozenset({
     "in_flight", "landed_unproven", "done", "blocked", "dropped",
 })
 
+#: Registers the 2026-09-21 operating reset ARCHIVED, with the ref that moved
+#: them. They are listed rather than deleted because the difference between
+#: *"this register was retired on purpose"* and *"this register vanished"* is
+#: the only thing self-test 10 can still tell us about them, and a source that
+#: simply disappears from `SOURCES` takes that distinction with it.
+#:
+#: ⚠️ MEASURED 2026-09-22: every one of these read `absent` on every run from
+#: the reset onward, so the digest had been PERMANENTLY BLIND to five of its
+#: six sources while reporting itself healthy — and `--self-test` had been
+#: failing check 10 on all five, which is what made `work-digest` red on 6 of
+#: 6 runs on `main` (E29). The rows live at
+#: docs/archive/2026-09-21-operating-reset/registers/.
+RETIRED_SOURCES: tuple[tuple[str, str], ...] = (
+    ("open-items register", "docs/claude/OPEN-ITEMS.json"),
+    ("health backlog", "docs/claude/health-review-backlog.json"),
+    ("performance backlog", "docs/claude/performance-review-backlog.json"),
+    ("ml backlog", "docs/claude/ml-review-backlog.json"),
+    ("research backlog", "docs/claude/research-review-backlog.json"),
+)
+
+#: ⚠️ ONE SOURCE, AND THAT IS THE REPORTABLE FACT RATHER THAN A DIMINISHED
+#: DIGEST. The reset's whole shape is "one register" (CLAUDE.md § How work is
+#: organised), and `MANAGER-CHECKLIST.json` is it, so the digest now watches
+#: exactly the surface the operating model says work lives on.
+#:
+#: ⚠️ WHAT IS NOT COVERED, STATED RATHER THAN IMPLIED: `docs/claude/work/
+#: PIPELINE.jsonl` is the OTHER live surface the reset created, and this digest
+#: DOES NOT READ IT. It is append-only JSONL rather than a keyed JSON register,
+#: so `_items_at()` cannot diff it as-is. Until that lands, a pipeline item
+#: coming due produces NO ping — filed, not forgotten.
 SOURCES: tuple[Source, ...] = (
     Source("manager checklist", "docs/claude/work/MANAGER-CHECKLIST.json",
            "state", CHECKLIST_EVENTS, True, "added", "removed"),
-    Source("open-items register", "docs/claude/OPEN-ITEMS.json",
-           None, frozenset(), True, "filed", "CLEARED"),
-    Source("health backlog", "docs/claude/health-review-backlog.json",
-           "status", BACKLOG_TERMINAL, False, "filed", "removed"),
-    Source("performance backlog", "docs/claude/performance-review-backlog.json",
-           "status", BACKLOG_TERMINAL, False, "filed", "removed"),
-    Source("ml backlog", "docs/claude/ml-review-backlog.json",
-           "status", BACKLOG_TERMINAL, False, "filed", "removed"),
-    Source("research backlog", "docs/claude/research-review-backlog.json",
-           "status", BACKLOG_TERMINAL, False, "filed", "removed"),
 )
 
 #: Per-source read grades. NEVER collapsed — `no_changes` on a source we could
@@ -523,18 +605,30 @@ def _items_at(ref: str, path: str) -> tuple[str, dict[str, dict]]:
     * ``unreadable`` — it exists and we could not parse it. **We could not
       look.** Emphatically not ``absent`` and emphatically not empty.
     """
-    try:
-        raw = subprocess.run(
-            ["git", "show", f"{ref}:{path}"],
-            cwd=REPO_ROOT, capture_output=True, text=True, check=True,
-        ).stdout
-    except subprocess.CalledProcessError:
-        return "absent", {}
-    try:
-        doc = json.loads(raw)
-        items = doc["items"]
-    except (ValueError, KeyError, TypeError):
-        return "unreadable", {}
+    if str(REPO_ROOT) not in sys.path:
+        sys.path.insert(0, str(REPO_ROOT))
+    from src.runtime import checklist_store as _ck  # noqa: PLC0415
+    if _ck.is_checklist_path(path):  # monolith before the per-row cutover, rows after
+        try:
+            doc = _ck.load_at(REPO_ROOT, ref)
+        except (ValueError, OSError):
+            return "unreadable", {}
+        if doc is None:
+            return "absent", {}
+        items = doc.get("items")
+    else:
+        try:
+            raw = subprocess.run(
+                ["git", "show", f"{ref}:{path}"],
+                cwd=REPO_ROOT, capture_output=True, text=True, check=True,
+            ).stdout
+        except subprocess.CalledProcessError:
+            return "absent", {}
+        try:
+            doc = json.loads(raw)
+            items = doc["items"]
+        except (ValueError, KeyError, TypeError):
+            return "unreadable", {}
     if not isinstance(items, list):
         return "unreadable", {}
     out: dict[str, dict] = {}
@@ -931,6 +1025,15 @@ def main(argv: list[str] | None = None) -> int:
                     help="write even if a digest was already recorded for today")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
+    # The verdict below is about the COMMITTED tree. Say so when that is
+    # not the tree you edited. See
+    # BL-20260917-THE-DIRTY-TREE-NOTICE-LIVES-ONLY-IN-RUN-GUARDS-SO-ALL-18-DIRECTLY-INVOCABLE-DIFF-SCOPED-GUARDS-STILL-GRADE-THE-WRONG-TREE-SILENTLY
+    import pathlib  # noqa: PLC0415 — local, so importing this module stays free
+    import sys as _sys  # noqa: PLC0415
+    _sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "ci"))
+    import _dirty_tree  # noqa: E402,PLC0415 — path shim above
+    _dirty_tree.warn()
+
 
     if a.self_test:
         return _self_test()
@@ -973,7 +1076,7 @@ def _self_test() -> int:
     from one that always passes. Each check here has a positive control."""
     ok = True
 
-    def check(n: int, label: str, passed: bool, detail: str = "") -> None:
+    def check(n: int | str, label: str, passed: bool, detail: str = "") -> None:
         nonlocal ok
         ok &= passed
         print(f"  self-test {n} ({label}): {'PASS' if passed else f'FAIL {detail}'}")
@@ -1044,6 +1147,21 @@ def _self_test() -> int:
     }
     check(11, "every review backlog on disk is read", on_disk <= declared,
           f"unread: {sorted(on_disk - declared)}")
+
+    # 11a-11b: the RETIREMENT is checked in both directions, because a list of
+    # dead paths that nothing asserts against is a comment, not a record.
+    #
+    # ⚠️ 11b is the one that matters and it is deliberately a FAILURE, not a
+    # warning. If an archived register reappears on disk, the digest is once
+    # again blind to a live surface while every other check stays green —
+    # exactly the state this module sat in from 2026-09-21 to 2026-09-22.
+    readded = [path for _, path in RETIRED_SOURCES if path in declared]
+    check("11a", "no retired source is silently back in SOURCES", not readded,
+          str(readded))
+    resurrected = [path for _, path in RETIRED_SOURCES
+                   if (REPO_ROOT / path).exists()]
+    check("11b", "no retired register has reappeared unwatched on disk",
+          not resurrected, str(resurrected))
 
     # 12: the per-source read grades ship even when nothing was attempted — a
     # key that vanishes makes a consumer branch on absence, and absence is not
@@ -1147,9 +1265,38 @@ def _self_test() -> int:
 
         # The path the digest actually read is NAMED in its own output, so which
         # resolver won is checkable from the message rather than from the code.
-        check(22, "the resolved ledger path is operator-visible",
-              str(tmp) in "\n".join(render_standing_wedges(missing, now_t)),
-              str(missing.get("source")))
+        #
+        # ⚠️ THIS USED TO ASSERT ONLY THE `not_fetched` FIXTURE while its comment
+        # claimed the path is visible generally — so the path was printed exactly
+        # when the ledger was NOT working and never when it was, and the test
+        # said that was fine. Measured 2026-09-12: 0 of 184 rows in
+        # docs/claude/pending-pings.jsonl name /data/bot-data, while the digest
+        # was correctly reporting a real wedge the whole time. Now EVERY
+        # reachable state is asserted, the same way check 23 enumerates states
+        # rather than sampling one.
+        path_blind = []
+        for _name, _sw in (
+            ("not_fetched", missing),
+            ("stale", stale),
+            ("read/fresh/empty", fresh),
+            ("read/undated/empty", undated),
+            ("unreadable", {"wedgeState": "unreadable", "source": str(tmp),
+                            "reason": "planted", "wedges": [], "count": 0}),
+            ("read/with-wedges", {"wedgeState": "read", "source": str(tmp),
+                                  "freshness": "fresh", "ageSeconds": 5,
+                                  "count": 1,
+                                  "wedges": [{"account": "a", "symbol": "S",
+                                              "side": "long",
+                                              "share_hold": "x",
+                                              "pages_suppressed": 0,
+                                              "first_seen": None,
+                                              "detail": "d"}]}),
+        ):
+            if str(tmp) not in "\n".join(render_standing_wedges(_sw, now_t)):
+                path_blind.append(_name)
+        check(22, "the resolved ledger path is operator-visible in EVERY state, "
+                  "not only the broken ones",
+              not path_blind, str(path_blind))
 
     # THE ONE THAT MATTERS. No reachable state of the wedge block is silent — an
     # item downgraded out of the pager falling out of the digest too is the

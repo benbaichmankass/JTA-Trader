@@ -69,21 +69,14 @@ def test_an_unattributable_claim_is_refused_not_written(branch, held_by):
         mod.build_claim(branch, held_by, "")
 
 
-def test_real_board_only_the_slot_changes():
-    """The property the whole splice exists for, asserted on the REAL file."""
-    mod = _load()
-    src = BOARD.read_text(encoding="utf-8")
-    out = mod.splice(src, mod.build_claim("automation/probe-1-1", "run 1", "p",
-                                          claimed_at="2026-09-09T06:00:00Z"))
-
-    before, after = json.loads(src), json.loads(out)
-    assert after["merge_slot"]["branch"] == "automation/probe-1-1"
-    assert {k: v for k, v in before.items() if k != "merge_slot"} == \
-           {k: v for k, v in after.items() if k != "merge_slot"}
-
-    start, end = mod.find_top_level_value_span(src, "merge_slot")
-    assert out.startswith(src[:start]), "bytes before the slot were rewritten"
-    assert out.endswith(src[end:]), "bytes after the slot were rewritten"
+# ⚠️ REMOVED 2026-09-21 by the operating reset: `test_real_board_only_the_slot_changes`.
+# It asserted a property of the LIVE session-board.json merge slot, which is archived under
+# docs/archive/2026-09-21-operating-reset/. Its subject is gone, so the
+# test cannot pass and cannot be made to pass — it is removed WITH its
+# subject rather than skipped, because a permanently-skipped test is a
+# control in name only. Its fixture-based siblings in this file are
+# UNTOUCHED and still green: they test the CODE, which still exists.
+# Restore it from git history if the register ever returns.
 
 
 def _budget(mod, src: str, out: str) -> int:
@@ -101,32 +94,14 @@ def _budget(mod, src: str, out: str) -> int:
     return src[s0:e0].count("\n") + out[s1:e1].count("\n") + 2
 
 
-def test_real_board_diff_is_small_enough_to_conflict_narrowly():
-    """A whole-file reformat passes every correctness test above and still
-    breaks the thing this change is for, so the SIZE is asserted separately.
-
-    ⚠️ THIS TEST USED A POSITIONAL METRIC AND FAILED ON CORRECT BEHAVIOUR.
-    It was ``sum(1 for x, y in zip(a, b) if x != y) + abs(len(a) - len(b))``,
-    which compares line *i* of the old file with line *i* of the new one — so a
-    claim with a DIFFERENT LINE COUNT from the one it replaces shifts every
-    following line and reads as a whole-file rewrite. Measured on `main` at
-    `4230ef10b` on 2026-09-10: a 6-key outgoing claim replaced by this script's
-    4-key claim took the board 94 → 91 lines and the metric reported **87**
-    against a budget of 6, while `test_real_board_only_the_slot_changes` proved
-    the bytes on BOTH sides of the slot were preserved and the real diff was
-    **11 lines**. It failed on `main`, so it failed `pytest-run` on every open
-    PR — a guard reddening the repo for doing the right thing.
-    """
-    mod = _load()
-    src = BOARD.read_text(encoding="utf-8")
-    out = mod.splice(src, mod.build_claim("automation/probe-1-1", "run 1", "p",
-                                          claimed_at="2026-09-09T06:00:00Z"))
-    changed = mod._changed_lines(src, out)
-    budget = _budget(mod, src, out)
-    assert changed <= budget, (
-        f"{changed} lines change against a budget of {budget} (the two slots' "
-        f"own size). A whole-file re-serialisation turns every concurrent "
-        f"session edit into a conflict.")
+# ⚠️ REMOVED 2026-09-21 by the operating reset: `test_real_board_diff_is_small_enough_to_conflict_narrowly`.
+# It asserted a property of the LIVE session-board.json merge slot, which is archived under
+# docs/archive/2026-09-21-operating-reset/. Its subject is gone, so the
+# test cannot pass and cannot be made to pass — it is removed WITH its
+# subject rather than skipped, because a permanently-skipped test is a
+# control in name only. Its fixture-based siblings in this file are
+# UNTOUCHED and still green: they test the CODE, which still exists.
+# Restore it from git history if the register ever returns.
 
 
 @pytest.mark.parametrize("extra_keys", [0, 1, 2, 5])
@@ -173,49 +148,24 @@ def test_an_outgoing_claim_with_EXTRA_KEYS_is_still_a_narrow_diff(extra_keys):
     assert out.startswith(src[:s0]) and out.endswith(src[e0:])
 
 
-@pytest.mark.parametrize("indent,sort_keys", [(1, False), (4, False), (2, True)])
-def test_a_whole_file_reserialisation_is_still_caught(indent, sort_keys):
-    """PLANTED CONTROL — the teeth, kept after the metric was repaired.
-
-    A metric loosened to stop failing on correct behaviour is worthless if it
-    also stops failing on the behaviour it exists to prevent. Each of these is a
-    genuine reformat of the real board and each must BREACH the budget.
-
-    ⚠️ `indent=2, sort_keys=False` is deliberately NOT in this list, and the
-    reason is worth stating rather than hiding: the board is already stored in
-    exactly `json.dumps(..., indent=2)` form, so re-serialising it that way
-    reproduces the file BYTE-FOR-BYTE outside the slot. That is not a reformat
-    this guard misses — it is not a reformat at all, and
-    `test_real_board_only_the_slot_changes` confirms the surrounding bytes are
-    identical. Adding it as a control would assert a failure that ought not to
-    happen.
-    """
-    mod = _load()
-    src = BOARD.read_text(encoding="utf-8")
-    good = mod.splice(src, mod.build_claim("automation/probe-1-1", "run 1", "p",
-                                           claimed_at="2026-09-09T06:00:00Z"))
-    reformatted = json.dumps(json.loads(good), indent=indent,
-                             ensure_ascii=False, sort_keys=sort_keys) + "\n"
-    changed = mod._changed_lines(src, reformatted)
-    budget = _budget(mod, src, reformatted)
-    assert changed > budget, (
-        f"a whole-file re-serialisation (indent={indent}, sort_keys={sort_keys}) "
-        f"changed only {changed} lines against a budget of {budget} — the size "
-        f"guard has lost its teeth.")
+# ⚠️ REMOVED 2026-09-21 by the operating reset: `test_a_whole_file_reserialisation_is_still_caught`.
+# It asserted a property of the LIVE session-board.json merge slot, which is archived under
+# docs/archive/2026-09-21-operating-reset/. Its subject is gone, so the
+# test cannot pass and cannot be made to pass — it is removed WITH its
+# subject rather than skipped, because a permanently-skipped test is a
+# control in name only. Its fixture-based siblings in this file are
+# UNTOUCHED and still green: they test the CODE, which still exists.
+# Restore it from git history if the register ever returns.
 
 
-def test_the_key_is_found_at_top_level_not_in_prose_or_a_nested_schema():
-    """The real board mentions `merge_slot` in `_doc` prose AND defines a
-    `schema.merge_slot` DESCRIPTION. A naive `text.find` hits those first."""
-    mod = _load()
-    src = BOARD.read_text(encoding="utf-8")
-    start, _ = mod.find_top_level_value_span(src, "merge_slot")
-    # The span must begin at a JSON object, not inside a string.
-    assert src[start] == "{", src[start:start + 40]
-    # And the nested description must survive untouched.
-    out = mod.splice(src, mod.build_claim("automation/probe-1-1", "r", "p"))
-    assert json.loads(out)["schema"]["merge_slot"] == \
-           json.loads(src)["schema"]["merge_slot"]
+# ⚠️ REMOVED 2026-09-21 by the operating reset: `test_the_key_is_found_at_top_level_not_in_prose_or_a_nested_schema`.
+# It asserted a property of the LIVE session-board.json merge slot, which is archived under
+# docs/archive/2026-09-21-operating-reset/. Its subject is gone, so the
+# test cannot pass and cannot be made to pass — it is removed WITH its
+# subject rather than skipped, because a permanently-skipped test is a
+# control in name only. Its fixture-based siblings in this file are
+# UNTOUCHED and still green: they test the CODE, which still exists.
+# Restore it from git history if the register ever returns.
 
 
 def test_a_board_without_a_top_level_slot_is_refused():
@@ -223,3 +173,13 @@ def test_a_board_without_a_top_level_slot_is_refused():
     with pytest.raises(mod.SpliceError):
         mod.splice('{\n "active_sessions": []\n}\n',
                    mod.build_claim("b", "h", "p"))
+
+
+# ⚠️ REMOVED 2026-09-21 by the operating reset: `test_schema_string_matches_what_build_claim_actually_writes`.
+# It asserted a property of the LIVE session-board.json merge slot, which is archived under
+# docs/archive/2026-09-21-operating-reset/. Its subject is gone, so the
+# test cannot pass and cannot be made to pass — it is removed WITH its
+# subject rather than skipped, because a permanently-skipped test is a
+# control in name only. Its fixture-based siblings in this file are
+# UNTOUCHED and still green: they test the CODE, which still exists.
+# Restore it from git history if the register ever returns.

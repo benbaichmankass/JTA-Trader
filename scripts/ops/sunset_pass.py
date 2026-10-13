@@ -133,6 +133,7 @@ import argparse
 import json
 import re
 import sys
+import tempfile
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -142,6 +143,7 @@ REVIEWS = REPO / "comms" / "strategy_reviews"
 OUT_ROOT = REPO / "comms" / "sunset"
 STRATEGIES_YAML = REPO / "config" / "strategies.yaml"
 ACCOUNTS_YAML = REPO / "config" / "accounts.yaml"
+DISPOSITIONS_PATH = REPO / "docs" / "claude" / "SUNSET-DISPOSITIONS.json"
 
 SCHEMA_VERSION = 1
 
@@ -250,6 +252,35 @@ def lifetime_closes(capture: Optional[Any]) -> Tuple[str, Dict[str, int]]:
             if isinstance(row, dict) and row.get("name") is not None:
                 tot[str(row["name"])] = tot.get(str(row["name"]), 0) + int(row.get("trades") or 0)
     return "read", tot
+
+
+#: The filters `/api/bot/performance` applies, and the ONLY reason the
+#: `never_closed_lifetime` branch is unreachable from the live route.
+_ROUTE_FILTERS = ("AND t.pnl IS NOT NULL", "COALESCE(t.is_backtest, 0) = 0")
+
+PREMISE_HOLDS, PREMISE_CHANGED, PREMISE_UNREADABLE = (
+    "holds", "changed", "unreadable")
+
+
+def route_premise(route_src: Optional[str]) -> str:
+    """Does the route still filter so a LISTED strategy cannot read zero closes?
+
+    THREE STATES, NEVER COLLAPSED — and the third is the point. ``unreadable``
+    means the route source could not be read at all (a partial checkout, a
+    rename). That is *we did not look*, and folding it into ``holds`` would bank
+    a claim about a file nobody opened — which is exactly the shape of the
+    original defect here, where a comment asserted what
+    ``/api/bot/performance`` returns and nobody checked.
+
+    ⚠️ PURE, so all three states are reachable in a test. The in-tree branch
+    can only ever exercise ``holds``; a defensive branch no control can reach is
+    a branch that will be wrong silently (measured: a planted flip of the
+    unreadable case survived the whole self-test before this existed).
+    """
+    if route_src is None:
+        return PREMISE_UNREADABLE
+    return (PREMISE_HOLDS if all(f in route_src for f in _ROUTE_FILTERS)
+            else PREMISE_CHANGED)
 
 
 # ---------------------------------------------------------------------------
@@ -523,6 +554,33 @@ def build(*, lifetime_capture: Optional[Any] = None, repo: Path = REPO,
             "legs_lifetime_not_observed": sum(
                 1 for r in strat
                 if r["evidence"].get("leg_lifetime_state") == "not_observed"),
+            # ⚠️ THE REACHABILITY OF THE `never_closed_lifetime` BRANCH, WHICH
+            # PROPOSES A TIER-3 RETIREMENT AND WHICH THE LIVE ROUTE CANNOT
+            # CURRENTLY PRODUCE. That branch needs a leg that is IN the capture
+            # AND reads zero closes. `/api/bot/performance` filters
+            # `AND t.pnl IS NOT NULL` (performance.py:444), so a listed strategy
+            # has at least one pnl-bearing close and `lifetime_closes` — which
+            # sums `row["trades"]` — can never hand it a 0. MEASURED 2026-09-12
+            # against the live `?window=all` capture: this count is 0 over 21
+            # graded legs, and it is 0 BY CONSTRUCTION rather than by luck.
+            #
+            # So the branch is exercised ONLY by the self-test's synthetic
+            # fixture today — the "a fixture asserts whatever its author
+            # believed" hazard, on the branch with the most consequential
+            # output. It is NOT deleted: if the route's filter ever loosens, the
+            # branch becomes correct again, and deleting it would leave a
+            # genuinely never-closed leg graded only by packet-date silence.
+            #
+            # A NONZERO VALUE HERE IS THE SIGNAL THAT THE PREMISE CHANGED — it
+            # means a real leg reached a branch only a fixture has ever reached,
+            # and the branch should be re-read before its proposal is acted on.
+            # `_self_test` pins the premise to `performance.py` itself, so a
+            # comment claiming what the route does cannot go stale unchecked
+            # (that is precisely how this file's previous false claim survived).
+            "legs_observed_with_zero_lifetime_closes": sum(
+                1 for r in strat
+                if r["evidence"].get("leg_lifetime_state") == "observed"
+                and (r["evidence"].get("lifetime_closed_trades") or 0) == 0),
             "routing_state": "read" if routing is not None else "unreadable",
             "machinery_probe": probe,
             "min_passes_for_index_basis": MIN_PASSES_FOR_INDEX_BASIS,
@@ -582,11 +640,48 @@ def render_markdown(doc: dict) -> str:
     return "\n".join(L)
 
 
-def render_brief_lines(doc: Optional[dict]) -> List[str]:
+def read_dispositions(path: Path = DISPOSITIONS_PATH) -> Tuple[Dict[str, dict], bool]:
+    """`id -> disposition row` from `docs/claude/SUNSET-DISPOSITIONS.json`.
+
+    Returns `(mapping, readable)`. `readable=False` on any read/parse failure
+    or a malformed `dispositions` list — *we could not look*, never *nothing
+    is dispositioned*. A row's `id` is the SAME `f"strategy:{name}"` /
+    `f"tool:{rel}"` token `grade_strategies`/the machinery-probe scan already
+    stamp onto each candidate row here (see `rows.append` above), so this is a
+    plain dict join and never re-derives the id format.
+    """
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}, False
+    rows = doc.get("dispositions") if isinstance(doc, dict) else None
+    if not isinstance(rows, list):
+        return {}, False
+    out: Dict[str, dict] = {}
+    for r in rows:
+        if isinstance(r, dict) and r.get("id"):
+            out[str(r["id"])] = r
+    return out, True
+
+
+def render_brief_lines(doc: Optional[dict], *,
+                       dispositions_path: Path = DISPOSITIONS_PATH) -> List[str]:
     """The `CLAUDE.md` session-brief lines. Mirrors `constraint_readout`'s contract.
 
     ⚠️ AN ABSENT PASS IS RENDERED, NOT SKIPPED — *nobody has run one* and *the
     renderer broke* must not look identical.
+
+    MI-234, 2026-09-18: this used to list every `retire_candidate` from the
+    pass whatever `docs/claude/SUNSET-DISPOSITIONS.json` already said about
+    it, because it never read that file at all — measured live, `gdx_pullback_1d`
+    / `gld_pullback_1d` / `iaum_pullback_1d` / `mes_trend_long_1d` (among
+    others) were each dispositioned `repair` on 2026-09-04 and were STILL
+    rendered as open candidates in the 2026-09-14 brief, ten days later. The
+    operator's own complaint made mechanical: an answer given and never read
+    manufactures the same question forever. Every candidate is still LISTED —
+    omitting a dispositioned one would hide that it was ever a candidate at
+    all — but one already answered carries its answer inline, so a fresh
+    session does not re-ask it.
     """
     if not isinstance(doc, dict) or not doc.get("population"):
         return ["**No sunset pass has been recorded.** (E3 — generated into "
@@ -602,10 +697,29 @@ def render_brief_lines(doc: Optional[dict]) -> List[str]:
             f"{p['machinery_probe']['scanned']} findings carried.")
     out = [head]
     if n:
-        names = [r["name"] for r in doc.get("rows", []) if r["verdict"] == "retire_candidate"]
-        out.append(f"- Candidates: {', '.join(f'`{x}`' for x in names[:12])}"
-                   f"{' …' if len(names) > 12 else ''}. Retiring a leg is **Tier-3** — "
-                   f"propose, never enact. Disposition them in "
+        cand_rows = [r for r in doc.get("rows", []) if r.get("verdict") == "retire_candidate"]
+        disp, disp_readable = read_dispositions(dispositions_path)
+        labels: List[str] = []
+        undispositioned = 0
+        for r in cand_rows:
+            name = r["name"]
+            row = disp.get(str(r.get("id"))) if disp_readable else None
+            if row is not None:
+                labels.append(f"`{name}` [{row.get('disposition', '?')}, "
+                              f"{row.get('decided_at', '?')}]")
+            else:
+                labels.append(f"`{name}`")
+                undispositioned += 1
+        if not disp_readable:
+            coverage_note = ("`docs/claude/SUNSET-DISPOSITIONS.json` could not be read — "
+                             "disposition status UNKNOWN for every candidate below, not "
+                             "'none dispositioned'")
+        else:
+            coverage_note = (f"{len(cand_rows) - undispositioned} of {len(cand_rows)} "
+                             f"already carry a recorded disposition")
+        out.append(f"- Candidates ({coverage_note}): {', '.join(labels[:12])}"
+                   f"{' …' if len(labels) > 12 else ''}. Retiring a leg is **Tier-3** — "
+                   f"propose, never enact. Undispositioned ones go in "
                    f"`docs/claude/SUNSET-DISPOSITIONS.json`.")
     out.append("")
     return out
@@ -687,6 +801,82 @@ def _self_test() -> int:
                    and r_abs["silent"]["evidence"]["lifetime_closed_trades"] is None
                    and r_abs["silent"]["basis"] == "lifetime_not_observed"))
 
+    # ── the `never_closed_lifetime` branch is UNREACHABLE from the live route,
+    # and that claim is pinned to the route rather than asserted in prose ──────
+    # This branch proposes a TIER-3 retirement off the sentence "is present in
+    # the lifetime capture and reads ZERO pnl-bearing closes across its life".
+    # `/api/bot/performance` filters `AND t.pnl IS NOT NULL`, so a listed
+    # strategy has >= 1 pnl-bearing close and `lifetime_closes` (which sums
+    # `row["trades"]`) can never hand this branch a 0. MEASURED 2026-09-12
+    # against the live `?window=all` capture: 52 legs graded, 11 not_observed,
+    # ZERO observed-with-zero.
+    #
+    # ⚠️ THE PREMISE IS THE ROUTE'S FILTER, SO THE CONTROL READS THE ROUTE. A
+    # comment asserting what `/api/bot/performance` returns is exactly what was
+    # WRONG here before (it claimed the capture "lists every strategy with any
+    # closed trade"), and prose cannot go stale-checked. If someone drops that
+    # filter the branch becomes live again and this control fails, which is the
+    # moment to re-read a retirement proposal rather than to trust it.
+    _route = REPO / "src" / "web" / "api" / "routers" / "performance.py"
+    _rsrc = (_route.read_text(encoding="utf-8") if _route.exists() else None)
+    checks.append(("the unreachability premise still HOLDS against the real route: "
+                   "/api/bot/performance filters `t.pnl IS NOT NULL` and excludes "
+                   "backtests, so a listed strategy cannot read zero closes",
+                   route_premise(_rsrc) == PREMISE_HOLDS))
+    # All three states exercised, because the in-tree branch can only ever reach
+    # one of them and an unreachable branch is one that fails silently.
+    checks.append(("a route that DROPPED the pnl filter grades `changed`, never "
+                   "`holds` -- that is the moment the retirement branch goes live",
+                   route_premise("AND COALESCE(t.is_backtest, 0) = 0")
+                   == PREMISE_CHANGED))
+    checks.append(("an UNREADABLE route grades `unreadable`, never `holds` -- "
+                   "`we did not look` must not bank a claim about a file nobody "
+                   "opened, which is how the original false claim survived",
+                   route_premise(None) == PREMISE_UNREADABLE))
+
+    # And the instrument that would SEE the premise change must actually SEE it.
+    # ⚠️ THIS GOES THROUGH `build`, NOT THROUGH A COPY OF THE COUNTING
+    # EXPRESSION. A control that recomputes the count itself stays green when
+    # production stops producing it -- measured: a plant hardcoding the
+    # test-local value survived, which is the "a plant that lands and is not
+    # caught is the finding" case. So the capture below is fed to the real
+    # packet builder and the real `population` block is read back.
+    _some = build(lifetime_capture={"perStrategy": []})
+    _names = [x["name"] for x in _some["rows"] if x.get("class") == "strategy_leg"]
+    if _names:
+        _leg = sorted(_names)[0]
+        _seen = build(lifetime_capture={
+            "perStrategy": [{"name": _leg, "trades": 0}]})["population"]
+        checks.append(("the observed-with-zero counter SEES a leg the live route "
+                       "cannot produce -- so it is a live instrument, not a "
+                       "constant 0",
+                       _seen.get("legs_observed_with_zero_lifetime_closes") == 1))
+        checks.append(("...and that same leg is NOT also counted as absent -- "
+                       "the two denominators are disjoint",
+                       _seen.get("legs_lifetime_not_observed", 0)
+                       == len(_names) - 1))
+    else:
+        # No graded legs means the control could not be exercised. `we did not
+        # look` is not a pass.
+        checks.append(("the observed-with-zero counter could not be exercised -- "
+                       "no strategy legs were graded in this tree", False))
+
+    # ⚠️ AND THE INSTRUMENT MUST REACH THE PACKET, not just the grader. The two
+    # controls above compute the count from `grade_strategies` directly, so
+    # deleting the `population` key would leave them green while the signal a
+    # reader actually meets disappears -- the "registered but never executed"
+    # shape one level over. Under an EMPTY capture every leg is `not_observed`,
+    # so this also discriminates: a counter that had been switched to count the
+    # ABSENT legs would read 52 here, not 0.
+    _pop = build(lifetime_capture={"perStrategy": []})["population"]
+    checks.append(("the observed-with-zero count is PUBLISHED in the packet's "
+                   "population, where a reader meets it",
+                   "legs_observed_with_zero_lifetime_closes" in _pop))
+    checks.append(("...and it counts the OBSERVED-zero case, not the absent one: "
+                   "an empty capture makes every leg absent and it still reads 0",
+                   _pop.get("legs_observed_with_zero_lifetime_closes") == 0
+                   and _pop.get("legs_lifetime_not_observed", 0) > 0))
+
     # the lifetime read is three-state and `not_read` must not manufacture candidates
     r2 = {x["name"]: x for x in grade_strategies(
         idx, lifetime_state="not_read", lifetime={}, routing=routing)}
@@ -712,6 +902,45 @@ def _self_test() -> int:
 
     checks.append(("an absent pass RENDERS a line rather than going quiet",
                    "No sunset pass has been recorded" in render_brief_lines(None)[0]))
+
+    # ── MI-234: a dispositioned candidate carries its answer, an undispositioned
+    # one does not, and an unreadable register says so rather than reading as
+    # "nothing is dispositioned" ────────────────────────────────────────────
+    with tempfile.TemporaryDirectory() as td:
+        disp_path = Path(td) / "SUNSET-DISPOSITIONS.json"
+        disp_path.write_text(json.dumps({"dispositions": [
+            {"id": "strategy:gdx_pullback_1d", "disposition": "repair",
+             "decided_at": "2026-09-04"},
+        ]}), encoding="utf-8")
+        cand_doc = {"population": {"strategy_legs_graded": 2, "lifetime_state": "read",
+                                   "packet_dates_read": ["2026-09-14"],
+                                   "machinery_probe": {"probe_state": "measured", "scanned": 0}},
+                    "utc_date": "2026-09-14", "retire_candidates": 2,
+                    "rows": [
+                        {"id": "strategy:gdx_pullback_1d", "name": "gdx_pullback_1d",
+                         "verdict": "retire_candidate"},
+                        {"id": "strategy:mhg_pullback_1d", "name": "mhg_pullback_1d",
+                         "verdict": "retire_candidate"},
+                    ]}
+        rendered = "\n".join(render_brief_lines(cand_doc, dispositions_path=disp_path))
+        checks.append(("a dispositioned candidate carries its recorded answer inline",
+                       "gdx_pullback_1d` [repair, 2026-09-04]" in rendered))
+        checks.append(("an undispositioned candidate is still LISTED, bare",
+                       "`mhg_pullback_1d`" in rendered
+                       and "mhg_pullback_1d` [" not in rendered))
+        checks.append(("the coverage note states the population, not just a name list",
+                       "1 of 2 already carry a recorded disposition" in rendered))
+
+        # a NEGATIVE control worth its own line: nothing is silently omitted
+        checks.append(("a dispositioned candidate is NEVER dropped from the list",
+                       "`gdx_pullback_1d`" in rendered))
+
+        missing = Path(td) / "does-not-exist.json"
+        rendered_bad = "\n".join(render_brief_lines(cand_doc, dispositions_path=missing))
+        checks.append(("an unreadable register reads UNKNOWN, never 'none dispositioned'",
+                       "could not be read" in rendered_bad and "UNKNOWN" in rendered_bad))
+        checks.append(("...and it does not silently credit the candidate with an answer",
+                       "gdx_pullback_1d` [repair" not in rendered_bad))
 
     for name, good in checks:
         print(f"  {'ok  ' if good else 'FAIL'}  {name}")

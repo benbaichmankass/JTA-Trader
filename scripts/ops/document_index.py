@@ -46,7 +46,7 @@ import subprocess
 import sys
 from datetime import date
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 REPO = Path(__file__).resolve().parents[2]
 INDEX_PATH = REPO / "docs" / "DOCUMENT-INDEX.md"
@@ -62,6 +62,80 @@ STAMP_SENTINEL = "**Doc status:**"
 STAMP_RE = re.compile(
     r"^>\s*\*\*Doc status:\*\*\s*`(?P<status>[a-z_]+)`", re.MULTILINE
 )
+# The SAME line, read for everything it asserts rather than only its status.
+# `check_document_index.py`'s R3 needs the status alone; the WRITER needs the
+# date, because the date is a claim about a human act and must not be reissued
+# by a tool that did not perform it.
+STAMP_FULL_RE = re.compile(
+    r"^>\s*\*\*Doc status:\*\*\s*`(?P<status>[a-z_]+)`\s*·\s*"
+    r"category\s*`(?P<category>[a-z_-]+)`\s*·\s*"
+    r"last verified\s*`(?P<last_verified>[^`]*)`",
+    re.MULTILINE,
+)
+
+
+def existing_stamp(rel: str) -> Optional[Dict[str, str]]:
+    """What this document's own header currently asserts, or ``None``.
+
+    ``None`` is "there is no stamp to preserve" and is NOT the same as a stamp
+    reading `never` — the first means a date must be minted, the second is an
+    existing, deliberate claim that nobody has assessed it.
+    """
+    try:
+        text = (REPO / rel).read_text(encoding="utf-8")
+    except OSError:
+        return None
+    m = STAMP_FULL_RE.search(text)
+    return m.groupdict() if m else None
+
+
+def carry_last_verified(rel: str,
+                        computed: Dict[str, str]) -> Tuple[str, str]:
+    """The date to stamp, and WHY — never `today` by default.
+
+    ⚠️ THIS IS THE WHOLE FIX, AND IT IS A REFUSAL RATHER THAN A WARNING.
+    `last verified` is the field a session reads to decide whether a document
+    can be trusted. Re-stamping it asserts a verification that did not happen,
+    at a scale no session could perform: MEASURED on a clean tree at
+    `origin/main` on 2026-09-12, `--write` changed 471 files and **425 of them
+    differed ONLY by that date** — `CLAUDE.md`, `docs/CLAUDE-RULES-CANONICAL.md`
+    and `docs/ARCHITECTURE-CANONICAL.md` among them, i.e. levels 1, 2 and 6 of
+    the instruction hierarchy.
+
+    It also destroyed the signal in the direction that cannot be recovered: a
+    document last genuinely assessed in May became indistinguishable from one
+    assessed today, with no record of which was which.
+
+    ⚠️ AND THE GUARD PRESCRIBED IT, which made it a trap rather than a footgun —
+    `document-index-guard`'s R1 failure names ONE unregistered file and hands
+    you a command whose diff is three orders of magnitude larger. The precedent
+    followed here is `backlog_append`, fixed by making the helper REFUSE rather
+    than by documenting the hazard.
+
+    So the date is CARRIED unless the assessment actually changed. Returns
+    ``(date, basis)`` with basis in
+    ``carried`` / ``assessment_changed`` / ``new`` / ``restamped``.
+
+    ⚠️ THERE IS DELIBERATELY NO `today` PARAMETER, AND ADDING ONE WOULD BE A
+    BUG RATHER THAN A TIDY-UP. It had one until `diagnostic-provenance-guard`
+    caught it accepted-and-never-read (D/inert-parameter). The mint paths must
+    keep reading ``computed["last_verified"]``, which `assess` sets to
+    **`never`** when the status basis is `not-assessed` and to `today` only
+    otherwise — so substituting `today` would stamp a real date on a document
+    nobody has assessed, which is the precise claim this function exists to
+    refuse, reintroduced through the parameter meant to serve it.
+    """
+    prev = existing_stamp(rel)
+    if prev is None:
+        return computed["last_verified"], "new"
+    same = (prev.get("status") == computed["status"]
+            and prev.get("category") == computed["category"])
+    if not same:
+        return computed["last_verified"], "assessment_changed"
+    carried = (prev.get("last_verified") or "").strip()
+    if not carried:
+        return computed["last_verified"], "new"
+    return carried, "carried"
 
 # ---------------------------------------------------------------------------
 # THE POPULATION
@@ -194,6 +268,9 @@ CATEGORY_EXPLICIT: Dict[str, Tuple[str, str]] = {
     # obeyed as one. Read in full by MI-162; no directory or name rule reaches
     # it, so it graded `unknown` until assigned here.
     "docs/claude/TASK-PRIORITY-2026-09-07.md": ("plan", "read:ranks-tasks-under-the-current-cycle-priority"),
+    # Evidence: a stated-population measurement (the triage of the first gitleaks
+    # full-history run), authored by the session that took it. No name rule reaches it.
+    "docs/security/gitleaks-baseline.md": ("evidence", "read:SA-SEC-lane-authored-the-triage-2026-09-29"),
 }
 
 # ---------------------------------------------------------------------------
@@ -233,11 +310,127 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
     # rather than its replacement, and nothing supersedes it. It shipped
     # carrying `unknown` only because it was written minutes before this index
     # landed, so no rule had yet been able to see it.
+    # Written 2026-09-12 by MI-279, the same session that took every measurement
+    # in it, so the status is ESTABLISHED rather than inferred: each figure was
+    # read this session against a stated population, with a positive control on
+    # every negative (the date probe returns 39/348/65/312 on four other days
+    # and only 2026-08-16 is zero; the `log_file` route returns content for a
+    # real name and NOTHING for a bogus one). No other rung can see it -- rule 1
+    # does not import it, rule 2's ACTIVE_DOCS does not enforce it, it is not a
+    # skill, not `history`, and declares itself neither dead nor superseded --
+    # so without this entry it reads `unknown`, which is the one thing it is NOT.
+    # ⚠️ It goes `historical` if the corpus stamp it points at ever lands: from
+    # that moment its central claim (a corpus row records no dispatched sha) is
+    # a statement about the past, and leaving it `live` would make it a trap for
+    # exactly the reader it was written for.
+    "docs/research/corpus-schema-degradation-2026-09-12.md": (
+        "live",
+        "read:MI-279-authored-and-measured-it-2026-09-12",
+        "evidence closing BL-20260816-CORPUS-CONFLICT-REDERIVE-RUNS-THE-STALE-BRANCH-EXTRACTOR; "
+        "goes historical once the dispatched-sha stamp lands",
+    ),
+    # Written 2026-10-07 by lane PAIRS-STOCKTAKE, the same session that took
+    # every measurement in it (paged /trades/closed and /pairs/soak reads,
+    # config/pairs.yaml, the executor, the mandate store, the prop lot
+    # tables), each figure MEASURED/INFERRED/DECIDED-marked with its locator,
+    # so the status is ESTABLISHED rather than inferred. No other rung can see
+    # it (not imported by rule 1, not in ACTIVE_DOCS, not a skill, not
+    # `history`), so without this entry it reads `unknown`, which it is not.
+    # ⚠️ It goes `historical` once RQ-20261007-005..008 land measured records:
+    # its verdict table's "no Stage-0 evidence" column is then a statement
+    # about the past, and the live answer lives in those records.
+    "docs/research/pairs-stocktake-2026-10-07.md": (
+        "live",
+        "read:PAIRS-STOCKTAKE-lane-authored-and-measured-it-2026-10-07",
+        "operator question 2026-10-06 (PI-20261006-APBY4NTV-0004); goes historical once "
+        "RQ-20261007-005..008 land measured records",
+    ),
+    # Written 2026-09-22 by the E24 OPS lane, the same session that took every
+    # measurement in it, so the status is ESTABLISHED rather than inferred. Each
+    # figure was read this session against a stated population, and every
+    # NEGATIVE carries a positive control on the same call shape and credential:
+    # the six GitHub security-API 403s are controlled by six 200s, and the four
+    # `sshd` journal 400s are controlled by a 200 on `ict-web-api.service` -- so
+    # "we could not look" is demonstrated, not assumed. No other rung can see
+    # it: rule 1 does not import it, rule 2's ACTIVE_DOCS does not enforce it,
+    # it is not a skill, not `history`, and it declares itself neither dead nor
+    # superseded -- so without this entry it reads `unknown`, which is the ONE
+    # thing it is not, because `unknown` means NOBODY HAS CHECKED.
+    # ⚠️ It goes `superseded` the moment a LATER breach sweep lands. This is a
+    # point-in-time sweep with short windows by construction (the activity and
+    # workflow-run feeds are page-capped at ~13.5 h and ~10.4 h), so leaving it
+    # `live` past its successor would let a reader quote a stale all-clear about
+    # a repo that moves this fast -- the exact trap the register exists to end.
+    "docs/security/breach-sweep-2026-09-22.md": (
+        "live",
+        "read:E24-lane-authored-and-measured-it-2026-09-22",
+        "the stated breach-check negative the /health-review skill requires and "
+        "the 2026-09-22 review could not produce; verdict `watch` -- 2 of 5 "
+        "sources swept clean, 1 partial, 2 `could_not_look` with named reasons; "
+        "superseded by the next sweep, and its windows are short by construction",
+    ),
+    # SA-SEC lane, 2026-09-29: authored by the session that measured it (fresh full
+    # clone, 12,301 commits, 1,501 branches; count cross-checked against CI run
+    # 36584026733) and pinned by tests/test_gitleaks_baseline.py. It goes stale the
+    # moment `.gitleaks-baseline.json` is regenerated without updating it.
+    "docs/security/gitleaks-baseline.md": (
+        "live",
+        "read:SA-SEC-lane-authored-and-measured-it-2026-09-29",
+        "what .gitleaks-baseline.json accepts and why: 352 first-run findings "
+        "classified by value shape, 4 named known-revoked entries, and the "
+        "planted-key proof; count pinned by tests/test_gitleaks_baseline.py",
+    ),
     "docs/claude/TASK-PRIORITY-2026-09-07.md": (
         "live",
         "read:MI-162-opened-it-anchored-to-the-current-cycle-priority",
         "ranks TASKS under CY-20260906-TRADING-TRUTH; companion to the live "
         "work plan WORKPLAN-2026-08-29.md, not a replacement for it",
+    ),
+    # Written 2026-09-12 by MI-283, which is also the session that authored the
+    # change it documents, so the status is ESTABLISHED rather than inferred: it
+    # is the evidence doc for PR #11903, that PR is open and unmerged, and every
+    # measurement in it was taken this session against a stated population.
+    # It carried `unknown` for the same reason TASK-PRIORITY-2026-09-07 did --
+    # written after the rules that could have seen it, so no rule can derive a
+    # status from anything but its own self-declared header, which this register
+    # deliberately refuses to trust.
+    # ⚠️ It goes `historical` the moment #11903 is merged or rejected: it is
+    # evidence for a DECISION, and once the decision is taken the doc records
+    # something that happened rather than something pending.
+    "docs/claude/work/BYBIT-SYMBOL-DEDUPE-REPAIR-2026-09-12.md": (
+        "live",
+        "read:MI-283-authored-it-this-session-evidence-for-open-PR-11903",
+        "evidence for the Tier-2 ask in PR #11903, which is open and unmerged; "
+        "goes historical when that PR is decided",
+    ),
+    # Both written 2026-09-17 by the OPS lane (MI-294), which authored and read
+    # them in full in the same session. They are the deliverables of units 2 and
+    # 3 of that lane, and each states its own coverage and populations inline --
+    # the triage declares its partition verified complete (330/330), and the
+    # review opens with a table of what it did NOT cover rather than implying a
+    # full /system-review. They ship carrying `unknown` only because no derivable
+    # rule reaches a freshly-written record under `docs/claude/work/`.
+    "docs/claude/work/BACKLOG-TRIAGE-2026-09-17.md": (
+        "live",
+        "read:MI-294-authored-it-this-session-triage-handoff",
+        "the current triage of the health backlog into 21 named chunks; goes "
+        "historical when a later triage re-measures the same population",
+    ),
+    "docs/claude/work/SYSTEM-REVIEW-2026-09-17.md": (
+        "live",
+        "read:MI-294-authored-it-this-session-review-record",
+        "the 2026-09-17 review record, weighted to performance-7d and soak "
+        "monitoring; goes historical at the next system review",
+    ),
+    # Authored and read in full by lane BREAKOUT-TERMS-READ, 2026-10-08. It states
+    # its own coverage: the FAQ Center was read, the binding agreements were 403
+    # (section 0 lists every URL), so the doc is live as a record of what was and
+    # was not read -- not as a reading of Breakout's contracts.
+    "docs/integrations/breakout-terms-read-2026-10-08.md": (
+        "live",
+        "read:BREAKOUT-TERMS-READ-authored-it-this-session-terms-read-record",
+        "the 2026-10-08 read of Breakout's FAQ Center terms; goes historical "
+        "when the Evaluation Agreement / Program Rules are read at source",
     ),
 }
 
@@ -629,14 +822,38 @@ def stamp_for(rel: str, today: str) -> str:
     the producer would reintroduce it one level up.
     """
     r = assess(rel, _canonical_active_docs(), _mi159_states(), today)
+    # Carry here too. A generator that rewrites its own document wholesale must
+    # emit the SAME date the index row carries, or it reintroduces the churn
+    # one file at a time.
+    r["last_verified"], _ = carry_last_verified(rel, r)
     return stamp_line(rel, r["status"], r["category"],
                       r["superseded_by"], r["last_verified"])
 
 
-def build_rows(today: str) -> List[Dict[str, str]]:
+def build_rows(today: str, *, restamp: bool = False) -> List[Dict[str, str]]:
+    """Every row, with `last_verified` CARRIED from each document's own header.
+
+    ⚠️ THE CARRY HAPPENS HERE, NOT IN THE STAMPER, so the INDEX ROW and the
+    HEADER get the same date from one computation. R3 compares those two
+    surfaces; a carry applied to only one of them would be the
+    two-surfaces-two-answers defect that rule exists to catch.
+
+    `restamp=True` is the deliberate re-verification path, reachable ONLY via
+    `--restamp`, and deliberately NOT what the guard's remedy line tells a
+    session to run.
+    """
     active = _canonical_active_docs()
     mi159 = _mi159_states()
-    return [assess(rel, active, mi159, today) for rel in population()]
+    rows = []
+    for rel in population():
+        r = assess(rel, active, mi159, today)
+        if restamp:
+            r["verified_basis"] = "restamped"
+        else:
+            r["last_verified"], r["verified_basis"] = carry_last_verified(
+                rel, r)
+        rows.append(r)
+    return rows
 
 
 def render_index(rows: List[Dict[str, str]], today: str, generated: Dict[str, str]) -> str:
@@ -884,14 +1101,102 @@ def census(rows: List[Dict[str, str]]) -> str:
     return "\n".join(out)
 
 
+# Three states, never collapsed. An index that is ABSENT has nothing to lose;
+# one we could not READ is *we did not look*, and the two must not share a
+# value -- returning `{}` for both would make an unreadable index authorise the
+# very overwrite this reader exists to gate.
+BASES_READ, BASES_ABSENT, BASES_UNREADABLE = "read", "absent", "unreadable"
+
+
+def committed_bases(index_text: Optional[str] = None
+                    ) -> Tuple[str, Dict[str, str]]:
+    """`(state, {path: basis})` read back from the table this module WROTE.
+
+    A reader for our own output, so `--write` can tell what it is about to
+    replace.
+
+    ⚠️ ABSENT AND UNREADABLE ARE DIFFERENT ANSWERS. A missing index is the
+    first-run case and genuinely has nothing at risk. An index that exists and
+    cannot be read tells us nothing about what it holds, and `--write` refuses
+    on it -- the alternative is that a permissions error or a decode failure
+    silently green-lights replacing every recorded basis in the file.
+    """
+    if index_text is None:
+        try:
+            index_text = INDEX_PATH.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            return BASES_ABSENT, {}
+        except (OSError, UnicodeDecodeError):
+            return BASES_UNREADABLE, {}
+    out: Dict[str, str] = {}
+    for line in index_text.splitlines():
+        if not line.startswith("| `"):
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) < 6:
+            continue
+        path = cells[0].strip().strip("`")
+        if "/" not in path:          # the summary tables at the top of the file
+            continue
+        out[path] = cells[5].strip().strip("`")
+    return BASES_READ, out
+
+
+def unowned_bases(committed: Dict[str, str],
+                  rows: List[Dict[str, str]]) -> List[Tuple[str, str, str]]:
+    """`[(path, committed_basis, computed_basis)]` -- rows whose recorded basis
+    this generator did NOT produce and is about to overwrite.
+
+    ⚠️ DERIVED, NEVER PATTERN-MATCHED, and that is the whole design. The
+    motivating convention is `<mi-id>:self-measured-<date> / ...`, and matching
+    THAT string would catch one habit and miss every other -- while this repo's
+    own rule is that a probe must be shown able to find a positive. Comparing
+    against what `build_rows()` computes for the same path finds any basis this
+    module did not write, whatever convention produced it.
+
+    MEASURED 2026-09-13 over all 1081 committed rows on `main`: exactly ONE
+    differs, and it is the hand-written one. So the test is precise rather than
+    noisy -- a check that flagged hundreds would be walked past, which is this
+    repo's stated P1.
+
+    ⚠️ WHAT IT DOES NOT DO. It does not judge which basis is BETTER, and it
+    never carries the committed one forward: `STATUS_EXPLICIT`'s docstring
+    forbids this generator asserting what it cannot derive, and the row that
+    recorded the 35 erased bases REFUSED restoring them on exactly that
+    reasoning. This makes the replacement VISIBLE and DELIBERATE; it does not
+    reverse that decision, and doing so would be a separate one.
+    """
+    out: List[Tuple[str, str, str]] = []
+    for r in rows:
+        was = committed.get(r["path"])
+        if was is None:                     # a new document has nothing to lose
+            continue
+        now = r.get("basis", "")
+        if was and now and was != now:
+            out.append((r["path"], was, now))
+    return sorted(out)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--write", action="store_true", help="rebuild index and stamp headers")
     ap.add_argument("--census", action="store_true", help="report only; no writes")
+    ap.add_argument(
+        "--restamp", action="store_true",
+        help="RE-DATE every document's `last verified` to today. Only run this "
+             "if you have ACTUALLY re-verified them — it asserts a human act. "
+             "Deliberately NOT what the guard's remedy line tells you to run; "
+             "--write carries each document's existing date instead.")
+    ap.add_argument(
+        "--reset-unowned-bases", action="store_true",
+        help="Replace `basis` values this generator did not produce. Without "
+             "it --write REFUSES rather than silently erasing what a session "
+             "recorded about a document. Deliberately NOT what the guard's "
+             "remedy line tells you to run.")
     a = ap.parse_args()
 
     today = date.today().isoformat()
-    rows = build_rows(today)
+    rows = build_rows(today, restamp=a.restamp)
     generated = verify_generated()
 
     if a.census or not a.write:
@@ -901,8 +1206,43 @@ def main() -> int:
             print(f"\n⚠️ generated-waiver DID NOT VERIFY (waiver refused): {sorted(unverified)}")
         return 0
 
+    # ⚠️ REFUSE BEFORE WRITING, NOT AFTER. A warning printed alongside a diff
+    # that already happened is the shape this repo has paid for: the hazard was
+    # documented in `carry_last_verified`'s docstring and still erased 35
+    # recorded bases across two PRs. The precedent it cites is `backlog_append`,
+    # fixed by making the helper REFUSE.
+    bases_state, committed = committed_bases()
+    if bases_state == BASES_UNREADABLE and not a.reset_unowned_bases:
+        print(f"REFUSING to write: {INDEX_PATH.relative_to(REPO)} exists and "
+              f"could not be READ, so this run cannot tell which rows carry a "
+              f"`basis` it did not produce. That is 'we could not look', never "
+              f"'nothing is at risk'. Fix the file, or re-run with "
+              f"--reset-unowned-bases to overwrite it regardless.")
+        return 1
+    at_risk = unowned_bases(committed, rows)
+    if at_risk and not a.reset_unowned_bases:
+        print(f"REFUSING to write: {len(at_risk)} row(s) carry a `basis` this "
+              f"generator did not produce, and --write would replace them.")
+        for pth, was, now in at_risk:
+            print(f"  {pth}")
+            print(f"      recorded : {was}")
+            print(f"      would be : {now}")
+        print("These record what a session ESTABLISHED about a document; this "
+              "module cannot derive them, so it cannot carry them either "
+              "(STATUS_EXPLICIT's own rule). Either move the determination into "
+              "STATUS_EXPLICIT in this file, or re-run with "
+              "--reset-unowned-bases to replace them deliberately.")
+        return 1
+
     INDEX_PATH.parent.mkdir(parents=True, exist_ok=True)
     INDEX_PATH.write_text(render_index(rows, today, generated), encoding="utf-8")
+    if at_risk:
+        # Deliberate is not the same as unrecorded: name them in the run output
+        # so the erasure appears in whatever log or transcript carries it.
+        print(f"--reset-unowned-bases: REPLACED {len(at_risk)} recorded "
+              f"basis(es) that this generator did not produce:")
+        for pth, was, _now in at_risk:
+            print(f"  {pth}: {was}")
     print(f"wrote {INDEX_PATH.relative_to(REPO)} ({len(rows)} rows)")
 
     changed = 0
@@ -913,8 +1253,18 @@ def main() -> int:
                 r["path"], r["status"], r["category"],
                 r["superseded_by"], r["last_verified"])):
             changed += 1
+    import collections as _c
+    basis = _c.Counter(r.get("verified_basis", "carried") for r in rows)
     print(f"stamped {changed} document header(s); "
           f"{len(generated)} generated document(s) exempt from R3")
+    print("  `last verified` basis: "
+          + " · ".join(f"{k} {v}" for k, v in sorted(basis.items())))
+    if a.restamp:
+        print("  ⚠️ --restamp RE-DATED every document. That asserts a human "
+              "verification of each one. If you did not perform it, revert.")
+    else:
+        print("  carried dates are NOT a claim that anything was verified "
+              "today — they are the previous claim, left alone.")
     print()
     print(census(rows))
     return 0

@@ -139,6 +139,16 @@ def _now_iso() -> str:
 
 def read_json(path: Path) -> Tuple[Optional[Any], bool]:
     """Returns (parsed, readable). ``(None, True)`` means genuinely absent."""
+    if str(REPO_ROOT) not in sys.path:
+        sys.path.insert(0, str(REPO_ROOT))
+    from src.runtime import checklist_store as _ck  # noqa: PLC0415
+    if _ck.is_checklist_path(path):  # rows are the truth once the store is seeded
+        if not _ck.exists(path):
+            return None, True
+        try:
+            return _ck.load_path(path), True
+        except (OSError, ValueError):
+            return None, False
     if not path.is_file():
         return None, True
     try:
@@ -468,8 +478,16 @@ one, run this BEFORE your last turn, then push it.
       --clears-when closed_or_merged
 
 `--kind` is one of `pull_request` · `branch` · `path_on_main` · `work_object` ·
-`operator_decision`, and the command REFUSES anything it cannot grade rather
-than letting you declare a blocker nothing will ever watch.
+`operator_decision` · `registry_confirmed`, and the command REFUSES anything it
+cannot grade rather than letting you declare a blocker nothing will ever watch.
+
+⚠️ **If you were registered with a `registry_key` (not yet a real session id
+in `SESSIONS.json` on `main`) and you are waiting on your OWN row to land and
+be confirmed, declare THAT — it is the commonest blocker measured so far:**
+
+    python3 scripts/ops/session_registry.py blocked-on \\
+      --session-id <your id> --kind registry_confirmed \\
+      --ref pending-20260911T060510Z --clears-when confirmed
 
 ⚠️ **THIS IS THE ONE SANCTIONED EXCEPTION TO 'the manager owns that file' UNDER
 `## Registry` ABOVE, AND IT IS NARROW.** You append ONE typed edge to YOUR OWN row and
@@ -548,9 +566,38 @@ pages the moment your blocker clears. Contract:
     YOURSELF. Declare `{{"tier": 1, "landing": "self", "why": "..."}}`, open the PR
     **not** as a draft (`"draft": false` in your `pr-requests` JSON, or
     `create_pull_request` directly), and add `.github/pr-automerge-requests/<slug>.txt`
-    (any contents — its PATH is the signal). `claude-pr-automerge` then enables
-    native auto-merge and GitHub merges **when the required checks pass**. No
-    manager, and CI is never bypassed.
+    (any contents — its PATH is the signal), and take the R13 merge-slot claim:
+
+        python3 scripts/ops/claim_merge_slot.py --branch-claim \
+          --branch <your-branch> --held-by <your-session-id> --purpose "<what + PR #>"
+
+    `claude-pr-automerge` then enables native auto-merge and GitHub merges
+    **when the required checks pass**. No manager, and CI is never bypassed.
+    ⚠️ ARMING IS NOT A REQUEST TO MERGE — IT *IS* THE MERGE, which is why R13
+    makes you claim the slot. A branch that arms without a claim FAILS
+    `pr-landing-guard`, a required check, and holds itself out of `main`.
+    ⚠️ **`--branch-claim` IS A FLAG, NOT THE DEFAULT, AND YOU WANT IT.** Omit it
+    and the script splices `docs/claude/session-board.json::merge_slot` — ONE
+    field in ONE file that every armed branch must overwrite. R13 accepts
+    either, and tries the per-branch file FIRST. MEASURED over the last 40
+    commits to `main` touching that file (2026-09-11T23:12Z -> 2026-09-12T09:30Z):
+    **39 of 40 MOVED `merge_slot.branch`**, median gap 11.5 min, 26 of 38 under
+    16 — and resolving the conflict pushes a new head that RESTARTS CI, so
+    resolving faster does not help. Observed with a control the same morning:
+    all four ARMED PRs of one session went `dirty` together, while the only two
+    that stayed CLEAN were the two declaring `landing: "hold"` — which write no
+    claim at all. `--branch-claim` writes `.github/merge-slots/<slug>.json`,
+    which NO other branch can contend for.
+    ⚠️ NOTHING IS GIVEN UP: R13 never serialized (its own docstring says so — a
+    committed claim reaches no other session until the branch merges), so the
+    shared field bought a guaranteed conflict and no exclusion. Attribution is
+    preserved and strengthened — the branch is named in the PATH *and* in the
+    body, and R13 requires the two to agree. Rationale:
+    `.github/merge-slots/README.md`.
+    ⚠️ THE CLAIM IS THE *SECOND* PUSH. Open the PR yourself first (see below),
+    then push the arming file + claim together; `pr-landing-guard` is satisfied
+    by that second push, so a red guard on the first is the expected
+    intermediate state, not a failure.
     ⚠️ BOTH HALVES ARE REQUIRED AND NEITHER IS SUFFICIENT. `draft:false` alone
     gives a ready green PR that waits for a human click — that IS the failure.
     The request file alone against a DRAFT PR is REFUSED by `claude-pr-automerge`,
@@ -1097,11 +1144,31 @@ def cmd_blocked_on(a) -> int:
               "NOTHING WAS WRITTEN.")
         return 5
     rows = [r for r in registry_rows(doc) if r.get("session_id") == a.session_id]
+    if not rows and a.kind == "registry_confirmed" and (a.ref or "").strip():
+        # MI-263/MI-264, and the reason this fallback exists at all: a row
+        # minted via the PENDING flow carries `session_id: None` until
+        # `confirm()` runs, so a lane cannot find "my own row" by its real
+        # session id while precisely the condition `registry_confirmed`
+        # exists to watch is still true — the ordinary session_id lookup
+        # above would ALWAYS refuse for the one kind whose whole point is
+        # declaring on an as-yet-unconfirmed row. Fall back to the one piece
+        # of identity the spawn prompt DID hand the lane: its own
+        # `registry_key`. Refuse rather than guess if it is ambiguous or the
+        # row already carries a session_id (then it is NOT this lane's row
+        # to touch, or it is already confirmed and this kind is moot).
+        ref_val = a.ref.strip()
+        key_rows = [r for r in registry_rows(doc)
+                    if str(r.get("registry_key") or "") == ref_val]
+        if len(key_rows) == 1 and not key_rows[0].get("session_id"):
+            rows = key_rows
     if not rows:
         print(f"session-registry: REFUSED — no row for {a.session_id}. "
               f"⚠️ On a branch that has not landed this reads as NOT LANDED "
               f"YET, never as never-written (MI-263). Check the manager's "
-              f"branch before concluding anything.")
+              f"branch before concluding anything. If you are declaring "
+              f"`--kind registry_confirmed`, this also means no UNCONFIRMED "
+              f"row on this checkout carries `--ref` as its `registry_key` — "
+              f"pull `main` again before concluding it was never written.")
         return 5
     if len(rows) > 1:
         # ⚠️ NEVER `rows[0]`. This file's own `_mint_registry_key` records three
@@ -1486,7 +1553,8 @@ def main(argv=None) -> int:
                        help="declare a TYPED blocker this lane is waiting for")
     b.add_argument("--session-id", required=True)
     b.add_argument("--kind", help="pull_request | branch | path_on_main | "
-                                  "work_object | operator_decision")
+                                  "work_object | operator_decision | "
+                                  "registry_confirmed")
     b.add_argument("--ref", help="'#N' or 'owner/repo#N' | branch name | repo "
                                  "path | WO id | 'WO-ID::REQUEST-ID'")
     b.add_argument("--clears-when", dest="clears_when",

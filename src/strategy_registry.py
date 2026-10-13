@@ -36,6 +36,20 @@ _DEFAULT_TRADER_SERVICE = "ict-trader-live"
 
 _cache: list[dict] | None = None
 
+#: E31 — what THIS PROCESS holds, stamped when ``_cache`` was populated.
+#:
+#: ``_cache`` is never invalidated (only ``reload_strategies`` clears it), so a
+#: long-lived trader resolves its roster ONCE at import and keeps it until the
+#: process restarts. That is correct behaviour and it was also INVISIBLE: every
+#: surface reporting "what the bot is running" re-read this YAML, so a roster
+#: cut landing on the VM via ``ict-git-sync`` showed as applied on every screen
+#: while the process went on trading the old list. The stamp is what makes the
+#: difference readable — see ``src/runtime/loaded_config.py``.
+#:
+#: ``None`` means THIS PROCESS NEVER LOADED THE REGISTRY, which is not the same
+#: statement as "the registry declares nothing" and must never render as one.
+_cache_stamp: "object | None" = None
+
 # Valid strategy-level execution gate values (S9). "live" = eligible to
 # execute; "shadow" = run + log order packages but never send a live
 # order (data-only). Default is "live" (permissive — omitting the field
@@ -55,9 +69,22 @@ def _norm_execution(value: Any) -> str:
     return v if v in _VALID_EXECUTION else "live"
 
 
-def _load_yaml(path: str = _YAML_PATH) -> dict[str, Any]:
+def _load_yaml_with_digest(path: str = _YAML_PATH) -> tuple[dict[str, Any], str]:
+    """Parse *path* and digest THE EXACT BYTES that were parsed.
+
+    E31: the digest has to come from the same read as the parse, not from a
+    second ``open()`` afterwards — otherwise a file edited between the two
+    stamps a digest for content this process never loaded, which is the
+    opposite of the fact the stamp exists to record.
+    """
+    from src.runtime.loaded_config import digest_text
     with open(path, "r", encoding="utf-8") as fh:
-        return yaml.safe_load(fh) or {}
+        text = fh.read()
+    return (yaml.safe_load(text) or {}), digest_text(text)
+
+
+def _load_yaml(path: str = _YAML_PATH) -> dict[str, Any]:
+    return _load_yaml_with_digest(path)[0]
 
 
 def load_strategies(path: str = _YAML_PATH) -> list[dict]:
@@ -71,7 +98,7 @@ def load_strategies(path: str = _YAML_PATH) -> list[dict]:
     if path == _YAML_PATH and _cache is not None:
         return _cache
 
-    data = _load_yaml(path)
+    data, source_digest = _load_yaml_with_digest(path)
     raw = data.get("strategies") or {}
     if not isinstance(raw, dict):
         raise ValueError(f"strategies.yaml: expected mapping under 'strategies', got {type(raw)}")
@@ -101,7 +128,86 @@ def load_strategies(path: str = _YAML_PATH) -> list[dict]:
 
     if path == _YAML_PATH:
         _cache = result
+        _stamp_cache(path, source_digest, result)
     return result
+
+
+def declared_names(path: str = _YAML_PATH) -> list[str]:
+    """Every key under ``strategies:`` exactly as the FILE spells it.
+
+    E21. This is the raw denominator the health check cross-checks the resolved
+    roster against, so it deliberately does NOT go through ``load_strategies``
+    (no cache, no normalisation, no defaults) — a cross-check that shares the
+    code path it is checking proves nothing. It lives here rather than in
+    ``health.py`` so the repo keeps one module that parses this file; raises on
+    an unreadable file, and the caller decides what that means.
+    """
+    raw = (_load_yaml(path) or {}).get("strategies") or {}
+    if not isinstance(raw, dict):
+        raise ValueError(
+            f"strategies.yaml: expected mapping under 'strategies', got {type(raw)}"
+        )
+    return [str(k) for k in raw]
+
+
+def declared_enabled_count(path: str = _YAML_PATH) -> int:
+    """How many declared strategies are not explicitly ``enabled: false``.
+
+    Permissive default, matching every other gate in this repo: a missing
+    ``enabled`` key means enabled.
+    """
+    raw = (_load_yaml(path) or {}).get("strategies") or {}
+    return sum(
+        1 for cfg in raw.values()
+        if not isinstance(cfg, dict) or cfg.get("enabled", True) is not False
+    )
+
+
+def reload_strategies(path: str = _YAML_PATH) -> list[dict]:
+    """Re-read the YAML, BYPASSING the module cache.
+
+    E21. ``load_strategies()`` caches after the first successful read, which is
+    right for a trader process that resolves its roster once at import — but it
+    means a long-lived READER (the health snapshot, the hourly report) would go
+    on reporting the last good roster after ``config/strategies.yaml`` broke,
+    i.e. the health check built to catch an unreadable roster would never see
+    one. Anything whose job is to ASK whether the file is currently readable
+    must use this; anything that wants the roster it is running on must not.
+    """
+    global _cache, _cache_stamp
+    _cache = None
+    _cache_stamp = None
+    return load_strategies(path)
+
+
+def _stamp_cache(path: str, source_digest: str, rows: list[dict]) -> None:
+    """Record what was cached, for ``loaded_config.process_snapshot``.
+
+    Best-effort and never raises: this is an OBSERVATION of the registry load,
+    and a failure to observe must not break the load itself (the trader
+    resolves its roster through this path at import).
+    """
+    global _cache_stamp
+    try:
+        from src.runtime.loaded_config import new_stamp
+        _cache_stamp = new_stamp(
+            path,
+            source_digest,
+            roster_state="ok" if rows else "empty",
+            names=[str(r["name"]) for r in rows],
+            execution={str(r["name"]): str(r.get("execution") or "live") for r in rows},
+        )
+    except Exception:  # noqa: BLE001
+        _cache_stamp = None
+
+
+def cache_stamp():
+    """The ``LoadStamp`` for the roster this process holds, or ``None``.
+
+    ``None`` = this process has not loaded ``config/strategies.yaml``. The
+    caller must render that distinctly from an empty roster.
+    """
+    return _cache_stamp
 
 
 def _strategy_cfg(name: str, path: str = _YAML_PATH) -> dict:

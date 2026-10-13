@@ -67,6 +67,23 @@ UNITS_YAML = textwrap.dedent("""\
 """)
 
 
+@pytest.fixture(autouse=True)
+def _deterministic_tick_size(monkeypatch):
+    """Resolve the tick size the same way whatever ran before this test.
+
+    The mocked clients here are bare ``MagicMock``s, so a live
+    ``get_instruments_info`` lookup hands back a MagicMock ``tickSize`` and the
+    order path refuses with ``conversion from MagicMock to Decimal``. In the
+    full suite an earlier test had usually warmed ``precision._LIVE_CACHE`` for
+    the symbol, which hid this; run alone, 4 tests failed
+    (PI-20260930-MEK2XMWT-0001). Clear the cache and skip the live lookup so
+    the static map / fallback decides, as it would for an unknown client.
+    """
+    from src.units.accounts import precision
+    monkeypatch.setattr(precision, "_LIVE_CACHE", {})
+    monkeypatch.setattr(precision, "_live_tick_size", lambda *a, **k: None)
+
+
 @pytest.fixture()
 def units_yaml(tmp_path):
     p = tmp_path / "units.yaml"
@@ -174,9 +191,13 @@ def _real_pkg(**overrides):
 class TestRiskBypass:
     def test_approve_bypasses_daily_loss_for_test_order(self):
         from src.units.accounts.risk import RiskManager
-        rm = RiskManager({"daily_usd": 100, "pos_size": 500, "max_dd_pct": 0.05})
-        # Trip the daily-loss gate hard: a real order would be rejected.
-        rm.daily_pnl = -10_000.0
+        # 2026-10-09: the daily off is the armed daily_dd_switch (DAILY_LOSS_CAP
+        # was folded into it). Trip it hard: a real order is rejected.
+        rm = RiskManager({"daily_usd": 100, "pos_size": 500, "max_dd_pct": 0.05,
+                          "daily_dd_switch": {"armed": True}}, account_id="smoke_dd")
+        rm.note_live_equity(100_000.0)
+        assert rm.approve(_real_pkg()) is True
+        rm.note_live_equity(80_000.0)
         assert rm.approve(_real_pkg()) is False
         # Test order short-circuits.
         assert rm.approve(_smoke_pkg()) is True
@@ -192,12 +213,13 @@ class TestRiskBypass:
         assert rm.approve(big) is True
         assert rm.approve(_smoke_pkg(meta={"is_test": True, "estimated_value": 999_999})) is True
 
-    def test_approve_bypasses_drawdown_for_test_order(self):
+    def test_drawdown_figure_alone_refuses_nothing(self):
+        # INTRADAY_DRAWDOWN was folded into the daily_dd_switch (2026-10-09).
         from src.units.accounts.risk import RiskManager
         rm = RiskManager({"daily_usd": 100, "pos_size": 500, "max_dd_pct": 0.01})
         rm.update_equity(100_000.0)
-        rm.update_equity(80_000.0)  # 20% drawdown — way past 1% cap.
-        assert rm.approve(_real_pkg()) is False
+        rm.update_equity(80_000.0)  # 20% drawdown — reported only.
+        assert rm.approve(_real_pkg()) is True
         assert rm.approve(_smoke_pkg()) is True
 
     def test_size_order_from_cfg_returns_test_qty(self):

@@ -1519,6 +1519,50 @@ class Database:
         finally:
             conn.close()
 
+    def mark_order_package_shadow_if_untouched(self, order_package_id, close_reason):
+        """Mark a package ``shadow`` ONLY while no account has acted on it.
+
+        One ``order_package_id`` is shared by every account a signal fans out
+        to (``Coordinator.multi_account_execute`` logs it once per dispatch
+        round). A DRY prop account's no-emit terminalisation must therefore
+        never overwrite what a LIVE account already wrote to the same row —
+        before this guard, a dry ``tradeify_1`` dispatched after a live
+        ``breakout_1`` turned ``('emitted', 'prop_ticket_emitted')`` into
+        ``('shadow', 'prop_shadow_no_emit')`` (manager review of #14672,
+        TRADEIFY-WIRE). Writes only when ``status = 'open'`` AND
+        ``linked_trade_id IS NULL``. Returns rows affected (0 = another
+        account got there first, which is the correct outcome to keep).
+        """
+        if not order_package_id:
+            raise ValueError("mark_order_package_shadow_if_untouched requires order_package_id")
+        return self.mark_order_package_if_untouched(order_package_id, "shadow", close_reason)
+
+    def mark_order_package_if_untouched(self, order_package_id, status, close_reason):
+        """Terminalise a SHARED package with ``status`` / ``close_reason`` ONLY
+        while no account has acted on it (``status = 'open'`` AND
+        ``linked_trade_id IS NULL``) — the guard
+        :meth:`mark_order_package_shadow_if_untouched` introduced, for any
+        status. Returns rows affected (0 = another account got there first,
+        the correct outcome to keep)."""
+        from datetime import timezone
+
+        if not order_package_id:
+            raise ValueError("mark_order_package_if_untouched requires order_package_id")
+        conn = self.connect()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                "UPDATE order_packages "
+                "SET status = ?, close_reason = ?, updated_at = ? "
+                "WHERE order_package_id = ? AND status = 'open' "
+                "AND linked_trade_id IS NULL",
+                [status, close_reason, datetime.now(timezone.utc).isoformat(), order_package_id],
+            )
+            conn.commit()
+            return cursor.rowcount
+        finally:
+            conn.close()
+
     def insert_signal(self, signal_data):
         """Insert a row into the signals table.
 
@@ -1672,6 +1716,40 @@ class Database:
                 query += f" LIMIT {int(limit)}"
             cursor.execute(query, params)
             return [dict(row) for row in cursor.fetchall()]
+        finally:
+            conn.close()
+
+    def get_open_package_strategy_names(self):
+        """Every DISTINCT ``strategy_name`` that currently has an OPEN package.
+
+        E21. The exit half used to derive its population from the strategy
+        ROSTER (``pipeline.STRATEGIES``), which means a position was monitored
+        because its name appeared in a list. Two ways that strands a real
+        position, both reachable:
+
+        1. ``config/strategies.yaml`` becomes unreadable — the roster resolves
+           to nothing (before 2026-09-22, to the wrong two names) and every
+           open package stops receiving ``monitor()``.
+        2. A leg is RETIRED from ``strategies.yaml`` while it still holds an
+           open position. Roster removal from an ACCOUNT is harmless (exit
+           evaluation never read account rosters), but removal from the
+           registry is not — and cutting legs is routine here.
+
+        So the exit population is DB-driven and unioned with the roster: a
+        package is monitored because it is OPEN. Returns ``[]`` only when the
+        query genuinely found nothing; a failure RAISES so the caller can tell
+        "nothing is open" from "we could not look" rather than inferring a
+        calm answer from an empty list.
+        """
+        conn = self.connect()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                "SELECT DISTINCT strategy_name FROM order_packages "
+                "WHERE status = 'open' AND strategy_name IS NOT NULL "
+                "AND strategy_name != ''"
+            )
+            return [str(row[0]) for row in cursor.fetchall()]
         finally:
             conn.close()
 

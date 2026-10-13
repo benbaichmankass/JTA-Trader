@@ -1,5 +1,11 @@
 name: constraint-readout
 
+# ⚠️ SCHEDULE RETIRED 2026-09-21 — operating reset.
+# This workflow served the eight-register operating model, which is archived under
+# docs/archive/2026-09-21-operating-reset/. Its cron is commented out below rather
+# than deleted, so re-arming it is one uncomment. `workflow_dispatch` still works.
+# Scope of record: docs/plans/OPERATING-PLAN-2026-09-21.md
+
 # A1's readout, on a real cadence. The operating model classifies A1 as trigger
 # `Cadenced`, autonomy `Full`; until this file landed it had NEITHER.
 #
@@ -52,12 +58,12 @@ name: constraint-readout
 # auto-merge PR, plus a read-only diag bearer for the money item.
 
 on:
-  schedule:
-    # 06:05 UTC daily. The slot is chosen, not decorative: it lands after
-    # probes (05:20) and due-list (05:50) have refreshed the registers the
-    # brief renders from, and before work-digest's 06:20 slot reads them. See
-    # the lateness warning above — this ordering is intent, not a promise.
-    - cron: "5 6 * * *"
+  # schedule:
+    # # 06:05 UTC daily. The slot is chosen, not decorative: it lands after
+    # # probes (05:20) and due-list (05:50) have refreshed the registers the
+    # # brief renders from, and before work-digest's 06:20 slot reads them. See
+    # # the lateness warning above — this ordering is intent, not a promise.
+    # - cron: "5 6 * * *"
   workflow_dispatch:
 
 permissions:
@@ -81,7 +87,7 @@ jobs:
     # job mid-wait and reports a failure for a merge that was about to succeed.
     # 40 = ~5m of work + the 30m wait + 5m slack. tests/test_commit_to_main_callers.py
     # pins this floor across every caller.
-    timeout-minutes: 40
+    timeout-minutes: 90  # was 60: shared commit-to-main wait 50->80 (W41)
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
@@ -132,9 +138,27 @@ jobs:
       # slot fires at all — read the run history, never the cron expression.
       #
       # Only PyYAML, deliberately: nothing else this job runs leaves the
-      # stdlib (render_due_list.py and render_session_brief.py are stdlib-only,
-      # which is why due-list.yml needs no install step and succeeds). The
-      # pinned spelling matches the 10 sibling workflows that already use it.
+      # stdlib. The pinned spelling matches the sibling workflows that already
+      # use it.
+      #
+      # ⚠️ CORRECTED 2026-09-17 — THIS COMMENT USED TO END "(render_due_list.py
+      # and render_session_brief.py are stdlib-only, WHICH IS WHY due-list.yml
+      # NEEDS NO INSTALL STEP AND SUCCEEDS)". Do not re-quote that. It was true
+      # when written on 2026-09-08 and false four days later:
+      # `src_spent_decision_edges` landed 2026-09-12 and execs
+      # `scripts/ci/check_decision_answers.py`, which imports PyYAML at module
+      # scope, so `render_due_list.py` stopped being stdlib-only. due-list.yml's
+      # cron then failed 4 of 4 scheduled runs (#104-#107, 2026-09-13 .. 09-16)
+      # at its own self-test gate on the identical ModuleNotFoundError this step
+      # was added to fix.
+      #
+      # ⚠️ THE STALE SENTENCE IS WHY THE FIX DID NOT SPREAD, which is the part
+      # worth carrying: this class was correctly diagnosed here and fixed at ONE
+      # call site, and a reader checking whether the siblings needed the same
+      # step was told in prose that they did not. FIELD BEATS COMMENT —
+      # tests/test_workflow_python_deps.py now DERIVES the answer from the
+      # import-and-exec graph over every workflow, so nobody has to trust a
+      # prose claim about which script is stdlib-only again.
       - name: Install PyYAML — the work store is YAML and the runner has none
         run: python3 -m pip install --quiet --upgrade pip "pyyaml>=6.0"
 
@@ -216,7 +240,33 @@ jobs:
           # CLAUDE.md rides with them deliberately — see the header. Committing
           # the readout without the brief is what would make this file a
           # relocation of the bug rather than a fix for it.
-          paths: docs/claude/CONSTRAINT.json docs/claude/READOUT.md CLAUDE.md
+          # ⚠️ CHECKLIST-ROUTING-AGE.json IS LOAD-BEARING HERE AND WAS ABSENT
+          # UNTIL 2026-09-12, WHICH IS WHY EVERY SCHEDULED RUN OF THIS
+          # WORKFLOW FAILED. This job runs `checklist_routing_age.py --write`
+          # above, and that register is STATEFUL — it records which rows it
+          # has already reported, so a row is paged ONCE when it crosses 24h.
+          # The session brief is then rendered FROM the mutated register. With
+          # the register left out of this list, the commit carried a brief
+          # derived from state that was thrown away, so `session-brief-guard`
+          # re-rendered from the OLD register, got a different block, and
+          # graded `introduced_block_edited` -> exit 1. Reproduced on the two
+          # surviving branches: as committed the guard exits 1, and with the
+          # register present in the tree it exits 0.
+          paths: docs/claude/CONSTRAINT.json docs/claude/READOUT.md CLAUDE.md docs/claude/work/CHECKLIST-ROUTING-AGE.json
+          # ⚠️ WITHOUT THIS THE STALE-BRANCH REFRESH IS INERT FOR THIS CALLER,
+          # and that is why this workflow has concluded `success` ZERO times in
+          # its entire life. Its output is DERIVED FROM the registers it merges:
+          # generation takes ~31 minutes on a repo that merges several times an
+          # hour, so by the time the checks run the base has moved and
+          # `session-brief-guard` fails with `verdict=introduced_registers_
+          # changed` (run 34592532948 -> PR #11789). The refresh merged main in,
+          # minted a new sha, re-triggered the checks — and pushed the SAME
+          # stale brief, so the same guard failed one sha later. Re-running the
+          # checks is not the remedy; RE-DERIVING is. This is the same pair of
+          # commands the generation step above runs.
+          refresh-command: >-
+            python3 scripts/ops/constraint_readout.py --write &&
+            python3 scripts/ops/render_session_brief.py --write
           message: "chore(ops): refresh the A1 constraint readout"
           pr-title: "chore(ops): refresh the A1 constraint readout (auto)"
           pr-body: >-

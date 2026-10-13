@@ -1,0 +1,30 @@
+{
+  "id": "CI-PYTEST-TIMEOUT-HEADROOM",
+  "title": "pytest-run attempt-1 hits its 50-min timeout-minutes at ~100% of the suite (cancelled), attempt-2 passes in ~33 min",
+  "phase": "ci",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-12 RESEARCH-OPS-1447] EVIDENCE (not a concurrency cancel, STAMP-RACE-2 is unrelated). Runs 38238044098 (#17726, claude/mgr-pairs-alpaca-decision) and 38248466083 (#17751, claude/mgr-checklist-1225): attempt 1 jobs 114773969290 / 114808253597 conclusion=cancelled, job wall 10:44:19->11:34:33 (50.2 min) and 12:21:01->13:11:20 (50.3 min); 'Run tests' step cancelled at 48.4 / 48.6 min and the log shows pytest reached [100%] with 0 FAILED/ERROR lines 5 s before '##[error]The operation was canceled.' = pytest-run.yml timeout-minutes: 50 (line 113). Attempt 2 of the same SHAs: 'Run tests' 11:39:02->12:11:51 (32.8 min) success. Same signature on #16723 pytest-run 06:10:49->07:00:01 (49.2 min, conclusion failure) and #16233/#17170 (cancelled ~50 min, 2026-10-12 06:xx). Concurrency group is pytest-run-<event>-<pr number> (pytest-run.yml:98): attempt-1 jobs ran un-superseded, so cancel-in-progress is NOT the cause. Cause: the suite wall time swings 33-48+ min with runner speed (+47% attempt 1 vs 2) and the 50 min cap (#15886, sized at 1.7x the then-median 26.5 min) no longer has headroom. FIX OPTIONS (not done here, workflow logic untouched): raise timeout-minutes to ~75, and/or run pytest with xdist (-n auto), and/or split the suite. MEASURE AFTER: count of pytest-run jobs with conclusion=cancelled and wall >= 49 min over the next 100 PR runs should be 0. RERUN: gh api repos/benbaichmankass/Metis-Insights/actions/runs/38238044098/attempts/1/jobs --jq '.jobs[]|{conclusion,started_at,completed_at}' [2026-10-12T15:00Z] BLAST RADIUS on automation/* PRs (population: open PRs with head automation/research*, 12 at 14:55Z): #17674 pytest-run=cancelled; #17698 pytest-run=failure + guards=failure; #17652 and #17702 mergeable_state=dirty (conflicts); #17731 and #17702 have NO pytest-run/guards/pytest-collect check-runs on their head at all (checks never started: the AUTOMERGE-GAPS / GITHUB_TOKEN-no-trigger class). Stranded replenish PRs #17698/#17717/#17731 are why runnable stays 12 < floor 25 (templates hold only 1 point). Same class as PI-20261006-LCEVL8D5-0001 (routed RQ-INFRA); this row owns the pytest-run timeout part only. [2026-10-13T00:30Z manager] SECOND pytest-run fragility, same lane scope: tests/test_research_queue_fairshare.py::test_committed_queue_dispatches_every_theme_it_holds failed on #17785 (checklist-only diff) at 21:50Z with 'themes starved of dispatch: []' -- EMPTY list, so the assertion tripped on 'themes' being empty: at that wall-clock moment the committed queue held no due+queued workflow unit. Passes on the same commit locally at 00:25Z (14/14). The test reads live wall-clock queue state, so it goes red on any PR whenever the queue is momentarily drained. Fix: freeze now / build the population from a fixture, or skip-with-reason when the population is empty (a vacuous population is 'could not look', not a pass or a fail).",
+  "updated_at": "2026-10-13T05:44:42Z",
+  "updated_by": "lane-CARRYOVER-1013",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "none: CI reliability",
+    "arch": "none: CI-only"
+  },
+  "observation": {
+    "what": "PR merged; then no pytest-run job cancelled at >=49 min over the next 100 PR runs, and the fairshare test skips rather than fails when the queue is drained",
+    "how_to_check": "gh api repos/benbaichmankass/Metis-Insights/actions/workflows/pytest-run.yml/runs --jq count of conclusion=cancelled with wall>=49min",
+    "due_by": "2026-10-27T00:00Z"
+  },
+  "_seq": 435
+}

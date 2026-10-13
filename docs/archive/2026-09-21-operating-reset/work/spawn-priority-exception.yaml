@@ -1,0 +1,853 @@
+# SPAWN PRIORITY EXCEPTION
+#
+# The spawn gate refuses work that displaces the cycle priority. That refusal is
+# the mechanism working, not an obstacle: the priority was consulted ZERO times in
+# the day the gate was built, at a measured 12:1 spend against it.
+#
+# This file makes a displacement VISIBLE and ARGUED rather than silent. Filing it
+# is not approval — `decision: pending` still refuses. Only an operator saying yes,
+# with their name and the date on it, permits the spawn.
+
+decision: approved
+approved_by: operator (ben.baichmankass) — in conversation, directly
+approved_at: 2026-09-11
+# ⚠️ These fields carry the MOST RECENT approval (2026-09-08, the three-lane
+#    structure; superseded 2026-09-10 by the ops-lane block below). The 2026-09-03 approval that opened this file is NOT erased —
+#    it is the first `reason` block below and still covers its own six objects.
+#    Two approvals, one file, because the gate reads a single document.
+
+covers:
+  - WO-20260903-AVAX-VENUE-MAX-OWN-THE-ORDER-PATH
+  - WO-20260903-CLOSE-WEDGE-LEDGER-ABSENT
+  - WO-20260906-REAL-MONEY-WENT-0-FOR-13-THE
+  - WO-20260906-THREE-LIVE-ALARMS-ON-THE-TRADING-FLEET
+  - WO-20260906-RE-LAND-1C-S-LIVE-ALARMS-DISPOSITION
+  - WO-20260906-FINISH-THE-OBSERVATION-SWEEP-56-OF-82
+  # -- added 2026-09-08, three-lane structure (see the block at the end) --
+  - WO-20260908-MAIN-IS-RED-R13-S-OWN-FILE
+  - WO-20260908-MEASURE-HOW-ACTIVE-MANAGEMENT-ACTUALLY-BEHAVES-FROM
+  - WO-20260901-PHASE-F
+  - WO-20260901-PHASE-D
+  # -- added 2026-09-09, the landing-machinery lane (see the block at the end) --
+  - WO-20260909-THE-LANDING-MACHINERY-ASSERTS-MORE-THAN-IT
+  # -- added 2026-09-09, the engineering lane (see the block at the end) --
+  - WO-20260901-PHASE-F
+  # -- added 2026-09-09, the landing lane (see the block at the end) --
+  - WO-20260909-EVERY-PR-IN-THE-REPO-IS-RED
+  # -- added 2026-09-09, the security gate (operator-approved directly) --
+  - WO-20260909-GATE-API-BOT-DB-THE-MONEY-DB
+  # -- added 2026-09-10, the ops lane (operator-directed twice; see the block at the end) --
+  - WO-20260910-DISPOSITION-THE-34-UNDISPOSITIONED-AUTOMATION-PRS-AND
+  # -- added 2026-09-11, the dormant-objects sweep (operator-directed, trigger now met) --
+  - WO-20260911-SWEEP-THE-623-DORMANT-WORK-OBJECTS-AND
+  # -- added 2026-09-11, the blocked-lane wake (engineering queue `then`, operator-ordered) --
+  - WO-20260911-A-SESSION-BLOCKED-ON-A-MANAGER-ACTION
+  # -- added 2026-09-11, in_flight decay (engineering queue `then`, operator-ordered) --
+  - WO-20260911-IN-FLIGHT-GOES-FALSE-BY-TIME-PASSING
+  # -- added 2026-09-11, the WIP-ceiling unstick (ops lane; unsticking outranks its own backlog) --
+  - WO-20260911-DISPOSITION-THE-17-UNSUPPORTED-IN-FLIGHT-ROWS
+  # -- added 2026-09-11, the SPA bearer half (operator-approved DIRECTLY, as a decision pop-up) --
+  - WO-20260911-GIVE-THE-SPA-A-BEARER-SO-THE
+  # -- added 2026-09-11, the #11767 adversarial review (operator-approved DIRECTLY, as a decision pop-up) --
+  - WO-20260911-ADVERSARIALLY-REVIEW-11767-THE-BLOCKED-LANE-NOTIFIER
+  # -- added 2026-09-11, the #11767 fix round (operator-approved DIRECTLY, as a decision pop-up) --
+  - WO-20260911-FIX-THE-FOUR-FINDINGS-THE-ADVERSARIAL-REVIEW
+  # -- added 2026-09-11, the engineering lane (operator-directed; block at end of file) --
+  - WO-20260911-LET-AN-APPROVED-TIER-2-PR-LAND
+  # -- added 2026-09-11 19:5xZ, MI-236 stale-in_flight decay (operator-directed lane model:
+  #    the engineering lane exists to stop us getting stuck on the same problems; this
+  #    one blocked the operator's OWN chosen spawns today) --
+  - WO-20260911-DECAY-STALE-IN-FLIGHT-WORK-OBJECT-ROWS
+  # -- added 2026-09-12, the THREE-LANE continuous workplan (operator-directed, verbatim) --
+  - WO-20260912-ENGINEERING-LANE-MAKE-THE-LANDING-AND-REGISTER
+  # -- added 2026-09-12, the merge-queue unblocker (operator-approved directly) --
+  - WO-20260912-UNBLOCK-THE-MERGE-QUEUE-THE-R13-MERGE
+
+reason: >-
+  Asked DIRECTLY of the operator on 2026-09-03 as a decision pop-up, with three
+  options offered (park it as a backup / assign a session to own it properly /
+  close it and re-file the bug). The operator chose "Assign a session to own it
+  properly". In the same exchange they approved authoring
+  IN-20260903-TRADING-SYSTEM-HEALTH so the trading side has a parent intent at all,
+  having said earlier the same morning: "if we have three sessions, then maybe we
+  can dedicate one of them to research and development and engineering things, at
+  least making sure that things aren't falling through the cracks on that side".
+
+  WHY IT GENUINELY DISPLACES RATHER THAN WAITS: PR #10780 holds ~320 lines touching
+  the ORDER PATH (execute.py, qty_legalize.py, precision.py), recovered by a manager
+  from a dead session's uncommitted working tree. No branch carried them, no remote
+  had them; one `git checkout -f` or one container reclaim and they were gone. The
+  work exists today only because a stop hook flagged a dirty tree six times. It is
+  unreviewed, unowned, and untiered, and every day it sits is a day it can be lost
+  again — which is the specific failure the operating-layer rebuild exists to end,
+  arriving on the trading side while the rebuild is still being built.
+
+  SCOPE OF THE DISPLACEMENT — deliberately ONE object, not a lane. This exception
+  names exactly one work object. The duty pass over the due monitoring rows is
+  QUEUED and NOT covered here; it waits for the cycle priority or its own exception.
+  A blanket exception naming nothing is a permanent priority-suspension wearing an
+  exception's clothes, which is what the `covers` check exists to refuse.
+
+  ⚠️ THIS IS NOT A STANDING GRANT. It expires with this object. The cycle priority
+  remains CY-20260903-MANAGER-CONTROL, and the other two live sessions (MI-88, MI-89)
+  both serve it.
+
+# ── RE-AFFIRMED AFTER THE SEQUENCING DIRECTIVE, 2026-09-03 ──
+#
+# Minutes after this exception was granted, the operator set a three-phase
+# ordering (recorded in docs/claude/CYCLE-PRIORITY.json ::
+# current.operator_sequencing_2026_09_03): finish the workflow build → review the
+# roadmap TOGETHER → only then start actual work. Trading work is phase 3, and
+# this object is trading work, so the manager put the conflict back to the
+# operator rather than letting it run unremarked.
+#
+# ⚠️ THE MANAGER RECOMMENDED STANDING IT DOWN. The operator OVERRULED that and
+# chose to let it finish, on the ground that its done-condition is a DISPOSITION
+# ("reach a Tier-gated PR OR record a decision not to pursue") rather than new
+# trading development — triage of work that was one `git checkout -f` from being
+# lost, not a new build.
+#
+# Recorded because the recommendation and the decision differed. A successor
+# reading only the outcome would see trading work running during a build phase
+# and reasonably conclude the sequencing was ignored. It was not: it was raised,
+# argued, and decided by the operator.
+#
+# ⚠️ THIS DOES NOT WIDEN THE EXCEPTION. It still names ONE object. The duty pass
+# and every other trading-side unit remain QUEUED behind phase 3.
+sequencing_conflict:
+  raised_by: manager (session_01Nopk1HcpvWBSEbZxEmALkd)
+  raised_at: 2026-09-03
+  manager_recommendation: stand it down and free the slot for workflow build
+  operator_decision: let it finish — disposition, not development
+  decided_at: 2026-09-03
+
+
+# ---------------------------------------------------------------------------
+# SECOND COVERED OBJECT, added 2026-09-03T11:45Z
+# ---------------------------------------------------------------------------
+close_wedge_ledger_exception:
+  covers: WO-20260903-CLOSE-WEDGE-LEDGER-ABSENT
+  approved_by: operator (ben.baichmankass) — in conversation, via decision pop-up
+  approved_at: 2026-09-03
+  asked_as: >-
+    The manager put it to the operator directly with three options (spawn MI-101 now /
+    spend the slot on the cold-session verification for Phases A-D instead / leave the
+    slot empty). The operator chose "Spawn MI-101 now".
+  reason: >-
+    It is a LIVE-SYSTEM observability hole on a REAL-MONEY close path, and the
+    operator has separately and explicitly carved live-system work out of the
+    build -> roadmap -> work sequencing they set this morning. So this is not the
+    cycle priority being overridden by a session's judgement; it is the category
+    the operator already excluded from the sequencing, now confirmed case by case.
+    MEASURED, not asserted: /api/diag/log_file?name=close_wedge_standing returns
+    present:false at the canonical path, AND the work digest reads a repo-relative
+    path for it, so a broker_cancel_wedged close failure is currently carried by
+    NEITHER the pager nor the digest.
+  why_it_displaces_rather_than_waits: >-
+    The exposure accrues silently. Every hour it stays unfixed is an hour in which a
+    close failure on a real-money account could occur and be recorded nowhere a human
+    reads. That is exactly the shape of harm that does not announce itself and so
+    cannot be picked up later by noticing it -- unlike the workflow-build items, which
+    are visible in the queue and lose nothing by waiting an hour.
+  scope_limit: >-
+    ⚠️ This exception covers ONE object. It is NOT a standing permission for trading
+    or Ops work generally, and it does NOT displace the operator's sequencing for
+    anything else. A blanket exception naming nothing is a permanent cap-raise wearing
+    an exception's clothes -- which is the gate's own wording, and it is right.
+
+
+# ---------------------------------------------------------------------------
+# THIRD AND FOURTH COVERED OBJECTS, added 2026-09-06T08:50Z
+# ---------------------------------------------------------------------------
+trading_truth_exception_2026_09_06:
+  covers:
+    - WO-20260906-REAL-MONEY-WENT-0-FOR-13-THE
+    - WO-20260906-THREE-LIVE-ALARMS-ON-THE-TRADING-FLEET
+  approved_by: operator (ben.baichmankass) — in conversation, 2026-09-06
+  approved_at: 2026-09-06
+  raised_by: manager (session_01HrmZ1RRNM4UnEUaFdrPEjj)
+
+  asked_as: >-
+    The operator opened the session asking for exactly this: "the next thing I wanna do
+    after that is, like, a serious system review, uh, of... especially, like, a
+    performance review. We've had a pretty terrible week. I wanna see that we understand
+    what's going on there, and that everything is working correctly." The manager put a
+    written work plan whose Phase 1 is two-thirds trading work (1B the loss attribution,
+    1C the live alarms) and the operator replied "That looks like a good plan, and we can
+    do that", then "go".
+
+  ⚠️_WHAT_THE_OPERATOR_DID_NOT_SAY: >-
+    They did NOT answer the manager's standing question of whether the CYCLE PRIORITY
+    itself changes. It was put to them explicitly ("does the trading result reprioritize
+    the cycle?") and went unanswered across two turns. So this is deliberately filed as a
+    NARROW EXCEPTION naming two objects, and NOT as a rewrite of CYCLE-PRIORITY.json.
+    CY-20260903-MANAGER-CONTROL still stands as the cycle priority and Session 1A serves
+    it. Rewriting the priority on an unanswered question would be inferring a direction
+    the operator did not give — the exact silent displacement this gate exists to refuse.
+
+  supersedes_the_09_03_sequencing_for_these_two_objects_only: >-
+    CYCLE-PRIORITY.json :: current.operator_sequencing_2026_09_03 orders the cycle as
+    finish the workflow build -> review the roadmap together -> only then start actual
+    work, which puts trading work in phase 3. That directive is SUPERSEDED for these two
+    objects by the operator's own instruction on 2026-09-06, which is later and which
+    named the performance review specifically. An operator reordering their own sequence
+    is not a violation of it. Recorded rather than assumed, because a successor reading
+    only the 09-03 directive would see trading work running in a build phase and
+    reasonably conclude the sequencing was ignored.
+
+  why_it_displaces_rather_than_waits: >-
+    MEASURED, not asserted, at 2026-09-06T07:1xZ against /api/bot/performance and
+    /api/bot/trades/closed. bybit_2 -- the only real-money book -- closed 13 graded trades
+    from 2026-08-30 with ZERO winners, -43.12 USD on a book that now reads 264.86, i.e.
+    about -14% of starting equity, at expectancyR -0.90. The preceding 14 days were 14/23
+    wins (60.9%) and +40.96. The flip date coincides with the e35 bracket-geometry deploy.
+    The exposure is ONGOING: the legs are still live and still trading under the new
+    geometry, so every day this is not attributed is another day of the same unexplained
+    losing run on real money. That is the same shape the close-wedge exception cites --
+    harm that accrues silently and cannot be picked up later by noticing it -- unlike the
+    workflow-build items, which sit visibly in the queue and lose nothing by waiting.
+    The alarms object is live-system observability on a real-money-adjacent path, which is
+    the category the operator ALREADY carved out of the 09-03 sequencing (see
+    close_wedge_ledger_exception.reason above); this confirms it case by case rather than
+    relying on that carve-out silently.
+
+  scope_limit: >-
+    ⚠️ TWO objects, named. NOT a standing grant for trading work, NOT a lane, and NOT a
+    suspension of the cycle priority. It expires with these two objects. Phase 2 of the
+    2026-09-06 plan (the /performance-review, /ml-review and /health-review pass) is
+    deliberately NOT covered here -- it is sequenced AFTER 1B lands a trustworthy R
+    instrument, and when it comes it needs its own decision, not this one stretched.
+    A blanket exception naming nothing is a permanent cap-raise wearing an exception's
+    clothes -- the gate's own wording, and it is right.
+
+
+# ---------------------------------------------------------------------------
+# FIFTH AND SIXTH COVERED OBJECTS, added 2026-09-06T10:08Z
+# ⚠️ THE DIRECTION OF THIS EXCEPTION IS THE OPPOSITE OF EVERY ONE ABOVE.
+# ---------------------------------------------------------------------------
+operating_layer_exception_after_the_priority_flipped:
+  covers:
+    - WO-20260906-RE-LAND-1C-S-LIVE-ALARMS-DISPOSITION
+    - WO-20260906-FINISH-THE-OBSERVATION-SWEEP-56-OF-82
+  approved_by: operator (ben.baichmankass) — in conversation, via decision pop-up, 2026-09-06
+  approved_at: 2026-09-06
+  raised_by: manager (session_01HrmZ1RRNM4UnEUaFdrPEjj)
+
+  ⚠️_READ_THIS_FIRST_THE_POLARITY_INVERTED: >-
+    Every earlier entry in this file excepts TRADING work from an OPERATING-LAYER cycle.
+    These two are the reverse: they except OPERATING-LAYER work from a TRADING cycle. The
+    operator moved the cycle priority to CY-20260906-TRADING-TRUTH
+    (intent IN-20260903-TRADING-SYSTEM-HEALTH) the same day, which immediately made the
+    operating-layer objects the ones the spawn gate refuses. A successor skimming this file
+    and assuming every entry points the same way will read these backwards.
+
+  asked_as: >-
+    Both were put to the operator as decision pop-ups with the tradeoffs stated. On #11105 the
+    options were spawn-a-clean-reland / operator-merges-past-the-red-check / close-and-let-1C-redo
+    / leave-it-red, and the operator chose "Spawn a session to re-land clean". On the sweep, the
+    operator selected "Finish the observation sweep" among the work to route next. So each is
+    directly operator-chosen, not a manager's inference from a busy morning.
+
+  why_they_displace_rather_than_wait: >-
+    THE RE-LAND: it carries a job file the operator has ALREADY APPROVED ("you have my ok on
+    11105") and a disposition naming a live order-path defect, and it is stranded on a branch that
+    can never go green because of the MANAGER'S OWN commits. Leaving it parked means an approved
+    change sits unlanded on a permanently-red PR — the shape that turns an approval into nothing.
+    It is also small and bounded.
+    THE SWEEP: it is the direct instrument of "trustworthy instruments before building more on
+    top", which is the new cycle priority's own wording. 9 OPEN-ITEMS rows have still NEVER been
+    observed and 28 checklist items read landed_unproven, so the store cannot presently tell
+    shipped from working — and several of those rows are about TRADING mechanisms. Classing it as
+    operating-layer is a filing fact, not a statement that it serves the old priority.
+
+  scope_limit: >-
+    ⚠️ TWO objects, named. NOT a standing grant for operating-layer work under the trading cycle,
+    and NOT a partial reversal of the priority the operator just set. It expires with these two.
+    A blanket exception naming nothing is a permanent cap-raise wearing an exception's clothes —
+    the gate's own wording, and it is right in both directions.
+
+  ⚠️_the_four_earlier_entries_are_now_REDUNDANT_not_wrong: >-
+    WO-20260906-REAL-MONEY-WENT-0-FOR-13-THE and WO-20260906-THREE-LIVE-ALARMS-ON-THE-TRADING-FLEET
+    served IN-20260903-TRADING-SYSTEM-HEALTH, which is now the CYCLE intent, so they no longer need
+    excepting at all. They are left in place as the record of how that work was authorised BEFORE
+    the priority moved, and must not be read as still load-bearing.
+
+# ── SECOND APPROVAL, 2026-09-08 — THE THREE-LANE STRUCTURE ──
+#
+# WHAT THE OPERATOR ASKED FOR, in their own framing: "three dedicated lanes. one
+# for, like, regular op stuff ... then one track for research and one track for
+# engineering", with the engineering lane explicitly resuming "the implementation
+# of the new workflow set up which we paused while doing research tasks", and
+# "if there's any infra that the research spawns that's needed, we should do that."
+#
+# WHY IT NEEDS AN EXCEPTION AT ALL, stated rather than assumed away: the cycle
+# priority is CY-20260906-TRADING-TRUTH / IN-20260903-TRADING-SYSTEM-HEALTH, and
+# TWO of the three lanes serve IN-20260901-OPERATING-LAYER instead. That is a real
+# displacement. It is not a loophole: the operator directed the structure knowing
+# the cycle, and the cycle's own work CANNOT LAND while the first object stands.
+#
+# THE THREE OBJECTS, and why each displaces rather than waits:
+#
+#   WO-20260908-MAIN-IS-RED-R13-S-OWN-FILE — `board-coherence` FAILS on a clean
+#     checkout of origin/main (verified by running it there, not on a branch), so
+#     EVERY PR in the repo is red, including every trading-truth PR. Separately,
+#     R13 and R2 are mutually unsatisfiable for a manager register PR. This does
+#     not compete with the cycle; it is the precondition for the cycle landing
+#     anything at all. Both defects came from merges made this morning.
+#
+#   WO-20260908-MEASURE-HOW-ACTIVE-MANAGEMENT-ACTUALLY-BEHAVES-FROM — the research
+#     lane. One day produced four unstudied, measurable failures of the operating
+#     model, each of which silently corrupts the cycle's own output: a session that
+#     cannot push loses its work; a session on the WRONG REPO produces plausible
+#     trading findings from a foreign codebase (observed today, caught by accident).
+#
+#   WO-20260901-PHASE-F — the engineering lane. Per CLAUDE.md it is the ONE phase
+#     deliberately unblocked (`blocked_on: []`) and "the only one that touches the
+#     measured constraint". Phases A-D are `waiting` on external OBSERVATIONS, not
+#     on more building; G waits on an event and H waits on B. So F is not a
+#     preference among phases — it is the only one startable.
+#
+# SCOPE — three named objects, not a lane-wide suspension. LANE 1 (the system
+# review, WO-20260908-SYSTEM-REVIEW-38-DAYS-SINCE-THE-LAST) is deliberately NOT
+# here: it already serves IN-20260903-TRADING-SYSTEM-HEALTH, so it needs no
+# exception and must not be granted one it does not require.
+#
+# ⚠️ NOT A STANDING GRANT. It expires with these three objects. The cycle
+# priority is unchanged and is still CY-20260906-TRADING-TRUTH.
+
+phase_d_addendum_2026_09_08:
+  approved_by: operator (ben.baichmankass) — asked directly and answered directly, 2026-09-08
+  approved_at: '2026-09-08'
+  covers_added: [WO-20260901-PHASE-D]
+  reason: >-
+    THE OPERATOR ASKED FOR THIS ONE DIRECTLY, which is the basis the gate's own
+    refusal message names as sufficient ("If the operator asked for it directly,
+    say so there"). It was put to them as an explicit choice between three
+    dispositions and answered: "Carry the four missing classes into the readout,
+    then retire DUE.md." Recorded in WO-20260901-PHASE-D::operator_decision_2026_09_08.
+  why_it_is_not_a_lane_wide_reopening: >-
+    Phases A-D are `waiting` on external OBSERVATIONS, and the standing exception
+    deliberately excluded them for that reason - which was correct, because more
+    BUILDING does not discharge an observation. Phase D is admitted here on a
+    NARROWER ground: the operator's decision converts one specific piece of it
+    from "wait for an observation" into "do a defined port", so it is startable
+    in a way A, B, C and H are not. Phase A also received a decision the same day
+    and is deliberately NOT added: it routes to MI-194, which is already
+    registered and already holds that context, so it needs no new spawn.
+  cost_stated_rather_than_hidden: >-
+    This does displace CY-20260906-TRADING-TRUTH for one session's worth of work,
+    and it is not trading work. It is admitted because the operator chose it
+    knowing that, not because the gate was inconvenient. The exception is still
+    NOT a standing grant and still expires with the objects it names.
+
+# ============================================================================
+# 2026-09-09 — THE LANDING-MACHINERY LANE (WO-20260909-THE-LANDING-MACHINERY-…)
+# ============================================================================
+#
+# ASKED AND ANSWERED DIRECTLY. The manager reported that all four lanes from the
+# 2026-09-08 dispatch had emptied — every lane session idle, last dispatch of any
+# kind seven hours earlier — and proposed one lane on MI-208 + MI-207. The
+# operator answered, verbatim: "yes do that". That is the approval this block
+# records; it is not inferred from a busy adjacent task.
+#
+# WHY IT DISPLACES RATHER THAN WAITS. The cycle is CY-20260906-TRADING-TRUTH, and
+# repairing the MEASUREMENT before acting on it is exactly what this is: the
+# defect makes the repo's own landing instruments assert success they did not
+# achieve. Eleven automation producers write the pr-landing arming file and never
+# the merge_slot claim R13 requires beside it, so every receipt PR is structurally
+# unmergeable; the un-landed digest receipt then goes stale on a 6h clock and a
+# repo-wide TIME-BASED guard reds ALL 42 open PRs — including any trading PR. The
+# manager has hand-cleared this twice (01:04Z and, expected, 06:40Z) and it returns
+# on the next run, so the trading side cannot land work reliably while it stands.
+#
+# ⚠️ AND THE MANAGER CANNOT FIX IT. Both halves are worker paths —
+# .github/workflows/ and scripts/ — that check_manager_scope R2 bars a manager from
+# authoring, which is why this needs a session and not another hand-push. Filing a
+# manager-scope-exception instead was considered and REFUSED: the cheapest way past
+# that guard must remain routing the work to a session.
+#
+# SCOPE — two objects' worth of work, ONE object named. MI-201 / MI-202 / MI-203
+# stay `ready` and unassigned and are NOT covered here. A blanket exception naming
+# nothing is a permanent priority-suspension wearing an exception's clothes.
+#
+# ⚠️ NOT A STANDING GRANT. It expires with this object. The cycle priority remains
+# CY-20260906-TRADING-TRUTH.
+
+# ============================================================================
+# 2026-09-09 (second) — THE ENGINEERING LANE (WO-20260901-PHASE-F)
+# ============================================================================
+#
+# ASKED AND ANSWERED. The operator set the day's work plan in their own words:
+# "for the research lane, we're still working on building out the workflow
+# implementation in the engineering lane plus other things that are arising in
+# real time from the research", and then "pace the work correctly, and make sure
+# the lanes are actually working". This is the engineering lane of that plan.
+#
+# WHY IT DISPLACES. Phase F is the one phase the build plan marks as deliberately
+# UNBLOCKED and the only one that touches the MEASURED constraint. Its plumbing
+# landed (MI-194: #11358, #11360, #11385) and its done_condition is NOT met,
+# because that condition is an OBSERVATION — a packet committed on a cadence AND
+# READ, with a Tier-3 approval landing in exactly one place.
+# OI-20260901-REVIEW-PACKET-CANNOT-PROPOSE-AN-ACTION-AND-ITS-EVIDENCE-BLOCK-IS-
+# UNEXERCISED carries the measurement: 52 strategies graded, 0 actionable, every
+# leg below the evidence floor, and "A ROUTE IS NOT A READER". Written-and-never-
+# read is the exact failure the operating layer exists to end, so leaving it is
+# building more surface over an unread one.
+#
+# SCOPE — ONE object. Phase G and Phase D are NOT covered. The ops lane (system
+# review) parents to the trading intent and needs no exception; the backlog drain
+# has no object yet and is NOT covered here.
+#
+# ⚠️ NOT A STANDING GRANT. It expires with this object. The cycle priority remains
+# CY-20260906-TRADING-TRUTH.
+
+
+# ============================================================================
+# 2026-09-09 (third) — THE LANDING LANE (WO-20260909-EVERY-PR-IN-THE-REPO-IS-RED)
+# ============================================================================
+#
+# WHY IT DISPLACES — and it is the one kind of work that genuinely can, because it
+# does not COMPETE with the cycle, it is what lets the cycle land at all. MEASURED
+# 2026-09-09T07:53:19Z: scripts/ci/check_trainer_capture_watch.py exits 1 on CLEAN MAIN
+# ("newest recorded run is 15.1h old, window 15h") — established by running it
+# against a clean main checkout, not inferred from a PR, after a first check that
+# read $? from a pipeline's tail and proved nothing. It is a repo-wide red: every
+# open PR fails `guards` on it, including all three trading-truth lane PRs. Leaving
+# it means the cycle's own work cannot merge.
+#
+# WHY A SESSION AND NOT THE MANAGER. The refreshed receipt already exists, in
+# automation PR #11488. The manager cannot land it: that branch is ~3h behind main,
+# so merging main in produces a merge commit whose FIRST-PARENT diff carries
+# scripts/ and tests/, which check_manager_scope R2 attributes to the manager as
+# doing an item. That is MI-184, filed as
+# BL-20260908-THE-MANAGER-MUST-RUN-THE-MERGE-QUEUE-BUT-R2-FORBIDS-IT-AUTHORING-THE-COMMIT-THAT-RESOLVES-A-REGISTER-CONFLICT
+# (hit live). Routing it is the rule working, and no
+# manager-scope-exception is being filed to get past R2.
+#
+# THIS IS A THIRD, DISTINCT CAUSE — do not read it as the deadlock returning.
+# #11494 fixed the R13 half and #11500 PROVED it by self-landing; #11509 fixed a
+# second, content half (a PR closed with no recorded disposition). This one is an
+# automation PR that went STALE: nothing rebases it and its author is a bot that
+# never comes back, so it rots into a permanent red. Conflating the three is how a
+# fixed problem gets re-declared broken, or a live one declared fixed.
+#
+# SCOPE — ONE object. It does not cover the other stale automation PRs as work in
+# their own right beyond landing-or-closing them, and it covers neither Phase G
+# nor Phase D.
+#
+# NOT A STANDING GRANT. It expires with this object. The cycle priority remains
+# CY-20260906-TRADING-TRUTH.
+
+# ============================================================================
+# 2026-09-09 (fourth) — THE SECURITY GATE (WO-20260909-GATE-API-BOT-DB-THE-MONEY-DB)
+# ============================================================================
+#
+# THE OPERATOR ASKED FOR THIS DIRECTLY, which this file's own guidance says is the
+# 30-second case. Put to them as a decision pop-up on 2026-09-09 with four options
+# (gate /api/bot/db/* now, do full Phase H, accept and record, or measure the blast
+# radius first). They chose: "Gate /api/bot/db/* now".
+#
+# THE EVIDENCE IS THE MANAGER'S OWN READ, not a relayed claim. GET
+# https://ict-bot.duckdns.org/api/bot/db/tables returned HTTP 200 / 10,494 bytes
+# with NO bearer at 2026-09-09T07:43:31Z, serving table names, row counts and full
+# column schemas for trade_journal.db - the money DB - and trainer_store.db.
+#
+# ONE HALF IS UNVERIFIED AND IS FLAGGED AS SUCH RATHER THAN ASSERTED. A lane
+# reports /api/bot/db/table/{name} serving actual ROWS unauthenticated. The manager
+# did NOT confirm it: the sandbox refused to pull live trade rows and that refusal
+# was not worked around. The session must establish it first.
+#
+# THIS IS NOT THE CLOSED DIAG-TOKEN QUESTION. That surface is bearer-gated and its
+# exposure is a DECIDED, accepted risk that must not be re-raised. This one has no
+# credential of any kind. Filing them together would reopen a closed decision.
+#
+# WHY IT DISPLACES. It is an unauthenticated read of the production money DB, and
+# the operator chose to act on it now. The narrow gate was chosen OVER full Phase H
+# deliberately, so the scope is /api/bot/db/* and nothing wider.
+#
+# SCOPE - ONE object. NOT a standing grant, and it does not license Phase H.
+# The cycle priority remains CY-20260906-TRADING-TRUTH.
+# ---------------------------------------------------------------------------
+# ADDED 2026-09-10 — THE OPS LANE (WO-20260910-DISPOSITION-THE-34-...)
+# ---------------------------------------------------------------------------
+reason_20260910_ops_lane: >-
+  WHAT THE OPERATOR ACTUALLY SAID, quoted rather than paraphrased, because this
+  exception stands or falls on it. TWO separate directives, both in their own
+  words, both about this work:
+
+  (1) 2026-09-10T13:20Z, answering a decision pop-up put to them after the manager
+  discovered it had reported the merge queue EMPTY while 20 PRs were open, over
+  two alternatives ("close all twelve and accept the loss" / "fix #11519 first,
+  then let it drain"): "Rescue the 3, close the 9."
+
+  (2) Earlier, unprompted: "there are over 600 dormant work items - we need a
+  specific session in the ops lane (when opens ups) to work through the list and
+  update it - these things either need to closed or qued (for future sessions, it
+  just doesn't make sense that our workflow has this many dormant items) - if some
+  of them are stuck on soaks/observations, then we need a status the describes
+  that". The condition they attached -- "when opens up" -- is MET as of this
+  filing: one lane is live (research/MI-201), so two of the operator's cap of
+  three are free.
+
+  ⚠️ WHAT IS INFERENCE AND MUST NOT BE READ AS THEIR WORDS: the operator approved
+  the WORK and named the LANE. They were not asked, and did not say, "displace the
+  cycle priority to do it". That step is the manager's, and this file is where it
+  is made visible rather than taken silently. If the operator disagrees, this is
+  the row to point at.
+
+  WHY IT GENUINELY DISPLACES RATHER THAN WAITS: the most-stuck producer in the
+  pile is `reconcile-open-prs`, the job that maintains OPEN-PRS.json -- the
+  register that carries operator decisions WITH THEIR CONDITIONS. Every merge to
+  main fires it, its PR conflicts bare on docs/claude/session-board.json, and the
+  next merge fires another; it has been generating its own backlog since
+  2026-09-08. The register meant to track the queue is the single biggest thing
+  stuck in it, which makes this an INTEGRITY defect in the instrument the manager
+  reads, not routine queue tidying. CLAUDE.md's own framing applies directly: a
+  row recording a verdict without its condition is WORSE than a missing row,
+  because it reads as complete.
+
+  AND IT IS NOT HYPOTHETICAL HARM. PR #11735 (2026-09-10T21:25Z) measured that
+  the manager's own row-count check on #11662/#11664 was the WRONG TEST -- the
+  corpus is append-only PER RUN, so a later run with MORE rows can still lack a
+  strategy an earlier run measured. 22 measured compat-matrix rows were discarded,
+  none superseded, and two of them were the ONLY alpaca_live verdicts for two
+  REAL-MONEY legs. The rows were recoverable only because the closed branches
+  still existed; a pruned branch would have made the loss silent and final. The
+  remaining 34 are undispositioned under that same wrong test.
+
+  SCOPE OF THE DISPLACEMENT -- ONE object, not a standing lane licence. Tier-1
+  dispositions and artifact rescue by value only. No src/, no config/, no
+  workflow, no order path.
+
+reason_20260911_dormant_sweep: >-
+  OPERATOR-DIRECTED, 2026-09-10, and the trigger they attached is NOW MET. Their
+  words, verbatim, spoken while reading the deployed SPA Work page (not from a
+  report): "there are over 600 dormant work items - we need a specific session in
+  the ops lane (when opens ups) to work through the list and update it - these
+  things either need to closed or qued (for future sessions, it just doesn't make
+  sense that our workflow has this many dormant items) - if some of them are stuck
+  on soaks/observations, then we need a status the describes that".
+
+  THE TRIGGER WAS "WHEN [A SLOT] OPENS UP", AND IT HAS. Measured by the manager at
+  2026-09-11T03:32Z off `list_sessions(mine=true)`: exactly ONE lane is RUNNING
+  (session_01G4VneSjgv5QT4rMGj4izi5, engineering, MI-238); the MI-139 and MI-259
+  ops lanes and the MI-240 lane are all IDLE/disconnected with `completed` /
+  `review_ready` post-turn summaries. Against the operator's cap of 3 concurrent
+  lanes that is two free slots. So this spawn is EXECUTING a standing operator
+  instruction whose stated precondition is now satisfied -- it is not the manager
+  deciding the dormant list outranks the cycle priority.
+
+  ⚠️ WHAT IS AND IS NOT COVERED, stated so a later session does not read this as
+  wider than it is. The operator approved the WORK, named the LANE, and set the
+  TRIGGER. They were NOT asked, and did not say, "displace CY-20260906-TRADING-TRUTH
+  to do it". That step is the manager's, and it is argued rather than assumed: the
+  cycle priority is about making the instruments that measure the trading system
+  trustworthy BEFORE acting on what they say, and `dormant` collapsing "parked",
+  "queued" and "ACCRUING -- a soak is running and nobody is watching it" into one
+  value is precisely an untrustworthy instrument, one level up. Soak-bound trading
+  work is the population that is mis-rendered. That is why it displaces rather than
+  waits; it is not a claim that operating-model work generally outranks the cycle.
+
+  ⚠️ AND IT IS NOT A LICENCE TO BULK-CLOSE. The work store's own README records a
+  bulk pass on 2026-09-01 doing real harm, and CLAUDE.md states that a FALSE
+  blocker is worse than a missing one -- the same applies to a false `done`. The
+  object's done-when says a lower dormant count alone clears nothing.
+
+reason_20260911_blocked_lane_wake: >-
+  THE OPERATOR SET THIS QUEUE ORDER DIRECTLY. Asked as a pop-up on 2026-09-10 and answered
+  "Finish MI-238 first, then the infra" -- recorded in `_lane_queues.engineering` as
+  OVERRIDING the manager's own recommendation, which had been to take MI-235/236/246
+  FIRST. MI-238's two code halves are now landed (bot 4e9255acb + observed 681b88a84;
+  SPA ict-trader-dashboard#215 941c96f81) and its one remaining criterion is the operator
+  confirming the rendered page in a browser -- which is not lane work. So "then the infra"
+  is now due, and MI-235 is the first row of it.
+
+  WHY IT DISPLACES THE CYCLE PRIORITY RATHER THAN WAITING: the cycle is
+  CY-20260906-TRADING-TRUTH -- repair the MEASUREMENT before acting on what it says -- and
+  this is a measurement failure about the work system itself. MEASURED on three lanes:
+  MI-222 blocked 13h on a PR closed two hours after it asked; MI-139 blocked 3.5 DAYS on a
+  PR closed NINE HOURS BEFORE it asked; and 2026-09-11T03:56-04:29Z the MI-238 engineering
+  lane sat idle 33 minutes blocked on a manager merge it had correctly announced in its own
+  summary. Roughly four lane-days lost to one class, and in every case the blocker had
+  ALREADY CLEARED and nothing told the lane. A lane that cannot be told its blocker cleared
+  is a trading-truth problem the moment the blocked lane is a trading lane -- and two of the
+  three already were.
+
+  WHAT THE OPERATOR DID AND DID NOT SAY, stated so this is not read as wider than it is:
+  they set the ORDER and named the LANE. They did not say "displace
+  CY-20260906-TRADING-TRUTH". That argument is the manager's and is made above rather than
+  assumed.
+
+  AND THE DONE-CONDITION FORBIDS THE CHEAP ANSWER, deliberately: "A REMINDER TO THE MANAGER
+  IS NOT A MECHANISM and does not close this." The manager noticing is precisely what failed
+  three times.
+
+reason_20260911_in_flight_decay: >-
+  SAME OPERATOR QUEUE ORDER as the MI-235 block above -- "Finish MI-238 first, then the
+  infra", answered 2026-09-10, recorded in `_lane_queues.engineering`, where MI-236 is the
+  row immediately after MI-235. MI-238 is delivered (its lane read `completed` at
+  2026-09-11T06:24Z, with the SPA half merged and observed live) and MI-235's PR is green,
+  so this is the next row of the infra by the operator's own ordering, not by the manager
+  re-picking.
+
+  WHY IT DISPLACES THE CYCLE PRIORITY RATHER THAN WAITING, and the argument is stronger
+  today than when the row was filed: the cycle is CY-20260906-TRADING-TRUTH -- repair the
+  MEASUREMENT before acting on what it says -- and this is a measurement that is MEASURABLY
+  WRONG. Six of nineteen in_flight rows were false on 2026-09-10, one of them for FOUR DAYS
+  after its owner was archived, and the same class had already been measured at 17 of 17 on
+  SESSIONS.json (MI-178). The manager reads that register to decide capacity.
+
+  AND IT IS NOW BINDING RATHER THAN COSMETIC: the WIP ceiling of 8 is FULL as of the
+  2026-09-11T04:26Z census, so a stale `in_flight` row is no longer just a misleading
+  number -- it is actively REFUSING real work at `check_wip_ceiling.py`. An instrument that
+  both misreports and blocks is exactly what the cycle says to fix first.
+
+  WHAT THE OPERATOR DID AND DID NOT SAY: they set the ORDER and named the LANE. They did
+  not say "displace CY-20260906-TRADING-TRUTH". That argument is the manager's, made above
+  rather than assumed.
+
+  AND THE DONE-CONDITION FORBIDS THE CHEAP ANSWER: "the state correction alone is a one-off
+  and does not close this." A sweep someone has to remember to run is the same failure one
+  level up.
+
+reason_20260911_wip_ceiling_unstick: >-
+  THE OPS LANE'S ROLE, AS THE OPERATOR DEFINED IT, ALREADY COVERS THIS: "ops -- system review, audit, trade
+  grading, soak monitoring, AND prioritised above its own backlog: unsticking what is stuck. Ops backlog is
+  PAUSABLE to unstick." This is unsticking, so it is not competing with the ops backlog; it outranks it by the
+  operator's own ordering.
+
+  WHY IT DISPLACES THE CYCLE PRIORITY RATHER THAN WAITING, and this is the strongest instance of the argument
+  so far: the WIP ceiling of 8 is FULL and check_wip_ceiling.py now REFUSES a ninth in_flight object. Measured
+  by the manager running check_stale_in_flight.py at 2026-09-11T08:18Z: 34 in_flight across both registers = 9
+  supported / 17 UNSUPPORTED / 8 could-not-establish, and FOUR of the eight object slots are unsupported --
+  held by owners dormant 34.8-37.9h. So the ceiling is no longer a guideline, it is THE BINDING CONSTRAINT ON
+  ALL FURTHER WORK, including trading work under CY-20260906-TRADING-TRUTH. Nothing new can be started until
+  it clears. An instrument that blocks real work on the strength of rows whose owners are gone is exactly what
+  the cycle says to repair before acting on what it says.
+
+  WHAT THE OPERATOR DID AND DID NOT SAY: they defined the ops lane's role and put unsticking above its
+  backlog. They did not say "displace CY-20260906-TRADING-TRUTH". That argument is the manager's and is made
+  above rather than assumed.
+
+  AND THE DONE-CONDITION FORBIDS THE CHEAP ANSWER, which here is the dangerous one: a lower unsupported count
+  is trivially achievable by marking rows done, and `done` means MERGED AND OBSERVED. The MI-236 lane refused
+  to recommend a landing state for exactly this reason and that refusal is inherited, not overridden -- what
+  changes is that this lane is asked to do the per-row reading that makes a landing state establishable.
+
+reason_20260911_spa_bearer_and_11767_review: >-
+  BOTH WERE PUT TO THE OPERATOR DIRECTLY, AS TWO DECISION POP-UPS, ON 2026-09-11, AND BOTH WERE ANSWERED.
+  This is the strongest form this file admits -- not a manager's argument that work displaces the cycle, but
+  the operator choosing it from stated options with the trade-offs in front of them. The manager's
+  recommendation was offered and marked as such in each.
+
+  (1) SPA BEARER HALF. Question: "Both engineering lanes just finished, so two of your three slots are free.
+  What goes out next?" Options offered: the SPA bearer half (recommended) / the merge-slot fix (exempt
+  automation/** from R13) / hold both slots until the operator confirms the Workflow page. CHOSEN: the SPA
+  bearer half. WHY IT DISPLACES CY-20260906-TRADING-TRUTH RATHER THAN WAITING: #11783 landed the propagation
+  path for the two web-api auth secrets and NOTHING CAN USE IT -- MI-265 established the host side is
+  unreachable for everyone, MI-266 established the client side cannot send a bearer at all. A half-landed
+  change is worse than either state, and this is a half-landed change with a named remaining half. It also
+  does not compete for the operator's attention with the values they owe: the work can be BUILT without them
+  and only TESTED with them, which is exactly the "originate values + probe SPA in parallel" the operator
+  chose earlier the same day.
+
+  ⚠️ WHAT THE OPERATOR DID NOT SAY: they did not say "displace the trading cycle". They chose between three
+  options the manager framed. That framing is the manager's and is recorded here rather than hidden, so a
+  successor can disagree with it without having to reconstruct it.
+
+  ⚠️ AND THE DONE-CONDITION FORBIDS THE FLATTERING ANSWER: the object states in terms that the PR MAY LAND
+  WITHOUT THE TAB RENDERING and that the lane MUST NOT claim it does -- the host side needs two secret values
+  only the operator can originate. "The tab renders" is a LATER observation belonging to nobody yet.
+
+  (2) THE #11767 ADVERSARIAL REVIEW. Question: #11767 is green and declares landing: hold /
+  changes_landing_machinery, which is R12 -- the manager must NOT merge it, because the guard that would catch
+  a mistake in it is the thing being changed. Options offered: spawn a review lane to read it adversarially
+  (recommended) / the operator reads and merges it themselves / leave it parked. CHOSEN: spawn a review lane.
+  WHY IT DISPLACES THE CYCLE: it is finished work sitting unmerged behind a rule that exists precisely so a
+  manager cannot clear it, which is the drop pattern this manager session exists to stop; and every PR in the
+  repo lands through the machinery #11767 touches, so a defect there reaches the trading work too.
+
+  ⚠️ THE REVIEWER IS NOT A SECOND MANAGER AND MUST NOT MERGE IT EITHER. Its deliverable is a REPORT the
+  operator merges on. A review that ends in a merge has defeated the rule it was spawned to honour, and the
+  object says so in its done-when.
+
+  ⚠️ AND A CLEAN REPORT IS A VALID OUTCOME, required to state its POPULATION -- what was examined -- so that
+  "no problems found" can be told apart from "did not look hard".
+
+reason_20260911_11767_fix_round: >-
+  PUT TO THE OPERATOR DIRECTLY AS A DECISION POP-UP, 2026-09-11, AND ANSWERED. Question: the adversarial review
+  says #11767 must NOT merge as it stands -- one blocking bug, two should-fix, one note, all small and verified
+  fixable -- how should the fix round be handled? Options offered: a FRESH lane taking all four items (the
+  manager's recommendation, marked as such) / a fresh lane taking the BLOCKING item only, filing the rest /
+  parking #11767 entirely. CHOSEN: fresh lane, all four items.
+
+  WHY A FRESH LANE RATHER THAN REVIVING MI-235, stated because it is the manager's judgement and not the
+  operator's: that session is long-idle with cold context, and the review is a COMPLETE WRITTEN SPEC, so nothing
+  is lost by starting clean. All three concurrent slots were free at dispatch, so it costs no other work.
+
+  WHY IT DISPLACES CY-20260906-TRADING-TRUTH RATHER THAN WAITING: the blocking bug is that a blocker first graded
+  `could_not_look` never pages when it clears -- which is #11767's OWN MOTIVATING CASE. Shipping without it would
+  give a mechanism that LOOKS ARMED AND STAYS SILENT exactly where it is most needed, which is the failure class
+  this whole operating layer exists to end, installed by the thing built to prevent it. And every PR in the repo
+  lands through the machinery #11767 touches, so a defect there reaches the trading work too.
+
+  ⚠️ THE LANE MUST NOT MERGE #11767. R12 holds a landing-machinery change for a human read whatever its state,
+  and fixing the findings does not lift that. The manager does not merge it either. The operator does.
+
+  ⚠️ AND A GREEN GUARD SELF-TEST IS NOT THE VERIFICATION, which the review established rather than assumed: the
+  guard and its self-test harness are NOT MODIFIED by this diff (measured, empty git diff), so an identical green
+  on main is the EXPECTED outcome and says nothing about the PR. The lane is told this so it does not report the
+  same green the review already refused to lean on.
+
+# ---------------------------------------------------------------------------
+# ADDED 2026-09-11 -- the engineering lane, MI-273
+# ---------------------------------------------------------------------------
+# approved_by: operator (ben.baichmankass), in conversation, 2026-09-11, directly.
+# The operator named this item themselves in the handoff prompt, alongside MI-271
+# and MI-272, recorded there as already chosen.
+#
+# WHY IT DISPLACES THE CYCLE PRIORITY, STATED RATHER THAN WAVED THROUGH:
+# WO-20260911-LET-AN-APPROVED-TIER-2-PR-LAND sits under IN-20260901-OPERATING-LAYER,
+# not the cycle's IN-20260903-TRADING-SYSTEM-HEALTH, so the gate is right to stop it.
+# The argument is not that it outranks trading truth; it is that it is UPSTREAM of it.
+# #11738 has been green, operator-approved and unlanded since 2026-09-10T07:52Z,
+# waiting on a merge click the operator has now said will not come. Every Tier-2
+# remedy the bleed diagnosis (MI-271) proposes would queue behind that same click.
+# A lane that cannot land its own approved work does not produce trading truth more
+# slowly -- it produces it and then drops it.
+#
+# SCOPE: this exception covers ONE object. The other operating-layer items queued
+# behind it (MI-236, MI-237, MI-244, MI-239) are NOT covered and must not be read
+# as covered.
+
+# ---------------------------------------------------------------------------
+# 2026-09-12 — THE THREE-LANE CONTINUOUS WORKPLAN (operator-directed)
+# ---------------------------------------------------------------------------
+# decision: approved
+# approved_by: operator (ben.baichmankass) — in conversation, directly, 2026-09-12
+# covers: WO-20260912-ENGINEERING-LANE-MAKE-THE-LANDING-AND-REGISTER
+#
+# WHAT THE OPERATOR SAID, kept close to verbatim because the paraphrase is what
+# usually rots: "we already said at the very beginning that we have to have the
+# three lanes with the work plans that we can keep working through. If nothing's
+# going on, that's already a problem... I am absolutely positive without even
+# thinking about the roadmap that there are engineering caps we could take... we
+# need a work plan for you to keep working for several days without stopping."
+#
+# WHY THIS DISPLACES NOTHING, and the argument is not a formality:
+#   * The RESEARCH lane (MI-278) IS the cycle priority — M20 Active Trade
+#     Management, pointed at MI-277's measured finding. It needs no exception.
+#   * The OPS lane (MI-279) is the health register under the same trading-health
+#     intent. It needs no exception.
+#   * Only the ENGINEERING lane sits under IN-20260901-OPERATING-LAYER, and it is
+#     the machinery that LOSES the other two lanes' work. Measured this session,
+#     not theorised: a commit carrying a live lane's registry row was dropped by
+#     the auto-merge race and that lane ran unrecorded for nine minutes; a green
+#     automation PR sat unmergeable for 3.5h because four green checks read as
+#     ready. A lane whose output the machinery can silently discard is not cheaper
+#     to run — it is more expensive, because the loss is invisible.
+#
+# ⚠️ SCOPE OF THIS EXCEPTION: the engineering OBJECT only. It does not raise the
+#    WIP ceiling, does not cover future engineering work, and does not license a
+#    fourth lane. A blanket exception naming nothing is the thing this file exists
+#    to refuse.
+
+# 2026-09-12 — THE MERGE-QUEUE UNBLOCKER (operator-approved directly)
+# ---------------------------------------------------------------------------
+# decision: approved
+# approved_by: operator (ben.baichmankass) — in conversation, directly, 2026-09-12
+# covers: WO-20260912-UNBLOCK-THE-MERGE-QUEUE-THE-R13-MERGE
+#
+# THE GATE REFUSED THIS AND WAS RIGHT TO. The work is landing machinery under
+# IN-20260901-OPERATING-LAYER, not the cycle's trading-truth intent, so it is a
+# displacement and only the operator may permit one. The manager put it to them
+# rather than deciding it.
+#
+# ⚠️ AND THE MANAGER DID NOT RE-LABEL THE INTENT TO SLIP PAST, which was
+#    available and would have worked: the PRs this unblocks are MI-279's backlog
+#    drain and MI-278's M20 research, both squarely trading-truth, so filing the
+#    object under IN-20260903 would have passed the gate on its face. That is
+#    exactly the theatre capture_idea.py's docstring warns about — intent
+#    describes what the work IS, not who benefits from it. Recorded because the
+#    next manager under the same pressure will see the same shortcut.
+#
+# WHAT IT IS, MEASURED RATHER THAN ASSERTED (2026-09-12T07:31:49Z):
+#   * #11891 (the per-branch R13 merge-slot claim) reads `guards: PASS 72 · FAIL 1`
+#     and the ONE failure is `ruff-lint` E731 — a lambda assignment at
+#     scripts/ci/check_pr_landing.py:1404. Reproduced locally on the same head.
+#   * 14 of 19 open PRs are unmergeable; 13 of those 14 conflict on
+#     docs/claude/session-board.json::merge_slot ALONE, with 4 clean PRs as the
+#     positive control. R13 requires that claim to arm auto-merge and every armed
+#     branch overwrites the same field, so the queue jams BY CONSTRUCTION at n>1.
+#   * The owning lane MI-280 is RUNNING, reports "all checks clean" and sits at
+#     status need_input "merge PRs #11891, #11889, #11898" — it believes it is
+#     done and is blocked on the manager, so it will not fix its own red check.
+#   * The manager may not fix it: scripts/ci/** is a worker path and
+#     check_manager_scope.py R2 grades manager COMMITS, not net diffs. CLAUDE.md's
+#     own words are that "the cheapest way past this guard must be to route the
+#     work to a session" — which is what this exception permits.
+#
+# ⚠️ TWO MANAGER ERRORS ARE RECORDED HERE RATHER THAN TIDIED AWAY:
+#   1. The session was SPAWNED BEFORE it was REGISTERED, so the gate's refusal
+#      arrived after it was already live and it ran unregistered for ~4 minutes.
+#      Register first; the gate cannot protect a spawn that already happened.
+#   2. The first spawn attempt named NO work object at all and was refused for
+#      that instead. Both refusals were correct and both were the manager's fault.
+#
+# ⚠️ SCOPE: this OBJECT only. It does not license future lint-unblocker spawns,
+#    does not raise the WIP ceiling, and is NOT a standing carve-out for
+#    "anything blocking the merge queue" — the operator was offered that wider
+#    option explicitly and chose the narrow one.
+
+# 2026-09-12 — ROLLBACK TO THREE LANES (operator-directed, directly)
+# ---------------------------------------------------------------------------
+# THIS BLOCK GRANTS NOTHING. It RETIRES exceptions rather than adding one, and
+# it is written here because this file is where a session looks to find out
+# which lanes are legitimate.
+#
+# WHAT THE OPERATOR SAID, kept close to verbatim: "we need to pare back the
+# number of lanes ... back towards the cap. We made specific exceptions for
+# specific things, and if we're done with those items, then we need to roll back
+# to the three lanes exactly to make sure that this kind of issue is not
+# happening ... pace it, get it done ... if a merge needs to wait, that's your
+# job as the manager."
+#
+# WHAT PROMPTED IT, measured rather than felt: the open-PR queue went 19 -> 31 in
+# ~2.5h while the manager merged 5, leaving 26 of 31 unmergeable. That is not a
+# merge-discipline failure; it is six producing lanes against one serialising
+# manager. Adding merge throughput cannot fix a production/consumption mismatch.
+#
+# THE THREE THAT REMAIN — the canonical lanes from the 2026-09-12 three-lane
+# block above, unchanged:
+#   research    MI-278  WO-20260912-M20-ACTIVE-TRADE-MANAGEMENT-HOLD-WINNERS-LONGER
+#   ops         MI-279  WO-20260912-OPS-LANE-DRIVE-THE-HEALTH-BACKLOG-DOWN
+#   engineering MI-280  WO-20260912-ENGINEERING-LANE-MAKE-THE-LANDING-AND-REGISTER
+#
+# THE EXCEPTIONS BEING WOUND DOWN, each with a stated end condition rather than
+# a date, because "we are done with those items" is a fact about the work:
+#   prop        MI-282 — ends when PR #11882 is dispositioned. Its finding is
+#                        delivered: the arbitration fan-out has never dispatched,
+#                        so the allowlist was never the lever.
+#   order-path  MI-283 — ends when PR #11903 is dispositioned. It is at 610k/1M,
+#                        past the hand-off threshold, and its work is captured in
+#                        the PR. ⚠️ #11903 is TIER-2 and blocked on an operator
+#                        approval that is NOT to be re-sought; archiving the
+#                        SESSION does not close the PR.
+#   engineering MI-285 — BOUNDED to its single unit (make lanes use
+#                        --branch-claim) and then archived. It is a SECOND
+#                        engineering lane, which is exactly the sprawl being
+#                        corrected; it was dispatched 3 minutes before the
+#                        operator's instruction and is allowed to finish only
+#                        because its unit is what stops the queue re-jamming.
+#                        It gets NO further work.
+#
+# ⚠️ THE STANDING RULE THIS SETS, and it is the behavioural change: THE MANAGER
+#    DOES NOT SPAWN A REPLACEMENT when a lane finishes. A lane closing returns
+#    the count to three or below and it STAYS there. A hand-off (one lane
+#    replaced 1-for-1 because it is past its context threshold) is not a new
+#    lane and is permitted; a fourth concurrent lane is not, and needs a fresh
+#    operator decision recorded in this file.
+#
+# ⚠️ AND MI-278 IS AT 762,410/1M — past the ~600k hand-off threshold. It is KEPT
+#    (it is the research lane) but must close out its in-flight PRs rather than
+#    start new units. Its eventual replacement is a 1-for-1 hand-off, not growth.

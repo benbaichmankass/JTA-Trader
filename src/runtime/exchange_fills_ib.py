@@ -238,6 +238,19 @@ def ib_fill_to_row(
     if realized is not None and abs(realized) > 1e17:
         realized = None
     commission = _f(getattr(report, "commission", None)) if report is not None else None
+    # ⚠️ AN UNREPORTED COMMISSION REPORT READS 0.0, NOT None (PROV-IB,
+    # PI-20260929-HXO9WPVH-0001). ib_insync builds every Fill with a default
+    # ``CommissionReport()`` (execId='', realizedPNL=0.0, commission=0.0) in
+    # ``wrapper.execDetails`` and only overwrites it when IB's later
+    # ``commissionReport`` callback arrives for that execId; that callback also
+    # coerces IB's UNSET_DOUBLE realizedPNL to 0.0 before the sentinel check
+    # above can see it. Verified against ib_insync 0.9.86 source 2026-10-11. So
+    # ``execId == ''`` means "IB has not reported", and the 0.0 beside it is not
+    # a break-even close. A reported report carries its execId and keeps its 0.0
+    # (an opening fill legitimately realizes 0).
+    if report is not None and not str(getattr(report, "execId", "") or "").strip():
+        realized = None
+        commission = None
 
     raw: Dict[str, Any] = {
         "source": "ib_reqExecutions",

@@ -130,7 +130,15 @@ EXCEPTIONS = ROOT / "docs" / "claude" / "soak-doctrine-exceptions.json"
 
 #: Backlog files a ledger entry's ``backlog_row`` may be VERIFIED against. The
 #: entry is checked, not merely present — see the module docstring.
+#: ⚠️ UPDATED 2026-09-21 by the operating reset. The four review backlogs are
+#: archived under `docs/archive/2026-09-21-operating-reset/registers/` and the
+#: MANAGER CHECKLIST is now the one register, so a ledger entry names a
+#: checklist item id (`B4`) instead of a backlog row id. Both shapes read
+#: `items[].id`, so the loader below is unchanged. The archived paths stay in
+#: this list because `_load_backlog_ids` skips a path that does not exist —
+#: dropping them would silently stop verifying any entry that still names one.
 BACKLOGS = [
+    ROOT / "docs" / "claude" / "work" / "MANAGER-CHECKLIST.json",
     ROOT / "docs" / "claude" / "health-review-backlog.json",
     ROOT / "docs" / "claude" / "performance-review-backlog.json",
     ROOT / "docs" / "claude" / "ml-review-backlog.json",
@@ -257,11 +265,16 @@ def find_accrual_gated_verdicts(
 
 def _load_backlog_ids() -> Set[str]:
     ids: Set[str] = set()
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+    from src.runtime import checklist_store as _ck  # noqa: PLC0415
     for path in BACKLOGS:
-        if not path.exists():
+        is_ck = _ck.is_checklist_path(path)  # monolith, or per-row store once cut over
+        if not (_ck.exists(path) if is_ck else path.exists()):
             continue
         try:
-            data = json.loads(path.read_text(encoding="utf-8"))
+            data = (_ck.load_path(path) if is_ck
+                    else json.loads(path.read_text(encoding="utf-8")))
         except (OSError, ValueError):
             continue
         rows = data.get("items") if isinstance(data, dict) else data

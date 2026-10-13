@@ -246,6 +246,27 @@ class TestPlanRow:
         assert updates is None
         assert "returned None" in reason
 
+    def test_a_slipped_entry_is_retried_with_the_venue_fill(
+        self, script, tmp_db, fake_cfgs,
+    ):
+        """CLOSE-PNL-NULL: >10 bps of entry slippage made the venue's own
+        record unmatchable against the journal's intended entry."""
+        row = _read_row(tmp_db, 1540)
+        seen = []
+        rec = {"avg_exit_price": 76977.6, "closed_pnl": 0.5723,
+               "qty": 0.004, "side": "Sell", "closed_at": "1763300000000"}
+
+        def _lookup(cfg, **kw):
+            seen.append(kw["entry_price"])
+            return rec if kw["entry_price"] == 76650.0 else None
+
+        with patch.object(script, "account_closed_pnl_for_trade", _lookup), \
+                patch.object(script, "_venue_entry_fill", return_value=76650.0):
+            updates, reason = script._plan_row(row, fake_cfgs["bybit_2"])
+        assert reason is None
+        assert seen == [76700.0, 76650.0]
+        assert abs(updates["pnl"] - 0.5723) < 1e-6
+
     def test_zero_exit_price_skips_row(
         self, script, tmp_db, fake_cfgs,
     ):
@@ -285,6 +306,43 @@ class TestPlanRow:
             updates, reason = script._plan_row(row, fake_cfgs["bybit_2"])
         assert updates is None
         assert "closed_pnl=None" in reason
+
+    def test_sign_mismatch_refuses_write(
+        self, script, tmp_db, fake_cfgs,
+    ):
+        """FIX-CA-19 (CA-A11): a long with an exit ~18% ADVERSE to entry
+        but a POSITIVE recovered closed_pnl is a mismatched Bybit record
+        (the +3847.29 incident shape backfill_orphan_pnl.py already
+        refuses). Writing it would fabricate a profit on a losing trade."""
+        row = _read_row(tmp_db, 1540)  # long, entry 76700
+        with patch.object(
+            script, "account_closed_pnl_for_trade",
+            return_value={
+                "avg_exit_price": 62893.99,
+                "closed_pnl": 3847.29,
+                "qty": 0.004, "side": "Sell", "closed_at": None,
+            },
+        ):
+            updates, reason = script._plan_row(row, fake_cfgs["bybit_2"])
+        assert updates is None
+        assert reason is not None and "ADVERSE" in reason
+
+    def test_sign_mismatch_refuses_fabricated_loss(
+        self, script, tmp_db, fake_cfgs,
+    ):
+        """Mirror case: a favourable exit with a negative recovered pnl."""
+        row = _read_row(tmp_db, 1540)  # long, entry 76700
+        with patch.object(
+            script, "account_closed_pnl_for_trade",
+            return_value={
+                "avg_exit_price": 80000.0,
+                "closed_pnl": -12.5,
+                "qty": 0.004, "side": "Sell", "closed_at": None,
+            },
+        ):
+            updates, reason = script._plan_row(row, fake_cfgs["bybit_2"])
+        assert updates is None
+        assert reason is not None and "FAVORABLE" in reason
 
 
 class TestEndToEnd:

@@ -37,6 +37,10 @@ CANONICAL_UNITS=(
 )
 
 log "Collecting service status…"
+# Running kernel (manager 2026-09-29): after the 1057 -> 1062 kernel reboot no
+# relay could read which kernel the box actually booted.
+echo "===== kernel ====="
+echo "uname -r: $(uname -r 2>/dev/null || echo '(unreadable)')"
 echo "===== systemctl is-active ====="
 overall_ok=0
 for unit in "${CANONICAL_UNITS[@]}"; do
@@ -46,6 +50,45 @@ for unit in "${CANONICAL_UNITS[@]}"; do
         overall_ok=1
     fi
 done
+
+# FIX-CA-15 (CA-A10-402): failed-unit gate begin
+#
+# Until this block, a failed ONE-SHOT (as opposed to the three long-running
+# CANONICAL_UNITS above, which is-active already gates on) was visible only in
+# the uncapped "all ict-* units" dump further down — and that dump's own
+# comment says outright "Read-only... Never affects the exit code." So a
+# failed ict-git-sync (deploy stops propagating), ict-db-integrity (silent
+# corruption), or an exchange fills/funding/executions pull (P&L and cost
+# tracking goes stale) was discoverable only if a session or the operator
+# happened to read the uncapped dump and knew to look — CA-A10-402, confirmed
+# 2026-09-27 (`grep -rl OnFailure deploy/` -> 0 files repo-wide; no push
+# alerting exists for ANY unit's own failure). `systemctl is-failed <unit>`
+# prints "failed" and exits 0 when the unit IS failed; it prints the unit's
+# actual state (e.g. "inactive") and exits non-zero otherwise, so a unit this
+# host has never heard of reads as "inactive", never "failed" — no separate
+# existence check is needed to avoid a false positive on a host missing one
+# of these oneshots.
+GATE_ONESHOTS=(
+    ict-git-sync.service
+    ict-db-integrity.service
+    ict-exchange-fills-pull.service
+    # Split off ict-exchange-fills-pull.service 2026-09-27 (FIX-CA-OPS2) so an
+    # Alpaca-side failure can never block the Bybit wallet ledger sharing that
+    # unit; gated here for the same reason its Bybit sibling is.
+    ict-alpaca-fills-pull.service
+    ict-exchange-funding-pull.service
+    ict-ib-executions-pull.service
+)
+echo
+echo "===== failed-unit gate (money/deploy-freshness oneshots) ====="
+for unit in "${GATE_ONESHOTS[@]}"; do
+    fstate="$(timeout 8 systemctl is-failed "${unit}" 2>/dev/null || true)"
+    printf '%-40s %s\n' "${unit}" "${fstate:-unknown}"
+    if [ "${fstate}" = "failed" ]; then
+        overall_ok=1
+    fi
+done
+# FIX-CA-15 (CA-A10-402): failed-unit gate end
 
 # claude bridge is optional — report but don't fail on it.
 if [ -f /etc/systemd/system/ict-claude-bridge.service ]; then
@@ -73,6 +116,19 @@ echo "--- list-unit-files (install state: enabled/disabled/masked — catches en
 timeout 8 systemctl list-unit-files 'ict-*.service' 'ict-*.timer' \
     --no-legend --no-pager 2>/dev/null | head -60 \
     || echo "(systemctl list-unit-files unavailable)"
+
+echo
+echo "===== storage (read-only; PI-20260929-CMXYTHSP-0002) ====="
+# Is /data/bot-data its own mount (e.g. the ict-bot-data-vol block volume) or a
+# directory on the boot volume? findmnt prints nothing for a non-mountpoint, so
+# the --target form is used: it names the filesystem that CONTAINS the path.
+findmnt --target /data/bot-data -o TARGET,SOURCE,FSTYPE,SIZE,USED 2>/dev/null \
+    || echo "(findmnt unavailable or /data/bot-data missing)"
+mountpoint /data/bot-data 2>/dev/null || true
+df -B1 / /data/bot-data 2>/dev/null || echo "(df unavailable)"
+lsblk -b -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINTS 2>/dev/null | grep -v '^loop' \
+    || echo "(lsblk unavailable)"
+grep -vE '^[[:space:]]*(#|$)' /etc/fstab 2>/dev/null || echo "(no /etc/fstab)"
 
 echo
 echo "===== heartbeat ====="
@@ -304,7 +360,11 @@ if [ -n "${data_dir}" ]; then
     done
     echo
     echo "--- ls ${python_alt_root}/ (parent must exist for writes) ---"
-    ls -la "${python_alt_root}/" 2>&1 | head -30
+    # sed, not head: head exits after 30 lines, and once the listing outgrows the
+    # pipe buffer ls dies of SIGPIPE; under `set -o pipefail` that 141 became the
+    # WHOLE script's exit code and cut off every section below (MEASURED:
+    # status-check #14285, 2026-09-29, exit 141 right after this listing).
+    ls -la "${python_alt_root}/" 2>&1 | sed -n '1,30p'
 else
     echo "(DATA_DIR unset; python resolver would return repo-relative paths)"
 fi

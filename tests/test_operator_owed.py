@@ -11,15 +11,13 @@ from __future__ import annotations
 
 import datetime as _dt
 import json
+import os
 import subprocess
 
 import pytest
 
-from scripts.ci.check_operator_owed import (
-    check,
-    measure_carries,
-    register_commits,
-)
+from scripts.ci.check_operator_owed import check, record_ages
+from scripts.ops import pipeline
 from src.runtime.operator_owed import (
     ALL_OWNER_CLASSES,
     ALL_STATES,
@@ -38,7 +36,6 @@ from src.runtime.operator_owed import (
 )
 
 NOW = _dt.datetime(2026, 8, 25, 19, 0, tzinfo=_dt.timezone.utc)
-REL = "docs/claude/operator-owed-register.json"
 
 
 def _item(**over):
@@ -285,20 +282,73 @@ def test_a_terminal_item_must_say_what_happened():
 
 # ---------------------------------------------------------------------------
 # the MEASUREMENT — part (d)'s basis, against a real git history
+#
+# ⚠️ REWRITTEN 2026-09-22 (E45). These tests used to build a
+# `docs/claude/operator-owed-register.json`, which the 2026-09-21 operating
+# reset ARCHIVED, and called `check(repo, now=..., path=...)`. The guard is
+# re-pointed at `docs/claude/work/PIPELINE.jsonl` — the post-reset home of
+# anything owed to the operator (`next_action: "ask_operator"`) — so the
+# fixtures are rebuilt on that schema and against a real git history, for the
+# original reason: a grader tested only on hand-fed integers leaves the
+# MEASUREMENT itself unverified.
+#
+# The `grade_item` / `validate_item` tests above still pass and still test real
+# code, but note what they now cover: `src/runtime/operator_owed.py` is imported
+# by nothing outside this file since the re-point. That is filed, not fixed
+# here.
+#
+# ⚠️ REWRITTEN AGAIN 2026-09-24 (E64). `PIPELINE.jsonl` moved from one shared
+# append-only file to a DIRECTORY of immutable per-record files (see
+# `scripts/ops/pipeline.py`'s module docstring). `measure_carries()` /
+# `register_commits_dated()` / `parse_rows()` are gone with it — a record file
+# is never rewritten, so the commit that ADDS a row's current file already IS
+# its last-changed date; `record_ages()` reads that directly (one `git log -1`
+# per file) instead of diffing many historical snapshots of one shared file.
 # ---------------------------------------------------------------------------
 
-def _repo(tmp_path, items):
+REL = "docs/claude/work/pipeline"
+
+
+#: ⚠️ THE BASELINE FIXTURE IS GONE, 2026-09-22, and its absence is the point.
+#: It patched away a shipped list of eight grandfathered ids so these fixtures
+#: could run. That list existed because the guard counted REGISTER COMMITS,
+#: which put 9 of 10 due rows over the limit on day one — the unit being wrong,
+#: not a debt. The guard now measures the AGE of a row's content against the
+#: row's own declared cadence, needs no hatch, and ships none, so there is
+#: nothing left to patch out.
+
+def _owed(rid="OO-TEST", *, action="ask_operator", state="queued",
+          due=None, what="a question for the operator", every=3):
+    due_when = due or {"kind": "date", "due_date": "2020-01-01"}
+    if every is not None:
+        due_when = dict(due_when, check_every_days=every)
+    return {
+        "id": rid,
+        "what": what,
+        "origin": {"kind": "session", "ref": "s1", "rerun": "re-ask"},
+        "due_when": due_when,
+        "next_action": action,
+        "state": state,
+    }
+
+
+def _repo(tmp_path):
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.email", "t@t"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.name", "t"], cwd=tmp_path, check=True)
-    (tmp_path / "docs" / "claude").mkdir(parents=True)
-    _write(tmp_path, items)
+    (tmp_path / "docs" / "claude" / "work").mkdir(parents=True)
     return tmp_path
 
 
-def _write(repo, items):
-    (repo / REL).write_text(json.dumps(
-        {"schema_version": 1, "carry_limit": 2, "items": items}, indent=2))
+def _write(repo, rows):
+    """One NEW file per row, in the given order -- a later row sharing an
+    earlier one's id supersedes it in the fold (matching `pipeline.py`'s
+    "last filename wins" contract)."""
+    store = repo / REL
+    store.mkdir(parents=True, exist_ok=True)
+    for i, r in enumerate(rows):
+        (store / f"{i:04d}-{r['id']}.json").write_text(
+            json.dumps(r), encoding="utf-8")
 
 
 def _commit(repo, message):
@@ -306,101 +356,252 @@ def _commit(repo, message):
     subprocess.run(["git", "commit", "-q", "-m", message], cwd=repo, check=True)
 
 
-def test_carry_is_none_before_the_register_has_any_history(tmp_path):
-    repo = _repo(tmp_path, [_item()])
-    current = {"OO-TEST": _item()}
-    carries, transitions = measure_carries(repo, REL, current, register_commits(repo, REL))
-    assert carries["OO-TEST"] is None, "no commits means no carry EXISTS to count"
+NOW_FIXED = _dt.datetime(2026, 9, 22, 12, 0, tzinfo=_dt.timezone.utc)
+
+
+def _history(repo, *generations):
+    """Commit each `(rows, days_ago)` generation, BACKDATED.
+
+    ⚠️ RE-POINTED 2026-09-24 (E64). A generation writes a NEW file only for a
+    row that is new or whose content CHANGED since it was last written; a row
+    repeated unchanged across generations is never re-touched, matching the
+    real store's invariant that a record file is never edited after it is
+    written. That is what lets `record_ages()` read a row's last-changed date
+    straight off the commit that added its current file.
+
+    The filler row is not padding: `register_commits()` reads `git log --
+    <path>`, so a commit that changes nothing under the directory is not a
+    register commit at all. It also reproduces the live condition — another
+    lane appending its own row while this one sits untouched.
+
+    The BACKDATING is what makes these tests evaluate the property CI
+    evaluates. The first version of this suite planted three same-second
+    commits and asserted a carry count; those controls passed while the
+    guard's unit was wrong, and CI caught what the tests could not.
+    """
+    store = repo / REL
+    store.mkdir(parents=True, exist_ok=True)
+    last_written = {}
+    for i, (rows, days_ago) in enumerate(generations):
+        filler = _owed(f"FILL-{i}", action="dispatch_lane")
+        for r in [*rows, filler]:
+            if last_written.get(r["id"]) == r:
+                continue
+            (store / f"{i:04d}-{r['id']}.json").write_text(
+                json.dumps(r), encoding="utf-8")
+            last_written[r["id"]] = r
+        when = (NOW_FIXED - _dt.timedelta(days=days_ago)).isoformat()
+        env = dict(os.environ, GIT_AUTHOR_DATE=when, GIT_COMMITTER_DATE=when)
+        subprocess.run(["git", "add", "-A"], cwd=repo, check=True, env=env)
+        subprocess.run(["git", "commit", "-q", "-m", f"gen{i}"], cwd=repo,
+                       check=True, env=env)
+
+
+def test_age_is_none_before_the_register_has_any_history(tmp_path):
+    repo = _repo(tmp_path)
+    _write(repo, [_owed()])  # written but never committed
+    res = pipeline.read_log(repo / REL)
+    ages, transitions = record_ages(repo, REL, res.sources, res.raw,
+                                     ["OO-TEST"], now=NOW_FIXED)
+    assert ages["OO-TEST"] is None, (
+        "no commit means no AGE EXISTS to measure — 'we could not look' must "
+        "not collapse into 'brand new'")
     assert transitions["OO-TEST"] == 0
 
 
-def test_carry_counts_register_commits_that_left_the_item_alone(tmp_path):
-    """The core of (d): each register commit that does not change an item is
-    one session carrying it forward unmoved."""
-    stale = _item(id="STALE")
-    repo = _repo(tmp_path, [stale, _item(id="OTHER")])
-    _commit(repo, "register the items")
+def test_age_measures_when_the_row_last_CHANGED_not_when_it_was_last_seen(tmp_path):
+    """The core of (d), in the unit that survives a shared append-only store.
 
-    def carry_of(item_id):
-        current = {i["id"]: i for i in json.loads((repo / REL).read_text())["items"]}
-        carries, _ = measure_carries(repo, REL, current, register_commits(repo, REL))
-        return carries[item_id]
-
-    # The commit that MADE the current content is not itself a carry.
-    assert carry_of("STALE") == 0
-
-    # A later register commit that touches only OTHER carries STALE once.
-    _write(repo, [stale, _item(id="OTHER", title="edited once")])
-    _commit(repo, "move OTHER")
-    assert carry_of("STALE") == 1
-    assert carry_of("OTHER") == 0
-
-    # And again -> at the limit of 2, which is the escalation.
-    _write(repo, [stale, _item(id="OTHER", title="edited twice")])
-    _commit(repo, "move OTHER again")
-    assert carry_of("STALE") == 2
-    grade = grade_item(stale, carries_unchanged=2, now=NOW)
-    assert grade["state"] == STATE_ESCALATE_CARRIED and grade["escalates"]
+    ⚠️ The three commits are 30, 20 and 1 days old and NONE of them changes
+    STALE, so its file is written and committed ONCE, at the oldest — its
+    content is 30 days old, the age of the commit that ADDED its file, not of
+    the newest commit that merely left it alone. Getting this backwards would
+    report every row as fresh the moment any lane committed anything."""
+    repo = _repo(tmp_path)
+    stale = _owed("STALE")
+    _history(repo, ([stale], 30), ([stale], 20), ([stale], 1))
+    res = pipeline.read_log(repo / REL)
+    ages, transitions = record_ages(repo, REL, res.sources, res.raw,
+                                     ["STALE"], now=NOW_FIXED)
+    assert 29.5 < ages["STALE"] < 30.5, ages
+    assert transitions["STALE"] == 0, (
+        "one record, never re-appended -- no transition observed")
 
 
-def test_moving_an_item_clears_its_carry(tmp_path):
-    stale = _item(id="STALE")
-    repo = _repo(tmp_path, [stale, _item(id="OTHER")])
-    _commit(repo, "register")
-    _write(repo, [stale, _item(id="OTHER", title="edited")])
-    _commit(repo, "move OTHER")
-
-    _write(repo, [_item(id="STALE", status="resolved", resolution="done"),
-                  _item(id="OTHER", title="edited")])
-    _commit(repo, "resolve STALE")
-    current = {i["id"]: i for i in json.loads((repo / REL).read_text())["items"]}
-    carries, transitions = measure_carries(repo, REL, current, register_commits(repo, REL))
-    assert carries["STALE"] == 0
-    assert transitions["STALE"] >= 1, "a real content change is an observed transition"
+def test_moving_a_row_resets_its_age(tmp_path):
+    repo = _repo(tmp_path)
+    before = _owed("MOVED")
+    after = dict(before, what="answered: yes")
+    _history(repo, ([before], 30), ([before], 20), ([after], 1))
+    res = pipeline.read_log(repo / REL)
+    ages, transitions = record_ages(repo, REL, res.sources, res.raw,
+                                     ["MOVED"], now=NOW_FIXED)
+    assert ages["MOVED"] < 1.5, "a row edited a day ago is one day old"
+    assert transitions["MOVED"] >= 1, (
+        "and the change is OBSERVED — a green with zero observed transitions "
+        "is unproven, not success")
 
 
-def test_an_uncommitted_edit_reads_as_in_flight_not_as_a_carry(tmp_path):
-    stale = _item(id="STALE")
-    repo = _repo(tmp_path, [stale])
-    _commit(repo, "register")
-    _write(repo, [_item(id="STALE", title="being edited right now")])
-    current = {i["id"]: i for i in json.loads((repo / REL).read_text())["items"]}
-    carries, _ = measure_carries(repo, REL, current, register_commits(repo, REL))
-    assert carries["STALE"] == 0
+def test_an_appended_update_supersedes_the_earlier_record(tmp_path):
+    """⚠️ LAST WINS. A row is updated by writing a NEW record file under the
+    same id. Reading the first occurrence would grade a superseded copy and
+    manufacture staleness that never happened."""
+    repo = _repo(tmp_path)
+    old = _owed("DUP", what="unanswered")
+    new = _owed("DUP", what="answered")
+    _write(repo, [old, new])
+    res = pipeline.read_log(repo / REL)
+    assert res.items["DUP"]["what"] == "answered"
 
 
-def test_the_check_fails_on_a_carried_item_and_says_how_to_clear_it(tmp_path, capsys):
-    stale = _item(id="STALE")
-    repo = _repo(tmp_path, [stale, _item(id="OTHER")])
-    _commit(repo, "register")
-    for n in range(2):
-        _write(repo, [stale, _item(id="OTHER", title=f"edit {n}")])
-        _commit(repo, f"move OTHER {n}")
+def test_record_ages_reads_the_records_own_filename_timestamp_not_the_landing_commit(
+        tmp_path):
+    """PINS D11 / `PI-20260927-EPMBGUYB-0003` -- root cause CONFIRMED 2026-09-27.
 
-    assert check(repo, now=NOW, path=REL) == 1
+    THE FAILURE: `operator-owed-guard`'s `guards` CI runs at 07:39-07:43Z on
+    2026-09-27 read several rows as >= 2.0 days old (the hard-fail threshold);
+    a LATER local run of the identical check, on the same/a newer commit, read
+    the SAME rows as 1.3 days.
+
+    THE CONFIRMED ROOT CAUSE: `record_ages()` read the git COMMITTER date of
+    the commit that merged a record's file into `main` (`git log -1
+    --format=%cI`) and used it as "when this row's content last changed". That
+    date is when this repo's serialized self-land merge queue
+    (`scripts/ops/claim_merge_slot.py`, one claimant at a time) happened to
+    free that PR's slot -- NOT when the record was actually written. MEASURED
+    over the 110 most recent non-migration records in
+    `docs/claude/work/pipeline/`: every one lands at or after its own filename
+    timestamp (never before, as expected), median gap 35.6 minutes, mean 107.6
+    minutes, max ~27.9 hours, and 98/110 (89%) exceed 10 minutes. A CI run
+    whose checkout predates a queued PR's merge necessarily reads that row's
+    PRIOR, older generation -- correctly stale as of THAT snapshot -- while a
+    run taken after the merge lands reads the fresh one: same row, same
+    eventual git history, two different points along an asynchronous queue.
+    Ruled out, checked against the code rather than assumed: (a) naive/aware
+    timezone confusion -- every timestamp on this path is aware and correctly
+    offset, and aware-datetime subtraction is correct across differing
+    offsets; (b) a shallow clone -- `.github/workflows/guards.yml` (the only
+    workflow that runs this guard) checks out with `fetch-depth: 0`.
+
+    THE FIX: prefer the record's own authoring timestamp, embedded in its
+    filename by `pipeline._record_filename()` at write time
+    (`{YYYYMMDDTHHMMSSffffff}Z-{rand}.json`), and never ask git for a date
+    once that timestamp parses -- so a slow merge-queue slot cannot move it.
+
+    This fixture reproduces the shape directly: one record file, named with
+    the real production format, whose EMBEDDED timestamp says "written 10
+    minutes ago" -- but whose landing commit (standing in for "whenever the
+    merge queue let this in") is backdated 30 days. Pre-fix this read ~30
+    days (stale, escalating); post-fix it reads ~10 minutes (fresh).
+    """
+    repo = _repo(tmp_path)
+    store = repo / REL
+    store.mkdir(parents=True, exist_ok=True)
+
+    written_at = NOW_FIXED - _dt.timedelta(minutes=10)
+    name = f"{written_at.strftime('%Y%m%dT%H%M%S%f')}Z-deadbeef.json"
+    row = _owed("FRESH-BUT-QUEUED")
+    (store / name).write_text(json.dumps(row), encoding="utf-8")
+
+    # The commit that lands this file is backdated 30 days -- standing in for
+    # a merge-queue slot that took a long time to free.
+    when = (NOW_FIXED - _dt.timedelta(days=30)).isoformat()
+    env = dict(os.environ, GIT_AUTHOR_DATE=when, GIT_COMMITTER_DATE=when)
+    subprocess.run(["git", "add", "-A"], cwd=repo, check=True, env=env)
+    subprocess.run(["git", "commit", "-q", "-m", "landed 30 days late"],
+                   cwd=repo, check=True, env=env)
+
+    # Fixture sanity: confirm the landing commit really is the stale,
+    # backdated one, so this test cannot pass for the wrong reason.
+    committer_date = subprocess.run(
+        ["git", "log", "-1", "--format=%cI", "--", str(store / name)],
+        cwd=repo, capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    thirty_days_ago = (NOW_FIXED - _dt.timedelta(days=30)).date().isoformat()
+    assert committer_date.startswith(thirty_days_ago), (
+        "fixture sanity: the landing commit must be the stale, backdated one "
+        f"-- got {committer_date!r}")
+
+    res = pipeline.read_log(store)
+    ages, _transitions = record_ages(repo, REL, res.sources, res.raw,
+                                      ["FRESH-BUT-QUEUED"], now=NOW_FIXED)
+
+    assert ages["FRESH-BUT-QUEUED"] is not None
+    assert ages["FRESH-BUT-QUEUED"] < 1.0, (
+        f"got {ages['FRESH-BUT-QUEUED']!r} days -- the row's OWN filename "
+        f"timestamp says it was written 10 minutes ago; a git-committer-date "
+        f"reading (~30 days, this fixture's landing commit) is the exact "
+        f"failure D11 pins")
+
+
+def test_the_check_fails_on_a_carried_row_and_says_how_to_clear_it(tmp_path, capsys):
+    repo = _repo(tmp_path)
+    stale = _owed("STALE")
+    _history(repo, ([stale], 30), ([stale], 20), ([stale], 1))
+    rc = check(repo, path=REL, now=NOW_FIXED)
     out = capsys.readouterr().out
-    assert "escalate_carried" in out and "STALE" in out
-    # The escalation must name the ways OUT, since re-listing is what it replaces.
-    assert "snoozed_until" in out and "resolution" in out
+    assert rc == 1, out
+    assert "STALE" in out
+    for way_out in ("ACT on it", "MOVE it", "DEFER it", "KILL it"):
+        assert way_out in out, f"the failure must offer {way_out!r}"
 
 
-def test_the_check_passes_a_register_whose_items_are_moving(tmp_path, capsys):
-    # No `automation_path`: the fixture's placeholder does not exist inside a
-    # temporary repo, and this check verifies the path rather than trusting the
-    # declaration — which is the behaviour a sibling test pins.
-    items = [_item(id="A"), _item(id="B")]
-    for item in items:
-        item.pop("automation_path")
-        item["cannot_automate_reason"] = (
-            "no broker API exists for this venue; it is a manual bridge by design")
-    repo = _repo(tmp_path, items)
-    _commit(repo, "register")
-    assert check(repo, now=NOW, path=REL) == 0
+def test_a_row_that_is_not_due_is_the_defer_path_not_a_carry(tmp_path, capsys):
+    """Grading a row waiting behind its own condition would punish the
+    canonical rule's third way out."""
+    repo = _repo(tmp_path)
+    deferred = _owed("LATER", due={"kind": "date", "due_date": "2099-01-01"})
+    _history(repo, ([deferred], 30), ([deferred], 20), ([deferred], 1))
+    assert check(repo, path=REL, now=NOW_FIXED) == 0, capsys.readouterr().out
+
+
+def test_a_row_nobody_owes_the_operator_is_out_of_population(tmp_path, capsys):
+    repo = _repo(tmp_path)
+    lane = _owed("LANE", action="dispatch_lane")
+    _history(repo, ([lane], 30), ([lane], 1))
+    assert check(repo, path=REL, now=NOW_FIXED) == 0, capsys.readouterr().out
+
+
+def test_a_terminal_row_is_out_of_population(tmp_path, capsys):
+    repo = _repo(tmp_path)
+    done = dict(_owed("DONE", state="done"), terminal_reason="answered")
+    _history(repo, ([done], 30), ([done], 1))
+    assert check(repo, path=REL, now=NOW_FIXED) == 0, capsys.readouterr().out
+
+
+def test_zero_observed_transitions_is_reported_as_unproven(tmp_path, capsys):
+    repo = _repo(tmp_path)
+    row = _owed("QUIET")
+    _history(repo, ([row], 30), ([row], 1))
+    check(repo, path=REL, now=NOW_FIXED)
     assert "UNPROVEN" in capsys.readouterr().out, (
         "a register that has never moved anything must say so rather than "
         "reading as a clean green")
 
 
-def test_a_missing_register_fails_rather_than_passing_vacuously(tmp_path):
-    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
-    assert check(tmp_path, now=NOW, path=REL) == 1
+def test_a_missing_register_is_COULD_NOT_LOOK_not_a_pass(tmp_path, capsys):
+    """⚠️ EXIT 2, NOT 0 AND NOT 1. This is the exact state the guard sat in from
+    the 2026-09-21 reset until the E45 re-point: its register did not exist, so
+    it graded nothing. Reading that as a pass is the defect; reading it as a
+    finding would blame the PR for it."""
+    repo = _repo(tmp_path)
+    assert check(repo, path=REL, now=NOW_FIXED) == 2
+    assert "COULD NOT LOOK" in capsys.readouterr().out
+
+
+def test_an_unparseable_register_is_COULD_NOT_LOOK(tmp_path, capsys):
+    repo = _repo(tmp_path)
+    store = repo / REL
+    store.mkdir(parents=True)
+    (store / "broken.json").write_text("{not json\n")
+    _commit(repo, "broken")
+    assert check(repo, path=REL, now=NOW_FIXED) == 2
+    assert "COULD NOT LOOK" in capsys.readouterr().out
+
+
+def test_the_shipped_selftest_plants_its_own_violations():
+    """The guard's own planted controls, run as a test so a broken one is a red
+    suite rather than a line nobody reads in a CI log."""
+    from scripts.ci.check_operator_owed import _self_test
+
+    assert _self_test() == 0

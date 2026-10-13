@@ -1,0 +1,30 @@
+{
+  "_doc": [
+    "THE MANAGER LEASE. Exactly one management session at a time, never two.",
+    "",
+    "Written by scripts/ops/manager_lease.py -- do not hand-edit; a hand-edit that",
+    "breaks the JSON reads as `unreadable`, which REFUSES every claim until it is",
+    "repaired or forced.",
+    "",
+    "READ THIS FILE BEFORE MANAGING ANYTHING:  python3 scripts/ops/manager_lease.py status",
+    "",
+    "Takeover is TIME-BASED. A session that dies cannot hand over, so nothing here",
+    "depends on the outgoing manager cooperating. An outgoing manager still alive",
+    "learns at its next heartbeat that it no longer holds the lease, and stands down.",
+    "",
+    "A CLAIM YOU DID NOT PUSH PROTECTS NOTHING -- another session reads `origin`.",
+    "",
+    "Sub-sessions do NOT depend on this. They keep running with no lease held; what",
+    "pauses is SUPERVISION. docs/claude/work/SESSIONS.json is what a cold manager",
+    "reads to pick them up. Design: docs/claude/work/objects/WO-20260901-PHASE-E.yaml"
+  ],
+  "schema_version": 1,
+  "state": "released",
+  "holder": null,
+  "released_by": "session_01GHpyXT2qssLJsrvXBQRkQF",
+  "released_at": "2026-09-19T09:12:44Z",
+  "previous_holder": "session_01GHpyXT2qssLJsrvXBQRkQF",
+  "forced": false,
+  "force_reason": null,
+  "note": "Stand-down at end of session. Both PRs of this session (#12580, #12581) are merged and every queued row (MI-327..MI-334) is DEFERRED on the operator's budget constraint until the week of 2026-09-22 — so there is no supervision behind this lease. Released rather than heartbeated: extending a lease with nothing behind it is exactly what R6 names. 3 BLOCKED and 6 REVIEW_READY lanes are recorded in SESSIONS.json and are the next manager's first read."
+}

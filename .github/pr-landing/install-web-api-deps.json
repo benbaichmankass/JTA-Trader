@@ -1,0 +1,12 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Adds a Tier-2 system-action (install-web-api-deps) that pip-installs the fixed package webauthn into the interpreter ict-web-api.service actually runs and restarts that unit. Touches no order path, strategies, accounts or risk.",
+  "why": "POST /api/auth/passkey/register/begin 500s with ModuleNotFoundError: webauthn because deploy_pull_restart.sh pip-installs into /usr/bin/python3 while the web-api runs from the repo .venv, so the operator cannot enrol a passkey. The action reads the spec from requirements.txt, takes no free-form input, verifies the import, then restarts. Root cause tracked as DEPLOY-PIP-VENV. Tests: tests/ops/test_system_actions_workflow.py, tests/ops/test_web_auth_config_actions.py.",
+  "recorded_decision": {
+    "kind": "standing_authorization",
+    "ref": "DEPLOY-PIP-VENV UI-UPGRADE-1-AUTH-CONFIG 2026-09-27 data-backed standing authorization; operator asked to sign in 2026-10-12 and the register/begin traceback shows webauthn missing from the web-api venv; manager review 2026-10-12T12:03Z",
+    "evidence": "docs/claude/system-actions.md"
+  }
+}

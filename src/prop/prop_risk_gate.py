@@ -127,14 +127,72 @@ def mode() -> str:
     return raw if raw in _MODES else _DEFAULT_MODE
 
 
+#: What ``enforce_ticket_cap`` did to one ticket.
+CAP_NOT_ENFORCED = "not_enforced"   # mode is off / annotate: size untouched
+CAP_UNCHANGED = "unchanged"         # enforce; the risk is within the cap
+CAP_RESIZED = "resized"             # enforce; the risk exceeded the cap -> cut to it
+CAP_REFUSED = "refused"             # enforce; no cap is known -> the ticket is refused
+
+
+def enforce_ticket_cap(
+    *, risk_usd: float, cap_usd: Optional[float], gate_mode: Optional[str] = None,
+    sizing_mode: str = "",
+) -> Dict[str, Any]:
+    """``enforce`` mode's SIZE action — the part this gate never had until 2026-09-27.
+
+    ``PROP_TICKET_RISK_GATE_MODE=enforce`` was operator-approved on 2026-08-31
+    and read live, but no code path changed a size (PI-20260924-MQ3CDMU6-0002).
+    Operator decision 2026-09-27 ~08:40Z: "Implement it with the sizing
+    decision". The cap is the CURRENT sizing mode's configured cap
+    (``prop_sizing.SizingDecision.cap_usd``): the flat $75 for the current
+    breakout_1 account, the room formula for a fresh one. It is deliberately
+    NOT the live cushion: capping the current account at its cushion would
+    overturn the operator's "keep flat until it passes or dies" in the same
+    popup. The cushion caveat (``caveat_lines``) is unchanged.
+
+    Pure. ``off`` / ``annotate`` never touch the size. Under ``enforce`` a risk
+    above the cap is cut to the cap; an unknown cap refuses — we do not emit a
+    size nobody bounded. Every non-trivial outcome carries a ``cause``.
+    """
+    gm = gate_mode if gate_mode is not None else mode()
+    risk = float(risk_usd)
+    base = {"gate_mode": gm, "sizing_mode": sizing_mode, "cap_usd": cap_usd,
+            "requested_risk_usd": risk}
+    if gm != "enforce":
+        return {**base, "action": CAP_NOT_ENFORCED, "risk_usd": risk, "cause": None}
+    if cap_usd is None:
+        return {**base, "action": CAP_REFUSED, "risk_usd": None,
+                "cause": (f"risk gate ENFORCE: no configured cap for {sizing_mode or 'this'} "
+                          f"sizing — refusing a ${risk:,.2f} ticket rather than emitting "
+                          f"an unbounded size")}
+    cap = float(cap_usd)
+    # half-a-cent tolerance: both sides are rounded to cents upstream.
+    if risk <= cap + 0.005:
+        return {**base, "action": CAP_UNCHANGED, "risk_usd": risk, "cause": None}
+    return {**base, "action": CAP_RESIZED, "risk_usd": round(cap, 2),
+            "cause": (f"risk gate ENFORCE: ticket risk ${risk:,.2f} exceeds the "
+                      f"{sizing_mode or 'configured'}-mode cap ${cap:,.2f} — resized to the cap")}
+
+
 def grade_ticket_risk(
     *,
     risk_usd: Optional[float],
     distance_to_dd_floor_usd: Optional[float] = None,
     distance_to_daily_loss_usd: Optional[float] = None,
     status_freshness: Optional[str] = None,
+    open_risk_state: Optional[str] = None,
+    open_loss_to_stop_usd: Optional[float] = None,
 ) -> Dict[str, Any]:
     """Grade one ticket's risk against the account's remaining cushion.
+
+    ``open_risk_state`` (E66) is ``compute_rule_distance``'s
+    ``after_open_risk_state``. ``None`` means the caller did not supply one and
+    keeps the pre-E66 behaviour, for pure callers. ``no_open_positions`` or
+    ``measured`` means the distances passed in ALREADY have the open
+    positions' loss-to-stop subtracted. Any other value (``stop_unknown``,
+    ``unrealized_unreported``, ``unreadable``) makes the cushion UNKNOWN: an
+    open position whose stop we cannot see may still lose any amount, so what
+    is left for a new ticket cannot be stated.
 
     Pure: values in, verdict out. ``status_freshness`` is the four-state string
     ``compute_rule_distance`` already returns (``ok`` / ``stale`` / ``absent`` /
@@ -154,12 +212,13 @@ def grade_ticket_risk(
         }
 
     fresh_ok = status_freshness == "ok"
+    open_risk_ok = open_risk_state in (None, "no_open_positions", "measured")
     known: list[str] = []
     candidates: list[tuple[str, float]] = []
-    if fresh_ok and distance_to_dd_floor_usd is not None:
+    if fresh_ok and open_risk_ok and distance_to_dd_floor_usd is not None:
         known.append("dd_floor")
         candidates.append(("dd_floor", float(distance_to_dd_floor_usd)))
-    if fresh_ok and distance_to_daily_loss_usd is not None:
+    if fresh_ok and open_risk_ok and distance_to_daily_loss_usd is not None:
         known.append("daily_loss")
         candidates.append(("daily_loss", float(distance_to_daily_loss_usd)))
 
@@ -169,6 +228,15 @@ def grade_ticket_risk(
         if not fresh_ok:
             why = (f"the account-status snapshot is {status_freshness or 'unreadable'}"
                    f" — a cushion that cannot be shown to be current is not a cushion")
+        elif not open_risk_ok:
+            why = ({
+                "stop_unknown": "an open position has no journaled stop, so "
+                                "what it can still lose is unknown",
+                "unrealized_unreported": "the snapshot carries no unrealized "
+                                         "P&L, so open positions cannot be "
+                                         "marked to their stops",
+            }.get(str(open_risk_state),
+                  f"the open positions could not be read ({open_risk_state})"))
         else:
             why = ("neither the DD-floor nor the daily-loss distance could be "
                    "derived from the reported snapshot")
@@ -200,6 +268,8 @@ def grade_ticket_risk(
             "state": UNKNOWN, "risk_usd": float(risk_usd), "cushion_usd": None,
             "binding_limit": None, "limits_known": known, "overshoot_usd": None,
             "status_freshness": status_freshness, "reason": why,
+            "open_risk_state": open_risk_state,
+            "open_loss_to_stop_usd": open_loss_to_stop_usd,
             # Explicitly NOT `cushion_usd` — a stale number must never be read
             # as the live one by a consumer that only checks for a value.
             "last_known_cushion_usd": last_known[1] if last_known else None,
@@ -221,12 +291,18 @@ def grade_ticket_risk(
         "limits_known": known,
         "overshoot_usd": round(risk - cushion, 2) if exceeds else None,
         "status_freshness": status_freshness,
+        "open_risk_state": open_risk_state,
+        "open_loss_to_stop_usd": open_loss_to_stop_usd,
         "reason": (
             f"suggested risk ${risk:,.2f} is at or past the remaining "
             f"${cushion:,.2f} to the {binding.replace('_', ' ')} limit"
             if exceeds else
             f"suggested risk ${risk:,.2f} fits inside the remaining "
             f"${cushion:,.2f} to the {binding.replace('_', ' ')} limit"
+        ) + (
+            f" (after ${open_loss_to_stop_usd:,.2f} still at risk to the stops "
+            f"of open positions)"
+            if open_risk_state == "measured" and open_loss_to_stop_usd else ""
         ),
     }
 
@@ -251,21 +327,74 @@ def grade_account_ticket_risk(
         return grade_ticket_risk(
             risk_usd=risk_usd, status_freshness="unreadable",
         )
+    # E66: grade against the cushion AFTER open positions' loss-to-stop. A
+    # reader that did not report the state is `unreadable`, not "flat" — the
+    # absence of the key must not silently restore the pre-E66 optimism.
+    ors = rd.get("after_open_risk_state") or "unreadable"
+    if ors in ("no_open_positions", "measured"):
+        dd = rd.get("distance_to_dd_floor_after_open_risk_usd")
+        daily = rd.get("distance_to_daily_loss_after_open_risk_usd")
+    else:
+        # Passed so the UNKNOWN verdict can quote a last-known figure; it is
+        # an UPPER bound here (open risk not subtracted), and caveat_lines only
+        # quotes it when even that bound is exceeded.
+        dd = rd.get("distance_to_dd_floor_usd")
+        daily = rd.get("distance_to_daily_loss_usd")
     return grade_ticket_risk(
         risk_usd=risk_usd,
-        distance_to_dd_floor_usd=rd.get("distance_to_dd_floor_usd"),
-        distance_to_daily_loss_usd=rd.get("distance_to_daily_loss_usd"),
+        distance_to_dd_floor_usd=dd,
+        distance_to_daily_loss_usd=daily,
         status_freshness=rd.get("status_freshness"),
+        open_risk_state=ors,
+        open_loss_to_stop_usd=rd.get("open_loss_to_stop_usd"),
     )
 
 
-def caveat_lines(verdict: Dict[str, Any]) -> list[str]:
+def breach_guards_for(account_id: Optional[str]) -> str:
+    """``enforce`` | ``report`` for ``account_id``, read from
+    ``config/accounts.yaml::<account>.risk.breach_guards`` — the same key the
+    RiskManager reads (``src.units.accounts.risk.breach_guards_mode``), so
+    the ticket text and the risk gate can never disagree. Any read failure,
+    a missing account or an unparseable value is ``enforce``."""
+    if not account_id:
+        return "enforce"
+    try:
+        from src.config.accounts_loader import load_accounts_dict
+        from src.units.accounts.risk import breach_guards_mode
+
+        acct = load_accounts_dict().get(account_id) or {}
+        if not isinstance(acct, dict):
+            return "enforce"
+        # SAME source PropRiskManager is built from (prop_risk.py:
+        # ``config.get("risk") or config``), so the two can never disagree.
+        return breach_guards_mode(acct.get("risk") or acct)
+    except Exception:  # noqa: BLE001 — unreadable config is the safe default
+        return "enforce"
+
+
+def caveat_lines(verdict: Dict[str, Any], breach_guards: str = "enforce") -> list[str]:
     """Operator-facing caveat block for a ticket, or ``[]`` when nothing to say.
 
     ``within_cushion`` and ``no_risk_declared`` render nothing — a warning on
     every ticket is the desensitised-alarm P1 this repo treats as its own bug.
+
+    ``breach_guards="report"`` (a replaceable account, operator 2026-09-28):
+    ``exceeds_cushion`` renders ONE informational line instead of the "DO NOT
+    PLACE" block, so neither a human nor the executor reads it as a no-go.
+    ``cushion_unknown`` is NOT softened: that is "we could not look", which
+    stays a caveat in every mode.
     """
     state = verdict.get("state")
+    if state == EXCEEDS and breach_guards == "report":
+        risk = verdict.get("risk_usd") or 0.0
+        cushion = verdict.get("cushion_usd") or 0.0
+        limit = str(verdict.get("binding_limit") or "").replace("_", " ")
+        return [
+            "",
+            f"  ⚠️ Would breach the {limit} limit if stopped out (risk ${risk:,.2f} vs "
+            f"${cushion:,.2f} left): accepted, the account is replaceable "
+            "(breach_guards: report). PLACE AS SHOWN.",
+        ]
     if state == EXCEEDS:
         risk = verdict.get("risk_usd") or 0.0
         cushion = verdict.get("cushion_usd") or 0.0
@@ -304,6 +433,14 @@ def caveat_lines(verdict: Dict[str, Any]) -> list[str]:
                 "live — but the",
                 "     account can only have moved, and a loss since would make it "
                 "SMALLER.",
+            ]
+        if verdict.get("open_risk_state") == "stop_unknown":
+            out += [
+                "     An OPEN position has no journaled stop. Report its CURRENT "
+                "stop with",
+                '     {"kind":"amend","account_id":…,"symbol":…,"direction":…,'
+                '"sl":<stop>}',
+                "     before adding exposure.",
             ]
         out += [
             "     Send a fresh balance (`bal <balance> <equity>`) before placing, "
@@ -385,6 +522,8 @@ def record_ticket_risk_soak(
             "status_freshness": verdict.get("status_freshness"),
             "last_known_cushion_usd": verdict.get("last_known_cushion_usd"),
             "last_known_exceeded": verdict.get("last_known_exceeded"),
+            "open_risk_state": verdict.get("open_risk_state"),
+            "open_loss_to_stop_usd": verdict.get("open_loss_to_stop_usd"),
             "reason": verdict.get("reason"),
         }
         from src.utils.paths import runtime_logs_dir
@@ -396,7 +535,7 @@ def record_ticket_risk_soak(
 
 
 __all__ = [
-    "grade_ticket_risk", "grade_account_ticket_risk", "caveat_lines", "mode",
+    "grade_ticket_risk", "grade_account_ticket_risk", "caveat_lines", "mode", "breach_guards_for",
     "record_ticket_risk_soak",
     "WITHIN", "EXCEEDS", "UNKNOWN", "NO_RISK",
 ]

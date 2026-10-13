@@ -411,6 +411,25 @@ def declared_levers_present(cfg: dict) -> list[str]:
             if any(cfg.get(k) is not None for k in keys)]
 
 
+def _forward_side(a: list, cfg: dict) -> None:
+    """Forward the leg's live direction gate to the harness (donchian, pullback).
+
+    Live honours ``side_filter: long|short|both`` (legacy ``long_only: true`` ->
+    long). This wrapper forwarded ONLY ``long_only``, so a ``side_filter: short``
+    leg (``trend_donchian_xrp_4h`` since 2026-07-30, ``sol_pullback_2h``) was swept
+    on a TWO-SIDED book -- trades the live leg never takes. Found 2026-10-07 by
+    lane EXIT-PARITY-CHECK: the 2026-10-04 ``trail4`` pass on
+    ``trend_donchian_xrp_4h`` rests on such a book. ``both``/absent passes no
+    flag (harness default), so every non-filtered leg's base is unchanged.
+    """
+    if cfg.get("long_only"):
+        a.append("--long-only")
+        return
+    sf = cfg.get("side_filter")
+    if sf in ("long", "short"):
+        a.extend(["--side-filter", sf])
+
+
 def base_args(name: str, cfg: dict, fam: str, data: str, resample: str | None,  # inert: `name` — the leg id, kept because FIVE external callers pass it positionally (m20_flip_replay_sweep, m21_entry_head_round, m20_exit_head_round, m21_entry_sweep, and this module); every arg is built from `cfg`, so dropping it would be a cross-script signature break for no behavioural gain. It affects NOTHING here — do not add a doc claiming otherwise.
               tp_cap_pct: float = 0.0,
               fee_bps_roundtrip: float | None = None,
@@ -486,8 +505,7 @@ def base_args(name: str, cfg: dict, fam: str, data: str, resample: str | None,  
         opt("--vol-skip-below-pctl", "vol_skip_below_pctl")
         opt("--vol-pctl-window", "vol_pctl_window")
         declared_levers()
-        if cfg.get("long_only"):
-            a.append("--long-only")
+        _forward_side(a, cfg)
     elif fam == "squeeze":
         for flag, key in (("--bb-period", "bb_period"), ("--bb-std", "bb_std"),
                           ("--kc-mult", "kc_mult"), ("--atr-period", "atr_period"),
@@ -550,6 +568,7 @@ def base_args(name: str, cfg: dict, fam: str, data: str, resample: str | None,  
         opt("--vol-skip-below-pctl", "vol_skip_below_pctl")
         opt("--vol-pctl-window", "vol_pctl_window")
         declared_levers()
+        _forward_side(a, cfg)
     # FEE BAND. Passed through verbatim when set, so a fee-survival A/B measures
     # the SAME base at two cost levels rather than two different books. None means
     # "the harness's own default" and is recorded as such -- never silently stamped
@@ -913,12 +932,93 @@ def shipped_lever_cells(cfg: dict,
     return out
 
 
+def momentum_stale_cells() -> list[tuple[str, str, list[str]]]:
+    """MOMENTUM-TRAIL-LEVER `momentum_stale` grid (memo § 4.2): N in {8, 12}
+    (the two shipped stale bar counts) x A in {20, 25} (the regime detector's
+    chop / trending cut-points)."""
+    return [(f"ms{n}_a{a}", "momentum_stale",
+             ["--momentum-stale-bars", str(n),
+              "--momentum-stale-adx-below", str(a)])
+            for n in (8, 12) for a in (20, 25)]
+
+
+# GEOM-B1: the two TP-GEOMETRY lever columns. Backtest-only today -- the LIVE
+# producer of a `{"tp": ...}` verdict is lane TP-DOCTRINE's (BUILD B1) -- and
+# graded by the same Path A/B gate and walk-forward as every other column.
+TP_GEOMETRY_LEVERS = ("tp_extend", "tp_retarget")
+#: Families whose harness carries the `--tp-*` flags (scripts/research/tp_geometry.py).
+TP_GEOMETRY_FAMILIES = ("donchian", "pullback", "scalp")
+#: Calibration-first target grid for the trail families, in R. INFERRED from
+#: docs/research/mi307-offline-mfe-2026-09-18.json: the predictive target on the
+#: real-money legs sits at 2.0-2.5R (reach-rate 25-40%). The leg's own FINITE
+#: declared `tp_r` is added when it differs.
+TP_GEOMETRY_TARGETS_R = (2.0, 2.5)
+
+
+def _tp_geometry_cells(cfg: dict, fam: str | None,
+                      skipped: list | None = None
+                      ) -> list[tuple[str, str, list[str]]]:
+    """The `tp_extend` / `tp_retarget` cells for one leg (opt-in, see `cells_for`).
+
+    `tp_extend`: target x approach_frac x extend_r x max_extends, thesis `native`
+    (the strategy's own continuation test). `tp_retarget`: target x
+    {atr_rescale, stall_pull_in x stall bars}. On the trail families the target
+    is a FINITE entry-time one from `TP_GEOMETRY_TARGETS_R` plus the leg's own
+    declared finite `tp_r`; on the scalp the lever acts on the LIVE `tp_at_r`
+    bracket itself (no `--tp-target-r`), so the cell measures revising the
+    target that actually trades.
+    """
+    if fam not in TP_GEOMETRY_FAMILIES:
+        if skipped is not None:
+            skipped.append({"cell": None, "lever": "tp_extend,tp_retarget",
+                            "reason": f"tp_geometry_not_in_harness:{fam}"})
+        return []
+    if fam == "scalp":
+        targets: list[tuple[str, list[str]]] = [("live", [])]
+    else:
+        vals = list(TP_GEOMETRY_TARGETS_R)
+        declared = cfg.get("tp_r")
+        try:
+            d = float(declared) if declared is not None else None
+        except (TypeError, ValueError):
+            d = None
+        if d is not None and 0.0 < d < 50.0 and d not in vals:
+            vals.append(d)
+        targets = [(f"t{v:g}", ["--tp-target-r", f"{v:g}"]) for v in sorted(vals)]
+    # Grids as REGISTERED in the units' decision rules (before any run):
+    #   trail families  RQ-20261007-001/-003: approach (0.75, 0.85) x extend_r (0.5, 1.0)
+    #                   x max_extends (1, 3); stall bars (6, 10)
+    #   scalp           RQ-20261007-004: approach 0.85 x extend_r (0.5, 1.0); stall bars (3, 6)
+    appr_grid = (0.85,) if fam == "scalp" else (0.75, 0.85)
+    ext_grid = (0.5, 1.0)
+    max_grid = (3,) if fam == "scalp" else (1, 3)
+    stall_grid = (3, 6) if fam == "scalp" else (6, 10)
+    out: list[tuple[str, str, list[str]]] = []
+    for ttag, targs in targets:
+        for appr in appr_grid:
+            for ext_r in ext_grid:
+                for mx in max_grid:
+                    out.append((f"tpx_{ttag}_a{appr:g}_e{ext_r:g}_m{mx}", "tp_extend",
+                                targs + ["--tp-extend-r", f"{ext_r:g}",
+                                         "--tp-approach-frac", f"{appr:g}",
+                                         "--tp-max-extends", str(mx),
+                                         "--tp-thesis", "native"]))
+        out.append((f"tpr_atr_{ttag}", "tp_retarget",
+                    targs + ["--tp-retarget-mode", "atr_rescale"]))
+        for stall in stall_grid:
+            out.append((f"tpr_stall{stall}_{ttag}", "tp_retarget",
+                        targs + ["--tp-retarget-mode", "stall_pull_in",
+                                 "--tp-retarget-stall-bars", str(stall)]))
+    return out
+
+
 def cells_for(cfg: dict, fam: str | None = None,
               skipped: list | None = None,
               *,
               without_declared_levers: frozenset[str] | None = None,
               tp_cap_pct: float = 0.0,
               harness: str | None = None,
+              tp_geometry_cells: bool = False,
               ) -> list[tuple[str, str, list[str]]]:
     """(cell_tag, matrix_lever, extra_args). Config-exact base is implied.
 
@@ -933,6 +1033,12 @@ def cells_for(cfg: dict, fam: str | None = None,
     run, and two rows carrying one tag while measuring two books is the exact
     provenance failure the run-level identity fields exist to prevent. Sweep the
     alternatives in a normal run; use this arm to grade what is already live.
+
+    ``tp_geometry_cells`` (default False) appends the `tp_extend` / `tp_retarget`
+    cells (`_tp_geometry_cells()` above). OPT-IN, not default, on purpose: they are
+    ~24 + ~9 cells per leg, so emitting them by default would multiply every
+    existing sweep and change what an empty `levers` input means. `main()` sets
+    it only when `--levers` names one of them.
     """
     if without_declared_levers:
         dropped = [lev for lev in declared_levers_present(cfg)
@@ -1062,6 +1168,57 @@ def cells_for(cfg: dict, fam: str | None = None,
         for tag, extra in vt:
             out.append((tag, "vol_trail",
                         extra + ["--trail-vol-tight-mult", str(tight)]))
+    # MOMENTUM-TRAIL-LEVER cells (memo docs/research/cross-signal-exits-2026-10-07.md
+    # § 4.1 / § 4.2): a stop that reads MOMENTUM (Wilder ADX), not price path.
+    # `momentum_trail` tightens the trail on bars where ADX < A (k=0) or ADX < A
+    # AND ADX_j < ADX_{j-3} (k=3); T is the same config-relative tight mult the
+    # decay / vol cells use and must sit BELOW the leg's own trail (the lever can
+    # only tighten, and the harness CLI refuses T >= trail_mult). `momentum_stale`
+    # is a time stop keyed to ADX decay instead of open R. trend + pullback only:
+    # squeeze computes no ADX. On a leg that ships a stale stop the COMBO cells
+    # here run against the config-exact base. The stale-SWAP base (shipped
+    # R-keyed stale removed, momentum_stale in its place) is NOT emitted: the
+    # lever-off arm is pinned to `shipped_*` cells only
+    # (tests/test_m20_fleet_capital_report.py, the invariant the arm rests on).
+    if fam in ("donchian", "pullback"):
+        if tm is not None:
+            tight = max(1.5, round(float(tm) / 2.0, 1))
+            if tight < float(tm):
+                for a in (20, 25):
+                    for k in (0, 3):
+                        extra = ["--trail-adx-below", str(a)]
+                        if k:
+                            extra += ["--trail-adx-falling-bars", str(k)]
+                        out.append((f"adx{a}_k{k}_t{tight:g}", "momentum_trail",
+                                    extra + ["--trail-adx-tight-mult",
+                                             str(tight)]))
+            elif skipped is not None:
+                skipped.append({"cell": "adx*", "lever": "momentum_trail",
+                                "reason": f"tight_mult_{tight:g}_not_below_trail_mult_{float(tm):g}"})
+        out += momentum_stale_cells()
+    if tp_geometry_cells:
+        out.extend(_tp_geometry_cells(cfg, fam, skipped))
+    return out
+
+
+def tp_geometry_entry(c_is: dict, c_oos: dict, tp_base: dict | None) -> dict:
+    """The per-cell TP-geometry record: activity, the CALIBRATION share beside the
+    base's, and whether the cell kept it (RQ-20261007-001 statistic (a)).
+
+    REPORTED, never graded here -- the Path A/B gate grades P&L; the doctrine
+    grades calibration BEFORE P&L, so the unit's rule reads this block. `None`,
+    not 0.0, whenever a side could not be read: *we did not look*.
+    """
+    out: dict = {}
+    for w, c in (("IS", c_is), ("OOS", c_oos)):
+        g = c.get("tp_geometry") or {}
+        b = ((tp_base or {}).get(w) or {}).get("tp_geometry") or {}
+        cs, bs = g.get("calibration_share"), b.get("calibration_share")
+        out[w] = {
+            "cell": g or None, "base": b or None,
+            "calibration_share_cell": cs, "calibration_share_base": bs,
+            "calibration_ge_base": (None if cs is None or bs is None else cs >= bs),
+        }
     return out
 
 
@@ -1612,9 +1769,19 @@ def summary_split_line(leg: str, v: dict) -> str:
     mode = v.get("split_mode")
     if v.get("split_fallback"):
         lifetime = v.get("split_lifetime_trades")
+        # ⚠️ NAME THE CAUSE, NOT ONLY THE STAGE. `harness_rc` says WHERE it
+        # failed and nothing about WHY, and the why was already captured:
+        # `resolve_split` stores the subprocess's stderr tail in
+        # `split_detail` and every reader then dropped it. A plain
+        # `ModuleNotFoundError: No module named 'pandas'` cost two relay
+        # round-trips to see (BL-20260818-HARNESS-RC-COLLAPSES-THE-ACTUAL-ERROR)
+        # — the same "message names a stage rather than a cause" shape as
+        # BL-20260811-TRAINER-RELAY-BLAMES-THE-VM-WHEN-ONLY-THE-COMMENT-POST-FAILED.
+        detail = str(v.get("split_detail") or "").strip()
         return (f"- split (`{leg}`): **{split}** — FELL BACK to the `--split` "
                 f"date ({v['split_fallback']}"
                 + (f", lifetime={lifetime} trades" if lifetime is not None else "")
+                + (f"; cause: {detail}" if detail else "")
                 + f"); the `{mode}` derivation could not be satisfied, so this "
                 f"boundary was NOT chosen for this leg")
     if mode != "date":
@@ -1626,6 +1793,70 @@ def summary_split_line(leg: str, v: dict) -> str:
                 f"same date")
     return (f"- split (`{leg}`): **{split}** — fixed calendar date "
             f"(split_mode=`date`), the same for every leg")
+
+
+def fleet_grading_census(verdicts: dict) -> dict:
+    """How many cells did this run actually GRADE, and how many could it not?
+
+    Pure and side-effect-free so it can be tested directly — the block that
+    calls it lives inside ``main()`` and is not otherwise reachable from a test,
+    the same reasoning as :func:`summary_split_line`.
+
+    ⚠️ **`insufficient_base` IS THE HONEST STATE AND MUST STAY.** The defect
+    this answers is not that cells come back ungraded — it is that nothing
+    said so ABOVE the per-cell level, so *"we tested it and it failed"* and
+    *"we could not test it"* read identically at the level anyone actually
+    reads (BL-20260818-UNGRADED-CELLS-DO-NOT-SURFACE-AT-THE-FLEET-LEVEL).
+    Measured instance: `stale8_lt0R` on `xrp_pullback_2h` sat
+    `insufficient_base` at OOS base 23 against the floor of 25, the per-cell
+    record even naming the remedy — and the session-level reading was that the
+    leg's hold-conviction levers had been tried and had failed. Re-running at a
+    larger `--split-target-oos` graded all 14 cells and gave a real answer.
+
+    THREE RUN STATES, never collapsed, because they are three different facts:
+
+    * ``no_cells``        — the run produced no cells at all. **Not a result.**
+      A broken invocation looks exactly like this, and an empty dated directory
+      is worse than no directory because the next session's glob finds it
+      (BL-20260818-SWEEP-REPORTS-DONE-AFTER-MEASURING-ZERO-CELLS).
+    * ``all_ungraded``    — cells exist and NONE reached a verdict. *We could
+      not look*, which is not *we looked and found nothing*.
+    * ``graded``          — at least one cell was graded; ``cells_ungraded``
+      still says how many were not, so a majority-ungraded leg cannot be
+      reported as assessed.
+
+    Returns per-leg counts too, so a caller can name the leg rather than only
+    the fleet total.
+    """
+    UNGRADED = {"insufficient_base"}
+    per_leg: dict = {}
+    total = ungraded = 0
+    harness_error = 0
+    for leg, leg_v in sorted((verdicts or {}).items()):
+        if not isinstance(leg_v, dict):
+            continue
+        if leg_v.get("status") == "harness_error":
+            harness_error += 1
+            per_leg[leg] = {"cells": 0, "ungraded": 0, "harness_error": True}
+            continue
+        entries = [e for es in (leg_v.get("levers") or {}).values()
+                   for e in (es or [])]
+        n = len(entries)
+        u = sum(1 for e in entries
+                if isinstance(e, dict) and e.get("verdict") in UNGRADED)
+        per_leg[leg] = {"cells": n, "ungraded": u, "harness_error": False}
+        total += n
+        ungraded += u
+    if total == 0:
+        state = "no_cells"
+    elif ungraded >= total:
+        state = "all_ungraded"
+    else:
+        state = "graded"
+    return {"run_state": state, "legs_total": len(per_leg),
+            "legs_harness_error": harness_error,
+            "cells_total": total, "cells_ungraded": ungraded,
+            "cells_graded": total - ungraded, "per_leg": per_leg}
 
 
 def insufficient_base_reason(base_oos_n, floor: int, split: str,
@@ -2205,7 +2436,9 @@ def main(argv: list[str]) -> int:
                          "config/strategies.yaml.")
     ap.add_argument("--levers", default=None,
                     help="CSV of matrix levers to restrict cells to (e.g. "
-                         "trail_decay) — skips already-verdicted cells on a re-run")
+                         "trail_decay) — skips already-verdicted cells on a re-run. "
+                         "tp_extend / tp_retarget (GEOM-B1: a take-profit that "
+                         "moves) are OPT-IN: their cells exist only when named here.")
     ap.add_argument("--list", action="store_true",
                     help="print the run plan (leg -> harness/data/cells) and exit")
     ap.add_argument("--fee-bps-roundtrip", type=float, default=None,
@@ -2293,6 +2526,8 @@ def main(argv: list[str]) -> int:
     only = set(a.only.split(",")) if a.only else None
     fams = set(a.family.split(",")) if a.family else None
     levers = set(a.levers.split(",")) if a.levers else None
+    # GEOM-B1: the tp_extend / tp_retarget cells exist only when asked for by name.
+    tp_cells = bool(levers and levers & set(TP_GEOMETRY_LEVERS))
     without_levers = frozenset(a.without_declared_lever or ())
     if without_levers and a.census:
         # The census measures ONE base per leg and grades nothing. Running it
@@ -2328,7 +2563,8 @@ def main(argv: list[str]) -> int:
         inert: list = []
         cells = cells_for(cfg, fam, skipped=inert,
                           without_declared_levers=without_levers,
-                          tp_cap_pct=a.tp_cap_pct, harness=harness)
+                          tp_cap_pct=a.tp_cap_pct, harness=harness,
+                          tp_geometry_cells=tp_cells)
         # WHAT THIS LEG ACTUALLY HAD REMOVED, against what the run asked for.
         # A leg that never declared the requested lever produces a base
         # byte-identical to the config-exact base; recording only the run-level
@@ -2540,10 +2776,14 @@ def main(argv: list[str]) -> int:
         leg_split, split_meta = resolve_split(
             p["harness"], p["base"], a.split_mode, a.split, a.split_target_oos)
         if split_meta.get("split_fallback"):
+            # The cause rides stdout too — the sweep's stdout is what a
+            # session reads first, and `harness_rc` alone sends it hunting.
+            _sd = str(split_meta.get("split_detail") or "").strip()
             print(f"    split: FELL BACK to {leg_split} "
                   f"({split_meta['split_fallback']}"
                   + (f", lifetime={split_meta['split_lifetime_trades']}"
-                     if "split_lifetime_trades" in split_meta else "") + ")")
+                     if "split_lifetime_trades" in split_meta else "")
+                  + (f"; cause: {_sd}" if _sd else "") + ")")
         elif a.split_mode != "date":
             print(f"    split: {leg_split} (targeting {a.split_target_oos} OOS "
                   f"trades of {split_meta.get('split_lifetime_trades')} lifetime "
@@ -2776,6 +3016,18 @@ def main(argv: list[str]) -> int:
             else:
                 print(f"   p80 cell skipped (p80={p80}, tm={tm_val})",
                       flush=True)
+        # GEOM-B1: the config-exact base read WITH `--tp-report` (no exit changes),
+        # so a tp cell's calibration share has a base to be read beside. Kept out of
+        # `base_is`/`base_oos`: the graded base is untouched.
+        tp_base = None
+        if any(lv in TP_GEOMETRY_LEVERS for _, lv, _ in p["cells"]):
+            tp_base = {
+                "IS": run_cell(p["harness"], p["base"] + ["--tp-report"], end=leg_split),
+                "OOS": run_cell(p["harness"], p["base"] + ["--tp-report"],
+                                start=leg_split)}
+            leg_v["tp_geometry_base"] = {
+                w: (r.get("tp_geometry") or {"read_state": "error"})
+                for w, r in tp_base.items()}
         for tag, lever, extra in p["cells"]:
             args = p["base"] + extra
             c_is = run_cell(p["harness"], args, end=leg_split)
@@ -2799,6 +3051,8 @@ def main(argv: list[str]) -> int:
             # be unable to answer the question it was added for.
             entry["capital"] = {"IS": capital_delta(c_is, base_is),
                                 "OOS": capital_delta(c_oos, base_oos)}
+            if lever in TP_GEOMETRY_LEVERS:
+                entry["tp_geometry"] = tp_geometry_entry(c_is, c_oos, tp_base)
             # THE MIN-OOS-TRADES FLOOR (operator decision 2026-08-11: 25).
             #
             # Path A's `beats()` had NO minimum trade count, so a cell cleared it
@@ -2982,6 +3236,14 @@ def main(argv: list[str]) -> int:
         _all_entries = [e for es in leg_v["levers"].values() for e in es]
         leg_v["selection"] = {
             "cells_tried": len(_all_entries),
+            # ⚠️ TRIED IS NOT GRADED. A cell that hit the OOS-trades floor is
+            # `insufficient_base` — the honest state — but counted only under
+            # `cells_tried` it reads as assessed, so "we tested it and it
+            # failed" and "we could not test it" become one number at the
+            # level anyone reads
+            # (BL-20260818-UNGRADED-CELLS-DO-NOT-SURFACE-AT-THE-FLEET-LEVEL).
+            "cells_ungraded": sum(1 for e in _all_entries
+                                  if e.get("verdict") == "insufficient_base"),
             "cells_withheld_inert": len(leg_v["inert_cells"]),
             "path_a_pass": sum(1 for e in _all_entries
                                if e.get("verdict") == "PASS"),
@@ -3043,8 +3305,27 @@ def main(argv: list[str]) -> int:
     for leg, leg_v in verdicts.items():
         if isinstance(leg_v, dict):
             leg_v["regime_gate_delta"] = regime_gate_delta(leg, off_legs)
+    # THE FLEET-LEVEL GRADING CENSUS. See fleet_grading_census() for why the
+    # three run states are not collapsed. Printed per leg as well as written,
+    # because "a run containing an insufficient_base cell says so without
+    # opening the JSON" is the resolution criterion.
+    _census = fleet_grading_census(verdicts)
+    for _leg, _c in _census["per_leg"].items():
+        if _c["harness_error"]:
+            print(f"    {_leg}: HARNESS ERROR — 0 cells")
+        elif _c["ungraded"]:
+            print(f"    {_leg}: {_c['cells']} cells, {_c['ungraded']} UNGRADED "
+                  f"(insufficient_base)")
+    if _census["run_state"] != "graded":
+        print(f"    !! fleet run_state={_census['run_state']} — "
+              f"{_census['cells_graded']} of {_census['cells_total']} cells "
+              f"graded. This run is NOT a measurement.")
     (run_dir / "verdicts.json").write_text(json.dumps(
         {"generated_at": datetime.now(timezone.utc).isoformat(),
+         # ⚠️ TOP-LEVEL RUN STATE, so a glob-based reader cannot mistake an
+         # empty or wholly-ungraded run for a measurement without branching on
+         # it. The per-cell records were always honest; nothing rolled them up.
+         "grading_census": _census,
          "split_fallback_date": a.split, "split_mode": a.split_mode,
          "split_target_oos": a.split_target_oos, "tp_cap_pct": a.tp_cap_pct,
          # The router value ACTUALLY used by the harness runs above — recorded
@@ -3368,9 +3649,53 @@ def main(argv: list[str]) -> int:
                     f"| {_r['base_max_dd']} | {_r['d_net_r']} | {_r['d_max_dd']} "
                     f"| {_r['allowed_d_max_dd']} | {_grant}% | {_r['headroom']} "
                     f"| {'Y' if _r['passes'] else 'N'} |")
+    # The grading census in SUMMARY.md as well as stdout and verdicts.json —
+    # the criterion is that a run containing an insufficient_base cell "says so
+    # without opening the JSON", and SUMMARY.md is the human artifact.
+    lines.append("")
+    lines.append("## Grading census")
+    lines.append("")
+    lines.append(f"- run_state: **{_census['run_state']}** — "
+                 f"{_census['cells_graded']} of {_census['cells_total']} cells "
+                 f"graded, {_census['cells_ungraded']} UNGRADED "
+                 f"(`insufficient_base`), {_census['legs_harness_error']} leg(s) "
+                 f"with a harness error.")
+    lines.append("- `insufficient_base` is the HONEST state, not a failure of "
+                 "the lever: it means the OOS base did not reach the floor, so "
+                 "the cell could not be graded either way. A leg whose cells "
+                 "are majority-ungraded must NOT be reported as assessed.")
+    for _leg, _c in _census["per_leg"].items():
+        if _c["harness_error"]:
+            lines.append(f"  - `{_leg}`: HARNESS ERROR — 0 cells")
+        elif _c["ungraded"]:
+            lines.append(f"  - `{_leg}`: {_c['cells']} cells, "
+                         f"**{_c['ungraded']} UNGRADED**")
     (run_dir / "SUMMARY.md").write_text("\n".join(lines) + "\n")
     print(f"capital: {len(measured)}/{len(dist)} cells measured")
-    print("done ->", run_dir)
+    # ⚠️ A RUN THAT MEASURED NOTHING MUST NOT LOOK LIKE ONE THAT MEASURED
+    # EVERYTHING. Until 2026-09-13 this printed a bare `done ->` and returned
+    # 0 after 0/0 cells, having already written SUMMARY.md, results.jsonl,
+    # capital_distribution.json and verdicts.json into a dated directory — so
+    # nothing in the ARTIFACT SET distinguished a broken invocation from a
+    # complete sweep, and only the `0/0` on stdout did. A later session globs
+    # the directory, not the stdout. Measured cost: a session read such a run
+    # as a result and reported a conclusion from it; the true reading was "my
+    # invocation was broken" (bare python3, no pandas).
+    # BL-20260818-SWEEP-REPORTS-DONE-AFTER-MEASURING-ZERO-CELLS.
+    #
+    # This is `silent-empty-guard`'s class one level up: that guard catches a
+    # PRODUCER returning [] from a broad except; this is a whole RUN returning
+    # an empty artifact set under a success banner.
+    #
+    # THE COUNT RIDES THE BANNER and the EXIT CODE is non-zero, so both the
+    # human and the shell see it. `cells_total`/`cells_measured` were already
+    # in capital_distribution.json — the denominator existed and no top-level
+    # reader was made to look at it.
+    if not measured:
+        print(f"done (0 of {len(dist)} cells measured — NOTHING WAS "
+              f"MEASURED, this is not a result) -> {run_dir}")
+        return 2
+    print(f"done ({len(measured)} of {len(dist)} cells measured) -> {run_dir}")
     return 0
 
 

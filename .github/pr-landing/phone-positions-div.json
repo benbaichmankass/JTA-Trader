@@ -1,0 +1,11 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "Phone executor (page-side exec.js only) learns to read Breakout's DIV-based Positions grid, which the first live read (2026-10-12 19:40Z) reported as positions_state=no_table. Read-only: no order path, no tab clicks beyond the existing ones, reconcile stays report_only. All #17745 fail-closed rules kept (flat only with empty text inside the tab-bounded panel or tab count 0; >15 rows refuse; count mismatch refuse; digit-masked header dump on any unclean read). Held for operator approval because the APK ships to the live prop phone. Scope add (manager, operator-directed acceptance test): server src/prop/phone_reconcile.py fill_unpriced_closes fills the MEASURED exit price + realized P&L of journal rows ALREADY closed with exit NULL from a clean Closed-orders read; it writes even while reconcile is report_only because it never decides open-vs-closed.",
+  "hold_text": "MANAGER DISPATCH (session_01G16FfyYSmDPQuuW55BuTmK, 2026-10-12), quoted: \"Landing: PR, tier 2, landing hold, hold_reason tier_2_3_needs_approval; do NOT write recorded_decision.\" Tier-2 change shipped to the live prop phone via the APK, so the operator approves the merge.",
+  "recorded_decision": {
+    "kind": "operator_decision",
+    "ref": "PHONE-POSITIONS-DIV operator 2026-10-12 verbatim: 'we need to be able to track the prop trades - no upnl isn't a solution' and 'I don't want to give it because we need to verify that the app can fulfill this function' -- operator directed the app to read the Breakout exits itself; merged by manager session_01G16FfyYSmDPQuuW55BuTmK under the 2026-09-27 data-backed Tier-2 standing authorization (read-only, no order path, reconcile stays report_only; revert = revert PR + reinstall prior APK)"
+  }
+}

@@ -150,6 +150,8 @@ def _prop_menu_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📋 Prop report prompt", callback_data=CB_PROP_PROMPT)],
         [InlineKeyboardButton("❓ Report format", callback_data=CB_PROP_HELP)],
+        # TELEGRAM-CHANNELS part C: shared settings menu, TRADES channel.
+        [InlineKeyboardButton("⚙️ Settings", callback_data="ns:open:trades")],
     ])
 
 
@@ -304,6 +306,14 @@ async def _on_operator_photo(update: Update, _: ContextTypes.DEFAULT_TYPE) -> No
     await update.message.reply_text(reply or "⚠ No report found in that image.")
 
 
+def _html_to_plain(html: str) -> str:
+    """Strip Telegram-HTML tags and unescape entities — the plain fallback."""
+    import html as _html
+    import re as _re
+
+    return _html.unescape(_re.sub(r"<[^>]+>", "", html))
+
+
 async def _drain_pending_claude_pings(context: ContextTypes.DEFAULT_TYPE) -> None:
     """JobQueue task — scan the Claude inbox, send each, delete on success.
 
@@ -347,8 +357,15 @@ async def _drain_pending_claude_pings(context: ContextTypes.DEFAULT_TYPE) -> Non
                 pass
             continue
 
-        prefix = _PRIORITY_ICONS.get(priority, _PRIORITY_ICONS["normal"])
-        text = f"{prefix} {body}"
+        # A self-titled HTML ping (the sectioned manager update) carries its own
+        # header + parse_mode; plain pings keep the priority prefix. Same rule
+        # as the failover drainer in src/bot/cloud_notifier.py.
+        parse_mode = payload.get("parse_mode") or None
+        if parse_mode:
+            text = body
+        else:
+            prefix = _PRIORITY_ICONS.get(priority, _PRIORITY_ICONS["normal"])
+            text = f"{prefix} {body}"
 
         # DESTINATION IS RESOLVED, NOT HARDCODED (2026-09-01).
         #
@@ -373,29 +390,38 @@ async def _drain_pending_claude_pings(context: ContextTypes.DEFAULT_TYPE) -> Non
         # is byte-for-byte the previous behaviour. The change cannot lose a ping;
         # at worst it delivers exactly where it delivered yesterday.
         route = _claude_route()
-        try:
-            from src.runtime.notify import send_telegram_direct
+        from src.runtime import telegram_split
+        from src.runtime.notify import send_telegram_direct
 
-            sent = send_telegram_direct(
-                text, parse_mode=None, mirror_to_fcm=False,
-                bot_token=route.token, chat_id=route.chat_id,
-            )
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(
-                "claude ping inbox: send failed for %s via %s — %s",
-                name, route.describe(), exc,
-            )
-            continue   # leave file in place; retry next tick
+        def _send(part: str) -> bool:
+            try:
+                return send_telegram_direct(
+                    part, parse_mode=parse_mode, mirror_to_fcm=False,
+                    bot_token=route.token, chat_id=route.chat_id,
+                )
+            except Exception:  # noqa: BLE001
+                if not parse_mode:
+                    raise
+                # ⚠️ An HTML body Telegram refuses to parse must not loop on
+                # the inbox forever: deliver it once as PLAIN text instead.
+                logger.warning("claude ping inbox: %s HTML send failed — "
+                               "retrying as plain text", name)
+                return send_telegram_direct(
+                    _html_to_plain(part), parse_mode=None, mirror_to_fcm=False,
+                    bot_token=route.token, chat_id=route.chat_id,
+                )
 
-        # Only delete on a CONFIRMED send. send_telegram_direct returns False
-        # (no raise) when credentials are missing — pre-2026-06-23 that silent
-        # skip was treated as success and the file was deleted, silently losing
-        # the ping. Keep the file so a transient creds gap retries instead.
-        if not sent:
-            logger.warning(
-                "claude ping inbox: send skipped (creds missing?) for %s — "
-                "keeping for retry", name,
-            )
+        # TELEGRAM-CHANNELS (2026-10-11): an oversized body is SPLIT into
+        # <=4096-char parts and delivered in order (resuming after a partial
+        # failure); a repeated non-length 4xx moves the file aside as .broken
+        # with ONE red flag on SYSTEM. Before this, a too-long ping failed every
+        # 5 s forever (measured: ~660 failures/hour on one ~50h-old file).
+        # Only a CONFIRMED send of every part deletes the file — an unconfirmed
+        # send (creds missing) keeps it for retry, as before.
+        outcome = telegram_split.process_ping(
+            path, payload, text, parse_mode, _send,
+            where=f"ict-claude-bridge via {route.describe()}")
+        if outcome != "sent":
             continue
 
         try:
@@ -445,6 +471,11 @@ def main() -> None:
     app.add_handler(CommandHandler("start", start_cmd))
     app.add_handler(CommandHandler("menu", menu_cmd))
     app.add_handler(CommandHandler("testexpiry", testexpiry_cmd))
+    # TELEGRAM-CHANNELS part C: this bot polls the TRADES channel; the ONE
+    # settings menu is mounted before the catch-all so `ns:` taps reach it.
+    from src.bot.notification_settings_menu import register as _register_settings
+
+    _register_settings(app, "trades", service="ict-claude-bridge")
     app.add_handler(CallbackQueryHandler(on_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, _on_operator_message))
     app.add_handler(MessageHandler(filters.PHOTO, _on_operator_photo))

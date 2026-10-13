@@ -33,6 +33,7 @@ from fastapi import APIRouter, HTTPException, Query, Response
 
 from src.utils.paths import trade_journal_db_path
 from src.web.api._asset_class import asset_class_for_symbol
+from src.web.api._since import parse_since
 from src.web.api._clean_trades import (
     account_class_wire,
     exclude_superseded_predicate,
@@ -96,6 +97,7 @@ _SIDE_MAP = {
 # `reconciler`; the four-known-reasons union matches the dashboard's
 # `ClosedTrade.closeReason` type so renderers can switch on it.
 _KNOWN_REASONS = {"tp", "sl", "manual"}
+_CROSS_REASONS = {"sl_cross": "sl", "tp_cross": "tp"}
 
 
 def _normalise_side(direction: Any) -> str:
@@ -110,6 +112,11 @@ def _normalise_close_reason(exit_reason: Any) -> Optional[str]:
     raw = exit_reason.strip().lower()
     if raw in _KNOWN_REASONS:
         return raw
+    # A monitor-decided close at the stop/target level is still a stop/target
+    # exit; `strategies.py` already folds them the same way. Without this the
+    # SPA labelled bybit_2 trade 6565 (an `sl_cross`) "other" (CLOSE-PNL-NULL).
+    if raw in _CROSS_REASONS:
+        return _CROSS_REASONS[raw]
     if raw.startswith("reconciler"):
         return "reconciler"
     return "other"
@@ -200,6 +207,11 @@ def _row_to_wire(row: sqlite3.Row,
         # never collapsed; a consumer that renders anything but
         # `known_divergent` as a clean bill of health has reintroduced the
         # bug (BL-20260826-JOURNAL-READS-DO-NOT-CONSULT-THE-BROKER-TRUTH-LEDGER).
+        # collapsed-state: unreadable — this route only SYNTHESISES the
+        # `unreadable` fallback map when the ledger read raised (trust_map is
+        # None); every real read_state is produced by
+        # broker_truth.journal_trust_map and graded per account by
+        # journal_trust_for, which is where read/absent are told apart.
         "journalTrust": journal_trust_for(
             row["account_id"], trust_map if trust_map is not None
             else {"read_state": "unreadable", "accounts": {}},
@@ -335,6 +347,12 @@ def get_closed_trades(
       * a genuinely empty result → **200** with ``[]``. That is the ONLY thing
         an empty list may mean.
 
+      * an unparseable ``since`` → **422** with ``filter_state: "unparsed"``
+        (a bare ``+00:00`` in a URL decodes to a space -- encode it ``%2B``).
+        Before this it matched nothing and returned ``[]``
+        (PI-20261005-MWOP8C4X-0003). A parsed/absent filter is reported in the
+        ``X-Filter-State`` header (``parsed`` | ``none``).
+
     Two response headers make truncation distinguishable from exhaustion —
     without them a full page and a complete answer render identically:
 
@@ -346,6 +364,9 @@ def get_closed_trades(
     metadata would break the only live consumer.
     """
     effective_include = include_paper or include_demo
+    # 422 (filter_state "unparsed") on a bad value -- never a bare [].
+    since, filter_state = parse_since(since)
+    response.headers["X-Filter-State"] = filter_state
     if not _DB_PATH.exists():
         # NOT an empty journal — we could not look at one. A caller that reads
         # this as "no closed trades" has been handed a false negative.

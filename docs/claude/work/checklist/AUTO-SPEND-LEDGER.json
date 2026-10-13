@@ -1,0 +1,26 @@
+{
+  "id": "AUTO-SPEND-LEDGER",
+  "title": "Assistant-manager script reads session metadata and writes spend_usd on lane archive",
+  "phase": "automation",
+  "state": "queued",
+  "owner": "build lane",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Est. saving $15/wk (API-equivalent, ESTIMATE) plus fixes the unrecorded-spend gap: 189 of 256 checklist rows touched 2026-09-29..2026-10-13 (74%) carry no spend_usd (population 256 rows, window 14 days). Build size M. Assistant-manager script reads session metadata and writes spend_usd on lane archive; Actions cannot read sessions. Source: docs/plans/OPS-AUTOMATION-INVENTORY-2026-10-13.md section C.",
+  "updated_at": "2026-10-13T08:02:13Z",
+  "updated_by": "session_OPS-AUTOMATION-INVENTORY",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "observation": {
+    "what": "AUTO-SPEND-LEDGER built and measured against its estimate",
+    "how_to_check": "share of new lane rows with spend_usd rises from 26% to ~100%",
+    "due_by": "2026-10-27"
+  },
+  "_seq": 458
+}

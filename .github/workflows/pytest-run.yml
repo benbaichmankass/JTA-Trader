@@ -85,8 +85,17 @@ on:
 # NEVER be cancelled by a `pull_request` run on the same ref, or the merge queue
 # stalls on a required check that reports `cancelled`. Same shape as guards.yml.
 concurrency:
+#
+# PUSH TO MAIN IS NOT CANCELLED (2026-09-29, PI-20260929-AQRK6CL1-0003). The
+# group is per-ref, so with `cancel-in-progress: true` every merge cancelled the
+# previous main run: measured 15 of the last 19 completed push-to-main runs were
+# `cancelled`, so main rarely finished a post-merge run and a semantic break
+# between two PRs each green on an older base went uncaught. Cancellation stays
+# for pull_request/merge_group/dispatch; for push the running run finishes and
+# GitHub keeps at most ONE pending run in the group (a newer push replaces the
+# pending one), bounding cost at one running + one pending instead of one per merge.
   group: pytest-run-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name != 'push' }}
 
 permissions:
   contents: read
@@ -94,7 +103,19 @@ permissions:
 jobs:
   pytest-run:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # 30 -> 50 (2026-10-03, lane CI-TIMEOUT). The full suite had no headroom:
+    # of the last 100 completed runs on this workflow (run ids 37104578054..
+    # 37115481899, one page of the API, 2026-10-03 06:54Z-10:10Z) 26 ran longer
+    # than 8 min. Of the full-suite runs that reached the end, 11 succeeded at
+    # a median of 26.5 min (range 19.4-30.0, the slowest AT the old limit), and
+    # 6 pull_request runs (attempts 1-2 of run 37110623445 among them) were
+    # cancelled at 30.4-30.6 min by this limit. 50 gives ~1.7x the median.
+    # 50 -> 75 (2026-10-13, lane CARRYOVER-1013, row CI-PYTEST-TIMEOUT-HEADROOM). The suite
+    # (~22.7k tests) takes 33-41 min on a good runner and 48+ min on a slow one; attempt-1 jobs
+    # were cancelled at ~50.2 min with pytest already at [100%] (runs 38238044098, 38248466083).
+    # 75 is ~1.5x the slowest observed full run. Sharding was not chosen: it multiplies runner
+    # cost and the cap is the only thing failing.
+    timeout-minutes: 75
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -215,6 +236,25 @@ jobs:
           #     the exact failure the relay was built to fix. Removing those references
           #     is a DOCS-ONLY diff, so without this it would merge on a green tick
           #     from a run that executed nothing, re-opening the gap silently.
+          #   docs/sprint-logs/                            test_conflict_marker_scope —
+          #     level 4 of the instruction hierarchy, and the tree whose absence
+          #     decided the conflict-marker scope. That test asserts every sprint
+          #     log is inside the scanned corpus, so a sprint-log-only PR must run
+          #     the suite rather than short-circuit past the assertion.
+          #     NOTE the alternative has NO trailing slash, deliberately: the
+          #     coverage test keys this tree by its DIRECTORY name, so
+          #     `^docs/sprint-logs/` matches every real diff path and fails the
+          #     test's own `_matches("docs/sprint-logs")`. Dropping the slash
+          #     over-matches a hypothetical `docs/sprint-logs-*` sibling, which
+          #     only ever runs MORE tests — the safe direction.
+          #   docs/claude/work/PIPELINE.jsonl             test_pipeline —
+          #     `test_the_committed_store_is_valid` validates the REAL store, not a
+          #     fixture, because the thing worth protecting is the file the brief
+          #     will read. That makes the store a test INPUT, so a PR touching only
+          #     it must run the suite. Added 2026-09-21 when test_pytest_run_filter
+          #     caught exactly that hole on the store's first commit — the same
+          #     shape as #9208, which merged green having executed nothing and left
+          #     main red.
           #   docs/claude/work/SESSIONS.json               test_register_field_loss —
           #     plants a FIELD revert into the REAL 231-row register and asserts the
           #     guard goes red while the union-by-id proof still reads CLEAN. A fixture
@@ -222,6 +262,21 @@ jobs:
           #     SESSIONS.json, so those PRs now run the full suite. Included anyway —
           #     a register write-back IS the diff that can revert a field, so excluding
           #     it would exempt exactly the change the guard exists for.
+          #   docs/archive/2026-09-21-operating-reset/work/SESSIONS.json
+          #     test_session_reaper_trigger_liveness (FIX-CA-17, CA-A14-session-reaper-
+          #     dead-trigger) asserts this ARCHIVED file exists at this exact path, as
+          #     the evidence that session-reaper.yml's old push-trigger `paths:` filter
+          #     (which named the pre-archive location) was permanently dead. Near-zero
+          #     ongoing cost — this tree is frozen by convention — but a future PR that
+          #     moved or deleted it would otherwise falsify the test's premise on a
+          #     green tick from a run that executed nothing.
+          #   .gitleaks-baseline.json, docs/security/gitleaks-baseline.md
+          #     tests/test_gitleaks_baseline.py (PI-20260929-SASEC-0001) reads BOTH: the
+          #     baseline is the accepted-findings list the weekly secret scan trusts, and
+          #     the test pins that the four known-revoked entries stay baselined AND named
+          #     in the notes doc and that no vendor-token shape hides in the file. A PR
+          #     touching only them would otherwise pass having run none of that. Cost:
+          #     the baseline changes only when someone re-baselines on purpose.
           #
           # THE COST IS REAL AND IS BEING PAID DELIBERATELY. ARCHITECTURE-
           # CANONICAL.md is edited by many docs-only PRs, and each now pays a
@@ -235,7 +290,7 @@ jobs:
           # on the backlog row; it is a bigger change than this one.
           #
           # Pinned in tests/test_pytest_run_filter.py::COVERED.
-          if echo "$FILES" | grep -Eq '\.py$|requirements(-test)?\.txt$|pytest\.ini$|setup\.cfg$|pyproject\.toml$|^config/|^\.github/workflows/|^\.github/actions/|^scripts/|^deploy/|^comms/|^docs/research/exit-refinement-coverage\.json$|^docs/research/m20-sweep-corpus\.jsonl$|^docs/claude/system-actions\.md$|^docs/ARCHITECTURE-CANONICAL\.md$|^docs/research/m20-exit-head-rounds\.jsonl$|^docs/research/m20-fold-dispersion-arms-consolidated\.jsonl$|^docs/research/m20-fold-dispersion-2026-08-15\.md$|^docs/claude/impossibility-claim-baseline\.json$|^docs/claude/SUNSET-DISPOSITIONS\.json$|^docs/claude/CONSTRAINT\.json$|^docs/claude/diag-relay\.md$|^docs/claude/work/SESSIONS\.json$|^ml/|^automation/|^research/|^\.claude/|^\.env\.example$|^tests/|^data/backtest_candles\.csv$|^data/btc_1m_sample\.csv$|^data/ict_validate_manifest\.csv$'; then
+          if echo "$FILES" | grep -Eq '\.py$|requirements(-test)?\.txt$|pytest\.ini$|setup\.cfg$|pyproject\.toml$|^config/|^\.github/workflows/|^\.github/actions/|^scripts/|^deploy/|^comms/|^docs/research/exit-refinement-coverage\.json$|^docs/research/m20-sweep-corpus\.jsonl$|^docs/claude/system-actions\.md$|^docs/ARCHITECTURE-CANONICAL\.md$|^docs/research/m20-exit-head-rounds\.jsonl$|^docs/research/m20-fold-dispersion-arms-consolidated\.jsonl$|^docs/research/m20-fold-dispersion-2026-08-15\.md$|^docs/claude/impossibility-claim-baseline\.json$|^docs/claude/SUNSET-DISPOSITIONS\.json$|^docs/claude/CONSTRAINT\.json$|^docs/claude/diag-relay\.md$|^docs/claude/work/SESSIONS\.json$|^docs/archive/2026-09-21-operating-reset/work/SESSIONS\.json$|^docs/claude/session-board\.json$|^docs/claude/work/objects/WO-20260901-PHASE-G\.yaml$|^docs/research/e35-bracket-corpus\.jsonl$|^docs/research/research-disposition-ledger\.jsonl$|^ml/|^automation/|^research/|^\.claude/|^\.env\.example$|^tests/|^data/backtest_candles\.csv$|^data/btc_1m_sample\.csv$|^data/ict_validate_manifest\.csv$|^docs/claude/soak-doctrine-exceptions\.json$|^docs/claude/system-review-checklist\.json$|^docs/research/data/backtest-mfe-reference-2026-09-07\.json$|^docs/claude/work/objects/|^docs/api-tier-policy\.md$|^docs/CLAUDE-RULES-CANONICAL\.md$|^docs/sprint-logs|^docs/claude/health-review-backlog\.json$|^docs/claude/OPEN-ITEMS\.json$|^docs/claude/work/checklist/|^docs/claude/work/PIPELINE\.jsonl$|^docs/claude/work/OPEN-PRS\.json$|^\.gitleaks-baseline\.json$|^docs/security/gitleaks-baseline\.md$'; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"
@@ -274,6 +329,22 @@ jobs:
           pytest -q tests/ \
             --ignore=tests/test_main_loop.py \
             --junitxml=pytest-report.xml
+
+      - name: Summarize SKIPPED tests in the job summary
+        # `if: always()`, deliberately — the whole point is that a GREEN run
+        # reports `N skipped` and says nothing about which N, so a guard's
+        # entire test module can go dark and read identically to routine
+        # conditional coverage. Runs on success as well as failure.
+        #
+        # Reads the SAME pytest-report.xml the failure summary below already
+        # parses, so it costs no extra runtime and adds no dependency. Never
+        # fails the job: this is observability, and a reporting bug must not
+        # turn a green suite red.
+        if: always()
+        continue-on-error: true
+        run: |
+          python3 scripts/ci/summarize_pytest_skips.py \
+            --report pytest-report.xml >> "$GITHUB_STEP_SUMMARY" || true
 
       - name: Summarize failing tests in the job summary
         if: failure()

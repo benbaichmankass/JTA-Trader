@@ -1,5 +1,11 @@
 # `pr-landing` — every PR says its TIER and how it means to LAND
 
+> **FILENAME = the full branch name with `/` → `-`** (only a leading `claude/` is
+> dropped). `lane/foo` → `.github/pr-landing/lane-foo.json`;
+> `chore/x` → `.github/pr-landing/chore-x.json`. The same slug names the
+> `pr-automerge-requests/<slug>.txt` and `merge-slots/<slug>.json` files. Dropping the
+> `lane-`/`chore-` prefix is the commonest R11 failure.
+
 One file per branch: **`.github/pr-landing/<branch-slug>.json`**, where the slug
 is the branch name with a leading `claude/` stripped and `/` → `-` — the same
 derivation `claude-pr-automerge.yml` uses, so the two can never disagree about
@@ -9,6 +15,32 @@ Enforced by `pr-landing-guard` (`scripts/ci/check_pr_landing.py`), which runs on
 every PR. Read that file's docstring for the rule-by-rule reasoning; this is the
 operator's-eye summary.
 
+> ### THE MERGE-SLOT CLAIM: USE THE PER-BRANCH ROUTE
+>
+> ```bash
+> python3 scripts/ops/claim_merge_slot.py --branch-claim \
+>     --branch <your-branch> --held-by <your session id>
+> ```
+>
+> It writes `.github/merge-slots/<slug>.json`, which cannot conflict with another
+> branch's claim. Commit it in the same push that arms the route.
+>
+> ⚠️ **FIXED 2026-09-24 (E51).** Until then, R13's own failure message told you
+> to satisfy it by writing `merge_slot` into `docs/claude/session-board.json` —
+> a file the 2026-09-21 operating reset had archived (now at
+> `docs/archive/2026-09-21-operating-reset/registers/session-board.json`), so
+> the remedy the guard printed could not be performed. `check_pr_landing.py`'s
+> R13 message (and `slot_claim_state`'s underlying `detail`) now name the
+> per-branch route above and state plainly that the legacy file is retired and
+> must not be resurrected. This note originally filed the bug as
+> `PI-20260921-0002` in `docs/claude/work/PIPELINE.jsonl` — by the time E51
+> looked, that id had been silently overwritten by an unrelated finding
+> through the append-collision defect `docs/claude/work/PIPELINE.jsonl` itself
+> documents (`python3 scripts/ops/pipeline.py --check` lists it as one of 3
+> GRANDFATHERED collisions), so the original filing is no longer readable
+> there. The fix landed directly in code instead; this box is kept short as a
+> pointer, not a workaround.
+
 ## Why this exists
 
 On 2026-09-03, seven of the night shift's PRs sat open, green and unlanded,
@@ -17,11 +49,30 @@ waiting on the manager. Tier-1 work — which `docs/CLAUDE-RULES-CANONICAL.md`
 through a human on every single session, by convention.
 
 Three of those PR bodies blamed `pr-opener.yml` for "creating every PR as a
-draft regardless of `draft:false`". **That is false and should not be repeated.**
-`pr-opener.yml` honours `draft:false`; `true` is only the default, and those
-sessions' request files asked for `"draft": true`. The cause was a blanket
-instruction in the spawn template plus a permissions asymmetry, not a bug in the
-relay.
+draft regardless of `draft:false`".
+
+⚠️ **This paragraph used to say "That is false and should not be repeated," and
+that rebuttal was itself wrong.** Those sessions were reporting a real defect.
+At the time, `pr-opener.yml` read the flag as `jq '.draft // true'`, and jq's
+`//` treats an explicit `false` as *absent* — so
+`"draft": false` was genuinely **unreachable** and every PR the relay opened came
+out a draft whatever the request asked for. Filed as
+`BL-20260903-PR-OPENER-DRAFT-FALSE-IS-UNREACHABLE-SO-TIER-1-CAN-NEVER-SELF-LAND-THROUGH-THE-RELAY`,
+whose resolution criteria require, in terms, that this file stop asserting the
+reporting sessions were wrong. This correction is that.
+
+**Both halves are now fixed.** The expression is `jq -r '.draft // false'`, and
+the default itself flipped to **`false`** on 2026-09-03 by operator ruling (see
+the header of `pr-opener.yml`) — so the old sentence "`true` is only the default"
+is stale twice over. **Verified by observation, not by reading the diff:** PR
+#11966 was opened through this relay from a request file containing
+`"draft": false` and comes back `draft: false` on `pull_request_read`, opened by
+`github-actions[bot]`.
+
+What the original paragraph got right is that a blanket "open as draft"
+instruction in the spawn template, plus the permissions asymmetry that stops a
+sub-session clearing its own draft, were **also** in play. Two causes, not one;
+the relay bug was the half this file denied.
 
 ## The two mechanisms are not alternatives
 
@@ -62,6 +113,51 @@ Tier-2 work that the operator has already approved, where the approval is
 ...plus the same arming file and merge-slot claim Tier-1 self-landing needs.
 See **R15** below and `docs/claude/work/approvals/README.md` for the record's
 shape. **Tier-3 never self-lands and no record admits it.**
+
+And **one Tier-3 shape lands on a MANDATE** (R16, 2026-09-25):
+
+```json
+{
+  "tier": 3,
+  "landing": "mandate",
+  "mandate": "MD-DEMOTE-S2-S1",
+  "run_id": "<the r4-demotion-gate run id, matching the branch>",
+  "workflow": ".github/workflows/r4-demotion-gate.yml",
+  "why": "automated Stage-2 roster cut under a granted derisk_only mandate"
+}
+```
+
+⚠️ **This is NOT a Tier-3 `landing: "self"`, and R4 is unchanged.** `"self"` at
+tier 3 still fails R4 outright and no record buys one. `"mandate"` is a separate
+route, graded clause by clause by `scripts/ci/check_mandate_autoland.py`
+(`mandate-autoland-guard`, which `pr-landing-guard` delegates to), admitting
+**exactly one diff shape**:
+
+| clause | what it checks |
+|---|---|
+| **A1** | every changed path is on a closed allowlist — the roster file, the mirror-window records and their source runs, the firing records, and this branch's own declaration and merge-slot claim. **`config/mandates.yaml` is not on it**, so the PR cannot grant its own authorization. |
+| **A2** | `config/accounts.yaml` changes by REMOVALS from `strategies:` rosters and nothing else — proven by filtering the removed legs out of the merge-base document and requiring the result to equal HEAD. |
+| **A3** | each removed leg carries a committed mirror-window record and a firing record added by this diff, citing it, naming a mandate, with matching accounts and a reachable `source_run`. |
+| **A4** | that mandate is in the **merge-base** `mandates:` list, is not `blocked_until`, and its `direction` is `derisk_only`. |
+| **A5** | `scripts/ops/mandate_resolver.py`, replayed over the merge-base configs plus this diff's evidence, returns **FIRE** and proposes exactly this removal and no addition. |
+| **A6** | the live account and its mirror are cut together, so the strict-equality mirror tests stay green. |
+| **A7** | the branch is `automation/r4-demotion-<run_id>`, every commit is authored *and* committed by `github-actions[bot]`, the PR's own author is that bot, and an attributable merge-slot claim names the run. |
+| **A8** | the granted mandate carries `autoland: true` — **the operator's arming switch**. |
+
+⚠️ **BUILT, NOT ARMED.** No entry in `config/mandates.yaml` carries
+`autoland: true`, so today every `r4-demotion-gate` run falls back to
+`landing: "hold"` and a human merges — by the route working, not by its absence.
+Adding that field is the operator's act, the same asymmetry that makes granting
+a mandate theirs. `tests/test_mandate_autoland.py::test_the_route_ships_unarmed`
+asserts it, and is meant to fail loudly on the arming commit.
+
+⚠️ **What the route rests on, said plainly.** A7 proves the branch carries the
+workflow's identity and that `github-actions[bot]` opened the PR — not that
+nobody could forge `git config user.email`. What stands behind it is that the PR
+author comes from a token no session holds, and that a forged branch is still
+worthless: it must carry a resolver FIRE over operator-granted evidence and may
+still only ever REMOVE. A wrong verdict here takes a leg **off** a real-money
+book.
 
 Anything a human must approve, or that is simply not ready:
 
@@ -126,9 +222,37 @@ The checks that matter most:
   approval is a held, human-read PR while *using* one is free. That asymmetry is
   what closes the two-PR chain (self-land PR A writing an approval for your own
   PR B, then self-land B against it).
-- **R13** — a branch that ARMS auto-merge must hold the merge slot in
-  `docs/claude/session-board.json`, claimed in its own diff. Arming is not a
-  request to merge, it **is** the merge. The `PreToolUse` merge-slot guard in
+- **R13** — a branch that ARMS auto-merge must hold **an attributable,
+  timestamped merge-slot claim, made in its own diff**. Arming is not a
+  request to merge, it **is** the merge.
+  ⚠️ **TWO ROUTES SATISFY R13, AND ON A LANE BRANCH YOU WANT THE SECOND.** The
+  guard tries the per-branch route **first** and either is sufficient
+  (`check_pr_landing.py::slot_claim_state`):
+
+  | route | file | use it |
+  |---|---|---|
+  | legacy / automation | `docs/claude/session-board.json::merge_slot` | `commit-to-main` and the 27 workflows behind it. Still passes, byte-for-byte. |
+  | **per-branch (prefer this)** | `.github/merge-slots/{slug}.json` | **every session branch** |
+
+  ```
+  python3 scripts/ops/claim_merge_slot.py --branch-claim \
+    --branch claude/<your-branch> --held-by <session-id> --purpose "<what and which PR>"
+  ```
+
+  ⚠️ **`--branch-claim` IS NOT THE DEFAULT — you must pass the flag.** Without
+  it the script splices the shared field, which is the conflicting route.
+  **Why prefer it:** the shared `merge_slot` is ONE field in ONE file that every
+  armed branch must overwrite, so every armed branch conflicts with `main` the
+  moment anything else claims it. Measured over the last 40 commits to `main`
+  touching `session-board.json` (2026-09-11T23:12Z → 2026-09-12T09:30Z),
+  **39 of 40 moved `merge_slot.branch`** — median gap 11.5 minutes, 26 of 38
+  under 16. Resolving the conflict pushes a new head and **restarts CI**, so
+  resolving faster does not help. Observed with a control the same morning: all
+  four ARMED PRs of one session went `dirty` together, while the only two that
+  stayed CLEAN were the two declaring `landing: "hold"` — which write no claim
+  at all. **Nothing is given up:** R13 never serialized (see below), so the
+  shared field bought a guaranteed conflict and no exclusion. Full rationale:
+  `.github/merge-slots/README.md`. The `PreToolUse` merge-slot guard in
   `.claude/settings.json` matches only `mcp__github__merge_pull_request` and
   `mcp__github__enable_pr_auto_merge`, and the arming route calls **neither** —
   the merge is performed by `claude-pr-automerge.yml` under `GITHUB_TOKEN`, so

@@ -402,6 +402,10 @@ class InFlightRow:
     row_id: str
     owner: Any
     grade: OwnerGrade
+    #: the checklist row's ``lane`` field. On the post-reset checklist the lane
+    #: session id lives HERE (``owner`` is often just ``manager`` / ``research
+    #: lane``); FIX-SA-10 grades an archived lane off it.
+    lane: Any = None
 
 
 def read_registry(repo_root: Path) -> Optional[dict[str, dict[str, Any]]]:
@@ -453,8 +457,8 @@ def in_flight_rows(
 
     # --- the checklist -------------------------------------------------------
     try:
-        checklist = json.loads(
-            (repo_root / CHECKLIST_RELPATH).read_text(encoding="utf-8"))
+        from src.runtime import checklist_store as _ck  # noqa: PLC0415
+        checklist = _ck.load_path(repo_root / CHECKLIST_RELPATH)
     except (OSError, ValueError):
         checklist = None
     if isinstance(checklist, dict):
@@ -471,7 +475,8 @@ def in_flight_rows(
             out.append(InFlightRow(
                 CHECKLIST_REGISTER, str(item.get("id") or "(no id)"),
                 item.get("owner"),
-                grade_owner_activity(item.get("owner"), registry, now=now)))
+                grade_owner_activity(item.get("owner"), registry, now=now),
+                lane=item.get("lane")))
 
     # --- the work objects (the register the WIP ceiling binds on) ------------
     objects_dir = repo_root / OBJECTS_RELDIR
