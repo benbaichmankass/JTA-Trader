@@ -6,7 +6,7 @@ import time
 
 import torch
 
-print(subprocess.run(["nvidia-smi"], capture_output=True, text=True).stdout)
+print(subprocess.run(["nvidia-smi"], capture_output=True, text=True, check=False).stdout)
 
 res = {"torch": torch.__version__, "cuda": torch.cuda.is_available()}
 if res["cuda"]:
