@@ -1,0 +1,27 @@
+{
+  "id": "COMPUTE-UTIL-TELEMETRY",
+  "title": "COMPUTE-UTIL-TELEMETRY: daily CPU/mem/net/disk ledger for 3 VMs + Oracle idle-reclaim alert + spare capacity + OCI limits read",
+  "phase": "process",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Built 2026-10-13: workflow compute-util-telemetry + scripts/ops/compute_util.py + tests/test_compute_util.py; ledger/spare/state/limits under comms/cloud/. Untested against live OCI (no creds in session) - first run is the proof.",
+  "updated_at": "2026-10-13T10:56:43Z",
+  "updated_by": "session_01EexLtAgHjQJ2ZpCWhqaeoQ",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "observation": {
+    "what": "First workflow run lands ledger rows with read_state measured for cpu+mem on all 3 hosts (gateway included) and oci_limits.json has a measured standard-a1-core-count",
+    "how_to_check": "git log comms/cloud/compute_util_ledger.jsonl; jq read_state; vm-topology.md section filled",
+    "due_by": "2026-10-20"
+  },
+  "writeback": "docs/reference/vm-topology.md",
+  "_seq": 464
+}
