@@ -24,7 +24,7 @@ def test_idle_host_is_at_risk_and_busy_is_ok():
     rows = cu.build_rows(TODAY, m, {})
     v = {h: cu.evaluate_host(rows, h, TODAY) for h in cu.HOSTS}
     assert v["live"]["status"] == "ok"
-    assert v["trainer"]["status"] == "at_risk"
+    assert v["trainer"]["status"] == "at_risk" and v["trainer"]["net_unmeasured"]
     assert v["gateway"]["status"] == "watch"   # 25% < 30% watch line, >= 20% idle line
 
 
@@ -77,3 +77,10 @@ def test_alert_only_on_transition(tmp_path, monkeypatch):
     assert r1["alert_hosts"] == ["trainer"]
     r2 = cu.cmd_evaluate(rows, TODAY, write=True)
     assert r2["alert_hosts"] == []
+
+
+def test_network_is_never_derived_to_a_percentage():
+    rows = cu.build_rows(TODAY, _metrics(trainer=_days(3, 8, 10, net=500.0)), {})
+    r = next(x for x in rows if x["host"] == "trainer" and x["date"] < TODAY)
+    assert r["net_p95_pct_of_shape"] is None and r["read_state"]["net"] == "could_not_look"
+    assert r["net_in_p95_raw"] is not None      # raw kept for a later unit check
