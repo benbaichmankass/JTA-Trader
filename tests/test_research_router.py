@@ -2,7 +2,7 @@
 import io
 import json
 from contextlib import redirect_stdout
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -287,3 +287,29 @@ def test_collector_recognises_the_kaggle_artifact_name():
     m = col._ARTIFACT_RE.match("research-script-run-kaggle-RQ-20261013-9da8-01-123456")
     assert m and m.group(1) == "RQ-20261013-9da8-01" and m.group(2) == "123456"
     assert "research-script-run-kaggle.yml" in col.COLLECTED_WORKFLOWS
+
+
+# ── utilization + idle-capacity fill (operator 2026-10-13: get the most out of every resource) ─────────────
+def test_utilization_record_has_explicit_read_state_and_week_rolls_up(tmp_path):
+    from scripts.research import research_utilization as ru
+    assert ru._self_test() == 0
+
+
+def test_idle_fill_pulls_an_opted_in_recurring_unit_forward_only_into_free_capacity(tmp_path, monkeypatch):
+    monkeypatch.setattr(dq, "pending_stamp_units", lambda api=None: {})
+    monkeypatch.setattr(dq, "declared_inputs", lambda *a, **k: ["research_unit", "power_state"])
+    monkeypatch.setattr(script_run, "plan", lambda *a, **k: type("P", (), {"ok": True, "errors": []})())
+    recent = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+    units = [("RQ-20300110-002", {"compute": "cpu_light", "routing": CPU_ROUTE, "cadence": "daily",
+                                  "last_dispatched_at": recent, "idle_fill": True}),
+             ("RQ-20300110-003", {"compute": "cpu_light", "routing": CPU_ROUTE, "cadence": "daily",
+                                  "last_dispatched_at": recent})]                   # not opted in: stays put
+    dec, fired = _dry(tmp_path, monkeypatch, units, fire=True,
+                      runs={"in_progress": [{"workflowName": "x", "createdAt": datetime.now(timezone.utc).isoformat()}]})
+    assert dec["RQ-20300110-002"]["outcome"] == dq.DISPATCHED and dec["RQ-20300110-002"]["idle_fill"] is True
+    assert dec["RQ-20300110-003"]["outcome"] == dq.NOT_DUE
+    # no free capacity -> no fill: three runner runs already in flight
+    busy = [{"workflowName": "research-script-run", "createdAt": datetime.now(timezone.utc).isoformat()}] * 3
+    dec2, _ = _dry(tmp_path / "b", monkeypatch, units, fire=True, runs={"in_progress": busy}) \
+        if (tmp_path / "b").mkdir() is None else (None, None)
+    assert dec2["RQ-20300110-002"]["outcome"] != dq.DISPATCHED

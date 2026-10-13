@@ -215,7 +215,7 @@ jobs:
           # max_concurrent (runner 3, trainer 1, kaggle 1) now live in
           # scripts/research/research_compute.yaml, not on this command line.
           ARGS=(--ref "${{ github.ref_name }}" --max-gpu-dispatches-per-run "${{ inputs.max_gpu || '1' }}"
-                --max-repo-queued 10)
+                --max-repo-queued 10 --utilization-dir comms/research/utilization)
           # Kaggle weekly GPU quota (token-free): unreadable = GPU units WAIT, never routed blind.
           if [ -n "${KAGGLE_API_TOKEN:-}" ]; then
             pip install --quiet "kaggle>=2.0" && kaggle quota > /tmp/kaggle-quota.txt 2>/dev/null || true
@@ -556,7 +556,7 @@ jobs:
         with:
           verify-merged: "true"
           token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
-          paths: docs/claude/work/research-queue-dispatch-receipt.json
+          paths: docs/claude/work/research-queue-dispatch-receipt.json comms/research/utilization
           message: "chore(research-queue): liveness receipt for run ${{ github.run_id }}"
           pr-title: "chore(research-queue): liveness receipt (auto)"
           pr-body: >-

@@ -1036,6 +1036,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--max-gpu-dispatches-per-run", type=int, default=1,
                     help="per-RUN cap on GPU bursts; the ledger cap is monthly and "
                          "cannot bound a loop inside one run")
+    ap.add_argument("--utilization-dir", default=None,
+                    help="fire path: write this cycle's per-backend utilization record (measured vs could-not-look) "
+                         "to <dir>/<run_id>.json (research_utilization.py). The summary line always prints.")
     ap.add_argument("--json", action="store_true", help="emit the decisions as JSON")
     args = ap.parse_args(argv)
 
@@ -1096,6 +1099,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     inflight = int(pressure.get("inflight_research") or 0)
     # Per-backend load: runs in flight by workflow NAME (gh reports names) mapped back to backends.
     state = cr.BackendState(total_inflight=inflight)
+    _q: Dict[str, Any] = {"remaining": None, "note": "no quota read"}
     if cfg is not None:
         name_to_backend = {}
         for _f, _n in (research_workflow_names(jobs) if args.fire else {}).items():
@@ -1156,6 +1160,30 @@ def main(argv: Optional[List[str]] = None) -> int:
             if pending:
                 print("pending stamps (open stamp PRs, treated as dispatched): "
                       + ", ".join(f"{u} <- {p}" for u, p in sorted(pending.items())), file=sys.stderr)
+    # IDLE-CAPACITY FILL (RESEARCH-ROUTER, operator 2026-10-13: "get the most out of all the resources"): when a backend
+    # has more free slots than units due for it, pull forward recurring units that opted in with `idle_fill: true`
+    # and are waiting only on their cadence. Fire path only (a dry run has no occupancy to fill), lowest priority
+    # (they sort after every due unit), and capped by the free slots.
+    fill_ids: set = set()
+    if args.fire and cfg is not None and pressure.get("by_name") is not None and not pressure["block"]:
+        due_by_be: Dict[str, int] = {}
+        waiting: List[Any] = []
+        for j in jobs:
+            if not j.valid or j.status != "queued" or not isinstance(j.raw.get("_plan"), cr.Resolution) or not j.raw["_plan"].ok:
+                continue
+            be = j.raw["_plan"].backend
+            ok_due, why = _is_due(j.raw, now)
+            if ok_due:
+                due_by_be[be] = due_by_be.get(be, 0) + 1
+            elif j.raw.get("idle_fill") is True and "not yet elapsed" in why:
+                waiting.append((be, j))
+        for be, j in waiting:
+            b = cfg["backends"].get(be)
+            if b is None or not b.get("auto_route", True):
+                continue
+            if int(b["max_concurrent"]) - state.busy(be) - due_by_be.get(be, 0) > 0:
+                fill_ids.add(j.id)
+                due_by_be[be] = due_by_be.get(be, 0) + 1
     gpu_fired = 0
     fired_by_workflow: Dict[str, int] = {}
     for job in jobs:
@@ -1177,6 +1205,9 @@ def main(argv: Optional[List[str]] = None) -> int:
             continue
 
         due, due_reason = _is_due(entry, now)
+        if not due and job.id in fill_ids:
+            due, due_reason = True, "idle-capacity fill (opted in; " + due_reason + ")"
+            row["idle_fill"] = True
         if not due:
             row.update(outcome=NOT_DUE, reason=due_reason)
             if RETRY_CAP_MARK in due_reason:
@@ -1320,6 +1351,28 @@ def main(argv: Optional[List[str]] = None) -> int:
     counts: Dict[str, int] = {}
     for row in decisions:
         counts[row["outcome"]] = counts.get(row["outcome"], 0) + 1
+
+    # UTILIZATION (RESEARCH-ROUTER): measure what this cycle used of each backend, with explicit read-state.
+    if cfg is not None:
+        from scripts.research import research_utilization as ru
+        try:
+            _n2b = {}
+            for _f, _n in research_workflow_names(jobs).items():
+                _b = cr.backend_for_workflow(_f, cfg)
+                if _b:
+                    _n2b[_n] = _b
+            util = ru.measure(cfg=cfg, by_name_to_backend=_n2b, pressure=pressure,
+                              quota=_q,
+                              decisions=decisions, now=now, run_id=os.environ.get("GITHUB_RUN_ID", now.strftime("%Y%m%dT%H%M%S")),
+                              fired=bool(args.fire))
+            print(ru.one_line(util), file=sys.stderr)
+            for _fl in util["flags"]:
+                print(f"::warning::research-capacity {_fl}", file=sys.stderr)
+            if args.fire and args.utilization_dir:
+                ru.write(util, Path(args.utilization_dir))
+        except (OSError, ValueError, KeyError) as exc:
+            print(f"::warning::utilization could not be recorded ({type(exc).__name__}: {exc}); dispatch is unaffected",
+                  file=sys.stderr)
 
     if args.json:
         print(json.dumps({"generated_at": now.isoformat(), "queue_dir": str(queue_dir),
