@@ -37,7 +37,7 @@ MARGIN_MIN = 3
 
 
 def timeout_minutes(workflow: Path = WORKFLOW) -> int:
-    m = re.search(r"^\s+timeout-minutes:\s*(\d+)\s*$", workflow.read_text(encoding="utf-8"), re.M)
+    m = re.search(r"^\s+timeout-minutes:\s*(\d+)\s*$", workflow.read_text(encoding="utf-8"), re.MULTILINE)
     if not m:
         raise RuntimeError(f"no timeout-minutes in {workflow}")
     return int(m.group(1))
