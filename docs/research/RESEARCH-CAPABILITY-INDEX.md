@@ -407,3 +407,9 @@ than none — that is the failure it was written to fix. So:
 - **Do not** claim completeness in prose anywhere else. Point here instead. The
   `backtesting` skill's old "every real backtest entry point in the repo" line is exactly
   the sentence that stopped a session from looking further.
+
+## Research pipeline operations
+
+| Question | Tool |
+|---|---|
+| **Is the research pipeline itself alive — dispatcher, queue floor, each compute backend, collector, stranded stamps — and who was told?** Token-free 15-min watchdog: self-heals once, escalates on the `ops-flags (do not merge)` PR + send-ping + `comms/research/ops/watchdog_incidents.jsonl`. | `scripts/research/research_watchdog.py` (thresholds `research_watchdog.yaml`, workflow `research-watchdog.yml`) |

@@ -104,13 +104,13 @@ def test_kaggle_quota_distinguishes_idle_by_quota_from_idle_by_fault():
 
 # ── collector ──
 def test_collector_states():
-    assert w.check_collector({"landed": [{"unit": "U", "run_id": 1, "age_minutes": 30}]}, NOW, TH)["state"] == w.OK
-    v = w.check_collector({"landed": [{"unit": "U", "run_id": 1, "age_minutes": 500}]}, NOW, TH)
+    assert w.check_collector({"landed": [{"unit": "U", "run_id": 1, "age_minutes": 30}]}, TH)["state"] == w.OK
+    v = w.check_collector({"landed": [{"unit": "U", "run_id": 1, "age_minutes": 500}]}, TH)
     assert v["state"] == w.BAD and v["heal"] == "dispatch"
-    assert w.check_collector({"landed": [], "lost": [{"unit": "U", "run_id": 2, "why": "expired"}]}, NOW, TH)["state"] == w.BAD
-    assert w.check_collector({"landed": [], "unreadable": [{"run_id": 3}]}, NOW, TH)["state"] == w.CNL
-    assert w.check_collector({"read_error": "gh failed"}, NOW, TH)["state"] == w.CNL
-    assert w.check_collector(None, NOW, TH)["state"] == w.CNL
+    assert w.check_collector({"landed": [], "lost": [{"unit": "U", "run_id": 2, "why": "expired"}]}, TH)["state"] == w.BAD
+    assert w.check_collector({"landed": [], "unreadable": [{"run_id": 3}]}, TH)["state"] == w.CNL
+    assert w.check_collector({"read_error": "gh failed"}, TH)["state"] == w.CNL
+    assert w.check_collector(None, TH)["state"] == w.CNL
 
 
 # ── stamps ──

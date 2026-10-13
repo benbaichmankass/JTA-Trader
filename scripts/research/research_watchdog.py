@@ -209,7 +209,7 @@ def check_backend(name: str, runnable_for: Optional[int], runs: Optional[list], 
                    f"(limit {lim:g})", evidence=ev, heal="dispatch")
 
 
-def check_collector(status: Optional[dict], now: datetime, th: dict) -> Dict[str, Any]:
+def check_collector(status: Optional[dict], th: dict) -> Dict[str, Any]:
     lim = float(th["collector_stuck_minutes"])
     if status is None or status.get("read_error"):
         return verdict("collector", CNL, (status or {}).get("read_error") or "could not list completed research runs")
@@ -337,7 +337,7 @@ class FixtureProbe:
     def _get(self, key: str) -> Any:
         return self.fx.get(key)
 
-    def workflow_runs(self, wf: str, per_page: int = 20):
+    def workflow_runs(self, wf: str, per_page: int = 20):  # inert: per_page — mirrors GhProbe's signature; fixtures are pre-sliced
         return (self._get("workflow_runs") or {}).get(wf)
 
     def run_jobs(self, run_id: int):
@@ -346,16 +346,16 @@ class FixtureProbe:
     def open_prs(self):
         return self._get("open_prs")
 
-    def collector_status(self, window_hours: float, now: datetime):
+    def collector_status(self, window_hours: float, now: datetime):  # inert: window_hours — mirrors GhProbe's signature; inert: now — same
         return self._get("collector")
 
     def kaggle_quota(self) -> dict:
         return self._get("kaggle_quota") or {"note": "no quota in fixture"}
 
-    def ops_flags_pr(self, title: str):
+    def ops_flags_pr(self, title: str):  # inert: title — mirrors GhProbe's signature
         return self._get("ops_flags_pr")
 
-    def pr_comments(self, number: int):
+    def pr_comments(self, number: int):  # inert: number — mirrors GhProbe's signature
         return self._get("pr_comments")
 
     def post_comment(self, number: int, body: str) -> bool:
@@ -426,7 +426,7 @@ def evaluate(probe: Any, cfg: dict, now: datetime, facts: Optional[dict]) -> Lis
             quota = {"remaining": q.get("remaining"), "floor_hours": facts["kaggle_floor_hours"] if facts else 0}
         out.append(check_backend(be, (facts["by_backend"].get(be, 0) if facts else None),
                                  probe.workflow_runs(facts["backend_workflows"][be], 10) if facts else None, now, th, quota))
-    out.append(check_collector(probe.collector_status(float(th["collector_window_hours"]), now), now, th))
+    out.append(check_collector(probe.collector_status(float(th["collector_window_hours"]), now), th))
     out.append(check_stamps(probe.open_prs(), now, th))
     return out
 
