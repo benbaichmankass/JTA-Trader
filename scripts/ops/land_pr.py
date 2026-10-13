@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wiring: tests/test_land_pr.py (CLI helper, run by hand or by a lane; not a CI guard)
+# wiring: manual-only - run by hand or by a lane before opening a PR; tests/test_land_pr.py covers it
 """Write the three landing files for a branch, with the slug and tier the guard would assign.
 
 WHY (row AUTO-LANDING-FILES, plan docs/plans/OPS-AUTOMATION-INVENTORY-2026-10-13.md act M-c):
@@ -34,8 +34,8 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts" / "ci"))
 sys.path.insert(0, str(REPO / "scripts" / "ops"))
 
-import check_pr_landing as cpl  # noqa: E402
-import claim_merge_slot as cms  # noqa: E402
+import check_pr_landing as cpl
+import claim_merge_slot as cms
 
 HOLD_TEXT = {
     "tier_2_3_needs_approval": "touches Tier-{tier} paths ({paths}); needs explicit operator approval before merge",
