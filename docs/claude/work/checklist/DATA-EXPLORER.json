@@ -1,0 +1,31 @@
+{
+  "id": "DATA-EXPLORER",
+  "title": "Data Explorer redesign: research catalog + signals/trades/order-packages/raw sub-tabs, auth restored so the tab loads",
+  "phase": "W42",
+  "state": "in_flight",
+  "owner": "lane DATA-EXPLORER (session_01EUNwHBF7sHQp1DimqACauN) for manager session_01G16FfyYSmDPQuuW55BuTmK",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": 18,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-13 operator ask, verbatim] \"add a tab in the UI data explorer to view the tests we have run and that are queued - a searchable and filterable catalog of all the research tests (summary, results, topic/roadmap priority, data used) ... the signals catalog, trade log and the rest of our database as sub tabs ... make sure a) it is functioning (the tab is pretty dead right now) and b) it is designed to be useful so I can stay on top of our data\". ROOT CAUSE OF DEAD (manager 12:40Z): POST /api/auth/login 500 auth_unavailable, /api/bot/db/tables 401 -> require_session-gated explorer cannot load. [lane built, in this PR] GET /api/bot/research/catalog + /{unit_id} (src/runtime/research_catalog.py, ungated Tier-1, public-repo data only), tests/test_research_catalog.py, tier-policy rows. MEASURED over research/queue 2026-10-13: 567 units, 0 read errors: 456 result, 57 blocked, 37 dispatched (36h-352h ago, 36 with NO result row), 7 queued, 4 due, 6 retired; 110 flagged stuck (57 blocked + 37 dispatched-no-result + 16 needs_review). [separate PR] set-env derives WEBAPP_PASSWORD_SHA256 from plaintext secret WEBAPP_PASSWORD and mints JWT_SIGNING_KEY on the runner. NOT DONE: dashboard repo attach (add_repo) was DENIED by the auto-mode classifier so no SPA work exists; auth not yet restored (needs the operator to paste WEBAPP_PASSWORD).",
+  "updated_at": "2026-10-13T12:52:24Z",
+  "updated_by": "session_01EUNwHBF7sHQp1DimqACauN",
+  "roadmap": [
+    "M6"
+  ],
+  "priority": "high",
+  "observation": {
+    "what": "A human opens the deployed SPA Data Explorer, logs in, and sees the Research catalog default sub-tab with rows (and Signals/Trades/Raw tables load); wrong password returns 401 not 500; /api/bot/db/tables returns 200 with a bearer and 401 without",
+    "how_to_check": "curl -s -o /dev/null -w %{http_code} -X POST https://ict-bot.duckdns.org/api/auth/login -H Content-Type:application/json -d {\"email\":\"ben.baichmankass@gmail.com\",\"password\":\"wrong\"} -> 401; GET /api/bot/research/catalog?limit=1 -> present:true; human confirms render",
+    "due_by": "2026-10-20"
+  },
+  "writeback": {
+    "roadmap": "M6 where/next: Data Explorer research catalog landed (owed at close)",
+    "arch": "none: read-only projection, no contract change"
+  },
+  "_seq": 465
+}
