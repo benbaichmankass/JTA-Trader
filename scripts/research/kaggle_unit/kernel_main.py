@@ -20,7 +20,17 @@ import subprocess
 import sys
 import tarfile
 
-specs = sorted(glob.glob("/kaggle/input/**/spec.json", recursive=True))
+def _is_spec(path):
+    try:
+        d = json.load(open(path))
+    except (OSError, ValueError):
+        return False
+    return isinstance(d, dict) and "unit" in d and "run_id" in d
+
+
+# the extracted repo tree may hold other spec.json files: take the shallowest one that carries a unit and a run_id
+specs = sorted((p for p in glob.glob("/kaggle/input/**/spec.json", recursive=True) if _is_spec(p)),
+               key=lambda p: (p.count("/"), p), reverse=True)
 if not specs:
     print("NO_SPEC: bundle dataset not mounted")
     sys.exit(3)
@@ -29,16 +39,29 @@ unit, run_id = str(spec.get("unit", "")), str(spec.get("run_id", ""))
 if not re.fullmatch(r"RQ-\d{8}-(?:\d{3}|[0-9a-f]{4}-\d{2})", unit) or not re.fullmatch(r"[A-Za-z0-9_\-]{1,64}", run_id):
     print("BAD_SPEC", unit, run_id)
     sys.exit(4)
-bundle = os.path.join(os.path.dirname(specs[-1]), "repo.tar.gz")
+bundle_dir = os.path.dirname(specs[-1])
+bundle = os.path.join(bundle_dir, "repo.tar.gz")
 repo = "/tmp/repo"
 shutil.rmtree(repo, ignore_errors=True)
 os.makedirs(repo)
-with tarfile.open(bundle) as tf:
-    for m in tf.getmembers():           # no absolute paths / traversal out of the unpack dir
-        if m.name.startswith("/") or ".." in m.name.split("/"):
-            print("BAD_MEMBER", m.name)
-            sys.exit(5)
-    tf.extractall(repo)
+if os.path.exists(bundle):
+    with tarfile.open(bundle) as tf:
+        for m in tf.getmembers():           # no absolute paths / traversal out of the unpack dir
+            if m.name.startswith("/") or ".." in m.name.split("/"):
+                print("BAD_MEMBER", m.name)
+                sys.exit(5)
+        tf.extractall(repo)
+else:
+    # OBSERVED 2026-10-13 (run 38396963370): Kaggle auto-extracts an uploaded .tar.gz, so the dataset mount holds the
+    # repo tree itself, not repo.tar.gz. Find the tree by its anchor file rather than assuming a layout.
+    hits = sorted(glob.glob(os.path.join(bundle_dir, "**", "scripts", "research", "script_run.py"), recursive=True))
+    if not hits:
+        print("NO_BUNDLE: neither repo.tar.gz nor a scripts/research/script_run.py under", bundle_dir)
+        print(sorted(os.listdir(bundle_dir))[:40])
+        sys.exit(6)
+    root = os.path.dirname(os.path.dirname(os.path.dirname(hits[0])))
+    shutil.rmtree(repo, ignore_errors=True)
+    shutil.copytree(root, repo)
 print("== gpu:", subprocess.run(["nvidia-smi", "-L"], capture_output=True, text=True, check=False).stdout.strip())
 env = dict(os.environ, PYTHONPATH=repo, GITHUB_SHA=str(spec.get("commit_sha", "")))
 rc = subprocess.run([sys.executable, "scripts/research/script_run.py", "--unit", unit, "--run-id", run_id, "--run"],
