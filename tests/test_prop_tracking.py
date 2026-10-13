@@ -128,6 +128,15 @@ def test_positions_miss_event_is_quiet_scrubbed_and_kept(env):
     assert env == []
 
 
+def test_positions_miss_no_tab_detail_is_kept_scrubbed(env):
+    pe.record_event(_dev(), {"event": "positions_miss", "reason": "no_tab d6 c0 t1",
+                             "headers": ["Loading", "Menu"], "controls": ["Menu"]})
+    d = pe.last_positions_diag("breakout_2")
+    assert d["state"] == "no_tab d6 c0 t1" and d["headers"] == ["Loading", "Menu"]
+    pe.record_event(_dev(), {"event": "positions_miss", "reason": "no_tab https://x.y/z <b>1234567</b>"})
+    assert "https" not in json.dumps(pe.last_positions_diag("breakout_2")) and "<" not in pe.last_positions_diag("breakout_2")["state"]
+
+
 # ---- reconcile ----
 
 def test_matching_positions_change_nothing():

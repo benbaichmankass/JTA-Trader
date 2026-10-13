@@ -469,6 +469,16 @@ document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__su
   let e6 = await qP6.evaluate("__ex.positionsRead()");
   eq([e6.state, e6.controls.includes("Positions")], ["no_table", true], "positions: card layout (no table) -> no_table with the masked controls dump");
   eq(/31/.test(JSON.stringify(e6)), false, "positions miss dump carries no value");
+  // PHONE-POSITIONS-READ-CONTEXT: chips counted/clicked incl. plain-div chips with a count badge; miss dump says where we are
+  const qC1 = await onHost(`<!doctype html><html><body><div class=bar><div class=chip>Order form</div><div class=chip>Positions 1</div></div><div>Balance 4,930.42 USD</div></body></html>`);
+  eq((await qC1.evaluate("__ex.tabChips()")).chips, 1, "tabChips: a plain-div 'Positions 1' chip is counted");
+  eq(await qC1.evaluate("__ex.clickTab('^positions\\\\b')"), "clicked", "clickTab: clicks the plain-div chip clickText cannot see");
+  eq(await qC1.evaluate("__ex.clickText('^positions\\\\b')"), "none", "clickText alone misses it (why clickTab exists)");
+  const qC2 = await onHost(`<!doctype html><html><body><h1>Loading</h1><button>Menu</button><p>Balance 4,930.42 USD</p></body></html>`);
+  const md = await qC2.evaluate("__ex.missDump()");
+  eq([md.chips, typeof md.trade, typeof md.path_depth, md.controls.includes("Menu"), md.headers.includes("Loading")], [0, "boolean", "number", true, true], "missDump: chips 0, path info, controls and leaf texts present");
+  eq(/4,930|930/.test(JSON.stringify(md)), false, "missDump: digits masked, no balance value");
+  eq(await qC2.evaluate("__ex.clickTab('^positions\\\\b')"), "none", "clickTab: no chip -> none (no_tab)");
   const qP7 = await onHost(posTable("Positions", "<tr><td>ETHUSD</td><td>-1.5</td><td>2600</td><td>2550</td><td>3000</td><td>−75.00</td><td>-</td></tr>", "<p>x</p>"));
   let e7 = await qP7.evaluate("__ex.positionsRead()");
   eq([e7.state, e7.rows[0].side, e7.rows[0].qty, e7.rows[0].upnl], ["read", "short", 1.5, -75], "positions: signed size gives the side; unicode minus uPnL");

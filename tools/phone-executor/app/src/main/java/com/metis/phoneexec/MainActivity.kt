@@ -134,6 +134,7 @@ class MainActivity : Activity() {
         const val TICK_MS = 30_000L
         const val HEARTBEAT_MS = 120_000L
         const val ACCT_MS = 300_000L
+        const val CHIPS_WAIT_MS = 12_000L               // Positions/Closed read: wait this long for the tab chips to render
         const val POS_MISS_MS = 1_800_000L   // a Positions read that failed is reported (masked dump) at most every 30 min
         const val USER_HOLD_MS = 5 * 60_000L
         const val PAUSE_MAX_MS = 10 * 60_000L
@@ -565,15 +566,38 @@ class MainActivity : Activity() {
         }
         if (ps != "read" && System.currentTimeMillis() - lastPosMissMs >= POS_MISS_MS) {
             lastPosMissMs = System.currentTimeMillis()
-            api.positionsMiss(ps, pos?.optJSONArray("headers") ?: JSONArray(), pos?.optJSONArray("controls") ?: JSONArray())
+            api.positionsMiss((ps + " " + (pos?.optString("detail") ?: "")).trim(), pos?.optJSONArray("headers") ?: JSONArray(), pos?.optJSONArray("controls") ?: JSONArray())
         }
         api.accountStatus(bal, eq, if (eqRead != null) "equity" else "portfolio", d(a, "unrealized"), pos, closed)
         return if (ps == "read") "posted" else "posted_pos_$ps"
     }
 
-    /** Show one bottom-panel view by its tab label and read it. Null when the tab is missing or the page did not answer. */
+    /** Wait (poll) until the bottom-panel tab chips exist: the SPA renders them after the document is "complete". */
+    private suspend fun waitChips(p: Page, maxMs: Long): JSONObject? {
+        val end = System.currentTimeMillis() + maxMs
+        var tc: JSONObject? = null
+        while (true) {
+            tc = try { p.ensure(); p.obj("__ex.tabChips()") } catch (e: JsTimeout) { null }
+            if ((tc?.optInt("chips") ?: 0) > 0 || System.currentTimeMillis() >= end) return tc
+            delay(1000)
+        }
+    }
+
+    /** Show one bottom-panel view by its tab label and read it. Runs against the loaded /account/<id>/trade terminal:
+     *  waits for the chips; when the page is an account page but not /trade it opens the terminal first (not while the
+     *  operator is using the screen). A genuine miss returns state no_tab plus a masked dump of what IS on the page. */
     private suspend fun readView(p: Page, tabRe: String, reader: String): JSONObject? {
-        if (p.js("__ex.clickText(${q(tabRe)})") != "clicked") return JSONObject().put("state", "no_tab")
+        var tc = waitChips(p, CHIPS_WAIT_MS)
+        if ((tc?.optInt("chips") ?: 0) == 0 && tc?.optBoolean("trade") == false && tc?.optInt("acct_href") == 1 && !(p === fg && userActive())) {
+            val href = p.js("__ex.terminalHref()")
+            if (href.startsWith("https://trade.breakoutprop.com/")) { p.load(href); p.settle(20_000L); tc = waitChips(p, CHIPS_WAIT_MS) }
+        }
+        if (p.js("__ex.clickTab(${q(tabRe)})") != "clicked") {
+            val d = p.obj("__ex.missDump()") ?: JSONObject()
+            return JSONObject().put("state", "no_tab").put("headers", d.optJSONArray("headers") ?: JSONArray())
+                .put("controls", d.optJSONArray("controls") ?: JSONArray())
+                .put("detail", "d${d.optInt("path_depth")} c${d.optInt("chips")} t${if (d.optBoolean("trade")) 1 else 0}")
+        }
         delay(1200); p.ensure()
         return p.obj(reader)
     }
