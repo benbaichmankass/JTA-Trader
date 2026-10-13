@@ -367,6 +367,31 @@ def test_adoption_never_moves_a_newer_stamp_backwards(tmp_path, monkeypatch):
     assert stamps[UID] == "2030-01-10T05:00:00+00:00"
 
 
+def test_a_stranded_stamp_is_never_adopted_over_a_deliberate_rearm(tmp_path, monkeypatch):
+    """PI-20261013-HOPS1447-0001: #17853 restored the stamps of the OPEN stranded stamp PR #17809 onto
+    RQ-20261009-903 / RQ-20261012-75b2-19, whose `last_dispatched_at: null` was #17829's re-arm."""
+    now = datetime.now(timezone.utc)
+    old = (now - timedelta(hours=8)).replace(microsecond=0)
+    monkeypatch.setattr(dq, "RESULTS_ROOT", _results(
+        tmp_path, UID, [_state_row("producer_failed", (now - timedelta(hours=9)).isoformat())]))
+    src = "PR #7 (automation/research-queue-stamp-1-1)"
+    monkeypatch.setattr(dq, "stranded_stamp_adoptions", lambda now, hours=3.0, api=None: {UID: (old, src)})
+    assert dq.cleared_on_purpose(_entry(last_dispatched_at=None)) is True
+    fired, dec, stamps = _cycle(tmp_path, monkeypatch, [(UID, {})], pending={UID: src})
+    assert fired == [f"research_unit={UID}"]        # the re-arm is honoured: the unit runs again ...
+    assert stamps[UID] != old.isoformat()           # ... and carries THIS fire's stamp, never the old one
+
+
+def test_cleared_on_purpose_is_false_for_a_dropped_stamp_and_a_stamped_unit(tmp_path, monkeypatch):
+    now = datetime.now(timezone.utc)
+    assert dq.cleared_on_purpose(_entry(last_dispatched_at=None)) is False        # no rows: a dropped stamp
+    monkeypatch.setattr(dq, "RESULTS_ROOT", _results(tmp_path, UID, [_row((now - timedelta(hours=2)).isoformat())]))
+    assert dq.cleared_on_purpose(_entry(last_dispatched_at=None)) is False        # a real verdict: not a re-arm
+    monkeypatch.setattr(dq, "RESULTS_ROOT", _results(
+        tmp_path, UID, [_state_row("producer_failed", (now - timedelta(hours=2)).isoformat())]))
+    assert dq.cleared_on_purpose(_entry(last_dispatched_at=now.isoformat())) is False   # stamped
+
+
 # ── 5. non-verdict rows do not consume a once-unit (RQ-REARM-PRODUCER-FAILED) ──
 
 def _state_row(read_state: str, generated_at: str) -> str:

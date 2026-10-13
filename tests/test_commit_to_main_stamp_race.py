@@ -46,6 +46,20 @@ def test_resolver_keeps_the_later_stamp_when_only_the_stamp_differs():
     assert rsc.resolve(p, b, a) == b
 
 
+def test_resolver_never_lets_a_stamp_undo_a_rearm():
+    """PI-20261013-HOPS1447-0001: a cleared stamp (`last_dispatched_at: null`) is a deliberate re-arm."""
+    p = "research/queue/RQ-1.yaml"
+    stamped = _unit("2026-10-12T14:51:40+00:00")
+    cleared = "id: RQ-1\nstatus: queued\nlast_dispatched_at: null\n"
+    base = _unit("2026-10-12T14:51:40+00:00")
+    assert rsc.resolve(p, stamped, cleared) == cleared                    # branch stamp vs main re-arm
+    assert rsc.resolve(p, cleared, stamped) == cleared
+    assert rsc.resolve(p, _unit("2026-10-13T09:00:00+00:00"), cleared, base) == cleared
+    # a side that did not move off the merge base loses to the side that did
+    assert rsc.resolve(p, stamped, _unit("2026-10-13T01:00:00+00:00"), base) == _unit("2026-10-13T01:00:00+00:00")
+    assert rsc.resolve(p, _unit("2026-10-13T01:00:00+00:00"), stamped, base) == _unit("2026-10-13T01:00:00+00:00")
+
+
 def test_resolver_refuses_any_other_difference_or_path():
     p = "research/queue/RQ-1.yaml"
     assert rsc.resolve(p, _unit("2026-10-11T21:00:00+00:00", "x: 1\n"),
