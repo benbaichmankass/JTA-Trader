@@ -60,8 +60,8 @@ jobs:
           kaggle quota 2>&1 | tee out/quota-before.txt || echo "quota call failed (non-fatal)"
       - name: Push kernel
         run: |
-          mkdir -p k && cp research/kaggle/gpu-pilot/pilot.py k/
-          sed "s|__USERNAME__|$USERNAME|" research/kaggle/gpu-pilot/kernel-metadata.json > k/kernel-metadata.json
+          mkdir -p k && cp scripts/research/kaggle_gpu_pilot/pilot.py k/
+          sed "s|__USERNAME__|$USERNAME|" scripts/research/kaggle_gpu_pilot/kernel-metadata.json > k/kernel-metadata.json
           date -u +%s > out/t_push
           kaggle kernels push -p k 2>&1 | sed "s|$USERNAME|<user>|g" | tee out/push.txt
           grep -qi "error\|fail" out/push.txt && { echo "PUSH FAILED"; exit 1; } || true
