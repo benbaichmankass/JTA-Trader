@@ -182,7 +182,7 @@ def check_queue(runnable_n: Optional[int], th: dict, extra: Optional[dict] = Non
 
 
 def check_backend(name: str, runnable_for: Optional[int], runs: Optional[list], now: datetime, th: dict,
-                  quota: Optional[dict] = None) -> Dict[str, Any]:
+                  quota: Optional[dict] = None, max_concurrent: Optional[int] = None) -> Dict[str, Any]:
     chk, lim = f"backend:{name}", float(th["backend_idle_minutes"])
     if runnable_for is None:
         return verdict(chk, CNL, "could not work out which runnable units route here")
@@ -201,6 +201,10 @@ def check_backend(name: str, runnable_for: Optional[int], runs: Optional[list], 
     act = _active(runs, now)
     ages = [a for a in (_age_min(r.get("created_at"), now) for r in runs) if a is not None]
     ev.update(active=len(act), minutes_since_last_start=round(min(ages), 1) if ages else None)
+    # UNDERUTILISED (operator 2026-10-13): runnable work AND free slots. A reading, never an alert: it stays state OK
+    # (so nothing reaches ops-flags or Telegram) and is recorded only in evidence / the weekly utilisation view.
+    if max_concurrent is not None and len(act) < max_concurrent:
+        ev.update(underutilised=True, max_concurrent=max_concurrent)
     if act:
         return verdict(chk, OK, f"{len(act)} run(s) queued/in progress", evidence=ev)
     if ages and min(ages) <= lim:
@@ -455,6 +459,7 @@ def queue_facts(root: Path, now: datetime) -> Optional[dict]:
         return {"runnable": len(run_ids), "by_backend": by_be, "unplaceable": unplaceable, "units_total": len(units),
                 "unreadable_units": len(bad), "backends": [n for n, b in cfg["backends"].items() if b.get("auto_route", True)],
                 "backend_workflows": {n: b["workflow"] for n, b in cfg["backends"].items()},
+                "backend_max_concurrent": {n: b.get("max_concurrent") for n, b in cfg["backends"].items()},
                 "router_style_due_not_counted_by_dispatchable": uncounted,
                 "kaggle_floor_hours": float((cfg["backends"].get("kaggle", {}).get("quota") or {}).get("floor_hours") or 0)}
     except Exception as exc:  # allow-silent: printed to stderr, and the None return becomes a could_not_look verdict, never an ok
@@ -485,7 +490,8 @@ def evaluate(probe: Any, cfg: dict, now: datetime, facts: Optional[dict]) -> Lis
             q = probe.kaggle_quota()
             quota = {"remaining": q.get("remaining"), "floor_hours": facts["kaggle_floor_hours"] if facts else 0}
         out.append(check_backend(be, (facts["by_backend"].get(be, 0) if facts else None),
-                                 probe.workflow_runs(facts["backend_workflows"][be], 10) if facts else None, now, th, quota))
+                                 probe.workflow_runs(facts["backend_workflows"][be], 10) if facts else None, now, th, quota,
+                                 (facts.get("backend_max_concurrent") or {}).get(be) if facts else None))
     out.append(check_collector(probe.collector_status(float(th["collector_window_hours"]), now), th))
     out.append(check_stamps(probe.open_prs(), now, th))
     out.append(check_phone_heartbeat(probe.phone_probe(now), th))
