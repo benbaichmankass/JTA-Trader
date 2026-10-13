@@ -34,8 +34,8 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts" / "ci"))
 sys.path.insert(0, str(REPO / "scripts" / "ops"))
 
-import check_pr_landing as cpl
-import claim_merge_slot as cms
+import check_pr_landing as cpl  # noqa: E402
+import claim_merge_slot as cms  # noqa: E402
 
 HOLD_TEXT = {
     "tier_2_3_needs_approval": "touches Tier-{tier} paths ({paths}); needs explicit operator approval before merge",
