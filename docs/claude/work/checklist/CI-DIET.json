@@ -1,0 +1,30 @@
+{
+  "id": "CI-DIET",
+  "title": "CI diet: free the GitHub-hosted runner pool for research without weakening any check (data-only PRs run only the tests that read their paths)",
+  "phase": "ci",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "lane/ci-diet",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-13 lane CI-DIET] MEASURED over the 48h ending 20:18Z (9,500 runs from the Actions API; job-minutes sampled 6 runs/workflow): PR pytest-run is ~62% of CI job-minutes (502 runs, mean ~36 job-min, ~17.9k min/48h); Guards PR ~2.3k, Guards push ~1.5k, pytest-run push ~1.7k (200 pushes), everything else <1k each. 179 of 233 commits landed on main (77%) touched ONLY research/queue|results, checklist, pipeline, comms, pr-landing/automerge/merge-slot files, yet every one paid the full suite on the PR and again on push (the relevance filter includes those trees because tests read them). FIX 1 (this PR): scripts/ci/pytest_run_scope.py + pytest-run.yml: a data-only diff runs the 249 test files that mention those trees instead of the full suite; non-allowlisted path => full; guards unchanged; check name unchanged. Concurrency-cancel already exists on every PR workflow (3.3k min/48h are partial runs cancelled by newer pushes). NOT changed on purpose: Guards --all on push (post-merge semantic-skew net), push pytest-run for code merges.",
+  "updated_at": "2026-10-13T20:42:10Z",
+  "updated_by": "lane-CI-DIET",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "writeback": {
+    "roadmap": "L-OPS: record CI p90 concurrency before/after",
+    "arch": "none: CI-only"
+  },
+  "observation": {
+    "what": "CI p90 concurrent jobs over the 24h after the PR lands vs the 16 baseline (24h measurement, 2026-10-13); data-only PRs show pytest-run scope=data in the job summary; research runner cap in research_compute.yaml raisable",
+    "how_to_check": "gh api repos/benbaichmankass/Metis-Insights/actions/runs per hour; python3 scripts/ci/pytest_run_scope.py; count of pytest-run PR runs with duration >25 min among commits touching only research/results|checklist|comms",
+    "due_by": "2026-10-15T00:00Z"
+  },
+  "_seq": 467
+}
