@@ -180,6 +180,7 @@ SENDERS: Final[dict[str, tuple[str, ...]]] = {
     # MANAGER (git-pull fan-out of committed session pings / merges)
     "scripts/notify_on_pull.py": ("pr_merged", "claude_ping"),
     "scripts/ops/attention_watch.py": ("manager_update",),
+    "scripts/ops/phone_hb_alert.py": ("alert",),   # PHONE-KEEPALIVE: stale phone heartbeat, target=system
     # MANAGER
     "scripts/notify_session.py": ("session",),
     "scripts/ops/work_digest_now.py": ("manager_update",),

@@ -192,6 +192,14 @@ def run(dry_run: bool = False, force: bool = False) -> int:
             aw.commit(prep, "dry_run")
         return 0
 
+    # PHONE-KEEPALIVE: a stale phone heartbeat is its own SYSTEM-channel alert (+ one recovery message), not only a
+    # line in the collapsed "Manager watch" section below. Never raises.
+    try:
+        from scripts.ops import phone_hb_alert  # noqa: PLC0415
+        phone_hb_alert.run()
+    except Exception as exc:  # noqa: BLE001
+        print(f"work-digest-now: phone-hb-alert failed: {exc}")
+
     from send_ping import enqueue  # noqa: PLC0415
 
     try:

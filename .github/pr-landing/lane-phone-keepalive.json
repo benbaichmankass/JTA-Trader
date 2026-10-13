@@ -1,0 +1,12 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 by path (src/prop/phone_executor.py heartbeat allowlist + event kind; scripts/ops/work_digest_now.py alert hook; the phone-executor APK). The operator's 2026-10-13 ask ('the Breakout phone executor must know how to stay open INDEFINITELY', relayed by the manager) is the OK; this lane cannot write its own approval record, so the manager lands it. No order logic is touched.",
+  "why": "Phone executor stayed dead 15:14Z-18:48Z because its tick loop lived in the Activity scope and nothing relaunched it. Adds an independent watchdog (service loop + AlarmManager chain), liveness fields in the heartbeat, tap-here notifications, and a standalone system-channel stale-heartbeat alert with one recovery message.",
+  "recorded_decision": {
+    "kind": "operator_decision",
+    "ref": "PHONE-KEEPALIVE",
+    "text": "Operator 2026-10-13 ~18:50Z: 'we need to make sure that it knows how to stay open indefinitely' (Breakout phone executor). No order logic touched."
+  }
+}
