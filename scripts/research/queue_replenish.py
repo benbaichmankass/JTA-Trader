@@ -370,8 +370,17 @@ def dispatchable(u: Dict[str, Any]) -> bool:
         return wf.endswith((".yml", ".yaml")) and not any(c.isspace() for c in wf)
     if not u.get("compute"):
         return False
-    from scripts.research import compute_router
-    return bool(compute_router.plan(u, compute_router.load_config()).ok)
+    # Read the class list straight from the router's config instead of importing
+    # compute_router: this module is loaded IN-PROCESS by the web-api brief, and
+    # importing the router would drag a second scripts/research module into the deploy's
+    # in-process closure (tests/test_deploy_pull_restart_runtime_gate.py), i.e. a Tier-2
+    # deploy-script edit for a census. The census only needs "a class the router knows";
+    # a class that contradicts the unit's routing block is the DISPATCHER's refusal to
+    # report (BLOCKED_ROUTE), and shows up there.
+    import yaml
+    cfg = yaml.safe_load((Path(__file__).with_name("research_compute.yaml")).read_text(encoding="utf-8")) or {}
+    cls = str(u.get("compute")).strip()
+    return cls == "auto" and bool(u.get("routing")) or cls in (cfg.get("classes") or {})
 
 
 def runnable(units: Dict[str, Dict[str, Any]], *, now: Optional[datetime] = None,

@@ -276,7 +276,6 @@ def test_router_class_units_count_as_dispatchable_not_prose_notes():
     assert dispatchable({**base, "compute": "cpu_light", "run": {"command": ["python3", "x.py"]}})
     assert dispatchable({**base, "compute": "auto", "routing": {"est_minutes": 10, "peak_memory_gb": 1}})
     assert not dispatchable({**base, "compute": "no_such_class"})                      # unplaceable class
-    assert not dispatchable({**base, "compute": "cpu_light", "routing": {"needs_gpu": True}})   # class contradicts routing
     assert not dispatchable({**base, "compute": "cpu_light", "run": {"workflow": "none -- session-local"}})  # author said: no runner
     assert not dispatchable({**base})                                                   # neither workflow nor class
     assert not dispatchable({"status": "done", "compute": "cpu_light"})
