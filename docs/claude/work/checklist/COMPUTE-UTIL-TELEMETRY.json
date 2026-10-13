@@ -1,0 +1,26 @@
+{
+  "id": "COMPUTE-UTIL-TELEMETRY",
+  "title": "COMPUTE-UTIL-TELEMETRY: compute review recommendation",
+  "phase": "process",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Record daily CPU/mem/disk/load p95 for live, trainer and gateway VMs (live vm_health and trainer mirror already carry single samples; gateway has none). A gateway reader touches a VM = Tier 2 step. Source: docs/plans/COMPUTE-ARCH-REVIEW-2026-10-13.md (ranked recommendations).",
+  "updated_at": "2026-10-13T08:44:11Z",
+  "updated_by": "session_01KKBMQzaGaDYCtbtCskjDJk",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "observation": {
+    "what": "Record daily CPU/mem/disk/load p95 for live, trainer and gateway VMs (live vm_health and trainer mirror already carry single samples; gateway has none)",
+    "how_to_check": "a 7-day p95 series per VM exists and is readable without SSH; docs/plans/COMPUTE-ARCH-REVIEW-2026-10-13.md A1 filled in with it",
+    "due_by": "2026-10-27"
+  },
+  "_seq": 449
+}
