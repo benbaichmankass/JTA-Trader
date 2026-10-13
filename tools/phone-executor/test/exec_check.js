@@ -486,6 +486,65 @@ document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__su
   const qF4 = await onHost(posTable("Positions", many));
   let f4 = await qF4.evaluate("__ex.positionsRead()");
   eq([f4.state, f4.n_rows, f4.rows], ["too_many_rows", 16, undefined], "16 positions -> too_many_rows, nothing sent");
+  // DIV GRID (PHONE-POSITIONS-DIV, 2026-10-12): the LIVE Positions view has no <table>: header labels Market | UP&L |
+  // Side | Value | Opening price | Current price | TP / SL | Net P&L (read from the first live diag), no size column.
+  // SYNTHETIC rows in that shape; the empty state "Start trading with leverage" appears while flat.
+  const gridRow = (m, up, side, val, op, cur, tpsl, net) => `<div class=r><div>${m}</div><div>${up}</div><div>${side}</div><div>${val}</div><div>${op}</div><div>${cur}</div><div>${tpsl}</div><div>${net}</div></div>`;
+  const gridPage = (tab, body, aside) => `<!doctype html><html><head><meta charset=utf-8></head><body>
+<div id=top><span>Trade</span><div>Portfolio 4,947.72 USD</div></div>
+<div id=side><div><button>Market</button><button>Limit</button></div><div>Side</div><div>Value</div>${aside || ""}</div>
+<div id=bottom><div id=tabs><button>Open orders</button><button>${tab}</button><button>Portfolio</button><button>Closed orders</button><button>Trades</button></div>
+<div id=panel><div id=hdr><div>Market</div><div>UP&amp;L</div><div>Side</div><div>Value</div><div>Opening price</div><div>Current price</div><div>TP / SL</div><div>Net P&amp;L</div></div>${body}</div></div></body></html>`;
+  const G2 = gridRow("ETHUSD 5x", "+31.27 USD", "Long", "3,003.30 USD", "2,527.80", "2,554.40", "2655.4 / 2506.5", "+30.10 USD") +
+    gridRow("SOLUSD 5x", "-4.50 USD", "Short", "1,921.00 USD", "111.16", "112.30", "-", "-5.60 USD");
+  const gP = await onHost(gridPage("Positions", G2));
+  let g2 = await gP.evaluate("__ex.positionsRead()");
+  eq([g2.state, g2.layout, g2.n_rows], ["read", "div_grid", 2], "div grid: two positions read");
+  eq(g2.rows.map((r) => [r.symbol, r.side, r.entry, r.mark, r.upnl, r.value]),
+    [["ETHUSD", "long", 2527.8, 2554.4, 31.27, 3003.3], ["SOLUSD", "short", 111.16, 112.3, -4.5, 1921]], "div grid: mapped by header label (UP&L is upnl)");
+  eq(g2.rows.map((r) => r.netpnl), [30.1, -5.6], "div grid: Net P&L kept apart from upnl");
+  eq(g2.rows.map((r) => [r.qty, r.qty_src]), [[1.17573598, "value/mark"], [17.10596616, "value/mark"]], "div grid: qty derived from Value / Current price, labelled");
+  const gP1 = await onHost(gridPage("Positions", gridRow("ETHUSD", "+1.00 USD", "Long", "2,554.40 USD", "2,527.80", "2,554.40", "-", "+0.50 USD")));
+  let g1 = await gP1.evaluate("__ex.positionsRead()");
+  eq([g1.state, g1.rows.length, g1.rows[0].side], ["read", 1, "long"], "div grid: one position read");
+  const gE = await onHost(gridPage("Positions", "<div class=empty><svg></svg><p>Start trading with leverage</p><button>Trade</button></div>"));
+  let ge = await gE.evaluate("__ex.positionsRead()");
+  eq([ge.state, ge.rows], ["read", []], "div grid: empty-state INSIDE the Positions panel is flat");
+  const gE2 = await onHost(gridPage("Positions", "", "<p>Start trading with leverage</p>"));
+  eq((await gE2.evaluate("__ex.positionsRead()")).state, "empty_unconfirmed", "div grid: empty-state text elsewhere on the page is NOT flat");
+  const gO = await onHost(gridPage("Positions", gridRow("ETHUSD 5x", "+31.27 USD", "Long", "3,003.30 USD", "2,527.80", "2,554.40", "-", "+30.10 USD"), "<p>Start trading with leverage</p>"));
+  let go = await gO.evaluate("__ex.positionsRead()");
+  eq([go.state, go.rows.length, go.rows[0].symbol], ["read", 1, "ETHUSD"], "div grid: 1 open position + 'Start trading' text elsewhere reads the position, not flat");
+  const gO2 = await onHost(gridPage("Positions", gridRow("ETHUSD 5x", "+31.27 USD", "Long", "3,003.30 USD", "2,527.80", "2,554.40", "-", "+30.10 USD") + "<p>Start trading with leverage</p>"));
+  eq((await gO2.evaluate("__ex.positionsRead()")).rows.length, 1, "div grid: a row present wins over stray empty text inside the panel");
+  const gE3 = await onHost(gridPage("Positions", "", ""));
+  eq((await gE3.evaluate("__ex.positionsRead()")).state, "empty_unconfirmed", "div grid: header with no rows and no empty text is NOT flat");
+  const gE4 = await onHost(gridPage("Positions (0)", ""));
+  let ge4 = await gE4.evaluate("__ex.positionsRead()");
+  eq([ge4.state, ge4.rows], ["read", []], "div grid: the tab's own count 0 is flat");
+  eq((await (await onHost(gridPage("Positions (3)", G2))).evaluate("__ex.positionsRead()")).state, "count_mismatch", "div grid: tab count 3 vs 2 rows -> not read");
+  const gMany = Array.from({length: 16}, () => gridRow("ETHUSD", "+1 USD", "Long", "2,554.40 USD", "2,500", "2,554.40", "-", "+1 USD")).join("");
+  let gm = await (await onHost(gridPage("Positions", gMany))).evaluate("__ex.positionsRead()");
+  eq([gm.state, gm.n_rows, gm.rows], ["too_many_rows", 16, undefined], "div grid: 16 positions -> too_many_rows, nothing sent");
+  const gBad = G2 + "<div class=r><div>XRPUSD 5x</div><div>+1 USD</div><div>Long</div><div>500 USD</div></div>";
+  let gb = await (await onHost(gridPage("Positions", gBad))).evaluate("__ex.positionsRead()");
+  eq(gb.state, "unparsed", "div grid: a row whose cells do not line up with the header is unparsed, never dropped");
+  eq(/\d/.test(JSON.stringify(gb.headers)), false, "div grid: miss dump headers carry no digits");
+  const gNoSide = await onHost(gridPage("Positions", gridRow("ETHUSD", "+1 USD", "-", "2,554.40 USD", "2,500", "2,554.40", "-", "+1 USD")));
+  eq((await gNoSide.evaluate("__ex.positionsRead()")).state, "unparsed", "div grid: no readable side -> unparsed, never guessed");
+  const gNoTabs = await onHost(`<!doctype html><html><body><div id=hdr><div>Market</div><div>UP&amp;L</div><div>Side</div><div>Value</div><div>Opening price</div><div>Current price</div></div><p>Start trading with leverage</p></body></html>`);
+  eq((await gNoTabs.evaluate("__ex.positionsRead()")).state, "empty_unconfirmed", "div grid: no tab bar to bound the panel -> no flat evidence");
+  // CLOSED ORDERS as a DIV GRID (layout UNMEASURED; synthetic): the generic reader maps by header label too.
+  const cRow = (m, side, typ, qty, px, st, tm, pnl) => `<div class=r><div>${m}</div><div>${side}</div><div>${typ}</div><div>${qty}</div><div>${px}</div><div>${st}</div><div>${tm}</div><div>${pnl}</div></div>`;
+  const closedGrid = (tab, body) => `<!doctype html><html><body><div id=tabs><button>Open orders</button><button>Positions</button><button>${tab}</button><button>Trades</button></div>
+<div id=panel><div id=hdr><div>Market</div><div>Side</div><div>Type</div><div>Size</div><div>Avg. price</div><div>Status</div><div>Time</div><div>Net P&amp;L</div></div>${body}</div></body></html>`;
+  const cg = await onHost(closedGrid("Closed orders", cRow("SOLUSD", "Sell", "Stop", "17.26", "111.39", "Filled", "2026-10-12 16:30:05", "+3.97 USD") +
+    cRow("SOLUSD", "Buy", "Limit", "17.26", "111.16", "Filled", "2026-10-11 18:51:24", "-")));
+  let cgr = await cg.evaluate("__ex.closedRead()");
+  eq([cgr.state, cgr.layout, cgr.rows.length], ["read", "div_grid", 2], "closed div grid: two orders read");
+  eq([cgr.rows[0].side, cgr.rows[0].qty, cgr.rows[0].price, cgr.rows[0].status, cgr.rows[0].netpnl, cgr.rows[0].time], ["short", 17.26, 111.39, "Filled", 3.97, "2026-10-12 16:30:05"], "closed div grid: the exit row mapped by header");
+  const cgBad = await onHost(closedGrid("Closed orders", cRow("SOLUSD", "Sell", "Stop", "17.26", "111.39", "Filled", "2026-10-12 16:30:05", "+3.97 USD") + "<div class=r><div>SOLUSD 12</div><div>Buy</div></div>"));
+  eq((await cgBad.evaluate("__ex.closedRead()")).state, "unparsed", "closed div grid: a misaligned row is unparsed");
   const closedT = `<!doctype html><html><body><div role=tablist><button role=tab>Positions</button><button role=tab>Closed orders</button></div>
 <table><tr><th>Time</th><th>Symbol</th><th>Side</th><th>Type</th><th>Filled</th><th>Avg. price</th><th>Status</th><th>Realized PnL</th></tr>
 <tr><td>2026-10-12 12:01:05</td><td>ETH</td><td>Sell</td><td>Take profit</td><td>1.1758</td><td>2,655.40</td><td>Filled</td><td>+150.03</td></tr>
