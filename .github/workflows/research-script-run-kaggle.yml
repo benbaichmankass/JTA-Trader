@@ -75,6 +75,7 @@ jobs:
         env:
           UNIT: ${{ inputs.research_unit }}
         run: |
+          set +e
           set -uo pipefail
           case "$UNIT" in RQ-[0-9]*) ;; *) echo "::error::bad unit id"; exit 1;; esac
           case "$UNIT" in *[!A-Za-z0-9-]*) echo "::error::bad unit id chars"; exit 1;; esac
@@ -97,35 +98,41 @@ jobs:
           if [ "$GATE_RC" != "0" ]; then echo "QUOTA GATE REFUSED (see line above); nothing pushed" | tee -a "$OUT/kaggle-session.log"; exit 10; fi
           python3 scripts/research/kaggle_run.py bundle --unit "$UNIT" --run-id "$GITHUB_RUN_ID" \
               --username "$USERNAME" --out /tmp/kb/bundle --sha "$GITHUB_SHA" | tee /tmp/kb/info.json | tee -a "$OUT/kaggle-session.log"
-          # dataset: create the first time, new version afterwards
+          # dataset: create the first time, new version afterwards. The CLI can exit non-zero while the dataset
+          # is still being created (observed run 38396475640: output "Your private Dataset is being created"), so the
+          # exit code is NOT the verdict -- polling `datasets status` for "ready" is.
           if kaggle datasets status "$USERNAME/metis-research-bundle" >/dev/null 2>&1; then
-            kaggle datasets version -p /tmp/kb/bundle -m "run ${GITHUB_RUN_ID} ${UNIT}" 2>&1 | scrub | tee -a "$OUT/kaggle-session.log"
+            kaggle datasets version -p /tmp/kb/bundle -m "run ${GITHUB_RUN_ID} ${UNIT}" 2>&1 | scrub | grep -v "it/s\|B/s" | tee -a "$OUT/kaggle-session.log"
           else
-            kaggle datasets create -p /tmp/kb/bundle 2>&1 | scrub | tee -a "$OUT/kaggle-session.log"
+            kaggle datasets create -p /tmp/kb/bundle 2>&1 | scrub | grep -v "it/s\|B/s" | tee -a "$OUT/kaggle-session.log"
           fi
-          for i in $(seq 1 40); do
+          READY=0
+          for i in $(seq 1 60); do
             st=$(kaggle datasets status "$USERNAME/metis-research-bundle" 2>&1 | scrub)
-            echo "dataset: $st"
-            case "$st" in *[Rr]eady*|*READY*) break;; esac
+            echo "dataset: $st" | tee -a "$OUT/kaggle-session.log"
+            case "$st" in *[Rr]eady*|*READY*) READY=1; break;; esac
             sleep 15
           done
-          kaggle kernels push -p /tmp/kb/bundle-kernel 2>&1 | scrub | tee -a "$OUT/kaggle-session.log"
-          grep -qi "error\|fail" "$OUT/kaggle-session.log" && { echo "PUSH FAILED"; exit 11; } || true
+          if [ "$READY" != "1" ]; then echo "DATASET NEVER BECAME READY" | tee -a "$OUT/kaggle-session.log"; exit 12; fi
+          timeout 300 kaggle kernels push -p /tmp/kb/bundle-kernel 2>&1 | scrub | tee /tmp/kb/push.txt | tee -a "$OUT/kaggle-session.log"
+          if grep -qi "error\|fail" /tmp/kb/push.txt; then echo "PUSH FAILED"; exit 11; fi
           TIMEOUT_MIN=$(python3 -c "import json,sys;print(json.loads(open('/tmp/kb/info.json').read())['timeout_minutes'])" 2>/dev/null || echo 120)
-          deadline=$(( $(date +%s) + (TIMEOUT_MIN + 20) * 60 ))
+          deadline=$(( $(date +%s) + (TIMEOUT_MIN + 10) * 60 ))
           while :; do
-            s=$(kaggle kernels status "$USERNAME/metis-research-run" 2>&1 | scrub)
+            s=$(timeout 90 kaggle kernels status "$USERNAME/metis-research-run" 2>&1 | scrub)
             echo "$(date -u +%H:%M:%S) $s"
             case "$s" in *COMPLETE*|*ERROR*|*CANCEL*) break;; esac
             if [ "$(date +%s)" -gt "$deadline" ]; then echo "TIMEOUT waiting for the kernel" | tee -a "$OUT/kaggle-session.log"; break; fi
             sleep 30
           done
           echo "kernel final status: $s" >> "$OUT/kaggle-session.log"
-          kaggle kernels output "$USERNAME/metis-research-run" -p /tmp/kb/kout 2>&1 | scrub | tee -a "$OUT/kaggle-session.log" || true
+          timeout 300 kaggle kernels output "$USERNAME/metis-research-run" -p /tmp/kb/kout 2>&1 | scrub | tee -a "$OUT/kaggle-session.log" || true
           if [ -d /tmp/kb/kout/result ]; then cp -r /tmp/kb/kout/result/. "$OUT/"; fi
           cp /tmp/kb/kout/*.log "$OUT/kaggle-kernel.log" 2>/dev/null || true
           kaggle quota 2>&1 | tee "$OUT/kaggle-quota-after.txt" || true
           grep -rl "$USERNAME" "$OUT" 2>/dev/null | xargs -r sed -i "s|$USERNAME|<user>|g"
+          # show the kernel's own log in this job's log (the kernel is a black box otherwise); username already scrubbed
+          echo "== kaggle kernel log (tail) =="; tail -c 6000 "$OUT/kaggle-kernel.log" 2>/dev/null || echo "(no kernel log downloaded)"
           test -s "$OUT/run-manifest.json"
       - name: Derive the result record
         if: always()

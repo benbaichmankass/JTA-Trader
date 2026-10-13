@@ -67,6 +67,10 @@ python3 scripts/ci/check_research_queue_health.py              # the alarm the d
 git log --oneline -15 -- research/queue docs/claude/work/research-queue-dispatch-receipt.json   # stamps + receipts landing on main
 ```
 
+- **Utilization and capacity flags.** Read the newest file in `comms/research/utilization/` (and
+  `python3 scripts/research/research_utilization.py --week`). A `floor_thin` or `kaggle_quota_expiring` flag means a
+  backend is idle with nothing due for it: that is top-up work in step B/E (author units whose `compute:` class lands
+  there, with a `value:` block). `read_state: could_not_look` is a finding about the measurement, not an idle backend.
 - **Dispatcher / collector / grader ran and landed.** The workflows are
   `research-queue-dispatch.yml` (hourly :20), `research-queue-grade.yml` (6-hourly :50) and
   `research-queue-replenish.yml` (daily 05:50). Read recent runs with the GitHub MCP

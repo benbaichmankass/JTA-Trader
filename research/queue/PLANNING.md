@@ -55,6 +55,19 @@ run:
   A unit whose backend is full or out of quota is `deferred` with the reason and retried next cycle; it does not
   block units bound for other backends.
 
+- **Utilization is measured every fired cycle** (`scripts/research/research_utilization.py`, one file per run under
+  `comms/research/utilization/`, landed with the liveness receipt): per backend capacity, in flight, fired, waiting and
+  free slots, each with an explicit `read_state` (`measured` | `could_not_look` -- a backend we could not count is never
+  reported idle); Kaggle GPU hours used / remaining / expiring before the weekly reset; GPU-burst $ month-to-date; the
+  trainer VM's spare capacity when COMPUTE-UTIL-TELEMETRY has landed. `python3 scripts/research/research_utilization.py --week`
+  is the Wednesday planning view: slot-cycles available vs used vs idle, value dispatched, flag counts.
+- **Idle-capacity fill:** a recurring unit that sets `idle_fill: true` may be pulled forward when its backend has more
+  free slots than units due for it (it sorts after every due unit). Set it only when an early re-run is harmless.
+- **Thin floor:** when a backend has free slots and nothing due for it (or Kaggle GPU hours are about to expire with no
+  gpu unit due) the dispatcher prints ONE `::warning::research-capacity floor_thin|kaggle_quota_expiring ...` and records
+  it in the utilization file; research-ops step A reads it and treats it as top-up work (author units whose compute
+  class lands on the idle backend).
+
 ## 2. Weights
 - `research/THEMES.yaml` is the only place weights live. They are a share of fire slots, not an order.
 - Set at the operator's direction (2026-09-30: regime 5, live_strategy 4, ml_health 3, new_strategy_prop 2,
