@@ -548,6 +548,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/ops/tradeify-bot-ownership-note.md` | lookup | unknown | — | never | `dir:operator-setup-procedures / ownership statement and evidence procedure` | — |
 | `docs/pipeline/stage-contracts.md` | architecture | unknown | — | never | `name:declares-a-contract / not-assessed` | — |
 | `docs/plans/ENGINEERING-PLAN-2026-09-21.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
+| `docs/plans/OCI-STATE-CHECK-2026-10-13.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
 | `docs/plans/OPERATING-PLAN-2026-09-21.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/plans/COMPUTE-ARCH-REVIEW-2026-10-13.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/plans/OPS-AUTOMATION-INVENTORY-2026-10-13.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
@@ -567,6 +568,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/reference/data-model.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
 | `docs/reference/diag-access.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
 | `docs/reference/env-vars.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
+| `docs/reference/pr-event-wake-policy.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
 | `docs/reference/runtime-notes.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
 | `docs/reference/session-capabilities.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |
 | `docs/reference/signal-catalog-review.md` | lookup | unknown | — | never | `dir:reference-is-lookup / not-assessed` | — |

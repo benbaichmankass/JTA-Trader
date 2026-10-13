@@ -1,26 +1,30 @@
 {
   "id": "COMPUTE-KAGGLE-GPU",
-  "title": "COMPUTE-KAGGLE-GPU: compute review recommendation",
-  "phase": "process",
-  "state": "queued",
-  "owner": "manager",
-  "lane": null,
+  "title": "Pilot one free-GPU run on Kaggle (private kernel, public data, CLI-driven)",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "lane COMPUTE-KAGGLE-GPU",
+  "lane": "COMPUTE-KAGGLE-GPU",
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "Pilot one free-GPU bake-off on Kaggle (private notebook + private dataset of public-data features; kaggle CLI push/status/output). Verify the weekly GPU quota first (currently unverified). Needs an operator-originated Kaggle token. Source: docs/plans/COMPUTE-ARCH-REVIEW-2026-10-13.md (ranked recommendations).",
-  "updated_at": "2026-10-13T08:44:12Z",
-  "updated_by": "session_01KKBMQzaGaDYCtbtCskjDJk",
+  "note": "Workflow kaggle-gpu-pilot.yml landed; closes when a dispatched run returns nvidia-smi + quota; result in docs/plans/COMPUTE-KAGGLE-GPU-PILOT-2026-10-13.md. Proposed in COMPUTE-ARCH-REVIEW (PR #17833).",
+  "updated_at": "2026-10-13T09:21:08Z",
+  "updated_by": "session_01QS1CMBmvoizdwGo1vLF3zk",
   "roadmap": [
-    "M14"
+    "M25"
   ],
-  "observation": {
-    "what": "Pilot one free-GPU bake-off on Kaggle (private notebook + private dataset of public-data features; kaggle CLI push/status/output)",
-    "how_to_check": "one bake-off result retrieved by CLI with no session babysitting it, or a recorded reason it is unfit",
-    "due_by": "2026-11-10"
+  "writeback": {
+    "roadmap": "M25 where/next updated with the pilot outcome when the run is observed",
+    "arch": "none: Tier-1 research tooling; no architecture change"
   },
-  "_seq": 452
+  "observation": {
+    "what": "a dispatched kaggle-gpu-pilot run returns nvidia-smi output and kaggle quota, or a named blocker",
+    "how_to_check": "actions run artifact kaggle-gpu-pilot; docs/plans/COMPUTE-KAGGLE-GPU-PILOT-2026-10-13.md",
+    "due_by": "2026-10-20T00:00Z"
+  },
+  "_seq": 463
 }
