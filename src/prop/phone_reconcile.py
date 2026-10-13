@@ -153,6 +153,8 @@ def clean_closed(account_id: str, rows: Any) -> List[Dict[str, Any]]:
                     "price": _num(r.get("price"), signed=False),
                     "pnl": _num(r.get("pnl")) if r.get("pnl") is not None else _num(r.get("netpnl")),   # the venue's own realized figure, never computed
                     "type": str(r.get("type") or "")[:30], "status": str(r.get("status") or "")[:20],
+                    # "Long (Reduce)" / "Short (Reduce)" = a closing order (None when the page did not say)
+                    "reduce": r["reduce"] if isinstance(r.get("reduce"), bool) else None,
                     "time": str(r.get("time") or "")[:40]})
     return out
 
@@ -248,9 +250,19 @@ def _pick_exit(row: Dict[str, Any], closed: List[Dict[str, Any]], used: List[str
         return True
 
     cands = [c for c in closed if c["symbol"] == str(row.get("symbol") or "").upper() and c["side"] == want
-             and c.get("price") is not None and not _DEAD.search(c.get("status") or "")
+             and c.get("price") is not None and _is_exit_row(c)
              and _qty_close(c.get("qty"), _num(row.get("qty"))) and ok(c)]
     return (cands[0] if len(cands) == 1 else None), len(cands)
+
+
+def _is_exit_row(c: Dict[str, Any]) -> bool:
+    """A Closed-orders row that can be a position's EXIT: not a cancelled/rejected one, FILLED when the page says a
+    status (a bracket leaves both its TP and its SL listed, one Filled and one Cancelled), and a reduce order when the
+    page says so (the plain "Long Limit" row is an ENTRY, never an exit)."""
+    st = c.get("status") or ""
+    if _DEAD.search(st) or (st and not re.search(r"fill", st, re.I)):
+        return False
+    return c.get("reduce") is not False
 
 
 def _close_reason(row: Dict[str, Any], c: Optional[Dict[str, Any]]) -> str:
@@ -491,8 +503,11 @@ def fill_unpriced_closes(account_id: str, closed: List[Dict[str, Any]], *, now: 
         return out
     with _LOCK:
         fills = prop_journal.list_fills(account_id=account_id, limit=500)
+        from src.prop.fill_inference import is_inferred
+        # rows closed WITHOUT an exit, plus closes the server only INFERRED from candles (ESTIMATED exit = the SL/TP
+        # level): the terminal's own Filled closing order overrides those with the MEASURED exit and realized P&L
         rows = [f for f in fills if f.get("account_id") == account_id and str(f.get("status") or "").lower() == "closed"
-                and f.get("exit_price") is None and f.get("ticket_id")]
+                and (f.get("exit_price") is None or is_inferred(f)) and f.get("ticket_id")]
         st = _load_state(account_id)
         used: List[str] = [u for u in (st.get("used_closes") or []) if isinstance(u, str)]
         for f in rows:
@@ -508,7 +523,7 @@ def fill_unpriced_closes(account_id: str, closed: List[Dict[str, Any]], *, now: 
                         and opened is not None and vt >= opened - TZ_SLACK and vt <= now + TZ_SLACK)
 
             cands = [c for c in closed if c["symbol"] == str(f.get("symbol") or "").upper() and c["side"] == want
-                     and not _DEAD.search(c.get("status") or "") and ok(c)]
+                     and _is_exit_row(c) and ok(c)]
             if len(cands) != 1:
                 (out["ambiguous"] if cands else out["no_match"]).append(rid)
                 if cands and _once(st, f"fillin_ambig:{rid}", now):

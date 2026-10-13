@@ -1227,6 +1227,15 @@ def main() -> None:
             except Exception:  # noqa: BLE001
                 logger.exception("prop_monitor_pulse tick failed")
 
+            # A resting prop limit the system itself placed becomes a known (ESTIMATED) open position when the candles
+            # trade through it, without waiting for the phone's Positions read (operator 2026-10-13: "the system
+            # opened that position, it should be aware of it"). Rate-limited inside; best-effort.
+            try:
+                from src.prop.fill_inference import run_inference_tick
+                run_inference_tick()
+            except Exception:  # noqa: BLE001
+                logger.exception("prop fill_inference tick failed")
+
             # A prop ticket that passed its validity window with no report-back
             # is silent drift — the bot can't tell whether it was
             # placed-and-unreported or skipped. Ask the operator with a Yes/No
