@@ -356,9 +356,31 @@ DISPATCH_CYCLE_HOURS = 6.0
 
 
 def dispatchable(u: Dict[str, Any]) -> bool:
-    """Routed to a real *.yml workflow (not a session note) and still queued."""
+    """Routed to a real *.yml workflow (not a session note) and still queued -- or, since
+    RESEARCH-ROUTER (2026-10-13), declaring no workflow but a `compute:` class the token-free
+    router can place (PLANNING.md 1b: a new unit must NOT name a runner). Until QUEUE-FILL-1013
+    this read only `run.workflow`, so every router-style unit was queued-but-invisible: the
+    dispatcher's dry run would fire it (`would_dispatch`) while this census, the 25-unit floor,
+    the health alarm and the refill all counted it as 0. An explicit non-yml `run.workflow` (a
+    session note) stays NOT dispatchable: it is the author's word that no runner exists."""
+    if u.get("status") != "queued":
+        return False
     wf = str((u.get("run") or {}).get("workflow") or "")
-    return u.get("status") == "queued" and wf.endswith((".yml", ".yaml")) and not any(c.isspace() for c in wf)
+    if wf:
+        return wf.endswith((".yml", ".yaml")) and not any(c.isspace() for c in wf)
+    if not u.get("compute"):
+        return False
+    # Read the class list straight from the router's config instead of importing
+    # compute_router: this module is loaded IN-PROCESS by the web-api brief, and
+    # importing the router would drag a second scripts/research module into the deploy's
+    # in-process closure (tests/test_deploy_pull_restart_runtime_gate.py), i.e. a Tier-2
+    # deploy-script edit for a census. The census only needs "a class the router knows";
+    # a class that contradicts the unit's routing block is the DISPATCHER's refusal to
+    # report (BLOCKED_ROUTE), and shows up there.
+    import yaml
+    cfg = yaml.safe_load((Path(__file__).with_name("research_compute.yaml")).read_text(encoding="utf-8")) or {}
+    cls = str(u.get("compute")).strip()
+    return cls == "auto" and bool(u.get("routing")) or cls in (cfg.get("classes") or {})
 
 
 def runnable(units: Dict[str, Dict[str, Any]], *, now: Optional[datetime] = None,
