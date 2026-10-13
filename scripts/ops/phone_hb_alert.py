@@ -15,6 +15,7 @@ threshold. The phone's own watchdog (Liveness.kt) is what recovers; this tells t
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -38,8 +39,29 @@ def plan(probe: dict, state: dict, now: datetime) -> tuple[list[tuple[str, str]]
     return [], dict(state)
 
 
+WATCHDOG = REPO_ROOT / "scripts" / "research" / "research_watchdog.py"
+
+
+def watchdog_has_open_phone_incident() -> bool:
+    """True ONLY when the research watchdog (15-min cadence, PR #17912) reports an OPEN ``phone_heartbeat`` incident, i.e.
+    it already told the operator: one incident, one Telegram. Anything else -- script not merged yet, exit 2
+    (could_not_look), timeout, unparseable output -- is False, so this alert still sends."""
+    if not WATCHDOG.exists():
+        return False
+    try:
+        r = subprocess.run([sys.executable, str(WATCHDOG), "--open-incidents"], capture_output=True, text=True,
+                           timeout=60, cwd=REPO_ROOT)
+        if r.returncode != 0:
+            return False
+        d = json.loads(r.stdout.strip().splitlines()[-1])
+        return d.get("read_state") == "measured" and "phone_heartbeat" in (d.get("open") or [])
+    except Exception:  # noqa: BLE001 -- could not look == send
+        return False
+
+
 def run(now: datetime | None = None, probe: dict | None = None, state_path: Path = STATE,
-        send: Callable[..., Any] | None = None) -> list[str]:
+        send: Callable[..., Any] | None = None,
+        watchdog_open: Callable[[], bool] = watchdog_has_open_phone_incident) -> list[str]:
     """Probe, plan, send. Never raises (a broken alert must not take the digest down). Returns what was sent."""
     now = now or datetime.now(timezone.utc)
     sent: list[str] = []
@@ -54,7 +76,15 @@ def run(now: datetime | None = None, probe: dict | None = None, state_path: Path
         msgs, new = plan(probe, state, now)
         if send is None:
             from send_ping import enqueue as send  # noqa: PLC0415
+        # ONE Telegram per incident: if the watchdog already owns this outage, stay silent for its alert AND its recovery
+        # (it sends its own); the state still advances so this never re-fires for the same outage.
+        if msgs and new.get("breached") and not state.get("breached"):
+            new["suppressed"] = bool(watchdog_open())
+        elif msgs and not new.get("breached") and state.get("suppressed"):
+            msgs = []
         for pri, body in msgs:
+            if new.get("suppressed") and new.get("breached"):
+                break
             send(body, priority=pri, target="system")
             sent.append(body)
         if new != state:

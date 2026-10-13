@@ -48,3 +48,28 @@ def test_probe_stale_heartbeat_is_breached_end_to_end():
     p = ps.probe_phone_heartbeat(NOW, lambda _p: ("read", {"phone_heartbeat": {"at": old}}), lambda _a: "live")
     assert p["status"] == "breached" and p["priority"] == "urgent"
     assert h.plan(p, {}, NOW)[0][0][0] == "urgent"
+
+
+def test_watchdog_owned_incident_sends_nothing_alert_or_recovery(tmp_path):
+    calls, sp = [], tmp_path / "s.json"
+    send = lambda body, priority, target: calls.append(body)   # noqa: E731
+    h.run(NOW, BAD, sp, send, watchdog_open=lambda: True)
+    assert calls == [] and __import__("json").loads(sp.read_text())["suppressed"] is True
+    h.run(NOW, BAD, sp, send, watchdog_open=lambda: True)       # still the same outage: quiet
+    h.run(NOW, GOOD, sp, send, watchdog_open=lambda: True)      # the watchdog sends the recovery
+    assert calls == []
+    h.run(NOW, BAD, sp, send, watchdog_open=lambda: False)      # a NEW outage the watchdog does not own: alerts
+    assert len(calls) == 1
+
+
+def test_watchdog_unknown_or_absent_still_sends(tmp_path, monkeypatch):
+    monkeypatch.setattr(h, "WATCHDOG", tmp_path / "missing.py")
+    assert h.watchdog_has_open_phone_incident() is False        # not merged yet -> send
+    w = tmp_path / "w.py"
+    w.write_text("import sys\nsys.exit(2)\n")                    # could_not_look
+    monkeypatch.setattr(h, "WATCHDOG", w)
+    assert h.watchdog_has_open_phone_incident() is False
+    w.write_text('print(\'{"read_state":"measured","open":["phone_heartbeat"]}\')\n')
+    assert h.watchdog_has_open_phone_incident() is True
+    w.write_text('print(\'{"read_state":"measured","open":["dispatcher"]}\')\n')
+    assert h.watchdog_has_open_phone_incident() is False
