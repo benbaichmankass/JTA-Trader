@@ -1,6 +1,6 @@
 # COMPUTE-KAGGLE-GPU pilot — 2026-10-13
 
-> **Doc status:** `live` · category `plan` · last verified `2026-10-13` · lane `COMPUTE-KAGGLE-GPU` · checklist row `COMPUTE-KAGGLE-GPU` (`landed_unproven`) · parent `docs/plans/COMPUTE-ARCH-REVIEW-2026-10-13.md` rec. 6
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · lane `COMPUTE-KAGGLE-GPU` · checklist row `COMPUTE-KAGGLE-GPU` (`landed_unproven`) · parent `docs/plans/COMPUTE-ARCH-REVIEW-2026-10-13.md` rec. 6
 
 ## Result: NOT PROVEN — blocked on the Actions secret, before any Kaggle call
 
