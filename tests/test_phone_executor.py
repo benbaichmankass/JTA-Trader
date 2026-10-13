@@ -602,3 +602,21 @@ def test_account_status_unrealized_is_kept_when_read_and_null_when_not():
     assert prop_journal.latest_account_status("breakout_2")["unrealized"] == -12.5
     pe.record_report(_dev(), {"kind": "account_status", "equity": 5056.86})
     assert prop_journal.latest_account_status("breakout_2")["unrealized"] is None  # unread is NULL, never 0
+
+
+def test_heartbeat_keeps_keepalive_fields(_iso):
+    """PHONE-KEEPALIVE: what keeps the app alive and what had to bring it back is reported, not dropped."""
+    pe.record_event(_dev(), {"event": "heartbeat", "reason": "background: no ticket waiting",
+                             "state": {"st": "background", "battery_exempt": True, "overlay": False, "fgs_running": True,
+                                       "alarm_exact": False, "restarts_24h": 2,
+                                       "last_restart_reason": "activity_missing(service_tick)",
+                                       "app_version": "1b.200/200", "nope": 1}})
+    st = pe.last_heartbeat("breakout_2")["state"]
+    assert st["battery_exempt"] is True and st["overlay"] is False and st["fgs_running"] is True
+    assert st["restarts_24h"] == 2 and st["last_restart_reason"] == "activity_missing(service_tick)"
+    assert st["app_version"] == "1b.200/200" and "nope" not in st
+
+
+def test_loop_restarted_is_an_accepted_event_kind(_iso):
+    pe.record_event(_dev(), {"event": "loop_restarted", "reason": "watchdog"}, send=lambda *a, **k: True)
+    assert pe.recent_events("breakout_2")[-1]["kind"] == "loop_restarted"

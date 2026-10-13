@@ -6,6 +6,7 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
@@ -126,6 +127,8 @@ class MainActivity : Activity() {
     private var wokeAtMs = 0L           // > 0 while WE brought the Activity forward (it goes back afterwards)
 
     companion object {
+        /** The live Activity in this process (null once destroyed): the watchdog restarts its loop or relaunches it. */
+        @Volatile var instance: MainActivity? = null
         const val TRADE_URL = "https://trade.breakoutprop.com/"
         // The login entry that WORKED in the 1a probe (11:44-11:47Z): portal code step -> app.breakoutprop.com
         // (Cloudflare check, then served) -> trade host SSO -> logged-in landing. The trade host's own password
@@ -167,6 +170,7 @@ class MainActivity : Activity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
+        instance = this
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setSecure(true)   // fail closed: secure until the state machine has SEEN the logged-in terminal
         api = Api(this); ledger = Ledger(this)
@@ -217,15 +221,36 @@ class MainActivity : Activity() {
         KeepAliveService.start(this, launch = false)
         web.loadUrl(TRADE_URL)
 
+        Liveness.markTick(this)
         scope.launch {
             val stuck = ledger.unresolved()
             if (stuck.isNotEmpty()) api.event("error", "restart found unresolved tickets; not retried; check the terminal", stuck.first())
-            api.event("app_started", "")
-            while (true) { delay(TICK_MS); tick() }
+            // the last watchdog/boot/sticky restart reason rides the event, so a restart is explained, not just seen
+            api.event("app_started", Liveness.lastRestartReason(this@MainActivity))
+        }
+        startLoop()
+        // relaunched by the watchdog (not by the operator): hand the screen back unless it was touched
+        if (intent?.getBooleanExtra("watchdog", false) == true) scope.launch {
+            delay(8_000L); if (lastUserInputMs == 0L && resumed) moveTaskToBack(true)
         }
     }
 
-    override fun onDestroy() { scope.cancel(); super.onDestroy() }
+    /** The tick loop, as a restartable job (PHONE-KEEPALIVE): the watchdog can cancel a wedged one and start a fresh one. */
+    private var loopJob: Job? = null
+    private fun startLoop() {
+        loopJob?.cancel()
+        loopJob = scope.launch { while (true) { delay(TICK_MS); Liveness.markTick(this@MainActivity); tick() } }
+    }
+
+    /** Called by KeepAliveService when no tick or heartbeat has happened for Liveness.LOOP_STALE_MS. */
+    fun restartLoop(why: String) {
+        loopJob?.cancel(); busy = false
+        Liveness.markTick(this)
+        scope.launch { try { api.event("loop_restarted", why) } catch (e: Exception) { } }
+        startLoop()
+    }
+
+    override fun onDestroy() { if (instance === this) instance = null; scope.cancel(); super.onDestroy() }
 
     override fun onResume() {
         super.onResume(); resumed = true
@@ -502,6 +527,7 @@ class MainActivity : Activity() {
      *  pause / touch-hold flags and the terminal gate. Our own state and UI labels only; never links or values. */
     private suspend fun heartbeat(st: String, s: JSONObject?, force: Boolean = false) {
         val now = System.currentTimeMillis()
+        Liveness.markTick(this)   // long jobs (re-login, mail wait) heartbeat too: they count as alive
         if (!force && now - lastHbMs < HEARTBEAT_MS) return
         lastHbMs = now
         val state = JSONObject().put("st", st).put("paused", paused()).put("hold", userActive())
@@ -518,6 +544,12 @@ class MainActivity : Activity() {
             // background engine: which one, jobs run / jobs whose page answered, the last job's result and its age
             .put("bg", BgWeb.engine).put("bg_runs", bgRuns).put("bg_ok", bgOk).put("bg_last", bgLast)
             .put("bg_last_min", if (bgLastMs > 0) (now - bgLastMs) / 60_000 else -1L)
+            // PHONE-KEEPALIVE: what keeps this app alive, and what had to bring it back
+            .put("battery_exempt", getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(packageName))
+            .put("overlay", Settings.canDrawOverlays(this)).put("fgs_running", Liveness.fgsRunning)
+            .put("alarm_exact", KeepAliveService.exactAlarmOk(this))
+            .put("last_restart_reason", Liveness.lastRestartReason(this)).put("restarts_24h", Liveness.restarts24h(this))
+            .put("app_version", appVersion())
         // never touch the WebView while backgrounded (jsObj is bounded anyway and yields null on a timeout)
         if (resumed) jsObj("__ex.terminal()")?.let { tm ->
             for (k in listOf("ready", "probe", "panels", "orderControl", "ticketOpen", "buySell")) state.put(k, tm.optBoolean(k))
@@ -526,6 +558,11 @@ class MainActivity : Activity() {
         if (resumed && st == "logged_in" && now - lastAcctMs >= ACCT_MS) { lastAcctMs = now; state.put("acct", readAccount(fg)) }
         api.heartbeat(lastStatus, state)
     }
+
+    private fun appVersion(): String = try {
+        val pi = packageManager.getPackageInfo(packageName, 0)
+        "${pi.versionName}/${if (Build.VERSION.SDK_INT >= 28) pi.longVersionCode else pi.versionCode.toLong()}"
+    } catch (e: Exception) { "?" }
 
     /** Read the account panel (read-only) and post it as account_status; only on the terminal with no ticket open.
      *  Returns a short state for the heartbeat: posted / unread / busy. Nothing is posted unless a value was read. */
