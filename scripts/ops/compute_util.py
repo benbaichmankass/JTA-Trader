@@ -229,6 +229,10 @@ def merge_ledger(existing: list[dict], new: list[dict], keep_days: int = 60) -> 
                 if v is None and old.get(k) is not None:
                     r[k] = old[k]
             r["read_state"] = {m: ("measured" if _val(r, m) is not None else "could_not_look") for m in METRICS}
+        # legacy first-run rows carried a bogus network % (unit unverified): never carry it forward.
+        r["net_p95_pct_of_shape"] = None
+        r.pop("net_p95_bps", None)
+        r["read_state"]["net"] = "could_not_look"
         idx[(r["host"], r["date"])] = r
     rows = sorted(idx.values(), key=lambda r: (r["date"], r["host"]))
     cutoff = (dt.date.fromisoformat(rows[-1]["date"]) - dt.timedelta(days=keep_days)).isoformat() if rows else ""
