@@ -12,7 +12,7 @@
   "prs": [],
   "blocked_on": [],
   "note": "Built 2026-10-13: workflow compute-util-telemetry + scripts/ops/compute_util.py + tests/test_compute_util.py; ledger/spare/state/limits under comms/cloud/. Untested against live OCI (no creds in session) - first run is the proof.",
-  "updated_at": "2026-10-13T10:56:43Z",
+  "updated_at": "2026-10-13T11:06:16Z",
   "updated_by": "session_01EexLtAgHjQJ2ZpCWhqaeoQ",
   "roadmap": [
     "L-OPS"
@@ -22,6 +22,9 @@
     "how_to_check": "git log comms/cloud/compute_util_ledger.jsonl; jq read_state; vm-topology.md section filled",
     "due_by": "2026-10-20"
   },
-  "writeback": "docs/reference/vm-topology.md",
+  "writeback": {
+    "roadmap": "none: telemetry/limits read only; milestone L-OPS measure unchanged until first run lands values",
+    "arch": "none: Tier-1 read path; documented in docs/reference/vm-topology.md"
+  },
   "_seq": 464
 }

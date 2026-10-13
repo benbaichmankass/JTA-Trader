@@ -189,6 +189,11 @@ CADENCE_REGISTRY: dict[str, dict] = {
     #    and lands it through commit-to-main, so the last commit touching it
     #    IS the receipt. (Its reviewed_at age is ALSO graded, more tightly,
     #    by check_grading_freshness.py.)
+    "compute-util-telemetry.yml": {
+        "receipt": "comms/cloud/compute_util_ledger.jsonl",
+        "why": "the workflow rewrites the ledger every day and lands it through "
+               "commit-to-main; the last commit touching it IS the receipt",
+    },
     "grade-closed-trades.yml": {
         "receipt": "comms/claude_strategy_scores.jsonl",
         "why": "the workflow appends and commits the score file itself via "

@@ -54,7 +54,7 @@ def test_merge_keeps_measured_disk_when_new_run_lacks_ssh():
     first = cu.build_rows(TODAY, _metrics(live=_days(1, 30, 10)), {"live": {"disk_pct": 71.0, "load1": 0.5, "mem_used_pct": 11.0}})
     second = cu.build_rows(TODAY, _metrics(live=_days(1, 30, 10)), {})
     out = cu.merge_ledger(first, second)
-    today = [r for r in out if r["host"] == "live" and r["date"] == TODAY][0]
+    today = next(r for r in out if r["host"] == "live" and r["date"] == TODAY)
     assert today["disk_pct"] == 71.0 and today["read_state"]["disk"] == "measured"
     assert len([r for r in out if r["host"] == "live" and r["date"] == TODAY]) == 1
 
