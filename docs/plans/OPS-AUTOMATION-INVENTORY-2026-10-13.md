@@ -1,6 +1,6 @@
 # Ops automation inventory — 2026-10-13
 
-> **Doc status:** `live` · category `plan` · last verified `2026-10-13` · lane `OPS-AUTOMATION-INVENTORY` for row `STRATEGY-REALIGN` (roadmap `L-OPS`).
+> **Doc status:** `unknown` · category `plan` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../docs/DOCUMENT-INDEX.md) · nobody has verified this document's status.
 > **Authorizes nothing and builds nothing.** Inventory and plan only; every build below is a checklist row `AUTO-*`.
 
 **Goal (operator, 2026-10-13, verbatim from `STRATEGY-REALIGN`):** move ongoing ops off Claude so Claude effort goes to research, and plan *"any and all functions that could be automated to take the pressure off the claude budget"*. Accepted starting split: ~10% ops / ~20% builds / ~70% research.
