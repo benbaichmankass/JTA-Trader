@@ -153,7 +153,7 @@ def test_suite_runs_in_parallel_without_deselecting_anything():
     ]
     assert len(runs) == 2, "one full-mode step and one data-mode step"
     for run in runs:
-        cmd = " ".join(l for l in run.splitlines() if not l.strip().startswith("#"))
+        cmd = " ".join(ln for ln in run.splitlines() if not ln.strip().startswith("#"))
         assert "-n auto --dist loadfile" in cmd
         assert "--ignore=tests/test_main_loop.py" in cmd
         for forbidden in ("--deselect", " -k ", " -m ", "--lf", "--collect-only"):
