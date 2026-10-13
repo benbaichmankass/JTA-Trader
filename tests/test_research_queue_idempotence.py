@@ -370,7 +370,7 @@ def test_adoption_never_moves_a_newer_stamp_backwards(tmp_path, monkeypatch):
 # ── 5. non-verdict rows do not consume a once-unit (RQ-REARM-PRODUCER-FAILED) ──
 
 def _state_row(read_state: str, generated_at: str) -> str:
-    return json.dumps({"research_unit": UID, "verdict": "not_applicable", "read_state": read_state,
+    return json.dumps({"research_unit": UID, "verdict": "indeterminate", "read_state": read_state,
                        "generated_at": generated_at})
 
 
