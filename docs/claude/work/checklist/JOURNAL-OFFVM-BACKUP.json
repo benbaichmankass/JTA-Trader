@@ -14,7 +14,7 @@
   ],
   "blocked_on": [],
   "note": "Operator-approved 2026-10-13 ('yes make the off-vm backup'). Actions cron 03:23Z SSHes live VM read-only, online-backup snapshot + integrity_check, uploads to bucket ict-journal-backups (NoPublicAccess, versioning on); 30d daily + 12w weekly pruning. Not observed until first run + restore test. Revert: delete journal-offvm-backup.yml.",
-  "updated_at": "2026-10-13T12:20:37Z",
+  "updated_at": "2026-10-13T12:28:40Z",
   "updated_by": "session_JOURNAL-OFFVM-BACKUP",
   "roadmap": [
     "L-OPS"
@@ -23,6 +23,10 @@
     "what": "7 consecutive daily trade_journal objects present in the private versioned bucket, newest restore-tested",
     "how_to_check": "open an issue labelled journal-backup-request with body 'mode: status' and read consecutive_daily",
     "due_by": "2026-10-21"
+  },
+  "writeback": {
+    "roadmap": "none: landed_unproven - no first run yet; L-OPS milestone line is updated when the 7-day observation closes",
+    "arch": "none: backup job adds no pipeline contract; ARCHITECTURE-CANONICAL gets a backup line when observed"
   },
   "_seq": 463
 }
