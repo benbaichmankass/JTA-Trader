@@ -328,6 +328,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-test.txt
+          # CI-only parallel runner (CI-DIET); kept out of requirements-test.txt so the
+          # sandbox/dev install is unchanged. Major-pinned.
+          pip install "pytest-xdist>=3.5,<4"
 
       - name: Explain the scope of this run
         if: steps.changed.outputs.relevant == 'true'

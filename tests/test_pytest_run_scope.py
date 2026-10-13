@@ -145,7 +145,7 @@ def test_untrusted_file_names_never_reach_a_shell_inline():
 def test_suite_runs_in_parallel_without_deselecting_anything():
     """CI-DIET: xdist (-n auto --dist loadfile) cuts the full suite from 33-46 min serial to ~12-14.
     It must stay a PURE scheduling change: no -k / -m / --deselect beyond what the workflow always
-    carried, and the dependency must be declared where CI installs it."""
+    carried, and the dependency must be installed by the workflow."""
     wf = yaml.safe_load(WORKFLOW.read_text())
     runs = [
         s["run"] for s in wf["jobs"]["pytest-run"]["steps"]
@@ -158,4 +158,4 @@ def test_suite_runs_in_parallel_without_deselecting_anything():
         assert "--ignore=tests/test_main_loop.py" in cmd
         for forbidden in ("--deselect", " -k ", " -m ", "--lf", "--collect-only"):
             assert forbidden not in cmd, f"pytest-run must not narrow the suite with {forbidden!r}"
-    assert re.search(r"^pytest-xdist", (REPO / "requirements-test.txt").read_text(), re.M)
+    assert 'pip install "pytest-xdist>=3.5,<4"' in WORKFLOW.read_text()
