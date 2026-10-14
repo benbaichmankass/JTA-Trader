@@ -119,10 +119,12 @@ def bot_symbol(account_id: str, venue_text: Any) -> Optional[str]:
 
 # BREAKOUT-POS-UNPARSED (1b.193 live dump, 2026-10-14): Breakout's Positions Side cell carries NO text (the side is
 # drawn), so the phone sends "side_unread": every row parsed except its side. The side may then be taken from the
-# journal: the open fills with the same bot symbol and an entry within ENTRY_TOL_FRAC (0.2%) of the terminal's Opening price
-# must all be on ONE side. That side is ESTIMATED (the journal's, not the venue's); anything else leaves the read
+# journal: the open fills with the same bot symbol and an entry within ENTRY_TOL_FRAC of the terminal's Opening price
+# must all be on ONE side, and their summed size must match the row's (QTY_TOL; the venue nets same-side entries). That side is ESTIMATED (the journal's, not the venue's); anything else leaves the read
 # un-reconciled. Never guessed from a sign, a colour or a P&L.
-ENTRY_TOL_FRAC = 0.002   # the venue avg 2461.52 vs journal 2458.24 (0.13%, operator screenshot 2026-10-14 21:41Z)
+# 0.5% ~ entry slippage: the live venue avg 2461.52 vs the journal's 2458.24 is 0.13% (operator screenshot 21:41Z).
+# The size match is what keeps a wider band from pairing the wrong fill.
+ENTRY_TOL_FRAC = 0.005
 
 
 def resolve_sides(account_id: str, rows: Any) -> Optional[List[Dict[str, Any]]]:
@@ -148,10 +150,10 @@ def resolve_sides(account_id: str, rows: Any) -> Optional[List[Dict[str, Any]]]:
             return None
         step = _num((insts.get(sym) or {}).get("price_step"), signed=False) or 0.0
         tol = max(2 * step, entry * ENTRY_TOL_FRAC)
-        sides = {_side(f.get("direction")) for f in open_rows
-                 if str(f.get("symbol") or "").upper() == sym and _num(f.get("entry_price"), signed=False) is not None
-                 and abs(float(f["entry_price"]) - entry) <= tol} - {None}
-        if len(sides) != 1:
+        hits = [f for f in open_rows if str(f.get("symbol") or "").upper() == sym
+                and _num(f.get("entry_price"), signed=False) is not None and abs(float(f["entry_price"]) - entry) <= tol]
+        sides = {_side(f.get("direction")) for f in hits} - {None}
+        if len(sides) != 1 or not _qty_close(sum(_num(f.get("qty")) or 0.0 for f in hits), _num(r.get("qty"), signed=False)):
             return None
         out.append({**r, "side": sides.pop(), "side_source": "journal"})
     return out
