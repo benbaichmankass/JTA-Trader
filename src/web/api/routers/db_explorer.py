@@ -309,7 +309,7 @@ def db_tables(
 # (BL-20260730-TRADES-TIMESTAMP-FORMAT-MIXED), and "stale" needs a declared
 # writer cadence per table that does not exist. ``ageSeconds`` is the raw fact.
 _TS_COLUMN_CANDIDATES: Tuple[str, ...] = (
-    "updated_at", "created_at", "timestamp", "ts", "recorded_at", "generated_at",
+    "updated_at", "created_at", "logged_at_utc", "timestamp", "ts", "recorded_at", "generated_at",
     "closed_at", "opened_at", "finished_at", "started_at", "time", "date",
 )
 _OVERVIEW_SWR = None  # built lazily so importing this module stays cheap
@@ -399,7 +399,7 @@ def _db_overview(label: str, path: Path, integrity: str, now: Any) -> Dict[str, 
         out["walBytes"] = None
     try:
         conn = _connect(path)
-    except sqlite3.Error as exc:
+    except sqlite3.Error as exc:  # allow-silent: surfaced as readState "unreadable" + reason, never as zero tables
         logger.exception("db_overview: open failed for %s", path)
         out.update({"readState": "unreadable", "reason": type(exc).__name__, "tables": [],
                     "journalMode": None, "integrity": {"state": "not_checked", "result": None}})

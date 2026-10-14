@@ -23,20 +23,20 @@ def _bearer() -> dict:
 
 
 def _make_journal(path: Path) -> None:
+    """The REAL production schema (Database.create_tables), then a few rows with REAL columns
+    -- a fictional-column fixture is exactly how `signals` was first mis-modelled as having `ts`."""
+    from tests.fixtures.real_schema_db import make_canonical_db
+    make_canonical_db(path)
     conn = sqlite3.connect(str(path))
     try:
-        conn.execute("CREATE TABLE trades (id INTEGER PRIMARY KEY, symbol TEXT, created_at TEXT)")
-        conn.executemany("INSERT INTO trades (symbol, created_at) VALUES (?, ?)", [
-            ("BTCUSDT", "2026-10-10 08:00:00"), ("MES", "2026-10-11T09:30:00Z"),
-            ("ETHUSDT", "2026-10-12 10:15:00")])
-        conn.execute("CREATE TABLE signals (id INTEGER PRIMARY KEY, ts INTEGER)")      # allowlisted, EMPTY
-        conn.execute("CREATE TABLE balance_snapshots (id INTEGER PRIMARY KEY, ts INTEGER)")
-        conn.execute("INSERT INTO balance_snapshots (ts) VALUES (1760000000000)")      # epoch milliseconds
-        conn.execute("CREATE TABLE insights_usage (id INTEGER PRIMARY KEY, input_tokens INTEGER)")
-        conn.execute("INSERT INTO insights_usage (input_tokens) VALUES (5)")           # no timestamp column
-        conn.execute("CREATE TABLE notes (id INTEGER PRIMARY KEY, body TEXT)")         # NOT allowlisted
-        conn.execute("CREATE TABLE device_tokens (id INTEGER PRIMARY KEY, token TEXT)")
-        conn.execute("INSERT INTO device_tokens (token) VALUES ('SECRET-FCM-TOKEN-VALUE')")
+        conn.executemany(
+            "INSERT INTO trades (timestamp, created_at, symbol, direction, entry_price, position_size) VALUES (?,?,?,?,?,?)",
+            [("2026-10-10 08:00:00", "2026-10-10 08:00:00", "BTCUSDT", "long", 1.0, 1.0),
+             ("2026-10-11T09:30:00Z", "2026-10-11T09:30:00Z", "MES", "short", 1.0, 1.0),   # mixed encodings
+             ("2026-10-12 10:15:00", "2026-10-12 10:15:00", "ETHUSDT", "long", 1.0, 1.0)])
+        # real `signals` timestamp column is logged_at_utc; the table is left EMPTY on purpose
+        conn.execute("INSERT INTO balance_snapshots (account_id, ts, api_ok) VALUES ('a', '1760000000000', 1)")  # epoch ms as text
+        conn.execute("INSERT INTO device_tokens (token, platform) VALUES ('SECRET-FCM-TOKEN-VALUE', 'android')")
         conn.commit()
     finally:
         conn.close()
@@ -75,19 +75,33 @@ def test_rows_empty_flag_and_owning_db(client: TestClient):
 
 def test_exposure_contract_is_inherited(client: TestClient):
     body = client.get("/api/bot/db/overview").json()
-    assert set(_by_name(body)) == {"trades", "signals", "balance_snapshots", "insights_usage"}
+    from src.web.api.routers import db_explorer as dbx
+    names = set(_by_name(body))
+    assert names <= dbx._TABLE_ALLOWLIST and "device_tokens" not in names
+    assert {"trades", "signals", "balance_snapshots"} <= names
     assert "SECRET-FCM-TOKEN-VALUE" not in client.get("/api/bot/db/overview").text
 
 
 def test_newest_inserted_row_and_mixed_encodings(client: TestClient):
     t = _by_name(client.get("/api/bot/db/overview").json())
-    assert t["trades"]["newestRowColumn"] == "created_at"
+    assert t["trades"]["newestRowColumn"] == "created_at"       # preferred: when the row was written
     assert t["trades"]["newestRowAt"] == "2026-10-12T10:15:00Z" and t["trades"]["newestRowState"] == "read"
     assert t["trades"]["ageSeconds"] > 0
     assert t["balance_snapshots"]["newestRowState"] == "read"            # epoch ms parsed
     assert t["balance_snapshots"]["newestRowAt"].startswith("2025-10-0")
-    assert t["insights_usage"]["newestRowState"] == "no_timestamp_column"
-    assert t["insights_usage"]["newestRowAt"] is None and t["insights_usage"]["ageSeconds"] is None
+    assert t["signals"]["newestRowColumn"] == "logged_at_utc"          # the real column, not a guess
+
+
+def test_table_without_a_timestamp_column_says_so():
+    import datetime
+    from src.web.api.routers.db_explorer import _table_overview
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.execute("CREATE TABLE x (id INTEGER PRIMARY KEY, n INTEGER)")
+    conn.execute("INSERT INTO x (n) VALUES (1)")
+    o = _table_overview(conn, "x", "trade_journal", datetime.datetime.now(datetime.timezone.utc))
+    assert o["rows"] == 1 and o["newestRowState"] == "no_timestamp_column"
+    assert o["newestRowAt"] is None and o["ageSeconds"] is None
 
 
 def test_missing_db_is_not_zero_tables(client: TestClient):
@@ -97,7 +111,7 @@ def test_missing_db_is_not_zero_tables(client: TestClient):
     assert ts["sizeBytes"] is None and ts["walBytes"] is None
     assert dbs["trade_journal"]["present"] is True and dbs["trade_journal"]["sizeBytes"] > 0
     s = client.get("/api/bot/db/overview").json()["summary"]
-    assert s["dbsMissing"] == 1 and s["emptyTables"] == 1 and s["tables"] == 4
+    assert s["dbsMissing"] == 1 and s["emptyTables"] >= 1 and s["tables"] == len(_by_name(client.get("/api/bot/db/overview").json()))
 
 
 def test_integrity_is_opt_in_and_not_requested_is_not_ok(client: TestClient):
