@@ -34,8 +34,49 @@ import importlib
 import re
 from pathlib import Path
 
+import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+#: Router modules the alignment tests below force-reimport under a patched DATA_DIR.
+_REIMPORTED = (
+    "src.web.api.routers.bot_config",
+    "src.web.api.routers.dashboard",
+    "src.web.api.routers.diag",
+    "src.web.api.routers.shadow",
+    "src.web.api.routers.trade_scores",
+)
+_ABSENT = object()
+
+
+@pytest.fixture(autouse=True)
+def _restore_reimported_router_modules():
+    """Put the router modules back after each test.
+
+    ``_reload`` pops a module and re-imports it while DATA_DIR points at a tmp path, so its
+    module-level path bindings (e.g. ``diag._LOG_FILES``) capture that tmp path -- and, because
+    ``from src.web.api.routers import diag`` reads the package ATTRIBUTE first, every later test
+    on the same xdist worker kept seeing the stale module. Measured: running this file before
+    ``tests/test_notify_unit_failure.py`` fails its diag-relay test (pytest-run on #17965, which
+    only changed which worker ran what). Restoring BOTH ``sys.modules`` and the package
+    attributes returns the process to its pre-test state.
+    """
+    import sys
+    pkg = sys.modules.get("src.web.api.routers")
+    saved = {n: sys.modules.get(n) for n in _REIMPORTED}
+    saved_attr = {n.rsplit(".", 1)[1]: getattr(pkg, n.rsplit(".", 1)[1], _ABSENT) for n in _REIMPORTED} if pkg else {}
+    yield
+    for name, mod in saved.items():
+        if mod is None:
+            sys.modules.pop(name, None)
+        else:
+            sys.modules[name] = mod
+    for attr, val in saved_attr.items():
+        if val is _ABSENT:
+            if pkg is not None and hasattr(pkg, attr):
+                delattr(pkg, attr)
+        else:
+            setattr(pkg, attr, val)
 
 
 # ─── Family 1: reader/writer alignment under env overrides ──────────
