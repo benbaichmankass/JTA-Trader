@@ -1,5 +1,7 @@
 # Weekly walk-through brief — ML review + frontier scan (prep, 2026-10-14)
 
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · **nobody has verified this document's status — do not act on it as current**
+
 > Lane `ML-FRONTIER-PREP-20261014` (Tier 1, docs only). Propose-only: no units queued, no stage changes, nothing past shadow.
 > Merged ≠ deployed ≠ observed is stated per line. Every figure names its population. Not run: `stage-guard` / `gate-check` (need the trainer relay — not dispatched this lane), so **no promotion packet exists** and nothing below is a promotion recommendation.
 
