@@ -494,7 +494,11 @@ def derive_record(p: Plan, *, repo: Path = _REPO) -> Dict[str, Any]:
         rpath = out_dir / "records.jsonl"
         with rpath.open("w", encoding="utf-8") as fh:
             for r in records:
-                fh.write(json.dumps(r) + "\n")
+                # A fanned-out row inherits the run's declared read_state when it names none: the
+                # emitter refuses a row without one, and the collector then reported the whole run
+                # `lost` (RQ-20261007-005..008, pairs_configured_stage0). Nothing is invented -- the
+                # run's own verdict.json said `measured`; a row that names its own state keeps it.
+                fh.write(json.dumps({"read_state": rs, **r}) + "\n")
         base["records_file"] = (p.out_dir / "records.jsonl").as_posix()
         base["min_rows"] = str(len(records))
     return base
@@ -550,7 +554,7 @@ def _self_test() -> int:
             "import json,sys,os\n"
             "out=sys.argv[sys.argv.index('--out')+1]\nos.makedirs(out,exist_ok=True)\n"
             "json.dump({'verdict':'pass','read_state':'measured','population':'p','n':3,"
-            "'measurement':{'x':1},'records':[{'verdict':'pass','read_state':'measured',"
+            "'measurement':{'x':1},'records':[{'verdict':'pass',"
             "'population':'leg a','n':3}]}, open(os.path.join(out,'verdict.json'),'w'))\n")
         (repo / "scripts" / "research" / "_st_silent.py").write_text("print('ran')\n")
         (repo / "scripts" / "research" / "_st_fail.py").write_text("import sys; sys.exit(3)\n")
@@ -571,6 +575,8 @@ def _self_test() -> int:
         rec = derive_record(p, repo=repo)
         assert rec["verdict"] == "pass" and rec["read_state"] == "measured" and rec["n"] == "3", rec
         assert rec["records_file"].endswith("records.jsonl") and rec["min_rows"] == "1", rec
+        # a fanned-out row that names no read_state inherits the run's (RESEARCH-PIPE-UNSTICK)
+        assert json.loads((repo / rec["records_file"]).read_text().splitlines()[0])["read_state"] == "measured"
         assert (repo / rec["measurement_file"]).is_file()
         assert rec["decision_rule_id"] == "RULE-ST"
 

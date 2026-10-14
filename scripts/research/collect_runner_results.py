@@ -198,6 +198,49 @@ def emit_record(root: Path, rec: Dict[str, Any], *, run: Dict[str, Any], repo_sl
     return None
 
 
+def recollect_orphans(root: Path, *, repo_slug: str) -> List[Dict[str, Any]]:
+    """Re-emit the E5 record for every numeric-run-id artifact dir that holds a `record-inputs.json`
+    but no `research/results/<unit>/<run_id>.jsonl`.
+
+    WHY (RESEARCH-PIPE-UNSTICK 2026-10-14): `collect()` only looks at the last 100 completed runs, so a
+    run whose outputs landed (old per-run `land` job) but whose record did not is never retried; the
+    catalog then reads the unit as `dispatched` with no result for ever (RQ-20261007-005..008, 130+ h).
+    Nothing is invented: the record is emitted by research_result.py from the committed record-inputs.json,
+    exactly as `collect()` does. Non-numeric run ids (`local-*`) are not Actions runs and are skipped."""
+    done: List[Dict[str, Any]] = []
+    for ri in sorted((root / "comms" / "research").glob("*/*/record-inputs.json")):
+        unit, run_id = ri.parent.parent.name, ri.parent.name
+        if not run_id.isdigit() or (root / "research" / "results" / unit / f"{run_id}.jsonl").exists():
+            continue
+        try:
+            rec = json.loads(ri.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        try:
+            man = json.loads((ri.parent / "run-manifest.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            man = {}
+        if not man.get("commit_sha"):
+            continue      # a record without a commit sha is inadmissible; never invent one
+        # rows written before script_run defaulted `read_state` carry none; give them the run's own
+        # (record-inputs.json) so the emitter admits them. Same rule as script_run.derive_record.
+        rf = str(rec.get("records_file") or "")
+        tmp = None
+        if rf and (root / rf).is_file():
+            rows = [json.loads(ln) for ln in (root / rf).read_text(encoding="utf-8").splitlines() if ln.strip()]
+            if any("read_state" not in r for r in rows):
+                import tempfile
+                tmp = Path(tempfile.mkdtemp()) / "records.jsonl"
+                tmp.write_text("".join(json.dumps({"read_state": rec.get("read_state"), **r}) + "\n" for r in rows),
+                               encoding="utf-8")
+                rec = {**rec, "records_file": str(tmp)}
+        out = emit_record(root, rec, run={"databaseId": int(run_id), "headSha": man["commit_sha"],
+                                          "url": man.get("run_url") or ""}, repo_slug=repo_slug)
+        if out:
+            done.append({"unit": unit, "run_id": int(run_id), "record": out})
+    return done
+
+
 def collect(root: Path, *, repo_slug: str, runs: Optional[List[Dict[str, Any]]] = None,
             artifacts_for=run_artifacts, downloader=download, dry_run: bool = False,
             pending: Optional[set] = None) -> Dict[str, Any]:
@@ -349,6 +392,25 @@ def _self_test() -> int:
         assert _RECORD_PATH_RE.match("research/results/RQ-1-001/12.jsonl") and not _RECORD_PATH_RE.match("comms/x/1.jsonl")
         res5 = collect(root, repo_slug="o/r", runs=runs2[:1], artifacts_for=arts2, downloader=lambda *a: False)
         assert not (res5["lost"] or res5["unreadable"] or res5["read_error"] or res5["landed"]), res5
+    # orphan re-collect: an artifact dir with record-inputs.json and no E5 record gets one; `local-*` is skipped
+    with tempfile.TemporaryDirectory() as td:
+        r2 = Path(td)
+        (r2 / "scripts/research").mkdir(parents=True)
+        (r2 / "scripts/research/research_result.py").write_text((_REPO / "scripts/research/research_result.py").read_text(encoding="utf-8"))
+        (r2 / "research/results").mkdir(parents=True)
+        for rid in ("777", "local-abc"):
+            d = r2 / "comms/research/RQ-20300101-009" / rid
+            d.mkdir(parents=True)
+            (d / "run-manifest.json").write_text(json.dumps({"commit_sha": "abc123", "run_url": None}))
+            (d / "record-inputs.json").write_text(json.dumps({
+                "research_unit": "RQ-20300101-009", "power_state": "runnable", "decision_rule_id": "RULE-X",
+                "decision_rule_registered_at": "2030-01-01", "tool": "python3 x.py", "verdict": "pass", "read_state": "measured",
+                "population": "p", "n": "5", "artifact_store": f"comms/research/RQ-20300101-009/{rid}", "artifact_locator": "x",
+                "note": "", "measurement_file": "", "records_file": "", "min_rows": "1"}))
+        got = recollect_orphans(r2, repo_slug="o/r")
+        assert [x["run_id"] for x in got] == [777], got
+        assert (r2 / "research/results/RQ-20300101-009/777.jsonl").exists()
+        assert recollect_orphans(r2, repo_slug="o/r") == []          # idempotent: now landed
     # ML-RQ-RUNNER: the trainer twin's artifact name resolves to the same (unit, run id) pair
     m = _ARTIFACT_RE.match("research-script-run-trainer-RQ-20261011-9da8-01-123456")
     assert m and m.group(1) == "RQ-20261011-9da8-01" and m.group(2) == "123456", m
@@ -363,6 +425,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--self-test", action="store_true")
     ap.add_argument("--repo", default="", help="owner/name (default: $GITHUB_REPOSITORY)")
+    ap.add_argument("--recollect-orphans", action="store_true",
+                    help="re-emit E5 records for landed artifact dirs that have none; then exit")
     ap.add_argument("--dry-run", action="store_true", help="list what would be collected; write nothing")
     ap.add_argument("--json-out", default="", help="write the batch manifest here (the dispatcher reads it)")
     args = ap.parse_args(argv)
@@ -372,6 +436,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     slug = args.repo or os.environ.get("GITHUB_REPOSITORY") or ""
     if not slug:
         ap.error("--repo or $GITHUB_REPOSITORY is required")
+    if args.recollect_orphans:
+        for x in recollect_orphans(_REPO, repo_slug=slug):
+            print(f"  recollected {x['unit']} run {x['run_id']} -> {x['record']}")
+        return 0
     pending = pending_in_open_batches(slug)
     if pending is None:
         print("::warning::could not list open results-batch PRs; collecting without the duplicate check")
