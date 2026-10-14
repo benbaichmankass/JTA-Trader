@@ -64,6 +64,11 @@ _REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_REPO))
 
 TEMPLATES = Path("research/templates")
+# family -> docs/roadmap/milestones.yaml milestone. Kept here, not in the templates: a template edit
+# is "landing machinery" (check_pr_landing R12) and would force a human read of every such change.
+# A template may still override with its own `roadmap:` field.
+FAMILY_ROADMAP = {"e35-bracket": ["M20"], "m20-exit-lever": ["M20"], "macro-valuation": ["M28"],
+                  "prop-fit-breakout": ["L-PROP"], "roster-walkforward": ["L-LADDER"]}
 QUEUE = Path("research/queue")
 DEFAULT_TARGET = 25
 _PLACEHOLDER = re.compile(r"\{([a-z_]+)\}")
@@ -275,11 +280,12 @@ def render(tpl: Dict[str, Any], tpl_path: str, tpl_sha: str, params: Dict[str, A
         unit["theme"] = str(tpl["theme"])
     if tpl.get("priority") is not None:
         unit["priority"] = int(tpl["priority"])
-    if tpl.get("roadmap"):
+    roadmap = tpl.get("roadmap") or FAMILY_ROADMAP.get(str(tpl.get("family")))
+    if roadmap:
         # roadmap-map-guard (CLAUDE.md "The roadmap loop"): every new queue unit carries a
         # milestone ref. RESEARCH-PIPE-UNSTICK 2026-10-14: generated units had none, so every
         # replenish PR failed `guards`.
-        unit["roadmap"] = [str(m) for m in tpl["roadmap"]] if isinstance(tpl["roadmap"], list) else str(tpl["roadmap"])
+        unit["roadmap"] = [str(m) for m in roadmap] if isinstance(roadmap, list) else str(roadmap)
     if tpl.get("why_not_inferential"):
         unit["why_not_inferential"] = _fill(tpl["why_not_inferential"], p)
     unit["question"] = _fill(tpl["question"], p)
