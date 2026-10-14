@@ -393,8 +393,17 @@ def record_report(device: PhoneDevice, body: Dict[str, Any]) -> Dict[str, Any]:
         # positions and reconciled; any other state is kept as a label so "we could not look" stays visible.
         from src.prop import phone_reconcile
         pstate = re.sub(r"[^a-z_]", "", str(body_in.get("positions_state") or "not_read"))[:24] or "not_read"
-        body["positions_state"] = pstate
         positions = closed = None
+        if pstate == "side_unread":
+            # BREAKOUT-POS-UNPARSED: rows parsed except the side the venue draws without text; the journal may supply
+            # it (phone_reconcile.resolve_sides). Then the read counts, labelled ESTIMATED; otherwise it stays a label.
+            resolved = phone_reconcile.resolve_sides(device.account_id, body_in.get("positions"))
+            if resolved is not None:
+                body_in = {**body_in, "positions": resolved}
+                pstate = "read"
+                body["positions_side_source"] = "journal"
+                body["positions_provenance"] = "ESTIMATED"
+        body["positions_state"] = pstate
         if pstate == "read":
             positions = phone_reconcile.clean_positions(device.account_id, body_in.get("positions"))
             closed = phone_reconcile.clean_closed(device.account_id, body_in.get("closed_orders"))
@@ -602,7 +611,9 @@ def record_event(device: PhoneDevice, body: Dict[str, Any], *, send=None) -> Dic
         _write_heartbeat(device.account_id, reason, body.get("state"))
     if kind == "positions_miss":
         _write_positions_diag(device.account_id, reason, body.get("headers"), body.get("controls"), body.get("cells"))
-        if not reason.startswith("closed_"):   # a closed_* miss follows a CLEAN Positions read: nothing is unseen
+        # a closed_* miss follows a CLEAN Positions read, and an amend_* dump (BREAKOUT-POS-UNPARSED) is the trail amend
+        # refusing on a row it FOUND: in neither is a position unseen
+        if not reason.startswith(("closed_", "amend_")):
             _alert_unseen_positions(device.account_id, reason, send=send)
     # login_retry: an auto re-login attempt/failure inside a streak (PHONE-AUTOLOGIN, no latch, retried forever) is
     # logged in phone_events but not pinged; the phone sends ONE login_failed red flag after 3 in a row instead.

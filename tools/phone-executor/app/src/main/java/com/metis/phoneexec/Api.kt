@@ -74,7 +74,9 @@ class Api(private val c: Context) {
             .apply { if (unrealized != null) put("unrealized", unrealized) }
             .put("positions_state", positions?.optString("state")?.ifEmpty { null } ?: "not_read")
             .apply {
-                if (positions != null && positions.optString("state") == "read") {
+                // side_unread (BREAKOUT-POS-UNPARSED): every row parsed but its side; the server may take the side
+                // from the journal (ESTIMATED) or keep the read as a label
+                if (positions != null && positions.optString("state") in listOf("read", "side_unread")) {
                     put("positions", positions.optJSONArray("rows") ?: JSONArray())
                     if (positions.has("count") && !positions.isNull("count")) put("positions_count", positions.optInt("count"))
                 }
