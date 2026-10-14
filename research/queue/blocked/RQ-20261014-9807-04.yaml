@@ -58,15 +58,23 @@ decision_rule:
     the TP side (Q2/Q3).
 blocked_on:
 - what: >-
-    m20-exit-lever-sweep.yml takes `levers` (which lever columns) but no `cells` input; giveback_stop cells are hard-coded to
-    gb1R_afterMFE1R / gb1R_afterMFE2R (m20_fleet_exit_sweep.py) and trail_decay to the reference cell. Census-keyed values
-    cannot be passed.
-  ref: scripts/research/m20_fleet_exit_sweep.py (giveback_stop grid); .github/workflows/m20-exit-lever-sweep.yml inputs
+    The census RQ-20261014-9807-01 has no usable result: its only record
+    (research/results/RQ-20261014-9807-01/38540458035.jsonl, run 38540458035) is read_state producer_failed
+    (`giveback_census.py` cmd 0 exit=1, nothing measured). The cells are keyed to its per-leg giveback_r p25/p50,
+    peak_r p50 and median bars_since_peak, so none can be derived yet.
+  ref: RQ-20261014-9807-01
   clears_when: >-
-    A Tier-1 build (proposed row GEOM-CELLS-INPUT) adds a `cells` input (JSON list of {lever, tag, params}) to the sweep
-    workflow and m20_fleet_exit_sweep.py, with a test that an empty value reproduces today's grid byte-for-byte. Then, after
-    RQ-20261014-9807-01 lands (requires_result), fill run.inputs.cells from its per-leg rows, git mv to research/queue/, status
-    queued.
+    RQ-20261014-9807-01 lands a result with per-leg rows (requires_result verdict pass). Then derive per-leg cells per the
+    question above (giveback_r in {p25, p50}, giveback_min_mfe_r in {1.0, peak p50}, trail_decay_stall_bars = median
+    bars_since_peak with the reference tight mult), put them in run.inputs.cells as a JSON list of
+    {leg, lever, tag, params}, git mv to research/queue/, status queued.
+- what: >-
+    [CLEARED by GEOM-CELLS-INPUT, PR #18063] the sweep had no `cells` input. m20-exit-lever-sweep.yml now takes `cells`
+    (JSON list of {leg, lever, tag, params}); empty keeps the full grid. Levers: giveback_stop (giveback_r,
+    giveback_min_mfe_r), trail_decay (trail_decay_arm_r, trail_decay_stall_bars, trail_decay_tight_mult), stale_stop,
+    trail_geometry.
+  ref: scripts/research/m20_fleet_exit_sweep.py (--cells); .github/workflows/m20-exit-lever-sweep.yml inputs.cells
+  clears_when: PR #18063 merged.
 compute: cpu_long
 value:
   bucket: own_losses
@@ -89,7 +97,7 @@ run:
     tp_cap_pct: '0.099'
     split_mode: oos-trades
     research_unit: RQ-20261014-9807-04
-  note: run.inputs.cells is filled from the census record when the input exists (blocked_on); do not dispatch before.
+  note: run.inputs.cells (JSON list of {leg, lever, tag, params}) is filled from the census record once RQ-20261014-9807-01 has a result (blocked_on); do not dispatch before.
 lands:
   store: docs/research/m20-sweep-corpus.jsonl
   assert_field: leg
