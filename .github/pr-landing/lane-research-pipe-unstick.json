@@ -1,5 +1,6 @@
 {
   "tier": 1,
-  "landing": "self",
-  "why": "RESEARCH-PIPE-UNSTICK (manager-dispatched lane). Tier-1: research tooling only (scripts/research/queue_replenish.py self-test + research/templates/*.yaml roadmap field). No src/, no config/strategies.yaml or accounts.yaml, no order path, no risk caps. Self-lands on green via auto-merge."
+  "landing": "hold",
+  "hold_reason": "changes_landing_machinery",
+  "why": "RESEARCH-PIPE-UNSTICK root-cause fix. Tier-1 research tooling, but scripts/research/queue_replenish.py is the generator check_pr_landing E58 re-runs to vouch for replenish PRs, so R12 requires one human read. Change: (1) generated units now carry a `roadmap` ref (roadmap-map-guard failed every replenish PR without it); (2) the self-test no longer asserts the LIVE grids still have unminted points, which failed on the PR that minted the last one. No guard weakened."
 }
