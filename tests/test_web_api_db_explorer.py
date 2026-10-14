@@ -568,7 +568,13 @@ class TestAuthenticationGate:
         from src.web.api.auth import require_session
 
         routes = [r for r in dbx.router.routes if "/db/" in getattr(r, "path", "")]
-        assert len(routes) == 2, [getattr(r, "path", None) for r in routes]
+        # The population is NAMED, not counted: a new route must be added here on
+        # purpose (and still carries the gate below). /db/overview joined
+        # 2026-10-14 (DATA-EXPLORER) -- gated like its siblings, covered by
+        # tests/test_web_api_db_overview.py.
+        assert {r.path for r in routes} == {
+            "/api/bot/db/tables", "/api/bot/db/overview", "/api/bot/db/table/{table}",
+        }, [getattr(r, "path", None) for r in routes]
 
         for route in routes:
             deps = [d.call for d in route.dependant.dependencies]
