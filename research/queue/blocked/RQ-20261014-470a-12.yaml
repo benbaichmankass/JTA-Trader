@@ -1,0 +1,75 @@
+id: RQ-20261014-470a-12
+title: 'M22 pairs at configured params, re-measured on an honest R scale: do the four configured pairs still clear net of the full cost stack
+  once 1R is the spread''s risk at the ENTRY-bar hedge ratio?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+kind: experiment
+question: With backtest_pairs.py's risk computed on the spread at the entry-bar beta held fixed (not on a series whose beta changes every bar),
+  do pairs_sol_eth, pairs_bnb_btc and the two other configured pairs each show net_total_r > 0 net of fee + slippage + funding at n >= 39, AND
+  does the same ledger priced in dollars at true notionals agree in sign?
+why_this_matters: 'RQ-20261007-005..008 all PASSED (+51.8 to +102.4 R, n 273-304) with a fee-only arm within 0.15 R of the full stack. MEASURED
+  this lane (SOL/ETH 1h, May 2026, Binance Vision): with hedge_beta=rolling the spread''s 15-bar std is 1.63 (beta-drift times log ETH dominates)
+  vs 0.0021 at a fixed beta -- 1R is inflated ~775x, so the per-trade cost in R (2 x 10.5 bps / risk) is understated by the same factor (0.0006
+  R vs ~0.50 R). The committed ledger agrees: mean cost_r 0.0014 R over 304 trades. The four PASSES are therefore not readable as net-of-cost
+  evidence; their sign under an honest scale is UNKNOWN (gross R is in the same inflated units).'
+power:
+  expected_n: 280
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: MEASURED n 273-304 per pair on the 2026-10-07 runs (same 6-month window); d=0.3 needs 88.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on public candles; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261014470a12-PAIRS-RSCALE
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: 'Per pair: n, net_total_r (full stack, honest R), net_total_r_fee_only, mean cost_r per trade; and the $ ledger''s net $ at true
+    notionals with the same cost stack.'
+  rule: 'PASS per pair iff net_total_r > 0 AND n >= 39 AND the $ ledger''s net is > 0 (signs agree). FAIL iff net_total_r <= 0 at n >= 39: the
+    pair has no Stage-0 edge at configured params -> a Tier-3 roster input for config/pairs.yaml via the manager. Signs DISAGREE: indeterminate
+    -- the R accounting is still wrong; back to the build row. n < 39: indeterminate. A mean cost_r below 0.01 R on any pair is a failed positive
+    control (the scale bug is still present): indeterminate.'
+  what_it_does_not_do: Does not edit config/pairs.yaml or the pairs executor. Does not re-tune pair params. Does not decide prop fit.
+blocked_on:
+- what: backtest_pairs.py measures 1R on the rolling-beta spread series, so beta drift inflates risk and deflates cost-in-R; pairs_dollar_lots.py
+    prices fees only (no slippage, no funding).
+  ref: docs/claude/work/checklist/PAIRS-R-SCALE.json
+  clears_when: 'PAIRS-R-SCALE lands: risk = stop_z x std of (la - beta_entry x lb) over the lookback at entry; the self-test plants a rolling-beta
+    case whose cost_r is within 10% of the fixed-beta figure; pairs_dollar_lots.py takes slippage + funding from resolve_cost_policy. Then git
+    mv to research/queue/, status queued, run.command = pairs_configured_stage0.py --pair <each> --fetch.'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 200
+  confidence: 0.5
+  bucket: own_losses
+  basis: four live paper pair sleeves and the M22 roster decision; estimate.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 15
+  basis: Same fetch + engine as RQ-20261007-005..008.
+run:
+  workflow: null
+  note: Null until PAIRS-R-SCALE lands (blocked_on).
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M22
+related:
+- P3-STRATEGY-PROGRAMME
+- docs/research/programmes/03-STRATEGY-IMPROVEMENT.md
+- RQ-20261007-005
+- RQ-20261007-006
+- RQ-20261007-007
+- RQ-20261007-008
+- scripts/backtest_pairs.py
+- scripts/research/pairs_dollar_lots.py

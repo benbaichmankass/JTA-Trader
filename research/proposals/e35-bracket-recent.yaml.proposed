@@ -1,0 +1,78 @@
+# NOT LOADED: parked here because tests/test_research_queue_autonomy.py::test_weights_follow_the_operators_priorities pins the template families
+# and weights to the OPERATOR'S priorities (30/25/20/15/10); adding a family is an operator decision. To adopt: operator approves a weight, then move this file to
+# research/templates/e35-bracket-recent.yaml and update that test in the same PR.
+# PROPOSED 2026-10-14 (RESEARCH-OPS 02:47Z, for manager review -- a new template forces a landing hold).
+# WHY A NEW FAMILY AND NOT A NEW AXIS ON e35-bracket: queue_replenish.point_key() keys only on leg, *_key axes,
+# start_date and cadence_days. A plain `days: [...]` list axis is NOT in the key (dedupe would collapse it), and a
+# `{key,label}` axis added to e35-bracket would change the key of EVERY already-minted 1830-day unit and re-mint
+# them all as duplicates. A separate family name has its own key namespace, so nothing existing is touched.
+# THE NEW PRE-REGISTERED AXIS: the trailing window, 730 days vs the 1830 of e35-bracket -- "is the shipped
+# geometry still not dominated on the RECENT regime", which the 1830-day sweep averages away.
+# CAVEATS FOR THE REVIEWER (unverified here): (1) lands.store is the shared corpus, so a 730-day row lands beside
+# the 1830-day rows for the same leg -- confirm the e35 disposition reader keys on run stamp, not leg alone, or
+# point this family at its own store; (2) 1d legs will mostly read unresolvable_at_current_n at 730 days (the
+# 39-trade floor), which is a legitimate indeterminate but spends a fire: consider `min_n_trades` once the
+# per-leg 730-day OOS count is known.
+family: e35-bracket-recent
+weight: 5
+kind: experiment
+cadence: monthly
+theme: live_strategy
+priority: 3
+title: "E35 bracket-geometry sweep, RECENT 730-day window: {leg} (generated, monthly)"
+question: >-
+  Does any bracket cell (tp_r x atr_stop_mult x timeout) beat {leg}'s shipped
+  geometry ({symbol} {timeframe}) through the IS/OOS Path A/B gate on the
+  trailing 730 days -- and is the shipped geometry still not dominated on the
+  recent regime this month?
+why_this_matters: >-
+  The bracket dimension is worth what its response-surface spread says; a
+  monthly re-sweep per live leg is how a shipped geometry is kept honest
+  without a session choosing to look.
+power:
+  expected_n: 50
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    split_target_oos defaults to 50 OOS trades (the sweep's own derivation);
+    d=0.45 needs 38.76 -> 39 at alpha 0.05 / power 0.8, so a leg reaching the
+    default target is powered; below 39 the verdict is unresolvable_at_current_n.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Free-lane candle fetch (binance_vision / yfinance); nothing accrues.
+decision_rule:
+  id: "RULE-TPL-E35-BRACKET-RECENT-730D-IS-OOS-GATE"
+  statistic: >-
+    Per cell: gate_verdict (is_oos_pass / is_oos_fail) from the IS/OOS Path
+    A/B gate; base_oos_trades.
+  rule: >-
+    PASS (a Tier-3 geometry proposal for that leg, not applied here) IF at
+    least one cell reads is_oos_pass with base_oos_trades >= 39.
+    no_action_warranted IF no cell passes with base_oos_trades >= 39 (the
+    shipped geometry stands). unresolvable_at_current_n (indeterminate) IF
+    base_oos_trades < 39.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 45
+  basis: one leg per unit, 199 cells, ~6 min per leg on the free lane (measured 2026-09-24).
+run:
+  workflow: e35-bracket-sweep.yml
+  inputs:
+    only: "{leg}"
+    days: "730"
+    gate_top: "2"
+    singles_only: "false"
+    max_parallel: "1"
+    research_unit: "{unit_id}"
+lands:
+  store: docs/research/e35-bracket-corpus.jsonl
+  assert_field: leg
+  min_rows: 1
+grid:
+  legs: live_roster_legs_e35_sweepable

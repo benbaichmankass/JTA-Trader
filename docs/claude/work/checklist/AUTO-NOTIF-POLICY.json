@@ -1,0 +1,32 @@
+{
+  "id": "AUTO-NOTIF-POLICY",
+  "title": "Manager stops subscribing to auto-merge-armed PRs, subscribes on red only; skill + policy edit",
+  "phase": "automation",
+  "state": "landed_unproven",
+  "owner": "AUTO-WAVE1 lane",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    17845
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-13 AUTO-WAVE1] Policy in docs/reference/pr-event-wake-policy.md: manager/assistant do not subscribe to armed Tier-1 self-landing PRs (GitHub merges on green; pytest-rerun and branch-sync cover infra deaths and behind-main); subscribe on real red, unresolved conflict, holds, Tier-2/3 and human change requests. manager SKILL.md NOT edited (lane MANAGER-HANDOVER-SKILL owns it): it needs ONE pointer line to this file. Gap stated in the doc: nothing yet surfaces an unseen red armed PR (AUTO-CI-TRIAGE). Wake-count saving unmeasured.",
+  "updated_at": "2026-10-13T10:00:40Z",
+  "updated_by": "session_AUTO-WAVE1",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "observation": {
+    "what": "AUTO-NOTIF-POLICY built and measured against its estimate",
+    "how_to_check": "PR-event wakes/day in the manager session fall vs the pre-change count",
+    "due_by": "2026-10-27"
+  },
+  "writeback": {
+    "roadmap": "none: manager process policy",
+    "arch": "none: no contract change"
+  },
+  "_seq": 448
+}

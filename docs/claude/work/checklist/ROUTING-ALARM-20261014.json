@@ -1,0 +1,32 @@
+{
+  "id": "ROUTING-ALARM-20261014",
+  "title": "Close the routing alarm: route all 25 unrouted due pipeline items (WR-20261014-0530Z)",
+  "phase": "hygiene",
+  "state": "done",
+  "owner": "manager",
+  "lane": "routing-alarm-20261014",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    17998
+  ],
+  "blocked_on": [],
+  "note": "Tier-1 hygiene lane. Before: 25 unrouted (oldest PI-20260930-LJF2ZFXF-0002, 14d). CLOSE: unrouted 25 -> 0 (re-measured with pipeline.unrouted() on the same population: due items folded from docs/claude/work/pipeline/; due=227 unchanged, 25 moved to state routed). Dispositions: checklist rows 25 (5 new ROUTE-* rows: HARNESS-FIXES 4, DATA-ROUTES 6, PROP-TRACKING 6, CI-LANDING-FIXES 3, LEG-EVIDENCE 6), research/queue units 0, killed 0. Nothing was stale on re-check (each rerun still applied). landed_unproven: closes when, on main after merge, python3 scripts/ops/pipeline.py --stats reads unrouted 0. NOTE: state is landed_unproven in anticipation of automerge of PR #17998; if that PR is not merged, treat the row as in_flight. OBSERVED 2026-10-14T06:20Z on main 276c3c51 (PR #17998 merged): pipeline.py --stats reads unrouted 0, due 227. Closed.",
+  "updated_at": "2026-10-14T06:20:10Z",
+  "updated_by": "session_01PMigu2M3NSj1XcoXibU6FD",
+  "roadmap": [
+    "M40"
+  ],
+  "writeback": {
+    "roadmap": "none: hygiene routing, no milestone outcome changed",
+    "arch": "none: no architecture change"
+  },
+  "observation": {
+    "what": "unrouted due pipeline items is 0 on main after merge",
+    "how_to_check": "python3 scripts/ops/pipeline.py --stats  # read unrouted",
+    "due_by": "2026-10-15"
+  },
+  "_seq": 471
+}

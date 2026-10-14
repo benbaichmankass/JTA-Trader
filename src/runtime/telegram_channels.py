@@ -123,6 +123,7 @@ SENDERS: Final[dict[str, tuple[str, ...]]] = {
     "src/utils/log_redact.py": ("alert",),
     "scripts/send_ping.py": ("claude_ping", "execution_alert"),
     "scripts/ops/send_route_test_ping.py": ("alert",),
+    "scripts/research/research_watchdog.py": ("alert",),   # RESEARCH-WATCHDOG escalations/resolutions -> SYSTEM (direct sendMessage)
     # TRADES
     "src/runtime/mobile_push/trade_events.py": ("trade_opened", "trade_closed", "trade_updated"),
     "src/runtime/execution_diagnostics.py": (
@@ -179,6 +180,7 @@ SENDERS: Final[dict[str, tuple[str, ...]]] = {
     # MANAGER (git-pull fan-out of committed session pings / merges)
     "scripts/notify_on_pull.py": ("pr_merged", "claude_ping"),
     "scripts/ops/attention_watch.py": ("manager_update",),
+    "scripts/ops/phone_hb_alert.py": ("alert",),   # PHONE-KEEPALIVE: stale phone heartbeat, target=system
     # MANAGER
     "scripts/notify_session.py": ("session",),
     "scripts/ops/work_digest_now.py": ("manager_update",),

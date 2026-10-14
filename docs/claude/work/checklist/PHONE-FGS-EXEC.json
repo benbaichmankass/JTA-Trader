@@ -1,0 +1,26 @@
+{
+  "id": "PHONE-FGS-EXEC",
+  "title": "Phone executor: ticket claim and fill inside the foreground service (no bring-to-front) -- only after 24 h of clean background heartbeats",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-14 weekly planning] OPERATOR-APPROVED 2026-10-14 (Tier-2, prop execution path), GATED: start only after the PHONE-AUTOLOGIN-2 APK shows 24 h of clean background heartbeats. Source: PI-20261010-UYZJSGJY-0001 -- login checks, re-login and the account read already run in BgWeb; tickets still bring MainActivity forward, which Android background-activity-start limits can refuse (MEASURED 2026-10-10 'bring-to-front already requested'). Build: move pending peek + claim + fill into the foreground service; the dry-test ticket path (PHONE-DRYTEST-ACTION) is the verification, then one real ticket observed in the prop journal.",
+  "updated_at": "2026-10-14T07:37:21Z",
+  "updated_by": "session_01DfFYRUG7orGpkE5pVnA8e4",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "observation": {
+    "what": "first, 24 h of clean background heartbeats from the PHONE-AUTOLOGIN-2 APK recorded on this row; then a ticket is claimed and filled from the foreground service with no bring-to-front, observed in the prop journal (dry-test ticket first, then one real ticket)",
+    "how_to_check": "/phone heartbeat rows via the diag relay + the prop journal ticket state transitions",
+    "due_by": "2026-10-28"
+  },
+  "_seq": 484
+}

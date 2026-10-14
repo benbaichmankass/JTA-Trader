@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "due_date": "2026-10-17",
+    "kind": "date"
+  },
+  "id": "PI-20261014-7E02E0F4-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "session_01AQCKErTeV3XpduwjyLo73c",
+    "rerun": "grep -n 'breakout_1\\|prop_rulesets/breakout' research/templates/prop-fit-breakout.yaml research/queue/RQ-20261014-00[2-5].yaml; python3 -c \"import yaml;a=yaml.safe_load(open('config/accounts.yaml'));a=a.get('accounts',a);print(a['breakout_1'].get('mode'),a['breakout_1'].get('strategies'),a['breakout_2'].get('backtest_ruleset'))\""
+  },
+  "routed_to": "RESEARCH-OPS (next pass): research/templates/prop-fit-breakout.yaml fix + regenerate, Tier-1",
+  "state": "routed",
+  "what": "GENERATED PROP-FIT TEMPLATE TARGETS A RETIRED ACCOUNT (found by lane P5-PROP-PROGRAMME, 2026-10-14). research/templates/prop-fit-breakout.yaml generated RQ-20261014-002..005 today; each prices config/prop_rulesets/breakout.yaml (Classic) and says 'A PASS is a Tier-3 roster proposal for breakout_1' -- but breakout_1 is retired (config/accounts.yaml: mode dry_run, strategies []), and the live Breakout account is breakout_2 on backtest_ruleset prop_rulesets/breakout_turbo_1step.yaml. A PASS from these units cannot be acted on as written. Fix: re-point the template at breakout_2 + the Turbo ruleset (or read the target account's backtest_ruleset from accounts.yaml), regenerate via queue_replenish.py, and retire 002..005 with that reason or let them land as Classic-ruleset information. Tier-1 (research tooling). Programme 05 section 6."
+}

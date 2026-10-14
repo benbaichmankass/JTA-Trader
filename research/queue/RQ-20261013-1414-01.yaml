@@ -1,0 +1,160 @@
+id: RQ-20261013-1414-01
+title: 'AI trader / linear family: is a multinomial logit as good as LightGBM on the BTC/ETH/SOL 15m volatility-regime heads? (family
+  has 0 registered models)'
+status: done
+cadence: once
+theme: ml_health
+priority: 2
+kind: experiment
+question: On the SAME 15m v002 shards, features, purged folds and final-90-day holdout, does a plain numpy multinomial logistic regression
+  (linear_logit family, 0 registered models) come within 0.01 macro-F1 of the incumbent LightGBM regime learner on ALL of BTCUSDT, ETHUSDT
+  and SOLUSDT? If so the regime axis does not need a boosted tree, and a zero-dependency, interpretable head is a live option.
+why_this_matters: 'ml_plan_status.py --diversity (2026-10-13): linear_logit has 0 registered models and 0 open plan items; gbdt is 75
+  of 96 (78%). All three advisory heads are GBDT. Nobody has measured how much of the head''s macro-F1 is the tree and how much is just
+  the rolling-vol feature. DATASET PATHS UNVERIFIED FROM THIS SANDBOX: the trainer shards are not reachable here. The 15m v002 BTC/ETH/SOL
+  shards and the base feature names are the ones queued unit RQ-20261012-75b2-19..21 already declare (MEASURED present on the trainer
+  2026-10-11 per RQ-20261011-9da8-01); a missing column lands as a dead NaN feature or producer_failed, which research-ops must read
+  as a ROUTE FAULT (fix the path, re-queue), never as a verdict.'
+power:
+  expected_n: 8640
+  min_detectable_effect: 0.05
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: Unit = bar in the final-90-day holdout (~8,640 rows = 90 d x 96 15m bars) per symbol; d=0.05 paired needs (1.96+0.8416)^2/0.05^2
+    = 3,140 rows, floor met on rows. Bars are autocorrelated so effective n is far lower; the rule therefore also requires the purged-CV
+    fold-mean delta (min_folds 3) and the first run replaces this estimate with the measured n.
+  feasibility:
+    source: none
+    accrual_basis: 'Nightly-rebuilt shard: history for the window used is fixed, nothing needs to accrue for the rows this unit reads.'
+decision_rule:
+  id: RULE-RQ20261013-1414-01-LINEAR-VS-GBDT-REGIME
+  registered_at: '2026-10-13'
+  registered_before_run: true
+  statistic: Paired per-fold macro-F1 difference (logit minus LightGBM) on identical purged expanding walk-forward folds (5 folds, embargo
+    96 rows, min_train_frac 0.4) and on the holdout window, per symbol; mean over folds. Applied by ml_bakeoff.py evaluate_rule from
+    this unit's ml_bakeoff.rule.
+  rule: 'PASS (non-inferior) IF logit - lgbm macro-F1 >= -0.010 on the CV mean on ALL THREE symbols AND >= -0.010 on the holdout on
+    all three: a linear head is a registrable alternative family. FAIL IF logit - lgbm < -0.030 on the CV mean on EVERY symbol (the
+    tree is doing real work everywhere; closes only this untuned unweighted logit on these 6 features). INDETERMINATE otherwise (mixed
+    by symbol), or if folds < 3 or an arm is unavailable.'
+  min_n: 3 usable CV folds per symbol; holdout >= 20 rows; tail_rows 60000 per symbol (n_rows reported).
+  what_it_does_not_do: Trains or registers nothing, touches no registry, manifest, stage or config, promotes/demotes nothing (Tier-3).
+    Grades the regime LABEL with an UNWEIGHTED lightgbm incumbent (the shipped heads use class_weight volatile=28 and half-life sample
+    weights), so it is a family comparison, not a re-grade of the shipped model. Says nothing about trade P&L.
+compute: needs_vm_data
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 120
+  confidence: 0.3
+  basis: 'stand-in: a non-inferior linear head removes the boosted-tree dependency and the retrain/serve-parity surface of the 3 advisory
+    heads; not a measured P&L'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 25
+  basis: 'Estimate, not a measurement: tail_rows-bounded read of 3 shards, 200-tree LightGBM + a numpy logit x 5 folds x 3 symbols.'
+ml_bakeoff:
+  task: classification
+  metric: macro_f1
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT:
+        path: datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl
+      ETHUSDT:
+        path: datasets-out/market_features/ETHUSDT/15m/v002/data.jsonl
+      SOLUSDT:
+        path: datasets-out/market_features/SOLUSDT/15m/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    tail_rows: 60000
+    holdout_after: '2026-07-12'
+  cv:
+    folds: 5
+    embargo_rows: 96
+    min_train_frac: 0.4
+  baseline: lgbm
+  controls:
+  - prior
+  candidates:
+  - logit
+  learners:
+    prior:
+      kind: prior
+    lgbm:
+      kind: lightgbm
+      params:
+        n_estimators: 200
+        learning_rate: 0.05
+        num_leaves: 31
+        min_child_samples: 50
+    logit:
+      kind: numpy_logit
+  rule:
+    min_folds: 3
+    pass_if:
+    - group: &id001
+      - BTCUSDT
+      - ETHUSDT
+      - SOLUSDT
+      vs: baseline
+      window: cv
+      op: '>='
+      value: -0.01
+    - group: *id001
+      vs: baseline
+      window: holdout
+      op: '>='
+      value: -0.01
+    fail_if_no_candidate_reaches:
+    - group: any
+      vs: baseline
+      window: cv
+      op: '>='
+      value: -0.03
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261013-1414-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M25
+related:
+- ML-RQ-RUNNER
+- scripts/research/ml_bakeoff.py
+- docs/plans/ml-plan-items.yaml
+- .claude/skills/ml-review/SKILL.md
+last_dispatched_at: '2026-10-13T23:04:44+00:00'
+grading:
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261013-1414-01-LINEAR-VS-GBDT-REGIME
+  evidence:
+  - research/results/RQ-20261013-1414-01/38482009455.jsonl
+  graded_at: '2026-10-14'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

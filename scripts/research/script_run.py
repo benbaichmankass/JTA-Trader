@@ -99,7 +99,13 @@ WORKFLOW = "research-script-run.yml"
 #: trainer-resident data, torch/lightgbm weights or the trainer's disk. Same unit shape, same verdict.json,
 #: same artifact -> collector -> record path; only WHERE the command runs differs.
 TRAINER_WORKFLOW = "research-script-run-trainer.yml"
-WORKFLOWS = (WORKFLOW, TRAINER_WORKFLOW)
+#: RESEARCH-ROUTER (2026-10-13): the Kaggle GPU twin -- the same contract executed inside a Kaggle kernel.
+KAGGLE_WORKFLOW = "research-script-run-kaggle.yml"
+#: ML-DATA-OFF-TRAINER (2026-10-13): the published-data twin -- a runner that first fetches the unit's private Kaggle dataset.
+DATA_WORKFLOW = "research-script-run-data.yml"
+#: KAGGLE-CPU-ROUTE (2026-10-14): the Kaggle CPU twin (published-data units; not metered by the GPU quota).
+KAGGLE_CPU_WORKFLOW = "research-script-run-kaggle-cpu.yml"
+WORKFLOWS = (WORKFLOW, TRAINER_WORKFLOW, KAGGLE_WORKFLOW, DATA_WORKFLOW, KAGGLE_CPU_WORKFLOW)
 OUT_ROOT = Path("comms") / "research"
 
 #: The only script families the runner will execute. Anchored, no `..`, no
@@ -212,7 +218,12 @@ def plan(unit: str, *, run_id: str, queue_dir: Path = _DEFAULT_QUEUE,
     if not isinstance(run, dict):
         errs.append("`run` must be a mapping")
         run = {}
-    if str(run.get("workflow") or "").strip() not in WORKFLOWS:
+    wf_decl = str(run.get("workflow") or "").strip()
+    # A unit may declare `compute:` instead of a workflow; the dispatcher picks the backend, and every
+    # backend of a script-run class runs this same contract, so the command is checked either way.
+    if wf_decl == "" and raw.get("compute"):
+        pass
+    elif wf_decl not in WORKFLOWS:
         errs.append(f"run.workflow must be one of {WORKFLOWS!r} for this runner, got "
                     f"{run.get('workflow')!r}")
     if "command" in run and "commands" in run:
@@ -387,6 +398,23 @@ def execute(p: Plan, *, repo: Path = _REPO) -> Dict[str, Any]:
 
 
 # ── record derivation ───────────────────────────────────────────────────────
+def manifest_mismatch(manifest: Any, unit: str, run_id: str) -> List[str]:
+    """Why a run-manifest does NOT belong to `comms/research/<unit>/<run_id>/` (empty = it does).
+
+    The one predicate behind the kaggle runner's post-fetch verify and the guard's R4 (all backends). A
+    manifest is written from the plan's own unit and out_dir, so a disagreement with the directory it sits in
+    means the files came from another run -- 2026-10-13: a Kaggle kernel that mounted a stale dataset version
+    executed the PREVIOUS run's spec and its output was filed under the new run's directory."""
+    if not isinstance(manifest, dict):
+        return ["run-manifest.json is not a JSON object"]
+    out = []
+    if manifest.get("unit") != unit:
+        out.append(f"manifest unit {manifest.get('unit')!r} != directory unit {unit!r}")
+    if str(manifest.get("run_id")) != str(run_id):
+        out.append(f"manifest run_id {manifest.get('run_id')!r} != directory run_id {run_id!r}")
+    return out
+
+
 def _read_json(path: Path) -> Optional[Dict[str, Any]]:
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
@@ -468,7 +496,11 @@ def derive_record(p: Plan, *, repo: Path = _REPO) -> Dict[str, Any]:
         rpath = out_dir / "records.jsonl"
         with rpath.open("w", encoding="utf-8") as fh:
             for r in records:
-                fh.write(json.dumps(r) + "\n")
+                # A fanned-out row inherits the run's declared read_state when it names none: the
+                # emitter refuses a row without one, and the collector then reported the whole run
+                # `lost` (RQ-20261007-005..008, pairs_configured_stage0). Nothing is invented -- the
+                # run's own verdict.json said `measured`; a row that names its own state keeps it.
+                fh.write(json.dumps({"read_state": rs, **r}) + "\n")
         base["records_file"] = (p.out_dir / "records.jsonl").as_posix()
         base["min_rows"] = str(len(records))
     return base
@@ -524,7 +556,7 @@ def _self_test() -> int:
             "import json,sys,os\n"
             "out=sys.argv[sys.argv.index('--out')+1]\nos.makedirs(out,exist_ok=True)\n"
             "json.dump({'verdict':'pass','read_state':'measured','population':'p','n':3,"
-            "'measurement':{'x':1},'records':[{'verdict':'pass','read_state':'measured',"
+            "'measurement':{'x':1},'records':[{'verdict':'pass',"
             "'population':'leg a','n':3}]}, open(os.path.join(out,'verdict.json'),'w'))\n")
         (repo / "scripts" / "research" / "_st_silent.py").write_text("print('ran')\n")
         (repo / "scripts" / "research" / "_st_fail.py").write_text("import sys; sys.exit(3)\n")
@@ -545,6 +577,8 @@ def _self_test() -> int:
         rec = derive_record(p, repo=repo)
         assert rec["verdict"] == "pass" and rec["read_state"] == "measured" and rec["n"] == "3", rec
         assert rec["records_file"].endswith("records.jsonl") and rec["min_rows"] == "1", rec
+        # a fanned-out row that names no read_state inherits the run's (RESEARCH-PIPE-UNSTICK)
+        assert json.loads((repo / rec["records_file"]).read_text().splitlines()[0])["read_state"] == "measured"
         assert (repo / rec["measurement_file"]).is_file()
         assert rec["decision_rule_id"] == "RULE-ST"
 

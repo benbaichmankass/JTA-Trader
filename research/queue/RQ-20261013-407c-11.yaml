@@ -1,0 +1,152 @@
+id: RQ-20261013-407c-11
+title: >-
+  Session/time-of-day, trend_donchian_sol: does skipping one pre-registered UTC session block (Asia 00-07, US-open 12-16,
+  late 20-23) beat the declared entry net of the full cost stack?
+status: done
+cadence: once
+theme: regime
+priority: 2
+kind: experiment
+question: >-
+  M21 round 3 mined only two shared hour pockets (4h donchian hour 0, the 19-20 UTC pocket) and recorded time_of_day = n/a
+  for the 1h/2h families: per-leg hour cells were deliberately NOT mined. This unit does not mine either. It tests three session
+  blocks fixed BEFORE any run for market-structure reasons (Asia low-liquidity, US cash-open volatility, late-US/roll), applied
+  identically to trend_donchian_sol (SOLUSDT 1h). On the pinned 730d window (2024-10-05 .. 2026-10-04 23:59), same cost stack
+  as the evidence builder, does skipping any one block (signal-bar open hour, UTC) beat the declared entry by a material margin,
+  with no worse drawdown and in at least 3 of 4 calendar folds?
+why_this_matters: >-
+  Session structure is a cross-asset claim, not a per-leg one: the same three blocks are run on seven crypto legs in seven
+  sibling units (RQ-20261013-407c-10..15 and -19) so a real session effect must reproduce across legs and timeframes, while
+  a lone pass is read as noise. Fees, funding and liquidity all vary by session; if one block is consistently the drag it
+  is a portfolio-wide entry filter, the cheapest structural lever there is.
+power:
+  expected_n: 120
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo's standing E35 floor, RQ-20261006-002/-004/-060). expected_n
+    = 120 is an ESTIMATE from the nearest committed record or the leg's trade cadence, not a measurement of this exact arm
+    set. Below 39 baseline trades the unit grades indeterminate (underpowered), never FAIL. The 2.0 R bar is a MATERIALITY
+    bar over the whole window, not a significance test; the 3-of-4 calendar-fold majority is what refuses a one-period artifact.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Re-measurement on freshly fetched keyless Binance Vision candles (trend_donchian_sol, pinned window 2024-10-05 .. 2026-10-04
+      23:59); the harness replays history, nothing accrues. expected_n is an estimate, so power_state stays accruing and a
+      thin baseline grades indeterminate.
+decision_rule:
+  id: RULE-20261013407C11-SESSION
+  registered_at: '2026-10-13'
+  registered_before_run: true
+  statistic: >-
+    Per arm, from the harness's own --json summary of scripts/backtest_trend.py (argv built by regime_debt_matrix.build_harness_cmd,
+    the evidence builder's own, plus the arm's raw tokens; full cost stack: fee + resolved slippage + funding, never a zero
+    default): total_trades, net_total_r, max_drawdown_r, plus net_r per fold over FOUR equal calendar spans of the window
+    (same date boundaries every arm). Arms: B = leg as declared, SA = --skip-hours=0,1,2,3,4,5,6,7, SU = --skip-hours=12,13,14,15,16,
+    SL = --skip-hours=20,21,22,23. POSITIVE CONTROL, first: B must reproduce the committed record (total_trades within 2%,
+    net_total_r within 0.5 R). Per candidate C in {SA, SU, SL}: dR = net_r(C) - net_r(B); dDD = maxDD(C) - maxDD(B); fold_wins
+    = folds in which C out-earns B.
+  rule: >-
+    indeterminate IF the positive control fails or n(B) < 39 (underpowered: no verdict, extend the window or redesign; never
+    FAIL on thin n). A candidate C PASSES iff dR >= 2.0 R AND dDD <= 0 AND fold_wins >= 3 of 4. PASS IF any candidate passes
+    (best = highest dR; the script's generic label reads 'reachable_lever_beats_removed'): a Tier-3 PROPOSAL note on the owning
+    checklist row for the manager, never a config edit; two passing candidates within 0.5 R of each other is a preference,
+    not a finding. FAIL IF none passes (script label 'no_reachable_lever_beats_removed'): the declared skip-hours stands;
+    the axis is recorded honest_negative on this window. The 2.0 R bar, the drawdown clause, the 3-of-4 fold majority and
+    the 39 floor are not changed after any result.
+  what_it_does_not_do: >-
+    Does not mine hours: the three blocks are fixed here and may not be edited after seeing any result. Does not edit config.
+    A single-leg pass is a LEAD only; a Tier-3 session filter is proposed only if the same block passes on >= 4 of the 7 sibling
+    units (RQ-20261013-407c-10..15 and -19), counted by research-ops from the landed verdicts.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 60
+  confidence: 0.2
+  bucket: structural
+  basis: >-
+    stand-in: a session block that is a repeatable drag across six legs would apply fleet-wide; ~60 USD/month is a placeholder
+    for a small structural edge on small live books. Estimate, not a measurement.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 15
+  basis: >-
+    One keyless Binance Vision fetch of ~760 days and 4 harness passes over it; GitHub-hosted runner, no trainer data.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_sol
+  - --arm
+  - B=
+  - --arm
+  - SA=--skip-hours=0,1,2,3,4,5,6,7
+  - --arm
+  - SU=--skip-hours=12,13,14,15,16
+  - --arm
+  - SL=--skip-hours=20,21,22,23
+  - --days
+  - '760'
+  - --start
+  - '2024-10-05'
+  - --end
+  - 2026-10-04 23:59
+  - --control
+  - B=comms/strategy_evidence/runs/2026-10-05-730d-expand/trend_donchian_sol__bt.json
+  - --control-tol-n
+  - '0.02'
+  - --control-tol-r
+  - '0.5'
+  - --grade
+  - sweep
+  - --baseline
+  - B
+  - --delta-r
+  - '2.0'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261013-407c-11
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: >-
+    research/results/RQ-20261013-407c-11/<run_id>.jsonl (E5 contract via the batch collector); per-arm harness summaries,
+    trade ledgers, exact argv and verdict.json under comms/research/RQ-20261013-407c-11/<run_id>/.
+roadmap:
+- L-REGIME
+related:
+- QUEUE-FILL-1013
+- scripts/research/exit_lever_ablation.py
+- docs/research/entry-refinement-coverage.json
+- RQ-20261013-407c-10
+- RQ-20261013-407c-12
+- RQ-20261013-407c-13
+- RQ-20261013-407c-14
+- RQ-20261013-407c-15
+- RQ-20261013-407c-19
+last_dispatched_at: '2026-10-14T04:38:04+00:00'
+grading:
+  auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-20261013407C11-SESSION
+  evidence:
+  - research/results/RQ-20261013-407c-11/38512431416.jsonl
+  first_fail: 1 row(s), all measured, all fail
+  graded_at: '2026-10-14'
+  grader: scripts/research/queue_grade.py
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Tier-1 read path, held only because the guard cannot certify src/web/api/main.py (router registration), src/web/api/routers/research_catalog.py and src/runtime/research_catalog.py as TIER1_SURFACE. The diff adds one ungated GET projection of files already public in this repo (research/queue, research/results, research/THEMES.yaml, docs/roadmap/milestones.yaml): no DB, no secret, no order path, no config. Review points: (1) ungated by design, same class as /api/bot/roadmap and /api/bot/work - rationale is in docs/api-tier-policy.md; (2) the catalog imports scripts.research.dispatch_queue._is_due lazily and reports dueState 'unknown' rather than guessing if that fails; (3) money-DB routes /api/bot/db/* are untouched and stay require_session. Verified: tests/test_research_catalog.py 8 passed incl. a live-tree positive control; check_api_tier_policy.py --all OK; ruff clean on the new files.",
+  "why": "DATA-EXPLORER: backs the Research catalog sub-tab (search, facets, sort, pagination, stay-on-top block) the operator asked for 2026-10-13."
+}

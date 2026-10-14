@@ -1,0 +1,46 @@
+# scripts/research/research_watchdog.yaml -- thresholds for the token-free research watchdog
+# (RESEARCH-WATCHDOG, operator 2026-10-13). Read by scripts/research/research_watchdog.py; edit HERE, not in code.
+#
+# Origin: the research dispatcher started nothing from 12:50Z to >= 15:58Z on 2026-10-13 and nobody noticed
+# until a Claude check. The watchdog runs every 15 min from its OWN workflow (an alarm housed in the thing it
+# watches is silent exactly when that thing does not run) and escalates without spending Claude tokens.
+
+thresholds:
+  # dispatcher: minutes since the last run whose `dispatch` JOB actually started (a run whose dispatch job was
+  # skipped by the dedupe job, or is still queued behind the concurrency group, is NOT a start).
+  dispatcher_no_start_minutes: 75
+  # the dispatch job's own timeout is 30 min; running longer than this is stuck, not slow.
+  dispatcher_job_running_stuck_minutes: 35
+  # a dispatch job still queued/pending this long is blocked behind something (the concurrency group, no runner).
+  dispatcher_job_pending_stuck_minutes: 45
+  # runs start but NOTHING is fired: runnable units exist, no research compute run is queued/in progress, and the
+  # newest research compute run was created longer ago than this.
+  fires_idle_minutes: 75
+  # a backend with runnable units routed to it, nothing in flight on it and nothing started on it this long.
+  backend_idle_minutes: 60
+  # same floor queue_replenish.py and check_research_queue_health.py enforce.
+  runnable_floor: 25
+  # a completed runner/trainer/kaggle run whose result is still not on main after this long (the dispatcher collects
+  # every cycle, landing takes a CI cycle of 35-60 min, so this is several cycles of slack).
+  collector_stuck_minutes: 240
+  collector_window_hours: 48
+  # an open automation/research-queue-stamp-* PR older than this is stranded (dispatch_queue.STRANDED_STAMP_HOURS).
+  stranded_stamp_hours: 3.0
+  # an open automation/* PR (stamp, receipt, capture-watch) CONFLICTING with main this long is named directly
+  # (#18004/#18014, 2026-10-14: a conflicted PR runs no checks, so it never lands and nothing else says why).
+  conflicted_automation_minutes: 45
+  # breakout_2 phone executor heartbeat older than this while the account is live (prop_silence.HEARTBEAT_MAX_MIN; a test pins them equal).
+  phone_heartbeat_max_minutes: 10
+  # after a self-heal, wait this long for the re-fired run to start before re-checking.
+  recheck_wait_seconds: 150
+
+# The standing PR the manager session subscribes to: every escalation / resolution is a comment on it, so each one
+# wakes the manager with no Claude tokens spent polling. It is never merged.
+ops_flags:
+  title: "ops-flags (do not merge)"
+  pr_number: 17895        # the ONE place the PR number is recorded; the manager skill points here. A replacement PR changes this line only.
+  branch: "ops/flags"
+  comment_marker: "research-watchdog"
+
+# Checks that exist but are not graded as failures when they cannot apply.
+backends_not_graded: [runpod]   # auto_route: false -- operator-armed, selected only by an explicit workflow:

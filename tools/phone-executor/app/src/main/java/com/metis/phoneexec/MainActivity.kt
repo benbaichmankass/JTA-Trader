@@ -6,6 +6,7 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
@@ -126,6 +127,8 @@ class MainActivity : Activity() {
     private var wokeAtMs = 0L           // > 0 while WE brought the Activity forward (it goes back afterwards)
 
     companion object {
+        /** The live Activity in this process (null once destroyed): the watchdog restarts its loop or relaunches it. */
+        @Volatile var instance: MainActivity? = null
         const val TRADE_URL = "https://trade.breakoutprop.com/"
         // The login entry that WORKED in the 1a probe (11:44-11:47Z): portal code step -> app.breakoutprop.com
         // (Cloudflare check, then served) -> trade host SSO -> logged-in landing. The trade host's own password
@@ -134,6 +137,7 @@ class MainActivity : Activity() {
         const val TICK_MS = 30_000L
         const val HEARTBEAT_MS = 120_000L
         const val ACCT_MS = 300_000L
+        const val CHIPS_WAIT_MS = 12_000L               // Positions/Closed read: wait this long for the tab chips to render
         const val POS_MISS_MS = 1_800_000L   // a Positions read that failed is reported (masked dump) at most every 30 min
         const val USER_HOLD_MS = 5 * 60_000L
         const val PAUSE_MAX_MS = 10 * 60_000L
@@ -166,6 +170,7 @@ class MainActivity : Activity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
+        instance = this
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setSecure(true)   // fail closed: secure until the state machine has SEEN the logged-in terminal
         api = Api(this); ledger = Ledger(this)
@@ -216,15 +221,36 @@ class MainActivity : Activity() {
         KeepAliveService.start(this, launch = false)
         web.loadUrl(TRADE_URL)
 
+        Liveness.markTick(this)
         scope.launch {
             val stuck = ledger.unresolved()
             if (stuck.isNotEmpty()) api.event("error", "restart found unresolved tickets; not retried; check the terminal", stuck.first())
-            api.event("app_started", "")
-            while (true) { delay(TICK_MS); tick() }
+            // the last watchdog/boot/sticky restart reason rides the event, so a restart is explained, not just seen
+            api.event("app_started", Liveness.lastRestartReason(this@MainActivity))
+        }
+        startLoop()
+        // relaunched by the watchdog (not by the operator): hand the screen back unless it was touched
+        if (intent?.getBooleanExtra("watchdog", false) == true) scope.launch {
+            delay(8_000L); if (lastUserInputMs == 0L && resumed) moveTaskToBack(true)
         }
     }
 
-    override fun onDestroy() { scope.cancel(); super.onDestroy() }
+    /** The tick loop, as a restartable job (PHONE-KEEPALIVE): the watchdog can cancel a wedged one and start a fresh one. */
+    private var loopJob: Job? = null
+    private fun startLoop() {
+        loopJob?.cancel()
+        loopJob = scope.launch { while (true) { delay(TICK_MS); Liveness.markTick(this@MainActivity); tick() } }
+    }
+
+    /** Called by KeepAliveService when no tick or heartbeat has happened for Liveness.LOOP_STALE_MS. */
+    fun restartLoop(why: String) {
+        loopJob?.cancel(); busy = false
+        Liveness.markTick(this)
+        scope.launch { try { api.event("loop_restarted", why) } catch (e: Exception) { } }
+        startLoop()
+    }
+
+    override fun onDestroy() { if (instance === this) instance = null; scope.cancel(); super.onDestroy() }
 
     override fun onResume() {
         super.onResume(); resumed = true
@@ -501,6 +527,7 @@ class MainActivity : Activity() {
      *  pause / touch-hold flags and the terminal gate. Our own state and UI labels only; never links or values. */
     private suspend fun heartbeat(st: String, s: JSONObject?, force: Boolean = false) {
         val now = System.currentTimeMillis()
+        Liveness.markTick(this)   // long jobs (re-login, mail wait) heartbeat too: they count as alive
         if (!force && now - lastHbMs < HEARTBEAT_MS) return
         lastHbMs = now
         val state = JSONObject().put("st", st).put("paused", paused()).put("hold", userActive())
@@ -517,6 +544,12 @@ class MainActivity : Activity() {
             // background engine: which one, jobs run / jobs whose page answered, the last job's result and its age
             .put("bg", BgWeb.engine).put("bg_runs", bgRuns).put("bg_ok", bgOk).put("bg_last", bgLast)
             .put("bg_last_min", if (bgLastMs > 0) (now - bgLastMs) / 60_000 else -1L)
+            // PHONE-KEEPALIVE: what keeps this app alive, and what had to bring it back
+            .put("battery_exempt", getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(packageName))
+            .put("overlay", Settings.canDrawOverlays(this)).put("fgs_running", Liveness.fgsRunning)
+            .put("alarm_exact", KeepAliveService.exactAlarmOk(this))
+            .put("last_restart_reason", Liveness.lastRestartReason(this)).put("restarts_24h", Liveness.restarts24h(this))
+            .put("app_version", appVersion())
         // never touch the WebView while backgrounded (jsObj is bounded anyway and yields null on a timeout)
         if (resumed) jsObj("__ex.terminal()")?.let { tm ->
             for (k in listOf("ready", "probe", "panels", "orderControl", "ticketOpen", "buySell")) state.put(k, tm.optBoolean(k))
@@ -525,6 +558,11 @@ class MainActivity : Activity() {
         if (resumed && st == "logged_in" && now - lastAcctMs >= ACCT_MS) { lastAcctMs = now; state.put("acct", readAccount(fg)) }
         api.heartbeat(lastStatus, state)
     }
+
+    private fun appVersion(): String = try {
+        val pi = packageManager.getPackageInfo(packageName, 0)
+        "${pi.versionName}/${if (Build.VERSION.SDK_INT >= 28) pi.longVersionCode else pi.versionCode.toLong()}"
+    } catch (e: Exception) { "?" }
 
     /** Read the account panel (read-only) and post it as account_status; only on the terminal with no ticket open.
      *  Returns a short state for the heartbeat: posted / unread / busy. Nothing is posted unless a value was read. */
@@ -561,21 +599,53 @@ class MainActivity : Activity() {
         val cs = closed?.optString("state")
         if (closed != null && cs != "read" && System.currentTimeMillis() - lastPosMissMs >= POS_MISS_MS) {
             lastPosMissMs = System.currentTimeMillis()
-            api.positionsMiss("closed_$cs", closed.optJSONArray("headers") ?: JSONArray(), closed.optJSONArray("controls") ?: JSONArray())
+            api.positionsMiss("closed_$cs", closed.optJSONArray("headers") ?: JSONArray(), closed.optJSONArray("controls") ?: JSONArray(),
+                closed.optJSONArray("cells") ?: JSONArray())
         }
         if (ps != "read" && System.currentTimeMillis() - lastPosMissMs >= POS_MISS_MS) {
             lastPosMissMs = System.currentTimeMillis()
-            api.positionsMiss(ps, pos?.optJSONArray("headers") ?: JSONArray(), pos?.optJSONArray("controls") ?: JSONArray())
+            api.positionsMiss((ps + " " + (pos?.optString("detail") ?: "")).trim(), pos?.optJSONArray("headers") ?: JSONArray(), pos?.optJSONArray("controls") ?: JSONArray(),
+                pos?.optJSONArray("cells") ?: JSONArray())
         }
         api.accountStatus(bal, eq, if (eqRead != null) "equity" else "portfolio", d(a, "unrealized"), pos, closed)
         return if (ps == "read") "posted" else "posted_pos_$ps"
     }
 
-    /** Show one bottom-panel view by its tab label and read it. Null when the tab is missing or the page did not answer. */
+    /** Wait (poll) until the bottom-panel tab chips exist: the SPA renders them after the document is "complete". */
+    private suspend fun waitChips(p: Page, maxMs: Long): JSONObject? {
+        val end = System.currentTimeMillis() + maxMs
+        var tc: JSONObject? = null
+        while (true) {
+            tc = try { p.ensure(); p.obj("__ex.tabChips()") } catch (e: JsTimeout) { null }
+            if ((tc?.optInt("chips") ?: 0) > 0 || System.currentTimeMillis() >= end) return tc
+            delay(1000)
+        }
+    }
+
+    /** Show one bottom-panel view by its tab label and read it. Runs against the loaded /account/<id>/trade terminal:
+     *  waits for the chips; when the page is an account page but not /trade it opens the terminal first (not while the
+     *  operator is using the screen). A genuine miss returns state no_tab plus a masked dump of what IS on the page. */
     private suspend fun readView(p: Page, tabRe: String, reader: String): JSONObject? {
-        if (p.js("__ex.clickText(${q(tabRe)})") != "clicked") return JSONObject().put("state", "no_tab")
+        var tc = waitChips(p, CHIPS_WAIT_MS)
+        if ((tc?.optInt("chips") ?: 0) == 0 && tc?.optBoolean("trade") == false && tc?.optInt("acct_href") == 1 && !(p === fg && userActive())) {
+            val href = p.js("__ex.terminalHref()")
+            if (href.startsWith("https://trade.breakoutprop.com/")) { p.load(href); p.settle(20_000L); tc = waitChips(p, CHIPS_WAIT_MS) }
+        }
+        if (p.js("__ex.clickTab(${q(tabRe)})") != "clicked") {
+            val d = p.obj("__ex.missDump()") ?: JSONObject()
+            return JSONObject().put("state", "no_tab").put("headers", d.optJSONArray("headers") ?: JSONArray())
+                .put("controls", d.optJSONArray("controls") ?: JSONArray())
+                .put("detail", "d${d.optInt("path_depth")} c${d.optInt("chips")} t${if (d.optBoolean("trade")) 1 else 0}")
+        }
         delay(1200); p.ensure()
-        return p.obj(reader)
+        var r = p.obj(reader)
+        // the panel fills in after the click: no table yet / header but no rows yet are re-read a few times before
+        // they count as a miss (a flat Positions view is only believed on positive evidence, never on "not rendered")
+        var tries = 0
+        while (tries < 4 && r?.optString("state").let { it == "no_table" || it == "empty_unconfirmed" }) {
+            delay(1500); tries += 1; p.ensure(); r = p.obj(reader) ?: r
+        }
+        return r
     }
 
     /** Where "back to the terminal" goes: the last account terminal seen while logged in, else the host root. */
@@ -1122,6 +1192,13 @@ class MainActivity : Activity() {
                 js("__ex.clickText(${q(view)})"); delay(1500)
                 val rows = js("JSON.stringify(__ex.rows())").uppercase()
                 val hit = rows.split("],[").any { r -> (r.contains(venue.uppercase()) || r.contains(base)) && sideRe.containsMatchIn(r) }
+                // BREAKOUT-UNTRACKED-1014: Positions is a DIV grid (no <tr>), invisible to rows(); a clean grid read
+                // showing this symbol on this side also confirms the submit. Read-only; the opp/flatten path stays rows()-only.
+                val grid = if (view == "^positions$") jsObj("__ex.positionsRead()")?.takeIf { it.optString("state") == "read" }?.optJSONArray("rows") else null
+                val gridHit = grid != null && (0 until grid.length()).any { i ->
+                    val g = grid.optJSONObject(i); val gs = g?.optString("symbol")?.uppercase() ?: ""
+                    gs.isNotEmpty() && ((venue.isNotEmpty() && gs.contains(venue.uppercase())) || (base.isNotEmpty() && gs.contains(base))) && sideRe.containsMatchIn(g?.optString("side") ?: "")
+                }
                 val opp = view == "^positions$" && rows.split("],[").any { r -> (r.contains(venue.uppercase()) || r.contains(base)) && oppRe.containsMatchIn(r) && !sideRe.containsMatchIn(r) }
                 if (opp) {
                     js("__ex.rowClose(${q(venue)}, ${q(oppRe.pattern)})"); delay(1200); js("__ex.dialogClick('confirm|close|yes|ok')")
@@ -1129,7 +1206,7 @@ class MainActivity : Activity() {
                     api.event("flattened", "opposite-side position found after submit; close clicked; CHECK the terminal", id)
                     report(id, "mismatch_flattened", "opposite side seen", tk); return
                 }
-                if (hit) {
+                if (hit || gridHit) {
                     ledger.append(id, "placed")
                     api.post("report", JSONObject().put("kind", "fill").put("status", "placed").put("ticket_id", id)
                         .put("symbol", sym).put("direction", if (long) "long" else "short")
@@ -1189,7 +1266,12 @@ class MainActivity : Activity() {
         if (rowTp != null && !fromTp.isNaN() && !close(rowTp, fromTp, pStep)) return amendHuman(t, "row TP $rowTp != expected ${fmt(fromTp, pStep)}", pos)
         // 3. the row's ONE edit control, then the ONE dialog
         val e = js("__ex.posEdit(${q(venue)}, ${q(sideRe)})")
-        if (e != "clicked") return amendRefuse(t, "position edit control: $e", pos)
+        if (e != "clicked") {
+            // MEASURE FIRST (BREAKOUT-POS-UNPARSED): the row's control dump also goes to the account's visible positions
+            // diag (state amend_<why>), since the amend_result form only lands in the ticket's meta
+            try { api.positionsMiss("amend_$e", pos.optJSONArray("headers") ?: JSONArray(), pos.optJSONArray("ctl_lines") ?: JSONArray()) } catch (x: Exception) { }
+            return amendRefuse(t, "position edit control: $e", pos)
+        }
         delay(1500); ensure()
         val d0 = jsObj("__ex.editDialog()")
         if (d0?.optInt("n") != 1) { js("__ex.dlgCancel()"); return amendRefuse(t, "edit dialog not unique (n=${d0?.optInt("n")})", pos) }

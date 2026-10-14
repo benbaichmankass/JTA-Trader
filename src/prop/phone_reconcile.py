@@ -117,6 +117,48 @@ def bot_symbol(account_id: str, venue_text: Any) -> Optional[str]:
     return None
 
 
+# BREAKOUT-POS-UNPARSED (1b.193 live dump, 2026-10-14): Breakout's Positions Side cell carries NO text (the side is
+# drawn), so the phone sends "side_unread": every row parsed except its side. The side may then be taken from the
+# journal: the open fills with the same bot symbol and an entry within ENTRY_TOL_FRAC of the terminal's Opening price
+# must all be on ONE side, and their summed size must match the row's (QTY_TOL; the venue nets same-side entries). That side is ESTIMATED (the journal's, not the venue's); anything else leaves the read
+# un-reconciled. Never guessed from a sign, a colour or a P&L.
+# 0.5% ~ entry slippage: the live venue avg 2461.52 vs the journal's 2458.24 is 0.13% (operator screenshot 21:41Z).
+# The size match is what keeps a wider band from pairing the wrong fill.
+ENTRY_TOL_FRAC = 0.005
+
+
+def resolve_sides(account_id: str, rows: Any) -> Optional[List[Dict[str, Any]]]:
+    """The side_unread rows with each missing side taken from the journal (``side_source: journal``), or None when any
+    row cannot be matched to exactly one side."""
+    from src.prop import prop_journal, phone_executor
+    from src.prop.prop_overview import split_fills
+
+    if not isinstance(rows, list) or not rows or len(rows) > _MAX_ROWS:
+        return None
+    open_rows = [f for f in split_fills(prop_journal.list_fills(account_id=account_id, limit=500))[0]
+                 if f.get("account_id") == account_id]
+    insts = phone_executor.phone_config(account_id).get("instruments") or {}
+    out = []
+    for r in rows:
+        if not isinstance(r, dict):
+            return None
+        if _side(r.get("side")):
+            out.append(r)
+            continue
+        sym, entry = bot_symbol(account_id, r.get("symbol")), _num(r.get("entry"), signed=False)
+        if sym is None or not entry:
+            return None
+        step = _num((insts.get(sym) or {}).get("price_step"), signed=False) or 0.0
+        tol = max(2 * step, entry * ENTRY_TOL_FRAC)
+        hits = [f for f in open_rows if str(f.get("symbol") or "").upper() == sym
+                and _num(f.get("entry_price"), signed=False) is not None and abs(float(f["entry_price"]) - entry) <= tol]
+        sides = {_side(f.get("direction")) for f in hits} - {None}
+        if len(sides) != 1 or not _qty_close(sum(_num(f.get("qty")) or 0.0 for f in hits), _num(r.get("qty"), signed=False)):
+            return None
+        out.append({**r, "side": sides.pop(), "side_source": "journal"})
+    return out
+
+
 def clean_positions(account_id: str, rows: Any) -> List[Dict[str, Any]]:
     """Validate the phone's Positions rows. Raises ValueError on a structurally bad row (the report is refused,
     so a half-read list can never reconcile). Unknown instruments keep ``symbol: None`` and their venue text."""
@@ -134,6 +176,8 @@ def clean_positions(account_id: str, rows: Any) -> List[Dict[str, Any]]:
         out.append({"symbol": bot_symbol(account_id, venue), "venue_symbol": venue, "direction": side, "qty": qty,
                     "entry": _num(r.get("entry"), signed=False), "mark": _num(r.get("mark"), signed=False),
                     "upnl": _num(r.get("upnl"))})
+        if r.get("side_source") == "journal":
+            out[-1]["side_source"] = "journal"
     return out
 
 
@@ -153,6 +197,8 @@ def clean_closed(account_id: str, rows: Any) -> List[Dict[str, Any]]:
                     "price": _num(r.get("price"), signed=False),
                     "pnl": _num(r.get("pnl")) if r.get("pnl") is not None else _num(r.get("netpnl")),   # the venue's own realized figure, never computed
                     "type": str(r.get("type") or "")[:30], "status": str(r.get("status") or "")[:20],
+                    # "Long (Reduce)" / "Short (Reduce)" = a closing order (None when the page did not say)
+                    "reduce": r["reduce"] if isinstance(r.get("reduce"), bool) else None,
                     "time": str(r.get("time") or "")[:40]})
     return out
 
@@ -248,9 +294,19 @@ def _pick_exit(row: Dict[str, Any], closed: List[Dict[str, Any]], used: List[str
         return True
 
     cands = [c for c in closed if c["symbol"] == str(row.get("symbol") or "").upper() and c["side"] == want
-             and c.get("price") is not None and not _DEAD.search(c.get("status") or "")
+             and c.get("price") is not None and _is_exit_row(c)
              and _qty_close(c.get("qty"), _num(row.get("qty"))) and ok(c)]
     return (cands[0] if len(cands) == 1 else None), len(cands)
+
+
+def _is_exit_row(c: Dict[str, Any]) -> bool:
+    """A Closed-orders row that can be a position's EXIT: not a cancelled/rejected one, FILLED when the page says a
+    status (a bracket leaves both its TP and its SL listed, one Filled and one Cancelled), and a reduce order when the
+    page says so (the plain "Long Limit" row is an ENTRY, never an exit)."""
+    st = c.get("status") or ""
+    if _DEAD.search(st) or (st and not re.search(r"fill", st, re.I)):
+        return False
+    return c.get("reduce") is not False
 
 
 def _close_reason(row: Dict[str, Any], c: Optional[Dict[str, Any]]) -> str:
@@ -491,8 +547,11 @@ def fill_unpriced_closes(account_id: str, closed: List[Dict[str, Any]], *, now: 
         return out
     with _LOCK:
         fills = prop_journal.list_fills(account_id=account_id, limit=500)
+        from src.prop.fill_inference import is_inferred
+        # rows closed WITHOUT an exit, plus closes the server only INFERRED from candles (ESTIMATED exit = the SL/TP
+        # level): the terminal's own Filled closing order overrides those with the MEASURED exit and realized P&L
         rows = [f for f in fills if f.get("account_id") == account_id and str(f.get("status") or "").lower() == "closed"
-                and f.get("exit_price") is None and f.get("ticket_id")]
+                and (f.get("exit_price") is None or is_inferred(f)) and f.get("ticket_id")]
         st = _load_state(account_id)
         used: List[str] = [u for u in (st.get("used_closes") or []) if isinstance(u, str)]
         for f in rows:
@@ -508,7 +567,7 @@ def fill_unpriced_closes(account_id: str, closed: List[Dict[str, Any]], *, now: 
                         and opened is not None and vt >= opened - TZ_SLACK and vt <= now + TZ_SLACK)
 
             cands = [c for c in closed if c["symbol"] == str(f.get("symbol") or "").upper() and c["side"] == want
-                     and not _DEAD.search(c.get("status") or "") and ok(c)]
+                     and _is_exit_row(c) and ok(c)]
             if len(cands) != 1:
                 (out["ambiguous"] if cands else out["no_match"]).append(rid)
                 if cands and _once(st, f"fillin_ambig:{rid}", now):

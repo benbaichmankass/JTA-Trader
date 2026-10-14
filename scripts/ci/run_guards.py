@@ -1324,6 +1324,7 @@ GUARDS: List[Dict[str, Any]] = [
         "when": None,
         "steps": [
             ["python3", "scripts/research/script_run.py", "--self-test"],
+            ["python3", "scripts/research/kaggle_run.py", "self-test"],
             ["python3", "scripts/ci/check_research_script_run.py", "--self-test"],
             ["python3", "scripts/ci/check_research_script_run.py"],
         ],

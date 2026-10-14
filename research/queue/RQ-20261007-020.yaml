@@ -1,7 +1,7 @@
 id: RQ-20261007-020
 title: 'Exit parity, prop real money: trend_donchian_eth_prop WITHOUT the stale_exit close lever the prop path
   cannot fire (vs the 2026-10-05-730d record WITH it) -- build the close op, or strip the lever?'
-status: done
+status: retired
 cadence: once
 kind: experiment
 theme: new_strategy_prop
@@ -170,3 +170,21 @@ grading:
   reason: 1 row(s), all measured, all fail
   rows: 1
   verdict: fail
+retired_reason: '2026-10-13 RESEARCH-OPS-20261013-2047 (manager instruction 18:03Z; finding from lane PI-407C, PR #17903):
+  retire, and mark the DURABLE result row non-informative. EXIT-LEVER-STRIP #17002 (2026-10-07) removed stale_exit_bars /
+  stale_exit_below_r from trend_donchian_eth_prop, and the dispatched run (37760503444, 2026-10-08) read arm W from config,
+  so W ran WITHOUT the stale exit: its argv carries no stale flag (cfg_set {}), its by_outcome is stop 77 / take_profit
+  12 / trail_stop 259 with no stale_stop, and the graded delta is dR 0.0 / dDD 0.0 / fold_wins 0 -- W and X were the same
+  strategy, so the row''s fail / live_without_lever grade measures nothing about the lever. It passed its positive control
+  only because the control tolerance (2% on n; 348 vs 355 = 1.97%) admits the stripped book. The informative measurement
+  of this question is the session-local run recorded in result_preliminary (W reproduced the committed record exactly,
+  355 trades, +13.0223 R, with stale_stop 79; X +12.8408 R; dR +0.18 R; 2 of 4 fold wins; verdict fail / live_without_lever,
+  evidence comms/research/RQ-20261007-001/local-5fd0163ca/verdict.json, PR #16970), and that is what the strip decision
+  rests on. Not re-scoped: the question (build a close verb vs strip) was decided and shipped, the lever no longer exists
+  in the live config, and a rerun of the same command would reproduce the no-op; a new question would be a new unit with
+  the stale flags passed explicitly, which nothing now asks. The registered rule and the grading block above are unchanged.'
+non_informative:
+  result: research/results/RQ-20261007-020/37760503444.jsonl
+  reason: arm W read config after the stale_exit_* strip (#17002), so W == X (dR 0.0, identical by_outcome); the durable grade does not measure the stale exit
+  marked_at: '2026-10-13'
+  informative_record: comms/research/RQ-20261007-001/local-5fd0163ca/verdict.json

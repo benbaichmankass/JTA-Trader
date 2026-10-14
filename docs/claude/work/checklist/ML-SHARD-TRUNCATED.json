@@ -1,0 +1,30 @@
+{
+  "id": "ML-SHARD-TRUNCATED",
+  "title": "ML-SHARD-TRUNCATED: BTC/SOL 15m market_raw data.jsonl cut short (151,000 / 64,000 rows vs metadata 175,296 / 175,104)",
+  "phase": "process",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "FOUND 2026-10-13 by lane ML-DATA-OFF-TRAINER (trainer diag #17894). market_raw/BTCUSDT/15m/v002/data.jsonl has 151,000 rows (last 2026-02-01T21:45Z) but its metadata.json says row_count 175,296 (generated 00:44Z); SOL has 64,000 rows (last 2023-08-12) vs 175,104; ETH is consistent. The files were rewritten at 05:18Z / 05:42Z, ~4.5 h after the metadata, i.e. a second writer replaced the file with a prefix (round row counts). market_features and forecasts were rebuilt from the cut files, so every BTC/SOL regime unit and regime-head training reads cut data (RQ-20261012-75b2-22: n_test_rows=0). The 05Z hour is the over-subscribed catch-up hour (busy 1.96) -- correlation only, writer NOT identified. NEXT: (a) read journalctl for ict-trainer-catchup / ict-trainer / drift-retrain 05:00-05:45Z for an OOM kill or write error; read scripts/ops/build_trainer_datasets.sh BTC/SOL 15m raw build + any second market_raw writer; (b) repair: rebuild BTC/SOL 15m market_raw (Tier 2: data-mutation job) and add a row_count vs metadata check to ml/datasets/validate.py so the build fails loudly; (c) re-run the withheld units. The exporter already withholds such shards. 2026-10-14 UPDATE (MEASURED by the export integrity check in run 38503995602, 03:00Z): BTC 15m market_raw/market_features passed (row counts equal their metadata) while SOL 15m was still cut (64,000 / 63,976 rows vs 175,104 in metadata). BTC was cut at 05:18Z on 10-13 and whole at 03:00Z on 10-14, so something repaired it between; the writer is still unidentified. Hypothesis, not established: the 05Z ict-trainer-catchup hour truncates and a later rebuild restores. Check: re-run the export integrity check (ml-data-export-kaggle.yml) at ~04:50Z and ~06:40Z and compare BTC/SOL row counts to metadata around the 05Z hour.",
+  "updated_at": "2026-10-14T05:09:02Z",
+  "updated_by": "session_01TLzWnNpc5nNAH52UaenHhX",
+  "roadmap": [
+    "M14"
+  ],
+  "observation": {
+    "what": "market_raw BTC/SOL 15m data.jsonl row count equals metadata row_count and last_ts is within 1 day on the trainer; MANIFEST.withheld empty on the next export",
+    "how_to_check": "python3 scripts/research/market_data_export.py build (see MANIFEST.withheld) ; trainer-vm-diag wc -l / tail -1 of the three market_raw 15m shards",
+    "due_by": "2026-10-16"
+  },
+  "writeback": {
+    "roadmap": "M14 where/next: the BTC/SOL regime shards are whole and current, and the build refuses a shard that disagrees with its metadata",
+    "arch": "none: data-pipeline fix; docs/reference/data-model.md gains the row_count invariant"
+  },
+  "_seq": 467
+}

@@ -14,6 +14,7 @@
 #   ACTION_CLOSED_AT  - optional ISO-8601 timestamp
 #   ACTION_REASON     - free text stored on the close row
 #   ACTION_APPLY      - "true" to write (backup first); else dry-run
+#   ACTION_FROM_PLACED - "true" to also close a `placed` row on a `placed` ticket
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -28,6 +29,7 @@ ACTION_EXIT_PRICE="${ACTION_EXIT_PRICE:-}"
 ACTION_CLOSED_AT="${ACTION_CLOSED_AT:-}"
 ACTION_REASON="${ACTION_REASON:-}"
 ACTION_APPLY="${ACTION_APPLY:-}"
+ACTION_FROM_PLACED="${ACTION_FROM_PLACED:-}"
 
 if [ -z "${ACCOUNT_ID}" ] || [ -z "${ACTION_TICKET_ID}" ]; then
     log "ERROR: prop-report-close needs ACCOUNT_ID and ACTION_TICKET_ID."
@@ -52,6 +54,7 @@ PY="${REPO_DIR}/.venv/bin/python3"
 ARGS=(--db "${DB_PATH}" --account "${ACCOUNT_ID}" --ticket-id "${ACTION_TICKET_ID}" --reason "${ACTION_REASON}")
 [ -n "${ACTION_EXIT_PRICE}" ] && ARGS+=(--exit-price "${ACTION_EXIT_PRICE}")
 [ -n "${ACTION_CLOSED_AT}" ] && ARGS+=(--closed-at "${ACTION_CLOSED_AT}")
+case "${ACTION_FROM_PLACED}" in true|True) ARGS+=(--from-placed) ;; esac
 case "${ACTION_APPLY}" in
   true|True)
     echo ">>> prop-report-close: APPLY mode — will write (DB backup taken first)."

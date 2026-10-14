@@ -1,0 +1,30 @@
+{
+  "id": "RESEARCH-OPS-20261014-1447",
+  "title": "Research-ops pass 2026-10-14 14:47Z",
+  "phase": "research",
+  "state": "done",
+  "owner": "manager",
+  "lane": "research-ops-lane-20261014-1447",
+  "model": null,
+  "ceiling_usd": 5,
+  "spend_usd": 2.5,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[lane done] 21 results read p3/f11/i7; catboost verbose engine bug fixed (ml_bakeoff) + test; 6 units authored (de02-01..06); runnable 6->12, FLOOR NOT MET (12<25, templates 0 points); 2 unrouted PI routed; ML plan items M1/M2/M3/F11/F13/F16 written back. Record comms/research/ops/20261014T1500Z.json. Hold PR needs manager merge. CLOSED 2026-10-14 20:47: observation met, RQ-20261014-de02-01 landed with catboost arm_status ok (verdict pass, n=48000).",
+  "updated_at": "2026-10-14T20:54:30Z",
+  "updated_by": "research-ops-lane-20261014-2047",
+  "writeback": {
+    "roadmap": "none: operations pass",
+    "arch": "none: no component changed"
+  },
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "observation": {
+    "what": "manager merges the hold PR; RQ-20261014-de02-01 lands catboost arm_status ok",
+    "how_to_check": "grep -m1 status: research/queue/RQ-20261014-de02-01.yaml; python3 scripts/ci/check_research_queue_throughput.py --json",
+    "due_by": "2026-10-16"
+  },
+  "_seq": 491
+}

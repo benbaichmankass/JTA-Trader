@@ -1,0 +1,42 @@
+{
+  "unit": "RQ-20261014-9d20-03",
+  "run_id": "38569791316",
+  "commit_sha": "cc9910fac56aff91dddafd3ddcdb9155079b57ab",
+  "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/38569791316",
+  "timeout_minutes": 30,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/ledger_metalabel.py",
+        "--mode",
+        "classify",
+        "--target",
+        "giveback_gt",
+        "--threshold",
+        "0.5",
+        "--learners",
+        "prior,numpy_logit",
+        "--min-leg-n",
+        "100",
+        "--folds",
+        "4",
+        "--embargo",
+        "5",
+        "--skip-quantile",
+        "0.2",
+        "--auc-gain",
+        "0.05",
+        "--lift-r",
+        "0.05",
+        "--out",
+        "comms/research/RQ-20261014-9d20-03/38569791316"
+      ],
+      "log": "comms/research/RQ-20261014-9d20-03/38569791316/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 1.3
+    }
+  ],
+  "all_ok": true
+}
