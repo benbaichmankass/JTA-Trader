@@ -273,7 +273,7 @@ def config_problem(entry: Dict[str, Any], repo: Optional[Path] = None) -> Option
         return f"misconfigured: run.inputs {bad} hold an unresolved placeholder ('NOT YET DECIDED'/TBD/TODO)"
     declared = declared_inputs(workflow, repo=repo or _REPO)
     if declared is None or workflow.split("/")[-1] in ("research-script-run.yml", "research-script-run-trainer.yml",
-                                                                "research-script-run-kaggle.yml"):
+                                                                "research-script-run-kaggle.yml", "research-script-run-data.yml"):
         return None
     inputs, _ = dispatch_inputs(entry, power_state="x", repo=repo or _REPO)
     unknown = sorted(k for k in inputs if k not in declared)
@@ -664,7 +664,7 @@ def dispatch_inputs(entry: Dict[str, Any], *, power_state: str = "",
     if inputs.get("research_unit") and power_state:
         inputs["power_state"] = power_state
     if declared is None or workflow not in ("research-script-run.yml", "research-script-run-trainer.yml",
-                                            "research-script-run-kaggle.yml"):
+                                            "research-script-run-kaggle.yml", "research-script-run-data.yml"):
         return inputs, []
     dropped = sorted(k for k in inputs if k not in declared)
     return {k: v for k, v in inputs.items() if k in declared}, dropped
@@ -971,11 +971,30 @@ def _fire(entry: Dict[str, Any], *, route: str, ref: str,
         return False, (f"run.workflow {workflow[:60]!r} is not a workflow file — a "
                        "session-bound note; retarget it to research-script-run.yml "
                        "(scripts/research/script_run.py) or a real *.yml")
+    # ML-DATA-OFF-TRAINER: the RunPod burst is ISSUE-triggered (gpu-burst-train.yml has no workflow_dispatch), so a unit the
+    # router placed there opens the labelled request issue the workflow already parses. Its own gates still bind: the
+    # ledger preflight ($10/month), GPU_BURST_ARMED, and --max-gpu-dispatches-per-run above.
+    _rp = (entry.get("routing") or {}).get("runpod")
+    if workflow == "gpu-burst-train.yml" and isinstance(_rp, dict) and _rp.get("manifest"):
+        body = "\n".join([f"experiment: {entry.get('id')} {str(entry.get('title') or '')[:80]}".strip(),
+                          f"est_cost: {float(_rp.get('est_cost_usd') or 0.5):.2f}",
+                          f"manifest: {_rp['manifest']}",
+                          f"max_minutes: {int(_rp.get('max_minutes') or 90)}",
+                          "", f"Opened by research-queue-dispatch for {entry.get('id')} (Kaggle GPU quota short; RunPod fallback)."])
+        try:
+            proc = subprocess.run(["gh", "issue", "create", "--label", "gpu-burst-train",
+                                   "--title", f"gpu-burst: {entry.get('id')}", "--body", body],
+                                  capture_output=True, text=True, timeout=120)
+        except (OSError, subprocess.SubprocessError) as exc:
+            return False, f"{type(exc).__name__}: {exc}"
+        if proc.returncode != 0:
+            return False, (proc.stderr or proc.stdout or "").strip()[:400]
+        return True, f"opened gpu-burst-train request {proc.stdout.strip()[-60:]} (route={route})"
     # RQ-RUN (2026-09-28): the token-free runner reads the unit's command from
     # its YAML. Refuse here what the runner would refuse there, so a bad unit
     # is a DISPATCH_FAILED row instead of a spent runner + a stamped unit.
     if workflow in ("research-script-run.yml", "research-script-run-trainer.yml",
-                    "research-script-run-kaggle.yml"):
+                    "research-script-run-kaggle.yml", "research-script-run-data.yml"):
         from scripts.research import script_run
         preflight = script_run.plan(str(entry.get("id")), run_id="preflight")
         if not preflight.ok:
@@ -1117,7 +1136,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(f"::notice::research-queue-dispatch deferred every fire: {pressure['block']}", file=sys.stderr)
     inflight = int(pressure.get("inflight_research") or 0)
     # Per-backend load: runs in flight by workflow NAME (gh reports names) mapped back to backends.
-    state = cr.BackendState(total_inflight=inflight)
+    state = cr.BackendState(total_inflight=inflight, now=now)
     _q: Dict[str, Any] = {"remaining": None, "note": "no quota read"}
     if cfg is not None:
         name_to_backend = {}
@@ -1206,7 +1225,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 waiting.append((be, j))
         for be, j in waiting:
             b = cfg["backends"].get(be)
-            if b is None or not b.get("auto_route", True):
+            if b is None or b.get("auto_route", True) is not True:
                 continue
             if int(b["max_concurrent"]) - state.busy(be) - due_by_be.get(be, 0) > 0:
                 fill_ids.add(j.id)

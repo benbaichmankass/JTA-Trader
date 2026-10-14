@@ -80,7 +80,7 @@ def measure(*, cfg: dict[str, Any], by_name_to_backend: dict[str, str], pressure
             by_backend[be] = by_backend.get(be, 0) + int(n)
     backends: dict[str, Any] = {}
     for name, b in cfg["backends"].items():
-        if not b.get("auto_route", True):
+        if b.get("auto_route", True) is False:
             continue
         cap = int(b["max_concurrent"])
         fired_n = sum(1 for d in decisions if d.get("backend") == name and d.get("outcome") == "dispatched")
@@ -182,6 +182,12 @@ def week(root: Path = _REPO, now: datetime | None = None, days: int = 7) -> dict
         av = a["slot_cycles_available"]
         a["utilization"] = round(a["slot_cycles_used"] / av, 3) if av else None
         a["idle_slot_cycles"] = av - a["slot_cycles_used"]
+    # The trainer is its own managed queue (ML-DATA-OFF-TRAINER): who consumes it, its idle windows, queue depth.
+    try:
+        from scripts.research import trainer_queue as tq  # noqa: PLC0415
+        out["trainer_queue"] = {"workload": tq.breakdown(tq.load()), "queue": tq.status()}
+    except (OSError, ValueError, KeyError, ImportError) as exc:
+        out["trainer_queue"] = {"read_state": "could_not_look", "why": f"{type(exc).__name__}: {exc}"}
     kq = [r["kaggle_gpu"] for r in recs if r["kaggle_gpu"]["read_state"] == "measured"]
     if kq:
         last = kq[-1]

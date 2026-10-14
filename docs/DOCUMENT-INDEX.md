@@ -549,6 +549,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/pipeline/stage-contracts.md` | architecture | unknown | — | never | `name:declares-a-contract / not-assessed` | — |
 | `docs/plans/DATA-EXPLORER-SPA-HANDOFF.md` | history | historical | — | 2026-10-13 | `name:record-of-a-past-state / dir:record-of-a-completed-session` | — |
 | `docs/plans/ENGINEERING-PLAN-2026-09-21.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
+| `docs/plans/KAGGLE-TRAINING-PIPELINE-DESIGN-2026-10-13.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/plans/OCI-STATE-CHECK-2026-10-13.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
 | `docs/plans/COMPUTE-KAGGLE-GPU-PILOT-2026-10-13.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
 | `docs/plans/OPERATING-PLAN-2026-09-21.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
@@ -905,6 +906,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/mi301-stop-term-robustness-2026-09-17.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/mirror-qty-diverge-2026-10-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-buildout-strategy-2026-06-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/ml-data-classification-2026-10-13.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-strategies-deep-review-2026-06-25.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml2-predictive-bracket-2026-09-06.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/netting-partial-close-packet-2026-08-02.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
@@ -941,6 +943,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/prop-firm-scan-2026-10-04.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/prop-firm-deepdive-2026-10-04.md` | evidence | unknown | — | 2026-10-04 | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/relative-value-families-2026-10-07.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/trainer-workload-2026-10-13.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/velotrade-fit-2026-10-06.md` | evidence | unknown | — | 2026-10-06 | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/velotrade-api-probe-2026-10-05.md` | evidence | unknown | — | 2026-10-05 | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/tradeify-feed-trip-2026-10-07.md` | evidence | unknown | — | 2026-10-07 | `dir:research-is-measurement / not-assessed` | — |

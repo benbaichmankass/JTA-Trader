@@ -55,6 +55,17 @@ run:
   A unit whose backend is full or out of quota is `deferred` with the reason and retried next cycle; it does not
   block units bound for other backends.
 
+- **Published data (ML-DATA-OFF-TRAINER, 2026-10-13).** A unit whose `ml_bakeoff.dataset` paths are all in `scripts/research/market_data_export.py::ALLOW`
+  (BTC/ETH/SOL 15m+1h `market_features`/`market_raw`, published daily as the private Kaggle dataset `metis-market-data`) declares
+  `routing: {needs_trainer_resident_data: false, published_data: metis-market-data}` and `compute: auto`, with no `run.workflow`. The router CHECKS
+  the claim (a path outside the allowlist is `BLOCKED_ROUTE`) and sends it to `research-script-run-data.yml` (runner + dataset fetch) or, with
+  `needs_gpu`, to Kaggle with the dataset mounted. **Check `published-data.json` beside the result**: it carries each shard's `last_ts`; a shard that
+  disagrees with its own metadata is withheld by the exporter and the unit fails closed (`ML-SHARD-TRUNCATED`: BTC/SOL 15m were cut short on 2026-10-13).
+  Units that read OURS data (trade_outcomes, setup_labels, conviction_meta, execution_quality, account_context) still need `needs_vm_data`.
+- **The trainer is its own windowed queue.** `backends.trainer.queue.windows_utc` (derived from the measured hour-of-day occupancy, `comms/cloud/trainer_workload_profile.json`)
+  releases `needs_vm_data` units only into idle windows (03-05Z, 07-24Z) and only when `est_minutes x 1.5` fits before the window closes; otherwise `deferred` with the next opening.
+- **RunPod is a ledger-capped fallback for `compute: gpu`**, after Kaggle, and only for a unit that declares `routing.runpod: {manifest, est_cost_usd}` (the pod trains a registered
+  ML manifest, not a script). It opens the labelled `gpu-burst-train` issue; the $10/month ledger gate and `GPU_BURST_ARMED` still decide whether a pod launches.
 - **Utilization is measured every fired cycle** (`scripts/research/research_utilization.py`, one file per run under
   `comms/research/utilization/`, landed with the liveness receipt): per backend capacity, in flight, fired, waiting and
   free slots, each with an explicit `read_state` (`measured` | `could_not_look` -- a backend we could not count is never

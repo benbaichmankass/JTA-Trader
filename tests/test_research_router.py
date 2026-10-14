@@ -74,7 +74,9 @@ def test_auto_derives_the_class_from_routing_and_refuses_a_contradiction():
 
 
 def test_runpod_is_never_auto_routed():
-    assert "runpod" not in {b for c in CFG["classes"].values() for b in c["backends"]}
+    # ML-DATA-OFF-TRAINER (operator 2026-10-13 (d)): RunPod is a ledger-capped FALLBACK, never a class's first choice.
+    assert CFG["backends"]["runpod"]["auto_route"] == "fallback"
+    assert all(c["backends"][0] != "runpod" for c in CFG["classes"].values())
 
 
 def test_capacity_makes_a_unit_wait_and_a_fallback_class_moves_on():
