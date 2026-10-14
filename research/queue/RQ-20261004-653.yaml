@@ -3,7 +3,7 @@
 # only while `queue_replenish.py --verify` reproduces it byte-for-byte from the template.
 id: RQ-20261004-653
 title: 'E35 bracket-geometry sweep: ief_pullback_1d (generated, monthly)'
-status: retired
+status: queued
 cadence: monthly
 kind: experiment
 theme: live_strategy
@@ -75,4 +75,3 @@ grading:
   reason: base_oos_trades 8 < 39 (unresolvable_at_current_n)
   rows: 199
   verdict: indeterminate
-retired_reason: '2026-10-14 RESEARCH-PIPE-UNSTICK: ief_pullback_1d: its 2026-10-05 sweep run (37280054032) succeeded but wrote no corpus rows under this unit; the leg''s 199 rows landed under sibling unit RQ-20261005-001 (sweep_generated_at 2026-10-06T06:29, after this unit''s stamp). Duplicate point, answered elsewhere. Corpus rows are tagged by research_unit; verified by grouping docs/research/e35-bracket-corpus.jsonl on (research_unit, leg, sweep_generated_at).'
