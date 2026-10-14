@@ -76,7 +76,8 @@ else:
     root = os.path.dirname(os.path.dirname(os.path.dirname(hits[0])))
     shutil.rmtree(repo, ignore_errors=True)
     shutil.copytree(root, repo)
-print("== gpu:", subprocess.run(["nvidia-smi", "-L"], capture_output=True, text=True, check=False).stdout.strip())
+print("== gpu:", subprocess.run(["nvidia-smi", "-L"], capture_output=True, text=True, check=False).stdout.strip()
+      if shutil.which("nvidia-smi") else "none (CPU kernel)")
 env = dict(os.environ, PYTHONPATH=repo, GITHUB_SHA=str(spec.get("commit_sha", "")))
 # ML-DATA-OFF-TRAINER: a unit with routing.published_data has the private market-data dataset mounted too; the dir that
 # holds its MANIFEST.json is the one that CONTAINS datasets-out/, which is what ml_bakeoff resolves relative paths from.

@@ -54,7 +54,8 @@ CONFIG = _REPO / "scripts" / "research" / "research_watchdog.yaml"
 LEDGER = _REPO / "comms" / "research" / "ops" / "watchdog_incidents.jsonl"
 DISPATCH_WORKFLOW = "research-queue-dispatch.yml"
 STAMP_PREFIX = "automation/research-queue-stamp"
-RESEARCH_WORKFLOWS = ("research-script-run.yml", "research-script-run-trainer.yml", "research-script-run-kaggle.yml")
+RESEARCH_WORKFLOWS = ("research-script-run.yml", "research-script-run-trainer.yml", "research-script-run-kaggle.yml",
+                      "research-script-run-kaggle-cpu.yml")
 STALE_ACTIVE_HOURS = 24.0     # a run "in flight" longer than this is stuck debris, not load (dispatch_queue.STALE_PRESSURE_HOURS)
 OK, BAD, CNL = "ok", "bad", "could_not_look"
 

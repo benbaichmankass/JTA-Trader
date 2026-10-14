@@ -103,7 +103,9 @@ TRAINER_WORKFLOW = "research-script-run-trainer.yml"
 KAGGLE_WORKFLOW = "research-script-run-kaggle.yml"
 #: ML-DATA-OFF-TRAINER (2026-10-13): the published-data twin -- a runner that first fetches the unit's private Kaggle dataset.
 DATA_WORKFLOW = "research-script-run-data.yml"
-WORKFLOWS = (WORKFLOW, TRAINER_WORKFLOW, KAGGLE_WORKFLOW, DATA_WORKFLOW)
+#: KAGGLE-CPU-ROUTE (2026-10-14): the Kaggle CPU twin (published-data units; not metered by the GPU quota).
+KAGGLE_CPU_WORKFLOW = "research-script-run-kaggle-cpu.yml"
+WORKFLOWS = (WORKFLOW, TRAINER_WORKFLOW, KAGGLE_WORKFLOW, DATA_WORKFLOW, KAGGLE_CPU_WORKFLOW)
 OUT_ROOT = Path("comms") / "research"
 
 #: The only script families the runner will execute. Anchored, no `..`, no

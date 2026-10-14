@@ -68,9 +68,10 @@ TRAINER_WORKFLOW = "research-script-run-trainer.yml"
 KAGGLE_WORKFLOW = "research-script-run-kaggle.yml"
 #: ML-DATA-OFF-TRAINER (2026-10-13): the published-data twin; artifact research-script-run-data-<unit>-<run_id>.
 DATA_WORKFLOW = "research-script-run-data.yml"
-COLLECTED_WORKFLOWS = (WORKFLOW, TRAINER_WORKFLOW, KAGGLE_WORKFLOW, DATA_WORKFLOW)
+KAGGLE_CPU_WORKFLOW = "research-script-run-kaggle-cpu.yml"
+COLLECTED_WORKFLOWS = (WORKFLOW, TRAINER_WORKFLOW, KAGGLE_WORKFLOW, DATA_WORKFLOW, KAGGLE_CPU_WORKFLOW)
 RECORD_INPUTS = "record-inputs.json"
-_ARTIFACT_RE = re.compile(r"^research-script-run(?:-trainer|-kaggle|-data)?-(RQ-\d{8}-(?:\d{3}|[0-9a-f]{4}-\d{2}))-(\d+)$")
+_ARTIFACT_RE = re.compile(r"^research-script-run(?:-trainer|-kaggle-cpu|-kaggle|-data)?-(RQ-\d{8}-(?:\d{3}|[0-9a-f]{4}-\d{2}))-(\d+)$")
 _EMIT_FIELDS = ("research_unit", "power_state", "decision_rule_id", "decision_rule_registered_at",
                 "verdict", "read_state", "population", "n", "tool", "measurement_file",
                 "records_file", "artifact_store", "artifact_locator", "note")
