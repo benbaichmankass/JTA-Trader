@@ -11,7 +11,7 @@
 # Edit rules: add/close items ONLY with the row/unit that carries them. `state` here is the PLAN's
 # view (open | done | killed | parked); the ref's own state is read live, never copied.
 schema: 1
-updated: '2026-10-11'
+updated: '2026-10-14'
 review_days: 14          # an open item whose ref has not moved in this long is flagged STALE
 items:
 # ---- Track S: the independent-AI-trader spine (operator goal 2026-07-01: one model that reads everything) ----
@@ -62,6 +62,15 @@ items:
 - {id: ML-F13, track: F, family: ensemble_stack, title: "Bagged randomised trees (ExtraTrees) and a small MLP vs LightGBM on the 15m regime heads", state: open, ref: RQ-20261013-1414-07, close: "Unit graded.", tier: 1}
 - {id: ML-F14, track: F, family: ts_foundation_model, title: "TSFM LoRA fine-tune vs the same checkpoint frozen (conditional on ML-F1 PASS; GPU-class)", state: open, ref: RQ-20261013-1414-08, close: "RQ-20261011-9da8-01 has PASSED, the fine-tune script + data-bundle path exist, unit moved out of blocked/ and graded.", tier: 1}
 - {id: ML-F15, track: F, family: ts_foundation_model, title: "Covariate-native forecasters (Chronos-2 / TiRex-2) with funding + OI on ETH/SOL 1h", state: open, ref: RQ-20261013-1414-09, close: "FUNDING-OI-DATASETS-ETH-SOL done and the covariate builder landed; unit moved out of blocked/ and graded.", tier: 1}
+# ---- Track M: meta-labeling (M23 revived, operator 2026-10-14) and the test-result corpus -- programme docs/research/programmes/02-AI-TRADER.md ----
+- {id: ML-M0, track: M, title: "The AI-trader research programme itself (02-AI-TRADER.md, SIGNALS-CATALOG.md, signals-catalog.yaml)", state: open, ref: AI-TRADER-PROGRAMME, close: "PRs merged; the first W1 unit (RQ-20261014-9d20-01 or -02) lands a measured record and a research-ops record lists it in results_read.", tier: 1}
+- {id: ML-M1, track: M, title: "Peak-to-exit census on the committed test-result ledgers: giveback distribution and oracle-peak headroom per family (defines the exit-model label)", state: open, ref: RQ-20261014-9d20-01, close: "Unit graded; a PASS releases RQ-20261014-9d20-03; a FAIL retires the exit-model line on this corpus.", tier: 1}
+- {id: ML-M2, track: M, family: linear_logit, title: "Meta-label thin-column baseline: within-leg logit on confidence/direction/hour/day/adx/regime_weight vs the class prior, selection lift of skipping the bottom fifth", state: open, ref: RQ-20261014-9d20-02, close: "Unit graded; a FAIL closes only these columns and makes METALABEL-EMIT-FEATURES the gating lever.", tier: 1}
+- {id: ML-M3, track: M, family: linear_logit, title: "Is giveback (> 0.5 of the peak) predictable at entry from the thin columns? (decides cheap entry-conditioned bracket vs in-trade telemetry lever)", state: open, ref: RQ-20261014-9d20-03, close: "Unit graded (fires on ML-M1 PASS).", tier: 1}
+- {id: ML-M4, track: M, title: "Lever: widen every harness --emit-trades row with the signals catalog's decision-time features and mae_r (the meta-label corpus = test results carrying the signals)", state: open, ref: METALABEL-EMIT-FEATURES, close: "Fresh family ledgers carry the columns non-null on >= 90% of rows; RQ-20261014-9d20-04 leaves blocked/.", tier: 1}
+- {id: ML-M5, track: M, family: linear_logit, title: "M23 P3 on test results: within-family take/skip head vs take-all and vs the confidence-only control (net R + max DD in >= 2/3 folds)", state: open, ref: RQ-20261014-9d20-04, close: "Unit out of blocked/ and graded; a PASS files the shadow-registration proposal (Tier-3 note) and the parity check.", tier: 1}
+- {id: ML-M6, track: M, title: "Headline measure: net P&L per capital-day (R and USD) per book served on /api/bot/performance and in the brief", state: open, ref: HEADLINE-MEASURE-CAPITAL-DAY, close: "Route serves netPnlPerCapitalDay with a read_state and a diag pull shows a non-null bybit_2 value over 30 d.", tier: 1}
+- {id: ML-F16, track: F, family: ensemble_stack, title: "ExtraTrees and a small MLP vs LightGBM on the BTC/ETH 1h regime head on PUBLISHED data (off-trainer twin of ML-F13)", state: open, ref: RQ-20261014-9d20-05, close: "Unit graded; families.ensemble_stack.history appended either way.", tier: 1}
 # ---- Track V: plumbing validation (recurring) ----
 - {id: ML-V2, track: V, title: "Weekly plumbing check: trainer cycle, builds, registry, shadow-log liveness, advisory parity", state: open, ref: recurring:ml-review, close: "Recurring: scripts/ops/ml_plan_status.py --plumbing is run by every ml-review and the result is in the review record.", tier: 1}
 - {id: ML-L1, track: V, title: "The ML plan loop itself (this file reviewed against measured progress every cycle)", state: open, ref: ML-ROADMAP-LOOP, close: "Row done when two consecutive weekly cycles ran without an operator reminder.", tier: 1}
