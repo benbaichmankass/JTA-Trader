@@ -123,10 +123,7 @@ def _tf_of(leg: str, cfg: Optional[dict], rows: List[dict]) -> Optional[str]:
 
 def load_legs(glob_pat: str, leg_re: Optional[str]) -> Tuple[List[dict], List[dict]]:
     """Return (legs, skipped). A leg: {leg, symbol, tf, rows, ledger}."""
-    try:
-        strat = yaml.safe_load(open(REPO / "config/strategies.yaml"))["strategies"]
-    except Exception:  # noqa: BLE001 -- self-test runs without the repo config shape
-        strat = {}
+    strat = yaml.safe_load(open(REPO / "config/strategies.yaml"))["strategies"]
     legs, skipped = [], []
     for leg, path in sorted(newest_ledgers(glob_pat).items()):
         if leg_re and not re.search(leg_re, leg):
@@ -259,7 +256,7 @@ def build(legs: List[dict], cache: Path, now: datetime) -> Tuple[List[dict], Lis
                 if key not in frames:
                     frames[key] = fetch_frame(L["symbol"], L["tf"], need.get(key, 30), cache)
                 df = frames[key]
-        except Exception as e:  # noqa: BLE001 -- a feed failure is a named per-leg state, never a pooled zero
+        except Exception as e:  # noqa: BLE001  # allow-silent: recorded as state=feed_failed with the error in the leg report; that leg is excluded and listed, never a pooled zero
             reports.append({**rep, "state": "feed_failed", "error": str(e)[:200]})
             continue
         ind = indicators(df)
