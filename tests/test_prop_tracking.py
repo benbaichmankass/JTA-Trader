@@ -467,3 +467,51 @@ def test_fill_in_overrides_an_inferred_close_with_the_measured_exit():
     c = _fills()["t-inf"]
     assert c["exit_price"] == 2536.1 and json.loads(c["raw"])["provenance"].lower() == "measured"
     assert len(_fills()) == 1
+
+
+# --- BREAKOUT-UNTRACKED-1014: a Positions miss while the journal holds a ticket ON THE VENUE alerts ONCE ---
+
+def _venue_ticket(tid: str, status: str = "placed"):
+    prop_journal.record_ticket({
+        "ticket_id": tid, "account_id": "breakout_2", "strategy": "trend_donchian_eth_prop", "symbol": "ETHUSDT",
+        "direction": "short", "entry": 2458.24, "sl": 2504.25, "tp": 2214.87, "qty": 0.54,
+        "valid_until": datetime.now(timezone.utc).isoformat(), "status": status})
+
+
+def _unseen_pings(sent):
+    return [m for m in sent if "cannot read the Breakout Positions tab" in m]
+
+
+def test_positions_miss_with_a_placed_ticket_alerts_once_per_ticket(env):
+    _venue_ticket("prop-manual-f6552263ed1d")
+    for _ in range(3):
+        pe.record_event(_dev(), {"event": "positions_miss", "reason": "no_tab d6 c6 t1"})
+    pings = _unseen_pings(env)
+    assert len(pings) == 1
+    assert "prop-manual-f6552263ed1d" in pings[0] and "INVISIBLE" in pings[0] and "no_tab d6 c6 t1" in pings[0]
+    _venue_ticket("t-second", status="filled")      # a NEW unseen ticket alerts once more, naming only itself
+    pe.record_event(_dev(), {"event": "positions_miss", "reason": "unparsed"})
+    pings = _unseen_pings(env)
+    assert len(pings) == 2 and "t-second" in pings[1] and "f6552263ed1d" not in pings[1]
+
+
+def test_positions_miss_without_a_venue_ticket_stays_quiet(env):
+    _venue_ticket("t-closed", status="closed")
+    _venue_ticket("t-emitted", status="emitted")
+    pe.record_event(_dev(), {"event": "positions_miss", "reason": "no_tab d6 c6 t1"})
+    assert _unseen_pings(env) == []
+
+
+def test_closed_orders_miss_never_raises_the_unseen_alert(env):
+    _venue_ticket("t1")
+    pe.record_event(_dev(), {"event": "positions_miss", "reason": "closed_no_table"})
+    assert _unseen_pings(env) == []
+
+
+def test_unseen_alert_retries_when_the_ping_failed(env, monkeypatch):
+    _venue_ticket("t1")
+    monkeypatch.setattr("src.runtime.notify.send_telegram_direct", lambda m, **k: False)
+    pe.record_event(_dev(), {"event": "positions_miss", "reason": "no_tab d6 c6 t1"})
+    monkeypatch.setattr("src.runtime.notify.send_telegram_direct", lambda m, **k: env.append(m) or True)
+    pe.record_event(_dev(), {"event": "positions_miss", "reason": "no_tab d6 c6 t1"})
+    assert len(_unseen_pings(env)) == 1
