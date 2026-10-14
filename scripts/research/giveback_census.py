@@ -150,10 +150,10 @@ def census(tel: Iterable[dict], trades: Iterable[dict], min_n: int = 20) -> Dict
             n_open_excluded += 1
             continue
         peak = _f(r.get("peak_r"))
-        # live rows carry peak_state="measured" WITH a peak; only a non-"measured" state
-        # (e.g. thin_window, peak_r null) means there is no peak. Truthiness alone read
-        # every live row as peakless (0 of 595 graded on 2026-10-14).
-        if peak is None or str(r.get("peak_state") or "measured").lower() != "measured":
+        # peak_state is the REASON a peak is absent ("thin_window", "unanchored", "no_risk"); a row whose peak
+        # WAS measured carries the literal "measured" (src/runtime/trail_decay.py PEAK_MEASURED). Treating any
+        # truthy state as "no peak" excluded every measured row -> read_state=no_data on a 591-row table.
+        if peak is None or str(r.get("peak_state") or "").strip() not in ("", "measured"):
             n_no_peak += 1
             continue
         realised, prov = None, None
@@ -227,13 +227,12 @@ def census(tel: Iterable[dict], trades: Iterable[dict], min_n: int = 20) -> Dict
 
 def selftest() -> int:
     tel = [
-        {"order_package_id": "a", "peak_r": 2.0, "open_r": 0.5, "terminal_state": "final", "peak_provenance": "measured", "risk_per_unit": 1},
+        {"order_package_id": "a", "peak_r": 2.0, "peak_state": "measured", "open_r": 0.5, "terminal_state": "final", "peak_provenance": "measured", "risk_per_unit": 1},
         {"order_package_id": "b", "peak_r": 1.5, "open_r": -1.0, "terminal_state": "final", "peak_provenance": "estimated", "risk_per_unit": 1},
         {"order_package_id": "c", "peak_r": 0.4, "open_r": 0.1, "terminal_state": None, "peak_provenance": "estimated", "risk_per_unit": 2.0},
         {"order_package_id": "open", "peak_r": 3.0, "open_r": 2.0, "terminal_state": None, "peak_provenance": "estimated"},
         {"order_package_id": "nopeak", "peak_r": None, "peak_state": "thin_window"},
     ]
-    tel[0]["peak_state"] = "measured"  # live shape: state set AND peak present -> graded
     tr = [
         {"order_package_id": "a", "status": "closed", "account_class": "real_money", "strategy_name": "s1", "timestamp": "2026-10-01T00:00:00Z", "closed_at": "2026-10-03T00:00:00Z", "pnl": 5.0, "position_size": 10},
         {"order_package_id": "b", "status": "closed", "account_class": "real_money", "strategy_name": "s1", "timestamp": "2026-10-01T00:00:00Z", "closed_at": "2026-10-02T00:00:00Z", "pnl": -10.0, "position_size": 10},
@@ -297,12 +296,16 @@ def main(argv: Optional[List[str]] = None) -> int:
     desc = (f"closed trades since {a.since_days}d with a position_telemetry row and a readable peak_r, "
             f"joined on order_package_id; per account_class x strategy, never pooled across classes")
     print(json.dumps({"read_state": read_state, "note": note, "n_graded": m.get("n_graded"),
+                      "excluded": m.get("excluded"),
                       "pooled_by_class": m.get("pooled_by_class"), "strategies": m.get("strategies")}, indent=1))
     if a.out:
         rec = research_result.build(
             research_unit=a.unit, decision_rule_id=RULE_ID, decision_rule_registered_at=RULE_REGISTERED_AT,
             verdict="not_applicable" if read_state != "measured" else "pass",
-            read_state=read_state, population_description=desc, n=m.get("n_graded"),
+            # a non-measured read_state REQUIRES population.n None (research_result.write refuses 0): "we did not
+            # measure" must not be spelled as a measured-empty sample. The crash that made run 38540458035 exit 1.
+            read_state=read_state, population_description=desc,
+            n=m.get("n_graded") if read_state == "measured" else None,
             workflow=os.environ.get("GITHUB_WORKFLOW", "local"), run_id=os.environ.get("GITHUB_RUN_ID", "local"),
             commit_sha=_sha(), tool="scripts/research/giveback_census.py",
             # collapsed-state: not_applicable — kind: deterministic census; the power gate's seven states are

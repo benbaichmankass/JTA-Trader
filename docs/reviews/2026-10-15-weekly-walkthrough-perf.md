@@ -102,9 +102,9 @@ Population: **50 routings / 26 distinct legs**, every account in `config/account
 - **Telemetry coverage** is 36% of paper closes; 261 of 595 telemetry rows have no `trade_id` (`summary.by_lifecycle.unknown_no_trade_id`). Giveback is a view of the joined minority.
 - Journal `pnl` fee/funding treatment was not independently checked this session.
 
-## 6. What this lane changed (authored here — NOT merged, NOT deployed)
+## 6. Census-script bug (found by this lane; fixed on `main` by another change)
 
-`scripts/research/giveback_census.py` treated **any** non-empty `peak_state` as "no peak". Live telemetry writes `peak_state: "measured"` **with** a peak (397 rows) and `thin_window` only with `peak_r` null (198 rows), so the census graded **0 of 595** rows — the queue unit `RQ-20261014-9807-01` would have returned `no_data`. Fixed to accept `measured` as a peak; selftest updated and passes. Reproduced before, verified after (0 → 318 graded over 90 days). Tier 1 (`scripts/research/**`).
+`scripts/research/giveback_census.py` treated **any** non-empty `peak_state` as "no peak". Live telemetry writes `peak_state: "measured"` **with** a peak (397 rows) and `thin_window` only with `peak_r` null (198 rows), so the pre-fix census graded **0 of 595** rows (read on identical inputs, 2026-10-14) and `RQ-20261014-9807-01` would have returned `no_data`. An equivalent fix was already on `main` when this PR was merged forward; this PR therefore carries **no script change**. With that fix the census graded 318 rows over 90 days on the same inputs (this lane's tree held an equivalent patch). MERGED on `main`; **not yet observed** in a landed queue-unit result.
 
 ## 7. Candidate follow-ups (for the walk-through; NOT run, NOT filed)
 

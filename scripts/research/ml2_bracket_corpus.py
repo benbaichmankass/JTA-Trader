@@ -116,7 +116,14 @@ from src.runtime.tp_venue_cap import TP_VENUE_CAP_PCT  # noqa: E402
 #: The closed feature list. Decision-time and exogenous — see the docstring.
 FEATURE_NAMES: Tuple[str, ...] = (
     "risk_frac", "is_long", "confidence", "hour_sin", "hour_cos", "dow",
+    "adx_at_entry", "regime_weight",
 )
+
+#: The six-feature list ML-2 was refuted on (2026-09-06, 15m trend_donchian).
+#: Kept so that corpus -- whose emit predates the two columns -- stays gradable
+#: (`ml2_bracket_train_eval.py --legacy-features`). FEATURE_NAMES[:6] by
+#: construction; asserted in tests so the two cannot drift.
+LEGACY_FEATURE_NAMES: Tuple[str, ...] = FEATURE_NAMES[:6]
 
 #: Columns that are OUTCOMES. Named explicitly so a reader can see that none of
 #: them appears in FEATURE_NAMES, rather than having to check by eye.
@@ -202,6 +209,9 @@ def build_row(raw: Dict[str, Any], *, bank_frac_asserted: float = 0.0) -> Dict[s
     out["risk_frac"] = risk_frac
     out["is_long"] = 1.0 if direction == "long" else 0.0
     out["confidence"] = _f(raw.get("confidence")) or 0.0
+    # None stays None: an ADX that was not computed is not an ADX of 0.
+    out["adx_at_entry"] = _f(raw.get("adx_at_entry"))
+    out["regime_weight"] = _f(raw.get("regime_weight"))
     if ts is not None:
         ang = 2.0 * math.pi * (ts.hour + ts.minute / 60.0) / 24.0
         out["hour_sin"] = math.sin(ang)
@@ -237,7 +247,28 @@ def build_rows(raws: Iterable[Dict[str, Any]], *, bank_frac_asserted: float = 0.
     return rows
 
 
-def feature_matrix(rows: Sequence[Dict[str, Any]], outcome: str = "mfe_frac"
+def complete_rows(rows: Sequence[Dict[str, Any]], outcome: str = "mfe_frac",
+                  features: Sequence[str] = FEATURE_NAMES
+                  ) -> Tuple[List[Dict[str, Any]], Dict[str, int]]:
+    """The rows whose features AND outcome are complete, plus why the rest were
+    dropped. `feature_matrix` is this plus the projection; callers that need
+    row metadata beside X/y (per-leg baselines) use this directly."""
+    kept: List[Dict[str, Any]] = []
+    dropped = {"missing_feature": 0, "missing_outcome": 0, "kept": 0}
+    for r in rows:
+        if any(_f(r.get(k)) is None for k in features):
+            dropped["missing_feature"] += 1
+            continue
+        if _f(r.get(outcome)) is None:
+            dropped["missing_outcome"] += 1
+            continue
+        kept.append(r)
+        dropped["kept"] += 1
+    return kept, dropped
+
+
+def feature_matrix(rows: Sequence[Dict[str, Any]], outcome: str = "mfe_frac",
+                   features: Sequence[str] = FEATURE_NAMES
                    ) -> Tuple[List[List[float]], List[float], Dict[str, int]]:
     """Return (X, y, dropped) over rows whose features AND outcome are complete.
 
@@ -248,21 +279,9 @@ def feature_matrix(rows: Sequence[Dict[str, Any]], outcome: str = "mfe_frac"
     371 of 371 rows were dropped before the candle stage and it read as "the
     family has no data" for as long as the harness existed.
     """
-    X: List[List[float]] = []
-    y: List[float] = []
-    dropped = {"missing_feature": 0, "missing_outcome": 0, "kept": 0}
-    for r in rows:
-        vals = [_f(r.get(k)) for k in FEATURE_NAMES]
-        if any(v is None for v in vals):
-            dropped["missing_feature"] += 1
-            continue
-        ov = _f(r.get(outcome))
-        if ov is None:
-            dropped["missing_outcome"] += 1
-            continue
-        X.append([float(v) for v in vals])  # type: ignore[arg-type]
-        y.append(ov)
-        dropped["kept"] += 1
+    kept, dropped = complete_rows(rows, outcome, features)
+    X = [[float(_f(r.get(k))) for k in features] for r in kept]  # type: ignore[arg-type]
+    y = [float(_f(r.get(outcome))) for r in kept]  # type: ignore[arg-type]
     return X, y, dropped
 
 

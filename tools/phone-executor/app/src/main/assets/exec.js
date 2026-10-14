@@ -248,9 +248,11 @@
     if (!m) return null; var v = parseFloat((m[2] + (m[3] || "")).replace(/,/g, "")); return (m[1] === "-" || m[1] === "−") ? -v : v;
   }
   function sideOf(s) { var m = /\b(long|short|buy|sell)\b/i.exec(s || ""); if (!m) return null; return /long|buy/i.test(m[1]) ? "long" : "short"; }
-  function tabCount(re) {   // "Positions (2)" / "Positions 2" -> 2; a bare label -> null (the page did not say)
-    var c = all("button,[role=tab],[role=button],a").filter(function (x) { return re.test(t(x)); });
-    if (c.length !== 1) return null; var m = /\(?\s*(\d+)\s*\)?\s*$/.exec(t(c[0]).replace(re, "")); return m ? parseInt(m[1], 10) : null;
+  function tabCount(re) {   // "Positions (2)" / "Positions 2" / "Positions1" -> 2/2/1; a bare label -> null (the page did not say)
+    var c = all("button,[role=tab],[role=button],a").filter(function (x) { return tabMatch(re, t(x)); });
+    if (c.length !== 1) return null;
+    var tm = TAB_LABEL.exec(t(c[0])); if (tm) return tm[2] ? parseInt(tm[2].replace(/\D/g, ""), 10) : null;
+    var m = /\(?\s*(\d+)\s*\)?\s*$/.exec(t(c[0]).replace(re, "")); return m ? parseInt(m[1], 10) : null;
   }
   function masked(hs) { return hs.map(function (h) { return h.replace(/\d/g, "#").slice(0, 24); }).slice(0, 20); }
   function controlsDump() { return all("button,[role=tab],[role=button]").map(function (x) { return t(x).replace(/\d/g, "#").slice(0, 30); }).filter(Boolean).slice(0, 30); }
@@ -296,6 +298,11 @@
   // highest ancestor of the header that holds no tab label (Positions / Open orders / Closed orders / ...): the empty
   // state counts only INSIDE it, and a panel that reaches <body> proves nothing.
   var TAB_LABEL = /^(open orders|positions|portfolio|closed orders|trades)(\s*\(?\s*\d+\s*\)?)?$/i;
+  // BREAKOUT-UNTRACKED-1014 (2026-10-14): with a position open the chip renders its count badge GLUED to the label
+  // (innerText "Positions1", "Open orders2"), so /^positions\b/ and /^positions$/ missed it and every read was
+  // no_tab for 9 h while an ETH short was open. A tab chip's text is matched with its count badge dropped too.
+  function tabText(s) { var m = TAB_LABEL.exec(s); return m ? m[1] : s; }
+  function tabMatch(rx, s) { return rx.test(s) || rx.test(tabText(s)); }
   function kids(e) { return Array.prototype.slice.call(e.children).filter(vis); }
   function gridHeaders(cols) {
     var labels = innermost(all("div,span,p,button,[role=button],[role=columnheader],th,li,a,label")).filter(function (e) {
@@ -626,7 +633,7 @@
       // "Open orders", "Positions", "Market chart", "Order book" ...; tabs=0 inputs=0, no buy/sell text).
       var ct = all("button,[role=tab],[role=button]").map(t);
       var panels = /(^|\.)trade\.breakoutprop\.com$/.test(location.hostname) &&
-        ct.some(function (x) { return /^positions$/i.test(x); }) && ct.some(function (x) { return /^open orders$/i.test(x); });
+        ct.some(function (x) { return /^positions$/i.test(tabText(x)); }) && ct.some(function (x) { return /^open orders$/i.test(tabText(x)); });
       return {ready: ctl || !!submitBtn() || bs || probe || panels, panels: panels, orderControl: ctl, ticketOpen: !!submitBtn(), buySell: bs,
         probe: probe, tabs: tb.length, inputs: inputs(document).length};
     },
@@ -665,7 +672,7 @@
     },
     clickText: function (re, roleSel) {
       var rx = new RegExp(re, "i");
-      var b = all(roleSel || "button,[role=tab],[role=button],a").filter(function (x) { return rx.test(t(x)); })[0];
+      var b = all(roleSel || "button,[role=tab],[role=button],a").filter(function (x) { return tabMatch(rx, t(x)); })[0];
       if (!b) return "none";
       // the tab strip scrolls horizontally on a phone ("Closed orders" is the last chip, clipped): bring it into view
       try { b.scrollIntoView({block: "nearest", inline: "center"}); } catch (e) { }
@@ -682,7 +689,7 @@
     clickTab: function (re) {
       if (window.__ex.clickText(re) === "clicked") return "clicked";
       var rx = new RegExp(re, "i");
-      var b = all("div,span,li").filter(function (x) { var s = t(x); return s.length > 0 && s.length <= 30 && rx.test(s) && TAB_LABEL.test(s); })
+      var b = all("div,span,li").filter(function (x) { var s = t(x); return s.length > 0 && s.length <= 30 && tabMatch(rx, s) && TAB_LABEL.test(s); })
         .filter(function (x, i, a) { return !a.some(function (y) { return y !== x && x.contains(y); }); })[0];
       if (!b) return "none";
       try { b.scrollIntoView({block: "nearest", inline: "center"}); } catch (e) { }

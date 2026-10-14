@@ -185,6 +185,22 @@ def declared_class(entry: Dict[str, Any]) -> Optional[str]:
     return derive_class(entry) if c == "auto" else c
 
 
+#: ml_bakeoff learner kinds that can use a GPU. EMPTY today: every kind in ml_bakeoff.LEARNERS (prior, numpy_logit, lightgbm,
+#: catboost, sklearn_*, tabicl, tabpfn) is fit on CPU here. An ml_bakeoff unit whose learners are all outside this set gains
+#: nothing from a GPU kernel, and a Kaggle GPU kernel is metered (30 h/week) whether or not the GPU is touched.
+GPU_LEARNER_KINDS: frozenset = frozenset()
+
+
+def cpu_only_bakeoff(entry: Dict[str, Any]) -> bool:
+    """True when the unit is an ml_bakeoff whose every learner is CPU-only (KAGGLE-CPU-ROUTE, 2026-10-14)."""
+    b = entry.get("ml_bakeoff")
+    if not isinstance(b, dict):
+        return False
+    learners = b.get("learners")
+    kinds = {str((v or {}).get("kind")) for v in learners.values() if isinstance(v, dict)} if isinstance(learners, dict) else set()
+    return not (kinds & GPU_LEARNER_KINDS)
+
+
 def class_routing_conflict(cls: str, entry: Dict[str, Any], cfg: Dict[str, Any]) -> Optional[str]:
     """A class that contradicts the unit's own `routing:` block. None when consistent or when there is no block."""
     r = entry.get("routing")
@@ -199,6 +215,9 @@ def class_routing_conflict(cls: str, entry: Dict[str, Any], cfg: Dict[str, Any])
     if cls == "needs_vm_data" and r.get("published_data"):
         return "compute: needs_vm_data but the unit's data is published (routing.published_data) -- it need not wait for the trainer"
     bl = cfg["classes"][cls]["backends"]
+    if cls in ("gpu", "gpu_preferred") and not gpu and cpu_only_bakeoff(entry):
+        return (f"compute: {cls} but every ml_bakeoff learner is CPU-only (routing.needs_gpu is not true): the GPU-first backend "
+                "is metered Kaggle GPU quota -- use compute: auto (cpu_light/cpu_long)")
     if cls == "gpu" and not gpu:
         return "compute: gpu but routing.needs_gpu is not true"
     if cls == "needs_vm_data" and not vm:
