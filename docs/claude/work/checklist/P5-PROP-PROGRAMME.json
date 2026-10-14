@@ -1,0 +1,30 @@
+{
+  "id": "P5-PROP-PROGRAMME",
+  "title": "05-PROP programme plan + first 2 weeks of pre-registered units",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "research lane (Opus)",
+  "lane": "session_01AQCKErTeV3XpduwjyLo73c",
+  "model": null,
+  "ceiling_usd": 20,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-14 manager session_01VduHYzdaXe27wTDBLSu8ao] Dispatched per weekly planning 2026-10-14. Deliverables: docs/research/programmes/05-PROP.md in the shape of 01 (seed: rows B6, PROP-EXIT-READ, PROP-PER-LEG-EV-GRID); first-2-week units, runnable first. Units land landing:hold; the manager merges. Opus, fresh. [2026-10-14 lane session_01AQCKErTeV3XpduwjyLo73c] LANDED_UNPROVEN on the lane's side: PR (draft, landing hold) carries docs/research/programmes/05-PROP.md, 10 runnable units RQ-20261014-f516-01..10 (research-script-run.yml, prop_ev_grid; each passes script_run.py --check) + blocked/f516-11 (on PROP-EXIT-READ), prop_ev_sim.py --leg-risk-usd / --dd-switch-frac (self-tested), L-PROP next rewritten, RESEARCH-MAP s6 marks 01/02/05 landed. Finding filed PI-20261014-7E02E0F4-0001 (generated Breakout fit template targets retired breakout_1 / Classic ruleset). Closes to done when the first baseline unit lands a measured record (observation).",
+  "updated_at": "2026-10-14T18:21:42Z",
+  "updated_by": "session_01AQCKErTeV3XpduwjyLo73c",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "writeback": {
+    "roadmap": "L-PROP next rewritten: Programme 05 is the plan (05-PROP.md); units RQ-20261014-f516-01..10 runnable, blocked/f516-11",
+    "arch": "none: research tooling only (prop_ev_sim.py gains --leg-risk-usd and --dd-switch-frac, sim-only, mirroring sizing.flat.per_leg_risk_usd and the daily-DD switch); no runtime or contract change"
+  },
+  "observation": {
+    "what": "first Programme 05 baseline unit (RQ-20261014-f516-01, -02 or -03) lands a measured record under research/results/ and its seed-median ev is copied into 05-PROP.md section 1",
+    "how_to_check": "ls research/results/RQ-20261014-f516-0{1,2,3}/; grading block on the unit yaml",
+    "due_by": "2026-10-21"
+  },
+  "_seq": 494
+}

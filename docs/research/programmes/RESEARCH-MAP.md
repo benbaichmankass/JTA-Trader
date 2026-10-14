@@ -4,7 +4,7 @@
 
 **Operator intent (weekly planning 2026-10-14, agreed verbatim):** research is the main focus. One long-term plan per goal, a deep roster of well-researched tests and models — not a filled queue. Programmes are **mutually supportive**: the AI trader is fed every test result; strategy improvement and frontier work inform active management. **Headline measure: net P&L per capital-day, in R and in $, per strategy (every leg pulls its own weight) and at portfolio level, weighted.** Top pain point: **giveback**. Brackets are **predictions** — the TP is where we expect price to reach, the SL is where we stop waiting.
 
-How this fits the work system: a programme is a *plan*, not a third category of work (CLAUDE.md § "Two categories"). Each question below becomes a `research/queue/` unit and each build a checklist row, every one carrying a `roadmap` milestone ref. Full plan per programme: `01-ACTIVE-TRADE-MANAGEMENT.md` (landed); `02`..`05` are owed and listed at the end.
+How this fits the work system: a programme is a *plan*, not a third category of work (CLAUDE.md § "Two categories"). Each question below becomes a `research/queue/` unit and each build a checklist row, every one carrying a `roadmap` milestone ref. Full plan per programme: `01-ACTIVE-TRADE-MANAGEMENT.md`, `02-AI-TRADER.md` and `05-PROP.md` (landed); `03`, `04` are owed and listed at the end.
 
 ## 1. The five programmes, in order
 
@@ -81,4 +81,4 @@ How this fits the work system: a programme is a *plan*, not a third category of 
 
 ## 6. Owed (not landed by this lane)
 
-`02-AI-TRADER.md`, `03-STRATEGY-IMPROVEMENT.md`, `04-MACRO-SLEEVE.md`, `05-PROP.md` — one per week in programme order, each in the shape of `01-ACTIVE-TRADE-MANAGEMENT.md` (goal + measure, questions in dependency order, a test ladder per question, a 3–4 week backlog, the first two weeks as queue units). P2's seed is `docs/plans/ml-plan-items.yaml` + `docs/research/frontier-scan-2026-10-11.md`; P3's is the perf-followup skill; P4's is `.claude/skills/macro-research/SKILL.md`; P5's is rows B6 / PROP-EXIT-READ.
+**Landed:** `01-ACTIVE-TRADE-MANAGEMENT.md`; `02-AI-TRADER.md` (#18015); `05-PROP.md` (lane `P5-PROP-PROGRAMME`, 2026-10-14 — units `RQ-20261014-f516-01..10` runnable, `blocked/RQ-20261014-f516-11`). **Still owed:** `03-STRATEGY-IMPROVEMENT.md`, `04-MACRO-SLEEVE.md` — one per week in programme order, each in the shape of `01-ACTIVE-TRADE-MANAGEMENT.md` (goal + measure, questions in dependency order, a test ladder per question, a 3–4 week backlog, the first two weeks as queue units). P2's seed is `docs/plans/ml-plan-items.yaml` + `docs/research/frontier-scan-2026-10-11.md`; P3's is the perf-followup skill; P4's is `.claude/skills/macro-research/SKILL.md`; P5's is rows B6 / PROP-EXIT-READ.
