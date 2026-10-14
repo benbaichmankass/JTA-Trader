@@ -1266,7 +1266,12 @@ class MainActivity : Activity() {
         if (rowTp != null && !fromTp.isNaN() && !close(rowTp, fromTp, pStep)) return amendHuman(t, "row TP $rowTp != expected ${fmt(fromTp, pStep)}", pos)
         // 3. the row's ONE edit control, then the ONE dialog
         val e = js("__ex.posEdit(${q(venue)}, ${q(sideRe)})")
-        if (e != "clicked") return amendRefuse(t, "position edit control: $e", pos)
+        if (e != "clicked") {
+            // MEASURE FIRST (BREAKOUT-POS-UNPARSED): the row's control dump also goes to the account's visible positions
+            // diag (state amend_<why>), since the amend_result form only lands in the ticket's meta
+            try { api.positionsMiss("amend_$e", pos.optJSONArray("headers") ?: JSONArray(), pos.optJSONArray("ctl_lines") ?: JSONArray()) } catch (x: Exception) { }
+            return amendRefuse(t, "position edit control: $e", pos)
+        }
         delay(1500); ensure()
         val d0 = jsObj("__ex.editDialog()")
         if (d0?.optInt("n") != 1) { js("__ex.dlgCancel()"); return amendRefuse(t, "edit dialog not unique (n=${d0?.optInt("n")})", pos) }

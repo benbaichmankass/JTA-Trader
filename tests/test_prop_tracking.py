@@ -520,6 +520,17 @@ def test_closed_orders_miss_never_raises_the_unseen_alert(env):
     assert _unseen_pings(env) == []
 
 
+def test_amend_control_dump_is_kept_and_never_raises_the_unseen_alert(env):
+    # BREAKOUT-POS-UNPARSED: the trail amend FOUND the row but refuses (edit control unmeasured) and posts the row's
+    # control dump through positions_miss: it is kept as the visible diag and is not an "invisible position" alert.
+    _venue_ticket("t1")
+    pe.record_event(_dev(), {"event": "positions_miss", "reason": "amend_no_edit_unmeasured",
+                             "headers": ["Market", "TP / SL"], "controls": ["TP / SL:button Edit", "  cls=icon-btn"]})
+    assert _unseen_pings(env) == []
+    d = pe.last_positions_diag("breakout_2")
+    assert d["state"] == "amend_no_edit_unmeasured" and d["controls"] == ["TP / SL:button Edit", "cls=icon-btn"]
+
+
 def test_unseen_alert_retries_when_the_ping_failed(env, monkeypatch):
     _venue_ticket("t1")
     monkeypatch.setattr("src.runtime.notify.send_telegram_direct", lambda m, **k: False)

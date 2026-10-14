@@ -602,7 +602,9 @@ def record_event(device: PhoneDevice, body: Dict[str, Any], *, send=None) -> Dic
         _write_heartbeat(device.account_id, reason, body.get("state"))
     if kind == "positions_miss":
         _write_positions_diag(device.account_id, reason, body.get("headers"), body.get("controls"), body.get("cells"))
-        if not reason.startswith("closed_"):   # a closed_* miss follows a CLEAN Positions read: nothing is unseen
+        # a closed_* miss follows a CLEAN Positions read, and an amend_* dump (BREAKOUT-POS-UNPARSED) is the trail amend
+        # refusing on a row it FOUND: in neither is a position unseen
+        if not reason.startswith(("closed_", "amend_")):
             _alert_unseen_positions(device.account_id, reason, send=send)
     # login_retry: an auto re-login attempt/failure inside a streak (PHONE-AUTOLOGIN, no latch, retried forever) is
     # logged in phone_events but not pinged; the phone sends ONE login_failed red flag after 3 in a row instead.

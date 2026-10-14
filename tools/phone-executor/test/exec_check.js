@@ -574,6 +574,23 @@ document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__su
   // a Current price misread as a tiny number ("2 462.10" -> 2) is never a qty divisor: unparsed, not a 663-lot position
   let gm2 = await (await onHost(gridPage("Positions1", gridRow("ETHUSD", "-2.10 USD", "Short", "1,327.45 USD", "2,458.24", "2 462.10", "-", "-2.50 USD")))).evaluate("__ex.positionsRead()");
   eq([gm2.state, gm2.detail], ["unparsed", "miss=qty bad=0 n=1"], "mark 2x away from entry -> qty not derived (unparsed)");
+  // AMEND ON THE DIV GRID (BREAKOUT-POS-UNPARSED): posInfo/posEdit searched only tr/[role=row], so every trail amend
+  // on the live grid reported no_position while the ETH short was open. The row is now found in the Positions grid,
+  // its combined "TP / SL" column is split, and -- MEASURE FIRST -- nothing in a grid row is clicked: posEdit refuses
+  // no_edit_unmeasured and posInfo carries the row's control dump (digits masked). SYNTHETIC controls.
+  const amendRow = (side) => gridRow("<span>ETH</span><span>x5</span>", "-2.10 USD", side, "1,327.45 USD", "2,458.24", "2,462.10",
+    "<span>2214.87 / 2504.25</span><button data-c aria-label='Edit TP/SL' class='icon-btn tpsl-edit'><svg width=8 height=8></svg></button>",
+    "-2.50 USD<button data-c>Close</button>");
+  const gA = await onHost(gridPage("Positions1", amendRow("Short") + "<script>window.__clicks=0;document.querySelectorAll('[data-c]').forEach(function(b){b.onclick=function(){window.__clicks++}})</script>"));
+  let ga = await gA.evaluate("__ex.posInfo('ETHUSD','short|sell')");
+  eq([ga.n, ga.layout, ga.sl, ga.tp], [1, "div_grid", "2504.25", "2214.87"], "amend grid: the ETH short row found; TP / SL split into sl + tp");
+  eq((await gA.evaluate("__ex.posInfo('ETHUSD','long|buy')")).n, 0, "amend grid: no long row");
+  eq(ga.ctls.map((c) => [c.col, c.tag, c.label]).filter((c) => c[1] === "button"), [["TP / SL", "button", "Edit TP/SL"], ["Net P&L", "button", "Close"]], "amend grid: control dump names each control and its column");
+  eq(ga.ctls.find((c) => c.tag === "button").cls, "icon-btn tpsl-edit", "amend grid: control dump keeps class names");
+  eq([/\d/.test(JSON.stringify(ga.ctls)), ga.ctl_lines.every((x) => x.length <= 40)], [false, true], "amend grid: dump digit-masked, lines fit the server's 40-char scrub");
+  eq([await gA.evaluate("__ex.posEdit('ETHUSD','short|sell')"), await gA.evaluate("window.__clicks")], ["no_edit_unmeasured", 0], "amend grid: MEASURE FIRST -- refused, nothing clicked");
+  const gA2 = await onHost(gridPage("Positions2", amendRow("Short") + amendRow("Short")));
+  eq(await gA2.evaluate("__ex.posEdit('ETHUSD','short|sell')"), "rows_2", "amend grid: two ETH short rows -> refused");
   const gNoTabs = await onHost(`<!doctype html><html><body><div id=hdr><div>Market</div><div>UP&amp;L</div><div>Side</div><div>Value</div><div>Opening price</div><div>Current price</div></div><p>Start trading with leverage</p></body></html>`);
   eq((await gNoTabs.evaluate("__ex.positionsRead()")).state, "empty_unconfirmed", "div grid: no tab bar to bound the panel -> no flat evidence");
   // CLOSED ORDERS as a DIV GRID (layout UNMEASURED; synthetic): the generic reader maps by header label too.
