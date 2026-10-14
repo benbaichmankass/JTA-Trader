@@ -277,6 +277,18 @@ GUARDS: List[Dict[str, Any]] = [
                   ["python3", "scripts/ops/work_report.py", "--self-test"]],
     },
     {
+        # BLOCKER-WATCH, 2026-10-10: blocked rows whose blocker is finished, queued
+        # research units never dispatched, landed_unproven past due. The self-test
+        # includes a positive control (every finding kind is shown it can fire) and
+        # a smoke run against the live stores.
+        "name": "blocker-watch",
+        "when": {"globs": ["scripts/ops/blocker_watch.py", "scripts/ops/attention_watch.py",
+                            "scripts/ops/render_daily_brief.py", "scripts/ops/manager_preflight.py",
+                            "tests/test_blocker_watch.py", "research/queue/**",
+                            "docs/claude/work/checklist/**"]},
+        "steps": [["python3", "scripts/ops/blocker_watch.py", "--self-test"]],
+    },
+    {
         # FIX-SA-09, 2026-09-29: the SessionStart hook, three slash commands and
         # four skills told sessions to drain review backlogs archived on
         # 2026-09-21. This is the detector: no live `.claude/` line may name a
@@ -337,6 +349,17 @@ GUARDS: List[Dict[str, Any]] = [
         "when": {"globs": ["scripts/**/*.py", "src/**/*.py", "scripts/ci/check_checklist_readers.py"]},
         "steps": [["python3", "scripts/ci/check_checklist_readers.py", "--self-test"],
                   ["python3", "scripts/ci/check_checklist_readers.py"]],
+    },
+    {
+        # ROADMAP-LOOP (operator, 2026-10-11): milestone <-> checklist row <-> queue unit is a FIELD
+        # (`roadmap`), closing rows carry `writeback`, and the ROADMAP.md live block is generated.
+        # Whole-store checks always; enforcement on rows/units the DIFF touches only.
+        "name": "roadmap-map-guard",
+        "when": {"globs": ["docs/roadmap/**", "ROADMAP.md", "docs/claude/work/checklist/**",
+                            "research/queue/**", "scripts/ops/roadmap_map.py",
+                            "docs/ARCHITECTURE-CANONICAL.md"]},
+        "steps": [["python3", "scripts/ops/roadmap_map.py", "--self-test"],
+                  ["python3", "scripts/ops/roadmap_map.py", "--check", "--base", "origin/main"]],
     },
     {
         # PI-20261005-4GA8WQPA-0002 (the lapse wave): a pipeline item whose
@@ -1301,6 +1324,7 @@ GUARDS: List[Dict[str, Any]] = [
         "when": None,
         "steps": [
             ["python3", "scripts/research/script_run.py", "--self-test"],
+            ["python3", "scripts/research/kaggle_run.py", "self-test"],
             ["python3", "scripts/ci/check_research_script_run.py", "--self-test"],
             ["python3", "scripts/ci/check_research_script_run.py"],
         ],

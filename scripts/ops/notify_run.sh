@@ -70,7 +70,7 @@ if [ "${action}" = "send-ping" ]; then
 fi
 
 case "${action}" in
-    status-check|list-listening-ports|gateway-logs|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|generate-strategy-review-packets|send-prop-test-ping|phone-dry-test|grade-closed-trades|net-r-regrade|get-env)
+    status-check|list-listening-ports|gateway-logs|gateway-forensics|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|generate-strategy-review-packets|send-prop-test-ping|phone-dry-test|grade-closed-trades|net-r-regrade|get-env)
         tier=1
         if [ "${exit_code}" -eq 0 ]; then
             result="ok"
@@ -173,7 +173,7 @@ case "${action}" in
             *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
         esac
         ;;
-    backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|fix-prop-mislinked-close|repair-prop-fill-direction|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|rotate-account-keys|init-diag-token|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm)
+    backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|fix-prop-mislinked-close|repair-prop-fill-direction|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|rotate-account-keys|init-diag-token|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm)
         tier=2
         case "${exit_code}" in
             0) result="ok"; priority="normal" ;;
@@ -186,6 +186,26 @@ case "${action}" in
         tier=2
         case "${exit_code}" in
             0) result="ok — ticket expired (or dry-run plan printed; see run log)"; priority="normal" ;;
+            3) result="refused — nothing written (see run log for the reason)"; priority="high" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
+    prop-report-close)
+        # Journals the CLOSE of ONE open prop position (exit optional). Exit 3 is a
+        # guarded REFUSAL, nothing written.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok — close journaled (or dry-run plan printed; see run log)"; priority="normal" ;;
+            3) result="refused — nothing written (see run log for the reason)"; priority="high" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
+    prop-ticket-reissue)
+        # Re-issues ONE suppressed prop ticket as `emitted`, rebuilt with the
+        # emission sizing (PROP-REISSUE). Exit 3 is a guarded REFUSAL, nothing written.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok — ticket re-issued (or dry-run plan printed; see run log)"; priority="normal" ;;
             3) result="refused — nothing written (see run log for the reason)"; priority="high" ;;
             *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
         esac
@@ -213,7 +233,7 @@ case "${action}" in
             *) result="FAILED (exit ${exit_code})"; priority="high" ;;
         esac
         ;;
-    egress-landing-probe|velotrade-api-probe)
+    egress-landing-probe|velotrade-api-probe|velotrade-trade-history-read)
         # READ-ONLY landing-page reachability probe of a fixed host allowlist.
         # Any HTTP outcome is a measurement; only an environment fault fails.
         tier=2
@@ -257,6 +277,20 @@ case "${action}" in
         case "${exit_code}" in
             0) result="ok"; priority="normal" ;;
             *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
+    init-web-session-pepper|install-web-api-deps)
+        tier=2
+        case "${exit_code}" in
+            0) result="ok"; priority="normal" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
+    passkey-enrol-code)
+        tier=1
+        case "${exit_code}" in
+            0) result="ok"; priority="low" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="high" ;;
         esac
         ;;
     unset-env)

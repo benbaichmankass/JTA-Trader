@@ -1,0 +1,26 @@
+{
+  "id": "KAGGLE-TRAIN-RUNNER-FIRST",
+  "title": "Training off-VM: GitHub-runner first, Kaggle GPU second; design (T1) then the artefact return path (T2) behind a parity gate",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-14 weekly planning] OPERATOR-APPROVED 2026-10-14. Two phases: (1) Tier-1 DESIGN doc under docs/plans/ -- which manifests can train on a GitHub runner (CPU, 6 h/job) vs a Kaggle GPU kernel (COMPUTE-KAGGLE-GPU passed 2026-10-13: 2x T4, 30 h/wk), how market-only shards reach them (ML-DATA-OFF-TRAINER classification: OURS families never leave the trainer), and a PARITY GATE: an off-VM artefact is admitted only if it matches a trainer-VM run of the same manifest within a declared tolerance on the same eval split. (2) Tier-2 RETURN PATH: the artefact lands in the trainer registry as 'candidate' through the existing promote ladder; needs one operator OK before the first registry write. Runner first because it is free and already authenticated; Kaggle GPU for the manifests the runner cannot fit.",
+  "updated_at": "2026-10-14T07:37:20Z",
+  "updated_by": "session_01DfFYRUG7orGpkE5pVnA8e4",
+  "roadmap": [
+    "M25"
+  ],
+  "observation": {
+    "what": "(T1) the design doc is on main naming manifests per backend and the parity tolerance; (T2) one off-VM training artefact passes the parity gate against a trainer-VM run of the same manifest and lands as candidate in the registry",
+    "how_to_check": "docs/plans/ design doc path on this row; python -m ml list-models showing the off-VM candidate with its parity record",
+    "due_by": "2026-10-28"
+  },
+  "_seq": 478
+}

@@ -1,0 +1,163 @@
+id: RQ-20261013-1414-07
+title: 'Frontier / family diversity: do bagged randomised trees (ExtraTrees) or a small MLP beat LightGBM on the BTC/ETH/SOL 15m regime
+  heads?'
+status: done
+cadence: once
+theme: ml_health
+priority: 3
+kind: experiment
+question: 'On the 15m v002 shards, purged CV and the final-90-day holdout, does sklearn ExtraTrees (bagging: variance reduction instead
+  of boosting) or a (32,16) MLP (neural tabular) beat unweighted LightGBM by >= 0.01 macro-F1 on ALL THREE symbols?'
+why_this_matters: 'Diversity check 2026-10-13: 78% of registered models are GBDT and two earlier ML heads from other classes (TCN deep
+  sequence, MAE encoder) FAILED on a different INPUT problem (price-only / daily-panel mismatch), which says nothing about non-boosted
+  learners on the same tabular features. RQ-20261012-75b2-19..21 test a second GBDT implementation (HGB); this is the first test of
+  a different inductive bias on identical rows. DATASET PATHS UNVERIFIED FROM THIS SANDBOX: the trainer shards are not reachable here.
+  The 15m v002 BTC/ETH/SOL shards and the base feature names are the ones queued unit RQ-20261012-75b2-19..21 already declare (MEASURED
+  present on the trainer 2026-10-11 per RQ-20261011-9da8-01); a missing column lands as a dead NaN feature or producer_failed, which
+  research-ops must read as a ROUTE FAULT (fix the path, re-queue), never as a verdict.'
+power:
+  expected_n: 8640
+  min_detectable_effect: 0.05
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: Unit = bar in the final-90-day holdout (~8,640 rows = 90 d x 96 15m bars) per symbol; d=0.05 paired needs (1.96+0.8416)^2/0.05^2
+    = 3,140 rows, floor met on rows. Bars are autocorrelated so effective n is far lower; the rule therefore also requires the purged-CV
+    fold-mean delta (min_folds 3) and the first run replaces this estimate with the measured n.
+  feasibility:
+    source: none
+    accrual_basis: 'Nightly-rebuilt shard: history for the window used is fixed, nothing needs to accrue for the rows this unit reads.'
+decision_rule:
+  id: RULE-RQ20261013-1414-07-BAGGED-AND-NEURAL-VS-GBDT-REGIME
+  registered_at: '2026-10-13'
+  registered_before_run: true
+  statistic: Paired per-fold macro-F1 difference (candidate minus unweighted LightGBM) on identical purged folds (5, embargo 96) and
+    on the holdout, per symbol; mean over folds.
+  rule: 'PASS IF a candidate (et or mlp) beats LightGBM by >= +0.010 on the CV mean on ALL THREE symbols AND by >= 0 on the holdout
+    on all three (a non-boosted family is a candidate regime learner; Tier-3 to register). FAIL IF no candidate is >= -0.010 vs LightGBM
+    on any symbol (both are clearly worse everywhere: closes only these two untuned arms on these 6 features). INDETERMINATE otherwise
+    -- including the useful middle case where a candidate is within 0.01 (an equally good second family exists) -- or if folds < 3 or
+    an arm is unavailable.'
+  min_n: 3 usable CV folds per symbol; holdout >= 20 rows.
+  what_it_does_not_do: 'Registers, trains and promotes nothing; touches no config. Untuned arms: a FAIL does not close the families.
+    Grades the regime LABEL, not P&L.'
+compute: needs_vm_data
+value:
+  bucket: frontier
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'stand-in: an equal-or-better non-boosted family would diversify the 3 advisory heads and the retrain surface; not a measured
+    P&L'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 50
+  basis: 'Estimate: ExtraTrees 300 trees (single-thread) + MLP x 5 folds x 3 symbols at tail_rows 60000.'
+ml_bakeoff:
+  task: classification
+  metric: macro_f1
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT:
+        path: datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl
+      ETHUSDT:
+        path: datasets-out/market_features/ETHUSDT/15m/v002/data.jsonl
+      SOLUSDT:
+        path: datasets-out/market_features/SOLUSDT/15m/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    tail_rows: 60000
+    holdout_after: '2026-07-12'
+  cv:
+    folds: 5
+    embargo_rows: 96
+    min_train_frac: 0.4
+  baseline: lgbm
+  controls:
+  - prior
+  candidates:
+  - et
+  - mlp
+  learners:
+    prior:
+      kind: prior
+    lgbm:
+      kind: lightgbm
+      params:
+        n_estimators: 200
+        learning_rate: 0.05
+        num_leaves: 31
+        min_child_samples: 50
+    et:
+      kind: sklearn_extratrees
+      params: {}
+    mlp:
+      kind: sklearn_mlp
+      params: {}
+  rule:
+    min_folds: 3
+    pass_if:
+    - group: &id001
+      - BTCUSDT
+      - ETHUSDT
+      - SOLUSDT
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.01
+    - group: *id001
+      vs: baseline
+      window: holdout
+      op: '>='
+      value: 0.0
+    fail_if_no_candidate_reaches:
+    - group: any
+      vs: baseline
+      window: cv
+      op: '>='
+      value: -0.01
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261013-1414-07
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M25
+related:
+- ML-RQ-RUNNER
+- RQ-20261012-75b2-19
+- docs/plans/ml-plan-items.yaml
+last_dispatched_at: '2026-10-14T12:01:59+00:00'
+grading:
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261013-1414-07-BAGGED-AND-NEURAL-VS-GBDT-REGIME
+  evidence:
+  - research/results/RQ-20261013-1414-07/38560874442.jsonl
+  graded_at: '2026-10-14'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

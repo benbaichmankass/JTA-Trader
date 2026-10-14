@@ -65,7 +65,8 @@ ACCOUNTS = {"accounts": {
 }}
 
 
-def _record(leg, cfg, *, slippage=5.0, n=56, folds_net=(4.8583, 2.2583, 8.3058, 3.5996)):
+def _record(leg, cfg, *, slippage=5.0, n=56, folds_net=(4.8583, 2.2583, 8.3058, 3.5996),
+            fidelity="faithful"):
     net = round(sum(folds_net), 4)
     return {
         "strategy": leg, "config_fingerprint": mr.b1.config_fingerprint(cfg),
@@ -78,6 +79,7 @@ def _record(leg, cfg, *, slippage=5.0, n=56, folds_net=(4.8583, 2.2583, 8.3058, 
                           "registered_at": "2026-09-22T05:34:08Z", "verdict": "pass"},
         "generated_at": "2026-09-24T12:41:53+00:00",
         "source_run": f"comms/strategy_evidence/runs/x/{leg}__trades.jsonl",
+        "fidelity": fidelity,
     }
 
 
@@ -217,6 +219,28 @@ def test_fire_s0_to_s1(repo):
     assert res["proposal"]["roster_add"] == {"bybit_1": [LEG]}
 
 
+# ── C5 fidelity (operator 2026-10-11, GUARD-FIDELITY) ─────────────────────
+def test_real_money_promotion_on_an_approximate_record_refuses_on_b1_c5(repo):
+    rec = _record(LEG, LEG_CFG, fidelity="approximate")
+    rec["omitted_levers"] = ["trail_decay_stall_bars", "trail_decay_tight_mult"]
+    res = _s1s2(repo(records={LEG: rec}))
+    _refused(res, "R-B1-C5")
+    assert "trail_decay_stall_bars" in res["detail"]
+
+
+def test_paper_promotion_on_an_approximate_record_is_not_refused_by_c5(repo):
+    """C5 binds a NEW RISK-BEARING add only (the operator's words: Stage-0
+    evidence for a real-money roster add). S0 -> S1 lands on a paper soak
+    account, which is exactly where an approximate leg should go to be learned
+    from -- so the same record that refuses above must FIRE here."""
+    root = repo(accounts={"accounts": {**ACCOUNTS["accounts"],
+                                       "bybit_1": _acct("paper", "bybit", ["l1", "l2", "l3"])}},
+                records={LEG: _record(LEG, LEG_CFG, fidelity="approximate")})
+    res = mr.resolve(LEG, "S0", "S1", "bybit_1", root=root)
+    assert res["verdict"] == "FIRE", res
+    assert res["proposal"]["roster_add"] == {"bybit_1": [LEG]}
+
+
 def _stage2_accts():
     accts = copy.deepcopy(ACCOUNTS)
     accts["accounts"]["bybit_2"]["strategies"].append(LEG)
@@ -303,8 +327,13 @@ def test_stage0_p10_is_deterministic_and_seeded(repo):
 
 def test_real_stage2_thresholds_match_the_operators_pricing():
     """The operator was told xrp_4h, ief and iaum have POSITIVE p10 and the
-    other Stage-2 legs negative (SIGNAL-0005). Pin that on the real records."""
-    for leg, positive in (("trend_donchian_xrp_4h", True), ("ief_pullback_1d", True),
+    other Stage-2 legs negative (SIGNAL-0005). Pin that on the real records.
+
+    Re-stated 2026-10-12 (RQ-20261007-023 PASS, RULE-RQ1007-XRP4H-STAGE0-1460D):
+    the 1460d xrp_4h record (n=46, p10 -3.885) replaced the 365d n=16 one, and its
+    p10 is NEGATIVE, so xrp_4h now pins False. SIGNAL-0005's pricing is reported
+    to the operator as changed, not silently kept."""
+    for leg, positive in (("trend_donchian_xrp_4h", False), ("ief_pullback_1d", True),
                           ("iaum_pullback_1d", True), ("xrp_pullback_2h", False),
                           ("ada_pullback_2h", False), ("trend_donchian_eth_4h", False),
                           ("slv_pullback_1d", False)):

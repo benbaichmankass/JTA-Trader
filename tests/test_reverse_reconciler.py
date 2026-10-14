@@ -700,7 +700,7 @@ def test_alive_orphan_with_recoverable_package_reattached_not_flattened(tmp_db, 
         "order_package_id": "op-btc", "strategy_name": "trend_donchian",
         "symbol": "BTCUSDT", "direction": "long", "entry": 80700.0,
         "sl": 79000.0, "tp": 83000.0, "status": "closed",
-        "created_at": "2026-06-15T06:00:00Z",
+        "created_at": (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(),
     })
 
     with patch(
@@ -1072,8 +1072,12 @@ def _pkg_link(db, opid):
 
 
 def _seed_real_leg_and_package(db, *, real_status="open"):
+    # Relative to now, not a fixed date: #17491 refuses orphan-attribution
+    # packages older than ORPHAN_PACKAGE_MAX_AGE_DAYS (14), so a hard-coded
+    # 2026-09-27 package aged out on 2026-10-11 and these tests went red.
+    _recent = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
     real_id = int(db.insert_trade({
-        "timestamp": "2026-09-27T10:00:00+00:00", "symbol": "ETHUSDT",
+        "timestamp": _recent, "symbol": "ETHUSDT",
         "direction": "long", "entry_price": 2500.0, "position_size": 1.0,
         "setup_type": "trend", "status": real_status, "is_backtest": 0,
         "strategy_name": "eth_trend_1h", "account_id": "bybit_2",
@@ -1083,7 +1087,7 @@ def _seed_real_leg_and_package(db, *, real_status="open"):
         "order_package_id": "pkg-1", "strategy_name": "eth_trend_1h",
         "symbol": "ETHUSDT", "direction": "long", "entry": 2500.0,
         "sl": 2400.0, "tp": 2700.0, "status": "open",
-        "linked_trade_id": real_id, "created_at": "2026-09-27T10:00:00Z",
+        "linked_trade_id": real_id, "created_at": _recent,
     })
     return real_id
 

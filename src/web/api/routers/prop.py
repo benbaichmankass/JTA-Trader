@@ -16,6 +16,9 @@ Endpoints:
 - ``GET  /api/bot/prop/tickets?account_id=&status=&limit=`` — outbound tickets.
 - ``GET  /api/bot/prop/status?account_id=`` — latest account-status snapshot +
   computed rule-distance (distance to the $150 daily-loss / $300 static-DD).
+- ``GET  /api/bot/prop/overview?window=24h|7d|30d|all`` — whole prop book in one
+  read for the SPA Overview (equity over fresh accounts, open trades, windowed
+  realized P&L; DASH-PROP-OVERVIEW).
 - ``GET  /api/bot/prop/reconcile?account_id=`` — un-acted tickets (emitted, past
   validity, no matching fill) + a summary.
 
@@ -34,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/bot/prop", tags=["prop"])
 
-_DEFAULT_ACCOUNT = "breakout_1"
+_DEFAULT_ACCOUNT = "breakout_2"  # breakout_1 retired 2026-10-07 (BREAKOUT1-RETIRE); breakout_2 is the live Breakout account
 
 
 def _require_write_token(authorization: str | None) -> None:
@@ -143,6 +146,18 @@ def _phone_heartbeat(acct: str) -> dict[str, Any] | None:
     return phone_executor.last_heartbeat(acct) if phone_executor.is_phone_account(acct) else None
 
 
+def _phone_positions_diag(acct: str) -> dict[str, Any] | None:
+    from src.prop import phone_executor
+
+    return phone_executor.last_positions_diag(acct) if phone_executor.is_phone_account(acct) else None
+
+
+def _phone_events(acct: str) -> list[dict[str, Any]] | None:
+    from src.prop import phone_executor
+
+    return phone_executor.recent_events(acct) if phone_executor.is_phone_account(acct) else None
+
+
 @router.get("/status")
 def get_status(account_id: str | None = None) -> dict[str, Any]:
     from src.prop import prop_journal, prop_reconcile
@@ -167,6 +182,11 @@ def get_status(account_id: str | None = None) -> dict[str, Any]:
             "phone_diag": _phone_diag(acct),
             # the phone's latest heartbeat: status line + gate/pause/touch-hold state (null = none posted)
             "phone_heartbeat": _phone_heartbeat(acct),
+            # the phone's last ~40 events (login_started/login_failed/... with the scrubbed reason), oldest first
+            # (null = none posted since the log existed)
+            "phone_events": _phone_events(acct),
+            # PROP-TRACKING: the latest Positions read that was NOT clean (state + masked headers/controls; null = none)
+            "phone_positions_diag": _phone_positions_diag(acct),
         }
     except Exception:  # noqa: BLE001  # allow-silent: degrade to present:false, not a 500
         logger.warning("prop: /status read failed; degrading to present:false", exc_info=True)
@@ -175,6 +195,18 @@ def get_status(account_id: str | None = None) -> dict[str, Any]:
         return {"account_id": acct, "present": False, "status": None,
                 "status_age_hours": None, "status_freshness": "error",
                 "rule_distance": None}
+
+
+@router.get("/overview")
+def get_overview(window: str = "7d") -> dict[str, Any]:
+    from src.prop import prop_overview
+
+    try:
+        return {"present": True, **prop_overview.build_overview(window)}
+    except Exception:  # noqa: BLE001  # allow-silent: degrade to present:false, not a 500
+        logger.warning("prop: /overview read failed; degrading to present:false", exc_info=True)
+        return {"present": False, "equity": None, "open_trades": None,
+                "realized": None, "unrealized_pnl": None}
 
 
 @router.get("/reconcile")
@@ -258,11 +290,20 @@ async def phone_claim(request: Request,
 @router.get("/phone/pending")
 async def phone_pending(accepts: str = "",
                         authorization: str | None = Header(default=None)) -> dict[str, Any]:
-    """READ-ONLY: how many tickets are waiting for the device's account. Claims nothing; the backgrounded app
-    polls this and brings itself to the front before it claims (PI-20261006-APBY4NTV-0006)."""
+    """How many tickets are waiting for the device's account. Claims nothing; the backgrounded app
+    polls this and brings itself to the front before it claims (PI-20261006-APBY4NTV-0006). ``status_age_hours``
+    (null = no dateable row) lets it also come forward to check its login when account_status is stale (PHONE-AUTOLOGIN).
+
+    It also runs the stale-claim watchdog (BREAKOUT-UNTRACKED-1014): the backgrounded app never calls /phone/claim,
+    so a live-submitted claim the phone never confirmed sat ``claimed`` for 5 h (13:22Z -> 18:36Z 2026-10-14) with
+    no "unconfirmed submit" alert. The watchdog is idempotent; running it here bounds that to one poll."""
     from src.prop import phone_executor as pe
     dev = _phone_device(authorization)
-    return {"ok": True, "pending": await asyncio.to_thread(pe.pending_count, dev, None, _accepts(accepts))}
+    expired = await asyncio.to_thread(pe.expire_stale_claims, dev.account_id)
+    if expired:
+        await asyncio.to_thread(pe.alert_expired, dev.account_id, expired)
+    return {"ok": True, "pending": await asyncio.to_thread(pe.pending_count, dev, None, _accepts(accepts)),
+            "status_age_hours": await asyncio.to_thread(pe.account_status_age_hours, dev.account_id)}
 
 
 @router.post("/phone/report")

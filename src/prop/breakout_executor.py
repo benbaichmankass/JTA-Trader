@@ -24,8 +24,9 @@ operator sees the decision even if the push/telegram leg dropped.
 from __future__ import annotations
 
 import logging
+import re
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -80,17 +81,19 @@ def _per_symbol(routing: Dict[str, Any], symbol: str, key: str, default: Any) ->
     return default
 
 
-#: How long a ticket left at ``expiry_prompted`` ("did you place this?"
-#: never answered, so nothing is known to have been placed) keeps blocking
-#: re-tickets for its key AFTER its ``valid_until``. ``awaiting_report``
-#: ("yes" answered, fill never reported) is NOT time-bound: it blocks until
-#: reported, like ``placed``, because it may be a live position.
-#: Measured 2026-09-29 (PI-20260929-2PNSPDNU-0002): two 09-25 11:11Z tickets
-#: whose prompt was never answered suppressed every SOL-long and ETH-long
-#: signal for four days, the same way two 08-28/08-30 tickets suppressed 37
-#: signals until cleared by hand on 09-11. A prompt nobody answered within a
-#: day of the setup going stale is a stale prompt, not a live ticket.
-STALE_PROMPT_GRACE = timedelta(hours=24)
+#: Statuses that block a re-ticket for their key with NO time window: a working
+#: order, an operator "yes, placed" never reported, or a phone attempt in flight
+#: (``claimed``; the phone's claim watchdog ends it within CLAIM_TIMEOUT_S).
+#: Each may be a live position the fills journal cannot see yet.
+_BLOCKING_UNTIL_RESOLVED = ("placed", "awaiting_report", "claimed")
+#: Statuses that block only while the ticket's validity has not passed (or
+#: cannot be read). ``expiry_prompted`` and ``invalidated_prompted`` used to
+#: block for ``valid_until`` + a 24 h STALE_PROMPT_GRACE; retired by operator
+#: directive 2026-10-07 ("if a ticket expires and I haven't logged a trade, the
+#: system should assume that the trade wasnt placed and the ticket should be
+#: kept alive"). MEASURED that day: velotrade_1's expired ETH-short ticket sat
+#: in ``expiry_prompted`` and suppressed four signals for 17 h.
+_BLOCKING_WHILE_VALID = ("emitted", "expiry_prompted", "invalidated_prompted")
 
 
 def _parse_valid_until(vu: Any) -> Optional[datetime]:
@@ -118,19 +121,16 @@ def _reticket_suppress_reason(
     - an OPEN prop position exists for the key (newest ``prop_fills`` row is
       ``open``/``filled`` — the same derivation the monitor pulse uses), or
     - a still-LIVE outstanding ticket exists: ``placed`` (working order on the
-      terminal) and ``awaiting_report`` (operator answered "yes, placed" and
-      never reported the fill) — either may be a live position the fills
-      journal cannot see, so both block until reported, with NO time window
-      (manager decision 2026-09-29 17:24Z); ``expiry_prompted`` (the "did you
-      place this?" prompt was never answered, so nothing is known to have
-      been placed) only within ``valid_until`` + ``STALE_PROMPT_GRACE``, or
-      with no readable ``valid_until`` (fail-safe: a validity we cannot read
-      is not known to have passed); or ``emitted`` whose ``valid_until`` has
-      not passed. An EXPIRED unacted ticket does NOT block — a fresh signal
-      after the old setup went stale is a new trade decision — and neither
-      does a prompt about one that nobody answered within the grace window
-      (2026-09-29: two such prompts from 09-25 blocked every SOL-long /
-      ETH-long signal until cleared by hand).
+      terminal), ``awaiting_report`` (operator answered "yes, placed" and never
+      reported the fill) or ``claimed`` (a phone attempt in flight) -- each may
+      be a live position the fills journal cannot see, so they block until
+      resolved, with NO time window (manager decision 2026-09-29 17:24Z); or
+      ``emitted`` / ``expiry_prompted`` / ``invalidated_prompted`` whose
+      ``valid_until`` has not passed, or cannot be read (fail-safe).
+
+    An EXPIRED ticket with no logged fill never blocks, whatever prompt it
+    carries: it was not placed and the opportunity stays alive (operator
+    directive 2026-10-07; docs/ARCHITECTURE-CANONICAL.md § "Prop ticket flow").
 
     Fail-OPEN: any journal read error returns None so a genuine trade is never
     stranded by a read hiccup (same posture as the reconciler guards).
@@ -156,33 +156,77 @@ def _reticket_suppress_reason(
                     or str(t.get("direction") or "").lower() != d):
                 continue
             status = str(t.get("status") or "").lower()
-            if status in ("placed", "awaiting_report"):
-                # A working order, or an operator "yes, placed" never reported:
-                # either may be a live position the fills journal cannot see.
+            if status in _BLOCKING_UNTIL_RESOLVED:
                 # Blocks until reported, NO time window (manager decision
                 # 2026-09-29 17:24Z: a doubled prop position costs more than
-                # one lost signal — this is the fail-safe side).
+                # one lost signal -- this is the fail-safe side).
                 return f"outstanding_ticket:{status}: {t.get('ticket_id')}"
-            if status == "expiry_prompted":
-                vu_dt = _parse_valid_until(t.get("valid_until"))
-                if vu_dt is None or vu_dt + STALE_PROMPT_GRACE > now:
-                    return f"outstanding_ticket:{status}: {t.get('ticket_id')}"
-                logger.info(
-                    "breakout_executor: %s ticket %s (%s %s) is %s but its validity "
-                    "passed %s ago — a stale prompt, not an outstanding ticket",
-                    account_id, t.get("ticket_id"), sym, d, status, now - vu_dt,
-                )
-                continue
-            if status == "emitted":
+            if status in _BLOCKING_WHILE_VALID:
                 vu_dt = _parse_valid_until(t.get("valid_until"))
                 if vu_dt is None or vu_dt > now:
-                    return f"outstanding_ticket:emitted: {t.get('ticket_id')}"
+                    return f"outstanding_ticket:{status}: {t.get('ticket_id')}"
     except Exception as exc:  # noqa: BLE001 — fail-open, never strand a trade
         logger.warning(
             "breakout_executor: reticket guard read failed for %s/%s/%s (%s) — "
             "allowing emission", account_id, symbol, direction, exc,
         )
     return None
+
+
+_PLACED_BLOCKER_RE = re.compile(r"^outstanding_ticket:placed:\s*(prop-[a-z]+-[0-9a-f]+)$")
+
+
+def _supersede_candidate(
+    suppress: str, *, account_id: str, account_cfg: Dict[str, Any], trade_id: str,
+    strategy: str, symbol: str, direction: str, entry: float, sl: float, tp: float,
+    timeframe: str, now: Optional[datetime] = None,
+) -> Optional[Dict[str, Any]]:
+    """The supersede candidate a suppressed ticket carries, or None.
+
+    OPERATOR DECISION 2026-10-08 ~20:03Z ("Approve as proposed", pipeline item
+    PI-20261008-3QRUJSYR-0001, checklist row PROP-SUPERSEDE): a new signal for
+    the same (account, strategy, symbol, direction) whose outstanding ticket is
+    ``placed`` may supersede that resting entry. Emission has no terminal read,
+    so it only MARKS the candidate; the executor, holding the read, decides and
+    performs cancel -> confirm -> old ``skipped: superseded by <new>`` -> new
+    released (``prop_supersede.release``).
+
+    A candidate is recorded only when the blocker is a ``placed`` ticket of the
+    SAME strategy on this account, and the ticket rebuilds with emission's own
+    functions (``prop_ticket_reissue.rebuild_fields``): its rendered message
+    carries the entry band the executor checks BEFORE it cancels anything.
+    Every other suppression (an open position, ``awaiting_report``,
+    ``claimed``, an ``emitted`` ticket, another strategy) records no candidate
+    and blocks exactly as before. Any error records no candidate (fail closed:
+    the block stands)."""
+    m = _PLACED_BLOCKER_RE.match(str(suppress or ""))
+    if not m:
+        return None
+    blocker_id = m.group(1)
+    try:
+        from src.prop import prop_journal
+        from scripts.ops.prop_ticket_reissue import rebuild_fields
+
+        blocker = prop_journal.get_ticket(blocker_id)
+        if (not blocker or str(blocker.get("account_id") or "") != account_id
+                or str(blocker.get("status") or "").lower() != "placed"
+                or str(blocker.get("strategy") or "") != strategy):
+            return None
+        now = now or datetime.now(timezone.utc)
+        fields, why = rebuild_fields(
+            {"ticket_id": trade_id, "account_id": account_id, "strategy": strategy,
+             "symbol": symbol, "direction": direction, "entry": entry, "sl": sl, "tp": tp},
+            account_cfg, now, timeframe=timeframe)
+        if fields is None:
+            logger.info("breakout_executor: %s no supersede candidate for %s (%s)",
+                        trade_id, blocker_id, why)
+            return None
+        return {"blocked_by": blocker_id, "at": now.isoformat(),
+                "message": fields["message"], "valid_until": fields["valid_until"]}
+    except Exception as exc:  # noqa: BLE001 — no candidate: the block stands
+        logger.warning("breakout_executor: supersede candidate failed for %s (%s); block stands",
+                       trade_id, exc)
+        return None
 
 
 def _leverage_refusal(account_id: str, unit: Any, symbol: str, qty_units: Any, entry: Any,
@@ -291,6 +335,10 @@ def emit_prop_ticket(
             "breakout_executor: %s reticket SUPPRESSED for %s %s (%s) → %s",
             account_id, symbol, direction, suppress, trade_id,
         )
+        candidate = _supersede_candidate(
+            suppress, account_id=account_id, account_cfg=account_cfg, trade_id=trade_id,
+            strategy=strategy, symbol=symbol, direction=direction, entry=entry, sl=sl, tp=tp,
+            timeframe=str(timeframe or _DEFAULT_TIMEFRAME))
         try:
             from src.prop import prop_journal
 
@@ -308,6 +356,7 @@ def emit_prop_ticket(
                     order["meta"].get("order_package_id")
                     if isinstance(order.get("meta"), dict) else None
                 ),
+                **({"meta": {"supersede": candidate}} if candidate else {}),
             })
         except Exception as exc:  # noqa: BLE001 — audit row is best-effort
             logger.warning(

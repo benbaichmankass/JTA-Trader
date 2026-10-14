@@ -228,7 +228,8 @@ write_files:
     permissions: '0644'
     owner: root:root
     content: |
-      # Fires ict-trainer-catchup.service once daily at 05:00 UTC — well
+      # Fires ict-trainer-catchup.service once daily at 08:00 UTC (moved from 05:00Z 2026-10-14: clear of the
+      # 03:00-05:00Z trainer research window and the 05:52Z review) — well
       # after the primary ict-trainer.timer's `daily` + up to 1h
       # RandomizedDelaySec window (00:00-01:00 UTC), so a clean day's cycle
       # is long finished before this fires and finds nothing to do.
@@ -236,7 +237,7 @@ write_files:
       Description=Same-day catch-up for an interrupted ICT training cycle
 
       [Timer]
-      OnCalendar=*-*-* 05:00:00 UTC
+      OnCalendar=*-*-* 08:00:00 UTC
       Persistent=true
 
       [Install]
@@ -549,7 +550,7 @@ final_message: |
   ict-trainer.service: installed, disabled (Claude enables via diag relay).
   ict-trainer.timer:   installed, disabled (Claude enables via diag relay).
   ict-trainer-catchup.service: installed, disabled (Claude enables via diag relay; same-day resume of an interrupted cycle, see run_training_cycle.sh checkpoint/resume).
-  ict-trainer-catchup.timer:   installed, disabled (Claude enables via diag relay; daily 05:00 UTC).
+  ict-trainer-catchup.timer:   installed, disabled (Claude enables via diag relay; daily 08:00 UTC).
   ict-trainer-publish.service: installed, enabled (oneshot).
   ict-trainer-publish.timer:   installed, enabled (every 2 min).
   ict-trainer-forecast.service: installed, enabled (oneshot; M19 fc_* producer).

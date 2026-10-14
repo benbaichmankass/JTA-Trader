@@ -1,0 +1,793 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "10 crypto-perp legs with n>=30 in the newest committed ledger; 12 other ledgers not measured (reasons in measurement.skipped); trend (ADX-14); vol NOT covered",
+  "n": 1224,
+  "measurement": {
+    "label": "no_headroom_trend_axis",
+    "scoping_only_not_a_promotion_case": true,
+    "axis": "trend (ADX-14); vol NOT covered",
+    "selection": {
+      "min_cell_n": 8,
+      "loss_se": 0.0
+    },
+    "bar": {
+      "per_test_trade_r": 0.03,
+      "p5_gt": 0,
+      "min_cell_n": 8,
+      "min_leg_n": 30,
+      "min_legs": 5,
+      "blocks": 4,
+      "seeds": 300
+    },
+    "skipped": {
+      "gdx_pullback_1d": "n=10 < 30",
+      "gld_pullback_1d": "n=5 < 30",
+      "gld_pullback_1h": "symbol 'GLD' is not a Binance-vision USDT perp (no committed candle source) \u2014 not_attempted",
+      "iaum_pullback_1d": "n=7 < 30",
+      "ief_pullback_1d": "n=3 < 30",
+      "mgc_pullback_1d": "n=8 < 30",
+      "mhg_pullback_1d": "n=10 < 30",
+      "qqq_pullback_1h": "symbol 'QQQ' is not a Binance-vision USDT perp (no committed candle source) \u2014 not_attempted",
+      "slv_pullback_1d": "n=11 < 30",
+      "spy_pullback_1h": "symbol 'SPY' is not a Binance-vision USDT perp (no committed candle source) \u2014 not_attempted",
+      "tlt_pullback_1d": "n=8 < 30",
+      "tlt_pullback_1h": "symbol 'TLT' is not a Binance-vision USDT perp (no committed candle source) \u2014 not_attempted"
+    },
+    "legs": {
+      "ada_pullback_2h": {
+        "ledger": "comms/strategy_evidence/runs/2026-09-25/ada_pullback_2h__trades.jsonl",
+        "symbol": "ADAUSDT",
+        "timeframe": "2h",
+        "n": 57,
+        "label_counts": {
+          "chop": 0,
+          "transitional": 0,
+          "trending": 57
+        },
+        "unlabelled": 0,
+        "has_live_policy_cell": false
+      },
+      "avax_pullback_2h": {
+        "ledger": "comms/strategy_evidence/runs/2026-09-25/avax_pullback_2h__trades.jsonl",
+        "symbol": "AVAXUSDT",
+        "timeframe": "2h",
+        "n": 57,
+        "label_counts": {
+          "chop": 0,
+          "transitional": 1,
+          "trending": 56
+        },
+        "unlabelled": 0,
+        "has_live_policy_cell": false
+      },
+      "eth_pullback_2h": {
+        "ledger": "comms/strategy_evidence/runs/2026-10-05-730d-expand/eth_pullback_2h__trades.jsonl",
+        "symbol": "ETHUSDT",
+        "timeframe": "2h",
+        "n": 116,
+        "label_counts": {
+          "chop": 0,
+          "transitional": 1,
+          "trending": 115
+        },
+        "unlabelled": 0,
+        "has_live_policy_cell": false
+      },
+      "eth_pullback_prop_2h": {
+        "ledger": "comms/strategy_evidence/runs/2026-09-25/eth_pullback_prop_2h__trades.jsonl",
+        "symbol": "ETHUSDT",
+        "timeframe": "2h",
+        "n": 70,
+        "label_counts": {
+          "chop": 0,
+          "transitional": 0,
+          "trending": 70
+        },
+        "unlabelled": 0,
+        "has_live_policy_cell": false
+      },
+      "htf_pullback_trend_2h": {
+        "ledger": "comms/strategy_evidence/runs/2026-09-25/htf_pullback_trend_2h__trades.jsonl",
+        "symbol": "BTCUSDT",
+        "timeframe": "2h",
+        "n": 86,
+        "label_counts": {
+          "chop": 9,
+          "transitional": 11,
+          "trending": 66
+        },
+        "unlabelled": 0,
+        "has_live_policy_cell": true
+      },
+      "pullback_ada_1h": {
+        "ledger": "comms/strategy_evidence/runs/2026-10-07-stage0-prop/pullback_ada_1h__trades.jsonl",
+        "symbol": "ADAUSDT",
+        "timeframe": "1h",
+        "n": 375,
+        "label_counts": {
+          "chop": 54,
+          "transitional": 70,
+          "trending": 251
+        },
+        "unlabelled": 0,
+        "has_live_policy_cell": false
+      },
+      "pullback_doge_1h": {
+        "ledger": "comms/strategy_evidence/runs/2026-10-07-stage0-prop/pullback_doge_1h__trades.jsonl",
+        "symbol": "DOGEUSDT",
+        "timeframe": "1h",
+        "n": 384,
+        "label_counts": {
+          "chop": 73,
+          "transitional": 56,
+          "trending": 255
+        },
+        "unlabelled": 0,
+        "has_live_policy_cell": false
+      },
+      "pullback_link_1h": {
+        "ledger": "comms/strategy_evidence/runs/2026-10-07-stage0-prop/pullback_link_1h__trades.jsonl",
+        "symbol": "LINKUSDT",
+        "timeframe": "1h",
+        "n": 400,
+        "label_counts": {
+          "chop": 84,
+          "transitional": 55,
+          "trending": 261
+        },
+        "unlabelled": 0,
+        "has_live_policy_cell": false
+      },
+      "sol_pullback_2h": {
+        "ledger": "comms/strategy_evidence/runs/2026-10-05-730d-expand/sol_pullback_2h__trades.jsonl",
+        "symbol": "SOLUSDT",
+        "timeframe": "2h",
+        "n": 36,
+        "label_counts": {
+          "chop": 0,
+          "transitional": 0,
+          "trending": 36
+        },
+        "unlabelled": 0,
+        "has_live_policy_cell": false
+      },
+      "xrp_pullback_2h": {
+        "ledger": "comms/strategy_evidence/runs/2026-10-08/xrp_pullback_2h__trades.jsonl",
+        "symbol": "XRPUSDT",
+        "timeframe": "2h",
+        "n": 55,
+        "label_counts": {
+          "chop": 0,
+          "transitional": 0,
+          "trending": 55
+        },
+        "unlabelled": 0,
+        "has_live_policy_cell": false
+      }
+    },
+    "n_legs": 10,
+    "test_trades_total": 1224,
+    "ungated_test_net_r_total": 167.77,
+    "ungated_test_net_r_per_leg": {
+      "ada_pullback_2h": 11.237,
+      "avax_pullback_2h": -8.72,
+      "eth_pullback_2h": 7.357,
+      "eth_pullback_prop_2h": -5.659,
+      "htf_pullback_trend_2h": -5.082,
+      "pullback_ada_1h": 86.19,
+      "pullback_doge_1h": 65.987,
+      "pullback_link_1h": 7.003,
+      "sol_pullback_2h": 0.987,
+      "xrp_pullback_2h": 8.471
+    },
+    "seeds": 300,
+    "results": {
+      "ordinal": {
+        "oracle": {
+          "pooled_delta_r": {
+            "mean": 2.1675,
+            "p5": -30.7501,
+            "p95": 34.2586
+          },
+          "pooled_delta_r_per_test_trade": {
+            "mean": 0.0023,
+            "p5": -0.0251,
+            "p95": 0.0272
+          },
+          "mean_dropped_trades_total": 345.0,
+          "per_leg": {
+            "ada_pullback_2h": {
+              "mean": -3.0327,
+              "p5": -3.0327,
+              "p95": -3.0327,
+              "mean_dropped": 14.0
+            },
+            "avax_pullback_2h": {
+              "mean": 4.2599,
+              "p5": 4.2599,
+              "p95": 4.2599,
+              "mean_dropped": 12.0
+            },
+            "eth_pullback_2h": {
+              "mean": 1.4394,
+              "p5": 1.4394,
+              "p95": 1.4394,
+              "mean_dropped": 42.0
+            },
+            "eth_pullback_prop_2h": {
+              "mean": -2.1474,
+              "p5": -2.1474,
+              "p95": -2.1474,
+              "mean_dropped": 19.0
+            },
+            "htf_pullback_trend_2h": {
+              "mean": 1.9611,
+              "p5": 1.9611,
+              "p95": 1.9611,
+              "mean_dropped": 22.0
+            },
+            "pullback_ada_1h": {
+              "mean": 7.932,
+              "p5": 7.932,
+              "p95": 7.932,
+              "mean_dropped": 36.0
+            },
+            "pullback_doge_1h": {
+              "mean": 7.4734,
+              "p5": 7.4734,
+              "p95": 7.4734,
+              "mean_dropped": 70.0
+            },
+            "pullback_link_1h": {
+              "mean": -14.9424,
+              "p5": -14.9424,
+              "p95": -14.9424,
+              "mean_dropped": 89.0
+            },
+            "sol_pullback_2h": {
+              "mean": -0.9865,
+              "p5": -0.9865,
+              "p95": -0.9865,
+              "mean_dropped": 27.0
+            },
+            "xrp_pullback_2h": {
+              "mean": 1.2408,
+              "p5": 1.2408,
+              "p95": 1.2408,
+              "mean_dropped": 14.0
+            }
+          }
+        },
+        "A=0.55": {
+          "pooled_delta_r": {
+            "mean": -48.8135,
+            "p5": -132.8549,
+            "p95": 16.7486
+          },
+          "pooled_delta_r_per_test_trade": {
+            "mean": -0.0365,
+            "p5": -0.0896,
+            "p95": 0.0156
+          },
+          "mean_dropped_trades_total": 319.86,
+          "per_leg": {
+            "ada_pullback_2h": {
+              "mean": -1.8205,
+              "p5": -7.7852,
+              "p95": 4.0488,
+              "mean_dropped": 7.63
+            },
+            "avax_pullback_2h": {
+              "mean": 2.393,
+              "p5": -0.9364,
+              "p95": 5.6555,
+              "mean_dropped": 6.6
+            },
+            "eth_pullback_2h": {
+              "mean": -0.9048,
+              "p5": -12.1244,
+              "p95": 8.7685,
+              "mean_dropped": 23.35
+            },
+            "eth_pullback_prop_2h": {
+              "mean": -1.1602,
+              "p5": -6.1695,
+              "p95": 4.6619,
+              "mean_dropped": 10.59
+            },
+            "htf_pullback_trend_2h": {
+              "mean": 1.337,
+              "p5": -4.8622,
+              "p95": 8.2297,
+              "mean_dropped": 12.5
+            },
+            "pullback_ada_1h": {
+              "mean": -17.4623,
+              "p5": -46.0498,
+              "p95": 7.5472,
+              "mean_dropped": 85.4
+            },
+            "pullback_doge_1h": {
+              "mean": -19.9749,
+              "p5": -47.7474,
+              "p95": 10.204,
+              "mean_dropped": 79.64
+            },
+            "pullback_link_1h": {
+              "mean": -11.6688,
+              "p5": -29.3793,
+              "p95": 7.4297,
+              "mean_dropped": 71.7
+            },
+            "sol_pullback_2h": {
+              "mean": -0.5498,
+              "p5": -6.901,
+              "p95": 5.4193,
+              "mean_dropped": 14.78
+            },
+            "xrp_pullback_2h": {
+              "mean": 0.6415,
+              "p5": -3.6742,
+              "p95": 5.4657,
+              "mean_dropped": 7.67
+            }
+          }
+        },
+        "A=0.60": {
+          "pooled_delta_r": {
+            "mean": -43.0261,
+            "p5": -120.928,
+            "p95": 21.276
+          },
+          "pooled_delta_r_per_test_trade": {
+            "mean": -0.0324,
+            "p5": -0.0808,
+            "p95": 0.0242
+          },
+          "mean_dropped_trades_total": 322.72,
+          "per_leg": {
+            "ada_pullback_2h": {
+              "mean": -1.99,
+              "p5": -8.2671,
+              "p95": 4.0551,
+              "mean_dropped": 8.31
+            },
+            "avax_pullback_2h": {
+              "mean": 2.6065,
+              "p5": -0.5917,
+              "p95": 6.2267,
+              "mean_dropped": 7.18
+            },
+            "eth_pullback_2h": {
+              "mean": -0.6693,
+              "p5": -10.9666,
+              "p95": 9.7866,
+              "mean_dropped": 25.37
+            },
+            "eth_pullback_prop_2h": {
+              "mean": -1.3503,
+              "p5": -6.075,
+              "p95": 4.3904,
+              "mean_dropped": 11.46
+            },
+            "htf_pullback_trend_2h": {
+              "mean": 1.3718,
+              "p5": -4.3899,
+              "p95": 8.07,
+              "mean_dropped": 13.6
+            },
+            "pullback_ada_1h": {
+              "mean": -15.0108,
+              "p5": -43.2718,
+              "p95": 12.8227,
+              "mean_dropped": 80.02
+            },
+            "pullback_doge_1h": {
+              "mean": -17.136,
+              "p5": -43.8947,
+              "p95": 9.8703,
+              "mean_dropped": 78.69
+            },
+            "pullback_link_1h": {
+              "mean": -12.185,
+              "p5": -32.2122,
+              "p95": 5.5214,
+              "mean_dropped": 73.56
+            },
+            "sol_pullback_2h": {
+              "mean": -0.6151,
+              "p5": -6.6213,
+              "p95": 5.4344,
+              "mean_dropped": 16.13
+            },
+            "xrp_pullback_2h": {
+              "mean": 0.7146,
+              "p5": -3.1909,
+              "p95": 5.6146,
+              "mean_dropped": 8.39
+            }
+          }
+        },
+        "A=0.70": {
+          "pooled_delta_r": {
+            "mean": -32.698,
+            "p5": -112.0511,
+            "p95": 24.2153
+          },
+          "pooled_delta_r_per_test_trade": {
+            "mean": -0.0242,
+            "p5": -0.0741,
+            "p95": 0.0229
+          },
+          "mean_dropped_trades_total": 328.33,
+          "per_leg": {
+            "ada_pullback_2h": {
+              "mean": -2.3085,
+              "p5": -8.1207,
+              "p95": 3.8127,
+              "mean_dropped": 9.74
+            },
+            "avax_pullback_2h": {
+              "mean": 3.0612,
+              "p5": 0.1008,
+              "p95": 6.5091,
+              "mean_dropped": 8.48
+            },
+            "eth_pullback_2h": {
+              "mean": -0.0985,
+              "p5": -8.7866,
+              "p95": 10.2064,
+              "mean_dropped": 29.46
+            },
+            "eth_pullback_prop_2h": {
+              "mean": -1.3282,
+              "p5": -5.6493,
+              "p95": 4.2902,
+              "mean_dropped": 13.34
+            },
+            "htf_pullback_trend_2h": {
+              "mean": 1.1758,
+              "p5": -3.6278,
+              "p95": 7.8679,
+              "mean_dropped": 15.6
+            },
+            "pullback_ada_1h": {
+              "mean": -10.0833,
+              "p5": -38.1066,
+              "p95": 13.2208,
+              "mean_dropped": 69.28
+            },
+            "pullback_doge_1h": {
+              "mean": -10.9005,
+              "p5": -39.8382,
+              "p95": 11.8808,
+              "mean_dropped": 76.51
+            },
+            "pullback_link_1h": {
+              "mean": -12.1589,
+              "p5": -29.3413,
+              "p95": 3.7721,
+              "mean_dropped": 77.21
+            },
+            "sol_pullback_2h": {
+              "mean": -0.5801,
+              "p5": -5.8841,
+              "p95": 5.5636,
+              "mean_dropped": 18.89
+            },
+            "xrp_pullback_2h": {
+              "mean": 0.8954,
+              "p5": -2.824,
+              "p95": 5.7406,
+              "mean_dropped": 9.82
+            }
+          }
+        }
+      },
+      "uniform": {
+        "oracle": {
+          "pooled_delta_r": {
+            "mean": 2.1675,
+            "p5": -30.7501,
+            "p95": 34.2586
+          },
+          "pooled_delta_r_per_test_trade": {
+            "mean": 0.0023,
+            "p5": -0.0251,
+            "p95": 0.0272
+          },
+          "mean_dropped_trades_total": 345.0,
+          "per_leg": {
+            "ada_pullback_2h": {
+              "mean": -3.0327,
+              "p5": -3.0327,
+              "p95": -3.0327,
+              "mean_dropped": 14.0
+            },
+            "avax_pullback_2h": {
+              "mean": 4.2599,
+              "p5": 4.2599,
+              "p95": 4.2599,
+              "mean_dropped": 12.0
+            },
+            "eth_pullback_2h": {
+              "mean": 1.4394,
+              "p5": 1.4394,
+              "p95": 1.4394,
+              "mean_dropped": 42.0
+            },
+            "eth_pullback_prop_2h": {
+              "mean": -2.1474,
+              "p5": -2.1474,
+              "p95": -2.1474,
+              "mean_dropped": 19.0
+            },
+            "htf_pullback_trend_2h": {
+              "mean": 1.9611,
+              "p5": 1.9611,
+              "p95": 1.9611,
+              "mean_dropped": 22.0
+            },
+            "pullback_ada_1h": {
+              "mean": 7.932,
+              "p5": 7.932,
+              "p95": 7.932,
+              "mean_dropped": 36.0
+            },
+            "pullback_doge_1h": {
+              "mean": 7.4734,
+              "p5": 7.4734,
+              "p95": 7.4734,
+              "mean_dropped": 70.0
+            },
+            "pullback_link_1h": {
+              "mean": -14.9424,
+              "p5": -14.9424,
+              "p95": -14.9424,
+              "mean_dropped": 89.0
+            },
+            "sol_pullback_2h": {
+              "mean": -0.9865,
+              "p5": -0.9865,
+              "p95": -0.9865,
+              "mean_dropped": 27.0
+            },
+            "xrp_pullback_2h": {
+              "mean": 1.2408,
+              "p5": 1.2408,
+              "p95": 1.2408,
+              "mean_dropped": 14.0
+            }
+          }
+        },
+        "A=0.55": {
+          "pooled_delta_r": {
+            "mean": -25.9049,
+            "p5": -103.8828,
+            "p95": 37.9706
+          },
+          "pooled_delta_r_per_test_trade": {
+            "mean": -0.0192,
+            "p5": -0.0696,
+            "p95": 0.03
+          },
+          "mean_dropped_trades_total": 288.0,
+          "per_leg": {
+            "ada_pullback_2h": {
+              "mean": -1.8205,
+              "p5": -7.7852,
+              "p95": 4.0488,
+              "mean_dropped": 7.63
+            },
+            "avax_pullback_2h": {
+              "mean": 2.393,
+              "p5": -0.9364,
+              "p95": 5.6555,
+              "mean_dropped": 6.6
+            },
+            "eth_pullback_2h": {
+              "mean": -0.9048,
+              "p5": -12.1244,
+              "p95": 8.7685,
+              "mean_dropped": 23.35
+            },
+            "eth_pullback_prop_2h": {
+              "mean": -1.1602,
+              "p5": -6.1695,
+              "p95": 4.6619,
+              "mean_dropped": 10.59
+            },
+            "htf_pullback_trend_2h": {
+              "mean": 1.4527,
+              "p5": -4.7894,
+              "p95": 8.8201,
+              "mean_dropped": 13.43
+            },
+            "pullback_ada_1h": {
+              "mean": -4.7309,
+              "p5": -32.2837,
+              "p95": 16.4914,
+              "mean_dropped": 52.46
+            },
+            "pullback_doge_1h": {
+              "mean": -11.5546,
+              "p5": -40.6109,
+              "p95": 14.8418,
+              "mean_dropped": 77.76
+            },
+            "pullback_link_1h": {
+              "mean": -7.9605,
+              "p5": -30.275,
+              "p95": 11.9732,
+              "mean_dropped": 73.72
+            },
+            "sol_pullback_2h": {
+              "mean": -0.5498,
+              "p5": -6.901,
+              "p95": 5.4193,
+              "mean_dropped": 14.78
+            },
+            "xrp_pullback_2h": {
+              "mean": 0.6415,
+              "p5": -3.6742,
+              "p95": 5.4657,
+              "mean_dropped": 7.67
+            }
+          }
+        },
+        "A=0.60": {
+          "pooled_delta_r": {
+            "mean": -22.152,
+            "p5": -94.9446,
+            "p95": 33.3594
+          },
+          "pooled_delta_r_per_test_trade": {
+            "mean": -0.0166,
+            "p5": -0.0658,
+            "p95": 0.031
+          },
+          "mean_dropped_trades_total": 294.35,
+          "per_leg": {
+            "ada_pullback_2h": {
+              "mean": -1.99,
+              "p5": -8.2671,
+              "p95": 4.0551,
+              "mean_dropped": 8.31
+            },
+            "avax_pullback_2h": {
+              "mean": 2.6065,
+              "p5": -0.5917,
+              "p95": 6.2267,
+              "mean_dropped": 7.18
+            },
+            "eth_pullback_2h": {
+              "mean": -0.6693,
+              "p5": -10.9666,
+              "p95": 9.7866,
+              "mean_dropped": 25.37
+            },
+            "eth_pullback_prop_2h": {
+              "mean": -1.3503,
+              "p5": -6.075,
+              "p95": 4.3904,
+              "mean_dropped": 11.46
+            },
+            "htf_pullback_trend_2h": {
+              "mean": 1.4627,
+              "p5": -4.507,
+              "p95": 8.6391,
+              "mean_dropped": 14.39
+            },
+            "pullback_ada_1h": {
+              "mean": -3.3472,
+              "p5": -29.6172,
+              "p95": 17.0437,
+              "mean_dropped": 50.64
+            },
+            "pullback_doge_1h": {
+              "mean": -9.6345,
+              "p5": -38.3693,
+              "p95": 14.4512,
+              "mean_dropped": 77.02
+            },
+            "pullback_link_1h": {
+              "mean": -8.9227,
+              "p5": -30.1047,
+              "p95": 8.7252,
+              "mean_dropped": 75.45
+            },
+            "sol_pullback_2h": {
+              "mean": -0.6151,
+              "p5": -6.6213,
+              "p95": 5.4344,
+              "mean_dropped": 16.13
+            },
+            "xrp_pullback_2h": {
+              "mean": 0.7146,
+              "p5": -3.1909,
+              "p95": 5.6146,
+              "mean_dropped": 8.39
+            }
+          }
+        },
+        "A=0.70": {
+          "pooled_delta_r": {
+            "mean": -18.3038,
+            "p5": -85.6899,
+            "p95": 26.4698
+          },
+          "pooled_delta_r_per_test_trade": {
+            "mean": -0.0132,
+            "p5": -0.0579,
+            "p95": 0.0285
+          },
+          "mean_dropped_trades_total": 307.02,
+          "per_leg": {
+            "ada_pullback_2h": {
+              "mean": -2.3085,
+              "p5": -8.1207,
+              "p95": 3.8127,
+              "mean_dropped": 9.74
+            },
+            "avax_pullback_2h": {
+              "mean": 3.0612,
+              "p5": 0.1008,
+              "p95": 6.5091,
+              "mean_dropped": 8.48
+            },
+            "eth_pullback_2h": {
+              "mean": -0.0985,
+              "p5": -8.7866,
+              "p95": 10.2064,
+              "mean_dropped": 29.46
+            },
+            "eth_pullback_prop_2h": {
+              "mean": -1.3282,
+              "p5": -5.6493,
+              "p95": 4.2902,
+              "mean_dropped": 13.34
+            },
+            "htf_pullback_trend_2h": {
+              "mean": 1.2276,
+              "p5": -4.04,
+              "p95": 8.1636,
+              "mean_dropped": 16.17
+            },
+            "pullback_ada_1h": {
+              "mean": -2.0405,
+              "p5": -26.819,
+              "p95": 15.2149,
+              "mean_dropped": 47.24
+            },
+            "pullback_doge_1h": {
+              "mean": -5.6589,
+              "p5": -31.4927,
+              "p95": 15.1855,
+              "mean_dropped": 75.24
+            },
+            "pullback_link_1h": {
+              "mean": -9.9857,
+              "p5": -28.3336,
+              "p95": 5.3412,
+              "mean_dropped": 78.64
+            },
+            "sol_pullback_2h": {
+              "mean": -0.5801,
+              "p5": -5.8841,
+              "p95": 5.5636,
+              "mean_dropped": 18.89
+            },
+            "xrp_pullback_2h": {
+              "mean": 0.8954,
+              "p5": -2.824,
+              "p95": 5.7406,
+              "mean_dropped": 9.82
+            }
+          }
+        }
+      }
+    }
+  },
+  "note": "no_headroom_trend_axis. Upper-bound scoping, NOT a promotion case: \u0394netR = net R of dropped test-block trades negated, cells selected on earlier blocks only. Pooled legs share symbols, so the pooled band is optimistic. trend (ADX-14); vol NOT covered."
+}

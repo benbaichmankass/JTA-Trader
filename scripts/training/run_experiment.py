@@ -40,6 +40,25 @@ def _safe_run(hid, fn, ctx, results_dir, results, failures, t0, max_hours):
         print(f"[{hid}] FAILED:\n{failures[hid]}")
 
 
+def _summary_row(hid, r):
+    """One SUMMARY.md table row for a hypothesis result."""
+    m = r.get("metrics", {})
+    b = r.get("baseline_metrics", {})
+    if m.get("build_signal_errors"):
+        # A raising build_signal() is a bug, not a null result (CA-B02).
+        return (
+            f'| {hid} | SIGNAL_ERRORS | build_signal raised {m["build_signal_errors"]}x; '
+            f'first: {m.get("build_signal_first_error")} — result is NOT a clean null |'
+        )
+    if "sharpe" in m:
+        delta = f' (Δ sharpe {m["sharpe"] - b.get("sharpe", 0):+.2f})'
+        return f'| {hid} | OK | sharpe={m["sharpe"]:.2f}{delta} |'
+    if "expectancy_r" in m:
+        delta = f' (Δ E[R] {m["expectancy_r"] - b.get("expectancy_r", 0):+.3f})'
+        return f'| {hid} | OK | E[R]={m["expectancy_r"]:.3f}{delta} |'
+    return f"| {hid} | OK | see results/{hid}/metrics.json |"
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-id", required=True)
@@ -78,16 +97,7 @@ def main():
         "|---|---|---|",
     ]
     for hid, r in results.items():
-        m = r.get("metrics", {})
-        b = r.get("baseline_metrics", {})
-        if "sharpe" in m:
-            delta = f' (Δ sharpe {m["sharpe"] - b.get("sharpe", 0):+.2f})'
-            lines.append(f'| {hid} | OK | sharpe={m["sharpe"]:.2f}{delta} |')
-        elif "expectancy_r" in m:
-            delta = f' (Δ E[R] {m["expectancy_r"] - b.get("expectancy_r", 0):+.3f})'
-            lines.append(f'| {hid} | OK | E[R]={m["expectancy_r"]:.3f}{delta} |')
-        else:
-            lines.append(f"| {hid} | OK | see results/{hid}/metrics.json |")
+        lines.append(_summary_row(hid, r))
     for hid in failures:
         lines.append(f"| {hid} | FAILED | see results/{hid}/FAILURE.md |")
     (results_dir / "SUMMARY.md").write_text("\n".join(lines))

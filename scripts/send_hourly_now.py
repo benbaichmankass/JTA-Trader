@@ -60,6 +60,78 @@ def _acquire_lock(lock_path: Path):
     return fh
 
 
+def _due(update: str, now) -> tuple[bool, str]:
+    try:
+        from src.runtime import telegram_settings
+        return telegram_settings.is_due(update, now)
+    except Exception as exc:  # noqa: BLE001 — a broken gate SENDS, never silences
+        return True, f"gate unreadable ({type(exc).__name__}) — sending"
+
+
+def _window(update: str, now):
+    try:
+        from src.runtime import telegram_settings
+        return telegram_settings.window_start(update, now)
+    except Exception:  # noqa: BLE001
+        from datetime import timedelta
+        return now - timedelta(hours=1)
+
+
+def _stamp(update: str, now) -> None:
+    try:
+        from src.runtime import telegram_settings
+        telegram_settings.mark_sent(update, now)
+    except Exception:  # noqa: BLE001
+        logger.warning("send_hourly_now: could not stamp %s", update)
+
+
+def send_periodic_updates(now) -> dict:
+    """Send whichever of SYSTEM health / TRADES snapshot is due. Returns
+    ``{update: outcome}``. One data sweep serves both."""
+    from src.runtime import telegram_channels
+    from src.runtime.hourly_report import (
+        assemble_hourly_data, deploy_and_alerts, render_system_health)
+
+    due = {u: _due(u, now) for u in ("system_health", "trades_snapshot")}
+    for u, (d, why) in due.items():
+        print(f"{u}: {'DUE' if d else 'not due'} ({why})")
+    if not any(d for d, _ in due.values()):
+        return {u: "not_due" for u in due}
+    since_h = _window("system_health", now)
+    report = assemble_hourly_data(now_utc=now, tick_interval_s=900, since=since_h)
+    out = {}
+    if due["system_health"][0]:
+        text = render_system_health(report, deploy_and_alerts(since_h, now))
+        print(f"--- SYSTEM health check ({len(text)} chars) ---\n{text}")
+        try:
+            ok = telegram_channels.send("system_health", text, parse_mode="HTML")
+        except Exception as exc:  # noqa: BLE001
+            # The SYSTEM route itself raised: keep the legacy scheduled path as
+            # the last rung so the health check is never silently lost.
+            logger.warning("system health HTML send failed (%s); scheduled fallback", exc)
+            from src.runtime.outcomes import send_scheduled
+            send_scheduled(text)
+            ok = True
+        out["system_health"] = "sent" if ok else "not_sent"
+        if ok:
+            _stamp("system_health", now)
+    if due["trades_snapshot"][0]:
+        from src.runtime import trades_snapshot
+        since_t = _window("trades_snapshot", now)
+        text = trades_snapshot.render(trades_snapshot.gather(since_t, now), since=since_t,
+                                      now=now, accounts=report.get("accounts"))
+        print(f"--- TRADES snapshot ({len(text)} chars) ---\n{text}")
+        try:
+            ok = telegram_channels.send("trades_snapshot", text, parse_mode="HTML")
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("trades snapshot send failed: %s", exc)
+            ok = False
+        out["trades_snapshot"] = "sent" if ok else "not_sent"
+        if ok:
+            _stamp("trades_snapshot", now)
+    return out
+
+
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     lock_path = _resolve_lock_path()
@@ -76,36 +148,16 @@ def main() -> int:
     try:
         # Lazy imports so the lock acquisition (and its failure mode)
         # surfaces a useful error before we touch the runtime modules.
-        from src.runtime.hourly_report import build_combined_hourly_report
-        from src.runtime.notify import send_telegram_direct
-        from src.runtime.outcomes import send_scheduled
-
         now = datetime.now(timezone.utc)
-        # This is the SINGLE hourly producer (the duplicate in-loop path in
-        # src/main.py was removed so the operator gets exactly one dispatch
-        # per hour — see TELEGRAM-SPEC.md § 4.1).
-        #
-        # Notification streamlining (2026-07-08): the operator wants ONE hourly
-        # message. The earlier attempt rendered the strategy + accounts halves
-        # SEPARATELY and concatenated them, but each half was already capped at
-        # Telegram's 4096-char limit, so the concatenation ran up to ~8192 and
-        # the "send as one" guard almost never held — it fell back to two
-        # messages every hour. ``build_combined_hourly_report`` renders both
-        # halves through a SINGLE ``render_html`` call, so the shared truncation
-        # guarantees the whole snapshot is exactly one Telegram message.
-        combined = build_combined_hourly_report(now_utc=now, tick_interval_s=900)
-        print(f"--- combined hourly snapshot ({len(combined)} chars) ---")
-        print(combined)
+        # TELEGRAM-CHANNELS (2026-10-11, operator): the periodic update is
+        # SPLIT BY CONTENT — the SYSTEM channel gets the HEALTH CHECK, the
+        # TRADES channel the PERFORMANCE SNAPSHOT — each at the operator's own
+        # cadence, decided by the ONE shared gate (telegram_settings.is_due).
+        # This timer still fires hourly; the gate decides what is due.
         try:
-            send_telegram_direct(combined, parse_mode="HTML")
-            print("dispatched (combined hourly snapshot).")
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(
-                "hourly combined HTML send failed (%s); falling back to scheduled",
-                exc,
-            )
-            send_scheduled(combined)
-            print("dispatched (combined, scheduled fallback).")
+            send_periodic_updates(now)
+        except Exception:  # noqa: BLE001 — the watchdog below must still run
+            logger.exception("send_hourly_now: periodic updates failed")
 
         # Liveness watchdog piggybacks on the hourly cycle (moved here from
         # the trader loop): pings when actionable signals fired but no

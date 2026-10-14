@@ -1,0 +1,19 @@
+{
+  "based_on": "20261013T145417340794Z-24157407.json",
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "a re-armed producer_failed unit keeps a null last_dispatched_at until its next real dispatch",
+    "kind": "observation"
+  },
+  "id": "PI-20261013-HOPS1447-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261013-1447 research-ops lane",
+    "rerun": "git log --format='%h %ad %s' -4 -- research/queue/RQ-20261012-75b2-19.yaml  # a stamp commit after re-arm commit 0edfd7a1 shows the race"
+  },
+  "routed_to": "RQ-REARM-PRODUCER-FAILED",
+  "state": "done",
+  "terminal_reason": "Root cause was not a stamp-landing race: stranded_stamp_adoptions re-stamped null (re-armed) units from OPEN stranded stamp PR #17809. Fixed in #17879 (cleared_on_purpose + resolver null handling). OBSERVED: dispatcher run 38427161734 (fire=true, 16:02Z, code with the fix) stamp PR #17899 did not touch RQ-20261009-903 / RQ-20261012-75b2-19; both still null on main 2744fd9a and `dispatch_queue.py` dry run reads them would_dispatch. Latent whole-file restore in the land job filed as PI-20261013-GGXCSUMP-0001.",
+  "what": "STAMP RACE UNDOES RE-ARMS: stamp PR #17853 (run 38379540767, merged 2026-10-13T14:34Z) re-stamped RQ-20261009-903 and RQ-20261012-75b2-19 with their pre-re-arm last_dispatched_at, undoing the re-arm landed by #17829 (RQ-REARM-PRODUCER-FAILED) two hours earlier; the dry run read them not_due again. This pass cleared both stamps again, but the cause stands: a stamp PR from a run started before a re-arm overwrites the cleared stamp. The stamp writer must skip a unit whose stamp was cleared after the run began."
+}

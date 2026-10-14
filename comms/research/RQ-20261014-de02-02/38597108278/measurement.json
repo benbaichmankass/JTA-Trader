@@ -1,0 +1,103 @@
+{
+  "kind": "nfp",
+  "symbol": "ES=F",
+  "snapshot_files": [
+    "comms/macro/econ_calendar_snapshots.jsonl",
+    "comms/macro/econ_calendar_snapshots_survey_backfill.jsonl"
+  ],
+  "releases": 140,
+  "releases_with_value": 140,
+  "price_bars": 5488,
+  "first_release": "2015-01-09",
+  "last_release": "2026-10-02",
+  "rows": [
+    {
+      "horizon_days": 1,
+      "n": 140,
+      "ic": -0.160283,
+      "ic_t": -1.908,
+      "overlap_factor": 1.0,
+      "n_eff": 140.0,
+      "ic_t_eff": -1.908,
+      "pearson": 0.059274,
+      "sign_hit_rate": 0.449275,
+      "mean_fwd_return": -0.000343
+    },
+    {
+      "horizon_days": 3,
+      "n": 140,
+      "ic": -0.038841,
+      "ic_t": -0.457,
+      "overlap_factor": 1.0,
+      "n_eff": 140.0,
+      "ic_t_eff": -0.457,
+      "pearson": -0.041429,
+      "sign_hit_rate": 0.489209,
+      "mean_fwd_return": 0.001954
+    },
+    {
+      "horizon_days": 5,
+      "n": 140,
+      "ic": -0.083434,
+      "ic_t": -0.984,
+      "overlap_factor": 1.0,
+      "n_eff": 140.0,
+      "ic_t_eff": -0.984,
+      "pearson": -0.216871,
+      "sign_hit_rate": 0.507246,
+      "mean_fwd_return": 0.0046
+    }
+  ],
+  "summary": {
+    "max_n": 140,
+    "min_honest_n": 12,
+    "sufficient_history": true,
+    "any_flagged_horizon": false,
+    "any_flagged_horizon_overlap_corrected": false,
+    "strongest_ic_horizon_days": 1,
+    "strongest_ic": -0.160283,
+    "strongest_ic_t": -1.908,
+    "strongest_ic_t_eff": -1.908,
+    "t_flag": 2.0,
+    "verdict": "no_edge_at_tested_horizons"
+  },
+  "rule": {
+    "primary": [
+      1,
+      3,
+      5
+    ],
+    "min_n": 100,
+    "t_bar": 2.4,
+    "expected_sign": "positive"
+  },
+  "per_horizon": [
+    {
+      "horizon_days": 1,
+      "n": 140,
+      "ic": -0.160283,
+      "ic_t_eff": -1.908,
+      "n_ok": true,
+      "t_reached": false,
+      "sign_ok": false
+    },
+    {
+      "horizon_days": 3,
+      "n": 140,
+      "ic": -0.038841,
+      "ic_t_eff": -0.457,
+      "n_ok": true,
+      "t_reached": false,
+      "sign_ok": false
+    },
+    {
+      "horizon_days": 5,
+      "n": 140,
+      "ic": -0.083434,
+      "ic_t_eff": -0.984,
+      "n_ok": true,
+      "t_reached": false,
+      "sign_ok": false
+    }
+  ]
+}

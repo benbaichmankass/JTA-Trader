@@ -208,7 +208,7 @@ DISPATCH_FAILED = "dispatch_failed"
 RUNNER_MEMORY_GB = 16.0
 TRAINER_MEMORY_GB = 6.0
 
-_ID_RE = re.compile(r"^RQ-\d{8}-[0-9]{3}$")
+_ID_RE = re.compile(r"^RQ-\d{8}-(?:[0-9]{3}|[0-9a-f]{4}-[0-9]{2})$")
 _CADENCES = ("once", "daily", "weekly", "monthly")
 _LOG = logging.getLogger(__name__)
 
@@ -691,6 +691,21 @@ def new_unit_stamp_errors(entry: Dict[str, Any]) -> List[str]:
     return []
 
 
+def _compute_doc() -> Dict[str, Any]:
+    """scripts/research/research_compute.yaml as a bare mapping ({} if unreadable).
+
+    Read directly instead of importing compute_router: the web-api's daily brief loads this module in-process,
+    and the deploy restarts the API only for the scripts/research files on its allowlist
+    (scripts/deploy_pull_restart.sh IN_PROCESS_CHANGES, Tier-2). Keeping the router out of that closure
+    means this validation needs no deploy-script change."""
+    import yaml  # noqa: PLC0415
+    try:
+        doc = yaml.safe_load((Path(__file__).resolve().parent / "research_compute.yaml").read_text(encoding="utf-8"))
+    except (OSError, yaml.YAMLError):
+        return {}
+    return doc if isinstance(doc, dict) else {}
+
+
 def validate(entry: Dict[str, Any], *, path: Optional[Path] = None,
              is_new: bool = False) -> List[str]:
     """Structural errors in one entry. An empty list means structurally valid.
@@ -738,9 +753,33 @@ def validate(entry: Dict[str, Any], *, path: Optional[Path] = None,
                                 and set(req) <= {"unit", "verdict"}):
         errs.append("`requires_result` must be {unit: RQ-YYYYMMDD-NNN[, verdict: pass|fail|...]}")
     run = entry.get("run")
-    if not isinstance(run, dict) or not run.get("workflow"):
-        errs.append("`run.workflow` is required — the dispatcher fires a workflow, "
-                    "so a job that names none cannot be dispatched")
+    compute = entry.get("compute")
+    if compute is not None:
+        # RESEARCH-ROUTER: a compute class stands in for `run.workflow`; the class table is
+        # scripts/research/research_compute.yaml and the router, not the author, picks the backend.
+        known = _compute_doc().get("classes")
+        known = sorted(known) + ["auto"] if isinstance(known, dict) else []
+        if not known:
+            errs.append("cannot read scripts/research/research_compute.yaml")
+        elif compute not in known:
+            errs.append(f"`compute` must be one of {known}, got {compute!r}")
+    val = entry.get("value")
+    if val is not None:
+        if not isinstance(val, dict) or not set(val) <= {"usd_at_stake_per_month", "confidence", "bucket", "basis"}:
+            errs.append("`value` must be a mapping of usd_at_stake_per_month / confidence / bucket / basis")
+        else:
+            u, c = val.get("usd_at_stake_per_month"), val.get("confidence")
+            if u is not None and (isinstance(u, bool) or not isinstance(u, (int, float)) or u < 0):
+                errs.append("value.usd_at_stake_per_month must be a number >= 0")
+            if c is not None and (isinstance(c, bool) or not isinstance(c, (int, float)) or not 0 <= c <= 1):
+                errs.append("value.confidence must be a number in [0, 1]")
+            if val.get("bucket") is not None:
+                buckets = (_compute_doc().get("value") or {}).get("buckets")
+                if isinstance(buckets, dict) and val["bucket"] not in buckets:
+                    errs.append(f"value.bucket {val['bucket']!r} is not a bucket in scripts/research/research_compute.yaml")
+    if not (isinstance(run, dict) and run.get("workflow")) and not compute:
+        errs.append("`run.workflow` or `compute:` is required — the dispatcher fires a workflow, "
+                    "so a job that names neither cannot be dispatched")
     lands = entry.get("lands")
     if not isinstance(lands, dict) or not lands.get("store"):
         errs.append("`lands.store` is required — R2: a run's deliverable is a LANDED "

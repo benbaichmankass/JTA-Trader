@@ -26,14 +26,16 @@ side is `None`, and `None` never passes.
 
 Each leg's full `verdicts.json` (the per-cell calibration the unit's rule reads) is
 copied under `--measurements-dir` so the record POINTS at a committed measurement
-instead of an expiring artifact.
+instead of an expiring artifact. It must live OUTSIDE `research/results/`: that store
+holds only `<unit>/<run_id>.jsonl` (research-results-guard R2/R3); whole-file JSON
+measurements go under `comms/research/<unit>/`.
 
 Tier-1: reads JSON, writes JSONL. No live path.
 
     python3 scripts/research/m27/scalp_sweep_result.py --self-test
     python3 scripts/research/m27/scalp_sweep_result.py --verdicts-dir sweep_out \\
         --legs ict_scalp_5m,ict_scalp_xrp_5m --out rr/records.jsonl \\
-        --measurements-dir research/results/RQ-20261007-004/measurements
+        --measurements-dir comms/research/RQ-20261007-004/measurements
 """
 from __future__ import annotations
 

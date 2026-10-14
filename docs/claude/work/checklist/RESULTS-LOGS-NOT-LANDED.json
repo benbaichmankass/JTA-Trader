@@ -1,0 +1,25 @@
+{
+  "id": "RESULTS-LOGS-NOT-LANDED",
+  "title": "Batch-landed research results drop logs/ (gitignored): a producer_failed run leaves no cause on main",
+  "phase": "fix",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[RESEARCH-OPS-20261012-2047] MEASURED: .gitignore:32 'logs/' ignores comms/research/RQ-20261009-903/38258786887/logs/cmd-0.log although run-manifest.json points at it; 105 older comms/research logs/ files ARE tracked. Cost: RQ-20261009-903 failed in 0.3 s and the cause had to be re-derived by running the script (it was the ICT_OFFVM_BUILD_HOST guard). Fix: have the collector land the last N lines of a failed command's log (force-add or fold into verdict note) for exit != 0 only. Clears when a producer_failed record on main carries its failing command's stderr tail.",
+  "updated_at": "2026-10-12T21:04:34Z",
+  "updated_by": "session_016F9Q3yiYHGv5UEHfzMn6Dz",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "none: lever row",
+    "arch": "none"
+  },
+  "_seq": 444
+}

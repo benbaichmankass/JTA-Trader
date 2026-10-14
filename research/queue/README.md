@@ -224,12 +224,16 @@ weight in `THEMES.yaml`, verbatim "Prop first (Recommended)".)
 
 ## Allocating a unit id (RQ-ID-ALLOCATOR)
 
-`python3 scripts/research/next_rq_id.py --fetch` prints the next free `RQ-YYYYMMDD-NNN`, counting ids already
-claimed in the working tree, on `main` AND on every `origin/*` branch (unit files and result directories).
-Picking "the next number" from your own checkout cannot see another lane's unmerged id -- that is how
-#14103 / #14131 / #14049 and #15603 collided. It is not a lock: push the unit file first (the push is the
-claim) and `--fetch` right before you allocate. `queue_replenish` does not use it (its ids must reproduce
-byte-for-byte at the merge-base for the E58 `--verify`).
+**`python3 scripts/research/next_rq_id.py --fetch`** prints a collision-free id `RQ-YYYYMMDD-<h4>-NN`: `<h4>` is
+4 hex chars hashed from your session (env session id, else branch, else random), `NN` a per-session counter from 01.
+There is no shared counter, so two lanes cannot collide (the hash differs; the allocator also skips any id already
+claimed in the tree, on `main` or on any `origin/*` branch). Never hand-pick a number or a `9xx` band.
+`--count N` mints N; `--seed X` overrides the hashed seed. Old `RQ-YYYYMMDD-NNN` ids stay valid everywhere;
+`queue_replenish` still mints `001-899` (its ids must reproduce byte-for-byte for the E58 `--verify`), and
+`--legacy` mints from the old `900-999` hand band. The `research-queue-id-bands` guard refuses a PR that adds a
+unit whose id already exists on the base (in `queue/` or `queue/blocked/`) or twice in the PR (C4), and accepts the
+hashed scheme. Known pre-existing duplicate (not renumbered, heavily referenced): `RQ-20260928-006` in both
+`queue/` (done, M20 sweep) and `queue/blocked/` (volatile-cell parity re-check).
 
 ## Running it
 
@@ -325,6 +329,16 @@ it; re-run those rather than quoting these counts.
 | `automation/*` PRs strand when their CI checks are cancelled ~15 min in; `stale-automation-sweep` refreshes but never re-requests checks, so a stranded stamp PR re-fires its units | #16656, #16657, #16124, #16654 (manager); checks on #16656 re-run by hand as a stopgap | `PI-20261006-LCEVL8D5-0001` |
 | queued units the dispatcher can never fire (`run.workflow` is a human note) or the grader can never close (hand-written, no `grading.auto`) | 2 session-bound + 4 session-graded of 308 files | `PI-20261006-LCEVL8D5-0002` |
 | the `needs_review` bucket surfaces only to a session that thinks to grep for it | 11 flagged (all statuses) | `PI-20261006-LCEVL8D5-0003` |
+
+## ML units — the same queue, a trainer-side runner (ML-RQ-RUNNER, 2026-10-11)
+
+An ML test (learner bake-off, conformal evaluation, control comparison) is an ordinary unit with an `ml_bakeoff:` block (the machine
+form of its `decision_rule`, registered with it) and `run.workflow: research-script-run-trainer.yml` (needs the trainer) or
+`research-script-run.yml` (CPU-only, data in the repo), `run.command: [python3, scripts/research/ml_bakeoff.py, --unit, '{unit}',
+--out, '{out_dir}']`. The trainer twin SSHes to the trainer, refuses to run until the trainer's checkout holds byte-identical copies
+of the unit and its scripts, runs `script_run.py` there under the venv, and uploads the same artifact the collector already lands
+(`research-script-run-trainer-<unit>-<run_id>`). Engine schema: `scripts/research/ml_bakeoff.py` docstring. The loop around it:
+`.claude/skills/frontier-research/SKILL.md` § "The research → test → improve loop".
 
 ## `run.workflow` DECLARED vs. actually `gh workflow run`-DISPATCHABLE
 

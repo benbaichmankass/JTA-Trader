@@ -1,6 +1,6 @@
 id: RQ-20261006-060
 title: "TP doctrine, real money: does a finite, venue-reachable target beat trend_donchian_eth_4h's 50R sentinel on bybit_2?"
-status: queued
+status: retired
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -122,4 +122,5 @@ related:
   - 'PI-20261006-5FUGHVX8-0001 (the ranked TP-doctrine debt list; this unit is its real-money Bybit entry)'
   - 'RQ-20260922-005 / RQ-20260830-002 (prior e35 sweeps of this leg: 0 of 199 cells cleared the gate at the SENTINEL base; this unit asks the finite-tp_r cells the reachability question those runs did not)'
   - 'docs/research/ml2-predictive-bracket-2026-09-06.md (ML-2 refuted; per-leg MFE quantile in R is the predictive-bracket answer)'
-last_dispatched_at: '2026-10-06T12:05:05+00:00'
+last_dispatched_at: '2026-10-06T13:11:27+00:00'
+retired_reason: '2026-10-11 RESEARCH-OPS-20261011-1447: superseded by RQ-20261010-419b-01, which re-ran this exact question with the gate widened (gate_top 12) after this unit''s dispatch gated only the unreachable tp6 cells. 419b-01 result (e35 corpus run stamp 2026-10-11T02:01:04Z, 24 gated cells, base_oos_trades 49): no finite tp_r <= 4.0 cell reads is_oos_pass -> honest_negative (a fixed R-multiple does not beat the sentinel OOS on trend_donchian_eth_4h); never a demotion. The doctrine answer routes to RQ-20261009-900 / PI-20261006-5FUGHVX8-0001.'

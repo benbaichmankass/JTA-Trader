@@ -55,6 +55,8 @@ EXPECTED_ACTIONS = {
     "pull-latest-logs": "pull_logs.sh",
     # PR #1698: read-only IB Gateway container status + recent logs.
     "gateway-logs": "gateway_logs.sh",
+    # Read-only restart forensics for the ib-gateway container + its watchdog/reset timers.
+    "gateway-forensics": "gateway_forensics.sh",
     "inspect-closed-pnl": "inspect_closed_pnl_action.sh",
     "bybit-account-audit": "bybit_account_audit_action.sh",
     # Read-only broker-truth audit of Bybit protective-bracket COVERAGE
@@ -155,6 +157,10 @@ EXPECTED_ACTIONS = {
     "fix-data-dir": "fix_data_dir.sh",
     "rotate-account-keys": "rotate_account_keys.sh",
     "init-diag-token": "init_diag_token.sh",
+    # UI-UPGRADE-1-AUTH-CONFIG (2026-10-12): site sign-in provisioning.
+    "init-web-session-pepper": "init_web_session_pepper.sh",   # Tier 2
+    "install-web-api-deps": "install_web_api_deps.sh",         # Tier 2
+    "passkey-enrol-code": "passkey_enrol_code_action.sh",       # Tier 1
     # 2026-05-24 bots overhaul — autonomous Claude infra.
     "send-ping": "send_ping_action.sh",   # Tier 1: immediate ping, no restart
     # 2026-06-17 — fire one TEST prop ticket through the real prop_signal path
@@ -266,6 +272,7 @@ EXPECTED_ACTIONS = {
     # backup; optional ids: / equal_only: narrowing. Void-flags ONLY the reduce
     # leg, never the parent close.
     "supersede-intent-reduce-phantom-pnl": "supersede_intent_reduce_phantom_pnl_action.sh",
+    "backfill-intent-reduce-pnl": "backfill_intent_reduce_pnl_action.sh",
     # 2026-07-06 — one-shot repair of the mis-linked ETH prop close
     # (BL-20260706-PROP-CLOSE-MISLINK; root cause fixed in #5744): relink the
     # close fill to the real position ticket, close it, restore the phantom.
@@ -276,6 +283,12 @@ EXPECTED_ACTIONS = {
     # `expired`. DRY-RUN by default; apply gated + DB backup; every other
     # transition, a non-REST account, or a ticket with fills is refused.
     "prop-ticket-expire": "prop_ticket_expire_action.sh",
+    # 2026-10-08 — PROP-REISSUE: re-issue ONE `suppressed` prop ticket whose
+    # blocking ticket is terminal, rebuilt with emission's own sizing so the
+    # executor's intake (band, expiry, guards) decides placement. DRY-RUN by
+    # default; apply gated + DB backup; every other case refused.
+    "prop-ticket-reissue": "prop_ticket_reissue_action.sh",
+    "prop-report-close": "prop_report_close_action.sh",
     # 2026-08-20 — prop-journal hygiene for fills admitted with NO direction
     # (BL-20260820-PROP-FILL-DIRECTION-ADMISSION-GAP). _position_key needs
     # (account, symbol, direction) but ingest_report only validates the first
@@ -300,6 +313,8 @@ EXPECTED_ACTIONS = {
     "velotrade-api-probe": "velotrade_api_probe_action.sh",
     # 2026-10-05 — ONE REST round trip on velotrade_1, dry unless apply=live (VELOTRADE-API-EXEC).
     "velotrade-api-roundtrip": "velotrade_api_roundtrip_action.sh",
+    # 2026-10-07 — READ-ONLY REST trade-history read (VELOTRADE-RECON).
+    "velotrade-trade-history-read": "velotrade_trade_history_read_action.sh",
     # 2026-06-30 — clear the daily_risk_state row for one account so
     # INTRADAY_DRAWDOWN counters reset without a full service restart.
     "reset-daily-risk-state": "reset_daily_risk_state.sh",
@@ -405,6 +420,8 @@ TIER_2_ACTIONS = {
     "fix-data-dir",
     "rotate-account-keys",
     "init-diag-token",
+    "init-web-session-pepper",
+    "install-web-api-deps",
     "set-env",
     "unset-env",
     "scrub-env-noncompliant",
@@ -425,14 +442,18 @@ TIER_2_ACTIONS = {
     "supersede-options-adoption-artifacts",
     "supersede-reset-orphan-artifacts",
     "supersede-intent-reduce-phantom-pnl",
+    "backfill-intent-reduce-pnl",
     "fix-prop-mislinked-close",
     "prop-ticket-expire",
+    "prop-ticket-reissue",
+    "prop-report-close",
     "repair-prop-fill-direction",
     "breakout-login-check",
     "breakout-terminal-probe",
     "egress-landing-probe",
     "velotrade-api-probe",
     "velotrade-api-roundtrip",
+    "velotrade-trade-history-read",
     "reset-daily-risk-state",
     "repair-malformed-notes",
     "repair-netted-rows",

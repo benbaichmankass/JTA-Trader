@@ -1,0 +1,22 @@
+{
+  "id": "ML-RUNPOD-RESULT-LANDING",
+  "title": "RunPod GPU-fallback runs do not land an E5 result record (research/results/<unit>/<run_id>.jsonl)",
+  "phase": "build",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Found by lane ML-DATA-OFF-TRAINER 2026-10-14. The router can now fall back class gpu -> runpod (auto_route: fallback; manifest requests only; ledger cap $10/month; dispatcher opens a gpu-burst-train issue). gpu-burst-train.yml has no step that writes the unit's result into research/results/, so a fallback run is fired and billed but its answer is not read by the collector. Fix: have the gpu-burst-train flow (or a post-step) land the E5 record, or make the fallback refuse until it does. Closes when a RunPod-run unit shows a landed result record. Until then the fallback only fires if GPU_BURST_ARMED is set (operator-armed), so exposure is bounded.",
+  "updated_at": "2026-10-14T05:14:38Z",
+  "updated_by": "session_01TLzWnNpc5nNAH52UaenHhX",
+  "roadmap": [
+    "L-OPS",
+    "M14"
+  ],
+  "_seq": 470
+}

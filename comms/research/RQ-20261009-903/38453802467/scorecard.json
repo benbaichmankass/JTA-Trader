@@ -1,0 +1,520 @@
+{
+  "calendar_resolved": {
+    "cpi_mom": 139,
+    "fomc": 88,
+    "nfp": 140
+  },
+  "definitions": {
+    "bootstrap": "percentile, 2000 resamples of paired releases, seed 20261012+horizon, 95%",
+    "consensus_surprise": "realized - calendar consensus (FOMC: consensus level - prior, in bps)",
+    "difference": "signed IC_pm - IC_consensus, as written in the rule; abs_ic_diff reported ungraded",
+    "graded_population": "last PM quote within 6 h before close_time",
+    "join": "exact: UTC date of the Kalshi close_time == calendar scheduled_for",
+    "pm_expected": "last usable two-sided yes bid/ask mid per strike with candle_end_utc <= close_time; usable = 0<=bid<=ask<=1, spread<=0.30",
+    "pm_surprise": "realized - pm_expected (realized = calendar actual; FOMC = calendar change in bps)",
+    "pooling": "within-kind percentile rank of each surprise; forward return raw",
+    "return": "ES=F close-to-close forward return, trading-day horizons, right-censored dropped"
+  },
+  "grade": {
+    "n": 68,
+    "note": "FAIL (rule: diff<=0 or interval spans zero at n>=49). h=3: diff=+0.0541 CI[-0.1634,+0.2927] interval spans 0; h=5: diff=+0.0946 CI[-0.1322,+0.3304] interval spans 0",
+    "verdict": "fail"
+  },
+  "horizons": [
+    1,
+    3,
+    5,
+    10,
+    21
+  ],
+  "join_all_last_quote": {
+    "no_exact_date": 6,
+    "no_realized_or_consensus": 0,
+    "off_by_one_day_only": 0,
+    "paired": 93,
+    "pm_events": 134,
+    "settled_checked": 78,
+    "settled_mismatch": 1,
+    "skipped_no_pm": 35,
+    "stale_dropped": 0
+  },
+  "join_graded": {
+    "no_exact_date": 5,
+    "no_realized_or_consensus": 0,
+    "off_by_one_day_only": 0,
+    "paired": 68,
+    "pm_events": 134,
+    "settled_checked": 53,
+    "settled_mismatch": 1,
+    "skipped_no_pm": 35,
+    "stale_dropped": 26
+  },
+  "n_floor": 49,
+  "per_kind": {
+    "cpi_mom": [
+      {
+        "abs_ic_diff": 0.064715,
+        "boot_hi": 0.454224,
+        "boot_lo": -0.29195,
+        "diff": 0.064715,
+        "half_diffs": [
+          0.434441,
+          -0.159782
+        ],
+        "horizon_days": 1,
+        "ic_a": 0.067532,
+        "ic_b": 0.002817,
+        "key_a": "pm_surprise",
+        "key_b": "surprise",
+        "n_boot": 2000,
+        "n_paired": 21
+      },
+      {
+        "abs_ic_diff": 0.104051,
+        "boot_hi": 0.703064,
+        "boot_lo": -0.373098,
+        "diff": 0.104051,
+        "half_diffs": [
+          -0.104937,
+          0.057422
+        ],
+        "horizon_days": 3,
+        "ic_a": 0.11039,
+        "ic_b": 0.006339,
+        "key_a": "pm_surprise",
+        "key_b": "surprise",
+        "n_boot": 2000,
+        "n_paired": 21
+      },
+      {
+        "abs_ic_diff": 0.18882,
+        "boot_hi": 0.766574,
+        "boot_lo": -0.321223,
+        "diff": 0.18882,
+        "half_diffs": [
+          -0.017599,
+          0.259838
+        ],
+        "horizon_days": 5,
+        "ic_a": 0.215584,
+        "ic_b": 0.026764,
+        "key_a": "pm_surprise",
+        "key_b": "surprise",
+        "n_boot": 2000,
+        "n_paired": 21
+      },
+      {
+        "abs_ic_diff": -0.177767,
+        "boot_hi": 0.700754,
+        "boot_lo": -0.21151,
+        "diff": 0.177767,
+        "half_diffs": [
+          0.091392,
+          0.209091
+        ],
+        "horizon_days": 10,
+        "ic_a": -0.094805,
+        "ic_b": -0.272572,
+        "key_a": "pm_surprise",
+        "key_b": "surprise",
+        "n_boot": 2000,
+        "n_paired": 21
+      },
+      {
+        "abs_ic_diff": 0.007339,
+        "boot_hi": 0.320371,
+        "boot_lo": -0.396425,
+        "diff": -0.007339,
+        "half_diffs": [
+          0.060298,
+          0.142117
+        ],
+        "horizon_days": 21,
+        "ic_a": -0.112987,
+        "ic_b": -0.105648,
+        "key_a": "pm_surprise",
+        "key_b": "surprise",
+        "n_boot": 2000,
+        "n_paired": 21
+      }
+    ],
+    "fomc": [
+      {
+        "abs_ic_diff": -0.0326,
+        "boot_hi": 0.497758,
+        "boot_lo": -0.343232,
+        "diff": 0.0326,
+        "half_diffs": [
+          -0.201226,
+          null
+        ],
+        "horizon_days": 1,
+        "ic_a": -0.299747,
+        "ic_b": -0.332347,
+        "key_a": "pm_surprise",
+        "key_b": "surprise",
+        "n_boot": 2000,
+        "n_paired": 21
+      },
+      {
+        "abs_ic_diff": -0.120776,
+        "boot_hi": 0.631552,
+        "boot_lo": -0.34594,
+        "diff": 0.120776,
+        "half_diffs": [
+          -0.243653,
+          null
+        ],
+        "horizon_days": 3,
+        "ic_a": -0.100788,
+        "ic_b": -0.221565,
+        "key_a": "pm_surprise",
+        "key_b": "surprise",
+        "n_boot": 2000,
+        "n_paired": 21
+      },
+      {
+        "abs_ic_diff": -0.088807,
+        "boot_hi": 0.597589,
+        "boot_lo": -0.445356,
+        "diff": 0.088807,
+        "half_diffs": [
+          -0.120944,
+          null
+        ],
+        "horizon_days": 5,
+        "ic_a": -0.058902,
+        "ic_b": -0.14771,
+        "key_a": "pm_surprise",
+        "key_b": "surprise",
+        "n_boot": 2000,
+        "n_paired": 21
+      },
+      {
+        "abs_ic_diff": -0.103483,
+        "boot_hi": 0.533043,
+        "boot_lo": -0.319205,
+        "diff": 0.103483,
+        "half_diffs": [
+          -0.120944,
+          null
+        ],
+        "horizon_days": 10,
+        "ic_a": -0.081154,
+        "ic_b": -0.184637,
+        "key_a": "pm_surprise",
+        "key_b": "surprise",
+        "n_boot": 2000,
+        "n_paired": 21
+      },
+      {
+        "abs_ic_diff": 0.001548,
+        "boot_hi": 0.421145,
+        "boot_lo": -0.356083,
+        "diff": -0.001548,
+        "half_diffs": [
+          0.093274,
+          null
+        ],
+        "horizon_days": 21,
+        "ic_a": -0.180584,
+        "ic_b": -0.179036,
+        "key_a": "pm_surprise",
+        "key_b": "surprise",
+        "n_boot": 2000,
+        "n_paired": 20
+      }
+    ],
+    "nfp": [
+      {
+        "abs_ic_diff": -0.026471,
+        "boot_hi": 0.131872,
+        "boot_lo": -0.064671,
+        "diff": 0.026471,
+        "half_diffs": [
+          0.054945,
+          -0.013127
+        ],
+        "horizon_days": 1,
+        "ic_a": -0.400342,
+        "ic_b": -0.426813,
+        "key_a": "pm_surprise",
+        "key_b": "surprise",
+        "n_boot": 2000,
+        "n_paired": 26
+      },
+      {
+        "abs_ic_diff": -0.023608,
+        "boot_hi": 0.167866,
+        "boot_lo": -0.109995,
+        "diff": 0.023608,
+        "half_diffs": [
+          0.076923,
+          0.019582
+        ],
+        "horizon_days": 3,
+        "ic_a": -0.030427,
+        "ic_b": -0.054036,
+        "key_a": "pm_surprise",
+        "key_b": "surprise",
+        "n_boot": 2000,
+        "n_paired": 26
+      },
+      {
+        "abs_ic_diff": 0.029733,
+        "boot_hi": 0.178391,
+        "boot_lo": -0.095631,
+        "diff": 0.029733,
+        "half_diffs": [
+          0.104396,
+          -0.041349
+        ],
+        "horizon_days": 5,
+        "ic_a": 0.061197,
+        "ic_b": 0.031464,
+        "key_a": "pm_surprise",
+        "key_b": "surprise",
+        "n_boot": 2000,
+        "n_paired": 26
+      },
+      {
+        "abs_ic_diff": 0.094582,
+        "boot_hi": 0.245178,
+        "boot_lo": -0.034736,
+        "diff": 0.094582,
+        "half_diffs": [
+          0.146853,
+          0.062472
+        ],
+        "horizon_days": 10,
+        "ic_a": 0.181538,
+        "ic_b": 0.086957,
+        "key_a": "pm_surprise",
+        "key_b": "surprise",
+        "n_boot": 2000,
+        "n_paired": 25
+      },
+      {
+        "abs_ic_diff": 0.109154,
+        "boot_hi": 0.286389,
+        "boot_lo": -0.042818,
+        "diff": 0.109154,
+        "half_diffs": [
+          0.230769,
+          0.09024
+        ],
+        "horizon_days": 21,
+        "ic_a": 0.307692,
+        "ic_b": 0.198538,
+        "key_a": "pm_surprise",
+        "key_b": "surprise",
+        "n_boot": 2000,
+        "n_paired": 25
+      }
+    ]
+  },
+  "pooled": [
+    {
+      "abs_ic_diff": 0.003852,
+      "boot_hi": 0.206804,
+      "boot_lo": -0.210227,
+      "diff": -0.003852,
+      "half_diffs": [
+        0.041898,
+        0.013252
+      ],
+      "horizon_days": 1,
+      "ic_a": -0.228556,
+      "ic_b": -0.224704,
+      "key_a": "pm_surprise",
+      "key_b": "surprise",
+      "n_boot": 2000,
+      "n_paired": 68
+    },
+    {
+      "abs_ic_diff": -0.054107,
+      "boot_hi": 0.292714,
+      "boot_lo": -0.163429,
+      "diff": 0.054107,
+      "half_diffs": [
+        -0.143521,
+        0.214447
+      ],
+      "horizon_days": 3,
+      "ic_a": -0.001642,
+      "ic_b": -0.05575,
+      "key_a": "pm_surprise",
+      "key_b": "surprise",
+      "n_boot": 2000,
+      "n_paired": 68
+    },
+    {
+      "abs_ic_diff": 0.025184,
+      "boot_hi": 0.330407,
+      "boot_lo": -0.132173,
+      "diff": 0.094556,
+      "half_diffs": [
+        -0.138876,
+        0.269251
+      ],
+      "horizon_days": 5,
+      "ic_a": 0.05987,
+      "ic_b": -0.034686,
+      "key_a": "pm_surprise",
+      "key_b": "surprise",
+      "n_boot": 2000,
+      "n_paired": 68
+    },
+    {
+      "abs_ic_diff": -0.00878,
+      "boot_hi": 0.242501,
+      "boot_lo": -0.108412,
+      "diff": 0.067121,
+      "half_diffs": [
+        -0.039816,
+        0.165122
+      ],
+      "horizon_days": 10,
+      "ic_a": 0.02917,
+      "ic_b": -0.037951,
+      "key_a": "pm_surprise",
+      "key_b": "surprise",
+      "n_boot": 2000,
+      "n_paired": 67
+    },
+    {
+      "abs_ic_diff": -0.002577,
+      "boot_hi": 0.186338,
+      "boot_lo": -0.200022,
+      "diff": -0.002577,
+      "half_diffs": [
+        -0.047724,
+        0.098284
+      ],
+      "horizon_days": 21,
+      "ic_a": 0.027732,
+      "ic_b": 0.030309,
+      "key_a": "pm_surprise",
+      "key_b": "surprise",
+      "n_boot": 2000,
+      "n_paired": 66
+    }
+  ],
+  "price_bars": 5487,
+  "registered_horizons": [
+    3,
+    5
+  ],
+  "rule_id": "RULE-RQ1009-903-PM-SURPRISE-VS-CONSENSUS",
+  "sensitivity_all_last_quote_pooled": [
+    {
+      "abs_ic_diff": -0.032348,
+      "boot_hi": 0.186127,
+      "boot_lo": -0.129781,
+      "diff": 0.032348,
+      "half_diffs": [
+        0.084,
+        0.011829
+      ],
+      "horizon_days": 1,
+      "ic_a": -0.13383,
+      "ic_b": -0.166178,
+      "key_a": "pm_surprise",
+      "key_b": "surprise",
+      "n_boot": 2000,
+      "n_paired": 93
+    },
+    {
+      "abs_ic_diff": -0.065747,
+      "boot_hi": 0.255573,
+      "boot_lo": -0.113015,
+      "diff": 0.065747,
+      "half_diffs": [
+        -0.026789,
+        0.179353
+      ],
+      "horizon_days": 3,
+      "ic_a": -0.013214,
+      "ic_b": -0.078961,
+      "key_a": "pm_surprise",
+      "key_b": "surprise",
+      "n_boot": 2000,
+      "n_paired": 93
+    },
+    {
+      "abs_ic_diff": -0.028155,
+      "boot_hi": 0.330584,
+      "boot_lo": -0.040862,
+      "diff": 0.143525,
+      "half_diffs": [
+        0.056829,
+        0.234864
+      ],
+      "horizon_days": 5,
+      "ic_a": 0.057685,
+      "ic_b": -0.08584,
+      "key_a": "pm_surprise",
+      "key_b": "surprise",
+      "n_boot": 2000,
+      "n_paired": 93
+    },
+    {
+      "abs_ic_diff": 0.092095,
+      "boot_hi": 0.275096,
+      "boot_lo": -0.012669,
+      "diff": 0.13446,
+      "half_diffs": [
+        0.177398,
+        0.122085
+      ],
+      "horizon_days": 10,
+      "ic_a": 0.113278,
+      "ic_b": -0.021182,
+      "key_a": "pm_surprise",
+      "key_b": "surprise",
+      "n_boot": 2000,
+      "n_paired": 92
+    },
+    {
+      "abs_ic_diff": 0.052682,
+      "boot_hi": 0.20884,
+      "boot_lo": -0.098815,
+      "diff": 0.052682,
+      "half_diffs": [
+        0.120088,
+        0.008493
+      ],
+      "horizon_days": 21,
+      "ic_a": 0.093226,
+      "ic_b": 0.040544,
+      "key_a": "pm_surprise",
+      "key_b": "surprise",
+      "n_boot": 2000,
+      "n_paired": 91
+    }
+  ],
+  "series": {
+    "KXCPI": {
+      "events": 63,
+      "skip_reasons": {
+        "ladder_too_thin_or_incoherent": 23
+      },
+      "skipped": 23
+    },
+    "KXFEDDECISION": {
+      "events": 28,
+      "skip_reasons": {
+        "ladder_too_thin_or_incoherent": 6
+      },
+      "skipped": 6
+    },
+    "KXPAYROLLS": {
+      "events": 43,
+      "skip_reasons": {
+        "ladder_too_thin_or_incoherent": 6
+      },
+      "skipped": 6
+    }
+  },
+  "symbol": "ES=F"
+}

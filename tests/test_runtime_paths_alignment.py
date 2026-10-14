@@ -32,21 +32,65 @@ from __future__ import annotations
 
 import importlib
 import re
+import sys
 from pathlib import Path
+
+import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
+@pytest.fixture(autouse=True)
+def _restore_router_modules():
+    """`_reload` pops and re-imports router modules under a monkeypatched DATA_DIR; without this the
+    re-imported copies (bound to a tmp_path) stayed in sys.modules for every later test on the same
+    xdist worker, so e.g. test_notify_unit_failure compared diag._LOG_FILES against a deleted tmp dir
+    (RESEARCH-PIPE-UNSTICK 2026-10-14: reproduced on pristine origin/main by running this file then
+    that one)."""
+    prefix = "src.web.api.routers."
+    snap = {k: v for k, v in sys.modules.items() if k.startswith(prefix)}
+    yield
+    pkg = sys.modules.get(prefix.rstrip("."))
+    for k in [k for k in sys.modules if k.startswith(prefix) and k not in snap]:
+        del sys.modules[k]
+        if pkg is not None and hasattr(pkg, k.rsplit(".", 1)[1]):
+            delattr(pkg, k.rsplit(".", 1)[1])      # `from pkg import mod` reads this attribute, not sys.modules
+    sys.modules.update(snap)
+    if pkg is not None:
+        for k, mod in snap.items():
+            setattr(pkg, k.rsplit(".", 1)[1], mod)
+
+
 # ─── Family 1: reader/writer alignment under env overrides ──────────
+
+
+_RELOADED: set = set()
 
 
 def _reload(module_name: str):
     """Force-reimport a module so module-level path bindings pick up
     fresh env vars set via monkeypatch."""
-    import sys
     sys.modules.pop(module_name, None)
+    _RELOADED.add(module_name)
     return importlib.import_module(module_name)
+
+
+@pytest.fixture(autouse=True)
+def _drop_reloaded_routers():
+    """A reload under a patched DATA_DIR leaves the module bound to that test's tmp path.
+    Without this, any later test in the same worker that does `from src.web.api.routers import diag`
+    gets the stale module (seen 2026-10-14: test_notify_unit_failure asserting the repo runtime_logs
+    path and getting .../test_runtime_status_reader_wri0/bot-data/...). Drop the reloaded modules, and
+    the package attribute `from pkg import sub` consults first, so the next import re-binds cleanly."""
+    yield
+    for name in sorted(_RELOADED):
+        sys.modules.pop(name, None)
+        parent, _, child = name.rpartition(".")
+        pkg = sys.modules.get(parent)
+        if pkg is not None and hasattr(pkg, child):
+            delattr(pkg, child)
+    _RELOADED.clear()
 
 
 def _runtime_log_path(module_name: str, attr: str) -> Path:

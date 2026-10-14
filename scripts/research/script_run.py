@@ -95,6 +95,17 @@ _REPO = Path(__file__).resolve().parents[2]
 _DEFAULT_QUEUE = _REPO / "research" / "queue"
 
 WORKFLOW = "research-script-run.yml"
+#: ML-RQ-RUNNER (2026-10-11): the SAME contract executed ON THE TRAINER VM over SSH — for units that need
+#: trainer-resident data, torch/lightgbm weights or the trainer's disk. Same unit shape, same verdict.json,
+#: same artifact -> collector -> record path; only WHERE the command runs differs.
+TRAINER_WORKFLOW = "research-script-run-trainer.yml"
+#: RESEARCH-ROUTER (2026-10-13): the Kaggle GPU twin -- the same contract executed inside a Kaggle kernel.
+KAGGLE_WORKFLOW = "research-script-run-kaggle.yml"
+#: ML-DATA-OFF-TRAINER (2026-10-13): the published-data twin -- a runner that first fetches the unit's private Kaggle dataset.
+DATA_WORKFLOW = "research-script-run-data.yml"
+#: KAGGLE-CPU-ROUTE (2026-10-14): the Kaggle CPU twin (published-data units; not metered by the GPU quota).
+KAGGLE_CPU_WORKFLOW = "research-script-run-kaggle-cpu.yml"
+WORKFLOWS = (WORKFLOW, TRAINER_WORKFLOW, KAGGLE_WORKFLOW, DATA_WORKFLOW, KAGGLE_CPU_WORKFLOW)
 OUT_ROOT = Path("comms") / "research"
 
 #: The only script families the runner will execute. Anchored, no `..`, no
@@ -102,7 +113,7 @@ OUT_ROOT = Path("comms") / "research"
 ALLOWED_SCRIPT_RE = re.compile(
     r"^(scripts/research/[A-Za-z0-9_\-]+\.py|scripts/backtest[A-Za-z0-9_\-]*\.py)$")
 _INTERPRETERS = ("python3", "python")
-_ID_RE = re.compile(r"^RQ-\d{8}-\d{3}$")
+_ID_RE = re.compile(r"^RQ-\d{8}-(?:\d{3}|[0-9a-f]{4}-\d{2})$")
 _RUN_ID_RE = re.compile(r"^[A-Za-z0-9_\-]{1,64}$")
 
 MIN_TIMEOUT_MIN = 10
@@ -207,8 +218,13 @@ def plan(unit: str, *, run_id: str, queue_dir: Path = _DEFAULT_QUEUE,
     if not isinstance(run, dict):
         errs.append("`run` must be a mapping")
         run = {}
-    if str(run.get("workflow") or "").strip() != WORKFLOW:
-        errs.append(f"run.workflow must be {WORKFLOW!r} for this runner, got "
+    wf_decl = str(run.get("workflow") or "").strip()
+    # A unit may declare `compute:` instead of a workflow; the dispatcher picks the backend, and every
+    # backend of a script-run class runs this same contract, so the command is checked either way.
+    if wf_decl == "" and raw.get("compute"):
+        pass
+    elif wf_decl not in WORKFLOWS:
+        errs.append(f"run.workflow must be one of {WORKFLOWS!r} for this runner, got "
                     f"{run.get('workflow')!r}")
     if "command" in run and "commands" in run:
         errs.append("declare `run.command` (one argv) OR `run.commands` (a list of argv), not both")
@@ -263,9 +279,58 @@ def units_targeting_runner(queue_dir: Path = _DEFAULT_QUEUE) -> List[str]:
         except (OSError, UnicodeDecodeError, yaml.YAMLError):
             continue
         run = raw.get("run") if isinstance(raw, dict) else None
-        if isinstance(run, dict) and str(run.get("workflow") or "").strip() == WORKFLOW:
+        if isinstance(run, dict) and str(run.get("workflow") or "").strip() in WORKFLOWS:
             out.append(p.stem)
     return out
+
+
+# ── trainer stale-checkout guard (research-script-run-trainer.yml) ──────────
+#: Keys the dispatcher rewrites AFTER firing (the stamp PR). They are excluded from a unit's content hash:
+#: the runner hashes the unit at dispatch, the trainer may sync a moment after the stamp lands, and a raw
+#: byte hash would then never match -- a stall that looks like a stale checkout but is only the stamp.
+_STAMP_KEYS = ("last_dispatched_at",)
+
+
+def content_hash(path: Path) -> str:
+    """sha256 of a file's bytes; for a queue-unit YAML, of its canonical JSON minus the dispatcher's stamp."""
+    import hashlib
+    data = path.read_bytes()
+    if path.suffix in (".yaml", ".yml") and path.parent.name in ("queue", "blocked"):
+        import yaml
+        raw = yaml.safe_load(data.decode("utf-8")) or {}
+        if isinstance(raw, dict):
+            for k in _STAMP_KEYS:
+                raw.pop(k, None)
+        data = json.dumps(raw, sort_keys=True, default=str).encode("utf-8")
+    return hashlib.sha256(data).hexdigest()
+
+
+def hash_manifest(p: Plan, *, repo: Path = _REPO) -> List[str]:
+    """``<sha256>:<repo-relative path>`` for the unit, this runner and every script the plan will execute."""
+    paths = {f"research/queue/{p.unit}.yaml", "scripts/research/script_run.py"}
+    for argv in p.commands:
+        paths.add(argv[1])
+        if argv[1].endswith("ml_bakeoff.py"):
+            paths.add("scripts/ml/_heavy_queue.py")
+    return [f"{content_hash(repo / rel)}:{rel}" for rel in sorted(paths)]
+
+
+def verify_manifest(tokens: List[str], *, repo: Path = _REPO) -> List[str]:
+    """Return the paths whose local content hash differs from (or is missing against) the manifest."""
+    bad: List[str] = []
+    for tok in tokens:
+        want, _, rel = tok.partition(":")
+        if not rel or ".." in rel or rel.startswith("/") or not re.fullmatch(r"[0-9a-f]{64}", want):
+            bad.append(rel or tok)
+            continue
+        try:
+            have = content_hash(repo / rel)
+        except OSError:
+            bad.append(rel)
+            continue
+        if have != want:
+            bad.append(rel)
+    return bad
 
 
 # ── execution ───────────────────────────────────────────────────────────────
@@ -333,6 +398,23 @@ def execute(p: Plan, *, repo: Path = _REPO) -> Dict[str, Any]:
 
 
 # ── record derivation ───────────────────────────────────────────────────────
+def manifest_mismatch(manifest: Any, unit: str, run_id: str) -> List[str]:
+    """Why a run-manifest does NOT belong to `comms/research/<unit>/<run_id>/` (empty = it does).
+
+    The one predicate behind the kaggle runner's post-fetch verify and the guard's R4 (all backends). A
+    manifest is written from the plan's own unit and out_dir, so a disagreement with the directory it sits in
+    means the files came from another run -- 2026-10-13: a Kaggle kernel that mounted a stale dataset version
+    executed the PREVIOUS run's spec and its output was filed under the new run's directory."""
+    if not isinstance(manifest, dict):
+        return ["run-manifest.json is not a JSON object"]
+    out = []
+    if manifest.get("unit") != unit:
+        out.append(f"manifest unit {manifest.get('unit')!r} != directory unit {unit!r}")
+    if str(manifest.get("run_id")) != str(run_id):
+        out.append(f"manifest run_id {manifest.get('run_id')!r} != directory run_id {run_id!r}")
+    return out
+
+
 def _read_json(path: Path) -> Optional[Dict[str, Any]]:
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
@@ -414,7 +496,11 @@ def derive_record(p: Plan, *, repo: Path = _REPO) -> Dict[str, Any]:
         rpath = out_dir / "records.jsonl"
         with rpath.open("w", encoding="utf-8") as fh:
             for r in records:
-                fh.write(json.dumps(r) + "\n")
+                # A fanned-out row inherits the run's declared read_state when it names none: the
+                # emitter refuses a row without one, and the collector then reported the whole run
+                # `lost` (RQ-20261007-005..008, pairs_configured_stage0). Nothing is invented -- the
+                # run's own verdict.json said `measured`; a row that names its own state keeps it.
+                fh.write(json.dumps({"read_state": rs, **r}) + "\n")
         base["records_file"] = (p.out_dir / "records.jsonl").as_posix()
         base["min_rows"] = str(len(records))
     return base
@@ -470,7 +556,7 @@ def _self_test() -> int:
             "import json,sys,os\n"
             "out=sys.argv[sys.argv.index('--out')+1]\nos.makedirs(out,exist_ok=True)\n"
             "json.dump({'verdict':'pass','read_state':'measured','population':'p','n':3,"
-            "'measurement':{'x':1},'records':[{'verdict':'pass','read_state':'measured',"
+            "'measurement':{'x':1},'records':[{'verdict':'pass',"
             "'population':'leg a','n':3}]}, open(os.path.join(out,'verdict.json'),'w'))\n")
         (repo / "scripts" / "research" / "_st_silent.py").write_text("print('ran')\n")
         (repo / "scripts" / "research" / "_st_fail.py").write_text("import sys; sys.exit(3)\n")
@@ -491,6 +577,8 @@ def _self_test() -> int:
         rec = derive_record(p, repo=repo)
         assert rec["verdict"] == "pass" and rec["read_state"] == "measured" and rec["n"] == "3", rec
         assert rec["records_file"].endswith("records.jsonl") and rec["min_rows"] == "1", rec
+        # a fanned-out row that names no read_state inherits the run's (RESEARCH-PIPE-UNSTICK)
+        assert json.loads((repo / rec["records_file"]).read_text().splitlines()[0])["read_state"] == "measured"
         assert (repo / rec["measurement_file"]).is_file()
         assert rec["decision_rule_id"] == "RULE-ST"
 
@@ -579,11 +667,23 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--derive-record", action="store_true",
                     help="print (and append to $GITHUB_OUTPUT) the research-result inputs, and write them "
                          "to <out_dir>/record-inputs.json so the batch collector can land the record")
+    ap.add_argument("--hashes", action="store_true",
+                    help="print the content-hash manifest (<sha256>:<path> ...) the trainer must match before it runs")
+    ap.add_argument("--verify-hashes", default=None, metavar="MANIFEST",
+                    help="exit 0 iff every '<sha256>:<path>' token matches this checkout; exit 6 and list the "
+                         "differing paths otherwise (the trainer's stale-checkout guard)")
     ap.add_argument("--power-state", default="",
                     help="the dispatcher's computed R4 label, recorded verbatim in record-inputs.json")
     args = ap.parse_args(argv)
     if args.self_test:
         return _self_test()
+    if args.verify_hashes is not None:
+        bad = verify_manifest(args.verify_hashes.split())
+        if bad:
+            print("STALE_CHECKOUT: not byte-identical:" + " ".join(bad))
+            return 6
+        print("checkout matches the manifest")
+        return 0
     if not args.unit:
         ap.error("--unit is required")
     p = plan(args.unit, run_id=args.run_id, queue_dir=Path(args.queue_dir).resolve())
@@ -591,6 +691,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         for e in p.errors:
             print(f"::error::{args.unit}: {e}", file=sys.stderr)
         return 1
+    if args.hashes:
+        print(" ".join(hash_manifest(p)))
+        return 0
     if args.check:
         print(f"{args.unit}: OK — {len(p.commands)} command(s), timeout {p.timeout_minutes} min, "
               f"out {p.out_dir.as_posix()}, rule {p.rule_id} ({p.rule_registered_at})")

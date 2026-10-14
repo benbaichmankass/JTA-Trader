@@ -1,0 +1,30 @@
+{
+  "id": "COMPUTE-GH-FIRST",
+  "title": "COMPUTE-GH-FIRST: compute review recommendation",
+  "phase": "process",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Route research units to GitHub runners by default; make the trainer SSH route explicit and non-colliding (tag runner vs needs_trainer_data, read why 4 of 11 research-script-run-trainer runs failed, keep them off the cycle/sweep windows). Source: docs/plans/COMPUTE-ARCH-REVIEW-2026-10-13.md (ranked recommendations). [2026-10-13 RESEARCH-ROUTER lane] CAUSE OF THE FAILED TRAINER RUNS, READ FROM THE FIELD (comms/research/<unit>/<run>/run-manifest.json on main): runs 38336079476 (RQ-20261012-75b2-20) and 38353918962 (75b2-21) each show cmd 0 exit=None timed_out=true seconds=2700 = the units' own timeout_minutes 45 killed an ml_bakeoff on the 1-OCPU trainer; 38329024424 (75b2-19) has the same ~45 min signature (manifest not collected). 38258786887 (41 s) was a producer bug (off-VM env), already fixed in pm_surprise_eval.py. NOT shown: whether the bake-offs were slow because they ran inside the 00:05Z cycle/04:00Z sweep windows or are simply >45 min of CPU on 1 OCPU -- cmd-0.log not read. SECOND DEFECT FOUND AND FIXED: the trainer SSH step ran under GitHub's default bash -e (set -uo pipefail does not clear -e), so a non-zero ssh skipped the rc= output and the tail of /tmp/out.txt (summary showed '(rc=)') -- that is why the cause stayed unread. Fixed with set +e (PR in flight). ROUTING: compute classes make the choice explicit (needs_vm_data -> trainer, max_concurrent 1; everything else -> runner), so GitHub runners are the default. Closes (state landed_unproven) when the next trainer failure prints its rc and trainer output in the job log.",
+  "updated_at": "2026-10-13T12:24:00Z",
+  "updated_by": "session_0152EFvvZYHZhJrsuocihAGg",
+  "roadmap": [
+    "M40"
+  ],
+  "observation": {
+    "what": "Route research units to GitHub runners by default; make the trainer SSH route explicit and non-colliding (tag runner vs needs_trainer_data, read why 4 of 11 research-script-run-trainer runs failed, keep them off the cycle/sweep windows)",
+    "how_to_check": "research-script-run-trainer failure rate over the last 20 runs and the cause of the 10-13 45-min failures; units tagged; none queued behind the 00:00-06:00Z cycle",
+    "due_by": "2026-10-27"
+  },
+  "_seq": 447,
+  "writeback": {
+    "roadmap": "M40 where/next: research units default to GitHub runners via compute classes; trainer route explicit (needs_vm_data, max 1) and its SSH step now prints rc + trainer output",
+    "arch": "none: Tier-1 research tooling; no architecture change"
+  }
+}

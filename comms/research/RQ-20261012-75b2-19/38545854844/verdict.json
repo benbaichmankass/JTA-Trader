@@ -1,0 +1,232 @@
+{
+  "verdict": "indeterminate",
+  "read_state": "measured",
+  "n": 36000,
+  "population": "1 group(s) ['ALL']; baseline lgbm; candidates ['hgb']; metric macro_f1; n = baseline OOS test rows summed over groups; cv folds per group >= 5",
+  "note": "between the pass bar and the fail floor",
+  "measurement": {
+    "engine": "scripts/research/ml_bakeoff.py",
+    "metric": "macro_f1",
+    "higher_is_better": true,
+    "delta_sign": "positive = learner better than reference",
+    "baseline": "lgbm",
+    "controls": [
+      "prior"
+    ],
+    "candidates": [
+      "hgb"
+    ],
+    "arm_status": {
+      "prior": "ok",
+      "lgbm": "ok",
+      "hgb": "ok"
+    },
+    "groups": {
+      "ALL": {
+        "n_rows": 60000,
+        "classes": [
+          "range",
+          "volatile"
+        ],
+        "arms": {
+          "prior": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.48501537801301764,
+                  0.4906261054120976,
+                  0.48769033727052796,
+                  0.49473684210526314,
+                  0.48663101604278075
+                ],
+                "n_test_rows": 36000
+              },
+              "holdout": {
+                "fold_metric": [],
+                "n_test_rows": 0
+              }
+            }
+          },
+          "lgbm": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.5094709008651745,
+                  0.5293761885100517,
+                  0.5331764705882354,
+                  0.5134961107511795,
+                  0.5083958556627367
+                ],
+                "n_test_rows": 36000
+              },
+              "holdout": {
+                "fold_metric": [],
+                "n_test_rows": 0
+              }
+            }
+          },
+          "hgb": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.5406258972150445,
+                  0.5229657036782631,
+                  0.5713045297418275,
+                  0.5071365827871427,
+                  0.5063725308557445
+                ],
+                "n_test_rows": 36000
+              },
+              "holdout": {
+                "fold_metric": [],
+                "n_test_rows": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "deltas": {
+      "ALL": {
+        "cv": {
+          "prior": {
+            "lgbm": {
+              "n_folds": 5,
+              "mean": -0.029843169506738154,
+              "ci95": [
+                -0.044283365909687455,
+                -0.01540297310378885
+              ],
+              "sign_consistent": true
+            },
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "sign_consistent": false
+            }
+          },
+          "hgb": {
+            "lgbm": {
+              "n_folds": 5,
+              "mean": 0.0108979435801289,
+              "ci95": [
+                -0.01627418038515442,
+                0.03807006754541222
+              ],
+              "sign_consistent": false
+            },
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.04074111308686705,
+              "ci95": [
+                0.004685146633786649,
+                0.07679707953994745
+              ],
+              "sign_consistent": true
+            }
+          }
+        },
+        "holdout": {
+          "prior": {
+            "lgbm": {
+              "n_folds": 0,
+              "mean": null,
+              "ci95": null
+            },
+            "prior": {
+              "n_folds": 0,
+              "mean": null,
+              "ci95": null
+            }
+          },
+          "hgb": {
+            "lgbm": {
+              "n_folds": 0,
+              "mean": null,
+              "ci95": null
+            },
+            "prior": {
+              "n_folds": 0,
+              "mean": null,
+              "ci95": null
+            }
+          }
+        }
+      }
+    },
+    "rule_evaluation": {
+      "verdict": "indeterminate",
+      "why": "between the pass bar and the fail floor",
+      "candidates": {
+        "hgb": {
+          "evaluated": true,
+          "passes_all": false,
+          "clauses": [
+            {
+              "holds": true,
+              "what": "['ALL'] >= 0.01 vs lgbm/cv"
+            },
+            {
+              "holds": false,
+              "what": "['ALL'] >= 0.0 vs lgbm/holdout"
+            }
+          ]
+        }
+      }
+    },
+    "headline_checks": [],
+    "licences": {
+      "prior": {
+        "kind": "prior",
+        "licence": "n/a",
+        "research_only": false,
+        "weights": ""
+      },
+      "lgbm": {
+        "kind": "lightgbm",
+        "licence": "MIT",
+        "research_only": false,
+        "weights": ""
+      },
+      "hgb": {
+        "kind": "sklearn_hgb",
+        "licence": "BSD-3-Clause",
+        "research_only": false,
+        "weights": ""
+      }
+    },
+    "n_folds_cv_min_over_groups": 5,
+    "seconds": 20.3
+  }
+}

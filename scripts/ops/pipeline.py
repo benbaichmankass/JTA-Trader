@@ -565,6 +565,17 @@ def append(item: dict, store: Path = STORE, *, intent: str,
     a caller mid-transition cannot silently start a second store.
     """
     validate(item)
+    # ROUTE-20261012: `routed_to` on a non-routed item is invisible to
+    # unrouted() (which keys on state alone), so the item stays "unrouted"
+    # while its record claims an owner (PI-20261011-YJAYF7GD-0001..4 were
+    # filed that way). Refused on NEW writes only; legacy records are not
+    # re-validated for it, so --check stays green.
+    if str(item.get("routed_to") or "").strip() and \
+            item["state"] not in ("routed",) + tuple(TERMINAL_STATES):
+        raise PipelineError(
+            f"id {item['id']!r}: routed_to={item['routed_to']!r} but "
+            f"state={item['state']!r} -- unrouted() keys on state, so this item "
+            f"would still count as unrouted. Set state='routed' (or drop routed_to).")
     if intent not in ("new", "update"):
         raise PipelineError(f"intent: must be 'new' or 'update', got {intent!r}")
 
@@ -1094,8 +1105,17 @@ def _check_git_merge_safety(check) -> None:
     import subprocess
 
     def git(*args: str, cwd: Path) -> subprocess.CompletedProcess:
+        # `-c gc.auto=0 -c maintenance.auto=false`: a `git merge` may fork a
+        # background `git gc --auto` into the throwaway repo, and that process
+        # can still be writing `.git/objects` while TemporaryDirectory tears
+        # the tree down -- MEASURED on PR #16964's guards job (run 37671602666,
+        # 2026-10-07): `OSError: [Errno 39] Directory not empty: 'objects'`
+        # from the cleanup, with every merge assertion already passed. The
+        # control is about merge semantics, not garbage collection, so
+        # background maintenance is switched off for these calls.
         return subprocess.run(
-            ["git", *args], cwd=str(cwd), capture_output=True, text=True)
+            ["git", "-c", "gc.auto=0", "-c", "maintenance.auto=false", *args],
+            cwd=str(cwd), capture_output=True, text=True)
 
     def base(**over: Any) -> dict:
         item = {
@@ -1116,7 +1136,9 @@ def _check_git_merge_safety(check) -> None:
         return
 
     for order in ("a-then-b", "b-then-a"):
-        with tempfile.TemporaryDirectory() as td:
+        # ignore_cleanup_errors: the assertions above are the control; a
+        # cleanup race on the throwaway repo must not read as a failed guard.
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
             repo = Path(td)
             git("init", "-q", "-b", "main", cwd=repo)
             git("config", "user.email", "test@example.invalid", cwd=repo)
@@ -1304,6 +1326,13 @@ def _selftest() -> int:
         append(base(id="X", state="routed", routed_to="A7"), store, intent="update",
                based_on=version_of("X", store))
         append(base(id="Y"), store, intent="new")
+        try:
+            append(base(id="Z", state="queued", routed_to="A7"), store, intent="new")
+        except PipelineError as exc:
+            check("routed_to on a non-routed item is refused on append (ROUTE-20261012)",
+                  "unrouted" in str(exc))
+        else:
+            check("routed_to on a non-routed item is refused on append (ROUTE-20261012)", False)
         res = read_log(store)
         check("two records for one id fold to the LAST (append-only state)",
               res.items["X"]["state"] == "routed")

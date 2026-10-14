@@ -1,0 +1,32 @@
+{
+  "id": "AUTO-LANDING-FILES",
+  "title": "scripts/ops/land_pr.py <branch> writes pr-landing, pr-automerge-requests and merge-slot files with the right s",
+  "phase": "automation",
+  "state": "landed_unproven",
+  "owner": "AUTO-WAVE1 lane",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    17842
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-13 AUTO-WAVE1] scripts/ops/land_pr.py <branch> --held-by S --why W writes the three landing files via the guard own branch_slug/claim helpers and tier lists; tier can only be raised; holds write no arming file. tests/test_land_pr.py runs the real pr-landing check on each output. Built, not yet observed in live use.",
+  "updated_at": "2026-10-13T10:00:32Z",
+  "updated_by": "session_AUTO-WAVE1",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "observation": {
+    "what": "AUTO-LANDING-FILES built and measured against its estimate",
+    "how_to_check": "a scratch branch passes pr-landing-guard using only the script output",
+    "due_by": "2026-10-27"
+  },
+  "writeback": {
+    "roadmap": "none: ops tooling, no milestone status change",
+    "arch": "none: no contract change"
+  },
+  "_seq": 450
+}

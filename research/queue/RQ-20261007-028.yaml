@@ -1,7 +1,7 @@
 id: RQ-20261007-028
 title: 'Tradeify 247 1-Step prop fit on the 730d record: ict_scalp_eth_15m at flat 0.5% and 0.75% of balance, n=151 (re-price
   of the UNDERPOWERED 2026-10-04 unit; PI-20261004-UQ9JJPRQ-0001)'
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 1
@@ -86,8 +86,6 @@ lands:
   store: research/results/
   assert_field: read_state
   min_rows: 1
-grading:
-  auto: true
 related:
 - PI-20261004-UQ9JJPRQ-0001
 - comms/strategy_evidence/runs/2026-10-02-730d/ict_scalp_eth_15m.json
@@ -96,3 +94,17 @@ related:
 - RQ-20261004-761
 - RQ-20261004-763
 - config/prop_rulesets/tradeify_247_1step.yaml
+last_dispatched_at: '2026-10-08T13:00:28+00:00'
+grading:
+  auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-RQ1007-TRADEIFY-FIT-730D-ict_scalp_eth_15m
+  evidence:
+  - research/results/RQ-20261007-028/37774153005.jsonl
+  first_fail: 1 row(s), all measured, all fail
+  graded_at: '2026-10-09'
+  grader: scripts/research/queue_grade.py
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

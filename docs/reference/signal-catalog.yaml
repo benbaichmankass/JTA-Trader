@@ -27,7 +27,7 @@ unguarded_surfaces:
 - 'hand-built live feature rows: src/units/strategies/vwap.py, ict_scalp.py, turtle_soup.py, src/runtime/advisory_sizing.py'
 - entry/exit head feature lists live in VM artifact JSON (scripts/ml/train_exit_head.py FEATURES*, train_entry_head.py FEATURES*), not git
 - hardcoded regime constants (src/runtime/regime/detector.py ADX cut-points)
-- config/news_feeds.yaml feed URLs; scripts/macro producer names
+- config/news_feeds.yaml feed URLs; scripts/macro producer names (incl. pm_snapshot_collect.py -> pm.* entries are hand-catalogued)
 - macro_series ids referenced inside macro_valuation inputs / macro_events events[].series
 health_vocabulary:
   measured: a per-input metric is served on an API/diag route
@@ -35,12 +35,12 @@ health_vocabulary:
   batch_level_only: producer-level liveness/vacuity, not per input
   unmeasured: no null-rate or staleness metric exists for this input today (provenance.UNMEASURED_MARKER = "unmeasured"; never read as healthy)
 population:
-  inputs: 333
+  inputs: 334
   by_family_kind:
     ml/ml_feature: 105
     regime_macro/cross_asset: 6
     regime_macro/crowding: 1
-    regime_macro/event_calendar: 19
+    regime_macro/event_calendar: 20
     regime_macro/macro_series: 54
     regime_macro/ml_output: 3
     regime_macro/news: 31
@@ -186,10 +186,10 @@ strategy_modules:
     candle_columns: []
     runtime_imports: []
     legs:
-      pair_sleeves: 4
-      live: 2
+      pair_sleeves: 5
+      live: 3
       shadow: 2
-      account: config/pairs.yaml::account_id (bybit_1)
+      account: config/pairs.yaml::account_id (bybit_1) + per-pair account_id (pairs_gld_gdx -> alpaca_paper)
       note: isolated order path via run_pairs_tick; not in strategies.yaml or any accounts.yaml roster
   pairs_executor:
     file: src/units/strategies/pairs_executor.py
@@ -205,20 +205,34 @@ strategy_modules:
     - src.runtime.provenance
     - src.runtime.runtime_flags
     legs:
-      pair_sleeves: 4
-      live: 2
+      pair_sleeves: 5
+      live: 3
       shadow: 2
-      account: config/pairs.yaml::account_id (bybit_1)
+      account: config/pairs.yaml::account_id (bybit_1) + per-pair account_id (pairs_gld_gdx -> alpaca_paper)
+      note: isolated order path via run_pairs_tick; not in strategies.yaml or any accounts.yaml roster
+  pairs_venue:
+    file: src/units/strategies/pairs_venue.py
+    candle_columns:
+    - close
+    - timestamp
+    runtime_imports:
+    - src.runtime.broker_shorting_gate
+    - src.runtime.market_data
+    legs:
+      pair_sleeves: 5
+      live: 3
+      shadow: 2
+      account: config/pairs.yaml::account_id (bybit_1) + per-pair account_id (pairs_gld_gdx -> alpaca_paper)
       note: isolated order path via run_pairs_tick; not in strategies.yaml or any accounts.yaml roster
   pairs_sizing:
     file: src/units/strategies/pairs_sizing.py
     candle_columns: []
     runtime_imports: []
     legs:
-      pair_sleeves: 4
-      live: 2
+      pair_sleeves: 5
+      live: 3
       shadow: 2
-      account: config/pairs.yaml::account_id (bybit_1)
+      account: config/pairs.yaml::account_id (bybit_1) + per-pair account_id (pairs_gld_gdx -> alpaca_paper)
       note: isolated order path via run_pairs_tick; not in strategies.yaml or any accounts.yaml roster
   regime:
     file: src/units/strategies/regime.py
@@ -264,6 +278,7 @@ strategy_modules:
     - src.runtime.exit_levers
     - src.runtime.position_telemetry
     - src.runtime.target_extension_soak
+    - src.runtime.tp_revision
     - src.runtime.tp_venue_cap
     - src.runtime.trail_decay
     - src.runtime.trail_vol
@@ -2989,7 +3004,7 @@ inputs:
   - src/units/strategies/pairs_executor.py:1241
   - src/units/strategies/pairs_executor.py:206
   timeframe: live
-  freshness: read-only sqlite (mode=ro); unreadable/absent -> skip_state_unreadable soak event + hourly alert (_STATE_ALERT_COOLDOWN_S=3600)
+  freshness: read-only sqlite (mode=ro); unreadable/absent -> state rebuilt from the open leg rows (persisted to runtime_logs/pairs_rebuilt_state.json) so exits keep evaluating; WARN on first, ONE red flag after 3 consecutive (_state_streak, NO-HALT 2026-10-09)
   used_by:
   - pairs_executor
   health:
@@ -8358,3 +8373,21 @@ inputs:
     state: unmeasured
     detail: unmeasured
   keying: n/a
+- id: pm.macro_markets
+  name: prediction-market macro snapshots (Kalshi + Polymarket)
+  family: regime_macro
+  kind: event_calendar
+  definition: implied probability (yes bid/ask mid) for curated Fed-decision, fed-funds, CPI, NFP and recession markets; append-only PIT lines with collected_at_utc and content_hash
+  source: Kalshi public REST /markets; Polymarket gamma /public-search (unauthenticated, read-only)
+  read_at:
+  - scripts/macro/pm_snapshot_collect.py
+  - config/pm_markets.yaml
+  - <data_dir>/pm_snapshots/YYYY-MM.jsonl (trainer VM; not in git)
+  timeframe: every 6h (deploy/trainer/ict-pm-snapshot.timer on the trainer VM)
+  freshness: collected_at_utc per line; timer OnCalendar 00,06,12,18:17 UTC
+  used_by:
+  - none yet (data accrual only; PM-SURPRISE-EVAL consumes it later)
+  health:
+    state: unmeasured
+    detail: unmeasured (no null-rate or staleness metric served)
+  keying: hand-catalogued (scripts/macro producers are an unguarded surface)

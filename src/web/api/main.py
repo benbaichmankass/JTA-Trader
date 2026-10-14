@@ -7,11 +7,13 @@ from __future__ import annotations
 
 import os
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.web.api.routers import accounts as accounts_router
 from src.web.api.routers import auth as auth_router
+from src.web.api.routers import auth_google as auth_google_router
+from src.web.api import auth as auth_module
 from src.web.api.routers import attribution as attribution_router
 from src.web.api.routers import backtests as backtests_router
 from src.web.api.routers import bot_config as bot_config_router
@@ -42,6 +44,7 @@ from src.web.api.routers import pnl_exchange as pnl_exchange_router
 from src.web.api.routers import pnl_broker_truth as pnl_broker_truth_router
 from src.web.api.routers import pnl_history as pnl_history_router
 from src.web.api.routers import reports as reports_router
+from src.web.api.routers import research_catalog as research_catalog_router
 from src.web.api.routers import roadmap as roadmap_router
 from src.web.api.routers import runtime_config as runtime_config_router
 from src.web.api.routers import shadow as shadow_router
@@ -54,7 +57,13 @@ from src.web.api.routers import trades_closed as trades_closed_router
 from src.web.api.routers import training_center as training_center_router
 from src.web.api.routers import work as work_router
 
-app = FastAPI(title="ICT Trading Bot — Dashboard API", version="0.2.0")
+# UI-UPGRADE-1-AUTH: the whole-site gate is an APP-LEVEL dependency (so it covers
+# every router and WS /ws/market) that is a no-op until SITE_AUTH_ENFORCE is set.
+app = FastAPI(
+    title="ICT Trading Bot — Dashboard API",
+    version="0.2.0",
+    dependencies=[Depends(auth_module.require_site_session)],
+)
 
 _dashboard_origin = os.environ.get("DASHBOARD_ORIGIN", "")
 _origins = ["http://localhost:5173", "http://localhost:3000"]
@@ -85,6 +94,7 @@ app.include_router(status_router.router)
 app.include_router(pnl_router.router)
 app.include_router(pnl_history_router.router)
 app.include_router(auth_router.router)
+app.include_router(auth_google_router.router)
 app.include_router(dashboard_router.router)
 app.include_router(bot_config_router.router)
 app.include_router(accounts_router.router)
@@ -120,6 +130,7 @@ app.include_router(pairs_router.router)
 app.include_router(prop_router.router)
 app.include_router(reports_router.router)
 app.include_router(roadmap_router.router)
+app.include_router(research_catalog_router.router)
 app.include_router(runtime_config_router.router)
 app.include_router(learning_router.router)
 app.include_router(market_ws_router.router)

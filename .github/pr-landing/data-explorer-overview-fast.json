@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Held for manager review: the guard cannot certify src/web/api/routers/db_explorer.py. READ-ONLY change to the existing session-gated GET /api/bot/db/overview: each table's COUNT(*) now has a 4 s budget enforced by Connection.interrupt() from a timer thread (tested against a real 1.5M-row table: interrupted, connection still usable, ample budget returns the exact count); on timeout rows is null with rowsState 'count_timed_out' and rowsEstimate = MAX(rowid) labelled 'max_rowid_upper_bound' (an upper bound, never an exact count); empty stays null (unknown, not 'not empty'). Adds countMs per table, elapsedMs, summary.countTimedOut, and ONE INFO journal line per cache build (the only latency record this endpoint has). Cache 120 s fresh / 3600 s stale-while-revalidate (was 60/600). No new route, no write, no secret, gate unchanged. NOT measured: the real authenticated latency on the VM (the diag relay is a fixed read allowlist and uvicorn's access log has no latency) - the new journal line makes it readable after the next authenticated load.",
+  "why": "DATA-EXPLORER: the operator's first real render showed the Database-health panel loading slowly (signals ~4.07M rows, trade_journal 1.9 GB)."
+}

@@ -1908,12 +1908,21 @@ class TestStuckStrategyWatchdog:
         ), patch(
             "src.units.accounts.clients.account_closed_pnl_for_trade",
             return_value=None,
-        ):
+        ), patch(
+            "src.runtime.order_monitor._cancel_resting_protection_after_flat",
+        ) as cancel_spy:
             summary = _watchdog_to_close(tmp_db)
 
         assert summary["auto_cleared"] == 1
         assert summary["recovered_closed"] == 0
         assert summary["closed_local_unmatched"] == 1
+        # CA-A01-001 / PI-20260927-JT7JW9CR-0001: finalising a flat row must
+        # also cancel its resting broker protection (trade 5836 left
+        # oca-protect-t5836 resting GTC). Exactly once, scoped to this trade.
+        assert cancel_spy.call_count == 1
+        args, kwargs = cancel_spy.call_args
+        assert args[:2] == ("bybit_2", "BTCUSDT")
+        assert kwargs.get("trade_id") == trade_id
         assert summary["errors"] == 0
 
         trade = _read_trade_full(tmp_db, trade_id)
@@ -2887,7 +2896,13 @@ class TestExitPriceFromClosedPnl:
         assert call["qty"] == pytest.approx(0.005), (
             "position_size not propagated: got %s (was 0.0 pre-fix)" % call["qty"]
         )
-        assert call["entry_price"] == pytest.approx(80000.0), (
+        # WATCHDOG-PAST-STOP (2026-10-10): the matcher now receives the entry
+        # ORDER's average fill (80123.45 in `_filled_status`), not the journal's
+        # intended 80000.0 — the venue's closed-pnl record carries the fill, and
+        # comparing it with the intended entry dropped real bybit_2 stop-outs
+        # (6549 at 12.5 bps, 6528 at 10.4 bps). Still never the 0.0 of the
+        # original defect.
+        assert call["entry_price"] == pytest.approx(80123.45), (
             "entry_price not propagated: got %s (was 0.0 pre-fix)" % call["entry_price"]
         )
 

@@ -932,6 +932,16 @@ def shipped_lever_cells(cfg: dict,
     return out
 
 
+def momentum_stale_cells() -> list[tuple[str, str, list[str]]]:
+    """MOMENTUM-TRAIL-LEVER `momentum_stale` grid (memo § 4.2): N in {8, 12}
+    (the two shipped stale bar counts) x A in {20, 25} (the regime detector's
+    chop / trending cut-points)."""
+    return [(f"ms{n}_a{a}", "momentum_stale",
+             ["--momentum-stale-bars", str(n),
+              "--momentum-stale-adx-below", str(a)])
+            for n in (8, 12) for a in (20, 25)]
+
+
 # GEOM-B1: the two TP-GEOMETRY lever columns. Backtest-only today -- the LIVE
 # producer of a `{"tp": ...}` verdict is lane TP-DOCTRINE's (BUILD B1) -- and
 # graded by the same Path A/B gate and walk-forward as every other column.
@@ -999,6 +1009,90 @@ def _tp_geometry_cells(cfg: dict, fam: str | None,
             out.append((f"tpr_stall{stall}_{ttag}", "tp_retarget",
                         targs + ["--tp-retarget-mode", "stall_pull_in",
                                  "--tp-retarget-stall-bars", str(stall)]))
+    return out
+
+
+# ---------------------------------------------------------------------------
+# GEOM-CELLS-INPUT -- explicit census-keyed cells (`--cells`).
+#
+# The grid in `cells_for` is fixed (gb1R_afterMFE1R/2R, the reference trail-decay
+# cells...). RQ-20261014-9807-04 needs cells KEYED TO A LEG'S OWN measured
+# giveback distribution, which no fixed grid can express. `--cells` takes a JSON
+# list of {leg?, lever, tag, params} and, when non-empty, REPLACES the grid with
+# exactly those cells. Empty/absent = today's grid, byte-for-byte.
+# Unknown leg / lever / param, or a lever the leg's harness does not carry, is
+# refused LOUDLY (exit 2) -- a cell that silently did not run would read as a
+# negative verdict.
+# ---------------------------------------------------------------------------
+CELL_PARAM_FLAGS: dict[str, dict[str, str]] = {
+    "stale_stop": {"stale_exit_bars": "--stale-exit-bars"},
+    "giveback_stop": {"giveback_min_mfe_r": "--giveback-min-mfe-r",
+                      "giveback_r": "--giveback-r"},
+    "trail_geometry": {"trail_mult": "--trail-mult"},
+    "trail_decay": {"trail_decay_arm_r": "--trail-decay-arm-r",
+                    "trail_decay_stall_bars": "--trail-decay-stall-bars",
+                    "trail_decay_tight_mult": "--trail-decay-tight-mult"},
+}
+# Levers whose flags only the donchian/pullback harnesses declare.
+CELL_LEVER_FAMILIES: dict[str, tuple[str, ...]] = {
+    "trail_decay": ("donchian", "pullback"),
+}
+
+
+def parse_cells_spec(raw: str | None, known_legs) -> list[dict]:
+    """Validate a ``--cells`` JSON string. Raises ValueError/TypeError on anything unknown."""
+    if raw is None or not str(raw).strip():
+        return []
+    try:
+        spec = json.loads(raw)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"cells is not valid JSON: {e}") from e
+    if not isinstance(spec, list):
+        raise TypeError("cells must be a JSON list of {leg?, lever, tag, params}")
+    out, seen = [], set()
+    for i, c in enumerate(spec):
+        if not isinstance(c, dict):
+            raise TypeError(f"cells[{i}] is not an object")
+        leg, lever, tag, params = (c.get("leg"), c.get("lever"), c.get("tag"),
+                                   c.get("params"))
+        if leg is not None and leg not in known_legs:
+            raise ValueError(f"cells[{i}]: unknown leg {leg!r}")
+        if lever not in CELL_PARAM_FLAGS:
+            raise ValueError(f"cells[{i}]: unknown lever {lever!r}; "
+                             f"known: {sorted(CELL_PARAM_FLAGS)}")
+        if not isinstance(tag, str) or not tag.strip():
+            raise ValueError(f"cells[{i}]: tag must be a non-empty string")
+        if not isinstance(params, dict) or not params:
+            raise ValueError(f"cells[{i}]: params must be a non-empty object")
+        bad = sorted(set(params) - set(CELL_PARAM_FLAGS[lever]))
+        if bad:
+            raise ValueError(f"cells[{i}]: unknown param(s) {bad} for lever "
+                             f"{lever!r}; known: {sorted(CELL_PARAM_FLAGS[lever])}")
+        for k, v in params.items():
+            if isinstance(v, bool) or not isinstance(v, (int, float)):
+                raise TypeError(f"cells[{i}]: param {k!r} must be a number")
+        if (leg, tag) in seen:
+            raise ValueError(f"cells[{i}]: duplicate tag {tag!r} for leg {leg!r}")
+        seen.add((leg, tag))
+        out.append({"leg": leg, "lever": lever, "tag": tag, "params": params})
+    return out
+
+
+def explicit_cells_for(spec: list[dict], leg: str, fam: str | None
+                       ) -> list[tuple[str, str, list[str]]]:
+    """The (tag, lever, extra_args) cells of ``spec`` that apply to ``leg``."""
+    out = []
+    for c in spec:
+        if c["leg"] not in (None, leg):
+            continue
+        need = CELL_LEVER_FAMILIES.get(c["lever"])
+        if need and fam not in need:
+            raise ValueError(f"cell {c['tag']!r}: lever {c['lever']!r} is not "
+                             f"carried by {leg!r}'s harness (family {fam!r})")
+        args: list[str] = []
+        for k, v in c["params"].items():
+            args += [CELL_PARAM_FLAGS[c["lever"]][k], f"{v:g}"]
+        out.append((c["tag"], c["lever"], args))
     return out
 
 
@@ -1158,6 +1252,34 @@ def cells_for(cfg: dict, fam: str | None = None,
         for tag, extra in vt:
             out.append((tag, "vol_trail",
                         extra + ["--trail-vol-tight-mult", str(tight)]))
+    # MOMENTUM-TRAIL-LEVER cells (memo docs/research/cross-signal-exits-2026-10-07.md
+    # § 4.1 / § 4.2): a stop that reads MOMENTUM (Wilder ADX), not price path.
+    # `momentum_trail` tightens the trail on bars where ADX < A (k=0) or ADX < A
+    # AND ADX_j < ADX_{j-3} (k=3); T is the same config-relative tight mult the
+    # decay / vol cells use and must sit BELOW the leg's own trail (the lever can
+    # only tighten, and the harness CLI refuses T >= trail_mult). `momentum_stale`
+    # is a time stop keyed to ADX decay instead of open R. trend + pullback only:
+    # squeeze computes no ADX. On a leg that ships a stale stop the COMBO cells
+    # here run against the config-exact base. The stale-SWAP base (shipped
+    # R-keyed stale removed, momentum_stale in its place) is NOT emitted: the
+    # lever-off arm is pinned to `shipped_*` cells only
+    # (tests/test_m20_fleet_capital_report.py, the invariant the arm rests on).
+    if fam in ("donchian", "pullback"):
+        if tm is not None:
+            tight = max(1.5, round(float(tm) / 2.0, 1))
+            if tight < float(tm):
+                for a in (20, 25):
+                    for k in (0, 3):
+                        extra = ["--trail-adx-below", str(a)]
+                        if k:
+                            extra += ["--trail-adx-falling-bars", str(k)]
+                        out.append((f"adx{a}_k{k}_t{tight:g}", "momentum_trail",
+                                    extra + ["--trail-adx-tight-mult",
+                                             str(tight)]))
+            elif skipped is not None:
+                skipped.append({"cell": "adx*", "lever": "momentum_trail",
+                                "reason": f"tight_mult_{tight:g}_not_below_trail_mult_{float(tm):g}"})
+        out += momentum_stale_cells()
     if tp_geometry_cells:
         out.extend(_tp_geometry_cells(cfg, fam, skipped))
     return out
@@ -2401,6 +2523,11 @@ def main(argv: list[str]) -> int:
                          "trail_decay) — skips already-verdicted cells on a re-run. "
                          "tp_extend / tp_retarget (GEOM-B1: a take-profit that "
                          "moves) are OPT-IN: their cells exist only when named here.")
+    ap.add_argument("--cells", default=None,
+                    help="GEOM-CELLS-INPUT: JSON list of {leg?, lever, tag, params} "
+                         "REPLACING the grid with exactly these cells (census-keyed "
+                         "values). Unknown leg/lever/param is refused. Empty = the "
+                         "ordinary grid, unchanged.")
     ap.add_argument("--list", action="store_true",
                     help="print the run plan (leg -> harness/data/cells) and exit")
     ap.add_argument("--fee-bps-roundtrip", type=float, default=None,
@@ -2499,6 +2626,15 @@ def main(argv: list[str]) -> int:
         print("ERROR: --census measures the config-exact base and cannot be "
               "combined with --without-declared-lever.")
         return 2
+    try:
+        cells_spec = parse_cells_spec(a.cells, set(strategies))
+    except (ValueError, TypeError) as e:
+        print(f"ERROR: --cells refused: {e}")
+        return 2
+    if cells_spec and (without_levers or a.census):
+        print("ERROR: --cells cannot be combined with --without-declared-lever "
+              "or --census.")
+        return 2
     data_dir = Path(a.data_dir)
     run_dir = Path(a.out) / datetime.now(timezone.utc).strftime("%Y-%m-%d")
     plan, skipped = [], []
@@ -2523,10 +2659,17 @@ def main(argv: list[str]) -> int:
             continue
         harness = FAMILY_HARNESS[fam]
         inert: list = []
-        cells = cells_for(cfg, fam, skipped=inert,
-                          without_declared_levers=without_levers,
-                          tp_cap_pct=a.tp_cap_pct, harness=harness,
-                          tp_geometry_cells=tp_cells)
+        if cells_spec:
+            try:
+                cells = explicit_cells_for(cells_spec, name, fam)
+            except ValueError as e:
+                print(f"ERROR: --cells refused: {e}")
+                return 2
+        else:
+            cells = cells_for(cfg, fam, skipped=inert,
+                              without_declared_levers=without_levers,
+                              tp_cap_pct=a.tp_cap_pct, harness=harness,
+                              tp_geometry_cells=tp_cells)
         # WHAT THIS LEG ACTUALLY HAD REMOVED, against what the run asked for.
         # A leg that never declared the requested lever produces a base
         # byte-identical to the config-exact base; recording only the run-level

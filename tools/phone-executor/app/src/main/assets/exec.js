@@ -200,6 +200,409 @@
     });
   }
 
+  // ---- POSITION AMEND (PROP-TRAIL-PHONE, 2026-10-07): the trail's SL (and a TP revision) edited on an OPEN position.
+  // UNMEASURED on Breakout's terminal: no capture has shown the Positions row's edit control or its dialog. So every
+  // helper finds things by text/label/role only, demands exactly ONE match, and returns a dump (our own UI labels,
+  // digits masked) when it cannot; the app refuses before any click it cannot verify. Never a close control.
+  var NOT_EDIT = /close|flatten|reverse|cancel|remove|delete|partial/i;
+  // BREAKOUT-POS-UNPARSED (2026-10-14): the live Positions view is a DIV GRID (no tr / [role=row]), so posRows found
+  // nothing and every trail amend reported no_position while the ETH short was open. With no table row, the ONE
+  // Positions div-grid header's data rows are matched instead (same discovery as readGrid); GRID_HDR remembers each
+  // grid row's header so rowCells can align its cells.
+  var GRID_HDR = typeof WeakMap === "function" ? new WeakMap() : null;
+  function posRows(sym, sideRe) {
+    var n = norm(sym), b = base(sym), rx = new RegExp(sideRe, "i");
+    var hit = function (r) { var s = t(r) + " " + wt(r), ns = norm(s); return (ns.indexOf(n) >= 0 || ns.indexOf(b) >= 0) && rx.test(s); };
+    var rs = innermost(all("tr,[role=row]").filter(function (r) { return hit(r) && !r.querySelector("th,[role=columnheader]"); }));
+    if (rs.length || !GRID_HDR) return rs;
+    var g = gridHeaders(POS_COLS); if (g.length !== 1) return [];
+    return gridRowsOf(g[0]).rows.filter(function (r) { if (!hit(r)) return false; GRID_HDR.set(r, g[0]); return true; });
+  }
+  function isGridRow(r) { return !!(GRID_HDR && GRID_HDR.get(r)); }
+  function ctlText(x) { return (t(x) + " " + (x.getAttribute("aria-label") || "") + " " + (x.getAttribute("title") || "")).trim(); }
+  function rowCtls(r) { return Array.prototype.slice.call(r.querySelectorAll("button,[role=button],a")).filter(vis); }
+  function rowCells(r) {
+    var cells = Array.prototype.slice.call(r.querySelectorAll("td,[role=cell],[role=gridcell]"));
+    var tb = r.closest("table,[role=table],[role=grid]"), hs = [];
+    if (!cells.length && isGridRow(r)) { cells = kids(r); hs = kids(GRID_HDR.get(r)).map(t); tb = null; }
+    if (tb) hs = Array.prototype.slice.call(tb.querySelectorAll("th,[role=columnheader]")).map(t);
+    var out = {}; if (hs.length === cells.length) cells.forEach(function (c, i) { out[hs[i]] = t(c); });
+    return {headers: hs, map: out, n: cells.length};
+  }
+  // a combined "TP / SL" (or "SL / TP") column: its two halves, in the header's order; null when absent or not two
+  function tpslCol(map) {
+    var ks = Object.keys(map).filter(function (k) { return /^(tp\s*\/\s*sl|sl\s*\/\s*tp)$/i.test(k.trim()); });
+    if (ks.length !== 1) return null;
+    var parts = map[ks[0]].split("/").map(function (x) { return x.trim(); }); if (parts.length !== 2) return null;
+    return /^tp/i.test(ks[0].trim()) ? {tp: parts[0], sl: parts[1]} : {sl: parts[0], tp: parts[1]};
+  }
+  // MEASURE-FIRST dump of a row's possibly-interactive elements: tag, role, aria-label / title / text, test id, the
+  // first class names and the column it sits in -- digits masked, never a click. The div grid's edit control is
+  // UNMEASURED, so this is the evidence a later build needs before anything in that row is ever clicked.
+  function ctlDump(r) {
+    var hs = isGridRow(r) ? kids(GRID_HDR.get(r)).map(t) : [], cs = isGridRow(r) ? kids(r) : [];
+    var m = function (s) { return (s || "").replace(/\d/g, "#"); };
+    return Array.prototype.slice.call(r.querySelectorAll("button,[role=button],a,[tabindex],svg,img,[onclick]")).filter(vis).slice(0, 12).map(function (x) {
+      var ci = -1; cs.forEach(function (c, i) { if (c.contains(x)) ci = i; });
+      return {col: ci >= 0 ? m(hs[ci]).slice(0, 16) : "", tag: x.tagName.toLowerCase(), role: x.getAttribute("role") || "",
+        label: m(x.getAttribute("aria-label") || x.getAttribute("title") || t(x)).slice(0, 30), testid: m(x.getAttribute("data-testid") || "").slice(0, 30),
+        cls: m(typeof x.className === "string" ? x.className : (x.getAttribute("class") || "")).split(/\s+/).slice(0, 3).join(" ").slice(0, 40)};
+    });
+  }
+  // the dump as short strings that survive the server's 40-char scrub (positions diag)
+  function ctlLines(d) {
+    var out = []; d.forEach(function (c) {
+      out.push((c.col ? c.col + ":" : "") + c.tag + (c.role ? "/" + c.role : "") + " " + c.label);
+      if (c.testid || c.cls) out.push("  " + (c.testid ? "id=" + c.testid + " " : "") + (c.cls ? "cls=" + c.cls : ""));
+    });
+    return out.map(function (x) { return x.slice(0, 40); }).slice(0, 30);
+  }
+  function col(map, re) { var rx = new RegExp(re, "i"), ks = Object.keys(map).filter(function (k) { return rx.test(k); }); return ks.length === 1 ? map[ks[0]] : null; }
+  // ---- TABLE READS (PROP-TRACKING, 2026-10-12): Positions + Closed orders, mapped by header text. First match wins,
+  // so the more specific patterns come first ("Mark price" is not "Market", "Realized PnL" is not unrealized).
+  // Breakout's Positions grid (read live 2026-10-12): Market | UP&L | Side | Value | Opening price | Current price |
+  // TP / SL | Net P&L. There is NO size column, so qty is derived (see parseRow). "UP&L" is the unrealized P&L and is
+  // the ONLY source of upnl; "Net P&L" is kept as net_pnl and never substituted for it.
+  var POS_COLS = [["skip", /liq|margin|^realized|funding|^tp\s*\/\s*sl|^sl\s*\/\s*tp|\broe\b|^actions?$/i],
+    ["value", /^(position )?value$|^notional/i], ["netpnl", /^net\s*p\s*&?\s*l/i],
+    ["upnl", /^u\.?\s*p\s*&\s*l|u\.?\s*pnl|unreali[sz]ed|^p\s*&\s*l|^pnl/i], ["mark", /^mark(?!et)|^last|^current/i],
+    ["entry", /entry|avg|average|open(ing)? price/i],
+    ["sl", /^(sl|s\/l|stop)/i], ["tp", /^(tp|t\/p|take)/i], ["side", /^(side|direction|dir)$/i],
+    ["qty", /^(size|qty|quantity|amount|position|contracts?)\b/i], ["lev", /^lev/i],
+    ["symbol", /^(symbol|market|instrument|contract|asset|pair|coin|name)$/i], ["time", /time|date|opened/i]];
+  // Closed orders: UNMEASURED layout (no live capture yet); the div-grid reader below is generic, and a miss posts
+  // its digit-masked headers (closed_ prefix) exactly like Positions.
+  var CLOSED_COLS = [["skip", /^actions?$|fee|reduce|^tp\s*\/\s*sl/i], ["netpnl", /^net\s*p\s*&?\s*l/i], ["pnl", /pnl|p\s*&\s*l|profit/i],
+    ["value", /^(position |order )?value$|^notional/i],
+    ["price", /avg|average|(fill(ed)?|clos(e|ed|ing)|exit|exec(uted)?)\s*price|^price$/i], ["trigger", /trigger|stop price/i],
+    ["side", /^(side|direction|dir)$/i], ["qty", /^(size|qty|quantity|amount|filled)\b/i],
+    ["type", /^(type|order type)$/i], ["status", /^status$/i], ["time", /time|date|closed|updated/i],
+    ["symbol", /^(symbol|market|instrument|contract|asset|pair|coin|name)$/i]];
+  var ROW_CAP = 15;   // phone_reconcile._MAX_ROWS (40) is above it
+  function colKey(h, cols) { for (var i = 0; i < cols.length; i++) if (cols[i][1].test((h || "").trim())) return cols[i][0]; return null; }
+  function firstNumber(s) {   // "1.1758 ETH" -> 1.1758; "+31.27 USD (1.2%)" -> 31.27; "−31.27" -> -31.27; none -> null
+    var m = /([-+−]?)\s*\$?\s*(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?/.exec((s || "").replace(/–/g, "-"));
+    if (!m) return null; var v = parseFloat((m[2] + (m[3] || "")).replace(/,/g, "")); return (m[1] === "-" || m[1] === "−") ? -v : v;
+  }
+  // BREAKOUT-POS-UNPARSED (2026-10-14): innerText glues adjacent inline spans ("<span>Short</span><span>20x</span>" ->
+  // "Short20x"), so \bshort\b missed a side word the operator can plainly read -- the "Positions1" badge failure again,
+  // in a cell. wt() is the cell's text nodes joined WITH spaces; it is used ONLY to find words (side, symbol), never
+  // numbers: a price whose digits sit in separate spans ("2,4<b>58</b>.24") must stay one number.
+  function wt(el) {
+    var out = [], w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null), n;
+    while ((n = w.nextNode())) if (n.parentElement && vis(n.parentElement) && n.nodeValue.trim()) out.push(n.nodeValue.trim());
+    return out.join(" ").replace(/\s+/g, " ").trim();
+  }
+  // BREAKOUT-POS-UNPARSED (1b.193 live dump 2026-10-14 21:38Z): the Positions Side cell has NO TEXT -- the side is
+  // drawn as an icon / colour / attribute. attrText(el) is the words in the cell's own and descendants' attributes
+  // (class, aria-label, title, alt, data-*, svg <title>, <use> href), camelCase / kebab / snake split into words.
+  // Words only, never colour: "text-red" is not a side. Ambiguous (both a long and a short word) -> null.
+  function attrEls(el) { return [el].concat(Array.prototype.slice.call(el.querySelectorAll("*"))).slice(0, 12); }
+  function attrText(el) {
+    var out = [];
+    attrEls(el).forEach(function (e) {
+      Array.prototype.slice.call(e.attributes || []).forEach(function (a) {
+        if (/^(class|aria-label|title|alt|href|xlink:href)$|^data-/i.test(a.name)) out.push(a.value);
+      });
+      if (e.tagName && e.tagName.toLowerCase() === "title") out.push(e.textContent || "");
+    });
+    return out.join(" ").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[^A-Za-z]+/g, " ").trim();
+  }
+  function sideOfAttr(s) {
+    var l = /\b(long|buy)\b/i.test(s || ""), sh = /\b(short|sell)\b/i.test(s || "");
+    return l === sh ? null : (l ? "long" : "short");
+  }
+  // the attribute SHAPE of a cell whose need-key read empty, for the miss dump: tag[.class tokens] aria/title/data
+  function attrShape(el) {
+    return attrEls(el).slice(0, 6).map(function (e) {
+      var tag = (e.tagName || "").toLowerCase(), bits = [tag];
+      Array.prototype.slice.call(e.attributes || []).forEach(function (a) {
+        if (/^(class|aria-label|title|alt|href|xlink:href|role)$|^data-/i.test(a.name) && a.value) bits.push(a.name.replace(/^data-/, "d-") + "=" + a.value);
+      });
+      return bits.join(" ");
+    });
+  }
+  function sideOf(s) { var m = /\b(long|short|buy|sell)\b/i.exec(s || ""); if (!m) return null; return /long|buy/i.test(m[1]) ? "long" : "short"; }
+  function tabCount(re) {   // "Positions (2)" / "Positions 2" / "Positions1" -> 2/2/1; a bare label -> null (the page did not say)
+    var c = all("button,[role=tab],[role=button],a").filter(function (x) { return tabMatch(re, t(x)); });
+    if (c.length !== 1) return null;
+    var tm = TAB_LABEL.exec(t(c[0])); if (tm) return tm[2] ? parseInt(tm[2].replace(/\D/g, ""), 10) : null;
+    var m = /\(?\s*(\d+)\s*\)?\s*$/.exec(t(c[0]).replace(re, "")); return m ? parseInt(m[1], 10) : null;
+  }
+  function masked(hs) { return hs.map(function (h) { return h.replace(/\d/g, "#").slice(0, 24); }).slice(0, 20); }
+  function controlsDump() { return all("button,[role=tab],[role=button]").map(function (x) { return t(x).replace(/\d/g, "#").slice(0, 30); }).filter(Boolean).slice(0, 30); }
+  // one row's cells -> {symbol, side, qty, ...}; cells are aligned to keys (null / "skip" columns ignored)
+  // `words` (optional): the same cells as wt() text, for the side and symbol words only; `attrs` (optional): the
+  // cells' attrText(), for a side drawn without text
+  function parseRow(cells, keys, words, attrs) {
+    var o = {}, rowText = cells.join(" ") + " " + (words || []).join(" ");
+    cells.forEach(function (c, i) {
+      var k = keys[i], w = (words && words[i]) || c; if (!k || k === "skip" || o[k] !== undefined) return;
+      if (k === "side") o.reduce = /reduce/i.test(c);   // "Long (Reduce)": the span after the side word; closes a SHORT
+      o[k] = k === "symbol" ? w.slice(0, 40) : (k === "status" || k === "type" || k === "time") ? c.slice(0, 40) : (k === "side" ? (sideOf(c) || sideOf(w) || sideOfAttr(attrs && attrs[i])) : firstNumber(c));
+    });
+    if (o.side == null) o.side = sideOf(o.symbol) || sideOf(rowText);
+    // a size carries the side only when it is SIGNED ("-1.5" short, "+1.5" long); an unsigned size is not a long
+    var qc = keys.indexOf("qty") >= 0 ? (cells[keys.indexOf("qty")] || "").trim() : "";
+    if (o.side == null && typeof o.qty === "number" && o.qty !== 0 && /^[-+−]/.test(qc)) o.side = o.qty > 0 ? "long" : "short";
+    if (typeof o.qty === "number") o.qty = Math.abs(o.qty);
+    // NO size column (Breakout's Positions grid shows Value, not contracts): qty = |Value| / Current price, marked
+    // qty_src so the server and a reader know it is DERIVED (rounded Value, so only approximately the placed size)
+    // a mark more than 2x away from the entry is a misread number (e.g. "2 462.10" read as 2), never a qty divisor
+    var px = o.mark != null ? o.mark : o.price, pxOk = typeof o.entry !== "number" || !(o.entry > 0) || (px / o.entry > 0.5 && px / o.entry < 2);
+    if (keys.indexOf("qty") < 0 && keys.indexOf("value") >= 0 && typeof o.value === "number" && typeof px === "number" && px > 0 && pxOk && o.value !== 0) {
+      o.qty = Math.round(Math.abs(o.value) / (o.mark != null ? o.mark : o.price) * 1e8) / 1e8; o.qty_src = "value/mark";
+    }
+    // the live Market cell reads "ETH 5" (a leverage badge with no x, 1b.193 dump): a bare number token is never part
+    // of a venue symbol, and left in it made the symbol unmappable ("ETH5")
+    if (o.symbol) o.symbol = o.symbol.replace(/\b(long|short|buy|sell)\b/ig, "").replace(/\d+(\.\d+)?\s*[x×]|\b[x×]\s*\d+(\.\d+)?\b/ig, "")
+      .replace(/(^|\s)\d+(\.\d+)?(?=\s|$)/g, " ").replace(/\s+/g, " ").trim();
+    return o;
+  }
+  // every parsed row is sent, never a prefix: a row the server does not see would read as gone (review of #17745);
+  // a strict list longer than the cap is refused instead of truncated. `emptyOk` = positive evidence the view is empty.
+  // An unparsed miss says WHICH need keys were missing (detail, "+"-joined: the server scrub keeps "+" and "=") and the
+  // first failing row's cells as key:shape with digits -> "d" (BREAKOUT-POS-UNPARSED: the first live miss said only
+  // "unparsed", so the failing field had to be guessed).
+  function cellShapes(cells, keys) {
+    return (cells || []).slice(0, 20).map(function (c, i) {
+      return ((keys[i] || "none") + ":" + c.replace(/\d/g, "d").replace(/,/g, "_").replace(/[^A-Za-z0-9 _.:\/()=+&%-]/g, "=")).slice(0, 40);
+    });
+  }
+  function finishRead(out, bad, hs, count, need, strict, emptyOk, raw, keys, els) {
+    if (strict && out.length > ROW_CAP) return {state: "too_many_rows", n_rows: out.length, count: count, headers: masked(hs)};
+    var rows = out.slice(0, ROW_CAP);
+    var miss = function (o) { return need.filter(function (k) { return o[k] == null || o[k] === ""; }); };
+    var fi = -1; out.forEach(function (o, i) { if (fi < 0 && miss(o).length) fi = i; });
+    if (bad || fi >= 0) {
+      var ms = []; out.forEach(function (o) { miss(o).forEach(function (k) { if (ms.indexOf(k) < 0) ms.push(k); }); });
+      var cs = fi >= 0 && raw ? cellShapes(raw[fi], keys || []) : [];
+      // a need-key cell that read EMPTY: its attribute shape too (digits masked), so the next miss shows how it is drawn
+      if (fi >= 0 && els && els[fi]) miss(out[fi]).forEach(function (k) {
+        var i = (keys || []).indexOf(k); if (i < 0 || !els[fi][i] || (raw[fi][i] || "").trim()) return;
+        attrShape(els[fi][i]).forEach(function (a) {
+          for (var j = 0; j < a.length && cs.length < 36; j += 36) cs.push((k + "+" + a.slice(j, j + 36)).replace(/\d/g, "d").replace(/[^A-Za-z0-9 _.:\/()=+&%-]/g, "=").slice(0, 40));
+        });
+      });
+      // SIDE ONLY: every row has symbol + qty and the venue drew the side without any word we can read. The rows go
+      // to the server as "side_unread" (never "read"): it may take the side from the ONE open journal ticket with the
+      // same symbol and entry (ESTIMATED), or leave the read un-reconciled. Never guessed here.
+      var sideOnly = !bad && ms.length === 1 && ms[0] === "side" && need.indexOf("side") >= 0 && (count === null || count === out.length);
+      var r0 = {state: sideOnly ? "side_unread" : "unparsed", n_rows: out.length + bad, count: count, headers: masked(hs),
+        detail: ("miss=" + (ms.join("+") || "none") + " bad=" + bad + " n=" + out.length).slice(0, 31), cells: cs};
+      if (sideOnly) r0.rows = rows;
+      return r0;
+    }
+    if (count !== null && count !== out.length) return {state: "count_mismatch", n_rows: out.length, count: count, headers: masked(hs)};
+    // flat needs POSITIVE evidence (the tab says 0, or the table's / panel's container says "no positions"): a header
+    // row with no data rows may be a table still rendering, and a false "flat" would close live journal rows.
+    if (!out.length && count !== 0 && !emptyOk) return {state: "empty_unconfirmed", n_rows: 0, count: count, headers: masked(hs)};
+    return {state: "read", rows: rows, n_rows: out.length, count: count, headers: masked(hs)};
+  }
+  // ---- DIV GRID (PHONE-POSITIONS-DIV, 2026-10-12): the live Positions view has NO <table>/<tr>/[role=row]. Headers are
+  // plain elements (they surface as controls: Market, UP&L, Side, Value, Opening price, Current price, TP / SL,
+  // Net P&L). The HEADER ROW is the smallest ancestor holding >= 4 distinct mapped labels incl. side and an entry /
+  // mark column; its children are the columns, in document order. DATA ROWS are the following siblings of that header
+  // (or of its wrapper, up to 3 levels, or those siblings' children) with the SAME child count. The PANEL is the
+  // highest ancestor of the header that holds no tab label (Positions / Open orders / Closed orders / ...): the empty
+  // state counts only INSIDE it, and a panel that reaches <body> proves nothing.
+  var TAB_LABEL = /^(open orders|positions|portfolio|closed orders|trades)(\s*\(?\s*\d+\s*\)?)?$/i;
+  // BREAKOUT-UNTRACKED-1014 (2026-10-14): with a position open the chip renders its count badge GLUED to the label
+  // (innerText "Positions1", "Open orders2"), so /^positions\b/ and /^positions$/ missed it and every read was
+  // no_tab for 9 h while an ETH short was open. A tab chip's text is matched with its count badge dropped too.
+  function tabText(s) { var m = TAB_LABEL.exec(s); return m ? m[1] : s; }
+  function tabMatch(rx, s) { return rx.test(s) || rx.test(tabText(s)); }
+  function kids(e) { return Array.prototype.slice.call(e.children).filter(vis); }
+  function gridHeaders(cols) {
+    var labels = innermost(all("div,span,p,button,[role=button],[role=columnheader],th,li,a,label")).filter(function (e) {
+      var s = t(e); return s && s.length <= 24 && colKey(s, cols);
+    }), found = [];
+    labels.forEach(function (l) {
+      for (var a = l.parentElement, d = 0; a && d < 6 && a !== document.body; a = a.parentElement, d++) {
+        var ks = {}; labels.forEach(function (m) { if (a.contains(m)) ks[colKey(t(m), cols)] = 1; });
+        var okShape = cols === CLOSED_COLS ? (ks.side && ks.symbol && (ks.type || ks.status) && (ks.price || ks.qty || ks.pnl || ks.status)) : (ks.side && (ks.entry || ks.mark));
+        if (Object.keys(ks).length >= 4 && okShape) { if (found.indexOf(a) < 0) found.push(a); return; }
+      }
+    });
+    return innermost(found);
+  }
+  function leafTabs() {
+    return all("button,[role=tab],[role=button],a,div,span,li").filter(function (x) { return TAB_LABEL.test(t(x)); })
+      .filter(function (x, i, a) { return !a.some(function (y) { return y !== x && x.contains(y); }); });
+  }
+  function gridPanel(h) {
+    var tabs = all("button,[role=tab],[role=button],a,div,span,li").filter(function (x) { return TAB_LABEL.test(t(x)); });
+    var p = h;
+    while (p.parentElement && p.parentElement !== document.body && p.parentElement !== document.documentElement &&
+           !tabs.some(function (x) { return p.parentElement.contains(x); })) p = p.parentElement;
+    return (p === document.body || p === document.documentElement || tabs.some(function (x) { return p.contains(x); })) ? null : p;
+  }
+  // a div-grid header's DATA ROWS: the following siblings of the header (or of its wrapper, up to 3 levels, or those
+  // siblings' children) with the SAME child count; `direct` / `sib` are kept for readGrid's misaligned-row count
+  function gridRowsOf(h) {
+    var hc = kids(h), node = h, sib;
+    for (var lvl = 0; lvl < 4 && node.parentElement; lvl++, node = node.parentElement) {
+      sib = kids(node.parentElement).filter(function (x) { return x !== node; });
+      var direct = sib.filter(function (x) { return kids(x).length === hc.length; });
+      var nested = []; sib.forEach(function (x) { if (direct.indexOf(x) < 0) kids(x).forEach(function (y) { if (kids(y).length === hc.length) nested.push(y); }); });
+      var pool = direct.length ? direct : nested;
+      if (pool.length) return {rows: pool, direct: direct, sib: sib};
+    }
+    return {rows: [], direct: [], sib: []};
+  }
+  function readGrid(cols, need, emptyRe, count, strict, hdrs) {
+    var h = hdrs[0], hs = kids(h).map(t), keys = hs.map(function (s) { return colKey(s, cols); });
+    var gr = gridRowsOf(h), rows = gr.rows, bad = 0;
+    // anything else in the same container that looks like a row but has another cell count is a row we cannot align
+    if (gr.direct.length) gr.sib.forEach(function (x) {
+      if (gr.direct.indexOf(x) >= 0 || emptyRe.test(t(x)) || !/\d/.test(t(x))) return;
+      if (kids(x).length >= 2) bad += 1;
+    });
+    var raw = rows.map(function (r) { return kids(r).map(t); });
+    var els = rows.map(kids);
+    var out = rows.map(function (r, i) { return parseRow(raw[i], keys, els[i].map(wt), els[i].map(attrText)); });
+    var panel = gridPanel(h), emptyOk = !!(panel && emptyRe.test(t(panel)));
+    var r = finishRead(out, bad, hs, count, need, strict, emptyOk, raw, keys, els);
+    r.layout = "div_grid";
+    return r;
+  }
+  function readTable(cols, need, emptyRe, tabRe, strict) {   // need: the keys every row must carry; a table is ours when it has a symbol column and a qty/price/entry column
+    var hits = [];
+    all("table,[role=table],[role=grid]").forEach(function (tb) {
+      var hs = Array.prototype.slice.call(tb.querySelectorAll("th,[role=columnheader]")).map(t);
+      var keys = hs.map(function (h) { return colKey(h, cols); });
+      if (keys.indexOf("symbol") >= 0 && keys.some(function (k) { return k === "qty" || k === "price" || k === "entry"; })) hits.push({tb: tb, hs: hs, keys: keys});
+    });
+    var count = tabCount(tabRe);
+    if (hits.length === 0) {
+      var g = gridHeaders(cols);
+      if (g.length === 1) return readGrid(cols, need, emptyRe, count, strict, g);
+      if (g.length > 1) return {state: "ambiguous", tables: g.length, count: count, headers: masked(g[0] ? kids(g[0]).map(t) : []), controls: controlsDump()};
+    }
+    if (hits.length !== 1) {
+      // No table: flat ONLY on the panel's own evidence -- the tab's count says 0, or the ONE visible tab panel says
+      // "no positions". Page-wide text is never enough (review of #17745: a "no positions" string elsewhere would
+      // read as flat and close every open journal row).
+      var panels = all("[role=tabpanel]"), panelEmpty = panels.length === 1 && emptyRe.test(t(panels[0]));
+      if (hits.length === 0 && (count === 0 || (count === null && panelEmpty))) return {state: "read", rows: [], count: count, headers: []};
+      return {state: hits.length ? "ambiguous" : "no_table", tables: hits.length, count: count,
+        headers: hits.length ? masked(hits[0].hs) : [], controls: controlsDump()};
+    }
+    var h = hits[0], out = [], bad = 0, raw = [], rels = [];
+    innermost(Array.prototype.slice.call(h.tb.querySelectorAll("tr,[role=row]")).filter(vis)).forEach(function (r) {
+      if (r.querySelector("th,[role=columnheader]")) return;
+      var els = Array.prototype.slice.call(r.querySelectorAll("td,[role=cell],[role=gridcell]")), cells = els.map(t);
+      if (cells.length === 1 && emptyRe.test(cells[0])) return;   // the table's own "no positions" row
+      if (cells.length !== h.hs.length) { bad += 1; return; }
+      raw.push(cells); rels.push(els); out.push(parseRow(cells, h.keys, els.map(wt), els.map(attrText)));
+    });
+    return finishRead(out, bad, h.hs, count, need, strict, emptyRe.test(t(h.tb.parentElement || h.tb)), raw, h.keys, rels);
+  }
+  function dialogs() { return all("[role=dialog],[role=alertdialog],dialog[open]"); }
+  function dlg() { var d = dialogs(); return d.length === 1 ? d[0] : null; }
+  function dlgByLabel(re, prefer) {
+    var d = dlg(); if (!d) return {list: [], hits: []};
+    var rx = new RegExp(re, "i"), px = prefer ? new RegExp(prefer, "i") : null, list = inputs(d);
+    var hits = list.filter(function (i) { return rx.test(labelFor(i)); });
+    if (hits.length > 1 && px) hits = hits.filter(function (i) { return px.test(labelFor(i)); });
+    return {list: list, hits: hits};
+  }
+  function dlgButtons(re, notRe) {
+    var d = dlg(); if (!d) return [];
+    var rx = new RegExp(re, "i");
+    return Array.prototype.slice.call(d.querySelectorAll("button,[role=button]")).filter(function (x) {
+      var s = ctlText(x); return vis(x) && rx.test(s) && !(notRe && notRe.test(s));
+    });
+  }
+
+  // login lineup helpers (PHONE-AUTOLOGIN-3, 2026-10-10: the live page read page_n=0 for 90 s after the email click on
+  // portal.breakoutprop.com, so the reader is broadened and every miss is described). A candidate is the innermost
+  // element whose text, with ALL whitespace and zero-width characters removed, is exactly a 1-3 digit number (an icon
+  // child or split digit spans no longer hide it), or a radio / button / option whose aria-label or value is one.
+  // Searched in the document, open shadow roots and same-origin iframes. Matching stays fail-closed (loginPick).
+  var ZW = /[\s\u200B-\u200D\u2060\uFEFF\u00A0]+/g;
+  function nt(el) { return ((el && (el.innerText || el.textContent)) || "").replace(ZW, ""); }
+  function gcs(e) { return (e.ownerDocument.defaultView || window).getComputedStyle(e); }
+  // every tree we can read: the document, open shadow roots, same-origin iframes (3 levels); xo = unreadable frames
+  function roots() {
+    var out = [], st = {shadow: 0, frames: 0, xo: 0};
+    (function walk(r, depth) {
+      out.push(r);
+      var els = r.querySelectorAll("*");
+      for (var i = 0; i < els.length; i++) {
+        var e = els[i];
+        if (e.shadowRoot) { st.shadow++; walk(e.shadowRoot, depth); }
+        if (/^I?FRAME$/.test(e.tagName)) {
+          st.frames++;
+          var d = null; try { d = e.contentDocument; } catch (x) { }
+          if (d && d.documentElement && depth < 3) walk(d, depth + 1); else st.xo++;
+        }
+      }
+    })(document, 0);
+    out.st = st; return out;
+  }
+  function deep(sel) {
+    var a = []; roots().forEach(function (r) { a = a.concat(Array.prototype.slice.call(r.querySelectorAll(sel))); }); return a;
+  }
+  function up(n) { return n.parentElement || (n.parentNode && n.parentNode.host) || null; }
+  function ctl(n) {
+    return /^(BUTTON|A|INPUT|OPTION|LABEL)$/.test(n.tagName) || /^(button|radio|option|checkbox|link)$/.test(n.getAttribute("role") || "") ||
+      n.hasAttribute("onclick");
+  }
+  var SKIP = /^(SCRIPT|STYLE|NOSCRIPT|TEMPLATE|HTML|HEAD|BODY|svg|SVG|PATH|path)$/;
+  function numCands() {
+    var c = [];
+    deep("*").forEach(function (e) {
+      if (SKIP.test(e.tagName) || !vis(e)) return;
+      var v = nt(e);
+      if (/^\d{1,3}$/.test(v)) {
+        // the innermost element carrying the whole number: a child with the same text represents it
+        for (var i = 0; i < e.children.length; i++) if (nt(e.children[i]) === v) return;
+        c.push({e: e, v: v});
+        return;
+      }
+      if (v) return;   // has other text: never read an attribute behind visible words
+      var a = (e.getAttribute("aria-label") || "").replace(ZW, "");
+      var val = (/^(radio|button|submit)$/.test(e.type || "") || /^(BUTTON|OPTION)$/.test(e.tagName)) ? String(e.value || "").replace(ZW, "") : "";
+      if (/^\d{1,3}$/.test(a)) c.push({e: e, v: a}); else if (/^\d{1,3}$/.test(val)) c.push({e: e, v: val});
+    });
+    // nested candidates (split digits "4" "2" inside "42"; or two choices "1" "2" inside a row reading "12"): a
+    // control inside wins over its container, else the container (the whole number) wins over its pieces
+    return c.filter(function (x) {
+      for (var i = 0; i < c.length; i++) {
+        var y = c[i]; if (y === x) continue;
+        if (y.e !== x.e && y.e.contains(x.e) && !ctl(x.e) && !hasCtlInside(y, c)) return false;   // a piece of y
+        if (y.e !== x.e && x.e.contains(y.e) && hasCtlInside(x, c)) return false;                  // a row of controls
+      }
+      return true;
+    });
+  }
+  function hasCtlInside(x, c) { return c.some(function (y) { return y !== x && x.e.contains(y.e) && ctl(y.e); }); }
+  function clickable(e) {
+    for (var n = e, d = 0; n && d < 5; n = up(n), d++) {
+      if (!/^\D*\d{1,3}\D*$/.test(t(n)) && !(n === e && nt(n) === "")) return null;   // a container holding SEVERAL numbers is never "the" choice
+      if (n.tagName === "LABEL" && n.control) return n.control;
+      if (/^(BUTTON|A|INPUT|OPTION)$/.test(n.tagName) || /^(button|radio|option|checkbox)$/.test(n.getAttribute("role") || "") ||
+          n.hasAttribute("onclick") || (gcs(n).cursor === "pointer" &&
+          !(up(n) && up(n).nodeType === 1 && gcs(up(n)).cursor === "pointer"))) return n;   // cursor inherits: only where it is SET
+    }
+    return null;
+  }
+  // scrubbed text for the diag: emails, links and EVERY digit removed, 40 chars
+  function scrub(s) {
+    return (s || "").replace(/\S+@\S+/g, "EML").replace(/(https?:\/\/|www\.)\S*/gi, "URL").replace(/\d+/g, "N")
+      .replace(/[^A-Za-z .:\/+=_-]/g, " ").replace(/\s+/g, " ").trim().slice(0, 40);
+  }
+  function deepText() {
+    var parts = [];
+    roots().forEach(function (r) {
+      if (r.body) parts.push(r.body.innerText || "");
+      else Array.prototype.forEach.call(r.children || [], function (k) { if (!SKIP.test(k.tagName)) parts.push(k.innerText || k.textContent || ""); });
+    });
+    return parts.join("\n");
+  }
+  function sig(s) { var h = 5381; for (var i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0; return h.toString(36); }
+
   window.__ex = {
     state: function () {
       var pw = all("input[type=password]").length > 0;
@@ -228,16 +631,69 @@
         challenged: /just a moment|verify you are human|cf-chl/i.test(body)};
     },
     // LOGIN step 1: type the account email and continue. The email value is never returned.
+    // PHONE-AUTOLOGIN-3: the continue control is looked for in the email field's own form first, a social / passkey
+    // button ("Continue with Google") is never the one, and window.__exSubmit records which kind was used (scrubbed).
     loginEmail: function (email) {
       if (!hostOk()) return "bad_host";
-      var el = all("input[type=email],input[autocomplete=email],input[name*=mail i]")[0];
+      var el = deep("input[type=email],input[autocomplete=email],input[name*=mail i]").filter(vis)[0];
       if (!el) return "no_email_field";
       el.focus(); setVal(el, email);
       if (el.value !== email) return "not_set";
-      var b = all("button").filter(function (b) { return /continue|log ?in|sign ?in|next|send|submit/i.test(t(b) + " " + (b.getAttribute("aria-label") || "")); })[0];
-      if (b && !(b.disabled || b.getAttribute("aria-disabled") === "true")) { b.click(); return "clicked"; }
+      var lab = function (b) { return t(b) + " " + (b.getAttribute("aria-label") || "") + " " + (b.value || ""); };
+      var ok = function (b) {
+        var s = lab(b);
+        return /continue|log ?in|sign ?in|next|send|submit|get (a |the )?(code|link)|verify/i.test(s) &&
+          !/google|apple|microsoft|facebook|github|passkey|sso|discord|wallet/i.test(s) && !(b.disabled || b.getAttribute("aria-disabled") === "true");
+      };
+      var scope = el.form || el.closest("form,[role=dialog],main") || document;
+      var sel = "button,input[type=submit],[role=button]";
+      var inForm = Array.prototype.slice.call(scope.querySelectorAll(sel)).filter(vis);
+      var b = inForm.filter(function (x) { return x.type === "submit" && ok(x); })[0] || inForm.filter(ok)[0];
+      var where = "form";
+      if (!b) { b = deep(sel).filter(vis).filter(ok)[0]; where = "page"; }
+      window.__exSubmit = {where: b ? where : "none", label: b ? scrub(lab(b)) : "", buttons: inForm.length};
+      if (b) { b.click(); return "clicked"; }
       if (el.form && el.form.requestSubmit) { el.form.requestSubmit(); return "submitted"; }
       return "no_button";
+    },
+    // The email submit did not move the page: press Enter in the email field (keydown/keypress/keyup), then submit
+    // its form. The value is not touched.
+    loginEnter: function () {
+      if (!hostOk()) return "bad_host";
+      var el = deep("input[type=email],input[autocomplete=email],input[name*=mail i]").filter(vis)[0];
+      if (!el) return "no_email_field";
+      el.focus();
+      ["keydown", "keypress", "keyup"].forEach(function (k) {
+        el.dispatchEvent(new KeyboardEvent(k, {key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true, cancelable: true}));
+      });
+      if (el.form && el.form.requestSubmit) { try { el.form.requestSubmit(); return "enter+submit"; } catch (e) { } }
+      return "enter";
+    },
+    // What the submit recorded (scrubbed: no digits, no email, no link).
+    loginSubmitInfo: function () { return window.__exSubmit || {where: "unread", label: "", buttons: 0}; },
+    // A scrubbed STRUCTURE snapshot of whatever page is in front of us, for the login_diag (never a value: numbers
+    // are COUNTED, every digit in a text becomes "N", emails and links are dropped). sig = a hash of the readable
+    // text, compared before/after the email submit ("did the page change").
+    loginProbe: function () {
+      var rs = roots(), tags = {}, inputs = {}, texts = [];
+      rs.forEach(function (r) {
+        Array.prototype.forEach.call(r.querySelectorAll("*"), function (e) {
+          var k = e.tagName.toLowerCase(); tags[k] = (tags[k] || 0) + 1;
+          if (k === "input" && vis(e)) inputs[e.type || "text"] = (inputs[e.type || "text"] || 0) + 1;
+        });
+      });
+      var top = Object.keys(tags).sort(function (a, b) { return tags[b] - tags[a]; }).slice(0, 15).map(function (k) { return k + "." + tags[k]; });
+      deep("button,[role=button],a,h1,h2,h3,h4,h5,h6,[role=heading],label,legend,[role=alert],[role=status]").filter(vis).forEach(function (e) {
+        var s = scrub(t(e) || e.getAttribute("aria-label") || ""); if (s && texts.indexOf(s) < 0 && texts.length < 20) texts.push(s);
+      });
+      var body = deepText();
+      var ph = {check_email: /check your (e-?mail|inbox)/i, we_sent: /we('ve| have)? sent|sent (you )?(an? )?(e-?mail|link|code)/i,
+        select: /\bselect/i, choose: /\bchoose/i, verify: /verif/i, number: /\bnumber/i, code: /\bcode\b/i, link: /\blink\b/i,
+        tap: /\b(tap|click)\b/i, expired: /expir/i, error: /error|invalid|wrong|try again|too many/i, social: /google|apple|passkey/i};
+      var hits = Object.keys(ph).filter(function (k) { return ph[k].test(body); });
+      return {tags: top, shadow: rs.st.shadow, frames: rs.st.frames, frames_xo: rs.st.xo, inputs: inputs, texts: texts,
+        phrases: hits, numtok: (body.match(/(^|[^\d])\d{1,3}(?![\d])/g) || []).length, digits: (body.match(/\d+/g) || []).length,
+        cands: numCands().length, chars: body.length, sig: sig(body), host: location.hostname};
     },
     // LOGIN step 2: the number the waiting page shows (the one to pick in the email). Exactly one prominent
     // 1-3 digit number, else "" (fail closed).
@@ -248,6 +704,32 @@
       var top = parseFloat(getComputedStyle(c[0]).fontSize);
       var same = c.filter(function (e) { return parseFloat(getComputedStyle(e).fontSize) === top && t(e) !== t(c[0]); });
       return same.length ? "" : t(c[0]);
+    },
+    // LOGIN step 2, LINEUP form (PHONE-AUTOLOGIN-2, operator 2026-10-10: "a login check that verifies you can choose
+    // the correct 2 digit number from a line up of 3"). The VALUES go to the app's memory only (never logged,
+    // reported or stored); the app reports counts. top = distinct numbers at the largest font size; btn = distinct
+    // numbers that sit in a clickable control (the lineup to tap); n = every visible 1-3 digit leaf.
+    loginChoices: function () {
+      var c = numCands();
+      if (!c.length) return {n: 0, top: [], btn: []};
+      var fs = function (x) { return parseFloat(gcs(x.e).fontSize) || 0; };
+      var max = Math.max.apply(null, c.map(fs));
+      var uniq = function (a) { return a.filter(function (x, i) { return a.indexOf(x) === i; }); };
+      var v = function (x) { return x.v; };
+      return {n: c.length, top: uniq(c.filter(function (x) { return fs(x) === max; }).map(v)),
+        btn: uniq(c.filter(function (x) { return !!clickable(x.e); }).map(v))};
+    },
+    // Tap the ONE lineup entry whose text is exactly [n]. More than one distinct control for it, or none: nothing is
+    // tapped ("ambiguous" / "none"), the app fails closed.
+    loginPick: function (n) {
+      if (!hostOk()) return "bad_host";
+      var hits = numCands().filter(function (x) { return x.v === String(n); }).map(function (x) { return clickable(x.e) || x.e; });
+      hits = hits.filter(function (x, i) { return hits.indexOf(x) === i; });
+      if (hits.length !== 1) return hits.length ? "ambiguous" : "none";
+      var el = hits[0];
+      ["pointerdown", "mousedown", "pointerup", "mouseup"].forEach(function (k) { el.dispatchEvent(new MouseEvent(k, {bubbles: true})); });
+      el.click();
+      return "clicked";
     },
     // TERMINAL GATE (2026-10-06 05:21Z dry test: claimed on an /account/ page that was not the trading terminal,
     // "order control not found"). Ready = an "Order" control, an open ticket, or Buy+Sell tabs are on the page;
@@ -265,7 +747,7 @@
       // "Open orders", "Positions", "Market chart", "Order book" ...; tabs=0 inputs=0, no buy/sell text).
       var ct = all("button,[role=tab],[role=button]").map(t);
       var panels = /(^|\.)trade\.breakoutprop\.com$/.test(location.hostname) &&
-        ct.some(function (x) { return /^positions$/i.test(x); }) && ct.some(function (x) { return /^open orders$/i.test(x); });
+        ct.some(function (x) { return /^positions$/i.test(tabText(x)); }) && ct.some(function (x) { return /^open orders$/i.test(tabText(x)); });
       return {ready: ctl || !!submitBtn() || bs || probe || panels, panels: panels, orderControl: ctl, ticketOpen: !!submitBtn(), buySell: bs,
         probe: probe, tabs: tb.length, inputs: inputs(document).length};
     },
@@ -304,8 +786,39 @@
     },
     clickText: function (re, roleSel) {
       var rx = new RegExp(re, "i");
-      var b = all(roleSel || "button,[role=tab],[role=button],a").filter(function (x) { return rx.test(t(x)); })[0];
-      if (!b) return "none"; b.click(); return "clicked";
+      var b = all(roleSel || "button,[role=tab],[role=button],a").filter(function (x) { return tabMatch(rx, t(x)); })[0];
+      if (!b) return "none";
+      // the tab strip scrolls horizontally on a phone ("Closed orders" is the last chip, clipped): bring it into view
+      try { b.scrollIntoView({block: "nearest", inline: "center"}); } catch (e) { }
+      b.click(); return "clicked";
+    },
+    // POSITIONS-READ CONTEXT (PHONE-POSITIONS-READ-CONTEXT, 2026-10-13). The bottom-panel tab chips render AFTER the
+    // document is "complete" (SPA), so the app waits on this before clicking. Names + counts only, never values.
+    tabChips: function () {
+      var n = leafTabs().length, path = location.pathname || "/";
+      return {chips: n, path_depth: path.split("/").length, trade: /\/trade(\/|$)/.test(path), acct_href: window.__ex.terminalHref() ? 1 : 0};
+    },
+    // Like clickText, but also finds a chip that is a plain div/span/li (no button/role): the LEAF element whose
+    // whole text is the label. Read-only view switch, same as clickText.
+    clickTab: function (re) {
+      if (window.__ex.clickText(re) === "clicked") return "clicked";
+      var rx = new RegExp(re, "i");
+      var b = all("div,span,li").filter(function (x) { var s = t(x); return s.length > 0 && s.length <= 30 && tabMatch(rx, s) && TAB_LABEL.test(s); })
+        .filter(function (x, i, a) { return !a.some(function (y) { return y !== x && x.contains(y); }); })[0];
+      if (!b) return "none";
+      try { b.scrollIntoView({block: "nearest", inline: "center"}); } catch (e) { }
+      b.click(); return "clicked";
+    },
+    // The miss dump for a tab that could not be found: where we are (path depth, /trade or not), how many chips, the
+    // buttons/tabs, and a short list of the leaf texts that ARE on the page. Digits masked, first 25, no links.
+    missDump: function () {
+      var seen = {}, out = [];
+      all("*").forEach(function (x) {
+        if (out.length >= 25 || x.children.length > 0) return;
+        var s = t(x).replace(/\d/g, "#").slice(0, 30); if (s && !seen[s]) { seen[s] = 1; out.push(s); }
+      });
+      var tc = window.__ex.tabChips();
+      return {path_depth: tc.path_depth, trade: tc.trade, chips: tc.chips, headers: out, controls: window.__ex.controls()};
     },
     openTicket: function () {
       if (submitBtn()) return "open";
@@ -410,7 +923,7 @@
     // else null (absent is never 0, never guessed). "Portfolio" is reported separately so the app can say which label
     // the equity came from. Numbers only; no account id, no other text.
     accountPanel: function () {
-      function num(s) { var m = /^[-+]?\$?\s*(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?\s*(USD[TC]?)?$/i.exec((s || "").trim()); return m ? parseFloat(m[0].replace(/[^\d.\-]/g, "")) : null; }
+      function num(s) { var m = /^[-+]?\$?\s*(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?\s*(USD[TC]?)?$/i.exec((s || "").replace(/\u2212/g, "-").trim()); return m ? parseFloat(m[0].replace(/[^\d.\-]/g, "")) : null; }
       function pick(label) {
         var rx = new RegExp("^" + label + "\\s*:?\\s*(.*)$", "i"), found = {};
         all("button,[role=button],[role=tab],div,span,p,td,li,dt,strong,b,h1,h2,h3,h4").forEach(function (x) {
@@ -426,7 +939,9 @@
         var k = Object.keys(found); return {n: k.length, v: k.length === 1 ? parseFloat(k[0]) : null};
       }
       var b = pick("balance"), e = pick("equity"), p = pick("portfolio");
-      return {balance: b.v, equity: e.v, portfolio: p.v, n: {balance: b.n, equity: e.n, portfolio: p.n}};
+      // the terminal's own account-level unrealized P&L when it labels one (PROP-TRACKING); signed, absent = null
+      var u = pick("(?:unreali[sz]ed\\s*(?:pnl|p\\s*&\\s*l)?|u\\.?\\s*pnl)");   // non-capturing: pick() reads group 1
+      return {balance: b.v, equity: e.v, portfolio: p.v, unrealized: u.v, n: {balance: b.n, equity: e.n, portfolio: p.n, unrealized: u.n}};
     },
     setInput: function (k, v) {
       var i = inputs(form() || document)[k]; if (!i) return null;
@@ -502,6 +1017,79 @@
       var rs = all("tr,[role=row]");
       return rs.map(function (r) { return Array.prototype.slice.call(r.querySelectorAll("td,th,[role=cell],[role=gridcell],[role=columnheader]")).map(t); })
         .filter(function (c) { return c.length > 1; }).slice(0, 40);
+    },
+    // AMEND: the ONE open-position row for (symbol, side): {n, sl, tp (column text or null), headers, controls}.
+    // controls are the row's own control texts (digits masked) for the refusal dump; never values beyond SL/TP.
+    posInfo: function (sym, sideRe) {
+      var rs = posRows(sym, sideRe);
+      if (rs.length !== 1) return {n: rs.length};
+      var c = rowCells(rs[0]), both = tpslCol(c.map), d = ctlDump(rs[0]);
+      return {n: 1, layout: isGridRow(rs[0]) ? "div_grid" : "table",
+        sl: both ? both.sl : col(c.map, "^(sl|s/l|stop ?loss)"), tp: both ? both.tp : col(c.map, "^(tp|t/p|take ?profit)"),
+        headers: c.headers.map(function (h) { return h.replace(/\d/g, "#").slice(0, 24); }),
+        controls: rowCtls(rs[0]).map(function (x) { return ctlText(x).replace(/\d/g, "#").slice(0, 40); }).slice(0, 12),
+        ctls: d, ctl_lines: ctlLines(d)};
+    },
+    // AMEND: click the row's ONE edit control (text / aria-label / title naming edit, modify or TP/SL; never a close).
+    // Returns clicked | no_row | rows_<n> | no_edit | ambiguous.
+    posEdit: function (sym, sideRe) {
+      if (!hostOk()) return "bad_host";
+      var rs = posRows(sym, sideRe);
+      if (!rs.length) return "no_row"; if (rs.length > 1) return "rows_" + rs.length;
+      // MEASURE FIRST: no capture has shown Breakout's div-grid edit control, so nothing in a grid row is clicked; the
+      // app refuses with the row's ctlDump (posInfo) as the evidence for the build that measures it.
+      if (isGridRow(rs[0])) return "no_edit_unmeasured";
+      var e = rowCtls(rs[0]).filter(function (x) { var s = ctlText(x); return /edit|modify|tp\s*\/\s*sl|sl\s*\/\s*tp|protection/i.test(s) && !NOT_EDIT.test(s); });
+      if (!e.length) return "no_edit"; if (e.length > 1) return "ambiguous";
+      e[0].click(); return "clicked";
+    },
+    // AMEND dialog read: how many dialogs, their inputs (label + value: values are OUR prices) and button texts.
+    editDialog: function () {
+      var ds = dialogs(); if (ds.length !== 1) return {n: ds.length};
+      return {n: 1, text: t(ds[0]).replace(/\d/g, "#").slice(0, 200),
+        inputs: inputs(ds[0]).map(function (i) { return {label: labelFor(i), value: i.value}; }),
+        buttons: Array.prototype.slice.call(ds[0].querySelectorAll("button,[role=button]")).filter(vis).map(function (x) { return ctlText(x).replace(/\d/g, "#").slice(0, 30); })};
+    },
+    dlgRead: function (re, prefer) { return fieldInfo(dlgByLabel(re, prefer)); },
+    dlgSet: function (re, prefer, v) {
+      var h = dlgByLabel(re, prefer); if (h.hits.length !== 1) return fieldInfo(h);
+      var i = h.hits[0]; i.focus(); setVal(i, String(v)); i.blur(); return fieldInfo(h);
+    },
+    dlgFocus: function (re, prefer) {
+      var h = dlgByLabel(re, prefer); if (h.hits.length !== 1) return "none";
+      var i = h.hits[0]; setVal(i, ""); i.focus(); return document.activeElement === i ? "focused" : "nofocus";
+    },
+    // The ONE save/confirm button of the ONE dialog (never close/cancel/remove/flatten/reverse). clicked | none | ambiguous | disabled
+    dlgSave: function () {
+      var b = dlgButtons("^\\s*(save|confirm|modify|apply|update|submit|ok)\\b", NOT_EDIT);
+      if (!b.length) return "none"; if (b.length > 1) return "ambiguous";
+      if (b[0].disabled || b[0].getAttribute("aria-disabled") === "true") return "disabled";
+      b[0].click(); return "clicked";
+    },
+    // Dismiss the ONE dialog without saving: its ONE cancel/discard button, else Escape. clicked | escape | none
+    dlgCancel: function () {
+      var d = dlg(); if (!d) return "none";
+      var b = dlgButtons("^\\s*(cancel|discard|dismiss)\\s*$", null);
+      if (b.length === 1) { b[0].click(); return "clicked"; }
+      d.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", code: "Escape", keyCode: 27, bubbles: true}));
+      document.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", code: "Escape", keyCode: 27, bubbles: true}));
+      return "escape";
+    },
+    // POSITIONS READ (PROP-TRACKING, 2026-10-12, read-only; operator: "we need to be able to track the prop trades").
+    // The Positions view must already be shown (the app clicks the tab). Columns are mapped BY HEADER TEXT; a
+    // value the page does not show stays null, never 0. state: read (positions [] means the terminal SAYS flat:
+    // a recognised header row with no data rows, or an explicit "no positions" text) | no_table | unparsed |
+    // count_mismatch (the tab's own count disagrees with the rows parsed). Anything but "read" reconciles nothing.
+    // UNMEASURED: no capture has shown Breakout's Positions table; headers come back digit-masked for a miss dump.
+    positionsRead: function () {
+      if (!hostOk()) return {state: "bad_host"};
+      return readTable(POS_COLS, ["symbol", "side", "qty"], /no (open )?positions|you have no (open )?positions|start trading with leverage/i, /^positions\b/i, true);
+    },
+    // CLOSED ORDERS READ (PROP-TRACKING): the shown Closed orders / Trades table, newest rows as the page orders
+    // them, max 15. Only OUR orders' symbol, side, qty, price, status, time and realized P&L columns; nothing else.
+    closedRead: function () {
+      if (!hostOk()) return {state: "bad_host"};
+      return readTable(CLOSED_COLS, ["symbol", "side"], /no (closed )?orders|no (trades|history)/i, /^(closed orders|trades)\b/i, false);
     },
     rowClose: function (sym, sideRe) {
       var n = norm(sym); var rx = new RegExp(sideRe, "i");

@@ -80,7 +80,19 @@ inputs:
       deadline (STAMP-RACE, below) cannot rescue a merge that lands minutes
       later. 50 = ~37 run + queue time + margin. Every caller's job budget was
       raised by the same 20 min so the work allowance each had is unchanged.
-    default: "50"
+
+      ⚠️ RAISED 50 -> 80 (HEALTH-REVIEW-W41, 2026-10-09; RQ-COLLECTOR residual).
+      The 2026-10-04 sizing was outgrown in 5 days. MEASURED over the 20
+      completed `pytest-run` pushes on main 2026-10-09 (Actions run durations):
+      29-64 min, 12 of 20 above 44 min. Dispatcher run 37965310081 went red
+      because its batch PR #17287's own `pytest-run` took 44 min
+      (17:21:15-18:05:59Z) and the 50 min wait expired at 18:11Z, ~5 min after
+      CI went green. The collector was NOT the cause (its step succeeded and
+      "Fail the job if the collector lost a run's rows" was skipped). 80 =
+      observed worst 64 + queue. Every caller's job budget was raised by the
+      same 30 min. ⚠️ A FIXED NUMBER WILL BE OUTGROWN AGAIN; the real fix is a
+      faster `pytest-run` (pipeline row filed by this review).
+    default: "80"
   refresh-command:
     description: >
       A shell command that RE-DERIVES this caller's generated file(s), run after
@@ -390,6 +402,21 @@ runs:
                    ".github/pr-automerge-requests/${SLUG}.txt" \
                    ".github/merge-slots"
         git commit -m "${MESSAGE}"
+        # EVERYTHING FROM HERE ON RUNS IN A CLEAN WORKTREE (STAMP-RACE-2,
+        # 2026-10-12). A caller's working tree can carry tracked edits this
+        # commit does not (research-queue-dispatch keeps its `last_dispatched_at`
+        # stamps dirty across three landings). Both `git checkout --detach
+        # FETCH_HEAD` (the replay below) and `git merge FETCH_HEAD` (the
+        # stale-branch refresh) REFUSE when such a file differs between HEAD and
+        # main, so MEASURED 2026-10-10/11 over 14 red dispatcher `land` jobs: 3
+        # died in ~1 s on the checkout ("local changes ... overwritten by
+        # checkout") and 2 more had their refresh reported `failed_conflict`
+        # by the same refusal ("overwritten by merge") with no conflict at all.
+        # The commit exists and the landed files are committed, so nothing the
+        # caller left dirty is needed here; the caller's tree is not touched.
+        PRODUCED_WT="$(mktemp -d "${RUNNER_TEMP:-/tmp}/ctm-wt.XXXXXX")"
+        git worktree add -q --detach "${PRODUCED_WT}" HEAD
+        cd "${PRODUCED_WT}"
         # CUT THE THROWAWAY BRANCH FROM `main`, NOT FROM THE DISPATCH REF
         # (2026-10-04, lane CI-AUTOMERGE). Until now the commit above sat on
         # whatever the CALLER checked out. A run dispatched on a session branch
@@ -565,8 +592,43 @@ runs:
             *)
               # UNKNOWN is 'we could not read the PR', NOT 'not merged yet'.
               # Keep waiting rather than concluding either way.
+              # ⚠️ WHEN NOT TO REFRESH (STAMP-RACE-2, 2026-10-12). The merge below
+              # mints a new head sha, and the required `pytest-run` has
+              # `cancel-in-progress: true` per PR, so a refresh at the one-third
+              # mark KILLS the half-finished run and restarts the ~45 min suite.
+              # MEASURED over 62 automation/research-* PRs opened 2026-10-10 12:00Z
+              # onward: every PR whose `main` moved had a 27 min "queue" before its
+              # final pytest-run -- that was this refresh (first run cancelled at
+              # 27 min), and open-to-merge was 64-79 min against an 80 min wait.
+              # The suite itself is 27-49 min against its own 50 min limit, so one
+              # restart leaves no slack: 4 of the 14 red jobs (refresh=refreshed)
+              # and the cancelled runs on #17654/#17664 are that restart. Branch protection is
+              # `strict: false`, so a behind-main PR merges without it; the
+              # refresh exists only to re-trigger checks that are red or absent.
+              # So: refresh at once if the PR CONFLICTS (it cannot merge as it
+              # is, and checks on a conflicted PR never start), otherwise wait
+              # for the one-third mark and then only if the head's checks have
+              # FINISHED red or never appeared. In-flight or green -> leave it.
               if [ "${REFRESH_TRIED}" -eq 0 ] && [ "${REFRESH_STATE}" != "disabled" ] \
-                 && [ "$(date +%s)" -ge "${REFRESH_AT}" ]; then
+                 && [ "$(date +%s)" -ge "${MIN_WAIT}" ]; then
+                MERGEABLE="$(gh pr view "${PR_URL}" --json mergeable --jq .mergeable 2>/dev/null || echo UNKNOWN)"
+                CHECKS="$(gh api "repos/${GITHUB_REPOSITORY}/commits/$(git rev-parse HEAD)/check-runs?per_page=100" \
+                  --jq 'if .total_count == 0 then "none" elif ([.check_runs[]|select(.status != "completed")]|length) > 0 then "inflight" elif ([.check_runs[]|select(.conclusion == "failure" or .conclusion == "cancelled" or .conclusion == "timed_out" or .conclusion == "action_required")]|length) > 0 then "red" else "green" end' \
+                  2>/dev/null || echo unknown)"
+                WANT_REFRESH=0
+                if [ "${MERGEABLE}" = "CONFLICTING" ]; then
+                  WANT_REFRESH=1
+                elif [ "$(date +%s)" -ge "${REFRESH_AT}" ]; then
+                  case "${CHECKS}" in
+                    red|none|unknown) WANT_REFRESH=1 ;;
+                    inflight) REFRESH_STATE="deferred_checks_in_flight" ;;
+                    green)    REFRESH_STATE="not_needed_checks_green" ;;
+                  esac
+                fi
+              else
+                WANT_REFRESH=0
+              fi
+              if [ "${WANT_REFRESH}" -eq 1 ]; then
                 REFRESH_TRIED=1
                 if ! git fetch -q origin main; then
                   REFRESH_STATE="skipped_fetch_failed"
@@ -707,6 +769,17 @@ runs:
                   # does) so nothing already on main is lost and any declared
                   # path the command does not rewrite keeps main's content, and
                   # THEN recompute over it.
+                  elif [ -n "${CONFLICTED}" ] && [ -z "${UNDECLARED}" ] \
+                       && python3 scripts/ops/resolve_stamp_conflicts.py ${CONFLICTED} \
+                       && git add -- ${CONFLICTED} && git commit -q --no-edit; then
+                    # Every conflicted file differs from main ONLY in
+                    # `last_dispatched_at` (a dispatch stamp); the later stamp
+                    # was kept. See resolve_stamp_conflicts.py.
+                    if git push origin "HEAD:refs/heads/${BR}"; then
+                      REFRESH_STATE="refreshed_after_stamp_conflict"
+                    else
+                      REFRESH_STATE="failed_push"
+                    fi
                   elif [ -n "${REFRESH_COMMAND:-}" ] && [ -n "${CONFLICTED}" ] \
                        && [ -z "${UNDECLARED}" ]; then
                     # shellcheck disable=SC2086 — CONFLICTED is a pathspec list.
