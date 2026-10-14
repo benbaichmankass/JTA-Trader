@@ -601,7 +601,7 @@ def record_event(device: PhoneDevice, body: Dict[str, Any], *, send=None) -> Dic
     if kind == "heartbeat":
         _write_heartbeat(device.account_id, reason, body.get("state"))
     if kind == "positions_miss":
-        _write_positions_diag(device.account_id, reason, body.get("headers"), body.get("controls"))
+        _write_positions_diag(device.account_id, reason, body.get("headers"), body.get("controls"), body.get("cells"))
         if not reason.startswith("closed_"):   # a closed_* miss follows a CLEAN Positions read: nothing is unseen
             _alert_unseen_positions(device.account_id, reason, send=send)
     # login_retry: an auto re-login attempt/failure inside a streak (PHONE-AUTOLOGIN, no latch, retried forever) is
@@ -640,17 +640,19 @@ def _write_diag(account_id: str, reason: str, controls: Any) -> None:
 
 
 # positions_miss (PROP-TRACKING): a Positions read that was not clean -- its state plus the table's digit-masked
-# headers and the page's control texts -- so the next build is fixed from evidence. Latest per account only.
+# headers and the page's control texts -- so the next build is fixed from evidence. Latest per account only. An
+# unparsed read also carries `cells`: its first failing row as key:shape, digits masked app-side (BREAKOUT-POS-UNPARSED).
 def _positions_diag_path(account_id: str) -> Path:
     return _diag_path(account_id).with_name(f"prop_phone_posdiag_{re.sub(r'[^a-z0-9_]', '', account_id)}.json")
 
 
-def _write_positions_diag(account_id: str, state: str, headers: Any, controls: Any) -> None:
+def _write_positions_diag(account_id: str, state: str, headers: Any, controls: Any, cells: Any = None) -> None:
     def lst(v: Any) -> list:
         return [x for x in (_scrub(c, 40).strip() for c in (v if isinstance(v, list) else [])[:_DIAG_MAX]) if x]
     try:
         _positions_diag_path(account_id).write_text(json.dumps(
-            {"at": _now().isoformat(), "state": _scrub(state, 60), "headers": lst(headers), "controls": lst(controls)}))
+            {"at": _now().isoformat(), "state": _scrub(state, 60), "headers": lst(headers), "controls": lst(controls),
+             "cells": [re.sub(r"\d", "d", c) for c in lst(cells)]}))
     except OSError:  # allow-silent: diagnostics only; the event is still acknowledged
         logger.warning("phone_executor: positions diag write failed", exc_info=True)
 
