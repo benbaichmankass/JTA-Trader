@@ -14,10 +14,19 @@
   ],
   "blocked_on": [],
   "note": "[2026-10-14T20:55Z manager session_01VduHYzdaXe27wTDBLSu8ao] Operator installed APK 1b.188 (~20:50Z). MEASURED 20:50:43Z /api/bot/prop/status?account_id=breakout_2: positions_state went no_tab -> unparsed; phone_positions_diag.headers = [Market, UP&L, Side, Value, Opening price, Current price, TP / SL, Net P&L] (the tab-badge fix in #18081 works). exec.js finishRead returns unparsed when a row lacks one of need=[symbol, side, qty] (qty is DERIVED from Value / Current price since the grid has no size column). Row content is not in the diag (masked), so the failing field is unknown. Journal still holds f6552263ed1d open ESTIMATED (fill 124). [2026-10-14T21:01Z lane session_01MVZPxo89875YXd2zz6xivJ] LIKELY ROOT CAUSE (reproduced in Chromium; not yet confirmed live because the diag masks row text): innerText glues adjacent inline spans, so <span>Short</span><span>20x</span> reads as 'Short20x' and \\bshort\\b misses the side, giving unparsed. FIX in PR #18099 (draft, Tier 2, landing hold): side and symbol words are read from text nodes joined with spaces, and a misread mark (more than 2x from entry) never divides Value for qty. An unparsed miss now posts detail (which need key was missing) plus the first failing row's digit-masked key:shape cells in phone_positions_diag.cells. State: NOT merged, NOT deployed, NOT observed. Closes on: positions_state=read with the ETH short listed, and fill 124 MEASURED, after the new APK is installed. [2026-10-14T21:33Z lane] MERGED: #18099 (squash 8659363). BUILT: phone-executor-apk run 38640497636 on main, being built; the manager sends the link. DEPLOYED: server part (phone_positions_diag.cells) goes out via ict-git-sync restart-on-HEAD-change; not verified. The read fix itself is APK-only. NOT OBSERVED: at 21:28Z the phone still runs 1b.188 and the last report (21:07Z) still reads unparsed. Closes on: positions_state=read with the ETH short side=short after install, and fill 124 MEASURED. PROP-TRAIL-PHONE AMEND WILL NOT EXECUTE after this fix. exec.js posInfo/posEdit find the row through posRows, which searches only tr/[role=row], and rowCells, which searches only td/[role=cell]. The live Positions view is a div grid, so posInfo returns n=0 and the app reports amend no_position and backs off. The amend status lines at 18:36Z and 19:40Z (LIVE ETHUSD SL 2504.25 -> 2481.52) are the attempts. Follow-up needed (Tier 2): make posRows/rowCells div-grid aware by reusing gridHeaders/readGrid, so the amend finds the row. The row's edit control is still UNMEASURED, so the first run will most likely refuse with no_edit and post the row's control dump.",
-  "updated_at": "2026-10-14T21:29:31Z",
+  "updated_at": "2026-10-14T21:36:33Z",
   "updated_by": "session_01VduHYzdaXe27wTDBLSu8ao",
   "roadmap": [
     "L-PROP"
   ],
+  "writeback": {
+    "roadmap": "none: plumbing fix under L-PROP; milestone where/next unchanged until positions_state=read is observed",
+    "arch": "none: phone-executor DOM parsing detail, no contract change"
+  },
+  "observation": {
+    "what": "breakout_2 phone status reports positions_state=read with the ETH short parsed side=short, and fill 124 becomes MEASURED",
+    "how_to_check": "GET /api/bot/prop/status?account_id=breakout_2 and /api/bot/prop/fills?account_id=breakout_2 after the operator installs the APK from run 38640497636",
+    "due_by": "2026-10-16"
+  },
   "_seq": 496
 }
