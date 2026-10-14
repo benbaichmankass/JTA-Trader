@@ -17,11 +17,19 @@
     "RQ-20261014-9807-01 (census result is producer_failed; 9807-04 stays blocked until it lands)"
   ],
   "note": "[2026-10-14 lane] cells input built; census 9807-01 producer_failed so 9807-04 not runnable.",
-  "updated_at": "2026-10-14T18:13:40Z",
+  "updated_at": "2026-10-14T18:23:21Z",
   "updated_by": "session_01WzkFeZ7iDz8aXpavBZSz2o",
   "roadmap": [
     "L-ATM"
   ],
-  "writeback": "Closes when a dispatch with cells=<json> runs only those cells (exercised by RQ-20261014-9807-04 once its census lands). Built in #18063 (tests in tests/test_m20_sweep_cells_input.py); #18064 (landing: hold) re-points 9807-04 blocked_on at 9807-01.",
+  "writeback": {
+    "roadmap": "none: harness/workflow input only; L-ATM milestone unchanged until a cells= run lands",
+    "arch": "none: no architecture contract changed (m20 sweep workflow input)"
+  },
+  "observation": {
+    "what": "a dispatch of m20-exit-lever-sweep.yml with cells=<json> ran only those cells (RQ-20261014-9807-04, once its census lands)",
+    "how_to_check": "open the m20-exit-lever-sweep run for RQ-20261014-9807-04; the per-leg SUMMARY lists exactly the named cell tags",
+    "due_by": "2026-10-28T00:00Z"
+  },
   "_seq": 489
 }

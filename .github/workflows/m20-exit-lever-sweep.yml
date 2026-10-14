@@ -251,7 +251,7 @@ jobs:
           from m20_fleet_exit_sweep import parse_cells_spec
           try:
               _cells = parse_cells_spec(os.environ.get("CELLS", ""), declared)
-          except ValueError as e:
+          except (ValueError, TypeError) as e:
               print(f"::error::cells refused: {e}", file=sys.stderr)
               raise SystemExit(1)
           _not_swept = sorted({c["leg"] for c in _cells

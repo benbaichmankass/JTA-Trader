@@ -1040,7 +1040,7 @@ CELL_LEVER_FAMILIES: dict[str, tuple[str, ...]] = {
 
 
 def parse_cells_spec(raw: str | None, known_legs) -> list[dict]:
-    """Validate a ``--cells`` JSON string. Raises ValueError on anything unknown."""
+    """Validate a ``--cells`` JSON string. Raises ValueError/TypeError on anything unknown."""
     if raw is None or not str(raw).strip():
         return []
     try:
@@ -1048,11 +1048,11 @@ def parse_cells_spec(raw: str | None, known_legs) -> list[dict]:
     except json.JSONDecodeError as e:
         raise ValueError(f"cells is not valid JSON: {e}") from e
     if not isinstance(spec, list):
-        raise ValueError("cells must be a JSON list of {leg?, lever, tag, params}")
+        raise TypeError("cells must be a JSON list of {leg?, lever, tag, params}")
     out, seen = [], set()
     for i, c in enumerate(spec):
         if not isinstance(c, dict):
-            raise ValueError(f"cells[{i}] is not an object")
+            raise TypeError(f"cells[{i}] is not an object")
         leg, lever, tag, params = (c.get("leg"), c.get("lever"), c.get("tag"),
                                    c.get("params"))
         if leg is not None and leg not in known_legs:
@@ -1070,7 +1070,7 @@ def parse_cells_spec(raw: str | None, known_legs) -> list[dict]:
                              f"{lever!r}; known: {sorted(CELL_PARAM_FLAGS[lever])}")
         for k, v in params.items():
             if isinstance(v, bool) or not isinstance(v, (int, float)):
-                raise ValueError(f"cells[{i}]: param {k!r} must be a number")
+                raise TypeError(f"cells[{i}]: param {k!r} must be a number")
         if (leg, tag) in seen:
             raise ValueError(f"cells[{i}]: duplicate tag {tag!r} for leg {leg!r}")
         seen.add((leg, tag))
@@ -2628,7 +2628,7 @@ def main(argv: list[str]) -> int:
         return 2
     try:
         cells_spec = parse_cells_spec(a.cells, set(strategies))
-    except ValueError as e:
+    except (ValueError, TypeError) as e:
         print(f"ERROR: --cells refused: {e}")
         return 2
     if cells_spec and (without_levers or a.census):
