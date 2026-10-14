@@ -1,6 +1,6 @@
 id: RQ-20261007-009
 title: 'Prop fit of a Stage-0-passing pair: does any configured M22 pair clear breakout_turbo_1step / tradeify_247_1step / velotrade_classic_1step at the account flat risk, and is the 2-leg route placeable there? -- PAIRS-STOCKTAKE'
-status: blocked
+status: queued
 cadence: once
 theme: new_strategy_prop
 priority: 1
@@ -103,31 +103,9 @@ decision_rule:
     terms is a venue question for the operator to put to the firm, not a
     measurement.
 
-blocked_on:
-  - kind: research_result
-    ref: RQ-20261007-005..008
-    what: >-
-      No committed pair-trade ledger exists yet. This unit's `--leg` path is
-      the trades.jsonl a PASS run of RQ-20261007-005..008 lands under
-      comms/research/RQ-20261007-00N/<run_id>/; the run_id is unknown until
-      the run lands, so the command below carries `<ledger>` placeholders.
-    clears_when: >-
-      At least one of RQ-20261007-005..008 has a research/results record with
-      verdict=pass; promote this file to research/queue/ with each `<ledger>`
-      replaced by that run's committed trades.jsonl path (one --leg per
-      passing pair) and set status: queued.
-  - kind: tooling
-    ref: scripts/research/prop_ev_sim.py
-    what: >-
-      The simulator skips legs independently (`trades_skipped_leg_busy`,
-      `hedge_blocked`) and has no notion of a 2-leg atomic trade. Pricing the
-      pair as ONE instrument (one ledger row per pair trade) is admissible as
-      an upper bound and is what the rule above does; the per-leg lot check
-      (L) is therefore graded by the reader, not by the simulator.
-    clears_when: >-
-      Either the reader grades (L) by hand from the ledger + lot table (no
-      tooling change required to run this unit), or a `--pair-legs` mode
-      lands in prop_ev_sim; the first is sufficient to promote this unit.
+# UNBLOCKED 2026-10-14 (RESEARCH-OPS 02:47Z): RQ-20261007-005..008 all read verdict=pass, read_state=measured on main
+# (research/results/RQ-20261007-005..008/*.jsonl, landed via #17963); the <ledger> placeholders are replaced by each run's committed
+# trades.jsonl, which is exactly the clears_when this file registered. Rule, statistic and mapping are unchanged.
 
 routing:
   needs_trainer_resident_data: false
@@ -145,7 +123,13 @@ run:
   - python3
   - scripts/research/prop_ev_grid.py
   - --leg
-  - 'pairs_sol_eth=<ledger>'
+  - 'pairs_sol_eth=comms/research/RQ-20261007-005/37729701291/trades.jsonl'
+  - --leg
+  - 'pairs_bnb_btc=comms/research/RQ-20261007-006/37735737052/trades.jsonl'
+  - --leg
+  - 'pairs_sol_btc=comms/research/RQ-20261007-007/37740397219/trades.jsonl'
+  - --leg
+  - 'pairs_eth_btc=comms/research/RQ-20261007-008/37746283322/trades.jsonl'
   - --arm
   - 'BRK=--ruleset config/prop_rulesets/breakout_turbo_1step.yaml --sizing balance --risk-pct 0.005'
   - --arm
