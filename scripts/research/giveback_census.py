@@ -165,8 +165,8 @@ def census(tel: Iterable[dict], trades: Iterable[dict], min_n: int = 20) -> Dict
             continue
         t0, t1 = _ts(t.get("timestamp")), _ts(t.get("closed_at"))
         hold_days = (t1 - t0).total_seconds() / 86400.0 if (t0 and t1 and t1 > t0) else None
-        key = (str(t.get("account_class") or r.get("account_id") or "unknown"),
-               str(t.get("strategy_name") or r.get("strategy") or "unknown"))
+        key = (str(t.get("account_class") or r.get("account_id") or "unattributed"),
+               str(t.get("strategy_name") or r.get("strategy") or "unattributed"))
         per.setdefault(key, []).append({
             "peak": peak, "realised": realised, "hold_days": hold_days, "prov": prov,
             "peak_lower_bound": str(r.get("peak_provenance") or "") != "measured",
@@ -262,9 +262,9 @@ def _sha() -> str:
     try:
         import subprocess
         return subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True,
-                              cwd=str(HERE), timeout=10).stdout.strip() or "unknown"
+                              cwd=str(HERE), timeout=10).stdout.strip() or "sha_unavailable"
     except (OSError, subprocess.SubprocessError):
-        return "unknown"
+        return "sha_unavailable"
 
 
 def main(argv: Optional[List[str]] = None) -> int:
@@ -280,18 +280,15 @@ def main(argv: Optional[List[str]] = None) -> int:
     a = ap.parse_args(argv)
     if a.selftest:
         return selftest()
-    read_state, note, tel, tr = "measured", "", [], []
-    try:
-        if a.db:
-            tel, tr = load_db(a.db, a.since_days)
-        elif a.telemetry_file and a.trades_file:
-            tel, tr = load_json(a.telemetry_file, a.trades_file)
-        else:
-            ap.error("give --db, or --telemetry-file with --trades-file")
-    except (sqlite3.Error, OSError, ValueError) as e:  # a missing table is a ROUTE fault, not a verdict
-        read_state, note = "producer_failed", f"could not read inputs: {e}"
-    m = census(tel, tr, a.min_n) if read_state == "measured" else {}
-    if read_state == "measured" and not m.get("n_graded"):
+    read_state, note = "measured", ""
+    if a.db:
+        tel, tr = load_db(a.db, a.since_days)  # a missing DB/table raises: the runner derives a producer_failed
+    elif a.telemetry_file and a.trades_file:   # record from the non-zero exit (research-script-run*.yml), so a
+        tel, tr = load_json(a.telemetry_file, a.trades_file)  # route fault is never swallowed into a verdict
+    else:
+        ap.error("give --db, or --telemetry-file with --trades-file")
+    m = census(tel, tr, a.min_n)
+    if not m.get("n_graded"):
         read_state, note = "no_data", "0 closed trades with a readable peak in the window"
     desc = (f"closed trades since {a.since_days}d with a position_telemetry row and a readable peak_r, "
             f"joined on order_package_id; per account_class x strategy, never pooled across classes")
@@ -304,6 +301,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             read_state=read_state, population_description=desc, n=m.get("n_graded"),
             workflow=os.environ.get("GITHUB_WORKFLOW", "local"), run_id=os.environ.get("GITHUB_RUN_ID", "local"),
             commit_sha=_sha(), tool="scripts/research/giveback_census.py",
+            # collapsed-state: not_applicable — kind: deterministic census; the power gate's seven states are
+            # the dispatcher's to grade, this producer only stamps the one state a deterministic unit can carry
             power_state="not_applicable", measurement=m, artifact_store="research/results/",
             artifact_locator="this record: measurement.strategies / measurement.pooled_by_class",
             rows_landed=len(m.get("strategies", [])), note=note or "deterministic census; the rule reads pooled_by_class")
