@@ -26,6 +26,9 @@ thresholds:
   collector_window_hours: 48
   # an open automation/research-queue-stamp-* PR older than this is stranded (dispatch_queue.STRANDED_STAMP_HOURS).
   stranded_stamp_hours: 3.0
+  # an open automation/* PR (stamp, receipt, capture-watch) CONFLICTING with main this long is named directly
+  # (#18004/#18014, 2026-10-14: a conflicted PR runs no checks, so it never lands and nothing else says why).
+  conflicted_automation_minutes: 45
   # breakout_2 phone executor heartbeat older than this while the account is live (prop_silence.HEARTBEAT_MAX_MIN; a test pins them equal).
   phone_heartbeat_max_minutes: 10
   # after a self-heal, wait this long for the re-fired run to start before re-checking.

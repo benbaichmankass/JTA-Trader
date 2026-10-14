@@ -36,6 +36,9 @@ from scripts.research import script_run  # noqa: E402
 
 DATASET_SLUG = "metis-research-bundle"
 KERNEL_SLUG = "metis-research-run"
+#: KAGGLE-CPU-ROUTE (2026-10-14): the CPU twin has its OWN bundle-dataset and kernel slugs, so a CPU run and a GPU run can be in
+#: flight together without one re-versioning the dataset the other kernel is mounting (the stale-mount defect, 2026-10-13).
+SLUGS = {"gpu": (DATASET_SLUG, KERNEL_SLUG), "cpu": (DATASET_SLUG + "-cpu", KERNEL_SLUG + "-cpu")}
 BUNDLE_ROOTS = ("scripts", "src", "config", "ml")
 EXTRA_ROOTS = ("comms", "docs/research", "research", "data")
 MAX_BUNDLE_MB = 200
@@ -46,7 +49,11 @@ def _tracked(paths: List[str], repo: Path) -> List[str]:
     return [p for p in out.stdout.splitlines() if p]
 
 
-def bundle(unit: str, run_id: str, username: str, out: Path, *, repo: Path = _REPO, sha: str = "") -> Dict[str, Any]:
+def bundle(unit: str, run_id: str, username: str, out: Path, *, repo: Path = _REPO, sha: str = "",
+           accelerator: str = "gpu") -> Dict[str, Any]:
+    if accelerator not in SLUGS:
+        raise SystemExit(f"accelerator must be one of {sorted(SLUGS)}, not {accelerator!r}")
+    dataset_slug, kernel_slug = SLUGS[accelerator]
     p = script_run.plan(unit, run_id=run_id, repo=repo, queue_dir=repo / "research" / "queue")
     if not p.ok:
         raise SystemExit("kaggle bundle refused: " + "; ".join(p.errors))
@@ -79,7 +86,7 @@ def bundle(unit: str, run_id: str, username: str, out: Path, *, repo: Path = _RE
         raise SystemExit(f"bundle is {size_mb:.0f} MB > {MAX_BUNDLE_MB} MB cap -- trim run.bundle_paths")
     (out / "spec.json").write_text(json.dumps({"unit": unit, "run_id": run_id, "commit_sha": sha}) + "\n")
     (out / "dataset-metadata.json").write_text(json.dumps({
-        "title": DATASET_SLUG, "id": f"{username}/{DATASET_SLUG}", "licenses": [{"name": "CC0-1.0"}],
+        "title": dataset_slug, "id": f"{username}/{dataset_slug}", "licenses": [{"name": "CC0-1.0"}],
         "isPrivate": True}) + "\n")
     kdir = out.parent / (out.name + "-kernel")
     kdir.mkdir(parents=True, exist_ok=True)
@@ -90,13 +97,13 @@ def bundle(unit: str, run_id: str, username: str, out: Path, *, repo: Path = _RE
     kmain = kmain.replace(marker, "EXPECTED = " + json.dumps({"unit": unit, "run_id": run_id}), 1)
     (kdir / "kernel_main.py").write_text(kmain)
     (kdir / "kernel-metadata.json").write_text(json.dumps({
-        "id": f"{username}/{KERNEL_SLUG}", "title": KERNEL_SLUG, "code_file": "kernel_main.py",
-        "language": "python", "kernel_type": "script", "is_private": "true", "enable_gpu": "true",
+        "id": f"{username}/{kernel_slug}", "title": kernel_slug, "code_file": "kernel_main.py",
+        "language": "python", "kernel_type": "script", "is_private": "true", "enable_gpu": "true" if accelerator == "gpu" else "false",
         "enable_tpu": "false", "enable_internet": "false",
-        "dataset_sources": [f"{username}/{DATASET_SLUG}", *[f"{username}/{d}" for d in published]],
+        "dataset_sources": [f"{username}/{dataset_slug}", *[f"{username}/{d}" for d in published]],
         "competition_sources": [],
         "kernel_sources": [], "model_sources": []}, indent=1) + "\n")
-    return {"published_data": published, "files": len(files), "bundle_mb": round(size_mb, 2), "timeout_minutes": p.timeout_minutes,
+    return {"accelerator": accelerator, "dataset_slug": dataset_slug, "kernel_slug": kernel_slug, "published_data": published, "files": len(files), "bundle_mb": round(size_mb, 2), "timeout_minutes": p.timeout_minutes,
             "kernel_dir": str(kdir)}
 
 
@@ -175,6 +182,7 @@ def main(argv: List[str] | None = None) -> int:
     b.add_argument("--username", required=True)
     b.add_argument("--out", required=True)
     b.add_argument("--sha", default="")
+    b.add_argument("--accelerator", choices=sorted(SLUGS), default="gpu")
     g = sub.add_parser("gate")
     g.add_argument("--quota-file", required=True)
     g.add_argument("--unit", required=True)
@@ -191,7 +199,7 @@ def main(argv: List[str] | None = None) -> int:
         print(f"VERIFY rc={res['rc']}: {res['reason']}")
         return res["rc"]
     if a.cmd == "bundle":
-        print(json.dumps(bundle(a.unit, a.run_id, a.username, Path(a.out), sha=a.sha)))
+        print(json.dumps(bundle(a.unit, a.run_id, a.username, Path(a.out), sha=a.sha, accelerator=a.accelerator)))
         return 0
     if a.cmd == "gate":
         import yaml

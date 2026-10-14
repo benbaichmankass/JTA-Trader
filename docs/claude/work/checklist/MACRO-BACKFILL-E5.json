@@ -1,0 +1,21 @@
+{
+  "id": "MACRO-BACKFILL-E5",
+  "title": "Eng (Tier-1 CI): macro-valuation-backfill.yml declares a research_unit input and lands an E5 research/results record via .github/actions/research-result, so RQ-20260928-010 (M28 realistic-cost rescore) can run as an accruing queue unit",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-14 lane P4-MACRO-PROGRAMME] Found by grading RQ-20260928-010 with scripts/research/research_queue.grade_power: state unverifiable -- an accruing unit must declare run.inputs.research_unit, and the workflow declares none (adding it to the unit alone = HTTP 422). The unit's cost proxy (fee_frac 0.005, carry 0.0) and inputs are otherwise decided. Done when: unit git mv'd back to research/queue/ with research_unit in run.inputs and dispatch_queue.py dry-run grades it would_dispatch. Programme: docs/research/programmes/04-MACRO-SLEEVE.md Q1.",
+  "updated_at": "2026-10-14T18:22:03Z",
+  "updated_by": "session_01PYxkoGKjBfYTMinCeEecYG",
+  "roadmap": [
+    "M28"
+  ],
+  "_seq": 494
+}

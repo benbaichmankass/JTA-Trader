@@ -565,6 +565,20 @@ def test_stale_run_does_not_arm_when_pr_head_has_moved():
     assert not (set(kinds) & ACTING), f"a stale run must act on nothing: {kinds}"
 
 
+def test_16984_shape_queued_self_head_now_hold_without_request_does_not_arm():
+    """#16984 run 37671365711: queued on 6efa01a3 (landing self + request), head became ef82483b
+    (landing hold, request file gone). The queued-vs-current pair is logged and nothing arms."""
+    res = run_gate(
+        branch="claude/some-branch", head_sha="6" * 40, current_head="e" * 40,
+        blobs={f"main|{REQ}/some-branch.txt": "old",
+               f"{'6'*40}|{REQ}/some-branch.txt": "new"},   # no blob at the current head
+        existing_pr={"number": 16984, "node_id": "N", "draft": False,
+                     "head": {"sha": "e" * 40}},
+    )
+    assert not (set(_kinds(res)) & ACTING)
+    assert "head check: queued=66666666 current=eeeeeeee" in json.dumps(res, default=str)
+
+
 def test_unreadable_current_head_does_not_arm():
     res = run_gate(
         branch="claude/some-branch", head_sha="d" * 40, pulls_get_raises=True,
