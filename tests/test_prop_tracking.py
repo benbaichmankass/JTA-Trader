@@ -137,6 +137,18 @@ def test_positions_miss_no_tab_detail_is_kept_scrubbed(env):
     assert "https" not in json.dumps(pe.last_positions_diag("breakout_2")) and "<" not in pe.last_positions_diag("breakout_2")["state"]
 
 
+def test_positions_miss_unparsed_keeps_detail_and_masked_cells(env):
+    # BREAKOUT-POS-UNPARSED: the first live miss said only "unparsed"; the app now names the missing keys and sends the
+    # first failing row's cells as key:shape. Digits are masked again server-side (a raw value never lands on disk).
+    pe.record_event(_dev(), {"event": "positions_miss", "reason": "unparsed miss=side bad=0 n=1",
+                             "headers": ["Market", "Side"], "cells": ["symbol:ETHUSD", "side:S", "value:1327.45 USD", "<x>"]})
+    d = pe.last_positions_diag("breakout_2")
+    assert d["state"] == "unparsed miss=side bad=0 n=1"
+    assert d["cells"] == ["symbol:ETHUSD", "side:S", "value:dddd.dd USD", "x"]
+    pe.record_event(_dev(), {"event": "positions_miss", "reason": "no_table"})
+    assert pe.last_positions_diag("breakout_2")["cells"] == []
+
+
 # ---- reconcile ----
 
 def test_matching_positions_change_nothing():

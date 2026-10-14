@@ -247,6 +247,15 @@
     var m = /([-+−]?)\s*\$?\s*(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?/.exec((s || "").replace(/–/g, "-"));
     if (!m) return null; var v = parseFloat((m[2] + (m[3] || "")).replace(/,/g, "")); return (m[1] === "-" || m[1] === "−") ? -v : v;
   }
+  // BREAKOUT-POS-UNPARSED (2026-10-14): innerText glues adjacent inline spans ("<span>Short</span><span>20x</span>" ->
+  // "Short20x"), so \bshort\b missed a side word the operator can plainly read -- the "Positions1" badge failure again,
+  // in a cell. wt() is the cell's text nodes joined WITH spaces; it is used ONLY to find words (side, symbol), never
+  // numbers: a price whose digits sit in separate spans ("2,4<b>58</b>.24") must stay one number.
+  function wt(el) {
+    var out = [], w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null), n;
+    while ((n = w.nextNode())) if (n.parentElement && vis(n.parentElement) && n.nodeValue.trim()) out.push(n.nodeValue.trim());
+    return out.join(" ").replace(/\s+/g, " ").trim();
+  }
   function sideOf(s) { var m = /\b(long|short|buy|sell)\b/i.exec(s || ""); if (!m) return null; return /long|buy/i.test(m[1]) ? "long" : "short"; }
   function tabCount(re) {   // "Positions (2)" / "Positions 2" / "Positions1" -> 2/2/1; a bare label -> null (the page did not say)
     var c = all("button,[role=tab],[role=button],a").filter(function (x) { return tabMatch(re, t(x)); });
@@ -257,12 +266,13 @@
   function masked(hs) { return hs.map(function (h) { return h.replace(/\d/g, "#").slice(0, 24); }).slice(0, 20); }
   function controlsDump() { return all("button,[role=tab],[role=button]").map(function (x) { return t(x).replace(/\d/g, "#").slice(0, 30); }).filter(Boolean).slice(0, 30); }
   // one row's cells -> {symbol, side, qty, ...}; cells are aligned to keys (null / "skip" columns ignored)
-  function parseRow(cells, keys) {
-    var o = {}, rowText = cells.join(" ");
+  // `words` (optional): the same cells as wt() text, for the side and symbol words only
+  function parseRow(cells, keys, words) {
+    var o = {}, rowText = cells.join(" ") + " " + (words || []).join(" ");
     cells.forEach(function (c, i) {
-      var k = keys[i]; if (!k || k === "skip" || o[k] !== undefined) return;
+      var k = keys[i], w = (words && words[i]) || c; if (!k || k === "skip" || o[k] !== undefined) return;
       if (k === "side") o.reduce = /reduce/i.test(c);   // "Long (Reduce)": the span after the side word; closes a SHORT
-      o[k] = (k === "symbol" || k === "status" || k === "type" || k === "time") ? c.slice(0, 40) : (k === "side" ? sideOf(c) : firstNumber(c));
+      o[k] = k === "symbol" ? w.slice(0, 40) : (k === "status" || k === "type" || k === "time") ? c.slice(0, 40) : (k === "side" ? (sideOf(c) || sideOf(w)) : firstNumber(c));
     });
     if (o.side == null) o.side = sideOf(o.symbol) || sideOf(rowText);
     // a size carries the side only when it is SIGNED ("-1.5" short, "+1.5" long); an unsigned size is not a long
@@ -271,19 +281,35 @@
     if (typeof o.qty === "number") o.qty = Math.abs(o.qty);
     // NO size column (Breakout's Positions grid shows Value, not contracts): qty = |Value| / Current price, marked
     // qty_src so the server and a reader know it is DERIVED (rounded Value, so only approximately the placed size)
-    if (keys.indexOf("qty") < 0 && keys.indexOf("value") >= 0 && typeof o.value === "number" && typeof (o.mark != null ? o.mark : o.price) === "number" && (o.mark != null ? o.mark : o.price) > 0 && o.value !== 0) {
+    // a mark more than 2x away from the entry is a misread number (e.g. "2 462.10" read as 2), never a qty divisor
+    var px = o.mark != null ? o.mark : o.price, pxOk = typeof o.entry !== "number" || !(o.entry > 0) || (px / o.entry > 0.5 && px / o.entry < 2);
+    if (keys.indexOf("qty") < 0 && keys.indexOf("value") >= 0 && typeof o.value === "number" && typeof px === "number" && px > 0 && pxOk && o.value !== 0) {
       o.qty = Math.round(Math.abs(o.value) / (o.mark != null ? o.mark : o.price) * 1e8) / 1e8; o.qty_src = "value/mark";
     }
-    if (o.symbol) o.symbol = o.symbol.replace(/\b(long|short|buy|sell)\b/ig, "").replace(/\d+(\.\d+)?\s*[x×]/ig, "").trim();
+    if (o.symbol) o.symbol = o.symbol.replace(/\b(long|short|buy|sell)\b/ig, "").replace(/\d+(\.\d+)?\s*[x×]|\b[x×]\s*\d+(\.\d+)?\b/ig, "").replace(/\s+/g, " ").trim();
     return o;
   }
   // every parsed row is sent, never a prefix: a row the server does not see would read as gone (review of #17745);
   // a strict list longer than the cap is refused instead of truncated. `emptyOk` = positive evidence the view is empty.
-  function finishRead(out, bad, hs, count, need, strict, emptyOk) {
+  // An unparsed miss says WHICH need keys were missing (detail, "+"-joined: the server scrub keeps "+" and "=") and the
+  // first failing row's cells as key:shape with digits -> "d" (BREAKOUT-POS-UNPARSED: the first live miss said only
+  // "unparsed", so the failing field had to be guessed).
+  function cellShapes(cells, keys) {
+    return (cells || []).slice(0, 20).map(function (c, i) {
+      return ((keys[i] || "none") + ":" + c.replace(/\d/g, "d").replace(/,/g, "_").replace(/[^A-Za-z0-9 _.:\/()=+&%-]/g, "=")).slice(0, 40);
+    });
+  }
+  function finishRead(out, bad, hs, count, need, strict, emptyOk, raw, keys) {
     if (strict && out.length > ROW_CAP) return {state: "too_many_rows", n_rows: out.length, count: count, headers: masked(hs)};
     var rows = out.slice(0, ROW_CAP);
-    if (bad || out.some(function (o) { return need.some(function (k) { return o[k] == null || o[k] === ""; }); }))
-      return {state: "unparsed", n_rows: out.length + bad, count: count, headers: masked(hs)};
+    var miss = function (o) { return need.filter(function (k) { return o[k] == null || o[k] === ""; }); };
+    var fi = -1; out.forEach(function (o, i) { if (fi < 0 && miss(o).length) fi = i; });
+    if (bad || fi >= 0) {
+      var ms = []; out.forEach(function (o) { miss(o).forEach(function (k) { if (ms.indexOf(k) < 0) ms.push(k); }); });
+      return {state: "unparsed", n_rows: out.length + bad, count: count, headers: masked(hs),
+        detail: ("miss=" + (ms.join("+") || "none") + " bad=" + bad + " n=" + out.length).slice(0, 31),
+        cells: fi >= 0 && raw ? cellShapes(raw[fi], keys || []) : []};
+    }
     if (count !== null && count !== out.length) return {state: "count_mismatch", n_rows: out.length, count: count, headers: masked(hs)};
     // flat needs POSITIVE evidence (the tab says 0, or the table's / panel's container says "no positions"): a header
     // row with no data rows may be a table still rendering, and a false "flat" would close live journal rows.
@@ -346,9 +372,10 @@
         });
       }
     }
-    var out = rows.map(function (r) { return parseRow(kids(r).map(t), keys); });
+    var raw = rows.map(function (r) { return kids(r).map(t); });
+    var out = rows.map(function (r, i) { return parseRow(raw[i], keys, kids(r).map(wt)); });
     var panel = gridPanel(h), emptyOk = !!(panel && emptyRe.test(t(panel)));
-    var r = finishRead(out, bad, hs, count, need, strict, emptyOk);
+    var r = finishRead(out, bad, hs, count, need, strict, emptyOk, raw, keys);
     r.layout = "div_grid";
     return r;
   }
@@ -374,15 +401,15 @@
       return {state: hits.length ? "ambiguous" : "no_table", tables: hits.length, count: count,
         headers: hits.length ? masked(hits[0].hs) : [], controls: controlsDump()};
     }
-    var h = hits[0], out = [], bad = 0;
+    var h = hits[0], out = [], bad = 0, raw = [];
     innermost(Array.prototype.slice.call(h.tb.querySelectorAll("tr,[role=row]")).filter(vis)).forEach(function (r) {
       if (r.querySelector("th,[role=columnheader]")) return;
-      var cells = Array.prototype.slice.call(r.querySelectorAll("td,[role=cell],[role=gridcell]")).map(t);
+      var els = Array.prototype.slice.call(r.querySelectorAll("td,[role=cell],[role=gridcell]")), cells = els.map(t);
       if (cells.length === 1 && emptyRe.test(cells[0])) return;   // the table's own "no positions" row
       if (cells.length !== h.hs.length) { bad += 1; return; }
-      out.push(parseRow(cells, h.keys));
+      raw.push(cells); out.push(parseRow(cells, h.keys, els.map(wt)));
     });
-    return finishRead(out, bad, h.hs, count, need, strict, emptyRe.test(t(h.tb.parentElement || h.tb)));
+    return finishRead(out, bad, h.hs, count, need, strict, emptyRe.test(t(h.tb.parentElement || h.tb)), raw, h.keys);
   }
   function dialogs() { return all("[role=dialog],[role=alertdialog],dialog[open]"); }
   function dlg() { var d = dialogs(); return d.length === 1 ? d[0] : null; }
