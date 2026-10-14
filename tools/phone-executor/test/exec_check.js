@@ -554,6 +554,26 @@ document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__su
   eq(/\d/.test(JSON.stringify(gb.headers)), false, "div grid: miss dump headers carry no digits");
   const gNoSide = await onHost(gridPage("Positions", gridRow("ETHUSD", "+1 USD", "-", "2,554.40 USD", "2,500", "2,554.40", "-", "+1 USD")));
   eq((await gNoSide.evaluate("__ex.positionsRead()")).state, "unparsed", "div grid: no readable side -> unparsed, never guessed");
+  // BREAKOUT-POS-UNPARSED (2026-10-14): 1b.188 found the live Positions tab with the ETH short open and read
+  // "unparsed". innerText GLUES adjacent inline spans ("<span>Short</span><span>20x</span>" -> "Short20x"), so the
+  // side word was invisible to \bshort\b. Side and symbol words are now read from the cell's text nodes with spaces;
+  // numbers still come from innerText, so a price whose digits sit in separate spans stays one number.
+  const glued = gridRow("<img alt=''><span>ETH</span><span>x5</span>", "<span>-2.10</span><span>USD</span>", "<span>Short</span><span>20x</span>",
+    "1,327.45 USD", "2,4<b>58</b>.24", "2,462.10", "2214.87 / 2504.25", "-2.50 USD");
+  const gG = await onHost(gridPage("Positions1", glued));
+  eq(await gG.evaluate("document.querySelector('.r').children[2].innerText"), "Short20x", "glued: the side cell's innerText really is glued");
+  let gg = await gG.evaluate("__ex.positionsRead()");
+  eq([gg.state, gg.n_rows, gg.count], ["read", 1, 1], "glued: the ETH short with glued side/leverage spans reads (was unparsed)");
+  eq([gg.rows[0].symbol, gg.rows[0].side, gg.rows[0].entry, gg.rows[0].mark, gg.rows[0].qty],
+    ["ETH", "short", 2458.24, 2462.1, 0.53915357], "glued: symbol ETH (x5 dropped), side short, split-digit entry kept whole, qty derived");
+  // a miss now says which need key failed and dumps the first failing row's cells (digits masked)
+  let gs = await (await onHost(gridPage("Positions1", gridRow("ETHUSD", "-2.10 USD", "S", "1,327.45 USD", "2,458.24", "2,462.10", "-", "-2.50 USD")))).evaluate("__ex.positionsRead()");
+  eq([gs.state, gs.detail], ["unparsed", "miss=side bad=0 n=1"], "unparsed miss names the missing key");
+  eq(gs.cells.slice(0, 4), ["symbol:ETHUSD", "upnl:-d.dd USD", "side:S", "value:d_ddd.dd USD"], "unparsed miss dumps key:shape cells, digits masked");
+  eq(/\d/.test(JSON.stringify(gs.cells)), false, "unparsed miss cells carry no digits");
+  // a Current price misread as a tiny number ("2 462.10" -> 2) is never a qty divisor: unparsed, not a 663-lot position
+  let gm2 = await (await onHost(gridPage("Positions1", gridRow("ETHUSD", "-2.10 USD", "Short", "1,327.45 USD", "2,458.24", "2 462.10", "-", "-2.50 USD")))).evaluate("__ex.positionsRead()");
+  eq([gm2.state, gm2.detail], ["unparsed", "miss=qty bad=0 n=1"], "mark 2x away from entry -> qty not derived (unparsed)");
   const gNoTabs = await onHost(`<!doctype html><html><body><div id=hdr><div>Market</div><div>UP&amp;L</div><div>Side</div><div>Value</div><div>Opening price</div><div>Current price</div></div><p>Start trading with leverage</p></body></html>`);
   eq((await gNoTabs.evaluate("__ex.positionsRead()")).state, "empty_unconfirmed", "div grid: no tab bar to bound the panel -> no flat evidence");
   // CLOSED ORDERS as a DIV GRID (layout UNMEASURED; synthetic): the generic reader maps by header label too.
