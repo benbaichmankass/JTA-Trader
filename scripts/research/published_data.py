@@ -73,7 +73,7 @@ def download_dataset(api: Any, user: str, slug: str, dest: Path) -> str:
         if done():
             return ""
         notes.append("api: returned but no MANIFEST.json")
-    except Exception as exc:  # noqa: BLE001 -- every failure mode is reported, none swallowed
+    except Exception as exc:  # allow-silent: the reason is appended to `notes` and returned to the caller, which prints it
         notes.append(f"api: {type(exc).__name__}: {str(exc)[-200:]}")
     try:
         ver = None
@@ -87,7 +87,7 @@ def download_dataset(api: Any, user: str, slug: str, dest: Path) -> str:
             if r.returncode == 0 and done():
                 return ""
             notes.append("cli@version: " + (r.stderr or r.stdout)[-200:])
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # allow-silent: the reason is appended to `notes` and returned to the caller, which prints it
         notes.append(f"list: {type(exc).__name__}: {str(exc)[-200:]}")
     return " | ".join(notes).replace(user, "<user>")
 
