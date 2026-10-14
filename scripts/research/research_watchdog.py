@@ -281,6 +281,35 @@ def check_stamps(prs: Optional[list], now: datetime, th: dict) -> Dict[str, Any]
     return verdict("stamps", OK, f"{len(stamp)} open stamp PR(s), none older than {hrs:g} h", evidence=ev)
 
 
+AUTOMATION_PREFIX = "automation/"
+
+
+def check_conflicted_automation(prs: Optional[list], state_for: Callable[[int], Optional[str]], now: datetime,
+                                th: dict) -> Dict[str, Any]:
+    """Name every `automation/*` PR (stamp, receipt, capture-watch ...) that is CONFLICTING and older than the bound.
+
+    A conflicted PR runs no checks and never merges, so the stamp/receipt it carries never lands (#18004, #18014,
+    2026-10-14) and the failure surfaced as a false 'idle' alarm. `state_for(n)` is GitHub's `mergeable_state`;
+    None = could not look, which is never read as clean."""
+    mins = float(th.get("conflicted_automation_minutes", 45))
+    if prs is None:
+        return verdict("conflicted_automation", CNL, "could not list open PRs")
+    auto = [p for p in prs if str(((p.get("head") or {}).get("ref")) or "").startswith(AUTOMATION_PREFIX)]
+    old = [p for p in auto if (_age_min(p.get("created_at"), now) or 0) > mins]
+    states = {p.get("number"): state_for(p.get("number")) for p in old}
+    dirty = [n for n, st in states.items() if st == "dirty"]
+    unread = [n for n, st in states.items() if st is None]
+    ev = {"open_automation_prs": len(auto), "checked": len(old), "conflicting": dirty, "unreadable": unread}
+    if dirty:
+        refs = {p.get("number"): (p.get("head") or {}).get("ref") for p in old}
+        return verdict("conflicted_automation", BAD,
+                       f"{len(dirty)} automation PR(s) CONFLICTING with main for > {mins:g} min: "
+                       + ", ".join(f"#{n} ({refs[n]})" for n in dirty[:6]), evidence=ev)
+    if unread:
+        return verdict("conflicted_automation", CNL, f"could not read mergeable_state for {len(unread)} PR(s)", evidence=ev)
+    return verdict("conflicted_automation", OK, f"{len(auto)} open automation PR(s), none conflicting > {mins:g} min", evidence=ev)
+
+
 def check_phone_heartbeat(res: Optional[dict], th: dict) -> Dict[str, Any]:
     """breakout_2's phone executor heartbeat, graded by scripts/ops/prop_silence.probe_phone_heartbeat (the SAME probe and
     the SAME 'live' definition -- config/accounts.yaml mode == live -- as the hourly attention watch). `res` is that probe's
@@ -333,6 +362,12 @@ class GhProbe:
 
     def open_prs(self) -> Optional[list]:
         return self._api(f"repos/{self.repo}/pulls?state=open&per_page=100")
+
+    def pr_merge_state(self, number: int) -> Optional[str]:
+        """GitHub's `mergeable_state` ('dirty' = conflicting); None = could not look. The list endpoint omits it."""
+        d = self._api(f"repos/{self.repo}/pulls/{number}")
+        st = d.get("mergeable_state") if isinstance(d, dict) else None
+        return None if st in (None, "unknown") else st
 
     def collector_status(self, window_hours: float, now: datetime) -> Optional[dict]:
         from scripts.research import collect_runner_results as crr
@@ -440,6 +475,9 @@ class FixtureProbe:
     def open_prs(self):
         return self._get("open_prs")
 
+    def pr_merge_state(self, number: int):
+        return (self._get("merge_states") or {}).get(str(number), "clean")
+
     def collector_status(self, window_hours: float, now: datetime):  # inert: window_hours — mirrors GhProbe's signature; inert: now — same
         return self._get("collector")
 
@@ -535,7 +573,9 @@ def evaluate(probe: Any, cfg: dict, now: datetime, facts: Optional[dict]) -> Lis
                                  (facts.get("backend_windows") or {}).get(be) if facts else None,
                                  (facts.get("backend_min_need_minutes") or {}).get(be) if facts else None))
     out.append(check_collector(probe.collector_status(float(th["collector_window_hours"]), now), th))
-    out.append(check_stamps(probe.open_prs(), now, th))
+    prs = probe.open_prs()
+    out.append(check_stamps(prs, now, th))
+    out.append(check_conflicted_automation(prs, probe.pr_merge_state, now, th))
     out.append(check_phone_heartbeat(probe.phone_probe(now), th))
     return out
 
