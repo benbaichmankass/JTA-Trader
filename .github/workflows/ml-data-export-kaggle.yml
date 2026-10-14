@@ -70,7 +70,8 @@ jobs:
           SSH="ssh -i $HOME/.ssh/trainer_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
           python3 scripts/research/market_data_export.py list-paths > /tmp/files.txt
           for attempt in 1 2; do
-            BUSY=$($SSH "${TRAINER_USER}@${TRAINER_IP}" "cd /home/ubuntu/ict-trading-bot/datasets-out && find market_features market_raw -name data.jsonl -mmin -10 | wc -l" 2>/dev/null | tr -d ' ')
+            # Only the files this job will copy count (first run 2026-10-14 00:52Z refused on 22 shards it never exports).
+            BUSY=$(grep 'data.jsonl$' /tmp/files.txt | $SSH "${TRAINER_USER}@${TRAINER_IP}" "cd /home/ubuntu/ict-trading-bot/datasets-out && xargs -r -I{} find {} -mmin -10 2>/dev/null | wc -l" 2>/dev/null | tr -d ' ')
             [ "${BUSY:-x}" = "0" ] && break
             echo "a shard was modified in the last 10 min (busy=${BUSY:-unreadable}); attempt ${attempt}"
             [ "$attempt" = "1" ] && sleep 660
