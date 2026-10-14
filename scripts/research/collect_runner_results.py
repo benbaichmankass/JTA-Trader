@@ -132,6 +132,34 @@ def already_landed(root: Path, unit: str, run_id: int) -> bool:
             or (root / "research" / "results" / unit / f"{run_id}.jsonl").exists())
 
 
+_BATCH_PREFIX = "automation/research-results-batch"
+_RECORD_PATH_RE = re.compile(r"^research/results/(?P<unit>[^/]+)/(?P<run>\d+)\.jsonl$")
+
+
+def pending_in_open_batches(repo_slug: str) -> Optional[set]:
+    """{(unit, run_id)} whose E5 record sits in an OPEN results-batch PR, or None when we could not look.
+
+    WHY (RESEARCH-PIPE-UNSTICK 2026-10-14): a batch PR stays open ~1 h (CI). The next hourly cycle
+    checks out `main`, which does not yet carry that record, so `already_landed` said no and the
+    same runs were collected AGAIN into a second batch PR. Each carries a different `generated_at`,
+    so the first to merge left the others `dirty` (add/add on research/results/**) -- #17897, #17927.
+    None -> fail open: collect as before (a duplicate PR is the old, visible failure)."""
+    raw = _gh(["api", f"repos/{repo_slug}/pulls?state=open&per_page=100", "--paginate", "--jq",
+               f'.[] | select(.head.ref | startswith("{_BATCH_PREFIX}")) | .number'])
+    if raw is None:
+        return None
+    pending: set = set()
+    for num in raw.split():
+        files = _gh(["api", f"repos/{repo_slug}/pulls/{num}/files?per_page=100", "--paginate", "--jq", ".[].filename"])
+        if files is None:
+            return None
+        for name in files.split():
+            m = _RECORD_PATH_RE.match(name)
+            if m:
+                pending.add((m.group("unit"), int(m.group("run"))))
+    return pending
+
+
 def emit_record(root: Path, rec: Dict[str, Any], *, run: Dict[str, Any], repo_slug: str) -> Optional[str]:
     """Write the E5 record through research_result.py; returns its repo path."""
     run_id = str(run["databaseId"])
@@ -169,7 +197,8 @@ def emit_record(root: Path, rec: Dict[str, Any], *, run: Dict[str, Any], repo_sl
 
 
 def collect(root: Path, *, repo_slug: str, runs: Optional[List[Dict[str, Any]]] = None,
-            artifacts_for=run_artifacts, downloader=download, dry_run: bool = False) -> Dict[str, Any]:
+            artifacts_for=run_artifacts, downloader=download, dry_run: bool = False,
+            pending: Optional[set] = None) -> Dict[str, Any]:
     """The batch: {landed, skipped, lost, unreadable, read_error}."""
     out: Dict[str, Any] = {"landed": [], "skipped": [], "lost": [], "unreadable": [], "read_error": None}
     if runs is None:
@@ -196,6 +225,9 @@ def collect(root: Path, *, repo_slug: str, runs: Optional[List[Dict[str, Any]]] 
         dest = root / "comms" / "research" / unit / str(run_id)
         if already_landed(root, unit, run_id):
             out["skipped"].append({"run_id": run_id, "unit": unit, "why": "already on main"})
+            continue
+        if pending and (unit, run_id) in pending:
+            out["skipped"].append({"run_id": run_id, "unit": unit, "why": "record is in an open results-batch PR"})
             continue
         if art.get("expired"):
             out["lost"].append({"run_id": run_id, "unit": unit, "why": "artifact expired before any cycle collected it"})
@@ -308,6 +340,11 @@ def _self_test() -> int:
         assert [x["run_id"] for x in res4["lost"]] == [9], res4           # lost: expired before any cycle took it
         assert res4["landed"] == [] and res4["read_error"] is None, res4
         # nothing to collect at all is a clean cycle
+        # a run whose record is already in an OPEN batch PR is skipped, not collected twice
+        res6 = collect(root, repo_slug="o/r", runs=[runs2[2]], artifacts_for=arts2, downloader=lambda *a: False,
+                       pending={("RQ-20300101-008", 8)})
+        assert [x["run_id"] for x in res6["skipped"]] == [8] and not res6["unreadable"], res6
+        assert _RECORD_PATH_RE.match("research/results/RQ-1-001/12.jsonl") and not _RECORD_PATH_RE.match("comms/x/1.jsonl")
         res5 = collect(root, repo_slug="o/r", runs=runs2[:1], artifacts_for=arts2, downloader=lambda *a: False)
         assert not (res5["lost"] or res5["unreadable"] or res5["read_error"] or res5["landed"]), res5
     # ML-RQ-RUNNER: the trainer twin's artifact name resolves to the same (unit, run id) pair
@@ -333,7 +370,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     slug = args.repo or os.environ.get("GITHUB_REPOSITORY") or ""
     if not slug:
         ap.error("--repo or $GITHUB_REPOSITORY is required")
-    res = collect(_REPO, repo_slug=slug, dry_run=args.dry_run)
+    pending = pending_in_open_batches(slug)
+    if pending is None:
+        print("::warning::could not list open results-batch PRs; collecting without the duplicate check")
+    res = collect(_REPO, repo_slug=slug, dry_run=args.dry_run, pending=pending)
     if args.json_out:
         Path(args.json_out).write_text(json.dumps(res, indent=2) + "\n", encoding="utf-8")
     print(f"collect_runner_results: landed={len(res['landed'])} skipped={len(res['skipped'])} lost={len(res['lost'])}"
