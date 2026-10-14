@@ -1,4 +1,4 @@
-# Research map — the five programmes and how they feed each other
+# Research map — the programmes and how they feed each other
 
 > **Doc status:** `unknown` · category `evidence` · last verified `2026-10-14` · registered in [`../../DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md) · lane `RESEARCH-PROGRAMMES` (dispatched by the manager from the 2026-10-14 weekly planning; checklist row `WEEKLY-PLANNING`) · **Tier-1: nothing here changes a config, a roster or an order path.**
 
@@ -6,7 +6,7 @@
 
 How this fits the work system: a programme is a *plan*, not a third category of work (CLAUDE.md § "Two categories"). Each question below becomes a `research/queue/` unit and each build a checklist row, every one carrying a `roadmap` milestone ref. Full plan per programme: `01-ACTIVE-TRADE-MANAGEMENT.md`, `02-AI-TRADER.md`, `03-STRATEGY-IMPROVEMENT.md` (lane P3-STRATEGY-PROGRAMME), `04-MACRO-SLEEVE.md` (lane P4-MACRO-PROGRAMME) and `05-PROP.md` (lane P5-PROP-PROGRAMME) are all landed (2026-10-14); none is owed.
 
-## 1. The five programmes, in order
+## 1. The programmes, in order
 
 | # | programme | goal | the measure it moves | roadmap | core questions, in dependency order |
 |---|---|---|---|---|---|
@@ -15,6 +15,7 @@ How this fits the work system: a programme is a *plan*, not a third category of 
 | **P3** | **Strategy improvement** (M21 entries, M22 small-TF/pairs, M27 scalps, perf-followup) | Every live leg pulls its own weight; losers are tuned or retired on evidence | Per-leg net R per capital-day (real, mirror, paper separately); Stage-0 pass rate at configured params (MEASURED 2026-10-14, `stage0_capital_day_census.py`: real money 3 of 7 legs pull weight, 1 drag, 3 underpowered; prop 0 of 2, both drag on 2/4 folds); perf-review grade | M21, M22, M27, L-LADDER | per-leg weight (same census as P1-Q1) → tune-before-retire (perf-followup Track 1) → lessons → extrapolate (Track 3) → new families at Stage 0 → portfolio overlap/concentration (Track 4) |
 | **P4** | **Macro sleeve** (M28, M29, WEPE) | A thesis-driven, weeks-horizon sleeve whose conviction axes add net R through defined-risk instruments | Net R of `alpaca_options_paper` per conviction axis vs the naive floor; event-surprise hit rate | M28, M29 | MACRO-RESHAPE wire-and-rescore → PM-surprise (RQ-20261009-903) → news veto / standalone news edge (NEWS-ALPHA-PROGRAM) → M29 wakes only on a read-out |
 | **P5** | **Prop** (L-PROP) | Prop accounts execute, protect and clear evaluations as an expected-value question (row B6) | E[profit before the account dies] per account; gradable prop closes (PROP-EXIT-READ) | L-PROP | first gradable closes → per-leg sizing (PROP-PER-LEG-EV-GRID) → breadth units into a candidate pool → P1-Q7 (TP amend on the dxtrade/phone paths) |
+| **P6** | **Data infrastructure** (L-DATA; supersedes M9's data half) — the plumbing under P1 and P2 | Every model learns from labels that are measurements, at a grain fine enough for its question, from every free information class, with train = serve features | Finest refreshed grain per crypto symbol (MEASURED 2026-10-14: 5m, 1m only stale BTC/MES v001); shards whole (4 v002 shards cut, SPLG empty); information classes beyond BTC (funding/OI, flow: BTC only); share of SL/TP ties resolved by finer data (0%) | L-DATA | Q1 tie-label error (`RQ-20261014-da7a-01`) → Q2 1m + derivatives archives → Q3 Binance-vs-Bybit label agreement → Q4 tie-aware labels + per-bar first-passage label store (under the exit lane's EXIT-PATH-EMIT-OFFLINE) → Q5 derivatives-metrics information lift → Q6 data catalog → Q7 Parquet + GC |
 
 ## 2. Cross-programme feeds — what is shared, and where it lives
 
@@ -68,6 +69,7 @@ How this fits the work system: a programme is a *plan*, not a third category of 
 | P3 | config-exact harnesses with the full cost stack; monthly M20/E35 generated sweeps; the grade pile cleared (RESEARCH-GRADE-PILE) | 13 harnesses; 2 outside the cost stack; 17 hand-written results ungraded on 2026-10-11 |
 | P4 | point-in-time macro store; event join with a production caller; PM collector | PM-COLLECTOR landed; event join has no caller |
 | P5 | prop journal exit prices (PROP-EXIT-READ); ticket supersede/reissue | first velotrade close had null exit_price/pnl |
+| P6 (serves P1/P2) | a persisted 1m archive + perp-derivatives archive for the 6 crypto roster symbols; tie-aware labels; a catalog of the stores | none persisted at < 5m except stale BTC/MES 1m v001; 4 cut v002 shards; plan `06-DATA-INFRA.md` |
 
 ## 5. Cadence and ownership
 
@@ -84,3 +86,5 @@ How this fits the work system: a programme is a *plan*, not a third category of 
 **Landed since:** `02-AI-TRADER.md` (#18015, lane AI-TRADER-PROGRAMME); `03-STRATEGY-IMPROVEMENT.md` (lane P3-STRATEGY-PROGRAMME, 2026-10-14: Stage-0 capital-day census `RQ-20261014-470a-11`, 11 runnable units `470a-01..11` incl. the fresh-window confirmation `470a-01` of `RQ-20261014-f0e2-05`, and the pairs R-scale finding, row `PAIRS-R-SCALE` + `blocked/RQ-20261014-470a-12`); `04-MACRO-SLEEVE.md` (2026-10-14, lane P4-MACRO-PROGRAMME): Q1..Q7, first-two-week units `RQ-20261014-4a4c-01..08` (runnable) + `blocked/RQ-20261014-4a4c-09`, and `RQ-20260928-010` re-scoped. P4's § 4 infra line is refined there: the event join has no caller in the *offline* replay either (`RQ-20260928-009`), and `macro-valuation-backfill.yml` lands no E5 record (`MACRO-BACKFILL-E5`).
 
 `05-PROP.md` landed 2026-10-14 (lane P5-PROP-PROGRAMME): Q1..Q7, first-two-week units `RQ-20261014-f516-01..10` (runnable) + `blocked/RQ-20261014-f516-11`; P3's census grades both prop legs `drag` on fold consistency (2/4), a P5 input. **Nothing is owed:** all five programmes (01..05) are landed. Each is re-read weekly against the measured state (§ 5, WEEKLY-PLANNING).
+
+`06-DATA-INFRA.md` landed 2026-10-14 (lane DATA-INFRA-PROGRAMME, operator directive ~21:35Z): the data plumbing under P1/P2 — measured audit of every ingest/label/dataset path, ranked open-source sources with licence and size, target architecture, rows `DATA-CATALOG`, `DATA-KLINE-ARCHIVE`, `DATA-DERIV-ARCHIVE`, `DATA-LABEL-TIES`, `DATA-INTRADE-LABEL-STORE`, `DATA-STORE-PARQUET-GC` (Tier-2) and units `RQ-20261014-da7a-01` (runnable) + `blocked/RQ-20261014-da7a-02/03`. It owns the plumbing; the IN-TRADE-EXIT-MODEL lane owns the exit model and the harness path emit (`EXIT-PATH-EMIT-OFFLINE`).

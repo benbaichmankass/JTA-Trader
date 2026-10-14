@@ -1,0 +1,21 @@
+{
+  "id": "DATA-STORE-PARQUET-GC",
+  "title": "PROPOSAL (Tier-2): market_features JSONL -> Parquet and GC of one-off versions on the trainer; fix the stale disk figures in scripts/ops/trainer_dataset_gc.py",
+  "phase": "build",
+  "state": "queued",
+  "owner": "build lane; operator OK required (Tier-2: deletes on the trainer)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-14 lane DATA-INFRA-PROGRAMME, plan docs/research/programmes/06-DATA-INFRA.md, milestone L-DATA] Programme 06 Q7. MEASURED (trainer diag #18107/#18108): datasets-out 9.6 GB of which market_features 7.9 GB, JSONL, versions BTC 15m v001..v004 + v513/v514/v515/v520, ETH 15m v002/v003/v521/v901; BTC 1m v001 572 MB for 3.24M rows (~177 B/row). Root disk 42 of 97 GB used; OCI free-tier block storage 194/200 GB used (TRAINER-DISK), so headroom comes from format and GC, not new volume. scripts/ops/trainer_dataset_gc.py docstring still says '45 GB root at 86%' (pre-resize; prose, fix in the same PR). PROPOSED: Parquet beside JSONL behind the builder's reader, readers switched, then GC of versions no manifest in ml/configs/ names, dry-run list first. Tier-2: prepare + validate, one operator OK, ship, verify post-state.",
+  "updated_at": "2026-10-14T21:42:33Z",
+  "updated_by": "session_016Csv2rRGUB5JorxKavz8rY",
+  "roadmap": [
+    "L-DATA"
+  ],
+  "_seq": 502
+}

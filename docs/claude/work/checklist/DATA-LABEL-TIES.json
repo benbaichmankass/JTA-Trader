@@ -1,0 +1,21 @@
+{
+  "id": "DATA-LABEL-TIES",
+  "title": "Tie-aware barrier labels: tie_ambiguous flag + optional 1m resolution in ml/datasets/labeling/triple_barrier.py and src/research/triple_barrier.py (label_version bump, default outputs byte-identical)",
+  "phase": "build",
+  "state": "queued",
+  "owner": "build lane dispatched by the manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-14 lane DATA-INFRA-PROGRAMME, plan docs/research/programmes/06-DATA-INFRA.md, milestone L-DATA] Programme 06 Q4. WHY: both barrier libraries resolve a bar that touches both barriers as SL-first (ml/datasets/labeling/triple_barrier.py:140-209; src/research/triple_barrier.py), so setup_candidates, exit_candidates, build_intrabar_exit_panel and every first-passage label inherit a convention. How often that convention is WRONG is RQ-20261014-da7a-01's measurement. BUILD: emit tie_ambiguous on every label row; when a 1m frame is supplied (DATA-KLINE-ARCHIVE), resolve ties on it and record tie_resolution in {sl_first_convention, 1m, still_ambiguous}; label_version suffix '-ties'; defaults unchanged byte-for-byte (test). Tier-1 (offline labelling code; no serving path reads these labels live). DONE WHEN: tests prove default byte-identity and a planted tie resolved TP-first on 1m; one dataset build carries the column.",
+  "updated_at": "2026-10-14T21:42:33Z",
+  "updated_by": "session_016Csv2rRGUB5JorxKavz8rY",
+  "roadmap": [
+    "L-DATA"
+  ],
+  "_seq": 500
+}
