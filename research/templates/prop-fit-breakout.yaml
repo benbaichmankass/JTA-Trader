@@ -94,6 +94,11 @@ grid:
     - {key: bal010, label: "flat 1.0% of balance", args: "--sizing balance --risk-pct 0.010"}
     - {key: bal015, label: "flat 1.5% of balance", args: "--sizing balance --risk-pct 0.015"}
     - {key: room033, label: "cushion-fit room 0.33 at 1.5%", args: "--sizing room --risk-pct 0.015 --room-frac 0.33"}
+    # PROPOSED 2026-10-14 (RESEARCH-OPS 02:47Z, manager review): two new pre-registered sizing arms. Adding arms to this
+    # {key,label} axis mints NEW point keys (sizing_arm_key) and leaves every existing key untouched, so nothing is re-minted.
+    # Same flags the committed arms use (prop_ev_sim --sizing balance|room, --risk-pct, --room-frac).
+    - {key: bal005, label: "flat 0.5% of balance", args: "--sizing balance --risk-pct 0.005"}
+    - {key: room050, label: "cushion-fit room 0.50 at 1.5%", args: "--sizing room --risk-pct 0.015 --room-frac 0.50"}
 markets:
   # our symbol -> Breakout market and the swap model its venue uses
   # (docs/integrations/breakout-instruments-2026-09-27.md).
