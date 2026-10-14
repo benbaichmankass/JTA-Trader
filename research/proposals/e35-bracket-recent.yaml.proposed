@@ -1,3 +1,6 @@
+# NOT LOADED: parked here because tests/test_research_queue_autonomy.py::test_weights_follow_the_operators_priorities pins the template families
+# and weights to the OPERATOR'S priorities (30/25/20/15/10); adding a family is an operator decision. To adopt: operator approves a weight, then move this file to
+# research/templates/e35-bracket-recent.yaml and update that test in the same PR.
 # PROPOSED 2026-10-14 (RESEARCH-OPS 02:47Z, for manager review -- a new template forces a landing hold).
 # WHY A NEW FAMILY AND NOT A NEW AXIS ON e35-bracket: queue_replenish.point_key() keys only on leg, *_key axes,
 # start_date and cadence_days. A plain `days: [...]` list axis is NOT in the key (dedupe would collapse it), and a
