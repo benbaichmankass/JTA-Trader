@@ -1,0 +1,228 @@
+{
+  "verdict": "indeterminate",
+  "read_state": "measured",
+  "n": 14400,
+  "population": "2 group(s) ['BTCUSDT_1h', 'ETHUSDT_1h']; baseline lgbm; candidates ['tabicl']; metric macro_f1; n = baseline OOS test rows summed over groups; cv folds per group >= 5",
+  "note": "no evaluated candidate reaches the floor, but some declared arms were unavailable \u2014 a FAIL closes only what was tested, so this is not a FAIL | UNAVAILABLE ARMS: {'tabicl': \"tabicl not importable: No module named 'tabicl'\"}",
+  "measurement": {
+    "engine": "scripts/research/ml_bakeoff.py",
+    "metric": "macro_f1",
+    "higher_is_better": true,
+    "delta_sign": "positive = learner better than reference",
+    "baseline": "lgbm",
+    "controls": [
+      "prior"
+    ],
+    "candidates": [
+      "tabicl"
+    ],
+    "arm_status": {
+      "prior": "ok",
+      "lgbm": "ok",
+      "tabicl": "unavailable"
+    },
+    "groups": {
+      "BTCUSDT_1h": {
+        "n_rows": 12000,
+        "classes": [
+          "range",
+          "volatile"
+        ],
+        "arms": {
+          "prior": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.4330708661417323,
+                  0.42423030787684923,
+                  0.46308724832214765,
+                  0.473491773308958,
+                  0.4698085419734904
+                ],
+                "n_test_rows": 7200
+              }
+            }
+          },
+          "lgbm": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.6148431781068754,
+                  0.5750671998160297,
+                  0.5733650829085587,
+                  0.6287878237758784,
+                  0.5474102340546808
+                ],
+                "n_test_rows": 7200
+              }
+            }
+          },
+          "tabicl": {
+            "status": "unavailable",
+            "reason": "tabicl not importable: No module named 'tabicl'"
+          }
+        }
+      },
+      "ETHUSDT_1h": {
+        "n_rows": 12000,
+        "classes": [
+          "range",
+          "volatile"
+        ],
+        "arms": {
+          "prior": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.39521209575808486,
+                  0.3787748058671268,
+                  0.4312796208530806,
+                  0.4396887159533074,
+                  0.4467921628889743
+                ],
+                "n_test_rows": 7200
+              }
+            }
+          },
+          "lgbm": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.7134322226121492,
+                  0.6126650336433208,
+                  0.6621011255157596,
+                  0.6494349302231761,
+                  0.5877885331347729
+                ],
+                "n_test_rows": 7200
+              }
+            }
+          },
+          "tabicl": {
+            "status": "unavailable",
+            "reason": "tabicl not importable: No module named 'tabicl'"
+          }
+        }
+      }
+    },
+    "deltas": {
+      "BTCUSDT_1h": {
+        "cv": {
+          "prior": {
+            "lgbm": {
+              "n_folds": 5,
+              "mean": -0.13515695620776907,
+              "ci95": [
+                -0.1861780464864513,
+                -0.08413586592908684
+              ],
+              "sign_consistent": true
+            },
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "sign_consistent": false
+            }
+          }
+        }
+      },
+      "ETHUSDT_1h": {
+        "cv": {
+          "prior": {
+            "lgbm": {
+              "n_folds": 5,
+              "mean": -0.22673488876172093,
+              "ci95": [
+                -0.3054411144399617,
+                -0.14802866308348014
+              ],
+              "sign_consistent": true
+            },
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "sign_consistent": false
+            }
+          }
+        }
+      }
+    },
+    "rule_evaluation": {
+      "verdict": "indeterminate",
+      "why": "no evaluated candidate reaches the floor, but some declared arms were unavailable \u2014 a FAIL closes only what was tested, so this is not a FAIL",
+      "candidates": {
+        "tabicl": {
+          "evaluated": false,
+          "status": "unavailable"
+        }
+      }
+    },
+    "headline_checks": [],
+    "licences": {
+      "prior": {
+        "kind": "prior",
+        "licence": "n/a",
+        "research_only": false,
+        "weights": ""
+      },
+      "lgbm": {
+        "kind": "lightgbm",
+        "licence": "MIT",
+        "research_only": false,
+        "weights": ""
+      },
+      "tabicl": {
+        "kind": "tabicl",
+        "licence": "BSD-3-Clause (verify on the Hub)",
+        "research_only": false,
+        "weights": ""
+      }
+    },
+    "n_folds_cv_min_over_groups": 5,
+    "seconds": 17.2
+  }
+}

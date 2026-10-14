@@ -1,6 +1,6 @@
 id: RQ-20261013-0b07-03
 title: 'RESEARCH-ROUTER smoke (GPU, UNATTENDED): prove the research-queue-dispatch cron itself fires research-script-run-kaggle.yml for a unit declaring only compute: gpu (0b07-01 proved the Kaggle runner and collector, but its Kaggle run was fired by hand) (plumbing, not research)'
-status: queued
+status: done
 cadence: once
 theme: infra
 priority: 1
@@ -59,3 +59,12 @@ related:
 last_dispatched_at: '2026-10-13T19:18:07+00:00'
 grading:
   auto: true
+  decision_rule_id: RULE-RQ20261013-0B07-03-ROUTER-SMOKE-GPU-UNATTENDED
+  evidence:
+  - research/results/RQ-20261013-0b07-03/38449812952.jsonl
+  - research/results/RQ-20261013-0b07-03/38469099134.jsonl
+  graded_at: '2026-10-14'
+  grader: scripts/research/queue_grade.py
+  reason: 2 row(s), all measured, all pass
+  rows: 2
+  verdict: pass

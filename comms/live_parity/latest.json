@@ -1,13 +1,13 @@
 {
  "schemaVersion": 1,
- "generatedAt": "2026-10-13T07:15:41+00:00",
+ "generatedAt": "2026-10-14T07:35:08+00:00",
  "window": {
-  "since": "2026-10-06T06:45:00+00:00",
-  "until": "2026-10-13T06:45:00+00:00"
+  "since": "2026-10-07T07:15:00+00:00",
+  "until": "2026-10-14T07:15:00+00:00"
  },
  "bundle": {
-  "fetched_at": "2026-10-13T07:10:44+00:00",
-  "requests": 70,
+  "fetched_at": "2026-10-14T07:32:20+00:00",
+  "requests": 81,
   "order_packages_complete": true,
   "trades_complete": true
  },
@@ -19,7 +19,7 @@
   "legs_checked": 16,
   "bars_checked": 296,
   "real_money_bars_checked": 260,
-  "evals_checked": 20139,
+  "evals_checked": 20223,
   "divergences_real_money": 0,
   "divergences_all": 0
  },
@@ -30,27 +30,27 @@
     {
      "plant": "replay_signal_live_none",
      "leg": "ada_pullback_2h",
-     "window": "2026-10-06T16:45:00+00:00",
+     "window": "2026-10-09T08:30:00+00:00",
      "flagged": true
     },
     {
      "plant": "lost_bar",
      "leg": "ada_pullback_2h",
-     "bar": "2026-10-06T08:00:00+00:00",
+     "bar": "2026-10-07T08:00:00+00:00",
      "flagged": true
     },
     {
      "plant": "live_signal_replay_none",
      "leg": "ada_pullback_2h",
      "flagged": true,
-     "window": "2026-10-06T08:00:00+00:00"
+     "window": "2026-10-07T08:00:00+00:00"
     }
    ]
   },
   "historical_positive": {
    "state": "pass",
-   "packages_checked": 11,
-   "packages_matched": 11,
+   "packages_checked": 10,
+   "packages_matched": 10,
    "packages": [
     {
      "leg": "trend_donchian_eth_4h",
@@ -81,14 +81,6 @@
      "package": "pkg-bec2df7ab1c143d1",
      "created_at": "2026-10-12T13:31:51.983981+00:00",
      "bar": "2026-10-12T04:00:00+00:00",
-     "status": "matched_signal",
-     "matched": true
-    },
-    {
-     "leg": "trend_donchian_eth_4h",
-     "package": "pkg-d29c9c617aa14b40",
-     "created_at": "2026-10-07T02:04:17.436227+00:00",
-     "bar": "2026-10-07T00:00:00+00:00",
      "status": "matched_signal",
      "matched": true
     },
@@ -162,32 +154,30 @@
   },
   "liveness": {
    "state": "pass",
-   "chains_in_window": 80,
+   "chains_in_window": 71,
    "latest": [
     {
+     "strategy": "pairs_sol_eth_b",
+     "created_at": "2026-10-14T03:00:13.764504+00:00",
+     "package": "pkg-02524a8965334b66",
+     "accounts": [
+      "bybit_1"
+     ]
+    },
+    {
+     "strategy": "pairs_sol_eth_a",
+     "created_at": "2026-10-14T03:00:12.836688+00:00",
+     "package": "pkg-bdb2e015c57b4f29",
+     "accounts": [
+      "bybit_1"
+     ]
+    },
+    {
      "strategy": "pairs_bnb_btc_b",
-     "created_at": "2026-10-13T01:05:31.358685+00:00",
-     "package": "pkg-400e270adedd4a7b",
+     "created_at": "2026-10-14T00:04:21.002888+00:00",
+     "package": "pkg-92402cea28024f1f",
      "accounts": [
       "bybit_1"
-     ]
-    },
-    {
-     "strategy": "pairs_bnb_btc_a",
-     "created_at": "2026-10-13T01:05:30.300793+00:00",
-     "package": "pkg-8a917cf15590468d",
-     "accounts": [
-      "bybit_1"
-     ]
-    },
-    {
-     "strategy": "trend_donchian_eth_4h",
-     "created_at": "2026-10-12T23:06:33.493718+00:00",
-     "package": "pkg-6808b9ae4e4a4a27",
-     "accounts": [
-      "bybit_1",
-      "bybit_2",
-      "bybit_portfolio"
      ]
     }
    ],
@@ -222,7 +212,7 @@
    "state": "checked",
    "reason": null,
    "bars_checked": 83,
-   "evals_checked": 4191,
+   "evals_checked": 4213,
    "divergences": 0,
    "by_class": {
     "previous_bar_signal": 0,
@@ -236,133 +226,6 @@
     "dropped_no_order": 0
    },
    "bars": [
-    {
-     "bar": "2026-10-06T08:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 52,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-06T10:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 51,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-06T12:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 51,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-06T14:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 49,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-06T16:00:00+00:00",
-     "status": "matched_signal",
-     "evals": 49,
-     "signal_evals": 48,
-     "downstream": {
-      "class": null,
-      "packages": [],
-      "gates": [
-       "open_package_blocked",
-       "open_package (order_packages)"
-      ],
-      "held_packages": [
-       "pkg-218e9e2e2c4e412d"
-      ]
-     }
-    },
-    {
-     "bar": "2026-10-06T18:00:00+00:00",
-     "status": "matched_signal",
-     "evals": 49,
-     "signal_evals": 5,
-     "downstream": {
-      "class": null,
-      "packages": [],
-      "gates": [
-       "open_package_blocked",
-       "open_package (order_packages)"
-      ],
-      "held_packages": [
-       "pkg-218e9e2e2c4e412d"
-      ]
-     }
-    },
-    {
-     "bar": "2026-10-06T20:00:00+00:00",
-     "status": "matched_signal",
-     "evals": 51,
-     "signal_evals": 20,
-     "downstream": {
-      "class": null,
-      "packages": [],
-      "gates": [
-       "open_package_blocked",
-       "open_package (order_packages)"
-      ],
-      "held_packages": [
-       "pkg-218e9e2e2c4e412d"
-      ]
-     }
-    },
-    {
-     "bar": "2026-10-06T22:00:00+00:00",
-     "status": "matched_signal",
-     "evals": 51,
-     "signal_evals": 3,
-     "downstream": {
-      "class": null,
-      "packages": [],
-      "gates": [
-       "open_package_blocked",
-       "open_package (order_packages)"
-      ],
-      "held_packages": [
-       "pkg-218e9e2e2c4e412d"
-      ]
-     }
-    },
-    {
-     "bar": "2026-10-07T00:00:00+00:00",
-     "status": "matched_signal",
-     "evals": 51,
-     "signal_evals": 7,
-     "downstream": {
-      "class": null,
-      "packages": [],
-      "gates": [
-       "open_package_blocked",
-       "open_package (order_packages)"
-      ],
-      "held_packages": [
-       "pkg-218e9e2e2c4e412d"
-      ]
-     }
-    },
-    {
-     "bar": "2026-10-07T02:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 52,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-07T04:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 51,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-07T06:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 51,
-     "signal_evals": 0
-    },
     {
      "bar": "2026-10-07T08:00:00+00:00",
      "status": "matched_no_signal",
@@ -939,11 +802,83 @@
      "status": "matched_no_signal",
      "evals": 52,
      "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T06:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 54,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T08:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 53,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T10:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 53,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T12:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 53,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T14:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 53,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T16:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 50,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T18:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 50,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T20:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 53,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T22:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 52,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-14T00:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 54,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-14T02:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 53,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-14T04:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 52,
+     "signal_evals": 0
     }
    ],
    "bars_not_comparable": 0,
    "divergence_detail": [],
-   "replay_calls": 10097,
+   "replay_calls": 9984,
    "mode_notes": {},
    "frames_without_current_bar": {
     "n": 0,
@@ -955,14 +890,9 @@
     "p90_s": null,
     "max_s": null
    },
-   "adx_gap_max": 0.1279,
-   "live_evals_in_window": 4244,
+   "adx_gap_max": 0.0,
+   "live_evals_in_window": 4264,
    "matched_signal_bars": [
-    "2026-10-06T16:00:00+00:00",
-    "2026-10-06T18:00:00+00:00",
-    "2026-10-06T20:00:00+00:00",
-    "2026-10-06T22:00:00+00:00",
-    "2026-10-07T00:00:00+00:00",
     "2026-10-08T00:00:00+00:00",
     "2026-10-08T02:00:00+00:00",
     "2026-10-09T08:00:00+00:00",
@@ -974,11 +904,6 @@
     "2026-10-11T00:00:00+00:00"
    ],
    "replay_signal_windows": [
-    "2026-10-06T16:45:00+00:00|long",
-    "2026-10-06T17:00:00+00:00|long",
-    "2026-10-06T17:15:00+00:00|long",
-    "2026-10-06T17:30:00+00:00|long",
-    "2026-10-06T17:45:00+00:00|long",
     "2026-10-09T08:30:00+00:00|short",
     "2026-10-09T09:15:00+00:00|short",
     "2026-10-09T09:30:00+00:00|short",
@@ -994,137 +919,29 @@
     "2026-10-09T19:15:00+00:00|short"
    ],
    "replay_none_windows": [
-    "2026-10-06T07:45:00+00:00",
-    "2026-10-06T08:00:00+00:00",
-    "2026-10-06T08:15:00+00:00",
-    "2026-10-06T08:30:00+00:00",
-    "2026-10-06T08:45:00+00:00",
-    "2026-10-06T09:00:00+00:00",
-    "2026-10-06T09:15:00+00:00",
-    "2026-10-06T09:30:00+00:00",
-    "2026-10-06T09:45:00+00:00",
-    "2026-10-06T10:00:00+00:00",
-    "2026-10-06T10:15:00+00:00",
-    "2026-10-06T10:30:00+00:00",
-    "2026-10-06T10:45:00+00:00",
-    "2026-10-06T11:00:00+00:00",
-    "2026-10-06T11:15:00+00:00",
-    "2026-10-06T11:30:00+00:00",
-    "2026-10-06T11:45:00+00:00",
-    "2026-10-06T12:00:00+00:00",
-    "2026-10-06T12:15:00+00:00",
-    "2026-10-06T12:30:00+00:00",
-    "2026-10-06T12:45:00+00:00",
-    "2026-10-06T13:00:00+00:00",
-    "2026-10-06T13:15:00+00:00",
-    "2026-10-06T13:30:00+00:00",
-    "2026-10-06T13:45:00+00:00",
-    "2026-10-06T14:00:00+00:00",
-    "2026-10-06T14:15:00+00:00",
-    "2026-10-06T14:30:00+00:00",
-    "2026-10-06T14:45:00+00:00",
-    "2026-10-06T15:00:00+00:00",
-    "2026-10-06T15:15:00+00:00",
-    "2026-10-06T15:30:00+00:00",
-    "2026-10-06T15:45:00+00:00",
-    "2026-10-06T18:15:00+00:00",
-    "2026-10-06T18:30:00+00:00",
-    "2026-10-06T18:45:00+00:00",
-    "2026-10-06T19:00:00+00:00",
-    "2026-10-06T19:15:00+00:00",
-    "2026-10-06T19:30:00+00:00",
-    "2026-10-06T19:45:00+00:00",
-    "2026-10-06T21:15:00+00:00",
-    "2026-10-06T21:30:00+00:00",
-    "2026-10-06T21:45:00+00:00",
-    "2026-10-06T22:15:00+00:00",
-    "2026-10-06T22:30:00+00:00",
-    "2026-10-06T22:45:00+00:00",
-    "2026-10-06T23:00:00+00:00",
-    "2026-10-06T23:15:00+00:00",
-    "2026-10-06T23:30:00+00:00",
-    "2026-10-06T23:45:00+00:00"
-   ]
-  },
-  {
-   "leg": "iaum_pullback_1d",
-   "symbol": "IAUM",
-   "timeframe": "1d",
-   "unit": "htf_pullback_trend_2h",
-   "decision_bar": "forming",
-   "execution": "live",
-   "accounts": [
-    "alpaca_live",
-    "alpaca_paper"
-   ],
-   "real_money": true,
-   "features": {
-    "side_filter": false,
-    "decision_frame": false,
-    "us_session_gate": true,
-    "long_only": false
-   },
-   "state": "checked",
-   "reason": null,
-   "bars_checked": 4,
-   "evals_checked": 584,
-   "divergences": 0,
-   "by_class": {
-    "previous_bar_signal": 0,
-    "missed_signal": 0,
-    "live_only_signal": 0,
-    "side_mismatch": 0,
-    "candle_mismatch": 0,
-    "lost_bar": 0,
-    "unevaluated_signal": 0,
-    "dropped_no_package": 0,
-    "dropped_no_order": 0
-   },
-   "bars": [
-    {
-     "bar": "2026-10-07T04:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 158,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-08T04:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 156,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-09T04:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 158,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-12T04:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 164,
-     "signal_evals": 0
-    }
-   ],
-   "bars_not_comparable": 52,
-   "divergence_detail": [],
-   "replay_calls": 826,
-   "mode_notes": {},
-   "frames_without_current_bar": {
-    "n": 0,
-    "examples": []
-   },
-   "stale_frames": {
-    "n": 91,
-    "p50_s": 574.2,
-    "p90_s": 1199.0,
-    "max_s": 1935.3025109767914
-   },
-   "adx_gap_max": 0.0,
-   "live_evals_in_window": 794,
-   "matched_signal_bars": [],
-   "replay_signal_windows": [],
-   "replay_none_windows": [
+    "2026-10-07T07:45:00+00:00",
+    "2026-10-07T08:00:00+00:00",
+    "2026-10-07T08:15:00+00:00",
+    "2026-10-07T08:30:00+00:00",
+    "2026-10-07T08:45:00+00:00",
+    "2026-10-07T09:00:00+00:00",
+    "2026-10-07T09:15:00+00:00",
+    "2026-10-07T09:30:00+00:00",
+    "2026-10-07T09:45:00+00:00",
+    "2026-10-07T10:00:00+00:00",
+    "2026-10-07T10:15:00+00:00",
+    "2026-10-07T10:30:00+00:00",
+    "2026-10-07T10:45:00+00:00",
+    "2026-10-07T11:00:00+00:00",
+    "2026-10-07T11:15:00+00:00",
+    "2026-10-07T11:30:00+00:00",
+    "2026-10-07T11:45:00+00:00",
+    "2026-10-07T12:00:00+00:00",
+    "2026-10-07T12:15:00+00:00",
+    "2026-10-07T12:30:00+00:00",
+    "2026-10-07T12:45:00+00:00",
+    "2026-10-07T13:00:00+00:00",
+    "2026-10-07T13:15:00+00:00",
     "2026-10-07T13:30:00+00:00",
     "2026-10-07T13:45:00+00:00",
     "2026-10-07T14:00:00+00:00",
@@ -1151,6 +968,88 @@
     "2026-10-07T19:15:00+00:00",
     "2026-10-07T19:30:00+00:00",
     "2026-10-07T19:45:00+00:00",
+    "2026-10-07T20:00:00+00:00"
+   ]
+  },
+  {
+   "leg": "iaum_pullback_1d",
+   "symbol": "IAUM",
+   "timeframe": "1d",
+   "unit": "htf_pullback_trend_2h",
+   "decision_bar": "forming",
+   "execution": "live",
+   "accounts": [
+    "alpaca_live",
+    "alpaca_paper"
+   ],
+   "real_money": true,
+   "features": {
+    "side_filter": false,
+    "decision_frame": false,
+    "us_session_gate": true,
+    "long_only": false
+   },
+   "state": "checked",
+   "reason": null,
+   "bars_checked": 4,
+   "evals_checked": 589,
+   "divergences": 0,
+   "by_class": {
+    "previous_bar_signal": 0,
+    "missed_signal": 0,
+    "live_only_signal": 0,
+    "side_mismatch": 0,
+    "candle_mismatch": 0,
+    "lost_bar": 0,
+    "unevaluated_signal": 0,
+    "dropped_no_package": 0,
+    "dropped_no_order": 0
+   },
+   "bars": [
+    {
+     "bar": "2026-10-08T04:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 156,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-09T04:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 158,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-12T04:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 164,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T04:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 163,
+     "signal_evals": 0
+    }
+   ],
+   "bars_not_comparable": 52,
+   "divergence_detail": [],
+   "replay_calls": 902,
+   "mode_notes": {},
+   "frames_without_current_bar": {
+    "n": 0,
+    "examples": []
+   },
+   "stale_frames": {
+    "n": 86,
+    "p50_s": 563.0,
+    "p90_s": 1254.2,
+    "max_s": 1935.3025109767914
+   },
+   "adx_gap_max": 0.0,
+   "live_evals_in_window": 799,
+   "matched_signal_bars": [],
+   "replay_signal_windows": [],
+   "replay_none_windows": [
     "2026-10-08T13:30:00+00:00",
     "2026-10-08T13:45:00+00:00",
     "2026-10-08T14:00:00+00:00",
@@ -1174,7 +1073,33 @@
     "2026-10-08T19:00:00+00:00",
     "2026-10-08T19:15:00+00:00",
     "2026-10-08T19:30:00+00:00",
-    "2026-10-08T19:45:00+00:00"
+    "2026-10-08T19:45:00+00:00",
+    "2026-10-09T13:30:00+00:00",
+    "2026-10-09T13:45:00+00:00",
+    "2026-10-09T14:00:00+00:00",
+    "2026-10-09T14:15:00+00:00",
+    "2026-10-09T14:30:00+00:00",
+    "2026-10-09T14:45:00+00:00",
+    "2026-10-09T15:00:00+00:00",
+    "2026-10-09T15:15:00+00:00",
+    "2026-10-09T15:30:00+00:00",
+    "2026-10-09T15:45:00+00:00",
+    "2026-10-09T16:00:00+00:00",
+    "2026-10-09T16:15:00+00:00",
+    "2026-10-09T16:30:00+00:00",
+    "2026-10-09T16:45:00+00:00",
+    "2026-10-09T17:00:00+00:00",
+    "2026-10-09T17:15:00+00:00",
+    "2026-10-09T17:30:00+00:00",
+    "2026-10-09T17:45:00+00:00",
+    "2026-10-09T18:00:00+00:00",
+    "2026-10-09T18:30:00+00:00",
+    "2026-10-09T18:45:00+00:00",
+    "2026-10-09T19:00:00+00:00",
+    "2026-10-09T19:15:00+00:00",
+    "2026-10-09T19:30:00+00:00",
+    "2026-10-09T19:45:00+00:00",
+    "2026-10-12T13:30:00+00:00"
    ]
   },
   {
@@ -1199,7 +1124,7 @@
    "state": "checked",
    "reason": null,
    "bars_checked": 4,
-   "evals_checked": 632,
+   "evals_checked": 636,
    "divergences": 0,
    "by_class": {
     "previous_bar_signal": 0,
@@ -1213,12 +1138,6 @@
     "dropped_no_order": 0
    },
    "bars": [
-    {
-     "bar": "2026-10-07T04:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 160,
-     "signal_evals": 0
-    },
     {
      "bar": "2026-10-08T04:00:00+00:00",
      "status": "matched_no_signal",
@@ -1260,24 +1179,30 @@
        "pkg-5e636e3adddf4a83"
       ]
      }
+    },
+    {
+     "bar": "2026-10-13T04:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 164,
+     "signal_evals": 0
     }
    ],
    "bars_not_comparable": 15,
    "divergence_detail": [],
-   "replay_calls": 1218,
+   "replay_calls": 1179,
    "mode_notes": {},
    "frames_without_current_bar": {
     "n": 0,
     "examples": []
    },
    "stale_frames": {
-    "n": 9,
-    "p50_s": 542.0,
-    "p90_s": 1151.7,
+    "n": 14,
+    "p50_s": 595.5,
+    "p90_s": 1008.2,
     "max_s": 1151.7480599880219
    },
    "adx_gap_max": 0.0,
-   "live_evals_in_window": 805,
+   "live_evals_in_window": 811,
    "matched_signal_bars": [
     "2026-10-09T04:00:00+00:00",
     "2026-10-12T04:00:00+00:00"
@@ -1311,32 +1236,6 @@
     "2026-10-12T18:45:00+00:00|short"
    ],
    "replay_none_windows": [
-    "2026-10-07T13:30:00+00:00",
-    "2026-10-07T13:45:00+00:00",
-    "2026-10-07T14:00:00+00:00",
-    "2026-10-07T14:15:00+00:00",
-    "2026-10-07T14:30:00+00:00",
-    "2026-10-07T14:45:00+00:00",
-    "2026-10-07T15:00:00+00:00",
-    "2026-10-07T15:15:00+00:00",
-    "2026-10-07T15:30:00+00:00",
-    "2026-10-07T15:45:00+00:00",
-    "2026-10-07T16:00:00+00:00",
-    "2026-10-07T16:15:00+00:00",
-    "2026-10-07T16:30:00+00:00",
-    "2026-10-07T16:45:00+00:00",
-    "2026-10-07T17:00:00+00:00",
-    "2026-10-07T17:15:00+00:00",
-    "2026-10-07T17:30:00+00:00",
-    "2026-10-07T17:45:00+00:00",
-    "2026-10-07T18:00:00+00:00",
-    "2026-10-07T18:15:00+00:00",
-    "2026-10-07T18:30:00+00:00",
-    "2026-10-07T18:45:00+00:00",
-    "2026-10-07T19:00:00+00:00",
-    "2026-10-07T19:15:00+00:00",
-    "2026-10-07T19:30:00+00:00",
-    "2026-10-07T19:45:00+00:00",
     "2026-10-08T13:30:00+00:00",
     "2026-10-08T13:45:00+00:00",
     "2026-10-08T14:00:00+00:00",
@@ -1360,7 +1259,33 @@
     "2026-10-08T18:30:00+00:00",
     "2026-10-08T18:45:00+00:00",
     "2026-10-08T19:00:00+00:00",
-    "2026-10-08T19:15:00+00:00"
+    "2026-10-08T19:15:00+00:00",
+    "2026-10-08T19:30:00+00:00",
+    "2026-10-08T19:45:00+00:00",
+    "2026-10-09T13:15:00+00:00",
+    "2026-10-09T13:45:00+00:00",
+    "2026-10-09T14:00:00+00:00",
+    "2026-10-09T14:15:00+00:00",
+    "2026-10-09T14:30:00+00:00",
+    "2026-10-09T14:45:00+00:00",
+    "2026-10-09T15:00:00+00:00",
+    "2026-10-09T15:15:00+00:00",
+    "2026-10-09T15:30:00+00:00",
+    "2026-10-12T19:45:00+00:00",
+    "2026-10-13T13:30:00+00:00",
+    "2026-10-13T13:45:00+00:00",
+    "2026-10-13T14:00:00+00:00",
+    "2026-10-13T14:15:00+00:00",
+    "2026-10-13T14:30:00+00:00",
+    "2026-10-13T14:45:00+00:00",
+    "2026-10-13T15:00:00+00:00",
+    "2026-10-13T15:15:00+00:00",
+    "2026-10-13T15:30:00+00:00",
+    "2026-10-13T15:45:00+00:00",
+    "2026-10-13T16:00:00+00:00",
+    "2026-10-13T16:15:00+00:00",
+    "2026-10-13T16:30:00+00:00",
+    "2026-10-13T16:45:00+00:00"
    ]
   },
   {
@@ -1385,7 +1310,7 @@
    "state": "checked",
    "reason": null,
    "bars_checked": 4,
-   "evals_checked": 647,
+   "evals_checked": 651,
    "divergences": 0,
    "by_class": {
     "previous_bar_signal": 0,
@@ -1399,12 +1324,6 @@
     "dropped_no_order": 0
    },
    "bars": [
-    {
-     "bar": "2026-10-07T04:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 160,
-     "signal_evals": 0
-    },
     {
      "bar": "2026-10-08T04:00:00+00:00",
      "status": "matched_no_signal",
@@ -1422,53 +1341,33 @@
      "status": "matched_no_signal",
      "evals": 167,
      "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T04:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 164,
+     "signal_evals": 0
     }
    ],
    "bars_not_comparable": 0,
    "divergence_detail": [],
-   "replay_calls": 1218,
+   "replay_calls": 1294,
    "mode_notes": {},
    "frames_without_current_bar": {
     "n": 0,
     "examples": []
    },
    "stale_frames": {
-    "n": 3,
-    "p50_s": 379.9,
-    "p90_s": 405.5,
-    "max_s": 405.5390338897705
+    "n": 5,
+    "p50_s": 385.8,
+    "p90_s": 444.6,
+    "max_s": 444.5781719684601
    },
-   "adx_gap_max": 0.2552,
-   "live_evals_in_window": 805,
+   "adx_gap_max": 0.08,
+   "live_evals_in_window": 811,
    "matched_signal_bars": [],
    "replay_signal_windows": [],
    "replay_none_windows": [
-    "2026-10-07T13:30:00+00:00",
-    "2026-10-07T13:45:00+00:00",
-    "2026-10-07T14:00:00+00:00",
-    "2026-10-07T14:15:00+00:00",
-    "2026-10-07T14:30:00+00:00",
-    "2026-10-07T14:45:00+00:00",
-    "2026-10-07T15:00:00+00:00",
-    "2026-10-07T15:15:00+00:00",
-    "2026-10-07T15:30:00+00:00",
-    "2026-10-07T15:45:00+00:00",
-    "2026-10-07T16:00:00+00:00",
-    "2026-10-07T16:15:00+00:00",
-    "2026-10-07T16:30:00+00:00",
-    "2026-10-07T16:45:00+00:00",
-    "2026-10-07T17:00:00+00:00",
-    "2026-10-07T17:15:00+00:00",
-    "2026-10-07T17:30:00+00:00",
-    "2026-10-07T17:45:00+00:00",
-    "2026-10-07T18:00:00+00:00",
-    "2026-10-07T18:15:00+00:00",
-    "2026-10-07T18:30:00+00:00",
-    "2026-10-07T18:45:00+00:00",
-    "2026-10-07T19:00:00+00:00",
-    "2026-10-07T19:15:00+00:00",
-    "2026-10-07T19:30:00+00:00",
-    "2026-10-07T19:45:00+00:00",
     "2026-10-08T13:30:00+00:00",
     "2026-10-08T13:45:00+00:00",
     "2026-10-08T14:00:00+00:00",
@@ -1492,7 +1391,33 @@
     "2026-10-08T18:30:00+00:00",
     "2026-10-08T18:45:00+00:00",
     "2026-10-08T19:00:00+00:00",
-    "2026-10-08T19:15:00+00:00"
+    "2026-10-08T19:15:00+00:00",
+    "2026-10-08T19:30:00+00:00",
+    "2026-10-08T19:45:00+00:00",
+    "2026-10-09T13:30:00+00:00",
+    "2026-10-09T13:45:00+00:00",
+    "2026-10-09T14:00:00+00:00",
+    "2026-10-09T14:15:00+00:00",
+    "2026-10-09T14:30:00+00:00",
+    "2026-10-09T14:45:00+00:00",
+    "2026-10-09T15:00:00+00:00",
+    "2026-10-09T15:15:00+00:00",
+    "2026-10-09T15:30:00+00:00",
+    "2026-10-09T15:45:00+00:00",
+    "2026-10-09T16:00:00+00:00",
+    "2026-10-09T16:15:00+00:00",
+    "2026-10-09T16:30:00+00:00",
+    "2026-10-09T16:45:00+00:00",
+    "2026-10-09T17:00:00+00:00",
+    "2026-10-09T17:15:00+00:00",
+    "2026-10-09T17:30:00+00:00",
+    "2026-10-09T17:45:00+00:00",
+    "2026-10-09T18:00:00+00:00",
+    "2026-10-09T18:15:00+00:00",
+    "2026-10-09T18:30:00+00:00",
+    "2026-10-09T18:45:00+00:00",
+    "2026-10-09T19:00:00+00:00",
+    "2026-10-09T19:15:00+00:00"
    ]
   },
   {
@@ -1517,7 +1442,7 @@
    "state": "checked",
    "reason": null,
    "bars_checked": 41,
-   "evals_checked": 4151,
+   "evals_checked": 4172,
    "divergences": 0,
    "by_class": {
     "previous_bar_signal": 0,
@@ -1531,82 +1456,6 @@
     "dropped_no_order": 0
    },
    "bars": [
-    {
-     "bar": "2026-10-06T08:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 103,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-06T12:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 100,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-06T16:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 98,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-06T20:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 102,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-07T00:00:00+00:00",
-     "status": "matched_signal",
-     "evals": 103,
-     "signal_evals": 51,
-     "downstream": {
-      "class": null,
-      "packages": [
-       "pkg-d29c9c617aa14b40"
-      ],
-      "gates": [
-       "open_package_blocked"
-      ],
-      "orders_by_account": {
-       "bybit_portfolio": [
-        {
-         "id": 6490,
-         "status": "closed"
-        }
-       ],
-       "bybit_2": [
-        {
-         "id": 6489,
-         "status": "closed"
-        }
-       ],
-       "bybit_1": [
-        {
-         "id": 6488,
-         "status": "closed"
-        }
-       ]
-      }
-     }
-    },
-    {
-     "bar": "2026-10-07T04:00:00+00:00",
-     "status": "matched_signal",
-     "evals": 103,
-     "signal_evals": 1,
-     "downstream": {
-      "class": null,
-      "packages": [],
-      "gates": [
-       "open_package_blocked",
-       "open_package (order_packages)"
-      ],
-      "held_packages": [
-       "pkg-d29c9c617aa14b40"
-      ]
-     }
-    },
     {
      "bar": "2026-10-07T08:00:00+00:00",
      "status": "matched_no_signal",
@@ -1878,11 +1727,47 @@
        "pkg-6808b9ae4e4a4a27"
       ]
      }
+    },
+    {
+     "bar": "2026-10-13T04:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 106,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T08:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 106,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T12:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 106,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T16:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 100,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T20:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 105,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-14T00:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 107,
+     "signal_evals": 0
     }
    ],
    "bars_not_comparable": 0,
    "divergence_detail": [],
-   "replay_calls": 10317,
+   "replay_calls": 10176,
    "mode_notes": {},
    "frames_without_current_bar": {
     "n": 0,
@@ -1895,78 +1780,69 @@
     "max_s": null
    },
    "adx_gap_max": 0.0982,
-   "live_evals_in_window": 4256,
+   "live_evals_in_window": 4276,
    "matched_signal_bars": [
-    "2026-10-07T00:00:00+00:00",
-    "2026-10-07T04:00:00+00:00",
     "2026-10-08T12:00:00+00:00",
     "2026-10-08T16:00:00+00:00",
     "2026-10-12T20:00:00+00:00",
     "2026-10-13T00:00:00+00:00"
    ],
    "replay_signal_windows": [
-    "2026-10-07T02:15:00+00:00|short",
-    "2026-10-07T02:30:00+00:00|short",
-    "2026-10-07T02:45:00+00:00|short",
-    "2026-10-07T03:00:00+00:00|short",
-    "2026-10-07T03:15:00+00:00|short",
-    "2026-10-07T03:30:00+00:00|short",
-    "2026-10-07T03:45:00+00:00|short",
     "2026-10-08T15:30:00+00:00|short",
     "2026-10-08T15:45:00+00:00|short",
     "2026-10-12T23:45:00+00:00|short"
    ],
    "replay_none_windows": [
-    "2026-10-06T07:45:00+00:00",
-    "2026-10-06T08:00:00+00:00",
-    "2026-10-06T08:15:00+00:00",
-    "2026-10-06T08:30:00+00:00",
-    "2026-10-06T08:45:00+00:00",
-    "2026-10-06T09:00:00+00:00",
-    "2026-10-06T09:15:00+00:00",
-    "2026-10-06T09:30:00+00:00",
-    "2026-10-06T09:45:00+00:00",
-    "2026-10-06T10:00:00+00:00",
-    "2026-10-06T10:15:00+00:00",
-    "2026-10-06T10:30:00+00:00",
-    "2026-10-06T10:45:00+00:00",
-    "2026-10-06T11:00:00+00:00",
-    "2026-10-06T11:15:00+00:00",
-    "2026-10-06T11:30:00+00:00",
-    "2026-10-06T11:45:00+00:00",
-    "2026-10-06T12:00:00+00:00",
-    "2026-10-06T12:15:00+00:00",
-    "2026-10-06T12:30:00+00:00",
-    "2026-10-06T12:45:00+00:00",
-    "2026-10-06T13:00:00+00:00",
-    "2026-10-06T13:15:00+00:00",
-    "2026-10-06T13:30:00+00:00",
-    "2026-10-06T13:45:00+00:00",
-    "2026-10-06T14:00:00+00:00",
-    "2026-10-06T14:15:00+00:00",
-    "2026-10-06T14:30:00+00:00",
-    "2026-10-06T14:45:00+00:00",
-    "2026-10-06T15:00:00+00:00",
-    "2026-10-06T15:15:00+00:00",
-    "2026-10-06T15:30:00+00:00",
-    "2026-10-06T15:45:00+00:00",
-    "2026-10-06T16:00:00+00:00",
-    "2026-10-06T16:15:00+00:00",
-    "2026-10-06T16:30:00+00:00",
-    "2026-10-06T16:45:00+00:00",
-    "2026-10-06T17:00:00+00:00",
-    "2026-10-06T17:15:00+00:00",
-    "2026-10-06T17:30:00+00:00",
-    "2026-10-06T17:45:00+00:00",
-    "2026-10-06T18:00:00+00:00",
-    "2026-10-06T18:15:00+00:00",
-    "2026-10-06T18:30:00+00:00",
-    "2026-10-06T18:45:00+00:00",
-    "2026-10-06T19:00:00+00:00",
-    "2026-10-06T19:15:00+00:00",
-    "2026-10-06T19:30:00+00:00",
-    "2026-10-06T19:45:00+00:00",
-    "2026-10-06T20:00:00+00:00"
+    "2026-10-07T07:45:00+00:00",
+    "2026-10-07T08:00:00+00:00",
+    "2026-10-07T08:15:00+00:00",
+    "2026-10-07T08:30:00+00:00",
+    "2026-10-07T08:45:00+00:00",
+    "2026-10-07T09:00:00+00:00",
+    "2026-10-07T09:15:00+00:00",
+    "2026-10-07T09:30:00+00:00",
+    "2026-10-07T09:45:00+00:00",
+    "2026-10-07T10:15:00+00:00",
+    "2026-10-07T10:30:00+00:00",
+    "2026-10-07T10:45:00+00:00",
+    "2026-10-07T11:00:00+00:00",
+    "2026-10-07T11:15:00+00:00",
+    "2026-10-07T11:30:00+00:00",
+    "2026-10-07T11:45:00+00:00",
+    "2026-10-07T12:00:00+00:00",
+    "2026-10-07T12:15:00+00:00",
+    "2026-10-07T12:30:00+00:00",
+    "2026-10-07T12:45:00+00:00",
+    "2026-10-07T13:00:00+00:00",
+    "2026-10-07T13:15:00+00:00",
+    "2026-10-07T13:30:00+00:00",
+    "2026-10-07T13:45:00+00:00",
+    "2026-10-07T14:00:00+00:00",
+    "2026-10-07T14:15:00+00:00",
+    "2026-10-07T14:30:00+00:00",
+    "2026-10-07T14:45:00+00:00",
+    "2026-10-07T15:00:00+00:00",
+    "2026-10-07T15:15:00+00:00",
+    "2026-10-07T15:30:00+00:00",
+    "2026-10-07T15:45:00+00:00",
+    "2026-10-07T16:00:00+00:00",
+    "2026-10-07T16:15:00+00:00",
+    "2026-10-07T16:30:00+00:00",
+    "2026-10-07T16:45:00+00:00",
+    "2026-10-07T17:00:00+00:00",
+    "2026-10-07T17:15:00+00:00",
+    "2026-10-07T17:30:00+00:00",
+    "2026-10-07T17:45:00+00:00",
+    "2026-10-07T18:00:00+00:00",
+    "2026-10-07T18:15:00+00:00",
+    "2026-10-07T18:30:00+00:00",
+    "2026-10-07T18:45:00+00:00",
+    "2026-10-07T19:00:00+00:00",
+    "2026-10-07T19:15:00+00:00",
+    "2026-10-07T19:30:00+00:00",
+    "2026-10-07T19:45:00+00:00",
+    "2026-10-07T20:00:00+00:00",
+    "2026-10-07T20:15:00+00:00"
    ]
   },
   {
@@ -2005,42 +1881,6 @@
     "dropped_no_order": 0
    },
    "bars": [
-    {
-     "bar": "2026-10-06T08:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 1,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-06T12:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 1,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-06T16:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 1,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-06T20:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 1,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-07T00:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 1,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-07T04:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 1,
-     "signal_evals": 0
-    },
     {
      "bar": "2026-10-07T08:00:00+00:00",
      "status": "matched_no_signal",
@@ -2277,6 +2117,42 @@
      "status": "matched_no_signal",
      "evals": 1,
      "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T04:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 1,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T08:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 1,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T12:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 1,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T16:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 1,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T20:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 1,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-14T00:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 1,
+     "signal_evals": 0
     }
    ],
    "bars_not_comparable": 0,
@@ -2323,7 +2199,7 @@
    "state": "checked",
    "reason": null,
    "bars_checked": 83,
-   "evals_checked": 4193,
+   "evals_checked": 4215,
    "divergences": 0,
    "by_class": {
     "previous_bar_signal": 0,
@@ -2337,78 +2213,6 @@
     "dropped_no_order": 0
    },
    "bars": [
-    {
-     "bar": "2026-10-06T08:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 52,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-06T10:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 51,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-06T12:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 51,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-06T14:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 49,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-06T16:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 49,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-06T18:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 49,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-06T20:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 51,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-06T22:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 51,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-07T00:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 51,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-07T02:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 52,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-07T04:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 51,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-07T06:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 51,
-     "signal_evals": 0
-    },
     {
      "bar": "2026-10-07T08:00:00+00:00",
      "status": "matched_no_signal",
@@ -3146,11 +2950,196 @@
        "pkg-249a260aaf094ea5"
       ]
      }
+    },
+    {
+     "bar": "2026-10-13T06:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 54,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T08:00:00+00:00",
+     "status": "matched_signal",
+     "evals": 53,
+     "signal_evals": 22,
+     "downstream": {
+      "class": null,
+      "packages": [],
+      "gates": [
+       "open_package_blocked",
+       "open_package_pair_coupled",
+       "open_package (order_packages)"
+      ],
+      "held_packages": [
+       "pkg-63b56da53bfe4d64",
+       "pkg-249a260aaf094ea5"
+      ]
+     }
+    },
+    {
+     "bar": "2026-10-13T10:00:00+00:00",
+     "status": "matched_signal",
+     "evals": 53,
+     "signal_evals": 25,
+     "downstream": {
+      "class": null,
+      "packages": [],
+      "gates": [
+       "open_package_blocked",
+       "open_package_pair_coupled",
+       "open_package (order_packages)"
+      ],
+      "held_packages": [
+       "pkg-63b56da53bfe4d64",
+       "pkg-249a260aaf094ea5"
+      ]
+     }
+    },
+    {
+     "bar": "2026-10-13T12:00:00+00:00",
+     "status": "matched_signal",
+     "evals": 53,
+     "signal_evals": 8,
+     "downstream": {
+      "class": null,
+      "packages": [],
+      "gates": [
+       "open_package_blocked",
+       "open_package_pair_coupled",
+       "open_package (order_packages)"
+      ],
+      "held_packages": [
+       "pkg-63b56da53bfe4d64",
+       "pkg-249a260aaf094ea5"
+      ]
+     }
+    },
+    {
+     "bar": "2026-10-13T14:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 53,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T16:00:00+00:00",
+     "status": "matched_signal",
+     "evals": 50,
+     "signal_evals": 19,
+     "downstream": {
+      "class": null,
+      "packages": [],
+      "gates": [
+       "open_package (order_packages)"
+      ],
+      "held_packages": [
+       "pkg-63b56da53bfe4d64",
+       "pkg-249a260aaf094ea5"
+      ]
+     }
+    },
+    {
+     "bar": "2026-10-13T18:00:00+00:00",
+     "status": "matched_signal",
+     "evals": 50,
+     "signal_evals": 1,
+     "downstream": {
+      "class": null,
+      "packages": [],
+      "gates": [
+       "open_package (order_packages)"
+      ],
+      "held_packages": [
+       "pkg-63b56da53bfe4d64",
+       "pkg-249a260aaf094ea5"
+      ]
+     }
+    },
+    {
+     "bar": "2026-10-13T20:00:00+00:00",
+     "status": "matched_signal",
+     "evals": 53,
+     "signal_evals": 6,
+     "downstream": {
+      "class": null,
+      "packages": [],
+      "gates": [
+       "open_package_blocked",
+       "open_package_pair_coupled",
+       "open_package (order_packages)"
+      ],
+      "held_packages": [
+       "pkg-63b56da53bfe4d64",
+       "pkg-249a260aaf094ea5"
+      ]
+     }
+    },
+    {
+     "bar": "2026-10-13T22:00:00+00:00",
+     "status": "matched_signal",
+     "evals": 52,
+     "signal_evals": 22,
+     "downstream": {
+      "class": null,
+      "packages": [],
+      "gates": [
+       "open_package_blocked",
+       "open_package_pair_coupled",
+       "open_package (order_packages)"
+      ],
+      "held_packages": [
+       "pkg-63b56da53bfe4d64",
+       "pkg-249a260aaf094ea5"
+      ]
+     }
+    },
+    {
+     "bar": "2026-10-14T00:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 54,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-14T02:00:00+00:00",
+     "status": "matched_signal",
+     "evals": 53,
+     "signal_evals": 8,
+     "downstream": {
+      "class": null,
+      "packages": [],
+      "gates": [
+       "open_package_blocked",
+       "open_package_pair_coupled",
+       "open_package (order_packages)"
+      ],
+      "held_packages": [
+       "pkg-63b56da53bfe4d64",
+       "pkg-249a260aaf094ea5"
+      ]
+     }
+    },
+    {
+     "bar": "2026-10-14T04:00:00+00:00",
+     "status": "matched_signal",
+     "evals": 52,
+     "signal_evals": 7,
+     "downstream": {
+      "class": null,
+      "packages": [],
+      "gates": [
+       "open_package_blocked",
+       "open_package_pair_coupled",
+       "open_package (order_packages)"
+      ],
+      "held_packages": [
+       "pkg-63b56da53bfe4d64",
+       "pkg-249a260aaf094ea5"
+      ]
+     }
     }
    ],
    "bars_not_comparable": 0,
    "divergence_detail": [],
-   "replay_calls": 11047,
+   "replay_calls": 11146,
    "mode_notes": {},
    "frames_without_current_bar": {
     "n": 0,
@@ -3162,8 +3151,8 @@
     "p90_s": null,
     "max_s": null
    },
-   "adx_gap_max": 0.1961,
-   "live_evals_in_window": 4246,
+   "adx_gap_max": 0.092,
+   "live_evals_in_window": 4266,
    "matched_signal_bars": [
     "2026-10-09T02:00:00+00:00",
     "2026-10-09T04:00:00+00:00",
@@ -3184,7 +3173,16 @@
     "2026-10-11T10:00:00+00:00",
     "2026-10-11T12:00:00+00:00",
     "2026-10-11T14:00:00+00:00",
-    "2026-10-13T04:00:00+00:00"
+    "2026-10-13T04:00:00+00:00",
+    "2026-10-13T08:00:00+00:00",
+    "2026-10-13T10:00:00+00:00",
+    "2026-10-13T12:00:00+00:00",
+    "2026-10-13T16:00:00+00:00",
+    "2026-10-13T18:00:00+00:00",
+    "2026-10-13T20:00:00+00:00",
+    "2026-10-13T22:00:00+00:00",
+    "2026-10-14T02:00:00+00:00",
+    "2026-10-14T04:00:00+00:00"
    ],
    "replay_signal_windows": [
     "2026-10-09T04:45:00+00:00|short",
@@ -3230,139 +3228,35 @@
     "2026-10-11T09:30:00+00:00|long",
     "2026-10-11T13:15:00+00:00|long",
     "2026-10-11T13:30:00+00:00|long",
-    "2026-10-11T13:45:00+00:00|long"
+    "2026-10-11T13:45:00+00:00|long",
+    "2026-10-13T09:45:00+00:00|short",
+    "2026-10-13T10:45:00+00:00|short",
+    "2026-10-13T17:30:00+00:00|short",
+    "2026-10-13T17:45:00+00:00|short"
    ],
    "replay_none_windows": [
-    "2026-10-06T07:45:00+00:00",
-    "2026-10-06T08:00:00+00:00",
-    "2026-10-06T08:15:00+00:00",
-    "2026-10-06T08:30:00+00:00",
-    "2026-10-06T08:45:00+00:00",
-    "2026-10-06T09:00:00+00:00",
-    "2026-10-06T09:15:00+00:00",
-    "2026-10-06T09:30:00+00:00",
-    "2026-10-06T09:45:00+00:00",
-    "2026-10-06T10:00:00+00:00",
-    "2026-10-06T10:15:00+00:00",
-    "2026-10-06T10:30:00+00:00",
-    "2026-10-06T10:45:00+00:00",
-    "2026-10-06T11:00:00+00:00",
-    "2026-10-06T11:15:00+00:00",
-    "2026-10-06T11:30:00+00:00",
-    "2026-10-06T11:45:00+00:00",
-    "2026-10-06T12:00:00+00:00",
-    "2026-10-06T12:15:00+00:00",
-    "2026-10-06T12:30:00+00:00",
-    "2026-10-06T12:45:00+00:00",
-    "2026-10-06T13:00:00+00:00",
-    "2026-10-06T13:15:00+00:00",
-    "2026-10-06T13:30:00+00:00",
-    "2026-10-06T13:45:00+00:00",
-    "2026-10-06T14:00:00+00:00",
-    "2026-10-06T14:15:00+00:00",
-    "2026-10-06T14:30:00+00:00",
-    "2026-10-06T14:45:00+00:00",
-    "2026-10-06T15:00:00+00:00",
-    "2026-10-06T15:15:00+00:00",
-    "2026-10-06T15:30:00+00:00",
-    "2026-10-06T15:45:00+00:00",
-    "2026-10-06T16:00:00+00:00",
-    "2026-10-06T16:15:00+00:00",
-    "2026-10-06T16:30:00+00:00",
-    "2026-10-06T16:45:00+00:00",
-    "2026-10-06T17:00:00+00:00",
-    "2026-10-06T17:15:00+00:00",
-    "2026-10-06T17:30:00+00:00",
-    "2026-10-06T17:45:00+00:00",
-    "2026-10-06T18:00:00+00:00",
-    "2026-10-06T18:15:00+00:00",
-    "2026-10-06T18:30:00+00:00",
-    "2026-10-06T18:45:00+00:00",
-    "2026-10-06T19:00:00+00:00",
-    "2026-10-06T19:15:00+00:00",
-    "2026-10-06T19:30:00+00:00",
-    "2026-10-06T19:45:00+00:00",
-    "2026-10-06T20:00:00+00:00"
-   ]
-  },
-  {
-   "leg": "gdx_pullback_1d",
-   "symbol": "GDX",
-   "timeframe": "1d",
-   "unit": "htf_pullback_trend_2h",
-   "decision_bar": "forming",
-   "execution": "live",
-   "accounts": [
-    "alpaca_paper"
-   ],
-   "real_money": false,
-   "features": {
-    "side_filter": false,
-    "decision_frame": false,
-    "us_session_gate": true,
-    "long_only": false
-   },
-   "state": "checked",
-   "reason": null,
-   "bars_checked": 4,
-   "evals_checked": 645,
-   "divergences": 0,
-   "by_class": {
-    "previous_bar_signal": 0,
-    "missed_signal": 0,
-    "live_only_signal": 0,
-    "side_mismatch": 0,
-    "candle_mismatch": 0,
-    "lost_bar": 0,
-    "unevaluated_signal": 0,
-    "dropped_no_package": 0,
-    "dropped_no_order": 0
-   },
-   "bars": [
-    {
-     "bar": "2026-10-07T04:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 160,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-08T04:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 160,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-09T04:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 159,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-12T04:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 166,
-     "signal_evals": 0
-    }
-   ],
-   "bars_not_comparable": 0,
-   "divergence_detail": [],
-   "replay_calls": 1183,
-   "mode_notes": {},
-   "frames_without_current_bar": {
-    "n": 0,
-    "examples": []
-   },
-   "stale_frames": {
-    "n": 0,
-    "p50_s": null,
-    "p90_s": null,
-    "max_s": null
-   },
-   "adx_gap_max": 0.0,
-   "live_evals_in_window": 803,
-   "matched_signal_bars": [],
-   "replay_signal_windows": [],
-   "replay_none_windows": [
+    "2026-10-07T07:45:00+00:00",
+    "2026-10-07T08:00:00+00:00",
+    "2026-10-07T08:15:00+00:00",
+    "2026-10-07T08:30:00+00:00",
+    "2026-10-07T08:45:00+00:00",
+    "2026-10-07T09:00:00+00:00",
+    "2026-10-07T09:15:00+00:00",
+    "2026-10-07T09:30:00+00:00",
+    "2026-10-07T09:45:00+00:00",
+    "2026-10-07T10:00:00+00:00",
+    "2026-10-07T10:15:00+00:00",
+    "2026-10-07T10:30:00+00:00",
+    "2026-10-07T10:45:00+00:00",
+    "2026-10-07T11:00:00+00:00",
+    "2026-10-07T11:15:00+00:00",
+    "2026-10-07T11:30:00+00:00",
+    "2026-10-07T11:45:00+00:00",
+    "2026-10-07T12:00:00+00:00",
+    "2026-10-07T12:15:00+00:00",
+    "2026-10-07T12:30:00+00:00",
+    "2026-10-07T12:45:00+00:00",
+    "2026-10-07T13:00:00+00:00",
     "2026-10-07T13:15:00+00:00",
     "2026-10-07T13:30:00+00:00",
     "2026-10-07T13:45:00+00:00",
@@ -3390,6 +3284,87 @@
     "2026-10-07T19:15:00+00:00",
     "2026-10-07T19:30:00+00:00",
     "2026-10-07T19:45:00+00:00",
+    "2026-10-07T20:00:00+00:00"
+   ]
+  },
+  {
+   "leg": "gdx_pullback_1d",
+   "symbol": "GDX",
+   "timeframe": "1d",
+   "unit": "htf_pullback_trend_2h",
+   "decision_bar": "forming",
+   "execution": "live",
+   "accounts": [
+    "alpaca_paper"
+   ],
+   "real_money": false,
+   "features": {
+    "side_filter": false,
+    "decision_frame": false,
+    "us_session_gate": true,
+    "long_only": false
+   },
+   "state": "checked",
+   "reason": null,
+   "bars_checked": 4,
+   "evals_checked": 648,
+   "divergences": 0,
+   "by_class": {
+    "previous_bar_signal": 0,
+    "missed_signal": 0,
+    "live_only_signal": 0,
+    "side_mismatch": 0,
+    "candle_mismatch": 0,
+    "lost_bar": 0,
+    "unevaluated_signal": 0,
+    "dropped_no_package": 0,
+    "dropped_no_order": 0
+   },
+   "bars": [
+    {
+     "bar": "2026-10-08T04:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 160,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-09T04:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 159,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-12T04:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 166,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T04:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 163,
+     "signal_evals": 0
+    }
+   ],
+   "bars_not_comparable": 0,
+   "divergence_detail": [],
+   "replay_calls": 1264,
+   "mode_notes": {},
+   "frames_without_current_bar": {
+    "n": 0,
+    "examples": []
+   },
+   "stale_frames": {
+    "n": 0,
+    "p50_s": null,
+    "p90_s": null,
+    "max_s": null
+   },
+   "adx_gap_max": 0.0,
+   "live_evals_in_window": 808,
+   "matched_signal_bars": [],
+   "replay_signal_windows": [],
+   "replay_none_windows": [
     "2026-10-08T13:30:00+00:00",
     "2026-10-08T13:45:00+00:00",
     "2026-10-08T14:00:00+00:00",
@@ -3412,7 +3387,34 @@
     "2026-10-08T18:15:00+00:00",
     "2026-10-08T18:30:00+00:00",
     "2026-10-08T18:45:00+00:00",
-    "2026-10-08T19:00:00+00:00"
+    "2026-10-08T19:00:00+00:00",
+    "2026-10-08T19:15:00+00:00",
+    "2026-10-08T19:30:00+00:00",
+    "2026-10-08T19:45:00+00:00",
+    "2026-10-09T13:30:00+00:00",
+    "2026-10-09T13:45:00+00:00",
+    "2026-10-09T14:00:00+00:00",
+    "2026-10-09T14:15:00+00:00",
+    "2026-10-09T14:30:00+00:00",
+    "2026-10-09T14:45:00+00:00",
+    "2026-10-09T15:00:00+00:00",
+    "2026-10-09T15:15:00+00:00",
+    "2026-10-09T15:30:00+00:00",
+    "2026-10-09T15:45:00+00:00",
+    "2026-10-09T16:00:00+00:00",
+    "2026-10-09T16:15:00+00:00",
+    "2026-10-09T16:30:00+00:00",
+    "2026-10-09T16:45:00+00:00",
+    "2026-10-09T17:00:00+00:00",
+    "2026-10-09T17:15:00+00:00",
+    "2026-10-09T17:30:00+00:00",
+    "2026-10-09T17:45:00+00:00",
+    "2026-10-09T18:00:00+00:00",
+    "2026-10-09T18:15:00+00:00",
+    "2026-10-09T18:30:00+00:00",
+    "2026-10-09T18:45:00+00:00",
+    "2026-10-09T19:00:00+00:00",
+    "2026-10-09T19:15:00+00:00"
    ]
   },
   {
@@ -3435,7 +3437,7 @@
    "state": "checked",
    "reason": null,
    "bars_checked": 4,
-   "evals_checked": 646,
+   "evals_checked": 650,
    "divergences": 0,
    "by_class": {
     "previous_bar_signal": 0,
@@ -3449,12 +3451,6 @@
     "dropped_no_order": 0
    },
    "bars": [
-    {
-     "bar": "2026-10-07T04:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 160,
-     "signal_evals": 0
-    },
     {
      "bar": "2026-10-08T04:00:00+00:00",
      "status": "matched_no_signal",
@@ -3472,53 +3468,33 @@
      "status": "matched_no_signal",
      "evals": 167,
      "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T04:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 164,
+     "signal_evals": 0
     }
    ],
    "bars_not_comparable": 0,
    "divergence_detail": [],
-   "replay_calls": 1309,
+   "replay_calls": 1321,
    "mode_notes": {},
    "frames_without_current_bar": {
     "n": 0,
     "examples": []
    },
    "stale_frames": {
-    "n": 2,
-    "p50_s": 361.4,
-    "p90_s": 361.4,
-    "max_s": 361.42758107185364
+    "n": 4,
+    "p50_s": 441.6,
+    "p90_s": 467.4,
+    "max_s": 467.4040639400482
    },
    "adx_gap_max": 0.1908,
-   "live_evals_in_window": 804,
+   "live_evals_in_window": 810,
    "matched_signal_bars": [],
    "replay_signal_windows": [],
    "replay_none_windows": [
-    "2026-10-07T13:30:00+00:00",
-    "2026-10-07T13:45:00+00:00",
-    "2026-10-07T14:00:00+00:00",
-    "2026-10-07T14:15:00+00:00",
-    "2026-10-07T14:30:00+00:00",
-    "2026-10-07T14:45:00+00:00",
-    "2026-10-07T15:00:00+00:00",
-    "2026-10-07T15:15:00+00:00",
-    "2026-10-07T15:30:00+00:00",
-    "2026-10-07T15:45:00+00:00",
-    "2026-10-07T16:00:00+00:00",
-    "2026-10-07T16:15:00+00:00",
-    "2026-10-07T16:30:00+00:00",
-    "2026-10-07T16:45:00+00:00",
-    "2026-10-07T17:00:00+00:00",
-    "2026-10-07T17:15:00+00:00",
-    "2026-10-07T17:30:00+00:00",
-    "2026-10-07T17:45:00+00:00",
-    "2026-10-07T18:00:00+00:00",
-    "2026-10-07T18:15:00+00:00",
-    "2026-10-07T18:30:00+00:00",
-    "2026-10-07T18:45:00+00:00",
-    "2026-10-07T19:00:00+00:00",
-    "2026-10-07T19:15:00+00:00",
-    "2026-10-07T19:30:00+00:00",
-    "2026-10-07T19:45:00+00:00",
     "2026-10-08T13:30:00+00:00",
     "2026-10-08T13:45:00+00:00",
     "2026-10-08T14:00:00+00:00",
@@ -3542,7 +3518,33 @@
     "2026-10-08T18:30:00+00:00",
     "2026-10-08T18:45:00+00:00",
     "2026-10-08T19:00:00+00:00",
-    "2026-10-08T19:15:00+00:00"
+    "2026-10-08T19:15:00+00:00",
+    "2026-10-08T19:30:00+00:00",
+    "2026-10-08T19:45:00+00:00",
+    "2026-10-09T13:30:00+00:00",
+    "2026-10-09T13:45:00+00:00",
+    "2026-10-09T14:00:00+00:00",
+    "2026-10-09T14:15:00+00:00",
+    "2026-10-09T14:30:00+00:00",
+    "2026-10-09T14:45:00+00:00",
+    "2026-10-09T15:00:00+00:00",
+    "2026-10-09T15:15:00+00:00",
+    "2026-10-09T15:30:00+00:00",
+    "2026-10-09T15:45:00+00:00",
+    "2026-10-09T16:00:00+00:00",
+    "2026-10-09T16:15:00+00:00",
+    "2026-10-09T16:30:00+00:00",
+    "2026-10-09T16:45:00+00:00",
+    "2026-10-09T17:00:00+00:00",
+    "2026-10-09T17:15:00+00:00",
+    "2026-10-09T17:30:00+00:00",
+    "2026-10-09T17:45:00+00:00",
+    "2026-10-09T18:00:00+00:00",
+    "2026-10-09T18:15:00+00:00",
+    "2026-10-09T18:30:00+00:00",
+    "2026-10-09T18:45:00+00:00",
+    "2026-10-09T19:00:00+00:00",
+    "2026-10-09T19:15:00+00:00"
    ]
   },
   {
@@ -3565,7 +3567,7 @@
    "state": "checked",
    "reason": null,
    "bars_checked": 4,
-   "evals_checked": 646,
+   "evals_checked": 650,
    "divergences": 0,
    "by_class": {
     "previous_bar_signal": 0,
@@ -3579,12 +3581,6 @@
     "dropped_no_order": 0
    },
    "bars": [
-    {
-     "bar": "2026-10-07T04:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 160,
-     "signal_evals": 0
-    },
     {
      "bar": "2026-10-08T04:00:00+00:00",
      "status": "matched_no_signal",
@@ -3602,11 +3598,17 @@
      "status": "matched_no_signal",
      "evals": 167,
      "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T04:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 164,
+     "signal_evals": 0
     }
    ],
    "bars_not_comparable": 0,
    "divergence_detail": [],
-   "replay_calls": 1436,
+   "replay_calls": 1443,
    "mode_notes": {},
    "frames_without_current_bar": {
     "n": 0,
@@ -3619,36 +3621,10 @@
     "max_s": null
    },
    "adx_gap_max": 0.0,
-   "live_evals_in_window": 804,
+   "live_evals_in_window": 810,
    "matched_signal_bars": [],
    "replay_signal_windows": [],
    "replay_none_windows": [
-    "2026-10-07T13:30:00+00:00",
-    "2026-10-07T13:45:00+00:00",
-    "2026-10-07T14:00:00+00:00",
-    "2026-10-07T14:15:00+00:00",
-    "2026-10-07T14:30:00+00:00",
-    "2026-10-07T14:45:00+00:00",
-    "2026-10-07T15:00:00+00:00",
-    "2026-10-07T15:15:00+00:00",
-    "2026-10-07T15:30:00+00:00",
-    "2026-10-07T15:45:00+00:00",
-    "2026-10-07T16:00:00+00:00",
-    "2026-10-07T16:15:00+00:00",
-    "2026-10-07T16:30:00+00:00",
-    "2026-10-07T16:45:00+00:00",
-    "2026-10-07T17:00:00+00:00",
-    "2026-10-07T17:15:00+00:00",
-    "2026-10-07T17:30:00+00:00",
-    "2026-10-07T17:45:00+00:00",
-    "2026-10-07T18:00:00+00:00",
-    "2026-10-07T18:15:00+00:00",
-    "2026-10-07T18:30:00+00:00",
-    "2026-10-07T18:45:00+00:00",
-    "2026-10-07T19:00:00+00:00",
-    "2026-10-07T19:15:00+00:00",
-    "2026-10-07T19:30:00+00:00",
-    "2026-10-07T19:45:00+00:00",
     "2026-10-08T13:30:00+00:00",
     "2026-10-08T13:45:00+00:00",
     "2026-10-08T14:00:00+00:00",
@@ -3672,7 +3648,33 @@
     "2026-10-08T18:30:00+00:00",
     "2026-10-08T18:45:00+00:00",
     "2026-10-08T19:00:00+00:00",
-    "2026-10-08T19:15:00+00:00"
+    "2026-10-08T19:15:00+00:00",
+    "2026-10-08T19:30:00+00:00",
+    "2026-10-08T19:45:00+00:00",
+    "2026-10-09T13:30:00+00:00",
+    "2026-10-09T13:45:00+00:00",
+    "2026-10-09T14:00:00+00:00",
+    "2026-10-09T14:15:00+00:00",
+    "2026-10-09T14:30:00+00:00",
+    "2026-10-09T14:45:00+00:00",
+    "2026-10-09T15:00:00+00:00",
+    "2026-10-09T15:15:00+00:00",
+    "2026-10-09T15:30:00+00:00",
+    "2026-10-09T15:45:00+00:00",
+    "2026-10-09T16:00:00+00:00",
+    "2026-10-09T16:15:00+00:00",
+    "2026-10-09T16:30:00+00:00",
+    "2026-10-09T16:45:00+00:00",
+    "2026-10-09T17:00:00+00:00",
+    "2026-10-09T17:15:00+00:00",
+    "2026-10-09T17:30:00+00:00",
+    "2026-10-09T17:45:00+00:00",
+    "2026-10-09T18:00:00+00:00",
+    "2026-10-09T18:15:00+00:00",
+    "2026-10-09T18:30:00+00:00",
+    "2026-10-09T18:45:00+00:00",
+    "2026-10-09T19:00:00+00:00",
+    "2026-10-09T19:15:00+00:00"
    ]
   },
   {
@@ -3695,7 +3697,7 @@
    "state": "checked",
    "reason": null,
    "bars_checked": 4,
-   "evals_checked": 558,
+   "evals_checked": 536,
    "divergences": 0,
    "by_class": {
     "previous_bar_signal": 0,
@@ -3709,12 +3711,6 @@
     "dropped_no_order": 0
    },
    "bars": [
-    {
-     "bar": "2026-10-07T04:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 160,
-     "signal_evals": 0
-    },
     {
      "bar": "2026-10-08T04:00:00+00:00",
      "status": "matched_no_signal",
@@ -3732,49 +3728,33 @@
      "status": "matched_no_signal",
      "evals": 163,
      "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T04:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 163,
+     "signal_evals": 0
     }
    ],
-   "bars_not_comparable": 83,
+   "bars_not_comparable": 108,
    "divergence_detail": [],
-   "replay_calls": 906,
+   "replay_calls": 825,
    "mode_notes": {},
    "frames_without_current_bar": {
     "n": 0,
     "examples": []
    },
    "stale_frames": {
-    "n": 73,
-    "p50_s": 598.5,
-    "p90_s": 1539.5,
+    "n": 96,
+    "p50_s": 660.2,
+    "p90_s": 2116.3,
     "max_s": 2760.514589071274
    },
    "adx_gap_max": 0.1679,
-   "live_evals_in_window": 797,
+   "live_evals_in_window": 804,
    "matched_signal_bars": [],
    "replay_signal_windows": [],
    "replay_none_windows": [
-    "2026-10-07T13:30:00+00:00",
-    "2026-10-07T13:45:00+00:00",
-    "2026-10-07T14:00:00+00:00",
-    "2026-10-07T14:15:00+00:00",
-    "2026-10-07T14:30:00+00:00",
-    "2026-10-07T15:00:00+00:00",
-    "2026-10-07T15:15:00+00:00",
-    "2026-10-07T15:30:00+00:00",
-    "2026-10-07T15:45:00+00:00",
-    "2026-10-07T16:00:00+00:00",
-    "2026-10-07T16:15:00+00:00",
-    "2026-10-07T16:45:00+00:00",
-    "2026-10-07T17:00:00+00:00",
-    "2026-10-07T17:15:00+00:00",
-    "2026-10-07T17:45:00+00:00",
-    "2026-10-07T18:00:00+00:00",
-    "2026-10-07T18:15:00+00:00",
-    "2026-10-07T18:30:00+00:00",
-    "2026-10-07T18:45:00+00:00",
-    "2026-10-07T19:00:00+00:00",
-    "2026-10-07T19:30:00+00:00",
-    "2026-10-07T19:45:00+00:00",
     "2026-10-08T13:30:00+00:00",
     "2026-10-08T13:45:00+00:00",
     "2026-10-08T14:00:00+00:00",
@@ -3802,7 +3782,29 @@
     "2026-10-09T13:30:00+00:00",
     "2026-10-09T13:45:00+00:00",
     "2026-10-09T14:00:00+00:00",
-    "2026-10-09T14:15:00+00:00"
+    "2026-10-09T14:15:00+00:00",
+    "2026-10-09T14:30:00+00:00",
+    "2026-10-09T14:45:00+00:00",
+    "2026-10-09T15:00:00+00:00",
+    "2026-10-09T15:15:00+00:00",
+    "2026-10-09T15:30:00+00:00",
+    "2026-10-09T15:45:00+00:00",
+    "2026-10-09T16:00:00+00:00",
+    "2026-10-09T16:15:00+00:00",
+    "2026-10-09T16:30:00+00:00",
+    "2026-10-09T16:45:00+00:00",
+    "2026-10-09T17:00:00+00:00",
+    "2026-10-09T17:15:00+00:00",
+    "2026-10-09T17:30:00+00:00",
+    "2026-10-09T17:45:00+00:00",
+    "2026-10-09T18:00:00+00:00",
+    "2026-10-09T18:15:00+00:00",
+    "2026-10-09T18:30:00+00:00",
+    "2026-10-09T18:45:00+00:00",
+    "2026-10-09T19:00:00+00:00",
+    "2026-10-09T19:15:00+00:00",
+    "2026-10-09T19:30:00+00:00",
+    "2026-10-09T19:45:00+00:00"
    ]
   },
   {
@@ -3825,7 +3827,7 @@
    "state": "checked",
    "reason": null,
    "bars_checked": 4,
-   "evals_checked": 645,
+   "evals_checked": 649,
    "divergences": 0,
    "by_class": {
     "previous_bar_signal": 0,
@@ -3839,12 +3841,6 @@
     "dropped_no_order": 0
    },
    "bars": [
-    {
-     "bar": "2026-10-07T04:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 160,
-     "signal_evals": 0
-    },
     {
      "bar": "2026-10-08T04:00:00+00:00",
      "status": "matched_no_signal",
@@ -3862,11 +3858,17 @@
      "status": "matched_no_signal",
      "evals": 167,
      "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T04:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 164,
+     "signal_evals": 0
     }
    ],
    "bars_not_comparable": 0,
    "divergence_detail": [],
-   "replay_calls": 1397,
+   "replay_calls": 1286,
    "mode_notes": {},
    "frames_without_current_bar": {
     "n": 0,
@@ -3879,166 +3881,11 @@
     "max_s": null
    },
    "adx_gap_max": 0.0,
-   "live_evals_in_window": 803,
+   "live_evals_in_window": 809,
    "matched_signal_bars": [],
    "replay_signal_windows": [],
    "replay_none_windows": [
-    "2026-10-07T13:15:00+00:00",
-    "2026-10-07T13:30:00+00:00",
-    "2026-10-07T13:45:00+00:00",
-    "2026-10-07T14:00:00+00:00",
-    "2026-10-07T14:15:00+00:00",
-    "2026-10-07T14:30:00+00:00",
-    "2026-10-07T14:45:00+00:00",
-    "2026-10-07T15:00:00+00:00",
-    "2026-10-07T15:15:00+00:00",
-    "2026-10-07T15:30:00+00:00",
-    "2026-10-07T15:45:00+00:00",
-    "2026-10-07T16:00:00+00:00",
-    "2026-10-07T16:15:00+00:00",
-    "2026-10-07T16:30:00+00:00",
-    "2026-10-07T16:45:00+00:00",
-    "2026-10-07T17:00:00+00:00",
-    "2026-10-07T17:15:00+00:00",
-    "2026-10-07T17:30:00+00:00",
-    "2026-10-07T17:45:00+00:00",
-    "2026-10-07T18:00:00+00:00",
-    "2026-10-07T18:15:00+00:00",
-    "2026-10-07T18:30:00+00:00",
-    "2026-10-07T18:45:00+00:00",
-    "2026-10-07T19:00:00+00:00",
-    "2026-10-07T19:15:00+00:00",
-    "2026-10-07T19:30:00+00:00",
-    "2026-10-07T19:45:00+00:00",
     "2026-10-08T13:15:00+00:00",
-    "2026-10-08T13:30:00+00:00",
-    "2026-10-08T13:45:00+00:00",
-    "2026-10-08T14:00:00+00:00",
-    "2026-10-08T14:15:00+00:00",
-    "2026-10-08T14:30:00+00:00",
-    "2026-10-08T14:45:00+00:00",
-    "2026-10-08T15:00:00+00:00",
-    "2026-10-08T15:15:00+00:00",
-    "2026-10-08T15:30:00+00:00",
-    "2026-10-08T15:45:00+00:00",
-    "2026-10-08T16:00:00+00:00",
-    "2026-10-08T16:15:00+00:00",
-    "2026-10-08T16:30:00+00:00",
-    "2026-10-08T16:45:00+00:00",
-    "2026-10-08T17:00:00+00:00",
-    "2026-10-08T17:15:00+00:00",
-    "2026-10-08T17:30:00+00:00",
-    "2026-10-08T17:45:00+00:00",
-    "2026-10-08T18:00:00+00:00",
-    "2026-10-08T18:15:00+00:00",
-    "2026-10-08T18:30:00+00:00",
-    "2026-10-08T18:45:00+00:00"
-   ]
-  },
-  {
-   "leg": "scha_trend_long_1d",
-   "symbol": "SCHA",
-   "timeframe": "1d",
-   "unit": "trend_donchian",
-   "decision_bar": "forming",
-   "execution": "live",
-   "accounts": [
-    "alpaca_paper"
-   ],
-   "real_money": false,
-   "features": {
-    "side_filter": false,
-    "decision_frame": false,
-    "us_session_gate": true,
-    "long_only": true
-   },
-   "state": "checked",
-   "reason": null,
-   "bars_checked": 4,
-   "evals_checked": 624,
-   "divergences": 0,
-   "by_class": {
-    "previous_bar_signal": 0,
-    "missed_signal": 0,
-    "live_only_signal": 0,
-    "side_mismatch": 0,
-    "candle_mismatch": 0,
-    "lost_bar": 0,
-    "unevaluated_signal": 0,
-    "dropped_no_package": 0,
-    "dropped_no_order": 0
-   },
-   "bars": [
-    {
-     "bar": "2026-10-07T04:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 160,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-08T04:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 160,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-09T04:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 158,
-     "signal_evals": 0
-    },
-    {
-     "bar": "2026-10-12T04:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 164,
-     "signal_evals": 0
-    }
-   ],
-   "bars_not_comparable": 18,
-   "divergence_detail": [],
-   "replay_calls": 887,
-   "mode_notes": {},
-   "frames_without_current_bar": {
-    "n": 0,
-    "examples": []
-   },
-   "stale_frames": {
-    "n": 36,
-    "p50_s": 498.9,
-    "p90_s": 975.5,
-    "max_s": 1407.1720418930054
-   },
-   "adx_gap_max": 0.0602,
-   "live_evals_in_window": 800,
-   "matched_signal_bars": [],
-   "replay_signal_windows": [],
-   "replay_none_windows": [
-    "2026-10-07T13:30:00+00:00",
-    "2026-10-07T13:45:00+00:00",
-    "2026-10-07T14:00:00+00:00",
-    "2026-10-07T14:15:00+00:00",
-    "2026-10-07T14:30:00+00:00",
-    "2026-10-07T14:45:00+00:00",
-    "2026-10-07T15:00:00+00:00",
-    "2026-10-07T15:15:00+00:00",
-    "2026-10-07T15:30:00+00:00",
-    "2026-10-07T15:45:00+00:00",
-    "2026-10-07T16:00:00+00:00",
-    "2026-10-07T16:15:00+00:00",
-    "2026-10-07T16:30:00+00:00",
-    "2026-10-07T16:45:00+00:00",
-    "2026-10-07T17:00:00+00:00",
-    "2026-10-07T17:15:00+00:00",
-    "2026-10-07T17:30:00+00:00",
-    "2026-10-07T17:45:00+00:00",
-    "2026-10-07T18:00:00+00:00",
-    "2026-10-07T18:15:00+00:00",
-    "2026-10-07T18:30:00+00:00",
-    "2026-10-07T18:45:00+00:00",
-    "2026-10-07T19:00:00+00:00",
-    "2026-10-07T19:15:00+00:00",
-    "2026-10-07T19:30:00+00:00",
-    "2026-10-07T19:45:00+00:00",
     "2026-10-08T13:30:00+00:00",
     "2026-10-08T13:45:00+00:00",
     "2026-10-08T14:00:00+00:00",
@@ -4062,7 +3909,162 @@
     "2026-10-08T18:30:00+00:00",
     "2026-10-08T18:45:00+00:00",
     "2026-10-08T19:00:00+00:00",
-    "2026-10-08T19:15:00+00:00"
+    "2026-10-08T19:15:00+00:00",
+    "2026-10-08T19:30:00+00:00",
+    "2026-10-08T19:45:00+00:00",
+    "2026-10-09T13:15:00+00:00",
+    "2026-10-09T13:30:00+00:00",
+    "2026-10-09T13:45:00+00:00",
+    "2026-10-09T14:00:00+00:00",
+    "2026-10-09T14:15:00+00:00",
+    "2026-10-09T14:30:00+00:00",
+    "2026-10-09T14:45:00+00:00",
+    "2026-10-09T15:00:00+00:00",
+    "2026-10-09T15:15:00+00:00",
+    "2026-10-09T15:30:00+00:00",
+    "2026-10-09T15:45:00+00:00",
+    "2026-10-09T16:00:00+00:00",
+    "2026-10-09T16:15:00+00:00",
+    "2026-10-09T16:30:00+00:00",
+    "2026-10-09T16:45:00+00:00",
+    "2026-10-09T17:00:00+00:00",
+    "2026-10-09T17:15:00+00:00",
+    "2026-10-09T17:30:00+00:00",
+    "2026-10-09T17:45:00+00:00",
+    "2026-10-09T18:00:00+00:00",
+    "2026-10-09T18:15:00+00:00",
+    "2026-10-09T18:30:00+00:00",
+    "2026-10-09T18:45:00+00:00"
+   ]
+  },
+  {
+   "leg": "scha_trend_long_1d",
+   "symbol": "SCHA",
+   "timeframe": "1d",
+   "unit": "trend_donchian",
+   "decision_bar": "forming",
+   "execution": "live",
+   "accounts": [
+    "alpaca_paper"
+   ],
+   "real_money": false,
+   "features": {
+    "side_filter": false,
+    "decision_frame": false,
+    "us_session_gate": true,
+    "long_only": true
+   },
+   "state": "checked",
+   "reason": null,
+   "bars_checked": 4,
+   "evals_checked": 627,
+   "divergences": 0,
+   "by_class": {
+    "previous_bar_signal": 0,
+    "missed_signal": 0,
+    "live_only_signal": 0,
+    "side_mismatch": 0,
+    "candle_mismatch": 0,
+    "lost_bar": 0,
+    "unevaluated_signal": 0,
+    "dropped_no_package": 0,
+    "dropped_no_order": 0
+   },
+   "bars": [
+    {
+     "bar": "2026-10-08T04:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 160,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-09T04:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 158,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-12T04:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 164,
+     "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T04:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 163,
+     "signal_evals": 0
+    }
+   ],
+   "bars_not_comparable": 18,
+   "divergence_detail": [],
+   "replay_calls": 916,
+   "mode_notes": {},
+   "frames_without_current_bar": {
+    "n": 0,
+    "examples": []
+   },
+   "stale_frames": {
+    "n": 33,
+    "p50_s": 498.9,
+    "p90_s": 975.5,
+    "max_s": 1407.1720418930054
+   },
+   "adx_gap_max": 0.0602,
+   "live_evals_in_window": 805,
+   "matched_signal_bars": [],
+   "replay_signal_windows": [],
+   "replay_none_windows": [
+    "2026-10-08T13:30:00+00:00",
+    "2026-10-08T13:45:00+00:00",
+    "2026-10-08T14:00:00+00:00",
+    "2026-10-08T14:15:00+00:00",
+    "2026-10-08T14:30:00+00:00",
+    "2026-10-08T14:45:00+00:00",
+    "2026-10-08T15:00:00+00:00",
+    "2026-10-08T15:15:00+00:00",
+    "2026-10-08T15:30:00+00:00",
+    "2026-10-08T15:45:00+00:00",
+    "2026-10-08T16:00:00+00:00",
+    "2026-10-08T16:15:00+00:00",
+    "2026-10-08T16:30:00+00:00",
+    "2026-10-08T16:45:00+00:00",
+    "2026-10-08T17:00:00+00:00",
+    "2026-10-08T17:15:00+00:00",
+    "2026-10-08T17:30:00+00:00",
+    "2026-10-08T17:45:00+00:00",
+    "2026-10-08T18:00:00+00:00",
+    "2026-10-08T18:15:00+00:00",
+    "2026-10-08T18:30:00+00:00",
+    "2026-10-08T18:45:00+00:00",
+    "2026-10-08T19:00:00+00:00",
+    "2026-10-08T19:15:00+00:00",
+    "2026-10-08T19:30:00+00:00",
+    "2026-10-08T19:45:00+00:00",
+    "2026-10-09T13:30:00+00:00",
+    "2026-10-09T13:45:00+00:00",
+    "2026-10-09T14:00:00+00:00",
+    "2026-10-09T14:30:00+00:00",
+    "2026-10-09T14:45:00+00:00",
+    "2026-10-09T15:00:00+00:00",
+    "2026-10-09T15:15:00+00:00",
+    "2026-10-09T15:30:00+00:00",
+    "2026-10-09T15:45:00+00:00",
+    "2026-10-09T16:00:00+00:00",
+    "2026-10-09T16:15:00+00:00",
+    "2026-10-09T16:30:00+00:00",
+    "2026-10-09T16:45:00+00:00",
+    "2026-10-09T17:00:00+00:00",
+    "2026-10-09T17:15:00+00:00",
+    "2026-10-09T17:30:00+00:00",
+    "2026-10-09T17:45:00+00:00",
+    "2026-10-09T18:00:00+00:00",
+    "2026-10-09T18:30:00+00:00",
+    "2026-10-09T18:45:00+00:00",
+    "2026-10-09T19:00:00+00:00",
+    "2026-10-09T19:15:00+00:00",
+    "2026-10-09T19:30:00+00:00",
+    "2026-10-09T19:45:00+00:00"
    ]
   },
   {
@@ -4110,7 +4112,7 @@
    "state": "checked",
    "reason": null,
    "bars_checked": 4,
-   "evals_checked": 646,
+   "evals_checked": 649,
    "divergences": 0,
    "by_class": {
     "previous_bar_signal": 0,
@@ -4124,12 +4126,6 @@
     "dropped_no_order": 0
    },
    "bars": [
-    {
-     "bar": "2026-10-07T04:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 161,
-     "signal_evals": 0
-    },
     {
      "bar": "2026-10-08T04:00:00+00:00",
      "status": "matched_no_signal",
@@ -4147,11 +4143,17 @@
      "status": "matched_no_signal",
      "evals": 167,
      "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T04:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 164,
+     "signal_evals": 0
     }
    ],
    "bars_not_comparable": 0,
    "divergence_detail": [],
-   "replay_calls": 1497,
+   "replay_calls": 1400,
    "mode_notes": {},
    "frames_without_current_bar": {
     "n": 0,
@@ -4164,36 +4166,10 @@
     "max_s": null
    },
    "adx_gap_max": 0.0597,
-   "live_evals_in_window": 804,
+   "live_evals_in_window": 810,
    "matched_signal_bars": [],
    "replay_signal_windows": [],
    "replay_none_windows": [
-    "2026-10-07T13:30:00+00:00",
-    "2026-10-07T13:45:00+00:00",
-    "2026-10-07T14:00:00+00:00",
-    "2026-10-07T14:15:00+00:00",
-    "2026-10-07T14:30:00+00:00",
-    "2026-10-07T14:45:00+00:00",
-    "2026-10-07T15:00:00+00:00",
-    "2026-10-07T15:15:00+00:00",
-    "2026-10-07T15:30:00+00:00",
-    "2026-10-07T15:45:00+00:00",
-    "2026-10-07T16:00:00+00:00",
-    "2026-10-07T16:15:00+00:00",
-    "2026-10-07T16:30:00+00:00",
-    "2026-10-07T16:45:00+00:00",
-    "2026-10-07T17:00:00+00:00",
-    "2026-10-07T17:15:00+00:00",
-    "2026-10-07T17:30:00+00:00",
-    "2026-10-07T17:45:00+00:00",
-    "2026-10-07T18:00:00+00:00",
-    "2026-10-07T18:15:00+00:00",
-    "2026-10-07T18:30:00+00:00",
-    "2026-10-07T18:45:00+00:00",
-    "2026-10-07T19:00:00+00:00",
-    "2026-10-07T19:15:00+00:00",
-    "2026-10-07T19:30:00+00:00",
-    "2026-10-07T19:45:00+00:00",
     "2026-10-08T13:30:00+00:00",
     "2026-10-08T13:45:00+00:00",
     "2026-10-08T14:00:00+00:00",
@@ -4217,7 +4193,33 @@
     "2026-10-08T18:30:00+00:00",
     "2026-10-08T18:45:00+00:00",
     "2026-10-08T19:00:00+00:00",
-    "2026-10-08T19:15:00+00:00"
+    "2026-10-08T19:15:00+00:00",
+    "2026-10-08T19:30:00+00:00",
+    "2026-10-08T19:45:00+00:00",
+    "2026-10-09T13:30:00+00:00",
+    "2026-10-09T13:45:00+00:00",
+    "2026-10-09T14:00:00+00:00",
+    "2026-10-09T14:15:00+00:00",
+    "2026-10-09T14:30:00+00:00",
+    "2026-10-09T14:45:00+00:00",
+    "2026-10-09T15:00:00+00:00",
+    "2026-10-09T15:15:00+00:00",
+    "2026-10-09T15:30:00+00:00",
+    "2026-10-09T15:45:00+00:00",
+    "2026-10-09T16:00:00+00:00",
+    "2026-10-09T16:15:00+00:00",
+    "2026-10-09T16:30:00+00:00",
+    "2026-10-09T16:45:00+00:00",
+    "2026-10-09T17:00:00+00:00",
+    "2026-10-09T17:15:00+00:00",
+    "2026-10-09T17:30:00+00:00",
+    "2026-10-09T17:45:00+00:00",
+    "2026-10-09T18:00:00+00:00",
+    "2026-10-09T18:15:00+00:00",
+    "2026-10-09T18:30:00+00:00",
+    "2026-10-09T18:45:00+00:00",
+    "2026-10-09T19:00:00+00:00",
+    "2026-10-09T19:15:00+00:00"
    ]
   },
   {
@@ -4240,7 +4242,7 @@
    "state": "checked",
    "reason": null,
    "bars_checked": 4,
-   "evals_checked": 646,
+   "evals_checked": 650,
    "divergences": 0,
    "by_class": {
     "previous_bar_signal": 0,
@@ -4254,12 +4256,6 @@
     "dropped_no_order": 0
    },
    "bars": [
-    {
-     "bar": "2026-10-07T04:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 160,
-     "signal_evals": 0
-    },
     {
      "bar": "2026-10-08T04:00:00+00:00",
      "status": "matched_no_signal",
@@ -4311,11 +4307,17 @@
        ]
       }
      }
+    },
+    {
+     "bar": "2026-10-13T04:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 164,
+     "signal_evals": 0
     }
    ],
    "bars_not_comparable": 0,
    "divergence_detail": [],
-   "replay_calls": 1398,
+   "replay_calls": 1363,
    "mode_notes": {},
    "frames_without_current_bar": {
     "n": 0,
@@ -4327,8 +4329,8 @@
     "p90_s": 346.6,
     "max_s": 346.6238069534302
    },
-   "adx_gap_max": 0.0104,
-   "live_evals_in_window": 804,
+   "adx_gap_max": 0.0446,
+   "live_evals_in_window": 810,
    "matched_signal_bars": [
     "2026-10-09T04:00:00+00:00",
     "2026-10-12T04:00:00+00:00"
@@ -4347,33 +4349,6 @@
     "2026-10-12T16:45:00+00:00|short"
    ],
    "replay_none_windows": [
-    "2026-10-07T13:15:00+00:00",
-    "2026-10-07T13:30:00+00:00",
-    "2026-10-07T13:45:00+00:00",
-    "2026-10-07T14:00:00+00:00",
-    "2026-10-07T14:15:00+00:00",
-    "2026-10-07T14:30:00+00:00",
-    "2026-10-07T14:45:00+00:00",
-    "2026-10-07T15:00:00+00:00",
-    "2026-10-07T15:15:00+00:00",
-    "2026-10-07T15:30:00+00:00",
-    "2026-10-07T15:45:00+00:00",
-    "2026-10-07T16:00:00+00:00",
-    "2026-10-07T16:15:00+00:00",
-    "2026-10-07T16:30:00+00:00",
-    "2026-10-07T16:45:00+00:00",
-    "2026-10-07T17:00:00+00:00",
-    "2026-10-07T17:15:00+00:00",
-    "2026-10-07T17:30:00+00:00",
-    "2026-10-07T17:45:00+00:00",
-    "2026-10-07T18:00:00+00:00",
-    "2026-10-07T18:15:00+00:00",
-    "2026-10-07T18:30:00+00:00",
-    "2026-10-07T18:45:00+00:00",
-    "2026-10-07T19:00:00+00:00",
-    "2026-10-07T19:15:00+00:00",
-    "2026-10-07T19:30:00+00:00",
-    "2026-10-07T19:45:00+00:00",
     "2026-10-08T13:15:00+00:00",
     "2026-10-08T13:30:00+00:00",
     "2026-10-08T13:45:00+00:00",
@@ -4396,7 +4371,34 @@
     "2026-10-08T18:00:00+00:00",
     "2026-10-08T18:15:00+00:00",
     "2026-10-08T18:30:00+00:00",
-    "2026-10-08T18:45:00+00:00"
+    "2026-10-08T18:45:00+00:00",
+    "2026-10-08T19:00:00+00:00",
+    "2026-10-08T19:15:00+00:00",
+    "2026-10-08T19:30:00+00:00",
+    "2026-10-08T19:45:00+00:00",
+    "2026-10-09T14:30:00+00:00",
+    "2026-10-09T16:45:00+00:00",
+    "2026-10-09T17:00:00+00:00",
+    "2026-10-09T17:45:00+00:00",
+    "2026-10-09T18:00:00+00:00",
+    "2026-10-09T19:00:00+00:00",
+    "2026-10-09T19:30:00+00:00",
+    "2026-10-09T19:45:00+00:00",
+    "2026-10-12T14:00:00+00:00",
+    "2026-10-12T15:00:00+00:00",
+    "2026-10-12T17:15:00+00:00",
+    "2026-10-12T19:15:00+00:00",
+    "2026-10-12T19:30:00+00:00",
+    "2026-10-12T19:45:00+00:00",
+    "2026-10-13T13:15:00+00:00",
+    "2026-10-13T13:30:00+00:00",
+    "2026-10-13T13:45:00+00:00",
+    "2026-10-13T14:00:00+00:00",
+    "2026-10-13T14:15:00+00:00",
+    "2026-10-13T14:30:00+00:00",
+    "2026-10-13T14:45:00+00:00",
+    "2026-10-13T15:00:00+00:00",
+    "2026-10-13T15:15:00+00:00"
    ]
   },
   {
@@ -4419,7 +4421,7 @@
    "state": "checked",
    "reason": null,
    "bars_checked": 4,
-   "evals_checked": 644,
+   "evals_checked": 647,
    "divergences": 0,
    "by_class": {
     "previous_bar_signal": 0,
@@ -4433,12 +4435,6 @@
     "dropped_no_order": 0
    },
    "bars": [
-    {
-     "bar": "2026-10-07T04:00:00+00:00",
-     "status": "matched_no_signal",
-     "evals": 160,
-     "signal_evals": 0
-    },
     {
      "bar": "2026-10-08T04:00:00+00:00",
      "status": "matched_no_signal",
@@ -4456,54 +4452,33 @@
      "status": "matched_no_signal",
      "evals": 165,
      "signal_evals": 0
+    },
+    {
+     "bar": "2026-10-13T04:00:00+00:00",
+     "status": "matched_no_signal",
+     "evals": 163,
+     "signal_evals": 0
     }
    ],
    "bars_not_comparable": 0,
    "divergence_detail": [],
-   "replay_calls": 1424,
+   "replay_calls": 1321,
    "mode_notes": {},
    "frames_without_current_bar": {
     "n": 0,
     "examples": []
    },
    "stale_frames": {
-    "n": 1,
+    "n": 2,
     "p50_s": 364.1,
     "p90_s": 364.1,
     "max_s": 364.08703207969666
    },
    "adx_gap_max": 0.0165,
-   "live_evals_in_window": 802,
+   "live_evals_in_window": 807,
    "matched_signal_bars": [],
    "replay_signal_windows": [],
    "replay_none_windows": [
-    "2026-10-07T13:15:00+00:00",
-    "2026-10-07T13:30:00+00:00",
-    "2026-10-07T13:45:00+00:00",
-    "2026-10-07T14:00:00+00:00",
-    "2026-10-07T14:15:00+00:00",
-    "2026-10-07T14:30:00+00:00",
-    "2026-10-07T14:45:00+00:00",
-    "2026-10-07T15:00:00+00:00",
-    "2026-10-07T15:15:00+00:00",
-    "2026-10-07T15:30:00+00:00",
-    "2026-10-07T15:45:00+00:00",
-    "2026-10-07T16:00:00+00:00",
-    "2026-10-07T16:15:00+00:00",
-    "2026-10-07T16:30:00+00:00",
-    "2026-10-07T16:45:00+00:00",
-    "2026-10-07T17:00:00+00:00",
-    "2026-10-07T17:15:00+00:00",
-    "2026-10-07T17:30:00+00:00",
-    "2026-10-07T17:45:00+00:00",
-    "2026-10-07T18:00:00+00:00",
-    "2026-10-07T18:15:00+00:00",
-    "2026-10-07T18:30:00+00:00",
-    "2026-10-07T18:45:00+00:00",
-    "2026-10-07T19:00:00+00:00",
-    "2026-10-07T19:15:00+00:00",
-    "2026-10-07T19:30:00+00:00",
-    "2026-10-07T19:45:00+00:00",
     "2026-10-08T13:15:00+00:00",
     "2026-10-08T13:30:00+00:00",
     "2026-10-08T13:45:00+00:00",
@@ -4526,9 +4501,36 @@
     "2026-10-08T18:00:00+00:00",
     "2026-10-08T18:15:00+00:00",
     "2026-10-08T18:30:00+00:00",
-    "2026-10-08T18:45:00+00:00"
+    "2026-10-08T18:45:00+00:00",
+    "2026-10-08T19:00:00+00:00",
+    "2026-10-08T19:15:00+00:00",
+    "2026-10-08T19:30:00+00:00",
+    "2026-10-08T19:45:00+00:00",
+    "2026-10-09T13:15:00+00:00",
+    "2026-10-09T13:30:00+00:00",
+    "2026-10-09T13:45:00+00:00",
+    "2026-10-09T14:00:00+00:00",
+    "2026-10-09T14:15:00+00:00",
+    "2026-10-09T14:30:00+00:00",
+    "2026-10-09T14:45:00+00:00",
+    "2026-10-09T15:00:00+00:00",
+    "2026-10-09T15:15:00+00:00",
+    "2026-10-09T15:30:00+00:00",
+    "2026-10-09T15:45:00+00:00",
+    "2026-10-09T16:00:00+00:00",
+    "2026-10-09T16:15:00+00:00",
+    "2026-10-09T16:30:00+00:00",
+    "2026-10-09T16:45:00+00:00",
+    "2026-10-09T17:00:00+00:00",
+    "2026-10-09T17:15:00+00:00",
+    "2026-10-09T17:30:00+00:00",
+    "2026-10-09T17:45:00+00:00",
+    "2026-10-09T18:00:00+00:00",
+    "2026-10-09T18:15:00+00:00",
+    "2026-10-09T18:30:00+00:00",
+    "2026-10-09T18:45:00+00:00"
    ]
   }
  ],
- "headline": "Live\u2194replay parity (2026-10-13, 2026-10-06\u21922026-10-13): 16 legs checked (7 real-money), 296 bars, divergences = 0 \u00b7 controls: planted_defect pass, historical_positive pass, liveness pass"
+ "headline": "Live\u2194replay parity (2026-10-14, 2026-10-07\u21922026-10-14): 16 legs checked (7 real-money), 296 bars, divergences = 0 \u00b7 controls: planted_defect pass, historical_positive pass, liveness pass"
 }
