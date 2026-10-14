@@ -1,0 +1,379 @@
+{
+  "verdict": "indeterminate",
+  "read_state": "measured",
+  "n": 7200,
+  "population": "2 group(s) ['BTCUSDT_1h', 'ETHUSDT_1h']; baseline prior; candidates ['tabicl', 'tabpfn']; metric macro_f1; n = baseline OOS test rows summed over groups; cv folds per group >= 5",
+  "note": "no evaluated candidate reaches the floor, but some declared arms were unavailable \u2014 a FAIL closes only what was tested, so this is not a FAIL | UNAVAILABLE ARMS: {'tabicl': \"tabicl not importable: No module named 'tabicl'\", 'tabpfn': \"tabpfn not importable: No module named 'tabpfn'\"}",
+  "measurement": {
+    "engine": "scripts/research/ml_bakeoff.py",
+    "metric": "macro_f1",
+    "higher_is_better": true,
+    "delta_sign": "positive = learner better than reference",
+    "baseline": "prior",
+    "controls": [
+      "lgbm",
+      "logit"
+    ],
+    "candidates": [
+      "tabicl",
+      "tabpfn"
+    ],
+    "arm_status": {
+      "prior": "ok",
+      "lgbm": "ok",
+      "logit": "ok",
+      "tabicl": "unavailable",
+      "tabpfn": "unavailable"
+    },
+    "groups": {
+      "BTCUSDT_1h": {
+        "n_rows": 6000,
+        "classes": [
+          "down",
+          "flat",
+          "up"
+        ],
+        "arms": {
+          "prior": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.31688804554079697,
+                  0.21680724773508278,
+                  0.3376264949402024,
+                  0.34900542495479203,
+                  0.3548387096774194
+                ],
+                "n_test_rows": 3600
+              }
+            }
+          },
+          "lgbm": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.5083181579678385,
+                  0.311508305201978,
+                  0.5402697963506311,
+                  0.5277194715396962,
+                  0.5361075316939174
+                ],
+                "n_test_rows": 3600
+              }
+            }
+          },
+          "logit": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.5665462628507918,
+                  0.3573553247494197,
+                  0.5234365208672765,
+                  0.5343260760021546,
+                  0.5607722007722008
+                ],
+                "n_test_rows": 3600
+              }
+            }
+          },
+          "tabicl": {
+            "status": "unavailable",
+            "reason": "tabicl not importable: No module named 'tabicl'"
+          },
+          "tabpfn": {
+            "status": "unavailable",
+            "reason": "tabpfn not importable: No module named 'tabpfn'"
+          }
+        }
+      },
+      "ETHUSDT_1h": {
+        "n_rows": 6000,
+        "classes": [
+          "down",
+          "up"
+        ],
+        "arms": {
+          "prior": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.31688804554079697,
+                  0.3220338983050847,
+                  0.333950046253469,
+                  0.353099730458221,
+                  0.35368043087971274
+                ],
+                "n_test_rows": 3600
+              }
+            }
+          },
+          "lgbm": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.48035908638296887,
+                  0.485539488320356,
+                  0.5466310234796918,
+                  0.5208102242585002,
+                  0.5246332046332046
+                ],
+                "n_test_rows": 3600
+              }
+            }
+          },
+          "logit": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.4874074074074074,
+                  0.5504328131302163,
+                  0.5517893409902654,
+                  0.5774220881692178,
+                  0.5429721184248347
+                ],
+                "n_test_rows": 3600
+              }
+            }
+          },
+          "tabicl": {
+            "status": "unavailable",
+            "reason": "tabicl not importable: No module named 'tabicl'"
+          },
+          "tabpfn": {
+            "status": "unavailable",
+            "reason": "tabpfn not importable: No module named 'tabpfn'"
+          }
+        }
+      }
+    },
+    "deltas": {
+      "BTCUSDT_1h": {
+        "cv": {
+          "lgbm": {
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.16975146798115354,
+              "ci95": [
+                0.11636350371796017,
+                0.2231394322443469
+              ],
+              "sign_consistent": true
+            },
+            "lgbm": {
+              "n_folds": 5,
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "sign_consistent": false
+            },
+            "logit": {
+              "n_folds": 5,
+              "mean": -0.023702624497556446,
+              "ci95": [
+                -0.06104339311776579,
+                0.0136381441226529
+              ],
+              "sign_consistent": false
+            }
+          },
+          "logit": {
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.19345409247870998,
+              "ci95": [
+                0.14442695326909002,
+                0.24248123168832994
+              ],
+              "sign_consistent": true
+            },
+            "lgbm": {
+              "n_folds": 5,
+              "mean": 0.023702624497556446,
+              "ci95": [
+                -0.0136381441226529,
+                0.06104339311776579
+              ],
+              "sign_consistent": false
+            },
+            "logit": {
+              "n_folds": 5,
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "sign_consistent": false
+            }
+          }
+        }
+      },
+      "ETHUSDT_1h": {
+        "cv": {
+          "lgbm": {
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.1756641751274874,
+              "ci95": [
+                0.1496807135277962,
+                0.2016476367271786
+              ],
+              "sign_consistent": true
+            },
+            "lgbm": {
+              "n_folds": 5,
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "sign_consistent": false
+            },
+            "logit": {
+              "n_folds": 5,
+              "mean": -0.030410148209444033,
+              "ci95": [
+                -0.06555020754621213,
+                0.004729911127324068
+              ],
+              "sign_consistent": true
+            }
+          },
+          "logit": {
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.20607432333693146,
+              "ci95": [
+                0.1749409861550423,
+                0.2372076605188206
+              ],
+              "sign_consistent": true
+            },
+            "lgbm": {
+              "n_folds": 5,
+              "mean": 0.030410148209444033,
+              "ci95": [
+                -0.004729911127324068,
+                0.06555020754621213
+              ],
+              "sign_consistent": true
+            },
+            "logit": {
+              "n_folds": 5,
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "sign_consistent": false
+            }
+          }
+        }
+      }
+    },
+    "rule_evaluation": {
+      "verdict": "indeterminate",
+      "why": "no evaluated candidate reaches the floor, but some declared arms were unavailable \u2014 a FAIL closes only what was tested, so this is not a FAIL",
+      "candidates": {
+        "tabicl": {
+          "evaluated": false,
+          "status": "unavailable"
+        },
+        "tabpfn": {
+          "evaluated": false,
+          "status": "unavailable"
+        }
+      }
+    },
+    "headline_checks": [],
+    "licences": {
+      "prior": {
+        "kind": "prior",
+        "licence": "n/a",
+        "research_only": false,
+        "weights": ""
+      },
+      "lgbm": {
+        "kind": "lightgbm",
+        "licence": "MIT",
+        "research_only": false,
+        "weights": ""
+      },
+      "logit": {
+        "kind": "numpy_logit",
+        "licence": "n/a",
+        "research_only": false,
+        "weights": ""
+      },
+      "tabicl": {
+        "kind": "tabicl",
+        "licence": "BSD-3-Clause (verify on the Hub)",
+        "research_only": false,
+        "weights": ""
+      },
+      "tabpfn": {
+        "kind": "tabpfn",
+        "licence": "Prior Labs non-commercial (license:other)",
+        "research_only": true,
+        "weights": "Prior Labs non-commercial weights (license:other); offline research evaluation only"
+      }
+    },
+    "n_folds_cv_min_over_groups": 5,
+    "seconds": 15.9
+  }
+}
