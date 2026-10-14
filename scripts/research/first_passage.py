@@ -18,7 +18,12 @@ THE CONSTRUCTION (fixed-bracket reconstruction; say this whenever a number from 
     question of a plain bracket, it does not replay the leg as it trades (that needs the harness-native
     per-bar emit, checklist row EXIT-PATH-EMIT-OFFLINE, and unit RQ-20261014-d6e7-06).
   * First passage per bar: SL is checked BEFORE TP on a bar that touches both (conservative; the harness
-    convention). No passage within H bars -> timeout, valued at that bar's close. H per leg = max(10, p90
+    convention -- every barrier labeller here does this; whether it is a material label error is measured by
+    RQ-20261014-da7a-01, filed by PR #18112, not re-filed here).
+  * Alignment: `entry_time` labels the ENTRY bar (open-time label on a native feed); the trade is filled at its
+    close, so the walk starts at entry + 1 bar and the entry bar's own high/low never count. MEASURED 2026-10-14 on
+    31 legs / 4,143 trades: starting AT the entry bar breaches the initial SL before the exit bar on 412 trades,
+    starting at entry + 1 on 0. The self-test plants the off-by-one (an entry-bar wick through the SL). No passage within H bars -> timeout, valued at that bar's close. H per leg = max(10, p90
     of the leg's realised holds in bars) -- registered, not tuned.
   * Costs: every arm pays the trade's own ledger `cost_total_r` (fee + slippage + funding from
     execution_costs.resolve_cost_policy() via the harness). An EARLY exit pays the trade's
@@ -753,6 +758,23 @@ def _self_test() -> int:
     # 2. first passage: SL before TP on a shared bar
     pth = {"adv": np.array([-0.2, -1.1]), "fav": np.array([0.5, 2.5]), "close_r": np.array([0.1, 0.0])}
     assert first_passage(pth, 2.0) == ("sl", 1, -1.0)
+    # 3. ALIGNMENT (manager finding, PR #18112): ledger entry_time labels the ENTRY bar (open-time label on a native
+    #    feed); the trade is entered at that bar's close, so its own high/low must NOT count. Plant the off-by-one:
+    #    the entry bar wicks through the SL, every later bar holds and reaches TP. Walking from the entry bar would
+    #    read SL-first; walking from entry + 1 (this file's convention) must read TP-first. Measured 2026-10-14 on
+    #    31 legs / 4,143 committed trades: start@entry_bar breaches the initial SL before the exit bar on 412,
+    #    start@entry+1 on 0 (trend_donchian_xrp_4h: 27/44 vs 0/44, as #18112 found).
+    ts = pd.date_range("2025-01-01", periods=6, freq="4h", tz="UTC")
+    al = pd.DataFrame({"timestamp": ts, "open": [100, 100, 100.5, 101, 102, 103],
+                       "high": [100.5, 100.5, 101, 102, 104.5, 104], "low": [99.5, 97.0, 100, 100.5, 101.5, 102],
+                       "close": [100, 100, 100.8, 101.8, 104, 103.5]})
+    tr = {"entry": 100.0, "sl": 98.0, "direction": "long"}
+    pa = walk_trade(al, indicators(al), 1, tr, 4)
+    oc = first_passage(pa, 2.0)[0]
+    early = float((al["low"].iloc[1] - 100.0) / 2.0)
+    if not (oc == "tp" and early <= -1.0 and float(pa["adv"][0]) > -1.0):
+        print(f"FAIL alignment: entry-bar wick counted (outcome {oc}, first adv {float(pa['adv'][0]):.2f})")
+        ok = False
     with tempfile.TemporaryDirectory() as td:
         for drift, expect_model in ((False, ("fail", "indeterminate")), (True, ("pass",))):
             df, rows = _synthetic(drift)
