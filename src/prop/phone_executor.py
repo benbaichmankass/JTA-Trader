@@ -393,8 +393,17 @@ def record_report(device: PhoneDevice, body: Dict[str, Any]) -> Dict[str, Any]:
         # positions and reconciled; any other state is kept as a label so "we could not look" stays visible.
         from src.prop import phone_reconcile
         pstate = re.sub(r"[^a-z_]", "", str(body_in.get("positions_state") or "not_read"))[:24] or "not_read"
-        body["positions_state"] = pstate
         positions = closed = None
+        if pstate == "side_unread":
+            # BREAKOUT-POS-UNPARSED: rows parsed except the side the venue draws without text; the journal may supply
+            # it (phone_reconcile.resolve_sides). Then the read counts, labelled ESTIMATED; otherwise it stays a label.
+            resolved = phone_reconcile.resolve_sides(device.account_id, body_in.get("positions"))
+            if resolved is not None:
+                body_in = {**body_in, "positions": resolved}
+                pstate = "read"
+                body["positions_side_source"] = "journal"
+                body["positions_provenance"] = "ESTIMATED"
+        body["positions_state"] = pstate
         if pstate == "read":
             positions = phone_reconcile.clean_positions(device.account_id, body_in.get("positions"))
             closed = phone_reconcile.clean_closed(device.account_id, body_in.get("closed_orders"))

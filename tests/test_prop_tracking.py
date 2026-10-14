@@ -531,6 +531,29 @@ def test_amend_control_dump_is_kept_and_never_raises_the_unseen_alert(env):
     assert d["state"] == "amend_no_edit_unmeasured" and d["controls"] == ["TP / SL:button Edit", "cls=icon-btn"]
 
 
+# ---- side_unread (BREAKOUT-POS-UNPARSED, 1b.193: the Side cell has no text) ----
+
+SIDELESS = {"symbol": "ETH", "qty": 0.5449, "entry": 2458.24, "mark": 2436.1, "upnl": 12.34}
+
+
+def test_side_unread_takes_the_side_from_the_one_open_fill_and_is_estimated(env):
+    _open("prop-manual-f6552263ed1d", direction="short", qty=0.54, entry=2458.24, sl=2504.25, tp=2214.87)
+    _status([SIDELESS], state="side_unread")
+    raw = json.loads(prop_journal.latest_account_status("breakout_2")["raw"])
+    assert raw["positions_state"] == "read" and raw["positions_side_source"] == "journal"
+    assert raw["positions_provenance"] == "ESTIMATED"
+    assert raw["positions"][0]["direction"] == "short" and raw["positions"][0]["side_source"] == "journal"
+
+
+@pytest.mark.parametrize("fills", [[], [("short", 2600.0)], [("short", 2458.24), ("long", 2458.5)]])
+def test_side_unread_without_exactly_one_side_stays_unreconciled(env, fills):
+    for i, (d, e) in enumerate(fills):
+        _open(f"t{i}", direction=d, entry=e)
+    r = _status([SIDELESS], state="side_unread")
+    raw = json.loads(prop_journal.latest_account_status("breakout_2")["raw"])
+    assert raw["positions_state"] == "side_unread" and "positions" not in raw and "reconcile" not in r
+
+
 def test_unseen_alert_retries_when_the_ping_failed(env, monkeypatch):
     _venue_ticket("t1")
     monkeypatch.setattr("src.runtime.notify.send_telegram_direct", lambda m, **k: False)

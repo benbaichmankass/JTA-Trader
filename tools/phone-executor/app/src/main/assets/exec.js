@@ -293,6 +293,35 @@
     while ((n = w.nextNode())) if (n.parentElement && vis(n.parentElement) && n.nodeValue.trim()) out.push(n.nodeValue.trim());
     return out.join(" ").replace(/\s+/g, " ").trim();
   }
+  // BREAKOUT-POS-UNPARSED (1b.193 live dump 2026-10-14 21:38Z): the Positions Side cell has NO TEXT -- the side is
+  // drawn as an icon / colour / attribute. attrText(el) is the words in the cell's own and descendants' attributes
+  // (class, aria-label, title, alt, data-*, svg <title>, <use> href), camelCase / kebab / snake split into words.
+  // Words only, never colour: "text-red" is not a side. Ambiguous (both a long and a short word) -> null.
+  function attrEls(el) { return [el].concat(Array.prototype.slice.call(el.querySelectorAll("*"))).slice(0, 12); }
+  function attrText(el) {
+    var out = [];
+    attrEls(el).forEach(function (e) {
+      Array.prototype.slice.call(e.attributes || []).forEach(function (a) {
+        if (/^(class|aria-label|title|alt|href|xlink:href)$|^data-/i.test(a.name)) out.push(a.value);
+      });
+      if (e.tagName && e.tagName.toLowerCase() === "title") out.push(e.textContent || "");
+    });
+    return out.join(" ").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[^A-Za-z]+/g, " ").trim();
+  }
+  function sideOfAttr(s) {
+    var l = /\b(long|buy)\b/i.test(s || ""), sh = /\b(short|sell)\b/i.test(s || "");
+    return l === sh ? null : (l ? "long" : "short");
+  }
+  // the attribute SHAPE of a cell whose need-key read empty, for the miss dump: tag[.class tokens] aria/title/data
+  function attrShape(el) {
+    return attrEls(el).slice(0, 6).map(function (e) {
+      var tag = (e.tagName || "").toLowerCase(), bits = [tag];
+      Array.prototype.slice.call(e.attributes || []).forEach(function (a) {
+        if (/^(class|aria-label|title|alt|href|xlink:href|role)$|^data-/i.test(a.name) && a.value) bits.push(a.name.replace(/^data-/, "d-") + "=" + a.value);
+      });
+      return bits.join(" ");
+    });
+  }
   function sideOf(s) { var m = /\b(long|short|buy|sell)\b/i.exec(s || ""); if (!m) return null; return /long|buy/i.test(m[1]) ? "long" : "short"; }
   function tabCount(re) {   // "Positions (2)" / "Positions 2" / "Positions1" -> 2/2/1; a bare label -> null (the page did not say)
     var c = all("button,[role=tab],[role=button],a").filter(function (x) { return tabMatch(re, t(x)); });
@@ -303,13 +332,14 @@
   function masked(hs) { return hs.map(function (h) { return h.replace(/\d/g, "#").slice(0, 24); }).slice(0, 20); }
   function controlsDump() { return all("button,[role=tab],[role=button]").map(function (x) { return t(x).replace(/\d/g, "#").slice(0, 30); }).filter(Boolean).slice(0, 30); }
   // one row's cells -> {symbol, side, qty, ...}; cells are aligned to keys (null / "skip" columns ignored)
-  // `words` (optional): the same cells as wt() text, for the side and symbol words only
-  function parseRow(cells, keys, words) {
+  // `words` (optional): the same cells as wt() text, for the side and symbol words only; `attrs` (optional): the
+  // cells' attrText(), for a side drawn without text
+  function parseRow(cells, keys, words, attrs) {
     var o = {}, rowText = cells.join(" ") + " " + (words || []).join(" ");
     cells.forEach(function (c, i) {
       var k = keys[i], w = (words && words[i]) || c; if (!k || k === "skip" || o[k] !== undefined) return;
       if (k === "side") o.reduce = /reduce/i.test(c);   // "Long (Reduce)": the span after the side word; closes a SHORT
-      o[k] = k === "symbol" ? w.slice(0, 40) : (k === "status" || k === "type" || k === "time") ? c.slice(0, 40) : (k === "side" ? (sideOf(c) || sideOf(w)) : firstNumber(c));
+      o[k] = k === "symbol" ? w.slice(0, 40) : (k === "status" || k === "type" || k === "time") ? c.slice(0, 40) : (k === "side" ? (sideOf(c) || sideOf(w) || sideOfAttr(attrs && attrs[i])) : firstNumber(c));
     });
     if (o.side == null) o.side = sideOf(o.symbol) || sideOf(rowText);
     // a size carries the side only when it is SIGNED ("-1.5" short, "+1.5" long); an unsigned size is not a long
@@ -323,7 +353,10 @@
     if (keys.indexOf("qty") < 0 && keys.indexOf("value") >= 0 && typeof o.value === "number" && typeof px === "number" && px > 0 && pxOk && o.value !== 0) {
       o.qty = Math.round(Math.abs(o.value) / (o.mark != null ? o.mark : o.price) * 1e8) / 1e8; o.qty_src = "value/mark";
     }
-    if (o.symbol) o.symbol = o.symbol.replace(/\b(long|short|buy|sell)\b/ig, "").replace(/\d+(\.\d+)?\s*[x×]|\b[x×]\s*\d+(\.\d+)?\b/ig, "").replace(/\s+/g, " ").trim();
+    // the live Market cell reads "ETH 5" (a leverage badge with no x, 1b.193 dump): a bare number token is never part
+    // of a venue symbol, and left in it made the symbol unmappable ("ETH5")
+    if (o.symbol) o.symbol = o.symbol.replace(/\b(long|short|buy|sell)\b/ig, "").replace(/\d+(\.\d+)?\s*[x×]|\b[x×]\s*\d+(\.\d+)?\b/ig, "")
+      .replace(/(^|\s)\d+(\.\d+)?(?=\s|$)/g, " ").replace(/\s+/g, " ").trim();
     return o;
   }
   // every parsed row is sent, never a prefix: a row the server does not see would read as gone (review of #17745);
@@ -336,16 +369,29 @@
       return ((keys[i] || "none") + ":" + c.replace(/\d/g, "d").replace(/,/g, "_").replace(/[^A-Za-z0-9 _.:\/()=+&%-]/g, "=")).slice(0, 40);
     });
   }
-  function finishRead(out, bad, hs, count, need, strict, emptyOk, raw, keys) {
+  function finishRead(out, bad, hs, count, need, strict, emptyOk, raw, keys, els) {
     if (strict && out.length > ROW_CAP) return {state: "too_many_rows", n_rows: out.length, count: count, headers: masked(hs)};
     var rows = out.slice(0, ROW_CAP);
     var miss = function (o) { return need.filter(function (k) { return o[k] == null || o[k] === ""; }); };
     var fi = -1; out.forEach(function (o, i) { if (fi < 0 && miss(o).length) fi = i; });
     if (bad || fi >= 0) {
       var ms = []; out.forEach(function (o) { miss(o).forEach(function (k) { if (ms.indexOf(k) < 0) ms.push(k); }); });
-      return {state: "unparsed", n_rows: out.length + bad, count: count, headers: masked(hs),
-        detail: ("miss=" + (ms.join("+") || "none") + " bad=" + bad + " n=" + out.length).slice(0, 31),
-        cells: fi >= 0 && raw ? cellShapes(raw[fi], keys || []) : []};
+      var cs = fi >= 0 && raw ? cellShapes(raw[fi], keys || []) : [];
+      // a need-key cell that read EMPTY: its attribute shape too (digits masked), so the next miss shows how it is drawn
+      if (fi >= 0 && els && els[fi]) miss(out[fi]).forEach(function (k) {
+        var i = (keys || []).indexOf(k); if (i < 0 || !els[fi][i] || (raw[fi][i] || "").trim()) return;
+        attrShape(els[fi][i]).forEach(function (a) {
+          for (var j = 0; j < a.length && cs.length < 36; j += 36) cs.push((k + "+" + a.slice(j, j + 36)).replace(/\d/g, "d").replace(/[^A-Za-z0-9 _.:\/()=+&%-]/g, "=").slice(0, 40));
+        });
+      });
+      // SIDE ONLY: every row has symbol + qty and the venue drew the side without any word we can read. The rows go
+      // to the server as "side_unread" (never "read"): it may take the side from the ONE open journal ticket with the
+      // same symbol and entry (ESTIMATED), or leave the read un-reconciled. Never guessed here.
+      var sideOnly = !bad && ms.length === 1 && ms[0] === "side" && need.indexOf("side") >= 0 && (count === null || count === out.length);
+      var r0 = {state: sideOnly ? "side_unread" : "unparsed", n_rows: out.length + bad, count: count, headers: masked(hs),
+        detail: ("miss=" + (ms.join("+") || "none") + " bad=" + bad + " n=" + out.length).slice(0, 31), cells: cs};
+      if (sideOnly) r0.rows = rows;
+      return r0;
     }
     if (count !== null && count !== out.length) return {state: "count_mismatch", n_rows: out.length, count: count, headers: masked(hs)};
     // flat needs POSITIVE evidence (the tab says 0, or the table's / panel's container says "no positions"): a header
@@ -413,9 +459,10 @@
       if (kids(x).length >= 2) bad += 1;
     });
     var raw = rows.map(function (r) { return kids(r).map(t); });
-    var out = rows.map(function (r, i) { return parseRow(raw[i], keys, kids(r).map(wt)); });
+    var els = rows.map(kids);
+    var out = rows.map(function (r, i) { return parseRow(raw[i], keys, els[i].map(wt), els[i].map(attrText)); });
     var panel = gridPanel(h), emptyOk = !!(panel && emptyRe.test(t(panel)));
-    var r = finishRead(out, bad, hs, count, need, strict, emptyOk, raw, keys);
+    var r = finishRead(out, bad, hs, count, need, strict, emptyOk, raw, keys, els);
     r.layout = "div_grid";
     return r;
   }
@@ -441,15 +488,15 @@
       return {state: hits.length ? "ambiguous" : "no_table", tables: hits.length, count: count,
         headers: hits.length ? masked(hits[0].hs) : [], controls: controlsDump()};
     }
-    var h = hits[0], out = [], bad = 0, raw = [];
+    var h = hits[0], out = [], bad = 0, raw = [], rels = [];
     innermost(Array.prototype.slice.call(h.tb.querySelectorAll("tr,[role=row]")).filter(vis)).forEach(function (r) {
       if (r.querySelector("th,[role=columnheader]")) return;
       var els = Array.prototype.slice.call(r.querySelectorAll("td,[role=cell],[role=gridcell]")), cells = els.map(t);
       if (cells.length === 1 && emptyRe.test(cells[0])) return;   // the table's own "no positions" row
       if (cells.length !== h.hs.length) { bad += 1; return; }
-      raw.push(cells); out.push(parseRow(cells, h.keys, els.map(wt)));
+      raw.push(cells); rels.push(els); out.push(parseRow(cells, h.keys, els.map(wt), els.map(attrText)));
     });
-    return finishRead(out, bad, h.hs, count, need, strict, emptyRe.test(t(h.tb.parentElement || h.tb)), raw, h.keys);
+    return finishRead(out, bad, h.hs, count, need, strict, emptyRe.test(t(h.tb.parentElement || h.tb)), raw, h.keys, rels);
   }
   function dialogs() { return all("[role=dialog],[role=alertdialog],dialog[open]"); }
   function dlg() { var d = dialogs(); return d.length === 1 ? d[0] : null; }

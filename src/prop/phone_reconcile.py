@@ -117,6 +117,46 @@ def bot_symbol(account_id: str, venue_text: Any) -> Optional[str]:
     return None
 
 
+# BREAKOUT-POS-UNPARSED (1b.193 live dump, 2026-10-14): Breakout's Positions Side cell carries NO text (the side is
+# drawn), so the phone sends "side_unread": every row parsed except its side. The side may then be taken from the
+# journal: the open fills with the same bot symbol and an entry within ENTRY_TOL_FRAC of the terminal's Opening price
+# must all be on ONE side. That side is ESTIMATED (the journal's, not the venue's); anything else leaves the read
+# un-reconciled. Never guessed from a sign, a colour or a P&L.
+ENTRY_TOL_FRAC = 0.001
+
+
+def resolve_sides(account_id: str, rows: Any) -> Optional[List[Dict[str, Any]]]:
+    """The side_unread rows with each missing side taken from the journal (``side_source: journal``), or None when any
+    row cannot be matched to exactly one side."""
+    from src.prop import prop_journal, phone_executor
+    from src.prop.prop_overview import split_fills
+
+    if not isinstance(rows, list) or not rows or len(rows) > _MAX_ROWS:
+        return None
+    open_rows = [f for f in split_fills(prop_journal.list_fills(account_id=account_id, limit=500))[0]
+                 if f.get("account_id") == account_id]
+    insts = phone_executor.phone_config(account_id).get("instruments") or {}
+    out = []
+    for r in rows:
+        if not isinstance(r, dict):
+            return None
+        if _side(r.get("side")):
+            out.append(r)
+            continue
+        sym, entry = bot_symbol(account_id, r.get("symbol")), _num(r.get("entry"), signed=False)
+        if sym is None or not entry:
+            return None
+        step = _num((insts.get(sym) or {}).get("price_step"), signed=False) or 0.0
+        tol = max(2 * step, entry * ENTRY_TOL_FRAC)
+        sides = {_side(f.get("direction")) for f in open_rows
+                 if str(f.get("symbol") or "").upper() == sym and _num(f.get("entry_price"), signed=False) is not None
+                 and abs(float(f["entry_price"]) - entry) <= tol} - {None}
+        if len(sides) != 1:
+            return None
+        out.append({**r, "side": sides.pop(), "side_source": "journal"})
+    return out
+
+
 def clean_positions(account_id: str, rows: Any) -> List[Dict[str, Any]]:
     """Validate the phone's Positions rows. Raises ValueError on a structurally bad row (the report is refused,
     so a half-read list can never reconcile). Unknown instruments keep ``symbol: None`` and their venue text."""
@@ -134,6 +174,8 @@ def clean_positions(account_id: str, rows: Any) -> List[Dict[str, Any]]:
         out.append({"symbol": bot_symbol(account_id, venue), "venue_symbol": venue, "direction": side, "qty": qty,
                     "entry": _num(r.get("entry"), signed=False), "mark": _num(r.get("mark"), signed=False),
                     "upnl": _num(r.get("upnl"))})
+        if r.get("side_source") == "journal":
+            out[-1]["side_source"] = "journal"
     return out
 
 
