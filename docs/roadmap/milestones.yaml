@@ -139,9 +139,13 @@ milestones:
     where: >-
       DORMANT since 2026-07-14 (E-3 closed an honest negative; E53 sweep 2026-09-24 found no entry-refinement commits since 2026-08-31).
       Re-test of the three levers that failed the effective walk-forward is queued as M21-REGRADE-RETEST.
-    next: Run M21-REGRADE-RETEST with more folds; reopen the milestone only if a lever clears the pre-registered bar.
+    next: >-
+      Run M21-REGRADE-RETEST with more folds; reopen the milestone only if a lever clears the pre-registered bar AND its
+      fresh-window confirmation (rung S0-C, docs/research/programmes/03-STRATEGY-IMPROVEMENT.md). 2026-10-14: the entry batch
+      RQ-20261014-f0e2-* produced two best-of-3 leads (eth_pullback_2h adx_min=22; trend_donchian_sol_4h vol-skip 0.95), both
+      off-roster; their confirmations are RQ-20261014-470a-01 / -10, and 470a-02..09 sweep entry axes on the real-money legs.
     owner: manager
-    reviewed: 2026-10-11
+    reviewed: 2026-10-14
   - id: M22
     goal: G1
     name: Small-timeframe edge and the pairs sleeve
@@ -150,9 +154,13 @@ milestones:
       Small-TF question dormant since 2026-07-16 (E53). The pairs sleeve it owns is live (isolated 2-leg order path) and its
       Stage-0 verdict at configured parameters is being re-measured: four 'Stage-0 at the CONFIGURED parameters' units are
       queued (RQ-20261007-005..008). It is single-account by construction (E36).
-    next: Read the four pairs Stage-0 units against their registered rule; decide the sleeve's roster from that, not from the sprint log (E37).
+    next: >-
+      The four pairs Stage-0 units (RQ-20261007-005..008) all graded PASS, but MEASURED 2026-10-14 (P3 lane) backtest_pairs.py's
+      rolling-beta R scale inflates 1R ~775x and understates cost-in-R by the same factor, so those PASSes are unreadable as
+      net-of-cost evidence (sign unknown). Fix PAIRS-R-SCALE, re-measure with RQ-20261014-470a-12, then decide the sleeve's
+      roster from that record, not from the sprint log (E37).
     owner: manager
-    reviewed: 2026-10-11
+    reviewed: 2026-10-14
   - id: M27
     goal: G1
     name: Scalp expansion (ict_scalp family)
@@ -218,7 +226,10 @@ milestones:
       Three prop accounts execute automatically (breakout_2 via the phone executor, tradeify_1 and velotrade_1 via DXtrade REST);
       ~30 'Stage-0 breadth for the prop book' units are queued. Open: per-leg sizing (PROP-PER-LEG-SIZING, PROP-PER-LEG-EV-GRID), the exit-price gap on
       venue SL/TP closes (PROP-EXIT-READ), ticket supersede/reissue (in flight), Tradeify other platforms.
-    next: Get the first prop closes gradable (PROP-EXIT-READ); then read the breadth units into a candidate pool; keep the EV question (B6) ahead of drawdown avoidance.
+    next: >-
+      Programme 05 (docs/research/programmes/05-PROP.md, 2026-10-14) is the plan: per-account EV baselines as configured (RQ-20261014-f516-01..03),
+      then sizing / per-leg / daily-DD-switch / breadth challengers against them (f516-04..10); live-vs-sim fidelity waits on gradable
+      closes (PROP-EXIT-READ, blocked/f516-11). Keep the EV question (B6) ahead of drawdown avoidance.
     architecture: ["Prop ticket flow"]
     owner: manager
     reviewed: 2026-10-11
@@ -367,21 +378,23 @@ milestones:
     name: Macro/value speculation sleeve
     status: active
     where: >-
-      Conviction comes only from the valuation read; the macro event join has no production caller (grep 2026-10-11: only macro_signals.py outside tests).
-      Re-shape via research is queued (MACRO-RESHAPE); prediction-market collector landed (PM-COLLECTOR); World Event Prediction Engine build-out is gated (WEPE-BUILDOUT).
-    next: Run the wire-and-rescore unit; PM-surprise evaluation once the join exists.
+      Programme of record: docs/research/programmes/04-MACRO-SLEEVE.md (P4-MACRO-PROGRAMME, 2026-10-14). Conviction comes only from the valuation read
+      (zero-cost calibration_rank -0.0037, edge_vs_baseline -0.0047, n=1,104); the event join has no caller live or in the offline replay (RQ-20260928-009).
+      Release-surprise drift: 1 of 13 kinds PASS (ppi_mom -> ES=F, n=139, h3 t_eff -3.43), confirmation set RQ-20261014-4a4c-01..06 queued; PM-surprise
+      (WEPE G2) FAIL at paired n=68; WEPE G3 ledger PASS as an instrument; news layer and WEPE not retired (NEWS-ALPHA-PROGRAM readout due 2026-11-09).
+    next: Grade the PPI confirmation set (4a4c-01..06) and the family units (-07/-08); build MACRO-BACKFILL-E5 to run the realistic-cost rescore (RQ-20260928-010); run the event-axis unit (4a4c-09) only if the confirmation clause holds.
     architecture: ["Research and Validation Pipeline"]
     owner: manager
-    reviewed: 2026-10-11
+    reviewed: 2026-10-14
   - id: M29
     goal: G6
     name: System-dynamics modelling
     status: dormant
-    where: "Dormant since 2026-07-25 after P1c calibration and the mispricing snapshot signal (E53); MACRO-RESHAPE note: M29 stays dormant until a scoped axis reads out."
-    next: Wakes only when MACRO-RESHAPE's new conviction axis reads out.
-    no_rows_reason: gated on MACRO-RESHAPE's scoping unit (row note, 2026-10-11)
+    where: "Dormant since 2026-07-25 after P1c calibration and the mispricing snapshot signal (E53); stays dormant until an M28 conviction axis reads out (04-MACRO-SLEEVE.md Q6)."
+    next: Wake read on RQ-20261014-4a4c-09's record (event-scored axis); PASS -> one NG system-dynamics axis scoping unit, FAIL -> stays dormant with that record as the reason.
+    no_rows_reason: gated on the M28 event-axis read-out (04-MACRO-SLEEVE.md Q6, 2026-10-14)
     owner: manager
-    reviewed: 2026-10-11
+    reviewed: 2026-10-14
   - id: M36
     goal: G6
     name: Consolidation and integration umbrella

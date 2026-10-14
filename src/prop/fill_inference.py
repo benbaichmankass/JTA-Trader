@@ -79,6 +79,24 @@ def _raw(f: Dict[str, Any]) -> Dict[str, Any]:
     return r if isinstance(r, dict) else {}
 
 
+def _placed_at(f: Dict[str, Any]) -> Optional[datetime]:
+    """When the working order reached the venue. BREAKOUT-UNTRACKED-1014: an unconfirmed live submit is journaled by the
+    stale-claim watchdog, which ran 5 h after the click (2026-10-14: submit ~13:22Z, row 18:36Z); keying the bars off
+    that write time missed the fill bar, so the open short was never inferred. Order: the report's own ``placed_at``,
+    ``opened_at``, the ticket's go-token redemption time (taken right before the submit click), then ``reported_at``."""
+    raw = _raw(f)
+    at = _parse(raw.get("placed_at")) or _parse(f.get("opened_at"))
+    if at is None and raw.get("source") == "phone_executor_unconfirmed" and f.get("ticket_id"):
+        try:
+            from src.prop import prop_journal
+            t = prop_journal.get_ticket(str(f["ticket_id"])) or {}
+            m = t.get("meta") if isinstance(t.get("meta"), dict) else {}
+            at = _parse((((m.get("phone") or {}).get("go")) or {}).get("used_at"))
+        except Exception:  # noqa: BLE001  # allow-silent: falls back to reported_at below
+            logger.warning("fill_inference: go-token time lookup failed for %s", f.get("ticket_id"), exc_info=True)
+    return at or _parse(f.get("reported_at"))
+
+
 def is_inferred(f: Dict[str, Any]) -> bool:
     return _raw(f).get("source") == SOURCE and _raw(f).get("provenance") == ESTIMATED
 
@@ -184,7 +202,7 @@ def infer(account_id: str, *, now: Optional[datetime] = None, bars_fn: Optional[
             try:
                 sym, side = str(f.get("symbol") or "").upper(), _side(f.get("direction"))
                 limit, qty = _f(f.get("entry_price")), _f(f.get("qty"))
-                placed_at = _parse(f.get("opened_at")) or _parse(f.get("reported_at"))
+                placed_at = _placed_at(f)
                 if not (sym and side and limit and qty and placed_at) or now - placed_at > MAX_AGE:
                     continue
                 if venue is not None and on_venue(sym, side) is None:

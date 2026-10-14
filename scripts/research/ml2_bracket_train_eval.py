@@ -80,13 +80,65 @@ from src.research.bracket_quantile import (  # noqa: E402
     QuantileRegressor, calibration_curve, empirical_quantile,
     grade_model, mean_absolute_calibration_error, shuffled_label_control,
 )
-from ml2_bracket_corpus import FEATURE_NAMES, feature_matrix  # noqa: E402
+from ml2_bracket_corpus import (  # noqa: E402
+    FEATURE_NAMES, LEGACY_FEATURE_NAMES, complete_rows,
+)
 
 #: Split fractions for the E4 dispersion test. 0.65 is the headline.
 DISPERSION_SPLITS = (0.55, 0.65, 0.75)
 
 #: Index of `risk_frac` in FEATURE_NAMES — the risk-scaled baseline needs it.
+#: `risk_frac` is first in BOTH the full and the legacy list, so one index
+#: serves every feature set (asserted in tests/test_ml2_live_leg_corpus.py).
 _RISK_FRAC_IDX = FEATURE_NAMES.index("risk_frac")
+
+#: The outcomes the R-basis path grades. `mfe_r` is the harness's own MFE in R
+#: (the harness emits the ENTRY stop, so R is exact -- see ml2_bracket_corpus).
+R_OUTCOMES = ("mfe_r",)
+
+#: The four naive baselines of RULE-RQ1009-900, all in R so they pair with the
+#: head's R-basis forecast row by row:
+#:   B1  the leg's declared tp_r, read as a constant forecast   (row `declared_tp_r`)
+#:   B2  the strategy-class default tp_r                        (row `class_default_tp_r`)
+#:   B3  the risk-scaled constant multiple: the train-fold unconditional R quantile
+#:   B4  the leg's MI-148 answer: the train-fold unconditional PERCENT-OF-ENTRY
+#:       quantile, re-expressed per row as q_frac / risk_frac_i
+#: B3 and B4 differ exactly as `risk_scaled` and `pooled` do on the %-of-entry
+#: path: B3 scales the target with volatility, B4 does not. B4 is what a
+#: model-free doctrine implementation would use.
+BASELINES = ("B1", "B2", "B3", "B4")
+BASELINE_UNAVAILABLE = "baseline_unavailable"
+
+
+def r_baselines(rows_ev: Sequence[Dict[str, Any]], y_tr: Sequence[float],
+                X_tr: Sequence[Sequence[float]], X_ev: Sequence[Sequence[float]],
+                q: float) -> Dict[str, List[Optional[float]]]:
+    """Per-eval-row forecasts, in R, for B1..B4 at quantile ``q``.
+
+    None, never 0.0, where a baseline cannot be formed for a row (a leg with no
+    declared target, an unusable risk): an unavailable baseline is not a
+    zero-distance forecast. The caller grades a baseline with ANY None as
+    `baseline_unavailable` rather than quietly shrinking its eval set.
+    """
+    def _col(key: str) -> List[Optional[float]]:
+        out: List[Optional[float]] = []
+        for r in rows_ev:
+            try:
+                v: Optional[float] = float(r.get(key))  # type: ignore[arg-type]
+            except (TypeError, ValueError):
+                v = None
+            out.append(v if v is not None and math.isfinite(v) else None)
+        return out
+
+    q_r = empirical_quantile(list(y_tr), q)
+    q_f = empirical_quantile([yv * xr[_RISK_FRAC_IDX] for xr, yv in zip(X_tr, y_tr)], q)
+    return {
+        "B1": _col("declared_tp_r"),
+        "B2": _col("class_default_tp_r"),
+        "B3": [q_r] * len(rows_ev),
+        "B4": [(q_f / xr[_RISK_FRAC_IDX]) if (q_f is not None and xr[_RISK_FRAC_IDX] > 0)
+               else None for xr in X_ev],
+    }
 
 
 def risk_scaled_baseline(X_train: Sequence[Sequence[float]], y_train: Sequence[float],
@@ -167,17 +219,27 @@ def evaluate(
     min_n: int = MIN_EVAL_N,
     control_trials: int = 20,
     seed: int = 0,
+    features: Sequence[str] = FEATURE_NAMES,
 ) -> Dict[str, Any]:
-    """One full evaluation at ONE split. Returns the calibration block first."""
+    """One full evaluation at ONE split. Returns the calibration block first.
+
+    ``outcome="mfe_r"`` switches to the R basis and the four-baseline gate
+    (B1..B4, see `BASELINES`); the %-of-entry outcomes keep the two-baseline
+    gate unchanged.
+    """
+    r_basis = outcome in R_OUTCOMES
     ordered = sorted(rows, key=_chrono_key)
-    X, y, dropped = feature_matrix(ordered, outcome=outcome)
+    kept, dropped = complete_rows(ordered, outcome, features)
+    X = [[float(r[k]) for k in features] for r in kept]
+    y = [float(r[outcome]) for r in kept]
     n = len(y)
     cut = int(n * split)
     Xtr, ytr, Xev, yev = X[:cut], y[:cut], X[cut:], y[cut:]
+    rows_ev = kept[cut:]
 
     out: Dict[str, Any] = {
         "outcome": outcome,
-        "basis": "percent_of_entry",
+        "basis": "r" if r_basis else "percent_of_entry",
         "split": split,
         "population": {
             "rows_in": len(rows),
@@ -187,7 +249,7 @@ def evaluate(
             "n_train": len(ytr),
             "n_eval": len(yev),
             "min_eval_n": min_n,
-            "features": list(FEATURE_NAMES),
+            "features": list(features),
         },
         "calibration": [],
         "mace": None,
@@ -214,7 +276,8 @@ def evaluate(
         mp = m.predict(Xev) if m.fitted else [None] * len(yev)
         bp: List[Optional[float]] = [base] * len(yev)
         preds_by_q[q] = mp
-        rs = risk_scaled_baseline(Xtr, ytr, Xev, q)
+        bl = r_baselines(rows_ev, ytr, Xtr, Xev, q) if r_basis else {}
+        rs = bl["B3"] if r_basis else risk_scaled_baseline(Xtr, ytr, Xev, q)
         # THE CONTROL IS RUN PER QUANTILE AND GATES THAT QUANTILE'S VERDICT.
         # It used to run once, at the middle q, and only be REPORTED -- so a
         # sub-null improvement still graded as a win. The null's width is not
@@ -232,6 +295,27 @@ def evaluate(
         g_pooled["vs_risk_scaled_improvement"] = g_risk["pinball_improvement"]
         g_pooled["vs_risk_scaled_state"] = g_risk["sharpness_state"]
         g_pooled["risk_scaled_pinball"] = g_risk["baseline_pinball"]
+        if r_basis:
+            # RULE-RQ1009-900: the head must beat ALL FOUR, each gated by this
+            # quantile's null p95. A baseline that cannot be formed for every
+            # eval row is `baseline_unavailable` and the gate fails closed.
+            states = []
+            for name in BASELINES:
+                if any(v is None for v in bl[name]):
+                    g_pooled[f"vs_{name}_state"] = BASELINE_UNAVAILABLE
+                    g_pooled[f"vs_{name}_improvement"] = None
+                else:
+                    gb = grade_model(yev, mp, bl[name], q, min_n=min_n,
+                                     null_p95=ctrl.get("null_p95_improvement"))
+                    g_pooled[f"vs_{name}_state"] = gb["sharpness_state"]
+                    g_pooled[f"vs_{name}_improvement"] = gb["pinball_improvement"]
+                    g_pooled[f"{name}_pinball"] = gb["baseline_pinball"]
+                states.append(g_pooled[f"vs_{name}_state"])
+            g_pooled["gate_state"] = (SHARP_BEATS_BASELINE
+                                      if all(st == SHARP_BEATS_BASELINE for st in states)
+                                      else "not_all_four")
+        else:
+            g_pooled["gate_state"] = g_risk["sharpness_state"]
         out["sharpness"].append(g_pooled)
 
     out["calibration"] = calibration_curve(yev, preds_by_q)  # type: ignore[arg-type]
@@ -243,7 +327,8 @@ def evaluate(
     graded = [c for c in out["calibration"] if c.get("coverage") is not None]
     # THE VERDICT KEYS ON THE RISK-SCALED BASELINE, not the pooled one.
     sharp = [s for s in out["sharpness"]
-             if s.get("vs_risk_scaled_state") == SHARP_BEATS_BASELINE]
+             if s.get("gate_state") == SHARP_BEATS_BASELINE]
+    out["sharp_vs_all_baselines_count"] = len(sharp)
     out["sharp_vs_pooled_count"] = sum(
         1 for s in out["sharpness"] if s["sharpness_state"] == SHARP_BEATS_BASELINE)
     out["sharp_vs_risk_scaled_count"] = len(sharp)
@@ -309,6 +394,27 @@ def _fmt(v: Any, p: int = 4) -> str:
     return str(v)
 
 
+_STATE_SHORT = {SHARP_BEATS_BASELINE: "BEATS", "beats_baseline_within_null": "in-null",
+                "no_better_than_baseline": "no", BASELINE_UNAVAILABLE: "n/a",
+                "not_measured": "n/m"}
+
+
+def render_r_table(result: Dict[str, Any], indent: str = "") -> None:
+    """The four baselines per quantile -- B1/B2/B3/B4 pinball improvement of the
+    head over each (positive = head sharper), each beside its null-gated state."""
+    print(f"{indent}{'q':>5} {'model':>9} " + " ".join(
+        f"{b + ' imp':>9} {b:>7}" for b in BASELINES) + f" {'null95':>7}  all-four")
+    for s in result["sharpness"]:
+        cells = " ".join(
+            f"{_fmt(s.get(f'vs_{b}_improvement'), 3):>9} "
+            f"{_STATE_SHORT.get(str(s.get(f'vs_{b}_state')), '?'):>7}" for b in BASELINES)
+        print(f"{indent}{s['q']:>5.2f} {_fmt(s['model_pinball'], 4):>9} {cells} "
+              f"{_fmt(s.get('null_p95'), 3):>7}  "
+              f"{'YES' if s.get('gate_state') == SHARP_BEATS_BASELINE else 'no'}")
+    print(f"{indent}beats ALL FOUR at {result.get('sharp_vs_all_baselines_count')} of "
+          f"{len(result['sharpness'])} quantiles")
+
+
 def render(result: Dict[str, Any], disp: Optional[Dict[str, Any]]) -> None:
     pop = result["population"]
     print("=" * 74)
@@ -332,6 +438,14 @@ def render(result: Dict[str, Any], disp: Optional[Dict[str, Any]]) -> None:
         print(f"{c['q']:>9.2f} {_fmt(c['coverage'],4):>9} {_fmt(c['coverage_error'],4):>8}")
     print(f"MACE (mean abs calibration error): {_fmt(result['mace'])}")
     print()
+    if result.get("basis") == "r":
+        print("--- 2. SHARPNESS (R basis) — against FOUR baselines; the gate is ALL FOUR ---")
+        print("    B1 declared tp_r · B2 class-default tp_r · B3 train R-quantile ·")
+        print("    B4 train %-of-entry quantile (MI-148). Improvement = (base-model)/base.")
+        render_r_table(result)
+        print()
+        _render_control_and_tail(result, disp)
+        return
     print("--- 2. SHARPNESS — against TWO baselines; the verdict keys on the 2nd ---")
     print("    (a) POOLED   : the unconditional percent-of-entry quantile. Beating")
     print("        it says only 'scale the target with volatility' — which tp_r")
@@ -351,7 +465,15 @@ def render(result: Dict[str, Any], disp: Optional[Dict[str, Any]]) -> None:
           f"{len(result['sharpness'])} quantiles; beats RISK-SCALED at "
           f"{result.get('sharp_vs_risk_scaled_count')}.")
     print()
+    _render_control_and_tail(result, disp)
+
+
+def _render_control_and_tail(result: Dict[str, Any], disp: Optional[Dict[str, Any]]) -> None:
     c = result.get("control") or {}
+    if not c.get("per_quantile"):
+        # No control ran (insufficient_n / not_measured): NO CONCLUSION AVAILABLE.
+        print("NO CONCLUSION AVAILABLE: no shuffled-label control ran.")
+        return
     print("--- 3. SHUFFLED-LABEL CONTROL (run PER QUANTILE; it GATES section 2) ---")
     for q, cc in sorted((c.get("per_quantile") or {}).items()):
         print(f"  q={q:.2f} state={cc.get('control_state')} "
@@ -420,6 +542,7 @@ def selftest(seeds: int = 6, n: int = 500, trials: int = 8) -> int:
                 "entry_time": f"2026-01-{1 + i % 28:02d} {i % 24:02d}:00:00",
                 "risk_frac": rf, "is_long": float(i % 2), "confidence": rng.random(),
                 "hour_sin": math.sin(i), "hour_cos": math.cos(i), "dow": float(i % 7),
+                "adx_at_entry": rng.uniform(10, 50), "regime_weight": 1.0,
                 "mfe_frac": mfe,
             })
         return rows
@@ -467,7 +590,15 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--corpus", help="ml2_bracket_corpus.py output JSONL")
-    ap.add_argument("--outcome", default="mfe_frac", choices=["mfe_frac", "exit_frac"])
+    ap.add_argument("--outcome", default="mfe_frac",
+                    choices=["mfe_frac", "exit_frac", "mfe_r"],
+                    help="mfe_r = R basis, graded against B1..B4 (RULE-RQ1009-900)")
+    ap.add_argument("--legacy-features", action="store_true",
+                    help="grade on the six ML-2 features only (a corpus built before "
+                         "adx_at_entry / regime_weight existed)")
+    ap.add_argument("--per-stratum", action="store_true",
+                    help="also evaluate each `stratum` separately, never pooled "
+                         "(rows carry it from ml2_live_leg_corpus.py)")
     ap.add_argument("--split", type=float, default=0.65)
     ap.add_argument("--min-n", type=int, default=MIN_EVAL_N)
     ap.add_argument("--per-leg", action="store_true",
@@ -488,31 +619,39 @@ def main() -> int:
     if malformed:
         print(f"⚠️  {malformed} malformed line(s) in {args.corpus} — "
               f"stated, not swallowed; the usable count below excludes them.")
-    result = evaluate(rows, outcome=args.outcome, split=args.split,
+    feats = LEGACY_FEATURE_NAMES if args.legacy_features else FEATURE_NAMES
+    result = evaluate(rows, outcome=args.outcome, split=args.split, features=feats,
                       min_n=args.min_n, control_trials=args.control_trials)
     # SAME control configuration as the headline — see dispersion()'s docstring.
     disp = None if args.no_dispersion else dispersion(
-        rows, headline_verdict=result["verdict"], outcome=args.outcome,
+        rows, headline_verdict=result["verdict"], outcome=args.outcome, features=feats,
         min_n=args.min_n, control_trials=args.control_trials)
     render(result, disp)
 
-    per_leg = {}
-    if args.per_leg:
-        legs: Dict[str, List[Dict[str, Any]]] = {}
+    per_leg: Dict[str, Any] = {}
+    per_stratum: Dict[str, Any] = {}
+    for label, key, enabled, store in (("LEG", "leg", args.per_leg, per_leg),
+                                       ("STRATUM", "stratum", args.per_stratum, per_stratum)):
+        if not enabled:
+            continue
+        groups: Dict[str, List[Dict[str, Any]]] = {}
         for r in rows:
-            legs.setdefault(str(r.get("leg")), []).append(r)
-        print("\n--- PER-LEG (the population problem, measured rather than asserted) ---")
-        print(f"{'leg':<34} {'n':>6} {'verdict':<34} {'mace':>8}")
-        for leg, lr in sorted(legs.items()):
-            res = evaluate(lr, outcome=args.outcome, min_n=args.min_n,
-                           control_trials=args.control_trials)
-            per_leg[leg] = res
-            print(f"{leg:<34} {res['population']['usable']:>6} "
-                  f"{res['verdict']:<34} {_fmt(res['mace']):>8}")
+            groups.setdefault(str(r.get(key)), []).append(r)
+        print(f"\n--- PER-{label} (graded separately, never pooled) ---")
+        print(f"{label.lower():<34} {'n':>6} {'n_eval':>6} {'verdict':<34} {'mace':>8}")
+        for g, gr in sorted(groups.items()):
+            res = evaluate(gr, outcome=args.outcome, split=args.split, features=feats,
+                           min_n=args.min_n, control_trials=args.control_trials)
+            store[g] = res
+            print(f"{g:<34} {res['population']['usable']:>6} "
+                  f"{res['population']['n_eval']:>6} {res['verdict']:<34} {_fmt(res['mace']):>8}")
+            if res["basis"] == "r" and res["sharpness"]:
+                render_r_table(res, indent="    ")
 
     if args.out:
         Path(args.out).parent.mkdir(parents=True, exist_ok=True)
-        payload = {"headline": result, "dispersion": disp, "per_leg": per_leg}
+        payload = {"headline": result, "dispersion": disp, "per_leg": per_leg,
+                   "per_stratum": per_stratum}
         Path(args.out).write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
         print(f"\nwrote {args.out}")
     return 0

@@ -1,7 +1,7 @@
 id: RQ-20261013-1414-03
 title: 'AI trader / direction: does ANY non-boosted family (logit, ExtraTrees, MLP) beat the class prior on direction_label for ETH
   1h and BTC 15m?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 3
@@ -147,3 +147,14 @@ related:
 last_dispatched_at: '2026-10-14T13:54:26+00:00'
 grading:
   auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261013-1414-03-DIRECTION-NONBOOSTED-VS-PRIOR
+  evidence:
+  - research/results/RQ-20261013-1414-03/38575869226.jsonl
+  graded_at: '2026-10-14'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

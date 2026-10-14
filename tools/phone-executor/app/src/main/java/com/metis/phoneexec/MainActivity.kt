@@ -599,11 +599,13 @@ class MainActivity : Activity() {
         val cs = closed?.optString("state")
         if (closed != null && cs != "read" && System.currentTimeMillis() - lastPosMissMs >= POS_MISS_MS) {
             lastPosMissMs = System.currentTimeMillis()
-            api.positionsMiss("closed_$cs", closed.optJSONArray("headers") ?: JSONArray(), closed.optJSONArray("controls") ?: JSONArray())
+            api.positionsMiss("closed_$cs", closed.optJSONArray("headers") ?: JSONArray(), closed.optJSONArray("controls") ?: JSONArray(),
+                closed.optJSONArray("cells") ?: JSONArray())
         }
         if (ps != "read" && System.currentTimeMillis() - lastPosMissMs >= POS_MISS_MS) {
             lastPosMissMs = System.currentTimeMillis()
-            api.positionsMiss((ps + " " + (pos?.optString("detail") ?: "")).trim(), pos?.optJSONArray("headers") ?: JSONArray(), pos?.optJSONArray("controls") ?: JSONArray())
+            api.positionsMiss((ps + " " + (pos?.optString("detail") ?: "")).trim(), pos?.optJSONArray("headers") ?: JSONArray(), pos?.optJSONArray("controls") ?: JSONArray(),
+                pos?.optJSONArray("cells") ?: JSONArray())
         }
         api.accountStatus(bal, eq, if (eqRead != null) "equity" else "portfolio", d(a, "unrealized"), pos, closed)
         return if (ps == "read") "posted" else "posted_pos_$ps"
@@ -1190,6 +1192,13 @@ class MainActivity : Activity() {
                 js("__ex.clickText(${q(view)})"); delay(1500)
                 val rows = js("JSON.stringify(__ex.rows())").uppercase()
                 val hit = rows.split("],[").any { r -> (r.contains(venue.uppercase()) || r.contains(base)) && sideRe.containsMatchIn(r) }
+                // BREAKOUT-UNTRACKED-1014: Positions is a DIV grid (no <tr>), invisible to rows(); a clean grid read
+                // showing this symbol on this side also confirms the submit. Read-only; the opp/flatten path stays rows()-only.
+                val grid = if (view == "^positions$") jsObj("__ex.positionsRead()")?.takeIf { it.optString("state") == "read" }?.optJSONArray("rows") else null
+                val gridHit = grid != null && (0 until grid.length()).any { i ->
+                    val g = grid.optJSONObject(i); val gs = g?.optString("symbol")?.uppercase() ?: ""
+                    gs.isNotEmpty() && ((venue.isNotEmpty() && gs.contains(venue.uppercase())) || (base.isNotEmpty() && gs.contains(base))) && sideRe.containsMatchIn(g?.optString("side") ?: "")
+                }
                 val opp = view == "^positions$" && rows.split("],[").any { r -> (r.contains(venue.uppercase()) || r.contains(base)) && oppRe.containsMatchIn(r) && !sideRe.containsMatchIn(r) }
                 if (opp) {
                     js("__ex.rowClose(${q(venue)}, ${q(oppRe.pattern)})"); delay(1200); js("__ex.dialogClick('confirm|close|yes|ok')")
@@ -1197,7 +1206,7 @@ class MainActivity : Activity() {
                     api.event("flattened", "opposite-side position found after submit; close clicked; CHECK the terminal", id)
                     report(id, "mismatch_flattened", "opposite side seen", tk); return
                 }
-                if (hit) {
+                if (hit || gridHit) {
                     ledger.append(id, "placed")
                     api.post("report", JSONObject().put("kind", "fill").put("status", "placed").put("ticket_id", id)
                         .put("symbol", sym).put("direction", if (long) "long" else "short")
@@ -1257,7 +1266,12 @@ class MainActivity : Activity() {
         if (rowTp != null && !fromTp.isNaN() && !close(rowTp, fromTp, pStep)) return amendHuman(t, "row TP $rowTp != expected ${fmt(fromTp, pStep)}", pos)
         // 3. the row's ONE edit control, then the ONE dialog
         val e = js("__ex.posEdit(${q(venue)}, ${q(sideRe)})")
-        if (e != "clicked") return amendRefuse(t, "position edit control: $e", pos)
+        if (e != "clicked") {
+            // MEASURE FIRST (BREAKOUT-POS-UNPARSED): the row's control dump also goes to the account's visible positions
+            // diag (state amend_<why>), since the amend_result form only lands in the ticket's meta
+            try { api.positionsMiss("amend_$e", pos.optJSONArray("headers") ?: JSONArray(), pos.optJSONArray("ctl_lines") ?: JSONArray()) } catch (x: Exception) { }
+            return amendRefuse(t, "position edit control: $e", pos)
+        }
         delay(1500); ensure()
         val d0 = jsObj("__ex.editDialog()")
         if (d0?.optInt("n") != 1) { js("__ex.dlgCancel()"); return amendRefuse(t, "edit dialog not unique (n=${d0?.optInt("n")})", pos) }

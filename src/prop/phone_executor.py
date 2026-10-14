@@ -254,6 +254,9 @@ def _journal_unconfirmed_submit(account_id: str, ticket: Dict[str, Any], *, send
         "symbol": ticket.get("symbol"), "direction": ticket.get("direction"),
         "entry_price": pick("entry", "price"), "qty": pick("qty", "qty"),
         "sl": pick("sl", "sl"), "tp": pick("tp", "tp"),
+        # the go-token redemption is the last server-seen moment before the submit click (fill_inference keys its
+        # bars off this, not off this row's write time, which the watchdog may make hours late)
+        "placed_at": ((m.get("phone") or {}).get("go") or {}).get("used_at"),
         "source": "phone_executor_unconfirmed", "provenance": "UNVERIFIED",
         "reason": "unconfirmed live submit: go-token redeemed, no placed/open report from the phone "
                   "(entry/qty/sl/tp are the server-verified form values, not a venue read)",
@@ -390,8 +393,17 @@ def record_report(device: PhoneDevice, body: Dict[str, Any]) -> Dict[str, Any]:
         # positions and reconciled; any other state is kept as a label so "we could not look" stays visible.
         from src.prop import phone_reconcile
         pstate = re.sub(r"[^a-z_]", "", str(body_in.get("positions_state") or "not_read"))[:24] or "not_read"
-        body["positions_state"] = pstate
         positions = closed = None
+        if pstate == "side_unread":
+            # BREAKOUT-POS-UNPARSED: rows parsed except the side the venue draws without text; the journal may supply
+            # it (phone_reconcile.resolve_sides). Then the read counts, labelled ESTIMATED; otherwise it stays a label.
+            resolved = phone_reconcile.resolve_sides(device.account_id, body_in.get("positions"))
+            if resolved is not None:
+                body_in = {**body_in, "positions": resolved}
+                pstate = "read"
+                body["positions_side_source"] = "journal"
+                body["positions_provenance"] = "ESTIMATED"
+        body["positions_state"] = pstate
         if pstate == "read":
             positions = phone_reconcile.clean_positions(device.account_id, body_in.get("positions"))
             closed = phone_reconcile.clean_closed(device.account_id, body_in.get("closed_orders"))
@@ -598,7 +610,11 @@ def record_event(device: PhoneDevice, body: Dict[str, Any], *, send=None) -> Dic
     if kind == "heartbeat":
         _write_heartbeat(device.account_id, reason, body.get("state"))
     if kind == "positions_miss":
-        _write_positions_diag(device.account_id, reason, body.get("headers"), body.get("controls"))
+        _write_positions_diag(device.account_id, reason, body.get("headers"), body.get("controls"), body.get("cells"))
+        # a closed_* miss follows a CLEAN Positions read, and an amend_* dump (BREAKOUT-POS-UNPARSED) is the trail amend
+        # refusing on a row it FOUND: in neither is a position unseen
+        if not reason.startswith(("closed_", "amend_")):
+            _alert_unseen_positions(device.account_id, reason, send=send)
     # login_retry: an auto re-login attempt/failure inside a streak (PHONE-AUTOLOGIN, no latch, retried forever) is
     # logged in phone_events but not pinged; the phone sends ONE login_failed red flag after 3 in a row instead.
     # login_diag (PHONE-AUTOLOGIN-2): one scrubbed structure snapshot per re-login attempt -- step reached, how many
@@ -635,19 +651,62 @@ def _write_diag(account_id: str, reason: str, controls: Any) -> None:
 
 
 # positions_miss (PROP-TRACKING): a Positions read that was not clean -- its state plus the table's digit-masked
-# headers and the page's control texts -- so the next build is fixed from evidence. Latest per account only.
+# headers and the page's control texts -- so the next build is fixed from evidence. Latest per account only. An
+# unparsed read also carries `cells`: its first failing row as key:shape, digits masked app-side (BREAKOUT-POS-UNPARSED).
 def _positions_diag_path(account_id: str) -> Path:
     return _diag_path(account_id).with_name(f"prop_phone_posdiag_{re.sub(r'[^a-z0-9_]', '', account_id)}.json")
 
 
-def _write_positions_diag(account_id: str, state: str, headers: Any, controls: Any) -> None:
+def _write_positions_diag(account_id: str, state: str, headers: Any, controls: Any, cells: Any = None) -> None:
     def lst(v: Any) -> list:
         return [x for x in (_scrub(c, 40).strip() for c in (v if isinstance(v, list) else [])[:_DIAG_MAX]) if x]
     try:
         _positions_diag_path(account_id).write_text(json.dumps(
-            {"at": _now().isoformat(), "state": _scrub(state, 60), "headers": lst(headers), "controls": lst(controls)}))
+            {"at": _now().isoformat(), "state": _scrub(state, 60), "headers": lst(headers), "controls": lst(controls),
+             "cells": [re.sub(r"\d", "d", c) for c in lst(cells)]}))
     except OSError:  # allow-silent: diagnostics only; the event is still acknowledged
         logger.warning("phone_executor: positions diag write failed", exc_info=True)
+
+
+# BREAKOUT-UNTRACKED-1014 (operator 2026-10-14: "a trade it placed but isn't tracking"): an ETH short sat open for
+# ~9 h while every Positions read was no_tab. positions_miss is quiet (it repeats every ~35 min), so nothing reached
+# the operator. When a Positions read fails while the journal holds a ticket ON THE VENUE (placed / filled), ONE
+# system-channel alert goes out per newly unseen ticket (dedup file beside the diag; ids drop out once resolved).
+_UNSEEN_STATUSES = ("placed", "filled")
+
+
+def _unseen_path(account_id: str) -> Path:
+    return _diag_path(account_id).with_name(f"prop_phone_unseen_{re.sub(r'[^a-z0-9_]', '', account_id)}.json")
+
+
+def _alert_unseen_positions(account_id: str, state: str, *, send=None) -> bool:
+    """Ping once per ticket the journal says is on the venue while the phone cannot read Positions. Never fatal."""
+    try:
+        live = [t for st in _UNSEEN_STATUSES for t in prop_journal.list_tickets(account_id=account_id, status=st, limit=50)]
+    except Exception:  # noqa: BLE001  # allow-silent: logged; the miss itself is still recorded
+        logger.warning("phone_executor: unseen-position check failed", exc_info=True)
+        return False
+    ids = {str(t.get("ticket_id")) for t in live if t.get("ticket_id")}
+    path = _unseen_path(account_id)
+    try:
+        prev = set(json.loads(path.read_text()).get("alerted") or [])
+    except (OSError, ValueError, AttributeError):
+        prev = set()
+    new = sorted(ids - prev)
+    sent = False
+    if new:
+        desc = "; ".join(f"{re.sub(r'[^A-Za-z0-9_-]', '', str(t.get('ticket_id')))[:64]} {_scrub(t.get('symbol'), 16)} {_scrub(t.get('direction'), 8)} "
+                         f"{_scrub(t.get('status'), 10)}" for t in live if str(t.get("ticket_id")) in new)[:400]
+        sent = _ping(f"⚠️ phone {account_id}: the app cannot read the Breakout Positions tab ({_scrub(state, 60)}) while "
+                     f"the journal has {len(new)} ticket(s) on the venue: {desc}. That position is INVISIBLE to the system "
+                     f"(no MEASURED uPnL, no SL/TP check). CHECK the terminal; one alert per ticket.", send)
+    alerted = (prev & ids) | (set(new) if sent else set())
+    if alerted != prev:
+        try:
+            path.write_text(json.dumps({"at": _now().isoformat(), "alerted": sorted(alerted)}))
+        except OSError:  # allow-silent: a lost dedup file means at most one repeat alert
+            logger.warning("phone_executor: unseen dedup write failed", exc_info=True)
+    return sent
 
 
 def last_positions_diag(account_id: str) -> Optional[Dict[str, Any]]:

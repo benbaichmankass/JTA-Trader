@@ -1,0 +1,228 @@
+{
+  "engine": "scripts/research/ml_bakeoff.py",
+  "metric": "macro_f1",
+  "higher_is_better": true,
+  "delta_sign": "positive = learner better than reference",
+  "baseline": "lgbm",
+  "controls": [
+    "prior"
+  ],
+  "candidates": [
+    "lgbm_har"
+  ],
+  "arm_status": {
+    "prior": "ok",
+    "lgbm": "ok",
+    "lgbm_har": "ok"
+  },
+  "groups": {
+    "ALL": {
+      "n_rows": 60000,
+      "classes": [
+        "range",
+        "volatile"
+      ],
+      "arms": {
+        "prior": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.454049135577798,
+                0.42811755361397935,
+                0.41851074139880473,
+                0.46984758117958914,
+                0.45901269817416784
+              ],
+              "n_test_rows": 36000
+            },
+            "holdout": {
+              "fold_metric": [],
+              "n_test_rows": 0
+            }
+          }
+        },
+        "lgbm": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.5982281831708571,
+                0.750431617598885,
+                0.6647916364198245,
+                0.6214397308015863,
+                0.6431622302098287
+              ],
+              "n_test_rows": 36000
+            },
+            "holdout": {
+              "fold_metric": [],
+              "n_test_rows": 0
+            }
+          }
+        },
+        "lgbm_har": {
+          "status": "ok",
+          "features": [
+            "rolling_log_return_vol",
+            "log_return",
+            "log_return_lag_1",
+            "log_return_lag_2",
+            "hour_of_day",
+            "dayofweek",
+            "har_rv_d",
+            "har_rv_w",
+            "har_rv_m"
+          ],
+          "windows": {
+            "cv": {
+              "fold_metric": [
+                0.5890720521420585,
+                0.7534810899564737,
+                0.6836823809130783,
+                0.614481760783122,
+                0.6473045838349083
+              ],
+              "n_test_rows": 36000
+            },
+            "holdout": {
+              "fold_metric": [],
+              "n_test_rows": 0
+            }
+          }
+        }
+      }
+    }
+  },
+  "deltas": {
+    "ALL": {
+      "cv": {
+        "prior": {
+          "lgbm": {
+            "n_folds": 5,
+            "mean": -0.20970313765132848,
+            "ci95": [
+              -0.30248641253967523,
+              -0.1169198627629817
+            ],
+            "sign_consistent": true
+          },
+          "prior": {
+            "n_folds": 5,
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ],
+            "sign_consistent": false
+          }
+        },
+        "lgbm_har": {
+          "lgbm": {
+            "n_folds": 5,
+            "mean": 0.0019936938857318285,
+            "ci95": [
+              -0.01182639019865054,
+              0.015813777970114195
+            ],
+            "sign_consistent": false
+          },
+          "prior": {
+            "n_folds": 5,
+            "mean": 0.21169683153706034,
+            "ci95": [
+              0.11026117829169703,
+              0.31313248478242367
+            ],
+            "sign_consistent": true
+          }
+        }
+      },
+      "holdout": {
+        "prior": {
+          "lgbm": {
+            "n_folds": 0,
+            "mean": null,
+            "ci95": null
+          },
+          "prior": {
+            "n_folds": 0,
+            "mean": null,
+            "ci95": null
+          }
+        },
+        "lgbm_har": {
+          "lgbm": {
+            "n_folds": 0,
+            "mean": null,
+            "ci95": null
+          },
+          "prior": {
+            "n_folds": 0,
+            "mean": null,
+            "ci95": null
+          }
+        }
+      }
+    }
+  },
+  "rule_evaluation": {
+    "verdict": "indeterminate",
+    "why": "between the pass bar and the fail floor",
+    "candidates": {
+      "lgbm_har": {
+        "evaluated": true,
+        "passes_all": false,
+        "clauses": [
+          {
+            "holds": false,
+            "what": "['ALL'] >= 0.01 vs lgbm/cv"
+          },
+          {
+            "holds": false,
+            "what": "['ALL'] >= 0.0 vs lgbm/holdout"
+          }
+        ]
+      }
+    }
+  },
+  "headline_checks": [],
+  "licences": {
+    "prior": {
+      "kind": "prior",
+      "licence": "n/a",
+      "research_only": false,
+      "weights": ""
+    },
+    "lgbm": {
+      "kind": "lightgbm",
+      "licence": "MIT",
+      "research_only": false,
+      "weights": ""
+    },
+    "lgbm_har": {
+      "kind": "lightgbm",
+      "licence": "MIT",
+      "research_only": false,
+      "weights": ""
+    }
+  },
+  "n_folds_cv_min_over_groups": 5,
+  "seconds": 21.4
+}

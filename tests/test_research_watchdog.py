@@ -123,6 +123,23 @@ def test_stamps_states():
     assert w.check_stamps(None, NOW, TH)["state"] == w.CNL
 
 
+def test_conflicted_automation_pr_is_named_not_idle():
+    def pr(n, m, ref):
+        return {"number": n, "created_at": ago(m), "head": {"ref": ref}}
+
+    prs = [pr(18004, 80, "automation/research-queue-stamp-38519778952-1"), pr(18014, 80, "automation/trainer-capture-watch-1"),
+           pr(5, 80, "automation/x"), pr(6, 10, "automation/y"), pr(7, 80, "feature/z")]
+    st = {18004: "dirty", 18014: "dirty", 5: "clean", 6: "dirty", 7: "dirty"}
+    v = w.check_conflicted_automation(prs, st.get, NOW, TH)
+    assert v["state"] == w.BAD and v["evidence"]["conflicting"] == [18004, 18014]
+    assert "#18004" in v["detail"] and "stamp" in v["detail"]
+    # young (6) and non-automation (7) conflicts are not named; clean is OK
+    assert w.check_conflicted_automation(prs[2:], st.get, NOW, TH)["state"] == w.OK
+    # could-not-look is never OK
+    assert w.check_conflicted_automation(prs, lambda n: None, NOW, TH)["state"] == w.CNL
+    assert w.check_conflicted_automation(None, st.get, NOW, TH)["state"] == w.CNL
+
+
 # ── phone heartbeat ──
 def test_phone_heartbeat_maps_the_shared_probe_and_never_passes_unknown():
     assert w.check_phone_heartbeat({"status": "ok", "detail": "fresh"}, TH)["state"] == w.OK
