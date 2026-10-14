@@ -98,8 +98,10 @@ def session_debt(queue_dir: Path | None = None) -> dict:
     Operator principle (research/queue/README.md, 2026-10-06): a step that waits on a session is
     debt. Two kinds, over every ``research/queue/*.yaml`` whose ``status`` is ``queued``:
 
-      * ``session_bound``: ``run.workflow`` is not a ``*.yml``/``*.yaml`` file, so the dispatcher can
-        never fire it;
+      * ``session_bound``: ``run.workflow`` is not a ``*.yml``/``*.yaml`` file AND the compute router
+        (``compute_router.plan``, the same call ``dispatch_queue`` makes) cannot inject one, so the
+        dispatcher can never fire it. A ``run.command`` + ``compute`` unit carries no ``run.workflow``
+        by design (the router picks it) and is NOT bound — until 2026-10-14 this counted them as bound;
       * ``session_graded``: hand-written (no ``generated``) and no ``grading.auto``, so
         ``queue_grade.py`` can never close it.
 
@@ -107,6 +109,8 @@ def session_debt(queue_dir: Path | None = None) -> dict:
     skipped a corrupt file would read as less debt.
     """
     import yaml  # noqa: PLC0415
+    from scripts.research import compute_router as cr  # noqa: PLC0415
+    cfg = cr.load_config()
     d = queue_dir or QUEUE_DIR
     bound: list[str] = []
     graded: list[str] = []
@@ -121,7 +125,7 @@ def session_debt(queue_dir: Path | None = None) -> dict:
         queued += 1
         uid = str(u.get("id") or f.stem)
         wf = str((u.get("run") or {}).get("workflow") or "")
-        if not wf.endswith((".yml", ".yaml")):
+        if not wf.endswith((".yml", ".yaml")) and not (not wf.strip() and cr.plan(u, cfg).ok):
             bound.append(uid)
         elif not u.get("generated") and not (u.get("grading") or {}).get("auto"):
             graded.append(uid)
@@ -373,6 +377,9 @@ def _self_test() -> int:
         (q / "RQ-3.yaml").write_text("id: RQ-3\nstatus: queued\nrun:\n  workflow: x.yml\ngenerated:\n  key: k\n")
         (q / "RQ-4.yaml").write_text("id: RQ-4\nstatus: queued\nrun:\n  workflow: x.yml\ngrading:\n  auto: {rule: r}\n")
         (q / "RQ-5.yaml").write_text("id: RQ-5\nstatus: done\nrun:\n  workflow: none\n")
+        # a command unit with no run.workflow is router-dispatched (the f0e2-03 shape), not session-bound
+        (q / "RQ-7.yaml").write_text("id: RQ-7\nstatus: queued\ncompute: cpu_light\nrun:\n  command: [python3, x.py]\n"
+                                     "grading:\n  auto: true\n")
         sdb = session_debt(q)
         check("session debt: bound, graded and the clean/closed units are told apart",
               sdb["session_bound"] == ["RQ-1"] and sdb["session_graded"] == ["RQ-2"]
