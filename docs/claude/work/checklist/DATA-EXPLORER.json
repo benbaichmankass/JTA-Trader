@@ -10,15 +10,17 @@
   "spend_usd": null,
   "tier": 1,
   "prs": [
-    17869
+    17869,
+    17949,
+    17956
   ],
   "blocked_on": [
-    "SPA: separate session session_01Jyhnk3ydk39eFFLQJaP8NK on ict-trader-dashboard (Overview/Research/Trades/Signals/Packages/login)",
-    "GET /api/bot/db/overview endpoint not built",
-    "operator real login (200 + access_token) and human render confirmation"
+    "SPA: session_01Jyhnk3ydk39eFFLQJaP8NK on ict-trader-dashboard (login, Overview, Research, Trades, Signals, Packages) - merge, deployed-bundle check with negative control, human render confirmation",
+    "operator real login (200 + access_token) - then read GET /api/bot/db/overview and ?integrity=quick for live counts and the signals COUNT cost",
+    "PI-20261014-IMQACAUN-0001 (41 stuck-dispatched research units) routed by manager"
   ],
-  "note": "[2026-10-14 lane] MERGED #17869 (research catalog API + SPA handoff doc). DEPLOYED+OBSERVED: after ict-web-api restart (issue #17946) GET /api/bot/research/catalog returned 200 at 00:09Z: total 606 units, 479 result / 59 blocked / 41 dispatched / 15 due / 7 retired / 5 queued, 112 stuck, readErrors 0; positive control RQ-20260922-003 -> result/pass with 2 result rows; negative controls: unknown id present:false, malformed id 400, bad order 422; /api/bot/db/tables without bearer still 401. AUTH: set-env #17905/#17906/#17907 landed (JWT key, password hash, ALLOWED_EMAIL + restart); wrong-password login returns 401 invalid_credentials (was 500). NOT established: real login mint (200+token) and gate-accepts-bearer. NOT built: /api/bot/db/overview, SPA. Stuck population: dispatched units with no landed result row (36-352h) not yet root-caused (failed run vs unmerged result).",
-  "updated_at": "2026-10-14T00:09:55Z",
+  "note": "[2026-10-14 final lane note] DEPLOYED+OBSERVED: GET /api/bot/research/catalog (#17869) 200 (619 units, 486 result at 01:03Z); GET /api/bot/db/overview (#17956) merged 00:58Z, live and GATED: 401 without bearer and with a bad bearer from 01:02Z; /api/bot/db/tables 401 without bearer; wrong-password login 401 invalid_credentials (was 500). Auth set-env #17905/#17906/#17907 landed 2026-10-13. NOT observed: overview CONTENT (gated, no token), real login mint, SPA, human render. Not provided by overview by design: 24h/7d growth, stale verdict. Caught by test-schema-fidelity-guard: signals timestamp column is logged_at_utc, not ts.",
+  "updated_at": "2026-10-14T01:03:04Z",
   "updated_by": "session_01EUNwHBF7sHQp1DimqACauN",
   "roadmap": [
     "M6"
