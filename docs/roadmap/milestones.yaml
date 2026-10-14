@@ -324,10 +324,30 @@ milestones:
     name: AI traders and the HF/data pipeline (M9 WS1-WS10 with M10)
     status: dormant
     where: "WS1-WS5 shipped and WS7-WS10 recorded in progress (ROADMAP section 'M9 / M10'); E53 found 0 commits since 2026-08-31 naming M9/M10 or touching ml/data. Active ML work now runs under M25 and the ML-ROADMAP-LOOP plan."
-    next: Subsumed by the ML-ROADMAP-LOOP plan; this entry exists so the historical M9/M10 rows have a disposition.
-    no_rows_reason: superseded by M25 and the ML roadmap loop; no row names M9 or M10
+    next: >-
+      Subsumed by the ML-ROADMAP-LOOP plan; this entry exists so the historical M9/M10 rows have a disposition.
+      2026-10-14 (DATA-INFRA-PROGRAMME, operator directive): the HF/data-pipeline half is SUPERSEDED by L-DATA -- not revived,
+      because M9 bundles AI-trader workstreams now owned by M23/M25 with the data pipeline, and the data work needs its own measure.
+      New data work is filed under L-DATA; rows still naming M9 (COMPUTE-HF-SOURCING, DATA-INFRA-PROGRAMME) keep resolving here.
+    no_rows_reason: superseded by M25 and the ML roadmap loop (AI-trader half) and by L-DATA (data half, 2026-10-14)
     owner: ML-ROADMAP-LOOP lane
     reviewed: 2026-10-11
+  - id: L-DATA
+    goal: G4
+    name: "Data infrastructure: ingest, process, label, learn"
+    status: active
+    where: >-
+      Created 2026-10-14 on the operator's directive (DATA-INFRA-PROGRAMME). MEASURED 2026-10-14 (trainer diag #18107/#18108, code):
+      finest refreshed grain 5m (BTC/ETH/SOL), 15m (ADA/AVAX/XRP); 1m only as a stale BTC v001 (3.24M rows) and MES v001; four v002
+      market_raw shards cut at round counts (BTC 5m 157,000, SOL 5m 135,000, SOL 15m 64,000, ADA 15m 158,000) and SPLG 1d empty;
+      funding/OI and order flow BTC-only; every barrier labeller resolves SL/TP ties SL-first; no catalog of the stores; trainer disk
+      56 of 97 GB free, OCI free-tier block storage 194 of 200 GB used. Plan: docs/research/programmes/06-DATA-INFRA.md.
+    next: >-
+      W1 read RQ-20261014-da7a-01 (is the SL-first tie a material label error?) and land DATA-CATALOG + DATA-KLINE-ARCHIVE;
+      W2 DATA-DERIV-ARCHIVE and DATA-LABEL-TIES; W3 DATA-INTRADE-LABEL-STORE under the exit lane's EXIT-PATH-EMIT-OFFLINE.
+    architecture: ["AI-traders training workflow (separate from live trading)"]
+    owner: DATA-INFRA-PROGRAMME lane / manager
+    reviewed: 2026-10-14
   - id: M41
     goal: G4
     name: Production-ready local LLM
