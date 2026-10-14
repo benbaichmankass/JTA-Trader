@@ -19,7 +19,7 @@
 > checks it in CI (diff-scoped, in the `guards` job); `--all` is the standing
 > audit and `--list` prints measured coverage.
 >
-> **Coverage, computed rather than counted: 139 of 139 routes documented (100%).**
+> **Coverage, computed rather than counted: 141 of 141 routes documented (100%).**
 > *Population — every `@router.<verb>("...")` under `src/web/api/routers/`
 > joined to its `APIRouter(prefix=...)`. Verified against the live FastAPI
 > route table (`app.routes`): the enumerator finds exactly those 96 with no
@@ -162,6 +162,8 @@ the same staleness this paragraph was already written to complain about.
 | `GET /api/bot/prop/reconcile` | `routers/prop.py` | Un-acted tickets (emitted, past `valid_until`, no fill reported back) — the P3 drift alert. |
 | `GET /api/bot/reports` | `routers/reports.py` | **Added 2026-06-22.** Newest-first index of consolidated system reports from `comms/reports/index.json`. `limit` clamped 1..500; `window` filters. File-backed, no DB table. |
 | `GET /api/bot/reports/{report_id}` | `routers/reports.py` | **Added 2026-06-22.** One report's metadata + its rendered self-contained `report.html`. 404 on unknown id; artifact paths validated under `comms/reports/` — **no path traversal**. |
+| `GET /api/bot/research/catalog` | `routers/research_catalog.py` | **Added 2026-10-13 (DATA-EXPLORER).** Searchable research-unit catalog projected from `research/queue/*.yaml` (+`blocked/`), `research/results/<unit>/*.jsonl`, `research/THEMES.yaml` and `docs/roadmap/milestones.yaml` (projection in `src/runtime/research_catalog.py`). Query: `q`, repeatable/CSV facets `theme status verdict goal backend kind stuck`, `sort`, `order`, `limit` (1..200), `offset`, `since`, `created_from/to`. **Ungated on purpose:** every byte comes from files in a public repo — no DB, no secrets, no new table — the same class as `/api/bot/roadmap` and `/api/bot/work`, so a login adds friction and no protection. Unparseable files surface in `readErrors`; a failed build returns `present:false, readState:"unreadable"` (never an empty list). 30 s fresh / 300 s stale cache. |
+| `GET /api/bot/research/catalog/{unit_id}` | `routers/research_catalog.py` | **Added 2026-10-13.** One unit in full plus up to 20 landed result rows. `unit_id` validated `RQ-[0-9A-Za-z-]{4,40}` (400); `present:false` on unknown id. Same ungated rationale as the list route. |
 | `GET /api/bot/roadmap` | `routers/roadmap.py` | The parsed product roadmap (milestone table + sprint-log index). Best-effort: a missing/garbled `ROADMAP.md` degrades to an empty envelope. Short in-process cache keyed on file mtimes. |
 | `GET /api/bot/roadmap/sprint/{sprint_id}` | `routers/roadmap.py` | One sprint log parsed into sections. `sprint_id` validated `[A-Za-z0-9._-]+` and resolved strictly under `docs/sprint-logs/` — **no traversal** (400); `present:false` on unknown id. |
 | `GET /api/bot/work` | `routers/work.py` | The work store (`docs/claude/work/`): intents → objects → steps, lifecycle roll-up, typed `blocked_on` edges. Best-effort: a missing/garbled store degrades to an empty envelope, never a 5xx. Short in-process cache keyed on file mtimes. **Read-only.** ⚠️ The control half's DECISION channel landed 2026-09-01 as the two rows below; the READ GATE half of Phase H did **not**, and its precondition (the Android app + the Streamlit dashboard off the live feed) was unmet when this landed. A file that fails to parse is reported in `readErrors`, never dropped. |
