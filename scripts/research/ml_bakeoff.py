@@ -233,7 +233,7 @@ def _mk_lightgbm(p):
         import lightgbm as lgb
     except ImportError as e:
         raise Unavailable(f"lightgbm not importable: {e}")
-    return lgb.LGBMClassifier(verbose=-1, **{"n_estimators": 200, "learning_rate": 0.05, "num_leaves": 31, **p})
+    return lgb.LGBMClassifier(**{"verbose": -1, "n_estimators": 200, "learning_rate": 0.05, "num_leaves": 31, **p})
 
 
 def _mk_catboost(p):
@@ -241,7 +241,9 @@ def _mk_catboost(p):
         from catboost import CatBoostClassifier
     except ImportError as e:
         raise Unavailable(f"catboost not importable: {e}")
-    return CatBoostClassifier(verbose=0, **{"iterations": 300, **p})
+    # defaults first, unit params override: a unit declaring verbose must not raise "multiple values for keyword argument"
+    # (RQ-20261014-4591-04 landed catboost as unavailable for exactly that, 2026-10-14)
+    return CatBoostClassifier(**{"verbose": 0, "iterations": 300, **p})
 
 
 def _mk_hgb(p):

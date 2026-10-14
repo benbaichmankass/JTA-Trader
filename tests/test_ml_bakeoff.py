@@ -294,3 +294,22 @@ def test_df_columns_block_gives_one_arm_its_own_extra_columns():
     df = pd.DataFrame({"x0": np.arange(10.0), "fc_a": np.arange(10.0) * 2})
     out = mb.FEATURE_BLOCKS["df_columns"](df, {"columns": ["fc_a"]})
     assert list(out) == ["fc_a"] and out["fc_a"][3] == 6.0
+
+
+def test_unit_declared_verbose_does_not_collide_with_engine_default(monkeypatch):
+    """RQ-20261014-4591-04: a unit that declares ``verbose`` made CatBoost land ``unavailable`` (TypeError: multiple
+    values for keyword argument) and turned a runnable question INDETERMINATE. Unit params must override defaults."""
+    import types
+
+    seen = {}
+
+    class _Fake:
+        def __init__(self, **kw):
+            seen.update(kw)
+
+    monkeypatch.setitem(sys.modules, "catboost", types.SimpleNamespace(CatBoostClassifier=_Fake))
+    mb._mk_catboost({"verbose": 0, "depth": 6})
+    assert seen["verbose"] == 0 and seen["depth"] == 6 and seen["iterations"] == 300
+    seen.clear()
+    mb._mk_catboost({})
+    assert seen["verbose"] == 0
