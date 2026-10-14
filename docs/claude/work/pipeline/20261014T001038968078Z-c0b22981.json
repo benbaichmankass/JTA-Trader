@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-16",
+    "kind": "date"
+  },
+  "id": "PI-20261014-IMQACAUN-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "GET /api/bot/research/catalog (src/runtime/research_catalog.py), lane DATA-EXPLORER, PR #17869",
+    "rerun": "curl -s 'https://ict-bot.duckdns.org/api/bot/research/catalog?status=dispatched&limit=200' | python3 -c \"import sys,json;d=json.load(sys.stdin);print(d['matched'],[(i['id'],i['lastDispatchedAt'],i['resultCount']) for i in d['items'] if i['resultCount']==0][:50])\""
+  },
+  "state": "queued",
+  "what": "DATA-EXPLORER catalog finding (MEASURED 2026-10-14 over 606 research units, 0 read errors): 41 units are 'dispatched' (queue last_dispatched_at set, no landed result row after the stamp); on 2026-10-13 it was 37, dispatched 36h-352h earlier, 36 of them with no result row at all. 'Stuck' (112) = 59 blocked + dispatched-no-result (>6h) + grading.needs_review. NOT root-caused: the catalog cannot tell a failed run from a result that never merged (stranded result PR) or a lost stamp. Root-cause each: find the dispatched run and its outcome, then re-arm, fix the landing path, or retire with a reason."
+}
