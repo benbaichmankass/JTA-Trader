@@ -1,0 +1,42 @@
+{
+  "unit": "RQ-20261014-f516-05",
+  "run_id": "38635059641",
+  "commit_sha": "5ab3ac12b201b6dc2e3c0d0b0733a55096cb142a",
+  "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/38635059641",
+  "timeout_minutes": 120,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/prop_ev_grid.py",
+        "--leg",
+        "trend_donchian_eth_prop=comms/strategy_evidence/runs/2026-10-05-730d/trend_donchian_eth_prop__trades.jsonl",
+        "--arm",
+        "A=--sizing balance --risk-pct 0.01 --dd-switch-frac 0.8",
+        "--arm",
+        "C050=--sizing balance --risk-pct 0.005 --dd-switch-frac 0.8",
+        "--arm",
+        "C075=--sizing balance --risk-pct 0.0075 --dd-switch-frac 0.8",
+        "--arm",
+        "CROOM=--sizing room --risk-pct 0.015 --room-frac 0.45 --dd-switch-frac 0.8",
+        "--common",
+        "--trades trend_donchian_sol_prop=comms/strategy_evidence/runs/2026-10-05-730d/trend_donchian_sol_prop__trades.jsonl --ruleset config/prop_rulesets/velotrade_classic_1step.yaml --costs breakout --commission-bps-rt 6 --slippage-bps-rt 3 --swap-daily 0.0005 --swap-model dxtrade --no-hedge --funded-start fresh --lev-cap trend_donchian_eth_prop=5 --lev-cap trend_donchian_sol_prop=5",
+        "--seeds",
+        "1,2,3,4,5",
+        "--grade",
+        "cushion_vs_flat",
+        "--out",
+        "comms/research/RQ-20261014-f516-05/38635059641",
+        "--jobs",
+        "4",
+        "--note",
+        "RQ-20261014-f516-05: Programme 05 Q2 sizing challengers, velotrade_1"
+      ],
+      "log": "comms/research/RQ-20261014-f516-05/38635059641/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 6403.7
+    }
+  ],
+  "all_ok": true
+}
