@@ -1190,6 +1190,13 @@ class MainActivity : Activity() {
                 js("__ex.clickText(${q(view)})"); delay(1500)
                 val rows = js("JSON.stringify(__ex.rows())").uppercase()
                 val hit = rows.split("],[").any { r -> (r.contains(venue.uppercase()) || r.contains(base)) && sideRe.containsMatchIn(r) }
+                // BREAKOUT-UNTRACKED-1014: Positions is a DIV grid (no <tr>), invisible to rows(); a clean grid read
+                // showing this symbol on this side also confirms the submit. Read-only; the opp/flatten path stays rows()-only.
+                val grid = if (view == "^positions$") jsObj("__ex.positionsRead()")?.takeIf { it.optString("state") == "read" }?.optJSONArray("rows") else null
+                val gridHit = grid != null && (0 until grid.length()).any { i ->
+                    val g = grid.optJSONObject(i); val gs = g?.optString("symbol")?.uppercase() ?: ""
+                    gs.isNotEmpty() && ((venue.isNotEmpty() && gs.contains(venue.uppercase())) || (base.isNotEmpty() && gs.contains(base))) && sideRe.containsMatchIn(g?.optString("side") ?: "")
+                }
                 val opp = view == "^positions$" && rows.split("],[").any { r -> (r.contains(venue.uppercase()) || r.contains(base)) && oppRe.containsMatchIn(r) && !sideRe.containsMatchIn(r) }
                 if (opp) {
                     js("__ex.rowClose(${q(venue)}, ${q(oppRe.pattern)})"); delay(1200); js("__ex.dialogClick('confirm|close|yes|ok')")
@@ -1197,7 +1204,7 @@ class MainActivity : Activity() {
                     api.event("flattened", "opposite-side position found after submit; close clicked; CHECK the terminal", id)
                     report(id, "mismatch_flattened", "opposite side seen", tk); return
                 }
-                if (hit) {
+                if (hit || gridHit) {
                     ledger.append(id, "placed")
                     api.post("report", JSONObject().put("kind", "fill").put("status", "placed").put("ticket_id", id)
                         .put("symbol", sym).put("direction", if (long) "long" else "short")
