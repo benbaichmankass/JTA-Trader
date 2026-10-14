@@ -1,0 +1,26 @@
+{
+  "id": "AUTOMERGE-STALE-HEAD",
+  "title": "claude-pr-automerge must re-check the PR's CURRENT head before arming (a hold declared after a queued run can be armed over)",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-14 weekly planning] OPERATOR-APPROVED 2026-10-14. Source: PI-20261007-CJT6J2S9-0001 -- MEASURED on PR #16984: run 37671365711 queued on head 6efa01a3 (landing: self) at 19:01:47Z, executed 19:49:10Z, and armed native auto-merge although the head had become ef82483b with landing: hold and no request file. Build: the request gate and the E63 landing gate read the PR's head at execution time (pull_request_read), refuse when the request file or the self declaration is gone from that head, and log the queued-vs-current sha pair. Test with the #16984 shape. Related cluster: AUTOMERGE-GAPS.",
+  "updated_at": "2026-10-14T07:37:21Z",
+  "updated_by": "session_01DfFYRUG7orGpkE5pVnA8e4",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "observation": {
+    "what": "claude-pr-automerge reads the PR head at execution time and refuses to arm when that head carries landing: hold or no request file; a replay of the #16984 shape is refused and logged with the queued-vs-current sha pair",
+    "how_to_check": "the workflow run log of the first PR where the head moved between queue and execution, plus the test added for the gate",
+    "due_by": "2026-10-21"
+  },
+  "_seq": 485
+}

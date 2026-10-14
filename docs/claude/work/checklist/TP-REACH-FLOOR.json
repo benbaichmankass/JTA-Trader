@@ -1,0 +1,26 @@
+{
+  "id": "TP-REACH-FLOOR",
+  "title": "TP-doctrine guard: a declared take-profit reached by fewer than 10% of harness trades grades as non-compliant (reach-rate floor 0.10 for near-sentinel TPs)",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-14 weekly planning] OPERATOR-APPROVED 2026-10-14. Source: PI-20261007-SXUZGFME-0001 -- scripts/ci/check_tp_doctrine.py keys entry_state on tp_r >= 50 (sentinel) and the venue cap at a reference ATR, so a finite-but-unreachable TP (e.g. trend_donchian_eth_prop tp_r 6.0 reached by 0.9% of 1,004 harness trades, docs/research/mi307-offline-mfe-2026-09-18.json) passes entry_tp. Build: the guard reads the per-leg MFE/reach-rate evidence and grades reach_rate < 0.10 as non-compliant, with a positive control (a TP reached >= 10% still passes) and the ratchet re-run; counts are re-measured, never quoted. Serves the 'brackets as predictions' milestone.",
+  "updated_at": "2026-10-14T07:37:21Z",
+  "updated_by": "session_01DfFYRUG7orGpkE5pVnA8e4",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "observation": {
+    "what": "python3 scripts/ci/check_tp_doctrine.py grades a routing whose declared TP is reached by < 10% of harness trades as non-compliant, with a positive control (a TP reached >= 10% still passes) in tests, and the ratchet baseline is re-run, not quoted",
+    "how_to_check": "run the guard on main and read the per-routing reach_rate field; tests/ for the positive control",
+    "due_by": "2026-10-21"
+  },
+  "_seq": 482
+}

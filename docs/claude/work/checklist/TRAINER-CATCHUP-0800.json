@@ -1,0 +1,27 @@
+{
+  "id": "TRAINER-CATCHUP-0800",
+  "title": "Move the ict-trainer-catchup timer from 05:00Z to 08:00Z so it no longer overlaps the 03:00-05:00Z research window and the 05:52Z daily review",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-14 weekly planning] OPERATOR-APPROVED 2026-10-14 (Tier-2, timer change on ict-trainer-vm; approval recorded here, relayed by the manager session_01G16FfyYSmDPQuuW55BuTmK). Ship through the vm-ops / system-actions route (timer OnCalendar edit + daemon-reload), then verify the post-state through trainer-vm-diag. Revert: set OnCalendar back to 05:00Z. Reasoning from planning: the catch-up competes with the trainer research window (scripts/research/research_compute.yaml trainer.queue.windows_utc 03:00-05:00) and the 05:52Z review reads a half-finished cycle.",
+  "updated_at": "2026-10-14T07:37:20Z",
+  "updated_by": "session_01DfFYRUG7orGpkE5pVnA8e4",
+  "roadmap": [
+    "M25",
+    "L-OPS"
+  ],
+  "observation": {
+    "what": "ict-trainer-catchup.timer on ict-trainer-vm reads OnCalendar 08:00Z and the next catch-up run starts at ~08:00Z with no overlap of the 03:00-05:00Z research window",
+    "how_to_check": "trainer-vm-diag: systemctl list-timers ict-trainer-catchup + journalctl -u ict-trainer-catchup for the first 08:00Z run",
+    "due_by": "2026-10-17"
+  },
+  "_seq": 479
+}

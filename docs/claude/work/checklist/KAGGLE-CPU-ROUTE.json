@@ -1,0 +1,27 @@
+{
+  "id": "KAGGLE-CPU-ROUTE",
+  "title": "Route published-data research units to Kaggle CPU kernels (closes ML-DATA-RUNNER-FETCH: runner DownloadDataset 404s on the private dataset)",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-14 weekly planning] OPERATOR-APPROVED 2026-10-14 ('I'll take your recommendations'). Source: row ML-DATA-RUNNER-FETCH (kaggle 2.2.4 DownloadDataset 404s for the private dataset from a GitHub runner, runs 38507974681/38512183556/38514877849; the Kaggle kernel mount of metis-market-data is VERIFIED 20/20 files). Build: a kaggle CPU backend/class in scripts/research/research_compute.yaml so units with routing.published_data run in a Kaggle CPU kernel (not metered by the GPU quota) instead of github_runner_data. Tier-1 research tooling; no config/accounts or strategy edits. Planning doc: https://claude.ai/code/artifact/27fd3e97-ed3f-49ba-be2c-5e56997df95a",
+  "updated_at": "2026-10-14T07:37:20Z",
+  "updated_by": "session_01DfFYRUG7orGpkE5pVnA8e4",
+  "roadmap": [
+    "M25",
+    "L-OPS"
+  ],
+  "observation": {
+    "what": "one routing.published_data unit runs end to end in a Kaggle CPU kernel through the dispatcher (not a hand dispatch) and its result is collected into research/results/<uid>/; ML-DATA-RUNNER-FETCH closes with that run id",
+    "how_to_check": "comms/research/utilization backend=kaggle_cpu dispatch + the result dir + the kernel run id on this row",
+    "due_by": "2026-10-21"
+  },
+  "_seq": 477
+}
