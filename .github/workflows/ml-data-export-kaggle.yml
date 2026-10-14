@@ -34,6 +34,9 @@ on:
       skip_kernel_verify:
         description: "Skip the Kaggle-kernel verification (the runner verification always runs)"
         default: "false"
+      verify_only:
+        description: "Skip the export and only run the verification jobs against the dataset as published"
+        default: "false"
 
 permissions:
   contents: read
@@ -44,6 +47,7 @@ concurrency:
 
 jobs:
   export:
+    if: ${{ inputs.verify_only != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
@@ -126,6 +130,7 @@ jobs:
 
   verify-runner:
     needs: export
+    if: ${{ !cancelled() && (needs.export.result == 'success' || inputs.verify_only == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -142,15 +147,7 @@ jobs:
         run: |
           set -uo pipefail
           echo "::add-mask::${KAGGLE_API_TOKEN}"
-          USERNAME=$(python - <<'PY'
-          from kaggle.api.kaggle_api_extended import KaggleApi
-          a = KaggleApi(); a.authenticate()
-          print(a.config_values.get("username", ""))
-          PY
-          )
-          echo "::add-mask::$USERNAME"
-          mkdir -p /tmp/dl
-          kaggle datasets download -d "$USERNAME/metis-market-data" -p /tmp/dl --unzip 2>&1 | sed "s|$USERNAME|<user>|g" | tail -3
+          python3 scripts/research/published_data.py download --dataset metis-market-data --dest /tmp/dl
           python3 scripts/research/market_data_export.py verify --root /tmp/dl | tee verify-runner.json
       - uses: actions/upload-artifact@v4
         if: always()
@@ -161,7 +158,7 @@ jobs:
 
   verify-kaggle:
     needs: export
-    if: ${{ inputs.skip_kernel_verify != 'true' }}
+    if: ${{ !cancelled() && inputs.skip_kernel_verify != 'true' && (needs.export.result == 'success' || inputs.verify_only == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
