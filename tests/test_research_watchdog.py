@@ -267,3 +267,59 @@ def test_backend_underutilised_is_a_non_alerting_reading():
     full = [run(i, 1, "in_progress") for i in range(3)]
     assert "underutilised" not in w.check_backend("github_runner", 4, full, NOW, TH, max_concurrent=3)["evidence"]
     assert "underutilised" not in w.check_backend("github_runner", 4, full, NOW, TH)["evidence"]
+
+
+# ── windowed backend (the trainer queue, ML-DATA-OFF-TRAINER) ──
+WIN = ["03:00-05:00", "07:00-24:00"]
+DAY = NOW.replace(hour=0, minute=0)
+
+
+def _at(h, m=0):
+    return DAY + timedelta(hours=h, minutes=m)
+
+
+def _run(now, minutes_ago, status="completed", i=1):
+    return {"id": i, "created_at": (now - timedelta(minutes=minutes_ago)).strftime("%Y-%m-%dT%H:%M:%SZ"), "status": status}
+
+
+def test_trainer_idle_outside_its_window_is_waiting_not_an_incident():
+    # 02:04Z 2026-10-14: 7 runnable, nothing started for 120+ min -> the real false alarm
+    now = _at(2, 4)
+    v = w.check_backend("trainer", 7, [_run(now, 400)], now, TH, windows=WIN)
+    assert v["state"] == w.OK and "waiting for window (opens 03:00Z)" in v["detail"], v
+    now = _at(6, 0)                                                      # the catch-up hour
+    v = w.check_backend("trainer", 7, [_run(now, 400)], now, TH, windows=WIN)
+    assert v["state"] == w.OK and "07:00Z" in v["detail"], v
+
+
+def test_trainer_idle_inside_its_window_still_escalates_after_the_limit_from_open():
+    lim = int(TH["backend_idle_minutes"])
+    # positive control: window opened hours ago, nothing started -> BAD
+    now = _at(12, 0)
+    v = w.check_backend("trainer", 7, [_run(now, 4000)], now, TH, windows=WIN)
+    assert v["state"] == w.BAD and v["heal"] == "dispatch" and "counted from window open" in v["detail"], v
+    # inside the limit of the opening -> OK even though the last run is ancient
+    now = _at(7, 0) + timedelta(minutes=lim - 1)
+    assert w.check_backend("trainer", 7, [_run(now, 4000)], now, TH, windows=WIN)["state"] == w.OK
+    # past the limit from the opening -> BAD
+    now = _at(7, 0) + timedelta(minutes=lim + 1)
+    assert w.check_backend("trainer", 7, [_run(now, 4000)], now, TH, windows=WIN)["state"] == w.BAD
+
+
+def test_trainer_fit_rule_no_unit_fits_the_remaining_window_is_waiting():
+    now = _at(23, 50)
+    v = w.check_backend("trainer", 3, [_run(now, 4000)], now, TH, windows=WIN, min_need_minutes=22.5)
+    assert v["state"] == w.OK and "fits" in v["detail"], v
+    now = _at(23, 30)                                                    # positive control: it fits, nothing started
+    assert w.check_backend("trainer", 3, [_run(now, 4000)], now, TH, windows=WIN, min_need_minutes=22.5)["state"] == w.BAD
+
+
+def test_windows_do_not_hide_an_active_run_or_change_unwindowed_backends():
+    now = _at(2, 0)
+    assert w.check_backend("trainer", 5, [_run(now, 400), _run(now, 1, "queued", 2)], now, TH, windows=WIN)["state"] == w.OK
+    assert w.check_backend("github_runner", 5, [_run(now, 400)], now, TH)["state"] == w.BAD     # no windows -> unchanged
+
+
+def test_the_router_config_declares_the_trainer_windows_the_watchdog_reads():
+    from scripts.research import compute_router as cr
+    assert cr.load_config()["backends"]["trainer"]["queue"]["windows_utc"] == WIN

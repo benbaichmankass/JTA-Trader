@@ -181,8 +181,24 @@ def check_queue(runnable_n: Optional[int], th: dict, extra: Optional[dict] = Non
     return verdict("queue", OK, f"runnable {runnable_n} >= floor {floor}", evidence=ev, immediate=True)
 
 
+def window_position(windows: Optional[list], now: datetime) -> Optional[Dict[str, Any]]:
+    """Where `now` sits against a backend's idle-window policy (research_compute.yaml backends.<b>.queue.windows_utc).
+    None = no window policy. Else {inside, since_open_min, until_close_min, next_open} (minutes; next_open 'HH:MMZ')."""
+    if not windows:
+        return None
+    from scripts.research import compute_router as cr
+    wins = cr.parse_windows(windows)
+    t = now.hour * 60 + now.minute
+    for a, b in wins:
+        if a <= t < b:
+            return {"inside": True, "since_open_min": float(t - a), "until_close_min": float(b - t), "next_open": None}
+    nxt = min((a for a, _ in wins if a > t), default=wins[0][0])
+    return {"inside": False, "since_open_min": None, "until_close_min": None, "next_open": f"{nxt // 60:02d}:{nxt % 60:02d}Z"}
+
+
 def check_backend(name: str, runnable_for: Optional[int], runs: Optional[list], now: datetime, th: dict,
-                  quota: Optional[dict] = None, max_concurrent: Optional[int] = None) -> Dict[str, Any]:
+                  quota: Optional[dict] = None, max_concurrent: Optional[int] = None,
+                  windows: Optional[list] = None, min_need_minutes: Optional[float] = None) -> Dict[str, Any]:
     chk, lim = f"backend:{name}", float(th["backend_idle_minutes"])
     if runnable_for is None:
         return verdict(chk, CNL, "could not work out which runnable units route here")
@@ -209,6 +225,23 @@ def check_backend(name: str, runnable_for: Optional[int], runs: Optional[list], 
         return verdict(chk, OK, f"{len(act)} run(s) queued/in progress", evidence=ev)
     if ages and min(ages) <= lim:
         return verdict(chk, OK, f"last run started {min(ages):.0f} min ago (limit {lim:g})", evidence=ev)
+    # A windowed backend (the trainer: ML-DATA-OFF-TRAINER) releases units only into its idle windows, so idleness
+    # OUTSIDE a window is the design working, not an incident; inside one the idle limit runs from the window's opening.
+    pos = window_position(windows, now)
+    if pos is not None:
+        ev.update(window=pos, windows_utc=windows)
+        if not pos["inside"]:
+            return verdict(chk, OK, f"waiting for window (opens {pos['next_open']}): {runnable_for} runnable unit(s) held by "
+                           "backends.<b>.queue.windows_utc, by design", evidence=ev)
+        if min_need_minutes is not None and pos["until_close_min"] < float(min_need_minutes):
+            return verdict(chk, OK, f"waiting for next window: no runnable unit fits the {pos['until_close_min']:.0f} min left "
+                           f"(smallest needs ~{float(min_need_minutes):.0f} min incl. safety factor)", evidence=ev)
+        if pos["since_open_min"] <= lim:
+            return verdict(chk, OK, f"window opened {pos['since_open_min']:.0f} min ago (idle limit {lim:g} runs from the opening)",
+                           evidence=ev)
+        since = f"{min(pos['since_open_min'], min(ages)) if ages else pos['since_open_min']:.0f} min (inside its window)"
+        return verdict(chk, BAD, f"idle with {runnable_for} runnable unit(s) routed here: nothing started on it for {since} "
+                       f"(limit {lim:g}, counted from window open)", evidence=ev, heal="dispatch")
     since = f"{min(ages):.0f} min" if ages else "ever (0 runs listed)"
     return verdict(chk, BAD, f"idle with {runnable_for} runnable unit(s) routed here: nothing started on it for {since} "
                    f"(limit {lim:g})", evidence=ev, heal="dispatch")
@@ -447,6 +480,7 @@ def queue_facts(root: Path, now: datetime) -> Optional[dict]:
         cfg = cr.load_config()
         run_ids = qr.runnable(units, now=now)
         by_be: Dict[str, int] = {}
+        min_need: Dict[str, float] = {}
         unplaceable = 0
         for uid in run_ids:
             res = cr.plan(units[uid], cfg)
@@ -454,12 +488,18 @@ def queue_facts(root: Path, now: datetime) -> Optional[dict]:
                 unplaceable += 1
                 continue
             by_be[str(res.backend)] = by_be.get(str(res.backend), 0) + 1
+            q = (cfg["backends"].get(str(res.backend)) or {}).get("queue") or {}
+            if q.get("windows_utc"):    # the fit rule: est_minutes x safety_factor must fit before the window closes
+                need = cr.est_hours(units[uid]) * 60.0 * float(q.get("safety_factor", 1.0))
+                min_need[str(res.backend)] = min(need, min_need.get(str(res.backend), need))
         uncounted = sum(1 for u in units.values() if u.get("status") == "queued" and u.get("compute")
                         and not qr.dispatchable(u) and due_within(u, now, qr.DISPATCH_CYCLE_HOURS))
         return {"runnable": len(run_ids), "by_backend": by_be, "unplaceable": unplaceable, "units_total": len(units),
                 "unreadable_units": len(bad), "backends": [n for n, b in cfg["backends"].items() if b.get("auto_route", True)],
                 "backend_workflows": {n: b["workflow"] for n, b in cfg["backends"].items()},
                 "backend_max_concurrent": {n: b.get("max_concurrent") for n, b in cfg["backends"].items()},
+                "backend_windows": {n: (b.get("queue") or {}).get("windows_utc") for n, b in cfg["backends"].items()},
+                "backend_min_need_minutes": min_need,
                 "router_style_due_not_counted_by_dispatchable": uncounted,
                 "kaggle_floor_hours": float((cfg["backends"].get("kaggle", {}).get("quota") or {}).get("floor_hours") or 0)}
     except Exception as exc:  # allow-silent: printed to stderr, and the None return becomes a could_not_look verdict, never an ok
@@ -491,7 +531,9 @@ def evaluate(probe: Any, cfg: dict, now: datetime, facts: Optional[dict]) -> Lis
             quota = {"remaining": q.get("remaining"), "floor_hours": facts["kaggle_floor_hours"] if facts else 0}
         out.append(check_backend(be, (facts["by_backend"].get(be, 0) if facts else None),
                                  probe.workflow_runs(facts["backend_workflows"][be], 10) if facts else None, now, th, quota,
-                                 (facts.get("backend_max_concurrent") or {}).get(be) if facts else None))
+                                 (facts.get("backend_max_concurrent") or {}).get(be) if facts else None,
+                                 (facts.get("backend_windows") or {}).get(be) if facts else None,
+                                 (facts.get("backend_min_need_minutes") or {}).get(be) if facts else None))
     out.append(check_collector(probe.collector_status(float(th["collector_window_hours"]), now), th))
     out.append(check_stamps(probe.open_prs(), now, th))
     out.append(check_phone_heartbeat(probe.phone_probe(now), th))
