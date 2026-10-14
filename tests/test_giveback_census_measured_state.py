@@ -16,7 +16,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "scripts" / "research"))
 
-import giveback_census as gc
+import giveback_census as gc  # noqa: E402
 
 TEL = {"peak_r": 2.0, "peak_state": "measured", "open_r": 0.5, "terminal_state": "final",
        "peak_provenance": "measured", "risk_per_unit": 1}
