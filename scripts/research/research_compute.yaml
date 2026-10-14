@@ -17,13 +17,22 @@ backends:
     workflow: research-script-run.yml
     max_concurrent: 3          # == the dispatcher's historical --max-research-inflight 3, unchanged
     cost_weight: 1.0           # relative cost of one hour here (free, but it shares the repo's runner pool)
-    published_variant: github_runner_data   # a unit with routing.published_data runs on this backend's data twin instead
+    # A unit with routing.published_data runs on this backend's published twin instead. KAGGLE-CPU-ROUTE (2026-10-14): the twin is
+    # kaggle_cpu, NOT github_runner_data -- kaggle 2.2.4 DownloadDataset 404s for the private dataset from a GitHub runner (runs
+    # 38507974681 / 38512183556 / 38514877849, row ML-DATA-RUNNER-FETCH), while a Kaggle kernel mounts it (verified 20/20 files).
+    published_variant: kaggle_cpu
     what: "GitHub-hosted runner: free, ~20 concurrent repo-wide, 6 h/job"
   github_runner_data:
     workflow: research-script-run-data.yml
     max_concurrent: 2          # shares the runner pool with github_runner; each run downloads ~1.5 GB, so it is capped lower
     cost_weight: 1.0
-    what: "GitHub-hosted runner + the private published ML dataset (ML-DATA-OFF-TRAINER): a unit that sets routing.published_data"
+    what: "GitHub-hosted runner + the private published ML dataset (ML-DATA-OFF-TRAINER): explicit run.workflow only since KAGGLE-CPU-ROUTE; its fetch 404s from a runner"
+  kaggle_cpu:
+    workflow: research-script-run-kaggle-cpu.yml
+    max_concurrent: 1          # one CPU kernel + bundle dataset slug (metis-research-run-cpu); separate from the GPU slot, so both can run
+    cost_weight: 1.5           # free and NOT metered by the GPU quota; the runner job only polls, the kernel does the work
+    # NO `quota:` block, deliberately: a CPU kernel does not draw the weekly GPU hours (enable_gpu=false), so there is nothing to gate on.
+    what: "Kaggle CPU kernel (internet off): reads the private published dataset by mount; units with routing.published_data"
   trainer:
     workflow: research-script-run-trainer.yml
     max_concurrent: 1          # 1 OCPU / 6 GB; the workflow's own concurrency group is global
@@ -81,7 +90,7 @@ classes:
   cpu_long:       {backends: [github_runner], what: "30 min .. 5.5 h, public data / repo data, no GPU"}
   needs_vm_data:  {backends: [trainer],       what: "reads trainer-resident data / weights; fits in 6 GB"}
   gpu:            {backends: [kaggle, runpod], what: "needs a GPU; Kaggle first, RunPod burst (ledger-capped, manifest requests only) when Kaggle quota is short; never runs on CPU"}
-  gpu_preferred:  {backends: [kaggle, github_runner], what: "GPU if quota allows, else the CPU path (the script must support both)"}
+  gpu_preferred:  {backends: [kaggle, github_runner], what: "GPU if quota allows, else the CPU path (the script must support both). Refused for an ml_bakeoff whose learners are all CPU-only (it would burn GPU quota for nothing): use compute: auto"}
 
 # Dispatcher-wide ceilings. The per-backend max_concurrent above is the ONE capacity statement per backend;
 # these bound the sum, so research can never saturate the runner pool a system-action waits in.
@@ -97,7 +106,7 @@ classes:
 #   the waiting units (5) were routed to `trainer` (cap 1, compute_spare saturated, deliberately unchanged).
 #   research-script-run.yml's concurrency group is per-unit, so --max-fires-per-workflow=1 does not throttle it.
 limits:
-  max_total_inflight: 7        # runner 3 + runner_data 2 + trainer 1 + kaggle 1
+  max_total_inflight: 8        # runner 3 + runner_data 2 + trainer 1 + kaggle 1 + kaggle_cpu 1
   max_repo_queued: 10          # unchanged from the dispatcher's flag default
 
 # Value ranking. score = usd_per_month * confidence * bucket_boost * hand_written_boost * age_boost / cost
