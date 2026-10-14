@@ -90,6 +90,10 @@ on:
           answer yet, so its numbers must never be read as a test result.
         required: false
         default: ""
+      cells:
+        description: 'GEOM-CELLS-INPUT. JSON list of {"leg": "<leg>", "lever": "giveback_stop|trail_decay|stale_stop|trail_geometry", "tag": "<cell name>", "params": {"giveback_r": 0.8, ...}} -- census-keyed cells (RQ-20261014-9807-04). Non-empty REPLACES the fixed grid: ONLY these cells run (plus the config-exact base). Unknown leg / lever / param, or a leg named here that is not in `legs`, FAILS the run. Empty = the ordinary grid, unchanged. Cannot be combined with without_declared_levers.'
+        required: false
+        default: ''
       without_declared_levers:
         description: "LEVER-OFF ARM. CSV of declared levers (stale_stop,giveback_stop,trail_decay,vol_trail) to REMOVE from each leg's config-exact base, measuring ONE cell that puts each back at the leg's own live values. Empty = the ordinary arm. This is the only way to grade a SHIPPED lever: the shipped lever IS the base, so a normal cell reproducing it measures the base against itself — 31 of 860 corpus rows are exactly that, all-zero deltas labelled `is_oos_fail`/`insufficient_base` (BL-20260813-SWEEP-GRADES-SHIPPED-LEVERS-AGAINST-THEMSELVES). trail_geometry is not offerable: trail_mult has no OFF state."
         required: false
@@ -159,6 +163,7 @@ jobs:
         if: steps.gate.outputs.proceed == 'true'
         env:
           LEGS: ${{ inputs.legs }}
+          CELLS: ${{ inputs.cells }}
         run: |
           python3 - <<'PY' >> "$GITHUB_OUTPUT"
           import json, os, sys, yaml
@@ -238,6 +243,21 @@ jobs:
           unclassified = [s for s in sel if classify(s) is None]
           if unclassified:
               print(f"::error::legs with no family/harness: {unclassified}",
+                    file=sys.stderr)
+              raise SystemExit(1)
+          # GEOM-CELLS-INPUT: validate `cells` here so a bad spec fails the plan
+          # job before any leg fetches frames, and a cell naming a leg that is
+          # not being swept fails rather than quietly running zero cells for it.
+          from m20_fleet_exit_sweep import parse_cells_spec
+          try:
+              _cells = parse_cells_spec(os.environ.get("CELLS", ""), declared)
+          except ValueError as e:
+              print(f"::error::cells refused: {e}", file=sys.stderr)
+              raise SystemExit(1)
+          _not_swept = sorted({c["leg"] for c in _cells
+                               if c["leg"] and c["leg"] not in sel})
+          if _not_swept:
+              print(f"::error::cells name legs not in this sweep: {_not_swept}",
                     file=sys.stderr)
               raise SystemExit(1)
           out = [{"leg": s, "family": classify(s),
@@ -347,6 +367,7 @@ jobs:
           # rather than silently changing it.
           SPLIT_TARGET_OOS: ${{ inputs.split_target_oos }}
           WITHOUT: ${{ inputs.without_declared_levers }}
+          CELLS: ${{ inputs.cells }}
         run: |
           set -o pipefail
           # The CLI takes --without-declared-lever REPEATABLY (argparse append),
@@ -374,6 +395,7 @@ jobs:
             ${FEE_BPS:+--fee-bps-roundtrip "${FEE_BPS}"} \
             ${MIN_CONF:+--min-confidence-override "${MIN_CONF}"} \
             ${LEVERS:+--levers "${LEVERS}"} \
+            ${CELLS:+--cells "${CELLS}"} \
             "${WDL_ARGS[@]}" \
             --out "out/${LEG}" 2>&1 | tee sweep.out
 
