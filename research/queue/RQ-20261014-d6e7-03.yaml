@@ -29,13 +29,18 @@ power:
   min_detectable_effect: 0.05
   effect_units: metric
   sd: 0.8
-  design: paired
+  design: one_sample
   alpha: 0.05
   power: 0.8
   basis: >-
-    Paired per OOS trade (policy net R - bracket net R, same trade). sd of the paired difference ~0.8 R (INFERRED: early exits
-    move a trade by up to 1 + K R); 0.05 R needs (2.80 x 0.8 / 0.05)^2 = 2,007 trades -- at the edge of the ~1,500-2,000 OOS trades,
-    so an INDETERMINATE is a live outcome and is stated as such.
+    One-sample test on the PAIRED per-trade difference (policy net R - bracket net R, same OOS trade). sd of the paired difference
+    ~0.8 R (INFERRED: early exits move a trade by up to 1 + K R); 0.05 R needs (2.80 x 0.8 / 0.05)^2 = 2,007 trades -- at the edge
+    of the ~1,500-2,000 OOS trades, so an INDETERMINATE is a live outcome and is stated as such.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Committed ledgers + public candles; nothing accrues. n is set by the corpus the census RQ-20261014-d6e7-01 re-walks: 3,926
+      trades passed the MFE control in the lane authoring read of 2026-10-14; the OOS non-timeout share of those is the unit.
 decision_rule:
   id: RULE-RQ20261014-D6E7-03-EXIT-POLICY-NET
   registered_at: '2026-10-14'

@@ -7,6 +7,13 @@ cadence: once
 theme: live_strategy
 priority: 1
 kind: deterministic
+why_not_inferential: >-
+  This is a census of a FIXED population, not a sample estimate: every trade in the newest committed ledger of every USDT leg is
+  re-walked over public historical candles that do not change, and the record reports population quantities (first-passage shares,
+  the turn-oracle saving, the bracket's net R per capital-day). The same inputs give the same numbers on every run, and the rule
+  compares a population mean to fixed bars; it makes no claim about trades outside the corpus. It sizes the prize and fixes the
+  label for the inferential rungs, which carry their own power and bootstrap CIs (RQ-20261014-d6e7-02..05). The power block is
+  context for the population size.
 question: >-
   On the committed per-trade ledgers re-walked bar by bar over public candles (Fixed-bracket reconstruction: each trade in the
   newest committed ledger per USDT leg is re-walked bar by bar over public Binance Vision candles from its entry bar, with the
@@ -109,5 +116,6 @@ related:
 - docs/research/programmes/02-AI-TRADER.md (Q3)
 - scripts/research/first_passage.py
 - EXIT-PATH-EMIT-OFFLINE
-- RQ-20261014-da7a-01 (PR #18112: is SL-first on a shared bar a material label error -- this unit's labels use SL-first)
+- >-
+  RQ-20261014-da7a-01 (PR #18112: is SL-first on a shared bar a material label error -- this unit's labels use SL-first)
 last_dispatched_at: null

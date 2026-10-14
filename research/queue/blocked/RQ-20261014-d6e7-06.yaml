@@ -21,13 +21,13 @@ power:
   min_detectable_effect: 0.05
   effect_units: metric
   sd: 0.8
-  design: paired
+  design: one_sample
   alpha: 0.05
   power: 0.8
   basis: >-
-    Paired per trade; the real-money 4h/2h legs carry ~50-120 trades each per committed ledger (46-232, MEASURED 2026-10-14 from
-    the newest ledgers), so per leg this is underpowered for 0.05 R and the rule pools within family; per-leg rows are reported
-    with their n.
+    One-sample test on the paired per-trade difference; the real-money 4h/2h legs carry ~50-120 trades each per committed ledger
+    (46-232, MEASURED 2026-10-14 from the newest ledgers), so per leg this is underpowered for 0.05 R and the rule pools within
+    family; per-leg rows are reported with their n.
   feasibility:
     source: none
     accrual_basis: Harness re-runs; nothing accrues. Blocked on the emit.

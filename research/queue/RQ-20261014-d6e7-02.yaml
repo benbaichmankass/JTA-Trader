@@ -37,6 +37,11 @@ power:
     Unit = OOS test trade (its bar events share one weight). ~3,000 trades after the control, timeouts excluded from the label,
     4 of 5 time blocks tested -> ~1,500-2,000 OOS trades (estimate). A 0.1 sd per-trade log-loss gain needs ~785; the 300 floor
     in the rule is a floor.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Committed ledgers + public candles; nothing accrues. n is set by the corpus the census RQ-20261014-d6e7-01 re-walks: 3,926
+      trades passed the MFE control in the lane authoring read of 2026-10-14; the OOS non-timeout share of those is the unit.
 decision_rule:
   id: RULE-RQ20261014-D6E7-02-SIMPLE-STATE-VS-DISTANCE
   registered_at: '2026-10-14'
@@ -108,5 +113,6 @@ related:
 - docs/research/programmes/02-AI-TRADER.md (Q3)
 - scripts/research/first_passage.py
 - EXIT-PATH-EMIT-OFFLINE
-- RQ-20261014-da7a-01 (PR #18112: is SL-first on a shared bar a material label error -- this unit's labels use SL-first)
+- >-
+  RQ-20261014-da7a-01 (PR #18112: is SL-first on a shared bar a material label error -- this unit's labels use SL-first)
 last_dispatched_at: null
