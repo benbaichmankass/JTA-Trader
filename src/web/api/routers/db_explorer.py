@@ -292,6 +292,185 @@ def db_tables(
     }
 
 
+# ---------------------------------------------------------------------------
+# /db/overview — summary + health per database (DATA-EXPLORER, 2026-10-14)
+# ---------------------------------------------------------------------------
+# Same gate and same exposure contract as the rest of this file: only
+# allowlisted tables are reported, both DBs are opened ``mode=ro``, and nothing
+# below reads a column VALUE other than one timestamp per table.
+#
+# Every figure carries its own read-state, because a count that reads 0 may mean
+# "we could not look" (CLAUDE.md, collapsed states): ``rows`` is ``None`` with
+# ``rowsState: "count_failed"`` when the COUNT raised, ``empty`` is ``None`` then
+# too, and a DB that is not on disk is ``present: False`` -- never zero tables.
+#
+# NOT provided (and said so rather than faked): 24 h / 7 d growth, and a STALE
+# verdict. Growth needs a per-table timestamp encoding this file cannot assume
+# (BL-20260730-TRADES-TIMESTAMP-FORMAT-MIXED), and "stale" needs a declared
+# writer cadence per table that does not exist. ``ageSeconds`` is the raw fact.
+_TS_COLUMN_CANDIDATES: Tuple[str, ...] = (
+    "updated_at", "created_at", "timestamp", "ts", "recorded_at", "generated_at",
+    "closed_at", "opened_at", "finished_at", "started_at", "time", "date",
+)
+_OVERVIEW_SWR = None  # built lazily so importing this module stays cheap
+
+
+def _parse_any_ts(value: Any) -> Optional[Any]:
+    """An aware UTC datetime from ISO text, 'YYYY-MM-DD HH:MM:SS', epoch seconds
+    or epoch milliseconds -- or None when the value is none of those."""
+    from datetime import datetime, timezone  # noqa: PLC0415
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        v = float(value)
+        if v <= 0:
+            return None
+        if v > 1e11:  # epoch milliseconds
+            v /= 1000.0
+        try:
+            return datetime.fromtimestamp(v, tz=timezone.utc)
+        except (OverflowError, OSError, ValueError):
+            return None
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        d = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        try:
+            return _parse_any_ts(float(text))
+        except ValueError:
+            return None
+    return d if d.tzinfo else d.replace(tzinfo=timezone.utc)
+
+
+def _table_overview(conn: sqlite3.Connection, name: str, label: str, now: Any) -> Dict[str, Any]:
+    cols = [c["name"] for c in _columns(conn, name)]
+    try:
+        count: Optional[int] = conn.execute(f'SELECT COUNT(*) FROM "{name}"').fetchone()[0]
+        rows_state = "read"
+    except sqlite3.Error:  # allow-silent: surfaced as rowsState "count_failed" (rows None), never as 0
+        logger.exception("db_overview: COUNT failed for %s", name)
+        count, rows_state = None, "count_failed"
+    ts_col = next((c for c in _TS_COLUMN_CANDIDATES if c in cols), None)
+    newest, newest_state = None, "no_timestamp_column"
+    if count == 0:
+        newest_state = "empty"
+    elif ts_col is not None:
+        try:
+            # Highest rowid = newest INSERTED row. Deliberately not MAX(ts): these
+            # columns mix encodings, so a string MAX can pick the wrong row.
+            raw = conn.execute(
+                f'SELECT "{ts_col}" FROM "{name}" ORDER BY rowid DESC LIMIT 1'
+            ).fetchone()
+            parsed = _parse_any_ts(raw[0]) if raw else None
+            if parsed is None:
+                newest_state = "unparseable" if raw and raw[0] is not None else "null_value"
+            else:
+                newest, newest_state = parsed, "read"
+        except sqlite3.Error:  # allow-silent: surfaced as newestRowState "error"; the table still reports its count
+            logger.exception("db_overview: newest-row read failed for %s", name)
+            newest_state = "error"
+    return {
+        "name": name, "db": label, "rows": count, "rowsState": rows_state,
+        "empty": (count == 0) if count is not None else None,
+        "columnCount": len(cols),
+        "newestRowColumn": ts_col,
+        "newestRowAt": newest.strftime("%Y-%m-%dT%H:%M:%SZ") if newest else None,
+        "newestRowState": newest_state,
+        "ageSeconds": max(0, int((now - newest).total_seconds())) if newest else None,
+    }
+
+
+def _db_overview(label: str, path: Path, integrity: str, now: Any) -> Dict[str, Any]:
+    out: Dict[str, Any] = {"db": label, "file": path.name, "present": path.exists()}
+    if not out["present"]:
+        out.update({"readState": "missing", "tables": [], "sizeBytes": None, "walBytes": None,
+                    "journalMode": None, "integrity": {"state": "not_checked", "result": None}})
+        return out
+    try:
+        out["sizeBytes"] = path.stat().st_size
+    except OSError:  # allow-silent: surfaced as sizeBytes None, not 0
+        out["sizeBytes"] = None
+    wal = Path(f"{path}-wal")
+    try:
+        out["walBytes"] = wal.stat().st_size if wal.exists() else 0
+    except OSError:  # allow-silent: surfaced as walBytes None, not 0
+        out["walBytes"] = None
+    try:
+        conn = _connect(path)
+    except sqlite3.Error as exc:
+        logger.exception("db_overview: open failed for %s", path)
+        out.update({"readState": "unreadable", "reason": type(exc).__name__, "tables": [],
+                    "journalMode": None, "integrity": {"state": "not_checked", "result": None}})
+        return out
+    try:
+        try:
+            out["journalMode"] = conn.execute("PRAGMA journal_mode").fetchone()[0]
+        except sqlite3.Error:  # allow-silent: surfaced as journalMode None
+            out["journalMode"] = None
+        if integrity == "quick":
+            try:
+                res = conn.execute("PRAGMA quick_check").fetchone()[0]
+                out["integrity"] = {"state": "ok" if res == "ok" else "failed", "result": res}
+            except sqlite3.Error as exc:  # allow-silent: surfaced as integrity state "error"
+                out["integrity"] = {"state": "error", "result": type(exc).__name__}
+        else:
+            out["integrity"] = {"state": "not_requested", "result": None}
+        try:
+            out["tables"] = [_table_overview(conn, n, label, now) for n in _list_tables(conn)]
+            out["readState"] = "read"
+        except sqlite3.Error as exc:  # allow-silent: surfaced as readState "unreadable" + reason, never as zero tables
+            logger.exception("db_overview: table listing failed for %s", path)
+            out.update({"readState": "unreadable", "reason": type(exc).__name__, "tables": []})
+    finally:
+        conn.close()
+    return out
+
+
+def _overview_payload(integrity: str) -> Dict[str, Any]:
+    from datetime import datetime, timezone  # noqa: PLC0415
+    now = datetime.now(timezone.utc)
+    _federated_dbs()  # refreshes the trainer-store sidecar from the mirror, as /db/tables does
+    dbs = [_db_overview(lbl, p, integrity, now)
+           for lbl, p in ((_DB_TRADE_JOURNAL, _DB_PATH), (_DB_TRAINER_STORE, _TRAINER_STORE_DB))]
+    tables = [t for d in dbs for t in d["tables"]]
+    return {
+        "present": any(d["present"] for d in dbs),
+        "generatedAt": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "dbs": dbs,
+        "summary": {
+            "tables": len(tables),
+            "emptyTables": sum(1 for t in tables if t["empty"] is True),
+            "unknownRowCount": sum(1 for t in tables if t["rows"] is None),
+            "dbsUnreadable": sum(1 for d in dbs if d["present"] and d["readState"] != "read"),
+            "dbsMissing": sum(1 for d in dbs if not d["present"]),
+        },
+        "notProvided": ["growth_24h_7d", "stale_verdict"],
+    }
+
+
+@router.get("/db/overview")
+def db_overview(
+    integrity: str = Query("off", pattern="^(off|quick)$"),
+    _session: dict = Depends(require_session),
+) -> Dict[str, Any]:
+    """Per database: size, WAL size, journal mode, optional integrity check; per
+    allowlisted table: row count, empty flag, newest-row timestamp + age.
+
+    ``integrity=quick`` runs ``PRAGMA quick_check`` (can be slow on the 2M-row
+    journal), so it is opt-in and the default reports ``not_requested`` -- which
+    is not ``ok``. Session-gated exactly like ``/db/tables``.
+    """
+    global _OVERVIEW_SWR  # noqa: PLW0603
+    if _OVERVIEW_SWR is None:
+        from src.web.api._swr import SWRCache  # noqa: PLC0415
+        _OVERVIEW_SWR = SWRCache(name="db-overview", fresh_s=60.0, stale_s=600.0)
+    key = (integrity, str(_DB_PATH), str(_TRAINER_STORE_DB))
+    data, _age, _state = _OVERVIEW_SWR.get(key, lambda: _overview_payload(integrity))
+    return data
+
+
 @router.get("/db/table/{table}")
 def db_table(
     table: str,
