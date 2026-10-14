@@ -101,9 +101,12 @@ jobs:
           scrub() { sed "s|$USERNAME|<user>|g"; }
           python3 scripts/research/market_data_export.py build --src /tmp/src --out /tmp/stage --username "$USERNAME" | tee /tmp/build.json
           if kaggle datasets status "$USERNAME/metis-market-data" >/dev/null 2>&1; then
-            kaggle datasets version -p /tmp/stage -r zip -m "export $(date -u +%Y-%m-%dT%H:%MZ) run ${GITHUB_RUN_ID}" 2>&1 | scrub | grep -v "it/s\|B/s" | tail -5
+            # The CLI can exit non-zero while the dataset is still being created/versioned (observed 2026-10-14, run
+            # 38503995602: upload OK, "Your private Dataset is being created", exit 1). The exit code is NOT the verdict;
+            # the `ready` poll below is. `|| true` also covers the pipeline's pipefail under bash -e.
+            kaggle datasets version -p /tmp/stage -r zip -m "export $(date -u +%Y-%m-%dT%H:%MZ) run ${GITHUB_RUN_ID}" 2>&1 | scrub | grep -v "it/s\|B/s" | tail -5 || true
           else
-            kaggle datasets create -p /tmp/stage -r zip 2>&1 | scrub | grep -v "it/s\|B/s" | tail -5
+            kaggle datasets create -p /tmp/stage -r zip 2>&1 | scrub | grep -v "it/s\|B/s" | tail -5 || true
           fi
           READY=0
           for i in $(seq 1 80); do
