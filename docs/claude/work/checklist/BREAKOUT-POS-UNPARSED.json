@@ -9,10 +9,12 @@
   "ceiling_usd": 15,
   "spend_usd": null,
   "tier": 2,
-  "prs": [],
+  "prs": [
+    18099
+  ],
   "blocked_on": [],
-  "note": "[2026-10-14T20:55Z manager session_01VduHYzdaXe27wTDBLSu8ao] Operator installed APK 1b.188 (~20:50Z). MEASURED 20:50:43Z /api/bot/prop/status?account_id=breakout_2: positions_state went no_tab -> unparsed; phone_positions_diag.headers = [Market, UP&L, Side, Value, Opening price, Current price, TP / SL, Net P&L] (the tab-badge fix in #18081 works). exec.js finishRead returns unparsed when a row lacks one of need=[symbol, side, qty] (qty is DERIVED from Value / Current price since the grid has no size column). Row content is not in the diag (masked), so the failing field is unknown. Journal still holds f6552263ed1d open ESTIMATED (fill 124).",
-  "updated_at": "2026-10-14T20:51:46Z",
+  "note": "[2026-10-14T20:55Z manager session_01VduHYzdaXe27wTDBLSu8ao] Operator installed APK 1b.188 (~20:50Z). MEASURED 20:50:43Z /api/bot/prop/status?account_id=breakout_2: positions_state went no_tab -> unparsed; phone_positions_diag.headers = [Market, UP&L, Side, Value, Opening price, Current price, TP / SL, Net P&L] (the tab-badge fix in #18081 works). exec.js finishRead returns unparsed when a row lacks one of need=[symbol, side, qty] (qty is DERIVED from Value / Current price since the grid has no size column). Row content is not in the diag (masked), so the failing field is unknown. Journal still holds f6552263ed1d open ESTIMATED (fill 124). [2026-10-14T21:01Z lane session_01MVZPxo89875YXd2zz6xivJ] LIKELY ROOT CAUSE (reproduced in Chromium; not yet confirmed live because the diag masks row text): innerText glues adjacent inline spans, so <span>Short</span><span>20x</span> reads as 'Short20x' and \\bshort\\b misses the side, giving unparsed. FIX in PR #18099 (draft, Tier 2, landing hold): side and symbol words are read from text nodes joined with spaces, and a misread mark (more than 2x from entry) never divides Value for qty. An unparsed miss now posts detail (which need key was missing) plus the first failing row's digit-masked key:shape cells in phone_positions_diag.cells. State: NOT merged, NOT deployed, NOT observed. Closes on: positions_state=read with the ETH short listed, and fill 124 MEASURED, after the new APK is installed.",
+  "updated_at": "2026-10-14T21:00:30Z",
   "updated_by": "session_01VduHYzdaXe27wTDBLSu8ao",
   "roadmap": [
     "L-PROP"
