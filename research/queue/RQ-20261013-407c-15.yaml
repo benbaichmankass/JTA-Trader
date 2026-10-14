@@ -2,7 +2,7 @@ id: RQ-20261013-407c-15
 title: >-
   Session/time-of-day, ada_pullback_2h: does skipping one pre-registered UTC session block (Asia 00-07, US-open 12-16, late
   20-23) beat the declared entry net of the full cost stack?
-status: queued
+status: done
 cadence: once
 theme: regime
 priority: 3
@@ -117,8 +117,6 @@ lands:
   note: >-
     research/results/RQ-20261013-407c-15/<run_id>.jsonl (E5 contract via the batch collector); per-arm harness summaries,
     trade ledgers, exact argv and verdict.json under comms/research/RQ-20261013-407c-15/<run_id>/.
-grading:
-  auto: true
 roadmap:
 - L-REGIME
 related:
@@ -132,3 +130,13 @@ related:
 - RQ-20261013-407c-14
 - RQ-20261013-407c-19
 last_dispatched_at: '2026-10-14T00:24:52+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-20261013407C15-SESSION
+  evidence:
+  - research/results/RQ-20261013-407c-15/38488354126.jsonl
+  graded_at: '2026-10-14'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

@@ -2,7 +2,7 @@ id: RQ-20261013-407c-02
 title: >-
   Entry depth, ada_pullback_2h: does a deeper or shallower pullback_frac (0.382, 0.618, 0.75 vs the declared value) beat the
   declared entry net of the full cost stack? (M21 depth_threshold column = pending)
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -117,8 +117,6 @@ lands:
   note: >-
     research/results/RQ-20261013-407c-02/<run_id>.jsonl (E5 contract via the batch collector); per-arm harness summaries,
     trade ledgers, exact argv and verdict.json under comms/research/RQ-20261013-407c-02/<run_id>/.
-grading:
-  auto: true
 roadmap:
 - M21
 related:
@@ -126,3 +124,13 @@ related:
 - scripts/research/exit_lever_ablation.py
 - docs/research/entry-refinement-coverage.json
 last_dispatched_at: '2026-10-13T19:18:07+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-20261013407C02-DEPTH
+  evidence:
+  - research/results/RQ-20261013-407c-02/38449810060.jsonl
+  graded_at: '2026-10-14'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
