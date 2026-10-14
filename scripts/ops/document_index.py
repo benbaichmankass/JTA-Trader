@@ -320,6 +320,17 @@ STATUS_EXPLICIT: Dict[str, Tuple[str, str, str]] = {
         "read:AI-TRADER-PROGRAMME-lane-authored-and-measured-it-2026-10-14",
         "research programme of record for G4; re-measured by the weekly roadmap pass",
     ),
+    # Written 2026-10-14 by lane P4-MACRO-PROGRAMME, the same session that read
+    # every figure in it (the 13 landed event-study results, the PM-surprise and
+    # WEPE G3 results, thesis_p4_scorecard via the MACRO-RESHAPE note, the
+    # survey-backfill release counts, config/accounts.yaml), each MEASURED or
+    # marked UNVERIFIED. Plan of record for M28/M29 (programme P4); goes
+    # `superseded` when a later weekly pass rewrites it under a new file.
+    "docs/research/programmes/04-MACRO-SLEEVE.md": (
+        "live",
+        "read:P4-MACRO-PROGRAMME-lane-authored-and-measured-it-2026-10-14",
+        "research programme of record for M28/M29 (P4); re-measured by the weekly roadmap pass",
+    ),
     "docs/research/SIGNALS-CATALOG.md": (
         "live",
         "read:AI-TRADER-PROGRAMME-lane-authored-and-measured-it-2026-10-14",

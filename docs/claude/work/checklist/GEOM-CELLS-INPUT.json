@@ -2,20 +2,36 @@
   "id": "GEOM-CELLS-INPUT",
   "title": "m20-exit-lever-sweep.yml: accept a census-keyed 'cells' input (unblocks RQ-20261014-9807-04)",
   "phase": "research-infra",
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager (dispatch by capacity)",
   "lane": "session_01WzkFeZ7iDz8aXpavBZSz2o",
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 8,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
-  "blocked_on": [],
-  "note": "[2026-10-14 manager] Decision (a) from RESEARCH-PROGRAMMES (#18012). Blocked unit RQ-20261014-9807-04 (census-keyed giveback cells) needs m20-exit-lever-sweep.yml to take a 'cells' input naming (leg, lever, param) cells chosen by the giveback census RQ-20261014-9807-01, instead of the full grid. Tier-1 workflow/harness input only; no config or order path. Done when: a dispatch with cells=<json> runs only those cells and the unit's clears_when is met. Programme P1 (docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md). [2026-10-14T18:09Z manager session_01VduHYzdaXe27wTDBLSu8ao] Dispatched: Sonnet (build lane, no order path), fresh (spec is on the row), ceiling $8.",
-  "updated_at": "2026-10-14T18:09:17Z",
-  "updated_by": "session_01VduHYzdaXe27wTDBLSu8ao",
+  "prs": [
+    18063,
+    18064,
+    18070,
+    18071
+  ],
+  "blocked_on": [
+    "RQ-20261014-9807-01 (census result is producer_failed; 9807-04 stays blocked until it lands)"
+  ],
+  "note": "[2026-10-14 lane] 9807-01 root cause (trainer repro, diag #18067/#18069): giveback_census excluded every measured row (peak_state \"measured\" read as an absent-peak reason -> no_data) and then wrote population.n=0, which research_result refuses -> exit 1. Fix PR #18070 (self-land); re-arm of the unit (clear last_dispatched_at) is hold PR #18071, merge after #18070. 9807-04 stays blocked until 9807-01 lands a measured result. [2026-10-14T18:09Z manager session_01VduHYzdaXe27wTDBLSu8ao] Dispatched: Sonnet (build lane, no order path), fresh (spec is on the row), ceiling $8.",
+  "updated_at": "2026-10-14T18:26:32Z",
+  "updated_by": "session_01WzkFeZ7iDz8aXpavBZSz2o",
   "roadmap": [
     "L-ATM"
   ],
+  "writeback": {
+    "roadmap": "none: harness/workflow input only; L-ATM milestone unchanged until a cells= run lands",
+    "arch": "none: no architecture contract changed (m20 sweep workflow input)"
+  },
+  "observation": {
+    "what": "a dispatch of m20-exit-lever-sweep.yml with cells=<json> ran only those cells (RQ-20261014-9807-04, once its census lands)",
+    "how_to_check": "open the m20-exit-lever-sweep run for RQ-20261014-9807-04; the per-leg SUMMARY lists exactly the named cell tags",
+    "due_by": "2026-10-28T00:00Z"
+  },
   "_seq": 489
 }
