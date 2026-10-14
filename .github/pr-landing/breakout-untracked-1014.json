@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "BREAKOUT-UNTRACKED-1014 (operator 2026-10-14 ~18:38Z: 'a trade it placed but isn't tracking'). Tier 2 by path: src/prop/** and src/web/api/routers/prop.py ship to the live trader / web-api, and the phone-executor APK (exec.js + MainActivity.kt) runs on the prop execution phone. No order is placed, cancelled or amended by any change here: exec.js only widens TAB matching (a count badge glued to the label), the Kotlin change adds a read-only Positions grid check to the post-submit CONFIRM (the flatten path is untouched), the server runs the existing idempotent stale-claim watchdog from /phone/pending, keys fill inference off the go-token time, and sends one alert. Lane is told the manager merges.",
+  "why": "breakout_2 ETH short (ticket prop-manual-f6552263ed1d) open ~5 h untracked: (1) 'Positions1' badge defeated every Positions read (no_tab), (2) the stale-claim watchdog only ran on /phone/claim, which the backgrounded app never calls, (3) fill_inference keyed bars off the late journal write, (4) positions_miss is quiet, so no alert reached the operator."
+}

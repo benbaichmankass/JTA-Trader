@@ -4,7 +4,7 @@
 
 **Operator intent (weekly planning 2026-10-14, agreed verbatim):** research is the main focus. One long-term plan per goal, a deep roster of well-researched tests and models — not a filled queue. Programmes are **mutually supportive**: the AI trader is fed every test result; strategy improvement and frontier work inform active management. **Headline measure: net P&L per capital-day, in R and in $, per strategy (every leg pulls its own weight) and at portfolio level, weighted.** Top pain point: **giveback**. Brackets are **predictions** — the TP is where we expect price to reach, the SL is where we stop waiting.
 
-How this fits the work system: a programme is a *plan*, not a third category of work (CLAUDE.md § "Two categories"). Each question below becomes a `research/queue/` unit and each build a checklist row, every one carrying a `roadmap` milestone ref. Full plan per programme: `01-ACTIVE-TRADE-MANAGEMENT.md`, `02-AI-TRADER.md`, `03-STRATEGY-IMPROVEMENT.md`, `04-MACRO-SLEEVE.md` (landed 2026-10-14, lane P4-MACRO-PROGRAMME); `05` is owed and listed at the end.
+How this fits the work system: a programme is a *plan*, not a third category of work (CLAUDE.md § "Two categories"). Each question below becomes a `research/queue/` unit and each build a checklist row, every one carrying a `roadmap` milestone ref. Full plan per programme: `01-ACTIVE-TRADE-MANAGEMENT.md`, `02-AI-TRADER.md`, `03-STRATEGY-IMPROVEMENT.md` (lane P3-STRATEGY-PROGRAMME), `04-MACRO-SLEEVE.md` (lane P4-MACRO-PROGRAMME) and `05-PROP.md` (lane P5-PROP-PROGRAMME) are all landed (2026-10-14); none is owed.
 
 ## 1. The five programmes, in order
 
@@ -79,8 +79,8 @@ How this fits the work system: a programme is a *plan*, not a third category of 
 | weekly (Wed) | this map re-read against the measured state; re-weight `THEMES.yaml`; the next programme doc lands | WEEKLY-PLANNING |
 | weekly (Sun) | `/ml-review` step 9 (ML plan loop) + frontier scan feed P2 | ML-ROADMAP-LOOP |
 
-## 6. Owed (not landed by this lane)
+## 6. Landed programmes (nothing owed)
 
 **Landed since:** `02-AI-TRADER.md` (#18015, lane AI-TRADER-PROGRAMME); `03-STRATEGY-IMPROVEMENT.md` (lane P3-STRATEGY-PROGRAMME, 2026-10-14: Stage-0 capital-day census `RQ-20261014-470a-11`, 11 runnable units `470a-01..11` incl. the fresh-window confirmation `470a-01` of `RQ-20261014-f0e2-05`, and the pairs R-scale finding, row `PAIRS-R-SCALE` + `blocked/RQ-20261014-470a-12`); `04-MACRO-SLEEVE.md` (2026-10-14, lane P4-MACRO-PROGRAMME): Q1..Q7, first-two-week units `RQ-20261014-4a4c-01..08` (runnable) + `blocked/RQ-20261014-4a4c-09`, and `RQ-20260928-010` re-scoped. P4's § 4 infra line is refined there: the event join has no caller in the *offline* replay either (`RQ-20260928-009`), and `macro-valuation-backfill.yml` lands no E5 record (`MACRO-BACKFILL-E5`).
 
-Still owed: `05-PROP.md`, in the shape of `01-ACTIVE-TRADE-MANAGEMENT.md` (goal + measure, questions in dependency order, a test ladder per question, a 3–4 week backlog, the first two weeks as queue units). P5's seed is rows B6 / PROP-EXIT-READ, plus P3's census grading both prop legs `drag` on fold consistency (2/4).
+`05-PROP.md` landed 2026-10-14 (lane P5-PROP-PROGRAMME): Q1..Q7, first-two-week units `RQ-20261014-f516-01..10` (runnable) + `blocked/RQ-20261014-f516-11`; P3's census grades both prop legs `drag` on fold consistency (2/4), a P5 input. **Nothing is owed:** all five programmes (01..05) are landed. Each is re-read weekly against the measured state (§ 5, WEEKLY-PLANNING).
