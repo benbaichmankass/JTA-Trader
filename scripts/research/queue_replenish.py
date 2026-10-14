@@ -275,6 +275,11 @@ def render(tpl: Dict[str, Any], tpl_path: str, tpl_sha: str, params: Dict[str, A
         unit["theme"] = str(tpl["theme"])
     if tpl.get("priority") is not None:
         unit["priority"] = int(tpl["priority"])
+    if tpl.get("roadmap"):
+        # roadmap-map-guard (CLAUDE.md "The roadmap loop"): every new queue unit carries a
+        # milestone ref. RESEARCH-PIPE-UNSTICK 2026-10-14: generated units had none, so every
+        # replenish PR failed `guards`.
+        unit["roadmap"] = [str(m) for m in tpl["roadmap"]] if isinstance(tpl["roadmap"], list) else str(tpl["roadmap"])
     if tpl.get("why_not_inferential"):
         unit["why_not_inferential"] = _fill(tpl["why_not_inferential"], p)
     unit["question"] = _fill(tpl["question"], p)
@@ -592,10 +597,22 @@ def _self_test() -> int:
     # (#13950, 2026-09-29) filled the queue to exactly 25 and this self-test,
     # planning at target 25, then failed the guard on that very PR.
     live_have = len(runnable(existing_units(root)[0]))
-    p1 = plan(root, day="2030-01-01", target=live_have + 3)
-    p2 = plan(root, day="2030-01-01", target=live_have + 3)
+    # The live grids are FINITE: once every point has been minted, `plan` on the live queue
+    # returns nothing and asserting otherwise fails the guard on the very replenish PR that
+    # mints the last point (RESEARCH-PIPE-UNSTICK 2026-10-14). So the template/grid check
+    # runs against the live templates+config over an EMPTY queue; exhaustion of the live
+    # grids is a queue-floor finding for research-ops, not a broken template.
+    with tempfile.TemporaryDirectory() as td_empty:
+        er = Path(td_empty)
+        (er / "research").mkdir()
+        (er / "research" / "queue").mkdir()
+        (er / TEMPLATES).symlink_to(root / TEMPLATES)
+        for sub in ("config", "comms"):
+            (er / sub).symlink_to(root / sub)
+        p1 = plan(er, day="2030-01-01", target=25)
+        p2 = plan(er, day="2030-01-01", target=25)
     assert [u["text"] for u in p1["new_units"]] == [u["text"] for u in p2["new_units"]], "not deterministic"
-    assert p1["new_units"], "the live templates generate nothing -- a template or a grid source is broken"
+    assert p1["new_units"], "the live templates generate nothing from an empty queue -- a template or a grid source is broken"
     assert plan(root, day="2030-01-01", target=live_have)["new_units"] == [], "a full queue must generate nothing"
     # every generated unit is valid queue schema + a pre-registered rule
     from scripts.research.research_queue import validate, grade_power, grade_route
