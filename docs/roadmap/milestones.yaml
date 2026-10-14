@@ -218,7 +218,10 @@ milestones:
       Three prop accounts execute automatically (breakout_2 via the phone executor, tradeify_1 and velotrade_1 via DXtrade REST);
       ~30 'Stage-0 breadth for the prop book' units are queued. Open: per-leg sizing (PROP-PER-LEG-SIZING, PROP-PER-LEG-EV-GRID), the exit-price gap on
       venue SL/TP closes (PROP-EXIT-READ), ticket supersede/reissue (in flight), Tradeify other platforms.
-    next: Get the first prop closes gradable (PROP-EXIT-READ); then read the breadth units into a candidate pool; keep the EV question (B6) ahead of drawdown avoidance.
+    next: >-
+      Programme 05 (docs/research/programmes/05-PROP.md, 2026-10-14) is the plan: per-account EV baselines as configured (RQ-20261014-f516-01..03),
+      then sizing / per-leg / daily-DD-switch / breadth challengers against them (f516-04..10); live-vs-sim fidelity waits on gradable
+      closes (PROP-EXIT-READ, blocked/f516-11). Keep the EV question (B6) ahead of drawdown avoidance.
     architecture: ["Prop ticket flow"]
     owner: manager
     reviewed: 2026-10-11
