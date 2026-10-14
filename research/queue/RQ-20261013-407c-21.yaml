@@ -2,7 +2,7 @@ id: RQ-20261013-407c-21
 title: >-
   Volatility regime, trend_donchian_sol: does skipping entries in the HOT-vol tail (ATR percentile above 0.80/0.90/0.95) beat
   the declared entry net of the full cost stack?
-status: queued
+status: done
 cadence: once
 theme: regime
 priority: 3
@@ -123,8 +123,6 @@ lands:
   note: >-
     research/results/RQ-20261013-407c-21/<run_id>.jsonl (E5 contract via the batch collector); per-arm harness summaries,
     trade ledgers, exact argv and verdict.json under comms/research/RQ-20261013-407c-21/<run_id>/.
-grading:
-  auto: true
 roadmap:
 - L-REGIME
 related:
@@ -133,3 +131,13 @@ related:
 - docs/research/entry-refinement-coverage.json
 - RQ-20261013-407c-20
 last_dispatched_at: '2026-10-14T00:25:01+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-20261013407C21-VOLHOT
+  evidence:
+  - research/results/RQ-20261013-407c-21/38490084420.jsonl
+  graded_at: '2026-10-14'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

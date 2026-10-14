@@ -2,7 +2,7 @@ id: RQ-20261013-407c-01
 title: >-
   Entry depth, xrp_pullback_2h: does a deeper or shallower pullback_frac (0.382, 0.618, 0.75 vs the declared value) beat the
   declared entry net of the full cost stack? (M21 depth_threshold column = pending)
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -136,11 +136,11 @@ grading:
   confirmatory_run: 1
   decision_rule_id: RULE-20261013407C01-DEPTH
   evidence:
-  - research/results/RQ-20261013-407c-01/38449806765.jsonl
+  - research/results/RQ-20261013-407c-01/38497108603.jsonl
   first_fail: 1 row(s), all measured, all fail
   graded_at: '2026-10-14'
   grader: scripts/research/queue_grade.py
-  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
   reason: 1 row(s), all measured, all fail
   rows: 1
   verdict: fail
