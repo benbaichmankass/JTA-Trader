@@ -9,10 +9,12 @@
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    18015
+  ],
   "blocked_on": [],
   "note": "[2026-10-14 lane AI-TRADER-PROGRAMME] Operator (2026-10-14 weekly planning): the headline measure is net P&L per capital-day (R and $). MEASURED on main 2026-10-14: the quantity exists only inside src/runtime/hold_vs_cash.py (capital-days reasoning) and as the net_r_per_capital_day clause of config/mandates.yaml and a few queue units (RQ-20261010-002, RQ-20261005-813); no API route or brief section serves it per book. DEFINITION TO IMPLEMENT: sum of provenance-trustworthy net R (pnl_is_trustworthy; net of fee/funding where cost_source=broker, estimate otherwise, flagged) over a window, divided by capital-days = sum over days of deployed capital (account equity for a book; risk_usd-weighted exposure-days for a leg); USD twin uses net pnl. Render null as '-' with a read_state, never 0. Tier-1 read path. DONE WHEN: GET /api/bot/performance carries netPnlPerCapitalDay {r, usd, capital_days, read_state} per book, the daily brief section 4 quotes it, and a diag pull shows a non-null value for bybit_2 over the last 30 d.",
-  "updated_at": "2026-10-14T07:45:06Z",
+  "updated_at": "2026-10-14T08:02:13Z",
   "updated_by": "session_01QdFKBCgBQ5T8tfMvBjLVj3",
   "roadmap": [
     "L-LADDER",

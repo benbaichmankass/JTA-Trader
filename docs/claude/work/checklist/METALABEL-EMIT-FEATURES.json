@@ -9,10 +9,12 @@
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    18015
+  ],
   "blocked_on": [],
   "note": "[2026-10-14 lane AI-TRADER-PROGRAMME] WHY: the committed per-trade ledgers (comms/strategy_evidence/runs, 5,063 trades in the newest ledger per leg, 54 legs, MEASURED 2026-10-14) carry only confidence / direction / entry_time / regime_weight / adx_at_entry (null on ~96%). A meta-label head over ALL strategy signals (M23 revived, operator 2026-10-14) cannot be trained on test results until the emits carry the signals. SCOPE: one shared emit helper used by the trend/pullback/squeeze/fade/ict_scalp harnesses, columns named in docs/research/signals-catalog.yaml feeds.meta_label; keep every existing key byte-identical (build_strategy_evidence.py and build_exit_head_dataset.py read them); add mae_r while there (absent from every harness today). DONE WHEN: one fresh evidence run per family lands ledgers with the new columns non-null on >= 90% of rows, and RQ-20261014-9d20-05 (blocked/) moves to the queue. Unblocks the M23 P3 within-family test.",
-  "updated_at": "2026-10-14T07:41:16Z",
+  "updated_at": "2026-10-14T08:02:13Z",
   "updated_by": "session_01QdFKBCgBQ5T8tfMvBjLVj3",
   "roadmap": [
     "M23",
