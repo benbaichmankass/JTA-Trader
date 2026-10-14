@@ -88,12 +88,15 @@ The secondary head: *given this strategy's own signal, act or stand aside*. With
 
 Three exit heads on price features failed (ML-S2). The new information is the **peak-to-exit label** (how much of the in-trade peak was given back) and, once recorded, the **per-bar in-trade trajectory**. The ATM plan (parallel lane) owns the live levers; this programme owns the labels and the models.
 
+**Destination (amended 2026-10-14, lane `IN-TRADE-EXIT-MODEL`, operator direction verbatim on that row).** The exit line ends at an **in-trade first-passage model**: at every bar of an open trade, P(SL before TP | state now), and an exit-now rule (exit when E[R | hold] < R_now − cost) graded by net P&L per capital-day vs the fixed bracket, net of the full cost stack, out of sample. **Rung 3.1 (giveback predictable at entry) is a cheap first rung, not the destination** — even a PASS there leaves the operator's question ("if the momentum suddenly turns … are we going to hit the stop loss before the take profit?") unanswered, because that information arrives after entry. The ladder and its units live in `01-ACTIVE-TRADE-MANAGEMENT.md` § Q8 (`RQ-20261014-d6e7-01..06`); this programme owns the model rungs (8.2/8.4) and their learners. **Why ML-S2 failed and what differs:** the three heads were LightGBM on a per-trade "does holding pay" target, one leg/family at a time, ~20–120 OOS trades per fold; Q8 uses per-bar first-passage labels, a ~3,000-trade pooled corpus, a closed-form null (gambler's ruin) plus a calibrated distance-only reference so "learned where the trade is" cannot pass as information, and a linear model before any GBDT. Rung 3.3's lever is now filed: **`EXIT-PATH-EMIT-OFFLINE`** (Tier-1, offline harness `--emit-paths`, the priority) and **`EXIT-PATH-TELEMETRY-LIVE`** (Tier-2 proposal, live per-bar history). The bandit (3.4, `RQ-20261011-9da8-04`) consumes the **offline** emit.
+
 | rung | test | rule | unlock / retire | compute | carried by |
 |---|---|---|---|---|---|
 | 3.1 | **Is giveback predictable at entry?** Within-leg logit on the thin columns for `giveback_frac > 0.5`, plus the lift of keeping low-giveback trades | PASS/FAIL as 2.1 | PASS → an entry-conditioned bracket is the cheap exit model (route: `exit-refinement`); FAIL → the information is in-trade: route through the telemetry lever and the bandit | cpu_light | **`RQ-20261014-9d20-03`** (requires 0.3 PASS) |
 | 3.2 | Per-trade emits for the six live legs + `mfe_r` baselines per quantile (the corpus the bandit and the TP head need) | build | releases 3.4 and `TP-PREDICT-HEAD` | — | `ML-LEG-CORPUS` (row, queued) |
-| 3.3 | **Per-bar in-trade history**: `position_telemetry` as a time series (peak_r, open_r, bars_since_peak per bar) and `mae_r` in every harness emit | build; owned by the ATM plan if it names it, else filed by this programme in W3 | the exit model's in-trade feature set | — | lever named in § 6, W3 |
-| 3.4 | Offline contextual bandit over the exit-ladder arms (doubly-robust OPE) vs the best fixed ladder | n ≥ 150 and policy ≤ best fixed → retire | an arm-choosing exit policy (discrete, low variance) | cpu_long | `RQ-20261011-9da8-04` (blocked on 3.2) |
+| 3.3 | **Per-bar in-trade history**: offline harness path emit (stop/target in force per bar, open_r, peak_r, `mae_r`, bars_since_peak, ATR/ADX) first; live `position_telemetry` history second | build | the exit model's in-trade feature set; the fixed-bracket interim is `first_passage.py` (runs now) | — | **`EXIT-PATH-EMIT-OFFLINE`** (row, Tier-1) · `EXIT-PATH-TELEMETRY-LIVE` (row, Tier-2 proposal) |
+| 3.6 | **In-trade first-passage model + exit-now policy** (the destination; ATM Q8) | as registered on each unit | census → simple → rich → policy → harness-native → shadow → Tier-3 | cpu_light | **`RQ-20261014-d6e7-01..05`**, `blocked/RQ-20261014-d6e7-06` |
+| 3.4 | Offline contextual bandit over the exit-ladder arms (doubly-robust OPE) vs the best fixed ladder | n ≥ 150 and policy ≤ best fixed → retire | an arm-choosing exit policy (discrete, low variance) | cpu_long | `RQ-20261011-9da8-04` (blocked on 3.2; its per-bar states come from `EXIT-PATH-EMIT-OFFLINE`, not from live telemetry) |
 | 3.5 | TP-doctrine predict-head: sharper than four naive baselines, then a net-of-cost overlay | build the head only if both pass, else "B4 is enough" | the real predictive TP every bracket must carry | needs_vm_data | `RQ-20261009-900/-901` (blocked on 3.2) |
 
 ### Q4 — Model-family diversity: which families earn a place beyond GBDT?
@@ -170,6 +173,7 @@ Status key: **queued** (dispatchable now) · **blocked** (named blocker) · **ro
 | # | item | kind | compute | status |
 |---|---|---|---|---|
 | 1 | `RQ-20261014-9d20-01` peak-to-exit census *(new)* | Q0.3 | cpu_light | queued |
+| 1b | `RQ-20261014-d6e7-01` first-passage census, then `d6e7-02/04` (state models) on its PASS *(new, lane IN-TRADE-EXIT-MODEL)* | Q3.6 | cpu_light | queued |
 | 2 | `RQ-20261014-9d20-02` meta-label thin-column baseline *(new)* | Q2.1 | cpu_light | queued |
 | 3 | `RQ-20261014-9d20-05` ExtraTrees/MLP vs LightGBM on published 1h *(new)* | Q4 | auto (published) | queued |
 | 4 | `RQ-20261014-65cc-06/07/08` TabICL/TabPFN on Kaggle GPU; `65cc-09/10` logit + log-loss at 1h | Q4 / Q1.3 | gpu / auto | queued (other lane, 2026-10-14) |
@@ -193,7 +197,7 @@ Status key: **queued** (dispatchable now) · **blocked** (named blocker) · **ro
 
 | # | item | kind | compute |
 |---|---|---|---|
-| 15 | Per-bar in-trade telemetry history + `mae_r` in every harness emit (lever; filed by the ATM plan if it names it, else by this programme as `EXIT-INTRADE-HISTORY`) | Q3.3 | — |
+| 15 | Per-bar in-trade path: **`EXIT-PATH-EMIT-OFFLINE`** (filed 2026-10-14, Tier-1, pulled forward to W1–W2 — it does not wait for live data) and `EXIT-PATH-TELEMETRY-LIVE` (Tier-2 proposal); `EXIT-INTRADE-HISTORY` is not filed — these two rows replace it | Q3.3 | — |
 | 16 | Vol-axis headroom with the ML head's labels (`regime_impact_scoping.py --axis vol`): lever to export per-symbol `labels.jsonl` from the trainer to the repo (market-only, publishable) | Q1.4 | cpu_light after the lever |
 | 17 | Pooling parity: KS on feature marginals and realised-R per cell, test results vs trade outcomes (unit, trainer) | Q2.5 | needs_vm_data |
 | 18 | `RQ-20261011-9da8-02` tabular bake-off on the live meta-label dataset, if Q0.4 returns a GO cell and the trainer venv has the arms (`FRONTIER-LEVER-TABULAR`) | Q2.4 | gpu |
