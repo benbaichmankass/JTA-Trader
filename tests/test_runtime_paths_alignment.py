@@ -32,10 +32,34 @@ from __future__ import annotations
 
 import importlib
 import re
+import sys
 from pathlib import Path
+
+import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.fixture(autouse=True)
+def _restore_router_modules():
+    """`_reload` pops and re-imports router modules under a monkeypatched DATA_DIR; without this the
+    re-imported copies (bound to a tmp_path) stayed in sys.modules for every later test on the same
+    xdist worker, so e.g. test_notify_unit_failure compared diag._LOG_FILES against a deleted tmp dir
+    (RESEARCH-PIPE-UNSTICK 2026-10-14: reproduced on pristine origin/main by running this file then
+    that one)."""
+    prefix = "src.web.api.routers."
+    snap = {k: v for k, v in sys.modules.items() if k.startswith(prefix)}
+    yield
+    pkg = sys.modules.get(prefix.rstrip("."))
+    for k in [k for k in sys.modules if k.startswith(prefix) and k not in snap]:
+        del sys.modules[k]
+        if pkg is not None and hasattr(pkg, k.rsplit(".", 1)[1]):
+            delattr(pkg, k.rsplit(".", 1)[1])      # `from pkg import mod` reads this attribute, not sys.modules
+    sys.modules.update(snap)
+    if pkg is not None:
+        for k, mod in snap.items():
+            setattr(pkg, k.rsplit(".", 1)[1], mod)
 
 
 # ─── Family 1: reader/writer alignment under env overrides ──────────
