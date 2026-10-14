@@ -68,7 +68,10 @@ routing:
   needs_gpu: false
   peak_memory_gb: 3.0
   est_minutes: 90
-  basis: MEASURED 2026-10-14 in the lane sandbox: the census's candle fetch did not finish inside 30 min with per-leg fetches (since fixed: one fetch per symbol x timeframe); budget 90 min, timeout 240 (runner cap 360). As the probability rung, plus one pass over the OOS bar events.
+  basis: >-
+    MEASURED 2026-10-14 in the lane sandbox -- with per-leg fetches the census's candle fetch did not finish inside 30 min (since
+    fixed to one fetch per symbol x timeframe); budget 90 min, timeout 240 (runner cap 360). As the probability rung, plus one
+    pass over the OOS bar events.
 run:
   command:
   - python3

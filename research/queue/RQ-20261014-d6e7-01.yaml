@@ -69,8 +69,10 @@ routing:
   peak_memory_gb: 3.0
   est_minutes: 90
   basis: >-
-    Candle fetch dominates (Binance Vision, ~25 symbol x timeframe series, up to ~4 years of 5m-4h bars); the walk is seconds.
-    An authoring dry run is disclosed in the PR.
+    MEASURED 2026-10-14 in the lane sandbox -- with per-leg fetches the census's candle fetch did not finish inside 30 min (since
+    fixed to one fetch per symbol x timeframe); budget 90 min, timeout 240 (runner cap 360). Candle fetch dominates (Binance Vision,
+    ~25 symbol x timeframe series, up to ~4 years of 5m-4h bars); the walk is seconds. An authoring dry run is disclosed in the
+    PR.
 run:
   command:
   - python3
