@@ -1,7 +1,7 @@
 id: RQ-20261014-de02-01
 title: 'Frontier / model-family diversity (re-ask after the CatBoost verbose fix): on the 1h regime label, does CatBoost, ExtraTrees or HistGradientBoosting beat the LightGBM incumbent
   on LOG-LOSS?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -33,7 +33,7 @@ decision_rule:
   min_n: 3 usable CV folds per symbol; reported n_rows per symbol.
   what_it_does_not_do: Builds, calibrates and serves nothing, promotes nothing, touches no config; a log-loss PASS is not edge and not a P&L figure. A PASS earns a candidate-manifest
     note for the manager, never a swap.
-compute: gpu_preferred
+compute: auto
 value:
   bucket: frontier
   usd_at_stake_per_month: 120
@@ -45,8 +45,7 @@ routing:
   published_data: metis-market-data
   peak_memory_gb: 3.0
   est_minutes: 20
-  basis: 'Estimate, NOT measured: CPU-capable bake-off on published BTC/ETH 1h v002 shards (the same shards RQ-20261014-65cc-10 read successfully); gpu_preferred sends it to idle Kaggle
-    quota first, else a GitHub runner.'
+  basis: 'Estimate, NOT measured: CPU-capable bake-off on published BTC/ETH 1h v002 shards (the same shards RQ-20261014-65cc-10 read successfully); compute: auto routes it to the Kaggle CPU kernel (published data; not metered by the GPU quota).'
 ml_bakeoff:
   task: classification
   metric: logloss
@@ -145,6 +144,14 @@ related:
 - RQ-20261014-65cc-10
 - scripts/research/ml_bakeoff.py
 - docs/plans/ml-plan-items.yaml
+last_dispatched_at: '2026-10-14T17:18:29+00:00'
 grading:
   auto: true
-last_dispatched_at: '2026-10-14T17:18:29+00:00'
+  decision_rule_id: RULE-RQ20261014-DE02-01-FAMILY-VS-LGBM-REGIME-1H
+  evidence:
+  - research/results/RQ-20261014-de02-01/38597115745.jsonl
+  graded_at: '2026-10-14'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

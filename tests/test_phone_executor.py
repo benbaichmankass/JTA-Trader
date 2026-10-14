@@ -620,3 +620,21 @@ def test_heartbeat_keeps_keepalive_fields(_iso):
 def test_loop_restarted_is_an_accepted_event_kind(_iso):
     pe.record_event(_dev(), {"event": "loop_restarted", "reason": "watchdog"}, send=lambda *a, **k: True)
     assert pe.recent_events("breakout_2")[-1]["kind"] == "loop_restarted"
+
+
+def test_pending_poll_runs_the_stale_claim_watchdog(tmp_path, monkeypatch, _iso):
+    """BREAKOUT-UNTRACKED-1014: the backgrounded app only polls /phone/pending, never /phone/claim, so a live
+    submit the phone never confirmed sat `claimed` for 5 h with no alert. The pending poll now runs the watchdog."""
+    from src.web.api import main as api_main
+    tid = _go_live(tmp_path, monkeypatch)
+    later = datetime.now(timezone.utc) + timedelta(seconds=pe.CLAIM_TIMEOUT_S + 5)
+    monkeypatch.setattr(pe, "_now", lambda: later)
+    c = TestClient(api_main.app, raise_server_exceptions=False)
+    r = c.get("/api/bot/prop/phone/pending", headers={"Authorization": "Bearer " + TOKEN})
+    assert r.status_code == 200
+    assert prop_journal.get_ticket(tid)["status"] == "placed"
+    assert any("never confirmed" in m for m in _iso)
+    n = len(_iso)
+    c.get("/api/bot/prop/phone/pending", headers={"Authorization": "Bearer " + TOKEN})
+    assert len(_iso) == n   # idempotent: no second journal row, no second ping
+    assert len(prop_journal.list_fills(account_id="breakout_2")) == 1

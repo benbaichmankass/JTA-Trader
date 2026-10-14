@@ -924,7 +924,10 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/pairs-sleeve-real-money-readiness-2026-07-16.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/pairs-stocktake-2026-10-07.md` | evidence | live | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/programmes/02-AI-TRADER.md` | evidence | live | — | 2026-10-14 | `dir:research-is-measurement / read:AI-TRADER-PROGRAMME-lane-authored-and-measured-it-2026-10-14` | research programme of record for G4; re-measured by the weekly roadmap pass |
+| `docs/research/programmes/04-MACRO-SLEEVE.md` | evidence | live | — | 2026-10-14 | `dir:research-is-measurement / read:P4-MACRO-PROGRAMME-lane-authored-and-measured-it-2026-10-14` | research programme of record for M28/M29 (P4); re-measured by the weekly roadmap pass |
+| `docs/research/programmes/05-PROP.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Programme 05 plan (prop as an expected-value question): per-account EV baseline, Q1-Q7 ladders, 4-week backlog; units RQ-20261014-f516-01..11. |
 | `docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Programme 01 plan (brackets as predictions): goal + measure, Q1-Q7 ladders, 4-week backlog; units RQ-20261014-9807-01..05. |
+| `docs/research/programmes/03-STRATEGY-IMPROVEMENT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Programme 03 plan (every leg pulls its own weight): Stage-0 capital-day census, S0-C fresh-window confirmation rule, Q1-Q8 ladders, 4-week backlog; units RQ-20261014-470a-01..12, row PAIRS-R-SCALE. |
 | `docs/research/programmes/RESEARCH-MAP.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | The five research programmes, their measures, cross-programme feeds and infra needs (weekly planning 2026-10-14). |
 | `docs/research/reduce-fill-qty-2026-10-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/repo-private-transition-2026-10-08.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
@@ -1029,6 +1032,8 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/xrp-pullback-entry-axis-2026-08-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/xrp-pullback-joint-geometry-2026-08-23.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/xrp-pullback-trail-axis-and-inert-levers-2026-08-23.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/reviews/2026-10-15-weekly-walkthrough-ml.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/reviews/2026-10-15-weekly-walkthrough-perf.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/runbooks/alpaca-integration.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/backfill-orphan-pnl.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/devnull-guard.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |

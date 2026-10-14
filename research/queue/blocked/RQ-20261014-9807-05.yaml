@@ -54,6 +54,12 @@ decision_rule:
     with harness rows.
 blocked_on:
 - what: >-
+    STATUS 2026-10-14 (ML-LEG-CORPUS): the corpus (PR #18074 (runner ml2_live_leg_corpus.py, FEATURE_NAMES += adx_at_entry/regime_weight, ml2_bracket_train_eval --outcome mfe_r with B1..B4 per leg/stratum)) is per-TRADE only: it has no per-bar path
+    (open_r / ADX / ATR along the trade), so it does NOT clear this unit. Still needs a path re-walk from candles.
+  ref: ML-LEG-CORPUS; RQ-20261014-736c-01
+  clears_when: >-
+    Unchanged (below).
+- what: >-
     No committed per-trade PATH rows (per-bar open_r, ADX, ATR along each trade) for the live legs exist; harness emits are
     discarded and live telemetry keeps only the latest row per package.
   ref: docs/claude/work/checklist/ML-LEG-CORPUS.json (ML plan X1)

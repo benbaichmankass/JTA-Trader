@@ -1,0 +1,74 @@
+id: RQ-20261014-f516-11
+title: 'Programme 05 Q6: do realised prop closes match the sim''s per-trade cost and R assumptions (live-vs-sim fidelity) -- blocked
+  on gradable closes'
+status: blocked
+cadence: once
+kind: experiment
+theme: new_strategy_prop
+priority: 2
+roadmap:
+- L-PROP
+question: Over every automated prop close with a read exit price (velotrade_1, tradeify_1, breakout_2) since PROP-EXIT-READ lands, is
+  the realised net R per trade within the sim's assumed cost band of the harness R for the same signal (entry/exit slippage + commission
+  + swap), and is the TP/SL close-reason mix consistent with the backtest's?
+why_this_matters: Every Q1..Q5 number is a backtest re-priced under firm rules; nothing has checked the venue cost the sim charges against
+  a real prop fill, because the executor still reports closes as 'closed_on_terminal' with null exit price/P&L on the REST path (PROP-EXIT-READ
+  re-scoped to queued 2026-10-11). This is Stage 1's question (does realised cost match what the backtest assumed) for the prop books,
+  and it gates the re-run of RQ-20261007-002 and P1-Q7.
+power:
+  expected_n: 30
+  min_detectable_effect: 0.5
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: Paired live-vs-harness R difference per close; d=0.5 needs (1.96+0.84)^2/0.25 = 31.4 -> 30-32 closes. The three accounts' 730
+    d backtests imply roughly 1 trade per ~1.5 days pooled (ETH 355 + SOL 132 trades / 730 d per account), so ~45 d of gradable closes.
+  feasibility:
+    source: none
+    accrual_basis: Accrues from live prop closes once PROP-EXIT-READ writes exit_price/pnl/reason; 0 gradable today.
+decision_rule:
+  id: RULE-RQ1014-F516-11-LIVE-VS-SIM-FIDELITY
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: 'Per close: delta_r = realised net R (prop_fills exit price, P&L, fees) - harness net R for the same signal timestamp;
+    per account the mean and 95% CI of delta_r, and the share of closes whose reason is tp/sl/manual/other.'
+  rule: PASS IF on n >= 30 gradable closes the 95% CI of mean delta_r lies within +-0.10 R of 0 on every account with n >= 10 -> the
+    sim's venue stack is confirmed; Q1..Q5 records stand. FAIL IF the CI excludes 0 by more than 0.10 R on any account -> recalibrate
+    that firm's stack in prop_ev_sim (a build row) and re-run that account's Q1 baseline before any Q2..Q5 proposal is acted on. INDETERMINATE
+    IF n < 30. Any close whose reason is not tp/sl/strategy is a BUG filed the same day, not a statistic.
+  what_it_does_not_do: Grades no strategy edge (a live book never establishes edge). Does not re-price history.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 40
+  basis: '2-leg prop_ev_sim book, 5 seeds x the unit''s arms at the default 4,000 lives, --jobs 4 (2026-10-14 smoke: 400 lives of the
+    velotrade book in well under a minute).'
+compute: cpu_long
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 200
+  confidence: 0.5
+  basis: 'stand-in: three live prop accounts; it validates every other number in the programme. No balances stated.'
+blocked_on:
+- what: 'Prop closes are ungraded: the executor reconcile reports ''closed_on_terminal'' with null exit_price/pnl on the REST path (velotrade_1,
+    2026-10-11); breakout_2''s phone path has no observed close yet.'
+  ref: docs/claude/work/checklist/PROP-EXIT-READ.json (PI-20261011-MJ5KSFIO-0001)
+  clears_when: 'PROP-EXIT-READ is observed: an automated prop close lands in prop_fills with exit_price, pnl and a tp/sl reason. Then
+    git mv to research/queue/, status queued, author scripts/research/prop_live_vs_sim.py reading the journal via the diag relay, set
+    run.workflow and kind, and let n accrue.'
+run:
+  workflow: null
+  note: Null until the blocker clears (blocked_on).
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- docs/research/programmes/05-PROP.md
+- docs/claude/work/checklist/B6.json
+- scripts/research/prop_ev_sim.py
+- scripts/research/prop_ev_grid.py
+- docs/claude/work/checklist/PROP-EXIT-READ.json
+- research/queue/RQ-20261007-002.yaml

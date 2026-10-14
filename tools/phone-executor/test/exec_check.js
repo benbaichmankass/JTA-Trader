@@ -479,6 +479,18 @@ document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__su
   eq([md.chips, typeof md.trade, typeof md.path_depth, md.controls.includes("Menu"), md.headers.includes("Loading")], [0, "boolean", "number", true, true], "missDump: chips 0, path info, controls and leaf texts present");
   eq(/4,930|930/.test(JSON.stringify(md)), false, "missDump: digits masked, no balance value");
   eq(await qC2.evaluate("__ex.clickTab('^positions\\\\b')"), "none", "clickTab: no chip -> none (no_tab)");
+  // BREAKOUT-UNTRACKED-1014: with a position open the count badge is a child span GLUED to the label (innerText
+  // "Positions1"): every Positions read was no_tab for 9 h. The badge is dropped for matching, and is the tab's count.
+  const qC3 = await onHost(`<!doctype html><html><body><div class=bar><button>Open orders<span>2</span></button><button>Positions<span>1</span></button><button>Closed orders</button><button>Trades<span>3</span></button></div></body></html>`);
+  eq(await qC3.evaluate("document.querySelectorAll('button')[1].innerText"), "Positions1", "glued badge: innerText has no space");
+  eq(await qC3.evaluate("__ex.clickTab('^positions\\\\b')"), "clicked", "glued badge: clickTab finds 'Positions1'");
+  eq(await qC3.evaluate("__ex.clickText('^positions$')"), "clicked", "glued badge: the submit-confirm / amend exact match finds it");
+  eq(await qC3.evaluate("__ex.clickText('^open orders$')"), "clicked", "glued badge: 'Open orders2' found by the exact match");
+  eq(await qC3.evaluate("__ex.clickTab('^(closed orders|trades)\\\\b')"), "clicked", "glued badge: closed/trades still found");
+  eq(await qC3.evaluate("__ex.terminal().panels"), true, "glued badge: the panel-layout terminal gate still recognises the chips");
+  eq(await qC3.evaluate("__ex.clickText('^position$')"), "none", "badge drop does not loosen the label itself");
+  const qC4 = await onHost(`<!doctype html><html><body><button>Positions<span>1</span></button><button>Positionsx</button></body></html>`);
+  eq(await qC4.evaluate("__ex.clickText('^positions$')"), "clicked", "exact match: only the badged chip qualifies");
   const qP7 = await onHost(posTable("Positions", "<tr><td>ETHUSD</td><td>-1.5</td><td>2600</td><td>2550</td><td>3000</td><td>−75.00</td><td>-</td></tr>", "<p>x</p>"));
   let e7 = await qP7.evaluate("__ex.positionsRead()");
   eq([e7.state, e7.rows[0].side, e7.rows[0].qty, e7.rows[0].upnl], ["read", "short", 1.5, -75], "positions: signed size gives the side; unicode minus uPnL");

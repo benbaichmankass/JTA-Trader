@@ -126,3 +126,37 @@ def test_filled_and_stopped_between_two_looks_is_journaled_in_one_pass():
     r = fi.infer(ACCT, now=T0 + timedelta(hours=3), bars_fn=_bars((5, 2500, 2480), (60, 2540, 2495)))   # fill, then SL 2535.25
     assert r["filled"] == ["prop-manual-x1"] and r["closed"] == ["prop-manual-x1"]
     assert po.split_fills(prop_journal.list_fills(account_id=ACCT))[0] == []
+
+
+def _unconfirmed(tid, *, placed_at=None, go_used_at=None):
+    prop_journal.record_ticket({
+        "ticket_id": tid, "account_id": ACCT, "strategy": "trend_donchian_eth_prop", "symbol": "ETHUSDT",
+        "direction": "short", "entry": 2458.24, "sl": 2504.25, "tp": 2214.87, "qty": 0.54,
+        "valid_until": (T0 + timedelta(hours=1)).isoformat(), "status": "placed",
+        "meta": {"phone": {"go": {"go": True, "mode": "live", "used_at": go_used_at}}} if go_used_at else None})
+    rep = {"kind": "fill", "status": "placed", "account_id": ACCT, "ticket_id": tid, "symbol": "ETHUSDT",
+           "direction": "short", "qty": 0.54, "entry_price": 2458.24, "sl": 2504.25, "tp": 2214.87,
+           "source": "phone_executor_unconfirmed", "provenance": "UNVERIFIED"}
+    if placed_at:
+        rep["placed_at"] = placed_at
+    ingest_report(rep)   # reported_at = the real write time, hours/months after the synthetic bars
+
+
+@pytest.mark.parametrize("how", ["go_used_at", "placed_at"])
+def test_unconfirmed_submit_journaled_late_is_inferred_from_its_submit_time(how):
+    """BREAKOUT-UNTRACKED-1014: the watchdog journaled the 13:22Z submit at 18:36Z; ETH was through the short limit
+    only before that, so keying bars off the write time left the open short `placed` for ever."""
+    tid = "prop-manual-f6552263ed1d"
+    _unconfirmed(tid, **{how: (T0 + timedelta(minutes=1)).isoformat()})
+    r = fi.infer(ACCT, now=T0 + timedelta(hours=6), bars_fn=_bars((0, 2472.12, 2457.13), (15, 2487.41, 2471.51),
+                                                                 (300, 2431.46, 2424.74)))
+    assert r["filled"] == [tid]   # the 15-min bar (after the submit) traded through 2458.24
+    o = next(f for f in prop_journal.list_fills(account_id=ACCT) if f["status"] == "open")
+    assert o["entry_price"] == 2458.24 and json.loads(o["raw"])["provenance"] == "estimated"
+    assert r["closed"] == []      # neither SL 2504.25 nor TP 2214.87 traded
+
+
+def test_unconfirmed_submit_without_any_submit_time_keeps_the_old_write_time_rule():
+    _unconfirmed("t-no-time")
+    r = fi.infer(ACCT, now=T0 + timedelta(hours=6), bars_fn=_bars((15, 2487.41, 2471.51)))
+    assert r["filled"] == []

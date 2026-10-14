@@ -31,7 +31,7 @@ decision_rule:
     symbol. INDETERMINATE otherwise, or if folds < 3 or an arm is unavailable.
   min_n: 3 usable CV folds per symbol; reported n_rows per symbol.
   what_it_does_not_do: Builds, calibrates and serves nothing, promotes nothing, touches no config; a log-loss PASS is not edge and not a P&L figure.
-compute: gpu_preferred
+compute: auto
 value:
   bucket: ai_trader
   usd_at_stake_per_month: 150
@@ -43,8 +43,7 @@ routing:
   published_data: metis-market-data
   peak_memory_gb: 3.0
   est_minutes: 20
-  basis: 'Estimate, NOT measured: CPU-capable bake-off on published BTC/ETH 1h v002 shards (the same shards RQ-20261014-65cc-10 read successfully); gpu_preferred sends it to idle Kaggle
-    quota first, else a GitHub runner.'
+  basis: 'Estimate, NOT measured: CPU-capable bake-off on published BTC/ETH 1h v002 shards (the same shards RQ-20261014-65cc-10 read successfully); compute: auto routes it to the Kaggle CPU kernel (published data; not metered by the GPU quota).'
 ml_bakeoff:
   task: classification
   metric: logloss
