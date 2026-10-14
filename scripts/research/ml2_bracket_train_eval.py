@@ -470,6 +470,10 @@ def render(result: Dict[str, Any], disp: Optional[Dict[str, Any]]) -> None:
 
 def _render_control_and_tail(result: Dict[str, Any], disp: Optional[Dict[str, Any]]) -> None:
     c = result.get("control") or {}
+    if not c.get("per_quantile"):
+        # No control ran (insufficient_n / not_measured): NO CONCLUSION AVAILABLE.
+        print("NO CONCLUSION AVAILABLE: no shuffled-label control ran.")
+        return
     print("--- 3. SHUFFLED-LABEL CONTROL (run PER QUANTILE; it GATES section 2) ---")
     for q, cc in sorted((c.get("per_quantile") or {}).items()):
         print(f"  q={q:.2f} state={cc.get('control_state')} "
