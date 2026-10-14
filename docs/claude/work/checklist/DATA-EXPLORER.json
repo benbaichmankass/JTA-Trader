@@ -2,17 +2,23 @@
   "id": "DATA-EXPLORER",
   "title": "Data Explorer redesign: research catalog + signals/trades/order-packages/raw sub-tabs, auth restored so the tab loads",
   "phase": "W42",
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "lane DATA-EXPLORER (session_01EUNwHBF7sHQp1DimqACauN) for manager session_01G16FfyYSmDPQuuW55BuTmK",
   "lane": null,
   "model": null,
   "ceiling_usd": 18,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
-  "blocked_on": [],
-  "note": "[2026-10-13 operator ask, verbatim] \"add a tab in the UI data explorer to view the tests we have run and that are queued - a searchable and filterable catalog of all the research tests (summary, results, topic/roadmap priority, data used) ... the signals catalog, trade log and the rest of our database as sub tabs ... make sure a) it is functioning (the tab is pretty dead right now) and b) it is designed to be useful so I can stay on top of our data\". ROOT CAUSE OF DEAD (manager 12:40Z): POST /api/auth/login 500 auth_unavailable, /api/bot/db/tables 401 -> require_session-gated explorer cannot load. [lane built, in this PR] GET /api/bot/research/catalog + /{unit_id} (src/runtime/research_catalog.py, ungated Tier-1, public-repo data only), tests/test_research_catalog.py, tier-policy rows. MEASURED over research/queue 2026-10-13: 567 units, 0 read errors: 456 result, 57 blocked, 37 dispatched (36h-352h ago, 36 with NO result row), 7 queued, 4 due, 6 retired; 110 flagged stuck (57 blocked + 37 dispatched-no-result + 16 needs_review). [separate PR] set-env derives WEBAPP_PASSWORD_SHA256 from plaintext secret WEBAPP_PASSWORD and mints JWT_SIGNING_KEY on the runner. NOT DONE: dashboard repo attach (add_repo) was DENIED by the auto-mode classifier so no SPA work exists; auth not yet restored (needs the operator to paste WEBAPP_PASSWORD).",
-  "updated_at": "2026-10-13T12:52:24Z",
+  "prs": [
+    17869
+  ],
+  "blocked_on": [
+    "SPA: separate session session_01Jyhnk3ydk39eFFLQJaP8NK on ict-trader-dashboard (Overview/Research/Trades/Signals/Packages/login)",
+    "GET /api/bot/db/overview endpoint not built",
+    "operator real login (200 + access_token) and human render confirmation"
+  ],
+  "note": "[2026-10-14 lane] MERGED #17869 (research catalog API + SPA handoff doc). DEPLOYED+OBSERVED: after ict-web-api restart (issue #17946) GET /api/bot/research/catalog returned 200 at 00:09Z: total 606 units, 479 result / 59 blocked / 41 dispatched / 15 due / 7 retired / 5 queued, 112 stuck, readErrors 0; positive control RQ-20260922-003 -> result/pass with 2 result rows; negative controls: unknown id present:false, malformed id 400, bad order 422; /api/bot/db/tables without bearer still 401. AUTH: set-env #17905/#17906/#17907 landed (JWT key, password hash, ALLOWED_EMAIL + restart); wrong-password login returns 401 invalid_credentials (was 500). NOT established: real login mint (200+token) and gate-accepts-bearer. NOT built: /api/bot/db/overview, SPA. Stuck population: dispatched units with no landed result row (36-352h) not yet root-caused (failed run vs unmerged result).",
+  "updated_at": "2026-10-14T00:09:55Z",
   "updated_by": "session_01EUNwHBF7sHQp1DimqACauN",
   "roadmap": [
     "M6"
