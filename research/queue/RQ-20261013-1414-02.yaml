@@ -1,7 +1,7 @@
 id: RQ-20261013-1414-02
 title: 'AI trader / probability quality: do the 15m regime learners beat the class prior on LOG-LOSS, not only on thresholded macro-F1?
   (the prerequisite for conformal abstention)'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -154,3 +154,16 @@ related:
 - RQ-20261011-9da8-03
 - scripts/research/ml_bakeoff.py
 last_dispatched_at: '2026-10-13T21:54:37+00:00'
+grading:
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261013-1414-02-REGIME-LOGLOSS-VS-PRIOR
+  evidence:
+  - research/results/RQ-20261013-1414-02/38474112471.jsonl
+  graded_at: '2026-10-14'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

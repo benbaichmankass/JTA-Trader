@@ -1,6 +1,6 @@
 id: RQ-20261007-008
 title: 'Stage-0 at the CONFIGURED parameters, net of the full cost stack: pairs_eth_btc (ETHUSDT/BTCUSDT 1h, lookback 15, rolling beta) -- PAIRS-STOCKTAKE'
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 1
@@ -134,9 +134,6 @@ lands:
   assert_field: read_state
   min_rows: 1
 
-grading:
-  auto: true
-
 related:
 - 'config/pairs.yaml -- the entry this unit prices, at its own parameters'
 - 'docs/research/pairs-stocktake-2026-10-07.md -- the stocktake that registered this unit'
@@ -147,3 +144,13 @@ related:
 - RQ-20260929-105
 - RQ-20260929-106
 last_dispatched_at: '2026-10-08T07:53:31+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-RQ1007-008-ETH-BTC-CONFIGURED-STAGE0
+  evidence:
+  - research/results/RQ-20261007-008/37746283322.jsonl
+  graded_at: '2026-10-14'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
