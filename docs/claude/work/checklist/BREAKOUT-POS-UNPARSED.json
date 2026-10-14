@@ -9,10 +9,14 @@
   "ceiling_usd": 15,
   "spend_usd": null,
   "tier": 2,
-  "prs": [],
+  "prs": [
+    18099,
+    18100,
+    18109
+  ],
   "blocked_on": [],
-  "note": "[2026-10-14T20:55Z manager session_01VduHYzdaXe27wTDBLSu8ao] Operator installed APK 1b.188 (~20:50Z). MEASURED 20:50:43Z /api/bot/prop/status?account_id=breakout_2: positions_state went no_tab -> unparsed; phone_positions_diag.headers = [Market, UP&L, Side, Value, Opening price, Current price, TP / SL, Net P&L] (the tab-badge fix in #18081 works). exec.js finishRead returns unparsed when a row lacks one of need=[symbol, side, qty] (qty is DERIVED from Value / Current price since the grid has no size column). Row content is not in the diag (masked), so the failing field is unknown. Journal still holds f6552263ed1d open ESTIMATED (fill 124).",
-  "updated_at": "2026-10-14T20:51:46Z",
+  "note": "[2026-10-14T20:55Z manager session_01VduHYzdaXe27wTDBLSu8ao] Operator installed APK 1b.188 (~20:50Z). MEASURED 20:50:43Z /api/bot/prop/status?account_id=breakout_2: positions_state went no_tab -> unparsed; phone_positions_diag.headers = [Market, UP&L, Side, Value, Opening price, Current price, TP / SL, Net P&L] (the tab-badge fix in #18081 works). exec.js finishRead returns unparsed when a row lacks one of need=[symbol, side, qty] (qty is DERIVED from Value / Current price since the grid has no size column). Row content is not in the diag (masked), so the failing field is unknown. Journal still holds f6552263ed1d open ESTIMATED (fill 124). [2026-10-14T21:50Z lane session_01MVZPxo89875YXd2zz6xivJ] HANDOFF (lane ceiling of $15 reached). OBSERVED on 1b.193 (#18099 installed 21:37Z): still unparsed, miss=side. The live Side cell is EMPTY, so the #18099 glued-span theory was wrong for the live DOM. The 9th cell is an empty-header column, and the cells are aligned. #18109 (hold, unmerged) adds: attribute-word side read, empty-cell attribute dump, state side_unread with server journal side (ESTIMATED, entry tolerance 0.2%, because the venue avg 2461.52 vs journal 2458.24 differs by 0.13%), symbol 'ETH 5' -> ETH, the trail amend finding the div-grid row, and measure-first no_edit_unmeasured (no clicks). NOT BUILT, needs a new lane: the operator-MEASURED click path from screenshots (manager trigger 21:42Z). Steps: tap the position row; the bottom sheet's [Position details] shows Side + 'Total open volume' (a MEASURED side/qty source that also fixes miss=side); then [1 TP / 1 SL] -> the row whose TYPE starts 'Stop' -> its pencil -> 'Edit Stop loss' modal -> Trigger input only -> Confirm -> re-read. DENYLIST: 'Close position', the cancel icons on order rows, and the row close icon. The trail now asks for SL 2504.25 -> 2471.94. Flags: uPnL cells show no sign (a loss may read positive); entry discrepancy as above.",
+  "updated_at": "2026-10-14T21:46:03Z",
   "updated_by": "session_01VduHYzdaXe27wTDBLSu8ao",
   "roadmap": [
     "L-PROP"

@@ -533,7 +533,8 @@ def test_amend_control_dump_is_kept_and_never_raises_the_unseen_alert(env):
 
 # ---- side_unread (BREAKOUT-POS-UNPARSED, 1b.193: the Side cell has no text) ----
 
-SIDELESS = {"symbol": "ETH", "qty": 0.5449, "entry": 2458.24, "mark": 2436.1, "upnl": 12.34}
+# entry is the VENUE's avg opening price (operator screenshot 21:41Z), 0.13% off the journal's 2458.24
+SIDELESS = {"symbol": "ETH", "qty": 0.5449, "entry": 2461.52, "mark": 2436.1, "upnl": 12.34}
 
 
 def test_side_unread_takes_the_side_from_the_one_open_fill_and_is_estimated(env):

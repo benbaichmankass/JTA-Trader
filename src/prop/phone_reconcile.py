@@ -119,10 +119,10 @@ def bot_symbol(account_id: str, venue_text: Any) -> Optional[str]:
 
 # BREAKOUT-POS-UNPARSED (1b.193 live dump, 2026-10-14): Breakout's Positions Side cell carries NO text (the side is
 # drawn), so the phone sends "side_unread": every row parsed except its side. The side may then be taken from the
-# journal: the open fills with the same bot symbol and an entry within ENTRY_TOL_FRAC of the terminal's Opening price
+# journal: the open fills with the same bot symbol and an entry within ENTRY_TOL_FRAC (0.2%) of the terminal's Opening price
 # must all be on ONE side. That side is ESTIMATED (the journal's, not the venue's); anything else leaves the read
 # un-reconciled. Never guessed from a sign, a colour or a P&L.
-ENTRY_TOL_FRAC = 0.001
+ENTRY_TOL_FRAC = 0.002   # the venue avg 2461.52 vs journal 2458.24 (0.13%, operator screenshot 2026-10-14 21:41Z)
 
 
 def resolve_sides(account_id: str, rows: Any) -> Optional[List[Dict[str, Any]]]:
