@@ -1,0 +1,525 @@
+{
+  "leg": "ict_scalp_sol_15m",
+  "label": "no_reachable_lever_beats_removed",
+  "grade": {
+    "verdict": "fail",
+    "label": "no_reachable_lever_beats_removed",
+    "baseline": "B",
+    "candidates": {
+      "CD6": {
+        "delta_net_r": 0.0,
+        "delta_max_drawdown_r": 0.0,
+        "fold_wins": 0,
+        "passes": false
+      },
+      "CD12": {
+        "delta_net_r": 0.0066,
+        "delta_max_drawdown_r": -0.0066,
+        "fold_wins": 1,
+        "passes": false
+      },
+      "CD24": {
+        "delta_net_r": -0.8694,
+        "delta_max_drawdown_r": 1.471,
+        "fold_wins": 2,
+        "passes": false
+      }
+    },
+    "delta_r_bar": 4.0,
+    "fold_majority": 3,
+    "n_floor": 60,
+    "control": null,
+    "why": "no candidate clears the bar: the declared lever's lines are dead config and nothing reachable earns its place -- strip them (Tier-3, not done here)"
+  },
+  "arms": {
+    "B": {
+      "n": 84,
+      "net_r": -5.567,
+      "net_r_fee_only": -3.49,
+      "max_drawdown_r": 12.8911,
+      "by_outcome": {
+        "tp_hit": 14,
+        "timeout": 46,
+        "sl_hit": 22,
+        "be_stop": 2
+      },
+      "mean_bars_held": 19.417,
+      "net_r_per_capital_day": -0.3277,
+      "cost_stack": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": null,
+      "data_start": "2025-10-05 00:00:00+00:00",
+      "data_end": "2026-10-04 23:45:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2025-10-05 00:00:00+00:00",
+          "end": "2026-01-04 05:59:45+00:00",
+          "trades": 17,
+          "net_r": 2.5865
+        },
+        {
+          "fold": 2,
+          "start": "2026-01-04 05:59:45+00:00",
+          "end": "2026-04-05 11:59:30+00:00",
+          "trades": 19,
+          "net_r": 1.9571
+        },
+        {
+          "fold": 3,
+          "start": "2026-04-05 11:59:30+00:00",
+          "end": "2026-07-05 17:59:15+00:00",
+          "trades": 25,
+          "net_r": -0.0419
+        },
+        {
+          "fold": 4,
+          "start": "2026-07-05 17:59:15+00:00",
+          "end": "2026-10-04 23:59:00+00:00",
+          "trades": 23,
+          "net_r": -10.0691
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--timeframe",
+        "15m",
+        "--strategy-name",
+        "ict_scalp_sol_15m",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261013-407c-09/38488359354/arms/B__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261013-407c-09/38488359354/arms/B__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven",
+        "--start",
+        "2025-10-05",
+        "--end",
+        "2026-10-04 23:59"
+      ]
+    },
+    "CD6": {
+      "n": 84,
+      "net_r": -5.567,
+      "net_r_fee_only": -3.49,
+      "max_drawdown_r": 12.8911,
+      "by_outcome": {
+        "tp_hit": 14,
+        "timeout": 46,
+        "sl_hit": 22,
+        "be_stop": 2
+      },
+      "mean_bars_held": 19.417,
+      "net_r_per_capital_day": -0.3277,
+      "cost_stack": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": null,
+      "data_start": "2025-10-05 00:00:00+00:00",
+      "data_end": "2026-10-04 23:45:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2025-10-05 00:00:00+00:00",
+          "end": "2026-01-04 05:59:45+00:00",
+          "trades": 17,
+          "net_r": 2.5865
+        },
+        {
+          "fold": 2,
+          "start": "2026-01-04 05:59:45+00:00",
+          "end": "2026-04-05 11:59:30+00:00",
+          "trades": 19,
+          "net_r": 1.9571
+        },
+        {
+          "fold": 3,
+          "start": "2026-04-05 11:59:30+00:00",
+          "end": "2026-07-05 17:59:15+00:00",
+          "trades": 25,
+          "net_r": -0.0419
+        },
+        {
+          "fold": 4,
+          "start": "2026-07-05 17:59:15+00:00",
+          "end": "2026-10-04 23:59:00+00:00",
+          "trades": 23,
+          "net_r": -10.0691
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--timeframe",
+        "15m",
+        "--strategy-name",
+        "ict_scalp_sol_15m",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261013-407c-09/38488359354/arms/CD6__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261013-407c-09/38488359354/arms/CD6__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven",
+        "--cooldown-bars",
+        "6",
+        "--start",
+        "2025-10-05",
+        "--end",
+        "2026-10-04 23:59"
+      ]
+    },
+    "CD12": {
+      "n": 84,
+      "net_r": -5.5604,
+      "net_r_fee_only": -3.4853,
+      "max_drawdown_r": 12.8845,
+      "by_outcome": {
+        "tp_hit": 14,
+        "timeout": 46,
+        "sl_hit": 22,
+        "be_stop": 2
+      },
+      "mean_bars_held": 19.381,
+      "net_r_per_capital_day": -0.3279,
+      "cost_stack": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": null,
+      "data_start": "2025-10-05 00:00:00+00:00",
+      "data_end": "2026-10-04 23:45:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2025-10-05 00:00:00+00:00",
+          "end": "2026-01-04 05:59:45+00:00",
+          "trades": 17,
+          "net_r": 2.5865
+        },
+        {
+          "fold": 2,
+          "start": "2026-01-04 05:59:45+00:00",
+          "end": "2026-04-05 11:59:30+00:00",
+          "trades": 19,
+          "net_r": 1.9571
+        },
+        {
+          "fold": 3,
+          "start": "2026-04-05 11:59:30+00:00",
+          "end": "2026-07-05 17:59:15+00:00",
+          "trades": 25,
+          "net_r": -0.0353
+        },
+        {
+          "fold": 4,
+          "start": "2026-07-05 17:59:15+00:00",
+          "end": "2026-10-04 23:59:00+00:00",
+          "trades": 23,
+          "net_r": -10.0691
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--timeframe",
+        "15m",
+        "--strategy-name",
+        "ict_scalp_sol_15m",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261013-407c-09/38488359354/arms/CD12__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261013-407c-09/38488359354/arms/CD12__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven",
+        "--cooldown-bars",
+        "12",
+        "--start",
+        "2025-10-05",
+        "--end",
+        "2026-10-04 23:59"
+      ]
+    },
+    "CD24": {
+      "n": 78,
+      "net_r": -6.4364,
+      "net_r_fee_only": -4.5841,
+      "max_drawdown_r": 14.3621,
+      "by_outcome": {
+        "tp_hit": 13,
+        "timeout": 43,
+        "sl_hit": 20,
+        "be_stop": 2
+      },
+      "mean_bars_held": 19.436,
+      "net_r_per_capital_day": -0.4076,
+      "cost_stack": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": null,
+      "data_start": "2025-10-05 00:00:00+00:00",
+      "data_end": "2026-10-04 23:45:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2025-10-05 00:00:00+00:00",
+          "end": "2026-01-04 05:59:45+00:00",
+          "trades": 16,
+          "net_r": 2.0322
+        },
+        {
+          "fold": 2,
+          "start": "2026-01-04 05:59:45+00:00",
+          "end": "2026-04-05 11:59:30+00:00",
+          "trades": 18,
+          "net_r": 3.1131
+        },
+        {
+          "fold": 3,
+          "start": "2026-04-05 11:59:30+00:00",
+          "end": "2026-07-05 17:59:15+00:00",
+          "trades": 23,
+          "net_r": -2.1979
+        },
+        {
+          "fold": 4,
+          "start": "2026-07-05 17:59:15+00:00",
+          "end": "2026-10-04 23:59:00+00:00",
+          "trades": 21,
+          "net_r": -9.3841
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--timeframe",
+        "15m",
+        "--strategy-name",
+        "ict_scalp_sol_15m",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261013-407c-09/38488359354/arms/CD24__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261013-407c-09/38488359354/arms/CD24__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven",
+        "--cooldown-bars",
+        "24",
+        "--start",
+        "2025-10-05",
+        "--end",
+        "2026-10-04 23:59"
+      ]
+    }
+  },
+  "window": {
+    "start": "2025-10-05",
+    "end": "2026-10-04 23:59",
+    "fetch_days": 400,
+    "feed": {
+      "source": "binance",
+      "ticker": "SOLUSDT",
+      "interval": "15",
+      "resample": "15m"
+    },
+    "fold_edges": [
+      "2025-10-05 00:00:00+00:00",
+      "2026-01-04 05:59:45+00:00",
+      "2026-04-05 11:59:30+00:00",
+      "2026-07-05 17:59:15+00:00",
+      "2026-10-04 23:59:00+00:00"
+    ]
+  },
+  "argv": {
+    "B": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--timeframe",
+        "15m",
+        "--strategy-name",
+        "ict_scalp_sol_15m",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261013-407c-09/38488359354/arms/B__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261013-407c-09/38488359354/arms/B__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven",
+        "--start",
+        "2025-10-05",
+        "--end",
+        "2026-10-04 23:59"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": []
+    },
+    "CD6": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--timeframe",
+        "15m",
+        "--strategy-name",
+        "ict_scalp_sol_15m",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261013-407c-09/38488359354/arms/CD6__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261013-407c-09/38488359354/arms/CD6__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven",
+        "--cooldown-bars",
+        "6",
+        "--start",
+        "2025-10-05",
+        "--end",
+        "2026-10-04 23:59"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [
+        "--cooldown-bars",
+        "6"
+      ],
+      "omitted_levers_per_builder": []
+    },
+    "CD12": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--timeframe",
+        "15m",
+        "--strategy-name",
+        "ict_scalp_sol_15m",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261013-407c-09/38488359354/arms/CD12__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261013-407c-09/38488359354/arms/CD12__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven",
+        "--cooldown-bars",
+        "12",
+        "--start",
+        "2025-10-05",
+        "--end",
+        "2026-10-04 23:59"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [
+        "--cooldown-bars",
+        "12"
+      ],
+      "omitted_levers_per_builder": []
+    },
+    "CD24": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_ict_scalp.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--timeframe",
+        "15m",
+        "--strategy-name",
+        "ict_scalp_sol_15m",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261013-407c-09/38488359354/arms/CD24__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261013-407c-09/38488359354/arms/CD24__bt.json",
+        "--htf-rule",
+        "1h",
+        "--htf-ema-period",
+        "20",
+        "--sim-breakeven",
+        "--cooldown-bars",
+        "24",
+        "--start",
+        "2025-10-05",
+        "--end",
+        "2026-10-04 23:59"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [
+        "--cooldown-bars",
+        "24"
+      ],
+      "omitted_levers_per_builder": []
+    }
+  }
+}
