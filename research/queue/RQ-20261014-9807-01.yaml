@@ -74,8 +74,6 @@ lands:
   store: research/results/
   assert_field: read_state
   min_rows: 1
-grading:
-  auto: true
 roadmap:
 - M20
 - M31
@@ -87,3 +85,14 @@ related:
 - scripts/research/bracket_calibration_report.py --mfe (the same peak_r basis, percent-of-entry view)
 - RQ-20261007-001 / RQ-20261007-003 (landed 2026-10-08; the revision cells this census orders)
 last_dispatched_at: '2026-10-14T09:10:30+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-RQ20261014-9807-01-GIVEBACK-CENSUS
+  evidence:
+  - research/results/RQ-20261014-9807-01/38540458035.jsonl
+  graded_at: '2026-10-14'
+  grader: scripts/research/queue_grade.py
+  needs_review: true
+  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  rows: 1
+  verdict: null
