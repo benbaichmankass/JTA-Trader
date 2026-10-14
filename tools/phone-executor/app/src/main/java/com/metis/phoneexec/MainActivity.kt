@@ -38,6 +38,7 @@ import org.json.JSONObject
 import java.util.Date
 import kotlin.math.abs
 import kotlin.math.floor
+import kotlin.math.max
 import kotlin.math.round
 
 /**
@@ -94,6 +95,7 @@ class MainActivity : Activity() {
     private var busy = false
     private var lastHbMs = 0L
     private var lastAcctMs = 0L
+    private var sheetOkPosted = false   // the first clean sheet read posts its shape once (opened_by, uPnL sign)
     private var lastPosMissMs = 0L
     private var lastStatus = ""
     // HOTFIX 2026-10-05 (manual login was being reset by the loop): any touch/key on the screen holds every
@@ -139,6 +141,11 @@ class MainActivity : Activity() {
         const val ACCT_MS = 300_000L
         const val CHIPS_WAIT_MS = 12_000L               // Positions/Closed read: wait this long for the tab chips to render
         const val POS_MISS_MS = 1_800_000L   // a Positions read that failed is reported (masked dump) at most every 30 min
+        // BREAKOUT-SL-AMEND-CLICK: the sheet's pencil click (and Confirm) stays OFF until a live amend_sheet_unmeasured
+        // dump has shown the Stop row's icons (the ⓧ next to the pencil CANCELS the stop); the read path runs live
+        const val SHEET_EDIT_MEASURED = false
+        const val QTY_TOL_FRAC = 0.02                   // sheet "Total open volume" vs the ticket qty (venue rounding)
+        const val PRICE_BUF_FRAC = 0.001                // the new stop clears the venue's current price by max(2 steps, 0.1%)
         const val USER_HOLD_MS = 5 * 60_000L
         const val PAUSE_MAX_MS = 10 * 60_000L
         const val JS_TIMEOUT_MS = Page.JS_TIMEOUT_MS
@@ -590,7 +597,9 @@ class MainActivity : Activity() {
         if (bal == null && eq == null) return "unread"
         // Positions every read (the server reconciles the journal against it); Closed orders only once Positions read
         // cleanly (they carry the exit of a position that disappeared). The Positions view is left up afterwards.
-        val pos = readView(p, "^positions\\b", "__ex.positionsRead()")
+        var pos = readView(p, "^positions\\b", "__ex.positionsRead()")
+        // BREAKOUT-SL-AMEND-CLICK: a side the grid draws without text is read from the row's sheet (MEASURED)
+        if (pos != null && pos.optString("state") == "side_unread") pos = sheetSides(p, pos)
         val closed = if (pos?.optString("state") == "read") readView(p, "^(closed orders|trades)\\b", "__ex.closedRead()") else null
         if (closed != null) { p.js("__ex.clickText(${q("^positions\\b")})"); delay(600) }
         val ps = pos?.optString("state") ?: "unanswered"
@@ -1254,11 +1263,9 @@ class MainActivity : Activity() {
         // 1. the position row
         js("__ex.clickText('^positions$')"); delay(1500); ensure()
         var pos = jsObj("__ex.posInfo(${q(venue)}, ${q(sideRe)})") ?: return amendRefuse(t, "positions unreadable", null)
-        if (pos.optInt("n") == 0) {
-            ledger.append(aid, "no_position")
-            val rows = try { JSONArray(js("JSON.stringify(__ex.rows())")) } catch (e: org.json.JSONException) { JSONArray() }
-            return amendResult(t, "no_position", "no $venue ${if (long) "long" else "short"} row in Positions", null, null, JSONObject().put("rows", rows))
-        }
+        // BREAKOUT-SL-AMEND-CLICK: the live Positions view is a div grid with no side text and no edit control, so a
+        // row it cannot match (n=0) or a grid row goes to the position SHEET, which reads side + volume MEASURED
+        if (pos.optInt("n") == 0 || pos.optString("layout") == "div_grid") return executeAmendSheet(t, live, venue, long, pStep, fromSl, sl, tpChange)
         if (pos.optInt("n") != 1) return amendRefuse(t, "position row not unique (n=${pos.optInt("n")})", pos)
         // 2. the terminal must show the stop/target the VM believes is resting (row columns, when the layout has them)
         val rowSl = firstNum(pos.optString("sl", "")); val rowTp = firstNum(pos.optString("tp", ""))
@@ -1334,6 +1341,199 @@ class MainActivity : Activity() {
         } else {
             ledger.append(aid, "unconfirmed")
             amendResult(t, "mismatch", "after the save the terminal shows SL $vSl TP $vTp (asked ${fmt(sl, pStep)} / ${if (wantTp.isNaN()) "-" else fmt(wantTp, pStep)})", vSl, vTp, p2)
+            setStatus("amend $aid NOT VERIFIED — operator check")
+        }
+    }
+
+    // ---------------- position sheet (BREAKOUT-SL-AMEND-CLICK) ----------------
+    /** Open the ONE Positions row's bottom sheet for [sym] and read its [Position details] (MEASURED: what the venue
+     *  shows). The child row ("ETH 5x") is tapped first, then the group row ("ETH 1"); which one opened the sheet is
+     *  reported as opened_by (unmeasured until the first live run). Returns the details (ok, side, qty, entry, mark,
+     *  upnl, upnl_signed, opened_by, tries) or {ok:false, why, tries}; the sheet is left OPEN only when ok. */
+    private suspend fun sheetRead(p: Page, sym: String): JSONObject {
+        if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") == true) sheetClose(p, sym)
+        val tries = JSONArray()
+        var opened = ""
+        for (which in listOf("child", "group")) {
+            val r = p.js("__ex.sheetOpen(${q(sym)}, ${q(which)})")
+            tries.put("$which:$r")
+            if (r != "clicked") continue
+            delay(1200); p.ensure()
+            if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") == true) { opened = which; break }
+            tries.put("$which:no_sheet")
+        }
+        if (opened.isEmpty()) return JSONObject().put("ok", false).put("why", "sheet_not_open").put("tries", tries)
+        val si = p.obj("__ex.sheetInfo(${q(sym)})") ?: JSONObject()
+        if (!si.optBoolean("title_ok")) {
+            val c = sheetClose(p, sym)
+            return JSONObject().put("ok", false).put("why", "sheet_title").put("info", si).put("tries", tries).put("close", c)
+        }
+        p.js("__ex.sheetTab('details')"); delay(800); p.ensure()
+        val d = p.obj("__ex.sheetDetails()") ?: JSONObject().put("ok", false).put("why", "details_unanswered")
+        d.put("opened_by", opened).put("tries", tries)
+        if (!d.optBoolean("ok")) { if (!d.has("why")) d.put("why", "details_unread"); d.put("close", sheetClose(p, sym)) }
+        return d
+    }
+
+    /** Close the sheet: Escape first, then its header close icon. closed | escape | x | still_open(..) */
+    private suspend fun sheetClose(p: Page, sym: String): String {
+        if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") != true) return "closed"
+        p.js("__ex.sheetClose()"); delay(700); p.ensure()
+        if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") != true) return "escape"
+        val x = p.js("__ex.sheetCloseX()"); delay(700); p.ensure()
+        return if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") != true) "x" else "still_open($x)"
+    }
+
+    /** The sheet's evidence as short masked lines for the visible positions diag (state sheet_* / amend_sheet_*). No
+     *  values: the server masks digits in cells, and only shapes (tries, misses, uPnL text shape, icon dump) go in. */
+    private suspend fun sheetMiss(state: String, d: JSONObject, orders: JSONObject? = null, force: Boolean = false) {
+        if (!force && System.currentTimeMillis() - lastPosMissMs < POS_MISS_MS) return
+        lastPosMissMs = System.currentTimeMillis()
+        val h = JSONArray()
+        d.optJSONArray("tries")?.let { a -> for (i in 0 until a.length()) h.put(a.optString(i).take(40)) }
+        if (d.has("opened_by")) h.put("opened_by=${d.optString("opened_by")}")
+        d.optJSONArray("miss")?.let { a -> for (i in 0 until a.length()) h.put("miss=${a.optString(i)}".take(40)) }
+        if (d.has("upnl_shape")) h.put("upnl=${d.optString("upnl_shape")} signed=${d.optBoolean("upnl_signed")}".take(40))
+        if (d.has("close")) h.put("close=${d.optString("close")}".take(40))
+        val ctl = JSONArray()
+        orders?.optJSONArray("rows")?.let { rs ->
+            for (i in 0 until rs.length()) {
+                val r = rs.optJSONObject(i) ?: continue
+                ctl.put("${r.optString("type")} px=${r.optInt("n_px")} pen=${r.optInt("pencils")}")
+                r.optJSONArray("icon_lines")?.let { l -> for (j in 0 until l.length()) ctl.put("  " + l.optString(j).take(38)) }
+            }
+        }
+        try { api.positionsMiss(state, h, ctl) } catch (x: Exception) { }
+    }
+
+    /** side_unread (the Positions grid draws the side without text): each such row's side, size and avg entry are read
+     *  from its sheet's [Position details] (MEASURED, side_source sheet) and the read becomes "read". A row symbol that
+     *  repeats cannot be told apart from its sheet, and any unread sheet leaves side_unread untouched for the server's
+     *  journal fallback (ESTIMATED). The sheet is closed after each read. A uPnL without a sign is sent as null: a
+     *  sign-less loss is never a MEASURED number (open flag; upnl_signed says which). */
+    private suspend fun sheetSides(p: Page, pos: JSONObject): JSONObject {
+        val rows = pos.optJSONArray("rows") ?: return pos
+        val syms = (0 until rows.length()).map { rows.optJSONObject(it)?.optString("symbol") ?: "" }
+        if (syms.isEmpty() || syms.any { it.isEmpty() } || syms.toSet().size != syms.size) return pos
+        val out = JSONArray()
+        for (i in 0 until rows.length()) {
+            val r = JSONObject(rows.getJSONObject(i).toString())
+            if (!r.isNull("side") && r.optString("side").isNotEmpty()) { out.put(r); continue }
+            val d = sheetRead(p, syms[i])
+            if (!d.optBoolean("ok")) { sheetMiss("sheet_${d.optString("why")}", d); return pos }
+            d.put("close", sheetClose(p, syms[i]))
+            r.put("side", d.getString("side")).put("side_source", "sheet").put("qty", d.getDouble("qty")).put("qty_src", "sheet")
+                .put("entry", d.getDouble("entry")).put("upnl_signed", d.optBoolean("upnl_signed"))
+            if (!d.isNull("mark")) r.put("mark", d.optDouble("mark"))
+            if (d.optBoolean("upnl_signed") && !d.isNull("upnl")) r.put("upnl", d.optDouble("upnl")) else r.put("upnl", JSONObject.NULL)
+            out.put(r)
+            if (!sheetOkPosted) { sheetOkPosted = true; sheetMiss("sheet_ok", d, force = true) }
+        }
+        return JSONObject(pos.toString()).put("state", "read").put("rows", out).put("provenance", "MEASURED")
+    }
+
+    /** The trail amend on Breakout's position SHEET (operator-measured flow, 2026-10-14): the Positions grid has no
+     *  edit control and no side text, so the stop is edited where the venue puts it. Every step is asserted before the
+     *  next: the sheet's side + total volume == the ticket's; the [1 TP / 1 SL] tab holds ONE Stop row whose trigger is
+     *  the stop the VM believes is resting (else human_moved); the new stop is tighter AND clear of the venue's current
+     *  price; then -- only when SHEET_EDIT_MEASURED -- the Stop row's ONE pencil, the "Edit Stop loss" modal (header side
+     *  + qty asserted), ONLY the Trigger typed and read back (quantity unchanged), Confirm, and the Stop row re-read. */
+    private suspend fun executeAmendSheet(t: JSONObject, live: Boolean, venue: String, long: Boolean, pStep: Double,
+                                          fromSl: Double, sl: Double, tpChange: Boolean) {
+        val aid = t.getString("amend_id")
+        val want = if (long) "long" else "short"
+        if (tpChange) return amendRefuse(t, "the sheet path edits the stop only; a TP revision is not built", null)
+        if (if (long) sl <= fromSl + pStep / 2 else sl >= fromSl - pStep / 2) return amendRefuse(t, "sheet path: the new stop is not tighter", null)
+        // 1-2. the sheet and its [Position details], MEASURED
+        val d = sheetRead(fg, venue)
+        if (!d.optBoolean("ok")) {
+            val tries = d.optJSONArray("tries")?.let { a -> (0 until a.length()).map { a.optString(it) } } ?: emptyList()
+            if (d.optString("why") == "sheet_not_open" && tries.all { it.endsWith(":none") || it.endsWith(":no_grid") }) {
+                ledger.append(aid, "no_position")
+                return amendResult(t, "no_position", "no $venue row in Positions (${tries.joinToString(" ")})", null, null, d)
+            }
+            sheetMiss("amend_sheet_${d.optString("why")}", d, force = true)
+            return amendRefuse(t, "position sheet unread: ${d.optString("why")} ${d.optJSONArray("miss") ?: ""} ${tries.joinToString(" ")}", d)
+        }
+        suspend fun bail(why: String, dump: JSONObject?) { val c = sheetClose(fg, venue); amendRefuse(t, "$why (sheet close: $c)", dump) }
+        val tq = t.optDouble("qty", Double.NaN); val sq = d.optDouble("qty", Double.NaN)
+        if (d.optString("side") != want) return bail("sheet side ${d.optString("side")} != ticket $want", d)
+        if (tq.isNaN() || sq.isNaN() || abs(sq - tq) > max(1e-9, QTY_TOL_FRAC * tq)) return bail("sheet volume $sq != ticket qty $tq", d)
+        val mark = d.optDouble("mark", Double.NaN)
+        if (mark.isNaN()) return bail("sheet current price unread", d)
+        val buf = max(2 * pStep, mark * PRICE_BUF_FRAC)
+        if (if (long) sl > mark - buf else sl < mark + buf) return bail("new stop ${fmt(sl, pStep)} within ${fmt(buf, pStep)} of the current price ${fmt(mark, pStep)}", d)
+        // 3. [1 TP / 1 SL]: the ONE Stop row, its trigger == the resting stop the VM expects
+        fg.js("__ex.sheetTab('tpsl')"); delay(800); ensure()
+        val so = jsObj("__ex.sheetOrders()") ?: return bail("sheet orders unanswered", d)
+        if (so.optInt("n_stop") != 1) return bail("sheet stop rows n=${so.optInt("n_stop")}", so)
+        val rs = so.optJSONArray("rows") ?: JSONArray()
+        val stop = (0 until rs.length()).map { rs.optJSONObject(it) }.first { it?.optString("type") == "stop" }!!
+        val trig = if (stop.isNull("trigger")) null else stop.optDouble("trigger")
+        if (!close(trig, fromSl, pStep)) {
+            val c = sheetClose(fg, venue)
+            return amendHuman(t, "terminal stop $trig != expected ${fmt(fromSl, pStep)} (sheet close: $c)", so)
+        }
+        // FIRST-RUN GATE (BREAKOUT-SL-AMEND-CLICK): the read path above runs live; the pencil sits next to the ⓧ that
+        // CANCELS the stop, and no capture has shown the live icons, so nothing is clicked until their dump is reviewed
+        if (!SHEET_EDIT_MEASURED) {
+            sheetMiss("amend_sheet_unmeasured", d, so, force = true)
+            return bail("sheet read verified (side, volume, stop ${fmt(fromSl, pStep)} MEASURED); the pencil click is gated until its icon dump is reviewed", so)
+        }
+        // 4. the Stop row's ONE pencil -> the ONE "Edit Stop loss" modal
+        if (stop.optInt("pencils") != 1) return bail("stop row pencils n=${stop.optInt("pencils")}", so)
+        val e = js("__ex.sheetEditStop()")
+        if (e != "clicked") return bail("stop edit control: $e", so)
+        delay(1200); ensure()
+        suspend fun mbail(why: String, dump: JSONObject?) { val c = js("__ex.modalCancel()"); delay(600); bail("$why (modal cancel: $c)", dump) }
+        val m0 = jsObj("__ex.modalInfo()") ?: return mbail("edit modal unanswered", so)
+        if (m0.optInt("n") != 1 || m0.optString("kind") != "stop") return mbail("edit modal n=${m0.optInt("n")} kind=${m0.optString("kind")}", m0)
+        val mq = m0.optDouble("qty", Double.NaN)
+        if (m0.optString("side") != want || mq.isNaN() || abs(mq - sq) > max(1e-9, QTY_TOL_FRAC * sq)) return mbail("modal header ${m0.optString("side")} $mq != $want $sq", m0)
+        if (m0.optInt("triggers") != 1) return mbail("modal Trigger inputs n=${m0.optInt("triggers")}", m0)
+        val mt = num(jsObj("__ex.modalTrigger()")?.optString("value"))
+        if (!close(mt, fromSl, pStep)) { js("__ex.modalCancel()"); delay(600); val c = sheetClose(fg, venue); return amendHuman(t, "modal trigger $mt != expected ${fmt(fromSl, pStep)} (sheet close: $c)", m0) }
+        fun qtyField(m: JSONObject?): String {
+            val ins = m?.optJSONArray("inputs") ?: return "?"
+            return (0 until ins.length()).map { ins.optJSONObject(it) }.filter { Regex("(?i)quantity|\\bqty\\b|size").containsMatchIn(it?.optString("label") ?: "") }
+                .map { it!!.optString("value") }.joinToString("|")
+        }
+        val q0 = qtyField(m0)
+        // 5. ONLY the Trigger, typed and read back; the quantity must not move
+        val st = jsObj("__ex.modalSetTrigger(${q(fmt(sl, pStep))})")
+        delay(400)
+        val tr = num(jsObj("__ex.modalTrigger()")?.optString("value"))
+        val m1 = jsObj("__ex.modalInfo()")
+        if (st?.optInt("n") != 1 || !close(tr, sl, pStep)) return mbail("trigger read-back $tr", m1)
+        if (qtyField(m1) != q0) return mbail("modal quantity changed ($q0 -> ${qtyField(m1)})", m1)
+        if (!live) {
+            val c = js("__ex.modalCancel()"); delay(600); val sc = sheetClose(fg, venue)
+            ledger.append(aid, "dry_amended")
+            amendResult(t, "dry_amended", "sheet: trigger typed + read back, NOT confirmed (server mode dry; cancel: $c, sheet close: $sc)", tr, null, m1)
+            setStatus("DRY amend $aid read back on the sheet; not saved"); return
+        }
+        ledger.append(aid, "submitted")
+        val cf = js("__ex.modalConfirm()")
+        if (cf != "clicked") { ledger.append(aid, "refused"); return mbail("modal confirm control: $cf", m1) }
+        delay(1500); ensure()
+        if ((jsObj("__ex.modalInfo()")?.optInt("n") ?: 0) > 0) {
+            js("__ex.modalCancel()"); delay(600); val c = sheetClose(fg, venue); ledger.append(aid, "unconfirmed")
+            return amendResult(t, "mismatch", "edit modal still open after Confirm (sheet close: $c)", null, null, jsObj("__ex.modalInfo()"))
+        }
+        // 6. re-read the Stop row on the sheet
+        fg.js("__ex.sheetTab('tpsl')"); delay(1000); ensure()
+        val so2 = jsObj("__ex.sheetOrders()")
+        val rs2 = so2?.optJSONArray("rows") ?: JSONArray()
+        val stops2 = (0 until rs2.length()).map { rs2.optJSONObject(it) }.filter { it?.optString("type") == "stop" }
+        val vSl = if (stops2.size == 1 && !stops2[0]!!.isNull("trigger")) stops2[0]!!.optDouble("trigger") else null
+        val c = sheetClose(fg, venue)
+        if (close(vSl, sl, pStep)) {
+            ledger.append(aid, "amended")
+            amendResult(t, "amended", "confirmed and read back on the position sheet (sheet close: $c)", vSl, null, so2)
+            setStatus("LIVE amend $aid: SL ${fmt(sl, pStep)} read back")
+        } else {
+            ledger.append(aid, "unconfirmed")
+            amendResult(t, "mismatch", "after Confirm the sheet shows stop $vSl (asked ${fmt(sl, pStep)}; stops n=${stops2.size}; sheet close: $c)", vSl, null, so2)
             setStatus("amend $aid NOT VERIFIED — operator check")
         }
     }

@@ -603,6 +603,125 @@
   }
   function sig(s) { var h = 5381; for (var i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0; return h.toString(36); }
 
+  // ---- POSITION SHEET (BREAKOUT-SL-AMEND-CLICK, 2026-10-14). The flow is operator-MEASURED from screenshots (~21:41Z,
+  // phone width); its DOM is NOT measured yet, so every helper finds things by visible text / attribute words, demands
+  // exactly ONE match and otherwise returns a digit-masked dump. Tapping the Positions row opens a bottom sheet titled
+  // with the symbol ("ETH"), subtitle "Position – <id>", tabs [Position details] [Opening trades] [1 TP / 1 SL].
+  // Position details: Side "Short", "Total open volume" 0.54 ETH, "Avg. opening price", "Current price", "uPnL", and a
+  // RED "Close position" button. [1 TP / 1 SL]: SIDE | TYPE | TRIGGER PRICE rows ("Long | Stop l… | 2,504.25 USD | ✎ |
+  // ⓧ"): that SIDE is the CLOSING order's side, never the position's. ✎ opens "Edit Stop loss"; ⓧ CANCELS the order.
+  // DENYLIST: every click goes through safeClick, which refuses "Close position", any control whose words say
+  // close / cancel / remove / delete / flatten / reverse, and the ⓧ ✕ × glyph icons (a Positions row's ✕ closes the
+  // position; an order row's ⓧ cancels the stop). The two dismissals (the modal's "Cancel" text button, the sheet's
+  // header ✕) are separate, narrower paths: dlgDismiss / sheetCloseX.
+  var DENY_WORDS = /close|cancel|remove|delete|flatten|reverse|liquidat|discard/i;
+  var DENY_GLYPH = /^[✕✖✗✘×ⓧ⊗⊘❌❎⨯☒xX]$/;
+  var PENCIL_GLYPH = /^[✎✏✐\u{1f589}\u{1f58a}\u{1f58b}]$/u;
+  var SHEET_TAB = {details: /^position details$/i, trades: /^opening trades$/i, tpsl: /^\d+\s*tp\s*\/\s*\d+\s*sl$/i};
+  var SUBTITLE_RE = /^position\s*[–—-]\s*\S+/i;
+  function ctlWords(x) {   // a control's own words: text, aria-label, title, test id / icon names, svg <title>, <use> href
+    var s = [t(x)];
+    [x].concat(Array.prototype.slice.call(x.querySelectorAll("*")).slice(0, 12)).forEach(function (e) {
+      ["aria-label", "title", "data-testid", "data-icon", "data-id", "name", "alt", "href", "xlink:href"].forEach(function (a) { var v = e.getAttribute(a); if (v) s.push(v); });
+      if (e.tagName && e.tagName.toLowerCase() === "title") s.push(e.textContent || "");
+    });
+    return s.join(" ") + " " + attrText(x);
+  }
+  // why a control must never be clicked, or null. Words are matched in text AND attributes (class names included), so
+  // a false refusal ("closeable") is possible and safe; a missed ✕ is not.
+  function denied(x) {
+    if (!x || !x.getAttribute) return "none";
+    var txt = t(x);
+    if (/close\s*position/i.test(txt)) return "deny_close_position";
+    if (DENY_GLYPH.test(txt) || DENY_GLYPH.test((x.getAttribute("aria-label") || "").trim())) return "deny_glyph";
+    if (DENY_WORDS.test(ctlWords(x))) return "deny_word";
+    return null;
+  }
+  function safeClick(x) { var d = denied(x); if (d) return d; x.click(); return "clicked"; }
+  function textEls(root, re, max) {   // innermost visible elements whose own text matches re
+    return innermost(Array.prototype.slice.call((root || document).querySelectorAll("*")).filter(function (e) {
+      if (!vis(e)) return false; var s = t(e); return s.length > 0 && s.length <= (max || 40) && re.test(s);
+    }));
+  }
+  function sheetRoots() {   // the smallest ancestor of a [Position details] tab that also holds the [n TP / n SL] tab and the subtitle
+    var found = [];
+    textEls(document, SHEET_TAB.details).forEach(function (d) {
+      for (var a = d.parentElement, k = 0; a && k < 12 && a !== document.body; a = a.parentElement, k++) {
+        if (textEls(a, SHEET_TAB.tpsl).length && textEls(a, SUBTITLE_RE, 60).length) { if (found.indexOf(a) < 0) found.push(a); return; }
+      }
+    });
+    return innermost(found);
+  }
+  function sheetRoot() { var r = sheetRoots(); return r.length === 1 ? r[0] : null; }
+  function before(a, b) { return !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING); }
+  // the sheet's value for a row label ("Side" -> "Short"): the label's nearest ancestor whose text is the label + value
+  // and that holds no other details label
+  var DETAIL_LABELS = {side: /^side$/i, qty: /^total open volume$/i, entry: /^avg\.?\s*opening price$/i, mark: /^current price$/i,
+    upnl: /^u\.?\s*p\s*n\s*l$|^u\.?\s*p\s*&\s*l$|^unreali[sz]ed/i, margin: /^initial margin$/i};
+  function detailValue(root, re) {
+    var ls = textEls(root, re); if (ls.length !== 1) return {n: ls.length};
+    var lab = t(ls[0]), all_ = Object.keys(DETAIL_LABELS).map(function (k) { return DETAIL_LABELS[k]; });
+    for (var a = ls[0].parentElement, k = 0; a && k < 3 && a !== root; a = a.parentElement, k++) {
+      var others = all_.filter(function (rx) { return rx !== re && textEls(a, rx).length; });
+      if (others.length) return {n: 1, value: null, why: "shared_parent"};
+      var s = t(a); if (s.length > lab.length && s.toLowerCase().indexOf(lab.toLowerCase()) === 0) return {n: 1, value: s.slice(lab.length).trim(), el: a};
+    }
+    return {n: 1, value: null, why: "no_value"};
+  }
+  var PRICE_LEAF = /^[-+−]?\s*\d[\d,]*(\.\d+)?\s*(USD[TC]?)?$/i;
+  // the [n TP / n SL] tab's order rows: each TYPE cell ("Stop l…" / "Take p…") and its smallest ancestor holding ONE
+  // price and no other TYPE cell
+  function sheetOrderRows(root) {
+    var types = textEls(root, /^(stop|take)\b/i, 30), out = [];
+    types.forEach(function (ty) {
+      for (var a = ty.parentElement, k = 0; a && k < 5 && a !== root; a = a.parentElement, k++) {
+        if (types.some(function (o) { return o !== ty && a.contains(o); })) break;
+        var px = textEls(a, PRICE_LEAF);
+        if (px.length) { out.push({type: /^stop/i.test(t(ty)) ? "stop" : "take", el: a, typeEl: ty, px: px}); return; }
+      }
+      out.push({type: /^stop/i.test(t(ty)) ? "stop" : "take", el: null, typeEl: ty, px: []});
+    });
+    return out;
+  }
+  // a row's icon-like controls, outermost interactive element each: button / role=button / a / [tabindex] / svg / img /
+  // a one-glyph text element
+  function rowIcons(row, skip) {
+    var c = Array.prototype.slice.call(row.querySelectorAll("button,[role=button],a,[tabindex],svg,img,i,span,div")).filter(function (x) {
+      if (!vis(x) || skip.some(function (s) { return s === x || s.contains(x) || x.contains(s); })) return false;
+      var tag = x.tagName.toLowerCase();
+      return /^(button|a|svg|img|i)$/.test(tag) || x.getAttribute("role") === "button" || x.hasAttribute("tabindex") || (t(x).length === 1 && !x.children.length);
+    }).map(function (x) {
+      var o = x.closest("button,[role=button],a,[tabindex]");
+      return (!o || o === row || !row.contains(o) || skip.some(function (s) { return o.contains(s); })) ? x : o;
+    });
+    var u = c.filter(function (x, i) { return c.indexOf(x) === i; });
+    return u.filter(function (x) { return !u.some(function (o) { return o !== x && o.contains(x); }); });
+  }
+  function isPencil(x) { var s = t(x); return (PENCIL_GLYPH.test(s) || /\b(edit|pencil|modify)\b/i.test(ctlWords(x))) && !denied(x); }
+  function iconDump(x) {
+    var m = function (s) { return (s || "").replace(/\d/g, "#"); };
+    return {tag: x.tagName.toLowerCase(), role: x.getAttribute("role") || "", text: m(t(x)).slice(0, 8),
+      label: m(x.getAttribute("aria-label") || x.getAttribute("title") || "").slice(0, 24), testid: m(x.getAttribute("data-testid") || "").slice(0, 24),
+      words: m(attrText(x)).slice(0, 40), pencil: isPencil(x), deny: denied(x) || ""};
+  }
+  function iconLines(d) {
+    return d.map(function (c) { return (c.tag + (c.role ? "/" + c.role : "") + " " + (c.pencil ? "P " : "") + (c.deny ? "D " : "") + (c.text || c.label || c.testid || c.words)).slice(0, 40); });
+  }
+  // the edit modal: the ONE "Edit Stop loss" / "Edit Take profit" title and its smallest ancestor holding a Confirm and
+  // a Cancel button
+  function modalRoot() {
+    var ts = textEls(document, /^edit\s+(stop\s*loss|take\s*profit)$/i), found = [];
+    ts.forEach(function (ti) {
+      for (var a = ti.parentElement, k = 0; a && k < 10 && a !== document.body; a = a.parentElement, k++) {
+        var bs = Array.prototype.slice.call(a.querySelectorAll("button,[role=button]")).filter(vis);
+        if (bs.some(function (b) { return /^confirm$/i.test(t(b)); }) && bs.some(function (b) { return /^cancel$/i.test(t(b)); })) { found.push({root: a, title: ti}); return; }
+      }
+    });
+    return found;
+  }
+  var MODAL_HDR = /^(long|short)\s+(\d[\d,]*(?:\.\d+)?)\s*([A-Za-z]{2,8})?\s*@\s*(\d[\d,]*(?:\.\d+)?)\s*(USD[TC]?)?$/i;
+  function modalInputs(root) { return inputs(root).map(function (i) { return {label: labelFor(i).replace(/\s+/g, " ").trim().slice(0, 40), value: i.value}; }); }
+  function triggerInput(root) { return inputs(root).filter(function (i) { var l = labelFor(i); return /trigger/i.test(l) && !/distance|%|r\s*:\s*r|quantity/i.test(l); }); }
   window.__ex = {
     state: function () {
       var pw = all("input[type=password]").length > 0;
@@ -1091,6 +1210,144 @@
       if (!hostOk()) return {state: "bad_host"};
       return readTable(CLOSED_COLS, ["symbol", "side"], /no (closed )?orders|no (trades|history)/i, /^(closed orders|trades)\b/i, false);
     },
+    // ---- POSITION SHEET (BREAKOUT-SL-AMEND-CLICK) ----
+    // Open the sheet of the ONE Positions row for `sym`. which = "child" taps the position row's Market cell ("ETH 5x",
+    // a leverage badge); "group" taps the group row's ("ETH 1", the symbol + a count). Only inside the Positions grid
+    // panel, never a control the denylist names. clicked | bad_host | sheet_open | no_grid | no_panel | none | rows_<n> |
+    // deny_*.
+    sheetOpen: function (sym, which) {
+      if (!hostOk()) return "bad_host";
+      if (sheetRoots().length) return "sheet_open";
+      var g = gridHeaders(POS_COLS); if (g.length !== 1) return "no_grid";
+      var panel = gridPanel(g[0]); if (!panel) return "no_panel";
+      var b = base(sym).replace(/[^A-Z0-9]/g, ""), sfx = "(USD[TC]?|PERP)?";
+      var re = which === "group" ? new RegExp("^[\\u2304\\u2335\\u25be\\u25bc\\u02c5v]?\\s*" + b + sfx + "\\s*\\d+$", "i")
+        : new RegExp("^" + b + sfx + "\\s*\\d+(\\.\\d+)?\\s*[x\\u00d7]$", "i");
+      var hits = textEls(panel, re, 24).filter(function (e) { return !g[0].contains(e); });
+      if (!hits.length) return "none"; if (hits.length > 1) return "rows_" + hits.length;
+      return safeClick(hits[0]);
+    },
+    // The open sheet: {open, n, title_ok (a title equal to the symbol), subtitle (digits masked), tabs present}
+    sheetInfo: function (sym) {
+      var rs = sheetRoots(); if (rs.length !== 1) return {open: false, n: rs.length};
+      var r = rs[0], b = base(sym).replace(/[^A-Z0-9]/g, "");
+      var title = textEls(r, new RegExp("^" + b + "(USD[TC]?|PERP)?$", "i"), 16), sub = textEls(r, SUBTITLE_RE, 60);
+      return {open: true, n: 1, title_ok: title.length >= 1, subtitle: sub.length ? t(sub[0]).replace(/\d/g, "#").slice(0, 30) : "",
+        tabs: {details: textEls(r, SHEET_TAB.details).length, trades: textEls(r, SHEET_TAB.trades).length, tpsl: textEls(r, SHEET_TAB.tpsl).length}};
+    },
+    // Click one of the sheet's tabs: details | trades | tpsl. clicked | no_sheet | none | ambiguous | deny_*
+    sheetTab: function (which) {
+      var r = sheetRoot(); if (!r) return "no_sheet";
+      var ts = textEls(r, SHEET_TAB[which] || /^$/); if (!ts.length) return "none"; if (ts.length > 1) return "ambiguous";
+      return safeClick(ts[0]);
+    },
+    // [Position details] read: side / qty / entry / mark as the sheet SHOWS them (MEASURED); side only from an exact
+    // "Long" / "Short" value. upnl_signed: whether the uPnL text carries a sign (a sign-less loss is never a MEASURED
+    // number; the caller drops an unsigned upnl). upnl_shape is the text, digits masked (the open sign flag).
+    sheetDetails: function () {
+      var r = sheetRoot(); if (!r) return {ok: false, why: "no_sheet"};
+      var o = {ok: true, miss: []};
+      Object.keys(DETAIL_LABELS).forEach(function (k) {
+        var v = detailValue(r, DETAIL_LABELS[k]);
+        o[k + "_raw_n"] = v.n; o[k + "_text"] = v.value == null ? null : v.value.slice(0, 40);
+        if (v.value == null && k !== "margin") o.miss.push(k + (v.why ? ":" + v.why : ":n" + v.n));
+      });
+      var sv = (o.side_text || "").trim();
+      o.side = /^long$/i.test(sv) ? "long" : (/^short$/i.test(sv) ? "short" : null);
+      o.qty = o.qty_text == null ? null : firstNumber(o.qty_text);
+      o.qty_unit = o.qty_text == null ? "" : (o.qty_text.replace(/[^A-Za-z]/g, "") || "").slice(0, 8);
+      o.entry = o.entry_text == null ? null : firstNumber(o.entry_text);
+      o.mark = o.mark_text == null ? null : firstNumber(o.mark_text);
+      o.upnl_signed = o.upnl_text != null && /^\s*[-+−]/.test(o.upnl_text);
+      o.upnl = o.upnl_text == null ? null : firstNumber(o.upnl_text);
+      o.upnl_shape = o.upnl_text == null ? "" : o.upnl_text.replace(/\d/g, "d").slice(0, 24);
+      delete o.margin_text; delete o.upnl_text;
+      if (o.side == null || o.qty == null || o.entry == null) o.ok = false;
+      return o;
+    },
+    // [n TP / n SL] read: the order rows {type stop|take, trigger, closing side word, icons (masked dump)}. The SIDE
+    // column is the CLOSING order's side and is returned only as `close_side`, never as the position's side.
+    sheetOrders: function () {
+      var r = sheetRoot(); if (!r) return {ok: false, why: "no_sheet"};
+      var rows = sheetOrderRows(r).map(function (o) {
+        if (!o.el) return {type: o.type, trigger: null, why: "no_row"};
+        var ic = rowIcons(o.el, [o.typeEl].concat(o.px)).map(iconDump);
+        return {type: o.type, trigger: o.px.length === 1 ? firstNumber(t(o.px[0])) : null, n_px: o.px.length,
+          close_side: sideOf(wt(o.el)) || "", icons: ic, icon_lines: iconLines(ic), pencils: ic.filter(function (c) { return c.pencil; }).length};
+      });
+      return {ok: true, n_stop: rows.filter(function (x) { return x.type === "stop"; }).length,
+        n_take: rows.filter(function (x) { return x.type === "take"; }).length, rows: rows};
+    },
+    // Click the ONE pencil of the ONE Stop row (never the ⓧ next to it). clicked | no_sheet | stops_<n> | no_edit |
+    // ambiguous | deny_*
+    sheetEditStop: function () {
+      if (!hostOk()) return "bad_host";
+      var r = sheetRoot(); if (!r) return "no_sheet";
+      var st = sheetOrderRows(r).filter(function (o) { return o.type === "stop"; });
+      if (st.length !== 1 || !st[0].el) return "stops_" + st.length;
+      var p = rowIcons(st[0].el, [st[0].typeEl].concat(st[0].px)).filter(isPencil);
+      if (!p.length) return "no_edit"; if (p.length > 1) return "ambiguous";
+      return safeClick(p[0]);
+    },
+    // The edit modal: {n, kind stop|take, side, qty, unit, entry (from the "Short 0.54 ETH @ 2,461.52 USD" header),
+    // inputs [{label, value}], triggers (count of the Trigger input), buttons (masked)}
+    modalInfo: function () {
+      var ms = modalRoot(); if (ms.length !== 1) return {n: ms.length};
+      var r = ms[0].root, kind = /stop/i.test(t(ms[0].title)) ? "stop" : "take";
+      var h = textEls(r, MODAL_HDR, 60), m = h.length === 1 ? MODAL_HDR.exec(t(h[0])) : null;
+      return {n: 1, kind: kind, title: t(ms[0].title).slice(0, 30), hdr_n: h.length,
+        side: m ? m[1].toLowerCase() : null, qty: m ? parseFloat(m[2].replace(/,/g, "")) : null, unit: m ? (m[3] || "") : "",
+        entry: m ? parseFloat(m[4].replace(/,/g, "")) : null, inputs: modalInputs(r), triggers: triggerInput(r).length,
+        buttons: Array.prototype.slice.call(r.querySelectorAll("button,[role=button]")).filter(vis).map(function (x) { return t(x).replace(/\d/g, "#").slice(0, 20); }).slice(0, 10)};
+    },
+    // Set ONLY the modal's ONE Trigger input. {n, value} (n = how many Trigger inputs matched; nothing typed unless 1)
+    modalSetTrigger: function (v) {
+      var ms = modalRoot(); if (ms.length !== 1) return {n: -ms.length};
+      var ins = triggerInput(ms[0].root); if (ins.length !== 1) return {n: ins.length};
+      var i = ins[0]; i.focus(); setVal(i, String(v)); i.blur(); return {n: 1, value: i.value};
+    },
+    modalTrigger: function () {
+      var ms = modalRoot(); if (ms.length !== 1) return {n: -ms.length};
+      var ins = triggerInput(ms[0].root); return ins.length === 1 ? {n: 1, value: ins[0].value} : {n: ins.length};
+    },
+    // The modal's ONE "Confirm" button. clicked | none | ambiguous | disabled | deny_*
+    modalConfirm: function () {
+      var ms = modalRoot(); if (ms.length !== 1) return "none";
+      var b = Array.prototype.slice.call(ms[0].root.querySelectorAll("button,[role=button]")).filter(function (x) { return vis(x) && /^confirm$/i.test(t(x)); });
+      if (!b.length) return "none"; if (b.length > 1) return "ambiguous";
+      if (b[0].disabled || b[0].getAttribute("aria-disabled") === "true") return "disabled";
+      return safeClick(b[0]);
+    },
+    // Dismiss the modal without saving: its ONE button whose text is exactly "Cancel" (a text button inside the modal,
+    // never an icon), else Escape. clicked | escape | none
+    modalCancel: function () {
+      var ms = modalRoot(); if (ms.length !== 1) return "none";
+      var b = Array.prototype.slice.call(ms[0].root.querySelectorAll("button,[role=button]")).filter(function (x) { return vis(x) && /^cancel$/i.test(t(x)); });
+      if (b.length === 1) { b[0].click(); return "clicked"; }
+      document.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", code: "Escape", keyCode: 27, bubbles: true}));
+      return "escape";
+    },
+    // Close the sheet: Escape first (the caller re-checks sheetInfo); sheetCloseX is the fallback.
+    sheetClose: function () {
+      var r = sheetRoot(); if (!r) return "none";
+      [r, document].forEach(function (x) { x.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", code: "Escape", keyCode: 27, bubbles: true})); });
+      return "escape";
+    },
+    // The sheet's header ✕: an icon whose glyph or words say close, ABOVE the tabs (document order before the
+    // [Position details] tab), never a text button ("Close position" is below the tabs and has text). clicked | none |
+    // ambiguous | no_sheet
+    sheetCloseX: function () {
+      var r = sheetRoot(); if (!r) return "no_sheet";
+      var tab = textEls(r, SHEET_TAB.details)[0];
+      var c = rowIcons(r, []).filter(function (x) {
+        var s = t(x); return tab && before(x, tab) && !/position/i.test(s) && (DENY_GLYPH.test(s) || /^close$/i.test((x.getAttribute("aria-label") || x.getAttribute("title") || "").trim()) || (!s && /\bclose\b/i.test(ctlWords(x))));
+      });
+      if (!c.length) return "none"; if (c.length > 1) return "ambiguous";
+      c[0].click(); return "clicked";
+    },
+    // the denylist, exposed for the test: why `sel`'s ONE element must never be clicked, or "" when it may be
+    deniedSel: function (sel) { var e = document.querySelectorAll(sel); return e.length === 1 ? (denied(e[0]) || "") : "n" + e.length; },
+    safeClickSel: function (sel) { var e = document.querySelectorAll(sel); return e.length === 1 ? safeClick(e[0]) : "n" + e.length; },
     rowClose: function (sym, sideRe) {
       var n = norm(sym); var rx = new RegExp(sideRe, "i");
       var r = all("tr,[role=row]").filter(function (r) { var s = t(r); return norm(s).indexOf(n) >= 0 && rx.test(s); })[0];

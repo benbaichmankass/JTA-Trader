@@ -406,6 +406,10 @@ def record_report(device: PhoneDevice, body: Dict[str, Any]) -> Dict[str, Any]:
         body["positions_state"] = pstate
         if pstate == "read":
             positions = phone_reconcile.clean_positions(device.account_id, body_in.get("positions"))
+            if any(p.get("side_source") == "sheet" for p in positions):
+                # BREAKOUT-SL-AMEND-CLICK: the phone read the side the grid does not show off each row's position sheet
+                body["positions_side_source"] = "sheet"
+                body["positions_provenance"] = "MEASURED"
             closed = phone_reconcile.clean_closed(device.account_id, body_in.get("closed_orders"))
             body["positions"] = positions
             body["closed_orders"] = closed
@@ -613,7 +617,8 @@ def record_event(device: PhoneDevice, body: Dict[str, Any], *, send=None) -> Dic
         _write_positions_diag(device.account_id, reason, body.get("headers"), body.get("controls"), body.get("cells"))
         # a closed_* miss follows a CLEAN Positions read, and an amend_* dump (BREAKOUT-POS-UNPARSED) is the trail amend
         # refusing on a row it FOUND: in neither is a position unseen
-        if not reason.startswith(("closed_", "amend_")):
+        # sheet_* (BREAKOUT-SL-AMEND-CLICK) is the position-sheet read's own evidence; the Positions read is reported apart
+        if not reason.startswith(("closed_", "amend_", "sheet_")):
             _alert_unseen_positions(device.account_id, reason, send=send)
     # login_retry: an auto re-login attempt/failure inside a streak (PHONE-AUTOLOGIN, no latch, retried forever) is
     # logged in phone_events but not pinged; the phone sends ONE login_failed red flag after 3 in a row instead.

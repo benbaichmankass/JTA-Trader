@@ -564,3 +564,31 @@ def test_unseen_alert_retries_when_the_ping_failed(env, monkeypatch):
     monkeypatch.setattr("src.runtime.notify.send_telegram_direct", lambda m, **k: env.append(m) or True)
     pe.record_event(_dev(), {"event": "positions_miss", "reason": "no_tab d6 c6 t1"})
     assert len(_unseen_pings(env)) == 1
+
+
+# ---- position sheet (BREAKOUT-SL-AMEND-CLICK: side / volume / avg entry read off the row's sheet) ----
+
+SHEET_ROW = {"symbol": "ETH", "side": "short", "side_source": "sheet", "qty": 0.54, "qty_src": "sheet", "entry": 2461.52,
+             "mark": 2440.65, "upnl": None, "upnl_signed": False}
+
+
+def test_sheet_side_is_measured_and_an_unsigned_upnl_stays_null(env):
+    _open("prop-manual-f6552263ed1d", direction="short", qty=0.54, entry=2458.24, sl=2504.25, tp=2214.87)
+    _status([SHEET_ROW], state="read")
+    raw = json.loads(prop_journal.latest_account_status("breakout_2")["raw"])
+    assert raw["positions_state"] == "read" and raw["positions_side_source"] == "sheet"
+    assert raw["positions_provenance"] == "MEASURED"
+    p = raw["positions"][0]
+    assert (p["direction"], p["qty"], p["entry"], p["side_source"], p["upnl"], p["upnl_signed"]) == \
+        ("short", 0.54, 2461.52, "sheet", None, False)
+    # a sign-less uPnL is never summed into the account's unrealized as a measured number
+    assert raw.get("unrealized_source") != "positions_sum"
+
+
+def test_sheet_diag_is_kept_and_never_raises_the_unseen_alert(env):
+    _venue_ticket("t1")
+    for reason in ("sheet_sheet_not_open", "amend_sheet_unmeasured", "sheet_ok"):
+        pe.record_event(_dev(), {"event": "positions_miss", "reason": reason, "headers": ["child:none", "group:clicked"],
+                                 "controls": ["stop px=1 pen=1", "  button P ✎"]})
+        assert pe.last_positions_diag("breakout_2")["state"] == reason
+    assert _unseen_pings(env) == []
