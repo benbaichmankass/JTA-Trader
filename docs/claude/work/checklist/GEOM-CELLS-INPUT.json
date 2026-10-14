@@ -2,20 +2,26 @@
   "id": "GEOM-CELLS-INPUT",
   "title": "m20-exit-lever-sweep.yml: accept a census-keyed 'cells' input (unblocks RQ-20261014-9807-04)",
   "phase": "research-infra",
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "manager (dispatch by capacity)",
   "lane": null,
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
-  "blocked_on": [],
-  "note": "[2026-10-14 manager] Decision (a) from RESEARCH-PROGRAMMES (#18012). Blocked unit RQ-20261014-9807-04 (census-keyed giveback cells) needs m20-exit-lever-sweep.yml to take a 'cells' input naming (leg, lever, param) cells chosen by the giveback census RQ-20261014-9807-01, instead of the full grid. Tier-1 workflow/harness input only; no config or order path. Done when: a dispatch with cells=<json> runs only those cells and the unit's clears_when is met. Programme P1 (docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md).",
-  "updated_at": "2026-10-14T08:21:32Z",
-  "updated_by": "session_01G16FfyYSmDPQuuW55BuTmK",
+  "prs": [
+    18063,
+    18064
+  ],
+  "blocked_on": [
+    "RQ-20261014-9807-01 (census result is producer_failed; 9807-04 stays blocked until it lands)"
+  ],
+  "note": "[2026-10-14 lane] cells input built; census 9807-01 producer_failed so 9807-04 not runnable.",
+  "updated_at": "2026-10-14T18:13:40Z",
+  "updated_by": "session_01WzkFeZ7iDz8aXpavBZSz2o",
   "roadmap": [
     "L-ATM"
   ],
+  "writeback": "Closes when a dispatch with cells=<json> runs only those cells (exercised by RQ-20261014-9807-04 once its census lands). Built in #18063 (tests in tests/test_m20_sweep_cells_input.py); #18064 (landing: hold) re-points 9807-04 blocked_on at 9807-01.",
   "_seq": 489
 }
