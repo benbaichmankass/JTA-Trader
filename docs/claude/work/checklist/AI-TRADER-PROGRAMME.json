@@ -14,7 +14,7 @@
   ],
   "blocked_on": [],
   "note": "[2026-10-14 lane] Dispatched by the manager (session_01G16FfyYSmDPQuuW55BuTmK) for the operator's 2026-10-14 weekly planning. Deliverables: (A) docs/research/programmes/02-AI-TRADER.md, (B) docs/research/SIGNALS-CATALOG.md + docs/research/signals-catalog.yaml, (C) first-2-week units (hand-written, hold PRs), plus the instrument scripts/research/ledger_metalabel.py (meta-label + peak-to-exit measurements over the committed per-trade ledgers). Closes to landed_unproven when the PRs merge; done when the first W1 unit lands a measured record and research-ops lists it in results_read. [2026-10-14T08:10Z lane] DONE on the lane's side: PR #18015 (draft, landing: hold) carries (A) docs/research/programmes/02-AI-TRADER.md, (B) docs/research/SIGNALS-CATALOG.md + signals-catalog.yaml (67 families), (C) RQ-20261014-9d20-01/02/03/05 queued + blocked/-04, scripts/research/ledger_metalabel.py (self-test OK), rows METALABEL-EMIT-FEATURES + HEADLINE-MEASURE-CAPITAL-DAY, plan items ML-M0..M6 + ML-F16. Local run_guards.py: every guard PASS except pytest-skip-attribution (no pytest in the sandbox; environmental). State set to blocked because nobody is working it until the manager lands the PR; the manager flips it to landed_unproven on merge. Spend: Fable, under the ~$25 ceiling (not metered here). [2026-10-14T18:10Z manager session_01VduHYzdaXe27wTDBLSu8ao] blocker-watch STALE_BLOCK cleared: PR #18015 merged 2026-10-14. landed_unproven until the first W1 unit lands a measured record and research-ops lists it in results_read.",
-  "updated_at": "2026-10-14T18:09:18Z",
+  "updated_at": "2026-10-14T18:16:22Z",
   "updated_by": "session_01VduHYzdaXe27wTDBLSu8ao",
   "roadmap": [
     "M23",
@@ -22,5 +22,14 @@
     "L-REGIME",
     "M20"
   ],
+  "writeback": {
+    "roadmap": "none: M23/M25 where-next were written by the lane PR #18015 and planning PR #18011; this edit only clears a stale block",
+    "arch": "none: plan, signals catalog and a research instrument only; no runtime component, path or contract changed"
+  },
+  "observation": {
+    "what": "the first W1 unit of 02-AI-TRADER lands a measured record and a research-ops pass lists it in results_read",
+    "how_to_check": "ls research/results/ for the 02 plan W1 unit ids; grep comms/research/ops/*.json results_read",
+    "due_by": "2026-10-21"
+  },
   "_seq": 477
 }
