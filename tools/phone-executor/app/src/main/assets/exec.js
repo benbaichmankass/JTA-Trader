@@ -355,7 +355,8 @@
     }
     // the live Market cell reads "ETH 5" (a leverage badge with no x, 1b.193 dump): a bare number token is never part
     // of a venue symbol, and left in it made the symbol unmappable ("ETH5")
-    if (o.symbol) o.symbol = o.symbol.replace(/\b(long|short|buy|sell)\b/ig, "").replace(/\d+(\.\d+)?\s*[x×]|\b[x×]\s*\d+(\.\d+)?\b/ig, "")
+    // the GROUP row's Market cell leads with a "⌄" expand glyph (operator screenshot 2026-10-14): glyphs are not symbol
+    if (o.symbol) o.symbol = o.symbol.replace(/[^A-Za-z0-9 .\/\u00d7-]/g, " ").replace(/\b(long|short|buy|sell)\b/ig, "").replace(/\d+(\.\d+)?\s*[x×]|\b[x×]\s*\d+(\.\d+)?\b/ig, "")
       .replace(/(^|\s)\d+(\.\d+)?(?=\s|$)/g, " ").replace(/\s+/g, " ").trim();
     return o;
   }
@@ -450,17 +451,40 @@
     }
     return {rows: [], direct: [], sib: []};
   }
+  // BREAKOUT-SL-AMEND-CLICK (operator screenshot 2026-10-14 ~21:41Z): Positions groups rows per symbol. The GROUP row
+  // ("⌄ ETH 1  Sum ⌄  20.88 USD") carries "Sum" aggregates and a position count; the CHILD row ("ETH 5x  20.88 USD") is
+  // the position. A row with a "Sum" cell is a group row: its children are read instead -- any element in the panel
+  // with the header's cell count that is not a group row and holds no other such element. With no child row in the DOM
+  // (collapsed), a group row whose count is 1 stands in for its one position (row_kind "group"); a group of more than
+  // one position is never read as one row (unparsed, miss=group).
+  function isGroupRow(r) { return kids(r).some(function (c) { return /^\s*sum\b/i.test(t(c)); }); }
+  function groupCount(r) { var c = kids(r)[0], m = c ? /(\d+)\s*$/.exec(t(c)) : null; return m && !/[x\u00d7]\s*$/i.test(t(c)) ? parseInt(m[1], 10) : null; }
+  function childRows(h, groups) {
+    var n = kids(h).length, panel = gridPanel(h) || h.parentElement;
+    var c = Array.prototype.slice.call(panel.querySelectorAll("*")).filter(function (x) {
+      return vis(x) && x !== h && !x.contains(h) && !h.contains(x) && kids(x).length === n && !isGroupRow(x) && /\d/.test(t(x));
+    });
+    c = c.filter(function (x) { return !c.some(function (o) { return o !== x && x.contains(o); }); });
+    return groups.length ? c : [];
+  }
   function readGrid(cols, need, emptyRe, count, strict, hdrs) {
     var h = hdrs[0], hs = kids(h).map(t), keys = hs.map(function (s) { return colKey(s, cols); });
-    var gr = gridRowsOf(h), rows = gr.rows, bad = 0;
+    var gr = gridRowsOf(h), rows = gr.rows, bad = 0, kinds = null;
+    var groups = rows.filter(isGroupRow);
+    if (groups.length) {
+      var ch = childRows(h, groups);
+      if (ch.length) { rows = ch; kinds = rows.map(function () { return "child"; }); }
+      else if (groups.every(function (g) { return groupCount(g) === 1; })) kinds = rows.map(function (r) { return isGroupRow(r) ? "group" : "child"; });
+      else return {state: "unparsed", n_rows: rows.length, count: count, headers: masked(hs), detail: "miss=group bad=0 n=" + rows.length, layout: "div_grid", cells: []};
+    }
     // anything else in the same container that looks like a row but has another cell count is a row we cannot align
     if (gr.direct.length) gr.sib.forEach(function (x) {
-      if (gr.direct.indexOf(x) >= 0 || emptyRe.test(t(x)) || !/\d/.test(t(x))) return;
+      if (gr.direct.indexOf(x) >= 0 || emptyRe.test(t(x)) || !/\d/.test(t(x)) || rows.some(function (r) { return x.contains(r); })) return;
       if (kids(x).length >= 2) bad += 1;
     });
     var raw = rows.map(function (r) { return kids(r).map(t); });
     var els = rows.map(kids);
-    var out = rows.map(function (r, i) { return parseRow(raw[i], keys, els[i].map(wt), els[i].map(attrText)); });
+    var out = rows.map(function (r, i) { var o = parseRow(raw[i], keys, els[i].map(wt), els[i].map(attrText)); if (kinds) o.row_kind = kinds[i]; return o; });
     var panel = gridPanel(h), emptyOk = !!(panel && emptyRe.test(t(panel)));
     var r = finishRead(out, bad, hs, count, need, strict, emptyOk, raw, keys, els);
     r.layout = "div_grid";

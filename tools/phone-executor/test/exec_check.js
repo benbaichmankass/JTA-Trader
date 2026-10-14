@@ -574,13 +574,15 @@ document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__su
   eq(gs.cells.slice(0, 4), ["symbol:ETHUSD", "upnl:-d.dd USD", "side:S", "value:d_ddd.dd USD"], "unparsed miss dumps key:shape cells, digits masked");
   eq(/\d/.test(JSON.stringify(gs.cells)), false, "unparsed miss cells carry no digits");
   // LIVE 1b.193 SHAPE (dump 2026-10-14 21:38Z): 9 header children (8 labels + one EMPTY, which the server's diag drops),
-  // Market "ETH 5" (leverage badge, no x), an EMPTY Side cell (the side is drawn), an empty TP / SL cell, and a 9th
+  // Market "ETH d" -- the GROUP row's "ETH 1" (operator screenshot 21:41Z: "⌄ ETH 1  Sum ⌄"; corrected from the earlier
+  // "ETH 5" leverage-badge reading), read as row_kind "group" because no child row is in this DOM, an EMPTY Side cell (the side is drawn), an empty TP / SL cell, and a 9th
   // empty cell. SYNTHETIC attributes: which one Breakout uses is UNMEASURED -- the side_unread dump below shows it.
   const liveHdr = `<div>Market</div><div>UP&amp;L</div><div>Side</div><div>Value</div><div>Opening price</div><div>Current price</div><div>TP / SL</div><div>Net P&amp;L</div><div></div>`;
   const livePage = (sideCell) => `<!doctype html><html><head><meta charset=utf-8><style>#hdr,.r{display:grid;grid-template-columns:repeat(9,90px);min-height:20px}</style></head><body><div id=tabs><button>Open orders</button><button>Positions1</button><button>Closed orders</button></div>
-<div id=panel><div id=hdr>${liveHdr}</div><div class=r><div><span>ETH</span> <span class=lev>5</span></div><div>Sum 12.34USD</div><div>${sideCell}</div><div>Sum 1,327.45USD</div><div>2,458.24USD</div><div>2,436.10USD</div><div></div><div>Sum 11.90USD</div><div><button aria-label="Close">x</button></div></div></div></body></html>`;
+<div id=panel><div id=hdr>${liveHdr}</div><div class=r><div><span>ETH</span> <span class=lev>1</span></div><div>Sum 12.34USD</div><div>${sideCell}</div><div>Sum 1,327.45USD</div><div>2,458.24USD</div><div>2,436.10USD</div><div></div><div>Sum 11.90USD</div><div><button aria-label="Close">x</button></div></div></div></body></html>`;
   let lv = await (await onHost(livePage("<span class='pos-side pos-side--short'></span>"))).evaluate("__ex.positionsRead()");
-  eq([lv.state, lv.rows[0].symbol, lv.rows[0].side, lv.rows[0].entry, lv.rows[0].qty], ["read", "ETH", "short", 2458.24, 0.54490784], "live shape: side read from a class token, symbol 'ETH 5' -> ETH, 9th empty column ignored");
+  eq([lv.state, lv.rows[0].symbol, lv.rows[0].side, lv.rows[0].entry, lv.rows[0].qty], ["read", "ETH", "short", 2458.24, 0.54490784], "live shape: side read from a class token, symbol 'ETH 1' -> ETH, 9th empty column ignored");
+  eq(lv.rows[0].row_kind, "group", "live shape: the 1b.193 row is the GROUP row (count 1, no child in the DOM)");
   lv = await (await onHost(livePage("<svg aria-label='Sell'><use href='#arrow-down'></use></svg>"))).evaluate("__ex.positionsRead()");
   eq([lv.state, lv.rows[0].side], ["read", "short"], "live shape: side read from an svg aria-label");
   lv = await (await onHost(livePage("<span class='badge text-red' style='display:inline-block;width:8px;height:8px'></span>"))).evaluate("__ex.positionsRead()");
@@ -669,7 +671,7 @@ ${cRow("SOL", reduce("Short"), "Take profit", "17.26", "111.39", "Filled", "2026
   // them). Positions grid with a GROUP row ("ETH 1", Sum) and a CHILD row ("ETH 5x"), each with a row ✕ that closes
   // the position. Tapping a row opens the sheet; [1 TP / 1 SL] rows carry ✎ (edit) and ⓧ (cancels the order).
   const sheetPage = (opts) => { opts = opts || {}; const pen = opts.pen === undefined ? "<button class=ib data-k=edit aria-label='Edit'>✎</button>" : opts.pen;
-    return `<!doctype html><html><head><meta charset=utf-8></head><body>
+    return `<!doctype html><html><head><meta charset=utf-8><style>#hdr,.r{display:grid;grid-template-columns:repeat(9,90px);min-height:20px}</style></head><body>
 <div id=bottom><div id=tabs><button>Open orders</button><button>Positions1</button><button>Portfolio</button><button>Closed orders</button></div>
 <div id=panel><div id=hdr><div>Market</div><div>UP&amp;L</div><div>Side</div><div>Value</div><div>Opening price</div><div>Current price</div><div>TP / SL</div><div>Net P&amp;L</div><div></div></div>
 <div class=r id=grp><div><span>⌄</span> ETH 1</div><div>Sum 20.88USD</div><div><i class=dot></i></div><div>Sum 1,318.20USD</div><div>2,461.52USD</div><div>2,440.65USD</div><div></div><div>Sum 20.10USD</div><div><button class=x data-danger>✕</button></div></div>
@@ -754,5 +756,15 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
   await su.evaluate("__ex.sheetOpen('ETHUSD','child')");
   let sud = await su.evaluate("__ex.sheetDetails()");
   eq([sud.upnl_signed, sud.upnl, sud.side, sud.ok], [true, -12.4, null, false], "sheet details: signed uPnL kept; a non-exact side word is not read");
+  // GROUP vs CHILD rows (manager 2026-10-14 22:11Z: the read took the GROUP row "ETH 1" / "Sum"): the child row is read
+  const gc = await (await onHost(sheetPage())).evaluate("__ex.positionsRead()");
+  eq([gc.state, gc.rows.length, gc.rows[0].row_kind, gc.rows[0].symbol, gc.rows[0].upnl], ["side_unread", 1, "child", "ETH", 20.88], "group+child: only the CHILD row is read");
+  const gOnly = await (await onHost(sheetPage({noChild: true}))).evaluate("__ex.positionsRead()");
+  eq([gOnly.state, gOnly.rows.length, gOnly.rows[0].row_kind, gOnly.rows[0].symbol], ["side_unread", 1, "group", "ETH"], "group of 1 with no child in the DOM: the group row stands in, labelled group");
+  const gTwo = await (await onHost(sheetPage({noChild: true}).replace("</span> ETH 1<", "</span> ETH 2<").replace("Positions1", "Positions2"))).evaluate("__ex.positionsRead()");
+  eq([gTwo.state, gTwo.detail], ["unparsed", "miss=group bad=0 n=1"], "a group of 2 positions is never read as one row");
+  const nested = sheetPage().replace('<div class=r id=chd>', '<div class=wrap><div class=r id=chd>').replace('\u2715</button></div></div>\n</div></div>', '\u2715</button></div></div></div>\n</div></div>');
+  const gn = await (await onHost(nested)).evaluate("__ex.positionsRead()");
+  eq([gn.state, gn.rows.length, gn.rows[0].row_kind], ["side_unread", 1, "child"], "child row nested in a wrapper is still the one read");
   await b.close(); console.log("exec_check: all passed");
 })().catch((e) => { console.error(e); process.exit(1); });
