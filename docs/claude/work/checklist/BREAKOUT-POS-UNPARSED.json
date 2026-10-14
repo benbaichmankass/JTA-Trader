@@ -1,0 +1,21 @@
+{
+  "id": "BREAKOUT-POS-UNPARSED",
+  "title": "breakout_2: app 1b.188 finds the Positions tab but the row reads 'unparsed' (symbol/side/qty missing)",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "build lane (Opus)",
+  "lane": "session_01MVZPxo89875YXd2zz6xivJ",
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 15,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-14T20:55Z manager session_01VduHYzdaXe27wTDBLSu8ao] Operator installed APK 1b.188 (~20:50Z). MEASURED 20:50:43Z /api/bot/prop/status?account_id=breakout_2: positions_state went no_tab -> unparsed; phone_positions_diag.headers = [Market, UP&L, Side, Value, Opening price, Current price, TP / SL, Net P&L] (the tab-badge fix in #18081 works). exec.js finishRead returns unparsed when a row lacks one of need=[symbol, side, qty] (qty is DERIVED from Value / Current price since the grid has no size column). Row content is not in the diag (masked), so the failing field is unknown. Journal still holds f6552263ed1d open ESTIMATED (fill 124).",
+  "updated_at": "2026-10-14T20:51:46Z",
+  "updated_by": "session_01VduHYzdaXe27wTDBLSu8ao",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "_seq": 496
+}
