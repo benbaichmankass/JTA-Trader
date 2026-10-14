@@ -54,6 +54,16 @@ decision_rule:
     with harness rows.
 blocked_on:
 - what: >-
+    ROUTED 2026-10-14 (lane IN-TRADE-EXIT-MODEL): the per-bar path this unit needs is now a filed Tier-1 build,
+    EXIT-PATH-EMIT-OFFLINE (harness --emit-paths with open_r / peak_r / mae_r / bars_since_peak / ATR / ADX per bar and the
+    stop/target in force). This unit consumes that OFFLINE emit; live per-bar telemetry (EXIT-PATH-TELEMETRY-LIVE, Tier-2
+    proposal) is its parity read only. Interim: scripts/research/first_passage.py re-walks committed ledgers over public
+    candles with a FIXED bracket and computes ADX/ATR per bar -- usable for a fixed-bracket version of this question, which
+    RQ-20261014-d6e7-04 (rich in-trade state incl. bars since peak and ADX slope) already asks.
+  ref: docs/claude/work/checklist/EXIT-PATH-EMIT-OFFLINE.json
+  clears_when: >-
+    EXIT-PATH-EMIT-OFFLINE lands with its parity test; then the other entries below are moot.
+- what: >-
     STATUS 2026-10-14 (ML-LEG-CORPUS): the corpus (PR #18074 (runner ml2_live_leg_corpus.py, FEATURE_NAMES += adx_at_entry/regime_weight, ml2_bracket_train_eval --outcome mfe_r with B1..B4 per leg/stratum)) is per-TRADE only: it has no per-bar path
     (open_r / ADX / ATR along the trade), so it does NOT clear this unit. Still needs a path re-walk from candles.
   ref: ML-LEG-CORPUS; RQ-20261014-736c-01
