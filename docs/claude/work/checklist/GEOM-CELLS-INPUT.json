@@ -4,9 +4,9 @@
   "phase": "research-infra",
   "state": "landed_unproven",
   "owner": "manager (dispatch by capacity)",
-  "lane": null,
-  "model": null,
-  "ceiling_usd": null,
+  "lane": "session_01WzkFeZ7iDz8aXpavBZSz2o",
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 8,
   "spend_usd": null,
   "tier": 1,
   "prs": [
@@ -18,7 +18,7 @@
   "blocked_on": [
     "RQ-20261014-9807-01 (census result is producer_failed; 9807-04 stays blocked until it lands)"
   ],
-  "note": "[2026-10-14 lane] 9807-01 root cause (trainer repro, diag #18067/#18069): giveback_census excluded every measured row (peak_state \"measured\" read as an absent-peak reason -> no_data) and then wrote population.n=0, which research_result refuses -> exit 1. Fix PR #18070 (self-land); re-arm of the unit (clear last_dispatched_at) is hold PR #18071, merge after #18070. 9807-04 stays blocked until 9807-01 lands a measured result.",
+  "note": "[2026-10-14 lane] 9807-01 root cause (trainer repro, diag #18067/#18069): giveback_census excluded every measured row (peak_state \"measured\" read as an absent-peak reason -> no_data) and then wrote population.n=0, which research_result refuses -> exit 1. Fix PR #18070 (self-land); re-arm of the unit (clear last_dispatched_at) is hold PR #18071, merge after #18070. 9807-04 stays blocked until 9807-01 lands a measured result. [2026-10-14T18:09Z manager session_01VduHYzdaXe27wTDBLSu8ao] Dispatched: Sonnet (build lane, no order path), fresh (spec is on the row), ceiling $8.",
   "updated_at": "2026-10-14T18:26:32Z",
   "updated_by": "session_01WzkFeZ7iDz8aXpavBZSz2o",
   "roadmap": [
