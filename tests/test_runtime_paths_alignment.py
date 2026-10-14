@@ -32,7 +32,10 @@ from __future__ import annotations
 
 import importlib
 import re
+import sys
 from pathlib import Path
+
+import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -41,12 +44,32 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 # ─── Family 1: reader/writer alignment under env overrides ──────────
 
 
+_RELOADED: set = set()
+
+
 def _reload(module_name: str):
     """Force-reimport a module so module-level path bindings pick up
     fresh env vars set via monkeypatch."""
-    import sys
     sys.modules.pop(module_name, None)
+    _RELOADED.add(module_name)
     return importlib.import_module(module_name)
+
+
+@pytest.fixture(autouse=True)
+def _drop_reloaded_routers():
+    """A reload under a patched DATA_DIR leaves the module bound to that test's tmp path.
+    Without this, any later test in the same worker that does `from src.web.api.routers import diag`
+    gets the stale module (seen 2026-10-14: test_notify_unit_failure asserting the repo runtime_logs
+    path and getting .../test_runtime_status_reader_wri0/bot-data/...). Drop the reloaded modules, and
+    the package attribute `from pkg import sub` consults first, so the next import re-binds cleanly."""
+    yield
+    for name in sorted(_RELOADED):
+        sys.modules.pop(name, None)
+        parent, _, child = name.rpartition(".")
+        pkg = sys.modules.get(parent)
+        if pkg is not None and hasattr(pkg, child):
+            delattr(pkg, child)
+    _RELOADED.clear()
 
 
 def _runtime_log_path(module_name: str, attr: str) -> Path:
