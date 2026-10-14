@@ -82,8 +82,9 @@ class Api(private val c: Context) {
             })
 
     /** Positions read that was NOT "read": the state + digit-masked headers / control texts (no value), so the next
-     *  build can be fixed from the dump. The server keeps the latest per account. */
-    suspend fun positionsMiss(state: String, headers: JSONArray, controls: JSONArray) =
+     *  build can be fixed from the dump. The server keeps the latest per account. An unparsed read also sends its first
+     *  failing row as digit-masked key:shape cells (BREAKOUT-POS-UNPARSED). */
+    suspend fun positionsMiss(state: String, headers: JSONArray, controls: JSONArray, cells: JSONArray = JSONArray()) =
         post("event", JSONObject().put("event", "positions_miss").put("reason", state.take(40))
-            .put("headers", headers).put("controls", controls))
+            .put("headers", headers).put("controls", controls).put("cells", cells))
 }
