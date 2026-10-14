@@ -682,6 +682,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/P5-orb-mes-result-2026-06-26.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/P7-xsec-momentum-firstpass-2026-06-26.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/POST-VALUE-PIVOT-WORKPLAN-2026-07-27.md` | plan | closed_unfinished | — | 2026-09-07 | `name:workplan-is-a-forward-commitment / mi159:plan-status-header:closed_unfinished` | what was left: BOTH tracks. **Track 1** (higher-frequency microstructure off |
+| `docs/research/SIGNALS-CATALOG.md` | evidence | live | — | 2026-10-14 | `dir:research-is-measurement / read:AI-TRADER-PROGRAMME-lane-authored-and-measured-it-2026-10-14` | research view over docs/reference/signal-catalog.yaml (M23 x signals catalog merge) |
 | `docs/research/frontier-scan-2026-10-11.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | First frontier scan: ranked model/strategy shortlist behind RQ-20261011-9da8-01..07. |
 | `docs/research/R5-REMAINING-CORPUS-COST-STACK-2026-09-22.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | R7 lane: regrades the 40 of 52 evidence records that carried no `cost_stack`. Answers both live operator questions and carries proposals P1-P5, applied by nobody. `unknown` is correct and deliberate — the author wrote it, nobody else has read it. |
 | `docs/research/R6-VM-RESIDENCY-VERDICT-2026-08-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
@@ -922,6 +923,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/pairs-sleeve-PROPOSAL-2026-07-15.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/pairs-sleeve-real-money-readiness-2026-07-16.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/pairs-stocktake-2026-10-07.md` | evidence | live | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/programmes/02-AI-TRADER.md` | evidence | live | — | 2026-10-14 | `dir:research-is-measurement / read:AI-TRADER-PROGRAMME-lane-authored-and-measured-it-2026-10-14` | research programme of record for G4; re-measured by the weekly roadmap pass |
 | `docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Programme 01 plan (brackets as predictions): goal + measure, Q1-Q7 ladders, 4-week backlog; units RQ-20261014-9807-01..05. |
 | `docs/research/programmes/RESEARCH-MAP.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | The five research programmes, their measures, cross-programme feeds and infra needs (weekly planning 2026-10-14). |
 | `docs/research/reduce-fill-qty-2026-10-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
