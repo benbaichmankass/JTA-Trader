@@ -150,7 +150,10 @@ def census(tel: Iterable[dict], trades: Iterable[dict], min_n: int = 20) -> Dict
             n_open_excluded += 1
             continue
         peak = _f(r.get("peak_r"))
-        if peak is None or r.get("peak_state"):
+        # live rows carry peak_state="measured" WITH a peak; only a non-"measured" state
+        # (e.g. thin_window, peak_r null) means there is no peak. Truthiness alone read
+        # every live row as peakless (0 of 595 graded on 2026-10-14).
+        if peak is None or str(r.get("peak_state") or "measured").lower() != "measured":
             n_no_peak += 1
             continue
         realised, prov = None, None
@@ -230,6 +233,7 @@ def selftest() -> int:
         {"order_package_id": "open", "peak_r": 3.0, "open_r": 2.0, "terminal_state": None, "peak_provenance": "estimated"},
         {"order_package_id": "nopeak", "peak_r": None, "peak_state": "thin_window"},
     ]
+    tel[0]["peak_state"] = "measured"  # live shape: state set AND peak present -> graded
     tr = [
         {"order_package_id": "a", "status": "closed", "account_class": "real_money", "strategy_name": "s1", "timestamp": "2026-10-01T00:00:00Z", "closed_at": "2026-10-03T00:00:00Z", "pnl": 5.0, "position_size": 10},
         {"order_package_id": "b", "status": "closed", "account_class": "real_money", "strategy_name": "s1", "timestamp": "2026-10-01T00:00:00Z", "closed_at": "2026-10-02T00:00:00Z", "pnl": -10.0, "position_size": 10},
