@@ -2,26 +2,32 @@
   "id": "TRAINER-CATCHUP-0800",
   "title": "Move the ict-trainer-catchup timer from 05:00Z to 08:00Z so it no longer overlaps the 03:00-05:00Z research window and the 05:52Z daily review",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": "session_01FbEfqfJHABucdvrPGhE2sH",
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 8,
   "spend_usd": null,
   "tier": 2,
-  "prs": [],
+  "prs": [
+    18062
+  ],
   "blocked_on": [],
-  "note": "[2026-10-14 weekly planning] OPERATOR-APPROVED 2026-10-14 (Tier-2, timer change on ict-trainer-vm; approval recorded here, relayed by the manager session_01G16FfyYSmDPQuuW55BuTmK). Ship through the vm-ops / system-actions route (timer OnCalendar edit + daemon-reload), then verify the post-state through trainer-vm-diag. Revert: set OnCalendar back to 05:00Z. Reasoning from planning: the catch-up competes with the trainer research window (scripts/research/research_compute.yaml trainer.queue.windows_utc 03:00-05:00) and the 05:52Z review reads a half-finished cycle. [2026-10-14T18:09Z manager session_01VduHYzdaXe27wTDBLSu8ao] Dispatched: Sonnet (build lane, no order path), fresh (spec is on the row), ceiling $8.",
-  "updated_at": "2026-10-14T18:09:17Z",
-  "updated_by": "session_01VduHYzdaXe27wTDBLSu8ao",
+  "note": "[2026-10-14 weekly planning] OPERATOR-APPROVED 2026-10-14 (Tier-2, timer change on ict-trainer-vm; approval recorded here, relayed by the manager session_01G16FfyYSmDPQuuW55BuTmK). Ship through the vm-ops / system-actions route (timer OnCalendar edit + daemon-reload), then verify the post-state through trainer-vm-diag. Revert: set OnCalendar back to 05:00Z. Reasoning from planning: the catch-up competes with the trainer research window (scripts/research/research_compute.yaml trainer.queue.windows_utc 03:00-05:00) and the 05:52Z review reads a half-finished cycle. [2026-10-14T18:09Z manager session_01VduHYzdaXe27wTDBLSu8ao] Dispatched: Sonnet (build lane, no order path), fresh (spec is on the row), ceiling $8. [lane 2026-10-14] PR #18062 (hold) opened: timer 05:00Z->08:00Z. Window check: 08:00Z is inside the 07:00-24:00Z idle window, clear of 03:00-05:00Z; ict-trainer.timer is daily 00:00+1h jitter; catch-up is flock+checkpoint guarded; no window change. Merged: pending. Deployed: pending. Observed: first 08:00Z run, due_by 2026-10-16.",
+  "updated_at": "2026-10-14T18:19:04Z",
+  "updated_by": "session_01DfFYRUG7orGpkE5pVnA8e4",
   "roadmap": [
     "M25",
     "L-OPS"
   ],
   "observation": {
-    "what": "ict-trainer-catchup.timer on ict-trainer-vm reads OnCalendar 08:00Z and the next catch-up run starts at ~08:00Z with no overlap of the 03:00-05:00Z research window",
+    "what": "ict-trainer-catchup.timer on ict-trainer-vm reads OnCalendar 08:00Z and the first 08:00Z catch-up run completes",
     "how_to_check": "trainer-vm-diag: systemctl list-timers ict-trainer-catchup + journalctl -u ict-trainer-catchup for the first 08:00Z run",
-    "due_by": "2026-10-17"
+    "due_by": "2026-10-16"
+  },
+  "writeback": {
+    "roadmap": "none: ops timer move, no milestone line changes",
+    "arch": "none: ARCHITECTURE-CANONICAL only holds a dated history entry quoting 05:00Z; no standing section describes the catch-up time"
   },
   "_seq": 479
 }
