@@ -57,6 +57,15 @@ decision_rule:
     revision (Q3) or stops (Q4).
 blocked_on:
 - what: >-
+    STATUS 2026-10-14 (ML-LEG-CORPUS): the per-trade emit keeper is built (PR #18074 (runner ml2_live_leg_corpus.py, FEATURE_NAMES += adx_at_entry/regime_weight, ml2_bracket_train_eval --outcome mfe_r with B1..B4 per leg/stratum)); its roster is the six legs of RQ-20261009-900
+    (4 bybit_2 + 2 prop); the alpaca 1d legs are NOT in it, so check this unit's leg list against that roster. The corpus carries mfe_r, risk_frac (the
+    ATR-at-entry proxy, risk/entry), adx_at_entry, entry_time/exit_time (bars_held derivable) but NOT an entry-ATR
+    PERCENTILE and has no stratified-quantile reader. Those two remain to build before this unit can run.
+  ref: ML-LEG-CORPUS; RQ-20261014-736c-01
+  clears_when: >-
+    Unchanged (below), narrowed: RQ-20261014-736c-01 has landed its corpus, and a stratified-quantile reader
+    (entry-ATR percentile computed from candles) exists.
+- what: >-
     No driver keeps per-trade harness emits for the live legs: m20_fleet_exit_sweep.py runs config-exact but reads the summary;
     mi307_offline_mfe.py --run runs uncapped but keeps only percentiles. The stratification needs per-trade mfe_r with
     entry-time ATR percentile and ADX.
