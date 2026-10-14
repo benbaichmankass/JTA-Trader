@@ -138,3 +138,67 @@ def test_parse_any_ts():
     assert _parse_any_ts(1760000000).year == 2025 and _parse_any_ts(1760000000000).year == 2025
     for bad in (None, "", "not a date", 0, -5, True):
         assert _parse_any_ts(bad) is None
+
+
+# ── budgeted counts: the Overview must never hang on a big table (2026-10-14) ───────────────────
+def _big_db(path: Path, rows: int = 1_500_000) -> sqlite3.Connection:
+    conn = sqlite3.connect(str(path))
+    conn.execute("CREATE TABLE big (id INTEGER PRIMARY KEY, v INTEGER)")
+    conn.execute(f"WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i+1 FROM n WHERE i < {rows}) "
+                 "INSERT INTO big (v) SELECT i FROM n")
+    conn.commit()
+    return conn
+
+
+def test_a_real_slow_count_is_interrupted_and_reported_not_zeroed(tmp_path: Path):
+    """The mechanism itself: COUNT(*) runs inside ONE opcode, so a progress handler could not stop it;
+    Connection.interrupt() from the timer thread must. Budget 1 ms vs a 1.5M-row table."""
+    from src.web.api.routers.db_explorer import _count_rows
+    conn = _big_db(tmp_path / "big.db")
+    try:
+        count, state, estimate, ms = _count_rows(conn, "big", budget_s=0.001)
+        assert (count, state) == (None, "count_timed_out")
+        assert estimate == 1_500_000                        # MAX(rowid): labelled upper bound, not a count
+        assert conn.execute("SELECT COUNT(*) FROM big").fetchone()[0] == 1_500_000   # connection still usable
+        count, state, estimate, ms = _count_rows(conn, "big", budget_s=60.0)         # the same table, ample budget
+        assert (count, state, estimate) == (1_500_000, "read", None)
+    finally:
+        conn.close()
+
+
+def test_timed_out_table_row_keeps_null_vs_zero_honesty(tmp_path: Path, monkeypatch):
+    import datetime
+    from src.web.api.routers import db_explorer as dbx
+    conn = _big_db(tmp_path / "big.db", rows=300_000)
+    conn.row_factory = sqlite3.Row
+    monkeypatch.setattr(dbx, "_COUNT_BUDGET_S", 0.0005)
+    try:
+        t = dbx._table_overview(conn, "big", "trade_journal", datetime.datetime.now(datetime.timezone.utc))
+    finally:
+        conn.close()
+    assert t["rows"] is None and t["rowsState"] == "count_timed_out"
+    assert t["empty"] is None                                # unknown is not 'not empty'
+    assert t["rowsEstimate"] == 300_000 and t["rowsEstimateBasis"] == "max_rowid_upper_bound"
+    assert isinstance(t["countMs"], int)
+
+
+def test_fast_counts_stay_exact_and_carry_timing(client: TestClient):
+    body = client.get("/api/bot/db/overview").json()
+    t = _by_name(body)["trades"]
+    assert t["rows"] == 3 and t["rowsState"] == "read" and t["rowsEstimate"] is None and t["rowsEstimateBasis"] is None
+    assert isinstance(t["countMs"], int) and isinstance(body["elapsedMs"], int)
+    assert body["summary"]["countTimedOut"] == 0
+
+
+def test_a_non_interrupt_count_error_is_count_failed_not_a_timeout():
+    from src.web.api.routers.db_explorer import _count_rows
+
+    class Boom:
+        def interrupt(self): pass
+        def execute(self, *_a): raise sqlite3.OperationalError("no such table: x")
+    assert _count_rows(Boom(), "x")[:2] == (None, "count_failed")
+
+
+def test_overview_cache_is_long_and_serves_stale():
+    from src.web.api.routers import db_explorer as dbx
+    assert dbx._OVERVIEW_FRESH_S >= 120 and dbx._OVERVIEW_STALE_S >= 3600 and dbx._COUNT_BUDGET_S <= 5
