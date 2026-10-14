@@ -37,7 +37,7 @@ def test_allowlist_is_market_only():
 def test_published_unit_leaves_the_trainer():
     cfg = cr.load_config()
     p = cr.plan(_unit(), cfg)
-    assert p.ok and p.backend == "github_runner_data" and p.workflow == "research-script-run-data.yml" and p.cls == "cpu_light", p
+    assert p.ok and p.backend == "kaggle_cpu" and p.workflow == "research-script-run-kaggle-cpu.yml" and p.cls == "cpu_light", p
     assert cr.plan(_unit(est_minutes=90), cfg).cls == "cpu_long"
 
 
