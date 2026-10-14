@@ -1,6 +1,6 @@
 id: RQ-20261014-f0e2-13
 title: 'Re-entry cooldown, trend_donchian_xrp_4h: does moving post-exit cooldown (4, 8, 16) beat the declared setting net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 3
@@ -101,8 +101,6 @@ lands:
   assert_field: read_state
   min_rows: 1
   note: research/results/RQ-20261014-f0e2-13/<run_id>.jsonl via the batch collector; per-arm summaries and verdict.json under comms/research/RQ-20261014-f0e2-13/<run_id>/.
-grading:
-  auto: true
 roadmap:
 - L-LADDER
 related:
@@ -110,3 +108,16 @@ related:
 - scripts/research/exit_lever_ablation.py
 - docs/research/entry-refinement-coverage.json
 last_dispatched_at: '2026-10-14T12:01:59+00:00'
+grading:
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261014f0e213-AXIS
+  evidence:
+  - research/results/RQ-20261014-f0e2-13/38560860146.jsonl
+  graded_at: '2026-10-14'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate
