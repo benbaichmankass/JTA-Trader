@@ -10,7 +10,7 @@
 # Other lanes (e.g. ML-ROADMAP-LOOP) add their milestones as new list items under their own goal;
 # never reword another lane's entry in the same PR.
 version: 1
-reviewed: 2026-10-11          # date of the last full weekly pass
+reviewed: 2026-10-14          # date of the last full weekly pass (2026-10-14: the Wednesday planning dialogue, which replaces the Monday pass)
 review_cadence_days: 8        # report flags a milestone whose `reviewed` is older than this
 enforce_from_seq: 400         # checklist rows with _seq >= this must carry `roadmap` (+ `writeback` when closed) -- only when the diff touches them
 row_fallback: docs/roadmap/backfill-2026-10-11.json  # rows without their own `roadmap` field resolve here (explicit field wins); `--backfill` materialises it
@@ -20,15 +20,18 @@ goals:
   G1:
     name: Real-money edge, decided offline
     measure: >-
-      Net-of-cost expectancy on the real-money books (bybit_2 + bybit_portfolio, alpaca_live + alpaca_portfolio),
-      with every leg that reaches them having cleared Stage 0 (backtest, full cost stack) and Gate 1 (cost fidelity)
-      per docs/plans/OPERATING-PLAN-2026-09-21.md. A live book never establishes edge; it checks mechanics and cost.
+      Net P&L per capital-day, in R and in $, on the real-money books (bybit_2 + bybit_portfolio, alpaca_live +
+      alpaca_portfolio): PER STRATEGY (each leg pulls its own weight) and at PORTFOLIO level (capital-weighted).
+      Operator decision 2026-10-14 (weekly planning), replacing net-of-cost expectancy as the headline. Every leg that
+      reaches these books still clears Stage 0 (backtest, full cost stack) and Gate 1 (cost fidelity) per
+      docs/plans/OPERATING-PLAN-2026-09-21.md; a live book never establishes edge, it checks mechanics and cost.
     baseline: >-
-      Lifetime real-money expectancy was -0.3231R (n=431, profitFactor 0.68, /api/bot/performance realMoney all-window,
-      2026-09-21, before the roster cut). Latest window (comms/reviews/performance-review-20261010-191000.json,
-      2026-10-04..10-10): 4 priced real-money closes, +$2.10 -- n=4 is too small to read, overall_assessment "caution".
-      Roster measured 2026-10-11 from config/accounts.yaml: bybit_2 4 legs, alpaca_live 3 legs. TP doctrine
-      (python3 scripts/ci/check_tp_doctrine.py, 2026-10-11): 0 of 50 routings compliant.
+      To be measured by the 2026-10-15 perf-review prep (trigger 'Weekly review prep', Wed 18:53Z: net P&L per capital-day
+      in R and $ per strategy and for the whole book, plus giveback and TP-rule compliance). Prior-measure history, NOT the
+      new measure: lifetime real-money expectancy -0.3231R (n=431, profitFactor 0.68, 2026-09-21, before the roster cut);
+      2026-10-04..10-10 window 4 priced real-money closes, +$2.10 (n=4, "caution"). Roster 2026-10-11 from
+      config/accounts.yaml: bybit_2 4 legs, alpaca_live 3 legs. TP doctrine (python3 scripts/ci/check_tp_doctrine.py,
+      2026-10-14 06:40Z): 0 of 50 routings compliant.
   G2:
     name: Prop-account income
     measure: >-
@@ -78,6 +81,28 @@ goals:
 
 milestones:
   # ── G1 ──────────────────────────────────────────────────────────────────
+  - id: L-ATM
+    goal: G1
+    name: Active trade management -- brackets as predictions (merges M20 + M31)
+    status: active
+    where: >-
+      Created 2026-10-14 (weekly planning, operator) as G1's top milestone, merging M20 (exits, geometry, TP doctrine) and
+      M31 (position telemetry: peak-R between entry and exit); both keep their ids and history below as closed entries, and
+      rows/units still carrying M20/M31 refs are read as this milestone's history. Operator, verbatim: "every bracket
+      represents a prediction of where we think price will actually reach... no unattainable brackets that exist decoratively
+      for another exit mechanism". Field 2026-10-14 06:40Z: python3 scripts/ci/check_tp_doctrine.py reports 0 of 50 routings
+      compliant; B1 (monitor() tp revisions) is merged and deployed but no leg declares a revision (TP-DOCTRINE).
+      Done-condition: every real-money leg's TP AND SL is a revised prediction, moving through the trade; a momentum or
+      trailing exit does not exempt a leg. Measure: the check_tp_doctrine.py compliant count plus giveback (peak R vs
+      realised R, from position_telemetry), both re-run in the Wednesday review prep, never quoted.
+    next: >-
+      BRACKETS-AS-PREDICTIONS (real-money legs first, Tier-3 data-backed through the exit-refinement skill); TP-REACH-FLOOR
+      (a declared TP reached by < 10% of harness trades grades non-compliant); the 01 Active-trade-management programme plan
+      under L-PROGRAMMES feeds this milestone's queue units; resolve the open TP-doctrine units (RQ-20261006-060/061,
+      RQ-20261010-419b-01) and observe the first live trail_decay exit on ief_pullback_1d (M20-EXITS-4).
+    architecture: ["TP doctrine"]
+    owner: manager
+    reviewed: 2026-10-14
   - id: L-LADDER
     goal: G1
     name: The promotion ladder, mechanical (operating plan phases A-E)
@@ -95,19 +120,18 @@ milestones:
     reviewed: 2026-10-11
   - id: M20
     goal: G1
-    name: Active trade management (exits, geometry, TP doctrine)
-    status: active
+    name: Active trade management (exits, geometry, TP doctrine) -- MERGED INTO L-ATM 2026-10-14
+    status: closed
     where: >-
-      Exit pipeline industrialised: monthly 'M20 exit-lever' and 'E35 bracket-geometry' sweeps are generated per leg
-      (they make up most of the open queue). TP doctrine B1 (strategy monitor() can revise tp) is merged but no leg declares
-      a revision yet (TP-DOCTRINE note, 2026-10-11); check_tp_doctrine.py reports 0 of 50 routings compliant, 4 of 7
-      real-money routings failing entry_tp.
+      Closed 2026-10-14 by merging into L-ATM (operator, weekly planning); the id stays so its rows and units keep their
+      history. State at merge (2026-10-11 pass, not re-measured): exit pipeline industrialised with monthly 'M20 exit-lever'
+      and 'E35 bracket-geometry' sweeps generated per leg; TP doctrine B1 merged, no leg declaring a revision;
+      check_tp_doctrine.py 0 of 50 routings compliant, 4 of 7 real-money routings failing entry_tp.
     next: >-
-      First declared tp_revision on a real-money leg through the exit-refinement skill, real money first; observe the first
-      live trail_decay exit on ief_pullback_1d (M20-EXITS-4); resolve the open TP-doctrine queue units (RQ-20261006-060/061, RQ-20261010-419b-01).
+      Nothing new under this id: open M20 rows and units run to completion as L-ATM history; new work is filed under L-ATM.
     architecture: ["TP doctrine"]
     owner: manager
-    reviewed: 2026-10-11
+    reviewed: 2026-10-14
   - id: M21
     goal: G1
     name: Entry refinement
@@ -212,15 +236,16 @@ milestones:
     reviewed: 2026-10-11
   - id: M31
     goal: G3
-    name: Position telemetry (peak-R between entry and exit)
-    status: dormant
+    name: Position telemetry (peak-R between entry and exit) -- MERGED INTO L-ATM 2026-10-14
+    status: closed
     where: >-
-      Hook observed working on the live fleet 2026-09-07; peak_r sentinel data clean 2026-09-12; offline MFE distribution at stated n 2026-09-18 (E53).
-      Feeds the TP/trail work under M20.
-    next: Consumed by M20 trail-decay and TP-prediction units; no separate build open.
-    no_rows_reason: telemetry shipped and observed; consumers are M20 rows
+      Closed 2026-10-14 by merging into L-ATM (operator, weekly planning); the id stays for history. Telemetry shipped and
+      observed: hook working on the live fleet 2026-09-07, peak_r sentinel data clean 2026-09-12, offline MFE distribution at
+      stated n 2026-09-18 (E53). Its output (peak R vs realised R = giveback) is now half of L-ATM's measure.
+    next: Consumed by L-ATM (giveback measure, TP-reach floor, bracket predictions); no separate build.
+    no_rows_reason: merged into L-ATM; telemetry shipped and observed, consumers are L-ATM rows
     owner: manager
-    reviewed: 2026-10-11
+    reviewed: 2026-10-14
   # ── G4 ──────────────────────────────────────────────────────────────────
   - id: L-REGIME
     goal: G4
@@ -253,13 +278,23 @@ milestones:
     reviewed: 2026-10-11
   - id: M23
     goal: G4
-    name: Meta-labeling
-    status: backlog
-    where: P1 pipeline done with an honest thin-signal result 2026-07-17; idle since 2026-07-19 (E53).
-    next: Revisit after L-REGIME's good-vs-bad trade study, which is the same question at the regime level.
-    no_rows_reason: proposed only; label wall (n about 78 real decision rows per cell) not yet broken
-    owner: ML-ROADMAP-LOOP lane
-    reviewed: 2026-10-11
+    name: Meta-labeling plus the signals catalog
+    status: active
+    where: >-
+      ACTIVE from 2026-10-14 (operator, weekly planning): backlog -> active, merged with a SIGNALS CATALOG -- every signal
+      with its definition, where it is used and what it feeds, fed by all test results and trade outcomes. Field: the catalog
+      of what the system READS exists (docs/reference/signal-catalog.yaml, guard signal-catalog-guard, generated 2026-10-08);
+      the use/feed/outcome side is being written by the AI-trader programme lane (session_01QdFKBCgBQ5T8tfMvBjLVj3, row
+      RESEARCH-PROGRAMME-PLANS). Meta-labeling history: P1 pipeline done with an honest thin-signal result 2026-07-17, idle
+      since 2026-07-19; the label wall (about 78 real decision rows per cell) is not yet broken, which is why outcomes must
+      feed the catalog.
+    next: >-
+      Land the 02 AI-trader programme plan with the signals catalog as its first deliverable; derive pre-registered
+      meta-labeling units from it (fed by trade outcomes and test results); keep L-REGIME's good-vs-bad trade study as the
+      regime-level twin of the same question.
+    architecture: ["AI-traders training workflow (separate from live trading)"]
+    owner: ML-ROADMAP-LOOP lane / manager
+    reviewed: 2026-10-14
   - id: M14
     goal: G4
     name: ML optimization program (validation discipline, features, MLOps)
@@ -288,6 +323,23 @@ milestones:
     owner: ML-ROADMAP-LOOP lane
     reviewed: 2026-10-11
   # ── G5 ──────────────────────────────────────────────────────────────────
+  - id: L-PROGRAMMES
+    goal: G5
+    name: Research programmes -- the research map plus five plans
+    status: active
+    where: >-
+      Created 2026-10-14 (operator, weekly planning). A research map plus five programme plans under docs/research/programmes/,
+      in this order: 01 Active trade management, 02 AI trader, 03 Strategy improvement, 04 Macro sleeve, 05 Prop. The research
+      queue is fed ONLY from their backlogs; reviewed weekly on Tuesday 09:53Z (trigger 'Weekly research programme review',
+      which replaces the Monday research-planning session). Field 2026-10-14: the directory does not exist on main yet; the map
+      + 01 and the 02 plan + signals catalog are in flight in two Fable lanes (row RESEARCH-PROGRAMME-PLANS); 03-05 are
+      dispatched after the 2026-10-14 reset.
+    next: >-
+      Land the map and 01/02 (in flight), then 03/04/05; the first Tuesday review (2026-10-20) updates each plan (learned,
+      answered/unlocked/retired questions, next 3-4 weeks of pre-registered units, cross-programme feeds) and lands one PR.
+    architecture: ["Research and Validation Pipeline"]
+    owner: manager
+    reviewed: 2026-10-14
   - id: M40
     goal: G5
     name: Research and testing workflow (landing, grading, throughput)
@@ -353,14 +405,14 @@ milestones:
 
 # First match wins. Units that carry an explicit `roadmap:` key never reach these rules.
 queue_rules:
-  - {milestone: M20,     title_re: '(?i)M20 exit-lever|E35 bracket|bracket-geometry|Active geometry|TP doctrine|Momentum-conditioned|Time-stop|vol_trail|exit-head|Tune-before'}
+  - {milestone: L-ATM,   title_re: '(?i)M20 exit-lever|E35 bracket|bracket-geometry|Active geometry|TP doctrine|Momentum-conditioned|Time-stop|vol_trail|exit-head|Tune-before'}
   - {milestone: M16,     title_re: '(?i)\bM16\b'}
   - {milestone: L-REGIME, title_re: '(?i)regime head|regime weight|soft weight|trend_vol regime|regime-transition|regime cell|funding-augmented regime|Regime head as entry'}
   - {milestone: M28,     title_re: '(?i)NEWS-VETO|PM-SURPRISE'}
   - {milestone: M25,     title_re: '(?i)^Frontier:'}
   - {milestone: L-PROP,  title_re: '(?i)NEW FAMILY'}
   - {milestone: M22,     title_re: '(?i)short-timeframe discovery'}
-  - {milestone: M20,     title_re: '(?i)flip-exit'}
+  - {milestone: L-ATM,   title_re: '(?i)flip-exit'}
   - {milestone: M22,     title_re: '(?i)pairs'}
   - {milestone: L-PROP,  title_re: '(?i)for the prop book|prop candidate|VELOTRADE|_prop_|prop-account'}
   - {milestone: M28,     title_re: '(?i)M28|valuation snapshot'}
