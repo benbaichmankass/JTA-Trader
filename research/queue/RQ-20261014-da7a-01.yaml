@@ -24,11 +24,12 @@ power:
   expected_n: 3356
   min_detectable_effect: 0.02
   effect_units: proportion
+  sd: 0.14
   design: one_sample
   alpha: 0.05
   power: 0.8
   basis: >-
-    A proportion near 0.02 on the smallest eligible family (trend_donchian, ~374 trades) has SE ~0.007, so the 2% NEEDED bar and
+    sd = 0.14 is INFERRED, not measured: Bernoulli sqrt(p(1-p)) at the pre-registered NEEDED bar p = 0.02. A proportion near 0.02 on the smallest eligible family (trend_donchian, ~374 trades) has SE ~0.007, so the 2% NEEDED bar and
     the 0.5% NOT_NEEDED bar are separable per family at n >= ~370; pullback (1,636) and ict_scalp (919) are better powered. Counts
     MEASURED 2026-10-14 by newest_ledgers() over comms/strategy_evidence/runs (resamples excluded, USDT legs with a bar size).
   feasibility:
