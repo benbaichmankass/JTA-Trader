@@ -165,7 +165,7 @@ def census_group(g) -> Dict[str, Any]:
 
 def run_census(df, *, min_n: int, pass_r: float, fail_r: float) -> Dict[str, Any]:
     fams = {str(f): census_group(g) for f, g in df.groupby("family")}
-    legs = {str(l): census_group(g) for l, g in df.groupby("leg")}
+    legs = {str(leg): census_group(g) for leg, g in df.groupby("leg")}
     pooled = census_group(df)
     eligible = {f: c for f, c in fams.items() if c["n_with_mfe"] >= min_n and c["exit_headroom_r_per_trade"] is not None}
     if not eligible:
@@ -211,7 +211,9 @@ def classify_leg(g, *, target: str, features: List[str], learners: Dict[str, str
         try:
             for tr, te in plan:
                 if len(set(y[tr].tolist())) < 2:
-                    aucs.append(float("nan")); lifts.append(float("nan")); continue
+                    aucs.append(float("nan"))
+                    lifts.append(float("nan"))
+                    continue
                 A, B = _impute(X[tr], X[te], kind)
                 P = fit(A, y[tr], B, 2, {})
                 s = P[:, 1]
@@ -375,10 +377,11 @@ def _self_test() -> int:
         # a resample that must be excluded by default
         (run / "trend_donchian_sig_4h__B0__trades.jsonl").write_text((run / "trend_donchian_sig_4h__trades.jsonl").read_text())
         pat = str(run / "*__trades.jsonl")
-        df, files = load_corpus(pat, None, False)
+        df, _files = load_corpus(pat, None, False)
         ok = True
         if df["leg"].nunique() != 2 or len(df) != 800:
-            print(f"  FAIL  resample exclusion: legs={df['leg'].nunique()} rows={len(df)}"); ok = False
+            print(f"  FAIL  resample exclusion: legs={df['leg'].nunique()} rows={len(df)}")
+            ok = False
         else:
             print("  PASS  resample ledgers excluded by default")
         c = run_census(df, min_n=100, pass_r=0.25, fail_r=0.10)
@@ -386,13 +389,15 @@ def _self_test() -> int:
         if c["verdict"] == "pass" and head and head > 0.25:
             print(f"  PASS  census sees the planted giveback headroom ({head:.2f} R/trade)")
         else:
-            print(f"  FAIL  census: {c['verdict']} headroom={head}"); ok = False
+            print(f"  FAIL  census: {c['verdict']} headroom={head}")
+            ok = False
         # control: the exit already sits AT the peak on every trade (mfe_r == net_r) -> zero headroom by construction
         c2 = run_census(df.assign(mfe_r=df["net_r"]), min_n=100, pass_r=0.25, fail_r=0.10)
         if c2["verdict"] == "fail":
             print("  PASS  census FAILs when the exit already captures the peak (no headroom)")
         else:
-            print(f"  FAIL  census no-headroom control: {c2['verdict']}"); ok = False
+            print(f"  FAIL  census no-headroom control: {c2['verdict']}")
+            ok = False
         m = run_classify(df, target="won", threshold=0.5, features=["confidence", "direction_long", "hour_of_day", "dayofweek"],
                          learner_kinds=["prior", "numpy_logit"], folds=4, embargo=5, min_train_frac=0.4, min_leg_n=100,
                          skip_q=0.2, auc_gain=0.05, lift_r=0.05)
@@ -400,21 +405,24 @@ def _self_test() -> int:
         if m["verdict"] == "pass" and legs_pass == {"trend_donchian_sig_4h"}:
             print("  PASS  classify finds the planted leg and not the null leg")
         else:
-            print(f"  FAIL  classify: {m['verdict']} passing={m['passing']}"); ok = False
+            print(f"  FAIL  classify: {m['verdict']} passing={m['passing']}")
+            ok = False
         null_only = run_classify(df[df["leg"] == "trend_donchian_null_4h"], target="won", threshold=0.5,
                                  features=["confidence", "direction_long"], learner_kinds=["prior", "numpy_logit"], folds=4,
                                  embargo=5, min_train_frac=0.4, min_leg_n=100, skip_q=0.2, auc_gain=0.05, lift_r=0.05)
         if null_only["verdict"] in ("fail", "indeterminate"):
             print(f"  PASS  classify does not pass the null leg alone ({null_only['verdict']})")
         else:
-            print(f"  FAIL  null leg graded {null_only['verdict']}"); ok = False
+            print(f"  FAIL  null leg graded {null_only['verdict']}")
+            ok = False
         out = Path(td) / "out"
         rc = main(["--out", str(out), "--mode", "census", "--ledgers", pat])
         rec = json.loads((out / "verdict.json").read_text())
         if rc == 0 and rec["read_state"] == "measured" and rec["verdict"] == "pass":
             print("  PASS  verdict.json written in the script_run record shape")
         else:
-            print(f"  FAIL  record: rc={rc} {rec.get('read_state')} {rec.get('verdict')}"); ok = False
+            print(f"  FAIL  record: rc={rc} {rec.get('read_state')} {rec.get('verdict')}")
+            ok = False
     print("ledger_metalabel self-test:", "OK" if ok else "FAILED")
     return 0 if ok else 1
 
