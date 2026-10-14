@@ -423,7 +423,8 @@ class Logit:
         self.b = b
         return self
 
-    def predict(self, X: np.ndarray) -> np.ndarray:
+    def predict_proba_sl(self, X: np.ndarray) -> np.ndarray:
+        """P(label = 1) = P(SL first) for a binary logistic head -- a probability, never max(proba)."""
         X = np.where(np.isfinite(X), X, self.med)
         Z = np.c_[np.ones(len(X)), (X - self.mu) / self.sd]
         return np.clip(1 / (1 + np.exp(-np.clip(Z @ self.b, -30, 30))), 1e-4, 1 - 1e-4)
@@ -478,8 +479,8 @@ def fit_eval(trades: List[dict], K: float, feats: List[str], seed: int = 7,
             if oc == "timeout" or not ev:
                 continue
             yy = np.full(len(ev), 1.0 if oc == "sl" else 0.0)
-            pm = m.predict(_matrix(ev, feats))
-            pr = ref.predict(_matrix(ev, ref_feats)) if ref else p0(K, np.array([e["x"] for e in ev]))
+            pm = m.predict_proba_sl(_matrix(ev, feats))
+            pr = ref.predict_proba_sl(_matrix(ev, ref_feats)) if ref else p0(K, np.array([e["x"] for e in ev]))
             lm, lr, lb = _ll(yy, pm).mean(), _ll(yy, pr).mean(), _ll(yy, np.full(len(ev), base)).mean()
             per_trade[i] = {"gain_vs_ref": float(lr - lm), "gain_vs_base": float(lb - lm), "fold": fi,
                             "logit_pm": [float(v) for v in np.log(pm / (1 - pm))], "y": float(yy[0])}
@@ -529,8 +530,8 @@ def policy_eval(trades: List[dict], K: float, fe: Dict[str, Any], feats: List[st
             c_x = t["cost_slippage_r"]
             if ev:
                 xs = np.array([e["x"] for e in ev])
-                pm = m.predict(_matrix(ev, feats))
-                pr = ref.predict(_matrix(ev, ref_feats)) if ref is not None else p0(K, xs)
+                pm = m.predict_proba_sl(_matrix(ev, feats))
+                pr = ref.predict_proba_sl(_matrix(ev, ref_feats)) if ref is not None else p0(K, xs)
                 # E[R | hold] - E_ref[R | hold] = (p_ref - p_model)(K + 1). The calibrated reference stands in
                 # for "hold is worth open R" (exactly so under p0), so its discretisation bias cancels.
                 hit = np.nonzero((pm - pr) * (K + 1.0) > c_x)[0]
@@ -603,8 +604,7 @@ def verdict_model(fe: Dict[str, Any], min_gain: float, min_folds: int, min_n: in
     return "indeterminate", f"gain {g}, CI {ci}, folds+ {fe['folds_positive']}, slope {s}"
 
 
-def verdict_policy(pe: Dict[str, Any], min_gain_r: float, min_folds: int, min_n: int,
-                   seed: int = 13) -> Tuple[str, str]:
+def verdict_policy(pe: Dict[str, Any], min_gain_r: float, min_folds: int, min_n: int) -> Tuple[str, str]:
     if pe.get("n_oos_trades") == 0 or pe["pooled"]["n"] < min_n:
         return "indeterminate", f"n_oos_trades < {min_n}"
     nz = pe["null_policy_exit_share"]
