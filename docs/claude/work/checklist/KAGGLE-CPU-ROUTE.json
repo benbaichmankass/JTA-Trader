@@ -14,7 +14,7 @@
   ],
   "blocked_on": [],
   "note": "[2026-10-14 weekly planning] OPERATOR-APPROVED 2026-10-14 ('I'll take your recommendations'). Source: row ML-DATA-RUNNER-FETCH (kaggle 2.2.4 DownloadDataset 404s for the private dataset from a GitHub runner, runs 38507974681/38512183556/38514877849; the Kaggle kernel mount of metis-market-data is VERIFIED 20/20 files). Build: a kaggle CPU backend/class in scripts/research/research_compute.yaml so units with routing.published_data run in a Kaggle CPU kernel (not metered by the GPU quota) instead of github_runner_data. Tier-1 research tooling; no config/accounts or strategy edits. Planning doc: https://claude.ai/code/artifact/27fd3e97-ed3f-49ba-be2c-5e56997df95a [2026-10-14 lane] BUILT: backend kaggle_cpu (research-script-run-kaggle-cpu.yml, slugs metis-research-{bundle,run}-cpu, enable_gpu=false, no quota gate) is github_runner's published_variant, so every routing.published_data unit places on it; github_runner_data is now explicit-workflow only. FINDING (population: queue units with compute: gpu_preferred = 7, all status queued, all published_data, needs_gpu false, learners lightgbm/catboost/sklearn/numpy_logit/prior = CPU-only): RQ-20261014-4591-01..06 and RQ-20261014-de02-01 routed BEFORE to class gpu_preferred -> kaggle (GPU, metered 30 h/wk) first, github_runner_data fallback; AFTER compute: auto -> cpu_light -> kaggle_cpu. RQ-20261014-de02-02..06 were already cpu_light/github_runner (no published data) - untouched. Router now REFUSES gpu/gpu_preferred for an ml_bakeoff with only CPU learners (GPU_LEARNER_KINDS empty). Not observed yet: no dispatcher-fired CPU kernel run.",
-  "updated_at": "2026-10-14T18:21:40Z",
+  "updated_at": "2026-10-14T18:30:22Z",
   "updated_by": "session_013kda8yhsEBhJKqaABRK8xc",
   "roadmap": [
     "M25",
@@ -25,6 +25,9 @@
     "how_to_check": "comms/research/utilization backend=kaggle_cpu dispatch + the result dir + the kernel run id on this row",
     "due_by": "2026-10-21"
   },
-  "writeback": "research_compute.yaml carries the kaggle_cpu backend; ML-DATA-RUNNER-FETCH closes on the first observed dispatcher-fired CPU run",
+  "writeback": {
+    "roadmap": "M25 where/next: published-data research units run in a Kaggle CPU kernel (kaggle_cpu backend) instead of the runner fetch that 404s; first dispatcher-fired run still to observe",
+    "arch": "none: Tier-1 research tooling; no architecture change"
+  },
   "_seq": 477
 }

@@ -27,7 +27,8 @@ def test_published_data_unit_prefers_kaggle_cpu_not_the_runner_data_twin():
         r = cr.plan(unit(cls), CFG)
         assert r.ok and r.backend == "kaggle_cpu" and r.workflow == "research-script-run-kaggle-cpu.yml", r
     # a unit that does not claim published data is untouched
-    plain = unit("cpu_light", routing={"needs_gpu": False, "est_minutes": 20}); plain["ml_bakeoff"] = None
+    plain = unit("cpu_light", routing={"needs_gpu": False, "est_minutes": 20})
+    plain["ml_bakeoff"] = None
     assert cr.plan(plain, CFG).backend == "github_runner"
 
 
@@ -50,7 +51,8 @@ def test_cpu_only_bakeoff_cannot_be_gpu_preferred():
     assert not r.ok and "GPU quota" in r.error
     assert not cr.plan(unit("gpu"), CFG).ok
     # a genuine GPU request is untouched
-    g = unit("gpu", routing={"needs_gpu": True, "est_minutes": 60}); g["ml_bakeoff"] = None
+    g = unit("gpu", routing={"needs_gpu": True, "est_minutes": 60})
+    g["ml_bakeoff"] = None
     assert cr.plan(g, CFG).backend == "kaggle"
 
 
@@ -58,7 +60,7 @@ def test_no_queued_cpu_bakeoff_routes_to_the_gpu_backend():
     """The population check behind the finding: every queue unit whose placement is Kaggle GPU must truly need a GPU."""
     bad = []
     for f in sorted(glob.glob(str(REPO / "research" / "queue" / "RQ-*.yaml"))):
-        e = yaml.safe_load(open(f)) or {}
+        e = yaml.safe_load(Path(f).read_text()) or {}
         if e.get("status") not in ("queued", "running", None):
             continue
         p = cr.plan(e, CFG)
