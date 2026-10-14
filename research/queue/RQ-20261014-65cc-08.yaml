@@ -1,6 +1,6 @@
 id: RQ-20261014-65cc-08
 title: 'Frontier / scaling on Kaggle GPU: does TabICL keep its edge over LightGBM at a 12,000-row tail on the BTC and ETH 1h regime head?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -131,3 +131,15 @@ related:
 last_dispatched_at: '2026-10-14T07:33:56+00:00'
 grading:
   auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261014-65CC-08-TABICL-SCALING-12K
+  evidence:
+  - research/results/RQ-20261014-65cc-08/38529204934.jsonl
+  - research/results/RQ-20261014-65cc-08/38530107181.jsonl
+  graded_at: '2026-10-14'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 2 row(s), all measured, all indeterminate
+  rows: 2
+  verdict: indeterminate
