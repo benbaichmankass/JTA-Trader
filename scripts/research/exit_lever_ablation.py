@@ -154,9 +154,12 @@ def build_arm_argv(leg: str, cfg: dict[str, Any], csv: str, resample: str, emit:
     arm's raw flags and the pinned window. Returns (argv, omitted_levers)."""
     import regime_debt_matrix as rdm
     harness = rdm.classify(cfg)
-    if harness not in ("trend", "pullback"):
-        raise ValueError(f"{leg}: harness {harness!r} -- this ablation covers the trend and pullback "
-                         "harnesses (the two with the exit levers in question)")
+    # ict_scalp joined 2026-10-13 (QUEUE-FILL-1013): its argv builder is the same
+    # rdm.build_harness_cmd branch the evidence builder runs, and the arm tokens it
+    # needs (--cooldown-bars, --timeout-bars, --min-confidence) are plain raw flags.
+    if harness not in ("trend", "pullback", "ict_scalp"):
+        raise ValueError(f"{leg}: harness {harness!r} -- this ablation covers the trend, pullback and "
+                         "ict_scalp harnesses")
     argv, _faithful, omitted = rdm.build_harness_cmd(leg, cfg, harness, csv, resample, emit, jout)
     argv = list(argv)
     i = 0
@@ -533,8 +536,12 @@ def _self_test() -> int:
     # the argv builder reproduces the evidence builder's argv and applies the arm's edits
     import yaml
     legs = yaml.safe_load((REPO / "config" / "strategies.yaml").read_text(encoding="utf-8"))["strategies"]
+    # The fixture is the live leg PLUS the levers the ablation removes, set explicitly: the live
+    # config is not a stable fixture (EXIT-LEVER-STRIP #17002 removed stale_exit_bars from
+    # trend_donchian_eth_prop on 2026-10-07, which made this check fail with the builder intact).
     eth = legs.get("trend_donchian_eth_prop")
     if isinstance(eth, dict):
+        eth = {**eth, "stale_exit_bars": 12, "stale_exit_below_r": 0.0}
         base_argv, _ = build_arm_argv("trend_donchian_eth_prop", eth, "<d>", "1h", "<e>", "<j>", [], None, None)
         x_cfg = arm_cfg(eth, {}, ["stale_exit_bars", "stale_exit_below_r"])
         x_argv, _ = build_arm_argv("trend_donchian_eth_prop", x_cfg, "<d>", "1h", "<e>", "<j>",

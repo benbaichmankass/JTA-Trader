@@ -23,6 +23,17 @@ That is the whole job. Everything below either serves it or is forbidden.
 decisions a day."* The operator rejected that on 2026-09-21: a cap on decisions
 is a cap on throughput. The job is to AUTOMATE the decision, not to ration it.
 
+## Standing alert subscriptions (operator, 2026-10-13, binding)
+
+**Every manager session, at start AND after any handover, calls `subscribe_pr_activity` on the ops-flags PR** (title
+"ops-flags (do not merge)"; its number is recorded in ONE place, `scripts/research/research_watchdog.yaml`
+`ops_flags.pr_number` -- read it there, do not copy it here). The research watchdog
+(`scripts/research/research_watchdog.py`, every 15 min, token-free) posts one comment per incident (escalated /
+resolved), so each comment wakes the manager with no polling. **Never merge or close that PR.** Treat every watchdog
+comment as an incident to act on: **fix it, dispatch a lane for it, or tell the operator** -- never leave one
+unanswered. The incident ledger is `comms/research/ops/watchdog_incidents.jsonl`. The same alert also reaches the
+operator on the system Telegram channel. If the PR is ever replaced, change `pr_number` in the config and nothing else.
+
 ## Start of session
 
 1. **Title yourself.** Call `get_session` with no `session_id` to read your own
@@ -32,6 +43,7 @@ is a cap on throughput. The job is to AUTOMATE the decision, not to ration it.
    finds the manager among dozens of lanes.
 2. Read `CLAUDE.md`, `docs/CLAUDE-RULES-CANONICAL.md` and this file; then the
    checklist rows that are `in_flight` or `blocked`.
+2b. **Subscribe to the ops-flags PR** (§ "Standing alert subscriptions").
 3. Take over every live lane: `get_session` it, then send it a trigger naming
    you as its manager (the reply channel is described under § "Every spawn
    carries provenance" below).
@@ -994,7 +1006,7 @@ Commit it through a self-land PR (§ "How lane PRs land").
 **3. REWIRE.** `update_trigger` **cannot change a trigger's target session**, so:
 - (a) For every trigger whose `persistent_session_id` is the old session: `create_trigger` the same name, cron and prompt with `persistent_session_id=<new>`, then `update_trigger(enabled=false)` on the old one. Do not delete the old ones until step 5.
 - (b) Update every prompt that **names the old session id**: the research-ops routine, the assistant-manager charter and routines, the review and check-in routines, any live lane's brief. Routines: `update_trigger(prompt=...)`. Live lanes and the assistant manager: a fired trigger message (reply channel in § "Every spawn carries provenance"; `fire_trigger` takes no `text`) naming the new id as the wake target.
-- (c) Re-subscribe the new session to the PRs it must watch (`subscribe_pr_activity`).
+- (c) Re-subscribe the new session to the PRs it must watch (`subscribe_pr_activity`), **including the ops-flags PR** (number: `scripts/research/research_watchdog.yaml` `ops_flags.pr_number`; § "Standing alert subscriptions").
 - (d) Point the checklist at the new manager. There is no dedicated "manager" header field: `checklist.py header last_review` carries `by` (the new manager sets it at its first review), and any row `note` or `owner` naming the old manager as escalation target is updated with `checklist.py note`/`set`. Push to `main`.
 
 **4. VALIDATE.** All five must pass, each with its evidence written into the handoff doc.
@@ -1002,8 +1014,8 @@ Commit it through a self-land PR (§ "How lane PRs land").
 | # | Check | Pass means |
 |---|---|---|
 | **V1** | **Read-back** | The new manager restates, **from its own reading** (checklist, `list_sessions`, `list_triggers`, the handoff doc), the live lanes, pending operator decisions and the next 24 h of scheduled events. The old manager diffs this against its own list; every mismatch is fixed and re-read. |
-| **V2** | **Trigger audit** | `list_triggers` shows **zero enabled** triggers targeting the old session id. Every recurring routine, by name, exists, is enabled and targets the new one. Counts match the pre-handover list from step 1. |
-| **V3** | **Id sweep** | No enabled trigger prompt, assistant-manager charter or live lane brief still names the old session id as the escalation target. Grep the prompts from `list_triggers` / `get_trigger` for the old id. |
+| **V2** | **Trigger audit** | The new manager is subscribed to the ops-flags PR (a `subscribe_pr_activity` call on it returns subscribed, not "already watched by another session"). `list_triggers` shows **zero enabled** triggers targeting the old session id. Every recurring routine, by name, exists, is enabled and targets the new one. Counts match the pre-handover list from step 1. |
+| **V3** | **Id sweep** | The ops-flags subscription is held by the new session only. No enabled trigger prompt, assistant-manager charter or live lane brief still names the old session id as the escalation target. Grep the prompts from `list_triggers` / `get_trigger` for the old id. |
 | **V4** | **Wake round-trips** | (a) old → new: a test trigger is answered by a trigger back. (b) assistant manager → new: the assistant fires its escalation path and the new manager answers. (c) one live lane, if any, is told the new id and acknowledges. |
 | **V5** | **Operator notified, in one message** | New session link, what moved, and anything **not** moved with the reason. |
 
@@ -1023,7 +1035,7 @@ A grep that returns nothing proves nothing until the same grep is shown to find 
 - [ ] New session created: <id / link>, Opus, tags manager + predecessor:<old id>
 - [ ] Triggers recreated against the new session; old ones disabled (n recreated = __, pre-handover n = __)
 - [ ] Prompts naming the old id updated; checklist references updated and pushed
-- [ ] New manager subscribed to the PRs it must watch
+- [ ] New manager subscribed to the PRs it must watch, incl. the ops-flags PR
 - [ ] V1 read-back diffed against the old manager's list; mismatches fixed: <evidence>
 - [ ] V2 trigger audit: 0 enabled triggers on old id; recurring routines present, enabled, on new id: <list_triggers evidence>
 - [ ] V3 id sweep: grep of prompts / charters / lane briefs for old id finds none (positive control shown): <evidence>

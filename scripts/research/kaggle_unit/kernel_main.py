@@ -20,6 +20,11 @@ import subprocess
 import sys
 import tarfile
 
+# Injected per run by kaggle_run.bundle() (this file is pushed fresh with every run; the dataset it mounts may not be).
+# None = not injected (a bare copy of this file): no staleness check.
+EXPECTED = None  # BUNDLE-INJECTED
+
+
 def _is_spec(path):
     try:
         d = json.load(open(path))
@@ -39,6 +44,15 @@ unit, run_id = str(spec.get("unit", "")), str(spec.get("run_id", ""))
 if not re.fullmatch(r"RQ-\d{8}-(?:\d{3}|[0-9a-f]{4}-\d{2})", unit) or not re.fullmatch(r"[A-Za-z0-9_\-]{1,64}", run_id):
     print("BAD_SPEC", unit, run_id)
     sys.exit(4)
+if EXPECTED and (unit, run_id) != (EXPECTED["unit"], EXPECTED["run_id"]):
+    # STALE DATASET MOUNT (observed 2026-10-13, runs 38419107113 and 38449812952): the kernel started on the PREVIOUS
+    # dataset version, so it would execute -- and file under this run -- the wrong spec. Do not run; say so; the
+    # runner sees the marker, waits and re-pushes the kernel (which re-mounts the latest version).
+    print("STALE_SPEC: mounted", unit, run_id, "expected", EXPECTED["unit"], EXPECTED["run_id"])
+    os.makedirs("/kaggle/working/result", exist_ok=True)
+    open("/kaggle/working/result/kernel-exit.json", "w").write(json.dumps(
+        {"stale_spec": True, "mounted": {"unit": unit, "run_id": run_id}, "expected": EXPECTED}))
+    sys.exit(0)
 bundle_dir = os.path.dirname(specs[-1])
 bundle = os.path.join(bundle_dir, "repo.tar.gz")
 repo = "/tmp/repo"

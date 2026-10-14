@@ -83,7 +83,12 @@ def bundle(unit: str, run_id: str, username: str, out: Path, *, repo: Path = _RE
         "isPrivate": True}) + "\n")
     kdir = out.parent / (out.name + "-kernel")
     kdir.mkdir(parents=True, exist_ok=True)
-    (kdir / "kernel_main.py").write_text((repo / "scripts/research/kaggle_unit/kernel_main.py").read_text())
+    kmain = (repo / "scripts/research/kaggle_unit/kernel_main.py").read_text()
+    marker = "EXPECTED = None  # BUNDLE-INJECTED"
+    if marker not in kmain:
+        raise SystemExit("kernel_main.py lost its BUNDLE-INJECTED expectation line")
+    kmain = kmain.replace(marker, "EXPECTED = " + json.dumps({"unit": unit, "run_id": run_id}), 1)
+    (kdir / "kernel_main.py").write_text(kmain)
     (kdir / "kernel-metadata.json").write_text(json.dumps({
         "id": f"{username}/{KERNEL_SLUG}", "title": KERNEL_SLUG, "code_file": "kernel_main.py",
         "language": "python", "kernel_type": "script", "is_private": "true", "enable_gpu": "true",
@@ -109,6 +114,32 @@ def gate(quota_text: str, est_minutes: float) -> Dict[str, Any]:
     return {"go": True, "why": "within quota", **parsed}
 
 
+STALE_RC = 20      # verify: the fetched result is another run's (retry after the dataset version settles)
+MISSING_RC = 21    # verify: no manifest at all (kernel died; not a staleness case)
+
+
+def verify_result(result_dir: Path, unit: str, run_id: str) -> Dict[str, Any]:
+    """Does what `kaggle kernels output` returned belong to THIS run? {rc, reason}."""
+    ke = result_dir / "kernel-exit.json"
+    try:
+        kx = json.loads(ke.read_text()) if ke.exists() else {}
+    except ValueError:
+        kx = {}
+    if isinstance(kx, dict) and kx.get("stale_spec"):
+        return {"rc": STALE_RC, "reason": f"kernel mounted a stale dataset version: {kx.get('mounted')} (expected {kx.get('expected')})"}
+    mf = result_dir / "run-manifest.json"
+    if not mf.exists():
+        return {"rc": MISSING_RC, "reason": "no run-manifest.json in the kernel output"}
+    try:
+        m = json.loads(mf.read_text())
+    except ValueError:
+        return {"rc": MISSING_RC, "reason": "run-manifest.json is not valid JSON"}
+    bad = script_run.manifest_mismatch(m, unit, run_id)
+    if bad:
+        return {"rc": STALE_RC, "reason": "; ".join(bad)}
+    return {"rc": 0, "reason": "ok"}
+
+
 def _self_test() -> int:
     t = ("resource  used   remaining  total   refreshAt            \n"
          "--------  -----  ---------  ------  -------------------  \n"
@@ -119,6 +150,18 @@ def _self_test() -> int:
     low = t.replace("29.98h", " 2.10h")
     assert not gate(low, 60)["go"], gate(low, 60)
     assert not gate("garbage", 60)["go"] and gate("garbage", 60)["remaining"] is None
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        d = Path(td)
+        u, r = "RQ-20261013-0b07-03", "222"
+        assert verify_result(d, u, r)["rc"] == MISSING_RC
+        (d / "run-manifest.json").write_text(json.dumps({"unit": u, "run_id": "222"}))
+        assert verify_result(d, u, r)["rc"] == 0
+        (d / "run-manifest.json").write_text(json.dumps({"unit": "RQ-20261013-0b07-01", "run_id": "111"}))
+        assert verify_result(d, u, r)["rc"] == STALE_RC          # the 2026-10-13 defect
+        (d / "run-manifest.json").write_text(json.dumps({"unit": u, "run_id": "222"}))
+        (d / "kernel-exit.json").write_text(json.dumps({"stale_spec": True}))
+        assert verify_result(d, u, r)["rc"] == STALE_RC          # the kernel's own refusal wins
     print("kaggle_run self-test OK")
     return 0
 
@@ -135,10 +178,18 @@ def main(argv: List[str] | None = None) -> int:
     g = sub.add_parser("gate")
     g.add_argument("--quota-file", required=True)
     g.add_argument("--unit", required=True)
+    v = sub.add_parser("verify")
+    v.add_argument("--dir", required=True)
+    v.add_argument("--unit", required=True)
+    v.add_argument("--run-id", required=True)
     sub.add_parser("self-test")
     a = ap.parse_args(argv)
     if a.cmd == "self-test":
         return _self_test()
+    if a.cmd == "verify":
+        res = verify_result(Path(a.dir), a.unit, a.run_id)
+        print(f"VERIFY rc={res['rc']}: {res['reason']}")
+        return res["rc"]
     if a.cmd == "bundle":
         print(json.dumps(bundle(a.unit, a.run_id, a.username, Path(a.out), sha=a.sha)))
         return 0

@@ -189,6 +189,11 @@ CADENCE_REGISTRY: dict[str, dict] = {
     #    and lands it through commit-to-main, so the last commit touching it
     #    IS the receipt. (Its reviewed_at age is ALSO graded, more tightly,
     #    by check_grading_freshness.py.)
+    "research-watchdog.yml": {
+        "receipt": None,
+        "why": "writes the incident ledger only when an incident occurs, so a quiet watchdog leaves no receipt by design; "
+               "a stopped watchdog is observed by claude-run-failure-alert (crashed runs) and by research-ops reading the Actions run list",
+    },
     "compute-util-telemetry.yml": {
         "receipt": "comms/cloud/compute_util_ledger.jsonl",
         "why": "the workflow rewrites the ledger every day and lands it through "

@@ -1,69 +1,21 @@
 {
-  "generated_at": "2026-10-13T06:56:59Z",
+  "generated_at": "2026-10-13T19:22:51Z",
   "overall": "findings",
   "produced_by": {
-    "run_id": "38359366979",
+    "run_id": "38454292338",
     "workflow": "research-loss-detector"
   },
   "questions": {
     "A_stuck_research_prs": {
       "findings": [
         {
-          "age_hours": 121.1,
-          "branch": "automation/research-result-37729699069-1",
-          "pr": 17085,
-          "title": "research result: RQ-20261007-004 (run 37729699069)"
-        },
-        {
-          "age_hours": 31.9,
-          "branch": "automation/research-queue-stamp-38182207173-1",
-          "pr": 17652,
-          "title": "chore(research-queue): dispatch stamps (auto)"
-        },
-        {
-          "age_hours": 23.6,
-          "branch": "automation/research-queue-replenish-38215326620-1",
-          "pr": 17698,
+          "age_hours": 12.9,
+          "branch": "automation/research-queue-replenish-38356699588-1",
+          "pr": 17820,
           "title": "research-queue: replenish from templates (auto)"
-        },
-        {
-          "age_hours": 21.9,
-          "branch": "automation/research-queue-replenish-38227307266-1",
-          "pr": 17717,
-          "title": "research-queue: replenish from templates (auto)"
-        },
-        {
-          "age_hours": 19.9,
-          "branch": "automation/research-queue-replenish-38240183442-1",
-          "pr": 17731,
-          "title": "research-queue: replenish from templates (auto)"
-        },
-        {
-          "age_hours": 15.0,
-          "branch": "automation/research-results-batch-38273636135-1",
-          "pr": 17771,
-          "title": "research results: batch of 1 runner run(s) (dispatcher run 38273636135)"
-        },
-        {
-          "age_hours": 11.1,
-          "branch": "automation/research-queue-stamp-38294933000-1",
-          "pr": 17794,
-          "title": "chore(research-queue): dispatch stamps (auto)"
-        },
-        {
-          "age_hours": 11.0,
-          "branch": "automation/research-queue-stamp-38300567851-1",
-          "pr": 17796,
-          "title": "chore(research-queue): dispatch stamps (auto)"
-        },
-        {
-          "age_hours": 7.0,
-          "branch": "automation/research-results-batch-38324544318-1",
-          "pr": 17802,
-          "title": "research results: batch of 3 runner run(s) (dispatcher run 38324544318)"
         }
       ],
-      "population": "39 open PRs; 17 automation/*; 13 carry research; 4 automation/* carry none (not graded here)",
+      "population": "33 open PRs; 10 automation/*; 5 carry research; 5 automation/* carry none (not graded here)",
       "state": "findings",
       "threshold_hours": 6.0
     },
@@ -98,16 +50,6 @@
           "run_id": "36615144815",
           "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/36615144815",
           "workflow": "research-exit-head-build.yml"
-        },
-        {
-          "conclusion": "failure",
-          "created_at": "2026-10-08T04:54:04Z",
-          "result_job": [
-            "cancelled"
-          ],
-          "run_id": "37729699069",
-          "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/37729699069",
-          "workflow": "ict-scalp-exit-sweep.yml"
         }
       ],
       "lost": [
@@ -142,25 +84,22 @@
           "workflow": "research-exit-head-build.yml"
         }
       ],
-      "pending_merge": [
-        {
-          "conclusion": "failure",
-          "created_at": "2026-10-08T04:54:04Z",
-          "result_job": [
-            "cancelled"
-          ],
-          "run_id": "37729699069",
-          "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/37729699069",
-          "workflow": "ict-scalp-exit-sweep.yml"
-        }
-      ],
-      "population": "275 completed run(s) of 7 workflow(s) calling ./.github/actions/research-result since 2026-09-29 (dukascopy-span-probe.yml, ict-scalp-exit-sweep.yml, m20-exit-lever-sweep.yml, research-exit-head-build.yml, research-exit-head-replay-trainer.yml, research-harness-dispatch.yml, soak-book-grade-weekly.yml); 1495 produced no result by design (skipped); 473 result file(s) on origin/main",
+      "pending_merge": [],
+      "population": "287 completed run(s) of 7 workflow(s) calling ./.github/actions/research-result since 2026-09-29 (dukascopy-span-probe.yml, ict-scalp-exit-sweep.yml, m20-exit-lever-sweep.yml, research-exit-head-build.yml, research-exit-head-replay-trainer.yml, research-harness-dispatch.yml, soak-book-grade-weekly.yml); 1496 produced no result by design (skipped); 504 result file(s) on origin/main",
       "state": "findings"
     },
     "C_expiring_unlanded_artifacts": {
-      "findings": [],
-      "population": "1902 artifact(s) listed, 1902 unexpired, 1155 expire within 72.0h across 1129 run(s); 0 of those from research workflows (none); a landed copy = run id named on origin/main in research/results, a commit message, or a file under research/**, docs/research/**, runtime_logs/replay_pregate/**",
-      "state": "clean"
+      "findings": [
+        {
+          "artifact": "watchdog-rows",
+          "artifact_id": 11841936381,
+          "expires_at": "2026-10-16T19:19:58Z",
+          "run_id": "38453418506",
+          "workflow": "research-watchdog.yml"
+        }
+      ],
+      "population": "1903 artifact(s) listed, 1903 unexpired, 1145 expire within 72.0h across 1128 run(s); 1 of those from research workflows (research-watchdog.yml); a landed copy = run id named on origin/main in research/results, a commit message, or a file under research/**, docs/research/**, runtime_logs/replay_pregate/**",
+      "state": "findings"
     }
   },
   "ref": "origin/main",

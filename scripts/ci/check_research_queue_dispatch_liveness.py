@@ -8,6 +8,12 @@ script would notice, because a cron's own non-firing is invisible by
 construction (the same lesson check_cadence_liveness.py's docstring records
 for check_manager_queue_watch.py's 479-firing, zero-receipt Routine).
 
+SUPERSEDED AS THE FIRST LINE OF DEFENCE (2026-10-13, RESEARCH-WATCHDOG): this guard missed the 12:50Z-16:01Z stall
+because it runs as a step INSIDE research-queue-dispatch.yml (silent when that workflow does not run), grades a 48 h
+receipt, and a receipt proves a run happened -- not that the `dispatch` job started or fired anything.
+scripts/research/research_watchdog.py (own 15-min cron) now grades the dispatch job at 75 min; this stays as the
+coarse receipt-age backstop.
+
 THE RECEIPT, NOT THE LIVE API. `research-queue-dispatch.yml` writes
 `docs/claude/work/research-queue-dispatch-receipt.json` on every run that
 reaches the "Grade and dispatch" step successfully — fired or dry, cron or

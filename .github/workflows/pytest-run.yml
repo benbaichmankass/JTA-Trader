@@ -133,12 +133,15 @@ jobs:
             BEFORE="${{ github.event.before }}"
             if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
               echo "relevant=true" >> "$GITHUB_OUTPUT"
+              echo "mode=full" >> "$GITHUB_OUTPUT"
               echo "::notice::No prior commit to diff against — running the full check."
               exit 0
             fi
             RANGE="$BEFORE...${{ github.sha }}"
           fi
-          FILES=$(git diff --name-only $RANGE || true)
+          # --no-renames: list the OLD path of a rename too, so moving a file OUT of a
+          # suite-read tree is seen (CI-DIET; only ever widens the relevant set).
+          FILES=$(git diff --name-only --no-renames $RANGE || true)
           echo "Changed files ($RANGE):"
           echo "$FILES"
           # Run the full suite when the diff touches code/test-config OR
@@ -292,9 +295,24 @@ jobs:
           # Pinned in tests/test_pytest_run_filter.py::COVERED.
           if echo "$FILES" | grep -Eq '\.py$|requirements(-test)?\.txt$|pytest\.ini$|setup\.cfg$|pyproject\.toml$|^config/|^\.github/workflows/|^\.github/actions/|^scripts/|^deploy/|^comms/|^docs/research/exit-refinement-coverage\.json$|^docs/research/m20-sweep-corpus\.jsonl$|^docs/claude/system-actions\.md$|^docs/ARCHITECTURE-CANONICAL\.md$|^docs/research/m20-exit-head-rounds\.jsonl$|^docs/research/m20-fold-dispersion-arms-consolidated\.jsonl$|^docs/research/m20-fold-dispersion-2026-08-15\.md$|^docs/claude/impossibility-claim-baseline\.json$|^docs/claude/SUNSET-DISPOSITIONS\.json$|^docs/claude/CONSTRAINT\.json$|^docs/claude/diag-relay\.md$|^docs/claude/work/SESSIONS\.json$|^docs/archive/2026-09-21-operating-reset/work/SESSIONS\.json$|^docs/claude/session-board\.json$|^docs/claude/work/objects/WO-20260901-PHASE-G\.yaml$|^docs/research/e35-bracket-corpus\.jsonl$|^docs/research/research-disposition-ledger\.jsonl$|^ml/|^automation/|^research/|^\.claude/|^\.env\.example$|^tests/|^data/backtest_candles\.csv$|^data/btc_1m_sample\.csv$|^data/ict_validate_manifest\.csv$|^docs/claude/soak-doctrine-exceptions\.json$|^docs/claude/system-review-checklist\.json$|^docs/research/data/backtest-mfe-reference-2026-09-07\.json$|^docs/claude/work/objects/|^docs/api-tier-policy\.md$|^docs/CLAUDE-RULES-CANONICAL\.md$|^docs/sprint-logs|^docs/claude/health-review-backlog\.json$|^docs/claude/OPEN-ITEMS\.json$|^docs/claude/work/checklist/|^docs/claude/work/PIPELINE\.jsonl$|^docs/claude/work/OPEN-PRS\.json$|^\.gitleaks-baseline\.json$|^docs/security/gitleaks-baseline\.md$'; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
+            # CI-DIET (2026-10-13): of the relevant diffs, a DATA-ONLY one (checklist
+            # rows, pipeline rows, research queue/results, comms/ outputs, pr-landing /
+            # automerge / merge-slot request files) cannot change what the ~1,300 test
+            # files that do not read those trees observe. It runs exactly the test files
+            # that DO read them instead of the whole ~36-minute suite. The allowlist is
+            # explicit and lives in scripts/ci/pytest_run_scope.py (pinned by
+            # tests/test_pytest_run_scope.py); a path not named there runs the full
+            # suite, so the failure direction is "more tests", never "fewer".
+            # The `guards` job is untouched and still runs everything it ran before.
+            printf '%s\n' "$FILES" | python3 scripts/ci/pytest_run_scope.py | tee -a "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"
+            echo "mode=none" >> "$GITHUB_OUTPUT"
             echo "::notice::No code/config/workflow files changed — skipping the pip install + test-run steps (short-circuit, MB-20260706-CI-MINUTES)."
+            {
+              echo "### pytest-run: PASSED WITHOUT RUNNING TESTS (by design)"
+              echo "The diff touches no path the suite reads (see the relevance filter in this workflow, pinned by tests/test_pytest_run_filter.py). The \`guards\` job still ran."
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Set up Python 3.11
@@ -310,9 +328,35 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-test.txt
+          # CI-only parallel runner (CI-DIET); kept out of requirements-test.txt so the
+          # sandbox/dev install is unchanged. Major-pinned.
+          pip install "pytest-xdist>=3.5,<4"
+
+      - name: Explain the scope of this run
+        if: steps.changed.outputs.relevant == 'true'
+        env:
+          # via env, never inline: the reason embeds PR file names (untrusted).
+          SCOPE_MODE: ${{ steps.changed.outputs.mode }}
+          SCOPE_REASON: ${{ steps.changed.outputs.reason }}
+        run: |
+          {
+            echo "### pytest-run scope: \`${SCOPE_MODE}\`"
+            echo "${SCOPE_REASON}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run tests (data-only diff - every test file that reads the data trees)
+        if: steps.changed.outputs.relevant == 'true' && steps.changed.outputs.mode == 'data'
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python3 scripts/ci/pytest_run_scope.py --select-tests > /tmp/data-tests.txt
+          echo "selected $(wc -l < /tmp/data-tests.txt) test files"
+          pytest -q -n auto --dist loadfile $(cat /tmp/data-tests.txt) \
+            --ignore=tests/test_main_loop.py \
+            --junitxml=pytest-report.xml
 
       - name: Run tests
-        if: steps.changed.outputs.relevant == 'true'
+        if: steps.changed.outputs.relevant == 'true' && steps.changed.outputs.mode != 'data'
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
@@ -326,7 +370,14 @@ jobs:
           # a multi-round guess (the 2026-05-28 time-bomb-test incident: a
           # clock-relative insights test reddened pytest-run and it took a
           # full local-repro to name it).
-          pytest -q tests/ \
+          # -n auto --dist loadfile (CI-DIET, 2026-10-13): the hosted runner has 4 vCPUs and the
+          # serial suite used one. MEASURED on 3 probe runs of this exact suite: 14.4 min vs 33-46
+          # min serial. loadfile keeps every test FILE on one worker, in file order, so intra-file
+          # state sharing behaves as before. No test is skipped or deselected; the junit report and
+          # the failure summary below work unchanged. Cross-file order dependencies surfaced by
+          # parallel scheduling are fixed in the tests (tests/conftest.py autouse resets), never
+          # by deselecting.
+          pytest -q -n auto --dist loadfile tests/ \
             --ignore=tests/test_main_loop.py \
             --junitxml=pytest-report.xml
 

@@ -83,6 +83,13 @@ git log --oneline -15 -- research/queue docs/claude/work/research-queue-dispatch
   whose units show a fresh `last_dispatched_at` on `main` is adopted, not a defect; one
   whose units are being re-fired is. Known cause class: checks cancelled ~15 min in, never
   re-requested (`PI-20261006-LCEVL8D5-0001`).
+- **The watchdog runs between your passes (RESEARCH-WATCHDOG, 2026-10-13).** `research-watchdog.yml` checks the
+  dispatcher, queue floor, each backend, the collector and stranded stamps every 15 min with no tokens, self-heals once,
+  and escalates on the standing draft PR "ops-flags (do not merge)" + Telegram. **Read
+  `comms/research/ops/watchdog_incidents.jsonl` (newest rows since the previous run record) first**: every
+  `escalated` row without a later `resolved` row for the same `check` is an open incident and the FIRST INCIDENT of this
+  run; `self_healed` rows are stalls the watchdog already fixed (record them, root-cause if repeated). Thresholds:
+  `scripts/research/research_watchdog.yaml`. Contract and checks: `scripts/research/research_watchdog.py` docstring.
 - **A broken dispatcher, collector or grader is the FIRST INCIDENT of the run.** Fix it in
   Tier-1 (docs/tooling/CI scripts) if you can this run; otherwise file **one** pipeline item
   with `due_when` + `origin.rerun` (the command above that shows it broken). Do not proceed

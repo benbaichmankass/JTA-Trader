@@ -133,3 +133,49 @@ def test_bad_numbers_and_dates_refused(db, platforms, capsys, extra):
     rc, out = _run(db, platforms, capsys, extra=extra, apply=True)
     assert rc == 3 and not out["ok"]
     assert len(_q(db, "SELECT id FROM prop_fills")) == 5
+
+
+PLACED = "prop-manual-762f959676fd"
+
+
+def _add_placed(db: Path, ticket_status: str = "placed") -> None:
+    c = sqlite3.connect(db)
+    c.execute("INSERT INTO prop_tickets (ticket_id, account_id, strategy, symbol, direction, status, created_at) "
+              "VALUES (?,?,?,?,?,?,?)", (PLACED, "breakout_2", "trend_donchian_eth_prop", "ETHUSDT", "short",
+                                         ticket_status, "2026-10-12T21:57:37+00:00"))
+    c.execute("INSERT INTO prop_fills (account_id, ticket_id, symbol, direction, qty, entry_price, sl, tp, status, "
+              "reported_at, created_at) VALUES ('breakout_2',?,'ETHUSDT','short',0.57,2491.47,2535.25,2244.81,"
+              "'placed','2026-10-13T04:43:03+00:00','2026-10-13T04:43:03+00:00')", (PLACED,))
+    c.commit()
+    c.close()
+
+
+def test_placed_row_refused_without_flag(db, platforms, capsys):
+    """LIVE-SILENCE-DIAG: default behaviour unchanged — a `placed` row may still be a resting order."""
+    _add_placed(db)
+    rc, out = _run(db, platforms, capsys, tid=PLACED, apply=True)
+    assert rc == 3 and "no open/filled" in out["why"]
+    assert _q(db, "SELECT status FROM prop_tickets WHERE ticket_id=?", PLACED)[0]["status"] == "placed"
+
+
+def test_from_placed_closes_and_clears_reticket_block(db, platforms, capsys):
+    """LIVE-SILENCE-DIAG: a placed ticket that filled and stopped out off-journal blocks every later
+    same-key ticket (no time window). --from-placed closes it through ingest_report and the block lifts."""
+    _add_placed(db)
+    from src.prop.breakout_executor import _reticket_suppress_reason
+
+    assert "outstanding_ticket:placed" in (_reticket_suppress_reason("breakout_2", "ETHUSDT", "short") or "")
+    rc, out = _run(db, platforms, capsys, tid=PLACED, apply=True,
+                   extra=["--from-placed", "--exit-price", "2535.25", "--closed-at", "2026-10-13T05:00:00Z"])
+    assert rc == 0, out
+    r = _q(db, "SELECT * FROM prop_fills WHERE ticket_id=? AND status='closed'", PLACED)[0]
+    assert r["pnl"] == pytest.approx((2491.47 - 2535.25) * 0.57, abs=1e-3)
+    assert json.loads(r["raw"])["provenance"] == "ESTIMATED"
+    assert _q(db, "SELECT status FROM prop_tickets WHERE ticket_id=?", PLACED)[0]["status"] == "closed"
+    assert _reticket_suppress_reason("breakout_2", "ETHUSDT", "short") is None
+
+
+def test_from_placed_needs_a_placed_ticket(db, platforms, capsys):
+    _add_placed(db, ticket_status="emitted")
+    rc, out = _run(db, platforms, capsys, tid=PLACED, apply=True, extra=["--from-placed"])
+    assert rc == 3 and "no open/filled" in out["why"]

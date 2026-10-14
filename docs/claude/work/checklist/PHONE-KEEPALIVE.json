@@ -1,0 +1,31 @@
+{
+  "id": "PHONE-KEEPALIVE",
+  "title": "breakout_2 phone executor stays open indefinitely: independent watchdog + liveness reporting + standalone stale-heartbeat alert",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "lane session_01XJQ3iLXBW2jKYFWzZwoAKB",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "MEASURED 2026-10-13: heartbeat stopped ~15:14Z, next event app_started 18:48Z (operator reopened). Cause (supported, not fully separable): the tick loop lived in MainActivity's scope; once the Activity/process died nothing relaunched it (service only relaunched on boot/update; sticky restart with a null intent did nothing). Fix: Liveness.kt + KeepAliveService watchdog (60 s) + AlarmManager chain + loop_restarted event + heartbeat fields (battery_exempt, overlay, fgs_running, alarm_exact, last_restart_reason, restarts_24h, app_version) + tap-here notifications. Alert: the probe was NEVER muted (the glyph is the breach marker); it rode only the collapsed Manager-watch section of the hourly manager digest. scripts/ops/phone_hb_alert.py sends a standalone system-channel alert + one recovery. Operator OK for the Tier-2 change: the 2026-10-13 ask (recorded_decision operator_decision).  | OPEN FOLLOW-UP: the stale-heartbeat alert rides the hourly carrier (latency <= ~70 min); a 5-min detection needs its own timer (deploy/*.timer + cadence-liveness registration), not built. The Kotlin is compiled and unit-tested only by CI (phone-executor-apk.yml); no Android SDK in lane sandboxes. Closes when the observation holds on an installed build.",
+  "updated_at": "2026-10-13T18:56:52Z",
+  "updated_by": "session_01XJQ3iLXBW2jKYFWzZwoAKB",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "observation": {
+    "what": "no phone heartbeat gap > 10 min over 48h after the new APK is installed, or every gap self-recovered and alerted (phone_events loop_restarted/app_started + system-channel alert + recovery)",
+    "how_to_check": "GET /api/bot/prop/status?account_id=breakout_2: phone_heartbeat.state.restarts_24h/last_restart_reason/app_version, phone_events gaps",
+    "due_by": "2026-10-16T00:00Z"
+  },
+  "writeback": {
+    "roadmap": "none: L-PROP where/next unchanged",
+    "arch": "none: phone executor internals; no architecture change"
+  },
+  "recorded_decision": "operator_decision",
+  "_seq": 466
+}

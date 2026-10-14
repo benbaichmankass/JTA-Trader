@@ -274,7 +274,7 @@ they self-fire. Touching a guard's own logic is **Tier 3**.
 | Guard id (runs inside `guards.yml`) | Trigger | Purpose | Required on `main`? |
 |---|---|---|---|
 | `pytest-collect.yml` | PR, push `main` | `pytest --collect-only` — surfaces import/collection failures. | Yes |
-| `pytest-run.yml` | PR, push `main` | `pytest -q tests/` — runs the **full** suite (collection only checks imports). Required since 2026-05-22 (#1721). | Yes |
+| `pytest-run.yml` | PR, push `main` | `pytest -q tests/` — runs the **full** suite (collection only checks imports) unless the diff is **data-only**, in which case it runs only the test files that read those trees (CI-DIET, 2026-10-13; see below). Required since 2026-05-22 (#1721). | Yes |
 | `ruff-lint` | PR, push `main` | `ruff check` with rules from `ruff.toml`. | Yes |
 | `secret-scan` | PR, push `main` | `scripts/secret_scan.py` over every tracked file. | Yes |
 | `dry-run-guard` | PR to `main` | Fails PRs that flip dry-run flags, silently downgrading live mode. Telegrams operator on hit. | Yes |
@@ -289,6 +289,30 @@ they self-fire. Touching a guard's own logic is **Tier 3**.
 list of blocking checks — **read it there, this copy is a convenience mirror.**
 As of 2026-08-21 there are **three**:
 `["pytest-collect","pytest-run","guards"]`.
+
+#### `pytest-run` scope (CI-DIET, 2026-10-13)
+
+`pytest-run` decides, per diff, how much of the suite to execute (`scripts/ci/pytest_run_scope.py`, pinned by
+`tests/test_pytest_run_scope.py`). The job id, name and required context are unchanged, so branch protection and
+`claude-pr-automerge` treat it exactly as before; every run states its scope in the job summary.
+
+| mode | when | what runs |
+|---|---|---|
+| `none` | no changed path matches the relevance filter in the workflow (`tests/test_pytest_run_filter.py`) | nothing; the summary says it passed without running tests, by design |
+| `data` | every suite-relevant changed path is on the explicit data allowlist: `docs/claude/work/checklist/`, `docs/claude/work/pipeline/`, `docs/claude/work/PIPELINE.jsonl`, `research/queue/*.yaml`, `research/results/`, `comms/` (not `comms/schema/`), `.github/pr-landing/`, `.github/pr-automerge-requests/`, `.github/merge-slots/` | every test file whose text mentions those trees (`--select-tests`; 155 of ~1,440 files on 2026-10-13), selected by content, never by a hand list |
+| `full` | anything else: `.py`, `config/`, `src/`, `scripts/`, `tests/`, `.github/workflows/`, `comms/schema/`, the enumerated docs the suite reads (`docs/ARCHITECTURE-CANONICAL.md`, ...) | the whole suite, as before |
+
+Measured motive: 179 of 233 commits that landed on `main` in the 48h to 2026-10-13 (77%) were data-only and each paid the
+full ~36-minute suite twice (PR, then push). The `guards` job is not scoped by this and still runs on every PR and push.
+Widening the allowlist widens what skips the full suite; state why in the PR.
+
+Both `full` and `data` runs execute under `pytest-xdist` (`-n auto --dist loadfile`, 4 vCPU on the hosted runner): the same
+tests, scheduled across workers with every test file kept whole on one worker. Measured on three probe runs of the full
+suite: 11.7 / 13.0 / 20.5 min wall against 33-46 min serial. It is a scheduling change only (pinned by
+`tests/test_pytest_run_scope.py`: no `-k`/`-m`/`--deselect`); parallel scheduling exposed two cross-test pollution bugs
+(a `sys.modules` deletion and a Bybit tick/lot cache poisoned by mock clients), fixed in the tests rather than by
+deselecting. A new order-dependent test will now fail intermittently: fix the test's isolation, do not rerun until green.
+
 
 > ⚠️ **This mirror said "15 required contexts" until 2026-08-21 and had been
 > wrong since the guard consolidation.** The 13 individual guard contexts it
@@ -1334,6 +1358,7 @@ header before triggering a mutating one).
 | `external-issue-alert.yml` | Security | AUTO | `issues` | Early warning on the issue-driven-automation attack surface: flags issues opened by a non-owner, since every privileged relay here triggers on `issues.opened` + a label. |
 | `external-comment-alert.yml` | Security | AUTO | `issue_comment` | The comment-vector half of the above — flags comments from non-owner / non-automation accounts on any issue or PR. |
 | `compute-util-telemetry.yml` | Infra audit | AUTONOMOUS | cron (daily 06:37) + label / dispatch | Read-only daily CPU/memory/network/disk ledger for the live, trainer and gateway VMs (OCI Monitoring + one SSH df/proc sample), Oracle idle-reclaim alert, per-VM spare capacity for the research router, and the OCI A1 limits read (`comms/cloud/`). Logic in `scripts/ops/compute_util.py`. |
+| `research-watchdog.yml` | Research ops | AUTONOMOUS | cron (every 15 min) + dispatch | Token-free research pipeline watchdog: dispatcher job start/stuck, queue floor, per-backend idle, collector, stranded stamps; self-heals once, then escalates on the draft PR `ops-flags (do not merge)` + send-ping + `comms/research/ops/watchdog_incidents.jsonl`. Logic in `scripts/research/research_watchdog.py`. |
 | `oci-inventory.yml` | Infra audit | AUTONOMOUS | cron (weekly Mon 06:00) + label / dispatch | Read-only OCI compute inventory diffed against the topology this repo declares (`comms/cloud/expected_topology.json`) — the canonical docs described VM topology in prose and nothing checked it. ⚠️ Currently watched by nothing (`BL-20260821-OCI-INVENTORY-CRON-UNWATCHED`). |
 | `journal-offvm-backup.yml` | Infra backup | AUTONOMOUS | cron (daily 03:23) + label / dispatch | Versioned, private off-VM backup of the live `trade_journal.db`: read-only online-backup snapshot over SSH, integrity check, upload to the OCI bucket `ict-journal-backups` (NoPublicAccess, versioning on), 30-day daily + 12-week weekly pruning, restore test every run. Modes `backup` / `status` / `restore-test`. Output is sizes and counts only. JOURNAL-OFFVM-BACKUP (Tier 2, operator-approved 2026-10-13). |
 | `macro-producer-liveness.yml` | Ops audit | AUTONOMOUS | cron (daily 12:00) + label / dispatch | Dead-man switch for the scheduled macro producers — kills the "silently-skipped scheduled job" class by alarming when a registered producer stops landing rows. |

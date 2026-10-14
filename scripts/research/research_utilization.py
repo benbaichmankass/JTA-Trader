@@ -158,7 +158,8 @@ def week(root: Path = _REPO, now: datetime | None = None, days: int = 7) -> dict
     for r in recs:
         for n, b in r["backends"].items():
             a = out["backends"].setdefault(n, {"cycles_measured": 0, "cycles_could_not_look": 0, "slot_cycles_available": 0,
-                                               "slot_cycles_used": 0, "fires": 0, "waiting_cycles": 0, "value_dispatched": 0.0})
+                                               "slot_cycles_used": 0, "fires": 0, "waiting_cycles": 0, "underutilised_cycles": 0,
+                                               "value_dispatched": 0.0})
             if b["read_state"] != "measured":
                 a["cycles_could_not_look"] += 1
                 continue
@@ -167,10 +168,12 @@ def week(root: Path = _REPO, now: datetime | None = None, days: int = 7) -> dict
             a["slot_cycles_used"] += min(b["capacity"], b["inflight_at_start"] + b["fired_this_cycle"])
             a["fires"] += b["fired_this_cycle"]
             a["waiting_cycles"] += 1 if b["due_waiting"] else 0
+            # non-alerting reading: units were due and slots were left free after the cycle's fires
+            a["underutilised_cycles"] += 1 if (b["due_waiting"] and b.get("free_slots_after", 0) > 0) else 0
         for d in r.get("dispatched", []):
             be = out["backends"].setdefault(d.get("backend") or "unmanaged", {"cycles_measured": 0, "cycles_could_not_look": 0,
                                             "slot_cycles_available": 0, "slot_cycles_used": 0, "fires": 0, "waiting_cycles": 0,
-                                            "value_dispatched": 0.0})
+                                            "underutilised_cycles": 0, "value_dispatched": 0.0})
             be["value_dispatched"] = round(be["value_dispatched"] + float(d.get("value") or 0), 2)
         for f in r.get("flags", []):
             k = f.split(":", 1)[0]

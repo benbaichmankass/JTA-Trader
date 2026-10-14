@@ -1,0 +1,32 @@
+{
+  "id": "CI-DIET",
+  "title": "CI diet: free the GitHub-hosted runner pool for research without weakening any check (data-only PRs run only the tests that read their paths)",
+  "phase": "ci",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "lane/ci-diet",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    17926
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-13 lane CI-DIET] MEASURED over the 48h ending 20:18Z (9,500 runs from the Actions API; job-minutes sampled 6 runs/workflow): PR pytest-run is ~62% of CI job-minutes (502 runs, mean ~36 job-min, ~17.9k min/48h); Guards PR ~2.3k, Guards push ~1.5k, pytest-run push ~1.7k (200 pushes), everything else <1k each. 179 of 233 commits landed on main (77%) touched ONLY research/queue|results, checklist, pipeline, comms, pr-landing/automerge/merge-slot files, yet every one paid the full suite on the PR and again on push (the relevance filter includes those trees because tests read them). FIX 1 (this PR): scripts/ci/pytest_run_scope.py + pytest-run.yml: a data-only diff runs the 155 test files that mention those trees instead of the full suite; non-allowlisted path => full; guards unchanged; check name unchanged. Concurrency-cancel already exists on every PR workflow (3.3k min/48h are partial runs cancelled by newer pushes). NOT changed on purpose: Guards --all on push (post-merge semantic-skew net), push pytest-run for code merges. [2026-10-13 lane CI-DIET] PR1 #17926 MERGED 21:40Z (data-only scope). PR2 (xdist): same tests, -n auto --dist loadfile. Probe runs on branch copies: 14.4 min (first run) vs 33-46 serial; with the two isolation fixes 3 of 3 probe runs green at 11.7/13.0/20.5 min; before the fixes 3 of 3 failed (4 deterministic ml.datasets class-identity failures from tests/test_fetch_backtest_candles_yfinance.py deleting sys.modules without restoring; then 3 MagicMock->Decimal failures from Bybit _LIVE_CACHE/_LOT_CACHE poisoned by mock clients, different files each run). WATCH: any pytest-run failure on a test that passes alone is an isolation bug, fix the test, do not rerun.",
+  "updated_at": "2026-10-13T22:15:34Z",
+  "updated_by": "lane-CI-DIET",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "writeback": {
+    "roadmap": "L-OPS: record CI p90 concurrency before/after",
+    "arch": "none: CI-only"
+  },
+  "observation": {
+    "what": "CI p90 concurrent jobs over the 24h after the PR lands vs the 16 baseline (24h measurement, 2026-10-13); data-only PRs show pytest-run scope=data in the job summary; research runner cap in research_compute.yaml raisable",
+    "how_to_check": "gh api repos/benbaichmankass/Metis-Insights/actions/runs per hour; python3 scripts/ci/pytest_run_scope.py; count of pytest-run PR runs with duration >25 min among commits touching only research/results|checklist|comms",
+    "due_by": "2026-10-15T00:00Z"
+  },
+  "_seq": 467
+}

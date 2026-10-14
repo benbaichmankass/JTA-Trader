@@ -85,6 +85,17 @@ classes:
 
 # Dispatcher-wide ceilings. The per-backend max_concurrent above is the ONE capacity statement per backend;
 # these bound the sum, so research can never saturate the runner pool a system-action waits in.
+#
+# CAP MEASUREMENT 2026-10-13 (lane RESEARCH-UTIL; population: Actions jobs of 4,176 runs created 2026-10-12T19Z..10-13T20Z, all
+# `ubuntu-latest`, 5-min buckets, bucket MAXIMUM of jobs running by started_at/completed_at, 288 buckets):
+#   CI (pull_request+push, non-research) p50 9 · p90 16 · p99 21 · max 30      all non-research p90 17
+#   research p90 5 · max 8                                                     everything p50 12 · p90 20 · p99 28 · max 34
+#   Queue wait (created->started): p50 0s · p90 5s · p99 536s; 197 of 4,464 jobs waited > 120 s and ~90% of those started
+#   with 18-20 jobs already running -> the shared pool IS binding at ~20. The planned 20 - CI_p90 - 2 = 2 is BELOW today's 3.
+#   So the caps are NOT raised: more research slots would queue CI/merge jobs. Also, last measured dispatch cycle
+#   (comms/research/utilization, 16:05Z): github_runner in-flight 0/3, due_waiting 0 -- the runner backend had nothing waiting;
+#   the waiting units (5) were routed to `trainer` (cap 1, compute_spare saturated, deliberately unchanged).
+#   research-script-run.yml's concurrency group is per-unit, so --max-fires-per-workflow=1 does not throttle it.
 limits:
   max_total_inflight: 7        # runner 3 + runner_data 2 + trainer 1 + kaggle 1
   max_repo_queued: 10          # unchanged from the dispatcher's flag default
