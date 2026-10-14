@@ -133,6 +133,64 @@ def read_results(uid: str, results_root: Path) -> tuple[list[dict[str, Any]], li
     return rows, files
 
 
+#: Result sources OTHER than research/results/<uid>/: shared corpora whose rows are tagged
+#: `research_unit=<uid>` and dated by `sweep_generated_at`. A unit's rows at or after its
+#: dispatch stamp ARE its landed result; the catalog was blind to them (27 of 41 'dispatched'
+#: units on 2026-10-14 had landed there). Read-only; add a corpus by adding a row here.
+CORPORA: tuple[tuple[str, str], ...] = (
+    ("docs/research/e35-bracket-corpus.jsonl", "e35_bracket"),
+)
+
+
+def _load_corpus_index(root: Path) -> tuple[dict[str, dict[str, Any]], list[dict[str, str]]]:
+    """({uid: {path, corpus, sweeps: {sweep_generated_at: row_count}}}, readErrors).
+
+    One pass per corpus; only the unit tag and the sweep timestamp of each row are kept, so a
+    12 MB file costs a few KB. A missing file or an unparseable line is REPORTED (readErrors),
+    never read as 'no corpus rows' -- that would silently turn landed units back into 'stuck'."""
+    index: dict[str, dict[str, Any]] = {}
+    errors: list[dict[str, str]] = []
+    for rel, label in CORPORA:
+        path = root / rel
+        if not path.is_file():
+            errors.append({"path": rel, "error": "corpus file missing"})
+            continue
+        bad = 0
+        try:
+            with path.open(encoding="utf-8") as fh:
+                for ln in fh:
+                    if not ln.strip():
+                        continue
+                    try:
+                        r = json.loads(ln)
+                    except ValueError:
+                        bad += 1
+                        continue
+                    uid = r.get("research_unit") if isinstance(r, dict) else None
+                    if not uid:
+                        continue
+                    ent = index.setdefault(str(uid), {"path": rel, "corpus": label, "sweeps": {}})
+                    sw = str(r.get("sweep_generated_at") or "")
+                    ent["sweeps"][sw] = ent["sweeps"].get(sw, 0) + 1
+        except (OSError, UnicodeDecodeError) as exc:
+            errors.append({"path": rel, "error": f"unreadable: {type(exc).__name__}"})
+            continue
+        if bad:
+            errors.append({"path": rel, "error": f"{bad} unparseable line(s) skipped"})
+    return index, errors
+
+
+def _corpus_state(ent: dict[str, Any] | None, stamp: datetime | None) -> dict[str, Any]:
+    """Summarise one unit's corpus rows against its dispatch stamp."""
+    if not ent:
+        return {"landed": False, "rows": 0, "latest": None, "after_stamp_rows": 0}
+    dated = [(_ts(k), n) for k, n in ent["sweeps"].items()]
+    latest = max((d for d, _ in dated if d), default=None)
+    after = sum(n for d, n in dated if d is not None and (stamp is None or d >= stamp))
+    return {"landed": after > 0, "rows": sum(ent["sweeps"].values()), "latest": latest,
+            "after_stamp_rows": after}
+
+
 def _metrics(measurement: Any, limit: int = 14) -> dict[str, Any]:
     if not isinstance(measurement, dict):
         return {}
@@ -192,7 +250,8 @@ def _due(entry: dict, now: datetime) -> tuple[str, str | None]:
 
 
 def build_unit(entry: dict, *, path: Path, blocked_dir: bool, root: Path, results_root: Path,
-               roadmap: dict[str, dict[str, Any]], now: datetime) -> dict[str, Any]:
+               roadmap: dict[str, dict[str, Any]], now: datetime,
+               corpus: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:
     uid = str(entry.get("id") or path.stem)
     rows, files = read_results(uid, results_root)
     latest = rows[0] if rows else None
@@ -201,6 +260,9 @@ def build_unit(entry: dict, *, path: Path, blocked_dir: bool, root: Path, result
     latest_at = _ts((latest or {}).get("generated_at"))
     file_status = str(entry.get("status") or "queued")
     grading = entry.get("grading") if isinstance(entry.get("grading"), dict) else {}
+    cs = _corpus_state((corpus or {}).get(uid), last_stamp)
+    if cs["latest"] is not None and (latest_at is None or cs["latest"] > latest_at):
+        latest_at = cs["latest"]
 
     due_state, due_reason = ("not_due", None)
     stuck_reason: str | None = None
@@ -214,7 +276,7 @@ def build_unit(entry: dict, *, path: Path, blocked_dir: bool, root: Path, result
         stuck_reason = f"blocked: {blocked_reason}"
     elif file_status == "retired":
         status = "retired"
-    elif verdict_row is not None or file_status == "done":
+    elif verdict_row is not None or file_status == "done" or cs["landed"]:
         status = "result"
     elif file_status == "running":
         status = "running"
@@ -266,9 +328,17 @@ def build_unit(entry: dict, *, path: Path, blocked_dir: bool, root: Path, result
                   "minDetectableEffect": power.get("min_detectable_effect")} if (power or latest) else None,
         "verdict": vr.get("verdict") or grading.get("verdict"),
         "readState": (latest or {}).get("read_state"),
-        "resultNote": _text(vr.get("note"), 700) or _text(entry.get("result"), 700),
+        "resultNote": (_text(vr.get("note"), 700) or _text(entry.get("result"), 700)
+                       or (_text(grading.get("reason"), 700) if cs["landed"] and grading.get("verdict") else None)
+                       or (f"result landed in {corpus[uid]['path']} ({cs['after_stamp_rows']} row(s) at or after "
+                           f"the dispatch stamp); ungraded" if cs["landed"] and corpus else None)),
+        "resultSource": ("results_dir" if verdict_row is not None else
+                         (corpus[uid]["corpus"] if cs["landed"] and corpus else None)),
+        "corpus": {"path": corpus[uid]["path"], "corpus": corpus[uid]["corpus"], "rows": cs["rows"],
+                   "rowsAfterStamp": cs["after_stamp_rows"], "latestSweepAt": _iso(cs["latest"]),
+                   "graded": bool(grading.get("verdict"))} if corpus and uid in corpus else None,
         "metrics": _metrics(vr.get("measurement")),
-        "resultCount": len(rows),
+        "resultCount": len(rows) + cs["after_stamp_rows"],
         "dataUsed": _data_used(entry, verdict_row or latest),
         "backend": _route_backend(entry),
         "estMinutes": (entry.get("routing") or {}).get("est_minutes") if isinstance(entry.get("routing"), dict) else None,
@@ -278,7 +348,8 @@ def build_unit(entry: dict, *, path: Path, blocked_dir: bool, root: Path, result
         "lastActivity": _iso(max(activity)) if activity else _iso(_created(uid)),
         "links": {
             "unit": f"{REPO_BLOB}/{path.relative_to(root).as_posix()}" if path.is_relative_to(root) else None,
-            "results": [f"{REPO_BLOB}/{p}" for p in base_files],
+            "results": [f"{REPO_BLOB}/{p}" for p in base_files]
+            + ([f"{REPO_BLOB}/{corpus[uid]['path']}"] if corpus and uid in corpus else []),
             "run": ((vr or latest or {}).get("produced_by") or {}).get("run_url"),
         },
     }
@@ -291,8 +362,9 @@ def build_catalog(root: Path, *, now: datetime | None = None,
     results_root = results_root or (root / "research" / "results")
     qdir = root / "research" / "queue"
     roadmap = _roadmap_index(root)
+    corpus, corpus_errors = _load_corpus_index(root)
     units: list[dict[str, Any]] = []
-    errors: list[dict[str, str]] = []
+    errors: list[dict[str, str]] = list(corpus_errors)
     if not qdir.is_dir():
         return {"units": [], "readErrors": [{"path": "research/queue", "error": "directory missing"}],
                 "roadmapAvailable": bool(roadmap)}
@@ -305,7 +377,7 @@ def build_catalog(root: Path, *, now: datetime | None = None,
                 errors.append({"path": p.relative_to(root).as_posix(), "error": err or "unreadable"})
                 continue
             units.append(build_unit(doc, path=p, blocked_dir=is_blocked, root=root,
-                                    results_root=results_root, roadmap=roadmap, now=now))
+                                    results_root=results_root, roadmap=roadmap, now=now, corpus=corpus))
     return {"units": units, "readErrors": errors, "roadmapAvailable": bool(roadmap)}
 
 
