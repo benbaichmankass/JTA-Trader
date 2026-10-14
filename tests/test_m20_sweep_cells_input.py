@@ -16,7 +16,7 @@ import yaml
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "scripts" / "research"))
 
-import m20_fleet_exit_sweep as sweep
+import m20_fleet_exit_sweep as sweep  # noqa: E402
 
 LEG = "xrp_pullback_2h"
 CELLS = [
@@ -36,7 +36,7 @@ def _plan_cells(monkeypatch, capsys, *extra):
 
 
 def _listed_tags(out: str) -> list[str]:
-    line = next(l for l in out.splitlines() if l.strip().startswith("RUN"))
+    line = next(ln for ln in out.splitlines() if ln.strip().startswith("RUN"))
     return eval(line.split("cells=", 1)[1])
 
 
