@@ -232,6 +232,15 @@ def p0(K: float, x: np.ndarray) -> np.ndarray:
 def build(legs: List[dict], cache: Path, now: datetime) -> Tuple[List[dict], List[dict]]:
     """Walk every trade of every leg; apply the MFE positive control per leg. Returns (trades, leg_reports)."""
     out, reports = [], []
+    # One fetch per (symbol, timeframe) at the widest window any leg needs: legs sharing a series (e.g. two
+    # ETHUSDT 2h ledgers of 394 and 749 days) would otherwise each pay a multi-minute Binance Vision fetch.
+    need: Dict[Tuple[str, str], int] = {}
+    for L in legs:
+        ent0 = pd.to_datetime([r["entry_time"] for r in L["rows"]], utc=True, errors="coerce")
+        if len(ent0) and ent0.notna().any():
+            d = int((now - ent0.min().to_pydatetime()).days) + 10
+            need[(L["symbol"], L["tf"])] = max(need.get((L["symbol"], L["tf"]), 0), d)
+    frames: Dict[Tuple[str, str], pd.DataFrame] = {}
     for L in legs:
         rows = L["rows"]
         tfm = TF_MIN[L["tf"]]
@@ -243,8 +252,13 @@ def build(legs: List[dict], cache: Path, now: datetime) -> Tuple[List[dict], Lis
         rep: Dict[str, Any] = {"leg": L["leg"], "symbol": L["symbol"], "tf": L["tf"], "n_ledger": len(rows),
                                "horizon_bars": H}
         try:
-            days = int((now - ent.min().to_pydatetime()).days) + 10 + int(H * tfm / 1440) if len(rows) else 30
-            df = L.get("frame") if L.get("frame") is not None else fetch_frame(L["symbol"], L["tf"], days, cache)
+            key = (L["symbol"], L["tf"])
+            if L.get("frame") is not None:
+                df = L["frame"]
+            else:
+                if key not in frames:
+                    frames[key] = fetch_frame(L["symbol"], L["tf"], need.get(key, 30), cache)
+                df = frames[key]
         except Exception as e:  # noqa: BLE001 -- a feed failure is a named per-leg state, never a pooled zero
             reports.append({**rep, "state": "feed_failed", "error": str(e)[:200]})
             continue

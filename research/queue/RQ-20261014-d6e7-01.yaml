@@ -67,7 +67,7 @@ routing:
   needs_trainer_resident_data: false
   needs_gpu: false
   peak_memory_gb: 3.0
-  est_minutes: 45
+  est_minutes: 90
   basis: >-
     Candle fetch dominates (Binance Vision, ~25 symbol x timeframe series, up to ~4 years of 5m-4h bars); the walk is seconds.
     An authoring dry run is disclosed in the PR.
@@ -91,7 +91,7 @@ run:
   - '{out_dir}/candles'
   - --out
   - '{out_dir}'
-  timeout_minutes: 120
+  timeout_minutes: 240
   inputs:
     research_unit: RQ-20261014-d6e7-01
 lands:
