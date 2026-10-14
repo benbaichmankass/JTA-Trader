@@ -77,16 +77,18 @@ def download_dataset(api: Any, user: str, slug: str, dest: Path) -> str:
         notes.append(f"api: {type(exc).__name__}: {str(exc)[-200:]}")
     try:
         ver = None
+        owner = user
         for d in api.dataset_list(user=user, search=slug):
             if str(getattr(d, "ref", "")).endswith("/" + slug):
+                owner = str(d.ref).split("/")[0]  # the owner slug as the listing spells it
                 ver = getattr(d, "current_version_number", None) or getattr(d, "currentVersionNumber", None)
-        notes.append(f"latest version: {ver}")
+        notes.append(f"latest version: {ver}; owner slug same as token user: {owner == user}")
         if ver:
-            r = subprocess.run(["kaggle", "datasets", "download", "-d", ref, "--version", str(ver), "-p", str(dest),
-                                "--unzip", "-q"], capture_output=True, text=True)
-            if r.returncode == 0 and done():
+            # the dataset string is owner/slug/<version>; the CLI has no --version flag
+            api.dataset_download_files(f"{owner}/{slug}/{ver}", path=str(dest), unzip=True, quiet=True)
+            if done():
                 return ""
-            notes.append("cli@version: " + (r.stderr or r.stdout)[-200:])
+            notes.append("api@version: returned but no MANIFEST.json")
     except Exception as exc:  # allow-silent: the reason is appended to `notes` and returned to the caller, which prints it
         notes.append(f"list: {type(exc).__name__}: {str(exc)[-200:]}")
     return " | ".join(notes).replace(user, "<user>")
