@@ -46,5 +46,8 @@ The operator saw the Database-health panel load after a short wait (signals is ~
 2. **Newest row**: show a short relative age ("17m ago") and put the full timestamp in the drawer — the full ISO string is clipped on mobile (`2026-10-14T05:01:2`, `no timestamp colur`). **Compute the age on the client from `newestRowAt` vs now** — `ageSeconds` is as of `generatedAt` and the response may be served from cache for up to an hour, so it goes stale. Map `newestRowState` to short labels ("no timestamp column", "empty", "unparseable") instead of printing the raw token.
 3. `rowsState: "count_timed_out"` → "~N (estimate)" using `rowsEstimate`; `rows: null` with no estimate → "—".
 
+## Follow-up (2026-10-14 ~06:09Z, after the reload on the fast build)
+The operator reloaded on the new build and the Overview rendered fully (all row counts known). Remaining SPA nit: the **`EMPTY` badge is clipped to `EM` on mobile** — give it `flex-shrink: 0` / a min width, or shorten the label. Server side: the first authenticated `GET /api/bot/db/overview` after the 06:05Z restart (cold cache) was logged by uvicorn at 06:08:18Z, 12 s after its CORS preflight at 06:08:06Z — an upper bound on the cold build, not a measurement. The `db_overview built:` INFO line did NOT appear in the `ict-web-api` journal (the app logger is not at INFO there), so the exact `total_ms` is unread; the response carries `elapsedMs` and per-table `countMs` for anyone with a token.
+
 ## Not built (this lane)
 the SPA; the operator's real login test. (`/api/bot/db/overview` is PR #17956; auth set-env landed 2026-10-13.) Open items live on checklist row `DATA-EXPLORER`.
