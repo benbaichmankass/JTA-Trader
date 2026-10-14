@@ -52,6 +52,46 @@ def shard_facts(manifest_root: Path, entry: Dict[str, Any]) -> Dict[str, Any]:
     return {"manifest_generated_at": man.get("generated_at"), "shards": out}
 
 
+def download_dataset(api: Any, user: str, slug: str, dest: Path) -> str:
+    """Download + unzip the private dataset. Returns "" on success, else a scrubbed reason.
+
+    First the CLI; if it fails (2026-10-14: the kaggle>=2.0 CLI answered 404 on DownloadDataset for a dataset the kernel
+    mounts fine and `datasets status` reads), the python API, then the same call pinned to the latest version number."""
+    ref = f"{user}/{slug}"
+    notes = []
+
+    def done() -> bool:
+        return any(dest.rglob("MANIFEST.json"))
+
+    r = subprocess.run(["kaggle", "datasets", "download", "-d", ref, "-p", str(dest), "--unzip", "-q"],
+                       capture_output=True, text=True)
+    if r.returncode == 0 and done():
+        return ""
+    notes.append("cli: " + (r.stderr or r.stdout)[-200:])
+    try:
+        api.dataset_download_files(ref, path=str(dest), unzip=True, quiet=True)
+        if done():
+            return ""
+        notes.append("api: returned but no MANIFEST.json")
+    except Exception as exc:  # noqa: BLE001 -- every failure mode is reported, none swallowed
+        notes.append(f"api: {type(exc).__name__}: {str(exc)[-200:]}")
+    try:
+        ver = None
+        for d in api.dataset_list(user=user, search=slug):
+            if str(getattr(d, "ref", "")).endswith("/" + slug):
+                ver = getattr(d, "current_version_number", None) or getattr(d, "currentVersionNumber", None)
+        notes.append(f"latest version: {ver}")
+        if ver:
+            r = subprocess.run(["kaggle", "datasets", "download", "-d", ref, "--version", str(ver), "-p", str(dest),
+                                "--unzip", "-q"], capture_output=True, text=True)
+            if r.returncode == 0 and done():
+                return ""
+            notes.append("cli@version: " + (r.stderr or r.stdout)[-200:])
+    except Exception as exc:  # noqa: BLE001
+        notes.append(f"list: {type(exc).__name__}: {str(exc)[-200:]}")
+    return " | ".join(notes).replace(user, "<user>")
+
+
 def fetch(unit: str, dest: Path, *, out_dir: Optional[Path] = None, github_env: Optional[str] = None,
           queue_dir: Optional[Path] = None) -> int:
     entry = load_unit(unit, queue_dir)
@@ -77,10 +117,9 @@ def fetch(unit: str, dest: Path, *, out_dir: Optional[Path] = None, github_env: 
         return 4
     print(f"::add-mask::{user}")
     dest.mkdir(parents=True, exist_ok=True)
-    r = subprocess.run(["kaggle", "datasets", "download", "-d", f"{user}/{slug}", "-p", str(dest), "--unzip", "-q"],
-                       capture_output=True, text=True)
-    if r.returncode != 0:
-        print("download failed: " + (r.stderr or r.stdout).replace(user, "<user>")[-400:], file=sys.stderr)
+    err = download_dataset(api, user, slug, dest)
+    if err:
+        print("download failed: " + err, file=sys.stderr)
         return 5
     v = mde.verify(dest)
     print("verify:", json.dumps({k: v[k] for k in ("ok", "files_ok", "stale_shards")} | {"bad": len(v.get("files_bad", []))}))
@@ -135,7 +174,23 @@ def main(argv: Optional[list] = None) -> int:
     f.add_argument("--dest", required=True)
     f.add_argument("--run-id", default="")
     f.add_argument("--github-env", default=os.environ.get("GITHUB_ENV", ""))
+    d = sub.add_parser("download")
+    d.add_argument("--dataset", required=True, help="dataset slug (owner = the token's user)")
+    d.add_argument("--dest", required=True)
     a = ap.parse_args(argv)
+    if a.cmd == "download":
+        from kaggle.api.kaggle_api_extended import KaggleApi  # noqa: PLC0415
+        api = KaggleApi()
+        api.authenticate()
+        user = api.config_values.get("username", "")
+        if not user:
+            print("token did not resolve to a Kaggle user", file=sys.stderr)
+            return 4
+        print(f"::add-mask::{user}")
+        Path(a.dest).mkdir(parents=True, exist_ok=True)
+        err = download_dataset(api, user, a.dataset, Path(a.dest))
+        print("download failed: " + err if err else "download ok", file=sys.stderr if err else sys.stdout)
+        return 5 if err else 0
     if a.cmd == "self-test":
         return _self_test()
     if a.cmd == "fetch":
