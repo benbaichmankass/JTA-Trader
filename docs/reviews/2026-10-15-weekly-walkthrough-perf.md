@@ -1,6 +1,6 @@
 # Weekly walk-through brief — PERFORMANCE (grading and numbers only)
 
-> **Doc status:** `live` · category `review` · lane `PERF-REVIEW-PREP-20261014` · prepared 2026-10-14 for the Thursday 2026-10-15 walk-through · Tier 1.
+> **Doc status:** `unknown` · category `unknown` · lane `PERF-REVIEW-PREP-20261014` · prepared 2026-10-14 for the Thursday 2026-10-15 walk-through · Tier 1.
 > **Not run:** `/perf-followup` (happens after the walk-through). **Not done:** per-decision A–F grading, M13 insights cross-check, backlog drain — this brief is the numbers half only.
 
 ## 0. How to read this
