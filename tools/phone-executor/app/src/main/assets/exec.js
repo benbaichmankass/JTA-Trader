@@ -149,9 +149,13 @@
       return !!(pk && pk.preInputs && pk.preInputs.indexOf(i) < 0);
     })[0] || null;
   }
+  // PHONE-FGS-EXEC step 2 (manager 11:03Z): every TP/SL lookup is scoped to the ORDER FORM. The Positions grid has a
+  // "TP / SL" column (header and cells) whose click opens "Edit Take profit" on a LIVE position; page-wide matching (or
+  // a fallback to the whole document when no form is found) could reach it. No form -> nothing.
   function tpslBox() {
-    var cb = all("input[type=checkbox]").filter(function (c) { return /tp\s*\/\s*sl/i.test(labelFor(c) + " " + t(c.parentElement)); })[0];
-    if (!cb) { cb = Array.prototype.slice.call(document.querySelectorAll("input[type=checkbox]")).filter(function (c) { return /tp\s*\/\s*sl/i.test(t(c.closest("label") || c.parentElement)); })[0]; }
+    var f = form(); if (!f) return null;
+    var cb = all("input[type=checkbox]").filter(function (c) { return f.contains(c) && /tp\s*\/\s*sl/i.test(labelFor(c) + " " + t(c.parentElement)); })[0];
+    if (!cb) { cb = Array.prototype.slice.call(f.querySelectorAll("input[type=checkbox]")).filter(function (c) { return /tp\s*\/\s*sl/i.test(t(c.closest("label") || c.parentElement)); })[0]; }
     return cb || null;
   }
   function desc(x) {
@@ -160,7 +164,7 @@
       expanded: x.getAttribute("aria-expanded") || "", text: t(x).replace(/\d/g, "#").slice(0, 24)};
   }
   function tpslTexts(cb) {
-    var f = form() || document;
+    var f = form(); if (!f) return [];
     return innermost(Array.prototype.slice.call(f.querySelectorAll("button,[role=button],[role=switch],[role=checkbox],[aria-expanded],label,div,span,p")).filter(function (x) {
       return vis(x) && /^tp\s*\/\s*sl$/i.test(t(x)) && !(cb && (x.contains(cb) || x === cb.closest("label")));
     }));
@@ -169,7 +173,7 @@
     var p = h.parentElement, d = 0, sw = [];
     while (p && d < 2 && !sw.length) {
       sw = Array.prototype.slice.call(p.querySelectorAll("[role=switch],[role=checkbox],button,input[type=checkbox]")).filter(function (x) {
-        return vis(x) && x !== cb && !h.contains(x) && (x.tagName === "INPUT" || !t(x));
+        return vis(x) && x !== cb && !h.contains(x) && (x.tagName === "INPUT" || !t(x)) && inForm(x);
       });
       p = p.parentElement; d++;
     }
@@ -1067,6 +1071,18 @@
     },
     // Forget the picker state: the app calls this once at the start of each ticket.
     symbolReset: function () { window.__ex._mk = null; return "ok"; },
+    // PHONE-FGS-EXEC step 2 (manager 11:03Z, after an "Edit Take profit" window was seen on the engine page): in every
+    // open dialog that is NOT the order form, click the ONE button whose text is exactly "Cancel" (never Confirm, Save,
+    // Close position or anything else). Returns how many were cancelled; a dialog without exactly one Cancel is left.
+    cancelModals: function () {
+      var f = form(), n = 0;
+      all("[role=dialog],[role=alertdialog],[aria-modal=true]").forEach(function (d) {
+        if (f && (d.contains(f) || f.contains(d))) return;
+        var c = Array.prototype.slice.call(d.querySelectorAll("button,[role=button]")).filter(function (b) { return vis(b) && /^cancel$/i.test(t(b)); });
+        if (c.length === 1) { c[0].click(); n++; }
+      });
+      return n;
+    },
     // PHONE-FGS-EXEC step 2: close whatever popup/sheet the page has open with Escape ONLY (never a click: nothing is
     // cancelled or confirmed). The engine page was reloaded at the start of its job; this is the second guard.
     escape: function () {

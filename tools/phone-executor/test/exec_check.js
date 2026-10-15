@@ -342,6 +342,21 @@ document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__su
     eq([await rF("__ex.symbolOnTicket()"), await rF("window.__picks || 0"), await rF("window.__posclick || 0"), await rF("window.__submitted || 0")],
       ["ETH", 1, 0, 0], `fgs ${mode}: one picker click, the Positions row never clicked, nothing submitted`);
   }
+  // PHONE-FGS-EXEC step 2 (manager 11:03Z): TP/SL lookups never leave the order form. Q = no ticket form on the page,
+  // a Positions grid with a "TP / SL" column and an "Edit Take profit" dialog (Cancel / Confirm) open: openTpsl finds
+  // nothing to click, the grid's TP / SL cells are never clicked, cancelModals clicks Cancel and never Confirm.
+  const tpq = `<!doctype html><html><body><button>Positions1</button>
+<div id=pos><div class=hdr><div>Market</div><div>UP&L</div><div>Side</div><div>Value</div><div>Opening price</div><div>Current price</div><div id=th>TP / SL</div></div>
+<div class=row><div>ETH 1</div><div>50.49USD</div><div></div><div>1,278.70USD</div><div>2,461.52USD</div><div>2,368.01USD</div><div id=tc>TP / SL</div></div></div>
+<div role=dialog id=dlg><h2>Edit Take profit</h2><label><input type=checkbox>TP/SL</label><button id=cn>Cancel</button><button id=cf>Confirm</button></div>
+<script>['th','tc'].forEach(function(i){document.getElementById(i).onclick=function(){window.__tpcell=(window.__tpcell||0)+1;};});
+document.getElementById('cn').onclick=function(){window.__cancel=(window.__cancel||0)+1;document.getElementById('dlg').remove();};
+document.getElementById('cf').onclick=function(){window.__confirm=(window.__confirm||0)+1;};</script></body></html>`;
+  const pTq = await onHost(tpq); const rQ = (code) => pTq.evaluate(code);
+  eq([await rQ("__ex.openTpsl(0)"), await rQ("__ex.openTpsl(1)")], ["none", "none"], "tpsl Q: no order form -> nothing found, nothing clicked");
+  eq(await rQ("window.__tpcell || 0"), 0, "tpsl Q: the Positions 'TP / SL' header and cell are never clicked");
+  eq(await rQ("__ex.cancelModals()"), 1, "tpsl Q: the Edit Take profit dialog is cancelled");
+  eq([await rQ("window.__cancel || 0"), await rQ("window.__confirm || 0"), await rQ("__ex.cancelModals()")], [1, 0, 0], "tpsl Q: Cancel clicked once, Confirm never; nothing left to cancel");
   // SERVER READ-BACK (PHONE-GO-TOKEN, design 3.4): the app builds the read-back from these page reads (MainActivity.kt
   // readBack: SELECTED tabs, the submit label + disabled state, the TP/SL box, the by-label values) and hashes
   // "key=value" lines in READBACK_FIELDS order (== src/prop/phone_executor.py). Mirrors the app; proves the page reads

@@ -1151,10 +1151,11 @@ class MainActivity : Activity() {
         //    SOL-PICKER (2026-10-07): the first route is the terminal's "Select market" chip (open, pick ONE row,
         //    read back), then the watchlist; the picker state is reset per ticket so a failed pick never carries over.
         js("__ex.symbolReset()")
-        // PHONE-FGS-EXEC step 2: the engine page was reloaded at the start of its job; also close any popup/sheet with
-        // Escape (no click, so nothing is cancelled or confirmed) before the symbol step
-        if (cur !== fg) { js("__ex.escape()"); delay(400); ensure() }
-        var route = selectSymbol(venue, base)
+        // PHONE-FGS-EXEC step 2: the engine page was reloaded at the start of its job; also Cancel any open dialog that
+        // is not the order form (exactly one "Cancel" button, never Confirm) and press Escape, before the symbol step
+        var reset = ""
+        if (cur !== fg) { reset = "cancelled " + js("__ex.cancelModals()") + "; "; js("__ex.escape()"); delay(400); ensure() }
+        var route = reset + selectSymbol(venue, base)
         if (js("__ex.openTicket()") == "no_order_control") return refuse(id, "order control not found (symbol route: $route)", jsObj("__ex.ticket()"))
         delay(1500); ensure()
         var shown = js("__ex.symbolOnTicket()")
