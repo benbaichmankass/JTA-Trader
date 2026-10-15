@@ -1575,6 +1575,19 @@ GUARDS: List[Dict[str, Any]] = [
                   ["python3", "scripts/ci/check_tp_doctrine.py"]],
     },
     {
+        "name": "prop-harness-full-costs-guard",
+        # PROP-EVAL-COSTS (operator 2026-10-15): no caller of the portfolio engine
+        # (prop evaluator / Monte-Carlo / alt-prop / compat matrix / panel builder /
+        # walk-forwards) may run fee-only. Extends the D1 cost-stack verification.
+        "when": {"globs": [
+            "scripts/backtest_system.py", "scripts/prop/*.py", "scripts/walkforward_*.py",
+            "scripts/research/build_backtest_panel.py", "src/research/run_costs.py",
+            "config/prop_rulesets/*.yaml", "scripts/ci/check_prop_harness_full_costs.py",
+        ]},
+        "steps": [["python3", "scripts/ci/check_prop_harness_full_costs.py", "--self-test"],
+                  ["python3", "scripts/ci/check_prop_harness_full_costs.py"]],
+    },
+    {
         "name": "automerge-trigger-guard",
         # UNGATED: `when: None`, so it runs on every PR regardless of the diff.
         # The registry's convention for "always" is an EXPLICIT `None`, never an
@@ -1995,6 +2008,24 @@ GUARDS: List[Dict[str, Any]] = [
                          "--base", "origin/{base_ref}"],
                 "pr_only": True,
             },
+        ],
+    },
+    {
+        "name": "same-symbol-allocation-guard",
+        # Operator 2026-10-15 (re-scoped ~20:25Z): legs MAY share a netted position if we know how much of it belongs
+        # to each strategy. Whole-tree: a shared (account, symbol) needs slice support for the account (empty until lane
+        # NETTED-SLICES lands its config) or a committed allocation-weights record in comms/same_symbol_allocation/.
+        # Today's pairs are grandfathered BY NAME with the unit that feeds them and a due date inside the script.
+        # Checklist row SAME-SYMBOL-ALLOCATION.
+        "when": {"globs": [
+            "config/accounts.yaml",
+            "config/strategies.yaml",
+            "comms/same_symbol_allocation/**",
+            "scripts/ci/check_same_symbol_allocation.py",
+        ]},
+        "steps": [
+            ["python3", "scripts/ci/check_same_symbol_allocation.py", "--self-test"],
+            ["python3", "scripts/ci/check_same_symbol_allocation.py"],
         ],
     },
     {

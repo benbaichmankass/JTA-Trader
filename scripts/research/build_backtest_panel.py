@@ -266,6 +266,7 @@ def _adapter_backtest_system(
     row against its own strategy's decision-time specs.
     """
     import scripts.backtest_system as BS  # noqa: PLC0415 — local import by design
+    from src.research.run_costs import resolve_run_costs  # noqa: PLC0415
 
     base5m = BS._load_candles(data_path)
     roster_list = (
@@ -289,6 +290,7 @@ def _adapter_backtest_system(
         reentry_policy=reentry_policy,
         attach_full=True,
         symbol=symbol,
+        costs=resolve_run_costs(symbol), require_full_costs=True,
     )
     closed = summary.get("closed_trades", []) or []
     clock = summary.get("clock_frame")
@@ -319,6 +321,7 @@ def _adapter_backtest_system(
         "n_bars": int(len(clock)) if clock is not None else None,
         "harness_total_trades": len(closed),
         "harness_net_pnl": summary.get("net_pnl") or summary.get("total_pnl"),
+        "cost_policy": summary.get("cost_policy"),
         "per_strategy_trade_counts": {
             name: sum(1 for t in closed if t.owner == name) for name in roster_list
         },

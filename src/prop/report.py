@@ -167,9 +167,11 @@ def render_json(
     ruleset_view: Optional[Dict[str, Any]] = None,
     data_window: Optional[Dict[str, Any]] = None,
     generated_at: Optional[str] = None,
+    cost_policy: Optional[Dict[str, Any]] = None,
 ) -> str:
     payload = {
         "kind": "prop_eval_matrix",
+        "cost_policy": cost_policy,
         "generated_at": generated_at or datetime.now(timezone.utc).isoformat(),
         "ruleset": ruleset_view,
         "data_window": data_window,
