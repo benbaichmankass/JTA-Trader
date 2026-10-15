@@ -95,6 +95,7 @@ class MainActivity : Activity() {
     private var busy = false
     private var lastHbMs = 0L
     private var lastAcctMs = 0L
+    private var lastSheetMissMs = 0L
     private var sheetOkPosted = false   // the first clean sheet read posts its shape once (opened_by, uPnL sign)
     private var lastPosMissMs = 0L
     private var lastStatus = ""
@@ -144,6 +145,7 @@ class MainActivity : Activity() {
         // BREAKOUT-SL-AMEND-CLICK: the sheet's pencil click (and Confirm) stays OFF until a live amend_sheet_unmeasured
         // dump has shown the Stop row's icons (the ⓧ next to the pencil CANCELS the stop); the read path runs live
         const val SHEET_EDIT_MEASURED = false
+        const val SHEET_MISS_MS = 600_000L              // a sheet read that failed is dumped at most every 10 min
         const val QTY_TOL_FRAC = 0.02                   // sheet "Total open volume" vs the ticket qty (venue rounding)
         const val PRICE_BUF_FRAC = 0.001                // the new stop clears the venue's current price by max(2 steps, 0.1%)
         const val USER_HOLD_MS = 5 * 60_000L
@@ -1354,15 +1356,23 @@ class MainActivity : Activity() {
         if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") == true) sheetClose(p, sym)
         val tries = JSONArray()
         var opened = ""
-        for (which in listOf("child", "group")) {
-            val r = p.js("__ex.sheetOpen(${q(sym)}, ${q(which)})")
-            tries.put("$which:$r")
-            if (r != "clicked") continue
+        // BREAKOUT-SHEET-PROBE (1b.205, 05:59Z): click() on both rows found them but opened no sheet. Each row is now
+        // tried with click() and then a touch-style pointer tap, and every miss records what the page showed after it
+        // (viewport, new visible texts, the tapped cell's ancestor chain) -- measured, so the next build is not a guess
+        var probe: JSONObject? = null
+        loop@ for (which in listOf("child", "group")) for (mode in listOf("click", "pointer")) {
+            p.js("__ex.domMark()")
+            val r = p.js("__ex.sheetOpen(${q(sym)}, ${q(which)}, ${q(mode)})")
+            tries.put("$which/$mode:$r")
+            if (r != "clicked" && r != "tapped") { if (r == "none" || r == "no_grid") break; continue }
             delay(1200); p.ensure()
-            if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") == true) { opened = which; break }
-            tries.put("$which:no_sheet")
+            if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") == true) { opened = "$which/$mode"; break@loop }
+            delay(1500); p.ensure()
+            if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") == true) { opened = "$which/$mode"; break@loop }
+            tries.put("$which/$mode:no_sheet")
+            probe = p.obj("__ex.domDiff()")?.put("at", "$which/$mode")
         }
-        if (opened.isEmpty()) return JSONObject().put("ok", false).put("why", "sheet_not_open").put("tries", tries)
+        if (opened.isEmpty()) return JSONObject().put("ok", false).put("why", "sheet_not_open").put("tries", tries).apply { if (probe != null) put("probe", probe) }
         val si = p.obj("__ex.sheetInfo(${q(sym)})") ?: JSONObject()
         if (!si.optBoolean("title_ok")) {
             val c = sheetClose(p, sym)
@@ -1387,8 +1397,9 @@ class MainActivity : Activity() {
     /** The sheet's evidence as short masked lines for the visible positions diag (state sheet_* / amend_sheet_*). No
      *  values: the server masks digits in cells, and only shapes (tries, misses, uPnL text shape, icon dump) go in. */
     private suspend fun sheetMiss(state: String, d: JSONObject, orders: JSONObject? = null, force: Boolean = false) {
-        if (!force && System.currentTimeMillis() - lastPosMissMs < POS_MISS_MS) return
-        lastPosMissMs = System.currentTimeMillis()
+        // its own clock (manager 06:09Z): sharing lastPosMissMs with the Positions miss hid every sheet dump for 30 min
+        if (!force && System.currentTimeMillis() - lastSheetMissMs < SHEET_MISS_MS) return
+        lastSheetMissMs = System.currentTimeMillis()
         val h = JSONArray()
         d.optJSONArray("tries")?.let { a -> for (i in 0 until a.length()) h.put(a.optString(i).take(40)) }
         if (d.has("opened_by")) h.put("opened_by=${d.optString("opened_by")}")
@@ -1396,6 +1407,12 @@ class MainActivity : Activity() {
         if (d.has("upnl_shape")) h.put("upnl=${d.optString("upnl_shape")} signed=${d.optBoolean("upnl_signed")}".take(40))
         if (d.has("close")) h.put("close=${d.optString("close")}".take(40))
         val ctl = JSONArray()
+        d.optJSONObject("probe")?.let { pr ->
+            ctl.put("${pr.optString("at")} w=${pr.optInt("w")} h=${pr.optInt("h")} new=${pr.optInt("n_new")} dlg=${pr.optInt("dialogs")}".take(40))
+            ctl.put("tabs details=${pr.optInt("details_tabs")} tpsl=${pr.optInt("tpsl_tabs")}")
+            pr.optJSONArray("leaves")?.let { a -> for (i in 0 until a.length()) ctl.put("new: " + a.optString(i).take(34)) }
+            pr.optJSONArray("chain")?.let { a -> for (i in 0 until a.length()) ctl.put("up: " + a.optString(i).take(35)) }
+        }
         orders?.optJSONArray("rows")?.let { rs ->
             for (i in 0 until rs.length()) {
                 val r = rs.optJSONObject(i) ?: continue
