@@ -29,7 +29,7 @@ def _run(tmp_path: Path, capsys, *extra: str) -> tuple[list[dict], dict]:
                   "--doc-exclude", str(tmp_path / "docs" / "archive"),
                   "--min-age-days", "14", "--list-kept", *extra])
     assert rc == 0
-    rows = [json.loads(l) for l in capsys.readouterr().out.splitlines()]
+    rows = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
     return rows, rows[-1]
 
 

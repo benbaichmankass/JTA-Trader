@@ -41,7 +41,7 @@ def _rows(k: int = 7) -> list[dict[str, Any]]:
 
 
 def _jsonl(d: Path) -> list[dict[str, Any]]:
-    return [json.loads(l) for l in (d / "data.jsonl").read_text().splitlines() if l]
+    return [json.loads(line) for line in (d / "data.jsonl").read_text().splitlines() if line]
 
 
 def _same_rows(a, b) -> bool:
@@ -142,5 +142,5 @@ def test_cli_convert_and_verify(tmp_path: Path, capsys):
     (d / "data.jsonl").write_text('{"a": 1, "b": "x"}\n{"a": 2, "b": null}\n')
     assert ps.main(["convert", str(d)]) == 0
     assert ps.main(["verify", str(d)]) == 0
-    out = [json.loads(l) for l in capsys.readouterr().out.splitlines()]
+    out = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
     assert out[0]["status"] == "written" and out[1]["status"] == "PARITY"
