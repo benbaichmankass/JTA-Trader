@@ -25,6 +25,12 @@ the reason printed, when ANY of these holds:
   - `repo_ref`  — its `<family>/<scope>/<tf>/<version>` path appears in a
     code/config/research file under --ref-roots (scripts, ml, config,
     research, src, .github);
+  - `doc_ref`   — that path appears, as a FIXED STRING, in any text file
+    under --doc-roots (docs) outside --doc-exclude (docs/archive): an
+    evidence record or sprint log naming a version as its data source
+    (manager 2026-10-15, after a hand strike caught two such versions —
+    market_raw/MES/5m/v001 and market_features/BTCUSDT/1h/v001 — that the
+    code-only check had passed as candidates);
   - `young`     — its NEWEST FILE is younger than --min-age-days. (The dir
     mtime is not used: a nightly `open("w")` rewrite of data.jsonl does not
     touch it, so a dir rebuilt last night can read as months old.)
@@ -134,6 +140,37 @@ def repo_refs(roots: list[str], skip: set[str]) -> dict[tuple[str, str, str, str
     return refs
 
 
+def doc_refs(keys: list[tuple[str, str, str, str]], roots: list[str],
+             exclude: list[str]) -> dict[tuple[str, str, str, str], set[str]]:
+    """Fixed-string search for each `<family>/<scope>/<tf>/<version>` in docs.
+
+    Every file type is read (docs are mostly .md); `exclude` prefixes and
+    files over the size cap are skipped.
+    """
+    needles = {k: "/".join(k) for k in keys}
+    excl = [os.path.abspath(e) for e in exclude]
+    refs: dict[tuple[str, str, str, str], set[str]] = {}
+    for root in roots:
+        for dirpath, dirnames, files in os.walk(root):
+            here = os.path.abspath(dirpath)
+            if any(here == e or here.startswith(e + os.sep) for e in excl):
+                dirnames[:] = []
+                continue
+            dirnames[:] = [d for d in dirnames if d not in _SKIP_DIRS]
+            for f in files:
+                p = os.path.join(dirpath, f)
+                try:
+                    if os.path.getsize(p) > _MAX_REF_FILE_BYTES:
+                        continue
+                except OSError:
+                    continue
+                text = _read(p)
+                for k, needle in needles.items():
+                    if needle in text:
+                        refs.setdefault(k, set()).add(p)
+    return refs
+
+
 def _dir_size(path: str) -> int:
     total = 0
     for root, _dirs, files in os.walk(path):
@@ -167,6 +204,10 @@ def main(argv: list[str] | None = None) -> int:
                     help="scripts whose literal dataset paths are nightly targets")
     ap.add_argument("--ref-roots", default=",".join(_DEFAULT_REF_ROOTS),
                     help="dirs searched for a textual reference to a version path")
+    ap.add_argument("--doc-roots", default="docs",
+                    help="dirs fixed-string searched for a version path (any file type)")
+    ap.add_argument("--doc-exclude", default="docs/archive",
+                    help="comma-separated prefixes skipped by the doc search")
     ap.add_argument("--list-kept", action="store_true",
                     help="also print every kept dir with its reasons")
     ap.add_argument("--apply", action="store_true",
@@ -227,6 +268,12 @@ def main(argv: list[str] | None = None) -> int:
                     dirs[key] = {"path": vdir, "age_days": round(age_days, 1),
                                  "reasons": reasons, "inputs": inputs}
 
+    # Pass 1b: docs (evidence records, sprint logs) naming a version path.
+    drefs = doc_refs(list(dirs), [r for r in args.doc_roots.split(",") if os.path.isdir(r)],
+                     [e for e in args.doc_exclude.split(",") if e.strip()])
+    for key, files in drefs.items():
+        dirs[key]["reasons"].append("doc_ref:" + ",".join(sorted(files)[:3]))
+
     # Pass 2: anything a KEPT dir names as an input is kept too (fixpoint).
     changed = True
     while changed:
@@ -269,6 +316,7 @@ def main(argv: list[str] | None = None) -> int:
         "manifests_total": int(stats_row[2]),
         "nightly_literal_paths": len(nightly_paths),
         "repo_ref_paths": len(refs),
+        "doc_ref_versions": len(drefs),
         "min_age_days": args.min_age_days,
         "keep_versions": sorted(keep_versions),
     }))

@@ -25,6 +25,8 @@ def _run(tmp_path: Path, capsys, *extra: str) -> tuple[list[dict], dict]:
     rc = gc.main(["--datasets-root", str(tmp_path / "ds"), "--configs", str(tmp_path / "cfg"),
                   "--builder-scripts", str(tmp_path / "build.sh"),
                   "--ref-roots", str(tmp_path / "repo"), "--keep-versions", "",
+                  "--doc-roots", str(tmp_path / "docs"),
+                  "--doc-exclude", str(tmp_path / "docs" / "archive"),
                   "--min-age-days", "14", "--list-kept", *extra])
     assert rc == 0
     rows = [json.loads(l) for l in capsys.readouterr().out.splitlines()]
@@ -35,6 +37,7 @@ def _setup(tmp_path: Path) -> Path:
     ds = tmp_path / "ds"
     (tmp_path / "cfg").mkdir()
     (tmp_path / "repo").mkdir()
+    (tmp_path / "docs" / "archive").mkdir(parents=True)
     (tmp_path / "cfg" / "m.yaml").write_text(
         "dataset:\n  family: market_features\n  symbol_scope: BTCUSDT\n  timeframe: 15m\n  version: v513\n")
     (tmp_path / "build.sh").write_text('x="${DATASETS_ROOT}/market_raw/MES/15m/v001"\n')
@@ -94,3 +97,19 @@ def test_apply_deletes_only_candidates(tmp_path: Path, capsys):
                  "forecasts/BTCUSDT/15m/v001", "market_raw/MES/15m/v001",
                  "market_features/ETHUSDT/15m/v901", "market_features/BTCUSDT/15m/v777"):
         assert (ds / keep).is_dir(), keep
+
+
+def test_doc_ref_keeps_and_archive_does_not(tmp_path: Path, capsys):
+    ds = _setup(tmp_path)
+    _mk(ds, "market_raw/MES/5m/v001")
+    _mk(ds, "market_features/BTCUSDT/1h/v001")
+    (tmp_path / "docs" / "result.md").write_text(
+        "- **Data:** trainer `datasets-out/market_raw/MES/5m/v001/data.jsonl`\n")
+    (tmp_path / "docs" / "archive" / "old.md").write_text(
+        "Rebuilt market_features/BTCUSDT/1h/v001 with vol_threshold=0.003\n")
+    rows, summary = _run(tmp_path, capsys)
+    kept = {r["path"].split("ds/")[1]: r["reasons"] for r in rows if r["status"] == "gc_kept"}
+    cands = {r["path"].split("ds/")[1] for r in rows if r["status"] == "gc_candidate"}
+    assert kept["market_raw/MES/5m/v001"][0].startswith("doc_ref:")
+    assert "market_features/BTCUSDT/1h/v001" in cands  # only an archived doc names it
+    assert summary["doc_ref_versions"] == 1
