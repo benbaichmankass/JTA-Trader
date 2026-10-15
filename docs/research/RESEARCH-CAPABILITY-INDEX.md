@@ -336,6 +336,7 @@ verify-the-source-before-you-build.
 
 | Question | Tool |
 |---|---|
+| Is a leg's LIVE cumulative R inside the range its committed backtest predicts for the same n trades? (FIRST step for any underperformer; verdict CONSISTENT / BELOW_BACKTEST / NO_BACKTEST) | `scripts/research/live_vs_backtest.py` |
 | Temporal stability of a directional edge (walk-forward) | `scripts/research/direction_walkforward.py` |
 | Rank stability walk-forward | `scripts/research/rank_walkforward.py` |
 | Fee/slippage sensitivity + 3-fold robustness | `scripts/research/validate_robustness.py` |
