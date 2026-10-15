@@ -253,7 +253,7 @@ jobs:
                   upstream_prefix="/api/"
                   path="$botpath"
                   ;;
-                performance|stats|positions|positions/net|signals|strategies|strategies/*/review|strategies/*/tune|strategy/attribution|backtests|backtests/sweeps|order-packages|trades/closed|trades/scores|candles|accounts/balances|liquidity|config|insights/summary|insights/recent|insights/health|insights/usage|insights/history|insights/strategy/*|health/latest|health/history|health/services|health/snapshot|shadow/stats|shadow/drift|shadow/predictions|exit-ladder/soak|allocator/soak|fc-geometry/soak|pairs/soak|exposure/soak|ml/status|ml/cycle|ml/sessions|ml/registry|ml/builds|ml/db_pulls|ml/runs/*|news/recent|pnl/exchange|pnl/exchange/fills|pnl/broker-truth|gpu/spend|roadmap|roadmap/sprint/*|reports|reports/*|notifications|prop/fills|prop/tickets|prop/status|prop/reconcile|db/tables|db/table/*)
+                performance|stats|positions|positions/net|signals|strategies|strategies/*/review|strategies/*/tune|strategy/attribution|backtests|backtests/sweeps|order-packages|trades/closed|trades/scores|candles|accounts/balances|liquidity|config|insights/summary|insights/recent|insights/health|insights/usage|insights/history|insights/strategy/*|health/latest|health/history|health/services|health/snapshot|shadow/stats|shadow/drift|shadow/predictions|exit-ladder/soak|allocator/soak|fc-geometry/soak|pairs/soak|exposure/soak|ml/status|ml/cycle|ml/sessions|ml/registry|ml/builds|ml/db_pulls|ml/runs/*|news/recent|pnl/exchange|pnl/exchange/fills|pnl/broker-truth|gpu/spend|roadmap|roadmap/sprint/*|reports|reports/*|notifications|prop/fills|prop/tickets|prop/status|prop/reconcile)
                   upstream_prefix="/api/bot/"
                   path="$botpath"
                   ;;
@@ -442,11 +442,12 @@ jobs:
               "news/recent", "pnl/exchange", "pnl/broker-truth", "gpu/spend",
               "roadmap", "reports", "notifications",
               "prop/fills", "prop/tickets", "prop/status", "prop/reconcile",
-              "db/tables",
+              # db/tables + db/table/* REMOVED 2026-10-15 (PI-20261015-JWMGXOTH-0001): those routes need a dashboard
+              # session, so the relay's bearer always got 401 invalid_session (issue #18233) -- a dead entry
           }
           BOT_ALLOWLIST_GLOB = (
               "strategies/*/review", "strategies/*/tune",
-              "insights/strategy/*", "db/table/*",
+              "insights/strategy/*",
               "ml/runs/*", "roadmap/sprint/*", "reports/*",
           )
 

@@ -1,0 +1,35 @@
+{
+  "id": "TRADER-RESTART-GATE",
+  "title": "Deploy: skip restarting ict-trader-live when the runtime diff touches nothing the trader loads (Phase 1, operator-approved)",
+  "phase": null,
+  "state": "done",
+  "owner": "lane",
+  "lane": "session_013LfwP31TKTdoH5kHsBUyry",
+  "model": null,
+  "ceiling_usd": 20,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [
+    18285,
+    18317,
+    18335,
+    18338
+  ],
+  "blocked_on": [],
+  "note": "OPERATOR DECISION (popup ~2026-10-15T10:10Z, relayed by manager session_01VduHYzdaXe27wTDBLSu8ao), verbatim choice: \"Build it (Recommended)\". SPEC = the TIER-2 PROPOSAL in the TELEGRAM-RESTART-MSG row note, Phase 1 exactly: in scripts/deploy_pull_restart.sh, restart ict-trader-live iff a changed path (diff vs the TRADER's deployed sha) is (a) a .py in the static import closure from src.main (AST walk incl. function-level imports + importlib.import_module literals; ~382 files on 2026-10-15), (b) any non-.py runtime path (i.e. not in the existing safe-set regex), or (c) a .py outside src/ and scripts/. Other units keep today's behaviour. Closure committed as a generated file plus a CI drift guard that recomputes it; a missing/unreadable closure file means restart. deployed_sha becomes per-unit: a trader-specific marker, so a skipped trader keeps its own older sha. src/runtime/restart_cause.py's describe_deploy range and the cause line, plus /api/diag restart_pending (src/web/api/routers/diag.py, lockstep test tests/test_diag_restart_pending_lockstep.py) read per unit. Deliverables: tests (deploy-gate tests alongside tests/test_deploy_pull_restart_runtime_gate.py); a replay over first-parent merges 2026-10-08T09:40Z..2026-10-15T09:40Z reproducing the measured split (879 merges: 711 non-runtime, 168 runtime, 42 skip / 126 restart; prototype closure + replay scripts were in the lane's scratchpad; regenerate rather than trust these numbers); hold PR, hold_reason tier_2_3_needs_approval. Phase 2 (comms data-file reader map) out of scope. Previous lane handed off near its $15 ceiling. LANE session_013LfwP31TKTdoH5kHsBUyry, 2026-10-15T12:25Z. MERGED #18285 at 11:24Z. DEPLOYED: the 11:27:43 ict-git-sync run (8d74f16 -> 0d7f23b) ran the PRE-MERGE script. Its journal has no 'Trader restart gate:' line and no 'recorded trader deploy marker' line (diag #18315), which is the expected one-off for the deploy that installs the script. Trader restarted at 11:28:28 by the old rule. Commits 0d7f23b..580ae92 are all non-runtime, so the new gate has not run yet. NOT OBSERVED: no gate skip and no gate-taken restart yet. BUG FOUND: /api/diag/version deployed_sha_by_unit was null for both units (diag #18314) because it read runtime_logs_dir() (the data dir) and not <repo>/runtime_logs. Fix in PR #18317 (Tier-2 hold). That PR touches diag.py (in the closure), so its deploy should be the gate's first run: 'restart (no resolvable trader deploy marker)', then the marker is written. trader_git_sha and restart_pending_by_unit read correctly (0d7f23b6f, false/false at disk 580ae92). Closes when: one 'Trader restart gate: restart' and one 'skip ict-trader-live.service (trader restart gate: ...)' appear in the ict-git-sync journal, and deployed_sha_by_unit shows a trader sha older than web-api after the skip. OBSERVED 2026-10-15 (lane session_013LfwP31TKTdoH5kHsBUyry; diag #18331, #18333, #18334). The gate ran and decided RESTART correctly on 3 runtime deploys: (1) ~12:2x (0d7f23b..eb4237e, no trader marker yet), which wrote marker eb4237e; (2) 12:41:51 'Trader restart gate: restart (eb4237e..7411968: non_py_runtime: tools/phone-executor/...)'; (3) 12:57:44 'Trader restart gate: restart (7411968..050c583: in_closure: src/web/api/routers/diag.py)', with the trader Stopping/Started at 12:58:26. /api/diag/version at 13:03Z: trader_git_sha=050c583fd; deployed_sha_by_unit = both 050c583 (non-null after #18317). NOT YET OBSERVED: a gate SKIP. That needs a deploy whose runtime diff is only non-closure src/ or scripts/ .py; per the manager, wait for a natural one and do not manufacture one. Also not read back: the boot 'restart report' cause line (truncated in the relay output). Closes when the ict-git-sync journal shows 'skip ict-trader-live.service (trader restart gate: ...)' and deployed_sha_by_unit shows the trader sha older than the web-api's. DONE 2026-10-15T13:45Z (lane session_013LfwP31TKTdoH5kHsBUyry). OBSERVED, ict-git-sync journal (diag #18349, #18350). TAKEN RESTART + MARKER: 13:34:30 'Trader restart gate: restart (cc51622..c9c08ad: non_py_runtime: scripts/deploy_pull_restart.sh; in_closure: scripts/ops/trader_import_closure.py; in_closure: src/web/api/routers/diag.py)', then 13:35:06 'restarted ict-trader-live.service' and 'recorded trader deploy marker: c9c08ad'. SKIP: 13:39:37 'Trader restart gate: skip (c9c08ad..c67838d: 43 changed path(s), none loaded by the trader)' and 13:40:14 'skip ict-trader-live.service (...; trader stays on c9c08ad)'. The only runtime path in that range was scripts/ops/schedule_keeper.py (#18342); the other units restarted. /api/diag/version 13:44Z: deployed_sha_by_unit web-api=c67838d, trader=c9c08ad (older); trader_git_sha=c9c08ad; restart_pending_by_unit false/false. FOLLOW-UPS LANDED: #18317 (diag marker path), #18338 (tools/phone-executor and tools/phone-probe are non-runtime). OPEN CANDIDATES (in the #18338 body, not built): requirements-dev/test.txt, ruff.toml, .mcp.json, Dockerfile, .dockerignore, tools/gemini_delegate.ipynb; comms/* data files are Phase 2. FOLLOW-UP FILED: PI-20261015-KHSBUYRY-0001 (Phase 2 comms/* reader map + safe-set candidates; due 2026-10-22). The Telegram compact restart form was observed live earlier today (15/15 tracked, per the manager), so no separate item.",
+  "updated_at": "2026-10-15T13:51:04Z",
+  "updated_by": "session_013LfwP31TKTdoH5kHsBUyry",
+  "roadmap": [
+    "M6"
+  ],
+  "observation": {
+    "what": "one trader-gate SKIP on a live deploy: the ict-git-sync journal shows \"skip ict-trader-live.service (trader restart gate: ...)\" and /api/diag/version deployed_sha_by_unit shows the trader sha older than the web-api sha",
+    "how_to_check": "vm-diag-request issue, one path per body line: journalctl?unit=ict-git-sync&since=<deploy start>&until=<+3min>&lines=2000 and version; find a deploy whose runtime diff is only non-closure src/ or scripts/ .py with python3 scripts/ops/trader_import_closure.py decide",
+    "due_by": "2026-10-22"
+  },
+  "writeback": {
+    "roadmap": "none: M6 milestone line unchanged; this is a deploy-path refinement under it, not a milestone outcome",
+    "arch": "docs/ARCHITECTURE-CANONICAL.md change-log row 2026-10-15 TRADER-RESTART-GATE (added in #18285)"
+  },
+  "_seq": 517
+}

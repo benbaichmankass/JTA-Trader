@@ -313,6 +313,107 @@ document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__su
     eq(await rM("window.__submitted || 0"), 0, `market ${mode}: nothing submitted`);
     eq(await rM("[__ex.symbolStep('ETHUSD'), __ex.symbolStep('ETHUSD')]"), ["opened_market", mode === "J" ? "market_no_row" : "picked_market"], `market ${mode}: and back to ETH from SOL`);
   }
+  // PHONE-FGS-EXEC step 2 (MEASURED 1b.233 10:48Z, phone-test-60715df76a4d: from a SOL page the ETH pick saw 2 rows and
+  // refused market_ambiguous). L = the open position's row ("ETH 1" in the Positions div grid) sits inside the same
+  // popup root as the picker's plain "ETH Ethereum" row: the Positions panel row is excluded, the market row picked.
+  // P = two ETH rows in the picker, only one in the picker's own "<BASE> <lev>x" shape: that one is picked.
+  const fgs = (mode) => `<!doctype html><html><body>
+<div role=button id=chip aria-label="Select market">SOL 10x</div><button>Order form</button><button>Open orders</button><button>Positions1</button>
+<div role=dialog id=dlg>
+<div id=pos><div class=hdr><div>Market</div><div>UP&L</div><div>Side</div><div>Value</div><div>Opening price</div><div>Current price</div></div>
+<div class=row><div class=pr><span>ETH 1</span></div><div>Sum 50.49USD</div><div></div><div>Sum 1,278.70USD</div><div>2,461.52USD</div><div>2,368.01USD</div></div></div>
+<div id=list></div></div>
+<form id=f><div role=tablist><button type=button role=tab aria-selected=false>Market</button><button type=button role=tab aria-selected=true>Limit</button></div>
+<label for=lp>Limit price</label><input id=lp type=text><label for=q>Quantity</label><input id=q type=text>
+<button type=submit id=sub>Short (sell) SOL</button></form>
+<script>var MODE='${mode}';
+function pick(s){document.getElementById('chip').textContent=s+' 20x';document.getElementById('sub').textContent='Long (buy) '+s;document.getElementById('list').innerHTML='';}
+document.querySelector('.pr').onclick=function(){window.__posclick=(window.__posclick||0)+1;};
+function row(txt,s){var d=document.createElement('div');d.className='r';d.innerHTML='<span>'+txt+'</span>';d.onclick=function(){window.__picks=(window.__picks||0)+1;pick(s)};return d;}
+document.getElementById('chip').onclick=function(){var l=document.getElementById('list');
+ var rs=MODE==='L'?[['BTC Bitcoin','BTC'],['ETH Ethereum','ETH']]:[['ETH','ETH'],['ETH 20x - 2,368.01USD -1.20%','ETH'],['BTC 50x - 62,410.5USD -1.20%','BTC']];
+ rs.forEach(function(r){l.appendChild(row(r[0],r[1]))});};
+document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__submitted=(window.__submitted||0)+1};</script></body></html>`;
+  for (const mode of ["L", "P"]) {
+    const pF = await onHost(fgs(mode)); const rF = (code) => pF.evaluate(code);
+    eq(await rF("__ex.symbolReset()"), "ok", `fgs ${mode}: reset`);
+    eq(await rF("__ex.escape()"), "ok", `fgs ${mode}: escape (keys only)`);
+    eq(await rF("[__ex.symbolStep('ETHUSD'), __ex.symbolStep('ETHUSD'), __ex.symbolStep('ETHUSD')]"), ["opened_market", "picked_market", "done"], `fgs ${mode}: SOL -> ETH picked, not ambiguous`);
+    eq([await rF("__ex.symbolOnTicket()"), await rF("window.__picks || 0"), await rF("window.__posclick || 0"), await rF("window.__submitted || 0")],
+      ["ETH", 1, 0, 0], `fgs ${mode}: one picker click, the Positions row never clicked, nothing submitted`);
+  }
+  // PHONE-FGS-EXEC step 2 (manager 11:03Z): TP/SL lookups never leave the order form. Q = no ticket form on the page,
+  // a Positions grid with a "TP / SL" column and an "Edit Take profit" dialog (Cancel / Confirm) open: openTpsl finds
+  // nothing to click, the grid's TP / SL cells are never clicked, cancelModals clicks Cancel and never Confirm.
+  const tpq = `<!doctype html><html><body><button>Positions1</button>
+<div id=pos><div class=hdr><div>Market</div><div>UP&L</div><div>Side</div><div>Value</div><div>Opening price</div><div>Current price</div><div id=th>TP / SL</div></div>
+<div class=row><div>ETH 1</div><div>50.49USD</div><div></div><div>1,278.70USD</div><div>2,461.52USD</div><div>2,368.01USD</div><div id=tc>TP / SL</div></div></div>
+<div role=dialog id=dlg><h2>Edit Take profit</h2><label><input type=checkbox>TP/SL</label><button id=cn>Cancel</button><button id=cf>Confirm</button></div>
+<script>['th','tc'].forEach(function(i){document.getElementById(i).onclick=function(){window.__tpcell=(window.__tpcell||0)+1;};});
+document.getElementById('cn').onclick=function(){window.__cancel=(window.__cancel||0)+1;document.getElementById('dlg').remove();};
+document.getElementById('cf').onclick=function(){window.__confirm=(window.__confirm||0)+1;};</script></body></html>`;
+  const pTq = await onHost(tpq); const rQ = (code) => pTq.evaluate(code);
+  eq([await rQ("__ex.openTpsl(0)"), await rQ("__ex.openTpsl(1)")], ["none", "none"], "tpsl Q: no order form -> nothing found, nothing clicked");
+  eq(await rQ("window.__tpcell || 0"), 0, "tpsl Q: the Positions 'TP / SL' header and cell are never clicked");
+  eq(await rQ("__ex.cancelModals()"), 1, "tpsl Q: the Edit Take profit dialog is cancelled");
+  eq([await rQ("window.__cancel || 0"), await rQ("window.__confirm || 0"), await rQ("__ex.cancelModals()")], [1, 0, 0], "tpsl Q: Cancel clicked once, Confirm never; nothing left to cancel");
+  // PHONE-FGS-EXEC (12:56Z, account_status stale since 11:38): a finished ticket left the order form open on the engine
+  // page, so terminal().ticketOpen stayed true and readAccount read "busy". closeTicket clicks the ONE "Order form"
+  // toggle outside the form (never the submit, never inside the form); terminal() then reads the form closed.
+  const idleForm = `<!doctype html><html><body><button id=tg>Order form</button><button>Open orders</button><button>Positions1</button>
+<form id=f><div role=tablist><button type=button role=tab aria-selected=false>Market</button><button type=button role=tab aria-selected=true>Limit</button></div>
+<label for=lp>Limit price</label><input id=lp type=text value="2,295.99"><label for=q>Quantity</label><input id=q type=text value="0.01">
+<button type=submit id=sub>Long (buy) ETH</button></form>
+<script>document.getElementById('tg').onclick=function(){window.__toggle=(window.__toggle||0)+1;var f=document.getElementById('f');f.style.display=f.style.display==='none'?'':'none';};
+document.getElementById('sub').onclick=function(){window.__subclick=(window.__subclick||0)+1;};
+document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__submitted=(window.__submitted||0)+1};</script></body></html>`;
+  const pI = await onHost(idleForm); const rI = (code) => pI.evaluate(code);
+  eq(await rI("__ex.terminal().ticketOpen"), true, "idle form: the left-open order form reads as a ticket");
+  eq(await rI("__ex.closeTicket()"), "clicked", "idle form: its panel toggle is clicked");
+  eq([await rI("__ex.terminal().ticketOpen"), await rI("__ex.terminal().ready"), await rI("__ex.closeTicket()")], [false, true, "closed"], "idle form: closed, terminal still ready, nothing left to close");
+  eq([await rI("window.__toggle || 0"), await rI("window.__subclick || 0"), await rI("window.__submitted || 0")], [1, 0, 0], "idle form: one toggle click, the submit never clicked, nothing submitted");
+  // manager 13:03Z: never while a stray modal is open, never a toggle inside one. An Edit Take profit dialog holding its
+  // own "Order form" button is open: closeTicket refuses (modal_open, nothing clicked); dismissModals cancels it by the
+  // shared rule, then only the panel tab is clicked.
+  const pIm = await onHost(idleForm.replace('<form id=f>', '<div role=dialog id=dm><h3>Edit Take profit</h3><button id=dmo>Order form</button><button id=dmc>Cancel</button><button id=dmf>Confirm</button></div><form id=f>')
+    .replace('</script>', "['dmo','dmf'].forEach(function(i){document.getElementById(i).onclick=function(){window.__dlgclick=(window.__dlgclick||0)+1;};});document.getElementById('dmc').onclick=function(){window.__cancel=(window.__cancel||0)+1;document.getElementById('dm').remove();};</script>"));
+  const rIm = (code) => pIm.evaluate(code);
+  eq([await rIm("__ex.closeTicket()"), await rIm("window.__toggle || 0"), await rIm("window.__dlgclick || 0")], ["modal_open", 0, 0], "idle form + modal: refused, nothing clicked");
+  eq([(await rIm("__ex.dismissModals()")).cancelled, await rIm("__ex.closeTicket()")], [1, "clicked"], "idle form + modal: Cancel first, then the panel toggle");
+  eq([await rIm("window.__cancel || 0"), await rIm("window.__dlgclick || 0"), await rIm("window.__toggle || 0"), await rIm("window.__subclick || 0"), await rIm("__ex.terminal().ticketOpen")],
+    [1, 0, 1, 0, false], "idle form + modal: the dialog's Order form / Confirm never clicked, the submit never clicked, form closed");
+  // PHONE-FGS-EXEC (manager 12:47Z): the 10:48Z refusal's DOM shape (phone-test-60715df76a4d dump). Ticket on SOL, the
+  // "Select market" picker in its own popup, AND an "Edit Take profit" dialog already open with the position's "ETH"
+  // label, a "Take profit Quantity" and a "Distance for Trigger" input, Cancel / Confirm. That dialog's "ETH" is the
+  // second picker candidate 1b.233 saw (market_ambiguous). Nothing in the dialog may be clicked by the symbol route; the
+  // step-2 reset cancels it (Cancel once, Confirm never) and the pick then lands on the one market row.
+  const r1048 = `<!doctype html><html><body>
+<div role=button id=chip aria-label="Select market">SOL 20x</div><button>Order form</button><button>Open orders1</button><button>Positions1</button>
+<div role=dialog id=pk style="display:none"><input type=search role=searchbox placeholder=Search><button>All</button><div id=list></div></div>
+<div role=dialog id=tp><h3>Edit Take profit</h3><div>ETH</div><input aria-label="Take profit Quantity" type=text><input type=text><input aria-label="Distance for Trigger" type=text>
+<label><input type=checkbox>TP/SL</label><button id=cn>Cancel</button><button id=cf>Confirm</button></div>
+<form id=f><div role=tablist><button type=button role=tab aria-selected=false>Market</button><button type=button role=tab aria-selected=true>Limit</button></div>
+<label for=lp>Limit price</label><input id=lp type=text value="102.1"><label for=q>Quantity</label><input id=q type=text value="1.00">
+<button type=submit id=sub>Short (sell) SOL</button></form>
+<script>
+document.getElementById('tp').addEventListener('click',function(e){if(e.target.id!=='cn')window.__tpclick=(window.__tpclick||0)+1;},true);
+document.getElementById('cn').onclick=function(){window.__cancel=(window.__cancel||0)+1;document.getElementById('tp').remove();};
+document.getElementById('cf').onclick=function(){window.__confirm=(window.__confirm||0)+1;};
+function pick(s){document.getElementById('chip').textContent=s+' 20x';document.getElementById('sub').textContent='Long (buy) '+s;document.getElementById('pk').style.display='none';}
+function row(txt,s){var d=document.createElement('div');d.innerHTML='<span>'+txt+'</span>';d.onclick=function(){window.__picks=(window.__picks||0)+1;pick(s)};return d;}
+document.getElementById('chip').onclick=function(){var l=document.getElementById('list');l.innerHTML='';document.getElementById('pk').style.display='block';
+ [['ETH 20x - 2,369.47USD -1.20%','ETH'],['BTC 50x - 62,410.5USD -1.20%','BTC']].forEach(function(r){l.appendChild(row(r[0],r[1]))});};
+document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__submitted=(window.__submitted||0)+1};</script></body></html>`;
+  // without the reset (the 1b.233 entry): the dialog's "ETH" is a candidate, but only the picker row has the market shape
+  const pW0 = await onHost(r1048); const rW0 = (code) => pW0.evaluate(code);
+  eq(await rW0("[__ex.symbolReset(), __ex.symbolStep('ETHUSD'), __ex.symbolStep('ETHUSD')]"), ["ok", "opened_market", "picked_market"], "10:48 shape: the picker row is picked, not the dialog's ETH label");
+  eq([await rW0("window.__tpclick || 0"), await rW0("window.__confirm || 0"), await rW0("window.__cancel || 0"), await rW0("window.__picks || 0")], [0, 0, 0, 1], "10:48 shape: the symbol route clicks nothing in the Edit Take profit dialog");
+  // the step-2 background order: cancelModals, escape, then the symbol route
+  const pW = await onHost(r1048); const rW = (code) => pW.evaluate(code);
+  eq(await rW("[__ex.cancelModals(), __ex.escape(), __ex.symbolReset()]"), [1, "ok", "ok"], "10:48 reset: the Edit Take profit dialog is cancelled");
+  eq(await rW("[__ex.symbolStep('ETHUSD'), __ex.symbolStep('ETHUSD'), __ex.symbolStep('ETHUSD')]"), ["opened_market", "picked_market", "done"], "10:48 reset: SOL -> ETH picked");
+  eq([await rW("window.__cancel || 0"), await rW("window.__confirm || 0"), await rW("window.__tpclick || 0"), await rW("window.__submitted || 0")],
+    [1, 0, 0, 0], "10:48 reset: Cancel once, Confirm never, no other dialog click, nothing submitted");
   // SERVER READ-BACK (PHONE-GO-TOKEN, design 3.4): the app builds the read-back from these page reads (MainActivity.kt
   // readBack: SELECTED tabs, the submit label + disabled state, the TP/SL box, the by-label values) and hashes
   // "key=value" lines in READBACK_FIELDS order (== src/prop/phone_executor.py). Mirrors the app; proves the page reads
@@ -777,5 +878,41 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
   eq([await pp.evaluate("__ex.sheetOpen('ETHUSD','child','pointer')"), await pp.evaluate("__ex.sheetInfo('ETHUSD').open"), await pp.evaluate("window.__danger")], ["tapped", true, 0], "probe: the touch-style tap opens it; nothing denied clicked");
   dd = await pp.evaluate("__ex.domDiff()");
   eq([dd.n_new > 0, dd.details_tabs, dd.leaves.some((x) => /Position details/.test(x)), /\d/.test(JSON.stringify(dd.leaves))], [true, 1, true, false], "probe: the new sheet's texts are listed, digits masked");
+  // BREAKOUT-NATIVE-TAP (1b.210 08:37Z: click() and a synthetic pointer tap reached the cell, NO synthetic event opened
+  // the sheet). A row that opens only on a TRUSTED touch: sheetTarget names the centre of the SAME cell, the app touches
+  // it (here Playwright's real input stands in for MotionEvent), and the sheet opens; nothing denied is ever touched.
+  const tr = sheetPage().replace("document.getElementById('chd').addEventListener('click',function(e){", "document.getElementById('chd').addEventListener('click',function(e){if(!e.isTrusted)return;");
+  const tp = await onHost(tr);
+  eq([await tp.evaluate("__ex.sheetOpen('ETHUSD','child','pointer')"), await tp.evaluate("__ex.sheetInfo('ETHUSD').open")], ["tapped", false], "native: a synthetic tap does not open a trusted-only row");
+  let nt = await tp.evaluate("__ex.sheetTarget('ETHUSD','child',true)");
+  eq([nt.ok, nt.vw > 0, typeof nt.x, await tp.evaluate("document.elementFromPoint(" + nt.x + "," + nt.y + ").closest('#chm') !== null")], [true, true, "number", true], "native: the target is the child row's Market cell centre");
+  await tp.mouse.click(nt.x, nt.y);
+  eq([await tp.evaluate("__ex.sheetInfo('ETHUSD').open"), await tp.evaluate("window.__danger")], [true, 0], "native: a trusted tap at that point opens the sheet; nothing denied clicked");
+  eq((await tp.evaluate("__ex.sheetTarget('ETHUSD','child',false)")).why, "sheet_open", "native: never targeted with the sheet already open");
+  // a point covered by another element (an overlay, a row ✕ drawn over the cell) is refused, never touched
+  const cv = await onHost(sheetPage().replace("</body>", "<div id=ov style='position:fixed;left:0;top:0;width:100%;height:100%'></div></body>"));
+  let cvr = await cv.evaluate("__ex.sheetTarget('ETHUSD','child',false)");
+  eq([cvr.why, /^p\d+_\d+ v\d+x\d+ r-?\d+_-?\d+_\d+x\d+$/.test(cvr.g1), /^vv\d+x\d+\/\d+_\d+s[\d.]+ e\d+ sc\d+ dpr[\d.]+/.test(cvr.g2), cvr.g1.length <= 40 && cvr.g2.length <= 40],
+    ["covered", true, true, true], "native: a covered point is refused, with its geometry (numbers only, fits the 40-char scrub)");
+  const dz = await onHost(sheetPage().replace('<div id=chm>ETH <span>5x</span></div>', '<div id=chm style="position:relative">ETH <span>5x</span><i aria-label="Close" style="position:absolute;left:0;top:0;right:0;bottom:0"></i></div>'));
+  eq(/^(point_)?deny_/.test((await dz.evaluate("__ex.sheetTarget('ETHUSD','child',false)")).why), true, "native: a close control under the point is refused");
+  eq((await (await onHost(sheetPage({noChild: true}))).evaluate("__ex.sheetTarget('ETHUSD','child',false)")).why, "none", "native: no child row -> none (the amend path reads none as no position only with group none too)");
+  // finding (a): the EXPANDED child row carries the side as text; childShape measures it and positionsRead reads it
+  const ex = await onHost(sheetPage().replace('<div><i class=dot></i></div><div>1,318.20USD</div><div>2,461.52USD</div><div>2,440.65USD</div><div></div><div>20.10USD</div>', '<div>Short</div><div>1,318.20USD</div><div>2,461.52USD</div><div>2,440.65USD</div><div>1 TP / 1 SL</div><div>20.10USD</div>'));
+  let cs = await ex.evaluate("__ex.childShape()");
+  eq([cs.ok, cs.hdr, cs.groups, cs.child_rows, cs.sides.length, cs.sides[0].side, cs.sides[0].cells, cs.sides[0].picked, cs.sides[0].tpsl], [true, 9, 1, 1, 1, "short", 9, true, 1], "child shape: one Short in a 9-cell child row that childRows picks");
+  let er = await ex.evaluate("__ex.positionsRead()");
+  eq([er.state, er.rows.length, er.rows[0].side, er.rows[0].row_kind], ["read", 1, "short", "child"], "expanded child row: side read as text, state read");
+  // a stray "Edit Take profit" modal (manager 11:02Z: seen open on the engine page) is dismissed by its Cancel, never Confirm
+  const tm = await onHost(sheetPage().replace('<h3 id=mt>Edit Stop loss</h3>', '<h3 id=mt>Edit Take profit</h3>').replace('<div id=modal style="display:none">', '<div id=modal style="display:block">'));
+  let tmi = await tm.evaluate("__ex.modalInfo()");
+  eq([tmi.n, tmi.kind], [1, "take"], "stray modal: the open Edit Take profit modal is seen");
+  eq([await tm.evaluate("__ex.modalCancel()"), (await tm.evaluate("__ex.modalInfo()")).n, await tm.evaluate("window.__saved"), await tm.evaluate("window.__danger")], ["clicked", 0, 0, 0], "stray modal: Cancel closes it; Confirm never clicked");
+  // ONE dismiss rule (cancelModals / dismissModals share it): an Edit Take profit modal WITHOUT a dialog role is found too
+  const tm2 = await onHost(sheetPage().replace('<h3 id=mt>Edit Stop loss</h3>', '<h3 id=mt>Edit Take profit</h3>').replace('<div id=modal style="display:none">', '<div id=modal style="display:block">'));
+  eq((await tm2.evaluate("__ex.modalsOpen()")).n, 1, "dismiss: an open edit modal holding Confirm is counted");
+  let dm = await tm2.evaluate("__ex.dismissModals()");
+  eq([dm.found, dm.cancelled, dm.esc, (await tm2.evaluate("__ex.modalsOpen()")).n, await tm2.evaluate("window.__saved")], [1, 1, false, 0, 0], "dismiss: its Cancel clicked, nothing left, Confirm never clicked");
+  eq([(await tm2.evaluate("__ex.dismissModals()")).found, await tm2.evaluate("__ex.cancelModals()")], [0, 0], "dismiss: nothing open -> nothing found / cancelled");
   await b.close(); console.log("exec_check: all passed");
 })().catch((e) => { console.error(e); process.exit(1); });

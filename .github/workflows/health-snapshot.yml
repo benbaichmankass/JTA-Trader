@@ -192,7 +192,7 @@ jobs:
           ssh -i ~/.ssh/id_rsa \
               -o StrictHostKeyChecking=accept-new \
               -o ConnectTimeout=20 \
-              "${TRAINER_USER}@${TRAINER_HOST}" 'bash -s' \
+              "${TRAINER_USER}@${TRAINER_HOST}" 'timeout --kill-after=30 840 bash -s' \
               < /tmp/trainer_collect.sh \
               > artifacts/health/trainer_snapshot.txt 2>&1
           echo "trainer snapshot bytes: $(wc -c < artifacts/health/trainer_snapshot.txt)"

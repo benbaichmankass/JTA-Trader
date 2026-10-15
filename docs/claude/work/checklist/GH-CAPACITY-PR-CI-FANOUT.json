@@ -1,0 +1,32 @@
+{
+  "id": "GH-CAPACITY-PR-CI-FANOUT",
+  "title": "PR pytest-run holds 12 of 20 runner slots for ~40 min each",
+  "phase": null,
+  "state": "done",
+  "owner": "manager",
+  "lane": "session_018g6RBL3Tu3zfJxN6rcMVtJ",
+  "model": null,
+  "ceiling_usd": 15,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [
+    18240
+  ],
+  "blocked_on": [],
+  "note": "DONE 2026-10-15T14:20Z. The backstop is OBSERVED on main via schedule-keeper (#18336, merged 13:35Z). Run 38744044689 (keeper dispatch 13:35:48Z, HEAD bedd993b): decision run=true, full 'Run tests' step 13:37-14:04Z, success. Correct: 36b43396..bedd993b contains code (#18336). Run 38748791725 (keeper dispatch 14:08:48Z, HEAD 604466aa): decision run=true, full step started 14:10:47Z. Correct: bedd993b..604466aa contains 9f401d81, a Tier-3 prop-trail code change, so the backstop graded it post-merge. Interim full run 38739766678 on 36b43396 passed at 13:30Z. Affected mode was observed earlier (PR #18275). NOT YET OBSERVED: the run=false (covered) skip path, and a red pytest-run paging through claude-run-failure-alert. Neither has occurred yet. The pytest-run cron arm still has 0 runs; the keeper is what carries the backstop.",
+  "updated_at": "2026-10-15T14:21:22Z",
+  "updated_by": "session_018g6RBL3Tu3zfJxN6rcMVtJ",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "observation": {
+    "what": "first pytest-run schedule tick on main decides correctly (run=true runs the full suite, or run=false with a covered/in_flight reason)",
+    "how_to_check": "list pytest-run runs with event=schedule on main; read the Determine relevant changed files step log",
+    "due_by": "2026-10-16"
+  },
+  "writeback": {
+    "roadmap": "L-OPS where: CI capacity 2026-10-15 line (docs/roadmap/milestones.yaml)",
+    "arch": "ARCHITECTURE-CANONICAL.md change-log row 2026-10-15 GH-CAPACITY-PR-CI-FANOUT"
+  },
+  "_seq": 516
+}

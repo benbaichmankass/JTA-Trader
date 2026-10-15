@@ -1154,7 +1154,10 @@ def deploy_and_alerts(since: datetime, now: datetime) -> Dict[str, Any]:
                            "alert_ledgers": None, "wedges_lines": None}
     try:
         st = json.loads((RUNTIME_LOGS / "runtime_status.json").read_text(encoding="utf-8"))
-        out["running_sha"] = (st.get("git_sha") or None)
+        # `git_sha_running` is the sha the trader LOADED; `git_sha` in this file
+        # is the checkout at write time (runtime_status.build_status), which a
+        # pull advances without a restart -- reading it made "running" == disk.
+        out["running_sha"] = (st.get("git_sha_running") or None)
     except (OSError, ValueError):
         pass
     try:
@@ -1167,8 +1170,9 @@ def deploy_and_alerts(since: datetime, now: datetime) -> Dict[str, Any]:
         pass
     if out["running_sha"] and out["disk_sha"]:
         try:
-            from src.web.api.routers.diag import _restart_pending
-            out["restart_pending"] = _restart_pending(out["running_sha"], out["disk_sha"])
+            # Per unit (TRADER-RESTART-GATE): the deploy's own trader rule.
+            from src.web.api.routers.diag import _trader_restart_pending
+            out["restart_pending"] = _trader_restart_pending(out["running_sha"], out["disk_sha"])
         except Exception:  # noqa: BLE001  # allow-silent: None renders as "could not look"
             pass
     try:
@@ -1246,7 +1250,7 @@ def _deploy_section(d: Dict[str, Any]):
     from src.units.ui.telegram_format import Section
 
     rp = d.get("restart_pending")
-    rp_s = {True: "⚠️ YES — runtime code on disk is not loaded",
+    rp_s = {True: "⚠️ YES — code the trader loads changed on disk and is not loaded",
             False: "no", None: "— (could not look)"}[rp]
     al = d.get("alert_ledgers")
     lines = [
@@ -1261,6 +1265,38 @@ def _deploy_section(d: Dict[str, Any]):
     head = "Deploy & alerts — " + ("RESTART PENDING" if rp else
                                   f"{len(al)} alert ledger(s) changed" if al else "quiet")
     return Section(summary=head, body="\n".join(lines), priority=5 if rp else 45)
+
+
+def _notification_settings_section():
+    """Active NON-DEFAULT Telegram settings (TELEGRAM-CHANNELS-3 item 6), so a
+    silenced or slowed update is visible without reading the store. ``None``
+    when everything is at the defaults and the store was read; an absent store
+    IS the defaults, an UNREADABLE one is said (and serves defaults)."""
+    from src.runtime import telegram_settings as ts
+    from src.units.ui.telegram_format import Section
+
+    try:
+        d = ts.load()
+    except Exception as exc:  # noqa: BLE001  # allow-silent: said in the section itself ("could not look"), never rendered as nothing
+        return Section(summary="Notification settings — could not look",
+                       body=f"telegram_settings unreadable ({type(exc).__name__})", priority=40)
+    lines: List[str] = []
+    for key, (channel, name) in ts.PERIODIC.items():
+        choice = ts.cadence(key)
+        if choice != ts.DEFAULT_CADENCE:
+            lines.append(f"{name} ({channel}): {ts.CADENCE_LABELS[choice]} — default is "
+                         f"{ts.CADENCE_LABELS[ts.DEFAULT_CADENCE]}")
+    if d.get("muted"):
+        lines.append("Muted kinds: " + ", ".join(d["muted"]))
+    if d.get("read_state") == "unreadable":
+        lines.append("Settings store UNREADABLE — serving defaults")
+    if not lines:
+        return None
+    n = len(lines)
+    if d.get("updated_at") or d.get("updated_by"):
+        lines.append(f"Last changed: {d.get('updated_at') or '—'} by {d.get('updated_by') or '—'}")
+    return Section(summary=f"Notification settings — {n} non-default",
+                   body="\n".join(lines), priority=40)
 
 
 def render_system_health(report: Dict[str, Any], extras: Optional[Dict[str, Any]] = None) -> str:
@@ -1278,6 +1314,9 @@ def render_system_health(report: Dict[str, Any], extras: Optional[Dict[str, Any]
     sections.append(_reachability_section(report.get("accounts")))
     if extras is not None:
         sections.append(_deploy_section(extras))
+    notif = _notification_settings_section()
+    if notif is not None:
+        sections.append(notif)
     footer = {
         "ok": "All systems normal",
         "warn": "WARN: errors logged but no critical issues",

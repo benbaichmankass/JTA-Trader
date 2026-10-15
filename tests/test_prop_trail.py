@@ -65,11 +65,44 @@ def test_forming_bar_is_not_managed():
     assert p.bars == 1 and p.replay_sl == pytest.approx(95.0)   # 101-7=94 < 95
 
 
-def test_stop_through_current_price_is_not_amended():
+def test_stop_through_current_price_is_an_exit_not_a_hold():
+    # PI-20261015-JWMGXOTH-0002: the replay (120 - 7 = 113) is through the price 112, so the harness
+    # (scripts/backtest_trend.py::_stop_or_target) has exited; "hold" left the stale stop resting forever
     c = bars([(120, 100, 119)], forming=(113, 111, 112))
     p = pt.plan_trail(leg=SOL, direction="long", entry=100, initial_sl=95, signal_time=T0,
                       resting_sl=95, candles=c, now=now_after(1), price_step=0.01)
-    assert p.action == "hold" and "through the current price" in p.why
+    assert p.action == "exit" and "through the current price" in p.why
+    assert p.sl is None and p.replay_sl == pytest.approx(113.0) and p.detail["exit_px"] == 112
+
+
+def test_short_trail_crossed_is_an_exit():
+    c = bars([(101, 80, 81)], forming=(90, 88, 89))        # replay 80 + 7 = 87, price 89 above it
+    p = pt.plan_trail(leg=SOL, direction="short", entry=100, initial_sl=105, signal_time=T0,
+                      resting_sl=105, candles=c, now=now_after(1), price_step=0.01)
+    assert p.action == "exit" and p.replay_sl == pytest.approx(87.0) and p.detail["exit_px"] == 89
+
+
+def test_exit_stop_buffer_math():
+    # buffer = max(2 steps, EXIT_BUF_FRAC x price, QUOTE_BUFFER_ATR x atr), rounded AWAY from the price
+    assert pt.exit_stop("long", 112.0, 0.01, 2.0) == pytest.approx(111.8)      # 0.1 x atr 2.0 = 0.2 wins
+    assert pt.exit_stop("short", 89.0, 0.01, 2.0) == pytest.approx(89.2)
+    # the live 2026-10-15 ETH short: atr 18.4 -> 1.84 < 0.001 x 2353.04 = 2.353; ceil to the step
+    assert pt.exit_stop("short", 2353.04, 0.01, 18.404) == pytest.approx(2355.40)
+    assert pt.exit_stop("long", 2353.04, 0.01, 18.404) == pytest.approx(2350.68)
+    assert pt.exit_stop("short", 100.0, 0.5, 0.0) == pytest.approx(101.0)      # 2 steps win
+    # never on the wrong side of the price, never a sub-step price
+    for side in ("long", "short"):
+        for px in (0.5, 99.99, 2353.04):
+            s = pt.exit_stop(side, px, 0.01, 1.0)
+            assert (s < px) if side == "long" else (s > px)
+            assert abs(s * 100 - round(s * 100)) < 1e-6
+
+
+def test_tightens_is_tighten_only():
+    assert pt.tightens("short", 2504.25, 2355.40, 0.01) and not pt.tightens("short", 2350.0, 2355.40, 0.01)
+    assert pt.tightens("long", 95.0, 111.8, 0.01) and not pt.tightens("long", 111.9, 111.8, 0.01)
+    assert not pt.tightens("long", 111.795, 111.8, 0.01)                         # under one step
+    assert not pt.tightens("short", None, 1.0, 0.01)
 
 
 def test_short_mirror():
@@ -457,3 +490,45 @@ def test_bounded_step_always_passes_the_guards_own_check(side, resting, target, 
 def test_bounded_step_keeps_a_near_target_and_refuses_a_sub_step_move():
     assert pt.bounded_rollout_sl("long", 95.0, 96.0, 109.0, 0.01) == pytest.approx(96.0)
     assert pt.bounded_rollout_sl("long", 95.0, 95.004, 109.0, 0.01) is None
+
+
+# ── trail crossed on the venue (PI-20261015-JWMGXOTH-0002) ─────────────────
+
+CROSSED = bars([(120, 100, 119)], forming=(113, 111, 112))     # long replay 113, price 112
+
+
+def test_trail_crossed_moves_the_stop_to_the_quote_minus_buffer_bounded_and_alerts_once(tmp_path):
+    a, api = Adapter([pos()], guard=False), Api()
+    a.quote = {"bid": 112.0, "ask": 112.02}
+    res = run(a, api, "live", tmp_path, c=CROSSED)
+    # exit stop = bid 112 - max(0.02, 0.112, 0.2) = 111.8; the bounded rollout steps toward it from 95
+    assert len(a.calls) == 1 and a.calls[0][2] is None and a.calls[0][3] is True
+    assert 95.0 < a.calls[0][1] <= 111.8
+    assert sum("trail CROSSED" in x for x in res.alerts) == 1
+    prev = a.positions[0].stop_loss
+    for _ in range(8):
+        res = run(a, api, "live", tmp_path, c=CROSSED)
+        assert not any("trail CROSSED" in x for x in res.alerts)          # one alert per ticket
+        cur = a.positions[0].stop_loss
+        assert prev < cur <= 111.8                                       # each bounded step only tightens
+        prev = cur
+    # the ModifyRollout bound (<= 0.9 x 25% of the stop's distance from the quote per step) converges on the
+    # exit stop; a stop already AT it is never amended again
+    a.positions[0].stop_loss = 111.8
+    n = len(a.calls)
+    run(a, api, "live", tmp_path, c=CROSSED)
+    assert len(a.calls) == n
+
+
+def test_trail_crossed_never_loosens_a_tighter_resting_stop(tmp_path):
+    a, api = Adapter([pos(sl=111.9)]), Api()
+    a.quote = {"bid": 112.0, "ask": 112.02}
+    run(a, api, "live", tmp_path, c=CROSSED)
+    assert a.calls == []
+
+
+def test_trail_crossed_without_a_quote_does_nothing(tmp_path):
+    a, api = Adapter([pos()]), Api()
+    a.quote = None
+    run(a, api, "live", tmp_path, c=CROSSED)
+    assert a.calls == []

@@ -1,0 +1,150 @@
+{
+ "verdict": "indeterminate",
+ "read_state": "measured",
+ "n": 60,
+ "population": "trend_donchian_xrp_4h 2021-10-10..2026-10-14 (1830 d), config-exact UNCAPPED no-TP harness replay, 60 trades, rule=unconditioned: {'trend_donchian_xrp_4h': 'INDETERMINATE'}",
+ "note": "tp-prediction-derive: counterfactual TP net of the row's own cost stack; a PASS is a screen -- its follow-on is the harness-native e35 tp_r confirmation of K* before any Tier-3 proposal",
+ "measurement": {
+  "window": "2021-10-10..2026-10-14 (1830 d)",
+  "rule": "unconditioned",
+  "pooled": false,
+  "per_leg": {
+   "trend_donchian_xrp_4h": {
+    "n": 60,
+    "n_is": 36,
+    "n_oos": 24,
+    "base_tp_r": 3.0,
+    "mfe_r_quantiles": {
+     "p50": 0.6475,
+     "p60": 1.0385999999999997,
+     "p70": 1.7912999999999992,
+     "p80": 2.486800000000001,
+     "p90": 3.6633
+    },
+    "reach_all_uncapped": {
+     "1.0": 0.4,
+     "1.25": 0.38333333333333336,
+     "1.5": 0.3333333333333333,
+     "1.75": 0.3,
+     "2.0": 0.3,
+     "2.5": 0.2,
+     "3.0": 0.16666666666666666,
+     "3.5": 0.11666666666666667,
+     "4.0": 0.08333333333333333,
+     "5.0": 0.06666666666666667,
+     "6.0": 0.06666666666666667,
+     "8.0": 0.05
+    },
+    "selection": {
+     "cap_r_median_is": 2.4061518865702585,
+     "curve": [
+      {
+       "k": 1.0,
+       "reach_is": 0.3611111111111111,
+       "mean_net_is": -0.03973333333333328,
+       "eligible": true
+      },
+      {
+       "k": 1.25,
+       "reach_is": 0.3333333333333333,
+       "mean_net_is": 0.008088888888888935,
+       "eligible": true
+      },
+      {
+       "k": 1.5,
+       "reach_is": 0.3055555555555556,
+       "mean_net_is": 0.04694400728597454,
+       "eligible": true
+      },
+      {
+       "k": 1.75,
+       "reach_is": 0.2777777777777778,
+       "mean_net_is": 0.05690050481072695,
+       "eligible": true
+      },
+      {
+       "k": 2.0,
+       "reach_is": 0.2777777777777778,
+       "mean_net_is": 0.10821474659398977,
+       "eligible": true
+      },
+      {
+       "k": 2.5,
+       "reach_is": 0.25,
+       "mean_net_is": 0.14741375459955885,
+       "eligible": false
+      },
+      {
+       "k": 3.0,
+       "reach_is": 0.2222222222222222,
+       "mean_net_is": 0.1462081999204622,
+       "eligible": false
+      },
+      {
+       "k": 3.5,
+       "reach_is": 0.2222222222222222,
+       "mean_net_is": 0.16009708880935108,
+       "eligible": false
+      },
+      {
+       "k": 4.0,
+       "reach_is": 0.2222222222222222,
+       "mean_net_is": 0.16811275074788565,
+       "eligible": false
+      },
+      {
+       "k": 5.0,
+       "reach_is": 0.2222222222222222,
+       "mean_net_is": 0.16811275074788565,
+       "eligible": false
+      },
+      {
+       "k": 6.0,
+       "reach_is": 0.2222222222222222,
+       "mean_net_is": 0.16811275074788565,
+       "eligible": false
+      },
+      {
+       "k": 8.0,
+       "reach_is": 0.2222222222222222,
+       "mean_net_is": 0.16811275074788565,
+       "eligible": false
+      }
+     ]
+    },
+    "k_star": 2.0,
+    "outcome": "INDETERMINATE",
+    "verdict": "indeterminate",
+    "why": "n_oos 24 < 39"
+   }
+  },
+  "unreadable_rows": {
+   "trend_donchian_xrp_4h": 0
+  },
+  "constants": {
+   "grid": [
+    1.0,
+    1.25,
+    1.5,
+    1.75,
+    2.0,
+    2.5,
+    3.0,
+    3.5,
+    4.0,
+    5.0,
+    6.0,
+    8.0
+   ],
+   "reach_floor": 0.1,
+   "is_frac": 0.6,
+   "min_oos": 39,
+   "noninf_margin_r": 0.05,
+   "cal_tol": 0.1,
+   "min_cell_is": 30,
+   "boot": 2000,
+   "seed": 20261015,
+   "venue_cap_pct": 0.099
+  }
+ }
+}

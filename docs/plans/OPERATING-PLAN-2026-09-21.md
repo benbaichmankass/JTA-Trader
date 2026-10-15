@@ -109,6 +109,35 @@ so it cannot gate entry. It gates exit. This is the falsifier the system has
 never had — nothing currently demotes anything, and 21 retirement candidates
 have produced zero retirements.
 
+### Prop legs clear a SUPERSET of the ladder (operator, 2026-10-15, binding)
+
+A leg that reaches a **prop** roster (`account_class: prop`: breakout_2 · tradeify_1 · velotrade_1)
+must clear **everything a real-money leg must clear, PLUS prop DD survival**: Stage 0 net of the full
+cost stack · a Stage-1 soak on `bybit_1` (and `alpaca_paper` where relevant) with realized cost matching
+the backtest · the Gate-2 criteria · **and** the prop EV/survival gate against the firm's DD limits
+(`comms/prop_survival/<leg>.json`). Verbatim principle: *"if anything, the prop accounts should have a
+higher bar to clear because of the DD limits."* The prop gate is a **superset**, never a lower bar (this
+formalises the 2026-08-27 correction). Mechanical half: `prop-roster-gate-guard`
+(`scripts/ci/check_prop_roster_gate.py`) refuses a PR that adds a leg to a prop roster without a Stage-1
+soak (roster presence or a `SOAK-stage1-*` contract) and a survival record; `roster-promotion-evidence-guard`
+keeps demanding the Stage-0 record. **Grandfathered by name, with a due date for their soak:**
+`trend_donchian_eth_prop` (due 2026-11-07) and `trend_donchian_sol_prop` (due 2026-12-11) — both went live on
+prop before this rule, now soak on `bybit_1` (contracts in `docs/claude/work/SOAKS.json`) while they
+**stay live on the prop books**; if either FAILS the soak, a data-backed Tier-3 pull from the prop rosters is
+proposed. Row: `PROP-GATE-PARITY`.
+
+**Amendment (operator, 2026-10-15): live prop trading counts as Stage-1 soak evidence.** *"If they've passed
+a soak test trading live on the prop accounts, that should count as a pass and they can go live on bybit 2 as
+well."* Checkable per leg over its live prop closes (n stated = distinct signals, MEASURED fills only):
+(i) mechanics clean — exits are sl/tp/trail/manual-labelled, no orphans; (ii) `scripts/research/live_vs_backtest.py`
+(PR #18382) verdict CONSISTENT or better; (iii) realized cost within tolerance — prop venue costs differ, so a
+promotion to bybit_2 uses **Bybit's own MEASURED cost for that symbol** (ETHUSDT is measured on bybit_2; SOLUSDT
+has none there as of 2026-10-15, so SOL's clause (iii) comes from the bybit_1 soak). A PASS feeds `MD-PROMOTE-S1-S2`:
+a PR adding the leg to bybit_2 **and** bybit_portfolio together (mirror equality tests, human merge, not auto-land),
+and the evidence record must first carry a **portfolio-overlap check** (e.g. `trend_donchian_eth_prop` 1h beside
+`trend_donchian_eth_4h`: signal/return correlation and combined drawdown). The bybit_1 soak stays as a parallel
+source; contracts carry both (`sources` in `SOAKS.json`). This PR promotes nothing.
+
 ### Why the cheap gate is cost-fidelity, not profitability
 
 A 1d leg makes 10–30 trades a year. It can never establish expectancy on a

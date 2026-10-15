@@ -91,6 +91,21 @@ HARNESS_PATHS = (
 
 GUARDS: List[Dict[str, Any]] = [
     {
+        # TRADER-RESTART-GATE (operator decision 2026-10-15): the deploy leaves
+        # ict-trader-live running when a diff's src/ and scripts/ .py files are
+        # all outside config/trader_import_closure.txt, so that list must be the
+        # trader's real import closure. Any .py can add or drop an import.
+        "name": "trader-import-closure",
+        "when": {"globs": [
+            "**/*.py",
+            "config/trader_import_closure.txt",
+        ]},
+        "steps": [
+            ["python3", "scripts/ci/check_trader_import_closure.py", "--self-test"],
+            ["python3", "scripts/ci/check_trader_import_closure.py"],
+        ],
+    },
+    {
         # SIGNAL-CATALOG — every input a strategy / ML head / regime router /
         # macro producer reads needs an entry in docs/reference/signal-catalog.yaml.
         # Keying rule per family is in the guard's header.
@@ -1977,6 +1992,29 @@ GUARDS: List[Dict[str, Any]] = [
             ["python3", "scripts/ci/check_roster_promotion_evidence.py", "--self-test"],
             {
                 "argv": ["python3", "scripts/ci/check_roster_promotion_evidence.py",
+                         "--base", "origin/{base_ref}"],
+                "pr_only": True,
+            },
+        ],
+    },
+    {
+        "name": "prop-roster-gate-guard",
+        # Operator 2026-10-15 ("Yes, 1, 2 and 3a"; "the prop accounts should have a higher bar to clear
+        # because of the DD limits"): a leg added to an `account_class: prop` roster needs a Stage-1 soak
+        # (bybit_1/alpaca_paper roster or a SOAK-stage1 contract) AND a comms/prop_survival/<leg>.json
+        # record, ON TOP of what roster-promotion-evidence-guard already demands of every risk-bearing
+        # roster. Diff-scoped + roster-membership keyed; demotion free; the two pre-rule legs are
+        # grandfathered BY NAME with a due date inside the script.
+        "when": {"globs": [
+            "config/accounts.yaml",
+            "docs/claude/work/SOAKS.json",
+            "comms/prop_survival/**",
+            "scripts/ci/check_prop_roster_gate.py",
+        ]},
+        "steps": [
+            ["python3", "scripts/ci/check_prop_roster_gate.py", "--self-test"],
+            {
+                "argv": ["python3", "scripts/ci/check_prop_roster_gate.py",
                          "--base", "origin/{base_ref}"],
                 "pr_only": True,
             },

@@ -103,10 +103,33 @@
     var ctl = chip && chip.getAttribute("aria-controls"); if (ctl) { var e = document.getElementById(ctl); if (e && vis(e) && r.indexOf(e) < 0) r.push(e); }
     return r.filter(function (x) { return !inForm(x); });
   }
+  // PHONE-FGS-EXEC step 2 (MEASURED 1b.233, 10:48Z, ticket phone-test-60715df76a4d): from a SOL page the ETH pick
+  // found 2 candidates and refused (market_ambiguous). A row of the Positions grid (the open ETH position) is never a
+  // market row. The grid's rows are the header's siblings (or a wrapper's): its container is the header's parent,
+  // climbed at most 2 levels and NEVER into a popup root (gridPanel's wider panel can swallow the picker list itself).
+  function dataPanels() {
+    try {
+      var roots = popupRoots(marketChip());
+      var hasRoot = function (e) { return roots.some(function (r) { return e === r || e.contains(r); }); };
+      return gridHeaders(POS_COLS).map(function (h) {
+        var c = h.parentElement;
+        for (var k = 0; k < 2 && c; k++) {
+          var up = c.parentElement;
+          if (!up || up === document.body || hasRoot(up)) break;
+          c = up;
+        }
+        return c && !hasRoot(c) ? c : null;
+      }).filter(function (p) { return !!p; });
+    } catch (e) { return []; }
+  }
+  // The picker's own row format "<BASE> <leverage>x ..." (the chip reads "ETH #x"): when several candidates remain
+  // and exactly ONE has that shape, it is the market row. The submit label is still read back before anything is typed.
+  function leverageRow(r, b) { return new RegExp("^" + b + "\\s*\\d+(\\.\\d+)?\\s*[x\\u00d7](?![a-z])", "i").test((t(r) || "").trim()); }
   function marketCandidates(sym) {
-    var b = base(sym), chip = marketChip();
+    var b = base(sym), chip = marketChip(), dps = dataPanels();
     var leaves = all("span,div,p,strong,b,td,li,a,button,[role]").filter(function (x) {
-      return !inForm(x) && !(chip && (chip === x || chip.contains(x) || x.contains(chip))) && t(x).length <= 40 && startsWithBase(t(x), b);
+      return !inForm(x) && !(chip && (chip === x || chip.contains(x) || x.contains(chip))) && t(x).length <= 40 && startsWithBase(t(x), b) &&
+        !dps.some(function (p) { return p.contains(x); });
     });
     var roots = popupRoots(chip), pk = window.__ex._mk;
     if (roots.length) leaves = leaves.filter(function (x) { return roots.some(function (r) { return r.contains(x); }); });
@@ -114,7 +137,9 @@
     else return [];
     var rows = [];
     leaves.forEach(function (x) { var r = x.closest(ROW_SEL) || x; if (chip && r.contains(chip)) r = x; if (rows.indexOf(r) < 0) rows.push(r); });
-    return innermost(rows);
+    rows = innermost(rows);
+    if (rows.length > 1) { var lv = rows.filter(function (r) { return leverageRow(r, b); }); if (lv.length === 1) return lv; }
+    return rows;
   }
   function marketSearch() {
     var chip = marketChip(), roots = popupRoots(chip), pk = window.__ex._mk;
@@ -124,9 +149,13 @@
       return !!(pk && pk.preInputs && pk.preInputs.indexOf(i) < 0);
     })[0] || null;
   }
+  // PHONE-FGS-EXEC step 2 (manager 11:03Z): every TP/SL lookup is scoped to the ORDER FORM. The Positions grid has a
+  // "TP / SL" column (header and cells) whose click opens "Edit Take profit" on a LIVE position; page-wide matching (or
+  // a fallback to the whole document when no form is found) could reach it. No form -> nothing.
   function tpslBox() {
-    var cb = all("input[type=checkbox]").filter(function (c) { return /tp\s*\/\s*sl/i.test(labelFor(c) + " " + t(c.parentElement)); })[0];
-    if (!cb) { cb = Array.prototype.slice.call(document.querySelectorAll("input[type=checkbox]")).filter(function (c) { return /tp\s*\/\s*sl/i.test(t(c.closest("label") || c.parentElement)); })[0]; }
+    var f = form(); if (!f) return null;
+    var cb = all("input[type=checkbox]").filter(function (c) { return f.contains(c) && /tp\s*\/\s*sl/i.test(labelFor(c) + " " + t(c.parentElement)); })[0];
+    if (!cb) { cb = Array.prototype.slice.call(f.querySelectorAll("input[type=checkbox]")).filter(function (c) { return /tp\s*\/\s*sl/i.test(t(c.closest("label") || c.parentElement)); })[0]; }
     return cb || null;
   }
   function desc(x) {
@@ -135,7 +164,7 @@
       expanded: x.getAttribute("aria-expanded") || "", text: t(x).replace(/\d/g, "#").slice(0, 24)};
   }
   function tpslTexts(cb) {
-    var f = form() || document;
+    var f = form(); if (!f) return [];
     return innermost(Array.prototype.slice.call(f.querySelectorAll("button,[role=button],[role=switch],[role=checkbox],[aria-expanded],label,div,span,p")).filter(function (x) {
       return vis(x) && /^tp\s*\/\s*sl$/i.test(t(x)) && !(cb && (x.contains(cb) || x === cb.closest("label")));
     }));
@@ -144,7 +173,7 @@
     var p = h.parentElement, d = 0, sw = [];
     while (p && d < 2 && !sw.length) {
       sw = Array.prototype.slice.call(p.querySelectorAll("[role=switch],[role=checkbox],button,input[type=checkbox]")).filter(function (x) {
-        return vis(x) && x !== cb && !h.contains(x) && (x.tagName === "INPUT" || !t(x));
+        return vis(x) && x !== cb && !h.contains(x) && (x.tagName === "INPUT" || !t(x)) && inForm(x);
       });
       p = p.parentElement; d++;
     }
@@ -679,6 +708,33 @@
       if (!vis(e)) return false; var s = t(e); return s.length > 0 && s.length <= (max || 40) && re.test(s);
     }));
   }
+  // the ONE Positions row cell to tap for `sym`: which = "child" -> the position row's Market cell ("ETH 5x", a
+  // leverage badge); "group" -> the group row's ("ETH 1", the symbol + a count). Only inside the Positions grid panel.
+  // The element, or why not: no_grid | no_panel | none | rows_<n>
+  function sheetHit(sym, which) {
+    var g = gridHeaders(POS_COLS); if (g.length !== 1) return "no_grid";
+    var panel = gridPanel(g[0]); if (!panel) return "no_panel";
+    var b = base(sym).replace(/[^A-Z0-9]/g, ""), sfx = "(USD[TC]?|PERP)?";
+    var re = which === "group" ? new RegExp("^[\\u2304\\u2335\\u25be\\u25bc\\u02c5v]?\\s*" + b + sfx + "\\s*\\d+$", "i")
+      : new RegExp("^" + b + sfx + "\\s*\\d+(\\.\\d+)?\\s*[x\\u00d7]$", "i");
+    var hits = textEls(panel, re, 24).filter(function (e) { return !g[0].contains(e); });
+    if (!hits.length) return "none"; if (hits.length > 1) return "rows_" + hits.length;
+    return hits[0];
+  }
+  // stray-modal roots (see cancelModals): open non-form dialogs + Edit SL/TP modals, outermost first, no duplicates
+  function strayRoots() {
+    var f = form(), rs = [];
+    all("[role=dialog],[role=alertdialog],[aria-modal=true]").forEach(function (d) { if (!(f && (d.contains(f) || f.contains(d)))) rs.push(d); });
+    modalRoot().forEach(function (m) { if (!rs.some(function (r) { return r.contains(m.root) || m.root.contains(r); })) rs.push(m.root); });
+    return rs;
+  }
+  function cancelIn(r) {
+    var c = Array.prototype.slice.call(r.querySelectorAll("button,[role=button]")).filter(function (b) { return vis(b) && /^cancel$/i.test(t(b)); });
+    if (c.length !== 1) return false; c[0].click(); return true;
+  }
+  function confirmRoots() {
+    return strayRoots().filter(function (r) { return Array.prototype.slice.call(r.querySelectorAll("button,[role=button]")).some(function (b) { return vis(b) && /^confirm$/i.test(t(b)); }); });
+  }
   function sheetRoots() {   // the smallest ancestor of a [Position details] tab that also holds the [n TP / n SL] tab and the subtitle
     var found = [];
     textEls(document, SHEET_TAB.details).forEach(function (d) {
@@ -980,6 +1036,19 @@
       var b = all("button,[role=tab],[role=button]").filter(function (x) { return ORDER_RE.test(t(x)); })[0];
       if (!b) return "no_order_control"; b.click(); return "clicked";
     },
+    // PHONE-FGS-EXEC: close an IDLE order form left open on the engine page (a finished ticket opened it and Breakout
+    // keeps the panel open across reloads, so readAccount read "busy" on every background check after the 11:42Z dry
+    // fill). The ONE "Order form" panel toggle outside the form is clicked; never anything inside the form, never the
+    // submit. closed (nothing open) | clicked | modal_open | no_toggle | ambiguous. The caller re-reads terminal() afterwards.
+    // Never while a stray modal / Edit TP-SL dialog is open (the caller dismisses first with dismissModals, the shared
+    // cancel rule), and never a toggle inside one: only the panel tab on the terminal page.
+    closeTicket: function () {
+      if (!submitBtn()) return "closed";
+      var rs = strayRoots(); if (rs.length) return "modal_open";
+      var b = all("button,[role=tab],[role=button]").filter(function (x) { return ORDER_RE.test(t(x)) && !inForm(x) && !x.closest("[role=dialog],[role=alertdialog],[aria-modal=true]"); });
+      if (!b.length) return "no_toggle"; if (b.length > 1) return "ambiguous";
+      b[0].click(); return "clicked";
+    },
     // What the ticket says it trades: the text after "Long (buy)" / "Short (sell)" on the submit button ("BTC").
     symbolOnTicket: function () {
       var sub = submitBtn(); if (!sub) return "";
@@ -1029,6 +1098,29 @@
     },
     // Forget the picker state: the app calls this once at the start of each ticket.
     symbolReset: function () { window.__ex._mk = null; return "ok"; },
+    // STRAY-MODAL DISMISS, ONE rule for every caller (PHONE-FGS-EXEC step 2 + BREAKOUT-SL-AMEND-CLICK; manager 11:03Z,
+    // after an "Edit Take profit" window was seen on the engine page). The roots are every open dialog that is NOT the
+    // order form, plus every "Edit Stop loss / Edit Take profit" modal (modalRoot) the page draws without a dialog role.
+    // In each, click the ONE button whose text is exactly "Cancel" -- never Confirm, Save, Close position or anything
+    // else; a root without exactly one Cancel is left. cancelModals returns how many were cancelled.
+    cancelModals: function () { var n = 0; strayRoots().forEach(function (r) { if (cancelIn(r)) n++; }); return n; },
+    // The same, then Escape (keys only) when a root holding a Confirm is still open: {found, cancelled, esc}. The caller
+    // re-checks with modalsOpen() and does NOTHING else on the page while one stays open.
+    dismissModals: function () {
+      var rs = strayRoots(), n = 0; rs.forEach(function (r) { if (cancelIn(r)) n++; });
+      var esc = confirmRoots().length > 0;
+      if (esc) ["keydown", "keyup"].forEach(function (k) { document.dispatchEvent(new KeyboardEvent(k, {key: "Escape", code: "Escape", keyCode: 27, bubbles: true})); });
+      return {found: rs.length, cancelled: n, esc: esc};
+    },
+    // how many open non-form dialogs / edit modals still hold a visible Confirm (the ones that could change an order)
+    modalsOpen: function () { return {n: confirmRoots().length}; },
+    // PHONE-FGS-EXEC step 2: close whatever popup/sheet the page has open with Escape ONLY (never a click: nothing is
+    // cancelled or confirmed). The engine page was reloaded at the start of its job; this is the second guard.
+    escape: function () {
+      ["keydown", "keyup"].forEach(function (k) { document.dispatchEvent(new KeyboardEvent(k, {key: "Escape", code: "Escape", keyCode: 27, bubbles: true})); });
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+      return "ok";
+    },
     // The "Select market" chip's base ("ETH" from "ETH 20x"); "" when there is not exactly one such chip.
     marketShown: function () { var mc = marketChip(); if (!mc) return ""; var m = CHIP_RE.exec(t(mc)); return m ? m[1].toUpperCase() : "?"; },
     // Kept for the Dry test button / older callers: one exact-text click, else "none".
@@ -1254,18 +1346,60 @@
     sheetOpen: function (sym, which, mode) {
       if (!hostOk()) return "bad_host";
       if (sheetRoots().length) return "sheet_open";
-      var g = gridHeaders(POS_COLS); if (g.length !== 1) return "no_grid";
-      var panel = gridPanel(g[0]); if (!panel) return "no_panel";
-      var b = base(sym).replace(/[^A-Z0-9]/g, ""), sfx = "(USD[TC]?|PERP)?";
-      var re = which === "group" ? new RegExp("^[\\u2304\\u2335\\u25be\\u25bc\\u02c5v]?\\s*" + b + sfx + "\\s*\\d+$", "i")
-        : new RegExp("^" + b + sfx + "\\s*\\d+(\\.\\d+)?\\s*[x\\u00d7]$", "i");
-      var hits = textEls(panel, re, 24).filter(function (e) { return !g[0].contains(e); });
-      if (!hits.length) return "none"; if (hits.length > 1) return "rows_" + hits.length;
-      window.__exTap = hits[0];
+      var h = sheetHit(sym, which); if (typeof h === "string") return h;
+      window.__exTap = h;
       // mode "pointer" (BREAKOUT-SHEET-PROBE): the 1b.205 run tapped both rows with click() and no sheet opened; a
       // touch-style pointer sequence at the cell's centre is the second, measured attempt. Same target, same denylist.
-      if (mode === "pointer" && hits[0].scrollIntoView) hits[0].scrollIntoView({block: "center", inline: "nearest"});
-      return mode === "pointer" ? safeTap(hits[0]) : safeClick(hits[0]);
+      if (mode === "pointer" && h.scrollIntoView) h.scrollIntoView({block: "center", inline: "nearest"});
+      return mode === "pointer" ? safeTap(h) : safeClick(h);
+    },
+    // NATIVE TAP target (BREAKOUT-NATIVE-TAP; 1b.210 08:37Z: click() and a synthetic pointer tap reached the cell, the
+    // group tap EXPANDED the row, and no synthetic event opened the sheet -- the opener likely wants a trusted touch).
+    // The SAME row cell sheetOpen would click, denylist-checked, and the point the app will touch re-checked with
+    // elementFromPoint: the topmost element there must be that cell or inside it (never a row ✕ or an overlay), and
+    // nothing from it up to the cell may be denied. scroll=true centres the cell first (the caller waits, then asks
+    // again without scrolling, right before it touches). {ok, x, y, vw, vh} in CSS px, or {ok:false, why}.
+    sheetTarget: function (sym, which, scroll) {
+      if (!hostOk()) return {ok: false, why: "bad_host"};
+      if (sheetRoots().length) return {ok: false, why: "sheet_open"};
+      var h = sheetHit(sym, which); if (typeof h === "string") return {ok: false, why: h};
+      window.__exTap = h;
+      var d = denied(h); if (d) return {ok: false, why: d};
+      if (scroll && h.scrollIntoView) h.scrollIntoView({block: "center", inline: "nearest"});
+      var r = h.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+      if (!(r.width > 0 && r.height > 0) || x < 0 || y < 0 || x >= window.innerWidth || y >= window.innerHeight) return {ok: false, why: "offscreen"};
+      var pe = document.elementFromPoint(x, y);
+      if (!pe || !h.contains(pe)) {
+        // MEASURE (1b.233 10:40Z: both rows "covered" with NO element at the centre): the geometry, so the next build
+        // is fixed from evidence -- point vs viewport vs the cell's rect, the visual viewport, how many elements the
+        // point hits at all, and the page scroll. Numbers only, joined with the server scrub's kept characters (_ / x).
+        var vv = window.visualViewport, se = document.scrollingElement || document.documentElement, f = function (n) { return Math.round(n); };
+        var efp = document.elementsFromPoint ? document.elementsFromPoint(x, y).length : -1;
+        return {ok: false, why: "covered", top: pe ? (pe.tagName.toLowerCase() + (pe.getAttribute("role") ? "/" + pe.getAttribute("role") : "")).slice(0, 20) : "",
+          g1: ("p" + f(x) + "_" + f(y) + " v" + window.innerWidth + "x" + window.innerHeight + " r" + f(r.left) + "_" + f(r.top) + "_" + f(r.width) + "x" + f(r.height)).slice(0, 40),
+          g2: ("vv" + (vv ? f(vv.width) + "x" + f(vv.height) + "/" + f(vv.offsetLeft) + "_" + f(vv.offsetTop) + "s" + vv.scale.toFixed(2) : "-") +
+            " e" + efp + " sc" + f(se.scrollTop) + " dpr" + (window.devicePixelRatio || 0).toFixed(2) + (document.hidden ? " hid" : "")).slice(0, 40)};
+      }
+      for (var e = pe; e && e !== h.parentElement; e = e.parentElement) { var de = denied(e); if (de) return {ok: false, why: "point_" + de}; }
+      return {ok: true, x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, vw: window.innerWidth, vh: window.innerHeight};
+    },
+    // MEASURE (BREAKOUT-NATIVE-TAP finding a): after the group row expands, the child row shows the side as TEXT
+    // ("Short") and "1 TP / 1 SL". Its shape, so childRows() can be fixed from evidence if the read still misses it:
+    // the exact side words in the Positions panel, and for each the row it sits in -- that row's cell count against the
+    // header's, its depth below the panel, and whether childRows() would pick it. No values (texts are fixed words).
+    childShape: function () {
+      var g = gridHeaders(POS_COLS); if (g.length !== 1) return {ok: false, why: "no_grid", n: g.length};
+      var h = g[0], panel = gridPanel(h) || h.parentElement, n = kids(h).length;
+      var groups = gridRowsOf(h).rows.filter(isGroupRow), ch = childRows(h, groups.length ? groups : [h]);
+      var sides = textEls(panel, /^(long|short)$/i, 6).filter(function (e) { return !h.contains(e); });
+      return {ok: true, hdr: n, groups: groups.length, child_rows: ch.length, sides: sides.slice(0, 4).map(function (e) {
+        var row = e, depth = 0;
+        for (var a = e.parentElement; a && a !== panel; a = a.parentElement) { depth++; if (kids(a).length >= 4) { row = a; break; } }
+        var rd = 0; for (var b = row; b && b !== panel; b = b.parentElement) rd++;
+        var role = row.getAttribute ? (row.getAttribute("role") || "") : "";
+        return {side: t(e).toLowerCase(), cells: kids(row).length, depth: depth, row_depth: rd, role: role, picked: ch.indexOf(row) >= 0,
+          tpsl: textEls(row, SHEET_TAB.tpsl).length};
+      })};
     },
     // MEASURE (BREAKOUT-SHEET-PROBE): what the page shows before / after a tap. domMark remembers every visible element;
     // domDiff returns the viewport size, the dialog count and the NEW visible leaf texts (digits masked, max 15), and

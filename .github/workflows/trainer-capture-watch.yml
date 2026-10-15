@@ -196,7 +196,7 @@ jobs:
               -o StrictHostKeyChecking=accept-new \
               -o ConnectTimeout=30 \
               -o ServerAliveInterval=30 -o ServerAliveCountMax=10 \
-              "${TRAINER_USER}@${TRAINER_IP}" 'bash -s' \
+              "${TRAINER_USER}@${TRAINER_IP}" 'timeout --kill-after=30 5340 bash -s' \
               > observation.json <<'REMOTE'
           set -uo pipefail
           CAPTURE=/home/ubuntu/ict-trading-bot/datasets-out/market_microstructure/BTCUSDT/5m/v001/data.jsonl
