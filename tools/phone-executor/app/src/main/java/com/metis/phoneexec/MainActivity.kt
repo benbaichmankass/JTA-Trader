@@ -95,6 +95,7 @@ class MainActivity : Activity() {
     private var busy = false
     private var lastHbMs = 0L
     private var lastAcctMs = 0L
+    private var lastSheetMissMs = 0L
     private var sheetOkPosted = false   // the first clean sheet read posts its shape once (opened_by, uPnL sign)
     private var lastPosMissMs = 0L
     private var lastStatus = ""
@@ -144,6 +145,7 @@ class MainActivity : Activity() {
         // BREAKOUT-SL-AMEND-CLICK: the sheet's pencil click (and Confirm) stays OFF until a live amend_sheet_unmeasured
         // dump has shown the Stop row's icons (the ⓧ next to the pencil CANCELS the stop); the read path runs live
         const val SHEET_EDIT_MEASURED = false
+        const val SHEET_MISS_MS = 600_000L              // a sheet read that failed is dumped at most every 10 min
         const val QTY_TOL_FRAC = 0.02                   // sheet "Total open volume" vs the ticket qty (venue rounding)
         const val PRICE_BUF_FRAC = 0.001                // the new stop clears the venue's current price by max(2 steps, 0.1%)
         const val USER_HOLD_MS = 5 * 60_000L
@@ -1395,8 +1397,9 @@ class MainActivity : Activity() {
     /** The sheet's evidence as short masked lines for the visible positions diag (state sheet_* / amend_sheet_*). No
      *  values: the server masks digits in cells, and only shapes (tries, misses, uPnL text shape, icon dump) go in. */
     private suspend fun sheetMiss(state: String, d: JSONObject, orders: JSONObject? = null, force: Boolean = false) {
-        if (!force && System.currentTimeMillis() - lastPosMissMs < POS_MISS_MS) return
-        lastPosMissMs = System.currentTimeMillis()
+        // its own clock (manager 06:09Z): sharing lastPosMissMs with the Positions miss hid every sheet dump for 30 min
+        if (!force && System.currentTimeMillis() - lastSheetMissMs < SHEET_MISS_MS) return
+        lastSheetMissMs = System.currentTimeMillis()
         val h = JSONArray()
         d.optJSONArray("tries")?.let { a -> for (i in 0 until a.length()) h.put(a.optString(i).take(40)) }
         if (d.has("opened_by")) h.put("opened_by=${d.optString("opened_by")}")

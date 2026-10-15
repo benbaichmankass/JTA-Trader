@@ -1264,6 +1264,7 @@
       window.__exTap = hits[0];
       // mode "pointer" (BREAKOUT-SHEET-PROBE): the 1b.205 run tapped both rows with click() and no sheet opened; a
       // touch-style pointer sequence at the cell's centre is the second, measured attempt. Same target, same denylist.
+      if (mode === "pointer" && hits[0].scrollIntoView) hits[0].scrollIntoView({block: "center", inline: "nearest"});
       return mode === "pointer" ? safeTap(hits[0]) : safeClick(hits[0]);
     },
     // MEASURE (BREAKOUT-SHEET-PROBE): what the page shows before / after a tap. domMark remembers every visible element;
