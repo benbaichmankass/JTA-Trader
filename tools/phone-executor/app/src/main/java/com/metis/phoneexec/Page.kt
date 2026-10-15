@@ -34,6 +34,10 @@ class Page(val web: WebView, private val execSrc: String) {
     /** null on anything unreadable, a timeout included (the kiosk's jsObj semantics; js() still counts the timeout) */
     suspend fun obj(code: String): JSONObject? = try { JSONObject(js("JSON.stringify($code)")) } catch (e: Exception) { null }
     fun load(url: String) = web.loadUrl(url)
+    /** The WebView as the touch would meet it (measure-only, BREAKOUT-SL-AMEND-CLICK): on-screen size, attached to a
+     *  window, shown, window visibility (0 visible / 4 invisible / 8 gone) and alpha -- the background engine's overlay
+     *  is alpha 0 and not touchable, and 1b.233 read elementFromPoint null there. */
+    fun viewInfo(): String = "wv${web.width}x${web.height} at${if (web.isAttachedToWindow) 1 else 0} sh${if (web.isShown) 1 else 0} vis${web.windowVisibility} a${"%.1f".format(web.alpha)}"
     /** A REAL touch (BREAKOUT-NATIVE-TAP): ACTION_DOWN, ~70 ms, ACTION_UP dispatched to the WebView at CSS point
      *  ([x], [y]) of a [vw]-wide viewport. Chromium receives it as a trusted touch, unlike any event exec.js can build.
      *  The CSS-to-view scale is MEASURED as view width / window.innerWidth (no density assumption). The caller has

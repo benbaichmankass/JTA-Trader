@@ -671,7 +671,9 @@ class MainActivity : Activity() {
         // cleanly (they carry the exit of a position that disappeared). The Positions view is left up afterwards.
         var pos = readView(p, "^positions\\b", "__ex.positionsRead()")
         // BREAKOUT-SL-AMEND-CLICK: a side the grid draws without text is read from the row's sheet (MEASURED)
-        if (pos != null && pos.optString("state") == "side_unread") pos = sheetSides(p, pos)
+        // only on the FOREGROUND kiosk: the background engine's overlay is not hit-testable (1b.233/1b.241: elementFromPoint
+        // null at every target), so there the side stays unread and the server's journal fallback (ESTIMATED) applies
+        if (pos != null && pos.optString("state") == "side_unread" && p === fg) pos = sheetSides(p, pos)
         val closed = if (pos?.optString("state") == "read") readView(p, "^(closed orders|trades)\\b", "__ex.closedRead()") else null
         if (closed != null) { p.js("__ex.clickText(${q("^positions\\b")})"); delay(600) }
         val ps = pos?.optString("state") ?: "unanswered"
@@ -1431,8 +1433,14 @@ class MainActivity : Activity() {
      *  reported as opened_by (unmeasured until the first live run). Returns the details (ok, side, qty, entry, mark,
      *  upnl, upnl_signed, opened_by, tries) or {ok:false, why, tries}; the sheet is left OPEN only when ok. */
     private suspend fun sheetRead(p: Page, sym: String): JSONObject {
-        if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") == true) sheetClose(p, sym)
         val tries = JSONArray()
+        // BREAKOUT-SL-AMEND-CLICK (manager 11:02Z: an "Edit Take profit" modal was seen open on the engine page, origin
+        // unknown): an open Edit Stop loss / Edit Take profit modal is dismissed (its Cancel, else Escape -- never
+        // Confirm) before any sheet attempt, and the attempt does not run while one is still open
+        val m0 = dismissModal(p)
+        if (m0.isNotEmpty()) tries.put("modal_pre:$m0".take(40))
+        if (m0.endsWith("still_open")) return JSONObject().put("ok", false).put("why", "modal_open").put("tries", tries)
+        if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") == true) sheetClose(p, sym)
         var opened = ""
         // BREAKOUT-NATIVE-TAP (1b.210, 08:37Z): click() and a synthetic pointer tap reached the cells on both rows and
         // opened no sheet (the group tap only expanded the row). Each row is now touched NATIVELY (a MotionEvent the
@@ -1443,13 +1451,24 @@ class MainActivity : Activity() {
             p.js("__ex.domMark()")
             val r = nativeTap(p, sym, which)
             tries.put("$which/native:$r".take(40))
+            lastTapGeom.forEach { tries.put(it.take(40)) }
             if (!r.startsWith("touched")) { if (r == "no_grid") break; continue }
             delay(1200); p.ensure()
+            // which touch preceded a modal (manager 11:58Z: attribute any Edit SL/TP modal to the tap that opened it); a
+            // modal is dismissed (Cancel/Escape, never Confirm) and NOTHING further is attempted on this read
+            if ((p.obj("__ex.modalsOpen()")?.optInt("n") ?: 0) > 0) {
+                tries.put("modal_after:$which/native".take(40)); tries.put("modal_dismiss:${dismissModal(p)}".take(40))
+                return JSONObject().put("ok", false).put("why", "modal_after_tap").put("tries", tries)
+            }
             if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") == true) { opened = "$which/native"; break }
             delay(1500); p.ensure()
             if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") == true) { opened = "$which/native"; break }
             tries.put("$which/native:no_sheet")
             probe = p.obj("__ex.domDiff()")?.put("at", "$which/native")
+        }
+        if (opened.isEmpty()) {
+            val m1 = dismissModal(p)
+            if (m1.isNotEmpty()) tries.put("modal_post:$m1".take(40))
         }
         if (opened.isEmpty()) return JSONObject().put("ok", false).put("why", "sheet_not_open").put("tries", tries).apply { if (probe != null) put("probe", probe) }
         val si = p.obj("__ex.sheetInfo(${q(sym)})") ?: JSONObject()
@@ -1469,15 +1488,33 @@ class MainActivity : Activity() {
      *  is that cell or inside it with nothing denied up to it); only then is the point touched. The denylist is the same
      *  one every click goes through. "touched k=<css scale>" or why not (none | no_grid | rows_<n> | covered@<tag> |
      *  point_deny_* | deny_* | offscreen | sheet_open | unanswered). */
+    private var lastTapGeom: List<String> = emptyList()
     private suspend fun nativeTap(p: Page, sym: String, which: String): String {
+        lastTapGeom = emptyList()
         val s = p.obj("__ex.sheetTarget(${q(sym)}, ${q(which)}, true)") ?: return "unanswered"
         if (!s.optBoolean("ok")) return s.optString("why", "refused")
         delay(350)
         val r = p.obj("__ex.sheetTarget(${q(sym)}, ${q(which)}, false)") ?: return "unanswered"
-        if (!r.optBoolean("ok")) return r.optString("why", "refused") + (if (r.optString("top").isNotEmpty()) "@" + r.optString("top") else "")
+        if (!r.optBoolean("ok")) {
+            // geometry of a covered point (measure-only; 1b.233 read "covered" with nothing at the centre)
+            lastTapGeom = listOf(r.optString("g1"), r.optString("g2"), p.viewInfo() + (if (p === fg) " fg" else " bg")).filter { it.isNotEmpty() }
+            return r.optString("why", "refused") + (if (r.optString("top").isNotEmpty()) "@" + r.optString("top") else "")
+        }
         // which WebView took the touch (PHONE-FGS-EXEC: the background engine's non-touchable overlay or the kiosk);
         // MotionEvents go to the view directly, never through the window, but the two are measured apart
         return p.tap(r.getDouble("x"), r.getDouble("y"), r.getDouble("vw")) + (if (p === fg) " fg" else " bg")
+    }
+
+    /** Stray-modal dismiss before / after a sheet attempt: exec.js dismissModals (the ONE rule cancelModals also uses --
+     *  each open non-form dialog / Edit SL/TP modal gets its own exactly-one "Cancel" clicked, NEVER Confirm; Escape if
+     *  one holding a Confirm stays), then a re-check. "" when nothing was open; else "f<found> c<cancelled>[ esc]" plus
+     *  " closed" or " still_open" -- and while still_open the caller does nothing else on the page. */
+    private suspend fun dismissModal(p: Page): String {
+        val d = p.obj("__ex.dismissModals()") ?: return "unanswered still_open"
+        if (d.optInt("found") == 0 && !d.optBoolean("esc")) return ""
+        delay(700); p.ensure()
+        val left = p.obj("__ex.modalsOpen()")?.optInt("n") ?: -1
+        return "f${d.optInt("found")} c${d.optInt("cancelled")}${if (d.optBoolean("esc")) " esc" else ""} ${if (left == 0) "closed" else "still_open"}"
     }
 
     /** Close the sheet: Escape first, then its header close icon. closed | escape | x | still_open(..) */
@@ -1533,9 +1570,19 @@ class MainActivity : Activity() {
         // MEASURED), with no sheet. Expanded stays expanded, so later reads find the child row without touching.
         val grp = (0 until rows.length()).mapNotNull { rows.optJSONObject(it) }.filter { it.optString("row_kind") == "group" && (it.isNull("side") || it.optString("side").isEmpty()) }
         val pre = JSONArray()
-        if (grp.size == 1 && rows.length() == 1) {
+        // which kind of row the read saw (1b.233 10:40Z: the expand step left no line, so whether it ran is unmeasured)
+        pre.put("kinds=" + (0 until rows.length()).joinToString(",") { rows.optJSONObject(it)?.optString("row_kind", "-")?.ifEmpty { "-" } ?: "?" }.take(30))
+        val mg = dismissModal(p)
+        if (mg.isNotEmpty()) pre.put("modal_pre:$mg".take(40))
+        if (grp.size == 1 && rows.length() == 1 && !mg.endsWith("still_open")) {
             val x = nativeTap(p, syms[0], "group")
             delay(1200); p.ensure()
+            if (x.startsWith("touched") && (p.obj("__ex.modalsOpen()")?.optInt("n") ?: 0) > 0) {
+                // the expand touch opened an edit modal: record it, dismiss (never Confirm), and stop this read here
+                pre.put("modal_after:group/expand").put("modal_dismiss:${dismissModal(p)}".take(40))
+                sheetMiss("sheet_modal_after_tap", JSONObject().put("tries", pre), force = true)
+                return pos
+            }
             if (p.obj("__ex.sheetInfo(${q(syms[0])})")?.optBoolean("open") != true) {
                 val again = p.obj("__ex.positionsRead()")
                 val ar = again?.optJSONArray("rows")
@@ -1552,6 +1599,10 @@ class MainActivity : Activity() {
                         pre.put("${o.optString("side")} c=${o.optInt("cells")} d=${o.optInt("depth")}/${o.optInt("row_depth")} ${o.optString("role")} pk=${o.optBoolean("picked")} ts=${o.optInt("tpsl")}".take(40)) } }
                 }
             } else pre.put("group/expand:$x opened_sheet".take(40))
+            lastTapGeom.forEach { pre.put(it.take(40)) }
+        } else p.obj("__ex.childShape()")?.let { cs ->
+            // no expand (the row was not read as the collapsed group): the panel's shape, so the next build knows why
+            pre.put("hdr=${cs.optInt("hdr")} grp=${cs.optInt("groups")} child=${cs.optInt("child_rows")} sides=${cs.optJSONArray("sides")?.length() ?: 0}")
         }
         val out = JSONArray()
         for (i in 0 until rows.length()) {
@@ -1561,7 +1612,7 @@ class MainActivity : Activity() {
             if (!d.optBoolean("ok")) {
                 if (pre.length() > 0) { val tr = JSONArray(); for (j in 0 until pre.length()) tr.put(pre.get(j))
                     d.optJSONArray("tries")?.let { a -> for (j in 0 until a.length()) tr.put(a.get(j)) }; d.put("tries", tr) }
-                sheetMiss("sheet_${d.optString("why")}", d); return pos
+                sheetMiss("sheet_${d.optString("why")}", d, force = d.optString("why") == "modal_after_tap"); return pos
             }
             d.put("close", sheetClose(p, syms[i]))
             r.put("side", d.getString("side")).put("side_source", "sheet").put("qty", d.getDouble("qty")).put("qty_src", "sheet")
@@ -1585,6 +1636,8 @@ class MainActivity : Activity() {
         val aid = t.getString("amend_id")
         val want = if (long) "long" else "short"
         if (tpChange) return amendRefuse(t, "the sheet path edits the stop only; a TP revision is not built", null)
+        // the sheet needs an on-screen view (PHONE-FGS-EXEC routes amends to the front); never attempted on the engine page
+        if (cur !== fg) return amendRefuse(t, "sheet path runs on the foreground view only (engine page: not hit-testable)", null)
         if (if (long) sl <= fromSl + pStep / 2 else sl >= fromSl - pStep / 2) return amendRefuse(t, "sheet path: the new stop is not tighter", null)
         // 1-2. the sheet and its [Position details], MEASURED
         val d = sheetRead(cur, venue)

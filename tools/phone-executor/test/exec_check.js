@@ -834,7 +834,9 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
   eq((await tp.evaluate("__ex.sheetTarget('ETHUSD','child',false)")).why, "sheet_open", "native: never targeted with the sheet already open");
   // a point covered by another element (an overlay, a row ✕ drawn over the cell) is refused, never touched
   const cv = await onHost(sheetPage().replace("</body>", "<div id=ov style='position:fixed;left:0;top:0;width:100%;height:100%'></div></body>"));
-  eq((await cv.evaluate("__ex.sheetTarget('ETHUSD','child',false)")).why, "covered", "native: a covered point is refused");
+  let cvr = await cv.evaluate("__ex.sheetTarget('ETHUSD','child',false)");
+  eq([cvr.why, /^p\d+_\d+ v\d+x\d+ r-?\d+_-?\d+_\d+x\d+$/.test(cvr.g1), /^vv\d+x\d+\/\d+_\d+s[\d.]+ e\d+ sc\d+ dpr[\d.]+/.test(cvr.g2), cvr.g1.length <= 40 && cvr.g2.length <= 40],
+    ["covered", true, true, true], "native: a covered point is refused, with its geometry (numbers only, fits the 40-char scrub)");
   const dz = await onHost(sheetPage().replace('<div id=chm>ETH <span>5x</span></div>', '<div id=chm style="position:relative">ETH <span>5x</span><i aria-label="Close" style="position:absolute;left:0;top:0;right:0;bottom:0"></i></div>'));
   eq(/^(point_)?deny_/.test((await dz.evaluate("__ex.sheetTarget('ETHUSD','child',false)")).why), true, "native: a close control under the point is refused");
   eq((await (await onHost(sheetPage({noChild: true}))).evaluate("__ex.sheetTarget('ETHUSD','child',false)")).why, "none", "native: no child row -> none (the amend path reads none as no position only with group none too)");
@@ -844,5 +846,16 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
   eq([cs.ok, cs.hdr, cs.groups, cs.child_rows, cs.sides.length, cs.sides[0].side, cs.sides[0].cells, cs.sides[0].picked, cs.sides[0].tpsl], [true, 9, 1, 1, 1, "short", 9, true, 1], "child shape: one Short in a 9-cell child row that childRows picks");
   let er = await ex.evaluate("__ex.positionsRead()");
   eq([er.state, er.rows.length, er.rows[0].side, er.rows[0].row_kind], ["read", 1, "short", "child"], "expanded child row: side read as text, state read");
+  // a stray "Edit Take profit" modal (manager 11:02Z: seen open on the engine page) is dismissed by its Cancel, never Confirm
+  const tm = await onHost(sheetPage().replace('<h3 id=mt>Edit Stop loss</h3>', '<h3 id=mt>Edit Take profit</h3>').replace('<div id=modal style="display:none">', '<div id=modal style="display:block">'));
+  let tmi = await tm.evaluate("__ex.modalInfo()");
+  eq([tmi.n, tmi.kind], [1, "take"], "stray modal: the open Edit Take profit modal is seen");
+  eq([await tm.evaluate("__ex.modalCancel()"), (await tm.evaluate("__ex.modalInfo()")).n, await tm.evaluate("window.__saved"), await tm.evaluate("window.__danger")], ["clicked", 0, 0, 0], "stray modal: Cancel closes it; Confirm never clicked");
+  // ONE dismiss rule (cancelModals / dismissModals share it): an Edit Take profit modal WITHOUT a dialog role is found too
+  const tm2 = await onHost(sheetPage().replace('<h3 id=mt>Edit Stop loss</h3>', '<h3 id=mt>Edit Take profit</h3>').replace('<div id=modal style="display:none">', '<div id=modal style="display:block">'));
+  eq((await tm2.evaluate("__ex.modalsOpen()")).n, 1, "dismiss: an open edit modal holding Confirm is counted");
+  let dm = await tm2.evaluate("__ex.dismissModals()");
+  eq([dm.found, dm.cancelled, dm.esc, (await tm2.evaluate("__ex.modalsOpen()")).n, await tm2.evaluate("window.__saved")], [1, 1, false, 0, 0], "dismiss: its Cancel clicked, nothing left, Confirm never clicked");
+  eq([(await tm2.evaluate("__ex.dismissModals()")).found, await tm2.evaluate("__ex.cancelModals()")], [0, 0], "dismiss: nothing open -> nothing found / cancelled");
   await b.close(); console.log("exec_check: all passed");
 })().catch((e) => { console.error(e); process.exit(1); });
