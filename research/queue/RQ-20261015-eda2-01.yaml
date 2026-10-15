@@ -1,7 +1,7 @@
 id: RQ-20261015-eda2-01
 title: 'AI trader / probability quality, RE-RUN with all rows and a holdout that exists: do the 15m regime learners beat the class prior on LOG-LOSS?
   (pre-registered follow-up of RQ-20261013-1414-02; runs BEFORE any conformal work on 9da8-03)'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -157,3 +157,14 @@ related:
 - ML-F8
 - scripts/research/ml_bakeoff.py
 last_dispatched_at: '2026-10-15T17:12:34+00:00'
+grading:
+  attested: RULE-RQ20261015-EDA2-01-REGIME-LOGLOSS-VS-PRIOR-RERUN
+  auto: true
+  decision_rule_id: RULE-RQ20261015-EDA2-01-REGIME-LOGLOSS-VS-PRIOR-RERUN
+  evidence:
+  - research/results/RQ-20261015-eda2-01/38775459182.jsonl
+  graded_at: '2026-10-15'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

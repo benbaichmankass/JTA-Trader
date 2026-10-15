@@ -1,7 +1,7 @@
 id: RQ-20261015-cab7-04
 title: 'TP doctrine, real money: derive trend_donchian_eth_4h''s PREDICTIVE take-profit from its own uncapped MFE
   distribution (reach curve + IS-chosen K*, graded OOS net of cost vs the current bracket)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -105,3 +105,16 @@ related:
 - PI-20261006-5FUGHVX8-0001
 - RQ-20261010-419b-01
 last_dispatched_at: '2026-10-15T16:00:04+00:00'
+grading:
+  attested: RULE-RQ-20261015-cab7-04-PREDICTIVE-TP
+  auto: true
+  decision_rule_id: RULE-RQ-20261015-cab7-04-PREDICTIVE-TP
+  evidence:
+  - research/results/RQ-20261015-cab7-04/38765271266.jsonl
+  graded_at: '2026-10-15'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

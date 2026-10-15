@@ -1,6 +1,6 @@
 id: RQ-20261014-4591-06
 title: 'AI trader / recency: does the 1h regime log-loss lift over the class prior hold on only the most recent 12,000 hours (about 500 days)?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -129,9 +129,9 @@ grading:
   decision_rule_id: RULE-RQ20261014-4591-06-REGIME-LOGLOSS-RECENT-1H
   evidence:
   - research/results/RQ-20261014-4591-06/38560877721.jsonl
+  - research/results/RQ-20261014-4591-06/38738478568.jsonl
   graded_at: '2026-10-15'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  reason: 1 row(s), all measured, all pass (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
   rows: 1
-  verdict: null
+  verdict: pass
