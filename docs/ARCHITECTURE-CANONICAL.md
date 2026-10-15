@@ -847,6 +847,9 @@ that expires unplaced reaches a terminal status, gets no Yes/No prompt, and
 does not suppress the next signal for the same key.
 
 
+
+**tradeify_1 instrument specs and how to read them (TRADEIFY-INSTR-SPECS, 2026-10-15).** The terminal has only Watchlist and Positions widgets, so the info-panel probe (`instrument-info-*`) cannot open and `link-state-dump` reads no rows. Two read-only paths exist instead: `breakout-login-check` mode `quote-spread` (`DXtradeAdapter.quote_spread` over the executor's own `read_quote`: spread in bps of mid, no click, no account figure) and `velotrade-api-probe` with `account: tradeify_1` (REST login, account-scoped instrument rows: `marginRate`, min order and step, trading hours; GETs retry on 429). The REST row carries no swap or commission field, so those stay firm-declared and unconfirmed. Measured values and run links: `docs/research/tradeify-platforms-2026-10-15.md` § 2c. The watchlist now also holds SILVER/USD, XYZ100/USD, SP500/USD and USOIL/USD (watchlist only; no roster or order path references them).
+
 ## Operator Communication Pipeline
 
 The flow is repo-driven and auditable.
