@@ -623,6 +623,8 @@ autonomously; Tier-2 after an operator OK in chat. Allowlist:
 
 **`research-ops`** (`.claude/skills/research-ops/SKILL.md`) is the routine research-operations pass — 4×/day, bounded Sonnet lane dispatched by the manager: pipeline health, runnable floor, blocked-unit audit, results read, follow-ups filed. It keeps research flowing; it does not replace topic research (`perf-followup`, ML, readouts).
 
+**`weekly-audit`** (`.claude/skills/weekly-audit/SKILL.md`, operator 2026-10-14/15) is the Monday 06:07Z audit — a completion test, not a memo: a CORE pass every week plus a deep pass rotating by ISO week mod 4; every finding becomes a checklist row or pipeline item with a detector, and the one-page report lands in a self-landing PR. It replaces the retired `full-system-audit` program.
+
 **The ML / AI-trader build plan is reviewed every week, not when someone remembers** (operator,
 2026-10-11). Plan: `ROADMAP.md` § "AI trader (ML) — build plan"; machine-readable form
 `docs/plans/ml-plan-items.yaml` (every item → its checklist row or `research/queue/` unit);
