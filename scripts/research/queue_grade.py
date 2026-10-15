@@ -96,6 +96,14 @@ QUEUE = Path("research/queue")
 RESULTS = Path("research/results")
 E35_CORPUS = Path("docs/research/e35-bracket-corpus.jsonl")
 E35_FLOOR = 39
+# RESEARCH-LOOP-AUDIT RC5 (2026-10-15, docs/research/research-loop-audit-2026-10-15.md § 2a):
+# a recurring e35 unit graded indeterminate at base_oos_trades < floor/3 cannot reach the floor
+# on its own cadence (MEASURED: 19 monthly daily-bar legs at OOS n 0-11, adding ~1 trade/month),
+# so re-asking it monthly spends a runner slot to learn nothing. It is NOT retired (refinement-
+# first, operator 2026-09-27): the grader stretches the re-ask to RECHECK_DAYS via its own
+# grading block, which dispatch_queue.due() honours. The unit's registered fields never move.
+INFEASIBLE_FRACTION = 3
+RECHECK_DAYS = 90
 MECHANICAL = ("pass", "fail", "no_action_warranted")
 _RECURRING = ("daily", "weekly", "monthly")
 
@@ -251,7 +259,7 @@ def grade_e35(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
     passing = sorted({f"{r.get('leg')}:{r.get('cell')}" for r in rows if r.get("gate_verdict") == "is_oos_pass"})
     if n_oos < E35_FLOOR:
         return {"verdict": "indeterminate", "reason": f"base_oos_trades {n_oos} < {E35_FLOOR} (unresolvable_at_current_n)",
-                "rows": len(rows), "files": [E35_CORPUS.as_posix()], "passing_cells": passing}
+                "rows": len(rows), "files": [E35_CORPUS.as_posix()], "passing_cells": passing, "base_oos_trades": n_oos}
     if passing:
         return {"verdict": "pass", "reason": f"{len(passing)} cell(s) is_oos_pass at base_oos_trades {n_oos}: {passing[:6]}",
                 "rows": len(rows), "files": [E35_CORPUS.as_posix()], "passing_cells": passing}
@@ -284,6 +292,15 @@ def decide(unit: Dict[str, Any], g: Dict[str, Any], graded_at: str,
         return {"status": None, "reset_stamp": False,
                 "grading": {**base, "verdict": None, "needs_review": True}}
     if cadence in _RECURRING:
+        n_oos = g.get("base_oos_trades")
+        if v == "indeterminate" and isinstance(n_oos, int) and n_oos * INFEASIBLE_FRACTION < E35_FLOOR:
+            # Infeasible at this cadence: a mechanical outcome, not a human read -- so no needs_review.
+            return {"status": None, "reset_stamp": False,
+                    "grading": {**base, "verdict": v, "latest": True, "power": "infeasible_at_cadence",
+                                "recheck_after_days": RECHECK_DAYS,
+                                "note": f"base_oos_trades {n_oos} < floor {E35_FLOOR}/{INFEASIBLE_FRACTION}: the "
+                                        f"{cadence} re-ask cannot reach the floor; re-checked every {RECHECK_DAYS} "
+                                        "days instead (not retired)"}}
         return {"status": None, "reset_stamp": False,
                 "grading": {**base, "verdict": v, "latest": True, "needs_review": v == "indeterminate"}}
     if int(prior.get("confirmatory_run") or 0) >= 1 and v != "fail":
@@ -492,6 +509,11 @@ def _self_test() -> int:
     d3 = decide({**u, "grading": {"confirmatory_run": 1}}, {"verdict": "pass", "rows": 1, "files": [], "reason": "r"}, "2030-01-01")
     assert d3["status"] is None and d3["grading"]["needs_review"] and "not unanimous" in d3["grading"]["note"], d3
     assert decide({**u, "cadence": "monthly"}, {"verdict": "fail", "rows": 1, "files": [], "reason": "r"}, "2030-01-01")["status"] is None
+    # RC5: an infeasible recurring e35 read stretches the re-ask, no needs_review; a near-floor one does not
+    di5 = decide({**u, "cadence": "monthly"}, {"verdict": "indeterminate", "rows": 1, "files": [], "reason": "r", "base_oos_trades": 5}, "2030-01-01")
+    assert di5["grading"]["recheck_after_days"] == RECHECK_DAYS and not di5["grading"].get("needs_review") and di5["status"] is None, di5
+    di29 = decide({**u, "cadence": "monthly"}, {"verdict": "indeterminate", "rows": 1, "files": [], "reason": "r", "base_oos_trades": 29}, "2030-01-01")
+    assert di29["grading"]["needs_review"] and "recheck_after_days" not in di29["grading"], di29
     assert decide(u, {"verdict": None, "rows": 0, "files": [], "reason": "0 result row(s)"}, "2030-01-01") is None
     assert decide(u, {"verdict": None, "rows": 2, "files": [], "reason": "verdicts not unanimous"}, "2030-01-01")["grading"]["needs_review"]
 
