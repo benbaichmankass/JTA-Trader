@@ -16,12 +16,8 @@ import pytest
 
 from src.core.coordinator import OrderPackage
 from src.runtime.intents import INTENT_MODE_META_KEY, INTENT_MODE_META_VALUE
-from tests.test_intent_delta_dispatch import (  # noqa: F401 — fixture reuse
-    _init_trade_journal,
-    _patch_dispatch_deps,
-    coord,
-    trade_db,
-)
+from src.core.coordinator import Coordinator
+from tests.test_intent_delta_dispatch import _init_trade_journal, _patch_dispatch_deps
 
 SLICE_ACCOUNTS = textwrap.dedent("""\
     accounts:
@@ -41,6 +37,23 @@ SLICE_ACCOUNTS = textwrap.dedent("""\
           min_balance_usd: 50
           leverage: 3
 """)
+
+
+@pytest.fixture()
+def trade_db(tmp_path, monkeypatch):
+    path = str(tmp_path / "trade_journal.db")
+    _init_trade_journal(path)
+    monkeypatch.setenv("TRADE_JOURNAL_DB", path)
+    monkeypatch.setenv("BYBIT_API_KEY_2", "test-key")
+    monkeypatch.setenv("BYBIT_API_SECRET_2", "test-secret")
+    return path
+
+
+@pytest.fixture()
+def coord(tmp_path):
+    units_path = tmp_path / "units.yaml"
+    units_path.write_text("units: {}\n")
+    return Coordinator(units_path=str(units_path))
 
 
 @pytest.fixture()
