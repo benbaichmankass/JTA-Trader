@@ -1,0 +1,21 @@
+{
+  "id": "TRADEIFY-INSTR-SPECS",
+  "title": "Tradeify tradeify_1: read per-instrument spread/commission/swap/leverage/hours for SILVER, XYZ100, SP500, USOIL, UKOIL, PAXG (needs watchlist adds)",
+  "phase": "queued",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Filed by lane TRADEIFY-PLATFORMS 2026-10-15. docs/research/tradeify-platforms-2026-10-15.md \u00a7 2: the terminal's spread/swap/leverage/hours per instrument were NOT obtained because the instrument-info panel is reachable only after a watchlist add (add-watchlist-symbol, a UI mutation, no order) and the lane's brief was read-only; bid/ask digits are also masked by the dump. NEXT STEP (Tier-2, one operator OK in chat): add-watchlist-symbol on tradeify_1 for each symbol above (one per run), then instrument-info-probe; flat-account guard applies. CLOSES when the six instruments carry MEASURED spread, swap, leverage and hours in config/prop_rulesets/tradeify_routing.yaml or the memo, and RQ-20261015-24ca-01..05 are re-costed from them if they differ from the declared 8 bps + 3 bps + 0.033%/day. Until then those units run on DECLARED costs.",
+  "updated_at": "2026-10-15T17:02:07Z",
+  "updated_by": "lane-TRADEIFY-PLATFORMS-2026-10-15",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "_seq": 519
+}
