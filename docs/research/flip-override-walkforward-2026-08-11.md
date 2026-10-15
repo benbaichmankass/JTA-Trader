@@ -2,6 +2,8 @@
 
 > **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../docs/DOCUMENT-INDEX.md) · **nobody has verified this document's status — do not act on it as current**
 
+> **COST-INCOMPLETE (2026-10-15, PROP-EVAL-COSTS):** produced by `walkforward_flip_policy.py` before `run_system_backtest` carried the full cost stack -- FEE-ONLY (no slippage, no funding). Relative A/B between flip policies; absolute net figures here are overstated. Registry: `comms/research/cost_incomplete_2026-10-15.json`.
+
 > **Status:** Tier-1 research. **Evidence for a Tier-3 operator decision — nothing here
 > is enacted.** Closes the evidence half of `BL-20260811-FLIP-OVERRIDE-NEVER-WALKFORWARDED`.
 > Driver: [`scripts/walkforward_flip_policy.py`](../../scripts/walkforward_flip_policy.py)

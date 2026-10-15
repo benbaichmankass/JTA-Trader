@@ -872,7 +872,51 @@ def _summarize_conflicts(conflicts: List[Dict[str, Any]],
     }
 
 
-def run_system_backtest(base5m: pd.DataFrame, *, roster: List[str], start, end,
+def run_system_backtest(base5m, *args, costs: Optional[Dict[str, Any]] = None,
+                        require_full_costs: bool = False, **kwargs) -> Dict[str, Any]:
+    """Portfolio backtest with an explicit cost stack (PROP-EVAL-COSTS, 2026-10-15).
+
+    ``costs`` is a ``src.research.run_costs.resolve_run_costs`` dict; it is applied
+    for the duration of the run and recorded as ``summary["cost_policy"]``. With
+    ``require_full_costs=True`` (every prop / EV caller) a missing ``costs`` or a
+    fee-only stack raises -- there is no silent 0.0 default. Legacy callers that
+    pass neither keep the module-global behaviour byte-identically, and their
+    summary is stamped ``cost_policy.status = "module_globals"`` (fee-only unless
+    something set the globals) so the result can never pass for full-cost.
+    """
+    global FEE_BPS_ROUNDTRIP, SLIPPAGE_BPS_ROUNDTRIP, FUNDING_BPS_PER_WINDOW, FUNDING_WINDOW_HOURS
+    from src.research.run_costs import CostPolicyError  # noqa: PLC0415
+    if costs is None:
+        if require_full_costs:
+            raise CostPolicyError(
+                "run_system_backtest(require_full_costs=True) needs costs= "
+                "(src.research.run_costs.resolve_run_costs); refusing a silent fee-only run")
+        out = _run_system_backtest_core(base5m, *args, **kwargs)
+        fee_only = SLIPPAGE_BPS_ROUNDTRIP == 0.0 and FUNDING_BPS_PER_WINDOW == 0.0
+        out["cost_policy"] = {
+            "status": "module_globals", "fee_bps_roundtrip": FEE_BPS_ROUNDTRIP,
+            "slippage_bps_roundtrip": SLIPPAGE_BPS_ROUNDTRIP,
+            "funding_bps_per_window": FUNDING_BPS_PER_WINDOW,
+            "cost_incomplete": bool(fee_only)}
+        return out
+    if require_full_costs and costs.get("fee_only_arm_declared"):
+        raise CostPolicyError("require_full_costs=True refuses a declared fee-only arm")
+    saved = (FEE_BPS_ROUNDTRIP, SLIPPAGE_BPS_ROUNDTRIP, FUNDING_BPS_PER_WINDOW, FUNDING_WINDOW_HOURS)
+    FEE_BPS_ROUNDTRIP = float(costs["fee_bps_roundtrip"])
+    SLIPPAGE_BPS_ROUNDTRIP = float(costs["slippage_bps_roundtrip"])
+    FUNDING_BPS_PER_WINDOW = float(costs["funding_bps_per_window"])
+    FUNDING_WINDOW_HOURS = float(costs.get("funding_window_hours", FUNDING_WINDOW_HOURS))
+    try:
+        out = _run_system_backtest_core(base5m, *args, **kwargs)
+    finally:
+        (FEE_BPS_ROUNDTRIP, SLIPPAGE_BPS_ROUNDTRIP,
+         FUNDING_BPS_PER_WINDOW, FUNDING_WINDOW_HOURS) = saved
+    out["cost_policy"] = {**costs, "status": "resolved",
+                          "cost_incomplete": bool(costs.get("fee_only_arm_declared"))}
+    return out
+
+
+def _run_system_backtest_core(base5m: pd.DataFrame, *, roster: List[str], start, end,
                         initial_balance: float, risk_pct: float,
                         daily_loss_pct: float, signal_ttl_bars: int,
                         overrides: Dict[str, dict], refresh: bool,
