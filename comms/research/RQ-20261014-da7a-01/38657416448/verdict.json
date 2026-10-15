@@ -1,0 +1,1699 @@
+{
+  "verdict": "MIXED",
+  "read_state": "measured",
+  "n": 3356,
+  "population": "newest committed ledger per leg under comms/strategy_evidence/runs/*/*__trades.jsonl, resamples excluded, Binance USD-M USDT legs only, <= 400 trades per leg, legs passing the initial-SL-before-exit alignment control; 25 legs walked, 29 skipped (listed)",
+  "measurement": {
+    "bars": {
+      "tp_r": "1,2,3",
+      "horizon_bars": 60,
+      "min_n": 100,
+      "needed_frac": 0.02,
+      "not_needed_frac": 0.005
+    },
+    "verdict": "MIXED",
+    "families": {
+      "ict_scalp": {
+        "legs": [
+          "ict_scalp_5m",
+          "ict_scalp_avax_5m",
+          "ict_scalp_eth_15m",
+          "ict_scalp_sol_15m",
+          "ict_scalp_sol_5m",
+          "ict_scalp_xrp_15m",
+          "ict_scalp_xrp_5m"
+        ],
+        "1.0": {
+          "n": 919,
+          "amb": 5,
+          "mis": 5,
+          "amb_1m": 0,
+          "amb_frac": 0.00544069640914037,
+          "mislabel_frac": 0.00544069640914037
+        },
+        "2.0": {
+          "n": 919,
+          "amb": 2,
+          "mis": 2,
+          "amb_1m": 0,
+          "amb_frac": 0.002176278563656148,
+          "mislabel_frac": 0.002176278563656148
+        },
+        "3.0": {
+          "n": 919,
+          "amb": 0,
+          "mis": 0,
+          "amb_1m": 0,
+          "amb_frac": 0.0,
+          "mislabel_frac": 0.0
+        }
+      },
+      "pullback": {
+        "legs": [
+          "ada_pullback_2h",
+          "avax_pullback_2h",
+          "htf_pullback_trend_2h",
+          "sol_pullback_2h",
+          "eth_pullback_2h",
+          "eth_pullback_prop_2h",
+          "xrp_pullback_2h",
+          "pullback_ada_1h",
+          "pullback_doge_1h",
+          "pullback_link_1h"
+        ],
+        "1.0": {
+          "n": 1636,
+          "amb": 1,
+          "mis": 0,
+          "amb_1m": 0,
+          "amb_frac": 0.0006112469437652812,
+          "mislabel_frac": 0.0
+        },
+        "2.0": {
+          "n": 1636,
+          "amb": 0,
+          "mis": 0,
+          "amb_1m": 0,
+          "amb_frac": 0.0,
+          "mislabel_frac": 0.0
+        },
+        "3.0": {
+          "n": 1636,
+          "amb": 0,
+          "mis": 0,
+          "amb_1m": 0,
+          "amb_frac": 0.0,
+          "mislabel_frac": 0.0
+        }
+      },
+      "squeeze": {
+        "legs": [
+          "squeeze_breakout_4h",
+          "squeeze_doge_1h"
+        ],
+        "1.0": {
+          "n": 410,
+          "amb": 1,
+          "mis": 1,
+          "amb_1m": 0,
+          "amb_frac": 0.0024390243902439024,
+          "mislabel_frac": 0.0024390243902439024
+        },
+        "2.0": {
+          "n": 410,
+          "amb": 1,
+          "mis": 1,
+          "amb_1m": 0,
+          "amb_frac": 0.0024390243902439024,
+          "mislabel_frac": 0.0024390243902439024
+        },
+        "3.0": {
+          "n": 410,
+          "amb": 0,
+          "mis": 0,
+          "amb_1m": 0,
+          "amb_frac": 0.0,
+          "mislabel_frac": 0.0
+        }
+      },
+      "trend_donchian": {
+        "legs": [
+          "trend_donchian_ada_4h",
+          "trend_donchian_avax_4h",
+          "trend_donchian_sol_4h",
+          "trend_donchian_eth_4h",
+          "trend_donchian_xrp_4h"
+        ],
+        "1.0": {
+          "n": 374,
+          "amb": 1,
+          "mis": 1,
+          "amb_1m": 0,
+          "amb_frac": 0.00267379679144385,
+          "mislabel_frac": 0.00267379679144385
+        },
+        "2.0": {
+          "n": 374,
+          "amb": 0,
+          "mis": 0,
+          "amb_1m": 0,
+          "amb_frac": 0.0,
+          "mislabel_frac": 0.0
+        },
+        "3.0": {
+          "n": 374,
+          "amb": 0,
+          "mis": 0,
+          "amb_1m": 0,
+          "amb_frac": 0.0,
+          "mislabel_frac": 0.0
+        }
+      },
+      "fvg_range": {
+        "legs": [
+          "fvg_range_15m"
+        ],
+        "1.0": {
+          "n": 17,
+          "amb": 0,
+          "mis": 0,
+          "amb_1m": 0,
+          "amb_frac": 0.0,
+          "mislabel_frac": 0.0
+        },
+        "2.0": {
+          "n": 17,
+          "amb": 0,
+          "mis": 0,
+          "amb_1m": 0,
+          "amb_frac": 0.0,
+          "mislabel_frac": 0.0
+        },
+        "3.0": {
+          "n": 17,
+          "amb": 0,
+          "mis": 0,
+          "amb_1m": 0,
+          "amb_frac": 0.0,
+          "mislabel_frac": 0.0
+        }
+      }
+    },
+    "eligible_families": [
+      "ict_scalp",
+      "pullback",
+      "squeeze",
+      "trend_donchian"
+    ],
+    "legs": {
+      "ict_scalp_5m": {
+        "family": "ict_scalp",
+        "symbol": "BTCUSDT",
+        "bar_minutes": 5,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 140,
+              "breaches": 1
+            },
+            "1": {
+              "n": 140,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 145,
+            "match_frac": 1.0
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 145,
+            "amb": 2,
+            "mis": 2,
+            "amb_1m": 0,
+            "tp": 68,
+            "sl": 55,
+            "timeout": 22,
+            "amb_frac": 0.013793103448275862,
+            "mislabel_frac": 0.013793103448275862
+          },
+          "2.0": {
+            "n": 145,
+            "amb": 1,
+            "mis": 1,
+            "amb_1m": 0,
+            "tp": 36,
+            "sl": 64,
+            "timeout": 45,
+            "amb_frac": 0.006896551724137931,
+            "mislabel_frac": 0.006896551724137931
+          },
+          "3.0": {
+            "n": 145,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 19,
+            "sl": 70,
+            "timeout": 56,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "ict_scalp_avax_5m": {
+        "family": "ict_scalp",
+        "symbol": "AVAXUSDT",
+        "bar_minutes": 5,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 174,
+              "breaches": 3
+            },
+            "1": {
+              "n": 174,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 177,
+            "match_frac": 1.0
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 177,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 70,
+            "sl": 83,
+            "timeout": 24,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "2.0": {
+            "n": 177,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 32,
+            "sl": 93,
+            "timeout": 52,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "3.0": {
+            "n": 177,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 14,
+            "sl": 94,
+            "timeout": 69,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "ict_scalp_eth_15m": {
+        "family": "ict_scalp",
+        "symbol": "ETHUSDT",
+        "bar_minutes": 15,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 78,
+              "breaches": 0
+            },
+            "1": {
+              "n": 78,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 78,
+            "match_frac": 1.0
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 78,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 33,
+            "sl": 29,
+            "timeout": 16,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "2.0": {
+            "n": 78,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 15,
+            "sl": 36,
+            "timeout": 27,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "3.0": {
+            "n": 78,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 8,
+            "sl": 40,
+            "timeout": 30,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "ict_scalp_sol_15m": {
+        "family": "ict_scalp",
+        "symbol": "SOLUSDT",
+        "bar_minutes": 15,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 84,
+              "breaches": 0
+            },
+            "1": {
+              "n": 84,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 84,
+            "match_frac": 1.0
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 84,
+            "amb": 1,
+            "mis": 1,
+            "amb_1m": 0,
+            "tp": 33,
+            "sl": 27,
+            "timeout": 24,
+            "amb_frac": 0.011904761904761904,
+            "mislabel_frac": 0.011904761904761904
+          },
+          "2.0": {
+            "n": 84,
+            "amb": 1,
+            "mis": 1,
+            "amb_1m": 0,
+            "tp": 16,
+            "sl": 33,
+            "timeout": 35,
+            "amb_frac": 0.011904761904761904,
+            "mislabel_frac": 0.011904761904761904
+          },
+          "3.0": {
+            "n": 84,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 9,
+            "sl": 36,
+            "timeout": 39,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "ict_scalp_sol_5m": {
+        "family": "ict_scalp",
+        "symbol": "SOLUSDT",
+        "bar_minutes": 5,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 187,
+              "breaches": 1
+            },
+            "1": {
+              "n": 187,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 190,
+            "match_frac": 1.0
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 190,
+            "amb": 1,
+            "mis": 1,
+            "amb_1m": 0,
+            "tp": 88,
+            "sl": 79,
+            "timeout": 23,
+            "amb_frac": 0.005263157894736842,
+            "mislabel_frac": 0.005263157894736842
+          },
+          "2.0": {
+            "n": 190,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 40,
+            "sl": 93,
+            "timeout": 57,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "3.0": {
+            "n": 190,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 21,
+            "sl": 98,
+            "timeout": 71,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "ict_scalp_xrp_15m": {
+        "family": "ict_scalp",
+        "symbol": "XRPUSDT",
+        "bar_minutes": 15,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 72,
+              "breaches": 1
+            },
+            "1": {
+              "n": 72,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 76,
+            "match_frac": 1.0
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 76,
+            "amb": 1,
+            "mis": 1,
+            "amb_1m": 0,
+            "tp": 37,
+            "sl": 28,
+            "timeout": 11,
+            "amb_frac": 0.013157894736842105,
+            "mislabel_frac": 0.013157894736842105
+          },
+          "2.0": {
+            "n": 76,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 24,
+            "sl": 32,
+            "timeout": 20,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "3.0": {
+            "n": 76,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 9,
+            "sl": 37,
+            "timeout": 30,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "ict_scalp_xrp_5m": {
+        "family": "ict_scalp",
+        "symbol": "XRPUSDT",
+        "bar_minutes": 5,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 165,
+              "breaches": 0
+            },
+            "1": {
+              "n": 165,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 169,
+            "match_frac": 1.0
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 169,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 71,
+            "sl": 73,
+            "timeout": 25,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "2.0": {
+            "n": 169,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 34,
+            "sl": 80,
+            "timeout": 55,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "3.0": {
+            "n": 169,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 22,
+            "sl": 83,
+            "timeout": 64,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "ada_pullback_2h": {
+        "family": "pullback",
+        "symbol": "ADAUSDT",
+        "bar_minutes": 120,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 57,
+              "breaches": 2
+            },
+            "1": {
+              "n": 57,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 57,
+            "match_frac": 0.7192982456140351
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 57,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 25,
+            "sl": 32,
+            "timeout": 0,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "2.0": {
+            "n": 57,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 20,
+            "sl": 35,
+            "timeout": 2,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "3.0": {
+            "n": 57,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 16,
+            "sl": 36,
+            "timeout": 5,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "avax_pullback_2h": {
+        "family": "pullback",
+        "symbol": "AVAXUSDT",
+        "bar_minutes": 120,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 57,
+              "breaches": 0
+            },
+            "1": {
+              "n": 57,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 57,
+            "match_frac": 0.7017543859649122
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 57,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 25,
+            "sl": 29,
+            "timeout": 3,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "2.0": {
+            "n": 57,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 16,
+            "sl": 33,
+            "timeout": 8,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "3.0": {
+            "n": 57,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 10,
+            "sl": 34,
+            "timeout": 13,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "htf_pullback_trend_2h": {
+        "family": "pullback",
+        "symbol": "BTCUSDT",
+        "bar_minutes": 120,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 85,
+              "breaches": 0
+            },
+            "1": {
+              "n": 85,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 86,
+            "match_frac": 0.8488372093023255
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 86,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 38,
+            "sl": 40,
+            "timeout": 8,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "2.0": {
+            "n": 86,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 19,
+            "sl": 47,
+            "timeout": 20,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "3.0": {
+            "n": 86,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 9,
+            "sl": 47,
+            "timeout": 30,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "sol_pullback_2h": {
+        "family": "pullback",
+        "symbol": "SOLUSDT",
+        "bar_minutes": 120,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 36,
+              "breaches": 0
+            },
+            "1": {
+              "n": 36,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 36,
+            "match_frac": 0.7222222222222222
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 36,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 15,
+            "sl": 18,
+            "timeout": 3,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "2.0": {
+            "n": 36,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 8,
+            "sl": 22,
+            "timeout": 6,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "3.0": {
+            "n": 36,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 4,
+            "sl": 22,
+            "timeout": 10,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "squeeze_breakout_4h": {
+        "family": "squeeze",
+        "symbol": "BTCUSDT",
+        "bar_minutes": 240,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 10,
+              "breaches": 0
+            },
+            "1": {
+              "n": 10,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 10,
+            "match_frac": 1.0
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 10,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 4,
+            "sl": 6,
+            "timeout": 0,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "2.0": {
+            "n": 10,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 1,
+            "sl": 7,
+            "timeout": 2,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "3.0": {
+            "n": 10,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 1,
+            "sl": 7,
+            "timeout": 2,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "trend_donchian_ada_4h": {
+        "family": "trend_donchian",
+        "symbol": "ADAUSDT",
+        "bar_minutes": 240,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 45,
+              "breaches": 15
+            },
+            "1": {
+              "n": 45,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 46,
+            "match_frac": 0.6521739130434783
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 46,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 23,
+            "sl": 22,
+            "timeout": 1,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "2.0": {
+            "n": 46,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 12,
+            "sl": 31,
+            "timeout": 3,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "3.0": {
+            "n": 46,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 9,
+            "sl": 31,
+            "timeout": 6,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "trend_donchian_avax_4h": {
+        "family": "trend_donchian",
+        "symbol": "AVAXUSDT",
+        "bar_minutes": 240,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 47,
+              "breaches": 41
+            },
+            "1": {
+              "n": 47,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 50,
+            "match_frac": 0.74
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 50,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 19,
+            "sl": 31,
+            "timeout": 0,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "2.0": {
+            "n": 50,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 14,
+            "sl": 36,
+            "timeout": 0,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "3.0": {
+            "n": 50,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 11,
+            "sl": 39,
+            "timeout": 0,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "trend_donchian_sol_4h": {
+        "family": "trend_donchian",
+        "symbol": "SOLUSDT",
+        "bar_minutes": 240,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 111,
+              "breaches": 74
+            },
+            "1": {
+              "n": 111,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 116,
+            "match_frac": 0.5689655172413793
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 116,
+            "amb": 1,
+            "mis": 1,
+            "amb_1m": 0,
+            "tp": 70,
+            "sl": 46,
+            "timeout": 0,
+            "amb_frac": 0.008620689655172414,
+            "mislabel_frac": 0.008620689655172414
+          },
+          "2.0": {
+            "n": 116,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 55,
+            "sl": 61,
+            "timeout": 0,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "3.0": {
+            "n": 116,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 32,
+            "sl": 81,
+            "timeout": 3,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "eth_pullback_2h": {
+        "family": "pullback",
+        "symbol": "ETHUSDT",
+        "bar_minutes": 120,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 114,
+              "breaches": 0
+            },
+            "1": {
+              "n": 114,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 116,
+            "match_frac": 0.7327586206896551
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 116,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 50,
+            "sl": 54,
+            "timeout": 12,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "2.0": {
+            "n": 116,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 22,
+            "sl": 65,
+            "timeout": 29,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "3.0": {
+            "n": 116,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 19,
+            "sl": 65,
+            "timeout": 32,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "eth_pullback_prop_2h": {
+        "family": "pullback",
+        "symbol": "ETHUSDT",
+        "bar_minutes": 120,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 70,
+              "breaches": 0
+            },
+            "1": {
+              "n": 70,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 70,
+            "match_frac": 0.8571428571428571
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 70,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 32,
+            "sl": 35,
+            "timeout": 3,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "2.0": {
+            "n": 70,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 17,
+            "sl": 42,
+            "timeout": 11,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "3.0": {
+            "n": 70,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 15,
+            "sl": 42,
+            "timeout": 13,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "trend_donchian_eth_4h": {
+        "family": "trend_donchian",
+        "symbol": "ETHUSDT",
+        "bar_minutes": 240,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 113,
+              "breaches": 49
+            },
+            "1": {
+              "n": 113,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 116,
+            "match_frac": 0.646551724137931
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 116,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 64,
+            "sl": 51,
+            "timeout": 1,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "2.0": {
+            "n": 116,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 45,
+            "sl": 66,
+            "timeout": 5,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "3.0": {
+            "n": 116,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 31,
+            "sl": 69,
+            "timeout": 16,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "trend_donchian_xrp_4h": {
+        "family": "trend_donchian",
+        "symbol": "XRPUSDT",
+        "bar_minutes": 240,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 44,
+              "breaches": 27
+            },
+            "1": {
+              "n": 44,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 46,
+            "match_frac": 0.7608695652173914
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 46,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 25,
+            "sl": 21,
+            "timeout": 0,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "2.0": {
+            "n": 46,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 19,
+            "sl": 26,
+            "timeout": 1,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "3.0": {
+            "n": 46,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 10,
+            "sl": 31,
+            "timeout": 5,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "xrp_pullback_2h": {
+        "family": "pullback",
+        "symbol": "XRPUSDT",
+        "bar_minutes": 120,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 55,
+              "breaches": 0
+            },
+            "1": {
+              "n": 55,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 55,
+            "match_frac": 0.6909090909090909
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 55,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 26,
+            "sl": 24,
+            "timeout": 5,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "2.0": {
+            "n": 55,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 12,
+            "sl": 27,
+            "timeout": 16,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "3.0": {
+            "n": 55,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 8,
+            "sl": 29,
+            "timeout": 18,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "fvg_range_15m": {
+        "family": "fvg_range",
+        "symbol": "BTCUSDT",
+        "bar_minutes": 15,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 15,
+              "breaches": 0
+            },
+            "1": {
+              "n": 15,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 17,
+            "match_frac": 0.6470588235294118
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 17,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 5,
+            "sl": 12,
+            "timeout": 0,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "2.0": {
+            "n": 17,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 3,
+            "sl": 14,
+            "timeout": 0,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "3.0": {
+            "n": 17,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 3,
+            "sl": 14,
+            "timeout": 0,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "pullback_ada_1h": {
+        "family": "pullback",
+        "symbol": "ADAUSDT",
+        "bar_minutes": 60,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 371,
+              "breaches": 0
+            },
+            "1": {
+              "n": 371,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 375,
+            "match_frac": 0.7893333333333333
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 375,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 175,
+            "sl": 170,
+            "timeout": 30,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "2.0": {
+            "n": 375,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 90,
+            "sl": 199,
+            "timeout": 86,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "3.0": {
+            "n": 375,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 51,
+            "sl": 205,
+            "timeout": 119,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "pullback_doge_1h": {
+        "family": "pullback",
+        "symbol": "DOGEUSDT",
+        "bar_minutes": 60,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 383,
+              "breaches": 0
+            },
+            "1": {
+              "n": 383,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 384,
+            "match_frac": 0.8020833333333334
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 384,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 191,
+            "sl": 159,
+            "timeout": 34,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "2.0": {
+            "n": 384,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 102,
+            "sl": 192,
+            "timeout": 90,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "3.0": {
+            "n": 384,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 57,
+            "sl": 200,
+            "timeout": 127,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "pullback_link_1h": {
+        "family": "pullback",
+        "symbol": "LINKUSDT",
+        "bar_minutes": 60,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 398,
+              "breaches": 0
+            },
+            "1": {
+              "n": 398,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 400,
+            "match_frac": 0.805
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 400,
+            "amb": 1,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 191,
+            "sl": 181,
+            "timeout": 28,
+            "amb_frac": 0.0025,
+            "mislabel_frac": 0.0
+          },
+          "2.0": {
+            "n": 400,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 97,
+            "sl": 217,
+            "timeout": 86,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          },
+          "3.0": {
+            "n": 400,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 53,
+            "sl": 223,
+            "timeout": 124,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      },
+      "squeeze_doge_1h": {
+        "family": "squeeze",
+        "symbol": "DOGEUSDT",
+        "bar_minutes": 60,
+        "status": "measured",
+        "unreadable_rows": 0,
+        "control": {
+          "entry_offset_bars": 1,
+          "sl_breach_before_exit": {
+            "0": {
+              "n": 397,
+              "breaches": 15
+            },
+            "1": {
+              "n": 397,
+              "breaches": 0
+            }
+          },
+          "mfe_match_within_tol": {
+            "n": 400,
+            "match_frac": 0.9875
+          }
+        },
+        "per_k": {
+          "1.0": {
+            "n": 400,
+            "amb": 1,
+            "mis": 1,
+            "amb_1m": 0,
+            "tp": 209,
+            "sl": 171,
+            "timeout": 20,
+            "amb_frac": 0.0025,
+            "mislabel_frac": 0.0025
+          },
+          "2.0": {
+            "n": 400,
+            "amb": 1,
+            "mis": 1,
+            "amb_1m": 0,
+            "tp": 115,
+            "sl": 212,
+            "timeout": 73,
+            "amb_frac": 0.0025,
+            "mislabel_frac": 0.0025
+          },
+          "3.0": {
+            "n": 400,
+            "amb": 0,
+            "mis": 0,
+            "amb_1m": 0,
+            "tp": 77,
+            "sl": 225,
+            "timeout": 98,
+            "amb_frac": 0.0,
+            "mislabel_frac": 0.0
+          }
+        }
+      }
+    },
+    "skipped": {
+      "fade_breakout_4h": "symbol ? not a Binance USD-M perp",
+      "gdx_pullback_1d": "symbol GDX not a Binance USD-M perp",
+      "gld_pullback_1d": "symbol GLD not a Binance USD-M perp",
+      "gld_pullback_1h": "symbol GLD not a Binance USD-M perp",
+      "iwm_trend_long_1d": "symbol IWM not a Binance USD-M perp",
+      "mes_trend_long_1d": "symbol MES not a Binance USD-M perp",
+      "mgc_pullback_1d": "symbol MGC not a Binance USD-M perp",
+      "mgc_trend_1h": "symbol MGC not a Binance USD-M perp",
+      "mhg_pullback_1d": "symbol MHG not a Binance USD-M perp",
+      "qld_trend_long_1d": "symbol QLD not a Binance USD-M perp",
+      "qqq_pullback_1h": "symbol QQQ not a Binance USD-M perp",
+      "qqq_trend_long_1d": "symbol QQQ not a Binance USD-M perp",
+      "scha_trend_long_1d": "symbol SCHA not a Binance USD-M perp",
+      "slv_trend_1h": "symbol SLV not a Binance USD-M perp",
+      "spy_pullback_1h": "symbol SPY not a Binance USD-M perp",
+      "spy_trend_long_1d": "symbol SPY not a Binance USD-M perp",
+      "tlt_pullback_1d": "symbol TLT not a Binance USD-M perp",
+      "tlt_pullback_1h": "symbol TLT not a Binance USD-M perp",
+      "tqqq_trend_long_1d": "symbol TQQQ not a Binance USD-M perp",
+      "trend_donchian_eth": "no bar size in leg name",
+      "trend_donchian_sol": "no bar size in leg name",
+      "uso_trend_1h": "symbol USO not a Binance USD-M perp",
+      "iaum_pullback_1d": "symbol IAUM not a Binance USD-M perp",
+      "ief_pullback_1d": "symbol IEF not a Binance USD-M perp",
+      "slv_pullback_1d": "symbol SLV not a Binance USD-M perp",
+      "trend_donchian": "no bar size in leg name",
+      "trend_donchian_eth_prop": "no bar size in leg name",
+      "trend_donchian_sol_prop": "no bar size in leg name",
+      "fade_slv_1h": "symbol ? not a Binance USD-M perp"
+    },
+    "missing_months": {}
+  },
+  "note": "Fixed bracket (initial SL at -1R, TP at +K R) re-walked on Binance Vision 1m klines; MISLABEL = the bar touched both levels and 1m says TP came first, i.e. the SL-first convention mislabelled it. Label-fidelity measurement for the 1m archive decision, NOT an edge or promotion case."
+}
