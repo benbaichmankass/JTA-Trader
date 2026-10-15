@@ -304,7 +304,16 @@ jobs:
             # tests/test_pytest_run_scope.py); a path not named there runs the full
             # suite, so the failure direction is "more tests", never "fewer".
             # The `guards` job is untouched and still runs everything it ran before.
-            printf '%s\n' "$FILES" | python3 scripts/ci/pytest_run_scope.py | tee -a "$GITHUB_OUTPUT"
+            # AFFECTED MODE (GH-CAPACITY-PR-CI-FANOUT, operator 2026-10-15: "Yes, affected tests
+            # on PRs"). On pull_request ONLY, a code diff runs the test files the import graph says
+            # can observe it (importers, path readers, fixture users, tree scanners), falling back
+            # to the full suite on conftest / requirements / .github / scripts/ci / guard scripts /
+            # config-named or high-fan-in modules / anything undecidable. Push to main keeps the
+            # full suite (per-sha, never cancelled) and pages via claude-run-failure-alert if red.
+            # Pinned by tests/test_pytest_run_affected.py.
+            printf '%s\n' "$FILES" \
+              | python3 scripts/ci/pytest_run_scope.py --event "${{ github.event_name }}" --tests-out /tmp/affected-tests.txt \
+              | tee -a "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"
             echo "mode=none" >> "$GITHUB_OUTPUT"
@@ -355,8 +364,18 @@ jobs:
             --ignore=tests/test_main_loop.py \
             --junitxml=pytest-report.xml
 
+      - name: Run tests (pull_request code diff - import-graph affected test files)
+        if: steps.changed.outputs.relevant == 'true' && steps.changed.outputs.mode == 'affected'
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          echo "selected $(wc -l < /tmp/affected-tests.txt) test files"
+          pytest -q -n auto --dist loadfile $(cat /tmp/affected-tests.txt) \
+            --ignore=tests/test_main_loop.py \
+            --junitxml=pytest-report.xml
+
       - name: Run tests
-        if: steps.changed.outputs.relevant == 'true' && steps.changed.outputs.mode != 'data'
+        if: steps.changed.outputs.relevant == 'true' && steps.changed.outputs.mode != 'data' && steps.changed.outputs.mode != 'affected'
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
