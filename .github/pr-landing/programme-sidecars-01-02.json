@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "depends_on_unmerged_pr",
+  "hold_text": "Must land after #18193 (the programme source in queue_replenish.py, which reads research/programmes/*.yaml and makes research/programmes/** landing machinery). These two files are new hand-registered question nodes (RESEARCH-LOOP-AUDIT RC2/RC3) for programmes 01 and 02; the manager reviews and merges them (manager decision 2026-10-15 06:25Z: node sidecars land as HOLD PRs for manager merge).",
+  "why": "Tier-1 research planning content: research/programmes/01-active-trade-management.yaml and 02-ai-trader.yaml. All nodes are needs_authoring (no unit: bodies), so merging them emits no unit; they populate the authoring queue. No config/, src/, workflow or live path."
+}
