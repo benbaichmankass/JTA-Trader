@@ -86,6 +86,8 @@ def test_the_allowlist_is_explicit_and_pinned():
         r"^docs/claude/work/pipeline/",
         r"^docs/claude/work/PIPELINE\.jsonl$",
         r"^research/queue/[^/]+\.ya?ml$",
+        # GH-CAPACITY-PR-CI-FANOUT: parked units; their readers name research/queue
+        r"^research/queue/blocked/[^/]+\.ya?ml$",
         r"^research/results/",
         r"^comms/(?!schema/)",
         r"^\.github/pr-landing/",
