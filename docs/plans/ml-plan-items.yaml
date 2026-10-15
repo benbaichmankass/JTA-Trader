@@ -96,7 +96,7 @@ plumbing:
   max_silent_hours: 6          # a logging head with no row for this long is SILENT
   max_disk_used_pct: 85
   # PENDING PR #17580 + trainer promote-stage run: 4 shadow->candidate flips => expect {advisory: 3, shadow: 21, candidate: 71, research_only: 1}; update this line in the run that OBSERVES it.
-  expected_registry_stages: {advisory: 3, shadow: 25, candidate: 67, research_only: 1}   # MEASURED 2026-10-11 (api/bot/ml/status); a change must be explained by a recorded decision
+  expected_registry_stages: {advisory: 3, shadow: 21, candidate: 71, research_only: 1}   # MEASURED 2026-10-15 (api/bot/ml/status, post ML-STAGE-FLIPS: 4 shadow->candidate at 2026-10-11T21:28Z, trace on ML-STAGE-TRACE); a change must be explained by a recorded decision
   expected_refusing:          # manifests the trainer's dataset audit REFUSES (enforced) -- MEASURED 2026-10-11 api/bot/ml/status refusing_manifests_24h
     ml/configs/baseline-prop-mission-policy.yaml: ML-STAGE-DECISIONS
     ml/configs/btc-regime-15m-lgbm-base-vt003-pcv-v1.yaml: ML-HYGIENE
