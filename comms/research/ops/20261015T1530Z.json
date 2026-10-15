@@ -1,0 +1,80 @@
+{
+  "run": "RESEARCH-OPS-20261015-1447",
+  "finished_at": "2026-10-15T15:30:00Z",
+  "by": "research-ops-lane-20261015-1447",
+  "baseline": "comms/research/ops/20261015T0915Z.json",
+  "floor": 46,
+  "floor_basis": "computed_floor(fired_24h 57) = max(25, ceil(57 x 19 / 24))",
+  "authoring_queue_depth": 6,
+  "idle_backends": ["github_runner_data", "kaggle", "kaggle_cpu"],
+  "needs_review_triaged": 8,
+  "needs_review_left": 27,
+  "throughput": {
+    "runnable_before": 22, "runnable_after": 23, "queued": 126, "units": 720, "fired_24h": 57, "fired_7d": 327,
+    "results_landed_24h": 66, "result_files_unreadable": 0, "hours_since_last_dispatch": 0.8, "idle_alarm": false,
+    "as_of": "2026-10-15T14:49Z",
+    "note": "runnable_after is the dispatch dry run on this branch (+1 = RQ-20261015-ab54-01 would_dispatch on kaggle_cpu). The computed floor 46 is NOT met (22-23); refill capacity (templates + programme nodes) is 0 for a deficit of 24, as at 0847."
+  },
+  "mechanism": {
+    "dispatch_receipt": "ok: check_research_queue_dispatch_liveness fresh (3.6h)",
+    "collector": "ok: result_files_unreadable 0; 12 verdict.json files landed since the 09:10Z baseline (batch-lands #18292, #18328, #18357)",
+    "stranded_stamp_prs": "not listed this pass (GitHub list call not made); last_dispatched_at on main is 14:01Z, 0.8h old",
+    "watchdog": "tail only: newest row is the 2026-10-13T19:16Z backend:trainer self_healed row; no escalated row seen",
+    "incident": "none"
+  },
+  "results_read": {
+    "pass": 9, "fail": 3, "indeterminate": 0, "other": 0,
+    "population": "12 verdict.json landed since 09:10Z, all read_state measured. 1bf3-02 is still status queued (grader had not closed it); 75b2-20 is also queued ungraded: neither is hand-closed.",
+    "units": [
+      {"unit": "RQ-20261015-1bf3-03", "verdict": "pass", "detail": "trend_donchian_eth_4h at the prop stack, 1095d: net 31.0R n116, 4/4 folds; control reproduced the committed record. Input only."},
+      {"unit": "RQ-20261015-1bf3-04", "verdict": "pass", "detail": "trend_donchian_sol_4h prop stack: net 43.3R n116, 3/4 folds, control ok. Input only."},
+      {"unit": "RQ-20261015-1bf3-05", "verdict": "pass", "detail": "trend_donchian_eth_prop (incumbent) prop stack: net 33.4R n517, 3/4 folds."},
+      {"unit": "RQ-20261015-1bf3-06", "verdict": "pass", "detail": "trend_donchian_sol_prop (incumbent) prop stack: net 18.7R n203, 3/4 folds."},
+      {"unit": "RQ-20261015-1bf3-02", "verdict": "fail", "detail": "head-to-head at the approved risk 0.005: FLAT_HOLDS, incumbent undominated on seeds 1 and 5 -> incumbent stands, 4h pair stays pool-only. No Tier-3 proposal. Note on P5-PROP-PROGRAMME."},
+      {"unit": "RQ-20261007-009", "verdict": "pass", "detail": "pairs prop fit, 4 legs pass_all_seeds, BUT it prices the inflated-R pairs ledgers (PAIRS-R-SCALE): not evidence. No follow-up drawn. Note on PAIRS-R-SCALE."},
+      {"unit": "RQ-20261014-4591-01", "verdict": "pass", "detail": "1h BTC/ETH regime heads: lgbm and logit beat the class prior on log-loss (n 48000). First manifest-bearing kaggle_cpu result."},
+      {"unit": "RQ-20261014-4591-06", "verdict": "pass", "detail": "same at n 14400; dispatched by the dispatcher onto kaggle_cpu (utilization 38738123591). KAGGLE-CPU-ROUTE observation met, note on that row; the manager decides done."},
+      {"unit": "RQ-20261014-736c-01", "verdict": "pass", "detail": "corpus buildable (6 live legs, 1831 rows); S1 stratum 211 rows below the 252 eval floor, so downstream 900 grades it INDETERMINATE by design. Informational."},
+      {"unit": "RQ-20261015-8b93-01", "verdict": "pass", "detail": "trainer reference run (macro_f1 0.584, n_eval 8694) usable as the parity reference. Informational."},
+      {"unit": "RQ-20261012-75b2-20", "verdict": "fail", "detail": "hgb vs lgbm macro_f1 on ETH 15m: no candidate reaches the floor on any clause. honest_negative; closes hgb at these settings. Not on the ML plan (no ref), no family history entry."},
+      {"unit": "RQ-20261014-d6e7-02", "verdict": "fail", "detail": "in-trade state adds nothing (CI upper 0.00021 < 0.002 nats; 27 USDT legs; 22 non-crypto legs skipped). Closed per the rule, said on IN-TRADE-EXIT-MODEL; d6e7-03 retired."}
+    ]
+  },
+  "needs_review_triage": [
+    {"unit": "RQ-20260928-030", "disposition": "hand-read, stays recurring: ada_pullback_2h n35 < 39 -> indeterminate (net -3.46R)"},
+    {"unit": "RQ-20260928-031", "disposition": "hand-read, stays recurring: eth_pullback_2h n38 < 39 -> indeterminate (net -7.19R)"},
+    {"unit": "RQ-20260929-016", "disposition": "hand-read, stays recurring: gdx_pullback_1d FAIL n41 net -2.14R, third consecutive weekly fail on near-identical 10y windows (one measurement); paper-only leg, no live or mirror book"},
+    {"unit": "RQ-20260929-017", "disposition": "hand-read, stays recurring: gld_pullback_1d PASS n46 +16.67R"},
+    {"unit": "RQ-20260929-018", "disposition": "hand-read, stays recurring: gld_pullback_1h PASS n63 +22.41R (last row 2026-10-08)"},
+    {"unit": "RQ-20260929-004", "disposition": "no action, because the grader's own reading stands: base_oos_trades 5 < 39 -> unresolvable_at_current_n; quarterly re-ask (#18191)"},
+    {"unit": "RQ-20260929-009", "disposition": "no action yet: one measured row with no gradeable cell for ict_scalp_mgc_15m; needs a re-run with cells, left to the monthly cadence"},
+    {"unit": "RQ-20260927-003", "disposition": "no action, because already tracked: run.workflow is prose (trainer-vm-diag), both sessions failed producer-side, tracked in PI-20260927-* items; the unit cannot be fired by the dispatcher"}
+  ],
+  "unlocked": [],
+  "retired": [
+    {"unit": "RQ-20261014-d6e7-03", "reason": "requires_result d6e7-02 pass, which landed FAIL; prerequisite can never be met"}
+  ],
+  "levers_filed": [
+    {"lever": "template roster-walkforward rule shape not evaluated by harness_dispatch_result.parse_rule (5 weekly units land wiring_only)", "ref": "PI-20261006-1VPYTX8E-0001 (already filed, routed, due 2026-10-29; not re-filed)"}
+  ],
+  "units_authored": ["RQ-20261015-ab54-01"],
+  "followups_filed": [
+    {"what": "extend-n re-ask of 9d20-05 (ExtraTrees/MLP vs LightGBM, 1h) on full history, routed to idle kaggle_cpu", "ref": "RQ-20261015-ab54-01"},
+    {"what": "1bf3 chain disposition", "ref": "P5-PROP-PROGRAMME note"},
+    {"what": "weekly roster re-test readings", "ref": "P3-STRATEGY-PROGRAMME note"}
+  ],
+  "not_run": [
+    "GitHub list of open automation/research-queue-* PRs and of workflow runs (not called; liveness receipt and last_dispatched_at used instead)",
+    "needs_review triage beyond the 8 oldest (27 left)",
+    "research_disposition --record (ledger covers e35/m20/gld_compat corpora; none of these units)",
+    "blocked/ audit one by one (68 files; blocker_watch not re-run this pass)",
+    "tests/test_research_queue.py (pytest is not installed in this sandbox); the decision-rule guard was run"
+  ],
+  "handoff": [
+    "Read RQ-20261015-ab54-01 when it lands on kaggle_cpu. A second INDETERMINATE closes ExtraTrees/MLP as unresolved at these settings.",
+    "Authoring queue still holds 5 ready nodes: P2-Q3.1-fail (link to P1-Q8 / d6e7-04), P1-Q2-alpaca-1d-pooled (pooled finite-target unit, needs a pooled power block), P2-Q2.1-fail (cheapest step not needing METALABEL-EMIT-FEATURES), P2-Q2.5-pooling-parity (needs an instrument), P2-Q1.5-conformal (9da8-03 is blocked on FRONTIER-LEVER-CONFORMAL, nothing to unlock).",
+    "Computed floor 46 vs runnable ~23: refill capacity is 0, so closing the gap is authoring work for a topic lane or a manager decision on template capacity.",
+    "If gdx_pullback_1d keeps failing on a window that has actually moved, route it to the Stage-1 review; it is paper-only today.",
+    "Read RQ-20261015-1bf3-02 and 75b2-20 once the grader closes them; d6e7-04 is the live in-trade question after the d6e7-02 FAIL."
+  ]
+}
