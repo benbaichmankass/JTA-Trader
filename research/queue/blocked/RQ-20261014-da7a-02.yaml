@@ -1,0 +1,69 @@
+id: RQ-20261014-da7a-02
+title: >-
+  Programme 06 Q3 (L-DATA): is Binance USD-M 1m an adequate proxy for Bybit linear 1m for first-passage labels on our trades?
+  BLOCKED on DATA-KLINE-ARCHIVE
+status: blocked
+cadence: once
+kind: experiment
+theme: infra
+priority: 2
+roadmap: L-DATA
+question: >-
+  For the same committed-ledger trades and fixed brackets as RQ-20261014-da7a-01, do first-passage labels (tp / sl / timeout,
+  ties resolved on 1m) computed on Binance USD-M perp 1m agree with the labels computed on Bybit linear-perp 1m (the venue our
+  crypto legs trade), per family?
+why_this_matters: >-
+  The free archive (Binance Vision) is the cheap, whole source; our fills are on Bybit. If labels agree, every L-DATA label can be
+  built from the archive; if not, Bybit 1m (paged V5 REST, the fetch behind the round-count shard cuts) must be the label source
+  and Binance stays an information source only.
+power:
+  expected_n: 3356
+  min_detectable_effect: 0.02
+  effect_units: proportion
+  sd: 0.14
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: sd = 0.14 is INFERRED, not measured (Bernoulli sqrt(p(1-p)) at p = 0.02, the disagreement share at the 0.98 PASS bar). Paired label agreement per trade; same population as da7a-01 (~3,356 trades, smallest eligible family ~370).
+  feasibility:
+    source: none
+    accrual_basis: Re-walk over two archives; nothing accrues. Blocked on the Bybit 1m half of DATA-KLINE-ARCHIVE.
+decision_rule:
+  id: RULE-RQ20261014-DA7A-02-VENUE-LABEL-AGREEMENT
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: Per family and K in {1,2,3}, share of trades whose label (tp / sl / timeout) is identical on the two 1m sources.
+  rule: >-
+    PASS if agreement >= 0.98 on every eligible family (>= 100 trades) at every K -> Binance archive is the label source; FAIL if
+    < 0.95 on any eligible family at any K -> Bybit 1m is the label source for that family; MIXED otherwise (named families).
+    INDETERMINATE if either archive is missing months for the population (listed).
+  what_it_does_not_do: Says nothing about edge or cost; changes no config.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 150
+  basis: two 1m archives read from the private Kaggle dataset or the trainer copy once DATA-KLINE-ARCHIVE lands.
+compute: cpu_long
+value:
+  bucket: information
+  usd_at_stake_per_month: 80
+  confidence: 0.4
+  basis: 'stand-in: picks the label source for every L-DATA label. No balances stated.'
+blocked_on:
+- what: No persisted 1m archive exists for either venue (finest refreshed grain is 5m, MEASURED trainer diag #18108).
+  ref: docs/claude/work/checklist/DATA-KLINE-ARCHIVE.json
+  clears_when: >-
+    DATA-KLINE-ARCHIVE's manifests are whole for Binance UM 1m AND a Bybit linear 1m copy for the 6 crypto roster symbols; then
+    extend scripts/research/intrabar_label_fidelity.py with a --source pair mode, git mv to research/queue/, status queued, set run.
+run:
+  workflow: null
+  note: Null until the blocker clears (blocked_on).
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- docs/research/programmes/06-DATA-INFRA.md
+- research/queue/RQ-20261014-da7a-01.yaml
+- docs/claude/work/checklist/DATA-KLINE-ARCHIVE.json

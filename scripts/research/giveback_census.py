@@ -315,6 +315,18 @@ def main(argv: Optional[List[str]] = None) -> int:
             rows_landed=len(m.get("strategies", [])), note=note or "deterministic census; the rule reads pooled_by_class")
         p = research_result.write([rec], research_unit=a.unit, run_id=rec["produced_by"]["run_id"], root=Path(a.out))
         print(f"wrote {p}")
+        # script_run.py's contract (docs there, "WHAT LANDS"): the landed record is derived from
+        # <out_dir>/verdict.json. A green script that writes none lands as producer_failed ("outputs landed,
+        # NOTHING GRADED") -- run 38630247072 did exactly that, exit 0 in 0.6 s, with this census correct.
+        verdict = {
+            "verdict": rec["verdict"], "read_state": read_state, "population": desc,
+            "n": m.get("n_graded") if read_state == "measured" else None,
+            "measurement": m,
+            "note": note or "deterministic census; the rule reads pooled_by_class",
+        }
+        vp = Path(a.out) / "verdict.json"
+        vp.write_text(json.dumps(verdict, indent=1, default=str) + "\n", encoding="utf-8")
+        print(f"wrote {vp}")
     return 0
 
 

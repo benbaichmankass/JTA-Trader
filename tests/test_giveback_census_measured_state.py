@@ -53,3 +53,32 @@ def test_no_data_with_out_writes_a_record_instead_of_crashing(tmp_path):
                        capture_output=True, text=True, check=False)
     assert r.returncode == 0, r.stderr[-400:]
     assert "no_data" in r.stdout
+
+
+def test_out_dir_gets_a_verdict_json_the_runner_can_derive_from(tmp_path):
+    """script_run.derive_record lands a run as producer_failed unless <out>/verdict.json exists and is well-formed."""
+    import json
+
+    import script_run as sr  # noqa: E402
+
+    db = tmp_path / "j.db"
+    con = sqlite3.connect(db)
+    con.execute("create table position_telemetry(order_package_id text, peak_r real, peak_state text, "
+                "open_r real, risk_per_unit real, terminal_state text, peak_provenance text, "
+                "strategy text, account_id text)")
+    con.execute("create table trades(order_package_id text, status text, timestamp text, closed_at text, "
+                "pnl real, position_size real, account_class text, strategy_name text, exit_price real, "
+                "exit_reason text)")
+    con.execute("insert into position_telemetry values('a',2.0,'measured',0.5,1,'final','measured','s1','x')")
+    con.execute("insert into trades values('a','closed','2026-10-01T00:00:00Z','2026-10-02T00:00:00Z',"
+                "1.0,1.0,'real_money','s1',1.0,'tp')")
+    con.commit()
+    con.close()
+    out = tmp_path / "o"
+    r = subprocess.run([sys.executable, str(REPO / "scripts/research/giveback_census.py"), "--db", str(db),
+                        "--unit", "RQ-20261014-9807-01", "--out", str(out), "--min-n", "1"],
+                       capture_output=True, text=True, check=False)
+    assert r.returncode == 0, r.stderr[-400:]
+    v = json.loads((out / "verdict.json").read_text())
+    assert v["read_state"] == "measured" and v["n"] == 1 and v["verdict"] == "pass" and v["population"]
+    assert v["verdict"] in sr.VERDICTS and v["read_state"] in sr.READ_STATES

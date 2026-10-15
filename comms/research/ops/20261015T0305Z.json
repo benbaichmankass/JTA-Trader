@@ -1,0 +1,66 @@
+{
+  "run": "RESEARCH-OPS-20261015-0247",
+  "finished_at": "2026-10-15T03:05:00Z",
+  "by": "research-ops-lane-20261015-0247",
+  "baseline": "comms/research/ops/20261014T2110Z.json",
+  "floor": 25,
+  "throughput": {
+    "runnable_before": 20,
+    "runnable_after": 22,
+    "queued": 246,
+    "units": 700,
+    "fired_24h": 75,
+    "fired_7d": 326,
+    "results_landed_24h": 82,
+    "result_files_unreadable": 0,
+    "hours_since_last_dispatch": 1.7,
+    "idle_alarm": false,
+    "as_of": "2026-10-15T02:53Z",
+    "note": "MEASURED on origin/main 39ce56cb: runnable 20 (check_research_queue_health H1 red, templates hold 0 points for a deficit of 5). After the 2 units authored here the throughput script read 22 on this branch; floor NOT met (short 3). Intake exhausted for this pass: templates have no capacity, macro survey-surprise family saturated by de02/77dc/4a4c, programme 05 follow-ups authored, remaining blocked units wait on named levers."
+  },
+  "mechanism": {
+    "dispatch_receipt": "ok: check_research_queue_dispatch_liveness fresh (1.73h)",
+    "collector": "ok: result_files_unreadable 0; verdict.json files committed since 21:10Z",
+    "stranded_stamp_prs": "not listed this pass (GitHub PR list not queried)",
+    "watchdog": "tail only: newest row is the 2026-10-13T19:16Z backend:trainer self_healed row; no escalated row seen",
+    "incident": "none"
+  },
+  "results_read": {
+    "pass": 3,
+    "fail": 5,
+    "indeterminate": 0,
+    "mixed": 1,
+    "producer_failed": 0,
+    "population": "9 results read (470a-07, 470a-10, da7a-01, f516-05..10; f516-04 was read last pass), all read_state measured",
+    "units": [
+      {"unit": "RQ-20261014-470a-07", "verdict": "fail", "detail": "trend_donchian_xrp_4h n=46 (>=39 floor): no vol-skip arm reached dR>=2.0R with dDD<=0 and 3/4 folds (VH80 dR +0.24, dDD -1.19). Rule: axis recorded honest_negative for this leg/window. Auto-grader already re-queued one confirmatory run; no action beyond that."},
+      {"unit": "RQ-20261014-470a-10", "verdict": "fail", "detail": "trend_donchian_sol_4h n=83: VH95 dR -3.50, fold_wins 1. Same disposition: honest_negative, confirmatory run already re-queued by the grader."},
+      {"unit": "RQ-20261014-da7a-01", "verdict": "MIXED", "detail": "intrabar tie fidelity: every eligible family below the 0.02 NEEDED bar (max ict_scalp K=1 mislabel_frac 0.0054, others <=0.0027); only ict_scalp at K=1 is >=0.005, which makes the verdict MIXED. No family is at or above 0.02, so no label prerequisite is named. Information only; no follow-up unit."},
+      {"unit": "RQ-20261014-f516-05", "verdict": "pass", "detail": "velotrade_1 sizing CUSHION_FIT_WINS, best arm C075 (0.0075) vs A (0.01). Tier-3 proposal with caveats written as a note on P5-PROP-PROGRAMME for the manager; no config edit."},
+      {"unit": "RQ-20261014-f516-06", "verdict": "fail", "detail": "tradeify_1 sizing FLAT_HOLDS: configured sizing stands, closes for this book until the roster changes."},
+      {"unit": "RQ-20261014-f516-07", "verdict": "fail", "detail": "velotrade_1 dd-switch FLAT_HOLDS: 0.8 buffer confirmed. Baseline dd_switch_blocked 138/4000 lives = 0.035 < 0.5, so Q4 closes for tradeify_1 and breakout_2."},
+      {"unit": "RQ-20261014-f516-08", "verdict": "fail", "detail": "velotrade_1 breadth FLAT_HOLDS: incumbent stands, no XRP add."},
+      {"unit": "RQ-20261014-f516-09", "verdict": "pass", "detail": "tradeify_1: 4h ETH+SOL pair ev>0 on all seeds, every arm (n=116): ADMITTED to candidate pool only. Next rung authored as RQ-20261015-6504-02."},
+      {"unit": "RQ-20261014-f516-10", "verdict": "pass", "detail": "velotrade_1: same, admitted to pool only. Next rung authored as RQ-20261015-6504-01."}
+    ]
+  },
+  "unlocked": [],
+  "retired": [],
+  "blocked_audit": {
+    "population": "10 units in research/queue/blocked/ dated 20261014 (470a-12, 4a4c-09, 9807-02/-04/-05, 9d20-04, d6e7-06, da7a-02/-03, f516-11) plus 6 NOT_RUNNING from blocker_watch",
+    "finding": "every blocked unit names a lever row that exists and is queued (PAIRS-R-SCALE, METALABEL-EMIT-FEATURES, EXIT-PATH-EMIT-OFFLINE, DATA-KLINE-ARCHIVE, DATA-DERIV-ARCHIVE, PROP-EXIT-READ) or a prerequisite unit (9807-01 re-armed, 4a4c-01/-02/-03/-06 queued, not yet dispatched). Nothing unlockable this pass. blocker_watch NEEDS_LANE on 77dc-02 and d6e7-02..05 is a false reading: run.workflow is empty by design on compute-class units and dispatch_queue dry run lists 77dc-02 would_dispatch; d6e7-02..05 wait on requires_result. RQ-20260928-001 is the known session-local unit tracked by HTF-FILTER-AB-LANE."
+  },
+  "levers_filed": [],
+  "units_authored": ["RQ-20261015-6504-01", "RQ-20261015-6504-02"],
+  "followups_filed": [
+    {"what": "Tier-3 sizing proposal (velotrade_1 C075 vs C050 vs configured) for the manager", "ref": "P5-PROP-PROGRAMME note"},
+    {"what": "pool admission recorded", "ref": "PROP-BOOK-SEARCH-1095D note"}
+  ],
+  "not_run": ["GitHub PR list for stranded automation/research-queue-* PRs", "research_disposition --record (its ledger covers e35/m20/gld_compat corpora, none of the units read here)"],
+  "handoff": [
+    "Runnable 22, floor 25: short 3. Next pass: re-read throughput after dispatch drains the 17 would_dispatch units; if still short, template capacity (0) is the binding constraint, a manager/topic-lane decision.",
+    "Grade RQ-20261015-6504-01/-02 when they land (cushion_vs_flat).",
+    "Manager decision pending on the f516-05 sizing proposal (see P5-PROP-PROGRAMME note).",
+    "470a-07/-10 confirmatory re-runs: read when they land."
+  ]
+}
