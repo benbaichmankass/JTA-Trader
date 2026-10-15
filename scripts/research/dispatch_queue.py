@@ -413,10 +413,25 @@ def _is_due(entry: Dict[str, Any], now: datetime) -> tuple:
         return False, (f"research/results/{uid}/ holds {result_rows} row(s) with no readable "
                        "generated_at and there is no stamp — refusing to treat an undated "
                        "result as elapsed")
-    gap = timedelta(days=_CADENCE_DAYS.get(cadence, 1))
+    gap = timedelta(days=max(_CADENCE_DAYS.get(cadence, 1), recheck_after_days(entry)))
     if now - when >= gap:
         return True, f"last ran {when.isoformat()} ({basis}), cadence {cadence} elapsed"
     return False, f"last ran {when.isoformat()} ({basis}), cadence {cadence} not yet elapsed"
+
+
+def recheck_after_days(entry: Dict[str, Any]) -> int:
+    """A re-ask stretch the GRADER wrote into its own grading block (queue_grade RC5: a
+    recurring unit whose power cannot reach its floor at its cadence). Honoured only when
+    the block is the grader's (`auto: true` + `grader` names queue_grade.py), so a hand edit
+    of `grading:` cannot silently park a unit; clamped to [0, 366] days. It can only
+    LENGTHEN the gap -- `due()` takes max(cadence, this)."""
+    g = entry.get("grading")
+    if not (isinstance(g, dict) and g.get("auto") is True and str(g.get("grader") or "").endswith("queue_grade.py")):
+        return 0
+    try:
+        return max(0, min(366, int(g.get("recheck_after_days") or 0)))
+    except (TypeError, ValueError):
+        return 0
 
 
 def _waiting_since(entry: Dict[str, Any], uid: str) -> Optional[datetime]:
