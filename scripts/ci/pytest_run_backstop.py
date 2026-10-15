@@ -12,15 +12,19 @@ runs do not reliably carry it:
     OUTSIDE the next push run's range, and a data-only chore push on top of it
     runs only the data subset.
 
-So `pytest-run` also fires on a schedule (every 30 min), and this script
+So `pytest-run` also fires on a schedule (every 30 min) -- and, because GitHub
+did not fire that cron at all in its first 5 slots (2026-10-15), schedule-keeper
+also dispatches it on main (workflow_dispatch, backstop=true) -- and this script
 decides, for main's HEAD, whether that tick must run the full suite:
 
   covered   -- a COMPLETED run on main (any event) executed the full "Run tests"
                step on sha S, S is an ancestor of HEAD, and every commit in
                S..HEAD is invisible to the suite or data-only (same classifier
                as the workflow).  Skip: HEAD's code is already graded.
-  in_flight -- a schedule/dispatch run on HEAD (always full) is queued or running,
-               or a run on HEAD has its full "Run tests" step already started.
+  in_flight -- a run on HEAD has its full "Run tests" step already started.
+               (A queued/early run is NOT trusted, whatever its event: since the keeper
+               dispatches backstop ticks too, a schedule/dispatch run may itself be a
+               no-op, and two ticks that each trusted the other would both skip.)
                Skip: it will finish and page on red.
   run       -- anything else, including "could not look" (API error, no full run
                in the window, S not an ancestor).  The failure direction is
@@ -96,8 +100,6 @@ def decide(
     for r in runs:
         if r.get("head_sha") != head or r.get("status") == "completed":
             continue
-        if r.get("event") in ("schedule", "workflow_dispatch"):
-            return False, f"in_flight: {r.get('event')} run {r.get('id')} on HEAD runs the full suite"
         step = full_step(jobs_of(r["id"]))
         if step and step.get("status") in ("in_progress", "completed") and step.get("conclusion") != "skipped":
             return False, f"in_flight: run {r.get('id')} on HEAD is executing the full suite"

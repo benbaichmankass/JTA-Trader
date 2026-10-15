@@ -59,7 +59,8 @@ KEEPER_ACTOR = "github-actions[bot]"
 #: The validators whose SLOT matters. stale_hours = "no completed run for this
 #: long means it has stopped" (daily: one missed day + 2h; weekly: 7d + 2h).
 #: Adding a target = add it here AND add the `dedupe` job to its workflow
-#: (tests/test_schedule_keeper.py enforces both halves).
+#: (tests/test_schedule_keeper.py enforces both halves) -- unless the target's own
+#: run is idempotent per slot, declared as `self_dedupes: "<why>"`.
 TARGETS: dict[str, dict] = {
     "r4-demotion-gate.yml": {"stale_hours": 26},
     # PATHB-MANDATE (2026-09-30): the runner for the granted MD-SOAK-EXIT-CELL-PATHB.
@@ -102,6 +103,15 @@ TARGETS: dict[str, dict] = {
     # slot on either is exactly the silence this keeper exists to cover.
     "research-queue-replenish.yml": {"stale_hours": 26},
     "research-queue-grade.yml": {"stale_hours": 26},
+    # GH-CAPACITY-PR-CI-FANOUT (manager 2026-10-15T13:06Z): pytest-run's post-merge backstop.
+    # MEASURED: its `13,43 * * * *` cron created 0 runs in its first 5 slots (10:43-12:43Z) while
+    # every other scheduled workflow fired. A 30-min cron's slot never ages past GRACE_MIN, so the
+    # keeper dispatches it only through starved_min: no schedule/dispatch run for 30 min -> dispatch.
+    # It needs no `dedupe` job: each tick is itself a no-op unless main's HEAD code lacks a completed
+    # full-suite run (scripts/ci/pytest_run_backstop.py), and cron + keeper share one serialised
+    # concurrency group. stale_hours 2 = four missed ticks before the keeper pages.
+    "pytest-run.yml": {"stale_hours": 2, "starved_min": 30,
+                       "self_dedupes": "scripts/ci/pytest_run_backstop.py no-ops a tick whose HEAD is already graded"},
 }
 
 #: A slot younger than this is left to GitHub's own scheduler.
