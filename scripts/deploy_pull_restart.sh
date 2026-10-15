@@ -464,7 +464,7 @@ else
     else
         TRADER_DECISION="$(printf '%s\n' "${TRADER_CHANGED}" \
             | /usr/bin/python3 "${REPO_DIR}/scripts/ops/trader_import_closure.py" decide --root "${REPO_DIR}" 2>&1 || true)"
-        TRADER_VERDICT="$(printf '%s\n' "${TRADER_DECISION}" | head -n 1)"
+        TRADER_VERDICT="${TRADER_DECISION%%$'\n'*}"  # line 1, no pipe (pipefail-safe)
         TRADER_REASONS="$(printf '%s\n' "${TRADER_DECISION}" | sed -n '2,6p' | tr '\n' ';' | sed 's/;$//')"
         if [ "${TRADER_VERDICT}" = "SKIP" ]; then
             TRADER_RESTART=0
