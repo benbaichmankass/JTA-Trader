@@ -3,7 +3,6 @@ telegram_settings visibility finding (item 6). One test per item."""
 from __future__ import annotations
 
 import importlib.util
-import json
 from datetime import datetime, timezone
 from pathlib import Path
 

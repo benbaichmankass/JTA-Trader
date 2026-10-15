@@ -1277,7 +1277,7 @@ def _notification_settings_section():
 
     try:
         d = ts.load()
-    except Exception as exc:  # noqa: BLE001 — stated, not hidden
+    except Exception as exc:  # noqa: BLE001  # allow-silent: said in the section itself ("could not look"), never rendered as nothing
         return Section(summary="Notification settings — could not look",
                        body=f"telegram_settings unreadable ({type(exc).__name__})", priority=40)
     lines: List[str] = []
