@@ -100,11 +100,18 @@ REPO = Path(__file__).resolve().parents[2]
 CONTRACTS = REPO / "docs/claude/work/SOAKS.json"
 STAGE1_ACCOUNTS = ("bybit_1", "alpaca_paper")
 MAX_N_NEEDED = 2        # operator, 2026-10-15: "nothing needs to soak for more than one or two trades"
-N_DEFAULT = 2
+#: One clean trade passes (manager 2026-10-15, on the operator's "1-2 trades":
+#: SOL passed on its one clean tradeify_1 trade). A contract may ask for 2.
+N_DEFAULT = 1
 STAGE1_CHECKLIST = ("signal_fired", "order_size_side", "bracket_real_at_venue",
                     "management_no_fault", "exit_journaled", "fill_and_fees")
 SHADOW_CHECKLIST = ("signal_fired", "package_complete", "sized_and_routed_dry")
-PROP_CHECKLIST = ("signal_fired", "order_size_side", "bracket_real_at_venue",
+#: The prop checklist items that are the LEG's own mechanics. The rest
+#: (bracket_real_at_venue = the adapter's venue read, exit_journaled,
+#: fill_recorded) are the prop ACCOUNT ADAPTER's, and a fault there is recorded
+#: against the adapter, not the leg's soak.
+PROP_LEG_ITEMS = ("signal_fired", "order_size_side", "ticket_bracket_real")
+PROP_CHECKLIST = ("signal_fired", "order_size_side", "ticket_bracket_real", "bracket_real_at_venue",
                   "management_no_fault", "exit_journaled", "fill_recorded")
 #: Calendar / accrual fields of the retired design. A contract carrying any of
 #: them is refused — a soak never waits on a date or a sample.
@@ -416,15 +423,34 @@ def grade_prop_signal(ticket_rows: List[Dict[str, Any]], fills: List[Dict[str, A
             f"fault: exit not journaled with a clean reason/price ({reason[:60]!r})"
         items["fill_recorded"] = ("ok (no fee column on the prop journal)"
                                   if closed.get("exit_price") is not None else "fault: no exit price")
-        faults = [f"{k}: {v[7:]}" for k, v in items.items() if v.startswith("fault")]
-        per.append({"ticket": tk.get("ticket_id"), "account": tk.get("account_id"),
-                    "clean": not faults, "fault": "; ".join(faults) or None, "items": items})
+        tk_why = _tp_real(tk.get("entry"), tk.get("sl"), tk.get("tp"))
+        items["ticket_bracket_real"] = "ok" if not tk_why else f"fault: {tk_why}"
+        faults = {k: v[7:] for k, v in items.items() if v.startswith("fault")}
+        leg_faults = [f"{k}: {v}" for k, v in faults.items() if k in PROP_LEG_ITEMS]
+        adapter_faults = [f"{k}: {v}" for k, v in faults.items() if k not in PROP_LEG_ITEMS]
+        if leg_faults:
+            per.append({"ticket": tk.get("ticket_id"), "account": tk.get("account_id"), "clean": False,
+                        "fault": "; ".join(leg_faults), "items": items})
+        elif adapter_faults:
+            # The ACCOUNT'S ADAPTER failed (no venue read, exit not journaled, no
+            # exit price) -- e.g. breakout_2's reconcile gap, fixed in #18413.
+            # That is the adapter's defect, recorded against it, not the leg's:
+            # neither clean nor a fault for the leg's soak (manager, 2026-10-15).
+            per.append({"ticket": tk.get("ticket_id"), "account": tk.get("account_id"), "clean": None,
+                        "fault": None, "adapter_fault": "; ".join(adapter_faults), "items": items})
+        else:
+            per.append({"ticket": tk.get("ticket_id"), "account": tk.get("account_id"), "clean": True,
+                        "fault": None, "items": items})
     graded = [x for x in per if x["clean"] is not None]
     clean = any(x["clean"] for x in graded)
-    return {"id": (ticket_rows[0] if ticket_rows else {}).get("order_package_id"),
-            "clean": (clean if graded else None),
-            "fault": None if clean or not graded else "; ".join(x["fault"] for x in graded),
-            "accounts": per}
+    out = {"id": (ticket_rows[0] if ticket_rows else {}).get("order_package_id"),
+           "clean": (clean if graded else None),
+           "fault": None if clean or not graded else "; ".join(x["fault"] for x in graded),
+           "accounts": per}
+    adapters = [f"{x['account']}: {x['adapter_fault']}" for x in per if x.get("adapter_fault")]
+    if adapters:
+        out["adapter_faults"] = adapters
+    return out
 
 
 def evaluate(graded: List[Dict[str, Any]], n_needed: int) -> Dict[str, Any]:
@@ -685,7 +711,8 @@ def _self_test() -> int:
     ck("a PASS disposition without trades is refused",
        any("trades" in p for p in contract_problems(dict(base, disposition={
            "verdict": "PASS", "reason": "r", "decided_at": "2026-10-15", "evidence": ["e"]}))))
-    tk = [{"ticket_id": "a", "account_id": "x", "order_package_id": "P", "direction": "long", "qty": 1, "sl": 95}]
+    tk = [{"ticket_id": "a", "account_id": "x", "order_package_id": "P", "direction": "long", "qty": 1,
+           "entry": 100, "sl": 95, "tp": 110}]
     fl = [{"ticket_id": "a", "status": "open", "entry_price": 100, "sl": 97, "tp": 110},
           {"ticket_id": "a", "status": "closed", "reason": "sl", "exit_price": 97, "closed_at": "t"}]
     g = grade_prop_signal(tk, fl)
@@ -694,6 +721,12 @@ def _self_test() -> int:
        "trailed" in g["accounts"][0]["items"]["management_no_fault"])
     ck("a free-text 'sl - closed ...' prop reason reads as sl",
        grade_prop_signal(tk, [fl[0], dict(fl[1], reason="sl - closed Buy 3 @ 97")])["clean"] is True)
+    ck("an adapter fault (exit not journaled) is neutral for the leg, recorded against the adapter",
+       (lambda g: g["clean"] is None and bool(g.get("adapter_faults")))(
+           grade_prop_signal(tk, [fl[0], dict(fl[1], reason="closed on terminal, exit unknown",
+                                               exit_price=None)])))
+    ck("a ticket with no SL is a LEG fault",
+       grade_prop_signal([dict(tk[0], sl=None)], fl)["clean"] is False)
     ck("a manual prop close is neutral",
        grade_prop_signal(tk, [fl[0], dict(fl[1], reason="manual - operator")])["clean"] is None)
     print("soak_state self-test:", "PASS" if ok else "FAIL")

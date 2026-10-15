@@ -73,7 +73,8 @@ def test_no_trade_yet_is_awaiting_not_failing(tmp_path):
 
 def test_two_clean_trades_pass(tmp_path):
     db = _db(tmp_path, "2026-10-04T00:00:00", [_trade(2), _trade(3, "tp", exit_price=110.0)])
-    rows = ss.soak_states(today=date(2026, 10, 4), db_path=db, contracts_path=_contracts(tmp_path))
+    rows = ss.soak_states(today=date(2026, 10, 4), db_path=db,
+                          contracts_path=_contracts(tmp_path, n_needed=2))
     assert rows[0]["state"] == "passed" and rows[0]["progress"] == "2/2 clean"
 
 
@@ -83,10 +84,9 @@ def test_a_reconciler_close_after_clean_trades_is_a_mechanical_fail(tmp_path):
     assert rows[0]["state"] == "mechanical_fail" and "reconciler_filled" in rows[0]["reason"]
 
 
-def test_one_clean_trade_passes_when_n_needed_is_one(tmp_path):
+def test_one_clean_trade_passes_by_default(tmp_path):
     db = _db(tmp_path, "2026-10-04T00:00:00", [_trade(2)])
-    rows = ss.soak_states(today=date(2026, 10, 4), db_path=db,
-                          contracts_path=_contracts(tmp_path, n_needed=1))
+    rows = ss.soak_states(today=date(2026, 10, 4), db_path=db, contracts_path=_contracts(tmp_path))
     assert rows[0]["state"] == "passed"
 
 

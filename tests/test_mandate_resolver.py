@@ -1166,3 +1166,74 @@ def test_cut_afford_fires_only_when_stage2_sizes_nothing(cut_repo):
     res = _cut(root)
     assert res["verdict"] == "FIRE", res
     assert [f["clause"] for f in res["evidence"]["stage0_failures"]] == ["R-CUT-AFFORD"]
+
+
+# ── MD-PROMOTE-S1-S2 amendment (proposed 2026-10-15, SOAK-REDEFINE) ────────
+# Switched on by bar.soak_passed + bar.cost_basis: venue_symbol. The resolver
+# code is DORMANT until the granted entry carries those fields.
+AMENDED = {"mandates": [
+    _mandate("MD-PROMOTE-S1-S2", "add_risk",
+             bar=dict(BAR, soak_passed=True, cost_basis=mr.COST_BASIS_VENUE_SYMBOL,
+                      soak_snapshot_max_age_days=7)),
+], "proposed": []}
+SOAK_ID = f"SOAK-stage1-bybit_1-{LEG}"
+
+
+def _soaks(passed=True):
+    c = {"id": SOAK_ID, "leg": LEG, "account": "bybit_1", "kind": "stage1"}
+    if passed:
+        c["disposition"] = {"verdict": "PASS", "decided_at": "2026-10-15", "trades": [1, 2],
+                            "evidence": ["comms/research/soak_mechanics/2026-10-15.json"], "reason": "r"}
+    return {"soaks": [c]}
+
+
+def _rows(real=(1.0, 1.5, 0.5, 1.2, 0.8, 1.1, 0.9, 1.3, 0.7, 1.0), paper=(), symbol="ADAUSDT"):
+    out = []
+    for cls, vals in (("real_money", real), ("paper", paper)):
+        for side in ("entry", "exit"):
+            out += [{"venue": "bybit_perps", "symbol": symbol, "account_class": cls, "side": side,
+                     "bps": v} for v in vals]
+    return "".join(json.dumps(r) + "\n" for r in out)
+
+
+def _amended_repo(repo, *, passed=True, rows=None, r3_leg="insufficient_n"):
+    root = repo(mandates=AMENDED, r3=_r3({LEG: r3_leg}))
+    _w(root, mr.SOAKS_REL, _soaks(passed))
+    (root / R3_DATED.replace(".json", "__rows.jsonl")).write_text(rows if rows is not None else _rows())
+    return root
+
+
+def test_amended_promotion_fires_on_a_passed_soak_and_a_consistent_venue_cost(repo):
+    # The per-leg R3 verdict reads insufficient_n: under the amendment it is
+    # monitoring and gates nothing; the venue's pooled cost for ADAUSDT decides.
+    res = _s1s2(_amended_repo(repo))
+    assert res["verdict"] == "FIRE", res
+    assert res["evidence"]["soak"]["state"] == "passed"
+    assert res["evidence"]["cost_fidelity"]["basis"] == "market"
+
+
+def test_amended_promotion_needs_data_until_the_mechanical_soak_passes(repo):
+    _needs_data(_s1s2(_amended_repo(repo, passed=False)), "R-SOAK-NOT-PASSED")
+
+
+def test_amended_promotion_refuses_a_divergent_venue_cost(repo):
+    _refused(_s1s2(_amended_repo(repo, rows=_rows(real=tuple(20.0 + i / 10 for i in range(10))))),
+             "R-COST-FIDELITY")
+
+
+def test_amended_promotion_uses_paper_fills_when_real_money_is_below_the_floor(repo):
+    res = _s1s2(_amended_repo(repo, rows=_rows(real=(1.0, 2.0), paper=(1.0, 1.5, 0.5, 1.2, 0.8,
+                                                                           1.1, 0.9, 1.3, 0.7, 1.0))))
+    assert res["verdict"] == "FIRE", res
+    assert res["evidence"]["cost_fidelity"]["basis"] == "simulator"
+
+
+def test_amended_promotion_needs_data_when_the_venue_has_too_few_fills(repo):
+    _needs_data(_s1s2(_amended_repo(repo, rows=_rows(real=(1.0,)))), "R-COST-FIDELITY")
+
+
+def test_the_unamended_mandate_still_reads_the_per_leg_verdict(repo):
+    # Dormant until granted: without the bar fields the per-leg R3 clause decides.
+    root = _amended_repo(repo)
+    _w(root, mr.MANDATES_REL, MANDATES, as_yaml=True)
+    _needs_data(_s1s2(root), "R-COST-FIDELITY")

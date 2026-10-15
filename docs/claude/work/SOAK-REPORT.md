@@ -2,7 +2,7 @@
 
 > **Doc status:** `unknown` · category `unknown` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md) · *generated weekly by `scripts/ops/soak_report.py` — the generation time below is its freshness*
 
-> **Generated** 2026-10-15T20:46:35+00:00 by `scripts/ops/soak_report.py` (weekly, after the R5 grade). Do not hand-edit — regenerate.
+> **Generated** 2026-10-15T21:12:57+00:00 by `scripts/ops/soak_report.py` (weekly, after the R5 grade). Do not hand-edit — regenerate.
 
 > **R5 grade read:** `comms/research/soak_book_grade/2026-10-11.json` — 4d old — usable.
 
@@ -10,19 +10,22 @@
 
 | population | n | ready | dead | could-not-look | accruing | graded under shadow |
 |---|---|---|---|---|---|---|
-| Stage-1 soak legs (bybit_1, alpaca_paper) | 21 | 4 | 1 | 1 | 13 | 2 |
+| Stage-1 soak legs (bybit_1, alpaca_paper) | 21 | 7 | 1 | 0 | 11 | 2 |
 | `execution: shadow` strategies (config/strategies.yaml field) | 16 | 0 | 14 | 1 | 1 | 0 |
-| Checklist rows in `landed_unproven` | 148 | 0 | 0 | 148 | 0 | 0 |
+| Checklist rows in `landed_unproven` | 149 | 0 | 0 | 149 | 0 | 0 |
 | Open pipeline items with `next_action: check_observation` | 439 | 0 | 0 | 439 | 0 | 0 |
 
 States are `soak_alarm.py`'s four, ported: **ready** and **dead** are loud (a decision is owed); **could-not-look** means nothing read it — *not* that it is empty; **accruing** is quiet by design.
 
 ## Needs a decision (ready or dead)
 
+- **READY** `alpaca_paper/ief_pullback_1d` (stage1, soaking since 2026-06-20, 117d) — mechanical soak passed — the leg is a promotion candidate (MD-PROMOTE-S1-S2)
 - **DEAD** `alpaca_paper/qqq_trend_long_1d` (stage1, soaking since 2026-06-11, 126d) — R5 kill (mechanics): starved: 226 actionable intent(s) (1 episode(s)) in the window, 0 order(s)/ticket(s) received, held_back=2, no open position held. This leg's soak purpose (prove the pipeline works) is unmet: it never reaches an order re
+- **READY** `alpaca_paper/tqqq_trend_long_1d` (stage1, soaking since 2026-07-01, 106d) — mechanical soak passed — the leg is a promotion candidate (MD-PROMOTE-S1-S2) · open items: PI-20260927-BOVNQFJU-0001
 - **READY** `bybit_1/ada_pullback_2h` (stage1, soaking since 2026-06-18, 119d) — mechanical soak passed — the leg is a promotion candidate (MD-PROMOTE-S1-S2)
 - **READY** `bybit_1/trend_donchian_eth_4h` (stage1, soaking since 2026-06-18, 119d) — mechanical soak passed — the leg is a promotion candidate (MD-PROMOTE-S1-S2)
 - **READY** `bybit_1/trend_donchian_eth_prop` (stage1, soaking since 2026-10-15, 0d) — mechanical soak passed — the leg is a promotion candidate (MD-PROMOTE-S1-S2)
+- **READY** `bybit_1/trend_donchian_sol_prop` (stage1, soaking since 2026-10-15, 0d) — mechanical soak passed — the leg is a promotion candidate (MD-PROMOTE-S1-S2)
 - **READY** `bybit_1/trend_donchian_xrp_4h` (stage1, soaking since 2026-06-18, 119d) — mechanical soak passed — the leg is a promotion candidate (MD-PROMOTE-S1-S2)
 - **DEAD** `avax_pullback_2h` (shadow, soaking since 2026-07-23, 84d) — on NO account roster — nothing runs it, so nothing accrues · open items: PI-20260927-ADM2F2AD-0001, PI-20260930-39SDYWCO-0008, PI-20261001-1MX1RCZS-0002, PI-20261004-JC8KDKLF-0013 (+3)
 - **DEAD** `eth_pullback_prop_2h` (shadow, soaking since 2026-08-23, 53d) — on NO account roster — nothing runs it, so nothing accrues · open items: PI-20260926-KNSTSR8N-0003, PI-20261005-OAKGATE1-0003
@@ -44,14 +47,16 @@ States are `soak_alarm.py`'s four, ported: **ready** and **dead** are loud (a de
 | subject | what | start | days | exit condition | progress | ETA | next review | verdict |
 |---|---|---|---|---|---|---|---|---|
 | `alpaca_paper/qqq_trend_long_1d` | Stage-1 soak leg | 2026-06-11 | 126 | mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json) | mechanics starved (226 intents → 0 received); clean-trade state: soak_state.soak_states() | — | 2026-10-18 | **dead** |
-| `bybit_1/ada_pullback_2h` | Stage-1 soak leg | 2026-06-18 | 119 | mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json) | PASS 2026-10-15: clean [4496, 4585] | — | 2026-10-18 | **ready** |
-| `bybit_1/trend_donchian_eth_4h` | Stage-1 soak leg | 2026-06-18 | 119 | mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json) | PASS 2026-10-15: clean [6238, 6488] | — | 2026-10-18 | **ready** |
-| `bybit_1/trend_donchian_eth_prop` | Stage-1 soak leg | 2026-10-15 | 0 | mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json) | PASS 2026-10-15: clean ['prop:pkg-f17ceb55e3d04304', 'prop:pkg-6ef60e8451584587'] | — | 2026-10-18 | **ready** |
-| `bybit_1/trend_donchian_xrp_4h` | Stage-1 soak leg | 2026-06-18 | 119 | mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json) | PASS 2026-10-15: clean [5249, 6527] | — | 2026-10-18 | **ready** |
+| `alpaca_paper/ief_pullback_1d` | Stage-1 soak leg | 2026-06-20 | 117 | mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json) | PASS 2026-10-15: clean [4194] | — | 2026-10-18 | **ready** |
+| `alpaca_paper/tqqq_trend_long_1d` | Stage-1 soak leg | 2026-07-01 | 106 | mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json) | PASS 2026-10-15: clean [6395] | — | 2026-10-18 | **ready** |
+| `bybit_1/ada_pullback_2h` | Stage-1 soak leg | 2026-06-18 | 119 | mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json) | PASS 2026-10-15: clean [4496] | — | 2026-10-18 | **ready** |
+| `bybit_1/trend_donchian_eth_4h` | Stage-1 soak leg | 2026-06-18 | 119 | mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json) | PASS 2026-10-15: clean [6238] | — | 2026-10-18 | **ready** |
+| `bybit_1/trend_donchian_eth_prop` | Stage-1 soak leg | 2026-10-15 | 0 | mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json) | PASS 2026-10-15: clean ['prop:pkg-f17ceb55e3d04304'] | — | 2026-10-18 | **ready** |
+| `bybit_1/trend_donchian_sol_prop` | Stage-1 soak leg | 2026-10-15 | 0 | mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json) | PASS 2026-10-15: clean ['prop:pkg-c58bbadd9b9a492f'] | — | 2026-10-18 | **ready** |
+| `bybit_1/trend_donchian_xrp_4h` | Stage-1 soak leg | 2026-06-18 | 119 | mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json) | PASS 2026-10-15: clean [5249] | — | 2026-10-18 | **ready** |
 | `alpaca_paper/gdx_pullback_1d` | Stage-1 soak leg | 2026-06-27 | 110 | mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json) | mechanics no_intents (0 intents → 0 received); clean-trade state: soak_state.soak_states() | — | 2026-10-18 | **accruing** |
 | `alpaca_paper/gld_pullback_1d` | Stage-1 soak leg | 2026-06-11 | 126 | mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json) | mechanics no_intents (0 intents → 0 received); clean-trade state: soak_state.soak_states() | — | 2026-10-18 | **accruing** |
 | `alpaca_paper/iaum_pullback_1d` | Stage-1 soak leg | 2026-07-07 | 100 | mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json) | mechanics no_intents (0 intents → 0 received); clean-trade state: soak_state.soak_states() | — | 2026-10-18 | **accruing** |
-| `alpaca_paper/ief_pullback_1d` | Stage-1 soak leg | 2026-06-20 | 117 | mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json) | mechanics starved (95 intents → 0 received); clean-trade state: soak_state.soak_states() | — | 2026-10-18 | **accruing** |
 | `alpaca_paper/iwm_trend_long_1d` | Stage-1 soak leg | 2026-06-20 | 117 | mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json) | mechanics no_intents (0 intents → 0 received); clean-trade state: soak_state.soak_states() | — | 2026-10-18 | **accruing** |
 | `alpaca_paper/qld_trend_long_1d` | Stage-1 soak leg | 2026-07-01 | 106 | mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json) | mechanics starved (209 intents → 0 received); clean-trade state: soak_state.soak_states() | — | 2026-10-18 | **accruing** |
 | `alpaca_paper/scha_trend_long_1d` | Stage-1 soak leg | 2026-07-07 | 100 | mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json) | mechanics no_intents (0 intents → 0 received); clean-trade state: soak_state.soak_states() | — | 2026-10-18 | **accruing** |
@@ -59,9 +64,7 @@ States are `soak_alarm.py`'s four, ported: **ready** and **dead** are loud (a de
 | `alpaca_paper/splg_trend_long_1d` | Stage-1 soak leg | 2026-07-07 | 100 | mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json) | mechanics no_intents (0 intents → 0 received); clean-trade state: soak_state.soak_states() | — | 2026-10-18 | **accruing** |
 | `alpaca_paper/spy_trend_long_1d` | Stage-1 soak leg | 2026-06-11 | 126 | mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json) | mechanics starved (182 intents → 0 received); clean-trade state: soak_state.soak_states() | — | 2026-10-18 | **accruing** |
 | `alpaca_paper/tlt_pullback_1d` | Stage-1 soak leg | 2026-06-20 | 117 | mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json) | mechanics starved (76 intents → 0 received); clean-trade state: soak_state.soak_states() | — | 2026-10-18 | **accruing** |
-| `alpaca_paper/tqqq_trend_long_1d` | Stage-1 soak leg | 2026-07-01 | 106 | mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json) | mechanics starved (227 intents → 0 received); clean-trade state: soak_state.soak_states() | — | 2026-10-18 | **accruing** |
 | `bybit_1/xrp_pullback_2h` | Stage-1 soak leg | 2026-06-18 | 119 | mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json) | mechanics flowing (457 intents → 2 received); clean-trade state: soak_state.soak_states() | — | 2026-10-18 | **accruing** |
-| `bybit_1/trend_donchian_sol_prop` | Stage-1 soak leg | 2026-10-15 | 0 | mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json) | — | — | 2026-10-18 | **could-not-look** |
 | `alpaca_paper/slv_trend_1h` | Stage-1 roster leg in execution: shadow | 2026-06-21 | 116 | graded under the shadow population (`slv_trend_1h`) — a shadow leg sends no order, so Gate 2 cannot apply | — | — | 2026-10-18 | **see-shadow** |
 | `bybit_1/trend_donchian_1h` | Stage-1 roster leg in execution: shadow | 2026-06-01 | 136 | graded under the shadow population (`trend_donchian_1h`) — a shadow leg sends no order, so Gate 2 cannot apply | — | — | 2026-10-18 | **see-shadow** |
 
@@ -86,7 +89,7 @@ States are `soak_alarm.py`'s four, ported: **ready** and **dead** are loud (a de
 | `mgc_trend_1h` | execution: shadow strategy | 2026-06-18 | 119 | Gate 1: a committed Stage-0 evidence record clearing its registered rule → flip to live, else kill (evidence record present) | 16 shadow packages / R5 window | no data-driven ETA — shadow never accrues fills | 2026-10-18 | **accruing** |
 | `slv_trend_1h` | execution: shadow strategy | 2026-08-24 | 52 | Gate 1: a committed Stage-0 evidence record clearing its registered rule → flip to live, else kill (evidence record present) | 0 shadow packages / R5 window | no data-driven ETA — shadow never accrues fills | 2026-10-18 | **could-not-look** |
 
-## Checklist rows in `landed_unproven` — 148
+## Checklist rows in `landed_unproven` — 149
 
 | subject | what | start | days | exit condition | progress | ETA | next review | verdict |
 |---|---|---|---|---|---|---|---|---|
@@ -148,6 +151,7 @@ States are `soak_alarm.py`'s four, ported: **ready** and **dead** are loud (a de
 | `HEALTH-REVIEW-W41` | /health-review 2026-10-09 (W41): IB churn, auto-merge hold bug, phone_executor flake, RQ-COLLECTOR, NO-HALT deploy check, DAILY-DD read_stat | 2026-10-09 | 6 | the PR merges | — | — | none declared | **could-not-look** |
 | `ICT-SCALP-HTF` | CA-A05-001: _ict_scalp_variant_builder never fetches HTF candles for 7 ict_scalp legs that declare htf_trend_filter_enabled (paper: bybit_1, | 2026-10-02 | 13 | the live trader's /api/diag/version is >= f4b3446a AND a bybit_1 ict_scalp variant intent log shows htf_filter_active=True | — | — | none declared | **could-not-look** |
 | `IN-TRADE-EXIT-MODEL` | North star for exits: real-time P(SL before TP \| trade state now) and an exit-now mechanism that turns would-be losers into winners | 2026-10-14 | 1 | (NOT STATED in the row — close-out requires it) | — | — | none declared | **could-not-look** |
+| `IP-IN-PUBLIC-LOGS` | Trainer and live-box addresses out of the workflows: secrets.TRAINER_VM_IP / secrets.VM_SSH_HOST, fail-closed, literal-guard (hold PR, canar | 2026-10-15 | 0 | a rotation or a sweep of the remaining relays exercises them, and PI-20261015-KXMANT1S-0001 (literals in src/deploy/config/scripts) is open. | — | — | none declared | **could-not-look** |
 | `JC-GIT` | Operator decisions JC-CA-01 (set-account-mode commits to main) + JC-CA-03 (auto-land PR via GITHUB_TOKEN) + JC-CA-06 (retire account_state f | 2026-09-28 | 17 | issue #13572 | — | — | none declared | **could-not-look** |
 | `JOURNAL-OFFVM-BACKUP` | Versioned private off-VM backup of trade_journal.db (OCI Object Storage, daily, restore-tested) | 2026-10-13 | 2 | (NOT STATED in the row — close-out requires it) | — | — | none declared | **could-not-look** |
 | `LEDGER-REFRESH` | broker_truth_ledger ~77 days stale (bybit_2 SUB is CSV-only); bybit_1/bybit_portfolio daily journal-vs-wallet delta | 2026-10-11 | 4 | (NOT STATED in the row — close-out requires it) | — | — | none declared | **could-not-look** |

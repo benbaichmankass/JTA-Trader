@@ -19,8 +19,8 @@
    "leg": "gdx_pullback_1d",
    "metric": "clean closed trades on alpaca_paper/gdx_pullback_1d (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-27",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -41,8 +41,8 @@
    "leg": "gld_pullback_1d",
    "metric": "clean closed trades on alpaca_paper/gld_pullback_1d (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-11",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -72,8 +72,8 @@
    "leg": "gld_pullback_1h",
    "metric": "clean closed trades on alpaca_paper/gld_pullback_1h (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-21",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -94,8 +94,8 @@
    "leg": "iaum_pullback_1d",
    "metric": "clean closed trades on alpaca_paper/iaum_pullback_1d (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-07-07",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -110,14 +110,25 @@
     "fill_and_fees"
    ],
    "design": "mechanical",
+   "disposition": {
+    "decided_at": "2026-10-15",
+    "evidence": [
+     "comms/research/soak_mechanics/2026-10-15.json"
+    ],
+    "reason": "mechanical soak passed: clean: 4194 (after fault 3267)",
+    "trades": [
+     4194
+    ],
+    "verdict": "PASS"
+   },
    "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-alpaca_paper-ief_pullback_1d",
    "kind": "stage1",
    "leg": "ief_pullback_1d",
    "metric": "clean closed trades on alpaca_paper/ief_pullback_1d (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-20",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -138,8 +149,8 @@
    "leg": "iwm_trend_long_1d",
    "metric": "clean closed trades on alpaca_paper/iwm_trend_long_1d (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-20",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -160,8 +171,8 @@
    "leg": "qld_trend_long_1d",
    "metric": "clean closed trades on alpaca_paper/qld_trend_long_1d (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-07-01",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -191,8 +202,8 @@
    "leg": "qqq_pullback_1h",
    "metric": "clean closed trades on alpaca_paper/qqq_pullback_1h (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-21",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -213,8 +224,8 @@
    "leg": "qqq_trend_long_1d",
    "metric": "clean closed trades on alpaca_paper/qqq_trend_long_1d (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-11",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -235,8 +246,8 @@
    "leg": "scha_trend_long_1d",
    "metric": "clean closed trades on alpaca_paper/scha_trend_long_1d (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-07-07",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -257,8 +268,8 @@
    "leg": "slv_pullback_1d",
    "metric": "clean closed trades on alpaca_paper/slv_pullback_1d (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-27",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -279,8 +290,8 @@
    "leg": "splg_trend_long_1d",
    "metric": "clean closed trades on alpaca_paper/splg_trend_long_1d (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-07-07",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -310,8 +321,8 @@
    "leg": "spy_pullback_1h",
    "metric": "clean closed trades on alpaca_paper/spy_pullback_1h (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-21",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -332,8 +343,8 @@
    "leg": "spy_trend_long_1d",
    "metric": "clean closed trades on alpaca_paper/spy_trend_long_1d (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-11",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -354,8 +365,8 @@
    "leg": "tlt_pullback_1d",
    "metric": "clean closed trades on alpaca_paper/tlt_pullback_1d (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-20",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -385,8 +396,8 @@
    "leg": "tlt_pullback_1h",
    "metric": "clean closed trades on alpaca_paper/tlt_pullback_1h (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-21",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -401,14 +412,25 @@
     "fill_and_fees"
    ],
    "design": "mechanical",
+   "disposition": {
+    "decided_at": "2026-10-15",
+    "evidence": [
+     "comms/research/soak_mechanics/2026-10-15.json"
+    ],
+    "reason": "mechanical soak passed: clean: 6395",
+    "trades": [
+     6395
+    ],
+    "verdict": "PASS"
+   },
    "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-alpaca_paper-tqqq_trend_long_1d",
    "kind": "stage1",
    "leg": "tqqq_trend_long_1d",
    "metric": "clean closed trades on alpaca_paper/tqqq_trend_long_1d (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-07-01",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -438,8 +460,8 @@
    "leg": "uso_trend_1h",
    "metric": "clean closed trades on alpaca_paper/uso_trend_1h (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-21",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -459,10 +481,9 @@
     "evidence": [
      "comms/research/soak_mechanics/2026-10-15.json"
     ],
-    "reason": "mechanical soak passed: clean: 4496, 4585 (after fault 4332)",
+    "reason": "mechanical soak passed: clean: 4496 (after fault 4332)",
     "trades": [
-     4496,
-     4585
+     4496
     ],
     "verdict": "PASS"
    },
@@ -472,8 +493,8 @@
    "leg": "ada_pullback_2h",
    "metric": "clean closed trades on bybit_1/ada_pullback_2h (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-18",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -503,8 +524,8 @@
    "leg": "eth_pullback_2h",
    "metric": "clean closed trades on bybit_1/eth_pullback_2h (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-11",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -534,8 +555,8 @@
    "leg": "ict_scalp_eth_15m",
    "metric": "clean closed trades on bybit_1/ict_scalp_eth_15m (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-07-22",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -565,8 +586,8 @@
    "leg": "ict_scalp_sol_15m",
    "metric": "clean closed trades on bybit_1/ict_scalp_sol_15m (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-07-22",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -596,8 +617,8 @@
    "leg": "ict_scalp_xrp_15m",
    "metric": "clean closed trades on bybit_1/ict_scalp_xrp_15m (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-07-22",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -627,8 +648,8 @@
    "leg": "ict_scalp_xrp_5m",
    "metric": "clean closed trades on bybit_1/ict_scalp_xrp_5m (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-07-21",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -658,8 +679,8 @@
    "leg": "sol_pullback_2h",
    "metric": "clean closed trades on bybit_1/sol_pullback_2h (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-18",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -689,8 +710,8 @@
    "leg": "squeeze_breakout_4h",
    "metric": "clean closed trades on bybit_1/squeeze_breakout_4h (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-05-24",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -720,8 +741,8 @@
    "leg": "trend_donchian",
    "metric": "clean closed trades on bybit_1/trend_donchian (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-05-25",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -751,8 +772,8 @@
    "leg": "trend_donchian_eth",
    "metric": "clean closed trades on bybit_1/trend_donchian_eth (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-07-07",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -772,10 +793,9 @@
     "evidence": [
      "comms/research/soak_mechanics/2026-10-15.json"
     ],
-    "reason": "mechanical soak passed: clean: 6238, 6488 (after fault 5925)",
+    "reason": "mechanical soak passed: clean: 6238 (after fault 5925)",
     "trades": [
-     6238,
-     6488
+     6238
     ],
     "verdict": "PASS"
    },
@@ -785,8 +805,8 @@
    "leg": "trend_donchian_eth_4h",
    "metric": "clean closed trades on bybit_1/trend_donchian_eth_4h (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-18",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -816,8 +836,8 @@
    "leg": "trend_donchian_sol",
    "metric": "clean closed trades on bybit_1/trend_donchian_sol (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-07-07",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -837,10 +857,9 @@
     "evidence": [
      "comms/research/soak_mechanics/2026-10-15.json"
     ],
-    "reason": "mechanical soak passed: clean: 5249, 6527 (after fault 3116)",
+    "reason": "mechanical soak passed: clean: 5249 (after fault 3116)",
     "trades": [
-     5249,
-     6527
+     5249
     ],
     "verdict": "PASS"
    },
@@ -850,8 +869,8 @@
    "leg": "trend_donchian_xrp_4h",
    "metric": "clean closed trades on bybit_1/trend_donchian_xrp_4h (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-18",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -872,8 +891,8 @@
    "leg": "xrp_pullback_2h",
    "metric": "clean closed trades on bybit_1/xrp_pullback_2h (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "started": "2026-06-18",
    "verifies": "live MECHANICS: the signal fires, the order is placed with the right size and side, a real SL and TP rest at the venue, management works, the exit is journaled with a reason, and the fill and fees are recorded"
   },
@@ -900,8 +919,8 @@
    "leg": "avax_pullback_2h",
    "metric": "shadow order packages for avax_pullback_2h (any rostered account)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 complete shadow package(s), each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "started": "2026-07-23",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
@@ -928,8 +947,8 @@
    "leg": "eth_pullback_prop_2h",
    "metric": "shadow order packages for eth_pullback_prop_2h (any rostered account)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 complete shadow package(s), each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "started": "2026-08-23",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
@@ -956,8 +975,8 @@
    "leg": "fade_breakout_4h",
    "metric": "shadow order packages for fade_breakout_4h (any rostered account)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 complete shadow package(s), each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "started": "2026-06-01",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
@@ -984,8 +1003,8 @@
    "leg": "fvg_range_15m",
    "metric": "shadow order packages for fvg_range_15m (any rostered account)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 complete shadow package(s), each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "started": "2026-07-28",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
@@ -1012,8 +1031,8 @@
    "leg": "htf_pullback_trend_2h",
    "metric": "shadow order packages for htf_pullback_trend_2h (any rostered account)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 complete shadow package(s), each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "started": "2026-08-23",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
@@ -1031,8 +1050,8 @@
    "leg": "ict_scalp_5m",
    "metric": "shadow order packages for ict_scalp_5m (any rostered account)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 complete shadow package(s), each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "recommended_fix": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
    "started": "2026-09-28",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
@@ -1060,8 +1079,8 @@
    "leg": "ict_scalp_avax_5m",
    "metric": "shadow order packages for ict_scalp_avax_5m (any rostered account)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 complete shadow package(s), each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "started": "2026-09-28",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
@@ -1088,8 +1107,8 @@
    "leg": "ict_scalp_sol_5m",
    "metric": "shadow order packages for ict_scalp_sol_5m (any rostered account)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 complete shadow package(s), each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "started": "2026-09-28",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
@@ -1117,8 +1136,8 @@
    "leg": "mgc_trend_1h",
    "metric": "shadow order packages for mgc_trend_1h (any rostered account)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 complete shadow package(s), each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "started": "2026-06-18",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
@@ -1135,10 +1154,9 @@
     "evidence": [
      "comms/research/soak_mechanics/2026-10-15.json"
     ],
-    "reason": "mechanical soak passed: clean: pkg-08a3f8a838cc4688, pkg-9b55b6e2a3a84dfa",
+    "reason": "mechanical soak passed: clean: pkg-08a3f8a838cc4688",
     "trades": [
-     "pkg-08a3f8a838cc4688",
-     "pkg-9b55b6e2a3a84dfa"
+     "pkg-08a3f8a838cc4688"
     ],
     "verdict": "PASS"
    },
@@ -1148,8 +1166,8 @@
    "leg": "slv_trend_1h",
    "metric": "shadow order packages for slv_trend_1h (any rostered account)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 complete shadow package(s), each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "started": "2026-08-24",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
@@ -1167,8 +1185,8 @@
    "leg": "trend_donchian_1h",
    "metric": "shadow order packages for trend_donchian_1h (any rostered account)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 complete shadow package(s), each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "recommended_fix": "enabled: false \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract",
    "started": "2026-06-01",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
@@ -1187,8 +1205,8 @@
    "leg": "trend_donchian_ada_4h",
    "metric": "shadow order packages for trend_donchian_ada_4h (any rostered account)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 complete shadow package(s), each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "recommended_fix": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
    "started": "2026-09-28",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
@@ -1207,8 +1225,8 @@
    "leg": "trend_donchian_avax_4h",
    "metric": "shadow order packages for trend_donchian_avax_4h (any rostered account)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 complete shadow package(s), each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "recommended_fix": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
    "started": "2026-09-28",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
@@ -1227,8 +1245,8 @@
    "leg": "trend_donchian_sol_4h",
    "metric": "shadow order packages for trend_donchian_sol_4h (any rostered account)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 complete shadow package(s), each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "recommended_fix": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
    "started": "2026-09-28",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
@@ -1247,8 +1265,8 @@
    "leg": "turtle_soup",
    "metric": "shadow order packages for turtle_soup (any rostered account)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 complete shadow package(s), each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "recommended_fix": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract",
    "started": "2026-07-07",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
@@ -1267,8 +1285,8 @@
    "leg": "vwap",
    "metric": "shadow order packages for vwap (any rostered account)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 complete shadow package(s), each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 complete shadow package(s), each clearing every checklist item",
    "recommended_fix": "enabled: false \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract",
    "started": "2026-05-24",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
@@ -1289,10 +1307,9 @@
     "evidence": [
      "comms/research/soak_mechanics/2026-10-15.json"
     ],
-    "reason": "mechanical soak passed: clean: prop:pkg-f17ceb55e3d04304, prop:pkg-6ef60e8451584587 (after fault prop:pkg-244a6cff2c26457f)",
+    "reason": "mechanical soak passed: clean: prop:pkg-f17ceb55e3d04304",
     "trades": [
-     "prop:pkg-f17ceb55e3d04304",
-     "prop:pkg-6ef60e8451584587"
+     "prop:pkg-f17ceb55e3d04304"
     ],
     "verdict": "PASS"
    },
@@ -1302,8 +1319,8 @@
    "leg": "trend_donchian_eth_prop",
    "metric": "clean closed trades on bybit_1/trend_donchian_eth_prop (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "sources": [
     {
      "accounts": [
@@ -1314,6 +1331,7 @@
      "checklist": [
       "signal_fired",
       "order_size_side",
+      "ticket_bracket_real",
       "bracket_real_at_venue",
       "management_no_fault",
       "exit_journaled",
@@ -1322,8 +1340,8 @@
      "counts_as": "Stage-1 soak trades (operator amendment 2026-10-15: live prop trades count)",
      "feeds": "MD-PROMOTE-S1-S2 -> a PR adding the leg to bybit_2 AND bybit_portfolio together (mirror equality tests, human merge, not auto-land)",
      "kind": "prop_live",
-     "n_needed": 2,
-     "n_rule": "DISTINCT signals (one per order package; the same signal fills on up to 3 prop accounts and is counted once); a signal is clean when at least one account's fill clears the prop checklist",
+     "n_needed": 1,
+     "n_rule": "DISTINCT signals (one per order package; the same signal fills on up to 3 prop accounts and is counted once); a signal is clean when at least one account's fill clears the prop checklist; an account ADAPTER fault (no venue read, exit not journaled) is recorded against the adapter, not the leg",
      "portfolio_overlap_required": "BEFORE promotion the evidence record must report correlation of signals/returns and combined drawdown of trend_donchian_eth_prop (1h) vs the existing bybit_2 trend_donchian_eth_4h (two correlated ETH Donchian legs)"
     }
    ],
@@ -1341,14 +1359,25 @@
     "fill_and_fees"
    ],
    "design": "mechanical",
+   "disposition": {
+    "decided_at": "2026-10-15",
+    "evidence": [
+     "comms/research/soak_mechanics/2026-10-15.json"
+    ],
+    "reason": "mechanical soak passed: clean: prop:pkg-c58bbadd9b9a492f",
+    "trades": [
+     "prop:pkg-c58bbadd9b9a492f"
+    ],
+    "verdict": "PASS"
+   },
    "fail_rule": "the most recent graded trade is a mechanical fault (a checklist item fails, or a reconciler / watchdog / orphan close) -> fix, then re-soak",
    "id": "SOAK-stage1-bybit_1-trend_donchian_sol_prop",
    "kind": "stage1",
    "leg": "trend_donchian_sol_prop",
    "metric": "clean closed trades on bybit_1/trend_donchian_sol_prop (each = one entry + one journaled exit)",
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
-   "n_needed": 2,
-   "pass_rule": "2 clean trade(s) since the last mechanical fault, each clearing every checklist item",
+   "n_needed": 1,
+   "pass_rule": "1 clean trade(s) since the last mechanical fault, each clearing every checklist item",
    "sources": [
     {
      "accounts": [
@@ -1359,6 +1388,7 @@
      "checklist": [
       "signal_fired",
       "order_size_side",
+      "ticket_bracket_real",
       "bracket_real_at_venue",
       "management_no_fault",
       "exit_journaled",
@@ -1367,8 +1397,8 @@
      "counts_as": "Stage-1 soak trades (operator amendment 2026-10-15: live prop trades count)",
      "feeds": "MD-PROMOTE-S1-S2 -> a PR adding the leg to bybit_2 AND bybit_portfolio together (mirror equality tests, human merge, not auto-land)",
      "kind": "prop_live",
-     "n_needed": 2,
-     "n_rule": "DISTINCT signals (one per order package; the same signal fills on up to 3 prop accounts and is counted once); a signal is clean when at least one account's fill clears the prop checklist",
+     "n_needed": 1,
+     "n_rule": "DISTINCT signals (one per order package; the same signal fills on up to 3 prop accounts and is counted once); a signal is clean when at least one account's fill clears the prop checklist; an account ADAPTER fault (no venue read, exit not journaled) is recorded against the adapter, not the leg",
      "portfolio_overlap_required": "BEFORE promotion the evidence record must report overlap with the existing bybit_2 roster (correlation of signals/returns, combined drawdown)"
     }
    ],

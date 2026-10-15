@@ -965,6 +965,11 @@ def _add_risk(leg: str, frm: str, to: str, account: str, exchange: str,
                              f"packages on {soak!r} but places no real order, so roster membership "
                              f"there is not a Stage-1 soak",
                              _soak_data_task(leg, soak, m["id"], account))
+        # MD-PROMOTE-S1-S2 as AMENDED 2026-10-15 (operator grant): "has soaked"
+        # means the leg's MECHANICAL soak contract reads `passed` -- roster
+        # membership + `execution: live` alone are not a soak.
+        if bar.get("soak_passed"):
+            _soak_passed(leg, soak, m, root, ctx, account)
 
     # ── the committed record ────────────────────────────────────────────────
     rec_rel = f"{EVIDENCE_DIR_REL}/{leg}.json"
@@ -1091,6 +1096,138 @@ def _stale_against_record(r3: Dict[str, Any], modelled: Any) -> Optional[str]:
     return None
 
 
+# --------------------------------------------------------------------------
+# MD-PROMOTE-S1-S2 AMENDED 2026-10-15 (operator grant, popup in manager session
+# session_01VduHYzdaXe27wTDBLSu8ao, verbatim "Grant as written (Recommended)";
+# proposed as MD-PROMOTE-S1-S2-SOAK-AMEND by lane SOAK-REDEFINE). Two clauses
+# change, both switched on by the mandate's own `bar:` so the code follows the
+# field:
+#   bar.soak_passed: true   -> the leg's SOAKS.json contract must read `passed`
+#                              (the mechanical soak: 1-2 clean trades; live prop
+#                              trades count) -- R-SOAK-NOT-PASSED otherwise.
+#   bar.cost_basis: venue_symbol -> clause 3 reads the VENUE's measured cost for
+#                              the leg's SYMBOL, pooled over every leg's fills in
+#                              the committed R3 rows, graded by R3's own rule at
+#                              bar.cost_tolerance_bps. The PER-LEG R3 verdict is
+#                              ongoing monitoring that feeds the demotion mandates.
+# --------------------------------------------------------------------------
+SOAKS_REL = "docs/claude/work/SOAKS.json"
+COST_BASIS_VENUE_SYMBOL = "venue_symbol"
+#: R3 row account_class -> the basis R3 names its cells by. Real money first:
+#: a real fill is the venue's cost; a demo fill is a simulator's.
+VENUE_BASIS_ORDER = (("real_money", "market"), ("paper", "simulator"))
+
+
+def _soak_passed(leg: str, soak: str, m: Dict[str, Any], root: Path,
+                 ctx: Dict[str, Any], account: str) -> None:
+    """The amended soak clause. PASS when the contract carries a committed PASS
+    disposition (with the clean trades it rests on), or the newest FRESH committed
+    soak snapshot lists it `passed`. Anything else is NEEDS_DATA: a soak that has
+    not passed yet is waiting for a trade, never a refusal."""
+    sid = f"SOAK-stage1-{soak}-{leg}"
+    ev: Dict[str, Any] = {"contract": sid, "store": SOAKS_REL}
+    ctx["evidence"]["soak"] = ev
+    doc = _json(root / SOAKS_REL)
+    c = next((x for x in (doc or {}).get("soaks") or []
+              if isinstance(x, dict) and x.get("id") == sid), None)
+    if c is None:
+        raise _NeedsData("R-SOAK-NOT-PASSED", f"no soak contract {sid} in {SOAKS_REL}",
+                         _soak_data_task(leg, soak, m["id"], account))
+    d = c.get("disposition") or {}
+    if d.get("verdict") == "PASS" and d.get("trades"):
+        ev.update({"state": "passed", "basis": "disposition", "decided_at": d.get("decided_at"),
+                   "trades": d.get("trades"), "evidence": d.get("evidence")})
+        return
+    rel, snap = latest_soak_snapshot(root)
+    max_age = (m.get("bar") or {}).get("soak_snapshot_max_age_days", 7)
+    state = None
+    if snap is not None:
+        cap = _parse_ts(snap.get("captured_at"))
+        if cap is not None and _num(max_age):
+            from datetime import datetime, timezone
+            age = (datetime.now(timezone.utc) - cap).total_seconds() / 86400.0
+            if -ACCOUNT_SNAPSHOT_FUTURE_SKEW_DAYS <= age <= float(max_age):
+                row = next((r for r in snap.get("soaks") or []
+                            if isinstance(r, dict) and r.get("id") == sid), None)
+                state = (row or {}).get("state")
+                ev.update({"snapshot": rel, "captured_at": snap.get("captured_at")})
+    ev["state"] = state
+    if state == "passed":
+        ev["basis"] = "snapshot"
+        return
+    raise _NeedsData("R-SOAK-NOT-PASSED",
+                     f"{sid} has not passed its mechanical soak (state {state!r}; a soak passes on "
+                     f"1-2 clean trades -- OPERATING-PLAN § 2 'The soak is MECHANICAL')",
+                     _soak_data_task(leg, soak, m["id"], account))
+
+
+def venue_symbol_cost(venue: str, symbol: str, modelled: Any, tol: float,
+                      root: Path) -> Dict[str, Any]:
+    """The venue's measured round-trip cost for ``symbol``, pooled across every
+    leg's fills in the newest committed R3 rows file, graded by R3's own rule.
+    Real-money fills decide when they clear R3's floor; otherwise the paper
+    fills; otherwise the real-money (or paper) cell's insufficient_n verdict."""
+    rel, _doc = latest_r3(root)
+    out: Dict[str, Any] = {"rule": R3_RULE_ID, "record": rel, "venue": venue, "symbol": symbol,
+                           "modelled_bps": modelled, "tolerance_bps": tol, "verdict": None}
+    rows_rel = rel[:-len(".json")] + "__rows.jsonl" if rel else None
+    if not rows_rel or not (root / rows_rel).is_file() or not in_repo(root, rows_rel):
+        out["why"] = f"no committed R3 rows file beside {rel!r}"
+        return out
+    out["rows"] = rows_rel
+    rows: List[Dict[str, Any]] = []
+    for line in (root / rows_rel).read_text(encoding="utf-8").splitlines():
+        try:
+            r = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(r, dict) and r.get("venue") == venue and r.get("symbol") == symbol \
+                and isinstance(r.get("bps"), (int, float)):
+            rows.append(r)
+    sys.path.insert(0, str(REPO / "scripts" / "research"))
+    import r3_cost_fidelity as r3m  # noqa: PLC0415,E402
+    first = None
+    for cls, basis in VENUE_BASIS_ORDER:
+        ent = [r["bps"] for r in rows if r.get("account_class") == cls and r.get("side") == "entry"]
+        ex = [r["bps"] for r in rows if r.get("account_class") == cls and r.get("side") == "exit"]
+        g = dict(r3m.grade(ent, ex, modelled if _num(modelled) else None, tol), basis=basis)
+        first = first or g
+        if g.get("verdict") != r3m.INSUFFICIENT:
+            out.update(g)
+            return out
+    out.update(first or {})
+    return out
+
+
+def _venue_symbol_cost(leg: str, venue: str, record: Dict[str, Any], modelled: Any, tol: float,
+                       root: Path, ctx: Dict[str, Any]) -> None:
+    symbol = record.get("symbol")
+    if not symbol:
+        strategies = (_yaml(root, STRATEGIES_REL) or {}).get("strategies") or {}
+        cfg = strategies.get(leg) or {}
+        syms = cfg.get("symbols") or []
+        symbol = cfg.get("symbol") or (syms[0] if isinstance(syms, list) and syms else None)
+    g = venue_symbol_cost(venue, str(symbol), modelled, tol, root)
+    g["basis_of_comparison"] = COST_BASIS_VENUE_SYMBOL
+    ctx["evidence"]["cost_fidelity"] = g
+    v = g.get("verdict")
+    if v == R3_CONSISTENT:
+        return
+    if v == R3_DIVERGENT:
+        raise _Refuse("R-COST-FIDELITY",
+                      f"{venue} {symbol} ({g.get('basis')}) realized round-trip {g.get('roundtrip_mean')} "
+                      f"bps: CI95 {g.get('ci95')} lies above modelled {modelled} + {tol} bps "
+                      f"({g.get('rows')})")
+    raise _NeedsData("R-COST-FIDELITY",
+                     f"{venue} {symbol}: venue cost {v!r} -- {g.get('why') or 'not decisive'} "
+                     f"({g.get('rows') or g.get('record')})",
+                     {"what": (f"{leg}: the venue's measured cost for {symbol} on {venue} must be "
+                               f"decisive under {R3_RULE_ID} (pooled across legs, real money first)"),
+                      "clears_when": (f"the newest committed R3 rows grade {venue}|{symbol} `consistent` "
+                                      f"at modelled {modelled} + {tol} bps"),
+                      "check_every_days": 7, "next_action": "check_observation"})
+
+
 def _cost_fidelity(leg: str, venue: Optional[str], record: Dict[str, Any],
                    m: Dict[str, Any], root: Path, ctx: Dict[str, Any]) -> None:
     """Clause 3 of the bar: is the realized cost the one the record assumed?
@@ -1119,6 +1256,10 @@ def _cost_fidelity(leg: str, venue: Optional[str], record: Dict[str, Any],
                                             "modelled_bps": modelled, "tolerance_bps": tol}
         raise _Refuse("R-COST-FIDELITY", f"venue {venue} rests on the {PROVISIONAL_SLIPPAGE_BPS} "
                                          f"bps placeholder; the record modelled {modelled!r}")
+
+    if (m.get("bar") or {}).get("cost_basis") == COST_BASIS_VENUE_SYMBOL:
+        _venue_symbol_cost(leg, venue, record, modelled, tol, root, ctx)
+        return
 
     r3 = r3_leg_verdict(leg, root)
     cf = dict(r3, venue=venue, modelled_bps=modelled, tolerance_bps=tol,

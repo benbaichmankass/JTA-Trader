@@ -2,7 +2,7 @@
 
 > **Doc status:** `unknown` · category `unknown` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md) · *generated weekly by `scripts/ops/soak_report.py` — the generation time below is its freshness*
 
-> Generated 2026-10-15T20:46:35+00:00 by `scripts/ops/soak_report.py`; companion to [`SOAK-REPORT.md`](SOAK-REPORT.md). 439 rows, every one **could-not-look** (no evaluator reads `clears_when`).
+> Generated 2026-10-15T21:12:57+00:00 by `scripts/ops/soak_report.py`; companion to [`SOAK-REPORT.md`](SOAK-REPORT.md). 439 rows, every one **could-not-look** (no evaluator reads `clears_when`).
 
 | id | start | days | clears_when | next review | state |
 |---|---|---|---|---|---|
