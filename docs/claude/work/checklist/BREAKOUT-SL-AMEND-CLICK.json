@@ -2,7 +2,7 @@
   "id": "BREAKOUT-SL-AMEND-CLICK",
   "title": "breakout_2: phone trail amend via the position sheet (read side/qty MEASURED; tighten-only SL edit)",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "build lane (Opus)",
   "lane": "session_017Y39uF5LuaxBMqq5VtJ9FV",
   "model": "claude-opus-5-5",
@@ -13,8 +13,8 @@
     18114
   ],
   "blocked_on": [],
-  "note": "[2026-10-14T22:25Z lane] Manager 22:11Z carry-over fixed in #18114: the Positions read takes the CHILD position row (a row with a 'Sum' cell is a GROUP row; its child rows are read, nested or sibling). With no child in the DOM, a group whose count is 1 stands in (row_kind group); a group of >1 positions is unparsed (miss=group), never one row. The 1b.193 fixture's Market 'ETH 5' was corrected to the screenshot's 'ETH 1' (group count, not leverage). The group row's leading chevron glyph is stripped from the symbol.",
-  "updated_at": "2026-10-14T22:13:41Z",
+  "note": "[2026-10-15T05:52Z lane] #18114 MERGED (manager). Merged != deployed != observed: needs the APK built from main installed on the prop phone. Closes when (1) breakout_2 positions diag shows sheet_ok + amend_sheet_unmeasured, (2) a follow-up flips SHEET_EDIT_MEASURED after that dump is reviewed, (3) an amend_result 'amended' with sl_read == asked SL. Lane ends here; the flip is a new lane.",
+  "updated_at": "2026-10-15T05:51:27Z",
   "updated_by": "session_017Y39uF5LuaxBMqq5VtJ9FV",
   "roadmap": [
     "L-PROP"
