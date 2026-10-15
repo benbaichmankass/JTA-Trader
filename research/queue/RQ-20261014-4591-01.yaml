@@ -1,6 +1,6 @@
 id: RQ-20261014-4591-01
 title: 'AI trader / probability quality, out-of-time: does the 1h regime log-loss lift over the class prior (RQ-20261014-65cc-10 PASS) survive a post-2025-10-01 holdout?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -130,14 +130,13 @@ related:
 - scripts/research/ml_bakeoff.py
 last_dispatched_at: '2026-10-15T11:53:16+00:00'
 grading:
-  attested: RULE-RQ20261014-4591-01-REGIME-LOGLOSS-HOLDOUT
   auto: true
   decision_rule_id: RULE-RQ20261014-4591-01-REGIME-LOGLOSS-HOLDOUT
   evidence:
   - research/results/RQ-20261014-4591-01/38545857760.jsonl
+  - research/results/RQ-20261014-4591-01/38730583876.jsonl
   graded_at: '2026-10-15'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  reason: 1 row(s), all measured, all pass (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
   rows: 1
-  verdict: null
+  verdict: pass

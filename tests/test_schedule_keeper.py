@@ -32,6 +32,12 @@ def test_every_target_exists_is_scheduled_and_dedupes():
         for c in sk.workflow_crons(str(path)):
             sk.parse_cron(c)  # the keeper's grammar must cover every target cron
         jobs = d["jobs"]
+        if sk.TARGETS[wf].get("self_dedupes"):
+            # declared idempotent per slot; the reason must be real text, and such a target
+            # must not ALSO carry a half-wired dedupe job
+            assert len(sk.TARGETS[wf]["self_dedupes"]) > 20, wf
+            assert "dedupe" not in jobs, f"{wf}: declare self_dedupes OR a dedupe job, not both"
+            continue
         assert "dedupe" in jobs, f"{wf} lacks the dedupe job"
         assert jobs["dedupe"]["if"] == "github.event_name == 'schedule'"
         others = [k for k in jobs if k != "dedupe"]

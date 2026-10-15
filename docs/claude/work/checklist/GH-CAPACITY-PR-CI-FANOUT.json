@@ -13,8 +13,8 @@
     18240
   ],
   "blocked_on": [],
-  "note": "MERGED #18240 at 2026-10-15T10:26Z. OBSERVED affected mode: PR #18275's pytest-run run 38721769633 executed 'Run tests (pull_request code diff - import-graph affected test files)' in 2m47s, total job 4m07s, success; the data and full steps were skipped. NOT YET OBSERVED: the schedule backstop. At 10:53Z no event=schedule pytest-run run existed; the 10:43Z tick had not fired yet, and new crons often start late. CLOSES WHEN a pytest-run run with event=schedule on main exists, and its 'Determine relevant changed files' step logs run=true (full suite ran) or run=false with a covered/in_flight reason. Rerun: list pytest-run runs with event=schedule.",
-  "updated_at": "2026-10-15T10:58:41Z",
+  "note": "13:05Z: the pytest-run schedule created 0 runs in its first 5 slots (10:43-12:43Z) while other crons fired. Manager 13:06Z: build a schedule-keeper dispatch. PR gh-capacity-backstop-keeper adds pytest-run to schedule_keeper TARGETS (starved_min 30, stale_hours 2, self_dedupes) and gives pytest-run a workflow_dispatch input backstop (default true, used on main only) plus one serialised, non-cancelling concurrency group for backstop ticks. Interim: a full-suite pytest-run was dispatched on main at 13:05Z.",
+  "updated_at": "2026-10-15T13:10:29Z",
   "updated_by": "session_018g6RBL3Tu3zfJxN6rcMVtJ",
   "roadmap": [
     "L-OPS"
