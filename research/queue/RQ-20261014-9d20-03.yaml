@@ -1,7 +1,7 @@
 id: RQ-20261014-9d20-03
 title: 'AI trader / exit line: is a large peak-to-exit giveback (giveback_frac > 0.5) predictable WITHIN a leg from the decision-time
   columns the committed ledgers carry, or is the exit model''s information all in-trade (which the emits do not yet record)?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -112,9 +112,9 @@ grading:
   evidence:
   - research/results/RQ-20261014-9d20-03/38569791316.jsonl
   first_fail: 1 row(s), all measured, all fail
-  graded_at: '2026-10-14'
+  graded_at: '2026-10-15'
   grader: scripts/research/queue_grade.py
-  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
   reason: 1 row(s), all measured, all fail
   rows: 1
   verdict: fail
