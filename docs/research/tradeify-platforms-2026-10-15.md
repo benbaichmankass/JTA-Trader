@@ -43,7 +43,7 @@ Why the gap: per-instrument terminal specs need the symbol in the watchlist (`ad
 `instrument-info-probe` can open its info panel; the lane's brief was READ-ONLY, so it stopped there. Filed as checklist row `TRADEIFY-INSTR-SPECS`.
 The units below therefore use the **declared** stack plus a **declared** 3 bps slippage and say so.
 
-### 2b. TRADEIFY-INSTR-SPECS attempt, 2026-10-15 ~20:08-20:16Z (lane TRADEIFY-INSTR-SPECS; operator "Yes, add and read" ~19:50Z)
+### 2b. TRADEIFY-INSTR-SPECS attempt, 2026-10-15 ~20:08-20:16Z (the UNMEASURED cells below are superseded by 2c where it measured them) (lane TRADEIFY-INSTR-SPECS; operator "Yes, add and read" ~19:50Z)
 
 **Watchlist adds: DONE and verified (MEASURED).** One `add-watchlist-symbol` run per symbol, each verified by the adapter: exactly one
 suggestion row resolved, one click on its Symbol cell, Escape, **no order form and no dialog before or after, only that symbol added, nothing removed**,
@@ -80,6 +80,37 @@ than the "watchlist + info panel only" the operator approved. (a) A new read-onl
 how this terminal opens its instrument info, plus a numeric-safe emit (spread as bps of mid, swap/leverage as named fields, not masked digit runs); or
 (b) add a symbol-linked widget (a UI mutation not yet approved) so the existing probe's locator applies. Either needs a code PR before a run.
 
+
+### 2c. TRADEIFY-INSTR-SPECS MEASURED, 2026-10-15 21:10-21:17Z (after #18438 merged; supersedes the UNMEASURED cells in 2b)
+
+Two existing readers were extended (#18438), no widget was added: `quote-spread` (the executor's own `read_quote` off the watchlist) and the REST probe
+(`velotrade-api-probe`, `account: tradeify_1`). Flat before the REST login: `instrument-info-dry` #18450 (run 38808197277, 21:13:55Z) read margin used 0.0 and an empty
+Positions table; the REST portfolio then read positions 0, orders 0.
+
+| field | SILVER/USD | XYZ100/USD | SP500/USD | USOIL/USD | ETH/USD (control) | source / status |
+|---|---|---|---|---|---|---|
+| quoted spread, bps of mid (median of 3 reads ~1 s apart; min-max) | 1.74 (1.74-1.74) | 1.00 (0.34-1.00) | 0.13 (0.13-0.13) | 1.04 (1.04-2.08) | 0.0 (0.0-0.0) | MEASURED, #18448 run 38807791311, 21:10:49-21:11:13Z, **one snapshot**; excludes slippage and impact |
+| mid at read | 57.4 | 29,876 | 7,738 | 96.2 | 2,455 | MEASURED, same run |
+| margin rate (flat) | 0.2 | **not obtained (HTTP 429)** | **not obtained (HTTP 429)** | 0.2 | 0.2 | MEASURED, #18452 run 38808598907, account-scoped view; leverage 5:1 is **INFERRED** as 1/marginRate |
+| min order / increment (units) | 0.01 / 0.01 | increment 0.01; min **not obtained (429)** | increment 0.01; min **not obtained (429)** | 0.01 / 0.01 | 0.01 / 0.01 | MEASURED, same run |
+| lot size / multiplier | 1 / 1 | 1 / 1 | 1 / 1 | 1 / 1 | 1 / 1 | MEASURED (global instrument view) |
+| price increment | 0.001 | 0.01 | 0.001 | 0.01 | 0.001 | MEASURED |
+| trading status | FULL | not obtained (429) | not obtained (429) | FULL | FULL | MEASURED where shown |
+| trading hours | open and close at 00:00Z every day Mon-Sun, i.e. continuous 24x7 in the schedule | same | same | same | same | MEASURED schedule; "continuous" and "no holiday gaps" are **INFERRED** (the row lists no holidays) |
+| swap long / short, financing | **no field in the instrument row** | no field | no field | no field | no field | **NOT OBTAINABLE over REST**: the row's keys are assetClass, currency, description, firstCurrency, instrumentTreePath, lotSize, multiplier, pipSize, priceIncrement, quantityIncrement, symbol, tradingHours, type, version (global) and account, assetClass, marginRate, maxOrderSize, minOrderSize, minOrderSizeIncrement, symbol, tradingStatus, type (account). The 0.033%/day figure stays firm-declared, unconfirmed |
+| commission | no field | no field | no field | no field | no field | NOT OBTAINABLE over REST; 0.04%/side stays firm-declared, unconfirmed |
+
+Notes that change how to read the table:
+- The REST symbols are the slashed form (`SILVER/USD`); the unslashed `SILVERUSD` returns no row. The probe tried both.
+- ETH reads 0.0 bps in all three reads (bid equals ask). The four others read non-zero, so the parser does distinguish, but treat ETH's zero as "the watchlist showed equal bid and ask at that moment", not as a cost.
+- The REST run hit HTTP 429 on 15 of its 40 GETs (the probe sends them back to back). That is why XYZ100 and SP500 lack the account-scoped margin rate and minimum order size. Not a refusal of the instruments: their global rows came back.
+- A first dispatch (#18451, run 38808388790) used the wrong issue key (`account_id:`; the key is `account:`) and so probed velotrade_1 instead: read-only, positions 0 and orders 0, nothing placed. It adds no tradeify_1 evidence.
+
+**Versus the declared stack the units use** (8 bps commission round trip + 3 bps declared slippage + 0.033%/day swap, `--lev-cap leg=2`):
+- Spread: measured 0.13-1.74 bps at one snapshot, below the 3 bps declared slippage, so the declared figure still covers the quoted spread. A single snapshot says nothing about off-hours widening or fill slippage, so it is **not** grounds to lower the 3 bps.
+- Leverage: SILVER and USOIL show marginRate 0.2 (5:1 inferred), against the `2` the units cap them at (the firm page named 2:1 for indices and stocks and left metals and oil unnamed). That cap is part of each unit's pre-registered rule, not a cost input, so it was not touched. The indices' own margin rate is the field still missing.
+- Commission and swap: unmeasured, so the declared values stand.
+- **No unit was edited.** RQ-20261015-24ca-01..05 are unchanged.
 
 ## 3. Strategy → instrument mapping, and evidence state
 
