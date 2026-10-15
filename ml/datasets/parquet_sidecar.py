@@ -39,8 +39,9 @@ import json
 import math
 import os
 import sys
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 JSONL_NAME = "data.jsonl"
 PARQUET_NAME = "data.parquet"
@@ -52,8 +53,8 @@ _INT64_MIN, _INT64_MAX = -(2**63), 2**63 - 1
 
 def _pa():
     try:
-        import pyarrow as pa  # noqa: PLC0415
-        import pyarrow.parquet as pq  # noqa: PLC0415
+        import pyarrow as pa
+        import pyarrow.parquet as pq
     except ImportError:
         return None, None
     return pa, pq
@@ -224,12 +225,14 @@ def load_dataset_rows(
     if side is not None:
         try:
             return _load_parquet(side, keep)
-        except Exception:  # noqa: BLE001 — fall back to the source of truth
-            pass
+        except Exception as exc:  # noqa: BLE001 — fall back to the source of truth
+            print(json.dumps({"status": "parquet_sidecar_read_failed",
+                              "dir": str(dataset_dir), "reason": repr(exc)}),
+                  file=sys.stderr)
     src = dataset_dir / JSONL_NAME
     if not src.is_file():
         raise FileNotFoundError(src)
-    from ..experiments.runner import _load_jsonl  # noqa: PLC0415 — avoid a cycle
+    from ..experiments.runner import _load_jsonl  # local import: avoids a cycle
 
     return _load_jsonl(src, keep=keep)
 

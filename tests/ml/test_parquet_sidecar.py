@@ -4,15 +4,16 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Iterator, Mapping
 from pathlib import Path
-from typing import Any, ClassVar, Iterator, Mapping
+from typing import Any, ClassVar
 
 import pytest
 
 pytest.importorskip("pyarrow")
 
-from ml.datasets import parquet_sidecar as ps  # noqa: E402
-from ml.datasets.builder import DatasetBuilder  # noqa: E402
+from ml.datasets import parquet_sidecar as ps
+from ml.datasets.builder import DatasetBuilder
 
 
 class _Toy(DatasetBuilder):

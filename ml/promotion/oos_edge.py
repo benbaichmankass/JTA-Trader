@@ -31,11 +31,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
+from ..datasets.parquet_sidecar import dataset_present, load_dataset_rows
 from ..experiments.runner import (
     _aggregate_fold_metrics,
     _resolve_callable,
 )
-from ..datasets.parquet_sidecar import dataset_present, load_dataset_rows
 from ..experiments.splitters import iter_folds
 from ..manifest import TrainingManifest
 
