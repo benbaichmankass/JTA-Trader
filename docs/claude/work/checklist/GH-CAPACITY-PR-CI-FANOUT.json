@@ -2,7 +2,7 @@
   "id": "GH-CAPACITY-PR-CI-FANOUT",
   "title": "PR pytest-run holds 12 of 20 runner slots for ~40 min each",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": "session_018g6RBL3Tu3zfJxN6rcMVtJ",
   "model": null,
@@ -13,8 +13,8 @@
     18240
   ],
   "blocked_on": [],
-  "note": "CORRECTION to the previous note: guards are NOT already bounded. main-tree-watch grades only the diff-independent rules. The diff-scoped guards have the same token-merge gap. Not folded into #18240 because it needs a last-graded-sha base in run_guards (a design change). Filed as pipeline PI-20261015-N6RCMVTJ-0001 (due 2026-10-22).",
-  "updated_at": "2026-10-15T09:58:20Z",
+  "note": "MERGED #18240 at 2026-10-15T10:26Z. OBSERVED affected mode: PR #18275's pytest-run run 38721769633 executed 'Run tests (pull_request code diff - import-graph affected test files)' in 2m47s, total job 4m07s, success; the data and full steps were skipped. NOT YET OBSERVED: the schedule backstop. At 10:53Z no event=schedule pytest-run run existed; the 10:43Z tick had not fired yet, and new crons often start late. CLOSES WHEN a pytest-run run with event=schedule on main exists, and its 'Determine relevant changed files' step logs run=true (full suite ran) or run=false with a covered/in_flight reason. Rerun: list pytest-run runs with event=schedule.",
+  "updated_at": "2026-10-15T10:53:59Z",
   "updated_by": "session_018g6RBL3Tu3zfJxN6rcMVtJ",
   "roadmap": [
     "L-OPS"
