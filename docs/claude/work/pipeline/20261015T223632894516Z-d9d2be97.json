@@ -1,0 +1,19 @@
+{
+  "based_on": "20261015T203327113973Z-798a810e.json",
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "MD-PROMOTE-S1-S2-SOAK-AMEND is moved to `mandates:` by the operator (and the resolver build row exists) or removed from `proposed:` with the operator's reason",
+    "due_date": "2026-10-16",
+    "kind": "date"
+  },
+  "id": "PI-20261015-OAKREDEF-0002",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "session",
+    "ref": "lane SOAK-REDEFINE 2026-10-15 (manager session_01VduHYzdaXe27wTDBLSu8ao)",
+    "rerun": "python3 -c \"import yaml;d=yaml.safe_load(open('config/mandates.yaml'));print([m['id'] for m in d.get('proposed') or []])\""
+  },
+  "state": "done",
+  "terminal_reason": "Operator granted MD-PROMOTE-S1-S2-SOAK-AMEND ('Grant as written (Recommended)', relayed by manager session_01VduHYzdaXe27wTDBLSu8ao 2026-10-15). Manager folded it into MD-PROMOTE-S1-S2 in commit eeb0de70 (bar.soak_passed, bar.cost_basis: venue_symbol; proposed: []); resolver clauses built + tested in PR #18445. Rerun prints [].",
+  "what": "[mandate] MD-PROMOTE-S1-S2-SOAK-AMEND is PROPOSED in config/mandates.yaml (lane SOAK-REDEFINE, 2026-10-15) and authorizes nothing until the operator grants it. The granted MD-PROMOTE-S1-S2 still (a) checks 'has soaked' by roster membership + execution: live, not by a passed mechanical soak, and (b) requires the leg's PER-LEG R3 cost-fidelity verdict to read `consistent` (>= 10 measured fills per side) -- an accrual on the promotion path that the 2026-10-15 soak redefinition makes ongoing monitoring. Decision for the operator: grant (then a build lane edits the granted entry's text and mandate_resolver: soak clause reads SOAKS.json state `passed`; cost clause reads the venue's measured cost for the symbol + bar.cost_tolerance_bps, per-leg R3 stays as the demotion monitor) or refuse (the proposal is removed with the reason). The one mechanical-soak PASS leg not already on Stage 2 (record comms/research/soak_mechanics/2026-10-15.json) is trend_donchian_eth_prop; ada_pullback_2h, trend_donchian_eth_4h and trend_donchian_xrp_4h also PASS but are already on bybit_2 + bybit_portfolio."
+}

@@ -91,6 +91,12 @@ rule_effective_dates:
   equity_limits: "2026-09-30"
   inactivity: "2026-09-04"
 
+# Firm-declared costs (read by src/research/run_costs.prop_declared_costs) -- see the
+# `costs:` comment in the header: 0.03% per side, swap 0.05%/night.
+costs:
+  commission_bps_per_side: 3.0
+  swap_bps_per_night: 5.0
+
 economics:
   account_fee_usd: 54             # $5k CLASSIC 1-Step: $54 with code ALGO2026 (list $67) -- the price shown 2026-10-04
   rebuy_fee_usd: 54               # no reset product; "you may purchase a new challenge and start fresh"

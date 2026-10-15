@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "RQ-20261015-8bbc-01/-02 read PASS (CONSISTENT), or a per-trade comparison harness exists and has named the cause (regime|cost|execution|overfit) for each leg",
+    "kind": "observation",
+    "last_checked": "2026-10-15"
+  },
+  "id": "PI-20261015-10152047-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "research-ops 2026-10-15 20:47Z, operator standing first step for underperformers",
+    "rerun": "python3 scripts/research/live_vs_backtest_verdict.py --leg xrp_pullback_2h --out /tmp/lvb && cat /tmp/lvb/verdict.json"
+  },
+  "state": "queued",
+  "what": "BUILD: cause-naming harness for a BELOW_BACKTEST live leg. live_vs_backtest.py answers only 'is cumulative live R below the bootstrap band' (a percentile); it cannot name entry/exit/cost/regime divergence. Needed for xrp_pullback_2h (-8.84R n=16, 3.4th pct) and ada_pullback_2h (-7.04R n=15, 4.7th pct) on bybit_2 realMoney (PI-20261015-VUVNMUO8-0001/-0002; NOTE bybit_2, not bybit_1 as first dispatched): (1) join each live closed trade to the backtest trade on the same bar and diff entry/stop/TP/exit, fee, slippage, funding; (2) place live entries on the (trend,vol) grid via regime_cell_walkforward.py; (3) TP/SL bracket parity vs the TP doctrine. Stage A (does the divergence persist as n grows) is registered as RQ-20261015-8bbc-01/-02 via scripts/research/live_vs_backtest_verdict.py; a FAIL there opens this build. No config edit; any resulting regime off-cell or fix is a Tier-3 proposal."
+}

@@ -41,6 +41,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 import scripts.backtest_system as bt  # noqa: E402
+from src.research.run_costs import resolve_run_costs  # noqa: E402
 from src.prop.funding import apply_funding_to_ledger, funding_summary  # noqa: E402
 from src.prop.montecarlo import run_ev_montecarlo, run_montecarlo  # noqa: E402
 from src.prop.ruleset import PropRuleset, load_ruleset  # noqa: E402
@@ -76,6 +77,7 @@ def _engine_ledger(
         overrides=({strategy: {"long_only": True}} if getattr(args, "long_only", False) else {}),
         refresh=args.refresh_signals, clock_tf=args.clock_tf,
         flip_policy=args.flip_policy, reentry_policy="suppress", attach_full=True,
+        symbol=args.symbol, costs=args.costs, require_full_costs=True,
     )
     return summary.get("closed_trades", []) or []
 
@@ -126,6 +128,14 @@ def run(args: argparse.Namespace) -> int:
     except Exception as exc:  # noqa: BLE001
         print(f"ERROR: candle load failed ({args.data}): {exc}", file=sys.stderr)
         return 1
+
+    # Engine cost stack = fee + slippage (venue-aware, never zero). FUNDING/SWAP is
+    # applied DOWNSTREAM on the ledger by src.prop.funding (real series / constant /
+    # daily swap -- see funding_mode below), so the engine's own funding term is
+    # declared 0 here to avoid double-counting it; that is recorded, not defaulted.
+    args.costs = resolve_run_costs(args.symbol, funding_bps_per_window=0.0,
+                                   allow_fee_only=False)
+    args.costs["term_sources"]["funding"] = "applied_downstream:src.prop.funding"
 
     # Cost model: Breakout is perpetual-futures-STYLE but charges a flat
     # CFD-style DAILY SWAP (~0.09%/day per public reviews), not Bybit's 8h
@@ -218,6 +228,7 @@ def run(args: argparse.Namespace) -> int:
         "direction": "long_only" if getattr(args, "long_only", False) else "both_sides",
         "funding_mode": funding_mode,
         "funding_summary": fsum,
+        "cost_policy": args.costs,
         "data_window": {"start": str(data_start), "end": str(data_end)},
         "ruleset": ruleset.to_dict(),
         "params": {

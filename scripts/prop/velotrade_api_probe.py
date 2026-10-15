@@ -28,6 +28,7 @@ import argparse
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -75,6 +76,8 @@ SPEC_FIELDS = (
     "description", "name",
 )
 UA = "metis-insights-velotrade-api-probe/1 (read-only; contact: repo owner)"
+RETRY_429_S = (1.0, 2.0, 4.0)
+GET_GAP_S = 0.3
 _SECRETS: list[str] = []
 
 
@@ -143,13 +146,24 @@ def _call(method: str, path: str, token: str | None = None, body: dict | None = 
     if token:
         hdrs["Authorization"] = f"DXAPI {token}"
     req = urllib.request.Request(BASE + path, data=data, headers=hdrs, method=method)
-    try:
-        with urllib.request.urlopen(req, timeout=25) as r:
-            status, text = r.status, r.read().decode("utf-8", "replace")
-    except urllib.error.HTTPError as e:
-        status, text = e.code, e.read().decode("utf-8", "replace")
-    except Exception as e:  # network / TLS
-        return 0, None, f"{type(e).__name__}: {e}"
+    # TRADEIFY-INSTR-SPECS (run 38808598907): 40 back-to-back GETs drew HTTP 429 on 15 of them, which left
+    # the two indices without their account-scoped margin rate / minimum order size. GETs only (never the
+    # login/logout POSTs) are retried on 429 with the same 1/2/4 s schedule dxtrade_api.py uses, and each
+    # GET is followed by a short pause.
+    for attempt in range(len(RETRY_429_S) + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=25) as r:
+                status, text = r.status, r.read().decode("utf-8", "replace")
+        except urllib.error.HTTPError as e:
+            status, text = e.code, e.read().decode("utf-8", "replace")
+        except Exception as e:  # network / TLS
+            return 0, None, f"{type(e).__name__}: {e}"
+        if status == 429 and method == "GET" and attempt < len(RETRY_429_S):
+            time.sleep(RETRY_429_S[attempt])
+            continue
+        break
+    if method == "GET":
+        time.sleep(GET_GAP_S)
     try:
         return status, json.loads(text), text
     except ValueError:

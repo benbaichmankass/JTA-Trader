@@ -1,0 +1,2212 @@
+{
+ "counts": {
+  "awaiting_first_trade": 2,
+  "disposition:KILLED": 22,
+  "disposition:REFUSE": 1,
+  "mechanical_fail": 10,
+  "not_soaking": 7,
+  "passed": 8
+ },
+ "generated_at": "2026-10-15T21:10:34+00:00",
+ "note": "No P&L, balances or sizes are recorded here (public repo). Provenance of fees on the graded closes is carried per trade as cost_source.",
+ "population": {
+  "contracts": 50,
+  "journal_trades_rows": 6637,
+  "order_packages_rows": 5468,
+  "prop_fills_rows": 127,
+  "prop_tickets_rows": 264
+ },
+ "pulled_at": "2026-10-15T20:40:00Z",
+ "question": "Stage-1 / shadow soak, MECHANICAL definition (operator 2026-10-15): has each leg cleared its checklist on n_needed (<=2) clean trades since its last fault?",
+ "rule": "scripts/ops/soak_state.py (grade_trade / grade_shadow_package / grade_prop_signal / evaluate) \u2014 the same code soak_states() runs live",
+ "soaks": [
+  {
+   "account": "alpaca_paper",
+   "clean": [],
+   "fault": "bracket_real_at_venue: protection repair naked_rearm (position found unprotected); management_no_fault: naked_rearm",
+   "fault_id": 5349,
+   "graded": [
+    {
+     "clean": false,
+     "fault": "exit_journaled: exit_reason='exchange_flat_reconciled', no exit price; fill_and_fees: pnl or fee not recorded",
+     "id": 3937,
+     "items": {
+      "bracket_real_at_venue": "ok (venue leg ids not stamped on this path; no naked repair)",
+      "exit_journaled": "fault: exit_reason='exchange_flat_reconciled', no exit price",
+      "fill_and_fees": "fault: pnl or fee not recorded",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "bracket_real_at_venue: protection repair naked_rearm (position found unprotected); management_no_fault: naked_rearm",
+     "id": 5349,
+     "items": {
+      "bracket_real_at_venue": "fault: protection repair naked_rearm (position found unprotected)",
+      "exit_journaled": "ok (sl_cross)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "fault: naked_rearm",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    }
+   ],
+   "id": "SOAK-stage1-alpaca_paper-gdx_pullback_1d",
+   "kind": "stage1",
+   "leg": "gdx_pullback_1d",
+   "n_needed": 1,
+   "progress": "0/1 clean since fault",
+   "reason": "latest graded trade 5349 faulted: bracket_real_at_venue: protection repair naked_rearm (position found unprotected); management_no_fault: naked_rearm \u2014 fix, then re-soak",
+   "started": "2026-06-27",
+   "state": "mechanical_fail"
+  },
+  {
+   "account": "alpaca_paper",
+   "clean": [],
+   "fault": "exit_journaled: exit_reason='exchange_flat_reconciled', no exit price; fill_and_fees: pnl or fee not recorded",
+   "fault_id": 3934,
+   "graded": [
+    {
+     "clean": false,
+     "fault": "exit_journaled: exit_reason='exchange_flat_reconciled', no exit price; fill_and_fees: pnl or fee not recorded",
+     "id": 2634,
+     "items": {
+      "bracket_real_at_venue": "ok (venue leg ids not stamped on this path; no naked repair)",
+      "exit_journaled": "fault: exit_reason='exchange_flat_reconciled', no exit price",
+      "fill_and_fees": "fault: pnl or fee not recorded",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "exit_journaled: exit_reason='exchange_flat_reconciled', no exit price; fill_and_fees: pnl or fee not recorded",
+     "id": 3934,
+     "items": {
+      "bracket_real_at_venue": "ok (venue leg ids not stamped on this path; no naked repair)",
+      "exit_journaled": "fault: exit_reason='exchange_flat_reconciled', no exit price",
+      "fill_and_fees": "fault: pnl or fee not recorded",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    }
+   ],
+   "id": "SOAK-stage1-alpaca_paper-gld_pullback_1d",
+   "kind": "stage1",
+   "leg": "gld_pullback_1d",
+   "n_needed": 1,
+   "progress": "0/1 clean since fault",
+   "reason": "latest graded trade 3934 faulted: exit_journaled: exit_reason='exchange_flat_reconciled', no exit price; fill_and_fees: pnl or fee not recorded \u2014 fix, then re-soak",
+   "started": "2026-06-11",
+   "state": "mechanical_fail"
+  },
+  {
+   "account": "alpaca_paper",
+   "id": "SOAK-stage1-alpaca_paper-gld_pullback_1h",
+   "kind": "stage1",
+   "leg": "gld_pullback_1h",
+   "n_needed": 1,
+   "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=90, expectancy +0.365R, net +32.84R, folds 3/4, fi",
+   "started": "2026-06-21",
+   "state": "disposition:KILLED"
+  },
+  {
+   "account": "alpaca_paper",
+   "clean": [],
+   "fault": "bracket_real_at_venue: protection repair naked_rearm (position found unprotected); management_no_fault: naked_rearm",
+   "fault_id": 5352,
+   "graded": [
+    {
+     "clean": false,
+     "fault": "exit_journaled: exit_reason='exchange_flat_reconciled', no exit price; fill_and_fees: pnl or fee not recorded",
+     "id": 3491,
+     "items": {
+      "bracket_real_at_venue": "ok (venue leg ids not stamped on this path; no naked repair)",
+      "exit_journaled": "fault: exit_reason='exchange_flat_reconciled', no exit price",
+      "fill_and_fees": "fault: pnl or fee not recorded",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "bracket_real_at_venue: protection repair naked_rearm (position found unprotected); management_no_fault: naked_rearm",
+     "id": 5352,
+     "items": {
+      "bracket_real_at_venue": "fault: protection repair naked_rearm (position found unprotected)",
+      "exit_journaled": "ok (sl)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "fault: naked_rearm",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    }
+   ],
+   "id": "SOAK-stage1-alpaca_paper-iaum_pullback_1d",
+   "kind": "stage1",
+   "leg": "iaum_pullback_1d",
+   "n_needed": 1,
+   "progress": "0/1 clean since fault",
+   "reason": "latest graded trade 5352 faulted: bracket_real_at_venue: protection repair naked_rearm (position found unprotected); management_no_fault: naked_rearm \u2014 fix, then re-soak",
+   "started": "2026-07-07",
+   "state": "mechanical_fail"
+  },
+  {
+   "account": "alpaca_paper",
+   "clean": [
+    4194
+   ],
+   "fault": null,
+   "fault_id": null,
+   "graded": [
+    {
+     "clean": false,
+     "fault": "exit_journaled: exit_reason='exchange_flat_reconciled'",
+     "id": 3118,
+     "items": {
+      "bracket_real_at_venue": "ok (venue leg ids not stamped on this path; no naked repair)",
+      "exit_journaled": "fault: exit_reason='exchange_flat_reconciled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "fill_and_fees: pnl or fee not recorded",
+     "id": 3267,
+     "items": {
+      "bracket_real_at_venue": "ok (venue leg ids not stamped on this path; no naked repair)",
+      "exit_journaled": "ok (sl_cross)",
+      "fill_and_fees": "fault: pnl or fee not recorded",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 4194,
+     "items": {
+      "bracket_real_at_venue": "ok (venue leg ids not stamped on this path; no naked repair)",
+      "exit_journaled": "ok (sl_cross)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (stop trailed/amended at venue)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    }
+   ],
+   "id": "SOAK-stage1-alpaca_paper-ief_pullback_1d",
+   "kind": "stage1",
+   "leg": "ief_pullback_1d",
+   "n_needed": 1,
+   "progress": "1/1 clean",
+   "reason": "clean: 4194 (after fault 3267)",
+   "started": "2026-06-20",
+   "state": "passed"
+  },
+  {
+   "account": "alpaca_paper",
+   "clean": [],
+   "fault": "exit_journaled: exit_reason='exchange_flat_reconciled', no exit price; fill_and_fees: pnl or fee not recorded",
+   "fault_id": 4422,
+   "graded": [
+    {
+     "clean": false,
+     "fault": "exit_journaled: exit_reason='exchange_flat_reconciled'",
+     "id": 2771,
+     "items": {
+      "bracket_real_at_venue": "ok (venue leg ids not stamped on this path; no naked repair)",
+      "exit_journaled": "fault: exit_reason='exchange_flat_reconciled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "exit_journaled: exit_reason='exchange_flat_reconciled', no exit price; fill_and_fees: pnl or fee not recorded",
+     "id": 2772,
+     "items": {
+      "bracket_real_at_venue": "ok (venue leg ids not stamped on this path; no naked repair)",
+      "exit_journaled": "fault: exit_reason='exchange_flat_reconciled', no exit price",
+      "fill_and_fees": "fault: pnl or fee not recorded",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "exit_journaled: exit_reason='exchange_flat_reconciled'",
+     "id": 3268,
+     "items": {
+      "bracket_real_at_venue": "ok (venue leg ids not stamped on this path; no naked repair)",
+      "exit_journaled": "fault: exit_reason='exchange_flat_reconciled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "exit_journaled: exit_reason='exchange_flat_reconciled', no exit price; fill_and_fees: pnl or fee not recorded",
+     "id": 4422,
+     "items": {
+      "bracket_real_at_venue": "ok (venue leg ids not stamped on this path; no naked repair)",
+      "exit_journaled": "fault: exit_reason='exchange_flat_reconciled', no exit price",
+      "fill_and_fees": "fault: pnl or fee not recorded",
+      "management_no_fault": "ok (stop trailed/amended at venue)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    }
+   ],
+   "id": "SOAK-stage1-alpaca_paper-iwm_trend_long_1d",
+   "kind": "stage1",
+   "leg": "iwm_trend_long_1d",
+   "n_needed": 1,
+   "progress": "0/1 clean since fault",
+   "reason": "latest graded trade 4422 faulted: exit_journaled: exit_reason='exchange_flat_reconciled', no exit price; fill_and_fees: pnl or fee not recorded \u2014 fix, then re-soak",
+   "started": "2026-06-20",
+   "state": "mechanical_fail"
+  },
+  {
+   "account": "alpaca_paper",
+   "clean": [],
+   "fault": "bracket_real_at_venue: protection repair naked_rearm (position found unprotected); management_no_fault: naked_rearm",
+   "fault_id": 6027,
+   "graded": [
+    {
+     "clean": false,
+     "fault": "exit_journaled: exit_reason='exchange_flat_reconciled'",
+     "id": 4711,
+     "items": {
+      "bracket_real_at_venue": "ok (venue leg ids not stamped on this path; no naked repair)",
+      "exit_journaled": "fault: exit_reason='exchange_flat_reconciled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "bracket_real_at_venue: protection repair naked_rearm (position found unprotected); management_no_fault: naked_rearm",
+     "id": 6027,
+     "items": {
+      "bracket_real_at_venue": "fault: protection repair naked_rearm (position found unprotected)",
+      "exit_journaled": "ok (sl_cross)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "fault: naked_rearm",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    }
+   ],
+   "id": "SOAK-stage1-alpaca_paper-qld_trend_long_1d",
+   "kind": "stage1",
+   "leg": "qld_trend_long_1d",
+   "n_needed": 1,
+   "progress": "0/1 clean since fault",
+   "reason": "latest graded trade 6027 faulted: bracket_real_at_venue: protection repair naked_rearm (position found unprotected); management_no_fault: naked_rearm \u2014 fix, then re-soak",
+   "started": "2026-07-01",
+   "state": "mechanical_fail"
+  },
+  {
+   "account": "alpaca_paper",
+   "id": "SOAK-stage1-alpaca_paper-qqq_pullback_1h",
+   "kind": "stage1",
+   "leg": "qqq_pullback_1h",
+   "n_needed": 1,
+   "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=55, expectancy +0.197R, net +10.84R, folds 2/4, fi",
+   "started": "2026-06-21",
+   "state": "disposition:KILLED"
+  },
+  {
+   "account": "alpaca_paper",
+   "clean": [],
+   "fault": "exit_journaled: exit_reason='exchange_flat_reconciled', no exit price; fill_and_fees: pnl or fee not recorded",
+   "fault_id": 6023,
+   "graded": [
+    {
+     "clean": false,
+     "fault": "exit_journaled: exit_reason='exchange_flat_reconciled'",
+     "id": 4652,
+     "items": {
+      "bracket_real_at_venue": "ok (venue leg ids not stamped on this path; no naked repair)",
+      "exit_journaled": "fault: exit_reason='exchange_flat_reconciled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "exit_journaled: exit_reason='exchange_flat_reconciled', no exit price; fill_and_fees: pnl or fee not recorded",
+     "id": 6023,
+     "items": {
+      "bracket_real_at_venue": "ok (venue leg ids not stamped on this path; no naked repair)",
+      "exit_journaled": "fault: exit_reason='exchange_flat_reconciled', no exit price",
+      "fill_and_fees": "fault: pnl or fee not recorded",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    }
+   ],
+   "id": "SOAK-stage1-alpaca_paper-qqq_trend_long_1d",
+   "kind": "stage1",
+   "leg": "qqq_trend_long_1d",
+   "n_needed": 1,
+   "progress": "0/1 clean since fault",
+   "reason": "latest graded trade 6023 faulted: exit_journaled: exit_reason='exchange_flat_reconciled', no exit price; fill_and_fees: pnl or fee not recorded \u2014 fix, then re-soak",
+   "started": "2026-06-11",
+   "state": "mechanical_fail"
+  },
+  {
+   "account": "alpaca_paper",
+   "clean": [],
+   "fault": "exit_journaled: exit_reason='exchange_flat_reconciled', no exit price; fill_and_fees: pnl or fee not recorded",
+   "fault_id": 4710,
+   "graded": [
+    {
+     "clean": false,
+     "fault": "exit_journaled: exit_reason='exchange_flat_reconciled', no exit price; fill_and_fees: pnl or fee not recorded",
+     "id": 4710,
+     "items": {
+      "bracket_real_at_venue": "ok (venue leg ids not stamped on this path; no naked repair)",
+      "exit_journaled": "fault: exit_reason='exchange_flat_reconciled', no exit price",
+      "fill_and_fees": "fault: pnl or fee not recorded",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    }
+   ],
+   "id": "SOAK-stage1-alpaca_paper-scha_trend_long_1d",
+   "kind": "stage1",
+   "leg": "scha_trend_long_1d",
+   "n_needed": 1,
+   "progress": "0/1 clean since fault",
+   "reason": "latest graded trade 4710 faulted: exit_journaled: exit_reason='exchange_flat_reconciled', no exit price; fill_and_fees: pnl or fee not recorded \u2014 fix, then re-soak",
+   "started": "2026-07-07",
+   "state": "mechanical_fail"
+  },
+  {
+   "account": "alpaca_paper",
+   "clean": [],
+   "fault": "bracket_real_at_venue: protection repair naked_rearm (position found unprotected); management_no_fault: naked_rearm",
+   "fault_id": 5873,
+   "graded": [
+    {
+     "clean": true,
+     "fault": null,
+     "id": 4264,
+     "items": {
+      "bracket_real_at_venue": "ok (venue leg ids not stamped on this path; no naked repair)",
+      "exit_journaled": "ok (sl_cross)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "exit_journaled: exit_reason='exchange_flat_reconciled'",
+     "id": 4464,
+     "items": {
+      "bracket_real_at_venue": "ok (venue leg ids not stamped on this path; no naked repair)",
+      "exit_journaled": "fault: exit_reason='exchange_flat_reconciled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "bracket_real_at_venue: protection repair naked_rearm (position found unprotected); management_no_fault: naked_rearm; exit_journaled: exit_reason='exchange_flat_reconciled', no exit price; fill_and_fees: pnl or fee not recorded",
+     "id": 5267,
+     "items": {
+      "bracket_real_at_venue": "fault: protection repair naked_rearm (position found unprotected)",
+      "exit_journaled": "fault: exit_reason='exchange_flat_reconciled', no exit price",
+      "fill_and_fees": "fault: pnl or fee not recorded",
+      "management_no_fault": "fault: naked_rearm",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "bracket_real_at_venue: protection repair naked_rearm (position found unprotected); management_no_fault: naked_rearm",
+     "id": 5873,
+     "items": {
+      "bracket_real_at_venue": "fault: protection repair naked_rearm (position found unprotected)",
+      "exit_journaled": "ok (sl_cross)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "fault: naked_rearm",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    }
+   ],
+   "id": "SOAK-stage1-alpaca_paper-slv_pullback_1d",
+   "kind": "stage1",
+   "leg": "slv_pullback_1d",
+   "n_needed": 1,
+   "progress": "0/1 clean since fault",
+   "reason": "latest graded trade 5873 faulted: bracket_real_at_venue: protection repair naked_rearm (position found unprotected); management_no_fault: naked_rearm \u2014 fix, then re-soak",
+   "started": "2026-06-27",
+   "state": "mechanical_fail"
+  },
+  {
+   "account": "alpaca_paper",
+   "clean": [],
+   "fault": null,
+   "fault_id": null,
+   "graded": [],
+   "id": "SOAK-stage1-alpaca_paper-splg_trend_long_1d",
+   "kind": "stage1",
+   "leg": "splg_trend_long_1d",
+   "n_needed": 1,
+   "progress": "0/1 clean",
+   "reason": "no graded trade yet \u2014 waiting, not failing",
+   "started": "2026-07-07",
+   "state": "awaiting_first_trade"
+  },
+  {
+   "account": "alpaca_paper",
+   "id": "SOAK-stage1-alpaca_paper-spy_pullback_1h",
+   "kind": "stage1",
+   "leg": "spy_pullback_1h",
+   "n_needed": 1,
+   "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=75, expectancy -0.114R, net -8.55R, folds 2/4, fid",
+   "started": "2026-06-21",
+   "state": "disposition:KILLED"
+  },
+  {
+   "account": "alpaca_paper",
+   "clean": [],
+   "fault": null,
+   "fault_id": null,
+   "graded": [],
+   "id": "SOAK-stage1-alpaca_paper-spy_trend_long_1d",
+   "kind": "stage1",
+   "leg": "spy_trend_long_1d",
+   "n_needed": 1,
+   "progress": "0/1 clean",
+   "reason": "no graded trade yet \u2014 waiting, not failing",
+   "started": "2026-06-11",
+   "state": "awaiting_first_trade"
+  },
+  {
+   "account": "alpaca_paper",
+   "clean": [],
+   "fault": "bracket_real_at_venue: protection repair naked_rearm (position found unprotected); management_no_fault: naked_rearm",
+   "fault_id": 5265,
+   "graded": [
+    {
+     "clean": false,
+     "fault": "exit_journaled: exit_reason='exchange_flat_reconciled'",
+     "id": 3127,
+     "items": {
+      "bracket_real_at_venue": "ok (venue leg ids not stamped on this path; no naked repair)",
+      "exit_journaled": "fault: exit_reason='exchange_flat_reconciled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 3271,
+     "items": {
+      "bracket_real_at_venue": "ok (venue leg ids not stamped on this path; no naked repair)",
+      "exit_journaled": "ok (sl_cross)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 4169,
+     "items": {
+      "bracket_real_at_venue": "ok (venue leg ids not stamped on this path; no naked repair)",
+      "exit_journaled": "ok (sl_cross)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (stop trailed/amended at venue)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "bracket_real_at_venue: protection repair naked_rearm (position found unprotected); management_no_fault: naked_rearm",
+     "id": 5265,
+     "items": {
+      "bracket_real_at_venue": "fault: protection repair naked_rearm (position found unprotected)",
+      "exit_journaled": "ok (sl_cross)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "fault: naked_rearm",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    }
+   ],
+   "id": "SOAK-stage1-alpaca_paper-tlt_pullback_1d",
+   "kind": "stage1",
+   "leg": "tlt_pullback_1d",
+   "n_needed": 1,
+   "progress": "0/1 clean since fault",
+   "reason": "latest graded trade 5265 faulted: bracket_real_at_venue: protection repair naked_rearm (position found unprotected); management_no_fault: naked_rearm \u2014 fix, then re-soak",
+   "started": "2026-06-20",
+   "state": "mechanical_fail"
+  },
+  {
+   "account": "alpaca_paper",
+   "id": "SOAK-stage1-alpaca_paper-tlt_pullback_1h",
+   "kind": "stage1",
+   "leg": "tlt_pullback_1h",
+   "n_needed": 1,
+   "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=94, expectancy -0.072R, net -6.73R, folds 1/4, fid",
+   "started": "2026-06-21",
+   "state": "disposition:KILLED"
+  },
+  {
+   "account": "alpaca_paper",
+   "clean": [
+    6395
+   ],
+   "fault": null,
+   "fault_id": null,
+   "graded": [
+    {
+     "clean": true,
+     "fault": null,
+     "id": 6395,
+     "items": {
+      "bracket_real_at_venue": "ok (venue leg ids not stamped on this path; no naked repair)",
+      "exit_journaled": "ok (sl)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    }
+   ],
+   "id": "SOAK-stage1-alpaca_paper-tqqq_trend_long_1d",
+   "kind": "stage1",
+   "leg": "tqqq_trend_long_1d",
+   "n_needed": 1,
+   "progress": "1/1 clean",
+   "reason": "clean: 6395",
+   "started": "2026-07-01",
+   "state": "passed"
+  },
+  {
+   "account": "alpaca_paper",
+   "id": "SOAK-stage1-alpaca_paper-uso_trend_1h",
+   "kind": "stage1",
+   "leg": "uso_trend_1h",
+   "n_needed": 1,
+   "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=56, expectancy +0.462R, net +25.89R, folds 2/4, fi",
+   "started": "2026-06-21",
+   "state": "disposition:KILLED"
+  },
+  {
+   "account": "bybit_1",
+   "clean": [
+    4496
+   ],
+   "fault": null,
+   "fault_id": null,
+   "graded": [
+    {
+     "clean": false,
+     "fault": "bracket_real_at_venue: venue SL/TP order ids not stamped; exit_journaled: exit_reason='reconciler_filled'",
+     "id": 2701,
+     "items": {
+      "bracket_real_at_venue": "fault: venue SL/TP order ids not stamped",
+      "exit_journaled": "fault: exit_reason='reconciler_filled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "bracket_real_at_venue: venue SL/TP order ids not stamped; exit_journaled: exit_reason='reconciler_filled'",
+     "id": 3154,
+     "items": {
+      "bracket_real_at_venue": "fault: venue SL/TP order ids not stamped",
+      "exit_journaled": "fault: exit_reason='reconciler_filled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "bracket_real_at_venue: venue SL/TP order ids not stamped; exit_journaled: exit_reason='reconciler_filled'",
+     "id": 3183,
+     "items": {
+      "bracket_real_at_venue": "fault: venue SL/TP order ids not stamped",
+      "exit_journaled": "fault: exit_reason='reconciler_filled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "bracket_real_at_venue: venue SL/TP order ids not stamped; exit_journaled: exit_reason='reconciler_filled'",
+     "id": 3320,
+     "items": {
+      "bracket_real_at_venue": "fault: venue SL/TP order ids not stamped",
+      "exit_journaled": "fault: exit_reason='reconciler_filled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "bracket_real_at_venue: venue SL/TP order ids not stamped; exit_journaled: exit_reason='reconciler_filled'",
+     "id": 3427,
+     "items": {
+      "bracket_real_at_venue": "fault: venue SL/TP order ids not stamped",
+      "exit_journaled": "fault: exit_reason='reconciler_filled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "bracket_real_at_venue: venue SL/TP order ids not stamped",
+     "id": 3441,
+     "items": {
+      "bracket_real_at_venue": "fault: venue SL/TP order ids not stamped",
+      "exit_journaled": "ok (sl)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "bracket_real_at_venue: venue SL/TP order ids not stamped; exit_journaled: exit_reason='reconciler_filled'",
+     "id": 3501,
+     "items": {
+      "bracket_real_at_venue": "fault: venue SL/TP order ids not stamped",
+      "exit_journaled": "fault: exit_reason='reconciler_filled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "exit_journaled: exit_reason='reconciler_filled'",
+     "id": 3810,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "fault: exit_reason='reconciler_filled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 4148,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (sl)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 4209,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (tp)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (stop trailed/amended at venue)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "exit_journaled: exit_reason='reconciler_filled'",
+     "id": 4332,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "fault: exit_reason='reconciler_filled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (stop trailed/amended at venue)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 4496,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (sl)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 4585,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (sl)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (stop trailed/amended at venue)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 4924,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (sl)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 5087,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (sl)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 5479,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (sl)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 5669,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (sl)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 5694,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (tp)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (stop trailed/amended at venue)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 5839,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (sl_cross)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 5946,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (tp)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (stop trailed/amended at venue)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 6185,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (sl)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 6208,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (sl)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 6460,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (sl)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 6514,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (tp)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (stop trailed/amended at venue)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 6548,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (sl)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 6564,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (sl)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    }
+   ],
+   "id": "SOAK-stage1-bybit_1-ada_pullback_2h",
+   "kind": "stage1",
+   "leg": "ada_pullback_2h",
+   "n_needed": 1,
+   "progress": "1/1 clean",
+   "reason": "clean: 4496 (after fault 4332)",
+   "started": "2026-06-18",
+   "state": "passed"
+  },
+  {
+   "account": "bybit_1",
+   "id": "SOAK-stage1-bybit_1-eth_pullback_2h",
+   "kind": "stage1",
+   "leg": "eth_pullback_2h",
+   "n_needed": 1,
+   "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=62, expectancy -0.028R, net -1.74R, folds 1/4, fid",
+   "started": "2026-06-11",
+   "state": "disposition:KILLED"
+  },
+  {
+   "account": "bybit_1",
+   "id": "SOAK-stage1-bybit_1-ict_scalp_eth_15m",
+   "kind": "stage1",
+   "leg": "ict_scalp_eth_15m",
+   "n_needed": 1,
+   "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=78, expectancy +0.017R, net +1.32R, folds 2/4, fid",
+   "started": "2026-07-22",
+   "state": "disposition:KILLED"
+  },
+  {
+   "account": "bybit_1",
+   "id": "SOAK-stage1-bybit_1-ict_scalp_sol_15m",
+   "kind": "stage1",
+   "leg": "ict_scalp_sol_15m",
+   "n_needed": 1,
+   "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=84, expectancy -0.066R, net -5.57R, folds 2/4, fid",
+   "started": "2026-07-22",
+   "state": "disposition:KILLED"
+  },
+  {
+   "account": "bybit_1",
+   "id": "SOAK-stage1-bybit_1-ict_scalp_xrp_15m",
+   "kind": "stage1",
+   "leg": "ict_scalp_xrp_15m",
+   "n_needed": 1,
+   "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=76, expectancy +0.054R, net +4.07R, folds 2/4, fid",
+   "started": "2026-07-22",
+   "state": "disposition:KILLED"
+  },
+  {
+   "account": "bybit_1",
+   "id": "SOAK-stage1-bybit_1-ict_scalp_xrp_5m",
+   "kind": "stage1",
+   "leg": "ict_scalp_xrp_5m",
+   "n_needed": 1,
+   "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=169, expectancy -0.160R, net -27.00R, folds 0/4, f",
+   "started": "2026-07-21",
+   "state": "disposition:KILLED"
+  },
+  {
+   "account": "bybit_1",
+   "id": "SOAK-stage1-bybit_1-sol_pullback_2h",
+   "kind": "stage1",
+   "leg": "sol_pullback_2h",
+   "n_needed": 1,
+   "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=18, expectancy +0.255R, net +4.59R, folds 2/4, fid",
+   "started": "2026-06-18",
+   "state": "disposition:KILLED"
+  },
+  {
+   "account": "bybit_1",
+   "id": "SOAK-stage1-bybit_1-squeeze_breakout_4h",
+   "kind": "stage1",
+   "leg": "squeeze_breakout_4h",
+   "n_needed": 1,
+   "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=10, expectancy -0.040R, net -0.40R, folds 2/4, fid",
+   "started": "2026-05-24",
+   "state": "disposition:KILLED"
+  },
+  {
+   "account": "bybit_1",
+   "id": "SOAK-stage1-bybit_1-trend_donchian",
+   "kind": "stage1",
+   "leg": "trend_donchian",
+   "n_needed": 1,
+   "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=73, expectancy +0.063R, net +4.60R, folds 2/4, fid",
+   "started": "2026-05-25",
+   "state": "disposition:KILLED"
+  },
+  {
+   "account": "bybit_1",
+   "id": "SOAK-stage1-bybit_1-trend_donchian_eth",
+   "kind": "stage1",
+   "leg": "trend_donchian_eth",
+   "n_needed": 1,
+   "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=107, expectancy +0.151R, net +16.18R, folds 2/4, f",
+   "started": "2026-07-07",
+   "state": "disposition:KILLED"
+  },
+  {
+   "account": "bybit_1",
+   "clean": [
+    6238
+   ],
+   "fault": null,
+   "fault_id": null,
+   "graded": [
+    {
+     "clean": false,
+     "fault": "bracket_real_at_venue: venue SL/TP order ids not stamped; exit_journaled: exit_reason='reconciler_filled'",
+     "id": 2691,
+     "items": {
+      "bracket_real_at_venue": "fault: venue SL/TP order ids not stamped",
+      "exit_journaled": "fault: exit_reason='reconciler_filled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "bracket_real_at_venue: venue SL/TP order ids not stamped; exit_journaled: exit_reason='reconciler_filled'",
+     "id": 2805,
+     "items": {
+      "bracket_real_at_venue": "fault: venue SL/TP order ids not stamped",
+      "exit_journaled": "fault: exit_reason='reconciler_filled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "bracket_real_at_venue: venue SL/TP order ids not stamped; exit_journaled: exit_reason='reconciler_filled'",
+     "id": 3114,
+     "items": {
+      "bracket_real_at_venue": "fault: venue SL/TP order ids not stamped",
+      "exit_journaled": "fault: exit_reason='reconciler_filled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "exit_journaled: exit_reason='reconciler_filled'",
+     "id": 4444,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "fault: exit_reason='reconciler_filled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 4700,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (sl)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (stop trailed/amended at venue)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 4797,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (tp)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (stop trailed/amended at venue)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "exit_journaled: exit_reason='reconciler_filled'",
+     "id": 4807,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "fault: exit_reason='reconciler_filled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (stop trailed/amended at venue)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "exit_journaled: exit_reason='reconciler_filled'",
+     "id": 4903,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "fault: exit_reason='reconciler_filled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 5785,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (sl)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "exit_journaled: exit_reason='reconciler_filled'",
+     "id": 5925,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "fault: exit_reason='reconciler_filled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (stop trailed/amended at venue)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 6238,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (sl)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 6488,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (sl)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (stop trailed/amended at venue)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 6592,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (sl)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 6622,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (sl_cross)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    }
+   ],
+   "id": "SOAK-stage1-bybit_1-trend_donchian_eth_4h",
+   "kind": "stage1",
+   "leg": "trend_donchian_eth_4h",
+   "n_needed": 1,
+   "progress": "1/1 clean",
+   "reason": "clean: 6238 (after fault 5925)",
+   "started": "2026-06-18",
+   "state": "passed"
+  },
+  {
+   "account": "bybit_1",
+   "id": "SOAK-stage1-bybit_1-trend_donchian_sol",
+   "kind": "stage1",
+   "leg": "trend_donchian_sol",
+   "n_needed": 1,
+   "reason": "stage1 soak ended: leg is on NO roster since the 2026-10-05 cut (MD-S1-CUT-ON-STAGE0-FAIL, #16556); Stage-0 n=59, expectancy +0.076R, net +4.46R, folds 1/4, fid",
+   "started": "2026-07-07",
+   "state": "disposition:KILLED"
+  },
+  {
+   "account": "bybit_1",
+   "clean": [
+    5249
+   ],
+   "fault": null,
+   "fault_id": null,
+   "graded": [
+    {
+     "clean": false,
+     "fault": "bracket_real_at_venue: venue SL/TP order ids not stamped; exit_journaled: exit_reason='reconciler_filled'",
+     "id": 2687,
+     "items": {
+      "bracket_real_at_venue": "fault: venue SL/TP order ids not stamped",
+      "exit_journaled": "fault: exit_reason='reconciler_filled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "bracket_real_at_venue: venue SL/TP order ids not stamped; exit_journaled: exit_reason='reconciler_filled'",
+     "id": 3116,
+     "items": {
+      "bracket_real_at_venue": "fault: venue SL/TP order ids not stamped",
+      "exit_journaled": "fault: exit_reason='reconciler_filled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 5249,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (sl)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 6527,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (sl)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    }
+   ],
+   "id": "SOAK-stage1-bybit_1-trend_donchian_xrp_4h",
+   "kind": "stage1",
+   "leg": "trend_donchian_xrp_4h",
+   "n_needed": 1,
+   "progress": "1/1 clean",
+   "reason": "clean: 5249 (after fault 3116)",
+   "started": "2026-06-18",
+   "state": "passed"
+  },
+  {
+   "account": "bybit_1",
+   "clean": [],
+   "fault": "exit_journaled: exit_reason='reconciler_filled'",
+   "fault_id": 6171,
+   "graded": [
+    {
+     "clean": false,
+     "fault": "bracket_real_at_venue: venue SL/TP order ids not stamped; exit_journaled: exit_reason='reconciler_filled'",
+     "id": 2711,
+     "items": {
+      "bracket_real_at_venue": "fault: venue SL/TP order ids not stamped",
+      "exit_journaled": "fault: exit_reason='reconciler_filled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "bracket_real_at_venue: venue SL/TP order ids not stamped; exit_journaled: exit_reason='reconciler_filled'",
+     "id": 3506,
+     "items": {
+      "bracket_real_at_venue": "fault: venue SL/TP order ids not stamped",
+      "exit_journaled": "fault: exit_reason='reconciler_filled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 4008,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (sl)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "exit_journaled: exit_reason='reconciler_filled'",
+     "id": 4933,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "fault: exit_reason='reconciler_filled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 5358,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (sl)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "exit_journaled: exit_reason='reconciler_filled'",
+     "id": 5473,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "fault: exit_reason='reconciler_filled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 5775,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (sl)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 5961,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (tp)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (stop trailed/amended at venue)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 6052,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (sl)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (stop trailed/amended at venue)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": 6135,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "ok (sl)",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    },
+    {
+     "clean": false,
+     "fault": "exit_journaled: exit_reason='reconciler_filled'",
+     "id": 6171,
+     "items": {
+      "bracket_real_at_venue": "ok",
+      "exit_journaled": "fault: exit_reason='reconciler_filled'",
+      "fill_and_fees": "ok (cost_source=estimate)",
+      "management_no_fault": "ok (not exercised: exited before any management condition)",
+      "order_size_side": "ok",
+      "signal_fired": "ok"
+     }
+    }
+   ],
+   "id": "SOAK-stage1-bybit_1-xrp_pullback_2h",
+   "kind": "stage1",
+   "leg": "xrp_pullback_2h",
+   "n_needed": 1,
+   "progress": "0/1 clean since fault",
+   "reason": "latest graded trade 6171 faulted: exit_journaled: exit_reason='reconciler_filled' \u2014 fix, then re-soak",
+   "started": "2026-06-18",
+   "state": "mechanical_fail"
+  },
+  {
+   "account": "bybit_1",
+   "id": "SOAK-shadow-avax_pullback_2h",
+   "kind": "shadow",
+   "leg": "avax_pullback_2h",
+   "n_needed": 1,
+   "reason": "shadow soak ended: leg is on NO roster since the 2026-10-05 cut (#16561); Stage-0 n=57, expectancy -0.025R, net -1.40R, folds 2/4, fidelity approximate, slippag",
+   "started": "2026-07-23",
+   "state": "disposition:KILLED"
+  },
+  {
+   "account": "bybit_1",
+   "id": "SOAK-shadow-eth_pullback_prop_2h",
+   "kind": "shadow",
+   "leg": "eth_pullback_prop_2h",
+   "n_needed": 1,
+   "reason": "shadow soak ended: leg is on NO roster since the 2026-10-05 cut (#16561); Stage-0 n=70, expectancy -0.050R, net -3.52R, folds 2/4, fidelity faithful, slippage 3",
+   "started": "2026-08-23",
+   "state": "disposition:KILLED"
+  },
+  {
+   "account": "bybit_1",
+   "id": "SOAK-shadow-fade_breakout_4h",
+   "kind": "shadow",
+   "leg": "fade_breakout_4h",
+   "n_needed": 1,
+   "reason": "shadow soak ended: leg is on NO roster since the 2026-10-05 cut (#16561); Stage-0 n=27, expectancy -0.596R, net -16.09R, folds 1/4, fidelity faithful, slippage ",
+   "started": "2026-06-01",
+   "state": "disposition:KILLED"
+  },
+  {
+   "account": "bybit_1",
+   "id": "SOAK-shadow-fvg_range_15m",
+   "kind": "shadow",
+   "leg": "fvg_range_15m",
+   "n_needed": 1,
+   "reason": "shadow soak ended: leg is on NO roster since the 2026-10-05 cut (#16561); Stage-0 n=17, expectancy -0.570R, net -9.70R, folds 0/4, fidelity faithful, slippage 3",
+   "started": "2026-07-28",
+   "state": "disposition:KILLED"
+  },
+  {
+   "account": "bybit_1",
+   "id": "SOAK-shadow-htf_pullback_trend_2h",
+   "kind": "shadow",
+   "leg": "htf_pullback_trend_2h",
+   "n_needed": 1,
+   "reason": "shadow soak ended: leg is on NO roster since the 2026-10-05 cut (#16561); Stage-0 n=86, expectancy -0.057R, net -4.93R, folds 1/4, fidelity faithful, slippage 3",
+   "started": "2026-08-23",
+   "state": "disposition:KILLED"
+  },
+  {
+   "account": "-",
+   "id": "SOAK-shadow-ict_scalp_5m",
+   "kind": "shadow",
+   "leg": "ict_scalp_5m",
+   "n_needed": 1,
+   "reason": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
+   "started": "2026-09-28",
+   "state": "not_soaking"
+  },
+  {
+   "account": "bybit_1",
+   "id": "SOAK-shadow-ict_scalp_avax_5m",
+   "kind": "shadow",
+   "leg": "ict_scalp_avax_5m",
+   "n_needed": 1,
+   "reason": "shadow soak ended: leg is on NO roster since the 2026-10-05 cut (#16561); Stage-0 n=177, expectancy -0.210R, net -37.12R, folds 0/4, fidelity faithful, slippage",
+   "started": "2026-09-28",
+   "state": "disposition:KILLED"
+  },
+  {
+   "account": "bybit_1",
+   "id": "SOAK-shadow-ict_scalp_sol_5m",
+   "kind": "shadow",
+   "leg": "ict_scalp_sol_5m",
+   "n_needed": 1,
+   "reason": "shadow soak ended: leg is on NO roster since the 2026-10-05 cut (#16561); Stage-0 n=190, expectancy -0.120R, net -22.72R, folds 0/4, fidelity faithful, slippage",
+   "started": "2026-09-28",
+   "state": "disposition:KILLED"
+  },
+  {
+   "account": "ib_paper",
+   "id": "SOAK-shadow-mgc_trend_1h",
+   "kind": "shadow",
+   "leg": "mgc_trend_1h",
+   "n_needed": 1,
+   "reason": "Soak question answered, no extension. (1) Stage-0 n=118, +0.217R, net +25.61R but folds 2/4 \u2014 NOT a majority, so the MD-PROMOTE bar's fold clause refuses (PR #1",
+   "started": "2026-06-18",
+   "state": "disposition:REFUSE"
+  },
+  {
+   "account": "alpaca_paper,alpaca_options_paper",
+   "clean": [
+    "pkg-08a3f8a838cc4688"
+   ],
+   "fault": null,
+   "fault_id": null,
+   "graded": [
+    {
+     "clean": true,
+     "fault": null,
+     "id": "pkg-08a3f8a838cc4688",
+     "items": {
+      "package_complete": "ok",
+      "signal_fired": "ok",
+      "sized_and_routed_dry": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": "pkg-9b55b6e2a3a84dfa",
+     "items": {
+      "package_complete": "ok",
+      "signal_fired": "ok",
+      "sized_and_routed_dry": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": "pkg-33a692302dae4557",
+     "items": {
+      "package_complete": "ok",
+      "signal_fired": "ok",
+      "sized_and_routed_dry": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": "pkg-0348cf5abe6642d6",
+     "items": {
+      "package_complete": "ok",
+      "signal_fired": "ok",
+      "sized_and_routed_dry": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": "pkg-9d6bf4d7bc3a4784",
+     "items": {
+      "package_complete": "ok",
+      "signal_fired": "ok",
+      "sized_and_routed_dry": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": "pkg-63c4d91153b64047",
+     "items": {
+      "package_complete": "ok",
+      "signal_fired": "ok",
+      "sized_and_routed_dry": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": "pkg-6e4bc5009c8f4e22",
+     "items": {
+      "package_complete": "ok",
+      "signal_fired": "ok",
+      "sized_and_routed_dry": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": "pkg-dbaa4fcdc99e4978",
+     "items": {
+      "package_complete": "ok",
+      "signal_fired": "ok",
+      "sized_and_routed_dry": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": "pkg-78ae14ca67ea4955",
+     "items": {
+      "package_complete": "ok",
+      "signal_fired": "ok",
+      "sized_and_routed_dry": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": "pkg-5be56b9ecb164f2d",
+     "items": {
+      "package_complete": "ok",
+      "signal_fired": "ok",
+      "sized_and_routed_dry": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": "pkg-b36c13615e6746eb",
+     "items": {
+      "package_complete": "ok",
+      "signal_fired": "ok",
+      "sized_and_routed_dry": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": "pkg-c2dfed0a30954191",
+     "items": {
+      "package_complete": "ok",
+      "signal_fired": "ok",
+      "sized_and_routed_dry": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": "pkg-c0b546a8154b46b2",
+     "items": {
+      "package_complete": "ok",
+      "signal_fired": "ok",
+      "sized_and_routed_dry": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": "pkg-13545dbdc2dc4229",
+     "items": {
+      "package_complete": "ok",
+      "signal_fired": "ok",
+      "sized_and_routed_dry": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": "pkg-8b5294c56c7a44a5",
+     "items": {
+      "package_complete": "ok",
+      "signal_fired": "ok",
+      "sized_and_routed_dry": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": "pkg-800fc70c6a534946",
+     "items": {
+      "package_complete": "ok",
+      "signal_fired": "ok",
+      "sized_and_routed_dry": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": "pkg-1ad5751600f24176",
+     "items": {
+      "package_complete": "ok",
+      "signal_fired": "ok",
+      "sized_and_routed_dry": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": "pkg-8a5ef245e5cd4085",
+     "items": {
+      "package_complete": "ok",
+      "signal_fired": "ok",
+      "sized_and_routed_dry": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": "pkg-9d6f4f4cda834967",
+     "items": {
+      "package_complete": "ok",
+      "signal_fired": "ok",
+      "sized_and_routed_dry": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": "pkg-5e8f6d0eeafb433c",
+     "items": {
+      "package_complete": "ok",
+      "signal_fired": "ok",
+      "sized_and_routed_dry": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": "pkg-8fd5f45aa7e34d9b",
+     "items": {
+      "package_complete": "ok",
+      "signal_fired": "ok",
+      "sized_and_routed_dry": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": "pkg-38ad76682e854a9a",
+     "items": {
+      "package_complete": "ok",
+      "signal_fired": "ok",
+      "sized_and_routed_dry": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": "pkg-cea24a98bc834bc1",
+     "items": {
+      "package_complete": "ok",
+      "signal_fired": "ok",
+      "sized_and_routed_dry": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": "pkg-b48c731b4bd54497",
+     "items": {
+      "package_complete": "ok",
+      "signal_fired": "ok",
+      "sized_and_routed_dry": "ok"
+     }
+    },
+    {
+     "clean": true,
+     "fault": null,
+     "id": "pkg-612869cacf2b444c",
+     "items": {
+      "package_complete": "ok",
+      "signal_fired": "ok",
+      "sized_and_routed_dry": "ok"
+     }
+    }
+   ],
+   "id": "SOAK-shadow-slv_trend_1h",
+   "kind": "shadow",
+   "leg": "slv_trend_1h",
+   "n_needed": 1,
+   "progress": "1/1 clean",
+   "reason": "clean: pkg-08a3f8a838cc4688",
+   "started": "2026-08-24",
+   "state": "passed"
+  },
+  {
+   "account": "bybit_1",
+   "id": "SOAK-shadow-trend_donchian_1h",
+   "kind": "shadow",
+   "leg": "trend_donchian_1h",
+   "n_needed": 1,
+   "reason": "enabled: false \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract",
+   "started": "2026-06-01",
+   "state": "not_soaking"
+  },
+  {
+   "account": "-",
+   "id": "SOAK-shadow-trend_donchian_ada_4h",
+   "kind": "shadow",
+   "leg": "trend_donchian_ada_4h",
+   "n_needed": 1,
+   "reason": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
+   "started": "2026-09-28",
+   "state": "not_soaking"
+  },
+  {
+   "account": "-",
+   "id": "SOAK-shadow-trend_donchian_avax_4h",
+   "kind": "shadow",
+   "leg": "trend_donchian_avax_4h",
+   "n_needed": 1,
+   "reason": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
+   "started": "2026-09-28",
+   "state": "not_soaking"
+  },
+  {
+   "account": "-",
+   "id": "SOAK-shadow-trend_donchian_sol_4h",
+   "kind": "shadow",
+   "leg": "trend_donchian_sol_4h",
+   "n_needed": 1,
+   "reason": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
+   "started": "2026-09-28",
+   "state": "not_soaking"
+  },
+  {
+   "account": "-",
+   "id": "SOAK-shadow-turtle_soup",
+   "kind": "shadow",
+   "leg": "turtle_soup",
+   "n_needed": 1,
+   "reason": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract",
+   "started": "2026-07-07",
+   "state": "not_soaking"
+  },
+  {
+   "account": "-",
+   "id": "SOAK-shadow-vwap",
+   "kind": "shadow",
+   "leg": "vwap",
+   "n_needed": 1,
+   "reason": "enabled: false \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract",
+   "started": "2026-05-24",
+   "state": "not_soaking"
+  },
+  {
+   "account": "bybit_1",
+   "clean": [
+    "prop:pkg-f17ceb55e3d04304"
+   ],
+   "fault": null,
+   "fault_id": null,
+   "graded": [
+    {
+     "accounts": [
+      {
+       "account": "breakout_1",
+       "clean": true,
+       "fault": null,
+       "items": {
+        "bracket_real_at_venue": "ok",
+        "exit_journaled": "ok (sl)",
+        "fill_recorded": "ok (no fee column on the prop journal)",
+        "management_no_fault": "ok (stop amended/trailed at venue)",
+        "order_size_side": "ok",
+        "signal_fired": "ok",
+        "ticket_bracket_real": "ok"
+       },
+       "ticket": "prop-manual-c4b630b4886b"
+      }
+     ],
+     "clean": true,
+     "fault": null,
+     "id": "prop:pkg-f17ceb55e3d04304"
+    },
+    {
+     "accounts": [
+      {
+       "account": "tradeify_1",
+       "clean": true,
+       "fault": null,
+       "items": {
+        "bracket_real_at_venue": "ok",
+        "exit_journaled": "ok (sl)",
+        "fill_recorded": "ok (no fee column on the prop journal)",
+        "management_no_fault": "ok (not exercised: exited before any management condition)",
+        "order_size_side": "ok",
+        "signal_fired": "ok",
+        "ticket_bracket_real": "ok"
+       },
+       "ticket": "prop-manual-6c8cf9ae5f06"
+      }
+     ],
+     "clean": true,
+     "fault": null,
+     "id": "prop:pkg-6ef60e8451584587"
+    },
+    {
+     "accounts": [
+      {
+       "account": "velotrade_1",
+       "clean": true,
+       "fault": null,
+       "items": {
+        "bracket_real_at_venue": "ok",
+        "exit_journaled": "ok (sl)",
+        "fill_recorded": "ok (no fee column on the prop journal)",
+        "management_no_fault": "ok (stop amended/trailed at venue)",
+        "order_size_side": "ok",
+        "signal_fired": "ok",
+        "ticket_bracket_real": "ok"
+       },
+       "ticket": "prop-manual-6fbebc711fa6"
+      }
+     ],
+     "clean": true,
+     "fault": null,
+     "id": "prop:pkg-2ba157527fdd4732"
+    },
+    {
+     "accounts": [
+      {
+       "account": "velotrade_1",
+       "clean": true,
+       "fault": null,
+       "items": {
+        "bracket_real_at_venue": "ok",
+        "exit_journaled": "ok (sl)",
+        "fill_recorded": "ok (no fee column on the prop journal)",
+        "management_no_fault": "ok (stop amended/trailed at venue)",
+        "order_size_side": "ok",
+        "signal_fired": "ok",
+        "ticket_bracket_real": "ok"
+       },
+       "ticket": "prop-manual-609ce9dd6f4f"
+      },
+      {
+       "account": "breakout_2",
+       "adapter_fault": "exit_journaled: exit not journaled with a clean reason/price ('breakout_2 ETHUSDT long (row 106) closed on the Breakout ter'); fill_recorded: no exit price",
+       "clean": null,
+       "fault": null,
+       "items": {
+        "bracket_real_at_venue": "ok",
+        "exit_journaled": "fault: exit not journaled with a clean reason/price ('breakout_2 ETHUSDT long (row 106) closed on the Breakout ter')",
+        "fill_recorded": "fault: no exit price",
+        "management_no_fault": "ok (not exercised: exited before any management condition)",
+        "order_size_side": "ok",
+        "signal_fired": "ok",
+        "ticket_bracket_real": "ok"
+       },
+       "ticket": "prop-manual-f7933463fec8"
+      }
+     ],
+     "clean": true,
+     "fault": null,
+     "id": "prop:pkg-62db5d728f6e499f"
+    },
+    {
+     "accounts": [
+      {
+       "account": "tradeify_1",
+       "clean": true,
+       "fault": null,
+       "items": {
+        "bracket_real_at_venue": "ok",
+        "exit_journaled": "ok (sl)",
+        "fill_recorded": "ok (no fee column on the prop journal)",
+        "management_no_fault": "ok (not exercised: exited before any management condition)",
+        "order_size_side": "ok",
+        "signal_fired": "ok",
+        "ticket_bracket_real": "ok"
+       },
+       "ticket": "prop-manual-b640ea26a705"
+      }
+     ],
+     "clean": true,
+     "fault": null,
+     "id": "prop:pkg-7071d6188a44459c"
+    },
+    {
+     "accounts": [
+      {
+       "account": "velotrade_1",
+       "clean": true,
+       "fault": null,
+       "items": {
+        "bracket_real_at_venue": "ok",
+        "exit_journaled": "ok (sl)",
+        "fill_recorded": "ok (no fee column on the prop journal)",
+        "management_no_fault": "ok (stop amended/trailed at venue)",
+        "order_size_side": "ok",
+        "signal_fired": "ok",
+        "ticket_bracket_real": "ok"
+       },
+       "ticket": "prop-manual-3ea10bfaa680"
+      },
+      {
+       "account": "tradeify_1",
+       "clean": true,
+       "fault": null,
+       "items": {
+        "bracket_real_at_venue": "ok",
+        "exit_journaled": "ok (sl)",
+        "fill_recorded": "ok (no fee column on the prop journal)",
+        "management_no_fault": "ok (not exercised: exited before any management condition)",
+        "order_size_side": "ok",
+        "signal_fired": "ok",
+        "ticket_bracket_real": "ok"
+       },
+       "ticket": "prop-manual-2165978c1c04"
+      },
+      {
+       "account": "breakout_2",
+       "adapter_fault": "bracket_real_at_venue: no venue-read open fill (bracket at venue not observed); exit_journaled: exit not journaled with a clean reason/price ('LIVE-SILENCE-DIAG - filled and stopped out on terminal; ETH ')",
+       "clean": null,
+       "fault": null,
+       "items": {
+        "bracket_real_at_venue": "fault: no venue-read open fill (bracket at venue not observed)",
+        "exit_journaled": "fault: exit not journaled with a clean reason/price ('LIVE-SILENCE-DIAG - filled and stopped out on terminal; ETH ')",
+        "fill_recorded": "ok (no fee column on the prop journal)",
+        "management_no_fault": "ok (not exercised: exited before any management condition)",
+        "order_size_side": "ok",
+        "signal_fired": "ok",
+        "ticket_bracket_real": "ok"
+       },
+       "ticket": "prop-manual-762f959676fd"
+      }
+     ],
+     "clean": true,
+     "fault": null,
+     "id": "prop:pkg-c13a5d29b7f54b09"
+    },
+    {
+     "accounts": [
+      {
+       "account": "velotrade_1",
+       "clean": true,
+       "fault": null,
+       "items": {
+        "bracket_real_at_venue": "ok",
+        "exit_journaled": "ok (sl)",
+        "fill_recorded": "ok (no fee column on the prop journal)",
+        "management_no_fault": "ok (stop amended/trailed at venue)",
+        "order_size_side": "ok",
+        "signal_fired": "ok",
+        "ticket_bracket_real": "ok"
+       },
+       "ticket": "prop-manual-0eb7eeaa00d2"
+      },
+      {
+       "account": "breakout_2",
+       "clean": null,
+       "fault": null,
+       "items": {
+        "neutral": "operator manual close"
+       },
+       "ticket": "prop-manual-f6552263ed1d"
+      }
+     ],
+     "clean": true,
+     "fault": null,
+     "id": "prop:pkg-03c6de7026de4305"
+    }
+   ],
+   "id": "SOAK-stage1-bybit_1-trend_donchian_eth_prop",
+   "kind": "stage1",
+   "leg": "trend_donchian_eth_prop",
+   "n_needed": 1,
+   "progress": "1/1 clean",
+   "reason": "clean: prop:pkg-f17ceb55e3d04304",
+   "started": "2026-10-15",
+   "state": "passed"
+  },
+  {
+   "account": "bybit_1",
+   "clean": [
+    "prop:pkg-c58bbadd9b9a492f"
+   ],
+   "fault": null,
+   "fault_id": null,
+   "graded": [
+    {
+     "accounts": [
+      {
+       "account": "tradeify_1",
+       "clean": true,
+       "fault": null,
+       "items": {
+        "bracket_real_at_venue": "ok",
+        "exit_journaled": "ok (sl)",
+        "fill_recorded": "ok (no fee column on the prop journal)",
+        "management_no_fault": "ok (stop amended/trailed at venue)",
+        "order_size_side": "ok",
+        "signal_fired": "ok",
+        "ticket_bracket_real": "ok"
+       },
+       "ticket": "prop-manual-c245b7e56125"
+      }
+     ],
+     "clean": true,
+     "fault": null,
+     "id": "prop:pkg-c58bbadd9b9a492f"
+    }
+   ],
+   "id": "SOAK-stage1-bybit_1-trend_donchian_sol_prop",
+   "kind": "stage1",
+   "leg": "trend_donchian_sol_prop",
+   "n_needed": 1,
+   "progress": "1/1 clean",
+   "reason": "clean: prop:pkg-c58bbadd9b9a492f",
+   "started": "2026-10-15",
+   "state": "passed"
+  }
+ ],
+ "sources": [
+  "GET /api/diag/journal?table=trades (all pages)",
+  "GET /api/diag/journal?table=order_packages (all pages)",
+  "GET /api/bot/prop/tickets?limit=500",
+  "GET /api/bot/prop/fills?limit=500"
+ ]
+}

@@ -1,5 +1,5 @@
 """prop-roster-gate-guard: its planted-violation self-test must pass, and the grandfather table must
-name exactly the two pre-rule legs with ISO due dates that match their SOAKS.json contracts."""
+name exactly the two pre-rule legs, each with a SOAKS.json contract and an ISO lapse date."""
 import json
 import sys
 from datetime import date
@@ -22,5 +22,6 @@ def test_grandfather_names_and_due_dates_match_soak_contracts():
     for leg, meta in g.GRANDFATHERED.items():
         c = [s for s in soaks if s["id"] == f"SOAK-stage1-bybit_1-{leg}"]
         assert c, f"no Stage-1 contract for grandfathered {leg}"
-        assert c[0]["end_date"] == meta["due"]
+        # the mechanical soak (2026-10-15) has no end date; `due` is the exemption's lapse date
+        assert "end_date" not in c[0]
         date.fromisoformat(meta["due"])

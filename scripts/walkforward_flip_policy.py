@@ -41,6 +41,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 # Import after sys.path adjustment so the live aggregator import chain works.
+from src.research.run_costs import resolve_run_costs  # noqa: E402
 from scripts.backtest_system import (  # noqa: E402
     _load_candles,
     _parse_tf_classes,
@@ -188,6 +189,7 @@ def _run_cell(base5m, *, fold: str, half: str, roster_name: str, policy: str,
         flip_confidence_threshold=thr,
         flip_min_position_age_hours=age,
         flip_confgap_tf_classes=tf_classes,
+        symbol="BTCUSDT", costs=resolve_run_costs("BTCUSDT"), require_full_costs=True,
     )
     cell = Cell(fold=fold, half=half, roster=roster_name, policy=policy,
                 start=start, end=end, summary=out)

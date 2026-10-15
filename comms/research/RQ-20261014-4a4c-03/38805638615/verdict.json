@@ -1,0 +1,92 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "ppi_mom releases (live + survey backfill), ES=F base bar shifted -10 trading days (placebo)",
+  "n": 139,
+  "measurement": {
+    "kind": "ppi_mom",
+    "symbol": "ES=F",
+    "snapshot_files": [
+      "comms/macro/econ_calendar_snapshots.jsonl",
+      "comms/macro/econ_calendar_snapshots_survey_backfill.jsonl"
+    ],
+    "releases": 139,
+    "releases_with_value": 139,
+    "price_bars": 5489,
+    "first_release": "2015-01-15",
+    "last_release": "2026-09-10",
+    "release_start": null,
+    "release_end": null,
+    "anchor_shift_td": -10,
+    "releases_after_window": 139,
+    "rows": [
+      {
+        "horizon_days": 3,
+        "n": 139,
+        "ic": -0.034751,
+        "ic_t": -0.407,
+        "overlap_factor": 1.0,
+        "n_eff": 139.0,
+        "ic_t_eff": -0.407,
+        "pearson": -0.04794,
+        "sign_hit_rate": 0.474576,
+        "mean_fwd_return": 0.002094
+      },
+      {
+        "horizon_days": 5,
+        "n": 139,
+        "ic": 0.075885,
+        "ic_t": 0.891,
+        "overlap_factor": 1.0,
+        "n_eff": 139.0,
+        "ic_t_eff": 0.891,
+        "pearson": 0.089419,
+        "sign_hit_rate": 0.550847,
+        "mean_fwd_return": 0.002774
+      }
+    ],
+    "summary": {
+      "max_n": 139,
+      "min_honest_n": 12,
+      "sufficient_history": true,
+      "any_flagged_horizon": false,
+      "any_flagged_horizon_overlap_corrected": false,
+      "strongest_ic_horizon_days": 5,
+      "strongest_ic": 0.075885,
+      "strongest_ic_t": 0.891,
+      "strongest_ic_t_eff": 0.891,
+      "t_flag": 2.0,
+      "verdict": "no_edge_at_tested_horizons"
+    },
+    "rule": {
+      "primary": [
+        3,
+        5
+      ],
+      "min_n": 100,
+      "t_bar": 2.0,
+      "expected_sign": "negative"
+    },
+    "per_horizon": [
+      {
+        "horizon_days": 3,
+        "n": 139,
+        "ic": -0.034751,
+        "ic_t_eff": -0.407,
+        "n_ok": true,
+        "t_reached": false,
+        "sign_ok": true
+      },
+      {
+        "horizon_days": 5,
+        "n": 139,
+        "ic": 0.075885,
+        "ic_t_eff": 0.891,
+        "n_ok": true,
+        "t_reached": false,
+        "sign_ok": false
+      }
+    ]
+  },
+  "note": "no pre-registered horizon reached the t-bar in the expected sign"
+}

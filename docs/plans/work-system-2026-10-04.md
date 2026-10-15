@@ -13,7 +13,7 @@
 MEASURED 2026-10-04 by the manager over `docs/claude/work/pipeline/` (1,802
 items): **366 due, 151 unrouted**, 237 of the due never checked once, 215
 `routed` and still due, **25 `ask_operator` due and never sent to the operator**.
-36 of 45 Stage-1 soak legs sat at `insufficient-data` with no end date. The R5
+36 of 45 Stage-1 soak legs sat at `insufficient-data` with no definition of done. The R5
 grade's six `kill` calls (09-26) were never acted on, and this week's grade ran
 but landed no record (newest file is `comms/research/soak_book_grade/2026-09-26.json`).
 The brief was 737 KB.
@@ -29,7 +29,7 @@ arrive raises an alarm.
 |---|---|---|---|
 | **build** | checklist row `queued` | the manager dispatches it | `landed_unproven` (merged) → `done` (observed); `dropped` + reason |
 | **research unit** | `research/queue/<id>.yaml` with a pre-registered `decision_rule` | the dispatcher runs it | result in `research/results/`; the rule *is* the decision (mandate or `MD-KILL-QUESTION`) |
-| **soak** | a pipeline row carrying a **soak contract** (§5) | `ready`, `overdue` or `dead` | pass → Gate-2 evidence; fail → demote or kill; no "keep waiting" |
+| **soak** | a pipeline row carrying a **soak contract** (§5) | `passed` or `mechanical_fail` | passed → promotion candidate; mechanical_fail → fix, re-soak; no "keep waiting" |
 | **observation** | pipeline row, `due_when.kind=observation` with `clears_when` and `check_every_days` | `last_checked + every ≤ today` | `done` when `clears_when` holds; `killed` + `terminal_reason` |
 | **decision** | pipeline row, `next_action=ask_operator`, classified as a preference per manager skill § "Before any operator popup" | at creation | operator answer recorded verbatim on the row → `done` |
 | **alert** | a push from `attention_watch` or an existing notifier | at send | the manager's next review routes the item it names |
@@ -39,7 +39,7 @@ arrive raises an alarm.
 | signal | computed by | runs where | how often |
 |---|---|---|---|
 | pipeline due / unrouted | `scripts/ops/pipeline.py::is_due` / `unrouted` | VM, live on every brief request and every watch pass | per request, hourly |
-| soak state (`accruing`/`ready`/`overdue`/`dead`/`unknown`) | **SOAK-WATCH**: contracts are committed; state is computed live by `scripts/ops/soak_state.py::soak_states()` from the contracts and the journal DB. The brief, the report and the watch all call it. If it is absent, the section reads `absent`. | VM | per call |
+| soak state (`passed`/`mechanical_fail`/`in_progress`/`awaiting_first_trade`/`unknown`) | **SOAK-WATCH**: contracts are committed; state is computed live by `scripts/ops/soak_state.py::soak_states()` from the contracts and the journal DB. The brief, the report and the watch all call it. If it is absent, the section reads `absent`. | VM | per call |
 | checklist row health | `scripts/ops/attention_watch.py::probe_inflight` (git blame age of the row) | VM | hourly |
 | silence (expected signal missing) | `attention_watch.py` probes (§4) | VM | hourly |
 
@@ -51,8 +51,8 @@ Nothing is "due" because someone declared it. **The clock and the data decide.**
 |---|---|---|---|---|
 | 🆕 new actionable items, then the daily summary (counts + top 8 ranked, ask_operator first, after 06:00Z), else one quiet line | the ONE hourly Telegram digest via @claude_ict_comms_bot | operator | reads; answers any ❓ASK | same day |
 | new `ask_operator` item | 🆕 line at the top of the next hourly digest, priority `high` | operator | answers, or says "make it a mandate" | 24h |
-| soak → `ready` | 🆕 line in the next hourly digest + report soaks section | manager | grade against the contract; promote/kill per mandate | next daily review |
-| soak → `overdue` / `dead` | 🆕 line in the next hourly digest (`high`) + report | manager | kill, or redesign the contract | next daily review |
+| soak → `passed` | 🆕 line in the next hourly digest + report soaks section | manager | promotion candidate: run the promotion mandate | next daily review |
+| soak → `mechanical_fail` | 🆕 line in the next hourly digest (`high`) + report | manager | dispatch the fix; the next clean trades re-soak it | next daily review |
 | expected signal missing (§4) | 🆕 line in the hourly digest (`high`), repeated every 24h while breached; one ✅ when it clears | operator, and the manager at its review | dispatch a fix lane | next daily review |
 | everything due | the persisted daily report, `GET /api/bot/work/report` (05:30Z). The live view is `GET /api/bot/work/brief`, short and ranked with a soaks slot (**BRIEF-FIX**). | manager | dispatch, close or decide each one | review routine, 05:52Z + 17:52Z |
 | lane finished / blocked | PUSH: `create_trigger(persistent_session_id=<manager>)` + `fire_trigger`. POLL backup: the 3-hourly "Manager lane check-in" routine. | manager | merge/archive, or re-dispatch | on wake; ≤3h by poll |
@@ -72,7 +72,7 @@ review it."*
 | stored at | VM `runtime_logs/work_reports/<report_id>.json` + `latest.json` (kept 45 days) |
 | served at | `GET /api/bot/work/report` (latest) · `?report_id=…` (a past one) · `?since=<ISO>` adds `digestLog`, every hourly digest block that was sent (a session cannot read Telegram) |
 | `report_id` | `WR-YYYYMMDD-HHMMZ`, the generation time in UTC, e.g. `WR-20261005-0530Z` |
-| contents | expected-signal alarms · soak states (dead/overdue/ready first) · open `ask_operator` items · due count + top 25 ranked · then the brief verbatim (`render_daily_brief.render()`, BRIEF-FIX's renderer; §3 is "what moved"). Each section carries `ok` / `empty` / `error`. |
+| contents | expected-signal alarms · soak states (mechanical_fail/unknown/passed first) · open `ask_operator` items · due count + top 25 ranked · then the brief verbatim (`render_daily_brief.render()`, BRIEF-FIX's renderer; §3 is "what moved"). Each section carries `ok` / `empty` / `error`. |
 | alarm if missing | `attention_watch` probe `report` fires (Telegram, `high`) when, at 05:50Z, no report was generated today, when the latest is more than 26h old, when any section has `error`, or when the report is over 64 KB |
 
 **The manager gets NO push when the report is generated.** The review routine
@@ -114,22 +114,12 @@ start one.
 
 ## 5. The soak contract
 
-Every soak is created with all five of these, or it is not created:
-
-1. **What it verifies.** Live mechanics and realized cost match the Stage-0
-   backtest. Never edge.
-2. **Expected event rate, taken from the backtest** (trades per week on this
-   leg × symbol × timeframe).
-3. **n needed and its power** for the pass/fail rule.
-4. **End date** = start + n ÷ rate. **Longer than ~2 weeks means the design is
-   wrong.** Fix it up front: a wider soak book, a looser n backed by a stated
-   power, or a different instrument. Do not just wait longer.
-5. **Pass/fail rule**, registered before the soak starts.
-
-States: `accruing` (on pace, before the end date) · `ready` (n reached) ·
-`overdue` (end date passed, n not reached) · `dead` (no events when the rate
-says some were due) · `unknown` (could not read). Only `ready`, `overdue` and
-`dead` push. SOAK-WATCH owns the computation and the report.
+The soak rule is stated once, in [`OPERATING-PLAN` § 2 "The soak is
+MECHANICAL"](OPERATING-PLAN-2026-09-21.md) (operator, 2026-10-15). This section
+only names the states the work system pushes. `soak_state.soak_states()`
+computes them live: `passed` · `mechanical_fail` · `in_progress` ·
+`awaiting_first_trade` · `unknown` (could not read). Only `passed` and
+`mechanical_fail` push. SOAK-WATCH owns the computation and the report.
 
 ## 6. What is built where
 

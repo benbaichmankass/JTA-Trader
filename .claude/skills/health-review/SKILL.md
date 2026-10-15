@@ -619,9 +619,10 @@ for models and `/performance-review` for strategies; see Out of scope).
 **Check each soak's gate state for the window:**
 
 - **Shadow models** — `/api/bot/shadow/stats` (+ `/drift`): days-in-shadow,
-  prediction volume, the "wired" check, drift verdict. A model that has
-  accrued its soak volume + time with stable drift is a **promotion decision
-  due**; one drifting or degenerate (e.g. all-zero scores) is a **demotion /
+  prediction volume, the "wired" check, drift verdict. A model whose serving
+  mechanics are confirmed (wired, labels accruing, stable drift) and whose edge
+  is proven offline is a **promotion decision due** — calendar time is never
+  the gate (CLAUDE-RULES-CANONICAL § "Promotion evidence"); one drifting or degenerate (e.g. all-zero scores) is a **demotion /
   hold decision due**.
 - **Strategies** — `/api/bot/strategies/{name}/review` M7 packets: any packet
   whose action badge is `PROMOTE` / `DEMOTE_SHADOW` / `KILL` is a decision

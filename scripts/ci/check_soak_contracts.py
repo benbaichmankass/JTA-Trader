@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-"""soak-contract-guard — nothing enters a soak without a definition of done.
+"""soak-contract-guard — nothing enters a soak without a MECHANICAL definition of done.
 
 Operator, 2026-10-04: "we can't set something to soak if we don't know when it's
 done. It has to have a definition of done so that it knows to create an alert …
-that is basic."
+that is basic." Operator, 2026-10-15 (binding): "A soak is a mechanical
+verification that was already proven in backtesting, and nothing needs to soak
+for more than one or two trades." So the definition of done is a mechanical
+checklist cleared on ``n_needed`` <= 2 clean trades — never a sample size, never
+a date.
 
 REFUSES, against the contract store ``docs/claude/work/SOAKS.json`` (schema and
 admissibility: ``scripts/ops/soak_state.py::contract_problems``):
@@ -13,8 +17,11 @@ admissibility: ``scripts/ops/soak_state.py::contract_problems``):
     * a leg on a Stage-1 roster (bybit_1, alpaca_paper) that is not
       ``execution: shadow`` and has no contract ``SOAK-stage1-<account>-<leg>``;
     * an ``execution: shadow`` strategy with no contract ``SOAK-shadow-<leg>``;
-    * any contract that is not admissible (no end date, >14d marked ok, a
-      non-ok design with no recommended fix, missing fields).
+    * any contract that is not admissible (``soak_state.contract_problems``):
+      ``n_needed`` > 2, a checklist other than the canonical mechanical one, a
+      calendar/accrual field (``end_date`` / ``duration_days`` /
+      ``expected_per_week`` / ``power``) — a soak has no end date and waits on no
+      sample — a ``not_soaking`` design with no recommended fix, missing fields.
   DIFF-SCOPED (the existing 77 rows / 600+ items predate the rule; they are
   backfilled as decisions, not grandfathered silently — see the soak report):
     * a checklist row that ENTERS ``landed_unproven`` in this diff without a
@@ -79,8 +86,8 @@ def tree_findings(acc: dict, strat: dict, contracts: List[dict]) -> List[str]:
             if cid not in by_id:
                 out.append(f"{a}/{leg} is on a Stage-1 roster with NO soak contract ({cid}). "
                            f"Run `python3 scripts/ops/soak_state.py --backfill` and commit "
-                           f"docs/claude/work/SOAKS.json — it computes n, rate and end date from the "
-                           f"leg's Stage-0 evidence record.")
+                           f"docs/claude/work/SOAKS.json — it writes the mechanical contract "
+                           f"(checklist, n_needed <= 2, start date from git).")
     for leg in sorted(shadow):
         if f"SOAK-shadow-{leg}" not in by_id:
             out.append(f"{leg} is execution: shadow with NO soak contract (SOAK-shadow-{leg}).")
@@ -146,8 +153,8 @@ def diff_findings(base: str, contracts: List[dict]) -> List[str]:
                 out += [f"checklist row {r.get('id')}: {p}" for p in observation_problems(r["observation"])]
                 continue
             out.append(f"checklist row {r.get('id')} enters landed_unproven with no soak contract "
-                       f"(add a contract with id {r.get('id')!r} to docs/claude/work/SOAKS.json: what "
-                       f"observation proves it, n, end date, pass/fail rule) — or, for a one-shot "
+                       f"(add a contract with id {r.get('id')!r} to docs/claude/work/SOAKS.json: the "
+                       f"mechanical checklist and n_needed <= 2) — or, for a one-shot "
                        f"check, an `observation: {{what, how_to_check, due_by}}` on the row.")
     added = _git("diff", "--name-only", "--diff-filter=A", f"{base}...HEAD", "--", PIPE_DIR)
     for name in added.stdout.split():
@@ -185,19 +192,22 @@ def _self_test() -> int:
 
     acc = {"bybit_1": {"strategies": ["a", "s"]}, "alpaca_paper": {"strategies": []}}
     strat = {"a": {"execution": "live"}, "s": {"execution": "shadow"}}
-    good = [dict({k: "v" for k in ss.REQUIRED}, id="SOAK-stage1-bybit_1-a", design="too_long",
-                 recommended_fix="pool", started="2026-09-01", end_date="2027-01-01"),
-            dict({k: "v" for k in ss.REQUIRED}, id="SOAK-shadow-s", design="not_soaking",
-                 recommended_fix="retire", started="2026-09-01", end_date=None)]
+    good = [ss.make_contract(kind="stage1", leg="a", account="bybit_1", started="2026-09-01"),
+            ss.make_contract(kind="shadow", leg="s", account="bybit_1", started="2026-09-01",
+                             enabled=False)]
     ck("a contracted roster passes (positive control)", tree_findings(acc, strat, good) == [])
     ck("a NEW roster leg with no contract is refused",
        any("bybit_1/b" in f for f in tree_findings({"bybit_1": {"strategies": ["a", "s", "b"]}},
                                                    strat, good)))
     ck("a NEW shadow strategy with no contract is refused",
        any("SOAK-shadow-t" in f for f in tree_findings(acc, dict(strat, t={"execution": "shadow"}), good)))
-    ck("a contract with no end date and design ok is refused",
-       any("end_date" in f for f in tree_findings(acc, strat, [dict(good[0], design="ok", end_date=None),
+    ck("a contract with an end date (a calendar soak) is refused",
+       any("end_date" in f for f in tree_findings(acc, strat, [dict(good[0], end_date="2027-01-01"),
                                                               good[1]])))
+    ck("a contract with n_needed 10 (a sample-size soak) is refused",
+       any("n_needed" in f for f in tree_findings(acc, strat, [dict(good[0], n_needed=10), good[1]])))
+    ck("the retired too_long design is refused",
+       any("design" in f for f in tree_findings(acc, strat, [dict(good[0], design="too_long"), good[1]])))
     ck("a removed leg needs nothing (removal is free)",
        tree_findings({"bybit_1": {"strategies": ["s"]}}, strat, good) == [])
     ck("a one-shot observation with due_by is admissible",
