@@ -2377,7 +2377,7 @@ def _trader_restart_pending(running: str, on_disk: str) -> bool | None:
     try:
         from scripts.ops.trader_import_closure import classify_path
         closure = _trader_closure_for(on_disk)
-    except Exception as exc:  # noqa: BLE001 - fail-safe: no closure = the deploy restarts
+    except Exception as exc:  # noqa: BLE001  # allow-silent: no closure is NOT empty -- it falls to the deploy's any-runtime-path restart rule below
         logger.debug("trader restart_pending: closure unavailable: %s", exc)
         closure = None
     if closure is None:

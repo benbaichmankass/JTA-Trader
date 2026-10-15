@@ -245,7 +245,7 @@ def test_force_restart_bypasses_the_gate(fake):
 def test_non_runtime_skip_path_leaves_the_trader_marker_alone(fake):
     _with_trader_marker(fake)
     fake["diff_files"].write_text("docs/x.md\n")
-    res = _run(fake)
+    assert _run(fake).returncode == 0
     assert _restarted(fake) == []
     assert fake["trader_marker"].read_text().strip() == "tradersha1"
     assert fake["marker"].read_text().strip() == "newsha8"
