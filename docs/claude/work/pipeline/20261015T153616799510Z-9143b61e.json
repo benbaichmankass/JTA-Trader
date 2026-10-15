@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "each of the two trades has a stated cause (stop placement | gap/slippage | sizing) from the journal row and broker fills, or live_vs_backtest shows no live trade worse than every backtest trade at n>=5",
+    "kind": "observation",
+    "last_checked": "2026-10-15"
+  },
+  "id": "PI-20261015-VUVNMUO8-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "live_vs_backtest first step, manager request 2026-10-15 (session_01PGTY6hpteGz9KPVuVnMUo8)",
+    "rerun": "python3 scripts/research/live_vs_backtest.py --leg slv_pullback_1d --leg iaum_pullback_1d"
+  },
+  "state": "queued",
+  "what": "alpaca_live single-trade losses beyond 1R: slv_pullback_1d lost -1.03R (usd -3.9568) and iaum_pullback_1d lost -1.47R (usd -4.4136), each its first live trade, each worse than EVERY trade in its committed backtest (worst bt trade ~-1.01R; bt_n 11 and 7, fidelity approximate). live_vs_backtest.py 2026-10-15 reports INSUFFICIENT_N (n=1), so this is an execution-fidelity question, not statistics: for each trade pull the journal row + Alpaca order/fill history and establish whether the stop was (a) placed at the declared level, (b) gapped/slipped through (overnight/open gap on an ETF), or (c) mis-sized/misplaced (risk basis vs declared risk, bracket legs). Fix is a bug fix if (c); a gap-risk/sizing note for Tier-3 if (b). Not applied."
+}
