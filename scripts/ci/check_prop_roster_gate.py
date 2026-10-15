@@ -52,7 +52,7 @@ from typing import Any, Dict, List, Optional, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ops"))
-from _git_base import ABSENT_AT_BASE, READ, UNREADABLE, read_at, resolve_base  # noqa: E402
+from _git_base import READ, UNREADABLE, read_at, resolve_base  # noqa: E402
 import check_roster_promotion_evidence as rpe  # noqa: E402
 
 try:
