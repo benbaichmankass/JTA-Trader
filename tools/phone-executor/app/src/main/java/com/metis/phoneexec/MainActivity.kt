@@ -463,6 +463,11 @@ class MainActivity : Activity() {
             val n = p?.first
             statusStaleH = p?.second ?: -1.0
             lastPending = n ?: -1
+            // PHONE-FGS-EXEC step 2: an AMEND needs an on-screen view (the position sheet is opened by a native tap, and on
+            // the overlay elementFromPoint returned null, MEASURED 1b.233 10:40Z), so amends go to the front. The app cannot
+            // tell an amend from an entry before claiming, so it asks twice: with and without accepts=amend.
+            val nEntries = if ((n ?: 0) > 0) api.pendingInfo(amends = false)?.first else n
+            val amendsToFront = BgTicket.frontForAmends(n, nEntries)
             val now = System.currentTimeMillis()
             // LOGIN CHECK (PI-20261010-GKFNZSH4-0001): the page is never read in the background, so a logout is only
             // seen by bringing the Activity forward. Why now, or null:
@@ -479,6 +484,7 @@ class MainActivity : Activity() {
                 paused() -> setStatus("background: paused" + if ((n ?: 0) > 0) " ($n ticket(s) waiting)" else "")
                 now < bgWakeUntilMs -> setStatus("background: bring-to-front already requested")
                 // tickets run in the background engine (PHONE-FGS-EXEC); the front is the fallback (BgTicket)
+                amendsToFront -> ticketToFront(if (nEntries == null) "$n ticket(s) waiting, kinds unread (entry-only peek failed)" else "${n!! - nEntries} amend(s) waiting (the position sheet needs the screen)")
                 (n ?: 0) > 0 && now < bgTicketNextMs -> setStatus("background: $n ticket(s) waiting; engine retry in ${(bgTicketNextMs - now) / 1000 + 1} s")
                 (n ?: 0) > 0 && BgTicket.route(now, bgNoAnswer, bgTicketOffUntilMs) == BgTicket.Route.ENGINE -> bgJob("$n ticket(s) waiting", ticket = true)
                 (n ?: 0) > 0 -> ticketToFront("$n ticket(s) waiting; " + if (bgNoAnswer >= 2) "engine unavailable" else "engine fallback for ${(bgTicketOffUntilMs - now) / 60_000 + 1} min")
@@ -1061,8 +1067,9 @@ class MainActivity : Activity() {
         if (!resumed && cur === fg) { setStatus("backgrounded: no claim"); return }
         val now = System.currentTimeMillis()
         if (now < claimBackoffUntilMs) { setStatus("logged in · VM busy (5xx); backing off ${(claimBackoffUntilMs - now) / 1000 + 1} s (no claim)"); return }
-        // accepts amend: this build executes trail amends (PROP-TRAIL-PHONE); the VM serves them to no older build
-        val r = api.post("claim", JSONObject().put("accepts", JSONArray().put("amend"))) ?: run { setStatus("logged in · VM unreachable (no claim, no click)"); return }
+        // accepts amend: this build executes trail amends (PROP-TRAIL-PHONE); the VM serves them to no older build.
+        // PHONE-FGS-EXEC step 2: the background engine claims ENTRIES only (accepts=[]); amends are claimed on the kiosk.
+        val r = api.post("claim", JSONObject().put("accepts", JSONArray().apply { if (cur === fg) put("amend") })) ?: run { setStatus("logged in · VM unreachable (no claim, no click)"); return }
         if (!r.optBoolean("ok")) {
             // 5xx (e.g. the API restarting for a deploy): ONE attempt, no in-tick retry, and no execution -- we hold no
             // ticket, so nothing can be filled or submitted. Back off 1 -> 2 -> 4 -> 5 min. If the server committed the
@@ -1144,7 +1151,11 @@ class MainActivity : Activity() {
         //    SOL-PICKER (2026-10-07): the first route is the terminal's "Select market" chip (open, pick ONE row,
         //    read back), then the watchlist; the picker state is reset per ticket so a failed pick never carries over.
         js("__ex.symbolReset()")
-        var route = selectSymbol(venue, base)
+        // PHONE-FGS-EXEC step 2: the engine page was reloaded at the start of its job; also Cancel any open dialog that
+        // is not the order form (exactly one "Cancel" button, never Confirm) and press Escape, before the symbol step
+        var reset = ""
+        if (cur !== fg) { reset = "cancelled " + js("__ex.cancelModals()") + "; "; js("__ex.escape()"); delay(400); ensure() }
+        var route = reset + selectSymbol(venue, base)
         if (js("__ex.openTicket()") == "no_order_control") return refuse(id, "order control not found (symbol route: $route)", jsObj("__ex.ticket()"))
         delay(1500); ensure()
         var shown = js("__ex.symbolOnTicket()")

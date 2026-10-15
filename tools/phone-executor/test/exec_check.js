@@ -313,6 +313,50 @@ document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__su
     eq(await rM("window.__submitted || 0"), 0, `market ${mode}: nothing submitted`);
     eq(await rM("[__ex.symbolStep('ETHUSD'), __ex.symbolStep('ETHUSD')]"), ["opened_market", mode === "J" ? "market_no_row" : "picked_market"], `market ${mode}: and back to ETH from SOL`);
   }
+  // PHONE-FGS-EXEC step 2 (MEASURED 1b.233 10:48Z, phone-test-60715df76a4d: from a SOL page the ETH pick saw 2 rows and
+  // refused market_ambiguous). L = the open position's row ("ETH 1" in the Positions div grid) sits inside the same
+  // popup root as the picker's plain "ETH Ethereum" row: the Positions panel row is excluded, the market row picked.
+  // P = two ETH rows in the picker, only one in the picker's own "<BASE> <lev>x" shape: that one is picked.
+  const fgs = (mode) => `<!doctype html><html><body>
+<div role=button id=chip aria-label="Select market">SOL 10x</div><button>Order form</button><button>Open orders</button><button>Positions1</button>
+<div role=dialog id=dlg>
+<div id=pos><div class=hdr><div>Market</div><div>UP&L</div><div>Side</div><div>Value</div><div>Opening price</div><div>Current price</div></div>
+<div class=row><div class=pr><span>ETH 1</span></div><div>Sum 50.49USD</div><div></div><div>Sum 1,278.70USD</div><div>2,461.52USD</div><div>2,368.01USD</div></div></div>
+<div id=list></div></div>
+<form id=f><div role=tablist><button type=button role=tab aria-selected=false>Market</button><button type=button role=tab aria-selected=true>Limit</button></div>
+<label for=lp>Limit price</label><input id=lp type=text><label for=q>Quantity</label><input id=q type=text>
+<button type=submit id=sub>Short (sell) SOL</button></form>
+<script>var MODE='${mode}';
+function pick(s){document.getElementById('chip').textContent=s+' 20x';document.getElementById('sub').textContent='Long (buy) '+s;document.getElementById('list').innerHTML='';}
+document.querySelector('.pr').onclick=function(){window.__posclick=(window.__posclick||0)+1;};
+function row(txt,s){var d=document.createElement('div');d.className='r';d.innerHTML='<span>'+txt+'</span>';d.onclick=function(){window.__picks=(window.__picks||0)+1;pick(s)};return d;}
+document.getElementById('chip').onclick=function(){var l=document.getElementById('list');
+ var rs=MODE==='L'?[['BTC Bitcoin','BTC'],['ETH Ethereum','ETH']]:[['ETH','ETH'],['ETH 20x - 2,368.01USD -1.20%','ETH'],['BTC 50x - 62,410.5USD -1.20%','BTC']];
+ rs.forEach(function(r){l.appendChild(row(r[0],r[1]))});};
+document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__submitted=(window.__submitted||0)+1};</script></body></html>`;
+  for (const mode of ["L", "P"]) {
+    const pF = await onHost(fgs(mode)); const rF = (code) => pF.evaluate(code);
+    eq(await rF("__ex.symbolReset()"), "ok", `fgs ${mode}: reset`);
+    eq(await rF("__ex.escape()"), "ok", `fgs ${mode}: escape (keys only)`);
+    eq(await rF("[__ex.symbolStep('ETHUSD'), __ex.symbolStep('ETHUSD'), __ex.symbolStep('ETHUSD')]"), ["opened_market", "picked_market", "done"], `fgs ${mode}: SOL -> ETH picked, not ambiguous`);
+    eq([await rF("__ex.symbolOnTicket()"), await rF("window.__picks || 0"), await rF("window.__posclick || 0"), await rF("window.__submitted || 0")],
+      ["ETH", 1, 0, 0], `fgs ${mode}: one picker click, the Positions row never clicked, nothing submitted`);
+  }
+  // PHONE-FGS-EXEC step 2 (manager 11:03Z): TP/SL lookups never leave the order form. Q = no ticket form on the page,
+  // a Positions grid with a "TP / SL" column and an "Edit Take profit" dialog (Cancel / Confirm) open: openTpsl finds
+  // nothing to click, the grid's TP / SL cells are never clicked, cancelModals clicks Cancel and never Confirm.
+  const tpq = `<!doctype html><html><body><button>Positions1</button>
+<div id=pos><div class=hdr><div>Market</div><div>UP&L</div><div>Side</div><div>Value</div><div>Opening price</div><div>Current price</div><div id=th>TP / SL</div></div>
+<div class=row><div>ETH 1</div><div>50.49USD</div><div></div><div>1,278.70USD</div><div>2,461.52USD</div><div>2,368.01USD</div><div id=tc>TP / SL</div></div></div>
+<div role=dialog id=dlg><h2>Edit Take profit</h2><label><input type=checkbox>TP/SL</label><button id=cn>Cancel</button><button id=cf>Confirm</button></div>
+<script>['th','tc'].forEach(function(i){document.getElementById(i).onclick=function(){window.__tpcell=(window.__tpcell||0)+1;};});
+document.getElementById('cn').onclick=function(){window.__cancel=(window.__cancel||0)+1;document.getElementById('dlg').remove();};
+document.getElementById('cf').onclick=function(){window.__confirm=(window.__confirm||0)+1;};</script></body></html>`;
+  const pTq = await onHost(tpq); const rQ = (code) => pTq.evaluate(code);
+  eq([await rQ("__ex.openTpsl(0)"), await rQ("__ex.openTpsl(1)")], ["none", "none"], "tpsl Q: no order form -> nothing found, nothing clicked");
+  eq(await rQ("window.__tpcell || 0"), 0, "tpsl Q: the Positions 'TP / SL' header and cell are never clicked");
+  eq(await rQ("__ex.cancelModals()"), 1, "tpsl Q: the Edit Take profit dialog is cancelled");
+  eq([await rQ("window.__cancel || 0"), await rQ("window.__confirm || 0"), await rQ("__ex.cancelModals()")], [1, 0, 0], "tpsl Q: Cancel clicked once, Confirm never; nothing left to cancel");
   // SERVER READ-BACK (PHONE-GO-TOKEN, design 3.4): the app builds the read-back from these page reads (MainActivity.kt
   // readBack: SELECTED tabs, the submit label + disabled state, the TP/SL box, the by-label values) and hashes
   // "key=value" lines in READBACK_FIELDS order (== src/prop/phone_executor.py). Mirrors the app; proves the page reads

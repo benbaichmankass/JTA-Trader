@@ -194,7 +194,13 @@ def _git(repo_root: Path, *args: str) -> Optional[str]:
 
 
 def describe_deploy(intent: Dict[str, Any], repo_root: Optional[Path] = None) -> str:
-    """``deploy a1b2c3d (#18216, +3 more commits)`` from the intent marker."""
+    """``deploy a1b2c3d (#18216, +3 more commits)`` from the intent marker.
+
+    PER UNIT (TRADER-RESTART-GATE): the deploy writes ``from`` = the TRADER's
+    own deployed sha (``runtime_logs/deployed_sha_trader.txt``), not the shared
+    ``deployed_sha.txt``. A deploy that skipped the trader leaves it on an older
+    sha, so the count here is the commits THIS trader start moves across, which
+    can exceed the commits since the last web-api deploy."""
     root = Path(repo_root or _REPO_ROOT)
     sha = str(intent.get("sha") or "")
     base = str(intent.get("from") or "")

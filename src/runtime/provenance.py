@@ -319,6 +319,17 @@ ESTIMATED_SOURCES = frozenset({
     # PI-20260929-TWEW1FZJ-0002: before it, every such close carried NO
     # exit_reason_source at all).
     "strategy_verdict",
+    # `exit_reason_source` on an intent-layer REDUCE audit row
+    # (`exit_reason='intent_reduce_executed'`, `setup_type='intent_reduce'`).
+    # The intent multiplexer DECIDED to shrink the position and sent the
+    # reduce-only order itself; the row records that decision. Same footing as
+    # `strategy_verdict`: the system authored the reason, so it is a derivation
+    # of intent, never a venue statement. Written by
+    # src/units/accounts/execute.py's partial-close audit insert and backfilled
+    # by scripts/ops/backfill_exit_labels.py (ORDER-AUDIT-4,
+    # PI-20261015-PD85QJEZ-0003: before it, every such row carried NO
+    # exit_reason_source at all).
+    "intent_reduce_order",
 })
 
 #: `exit_reason_source` value meaning: the strategy's verdict asked for a close,

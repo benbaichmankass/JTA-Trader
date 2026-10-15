@@ -14909,6 +14909,184 @@ def _sweep_exit_label_from_bracket_order(
     return summary
 
 
+#: How far back an OPEN row is checked for its own bracket fill. The exchange
+#: fills pullers keep 90 days; a row older than that has no fills to read.
+_OWN_LEG_FILL_LOOKBACK_DAYS = 90
+
+
+def _sweep_open_row_own_leg_fill(
+    db, *, fills_conn_factory=None,
+) -> Dict[str, int]:
+    """Close an OPEN trade row whose OWN stop or target order filled the whole
+    position at the venue.
+
+    ORDER-AUDIT-4 item 19 (PI-20260930-3QNHBGND-0002). MEASURED 2026-09-30 on
+    alpaca_paper SPY row 6131 (8 sh): its own stop leg filled 8 @ 763.70 while
+    sibling row 4347 kept the symbol long, so the venue held 11 and the journal
+    16 for two weeks. Every flat-close path keys on (account, symbol, side)
+    ABSENCE, so on a netted symbol none of them can see ONE of two rows go;
+    nothing read the row's own leg fill. On a real-money account the same shape
+    leaves a row open with no position behind it, and its resting sibling leg
+    then protects (or fires against) the other row's position.
+
+    The rule is the stricter half of `bracket_leg_from_exit_fills`: the row's
+    OWN `sl_order_id` (or `tp_order_id`) filled at least the whole position
+    (5% qty tolerance) and the other leg's did not. "Last exit fill" is NOT
+    used here: on an open netted symbol the last fill can be a sibling's.
+    A venue order id belongs to one row, so a full fill on it is the venue
+    saying this row's position ended. LOCAL read of the exchange-fills store,
+    never a broker call to decide; an unreadable store is "could not look".
+
+    On a match: the row closes through `db.update_trade` (so the close ping
+    fires) as `sl`/`tp` with `exit_reason_source=venue_bracket_order`, the
+    VWAP of that order's fills as `exit_price` (`exchange_fill`), and the last
+    fill's time as `closed_at`. PnL is left to `_sweep_local_pnl_for_unpriced`
+    and the broker sweeps, like every flat-finalise path. Then the row's own
+    remaining protection is cancelled (row-scoped, CA-A01-001) and its package
+    cascade runs through the FIX-CA-05 open-leg hold. Never raises.
+    """
+    summary: Dict[str, int] = {
+        "scanned": 0, "closed": 0, "no_own_leg_fill": 0,
+        "store_unreadable": 0, "lost_race": 0, "errors": 0,
+    }
+    try:
+        conn = db.connect()
+        try:
+            conn.row_factory = __import__("sqlite3").Row
+            rows = [dict(r) for r in conn.execute(
+                "SELECT id, account_id, symbol, direction, position_size, "
+                "       created_at, notes, sl_order_id, tp_order_id, "
+                "       order_package_id "
+                "  FROM trades "
+                " WHERE status = 'open' "
+                "   AND COALESCE(is_backtest, 0) = 0 "
+                "   AND (COALESCE(sl_order_id, '') != '' "
+                "        OR COALESCE(tp_order_id, '') != '') "
+                "   AND COALESCE(setup_type, '') != 'intent_reduce' "
+                "   AND COALESCE(notes, '') NOT LIKE '%\"intent_reduce\": true%' "
+                "   AND datetime(created_at) >= datetime('now', ?) "
+                " ORDER BY id DESC LIMIT 200",
+                (f"-{_OWN_LEG_FILL_LOOKBACK_DAYS} days",),
+            ).fetchall()]
+        finally:
+            conn.close()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("_sweep_open_row_own_leg_fill: scan failed: %s", exc)
+        summary["errors"] += 1
+        return summary
+    if not rows:
+        return summary
+    summary["scanned"] = len(rows)
+
+    try:
+        if fills_conn_factory is not None:
+            fconn = fills_conn_factory()
+        else:
+            import sqlite3 as _sq
+            from src.runtime.exchange_fills_store import get_fills_db_path
+            path = get_fills_db_path()
+            fconn = (
+                _sq.connect(f"file:{path}?mode=ro", uri=True)
+                if path.exists() else None
+            )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "_sweep_open_row_own_leg_fill: fills store open failed: %s", exc)
+        fconn = None
+    if fconn is None:
+        summary["store_unreadable"] = len(rows)
+        return summary
+
+    try:
+        for row in rows:
+            try:
+                size = _safe_float(row.get("position_size"))
+                if not size or size <= 0:
+                    summary["no_own_leg_fill"] += 1
+                    continue
+                legs = {"sl": str(row.get("sl_order_id") or "") or None,
+                        "tp": str(row.get("tp_order_id") or "") or None}
+                own: Dict[str, List[Any]] = {}
+                for leg, oid in legs.items():
+                    if not oid:
+                        continue
+                    own[leg] = [f for f in fconn.execute(
+                        "SELECT price, qty, exec_time, symbol FROM exchange_fills "
+                        " WHERE account_id = ? AND order_id = ? AND side = ? "
+                        " ORDER BY datetime(exec_time) ASC",
+                        (str(row.get("account_id") or ""), oid,
+                         {"long": "sell", "short": "buy"}.get(
+                             str(row.get("direction") or "").lower(), "")),
+                    ).fetchall()]
+                floor = size * (1.0 - _BRACKET_ORDER_QTY_TOLERANCE)
+                full = [leg for leg, fs in own.items()
+                        if sum(_safe_float(f[1]) or 0.0 for f in fs) >= floor]
+                if len(full) != 1:
+                    summary["no_own_leg_fill"] += 1
+                    continue
+                leg = full[0]
+                fs = own[leg]
+                qty = sum(_safe_float(f[1]) or 0.0 for f in fs)
+                vwap = sum((_safe_float(f[0]) or 0.0) * (_safe_float(f[1]) or 0.0)
+                           for f in fs) / qty
+                closed_at = str(fs[-1][2])
+                # Re-read: another path this tick may already have closed it.
+                rconn = db.connect()
+                try:
+                    cur = rconn.execute(
+                        "SELECT status FROM trades WHERE id = ?",
+                        (int(row["id"]),)).fetchone()
+                finally:
+                    rconn.close()
+                if cur is None or str(cur[0]) != "open":
+                    summary["lost_race"] += 1
+                    continue
+                notes = _decode_notes(row.get("notes"))
+                notes.update({
+                    "closed_at": closed_at,
+                    "closed_by": "own_leg_fill_attribution",
+                    "exit_reason_source": BRACKET_ORDER_LABEL_SOURCE,
+                    "exit_price_source": "exchange_fill",
+                    "own_leg_fill": {"leg": leg, "order_id": legs[leg],
+                                     "qty": qty, "fills": len(fs)},
+                })
+                db.update_trade(int(row["id"]), {
+                    "status": "closed",
+                    "exit_reason": leg,
+                    "exit_price": round(vwap, 10),
+                    "closed_at": closed_at,
+                    "notes": dump_capped(notes, 2000),
+                })
+                summary["closed"] += 1
+                logger.warning(
+                    "_sweep_open_row_own_leg_fill: CLOSED trade_id=%s "
+                    "account=%s %s %s %s: its own %s order %s filled %s of %s "
+                    "@ %.6g (%s) while the row was still open",
+                    row["id"], row.get("account_id"), row.get("symbol"),
+                    row.get("direction"), size, leg, legs[leg], qty, size,
+                    vwap, closed_at,
+                )
+                # The other leg of THIS row now protects nothing of its own.
+                _cancel_closed_row_protection(row, db)
+                _cascade_close_linked_package(
+                    db, row["id"], close_reason=leg,
+                    caller="_sweep_open_row_own_leg_fill",
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "_sweep_open_row_own_leg_fill: row %s: %s",
+                    row.get("id"), exc)
+                summary["errors"] += 1
+    finally:
+        try:
+            fconn.close()
+        except Exception:  # noqa: BLE001
+            pass
+    if summary["closed"] or summary["errors"] or summary["lost_race"]:
+        logger.info("_sweep_open_row_own_leg_fill: %s", summary)
+    return summary
+
+
 def _options_executor_for(account_cfg: Dict[str, Any]):
     """Build an :class:`AlpacaOptionsExecutor` for an options-expressing account.
 
@@ -15469,6 +15647,19 @@ def run_reconciliation_tick(
     except Exception as exc:  # noqa: BLE001
         logger.warning(
             "run_monitor_tick: reduce-leg settlement sweep raised: %s", exc,
+        )
+
+    # ORDER-AUDIT-4 item 19: an OPEN row whose own stop/target order filled
+    # the whole position is closed here. A netted sibling keeps the symbol
+    # non-flat, so no absence-keyed reconciler can see it go.
+    try:
+        with _phase("sweep_open_row_own_leg_fill"):
+            own_leg = _sweep_open_row_own_leg_fill(db)
+        if own_leg.get("closed") or own_leg.get("errors"):
+            summaries["__own_leg_fill__"] = own_leg
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "run_monitor_tick: own-leg fill sweep raised: %s", exc,
         )
 
     # EXIT-CLUSTER: a close whose own stop/target ORDER has a venue fill is an
