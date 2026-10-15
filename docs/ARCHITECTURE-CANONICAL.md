@@ -291,6 +291,37 @@ is genuine selection. Design + single-account simulation:
 The decider remains research-stage — no live simulator script is wired
 yet; research harnesses live under `scripts/research/`.
 
+**Slice accounts (NETTED-SLICES, 2026-10-15, operator-ordered; Tier-2 hold
+until merged).** An account declaring `position_model: slices` in
+`config/accounts.yaml` (today: `bybit_1` only) does NOT elect one strategy per
+symbol. Operator, verbatim: *"We can have different strategies working with
+netted positions as long as we know how much of that position belongs to each
+strategy, and each piece of that position has its own brackets."*
+- **Ledger.** A slice is one open `trades` row (strategy, qty, entry, SL, TP,
+  `sl_order_id`/`tp_order_id`). The venue net must equal the signed sum of the
+  open slices (`src/runtime/slice_ledger.py`, three states:
+  reconciled / divergent / unreadable).
+- **Allocation.** The planner still runs `elect_from_gated` once to pick the
+  tick's side. It then splits the account's per-symbol risk budget across
+  every same-side candidate by `score / Σ score`
+  (`src/runtime/slice_allocation.py`; weights in
+  `config/slice_allocation.yaml`, Tier-3 to change). The score combines
+  confidence, the backtest expectancy (net R, measured evidence only), the
+  live win rate and regime fit. The account sits in one round per allocated
+  strategy.
+- **Admission.** `src/runtime/slice_admission.py` runs in the coordinator
+  after the RiskManager sizes the trade. The delta basis is the strategy's OWN
+  slice, so the same-strategy guard is kept. It refuses, per trade, an add
+  when:
+  - the book is divergent or unreadable;
+  - the book is non-flat and not in Partial TP/SL mode;
+  - the slice is opposite to the book on a ONE-WAY book (it is admitted on a
+    hedge book);
+  - the symbol's budget is exhausted.
+  A slice is never resized or reversed by a later signal: it exits through its
+  own qty-scoped Partial bracket or its strategy's per-trade close. Every
+  other account is unchanged.
+
 ### Step 4 — Risk gating
 Before any order reaches broker execution, risk controls decide whether
 to allow the signal:
@@ -1423,6 +1454,8 @@ filtered to architecture-level deltas only.
 | 2026-10-15 | DATA-STORE-PARQUET-GC (lane, Tier-2 hold) | **Dataset artifact layout gains an optional derived `data.parquet` beside `data.jsonl`.** Builders with `parquet_sidecar = True` (today `market_features` only) write it after the JSONL; `ml/datasets/parquet_sidecar.py::load_dataset_rows` is the one reader (training runner, `oos_edge`, `live_parity`, `market_sequences`) and prefers the sidecar only while its recorded source-JSONL size matches, else reads JSONL. JSONL remains the source of truth; the sidecar is refused (not written) for ragged or mixed-type columns so a read-back row is type-exact. Parity MEASURED on the trainer (#18162): BTC 1h v003 (43,800 rows) and BTC 15m v513 (175,272 rows) PARITY, 391 MB JSONL -> 20 MB Parquet. `scripts/ops/trainer_dataset_gc.py` keep rules now include metadata-input closure, repo refs and nightly literal paths. | `ml/datasets/parquet_sidecar.py`, `ml/datasets/builder.py`, `ml/datasets/families/market_features.py`, `ml/experiments/runner.py`, `ml/promotion/oos_edge.py`, `ml/promotion/live_parity.py`, `ml/datasets/families/market_sequences.py`, `scripts/ops/trainer_dataset_gc.py` | Trainer only; no live-VM or order path. Not merged as of this row. |
 | 2026-10-15 | TRADER-RESTART-GATE (lane, Tier-2 hold; operator "Build it (Recommended)") | **A deploy restarts `ict-trader-live` only when the diff touches something the trader loads.** `scripts/deploy_pull_restart.sh` keeps its runtime/non-runtime rule for every unit; for the trader it then restarts iff a path changed since the TRADER's own deployed sha is (a) a `.py` in the static import closure of `src/main.py` (committed `config/trader_import_closure.txt` UNION a live recompute on the VM tree; AST walk incl. function-level, relative, literal `import_module` imports and any string literal naming a repo module or package prefix such as `f"src.units.strategies.{x}"`), (b) a non-`.py` runtime path, or (c) a `.py` outside `src/` and `scripts/`. A running trader is otherwise left up; a stopped/crashed one is still started. **New per-unit marker** `runtime_logs/deployed_sha_trader.txt` (a skipped trader keeps its older sha); `deployed_sha.txt` now means every other unit. The restart intent's `from` is the trader's own sha. `/api/diag/version` gains `trader_git_sha` (from `runtime_status.json::git_sha_running`), `restart_pending_by_unit` and `deployed_sha_by_unit`; the hourly SYSTEM report's "Trader running sha" now reads `git_sha_running` (it read the checkout before). Fail-safe to RESTART on every unsure path (no/unresolvable marker, unreadable/empty diff, missing/unparsable closure, tool error). Guard `trader-import-closure`. Replay (`trader_import_closure.py replay`, first-parent merges 2026-10-08T09:40Z..10-15T09:40Z, per-merge closure): 879 merges, 711 non-runtime, 168 runtime → 49 trader-skip / 119 restart. | `scripts/deploy_pull_restart.sh`, `scripts/ops/trader_import_closure.py`, `scripts/ci/{check_trader_import_closure,run_guards}.py`, `config/trader_import_closure.txt`, `src/web/api/routers/diag.py`, `src/runtime/{hourly_report,restart_cause}.py`, tests | Deploy path only — no order path, mode or roster change. landed_unproven until one skipped and one taken trader restart are observed in the ict-git-sync deploy log. |
 | 2026-10-15 | GH-CAPACITY-PR-CI-FANOUT (lane, Tier-2 hold, #18240) | **The required `pytest-run` check now means different things on PRs and on `main`.** On `pull_request` it runs only the import-graph-affected test files (`scripts/ci/pytest_run_scope.py` `classify_affected`), falling back to the full suite on conftest/requirements/`.github`/`scripts/ci`/guard scripts/config-named or every-test modules/fan-in >50%/selector error. On `main` the full suite still runs on push, and a new 30-min `schedule` backstop (`scripts/ci/pytest_run_backstop.py`) runs it on HEAD whenever HEAD's code has no completed full run. That closes a gap: token-merged commits start no run, and the next push's `before...sha` range starts at them. A red push/schedule run pages via `claude-run-failure-alert`. | `.github/workflows/{pytest-run,claude-run-failure-alert}.yml`, `scripts/ci/{pytest_run_scope,pytest_run_backstop,check_cadence_liveness}.py`, `docs/github-actions-workflows.md`, `tests/test_pytest_run_{affected,backstop,scope}.py` | CI only; no live-VM effect. Context names unchanged. Post-merge detection bound ~30 min + suite time + queueing. Diff-scoped guards keep the token-merge gap (pipeline PI-20261015-N6RCMVTJ-0001). |
+
+| 2026-10-15 | NETTED-SLICES (lane, Tier-2 hold) | **Per-strategy slices on one (account, symbol), replacing pick-one on `position_model: slices` accounts** (§ Step 3). New `slice_ledger` (venue reconcile), `slice_allocation` (score-weighted split of the symbol risk budget, `config/slice_allocation.yaml`), `slice_admission` (per-trade refusals, delta basis = own slice). `accounts_in_more_than_one_round` now allows an account in several rounds only when every one allocates it a share, never twice for one strategy. Brackets: existing qty-scoped Partial TP/SL with per-slice leg ids. Opposite slices are admitted only on hedge books. | `src/runtime/slice_*.py`, `src/runtime/arbitration_fanout.py`, `src/runtime/intent_multiplexer.py`, `src/core/coordinator.py`, `src/units/accounts/__init__.py`, `config/accounts.yaml` (bybit_1), `config/slice_allocation.yaml` | `tests/test_slice_*.py`; mirror test `test_mirror_carries_the_same_position_model_as_live`. Live: 1–2 clean multi-slice trades on bybit_1 before bybit_2 + bybit_portfolio. |
 
 ## Known gaps
 
