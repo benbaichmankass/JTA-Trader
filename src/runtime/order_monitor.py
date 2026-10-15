@@ -1538,8 +1538,34 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
             else:
                 _exit_source = _prov_unmeasured_marker()
             existing_notes = _decode_notes(matched_trade.get("notes"))
+            _notes_changed = False
             if not existing_notes.get("exit_price_source"):
                 existing_notes["exit_price_source"] = _exit_source
+                _notes_changed = True
+            # ── AND THE REASON'S SOURCE (ORDER-AUDIT-3) ──────────────────
+            # PI-20260929-TWEW1FZJ-0002. This branch wrote `exit_reason` from
+            # the verdict and never said where it came from, so every
+            # monitor-decided close (`sl_cross`, `tp_cross`, `stale_stop`, ...)
+            # carried NO `exit_reason_source`. MEASURED 2026-10-15 over
+            # real-money closes since 2026-10-08 (n=16): 4 of 4 `sl_cross` rows
+            # unstamped (6565, 6566, 6593, 6594) — and all 4 had in fact been
+            # closed by the venue's own SL order before this branch ran, i.e.
+            # they reached it through `already_closed_on_exchange`, so the
+            # verdict's reason was not why the position ended.
+            #
+            # Two values, never collapsed: the monitor sent the close itself
+            # (`strategy_verdict`), or the venue was already flat
+            # (`strategy_verdict_venue_flat` — a pending state the
+            # bracket-order sweep resolves from venue order identity). Same
+            # never-overwrite rule as the price stamp above.
+            if not existing_notes.get("exit_reason_source"):
+                existing_notes["exit_reason_source"] = (
+                    VERDICT_VENUE_FLAT_LABEL_SOURCE
+                    if ex_result.get("skipped") == "already_closed_on_exchange"
+                    else VERDICT_LABEL_SOURCE
+                )
+                _notes_changed = True
+            if _notes_changed:
                 close_updates["notes"] = dump_capped(existing_notes, 2000)
             trade_id = matched_trade.get("id")
             if trade_id is not None:
@@ -14568,6 +14594,24 @@ _BRACKET_ORDER_RELABEL_REASONS = (
 #: the venue itself attributes that fill to the stop or target order.
 BRACKET_ORDER_LABEL_SOURCE = "venue_bracket_order"
 
+#: `exit_reason_source` stamped by `_apply_update`'s full-close branch
+#: (ORDER-AUDIT-3). Literals rather than a provenance import because this is
+#: the live close path (same reasoning as `_prov_unmeasured_marker`); a test
+#: pins them to `src/runtime/provenance.py`, where they are registered.
+#: `strategy_verdict`: the strategy's verdict authored the reason and the
+#: monitor sent the close (ESTIMATED). `strategy_verdict_venue_flat`: the venue
+#: was already flat when the close was sent, so the verdict's reason is not
+#: evidence (UNVERIFIED) — `_sweep_exit_label_from_bracket_order` resolves it.
+VERDICT_LABEL_SOURCE = "strategy_verdict"
+VERDICT_VENUE_FLAT_LABEL_SOURCE = "strategy_verdict_venue_flat"
+
+#: The exact substring a `dump_capped` notes blob carries when stamped with
+#: VERDICT_VENUE_FLAT_LABEL_SOURCE (json.dumps default separators, the same
+#: shape the `"intent_reduce": true` LIKE predicates below rely on).
+_VENUE_FLAT_NOTES_LIKE = (
+    f'%"exit_reason_source": "{VERDICT_VENUE_FLAT_LABEL_SOURCE}"%'
+)
+
 
 #: Relative qty tolerance for "this bracket order closed the whole position".
 #: Same value as `fills_pnl.QTY_TOLERANCE`, so the two fill readers agree.
@@ -14706,7 +14750,12 @@ def _sweep_exit_label_from_bracket_order(
                 "  FROM trades "
                 " WHERE status = 'closed' "
                 "   AND COALESCE(is_backtest, 0) = 0 "
-                f"  AND COALESCE(exit_reason, '') IN ({placeholders}) "
+                # ORDER-AUDIT-3: a verdict close that found the venue already
+                # flat keeps the verdict's (real-looking) reason, so it is
+                # selected by its MARKER, never by the reason — a verdict close
+                # the monitor actually sent is still never relabelled.
+                f"  AND (COALESCE(exit_reason, '') IN ({placeholders}) "
+                "        OR COALESCE(notes, '') LIKE ?) "
                 "   AND (COALESCE(sl_order_id, '') != '' "
                 "        OR COALESCE(tp_order_id, '') != '') "
                 "   AND COALESCE(setup_type, '') != 'intent_reduce' "
@@ -14715,7 +14764,7 @@ def _sweep_exit_label_from_bracket_order(
                 "       >= datetime('now', '-14 days') "
                 " ORDER BY datetime(COALESCE(closed_at, created_at)) DESC "
                 " LIMIT 100",
-                _BRACKET_ORDER_RELABEL_REASONS,
+                (*_BRACKET_ORDER_RELABEL_REASONS, _VENUE_FLAT_NOTES_LIKE),
             ).fetchall()]
         finally:
             conn.close()
@@ -14767,12 +14816,19 @@ def _sweep_exit_label_from_bracket_order(
                 # close/SL-TP notification hook has nothing to fire for.
                 wconn = db.connect()
                 try:
+                    # A marker-selected row (ORDER-AUDIT-3) is re-checked on
+                    # its marker AND the exact reason read above, so a
+                    # concurrent mark that changed the reason still wins.
                     cur = wconn.execute(
                         "UPDATE trades SET exit_reason = ?, notes = ? "  # writer-conformance: allow conditional relabel; update_trade cannot guard its WHERE (REVIEW-14106 a) and does no normalisation for exit_reason/notes
                         " WHERE id = ? "
-                        f"  AND COALESCE(exit_reason, '') IN ({placeholders})",
+                        f"  AND (COALESCE(exit_reason, '') IN ({placeholders}) "
+                        "       OR (COALESCE(exit_reason, '') = ? "
+                        "           AND COALESCE(notes, '') LIKE ?))",
                         (leg, dump_capped(notes, 500), int(row["id"]),
-                         *_BRACKET_ORDER_RELABEL_REASONS),
+                         *_BRACKET_ORDER_RELABEL_REASONS,
+                         str(row.get("exit_reason") or ""),
+                         _VENUE_FLAT_NOTES_LIKE),
                     )
                     wconn.commit()
                     changed = cur.rowcount
