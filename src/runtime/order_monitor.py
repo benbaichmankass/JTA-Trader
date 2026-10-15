@@ -9151,7 +9151,12 @@ def _emit_bybit_over_cover_alert(
     the side-blind sum, because that sum is the UNION of both conditions:
     narrowing the trigger to same-book coverage would make the orphan case go
     SILENT, which is strictly worse than mislabelling it. What changed in
-    #10739 is only what the page SAYS once it has fired.
+    #10739 is only what the page SAYS once it has fired. ONE exception since
+    PI-20261009-GXEDZJQE-0001 (2026-10-15): when the venue's own read reports a
+    LIVE sibling book, the caller grades each book's legs against that book's
+    own size (``bybit_leg_sides.over_cover_trip``). Those legs protect a live
+    position and are not stranded, so they no longer page. Stranded legs (no
+    live sibling) still trip on the side-blind sum.
 
     ⚠️ **AND "ONLY WHAT THE PAGE SAYS" NO LONGER DESCRIBES THE WHOLE SYSTEM,
     THOUGH IT STILL DESCRIBES THIS FUNCTION.** Since 2026-09-02 the naked
@@ -11958,6 +11963,24 @@ def _bybit_position_protection(client, category: str, symbol: str,
     pos = selection.row
     size = selection.size
     side = _norm_position_side(pos.get("side"))
+    # PI-20261009-GXEDZJQE-0001: the summed size of the OTHER live books, taken
+    # from this same venue read, and only when the venue reported >= 2 live
+    # books (a per-book read of a hedge symbol). `None` means no live sibling
+    # was established. It never means "the sibling is flat" and is never 0.0.
+    # The over-cover trip uses it to grade a live sibling's legs against that
+    # sibling's own size (`bybit_leg_sides.over_cover_trip`).
+    sibling_live_size: Optional[float] = None
+    if selection.live_count >= 2:
+        _sib = 0.0
+        for _r in rows:
+            if _r is pos or not isinstance(_r, dict):
+                continue
+            try:
+                _sib += abs(float(_r.get("size")))
+            except (TypeError, ValueError):
+                _sib = None
+                break
+        sibling_live_size = _sib if (_sib is not None and _sib > 0) else None
     # THE VENUE'S POSITION MODE, carried so the leg-side split can say whether
     # an OPPOSITE book could exist at all (0 = one-way netting ⇒ it cannot;
     # 1/2 = hedge ⇒ it may be a live sibling). Never defaulted to 0 — see
@@ -12062,6 +12085,8 @@ def _bybit_position_protection(client, category: str, symbol: str,
     return {
         "size": size, "side": side, "covered_qty": covered,
         "source": "partial_sl_legs",
+        # Size of the OTHER live book(s) on this symbol, or None (see above).
+        "sibling_book_live_size": sibling_live_size,
         # The VENUE's position mode for this book (0 one-way / 1 hedge-long
         # / 2 hedge-short), carried so the coverage soak can say WHY two
         # bases disagreed. ⚠️ `None` means the venue did not report it —
@@ -12847,6 +12872,10 @@ def _check_broker_naked_bybit_positions(db) -> Dict[str, int]:
         # exists to stop. `over_cover_split_ungraded` is *we could not tell
         # which* — emphatically not a third finding, and not a clean read.
         "over_cover_other_book": 0, "over_cover_split_ungraded": 0,
+        # PI-20261009-GXEDZJQE-0001: the side-blind sum was over the factor,
+        # but the venue reported a live sibling book and each book's legs are
+        # within that book's own size. No trip and no page; counted here.
+        "over_cover_live_sibling_explained": 0,
         # ---- the staged graded-book coverage basis (2026-09-02) -----------
         # ⚠️ THREE COUNTERS, THREE DIFFERENT FACTS, NEVER POOLED.
         # `coverage_graded_basis_bound` — rows where the GRADED figure actually
@@ -13167,10 +13196,37 @@ def _check_broker_naked_bybit_positions(db) -> Dict[str, int]:
                 # Live example: bybit_1 XRPUSDT, position 32557.2, legs
                 # 144789.3 (444.7%) — if the first leg trips it OVER-closes,
                 # and the rest are stranded.
-                if (
-                    state["source"] == "partial_sl_legs"
-                    and covered > size * _BYBIT_OVERCOVER_FACTOR
-                ):
+                # PI-20261009-GXEDZJQE-0001: the trip stays side-blind EXCEPT
+                # where the venue reported a LIVE sibling book in this same
+                # read. Those legs then protect that sibling and are graded
+                # against ITS size. Before this, a 0.12 long fully covered by
+                # its own leg paged at ERROR because a live 19.69 short's own
+                # 19.69 SL sat in the side-blind sum (bybit_1/ETHUSDT,
+                # 2026-10-08 and every ~2.3 min on 2026-10-15). Stranded
+                # other-book legs (no live sibling) still trip as before.
+                _oc_trips = False
+                if state["source"] == "partial_sl_legs":
+                    _oc_trips, _oc_basis = _bybit_leg_sides.over_cover_trip(
+                        size=size, side_blind_qty=covered,
+                        split=state.get("leg_side_split"),
+                        sibling_live_size=state.get("sibling_book_live_size"),
+                        factor=_BYBIT_OVERCOVER_FACTOR,
+                    )
+                    if (not _oc_trips and _oc_basis
+                            == _bybit_leg_sides.OVER_COVER_BASIS_PER_BOOK):
+                        # Counted, so "the side-blind sum was over but a live
+                        # sibling explains it" stays visible in the summary.
+                        summary["over_cover_live_sibling_explained"] += 1
+                        logger.debug(
+                            "_check_broker_naked_bybit_positions: %s/%s "
+                            "side-blind SL total %s exceeds size %s, but the "
+                            "excess protects a LIVE sibling book (size %s); "
+                            "each book is within its own size. Not an "
+                            "over-cover.",
+                            account_id, symbol, covered, size,
+                            state.get("sibling_book_live_size"),
+                        )
+                if _oc_trips:
                     summary["over_covered"] += 1
                     # ⚠️ The TRIP is side-blind (see below); the DESCRIPTION is
                     # not. Before 2026-09-02 this line said "resting SL legs
