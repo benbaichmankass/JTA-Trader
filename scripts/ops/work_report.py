@@ -26,7 +26,7 @@ CONTENTS — the brief is NOT re-rendered here. It is BRIEF-FIX's
 renderer. Above it sits the attention summary from
 ``attention_watch.build()``:
   * alarms — expected-signal-missing probes, ``ok``/``breached``/``unknown``;
-  * soaks — ``soak_state.soak_states()`` (SOAK-WATCH, live), dead/overdue/ready first;
+  * soaks — ``soak_state.soak_states()`` (SOAK-WATCH, live), mechanical_fail/unknown/passed first;
   * ask_operator — the open decisions;
   * due — the top items, ranked.
 
@@ -155,7 +155,7 @@ def generate(now: datetime | None = None) -> dict:
     def _soaks() -> tuple[Any, bool]:
         if view["soak_read"] == "unreadable":
             raise RuntimeError("soak_state.soak_states() raised — see the journal")
-        order = {"dead": 0, "overdue": 1, "ready": 2}
+        order = {"mechanical_fail": 0, "unknown": 1, "passed": 2, "in_progress": 3}
         rows = sorted(view["soaks"], key=lambda r: (order.get(str(r.get("state")), 9),
                                                      str(r.get("id"))))
         return rows, not rows
@@ -222,8 +222,8 @@ def render(now: datetime, sections: dict) -> str:
     s = sections.get("soaks", {})
     if s.get("state") == "ok":
         for r in s["data"]:
-            L.append(f"- **{r.get('state')}** `{r.get('id')}` end {r.get('end_date') or '—'} "
-                     f"· {_short(r.get('progress') or r.get('reason'), 120)}")
+            L.append(f"- **{r.get('state')}** `{r.get('id')}` {r.get('progress') or '—'} "
+                     f"· {_short(r.get('reason'), 120)}")
     elif s.get("state") == "empty":
         L.append("- soak_states() returned no soaks")
     elif s.get("state") == "absent":

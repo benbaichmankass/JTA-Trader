@@ -1017,7 +1017,7 @@ CUT_ID = "MD-S1-CUT-ON-STAGE0-FAIL"
 CUT_LEG = "eth_pullback_2h"
 CUT_CFG = {"enabled": True, "execution": "live", "timeframe": "2h", "symbols": ["ETHUSDT"]}
 CUT_BAR = {"min_n_closed": 30, "expectancy_gt": 0, "fold_majority": True, "affordability": True,
-           "soak_states": ["ready", "overdue"], "soak_snapshot_max_age_days": 7}
+           "soak_states": ["passed", "mechanical_fail"], "soak_snapshot_max_age_days": 7}
 
 
 def _cut_mandates(**over):
@@ -1036,7 +1036,7 @@ def _cut_accounts(extra_on=None):
     return a
 
 
-def _soak_snap(state="ready", *, age_days=0.0, leg=CUT_LEG, account="bybit_1"):
+def _soak_snap(state="passed", *, age_days=0.0, leg=CUT_LEG, account="bybit_1"):
     from datetime import datetime, timedelta, timezone
     ts = (datetime.now(timezone.utc) - timedelta(days=age_days)).isoformat()
     return {"captured_at": ts, "source": "test",
@@ -1078,11 +1078,11 @@ def test_cut_fires_on_a_failing_record_after_a_complete_soak(cut_repo):
     assert res["proposal"]["roster_add"] == {}
     clauses = {f["clause"] for f in res["evidence"]["stage0_failures"]}
     assert clauses == {"R-CUT-EXPECTANCY", "R-CUT-FOLDS"}
-    assert res["evidence"]["soak"]["state"] == "ready"
+    assert res["evidence"]["soak"]["state"] == "passed"
 
 
-def test_cut_fires_on_an_overdue_soak(cut_repo):
-    assert _cut(cut_repo(soak=_soak_snap("overdue")))["verdict"] == "FIRE"
+def test_cut_fires_on_a_mechanically_failed_soak(cut_repo):
+    assert _cut(cut_repo(soak=_soak_snap("mechanical_fail")))["verdict"] == "FIRE"
 
 
 def test_cut_fires_on_folds_alone_and_on_n_alone(cut_repo):
@@ -1140,7 +1140,7 @@ def test_cut_refuses_any_other_transition(cut_repo):
     assert res["verdict"] == "REFUSE", res
 
 
-@pytest.mark.parametrize("soak", [None, _soak_snap("accruing"), _soak_snap("dead"),
+@pytest.mark.parametrize("soak", [None, _soak_snap("awaiting_first_trade"), _soak_snap("in_progress"),
                                   _soak_snap("unknown"), _soak_snap(age_days=8),
                                   _soak_snap(leg="other_leg")])
 def test_cut_needs_data_unless_the_soak_is_complete_and_fresh(cut_repo, soak):

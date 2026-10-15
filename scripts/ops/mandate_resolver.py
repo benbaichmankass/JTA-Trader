@@ -1348,8 +1348,9 @@ def _demote_s1_off(leg: str, venue: Optional[str], m: Dict[str, Any], root: Path
 #       identity), source_run committed. A record that is not is NEEDS_DATA --
 #       "could not look" is never a cut signal;
 #   (5) the leg's Stage-1 soak contract (SOAK-stage1-<account>-<leg>) reads a
-#       state in bar.soak_states (ready | overdue) in the newest committed soak
-#       snapshot under comms/mandate_evidence/soak_state/, captured within
+#       state in bar.soak_states (passed | mechanical_fail since the 2026-10-15
+#       mechanical redefinition) in the newest committed soak snapshot under
+#       comms/mandate_evidence/soak_state/, captured within
 #       bar.soak_snapshot_max_age_days. Absent, stale, or any other state is
 #       NEEDS_DATA.
 # A record with no failing clause REFUSEs (R-STAGE0-PASSES): the evidence must
@@ -1386,7 +1387,7 @@ def _soak_snapshot_data_task(leg: str, account: str, why: str) -> Dict[str, Any]
                  f"`python3 scripts/ops/snapshot_soak_state_for_mandate.py` (reads the live "
                  f"brief's SOAKS section, computed by soak_state.soak_states()) and commit it."),
         "clears_when": (f"the newest {SOAK_SNAPSHOT_DIR_REL}/<date>.json is fresh and lists "
-                        f"SOAK-stage1-{account}-{leg} as ready or overdue"),
+                        f"SOAK-stage1-{account}-{leg} in a state listed in bar.soak_states"),
         "check_every_days": 7,
         "next_action": "check_observation",
     }

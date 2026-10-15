@@ -928,8 +928,9 @@ mandates:
       account's roster. Never on a record that is missing, unreadable,
       fee-only, stale against the leg's config, or cites a source_run absent
       from the repo: "could not look" is not a cut signal. Never on a soak
-      that is accruing, dead, unknown, absent from the snapshot, or read from
-      a stale snapshot. Never an `execution: shadow` leg (not a Stage-1 soak).
+      that is awaiting_first_trade, in_progress, unknown, absent from the
+      snapshot, or read from a stale snapshot (vocabulary re-mapped
+      2026-10-15 from accruing / dead / unknown; see bar.soak_states). Never an `execution: shadow` leg (not a Stage-1 soak).
       Never lands itself: no `autoland:`; the PR declares `landing: hold` and
       a human merges.
     evidence_required: >-
@@ -949,8 +950,67 @@ mandates:
       # "fails on folds", which is the promotion bar's fold clause.)
       fold_majority: true
       affordability: true
-      # soak_state.STATES: complete = n reached (ready) or end date passed (overdue).
-      soak_states: [ready, overdue]
+      # soak_state.STATES. RE-MAPPED 2026-10-15 (lane SOAK-REDEFINE, landing:
+      # hold, the manager merges) because the operator redefined the soak the same
+      # day (verbatim: "A soak is a mechanical verification that was already
+      # proven in backtesting, and nothing needs to soak for more than one or two
+      # trades"). The old values were "complete = n reached (ready) or end date
+      # passed (overdue)"; NEITHER STATE EXISTS ANY MORE (a mechanical soak has no
+      # sample size and no end date), so left unchanged this mandate could never
+      # fire again. The translation keeps the clause's meaning -- "the soak has
+      # reached a verdict": passed (n_needed <= 2 clean trades) or mechanical_fail
+      # (a fault, to fix and re-soak). awaiting_first_trade / in_progress /
+      # unknown stay NEEDS_DATA, as accruing / dead / unknown did.
+      # ⚠️ FOR THE OPERATOR: since edge is decided OFFLINE, a failing Stage-0
+      # record is arguably enough to cut a paper leg whatever its soak state.
+      # Dropping this clause would WIDEN the mandate (it would then cut legs still
+      # awaiting a first trade), so it is not done here -- it is the operator's.
+      soak_states: [passed, mechanical_fail]
       soak_snapshot_max_age_days: 7
 
-proposed: []
+proposed:
+  # ── PROPOSED 2026-10-15 by lane SOAK-REDEFINE — NOT GRANTED, authorizes NOTHING ──
+  # The operator redefined the Stage-1 soak on 2026-10-15 (verbatim: "A soak is a
+  # mechanical verification that was already proven in backtesting, and nothing
+  # needs to soak for more than one or two trades"). MD-PROMOTE-S1-S2 (granted
+  # above) does not name a soak n or duration in its `bar:`, but it carries one
+  # in effect: its `fires_when` requires the leg's PER-LEG R3 cost-fidelity
+  # verdict to read `consistent`, and R3 needs n >= 10 measured fills per side
+  # (RULE-R3-GATE1-COST-FIDELITY-v1's floor) -- a sample-size accrual on the
+  # promotion path, which the redefinition moves to ONGOING monitoring (the
+  # Gate-2 demotion signal). Separately, its `never:` clause "a leg that has not
+  # soaked at Stage 1" is checked by roster membership + `execution: live`
+  # (mandate_resolver R-NOT-SOAKED / R-EXECUTION-SHADOW), not by any soak result.
+  # This entry states the amendment for the operator to grant or refuse. It is
+  # deliberately WITHOUT `direction:`/`bar:`, so the resolver REFUSES it if anyone
+  # evaluates it -- it is a text proposal, not an evaluable mandate. If granted,
+  # the resolver change (soak clause + cost clause) is a build row, and the
+  # granted MD-PROMOTE-S1-S2 text is edited in the same PR.
+  - id: MD-PROMOTE-S1-S2-SOAK-AMEND
+    amends: MD-PROMOTE-S1-S2
+    proposed_by: SOAK-REDEFINE lane (manager session_01VduHYzdaXe27wTDBLSu8ao)
+    proposed_at: '2026-10-15'
+    grants: >-
+      MD-PROMOTE-S1-S2 reads the MECHANICAL soak result, and per-leg realized
+      cost becomes monitoring rather than a promotion gate
+    change: >-
+      (1) `never:` "Never a leg that has not soaked at Stage 1" becomes "Never a
+      leg whose Stage-1 soak contract SOAK-stage1-<account>-<leg> in
+      docs/claude/work/SOAKS.json is not `passed` (n_needed <= 2 clean trades,
+      each clearing the mechanical checklist; a `prop_live` source counts --
+      operator amendment 2026-10-15)". (2) The cost clause in `fires_when`: the
+      PER-LEG R3 `consistent` requirement is replaced by the VENUE's measured
+      cost for the leg's symbol (Bybit's own measured cost, per the operator's
+      prop amendment of 2026-10-15) clearing modelled + bar.cost_tolerance_bps;
+      the per-leg R3 verdict is kept as ONGOING monitoring that feeds
+      MD-DEMOTE-S2-S1 / MD-DEMOTE-S1-OFF. Everything else -- B1 clauses, the
+      Stage-0 bar (min_n_closed 30 is the BACKTEST n, unchanged), the 25% cap,
+      the 5.0 bps provisional basis for equities/futures, mirror equality,
+      human merge -- is unchanged.
+    why: >-
+      Without (1) a leg that faulted mechanically could promote; without (2) no
+      leg can promote until it has accrued >= 10 fills per side on paper, which
+      is the accrual the operator ruled out.
+    never: >-
+      Never authorizes anything while under `proposed:`. Never changes the
+      Stage-0 bar or the cap.

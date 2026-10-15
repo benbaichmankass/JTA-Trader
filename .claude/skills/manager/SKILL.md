@@ -975,19 +975,23 @@ what is blocked and on what>) then fire_trigger(<id>). If that prompts, comment 
 Then continue, or run close-out. Never stop to wait for direction.
 ```
 
-### The soak contract — no soak without an exit
+### The soak contract — a MECHANICAL check, 1–2 clean trades
 
-A Stage-1 placement is refused unless its pipeline row carries all five of:
-**what it verifies** (live matches backtest — mechanics and cost, never
-edge) · **expected event rate from the backtest** · **n needed and its power**
-· **end date** (= start + n ÷ rate) · **pass/fail rule registered before the
-soak starts.** **An end date more than ~2 weeks out means the design is wrong.**
-Fix it before placing the leg: a wider book, a stated-power smaller n, or a
-different instrument. Waiting longer is not a fix. At `ready`, grade the soak
-against its rule. At `overdue` or `dead`, kill the soak or redesign it. Never
-"keep waiting". A grade's `kill` calls (e.g. R5) are applied under
-`MD-DEMOTE-S1-OFF` / `MD-KILL-QUESTION`, or filed with a reason. They are never
-just read.
+Operator, 2026-10-15 (binding, verbatim): *"A soak is a mechanical verification
+that was already proven in backtesting, and nothing needs to soak for more than
+one or two trades."* A Stage-1 placement needs a contract in
+`docs/claude/work/SOAKS.json` carrying **the mechanical checklist** (signal
+fires · right size and side · real SL+TP resting at the venue · management
+works · exit journaled with a reason · fill and fees recorded) and **`n_needed`
+of 1 or 2**. No event rate, no power, no end date: `soak-contract-guard`
+refuses them. `soak_state.py` computes the state live: `passed` → the leg is a
+promotion candidate (`MD-PROMOTE-S1-S2`, read its file for what it still
+requires) · `mechanical_fail` → fix the fault, then re-soak (never wait it out) ·
+`awaiting_first_trade` / `in_progress` → quiet, no deadline, not failing. Edge
+is never read off a soak; realized cost (R3/R5) and live-vs-backtest are
+ONGOING MONITORING that feeds the demotion mandates. A grade's `kill` calls
+(e.g. R5) are applied under `MD-DEMOTE-S1-OFF` / `MD-KILL-QUESTION`, or filed
+with a reason. They are never just read.
 
 ### Decision batching
 
@@ -1097,7 +1101,8 @@ A grep that returns nothing proves nothing until the same grep is shown to find 
 ```
 STAGE 0  Backtest        → does an edge exist, net of the FULL cost stack?
    GATE 1
-STAGE 1  Soak            → bybit_1 · alpaca_paper. Mechanics + realized-cost fidelity.
+STAGE 1  Soak            → bybit_1 · alpaca_paper. MECHANICS on 1–2 clean trades
+                           (2026-10-15); realized cost is ongoing monitoring.
    GATE 2
 STAGE 2  Live + mirror   → bybit_2 + bybit_portfolio · alpaca_live + alpaca_portfolio.
                            Identical rosters, identical trades. The mirror is the

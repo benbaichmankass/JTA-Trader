@@ -85,11 +85,17 @@ one question, and a leg moves only when that question is answered on evidence.
             evidence record.
                               ▼  GATE 1  ▼
   STAGE 1   Soak                         bybit_1 · alpaca_paper
-            Do the mechanics work, and does realized cost match what the
-            backtest assumed?
-            Leaves when — orders place, fill and reconcile, AND realized cost
-            per trade matches the modelled cost.
-            Falls back when — they diverge.
+            Do the MECHANICS work? (edge was already proven at Stage 0)
+            Passes when — the first 1–2 CLEAN trades: the signal fires, the
+            order is placed with the right size and side, a real SL and TP
+            rest at the venue, management (trail/amend) works, the exit is
+            journaled with a reason, and the fill and fees are recorded.
+            Fails when — a mechanical fault; it is fixed, then re-soaked.
+            It never waits on a sample size and has no calendar: a leg with
+            no signal yet is "awaiting first trade", not failing.
+            Realized cost and live-vs-backtest are ONGOING MONITORING here
+            (the Gate-2 demotion signal, the underperformer first step) —
+            NOT exit criteria.
             This stage may be WIDE. It is an instrument, not a decision surface.
                               ▼  GATE 2  ▼
   STAGE 2   Live + mirror   bybit_2 + bybit_portfolio · alpaca_live + alpaca_portfolio
@@ -98,6 +104,34 @@ one question, and a leg moves only when that question is answered on evidence.
             Demotes when — the mirror goes net-negative net-of-cost over a
             declared window.
 ```
+
+### The soak is MECHANICAL — 1–2 clean trades, no calendar (operator, 2026-10-15, binding)
+
+Verbatim: *"A soak is a mechanical verification that was already proven in backtesting, and nothing
+needs to soak for more than one or two trades."* Until that day Stage 1 was built as a statistical
+accrual: every contract in `docs/claude/work/SOAKS.json` wanted `n_needed: 10` closes and an R3
+cost-fidelity verdict, with end dates computed from the backtest trade rate — 46 of 50 marked
+`too_long` by their own tooling, some ending in 2027–2029. That design is retired, and the lines of
+this section that read *"Leaves when — … AND realized cost per trade matches the modelled cost"* were
+its source.
+
+- **The contract** (`SOAKS.json`, schema in `scripts/ops/soak_state.py`): a mechanical `checklist`
+  and `n_needed` of 1 or 2. `soak-contract-guard` refuses `n_needed` > 2 and any calendar or accrual
+  field (`end_date`, `duration_days`, `expected_per_week`, `power`).
+- **The state**, computed live by `soak_state.soak_states()` from the journal: `passed` (n_needed clean
+  trades since the last fault) · `mechanical_fail` (the latest graded trade faulted: fix, then
+  re-soak) · `in_progress` · `awaiting_first_trade` (no deadline) · `unknown` (could not look).
+  A reconciler / watchdog / orphan close, an unstamped or naked bracket, a sentinel TP, or an
+  unrecorded fill or fee is a FAULT. An intent-layer reduce row or an operator's manual close is
+  neither clean nor a fault.
+- **Shadow soaks** prove what shadow can: the package is complete (side, entry, real SL and TP) and
+  every rostered account sizes it and records it dry. A passed shadow soak is not a Stage-1 soak.
+- **Live prop trades count** as soak trades (the amendment below).
+- **Migration** (2026-10-15): all 50 contracts re-graded from the live journal, read-only; the
+  evidence is `comms/research/soak_mechanics/2026-10-15.json` (`scripts/ops/soak_mechanics_record.py`).
+- **Not changed by this:** the granted `MD-PROMOTE-S1-S2` still requires the leg's PER-LEG R3 verdict
+  to read `consistent`, which is an accrual of ≥10 fills per side. Changing that is a mandate change,
+  so it is PROPOSED in `config/mandates.yaml` (`MD-PROMOTE-S1-S2-SOAK-AMEND`) for the operator to grant.
 
 **Stage 2 is one stage, not two.** The mirror and the live account carry the
 same strategies and take the same trades at all times (operator, 2026-09-21).
@@ -113,32 +147,43 @@ have produced zero retirements.
 
 A leg that reaches a **prop** roster (`account_class: prop`: breakout_2 · tradeify_1 · velotrade_1)
 must clear **everything a real-money leg must clear, PLUS prop DD survival**: Stage 0 net of the full
-cost stack · a Stage-1 soak on `bybit_1` (and `alpaca_paper` where relevant) with realized cost matching
-the backtest · the Gate-2 criteria · **and** the prop EV/survival gate against the firm's DD limits
+cost stack · a PASSED mechanical Stage-1 soak (on `bybit_1` / `alpaca_paper`, or from the leg's live prop
+trades — amendment below) · the Gate-2 criteria · **and** the prop EV/survival gate against the firm's DD limits
 (`comms/prop_survival/<leg>.json`). Verbatim principle: *"if anything, the prop accounts should have a
 higher bar to clear because of the DD limits."* The prop gate is a **superset**, never a lower bar (this
 formalises the 2026-08-27 correction). Mechanical half: `prop-roster-gate-guard`
 (`scripts/ci/check_prop_roster_gate.py`) refuses a PR that adds a leg to a prop roster without a Stage-1
 soak (roster presence or a `SOAK-stage1-*` contract) and a survival record; `roster-promotion-evidence-guard`
-keeps demanding the Stage-0 record. **Grandfathered by name, with a due date for their soak:**
-`trend_donchian_eth_prop` (due 2026-11-07) and `trend_donchian_sol_prop` (due 2026-12-11) — both went live on
-prop before this rule, now soak on `bybit_1` (contracts in `docs/claude/work/SOAKS.json`) while they
-**stay live on the prop books**; if either FAILS the soak, a data-backed Tier-3 pull from the prop rosters is
-proposed. Row: `PROP-GATE-PARITY`.
+keeps demanding the Stage-0 record. **Grandfathered by name, with an exemption lapse date:**
+`trend_donchian_eth_prop` (2026-11-07) and `trend_donchian_sol_prop` (2026-12-11) — both went live on
+prop before this rule, soak on `bybit_1` and from their live prop trades (contracts in
+`docs/claude/work/SOAKS.json`) while they **stay live on the prop books**; if either FAILS the soak
+mechanically, the fault is fixed and the leg re-soaked, and a data-backed Tier-3 pull from the prop rosters
+is proposed only if it cannot be. (The lapse dates were the end dates of the retired accrual contracts; the
+mechanical soak has none.) Row: `PROP-GATE-PARITY`.
 
 **Amendment (operator, 2026-10-15): live prop trading counts as Stage-1 soak evidence.** *"If they've passed
 a soak test trading live on the prop accounts, that should count as a pass and they can go live on bybit 2 as
-well."* Checkable per leg over its live prop closes (n stated = distinct signals, MEASURED fills only):
-(i) mechanics clean — exits are sl/tp/trail/manual-labelled, no orphans; (ii) `scripts/research/live_vs_backtest.py`
-(PR #18382) verdict CONSISTENT or better; (iii) realized cost within tolerance — prop venue costs differ, so a
-promotion to bybit_2 uses **Bybit's own MEASURED cost for that symbol** (ETHUSDT is measured on bybit_2; SOLUSDT
-has none there as of 2026-10-15, so SOL's clause (iii) comes from the bybit_1 soak). A PASS feeds `MD-PROMOTE-S1-S2`:
+well."* Under the mechanical soak (above) this is checkable per leg on its first 1–2 DISTINCT prop signals
+(one per order package, however many prop accounts it filled on): a signal is clean when at least one
+account's fill clears the prop checklist — order with side and size, a venue-read SL and TP, management,
+an exit journaled with an sl/tp/strategy reason and a price (`soak_state.grade_prop_signal`; the prop journal
+has no fee column, so the fee item is proven on the Bybit path). An operator's manual close is neither clean
+nor a fault. **Live-vs-backtest (`scripts/research/live_vs_backtest.py`, PR #18382) and realized cost are
+ongoing monitoring, not soak clauses** — a promotion to bybit_2 still checks cost against **Bybit's own
+MEASURED cost for that symbol**, and today the granted `MD-PROMOTE-S1-S2` still asks for a PER-LEG R3
+`consistent` verdict (see the proposed amendment above). A PASS feeds `MD-PROMOTE-S1-S2`:
 a PR adding the leg to bybit_2 **and** bybit_portfolio together (mirror equality tests, human merge, not auto-land),
 and the evidence record must first carry a **portfolio-overlap check** (e.g. `trend_donchian_eth_prop` 1h beside
 `trend_donchian_eth_4h`: signal/return correlation and combined drawdown). The bybit_1 soak stays as a parallel
 source; contracts carry both (`sources` in `SOAKS.json`). This PR promotes nothing.
 
 ### Why the cheap gate is cost-fidelity, not profitability
+
+> ⚠️ **SUPERSEDED 2026-10-15** by "The soak is MECHANICAL" above: the Stage-1 gate is the mechanical
+> checklist on 1–2 clean trades; cost fidelity is ongoing monitoring. Kept as the record of the
+> reasoning it replaced — the argument below (cost converges faster than expectancy) still explains
+> why R3 is a useful MONITOR, not why it should hold a soak open.
 
 A 1d leg makes 10–30 trades a year. It can never establish expectancy on a
 paper book in usable time — which is why 16 of 55 legs are structurally

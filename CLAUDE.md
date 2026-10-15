@@ -181,10 +181,15 @@ STAGE 0  Backtest        offline harness
          evidence record.
                           ▼  GATE 1  ▼
 STAGE 1  Soak             bybit_1 · alpaca_paper
-         Do the mechanics work, and does REALIZED COST match what the
-         backtest assumed? This stage may be wide — it is an instrument,
-         not a decision surface. It is also where legs that have not passed
-         shadow live data so we can learn how to tweak them.
+         Do the MECHANICS work? PASSES on the first 1–2 CLEAN trades (signal
+         fires, right size and side, real SL+TP resting at the venue,
+         management works, exit journaled with a reason, fill + fees
+         recorded). FAILS on a mechanical fault → fix, re-soak. No sample
+         size, no calendar: no signal yet = "awaiting first trade".
+         Realized cost + live-vs-backtest are ONGOING MONITORING (Gate-2
+         demotion signal), not exit criteria. This stage may be wide — it is
+         an instrument, not a decision surface. It is also where legs that
+         have not passed shadow live data so we can learn how to tweak them.
                           ▼  GATE 2  ▼
 STAGE 2  Live + mirror    bybit_2 + bybit_portfolio · alpaca_live + alpaca_portfolio
          Real money. The mirror carries the IDENTICAL roster and the
@@ -194,14 +199,25 @@ STAGE 2  Live + mirror    bybit_2 + bybit_portfolio · alpaca_live + alpaca_port
 
 **Prop legs clear a SUPERSET of this ladder** (operator, 2026-10-15: *"if anything, the prop accounts
 should have a higher bar to clear because of the DD limits"*): everything a real-money leg clears —
-Stage 0 net of the full cost stack, a Stage-1 soak with realized cost matching the backtest, Gate 2 —
+Stage 0 net of the full cost stack, a PASSED mechanical Stage-1 soak, Gate 2 —
 **plus** the prop EV/survival gate against the firm's DD limits (`comms/prop_survival/<leg>.json`).
 Never a lower bar. `prop-roster-gate-guard` enforces it on roster adds; `trend_donchian_eth_prop` /
-`trend_donchian_sol_prop` are grandfathered by name (soak due 2026-11-07 / 2026-12-11, row
-`PROP-GATE-PARITY`). **Amendment (operator, 2026-10-15): Stage-1 soak evidence may also come from LIVE prop
-trading** (mechanics clean · live_vs_backtest CONSISTENT · cost within tolerance using Bybit's own MEASURED cost
-for the symbol); a pass feeds `MD-PROMOTE-S1-S2` (bybit_2 + bybit_portfolio together, human merge) after a
-portfolio-overlap check. See [`docs/plans/OPERATING-PLAN-2026-09-21.md`](docs/plans/OPERATING-PLAN-2026-09-21.md) § 2.
+`trend_donchian_sol_prop` are grandfathered by name (exemption lapses 2026-11-07 / 2026-12-11, row
+`PROP-GATE-PARITY`). **Amendment (operator, 2026-10-15): live prop trades count as Stage-1 soak trades**
+(1–2 distinct clean signals on the mechanical checklist); a pass feeds `MD-PROMOTE-S1-S2` (bybit_2 +
+bybit_portfolio together, human merge) after a portfolio-overlap check, with cost checked against Bybit's
+own MEASURED cost for the symbol.
+
+⚠️ **The soak is MECHANICAL — 1–2 clean trades, never a sample, never a date** (operator, 2026-10-15,
+binding: *"A soak is a mechanical verification that was already proven in backtesting, and nothing needs
+to soak for more than one or two trades."*). Contracts: `docs/claude/work/SOAKS.json` (mechanical
+`checklist`, `n_needed` ≤ 2); state: `scripts/ops/soak_state.py` (`passed` · `mechanical_fail` ·
+`in_progress` · `awaiting_first_trade` · `unknown`); `soak-contract-guard` refuses `n_needed` > 2 and any
+`end_date` / `duration_days` / `expected_per_week` / `power`. The accrual design it replaced (n 10, R3
+verdict, end dates into 2029) is retired. ⚠️ The granted `MD-PROMOTE-S1-S2` still asks for a PER-LEG R3
+`consistent` verdict (≥10 fills/side) — an accrual on the promotion path; the amendment that moves it to
+monitoring is PROPOSED in `config/mandates.yaml` (`MD-PROMOTE-S1-S2-SOAK-AMEND`), not granted. *Field beats
+comment:* read the file. See [`docs/plans/OPERATING-PLAN-2026-09-21.md`](docs/plans/OPERATING-PLAN-2026-09-21.md) § 2.
 
 **A live or paper book never establishes edge.** It checks mechanics and cost.
 If a proposal advances a leg on live-book P&L, that is a category error.

@@ -733,9 +733,14 @@ The live port works like this:
 
 **Two forms of definition of done, both enforced by `soak-contract-guard`**
 (manager, 2026-10-04):
-- **A soak**: something that ACCRUES, such as a Stage-1 leg or a shadow
-  strategy. It needs a contract in `docs/claude/work/SOAKS.json`, or
-  `due_when.soak` on its pipeline item.
+- **A soak**: a Stage-1 leg or a shadow strategy. It needs a contract in
+  `docs/claude/work/SOAKS.json`, or `due_when.soak` on its pipeline item.
+  Since 2026-10-15 a soak is MECHANICAL (operator, verbatim: *"A soak is a
+  mechanical verification that was already proven in backtesting, and nothing
+  needs to soak for more than one or two trades"*): the contract states a
+  mechanical `checklist` and `n_needed` of 1 or 2 clean trades, never a sample
+  size or an end date — `soak-contract-guard` refuses both. Realized cost and
+  live-vs-backtest are ongoing monitoring, not soak exit criteria.
 - **A one-shot observation**: something that happens ONCE, such as "the 05:30Z
   report was produced" or "the tick ran clean on the new sha". It carries
   `observation: {what, how_to_check, due_by}` on its `check_observation` item
