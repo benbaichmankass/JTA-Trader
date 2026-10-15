@@ -28,6 +28,12 @@ object BgTicket {
     fun route(now: Long, engineNoAnswer: Int, engineOffUntilMs: Long): Route =
         if (engineNoAnswer >= 2 || now < engineOffUntilMs) Route.FRONT else Route.ENGINE
 
+    /** PHONE-FGS-EXEC step 2: amends go to the front (the position sheet needs an on-screen view). [total] = pending with
+     *  accepts=amend, [entries] = pending without it (null = that peek failed). True when an amend waits, or when tickets
+     *  wait and their kinds could not be read (the front handles both kinds). */
+    fun frontForAmends(total: Int?, entries: Int?): Boolean =
+        total != null && total > 0 && (entries == null || entries < total)
+
     /** Whether one background attempt counts AGAINST the engine. [kind] "entry" | "amend"; [ledgerState] = the ledger's
      *  last state for the claimed id (null = nothing claimed). An entry ticket that ends refused, unconfirmed, contained
      *  or mid-fill (intended / submitted left as the last state) counts. An amend counts only when the page failed it
