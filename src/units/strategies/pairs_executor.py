@@ -304,6 +304,19 @@ def _pair_is_open(pair: Dict[str, Any], account_id: str, db_path: Optional[str])
     return _pair_leg_state(pair, account_id, db_path) in ("open", "unreadable")
 
 
+def _pair_holds_legs(pair: Dict[str, Any], account_id: str,
+                     db_path: Optional[str]) -> bool:
+    """The CONCURRENCY view: does this pair hold (or possibly hold) a leg?
+    ``open``, ``half_open`` and ``unreadable`` all do.
+
+    PI-20260927-ECILBBVH-0009 (ORDER-AUDIT-3): the two concurrency helpers used
+    ``_pair_is_open``, which is False for ``half_open`` -- so a sibling pair
+    could open a new position on the symbol of a STRANDED naked leg, stacking
+    onto it under one-way netting. ``_pair_is_open`` keeps its meaning."""
+    return _pair_leg_state(pair, account_id, db_path) in (
+        "open", "half_open", "unreadable")
+
+
 _STATE_ALERT_COOLDOWN_S = 3600.0
 _state_alert_last: Dict[str, float] = {}
 
@@ -485,7 +498,7 @@ def _held_leg_symbols(pairs: Sequence[Dict[str, Any]], account_id: str,
     for p in pairs:
         if str(p.get("name")) == exclude_name:
             continue
-        if _pair_is_open(p, account_id, db_path):
+        if _pair_holds_legs(p, account_id, db_path):
             held.add(str(p["symbol_a"]))
             held.add(str(p["symbol_b"]))
     return held
@@ -500,7 +513,7 @@ def _count_correlated_open(pair: Dict[str, Any], pairs: Sequence[Dict[str, Any]]
     for p in pairs:
         if str(p.get("name")) == str(pair.get("name")):
             continue
-        if not _pair_is_open(p, account_id, db_path):
+        if not _pair_holds_legs(p, account_id, db_path):
             continue
         if {str(p["symbol_a"]), str(p["symbol_b"])} & my_syms:
             n += 1
