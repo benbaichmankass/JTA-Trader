@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "HELD for the manager (lane ORDER-AUDIT-4, item 19). Tier 2, order path: a new monitor-tick sweep closes an OPEN trade row when the local exchange-fills store shows the row's OWN sl_order_id or tp_order_id filled the whole position (5% tolerance) and the other leg did not. The close goes through db.update_trade (close ping fires), stamped sl/tp + venue_bracket_order + exchange_fill VWAP. Then it cancels THAT row's remaining protection (row-scoped, CA-A01-001) and cascades the package through the FIX-CA-05 open-leg hold. It makes no broker call to decide and changes no strategy, risk or sizing.",
+  "why": "PI-20260930-3QNHBGND-0002: a netted row whose own protective leg filled stays open forever while a sibling keeps the symbol non-flat (alpaca_paper SPY 6131, 2026-09-29). Every flat-close path keys on (account, symbol, side) absence."
+}

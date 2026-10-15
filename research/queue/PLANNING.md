@@ -62,6 +62,12 @@ run:
   `needs_gpu`, to Kaggle with the dataset mounted. **Check `published-data.json` beside the result**: it carries each shard's `last_ts`; a shard that
   disagrees with its own metadata is withheld by the exporter and the unit fails closed (`ML-SHARD-TRUNCATED`: BTC/SOL 15m were cut short on 2026-10-13).
   Units that read OURS data (trade_outcomes, setup_labels, conviction_meta, execution_quality, account_context) still need `needs_vm_data`.
+- **Say why a unit cannot take an idle backend before choosing `cpu_light`** (RESEARCH-LOOP-AUDIT RC5, 2026-10-15). MEASURED
+  2026-10-15: the runner backend sat at 3/3 with 12 due units waiting while the Kaggle GPU had used 0.19 of 30 weekly hours and
+  Kaggle CPU and the trainer had nothing due -- almost every authored unit declared `cpu_light`. When a unit's data is in
+  `metis-market-data` (`published_data` -> Kaggle CPU) or is trainer-resident (`needs_vm_data`, idle windows 03-05Z/07-24Z),
+  or its model is GPU-shaped, declare that class; if it must be `cpu_light`, say why in one line under `routing:`
+  (`why_runner: ...`). `check_research_queue_health.py` prints the idle backends every dispatch cycle.
 - **The trainer is its own windowed queue.** `backends.trainer.queue.windows_utc` (derived from the measured hour-of-day occupancy, `comms/cloud/trainer_workload_profile.json`)
   releases `needs_vm_data` units only into idle windows (03-05Z, 07-24Z) and only when `est_minutes x 1.5` fits before the window closes; otherwise `deferred` with the next opening.
 - **RunPod is a ledger-capped fallback for `compute: gpu`**, after Kaggle, and only for a unit that declares `routing.runpod: {manifest, est_cost_usd}` (the pod trains a registered

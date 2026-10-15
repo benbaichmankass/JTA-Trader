@@ -30,4 +30,13 @@ class BgTicketTest {
         assertEquals(false, BgTicket.countsAgainst("amend", "refused"))
         for (s in listOf("intended", "submitted", "unconfirmed")) assertEquals(s, true, BgTicket.countsAgainst("amend", s))
     }
+
+    @Test fun amendsGoToTheFrontEntriesStay() {
+        assertEquals(false, BgTicket.frontForAmends(0, 0))
+        assertEquals(false, BgTicket.frontForAmends(null, null))
+        assertEquals(false, BgTicket.frontForAmends(2, 2))   // entries only: the engine
+        assertEquals(true, BgTicket.frontForAmends(1, 0))    // one amend
+        assertEquals(true, BgTicket.frontForAmends(3, 2))    // an amend among entries: the front handles both
+        assertEquals(true, BgTicket.frontForAmends(1, null)) // kinds unread: the front
+    }
 }
