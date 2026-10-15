@@ -1998,6 +1998,25 @@ GUARDS: List[Dict[str, Any]] = [
         ],
     },
     {
+        "name": "same-symbol-allocation-guard",
+        # Operator 2026-10-15: two rostered legs on one (account, symbol) share ONE position slot and the election
+        # falls through confidence-tie -> declared priority -> 3d PnL -> timestamp -> NAME, with no backtest-quality
+        # term. Whole-tree: such a pair needs a committed head-to-head record (comms/same_symbol_allocation/) or a
+        # distinct non-zero DEFAULT_PRIORITIES ordering citing one. Today's pairs are grandfathered BY NAME with the
+        # unit that closes them and a due date inside the script. Checklist row SAME-SYMBOL-ALLOCATION.
+        "when": {"globs": [
+            "config/accounts.yaml",
+            "config/strategies.yaml",
+            "src/runtime/intents.py",
+            "comms/same_symbol_allocation/**",
+            "scripts/ci/check_same_symbol_allocation.py",
+        ]},
+        "steps": [
+            ["python3", "scripts/ci/check_same_symbol_allocation.py", "--self-test"],
+            ["python3", "scripts/ci/check_same_symbol_allocation.py"],
+        ],
+    },
+    {
         "name": "prop-roster-gate-guard",
         # Operator 2026-10-15 ("Yes, 1, 2 and 3a"; "the prop accounts should have a higher bar to clear
         # because of the DD limits"): a leg added to an `account_class: prop` roster needs a Stage-1 soak
