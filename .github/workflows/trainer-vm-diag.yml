@@ -405,6 +405,11 @@ jobs:
           # keepalives the SSH session is torn down mid-run and the relay reports
           # a spurious empty/failed result (BL-20260721-TRAINERDIAG-SILENT-SSH-DROP).
           # 30s x 10 = tolerate ~5 min of silence before declaring the link dead.
+          # Remote `timeout` (TRAINER-RUNAWAY-PROC): when the job is cancelled or hits
+          # its 60 min cap the ssh client dies but a no-tty remote `bash -s` is
+          # reparented to init and keeps running — on 2026-10-12 an orphaned
+          # `bash -s` + `python3 -` burned ~66% of the 1-OCPU trainer for ~3 days.
+          # 3540 s stays under timeout-minutes: 60; timeout signals its whole group.
           ssh -i ~/.ssh/trainer_key \
               -o BatchMode=yes \
               -o StrictHostKeyChecking=accept-new \
@@ -412,7 +417,7 @@ jobs:
               -o ServerAliveInterval=30 \
               -o ServerAliveCountMax=10 \
               "${TRAINER_USER}@${TRAINER_IP}" \
-              'bash -s' < /tmp/trainer_diag_cmd.sh \
+              'timeout --kill-after=30 3540 bash -s' < /tmp/trainer_diag_cmd.sh \
               > /tmp/trainer_diag_output.txt 2>&1 || true
           wc -c /tmp/trainer_diag_output.txt
 
