@@ -34,6 +34,7 @@ from typing import Any, NamedTuple
 
 from fastapi import APIRouter, HTTPException, Request, status
 
+from src.runtime import telegram_settings as _telegram_settings
 from src.runtime.exit_loop_health import (
     STATE_FILE_NAME as EXIT_LOOP_HEALTH_STATE_FILE,
 )
@@ -547,6 +548,14 @@ _WORK_DIGEST_RECEIPT = (
     Path(repo_root()) / "runtime_logs" / "work_digest_receipt.json"
 )
 
+# TELEGRAM-CHANNELS-3 (2026-10-11, item 6). The stored Telegram notification
+# settings (mutes, per-update cadence, last_sent, updated_at/updated_by). On
+# 2026-10-11 the MANAGER update moved from hourly to 4h and nobody could read
+# WHO changed it: the file is not otherwise reachable from a session. Holds no
+# secrets -- kind names, cadence choices and timestamps. Resolved through the
+# store's own path function so reader and writer cannot split.
+_TELEGRAM_SETTINGS = _telegram_settings._path()
+
 # WORK-SYSTEM (2026-10-04). The attention pass's receipt — stamped on every
 # pass. The pass rides ict-work-digest (no unit of its own), so it is anchored
 # to repo_root() for the same reason as the entry above.
@@ -580,6 +589,7 @@ _LOG_FILES: dict[str, Path] = {
     # not by trusting an `OnCalendar=` line. This repo has measured that a
     # declared cadence is not a run.
     "work_digest_receipt": _WORK_DIGEST_RECEIPT,
+    "telegram_settings": _TELEGRAM_SETTINGS,
     # WORK-SYSTEM. "Did the attention watch run, and what did it send?"
     "attention_watch_receipt": _ATTENTION_WATCH_RECEIPT,
     "status": _STATUS_JSON,

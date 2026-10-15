@@ -44,6 +44,10 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 CURSOR = REPO_ROOT / "runtime_logs" / "work_section_cursor.json"
 FIRST_RUN_WINDOW_H = 24
 MAX_PER_BUCKET = 8
+#: SHIPPED / VERIFIED are history, rendered LAST and capped tighter: Telegram's
+#: 4096-char trim drops the TAIL, and on 2026-10-11 it cut a Blocked item
+#: because ten Shipped/Verified lines sat ahead of it (TELEGRAM-CHANNELS-3).
+MAX_PER_BUCKET_HISTORY = 5
 _WHY = 100
 
 SHIPPED, VERIFIED, BLOCKED, FAILED, UPCOMING = (
@@ -69,9 +73,11 @@ def _last_note(note: Any) -> str:
 
 
 def _obs(o: Any) -> Optional[str]:
-    """A row's closing observation as one line (dict rows carry ``what``)."""
+    """A row's observed OUTCOME as one line, or ``None``. A dict's ``what`` is
+    the check that WOULD close the row, not what was seen, so it is not an
+    outcome (the VERIFIED line then falls back to the row's last note)."""
     if isinstance(o, dict):
-        o = o.get("observed") or o.get("result") or o.get("what")
+        o = o.get("observed") or o.get("result")
     return _short(o) if o else None
 
 
@@ -179,7 +185,7 @@ def build(prev: Optional[dict] = None, now: Optional[datetime] = None,
         if moved(rid, r, "landed_unproven"):
             b[SHIPPED].append(f"{rid} — {r['title']}")
         if moved(rid, r, "done"):
-            b[VERIFIED].append(f"{rid} — {r.get('observation') or r['title']}")
+            b[VERIFIED].append(f"{rid} — {r.get('observation') or r['why']}")
         if moved(rid, r, "dropped"):
             b[FAILED].append(f"{rid} (dropped) — {r['why']}")
         if r["state"] == "blocked":
@@ -211,11 +217,14 @@ def build(prev: Optional[dict] = None, now: Optional[datetime] = None,
             "pipeline_state": snap["pipeline_state"], "git": git, "snapshot": snap}
 
 
-_LABELS = ((SHIPPED, "✅ SHIPPED — merged, effect not yet observed"),
-           (VERIFIED, "🔬 VERIFIED / PASSED — effect observed"),
+#: Render order: what needs attention first (Blocked, Didn't work), then what
+#: is in flight / next, then the history (Shipped, Verified).
+_LABELS = ((BLOCKED, "⛔ BLOCKED now"),
            (FAILED, "❌ DIDN'T WORK — dropped / killed / reverted"),
-           (BLOCKED, "⛔ BLOCKED now"),
-           (UPCOMING, "⏭ COMING UP — ▶ in flight, · queued"))
+           (UPCOMING, "⏭ IN FLIGHT / NEXT — ▶ in flight, · queued"),
+           (SHIPPED, "✅ SHIPPED — merged, effect not yet observed"),
+           (VERIFIED, "🔬 VERIFIED / PASSED — outcome observed"))
+_CAPS = {SHIPPED: MAX_PER_BUCKET_HISTORY, VERIFIED: MAX_PER_BUCKET_HISTORY}
 
 
 def headline(d: dict) -> str:
@@ -243,9 +252,10 @@ def render_body(d: dict) -> str:
             L.append(f"{label}: none")
             continue
         L.append(f"{label} ({len(items)}):")
-        L += [f"  {x}" for x in items[:MAX_PER_BUCKET]]
-        if len(items) > MAX_PER_BUCKET:
-            L.append(f"  … +{len(items) - MAX_PER_BUCKET} more")
+        cap = _CAPS.get(key, MAX_PER_BUCKET)
+        L += [f"  {x}" for x in items[:cap]]
+        if len(items) > cap:
+            L.append(f"  … +{len(items) - cap} more")
     g = d["git"]
     L.append(f"Merged PRs in window: {_dash(g.get('merged_prs'))}"
              + ("" if g.get("reverts") is not None else " (git log could not run)"))

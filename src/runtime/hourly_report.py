@@ -1267,6 +1267,38 @@ def _deploy_section(d: Dict[str, Any]):
     return Section(summary=head, body="\n".join(lines), priority=5 if rp else 45)
 
 
+def _notification_settings_section():
+    """Active NON-DEFAULT Telegram settings (TELEGRAM-CHANNELS-3 item 6), so a
+    silenced or slowed update is visible without reading the store. ``None``
+    when everything is at the defaults and the store was read; an absent store
+    IS the defaults, an UNREADABLE one is said (and serves defaults)."""
+    from src.runtime import telegram_settings as ts
+    from src.units.ui.telegram_format import Section
+
+    try:
+        d = ts.load()
+    except Exception as exc:  # noqa: BLE001  # allow-silent: said in the section itself ("could not look"), never rendered as nothing
+        return Section(summary="Notification settings — could not look",
+                       body=f"telegram_settings unreadable ({type(exc).__name__})", priority=40)
+    lines: List[str] = []
+    for key, (channel, name) in ts.PERIODIC.items():
+        choice = ts.cadence(key)
+        if choice != ts.DEFAULT_CADENCE:
+            lines.append(f"{name} ({channel}): {ts.CADENCE_LABELS[choice]} — default is "
+                         f"{ts.CADENCE_LABELS[ts.DEFAULT_CADENCE]}")
+    if d.get("muted"):
+        lines.append("Muted kinds: " + ", ".join(d["muted"]))
+    if d.get("read_state") == "unreadable":
+        lines.append("Settings store UNREADABLE — serving defaults")
+    if not lines:
+        return None
+    n = len(lines)
+    if d.get("updated_at") or d.get("updated_by"):
+        lines.append(f"Last changed: {d.get('updated_at') or '—'} by {d.get('updated_by') or '—'}")
+    return Section(summary=f"Notification settings — {n} non-default",
+                   body="\n".join(lines), priority=40)
+
+
 def render_system_health(report: Dict[str, Any], extras: Optional[Dict[str, Any]] = None) -> str:
     """The SYSTEM channel's periodic HEALTH CHECK (HTML, fitted)."""
     from src.units.ui.telegram_format import render_html_fitted
@@ -1282,6 +1314,9 @@ def render_system_health(report: Dict[str, Any], extras: Optional[Dict[str, Any]
     sections.append(_reachability_section(report.get("accounts")))
     if extras is not None:
         sections.append(_deploy_section(extras))
+    notif = _notification_settings_section()
+    if notif is not None:
+        sections.append(notif)
     footer = {
         "ok": "All systems normal",
         "warn": "WARN: errors logged but no critical issues",

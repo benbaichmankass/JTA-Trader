@@ -1988,6 +1988,29 @@ GUARDS: List[Dict[str, Any]] = [
         ],
     },
     {
+        "name": "prop-roster-gate-guard",
+        # Operator 2026-10-15 ("Yes, 1, 2 and 3a"; "the prop accounts should have a higher bar to clear
+        # because of the DD limits"): a leg added to an `account_class: prop` roster needs a Stage-1 soak
+        # (bybit_1/alpaca_paper roster or a SOAK-stage1 contract) AND a comms/prop_survival/<leg>.json
+        # record, ON TOP of what roster-promotion-evidence-guard already demands of every risk-bearing
+        # roster. Diff-scoped + roster-membership keyed; demotion free; the two pre-rule legs are
+        # grandfathered BY NAME with a due date inside the script.
+        "when": {"globs": [
+            "config/accounts.yaml",
+            "docs/claude/work/SOAKS.json",
+            "comms/prop_survival/**",
+            "scripts/ci/check_prop_roster_gate.py",
+        ]},
+        "steps": [
+            ["python3", "scripts/ci/check_prop_roster_gate.py", "--self-test"],
+            {
+                "argv": ["python3", "scripts/ci/check_prop_roster_gate.py",
+                         "--base", "origin/{base_ref}"],
+                "pr_only": True,
+            },
+        ],
+    },
+    {
         "name": "manifest-scope-constants",
         # The ML manifest<->dataset contract, at COMMIT time. It was previously
         # validated ONLY at train time, on the trainer, inside a cycle that
