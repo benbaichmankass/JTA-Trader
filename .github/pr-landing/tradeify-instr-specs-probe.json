@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "HELD for the manager's review and merge (TRADEIFY-INSTR-SPECS, manager go 2026-10-15 20:21Z). Adds a READ-ONLY breakout-login-check mode quote-spread (DXtradeAdapter.quote_spread over the existing read_quote: spread in bps of mid; clicks nothing, reads no account figure) and gives velotrade-api-probe a tradeify_1 symbol set (ETH/USD control + SILVER/USD, XYZ100/USD, SP500/USD, USOIL/USD) that also prints each instrument row's key names. No order path, executor, config, sizing or risk change; velotrade_1's probe is unchanged.",
+  "why": "tradeify_1 has no instrument-info widget (instrument-info-dry #18434 refused) and link-state-dump finds 0 rows there (#18437), so no existing mode returns an instrument's cost. read_quote already parses the watchlist for the executor; the REST probe already reads instrument specs but was hard-coded to ETH/SOL/XRP/BTC and never run on tradeify_1."
+}
