@@ -6,6 +6,11 @@
   },
   "id": "PI-20261015-PD85QJEZ-0004",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-18",
+    "how_to_check": "diag journalctl?unit=ict-trader-live&lines=2000 windows over the readable journal: count 'ErrCode: 10002' (0 beyond the 2026-10-15T09:46:41Z control); 5x diag status captured_at vs local request midpoint: |offset| < 1s",
+    "what": "Bybit ErrCode 10002 has not repeated on ict-trader-live, and the VM clock offset stays under 1s"
+  },
   "origin": {
     "kind": "session",
     "ref": "ORDER-AUDIT-3 lane session_015ph6MwWrWPDbc6Pd85QJEZ, manager clock-drift check 2026-10-15",
