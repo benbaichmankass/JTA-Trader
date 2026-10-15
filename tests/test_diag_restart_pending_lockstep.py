@@ -64,3 +64,30 @@ def test_research_only_paths_are_non_runtime_and_src_is_not():
         assert pat.match(p), p
     for p in ("src/prop/prop_executor.py", "config/accounts.yaml", "scripts/ops/x.sh", "deploy/u.service"):
         assert not pat.match(p), p
+
+
+# ---- TRADER-RESTART-GATE: the trader gate's copy is the third member -------
+
+def _closure_tool_pattern(name: str) -> str:
+    text = (REPO / "scripts" / "ops" / "trader_import_closure.py").read_text(encoding="utf-8")
+    m = re.search(name + r" = re\.compile\(\s*((?:r\"[^\"]*\"\s*)+)\)", text)
+    assert m, f"{name} not found in trader_import_closure.py"
+    return "".join(re.findall(r'r"([^"]*)"', m.group(1)))
+
+
+def test_trader_gate_non_runtime_paths_equal_the_deploy_filter():
+    assert _closure_tool_pattern("NON_RUNTIME_PATHS_RE") == _deploy_pattern()
+
+
+def test_trader_gate_in_process_exception_equals_the_deploy_exception():
+    assert _closure_tool_pattern("IN_PROCESS_RUNTIME_PATHS_RE") == _deploy_in_process_pattern()
+
+
+def test_diag_trader_pending_uses_the_deploy_trader_rule():
+    """Per unit: a web-api-only file is pending for the web-api, not the trader."""
+    from src.web.api.routers.diag import _is_runtime_path
+    from scripts.ops.trader_import_closure import classify_path
+    closure = {"src/main.py"}
+    assert _is_runtime_path("src/web/api/routers/work.py")
+    assert classify_path("src/web/api/routers/work.py", closure) is None
+    assert classify_path("src/main.py", closure) == "in_closure"
