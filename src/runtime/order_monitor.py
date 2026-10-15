@@ -1538,8 +1538,34 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
             else:
                 _exit_source = _prov_unmeasured_marker()
             existing_notes = _decode_notes(matched_trade.get("notes"))
+            _notes_changed = False
             if not existing_notes.get("exit_price_source"):
                 existing_notes["exit_price_source"] = _exit_source
+                _notes_changed = True
+            # ── AND THE REASON'S SOURCE (ORDER-AUDIT-3) ──────────────────
+            # PI-20260929-TWEW1FZJ-0002. This branch wrote `exit_reason` from
+            # the verdict and never said where it came from, so every
+            # monitor-decided close (`sl_cross`, `tp_cross`, `stale_stop`, ...)
+            # carried NO `exit_reason_source`. MEASURED 2026-10-15 over
+            # real-money closes since 2026-10-08 (n=16): 4 of 4 `sl_cross` rows
+            # unstamped (6565, 6566, 6593, 6594) — and all 4 had in fact been
+            # closed by the venue's own SL order before this branch ran, i.e.
+            # they reached it through `already_closed_on_exchange`, so the
+            # verdict's reason was not why the position ended.
+            #
+            # Two values, never collapsed: the monitor sent the close itself
+            # (`strategy_verdict`), or the venue was already flat
+            # (`strategy_verdict_venue_flat` — a pending state the
+            # bracket-order sweep resolves from venue order identity). Same
+            # never-overwrite rule as the price stamp above.
+            if not existing_notes.get("exit_reason_source"):
+                existing_notes["exit_reason_source"] = (
+                    VERDICT_VENUE_FLAT_LABEL_SOURCE
+                    if ex_result.get("skipped") == "already_closed_on_exchange"
+                    else VERDICT_LABEL_SOURCE
+                )
+                _notes_changed = True
+            if _notes_changed:
                 close_updates["notes"] = dump_capped(existing_notes, 2000)
             trade_id = matched_trade.get("id")
             if trade_id is not None:
@@ -9125,7 +9151,12 @@ def _emit_bybit_over_cover_alert(
     the side-blind sum, because that sum is the UNION of both conditions:
     narrowing the trigger to same-book coverage would make the orphan case go
     SILENT, which is strictly worse than mislabelling it. What changed in
-    #10739 is only what the page SAYS once it has fired.
+    #10739 is only what the page SAYS once it has fired. ONE exception since
+    PI-20261009-GXEDZJQE-0001 (2026-10-15): when the venue's own read reports a
+    LIVE sibling book, the caller grades each book's legs against that book's
+    own size (``bybit_leg_sides.over_cover_trip``). Those legs protect a live
+    position and are not stranded, so they no longer page. Stranded legs (no
+    live sibling) still trip on the side-blind sum.
 
     ⚠️ **AND "ONLY WHAT THE PAGE SAYS" NO LONGER DESCRIBES THE WHOLE SYSTEM,
     THOUGH IT STILL DESCRIBES THIS FUNCTION.** Since 2026-09-02 the naked
@@ -11932,6 +11963,24 @@ def _bybit_position_protection(client, category: str, symbol: str,
     pos = selection.row
     size = selection.size
     side = _norm_position_side(pos.get("side"))
+    # PI-20261009-GXEDZJQE-0001: the summed size of the OTHER live books, taken
+    # from this same venue read, and only when the venue reported >= 2 live
+    # books (a per-book read of a hedge symbol). `None` means no live sibling
+    # was established. It never means "the sibling is flat" and is never 0.0.
+    # The over-cover trip uses it to grade a live sibling's legs against that
+    # sibling's own size (`bybit_leg_sides.over_cover_trip`).
+    sibling_live_size: Optional[float] = None
+    if selection.live_count >= 2:
+        _sib = 0.0
+        for _r in rows:
+            if _r is pos or not isinstance(_r, dict):
+                continue
+            try:
+                _sib += abs(float(_r.get("size")))
+            except (TypeError, ValueError):
+                _sib = None
+                break
+        sibling_live_size = _sib if (_sib is not None and _sib > 0) else None
     # THE VENUE'S POSITION MODE, carried so the leg-side split can say whether
     # an OPPOSITE book could exist at all (0 = one-way netting ⇒ it cannot;
     # 1/2 = hedge ⇒ it may be a live sibling). Never defaulted to 0 — see
@@ -12036,6 +12085,8 @@ def _bybit_position_protection(client, category: str, symbol: str,
     return {
         "size": size, "side": side, "covered_qty": covered,
         "source": "partial_sl_legs",
+        # Size of the OTHER live book(s) on this symbol, or None (see above).
+        "sibling_book_live_size": sibling_live_size,
         # The VENUE's position mode for this book (0 one-way / 1 hedge-long
         # / 2 hedge-short), carried so the coverage soak can say WHY two
         # bases disagreed. ⚠️ `None` means the venue did not report it —
@@ -12821,6 +12872,10 @@ def _check_broker_naked_bybit_positions(db) -> Dict[str, int]:
         # exists to stop. `over_cover_split_ungraded` is *we could not tell
         # which* — emphatically not a third finding, and not a clean read.
         "over_cover_other_book": 0, "over_cover_split_ungraded": 0,
+        # PI-20261009-GXEDZJQE-0001: the side-blind sum was over the factor,
+        # but the venue reported a live sibling book and each book's legs are
+        # within that book's own size. No trip and no page; counted here.
+        "over_cover_live_sibling_explained": 0,
         # ---- the staged graded-book coverage basis (2026-09-02) -----------
         # ⚠️ THREE COUNTERS, THREE DIFFERENT FACTS, NEVER POOLED.
         # `coverage_graded_basis_bound` — rows where the GRADED figure actually
@@ -13141,10 +13196,37 @@ def _check_broker_naked_bybit_positions(db) -> Dict[str, int]:
                 # Live example: bybit_1 XRPUSDT, position 32557.2, legs
                 # 144789.3 (444.7%) — if the first leg trips it OVER-closes,
                 # and the rest are stranded.
-                if (
-                    state["source"] == "partial_sl_legs"
-                    and covered > size * _BYBIT_OVERCOVER_FACTOR
-                ):
+                # PI-20261009-GXEDZJQE-0001: the trip stays side-blind EXCEPT
+                # where the venue reported a LIVE sibling book in this same
+                # read. Those legs then protect that sibling and are graded
+                # against ITS size. Before this, a 0.12 long fully covered by
+                # its own leg paged at ERROR because a live 19.69 short's own
+                # 19.69 SL sat in the side-blind sum (bybit_1/ETHUSDT,
+                # 2026-10-08 and every ~2.3 min on 2026-10-15). Stranded
+                # other-book legs (no live sibling) still trip as before.
+                _oc_trips = False
+                if state["source"] == "partial_sl_legs":
+                    _oc_trips, _oc_basis = _bybit_leg_sides.over_cover_trip(
+                        size=size, side_blind_qty=covered,
+                        split=state.get("leg_side_split"),
+                        sibling_live_size=state.get("sibling_book_live_size"),
+                        factor=_BYBIT_OVERCOVER_FACTOR,
+                    )
+                    if (not _oc_trips and _oc_basis
+                            == _bybit_leg_sides.OVER_COVER_BASIS_PER_BOOK):
+                        # Counted, so "the side-blind sum was over but a live
+                        # sibling explains it" stays visible in the summary.
+                        summary["over_cover_live_sibling_explained"] += 1
+                        logger.debug(
+                            "_check_broker_naked_bybit_positions: %s/%s "
+                            "side-blind SL total %s exceeds size %s, but the "
+                            "excess protects a LIVE sibling book (size %s); "
+                            "each book is within its own size. Not an "
+                            "over-cover.",
+                            account_id, symbol, covered, size,
+                            state.get("sibling_book_live_size"),
+                        )
+                if _oc_trips:
                     summary["over_covered"] += 1
                     # ⚠️ The TRIP is side-blind (see below); the DESCRIPTION is
                     # not. Before 2026-09-02 this line said "resting SL legs
@@ -14568,6 +14650,24 @@ _BRACKET_ORDER_RELABEL_REASONS = (
 #: the venue itself attributes that fill to the stop or target order.
 BRACKET_ORDER_LABEL_SOURCE = "venue_bracket_order"
 
+#: `exit_reason_source` stamped by `_apply_update`'s full-close branch
+#: (ORDER-AUDIT-3). Literals rather than a provenance import because this is
+#: the live close path (same reasoning as `_prov_unmeasured_marker`); a test
+#: pins them to `src/runtime/provenance.py`, where they are registered.
+#: `strategy_verdict`: the strategy's verdict authored the reason and the
+#: monitor sent the close (ESTIMATED). `strategy_verdict_venue_flat`: the venue
+#: was already flat when the close was sent, so the verdict's reason is not
+#: evidence (UNVERIFIED) — `_sweep_exit_label_from_bracket_order` resolves it.
+VERDICT_LABEL_SOURCE = "strategy_verdict"
+VERDICT_VENUE_FLAT_LABEL_SOURCE = "strategy_verdict_venue_flat"
+
+#: The exact substring a `dump_capped` notes blob carries when stamped with
+#: VERDICT_VENUE_FLAT_LABEL_SOURCE (json.dumps default separators, the same
+#: shape the `"intent_reduce": true` LIKE predicates below rely on).
+_VENUE_FLAT_NOTES_LIKE = (
+    f'%"exit_reason_source": "{VERDICT_VENUE_FLAT_LABEL_SOURCE}"%'
+)
+
 
 #: Relative qty tolerance for "this bracket order closed the whole position".
 #: Same value as `fills_pnl.QTY_TOLERANCE`, so the two fill readers agree.
@@ -14706,7 +14806,12 @@ def _sweep_exit_label_from_bracket_order(
                 "  FROM trades "
                 " WHERE status = 'closed' "
                 "   AND COALESCE(is_backtest, 0) = 0 "
-                f"  AND COALESCE(exit_reason, '') IN ({placeholders}) "
+                # ORDER-AUDIT-3: a verdict close that found the venue already
+                # flat keeps the verdict's (real-looking) reason, so it is
+                # selected by its MARKER, never by the reason — a verdict close
+                # the monitor actually sent is still never relabelled.
+                f"  AND (COALESCE(exit_reason, '') IN ({placeholders}) "
+                "        OR COALESCE(notes, '') LIKE ?) "
                 "   AND (COALESCE(sl_order_id, '') != '' "
                 "        OR COALESCE(tp_order_id, '') != '') "
                 "   AND COALESCE(setup_type, '') != 'intent_reduce' "
@@ -14715,7 +14820,7 @@ def _sweep_exit_label_from_bracket_order(
                 "       >= datetime('now', '-14 days') "
                 " ORDER BY datetime(COALESCE(closed_at, created_at)) DESC "
                 " LIMIT 100",
-                _BRACKET_ORDER_RELABEL_REASONS,
+                (*_BRACKET_ORDER_RELABEL_REASONS, _VENUE_FLAT_NOTES_LIKE),
             ).fetchall()]
         finally:
             conn.close()
@@ -14767,12 +14872,19 @@ def _sweep_exit_label_from_bracket_order(
                 # close/SL-TP notification hook has nothing to fire for.
                 wconn = db.connect()
                 try:
+                    # A marker-selected row (ORDER-AUDIT-3) is re-checked on
+                    # its marker AND the exact reason read above, so a
+                    # concurrent mark that changed the reason still wins.
                     cur = wconn.execute(
                         "UPDATE trades SET exit_reason = ?, notes = ? "  # writer-conformance: allow conditional relabel; update_trade cannot guard its WHERE (REVIEW-14106 a) and does no normalisation for exit_reason/notes
                         " WHERE id = ? "
-                        f"  AND COALESCE(exit_reason, '') IN ({placeholders})",
+                        f"  AND (COALESCE(exit_reason, '') IN ({placeholders}) "
+                        "       OR (COALESCE(exit_reason, '') = ? "
+                        "           AND COALESCE(notes, '') LIKE ?))",
                         (leg, dump_capped(notes, 500), int(row["id"]),
-                         *_BRACKET_ORDER_RELABEL_REASONS),
+                         *_BRACKET_ORDER_RELABEL_REASONS,
+                         str(row.get("exit_reason") or ""),
+                         _VENUE_FLAT_NOTES_LIKE),
                     )
                     wconn.commit()
                     changed = cur.rowcount

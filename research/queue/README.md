@@ -306,9 +306,13 @@ without Claude."* Three scheduled workflows own that:
 A generated or graded unit self-lands ONLY because `check_pr_landing.py` (E58)
 re-runs the producer's `--verify` at the merge-base and gets the same bytes;
 a hand-edited unit, a new hand-written unit, or a rule rewrite still holds for
-a human (E57). Mechanical grading applies to template-generated units and to
-hand-written ones that opt in with `grading: {auto: true}`; every other
-hand-written unit is graded by a session, as before. The `needs_review`
+a human (E57). Mechanical grading applies to template-generated units, to hand-written
+ones that opt in with `grading: {auto: true}`, and (RESEARCH-GRADE-BACKLOG,
+2026-10-15) to hand-written `once` units whose every result row carries the
+unit's own `decision_rule.id` (`attested`). A hand-written unit opts OUT with
+`grading: {auto: false}` or by carrying any session-written `grading:` block --
+the grader never overwrites a human read -- and a multi-dispatch unit declares
+`lands.runs: N` so the grader waits for N result files (RESEARCH-LOOP-AUDIT RC1). The `needs_review`
 bucket is `grep -l "needs_review: true" research/queue/*.yaml`. The alarm
 (`scripts/ci/check_research_queue_health.py`, run from the dispatcher) pages
 through the send-ping system-action when nothing has dispatched in 12 h or runnable units (same definition) < 25 AND the
