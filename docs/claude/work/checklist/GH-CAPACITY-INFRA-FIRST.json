@@ -1,0 +1,21 @@
+{
+  "id": "GH-CAPACITY-INFRA-FIRST",
+  "title": "Give infra (system-actions/vm-ops/deploy/diag/phone-executor-apk) preference on GitHub runner capacity over research and superseded CI",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "lane GH-CAPACITY-INFRA-FIRST",
+  "lane": "session_01PhYMEkk7p8AzzzVHLsqCLw",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR 2026-10-15 ~08:24Z verbatim: \"generally we want to give infra preference on github capacity since the resaerch has its own dedicated resources\"; also: let the current queue drain on its own -- NO manual cancels. TRIGGER/EVIDENCE (manager, 08:15Z): ~100 Actions runs queued (12 pytest-run, 11 pytest-rerun on superseded main shas, 10 Guards, 10 repo-inventory, 10 claude-pr-automerge, 9 pytest-collect ...) with research-queue-dispatch running on ubuntu-latest; phone-executor-apk queued 07:49Z finished ~08:20Z; system-actions runs 8472-8474 for an operator-approved live change queued 40+ min, one issue with no run at all; only 7 of 179 workflows set cancel-in-progress. SCOPE: (1) inventory research-*/ml-*/backtest workflows: compute-on-GitHub vs dispatch-only, measured durations; move heavy compute off GitHub runners. (2) concurrency + cancel-in-progress on PR CI (workflow + PR/head ref), pytest-rerun/workflow_run chains keyed on branch; never cancel main-push jobs that commit to main, deploy or run system-actions. (3) infra never queues behind research or superseded CI: measure what this plan allows (runner cap, research parallelism caps, self-hosted/trainer runners). LANE MEASUREMENT 08:21-08:30Z: 171 queued, 20/20 jobs in progress (Free-plan cap) = 12 pytest-run (PR, ~35-48 min each) + 5 Guards + 1 repo-inventory + 1 research-queue-dispatch + 1 live-replay-parity. Research held 1 of 20 slots; superseded/PR CI held 18. Inventory: comms/ci/gh-capacity-inventory-2026-10-15.json.",
+  "updated_at": "2026-10-15T08:27:32Z",
+  "updated_by": "session_01PhYMEkk7p8AzzzVHLsqCLw",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 512
+}

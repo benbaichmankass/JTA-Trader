@@ -1,0 +1,21 @@
+{
+  "id": "GH-CAPACITY-RESEARCH-OFFLOAD",
+  "title": "Move heavy research compute (e35/m20 sweeps, research-harness-dispatch) off GitHub-hosted runners to trainer/Kaggle",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "From GH-CAPACITY-INFRA-FIRST, operator 2026-10-15: research has its own dedicated resources. MEASURED (comms/ci/gh-capacity-inventory-2026-10-15.json): e35-bracket-sweep median 67 run-min (job-min 28-70 over last 6), m20-exit-lever-sweep median 50, research-harness-dispatch median 52 (job-min 11-64), all compute ON ubuntu-latest. This lane only capped e35/m20 matrix max-parallel to 3. Route each through research_compute.yaml backends (trainer is 1 OCPU, max 1 -- capacity there must be measured first; kaggle_cpu is the likely target). Rerun: python3 /tmp inventory method in the JSON 'method' field.",
+  "updated_at": "2026-10-15T08:27:55Z",
+  "updated_by": "session_01PhYMEkk7p8AzzzVHLsqCLw",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 514
+}

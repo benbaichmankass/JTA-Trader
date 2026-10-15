@@ -1,0 +1,21 @@
+{
+  "id": "GH-CAPACITY-LAND-VERIFY-OFF-RUNNER",
+  "title": "commit-to-main verify-merged holds a GitHub runner idle while its PR waits on CI",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "From GH-CAPACITY-INFRA-FIRST. MEASURED 2026-10-15: research-queue-dispatch (hourly cron) last completed run spent 33 runner-min in three commit-to-main 'land' steps (13+7+13) waiting for its own PRs to merge; those PRs need pytest-run slots from the same 20-job pool, so a waiting research job lengthens the queue it is waiting on. 37 workflow uses of .github/actions/commit-to-main; verify-timeout up to 80 min (W41). Proposal: open the PR + arm auto-merge in-run, and move the merged-or-not verification to the NEXT scheduled cycle (or a short follow-up job), keeping the 'opened != on main' property. Rerun: gh api runs of research-queue-dispatch.yml -> per-step minutes of the land job.",
+  "updated_at": "2026-10-15T08:27:55Z",
+  "updated_by": "session_01PhYMEkk7p8AzzzVHLsqCLw",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 513
+}

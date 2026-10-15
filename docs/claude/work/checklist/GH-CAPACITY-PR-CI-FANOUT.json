@@ -1,0 +1,21 @@
+{
+  "id": "GH-CAPACITY-PR-CI-FANOUT",
+  "title": "PR pytest-run holds 12 of 20 runner slots for ~40 min each",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "From GH-CAPACITY-INFRA-FIRST. MEASURED 08:24Z: 12 of 20 in-progress jobs were pytest-run on 12 distinct PRs (already superseded per PR number, so this is real fan-out, not stacking). Full suite ~22.7k tests, 33-48 min (pytest-run.yml timeout note). Options to evaluate without weakening the gate: run the full suite only in merge_group/at arm time, or a cheaper PR tier for data-only automation/** PRs (research receipts/results) -- required-check semantics must be preserved (a path-filtered required check stays pending). Rerun: count in_progress jobs by workflow via gh api runs?status=in_progress + jobs.",
+  "updated_at": "2026-10-15T08:27:55Z",
+  "updated_by": "session_01PhYMEkk7p8AzzzVHLsqCLw",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 516
+}
