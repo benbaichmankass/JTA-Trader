@@ -30,9 +30,7 @@
 # cannot see a SEMANTIC one — a branch filing new work under an id `main` already
 # gave to something else is, to git, one changed value at one key, so the merge
 # DELETES the existing row and reports success. `scripts/ci/check_register_ids.py`
-# (`register-id-guard`) was that half. CORRECTED 2026-10-15 (PI-20260922-JN54P2HH-0006):
-# the guard was REMOVED from CI at the 2026-09-21 reset (scripts/ci/run_guards.py lists it
-# under 'Removed'); the script still exists but nothing runs it on a PR.
+# (`register-id-guard`) is that half, and it runs on every PR.
 
 docs/claude/health-review-backlog.json      merge=jsonregister
 # The other three review backlogs are the SAME row-register shape and were NOT
