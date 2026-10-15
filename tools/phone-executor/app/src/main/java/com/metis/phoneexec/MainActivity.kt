@@ -1356,21 +1356,22 @@ class MainActivity : Activity() {
         if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") == true) sheetClose(p, sym)
         val tries = JSONArray()
         var opened = ""
-        // BREAKOUT-SHEET-PROBE (1b.205, 05:59Z): click() on both rows found them but opened no sheet. Each row is now
-        // tried with click() and then a touch-style pointer tap, and every miss records what the page showed after it
-        // (viewport, new visible texts, the tapped cell's ancestor chain) -- measured, so the next build is not a guess
+        // BREAKOUT-NATIVE-TAP (1b.210, 08:37Z): click() and a synthetic pointer tap reached the cells on both rows and
+        // opened no sheet (the group tap only expanded the row). Each row is now touched NATIVELY (a MotionEvent the
+        // WebView receives as a trusted touch) at the centre exec.js re-checked; every miss still records what the page
+        // showed after it (viewport, new visible texts, the touched cell's ancestor chain)
         var probe: JSONObject? = null
-        loop@ for (which in listOf("child", "group")) for (mode in listOf("click", "pointer")) {
+        for (which in listOf("child", "group")) {
             p.js("__ex.domMark()")
-            val r = p.js("__ex.sheetOpen(${q(sym)}, ${q(which)}, ${q(mode)})")
-            tries.put("$which/$mode:$r")
-            if (r != "clicked" && r != "tapped") { if (r == "none" || r == "no_grid") break; continue }
+            val r = nativeTap(p, sym, which)
+            tries.put("$which/native:$r".take(40))
+            if (!r.startsWith("touched")) { if (r == "no_grid") break; continue }
             delay(1200); p.ensure()
-            if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") == true) { opened = "$which/$mode"; break@loop }
+            if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") == true) { opened = "$which/native"; break }
             delay(1500); p.ensure()
-            if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") == true) { opened = "$which/$mode"; break@loop }
-            tries.put("$which/$mode:no_sheet")
-            probe = p.obj("__ex.domDiff()")?.put("at", "$which/$mode")
+            if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") == true) { opened = "$which/native"; break }
+            tries.put("$which/native:no_sheet")
+            probe = p.obj("__ex.domDiff()")?.put("at", "$which/native")
         }
         if (opened.isEmpty()) return JSONObject().put("ok", false).put("why", "sheet_not_open").put("tries", tries).apply { if (probe != null) put("probe", probe) }
         val si = p.obj("__ex.sheetInfo(${q(sym)})") ?: JSONObject()
@@ -1383,6 +1384,20 @@ class MainActivity : Activity() {
         d.put("opened_by", opened).put("tries", tries)
         if (!d.optBoolean("ok")) { if (!d.has("why")) d.put("why", "details_unread"); d.put("close", sheetClose(p, sym)) }
         return d
+    }
+
+    /** One NATIVE touch on the Positions row cell for [which] (BREAKOUT-NATIVE-TAP): exec.js centres the cell, then
+     *  re-checks it right before the touch (sheetTarget: the ONE cell, not denied, and elementFromPoint at its centre
+     *  is that cell or inside it with nothing denied up to it); only then is the point touched. The denylist is the same
+     *  one every click goes through. "touched k=<css scale>" or why not (none | no_grid | rows_<n> | covered@<tag> |
+     *  point_deny_* | deny_* | offscreen | sheet_open | unanswered). */
+    private suspend fun nativeTap(p: Page, sym: String, which: String): String {
+        val s = p.obj("__ex.sheetTarget(${q(sym)}, ${q(which)}, true)") ?: return "unanswered"
+        if (!s.optBoolean("ok")) return s.optString("why", "refused")
+        delay(350)
+        val r = p.obj("__ex.sheetTarget(${q(sym)}, ${q(which)}, false)") ?: return "unanswered"
+        if (!r.optBoolean("ok")) return r.optString("why", "refused") + (if (r.optString("top").isNotEmpty()) "@" + r.optString("top") else "")
+        return p.tap(r.getDouble("x"), r.getDouble("y"), r.getDouble("vw"))
     }
 
     /** Close the sheet: Escape first, then its header close icon. closed | escape | x | still_open(..) */
@@ -1432,12 +1447,42 @@ class MainActivity : Activity() {
         val rows = pos.optJSONArray("rows") ?: return pos
         val syms = (0 until rows.length()).map { rows.optJSONObject(it)?.optString("symbol") ?: "" }
         if (syms.isEmpty() || syms.any { it.isEmpty() } || syms.toSet().size != syms.size) return pos
+        // BREAKOUT-NATIVE-TAP finding (a): on 1b.210 a tap on the GROUP row expanded it and the child row showed the
+        // side as TEXT ("Short"). A row read as the collapsed group (row_kind group) is expanded with ONE native touch
+        // and Positions is re-read: a side the row now shows in text is read like any grid cell (side_source row,
+        // MEASURED), with no sheet. Expanded stays expanded, so later reads find the child row without touching.
+        val grp = (0 until rows.length()).mapNotNull { rows.optJSONObject(it) }.filter { it.optString("row_kind") == "group" && (it.isNull("side") || it.optString("side").isEmpty()) }
+        val pre = JSONArray()
+        if (grp.size == 1 && rows.length() == 1) {
+            val x = nativeTap(p, syms[0], "group")
+            delay(1200); p.ensure()
+            if (p.obj("__ex.sheetInfo(${q(syms[0])})")?.optBoolean("open") != true) {
+                val again = p.obj("__ex.positionsRead()")
+                val ar = again?.optJSONArray("rows")
+                if (again?.optString("state") == "read" && ar != null && ar.length() == 1 && ar.optJSONObject(0)?.optString("symbol") == syms[0]) {
+                    val r0 = JSONObject(ar.getJSONObject(0).toString()).put("side_source", "row")
+                    return JSONObject(again.toString()).put("rows", JSONArray().put(r0)).put("provenance", "MEASURED")
+                }
+                // still no side: the expanded row's shape (cell count, nesting, whether childRows picked it) rides on the
+                // sheet diag below, so the two measurements never overwrite each other
+                pre.put("group/expand:$x".take(40)).put("child_read=${again?.optString("state") ?: "unanswered"}".take(40))
+                p.obj("__ex.childShape()")?.let { cs ->
+                    pre.put("hdr=${cs.optInt("hdr")} grp=${cs.optInt("groups")} child=${cs.optInt("child_rows")}")
+                    cs.optJSONArray("sides")?.let { a -> for (j in 0 until a.length()) a.optJSONObject(j)?.let { o ->
+                        pre.put("${o.optString("side")} c=${o.optInt("cells")} d=${o.optInt("depth")}/${o.optInt("row_depth")} ${o.optString("role")} pk=${o.optBoolean("picked")} ts=${o.optInt("tpsl")}".take(40)) } }
+                }
+            } else pre.put("group/expand:$x opened_sheet".take(40))
+        }
         val out = JSONArray()
         for (i in 0 until rows.length()) {
             val r = JSONObject(rows.getJSONObject(i).toString())
             if (!r.isNull("side") && r.optString("side").isNotEmpty()) { out.put(r); continue }
             val d = sheetRead(p, syms[i])
-            if (!d.optBoolean("ok")) { sheetMiss("sheet_${d.optString("why")}", d); return pos }
+            if (!d.optBoolean("ok")) {
+                if (pre.length() > 0) { val tr = JSONArray(); for (j in 0 until pre.length()) tr.put(pre.get(j))
+                    d.optJSONArray("tries")?.let { a -> for (j in 0 until a.length()) tr.put(a.get(j)) }; d.put("tries", tr) }
+                sheetMiss("sheet_${d.optString("why")}", d); return pos
+            }
             d.put("close", sheetClose(p, syms[i]))
             r.put("side", d.getString("side")).put("side_source", "sheet").put("qty", d.getDouble("qty")).put("qty_src", "sheet")
                 .put("entry", d.getDouble("entry")).put("upnl_signed", d.optBoolean("upnl_signed"))

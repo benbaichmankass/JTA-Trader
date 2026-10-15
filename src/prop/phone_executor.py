@@ -410,6 +410,10 @@ def record_report(device: PhoneDevice, body: Dict[str, Any]) -> Dict[str, Any]:
                 # BREAKOUT-SL-AMEND-CLICK: the phone read the side the grid does not show off each row's position sheet
                 body["positions_side_source"] = "sheet"
                 body["positions_provenance"] = "MEASURED"
+            elif any(p.get("side_source") == "row" for p in positions):
+                # BREAKOUT-NATIVE-TAP: the side read as TEXT off the expanded child row of the Positions grid
+                body["positions_side_source"] = "row"
+                body["positions_provenance"] = "MEASURED"
             closed = phone_reconcile.clean_closed(device.account_id, body_in.get("closed_orders"))
             body["positions"] = positions
             body["closed_orders"] = closed
@@ -662,11 +666,25 @@ def _positions_diag_path(account_id: str) -> Path:
     return _diag_path(account_id).with_name(f"prop_phone_posdiag_{re.sub(r'[^a-z0-9_]', '', account_id)}.json")
 
 
+# BREAKOUT-NATIVE-TAP finding (b): the position-SHEET probes (sheet_* / amend_sheet_* / child_*) shared the one
+# positions slot, so the Positions read's own side_unread miss posted a second later overwrote the sheet evidence
+# (2026-10-15 08:21:38Z sheet_sheet_not_open -> 08:21:39Z side_unread). They get their own slot.
+_SHEET_DIAG_PREFIXES = ("sheet_", "amend_sheet_", "child_")
+
+
+def _is_sheet_diag(state: str) -> bool:
+    return str(state or "").startswith(_SHEET_DIAG_PREFIXES)
+
+
+def _sheet_diag_path(account_id: str) -> Path:
+    return _diag_path(account_id).with_name(f"prop_phone_sheetdiag_{re.sub(r'[^a-z0-9_]', '', account_id)}.json")
+
+
 def _write_positions_diag(account_id: str, state: str, headers: Any, controls: Any, cells: Any = None) -> None:
     def lst(v: Any) -> list:
         return [x for x in (_scrub(c, 40).strip() for c in (v if isinstance(v, list) else [])[:_DIAG_MAX]) if x]
     try:
-        _positions_diag_path(account_id).write_text(json.dumps(
+        (_sheet_diag_path if _is_sheet_diag(state) else _positions_diag_path)(account_id).write_text(json.dumps(
             {"at": _now().isoformat(), "state": _scrub(state, 60), "headers": lst(headers), "controls": lst(controls),
              "cells": [re.sub(r"\d", "d", c) for c in lst(cells)]}))
     except OSError:  # allow-silent: diagnostics only; the event is still acknowledged
@@ -718,6 +736,15 @@ def last_positions_diag(account_id: str) -> Optional[Dict[str, Any]]:
     """The latest positions_miss dump for the account, or None when none was ever posted."""
     try:
         return json.loads(_positions_diag_path(account_id).read_text())
+    except (OSError, ValueError):
+        return None
+
+
+def last_sheet_diag(account_id: str) -> Optional[Dict[str, Any]]:
+    """The latest position-SHEET dump (state sheet_* / amend_sheet_* / child_*), or None when none was posted since
+    the slot existed (BREAKOUT-NATIVE-TAP). Older sheet dumps sit in the positions slot."""
+    try:
+        return json.loads(_sheet_diag_path(account_id).read_text())
     except (OSError, ValueError):
         return None
 
