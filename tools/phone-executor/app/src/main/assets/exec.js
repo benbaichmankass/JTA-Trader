@@ -103,10 +103,33 @@
     var ctl = chip && chip.getAttribute("aria-controls"); if (ctl) { var e = document.getElementById(ctl); if (e && vis(e) && r.indexOf(e) < 0) r.push(e); }
     return r.filter(function (x) { return !inForm(x); });
   }
+  // PHONE-FGS-EXEC step 2 (MEASURED 1b.233, 10:48Z, ticket phone-test-60715df76a4d): from a SOL page the ETH pick
+  // found 2 candidates and refused (market_ambiguous). A row of the Positions grid (the open ETH position) is never a
+  // market row. The grid's rows are the header's siblings (or a wrapper's): its container is the header's parent,
+  // climbed at most 2 levels and NEVER into a popup root (gridPanel's wider panel can swallow the picker list itself).
+  function dataPanels() {
+    try {
+      var roots = popupRoots(marketChip());
+      var hasRoot = function (e) { return roots.some(function (r) { return e === r || e.contains(r); }); };
+      return gridHeaders(POS_COLS).map(function (h) {
+        var c = h.parentElement;
+        for (var k = 0; k < 2 && c; k++) {
+          var up = c.parentElement;
+          if (!up || up === document.body || hasRoot(up)) break;
+          c = up;
+        }
+        return c && !hasRoot(c) ? c : null;
+      }).filter(function (p) { return !!p; });
+    } catch (e) { return []; }
+  }
+  // The picker's own row format "<BASE> <leverage>x ..." (the chip reads "ETH #x"): when several candidates remain
+  // and exactly ONE has that shape, it is the market row. The submit label is still read back before anything is typed.
+  function leverageRow(r, b) { return new RegExp("^" + b + "\\s*\\d+(\\.\\d+)?\\s*[x\\u00d7](?![a-z])", "i").test((t(r) || "").trim()); }
   function marketCandidates(sym) {
-    var b = base(sym), chip = marketChip();
+    var b = base(sym), chip = marketChip(), dps = dataPanels();
     var leaves = all("span,div,p,strong,b,td,li,a,button,[role]").filter(function (x) {
-      return !inForm(x) && !(chip && (chip === x || chip.contains(x) || x.contains(chip))) && t(x).length <= 40 && startsWithBase(t(x), b);
+      return !inForm(x) && !(chip && (chip === x || chip.contains(x) || x.contains(chip))) && t(x).length <= 40 && startsWithBase(t(x), b) &&
+        !dps.some(function (p) { return p.contains(x); });
     });
     var roots = popupRoots(chip), pk = window.__ex._mk;
     if (roots.length) leaves = leaves.filter(function (x) { return roots.some(function (r) { return r.contains(x); }); });
@@ -114,7 +137,9 @@
     else return [];
     var rows = [];
     leaves.forEach(function (x) { var r = x.closest(ROW_SEL) || x; if (chip && r.contains(chip)) r = x; if (rows.indexOf(r) < 0) rows.push(r); });
-    return innermost(rows);
+    rows = innermost(rows);
+    if (rows.length > 1) { var lv = rows.filter(function (r) { return leverageRow(r, b); }); if (lv.length === 1) return lv; }
+    return rows;
   }
   function marketSearch() {
     var chip = marketChip(), roots = popupRoots(chip), pk = window.__ex._mk;
@@ -1042,6 +1067,13 @@
     },
     // Forget the picker state: the app calls this once at the start of each ticket.
     symbolReset: function () { window.__ex._mk = null; return "ok"; },
+    // PHONE-FGS-EXEC step 2: close whatever popup/sheet the page has open with Escape ONLY (never a click: nothing is
+    // cancelled or confirmed). The engine page was reloaded at the start of its job; this is the second guard.
+    escape: function () {
+      ["keydown", "keyup"].forEach(function (k) { document.dispatchEvent(new KeyboardEvent(k, {key: "Escape", code: "Escape", keyCode: 27, bubbles: true})); });
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+      return "ok";
+    },
     // The "Select market" chip's base ("ETH" from "ETH 20x"); "" when there is not exactly one such chip.
     marketShown: function () { var mc = marketChip(); if (!mc) return ""; var m = CHIP_RE.exec(t(mc)); return m ? m[1].toUpperCase() : "?"; },
     // Kept for the Dry test button / older callers: one exact-text click, else "none".

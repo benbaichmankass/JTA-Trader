@@ -33,10 +33,11 @@ class Api(private val c: Context) {
      *  when the VM is unreachable / refused. Claims nothing (the claim happens only once the Activity is resumed).
      *  Second: the VM's account_status age in hours (null when the server did not say; older servers don't), so the
      *  backgrounded app brings itself forward to check its login when that age is stale. */
-    suspend fun pendingInfo(): Pair<Int, Double?>? = withContext(Dispatchers.IO) {
+    suspend fun pendingInfo(amends: Boolean = true): Pair<Int, Double?>? = withContext(Dispatchers.IO) {
         try {
-            // accepts=amend: this build executes trail amends (PROP-TRAIL-PHONE), so a waiting amend wakes it too
-            val u = URL(base() + "/api/bot/prop/phone/pending?accepts=amend")
+            // accepts=amend: this build executes trail amends (PROP-TRAIL-PHONE), so a waiting amend wakes it too.
+            // amends=false (PHONE-FGS-EXEC step 2): entry tickets only; the difference is the amend count.
+            val u = URL(base() + "/api/bot/prop/phone/pending" + if (amends) "?accepts=amend" else "")
             if (u.protocol != "https") return@withContext null
             val conn = u.openConnection() as HttpURLConnection
             conn.connectTimeout = 10000; conn.readTimeout = 20000
