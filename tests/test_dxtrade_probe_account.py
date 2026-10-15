@@ -98,7 +98,9 @@ def test_login_ok_summary_has_booleans_and_no_balance(monkeypatch, capsys):
     assert probe.main(["--account", "tradeify_1"]) == 0
     out = capsys.readouterr().out
     assert '"account_model": "positionBased"' in out
-    assert '"symbols_present": {"ETH": true, "SOL": true, "XRP": true}' in out
+    # TRADEIFY-INSTR-SPECS: tradeify_1 probes its own symbol set (ETH control + the four non-crypto).
+    assert '"symbols_present": {"ETH": true, "SIL": true, "SP5": true, "USO": true, "XYZ": true}' in out
+    assert "row_keys[" in out and "spec[acct#1-instrument-by-symbol]" in out
     for secret in ("98765", "ACCT-SECRET-1", "tok-secret", "u-secret-name", "p-secret-word"):
         assert secret not in out
 
@@ -116,3 +118,28 @@ def test_workflow_and_action_script_pin_the_same_choice():
     assert m and m.group(1) == '""|velotrade_1|tradeify_1)'
     sh = (ROOT / "scripts/ops/velotrade_api_probe_action.sh").read_text()
     assert "velotrade_1|tradeify_1) :" in sh and '--account "${PROBE_ACCOUNT}"' in sh
+
+
+def test_velotrade_keeps_its_original_symbol_set_and_summary(monkeypatch, capsys):
+    monkeypatch.setenv("VELOTRADE_DX_USERNAME", "u-v")
+    monkeypatch.setenv("VELOTRADE_DX_PASSWORD", "p-v")
+
+    def fake(method, path, token=None, body=None):
+        if path == "/login":
+            return 200, {"sessionToken": "tok-v", "timeout": 1}, ""
+        if path.startswith("/users/"):
+            return 200, {"accounts": [{"accountCode": "ACCT-V", "isPositionBased": True}]}, ""
+        if "/instruments/" in path and "query" not in path:
+            return 200, {"symbol": path.rsplit("/", 1)[1].replace("%2F", ""), "type": "CURRENCY"}, ""
+        return 200, [], ""
+
+    monkeypatch.setattr(probe, "_call", fake)
+    assert probe.main(["--account", "velotrade_1"]) == 0
+    out = capsys.readouterr().out
+    assert '"symbols_present": {"ETH": true, "SOL": true, "XRP": true}' in out
+    assert "row_keys[" not in out and "SILVER" not in out
+
+
+def test_tradeify_symbol_set_is_fixed_and_has_the_four_instruments():
+    assert {"SILVER/USD", "XYZ100/USD", "SP500/USD", "USOIL/USD", "ETH/USD"} <= set(probe.TRADEIFY_SYMBOLS)
+    assert all(re.fullmatch(r"[A-Z0-9]+/?[A-Z]*", x) for x in probe.TRADEIFY_SYMBOLS)

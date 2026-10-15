@@ -47,6 +47,13 @@ PLATFORMS_YAML = Path(__file__).resolve().parents[2] / "config" / "prop_platform
 BASE = "https://dx.velotrade.com/dxsca-web"  # set by main() from the resolved account
 SYMBOLS = ["ETHUSD", "SOLUSD", "XRPUSD", "BTCUSD", "ETH/USD", "SOL/USD", "XRP/USD"]
 WANTED = ("ETH", "SOL", "XRP")
+# TRADEIFY-INSTR-SPECS (2026-10-15, manager go 20:21Z): the symbols tradeify_1 lists that the
+# non-crypto research units price (SILVER/USD, XYZ100/USD, SP500/USD, USOIL/USD) + ETH/USD as
+# the positive control. Used ONLY for account tradeify_1; velotrade_1 keeps SYMBOLS above.
+# Both spellings, because the REST symbol may be slashed (as the terminal shows) or not.
+TRADEIFY_SYMBOLS = ["ETH/USD", "ETHUSD", "SILVER/USD", "SILVERUSD", "XYZ100/USD", "XYZ100USD",
+                    "SP500/USD", "SP500USD", "USOIL/USD", "USOILUSD"]
+TRADEIFY_WANTED = ("ETH", "SIL", "XYZ", "SP5", "USO")
 # Account fields that describe the account's TYPE, not its identity. Printed by
 # value; anything not listed here (account code, owner, ids) is never printed.
 # `isPositionBased` is the spec's name (rest/types/account-details.md: "shows if the
@@ -60,6 +67,12 @@ SPEC_FIELDS = (
     # names the web terminal's own endpoint uses (seen in the login-check output)
     "minVolume", "maxVolume", "volumeStep", "pricePrecision", "quantityPrecision",
     "financingMode", "swapRateLong", "swapRateShort", "spreadType",
+    # TRADEIFY-INSTR-SPECS: candidate names for the cost / hours fields; whichever the server
+    # returns is printed. The row's full KEY NAMES are printed too (row_keys), so a field
+    # missing from this list is still discoverable on the next run.
+    "leverage", "maxLeverage", "contractSize", "commission", "tradingHours", "tradingSchedule",
+    "schedule", "sessions", "swapType", "swapLong", "swapShort", "tripleSwapDay", "spread",
+    "description", "name",
 )
 UA = "metis-insights-velotrade-api-probe/1 (read-only; contact: repo owner)"
 _SECRETS: list[str] = []
@@ -288,7 +301,9 @@ def main(argv: list[str] | None = None) -> int:
                 _out(f"account#{n} metrics: {_err(st, js, tx)}")
 
         # Reference data: global instruments, then the account-scoped view.
-        for sym in SYMBOLS:
+        symbols = TRADEIFY_SYMBOLS if account == "tradeify_1" else SYMBOLS
+        wanted = TRADEIFY_WANTED if account == "tradeify_1" else WANTED
+        for sym in symbols:
             qs = urllib.parse.quote(sym, safe="")
             for label, path in [("instruments", f"/instruments/query?symbols={qs}"), ("instrument-by-symbol", f"/instruments/{qs}")] + [
                 (f"acct#{n}-instruments", f"/accounts/{urllib.parse.quote(c, safe='')}/instruments/query?symbols={qs}")
@@ -302,6 +317,8 @@ def main(argv: list[str] | None = None) -> int:
                 if rows:
                     present[sym.replace("/", "")[:3]] = True
                     _out(f"spec[{label}]: " + json.dumps({k: rows[0][k] for k in SPEC_FIELDS if k in rows[0]}, sort_keys=True))
+                    if account == "tradeify_1":
+                        _out(f"row_keys[{label}] {sym}: {sorted(rows[0].keys())}")
                 else:
                     _out(f"spec[{label}] {sym}: no exact row ({_err(st, js, tx)}) shape={json.dumps(_shape(js), sort_keys=True)[:300]}")
     finally:
@@ -311,7 +328,7 @@ def main(argv: list[str] | None = None) -> int:
     _out("summary: " + json.dumps({
         "account": account, "read_state": "login_ok", "reachable": reachable, "login_ok": login_ok,
         "account_model": account_model or "unknown",
-        "symbols_present": {b: bool(present.get(b)) for b in WANTED}}, sort_keys=True))
+        "symbols_present": {b: bool(present.get(b)) for b in wanted}}, sort_keys=True))
     return 0
 
 
