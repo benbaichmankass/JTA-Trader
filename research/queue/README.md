@@ -107,6 +107,17 @@ clears can still be underpowered; a job that fails is underpowered for certain.
 It also does not adjust for multiplicity — a 40-cell sweep must declare its own
 adjusted `alpha`.
 
+
+## Recurring units that cannot reach their power floor (RESEARCH-LOOP-AUDIT RC5, 2026-10-15)
+
+A RECURRING e35 unit graded `indeterminate` at `base_oos_trades` below a third of its floor
+(`queue_grade.INFEASIBLE_FRACTION`) cannot reach the floor on its own cadence (MEASURED 2026-10-15: daily-bar
+legs at OOS n 0-11 against 39, adding about one trade a month). The grader writes `power: infeasible_at_cadence`
+and `recheck_after_days: 90` into its own grading block (no `needs_review`), and `dispatch_queue.due()` waits
+max(cadence, that). The unit is re-asked quarterly, never retired, and its registered fields never move.
+`recheck_after_days` is honoured only from a grader-written block (`auto: true` + `grader: ...queue_grade.py`)
+and can only lengthen the gap.
+
 ## Fields
 
 ```yaml
