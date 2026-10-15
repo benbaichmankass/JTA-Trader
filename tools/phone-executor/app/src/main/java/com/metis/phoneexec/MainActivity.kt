@@ -1468,7 +1468,7 @@ class MainActivity : Activity() {
         val r = p.obj("__ex.sheetTarget(${q(sym)}, ${q(which)}, false)") ?: return "unanswered"
         if (!r.optBoolean("ok")) {
             // geometry of a covered point (measure-only; 1b.233 read "covered" with nothing at the centre)
-            lastTapGeom = listOf(r.optString("g1"), r.optString("g2")).filter { it.isNotEmpty() }
+            lastTapGeom = listOf(r.optString("g1"), r.optString("g2"), p.viewInfo() + (if (p === fg) " fg" else " bg")).filter { it.isNotEmpty() }
             return r.optString("why", "refused") + (if (r.optString("top").isNotEmpty()) "@" + r.optString("top") else "")
         }
         // which WebView took the touch (PHONE-FGS-EXEC: the background engine's non-touchable overlay or the kiosk);
