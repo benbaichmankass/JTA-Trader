@@ -7,6 +7,11 @@
   "id": "PI-20260930-3QNHBGND-0003",
   "next_action": "check_observation",
   "note_2026_10_15": "[lane ORDER-AUDIT-4 (session_01MAn9pCezunefaeMAhzFaGC)] Live: exactly 2 instances among 5000 packages (alpaca_paper pkg-32a5162b->4347 SPY, pkg-785d9a60->5265 TLT); the venue holds both (SPY 11, TLT 707). Root cause is the pre-FIX-CA-05 cascade; every package-close writer in order_monitor now holds a package with an open leg (read 2026-10-15). The missing paged check is INV-8 in check_db_integrity (#18275). The XRPUSDT real-money package's legs are closed, so the reattach refuses it. NEXT: on the manager's OK, dispatch system-action reattach-stranded-package-legs with apply: true (dry run #18274 10:37Z: 2 packages closed->open, XRPUSDT refused); then INV-8 total should read 0.",
+  "observation": {
+    "due_by": "2026-10-20",
+    "how_to_check": "journalctl -u ict-db-integrity on the live VM via the diag relay, or python3 scripts/check_db_integrity.py on the VM through a system-action; read the INV-8 line",
+    "what": "after #18275 merges, the hourly ict-db-integrity report carries INV-8 with total_count=0 (the 2 paper instances were re-attached 10:50Z, #18282)"
+  },
   "origin": {
     "kind": "session",
     "ref": "lane PAPER-RESET session_01JjPRfAYQKaocTX3QnHBgnD; dispatched by manager session_01HYq6XtfesZ57VyaQrK6CL1",

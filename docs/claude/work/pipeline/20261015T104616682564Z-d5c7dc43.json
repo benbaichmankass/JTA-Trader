@@ -7,6 +7,11 @@
   "id": "PI-20260930-3QNHBGND-0002",
   "next_action": "check_observation",
   "note_2026_10_15": "[lane ORDER-AUDIT-4 (session_01MAn9pCezunefaeMAhzFaGC)] Live read 10:35Z: on every readable account venue qty == open-row qty, so no instance is live. Root cause: no own-leg fill-attribution pass existed. #18279 adds _sweep_open_row_own_leg_fill, a local fills-store read with the rule 'own sl/tp order filled >=95% of the position and the other leg did not'. It closes the row as sl/tp via update_trade, cancels the row's own protection, and cascades the package through the open-leg hold. MERGED no. NEXT: the manager merges #18279; after deploy, grep journalctl for _sweep_open_row_own_leg_fill (0 errors) and confirm diag exchange_positions qty == open-row qty per account.",
+  "observation": {
+    "due_by": "2026-10-22",
+    "how_to_check": "bash scripts/ops/diag_fetch.sh 'journalctl?unit=ict-trader-live&lines=2000' | grep _sweep_open_row_own_leg_fill; diag exchange_positions vs diag journal trades status=open",
+    "what": "after #18279 deploys, ict-trader-live logs no '_sweep_open_row_own_leg_fill' errors, and for every readable account diag exchange_positions qty equals the open-row qty per (symbol, side)"
+  },
   "origin": {
     "kind": "session",
     "ref": "lane PAPER-RESET session_01JjPRfAYQKaocTX3QnHBgnD; dispatched by manager session_01HYq6XtfesZ57VyaQrK6CL1",
