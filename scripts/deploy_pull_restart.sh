@@ -364,6 +364,16 @@ fi
 #     which are per-invocation CLIs that src/ never imports.
 # Re-run the grep before adding an import-time cache of any comms/macro file.
 #
+# tools/phone-executor/ and tools/phone-probe/ joined the safe set on 2026-10-15
+# (TRADER-RESTART-GATE, manager finding): they are Android app sources, built
+# into an APK by .github/workflows/phone-executor-apk.yml on a GitHub runner and
+# installed on the operator's phone. MEASURED by grep of src/, scripts/ (outside
+# research/ci), deploy/, bin/, ml/, utils/, sim/ and the top-level *.sh: no
+# reader (the one hit, src/prop/phone_reconcile.py, is a docstring). The VM talks
+# to the phone over its API, never through these files. Over 2026-10-08..10-15
+# tools/phone-executor/ was among the paths forcing 17 of the 119 replayed
+# trader restarts (trader_import_closure.py replay, merges per forcing area).
+#
 # EXCEPTION (OA-16(d), PI-20261004-GCFA5DOR-0010): scripts/research/ is
 # non-runtime EXCEPT the modules the web-api's /api/bot/work/brief imports
 # IN-PROCESS. src/web/api/routers/work.py imports
@@ -395,14 +405,14 @@ if [ "${DEPLOY_FORCE_RESTART:-0}" != "1" ]; then
     if [ -n "${CHANGED_FILES}" ]; then
         # Strip the known-safe non-runtime paths; anything left needs a restart.
         RUNTIME_CHANGES="$(printf '%s\n' "${CHANGED_FILES}" \
-            | grep -vE '^(docs/|tests/|\.claude/|\.github/|[^/]+\.md$|research/|runtime_logs/|scripts/research/|scripts/ci/|comms/research/|comms/strategy_evidence/|comms/macro/)' || true)"
+            | grep -vE '^(docs/|tests/|\.claude/|\.github/|[^/]+\.md$|research/|runtime_logs/|scripts/research/|scripts/ci/|comms/research/|comms/strategy_evidence/|comms/macro/|tools/phone-executor/|tools/phone-probe/)' || true)"
         # Add back the scripts/research modules the web-api imports in-process
         # (the EXCEPTION above). Without this the brief serves stale code.
         IN_PROCESS_CHANGES="$(printf '%s\n' "${CHANGED_FILES}" \
             | grep -E '^scripts/research/(dispatch_queue|e35_bracket_geometry_sweep|m20_fleet_exit_sweep|m20_wf_effective|queue_grade|queue_replenish|queue_throughput|research_queue)\.py$' || true)"
         RUNTIME_CHANGES="${RUNTIME_CHANGES}${IN_PROCESS_CHANGES}"
         if [ -z "${RUNTIME_CHANGES}" ]; then
-            echo ">>> Non-runtime commit (${RUNTIME_BASE:0:7} -> ${POST_SYNC_HEAD:0:7}): only non-runtime paths changed (docs/tests/.claude/.github/top-level-md/research/runtime_logs/scripts/{research,ci}/comms/{research,strategy_evidence,macro})."
+            echo ">>> Non-runtime commit (${RUNTIME_BASE:0:7} -> ${POST_SYNC_HEAD:0:7}): only non-runtime paths changed (docs/tests/.claude/.github/top-level-md/research/runtime_logs/scripts/{research,ci}/comms/{research,strategy_evidence,macro}/tools/{phone-executor,phone-probe})"
             echo ">>> Code synced + pings sent; skipping dependency install, unit refresh, and service restart (BL-20260529-002)."
             printf '%s\n' "${CHANGED_FILES}" | sed 's/^/>>>   changed: /'
             # The running processes' RUNTIME code already matches POST (only
