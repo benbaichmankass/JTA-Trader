@@ -364,3 +364,30 @@ def test_claim_route_accepts_capability(monkeypatch):
     assert c.get("/api/bot/prop/phone/pending?accepts=amend", headers=h).json()["pending"] == 1
     got = c.post("/api/bot/prop/phone/claim", headers=h, json={"accepts": ["amend"]}).json()["ticket"]
     assert got["kind"] == "amend" and got["ticket_id"] == "T1" and got["tp"] == 2900.0
+
+
+def test_tickets_api_view_exposes_the_trail_target(monkeypatch):
+    # PI-20261015-JWMGXOTH-0001: the trail's asked stop lived only in prop_tickets.meta.phone_trail, which no session
+    # read returned. list_outbound_tickets (/api/bot/prop/tickets) now projects it; absent fields stay None, never 0.
+    monkeypatch.setattr(prop_journal, "_prop_scope", lambda acct: set())   # sidecar-only view: no order_packages
+    _parent("T1")
+    _parent("T2", status="placed")
+    ptr.plan_amends("breakout_2", now=NOW, candles_fn=lambda s, tf: UP)
+    rows = {r["ticket_id"]: r for r in prop_journal.list_outbound_tickets(account_id="breakout_2")}
+    pt = rows["T1"]["phone_trail"]
+    assert pt["amend_status"] == "emitted" and pt["amend_kind"] == "sl" and pt["amend_id"] == "T1#a1"
+    assert pt["amend_sl"] == pytest.approx(2530.0) and pt["amend_from_sl"] == 2450.0
+    assert pt["replay_sl"] == pytest.approx(2530.0) and pt["last_plan_at"]
+    assert pt["resting_sl"] is None or isinstance(pt["resting_sl"], float)
+    assert pt["human_hold"] is None
+    prop_journal.record_ticket({"ticket_id": "T3", "account_id": "breakout_2", "strategy": "trend_donchian_eth_prop",
+                                "symbol": "ETHUSDT", "direction": "long", "entry": 1.0, "sl": 0.9, "tp": 1.2, "status": "suppressed"})
+    rows = {r["ticket_id"]: r for r in prop_journal.list_outbound_tickets(account_id="breakout_2")}
+    assert rows["T3"]["phone_trail"] is None
+
+
+def test_phone_trail_projection_never_invents_zero():
+    assert prop_journal._phone_trail_meta(None) is None
+    assert prop_journal._phone_trail_meta("not json") is None
+    pt = prop_journal._phone_trail_meta({"phone_trail": {"amend": {"sl": "x"}, "last_plan": {}}})
+    assert pt["amend_sl"] is None and pt["replay_sl"] is None and pt["resting_sl"] is None and pt["amend_status"] is None
