@@ -852,11 +852,18 @@ def _package_open_legs(db, open_pkg: dict) -> tuple:
                 rows = ([hit[0]] if hit and hit[0].get("status") == "open"
                         else [])
             else:
-                m = _find_trade_by_match(
+                # ...and ONLY to a row no OTHER package owns
+                # (PI-20260930-MEK2XMWT-0002, ORDER-AUDIT-3). Since #14590 the
+                # per-account gate lets two open packages for one
+                # strategy+symbol coexist (e.g. a Stage-1 soak package on
+                # alpaca_paper and a Stage-2 one on alpaca_live), and the bare
+                # strategy+symbol match handed this package the newest open row
+                # on ANY package -- so its trail/close verdict could be
+                # effectuated against the other package's trade. A row stamped
+                # with a different order_package_id is never this package's leg.
+                rows = _find_unowned_trades_by_match(
                     db, strategy=open_pkg.get("strategy_name"),
-                    symbol=open_pkg.get("symbol"),
-                )
-                rows = [m] if m else []
+                    symbol=open_pkg.get("symbol"), pkg_id=pkg_id)[:1]
     except Exception as exc:  # noqa: BLE001
         logger.warning(
             "order_monitor: package-leg lookup failed for pkg=%s: %s",
@@ -1888,6 +1895,27 @@ def _find_trade_by_match(db, *, strategy: Optional[str],
         )
         return None
     return rows[0] if rows else None
+
+
+def _find_unowned_trades_by_match(db, *, strategy: Optional[str],
+                                  symbol: Optional[str],
+                                  pkg_id: Any) -> List[Dict[str, Any]]:
+    """Open, non-backtest rows for strategy+symbol that belong to NO other
+    order package (``order_package_id`` empty or equal to *pkg_id*), most
+    recent first. Raises on a read failure so the caller's ``read_failed``
+    state is preserved (``_find_trade_by_match`` swallows it into ``None``)."""
+    if not strategy or not symbol:
+        return []
+    rows = db.get_trades(
+        filters={"strategy_name": strategy, "symbol": symbol, "status": "open"},
+        limit=50,
+    )
+    return [
+        r for r in rows
+        if not r.get("is_backtest")
+        and (not r.get("order_package_id")
+             or str(r.get("order_package_id")) == str(pkg_id))
+    ]
 
 
 def _close_trade_by_match(db, *, strategy: Optional[str], symbol: Optional[str],
@@ -3178,12 +3206,24 @@ def _is_session_defer(err_str: str, now: Optional[datetime] = None) -> bool:
     toward the streak and pages, so no deferral wording can stay silent past
     the open. IB defers ("IB venue for SYM is closed") follow the IB venue's
     own session, not the US equity clock, and are not escalated here.
+
+    ⚠️ The generic phrases are honoured ONLY on text a session venue emits
+    (PI-20260930-ZIFJ1RKM-0006, ORDER-AUDIT-3). They used to match on EVERY
+    venue, so a Bybit "market closed for maintenance" rejection cleared the
+    close-failure streak and never paged. A defer must now carry the signature
+    of the integration that emits it: AlpacaClient ("us_equity market closed"
+    / an "extended-hours" prefix) or IBClient ("IB venue for SYM is closed").
+    Anything else is a failure and counts toward the streak.
     """
     low = str(err_str or "").lower()
     if not ("exit deferred" in low or "deferring" in low or "market closed" in low
             or "deferred to the regular session" in low):
         return False
-    if "us_equity market closed" in low or low.startswith("extended-hours"):
+    is_alpaca = "us_equity market closed" in low or low.startswith("extended-hours")
+    is_ib = "ib venue for " in low and " is closed" in low
+    if not (is_alpaca or is_ib):
+        return False
+    if is_alpaca:
         try:
             if _us_equity_session(now) == "rth":
                 return False
