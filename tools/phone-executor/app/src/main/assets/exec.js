@@ -662,6 +662,18 @@
     return null;
   }
   function safeClick(x) { var d = denied(x); if (d) return d; x.click(); return "clicked"; }
+  // a touch-style tap at the element's centre: pointer + mouse down/up, then click (BREAKOUT-SHEET-PROBE)
+  function safeTap(x) {
+    var d = denied(x); if (d) return d;
+    var r = x.getBoundingClientRect(), o = {bubbles: true, cancelable: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, button: 0};
+    var P = typeof PointerEvent === "function" ? PointerEvent : MouseEvent;
+    x.dispatchEvent(new P("pointerdown", Object.assign({pointerType: "touch", isPrimary: true, pointerId: 1}, o)));
+    x.dispatchEvent(new MouseEvent("mousedown", o));
+    x.dispatchEvent(new P("pointerup", Object.assign({pointerType: "touch", isPrimary: true, pointerId: 1}, o)));
+    x.dispatchEvent(new MouseEvent("mouseup", o));
+    x.dispatchEvent(new MouseEvent("click", o));
+    return "tapped";
+  }
   function textEls(root, re, max) {   // innermost visible elements whose own text matches re
     return innermost(Array.prototype.slice.call((root || document).querySelectorAll("*")).filter(function (e) {
       if (!vis(e)) return false; var s = t(e); return s.length > 0 && s.length <= (max || 40) && re.test(s);
@@ -1239,7 +1251,7 @@
     // a leverage badge); "group" taps the group row's ("ETH 1", the symbol + a count). Only inside the Positions grid
     // panel, never a control the denylist names. clicked | bad_host | sheet_open | no_grid | no_panel | none | rows_<n> |
     // deny_*.
-    sheetOpen: function (sym, which) {
+    sheetOpen: function (sym, which, mode) {
       if (!hostOk()) return "bad_host";
       if (sheetRoots().length) return "sheet_open";
       var g = gridHeaders(POS_COLS); if (g.length !== 1) return "no_grid";
@@ -1249,7 +1261,27 @@
         : new RegExp("^" + b + sfx + "\\s*\\d+(\\.\\d+)?\\s*[x\\u00d7]$", "i");
       var hits = textEls(panel, re, 24).filter(function (e) { return !g[0].contains(e); });
       if (!hits.length) return "none"; if (hits.length > 1) return "rows_" + hits.length;
-      return safeClick(hits[0]);
+      window.__exTap = hits[0];
+      // mode "pointer" (BREAKOUT-SHEET-PROBE): the 1b.205 run tapped both rows with click() and no sheet opened; a
+      // touch-style pointer sequence at the cell's centre is the second, measured attempt. Same target, same denylist.
+      return mode === "pointer" ? safeTap(hits[0]) : safeClick(hits[0]);
+    },
+    // MEASURE (BREAKOUT-SHEET-PROBE): what the page shows before / after a tap. domMark remembers every visible element;
+    // domDiff returns the viewport size, the dialog count and the NEW visible leaf texts (digits masked, max 15), and
+    // the tapped cell's ancestor chain (tag/role/first classes, masked) so the row's handler can be located.
+    domMark: function () { window.__exMarkSet = typeof Set === "function" ? new Set(all("*")) : null; return window.__exMarkSet ? window.__exMarkSet.size : -1; },
+    domDiff: function () {
+      var m = window.__exMarkSet, nw = m ? all("*").filter(function (e) { return !m.has(e); }) : [];
+      var mk = function (s) { return (s || "").replace(/\d/g, "#"); };
+      var leaves = innermost(nw).map(function (e) { return mk(t(e)).slice(0, 36); }).filter(Boolean);
+      var chain = [], e = window.__exTap;
+      for (var k = 0; e && k < 7 && e !== document.body; e = e.parentElement, k++) {
+        var cls = (typeof e.className === "string" ? e.className : (e.getAttribute("class") || "")).split(/\s+/).slice(0, 2).join(".");
+        chain.push(mk(e.tagName.toLowerCase() + (e.getAttribute("role") ? "/" + e.getAttribute("role") : "") + (cls ? "." + cls : "") +
+          (e.hasAttribute("tabindex") ? " ti" : "") + (e.getAttribute("data-state") ? " ds=" + e.getAttribute("data-state") : "")).slice(0, 40));
+      }
+      return {w: window.innerWidth, h: window.innerHeight, n_new: nw.length, dialogs: dialogs().length, leaves: leaves.slice(0, 15),
+        details_tabs: textEls(document, SHEET_TAB.details).length, tpsl_tabs: textEls(document, SHEET_TAB.tpsl).length, chain: chain};
     },
     // The open sheet: {open, n, title_ok (a title equal to the symbol), subtitle (digits masked), tabs present}
     sheetInfo: function (sym) {
