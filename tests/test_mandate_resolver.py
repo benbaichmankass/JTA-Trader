@@ -941,6 +941,12 @@ def test_afford_on_the_real_committed_gld_record(tmp_path):
     _w(tmp_path, mr.ACCOUNTS_REL, accts, as_yaml=True)
     _w(tmp_path, f"{mr.ACCOUNT_SNAPSHOT_DIR_REL}/alpaca_live.json",
        _snapshot("alpaca_live", 193.56))
+    # The 2026-10-15 amendment (bar.soak_passed) checks the mechanical soak BEFORE
+    # affordability; give the COPY a passed contract so R-AFFORD is still reached.
+    _w(tmp_path, mr.SOAKS_REL, {"soaks": [{
+        "id": f"SOAK-stage1-alpaca_paper-{leg}",
+        "disposition": {"verdict": "PASS", "trades": ["fixture"],
+                        "decided_at": "2026-10-15T00:00:00Z"}}]})
     res = mr.resolve(leg, "S1", "S2", "alpaca_live", root=tmp_path)
     _refused(res, "R-AFFORD")
     aff = res["evidence"]["affordability"]
