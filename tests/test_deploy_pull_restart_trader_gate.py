@@ -249,3 +249,27 @@ def test_non_runtime_skip_path_leaves_the_trader_marker_alone(fake):
     assert _restarted(fake) == []
     assert fake["trader_marker"].read_text().strip() == "tradersha1"
     assert fake["marker"].read_text().strip() == "newsha8"
+
+
+def test_phone_executor_only_diff_restarts_nothing(fake):
+    """tools/phone-executor/ is Android source built on a GitHub runner; a
+    phone-only merge must not bounce the trader (or any unit)."""
+    _with_trader_marker(fake)
+    fake["diff_files"].write_text(
+        "tools/phone-executor/app/src/main/assets/exec.js\n"
+        "tools/phone-executor/test/exec_check.js\n")
+    res = _run(fake)
+    assert res.returncode == 0, res.stderr
+    assert _restarted(fake) == []
+    assert "Non-runtime commit" in res.stdout
+    assert fake["trader_marker"].read_text().strip() == "tradersha1"
+
+
+def test_phone_executor_plus_web_api_change_skips_only_the_trader(fake):
+    _with_trader_marker(fake)
+    fake["diff_files"].write_text(
+        "tools/phone-executor/app/src/main/assets/exec.js\nsrc/web/router.py\n")
+    res = _run(fake)
+    assert res.returncode == 0, res.stderr
+    assert _restarted(fake) == [WEB]
+    assert "Trader restart gate: skip" in res.stdout

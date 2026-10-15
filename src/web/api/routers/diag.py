@@ -2288,7 +2288,8 @@ def get_journalctl(
 # OA-14); tests/test_diag_restart_pending_lockstep.py now pins the two equal.
 _NON_RUNTIME_PATHS_RE = re.compile(
     r"^(docs/|tests/|\.claude/|\.github/|[^/]+\.md$|research/|runtime_logs/"
-    r"|scripts/research/|scripts/ci/|comms/research/|comms/strategy_evidence/|comms/macro/)"
+    r"|scripts/research/|scripts/ci/|comms/research/|comms/strategy_evidence/|comms/macro/"
+    r"|tools/phone-executor/|tools/phone-probe/)"
 )
 # ...except these scripts/research modules, which the web-api's brief imports
 # in-process (OA-16(d), PI-20261004-GCFA5DOR-0010). They stay runtime. Mirrors
