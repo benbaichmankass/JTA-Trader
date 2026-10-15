@@ -3,7 +3,7 @@ name: research-ops
 description: The routine research-OPERATIONS pass, run 4x/day (02:47, 08:47, 14:47, 20:47 UTC) as a bounded Sonnet lane. Checks the research pipeline is flowing (dispatcher, collector, receipts, stamps, stranded PRs), keeps the runnable floor of queue units topped up, audits every blocked / not-runnable unit and unlocks or retires it, reads every result landed since the last pass and applies its pre-registered rule, and files the follow-ups (research units and builds). Does NOT replace topic research (perf-followup, ML research, readouts on a specific question) — it only keeps the pipeline healthy and moving. Use when the manager dispatches a RESEARCH-OPS-<date>-<slot> lane, or the operator says "/research-ops", "check the research pipeline", "is research operations on track".
 ---
 
-> **Doc status:** `live` · category `instruction` · last verified `2026-10-10` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
+> **Doc status:** `live` · category `instruction` · last verified `2026-10-15` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
 # /research-ops — keep the research pipeline flowing
 
@@ -27,6 +27,23 @@ the routine half of Stage 3 (read what landed); `research/queue/PLANNING.md` § 
 and 5 (throughput, grade landed results, retire stale). Weights (§ 4 step 3) and drafting
 from `IDEAS.md` (step 4) stay in PLANNING.md and are used here only as the top-up source.
 Do not duplicate those docs — read them, link them, follow them.
+
+## What changed on 2026-10-15 (RESEARCH-LOOP-AUDIT, `docs/research/research-loop-audit-2026-10-15.md`)
+
+The audit found this pass spending its budget closing results by hand while the steps only a session can do
+(needs_review triage, the blocked/ audit, authoring from the plans) were `not_run` on 8 of 8 passes, and its
+intake list did not include the research programme plans at all. The mechanism now carries the mechanical half:
+
+- **Grading is mechanical for every unit by default** (`queue_grade.auto_graded`; opt-out `grading: {auto: false}`).
+  Do not hand-close a unit whose E5 rows are unanimous -- `research-queue-grade.yml` closes it. You read results for
+  their FOLLOW-UP (step D), and you triage what the grader could not decide (`needs_review`, step C).
+- **The programme plans are machine-read**: `research/programmes/*.yaml` question nodes are `queue_replenish.py`'s
+  sixth source. A `unit:` node is emitted on its own once its prerequisite verdicts close (any branch, PASS or FAIL);
+  a `needs_authoring:` node is in the **authoring queue** -- your FIRST intake source (step E).
+- **Recurring e35 units whose power cannot reach the floor** are re-asked every 90 days by the grader
+  (`recheck_after_days`), not monthly, and never land in `needs_review` -- do not retire them for that.
+- **The floor is computed** (`check_research_queue_health.computed_floor`: 19 h of supply at `fired_24h`, never below
+  25); the health check prints it, the idle backends and the authoring-queue depth every dispatch cycle.
 
 ## Ceiling and "done"
 
@@ -97,17 +114,16 @@ git log --oneline -15 -- research/queue docs/claude/work/research-queue-dispatch
 
 ## B. Runnable floor
 
-**Floor: 25 runnable units** — the same floor `queue_replenish.py` and
-`check_research_queue_health.py` enforce. Justification (from MEASURED 2026-10-10:
-`fired_24h = 32`, i.e. ~1.3 fires/h; interval between passes 6 h; replenish runs daily):
-25 units is ~19 h of supply at the observed fire rate, so the queue stays non-empty across
-three consecutive 6 h passes and one missed daily replenish. A floor below ~8 (one 6 h
-horizon of fires) means the dispatcher idles before the next pass can help. Re-derive it
-if `fired_24h` moves by more than a third; edit the number here and in the run record, not
-silently.
+**Floor: computed, never below 25** — `check_research_queue_health.computed_floor(fired_24h)` =
+max(25, ceil(fired_24h x 19 h / 24)): ~19 h of supply at the observed fire rate, so the queue stays
+non-empty across three consecutive 6 h passes and one missed daily replenish (the 2026-10-10 derivation
+gave 25 at `fired_24h = 32`; at 79 it is 63). It is computed every dispatch cycle -- read it from the health
+check's first line, never retype it. A page still needs runnable < 25 (`H1`); between 25 and the computed floor
+the health check warns `H1-THIN` (nothing left to refill or author) or `H1-AUTHOR` (the authoring queue holds
+ready questions -- that is your step E work).
 
-- `runnable >= 25` → nothing to do. Record it.
-- `runnable < 25` → first let the template refill do its job
+- `runnable >= floor` → nothing to do. Record it.
+- `runnable < floor` → first let the template + programme refill do its job
   (`research-queue-replenish.yml` fills from `research/templates/*.yaml`; the health check
   exits 3 when templates can fill the gap). If templates cannot fill it, or `runnable`
   stays below the floor after the unlock work in step C, top up from the sources in step E
@@ -115,7 +131,14 @@ silently.
   unmet, whose cadence has not elapsed, or that already ran `once` is queued, not runnable.
   Count with the throughput script, never by `ls`.
 
-## C. Blocked / not-runnable audit
+## C. Blocked / not-runnable audit -- and the `needs_review` triage, FIRST
+
+**Do the `needs_review` triage before step D, every pass, until the bucket is empty.** It was `not_run` on
+every pass from 2026-10-13 to 2026-10-15 because results were read first and the budget ran out. Population:
+`python3 scripts/research/queue_grade.py --health` → `needs_review`. Per unit, one disposition: the rule's
+reading of mixed / non-mechanical rows (close it with a session `grading:` block naming the verdict and the
+rows -- the grader then never touches it again), a redesign unit, or a retirement with a reason. Minimum per
+pass: the whole bucket, or 8 units if it is larger -- oldest first; say how many remain in the record.
 
 Population: every `status: queued` unit that is **not runnable**, plus every unit in
 `research/queue/blocked/`. Reuse the manager's watcher, do not re-implement it:
@@ -202,6 +225,12 @@ what `ml_plan_status.py --diversity` reads for `FAIL-STREAK`, and what the weekl
 (`.claude/skills/frontier-research/SKILL.md`) uses to decide whether a family is exhausted or merely
 untested. A FAIL records the exact configuration tested; it does not close the family.
 
+**Programme write-back.** If the graded unit was emitted from a programme node (`programme_node:` block) or is
+named in a node's `after`, check `python3 scripts/research/queue_replenish.py --programme-state` shows the node
+moving (`answered`, the next node `ready`/`moot`). A verdict whose next question is not in the tree yet is an
+authoring task: add the node (a `needs_authoring:` line is enough) to `research/programmes/<NN>.yaml` in this
+pass's PR -- that is how the plan learns between weekly reviews.
+
 **Generate the follow-ups, both kinds:** research → queue units (step E rules); otherwise →
 checklist rows / pipeline items for builds, bugs and tooling gaps. Every result ends in a
 unit id, a `PI-…`/checklist id, or `no action, because …`. A finding in chat or a memo is
@@ -211,6 +240,12 @@ not filed (CLAUDE.md § "Two categories").
 
 Draw new units from, in this order, until the floor is met or sources are exhausted:
 
+0. **The programme authoring queue** -- `python3 scripts/research/queue_replenish.py --authoring-queue`
+   (ready `needs_authoring:` nodes, ranked goal-first -- G1 net P&L before everything -- then value). Author a
+   node by REPLACING its `needs_authoring:` line with a full pre-registered `unit:` body in
+   `research/programmes/<NN>.yaml` (same rules as below; the replenisher emits the unit on its next run, and the
+   node's tree state stays true). Prefer nodes whose compute class lands on a backend the health check lists as
+   idle. Cap: ~10 nodes per pass (they are plan questions, already scoped) on top of the ~6 hand units below.
 1. The research rows on the checklist — `ARB-RESEARCH`, `CROSS-SIGNAL-RESEARCH`,
    `NEWS-VETO-EVAL`, `PM-SURPRISE-*`, `WEPE-BUILDOUT`, `SIGNAL-CATALOG`,
    `RESEARCH-FOLLOWUPS`, `RESEARCH-TOOLING-GAPS`, … (list them with
@@ -256,7 +291,8 @@ Write ONE durable, machine-readable record the next run reads as its baseline:
 ```json
 {
   "run": "RESEARCH-OPS-2026-10-10-2047", "finished_at": "2026-10-10T21:30:00Z", "by": "<session id>",
-  "floor": 25,
+  "floor": 63, "floor_basis": "computed_floor(fired_24h 79)", "authoring_queue_depth": 5,
+  "idle_backends": ["kaggle", "kaggle_cpu", "trainer"], "needs_review_triaged": 8, "needs_review_left": 29,
   "throughput": {"runnable_before": 8, "runnable_after": 27, "queued": 105, "fired_24h": 32,
                  "results_landed_24h": 32, "hours_since_last_dispatch": 4.9, "idle_alarm": false},
   "mechanism": {"dispatch_receipt": "ok", "collector": "ok", "stranded_stamp_prs": [], "incident": null},
