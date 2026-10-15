@@ -386,3 +386,25 @@ confirmed here) — `research/queue/README.md` and `dispatch_queue.py` are silen
 on it. If that pickup mechanism is real, it is undocumented; if it is not, all
 6 units are effectively unrouted. Either way the dispatcher's own grading does
 not distinguish them from a real workflow-routed unit today.
+
+## The programme source -- plans become units without a session (RESEARCH-LOOP-AUDIT, 2026-10-15)
+
+`queue_replenish.py` has a sixth source besides `research/templates/`: **`research/programmes/*.yaml`**,
+one file per research programme (`docs/research/programmes/<NN>-*.md` is the prose plan; the YAML is its
+question tree). Each node names its `goal` (G1 first), `roadmap`, `value`, `after` (prerequisite units or
+nodes and the CLOSED verdict each must reach -- `pass`, `fail`, `indeterminate`, `no_action_warranted` or
+`any`) and either a full pre-registered `unit:` body or `needs_authoring:` (one line).
+
+- A **`unit:` node** is emitted as a queue unit (generated band, `generated.key: programme:<node>`) on the
+  first replenish run after its `after` holds -- whenever ready, not only to fill a template deficit, at most
+  `PROGRAMME_MAX_PER_RUN` per run. E58 vouches it because `verify()` re-renders it from the committed node and
+  checks the node was ready on the merge-base queue. A FAIL branch registered in the plan is therefore as
+  pre-registered as a PASS chain.
+- A **`needs_authoring:` node** never becomes a unit here. Once its `after` holds it is in the **authoring
+  queue**, ranked goal-first then value: `python3 scripts/research/queue_replenish.py --authoring-queue`.
+  research-ops drafts from it first (SKILL § E).
+- `--programme-state` prints every node as `answered` / `in_queue` / `ready` / `waiting` / `moot` (a branch
+  not taken) / `retired`. It is computed on read, so there is no state file to go stale.
+- `research/programmes/**` is landing machinery (`check_pr_landing.py`): every edit holds for a human merge,
+  because a node's `unit:` is a registration.
+
