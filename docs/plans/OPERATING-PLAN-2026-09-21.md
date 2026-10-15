@@ -126,6 +126,18 @@ prop before this rule, now soak on `bybit_1` (contracts in `docs/claude/work/SOA
 **stay live on the prop books**; if either FAILS the soak, a data-backed Tier-3 pull from the prop rosters is
 proposed. Row: `PROP-GATE-PARITY`.
 
+**Amendment (operator, 2026-10-15): live prop trading counts as Stage-1 soak evidence.** *"If they've passed
+a soak test trading live on the prop accounts, that should count as a pass and they can go live on bybit 2 as
+well."* Checkable per leg over its live prop closes (n stated = distinct signals, MEASURED fills only):
+(i) mechanics clean — exits are sl/tp/trail/manual-labelled, no orphans; (ii) `scripts/research/live_vs_backtest.py`
+(PR #18382) verdict CONSISTENT or better; (iii) realized cost within tolerance — prop venue costs differ, so a
+promotion to bybit_2 uses **Bybit's own MEASURED cost for that symbol** (ETHUSDT is measured on bybit_2; SOLUSDT
+has none there as of 2026-10-15, so SOL's clause (iii) comes from the bybit_1 soak). A PASS feeds `MD-PROMOTE-S1-S2`:
+a PR adding the leg to bybit_2 **and** bybit_portfolio together (mirror equality tests, human merge, not auto-land),
+and the evidence record must first carry a **portfolio-overlap check** (e.g. `trend_donchian_eth_prop` 1h beside
+`trend_donchian_eth_4h`: signal/return correlation and combined drawdown). The bybit_1 soak stays as a parallel
+source; contracts carry both (`sources` in `SOAKS.json`). This PR promotes nothing.
+
 ### Why the cheap gate is cost-fidelity, not profitability
 
 A 1d leg makes 10–30 trades a year. It can never establish expectancy on a

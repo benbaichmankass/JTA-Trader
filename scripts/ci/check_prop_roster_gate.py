@@ -13,6 +13,13 @@ a superset. The bar for a leg reaching a prop roster:
      guard does NOT duplicate it) and Gate 2 criteria;
   2. a Stage-1 soak: the leg is on a Stage-1 roster (``soak_state.STAGE1_ACCOUNTS``) at HEAD
      OR carries a Stage-1 soak contract in ``docs/claude/work/SOAKS.json``; AND
+     AMENDMENT (operator 2026-10-15): Stage-1 soak evidence may ALSO come from LIVE PROP trading —
+     a contract ``sources`` entry of kind ``prop_live`` (n, end_date, pass_rule) counts. Its pass rule,
+     per leg over live prop closes (n stated, MEASURED fills only): (i) mechanics clean (sl/tp/trail/
+     manual-labelled exits, no orphans); (ii) live_vs_backtest verdict CONSISTENT or better; (iii) cost
+     within tolerance — a bybit_2 promotion must use Bybit's own MEASURED cost for the symbol. A PASS
+     feeds MD-PROMOTE-S1-S2 (bybit_2 + bybit_portfolio together, human merge) and the evidence record must
+     carry a PORTFOLIO OVERLAP check. Nothing is promoted by this guard.
   3. a prop survival-gate record: ``comms/prop_survival/<leg>.json`` — see ``record_problems``
      for the fields (the EV/survival run under the firm's ruleset, a rule registered before the
      run, verdict pass).
@@ -109,6 +116,23 @@ def has_stage1_contract(leg: str, soaks: Sequence[Dict[str, Any]]) -> Optional[s
     return None
 
 
+def has_prop_live_soak(leg: str, soaks: Sequence[Dict[str, Any]]) -> Optional[str]:
+    """Operator amendment 2026-10-15: Stage-1 soak evidence may ALSO come from LIVE PROP trading.
+
+    A contract for the leg carrying a ``sources`` entry of kind ``prop_live`` (n, end_date, pass_rule
+    stated) counts as a soak record. It is evidence for promotion decisions only — the cost clause for a
+    bybit_2 promotion must still use Bybit's own MEASURED costs for the symbol (see the contract).
+    """
+    for c in soaks:
+        if c.get("leg") != leg:
+            continue
+        for s in c.get("sources") or []:
+            if (isinstance(s, dict) and s.get("kind") == "prop_live" and s.get("n_needed")
+                    and s.get("end_date") and s.get("pass_rule")):
+                return str(c.get("id"))
+    return None
+
+
 def record_problems(rec: Optional[Dict[str, Any]], leg: str) -> List[str]:
     """Why ``comms/prop_survival/<leg>.json`` is not a prop survival-gate record. Empty = admissible.
 
@@ -171,9 +195,11 @@ def grade(found: Sequence[Dict[str, str]], head_accounts: Optional[str], soaks: 
         if grandfather_active(leg, today):
             continue
         miss: List[str] = []
-        if not (on_stage1_roster(leg, head_accounts) or has_stage1_contract(leg, soaks)):
+        if not (on_stage1_roster(leg, head_accounts) or has_stage1_contract(leg, soaks)
+                or has_prop_live_soak(leg, soaks)):
             miss.append(f"no Stage-1 soak: {leg} is on neither {'/'.join(STAGE1_ACCOUNTS)} roster "
-                        f"nor carries a SOAK-stage1-<acct>-{leg} contract in {SOAKS_REL}")
+                        f"nor carries a SOAK-stage1-<acct>-{leg} contract (or a `prop_live` source) "
+                        f"in {SOAKS_REL}")
         miss += [f"prop survival gate: {m}" for m in record_problems(load_record(leg, survival_dir), leg)]
         if miss:
             lapsed = " (grandfather LAPSED " + GRANDFATHERED[leg]["due"] + ")" if leg in GRANDFATHERED else ""
@@ -247,6 +273,13 @@ def self_test() -> int:
         h = acc(["old", "x"], [])
         c = [{"leg": "x", "kind": "stage1", "account": "bybit_1", "id": "SOAK-stage1-bybit_1-x"}]
         check("contract alone satisfies soak clause", grade(prop_adds(base, h), h, c, d, today), [])
+        # amendment: a prop_live source on a contract also satisfies the soak clause
+        pl = [{"leg": "x", "id": "S", "sources": [{"kind": "prop_live", "n_needed": 10,
+                                                  "end_date": "2026-11-01", "pass_rule": "r"}]}]
+        h2 = acc(["old", "x"], [])
+        check("prop_live source satisfies soak clause", grade(prop_adds(base, h2), h2, pl, d, today), [])
+        pl[0]["sources"][0].pop("end_date")
+        check("prop_live source without end_date does not", len(grade(prop_adds(base, h2), h2, pl, d, today)), 1)
         # bad record (verdict fail) refused
         (d / "x.json").write_text(json.dumps(dict(good, decision_rule={"id": "R", "registered_at": "z",
                                                                        "verdict": "fail"})))

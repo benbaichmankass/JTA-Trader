@@ -107,7 +107,10 @@ against the firm's DD limits, recorded as `comms/prop_survival/<leg>.json`. Enfo
 `prop-roster-gate-guard` (`scripts/ci/check_prop_roster_gate.py`). `trend_donchian_eth_prop` /
 `trend_donchian_sol_prop` are grandfathered by name (soak due 2026-11-07 / 2026-12-11) and stay live on the
 prop books while the bybit_1 soak accrues; a soak FAIL proposes pulling them (data-backed Tier-3). Row
-`PROP-GATE-PARITY`.
+`PROP-GATE-PARITY`. **Amendment (operator 2026-10-15):** live prop trading also counts as Stage-1 soak evidence
+(mechanics clean · `live_vs_backtest` CONSISTENT · cost within tolerance on Bybit's own MEASURED cost for the
+symbol); a pass feeds `MD-PROMOTE-S1-S2` (bybit_2 + bybit_portfolio together, human merge) after a
+portfolio-overlap check. See OPERATING-PLAN § 2 for the full rule.
 
 ## 3. Per-account trade ticket + discrepancy flagging
 

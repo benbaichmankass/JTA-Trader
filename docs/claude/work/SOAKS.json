@@ -1137,6 +1137,14 @@
    "expected_per_week": 3.13,
    "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents ; or live-vs-backtest divergent => propose pulling the leg from prop rosters (data-backed Tier-3)",
    "id": "SOAK-stage1-bybit_1-trend_donchian_eth_prop",
+   "sources": [
+    {"kind": "stage1", "account": "bybit_1", "n_needed": 10, "end_date": "2026-11-07"},
+    {"kind": "prop_live", "accounts": ["breakout_2", "tradeify_1", "velotrade_1"], "started": "2026-10-06", "n_needed": 10, "end_date": "2026-10-29",
+     "n_rule": "DISTINCT closed trades (one per entry signal; the same signal fills on up to 3 prop accounts and is counted once), MEASURED fills only",
+     "pass_rule": "over the leg's live prop closes: (i) mechanics clean -- exits are sl/tp/trail/manual-labelled, no orphans; (ii) scripts/research/live_vs_backtest.py (PR #18382) verdict CONSISTENT or better; (iii) realized cost within tolerance. Prop venue costs differ from Bybit: a bybit_2 promotion uses Bybit's own MEASURED cost for ETHUSDT (measured on bybit_2: trend_donchian_eth_4h n=17, eth_pullback_2h n=18 in comms/research/r3_cost_fidelity/2026-10-10__rows.jsonl).",
+     "feeds": "MD-PROMOTE-S1-S2 -> a PR adding the leg to bybit_2 AND bybit_portfolio together (mirror equality tests, human merge, not auto-land)",
+     "portfolio_overlap_required": "BEFORE promotion the evidence record must report correlation of signals/returns and combined drawdown of trend_donchian_eth_prop (1h) vs the existing bybit_2 trend_donchian_eth_4h (two correlated ETH Donchian legs)"}
+   ],
    "kind": "stage1",
    "leg": "trend_donchian_eth_prop",
    "metric": "closed trades on bybit_1/trend_donchian_eth_prop (each = one entry + one exit fill)",
@@ -1155,6 +1163,14 @@
    "expected_per_week": 1.25,
    "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents ; or live-vs-backtest divergent => propose pulling the leg from prop rosters (data-backed Tier-3)",
    "id": "SOAK-stage1-bybit_1-trend_donchian_sol_prop",
+   "sources": [
+    {"kind": "stage1", "account": "bybit_1", "n_needed": 10, "end_date": "2026-12-11"},
+    {"kind": "prop_live", "accounts": ["breakout_2", "tradeify_1", "velotrade_1"], "started": "2026-10-06", "n_needed": 10, "end_date": "2026-12-02",
+     "n_rule": "DISTINCT closed trades (one per entry signal; the same signal fills on up to 3 prop accounts and is counted once), MEASURED fills only",
+     "pass_rule": "over the leg's live prop closes: (i) mechanics clean -- exits are sl/tp/trail/manual-labelled, no orphans; (ii) scripts/research/live_vs_backtest.py (PR #18382) verdict CONSISTENT or better; (iii) realized cost within tolerance. MEASURED 2026-10-15: the R3 corpus (comms/research/r3_cost_fidelity/2026-10-10__rows.jsonl) holds NO SOLUSDT fills on bybit_2 (only bybit_1 paper), so clause (iii) for a bybit_2 promotion comes from the bybit_1 soak above, not from prop fills.",
+     "feeds": "MD-PROMOTE-S1-S2 -> a PR adding the leg to bybit_2 AND bybit_portfolio together (mirror equality tests, human merge, not auto-land)",
+     "portfolio_overlap_required": "BEFORE promotion the evidence record must report overlap with the existing bybit_2 roster (correlation of signals/returns, combined drawdown)"}
+   ],
    "kind": "stage1",
    "leg": "trend_donchian_sol_prop",
    "metric": "closed trades on bybit_1/trend_donchian_sol_prop (each = one entry + one exit fill)",
