@@ -249,9 +249,16 @@ def test_an_unmapped_venue_position_freezes_closes(monkeypatch):
 
 # ---- review of #17745 ----
 
-def test_report_only_is_the_declared_mode_and_writes_nothing(monkeypatch, env):
+def test_breakout_2_declares_write_and_an_unknown_value_reads_report_only(monkeypatch):
+    # operator decision 2026-10-15 ("Yes" to option (ii) of PI-20261015-JWMGXOTH-0004)
     monkeypatch.setattr(rc, "reconcile_mode", _DECLARED_MODE)
-    assert rc.reconcile_mode("breakout_2") == "report_only"           # config/prop_platforms.yaml declares it
+    assert rc.reconcile_mode("breakout_2") == "write"                 # config/prop_platforms.yaml declares it
+    monkeypatch.setattr(pe, "phone_config", lambda a: {"reconcile": "wrte"})
+    assert rc.reconcile_mode("breakout_2") == "report_only"           # a typo is the mode that writes nothing
+
+
+def test_report_only_writes_nothing(monkeypatch, env):
+    monkeypatch.setattr(rc, "reconcile_mode", lambda a: "report_only")
     jid = _open("prop-manual-f79")
     t0 = datetime.now(timezone.utc)
     for i in range(4):
@@ -263,6 +270,68 @@ def test_report_only_is_the_declared_mode_and_writes_nothing(monkeypatch, env):
     would = [m for m in env if "REPORT-ONLY" in m]
     assert len([m for m in would if "close journal row" in m]) == 1   # ONE alert per decision, not per read
     assert len([m for m in would if "UNCONFIRMED open row" in m]) == 1
+
+
+# ---- PI-20261015-JWMGXOTH-0004: a hand close reconciles itself as `manual` ----
+
+def _hand_close(t0, price=2371.70, typ="Market"):
+    return {"symbol": "ETH", "side": "long", "qty": 0.54, "price": price, "pnl": 48.5, "type": typ,
+            "status": "Filled", "time": (t0 + timedelta(seconds=5)).strftime("%Y-%m-%d %H:%M:%S")}
+
+
+def _short(tid="prop-manual-f655"):
+    return _open(tid, direction="short", qty=0.54, entry=2461.52, sl=2504.25, tp=2214.87)
+
+
+def test_a_hand_close_is_journaled_manual_after_two_clean_reads_and_one_read_writes_nothing(monkeypatch, env):
+    jid = _short()
+    t0 = datetime.now(timezone.utc)
+    monkeypatch.setattr(rc, "_now", lambda: t0)
+    r1 = _status([], closed=[_hand_close(t0)])
+    assert r1["reconcile"]["pending_close"] == [str(jid)] and _open_ids() == [jid]   # ONE empty read: nothing
+    monkeypatch.setattr(rc, "_now", lambda: t0 + timedelta(seconds=90))
+    r2 = _status([], closed=[_hand_close(t0)])
+    assert r2["reconcile"]["closed"] == [{"id": str(jid), "exit": 2371.70, "reason": "manual"}]
+    close = [f for f in prop_journal.list_fills(account_id="breakout_2") if f["status"] == "closed"][0]
+    raw = json.loads(close["raw"])
+    assert (close["reason"], close["exit_price"]) == ("manual", 2371.70)
+    assert raw["reconcile"]["reason_basis"].startswith("INFERRED")   # labelled: the venue never says "manual"
+
+
+@pytest.mark.parametrize("state", ["no_table", "unparsed", "empty_unconfirmed", "not_read"])
+def test_an_unreadable_positions_read_never_closes(monkeypatch, state):
+    jid = _short()
+    t0 = datetime.now(timezone.utc)
+    for i in range(4):
+        monkeypatch.setattr(rc, "_now", lambda i=i: t0 + timedelta(seconds=90 * i))
+        _status(None, state=state, closed=[_hand_close(t0)])
+    assert _open_ids() == [jid]
+
+
+def test_an_unreadable_read_between_two_empty_ones_does_not_count_as_absent(monkeypatch):
+    jid = _short()
+    t0 = datetime.now(timezone.utc)
+    monkeypatch.setattr(rc, "_now", lambda: t0)
+    _status([], closed=[])
+    monkeypatch.setattr(rc, "_now", lambda: t0 + timedelta(seconds=90))
+    _status(None, state="no_table")
+    assert _open_ids() == [jid]                                       # still ONE absent read, not two
+
+
+@pytest.mark.parametrize("price,typ,want", [
+    (2504.25, "Stop", "sl"), (2214.87, "Take profit", "tp"),        # the leg named by the venue
+    (2504.30, "Market", "sl"), (2215.00, "", "tp"),                   # at a bracket level, leg unnamed
+    (2371.70, "Market", "manual"),                                    # between SL and TP, neither leg
+    (2530.00, "Market", "venue_close"),                               # beyond the stop: a slip, not a hand close
+])
+def test_close_reason_keeps_bracket_fills_and_infers_manual_only_inside_the_bracket(price, typ, want):
+    row = {"direction": "short", "sl": 2504.25, "tp": 2214.87}
+    assert rc._close_reason(row, {"price": price, "type": typ}) == want
+
+
+def test_manual_needs_both_levels():
+    assert rc._close_reason({"sl": 2504.25, "tp": None}, {"price": 2371.70, "type": "Market"}) == "venue_close"
+    assert rc._close_reason({"sl": 2504.25, "tp": 2214.87}, None) == "closed_unpriced"
 
 
 def test_a_closing_order_listed_before_the_row_went_missing_is_not_its_exit(monkeypatch):
@@ -394,8 +463,7 @@ def _fills():
 
 
 def test_fill_in_prices_both_unpriced_closes_while_reconcile_is_report_only(monkeypatch):
-    monkeypatch.setattr(rc, "reconcile_mode", _DECLARED_MODE)
-    assert rc.reconcile_mode("breakout_2") == "report_only"
+    monkeypatch.setattr(rc, "reconcile_mode", lambda a: "report_only")   # fill-in writes in either mode
     _unpriced("t-sol", "SOLUSDT", "long", 17.26263867, 111.16)
     _unpriced("t-eth", "ETHUSDT", "long", 1.17577895, 2527.8, hours_ago_close=2)
     r = _status([], closed=[_co("SOL", "short", 17.26, 111.39, 3.97, 6), _co("ETH", "short", 1.1758, 2531.2, 3.99, 2),

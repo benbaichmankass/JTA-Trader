@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Bug fix in research tooling from #18199: train_parity.py wrote verdict.json with n nested in a population dict, so script_run.derive_record landed RQ-20261015-8b93-01's measured trainer run (38730580651) as producer_failed. Fix: population string + top-level n, with a test asserting the runner's own checks. Clears 01's last_dispatched_at (stamp-only edit) so the dispatcher re-arms it under the existing producer_failed retry rule. Checklist: KAGGLE-CPU-ROUTE and ML-DATA-RUNNER-FETCH closed done on observed run 38738478568. No src/, config/, workflow, registry or order-path change."
+}

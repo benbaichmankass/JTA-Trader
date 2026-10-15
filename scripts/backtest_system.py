@@ -199,6 +199,13 @@ ROSTER: Dict[str, Dict[str, str]] = {
     # from ROSTER.
     "trend_donchian_sol_prop": {"module": "src.units.strategies.trend_donchian", "tf": "1h"},
     "trend_donchian_eth_prop": {"module": "src.units.strategies.trend_donchian", "tf": "1h"},
+    # --- XRP legs (SAME-SYMBOL-ALLOCATION, 2026-10-15) --------------------------
+    # Registered so the XRPUSDT same-symbol head-to-head (trend_donchian_xrp_4h vs
+    # xrp_pullback_2h, on bybit_1/bybit_2/bybit_portfolio) can run under the real
+    # aggregate_intents election. Params come from config/strategies.yaml BY NAME.
+    # RESEARCH ONLY; the live order path never reads ROSTER.
+    "trend_donchian_xrp_4h": {"module": "src.units.strategies.trend_donchian", "tf": "4h"},
+    "xrp_pullback_2h":       {"module": "src.units.strategies.htf_pullback_trend_2h", "tf": "2h"},
 }
 _PANDAS_TF = {"5m": "5min", "15m": "15min", "30m": "30min", "1h": "1h", "2h": "2h", "4h": "4h"}
 

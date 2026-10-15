@@ -192,6 +192,17 @@ STAGE 2  Live + mirror    bybit_2 + bybit_portfolio · alpaca_live + alpaca_port
          DEMOTION signal.
 ```
 
+**Prop legs clear a SUPERSET of this ladder** (operator, 2026-10-15: *"if anything, the prop accounts
+should have a higher bar to clear because of the DD limits"*): everything a real-money leg clears —
+Stage 0 net of the full cost stack, a Stage-1 soak with realized cost matching the backtest, Gate 2 —
+**plus** the prop EV/survival gate against the firm's DD limits (`comms/prop_survival/<leg>.json`).
+Never a lower bar. `prop-roster-gate-guard` enforces it on roster adds; `trend_donchian_eth_prop` /
+`trend_donchian_sol_prop` are grandfathered by name (soak due 2026-11-07 / 2026-12-11, row
+`PROP-GATE-PARITY`). **Amendment (operator, 2026-10-15): Stage-1 soak evidence may also come from LIVE prop
+trading** (mechanics clean · live_vs_backtest CONSISTENT · cost within tolerance using Bybit's own MEASURED cost
+for the symbol); a pass feeds `MD-PROMOTE-S1-S2` (bybit_2 + bybit_portfolio together, human merge) after a
+portfolio-overlap check. See [`docs/plans/OPERATING-PLAN-2026-09-21.md`](docs/plans/OPERATING-PLAN-2026-09-21.md) § 2.
+
 **A live or paper book never establishes edge.** It checks mechanics and cost.
 If a proposal advances a leg on live-book P&L, that is a category error.
 
@@ -611,6 +622,8 @@ autonomously; Tier-2 after an operator OK in chat. Allowlist:
 ## Skills
 
 **`research-ops`** (`.claude/skills/research-ops/SKILL.md`) is the routine research-operations pass — 4×/day, bounded Sonnet lane dispatched by the manager: pipeline health, runnable floor, blocked-unit audit, results read, follow-ups filed. It keeps research flowing; it does not replace topic research (`perf-followup`, ML, readouts).
+
+**`weekly-audit`** (`.claude/skills/weekly-audit/SKILL.md`, operator 2026-10-14/15) is the Monday 06:07Z audit — a completion test, not a memo: a CORE pass every week plus a deep pass rotating by ISO week mod 4; every finding becomes a checklist row or pipeline item with a detector, and the one-page report lands in a self-landing PR. It replaces the retired `full-system-audit` program.
 
 **The ML / AI-trader build plan is reviewed every week, not when someone remembers** (operator,
 2026-10-11). Plan: `ROADMAP.md` § "AI trader (ML) — build plan"; machine-readable form

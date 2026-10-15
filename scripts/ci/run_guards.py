@@ -1345,6 +1345,16 @@ GUARDS: List[Dict[str, Any]] = [
         ],
     },
     {
+        # IP-IN-PUBLIC-LOGS (operator 2026-10-15): the live-trader and trainer addresses come from the VM_SSH_HOST /
+        # TRAINER_VM_IP repository secrets (masked in logs, one place to rotate), never a literal in a workflow.
+        "name": "workflow-vm-literal-guard",
+        "when": None,
+        "steps": [
+            ["python3", "scripts/ci/check_workflow_vm_literals.py", "--self-test"],
+            ["python3", "scripts/ci/check_workflow_vm_literals.py"],
+        ],
+    },
+    {
         # PI-20261005-RQ-ID-RACE-0001: generated units mint 001-899, hand-authored 900-999, and a
         # PR may not add a unit whose id is taken or sits in the wrong band.
         "name": "research-queue-id-bands",
@@ -1982,6 +1992,47 @@ GUARDS: List[Dict[str, Any]] = [
             ["python3", "scripts/ci/check_roster_promotion_evidence.py", "--self-test"],
             {
                 "argv": ["python3", "scripts/ci/check_roster_promotion_evidence.py",
+                         "--base", "origin/{base_ref}"],
+                "pr_only": True,
+            },
+        ],
+    },
+    {
+        "name": "same-symbol-allocation-guard",
+        # Operator 2026-10-15 (re-scoped ~20:25Z): legs MAY share a netted position if we know how much of it belongs
+        # to each strategy. Whole-tree: a shared (account, symbol) needs slice support for the account (empty until lane
+        # NETTED-SLICES lands its config) or a committed allocation-weights record in comms/same_symbol_allocation/.
+        # Today's pairs are grandfathered BY NAME with the unit that feeds them and a due date inside the script.
+        # Checklist row SAME-SYMBOL-ALLOCATION.
+        "when": {"globs": [
+            "config/accounts.yaml",
+            "config/strategies.yaml",
+            "comms/same_symbol_allocation/**",
+            "scripts/ci/check_same_symbol_allocation.py",
+        ]},
+        "steps": [
+            ["python3", "scripts/ci/check_same_symbol_allocation.py", "--self-test"],
+            ["python3", "scripts/ci/check_same_symbol_allocation.py"],
+        ],
+    },
+    {
+        "name": "prop-roster-gate-guard",
+        # Operator 2026-10-15 ("Yes, 1, 2 and 3a"; "the prop accounts should have a higher bar to clear
+        # because of the DD limits"): a leg added to an `account_class: prop` roster needs a Stage-1 soak
+        # (bybit_1/alpaca_paper roster or a SOAK-stage1 contract) AND a comms/prop_survival/<leg>.json
+        # record, ON TOP of what roster-promotion-evidence-guard already demands of every risk-bearing
+        # roster. Diff-scoped + roster-membership keyed; demotion free; the two pre-rule legs are
+        # grandfathered BY NAME with a due date inside the script.
+        "when": {"globs": [
+            "config/accounts.yaml",
+            "docs/claude/work/SOAKS.json",
+            "comms/prop_survival/**",
+            "scripts/ci/check_prop_roster_gate.py",
+        ]},
+        "steps": [
+            ["python3", "scripts/ci/check_prop_roster_gate.py", "--self-test"],
+            {
+                "argv": ["python3", "scripts/ci/check_prop_roster_gate.py",
                          "--base", "origin/{base_ref}"],
                 "pr_only": True,
             },

@@ -511,6 +511,15 @@ learns nothing about *why* it underperformed, so the same mistake recurs. This
 is the strategy-level analogue of the `drift-remediation` skill's one rule;
 follow it before ANY demote/kill enters `proposed_tweaks[]`.
 
+**Step 0 — always first (operator, 2026-10-15: "that should be a first step for any
+underperforming strategy"):** run `python3 scripts/research/live_vs_backtest.py --leg <leg>`
+and record its verdict beside the leg. It says whether the live cumulative R is inside the
+p5-p95 band the leg's own committed backtest predicts for the same number of trades.
+`CONSISTENT` → the result is luck-sized: keep accruing, no tune, no demote proposal (R4
+decides at its threshold). `BELOW_BACKTEST` → fidelity/regime problem, proceed to 1-3 and file
+the investigation unit. `NO_BACKTEST` → file a backtest unit. `INSUFFICIENT_N` /
+`NO_LIVE_TRADES` → say so; do not grade on it.
+
 When a live strategy underperforms in the window, the mandatory next step is a
 **root-cause diagnosis + robust re-test**, not a proposal to turn it off:
 

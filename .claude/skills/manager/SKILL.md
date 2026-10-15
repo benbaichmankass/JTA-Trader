@@ -140,6 +140,10 @@ a dispute of operator authority") and does not file it anywhere else.
 4. **Kills or re-scopes a burning lane** — reads what it has produced first.
 5. **Pushes the daily brief before the sync.**
 
+**Underperformer first step (operator, 2026-10-15):** before anyone tunes, demotes or asks
+about a leg that is losing, its lane runs `scripts/research/live_vs_backtest.py` — BELOW_BACKTEST
+→ fidelity/regime unit, CONSISTENT → keep accruing, NO_BACKTEST → backtest unit.
+
 ## Five things the manager may not do
 
 1. **Take an item.** CI-enforced by `scripts/ci/check_manager_scope.py`.

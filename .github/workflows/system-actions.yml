@@ -51,7 +51,7 @@ name: system-actions
 #                         mode-change branch and opens its PR, JC-CA-01)
 #
 # Optional repo variables:
-#   * VM_SSH_HOST       — defaults to 141.145.193.91 (Ampere live trader; was the
+#   * VM_SSH_HOST       — defaults to <VM_SSH_HOST> (Ampere live trader; was the
 #                         x86 micro 158.178.210.252 pre-2026-06-14 cutover)
 #   * VM_SSH_USER       — defaults to ubuntu
 #
@@ -356,7 +356,7 @@ jobs:
     # was also slimmed to a one-line is-active summary in deploy_pull_restart.sh).
     timeout-minutes: 20
     env:
-      VM_SSH_HOST: ${{ vars.VM_SSH_HOST || '141.145.193.91' }}
+      VM_SSH_HOST: ${{ secrets.VM_SSH_HOST }}
       VM_SSH_USER: ${{ vars.VM_SSH_USER || 'ubuntu' }}
       # The IB-Gateway container lives on its own dedicated VM (gateway-
       # isolation, 2026-06-10) — private IP, reached from the live trader
@@ -368,6 +368,13 @@ jobs:
       GATEWAY_HOST: ${{ vars.IB_GATEWAY_HOST || '10.0.0.251' }}
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
+      - name: Require VM host secrets (fail closed)
+        env:
+          NEED_VM_SSH_HOST: ${{ secrets.VM_SSH_HOST }}
+        run: |
+          fail=0
+          [ -n "${NEED_VM_SSH_HOST}" ] || { echo "::error::secret VM_SSH_HOST not set (Settings > Secrets and variables > Actions); refusing to continue before any ssh"; fail=1; }
+          exit "$fail"
       - name: Checkout (for wrapper scripts inside repo)
         uses: actions/checkout@v4
 
@@ -1219,11 +1226,11 @@ jobs:
               echo "::error::breakout-login-check account_id '${ACCOUNT_ID}' invalid (allowed: A-Z a-z 0-9 _ -)."
               exit 1
             fi
-            if [ -n "${ACTION_APPLY// }" ] && ! printf '%s' "${ACTION_APPLY}" | grep -Eq '^(install-deps|emit-status|reset-feed|probe-ticket|instrument-probe|instrument-search-dump|instrument-info-dry|instrument-info-probe|symbol-switch-dry|link-state-dump|page-status|edit-dialog-dry|edit-dialog-probe|edit-surface-probe|widget-menu-probe|add-watchlist-widget|watchlist-submenu-probe|instrument-page-dump|order-surface-dump|probe-ticket-ask|add-watchlist-symbol-dry|add-watchlist-symbol|executor-dry-run|watched-click|round-trip-dry|round-trip-live|sol|limit|lim-below|lim-above|executor-enable-timer|executor-disable-timer|executor-clear-halt|executor-clear-rollout|dump-tables|feed-enable-timer|feed-disable-timer|close-position|close-position-live)(,(install-deps|emit-status|reset-feed|probe-ticket|instrument-probe|instrument-search-dump|instrument-info-dry|instrument-info-probe|symbol-switch-dry|link-state-dump|page-status|edit-dialog-dry|edit-dialog-probe|edit-surface-probe|widget-menu-probe|add-watchlist-widget|watchlist-submenu-probe|instrument-page-dump|order-surface-dump|probe-ticket-ask|add-watchlist-symbol-dry|add-watchlist-symbol|executor-dry-run|watched-click|round-trip-dry|round-trip-live|sol|limit|lim-below|lim-above|executor-enable-timer|executor-disable-timer|executor-clear-halt|executor-clear-rollout|dump-tables|feed-enable-timer|feed-disable-timer|close-position|close-position-live)){0,10}$'; then
-              echo "::error::breakout-login-check apply must be a comma-separated subset of install-deps,emit-status,reset-feed,probe-ticket,instrument-probe,instrument-search-dump,instrument-info-dry,instrument-info-probe,symbol-switch-dry,link-state-dump,page-status,edit-dialog-dry,edit-dialog-probe,edit-surface-probe,widget-menu-probe,add-watchlist-widget,watchlist-submenu-probe,instrument-page-dump,order-surface-dump,probe-ticket-ask,add-watchlist-symbol-dry,add-watchlist-symbol,executor-dry-run,watched-click,round-trip-dry,round-trip-live,sol,limit,lim-below,lim-above,executor-enable-timer,executor-disable-timer,executor-clear-halt,executor-clear-rollout,dump-tables,feed-enable-timer,feed-disable-timer,close-position,close-position-live (got '${ACTION_APPLY}')."
+            if [ -n "${ACTION_APPLY// }" ] && ! printf '%s' "${ACTION_APPLY}" | grep -Eq '^(install-deps|emit-status|reset-feed|probe-ticket|instrument-probe|instrument-search-dump|instrument-info-dry|instrument-info-probe|symbol-switch-dry|quote-spread|link-state-dump|page-status|edit-dialog-dry|edit-dialog-probe|edit-surface-probe|widget-menu-probe|add-watchlist-widget|watchlist-submenu-probe|instrument-page-dump|order-surface-dump|probe-ticket-ask|add-watchlist-symbol-dry|add-watchlist-symbol|executor-dry-run|watched-click|round-trip-dry|round-trip-live|sol|limit|lim-below|lim-above|executor-enable-timer|executor-disable-timer|executor-clear-halt|executor-clear-rollout|dump-tables|feed-enable-timer|feed-disable-timer|close-position|close-position-live)(,(install-deps|emit-status|reset-feed|probe-ticket|instrument-probe|instrument-search-dump|instrument-info-dry|instrument-info-probe|symbol-switch-dry|quote-spread|link-state-dump|page-status|edit-dialog-dry|edit-dialog-probe|edit-surface-probe|widget-menu-probe|add-watchlist-widget|watchlist-submenu-probe|instrument-page-dump|order-surface-dump|probe-ticket-ask|add-watchlist-symbol-dry|add-watchlist-symbol|executor-dry-run|watched-click|round-trip-dry|round-trip-live|sol|limit|lim-below|lim-above|executor-enable-timer|executor-disable-timer|executor-clear-halt|executor-clear-rollout|dump-tables|feed-enable-timer|feed-disable-timer|close-position|close-position-live)){0,10}$'; then
+              echo "::error::breakout-login-check apply must be a comma-separated subset of install-deps,emit-status,reset-feed,probe-ticket,instrument-probe,instrument-search-dump,instrument-info-dry,instrument-info-probe,symbol-switch-dry,quote-spread,link-state-dump,page-status,edit-dialog-dry,edit-dialog-probe,edit-surface-probe,widget-menu-probe,add-watchlist-widget,watchlist-submenu-probe,instrument-page-dump,order-surface-dump,probe-ticket-ask,add-watchlist-symbol-dry,add-watchlist-symbol,executor-dry-run,watched-click,round-trip-dry,round-trip-live,sol,limit,lim-below,lim-above,executor-enable-timer,executor-disable-timer,executor-clear-halt,executor-clear-rollout,dump-tables,feed-enable-timer,feed-disable-timer,close-position,close-position-live (got '${ACTION_APPLY}')."
               exit 1
             fi
-            case ",${ACTION_APPLY:-}," in *",probe-ticket-ask,"*|*",symbol-switch-dry,"*|*",edit-dialog-dry,"*|*",edit-dialog-probe,"*|*",edit-surface-probe,"*|*",instrument-probe,"*|*",order-surface-dump,"*|*",add-watchlist-symbol-dry,"*|*",add-watchlist-symbol,"*|*",instrument-page-dump,"*|*",instrument-info-dry,"*|*",instrument-info-probe,"*)
+            case ",${ACTION_APPLY:-}," in *",probe-ticket-ask,"*|*",symbol-switch-dry,"*|*",quote-spread,"*|*",edit-dialog-dry,"*|*",edit-dialog-probe,"*|*",edit-surface-probe,"*|*",instrument-probe,"*|*",order-surface-dump,"*|*",add-watchlist-symbol-dry,"*|*",add-watchlist-symbol,"*|*",instrument-page-dump,"*|*",instrument-info-dry,"*|*",instrument-info-probe,"*)
               # instrument-probe needs 'symbols:' -- comma-separated venue
               # symbols, e.g. BTCUSD,ADAUSD,AVAXUSD,XRPUSD. Validated here so
               # a malformed dispatch fails loudly instead of reaching the VM.

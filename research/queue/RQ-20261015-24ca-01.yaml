@@ -1,0 +1,149 @@
+id: RQ-20261015-24ca-01
+title: >-
+  Tradeify non-crypto Stage 0 + prop survival: fade harness on SLV 1h priced as SILVER/USD (lead; follow-on to RQ-20261006-031 PASS)
+status: done
+cadence: once
+theme: new_strategy_prop
+priority: 1
+kind: experiment
+roadmap:
+- L-PROP
+question: >-
+  Does the breakout-fade (scripts/backtest_fade.py, harness defaults) on SLV 1h still show net edge, AND survive Tradeify's 1-Step rules (3% daily,
+  6% static drawdown, 2:1 leverage on non-BTC/ETH), once priced with Tradeify's declared cost stack on the trainer's 2018-2026 SLV history, as
+  the proxy for the SILVER/USD synthetic perp the tradeify_1 terminal lists?
+why_this_matters: >-
+  RQ-20261006-031 passed Stage 0 on SLV 1h (net_total_r +6.65R and +7.65R, n=136 and 138, win rate ~23%, expectancy ~+0.05R/trade) but (1) at
+  the harness's Alpaca-ETF costs (0 fee, 5 bps slippage), not Tradeify's 0.04%/side commission + 0.033%/day swap, (2) over only ~720 days of yfinance
+  1h (2024-10-17 -> 2026-10-07, a silver bull run) and (3) with max drawdown 19-21R, roughly 3x its total gain: at 0.5% risk a 19R run is ~9.5%
+  of the account against Tradeify's 6% static floor. Expectancy of 0.05R is also close to the 8-bps commission alone on a ~1% stop. This is the
+  matching Tradeify-instrument test plus the prop survival gate that unit named as its next step and that never had a follow-on. Tradeify lists
+  SILVER/USD (tradeify_1 terminal, key-by-key search, issue #18395, 2026-10-15): 'Silver Futures priced in United States dollars (synthetic perp
+  via Hyperliquid)', asset class Stocks.
+power:
+  expected_n: 120
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    d=0.3 needs ~87-90 observations at alpha 0.05 / power 0.8 (the repo's prop-fit floor, RQ-20260928-011/-012/-013). expected_n=120 is a cadence
+    GUESS, not a measurement: this (leg, symbol, timeframe) at Tradeify costs has not been run on the trainer's 2018-2026 history. Below 88 the
+    unit grades UNDERPOWERED (indeterminate), never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Re-run of RQ-20261006-031's cell with the trainer's longer SLV 1h history (12,431 rows, 2018-02-01 -> 2026-06-18) and Tradeify costs; the
+      cell's only prior observation was n=136-138 on 720 days (research/results/RQ-20261006-031/). A fixed historical backfill: nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261015-24ca-01
+  registered_at: '2026-10-15'
+  registered_before_run: true
+  statistic: >-
+    Per seed 1-5: prop_ev_sim path-mode ev_net_usd_per_life and p_net_positive over the leg's trade ledger (n = ledger rows), as graded by scripts/research/prop_ev_grid.py
+    --grade pass_all_seeds.
+  rule: >-
+    PASS IF n_trades >= 88 AND ev_net_usd_per_life > 0 on ALL 5 seeds AND p_net_positive >= 0.70 on ALL 5 seeds (prop_ev_sim path mode, config/prop_rulesets/tradeify_247_1step.yaml,
+    flat 0.5% risk, --lev-cap slv_fade_1h=2, --no-hedge, prorated swap, funded-start fresh, Tradeify cost stack 8 bps commission round trip +
+    3 bps declared slippage + 0.033%/day swap re-applied by the sim to the harness gross_r). FAIL IF ev_net_usd_per_life <= 0 on ANY seed (one
+    pass: re-queues once for a confirmatory run before it is read as a kill). INDETERMINATE (UNDERPOWERED) IF n_trades < 88; INDETERMINATE (NULL)
+    IF ev > 0 on all seeds but p_net_positive < 0.70 on any seed. The harness's own Stage-0 number (net_total_r at the same declared costs) is
+    written to harness.json beside the verdict and is reported, not graded separately: a leg with no net edge cannot show ev > 0 on all 5 seeds.
+    OPERATOR RULE (2026-10-15, relayed by the manager; binding on every prop leg): a prop leg clears the full real-money path, not a shortcut.
+    STAGE 0 backtest net of the full cost stack, THEN a SOAK (live prop trading on the account counts as the soak), THEN COST FIDELITY (realized
+    cost vs the declared cost used here), PLUS prop DD SURVIVAL under the account's rules. This unit is the first and last-but-one of those only:
+    it supplies Stage 0 and the prop-survival simulation. A PASS authorizes NO roster edit, NO account opening and NO order; soak, cost fidelity
+    and the Tier-3 roster decision stay open.
+  what_it_does_not_do: >-
+    Does not touch config/strategies.yaml, config/accounts.yaml or config/prop_platforms.yaml, places no order, and does not claim Tradeify's
+    quoted spread: the per-instrument spread/commission/swap/leverage/hours shown by the terminal are UNMEASURED (the terminal's instrument-info
+    panel is reachable only after a watchlist add, a UI mutation this lane did not perform); the costs above are the firm-declared rule-page figures
+    (docs/research/tradeify-portfolio-feasibility-2026-09-30.md, config/prop_rulesets/tradeify_247_1step.yaml, unconfirmed: true) plus a DECLARED
+    3 bps slippage. Candles are the trainer's data/<SYM>_<tf>.csv (1h to 2026-06-18, verified by trainer-diag #18392 on 2026-10-15), i.e. an ETF
+    proxy, not the Hyperliquid-fed synthetic perp's own price history.
+compute: needs_vm_data
+value:
+  bucket: structural
+  usd_at_stake_per_month: 200
+  confidence: 0.3
+  basis: >-
+    stand-in, not a measurement: a non-crypto prop leg widens tradeify_1 beyond ETH/SOL (2 legs, P(net>0)~0.37 min-seed, RQ-20261005-902); information
+    value of a leg that diversifies inactivity gaps and drawdown clustering
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 25
+  basis: >-
+    Harness over ~8 years of 1h/1d candles (single symbol) + 5 prop_ev_sim seeds; reads trainer-resident data/<SYM>_<tf>.csv (not in metis-market-data,
+    so not Kaggle-CPU routable).
+run:
+  commands:
+  - - python3
+    - scripts/backtest_fade.py
+    - --symbol
+    - SLV
+    - --timeframe
+    - 1h
+    - --fee-bps-roundtrip
+    - '8.0'
+    - --slippage-bps-roundtrip
+    - '3.0'
+    - --funding-bps-per-window
+    - '3.3'
+    - --funding-window-hours
+    - '24'
+    - --emit-trades
+    - '{out_dir}/trades.jsonl'
+    - --json
+    - '{out_dir}/harness.json'
+  - - python3
+    - scripts/research/prop_ev_grid.py
+    - --leg
+    - slv_fade_1h={out_dir}/trades.jsonl
+    - --arm
+    - A=--sizing balance --risk-pct 0.005
+    - --common
+    - >-
+      --ruleset config/prop_rulesets/tradeify_247_1step.yaml --lev-cap slv_fade_1h=2 --no-hedge --swap-model prorated --funded-start fresh
+    - --seeds
+    - 1,2,3,4,5
+    - --grade
+    - pass_all_seeds
+    - --p-floor
+    - '0.70'
+    - --n-floor
+    - '88'
+    - --out
+    - '{out_dir}'
+    - --jobs
+    - '2'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261015-24ca-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- TRADEIFY-PLATFORMS
+- docs/research/tradeify-platforms-2026-10-15.md
+- config/prop_rulesets/tradeify_247_1step.yaml
+- research/queue/RQ-20261005-902.yaml
+- research/queue/RQ-20261006-031.yaml
+- research/results/RQ-20261006-031/37660127876.jsonl
+last_dispatched_at: '2026-10-15T17:57:54+00:00'
+grading:
+  attested: RULE-RQ-20261015-24ca-01
+  auto: true
+  decision_rule_id: RULE-RQ-20261015-24ca-01
+  evidence:
+  - research/results/RQ-20261015-24ca-01/38781718886.jsonl
+  graded_at: '2026-10-15'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
