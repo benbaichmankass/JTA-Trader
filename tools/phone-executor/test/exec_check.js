@@ -766,5 +766,16 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
   const nested = sheetPage().replace('<div class=r id=chd>', '<div class=wrap><div class=r id=chd>').replace('\u2715</button></div></div>\n</div></div>', '\u2715</button></div></div></div>\n</div></div>');
   const gn = await (await onHost(nested)).evaluate("__ex.positionsRead()");
   eq([gn.state, gn.rows.length, gn.rows[0].row_kind], ["side_unread", 1, "child"], "child row nested in a wrapper is still the one read");
+  // BREAKOUT-SHEET-PROBE (1b.205 live 05:59Z: click() found both rows, no sheet opened): a row that reacts only to a
+  // touch pointer sequence opens with mode "pointer"; domDiff names what appeared and the tapped cell's ancestors
+  const pp = await onHost(sheetPage().replace("document.getElementById('chd').addEventListener('click'", "document.getElementById('chd').addEventListener('pointerup'"));
+  await pp.evaluate("__ex.domMark()");
+  eq([await pp.evaluate("__ex.sheetOpen('ETHUSD','child','click')"), await pp.evaluate("__ex.sheetInfo('ETHUSD').open")], ["clicked", false], "probe: click() alone does not open a pointer-only row");
+  let dd = await pp.evaluate("__ex.domDiff()");
+  eq([dd.n_new, dd.details_tabs, dd.chain[0].startsWith("div")], [0, 0, true], "probe: nothing new after the click; chain starts at the tapped cell");
+  await pp.evaluate("__ex.domMark()");
+  eq([await pp.evaluate("__ex.sheetOpen('ETHUSD','child','pointer')"), await pp.evaluate("__ex.sheetInfo('ETHUSD').open"), await pp.evaluate("window.__danger")], ["tapped", true, 0], "probe: the touch-style tap opens it; nothing denied clicked");
+  dd = await pp.evaluate("__ex.domDiff()");
+  eq([dd.n_new > 0, dd.details_tabs, dd.leaves.some((x) => /Position details/.test(x)), /\d/.test(JSON.stringify(dd.leaves))], [true, 1, true, false], "probe: the new sheet's texts are listed, digits masked");
   await b.close(); console.log("exec_check: all passed");
 })().catch((e) => { console.error(e); process.exit(1); });
