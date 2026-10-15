@@ -1998,6 +1998,24 @@ GUARDS: List[Dict[str, Any]] = [
         ],
     },
     {
+        "name": "same-symbol-allocation-guard",
+        # Operator 2026-10-15 (re-scoped ~20:25Z): legs MAY share a netted position if we know how much of it belongs
+        # to each strategy. Whole-tree: a shared (account, symbol) needs slice support for the account (empty until lane
+        # NETTED-SLICES lands its config) or a committed allocation-weights record in comms/same_symbol_allocation/.
+        # Today's pairs are grandfathered BY NAME with the unit that feeds them and a due date inside the script.
+        # Checklist row SAME-SYMBOL-ALLOCATION.
+        "when": {"globs": [
+            "config/accounts.yaml",
+            "config/strategies.yaml",
+            "comms/same_symbol_allocation/**",
+            "scripts/ci/check_same_symbol_allocation.py",
+        ]},
+        "steps": [
+            ["python3", "scripts/ci/check_same_symbol_allocation.py", "--self-test"],
+            ["python3", "scripts/ci/check_same_symbol_allocation.py"],
+        ],
+    },
+    {
         "name": "prop-roster-gate-guard",
         # Operator 2026-10-15 ("Yes, 1, 2 and 3a"; "the prop accounts should have a higher bar to clear
         # because of the DD limits"): a leg added to an `account_class: prop` roster needs a Stage-1 soak
