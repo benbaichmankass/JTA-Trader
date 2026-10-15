@@ -145,7 +145,7 @@ def run(unit_path: Path, out_dir: Path) -> int:
 
     try:
         src = bs._backtest_data_source.resolve_or_refuse(symbol, "5m", h.get("data"))
-    except Exception as exc:  # noqa: BLE001
+    except (OSError, ValueError, KeyError) as exc:  # allow-silent: not swallowed -- landed as read_state=unavailable with the reason in verdict.json
         return finish({"verdict": "indeterminate", "reason": f"data source: {exc}"},
                       f"{symbol} {legs}", "null", read_state="unavailable")
     if not src.ok:
