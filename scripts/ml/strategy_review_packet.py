@@ -1189,6 +1189,13 @@ def decide(
     # the exact "N days at stage" construct CLAUDE-RULES-CANONICAL § "Promotion
     # evidence" clause 3 forbids. `shadow_soak_days` is still accepted (callers
     # pass it) and decides nothing. The soak rule: OPERATING-PLAN § 2.
+    # Clause 3's remedy is "computed + reported, non-blocking", so the days are
+    # REPORTED on a promote and gate nothing.
+    if decision.action == "promote" and execution == "shadow":
+        decision.reasons.append(
+            f"context only, not a gate: {shadow_soak_days}d in shadow (a soak is mechanical, "
+            "1-2 clean trades -- OPERATING-PLAN § 2)."
+        )
 
     # --- Override 5: TUNE BEFORE DEMOTE (operator directive 2026-08-23).
     #

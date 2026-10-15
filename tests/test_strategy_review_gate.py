@@ -273,7 +273,7 @@ class TestOverrides:
         short = decide(h, cells, _diag(), execution="shadow", shadow_soak_days=5)
         long_ = decide(h, cells, _diag(), execution="shadow", shadow_soak_days=60)
         assert short.action == long_.action
-        assert not any("shadow soak" in r for r in short.reasons)
+        assert not any("requires" in r and "soak" in r for r in short.reasons)
 
 
 # ---------------------------------------------------------------------------
