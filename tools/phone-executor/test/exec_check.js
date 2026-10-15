@@ -357,6 +357,31 @@ document.getElementById('cf').onclick=function(){window.__confirm=(window.__conf
   eq(await rQ("window.__tpcell || 0"), 0, "tpsl Q: the Positions 'TP / SL' header and cell are never clicked");
   eq(await rQ("__ex.cancelModals()"), 1, "tpsl Q: the Edit Take profit dialog is cancelled");
   eq([await rQ("window.__cancel || 0"), await rQ("window.__confirm || 0"), await rQ("__ex.cancelModals()")], [1, 0, 0], "tpsl Q: Cancel clicked once, Confirm never; nothing left to cancel");
+  // PHONE-FGS-EXEC (12:56Z, account_status stale since 11:38): a finished ticket left the order form open on the engine
+  // page, so terminal().ticketOpen stayed true and readAccount read "busy". closeTicket clicks the ONE "Order form"
+  // toggle outside the form (never the submit, never inside the form); terminal() then reads the form closed.
+  const idleForm = `<!doctype html><html><body><button id=tg>Order form</button><button>Open orders</button><button>Positions1</button>
+<form id=f><div role=tablist><button type=button role=tab aria-selected=false>Market</button><button type=button role=tab aria-selected=true>Limit</button></div>
+<label for=lp>Limit price</label><input id=lp type=text value="2,295.99"><label for=q>Quantity</label><input id=q type=text value="0.01">
+<button type=submit id=sub>Long (buy) ETH</button></form>
+<script>document.getElementById('tg').onclick=function(){window.__toggle=(window.__toggle||0)+1;var f=document.getElementById('f');f.style.display=f.style.display==='none'?'':'none';};
+document.getElementById('sub').onclick=function(){window.__subclick=(window.__subclick||0)+1;};
+document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__submitted=(window.__submitted||0)+1};</script></body></html>`;
+  const pI = await onHost(idleForm); const rI = (code) => pI.evaluate(code);
+  eq(await rI("__ex.terminal().ticketOpen"), true, "idle form: the left-open order form reads as a ticket");
+  eq(await rI("__ex.closeTicket()"), "clicked", "idle form: its panel toggle is clicked");
+  eq([await rI("__ex.terminal().ticketOpen"), await rI("__ex.terminal().ready"), await rI("__ex.closeTicket()")], [false, true, "closed"], "idle form: closed, terminal still ready, nothing left to close");
+  eq([await rI("window.__toggle || 0"), await rI("window.__subclick || 0"), await rI("window.__submitted || 0")], [1, 0, 0], "idle form: one toggle click, the submit never clicked, nothing submitted");
+  // manager 13:03Z: never while a stray modal is open, never a toggle inside one. An Edit Take profit dialog holding its
+  // own "Order form" button is open: closeTicket refuses (modal_open, nothing clicked); dismissModals cancels it by the
+  // shared rule, then only the panel tab is clicked.
+  const pIm = await onHost(idleForm.replace('<form id=f>', '<div role=dialog id=dm><h3>Edit Take profit</h3><button id=dmo>Order form</button><button id=dmc>Cancel</button><button id=dmf>Confirm</button></div><form id=f>')
+    .replace('</script>', "['dmo','dmf'].forEach(function(i){document.getElementById(i).onclick=function(){window.__dlgclick=(window.__dlgclick||0)+1;};});document.getElementById('dmc').onclick=function(){window.__cancel=(window.__cancel||0)+1;document.getElementById('dm').remove();};</script>"));
+  const rIm = (code) => pIm.evaluate(code);
+  eq([await rIm("__ex.closeTicket()"), await rIm("window.__toggle || 0"), await rIm("window.__dlgclick || 0")], ["modal_open", 0, 0], "idle form + modal: refused, nothing clicked");
+  eq([(await rIm("__ex.dismissModals()")).cancelled, await rIm("__ex.closeTicket()")], [1, "clicked"], "idle form + modal: Cancel first, then the panel toggle");
+  eq([await rIm("window.__cancel || 0"), await rIm("window.__dlgclick || 0"), await rIm("window.__toggle || 0"), await rIm("window.__subclick || 0"), await rIm("__ex.terminal().ticketOpen")],
+    [1, 0, 1, 0, false], "idle form + modal: the dialog's Order form / Confirm never clicked, the submit never clicked, form closed");
   // PHONE-FGS-EXEC (manager 12:47Z): the 10:48Z refusal's DOM shape (phone-test-60715df76a4d dump). Ticket on SOL, the
   // "Select market" picker in its own popup, AND an "Edit Take profit" dialog already open with the position's "ETH"
   // label, a "Take profit Quantity" and a "Distance for Trigger" input, Cancel / Confirm. That dialog's "ETH" is the
