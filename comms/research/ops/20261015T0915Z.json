@@ -52,7 +52,7 @@
     ]
   },
   "unlocked": [
-    {"unit": "RQ-20261014-4591-01", "why": "landed producer_failed (no run-manifest.json) on the old Kaggle GPU route, which the KAGGLE-CPU-ROUTE row rebuilt; re-queued last_dispatched_at null, rule untouched, places on kaggle_cpu."},
+    {"unit": "RQ-20261014-4591-01", "why": "landed producer_failed (no run-manifest.json; only the kaggle quota files were committed). The row KAGGLE-CPU-ROUTE records that these units were routed to the Kaggle GPU kernel at the time and that route has since been rebuilt; the cause of the missing manifest itself is UNVERIFIED (no kernel log was read). Re-queued last_dispatched_at null, rule untouched, places on kaggle_cpu."},
     {"unit": "RQ-20261014-4591-06", "why": "same as 4591-01."},
     {"unit": "RQ-20261007-009", "why": "producer_failed: prop_ev_sim default --costs breakout needs entry/stop fields the pairs trades.jsonl rows lack. Added --costs as_given to --common (same arms, grade, seeds, bars); reproduced the ValueError and confirmed the cell passes build_trades. Re-queued."},
     {"unit": "RQ-20261007-080", "why": "producer_failed since 2026-10-08, never noticed (cmd 0 exit 1 in <1s). ROOT CAUSE reproduced in a clean venv with the workflow's deps: tp_revision_sweep.py imports src.runtime.tp_revision -> src/runtime/pipeline.py -> ModuleNotFoundError dotenv. python-dotenv added to research-script-run.yml; script then runs end to end. Re-queued."}
