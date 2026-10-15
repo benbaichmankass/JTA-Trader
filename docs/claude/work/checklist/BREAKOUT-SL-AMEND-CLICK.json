@@ -10,11 +10,13 @@
   "spend_usd": null,
   "tier": 2,
   "prs": [
-    18114
+    18114,
+    18150,
+    18158
   ],
   "blocked_on": [],
-  "note": "[2026-10-15T06:00Z lane] Manager 05:55Z: operator approved #18114 ('you have my okay to change that trade, or the app does'); APK run 38688996127 on main. BASELINE MEASURED 05:54Z /api/bot/prop/status?account_id=breakout_2: app 1b.199, positions_state read via journal (side_source journal, ESTIMATED; ETH short 0.54 @ 2461.52); diag side_unread miss=side (side cell: div.ds-table-cell role=cell, no side word in its attributes). EXPECTED on the #18114 build: positions read with side_source sheet (MEASURED); the first trail amend REFUSES by design at the click gate (SHEET_EDIT_MEASURED=false) after posting amend_sheet_unmeasured; the SL does NOT move until a reviewed flip. Watching.",
-  "updated_at": "2026-10-15T05:56:52Z",
+  "note": "[2026-10-15T06:10Z lane] OBSERVED on 1b.205 (installed 05:59Z), diag 05:59:44Z: sheet_sheet_not_open, tries child:clicked child:no_sheet group:clicked group:no_sheet. The CHILD row 'ETH 5x' IS in the WebView DOM, but click() on either row opened no sheet. Positions still read via the journal (ESTIMATED). No amend attempted yet; one would refuse at the same step, with nothing clicked. Cause unmeasured (pointer-only handler vs a wide WebView layout with no sheet). Probe PR #18158 (claude/breakout-sheet-probe) adds a pointer tap + post-tap DOM diff.",
+  "updated_at": "2026-10-15T06:03:08Z",
   "updated_by": "session_017Y39uF5LuaxBMqq5VtJ9FV",
   "roadmap": [
     "L-PROP"
