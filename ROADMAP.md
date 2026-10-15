@@ -216,7 +216,7 @@
 
 | milestone | status | where we are | next | work note |
 |---|---|---|---|---|
-| **M6** Web app UI (Svelte SPA) and Telegram channels | 🔄 active | SPA is the only consumer; Workflow page serves the checklist and daily brief; overview shows prop equity and open trades. TELEGRAM-CHANNELS (3 channels) is in flight; UI-UPGRADE-1 queued. | Telegram channel re-plumb; fast overview, work-queue snapshot, prop uPnL, nav order (UI-UPGRADE-1). | — |
+| **M6** Web app UI (Svelte SPA) and Telegram channels | 🔄 active | SPA is the only consumer; Workflow page serves the checklist and daily brief; overview shows prop equity and open trades. Telegram runs as three channels (trades / system / manager) with one routing table, one split helper and one settings store (ARCHITECTURE-CANONICAL § Telegram channels); UI-UPGRADE-1 queued. | Observe one /settings change taking effect (TELEGRAM-CHANNELS); fast overview, work-queue snapshot, prop uPnL, nav order (UI-UPGRADE-1). | — |
 
 **Unmapped work** (live rows / open units with no milestone) is counted live by `python3 scripts/ops/roadmap_map.py --report`; backfill is part of the weekly pass.
 

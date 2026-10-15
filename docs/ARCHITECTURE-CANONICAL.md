@@ -875,6 +875,43 @@ Statuses: `pending`, `sent`, `partially_answered`, `answered`,
 `acknowledged`, `expired`, `cancelled`. Stuck-request alert and
 final pre-expiry alert (M1 P1-B) prevent silent expiry.
 
+### Telegram channels
+
+Outbound Telegram is split into **three channels**, each a separate bot chat
+(operator spec 2026-10-09, row `TELEGRAM-CHANNELS`):
+
+| Channel | Bot process that polls it | Carries |
+|---|---|---|
+| `trades` | `ict-claude-bridge` | trade opened / closed / updated for all accounts; the periodic performance snapshot. No prop ticket prompts (retired 2026-10-09) |
+| `system` | `ict-telegram-bot` | the periodic health check, restarts, alerts, no-halt red flags |
+| `manager` | `ict-claude-decision-bot` | the periodic manager update, PR merges, decisions taken under authority, questions for the operator |
+
+* **Routing.** `src/runtime/telegram_channels.py` holds the ONE table, event kind
+  to channel. An unknown kind routes to `system`; an undeliverable channel falls
+  back to `system`; a send that raises on another channel is retried once on
+  `system`. `tests/test_telegram_channels.py` fails when a file that sends is not
+  in the table. Alert-class kinds (`UNMUTABLE`) can never be muted.
+* **Splitting.** `src/runtime/telegram_split.py` splits any message over the
+  4096-character cap on block boundaries and delivers the parts in order; a
+  non-retryable 4xx is counted and, after `MAX_CLIENT_ERRORS`, moved aside with
+  one red flag on `system` instead of being retried forever.
+* **Settings.** `src/runtime/telegram_settings.py` is the one store
+  (`runtime_state/telegram_settings.json`: `muted`, per-update `cadence`,
+  `last_sent`, `updated_at`/`updated_by`) and the one cadence gate (`is_due`);
+  `src/bot/notification_settings_menu.py` is the one `/settings` menu mounted in
+  all three bots. Defaults are today's behaviour (nothing muted, hourly); an
+  absent or unreadable store reads as the defaults. The store is readable
+  through `GET /api/diag/log_file?name=telegram_settings`, and the `system`
+  health check lists any non-default cadence or mute with who changed it last,
+  so a slowed or silenced update is visible without reading the file.
+* **Builders.** Manager update: `scripts/ops/work_digest_now.py`
+  (`ict-work-digest.timer`) composes a needs-you section (only when there is an
+  ask), the research queue (`scripts/ops/research_digest.py`) and the work section
+  (`scripts/ops/work_section.py`: blocked, didn't work, in flight / next, then
+  shipped and verified, the last two capped at five lines so the 4096 trim cannot
+  cut a blocker). Trades snapshot: `src/runtime/trades_snapshot.py`. System health:
+  `render_system_health` in `src/runtime/hourly_report.py`.
+
 ## Deployment and Sync Pipeline
 
 ### Flow
