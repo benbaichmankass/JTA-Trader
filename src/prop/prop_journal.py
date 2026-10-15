@@ -394,6 +394,48 @@ def _supersede_meta(meta: Any) -> Optional[Dict[str, Any]]:
     return cand if isinstance(cand, dict) else None
 
 
+def _phone_trail_meta(meta: Any) -> Optional[Dict[str, Any]]:
+    """The phone trail's state for a ticket (PI-20261015-JWMGXOTH-0001): what stop the trail last ASKED the phone to
+    set, the stop it believes is resting, and the latest replay -- the only place the trail target lived was
+    ``prop_tickets.meta.phone_trail``, which no session-reachable read returned. A projection, not a copy: absent
+    fields are None (never 0); None when the ticket has no trail state at all."""
+    if isinstance(meta, str):
+        try:
+            meta = json.loads(meta)
+        except (TypeError, ValueError):
+            return None
+    tr = meta.get("phone_trail") if isinstance(meta, dict) else None
+    if not isinstance(tr, dict):
+        return None
+
+    def num(v: Any) -> Optional[float]:
+        try:
+            f = float(v)
+        except (TypeError, ValueError):
+            return None
+        return f if f == f else None  # NaN -> None
+
+    am = tr.get("amend") if isinstance(tr.get("amend"), dict) else {}
+    lp = tr.get("last_plan") if isinstance(tr.get("last_plan"), dict) else {}
+    return {
+        "amend_id": am.get("id"),
+        "amend_kind": am.get("kind"),
+        "amend_status": am.get("status"),
+        "amend_sl": num(am.get("sl")),
+        "amend_from_sl": num(am.get("from_sl")),
+        "amend_emitted_at": am.get("emitted_at"),
+        "amend_reported_at": am.get("reported_at"),
+        "replay_sl": num(lp.get("replay_sl")),
+        "last_plan_at": lp.get("at"),
+        "last_plan_action": lp.get("action"),
+        "last_plan_why": lp.get("why"),
+        "resting_sl": num(tr.get("resting_sl")),
+        "resting_tp": num(tr.get("resting_tp")),
+        "human_hold": tr.get("human_hold") or None,
+        "fails": tr.get("fails"),
+    }
+
+
 def list_outbound_tickets(
     *, account_id: Optional[str] = None, status: Optional[str] = None,
     limit: int = 100,
@@ -504,6 +546,9 @@ def list_outbound_tickets(
             # PROP-SUPERSEDE: the candidate a suppressed ticket carries (the
             # executor reads it here; it never opens the DB).
             "supersede": _supersede_meta(tk.get("meta")),
+            # PHONE-TRAIL READ SURFACE (PI-20261015-JWMGXOTH-0001): the trail's asked / resting / replay stop
+            # (None = no trail state on this ticket; each absent field None, never 0)
+            "phone_trail": _phone_trail_meta(tk.get("meta")),
         }
 
     for r in op_rows:
