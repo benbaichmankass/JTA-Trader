@@ -1,0 +1,23 @@
+{
+  "based_on": "20261015T063806605276Z-6b127422.json",
+  "due_when": {
+    "due_date": "2026-10-22",
+    "kind": "date"
+  },
+  "id": "PI-20260930-3QNHBGND-0002",
+  "next_action": "check_observation",
+  "note_2026_10_15": "[lane ORDER-AUDIT-4 (session_01MAn9pCezunefaeMAhzFaGC)] Live read 10:35Z: on every readable account venue qty == open-row qty, so no instance is live. Root cause: no own-leg fill-attribution pass existed. #18279 adds _sweep_open_row_own_leg_fill, a local fills-store read with the rule 'own sl/tp order filled >=95% of the position and the other leg did not'. It closes the row as sl/tp via update_trade, cancels the row's own protection, and cascades the package through the open-leg hold. MERGED no. NEXT: the manager merges #18279; after deploy, grep journalctl for _sweep_open_row_own_leg_fill (0 errors) and confirm diag exchange_positions qty == open-row qty per account.",
+  "observation": {
+    "due_by": "2026-10-22",
+    "how_to_check": "bash scripts/ops/diag_fetch.sh 'journalctl?unit=ict-trader-live&lines=2000' | grep _sweep_open_row_own_leg_fill; diag exchange_positions vs diag journal trades status=open",
+    "what": "after #18279 deploys, ict-trader-live logs no '_sweep_open_row_own_leg_fill' errors, and for every readable account diag exchange_positions qty equals the open-row qty per (symbol, side)"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane PAPER-RESET session_01JjPRfAYQKaocTX3QnHBgnD; dispatched by manager session_01HYq6XtfesZ57VyaQrK6CL1",
+    "rerun": "scripts/ops/diag_fetch.sh 'alpaca_order_history?account_id=alpaca_paper&symbols=SPY&after=2026-09-26T00:00:00Z'  # stop leg 9fe49151 filled while trades row 6131 still open = still present"
+  },
+  "routed_to": "ORDER-AUDIT-4 PR #18279 (HOLD, Tier 2)",
+  "state": "routed",
+  "what": "[money-path/reconciler] A NETTED row whose OWN protective leg fills at the venue stays status=open forever while a sibling row keeps the symbol non-flat. MEASURED 2026-09-30 on alpaca_paper SPY row 6131 (spy_pullback_1h, 8 sh): it got its own GTC OCO on 2026-09-27 (#13115). Alpaca order history shows stop leg 9fe49151 FILLED 8 @ 763.70 at 2026-09-29T15:12:34Z (parent e21f6ca9 canceled). The broker now holds 11 SPY, which is row 4347 alone, yet row 6131 and pkg-51f1eff527d44b2e are still open. The snapshot reconciler keys on (symbol, side) ABSENCE, so it cannot see one of two netted rows go, and nothing reads the row's own leg fill. On alpaca_live the same shape would leave a real-money row open with no position behind it. The one-off repair for 6131 is the PAPER-RESET close (exit_kind sl). This item is the root cause: a fill-attribution pass that closes a row when ITS OWN sl/tp order (or its OCO child) reads filled."
+}
