@@ -270,6 +270,11 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     "bybit_1/ada_pullback_2h": R,
     "bybit_1/trend_donchian_1h": ER,
     "bybit_1/trend_donchian_eth_4h": ER,
+    # 2026-10-15 PROP-GATE-PARITY: the two prop legs enter the Stage-1 soak on bybit_1 with the
+    # SAME exit recipe they run on the prop books (declared 6 R target, TP-REACH-FLOOR fail), so
+    # they inherit the breakout_2 debt lines above verbatim. A visible, deliberate line.
+    "bybit_1/trend_donchian_eth_prop": ER,
+    "bybit_1/trend_donchian_sol_prop": ER,
     "bybit_1/trend_donchian_xrp_4h": R,
     "bybit_1/xrp_pullback_2h": R,
     "ib_paper/ict_scalp_mgc_15m": R,

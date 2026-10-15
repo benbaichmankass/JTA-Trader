@@ -220,7 +220,15 @@ accounts:
     market_type: linear                # USDT-margined linear perpetuals — same
                                        # as bybit_2. set-leverage fires at boot
                                        # via _apply_per_account_leverage.
-    strategies: [trend_donchian_1h, trend_donchian_eth_4h, trend_donchian_xrp_4h, xrp_pullback_2h, ada_pullback_2h]
+    strategies: [trend_donchian_1h, trend_donchian_eth_4h, trend_donchian_xrp_4h, xrp_pullback_2h, ada_pullback_2h, trend_donchian_eth_prop, trend_donchian_sol_prop]
+                                       # 2026-10-15 PROP-GATE-PARITY (Tier-3 roster add on PAPER, operator 'Yes, 1, 2 and 3a'):
+                                       # trend_donchian_eth_prop + trend_donchian_sol_prop join the Stage-1 soak. Operator: "if anything,
+                                       # the prop accounts should have a higher bar to clear because of the DD limits" -- a prop leg must
+                                       # clear everything a real-money leg clears (Stage 0 net of full cost, Stage-1 soak, Gate 2) PLUS the
+                                       # prop EV/survival gate. Both legs went live on breakout_2/tradeify_1/velotrade_1 WITHOUT a bybit_1
+                                       # soak; they STAY LIVE there while this soak accrues (3a). Contracts: SOAK-stage1-bybit_1-<leg> in
+                                       # docs/claude/work/SOAKS.json; row PROP-GATE-PARITY. ROLLBACK: drop the two names. bybit_2 /
+                                       # bybit_portfolio / alpaca rosters untouched (mirror equality tests).
                                        # 2026-10-05 MD-S1-CUT-ON-STAGE0-FAIL (operator grant
                                        # 2026-10-04, PR #16548) REMOVED 10 legs whose Stage-1 soak
                                        # was complete and whose Stage-0 record fails:

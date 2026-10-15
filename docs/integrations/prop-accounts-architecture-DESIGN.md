@@ -99,6 +99,16 @@ A new step, **required** by the `backtesting` and `new-strategy` skills:
   Binance-spot proxy with realised-only-optimistic EV. (Tier-3 — DRAFT PR,
   operator-approved before merge/deploy.)
 
+**Prop gate = SUPERSET of the real-money ladder (operator, 2026-10-15, binding).** The compat-matrix /
+EV-survival gate above is NOT the whole bar and never a lower one. A leg reaching a prop roster must
+also clear Stage 0 net of the full cost stack, a Stage-1 soak (`bybit_1`; `alpaca_paper` where relevant)
+with realized cost matching the backtest, and the Gate-2 criteria — and THEN the prop EV/survival gate
+against the firm's DD limits, recorded as `comms/prop_survival/<leg>.json`. Enforced by
+`prop-roster-gate-guard` (`scripts/ci/check_prop_roster_gate.py`). `trend_donchian_eth_prop` /
+`trend_donchian_sol_prop` are grandfathered by name (soak due 2026-11-07 / 2026-12-11) and stay live on the
+prop books while the bybit_1 soak accrues; a soak FAIL proposes pulling them (data-backed Tier-3). Row
+`PROP-GATE-PARITY`.
+
 ## 3. Per-account trade ticket + discrepancy flagging
 
 One signal → a `PropTicket` that is a **list of per-account instructions**:

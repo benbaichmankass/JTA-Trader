@@ -1,6 +1,6 @@
 {
  "_comment": "SOAK CONTRACTS \u2014 definitions of done, NOT state. State is computed live by scripts/ops/soak_state.py::soak_states(). Guarded by scripts/ci/check_soak_contracts.py.",
- "as_of": "2026-10-10",
+ "as_of": "2026-10-15",
  "soaks": [
   {
    "account": "alpaca_paper",
@@ -1128,6 +1128,42 @@
    "recommended_fix": "enabled: false \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract",
    "started": "2026-05-24",
    "verifies": "signal parity: the live shadow signal rate matches the backtest's trade rate"
+  },
+  {
+   "account": "bybit_1",
+   "design": "too_long",
+   "duration_days": 23,
+   "end_date": "2026-11-07",
+   "expected_per_week": 3.13,
+   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents ; or live-vs-backtest divergent => propose pulling the leg from prop rosters (data-backed Tier-3)",
+   "id": "SOAK-stage1-bybit_1-trend_donchian_eth_prop",
+   "kind": "stage1",
+   "leg": "trend_donchian_eth_prop",
+   "metric": "closed trades on bybit_1/trend_donchian_eth_prop (each = one entry + one exit fill)",
+   "n_needed": 10,
+   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2) AND live-vs-backtest consistency (scripts/research/live_vs_backtest.py, PR #18382 -- referenced, not yet on main); PROP-GATE-PARITY",
+   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
+   "recommended_fix": "23d at 3.13 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "started": "2026-10-15",
+   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
+  },
+  {
+   "account": "bybit_1",
+   "design": "too_long",
+   "duration_days": 57,
+   "end_date": "2026-12-11",
+   "expected_per_week": 1.25,
+   "fail_rule": "R3 verdict divergent (CI95 lower > modelled + tolerance), or 0 orders for actionable intents ; or live-vs-backtest divergent => propose pulling the leg from prop rosters (data-backed Tier-3)",
+   "id": "SOAK-stage1-bybit_1-trend_donchian_sol_prop",
+   "kind": "stage1",
+   "leg": "trend_donchian_sol_prop",
+   "metric": "closed trades on bybit_1/trend_donchian_sol_prop (each = one entry + one exit fill)",
+   "n_needed": 10,
+   "pass_rule": "R3 verdict consistent: CI95 upper <= modelled + cost_tolerance_bps (2.0, MD-PROMOTE-S1-S2) AND live-vs-backtest consistency (scripts/research/live_vs_backtest.py, PR #18382 -- referenced, not yet on main); PROP-GATE-PARITY",
+   "power": "R3 floor n=10/side (RULE-R5-SOAK-BOOK-GRADE-v1). A floor, not a computed power: it resolves only a divergence larger than the CI95 width at n=10 (~several bps on these venues)",
+   "recommended_fix": "57d at 1.25 events/week exceeds 14d: pool cost fidelity at the venue level (R3 per_venue cells, n>=20 pooled across legs) instead of per leg, or verify via replay/parity, or do not soak this leg",
+   "started": "2026-10-15",
+   "verifies": "live mechanics + cost fidelity: orders flow, and realized round-trip slippage matches the Stage-0 record's modelled cost"
   }
  ]
 }
