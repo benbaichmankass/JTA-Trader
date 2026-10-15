@@ -87,10 +87,11 @@ def check(queue_dir: Path = _REPO / "research" / "queue", workflow: Path = WORKF
             problems.append(f"R1 {unit}: {e}")
 
     # R2/R3 — each workflow's own surface. The trainer twin holds VM_SSH_KEY (reaching the trainer IS the
-    # point) and nothing else; the runner holds nothing beyond GITHUB_TOKEN.
+    # point) and TABPFN_TOKEN (ML-TABPFN-LICENCE: the Prior Labs weights key, sent over ssh stdin only) and nothing
+    # else; the runner holds nothing beyond GITHUB_TOKEN.
     problems += _check_workflow(workflow, {"GITHUB_TOKEN"})
     if trainer_workflow is not None:
-        problems += _check_workflow(trainer_workflow, {"GITHUB_TOKEN", "VM_SSH_KEY"})
+        problems += _check_workflow(trainer_workflow, {"GITHUB_TOKEN", "VM_SSH_KEY", "TABPFN_TOKEN"})
     # RESEARCH-ROUTER: the Kaggle GPU twin holds KAGGLE_API_TOKEN (the kernel itself receives no secret).
     if kaggle_workflow is not None:
         problems += _check_workflow(kaggle_workflow, {"GITHUB_TOKEN", "KAGGLE_API_TOKEN"})
@@ -195,7 +196,7 @@ def _self_test() -> int:
         assert any("persist-credentials" in p for p in probs), probs
         assert any("secrets.BRANCH_PROTECTION_TOKEN" in p for p in probs), probs
 
-        # ML-RQ-RUNNER: the trainer twin is held to the same surface, and may hold ONLY VM_SSH_KEY extra.
+        # ML-RQ-RUNNER: the trainer twin is held to the same surface, and may hold ONLY VM_SSH_KEY and TABPFN_TOKEN extra.
         twf = yaml.safe_load(TRAINER_WORKFLOW.read_text())
         twf.get("on", twf.get(True))["workflow_dispatch"]["inputs"]["command"] = {"description": "x"}
         tbad = repo / "twf-input.yml"

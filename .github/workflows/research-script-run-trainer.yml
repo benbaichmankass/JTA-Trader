@@ -92,6 +92,8 @@ jobs:
           TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
           UNIT: ${{ inputs.research_unit }}
           HASHES: ${{ steps.plan.outputs.hashes }}
+          # Optional (ML-TABPFN-LICENCE): Prior Labs key for the one-time TabPFN weights download. Unset today -> no-op.
+          TABPFN_TOKEN: ${{ secrets.TABPFN_TOKEN }}
         run: |
           # COMPUTE-GH-FIRST (2026-10-13): GitHub's default shell is `bash -e`; `set -uo pipefail` does NOT clear -e, so a
           # non-zero ssh (the unit's command failing or timing out on the trainer) exited this step at the ssh line and
@@ -124,13 +126,20 @@ jobs:
           echo "== script_run exit: $RC"
           exit $RC
           REMOTE
+          # TABPFN_TOKEN rides the ssh STDIN (a one-line `export` ahead of the fixed script), never argv, never the
+          # remote command string, never a log: the script is not run with -x and nothing echoes the variable. It is
+          # shell-quoted with printf %q. Only a non-empty secret adds the line; the weights cache on the trainer after
+          # the first download, so the token is needed once.
+          { if [ -n "${TABPFN_TOKEN:-}" ]; then printf 'export TABPFN_TOKEN=%q\n' "${TABPFN_TOKEN}"; fi; cat /tmp/remote.sh; } > /tmp/remote_run.sh
+          chmod 600 /tmp/remote_run.sh
           ssh -i ~/.ssh/trainer_key \
               -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
               -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
               "${TRAINER_USER}@${TRAINER_IP}" \
               "UNIT='${UNIT}' RUN_ID='${GITHUB_RUN_ID}' HASHES='${HASHES}' bash -s" \
-              < /tmp/remote.sh > /tmp/out.txt 2>&1
+              < /tmp/remote_run.sh > /tmp/out.txt 2>&1
           RC=$?
+          rm -f /tmp/remote_run.sh
           echo "rc=$RC" >> "$GITHUB_OUTPUT"
           # Public repo: never leave a VM address in a log or an artifact (ssh errors echo it).
           sed -i -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/<ip>/g' /tmp/out.txt
