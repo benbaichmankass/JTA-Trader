@@ -32,6 +32,7 @@ from typing import Any, ClassVar, Iterator, Mapping
 
 from ..builder import DatasetBuilder
 from ..metadata import LeakageStatus
+from ..parquet_sidecar import fresh_sidecar, load_dataset_rows
 from ..sequence_window import SEQ_WINDOW_COLUMN, build_causal_windows
 
 _FAMILY = "market_sequences"
@@ -48,6 +49,9 @@ _CARRY_COLUMNS = ("ts", "symbol", "timeframe")
 
 def _load_jsonl(path: Path) -> list[dict[str, Any]]:
     data_path = path / "data.jsonl"
+    if fresh_sidecar(path) is not None:
+        # market_features writes a data.parquet sidecar (DATA-STORE-PARQUET-GC).
+        return load_dataset_rows(path)
     if not data_path.is_file():
         raise FileNotFoundError(
             f"market_features data.jsonl not found at {data_path}; "
