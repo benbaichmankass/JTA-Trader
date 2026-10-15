@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wiring: research queue units (run.command) -> research-script-run-trainer.yml (reference) and
+# wiring: research/queue/RQ-20261015-8b93-01.yaml + -02.yaml (run.command) -> research-script-run-trainer.yml (reference) and
 #         research-script-run-kaggle-cpu.yml (off-VM); the dispatcher fires both. Row KAGGLE-TRAIN-RUNNER-FIRST.
 """Training-backend PARITY gate: does a manifest trained OFF the trainer VM match the trainer-trained one?
 
@@ -44,7 +44,7 @@ import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 _REPO = Path(__file__).resolve().parents[2]
 if str(_REPO) not in sys.path:
@@ -130,7 +130,7 @@ def _versions() -> Dict[str, Optional[str]]:
     for mod in ("lightgbm", "numpy", "sklearn", "hmmlearn"):
         try:
             out[mod] = getattr(__import__(mod), "__version__", None)
-        except Exception:  # noqa: BLE001 -- an absent optional lib is a recorded fact, not an error
+        except Exception:  # noqa: BLE001  # allow-silent: an absent optional lib is recorded as None in the output, not hidden
             out[mod] = None
     return out
 
@@ -258,7 +258,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             if rec.get("error"):
                 raise RuntimeError(rec["error"])
             rec.update(train_once(manifest_path, data_root(a.datasets_root), a.cutoff, Path(tmp)))
-        except Exception as exc:  # noqa: BLE001 -- recorded and graded producer_failed, never swallowed
+        except Exception as exc:  # noqa: BLE001  # allow-silent: recorded in train_parity.json and graded producer_failed
             rec["error"] = f"{type(exc).__name__}: {exc}"
     (out / RECORD).write_text(json.dumps(rec, indent=1, sort_keys=True) + "\n")
 
