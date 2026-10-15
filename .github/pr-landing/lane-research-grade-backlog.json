@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Session-graded research/queue edits hold for a human under E57 (only a dispatcher stamp or an E58 producer --verify can self-land a queue edit). No decision_rule is edited. 127 of the 139 status edits are byte-identical to what scripts/research/queue_grade.py on lane/research-grade-tooling writes (run it with --write at graded_at 2026-10-15 to reproduce); the rest are session grades with their reason in the grading block: 3 overrides where an independent read of the registered rule disagrees with the producer (RQ-20261012-75b2-25/-27 fail->indeterminate: holdout 0 rows, the rule's INDETERMINATE clause; RQ-20261014-f516-04 indeterminate->fail: the rule's NULL->KILLED branch), RQ-20261014-da7a-01 (MIXED -> indeterminate), 3 hand-written e35 units graded from the corpus, RQ-20261010-353c-04 retired (superseded by RQ-20261011-8025-02), RQ-20261012-75b2-20/-21 re-armed with run.timeout_minutes 45->90, 8 units marked needs_review because their rows measured a generic gate instead of the registered statistic. Adds one blocked follow-up unit (RQ-20261015-1bf3-01, rule registered before any run), checklist ML-REGIME-15M-DRIFT + a RESEARCH-GRADE-PILE note, and 2 pipeline items. Merge this BEFORE lane/research-grade-tooling's first cron grade, or it conflicts on the same unit files.",
+  "why": "RESEARCH-GRADE-BACKLOG: close the 140 queued hand-written units whose results landed but were never graded."
+}
