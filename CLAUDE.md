@@ -181,14 +181,9 @@ STAGE 0  Backtest        offline harness
          evidence record.
                           ▼  GATE 1  ▼
 STAGE 1  Soak             bybit_1 · alpaca_paper
-         Do the MECHANICS work? PASSES on the first 1–2 CLEAN trades (signal
-         fires, right size and side, real SL+TP resting at the venue,
-         management works, exit journaled with a reason, fill + fees
-         recorded). FAILS on a mechanical fault → fix, re-soak. No sample
-         size, no calendar: no signal yet = "awaiting first trade".
-         Realized cost + live-vs-backtest are ONGOING MONITORING (Gate-2
-         demotion signal), not exit criteria. This stage may be wide — it is
-         an instrument, not a decision surface. It is also where legs that
+         Do the MECHANICS work? 1–2 clean trades — no sample size, no
+         calendar (the binding paragraph below). This stage may be wide — it
+         is an instrument, not a decision surface. It is also where legs that
          have not passed shadow live data so we can learn how to tweak them.
                           ▼  GATE 2  ▼
 STAGE 2  Live + mirror    bybit_2 + bybit_portfolio · alpaca_live + alpaca_portfolio
@@ -208,16 +203,14 @@ Never a lower bar. `prop-roster-gate-guard` enforces it on roster adds; `trend_d
 bybit_portfolio together, human merge) after a portfolio-overlap check, with cost checked against Bybit's
 own MEASURED cost for the symbol.
 
-⚠️ **The soak is MECHANICAL — 1–2 clean trades, never a sample, never a date** (operator, 2026-10-15,
-binding: *"A soak is a mechanical verification that was already proven in backtesting, and nothing needs
-to soak for more than one or two trades."*). Contracts: `docs/claude/work/SOAKS.json` (mechanical
-`checklist`, `n_needed` ≤ 2); state: `scripts/ops/soak_state.py` (`passed` · `mechanical_fail` ·
-`in_progress` · `awaiting_first_trade` · `unknown`); `soak-contract-guard` refuses `n_needed` > 2 and any
-`end_date` / `duration_days` / `expected_per_week` / `power`. The accrual design it replaced (n 10, R3
-verdict, end dates into 2029) is retired. ⚠️ The granted `MD-PROMOTE-S1-S2` still asks for a PER-LEG R3
-`consistent` verdict (≥10 fills/side) — an accrual on the promotion path; the amendment that moves it to
-monitoring is PROPOSED in `config/mandates.yaml` (`MD-PROMOTE-S1-S2-SOAK-AMEND`), not granted. *Field beats
-comment:* read the file. See [`docs/plans/OPERATING-PLAN-2026-09-21.md`](docs/plans/OPERATING-PLAN-2026-09-21.md) § 2.
+⚠️ **THE SOAK IS MECHANICAL — 1–2 clean trades, never a sample size, never a date** (operator,
+2026-10-15, binding, verbatim): *"A soak is a mechanical verification that was already proven in
+backtesting, and nothing needs to soak for more than one or two trades."* Realized cost and
+live-vs-backtest are monitoring, never a soak's exit. This rule has been re-taught wrongly four times
+(2026-07-26, 07-28, 09-09, 10-15); it is stated ONCE, in
+[`docs/plans/OPERATING-PLAN-2026-09-21.md`](docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "The soak is
+MECHANICAL" — point at it, never restate it. `soak-contract-guard` refuses a contract with `n_needed` > 2
+or a calendar field; `soak-doctrine-guard` refuses a live doc, skill or generator that teaches a longer soak.
 
 **A live or paper book never establishes edge.** It checks mechanics and cost.
 If a proposal advances a leg on live-book P&L, that is a category error.
@@ -439,7 +432,7 @@ which should never have reached the operator): *"either we have enough data
 to decide, or we don't and then getting that data becomes a task which needs
 to happen so that a decision can be made."* So before asking: is getting the
 missing data itself a well-defined task (a research-queue unit, a Stage-1
-soak placement, a longer accrual window)? If yes, **file it** — no popup —
+soak placement, a replay or backfill)? If yes, **file it** — no popup —
 and only ask when the choice is genuinely a preference no data would settle.
 `scripts/ops/mandate_resolver.py` returns a third verdict, `NEEDS_DATA` (never
 `FIRE`, never a decisive `REFUSE`), naming the exact clause lacking evidence

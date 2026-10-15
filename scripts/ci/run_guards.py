@@ -2226,7 +2226,11 @@ GUARDS: List[Dict[str, Any]] = [
     {
         "name": "soak-doctrine-guard",
         "when": None,
-        "steps": [["python3", "scripts/check_soak_doctrine.py"]],
+        # 2026-10-15 (SOAK-REDEFINE, operator: "I can't keep re-explaining it"): checks E-H scan
+        # every live doc/skill/plan and the soak generators' OUTPUT for the long-soak SHAPE, and
+        # the self-test plants each historical teaching (it must be caught) plus controls.
+        "steps": [["python3", "scripts/check_soak_doctrine.py", "--self-test"],
+                  ["python3", "scripts/check_soak_doctrine.py"]],
     },
     {
         "name": "strategy-coverage-guard",

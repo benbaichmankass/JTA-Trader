@@ -495,12 +495,12 @@ def _soak_data_task(leg: str, soak: Optional[str], mid: str, account: str) -> Di
     return {
         "what": (f"{leg} needs a genuine Stage-1 soak on {soak!r} before {mid} can decide "
                  f"{leg} -> {account}: it must be `execution: live` (not `shadow`) on that "
-                 f"roster, then accrue real fills there -- 'Never a leg that has not soaked "
-                 f"at Stage 1' (the mandate's own `never:`)."),
+                 f"roster, and pass its MECHANICAL soak there -- 'Never a leg that has not "
+                 f"soaked at Stage 1' (the mandate's own `never:`). The soak is 1-2 clean "
+                 f"trades, never a sample size (OPERATING-PLAN § 2 'The soak is MECHANICAL')."),
         "clears_when": (f"config/strategies.yaml::{leg}.execution is not 'shadow' AND {leg} "
-                        f"is on {soak!r}'s roster, with enough real fills there to clear "
-                        f"RULE-R3-GATE1-COST-FIDELITY-v1's floor (>=10 measured entries and "
-                        f">=10 exits per side)"),
+                        f"is on {soak!r}'s roster AND its contract SOAK-stage1-{soak}-{leg} in "
+                        f"docs/claude/work/SOAKS.json reads `passed` (soak_state.soak_states())"),
         "check_every_days": 7,
         "next_action": "dispatch_lane",
     }

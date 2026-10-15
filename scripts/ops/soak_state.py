@@ -110,6 +110,11 @@ PROP_CHECKLIST = ("signal_fired", "order_size_side", "bracket_real_at_venue",
 #: them is refused — a soak never waits on a date or a sample.
 BANNED_FIELDS = ("end_date", "duration_days", "expected_per_week", "power")
 DESIGNS = ("mechanical", "not_soaking")
+#: A pass/fail rule naming any of these is a STATISTICAL exit — the retired design
+#: (R3 cost fidelity, live-vs-backtest, a CI, a sample floor). Refused.
+STATISTICAL_EXIT = re.compile(
+    r"realized cost|cost[- _]fidelity|\bR3\b|slippage|\bbps\b|live[- _]vs[- _]backtest|\bCI ?95\b|"
+    r"\bn ?(>=|≥|=) ?\d|cost_tolerance", re.I)
 #: Bracket / strategy exits (src/analysis/paper_record_classifier.py
 #: _CLEAN_EXIT_REASONS, plus ``giveback_stop`` — the M20 giveback lever, the same
 #: kind of in-strategy exit as ``stale_stop``).
@@ -196,6 +201,10 @@ def contract_problems(c: Dict[str, Any]) -> List[str]:
         if k in c:
             p.append(f"carries `{k}` — a soak has no calendar and waits on no sample "
                      f"(operator 2026-10-15); remove it")
+    for k in ("pass_rule", "fail_rule"):
+        if STATISTICAL_EXIT.search(str(c.get(k) or "")):
+            p.append(f"`{k}` names a cost / live-vs-backtest / sample criterion — those are ONGOING "
+                     "MONITORING, never a soak's exit (OPERATING-PLAN § 2 'The soak is MECHANICAL')")
     if "n_needed" in c and not _n_ok(c.get("n_needed")):
         p.append(f"n_needed must be 1 or 2 (got {c.get('n_needed')!r}) — nothing soaks for more "
                  "than one or two trades")
@@ -220,6 +229,9 @@ def contract_problems(c: Dict[str, Any]) -> List[str]:
                 p.append(f"sources[{i}] carries `{k}` — a soak source has no calendar either")
         if "n_needed" in s and not _n_ok(s.get("n_needed")):
             p.append(f"sources[{i}].n_needed must be 1 or 2")
+        if STATISTICAL_EXIT.search(str(s.get("pass_rule") or "")):
+            p.append(f"sources[{i}].pass_rule names a cost / live-vs-backtest / sample criterion — "
+                     "monitoring, never a soak's exit")
     d = c.get("disposition")
     if d is not None:
         if not isinstance(d, dict):
@@ -665,6 +677,11 @@ def _self_test() -> int:
        any("checklist" in p for p in contract_problems(dict(base, checklist=["signal_fired"]))))
     ck("a prop_live source with n_needed 10 is refused",
        any("sources[0]" in p for p in contract_problems(dict(base, sources=[{"kind": "prop_live", "n_needed": 10}]))))
+    ck("a cost-fidelity pass rule is refused",
+       any("pass_rule" in p for p in contract_problems(dict(base, pass_rule="R3 verdict consistent: CI95 upper <= modelled + 2 bps"))))
+    ck("a live-vs-backtest prop_live pass rule is refused",
+       any("sources[0].pass_rule" in p for p in contract_problems(
+           dict(base, sources=[{"kind": "prop_live", "n_needed": 2, "pass_rule": "live_vs_backtest CONSISTENT"}]))))
     ck("a PASS disposition without trades is refused",
        any("trades" in p for p in contract_problems(dict(base, disposition={
            "verdict": "PASS", "reason": "r", "decided_at": "2026-10-15", "evidence": ["e"]}))))

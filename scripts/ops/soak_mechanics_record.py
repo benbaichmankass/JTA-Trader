@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# wiring: manual-only - a session runs it over read-only diag pulls to write the committed soak evidence record (comms/research/soak_mechanics/); the live state is soak_state.soak_states() on the VM
 """Grade every soak contract MECHANICALLY from a pulled journal, and write a committed evidence record.
 
 Why this exists: soak state is computed live on the VM by

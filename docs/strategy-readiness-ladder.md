@@ -24,8 +24,8 @@ same idea — observe/collect before you let it touch money.
 | Tier | Bar to clear | What runs / happens |
 |---|---|---|
 | **`backtest_only`** | a committed harness result exists | nothing live — just a number on disk |
-| **`paper_ready`** | net-of-fee **positive overall** (7.5 bps) **AND** survives **2× fees** (15 bps) **AND** no single fold *catastrophically* negative | wire to **demo** (`execution: live`, routed to `bybit_1` / a paper account **only**) to accrue real decisions + ML soak + a live track record, **AND** add a row to the **refinement queue** |
-| **`live_money_ready`** | **every** OOS fold positive (strict) **AND** 2× fee headroom **AND** a demo soak window confirming live≈backtest **AND** `account_compat` PASS for the target account | eligible for **real money** (Tier-3, operator-gated) |
+| **`paper_ready`** | net-of-fee **positive overall** (7.5 bps) **AND** survives **2× fees** (15 bps) **AND** no single fold *catastrophically* negative | wire to **demo** (`execution: live`, routed to `bybit_1` / a paper account **only**) to verify the mechanics on its first 1–2 clean trades (and feed ML data), **AND** add a row to the **refinement queue** |
+| **`live_money_ready`** | **every** OOS fold positive (strict) **AND** 2× fee headroom **AND** a PASSED mechanical Stage-1 soak (1–2 clean trades — [`OPERATING-PLAN` § 2](plans/OPERATING-PLAN-2026-09-21.md)) **AND** `account_compat` PASS for the target account | eligible for **real money** (Tier-3, operator-gated) |
 | **`reject`** | net-negative at 7.5 bps, **or** fee-bleed (positive gross / negative once 2× fees bite — the `vwap` failure mode), **or** net-positive overall but a single catastrophic fold | **kill** — don't wire anywhere |
 
 **The "moderate" paper bar** (operator decision 2026-06-18): a fold is

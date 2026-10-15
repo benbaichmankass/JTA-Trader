@@ -107,31 +107,32 @@ one question, and a leg moves only when that question is answered on evidence.
 
 ### The soak is MECHANICAL — 1–2 clean trades, no calendar (operator, 2026-10-15, binding)
 
-Verbatim: *"A soak is a mechanical verification that was already proven in backtesting, and nothing
-needs to soak for more than one or two trades."* Until that day Stage 1 was built as a statistical
-accrual: every contract in `docs/claude/work/SOAKS.json` wanted `n_needed: 10` closes and an R3
-cost-fidelity verdict, with end dates computed from the backtest trade rate — 46 of 50 marked
-`too_long` by their own tooling, some ending in 2027–2029. That design is retired, and the lines of
-this section that read *"Leaves when — … AND realized cost per trade matches the modelled cost"* were
-its source.
+<!-- SOAK-RULE-CANONICAL: the ONE statement of the soak rule. Every other doc points here
+     (soak-doctrine-guard CHECK E refuses a live doc or skill that restates a long soak). -->
 
-- **The contract** (`SOAKS.json`, schema in `scripts/ops/soak_state.py`): a mechanical `checklist`
-  and `n_needed` of 1 or 2. `soak-contract-guard` refuses `n_needed` > 2 and any calendar or accrual
-  field (`end_date`, `duration_days`, `expected_per_week`, `power`).
-- **The state**, computed live by `soak_state.soak_states()` from the journal: `passed` (n_needed clean
-  trades since the last fault) · `mechanical_fail` (the latest graded trade faulted: fix, then
-  re-soak) · `in_progress` · `awaiting_first_trade` (no deadline) · `unknown` (could not look).
-  A reconciler / watchdog / orphan close, an unstamped or naked bracket, a sentinel TP, or an
-  unrecorded fill or fee is a FAULT. An intent-layer reduce row or an operator's manual close is
-  neither clean nor a fault.
-- **Shadow soaks** prove what shadow can: the package is complete (side, entry, real SL and TP) and
-  every rostered account sizes it and records it dry. A passed shadow soak is not a Stage-1 soak.
-- **Live prop trades count** as soak trades (the amendment below).
-- **Migration** (2026-10-15): all 50 contracts re-graded from the live journal, read-only; the
-  evidence is `comms/research/soak_mechanics/2026-10-15.json` (`scripts/ops/soak_mechanics_record.py`).
-- **Not changed by this:** the granted `MD-PROMOTE-S1-S2` still requires the leg's PER-LEG R3 verdict
-  to read `consistent`, which is an accrual of ≥10 fills per side. Changing that is a mandate change,
-  so it is PROPOSED in `config/mandates.yaml` (`MD-PROMOTE-S1-S2-SOAK-AMEND`) for the operator to grant.
+Verbatim: *"A soak is a mechanical verification that was already proven in backtesting, and nothing
+needs to soak for more than one or two trades."*
+
+- **What a soak asks:** do the mechanics work for this leg? Edge was settled offline at Stage 0.
+- **PASS** = the first `n_needed` (1 or 2) CLEAN trades. Clean = the signal fires · the order is placed
+  with the right size and side · a real SL and a real TP rest at the venue · management (trail/amend)
+  does not fault · the exit is journaled with a TP / SL / strategy reason and a price · the fill and
+  fees are recorded.
+- **FAIL** = a mechanical fault (a reconciler / watchdog / orphan close, a naked or unstamped bracket, a
+  sentinel TP, an unrecorded fill or fee). Fix it, then re-soak; the next clean trades pass it.
+- **No sample size, no calendar.** A soak has no end date, no duration, no expected rate and no power
+  calculation. A leg with no trade yet is `awaiting_first_trade` — waiting, not failing.
+- **Realized cost and live-vs-backtest are ONGOING MONITORING** (R3, R5, `live_vs_backtest.py`) — the
+  Gate-2 demotion signal and the underperformer first step. They are never soak exit criteria.
+- **Shadow** legs prove what shadow can (a complete package, sized and recorded dry on every rostered
+  account); a passed shadow soak is not a Stage-1 soak. **Live prop trades count** as soak trades.
+- **Where it lives:** contracts `docs/claude/work/SOAKS.json` (a mechanical `checklist`, `n_needed` ≤ 2);
+  state `scripts/ops/soak_state.py::soak_states()` (`passed` · `mechanical_fail` · `in_progress` ·
+  `awaiting_first_trade` · `unknown`); guards `soak-contract-guard` (the contracts) and
+  `soak-doctrine-guard` (the docs, skills and generators).
+- **Open:** the granted `MD-PROMOTE-S1-S2` still reads a per-leg R3 `consistent` verdict (a cost sample).
+  Its amendment is PROPOSED in `config/mandates.yaml` (`MD-PROMOTE-S1-S2-SOAK-AMEND`); granting it is the
+  operator's.
 
 **Stage 2 is one stage, not two.** The mirror and the live account carry the
 same strategies and take the same trades at all times (operator, 2026-09-21).
@@ -177,23 +178,6 @@ a PR adding the leg to bybit_2 **and** bybit_portfolio together (mirror equality
 and the evidence record must first carry a **portfolio-overlap check** (e.g. `trend_donchian_eth_prop` 1h beside
 `trend_donchian_eth_4h`: signal/return correlation and combined drawdown). The bybit_1 soak stays as a parallel
 source; contracts carry both (`sources` in `SOAKS.json`). This PR promotes nothing.
-
-### Why the cheap gate is cost-fidelity, not profitability
-
-> ⚠️ **SUPERSEDED 2026-10-15** by "The soak is MECHANICAL" above: the Stage-1 gate is the mechanical
-> checklist on 1–2 clean trades; cost fidelity is ongoing monitoring. Kept as the record of the
-> reasoning it replaced — the argument below (cost converges faster than expectancy) still explains
-> why R3 is a useful MONITOR, not why it should hold a soak open.
-
-A 1d leg makes 10–30 trades a year. It can never establish expectancy on a
-paper book in usable time — which is why 16 of 55 legs are structurally
-ungradeable today.
-
-But *"is realized slippage what we assumed?"* converges in a handful of trades,
-because it measures a per-trade cost quantity rather than a distribution of
-outcomes. That is what makes the ladder traversable for the slow legs.
-
-⚠️ **It only works if Stage 0 models the full cost stack** — see D1.
 
 ### Two structural facts about the roster
 
@@ -566,11 +550,11 @@ run — showing **all three**:
 2. **Positive in a majority of walk-forward folds.**
 3. **Stage-1 realized cost within a stated tolerance of the modelled cost.**
 
-⚠️ **Clause 3 is the one this system has never had**, and it is the cheap one:
-it converges in a handful of trades because it measures a per-trade quantity
-rather than a distribution. It is also the clause that makes clauses 1 and 2
-mean anything — an expectancy computed against a cost the venue does not charge
-is not an expectancy.
+⚠️ **Clause 3 is a PROMOTION clause, not a soak exit** (§ 2 "The soak is
+MECHANICAL"): a soak passes on 1–2 clean trades and never waits for a cost
+sample. How clause 3 is measured — per leg (R3's fill floor, as granted) or
+against the venue's measured cost for the symbol — is the proposed amendment
+`MD-PROMOTE-S1-S2-SOAK-AMEND` in `config/mandates.yaml`, the operator's to grant.
 
 **THE CAP.** Total declared risk across **auto-promoted** legs may not exceed
 <!-- population-ok: a configured ceiling or threshold the operator chose, not a measurement -->
@@ -701,7 +685,7 @@ deletion and rewiring; nothing new gets built until C.
 | **B1** | **Invert the execution-gate guard.** Demotion becomes free. A new guard blocks any leg reaching a Stage-2 roster without a fresh evidence record that clears its declared bar. **This is the load-bearing change.** | operator + build lane |
 | **B2** | **Decide what the Alpaca mirror is FOR, then make its invariant say that.** ⚠️ Re-scoped 2026-09-21: the first draft said *"extend the Bybit roster-sync test"* on the false premise that no invariant existed. One does — a deliberate SUBSET assertion (`test_alpaca_portfolio_mirrors_alpaca_live_minus_proxies`) that protects real money and does not make the mirror representative. Live 5 legs vs mirror 14, so Gate 2's demotion signal cannot be read off the mirror's aggregate. The test argues against blind equality during a staged go-live and that argument must be answered, not overwritten. | operator + build lane |
 | **B3** | **R4 as the demotion gate.** Flip to enforcing, pointed at demotion rather than promotion. Recommended 2026-07-30, built, shipped observe-only, never armed. | operator + build lane |
-| **B4** | **Re-scope the review packet.** Grade Stage 2 on money and Stage 1 on cost fidelity. Without this it keeps grading 52 legs against a 20-trade floor and emitting nothing, forever. | build lane |
+| **B4** | **Re-scope the review packet.** Grade Stage 2 on money and Stage 1 on mechanics (§ 2 "The soak is MECHANICAL"; cost fidelity is monitoring). Without this it keeps grading 52 legs against a 20-trade floor and emitting nothing, forever. | build lane |
 | **B5** | **The mandate mechanism** (`config/mandates.yaml` + a resolver + a guard). A standing authorization the operator grants ONCE that lets the system act inside stated bounds without asking again. `direction: derisk_only` mandates carry no rate ceiling because their worst case is trading less than we could; `add_risk` mandates carry a hard cap on total risk added, a per-leg size bound and a count. Every action records which mandate authorized it. **Pairs with B1** — the guard that requires evidence before a Stage-2 roster is the same guard that reads what is already authorized. | operator + build lane |
 
 ### PHASE C — unblock the research loop (week 2)
@@ -730,7 +714,7 @@ Full statements: [`RESEARCH-PLAN-2026-09-21.md`](RESEARCH-PLAN-2026-09-21.md) ·
 | **E9** | Retire the 67 orphaned guard scripts. Low priority; the reference sweep is the job. | build lane |
 | **R1** | **Re-run the corpus with costs on.** Nothing real depends on anything else until this is done. | research lane |
 | **R2** | Cut the fleet to what passes — an observation that `MD-DEMOTE-S1-OFF` fired correctly, not a separate decision. | manager |
-| **R3** | Cost fidelity as the standing Gate-1 test. What makes the ladder traversable for slow legs. | build lane |
+| **R3** | Cost fidelity as a standing MONITOR of every Stage-1/2 book (feeds the demotion mandates). It is not a soak exit — § 2 "The soak is MECHANICAL". | build lane |
 | **R4** | The first ten pre-registered questions. | operator + manager |
 | **R5** | **Read the soak book on a cadence.** Operator-named, never built. | build lane |
 | **R6** | Decide whether to trade at all right now. An empty live roster is an acceptable outcome. | operator |
@@ -741,7 +725,7 @@ Full statements: [`RESEARCH-PLAN-2026-09-21.md`](RESEARCH-PLAN-2026-09-21.md) ·
 |---|---|---|
 | **D1** | **Flip the cost defaults on, and re-run.** `src/runtime/execution_costs.py` models fee + slippage + funding correctly; the harnesses set slippage and funding to `0.0` by default, deliberately, for backward compatibility. So every "passed the backtest" verdict in the corpus is fee-only and optimistic by an unknown amount — measured once at +0.57R on the one leg anyone checked. 6 of 13 harnesses have no cost terms at all, including the `vwap` harness. | research lane |
 | **D2** | **Cut Stage 2 to what actually passes.** Depends on D1 — until the re-run we do not know which legs clear Stage 0. Today 3 of 44 meet the `live_money_ready` bar and none is on `bybit_2`. | operator + build lane |
-| **D3** | **Cost-fidelity job.** Weekly: compare each Stage-1 leg's realized cost against its harness assumption. This *is* Gate 1. Build only once D1 has given it something to compare to. | build lane |
+| **D3** | **Cost-fidelity job.** Weekly: compare each Stage-1 leg's realized cost against its harness assumption — ongoing monitoring, not a soak exit (§ 2). Build only once D1 has given it something to compare to. | build lane |
 
 > **What deferring Phase D costs, stated rather than buried:** until D2, real
 > money keeps running legs that fail their current evidence bar. **A6 pulls the

@@ -797,7 +797,7 @@ three buckets — never skip straight to drafting the question:
    in `docs/claude/work/PIPELINE.jsonl` via `scripts/ops/pipeline.py`, with a
    `clears_when` that states exactly what would settle it and an
    `origin.rerun` that re-asks the same question — a research-queue unit, a
-   Stage-1 soak placement proposal, or a longer accrual window. `#13698`'s
+   Stage-1 soak placement proposal, or a replay/backfill. `#13698`'s
    own case: `scripts/ops/mandate_resolver.py` now returns a THIRD verdict,
    `NEEDS_DATA` (never `FIRE`, never a decisive `REFUSE`), names the exact
    clause that lacks data, and `needs_data_pipeline_item()` /
@@ -853,7 +853,7 @@ manager skill so all the managers pick it up."*
 
 **Why.** MEASURED 2026-10-04: 366 pipeline items due, 151 unrouted, 25
 `ask_operator` items that had never reached the operator, 36 of 45 Stage-1
-soak legs with no end date, and a 737 KB brief that nobody read. Every
+soak legs with no definition of done, and a 737 KB brief that nobody read. Every
 attention signal was a page someone had to choose to open. Now the **VM
 computes due and pushes it**, and **silence is itself an alarm**.
 
@@ -864,7 +864,7 @@ sends ONE message per hour. The operator decided on 2026-10-04 to fold everythin
 second digest timer, ever. The message is built in this order:
 1. **🆕 NEW since the last digest.** These are the actionable edges, from `scripts/ops/attention_watch.py`:
    - a new `ask_operator` item;
-   - a soak moving to `ready`, `overdue` or `dead`;
+   - a soak moving to `passed` or `mechanical_fail`;
    - an expected-signal alarm breaching or clearing, when:
      - the R5 grade is 8 or more days old;
      - no research result has landed in 36h;
@@ -876,8 +876,8 @@ second digest timer, ever. The message is built in this order:
 3. **Otherwise one line:** "🟢 No new actionable items", plus the open counts.
    - **No edge set is seeded silently.** On its first pass, the watch sends one
      count line for each set that already exists at deploy, e.g. "❓
-     ask_operator at deploy: N open", "🧪 Soaks at deploy: N ready · N overdue
-     · N dead". Alarms need no seed line: the first pass reports every alarm
+     ask_operator at deploy: N open", "🧪 Soaks at deploy: N passed · N
+     mechanical_fail". Alarms need no seed line: the first pass reports every alarm
      that is breached.
 4. **Then "what changed".** This is the change digest that existed before:
    checklist transitions and the standing close-wedge ledger.
@@ -975,23 +975,23 @@ what is blocked and on what>) then fire_trigger(<id>). If that prompts, comment 
 Then continue, or run close-out. Never stop to wait for direction.
 ```
 
-### The soak contract — a MECHANICAL check, 1–2 clean trades
+### The soak contract — what the manager does with each state
 
-Operator, 2026-10-15 (binding, verbatim): *"A soak is a mechanical verification
-that was already proven in backtesting, and nothing needs to soak for more than
-one or two trades."* A Stage-1 placement needs a contract in
-`docs/claude/work/SOAKS.json` carrying **the mechanical checklist** (signal
-fires · right size and side · real SL+TP resting at the venue · management
-works · exit journaled with a reason · fill and fees recorded) and **`n_needed`
-of 1 or 2**. No event rate, no power, no end date: `soak-contract-guard`
-refuses them. `soak_state.py` computes the state live: `passed` → the leg is a
-promotion candidate (`MD-PROMOTE-S1-S2`, read its file for what it still
-requires) · `mechanical_fail` → fix the fault, then re-soak (never wait it out) ·
-`awaiting_first_trade` / `in_progress` → quiet, no deadline, not failing. Edge
-is never read off a soak; realized cost (R3/R5) and live-vs-backtest are
-ONGOING MONITORING that feeds the demotion mandates. A grade's `kill` calls
-(e.g. R5) are applied under `MD-DEMOTE-S1-OFF` / `MD-KILL-QUESTION`, or filed
-with a reason. They are never just read.
+The soak rule is stated once: [`OPERATING-PLAN` § 2 "The soak is
+MECHANICAL"](../../../docs/plans/OPERATING-PLAN-2026-09-21.md). Do not restate
+it in a dispatch, a row note or a contract; point at it. A Stage-1 placement
+needs a contract in `docs/claude/work/SOAKS.json`
+(`python3 scripts/ops/soak_state.py --backfill` writes it). What to do per live
+state (`soak_state.soak_states()`):
+- `passed` → the leg is a promotion candidate: run `MD-PROMOTE-S1-S2` (read the
+  file for what it still requires).
+- `mechanical_fail` → dispatch the fix; the next clean trades re-soak it. Never
+  wait it out.
+- `awaiting_first_trade` / `in_progress` → nothing; no deadline.
+- `unknown` → we could not look; find out why.
+
+A grade's `kill` calls (e.g. R5) are applied under `MD-DEMOTE-S1-OFF` /
+`MD-KILL-QUESTION`, or filed with a reason. They are never just read.
 
 ### Decision batching
 
