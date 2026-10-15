@@ -441,10 +441,10 @@ milestones:
     status: active
     where: >-
       SPA is the only consumer; Workflow page serves the checklist and daily brief; overview shows prop equity and open trades.
-      TELEGRAM-CHANNELS (3 channels) is in flight; UI-UPGRADE-1 queued.
-    next: Telegram channel re-plumb; fast overview, work-queue snapshot, prop uPnL, nav order (UI-UPGRADE-1).
+      Telegram runs as three channels (trades / system / manager) with one routing table, one split helper and one settings store (ARCHITECTURE-CANONICAL § Telegram channels); UI-UPGRADE-1 queued.
+    next: Observe one /settings change taking effect (TELEGRAM-CHANNELS); fast overview, work-queue snapshot, prop uPnL, nav order (UI-UPGRADE-1).
     owner: manager
-    reviewed: 2026-10-11
+    reviewed: 2026-10-15
 
 # First match wins. Units that carry an explicit `roadmap:` key never reach these rules.
 queue_rules:

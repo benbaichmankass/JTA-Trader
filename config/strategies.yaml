@@ -1268,7 +1268,15 @@ strategies:
     # Same entries as trend_donchian_sol; ONLY the exits are tightened to the
     # eth_pullback_prop_2h recipe (trail_mult 3.5, tp_r 6.0 vs the live 5.0/50.0).
     # GRADUATED to live 2026-08-13 (the prop EV/survival gate passed — see the
-    # execution line). ROLLBACK: set execution: shadow (observe-only) — one field,
+    # execution line). ⚠️ CORRECTED 2026-10-15 (operator, "Yes, 1, 2 and 3a"): the prop
+    # EV/survival gate is NOT a lower bar than real money — it is a SUPERSET: a prop
+    # leg must ALSO clear Stage 0 net of full cost, a Stage-1 soak and Gate 2 ("if
+    # anything, the prop accounts should have a higher bar to clear because of the DD
+    # limits"). This leg reached prop WITHOUT the bybit_1 soak, so it is now soaking
+    # there (SOAK-stage1-bybit_1-trend_donchian_sol_prop, due 2026-12-11, row
+    # PROP-GATE-PARITY) while it STAYS LIVE on the prop books; a soak FAIL proposes
+    # pulling it (data-backed Tier-3). Guard: prop-roster-gate-guard.
+    # ROLLBACK: set execution: shadow (observe-only) — one field,
     # no redeploy. To fully retract, also remove this block + the breakout_1
     # routing + the builder/registry/intents entries.
     model: null
@@ -1314,7 +1322,15 @@ strategies:
     # short-side-dependent, the long-only A/B flipped it negative); ONLY the exits
     # are tightened to the eth_pullback_prop_2h recipe (trail_mult 3.5, tp_r 6.0
     # vs the live 5.0/50.0). GRADUATED to live 2026-08-13 (the prop EV/survival
-    # gate passed — see the execution line). ROLLBACK: set execution: shadow
+    # gate passed — see the execution line). ⚠️ CORRECTED 2026-10-15 (operator, "Yes, 1,
+    # 2 and 3a"): that gate is NOT a lower bar than real money — it is a SUPERSET: a prop
+    # leg must ALSO clear Stage 0 net of full cost, a Stage-1 soak and Gate 2 ("if
+    # anything, the prop accounts should have a higher bar to clear because of the DD
+    # limits"). This leg reached prop WITHOUT the bybit_1 soak, so it is now soaking
+    # there (SOAK-stage1-bybit_1-trend_donchian_eth_prop, due 2026-11-07, row
+    # PROP-GATE-PARITY) while it STAYS LIVE on the prop books; a soak FAIL proposes
+    # pulling it (data-backed Tier-3). Guard: prop-roster-gate-guard.
+    # ROLLBACK: set execution: shadow
     # (observe-only) — one field, no redeploy. To fully retract, also remove this
     # block + the breakout_1 routing + the builder/registry/intents entries.
     model: null

@@ -4598,6 +4598,27 @@ def quote_from_watchlist_rows(got: Mapping[str, Any], venue_symbol: str) -> Opti
     return quote_from_tables([{"headers": headers, "rows": rows}], venue_symbol)
 
 
+def spread_bps(bid: float, ask: float) -> Optional[float]:
+    """(ask - bid) / mid in basis points, or None for a quote that is not 0 < bid <= ask."""
+    if not (bid > 0 and ask >= bid):
+        return None
+    return (ask - bid) / ((ask + bid) / 2.0) * 10_000.0
+
+
+def quote_spread_summary(quotes: Sequence[Mapping[str, float]], samples: int) -> Dict[str, Any]:
+    """Median / min / max spread (bps) and the median mid over the parsed reads. Pure; tested."""
+    pairs = [(spread_bps(q["bid"], q["ask"]), (q["bid"] + q["ask"]) / 2.0) for q in quotes
+             if q and "bid" in q and "ask" in q]
+    pairs = [(b, m) for b, m in pairs if b is not None]
+    if not pairs:
+        return {"read": "none", "n_ok": 0, "n_tried": samples}
+    bps = sorted(b for b, _ in pairs)
+    mids = sorted(m for _, m in pairs)
+    return {"read": "ok", "n_ok": len(pairs), "n_tried": samples,
+            "spread_bps": round(bps[len(bps) // 2], 3), "spread_bps_min": round(bps[0], 3),
+            "spread_bps_max": round(bps[-1], 3), "mid": round(mids[len(mids) // 2], 6)}
+
+
 def quote_diagnostics(tables: Sequence[Mapping[str, Any]], venue_symbol: str) -> Dict[str, Any]:
     """Why :func:`quote_from_tables` found nothing, for the run log. Market
     data only: the headers of every table with a Symbol column, and the raw
@@ -5701,6 +5722,37 @@ class DXtradeAdapter(PropPlatformAdapter):
         first; else the virtualised grid's rows (#13898)."""
         return (quote_from_tables(self._tables(page), venue_symbol)
                 or quote_from_watchlist_rows(self._watchlist_rows(page, venue_symbol), venue_symbol))
+
+    def quote_spread(self, page: Any, symbols: Sequence[str], *, samples: int = 3,
+                     gap_ms: int = 1_000) -> Dict[str, Any]:
+        """READ-ONLY (TRADEIFY-INSTR-SPECS, manager go 2026-10-15 20:21Z): the
+        quoted spread of each watchlist symbol, from the same ``read_quote``
+        the trail and the executor use. Clicks, hovers and types NOTHING.
+
+        Numeric-safe emit: per symbol only ``spread_bps`` (ask - bid over mid,
+        in bps; the median of ``samples`` reads ``gap_ms`` apart, plus the min
+        and max) and ``mid``. No account figure is read at all. A symbol with
+        no parsed quote reports ``read: none`` -- "we could not look", never 0.
+        """
+        out: Dict[str, Any] = {"mode": "quote_spread", "symbols": [], "results": {}}
+        for raw in dict.fromkeys(str(x).strip().upper() for x in symbols if str(x).strip()):
+            out["symbols"].append(raw)
+            got: List[Dict[str, float]] = []
+            for i in range(max(1, samples)):
+                try:
+                    q = self.read_quote(page, raw)
+                except Exception as exc:
+                    out["results"][raw] = {"read": "error", "error": type(exc).__name__}
+                    got = []
+                    break
+                if q:
+                    got.append(q)
+                if i + 1 < samples:
+                    page.wait_for_timeout(gap_ms)
+            if raw in out["results"]:
+                continue
+            out["results"][raw] = quote_spread_summary(got, samples)
+        return out
 
     def quote_diagnostics(self, page: Any, venue_symbol: str) -> Dict[str, Any]:
         """Read-only: what the watchlist looked like when no quote parsed."""

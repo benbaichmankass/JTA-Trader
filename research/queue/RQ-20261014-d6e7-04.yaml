@@ -2,7 +2,7 @@ id: RQ-20261014-d6e7-04
 title: >-
   In-trade exit line, rung 4: do momentum / ADX-slope / range / regime features in the in-trade state predict SL-before-TP beyond
   the distance-only reference -- the operator's 'momentum suddenly turns'?
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -114,3 +114,17 @@ related:
 - >-
   RQ-20261014-da7a-01 (PR #18112: is SL-first on a shared bar a material label error -- this unit's labels use SL-first)
 last_dispatched_at: '2026-10-15T14:01:33+00:00'
+grading:
+  attested: RULE-RQ20261014-D6E7-04-RICH-STATE-VS-DISTANCE
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261014-D6E7-04-RICH-STATE-VS-DISTANCE
+  evidence:
+  - research/results/RQ-20261014-d6e7-04/38747778982.jsonl
+  graded_at: '2026-10-15'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

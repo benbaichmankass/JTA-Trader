@@ -47,14 +47,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      TRAINER_IP: ${{ vars.TRAINER_VM_IP || '158.178.209.121' }}
+      TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
       # PINNED target. The script and the grow step both refuse unless the host's
       # IMDS reports exactly this id AND display name, so a TRAINER_VM_IP that
-      # ever points at the live VM (141.145.193.91) is refused, never resized.
+      # ever points at the live VM (<VM_SSH_HOST>) is refused, never resized.
       TRAINER_INSTANCE_OCID: ocid1.instance.oc1.eu-paris-1.anrwiljrnpsiupacbfquzkaxjkej2tlxbwggjr4ma3zfkbpnjr7uqefbheyq  # read from the trainer IMDS, relay #14254
       TRAINER_DISPLAY_NAME: ict-trainer-vm
       TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
     steps:
+      - name: Require VM host secrets (fail closed)
+        env:
+          NEED_TRAINER_VM_IP: ${{ secrets.TRAINER_VM_IP }}
+        run: |
+          fail=0
+          [ -n "${NEED_TRAINER_VM_IP}" ] || { echo "::error::secret TRAINER_VM_IP not set (Settings > Secrets and variables > Actions); refusing to continue before any ssh"; fail=1; }
+          exit "$fail"
       - uses: actions/checkout@v4
 
       - name: Parse request

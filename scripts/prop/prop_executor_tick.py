@@ -96,7 +96,7 @@ EXIT_DEFERRED = 7
 #: 5931584062 on #14947: "if a live ticket is waiting, the tick wins").
 #: ``close_position_*`` is NOT here: closing a position is never deferred.
 YIELD_MODES = frozenset({"probe", "instrument_probe", "instrument_search_dump", "instrument_info_dry",
-                         "instrument_info_probe", "symbol_switch_dry", "link_state_dump", "page_status", "widget_menu_probe", "add_watchlist_widget", "watchlist_submenu_probe",
+                         "instrument_info_probe", "symbol_switch_dry", "quote_spread", "link_state_dump", "page_status", "widget_menu_probe", "add_watchlist_widget", "watchlist_submenu_probe",
                          "add_watchlist_symbol_dry", "add_watchlist_symbol",
                          "instrument_page_dump", "order_surface_dump", "probe_ticket_ask",
                          "edit_dialog_dry", "edit_dialog_probe", "edit_surface_probe",
@@ -150,6 +150,8 @@ def resolve_mode(args: argparse.Namespace, env: Optional[Dict[str, str]] = None)
         return "instrument_info_probe"
     if getattr(args, "symbol_switch_dry", ""):
         return "symbol_switch_dry"
+    if getattr(args, "quote_spread", ""):
+        return "quote_spread"
     if getattr(args, "link_state_dump", False):
         return "link_state_dump"
     if getattr(args, "page_status", False):
@@ -503,6 +505,9 @@ def main(argv: Optional[list] = None) -> int:
     g.add_argument("--symbol-switch-dry", default="", metavar="VENUE_SYMBOL",
                    help="per-ticket symbol switch, DRY: select this symbol, verify, re-select the original and "
                         "verify; opens no order form")
+    g.add_argument("--quote-spread", default="", metavar="VENUE_SYMBOLS",
+                   help="READ-ONLY (TRADEIFY-INSTR-SPECS): each symbol's quoted spread in bps of mid, from the "
+                        "watchlist via read_quote; clicks nothing, reads no account figure")
     g.add_argument("--link-state-dump", action="store_true",
                    help="READ-ONLY: watchlist rows (element hit at each Symbol cell's centre), symbol_input(s), "
                         "and the sidebar ticket's buttons; clicks nothing")
@@ -734,6 +739,11 @@ def main(argv: Optional[list] = None) -> int:
                 got = adapter.page_status(page)
                 emit({"page_status": got}, *secrets)
                 return EXIT_OK if "error" not in got else EXIT_UNPARSED
+
+            if mode == "quote_spread":
+                got = adapter.quote_spread(page, [x for x in args.quote_spread.split(",") if x.strip()])
+                emit({"quote_spread": got}, *secrets)
+                return EXIT_OK if any(r.get("read") == "ok" for r in got["results"].values()) else EXIT_UNPARSED
 
             if mode == "link_state_dump":
                 got = adapter.link_state_dump(page)

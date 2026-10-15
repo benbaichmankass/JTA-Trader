@@ -1,0 +1,158 @@
+{
+  "window": "2021-10-10..2026-10-14 (1830 d)",
+  "rule": "unconditioned",
+  "pooled": true,
+  "per_leg": {
+    "pooled:iaum_pullback_1d+ief_pullback_1d+slv_pullback_1d+gdx_pullback_1d+tlt_pullback_1d": {
+      "n": 155,
+      "n_is": 90,
+      "n_oos": 65,
+      "base_tp_r": 50.0,
+      "mfe_r_quantiles": {
+        "p50": 1.128,
+        "p60": 1.553199999999999,
+        "p70": 2.1858,
+        "p80": 2.6664000000000003,
+        "p90": 4.211199999999999
+      },
+      "reach_all_uncapped": {
+        "1.0": 0.5548387096774193,
+        "1.25": 0.49032258064516127,
+        "1.5": 0.4129032258064516,
+        "1.75": 0.36774193548387096,
+        "2.0": 0.32903225806451614,
+        "2.5": 0.25161290322580643,
+        "3.0": 0.17419354838709677,
+        "3.5": 0.14838709677419354,
+        "4.0": 0.11612903225806452,
+        "5.0": 0.07096774193548387,
+        "6.0": 0.03870967741935484,
+        "8.0": 0.01935483870967742
+      },
+      "selection": {
+        "cap_r_median_is": 2.5941017001082143,
+        "curve": [
+          {
+            "k": 1.0,
+            "reach_is": 0.5222222222222223,
+            "mean_net_is": 0.04753333333333334,
+            "eligible": true
+          },
+          {
+            "k": 1.25,
+            "reach_is": 0.43333333333333335,
+            "mean_net_is": 0.009060000000000028,
+            "eligible": true
+          },
+          {
+            "k": 1.5,
+            "reach_is": 0.36666666666666664,
+            "mean_net_is": 0.006260373020804903,
+            "eligible": true
+          },
+          {
+            "k": 1.75,
+            "reach_is": 0.32222222222222224,
+            "mean_net_is": 0.016248845539932614,
+            "eligible": true
+          },
+          {
+            "k": 2.0,
+            "reach_is": 0.3111111111111111,
+            "mean_net_is": 0.06476209829739837,
+            "eligible": true
+          },
+          {
+            "k": 2.5,
+            "reach_is": 0.2777777777777778,
+            "mean_net_is": 0.0959956673369435,
+            "eligible": true
+          },
+          {
+            "k": 3.0,
+            "reach_is": 0.25555555555555554,
+            "mean_net_is": 0.11713324491452103,
+            "eligible": false
+          },
+          {
+            "k": 3.5,
+            "reach_is": 0.24444444444444444,
+            "mean_net_is": 0.140833244914521,
+            "eligible": false
+          },
+          {
+            "k": 4.0,
+            "reach_is": 0.2222222222222222,
+            "mean_net_is": 0.13479543168494898,
+            "eligible": false
+          },
+          {
+            "k": 5.0,
+            "reach_is": 0.17777777777777778,
+            "mean_net_is": 0.0777698109424701,
+            "eligible": false
+          },
+          {
+            "k": 6.0,
+            "reach_is": 0.17777777777777778,
+            "mean_net_is": 0.0777698109424701,
+            "eligible": false
+          },
+          {
+            "k": 8.0,
+            "reach_is": 0.17777777777777778,
+            "mean_net_is": 0.0777698109424701,
+            "eligible": false
+          }
+        ]
+      },
+      "k_star": 2.5,
+      "oos_mean_net_kstar": 0.3094393157920932,
+      "oos_mean_net_base": 0.4101589333927171,
+      "oos_delta_mean": -0.10071961760062396,
+      "oos_delta_ci95": [
+        -0.23664120204186911,
+        0.010366528648895106
+      ],
+      "reach_is_kstar": 0.2777777777777778,
+      "reach_oos_kstar": 0.36923076923076925,
+      "calibration_gap": 0.09145299145299146,
+      "reach_oos_base": 0.3076923076923077,
+      "outcome": "INDETERMINATE",
+      "verdict": "indeterminate",
+      "why": "delta CI [-0.237, 0.010] straddles -0.05"
+    }
+  },
+  "unreadable_rows": {
+    "iaum_pullback_1d": 0,
+    "ief_pullback_1d": 0,
+    "slv_pullback_1d": 0,
+    "gdx_pullback_1d": 0,
+    "tlt_pullback_1d": 0
+  },
+  "constants": {
+    "grid": [
+      1.0,
+      1.25,
+      1.5,
+      1.75,
+      2.0,
+      2.5,
+      3.0,
+      3.5,
+      4.0,
+      5.0,
+      6.0,
+      8.0
+    ],
+    "reach_floor": 0.1,
+    "is_frac": 0.6,
+    "min_oos": 39,
+    "noninf_margin_r": 0.05,
+    "cal_tol": 0.1,
+    "min_cell_is": 30,
+    "boot": 2000,
+    "seed": 20261015,
+    "venue_cap_pct": 0.099
+  }
+}

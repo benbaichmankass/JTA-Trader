@@ -1,6 +1,6 @@
 id: RQ-20261014-736c-01
 title: 'ML plan X1 (ML-LEG-CORPUS): build the six-live-leg per-trade corpus (config-exact uncapped harness emits, 1830 d) that unblocks the TP-predict head and the P1 Q2/Q5 units -- is it buildable and gradable?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -85,6 +85,14 @@ related:
 - RQ-20261009-901
 - scripts/research/ml2_live_leg_corpus.py
 - scripts/research/ml2_bracket_train_eval.py
+last_dispatched_at: '2026-10-15T12:55:32+00:00'
 grading:
   auto: true
-last_dispatched_at: '2026-10-15T12:55:32+00:00'
+  decision_rule_id: RULE-RQ20261014-736C-01-LEG-CORPUS-BUILD
+  evidence:
+  - research/results/RQ-20261014-736c-01/38738465656.jsonl
+  graded_at: '2026-10-15'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

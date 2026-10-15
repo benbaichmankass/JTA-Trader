@@ -1,0 +1,149 @@
+id: RQ-20261015-a1df-01
+title: 'Should REAL-MONEY trend_donchian_eth_4h adopt the prop variant''s tighter stall-decay exit? 4-arm exit replacement test, ETHUSDT 4h, ~4y, net of the full cost stack'
+status: done
+cadence: once
+theme: live_strategy
+priority: 1
+kind: experiment
+question: >-
+  On ETHUSDT 4h over the pinned window 2022-10-15 .. 2026-10-14 23:59 (~4 years, same cost stack and same harness argv builder as the evidence
+  builder, atr_stop_mult held at 2 in every arm so ONLY the exit changes), does any of three pre-registered candidate exits replace the incumbent
+  trend_donchian_eth_4h exit (A: trail 5.0, tp_r 50 / tp_intent none, no decay) on bybit_1 / bybit_2 / bybit_portfolio?
+  B = trail_mult 3.5 + stall decay (10 bars, tight 1.8) at the incumbent tp; C = B + tp_r 6.0; D = incumbent trail 5.0 + stall decay only
+  (10 bars, tight 1.8). Operator request 2026-10-15 ("let's test it"). Offline Stage-0 re-measurement; never a book decision.
+why_this_matters: >-
+  trend_donchian_eth_4h is live on REAL-MONEY bybit_2 (plus bybit_1 paper and the bybit_portfolio mirror). The prop variant trend_donchian_eth_prop
+  already runs trail 3.5 + stall decay (10 / 1.8). Whether the real-money leg should too has never been measured on the 4h leg: a data-backed
+  answer either way is worth more than the open question (a FAIL records honest_negative so the axis is not re-asked).
+power:
+  expected_n: 150
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo's standing E35 floor). expected_n=150 is an ESTIMATE: the committed 730d record
+    for this leg (comms/strategy_evidence/runs/2026-10-05-730d-expand/trend_donchian_eth_4h__bt.json) has 85 trades, so ~4 years should
+    carry ~170. It is not a measurement of this arm set. Below 39 incumbent trades the unit grades indeterminate (underpowered), never FAIL.
+    The 3-of-4 calendar-fold majority refuses a one-period artifact; the iid assumption is optimistic (trade sequences autocorrelate),
+    so the floor is necessary, not sufficient.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Re-measurement on freshly fetched keyless Binance Vision candles for ETHUSDT (pinned window); the harness replays history,
+      nothing accrues.
+decision_rule:
+  id: RULE-RQ20261015a1df01-ETH4H-EXIT-REPLACE
+  registered_at: '2026-10-15'
+  registered_before_run: true
+  statistic: >-
+    Per arm, from the harness's own --json summary of scripts/backtest_trend.py (argv built by regime_debt_matrix.build_harness_cmd plus the arm's
+    config edits; full cost stack = fee + resolved slippage + funding via execution_costs.resolve_cost_policy / Bybit perp costs, never a zero
+    default): total_trades, net_total_r, max_drawdown_r, plus net R per fold over FOUR equal calendar spans of the window (same boundaries every
+    arm; a trade is binned by entry time). Arms (atr_stop_mult 2 in all): A = incumbent as declared (trail 5.0, tp_r 50, no decay);
+    B = trail_mult 3.5 + trail_decay_stall_bars 10 + trail_decay_tight_mult 1.8; C = B + tp_r 6.0; D = trail 5.0 + trail_decay_stall_bars 10 +
+    trail_decay_tight_mult 1.8. Per candidate X: net_r(X) vs net_r(A); folds_ge = folds where net_r(X) >= net_r(A) (ties count);
+    maxDD(X) vs maxDD(A). Positive control: arm A's trades entered on/after the committed record's data_start (2024-10-05) reproduce that record's
+    n within 5% and net R within 3.0 R (looser than a same-window control because the longer window changes the open-position state at the
+    record's start). Reported, not graded: per-candidate lever_fired and tp_doctrine (declared tp_r, share of trades with MFE >= 6R, and whether
+    that clears the TP-REACH-FLOOR of 10%).
+  rule: >-
+    indeterminate IF the positive control fails or n(A) < 39 (underpowered: no verdict; extend the window or redesign; never FAIL on thin n).
+    A candidate X PASSES (replaces A) iff net_r(X) > net_r(A) AND folds_ge >= 3 of 4 AND maxDD(X) <= maxDD(A) x 1.10.
+    PASS IF one or more candidates pass: the passing candidate with the highest net R is named; a data-backed Tier-3 PROPOSAL note on the
+    owning checklist row for the manager (never a config edit by this unit). FAIL IF none passes: the incumbent exit stands and the axis is
+    recorded honest_negative on this window. The thresholds (strict net R, 3 of 4 folds with ties counting, 10% drawdown tolerance, the 39
+    floor) are not changed after any result.
+  what_it_does_not_do: >-
+    Does not edit config or place orders. A PASS is a Tier-3 proposal, not a promotion case, and says nothing about the 1h prop leg. Arm C passing
+    would NOT make C doctrine-compliant: the TP doctrine requires a real predictive take-profit, and the guard grades a finite target that trades
+    reach under 10% of the time as `unreachable` (trend_donchian_eth_prop's own 6R reads reach 0.009 and FAILs entry_tp). Whether C satisfies the
+    doctrine is the reported tp_doctrine field, to be read beside the verdict. Does not mine values: arm parameters are fixed here and may not be
+    edited after any result.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 300
+  confidence: 0.25
+  bucket: own_losses
+  basis: 'stand-in: placeholder for the exit-geometry edge on one real-money ETH leg (bybit_2) if a tighter exit replaces the 5.0 trail; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  why_runner: >-
+    Trainer needs trainer-resident data (none read here) and Kaggle CPU runs with the internet off while this harness fetches keyless Binance
+    Vision candles for the pinned window (metis-market-data holds only 15m/1h ETH feature shards, not this harness's input); GitHub runner is
+    the spill-over.
+  basis: One keyless Binance Vision fetch of ~1500 days of ETHUSDT 1h candles (resampled to 4h) and 4 harness passes; no trainer data.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_eth_4h
+  - --arm
+  - A=
+  - --arm
+  - B=trail_mult=3.5;trail_decay_stall_bars=10;trail_decay_tight_mult=1.8
+  - --arm
+  - C=trail_mult=3.5;trail_decay_stall_bars=10;trail_decay_tight_mult=1.8;tp_r=6.0
+  - --arm
+  - D=trail_decay_stall_bars=10;trail_decay_tight_mult=1.8
+  - --days
+  - '1500'
+  - --start
+  - '2022-10-15'
+  - --end
+  - 2026-10-14 23:59
+  - --control
+  - A=comms/strategy_evidence/runs/2026-10-05-730d-expand/trend_donchian_eth_4h__bt.json
+  - --control-since
+  - --control-tol-n
+  - '0.05'
+  - --control-tol-r
+  - '3.0'
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --fold-majority
+  - '3'
+  - --dd-tol-frac
+  - '0.10'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261015-a1df-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: research/results/RQ-20261015-a1df-01/<run_id>.jsonl via the batch collector; per-arm summaries and verdict.json under comms/research/RQ-20261015-a1df-01/<run_id>/.
+roadmap:
+- L-LADDER
+related:
+- scripts/research/exit_lever_ablation.py
+- trend_donchian_eth_prop
+- docs/ARCHITECTURE-CANONICAL.md#tp-doctrine
+last_dispatched_at: '2026-10-15T17:12:34+00:00'
+grading:
+  attested: RULE-RQ20261015a1df01-ETH4H-EXIT-REPLACE
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261015a1df01-ETH4H-EXIT-REPLACE
+  evidence:
+  - research/results/RQ-20261015-a1df-01/38775464060.jsonl
+  graded_at: '2026-10-15'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate
