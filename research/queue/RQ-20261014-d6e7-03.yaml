@@ -2,7 +2,7 @@ id: RQ-20261014-d6e7-03
 title: >-
   In-trade exit line, rung 3: does an exit-now policy driven by the SIMPLE-state model beat holding the bracket, net of cost, out
   of sample?
-status: queued
+status: retired
 cadence: once
 theme: ml_health
 priority: 1
@@ -116,3 +116,4 @@ related:
 - scripts/research/first_passage.py
 - EXIT-PATH-EMIT-OFFLINE
 last_dispatched_at: null
+retired_reason: '2026-10-15 research-ops 1447: its requires_result is RQ-20261014-d6e7-02 verdict pass, and d6e7-02 landed FAIL (run 38738469340: pooled model gain -0.00077 nats, CI95 [-0.00174, 0.00021], upper bound 0.00021 < the 0.002 floor, 2 of 4 folds positive, calibration slope 1.04, n_oos 2389 on 27 USDT legs). The prerequisite can no longer be met, so the exit-policy simulation has no signal to price. SCOPE: 22 non-crypto legs were skipped (non_crypto_feed_unavailable_on_runner), so the FAIL covers the crypto ledgers only. d6e7-04 (gated on d6e7-01, which passed) is untouched.'

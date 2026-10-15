@@ -85,9 +85,11 @@ def test_no_full_run_in_the_window_runs_the_suite():
 
 
 @pytest.mark.parametrize("event", ["schedule", "workflow_dispatch"])
-def test_in_flight_full_by_construction_run_on_head_skips(event):
-    run, why = bs.decide(HEAD, [_run(1, HEAD, event=event, status="queued")], lambda rid: {}, _neutral(False))
-    assert not run and why.startswith("in_flight")
+def test_a_queued_backstop_tick_on_head_is_not_trusted(event):
+    # cron + keeper both tick: each may itself be a no-op, so trusting a queued one could
+    # make BOTH skip. Only a started full step counts as in flight.
+    run, _ = bs.decide(HEAD, [_run(1, HEAD, event=event, status="queued")], lambda rid: {}, _neutral(False))
+    assert run
 
 
 def test_in_flight_push_run_counts_only_once_its_full_step_started():
@@ -168,13 +170,22 @@ def test_schedule_is_every_30_minutes():
     assert crons == ["13,43 * * * *"], "the stated bound (~30 min + run time) depends on this cadence"
 
 
-def test_schedule_never_cancels_and_shares_a_constant_group():
+def test_backstop_ticks_share_one_group_and_never_cancel():
     _, wf = _wf()
     cc = wf["concurrency"]
-    assert "github.event_name != 'schedule'" in cc["cancel-in-progress"]
-    assert "github.event_name != 'push'" in cc["cancel-in-progress"]
-    # schedule runs have no PR number: the group collapses to pytest-run-schedule-refs/heads/main
-    assert cc["group"].startswith("pytest-run-${{ github.event_name }}-")
+    group = re.sub(r"\s+", " ", cc["group"])
+    # schedule and keeper dispatch on main are serialised in one constant group
+    assert "'pytest-run-backstop-main'" in group
+    assert "github.event_name == 'schedule'" in group
+    assert "github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'" in group
+    # every other event keeps its per-event, per-PR/ref group
+    assert "format('pytest-run-{0}-{1}', github.event_name, github.event.pull_request.number || github.ref)" in group
+    cancel = cc["cancel-in-progress"]
+    # only PR, merge_group and off-main dispatch cancel; push, schedule and main dispatch never do
+    assert "github.event_name == 'pull_request'" in cancel
+    assert "github.event_name == 'merge_group'" in cancel
+    assert "github.ref != 'refs/heads/main'" in cancel
+    assert "'push'" not in cancel and "'schedule'" not in cancel
 
 
 def test_schedule_branch_calls_the_backstop_and_the_full_step_is_the_one_it_checks():
@@ -193,3 +204,43 @@ def test_backstop_failures_page_through_the_alert_path():
     assert "github.event.workflow_run.event == 'schedule'" in cond
     assert "github.event.workflow_run.event == 'push'" in cond
     assert "github.event.workflow_run.head_branch == 'main'" in cond
+
+
+# --- the keeper dispatch path (manager 2026-10-15T13:06Z: the cron created 0 runs in 5 slots) ---
+
+_kspec = importlib.util.spec_from_file_location("schedule_keeper", REPO / "scripts" / "ops" / "schedule_keeper.py")
+sk = importlib.util.module_from_spec(_kspec)
+_kspec.loader.exec_module(sk)
+
+
+def test_keeper_targets_pytest_run_with_a_starvation_waiver():
+    spec = sk.TARGETS.get("pytest-run.yml")
+    assert spec, "schedule-keeper must dispatch the backstop: GitHub dropped its cron"
+    # a 30-min cron's slot never ages past GRACE_MIN; without starved_min the keeper never dispatches
+    assert spec.get("starved_min") and spec["starved_min"] <= 30
+    assert spec.get("self_dedupes")
+
+
+def test_keeper_dispatches_when_the_backstop_has_been_silent():
+    import datetime as dt
+    now = dt.datetime(2026, 10, 15, 13, 5, tzinfo=dt.timezone.utc)
+    crons = sk.workflow_crons(str(WORKFLOW))
+    spec = sk.TARGETS["pytest-run.yml"]
+    silent = sk.decide_keep(crons, [], now, spec["stale_hours"], spec.get("starved_min"))
+    assert silent["dispatch"] and silent["stale"]
+    recent = [{"id": 1, "event": "workflow_dispatch", "status": "completed", "conclusion": "success",
+               "created_at": "2026-10-15T12:50:00Z", "triggering_actor": {"login": sk.KEEPER_ACTOR}}]
+    busy = sk.decide_keep(crons, recent, now, spec["stale_hours"], spec.get("starved_min"))
+    assert not busy["dispatch"], "a tick 15 min ago occupies the slot"
+
+
+def test_dispatch_on_main_runs_the_backstop_decision_by_default():
+    _, wf = _wf()
+    on = wf.get("on", wf.get(True))
+    inp = on["workflow_dispatch"]["inputs"]["backstop"]
+    assert inp["type"] == "boolean" and inp["default"] is True, "the keeper dispatches with DEFAULT inputs"
+    step = next(s for s in wf["jobs"]["pytest-run"]["steps"] if s.get("id") == "changed")
+    first = step["run"].split("pytest_run_backstop.py")[0]
+    assert '"${{ github.event_name }}" = "workflow_dispatch"' in first
+    assert '"${{ github.ref }}" = "refs/heads/main"' in first
+    assert '"${{ inputs.backstop }}" != "false"' in first
