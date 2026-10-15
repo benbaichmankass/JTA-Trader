@@ -638,7 +638,8 @@ def _self_test() -> int:
 
     # replace: operator rule (net R > A, >=3/4 folds >= A with ties, maxDD <= A*1.10)
     A = _arm(100, 20.0, 10.0, [5, 5, 5, 5])
-    B1 = _arm(100, 22.0, 10.9, [5, 5, 6, 6]); B1["reach_ge_6r"] = 0.02
+    B1 = _arm(100, 22.0, 10.9, [5, 5, 6, 6])
+    B1["reach_ge_6r"] = 0.02
     B2 = _arm(100, 25.0, 11.5, [9, 9, 9, -2])   # DD 15% worse -> no
     B3 = _arm(100, 21.0, 9.0, [5, 6, 4, 6])     # 3 folds >= A (one tie, one loss)
     B4 = _arm(100, 20.0, 9.0, [5, 5, 5, 5])     # not strictly greater
