@@ -11,8 +11,8 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "2026-10-15: orphan 'bash -s'(ppid 1)+'python3 -' started 2026-10-12 11:12Z, ~66% CPU on 1-OCPU trainer, killed via trainer-vm-diag #18269 (guard on pid/start/cmd; both gone). Source workflow NOT identified (env lacked UNIT/RUN_ID; no stdin script recoverable). Hypothesis (unverified): relay ssh died on cancel/60min cap, no-tty remote bash -s survived. Fix: remote 'timeout --kill-after=30 3540 bash -s' in trainer-vm-diag.yml (PR pending). Closes when: no python3 - / bash -s orphan with ppid 1 and etimes>3600 on trainer in next health pull, and heavy-lock waits drop. Load after kill still ~2.1 (drift-retrain ~47% CPU is legit); the 70min backtest_ict_scalp heavy-lock hold is separate, unaddressed.",
-  "updated_at": "2026-10-15T10:29:42Z",
+  "note": "2026-10-15: orphan 'bash -s'(ppid 1)+'python3 -' started 2026-10-12 11:12Z, ~66% CPU on 1-OCPU trainer, killed via trainer-vm-diag #18269 (guard on pid/start/cmd; both gone). Source workflow NOT identified (env lacked UNIT/RUN_ID; no stdin script recoverable). Hypothesis (unverified): relay ssh died on cancel/60min cap, no-tty remote bash -s survived. Fix: remote 'timeout --kill-after=30 3540 bash -s' in trainer-vm-diag.yml (PR pending). Closes when: no python3 - / bash -s orphan with ppid 1 and etimes>3600 on trainer in next health pull, and heavy-lock waits drop. Load after kill still ~2.1 (drift-retrain ~47% CPU is legit); the 70min backtest_ict_scalp heavy-lock hold is separate, unaddressed.  | 2026-10-15 follow-up: same remote 'timeout --kill-after=30 <cap> bash -s' wrapper applied to trainer-diag-relay (3540), trainer-capture-watch (5340), health-snapshot (840), each under its job timeout-minutes. Heavy lock is runtime_logs/trainer/.heavy.lock (0-byte flock; holder found via ps) per manager.",
+  "updated_at": "2026-10-15T10:30:39Z",
   "updated_by": "lane-trainer-runaway",
   "roadmap": [
     "L-OPS"
