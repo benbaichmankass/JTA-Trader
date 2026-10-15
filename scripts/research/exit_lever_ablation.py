@@ -37,11 +37,11 @@ declared. Tokens:
                     builder omits ``--trail-decay-*``, see
                     ``regime_debt_matrix._PB_LEVER_FLAG``).
 
-FOLDS. Four equal CALENDAR spans of the measured window, a trade binned by
-entry_time. Calendar, not equal-count: the arms have different trade sets, so
-equal-count folds would put different dates in "fold 2" for each arm and the
-per-fold comparison would compare nothing. Every arm is folded on the same
-four date boundaries.
+FOLDS. ``--folds`` (default four) equal CALENDAR spans of the measured window,
+a trade binned by entry_time. Calendar, not equal-count: the arms have different
+trade sets, so equal-count folds would put different dates in "fold 2" for each
+arm and the per-fold comparison would compare nothing. Every arm is folded on
+the same date boundaries. ``--fold-majority`` must not exceed ``--folds``.
 
 GRADES (``--grade``), each writing ``<out>/verdict.json`` in the
 ``script_run.py`` contract -- the rule's thresholds are the UNIT's, passed as
@@ -452,6 +452,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--same-as", default=None, help="sweep: X=Y, two arms asserted identical")
     ap.add_argument("--delta-r", type=float, required=True, help="materiality bar in R over the window (the unit's)")
     ap.add_argument("--fold-majority", type=int, required=True)
+    ap.add_argument("--folds", type=int, default=4,
+                    help="number of equal calendar folds (default 4; a longer window can carry more)")
     ap.add_argument("--n-floor", type=int, required=True)
     ap.add_argument("--dd-tol-frac", type=float, default=0.10, help="replace: max DD may exceed the incumbent's by this fraction")
     ap.add_argument("--control-since", action="store_true",
@@ -459,6 +461,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", required=True)
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
+    if a.folds < 2 or not (1 <= a.fold_majority <= a.folds):
+        print(f"ERROR: need --folds >= 2 and 1 <= --fold-majority <= --folds (got {a.folds}, {a.fold_majority})",
+              file=sys.stderr)
+        return 2
+    global N_FOLDS
+    N_FOLDS = a.folds
 
     import yaml
     out = Path(a.out)
