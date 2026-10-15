@@ -540,7 +540,11 @@ class MainActivity : Activity() {
                     // (Breakout keeps the panel open across reloads; after the 11:42Z background dry fill every check
                     // read "busy" and account_status stopped). Close it with its panel toggle, then read.
                     var closed = ""
-                    if (p.obj("__ex.terminal()")?.optBoolean("ticketOpen") == true) { closed = p.js("__ex.closeTicket()"); delay(1200); p.ensure() }
+                    if (p.obj("__ex.terminal()")?.optBoolean("ticketOpen") == true) {
+                        // a stray modal first, by the shared cancel rule (Cancel only; Escape when a Confirm stays open)
+                        if ((p.obj("__ex.dismissModals()")?.optInt("found") ?: 0) > 0) { delay(800); p.ensure() }
+                        closed = p.js("__ex.closeTicket()"); delay(1200); p.ensure()
+                    }
                     var acct = "busy"
                     for (i in 0 until 10) { acct = readAccount(p); if (acct != "busy") break; delay(2000) }
                     if (acct == "posted") lastAcctMs = System.currentTimeMillis()
@@ -1445,14 +1449,21 @@ class MainActivity : Activity() {
         val m0 = dismissModal(p)
         if (m0.isNotEmpty()) tries.put("modal_pre:$m0".take(40))
         if (m0.endsWith("still_open")) return JSONObject().put("ok", false).put("why", "modal_open").put("tries", tries)
-        if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") == true) sheetClose(p, sym)
         var opened = ""
+        // REUSE (manager 12:47Z; operator screenshot 12:43Z: a sheet a human opened was left open on the kiosk): a sheet
+        // that is ALREADY open for THIS symbol (title == the symbol, one sheet) is read as-is -- no touch needed. Any
+        // other open sheet (wrong title, or not exactly one) is closed first, as before: fail closed.
+        val pre0 = p.obj("__ex.sheetInfo(${q(sym)})")
+        if (pre0?.optBoolean("open") == true) {
+            if (pre0.optBoolean("title_ok")) { opened = "pre_open"; tries.put("sheet:pre_open") }
+            else { tries.put("sheet:pre_open_other close=${sheetClose(p, sym)}".take(40)) }
+        }
         // BREAKOUT-NATIVE-TAP (1b.210, 08:37Z): click() and a synthetic pointer tap reached the cells on both rows and
         // opened no sheet (the group tap only expanded the row). Each row is now touched NATIVELY (a MotionEvent the
         // WebView receives as a trusted touch) at the centre exec.js re-checked; every miss still records what the page
         // showed after it (viewport, new visible texts, the touched cell's ancestor chain)
         var probe: JSONObject? = null
-        for (which in listOf("child", "group")) {
+        for (which in if (opened.isEmpty()) listOf("child", "group") else emptyList()) {
             p.js("__ex.domMark()")
             val r = nativeTap(p, sym, which)
             tries.put("$which/native:$r".take(40))
