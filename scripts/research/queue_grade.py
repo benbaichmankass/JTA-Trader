@@ -163,6 +163,18 @@ def session_owned(unit: Dict[str, Any]) -> bool:
     return isinstance(g, dict) and g.get("auto") is not True
 
 
+def confirm_fail(unit: Dict[str, Any]) -> bool:
+    """True when an attested hand-written unit's first FAIL should be re-run once before it
+    closes (manager, 2026-10-15 06:58Z): only when a re-run can produce a DIFFERENT number --
+    an ML training run (`ml_bakeoff:` block), a unit that declares top-level `seeds` /
+    `n_seeds` (stochastic content it controls), or an explicit `grading.confirm_fail: true`.
+    A deterministic replay over a fixed window -- including a simulation whose argv pins its
+    seeds -- reproduces the identical number, so re-running it only spends a runner slot."""
+    g = unit.get("grading") if isinstance(unit.get("grading"), dict) else {}
+    return bool(g.get("confirm_fail") is True or isinstance(unit.get("ml_bakeoff"), dict)
+                or unit.get("seeds") is not None or unit.get("n_seeds") is not None)
+
+
 def _declared_runs(lands: Dict[str, Any]) -> int:
     """`lands.runs: N` -- a unit designed as N dispatches (the RQ-20260928-005 fan-out shape)
     is not graded until N result files landed; `lands.min_rows` still counts rows."""
@@ -261,7 +273,7 @@ def decide(unit: Dict[str, Any], g: Dict[str, Any], graded_at: str,
     if attested:
         base["attested"] = base["decision_rule_id"]
     v = g.get("verdict")
-    if attested and v == "fail" and cadence not in _RECURRING:
+    if attested and v == "fail" and cadence not in _RECURRING and not confirm_fail(unit):
         return {"status": "done", "reset_stamp": False,
                 "grading": {**base, "verdict": "fail",
                             "note": "hand-written unit, every row graded under its own registered rule: "
@@ -568,6 +580,11 @@ def _self_test() -> int:
         (d / "1.jsonl").write_text(json.dumps({"verdict": "not_applicable", "read_state": "producer_failed",
                                                 "decision_rule": {"id": "RULE-H"}}) + "\n")
         assert "needs_review: true" in grade_unit(r, "RQ-20300101-002", hand, "2030-01-02")
+        # an ML training run (or declared seeds / confirm_fail) re-runs its first FAIL once instead of closing
+        (d / "1.jsonl").write_text(own("fail") + "\n")
+        tml = grade_unit(r, "RQ-20300101-002", hand + "ml_bakeoff:\n  family: f\n", "2030-01-02")
+        assert tml and "status: queued" in tml and "last_dispatched_at: null" in tml and "confirmatory_run: 1" in tml, tml
+        assert "last_dispatched_at: null" in grade_unit(r, "RQ-20300101-002", hand + "n_seeds: 5\n", "2030-01-02")
         weekly = hand.replace("cadence: once", "cadence: weekly")
         (d / "1.jsonl").write_text(own("pass") + "\n")
         assert grade_unit(r, "RQ-20300101-002", weekly, "2030-01-02") is None   # recurring hand units stay a session's
