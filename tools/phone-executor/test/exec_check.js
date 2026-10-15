@@ -802,5 +802,10 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
   eq([cs.ok, cs.hdr, cs.groups, cs.child_rows, cs.sides.length, cs.sides[0].side, cs.sides[0].cells, cs.sides[0].picked, cs.sides[0].tpsl], [true, 9, 1, 1, 1, "short", 9, true, 1], "child shape: one Short in a 9-cell child row that childRows picks");
   let er = await ex.evaluate("__ex.positionsRead()");
   eq([er.state, er.rows.length, er.rows[0].side, er.rows[0].row_kind], ["read", 1, "short", "child"], "expanded child row: side read as text, state read");
+  // a stray "Edit Take profit" modal (manager 11:02Z: seen open on the engine page) is dismissed by its Cancel, never Confirm
+  const tm = await onHost(sheetPage().replace('<h3 id=mt>Edit Stop loss</h3>', '<h3 id=mt>Edit Take profit</h3>').replace('<div id=modal style="display:none">', '<div id=modal style="display:block">'));
+  let tmi = await tm.evaluate("__ex.modalInfo()");
+  eq([tmi.n, tmi.kind], [1, "take"], "stray modal: the open Edit Take profit modal is seen");
+  eq([await tm.evaluate("__ex.modalCancel()"), (await tm.evaluate("__ex.modalInfo()")).n, await tm.evaluate("window.__saved"), await tm.evaluate("window.__danger")], ["clicked", 0, 0, 0], "stray modal: Cancel closes it; Confirm never clicked");
   await b.close(); console.log("exec_check: all passed");
 })().catch((e) => { console.error(e); process.exit(1); });

@@ -1420,8 +1420,14 @@ class MainActivity : Activity() {
      *  reported as opened_by (unmeasured until the first live run). Returns the details (ok, side, qty, entry, mark,
      *  upnl, upnl_signed, opened_by, tries) or {ok:false, why, tries}; the sheet is left OPEN only when ok. */
     private suspend fun sheetRead(p: Page, sym: String): JSONObject {
-        if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") == true) sheetClose(p, sym)
         val tries = JSONArray()
+        // BREAKOUT-SL-AMEND-CLICK (manager 11:02Z: an "Edit Take profit" modal was seen open on the engine page, origin
+        // unknown): an open Edit Stop loss / Edit Take profit modal is dismissed (its Cancel, else Escape -- never
+        // Confirm) before any sheet attempt, and the attempt does not run while one is still open
+        val m0 = dismissModal(p)
+        if (m0.isNotEmpty()) tries.put("modal_pre:$m0".take(40))
+        if (m0.endsWith("still_open")) return JSONObject().put("ok", false).put("why", "modal_open").put("tries", tries)
+        if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") == true) sheetClose(p, sym)
         var opened = ""
         // BREAKOUT-NATIVE-TAP (1b.210, 08:37Z): click() and a synthetic pointer tap reached the cells on both rows and
         // opened no sheet (the group tap only expanded the row). Each row is now touched NATIVELY (a MotionEvent the
@@ -1440,6 +1446,10 @@ class MainActivity : Activity() {
             if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") == true) { opened = "$which/native"; break }
             tries.put("$which/native:no_sheet")
             probe = p.obj("__ex.domDiff()")?.put("at", "$which/native")
+        }
+        if (opened.isEmpty()) {
+            val m1 = dismissModal(p)
+            if (m1.isNotEmpty()) tries.put("modal_post:$m1".take(40))
         }
         if (opened.isEmpty()) return JSONObject().put("ok", false).put("why", "sheet_not_open").put("tries", tries).apply { if (probe != null) put("probe", probe) }
         val si = p.obj("__ex.sheetInfo(${q(sym)})") ?: JSONObject()
@@ -1474,6 +1484,19 @@ class MainActivity : Activity() {
         // which WebView took the touch (PHONE-FGS-EXEC: the background engine's non-touchable overlay or the kiosk);
         // MotionEvents go to the view directly, never through the window, but the two are measured apart
         return p.tap(r.getDouble("x"), r.getDouble("y"), r.getDouble("vw")) + (if (p === fg) " fg" else " bg")
+    }
+
+    /** Dismiss an open Edit Stop loss / Edit Take profit modal: exec.js modalCancel clicks only that modal's own
+     *  "Cancel" (else sends Escape), NEVER Confirm. "" when none was open; else "<kind>:<result>" plus " closed" or
+     *  " still_open" after a re-check (n>1 modals: nothing is clicked, "n<k> still_open"). */
+    private suspend fun dismissModal(p: Page): String {
+        val mi = p.obj("__ex.modalInfo()") ?: return ""
+        val n = mi.optInt("n")
+        if (n == 0) return ""
+        if (n > 1) return "n$n still_open"
+        val r = p.js("__ex.modalCancel()"); delay(700); p.ensure()
+        val after = p.obj("__ex.modalInfo()")?.optInt("n") ?: -1
+        return "${mi.optString("kind")}:$r ${if (after == 0) "closed" else "still_open"}"
     }
 
     /** Close the sheet: Escape first, then its header close icon. closed | escape | x | still_open(..) */
@@ -1531,7 +1554,9 @@ class MainActivity : Activity() {
         val pre = JSONArray()
         // which kind of row the read saw (1b.233 10:40Z: the expand step left no line, so whether it ran is unmeasured)
         pre.put("kinds=" + (0 until rows.length()).joinToString(",") { rows.optJSONObject(it)?.optString("row_kind", "-")?.ifEmpty { "-" } ?: "?" }.take(30))
-        if (grp.size == 1 && rows.length() == 1) {
+        val mg = dismissModal(p)
+        if (mg.isNotEmpty()) pre.put("modal_pre:$mg".take(40))
+        if (grp.size == 1 && rows.length() == 1 && !mg.endsWith("still_open")) {
             val x = nativeTap(p, syms[0], "group")
             delay(1200); p.ensure()
             if (p.obj("__ex.sheetInfo(${q(syms[0])})")?.optBoolean("open") != true) {
