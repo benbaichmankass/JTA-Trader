@@ -342,6 +342,9 @@ milestones:
       market_raw shards cut at round counts (BTC 5m 157,000, SOL 5m 135,000, SOL 15m 64,000, ADA 15m 158,000) and SPLG 1d empty;
       funding/OI and order flow BTC-only; every barrier labeller resolves SL/TP ties SL-first; no catalog of the stores; trainer disk
       56 of 97 GB free, OCI free-tier block storage 194 of 200 GB used. Plan: docs/research/programmes/06-DATA-INFRA.md.
+      2026-10-15 (DATA-STORE-PARQUET-GC, #18169 merged + deployed, #18177): 16 unreferenced dataset versions deleted under operator OK, 513 MB freed
+      (incl. market_raw/MES/1m/v001 -- so the only 1m store left is BTC v001); market_features now writes data.parquet beside data.jsonl
+      (MEASURED parity, 391 MB -> 20 MB on BTC 15m v513) -- the disk saving needs DATA-STORE-JSONL-RETIRE; first nightly sidecars not yet observed.
     next: >-
       W1 read RQ-20261014-da7a-01 (is the SL-first tie a material label error?) and land DATA-CATALOG + DATA-KLINE-ARCHIVE;
       W2 DATA-DERIV-ARCHIVE and DATA-LABEL-TIES; W3 DATA-INTRADE-LABEL-STORE under the exit lane's EXIT-PATH-EMIT-OFFLINE.
