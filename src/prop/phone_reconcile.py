@@ -313,7 +313,17 @@ def _is_exit_row(c: Dict[str, Any]) -> bool:
     return c.get("reduce") is not False
 
 
+#: The basis recorded beside a ``manual`` close reason: the venue's Closed-orders row does not say a human closed it.
+MANUAL_BASIS = ("INFERRED: exit strictly between the row's SL and TP, closing order typed as neither leg and at "
+                "neither level -- a hand close, as prop_executor.exit_reason infers it for tradeify_1")
+
+
 def _close_reason(row: Dict[str, Any], c: Optional[Dict[str, Any]]) -> str:
+    """``tp`` / ``sl`` when the closing order names its leg or fills at that level; ``manual`` when it is neither and
+    its price lies strictly between the row's SL and TP (operator decision 2026-10-15 on PI-20261015-JWMGXOTH-0004:
+    a hand close inferred as tradeify's ``prop_executor.exit_reason`` does; the report carries :data:`MANUAL_BASIS`).
+    ``venue_close`` stays for an exit outside the bracket or a row missing a level (a slipped stop is not a hand
+    close); ``closed_unpriced`` when no exit was read. The row's ``sl`` is the CURRENT stop: an amend rewrites it."""
     if c is None:
         return "closed_unpriced"
     typ = (c.get("type") or "").lower()
@@ -322,9 +332,12 @@ def _close_reason(row: Dict[str, Any], c: Optional[Dict[str, Any]]) -> str:
     if re.search(r"stop|sl\b|loss", typ):
         return "sl"
     px = c["price"]
-    for lvl, name in ((_num(row.get("tp")), "tp"), (_num(row.get("sl")), "sl")):
+    sl, tp = _num(row.get("sl")), _num(row.get("tp"))
+    for lvl, name in ((tp, "tp"), (sl, "sl")):
         if lvl and abs(px - lvl) <= 0.0025 * lvl:
             return name
+    if sl and tp and min(sl, tp) < px < max(sl, tp):
+        return "manual"
     return "venue_close"
 
 
@@ -339,8 +352,9 @@ def reconcile_mode(account_id: str) -> str:
 
     Declared in YAML, never an env flag: review of #17745 asked that auto-close and auto-open stay REPORT-ONLY
     until one clean live Positions read of Breakout's terminal is observed (no capture of its DOM exists yet).
-    An absent or unknown value reads as ``report_only`` -- the mode that writes nothing -- and the account's
-    YAML states it explicitly; flipping it to ``write`` is the follow-up PI-20261012-GNRBKIGG-0004."""
+    An absent or unknown value reads as ``report_only`` -- the mode that writes nothing. breakout_2 declares
+    ``write`` since the operator's 2026-10-15 decision on PI-20261015-JWMGXOTH-0004 (closes PI-20261012-GNRBKIGG-0004);
+    a close still needs :data:`MISS_READS` clean reads, and an unclean read never reaches :func:`reconcile`."""
     from src.prop import phone_executor
 
     v = str((phone_executor.phone_config(account_id) or {}).get("reconcile") or "").strip().lower()
@@ -465,6 +479,8 @@ def reconcile(account_id: str, positions: List[Dict[str, Any]], closed: List[Dic
                     "reconcile": {"absent_reads": m["n"], "first_absent": m["first"], "exit_candidates": n,
                                   "closing_order": c},
                 }
+                if reason == "manual":
+                    report["reconcile"]["reason_basis"] = MANUAL_BASIS
                 what = (f"close|close journal row {rid} ({f.get('symbol')} {f.get('direction')}) at "
                         + (f"{c['price']:g} ({reason})" if c else f"NO exit price ({n} matching closing orders read)"))
                 alert = "" if c else (f"📱 phone {account_id}: {f.get('symbol')} {f.get('direction')} (journal row {rid}) "
