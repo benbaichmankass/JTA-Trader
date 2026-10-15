@@ -274,7 +274,7 @@ they self-fire. Touching a guard's own logic is **Tier 3**.
 | Guard id (runs inside `guards.yml`) | Trigger | Purpose | Required on `main`? |
 |---|---|---|---|
 | `pytest-collect.yml` | PR, push `main` | `pytest --collect-only` — surfaces import/collection failures. | Yes |
-| `pytest-run.yml` | PR, push `main` | `pytest -q tests/` — runs the **full** suite (collection only checks imports) unless the diff is **data-only**, in which case it runs only the test files that read those trees (CI-DIET, 2026-10-13; see below). Required since 2026-05-22 (#1721). | Yes |
+| `pytest-run.yml` | PR, push `main`, schedule `13,43 * * * *` | `pytest -q tests/` — runs the **full** suite (collection only checks imports) unless the diff is **data-only** (only the test files that read those trees; CI-DIET, 2026-10-13) or, on a **pull_request**, a code diff the import graph can place (only the affected test files; GH-CAPACITY-PR-CI-FANOUT, 2026-10-15). The schedule is the post-merge backstop: full suite on `main`'s HEAD unless its code is already graded. See below. Required since 2026-05-22 (#1721). | Yes |
 | `ruff-lint` | PR, push `main` | `ruff check` with rules from `ruff.toml`. | Yes |
 | `secret-scan` | PR, push `main` | `scripts/secret_scan.py` over every tracked file. | Yes |
 | `dry-run-guard` | PR to `main` | Fails PRs that flip dry-run flags, silently downgrading live mode. Telegrams operator on hit. | Yes |
@@ -301,6 +301,14 @@ As of 2026-08-21 there are **three**:
 | `none` | no changed path matches the relevance filter in the workflow (`tests/test_pytest_run_filter.py`) | nothing; the summary says it passed without running tests, by design |
 | `data` | every suite-relevant changed path is on the explicit data allowlist: `docs/claude/work/checklist/`, `docs/claude/work/pipeline/`, `docs/claude/work/PIPELINE.jsonl`, `research/queue/*.yaml`, `research/results/`, `comms/` (not `comms/schema/`), `.github/pr-landing/`, `.github/pr-automerge-requests/`, `.github/merge-slots/` | every test file whose text mentions those trees (`--select-tests`; 155 of ~1,440 files on 2026-10-13), selected by content, never by a hand list |
 | `full` | anything else: `.py`, `config/`, `src/`, `scripts/`, `tests/`, `.github/workflows/`, `comms/schema/`, the enumerated docs the suite reads (`docs/ARCHITECTURE-CANONICAL.md`, ...) | the whole suite, as before |
+| `affected` | **pull_request only**, a code diff with no fallback trigger (GH-CAPACITY-PR-CI-FANOUT, operator 2026-10-15: "Yes, affected tests on PRs") | the test files the import graph says can observe the change: transitive importers, dotted-string and `import_module` prefix loaders, path/basename readers, plugin-fixture users, tree scanners. **Falls back to `full`** on conftest, requirements/pyproject, `.github/`, `scripts/ci/`, guard scripts, config-named modules, every-test (conftest-eager) modules, fan-in or selection >50% of test files, or any selector error. Pinned by `tests/test_pytest_run_affected.py` |
+
+**Post-merge backstop** (`schedule`, every 30 min, `scripts/ci/pytest_run_backstop.py`, pinned by
+`tests/test_pytest_run_backstop.py`). Push runs alone do not grade every merge: an auto-merged (`GITHUB_TOKEN`) merge
+commit starts no run, and the next push run's `before...sha` range begins at that commit. Each tick runs the full suite on
+`main`'s HEAD unless a completed full run on an ancestor is followed only by suite-neutral or data-only commits (or a full
+run on HEAD is in flight); "could not look" runs the suite. A red push/schedule run on `main` pages via
+`claude-run-failure-alert`. Bound: a post-merge break is detected within ~30 min + the suite's run time + runner queueing.
 
 Measured motive: 179 of 233 commits that landed on `main` in the 48h to 2026-10-13 (77%) were data-only and each paid the
 full ~36-minute suite twice (PR, then push). The `guards` job is not scoped by this and still runs on every PR and push.
