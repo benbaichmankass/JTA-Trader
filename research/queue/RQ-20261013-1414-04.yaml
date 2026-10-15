@@ -1,0 +1,206 @@
+id: RQ-20261013-1414-04
+title: 'AI trader / the missing control: does the shipped Chronos-Bolt-Tiny fc_* lift survive a classical HAR-RV control on the BTC/ETH/SOL
+  15m regime head?'
+status: done
+cadence: once
+theme: ml_health
+priority: 1
+kind: experiment
+question: 'On the 15m v002 shards (which carry the shipped fc_* quantile-forecast columns), does adding the six fc_* columns to the
+  base features beat adding the HAR-RV (day/week/month realised-variance) regressors by >= 0.005 macro-F1 on the purged-CV mean on ALL
+  THREE symbols and >= 0 on the holdout? Arms: base only, base+HAR-RV (control), base+fc_*, base+fc_*+HAR-RV, plus the class prior.'
+why_this_matters: 'fc_* is the one durable ML win and is advisory today (BTC macro_f1 +0.012 purged, ETH +0.029). The frontier scan
+  could find NO record of a classical HAR-RV comparison (docs/research/frontier-scan-2026-10-11.md section 2), and RQ-20261011-9da8-01
+  (blocked on new TSFM backends) names "HAR-RV >= fc is the headline" as a possible outcome. This unit answers that control question
+  NOW with the shard''s own columns and no new backend, and tells 9da8-01 whether a bigger forecaster is even the right lever. DATASET
+  PATHS UNVERIFIED FROM THIS SANDBOX: the trainer shards are not reachable here. The 15m v002 BTC/ETH/SOL shards and the base feature
+  names are the ones queued unit RQ-20261012-75b2-19..21 already declare (MEASURED present on the trainer 2026-10-11 per RQ-20261011-9da8-01);
+  a missing column lands as a dead NaN feature or producer_failed, which research-ops must read as a ROUTE FAULT (fix the path, re-queue),
+  never as a verdict. fc_* is the shard side-stream joined by the nightly build; if the columns are dead (all NaN) the fc arms collapse
+  to the base arm and the run must be read as a route fault.'
+power:
+  expected_n: 8640
+  min_detectable_effect: 0.05
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: Unit = bar in the final-90-day holdout (~8,640 rows = 90 d x 96 15m bars) per symbol; d=0.05 paired needs (1.96+0.8416)^2/0.05^2
+    = 3,140 rows, floor met on rows. Bars are autocorrelated so effective n is far lower; the rule therefore also requires the purged-CV
+    fold-mean delta (min_folds 3) and the first run replaces this estimate with the measured n.
+  feasibility:
+    source: none
+    accrual_basis: 'Nightly-rebuilt shard: history for the window used is fixed, nothing needs to accrue for the rows this unit reads.'
+decision_rule:
+  id: RULE-RQ20261013-1414-04-FC-VS-HARRV-CONTROL
+  registered_at: '2026-10-13'
+  registered_before_run: true
+  statistic: 'Paired per-fold macro-F1 difference, lgbm_fc minus lgbm_har (the HAR-RV control), on identical purged folds (5, embargo
+    96) and on the holdout, per symbol; mean over folds. Secondary (reported, not graded): lgbm_fc_har minus lgbm_fc, and every arm
+    minus the prior.'
+  rule: 'PASS IF lgbm_fc - lgbm_har >= +0.005 on the CV mean on ALL THREE symbols AND >= 0 on the holdout on all three (the neural forecast
+    adds information a classical control does not; larger TSFMs in 9da8-01 are then a live lever). FAIL IF lgbm_fc - lgbm_har < 0 on
+    the CV mean on EVERY symbol (HAR-RV matches or beats fc: report it as the headline and re-route 9da8-01''s premise). INDETERMINATE
+    otherwise (mixed by symbol), or if folds < 3 or an arm is unavailable.'
+  min_n: 3 usable CV folds per symbol; holdout >= 20 rows; fc_* non-NaN share per symbol is reported and must be > 50% of rows or the
+    result is a route fault, not a verdict.
+  what_it_does_not_do: Re-trains no shipped model, touches no registry or config, promotes nothing. Grades the regime LABEL with unweighted
+    LightGBM arms (the shipped heads weight classes), so it compares feature sets, not the shipped models. A feature-lift PASS is not
+    edge.
+compute: needs_vm_data
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 250
+  confidence: 0.45
+  basis: 'stand-in: the fc_* heads are the only advisory ML win; knowing whether they beat a free classical control decides whether
+    to spend on larger TSFMs (9da8-01) or stop; not a measured P&L'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 40
+  basis: 'Estimate: 3 shards x 4 LightGBM arms x 5 folds, 200 trees, tail_rows 60000.'
+ml_bakeoff:
+  task: classification
+  metric: macro_f1
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT:
+        path: datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl
+      ETHUSDT:
+        path: datasets-out/market_features/ETHUSDT/15m/v002/data.jsonl
+      SOLUSDT:
+        path: datasets-out/market_features/SOLUSDT/15m/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    tail_rows: 60000
+    holdout_after: '2026-07-12'
+    extra_columns:
+    - fc_ret_med
+    - fc_range_rel
+    - fc_up_prob
+    - fc_skew
+    - fc_q10_rel
+    - fc_q90_rel
+  cv:
+    folds: 5
+    embargo_rows: 96
+    min_train_frac: 0.4
+  baseline: lgbm_base
+  controls:
+  - prior
+  - lgbm_har
+  candidates:
+  - lgbm_fc
+  - lgbm_fc_har
+  learners:
+    prior:
+      kind: prior
+    lgbm_base:
+      kind: lightgbm
+      params: &id001
+        n_estimators: 200
+        learning_rate: 0.05
+        num_leaves: 31
+        min_child_samples: 50
+    lgbm_har:
+      kind: lightgbm
+      params: *id001
+      feature_blocks:
+      - kind: har_rv
+        bars_per_unit: 96
+    lgbm_fc:
+      kind: lightgbm
+      params: *id001
+      feature_blocks:
+      - kind: df_columns
+        columns: &id002
+        - fc_ret_med
+        - fc_range_rel
+        - fc_up_prob
+        - fc_skew
+        - fc_q10_rel
+        - fc_q90_rel
+    lgbm_fc_har:
+      kind: lightgbm
+      params: *id001
+      feature_blocks:
+      - kind: df_columns
+        columns: *id002
+      - kind: har_rv
+        bars_per_unit: 96
+  rule:
+    min_folds: 3
+    pass_if:
+    - group: &id003
+      - BTCUSDT
+      - ETHUSDT
+      - SOLUSDT
+      vs: lgbm_har
+      window: cv
+      op: '>='
+      value: 0.005
+    - group: *id003
+      vs: lgbm_har
+      window: holdout
+      op: '>='
+      value: 0.0
+    fail_if_no_candidate_reaches:
+    - group: any
+      vs: lgbm_har
+      window: cv
+      op: '>='
+      value: 0.0
+    headline_checks:
+    - name: fc_minus_base
+      learner: lgbm_fc
+      vs: baseline
+      group: any
+      window: cv
+      op: '>='
+      value: 0.0
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261013-1414-04
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M25
+related:
+- RQ-20261011-9da8-01
+- RQ-20261012-75b2-22
+- FRONTIER-LEVER-TSFM
+- scripts/ml/build_forecasts.py
+- docs/research/frontier-scan-2026-10-11.md
+last_dispatched_at: '2026-10-13T21:54:26+00:00'
+grading:
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261013-1414-04-FC-VS-HARRV-CONTROL
+  evidence:
+  - research/results/RQ-20261013-1414-04/38461434066.jsonl
+  graded_at: '2026-10-14'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

@@ -1,0 +1,40 @@
+{
+  "unit": "RQ-20261014-f516-07",
+  "run_id": "38651476879",
+  "commit_sha": "ba936ae2900927edb678e12ca7ec7f9c63b513b8",
+  "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/38651476879",
+  "timeout_minutes": 120,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/prop_ev_grid.py",
+        "--leg",
+        "trend_donchian_eth_prop=comms/strategy_evidence/runs/2026-10-05-730d/trend_donchian_eth_prop__trades.jsonl",
+        "--arm",
+        "A=--sizing balance --risk-pct 0.01 --dd-switch-frac 0.8",
+        "--arm",
+        "COFF=--sizing balance --risk-pct 0.01",
+        "--arm",
+        "C090=--sizing balance --risk-pct 0.01 --dd-switch-frac 0.9",
+        "--common",
+        "--trades trend_donchian_sol_prop=comms/strategy_evidence/runs/2026-10-05-730d/trend_donchian_sol_prop__trades.jsonl --ruleset config/prop_rulesets/velotrade_classic_1step.yaml --costs breakout --commission-bps-rt 6 --slippage-bps-rt 3 --swap-daily 0.0005 --swap-model dxtrade --no-hedge --funded-start fresh --lev-cap trend_donchian_eth_prop=5 --lev-cap trend_donchian_sol_prop=5",
+        "--seeds",
+        "1,2,3,4,5",
+        "--grade",
+        "cushion_vs_flat",
+        "--out",
+        "comms/research/RQ-20261014-f516-07/38651476879",
+        "--jobs",
+        "4",
+        "--note",
+        "RQ-20261014-f516-07: Programme 05 Q4 daily-DD switch effect, velotrade_1"
+      ],
+      "log": "comms/research/RQ-20261014-f516-07/38651476879/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 2531.3
+    }
+  ],
+  "all_ok": true
+}

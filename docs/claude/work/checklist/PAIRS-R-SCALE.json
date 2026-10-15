@@ -1,0 +1,22 @@
+{
+  "id": "PAIRS-R-SCALE",
+  "title": "Build: backtest_pairs.py measures 1R on the rolling-beta spread series, so beta drift inflates risk ~775x and deflates cost-in-R; fix the R scale (risk at the entry-bar beta) and give pairs_dollar_lots.py slippage + funding",
+  "phase": "W42",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-14 lane P3-STRATEGY-PROGRAMME] MEASURED: committed ledger comms/research/RQ-20261007-005/<run>/trades.jsonl (pairs_sol_eth, n=304) mean cost_r 0.0014 R per pair trade with risk_spread ~1.34; recomputed on Binance Vision SOLUSDT/ETHUSDT 1h May 2026 with the harness's _rolling_beta(15): spread std 1.63 rolling vs 0.0021 at the entry-bar beta (beta sigma 0.61 x log ETH ~7.8), so 2 x 10.5 bps costs 0.0006 R in the harness vs ~0.50 R honestly. Consequence: RQ-20261007-005..008's four PASSes (+51.8..+102.4 R) are unreadable as net-of-cost evidence; their honest sign is UNKNOWN (gross R is in the same inflated units). FIX (Tier-1 research harness, scripts/backtest_pairs.py): risk = stop_z x std over the lookback of (la - beta_entry x lb) with beta frozen at entry; P&L in R on the same fixed-beta spread; self-test plants a rolling-beta case whose cost_r is within 10% of the fixed-beta figure. Also scripts/research/pairs_dollar_lots.py: slippage + funding from execution_costs.resolve_cost_policy (fee-only today). OPEN QUESTION for this row, not established: whether src/units/strategies/pairs_executor sizes on the same rolling-beta quantity. DONE WHEN: the fix is merged with the self-test and blocked/RQ-20261014-470a-12 is moved to research/queue and lands a measured record.",
+  "updated_at": "2026-10-14T18:26:32Z",
+  "updated_by": "session_011NgbCF6CGFggZ2wf8DYmGP",
+  "roadmap": [
+    "M22",
+    "L-LADDER"
+  ],
+  "_seq": 495
+}

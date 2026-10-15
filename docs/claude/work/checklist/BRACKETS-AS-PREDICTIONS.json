@@ -1,0 +1,26 @@
+{
+  "id": "BRACKETS-AS-PREDICTIONS",
+  "title": "Brackets as predictions: every real-money leg's TP and SL is a revised prediction of where price will reach -- real-money legs first, Tier-3 data-backed",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-14 weekly planning] OPERATOR DIRECTION 2026-10-14 (verbatim): 'every bracket represents a prediction of where we think price will actually reach... no unattainable brackets that exist decoratively for another exit mechanism'. Tier-3 (strategy exit params) under the data-backed standing authorization: each leg's TP/SL revision is proposed from a committed evidence record (exit-refinement skill: harness lever sweep + MFE/reach-rate + giveback), shipped, then the operator notified; a momentum/trailing exit does not exempt a leg. Order: bybit_2 + bybit_portfolio and alpaca_live + alpaca_portfolio first (python3 scripts/ci/check_tp_doctrine.py: 0 of 50 routings compliant on 2026-10-14 06:40Z), then prop, then paper. Serves milestone L-ATM, which merges M20 and M31.",
+  "updated_at": "2026-10-14T07:37:21Z",
+  "updated_by": "session_01DfFYRUG7orGpkE5pVnA8e4",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "observation": {
+    "what": "every real-money routing (bybit_2, bybit_portfolio, alpaca_live, alpaca_portfolio) declares a predictive TP and SL revision backed by a committed evidence record; python3 scripts/ci/check_tp_doctrine.py reports all real-money routings compliant (0 of 7 on 2026-10-11) and giveback (peak R vs realised R) is measured for them in the weekly review prep",
+    "how_to_check": "check_tp_doctrine.py real-money rows + the evidence records named on this row + position_telemetry giveback in docs/reviews/<date>-weekly-walkthrough.md",
+    "due_by": "2026-11-11"
+  },
+  "_seq": 486
+}

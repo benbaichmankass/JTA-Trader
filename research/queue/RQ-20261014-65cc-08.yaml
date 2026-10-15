@@ -1,0 +1,145 @@
+id: RQ-20261014-65cc-08
+title: 'Frontier / scaling on Kaggle GPU: does TabICL keep its edge over LightGBM at a 12,000-row tail on the BTC and ETH 1h regime head?'
+status: done
+cadence: once
+theme: ml_health
+priority: 2
+kind: experiment
+question: At a 12,000-row tail (4x the small-n unit RQ-20261014-65cc-06), does TabICL still beat LightGBM by >= 0.005 macro-F1 under purged CV on BOTH symbols, and does it
+  finish inside the time limit on one T4?
+why_this_matters: 'A pretrained in-context learner''s edge is expected to SHRINK as n grows (the boosted tree catches up), so the n at which it stops winning tells us which
+  heads it is even a candidate for (the meta-label head is ~99 rows; the regime heads are 60,000). TabICL only (BSD, no licence question). The scaling answer and the wall-clock
+  are both outputs: if it cannot finish at 12k rows on a T4 the verdict is INDETERMINATE with a measured runtime, which sizes the next unit. DATA PATHS UNVERIFIED FROM THIS
+  SANDBOX (the shards are not reachable here): the BTC/ETH 1h v002 market_features paths are inside the published allowlist (scripts/research/market_data_export.py::ALLOW)
+  and RQ-20261013-1414-03 already reads ETHUSDT 1h with these six features; BTC 1h and the target column on each shard are the ones to check in the first run''s published-data.json
+  (last_ts per shard). A missing column or a stale/withheld shard lands as producer_failed or no_data: a ROUTE FAULT to fix and re-queue, never a verdict.'
+power:
+  expected_n: 7200
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'tail_rows 12000 with min_train_frac 0.4 leaves ~7200 out-of-sample rows over 5 folds per symbol; d=0.1 paired needs ~785 rows, so each symbol is above the row floor
+    on rows, but bars are autocorrelated so effective n is lower: the rule also requires the same-direction CV mean on BOTH symbols.'
+  feasibility:
+    source: none
+    accrual_basis: 'Fixed by construction (tail_rows of a nightly-rebuilt shard): n does not grow with waiting, so an underpowered result is reported as such and the follow-up
+      is a larger or different dataset, not a re-run.'
+decision_rule:
+  id: RULE-RQ20261014-65CC-08-TABICL-SCALING-12K
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: Paired per-fold macro-F1 difference (tabicl minus LightGBM) on identical purged folds (5, embargo 24 rows), mean over folds, per symbol; wall-clock seconds reported.
+  rule: PASS IF tabicl beats LightGBM by >= +0.005 macro-F1 on the CV mean on BOTH symbols at tail 12,000 (the edge survives 4x the n of unit 65cc-06). FAIL IF tabicl is below
+    LightGBM (< 0) on any symbol and the arm was evaluated (the edge does not survive scale; it is a small-n tool only). INDETERMINATE otherwise, or if folds < 3 or the arm
+    is unavailable/errored/timed out.
+  min_n: 3 usable CV folds per symbol; reported n_rows per symbol.
+  what_it_does_not_do: Serves nothing, registers nothing, touches no config; a PASS is not edge and not a P&L figure.
+compute: gpu
+value:
+  bucket: frontier
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  basis: 'stand-in: tells the AI-trader plan which heads a pretrained tabular learner is a candidate for; not a measured P&L'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: true
+  published_data: metis-market-data
+  peak_memory_gb: 10.0
+  est_minutes: 90
+  basis: 'Estimate, NOT measured: re-declare from the first run''s run-manifest.json.'
+ml_bakeoff:
+  task: classification
+  metric: macro_f1
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT_1h:
+        path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+      ETHUSDT_1h:
+        path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    tail_rows: 12000
+  cv:
+    folds: 5
+    embargo_rows: 24
+    min_train_frac: 0.4
+  baseline: lgbm
+  controls:
+  - prior
+  candidates:
+  - tabicl
+  learners:
+    prior:
+      kind: prior
+    lgbm:
+      kind: lightgbm
+      params:
+        n_estimators: 150
+        learning_rate: 0.05
+        num_leaves: 15
+        min_child_samples: 20
+    tabicl:
+      kind: tabicl
+      params: {}
+  rule:
+    min_folds: 3
+    pass_if:
+    - group:
+      - BTCUSDT_1h
+      - ETHUSDT_1h
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.005
+    fail_if_no_candidate_reaches:
+    - group: any
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.0
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 270
+  inputs:
+    research_unit: RQ-20261014-65cc-08
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M25
+related:
+- RQ-20261014-65cc-06
+- docs/research/frontier-scan-2026-10-11.md
+- scripts/research/research_compute.yaml
+last_dispatched_at: '2026-10-14T07:33:56+00:00'
+grading:
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261014-65CC-08-TABICL-SCALING-12K
+  evidence:
+  - research/results/RQ-20261014-65cc-08/38529204934.jsonl
+  - research/results/RQ-20261014-65cc-08/38530107181.jsonl
+  graded_at: '2026-10-14'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 2 row(s), all measured, all indeterminate
+  rows: 2
+  verdict: indeterminate

@@ -205,20 +205,57 @@
   // helper finds things by text/label/role only, demands exactly ONE match, and returns a dump (our own UI labels,
   // digits masked) when it cannot; the app refuses before any click it cannot verify. Never a close control.
   var NOT_EDIT = /close|flatten|reverse|cancel|remove|delete|partial/i;
+  // BREAKOUT-POS-UNPARSED (2026-10-14): the live Positions view is a DIV GRID (no tr / [role=row]), so posRows found
+  // nothing and every trail amend reported no_position while the ETH short was open. With no table row, the ONE
+  // Positions div-grid header's data rows are matched instead (same discovery as readGrid); GRID_HDR remembers each
+  // grid row's header so rowCells can align its cells.
+  var GRID_HDR = typeof WeakMap === "function" ? new WeakMap() : null;
   function posRows(sym, sideRe) {
     var n = norm(sym), b = base(sym), rx = new RegExp(sideRe, "i");
-    return innermost(all("tr,[role=row]").filter(function (r) {
-      var s = t(r), ns = norm(s); return (ns.indexOf(n) >= 0 || ns.indexOf(b) >= 0) && rx.test(s) && !r.querySelector("th,[role=columnheader]");
-    }));
+    var hit = function (r) { var s = t(r) + " " + wt(r), ns = norm(s); return (ns.indexOf(n) >= 0 || ns.indexOf(b) >= 0) && rx.test(s); };
+    var rs = innermost(all("tr,[role=row]").filter(function (r) { return hit(r) && !r.querySelector("th,[role=columnheader]"); }));
+    if (rs.length || !GRID_HDR) return rs;
+    var g = gridHeaders(POS_COLS); if (g.length !== 1) return [];
+    return gridRowsOf(g[0]).rows.filter(function (r) { if (!hit(r)) return false; GRID_HDR.set(r, g[0]); return true; });
   }
+  function isGridRow(r) { return !!(GRID_HDR && GRID_HDR.get(r)); }
   function ctlText(x) { return (t(x) + " " + (x.getAttribute("aria-label") || "") + " " + (x.getAttribute("title") || "")).trim(); }
   function rowCtls(r) { return Array.prototype.slice.call(r.querySelectorAll("button,[role=button],a")).filter(vis); }
   function rowCells(r) {
     var cells = Array.prototype.slice.call(r.querySelectorAll("td,[role=cell],[role=gridcell]"));
     var tb = r.closest("table,[role=table],[role=grid]"), hs = [];
+    if (!cells.length && isGridRow(r)) { cells = kids(r); hs = kids(GRID_HDR.get(r)).map(t); tb = null; }
     if (tb) hs = Array.prototype.slice.call(tb.querySelectorAll("th,[role=columnheader]")).map(t);
     var out = {}; if (hs.length === cells.length) cells.forEach(function (c, i) { out[hs[i]] = t(c); });
     return {headers: hs, map: out, n: cells.length};
+  }
+  // a combined "TP / SL" (or "SL / TP") column: its two halves, in the header's order; null when absent or not two
+  function tpslCol(map) {
+    var ks = Object.keys(map).filter(function (k) { return /^(tp\s*\/\s*sl|sl\s*\/\s*tp)$/i.test(k.trim()); });
+    if (ks.length !== 1) return null;
+    var parts = map[ks[0]].split("/").map(function (x) { return x.trim(); }); if (parts.length !== 2) return null;
+    return /^tp/i.test(ks[0].trim()) ? {tp: parts[0], sl: parts[1]} : {sl: parts[0], tp: parts[1]};
+  }
+  // MEASURE-FIRST dump of a row's possibly-interactive elements: tag, role, aria-label / title / text, test id, the
+  // first class names and the column it sits in -- digits masked, never a click. The div grid's edit control is
+  // UNMEASURED, so this is the evidence a later build needs before anything in that row is ever clicked.
+  function ctlDump(r) {
+    var hs = isGridRow(r) ? kids(GRID_HDR.get(r)).map(t) : [], cs = isGridRow(r) ? kids(r) : [];
+    var m = function (s) { return (s || "").replace(/\d/g, "#"); };
+    return Array.prototype.slice.call(r.querySelectorAll("button,[role=button],a,[tabindex],svg,img,[onclick]")).filter(vis).slice(0, 12).map(function (x) {
+      var ci = -1; cs.forEach(function (c, i) { if (c.contains(x)) ci = i; });
+      return {col: ci >= 0 ? m(hs[ci]).slice(0, 16) : "", tag: x.tagName.toLowerCase(), role: x.getAttribute("role") || "",
+        label: m(x.getAttribute("aria-label") || x.getAttribute("title") || t(x)).slice(0, 30), testid: m(x.getAttribute("data-testid") || "").slice(0, 30),
+        cls: m(typeof x.className === "string" ? x.className : (x.getAttribute("class") || "")).split(/\s+/).slice(0, 3).join(" ").slice(0, 40)};
+    });
+  }
+  // the dump as short strings that survive the server's 40-char scrub (positions diag)
+  function ctlLines(d) {
+    var out = []; d.forEach(function (c) {
+      out.push((c.col ? c.col + ":" : "") + c.tag + (c.role ? "/" + c.role : "") + " " + c.label);
+      if (c.testid || c.cls) out.push("  " + (c.testid ? "id=" + c.testid + " " : "") + (c.cls ? "cls=" + c.cls : ""));
+    });
+    return out.map(function (x) { return x.slice(0, 40); }).slice(0, 30);
   }
   function col(map, re) { var rx = new RegExp(re, "i"), ks = Object.keys(map).filter(function (k) { return rx.test(k); }); return ks.length === 1 ? map[ks[0]] : null; }
   // ---- TABLE READS (PROP-TRACKING, 2026-10-12): Positions + Closed orders, mapped by header text. First match wins,
@@ -247,20 +284,62 @@
     var m = /([-+−]?)\s*\$?\s*(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?/.exec((s || "").replace(/–/g, "-"));
     if (!m) return null; var v = parseFloat((m[2] + (m[3] || "")).replace(/,/g, "")); return (m[1] === "-" || m[1] === "−") ? -v : v;
   }
+  // BREAKOUT-POS-UNPARSED (2026-10-14): innerText glues adjacent inline spans ("<span>Short</span><span>20x</span>" ->
+  // "Short20x"), so \bshort\b missed a side word the operator can plainly read -- the "Positions1" badge failure again,
+  // in a cell. wt() is the cell's text nodes joined WITH spaces; it is used ONLY to find words (side, symbol), never
+  // numbers: a price whose digits sit in separate spans ("2,4<b>58</b>.24") must stay one number.
+  function wt(el) {
+    var out = [], w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null), n;
+    while ((n = w.nextNode())) if (n.parentElement && vis(n.parentElement) && n.nodeValue.trim()) out.push(n.nodeValue.trim());
+    return out.join(" ").replace(/\s+/g, " ").trim();
+  }
+  // BREAKOUT-POS-UNPARSED (1b.193 live dump 2026-10-14 21:38Z): the Positions Side cell has NO TEXT -- the side is
+  // drawn as an icon / colour / attribute. attrText(el) is the words in the cell's own and descendants' attributes
+  // (class, aria-label, title, alt, data-*, svg <title>, <use> href), camelCase / kebab / snake split into words.
+  // Words only, never colour: "text-red" is not a side. Ambiguous (both a long and a short word) -> null.
+  function attrEls(el) { return [el].concat(Array.prototype.slice.call(el.querySelectorAll("*"))).slice(0, 12); }
+  function attrText(el) {
+    var out = [];
+    attrEls(el).forEach(function (e) {
+      Array.prototype.slice.call(e.attributes || []).forEach(function (a) {
+        if (/^(class|aria-label|title|alt|href|xlink:href)$|^data-/i.test(a.name)) out.push(a.value);
+      });
+      if (e.tagName && e.tagName.toLowerCase() === "title") out.push(e.textContent || "");
+    });
+    return out.join(" ").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[^A-Za-z]+/g, " ").trim();
+  }
+  function sideOfAttr(s) {
+    var l = /\b(long|buy)\b/i.test(s || ""), sh = /\b(short|sell)\b/i.test(s || "");
+    return l === sh ? null : (l ? "long" : "short");
+  }
+  // the attribute SHAPE of a cell whose need-key read empty, for the miss dump: tag[.class tokens] aria/title/data
+  function attrShape(el) {
+    return attrEls(el).slice(0, 6).map(function (e) {
+      var tag = (e.tagName || "").toLowerCase(), bits = [tag];
+      Array.prototype.slice.call(e.attributes || []).forEach(function (a) {
+        if (/^(class|aria-label|title|alt|href|xlink:href|role)$|^data-/i.test(a.name) && a.value) bits.push(a.name.replace(/^data-/, "d-") + "=" + a.value);
+      });
+      return bits.join(" ");
+    });
+  }
   function sideOf(s) { var m = /\b(long|short|buy|sell)\b/i.exec(s || ""); if (!m) return null; return /long|buy/i.test(m[1]) ? "long" : "short"; }
-  function tabCount(re) {   // "Positions (2)" / "Positions 2" -> 2; a bare label -> null (the page did not say)
-    var c = all("button,[role=tab],[role=button],a").filter(function (x) { return re.test(t(x)); });
-    if (c.length !== 1) return null; var m = /\(?\s*(\d+)\s*\)?\s*$/.exec(t(c[0]).replace(re, "")); return m ? parseInt(m[1], 10) : null;
+  function tabCount(re) {   // "Positions (2)" / "Positions 2" / "Positions1" -> 2/2/1; a bare label -> null (the page did not say)
+    var c = all("button,[role=tab],[role=button],a").filter(function (x) { return tabMatch(re, t(x)); });
+    if (c.length !== 1) return null;
+    var tm = TAB_LABEL.exec(t(c[0])); if (tm) return tm[2] ? parseInt(tm[2].replace(/\D/g, ""), 10) : null;
+    var m = /\(?\s*(\d+)\s*\)?\s*$/.exec(t(c[0]).replace(re, "")); return m ? parseInt(m[1], 10) : null;
   }
   function masked(hs) { return hs.map(function (h) { return h.replace(/\d/g, "#").slice(0, 24); }).slice(0, 20); }
   function controlsDump() { return all("button,[role=tab],[role=button]").map(function (x) { return t(x).replace(/\d/g, "#").slice(0, 30); }).filter(Boolean).slice(0, 30); }
   // one row's cells -> {symbol, side, qty, ...}; cells are aligned to keys (null / "skip" columns ignored)
-  function parseRow(cells, keys) {
-    var o = {}, rowText = cells.join(" ");
+  // `words` (optional): the same cells as wt() text, for the side and symbol words only; `attrs` (optional): the
+  // cells' attrText(), for a side drawn without text
+  function parseRow(cells, keys, words, attrs) {
+    var o = {}, rowText = cells.join(" ") + " " + (words || []).join(" ");
     cells.forEach(function (c, i) {
-      var k = keys[i]; if (!k || k === "skip" || o[k] !== undefined) return;
+      var k = keys[i], w = (words && words[i]) || c; if (!k || k === "skip" || o[k] !== undefined) return;
       if (k === "side") o.reduce = /reduce/i.test(c);   // "Long (Reduce)": the span after the side word; closes a SHORT
-      o[k] = (k === "symbol" || k === "status" || k === "type" || k === "time") ? c.slice(0, 40) : (k === "side" ? sideOf(c) : firstNumber(c));
+      o[k] = k === "symbol" ? w.slice(0, 40) : (k === "status" || k === "type" || k === "time") ? c.slice(0, 40) : (k === "side" ? (sideOf(c) || sideOf(w) || sideOfAttr(attrs && attrs[i])) : firstNumber(c));
     });
     if (o.side == null) o.side = sideOf(o.symbol) || sideOf(rowText);
     // a size carries the side only when it is SIGNED ("-1.5" short, "+1.5" long); an unsigned size is not a long
@@ -269,19 +348,52 @@
     if (typeof o.qty === "number") o.qty = Math.abs(o.qty);
     // NO size column (Breakout's Positions grid shows Value, not contracts): qty = |Value| / Current price, marked
     // qty_src so the server and a reader know it is DERIVED (rounded Value, so only approximately the placed size)
-    if (keys.indexOf("qty") < 0 && keys.indexOf("value") >= 0 && typeof o.value === "number" && typeof (o.mark != null ? o.mark : o.price) === "number" && (o.mark != null ? o.mark : o.price) > 0 && o.value !== 0) {
+    // a mark more than 2x away from the entry is a misread number (e.g. "2 462.10" read as 2), never a qty divisor
+    var px = o.mark != null ? o.mark : o.price, pxOk = typeof o.entry !== "number" || !(o.entry > 0) || (px / o.entry > 0.5 && px / o.entry < 2);
+    if (keys.indexOf("qty") < 0 && keys.indexOf("value") >= 0 && typeof o.value === "number" && typeof px === "number" && px > 0 && pxOk && o.value !== 0) {
       o.qty = Math.round(Math.abs(o.value) / (o.mark != null ? o.mark : o.price) * 1e8) / 1e8; o.qty_src = "value/mark";
     }
-    if (o.symbol) o.symbol = o.symbol.replace(/\b(long|short|buy|sell)\b/ig, "").replace(/\d+(\.\d+)?\s*[x×]/ig, "").trim();
+    // the live Market cell reads "ETH 5" (a leverage badge with no x, 1b.193 dump): a bare number token is never part
+    // of a venue symbol, and left in it made the symbol unmappable ("ETH5")
+    // the GROUP row's Market cell leads with a "⌄" expand glyph (operator screenshot 2026-10-14): glyphs are not symbol
+    if (o.symbol) o.symbol = o.symbol.replace(/[^A-Za-z0-9 .\/\u00d7-]/g, " ").replace(/\b(long|short|buy|sell)\b/ig, "").replace(/\d+(\.\d+)?\s*[x×]|\b[x×]\s*\d+(\.\d+)?\b/ig, "")
+      .replace(/(^|\s)\d+(\.\d+)?(?=\s|$)/g, " ").replace(/\s+/g, " ").trim();
     return o;
   }
   // every parsed row is sent, never a prefix: a row the server does not see would read as gone (review of #17745);
   // a strict list longer than the cap is refused instead of truncated. `emptyOk` = positive evidence the view is empty.
-  function finishRead(out, bad, hs, count, need, strict, emptyOk) {
+  // An unparsed miss says WHICH need keys were missing (detail, "+"-joined: the server scrub keeps "+" and "=") and the
+  // first failing row's cells as key:shape with digits -> "d" (BREAKOUT-POS-UNPARSED: the first live miss said only
+  // "unparsed", so the failing field had to be guessed).
+  function cellShapes(cells, keys) {
+    return (cells || []).slice(0, 20).map(function (c, i) {
+      return ((keys[i] || "none") + ":" + c.replace(/\d/g, "d").replace(/,/g, "_").replace(/[^A-Za-z0-9 _.:\/()=+&%-]/g, "=")).slice(0, 40);
+    });
+  }
+  function finishRead(out, bad, hs, count, need, strict, emptyOk, raw, keys, els) {
     if (strict && out.length > ROW_CAP) return {state: "too_many_rows", n_rows: out.length, count: count, headers: masked(hs)};
     var rows = out.slice(0, ROW_CAP);
-    if (bad || out.some(function (o) { return need.some(function (k) { return o[k] == null || o[k] === ""; }); }))
-      return {state: "unparsed", n_rows: out.length + bad, count: count, headers: masked(hs)};
+    var miss = function (o) { return need.filter(function (k) { return o[k] == null || o[k] === ""; }); };
+    var fi = -1; out.forEach(function (o, i) { if (fi < 0 && miss(o).length) fi = i; });
+    if (bad || fi >= 0) {
+      var ms = []; out.forEach(function (o) { miss(o).forEach(function (k) { if (ms.indexOf(k) < 0) ms.push(k); }); });
+      var cs = fi >= 0 && raw ? cellShapes(raw[fi], keys || []) : [];
+      // a need-key cell that read EMPTY: its attribute shape too (digits masked), so the next miss shows how it is drawn
+      if (fi >= 0 && els && els[fi]) miss(out[fi]).forEach(function (k) {
+        var i = (keys || []).indexOf(k); if (i < 0 || !els[fi][i] || (raw[fi][i] || "").trim()) return;
+        attrShape(els[fi][i]).forEach(function (a) {
+          for (var j = 0; j < a.length && cs.length < 36; j += 36) cs.push((k + "+" + a.slice(j, j + 36)).replace(/\d/g, "d").replace(/[^A-Za-z0-9 _.:\/()=+&%-]/g, "=").slice(0, 40));
+        });
+      });
+      // SIDE ONLY: every row has symbol + qty and the venue drew the side without any word we can read. The rows go
+      // to the server as "side_unread" (never "read"): it may take the side from the ONE open journal ticket with the
+      // same symbol and entry (ESTIMATED), or leave the read un-reconciled. Never guessed here.
+      var sideOnly = !bad && ms.length === 1 && ms[0] === "side" && need.indexOf("side") >= 0 && (count === null || count === out.length);
+      var r0 = {state: sideOnly ? "side_unread" : "unparsed", n_rows: out.length + bad, count: count, headers: masked(hs),
+        detail: ("miss=" + (ms.join("+") || "none") + " bad=" + bad + " n=" + out.length).slice(0, 31), cells: cs};
+      if (sideOnly) r0.rows = rows;
+      return r0;
+    }
     if (count !== null && count !== out.length) return {state: "count_mismatch", n_rows: out.length, count: count, headers: masked(hs)};
     // flat needs POSITIVE evidence (the tab says 0, or the table's / panel's container says "no positions"): a header
     // row with no data rows may be a table still rendering, and a false "flat" would close live journal rows.
@@ -296,6 +408,11 @@
   // highest ancestor of the header that holds no tab label (Positions / Open orders / Closed orders / ...): the empty
   // state counts only INSIDE it, and a panel that reaches <body> proves nothing.
   var TAB_LABEL = /^(open orders|positions|portfolio|closed orders|trades)(\s*\(?\s*\d+\s*\)?)?$/i;
+  // BREAKOUT-UNTRACKED-1014 (2026-10-14): with a position open the chip renders its count badge GLUED to the label
+  // (innerText "Positions1", "Open orders2"), so /^positions\b/ and /^positions$/ missed it and every read was
+  // no_tab for 9 h while an ETH short was open. A tab chip's text is matched with its count badge dropped too.
+  function tabText(s) { var m = TAB_LABEL.exec(s); return m ? m[1] : s; }
+  function tabMatch(rx, s) { return rx.test(s) || rx.test(tabText(s)); }
   function kids(e) { return Array.prototype.slice.call(e.children).filter(vis); }
   function gridHeaders(cols) {
     var labels = innermost(all("div,span,p,button,[role=button],[role=columnheader],th,li,a,label")).filter(function (e) {
@@ -321,27 +438,55 @@
            !tabs.some(function (x) { return p.parentElement.contains(x); })) p = p.parentElement;
     return (p === document.body || p === document.documentElement || tabs.some(function (x) { return p.contains(x); })) ? null : p;
   }
-  function readGrid(cols, need, emptyRe, count, strict, hdrs) {
-    var h = hdrs[0], hc = kids(h), hs = hc.map(t), keys = hs.map(function (s) { return colKey(s, cols); });
-    var rows = [], bad = 0, node = h, found = false, sib;
-    for (var lvl = 0; lvl < 4 && node.parentElement && !found; lvl++, node = node.parentElement) {
+  // a div-grid header's DATA ROWS: the following siblings of the header (or of its wrapper, up to 3 levels, or those
+  // siblings' children) with the SAME child count; `direct` / `sib` are kept for readGrid's misaligned-row count
+  function gridRowsOf(h) {
+    var hc = kids(h), node = h, sib;
+    for (var lvl = 0; lvl < 4 && node.parentElement; lvl++, node = node.parentElement) {
       sib = kids(node.parentElement).filter(function (x) { return x !== node; });
       var direct = sib.filter(function (x) { return kids(x).length === hc.length; });
       var nested = []; sib.forEach(function (x) { if (direct.indexOf(x) < 0) kids(x).forEach(function (y) { if (kids(y).length === hc.length) nested.push(y); }); });
       var pool = direct.length ? direct : nested;
-      if (pool.length) {
-        rows = pool; found = true;
-        // anything else in the same container that looks like a row but has another cell count is a row we cannot align
-        sib.forEach(function (x) {
-          if (direct.indexOf(x) >= 0 || emptyRe.test(t(x)) || !/\d/.test(t(x))) return;
-          if (!direct.length) return;
-          if (kids(x).length >= 2) bad += 1;
-        });
-      }
+      if (pool.length) return {rows: pool, direct: direct, sib: sib};
     }
-    var out = rows.map(function (r) { return parseRow(kids(r).map(t), keys); });
+    return {rows: [], direct: [], sib: []};
+  }
+  // BREAKOUT-SL-AMEND-CLICK (operator screenshot 2026-10-14 ~21:41Z): Positions groups rows per symbol. The GROUP row
+  // ("⌄ ETH 1  Sum ⌄  20.88 USD") carries "Sum" aggregates and a position count; the CHILD row ("ETH 5x  20.88 USD") is
+  // the position. A row with a "Sum" cell is a group row: its children are read instead -- any element in the panel
+  // with the header's cell count that is not a group row and holds no other such element. With no child row in the DOM
+  // (collapsed), a group row whose count is 1 stands in for its one position (row_kind "group"); a group of more than
+  // one position is never read as one row (unparsed, miss=group).
+  function isGroupRow(r) { return kids(r).some(function (c) { return /^\s*sum\b/i.test(t(c)); }); }
+  function groupCount(r) { var c = kids(r)[0], m = c ? /(\d+)\s*$/.exec(t(c)) : null; return m && !/[x\u00d7]\s*$/i.test(t(c)) ? parseInt(m[1], 10) : null; }
+  function childRows(h, groups) {
+    var n = kids(h).length, panel = gridPanel(h) || h.parentElement;
+    var c = Array.prototype.slice.call(panel.querySelectorAll("*")).filter(function (x) {
+      return vis(x) && x !== h && !x.contains(h) && !h.contains(x) && kids(x).length === n && !isGroupRow(x) && /\d/.test(t(x));
+    });
+    c = c.filter(function (x) { return !c.some(function (o) { return o !== x && x.contains(o); }); });
+    return groups.length ? c : [];
+  }
+  function readGrid(cols, need, emptyRe, count, strict, hdrs) {
+    var h = hdrs[0], hs = kids(h).map(t), keys = hs.map(function (s) { return colKey(s, cols); });
+    var gr = gridRowsOf(h), rows = gr.rows, bad = 0, kinds = null;
+    var groups = rows.filter(isGroupRow);
+    if (groups.length) {
+      var ch = childRows(h, groups);
+      if (ch.length) { rows = ch; kinds = rows.map(function () { return "child"; }); }
+      else if (groups.every(function (g) { return groupCount(g) === 1; })) kinds = rows.map(function (r) { return isGroupRow(r) ? "group" : "child"; });
+      else return {state: "unparsed", n_rows: rows.length, count: count, headers: masked(hs), detail: "miss=group bad=0 n=" + rows.length, layout: "div_grid", cells: []};
+    }
+    // anything else in the same container that looks like a row but has another cell count is a row we cannot align
+    if (gr.direct.length) gr.sib.forEach(function (x) {
+      if (gr.direct.indexOf(x) >= 0 || emptyRe.test(t(x)) || !/\d/.test(t(x)) || rows.some(function (r) { return x.contains(r); })) return;
+      if (kids(x).length >= 2) bad += 1;
+    });
+    var raw = rows.map(function (r) { return kids(r).map(t); });
+    var els = rows.map(kids);
+    var out = rows.map(function (r, i) { var o = parseRow(raw[i], keys, els[i].map(wt), els[i].map(attrText)); if (kinds) o.row_kind = kinds[i]; return o; });
     var panel = gridPanel(h), emptyOk = !!(panel && emptyRe.test(t(panel)));
-    var r = finishRead(out, bad, hs, count, need, strict, emptyOk);
+    var r = finishRead(out, bad, hs, count, need, strict, emptyOk, raw, keys, els);
     r.layout = "div_grid";
     return r;
   }
@@ -367,15 +512,15 @@
       return {state: hits.length ? "ambiguous" : "no_table", tables: hits.length, count: count,
         headers: hits.length ? masked(hits[0].hs) : [], controls: controlsDump()};
     }
-    var h = hits[0], out = [], bad = 0;
+    var h = hits[0], out = [], bad = 0, raw = [], rels = [];
     innermost(Array.prototype.slice.call(h.tb.querySelectorAll("tr,[role=row]")).filter(vis)).forEach(function (r) {
       if (r.querySelector("th,[role=columnheader]")) return;
-      var cells = Array.prototype.slice.call(r.querySelectorAll("td,[role=cell],[role=gridcell]")).map(t);
+      var els = Array.prototype.slice.call(r.querySelectorAll("td,[role=cell],[role=gridcell]")), cells = els.map(t);
       if (cells.length === 1 && emptyRe.test(cells[0])) return;   // the table's own "no positions" row
       if (cells.length !== h.hs.length) { bad += 1; return; }
-      out.push(parseRow(cells, h.keys));
+      raw.push(cells); rels.push(els); out.push(parseRow(cells, h.keys, els.map(wt), els.map(attrText)));
     });
-    return finishRead(out, bad, h.hs, count, need, strict, emptyRe.test(t(h.tb.parentElement || h.tb)));
+    return finishRead(out, bad, h.hs, count, need, strict, emptyRe.test(t(h.tb.parentElement || h.tb)), raw, h.keys, rels);
   }
   function dialogs() { return all("[role=dialog],[role=alertdialog],dialog[open]"); }
   function dlg() { var d = dialogs(); return d.length === 1 ? d[0] : null; }
@@ -482,6 +627,125 @@
   }
   function sig(s) { var h = 5381; for (var i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0; return h.toString(36); }
 
+  // ---- POSITION SHEET (BREAKOUT-SL-AMEND-CLICK, 2026-10-14). The flow is operator-MEASURED from screenshots (~21:41Z,
+  // phone width); its DOM is NOT measured yet, so every helper finds things by visible text / attribute words, demands
+  // exactly ONE match and otherwise returns a digit-masked dump. Tapping the Positions row opens a bottom sheet titled
+  // with the symbol ("ETH"), subtitle "Position – <id>", tabs [Position details] [Opening trades] [1 TP / 1 SL].
+  // Position details: Side "Short", "Total open volume" 0.54 ETH, "Avg. opening price", "Current price", "uPnL", and a
+  // RED "Close position" button. [1 TP / 1 SL]: SIDE | TYPE | TRIGGER PRICE rows ("Long | Stop l… | 2,504.25 USD | ✎ |
+  // ⓧ"): that SIDE is the CLOSING order's side, never the position's. ✎ opens "Edit Stop loss"; ⓧ CANCELS the order.
+  // DENYLIST: every click goes through safeClick, which refuses "Close position", any control whose words say
+  // close / cancel / remove / delete / flatten / reverse, and the ⓧ ✕ × glyph icons (a Positions row's ✕ closes the
+  // position; an order row's ⓧ cancels the stop). The two dismissals (the modal's "Cancel" text button, the sheet's
+  // header ✕) are separate, narrower paths: dlgDismiss / sheetCloseX.
+  var DENY_WORDS = /close|cancel|remove|delete|flatten|reverse|liquidat|discard/i;
+  var DENY_GLYPH = /^[✕✖✗✘×ⓧ⊗⊘❌❎⨯☒xX]$/;
+  var PENCIL_GLYPH = /^[✎✏✐\u{1f589}\u{1f58a}\u{1f58b}]$/u;
+  var SHEET_TAB = {details: /^position details$/i, trades: /^opening trades$/i, tpsl: /^\d+\s*tp\s*\/\s*\d+\s*sl$/i};
+  var SUBTITLE_RE = /^position\s*[–—-]\s*\S+/i;
+  function ctlWords(x) {   // a control's own words: text, aria-label, title, test id / icon names, svg <title>, <use> href
+    var s = [t(x)];
+    [x].concat(Array.prototype.slice.call(x.querySelectorAll("*")).slice(0, 12)).forEach(function (e) {
+      ["aria-label", "title", "data-testid", "data-icon", "data-id", "name", "alt", "href", "xlink:href"].forEach(function (a) { var v = e.getAttribute(a); if (v) s.push(v); });
+      if (e.tagName && e.tagName.toLowerCase() === "title") s.push(e.textContent || "");
+    });
+    return s.join(" ") + " " + attrText(x);
+  }
+  // why a control must never be clicked, or null. Words are matched in text AND attributes (class names included), so
+  // a false refusal ("closeable") is possible and safe; a missed ✕ is not.
+  function denied(x) {
+    if (!x || !x.getAttribute) return "none";
+    var txt = t(x);
+    if (/close\s*position/i.test(txt)) return "deny_close_position";
+    if (DENY_GLYPH.test(txt) || DENY_GLYPH.test((x.getAttribute("aria-label") || "").trim())) return "deny_glyph";
+    if (DENY_WORDS.test(ctlWords(x))) return "deny_word";
+    return null;
+  }
+  function safeClick(x) { var d = denied(x); if (d) return d; x.click(); return "clicked"; }
+  function textEls(root, re, max) {   // innermost visible elements whose own text matches re
+    return innermost(Array.prototype.slice.call((root || document).querySelectorAll("*")).filter(function (e) {
+      if (!vis(e)) return false; var s = t(e); return s.length > 0 && s.length <= (max || 40) && re.test(s);
+    }));
+  }
+  function sheetRoots() {   // the smallest ancestor of a [Position details] tab that also holds the [n TP / n SL] tab and the subtitle
+    var found = [];
+    textEls(document, SHEET_TAB.details).forEach(function (d) {
+      for (var a = d.parentElement, k = 0; a && k < 12 && a !== document.body; a = a.parentElement, k++) {
+        if (textEls(a, SHEET_TAB.tpsl).length && textEls(a, SUBTITLE_RE, 60).length) { if (found.indexOf(a) < 0) found.push(a); return; }
+      }
+    });
+    return innermost(found);
+  }
+  function sheetRoot() { var r = sheetRoots(); return r.length === 1 ? r[0] : null; }
+  function before(a, b) { return !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING); }
+  // the sheet's value for a row label ("Side" -> "Short"): the label's nearest ancestor whose text is the label + value
+  // and that holds no other details label
+  var DETAIL_LABELS = {side: /^side$/i, qty: /^total open volume$/i, entry: /^avg\.?\s*opening price$/i, mark: /^current price$/i,
+    upnl: /^u\.?\s*p\s*n\s*l$|^u\.?\s*p\s*&\s*l$|^unreali[sz]ed/i, margin: /^initial margin$/i};
+  function detailValue(root, re) {
+    var ls = textEls(root, re); if (ls.length !== 1) return {n: ls.length};
+    var lab = t(ls[0]), all_ = Object.keys(DETAIL_LABELS).map(function (k) { return DETAIL_LABELS[k]; });
+    for (var a = ls[0].parentElement, k = 0; a && k < 3 && a !== root; a = a.parentElement, k++) {
+      var others = all_.filter(function (rx) { return rx !== re && textEls(a, rx).length; });
+      if (others.length) return {n: 1, value: null, why: "shared_parent"};
+      var s = t(a); if (s.length > lab.length && s.toLowerCase().indexOf(lab.toLowerCase()) === 0) return {n: 1, value: s.slice(lab.length).trim(), el: a};
+    }
+    return {n: 1, value: null, why: "no_value"};
+  }
+  var PRICE_LEAF = /^[-+−]?\s*\d[\d,]*(\.\d+)?\s*(USD[TC]?)?$/i;
+  // the [n TP / n SL] tab's order rows: each TYPE cell ("Stop l…" / "Take p…") and its smallest ancestor holding ONE
+  // price and no other TYPE cell
+  function sheetOrderRows(root) {
+    var types = textEls(root, /^(stop|take)\b/i, 30), out = [];
+    types.forEach(function (ty) {
+      for (var a = ty.parentElement, k = 0; a && k < 5 && a !== root; a = a.parentElement, k++) {
+        if (types.some(function (o) { return o !== ty && a.contains(o); })) break;
+        var px = textEls(a, PRICE_LEAF);
+        if (px.length) { out.push({type: /^stop/i.test(t(ty)) ? "stop" : "take", el: a, typeEl: ty, px: px}); return; }
+      }
+      out.push({type: /^stop/i.test(t(ty)) ? "stop" : "take", el: null, typeEl: ty, px: []});
+    });
+    return out;
+  }
+  // a row's icon-like controls, outermost interactive element each: button / role=button / a / [tabindex] / svg / img /
+  // a one-glyph text element
+  function rowIcons(row, skip) {
+    var c = Array.prototype.slice.call(row.querySelectorAll("button,[role=button],a,[tabindex],svg,img,i,span,div")).filter(function (x) {
+      if (!vis(x) || skip.some(function (s) { return s === x || s.contains(x) || x.contains(s); })) return false;
+      var tag = x.tagName.toLowerCase();
+      return /^(button|a|svg|img|i)$/.test(tag) || x.getAttribute("role") === "button" || x.hasAttribute("tabindex") || (t(x).length === 1 && !x.children.length);
+    }).map(function (x) {
+      var o = x.closest("button,[role=button],a,[tabindex]");
+      return (!o || o === row || !row.contains(o) || skip.some(function (s) { return o.contains(s); })) ? x : o;
+    });
+    var u = c.filter(function (x, i) { return c.indexOf(x) === i; });
+    return u.filter(function (x) { return !u.some(function (o) { return o !== x && o.contains(x); }); });
+  }
+  function isPencil(x) { var s = t(x); return (PENCIL_GLYPH.test(s) || /\b(edit|pencil|modify)\b/i.test(ctlWords(x))) && !denied(x); }
+  function iconDump(x) {
+    var m = function (s) { return (s || "").replace(/\d/g, "#"); };
+    return {tag: x.tagName.toLowerCase(), role: x.getAttribute("role") || "", text: m(t(x)).slice(0, 8),
+      label: m(x.getAttribute("aria-label") || x.getAttribute("title") || "").slice(0, 24), testid: m(x.getAttribute("data-testid") || "").slice(0, 24),
+      words: m(attrText(x)).slice(0, 40), pencil: isPencil(x), deny: denied(x) || ""};
+  }
+  function iconLines(d) {
+    return d.map(function (c) { return (c.tag + (c.role ? "/" + c.role : "") + " " + (c.pencil ? "P " : "") + (c.deny ? "D " : "") + (c.text || c.label || c.testid || c.words)).slice(0, 40); });
+  }
+  // the edit modal: the ONE "Edit Stop loss" / "Edit Take profit" title and its smallest ancestor holding a Confirm and
+  // a Cancel button
+  function modalRoot() {
+    var ts = textEls(document, /^edit\s+(stop\s*loss|take\s*profit)$/i), found = [];
+    ts.forEach(function (ti) {
+      for (var a = ti.parentElement, k = 0; a && k < 10 && a !== document.body; a = a.parentElement, k++) {
+        var bs = Array.prototype.slice.call(a.querySelectorAll("button,[role=button]")).filter(vis);
+        if (bs.some(function (b) { return /^confirm$/i.test(t(b)); }) && bs.some(function (b) { return /^cancel$/i.test(t(b)); })) { found.push({root: a, title: ti}); return; }
+      }
+    });
+    return found;
+  }
+  var MODAL_HDR = /^(long|short)\s+(\d[\d,]*(?:\.\d+)?)\s*([A-Za-z]{2,8})?\s*@\s*(\d[\d,]*(?:\.\d+)?)\s*(USD[TC]?)?$/i;
+  function modalInputs(root) { return inputs(root).map(function (i) { return {label: labelFor(i).replace(/\s+/g, " ").trim().slice(0, 40), value: i.value}; }); }
+  function triggerInput(root) { return inputs(root).filter(function (i) { var l = labelFor(i); return /trigger/i.test(l) && !/distance|%|r\s*:\s*r|quantity/i.test(l); }); }
   window.__ex = {
     state: function () {
       var pw = all("input[type=password]").length > 0;
@@ -626,7 +890,7 @@
       // "Open orders", "Positions", "Market chart", "Order book" ...; tabs=0 inputs=0, no buy/sell text).
       var ct = all("button,[role=tab],[role=button]").map(t);
       var panels = /(^|\.)trade\.breakoutprop\.com$/.test(location.hostname) &&
-        ct.some(function (x) { return /^positions$/i.test(x); }) && ct.some(function (x) { return /^open orders$/i.test(x); });
+        ct.some(function (x) { return /^positions$/i.test(tabText(x)); }) && ct.some(function (x) { return /^open orders$/i.test(tabText(x)); });
       return {ready: ctl || !!submitBtn() || bs || probe || panels, panels: panels, orderControl: ctl, ticketOpen: !!submitBtn(), buySell: bs,
         probe: probe, tabs: tb.length, inputs: inputs(document).length};
     },
@@ -665,7 +929,7 @@
     },
     clickText: function (re, roleSel) {
       var rx = new RegExp(re, "i");
-      var b = all(roleSel || "button,[role=tab],[role=button],a").filter(function (x) { return rx.test(t(x)); })[0];
+      var b = all(roleSel || "button,[role=tab],[role=button],a").filter(function (x) { return tabMatch(rx, t(x)); })[0];
       if (!b) return "none";
       // the tab strip scrolls horizontally on a phone ("Closed orders" is the last chip, clipped): bring it into view
       try { b.scrollIntoView({block: "nearest", inline: "center"}); } catch (e) { }
@@ -682,7 +946,7 @@
     clickTab: function (re) {
       if (window.__ex.clickText(re) === "clicked") return "clicked";
       var rx = new RegExp(re, "i");
-      var b = all("div,span,li").filter(function (x) { var s = t(x); return s.length > 0 && s.length <= 30 && rx.test(s) && TAB_LABEL.test(s); })
+      var b = all("div,span,li").filter(function (x) { var s = t(x); return s.length > 0 && s.length <= 30 && tabMatch(rx, s) && TAB_LABEL.test(s); })
         .filter(function (x, i, a) { return !a.some(function (y) { return y !== x && x.contains(y); }); })[0];
       if (!b) return "none";
       try { b.scrollIntoView({block: "nearest", inline: "center"}); } catch (e) { }
@@ -902,9 +1166,12 @@
     posInfo: function (sym, sideRe) {
       var rs = posRows(sym, sideRe);
       if (rs.length !== 1) return {n: rs.length};
-      var c = rowCells(rs[0]);
-      return {n: 1, sl: col(c.map, "^(sl|s/l|stop ?loss)"), tp: col(c.map, "^(tp|t/p|take ?profit)"), headers: c.headers.map(function (h) { return h.replace(/\d/g, "#").slice(0, 24); }),
-        controls: rowCtls(rs[0]).map(function (x) { return ctlText(x).replace(/\d/g, "#").slice(0, 40); }).slice(0, 12)};
+      var c = rowCells(rs[0]), both = tpslCol(c.map), d = ctlDump(rs[0]);
+      return {n: 1, layout: isGridRow(rs[0]) ? "div_grid" : "table",
+        sl: both ? both.sl : col(c.map, "^(sl|s/l|stop ?loss)"), tp: both ? both.tp : col(c.map, "^(tp|t/p|take ?profit)"),
+        headers: c.headers.map(function (h) { return h.replace(/\d/g, "#").slice(0, 24); }),
+        controls: rowCtls(rs[0]).map(function (x) { return ctlText(x).replace(/\d/g, "#").slice(0, 40); }).slice(0, 12),
+        ctls: d, ctl_lines: ctlLines(d)};
     },
     // AMEND: click the row's ONE edit control (text / aria-label / title naming edit, modify or TP/SL; never a close).
     // Returns clicked | no_row | rows_<n> | no_edit | ambiguous.
@@ -912,6 +1179,9 @@
       if (!hostOk()) return "bad_host";
       var rs = posRows(sym, sideRe);
       if (!rs.length) return "no_row"; if (rs.length > 1) return "rows_" + rs.length;
+      // MEASURE FIRST: no capture has shown Breakout's div-grid edit control, so nothing in a grid row is clicked; the
+      // app refuses with the row's ctlDump (posInfo) as the evidence for the build that measures it.
+      if (isGridRow(rs[0])) return "no_edit_unmeasured";
       var e = rowCtls(rs[0]).filter(function (x) { var s = ctlText(x); return /edit|modify|tp\s*\/\s*sl|sl\s*\/\s*tp|protection/i.test(s) && !NOT_EDIT.test(s); });
       if (!e.length) return "no_edit"; if (e.length > 1) return "ambiguous";
       e[0].click(); return "clicked";
@@ -964,6 +1234,144 @@
       if (!hostOk()) return {state: "bad_host"};
       return readTable(CLOSED_COLS, ["symbol", "side"], /no (closed )?orders|no (trades|history)/i, /^(closed orders|trades)\b/i, false);
     },
+    // ---- POSITION SHEET (BREAKOUT-SL-AMEND-CLICK) ----
+    // Open the sheet of the ONE Positions row for `sym`. which = "child" taps the position row's Market cell ("ETH 5x",
+    // a leverage badge); "group" taps the group row's ("ETH 1", the symbol + a count). Only inside the Positions grid
+    // panel, never a control the denylist names. clicked | bad_host | sheet_open | no_grid | no_panel | none | rows_<n> |
+    // deny_*.
+    sheetOpen: function (sym, which) {
+      if (!hostOk()) return "bad_host";
+      if (sheetRoots().length) return "sheet_open";
+      var g = gridHeaders(POS_COLS); if (g.length !== 1) return "no_grid";
+      var panel = gridPanel(g[0]); if (!panel) return "no_panel";
+      var b = base(sym).replace(/[^A-Z0-9]/g, ""), sfx = "(USD[TC]?|PERP)?";
+      var re = which === "group" ? new RegExp("^[\\u2304\\u2335\\u25be\\u25bc\\u02c5v]?\\s*" + b + sfx + "\\s*\\d+$", "i")
+        : new RegExp("^" + b + sfx + "\\s*\\d+(\\.\\d+)?\\s*[x\\u00d7]$", "i");
+      var hits = textEls(panel, re, 24).filter(function (e) { return !g[0].contains(e); });
+      if (!hits.length) return "none"; if (hits.length > 1) return "rows_" + hits.length;
+      return safeClick(hits[0]);
+    },
+    // The open sheet: {open, n, title_ok (a title equal to the symbol), subtitle (digits masked), tabs present}
+    sheetInfo: function (sym) {
+      var rs = sheetRoots(); if (rs.length !== 1) return {open: false, n: rs.length};
+      var r = rs[0], b = base(sym).replace(/[^A-Z0-9]/g, "");
+      var title = textEls(r, new RegExp("^" + b + "(USD[TC]?|PERP)?$", "i"), 16), sub = textEls(r, SUBTITLE_RE, 60);
+      return {open: true, n: 1, title_ok: title.length >= 1, subtitle: sub.length ? t(sub[0]).replace(/\d/g, "#").slice(0, 30) : "",
+        tabs: {details: textEls(r, SHEET_TAB.details).length, trades: textEls(r, SHEET_TAB.trades).length, tpsl: textEls(r, SHEET_TAB.tpsl).length}};
+    },
+    // Click one of the sheet's tabs: details | trades | tpsl. clicked | no_sheet | none | ambiguous | deny_*
+    sheetTab: function (which) {
+      var r = sheetRoot(); if (!r) return "no_sheet";
+      var ts = textEls(r, SHEET_TAB[which] || /^$/); if (!ts.length) return "none"; if (ts.length > 1) return "ambiguous";
+      return safeClick(ts[0]);
+    },
+    // [Position details] read: side / qty / entry / mark as the sheet SHOWS them (MEASURED); side only from an exact
+    // "Long" / "Short" value. upnl_signed: whether the uPnL text carries a sign (a sign-less loss is never a MEASURED
+    // number; the caller drops an unsigned upnl). upnl_shape is the text, digits masked (the open sign flag).
+    sheetDetails: function () {
+      var r = sheetRoot(); if (!r) return {ok: false, why: "no_sheet"};
+      var o = {ok: true, miss: []};
+      Object.keys(DETAIL_LABELS).forEach(function (k) {
+        var v = detailValue(r, DETAIL_LABELS[k]);
+        o[k + "_raw_n"] = v.n; o[k + "_text"] = v.value == null ? null : v.value.slice(0, 40);
+        if (v.value == null && k !== "margin") o.miss.push(k + (v.why ? ":" + v.why : ":n" + v.n));
+      });
+      var sv = (o.side_text || "").trim();
+      o.side = /^long$/i.test(sv) ? "long" : (/^short$/i.test(sv) ? "short" : null);
+      o.qty = o.qty_text == null ? null : firstNumber(o.qty_text);
+      o.qty_unit = o.qty_text == null ? "" : (o.qty_text.replace(/[^A-Za-z]/g, "") || "").slice(0, 8);
+      o.entry = o.entry_text == null ? null : firstNumber(o.entry_text);
+      o.mark = o.mark_text == null ? null : firstNumber(o.mark_text);
+      o.upnl_signed = o.upnl_text != null && /^\s*[-+−]/.test(o.upnl_text);
+      o.upnl = o.upnl_text == null ? null : firstNumber(o.upnl_text);
+      o.upnl_shape = o.upnl_text == null ? "" : o.upnl_text.replace(/\d/g, "d").slice(0, 24);
+      delete o.margin_text; delete o.upnl_text;
+      if (o.side == null || o.qty == null || o.entry == null) o.ok = false;
+      return o;
+    },
+    // [n TP / n SL] read: the order rows {type stop|take, trigger, closing side word, icons (masked dump)}. The SIDE
+    // column is the CLOSING order's side and is returned only as `close_side`, never as the position's side.
+    sheetOrders: function () {
+      var r = sheetRoot(); if (!r) return {ok: false, why: "no_sheet"};
+      var rows = sheetOrderRows(r).map(function (o) {
+        if (!o.el) return {type: o.type, trigger: null, why: "no_row"};
+        var ic = rowIcons(o.el, [o.typeEl].concat(o.px)).map(iconDump);
+        return {type: o.type, trigger: o.px.length === 1 ? firstNumber(t(o.px[0])) : null, n_px: o.px.length,
+          close_side: sideOf(wt(o.el)) || "", icons: ic, icon_lines: iconLines(ic), pencils: ic.filter(function (c) { return c.pencil; }).length};
+      });
+      return {ok: true, n_stop: rows.filter(function (x) { return x.type === "stop"; }).length,
+        n_take: rows.filter(function (x) { return x.type === "take"; }).length, rows: rows};
+    },
+    // Click the ONE pencil of the ONE Stop row (never the ⓧ next to it). clicked | no_sheet | stops_<n> | no_edit |
+    // ambiguous | deny_*
+    sheetEditStop: function () {
+      if (!hostOk()) return "bad_host";
+      var r = sheetRoot(); if (!r) return "no_sheet";
+      var st = sheetOrderRows(r).filter(function (o) { return o.type === "stop"; });
+      if (st.length !== 1 || !st[0].el) return "stops_" + st.length;
+      var p = rowIcons(st[0].el, [st[0].typeEl].concat(st[0].px)).filter(isPencil);
+      if (!p.length) return "no_edit"; if (p.length > 1) return "ambiguous";
+      return safeClick(p[0]);
+    },
+    // The edit modal: {n, kind stop|take, side, qty, unit, entry (from the "Short 0.54 ETH @ 2,461.52 USD" header),
+    // inputs [{label, value}], triggers (count of the Trigger input), buttons (masked)}
+    modalInfo: function () {
+      var ms = modalRoot(); if (ms.length !== 1) return {n: ms.length};
+      var r = ms[0].root, kind = /stop/i.test(t(ms[0].title)) ? "stop" : "take";
+      var h = textEls(r, MODAL_HDR, 60), m = h.length === 1 ? MODAL_HDR.exec(t(h[0])) : null;
+      return {n: 1, kind: kind, title: t(ms[0].title).slice(0, 30), hdr_n: h.length,
+        side: m ? m[1].toLowerCase() : null, qty: m ? parseFloat(m[2].replace(/,/g, "")) : null, unit: m ? (m[3] || "") : "",
+        entry: m ? parseFloat(m[4].replace(/,/g, "")) : null, inputs: modalInputs(r), triggers: triggerInput(r).length,
+        buttons: Array.prototype.slice.call(r.querySelectorAll("button,[role=button]")).filter(vis).map(function (x) { return t(x).replace(/\d/g, "#").slice(0, 20); }).slice(0, 10)};
+    },
+    // Set ONLY the modal's ONE Trigger input. {n, value} (n = how many Trigger inputs matched; nothing typed unless 1)
+    modalSetTrigger: function (v) {
+      var ms = modalRoot(); if (ms.length !== 1) return {n: -ms.length};
+      var ins = triggerInput(ms[0].root); if (ins.length !== 1) return {n: ins.length};
+      var i = ins[0]; i.focus(); setVal(i, String(v)); i.blur(); return {n: 1, value: i.value};
+    },
+    modalTrigger: function () {
+      var ms = modalRoot(); if (ms.length !== 1) return {n: -ms.length};
+      var ins = triggerInput(ms[0].root); return ins.length === 1 ? {n: 1, value: ins[0].value} : {n: ins.length};
+    },
+    // The modal's ONE "Confirm" button. clicked | none | ambiguous | disabled | deny_*
+    modalConfirm: function () {
+      var ms = modalRoot(); if (ms.length !== 1) return "none";
+      var b = Array.prototype.slice.call(ms[0].root.querySelectorAll("button,[role=button]")).filter(function (x) { return vis(x) && /^confirm$/i.test(t(x)); });
+      if (!b.length) return "none"; if (b.length > 1) return "ambiguous";
+      if (b[0].disabled || b[0].getAttribute("aria-disabled") === "true") return "disabled";
+      return safeClick(b[0]);
+    },
+    // Dismiss the modal without saving: its ONE button whose text is exactly "Cancel" (a text button inside the modal,
+    // never an icon), else Escape. clicked | escape | none
+    modalCancel: function () {
+      var ms = modalRoot(); if (ms.length !== 1) return "none";
+      var b = Array.prototype.slice.call(ms[0].root.querySelectorAll("button,[role=button]")).filter(function (x) { return vis(x) && /^cancel$/i.test(t(x)); });
+      if (b.length === 1) { b[0].click(); return "clicked"; }
+      document.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", code: "Escape", keyCode: 27, bubbles: true}));
+      return "escape";
+    },
+    // Close the sheet: Escape first (the caller re-checks sheetInfo); sheetCloseX is the fallback.
+    sheetClose: function () {
+      var r = sheetRoot(); if (!r) return "none";
+      [r, document].forEach(function (x) { x.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", code: "Escape", keyCode: 27, bubbles: true})); });
+      return "escape";
+    },
+    // The sheet's header ✕: an icon whose glyph or words say close, ABOVE the tabs (document order before the
+    // [Position details] tab), never a text button ("Close position" is below the tabs and has text). clicked | none |
+    // ambiguous | no_sheet
+    sheetCloseX: function () {
+      var r = sheetRoot(); if (!r) return "no_sheet";
+      var tab = textEls(r, SHEET_TAB.details)[0];
+      var c = rowIcons(r, []).filter(function (x) {
+        var s = t(x); return tab && before(x, tab) && !/position/i.test(s) && (DENY_GLYPH.test(s) || /^close$/i.test((x.getAttribute("aria-label") || x.getAttribute("title") || "").trim()) || (!s && /\bclose\b/i.test(ctlWords(x))));
+      });
+      if (!c.length) return "none"; if (c.length > 1) return "ambiguous";
+      c[0].click(); return "clicked";
+    },
+    // the denylist, exposed for the test: why `sel`'s ONE element must never be clicked, or "" when it may be
+    deniedSel: function (sel) { var e = document.querySelectorAll(sel); return e.length === 1 ? (denied(e[0]) || "") : "n" + e.length; },
+    safeClickSel: function (sel) { var e = document.querySelectorAll(sel); return e.length === 1 ? safeClick(e[0]) : "n" + e.length; },
     rowClose: function (sym, sideRe) {
       var n = norm(sym); var rx = new RegExp(sideRe, "i");
       var r = all("tr,[role=row]").filter(function (r) { var s = t(r); return norm(s).indexOf(n) >= 0 && rx.test(s); })[0];

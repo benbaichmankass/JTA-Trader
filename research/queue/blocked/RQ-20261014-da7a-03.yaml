@@ -1,0 +1,73 @@
+id: RQ-20261014-da7a-03
+title: >-
+  Programme 06 Q5 (L-DATA): do perp derivatives metrics (OI change, taker buy/sell imbalance, top-trader long/short) carry
+  information for the 1h regime heads and for giveback, beyond price? BLOCKED on DATA-DERIV-ARCHIVE
+status: blocked
+cadence: once
+kind: experiment
+theme: ml_health
+priority: 2
+roadmap: L-DATA
+question: >-
+  On BTCUSDT, ETHUSDT and SOLUSDT 1h: does adding the Binance Vision UM metrics block (OI pct change over 1/4/24 h, taker
+  buy/sell volume ratio, top-trader and global long/short ratio, all as of the bar close) to the published market_features
+  columns reduce out-of-sample log-loss of (a) the regime_label head and (b) a within-leg giveback_frac > 0.5 head on the
+  committed ledgers, vs the same learner without the block?
+why_this_matters: >-
+  Funding/OI exist for BTC only and order flow for BTC 5m only, forward from 2026-06-04 (MEASURED trainer diag #18108). Programme
+  02 Q5 needs a new information class per symbol before the veto / exit / proposer answers can change; this is the cheapest one
+  the open-source world publishes for every roster crypto symbol.
+power:
+  expected_n: 43800
+  min_detectable_effect: 0.005
+  effect_units: metric
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    Paired per-fold log-loss difference on identical purged walk-forward folds (5 folds, embargo 24 rows); ~43,800 1h rows per
+    symbol (market_raw v002 1h, MEASURED). The giveback arm is per leg on the committed ledgers, n per leg as in 02 Q3.1.
+  feasibility:
+    source: none
+    accrual_basis: Historical archive; nothing accrues. Blocked on DATA-DERIV-ARCHIVE.
+decision_rule:
+  id: RULE-RQ20261014-DA7A-03-DERIV-METRICS-LIFT
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: Per symbol and head, mean paired per-fold log-loss (with block minus without) with a t-interval; same learner (LightGBM, fixed params).
+  rule: >-
+    PASS if the interval is wholly < 0 on >= 2 of 3 symbols for the regime head OR on >= 2 legs (n >= 100) for the giveback head
+    -> file a producer row (Tier-2, through ML-PARITY-HARNESS) and the per-symbol market_features join; FAIL if the interval
+    contains or exceeds 0 on every symbol and every leg -> the metrics block is closed for these heads (the archive stays for
+    other consumers). INDETERMINATE if the archive has unledgered gaps over the window.
+  what_it_does_not_do: No live feature, no stage change, no config; a PASS earns a parity-checked producer row, never a promotion.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 90
+  basis: published 1h shards plus the metrics archive; runner with the published dataset (research-script-run-data.yml).
+compute: auto
+value:
+  bucket: information
+  usd_at_stake_per_month: 100
+  confidence: 0.3
+  basis: 'stand-in: first test of a new information class beyond BTC. No balances stated.'
+blocked_on:
+- what: No funding/OI/taker-volume history for ETH/SOL (and only BTC funding/OI) is persisted anywhere.
+  ref: docs/claude/work/checklist/DATA-DERIV-ARCHIVE.json
+  clears_when: >-
+    DATA-DERIV-ARCHIVE manifests whole for BTC/ETH/SOL over the 1h shard window; then author the join in the bake-off config,
+    git mv to research/queue/, status queued, set run.
+run:
+  workflow: null
+  note: Null until the blocker clears (blocked_on).
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- docs/research/programmes/06-DATA-INFRA.md
+- docs/research/programmes/02-AI-TRADER.md
+- docs/claude/work/checklist/DATA-DERIV-ARCHIVE.json
+- docs/claude/work/checklist/FUNDING-OI-DATASETS-ETH-SOL.json

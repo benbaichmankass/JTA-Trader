@@ -1,0 +1,17 @@
+{
+  "artifact_locator": "comms/research/RQ-20261014-9d20-01/38569410064/ (run-manifest.json + verdict.json + logs/)",
+  "artifact_store": "comms/research/RQ-20261014-9d20-01/38569410064",
+  "decision_rule_id": "RULE-RQ20261014-9D20-01-PEAK-TO-EXIT-CENSUS",
+  "decision_rule_registered_at": "2026-10-14",
+  "measurement_file": "comms/research/RQ-20261014-9d20-01/38569410064/measurement.json",
+  "min_rows": "1",
+  "n": "4900",
+  "note": "exit_headroom_present (pullback 1.540 R/trade >= 0.25). Peak-to-exit census, NOT a promotion case. mfe_r is a lagged LOWER bound (368 rows have gross_r > mfe_r), so headroom is understated. The oracle-peak bound is unattainable by construction; it sizes the prize an exit model could chase.",
+  "population": "newest committed ledger per leg under comms/strategy_evidence/runs/*/*__trades.jsonl; resamples excluded (__B<k>/__M); 54 ledger file(s), 5063 trades, 54 legs; net_r is the harness value net of fee + slippage + funding",
+  "power_state": "not_applicable",
+  "read_state": "measured",
+  "records_file": "",
+  "research_unit": "RQ-20261014-9d20-01",
+  "tool": "python3 scripts/research/ledger_metalabel.py",
+  "verdict": "pass"
+}

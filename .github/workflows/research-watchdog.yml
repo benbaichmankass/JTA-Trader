@@ -1,0 +1,139 @@
+name: research-watchdog
+
+# RESEARCH-WATCHDOG (operator 2026-10-13): the dispatcher started nothing from 12:50Z to >= 15:58Z and nobody
+# noticed until a Claude check. The pipeline must diagnose itself and escalate to the manager WITHOUT waiting for
+# a Claude routine. Token-free: no model is called here.
+#
+# WHY A SEPARATE WORKFLOW: the old alarm (check_research_queue_dispatch_liveness.py) is a step INSIDE
+# research-queue-dispatch.yml, so it is silent exactly when that workflow does not run; it also grades a 48 h
+# receipt. Logic, checks and the read-state rules: scripts/research/research_watchdog.py. Thresholds:
+# scripts/research/research_watchdog.yaml.
+#
+# Each cycle: check -> self-heal once per incident (re-fire ONE dispatch run; the dispatcher also adopts stranded
+# stamps) -> re-check -> escalate only if still bad (or immediately for queue-below-floor): ONE comment on the
+# standing draft PR "ops-flags (do not merge)" (the manager subscribes to its activity, so each comment wakes it),
+# ONE Telegram message on the operator SYSTEM channel (direct sendMessage; send-ping only as a fallback), ONE row in comms/research/ops/watchdog_incidents.jsonl.
+# NO HALTING: nothing here disables or stops any pipeline.
+#
+# Tier-1: reads GitHub, dispatches two research workflows (and system-actions send-ping only as a Telegram fallback), comments on one PR.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      live:
+        description: "Perform effects (dispatch / comment / ping / ledger). false = read-only report."
+        type: boolean
+        default: true
+      test_alert:
+        description: "Send ONE labelled test message through the operator system Telegram channel, then stop."
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: write        # gh workflow run (re-fire dispatch, replenish, send-ping)
+  pull-requests: write  # comment on the ops-flags PR
+  issues: write
+
+concurrency:
+  group: research-watchdog
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      events: ${{ steps.run.outputs.events }}
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      TELEGRAM_SYSTEM_CHAT_ID: ${{ secrets.TELEGRAM_SYSTEM_CHAT_ID }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install --quiet pyyaml
+
+      # continue-on-error: a red self-test must never stop the watching itself.
+      - name: Unit tests of the watchdog itself
+        continue-on-error: true
+        run: python3 -m pip install --quiet pytest && python3 -m pytest tests/test_research_watchdog.py -q
+
+      # Kaggle weekly GPU quota, so an idle Kaggle backend is told apart as quota-bound vs faulty. Best-effort.
+      - name: Read the Kaggle quota
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+        run: |
+          if [ -n "${KAGGLE_API_TOKEN:-}" ]; then
+            pip install --quiet "kaggle>=2.0" && kaggle quota > /tmp/kaggle-quota.txt 2>/dev/null || true
+          fi
+          if [ -s /tmp/kaggle-quota.txt ]; then echo "KAGGLE_QUOTA_FILE=/tmp/kaggle-quota.txt" >> "$GITHUB_ENV"; fi
+
+      - name: Test alert (manual only)
+        if: github.event_name == 'workflow_dispatch' && inputs.test_alert == true
+        run: python3 scripts/research/research_watchdog.py --test-alert
+
+      - name: Watch
+        id: run
+        if: "!(github.event_name == 'workflow_dispatch' && inputs.test_alert == true)"
+        run: |
+          set -uo pipefail
+          LIVE=""
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.live }}" = "true" ]; then LIVE="--live"; fi
+          python3 scripts/research/research_watchdog.py ${LIVE} --rows-out /tmp/rows.jsonl | tee /tmp/watchdog.txt
+          rc=${PIPESTATUS[0]}
+          # rc 1 = at least one check not ok: the flag is the escalation, not a red run. rc >= 2 = the watchdog crashed.
+          echo "events=$(wc -l < /tmp/rows.jsonl | tr -d ' ')" >> "$GITHUB_OUTPUT"
+          { echo '### research-watchdog'; echo '```'; cat /tmp/watchdog.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          [ "$rc" -le 1 ]
+
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.run.outputs.events != '' && steps.run.outputs.events != '0'
+        with:
+          name: watchdog-rows
+          path: /tmp/rows.jsonl
+          retention-days: 3
+
+  # Lands the incident ledger rows. A separate job so a slow merge wait never delays the next 15-minute check.
+  land:
+    needs: watch
+    if: needs.watch.outputs.events != '' && needs.watch.outputs.events != '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 110   # commit-to-main verify-merged waits up to 80 min (tests/test_commit_to_main_callers.py)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: watchdog-rows
+          path: /tmp/rows
+      - name: Append the new rows (idempotent by line)
+        run: |
+          set -euo pipefail
+          f=comms/research/ops/watchdog_incidents.jsonl
+          mkdir -p "$(dirname "$f")"; touch "$f"
+          while IFS= read -r line; do grep -qxF -- "$line" "$f" || echo "$line" >> "$f"; done < /tmp/rows/rows.jsonl
+          tail -n 5 "$f"
+      - name: Land the incident ledger
+        uses: ./.github/actions/commit-to-main
+        with:
+          verify-merged: "true"
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          paths: comms/research/ops/watchdog_incidents.jsonl
+          message: "chore(research-watchdog): incident ledger rows (run ${{ github.run_id }})"
+          pr-title: "chore(research-watchdog): incident ledger (auto)"
+          pr-body: >-
+            Append-only rows from scripts/research/research_watchdog.py (escalated / resolved / self_healed).
+            Data-only; read by research-ops and the weekly planning pass.
+          branch-prefix: automation/research-watchdog-ledger
+
+# no-durable-result: minutes-long artifact hand-off between two jobs of one run (watch -> land); the durable landing is the commit-to-main step above

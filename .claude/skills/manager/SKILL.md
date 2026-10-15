@@ -3,7 +3,7 @@ name: manager
 description: The manager-session contract. Read this at the start of any session that spawns or supervises other sessions. Defines the one job, the one register, spawn rules, the model table, the budget, and the daily-sync brief.
 ---
 
-> **Doc status:** `live` · category `instruction` · last verified `2026-10-10` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
+> **Doc status:** `live` · category `instruction` · last verified `2026-10-13` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
 # The manager contract
 
@@ -23,6 +23,17 @@ That is the whole job. Everything below either serves it or is forbidden.
 decisions a day."* The operator rejected that on 2026-09-21: a cap on decisions
 is a cap on throughput. The job is to AUTOMATE the decision, not to ration it.
 
+## Standing alert subscriptions (operator, 2026-10-13, binding)
+
+**Every manager session, at start AND after any handover, calls `subscribe_pr_activity` on the ops-flags PR** (title
+"ops-flags (do not merge)"; its number is recorded in ONE place, `scripts/research/research_watchdog.yaml`
+`ops_flags.pr_number` -- read it there, do not copy it here). The research watchdog
+(`scripts/research/research_watchdog.py`, every 15 min, token-free) posts one comment per incident (escalated /
+resolved), so each comment wakes the manager with no polling. **Never merge or close that PR.** Treat every watchdog
+comment as an incident to act on: **fix it, dispatch a lane for it, or tell the operator** -- never leave one
+unanswered. The incident ledger is `comms/research/ops/watchdog_incidents.jsonl`. The same alert also reaches the
+operator on the system Telegram channel. If the PR is ever replaced, change `pr_number` in the config and nothing else.
+
 ## Start of session
 
 1. **Title yourself.** Call `get_session` with no `session_id` to read your own
@@ -32,6 +43,7 @@ is a cap on throughput. The job is to AUTOMATE the decision, not to ration it.
    finds the manager among dozens of lanes.
 2. Read `CLAUDE.md`, `docs/CLAUDE-RULES-CANONICAL.md` and this file; then the
    checklist rows that are `in_flight` or `blocked`.
+2b. **Subscribe to the ops-flags PR** (§ "Standing alert subscriptions").
 3. Take over every live lane: `get_session` it, then send it a trigger naming
    you as its manager (the reply channel is described under § "Every spawn
    carries provenance" below).
@@ -648,7 +660,7 @@ This is not a third category of work. A build is a checklist row and a question 
 **Cadence.**
 1. **Per merge (the lane).** Write-back rule above. Reviews follow it too: a `/health-review`, `/performance-review` or `/ml-review` closes its row with a `writeback` naming the milestones its findings moved, and `/perf-followup` and `research-ops` units carry `roadmap` (the guard refuses the unit otherwise).
 2. **Every daily review (05:52Z and 17:52Z): the roadmap hook.** Run the report and work what it shows, in the same turn, like blocker_watch: orphan live rows or open units get a milestone; an `active` milestone with no work gets rows or is set `dormant` with a reason; a milestone past `review_cadence_days` makes the weekly pass due today. Do not dispatch from memory when the report is a command away.
-3. **Weekly roadmap pass (the first daily review of each ISO week; row `ROADMAP-PASS-<YYYYWNN>`, owner manager, may be handed to one bounded Sonnet lane).** Each pass, in order:
+3. **Weekly roadmap pass — since 2026-10-14 this is PART 2 of the Wednesday planning dialogue, not a Monday row** (operator, 2026-10-14; see § "Weekly planning (Wednesday) and the weekly cycle" below). The `ROADMAP-PASS-<YYYYWNN>` rows are retired (W43/W44 dropped as superseded) and the Monday research-planning session with them; the research side of the pass is the Tuesday programme review. The seven steps below are unchanged — they are what the roadmap part of the Wednesday session does, and the roadmap is edited only once the operator and the manager agree. Each pass, in order:
    1. *Re-measure* every goal baseline and every active milestone's `where` with its own command (`check_tp_doctrine.py`, `config/accounts.yaml` counts, queue counts by theme, `--report`). A dated claim not re-measured is marked "not re-measured", never copied forward.
    2. *Read the week's outcomes*: rows closed since `reviewed`, results landed in `research/results/`, merged PRs. Rewrite `where` and `next` from them; set `reviewed`.
    3. *Derive*: every `next` with no row or unit gets one (with the ref); every ask the operator made since the last pass is placed under a milestone or becomes one.
@@ -657,6 +669,50 @@ This is not a third category of work. A build is a checklist row and a question 
    6. *Architecture check*: for each active milestone, does its `architecture:` list still describe what exists? Fix the map or the list.
    7. `python3 scripts/ops/roadmap_map.py --write-roadmap`, commit with the yaml, and file next week's `ROADMAP-PASS` row (due date in its note). The pass's output is its PR plus the rows and units it created or re-prioritised, named in the row's note.
 4. **Slices plug in, they do not fork.** A lane that owns one slice (ML-ROADMAP-LOOP for G4, REGIME-PROGRAM for L-REGIME) adds and edits its own milestones under its goal in `milestones.yaml` and runs steps 1-7 for them inside the same weekly pass; the report and guard cover it with no extra wiring.
+
+## Weekly planning (Wednesday) and the weekly cycle (operator, 2026-10-13/14, binding)
+
+Row `WEEKLY-PLANNING`; trigger `trig_01Pm8AMPiigZX9ndobeyT6dE`, Wednesdays **08:20Z**, ahead of the weekly usage reset
+(Wed ~18:00Z), so the plan is set before the reset and the new week starts with work already queued. First run 2026-10-14;
+planning doc: https://claude.ai/code/artifact/27fd3e97-ed3f-49ba-be2c-5e56997df95a.
+
+**It is a dialogue, not a report** (operator, verbatim: *"this session isn't just making a report, it's a dialogue between
+both of us to work together on building our understanding, and then based on that, the work priorities"*). The manager
+does not publish a finished plan and ask for sign-off; priorities are never finalised without the operator, and if they
+are not available the working document stays current and the manager re-pings at a sensible time.
+
+**Format.** (A) *Prepare, lean*: a short working document of facts, published as an Artifact the operator can read and
+comment on — numbers with their population, merged / deployed / observed kept separate, the manager's own reading marked
+as its own, **no priorities drafted, only open questions**. (B) *The conversation*, four parts in this order, one at a time:
+
+| part | what | sources |
+|---|---|---|
+| 1. **Week review** | the week's work and system performance: what worked, what did not, where to focus improvement; ask what the operator saw that the data does not show, and challenge both readings where the evidence disagrees | PRs merged and rows moved since last Wednesday; lane spend vs ceilings; daily work reports and digest; live/paper/prop performance; research results and verdicts; CI health; incidents |
+| 2. **Roadmap** | `python3 scripts/ops/roadmap_map.py --report`; milestone status, measures vs baselines, what to add, retire or re-scope; `docs/roadmap/milestones.yaml` is edited **only once agreed**. This is the weekly roadmap pass (§ "The roadmap loop" step 3) | the report, the week's closed rows and results |
+| 3. **Schedule** | every recurring session for the coming week (`list_triggers`): agree the cadence, then create, update or delete triggers | the schedule below |
+| 4. **Workplan** | priorities in order; per-priority resource allotment as a share of the weekly allowance with the Sonnet/Opus split and lane ceilings; the checklist rows and pre-registered `research/queue/` units to add — enough runnable work by theme weight to last the week; a preliminary day-by-day lane schedule to next Wednesday. Propose, listen, revise; popups only for crisp choices | parts 1–3 |
+
+(C) *Close*: update the Artifact into the agreed plan; land the checklist, queue and roadmap edits in **one self-landing
+PR** (a lane may do the landing — the 2026-10-14 outcome was landed by one Fable lane with a ~$8 ceiling); record the
+outcome, the doc link and the schedule on row `WEEKLY-PLANNING`. Do this well before the reset.
+
+**The weekly cycle** (agreed 2026-10-14; every trigger is bound to the manager session unless noted, so a manager
+handover re-points them all — § "Manager handover"):
+
+| when (UTC) | session | trigger | what |
+|---|---|---|---|
+| **Wed 08:20** | weekly planning | `trig_01Pm8AMPiigZX9ndobeyT6dE` | the dialogue above |
+| **Wed 18:53** | review prep (after the reset) | `trig_01LE61kLKDFKptEfTfZ7vnYS` (bound to the assistant-manager session) | two Sonnet lanes: `PERF-REVIEW-PREP-<date>` (grading and numbers only — net P&L per capital-day in R and $ per strategy and whole book, giveback, TP-rule compliance; no `/perf-followup` yet) and `ML-FRONTIER-PREP-<date>` (`/ml-review` + frontier scan, no new units yet); one PR, `docs/reviews/<date>-weekly-walkthrough.md`, by 05:30Z Thursday |
+| **Thu 06:30** | combined walk-through WITH the operator | `trig_01CpyqNkhwqEjLAHq1Wrrh1b` (fires 06:17 to prepare) | performance, then ML review + frontier scan, as a dialogue; after agreement dispatch `/perf-followup` (Opus lane) and turn agreed ideas into pre-registered units or rows inside the programme plans; outcome on `WEEKLY-PLANNING` |
+| **Sat 07:23** | health review | `trig_013GU17584wu4HJYEkTF1KBk` (bound to the assistant-manager session) | one Sonnet lane runs `/health-review` end to end, dispositions every finding, self-lands one PR |
+| **Mon 06:07** | weekly audit | `trig_017awLRNy4rmdL57NHKXehet` | one Opus lane: CORE every week (behaviour invariants on live data, TP-rule compliance, live = mirror, full cost stack, populations, overdue, spend, health review #2, RECURRENCE) plus a ROTATING deep pass by ISO week mod 4 (0 OUTCOME + INDEPENDENCE, 1 CONSISTENCY + LIVENESS, 2 MODULARITY, 3 DESIGN CRITICISM); follows `.claude/skills/weekly-audit/SKILL.md` once row `WEEKLY-AUDIT-SKILL` lands it |
+| **Tue 09:53** | research programme review | `trig_01GuB9kH3CM4WJCJUgAb1s8Q` | one Opus lane updates the research map and the five programme plans (`docs/research/programmes/`: learned, answered / unlocked / retired questions, next 3–4 weeks of pre-registered units, cross-programme feeds); the queue is fed ONLY from these backlogs; one self-landing PR, so Wednesday starts from current plans |
+
+Unchanged and still running: research-ops 4×/day, the manager daily reviews 05:52Z / 17:52Z, lane check-ins.
+
+**Retired by this cycle (operator, 2026-10-14).** The Monday research-planning session and the Monday
+`ROADMAP-PASS-<week>` rows: the **Tuesday programme review replaces them** on the research side and the Wednesday roadmap
+part on the roadmap side. Do not re-file a `ROADMAP-PASS` row; file the roadmap outcome on `WEEKLY-PLANNING`.
 
 ## Standing authorizations — the ladder is fully automated
 
@@ -953,6 +1009,84 @@ arrives twice in the same shape is raised as *"should this become a mandate?"*
    before anything else.
 5. Run the review. Clear `ask_operator` items first, by classification, not by
    forwarding. Record `last_review`, push, then answer.
+
+## Manager handover (rotation)
+
+> **Operator, 2026-10-13 (verbatim):** "we need to add a section to the manager skill to streamline handover - basically, I want the manager to handoff at their own discretion, we just need to make sure it's clear how to validate a complete handoff to the new manager before the current one turns off".
+
+The manager rotates **at its own discretion**; no operator OK is needed to start. What is not discretionary is the proof: **the old manager stays responsible until V1–V5 below have all passed, with evidence in the handoff doc.** `old` = outgoing manager, `new` = incoming.
+
+### When
+
+Typical reasons:
+- **Context past ~300k tokens.** Cost per turn scales with context; the 2026-10-11 session reached 730k tokens and $165 by 2026-10-13.
+- **A natural boundary**, such as after a weekly planning pass or a review.
+- **Degraded recall.**
+
+**Never mid-incident, and never with a merge or deploy half-done.** Finish or hold it first.
+
+### Steps
+
+**1. PREPARE.** Write `docs/claude/work/handoffs/<YYYY-MM-DD>-<old-short>-to-new.md` (`<old-short>` = the first 8 characters of the old session id) containing:
+- live lanes: session id, checklist row, what each is doing, what it owes;
+- open PRs that need the manager (held, Tier-2/3, awaiting review);
+- operator asks and decisions in flight, in their exact wording;
+- every trigger and `send_later` that targets the old session (from `list_triggers`), by id and name;
+- artifacts and PRs the old session watches;
+- budget and pacing state (today's spend against the daily budget);
+- operator directives from this session **not yet in checklist rows**: put them in rows first, then list the row ids;
+- the new manager's first actions;
+- the handover checklist block below, copied in.
+
+Commit it through a self-land PR (§ "How lane PRs land").
+
+**2. CREATE.** `create_session` with:
+- `model`: **Opus** (the manager stays on Opus, operator); pass it explicitly;
+- the same `environment_id`; `source_url` set; `permission_mode: "auto"`;
+- tags `["manager", "predecessor:<old id>"]`;
+- title `Manager Session YYYY-MM-DD`;
+- prompt: read `CLAUDE.md`, this skill and the handoff doc; then perform V1 and **wait for the old manager's diff**. Do not start routine work yet.
+
+**3. REWIRE.** `update_trigger` **cannot change a trigger's target session**, so:
+- (a) For every trigger whose `persistent_session_id` is the old session: `create_trigger` the same name, cron and prompt with `persistent_session_id=<new>`, then `update_trigger(enabled=false)` on the old one. Do not delete the old ones until step 5.
+- (b) Update every prompt that **names the old session id**: the research-ops routine, the assistant-manager charter and routines, the review and check-in routines, any live lane's brief. Routines: `update_trigger(prompt=...)`. Live lanes and the assistant manager: a fired trigger message (reply channel in § "Every spawn carries provenance"; `fire_trigger` takes no `text`) naming the new id as the wake target.
+- (c) Re-subscribe the new session to the PRs it must watch (`subscribe_pr_activity`), **including the ops-flags PR** (number: `scripts/research/research_watchdog.yaml` `ops_flags.pr_number`; § "Standing alert subscriptions").
+- (d) Point the checklist at the new manager. There is no dedicated "manager" header field: `checklist.py header last_review` carries `by` (the new manager sets it at its first review), and any row `note` or `owner` naming the old manager as escalation target is updated with `checklist.py note`/`set`. Push to `main`.
+
+**4. VALIDATE.** All five must pass, each with its evidence written into the handoff doc.
+
+| # | Check | Pass means |
+|---|---|---|
+| **V1** | **Read-back** | The new manager restates, **from its own reading** (checklist, `list_sessions`, `list_triggers`, the handoff doc), the live lanes, pending operator decisions and the next 24 h of scheduled events. The old manager diffs this against its own list; every mismatch is fixed and re-read. |
+| **V2** | **Trigger audit** | The new manager is subscribed to the ops-flags PR (a `subscribe_pr_activity` call on it returns subscribed, not "already watched by another session"). `list_triggers` shows **zero enabled** triggers targeting the old session id. Every recurring routine, by name, exists, is enabled and targets the new one. Counts match the pre-handover list from step 1. |
+| **V3** | **Id sweep** | The ops-flags subscription is held by the new session only. No enabled trigger prompt, assistant-manager charter or live lane brief still names the old session id as the escalation target. Grep the prompts from `list_triggers` / `get_trigger` for the old id. |
+| **V4** | **Wake round-trips** | (a) old → new: a test trigger is answered by a trigger back. (b) assistant manager → new: the assistant fires its escalation path and the new manager answers. (c) one live lane, if any, is told the new id and acknowledges. |
+| **V5** | **Operator notified, in one message** | New session link, what moved, and anything **not** moved with the reason. |
+
+A grep that returns nothing proves nothing until the same grep is shown to find the old id on a known positive (RULE ONE): run V3's search on the pre-rewire prompt list first.
+
+**5. STAND DOWN.** Only after V1–V5 pass:
+- the old manager takes no further actions;
+- its last message points to the new session;
+- the **new** manager archives the old session (§ "Archive protocol") **after confirming nothing still wakes it**, for example a fired `send_later` lands in the new session. Then it deletes the disabled old triggers.
+
+**If any check fails, the old manager stays responsible and fixes it. It never goes quiet with a check open.** A handover that stops partway is a HANDOFF with the gaps named in the handoff doc, not a completion.
+
+### Handover checklist (the old manager copies this into the handoff doc and ticks it with evidence)
+
+```
+- [ ] Handoff doc committed and merged to main (PR #__)
+- [ ] New session created: <id / link>, Opus, tags manager + predecessor:<old id>
+- [ ] Triggers recreated against the new session; old ones disabled (n recreated = __, pre-handover n = __)
+- [ ] Prompts naming the old id updated; checklist references updated and pushed
+- [ ] New manager subscribed to the PRs it must watch, incl. the ops-flags PR
+- [ ] V1 read-back diffed against the old manager's list; mismatches fixed: <evidence>
+- [ ] V2 trigger audit: 0 enabled triggers on old id; recurring routines present, enabled, on new id: <list_triggers evidence>
+- [ ] V3 id sweep: grep of prompts / charters / lane briefs for old id finds none (positive control shown): <evidence>
+- [ ] V4 wake round-trips: (a) old->new <trigger id>  (b) assistant->new <evidence>  (c) lane ack <lane id>
+- [ ] V5 operator told in one message: new link, what moved, what did not and why
+- [ ] STAND DOWN: old manager's last message points to the new session; new manager has archived the old one after a wake landed in the new session
+```
 
 ## The ladder the manager is moving things along
 

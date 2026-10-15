@@ -1,0 +1,87 @@
+id: RQ-20261014-9d20-01
+title: 'AI trader / exit line: peak-to-exit census over the committed test-result ledgers -- how much R is given back between the
+  in-trade peak (mfe_r) and the exit, per strategy family, and what is the oracle-peak upper bound an exit model could chase?'
+status: done
+cadence: once
+theme: ml_health
+priority: 1
+kind: deterministic
+question: Over the newest committed per-trade ledger of every leg (comms/strategy_evidence/runs/*/*__trades.jsonl, resample sub-ledgers
+  excluded), per strategy family and pooled, what are (a) the distribution of giveback_frac = (mfe_r - net_r) / mfe_r on trades with
+  a positive peak, (b) the share of trades giving back more than half their peak, and (c) the exit HEADROOM per trade = mean max(mfe_r,
+  net_r) - mean net_r (a perfect exit at the peak, unattainable by construction)? This fixes the peak-to-exit LABEL the exit-model
+  line (02-AI-TRADER Q3) trains on, and sizes the prize before any model is built.
+why_not_inferential: 'A census of a fixed committed corpus: every row is read, nothing is sampled or estimated. The thresholds in the
+  rule are registered bars on a population statistic, not a hypothesis test. Authoring dry run 2026-10-14 (ledger_metalabel --self-test
+  only; the census over the real corpus was run once in the authoring session and showed headroom >> 0.25 R on every family with n >=
+  100 -- the registered run is the committed record, not that read).'
+decision_rule:
+  id: RULE-RQ20261014-9D20-01-PEAK-TO-EXIT-CENSUS
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: >-
+    Per family with >= 100 trades carrying mfe_r, exit_headroom_r_per_trade = mean(max(mfe_r, net_r)) - mean(net_r) over
+    those trades; giveback_frac quartiles and share > 0.5; exit_reason counts; the count of rows where gross_r > mfe_r (mfe_r is
+    a lagged lower bound, so headroom is UNDERSTATED).
+  rule: 'PASS (exit_headroom_present) IF any family at n >= 100 has headroom >= 0.25 R per trade: the peak-to-exit label is worth
+    modelling and RQ-20261014-9d20-03 (giveback predictability) is released via requires_result. FAIL IF every family at n >= 100 has
+    headroom < 0.10 R per trade: the exit line closes on this corpus and the exit-model backlog in 02-AI-TRADER is retired. INDETERMINATE
+    otherwise, or if no family reaches n >= 100 with mfe_r (read_state no_data).'
+  what_it_does_not_do: >-
+    Changes no exit lever, bracket, config or roster (Tier-3 belongs to the exit-refinement pipeline). The oracle
+    bound is not a forecast of achievable R; it bounds the prize. Says nothing about live trades (ledgers are harness emits, net of the
+    harness cost stack).
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 300
+  confidence: 0.5
+  basis: 'stand-in: the committed corpus shows mean net_r 0.12 R vs an oracle-peak mean of ~1.4 R per trade (authoring read, 2026-10-14);
+    even a tenth of that gap on the real-money books is of the order of the monthly P&L; not a measured P&L'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 3
+  basis: 'MEASURED in the authoring sandbox: 5,063 rows, 54 ledgers, < 10 s.'
+run:
+  command:
+  - python3
+  - scripts/research/ledger_metalabel.py
+  - --mode
+  - census
+  - --min-n
+  - '100'
+  - --headroom-pass-r
+  - '0.25'
+  - --headroom-fail-r
+  - '0.10'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 20
+  inputs:
+    research_unit: RQ-20261014-9d20-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M20
+- M23
+related:
+- AI-TRADER-PROGRAMME
+- docs/research/programmes/02-AI-TRADER.md
+- scripts/research/ledger_metalabel.py
+- ML-LEG-CORPUS
+- M31
+last_dispatched_at: '2026-10-14T13:11:24+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-RQ20261014-9D20-01-PEAK-TO-EXIT-CENSUS
+  evidence:
+  - research/results/RQ-20261014-9d20-01/38569410064.jsonl
+  graded_at: '2026-10-14'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

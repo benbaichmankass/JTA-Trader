@@ -1,0 +1,143 @@
+id: RQ-20261013-407c-21
+title: >-
+  Volatility regime, trend_donchian_sol: does skipping entries in the HOT-vol tail (ATR percentile above 0.80/0.90/0.95) beat
+  the declared entry net of the full cost stack?
+status: done
+cadence: once
+theme: regime
+priority: 3
+kind: experiment
+question: >-
+  M21 round 4 swept the vol-at-entry gate and shipped only the DEAD-vol floor (vol_skip_below_pctl 0.1) where anything shipped;
+  the hot tail (skip entries when the signal bar's ATR sits in the top of its trailing 200-bar distribution) is the mirror
+  question and the one a stop-based trend leg is most exposed to (wide stops, fast reversals). On the pinned 730d window (SOLUSDT
+  1h, 2024-10-05 .. 2026-10-04 23:59), same cost stack as the evidence builder, does --vol-skip-above-pctl 0.80, 0.90 or 0.95
+  beat the declared entry by a material margin, with no worse drawdown and in at least 3 of 4 calendar folds? Sibling unit
+  on the other 1h trend leg: see related.
+why_this_matters: >-
+  Volatility regime is the cross-asset structural variable the stack already measures; if a hot-vol skip helps both ETH and
+  SOL 1h trend it is a family-wide entry filter, if it helps neither it closes the vol-at-entry column's hot side with a stated
+  reason.
+power:
+  expected_n: 120
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo's standing E35 floor, RQ-20261006-002/-004/-060). expected_n
+    = 120 is an ESTIMATE from the nearest committed record or the leg's trade cadence, not a measurement of this exact arm
+    set. Below 39 baseline trades the unit grades indeterminate (underpowered), never FAIL. The 2.0 R bar is a MATERIALITY
+    bar over the whole window, not a significance test; the 3-of-4 calendar-fold majority is what refuses a one-period artifact.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Re-measurement on freshly fetched keyless Binance Vision candles (trend_donchian_sol, pinned window 2024-10-05 .. 2026-10-04
+      23:59); the harness replays history, nothing accrues. expected_n is an estimate, so power_state stays accruing and a
+      thin baseline grades indeterminate.
+decision_rule:
+  id: RULE-20261013407C21-VOLHOT
+  registered_at: '2026-10-13'
+  registered_before_run: true
+  statistic: >-
+    Per arm, from the harness's own --json summary of scripts/backtest_trend.py (argv built by regime_debt_matrix.build_harness_cmd,
+    the evidence builder's own, plus the arm's raw tokens; full cost stack: fee + resolved slippage + funding, never a zero
+    default): total_trades, net_total_r, max_drawdown_r, plus net_r per fold over FOUR equal calendar spans of the window
+    (same date boundaries every arm). Arms: B = leg as declared, VH80 = --vol-skip-above-pctl=0.8, VH90 = --vol-skip-above-pctl=0.9,
+    VH95 = --vol-skip-above-pctl=0.95. POSITIVE CONTROL, first: B must reproduce the committed record (total_trades within
+    2%, net_total_r within 0.5 R). Per candidate C in {VH80, VH90, VH95}: dR = net_r(C) - net_r(B); dDD = maxDD(C) - maxDD(B);
+    fold_wins = folds in which C out-earns B.
+  rule: >-
+    indeterminate IF the positive control fails or n(B) < 39 (underpowered: no verdict, extend the window or redesign; never
+    FAIL on thin n). A candidate C PASSES iff dR >= 2.0 R AND dDD <= 0 AND fold_wins >= 3 of 4. PASS IF any candidate passes
+    (best = highest dR; the script's generic label reads 'reachable_lever_beats_removed'): a Tier-3 PROPOSAL note on the owning
+    checklist row for the manager, never a config edit; two passing candidates within 0.5 R of each other is a preference,
+    not a finding. FAIL IF none passes (script label 'no_reachable_lever_beats_removed'): the declared vol_skip_above_pctl
+    stands; the axis is recorded honest_negative on this window. The 2.0 R bar, the drawdown clause, the 3-of-4 fold majority
+    and the 39 floor are not changed after any result.
+  what_it_does_not_do: >-
+    Does not edit config; does not re-test the dead-vol floor or any other gate; the two sibling units are read independently,
+    a Tier-3 filter needs BOTH to pass on the same percentile. trend_donchian_sol declares min_confidence 0.8 and adx_min
+    30 (config-exact in the baseline); the arms add only the hot-vol skip.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 60
+  confidence: 0.2
+  bucket: structural
+  basis: >-
+    stand-in: a fleet-wide hot-vol filter on the 1h trend family; placeholder for a small structural edge. Estimate, not a
+    measurement.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 15
+  basis: >-
+    One keyless Binance Vision fetch of ~760 days and 4 harness passes over it; GitHub-hosted runner, no trainer data.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_sol
+  - --arm
+  - B=
+  - --arm
+  - VH80=--vol-skip-above-pctl=0.8
+  - --arm
+  - VH90=--vol-skip-above-pctl=0.9
+  - --arm
+  - VH95=--vol-skip-above-pctl=0.95
+  - --days
+  - '760'
+  - --start
+  - '2024-10-05'
+  - --end
+  - 2026-10-04 23:59
+  - --control
+  - B=comms/strategy_evidence/runs/2026-10-05-730d-expand/trend_donchian_sol__bt.json
+  - --control-tol-n
+  - '0.02'
+  - --control-tol-r
+  - '0.5'
+  - --grade
+  - sweep
+  - --baseline
+  - B
+  - --delta-r
+  - '2.0'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261013-407c-21
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: >-
+    research/results/RQ-20261013-407c-21/<run_id>.jsonl (E5 contract via the batch collector); per-arm harness summaries,
+    trade ledgers, exact argv and verdict.json under comms/research/RQ-20261013-407c-21/<run_id>/.
+roadmap:
+- L-REGIME
+related:
+- QUEUE-FILL-1013
+- scripts/research/exit_lever_ablation.py
+- docs/research/entry-refinement-coverage.json
+- RQ-20261013-407c-20
+last_dispatched_at: '2026-10-14T00:25:01+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-20261013407C21-VOLHOT
+  evidence:
+  - research/results/RQ-20261013-407c-21/38490084420.jsonl
+  graded_at: '2026-10-14'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

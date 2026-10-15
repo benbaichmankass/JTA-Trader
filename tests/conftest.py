@@ -290,6 +290,27 @@ def _reset_intent_emission_debounce():
     _clear()
 
 
+# Bybit instrument-filter caches (tick size / lot bounds) are module state with a 2h TTL. A test
+# that hands the order path a MagicMock client stores that mock's attributes in them, and the next
+# test in the SAME PROCESS then fails with "conversion from MagicMock to Decimal is not supported".
+# The serial suite order happened to hide it; pytest-xdist (CI-DIET) schedules files onto workers
+# in an order that does not, and the failing files differed run to run (test_s008_accounts,
+# test_s029_pr2_trade_journal_write). Reset around every test, import-free like its neighbours.
+@pytest.fixture(autouse=True)
+def _reset_bybit_instrument_caches():
+    def _clear() -> None:
+        mod = sys.modules.get("src.units.accounts.precision")
+        if mod is not None:
+            for attr in ("_LIVE_CACHE", "_LOT_CACHE"):
+                cache = getattr(mod, attr, None)
+                if cache is not None:
+                    cache.clear()
+
+    _clear()
+    yield
+    _clear()
+
+
 # UI-UPGRADE-1: /api/bot/positions and /api/bot/work/brief serve a
 # stale-while-revalidate snapshot held in module state; without a reset one
 # test's fixture DB would be served to the next.

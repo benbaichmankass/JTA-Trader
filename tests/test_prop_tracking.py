@@ -137,6 +137,18 @@ def test_positions_miss_no_tab_detail_is_kept_scrubbed(env):
     assert "https" not in json.dumps(pe.last_positions_diag("breakout_2")) and "<" not in pe.last_positions_diag("breakout_2")["state"]
 
 
+def test_positions_miss_unparsed_keeps_detail_and_masked_cells(env):
+    # BREAKOUT-POS-UNPARSED: the first live miss said only "unparsed"; the app now names the missing keys and sends the
+    # first failing row's cells as key:shape. Digits are masked again server-side (a raw value never lands on disk).
+    pe.record_event(_dev(), {"event": "positions_miss", "reason": "unparsed miss=side bad=0 n=1",
+                             "headers": ["Market", "Side"], "cells": ["symbol:ETHUSD", "side:S", "value:1327.45 USD", "<x>"]})
+    d = pe.last_positions_diag("breakout_2")
+    assert d["state"] == "unparsed miss=side bad=0 n=1"
+    assert d["cells"] == ["symbol:ETHUSD", "side:S", "value:dddd.dd USD", "x"]
+    pe.record_event(_dev(), {"event": "positions_miss", "reason": "no_table"})
+    assert pe.last_positions_diag("breakout_2")["cells"] == []
+
+
 # ---- reconcile ----
 
 def test_matching_positions_change_nothing():
@@ -467,3 +479,116 @@ def test_fill_in_overrides_an_inferred_close_with_the_measured_exit():
     c = _fills()["t-inf"]
     assert c["exit_price"] == 2536.1 and json.loads(c["raw"])["provenance"].lower() == "measured"
     assert len(_fills()) == 1
+
+
+# --- BREAKOUT-UNTRACKED-1014: a Positions miss while the journal holds a ticket ON THE VENUE alerts ONCE ---
+
+def _venue_ticket(tid: str, status: str = "placed"):
+    prop_journal.record_ticket({
+        "ticket_id": tid, "account_id": "breakout_2", "strategy": "trend_donchian_eth_prop", "symbol": "ETHUSDT",
+        "direction": "short", "entry": 2458.24, "sl": 2504.25, "tp": 2214.87, "qty": 0.54,
+        "valid_until": datetime.now(timezone.utc).isoformat(), "status": status})
+
+
+def _unseen_pings(sent):
+    return [m for m in sent if "cannot read the Breakout Positions tab" in m]
+
+
+def test_positions_miss_with_a_placed_ticket_alerts_once_per_ticket(env):
+    _venue_ticket("prop-manual-f6552263ed1d")
+    for _ in range(3):
+        pe.record_event(_dev(), {"event": "positions_miss", "reason": "no_tab d6 c6 t1"})
+    pings = _unseen_pings(env)
+    assert len(pings) == 1
+    assert "prop-manual-f6552263ed1d" in pings[0] and "INVISIBLE" in pings[0] and "no_tab d6 c6 t1" in pings[0]
+    _venue_ticket("t-second", status="filled")      # a NEW unseen ticket alerts once more, naming only itself
+    pe.record_event(_dev(), {"event": "positions_miss", "reason": "unparsed"})
+    pings = _unseen_pings(env)
+    assert len(pings) == 2 and "t-second" in pings[1] and "f6552263ed1d" not in pings[1]
+
+
+def test_positions_miss_without_a_venue_ticket_stays_quiet(env):
+    _venue_ticket("t-closed", status="closed")
+    _venue_ticket("t-emitted", status="emitted")
+    pe.record_event(_dev(), {"event": "positions_miss", "reason": "no_tab d6 c6 t1"})
+    assert _unseen_pings(env) == []
+
+
+def test_closed_orders_miss_never_raises_the_unseen_alert(env):
+    _venue_ticket("t1")
+    pe.record_event(_dev(), {"event": "positions_miss", "reason": "closed_no_table"})
+    assert _unseen_pings(env) == []
+
+
+def test_amend_control_dump_is_kept_and_never_raises_the_unseen_alert(env):
+    # BREAKOUT-POS-UNPARSED: the trail amend FOUND the row but refuses (edit control unmeasured) and posts the row's
+    # control dump through positions_miss: it is kept as the visible diag and is not an "invisible position" alert.
+    _venue_ticket("t1")
+    pe.record_event(_dev(), {"event": "positions_miss", "reason": "amend_no_edit_unmeasured",
+                             "headers": ["Market", "TP / SL"], "controls": ["TP / SL:button Edit", "  cls=icon-btn"]})
+    assert _unseen_pings(env) == []
+    d = pe.last_positions_diag("breakout_2")
+    assert d["state"] == "amend_no_edit_unmeasured" and d["controls"] == ["TP / SL:button Edit", "cls=icon-btn"]
+
+
+# ---- side_unread (BREAKOUT-POS-UNPARSED, 1b.193: the Side cell has no text) ----
+
+# entry is the VENUE's avg opening price (operator screenshot 21:41Z), 0.13% off the journal's 2458.24
+SIDELESS = {"symbol": "ETH", "qty": 0.5449, "entry": 2461.52, "mark": 2436.1, "upnl": 12.34}
+
+
+def test_side_unread_takes_the_side_from_the_one_open_fill_and_is_estimated(env):
+    _open("prop-manual-f6552263ed1d", direction="short", qty=0.54, entry=2458.24, sl=2504.25, tp=2214.87)
+    _status([SIDELESS], state="side_unread")
+    raw = json.loads(prop_journal.latest_account_status("breakout_2")["raw"])
+    assert raw["positions_state"] == "read" and raw["positions_side_source"] == "journal"
+    assert raw["positions_provenance"] == "ESTIMATED"
+    assert raw["positions"][0]["direction"] == "short" and raw["positions"][0]["side_source"] == "journal"
+
+
+@pytest.mark.parametrize("fills", [[], [("short", 2600.0, 0.54)], [("short", 2458.24, 0.54), ("long", 2458.5, 0.54)],
+                                   [("short", 2458.24, 1.20)]])
+def test_side_unread_without_exactly_one_side_stays_unreconciled(env, fills):
+    # no fill / price outside 0.5% / both sides / size differs (1.20 vs the venue's 0.5449): never matched
+    for i, (d, e, q) in enumerate(fills):
+        _open(f"t{i}", direction=d, entry=e, qty=q)
+    r = _status([SIDELESS], state="side_unread")
+    raw = json.loads(prop_journal.latest_account_status("breakout_2")["raw"])
+    assert raw["positions_state"] == "side_unread" and "positions" not in raw and "reconcile" not in r
+
+
+def test_unseen_alert_retries_when_the_ping_failed(env, monkeypatch):
+    _venue_ticket("t1")
+    monkeypatch.setattr("src.runtime.notify.send_telegram_direct", lambda m, **k: False)
+    pe.record_event(_dev(), {"event": "positions_miss", "reason": "no_tab d6 c6 t1"})
+    monkeypatch.setattr("src.runtime.notify.send_telegram_direct", lambda m, **k: env.append(m) or True)
+    pe.record_event(_dev(), {"event": "positions_miss", "reason": "no_tab d6 c6 t1"})
+    assert len(_unseen_pings(env)) == 1
+
+
+# ---- position sheet (BREAKOUT-SL-AMEND-CLICK: side / volume / avg entry read off the row's sheet) ----
+
+SHEET_ROW = {"symbol": "ETH", "side": "short", "side_source": "sheet", "qty": 0.54, "qty_src": "sheet", "entry": 2461.52,
+             "mark": 2440.65, "upnl": None, "upnl_signed": False}
+
+
+def test_sheet_side_is_measured_and_an_unsigned_upnl_stays_null(env):
+    _open("prop-manual-f6552263ed1d", direction="short", qty=0.54, entry=2458.24, sl=2504.25, tp=2214.87)
+    _status([SHEET_ROW], state="read")
+    raw = json.loads(prop_journal.latest_account_status("breakout_2")["raw"])
+    assert raw["positions_state"] == "read" and raw["positions_side_source"] == "sheet"
+    assert raw["positions_provenance"] == "MEASURED"
+    p = raw["positions"][0]
+    assert (p["direction"], p["qty"], p["entry"], p["side_source"], p["upnl"], p["upnl_signed"]) == \
+        ("short", 0.54, 2461.52, "sheet", None, False)
+    # a sign-less uPnL is never summed into the account's unrealized as a measured number
+    assert raw.get("unrealized_source") != "positions_sum"
+
+
+def test_sheet_diag_is_kept_and_never_raises_the_unseen_alert(env):
+    _venue_ticket("t1")
+    for reason in ("sheet_sheet_not_open", "amend_sheet_unmeasured", "sheet_ok"):
+        pe.record_event(_dev(), {"event": "positions_miss", "reason": reason, "headers": ["child:none", "group:clicked"],
+                                 "controls": ["stop px=1 pen=1", "  button P ✎"]})
+        assert pe.last_positions_diag("breakout_2")["state"] == reason
+    assert _unseen_pings(env) == []

@@ -1,0 +1,66 @@
+id: RQ-20261013-0b07-02
+title: 'RESEARCH-ROUTER smoke (CPU): a unit that declares only compute: cpu_light is placed by the token-free dispatcher, runs on a GitHub-hosted runner, and lands through the shared collector (plumbing, not research)'
+status: done
+cadence: once
+theme: infra
+priority: 1
+kind: deterministic
+question: >-
+  Does a unit that declares only `compute: cpu_light` (no run.workflow) get dispatched by research-queue-dispatch to
+  research-script-run.yml, run on a GitHub-hosted runner, come back through the shared artifact -> collector path and land as an E5 record research-ops
+  can read and grade by this unit's registered rule?
+why_this_matters: >-
+  RESEARCH-ROUTER (operator 2026-10-13): Claude writes the unit, a token-free dispatcher chooses the compute. This is the
+  live proof of one class -> backend route; its PASS is part of the observation that closes checklist row RESEARCH-ROUTER.
+  It says NOTHING about any strategy or model.
+why_not_inferential: >-
+  A plumbing smoke: one short fixed matmul benchmark whose only readable outcome is whether the routed backend ran it and
+  the result landed. There is no sampling question to power.
+decision_rule:
+  id: RULE-RQ20261013-0B07-02-ROUTER-SMOKE-CPU
+  registered_at: '2026-10-13'
+  registered_before_run: true
+  statistic: 'verdict.json from scripts/research/compute_smoke.py --mode cpu'
+  rule: >-
+    PASS IF the E5 record landed via the dispatcher-chosen backend with read_state=measured and fp32_gflops > 0. FAIL IF measured
+    but the benchmark reports no throughput. A producer_failed/no_data record is NOT a verdict: it means the route is broken - read run-manifest.json
+    and the session log, fix, re-queue (last_dispatched_at: null); the rule is never edited.
+  what_it_does_not_do: >-
+    Measures nothing about any strategy, model or market; not a promotion case; touches no config, registry or account.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 200
+  confidence: 0.8
+  bucket: information
+  basis: 'infrastructure unlock: every cpu_light unit queued for the week depends on this route working; a stand-in figure, not a measured P&L'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 5
+  basis: One 5 s fp32 1024x1024 numpy matmul loop on a hosted runner.
+run:
+  command: [python3, scripts/research/compute_smoke.py, --mode, cpu, --out, '{out_dir}']
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261013-0b07-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap: [L-OPS]
+related:
+- RESEARCH-ROUTER
+- config/research_compute.yaml
+- scripts/research/compute_router.py
+last_dispatched_at: '2026-10-13T16:05:16+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-RQ20261013-0B07-02-ROUTER-SMOKE-CPU
+  evidence:
+  - research/results/RQ-20261013-0b07-02/38427286282.jsonl
+  graded_at: '2026-10-14'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

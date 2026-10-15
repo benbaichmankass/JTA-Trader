@@ -1,0 +1,109 @@
+id: RQ-20261014-9807-05
+title: 'Programme 01 Q5, the momentum-turn detector as a LABEL study: does bars-since-peak >= k or an ADX fall from its in-trade
+  peak predict that the remaining path from here is negative, on per-trade paths of the 7 real-money legs? BLOCKED: no per-trade
+  path corpus (ML-LEG-CORPUS)'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 2
+kind: experiment
+question: >-
+  The operator's stated fix for giveback (2026-10-14) is better active management: detecting momentum turning. Before it is a
+  lever it is a label question (Programme 01 Q5; the rows are M23 meta-labels for Programme 02): at each bar of an open trade
+  with peak_r >= 1, does a candidate exhaustion signal -- bars_since_peak >= k (k in 3, 6, 10), ADX fallen >= x from its
+  in-trade peak (x in 5, 10), or 3-bar range contraction below the entry ATR -- predict remaining_path_r < 0 (the trade's
+  realised R minus its open R at that bar) with a lift over the base rate that clears a permutation null, on per-trade path
+  rows from config-exact harness emits (7 real-money legs) and, as a parity check, live position_telemetry rows with
+  terminal_state final?
+power:
+  expected_n: 300
+  min_detectable_effect: 0.1
+  effect_units: metric
+  sd: 0.5
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    Two-sample on P(remaining_path_r < 0 | signal) vs P(.. | no signal); a 0.10 lift against sd ~0.5 (Bernoulli near 0.5) needs
+    2 x (1.96 + 0.8416)^2 x 0.5^2 / 0.1^2 = 393 bar-events, i.e. >= 300 trades with peak_r >= 1 across the 7 legs (mi307 cap_r_n
+    146-268 for the four bybit_2 legs uncapped; the alpaca 1d legs add little). Bar-events within a trade are not independent,
+    so the unit is the TRADE (first signal fire per trade) and the floor is a floor.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      No per-trade path corpus exists for the live legs (the m20 sweep keeps summaries; live telemetry has ~hundreds of rows and
+      peak_r is a lower bound). ML-LEG-CORPUS retains the emits; the path construction (per-bar open_r along the trade) is the
+      same truncation construction m20_exit_analysis.py S3 already uses on the live journal.
+decision_rule:
+  id: RULE-RQ20261014-9807-05-MOMENTUM-TURN-LABEL
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: >-
+    Per signal (k or x variant), pooled over the real-money legs and per leg: lift = P(remaining_path_r < 0 | signal fired) -
+    base rate P(remaining_path_r < 0 | peak_r >= 1), with a 1,000-draw permutation null of the signal timing within trade;
+    n trades with peak_r >= 1; the same lift on live final telemetry rows as a parity read (reported, not graded).
+  rule: >-
+    PASS IF a signal's pooled lift >= 0.10 with permutation p < 0.05 on n >= 300 AND the sign of the lift agrees on >= 3 of the
+    4 bybit_2 legs -> (a) the signal becomes a Q4 cell (harness --momentum-stale-* / trail-decay stall parameters) in a follow-on
+    sweep unit and (b) an entry in docs/reference/signal-catalog.yaml tagged as an M23 meta-label feature. FAIL IF no signal
+    reaches lift 0.05 at p < 0.05 -> retire the detector as a stop trigger; keep the catalog entry marked no_lift so the question
+    is not re-asked without new information. INDETERMINATE under n or if the harness and live lifts disagree in sign (report
+    both; do not pool).
+  what_it_does_not_do: >-
+    Ships no lever and no head. Does not grade exits by P&L (that is Q4's sweep). Live rows are a parity read only, never pooled
+    with harness rows.
+blocked_on:
+- what: >-
+    ROUTED 2026-10-14 (lane IN-TRADE-EXIT-MODEL): the per-bar path this unit needs is now a filed Tier-1 build,
+    EXIT-PATH-EMIT-OFFLINE (harness --emit-paths with open_r / peak_r / mae_r / bars_since_peak / ATR / ADX per bar and the
+    stop/target in force). This unit consumes that OFFLINE emit; live per-bar telemetry (EXIT-PATH-TELEMETRY-LIVE, Tier-2
+    proposal) is its parity read only. Interim: scripts/research/first_passage.py re-walks committed ledgers over public
+    candles with a FIXED bracket and computes ADX/ATR per bar -- usable for a fixed-bracket version of this question, which
+    RQ-20261014-d6e7-04 (rich in-trade state incl. bars since peak and ADX slope) already asks.
+  ref: docs/claude/work/checklist/EXIT-PATH-EMIT-OFFLINE.json
+  clears_when: >-
+    EXIT-PATH-EMIT-OFFLINE lands with its parity test; then the other entries below are moot.
+- what: >-
+    STATUS 2026-10-14 (ML-LEG-CORPUS): the corpus (PR #18074 (runner ml2_live_leg_corpus.py, FEATURE_NAMES += adx_at_entry/regime_weight, ml2_bracket_train_eval --outcome mfe_r with B1..B4 per leg/stratum)) is per-TRADE only: it has no per-bar path
+    (open_r / ADX / ATR along the trade), so it does NOT clear this unit. Still needs a path re-walk from candles.
+  ref: ML-LEG-CORPUS; RQ-20261014-736c-01
+  clears_when: >-
+    Unchanged (below).
+- what: >-
+    No committed per-trade PATH rows (per-bar open_r, ADX, ATR along each trade) for the live legs exist; harness emits are
+    discarded and live telemetry keeps only the latest row per package.
+  ref: docs/claude/work/checklist/ML-LEG-CORPUS.json (ML plan X1)
+  clears_when: >-
+    ML-LEG-CORPUS lands per-trade emits with the bar path (or a path re-walk from candles, as prop_exit_evidence.py does), and
+    a small reader computes the per-bar signals and remaining_path_r. Then git mv to research/queue/, status queued, set
+    run.command to the reader with --unit/--out and feasibility to source corpus over the emits.
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 200
+  confidence: 0.4
+  basis: >-
+    stand-in: the detector is the operator's named fix and its rows are the first M23 labels with a real signal behind them;
+    not a P&L measurement, no balances stated.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  basis: Estimate; a permutation test over a few thousand path rows, stdlib/numpy, runner.
+run:
+  workflow: null
+  note: Null until the path corpus exists (blocked_on).
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M20
+- M23
+related:
+- docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md (Q5; feeds Programme 02 via RESEARCH-MAP.md labels feed)
+- docs/reference/signal-catalog.yaml (the catalog a PASS writes into)
+- RQ-20261007-043 (momentum-keyed time stop, queued: the lever form of the same idea, graded by P&L)
+- scripts/research/m20_exit_analysis.py (S3: the truncation construction for live paths)
+last_dispatched_at: null

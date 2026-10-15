@@ -91,7 +91,12 @@ TARGETS: dict[str, dict] = {
     # the real cadence (MEASURED 2026-10-07: 18 runs/24 h, largest gap 3h40m)
     # was each run holding the concurrency group through its commit-to-main
     # waits, fixed by the dispatch/land split in research-queue-dispatch.yml.
-    "research-queue-dispatch.yml": {"stale_hours": 3},
+    # starved_min (RQ-CADENCE-2, 2026-10-13): hourly cadence must not depend on a keeper execution
+    # landing in the [slot+30, slot+60) window. MEASURED 2026-10-13: no dispatch run started 12:50Z
+    # -> 15:59Z because every keeper execution (pushes + a dropped :07 cron) fell inside a slot's
+    # first 30 min (grace) and none in its second half. When the last occupying run is this old the
+    # grace is waived.
+    "research-queue-dispatch.yml": {"stale_hours": 3, "starved_min": 75},
     # RQ-RUN (2026-09-28): the queue's own replenisher (daily) and mechanical
     # grader (every 6 h) are what make it run without a session; a dropped
     # slot on either is exactly the silence this keeper exists to cover.
@@ -182,13 +187,18 @@ def counts_for_slot(run: dict) -> bool:
 
 
 def decide_keep(crons: list[str], runs: list[dict], now: dt.datetime,
-                stale_hours: float) -> dict:
+                stale_hours: float, starved_min: Optional[float] = None) -> dict:
     slot = latest_slot(crons, now)
     age_min = (now - slot).total_seconds() / 60
     since = [r for r in runs if _ts(r["created_at"]) >= slot
              and (counts_for_slot(r) or r.get("event") == "workflow_dispatch")
              and r.get("conclusion") not in ("cancelled", "skipped")]
-    dispatch = (not since and age_min >= GRACE_MIN
+    occupying = [_ts(r["created_at"]) for r in runs
+                 if (counts_for_slot(r) or r.get("event") == "workflow_dispatch")
+                 and r.get("conclusion") not in ("cancelled", "skipped")]
+    gap_min = (now - max(occupying)).total_seconds() / 60 if occupying else None
+    starved = bool(starved_min and (gap_min is None or gap_min >= starved_min))
+    dispatch = (not since and (age_min >= GRACE_MIN or starved)
                 and age_min <= MAX_CATCHUP_H * 60)
     ran = sorted((r for r in runs if r.get("status") == "completed"
                   and r.get("conclusion") in RAN
@@ -198,7 +208,7 @@ def decide_keep(crons: list[str], runs: list[dict], now: dt.datetime,
     last_age_h = (now - _ts(last)).total_seconds() / 3600 if last else None
     stale = last_age_h is None or last_age_h > stale_hours
     return {"slot": slot.isoformat(), "slot_age_min": round(age_min),
-            "runs_since_slot": len(since), "dispatch": dispatch,
+            "runs_since_slot": len(since), "dispatch": dispatch, "starved": starved,
             "last_completed": last,
             "last_completed_age_h": None if last_age_h is None else round(last_age_h, 1),
             "stale_hours": stale_hours, "stale": stale}
@@ -238,7 +248,7 @@ def cmd_keep(args) -> int:
     rows, stale = [], []
     for wf, spec in TARGETS.items():
         crons = workflow_crons(f".github/workflows/{wf}")
-        d = decide_keep(crons, _runs(wf), now, spec["stale_hours"])
+        d = decide_keep(crons, _runs(wf), now, spec["stale_hours"], spec.get("starved_min"))
         d["workflow"] = wf
         if d["dispatch"] and not args.dry_run:
             _api(f"/actions/workflows/{wf}/dispatches", "POST", {"ref": "main"})
@@ -336,6 +346,16 @@ def self_test() -> int:
     d = decide_keep(hc, h_hist, T("2026-10-07T14:55"), 3)
     check("hourly: 2 slots missed -> still dispatches the latest only", d["dispatch"], True)
     check("hourly: last completed 3.6h ago -> STALE at 3h", d["stale"], True)
+    # RQ-CADENCE-2: the 2026-10-13 stall -- every keeper execution fell in a slot's first 30 min.
+    sh = [keep(30, "2026-10-13T12:50:00Z", "success", "completed")]
+    d = decide_keep(hc, sh, T("2026-10-13T14:42"), 3, 75)
+    check("hourly starved: 112 min since the last run waives grace (slot 22 min old)", d["dispatch"], True)
+    d = decide_keep(hc, sh, T("2026-10-13T13:35"), 3, 75)
+    check("hourly not yet starved: 45 min since the last run keeps grace", d["dispatch"], False)
+    d = decide_keep(hc, sh, T("2026-10-13T14:42"), 3)
+    check("no starved_min configured -> grace unchanged", d["dispatch"], False)
+    d = decide_keep(hc, sh + [keep(31, "2026-10-13T14:30:00Z", None, "in_progress")], T("2026-10-13T14:42"), 3, 75)
+    check("starved never double-fires over a run already in the slot", d["dispatch"], False)
     d = decide_dedupe("20 * * * *", sched(22, "2026-10-07T13:50:00Z", None, "in_progress"),
                       [keep(23, "2026-10-07T13:25:00Z", "success", "completed")])
     check("hourly: late scheduled run of a keeper-covered slot is skipped", d["skip"], True)

@@ -1,0 +1,136 @@
+id: RQ-20261013-407c-02
+title: >-
+  Entry depth, ada_pullback_2h: does a deeper or shallower pullback_frac (0.382, 0.618, 0.75 vs the declared value) beat the
+  declared entry net of the full cost stack? (M21 depth_threshold column = pending)
+status: done
+cadence: once
+theme: live_strategy
+priority: 2
+kind: experiment
+question: >-
+  The M21 entry-refinement coverage matrix (docs/research/entry-refinement-coverage.json) carries depth_threshold = PENDING
+  for the whole 2h pullback family: the pullback_frac band was never swept config-exact for ada_pullback_2h. The one prior
+  look (docs/research/xrp-pullback-entry-axis-2026-08-24.md) found pullback_frac higher is better in sample on xrp_pullback_2h
+  but not replicated across the family and flagged its gain as recent-tail. On the same pinned 730d window (ADAUSDT 2h, 2024-10-05
+  .. 2026-10-04 23:59), same cost stack as the evidence builder, does any of pullback_frac [0.382, 0.618, 0.75] beat the declared
+  entry by a material margin with no worse drawdown and in at least 3 of 4 calendar folds?
+why_this_matters: >-
+  ada_pullback_2h is on a live roster and its recent closes are net negative (perf-followup 2026-10-10: the 2h pullback family
+  bleeds; bybit_2 xrp_pullback_2h -5.9R, ada_pullback_2h -5.6R over n=10-12 each). Entry depth is the one axis the matrix
+  still lists as pending, so it is the cheapest untested lever on a losing leg.
+power:
+  expected_n: 110
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo's standing E35 floor, RQ-20261006-002/-004/-060). expected_n
+    = 110 is an ESTIMATE from the nearest committed record or the leg's trade cadence, not a measurement of this exact arm
+    set. Below 39 baseline trades the unit grades indeterminate (underpowered), never FAIL. The 1.0 R bar is a MATERIALITY
+    bar over the whole window, not a significance test; the 3-of-4 calendar-fold majority is what refuses a one-period artifact.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Re-measurement on freshly fetched keyless Binance Vision candles (ada_pullback_2h, pinned window 2024-10-05 .. 2026-10-04
+      23:59); the harness replays history, nothing accrues. expected_n is an estimate, so power_state stays accruing and a
+      thin baseline grades indeterminate.
+decision_rule:
+  id: RULE-20261013407C02-DEPTH
+  registered_at: '2026-10-13'
+  registered_before_run: true
+  statistic: >-
+    Per arm, from the harness's own --json summary of scripts/backtest_pullback.py (argv built by regime_debt_matrix.build_harness_cmd,
+    the evidence builder's own, plus the arm's raw tokens; full cost stack: fee + resolved slippage + funding, never a zero
+    default): total_trades, net_total_r, max_drawdown_r, plus net_r per fold over FOUR equal calendar spans of the window
+    (same date boundaries every arm). Arms: B = leg as declared, F0382 = pullback_frac=0.382, F0618 = pullback_frac=0.618,
+    F075 = pullback_frac=0.75. Per candidate C in {F0382, F0618, F075}: dR = net_r(C) - net_r(B); dDD = maxDD(C) - maxDD(B);
+    fold_wins = folds in which C out-earns B.
+  rule: >-
+    indeterminate IF the positive control fails or n(B) < 39 (underpowered: no verdict, extend the window or redesign; never
+    FAIL on thin n). A candidate C PASSES iff dR >= 1.0 R AND dDD <= 0 AND fold_wins >= 3 of 4. PASS IF any candidate passes
+    (best = highest dR; the script's generic label reads 'reachable_lever_beats_removed'): a Tier-3 PROPOSAL note on the owning
+    checklist row for the manager, never a config edit; two passing candidates within 0.5 R of each other is a preference,
+    not a finding. FAIL IF none passes (script label 'no_reachable_lever_beats_removed'): the declared pullback_frac stands;
+    the axis is recorded honest_negative on this window. The 1.0 R bar, the drawdown clause, the 3-of-4 fold majority and
+    the 39 floor are not changed after any result.
+  what_it_does_not_do: >-
+    Does not edit config/strategies.yaml; does not re-grade ada_pullback_2h's bracket (E35/M20 own those) or its ADX gate;
+    a PASS is a Tier-3 proposal input for the manager, mirrored to bybit_portfolio/bybit_1 in the same PR if ever shipped
+    (mirror trade-shaping equality). No committed 730d record exists for ada_pullback_2h, so no positive control is available:
+    the baseline arm is the declared config as built by regime_debt_matrix.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.25
+  bucket: own_losses
+  basis: >-
+    stand-in: ada_pullback_2h is a live leg with a recent net bleed; a +1.0R/730d materiality bar is ~0.04R/month at declared
+    risk. Estimate, not a measurement.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 15
+  basis: >-
+    One keyless Binance Vision fetch of ~760 days and 4 harness passes over it; GitHub-hosted runner, no trainer data.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - ada_pullback_2h
+  - --arm
+  - B=
+  - --arm
+  - F0382=pullback_frac=0.382
+  - --arm
+  - F0618=pullback_frac=0.618
+  - --arm
+  - F075=pullback_frac=0.75
+  - --days
+  - '760'
+  - --start
+  - '2024-10-05'
+  - --end
+  - 2026-10-04 23:59
+  - --grade
+  - sweep
+  - --baseline
+  - B
+  - --delta-r
+  - '1.0'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261013-407c-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: >-
+    research/results/RQ-20261013-407c-02/<run_id>.jsonl (E5 contract via the batch collector); per-arm harness summaries,
+    trade ledgers, exact argv and verdict.json under comms/research/RQ-20261013-407c-02/<run_id>/.
+roadmap:
+- M21
+related:
+- QUEUE-FILL-1013
+- scripts/research/exit_lever_ablation.py
+- docs/research/entry-refinement-coverage.json
+last_dispatched_at: '2026-10-13T19:18:07+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-20261013407C02-DEPTH
+  evidence:
+  - research/results/RQ-20261013-407c-02/38449810060.jsonl
+  graded_at: '2026-10-14'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

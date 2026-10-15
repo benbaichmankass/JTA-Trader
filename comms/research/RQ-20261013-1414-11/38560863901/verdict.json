@@ -1,0 +1,110 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "eia_crude_stocks releases (live feed + survey-consensus backfill) joined to CL=F daily closes",
+  "n": 585,
+  "measurement": {
+    "kind": "eia_crude_stocks",
+    "symbol": "CL=F",
+    "snapshot_files": [
+      "comms/macro/econ_calendar_snapshots.jsonl",
+      "comms/macro/econ_calendar_snapshots_survey_backfill.jsonl"
+    ],
+    "releases": 585,
+    "releases_with_value": 585,
+    "price_bars": 5479,
+    "first_release": "2015-01-07",
+    "last_release": "2026-10-07",
+    "rows": [
+      {
+        "horizon_days": 1,
+        "n": 585,
+        "ic": 0.036743,
+        "ic_t": 0.888,
+        "overlap_factor": 1.0,
+        "n_eff": 585.0,
+        "ic_t_eff": 0.888,
+        "pearson": 0.040227,
+        "sign_hit_rate": 0.517241,
+        "mean_fwd_return": 0.001813
+      },
+      {
+        "horizon_days": 3,
+        "n": 585,
+        "ic": 0.023571,
+        "ic_t": 0.569,
+        "overlap_factor": 1.0,
+        "n_eff": 585.0,
+        "ic_t_eff": 0.569,
+        "pearson": -0.042773,
+        "sign_hit_rate": 0.497436,
+        "mean_fwd_return": -0.002092
+      },
+      {
+        "horizon_days": 5,
+        "n": 585,
+        "ic": 0.01043,
+        "ic_t": 0.252,
+        "overlap_factor": 1.0,
+        "n_eff": 585.0,
+        "ic_t_eff": 0.252,
+        "pearson": 0.003993,
+        "sign_hit_rate": 0.509402,
+        "mean_fwd_return": 0.003367
+      }
+    ],
+    "summary": {
+      "max_n": 585,
+      "min_honest_n": 12,
+      "sufficient_history": true,
+      "any_flagged_horizon": false,
+      "any_flagged_horizon_overlap_corrected": false,
+      "strongest_ic_horizon_days": 1,
+      "strongest_ic": 0.036743,
+      "strongest_ic_t": 0.888,
+      "strongest_ic_t_eff": 0.888,
+      "t_flag": 2.0,
+      "verdict": "no_edge_at_tested_horizons"
+    },
+    "rule": {
+      "primary": [
+        1,
+        3,
+        5
+      ],
+      "min_n": 100,
+      "t_bar": 2.4,
+      "expected_sign": "negative"
+    },
+    "per_horizon": [
+      {
+        "horizon_days": 1,
+        "n": 585,
+        "ic": 0.036743,
+        "ic_t_eff": 0.888,
+        "n_ok": true,
+        "t_reached": false,
+        "sign_ok": false
+      },
+      {
+        "horizon_days": 3,
+        "n": 585,
+        "ic": 0.023571,
+        "ic_t_eff": 0.569,
+        "n_ok": true,
+        "t_reached": false,
+        "sign_ok": false
+      },
+      {
+        "horizon_days": 5,
+        "n": 585,
+        "ic": 0.01043,
+        "ic_t_eff": 0.252,
+        "n_ok": true,
+        "t_reached": false,
+        "sign_ok": false
+      }
+    ]
+  },
+  "note": "no pre-registered horizon reached the t-bar in the expected sign"
+}

@@ -662,6 +662,11 @@ jobs:
                      | grep -i -m1 '^[[:space:]]*closed_at[[:space:]]*:' \
                      | sed -E 's/^[[:space:]]*[Cc]losed_at[[:space:]]*:[[:space:]]*//' \
                      | tr -d '[:space:]' || true)
+            # prop-report-close: optional from_placed: true (close a `placed` row on a `placed` ticket).
+            from_placed=$(printf '%s\n' "${ISSUE_BODY}" \
+                     | grep -i -m1 '^[[:space:]]*from_placed[[:space:]]*:' \
+                     | sed -E 's/^[[:space:]]*[Ff]rom_placed[[:space:]]*:[[:space:]]*//' \
+                     | tr -d '[:space:]' || true)
             # close-stranded-journal-row: optional sl|tp — the row's own leg filled at the venue.
             exit_kind=$(printf '%s\n' "${ISSUE_BODY}" \
                      | grep -i -m1 '^[[:space:]]*exit_kind[[:space:]]*:' \
@@ -747,6 +752,7 @@ jobs:
           echo "ACTION_EQUAL_ONLY=${equal_only:-}" >>"$GITHUB_ENV"
           echo "ACTION_EXIT_PRICE=${exit_price:-}" >>"$GITHUB_ENV"
           echo "ACTION_CLOSED_AT=${closed_at:-}" >>"$GITHUB_ENV"
+          echo "ACTION_FROM_PLACED=${from_placed:-}" >>"$GITHUB_ENV"
           echo "ACTION_ROW=${row_id:-}" >>"$GITHUB_ENV"
           echo "ACTION_EXIT_KIND=${exit_kind:-}" >>"$GITHUB_ENV"
           echo ">>> Resolved ACTION=${action:-} REASON=${reason:-} ACCOUNT_ID=${account_id:-} MODE=${mode:-} TRADE_ID=${trade_id:-} SYMBOL=${symbol:-} DAYS=${days:-} WINDOWS=${windows:-} WINDOW_DAYS=${window_days:-} BT_MODE=${bt_mode:-} RECENT_ONLY_FRAC=${recent_only_frac:-} (event=${{ github.event_name }})"
@@ -1971,7 +1977,7 @@ jobs:
               echo "::error::prop-report-close closed_at '${ACTION_CLOSED_AT}' must be ISO-8601 (e.g. 2026-10-12T13:30:00Z)."
               exit 1
             fi
-            REMOTE_CMD="ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID}") ACTION_TICKET_ID=$(printf '%q' "${ACTION_TICKET_ID}") ACTION_EXIT_PRICE=$(printf '%q' "${ACTION_EXIT_PRICE:-}") ACTION_CLOSED_AT=$(printf '%q' "${ACTION_CLOSED_AT:-}") ACTION_REASON=$(printf '%q' "${REASON}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
+            REMOTE_CMD="ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID}") ACTION_TICKET_ID=$(printf '%q' "${ACTION_TICKET_ID}") ACTION_EXIT_PRICE=$(printf '%q' "${ACTION_EXIT_PRICE:-}") ACTION_CLOSED_AT=$(printf '%q' "${ACTION_CLOSED_AT:-}") ACTION_REASON=$(printf '%q' "${REASON}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACTION_FROM_PLACED=$(printf '%q' "${ACTION_FROM_PLACED:-}") ${REMOTE_CMD}"
           fi
           if [ "${ACTION}" = "repair-malformed-notes" ]; then
             REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"

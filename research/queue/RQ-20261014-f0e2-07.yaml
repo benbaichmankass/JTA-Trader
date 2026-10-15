@@ -1,0 +1,123 @@
+id: RQ-20261014-f0e2-07
+title: 'Re-entry cooldown, eth_pullback_2h: does moving post-exit cooldown (4, 8, 16) beat the declared setting net of the full cost stack?'
+status: done
+cadence: once
+theme: live_strategy
+priority: 3
+kind: experiment
+question: On the pinned 730d window (2024-10-05 .. 2026-10-04 23:59), same cost stack and same harness argv builder as the evidence builder, does
+  any of the 3 pre-registered post-exit cooldown arms on eth_pullback_2h (4, 8, 16) beat the leg as declared by a material margin, with no worse
+  drawdown and in at least 3 of 4 calendar folds? Arm values are fixed in this unit before any run; this is an offline Stage-0 re-measurement
+  and never a book decision.
+why_this_matters: eth_pullback_2h is a live-roster leg; the post-exit cooldown axis has not been measured for it in the committed matrix (checked
+  against research/queue on 2026-10-14). A repeatable drag removed by one pre-registered setting is the cheapest lever the book has; a null is
+  recorded honest_negative so the axis is not re-asked.
+power:
+  expected_n: 100
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo's standing E35 floor). expected_n=100 is an ESTIMATE from the nearest committed
+    record/trade cadence for eth_pullback_2h, not a measurement of this arm set. Below 39 baseline trades the unit grades indeterminate (underpowered),
+    never FAIL. The R bar is a MATERIALITY bar over the whole window, not a significance test; the 3-of-4 calendar-fold majority refuses a one-period
+    artifact.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched keyless Binance Vision candles (eth_pullback_2h, pinned window); the harness replays history,
+      nothing accrues.
+decision_rule:
+  id: RULE-RQ20261014f0e207-AXIS
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: 'Per arm, from the harness''s own --json summary of scripts/backtest_pullback.py (argv built by regime_debt_matrix.build_harness_cmd
+    plus the arm''s tokens; full cost stack: fee + resolved slippage + funding, never a zero default): total_trades, net_total_r, max_drawdown_r,
+    plus net_r per fold over FOUR equal calendar spans (same boundaries every arm). Arms: B = leg as declared; CD4 = --cooldown-bars=4; CD8 =
+    --cooldown-bars=8; CD16 = --cooldown-bars=16. Per candidate C: dR = net_r(C) - net_r(B); dDD = maxDD(C) - maxDD(B); fold_wins = folds in which
+    C out-earns B.'
+  rule: 'indeterminate IF the positive control fails or n(B) < 39 (underpowered: no verdict, extend the window or redesign; never FAIL on thin
+    n). A candidate C PASSES iff dR >= 1.0 R AND dDD <= 0 AND fold_wins >= 3 of 4. PASS IF any candidate passes (best = highest dR): a Tier-3
+    PROPOSAL note on the owning checklist row for the manager, never a config edit; two passing candidates within 0.5 R of each other is a preference,
+    not a finding. FAIL IF none passes: the declared post-exit cooldown stands; the axis is recorded honest_negative on this window. The 1.0 R
+    bar, the drawdown clause, the 3-of-4 fold majority and the 39 floor are not changed after any result.'
+  what_it_does_not_do: 'Does not mine values: the arm values are fixed here and may not be edited after seeing any result. Does not edit config,
+    and a single-leg pass is a LEAD only (Tier-3 proposal via the manager, never a promotion case). Does not test any other axis.'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 70
+  confidence: 0.25
+  bucket: own_losses
+  basis: 'stand-in: placeholder for a small edge on a small live/mirror book from one post-exit cooldown setting; estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 15
+  basis: One keyless Binance Vision fetch of ~760 days and 4 harness passes over it; GitHub-hosted runner, no trainer data.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - eth_pullback_2h
+  - --arm
+  - B=
+  - --arm
+  - CD4=--cooldown-bars=4
+  - --arm
+  - CD8=--cooldown-bars=8
+  - --arm
+  - CD16=--cooldown-bars=16
+  - --days
+  - '760'
+  - --start
+  - '2024-10-05'
+  - --end
+  - 2026-10-04 23:59
+  - --control
+  - B=comms/strategy_evidence/runs/2026-10-05-730d-expand/eth_pullback_2h__bt.json
+  - --control-tol-n
+  - '0.02'
+  - --control-tol-r
+  - '0.5'
+  - --grade
+  - sweep
+  - --baseline
+  - B
+  - --delta-r
+  - '1.0'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261014-f0e2-07
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: research/results/RQ-20261014-f0e2-07/<run_id>.jsonl via the batch collector; per-arm summaries and verdict.json under comms/research/RQ-20261014-f0e2-07/<run_id>/.
+roadmap:
+- L-LADDER
+related:
+- RESEARCH-OPS-20261014-0020
+- scripts/research/exit_lever_ablation.py
+- docs/research/entry-refinement-coverage.json
+last_dispatched_at: '2026-10-14T06:02:46+00:00'
+grading:
+  auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-RQ20261014f0e207-AXIS
+  evidence:
+  - research/results/RQ-20261014-f0e2-07/38512429402.jsonl
+  first_fail: 1 row(s), all measured, all fail
+  graded_at: '2026-10-14'
+  grader: scripts/research/queue_grade.py
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

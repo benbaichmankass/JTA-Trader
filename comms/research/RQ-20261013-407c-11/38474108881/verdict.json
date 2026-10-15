@@ -1,0 +1,641 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "trend_donchian_sol: 120 trades in the baseline arm 'B' on SOLUSDT 1h candles 2024-10-05 .. 2026-10-04 23:59, net of fee+slippage+funding (the harness's venue-aware stack); arms ['B', 'SA', 'SU', 'SL']",
+  "n": 120,
+  "measurement": {
+    "leg": "trend_donchian_sol",
+    "label": "no_reachable_lever_beats_removed",
+    "grade": {
+      "verdict": "fail",
+      "label": "no_reachable_lever_beats_removed",
+      "baseline": "B",
+      "candidates": {
+        "SA": {
+          "delta_net_r": -2.9977,
+          "delta_max_drawdown_r": -0.6217,
+          "fold_wins": 1,
+          "passes": false
+        },
+        "SU": {
+          "delta_net_r": -7.5048,
+          "delta_max_drawdown_r": -3.0604,
+          "fold_wins": 0,
+          "passes": false
+        },
+        "SL": {
+          "delta_net_r": -4.3984,
+          "delta_max_drawdown_r": -0.0424,
+          "fold_wins": 1,
+          "passes": false
+        }
+      },
+      "delta_r_bar": 2.0,
+      "fold_majority": 3,
+      "n_floor": 39,
+      "control": {
+        "ok": true,
+        "record_n": 120,
+        "record_net_r": 18.1833,
+        "arm_n": 120,
+        "arm_net_r": 18.1833,
+        "n_frac_diff": 0.0,
+        "net_r_abs_diff": 0.0,
+        "tol_n": 0.02,
+        "tol_r": 0.5
+      },
+      "why": "no candidate clears the bar: the declared lever's lines are dead config and nothing reachable earns its place -- strip them (Tier-3, not done here)"
+    },
+    "arms": {
+      "B": {
+        "n": 120,
+        "net_r": 18.1833,
+        "net_r_fee_only": 21.7324,
+        "max_drawdown_r": 10.8122,
+        "by_outcome": {
+          "trail_stop": 51,
+          "stop": 51,
+          "take_profit": 18
+        },
+        "mean_bars_held": 33.542,
+        "net_r_per_capital_day": 0.1084,
+        "cost_stack": {
+          "fee_bps_roundtrip": 7.5,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": {
+          "donchian": 20,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 5.0,
+          "min_confidence": 0.8
+        },
+        "data_start": "2024-10-05 00:00:00+00:00",
+        "data_end": "2026-10-04 23:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2024-10-05 00:00:00+00:00",
+            "end": "2025-04-05 11:59:45+00:00",
+            "trades": 27,
+            "net_r": 8.4391
+          },
+          {
+            "fold": 2,
+            "start": "2025-04-05 11:59:45+00:00",
+            "end": "2025-10-04 23:59:30+00:00",
+            "trades": 33,
+            "net_r": 7.9276
+          },
+          {
+            "fold": 3,
+            "start": "2025-10-04 23:59:30+00:00",
+            "end": "2026-04-05 11:59:15+00:00",
+            "trades": 27,
+            "net_r": -1.3791
+          },
+          {
+            "fold": 4,
+            "start": "2026-04-05 11:59:15+00:00",
+            "end": "2026-10-04 23:59:00+00:00",
+            "trades": 33,
+            "net_r": 3.1953
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "SOLUSDT",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.8",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "comms/research/RQ-20261013-407c-11/38474108881/arms/B__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261013-407c-11/38474108881/arms/B__bt.json",
+          "--long-only",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--start",
+          "2024-10-05",
+          "--end",
+          "2026-10-04 23:59"
+        ]
+      },
+      "SA": {
+        "n": 99,
+        "net_r": 15.1856,
+        "net_r_fee_only": 18.1079,
+        "max_drawdown_r": 10.1905,
+        "by_outcome": {
+          "trail_stop": 42,
+          "stop": 42,
+          "take_profit": 15
+        },
+        "mean_bars_held": 33.404,
+        "net_r_per_capital_day": 0.1102,
+        "cost_stack": {
+          "fee_bps_roundtrip": 7.5,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": {
+          "donchian": 20,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 5.0,
+          "min_confidence": 0.8,
+          "skip_hours": "0,1,2,3,4,5,6,7"
+        },
+        "data_start": "2024-10-05 00:00:00+00:00",
+        "data_end": "2026-10-04 23:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2024-10-05 00:00:00+00:00",
+            "end": "2025-04-05 11:59:45+00:00",
+            "trades": 25,
+            "net_r": 6.8467
+          },
+          {
+            "fold": 2,
+            "start": "2025-04-05 11:59:45+00:00",
+            "end": "2025-10-04 23:59:30+00:00",
+            "trades": 24,
+            "net_r": 7.5927
+          },
+          {
+            "fold": 3,
+            "start": "2025-10-04 23:59:30+00:00",
+            "end": "2026-04-05 11:59:15+00:00",
+            "trades": 23,
+            "net_r": -0.6559
+          },
+          {
+            "fold": 4,
+            "start": "2026-04-05 11:59:15+00:00",
+            "end": "2026-10-04 23:59:00+00:00",
+            "trades": 27,
+            "net_r": 1.4018
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "SOLUSDT",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.8",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "comms/research/RQ-20261013-407c-11/38474108881/arms/SA__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261013-407c-11/38474108881/arms/SA__bt.json",
+          "--long-only",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--skip-hours",
+          "0,1,2,3,4,5,6,7",
+          "--start",
+          "2024-10-05",
+          "--end",
+          "2026-10-04 23:59"
+        ]
+      },
+      "SU": {
+        "n": 89,
+        "net_r": 10.6785,
+        "net_r_fee_only": 13.4068,
+        "max_drawdown_r": 7.7518,
+        "by_outcome": {
+          "stop": 38,
+          "trail_stop": 39,
+          "take_profit": 12
+        },
+        "mean_bars_held": 39.787,
+        "net_r_per_capital_day": 0.0724,
+        "cost_stack": {
+          "fee_bps_roundtrip": 7.5,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": {
+          "donchian": 20,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 5.0,
+          "min_confidence": 0.8,
+          "skip_hours": "12,13,14,15,16"
+        },
+        "data_start": "2024-10-05 00:00:00+00:00",
+        "data_end": "2026-10-04 23:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2024-10-05 00:00:00+00:00",
+            "end": "2025-04-05 11:59:45+00:00",
+            "trades": 21,
+            "net_r": 6.7509
+          },
+          {
+            "fold": 2,
+            "start": "2025-04-05 11:59:45+00:00",
+            "end": "2025-10-04 23:59:30+00:00",
+            "trades": 26,
+            "net_r": 2.2601
+          },
+          {
+            "fold": 3,
+            "start": "2025-10-04 23:59:30+00:00",
+            "end": "2026-04-05 11:59:15+00:00",
+            "trades": 18,
+            "net_r": -1.4041
+          },
+          {
+            "fold": 4,
+            "start": "2026-04-05 11:59:15+00:00",
+            "end": "2026-10-04 23:59:00+00:00",
+            "trades": 24,
+            "net_r": 3.0712
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "SOLUSDT",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.8",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "comms/research/RQ-20261013-407c-11/38474108881/arms/SU__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261013-407c-11/38474108881/arms/SU__bt.json",
+          "--long-only",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--skip-hours",
+          "12,13,14,15,16",
+          "--start",
+          "2024-10-05",
+          "--end",
+          "2026-10-04 23:59"
+        ]
+      },
+      "SL": {
+        "n": 107,
+        "net_r": 13.7849,
+        "net_r_fee_only": 16.8807,
+        "max_drawdown_r": 10.7698,
+        "by_outcome": {
+          "trail_stop": 45,
+          "stop": 45,
+          "take_profit": 17
+        },
+        "mean_bars_held": 33.916,
+        "net_r_per_capital_day": 0.0912,
+        "cost_stack": {
+          "fee_bps_roundtrip": 7.5,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": {
+          "donchian": 20,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 5.0,
+          "min_confidence": 0.8,
+          "skip_hours": "20,21,22,23"
+        },
+        "data_start": "2024-10-05 00:00:00+00:00",
+        "data_end": "2026-10-04 23:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2024-10-05 00:00:00+00:00",
+            "end": "2025-04-05 11:59:45+00:00",
+            "trades": 24,
+            "net_r": 7.5051
+          },
+          {
+            "fold": 2,
+            "start": "2025-04-05 11:59:45+00:00",
+            "end": "2025-10-04 23:59:30+00:00",
+            "trades": 30,
+            "net_r": 7.0454
+          },
+          {
+            "fold": 3,
+            "start": "2025-10-04 23:59:30+00:00",
+            "end": "2026-04-05 11:59:15+00:00",
+            "trades": 24,
+            "net_r": -4.7731
+          },
+          {
+            "fold": 4,
+            "start": "2026-04-05 11:59:15+00:00",
+            "end": "2026-10-04 23:59:00+00:00",
+            "trades": 29,
+            "net_r": 4.0073
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "SOLUSDT",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.8",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "comms/research/RQ-20261013-407c-11/38474108881/arms/SL__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261013-407c-11/38474108881/arms/SL__bt.json",
+          "--long-only",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--skip-hours",
+          "20,21,22,23",
+          "--start",
+          "2024-10-05",
+          "--end",
+          "2026-10-04 23:59"
+        ]
+      }
+    },
+    "window": {
+      "start": "2024-10-05",
+      "end": "2026-10-04 23:59",
+      "fetch_days": 760,
+      "feed": {
+        "source": "binance",
+        "ticker": "SOLUSDT",
+        "interval": "60",
+        "resample": "1h"
+      },
+      "fold_edges": [
+        "2024-10-05 00:00:00+00:00",
+        "2025-04-05 11:59:45+00:00",
+        "2025-10-04 23:59:30+00:00",
+        "2026-04-05 11:59:15+00:00",
+        "2026-10-04 23:59:00+00:00"
+      ]
+    },
+    "argv": {
+      "B": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "SOLUSDT",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.8",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "comms/research/RQ-20261013-407c-11/38474108881/arms/B__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261013-407c-11/38474108881/arms/B__bt.json",
+          "--long-only",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--start",
+          "2024-10-05",
+          "--end",
+          "2026-10-04 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": [
+          "exit_head_action",
+          "exit_head_model",
+          "exit_head_threshold"
+        ]
+      },
+      "SA": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "SOLUSDT",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.8",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "comms/research/RQ-20261013-407c-11/38474108881/arms/SA__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261013-407c-11/38474108881/arms/SA__bt.json",
+          "--long-only",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--skip-hours",
+          "0,1,2,3,4,5,6,7",
+          "--start",
+          "2024-10-05",
+          "--end",
+          "2026-10-04 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [
+          "--skip-hours",
+          "0,1,2,3,4,5,6,7"
+        ],
+        "omitted_levers_per_builder": [
+          "exit_head_action",
+          "exit_head_model",
+          "exit_head_threshold"
+        ]
+      },
+      "SU": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "SOLUSDT",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.8",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "comms/research/RQ-20261013-407c-11/38474108881/arms/SU__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261013-407c-11/38474108881/arms/SU__bt.json",
+          "--long-only",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--skip-hours",
+          "12,13,14,15,16",
+          "--start",
+          "2024-10-05",
+          "--end",
+          "2026-10-04 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [
+          "--skip-hours",
+          "12,13,14,15,16"
+        ],
+        "omitted_levers_per_builder": [
+          "exit_head_action",
+          "exit_head_model",
+          "exit_head_threshold"
+        ]
+      },
+      "SL": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "SOLUSDT",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.8",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "comms/research/RQ-20261013-407c-11/38474108881/arms/SL__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261013-407c-11/38474108881/arms/SL__bt.json",
+          "--long-only",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--skip-hours",
+          "20,21,22,23",
+          "--start",
+          "2024-10-05",
+          "--end",
+          "2026-10-04 23:59"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [
+          "--skip-hours",
+          "20,21,22,23"
+        ],
+        "omitted_levers_per_builder": [
+          "exit_head_action",
+          "exit_head_model",
+          "exit_head_threshold"
+        ]
+      }
+    }
+  },
+  "note": "FAIL / no_reachable_lever_beats_removed: no candidate clears the bar: the declared lever's lines are dead config and nothing reachable earns its place -- strip them (Tier-3, not done here)"
+}

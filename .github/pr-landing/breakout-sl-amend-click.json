@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "BREAKOUT-SL-AMEND-CLICK lane (manager session_01VduHYzdaXe27wTDBLSu8ao, 2026-10-14). Tier 2 order path: the phone-executor APK (exec.js, MainActivity.kt) runs on the prop execution phone and src/prop/phone_*.py ships to the web-api. FIRST RUN IS READ-ONLY on the order: the sheet path taps the Positions row, reads side / volume / avg entry (MEASURED) and checks the Stop trigger, then posts the Stop row's icon dump and refuses the amend. The pencil click and Confirm are coded and tested on a synthetic DOM but gated off (SHEET_EDIT_MEASURED = false) until that dump is reviewed. The manager merges.",
+  "why": "PROP-TRAIL-PHONE could not tighten the breakout_2 ETH short (2504.25 -> 2471.94): the Positions div grid has no side text and no edit control. The operator-measured flow (row -> sheet -> [1 TP / 1 SL] -> pencil -> Edit Stop loss -> Trigger -> Confirm) is built measure-first with a unit-tested denylist (Close position, the order-row cancel icons, the row close icons); side_unread is resolved from the sheet as MEASURED before the journal fallback."
+}
