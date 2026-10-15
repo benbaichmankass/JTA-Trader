@@ -671,7 +671,9 @@ class MainActivity : Activity() {
         // cleanly (they carry the exit of a position that disappeared). The Positions view is left up afterwards.
         var pos = readView(p, "^positions\\b", "__ex.positionsRead()")
         // BREAKOUT-SL-AMEND-CLICK: a side the grid draws without text is read from the row's sheet (MEASURED)
-        if (pos != null && pos.optString("state") == "side_unread") pos = sheetSides(p, pos)
+        // only on the FOREGROUND kiosk: the background engine's overlay is not hit-testable (1b.233/1b.241: elementFromPoint
+        // null at every target), so there the side stays unread and the server's journal fallback (ESTIMATED) applies
+        if (pos != null && pos.optString("state") == "side_unread" && p === fg) pos = sheetSides(p, pos)
         val closed = if (pos?.optString("state") == "read") readView(p, "^(closed orders|trades)\\b", "__ex.closedRead()") else null
         if (closed != null) { p.js("__ex.clickText(${q("^positions\\b")})"); delay(600) }
         val ps = pos?.optString("state") ?: "unanswered"
@@ -1497,17 +1499,16 @@ class MainActivity : Activity() {
         return p.tap(r.getDouble("x"), r.getDouble("y"), r.getDouble("vw")) + (if (p === fg) " fg" else " bg")
     }
 
-    /** Dismiss an open Edit Stop loss / Edit Take profit modal: exec.js modalCancel clicks only that modal's own
-     *  "Cancel" (else sends Escape), NEVER Confirm. "" when none was open; else "<kind>:<result>" plus " closed" or
-     *  " still_open" after a re-check (n>1 modals: nothing is clicked, "n<k> still_open"). */
+    /** Stray-modal dismiss before / after a sheet attempt: exec.js dismissModals (the ONE rule cancelModals also uses --
+     *  each open non-form dialog / Edit SL/TP modal gets its own exactly-one "Cancel" clicked, NEVER Confirm; Escape if
+     *  one holding a Confirm stays), then a re-check. "" when nothing was open; else "f<found> c<cancelled>[ esc]" plus
+     *  " closed" or " still_open" -- and while still_open the caller does nothing else on the page. */
     private suspend fun dismissModal(p: Page): String {
-        val mi = p.obj("__ex.modalInfo()") ?: return ""
-        val n = mi.optInt("n")
-        if (n == 0) return ""
-        if (n > 1) return "n$n still_open"
-        val r = p.js("__ex.modalCancel()"); delay(700); p.ensure()
-        val after = p.obj("__ex.modalInfo()")?.optInt("n") ?: -1
-        return "${mi.optString("kind")}:$r ${if (after == 0) "closed" else "still_open"}"
+        val d = p.obj("__ex.dismissModals()") ?: return "unanswered still_open"
+        if (d.optInt("found") == 0 && !d.optBoolean("esc")) return ""
+        delay(700); p.ensure()
+        val left = p.obj("__ex.modalsOpen()")?.optInt("n") ?: -1
+        return "f${d.optInt("found")} c${d.optInt("cancelled")}${if (d.optBoolean("esc")) " esc" else ""} ${if (left == 0) "closed" else "still_open"}"
     }
 
     /** Close the sheet: Escape first, then its header close icon. closed | escape | x | still_open(..) */
@@ -1623,6 +1624,8 @@ class MainActivity : Activity() {
         val aid = t.getString("amend_id")
         val want = if (long) "long" else "short"
         if (tpChange) return amendRefuse(t, "the sheet path edits the stop only; a TP revision is not built", null)
+        // the sheet needs an on-screen view (PHONE-FGS-EXEC routes amends to the front); never attempted on the engine page
+        if (cur !== fg) return amendRefuse(t, "sheet path runs on the foreground view only (engine page: not hit-testable)", null)
         if (if (long) sl <= fromSl + pStep / 2 else sl >= fromSl - pStep / 2) return amendRefuse(t, "sheet path: the new stop is not tighter", null)
         // 1-2. the sheet and its [Position details], MEASURED
         val d = sheetRead(cur, venue)

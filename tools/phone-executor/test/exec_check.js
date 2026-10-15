@@ -851,5 +851,11 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
   let tmi = await tm.evaluate("__ex.modalInfo()");
   eq([tmi.n, tmi.kind], [1, "take"], "stray modal: the open Edit Take profit modal is seen");
   eq([await tm.evaluate("__ex.modalCancel()"), (await tm.evaluate("__ex.modalInfo()")).n, await tm.evaluate("window.__saved"), await tm.evaluate("window.__danger")], ["clicked", 0, 0, 0], "stray modal: Cancel closes it; Confirm never clicked");
+  // ONE dismiss rule (cancelModals / dismissModals share it): an Edit Take profit modal WITHOUT a dialog role is found too
+  const tm2 = await onHost(sheetPage().replace('<h3 id=mt>Edit Stop loss</h3>', '<h3 id=mt>Edit Take profit</h3>').replace('<div id=modal style="display:none">', '<div id=modal style="display:block">'));
+  eq((await tm2.evaluate("__ex.modalsOpen()")).n, 1, "dismiss: an open edit modal holding Confirm is counted");
+  let dm = await tm2.evaluate("__ex.dismissModals()");
+  eq([dm.found, dm.cancelled, dm.esc, (await tm2.evaluate("__ex.modalsOpen()")).n, await tm2.evaluate("window.__saved")], [1, 1, false, 0, 0], "dismiss: its Cancel clicked, nothing left, Confirm never clicked");
+  eq([(await tm2.evaluate("__ex.dismissModals()")).found, await tm2.evaluate("__ex.cancelModals()")], [0, 0], "dismiss: nothing open -> nothing found / cancelled");
   await b.close(); console.log("exec_check: all passed");
 })().catch((e) => { console.error(e); process.exit(1); });

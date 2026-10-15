@@ -721,6 +721,20 @@
     if (!hits.length) return "none"; if (hits.length > 1) return "rows_" + hits.length;
     return hits[0];
   }
+  // stray-modal roots (see cancelModals): open non-form dialogs + Edit SL/TP modals, outermost first, no duplicates
+  function strayRoots() {
+    var f = form(), rs = [];
+    all("[role=dialog],[role=alertdialog],[aria-modal=true]").forEach(function (d) { if (!(f && (d.contains(f) || f.contains(d)))) rs.push(d); });
+    modalRoot().forEach(function (m) { if (!rs.some(function (r) { return r.contains(m.root) || m.root.contains(r); })) rs.push(m.root); });
+    return rs;
+  }
+  function cancelIn(r) {
+    var c = Array.prototype.slice.call(r.querySelectorAll("button,[role=button]")).filter(function (b) { return vis(b) && /^cancel$/i.test(t(b)); });
+    if (c.length !== 1) return false; c[0].click(); return true;
+  }
+  function confirmRoots() {
+    return strayRoots().filter(function (r) { return Array.prototype.slice.call(r.querySelectorAll("button,[role=button]")).some(function (b) { return vis(b) && /^confirm$/i.test(t(b)); }); });
+  }
   function sheetRoots() {   // the smallest ancestor of a [Position details] tab that also holds the [n TP / n SL] tab and the subtitle
     var found = [];
     textEls(document, SHEET_TAB.details).forEach(function (d) {
@@ -1071,18 +1085,22 @@
     },
     // Forget the picker state: the app calls this once at the start of each ticket.
     symbolReset: function () { window.__ex._mk = null; return "ok"; },
-    // PHONE-FGS-EXEC step 2 (manager 11:03Z, after an "Edit Take profit" window was seen on the engine page): in every
-    // open dialog that is NOT the order form, click the ONE button whose text is exactly "Cancel" (never Confirm, Save,
-    // Close position or anything else). Returns how many were cancelled; a dialog without exactly one Cancel is left.
-    cancelModals: function () {
-      var f = form(), n = 0;
-      all("[role=dialog],[role=alertdialog],[aria-modal=true]").forEach(function (d) {
-        if (f && (d.contains(f) || f.contains(d))) return;
-        var c = Array.prototype.slice.call(d.querySelectorAll("button,[role=button]")).filter(function (b) { return vis(b) && /^cancel$/i.test(t(b)); });
-        if (c.length === 1) { c[0].click(); n++; }
-      });
-      return n;
+    // STRAY-MODAL DISMISS, ONE rule for every caller (PHONE-FGS-EXEC step 2 + BREAKOUT-SL-AMEND-CLICK; manager 11:03Z,
+    // after an "Edit Take profit" window was seen on the engine page). The roots are every open dialog that is NOT the
+    // order form, plus every "Edit Stop loss / Edit Take profit" modal (modalRoot) the page draws without a dialog role.
+    // In each, click the ONE button whose text is exactly "Cancel" -- never Confirm, Save, Close position or anything
+    // else; a root without exactly one Cancel is left. cancelModals returns how many were cancelled.
+    cancelModals: function () { var n = 0; strayRoots().forEach(function (r) { if (cancelIn(r)) n++; }); return n; },
+    // The same, then Escape (keys only) when a root holding a Confirm is still open: {found, cancelled, esc}. The caller
+    // re-checks with modalsOpen() and does NOTHING else on the page while one stays open.
+    dismissModals: function () {
+      var rs = strayRoots(), n = 0; rs.forEach(function (r) { if (cancelIn(r)) n++; });
+      var esc = confirmRoots().length > 0;
+      if (esc) ["keydown", "keyup"].forEach(function (k) { document.dispatchEvent(new KeyboardEvent(k, {key: "Escape", code: "Escape", keyCode: 27, bubbles: true})); });
+      return {found: rs.length, cancelled: n, esc: esc};
     },
+    // how many open non-form dialogs / edit modals still hold a visible Confirm (the ones that could change an order)
+    modalsOpen: function () { return {n: confirmRoots().length}; },
     // PHONE-FGS-EXEC step 2: close whatever popup/sheet the page has open with Escape ONLY (never a click: nothing is
     // cancelled or confirmed). The engine page was reloaded at the start of its job; this is the second guard.
     escape: function () {
