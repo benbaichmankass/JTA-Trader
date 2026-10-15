@@ -1,39 +1,33 @@
 #!/usr/bin/env python3
 # wiring: research/queue/RQ-*-SSA-*.yaml (run.command, via research-script-run.yml) + tests/test_same_symbol_head_to_head.py
-"""Same-symbol head-to-head — which of N legs on ONE (account, symbol) earns the slot?
+"""Same-symbol head-to-head — the BACKTEST-QUALITY INPUT per leg on a shared (account, symbol).
 
-OPERATOR, 2026-10-15 (verbatim): "If we're running the same strategy and symbol on 2 different
-timeframes, than we need to make sure that we know how to allocate the trades properly (and not, say
-alphabetically), or we need to choose the better one based on testing on run with that one".
+OPERATOR, 2026-10-15 (re-scope ~20:25Z): "We can have different strategies working with netted positions as long as we
+know how much of that position belongs to each strategy ... we just need to make sure we know how to allocate between
+the trades correctly. And it should be based on those other things, not just backtesting. It's just that backtesting is
+also a parameter here."  So this PICKS NOTHING. It produces one input to the EXISTING allocator
+(``src/runtime/allocator_ev.py`` / ``allocator_corr.py`` / ``allocator_soak.py`` / ``conviction_*``), beside the factors
+those already compute.
 
-HARNESS: ``scripts/backtest_system.py::run_system_backtest`` — the REAL ``aggregate_intents`` election, ONE shared
-netted position per symbol (a single position slot), each strategy's REAL ``order_package``/``monitor``, and the
-venue-aware cost stack (fee + slippage + perp funding). Arms (fixed before any run):
+HARNESS: ``scripts/backtest_system.py::run_system_backtest`` — the REAL ``aggregate_intents`` election, ONE shared netted
+position per symbol, each strategy's REAL ``order_package``/``monitor``, and the venue-aware cost stack. Arms:
 
-  * ``solo:<leg>``   each leg alone in the roster;
-  * ``together``     all legs under the live election.
+  * ``solo:<leg>``   each leg alone — the INDEPENDENT-SLICE proxy (own full slot, no netting). A true per-slice
+                     simulation needs lane NETTED-SLICES' slice model; until it lands this is the proxy, stated as such;
+  * ``together``     all legs under the live election — the SHARED-SLOT book.
 
-RULE (registered before the run, in the unit's ``decision_rule``): the arm with the highest OOS
-net-R per capital-day wins; if ``together`` does not beat the best single arm, the best single arm
-is kept alone. Strictly greater: a tie keeps the single arm (fewer legs, no election to be wrong about).
+REPORT RULE (registered before the run): report each leg's solo net-R per capital-day and the combined book's. No winner,
+no exclusion verdict. ``pass`` = all arms measured at >= ``min_oos_trades``; else ``indeterminate`` naming the starved arm.
 
-  net R          = sum over OOS closed trades of pnl / (qty * |entry - entry_stop|)   (pnl is net of fee+slippage+funding)
-  capital-days   = sum over OOS closed trades of (exit_ts - entry_ts) in days          (one slot -> no double count)
-  metric         = net R / capital-days
-
-OOS = trades whose entry is on/after ``oos_start``. Each arm must have >= ``min_oos_trades`` OOS trades to be
-ranked; otherwise the verdict is ``indeterminate`` and names the starved arm (a thin leg is a DATA verdict,
-never a silent win).
+  net R          = sum over OOS closed trades of pnl / (qty * |entry - entry_stop|)   (pnl net of fee+slippage+funding)
+  capital-days   = sum over OOS closed trades of (exit_ts - entry_ts) in days
+  metric         = net R / capital-days          (OOS = entries on/after ``oos_start``)
 
 COST STACK TRAP (do not remove): ``backtest_system`` module globals ``SLIPPAGE_BPS_ROUNDTRIP`` /
-``FUNDING_BPS_PER_WINDOW`` default to 0.0 and are only set from ``execution_costs`` inside its ``main()``.
-Calling ``run_system_backtest`` directly without setting them is a fee-only run. ``apply_cost_policy`` sets
-them here and the policy is recorded in the output.
+``FUNDING_BPS_PER_WINDOW`` default to 0.0 and are only set from ``execution_costs`` inside its ``main()``;
+``apply_cost_policy`` sets them here and records the policy.
 
-Output: ``<out>/verdict.json`` (script_run contract) and ``<out>/head_to_head.json`` — the evidence record. The record
-is the shape ``scripts/ci/check_same_symbol_allocation.py`` accepts once committed under ``comms/same_symbol_allocation/``.
-
-Tier-1 research tooling. Reads candles, writes only under ``--out``. No config, no order path.
+Output: ``<out>/verdict.json`` (script_run contract) and ``<out>/head_to_head.json``. Tier-1 research tooling.
 """
 from __future__ import annotations
 
@@ -81,22 +75,22 @@ def metric_from_trades(trades: Sequence[Dict[str, Any]], oos_start: Any) -> Dict
 
 
 def decide(arms: Dict[str, Dict[str, Any]], min_oos_trades: int) -> Dict[str, Any]:
-    """The registered rule, pure. ``arms`` maps ``solo:<leg>`` / ``together`` to a ``metric_from_trades`` dict."""
+    """The registered REPORT rule, pure. It ranks nothing and excludes nothing.
+
+    ``pass`` = every arm measured with >= ``min_oos_trades`` OOS trades, so the per-leg backtest-quality inputs are
+    usable by the allocator. ``indeterminate`` names the starved arm. There is deliberately no ``winner``.
+    """
     solos = {k: v for k, v in arms.items() if k.startswith("solo:")}
     if "together" not in arms or len(solos) < 2:
-        return {"verdict": "indeterminate", "winner": None, "reason": "need together + >=2 solo arms"}
+        return {"verdict": "indeterminate", "reason": "need together + >=2 solo arms"}
     starved = sorted(k for k, v in arms.items()
                      if v.get("n_oos", 0) < min_oos_trades or v.get("net_r_per_capital_day") is None)
     if starved:
-        return {"verdict": "indeterminate", "winner": None,
+        return {"verdict": "indeterminate",
                 "reason": f"arm(s) below min_oos_trades={min_oos_trades} or zero capital-days: {starved}"}
-    best_single = max(solos, key=lambda k: (solos[k]["net_r_per_capital_day"], k))
-    together_wins = arms["together"]["net_r_per_capital_day"] > solos[best_single]["net_r_per_capital_day"]
-    winner = "together" if together_wins else best_single
-    return {"verdict": "pass", "winner": winner, "best_single": best_single,
-            "keep_legs": "all (live election)" if together_wins else best_single.split(":", 1)[1],
-            "reason": ("together beats the best single arm" if together_wins
-                       else "together does not beat the best single arm -> keep it alone")}
+    return {"verdict": "pass", "reason": "all arms measured; per-leg inputs reported, no exclusion",
+            "per_leg_net_r_per_capital_day": {k.split(":", 1)[1]: v["net_r_per_capital_day"] for k, v in solos.items()},
+            "combined_book_net_r_per_capital_day": arms["together"]["net_r_per_capital_day"]}
 
 
 def apply_cost_policy(bs: Any, symbol: str) -> Dict[str, Any]:
@@ -143,7 +137,7 @@ def run(unit_path: Path, out_dir: Path) -> int:
     bs = _load_bs()
     missing = [leg for leg in legs if leg not in bs.ROSTER]
     if missing:
-        return finish({"verdict": "indeterminate", "winner": None,
+        return finish({"verdict": "indeterminate",
                        "reason": f"legs not registered in backtest_system.ROSTER: {missing} — harness gap, not a verdict"},
                       f"{symbol} {legs}", "null", read_state="unavailable")
     from src.research import risk_basis
@@ -152,16 +146,16 @@ def run(unit_path: Path, out_dir: Path) -> int:
     try:
         src = bs._backtest_data_source.resolve_or_refuse(symbol, "5m", h.get("data"))
     except Exception as exc:  # noqa: BLE001
-        return finish({"verdict": "indeterminate", "winner": None, "reason": f"data source: {exc}"},
+        return finish({"verdict": "indeterminate", "reason": f"data source: {exc}"},
                       f"{symbol} {legs}", "null", read_state="unavailable")
     if not src.ok:
-        return finish({"verdict": "indeterminate", "winner": None,
+        return finish({"verdict": "indeterminate",
                        "reason": "no 5m candle source for the symbol: " + str(getattr(src, "reason", "unresolved"))},
                       f"{symbol} {legs}", "null", read_state="unavailable")
     cost = apply_cost_policy(bs, symbol)
     live = risk_basis.live_risk(h.get("risk_account", risk_basis.DEFAULT_REFERENCE_ACCOUNT))
     if not live.ok or live.percent is None:
-        return finish({"verdict": "indeterminate", "winner": None, "reason": f"live risk unresolved: {live.describe()}"},
+        return finish({"verdict": "indeterminate", "reason": f"live risk unresolved: {live.describe()}"},
                       f"{symbol} {legs}", "null", read_state="unavailable")
     base5m = bs._load_candles(src.path)
 

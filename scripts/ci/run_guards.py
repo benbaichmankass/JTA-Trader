@@ -1999,15 +1999,14 @@ GUARDS: List[Dict[str, Any]] = [
     },
     {
         "name": "same-symbol-allocation-guard",
-        # Operator 2026-10-15: two rostered legs on one (account, symbol) share ONE position slot and the election
-        # falls through confidence-tie -> declared priority -> 3d PnL -> timestamp -> NAME, with no backtest-quality
-        # term. Whole-tree: such a pair needs a committed head-to-head record (comms/same_symbol_allocation/) or a
-        # distinct non-zero DEFAULT_PRIORITIES ordering citing one. Today's pairs are grandfathered BY NAME with the
-        # unit that closes them and a due date inside the script. Checklist row SAME-SYMBOL-ALLOCATION.
+        # Operator 2026-10-15 (re-scoped ~20:25Z): legs MAY share a netted position if we know how much of it belongs
+        # to each strategy. Whole-tree: a shared (account, symbol) needs slice support for the account (empty until lane
+        # NETTED-SLICES lands its config) or a committed allocation-weights record in comms/same_symbol_allocation/.
+        # Today's pairs are grandfathered BY NAME with the unit that feeds them and a due date inside the script.
+        # Checklist row SAME-SYMBOL-ALLOCATION.
         "when": {"globs": [
             "config/accounts.yaml",
             "config/strategies.yaml",
-            "src/runtime/intents.py",
             "comms/same_symbol_allocation/**",
             "scripts/ci/check_same_symbol_allocation.py",
         ]},

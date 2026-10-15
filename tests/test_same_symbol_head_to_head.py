@@ -30,18 +30,18 @@ def arm(n, v):
     return {"n_oos": n, "net_r_per_capital_day": v}
 
 
-def test_together_must_strictly_beat_best_single():
-    arms = {"solo:a": arm(30, 0.10), "solo:b": arm(30, 0.05), "together": arm(30, 0.10)}
+def test_report_ranks_nothing_and_names_no_winner():
+    arms = {"solo:a": arm(30, 0.10), "solo:b": arm(30, 0.05), "together": arm(30, 0.20)}
     d = h.decide(arms, 20)
-    assert d["verdict"] == "pass" and d["winner"] == "solo:a" and d["keep_legs"] == "a"
-    arms["together"] = arm(30, 0.11)
-    assert h.decide(arms, 20)["winner"] == "together"
+    assert d["verdict"] == "pass" and "winner" not in d and "keep_legs" not in d
+    assert d["per_leg_net_r_per_capital_day"] == {"a": 0.10, "b": 0.05}
+    assert d["combined_book_net_r_per_capital_day"] == 0.20
 
 
-def test_starved_arm_is_indeterminate_not_a_win():
+def test_starved_arm_is_indeterminate():
     arms = {"solo:a": arm(30, 0.10), "solo:b": arm(3, 9.9), "together": arm(30, 0.2)}
     d = h.decide(arms, 20)
-    assert d["verdict"] == "indeterminate" and d["winner"] is None and "solo:b" in d["reason"]
+    assert d["verdict"] == "indeterminate" and "solo:b" in d["reason"] and "winner" not in d
 
 
 def test_none_metric_is_indeterminate():
