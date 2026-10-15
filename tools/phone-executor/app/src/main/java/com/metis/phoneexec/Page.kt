@@ -76,7 +76,8 @@ class Page(val web: WebView, private val execSrc: String) {
  * already granted for the boot restart) and detached again when the job ends, so the overlay never lingers over what
  * the operator is doing. Without the overlay permission it falls back to a detached view laid out at screen size
  * (engine "detached"); if that does not answer the app falls back to bringing the Activity forward.
- * It never runs a ticket: orders stay on the foreground path.
+ * Since PHONE-FGS-EXEC (2026-10-15) it also runs tickets: MainActivity.bgTicket() points every ticket page call at
+ * this page while one runs, with the kiosk's gates unchanged; bring-to-front is the fallback (BgTicket).
  */
 object BgWeb {
     private var page: Page? = null
