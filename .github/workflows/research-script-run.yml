@@ -94,7 +94,10 @@ jobs:
           # --source dukascopy), so a unit can replay equity/ETF legs config-exact here as the
           # e35 sweep does (BRACKETS-AS-PREDICTIONS, RQ-20261015-cab7-06). Optional for every
           # other unit: nothing imports it unless a command asks for that lane.
-          pip install dukascopy-python
+          # PINNED: 4.0.1 is the latest release (PyPI upload 2025-04-28, >2 weeks old);
+          # maintainer Eghosa Osayande, homepage github.com/Eghosa-Osayande/dukascopy
+          # (PyPI metadata). The same package e35-bracket-sweep.yml already installs.
+          pip install dukascopy-python==4.0.1
       - name: Check the unit's declared command against the allowlist
         env:
           UNIT: ${{ inputs.research_unit }}
