@@ -76,6 +76,9 @@ _EVENT_KINDS = {
     "login_diag", "positions_miss",
     # PHONE-KEEPALIVE: the in-app watchdog restarted a wedged tick loop (pinged: a self-recovery the operator should see)
     "loop_restarted",
+    # PHONE-FGS-EXEC: a ticket the background engine claimed ended badly; the app brings itself to the front for the
+    # next tickets for a while, then retries the engine (pinged: the operator should know the fallback is in use)
+    "bg_ticket_fallback",
 }
 # terminal_miss carries the control texts the page showed (our own UI labels, scrubbed like a reason) so the
 # next "terminal did not load" is self-diagnosing; only the LATEST one per account is kept, beside the journal.
@@ -733,7 +736,10 @@ _HB_KEYS = {"st", "paused", "hold", "host", "onAccount", "path_depth", "ready", 
             "relogin_failures", "relogin_flagged", "relogin_next_min", "bg", "bg_runs", "bg_ok", "bg_last", "bg_last_min",
             # PHONE-KEEPALIVE (2026-10-13): what keeps the app alive and what had to bring it back
             "battery_exempt", "overlay", "fgs_running", "alarm_exact", "last_restart_reason", "restarts_24h",
-            "app_version"}
+            "app_version",
+            # PHONE-FGS-EXEC (2026-10-15): tickets the background engine claimed, the last one's ledger state, minutes
+            # left on the bring-to-front fallback
+            "bg_tickets", "bg_ticket_last", "bg_ticket_off_min"}
 
 
 def _write_heartbeat(account_id: str, reason: str, state: Any) -> None:
