@@ -310,6 +310,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--self-test", action="store_true")
     ap.add_argument("--today", default=None, help="ISO date override (tests)")
     args = ap.parse_args(argv)
+    # NOTICE only (no stash, no exit-code change): this guard grades a COMMIT RANGE, so a dirty tree
+    # is a verdict about a different tree. Same shared notice as the other diff-scoped guards.
+    import _dirty_tree  # noqa: PLC0415 — the path shim is at module level
+    _dirty_tree.warn()
     if args.self_test:
         return self_test()
     today = date.fromisoformat(args.today) if args.today else date.today()
