@@ -17,8 +17,12 @@ why_this_matters: 'Operator, 2026-10-15 (first ask, since re-scoped): ''If we''r
   is not its authority. RE-SCOPED by the operator ~20:25Z: ''We can have different strategies working with netted positions as long as we know
   how much of that position belongs to each strategy ... it should be based on those other things, not just backtesting. It''s just that backtesting
   is also a parameter here.'' Per the operator''s ''work based on what we''ve already built'', the allocator''s live contest data (src/runtime/allocator_soak.py
-  -> runtime_logs/allocator_soak.jsonl, /api/bot/allocator/soak) is the first source for how often these pairs actually contest; it was NOT read
-  in this session (live-VM read, UNVERIFIED). This unit supplies only the input that module lacks: per-leg backtest quality on the shared symbol.'
+  -> runtime_logs/allocator_soak.jsonl, /api/bot/allocator/soak) is the first source for how often these pairs actually contest; it WAS read this
+  session: allocator_soak (live /api/bot/allocator/soak, read 2026-10-15, LAST 500 records 2026-07-05..10-15, all symbols): 11 ticks where >=2
+  of this leg set were candidates on ETHUSDT (executed trend_donchian_eth_4h 6, trend_donchian_eth 5; allocator agreed 7, regret>0 on 4). Records
+  carry NO account field and an ex-ante EV score, not realised outcomes. That gives contest frequency and ex-ante regret, not per-leg realised/backtest
+  outcomes, so this unit stays as the backtest-quality input. This unit supplies only the input that module lacks: per-leg backtest quality on
+  the shared symbol.'
 power:
   expected_n: 40
   min_detectable_effect: 0.5
