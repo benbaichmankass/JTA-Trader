@@ -1454,6 +1454,12 @@ class MainActivity : Activity() {
             lastTapGeom.forEach { tries.put(it.take(40)) }
             if (!r.startsWith("touched")) { if (r == "no_grid") break; continue }
             delay(1200); p.ensure()
+            // which touch preceded a modal (manager 11:58Z: attribute any Edit SL/TP modal to the tap that opened it); a
+            // modal is dismissed (Cancel/Escape, never Confirm) and NOTHING further is attempted on this read
+            if ((p.obj("__ex.modalsOpen()")?.optInt("n") ?: 0) > 0) {
+                tries.put("modal_after:$which/native".take(40)); tries.put("modal_dismiss:${dismissModal(p)}".take(40))
+                return JSONObject().put("ok", false).put("why", "modal_after_tap").put("tries", tries)
+            }
             if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") == true) { opened = "$which/native"; break }
             delay(1500); p.ensure()
             if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") == true) { opened = "$which/native"; break }
@@ -1571,6 +1577,12 @@ class MainActivity : Activity() {
         if (grp.size == 1 && rows.length() == 1 && !mg.endsWith("still_open")) {
             val x = nativeTap(p, syms[0], "group")
             delay(1200); p.ensure()
+            if (x.startsWith("touched") && (p.obj("__ex.modalsOpen()")?.optInt("n") ?: 0) > 0) {
+                // the expand touch opened an edit modal: record it, dismiss (never Confirm), and stop this read here
+                pre.put("modal_after:group/expand").put("modal_dismiss:${dismissModal(p)}".take(40))
+                sheetMiss("sheet_modal_after_tap", JSONObject().put("tries", pre), force = true)
+                return pos
+            }
             if (p.obj("__ex.sheetInfo(${q(syms[0])})")?.optBoolean("open") != true) {
                 val again = p.obj("__ex.positionsRead()")
                 val ar = again?.optJSONArray("rows")
@@ -1600,7 +1612,7 @@ class MainActivity : Activity() {
             if (!d.optBoolean("ok")) {
                 if (pre.length() > 0) { val tr = JSONArray(); for (j in 0 until pre.length()) tr.put(pre.get(j))
                     d.optJSONArray("tries")?.let { a -> for (j in 0 until a.length()) tr.put(a.get(j)) }; d.put("tries", tr) }
-                sheetMiss("sheet_${d.optString("why")}", d); return pos
+                sheetMiss("sheet_${d.optString("why")}", d, force = d.optString("why") == "modal_after_tap"); return pos
             }
             d.put("close", sheetClose(p, syms[i]))
             r.put("side", d.getString("side")).put("side_source", "sheet").put("qty", d.getDouble("qty")).put("qty_src", "sheet")
