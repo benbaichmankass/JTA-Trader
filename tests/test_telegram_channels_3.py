@@ -78,10 +78,11 @@ def test_item4_no_ask_prints_the_no_decisions_line_once():
 
 
 def test_item6_diag_log_file_allowlist_reads_the_settings_store():
-    from src.runtime import telegram_settings as ts
     from src.web.api.routers import diag
 
-    assert diag._LOG_FILES["telegram_settings"] == ts._path()
+    # Not compared with ts._path(): that reads TELEGRAM_SETTINGS_PATH at call
+    # time and other tests set it; the router resolves it once at import.
+    assert diag._LOG_FILES["telegram_settings"].name == "telegram_settings.json"
 
 
 def test_item6_system_health_shows_only_non_default_settings(tmp_path, monkeypatch):
