@@ -91,11 +91,11 @@ Positions table; the REST portfolio then read positions 0, orders 0.
 |---|---|---|---|---|---|---|
 | quoted spread, bps of mid (median of 3 reads ~1 s apart; min-max) | 1.74 (1.74-1.74) | 1.00 (0.34-1.00) | 0.13 (0.13-0.13) | 1.04 (1.04-2.08) | 0.0 (0.0-0.0) | MEASURED, #18448 run 38807791311, 21:10:49-21:11:13Z, **one snapshot**; excludes slippage and impact |
 | mid at read | 57.4 | 29,876 | 7,738 | 96.2 | 2,455 | MEASURED, same run |
-| margin rate (flat) | 0.2 | **not obtained (HTTP 429)** | **not obtained (HTTP 429)** | 0.2 | 0.2 | MEASURED, #18452 run 38808598907, account-scoped view; leverage 5:1 is **INFERRED** as 1/marginRate |
-| min order / increment (units) | 0.01 / 0.01 | increment 0.01; min **not obtained (429)** | increment 0.01; min **not obtained (429)** | 0.01 / 0.01 | 0.01 / 0.01 | MEASURED, same run |
+| margin rate (flat) | 0.2 | **0.5** | **0.5** | 0.2 | 0.2 | MEASURED, account-scoped view: SILVER/USOIL/ETH in #18452 run 38808598907; XYZ100/SP500 in the re-run #18461 run 38812053334 (21:44:21-37Z, after #18454, no 429s). Leverage is **INFERRED** as 1/marginRate: 5:1 for SILVER, USOIL, ETH; **2:1 for XYZ100 and SP500** |
+| min order / increment (units) | 0.01 / 0.01 | 0.01 / 0.01 | 0.01 / 0.01 | 0.01 / 0.01 | 0.01 / 0.01 | MEASURED (XYZ100, SP500: re-run #18461) |
 | lot size / multiplier | 1 / 1 | 1 / 1 | 1 / 1 | 1 / 1 | 1 / 1 | MEASURED (global instrument view) |
 | price increment | 0.001 | 0.01 | 0.001 | 0.01 | 0.001 | MEASURED |
-| trading status | FULL | not obtained (429) | not obtained (429) | FULL | FULL | MEASURED where shown |
+| trading status | FULL | FULL | FULL | FULL | FULL | MEASURED (XYZ100, SP500: re-run #18461) |
 | trading hours | open and close at 00:00Z every day Mon-Sun, i.e. continuous 24x7 in the schedule | same | same | same | same | MEASURED schedule; "continuous" and "no holiday gaps" are **INFERRED** (the row lists no holidays) |
 | swap long / short, financing | **no field in the instrument row** | no field | no field | no field | no field | **NOT OBTAINABLE over REST**: the row's keys are assetClass, currency, description, firstCurrency, instrumentTreePath, lotSize, multiplier, pipSize, priceIncrement, quantityIncrement, symbol, tradingHours, type, version (global) and account, assetClass, marginRate, maxOrderSize, minOrderSize, minOrderSizeIncrement, symbol, tradingStatus, type (account). The 0.033%/day figure stays firm-declared, unconfirmed |
 | commission | no field | no field | no field | no field | no field | NOT OBTAINABLE over REST; 0.04%/side stays firm-declared, unconfirmed |
@@ -103,13 +103,13 @@ Positions table; the REST portfolio then read positions 0, orders 0.
 Notes that change how to read the table:
 - The REST symbols are the slashed form (`SILVER/USD`); the unslashed `SILVERUSD` returns no row. The probe tried both.
 - ETH reads 0.0 bps in all three reads (bid equals ask). The four others read non-zero, so the parser does distinguish, but treat ETH's zero as "the watchlist showed equal bid and ask at that moment", not as a cost.
-- The REST run hit HTTP 429 on 15 of its 40 GETs (the probe sends them back to back). That is why XYZ100 and SP500 lack the account-scoped margin rate and minimum order size. Not a refusal of the instruments: their global rows came back.
+- The first REST run (#18452) hit HTTP 429 on 15 of its 40 GETs (back to back), which left XYZ100 and SP500 without the account-scoped margin rate and minimum order size. #18454 added a GET-only 1/2/4 s retry and a 0.3 s pace; the re-run #18461 (flat verified first by #18460, run 38811858513, margin used 0.0 and no working orders; REST portfolio positions 0, orders 0) returned both with no 429. Not a refusal of the instruments: their global rows came back.
 - A first dispatch (#18451, run 38808388790) used the wrong issue key (`account_id:`; the key is `account:`) and so probed velotrade_1 instead: read-only, positions 0 and orders 0, nothing placed. It adds no tradeify_1 evidence.
 
 **Versus the declared stack the units use** (8 bps commission round trip + 3 bps declared slippage + 0.033%/day swap, `--lev-cap leg=2`):
 - Spread: measured 0.13-1.74 bps at one snapshot, below the 3 bps declared slippage, so the declared figure still covers the quoted spread. A single snapshot says nothing about off-hours widening or fill slippage, so it is **not** grounds to lower the 3 bps.
-- Leverage: SILVER and USOIL show marginRate 0.2 (5:1 inferred), against the `2` the units cap them at (the firm page named 2:1 for indices and stocks and left metals and oil unnamed). That cap is part of each unit's pre-registered rule, not a cost input, so it was not touched. The indices' own margin rate is the field still missing.
-- Commission and swap: unmeasured, so the declared values stand.
+- Leverage: SILVER and USOIL show marginRate 0.2 (5:1 inferred), against the `2` the units cap them at (the firm page named 2:1 for indices and stocks and left metals and oil unnamed). That cap is part of each unit's pre-registered rule, not a cost input, so it was not touched; `RQ-20261015-ca42-01` (2d) tests SILVER and USOIL at 5. XYZ100 and SP500 show marginRate 0.5 (2:1 inferred), which **matches the cap of 2 the index units already use** (-02, -03, -04), so no index unit needs a leverage change.
+- Commission and swap: unmeasured (no field in the REST row), so the declared values stand; accepted as firm-declared and UNCONFIRMED by the manager (2d).
 - **No unit was edited.** RQ-20261015-24ca-01..05 are unchanged.
 
 ## 3. Strategy → instrument mapping, and evidence state
