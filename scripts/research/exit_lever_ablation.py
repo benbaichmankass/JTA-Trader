@@ -71,6 +71,15 @@ flags, never defaults chosen here:
     unreachable-arm config must equal the no-decay arm, or the premise that the
     lever is dead is wrong and nothing below it may be read.
 
+  * ``replace`` (EXIT-REPLACE-ETH4H, 2026-10-15) -- baseline A is the INCUMBENT exit; every other
+    arm is a candidate to REPLACE it. A candidate passes iff ``net_r(C) > net_r(A)`` (strictly)
+    AND folds where ``net_r(C) >= net_r(A)`` (ties count) >= ``--fold-majority`` AND
+    ``maxDD(C) <= maxDD(A) * (1 + --dd-tol-frac)``. Several pass -> the highest net R. None ->
+    fail: the incumbent stands. Each candidate also reports ``tp_doctrine`` (the share of its
+    trades whose MFE reached its own declared tp_r vs ``check_tp_doctrine.REACH_FLOOR``) and
+    ``lever_fired`` (False when the arm reproduces A exactly -- a dead lever).
+    ``--control-since`` grades the positive control on the arm's trades entered on/after the
+    committed record's ``data_start`` when the window is LONGER than the record's.
   * ``stage0`` -- ONE arm (the baseline) graded on its own: the Stage-0 bar at
     whatever cost stack that arm carries (e.g. a prop venue's, via raw
     ``--fee-bps-roundtrip`` / ``--slippage-bps-roundtrip`` / ``--funding-*``
@@ -101,7 +110,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(REPO / "scripts" / "research"), str(REPO / "scripts"), str(REPO)]
 
 VERDICTS = ("pass", "fail", "indeterminate")
-GRADES = ("parity", "sweep", "stage0")
+GRADES = ("parity", "sweep", "stage0", "replace")
 N_FOLDS = 4
 
 
@@ -245,7 +254,9 @@ def summarize_arm(jout: str, emit: str, edges: list[Any]) -> dict[str, Any]:
     with open(jout, encoding="utf-8") as fh:
         bt = json.load(fh)
     trades = _load_trades(emit)
+    mfes = [float(t["mfe_r"]) for t in trades if t.get("mfe_r") is not None]
     return {
+        "reach_ge_6r": round(sum(1 for m in mfes if m >= 6.0) / len(mfes), 4) if mfes else None,
         "n": int(bt.get("total_trades", len(trades))),
         "net_r": float(bt["net_total_r"]),
         "net_r_fee_only": bt.get("net_total_r_fee_only"),
@@ -304,6 +315,48 @@ def grade_parity(arms: dict[str, dict[str, Any]], *, baseline: str, candidate: s
     return {"verdict": "fail", "label": "live_without_lever", **m,
             "why": f"dR={d_r} / dDD={d_dd} against bar {delta_r} with {wins}/{N_FOLDS} fold wins: the lever's "
                    "measured value is inside the materiality bar, so declared == executable (strip it) is the cheaper fix"}
+
+
+TP_REACH_FLOOR = 0.10  # == scripts/ci/check_tp_doctrine.REACH_FLOOR (TP-REACH-FLOOR, 2026-10-14)
+
+
+def grade_replace(arms: dict[str, dict[str, Any]], *, baseline: str, candidates: list[str], fold_majority: int,
+                  n_floor: int, dd_tol_frac: float, control: dict[str, Any] | None,
+                  tp_r_by_arm: dict[str, float | None] | None = None) -> dict[str, Any]:
+    a = arms[baseline]
+    m: dict[str, Any] = {"baseline": baseline, "candidates": {}, "fold_majority": fold_majority,
+                         "n_floor": n_floor, "dd_tol_frac": dd_tol_frac, "control": control}
+    if control is not None and not control["ok"]:
+        return {"verdict": "indeterminate", "label": "control_failed", **m,
+                "why": "the incumbent arm does not reproduce the committed record: the corpus differs"}
+    if a["n"] < n_floor:
+        return {"verdict": "indeterminate", "label": "underpowered", **m, "why": f"incumbent n={a['n']} < n_floor {n_floor}"}
+    best, best_r = None, None
+    for cl in candidates:
+        c = arms[cl]
+        d_r = round(c["net_r"] - a["net_r"], 4)
+        dd_cap = round(a["max_drawdown_r"] * (1.0 + dd_tol_frac), 4)
+        wins = sum(1 for fc, fa in zip(c["folds"], a["folds"]) if fc["net_r"] >= fa["net_r"])
+        ok = c["net_r"] > a["net_r"] and wins >= fold_majority and c["max_drawdown_r"] <= dd_cap
+        reach = c.get("reach_ge_6r")
+        tp_r = (tp_r_by_arm or {}).get(cl)
+        m["candidates"][cl] = {
+            "net_r": c["net_r"], "delta_net_r": d_r, "max_drawdown_r": c["max_drawdown_r"], "max_drawdown_cap": dd_cap,
+            "folds_ge_incumbent": wins, "passes": ok,
+            "lever_fired": not (c["n"] == a["n"] and abs(c["net_r"] - a["net_r"]) < 1e-9),
+            "tp_doctrine": {"declared_tp_r": tp_r, "reach_ge_6r": reach,
+                            "satisfies_reach_floor": (None if tp_r is None or tp_r >= 50 or reach is None
+                                                      else bool(reach >= TP_REACH_FLOOR)),
+                            "note": "tp_r >= 50 (or undeclared) is the sentinel: non-compliant by definition; reach is "
+                                    "P(mfe_r >= 6) over this arm's own trades"}}
+        if ok and (best_r is None or c["net_r"] > best_r):
+            best, best_r = cl, c["net_r"]
+    if best is not None:
+        return {"verdict": "pass", "label": "candidate_replaces_incumbent", "best": best, **m,
+                "why": f"{best} beats the incumbent {baseline} (net R {best_r} vs {a['net_r']}) in >= {fold_majority}/{N_FOLDS} "
+                       "folds within the drawdown tolerance: a data-backed Tier-3 PROPOSAL (config is not edited here)"}
+    return {"verdict": "fail", "label": "incumbent_stands", **m,
+            "why": "no candidate clears net R / fold / drawdown: the incumbent exit stands"}
 
 
 def grade_sweep(arms: dict[str, dict[str, Any]], *, baseline: str, candidates: list[str], delta_r: float,
@@ -400,6 +453,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--delta-r", type=float, required=True, help="materiality bar in R over the window (the unit's)")
     ap.add_argument("--fold-majority", type=int, required=True)
     ap.add_argument("--n-floor", type=int, required=True)
+    ap.add_argument("--dd-tol-frac", type=float, default=0.10, help="replace: max DD may exceed the incumbent's by this fraction")
+    ap.add_argument("--control-since", action="store_true",
+                    help="grade the control on trades entered on/after the record's data_start (window longer than the record's)")
     ap.add_argument("--out", required=True)
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
@@ -466,13 +522,26 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         arms[label] = summarize_arm(jout, emit, edges)
         arms[label]["argv"] = shown
-    control = check_control(arms[control_label], control_bt, a.control_tol_n, a.control_tol_r) if control_bt else None
+    ctl_arm = arms.get(control_label) if control_bt else None
+    if ctl_arm is not None and a.control_since:
+        since = _ts(control_bt["data_start"])
+        sub = [t for t in _load_trades(str(arms_dir / f"{control_label}__trades.jsonl"))
+               if _ts(t["entry_time"]) >= since]
+        ctl_arm = {"n": len(sub), "net_r": round(sum(float(t.get("net_r") or 0.0) for t in sub), 4)}
+    control = check_control(ctl_arm, control_bt, a.control_tol_n, a.control_tol_r) if control_bt else None
+    if control is not None and a.control_since:
+        control["since"] = str(control_bt["data_start"])
     if a.grade == "parity":
         g = grade_parity(arms, baseline=a.baseline, candidate=a.candidate, delta_r=a.delta_r,
                          fold_majority=a.fold_majority, n_floor=a.n_floor, control=control)
     elif a.grade == "stage0":
         g = grade_stage0(arms, baseline=a.baseline, fold_majority=a.fold_majority, n_floor=a.n_floor,
                          control=control)
+    elif a.grade == "replace":
+        cands = [lab for lab in labels if lab != a.baseline]
+        tp_by = {lab: arm_cfg(base, sets, unsets).get("tp_r") for lab, sets, unsets, _x in specs}
+        g = grade_replace(arms, baseline=a.baseline, candidates=cands, fold_majority=a.fold_majority,
+                          n_floor=a.n_floor, dd_tol_frac=a.dd_tol_frac, control=control, tp_r_by_arm=tp_by)
     else:
         cands = [lab for lab in labels if lab != a.baseline and (not same_as or lab not in same_as)]
         g = grade_sweep(arms, baseline=a.baseline, candidates=cands, delta_r=a.delta_r,
@@ -566,6 +635,29 @@ def _self_test() -> int:
     g = grade_sweep({"S": S2, "N": N, "R1": R1}, baseline="N", candidates=["R1"], delta_r=1.0,
                     fold_majority=3, n_floor=39, control=None, same_as=("S", "N"))
     check("sweep: 'identical' arms differ -> indeterminate/premise_failed", g["verdict"] == "indeterminate" and g["label"] == "premise_failed")
+
+    # replace: operator rule (net R > A, >=3/4 folds >= A with ties, maxDD <= A*1.10)
+    A = _arm(100, 20.0, 10.0, [5, 5, 5, 5])
+    B1 = _arm(100, 22.0, 10.9, [5, 5, 6, 6]); B1["reach_ge_6r"] = 0.02
+    B2 = _arm(100, 25.0, 11.5, [9, 9, 9, -2])   # DD 15% worse -> no
+    B3 = _arm(100, 21.0, 9.0, [5, 6, 4, 6])     # 3 folds >= A (one tie, one loss)
+    B4 = _arm(100, 20.0, 9.0, [5, 5, 5, 5])     # not strictly greater
+    B5 = _arm(100, 23.0, 9.0, [6, 6, 4, 4])     # only 2 folds
+    g = grade_replace({"A": A, "B": B1, "C": B2, "D": B3, "E": B4, "F": B5}, baseline="A",
+                      candidates=["B", "C", "D", "E", "F"], fold_majority=3, n_floor=39, dd_tol_frac=0.10, control=None,
+                      tp_r_by_arm={"B": 6.0})
+    c = g["candidates"]
+    check("replace: only B and D pass; highest net R (B) wins; DD/strict/fold clauses each bite",
+          g["verdict"] == "pass" and g["best"] == "B" and c["B"]["passes"] and c["D"]["passes"] and not c["C"]["passes"]
+          and not c["E"]["passes"] and not c["F"]["passes"])
+    check("replace: tp_doctrine reach field reported (2% < floor -> not satisfied)",
+          c["B"]["tp_doctrine"]["satisfies_reach_floor"] is False)
+    g = grade_replace({"A": A, "C": B2, "E": B4}, baseline="A", candidates=["C", "E"], fold_majority=3, n_floor=39,
+                      dd_tol_frac=0.10, control=None)
+    check("replace: none pass -> fail/incumbent_stands", g["verdict"] == "fail" and g["label"] == "incumbent_stands")
+    g = grade_replace({"A": _arm(30, 1.0, 1.0, [0, 0, 0, 1]), "B": B1}, baseline="A", candidates=["B"], fold_majority=3,
+                      n_floor=39, dd_tol_frac=0.10, control=None)
+    check("replace: thin incumbent -> indeterminate", g["verdict"] == "indeterminate")
 
     # calendar folds: four equal spans, a trade binned by entry_time, the last edge inclusive
     import pandas as pd
