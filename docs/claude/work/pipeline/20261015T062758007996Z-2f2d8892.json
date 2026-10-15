@@ -7,6 +7,11 @@
   "filed": "2026-10-11",
   "id": "PI-20261011-HOPS1447-0001",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-22",
+    "how_to_check": "ls research/results/RQ-20261015-72ad-01/ && python3 -c \"import json,glob;r=json.loads(open(sorted(glob.glob('research/results/RQ-20261015-72ad-01/*.jsonl'))[-1]).readline());print(r['read_state'],r['verdict'],r['measurement']['grade']['outcome'])\"",
+    "what": "RQ-20261015-72ad-01 lands a measured record (read_state=measured) under research/results/ and its pre-registered long-drag outcome is applied"
+  },
   "origin": {
     "by": "research-ops-1447",
     "kind": "session",
