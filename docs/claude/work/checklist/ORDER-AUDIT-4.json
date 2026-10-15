@@ -9,13 +9,34 @@
   "ceiling_usd": 25,
   "spend_usd": null,
   "tier": 2,
-  "prs": [],
-  "blocked_on": [],
-  "note": "Dispatched 2026-10-15 ~10:25Z by the manager (session_01VduHYzdaXe27wTDBLSu8ao) after ORDER-AUDIT-3 (session_015ph6MwWrWPDbc6Pd85QJEZ) closed at 10:20Z. Scope (from ORDER-AUDIT-3's note): item 19 PI-20260930-3QNHBGND-0002 (own-leg fill attribution), item 20 PI-20260930-3QNHBGND-0003 (closed package with an open leg; paged invariant), item 21 PI-20260930-MEK2XMWT-0003 (orphaned terminal, no flat/unknown split), PI-20261015-PD85QJEZ-0002 (backfill 4 real-money sl_cross closes 6565/6566/6593/6594 that were venue SL fills), PI-20261015-PD85QJEZ-0003 (intent_reduce_executed closes with no exit_reason_source). OUT OF SCOPE: PI-20261015-PD85QJEZ-0001 (GLD reconcile), operator verbatim 'Leave it for now'. Order-path/runtime and DB backfills are Tier 2 (HOLD for the manager; backfills dry-run first with before/after counts); strategy/risk/sizing is Tier 3 (propose only).",
-  "updated_at": "2026-10-15T10:28:28Z",
+  "prs": [
+    18270,
+    18273,
+    18275,
+    18279,
+    18280
+  ],
+  "blocked_on": [
+    {
+      "kind": "work_item",
+      "ref": "manager",
+      "what": "merge HOLD PRs #18273, #18275 and #18279; OK the reattach apply (dry run #18274) and the backfill-exit-labels run (apply:false preview first, after #18273 deploys)"
+    }
+  ],
+  "note": "Dispatched 2026-10-15 ~10:25Z by the manager (session_01VduHYzdaXe27wTDBLSu8ao) after ORDER-AUDIT-3 (session_015ph6MwWrWPDbc6Pd85QJEZ) closed at 10:20Z. Scope (from ORDER-AUDIT-3's note): item 19 PI-20260930-3QNHBGND-0002 (own-leg fill attribution), item 20 PI-20260930-3QNHBGND-0003 (closed package with an open leg; paged invariant), item 21 PI-20260930-MEK2XMWT-0003 (orphaned terminal, no flat/unknown split), PI-20261015-PD85QJEZ-0002 (backfill 4 real-money sl_cross closes 6565/6566/6593/6594 that were venue SL fills), PI-20261015-PD85QJEZ-0003 (intent_reduce_executed closes with no exit_reason_source). OUT OF SCOPE: PI-20261015-PD85QJEZ-0001 (GLD reconcile), operator verbatim 'Leave it for now'. Order-path/runtime and DB backfills are Tier 2 (HOLD for the manager; backfills dry-run first with before/after counts); strategy/risk/sizing is Tier 3 (propose only). [2026-10-15 ~10:55Z lane] Every item is root-caused against live data (diag journal: trades ids 2631-6630 and 5000 packages; exchange_positions).\n- PD85QJEZ-0002 and -0003 -> #18273 (HOLD T2). The backfill extends rule 0 to unsourced sl_cross/tp_cross. The intent-reduce writer now stamps exit_reason_source=intent_reduce_order. The action gains an apply:false preview.\n- Item 19 -> #18279 (HOLD T2): a new _sweep_open_row_own_leg_fill. There is no live instance today; on every readable account venue qty == open-row qty.\n- Item 20 -> #18275 (HOLD; the pr-landing guard cannot certify scripts/check_db_integrity.py as Tier 1): INV-8. It found 2 live paper instances (pkg-32a5162b->4347 SPY 11 and pkg-785d9a60->5265 TLT 707; the venue holds both). The reattach dry run #18274 plans closed->open for both and refuses XRPUSDT. The apply is HELD for the manager; it was operator-approved in WO-20260909.\n- Item 21 -> KILLED with evidence: the only writer requires a readable absent position twice, or a zero fill. There are 16 historical rows, none since 07-06. A pin test is in #18280.\nNot touched: PD85QJEZ-0001 (GLD), per the operator.",
+  "updated_at": "2026-10-15T10:47:48Z",
   "updated_by": "session_01MAn9pCezunefaeMAhzFaGC",
   "roadmap": [
     "L-OPS"
   ],
+  "observation": {
+    "what": "(1) backfill-exit-labels preview lists 6565/6566/6593/6594 sl_cross->sl and the intent-reduce stamps, and after apply the unsourced count reads 0/0; (2) INV-8 total is 0 after reattach; (3) _sweep_open_row_own_leg_fill runs with 0 errors, and venue qty == open-row qty per account",
+    "how_to_check": "system-action comment on the backfill run; diag journal order_packages for pkg-32a5162b/pkg-785d9a60 status=open; journalctl ict-trader-live grep _sweep_open_row_own_leg_fill; diag exchange_positions vs journal open trades",
+    "due_by": "2026-10-18"
+  },
+  "writeback": {
+    "roadmap": "L-OPS: ORDER-AUDIT-3 residue 19-21 + PD85QJEZ-0002/-0003 dispositioned: own-leg fill attribution (#18279), INV-8 closed-package/open-leg invariant (#18275), orphaned writer pinned + item killed with evidence (#18280), verdict/intent-reduce exit-label sourcing (#18273)",
+    "arch": "none: the exit-label vocabulary lives in src/runtime/provenance.py and the INV list in scripts/check_db_integrity.py docstring"
+  },
   "_seq": 517
 }
