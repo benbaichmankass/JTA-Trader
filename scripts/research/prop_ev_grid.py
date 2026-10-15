@@ -41,6 +41,14 @@ THE THREE GRADE SHAPES (each is one unit's rule, mapped to E5 verdicts)
     ALL seeds                                -> pass           (CUSHION_FIT_WINS)
     A or B undominated by best C on any seed -> fail           (FLAT_HOLDS)
     otherwise                                -> indeterminate  (NULL)
+``any_c_dominates`` (RQ-20261015-ee68-01), per leg, arms named A and C-*:
+    SOME C beats A on ev AND has >= A's survival on ALL seeds
+                                             -> pass           (SOME_C_DOMINATES)
+    no C does                                -> fail           (A_UNDOMINATED)
+    A or every C missing / no shared seed    -> indeterminate  (NULL)
+    Unlike cushion_vs_flat it does not pick the best-ev C first: a sweep
+    over C's risk asks whether ANY level dominates, and the highest-ev level
+    is often the one that gives up survival.
 ``reproduce`` (RQ-20260928-015), per leg, against ``--target LEG=ev:p``:
     |ev - ev*|/|ev*| <= tol AND |p - p*|/p* <= tol on every seed
                                              -> pass           (REPRODUCED)
@@ -71,7 +79,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 _REPO = Path(__file__).resolve().parents[2]
 SIM = "scripts/research/prop_ev_sim.py"
-GRADES = ("pass_all_seeds", "cushion_vs_flat", "reproduce", "none")
+GRADES = ("pass_all_seeds", "cushion_vs_flat", "any_c_dominates", "reproduce", "none")
 
 
 def _resolve_leg(spec: str, *, repo: Path) -> Tuple[str, Path, str]:
@@ -159,6 +167,29 @@ def grade_cushion_vs_flat(cells: Dict[str, Dict[int, Dict[str, float]]]) -> Tupl
     if undominated:
         return "fail", f"FLAT_HOLDS: A or B undominated by {best} on seed(s) {sorted(set(undominated))}"
     return "indeterminate", "NULL: mixed across seeds"
+
+
+def grade_any_c_dominates(cells: Dict[str, Dict[int, Dict[str, float]]]) -> Tuple[str, str]:
+    a = cells.get("A")
+    cs = {k: v for k, v in cells.items() if k.startswith("C")}
+    if not a or not cs:
+        return "indeterminate", "NULL: arm A or a C-* arm is missing"
+    winners, losing = [], {}
+    for k in sorted(cs):
+        seeds = sorted(set(a) & set(cs[k]))
+        if not seeds:
+            return "indeterminate", f"NULL: no seed shared by A and {k}"
+        bad = [s for s in seeds if not (cs[k][s]["ev"] > a[s]["ev"]
+                                        and cs[k][s]["p_alive_at_horizon"] >= a[s]["p_alive_at_horizon"])]
+        if bad:
+            losing[k] = bad
+        else:
+            winners.append(k)
+    if winners:
+        best = max(winners, key=lambda k: sum(s["ev"] for s in cs[k].values()) / max(1, len(cs[k])))
+        return "pass", f"SOME_C_DOMINATES: {winners} beat A on ev with >= survival on every seed; highest mean ev {best}"
+    return "fail", "A_UNDOMINATED: no C arm dominates A on every seed (" + \
+        ", ".join(f"{k} fails seed(s) {v}" for k, v in losing.items()) + ")"
 
 
 def grade_reproduce(cells: Dict[str, Dict[int, Dict[str, float]]], *, target_ev: float,
@@ -291,6 +322,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             v, why = grade_pass_all_seeds(by_arm, n=info["n_trades"], n_floor=args.n_floor, p_floor=args.p_floor)
         elif args.grade == "cushion_vs_flat":
             v, why = grade_cushion_vs_flat(by_arm)
+        elif args.grade == "any_c_dominates":
+            v, why = grade_any_c_dominates(by_arm)
         else:
             if leg not in targets:
                 v, why = "indeterminate", "NULL: no --target for this leg"
@@ -347,6 +380,15 @@ def _self_test() -> int:
     assert grade_cushion_vs_flat({"A": a, "B": b, "C-0.33": c_worse_surv})[0] == "fail"
     assert grade_cushion_vs_flat({"A": a, "B": b, "C-0.25": c_lose, "C-0.5": c_win})[0] == "pass"  # best C picked
     assert grade_cushion_vs_flat({"A": a})[0] == "indeterminate"
+    # any_c_dominates: the highest-ev C (c_worse_surv, mean 115) fails on survival, a lower-ev C (c_win) dominates
+    c_low = {1: {"ev": 101, "p_net_positive": .8, "p_alive_at_horizon": .10}, 2: {"ev": 101, "p_net_positive": .8, "p_alive_at_horizon": .11}}
+    assert grade_cushion_vs_flat({"A": a, "C-hi": c_worse_surv, "C-lo": c_low})[0] == "fail"   # best-ev pick fails
+    v_any, why_any = grade_any_c_dominates({"A": a, "C-hi": c_worse_surv, "C-lo": c_low})
+    assert v_any == "pass" and "C-lo" in why_any and "C-hi" not in why_any.split(";")[0], why_any
+    v_any, why_any = grade_any_c_dominates({"A": a, "C-hi": c_worse_surv, "C-x": c_lose})
+    assert v_any == "fail" and "C-hi fails seed(s) [1]" in why_any and "C-x fails seed(s) [2]" in why_any, why_any
+    assert grade_any_c_dominates({"A": a})[0] == "indeterminate"
+    assert grade_any_c_dominates({"A": a, "C-z": {9: c_win[1]}})[0] == "indeterminate"
 
     r = {"A": {1: {"ev": 900, "p_net_positive": 0.85, "p_alive_at_horizon": 0}}}
     assert grade_reproduce(r, target_ev=883, target_p=0.8477, tol=0.10)[0] == "pass"
