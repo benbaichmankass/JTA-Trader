@@ -264,12 +264,12 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     if rec.get("error"):
         verdict = {"verdict": "not_applicable", "read_state": "producer_failed",
-                   "population": {"n": None, "what": "eval rows"}, "note": rec["error"]}
+                   "population": "eval rows", "n": None, "note": rec["error"]}
     elif not a.reference_unit:
         n = int(rec["metrics"].get("n_eval", 0))
         ok = n >= 100 and rec["dataset"]["rows_used"] > 0
         verdict = {"verdict": "pass" if ok else "fail", "read_state": "measured",
-                   "population": {"n": n, "what": f"eval rows of {a.manifest} trained on {a.backend}, ts < {a.cutoff}"},
+                   "population": f"eval rows of {a.manifest} trained on {a.backend}, ts < {a.cutoff}", "n": n,
                    "measurement": {"metrics": rec["metrics"], "dataset": rec["dataset"], "versions": rec["versions"],
                                    "platform": rec["platform"], "train_wall_s": rec["train_wall_s"]},
                    "note": f"reference run on {a.backend}: {'usable' if ok else 'unusable (n_eval < 100 or 0 rows)'} "
@@ -278,7 +278,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         ref = latest_reference(a.reference_unit)
         if ref is None:
             verdict = {"verdict": "not_applicable", "read_state": "no_data",
-                       "population": {"n": None, "what": "reference runs"},
+                       "population": "reference runs", "n": None,
                        "note": f"no successful {RECORD} under comms/research/{a.reference_unit}/ in this checkout"}
         else:
             c = compare(ref, rec)
@@ -287,8 +287,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                 "candidate": {k: rec.get(k) for k in ("backend", "generated_at", "versions", "platform", "dataset",
                                                        "metrics")}}, indent=1, sort_keys=True) + "\n")
             verdict = {"verdict": c["verdict"], "read_state": "measured",
-                       "population": {"n": len(rec.get("eval_predictions") or []),
-                                      "what": f"eval rows of {a.manifest}, {ref.get('backend')} vs {a.backend}, ts < {a.cutoff}"},
+                       "population": f"eval rows of {a.manifest}, {ref.get('backend')} vs {a.backend}, ts < {a.cutoff}",
+                       "n": len(rec.get("eval_predictions") or ""),
                        "measurement": {"agreement": c["agreement"], "deltas": c["deltas"],
                                        "train_wall_s": {"reference": ref.get("train_wall_s"), "candidate": rec.get("train_wall_s")}},
                        "note": "; ".join(c["reasons"]) or "all metrics within tolerance"}
