@@ -34,9 +34,12 @@ The audit found this pass spending its budget closing results by hand while the 
 (needs_review triage, the blocked/ audit, authoring from the plans) were `not_run` on 8 of 8 passes, and its
 intake list did not include the research programme plans at all. The mechanism now carries the mechanical half:
 
-- **Grading is mechanical for every unit by default** (`queue_grade.auto_graded`; opt-out `grading: {auto: false}`).
-  Do not hand-close a unit whose E5 rows are unanimous -- `research-queue-grade.yml` closes it. You read results for
-  their FOLLOW-UP (step D), and you triage what the grader could not decide (`needs_review`, step C).
+- **Hand-written units are graded mechanically when their rows attest their own rule** (#18189, from lane
+  RESEARCH-GRADE-BACKLOG): a `once` unit whose every E5 row carries the unit's own `decision_rule.id` is closed by
+  `research-queue-grade.yml` (a FAIL closes it; no confirmatory re-run). Do not hand-close those. What stays yours:
+  units whose rows carry a generic producer rule (e.g. `RULE-M20-EXIT-LEVER-IS-OOS-GATE`), recurring hand units,
+  `needs_review` (step C), and units you opted out (`grading: {auto: false}` or your own `grading:` block -- the
+  grader never overwrites it). You read results for their FOLLOW-UP (step D).
 - **The programme plans are machine-read**: `research/programmes/*.yaml` question nodes are `queue_replenish.py`'s
   sixth source. A `unit:` node is emitted on its own once its prerequisite verdicts close (any branch, PASS or FAIL);
   a `needs_authoring:` node is in the **authoring queue** -- your FIRST intake source (step E).
