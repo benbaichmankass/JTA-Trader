@@ -13,8 +13,8 @@
     18240
   ],
   "blocked_on": [],
-  "note": "P1 BUILT, HOLD PR #18240 (tier_2_3_needs_approval). On pull_request ONLY, pytest-run runs import-graph-affected tests (scripts/ci/pytest_run_scope.py classify_affected), with a full-suite fallback on: conftest; requirements/pyproject; .github/ or scripts/ci/; guard scripts; config-named or every-test (conftest-eager) modules; fan-in >50%; selector error. Push to main stays full. claude-run-failure-alert now watches pytest-run (push/main only). MEASURED replay (164 main commits, 24h to 2026-10-15T08:30Z; 33 code diffs): 14 affected / 3 data / 16 full; about 756 runner-min/day saved (~0.5 slot). RESIDUAL RISK: auto-merged PR merge commits start no push run, so post-merge full-suite coverage lags to the next non-token push (median 34 min, unbounded if automation pushes stop). State: built, not merged.",
-  "updated_at": "2026-10-15T09:15:35Z",
+  "note": "CORRECTION to the previous note: guards are NOT already bounded. main-tree-watch grades only the diff-independent rules. The diff-scoped guards have the same token-merge gap. Not folded into #18240 because it needs a last-graded-sha base in run_guards (a design change). Filed as pipeline PI-20261015-N6RCMVTJ-0001 (due 2026-10-22).",
+  "updated_at": "2026-10-15T09:58:20Z",
   "updated_by": "session_018g6RBL3Tu3zfJxN6rcMVtJ",
   "roadmap": [
     "L-OPS"

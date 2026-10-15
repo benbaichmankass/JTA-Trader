@@ -304,7 +304,8 @@ on:
       - soak-book-grade-weekly
       # GH-CAPACITY-PR-CI-FANOUT (2026-10-15): PRs now run only the import-graph-affected
       # tests, so a cross-module break can merge. The FULL suite still runs on push to main;
-      # a red one there is the post-merge signal and must page. PUSH-TO-MAIN ONLY -- the
+      # a red one there is the post-merge signal and must page. PUSH/SCHEDULE ON MAIN ONLY (the
+      # schedule arm is the 30-min post-merge backstop) -- the
       # job `if:` below drops pull_request / merge_group / dispatch runs of this workflow,
       # which are visible on their PR (ordinary CI is deliberately out of scope here).
       - pytest-run
@@ -328,7 +329,8 @@ jobs:
        github.event.workflow_run.conclusion == 'cancelled' ||
        github.event.workflow_run.conclusion == 'timed_out') &&
       (github.event.workflow_run.name != 'pytest-run' ||
-       (github.event.workflow_run.event == 'push' &&
+       ((github.event.workflow_run.event == 'push' ||
+         github.event.workflow_run.event == 'schedule') &&
         github.event.workflow_run.head_branch == 'main'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
