@@ -98,7 +98,7 @@ def test_missing_dataset_is_producer_failed(tmp_path, monkeypatch):
     out = tmp_path / "o"
     tp.main(["--manifest", MANIFEST, "--cutoff", "2026-02-15T00:00:00Z", "--backend", "kaggle_cpu", "--out", str(out)])
     v = json.loads((out / "verdict.json").read_text())
-    assert v["read_state"] == "producer_failed" and v["verdict"] == "not_applicable" and v["population"]["n"] is None
+    assert v["read_state"] == "producer_failed" and v["verdict"] == "not_applicable" and v["n"] is None
 
 
 def test_ts_parsing():
@@ -115,3 +115,30 @@ def test_router_derives_the_dataset_path_from_the_manifest():
     # a manifest whose shard is not published, or one that does not exist, must NOT be routed off the trainer
     assert cr.published_problem({**entry, "train_parity": {"manifest": "conviction-meta-v1"}}, cr.load_config())
     assert cr.published_problem({**entry, "train_parity": {"manifest": "../nope"}}, cr.load_config())
+
+
+def _assert_runner_accepts(v: dict) -> None:
+    """The same checks scripts/research/script_run.py::derive_record applies before it grades a run (run 38730580651
+    measured fine but landed producer_failed because population was a dict and n was nested in it)."""
+    from scripts.research.script_run import READ_STATES, VERDICTS
+    assert v["verdict"] in VERDICTS and v["read_state"] in READ_STATES
+    assert isinstance(v["population"], str) and v["population"].strip()
+    assert "n" in v
+
+
+def test_every_verdict_shape_is_accepted_by_the_runner(tmp_path, monkeypatch):
+    data = _shard(tmp_path / "a")
+    ref = _run(tmp_path, "trainer", data, monkeypatch)
+    _assert_runner_accepts(ref["verdict"])
+    assert ref["verdict"]["n"] == int(ref["rec"]["metrics"]["n_eval"])
+    cur = _run(tmp_path, "kaggle_cpu", data, monkeypatch, ref=ref["rec"])
+    _assert_runner_accepts(cur["verdict"])
+    monkeypatch.setattr(tp, "latest_reference", lambda unit: None)
+    out = tmp_path / "noref"
+    tp.main(["--manifest", MANIFEST, "--cutoff", "2026-02-15T00:00:00Z", "--backend", "kaggle_cpu", "--out", str(out),
+             "--reference-unit", "RQ-20261015-aaaa-01"])
+    _assert_runner_accepts(json.loads((out / "verdict.json").read_text()))
+    monkeypatch.setenv("ML_DATA_ROOT", str(tmp_path / "empty"))
+    out = tmp_path / "fail"
+    tp.main(["--manifest", MANIFEST, "--cutoff", "2026-02-15T00:00:00Z", "--backend", "kaggle_cpu", "--out", str(out)])
+    _assert_runner_accepts(json.loads((out / "verdict.json").read_text()))
