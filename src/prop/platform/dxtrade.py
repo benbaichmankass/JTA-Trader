@@ -5123,6 +5123,22 @@ def surface_diff(before: Mapping[str, Any], after: Mapping[str, Any]) -> Dict[st
     return {"same": same, "added": added, "removed": removed, "changed": changed,
             "summary": "no change" if same else f"{len(added)} added, {len(removed)} removed, {len(changed)} changed"}
 
+def panel_names_symbol(text: str, symbol: str) -> bool:
+    """Pure: does ``text`` name ``symbol`` as a whole token -- either as
+    written ("ETHUSD", breakout_1) or split base/quote by ONE slash
+    ("ETH/USD", MEASURED on tradeify_1's Position Details panel, #18358
+    run 38748442282: "Position Details ETH/USD Ethereum vs United States
+    dollar ..."). Still an identity check: "SOL/USD", "ETH/USDT" and
+    "BTC/ETH/USD" never name ETHUSD (a slash or alphanumeric on either
+    side of the token refuses)."""
+    sym = str(symbol or "")
+    if not sym:
+        return False
+    forms = [re.escape(sym)] + [re.escape(sym[:i]) + "/" + re.escape(sym[i:]) for i in range(1, len(sym))]
+    pat = r"(?<![A-Za-z0-9/])(?:" + "|".join(forms) + r")(?![A-Za-z0-9/])"
+    return re.search(pat, str(text or ""), re.IGNORECASE) is not None
+
+
 def position_panel_mismatch(panel: Mapping[str, Any], symbol: str,
                             want: Sequence[str] = ("stop_loss", "take_profit"),
                             *, require_submit_enabled: bool = False) -> List[str]:
@@ -5141,7 +5157,7 @@ def position_panel_mismatch(panel: Mapping[str, Any], symbol: str,
         return [str(panel.get("why") or "panel not read")]
     bad: List[str] = []
     text = str(panel.get("text") or "")
-    if not re.search(rf"(?<![A-Za-z0-9]){re.escape(symbol)}(?![A-Za-z0-9])", text, re.IGNORECASE):
+    if not panel_names_symbol(text, symbol):
         bad.append(f"panel does not name {symbol}")
     if panel.get("ambiguous"):
         bad.append(f"ambiguous fields: {sorted(panel['ambiguous'])}")
