@@ -1,0 +1,21 @@
+{
+  "id": "GH-CAPACITY-RESEARCH-OFFLOAD",
+  "title": "Research backends stop holding a GitHub runner while the remote job runs (fire-and-forget + collector), so dedicated-first actually frees GitHub capacity",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "From GH-CAPACITY-INFRA-FIRST, operator 2026-10-15: research has its own dedicated resources. MEASURED (comms/ci/gh-capacity-inventory-2026-10-15.json): e35-bracket-sweep median 67 run-min (job-min 28-70 over last 6), m20-exit-lever-sweep median 50, research-harness-dispatch median 52 (job-min 11-64), all compute ON ubuntu-latest. This lane only capped e35/m20 matrix max-parallel to 3. Route each through research_compute.yaml backends (trainer is 1 OCPU, max 1 -- capacity there must be measured first; kaggle_cpu is the likely target). Rerun: python3 /tmp inventory method in the JSON 'method' field.  | REFRAMED 2026-10-15 by operator scope correction: research MAY use GitHub runners when free; the target is dedicated-first, GitHub spill-over. MEASURED: research-script-run-trainer.yml (while/sleep 60), research-script-run-kaggle.yml and -kaggle-cpu.yml (kernels status poll, sleep 30) each hold ubuntu-latest for the whole remote run, timeout 360 min; so a unit routed to trainer/Kaggle still occupies one of the 20 GitHub slots. Build: dispatch step submits and exits; research-queue-dispatch collect step (collect_runner_results.py already exists) fetches finished outputs next cycle. Then revisit class order for cpu_long (trainer first?) once trainer capacity is measured.",
+  "updated_at": "2026-10-15T08:36:31Z",
+  "updated_by": "session_01PhYMEkk7p8AzzzVHLsqCLw",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 514
+}
