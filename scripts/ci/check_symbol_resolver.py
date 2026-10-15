@@ -260,7 +260,7 @@ def self_test() -> int:  # noqa: C901
     check("15g (an EMPTY cfg `symbols` falls through to accounts.yaml — MI-222: "
           "the cross-check cannot be switched off from the cfg dict)",
           symbols_for_account_id("bybit_2", mode=UNION, cfg={"symbols": []})
-          == ["BTCUSDT", "ETHUSDT", "XRPUSDT", "ADAUSDT"])
+          == ["BTCUSDT", "ETHUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT"])
     check("15h (an UNKNOWN account id resolves to [] and never to an invented "
           "exchange default — a data sweep must not manufacture a venue read "
           "for a symbol nobody declared)",
