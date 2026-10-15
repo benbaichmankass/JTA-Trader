@@ -1,0 +1,25 @@
+{
+ "id": "SOAK-REDEFINE",
+ "title": "Redefine the Stage-1 soak as a MECHANICAL check passed on 1-2 clean trades (no sample size, no calendar); migrate all 50 SOAKS.json contracts; move every reader",
+ "phase": "B",
+ "state": "in_flight",
+ "owner": "lane SOAK-REDEFINE",
+ "lane": "session_01U3P3WrxwXu4Zjg6vryRGjF",
+ "model": null,
+ "ceiling_usd": null,
+ "spend_usd": null,
+ "tier": 3,
+ "prs": [],
+ "blocked_on": [],
+ "note": "OPERATOR DECISION 2026-10-15 ~20:10Z (verbatim): 'A soak is a mechanical verification that was already proven in backtesting, and nothing needs to soak for more than one or two trades.' Built on branch soak-redefine (landing: hold, governance + guard; the manager merges): soak_state.py mechanical grader + states (passed/mechanical_fail/in_progress/awaiting_first_trade/unknown); soak-contract-guard refuses n_needed>2 and end_date/duration_days/expected_per_week/power; SOAKS.json 50 contracts migrated (5 passed, 11 mechanical_fail, 2 in_progress, 2 awaiting_first_trade, 7 not_soaking, 22 KILLED + 1 REFUSE carried) with evidence comms/research/soak_mechanics/2026-10-15.json; readers moved (brief, work report, attention watch, mandate soak snapshot, MD-S1-CUT bar.soak_states re-map, prop-roster-gate prop_live, R5 note); docs: OPERATING-PLAN s2, CLAUDE.md, ARCHITECTURE-CANONICAL, CLAUDE-RULES-CANONICAL, manager skill. PROPOSED (not granted): MD-PROMOTE-S1-S2-SOAK-AMEND (pipeline PI-20261015-OAKREDEF-0002, ask_operator). Follow-up: PI-20261015-OAKREDEF-0001 (soak_report.py due_when.soak path still on accrual states). Nothing promoted; accounts.yaml untouched.",
+ "updated_at": "2026-10-15T20:33:53Z",
+ "updated_by": "session_01U3P3WrxwXu4Zjg6vryRGjF",
+ "_seq": 521,
+ "roadmap": [
+  "L-LADDER"
+ ],
+ "writeback": {
+  "roadmap": "none until merged+deployed+observed: no milestone line changes at PR time",
+  "arch": "docs/ARCHITECTURE-CANONICAL.md promotion-ladder row + 2026-10-15 SOAK-REDEFINE change-log row (in this PR)"
+ }
+}

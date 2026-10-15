@@ -1,14 +1,14 @@
 {
  "counts": {
-  "awaiting_first_trade": 5,
+  "awaiting_first_trade": 2,
   "disposition:KILLED": 22,
   "disposition:REFUSE": 1,
   "in_progress": 2,
   "mechanical_fail": 11,
-  "not_soaking": 3,
-  "passed": 6
+  "not_soaking": 7,
+  "passed": 5
  },
- "generated_at": "2026-10-15T20:21:24+00:00",
+ "generated_at": "2026-10-15T20:34:41+00:00",
  "note": "No P&L, balances or sizes are recorded here (public repo). Provenance of fees on the graded closes is carried per trade as cost_source.",
  "population": {
   "contracts": 50,
@@ -1571,63 +1571,14 @@
    "state": "disposition:KILLED"
   },
   {
-   "account": "bybit_1",
-   "clean": [
-    "pkg-1a36633e9a0240a5",
-    "pkg-6f2e7eacf68c4f3d"
-   ],
-   "fault": null,
-   "fault_id": null,
-   "graded": [
-    {
-     "clean": true,
-     "fault": null,
-     "id": "pkg-1a36633e9a0240a5",
-     "items": {
-      "package_complete": "ok",
-      "signal_fired": "ok",
-      "sized_and_routed_dry": "ok"
-     }
-    },
-    {
-     "clean": true,
-     "fault": null,
-     "id": "pkg-6f2e7eacf68c4f3d",
-     "items": {
-      "package_complete": "ok",
-      "signal_fired": "ok",
-      "sized_and_routed_dry": "ok"
-     }
-    },
-    {
-     "clean": true,
-     "fault": null,
-     "id": "pkg-70b4a605ec104b66",
-     "items": {
-      "package_complete": "ok",
-      "signal_fired": "ok",
-      "sized_and_routed_dry": "ok"
-     }
-    },
-    {
-     "clean": true,
-     "fault": null,
-     "id": "pkg-164c434be1a54974",
-     "items": {
-      "package_complete": "ok",
-      "signal_fired": "ok",
-      "sized_and_routed_dry": "ok"
-     }
-    }
-   ],
+   "account": "-",
    "id": "SOAK-shadow-ict_scalp_5m",
    "kind": "shadow",
    "leg": "ict_scalp_5m",
    "n_needed": 2,
-   "progress": "2/2 clean",
-   "reason": "clean: pkg-1a36633e9a0240a5, pkg-6f2e7eacf68c4f3d",
+   "reason": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
    "started": "2026-09-28",
-   "state": "passed"
+   "state": "not_soaking"
   },
   {
    "account": "bybit_1",
@@ -1665,10 +1616,6 @@
     "pkg-08a3f8a838cc4688",
     "pkg-9b55b6e2a3a84dfa"
    ],
-   "disposition_in_force": {
-    "until": "2026-10-24",
-    "verdict": "NEEDS_DATA"
-   },
    "fault": null,
    "fault_id": null,
    "graded": [
@@ -1943,49 +1890,34 @@
    "state": "not_soaking"
   },
   {
-   "account": "bybit_1",
-   "clean": [],
-   "fault": null,
-   "fault_id": null,
-   "graded": [],
+   "account": "-",
    "id": "SOAK-shadow-trend_donchian_ada_4h",
    "kind": "shadow",
    "leg": "trend_donchian_ada_4h",
    "n_needed": 2,
-   "progress": "0/2 clean",
-   "reason": "no graded trade yet \u2014 waiting, not failing",
+   "reason": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
    "started": "2026-09-28",
-   "state": "awaiting_first_trade"
+   "state": "not_soaking"
   },
   {
-   "account": "bybit_1",
-   "clean": [],
-   "fault": null,
-   "fault_id": null,
-   "graded": [],
+   "account": "-",
    "id": "SOAK-shadow-trend_donchian_avax_4h",
    "kind": "shadow",
    "leg": "trend_donchian_avax_4h",
    "n_needed": 2,
-   "progress": "0/2 clean",
-   "reason": "no graded trade yet \u2014 waiting, not failing",
+   "reason": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
    "started": "2026-09-28",
-   "state": "awaiting_first_trade"
+   "state": "not_soaking"
   },
   {
-   "account": "bybit_1",
-   "clean": [],
-   "fault": null,
-   "fault_id": null,
-   "graded": [],
+   "account": "-",
    "id": "SOAK-shadow-trend_donchian_sol_4h",
    "kind": "shadow",
    "leg": "trend_donchian_sol_4h",
    "n_needed": 2,
-   "progress": "0/2 clean",
-   "reason": "no graded trade yet \u2014 waiting, not failing",
+   "reason": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
    "started": "2026-09-28",
-   "state": "awaiting_first_trade"
+   "state": "not_soaking"
   },
   {
    "account": "-",

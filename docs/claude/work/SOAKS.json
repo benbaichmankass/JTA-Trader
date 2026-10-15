@@ -1018,25 +1018,13 @@
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
   {
-   "account": "bybit_1",
+   "account": "-",
    "checklist": [
     "signal_fired",
     "package_complete",
     "sized_and_routed_dry"
    ],
-   "design": "mechanical",
-   "disposition": {
-    "decided_at": "2026-10-15",
-    "evidence": [
-     "comms/research/soak_mechanics/2026-10-15.json"
-    ],
-    "reason": "mechanical soak passed: clean: pkg-1a36633e9a0240a5, pkg-6f2e7eacf68c4f3d",
-    "trades": [
-     "pkg-1a36633e9a0240a5",
-     "pkg-6f2e7eacf68c4f3d"
-    ],
-    "verdict": "PASS"
-   },
+   "design": "not_soaking",
    "fail_rule": "the most recent package is incomplete or not recorded dry -> fix, then re-soak",
    "id": "SOAK-shadow-ict_scalp_5m",
    "kind": "shadow",
@@ -1045,6 +1033,7 @@
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
    "n_needed": 2,
    "pass_rule": "2 complete shadow package(s), each clearing every checklist item",
+   "recommended_fix": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
    "started": "2026-09-28",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
@@ -1185,13 +1174,13 @@
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
   {
-   "account": "bybit_1",
+   "account": "-",
    "checklist": [
     "signal_fired",
     "package_complete",
     "sized_and_routed_dry"
    ],
-   "design": "mechanical",
+   "design": "not_soaking",
    "fail_rule": "the most recent package is incomplete or not recorded dry -> fix, then re-soak",
    "id": "SOAK-shadow-trend_donchian_ada_4h",
    "kind": "shadow",
@@ -1200,17 +1189,18 @@
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
    "n_needed": 2,
    "pass_rule": "2 complete shadow package(s), each clearing every checklist item",
+   "recommended_fix": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
    "started": "2026-09-28",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
   {
-   "account": "bybit_1",
+   "account": "-",
    "checklist": [
     "signal_fired",
     "package_complete",
     "sized_and_routed_dry"
    ],
-   "design": "mechanical",
+   "design": "not_soaking",
    "fail_rule": "the most recent package is incomplete or not recorded dry -> fix, then re-soak",
    "id": "SOAK-shadow-trend_donchian_avax_4h",
    "kind": "shadow",
@@ -1219,17 +1209,18 @@
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
    "n_needed": 2,
    "pass_rule": "2 complete shadow package(s), each clearing every checklist item",
+   "recommended_fix": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
    "started": "2026-09-28",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
   {
-   "account": "bybit_1",
+   "account": "-",
    "checklist": [
     "signal_fired",
     "package_complete",
     "sized_and_routed_dry"
    ],
-   "design": "mechanical",
+   "design": "not_soaking",
    "fail_rule": "the most recent package is incomplete or not recorded dry -> fix, then re-soak",
    "id": "SOAK-shadow-trend_donchian_sol_4h",
    "kind": "shadow",
@@ -1238,6 +1229,7 @@
    "monitoring": "ONGOING, not soak exit criteria: realized cost vs the Stage-0 model (R3, scripts/ops/r3_cost_fidelity.py) and live-vs-backtest (scripts/research/live_vs_backtest.py) feed the Gate-2 demotion signal and the underperformer first step",
    "n_needed": 2,
    "pass_rule": "2 complete shadow package(s), each clearing every checklist item",
+   "recommended_fix": "on no account roster \u2014 nothing runs it; retire the strategy block or re-roster it with a fresh contract (found by SOAK-REDEFINE 2026-10-15: the retired store carried it as a running too_long soak)",
    "started": "2026-09-28",
    "verifies": "shadow MECHANICS: the signal fires, the package is complete (side, entry, real SL and TP), and every rostered account sizes it and records it DRY"
   },
