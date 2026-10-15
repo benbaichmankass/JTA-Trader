@@ -9857,6 +9857,16 @@ def _resting_stop_not_executing(client, account_id: str, symbol: str, row,
         _RESTING_STOP_BREACH_STREAK[key] = n
         if n < _RESTING_STOP_BREACH_SWEEPS:
             return False
+        if _has_standing_wedge(account_id, symbol, row["direction"]):
+            # KNOWN: the close path already evidenced this position as a
+            # broker wedge and `close_wedge_standing` re-pages it on its own
+            # floor (operator, 2026-10-15, on GLD: "Leave it for now"). Count
+            # it, log it, never page a second channel for the same position.
+            logger.warning(
+                "_resting_stop_not_executing: %s/%s trade_id=%s resting stop "
+                "%s not executing — known standing wedge, not re-paged here",
+                account_id, symbol, row["id"], stop)
+            return True
         _page_rearm_refusal(
             "resting_stop_not_executing", account_id, symbol, row["id"],
             f"a {want} stop at {stop} rests at the venue but a fresh trade at "
@@ -9868,6 +9878,16 @@ def _resting_stop_not_executing(client, account_id: str, symbol: str, row,
     except Exception:  # noqa: BLE001 — a detector must never break the sweep
         logger.exception("_resting_stop_not_executing: %s/%s", account_id, symbol)
         _RESTING_STOP_BREACH_STREAK.pop(key, None)
+        return False
+
+
+def _has_standing_wedge(account_id: str, symbol: str, direction: Any) -> bool:
+    """Is (account, symbol, side) an evidenced standing wedge in
+    ``close_wedge_standing``? Unreadable -> False (page rather than hide)."""
+    try:
+        from src.runtime.close_wedge_standing import _load, wedge_key
+        return wedge_key(account_id, symbol, direction) in (_load().get("wedges") or {})
+    except Exception:  # noqa: BLE001
         return False
 
 

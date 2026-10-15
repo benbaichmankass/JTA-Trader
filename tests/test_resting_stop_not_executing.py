@@ -71,3 +71,30 @@ def test_outside_rth_a_breached_resting_stop_is_not_flagged(world):
     for s in _sweeps(db, 4):
         assert s["stop_resting"] == 1
     assert "resting_stop_not_executing" not in _kinds(pages)
+
+
+def test_a_known_standing_wedge_is_counted_but_not_paged_again(world):
+    """Operator 2026-10-15 on the GLD wedge: "Leave it for now". The wedge
+    ledger already re-pages that position on its own floor; this detector
+    must not add a second page for it."""
+    db, pages, mp = world
+    om._RESTING_STOP_BREACH_STREAK.clear()
+    _close_row(db, 5928)
+    mp.setattr(om, "_has_standing_wedge", lambda a, s, d: True)
+    v = _Venue(qty=56.0, price=680.0)
+    _resting_oco(v, 716.80)
+    _use(mp, v)
+    s = _sweeps(db, 4)[-1]
+    assert s["stop_resting_breached"] == 1
+    assert "resting_stop_not_executing" not in _kinds(pages)
+
+
+def test_the_page_fires_once_per_cooldown_not_every_sweep(world):
+    db, pages, mp = world
+    om._RESTING_STOP_BREACH_STREAK.clear()
+    _close_row(db, 5928)
+    v = _Venue(qty=56.0, price=680.0)
+    _resting_oco(v, 716.80)
+    _use(mp, v)
+    _sweeps(db, 8)
+    assert _kinds(pages).count("resting_stop_not_executing") == 1
