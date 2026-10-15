@@ -790,7 +790,9 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
   eq((await tp.evaluate("__ex.sheetTarget('ETHUSD','child',false)")).why, "sheet_open", "native: never targeted with the sheet already open");
   // a point covered by another element (an overlay, a row ✕ drawn over the cell) is refused, never touched
   const cv = await onHost(sheetPage().replace("</body>", "<div id=ov style='position:fixed;left:0;top:0;width:100%;height:100%'></div></body>"));
-  eq((await cv.evaluate("__ex.sheetTarget('ETHUSD','child',false)")).why, "covered", "native: a covered point is refused");
+  let cvr = await cv.evaluate("__ex.sheetTarget('ETHUSD','child',false)");
+  eq([cvr.why, /^p\d+_\d+ v\d+x\d+ r-?\d+_-?\d+_\d+x\d+$/.test(cvr.g1), /^vv\d+x\d+\/\d+_\d+s[\d.]+ e\d+ sc\d+ dpr[\d.]+/.test(cvr.g2), cvr.g1.length <= 40 && cvr.g2.length <= 40],
+    ["covered", true, true, true], "native: a covered point is refused, with its geometry (numbers only, fits the 40-char scrub)");
   const dz = await onHost(sheetPage().replace('<div id=chm>ETH <span>5x</span></div>', '<div id=chm style="position:relative">ETH <span>5x</span><i aria-label="Close" style="position:absolute;left:0;top:0;right:0;bottom:0"></i></div>'));
   eq(/^(point_)?deny_/.test((await dz.evaluate("__ex.sheetTarget('ETHUSD','child',false)")).why), true, "native: a close control under the point is refused");
   eq((await (await onHost(sheetPage({noChild: true}))).evaluate("__ex.sheetTarget('ETHUSD','child',false)")).why, "none", "native: no child row -> none (the amend path reads none as no position only with group none too)");

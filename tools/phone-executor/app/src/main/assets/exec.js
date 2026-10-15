@@ -1290,7 +1290,17 @@
       var r = h.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
       if (!(r.width > 0 && r.height > 0) || x < 0 || y < 0 || x >= window.innerWidth || y >= window.innerHeight) return {ok: false, why: "offscreen"};
       var pe = document.elementFromPoint(x, y);
-      if (!pe || !h.contains(pe)) return {ok: false, why: "covered", top: pe ? (pe.tagName.toLowerCase() + (pe.getAttribute("role") ? "/" + pe.getAttribute("role") : "")).slice(0, 20) : ""};
+      if (!pe || !h.contains(pe)) {
+        // MEASURE (1b.233 10:40Z: both rows "covered" with NO element at the centre): the geometry, so the next build
+        // is fixed from evidence -- point vs viewport vs the cell's rect, the visual viewport, how many elements the
+        // point hits at all, and the page scroll. Numbers only, joined with the server scrub's kept characters (_ / x).
+        var vv = window.visualViewport, se = document.scrollingElement || document.documentElement, f = function (n) { return Math.round(n); };
+        var efp = document.elementsFromPoint ? document.elementsFromPoint(x, y).length : -1;
+        return {ok: false, why: "covered", top: pe ? (pe.tagName.toLowerCase() + (pe.getAttribute("role") ? "/" + pe.getAttribute("role") : "")).slice(0, 20) : "",
+          g1: ("p" + f(x) + "_" + f(y) + " v" + window.innerWidth + "x" + window.innerHeight + " r" + f(r.left) + "_" + f(r.top) + "_" + f(r.width) + "x" + f(r.height)).slice(0, 40),
+          g2: ("vv" + (vv ? f(vv.width) + "x" + f(vv.height) + "/" + f(vv.offsetLeft) + "_" + f(vv.offsetTop) + "s" + vv.scale.toFixed(2) : "-") +
+            " e" + efp + " sc" + f(se.scrollTop) + " dpr" + (window.devicePixelRatio || 0).toFixed(2) + (document.hidden ? " hid" : "")).slice(0, 40)};
+      }
       for (var e = pe; e && e !== h.parentElement; e = e.parentElement) { var de = denied(e); if (de) return {ok: false, why: "point_" + de}; }
       return {ok: true, x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, vw: window.innerWidth, vh: window.innerHeight};
     },

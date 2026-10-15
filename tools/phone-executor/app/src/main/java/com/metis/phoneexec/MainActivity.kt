@@ -1432,6 +1432,7 @@ class MainActivity : Activity() {
             p.js("__ex.domMark()")
             val r = nativeTap(p, sym, which)
             tries.put("$which/native:$r".take(40))
+            lastTapGeom.forEach { tries.put(it.take(40)) }
             if (!r.startsWith("touched")) { if (r == "no_grid") break; continue }
             delay(1200); p.ensure()
             if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") == true) { opened = "$which/native"; break }
@@ -1458,12 +1459,18 @@ class MainActivity : Activity() {
      *  is that cell or inside it with nothing denied up to it); only then is the point touched. The denylist is the same
      *  one every click goes through. "touched k=<css scale>" or why not (none | no_grid | rows_<n> | covered@<tag> |
      *  point_deny_* | deny_* | offscreen | sheet_open | unanswered). */
+    private var lastTapGeom: List<String> = emptyList()
     private suspend fun nativeTap(p: Page, sym: String, which: String): String {
+        lastTapGeom = emptyList()
         val s = p.obj("__ex.sheetTarget(${q(sym)}, ${q(which)}, true)") ?: return "unanswered"
         if (!s.optBoolean("ok")) return s.optString("why", "refused")
         delay(350)
         val r = p.obj("__ex.sheetTarget(${q(sym)}, ${q(which)}, false)") ?: return "unanswered"
-        if (!r.optBoolean("ok")) return r.optString("why", "refused") + (if (r.optString("top").isNotEmpty()) "@" + r.optString("top") else "")
+        if (!r.optBoolean("ok")) {
+            // geometry of a covered point (measure-only; 1b.233 read "covered" with nothing at the centre)
+            lastTapGeom = listOf(r.optString("g1"), r.optString("g2")).filter { it.isNotEmpty() }
+            return r.optString("why", "refused") + (if (r.optString("top").isNotEmpty()) "@" + r.optString("top") else "")
+        }
         // which WebView took the touch (PHONE-FGS-EXEC: the background engine's non-touchable overlay or the kiosk);
         // MotionEvents go to the view directly, never through the window, but the two are measured apart
         return p.tap(r.getDouble("x"), r.getDouble("y"), r.getDouble("vw")) + (if (p === fg) " fg" else " bg")
@@ -1522,6 +1529,8 @@ class MainActivity : Activity() {
         // MEASURED), with no sheet. Expanded stays expanded, so later reads find the child row without touching.
         val grp = (0 until rows.length()).mapNotNull { rows.optJSONObject(it) }.filter { it.optString("row_kind") == "group" && (it.isNull("side") || it.optString("side").isEmpty()) }
         val pre = JSONArray()
+        // which kind of row the read saw (1b.233 10:40Z: the expand step left no line, so whether it ran is unmeasured)
+        pre.put("kinds=" + (0 until rows.length()).joinToString(",") { rows.optJSONObject(it)?.optString("row_kind", "-")?.ifEmpty { "-" } ?: "?" }.take(30))
         if (grp.size == 1 && rows.length() == 1) {
             val x = nativeTap(p, syms[0], "group")
             delay(1200); p.ensure()
@@ -1541,6 +1550,10 @@ class MainActivity : Activity() {
                         pre.put("${o.optString("side")} c=${o.optInt("cells")} d=${o.optInt("depth")}/${o.optInt("row_depth")} ${o.optString("role")} pk=${o.optBoolean("picked")} ts=${o.optInt("tpsl")}".take(40)) } }
                 }
             } else pre.put("group/expand:$x opened_sheet".take(40))
+            lastTapGeom.forEach { pre.put(it.take(40)) }
+        } else p.obj("__ex.childShape()")?.let { cs ->
+            // no expand (the row was not read as the collapsed group): the panel's shape, so the next build knows why
+            pre.put("hdr=${cs.optInt("hdr")} grp=${cs.optInt("groups")} child=${cs.optInt("child_rows")} sides=${cs.optJSONArray("sides")?.length() ?: 0}")
         }
         val out = JSONArray()
         for (i in 0 until rows.length()) {
