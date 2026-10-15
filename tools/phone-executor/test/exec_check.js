@@ -357,6 +357,38 @@ document.getElementById('cf').onclick=function(){window.__confirm=(window.__conf
   eq(await rQ("window.__tpcell || 0"), 0, "tpsl Q: the Positions 'TP / SL' header and cell are never clicked");
   eq(await rQ("__ex.cancelModals()"), 1, "tpsl Q: the Edit Take profit dialog is cancelled");
   eq([await rQ("window.__cancel || 0"), await rQ("window.__confirm || 0"), await rQ("__ex.cancelModals()")], [1, 0, 0], "tpsl Q: Cancel clicked once, Confirm never; nothing left to cancel");
+  // PHONE-FGS-EXEC (manager 12:47Z): the 10:48Z refusal's DOM shape (phone-test-60715df76a4d dump). Ticket on SOL, the
+  // "Select market" picker in its own popup, AND an "Edit Take profit" dialog already open with the position's "ETH"
+  // label, a "Take profit Quantity" and a "Distance for Trigger" input, Cancel / Confirm. That dialog's "ETH" is the
+  // second picker candidate 1b.233 saw (market_ambiguous). Nothing in the dialog may be clicked by the symbol route; the
+  // step-2 reset cancels it (Cancel once, Confirm never) and the pick then lands on the one market row.
+  const r1048 = `<!doctype html><html><body>
+<div role=button id=chip aria-label="Select market">SOL 20x</div><button>Order form</button><button>Open orders1</button><button>Positions1</button>
+<div role=dialog id=pk style="display:none"><input type=search role=searchbox placeholder=Search><button>All</button><div id=list></div></div>
+<div role=dialog id=tp><h3>Edit Take profit</h3><div>ETH</div><input aria-label="Take profit Quantity" type=text><input type=text><input aria-label="Distance for Trigger" type=text>
+<label><input type=checkbox>TP/SL</label><button id=cn>Cancel</button><button id=cf>Confirm</button></div>
+<form id=f><div role=tablist><button type=button role=tab aria-selected=false>Market</button><button type=button role=tab aria-selected=true>Limit</button></div>
+<label for=lp>Limit price</label><input id=lp type=text value="102.1"><label for=q>Quantity</label><input id=q type=text value="1.00">
+<button type=submit id=sub>Short (sell) SOL</button></form>
+<script>
+document.getElementById('tp').addEventListener('click',function(e){if(e.target.id!=='cn')window.__tpclick=(window.__tpclick||0)+1;},true);
+document.getElementById('cn').onclick=function(){window.__cancel=(window.__cancel||0)+1;document.getElementById('tp').remove();};
+document.getElementById('cf').onclick=function(){window.__confirm=(window.__confirm||0)+1;};
+function pick(s){document.getElementById('chip').textContent=s+' 20x';document.getElementById('sub').textContent='Long (buy) '+s;document.getElementById('pk').style.display='none';}
+function row(txt,s){var d=document.createElement('div');d.innerHTML='<span>'+txt+'</span>';d.onclick=function(){window.__picks=(window.__picks||0)+1;pick(s)};return d;}
+document.getElementById('chip').onclick=function(){var l=document.getElementById('list');l.innerHTML='';document.getElementById('pk').style.display='block';
+ [['ETH 20x - 2,369.47USD -1.20%','ETH'],['BTC 50x - 62,410.5USD -1.20%','BTC']].forEach(function(r){l.appendChild(row(r[0],r[1]))});};
+document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__submitted=(window.__submitted||0)+1};</script></body></html>`;
+  // without the reset (the 1b.233 entry): the dialog's "ETH" is a candidate, but only the picker row has the market shape
+  const pW0 = await onHost(r1048); const rW0 = (code) => pW0.evaluate(code);
+  eq(await rW0("[__ex.symbolReset(), __ex.symbolStep('ETHUSD'), __ex.symbolStep('ETHUSD')]"), ["ok", "opened_market", "picked_market"], "10:48 shape: the picker row is picked, not the dialog's ETH label");
+  eq([await rW0("window.__tpclick || 0"), await rW0("window.__confirm || 0"), await rW0("window.__cancel || 0"), await rW0("window.__picks || 0")], [0, 0, 0, 1], "10:48 shape: the symbol route clicks nothing in the Edit Take profit dialog");
+  // the step-2 background order: cancelModals, escape, then the symbol route
+  const pW = await onHost(r1048); const rW = (code) => pW.evaluate(code);
+  eq(await rW("[__ex.cancelModals(), __ex.escape(), __ex.symbolReset()]"), [1, "ok", "ok"], "10:48 reset: the Edit Take profit dialog is cancelled");
+  eq(await rW("[__ex.symbolStep('ETHUSD'), __ex.symbolStep('ETHUSD'), __ex.symbolStep('ETHUSD')]"), ["opened_market", "picked_market", "done"], "10:48 reset: SOL -> ETH picked");
+  eq([await rW("window.__cancel || 0"), await rW("window.__confirm || 0"), await rW("window.__tpclick || 0"), await rW("window.__submitted || 0")],
+    [1, 0, 0, 0], "10:48 reset: Cancel once, Confirm never, no other dialog click, nothing submitted");
   // SERVER READ-BACK (PHONE-GO-TOKEN, design 3.4): the app builds the read-back from these page reads (MainActivity.kt
   // readBack: SELECTED tabs, the submit label + disabled state, the TP/SL box, the by-label values) and hashes
   // "key=value" lines in READBACK_FIELDS order (== src/prop/phone_executor.py). Mirrors the app; proves the page reads
