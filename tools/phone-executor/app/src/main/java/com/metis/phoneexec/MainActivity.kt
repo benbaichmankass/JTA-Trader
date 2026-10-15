@@ -1464,7 +1464,9 @@ class MainActivity : Activity() {
         delay(350)
         val r = p.obj("__ex.sheetTarget(${q(sym)}, ${q(which)}, false)") ?: return "unanswered"
         if (!r.optBoolean("ok")) return r.optString("why", "refused") + (if (r.optString("top").isNotEmpty()) "@" + r.optString("top") else "")
-        return p.tap(r.getDouble("x"), r.getDouble("y"), r.getDouble("vw"))
+        // which WebView took the touch (PHONE-FGS-EXEC: the background engine's non-touchable overlay or the kiosk);
+        // MotionEvents go to the view directly, never through the window, but the two are measured apart
+        return p.tap(r.getDouble("x"), r.getDouble("y"), r.getDouble("vw")) + (if (p === fg) " fg" else " bg")
     }
 
     /** Close the sheet: Escape first, then its header close icon. closed | escape | x | still_open(..) */
