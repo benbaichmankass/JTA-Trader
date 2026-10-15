@@ -3,7 +3,7 @@ name: research-ops
 description: The routine research-OPERATIONS pass, run 4x/day (02:47, 08:47, 14:47, 20:47 UTC) as a bounded Sonnet lane. Checks the research pipeline is flowing (dispatcher, collector, receipts, stamps, stranded PRs), keeps the runnable floor of queue units topped up, audits every blocked / not-runnable unit and unlocks or retires it, reads every result landed since the last pass and applies its pre-registered rule, and files the follow-ups (research units and builds). Does NOT replace topic research (perf-followup, ML research, readouts on a specific question) — it only keeps the pipeline healthy and moving. Use when the manager dispatches a RESEARCH-OPS-<date>-<slot> lane, or the operator says "/research-ops", "check the research pipeline", "is research operations on track".
 ---
 
-> **Doc status:** `live` · category `instruction` · last verified `2026-10-15` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
+> **Doc status:** `live` · category `instruction` · last verified `2026-10-10` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
 # /research-ops — keep the research pipeline flowing
 
@@ -179,19 +179,6 @@ Record each disposition with `research_disposition.py --record` (it routes to `a
 keeps the refusals; **never hand-write the ledger**). Template-generated and
 `grading: {auto: true}` units are graded by `research-queue-grade.yml` — check they were,
 and handle only `grading.needs_review: true` ones (`grep -l "needs_review: true" research/queue/*.yaml`).
-
-**Reading is not closing (RESEARCH-GRADE-BACKLOG, 2026-10-15).** Until then this step read
-hand-written units' results into the run record and left the unit `queued`: MEASURED on main
-55bb4fdd, 140 queued hand-written units had result rows and none had been closed, which is
-what held `runnable` under the floor. Now `queue_grade.py` also grades a hand-written `once`
-unit whose every row carries the unit's OWN `decision_rule.id` (`grading.attested`; a FAIL
-closes it, no template confirmatory re-run). What is left for this pass is the rest, and the
-pass must **close** them, not only read them: units whose rows carry a generic producer rule
-(`RULE-M20-EXIT-LEVER-IS-OOS-GATE`, `RULE-E7-HARNESS-DISPATCHABLE`), hand-written e35 units
-(their rows are corpus rows with no rule id), `needs_review` units, and any attested unit
-where your read of the rule disagrees with the producer's verdict. Close each by editing the
-unit (`status: done` + a `grading:` block with `verdict`, `read_state`, `graded_by` and the
-reason); that edit holds for a human (E57), so say so in the record.
 
 **ML results (units with an `ml_bakeoff:` block, run by `scripts/research/ml_bakeoff.py` on the trainer or a runner).**
 Read them exactly like strategy results, plus three checks that are specific to them: (1) `measurement.arm_status` —

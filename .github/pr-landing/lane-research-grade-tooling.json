@@ -1,7 +1,5 @@
 {
   "tier": 1,
-  "landing": "hold",
-  "hold_reason": "changes_landing_machinery",
-  "hold_text": "Edits scripts/research/queue_grade.py, which E58 lists as landing machinery (its --verify vouches the grade PRs that self-land), so R12 holds it for a human. Change: a hand-written cadence:once unit whose EVERY E5 row carries the unit's own decision_rule.id is now graded (grading.attested), and a FAIL closes it (no template confirmatory re-run). Rows from a generic producer rule (RULE-M20-EXIT-LEVER-IS-OOS-GATE, RULE-E7-HARNESS-DISPATCHABLE) or with no rule id leave the unit to a session, as before. Also ml_bakeoff.py: a floor clause over a window with no measured folds (empty holdout) is INDETERMINATE, never FAIL. Tests: queue_grade --self-test, ml_bakeoff --self-test, tests/test_research_queue_autonomy.py + grader/harness/queue suites (129 passed).",
-  "why": "RESEARCH-GRADE-BACKLOG: 140 queued hand-written units had results and no step of the loop closed them; this makes the grade cron close the 130 whose rows attest their own rule."
+  "landing": "self",
+  "why": "Research tooling only: scripts/research/ml_bakeoff.py now reads a floor clause over a window with no measured folds (an empty holdout) as INDETERMINATE, never FAIL. Before this, RQ-20261012-75b2-25/-27 landed a FAIL although their registered rules say holdout rows < 20 is INDETERMINATE. Self-tested (an empty holdout -> indeterminate; a measured negative holdout -> still fail). No config, no live path, no queue edit. The queue_grade.py half of this PR was dropped on 2026-10-15 in favour of RESEARCH-LOOP-AUDIT's #18189, which changes the same file."
 }
