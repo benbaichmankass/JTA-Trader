@@ -88,6 +88,30 @@ ORDER_ID_RELABEL_REASONS = ("", "reconciler_filled", "netting_attributed",
 ORDER_ID_LABEL_SOURCE = "venue_bracket_order"
 _RELABEL_PH = ",".join("?" for _ in ORDER_ID_RELABEL_REASONS)
 
+# ORDER-AUDIT-4 (PI-20261015-PD85QJEZ-0002). A monitor-VERDICT close keeps the
+# verdict's reason (`sl_cross` / `tp_cross`). Before #18208 such a close wrote NO
+# `exit_reason_source`, so a row whose position the venue's OWN stop had already
+# closed (the monitor's close then found the venue flat) is indistinguishable by
+# its label from one the monitor really closed. MEASURED 2026-10-15 on real
+# money: 6565/6566/6593/6594 were booked `sl_cross` while their own
+# `sl_order_id` filled the whole position 45-53 s before the monitor wrote.
+# Rule 0 (venue order identity) is the evidence that separates them: a close the
+# monitor sent ends on the MONITOR's order, so `bracket_leg` returns None for it
+# and the row is left alone. Eligible only while the row is unsourced or carries
+# the #18208 venue-flat marker; a `strategy_verdict` source (the monitor sent
+# the close) is never relabelled. Re-checked in apply() against the exact notes
+# read here, so a concurrent writer wins.
+VERDICT_CROSS_REASONS = ("sl_cross", "tp_cross")
+
+# ORDER-AUDIT-4 (PI-20261015-PD85QJEZ-0003). The intent layer's reduce audit row
+# (`exit_reason='intent_reduce_executed'`, written ONLY by
+# src/units/accounts/execute.py's partial-close path) carried no
+# `exit_reason_source`. Its reason IS the intent layer's decision, so the stamp
+# is the truth about the reason, not a derivation from price. Stamp-only: the
+# reason, pnl and every price field are left as they are.
+INTENT_REDUCE_REASON = "intent_reduce_executed"
+INTENT_REDUCE_LABEL_SOURCE = "intent_reduce_order"
+
 
 BRACKET_ORDER_QTY_TOLERANCE = 0.05
 
@@ -230,17 +254,31 @@ def plan(conn: sqlite3.Connection,
     for r in rows:
         stats["scanned"] += 1
         reason0 = str(r["exit_reason"] or "").strip()
-        if (fills is not None and reason0 in ORDER_ID_RELABEL_REASONS
+        src0 = _notes(r["notes"]).get("exit_reason_source")
+        verdict_unsourced = (reason0 in VERDICT_CROSS_REASONS and
+                             (not src0 or src0 == prov.EXIT_LABEL_VERDICT_VENUE_FLAT))
+        if (fills is not None
+                and (reason0 in ORDER_ID_RELABEL_REASONS or verdict_unsourced)
                 and (r["sl_order_id"] or r["tp_order_id"])):
             leg = bracket_leg(r["sl_order_id"], r["tp_order_id"],
                               exit_fills_for(fills, r), r["position_size"])
             if leg:
-                stats[f"relabel_{leg}_order_id"] += 1
-                out.append({"id": r["id"], "action": "relabel",
-                            "basis": prov.MEASURED,
-                            "source": ORDER_ID_LABEL_SOURCE,
-                            "new_reason": leg, "old_reason": reason0})
+                stats[(f"relabel_verdict_{reason0}_to_{leg}_order_id"
+                       if verdict_unsourced else f"relabel_{leg}_order_id")] += 1
+                p = {"id": r["id"], "action": "relabel",
+                     "basis": prov.MEASURED,
+                     "source": ORDER_ID_LABEL_SOURCE,
+                     "new_reason": leg, "old_reason": reason0}
+                if verdict_unsourced:
+                    # Optimistic guard: the exact reason + notes read here.
+                    p["guard_reason"] = reason0
+                    p["guard_notes"] = r["notes"]
+                out.append(p)
                 continue
+            if verdict_unsourced:
+                # Not the row's own bracket order: the monitor's close (or an
+                # unread fill). Leave the verdict's label; say we looked.
+                stats["verdict_unsourced_no_bracket_fill"] += 1
         # Guard 2 — only a row still carrying the GENERIC reason, or the
         # snapshot reconciler's "went flat" reason (MEASURED price only, below).
         reason = str(r["exit_reason"] or "").strip()
@@ -280,6 +318,21 @@ def plan(conn: sqlite3.Connection,
             stats[f"unresolved_{basis}"] += 1
             out.append({"id": r["id"], "action": "unresolved", "basis": basis,
                         "source": "unresolved", "new_reason": None})
+
+    # PD85QJEZ-0003 — intent-layer reduce audit rows: stamp the source only.
+    for r in conn.execute(
+        "SELECT id, exit_reason, notes FROM trades "
+        " WHERE status = 'closed' AND COALESCE(is_backtest, 0) = 0 "
+        "   AND exit_reason = ?", (INTENT_REDUCE_REASON,)
+    ).fetchall():
+        if _notes(r["notes"]).get("exit_reason_source"):
+            stats["intent_reduce_already_sourced"] += 1
+            continue
+        stats["stamp_intent_reduce_source"] += 1
+        out.append({"id": r["id"], "action": "stamp", "basis": None,
+                    "source": INTENT_REDUCE_LABEL_SOURCE, "new_reason": None,
+                    "guard_reason": INTENT_REDUCE_REASON,
+                    "guard_notes": r["notes"]})
     return out, stats
 
 
@@ -294,6 +347,19 @@ def apply(conn: sqlite3.Connection, planned: list) -> int:
         n["exit_reason_source"] = p["source"]
         if p["basis"]:
             n["exit_reason_price_basis"] = p["basis"]
+        if "guard_notes" in p:
+            # ORDER-AUDIT-4 rows (verdict relabel / intent-reduce stamp): the
+            # row must still carry EXACTLY the reason and notes plan() read.
+            if p["new_reason"]:
+                n["pre_backfill_exit_reason"] = str(cur[1] or "")
+            c = conn.execute(
+                "UPDATE trades SET exit_reason = ?, notes = ? WHERE id = ? "
+                "AND COALESCE(exit_reason, '') = ? "
+                "AND COALESCE(notes, '') = COALESCE(?, '')",
+                (p["new_reason"] or p["guard_reason"], json.dumps(n), p["id"],
+                 p["guard_reason"], p["guard_notes"]))
+            written += c.rowcount
+            continue
         if p["new_reason"]:
             # Reversible from the row itself.
             n["pre_backfill_exit_reason"] = str(cur[1] or "")
@@ -419,8 +485,18 @@ def main(argv=None) -> int:
                 print(f"  {k:34s} {stats[k]}")
             relabels = [p for p in planned if p["action"] == "relabel"]
             print(f"\n  ROWS THAT WOULD CHANGE exit_reason: {len(relabels)}")
-            print(f"  rows stamped-only (unresolved/refused): "
+            print(f"  rows stamped-only (unresolved/refused/intent-reduce): "
                   f"{len(planned) - len(relabels)}")
+            # ORDER-AUDIT-4: name every verdict relabel, so the dry run can be
+            # checked row by row against the venue before --apply.
+            for p in planned:
+                if "guard_reason" in p and p["action"] == "relabel":
+                    print(f"  ORDER-AUDIT-4 verdict relabel: trade {p['id']} "
+                          f"{p['old_reason']} -> {p['new_reason']} "
+                          f"({p['source']})")
+            ir = [p["id"] for p in planned if p["action"] == "stamp"]
+            print(f"  ORDER-AUDIT-4 intent-reduce source stamps: {len(ir)}"
+                  + (f" (ids {min(ir)}..{max(ir)})" if ir else ""))
         if a.apply:
             n = apply(conn, planned)
             print(f"\nAPPLIED — {n} row(s) stamped.")
