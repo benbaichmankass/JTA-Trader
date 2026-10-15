@@ -5124,19 +5124,17 @@ def surface_diff(before: Mapping[str, Any], after: Mapping[str, Any]) -> Dict[st
             "summary": "no change" if same else f"{len(added)} added, {len(removed)} removed, {len(changed)} changed"}
 
 def panel_names_symbol(text: str, symbol: str) -> bool:
-    """Pure: does ``text`` name ``symbol`` as a whole token -- either as
-    written ("ETHUSD", breakout_1) or split base/quote by ONE slash
-    ("ETH/USD", MEASURED on tradeify_1's Position Details panel, #18358
-    run 38748442282: "Position Details ETH/USD Ethereum vs United States
-    dollar ..."). Still an identity check: "SOL/USD", "ETH/USDT" and
-    "BTC/ETH/USD" never name ETHUSD (a slash or alphanumeric on either
-    side of the token refuses)."""
-    sym = str(symbol or "")
-    if not sym:
+    """Pure: does ``text`` name ``symbol`` as a whole token, compared through
+    :func:`canonical_symbol` (EXACT equality of canonical forms, never a
+    substring) -- so Breakout's "ETHUSD" and tradeify_1's "ETH/USD" both name
+    ETHUSD (MEASURED on tradeify_1's Position Details panel, #18358 run
+    38748442282: "Position Details ETH/USD Ethereum vs United States dollar
+    ..."). Still an identity check: "SOL/USD", "ETH/USDT", "BTC/ETH/USD" and
+    "ETH-USD" never name ETHUSD."""
+    want = canonical_symbol(symbol)
+    if not want:
         return False
-    forms = [re.escape(sym)] + [re.escape(sym[:i]) + "/" + re.escape(sym[i:]) for i in range(1, len(sym))]
-    pat = r"(?<![A-Za-z0-9/])(?:" + "|".join(forms) + r")(?![A-Za-z0-9/])"
-    return re.search(pat, str(text or ""), re.IGNORECASE) is not None
+    return any(canonical_symbol(tok) == want for tok in re.findall(r"[A-Za-z0-9/]+", str(text or "")))
 
 
 def position_panel_mismatch(panel: Mapping[str, Any], symbol: str,
