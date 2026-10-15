@@ -852,11 +852,18 @@ def _package_open_legs(db, open_pkg: dict) -> tuple:
                 rows = ([hit[0]] if hit and hit[0].get("status") == "open"
                         else [])
             else:
-                m = _find_trade_by_match(
+                # ...and ONLY to a row no OTHER package owns
+                # (PI-20260930-MEK2XMWT-0002, ORDER-AUDIT-3). Since #14590 the
+                # per-account gate lets two open packages for one
+                # strategy+symbol coexist (e.g. a Stage-1 soak package on
+                # alpaca_paper and a Stage-2 one on alpaca_live), and the bare
+                # strategy+symbol match handed this package the newest open row
+                # on ANY package -- so its trail/close verdict could be
+                # effectuated against the other package's trade. A row stamped
+                # with a different order_package_id is never this package's leg.
+                rows = _find_unowned_trades_by_match(
                     db, strategy=open_pkg.get("strategy_name"),
-                    symbol=open_pkg.get("symbol"),
-                )
-                rows = [m] if m else []
+                    symbol=open_pkg.get("symbol"), pkg_id=pkg_id)[:1]
     except Exception as exc:  # noqa: BLE001
         logger.warning(
             "order_monitor: package-leg lookup failed for pkg=%s: %s",
@@ -1862,6 +1869,27 @@ def _find_trade_by_match(db, *, strategy: Optional[str],
         )
         return None
     return rows[0] if rows else None
+
+
+def _find_unowned_trades_by_match(db, *, strategy: Optional[str],
+                                  symbol: Optional[str],
+                                  pkg_id: Any) -> List[Dict[str, Any]]:
+    """Open, non-backtest rows for strategy+symbol that belong to NO other
+    order package (``order_package_id`` empty or equal to *pkg_id*), most
+    recent first. Raises on a read failure so the caller's ``read_failed``
+    state is preserved (``_find_trade_by_match`` swallows it into ``None``)."""
+    if not strategy or not symbol:
+        return []
+    rows = db.get_trades(
+        filters={"strategy_name": strategy, "symbol": symbol, "status": "open"},
+        limit=50,
+    )
+    return [
+        r for r in rows
+        if not r.get("is_backtest")
+        and (not r.get("order_package_id")
+             or str(r.get("order_package_id")) == str(pkg_id))
+    ]
 
 
 def _close_trade_by_match(db, *, strategy: Optional[str], symbol: Optional[str],
@@ -3152,12 +3180,24 @@ def _is_session_defer(err_str: str, now: Optional[datetime] = None) -> bool:
     toward the streak and pages, so no deferral wording can stay silent past
     the open. IB defers ("IB venue for SYM is closed") follow the IB venue's
     own session, not the US equity clock, and are not escalated here.
+
+    ⚠️ The generic phrases are honoured ONLY on text a session venue emits
+    (PI-20260930-ZIFJ1RKM-0006, ORDER-AUDIT-3). They used to match on EVERY
+    venue, so a Bybit "market closed for maintenance" rejection cleared the
+    close-failure streak and never paged. A defer must now carry the signature
+    of the integration that emits it: AlpacaClient ("us_equity market closed"
+    / an "extended-hours" prefix) or IBClient ("IB venue for SYM is closed").
+    Anything else is a failure and counts toward the streak.
     """
     low = str(err_str or "").lower()
     if not ("exit deferred" in low or "deferring" in low or "market closed" in low
             or "deferred to the regular session" in low):
         return False
-    if "us_equity market closed" in low or low.startswith("extended-hours"):
+    is_alpaca = "us_equity market closed" in low or low.startswith("extended-hours")
+    is_ib = "ib venue for " in low and " is closed" in low
+    if not (is_alpaca or is_ib):
+        return False
+    if is_alpaca:
         try:
             if _us_equity_session(now) == "rth":
                 return False
@@ -9825,6 +9865,72 @@ def _record_rearm_attempt(account_id: str, trade_id: Any) -> None:
         logger.exception("_record_rearm_attempt: %s/%s", account_id, trade_id)
 
 
+# Consecutive sweeps a RESTING stop has been confirmed through by a fresh
+# regular-session print. A stop legitimately sits breached for a moment while it
+# fires; persisting across sweeps means the venue is not executing it.
+_RESTING_STOP_BREACH_SWEEPS = 3
+_RESTING_STOP_BREACH_STREAK: Dict[str, int] = {}
+
+
+def _resting_stop_not_executing(client, account_id: str, symbol: str, row,
+                                state: Dict[str, Any]) -> bool:
+    """True once the row's resting venue stop has been CONFIRMED through the
+    market (`_breach_state` == ``confirmed``: a fresh RTH trade at/through it)
+    on `_RESTING_STOP_BREACH_SWEEPS` consecutive sweeps; pages once per
+    cooldown via `_page_rearm_refusal`. Never raises; any read failure or a
+    non-breach resets the streak and returns False (the old behaviour)."""
+    key = f"{account_id}|{symbol}|{row['id']}"
+    try:
+        want = _dir_side(row["direction"])
+        prices = [float(p) for p in (state.get("stop_prices") or []) if p]
+        if want is None or not prices:
+            _RESTING_STOP_BREACH_STREAK.pop(key, None)
+            return False
+        # The stop that fires FIRST: the highest sell stop under a long, the
+        # lowest buy stop over a short.
+        stop = max(prices) if want == "long" else min(prices)
+        bstate, binfo = _breach_state(client, symbol, want, stop, None, None, None)
+        if bstate != "confirmed":
+            _RESTING_STOP_BREACH_STREAK.pop(key, None)
+            return False
+        n = _RESTING_STOP_BREACH_STREAK.get(key, 0) + 1
+        _RESTING_STOP_BREACH_STREAK[key] = n
+        if n < _RESTING_STOP_BREACH_SWEEPS:
+            return False
+        if _has_standing_wedge(account_id, symbol, row["direction"]):
+            # KNOWN: the close path already evidenced this position as a
+            # broker wedge and `close_wedge_standing` re-pages it on its own
+            # floor (operator, 2026-10-15, on GLD: "Leave it for now"). Count
+            # it, log it, never page a second channel for the same position.
+            logger.warning(
+                "_resting_stop_not_executing: %s/%s trade_id=%s resting stop "
+                "%s not executing — known standing wedge, not re-paged here",
+                account_id, symbol, row["id"], stop)
+            return True
+        _page_rearm_refusal(
+            "resting_stop_not_executing", account_id, symbol, row["id"],
+            f"a {want} stop at {stop} rests at the venue but a fresh trade at "
+            f"{(binfo.get('trade') or {}).get('price')} has been through it for "
+            f"{n} consecutive sweeps without a fill — the venue is not executing "
+            "this stop; the position is effectively unprotected",
+            verb="detected")
+        return True
+    except Exception:  # noqa: BLE001 — a detector must never break the sweep
+        logger.exception("_resting_stop_not_executing: %s/%s", account_id, symbol)
+        _RESTING_STOP_BREACH_STREAK.pop(key, None)
+        return False
+
+
+def _has_standing_wedge(account_id: str, symbol: str, direction: Any) -> bool:
+    """Is (account, symbol, side) an evidenced standing wedge in
+    ``close_wedge_standing``? Unreadable -> False (page rather than hide)."""
+    try:
+        from src.runtime.close_wedge_standing import _load, wedge_key
+        return wedge_key(account_id, symbol, direction) in (_load().get("wedges") or {})
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def _page_rearm_refusal(kind: str, account_id: str, symbol: str,
                         trade_id: Any, reason: str, *, verb: str = "refused") -> None:
     """Log every refusal; page CRITICAL (per symbol+kind cooldown).
@@ -10386,6 +10492,9 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
         "active_close_skipped": 0,
         "no_client": 0,
         "stop_resting": 0,
+        # A stop rests at the venue but a fresh RTH print has been through it
+        # for several sweeps without it filling (ORDER-AUDIT-3 P0).
+        "stop_resting_breached": 0,
         "no_levels": 0,
         "venue_holding_duplicate": 0,
         "rearm_failed": 0,
@@ -10664,6 +10773,20 @@ def _check_broker_naked_equity_positions(db) -> Dict[str, int]:
                 # A confirmed resting stop refills this row's re-arm budget
                 # (REVIEW-14241 item 4).
                 _reset_rearm_attempts(account_id, row["id"])
+                # A resting stop is only protection if the venue EXECUTES it.
+                # ORDER-AUDIT-3 P0: alpaca_paper GLD (pkg-6a8e3fb325464be3)
+                # held a 39-sh OCO stop at 416.09 for ~15 days with GLD ~379 --
+                # ~37 points through, never filled, and a cancel Alpaca
+                # ACCEPTED left both legs in place (cancel_accepted_ineffective).
+                # This branch counted it as a healthy `stop_resting` every
+                # sweep. A stop a FRESH regular-session print has been through
+                # for _RESTING_STOP_BREACH_SWEEPS consecutive sweeps is not
+                # executing: counted apart and flagged ONCE (per cooldown)
+                # through the existing re-arm refusal pager. Nothing is placed
+                # or cancelled here -- the close path owns the exit.
+                if _resting_stop_not_executing(client, account_id, symbol, row, state):
+                    summary["stop_resting_breached"] += 1
+                    continue
                 summary["stop_resting"] += 1
                 continue  # stop side is armed — nothing for THIS pass to do
             summary["broker_naked"] += 1
