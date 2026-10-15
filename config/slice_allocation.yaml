@@ -14,28 +14,35 @@
 #
 # ⚠️ CHANGING ANY NUMBER IN THIS FILE IS TIER-3 (sizing / risk meaning).
 #
-# score(strategy) = Σ weight[k] · term[k], every term in [0, 1]:
-#   confidence  the intent's own confidence (clamped to [0, 1]).
-#   backtest    0.5 + expectancy_r_oos from comms/strategy_evidence/<leg>.json,
-#               clamped to [0, 1]. ONLY a `coverage_state: measured` record
-#               counts; anything else is NEUTRAL 0.5 (an absent record is not a
-#               leg without edge — see that directory's README).
-#   live        (wins + 1) / (n + 2) over the leg's last `live_window_trades`
-#               closed, non-backtest journal trades with a recorded pnl.
-#               No trades -> 0.5 (neutral prior, never 0).
-#   regime      1.0 when config/regime_policy.yaml has an EXPLICIT `on` cell for
-#               the leg's family in the intent's regime and side; 0.5 when the
-#               cell is unlisted (permissive default, unmeasured). Off cells
-#               never reach allocation (gate_intents drops them first).
-# Weights are normalised by their sum, so they need not add to 1.
-# A strategy's share of the symbol budget is score_i / Σ score over the tick's
-# contenders on that account. The name never decides: equal scores get equal
-# shares.
+# The score IS the existing conviction blend (src/runtime/conviction.py
+# compute_conviction — the same function the signal builders stamp observe-only
+# on meta.conviction), run with THESE weights over SIX inputs, each a P(win)
+# proxy in [0, 1]. An input that is absent is DROPPED and the weights are
+# renormalised over what remains (compute_conviction's own contract):
+#   c_strat  the strategy's calibrated signal confidence (stamped, else the
+#            intent's raw confidence).
+#   c_setup  setup-quality head (stamped when a model covers the leg).
+#   c_wr     trade-outcome head (stamped when a model covers the leg).
+#   c_reg    regime-alignment calibrator (stamped when one exists).
+#   c_bt     BACKTEST: 0.5 + expectancy_r_oos from comms/strategy_evidence/
+#            <leg>.json, net of the full cost stack, ONLY when
+#            coverage_state is `measured`.
+#   c_live   LIVE TRACK RECORD: (wins + 1) / (n + 2) over the leg's last
+#            `live_window_trades` closed journal trades.
+# Code: src/runtime/allocator_ev.py::intent_allocation_score, which also
+# records the cost-aware EV_R at that p_win beside the weight. A strategy's
+# share of the symbol budget is score_i / Σ score over the account's same-side
+# contenders this tick. The name never decides; if no score is positive the
+# split is equal and labelled `equal_split_last_resort`.
+# The observe-only stamp's own DEFAULT_CONVICTION_WEIGHTS are NOT these and are
+# untouched.
 weights:
-  confidence: 0.4
-  backtest: 0.3
-  live: 0.2
-  regime: 0.1
+  c_strat: 0.35
+  c_setup: 0.10
+  c_wr: 0.10
+  c_reg: 0.10
+  c_bt: 0.20
+  c_live: 0.15
 
 # Rolling window for the `live` term.
 live_window_trades: 30

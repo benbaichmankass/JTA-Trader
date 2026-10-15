@@ -1492,7 +1492,7 @@ class Coordinator:
                 # TRADEIFY-WIRE 2026-09-30.
                 "backtest_ruleset": getattr(account, "backtest_ruleset", None),
                 # NETTED-SLICES: `position_model: slices` switches the intent
-                # path to per-strategy slices (src/runtime/slice_admission.py).
+                # path to per-strategy slices (src/runtime/positions.py::admit_slice).
                 "position_model": getattr(account, "position_model", None),
             }
 
@@ -2415,13 +2415,13 @@ class Coordinator:
                     # strategy's own slice qty, not the account net — a second
                     # strategy's same-side signal used to resolve to
                     # `noop at_target` against another strategy's position.
-                    # admit_slice also sizes the slice inside the symbol's
+                    # positions.admit_slice also sizes the slice inside the symbol's
                     # risk budget (never above sized_qty) and refuses, per
                     # trade, an add the ledger cannot carry.
-                    from src.runtime.slice_allocation import account_uses_slices
+                    from src.runtime.positions import account_uses_slices
                     _slice_mode = account_uses_slices(account_cfg)
                     if _slice_mode:
-                        from src.runtime.slice_admission import admit_slice
+                        from src.runtime.positions import admit_slice
                         _adm = admit_slice(
                             account_id=account.name,
                             account_cfg=account_cfg,

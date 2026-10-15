@@ -89,7 +89,7 @@ def _pkg(strategy, direction="long", weight=None, contenders=None):
 def venue(monkeypatch):
     """Venue net the admission reads; tests set ``venue['net']``."""
     state = {"net": 0.0, "mode": "partial"}
-    import src.runtime.slice_admission as adm
+    import src.runtime.positions as adm
 
     def _positions(cfg):
         n = state["net"]

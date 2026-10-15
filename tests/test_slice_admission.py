@@ -1,9 +1,9 @@
-"""NETTED-SLICES: per-trade admission + sizing of a slice (src/runtime/slice_admission.py)."""
+"""NETTED-SLICES: per-trade admission + sizing of a slice (positions.admit_slice)."""
 from __future__ import annotations
 
 import pytest
 
-from src.runtime.slice_admission import admit_slice
+from src.runtime.positions import admit_slice
 
 CFG = {"account_id": "bybit_1", "exchange": "bybit", "position_model": "slices"}
 

@@ -1,11 +1,11 @@
-"""NETTED-SLICES: the slice ledger reconciles to the venue (src/runtime/slice_ledger.py)."""
+"""NETTED-SLICES: the slice ledger reconciles to the venue (src/runtime/positions.py)."""
 from __future__ import annotations
 
 import sqlite3
 
 import pytest
 
-from src.runtime import slice_ledger as sl
+from src.runtime import positions as sl
 
 
 def _journal(tmp_path, rows):

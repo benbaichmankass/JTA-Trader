@@ -1,6 +1,6 @@
 """NETTED-SLICES: every slice carries, trails and exits on its OWN bracket.
 
-Mechanism (chosen over separate conditional orders — see slice_admission.py):
+Mechanism (chosen over separate conditional orders — see positions.py admit_slice):
 Bybit Partial position TP/SL, ``tpslMode=Partial`` with ``tpSize = slSize =
 slice qty``. A slice's trail amends ITS tracked leg in place; a slice's exit is
 attributed to the slice whose leg is gone.
@@ -94,7 +94,7 @@ def test_partial_exit_never_takes_a_slice_whose_leg_still_rests_first():
 
 
 def test_opposite_slice_on_a_hedge_book_opens_in_its_own_book(monkeypatch):
-    """Opposite slices are admitted only on a hedge book (slice_admission);
+    """Opposite slices are admitted only on a hedge book (positions.admit_slice);
     there the short slice names positionIdx=2 and carries its own Partial legs."""
     monkeypatch.setenv("BYBIT_TPSL_MODE", "partial")
     monkeypatch.setenv("BYBIT_HEDGE_MODE_SYMBOLS", "bybit_1:ETHUSDT")

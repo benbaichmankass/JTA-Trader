@@ -97,16 +97,17 @@ def test_double_round_check_still_bites_on_unallocated_accounts():
 
 def test_multiplexer_puts_each_share_on_its_own_round_package(monkeypatch):
     import src.runtime.intent_multiplexer as im
-    from src.runtime import slice_allocation as sa
+    from src.runtime import allocator_ev as ae
+    from src.runtime.positions import ALLOCATION_META_KEY
 
     monkeypatch.setattr(im, "_load_accounts_dict", lambda: ROSTER)
-    monkeypatch.setattr(sa, "score_candidate", lambda c: {"score": float(c.confidence)})
+    monkeypatch.setattr(ae, "intent_allocation_score", lambda c: {"score": float(c.confidence)})
     cands = (_intent("trend_donchian_eth_4h", confidence=0.6),
              _intent("trend_donchian_eth_prop", confidence=0.2))
     signal = {"side": "buy", "meta": {}}
     im._attach_account_election(signal, cands, symbol="ETHUSDT", intents_before_gate=2)
     rounds = {r["strategy"]: r for r in signal[im.ACCOUNT_ROUNDS_KEY]}
-    prop = rounds["trend_donchian_eth_prop"]["signal"]["meta"][sa.SLICE_ALLOCATION_META_KEY]
+    prop = rounds["trend_donchian_eth_prop"]["signal"]["meta"][ALLOCATION_META_KEY]
     assert prop["bybit_1"]["weight"] == pytest.approx(0.25)
     assert prop["bybit_1"]["contenders"] == ["trend_donchian_eth_4h", "trend_donchian_eth_prop"]
     # the round package carries only ITS share, and bybit_2 (non-slice) none

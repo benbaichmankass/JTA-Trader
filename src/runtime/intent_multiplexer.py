@@ -1267,8 +1267,8 @@ def _attach_account_election(
             _pa = plan.get("per_account") or {}
             _rmeta = _rsig.setdefault("meta", {})
             if isinstance(_rmeta, dict):
-                from src.runtime.slice_allocation import SLICE_ALLOCATION_META_KEY
-                _rmeta[SLICE_ALLOCATION_META_KEY] = {
+                from src.runtime.positions import ALLOCATION_META_KEY
+                _rmeta[ALLOCATION_META_KEY] = {
                     a: {
                         "weight": w,
                         "contenders": sorted((_pa.get(a) or {}).get("allocation") or {}),

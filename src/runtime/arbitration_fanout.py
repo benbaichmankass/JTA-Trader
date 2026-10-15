@@ -368,8 +368,9 @@ def plan_per_account_election(
     evidence-ranked key every other account uses — and then, instead of
     keeping one winner, ALLOCATES among every candidate on that side with
     complete geometry: ``weight = score / Σ score``
-    (``slice_allocation.allocation_weights``; ``slice_score_fn`` defaults to
-    ``slice_allocation.score_candidate``). The account then appears in one
+    (``allocator_ev.allocation_weights``; ``slice_score_fn`` defaults to
+    ``allocator_ev.intent_allocation_score`` — the conviction blend extended
+    with the backtest and live-track-record inputs). The account then appears in one
     round PER ALLOCATED STRATEGY, and each such round carries
     ``allocation[account] = weight``. That is the only way an account may be
     named by more than one round (:func:`accounts_in_more_than_one_round`).
@@ -583,8 +584,8 @@ def accounts_in_more_than_one_round(rounds: Any) -> List[str]:
 
 def _is_slice_account(cfg: Any) -> bool:
     try:
-        from src.runtime.slice_allocation import account_uses_slices
-        return account_uses_slices(cfg)
+        from src.runtime.positions import account_uses_slices
+        return account_uses_slices(dict(cfg) if isinstance(cfg, Mapping) else cfg)
     except Exception:  # noqa: BLE001 — an unreadable flag keeps the election
         return False
 
@@ -601,9 +602,9 @@ def _allocate_slices(
     strategy. See :func:`plan_per_account_election`. Never raises past a
     per-candidate failure: a candidate that cannot be scored or rendered is
     left out of the split and named in ``row["dropped"]``."""
-    from src.runtime import slice_allocation as _sa
+    from src.runtime import allocator_ev as _ae
 
-    score_fn = score_fn or _sa.score_candidate
+    score_fn = score_fn or _ae.intent_allocation_score
     contenders = [c for c in own if str(getattr(c, "side", "")) == side and _has_geometry(c)]
     row["opposite_side"] = sorted(
         str(c.strategy) for c in own
@@ -630,7 +631,7 @@ def _allocate_slices(
             logger.warning("arbitration_fanout: slice scoring failed for %s on %s",
                            name, account_id, exc_info=False)
             row["dropped"].append(name)
-    weights, basis = _sa.allocation_weights(scores)
+    weights, basis = _ae.allocation_weights(scores)
     if not weights:
         row["state"] = "elected_undispatchable"
         return
