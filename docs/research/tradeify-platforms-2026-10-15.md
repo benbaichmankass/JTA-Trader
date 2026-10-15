@@ -81,6 +81,12 @@ how this terminal opens its instrument info, plus a numeric-safe emit (spread as
 (b) add a symbol-linked widget (a UI mutation not yet approved) so the existing probe's locator applies. Either needs a code PR before a run.
 
 
+### 2d. Manager decisions on 2c (2026-10-15 21:20Z) and the follow-up unit
+
+- Swap (0.033%/day) and commission (0.04%/side) are **ACCEPTED as firm-declared and flagged UNCONFIRMED** in every cost table: no data source for them exists from tradeify_1 (the REST row has no such field; the info panel cannot be opened).
+- The leverage-cap question is a data task, not an operator preference. `RQ-20261015-24ca-01..05` stay untouched. One new pre-registered unit, **`RQ-20261015-ca42-01`**, re-runs the SILVER fade and the USOIL trend at `--lev-cap 5` (marginRate 0.2; 5:1 is **INFERRED** as 1/marginRate), with its rule written before the run, including a registered cap-binding reading (identical ev and p to the second decimal at cap 5 and cap 2 means the cap cannot be what decides the verdict). Only the SILVER row is auto-graded; the USOIL leg writes its own verdict under `uso/` and is read by hand under the same criteria, because the grader reads one `verdict.json` per run.
+- Context for reading it: `-01` already graded FAIL at cap 2 (ev -15.7 to -27.4 per life, p_net_positive about 0.15, n=518), so a leverage change only matters if the cap actually bit.
+
 ## 3. Strategy → instrument mapping, and evidence state
 
 | Our evidence | Maps to | State |
