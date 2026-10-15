@@ -14,10 +14,19 @@
   ],
   "blocked_on": [],
   "note": "MERGED #18240 at 2026-10-15T10:26Z. OBSERVED affected mode: PR #18275's pytest-run run 38721769633 executed 'Run tests (pull_request code diff - import-graph affected test files)' in 2m47s, total job 4m07s, success; the data and full steps were skipped. NOT YET OBSERVED: the schedule backstop. At 10:53Z no event=schedule pytest-run run existed; the 10:43Z tick had not fired yet, and new crons often start late. CLOSES WHEN a pytest-run run with event=schedule on main exists, and its 'Determine relevant changed files' step logs run=true (full suite ran) or run=false with a covered/in_flight reason. Rerun: list pytest-run runs with event=schedule.",
-  "updated_at": "2026-10-15T10:53:59Z",
+  "updated_at": "2026-10-15T10:58:41Z",
   "updated_by": "session_018g6RBL3Tu3zfJxN6rcMVtJ",
   "roadmap": [
     "L-OPS"
   ],
+  "observation": {
+    "what": "first pytest-run schedule tick on main decides correctly (run=true runs the full suite, or run=false with a covered/in_flight reason)",
+    "how_to_check": "list pytest-run runs with event=schedule on main; read the Determine relevant changed files step log",
+    "due_by": "2026-10-16"
+  },
+  "writeback": {
+    "roadmap": "L-OPS where: CI capacity 2026-10-15 line (docs/roadmap/milestones.yaml)",
+    "arch": "ARCHITECTURE-CANONICAL.md change-log row 2026-10-15 GH-CAPACITY-PR-CI-FANOUT"
+  },
   "_seq": 516
 }
