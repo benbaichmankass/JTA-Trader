@@ -7,6 +7,11 @@
   },
   "id": "PI-20261015-FBLTJK1G-0002",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-15",
+    "how_to_check": "diag sql: SELECT COUNT(*), SUM(sl_order_id IS NULL) FROM trades WHERE account_id='bybit_1' AND created_at >= <merge date> AND COALESCE(is_backtest,0)=0",
+    "what": "Count of bybit_1 slice opens since merge with sl_order_id NULL (untracked leg)."
+  },
   "origin": {
     "kind": "session",
     "ref": "Lane NETTED-SLICES session_012ogCc58pJF5f9xFBLtjk1G, PR branch claude/netted-slices, 2026-10-15",
