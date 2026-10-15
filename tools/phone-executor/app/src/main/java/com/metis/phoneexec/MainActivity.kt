@@ -536,10 +536,15 @@ class MainActivity : Activity() {
                         p.load(s.optString("singleAccountLink")); s = p.settle(20_000L) ?: s
                     }
                     if (ticket) { bgTicket(p, s); bgLast = "ticket+$bgTicketLast"; return }
+                    // PHONE-FGS-EXEC: no ticket runs in this job, so an open order form is one a finished ticket left
+                    // (Breakout keeps the panel open across reloads; after the 11:42Z background dry fill every check
+                    // read "busy" and account_status stopped). Close it with its panel toggle, then read.
+                    var closed = ""
+                    if (p.obj("__ex.terminal()")?.optBoolean("ticketOpen") == true) { closed = p.js("__ex.closeTicket()"); delay(1200); p.ensure() }
                     var acct = "busy"
                     for (i in 0 until 10) { acct = readAccount(p); if (acct != "busy") break; delay(2000) }
                     if (acct == "posted") lastAcctMs = System.currentTimeMillis()
-                    bgLast = "logged_in+$acct"
+                    bgLast = "logged_in+$acct" + (if (closed.isNotEmpty()) " form:$closed" else "")
                 }
                 "challenged" -> setStatus("background: challenge page (not solved); re-checked on the next background check")
                 else -> setStatus("background: engine not on the terminal (${s.optString("host")})")

@@ -1036,6 +1036,16 @@
       var b = all("button,[role=tab],[role=button]").filter(function (x) { return ORDER_RE.test(t(x)); })[0];
       if (!b) return "no_order_control"; b.click(); return "clicked";
     },
+    // PHONE-FGS-EXEC: close an IDLE order form left open on the engine page (a finished ticket opened it and Breakout
+    // keeps the panel open across reloads, so readAccount read "busy" on every background check after the 11:42Z dry
+    // fill). The ONE "Order form" panel toggle outside the form is clicked; never anything inside the form, never the
+    // submit. closed (nothing open) | clicked | no_toggle | ambiguous. The caller re-reads terminal() afterwards.
+    closeTicket: function () {
+      if (!submitBtn()) return "closed";
+      var b = all("button,[role=tab],[role=button]").filter(function (x) { return ORDER_RE.test(t(x)) && !inForm(x); });
+      if (!b.length) return "no_toggle"; if (b.length > 1) return "ambiguous";
+      b[0].click(); return "clicked";
+    },
     // What the ticket says it trades: the text after "Long (buy)" / "Short (sell)" on the submit button ("BTC").
     symbolOnTicket: function () {
       var sub = submitBtn(); if (!sub) return "";

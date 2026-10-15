@@ -357,6 +357,21 @@ document.getElementById('cf').onclick=function(){window.__confirm=(window.__conf
   eq(await rQ("window.__tpcell || 0"), 0, "tpsl Q: the Positions 'TP / SL' header and cell are never clicked");
   eq(await rQ("__ex.cancelModals()"), 1, "tpsl Q: the Edit Take profit dialog is cancelled");
   eq([await rQ("window.__cancel || 0"), await rQ("window.__confirm || 0"), await rQ("__ex.cancelModals()")], [1, 0, 0], "tpsl Q: Cancel clicked once, Confirm never; nothing left to cancel");
+  // PHONE-FGS-EXEC (12:56Z, account_status stale since 11:38): a finished ticket left the order form open on the engine
+  // page, so terminal().ticketOpen stayed true and readAccount read "busy". closeTicket clicks the ONE "Order form"
+  // toggle outside the form (never the submit, never inside the form); terminal() then reads the form closed.
+  const idleForm = `<!doctype html><html><body><button id=tg>Order form</button><button>Open orders</button><button>Positions1</button>
+<form id=f><div role=tablist><button type=button role=tab aria-selected=false>Market</button><button type=button role=tab aria-selected=true>Limit</button></div>
+<label for=lp>Limit price</label><input id=lp type=text value="2,295.99"><label for=q>Quantity</label><input id=q type=text value="0.01">
+<button type=submit id=sub>Long (buy) ETH</button></form>
+<script>document.getElementById('tg').onclick=function(){window.__toggle=(window.__toggle||0)+1;var f=document.getElementById('f');f.style.display=f.style.display==='none'?'':'none';};
+document.getElementById('sub').onclick=function(){window.__subclick=(window.__subclick||0)+1;};
+document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__submitted=(window.__submitted||0)+1};</script></body></html>`;
+  const pI = await onHost(idleForm); const rI = (code) => pI.evaluate(code);
+  eq(await rI("__ex.terminal().ticketOpen"), true, "idle form: the left-open order form reads as a ticket");
+  eq(await rI("__ex.closeTicket()"), "clicked", "idle form: its panel toggle is clicked");
+  eq([await rI("__ex.terminal().ticketOpen"), await rI("__ex.terminal().ready"), await rI("__ex.closeTicket()")], [false, true, "closed"], "idle form: closed, terminal still ready, nothing left to close");
+  eq([await rI("window.__toggle || 0"), await rI("window.__subclick || 0"), await rI("window.__submitted || 0")], [1, 0, 0], "idle form: one toggle click, the submit never clicked, nothing submitted");
   // SERVER READ-BACK (PHONE-GO-TOKEN, design 3.4): the app builds the read-back from these page reads (MainActivity.kt
   // readBack: SELECTED tabs, the submit label + disabled state, the TP/SL box, the by-label values) and hashes
   // "key=value" lines in READBACK_FIELDS order (== src/prop/phone_executor.py). Mirrors the app; proves the page reads
