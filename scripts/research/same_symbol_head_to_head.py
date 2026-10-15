@@ -164,7 +164,8 @@ def run(unit_path: Path, out_dir: Path) -> int:
             base5m, roster=roster, start=h.get("start"), end=h.get("end"),
             initial_balance=float(h.get("initial_balance", 10_000.0)), risk_pct=float(live.percent),
             daily_loss_pct=float(h.get("daily_loss_pct", 3.0)), signal_ttl_bars=int(h.get("signal_ttl_bars", 1)),
-            overrides={}, refresh=False, clock_tf=h.get("clock_tf", "15m"), attach_full=True, symbol=symbol)
+            overrides={}, refresh=False, clock_tf=h.get("clock_tf", "15m"), attach_full=True, symbol=symbol,
+            costs=cost, require_full_costs=True)
         return metric_from_trades(_trade_dicts(s["closed_trades"]), h["oos_start"])
 
     arms = {f"solo:{leg}": one([leg]) for leg in legs}
