@@ -959,13 +959,19 @@ def _trader_repo(tmp_path, monkeypatch, *, changed_path):
     git("add", ".")
     git("commit", "-qm", "next")
     head = git("rev-parse", "--short", "HEAD")
-    logs = tmp_path / "runtime_logs"
-    logs.mkdir(exist_ok=True)
-    (logs / "runtime_status.json").write_text(_json.dumps({"git_sha": head, "git_sha_running": base}))
-    (logs / "deployed_sha.txt").write_text(head + "\n")
-    (logs / "deployed_sha_trader.txt").write_text(base + "\n")
+    # The VM layout: runtime_status.json lives in runtime_logs_dir() (the DATA
+    # dir), the deploy markers in <repo>/runtime_logs (where the deploy script
+    # writes them). Two different directories -- a test that made them one
+    # directory hid the bug observed on the VM (diag issue #18314).
+    data_logs = tmp_path / "data" / "runtime_logs"
+    data_logs.mkdir(parents=True, exist_ok=True)
+    (data_logs / "runtime_status.json").write_text(_json.dumps({"git_sha": head, "git_sha_running": base}))
+    repo_logs = tmp_path / "runtime_logs"
+    repo_logs.mkdir(exist_ok=True)
+    (repo_logs / "deployed_sha.txt").write_text(head + "\n")
+    (repo_logs / "deployed_sha_trader.txt").write_text(base + "\n")
     monkeypatch.setattr(diag_router, "repo_root", lambda: tmp_path)
-    monkeypatch.setattr(diag_router, "runtime_logs_dir", lambda: logs)
+    monkeypatch.setattr(diag_router, "runtime_logs_dir", lambda: data_logs)
     monkeypatch.setattr(diag_router, "_RUNNING_GIT_SHA", base)
     monkeypatch.setattr(diag_router, "_resolve_git_sha", lambda: head)
     diag_router._trader_closure_for.cache_clear()
@@ -1009,7 +1015,7 @@ def test_trader_pending_is_none_when_the_trader_sha_is_unreadable(
     client, fake_runtime, monkeypatch, tmp_path
 ):
     _trader_repo(tmp_path, monkeypatch, changed_path="src/core.py")
-    (tmp_path / "runtime_logs" / "runtime_status.json").unlink()
+    (tmp_path / "data" / "runtime_logs" / "runtime_status.json").unlink()
     body = client.get("/api/diag/version", headers=_bearer(_TOKEN)).json()
     assert body["trader_git_sha"] == "unknown"
     assert body["restart_pending_by_unit"]["ict-trader-live.service"] is None
