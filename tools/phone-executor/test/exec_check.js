@@ -313,6 +313,50 @@ document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__su
     eq(await rM("window.__submitted || 0"), 0, `market ${mode}: nothing submitted`);
     eq(await rM("[__ex.symbolStep('ETHUSD'), __ex.symbolStep('ETHUSD')]"), ["opened_market", mode === "J" ? "market_no_row" : "picked_market"], `market ${mode}: and back to ETH from SOL`);
   }
+  // PHONE-FGS-EXEC step 2 (MEASURED 1b.233 10:48Z, phone-test-60715df76a4d: from a SOL page the ETH pick saw 2 rows and
+  // refused market_ambiguous). L = the open position's row ("ETH 1" in the Positions div grid) sits inside the same
+  // popup root as the picker's plain "ETH Ethereum" row: the Positions panel row is excluded, the market row picked.
+  // P = two ETH rows in the picker, only one in the picker's own "<BASE> <lev>x" shape: that one is picked.
+  const fgs = (mode) => `<!doctype html><html><body>
+<div role=button id=chip aria-label="Select market">SOL 10x</div><button>Order form</button><button>Open orders</button><button>Positions1</button>
+<div role=dialog id=dlg>
+<div id=pos><div class=hdr><div>Market</div><div>UP&L</div><div>Side</div><div>Value</div><div>Opening price</div><div>Current price</div></div>
+<div class=row><div class=pr><span>ETH 1</span></div><div>Sum 50.49USD</div><div></div><div>Sum 1,278.70USD</div><div>2,461.52USD</div><div>2,368.01USD</div></div></div>
+<div id=list></div></div>
+<form id=f><div role=tablist><button type=button role=tab aria-selected=false>Market</button><button type=button role=tab aria-selected=true>Limit</button></div>
+<label for=lp>Limit price</label><input id=lp type=text><label for=q>Quantity</label><input id=q type=text>
+<button type=submit id=sub>Short (sell) SOL</button></form>
+<script>var MODE='${mode}';
+function pick(s){document.getElementById('chip').textContent=s+' 20x';document.getElementById('sub').textContent='Long (buy) '+s;document.getElementById('list').innerHTML='';}
+document.querySelector('.pr').onclick=function(){window.__posclick=(window.__posclick||0)+1;};
+function row(txt,s){var d=document.createElement('div');d.className='r';d.innerHTML='<span>'+txt+'</span>';d.onclick=function(){window.__picks=(window.__picks||0)+1;pick(s)};return d;}
+document.getElementById('chip').onclick=function(){var l=document.getElementById('list');
+ var rs=MODE==='L'?[['BTC Bitcoin','BTC'],['ETH Ethereum','ETH']]:[['ETH','ETH'],['ETH 20x - 2,368.01USD -1.20%','ETH'],['BTC 50x - 62,410.5USD -1.20%','BTC']];
+ rs.forEach(function(r){l.appendChild(row(r[0],r[1]))});};
+document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__submitted=(window.__submitted||0)+1};</script></body></html>`;
+  for (const mode of ["L", "P"]) {
+    const pF = await onHost(fgs(mode)); const rF = (code) => pF.evaluate(code);
+    eq(await rF("__ex.symbolReset()"), "ok", `fgs ${mode}: reset`);
+    eq(await rF("__ex.escape()"), "ok", `fgs ${mode}: escape (keys only)`);
+    eq(await rF("[__ex.symbolStep('ETHUSD'), __ex.symbolStep('ETHUSD'), __ex.symbolStep('ETHUSD')]"), ["opened_market", "picked_market", "done"], `fgs ${mode}: SOL -> ETH picked, not ambiguous`);
+    eq([await rF("__ex.symbolOnTicket()"), await rF("window.__picks || 0"), await rF("window.__posclick || 0"), await rF("window.__submitted || 0")],
+      ["ETH", 1, 0, 0], `fgs ${mode}: one picker click, the Positions row never clicked, nothing submitted`);
+  }
+  // PHONE-FGS-EXEC step 2 (manager 11:03Z): TP/SL lookups never leave the order form. Q = no ticket form on the page,
+  // a Positions grid with a "TP / SL" column and an "Edit Take profit" dialog (Cancel / Confirm) open: openTpsl finds
+  // nothing to click, the grid's TP / SL cells are never clicked, cancelModals clicks Cancel and never Confirm.
+  const tpq = `<!doctype html><html><body><button>Positions1</button>
+<div id=pos><div class=hdr><div>Market</div><div>UP&L</div><div>Side</div><div>Value</div><div>Opening price</div><div>Current price</div><div id=th>TP / SL</div></div>
+<div class=row><div>ETH 1</div><div>50.49USD</div><div></div><div>1,278.70USD</div><div>2,461.52USD</div><div>2,368.01USD</div><div id=tc>TP / SL</div></div></div>
+<div role=dialog id=dlg><h2>Edit Take profit</h2><label><input type=checkbox>TP/SL</label><button id=cn>Cancel</button><button id=cf>Confirm</button></div>
+<script>['th','tc'].forEach(function(i){document.getElementById(i).onclick=function(){window.__tpcell=(window.__tpcell||0)+1;};});
+document.getElementById('cn').onclick=function(){window.__cancel=(window.__cancel||0)+1;document.getElementById('dlg').remove();};
+document.getElementById('cf').onclick=function(){window.__confirm=(window.__confirm||0)+1;};</script></body></html>`;
+  const pTq = await onHost(tpq); const rQ = (code) => pTq.evaluate(code);
+  eq([await rQ("__ex.openTpsl(0)"), await rQ("__ex.openTpsl(1)")], ["none", "none"], "tpsl Q: no order form -> nothing found, nothing clicked");
+  eq(await rQ("window.__tpcell || 0"), 0, "tpsl Q: the Positions 'TP / SL' header and cell are never clicked");
+  eq(await rQ("__ex.cancelModals()"), 1, "tpsl Q: the Edit Take profit dialog is cancelled");
+  eq([await rQ("window.__cancel || 0"), await rQ("window.__confirm || 0"), await rQ("__ex.cancelModals()")], [1, 0, 0], "tpsl Q: Cancel clicked once, Confirm never; nothing left to cancel");
   // SERVER READ-BACK (PHONE-GO-TOKEN, design 3.4): the app builds the read-back from these page reads (MainActivity.kt
   // readBack: SELECTED tabs, the submit label + disabled state, the TP/SL box, the by-label values) and hashes
   // "key=value" lines in READBACK_FIELDS order (== src/prop/phone_executor.py). Mirrors the app; proves the page reads
@@ -574,13 +618,15 @@ document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__su
   eq(gs.cells.slice(0, 4), ["symbol:ETHUSD", "upnl:-d.dd USD", "side:S", "value:d_ddd.dd USD"], "unparsed miss dumps key:shape cells, digits masked");
   eq(/\d/.test(JSON.stringify(gs.cells)), false, "unparsed miss cells carry no digits");
   // LIVE 1b.193 SHAPE (dump 2026-10-14 21:38Z): 9 header children (8 labels + one EMPTY, which the server's diag drops),
-  // Market "ETH 5" (leverage badge, no x), an EMPTY Side cell (the side is drawn), an empty TP / SL cell, and a 9th
+  // Market "ETH d" -- the GROUP row's "ETH 1" (operator screenshot 21:41Z: "⌄ ETH 1  Sum ⌄"; corrected from the earlier
+  // "ETH 5" leverage-badge reading), read as row_kind "group" because no child row is in this DOM, an EMPTY Side cell (the side is drawn), an empty TP / SL cell, and a 9th
   // empty cell. SYNTHETIC attributes: which one Breakout uses is UNMEASURED -- the side_unread dump below shows it.
   const liveHdr = `<div>Market</div><div>UP&amp;L</div><div>Side</div><div>Value</div><div>Opening price</div><div>Current price</div><div>TP / SL</div><div>Net P&amp;L</div><div></div>`;
   const livePage = (sideCell) => `<!doctype html><html><head><meta charset=utf-8><style>#hdr,.r{display:grid;grid-template-columns:repeat(9,90px);min-height:20px}</style></head><body><div id=tabs><button>Open orders</button><button>Positions1</button><button>Closed orders</button></div>
-<div id=panel><div id=hdr>${liveHdr}</div><div class=r><div><span>ETH</span> <span class=lev>5</span></div><div>Sum 12.34USD</div><div>${sideCell}</div><div>Sum 1,327.45USD</div><div>2,458.24USD</div><div>2,436.10USD</div><div></div><div>Sum 11.90USD</div><div><button aria-label="Close">x</button></div></div></div></body></html>`;
+<div id=panel><div id=hdr>${liveHdr}</div><div class=r><div><span>ETH</span> <span class=lev>1</span></div><div>Sum 12.34USD</div><div>${sideCell}</div><div>Sum 1,327.45USD</div><div>2,458.24USD</div><div>2,436.10USD</div><div></div><div>Sum 11.90USD</div><div><button aria-label="Close">x</button></div></div></div></body></html>`;
   let lv = await (await onHost(livePage("<span class='pos-side pos-side--short'></span>"))).evaluate("__ex.positionsRead()");
-  eq([lv.state, lv.rows[0].symbol, lv.rows[0].side, lv.rows[0].entry, lv.rows[0].qty], ["read", "ETH", "short", 2458.24, 0.54490784], "live shape: side read from a class token, symbol 'ETH 5' -> ETH, 9th empty column ignored");
+  eq([lv.state, lv.rows[0].symbol, lv.rows[0].side, lv.rows[0].entry, lv.rows[0].qty], ["read", "ETH", "short", 2458.24, 0.54490784], "live shape: side read from a class token, symbol 'ETH 1' -> ETH, 9th empty column ignored");
+  eq(lv.rows[0].row_kind, "group", "live shape: the 1b.193 row is the GROUP row (count 1, no child in the DOM)");
   lv = await (await onHost(livePage("<svg aria-label='Sell'><use href='#arrow-down'></use></svg>"))).evaluate("__ex.positionsRead()");
   eq([lv.state, lv.rows[0].side], ["read", "short"], "live shape: side read from an svg aria-label");
   lv = await (await onHost(livePage("<span class='badge text-red' style='display:inline-block;width:8px;height:8px'></span>"))).evaluate("__ex.positionsRead()");
@@ -664,5 +710,139 @@ ${cRow("SOL", reduce("Short"), "Take profit", "17.26", "111.39", "Filled", "2026
 <dl><dt>Balance</dt><dd>5,048.20</dd><dt>Unrealized PnL</dt><dd>\u221212.06</dd></dl></body></html>`);
   let ap = await qA.evaluate("__ex.accountPanel()");
   eq([ap.balance, ap.portfolio, ap.unrealized], [5048.2, 5099.14, -12.06], "account panel: balance, portfolio and signed unrealized read by label");
+  // POSITION SHEET (BREAKOUT-SL-AMEND-CLICK): the operator-MEASURED flow (screenshots 2026-10-14 ~21:41Z) on a
+  // SYNTHETIC DOM -- text, tabs and values transcribed; tags, classes and nesting are GUESSES (the live dump measures
+  // them). Positions grid with a GROUP row ("ETH 1", Sum) and a CHILD row ("ETH 5x"), each with a row ✕ that closes
+  // the position. Tapping a row opens the sheet; [1 TP / 1 SL] rows carry ✎ (edit) and ⓧ (cancels the order).
+  const sheetPage = (opts) => { opts = opts || {}; const pen = opts.pen === undefined ? "<button class=ib data-k=edit aria-label='Edit'>✎</button>" : opts.pen;
+    return `<!doctype html><html><head><meta charset=utf-8><style>#hdr,.r{display:grid;grid-template-columns:repeat(9,90px);min-height:20px}</style></head><body>
+<div id=bottom><div id=tabs><button>Open orders</button><button>Positions1</button><button>Portfolio</button><button>Closed orders</button></div>
+<div id=panel><div id=hdr><div>Market</div><div>UP&amp;L</div><div>Side</div><div>Value</div><div>Opening price</div><div>Current price</div><div>TP / SL</div><div>Net P&amp;L</div><div></div></div>
+<div class=r id=grp><div><span>⌄</span> ETH 1</div><div>Sum 20.88USD</div><div><i class=dot></i></div><div>Sum 1,318.20USD</div><div>2,461.52USD</div><div>2,440.65USD</div><div></div><div>Sum 20.10USD</div><div><button class=x data-danger>✕</button></div></div>
+${opts.noChild ? "" : `<div class=r id=chd><div id=chm>ETH <span>5x</span></div><div>20.88USD</div><div><i class=dot></i></div><div>1,318.20USD</div><div>2,461.52USD</div><div>2,440.65USD</div><div></div><div>20.10USD</div><div><button class=x data-danger>✕</button></div></div>`}
+</div></div>
+<div id=sheet style="display:none"><div id=sh-hd><b>ETH</b><span>Position – 7f3a9c</span><button id=shx aria-label="Close">✕</button></div>
+<div id=sh-tabs><button data-t=d>Position details</button><button data-t=o>Opening trades</button><button data-t=s>1 TP / 1 SL</button></div>
+<div id=pd><button data-danger class=red>Close position</button>
+<div class=kv><span>Open time</span><span>2026-10-14 13:02</span></div><div class=kv><span>Side</span><span class=red>${opts.side || "Short"}</span></div>
+<div class=kv><span>Avg. opening price</span><span>2,461.52 USD</span></div><div class=kv><span>Current price</span><span>2,440.65 USD</span></div>
+<div class=kv><span>Initial margin</span><span>265.84 USD</span></div><div class=kv><span>Total open volume</span><span>${opts.qty || "0.54"} ETH</span></div>
+<div class=kv><span>uPnL</span><span>${opts.upnl || "20.88 USD"}</span></div><div class=kv><span>RoE</span><span>7.85%</span></div></div>
+<div id=ps style="display:none"><div class=th><span>SIDE</span><span>TYPE</span><span>TRIGGER PRICE</span></div>
+<div class=or id=slrow><span>Long</span><span>Stop l…</span><span id=slpx>2,504.25 USD</span>${pen}<button class=ib data-danger>ⓧ</button></div>
+<div class=or><span>Long</span><span>Take p…</span><span>2,214.87 USD</span><button class=ib aria-label='Edit'>✎</button><button class=ib data-danger>ⓧ</button></div></div></div>
+<div id=modal style="display:none"><h3 id=mt>Edit Stop loss</h3><p>Short 0.54 ETH @ 2,461.52 USD</p>
+<label for=mq>Quantity</label><input id=mq value="0.54"><label for=mtr>Trigger USD</label><input id=mtr value="2504.25"><label for=md>Entry distance %</label><input id=md value="1.74">
+<label for=mr>R:R</label><input id=mr value="2.6"><button id=mc>Cancel</button><button id=mok>Confirm</button></div>
+<script>window.__danger=0;window.__saved=0;
+document.querySelectorAll('[data-danger]').forEach(function(b){b.onclick=function(){window.__danger++}});
+var S=document.getElementById('sheet'),M=document.getElementById('modal');
+${opts.groupOpens ? "document.getElementById('grp')" : (opts.noChild ? "document.getElementById('grp')" : "document.getElementById('chd')")}.addEventListener('click',function(e){if(!e.target.closest('[data-danger]'))S.style.display='block'});
+document.querySelectorAll('#sh-tabs button').forEach(function(b){b.onclick=function(){document.getElementById('pd').style.display=b.dataset.t==='d'?'block':'none';document.getElementById('ps').style.display=b.dataset.t==='s'?'block':'none'}});
+document.getElementById('shx').onclick=function(){S.style.display='none'};
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&${opts.escCloses ? "true" : "false"})S.style.display='none'});
+var pe=document.querySelector('[data-k=edit]'); if(pe) pe.onclick=function(){M.style.display='block'};
+document.getElementById('mc').onclick=function(){M.style.display='none'};
+document.getElementById('mok').onclick=function(){window.__saved++;document.getElementById('slpx').textContent=Number(document.getElementById('mtr').value).toLocaleString('en-US',{minimumFractionDigits:2})+' USD';M.style.display='none'};
+</script></body></html>`; };
+  const shp = await onHost(sheetPage());
+  const ev = (c) => shp.evaluate(c);
+  // DENYLIST: "Close position", the ⓧ cancel icons and the row ✕ close icons are refused by the click helper
+  eq(await ev("__ex.deniedSel('#pd > button')"), "deny_close_position", "denylist: 'Close position' refused");
+  eq(await ev("__ex.deniedSel('#slrow [data-danger]')"), "deny_glyph", "denylist: the SL row's ⓧ (cancels the stop) refused");
+  eq(await ev("__ex.deniedSel('#chd .x')"), "deny_glyph", "denylist: the child row's ✕ (closes the position) refused");
+  eq(await ev("__ex.deniedSel('#grp .x')"), "deny_glyph", "denylist: the group row's ✕ refused");
+  eq([await ev("__ex.safeClickSel('#pd > button')"), await ev("__ex.safeClickSel('#slrow [data-danger]')"), await ev("__ex.safeClickSel('#chd .x')"), await ev("window.__danger")],
+    ["deny_close_position", "deny_glyph", "deny_glyph", 0], "denylist: safeClick refuses all three, nothing clicked");
+  const dn = await onHost(`<!doctype html><html><body><button id=a aria-label="Cancel order"><svg></svg></button><button id=b title="Close"></button><button id=c><svg><title>remove</title></svg></button><button id=d class="btn-close-icon"></button><button id=e>Confirm</button><button id=f aria-label="Edit">✎</button></body></html>`);
+  eq(await dn.evaluate("['#a','#b','#c','#d','#e','#f'].map(function(s){return __ex.deniedSel(s)})"), ["deny_word", "deny_word", "deny_word", "deny_word", "", ""], "denylist: cancel/close/remove words in aria, title, svg title and class are refused; Confirm and Edit are not");
+  // 1. the CHILD row opens the sheet (never the ✕); the sheet's title is the symbol
+  eq(await ev("__ex.sheetInfo('ETHUSD').open"), false, "sheet: closed at start");
+  eq(await ev("__ex.sheetOpen('ETHUSD','child')"), "clicked", "sheet: the child row 'ETH 5x' tapped");
+  let si = await ev("__ex.sheetInfo('ETHUSD')");
+  eq([si.open, si.title_ok, si.subtitle, si.tabs], [true, true, "Position – #f#a#c", {details: 1, trades: 1, tpsl: 1}], "sheet: open, title ETH, subtitle masked, three tabs");
+  eq(await ev("__ex.sheetOpen('ETHUSD','child')"), "sheet_open", "sheet: never opened twice");
+  // 2. [Position details]: side, total open volume, avg opening price MEASURED
+  eq(await ev("__ex.sheetTab('details')"), "clicked", "sheet: details tab");
+  let sd = await ev("__ex.sheetDetails()");
+  eq([sd.ok, sd.side, sd.qty, sd.qty_unit, sd.entry, sd.mark, sd.upnl_signed, sd.upnl_shape], [true, "short", 0.54, "ETH", 2461.52, 2440.65, false, "dd.dd USD"], "sheet details: Short 0.54 ETH @ 2461.52 read; an unsigned uPnL is flagged");
+  // 3. [1 TP / 1 SL]: ONE stop row, trigger 2504.25; its SIDE word is the closing side, never the position's
+  eq(await ev("__ex.sheetTab('tpsl')"), "clicked", "sheet: TP/SL tab");
+  let so = await ev("__ex.sheetOrders()");
+  const stopRow = so.rows.find((r) => r.type === "stop");
+  eq([so.n_stop, so.n_take, stopRow.trigger, stopRow.close_side, stopRow.pencils, stopRow.icons.length], [1, 1, 2504.25, "long", 1, 2], "sheet orders: one stop @ 2504.25 (closing side long), one pencil among two icons");
+  eq(stopRow.icon_lines.every((x) => x.length <= 40) && !/\d/.test(JSON.stringify(stopRow.icons)), true, "sheet orders: icon dump masked, fits the 40-char scrub");
+  // 4. ONLY the stop row's pencil; the modal is "Edit Stop loss" with the header side + qty
+  eq([await ev("__ex.sheetEditStop()"), await ev("window.__danger")], ["clicked", 0], "edit: the stop row's pencil clicked, never the ⓧ");
+  let mi = await ev("__ex.modalInfo()");
+  eq([mi.n, mi.kind, mi.side, mi.qty, mi.unit, mi.entry, mi.triggers], [1, "stop", "short", 0.54, "ETH", 2461.52, 1], "modal: Edit Stop loss, header Short 0.54 ETH @ 2461.52, one Trigger input");
+  // 5. set ONLY the Trigger; quantity untouched; Cancel (dry) saves nothing
+  eq(await ev("__ex.modalSetTrigger('2471.94')"), {n: 1, value: "2471.94"}, "modal: trigger set + read back");
+  eq((await ev("__ex.modalInfo()")).inputs.find((i) => /quantity/i.test(i.label)).value, "0.54", "modal: quantity untouched");
+  eq([await ev("__ex.modalCancel()"), await ev("window.__saved"), (await ev("__ex.modalInfo()")).n], ["clicked", 0, 0], "modal (dry): Cancel saves nothing");
+  // live: Confirm, then 6. re-read the stop trigger
+  await ev("__ex.sheetEditStop()"); await ev("__ex.modalSetTrigger('2471.94')");
+  eq([await ev("__ex.modalConfirm()"), await ev("window.__saved"), await ev("window.__danger")], ["clicked", 1, 0], "modal (live): Confirm clicked once, nothing denied clicked");
+  eq((await ev("__ex.sheetOrders()")).rows.find((r) => r.type === "stop").trigger, 2471.94, "re-read: stop trigger is the new SL");
+  // 7. close: Escape does nothing on this synthetic sheet -> the header ✕ (never 'Close position')
+  eq(await ev("__ex.sheetClose()"), "escape", "close: Escape sent");
+  eq(await ev("__ex.sheetInfo('ETHUSD').open"), true, "close: the sheet ignored Escape");
+  eq([await ev("__ex.sheetCloseX()"), await ev("__ex.sheetInfo('ETHUSD').open"), await ev("window.__danger")], ["clicked", false, 0], "close: the header ✕ closed the sheet; no position / order control clicked");
+  // no child row in the DOM (the 1b.193 dump read only the group row): child -> none; the group row opens the sheet
+  const sg = await onHost(sheetPage({noChild: true}));
+  eq([await sg.evaluate("__ex.sheetOpen('ETHUSD','child')"), await sg.evaluate("__ex.sheetOpen('ETHUSD','group')"), await sg.evaluate("__ex.sheetInfo('ETHUSD').open")], ["none", "clicked", true], "sheet: no child row -> the group row 'ETH 1' opens it");
+  // no positively identified pencil (icon with no glyph / words): refused, nothing clicked
+  const sn = await onHost(sheetPage({pen: "<button class=ib><svg width=8 height=8></svg></button>"}));
+  await sn.evaluate("__ex.sheetOpen('ETHUSD','child')"); await sn.evaluate("__ex.sheetTab('tpsl')");
+  eq([await sn.evaluate("__ex.sheetEditStop()"), await sn.evaluate("window.__danger"), (await sn.evaluate("__ex.modalInfo()")).n], ["no_edit", 0, 0], "edit: an unidentified icon is never clicked (no_edit)");
+  // a signed uPnL is MEASURED with its sign; a side that is not exactly Long/Short is null
+  const su = await onHost(sheetPage({upnl: "−12.40 USD", side: "Short 5x"}));
+  await su.evaluate("__ex.sheetOpen('ETHUSD','child')");
+  let sud = await su.evaluate("__ex.sheetDetails()");
+  eq([sud.upnl_signed, sud.upnl, sud.side, sud.ok], [true, -12.4, null, false], "sheet details: signed uPnL kept; a non-exact side word is not read");
+  // GROUP vs CHILD rows (manager 2026-10-14 22:11Z: the read took the GROUP row "ETH 1" / "Sum"): the child row is read
+  const gc = await (await onHost(sheetPage())).evaluate("__ex.positionsRead()");
+  eq([gc.state, gc.rows.length, gc.rows[0].row_kind, gc.rows[0].symbol, gc.rows[0].upnl], ["side_unread", 1, "child", "ETH", 20.88], "group+child: only the CHILD row is read");
+  const gOnly = await (await onHost(sheetPage({noChild: true}))).evaluate("__ex.positionsRead()");
+  eq([gOnly.state, gOnly.rows.length, gOnly.rows[0].row_kind, gOnly.rows[0].symbol], ["side_unread", 1, "group", "ETH"], "group of 1 with no child in the DOM: the group row stands in, labelled group");
+  const gTwo = await (await onHost(sheetPage({noChild: true}).replace("</span> ETH 1<", "</span> ETH 2<").replace("Positions1", "Positions2"))).evaluate("__ex.positionsRead()");
+  eq([gTwo.state, gTwo.detail], ["unparsed", "miss=group bad=0 n=1"], "a group of 2 positions is never read as one row");
+  const nested = sheetPage().replace('<div class=r id=chd>', '<div class=wrap><div class=r id=chd>').replace('\u2715</button></div></div>\n</div></div>', '\u2715</button></div></div></div>\n</div></div>');
+  const gn = await (await onHost(nested)).evaluate("__ex.positionsRead()");
+  eq([gn.state, gn.rows.length, gn.rows[0].row_kind], ["side_unread", 1, "child"], "child row nested in a wrapper is still the one read");
+  // BREAKOUT-SHEET-PROBE (1b.205 live 05:59Z: click() found both rows, no sheet opened): a row that reacts only to a
+  // touch pointer sequence opens with mode "pointer"; domDiff names what appeared and the tapped cell's ancestors
+  const pp = await onHost(sheetPage().replace("document.getElementById('chd').addEventListener('click'", "document.getElementById('chd').addEventListener('pointerup'"));
+  await pp.evaluate("__ex.domMark()");
+  eq([await pp.evaluate("__ex.sheetOpen('ETHUSD','child','click')"), await pp.evaluate("__ex.sheetInfo('ETHUSD').open")], ["clicked", false], "probe: click() alone does not open a pointer-only row");
+  let dd = await pp.evaluate("__ex.domDiff()");
+  eq([dd.n_new, dd.details_tabs, dd.chain[0].startsWith("div")], [0, 0, true], "probe: nothing new after the click; chain starts at the tapped cell");
+  await pp.evaluate("__ex.domMark()");
+  eq([await pp.evaluate("__ex.sheetOpen('ETHUSD','child','pointer')"), await pp.evaluate("__ex.sheetInfo('ETHUSD').open"), await pp.evaluate("window.__danger")], ["tapped", true, 0], "probe: the touch-style tap opens it; nothing denied clicked");
+  dd = await pp.evaluate("__ex.domDiff()");
+  eq([dd.n_new > 0, dd.details_tabs, dd.leaves.some((x) => /Position details/.test(x)), /\d/.test(JSON.stringify(dd.leaves))], [true, 1, true, false], "probe: the new sheet's texts are listed, digits masked");
+  // BREAKOUT-NATIVE-TAP (1b.210 08:37Z: click() and a synthetic pointer tap reached the cell, NO synthetic event opened
+  // the sheet). A row that opens only on a TRUSTED touch: sheetTarget names the centre of the SAME cell, the app touches
+  // it (here Playwright's real input stands in for MotionEvent), and the sheet opens; nothing denied is ever touched.
+  const tr = sheetPage().replace("document.getElementById('chd').addEventListener('click',function(e){", "document.getElementById('chd').addEventListener('click',function(e){if(!e.isTrusted)return;");
+  const tp = await onHost(tr);
+  eq([await tp.evaluate("__ex.sheetOpen('ETHUSD','child','pointer')"), await tp.evaluate("__ex.sheetInfo('ETHUSD').open")], ["tapped", false], "native: a synthetic tap does not open a trusted-only row");
+  let nt = await tp.evaluate("__ex.sheetTarget('ETHUSD','child',true)");
+  eq([nt.ok, nt.vw > 0, typeof nt.x, await tp.evaluate("document.elementFromPoint(" + nt.x + "," + nt.y + ").closest('#chm') !== null")], [true, true, "number", true], "native: the target is the child row's Market cell centre");
+  await tp.mouse.click(nt.x, nt.y);
+  eq([await tp.evaluate("__ex.sheetInfo('ETHUSD').open"), await tp.evaluate("window.__danger")], [true, 0], "native: a trusted tap at that point opens the sheet; nothing denied clicked");
+  eq((await tp.evaluate("__ex.sheetTarget('ETHUSD','child',false)")).why, "sheet_open", "native: never targeted with the sheet already open");
+  // a point covered by another element (an overlay, a row ✕ drawn over the cell) is refused, never touched
+  const cv = await onHost(sheetPage().replace("</body>", "<div id=ov style='position:fixed;left:0;top:0;width:100%;height:100%'></div></body>"));
+  eq((await cv.evaluate("__ex.sheetTarget('ETHUSD','child',false)")).why, "covered", "native: a covered point is refused");
+  const dz = await onHost(sheetPage().replace('<div id=chm>ETH <span>5x</span></div>', '<div id=chm style="position:relative">ETH <span>5x</span><i aria-label="Close" style="position:absolute;left:0;top:0;right:0;bottom:0"></i></div>'));
+  eq(/^(point_)?deny_/.test((await dz.evaluate("__ex.sheetTarget('ETHUSD','child',false)")).why), true, "native: a close control under the point is refused");
+  eq((await (await onHost(sheetPage({noChild: true}))).evaluate("__ex.sheetTarget('ETHUSD','child',false)")).why, "none", "native: no child row -> none (the amend path reads none as no position only with group none too)");
+  // finding (a): the EXPANDED child row carries the side as text; childShape measures it and positionsRead reads it
+  const ex = await onHost(sheetPage().replace('<div><i class=dot></i></div><div>1,318.20USD</div><div>2,461.52USD</div><div>2,440.65USD</div><div></div><div>20.10USD</div>', '<div>Short</div><div>1,318.20USD</div><div>2,461.52USD</div><div>2,440.65USD</div><div>1 TP / 1 SL</div><div>20.10USD</div>'));
+  let cs = await ex.evaluate("__ex.childShape()");
+  eq([cs.ok, cs.hdr, cs.groups, cs.child_rows, cs.sides.length, cs.sides[0].side, cs.sides[0].cells, cs.sides[0].picked, cs.sides[0].tpsl], [true, 9, 1, 1, 1, "short", 9, true, 1], "child shape: one Short in a 9-cell child row that childRows picks");
+  let er = await ex.evaluate("__ex.positionsRead()");
+  eq([er.state, er.rows.length, er.rows[0].side, er.rows[0].row_kind], ["read", 1, "short", "child"], "expanded child row: side read as text, state read");
   await b.close(); console.log("exec_check: all passed");
 })().catch((e) => { console.error(e); process.exit(1); });

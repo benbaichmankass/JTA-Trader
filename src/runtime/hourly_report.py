@@ -1154,7 +1154,10 @@ def deploy_and_alerts(since: datetime, now: datetime) -> Dict[str, Any]:
                            "alert_ledgers": None, "wedges_lines": None}
     try:
         st = json.loads((RUNTIME_LOGS / "runtime_status.json").read_text(encoding="utf-8"))
-        out["running_sha"] = (st.get("git_sha") or None)
+        # `git_sha_running` is the sha the trader LOADED; `git_sha` in this file
+        # is the checkout at write time (runtime_status.build_status), which a
+        # pull advances without a restart -- reading it made "running" == disk.
+        out["running_sha"] = (st.get("git_sha_running") or None)
     except (OSError, ValueError):
         pass
     try:
@@ -1167,8 +1170,9 @@ def deploy_and_alerts(since: datetime, now: datetime) -> Dict[str, Any]:
         pass
     if out["running_sha"] and out["disk_sha"]:
         try:
-            from src.web.api.routers.diag import _restart_pending
-            out["restart_pending"] = _restart_pending(out["running_sha"], out["disk_sha"])
+            # Per unit (TRADER-RESTART-GATE): the deploy's own trader rule.
+            from src.web.api.routers.diag import _trader_restart_pending
+            out["restart_pending"] = _trader_restart_pending(out["running_sha"], out["disk_sha"])
         except Exception:  # noqa: BLE001  # allow-silent: None renders as "could not look"
             pass
     try:
@@ -1246,7 +1250,7 @@ def _deploy_section(d: Dict[str, Any]):
     from src.units.ui.telegram_format import Section
 
     rp = d.get("restart_pending")
-    rp_s = {True: "⚠️ YES — runtime code on disk is not loaded",
+    rp_s = {True: "⚠️ YES — code the trader loads changed on disk and is not loaded",
             False: "no", None: "— (could not look)"}[rp]
     al = d.get("alert_ledgers")
     lines = [

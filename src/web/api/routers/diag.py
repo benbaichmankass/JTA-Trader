@@ -2328,6 +2328,76 @@ def _restart_pending(running: str, on_disk: str) -> bool | None:
     return any(_is_runtime_path(line) for line in out.stdout.splitlines())
 
 
+TRADER_UNIT = "ict-trader-live.service"
+WEB_API_UNIT = "ict-web-api.service"
+
+
+def _trader_running_sha() -> str:
+    """The sha the TRADER process loaded (``runtime_status.json::git_sha_running``,
+    written by the trader itself). ``"unknown"`` when unreadable -- never the
+    checkout, which is what ``git_sha`` in that file means."""
+    try:
+        st = json.loads((runtime_logs_dir() / "runtime_status.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return "unknown"
+    sha = st.get("git_sha_running") if isinstance(st, dict) else None
+    return str(sha) if sha else "unknown"
+
+
+@functools.lru_cache(maxsize=4)
+def _trader_closure_for(on_disk: str):
+    """The deploy's trader closure (committed file UNION a live walk) for the
+    checkout at ``on_disk``; cached per sha because the walk takes ~2 s."""
+    from scripts.ops.trader_import_closure import deploy_closure
+    closure, _notes = deploy_closure(repo_root())
+    return closure
+
+
+def _trader_restart_pending(running: str, on_disk: str) -> bool | None:
+    """Per-unit (TRADER-RESTART-GATE): True when the deploy WOULD restart the
+    trader for the diff between what the trader loaded and the checkout --
+    the same rule as scripts/deploy_pull_restart.sh's trader gate. Three-way:
+    None = could not look."""
+    if running == "unknown" or on_disk == "unknown":
+        return None
+    if running == on_disk:
+        return False
+    try:
+        out = subprocess.run(
+            ["git", "diff", "--no-renames", "--name-only", running, on_disk],
+            cwd=str(repo_root()),
+            capture_output=True, text=True, timeout=5, check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.debug("trader restart_pending: git diff could not run: %s", exc)
+        return None
+    if out.returncode != 0:
+        return None
+    changed = [ln for ln in out.stdout.splitlines() if ln]
+    try:
+        from scripts.ops.trader_import_closure import classify_path
+        closure = _trader_closure_for(on_disk)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: no closure is NOT empty -- it falls to the deploy's any-runtime-path restart rule below
+        logger.debug("trader restart_pending: closure unavailable: %s", exc)
+        closure = None
+    if closure is None:
+        # The deploy restarts the trader on ANY runtime path when it has no closure.
+        return any(not _NON_RUNTIME_PATHS_RE.match(p) for p in changed)
+    return any(classify_path(p, closure, _NON_RUNTIME_PATHS_RE) for p in changed)
+
+
+def _deployed_sha_by_unit() -> dict[str, str | None]:
+    """The deploy markers: ``deployed_sha.txt`` (every unit but the trader) and
+    ``deployed_sha_trader.txt`` (the trader, TRADER-RESTART-GATE). None = absent."""
+    out: dict[str, str | None] = {}
+    for unit, name in ((WEB_API_UNIT, "deployed_sha.txt"), (TRADER_UNIT, "deployed_sha_trader.txt")):
+        try:
+            out[unit] = (runtime_logs_dir() / name).read_text(encoding="utf-8").strip() or None
+        except OSError:
+            out[unit] = None
+    return out
+
+
 @router.get("/version")
 def get_version(request: Request) -> dict[str, Any]:
     """Diagnostic — git SHA + captured timestamp of the running web-api
@@ -2346,6 +2416,8 @@ def get_version(request: Request) -> dict[str, Any]:
     on_disk = _resolve_git_sha()
     # Three-way, never collapsed: None = we could not look (see _restart_pending).
     restart_pending = _restart_pending(_RUNNING_GIT_SHA, on_disk)
+    trader_sha = _trader_running_sha()
+    trader_pending = _trader_restart_pending(trader_sha, on_disk)
     return {
         # The sha the RUNNING process was loaded from -- captured once at
         # import. This is what the field name and this endpoint's whole
@@ -2360,6 +2432,15 @@ def get_version(request: Request) -> dict[str, Any]:
         # 2026-05-09 incident state. False when the shas differ only by files
         # the deploy skips restarts for (FIX-SA-11). None = could not look.
         "restart_pending": restart_pending,
+        # PER UNIT (TRADER-RESTART-GATE): the deploy may leave the trader on an
+        # older sha whose loaded code is identical, so the trader has its own
+        # running sha and its own pending flag. Same three-way None.
+        "trader_git_sha": trader_sha,
+        "restart_pending_by_unit": {
+            WEB_API_UNIT: restart_pending,
+            TRADER_UNIT: trader_pending,
+        },
+        "deployed_sha_by_unit": _deployed_sha_by_unit(),
         "captured_at": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -3488,6 +3569,48 @@ def get_position_telemetry(
             detail={"error": "telemetry_unavailable", "detail": str(exc)},
         ) from exc
     return read_records(limit=limit, strategy=strategy)
+
+
+@router.get("/position_path_history")
+def get_position_path_history(
+    request: Request,
+    order_package_id: str | None = None,
+    trade_id: str | None = None,
+    strategy: str | None = None,
+    since: str | None = None,
+    limit: int = 2000,
+) -> dict[str, Any]:
+    """EXIT-PATH-TELEMETRY-LIVE — the per-bar PATH of each open position.
+
+    ``position_telemetry`` (above) holds ONE upserted row per package, so a
+    trade's trajectory is overwritten bar by bar. ``position_path_history`` is
+    its append-only twin: one row per (package, bar), projected from the same
+    record on the same pass, plus ``mae_r``, ``sl_r``/``tp_r`` and ATR/ADX. It
+    is the live side of the in-trade exit model's parity check (row
+    IN-TRADE-EXIT-MODEL).
+
+    Filter by ``order_package_id`` or ``trade_id`` to get one trade's path in
+    BAR order; otherwise rows are newest-written first. ``present: false`` =
+    the table does not exist yet (not "no rows"). ``peak_r``/``mae_r`` are
+    bar-extreme reconstructions — ESTIMATED, never measured. ``passes`` says
+    how many exit-loop passes a bar row summarises; ``atr_source`` says
+    whether ATR is the trail's own (``monitor``), recomputed
+    (``computed_wilder14``), or ``unavailable``.
+
+    Observe-only: one read-only SQLite connection, no socket, no order path.
+    Tier 2.5, token-gated.
+    """
+    _require_diag_token(request)
+    try:
+        from src.runtime.position_path_history import read_history
+    except Exception as exc:  # noqa: BLE001  # allow-silent: logged + re-raised as 503
+        logger.warning("get_position_path_history: import failed: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"error": "path_history_unavailable", "detail": str(exc)},
+        ) from exc
+    return read_history(order_package_id=order_package_id, trade_id=trade_id,
+                        strategy=strategy, since=since, limit=limit)
 
 
 @router.get("/tick_cost")

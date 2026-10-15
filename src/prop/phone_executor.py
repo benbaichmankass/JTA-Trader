@@ -76,6 +76,9 @@ _EVENT_KINDS = {
     "login_diag", "positions_miss",
     # PHONE-KEEPALIVE: the in-app watchdog restarted a wedged tick loop (pinged: a self-recovery the operator should see)
     "loop_restarted",
+    # PHONE-FGS-EXEC: a ticket the background engine claimed ended badly; the app brings itself to the front for the
+    # next tickets for a while, then retries the engine (pinged: the operator should know the fallback is in use)
+    "bg_ticket_fallback",
 }
 # terminal_miss carries the control texts the page showed (our own UI labels, scrubbed like a reason) so the
 # next "terminal did not load" is self-diagnosing; only the LATEST one per account is kept, beside the journal.
@@ -406,6 +409,14 @@ def record_report(device: PhoneDevice, body: Dict[str, Any]) -> Dict[str, Any]:
         body["positions_state"] = pstate
         if pstate == "read":
             positions = phone_reconcile.clean_positions(device.account_id, body_in.get("positions"))
+            if any(p.get("side_source") == "sheet" for p in positions):
+                # BREAKOUT-SL-AMEND-CLICK: the phone read the side the grid does not show off each row's position sheet
+                body["positions_side_source"] = "sheet"
+                body["positions_provenance"] = "MEASURED"
+            elif any(p.get("side_source") == "row" for p in positions):
+                # BREAKOUT-NATIVE-TAP: the side read as TEXT off the expanded child row of the Positions grid
+                body["positions_side_source"] = "row"
+                body["positions_provenance"] = "MEASURED"
             closed = phone_reconcile.clean_closed(device.account_id, body_in.get("closed_orders"))
             body["positions"] = positions
             body["closed_orders"] = closed
@@ -613,7 +624,8 @@ def record_event(device: PhoneDevice, body: Dict[str, Any], *, send=None) -> Dic
         _write_positions_diag(device.account_id, reason, body.get("headers"), body.get("controls"), body.get("cells"))
         # a closed_* miss follows a CLEAN Positions read, and an amend_* dump (BREAKOUT-POS-UNPARSED) is the trail amend
         # refusing on a row it FOUND: in neither is a position unseen
-        if not reason.startswith(("closed_", "amend_")):
+        # sheet_* (BREAKOUT-SL-AMEND-CLICK) is the position-sheet read's own evidence; the Positions read is reported apart
+        if not reason.startswith(("closed_", "amend_", "sheet_")):
             _alert_unseen_positions(device.account_id, reason, send=send)
     # login_retry: an auto re-login attempt/failure inside a streak (PHONE-AUTOLOGIN, no latch, retried forever) is
     # logged in phone_events but not pinged; the phone sends ONE login_failed red flag after 3 in a row instead.
@@ -657,11 +669,25 @@ def _positions_diag_path(account_id: str) -> Path:
     return _diag_path(account_id).with_name(f"prop_phone_posdiag_{re.sub(r'[^a-z0-9_]', '', account_id)}.json")
 
 
+# BREAKOUT-NATIVE-TAP finding (b): the position-SHEET probes (sheet_* / amend_sheet_* / child_*) shared the one
+# positions slot, so the Positions read's own side_unread miss posted a second later overwrote the sheet evidence
+# (2026-10-15 08:21:38Z sheet_sheet_not_open -> 08:21:39Z side_unread). They get their own slot.
+_SHEET_DIAG_PREFIXES = ("sheet_", "amend_sheet_", "child_")
+
+
+def _is_sheet_diag(state: str) -> bool:
+    return str(state or "").startswith(_SHEET_DIAG_PREFIXES)
+
+
+def _sheet_diag_path(account_id: str) -> Path:
+    return _diag_path(account_id).with_name(f"prop_phone_sheetdiag_{re.sub(r'[^a-z0-9_]', '', account_id)}.json")
+
+
 def _write_positions_diag(account_id: str, state: str, headers: Any, controls: Any, cells: Any = None) -> None:
     def lst(v: Any) -> list:
         return [x for x in (_scrub(c, 40).strip() for c in (v if isinstance(v, list) else [])[:_DIAG_MAX]) if x]
     try:
-        _positions_diag_path(account_id).write_text(json.dumps(
+        (_sheet_diag_path if _is_sheet_diag(state) else _positions_diag_path)(account_id).write_text(json.dumps(
             {"at": _now().isoformat(), "state": _scrub(state, 60), "headers": lst(headers), "controls": lst(controls),
              "cells": [re.sub(r"\d", "d", c) for c in lst(cells)]}))
     except OSError:  # allow-silent: diagnostics only; the event is still acknowledged
@@ -717,6 +743,15 @@ def last_positions_diag(account_id: str) -> Optional[Dict[str, Any]]:
         return None
 
 
+def last_sheet_diag(account_id: str) -> Optional[Dict[str, Any]]:
+    """The latest position-SHEET dump (state sheet_* / amend_sheet_* / child_*), or None when none was posted since
+    the slot existed (BREAKOUT-NATIVE-TAP). Older sheet dumps sit in the positions slot."""
+    try:
+        return json.loads(_sheet_diag_path(account_id).read_text())
+    except (OSError, ValueError):
+        return None
+
+
 # heartbeat (2026-10-06 08:15Z: the phone went silent for an hour with no claim and no event, because every
 # no-claim branch but one only set the on-screen status). The app posts its status line + gate state on every
 # tick path at most every 2 min; only the latest is kept. Keys are a fixed allowlist; values are bools, small
@@ -728,7 +763,10 @@ _HB_KEYS = {"st", "paused", "hold", "host", "onAccount", "path_depth", "ready", 
             "relogin_failures", "relogin_flagged", "relogin_next_min", "bg", "bg_runs", "bg_ok", "bg_last", "bg_last_min",
             # PHONE-KEEPALIVE (2026-10-13): what keeps the app alive and what had to bring it back
             "battery_exempt", "overlay", "fgs_running", "alarm_exact", "last_restart_reason", "restarts_24h",
-            "app_version"}
+            "app_version",
+            # PHONE-FGS-EXEC (2026-10-15): tickets the background engine claimed, the last one's ledger state, minutes
+            # left on the bring-to-front fallback
+            "bg_tickets", "bg_ticket_last", "bg_ticket_off_min"}
 
 
 def _write_heartbeat(account_id: str, reason: str, state: Any) -> None:

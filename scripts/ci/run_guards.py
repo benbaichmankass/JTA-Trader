@@ -91,6 +91,21 @@ HARNESS_PATHS = (
 
 GUARDS: List[Dict[str, Any]] = [
     {
+        # TRADER-RESTART-GATE (operator decision 2026-10-15): the deploy leaves
+        # ict-trader-live running when a diff's src/ and scripts/ .py files are
+        # all outside config/trader_import_closure.txt, so that list must be the
+        # trader's real import closure. Any .py can add or drop an import.
+        "name": "trader-import-closure",
+        "when": {"globs": [
+            "**/*.py",
+            "config/trader_import_closure.txt",
+        ]},
+        "steps": [
+            ["python3", "scripts/ci/check_trader_import_closure.py", "--self-test"],
+            ["python3", "scripts/ci/check_trader_import_closure.py"],
+        ],
+    },
+    {
         # SIGNAL-CATALOG — every input a strategy / ML head / regime router /
         # macro producer reads needs an entry in docs/reference/signal-catalog.yaml.
         # Keying rule per family is in the guard's header.

@@ -2556,6 +2556,11 @@ def _log_trade_to_journal(
                     audit_notes["legs_left_resting_on_closed_rows"] = \
                         reduce_result["legs_left_resting_on_closed_rows"]
                 audit_notes["pnl_source"] = "deferred_intent_reduce"
+                # ORDER-AUDIT-4 (PI-20261015-PD85QJEZ-0003): the reason on this
+                # row is the intent layer's own decision, so say so. A literal,
+                # pinned to src/runtime/provenance.py by a test (the order path
+                # keeps its imports minimal).
+                audit_notes.setdefault("exit_reason_source", "intent_reduce_order")
                 now_iso = datetime.now(timezone.utc).isoformat()
                 db.insert_trade({
                     "timestamp": now_iso,

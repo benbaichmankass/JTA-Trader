@@ -416,6 +416,66 @@ if [ "${DEPLOY_FORCE_RESTART:-0}" != "1" ]; then
     fi
 fi
 
+# ---------------------------------------------------------------------------
+# TRADER-RESTART-GATE (operator decision 2026-10-15, "Build it (Recommended)",
+# Phase 1): a runtime diff restarts EVERY long-running unit below, but the
+# trader only needs a restart when the diff touches something IT loads.
+# MEASURED over the 879 first-parent merges 2026-10-08T09:40Z..2026-10-15T09:40Z:
+# of 168 runtime merges, 42 changed only src/ or scripts/ .py files outside the
+# trader's import closure (web-api routers, ops CLIs) and bounced the trader for
+# nothing. scripts/ops/trader_import_closure.py replay regenerates the split.
+#
+# The trader restarts iff a path changed since the TRADER's own deployed sha is
+#   (a) a .py in its static import closure from src.main
+#       (config/trader_import_closure.txt UNION a live recompute on this tree),
+#   (b) a non-.py path outside the non-runtime set above, or
+#   (c) a .py outside src/ and scripts/ outside that set.
+# Every other unit keeps the rule above, unchanged.
+#
+# Per-unit marker: runtime_logs/deployed_sha_trader.txt is the sha the trader
+# was last (re)started onto. A skipped trader KEEPS its older sha, so the next
+# deploy diffs from what the trader really loaded and a change it skipped can
+# never be lost; deployed_sha.txt keeps meaning "every other unit".
+#
+# FAIL-SAFE: restart unless the gate positively says SKIP. A missing/unreadable
+# trader marker, a diff that fails or is empty, a missing closure file, a closure
+# file that does not parse, any python error: RESTART. A trader that is not
+# active is never skipped (the deploy's revive of a crashed trader is kept).
+# DEPLOY_FORCE_RESTART=1 bypasses the gate.
+# ---------------------------------------------------------------------------
+TRADER_DEPLOYED_SHA_FILE="${REPO_DIR}/runtime_logs/deployed_sha_trader.txt"
+TRADER_RESTART=1
+TRADER_GATE_NOTE="restart (default)"
+TRADER_BASE="${RUNTIME_BASE}"
+LAST_TRADER_SHA="$(tr -d '[:space:]' < "${TRADER_DEPLOYED_SHA_FILE}" 2>/dev/null || true)"
+if [ "${DEPLOY_FORCE_RESTART:-0}" = "1" ]; then
+    TRADER_GATE_NOTE="restart (DEPLOY_FORCE_RESTART=1)"
+elif [ -z "${LAST_TRADER_SHA}" ] || ! git rev-parse -q --verify "${LAST_TRADER_SHA}^{commit}" >/dev/null 2>&1; then
+    TRADER_GATE_NOTE="restart (no resolvable trader deploy marker)"
+else
+    TRADER_BASE="${LAST_TRADER_SHA}"
+    if [ "${TRADER_BASE}" = "${POST_SYNC_HEAD}" ]; then
+        TRADER_CHANGED=""
+        TRADER_GATE_NOTE="skip (trader already deployed at ${POST_SYNC_HEAD:0:7})"
+        TRADER_RESTART=0
+    elif ! TRADER_CHANGED="$(git diff --no-renames --name-only "${TRADER_BASE}" "${POST_SYNC_HEAD}" 2>/dev/null)" \
+            || [ -z "${TRADER_CHANGED}" ]; then
+        TRADER_GATE_NOTE="restart (trader diff ${TRADER_BASE:0:7}..${POST_SYNC_HEAD:0:7} unreadable or empty)"
+    else
+        TRADER_DECISION="$(printf '%s\n' "${TRADER_CHANGED}" \
+            | /usr/bin/python3 "${REPO_DIR}/scripts/ops/trader_import_closure.py" decide --root "${REPO_DIR}" 2>&1 || true)"
+        TRADER_VERDICT="${TRADER_DECISION%%$'\n'*}"  # line 1, no pipe (pipefail-safe)
+        TRADER_REASONS="$(printf '%s\n' "${TRADER_DECISION}" | sed -n '2,6p' | tr '\n' ';' | sed 's/;$//')"
+        if [ "${TRADER_VERDICT}" = "SKIP" ]; then
+            TRADER_RESTART=0
+            TRADER_GATE_NOTE="skip (${TRADER_BASE:0:7}..${POST_SYNC_HEAD:0:7}: ${TRADER_REASONS})"
+        else
+            TRADER_GATE_NOTE="restart (${TRADER_BASE:0:7}..${POST_SYNC_HEAD:0:7}: ${TRADER_REASONS:-no verdict})"
+        fi
+    fi
+fi
+echo ">>> Trader restart gate: ${TRADER_GATE_NOTE}"
+
 echo ">>> Code changed (${PRE_SYNC_HEAD:0:7} -> ${POST_SYNC_HEAD:0:7}). Installing/updating dependencies..."
 /usr/bin/python3 -m pip install -r requirements.txt --quiet
 
@@ -690,10 +750,22 @@ for unit in "${ICT_UNITS[@]}"; do
         echo ">>>   skip ${unit} (in DEPLOY_RESTART_SKIP)"
         continue
     fi
+    if [ "${unit}" = "${TRADER_UNIT}" ] && [ "${TRADER_RESTART}" -eq 0 ]; then
+        # TRADER-RESTART-GATE: only a RUNNING trader is left alone; a stopped or
+        # crashed one falls through to the rules below exactly as before.
+        trader_state="$("${SYSTEMCTL[@]}" is-active "${unit}" 2>/dev/null || true)"
+        if [ "${trader_state}" = "active" ]; then
+            echo ">>>   skip ${unit} (trader restart gate: ${TRADER_GATE_NOTE}; trader stays on ${TRADER_BASE:0:7})"
+            continue
+        fi
+        echo ">>>   trader restart gate said skip, but ${unit} is '${trader_state:-unknown}' — not skipping it."
+    fi
     if [ "${unit}" = "${TRADER_UNIT}" ] && [ -f "${TRADER_STOP_MARKER}" ]; then
         trader_state="$("${SYSTEMCTL[@]}" is-active "${unit}" 2>/dev/null || true)"
         if [ "${trader_state}" != "active" ]; then
             echo ">>>   hold ${unit} (operator stop marker present, unit '${trader_state:-unknown}') — NOT starting it; start-bot-service releases the hold."
+            # Whatever starts it next loads the synced tree (see the hold note above).
+            printf '%s\n' "${POST_SYNC_HEAD}" > "${TRADER_DEPLOYED_SHA_FILE}" 2>&- || true
             continue
         fi
         # Active + marker. stop_bot.sh writes the marker a few seconds BEFORE its
@@ -705,6 +777,7 @@ for unit in "${ICT_UNITS[@]}"; do
         marker_age=$(( $(date +%s) - marker_mtime ))
         if [ "${marker_age}" -lt "${TRADER_STOP_MARKER_GRACE_S}" ]; then
             echo ">>>   skip ${unit} (operator stop marker is ${marker_age}s old — a stop is in progress; not restarting it)"
+            printf '%s\n' "${POST_SYNC_HEAD}" > "${TRADER_DEPLOYED_SHA_FILE}" 2>&- || true
             continue
         fi
         echo ">>>   ${unit} is active with a ${marker_age}s-old operator stop marker — marker is stale; removing it and restarting as normal."
@@ -720,9 +793,27 @@ for unit in "${ICT_UNITS[@]}"; do
     if stop_note="$(stopped_unit_note "${unit}")"; then
         echo ">>>   starting stopped ${unit} (${stop_note}). To keep the trader stopped use stop-bot-service."
     fi
+    if [ "${unit}" = "${TRADER_UNIT}" ]; then
+        # TELEGRAM-RESTART-MSG: tell the trader's boot ping WHY it is starting
+        # (src/runtime/restart_cause.py reads + consumes this). Best-effort.
+        # "from" is the TRADER's own deployed sha (TRADER-RESTART-GATE), so the
+        # cause line counts the commits the trader actually moves across.
+        printf '{"cause": "deploy", "sha": "%s", "from": "%s", "unit": "%s", "at": %s}\n' \
+            "${POST_SYNC_HEAD}" "${TRADER_BASE}" "${TRADER_UNIT}" "$(date +%s)" \
+            > "${REPO_DIR}/runtime_logs/trader_restart_intent.json" 2>&- || true
+    fi
     if "${SYSTEMCTL[@]}" restart "${unit}"; then
         echo ">>>   restarted ${unit}"
         RESTARTED_UNITS+=("${unit}")
+        if [ "${unit}" = "${TRADER_UNIT}" ]; then
+            # Per-unit marker, written the moment the trader is on POST: a later
+            # failure (version assertion exit 4) must not make it lie older.
+            if printf '%s\n' "${POST_SYNC_HEAD}" > "${TRADER_DEPLOYED_SHA_FILE}" 2>&-; then
+                echo ">>>   recorded trader deploy marker: ${POST_SYNC_HEAD:0:7}"
+            else
+                echo ">>>   WARNING: could not write trader deploy marker ${TRADER_DEPLOYED_SHA_FILE} (next deploy restarts the trader)"
+            fi
+        fi
     else
         echo ">>>   WARNING: restart ${unit} failed (continuing)"
         for money_unit in ${MONEY_PATH_UNITS}; do
