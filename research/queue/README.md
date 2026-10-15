@@ -107,6 +107,17 @@ clears can still be underpowered; a job that fails is underpowered for certain.
 It also does not adjust for multiplicity — a 40-cell sweep must declare its own
 adjusted `alpha`.
 
+
+## Recurring units that cannot reach their power floor (RESEARCH-LOOP-AUDIT RC5, 2026-10-15)
+
+A RECURRING e35 unit graded `indeterminate` at `base_oos_trades` below a third of its floor
+(`queue_grade.INFEASIBLE_FRACTION`) cannot reach the floor on its own cadence (MEASURED 2026-10-15: daily-bar
+legs at OOS n 0-11 against 39, adding about one trade a month). The grader writes `power: infeasible_at_cadence`
+and `recheck_after_days: 90` into its own grading block (no `needs_review`), and `dispatch_queue.due()` waits
+max(cadence, that). The unit is re-asked quarterly, never retired, and its registered fields never move.
+`recheck_after_days` is honoured only from a grader-written block (`auto: true` + `grader: ...queue_grade.py`)
+and can only lengthen the gap.
+
 ## Fields
 
 ```yaml
@@ -306,9 +317,13 @@ without Claude."* Three scheduled workflows own that:
 A generated or graded unit self-lands ONLY because `check_pr_landing.py` (E58)
 re-runs the producer's `--verify` at the merge-base and gets the same bytes;
 a hand-edited unit, a new hand-written unit, or a rule rewrite still holds for
-a human (E57). Mechanical grading applies to template-generated units and to
-hand-written ones that opt in with `grading: {auto: true}`; every other
-hand-written unit is graded by a session, as before. The `needs_review`
+a human (E57). Mechanical grading applies to template-generated units, to hand-written
+ones that opt in with `grading: {auto: true}`, and (RESEARCH-GRADE-BACKLOG,
+2026-10-15) to hand-written `once` units whose every result row carries the
+unit's own `decision_rule.id` (`attested`). A hand-written unit opts OUT with
+`grading: {auto: false}` or by carrying any session-written `grading:` block --
+the grader never overwrites a human read -- and a multi-dispatch unit declares
+`lands.runs: N` so the grader waits for N result files (RESEARCH-LOOP-AUDIT RC1). The `needs_review`
 bucket is `grep -l "needs_review: true" research/queue/*.yaml`. The alarm
 (`scripts/ci/check_research_queue_health.py`, run from the dispatcher) pages
 through the send-ping system-action when nothing has dispatched in 12 h or runnable units (same definition) < 25 AND the
