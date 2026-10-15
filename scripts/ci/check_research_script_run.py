@@ -87,11 +87,11 @@ def check(queue_dir: Path = _REPO / "research" / "queue", workflow: Path = WORKF
             problems.append(f"R1 {unit}: {e}")
 
     # R2/R3 — each workflow's own surface. The trainer twin holds VM_SSH_KEY (reaching the trainer IS the
-    # point) and TABPFN_TOKEN (ML-TABPFN-LICENCE: the Prior Labs weights key, sent over ssh stdin only) and nothing
+    # point) and TRAINER_VM_IP (the trainer's address, a masked secret rather than a literal: IP-IN-PUBLIC-LOGS) and TABPFN_TOKEN (ML-TABPFN-LICENCE: the Prior Labs weights key, sent over ssh stdin only) and nothing
     # else; the runner holds nothing beyond GITHUB_TOKEN.
     problems += _check_workflow(workflow, {"GITHUB_TOKEN"})
     if trainer_workflow is not None:
-        problems += _check_workflow(trainer_workflow, {"GITHUB_TOKEN", "VM_SSH_KEY", "TABPFN_TOKEN"})
+        problems += _check_workflow(trainer_workflow, {"GITHUB_TOKEN", "VM_SSH_KEY", "TABPFN_TOKEN", "TRAINER_VM_IP"})
     # RESEARCH-ROUTER: the Kaggle GPU twin holds KAGGLE_API_TOKEN (the kernel itself receives no secret).
     if kaggle_workflow is not None:
         problems += _check_workflow(kaggle_workflow, {"GITHUB_TOKEN", "KAGGLE_API_TOKEN"})
