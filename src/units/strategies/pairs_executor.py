@@ -1027,6 +1027,25 @@ def _place_pair(client: Any, account_cfg: dict, pair: Dict[str, Any],
             "leg_placement": leg_placement}
 
 
+def _account_is_dry(account_cfg: dict) -> bool:
+    """True when the account is ``mode: dry_run`` -- the SAME accepted spellings
+    ``execute_pkg`` reads for placement (``dry`` / ``dry_run`` / ``dry-run`` /
+    ``paper``), so a pair that was opened dry is also closed dry.
+
+    PI-20260927-ECILBBVH-0004 (ORDER-AUDIT-3): the close and the leg-imbalance
+    unwind called ``close_open_position`` directly, which has no mode gate, so an
+    account flipped to ``mode: dry_run`` still had pair closes sent to the venue.
+    This mirrors ``order_monitor``'s close helpers, which return
+    ``{"ok": True, "skipped": "dry_run"}`` without reaching the venue."""
+    mode = str((account_cfg or {}).get("mode") or "live").strip().lower()
+    return mode in {"dry", "dry_run", "dry-run", "paper"}
+
+
+def _dry_close_result() -> Dict[str, Any]:
+    return {"ok": True, "skipped": "dry_run", "exchange_response": None,
+            "exchange_order_id": None, "error": None}
+
+
 def _unwind_legs(client: Any, account_cfg: dict, placed: Sequence[tuple]) -> List[Dict[str, Any]]:
     """Flatten already-placed legs after a partial-placement failure and RETURN the
     legs that did NOT confirm flat (still naked).
@@ -1041,6 +1060,10 @@ def _unwind_legs(client: Any, account_cfg: dict, placed: Sequence[tuple]) -> Lis
     naked: List[Dict[str, Any]] = []
     for symbol, direction, qty in placed:
         entry = {"symbol": symbol, "direction": direction, "qty": float(qty)}
+        if _account_is_dry(account_cfg):
+            logger.info("pairs: dry_run account -- unwind of %s (%s qty=%s) not sent "
+                        "to the venue", symbol, direction, qty)
+            continue
         try:
             res = close_open_position(client, account_cfg, symbol=symbol,
                                       side=direction, qty=float(qty))
@@ -1196,10 +1219,15 @@ def _close_pair(client: Any, account_cfg: dict, pair: Dict[str, Any],
             # missing-context problem. `close_open_position` treats a cancel
             # failure as logged-not-fatal (the position IS flat either way), so
             # passing them cannot turn a good close into a failed one.
-            res = close_open_position(client, account_cfg, symbol=symbol,
-                                      side=direction, qty=qty,
-                                      sl_order_id=row.get("sl_order_id"),
-                                      tp_order_id=row.get("tp_order_id"))
+            if _account_is_dry(account_cfg):
+                # Dry account: journal the close (the row was opened dry too),
+                # never reach the venue. See `_account_is_dry`.
+                res = _dry_close_result()
+            else:
+                res = close_open_position(client, account_cfg, symbol=symbol,
+                                          side=direction, qty=qty,
+                                          sl_order_id=row.get("sl_order_id"),
+                                          tp_order_id=row.get("tp_order_id"))
             if not res.get("ok"):
                 logger.warning("pairs: leg close not confirmed %s (%s): %s — row left open",
                                symbol, strat, res.get("error"))
@@ -1601,10 +1629,15 @@ def _revise_leg_tps(client: Any, account_cfg: dict, pair: Dict[str, Any],
                 out.append({"symbol": symbol, "revised": False, "reason": "unchanged",
                             "tp": new_tp})
                 continue
-            res = modify_open_order(client, account_cfg, symbol=symbol, tp=new_tp,
-                                    side=str(row.get("direction") or "").lower(),
-                                    qty=float(row.get("position_size") or 0.0),
-                                    cur_tp=cur, trade_id=row.get("id"))
+            if _account_is_dry(account_cfg):
+                # Dry account: nothing rests at the venue to amend; the journal
+                # TP still follows the prediction. See `_account_is_dry`.
+                res = _dry_close_result()
+            else:
+                res = modify_open_order(client, account_cfg, symbol=symbol, tp=new_tp,
+                                        side=str(row.get("direction") or "").lower(),
+                                        qty=float(row.get("position_size") or 0.0),
+                                        cur_tp=cur, trade_id=row.get("id"))
             ok = bool(isinstance(res, dict) and res.get("ok"))
             if ok:
                 db.update_trade(row["id"], {"take_profit_1": new_tp})
