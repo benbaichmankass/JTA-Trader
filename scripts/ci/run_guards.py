@@ -1345,6 +1345,16 @@ GUARDS: List[Dict[str, Any]] = [
         ],
     },
     {
+        # IP-IN-PUBLIC-LOGS (operator 2026-10-15): the live-trader and trainer addresses come from the VM_SSH_HOST /
+        # TRAINER_VM_IP repository secrets (masked in logs, one place to rotate), never a literal in a workflow.
+        "name": "workflow-vm-literal-guard",
+        "when": None,
+        "steps": [
+            ["python3", "scripts/ci/check_workflow_vm_literals.py", "--self-test"],
+            ["python3", "scripts/ci/check_workflow_vm_literals.py"],
+        ],
+    },
+    {
         # PI-20261005-RQ-ID-RACE-0001: generated units mint 001-899, hand-authored 900-999, and a
         # PR may not add a unit whose id is taken or sits in the wrong band.
         "name": "research-queue-id-bands",

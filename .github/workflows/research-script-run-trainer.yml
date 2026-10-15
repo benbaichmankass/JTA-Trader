@@ -54,6 +54,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
+      - name: Require VM host secrets (fail closed)
+        env:
+          NEED_TRAINER_VM_IP: ${{ secrets.TRAINER_VM_IP }}
+        run: |
+          fail=0
+          [ -n "${NEED_TRAINER_VM_IP}" ] || { echo "::error::secret TRAINER_VM_IP not set (Settings > Secrets and variables > Actions); refusing to continue before any ssh"; fail=1; }
+          exit "$fail"
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
@@ -92,7 +99,7 @@ jobs:
         id: tabpfn_key
         continue-on-error: true
         env:
-          TRAINER_IP: ${{ vars.TRAINER_VM_IP || '158.178.209.121' }}
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
           TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
           TABPFN_TOKEN: ${{ secrets.TABPFN_TOKEN }}
         run: |
@@ -107,7 +114,7 @@ jobs:
         id: run
         continue-on-error: true
         env:
-          TRAINER_IP: ${{ vars.TRAINER_VM_IP || '158.178.209.121' }}
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
           TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
           UNIT: ${{ inputs.research_unit }}
           HASHES: ${{ steps.plan.outputs.hashes }}
@@ -159,7 +166,7 @@ jobs:
         if: always()
         continue-on-error: true
         env:
-          TRAINER_IP: ${{ vars.TRAINER_VM_IP || '158.178.209.121' }}
+          TRAINER_IP: ${{ secrets.TRAINER_VM_IP }}
           TRAINER_USER: ${{ vars.TRAINER_VM_USER || 'ubuntu' }}
           UNIT: ${{ inputs.research_unit }}
         run: |

@@ -209,7 +209,7 @@ def test_idempotency_is_the_result_file_not_deletion(wf):
 # --------------------------------------------------------------------------
 
 LIVE_VM_TOKENS = [
-    "141.145.193.91",     # live trader (ict-bot-arm)
+    "${LIVE_IP:-",        # live trader (ict-bot-arm): the address comes from the VM_SSH_HOST secret, never a literal
     "158.178.210.252",    # terminated x86 micro, still referenced in old docs
     "10.0.0.251",         # IB gateway VM, private subnet
     "ict-bot.duckdns.org",
@@ -231,7 +231,8 @@ def test_scope_tripwire_covers_every_non_trainer_host(wf, token):
 def test_relay_targets_the_trainer_and_only_the_trainer(wf_text):
     """The SSH destination must be the trainer variable, never a literal live host."""
     assert "TRAINER_VM_IP" in wf_text
-    assert "158.178.209.121" in wf_text, "trainer default IP missing"
+    assert "secrets.TRAINER_VM_IP" in wf_text, "trainer address must come from the TRAINER_VM_IP secret"
+    assert "158.178.209.121" not in wf_text, "no literal trainer address in the workflow"
     # The live tokens appear ONLY inside the tripwire loop. Assert none of them is
     # used as an ssh destination.
     for token in LIVE_VM_TOKENS:

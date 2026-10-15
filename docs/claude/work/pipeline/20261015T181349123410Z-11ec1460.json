@@ -1,0 +1,19 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "the process is identified (owner/cmd), then killed or explained, or shown to be gone",
+    "due_date": "2026-10-17",
+    "kind": "date"
+  },
+  "id": "PI-20261015-KXMANT1S-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-FRONTIER-W42, trainer-vm-diag run 38717446413 (artifact trainer-vm-diag-38717446413)",
+    "rerun": "trainer-vm-diag cmd: ps -o pid,lstart,etimes,pcpu,cmd -p 2400542; ls -l /proc/2400542/cwd   # if the pid is gone: ps -eo pid,etimes,pcpu,cmd --sort=-etimes | head"
+  },
+  "routed_to": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "what": "Trainer pid 2400542 (`python3 -`, stdin-fed) was running 255,042 s (~2.95 days) at 65.8% average CPU (n=1 process, ps pcpu = CPU time over its whole lifetime since ~2026-10-12) on the 1-OCPU trainer when sampled by trainer-vm-diag run 38717446413 at 2026-10-15T10:03Z; looks like a leaked or runaway diag/relay process (started ~Oct 12). Possible contributor to a slow trainer and the 3600 s heavy-lock waits (a backtest_ict_scalp.py corpus run held the lock at the time). Not touched (read-only lane); nobody has identified its owner or decided to kill it."
+}
