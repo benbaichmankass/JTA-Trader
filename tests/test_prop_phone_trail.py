@@ -391,3 +391,37 @@ def test_phone_trail_projection_never_invents_zero():
     assert prop_journal._phone_trail_meta("not json") is None
     pt = prop_journal._phone_trail_meta({"phone_trail": {"amend": {"sl": "x"}, "last_plan": {}}})
     assert pt["amend_sl"] is None and pt["replay_sl"] is None and pt["resting_sl"] is None and pt["amend_status"] is None
+
+
+# ── trail crossed (PI-20261015-JWMGXOTH-0002) ────────────────────────────────
+# short: entry 2500, sl 2550 -> atr 20, trail = ext + 70. Bar lows 2400 then 2475: replay 2470; last close 2485
+CROSSED_SHORT = _candles([2415, 2490])
+
+
+def test_short_trail_crossed_emits_a_tighten_only_exit_amend_and_alerts_once(_iso):
+    _parent(direction="short")
+    out = ptr.plan_amends("breakout_2", now=NOW, candles_fn=lambda s, tf: CROSSED_SHORT)
+    am = _trail()["amend"]
+    assert out["emitted"] == ["T1#a1"] and am["kind"] == "sl" and am["from_sl"] == 2550.0
+    # 2485 + max(2 steps, 0.001 x 2485 = 2.485, 0.1 x 20 = 2.0) = 2487.485 -> rounded up to the step
+    assert 2487.48 < am["sl"] <= 2487.5 and am["sl"] < 2550.0
+    assert am["reason"].startswith("trail crossed")
+    assert _trail()["last_plan"]["action"] == "exit"
+    assert sum("trail CROSSED" in x for x in out["alerts"]) == 1
+
+
+def test_long_trail_crossed_exit_amend_sits_under_the_price():
+    _parent(direction="long")
+    c = _candles([2600, 2520])          # ext 2600 -> trail 2530; last close 2515 is under it
+    out = ptr.plan_amends("breakout_2", now=NOW, candles_fn=lambda s, tf: c)
+    am = _trail()["amend"]
+    assert out["emitted"] == ["T1#a1"] and am["from_sl"] == 2450.0
+    assert 2512.4 <= am["sl"] < 2512.52 and am["sl"] > 2450.0          # 2515 - 2.515, floored
+
+
+def test_trail_crossed_no_amend_when_the_resting_stop_is_already_tighter():
+    _parent(direction="short", meta={"phone_trail": {"resting_sl": 2486.0}})
+    out = ptr.plan_amends("breakout_2", now=NOW, candles_fn=lambda s, tf: CROSSED_SHORT)
+    tr = _trail()
+    assert out["emitted"] == [] and "amend" not in tr
+    assert tr["last_plan"]["action"] == "exit" and "already at or inside" in tr["last_plan"]["why"]
