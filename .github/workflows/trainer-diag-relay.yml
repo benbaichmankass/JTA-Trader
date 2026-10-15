@@ -268,7 +268,7 @@ jobs:
                 -o ServerAliveInterval=30 \
                 -o ServerAliveCountMax=10 \
                 "${TRAINER_USER}@${TRAINER_IP}" \
-                'bash -s' < /tmp/td_script.sh > /tmp/td_out.txt 2>&1 || true
+                'timeout --kill-after=30 3540 bash -s' < /tmp/td_script.sh > /tmp/td_out.txt 2>&1 || true
 
             # The sentinel is the ONLY proof the script reached the trainer and
             # ran to completion. ssh's own exit code cannot say this: 255 is

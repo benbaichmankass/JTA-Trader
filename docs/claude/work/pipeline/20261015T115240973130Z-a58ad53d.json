@@ -1,0 +1,25 @@
+{
+  "based_on": "20261015T105044467146Z-c35973b8.json",
+  "due_when": {
+    "due_date": "2026-10-22",
+    "kind": "date"
+  },
+  "id": "PI-20260930-3QNHBGND-0003",
+  "next_action": "check_observation",
+  "note_2026_10_15": "[lane ORDER-AUDIT-4 (session_01MAn9pCezunefaeMAhzFaGC)] Live: exactly 2 instances among 5000 packages (alpaca_paper pkg-32a5162b->4347 SPY, pkg-785d9a60->5265 TLT); the venue holds both (SPY 11, TLT 707). Root cause is the pre-FIX-CA-05 cascade; every package-close writer in order_monitor now holds a package with an open leg (read 2026-10-15). The missing paged check is INV-8 in check_db_integrity (#18275). The XRPUSDT real-money package's legs are closed, so the reattach refuses it. NEXT: on the manager's OK, dispatch system-action reattach-stranded-package-legs with apply: true (dry run #18274 10:37Z: 2 packages closed->open, XRPUSDT refused); then INV-8 total should read 0.",
+  "note_2026_10_15_apply": "[lane ORDER-AUDIT-4 10:52Z] APPLIED and OBSERVED. On the manager's OK (10:49Z, trig_017fk6hWdW3pm9Rp3QDR7Lm4), system-action #18282 reattach-stranded-package-legs ran with apply:true. An independent diag journal read at 10:51Z shows pkg-32a5162b and pkg-785d9a60 status=open, close_reason=NULL, linked 4347/5265, meta.reattach_repair recorded. The detector re-run over 5000 packages x trades 2631-6630 found 0 closed/orphaned packages with an open leg. The venue alpaca_paper position (SPY long 11, TLT short 707) matches the legs. Remaining: #18275 (INV-8) merge; then this item is done.",
+  "observation": {
+    "due_by": "2026-10-20",
+    "how_to_check": "journalctl -u ict-db-integrity on the live VM via the diag relay, or python3 scripts/check_db_integrity.py on the VM through a system-action; read the INV-8 line",
+    "what": "after #18275 merges, the hourly ict-db-integrity report carries INV-8 with total_count=0 (the 2 paper instances were re-attached 10:50Z, #18282)"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane PAPER-RESET session_01JjPRfAYQKaocTX3QnHBgnD; dispatched by manager session_01HYq6XtfesZ57VyaQrK6CL1",
+    "rerun": "scripts/ops/diag_fetch.sh 'journal?table=order_packages&limit=1000'  # packages status=closed whose linked_trade_id is an open trade (also page offset=1000,2000)"
+  },
+  "routed_to": "ORDER-AUDIT-4 PR #18275 (INV-8, Tier 1) + reattach apply (Tier 2, manager)",
+  "state": "done",
+  "terminal_reason": "[lane ORDER-AUDIT-4 (session_01MAn9pCezunefaeMAhzFaGC) 2026-10-15] DONE: merged, applied and observed. (1) The 2 live instances (alpaca_paper pkg-32a5162b -> 4347 SPY, pkg-785d9a60 -> 5265 TLT; the venue held both positions) were re-attached by system-action #18282 on manager OK. An independent diag re-read at 10:51Z showed both packages open, and the detector found 0 instances over 5000 packages. (2) The root-cause path (pre-FIX-CA-05 cascade) is guarded on main: every package-close writer in order_monitor holds a package that still has an open leg. (3) The missing paged invariant is INV-8 in scripts/check_db_integrity.py (#18275, merged 11:09Z). It is live on the VM: the ict-db-integrity runs at 11:11, 11:22 and 11:27Z print 'INV-8: recent=0 total=0', and a recent instance pages through db_integrity_alert.",
+  "what": "[journal/F-39 recurrence] Two alpaca_paper order_packages are CLOSED with close_reason=exchange_flat_reconciled while their linked legs are still OPEN: pkg-32a5162bbbdd4ef6 -> trade 4347 (SPY) and pkg-785d9a600c894c81 -> trade 5265 (TLT). MEASURED 2026-09-30 via diag journal (the 3000 newest order_packages rows; trades ids 2306-6305). These are two of the three packages that reattach-stranded-package-legs (Audit F-39 / MI-231, 2026-09-10) was built to re-open. So either the reattach never applied or something re-closed them. The PAPER-RESET closes both legs, which removes the paper instance. Two questions stay open: does the path that closes a package under an open leg still exist, and did it also re-close the real-money pkg-293021e2e84a48db (XRPUSDT 5474)?"
+}

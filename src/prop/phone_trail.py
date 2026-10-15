@@ -322,13 +322,29 @@ def _plan_one(conn: Any, r: Any, account_id: str, now: datetime, legs: Mapping[s
             new = plan.sl
         else:
             tr["last_plan"]["why"] = f"new stop {plan.sl} within {buf:.4g} of the price {px}: not amended"
+    exit_ = False
+    if plan.action == "exit" and candles is not None and len(candles):
+        # TRAIL CROSSED (PI-20261015-JWMGXOTH-0002): the harness has exited (prop_trail.plan_trail); the stop goes
+        # to the feed price + buffer (short) / - buffer (long), tighten-only, through the same amend channel. The
+        # phone re-checks it against the venue's own price before any click.
+        px = float(candles["close"].iloc[-1])
+        tgt = prop_trail.exit_stop(direction, px, step, plan.detail.get("atr"))
+        if prop_trail.tightens(direction, resting_sl, tgt, step):
+            new, exit_ = tgt, True
+            if not tr.get("exit_alerted"):
+                alerts.append(f"{tid}: trail CROSSED (replay {plan.replay_sl} through the price {px}): the harness "
+                              f"has exited, so the stop amend is to {tgt} (price + buffer). Tighten-only; no close")
+                tr["exit_alerted"] = True
+        else:
+            tr["last_plan"]["why"] = f"{plan.why}; the resting SL {resting_sl} is already at or inside {tgt}"
     if new is not None:
         seq = int(tr.get("seq") or 0) + 1
         tr["seq"] = seq
         tr["amend"] = {"id": f"{tid}#a{seq}", "status": "emitted", "kind": "sl", "from_sl": resting_sl,
                        "sl": new, "from_tp": resting_tp, "tp": resting_tp, "emitted_at": now.isoformat(),
                        "valid_until": (now + timedelta(seconds=AMEND_VALID_S)).isoformat(),
-                       "reason": f"trail: {tf} chandelier replay (bars={plan.bars}, mfe_r={plan.detail.get('mfe_r')})"}
+                       "reason": (f"trail crossed: exit stop at price + buffer (replay {plan.replay_sl})" if exit_ else
+                                  f"trail: {tf} chandelier replay (bars={plan.bars}, mfe_r={plan.detail.get('mfe_r')})")}
     if _cas(conn, tid, raw, {**m, KEY: tr}):
         out["alerts"].extend(alerts)
         if new is not None:

@@ -2288,7 +2288,8 @@ def get_journalctl(
 # OA-14); tests/test_diag_restart_pending_lockstep.py now pins the two equal.
 _NON_RUNTIME_PATHS_RE = re.compile(
     r"^(docs/|tests/|\.claude/|\.github/|[^/]+\.md$|research/|runtime_logs/"
-    r"|scripts/research/|scripts/ci/|comms/research/|comms/strategy_evidence/|comms/macro/)"
+    r"|scripts/research/|scripts/ci/|comms/research/|comms/strategy_evidence/|comms/macro/"
+    r"|tools/phone-executor/|tools/phone-probe/)"
 )
 # ...except these scripts/research modules, which the web-api's brief imports
 # in-process (OA-16(d), PI-20261004-GCFA5DOR-0010). They stay runtime. Mirrors
@@ -2388,11 +2389,17 @@ def _trader_restart_pending(running: str, on_disk: str) -> bool | None:
 
 def _deployed_sha_by_unit() -> dict[str, str | None]:
     """The deploy markers: ``deployed_sha.txt`` (every unit but the trader) and
-    ``deployed_sha_trader.txt`` (the trader, TRADER-RESTART-GATE). None = absent."""
+    ``deployed_sha_trader.txt`` (the trader, TRADER-RESTART-GATE). None = absent.
+
+    Read from ``<repo>/runtime_logs/`` -- where scripts/deploy_pull_restart.sh
+    writes them (``${REPO_DIR}/runtime_logs``) -- NOT ``runtime_logs_dir()``,
+    which on the live VM resolves to the data dir. OBSERVED 2026-10-15T12:17Z
+    (diag issue #18314): reading runtime_logs_dir() returned null for both."""
     out: dict[str, str | None] = {}
+    marker_dir = Path(repo_root()) / "runtime_logs"
     for unit, name in ((WEB_API_UNIT, "deployed_sha.txt"), (TRADER_UNIT, "deployed_sha_trader.txt")):
         try:
-            out[unit] = (runtime_logs_dir() / name).read_text(encoding="utf-8").strip() or None
+            out[unit] = (marker_dir / name).read_text(encoding="utf-8").strip() or None
         except OSError:
             out[unit] = None
     return out

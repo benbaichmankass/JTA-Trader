@@ -82,6 +82,16 @@ on:
   # "a check went red", it is "a check silently did not run", which renders
   # identically to green.
   workflow_dispatch:
+    inputs:
+      backstop:
+        # GH-CAPACITY-PR-CI-FANOUT (manager 2026-10-15T13:06Z): GitHub never fired this file's
+        # cron in its first 5 slots, so schedule-keeper ALSO dispatches pytest-run on main with
+        # default inputs. On main, backstop=true runs the post-merge backstop decision (full suite
+        # unless HEAD's code is already graded); backstop=false forces the full suite. On any other
+        # ref the input is ignored and the full suite runs, as before.
+        description: "On main: run the full suite only if HEAD's code has no completed full run"
+        type: boolean
+        default: true
 
 # Concurrency (2026-08-10, BL-20260810-REQUIRED-WORKFLOWS-NO-CONCURRENCY-GROUP).
 # Without a group, a re-queue (a second push to the same PR, or the
@@ -104,10 +114,15 @@ concurrency:
 # for pull_request/merge_group/dispatch; for push the running run finishes and
 # GitHub keeps at most ONE pending run in the group (a newer push replaces the
 # pending one), bounding cost at one running + one pending instead of one per merge.
-  group: pytest-run-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
-  # The backstop (schedule) never cancels either: its group is constant (one ref, main), so a
-  # cancelling tick would kill the full run it exists to finish.
-  cancel-in-progress: ${{ github.event_name != 'push' && github.event_name != 'schedule' }}
+  # The post-merge backstop (the schedule tick, and the keeper's workflow_dispatch on main) shares
+  # ONE constant group and never cancels: a cancelling tick would kill the full run it exists to
+  # finish, and serialising cron + keeper means the second one sees the first's completed full run
+  # and no-ops. Every other event keeps its per-event, per-PR/ref group.
+  group: >-
+    ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'))
+    && 'pytest-run-backstop-main'
+    || format('pytest-run-{0}-{1}', github.event_name, github.event.pull_request.number || github.ref) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main') }}
 
 permissions:
   contents: read
@@ -142,7 +157,7 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -e
-          if [ "${{ github.event_name }}" = "schedule" ]; then
+          if [ "${{ github.event_name }}" = "schedule" ] || { [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.ref }}" = "refs/heads/main" ] && [ "${{ inputs.backstop }}" != "false" ]; }; then
             # Post-merge backstop: full suite on main's HEAD unless its code is already graded.
             DECISION=$(python3 scripts/ci/pytest_run_backstop.py --head "${{ github.sha }}")
             echo "$DECISION"

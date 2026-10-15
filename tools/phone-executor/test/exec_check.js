@@ -357,6 +357,63 @@ document.getElementById('cf').onclick=function(){window.__confirm=(window.__conf
   eq(await rQ("window.__tpcell || 0"), 0, "tpsl Q: the Positions 'TP / SL' header and cell are never clicked");
   eq(await rQ("__ex.cancelModals()"), 1, "tpsl Q: the Edit Take profit dialog is cancelled");
   eq([await rQ("window.__cancel || 0"), await rQ("window.__confirm || 0"), await rQ("__ex.cancelModals()")], [1, 0, 0], "tpsl Q: Cancel clicked once, Confirm never; nothing left to cancel");
+  // PHONE-FGS-EXEC (12:56Z, account_status stale since 11:38): a finished ticket left the order form open on the engine
+  // page, so terminal().ticketOpen stayed true and readAccount read "busy". closeTicket clicks the ONE "Order form"
+  // toggle outside the form (never the submit, never inside the form); terminal() then reads the form closed.
+  const idleForm = `<!doctype html><html><body><button id=tg>Order form</button><button>Open orders</button><button>Positions1</button>
+<form id=f><div role=tablist><button type=button role=tab aria-selected=false>Market</button><button type=button role=tab aria-selected=true>Limit</button></div>
+<label for=lp>Limit price</label><input id=lp type=text value="2,295.99"><label for=q>Quantity</label><input id=q type=text value="0.01">
+<button type=submit id=sub>Long (buy) ETH</button></form>
+<script>document.getElementById('tg').onclick=function(){window.__toggle=(window.__toggle||0)+1;var f=document.getElementById('f');f.style.display=f.style.display==='none'?'':'none';};
+document.getElementById('sub').onclick=function(){window.__subclick=(window.__subclick||0)+1;};
+document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__submitted=(window.__submitted||0)+1};</script></body></html>`;
+  const pI = await onHost(idleForm); const rI = (code) => pI.evaluate(code);
+  eq(await rI("__ex.terminal().ticketOpen"), true, "idle form: the left-open order form reads as a ticket");
+  eq(await rI("__ex.closeTicket()"), "clicked", "idle form: its panel toggle is clicked");
+  eq([await rI("__ex.terminal().ticketOpen"), await rI("__ex.terminal().ready"), await rI("__ex.closeTicket()")], [false, true, "closed"], "idle form: closed, terminal still ready, nothing left to close");
+  eq([await rI("window.__toggle || 0"), await rI("window.__subclick || 0"), await rI("window.__submitted || 0")], [1, 0, 0], "idle form: one toggle click, the submit never clicked, nothing submitted");
+  // manager 13:03Z: never while a stray modal is open, never a toggle inside one. An Edit Take profit dialog holding its
+  // own "Order form" button is open: closeTicket refuses (modal_open, nothing clicked); dismissModals cancels it by the
+  // shared rule, then only the panel tab is clicked.
+  const pIm = await onHost(idleForm.replace('<form id=f>', '<div role=dialog id=dm><h3>Edit Take profit</h3><button id=dmo>Order form</button><button id=dmc>Cancel</button><button id=dmf>Confirm</button></div><form id=f>')
+    .replace('</script>', "['dmo','dmf'].forEach(function(i){document.getElementById(i).onclick=function(){window.__dlgclick=(window.__dlgclick||0)+1;};});document.getElementById('dmc').onclick=function(){window.__cancel=(window.__cancel||0)+1;document.getElementById('dm').remove();};</script>"));
+  const rIm = (code) => pIm.evaluate(code);
+  eq([await rIm("__ex.closeTicket()"), await rIm("window.__toggle || 0"), await rIm("window.__dlgclick || 0")], ["modal_open", 0, 0], "idle form + modal: refused, nothing clicked");
+  eq([(await rIm("__ex.dismissModals()")).cancelled, await rIm("__ex.closeTicket()")], [1, "clicked"], "idle form + modal: Cancel first, then the panel toggle");
+  eq([await rIm("window.__cancel || 0"), await rIm("window.__dlgclick || 0"), await rIm("window.__toggle || 0"), await rIm("window.__subclick || 0"), await rIm("__ex.terminal().ticketOpen")],
+    [1, 0, 1, 0, false], "idle form + modal: the dialog's Order form / Confirm never clicked, the submit never clicked, form closed");
+  // PHONE-FGS-EXEC (manager 12:47Z): the 10:48Z refusal's DOM shape (phone-test-60715df76a4d dump). Ticket on SOL, the
+  // "Select market" picker in its own popup, AND an "Edit Take profit" dialog already open with the position's "ETH"
+  // label, a "Take profit Quantity" and a "Distance for Trigger" input, Cancel / Confirm. That dialog's "ETH" is the
+  // second picker candidate 1b.233 saw (market_ambiguous). Nothing in the dialog may be clicked by the symbol route; the
+  // step-2 reset cancels it (Cancel once, Confirm never) and the pick then lands on the one market row.
+  const r1048 = `<!doctype html><html><body>
+<div role=button id=chip aria-label="Select market">SOL 20x</div><button>Order form</button><button>Open orders1</button><button>Positions1</button>
+<div role=dialog id=pk style="display:none"><input type=search role=searchbox placeholder=Search><button>All</button><div id=list></div></div>
+<div role=dialog id=tp><h3>Edit Take profit</h3><div>ETH</div><input aria-label="Take profit Quantity" type=text><input type=text><input aria-label="Distance for Trigger" type=text>
+<label><input type=checkbox>TP/SL</label><button id=cn>Cancel</button><button id=cf>Confirm</button></div>
+<form id=f><div role=tablist><button type=button role=tab aria-selected=false>Market</button><button type=button role=tab aria-selected=true>Limit</button></div>
+<label for=lp>Limit price</label><input id=lp type=text value="102.1"><label for=q>Quantity</label><input id=q type=text value="1.00">
+<button type=submit id=sub>Short (sell) SOL</button></form>
+<script>
+document.getElementById('tp').addEventListener('click',function(e){if(e.target.id!=='cn')window.__tpclick=(window.__tpclick||0)+1;},true);
+document.getElementById('cn').onclick=function(){window.__cancel=(window.__cancel||0)+1;document.getElementById('tp').remove();};
+document.getElementById('cf').onclick=function(){window.__confirm=(window.__confirm||0)+1;};
+function pick(s){document.getElementById('chip').textContent=s+' 20x';document.getElementById('sub').textContent='Long (buy) '+s;document.getElementById('pk').style.display='none';}
+function row(txt,s){var d=document.createElement('div');d.innerHTML='<span>'+txt+'</span>';d.onclick=function(){window.__picks=(window.__picks||0)+1;pick(s)};return d;}
+document.getElementById('chip').onclick=function(){var l=document.getElementById('list');l.innerHTML='';document.getElementById('pk').style.display='block';
+ [['ETH 20x - 2,369.47USD -1.20%','ETH'],['BTC 50x - 62,410.5USD -1.20%','BTC']].forEach(function(r){l.appendChild(row(r[0],r[1]))});};
+document.getElementById('f').onsubmit=function(e){e.preventDefault();window.__submitted=(window.__submitted||0)+1};</script></body></html>`;
+  // without the reset (the 1b.233 entry): the dialog's "ETH" is a candidate, but only the picker row has the market shape
+  const pW0 = await onHost(r1048); const rW0 = (code) => pW0.evaluate(code);
+  eq(await rW0("[__ex.symbolReset(), __ex.symbolStep('ETHUSD'), __ex.symbolStep('ETHUSD')]"), ["ok", "opened_market", "picked_market"], "10:48 shape: the picker row is picked, not the dialog's ETH label");
+  eq([await rW0("window.__tpclick || 0"), await rW0("window.__confirm || 0"), await rW0("window.__cancel || 0"), await rW0("window.__picks || 0")], [0, 0, 0, 1], "10:48 shape: the symbol route clicks nothing in the Edit Take profit dialog");
+  // the step-2 background order: cancelModals, escape, then the symbol route
+  const pW = await onHost(r1048); const rW = (code) => pW.evaluate(code);
+  eq(await rW("[__ex.cancelModals(), __ex.escape(), __ex.symbolReset()]"), [1, "ok", "ok"], "10:48 reset: the Edit Take profit dialog is cancelled");
+  eq(await rW("[__ex.symbolStep('ETHUSD'), __ex.symbolStep('ETHUSD'), __ex.symbolStep('ETHUSD')]"), ["opened_market", "picked_market", "done"], "10:48 reset: SOL -> ETH picked");
+  eq([await rW("window.__cancel || 0"), await rW("window.__confirm || 0"), await rW("window.__tpclick || 0"), await rW("window.__submitted || 0")],
+    [1, 0, 0, 0], "10:48 reset: Cancel once, Confirm never, no other dialog click, nothing submitted");
   // SERVER READ-BACK (PHONE-GO-TOKEN, design 3.4): the app builds the read-back from these page reads (MainActivity.kt
   // readBack: SELECTED tabs, the submit label + disabled state, the TP/SL box, the by-label values) and hashes
   // "key=value" lines in READBACK_FIELDS order (== src/prop/phone_executor.py). Mirrors the app; proves the page reads
@@ -834,7 +891,9 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
   eq((await tp.evaluate("__ex.sheetTarget('ETHUSD','child',false)")).why, "sheet_open", "native: never targeted with the sheet already open");
   // a point covered by another element (an overlay, a row ✕ drawn over the cell) is refused, never touched
   const cv = await onHost(sheetPage().replace("</body>", "<div id=ov style='position:fixed;left:0;top:0;width:100%;height:100%'></div></body>"));
-  eq((await cv.evaluate("__ex.sheetTarget('ETHUSD','child',false)")).why, "covered", "native: a covered point is refused");
+  let cvr = await cv.evaluate("__ex.sheetTarget('ETHUSD','child',false)");
+  eq([cvr.why, /^p\d+_\d+ v\d+x\d+ r-?\d+_-?\d+_\d+x\d+$/.test(cvr.g1), /^vv\d+x\d+\/\d+_\d+s[\d.]+ e\d+ sc\d+ dpr[\d.]+/.test(cvr.g2), cvr.g1.length <= 40 && cvr.g2.length <= 40],
+    ["covered", true, true, true], "native: a covered point is refused, with its geometry (numbers only, fits the 40-char scrub)");
   const dz = await onHost(sheetPage().replace('<div id=chm>ETH <span>5x</span></div>', '<div id=chm style="position:relative">ETH <span>5x</span><i aria-label="Close" style="position:absolute;left:0;top:0;right:0;bottom:0"></i></div>'));
   eq(/^(point_)?deny_/.test((await dz.evaluate("__ex.sheetTarget('ETHUSD','child',false)")).why), true, "native: a close control under the point is refused");
   eq((await (await onHost(sheetPage({noChild: true}))).evaluate("__ex.sheetTarget('ETHUSD','child',false)")).why, "none", "native: no child row -> none (the amend path reads none as no position only with group none too)");
@@ -844,5 +903,16 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
   eq([cs.ok, cs.hdr, cs.groups, cs.child_rows, cs.sides.length, cs.sides[0].side, cs.sides[0].cells, cs.sides[0].picked, cs.sides[0].tpsl], [true, 9, 1, 1, 1, "short", 9, true, 1], "child shape: one Short in a 9-cell child row that childRows picks");
   let er = await ex.evaluate("__ex.positionsRead()");
   eq([er.state, er.rows.length, er.rows[0].side, er.rows[0].row_kind], ["read", 1, "short", "child"], "expanded child row: side read as text, state read");
+  // a stray "Edit Take profit" modal (manager 11:02Z: seen open on the engine page) is dismissed by its Cancel, never Confirm
+  const tm = await onHost(sheetPage().replace('<h3 id=mt>Edit Stop loss</h3>', '<h3 id=mt>Edit Take profit</h3>').replace('<div id=modal style="display:none">', '<div id=modal style="display:block">'));
+  let tmi = await tm.evaluate("__ex.modalInfo()");
+  eq([tmi.n, tmi.kind], [1, "take"], "stray modal: the open Edit Take profit modal is seen");
+  eq([await tm.evaluate("__ex.modalCancel()"), (await tm.evaluate("__ex.modalInfo()")).n, await tm.evaluate("window.__saved"), await tm.evaluate("window.__danger")], ["clicked", 0, 0, 0], "stray modal: Cancel closes it; Confirm never clicked");
+  // ONE dismiss rule (cancelModals / dismissModals share it): an Edit Take profit modal WITHOUT a dialog role is found too
+  const tm2 = await onHost(sheetPage().replace('<h3 id=mt>Edit Stop loss</h3>', '<h3 id=mt>Edit Take profit</h3>').replace('<div id=modal style="display:none">', '<div id=modal style="display:block">'));
+  eq((await tm2.evaluate("__ex.modalsOpen()")).n, 1, "dismiss: an open edit modal holding Confirm is counted");
+  let dm = await tm2.evaluate("__ex.dismissModals()");
+  eq([dm.found, dm.cancelled, dm.esc, (await tm2.evaluate("__ex.modalsOpen()")).n, await tm2.evaluate("window.__saved")], [1, 1, false, 0, 0], "dismiss: its Cancel clicked, nothing left, Confirm never clicked");
+  eq([(await tm2.evaluate("__ex.dismissModals()")).found, await tm2.evaluate("__ex.cancelModals()")], [0, 0], "dismiss: nothing open -> nothing found / cancelled");
   await b.close(); console.log("exec_check: all passed");
 })().catch((e) => { console.error(e); process.exit(1); });

@@ -51,6 +51,9 @@ def test_diag_in_process_exception_equals_the_deploy_exception():
 def test_diag_classifier_matches_the_deploy_on_the_edge_paths():
     from src.web.api.routers.diag import _is_runtime_path
     assert not _is_runtime_path("comms/macro/valuation_snapshots.jsonl")
+    assert not _is_runtime_path("tools/phone-executor/app/src/main/assets/exec.js")
+    assert not _is_runtime_path("tools/phone-probe/README.md")
+    assert _is_runtime_path("tools/gemini_delegate.ipynb")  # only the two app trees
     assert not _is_runtime_path("scripts/research/regime_matrix.py")
     assert _is_runtime_path("scripts/research/queue_throughput.py")
     assert _is_runtime_path("comms/claude_strategy_scores.jsonl")

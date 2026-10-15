@@ -64,7 +64,8 @@ CLOSURE_REL = "config/trader_import_closure.txt"
 #: tests/test_diag_restart_pending_lockstep.py pins all three equal.
 NON_RUNTIME_PATHS_RE = re.compile(
     r"^(docs/|tests/|\.claude/|\.github/|[^/]+\.md$|research/|runtime_logs/"
-    r"|scripts/research/|scripts/ci/|comms/research/|comms/strategy_evidence/|comms/macro/)"
+    r"|scripts/research/|scripts/ci/|comms/research/|comms/strategy_evidence/|comms/macro/"
+    r"|tools/phone-executor/|tools/phone-probe/)"
 )
 
 #: ...except these scripts/research modules, which the WEB-API imports in-process
