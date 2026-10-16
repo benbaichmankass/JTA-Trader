@@ -3,7 +3,7 @@
 # only while `queue_replenish.py --verify` reproduces it byte-for-byte from the template.
 id: RQ-20260929-006
 title: 'M20 exit-lever sweep: gld_pullback_1h (generated, monthly)'
-status: queued
+status: retired
 cadence: monthly
 kind: experiment
 theme: live_strategy
@@ -76,3 +76,8 @@ grading:
   reason: 1 row(s), all measured, all pass
   rows: 1
   verdict: pass
+retired_reason: '2026-10-16 P1-ATM-BACKLOG-1016: gld_pullback_1h is routed to NO account (config/accounts.yaml
+  strategies: rosters, read 2026-10-16 via src.config.accounts_loader; queue_replenish.repo_facts no longer
+  lists it), so a monthly exit/bracket re-sweep measures a leg that does not trade. Retired, not answered.
+  Generator gap (a generated unit whose leg left the roster is never retired, and its retired key blocks
+  re-minting if the leg returns) filed on checklist row QUEUE-GEN-ROSTER-SYNC.'
