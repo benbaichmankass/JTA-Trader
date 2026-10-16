@@ -1,0 +1,22 @@
+{
+  "id": "GRADER-FAIL-WORDING",
+  "title": "Build: exit_lever_ablation.py sweep FAIL label says 'the removed lever's lines are dead: strip them' -- wrong for ENTRY sweeps (B is the declared value, not a removed lever); reword per grade so a FAIL cannot drive a Tier-3 strip of a working entry param",
+  "phase": "W42",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-16 lane P3-STRATEGY-BACKLOG-1016, programme-03 audit \u00a7 4.2 (PR #18532)] VERIFIED in code this session: scripts/research/exit_lever_ablation.py docstring line 67 'fail if none does (the removed lever's lines are dead: strip them)' and the sweep grader's FAIL label is reused by every M21 entry sweep (470a-02..09, f0e2-*), whose baseline B is the leg AS DECLARED, so the right reading of a FAIL is 'the declared value stands; the axis is honest_negative on this window'. Fix: a --sweep-kind entry|exit flag (or infer from whether B unsets a key) selecting the label; self-test both. New P3 units RQ-20261016-c56e-05..09 already state the correct reading in their rule. Tier 1 research tooling.",
+  "updated_at": "2026-10-16T07:41:03Z",
+  "updated_by": "P3-STRATEGY-BACKLOG-1016",
+  "roadmap": [
+    "L-LADDER",
+    "M21"
+  ],
+  "_seq": 528
+}
