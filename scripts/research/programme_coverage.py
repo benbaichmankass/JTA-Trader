@@ -165,7 +165,11 @@ def check(cov: Dict[str, Any], baseline: Dict[str, int]) -> List[str]:
             fails.append(f"{r['programme']} ({r['plan']}): {n} uncovered question(s) {r['uncovered']} > baseline {cap} "
                          "-- add a node (a `needs_authoring:` line is enough) or a reasoned `questions:` discharge")
         for prob in r["problems"]:
-            if prob.startswith("questions.") or prob.startswith("tree "):
+            # A malformed `questions:` discharge fails (it would read as covered). A tree whose
+            # `programme:` / `plan:` header disagrees with its plan is WARNED, never failed: the
+            # programme lanes write these trees, and a header typo must not block their PR (manager,
+            # 2026-10-16) -- the questions still count as uncovered until a node names them.
+            if prob.startswith("questions."):
                 fails.append(f"{r['programme']}: {prob}")
     return fails
 
@@ -212,6 +216,12 @@ def _self_test() -> int:
         assert any("P2" in x for x in check(cov, {"P1": 9}))
         assert any("P1" in x and "> baseline" in x for x in check(cov, {"P1": 0, "P2": 2}))
         assert "P2 2/2 uncovered (NO TREE)" in summary_line(cov)
+        # a tree that LANDS later can only lower the count; a header mismatch warns, never fails
+        (r / TREES / "02-beta.yaml").write_text("programme: P9\nplan: wrong.md\nnodes:\n  - {id: P2-Q0, needs_authoring: x}\n")
+        cov2 = coverage(r)
+        b2 = cov2["programmes"][1]
+        assert b2["uncovered"] == ["Q1"] and any(p.startswith("tree ") for p in b2["problems"]), b2
+        assert not [x for x in check(cov2, base) if x.startswith("P2")], check(cov2, base)
     print("programme-coverage self-test OK")
     return 0
 
@@ -250,6 +260,10 @@ def main(argv: Optional[List[str]] = None) -> int:
                 print(f"  {r['programme']} uncovered: {', '.join(r['uncovered'])}")
     if args.check:
         fails = check(cov, load_baseline(_REPO))
+        for r in cov["programmes"]:
+            for prob in r["problems"]:
+                if prob.startswith("tree ") or prob.startswith("no tree"):
+                    print(f"::warning::programme-coverage: {r['programme']}: {prob}")
         for f in fails:
             print(f"::error::programme-coverage: {f}")
         print("programme-coverage --check: " + ("OK" if not fails else f"FAIL ({len(fails)})"))
