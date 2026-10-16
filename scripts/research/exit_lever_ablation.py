@@ -87,6 +87,33 @@ flags, never defaults chosen here:
     flags). pass iff net_r > 0 AND n >= n_floor AND >= fold_majority folds net
     > 0; fail otherwise at n >= n_floor; indeterminate when n < n_floor or a
     ``--control`` arm does not reproduce its committed record.
+  * ``holdout`` (PROMOTION-BAR-HOLDOUT-1016; operator decision 2026-10-16, "Require holdout":
+    *"promotion needs a pass on the held-back 25% ... one setting tested once, so no deflation
+    is needed"*) -- SELECT on the earliest span, then test the ONE selected arm ONCE on the latest
+    span. Every arm runs once over the whole pinned window (one continuous harness pass, so
+    indicators warm up exactly as the record's run did); the boundary is fixed BEFORE any outcome
+    is read: the latest ``--holdout-frac`` (default 0.25) of the calendar window, grown in 1%
+    steps until it holds ``--holdout-min-trades`` (default 25) of the BASELINE arm's entries
+    (entry times only, never an outcome), capped at ``--holdout-max-frac`` (default 0.40); a leg
+    still short at the cap is run anyway and grades ``underpowered``. DISCOVERY sees only trades
+    whose entry AND exit precede the boundary (``discovery_trades`` raises ``HoldoutLeak`` on
+    anything else; a trade straddling the boundary is in neither span). SELECTION: an arm is
+    eligible iff its discovery n >= ``--n-floor``, discovery net R > 0 and >= ``--fold-majority``
+    of ``--folds`` calendar folds of the discovery span are net-positive; the eligible arm with
+    the highest discovery net R is selected (a tie goes to ``--baseline``, then declaration
+    order). HOLDOUT: the selected arm's trades entered on/after the boundary, read once.
+      pass / ``confirmed``          if n_holdout >= --holdout-min-trades and net R > 0;
+      fail / ``not_replicated``     if n_holdout >= the floor and net R <= 0 (closes the
+                                    CONFIGURATION, never the family);
+      fail / ``no_discovery``       if no arm is eligible on discovery (nothing to confirm) while at
+                                    least one arm held >= --n-floor discovery trades;
+      indeterminate / ``insufficient_discovery`` if every arm held < --n-floor discovery trades
+                                    (a power shortfall, never evidence against the leg);
+      indeterminate / ``underpowered`` if n_holdout < the floor.
+    The verdict carries ``holdout_confirmation`` in the exact shape
+    ``scripts/ops/mandate_resolver.py`` clause ``R-HOLDOUT`` reads from a Stage-0 record
+    (``source_run`` is null here: whoever writes the record points it at the committed
+    ``verdict.json``).
 Honesty notes. ``maxDD`` and ``net_total_r`` are read from the harness's own
 ``--json`` summary, never re-derived. ``delta_r`` is a MATERIALITY bar in R
 over the whole window (the unit says why that value), not a significance test;
@@ -111,7 +138,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(REPO / "scripts" / "research"), str(REPO / "scripts"), str(REPO)]
 
 VERDICTS = ("pass", "fail", "indeterminate")
-GRADES = ("parity", "sweep", "stage0", "replace")
+GRADES = ("parity", "sweep", "stage0", "replace", "holdout")
 N_FOLDS = 4
 
 
@@ -451,11 +478,170 @@ def grade_stage0(arms: dict[str, dict[str, Any]], *, baseline: str, fold_majorit
             "why": f"net_r={b['net_r']} with {pos}/{N_FOLDS} positive folds (needs > 0 and >= {fold_majority})"}
 
 
+# ── holdout (pure; see the module docstring's ``holdout`` grade) ───────────────
+class HoldoutLeak(ValueError):
+    """A trade at or after the holdout boundary reached the selection step."""
+
+
+def holdout_boundary(entry_times: list[Any], lo: Any, hi: Any, *, frac: float, min_trades: int,
+                     max_frac: float) -> dict[str, Any]:
+    """Place the boundary from the calendar window and the BASELINE arm's entry times only.
+
+    The share starts at ``frac`` and grows in 1% steps until the span [boundary, hi] holds
+    ``min_trades`` entries, capped at ``max_frac``. Returns the boundary, the share used, the
+    baseline entries in the span, and whether the cap was hit short of the floor."""
+    if not (0.0 < frac <= max_frac < 1.0):
+        raise ValueError(f"need 0 < holdout_frac <= holdout_max_frac < 1 (got {frac}, {max_frac})")
+    ts = sorted(_ts(t) for t in entry_times)
+    steps = int(round((max_frac - frac) * 100))
+    share = frac
+    for i in range(steps + 1):
+        share = round(frac + i / 100.0, 4)
+        boundary = hi - (hi - lo) * share
+        n = sum(1 for t in ts if boundary <= t <= hi)
+        if n >= min_trades:
+            return {"boundary": boundary, "share": share, "baseline_n_holdout": n, "grown": i > 0,
+                    "short_at_cap": False}
+    boundary = hi - (hi - lo) * max_frac
+    n = sum(1 for t in ts if boundary <= t <= hi)
+    return {"boundary": boundary, "share": max_frac, "baseline_n_holdout": n, "grown": True,
+            "short_at_cap": True}
+
+
+def discovery_trades(trades: list[dict[str, Any]], boundary: Any) -> list[dict[str, Any]]:
+    """Trades whose entry AND exit precede the boundary; anything that touches the held-back
+    span is dropped here, so the selection step cannot see it."""
+    out = []
+    for t in trades:
+        ex = t.get("exit_time")
+        if ex and _ts(t["entry_time"]) < boundary and _ts(ex) < boundary:
+            out.append(t)
+    return out
+
+
+def holdout_trades(trades: list[dict[str, Any]], boundary: Any, hi: Any) -> list[dict[str, Any]]:
+    return [t for t in trades if boundary <= _ts(t["entry_time"]) <= hi]
+
+
+def _assert_discovery_only(trades: list[dict[str, Any]], boundary: Any) -> None:
+    for t in trades:
+        if _ts(t["entry_time"]) >= boundary or not t.get("exit_time") or _ts(t["exit_time"]) >= boundary:
+            raise HoldoutLeak(f"trade entered {t.get('entry_time')} / exited {t.get('exit_time')} touches the "
+                              f"held-back span (boundary {boundary}) and reached selection")
+
+
+def _span_stats(trades: list[dict[str, Any]], edges: list[Any] | None) -> dict[str, Any]:
+    net = round(sum(float(t.get("net_r") or 0.0) for t in trades), 4)
+    out: dict[str, Any] = {"n": len(trades), "net_r": net,
+                           "expectancy_r": round(net / len(trades), 4) if trades else None}
+    if edges is not None:
+        folds = fold_net_r(trades, edges)
+        out["folds"] = folds
+        out["folds_positive"] = sum(1 for f in folds if f["net_r"] > 0)
+    return out
+
+
+def select_on_discovery(disc: dict[str, list[dict[str, Any]]], *, order: list[str], baseline: str,
+                        boundary: Any, edges: list[Any], n_floor: int, fold_majority: int
+                        ) -> tuple[str | None, dict[str, Any]]:
+    """The pre-registered selection rule over DISCOVERY trades only (see the docstring)."""
+    table: dict[str, Any] = {}
+    best, best_r = None, None
+    ranked = [baseline] + [lab for lab in order if lab != baseline]
+    for lab in ranked:
+        _assert_discovery_only(disc[lab], boundary)
+        st = _span_stats(disc[lab], edges)
+        ok = st["n"] >= n_floor and st["net_r"] > 0 and st["folds_positive"] >= fold_majority
+        st["eligible"] = ok
+        table[lab] = st
+        if ok and (best_r is None or st["net_r"] > best_r):
+            best, best_r = lab, st["net_r"]
+    return best, table
+
+
+def grade_holdout(selected: str | None, held: dict[str, Any] | None, *, min_trades: int,
+                  plan: dict[str, Any], table: dict[str, Any], n_floor: int = 0) -> dict[str, Any]:
+    m = {"selected": selected, "selected_from": len(table), "discovery": table, "plan": plan,
+         "holdout": held, "holdout_min_trades": min_trades, "discovery_n_floor": n_floor,
+         "evaluations_on_holdout": 1 if selected else 0}
+    if selected is None and table and all((st.get("n") or 0) < n_floor for st in table.values()):
+        return {"verdict": "indeterminate", "label": "insufficient_discovery", **m,
+                "why": f"every arm holds < {n_floor} discovery trades: selection could not be made, which is a "
+                       "power shortfall, not evidence against the leg"}
+    if selected is None:
+        return {"verdict": "fail", "label": "no_discovery", **m,
+                "why": "no arm is eligible on the discovery span (n floor, net R > 0, fold majority): nothing to confirm"}
+    if held["n"] < min_trades:
+        return {"verdict": "indeterminate", "label": "underpowered", **m,
+                "why": f"{selected} holds n={held['n']} held-back trades < {min_trades}: the span cannot decide"}
+    if held["net_r"] > 0.0:
+        return {"verdict": "pass", "label": "confirmed", **m,
+                "why": f"{selected} (selected from {len(table)} on discovery) reads net_r={held['net_r']} over "
+                       f"n={held['n']} held-back trades, read once"}
+    return {"verdict": "fail", "label": "not_replicated", **m,
+            "why": f"{selected} reads net_r={held['net_r']} over n={held['n']} held-back trades: the configuration "
+                   "does not replicate (closes the configuration, never the family)"}
+
+
+def holdout_confirmation(g: dict[str, Any], *, fingerprint: str | None, cost_stack: dict[str, Any],
+                         lo: Any, hi: Any, unit: str | None) -> dict[str, Any]:
+    """The block mandate_resolver.py R-HOLDOUT reads off a Stage-0 record."""
+    plan, held = g["plan"], g.get("holdout") or {}
+    import pandas as pd
+    b = plan["boundary"]
+    disc_end = str(b - pd.Timedelta(seconds=1))
+    return {"verdict": g["label"], "research_unit": unit,
+            "decision_rule": {"id": f"RULE-{unit}" if unit else None, "registered_before_run": True},
+            "selected_label": g["selected"], "selected_config_fingerprint": fingerprint,
+            "selected_from": g["selected_from"], "evaluations_on_holdout": g["evaluations_on_holdout"],
+            "discovery": {"start": str(lo), "end": disc_end},
+            "holdout": {"start": str(b), "end": str(hi), "share": plan["share"],
+                        "short_at_cap": plan["short_at_cap"]},
+            "n_holdout": held.get("n"), "net_r_holdout": held.get("net_r"),
+            "expectancy_r_holdout": held.get("expectancy_r"), "cost_stack": cost_stack, "source_run": None}
+
+
 def verdict_record(grade: dict[str, Any], *, leg: str, arms: dict[str, dict[str, Any]], population: str,
                    n: int, extra: dict[str, Any]) -> dict[str, Any]:
     return {"verdict": grade["verdict"], "read_state": "measured", "population": population, "n": n,
             "measurement": {"leg": leg, "label": grade.get("label"), "grade": grade, "arms": arms, **extra},
             "note": f"{grade['verdict'].upper()} / {grade.get('label')}: {grade.get('why')}"}
+
+
+def _run_holdout(a: Any, base: dict[str, Any], specs: list[Any], labels: list[str], arms_dir: Path,
+                 edges: list[Any], arms: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """Boundary from the baseline arm's entry times, selection on discovery, one read of the winner."""
+    sys.path.insert(0, str(REPO / "scripts" / "ci"))
+    from check_roster_promotion_evidence import config_fingerprint
+    lo, hi = edges[0], edges[-1]
+    trades = {lab: _load_trades(str(arms_dir / f"{lab}__trades.jsonl")) for lab in labels}
+    plan = holdout_boundary([t["entry_time"] for t in trades[a.baseline]], lo, hi, frac=a.holdout_frac,
+                            min_trades=a.holdout_min_trades, max_frac=a.holdout_max_frac)
+    b = plan["boundary"]
+    step = (b - lo) / N_FOLDS
+    d_edges = [lo + step * i for i in range(N_FOLDS)] + [b]
+    disc = {lab: discovery_trades(trades[lab], b) for lab in labels}
+    sel, table = select_on_discovery(disc, order=labels, baseline=a.baseline, boundary=b, edges=d_edges,
+                                     n_floor=a.n_floor, fold_majority=a.fold_majority)
+    held = _span_stats(holdout_trades(trades[sel], b, hi), None) if sel else None
+    plan_out = {**plan, "boundary": b, "discovery_fold_edges": [str(e) for e in d_edges],
+                "straddling_excluded": {lab: sum(1 for t in trades[lab] if _ts(t["entry_time"]) < b)
+                                        - len(disc[lab]) for lab in labels}}
+    g = grade_holdout(sel, held, min_trades=a.holdout_min_trades, plan=plan_out, table=table, n_floor=a.n_floor)
+    # The cost stack every arm ran at (the selected arm's; the baseline's when nothing was selected).
+    c = arms[sel or a.baseline]["cost_stack"]
+    cs = {"fees": c.get("fee_bps_roundtrip"), "slippage": c.get("slippage_bps_roundtrip"),
+          "funding": c.get("funding_bps_per_window"), "unit": "bps_roundtrip (funding: bps per funding window)"}
+    fp = None
+    if sel:
+        spec = next(sp for sp in specs if sp[0] == sel)
+        fp = config_fingerprint(arm_cfg(base, spec[1], spec[2]))
+        if spec[3]:
+            g["raw_flag_warning"] = (f"{sel} carries raw harness flags {spec[3]} the config fingerprint does not "
+                                     "see: a record cannot be bound to it")
+    g["_block"] = holdout_confirmation(g, fingerprint=fp, cost_stack=cs, lo=lo, hi=hi, unit=a.research_unit)
+    g["plan"]["boundary"] = str(b)
+    return g
 
 
 # ── main ────────────────────────────────────────────────────────────────────
@@ -488,6 +674,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--delta-r-per-trade", type=float, default=0.0,
                     help="replace: a candidate must also beat the incumbent by this many R per incumbent trade "
                          "(bar = x * n(incumbent)); 0 = the strict net-R rule alone")
+    ap.add_argument("--holdout-frac", type=float, default=0.25,
+                    help="holdout: the latest share of the calendar window held back (grown to the trade floor)")
+    ap.add_argument("--holdout-min-trades", type=int, default=25,
+                    help="holdout: baseline entries the held-back span must hold; also its grading floor")
+    ap.add_argument("--holdout-max-frac", type=float, default=0.40, help="holdout: cap on the held-back share")
+    ap.add_argument("--research-unit", default=None, help="holdout: the unit id, carried into the block")
     ap.add_argument("--control-since", action="store_true",
                     help="grade the control on trades entered on/after the record's data_start (window longer than the record's)")
     ap.add_argument("--out", required=True)
@@ -583,6 +775,8 @@ def main(argv: list[str] | None = None) -> int:
         g = grade_replace(arms, baseline=a.baseline, candidates=cands, fold_majority=a.fold_majority,
                           n_floor=a.n_floor, dd_tol_frac=a.dd_tol_frac, control=control, tp_r_by_arm=tp_by,
                           delta_r_per_trade=a.delta_r_per_trade)
+    elif a.grade == "holdout":
+        g = _run_holdout(a, base, specs, labels, arms_dir, edges, arms)
     else:
         cands = [lab for lab in labels if lab != a.baseline and (not same_as or lab not in same_as)]
         g = grade_sweep(arms, baseline=a.baseline, candidates=cands, delta_r=a.delta_r,
@@ -593,8 +787,13 @@ def main(argv: list[str] | None = None) -> int:
            f"{feed.get('ticker', base.get('symbols', ['?'])[0])} {base.get('timeframe')} candles "
            f"{a.start or arms[a.baseline].get('data_start')} .. {a.end or arms[a.baseline].get('data_end')}, "
            f"net of fee+slippage+funding (the harness's venue-aware stack); arms {labels}")
+    extra_m: dict[str, Any] = {"window": window, "argv": argvs}
+    if a.grade == "holdout":
+        extra_m["holdout_confirmation"] = g.pop("_block")
+        pop += (f"; holdout boundary {g['plan']['boundary']} (share {g['plan']['share']}), selection on "
+                "discovery trades only, the selected arm read once on the held-back span")
     rec = verdict_record(g, leg=a.leg, arms=arms, population=pop, n=arms[a.baseline]["n"],
-                         extra={"window": window, "argv": argvs})
+                         extra=extra_m)
     (out / "verdict.json").write_text(json.dumps(rec, indent=2, default=str) + "\n", encoding="utf-8")
     (out / "summary.json").write_text(json.dumps({"leg": a.leg, "grade": g, "arms": arms, "window": window},
                                                  indent=2, default=str) + "\n", encoding="utf-8")

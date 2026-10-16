@@ -60,6 +60,9 @@
 #   bar:                min_n_closed / expectancy_gt / fold_majority /
 #                       cost_tolerance_bps. A mandate with no `bar:` REFUSES --
 #                       "a mandate with no bar is not a mandate".
+#                       Since 2026-10-16 the two promotion bars also carry
+#                       holdout_required / holdout_min_n (operator decision
+#                       "Require holdout"; resolver clause R-HOLDOUT).
 #   cap:                basis / max_auto_share. Required for `add_risk`.
 #
 # ⚠️ ONE FURTHER FIELD, ADDED 2026-09-25, SHIPPED UNSET, AND ARMED ON EXACTLY ONE
@@ -301,6 +304,22 @@ mandates:
       min_n_closed: 30
       expectancy_gt: 0
       fold_majority: true
+      # OPERATOR DECISION 2026-10-16 (popup "Require holdout", relayed by Manager
+      # Session 2026-10-16 session_01VduHYzdaXe27wTDBLSu8ao; verbatim on checklist
+      # row PROMOTION-BAR-MULTIPLICITY): "From now on, promotion needs a pass on the
+      # held-back 25% you just approved. That's one setting tested once, so no
+      # deflation is needed. Live legs are not demoted on this number (live
+      # net-of-cost results still govern demotion), but all 8 real-money legs get
+      # holdout re-runs first." The Stage-0 record must carry `holdout_confirmation`:
+      # the configuration SELECTED on the earliest span, evaluated ONCE on a
+      # pre-registered, never-seen latest span (~25%, grown to holdout_min_n trades,
+      # capped at 40%), same rule, full cost stack, positive net of cost.
+      # mandate_resolver.py clause R-HOLDOUT: absent or unreadable -> NEEDS-DATA
+      # naming the holdout unit, never REFUSE; a valid confirmation that failed ->
+      # REFUSE. holdout_min_n (25) is the held-back trade floor from the same
+      # dispatch. Nothing else in this entry changed; MD-DEMOTE-S2-S1 is untouched.
+      holdout_required: true
+      holdout_min_n: 25
     cap:
       basis: uniform_account_risk_pct_share_of_roster
       max_auto_share: 0.25
@@ -496,6 +515,22 @@ mandates:
       # cost for the leg's symbol. Neither changes the Stage-0 bar above.
       soak_passed: true
       cost_basis: venue_symbol
+      # OPERATOR DECISION 2026-10-16 (popup "Require holdout", relayed by Manager
+      # Session 2026-10-16 session_01VduHYzdaXe27wTDBLSu8ao; verbatim on checklist
+      # row PROMOTION-BAR-MULTIPLICITY): "From now on, promotion needs a pass on the
+      # held-back 25% you just approved. That's one setting tested once, so no
+      # deflation is needed. Live legs are not demoted on this number (live
+      # net-of-cost results still govern demotion), but all 8 real-money legs get
+      # holdout re-runs first." The Stage-0 record must carry `holdout_confirmation`:
+      # the configuration SELECTED on the earliest span, evaluated ONCE on a
+      # pre-registered, never-seen latest span (~25%, grown to holdout_min_n trades,
+      # capped at 40%), same rule, full cost stack, positive net of cost.
+      # mandate_resolver.py clause R-HOLDOUT: absent or unreadable -> NEEDS-DATA
+      # naming the holdout unit, never REFUSE; a valid confirmation that failed ->
+      # REFUSE. holdout_min_n (25) is the held-back trade floor from the same
+      # dispatch. Nothing else in this entry changed; MD-DEMOTE-S2-S1 is untouched.
+      holdout_required: true
+      holdout_min_n: 25
     cap:
       basis: uniform_account_risk_pct_share_of_roster
       max_auto_share: 0.25
