@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "why": "Commits one parity-PASS offload drop (eth-regime-1h-lgbm-v1 @ 20261016T030629Z, from RQ-20261016-8b93-01 run 38843465348) into ml/offload-inbox plus its index row, and a checklist note. Merging only puts the drop on the trainer's disk via trainer_git_sync; the drain stays unarmed (ict-offload-drain installed-disabled, OFFLOAD_DRAIN_APPLY=0) so nothing is registered until the operator-approved one-shot --apply.",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "ml/offload-inbox/** is Tier-2 by name in check_pr_landing; it is the transport for the operator-gated registry write. Merge together with (or before) the operator's OK for the one-shot drain."
+}
