@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "HELD for the manager's merge (lane P5-PROP-BACKLOG-1016). Adds research/programmes/05-prop.yaml, Programme 05 (prop) as a machine question tree (26 nodes: 11 runnable now, 1 pre-registered unit on RQ-20261016-e2db-07 FAIL, 14 branches), and the 11 units the replenisher materialises from it (RQ-20261016-004..014: per-leg prop survival gate x 3 accounts, breakout_2 sizing, velotrade_1 sizing rung 2, tradeify_1 per-leg risk, breakout_2 ADA breadth, 4 exit ablations at the prop venue stack). Tier-1 tooling: queue_replenish.render_node fills run.inputs.research_unit for compute-routed nodes (else script_run --check refuses them), and the self-test's 'full queue generates nothing' assertion is scoped to template families. Plan doc 05-PROP.md gains section 7. No config, roster, sizing or order path touched.",
+  "why": "Programme nodes and queue units register decision rules (landing machinery: a human merges), and the replenisher change alters what the producer emits."
+}

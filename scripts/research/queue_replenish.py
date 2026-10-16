@@ -586,7 +586,10 @@ def render_node(node: Dict[str, Any], prog_path: str, prog_sha: str, programme: 
     rule.setdefault("registered_at", day)
     unit["decision_rule"] = rule
     run = dict(unit.get("run") or {})
-    if run.get("workflow") == "research-script-run.yml":
+    # A compute-routed node (`compute:`, no `run.workflow` -- PLANNING.md § 1b) lands on a
+    # script-run backend too, and script_run.py --check refuses it unless research_unit is the
+    # minted id; the node cannot know that id in advance, so it is filled here (P5-PROP-BACKLOG-1016).
+    if run.get("workflow") == "research-script-run.yml" or (not run.get("workflow") and unit.get("compute")):
         run["inputs"] = {**dict(run.get("inputs") or {}), "research_unit": unit_id}
     if run:
         unit["run"] = run
@@ -867,7 +870,11 @@ def _self_test() -> int:
         p2 = plan(er, day="2030-01-01", target=25)
     assert [u["text"] for u in p1["new_units"]] == [u["text"] for u in p2["new_units"]], "not deterministic"
     assert p1["new_units"], "the live templates generate nothing from an empty queue -- a template or a grid source is broken"
-    assert plan(root, day="2030-01-01", target=live_have)["new_units"] == [], "a full queue must generate nothing"
+    # Templates fill a deficit, so a full queue generates none of them. Programme nodes are emitted
+    # whenever READY regardless of the deficit (by design, see plan()), so a node a verdict just
+    # unlocked is not a broken template -- excluded here, or every unlock reads red until the next run.
+    assert [u for u in plan(root, day="2030-01-01", target=live_have)["new_units"]
+            if not u["family"].startswith(PROGRAMME_FAMILY + ":")] == [], "a full queue must generate nothing"
     # every generated unit is valid queue schema + a pre-registered rule
     from scripts.research.research_queue import validate, grade_power, grade_route
     yaml = _yaml()
@@ -1040,6 +1047,7 @@ def _self_test() -> int:
         y = _yaml().safe_load(newu["text"])
         assert y["decision_rule"]["registered_before_run"] is True and y["roadmap"] == ["M20"] and y["value"]["usd_at_stake_per_month"] == 100
         assert y["generated"]["key"] == "programme:P1-Q1.fail" and y["programme_node"]["goal"] == "G1"
+        assert y["run"]["inputs"] == {"research_unit": newu["id"]}, y["run"]   # compute-routed: id filled
         git("checkout", "-q", "-b", "gen")
         (r / QUEUE / f"{newu['id']}.yaml").write_text(newu["text"], encoding="utf-8")
         git("add", "-A")
