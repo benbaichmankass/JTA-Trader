@@ -361,3 +361,25 @@ def test_roster_history_reads_the_real_repo_history():
         assert out["reason"]
     else:
         assert out["versions_read"] >= 1
+
+
+def test_planted_defect_skips_a_signal_window_in_a_bar_before_since():
+    """2026-10-16 run 38878704887: the plant landed in the last 15m window of
+    the bar BEFORE `since` (cached as a stale-frame candidate), which the run
+    never analyses, so the control read FAIL for the instrument's own reason."""
+    leg = _leg()
+    rows, robust = _consistent_evals(leg)
+    sig_bars = sorted({P.to_epoch(w) // TF_S * TF_S for w in robust})
+    since = sig_bars[0] + TF_S  # the signal bar is now before the window
+    b = _bundle(rows)
+    res = P.analyse_leg(leg, b, since, UNTIL)
+    cached = [w for w in res["replay_signal_windows"]
+              if P.to_epoch(w.split("|")[0]) < since]
+    assert cached, "fixture must reproduce a cached signal window before since"
+    p1 = P.planted_defect([leg], [res], b, since, UNTIL)["plants"][0]
+    assert p1["flagged"] is not False, p1  # never a false FAIL
+    assert p1.get("window") is None or P.to_epoch(p1["window"]) >= since
+    # and the analysed-window case still plants and flags (clean twin)
+    res2 = P.analyse_leg(leg, b, SINCE, UNTIL)
+    p2 = P.planted_defect([leg], [res2], b, SINCE, UNTIL)["plants"][0]
+    assert p2["flagged"] is True, p2

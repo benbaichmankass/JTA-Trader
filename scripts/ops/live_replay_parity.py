@@ -1246,14 +1246,24 @@ def planted_defect(legs: list[Leg], results: list[dict], bundle: dict,
     target = None
     for lg in legs:
         r = by_leg.get(lg.name)
-        if r and r["state"] == "checked" and r.get("replay_signal_windows") and lg.decision_bar == "forming":
-            target = (lg, r)
+        if not (r and r["state"] == "checked" and lg.decision_bar == "forming"):
+            continue
+        # Only a window inside an ANALYSED bar can be planted: the replay cache
+        # also holds the last 15m window of the bar BEFORE `since` (a stale-frame
+        # candidate), and a plant there can never be flagged — measured
+        # 2026-10-16 (run 38878704887, since 08:45Z, plant 09:45Z in the 08:00
+        # 2h bar), on main's script too.
+        ws = [w for w in r.get("replay_signal_windows") or []
+              if (_bar_of(r, to_epoch(w.split("|")[0])) or {}).get("status")
+              not in (None, "not_comparable")]
+        if ws:
+            target = (lg, r, ws[0])
             break
     plants = []
     # Plant 1 (the mandated one): replay=signal, live=no-signal.
     if target:
-        lg, r = target
-        w, _side = r["replay_signal_windows"][0].split("|")
+        lg, r, w0 = target
+        w, _side = w0.split("|")
         wt = to_epoch(w)
         fake = [EvalRow(t=wt + 30 + 120 * k, side="none", reason="planted", adx=None,
                         confidence=None, close=None, channel=None) for k in range(5)]
