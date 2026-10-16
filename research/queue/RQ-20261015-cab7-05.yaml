@@ -1,7 +1,7 @@
 id: RQ-20261015-cab7-05
 title: 'TP doctrine, real money: does a REGIME-CONDITIONED predictive TP (entry-vol tercile x ADX tercile) beat
   the unconditioned K* on the four Bybit real-money legs, pooled?'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -104,3 +104,17 @@ related:
 - RQ-20261009-900
 - docs/research/ml2-predictive-bracket-2026-09-06.md
 last_dispatched_at: '2026-10-15T19:14:30+00:00'
+grading:
+  attested: RULE-RQ-20261015-cab7-05-CONDITIONED-TP
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ-20261015-cab7-05-CONDITIONED-TP
+  evidence:
+  - research/results/RQ-20261015-cab7-05/38792318689.jsonl
+  graded_at: '2026-10-16'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate
