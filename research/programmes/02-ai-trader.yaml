@@ -34,6 +34,8 @@ nodes:
     value: {usd_at_stake_per_month: 150, confidence: 0.3}
     after: [{unit: RQ-20261014-9d20-05, verdict: indeterminate}]
     unit:
+      theme: ml_health
+      priority: 2
       title: 'AI trader / family diversity, n EXTENDED: do ExtraTrees or a small MLP come within 0.01 macro-F1
         of LightGBM on the BTC and ETH 1h volatility-regime head over the FULL published history (tail_rows
         43000 vs 20000)? (re-test of 9d20-05, which closed INDETERMINATE)'
@@ -149,6 +151,8 @@ nodes:
             op: '>='
             value: -0.03
       run:
+        inputs:
+          research_unit: RQ-20261016-001
         command:
         - python3
         - scripts/research/ml_bakeoff.py
