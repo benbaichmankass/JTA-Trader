@@ -408,7 +408,8 @@ def path_stats(trades: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
 
 
 def build_record(name: str, cfg: Dict[str, Any], *, workdir: str,
-                 days: int, folds: int) -> Dict[str, Any]:
+                 days: int, folds: int,
+                 research_emits: bool = False) -> Dict[str, Any]:
     """Produce one leg's evidence record. Never raises on a leg-level failure."""
     import regime_debt_matrix as rdm  # local: pulls pandas transitively
 
@@ -467,7 +468,10 @@ def build_record(name: str, cfg: Dict[str, Any], *, workdir: str,
         return rec
 
     try:
-        row = rdm.run_one(name, cfg, workdir, days=days)
+        # Opt-in only: the default call is byte-identical to before, so any
+        # caller (or test double) of run_one without the kwarg is unaffected.
+        row = rdm.run_one(name, cfg, workdir, days=days,
+                          **({"research_emits": True} if research_emits else {}))
     except Exception as e:  # noqa: BLE001 - a leg-level failure must not stop the sweep
         rec["coverage_state"] = "harness_failed"
         rec["error"] = f"{type(e).__name__}: {e}"
@@ -755,6 +759,11 @@ def main(argv: Optional[List[str]] = None) -> int:
                          "makes source_run unreachable -- see RUNS_DIR_REL.")
     ap.add_argument("--dry-run", action="store_true",
                     help="Classify + grade fidelity only. No fetch, no harness run.")
+    ap.add_argument("--research-emits", action="store_true",
+                    help="Opt-in (EXIT-PATH-EMIT-OFFLINE / METALABEL-EMIT-FEATURES): "
+                         "trend/pullback legs also write <leg>__paths.jsonl and carry "
+                         "mae_r + the decision-time f_* columns on every trade row. "
+                         "Grading is unchanged; off = byte-identical.")
     a = ap.parse_args(argv)
 
     legs = load_legs()
@@ -787,7 +796,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             counts[state] += 1
             print(f"  {n:34s} harness={str(h):10s} {state}")
             continue
-        rec = build_record(n, legs[n], workdir=wd, days=a.days, folds=a.folds)
+        rec = build_record(n, legs[n], workdir=wd, days=a.days, folds=a.folds,
+                           research_emits=a.research_emits)
         counts[rec["coverage_state"]] += 1
         _, decision = write_record(rec, out_dir, refusal_dir=Path(wd))
         if decision != "write":

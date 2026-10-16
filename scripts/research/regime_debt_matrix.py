@@ -873,7 +873,8 @@ def _tp_r_flags(cfg: dict) -> List[str]:
 
 def build_harness_cmd(name: str, cfg: dict, harness: str, csv: str, resample: str,  # inert: name — the argv is built from cfg/harness/csv; the cell name is used by the CALLER for reporting, never by the command
                       emit: str, jout: str,
-                      fee_override: Optional[float] = None
+                      fee_override: Optional[float] = None,
+                      research_emits: bool = False
                       ) -> tuple[list[str], bool, list[str]]:
     """Return (argv, faithful, omitted_levers).
 
@@ -1057,7 +1058,20 @@ def build_harness_cmd(name: str, cfg: dict, harness: str, csv: str, resample: st
                              if k not in _PB_PLAIN and k not in _PB_LEVER_FLAG)
                          | set(conditional_omissions("pullback", cfg, argv)))
         faithful = not omitted
+    # EXIT-PATH-EMIT-OFFLINE / METALABEL-EMIT-FEATURES (opt-in, default False =
+    # byte-identical argv): ask the trend/pullback harnesses for the per-bar path
+    # file (beside `emit`, `__paths.jsonl`) and the decision-time f_* columns.
+    # Appended AFTER fidelity is graded -- they change what is WRITTEN, never
+    # which trades exist (tests/test_harness_emit.py pins that).
+    if research_emits and harness in ("trend", "pullback"):
+        argv += ["--emit-features", "--emit-paths", research_paths_file(emit)]
     return argv, faithful, omitted
+
+
+def research_paths_file(emit: str) -> str:
+    """Where `research_emits` writes the per-bar path rows for a trades emit."""
+    stem = emit[:-len("__trades.jsonl")] if emit.endswith("__trades.jsonl") else emit
+    return stem + "__paths.jsonl"
 
 
 def _regime_tag(csv: str, emit: str, resample: str, label: str) -> dict:
@@ -1185,7 +1199,7 @@ def emit_trades_for(name: str, cfg: dict, workdir: str, days: int, *,
 
 
 def run_one(name: str, cfg: dict, workdir: str, days: int,
-            fee_arms: Optional[list] = None) -> dict:
+            fee_arms: Optional[list] = None, research_emits: bool = False) -> dict:
     harness = classify(cfg)
     sym = (cfg.get("symbols") or [None])[0]
     tf = cfg.get("timeframe")
@@ -1205,7 +1219,8 @@ def run_one(name: str, cfg: dict, workdir: str, days: int,
         row["error"] = f"fetch failed: {type(e).__name__}: {e}"
         return row
     argv, faithful, omitted = build_harness_cmd(name, cfg, harness, csv,
-                                                feed["resample"], emit, jout)
+                                                feed["resample"], emit, jout,
+                                                research_emits=research_emits)
     row["fidelity"] = "faithful" if faithful else "approximate"
     row["omitted_levers"] = omitted
     annotate_exit_head_replayability(cfg, row, omitted)

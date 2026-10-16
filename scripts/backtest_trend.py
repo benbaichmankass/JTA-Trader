@@ -132,6 +132,11 @@ class Trade:
     n_extends: Optional[int] = None
     n_retargets: Optional[int] = None
     tp_exit_r: Optional[float] = None
+    # EXIT-PATH-EMIT-OFFLINE / METALABEL-EMIT-FEATURES (scripts/research/
+    # harness_emit.py): mae_r plus the decision-time f_* columns. None unless
+    # --emit-paths or --emit-features is passed, so a default emit row is
+    # byte-identical.
+    extra: Optional[Dict[str, Any]] = None
 
 
 def _load_candles(path: str) -> pd.DataFrame:
@@ -320,7 +325,9 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                  decision_bar: str = "closed",
                  decision_1m: Optional[pd.DataFrame] = None,
                  decision_cfg: Optional[Dict[str, Any]] = None,
-                 decision_workers: int = 4) -> Dict[str, Any]:
+                 decision_workers: int = 4,
+                 emit_paths_path: Optional[str] = None,
+                 emit_features: bool = False) -> Dict[str, Any]:
     # FORMING-BAR DECISION MODE (PI-20260929-VOLSKIP-SIGNAL-0002; default
     # "closed" = byte-identical). Live evaluates the WHOLE entry signal on the
     # still-forming bar every ~2 min; "forming" replays that decision with the
@@ -495,6 +502,17 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
     else:
         rr_floor_state = "unmeasurable_no_tp_cap"
     trades: List[Trade] = []
+    # OPT-IN research emits (scripts/research/harness_emit.py; both None by
+    # default, so nothing below allocates or changes on a flag-off run).
+    # The recorder is driven from THIS loop -- no re-walk -- and reads the
+    # engine's own `mfe`/`trail`/`tp_price`/`peak_j`.
+    _prec = _dctx = None
+    if emit_paths_path or emit_features:
+        import harness_emit as _he
+        _prec = _he.PathRecorder(df, strategy=strategy_name, symbol=symbol,
+                                 keep_rows=bool(emit_paths_path))
+        if emit_features:
+            _dctx = _he.DecisionContext(df)
     # Per-entry live-TP distance in R. Answers 'does the 9.9% clamp actually
     # BIND on this leg' from the leg's own frame, instead of from an assumed
     # ATR%. Empty when --tp-cap-pct is off.
@@ -776,7 +794,16 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
             # reads "stop"); tests/test_backtest_trend_live_tp.py pins that it
             # is the only SL-first site.
             _rest_hit = _stop_or_target(float(_ov["rest_high"]), float(_ov["rest_low"]))
+        if _prec is not None:
+            _prec.start(trade_key=_he.trade_key(strategy_name, symbol,
+                                                df["timestamp"].iloc[entry_i], direction),
+                        entry_i=entry_i, entry=entry, risk=risk,
+                        is_long=(direction == "long"))
         for j in range(entry_i + 1, min(entry_i + timeout_bars + 1, n)) if _rest_hit is None else ():
+            if _prec is not None:
+                # Closes bar j-1's row with the state as it stands now (its end
+                # state) and opens bar j with the stop/target it is tested against.
+                _prec.bar(j, stop=trail, target=tp_price, peak_r=mfe, peak_j=peak_j)
             bh, bl = float(df["high"].iloc[j]), float(df["low"].iloc[j])
             # M20 partial-TP bank lever (0 = off, byte-identical): bank
             # `bank_frac` of the position when price touches entry ± bank_at_r ×
@@ -974,6 +1001,12 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
             _rr_min_per_trade.append(rr_min)
         if exit_price is None:
             exit_price = float(df["close"].iloc[exit_idx])
+        _extra = None
+        if _prec is not None:
+            _extra = {"mae_r": _prec.finish(exit_idx, exit_price, exit_reason,
+                                            peak_r=mfe, peak_j=peak_j)["mae_r"]}
+            if _dctx is not None:
+                _extra.update(_dctx.at(entry_i))
         r = ((exit_price - entry) / risk if direction == "long"
              else (entry - exit_price) / risk)
         _tp_exit_r = r      # raw price R, before bank / regime weighting (calibration)
@@ -1008,9 +1041,12 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                                  mom_tightened) if mom_any else None,
             **({} if _tpt is None else dict(
                 final_target_r=_tpt.final_target_r, n_extends=_tpt.n_extends,
-                n_retargets=_tpt.n_retargets, tp_exit_r=round(_tp_exit_r, 4)))))
+                n_retargets=_tpt.n_retargets, tp_exit_r=round(_tp_exit_r, 4))),
+            extra=_extra))
         next_idx = exit_idx + 1 + cooldown_bars
         i = next_idx
+    if emit_paths_path and _prec is not None:
+        _prec.write(emit_paths_path)
     if trades_out is not None:
         trades_out.extend(trades)
     if emit_path:
@@ -1080,7 +1116,8 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                     "confidence": t.confidence, "adx_at_entry": t.adx_at_entry,
                     "regime_weight": t.regime_weight,
                     **(t.mom or {}),
-                    **(_tpg_row(t) if tp_geom.armed else {})}, default=str) + "\n")
+                    **(_tpg_row(t) if tp_geom.armed else {}),
+                    **(t.extra or {})}, default=str) + "\n")
     params: Dict[str, Any] = {"donchian": donchian, "atr_stop_mult": atr_stop_mult,
                               "trail_mult": trail_mult, "min_confidence": min_confidence}
     if adx_min is not None:
@@ -1606,6 +1643,16 @@ def main(argv: List[str]) -> int:
                         "describes the run, not a per-leg trade.")
     p.add_argument("--emit-trades", default=None, metavar="PATH",
                    help="Write per-trade {entry_time, net_r, confidence} JSONL for portfolio_combine.")
+    p.add_argument("--emit-paths", default=None, metavar="PATH",
+                   help="EXIT-PATH-EMIT-OFFLINE (opt-in): write one JSONL row per (trade, "
+                        "in-trade bar) -- bar in R, stop/target in force, open/peak/mae R, "
+                        "bars_since_peak, ATR, ADX (scripts/research/harness_emit.py). "
+                        "Also adds mae_r to every --emit-trades row. Off = byte-identical.")
+    p.add_argument("--emit-features", action="store_true",
+                   help="METALABEL-EMIT-FEATURES (opt-in): add mae_r and the decision-time "
+                        "f_* context columns (ADX-14 + label, ATR pct/percentile/bucket, "
+                        "regime cell proxy, rolling log-return vol, 20-bar return, UTC "
+                        "hour/dow) to every --emit-trades row. Existing keys unchanged.")
     args = p.parse_args(argv[1:])
     # --- data-source resolution (BL-20260813-HARNESS-SYMBOL-IS-A-LABEL-DATA-DEFAULTS-TO-BTC)
     # Runs BEFORE any other validation so a mislabelled run cannot get far enough
@@ -1732,6 +1779,8 @@ def main(argv: List[str]) -> int:
         print(_fmt_sweep(out))
     else:
         out = run_backtest(df, emit_path=args.emit_trades, strategy_name=args.strategy_name,
+                           emit_paths_path=args.emit_paths,
+                           emit_features=args.emit_features,
                            **decision_kw,
                            min_confidence=args.min_confidence, **bt_kwargs)
         print(_fmt(out))
