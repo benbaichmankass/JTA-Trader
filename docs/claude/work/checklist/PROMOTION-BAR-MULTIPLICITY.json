@@ -1,0 +1,23 @@
+{
+  "id": "PROMOTION-BAR-MULTIPLICITY",
+  "title": "OPERATOR DECISION: should MD-PROMOTE-S0-S1 / S1-S2 bars deflate for the number of configurations tried (DSR / haircut) instead of expectancy > 0?",
+  "phase": "W42",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [
+    "RESEARCH-TRIAL-LEDGER"
+  ],
+  "note": "[2026-10-16 RESEARCH-OPS-BENCHMARK-1016] DECISION (benchmark docs/research/research-ops-benchmark-2026-10-16.md section 4 item 1; sources S2, S3, S6, S7, S10). config/mandates.yaml bars: MD-PROMOTE-S0-S1 {min_n_closed 30, expectancy_gt 0, fold_majority}; MD-PROMOTE-S1-S2 same + cost_tolerance_bps 2.0; Stage-0 rule RULE-D1-STAGE0-NET-OF-FULL-COST net_r_oos > 0. None sees selection from N trials; at ~80 fires/day passes by chance are expected (Winton: best of 100 skill-free strategies p~0.15). OPTIONS: (a) RECOMMENDED measure first, report-only: RESEARCH-TRIAL-LEDGER computes how many current Stage-0 passes survive a DSR>0.95 / haircut bar, decision returns with that count; (b) adopt the deflated bar now; (c) keep expectancy>0, rely on fresh-window confirmation (RESEARCH-CONFIRM-FRESH-WINDOW). blocked_on RESEARCH-TRIAL-LEDGER for (a). Only the operator grants a mandate change. roadmap L-LADDER.",
+  "updated_at": "2026-10-16T09:46:56Z",
+  "updated_by": "session_016YtGa4nVhnWbckKhb6VYaV",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "_seq": 532
+}

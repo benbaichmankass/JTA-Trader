@@ -1,0 +1,21 @@
+{
+  "id": "PROP-GRID-SURVIVAL-TOL",
+  "title": "Build: prop_ev_grid survival clause compares per-seed p_alive with no MC-SE tolerance (decides on noise)",
+  "phase": null,
+  "state": "queued",
+  "owner": "research tooling lane",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-16 lane P5-PROP-BACKLOG-1016, from manager programme audit 2026-10-16 \u00a7 4.1 / \u00a7 5.2] scripts/research/prop_ev_grid.py grade_cushion_vs_flat / grade_any_c_dominates require p_alive(C) >= p_alive(A) on EVERY seed with no tolerance. Case (audit, MEASURED from research/results): RQ-20261015-8bbc-03 seed 1 p_alive 0.3960 vs 0.3965 with EV $652 vs $141, while one seed's MC SE at n=4000 lives is ~sqrt(p(1-p)/4000) ~ 0.008 (INFERRED). Same shape suspected in 6504-02, 1bf3-02, f516-08. Deliverable: (1) a test reproducing the 8bbc-03 seed-1 case; (2) a NEW grade shape (e.g. any_c_dominates_tol: p_alive(C) >= p_alive(A) - 2*sqrt(SE_A^2+SE_C^2)) that leaves the existing shapes' output unchanged (registered rules stay as written); (3) re-grade 8bbc-03, 6504-02, 1bf3-02, f516-08 as NEW registered units on the tolerance shape, never by editing old verdicts. Every Programme 05 dominance unit (research/programmes/05-prop.yaml) carries a STRICT-SEED CAVEAT pointing here. Closes when the shape is merged with its test and the four re-grade units are queued.",
+  "updated_at": "2026-10-16T08:11:54Z",
+  "updated_by": "session_01V7WcGdgRbZur21X57LReea",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "_seq": 526
+}

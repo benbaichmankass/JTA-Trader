@@ -32,7 +32,21 @@ file moves):
 
   * pass / no_action_warranted -> `status: done` + a `grading:` block naming
     the verdict, the rows, and the evidence paths;
-  * fail, first time            -> NOT a kill: `last_dispatched_at: null`
+  * pass on a TEMPLATE cell     -> also a DISCOVERY, not a confirmation
+    (RESEARCH-CONFIRM-FRESH-WINDOW, operator 2026-10-16): the grader ADDS exactly
+    one fresh-window confirmation unit (`confirmation_unit`: same rule, same run,
+    evidence confined to data after the PASS run, `requires_result` on the PASS,
+    `not_before` once that data can exist) and the block says `discovery:
+    unconfirmed`, `confirm_unit`, `selected_from_cells` (the multiple-testing
+    denominator). Programme nodes are excluded: their DAG owns confirmation.
+    A recurring cell's later PASS reuses that one unit. The confirmation reads
+    `confirmed` only when it passes on one of the parent's passing cells;
+  * fail on a DETERMINISTIC template cell (or confirmation unit) -> `status:
+    done`, verdict fail, NO same-window replay (it reproduces the same number).
+    A FAIL closes a cell, never a family: the family-retirement protocol
+    (#18557) owns retirement;
+  * fail, first time, on any other auto unit, or a non-deterministic template
+    cell (`confirm_fail`)       -> NOT a kill: `last_dispatched_at: null`
     (re-queued for a confirmatory run) + `grading.confirmatory_run: 1`;
   * fail, second time           -> `status: done`, verdict fail, both runs
     named. The confirmatory pass reads ONLY rows landed since the
@@ -77,7 +91,9 @@ re-run `--verify` at a PR's merge-base and demand the same bytes before a
 grade PR self-lands. A grade nobody can reproduce holds for a human.
 
 Tier-1 research tooling: reads research/results + corpora, writes only
-research/queue/RQ-*.yaml. Never touches config/, src/ or a live path.
+research/queue/RQ-*.yaml (modifies graded units; adds only the confirmation
+units they open, which `--verify` re-derives byte-for-byte). Never touches
+config/, src/ or a live path.
 """
 from __future__ import annotations
 
@@ -86,7 +102,7 @@ import json
 import re
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -249,7 +265,31 @@ def grade_e5(rows: List[Tuple[str, Dict[str, Any]]], min_rows: int) -> Dict[str,
     if len(verdicts) != 1 or verdicts[0] not in MECHANICAL + ("indeterminate",):
         return {"verdict": None, "reason": f"verdicts not unanimous-mechanical: {verdicts}", "rows": n, "files": files}
     tail = f" ({superseded} earlier producer_failed / re-graded wiring_only row(s) superseded)" if superseded else ""
-    return {"verdict": verdicts[0], "reason": f"{n} row(s), all measured, all {verdicts[0]}{tail}", "rows": n, "files": files}
+    return {"verdict": verdicts[0], "reason": f"{n} row(s), all measured, all {verdicts[0]}{tail}", "rows": n, "files": files,
+            **_selection(rows)}
+
+
+def _selection(rows: List[Tuple[str, Dict[str, Any]]]) -> Dict[str, Any]:
+    """What a fresh-window confirmation needs from the rows that were graded: how many cells the
+    verdict was selected from (`measurement.cells_swept`, summed; None unless EVERY row says), the
+    passing cells (`measurement.passing_cells`, union), and the newest row timestamp -- the last
+    moment of data the run could have seen."""
+    swept: Optional[int] = 0
+    cells: set = set()
+    seen: Optional[datetime] = None
+    for _f, r in rows:
+        m = r.get("measurement") if isinstance(r.get("measurement"), dict) else {}
+        try:
+            swept = None if swept is None or m.get("cells_swept") is None else swept + int(m["cells_swept"])
+        except (TypeError, ValueError):
+            swept = None
+        if isinstance(m.get("passing_cells"), list):
+            cells.update(str(c) for c in m["passing_cells"])
+        ts = _parse_ts(r.get("generated_at") or (r.get("run") or {}).get("started_at"))
+        if ts and (seen is None or ts > seen):
+            seen = ts
+    return {"cells_swept": swept if rows else None, "passing_cells": sorted(cells),
+            "seen_until": seen.isoformat() if seen else None}
 
 
 def grade_e35(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -262,17 +302,166 @@ def grade_e35(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
                 "rows": len(rows), "files": [E35_CORPUS.as_posix()], "passing_cells": passing, "base_oos_trades": n_oos}
     if passing:
         return {"verdict": "pass", "reason": f"{len(passing)} cell(s) is_oos_pass at base_oos_trades {n_oos}: {passing[:6]}",
-                "rows": len(rows), "files": [E35_CORPUS.as_posix()], "passing_cells": passing}
+                "rows": len(rows), "files": [E35_CORPUS.as_posix()], "passing_cells": passing, "cells_swept": len(rows)}
     return {"verdict": "no_action_warranted", "reason": f"0 of {len(rows)} cells is_oos_pass at base_oos_trades {n_oos}",
             "rows": len(rows), "files": [E35_CORPUS.as_posix()], "passing_cells": []}
+
+
+# ── fresh-window confirmation (RESEARCH-CONFIRM-FRESH-WINDOW, operator 2026-10-16) ──
+#: How long after the PASS run's last data a confirmation may fire: the window it reads must hold
+#: data the PASS never saw, and for a harness that reads history up to "now" that data only exists
+#: once it has accrued. Not derived from a power calculation; a confirmation that is still short of
+#: its rule's floor grades indeterminate (`awaiting: more_data`) like any other unit.
+CONFIRM_WAIT_DAYS = 60
+#: Workflows whose inputs can confine the evidence to a window the PASS did not see, mapped to the
+#: input overrides that do it. m20-exit-lever-sweep: `split_mode: date` + `split: <day after the
+#: PASS's data>` makes OOS exactly the trades after the PASS run (the NEXT calendar day, so no
+#: same-day trade the PASS saw is in it). A workflow absent here gets its confirmation unit authored
+#: `blocked` with the reason, never a same-window re-run labelled fresh.
+_FRESH_WINDOW_INPUTS = {
+    "m20-exit-lever-sweep.yml": lambda after: {"split_mode": "date",
+                                               "split": (after + timedelta(days=1)).date().isoformat()},
+}
+_POLICY = ("operator 2026-10-16 (popup, 'Yes, adopt'): a single-window PASS on a template cell is a "
+           "discovery; it opens exactly one fresh-window confirmation unit before it can feed any Tier-3 proposal")
+
+
+def template_cell(unit: Dict[str, Any]) -> bool:
+    """A cell generated from a research/templates family. Programme nodes (`programme:*`) are not:
+    their DAG registers its own confirmation nodes (P3's best-of-3 -> one fresh window)."""
+    gen = unit.get("generated")
+    return isinstance(gen, dict) and not str(gen.get("family") or "").startswith("programme:")
+
+
+def confirmation_of(unit: Dict[str, Any]) -> Optional[str]:
+    c = unit.get("confirmation")
+    return str(c.get("of")) if isinstance(c, dict) and c.get("of") else None
+
+
+def confirm_unit_id(parent_id: str, graded_at: str) -> str:
+    """Deterministic (E58 --verify re-derives it): hashed-scheme id dated on the grading day, h4 from
+    the parent id. Hashed ids are exempt from the 001-899 / 900-999 bands (research-queue-id-bands)."""
+    import hashlib
+    h4 = hashlib.sha256(f"confirm:{parent_id}".encode()).hexdigest()[:4]
+    return f"RQ-{graded_at.replace('-', '')[:8]}-{h4}-01"
+
+
+def _swap_id(obj: Any, old: str, new: str) -> Any:
+    if isinstance(obj, str):
+        return obj.replace(old, new)
+    if isinstance(obj, list):
+        return [_swap_id(x, old, new) for x in obj]
+    if isinstance(obj, dict):
+        return {k: _swap_id(v, old, new) for k, v in obj.items()}
+    return obj
+
+
+def confirmation_unit(unit: Dict[str, Any], g: Dict[str, Any], child_id: str) -> str:
+    """The ONE fresh-window confirmation unit a template-cell PASS opens. Same decision rule (id,
+    statistic, rule text, registration) and same run as the PASS, re-pointed at the child id; the
+    window is confined to data after the PASS run's last row when the workflow can say so
+    (`_FRESH_WINDOW_INPUTS`), else the unit is `blocked` and says why. A pure function of (the parent
+    unit, the graded rows, the id), so `--verify` reproduces it byte-for-byte."""
+    yaml = _yaml()
+    pid = str(unit.get("id"))
+    after = _parse_ts(g.get("seen_until")) or _parse_ts(unit.get("last_dispatched_at"))
+    run = _swap_id(unit.get("run") or {}, pid, child_id)
+    wf = str(run.get("workflow") or "")
+    window_fn = _FRESH_WINDOW_INPUTS.get(wf)
+    blocked = None
+    if after is None:
+        blocked = "the PASS run's data end is unknown (no dated row, no stamp), so no disjoint window can be named"
+    elif window_fn is None:
+        blocked = (f"workflow {wf or '(none)'} has no input that confines the evidence to data after "
+                   f"{after.isoformat()}; wire one (queue_grade._FRESH_WINDOW_INPUTS) and unblock this unit")
+    else:
+        run = {**run, "inputs": {**(run.get("inputs") or {}), **window_fn(after)}}
+    n_cells = g.get("cells_swept")
+    selected = (f"{n_cells} cell(s)" if isinstance(n_cells, int) else
+                "an unrecorded number of cells (the producer did not report cells_swept)")
+    cells = list(g.get("passing_cells") or [])
+    out: Dict[str, Any] = {
+        "id": child_id,
+        "title": f"Fresh-window confirmation of {pid}: {unit.get('title')}",
+        "status": "blocked" if blocked else "queued",
+        "cadence": "once",
+    }
+    skip = {"id", "title", "status", "cadence", "generated", "grading", "last_dispatched_at",
+            "requires_result", "not_before", "confirmation", "run", "dispatch_precondition"}
+    for k, v in unit.items():
+        if k not in skip:
+            out[k] = _swap_id(v, pid, child_id) if k == "lands" else v
+    out["question"] = (f"CONFIRMATION of {pid}'s PASS on a window it did not see (data after "
+                       f"{after.isoformat() if after else 'UNKNOWN'}), under the SAME registered rule: "
+                       f"{unit.get('question')}")
+    out["run"] = run
+    out["requires_result"] = {"unit": pid, "verdict": "pass"}
+    if after is not None:
+        out["not_before"] = (after + timedelta(days=CONFIRM_WAIT_DAYS)).isoformat()
+    out["confirmation"] = {
+        "of": pid,
+        "policy": _POLICY,
+        "window": {"after": after.isoformat() if after else None, "mode": "most_recent_disjoint",
+                   "wait_days": CONFIRM_WAIT_DAYS},
+        "selected_from_cells": n_cells if isinstance(n_cells, int) else None,
+        "passing_cells": cells,
+        "note": (f"{pid} PASSED on one window, selected from {selected}; passing cell(s) {cells[:6] or 'not named'}. "
+                 "That count is the multiple-testing denominator (row RESEARCH-TRIAL-LEDGER). This unit re-asks "
+                 "on fresh data only; it CONFIRMS when it passes on at least one of those cells, and until then "
+                 f"{pid} may not feed a Tier-3 proposal."),
+    }
+    if blocked:
+        out["blocked_reason"] = blocked
+    out["grading"] = {"auto": True}
+    head = (f"# AUTHORED by scripts/research/queue_grade.py: the one fresh-window confirmation of {pid}'s PASS\n"
+            "# (RESEARCH-CONFIRM-FRESH-WINDOW). Self-lands only while `queue_grade.py --verify` reproduces it.\n")
+    return head + yaml.safe_dump(out, sort_keys=False, width=100, allow_unicode=True)
 
 
 def decide(unit: Dict[str, Any], g: Dict[str, Any], graded_at: str,
            attested: bool = False) -> Optional[Dict[str, Any]]:
     """The disposition for one unit, or None when nothing is to be written.
-    Returns {"status": new|None, "reset_stamp": bool, "grading": block}.
+    Returns {"status": new|None, "reset_stamp": bool, "grading": block, "spawn": child id|None}.
     `attested`: a hand-written `once` unit whose rows all carry its own rule id
     (see the module docstring) -- a FAIL closes it instead of re-queueing."""
+    d = _decide(unit, g, graded_at, attested)
+    if d is None:
+        return None
+    d.setdefault("spawn", None)
+    gb = d["grading"]
+    prior = unit.get("grading") if isinstance(unit.get("grading"), dict) else {}
+    parent = confirmation_of(unit)
+    if prior.get("confirm_unit"):
+        # exactly ONE confirmation per discovery: a recurring cell's later PASS reuses it
+        gb["confirm_unit"] = prior["confirm_unit"]
+        gb.setdefault("discovery", prior.get("discovery") or "unconfirmed")
+    elif template_cell(unit) and gb.get("verdict") == "pass":
+        child = confirm_unit_id(str(unit.get("id")), graded_at)
+        n = g.get("cells_swept")
+        gb.update({"discovery": "unconfirmed", "confirm_unit": child,
+                   "selected_from_cells": n if isinstance(n, int) else None,
+                   "note": (f"single-window PASS selected from {n if isinstance(n, int) else 'an unrecorded number of'} "
+                            f"cell(s): a discovery, not a confirmation. {child} re-asks on a disjoint window; "
+                            "no Tier-3 proposal from this unit until it CONFIRMS")})
+        d["spawn"] = child
+    if parent and gb.get("verdict") == "pass":
+        want = set((unit.get("confirmation") or {}).get("passing_cells") or [])
+        got = set(g.get("passing_cells") or [])
+        if want and got and not (want & got):
+            d.update(status=None, reset_stamp=False)
+            gb.update({"verdict": None, "needs_review": True,
+                       "note": f"passed on {sorted(got)[:6]}, none of {parent}'s passing cells {sorted(want)[:6]}: "
+                               "a NEW discovery on fresh data, not a confirmation -- a session reads it"})
+        else:
+            gb.update({"confirms": parent, "confirmation": "confirmed",
+                       "note": f"fresh-window PASS under the same rule: {parent}'s discovery is CONFIRMED"})
+    elif parent and gb.get("verdict") == "fail":
+        gb.update({"confirms": parent, "confirmation": "not_replicated"})
+    return d
+
+
+def _decide(unit: Dict[str, Any], g: Dict[str, Any], graded_at: str,
+            attested: bool = False) -> Optional[Dict[str, Any]]:
     cadence = str(unit.get("cadence") or "once")
     prior = unit.get("grading") if isinstance(unit.get("grading"), dict) else {}
     base = {"auto": True, "graded_at": graded_at, "grader": "scripts/research/queue_grade.py",
@@ -281,6 +470,17 @@ def decide(unit: Dict[str, Any], g: Dict[str, Any], graded_at: str,
     if attested:
         base["attested"] = base["decision_rule_id"]
     v = g.get("verdict")
+    if (v == "fail" and cadence not in _RECURRING and not confirm_fail(unit)
+            and (isinstance(unit.get("generated"), dict) or confirmation_of(unit))
+            and int(prior.get("confirmatory_run") or 0) < 1):
+        # RESEARCH-CONFIRM-FRESH-WINDOW (b): a deterministic harness re-run over the same window
+        # reproduces the same number, so the template's same-window replay only spent a slot
+        # (MEASURED on main 2026-10-16: 0 of 176 generated units ever took it). A FAIL closes the
+        # cell; it never retires the family -- the family-retirement protocol (#18557) owns that.
+        return {"status": "done", "reset_stamp": False,
+                "grading": {**base, "verdict": "fail",
+                            "note": "deterministic harness: FAIL closes this cell with no same-window replay; "
+                                    "it does not retire the family (family-retirement protocol, #18557)"}}
     if attested and v == "fail" and cadence not in _RECURRING and not confirm_fail(unit):
         return {"status": "done", "reset_stamp": False,
                 "grading": {**base, "verdict": "fail",
@@ -363,6 +563,14 @@ def apply_text(text: str, d: Dict[str, Any]) -> str:
 
 def grade_unit(root: Path, unit_id: str, text: str, graded_at: str) -> Optional[str]:
     """New text for the unit file, or None when nothing is to be written."""
+    res = grade_unit_full(root, unit_id, text, graded_at)
+    return res[0] if res else None
+
+
+def grade_unit_full(root: Path, unit_id: str, text: str,
+                    graded_at: str) -> Optional[Tuple[str, Optional[Tuple[str, str]]]]:
+    """(new unit text, (child id, child text) | None), or None when nothing is to be written. The
+    child is the fresh-window confirmation unit a template-cell PASS opens (`confirmation_unit`)."""
     yaml = _yaml()
     unit = yaml.safe_load(text)
     if not isinstance(unit, dict) or unit.get("status") != "queued" or not unit.get("last_dispatched_at"):
@@ -417,28 +625,55 @@ def grade_unit(root: Path, unit_id: str, text: str, graded_at: str) -> Optional[
     d = decide(unit, g, graded_at, attested=attested)
     if d is None:
         return None
+    child: Optional[Tuple[str, str]] = None
+    if d.get("spawn"):
+        cid = d["spawn"]
+        taken = root / QUEUE / f"{cid}.yaml"
+        other = None
+        if taken.is_file():
+            try:
+                other = confirmation_of(yaml.safe_load(taken.read_text(encoding="utf-8")) or {})
+            except yaml.YAMLError:
+                other = "(unreadable)"
+        if taken.is_file() and other != unit.get("id"):
+            # 1-in-65,536 hash collision with an unrelated unit: never overwrite it -- a session decides
+            d["grading"].pop("confirm_unit", None)
+            d["grading"].update({"needs_review": True,
+                                 "note": f"PASS is a discovery, but confirmation id {cid} is taken by another unit"})
+        else:
+            child = (cid, confirmation_unit(unit, g, cid))
     new = apply_text(text, d)
     if new == text:
         return None
     # the edit must still parse and must have changed only what it claims
     back = yaml.safe_load(new)
     assert isinstance(back, dict) and back.get("id") == unit.get("id")
-    return new
+    if child:
+        cu = yaml.safe_load(child[1])
+        assert isinstance(cu, dict) and cu.get("id") == child[0] and confirmation_of(cu) == unit.get("id")
+    return new, child
 
 
 def run(root: Path, *, graded_at: str, write: bool) -> Dict[str, Any]:
     changed = []
+    spawned = []
     for path in sorted((root / QUEUE).glob("*.yaml")):
         text = path.read_text(encoding="utf-8")
-        new = grade_unit(root, path.stem, text, graded_at)
-        if new is None:
+        res = grade_unit_full(root, path.stem, text, graded_at)
+        if res is None:
             continue
+        new, child = res
         g = _yaml().safe_load(new).get("grading") or {}
         changed.append({"id": path.stem, "verdict": g.get("verdict"), "status": _yaml().safe_load(new).get("status"),
                         "needs_review": bool(g.get("needs_review")), "reason": g.get("reason")})
+        if child:
+            spawned.append({"id": child[0], "confirms": path.stem,
+                            "status": _yaml().safe_load(child[1]).get("status")})
         if write:
             path.write_text(new, encoding="utf-8")
-    return {"graded_at": graded_at, "changed": changed, "written": write}
+            if child:
+                (root / QUEUE / f"{child[0]}.yaml").write_text(child[1], encoding="utf-8")
+    return {"graded_at": graded_at, "changed": changed, "spawned": spawned, "written": write}
 
 
 # ── verify ──────────────────────────────────────────────────────────────────
@@ -456,10 +691,15 @@ def verify(root: Path, base: str) -> List[str]:
     if rc != 0:
         return ["queue diff unreadable"]
     problems = []
-    for line in out.strip().splitlines():
-        status, _, path = line.partition("\t")
+    lines = [ln.partition("\t") for ln in out.strip().splitlines()]
+    added = {path for status, _, path in lines if status == "A"}
+    expected_children: Dict[str, str] = {}
+    for status, _, path in lines:
+        if status == "A":
+            continue    # only a confirmation unit a graded parent opens, checked below
         if status != "M":
-            problems.append(f"{path}: {status} -- the grader only MODIFIES existing units")
+            problems.append(f"{path}: {status} -- the grader only MODIFIES existing units "
+                            "(and ADDS the one confirmation unit a graded PASS opens)")
             continue
         rc, base_text = _git(root, "show", f"{mb}:{path}")
         if rc != 0:
@@ -468,9 +708,20 @@ def verify(root: Path, base: str) -> List[str]:
         head_text = (root / path).read_text(encoding="utf-8")
         g = (_yaml().safe_load(head_text) or {}).get("grading") or {}
         graded_at = str(g.get("graded_at") or "")
-        expected = grade_unit(root, Path(path).stem, base_text, graded_at)
-        if expected != head_text:
+        res = grade_unit_full(root, Path(path).stem, base_text, graded_at)
+        if (res[0] if res else None) != head_text:
             problems.append(f"{path}: does not reproduce from the merge-base unit + HEAD results at graded_at {graded_at!r}")
+            continue
+        if res and res[1]:
+            expected_children[f"{QUEUE.as_posix()}/{res[1][0]}.yaml"] = res[1][1]
+    for path in sorted(added):
+        want = expected_children.get(path)
+        if want is None:
+            problems.append(f"{path}: A -- not the confirmation unit of any unit this diff grades")
+        elif (root / path).read_text(encoding="utf-8") != want:
+            problems.append(f"{path}: does not reproduce as its parent's confirmation unit (hand-edited?)")
+    for path in sorted(set(expected_children) - added):
+        problems.append(f"{path}: the grade opens this confirmation unit but the diff does not add it")
     return problems
 
 
@@ -512,9 +763,14 @@ def _self_test() -> int:
     assert grade_e35([])["verdict"] is None
     u = {"cadence": "once", "decision_rule": {"id": "R"}, "generated": {"key": "k"}}
     assert decide(u, {"verdict": "pass", "rows": 1, "files": [], "reason": "r"}, "2030-01-01")["status"] == "done"
+    # RESEARCH-CONFIRM-FRESH-WINDOW (b): a deterministic cell's first FAIL closes (planted) ...
     d = decide(u, {"verdict": "fail", "rows": 1, "files": [], "reason": "r"}, "2030-01-01")
+    assert d["status"] == "done" and not d["reset_stamp"] and "confirmatory_run" not in d["grading"], d
+    # ... a non-deterministic one (declared seeds) keeps the one confirmatory replay (clean)
+    un = {**u, "n_seeds": 5}
+    d = decide(un, {"verdict": "fail", "rows": 1, "files": [], "reason": "r"}, "2030-01-01")
     assert d["status"] is None and d["reset_stamp"] and d["grading"]["confirmatory_run"] == 1
-    d2 = decide({**u, "grading": {"confirmatory_run": 1}}, {"verdict": "fail", "rows": 1, "files": [], "reason": "r"}, "2030-01-01")
+    d2 = decide({**un, "grading": {"confirmatory_run": 1}}, {"verdict": "fail", "rows": 1, "files": [], "reason": "r"}, "2030-01-01")
     assert d2["status"] == "done" and d2["grading"]["verdict"] == "fail"
     di = decide(u, {"verdict": "indeterminate", "rows": 1, "files": [], "reason": "r"}, "2030-01-01")
     assert di["status"] == "done" and di["grading"]["awaiting"] == "more_data" and not di["grading"].get("needs_review"), di

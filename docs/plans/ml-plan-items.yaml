@@ -24,6 +24,8 @@ items:
 - {id: ML-R5, family: gbdt, track: R, title: "Regime scope: history, impact scoping, next units (child of the regime program)", state: open, ref: REGIME-SCOPE, close: "Absorbed by REGIME-PROGRAM deliverables 1 and 5; row closes when its units are in the queue.", tier: 1}
 - {id: ML-R3, family: gbdt, track: R, title: "Regime-head stage decisions (MES baselines, 15m twin, audit baseline soft-off)", state: done, ref: ML-STAGE-DECISIONS, close: "One held Tier-3 PR landed by the operator and the stage change OBSERVED on the trainer registry. [CLOSED 2026-10-15 ML-FRONTIER-W42: the stage change is OBSERVED on the trainer registry -- 4 shadow->candidate at 2026-10-11T21:28Z, trace on checklist row ML-STAGE-TRACE (trainer-vm-diag #18155, run 38689709849).]", tier: 3}
 - {id: ML-R4, family: gbdt, track: R, title: "ETH/SOL funding/OI-joined datasets (unblocks RQ-20260929-109/110)", state: open, ref: FUNDING-OI-DATASETS-ETH-SOL, close: "Datasets build on the trainer and both units leave blocked/.", tier: 1}
+- {id: ML-R6, family: bayesian_probabilistic, track: R, title: "Regime label streams (ML vol head + causal HMM) exported for trade-separation tests (unblocks RQ-20261016-65ff-28 classifier comparison, RQ-20260928-006)", state: open, ref: REGIME-VOL-LABELS-EXPORT, close: "Label files on main for BTC/ETH/SOL for both classifiers; 65ff-28 leaves blocked/.", tier: 1}
+- {id: ML-R7, family: none, track: R, title: "Regime axes on the alpaca_live equity legs: exit_lever_ablation fetches non-crypto legs on the runner (unblocks RQ-20261016-65ff-29)", state: open, ref: REGIME-EQUITY-LEG-FETCH, close: "One non-crypto exit_lever_ablation unit lands a measured record; 65ff-29 split per leg and leaves blocked/.", tier: 1}
 - {id: ML-N1J, family: gbdt, track: R, title: "Lever for ML-N1: shadow-log -> realized vol joiner", state: open, ref: ML-HEAD-AGREEMENT-JOIN, close: "Joiner merged, unit moved out of blocked/.", tier: 1}
 # ---- Track X: exit and take-profit heads ----
 - {id: ML-X1, family: gbdt, track: X, title: "ml2-live-leg-corpus lever (per-trade emits for the six live legs; mfe_r baselines)", state: open, ref: ML-LEG-CORPUS, close: "ml2_bracket_train_eval --per-leg prints four baselines per quantile; RQ-20261009-900 leaves blocked/.", tier: 1}
@@ -90,7 +92,7 @@ families:
   rl_bandit: {history: []}
   conformal_calibration: {history: [INDETERMINATE]}   # ML-F8 2026-10-14: CV clause held on all 3 symbols, holdout empty -> re-run ML-F17
   linear_logit: {history: [FAIL, FAIL, PASS, INDETERMINATE, INDETERMINATE]}   # ML-M2 FAIL, ML-M3 FAIL (thin columns), ML-F11 PASS (MES 1d non-inferiority), ML-F7 INDETERMINATE, ML-F9 INDETERMINATE; 2026-10-14
-  ensemble_stack: {history: [INDETERMINATE, INDETERMINATE, INDETERMINATE]}    # ML-F16 (ExtraTrees/MLP vs LightGBM, 1h shards), ML-F13 (15m shards) 2026-10-14; ML-F18 (1h, full shard n-extend) 2026-10-16
+  ensemble_stack: {history: [INDETERMINATE, INDETERMINATE, PASS, INDETERMINATE, INDETERMINATE]}    # ML-F16 (ExtraTrees/MLP vs LightGBM, 1h shards), ML-F13 (15m shards) 2026-10-14; RQ-20261013-1414-05 PASS (ExtraTrees non-inferior to LightGBM on the MES 1d regime head, CV and holdout; written back 2026-10-16 by lane P2-AI-REGIME-BACKLOG-1016, manager audit 2026-10-16 s2); RQ-20261015-ab54-01 and RQ-20261016-001 INDETERMINATE (1h, tail_rows 43000, the same question twice)
 # Plumbing expectations (read by `ml_plan_status.py --plumbing`). A silent or constant shadow head is a
 # FINDING unless it appears here with the row/PI that tracks it -- so a new silence cannot hide.
 plumbing:

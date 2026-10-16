@@ -75,6 +75,16 @@ blocked_on:
     trail_geometry.
   ref: scripts/research/m20_fleet_exit_sweep.py (--cells); .github/workflows/m20-exit-lever-sweep.yml inputs.cells
   clears_when: PR #18063 merged.
+- clears_when: EXIT-PATH-EMIT-OFFLINE lands harness --emit-paths for the real-money legs; derive giveback_r
+    p25/p50, peak_r p50 and median bars_since_peak from the path rows, fill run.inputs.cells, git mv to
+    research/queue/.
+  ref: EXIT-PATH-EMIT-OFFLINE
+  what: '[2026-10-16 lane P1-ATM-BACKLOG-1016] The census (RQ-20261014-9807-01) now lands, but its real-money
+    pool is insufficient_n (7 closes < 20; research/results/RQ-20261014-9807-01/38674510250.jsonl), and
+    keying the cells from the harness ledgers instead does NOT work: ledger mfe_r is a lagged lower bound,
+    so per-trade giveback (mfe_r - gross_r over trades with mfe_r >= 1) reads p50 -0.04 R on xrp_pullback_2h,
+    -0.11 ada, -0.07 eth_4h (lane sandbox 2026-10-16, newest committed ledger per leg) -- negative givebacks
+    cannot key a stop. The per-leg giveback this unit needs comes from per-bar paths.'
 compute: cpu_long
 value:
   bucket: own_losses

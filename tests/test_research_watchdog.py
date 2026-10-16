@@ -8,6 +8,7 @@ from scripts.research import research_watchdog as w
 
 NOW = datetime(2026, 10, 13, 16, 0, tzinfo=timezone.utc)
 CFG = w.load_config()
+_REAL_QUEUE_FACTS = w.queue_facts
 TH = CFG["thresholds"]
 
 
@@ -69,6 +70,30 @@ def test_fires_ok_paths_and_cnl():
 
 def test_fires_ignores_ancient_stuck_runs_as_load():
     assert w.check_fires(5, [run(1, 3000, "in_progress")], NOW, TH)["state"] == w.BAD
+
+
+def test_fires_counts_every_workflow_a_runnable_unit_routes_to():
+    # MEASURED 2026-10-16 09:36Z: the dispatcher fired 8 research-harness-dispatch.yml runs at 08:57Z (in flight),
+    # but the watchdog listed only the four research-script-run* files and escalated "no research compute run
+    # started for 160 min". Workflows named by queue_facts' compute_workflows must be listed and counted.
+    harness = "research-harness-dispatch.yml"
+    assert harness in w.compute_workflows({"compute_workflows": [harness]})
+    assert set(w.RESEARCH_WORKFLOWS) <= set(w.compute_workflows(None))         # unreadable facts keep the floor
+    fx = {"workflow_runs": {w.DISPATCH_WORKFLOW: [run(1, 20)], harness: [run(50, 40, "in_progress")],
+                            **{wf: [run(10 + i, 160)] for i, wf in enumerate(w.RESEARCH_WORKFLOWS)}},
+          "run_jobs": {"1": [job(20)]}}
+    facts = dict(HEALTHY, compute_workflows=[harness])
+    fires = next(v for v in w.evaluate(w.FixtureProbe(fx), CFG, NOW, facts) if v["check"] == "dispatcher_fires")
+    assert fires["state"] == w.OK and harness in fires["evidence"]["workflows_counted"]
+    without = next(v for v in w.evaluate(w.FixtureProbe(fx), CFG, NOW, dict(HEALTHY)) if v["check"] == "dispatcher_fires")
+    assert without["state"] == w.BAD                                            # the 09:36Z false escalation, reproduced
+
+
+def test_queue_facts_names_the_workflows_runnable_units_resolve_to():
+    # reads the checked-in queue (the autouse fixture patches the module attribute, not this captured original)
+    f = _REAL_QUEUE_FACTS(w._REPO, datetime.now(timezone.utc))
+    assert f is not None and isinstance(f["compute_workflows"], list) and f["compute_workflows"]
+    assert all((w._REPO / ".github" / "workflows" / wf).is_file() for wf in f["compute_workflows"])
 
 
 # ── queue ──

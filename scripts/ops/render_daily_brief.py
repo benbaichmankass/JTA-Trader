@@ -518,6 +518,8 @@ def build(*, today: date | None = None, root: Path | None = None) -> dict[str, A
 
     mandates_doc, mandates_state = read_yaml(_MANDATES, root)
 
+    research_t = _research_throughput(root)
+
     try:  # BLOCKER-WATCH: do the blocked / 'running' claims still hold?
         from scripts.ops import blocker_watch  # noqa: PLC0415
         bw = blocker_watch.build(repo=root)
@@ -529,7 +531,9 @@ def build(*, today: date | None = None, root: Path | None = None) -> dict[str, A
         "schemaVersion": 1,
         "forDate": today.isoformat(),
         "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
-        "researchThroughput": _research_throughput(root),
+        "researchThroughput": research_t,
+        "researchFloorLines": _research_floor_lines(research_t, root),
+        "researchSlo": _research_slo(root),
         "liveParity": _live_parity_line(root),
         "pipeline": {"stats": pipe_stats, "section0Lines": section0,
                      "healthy": pipe_res.healthy, "askOperator": ask_operator},
@@ -554,6 +558,14 @@ def _section0(b: dict) -> list[str]:
     # `section0_lines` emits its own "## §0 —" header. Due-ness comes from
     # pipeline.py (`due`, `due_bucket`), never re-derived here.
     L = list(b["pipeline"]["section0Lines"]) + [""]
+    # RESEARCH-ENGINE-1016 (2026-10-16): a research floor gap is DUE work computed on every render -- it
+    # reached the manager only as prose in research-ops handoffs before, and nobody acted on it.
+    if "researchFloorLines" in b:
+        L += list(b["researchFloorLines"])
+    # RESEARCH-PIPELINE-SLO (2026-10-16): the research pipeline's SLO table, every render, from the newest
+    # comms/research/health/ status file -- a missing or stale file is a declared hole, never "all ok".
+    if "researchSlo" in b:
+        L += list((b["researchSlo"] or {}).get("lines") or [])
     bw = b.get("blockerWatch")
     if bw is not None:
         from scripts.ops import blocker_watch  # noqa: PLC0415
@@ -666,6 +678,34 @@ def _research_throughput(root: Path | None) -> dict | None:
         return throughput(root or REPO_ROOT)
     except Exception:  # noqa: BLE001 -- a hole, declared in §4, not a crash of the whole brief
         return None
+
+
+def _research_floor_lines(t: dict | None, root: Path | None) -> list[str]:
+    """§0 lines for a research floor gap (RESEARCH-ENGINE-1016): computed on every render from the
+    throughput already read above, so a gap is due work the moment it exists -- not prose in a handoff."""
+    try:
+        from scripts.research.queue_throughput import floor_gap_lines  # noqa: PLC0415
+        return floor_gap_lines(t, root or REPO_ROOT)
+    except Exception:  # noqa: BLE001 -- a hole, declared, not a crash of the brief
+        return ["### 🚨 Research floor — COULD NOT BE READ (we did not look; this is not 'met')", ""]
+
+
+def _research_slo(root: Path | None) -> dict:
+    """{readState, asOf, counts, notOk, table, lines}: the newest research SLO status file
+    (scripts/research/research_slo.py, written every 2 h by research-slo.yml). Absent / unreadable /
+    stale are states rendered in §0, never an empty table read as healthy."""
+    try:
+        from scripts.ops import research_slo_view as research_slo  # noqa: PLC0415
+        doc, state = research_slo.latest_status(root or REPO_ROOT)
+        rows = (doc or {}).get("latest") or []
+        return {"readState": state, "asOf": (doc or {}).get("as_of"), "counts": (doc or {}).get("counts"),
+                "notOk": [r.get("slo") for r in rows if r.get("state") != "ok"],
+                "table": [{k: r.get(k) for k in ("slo", "state", "value", "op", "threshold")} for r in rows],
+                "lines": research_slo.table_lines(doc, state)}
+    except Exception as exc:  # noqa: BLE001 -- a hole, declared, not a crash of the brief
+        return {"readState": "unreadable", "asOf": None, "counts": None, "notOk": None, "table": None,
+                "lines": [f"### 🚨 Research pipeline SLOs — COULD NOT BE READ ({type(exc).__name__}; we did not look, "
+                          "this is not 'ok')", ""]}
 
 
 _LIVE_PARITY = Path("comms/live_parity/latest.json")
