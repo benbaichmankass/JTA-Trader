@@ -284,22 +284,48 @@ def config_problem(entry: Dict[str, Any], repo: Optional[Path] = None) -> Option
     return None
 
 
-def confirmatory_requeue(entry: Dict[str, Any], result_at: Optional[datetime]) -> bool:
+def confirmatory_requeue(entry: Dict[str, Any], result_at: Optional[datetime],
+                         results_root: Optional[Path] = None) -> bool:
     """Did `queue_grade.decide` clear this unit's stamp to ask for a confirmatory
     run AFTER reading the rows that exist? True only when the grading block
-    says `confirmatory_run >= 1` and its `graded_at` is not before the latest
-    result row -- a row landed after the grading is a result of the
-    confirmatory run itself, and the unit is then not due again."""
+    says `confirmatory_run >= 1` and no result has landed since that grading --
+    a result landed after the grading is the confirmatory run itself, and the
+    unit is then not due again.
+
+    ⚠️ "Since the grading" is read from the grading's own `evidence` list when it
+    has one: the rows the grader READ are named there, so a result file NOT in
+    it is new. Only without that list does it fall back to `graded_at`, and the
+    grader writes `graded_at` as a DATE ('2026-10-15'), which parses to midnight:
+    comparing a same-day result (19:14) against it said "landed after the
+    grading", so `stamp_lost` re-stamped the deliberate re-queue with run 1's
+    own `generated_at`, the confirmatory run never fired, and the grader's
+    confirmatory pass (`since` = that stamp, rows with ts < since excluded) re-read
+    run 1 and closed the unit "two consecutive FAIL passes" on ONE run. MEASURED
+    2026-10-16 (lane RESEARCH-FOLLOWUP-1016): RQ-20261015-4941-01/-02 closed that
+    way, evidence one file each. A date-only fallback therefore compares DATES:
+    a result dated on or before the grading day counts as already read."""
     g = entry.get("grading") if isinstance(entry.get("grading"), dict) else {}
     try:
         if int(g.get("confirmatory_run") or 0) < 1:
             return False
     except (TypeError, ValueError):
         return False
-    graded = _parse_ts(g.get("graded_at"))
+    evidence = g.get("evidence")
+    uid = str(entry.get("id") or "")
+    if isinstance(evidence, list) and evidence and uid:
+        rdir = (results_root if results_root is not None else RESULTS_ROOT) / uid
+        read = {Path(str(e)).name for e in evidence}
+        landed = {f.name for f in rdir.glob("*.jsonl")} if rdir.is_dir() else set()
+        return landed <= read
+    raw = str(g.get("graded_at") or "")
+    graded = _parse_ts(raw)
     if graded is None:
         return False
-    return result_at is None or result_at <= graded
+    if result_at is None:
+        return True
+    if len(raw) == 10:   # date-only: the grading happened at an unknown time that day
+        return result_at.date() <= graded.date()
+    return result_at <= graded
 
 
 def stamp_lost(entry: Dict[str, Any]) -> Optional[datetime]:
@@ -348,6 +374,15 @@ def _is_due(entry: Dict[str, Any], now: datetime) -> tuple:
     met, why = precondition_met(entry)
     if not met:
         return False, why
+    # RESEARCH-CONFIRM-FRESH-WINDOW (operator 2026-10-16): a fresh-window confirmation unit
+    # (queue_grade.confirmation_unit) needs data its PASS never saw, so it carries the earliest
+    # moment that data can exist. An unparseable value is refused, never read as "elapsed".
+    if entry.get("not_before") is not None:
+        nb = _parse_ts(entry.get("not_before"))
+        if nb is None:
+            return False, f"not_before={entry.get('not_before')!r} is unparseable -- refusing to fire"
+        if now < nb:
+            return False, f"not_before {nb.isoformat()} not reached (fresh window still accruing)"
     problem = config_problem(entry)
     if problem:
         return False, problem
@@ -447,11 +482,29 @@ def _waiting_since(entry: Dict[str, Any], uid: str) -> Optional[datetime]:
     return datetime(int(m[1]), int(m[2]), int(m[3]), tzinfo=timezone.utc) if m else None
 
 
+def _due_since(entry: Dict[str, Any], uid: str) -> Optional[datetime]:
+    """When the unit became DUE -- the moment it started waiting for a slot. For a recurring unit that
+    is its last stamp PLUS its cadence gap, never the stamp itself.
+
+    ⚠️ RESEARCH-ENGINE-1016 (2026-10-16). Aging and starvation used to count from the last stamp
+    (`_waiting_since`), so a monthly re-run came due already "waiting" 30 days: 720 h > the router's
+    `starve_hours` 240, i.e. STARVED, sorting ahead of every authored unit in its theme, plus ten aging
+    steps of age_boost. 62 of the 112 queued units on 2026-10-16 were generated monthly sweeps (e35-bracket 26,
+    m20-exit-lever 36), so each month's rollover would put them all in front of the questions anybody asked.
+    A unit waits from when it is due; a `once` unit (and a recurring one never stamped) is due from creation."""
+    since = _waiting_since(entry, uid)
+    cadence = str(entry.get("cadence") or "once")
+    if since is not None and entry.get("last_dispatched_at") and cadence in _CADENCE_DAYS:
+        since = since + timedelta(days=max(_CADENCE_DAYS[cadence], recheck_after_days(entry)))
+    return since
+
+
 def effective_priority(entry: Dict[str, Any], uid: str, now: datetime, aging_hours: float) -> int:
-    """priority minus one step per `aging_hours` waited (floor 0): nothing starves inside its theme."""
+    """priority minus one step per `aging_hours` waited since the unit came DUE (floor 0): nothing
+    starves inside its theme."""
     prio = entry.get("priority")
     prio = prio if isinstance(prio, int) and not isinstance(prio, bool) else 3
-    since = _waiting_since(entry, uid)
+    since = _due_since(entry, uid)
     steps = int(max(0.0, (now - since).total_seconds()) // (aging_hours * 3600)) if since else 0
     return max(0, prio - steps)
 
@@ -504,14 +557,19 @@ def fair_order(jobs: List[Any], now: datetime, themes_doc: Dict[str, Any],
         starve = timedelta(hours=float(cfg["value"]["starve_hours"]))
         for th in cand:
             def _key(x, _fires=fires):
-                since = _waiting_since(x.raw, x.id)
+                since = _due_since(x.raw, x.id)
                 waited = (now - since) if since else timedelta(0)
                 steps = int(max(0.0, waited.total_seconds()) // (aging * 3600))
                 r = cr.score(x.raw, cfg, aging_steps=steps, fires=_fires)
                 r["starved"] = waited > starve
                 r["waited_h"] = round(waited.total_seconds() / 3600.0, 1)
                 x.raw["_rank"] = r
-                return (not r["starved"], -r["rank_value"], x.id)
+                # Authored before generated inside a theme (RESEARCH-ENGINE-1016): someone ASKED an authored
+                # question; a template re-run keeps the queue stocked. The 1.25 hand_written_boost alone let a
+                # generated sweep with a large declared value outrank an authored unit. Theme shares are
+                # untouched (this is within one theme), and a generated unit still fires whenever its theme has
+                # no authored unit due -- or first, once it has been DUE past starve_hours (nothing starves).
+                return (not r["starved"], isinstance(x.raw.get("generated"), dict), -r["rank_value"], x.id)
             cand[th].sort(key=_key)
     for th in cand if cfg is None else ():
         # Within one effective priority a hand-written unit (someone ASKED this question) goes
@@ -740,6 +798,22 @@ def serialized_workflow(wf_file: str, repo: Path = _REPO) -> bool:
     return bool(m) and "${{" not in m.group(1)
 
 
+def managed_first(jobs: List[Any], cfg: Dict[str, Any]) -> List[Any]:
+    """Fire order across the shared --max-research-inflight cap: units placed on a MANAGED backend first, then
+    units whose explicit run.workflow has no backend (compute_router.plan -> "unmanaged"), each group keeping
+    its fair_order. The cap (research_compute.yaml limits.max_total_inflight) is declared as the SUM of the
+    backends' slots, but an unmanaged unit is gated only by that cap -- so in pure fair order it can take every
+    slot. MEASURED 2026-10-16 (lane RESEARCH-DISPATCH-STALL-1016): the 08:10Z and 08:51Z cycles fired 8
+    research-harness-dispatch.yml units each and deferred trainer (RQ-20261012-75b2-20) and kaggle_cpu
+    (RQ-20261014-65cc-09) units on "research compute cap 8 reached" while both backends had 0 in flight; the
+    watchdog then escalated trainer idle 397 min / kaggle_cpu idle 336 min. A managed unit is still bounded
+    by its own backend's max_concurrent, so unmanaged units keep every slot no backend has due work for."""
+    def managed(j: Any) -> bool:
+        p = (getattr(j, "raw", None) or {}).get("_plan")
+        return isinstance(p, cr.Resolution) and p.ok and p.backend in cfg.get("backends", {})
+    return [j for j in jobs if managed(j)] + [j for j in jobs if not managed(j)]
+
+
 def research_workflow_names(jobs: List[Any], repo: Path = _REPO) -> Dict[str, str]:
     """{workflow file -> its `name:`} for every real workflow the queue routes
     to, plus the token-free runner. A run counts as research compute when its
@@ -771,7 +845,7 @@ def gh_runs(status: str, *, limit: int = 200) -> Optional[List[Dict[str, Any]]]:
     """`gh run list` rows for one status, or None when gh could not answer --
     a count we could not take is reported as such, never as zero."""
     cmd = ["gh", "run", "list", "--status", status, "--limit", str(limit),
-           "--json", "databaseId,workflowName,status,createdAt"]
+           "--json", "databaseId,workflowName,status,createdAt,event"]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
     except (OSError, subprocess.SubprocessError):
@@ -793,6 +867,14 @@ def gh_runs(status: str, *, limit: int = 200) -> Optional[List[Dict[str, Any]]]:
 #: in flight" were three `trainer-vm-diag` issue dispatches from the same
 #: morning. Counting them deferred every fire, and would have forever.
 STALE_PRESSURE_HOURS = 24.0
+
+#: Run events that do NOT count toward --max-repo-queued (manager decision 2026-10-16, lane
+#: RESEARCH-DISPATCH-STALL-1016). A `workflow_run` listener run is created for EVERY completion of a
+#: workflow it watches and mostly ends `skipped` without holding a runner. MEASURED 2026-10-16 09:37Z:
+#: the 27 fresh queued runs that deferred every fire were mostly claude-run-failure-alert (37 of ~60 of
+#: its runs since 08:00Z ended skipped). They still count for infra-yield (system-actions-cancel-guard is
+#: a listener AND infra) -- this only narrows the saturation count.
+NON_COMPETING_EVENTS = frozenset({"workflow_run"})
 
 
 def _run_age_hours(row: Dict[str, Any], now: datetime) -> Optional[float]:
@@ -858,19 +940,21 @@ def backpressure(research_names: Dict[str, str], *, max_inflight: int, max_queue
     for r in queued + inprog:
         if str(r.get("workflowName")) in names:
             by_name[str(r["workflowName"])] = by_name.get(str(r["workflowName"]), 0) + 1
+    competing = [r for r in queued if str(r.get("event") or "") not in NON_COMPETING_EVENTS]
+    listeners = len(queued) - len(competing)
     infra = set(infra_names or [])
     infra_waiting = sorted({str(r.get("workflowName")) for r in queued if str(r.get("workflowName")) in infra})
     infra_queued = sum(1 for r in queued if str(r.get("workflowName")) in infra)
-    out = {"inflight_research": inflight, "by_name": by_name, "repo_queued": len(queued), "stale_ignored": stale, "block": None,
-           "infra_queued": infra_queued,
+    out = {"inflight_research": inflight, "by_name": by_name, "repo_queued": len(competing), "stale_ignored": stale, "block": None,
+           "infra_queued": infra_queued, "listener_queued_ignored": listeners,
            "detail": f"research compute in flight {inflight} (cap {max_inflight}); repo runs queued "
-                     f"{len(queued)} (cap {max_queued}); {stale} stuck run(s) older than "
-                     f"{stale_after_hours:g} h ignored"}
+                     f"{len(competing)} (cap {max_queued}; {listeners} workflow_run listener run(s) not counted); "
+                     f"{stale} stuck run(s) older than {stale_after_hours:g} h ignored"}
     if infra_queued:
         out["block"] = (f"{infra_queued} infra run(s) queued ({', '.join(infra_waiting)}): research yields "
                         "the shared GitHub runner pool to infra -- deferring every fire this cycle")
-    elif len(queued) > max_queued:
-        out["block"] = (f"{len(queued)} workflow runs are queued repo-wide (> {max_queued}): research "
+    elif len(competing) > max_queued:
+        out["block"] = (f"{len(competing)} workflow runs are queued repo-wide (> {max_queued}): research "
                         "must not add to a saturated runner pool -- deferring every fire this cycle")
     elif inflight >= max_inflight:
         out["block"] = (f"{inflight} research compute run(s) already queued/in progress (cap "
@@ -1266,6 +1350,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                 due_by_be[be] = due_by_be.get(be, 0) + 1
     gpu_fired = 0
     fired_by_workflow: Dict[str, int] = {}
+    if args.fire and cfg is not None:
+        jobs = managed_first(jobs, cfg)
     for job in jobs:
         entry = job.raw
         row: Dict[str, Any] = {"id": job.id, "path": _display_path(job.path),

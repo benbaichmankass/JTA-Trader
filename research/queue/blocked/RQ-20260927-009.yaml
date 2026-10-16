@@ -2,6 +2,8 @@ id: RQ-20260927-009
 title: Does a realised-vol-percentile soft weight (instead of ADX) rescue the same chop-fold on trend_4h/pullback_2h?
 status: blocked
 cadence: once
+theme: regime
+priority: 2
 kind: experiment
 
 question: >-
@@ -93,6 +95,14 @@ routing:
     Same trainer-VM data dependency as RQ-20260927-004 (data/<SYM>_15m.csv).
 
 blocked_on:
+  - kind: work_item
+    ref: REGIME-WEIGHT-VARIANTS
+    what: >-
+      Owner named 2026-10-16 (lane P2-AI-REGIME-BACKLOG-1016, deliverable 2 of the regime backlog): this unit waits on
+      the soft-weight build (realised-vol-percentile weight) owned by row REGIME-WEIGHT-VARIANTS, child of REGIME-PROGRAM. The prose entries below are the original diagnosis and stay as written.
+    clears_when: >-
+      The owning row is done and its closing observation is recorded; then git mv this file to research/queue/, status queued,
+      run.command set (no run.workflow: declare compute).
   - what: >-
       `scripts/research/regime_weight.py::soft_regime_weight` and the harness
       wiring in backtest_trend.py/backtest_pullback.py key EXCLUSIVELY on the
@@ -123,6 +133,8 @@ lands:
   assert_field: label
   min_rows: 10
 
+roadmap:
+- L-REGIME
 related:
   - 'RQ-20260927-004 (the ADX-keyed sibling this unit generalizes)'
   - 'SRQ-20260618-001 / SRQ-20260618-002'

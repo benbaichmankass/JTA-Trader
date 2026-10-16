@@ -1,0 +1,82 @@
+id: RQ-20261016-65ff-25
+title: 'AI trader / conformal abstention at 1h on PUBLISHED data: does split-conformal abstention on the BTC/ETH/SOL 1h regime learner beat a plain max-probability
+  threshold at matched coverage? (P2-Q1.5, the 1h variant of RQ-20261011-9da8-03)'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 2
+kind: experiment
+question: On the published BTC/ETH/SOL 1h v002 market_features shards (regime_label, the six shared features), with a LightGBM learner fit under the same
+  purged walk-forward folds as RQ-20261014-65cc-10, does a split-conformal (Mondrian per predicted class) abstention rule give a LOWER selective error than
+  the plain max-probability threshold at the SAME coverage (50 / 70 / 90 %), while empirical coverage stays within 3 points of nominal in >= 90% of rolling
+  30-day windows?
+why_this_matters: '65cc-10, 4591-01, 4591-06 and eda2-01 all PASSED (the regime learners beat the class prior on LOG-LOSS) -- the condition 02 s6 W3 #20
+  set for releasing conformal abstention. RQ-20261011-9da8-03 asks it on the trainer-resident shadow log and needs TWO levers (the scorer AND the realised-label
+  joiner ML-HEAD-AGREEMENT-JOIN). This 1h variant reads labelled published shards, so it needs ONLY the scorer: it removes the joiner from the critical
+  path and runs off the saturated trainer. conformal_calibration has 0 registered models (ml_plan_status --diversity).'
+power:
+  expected_n: 3
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: Three symbols x ~24 rolling 30-day windows over the CV test span (tail_rows 40000 at min_train_frac 0.4 -> ~24000 OOS rows ~ 1000 days); the unit
+    of analysis is the (symbol, coverage level) selective-error comparison, with window-level validity.
+  feasibility:
+    source: none
+    accrual_basis: Fixed published shard; nothing accrues.
+decision_rule:
+  id: RULE-RQ2026101665ff25-CONFORMAL-1H
+  statistic: 'Per symbol and coverage level c in {0.5, 0.7, 0.9}: selective error (misclassification among non-abstained OOS rows) of (a) the plain max-probability
+    threshold tuned to coverage c and (b) the Mondrian split-conformal rule at the same coverage; empirical coverage per rolling 30-day window vs nominal.'
+  rule: 'PASS IF on >= 2 of 3 symbols the conformal rule has LOWER selective error than the plain threshold at ALL three coverage levels AND rolling-window
+    coverage is within +/-3 points of nominal in >= 90% of windows (a per-trade refusal signal worth a Tier-3 proposal note on FRONTIER-RESEARCH; family
+    history conformal_calibration PASS). FAIL IF either condition fails on >= 2 symbols (no gain, or validity broken by drift: family history FAIL with
+    this configuration). INDETERMINATE IF < 6 usable windows per symbol or the scorer reports an arm unavailable.'
+  min_n: 6 usable 30-day windows per symbol, >= 200 OOS rows each.
+  what_it_does_not_do: Changes no head, threshold, stage or order path; 'abstain' is measured offline on market labels only. Wiring abstention as a RiskManager
+    refusal is a separate Tier-3 proposal. Not a P&L claim.
+  registered_at: '2026-10-16'
+  registered_before_run: true
+compute: auto
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.3
+  basis: 'stand-in (02 node P2-Q1.5 weight): a calibrated refusal signal for the advisory heads; not a measured P&L'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  published_data: metis-market-data
+  peak_memory_gb: 3.0
+  est_minutes: 30
+  basis: 'Estimate: the 65cc-10 fold plan plus a calibration split per fold; Kaggle CPU via published data.'
+blocked_on:
+- kind: work_item
+  ref: FRONTIER-LEVER-CONFORMAL
+  what: 'The scorer scripts/research/conformal_abstain_eval.py does not exist. For THIS unit it needs a --published mode: read the shards from $ML_DATA_ROOT
+    like ml_bakeoff.py, fit LightGBM on the 65cc-10 folds, then split-conformal vs plain threshold at matched coverage, rolling-window coverage, verdict.json
+    in the E5 shape. The realised-label joiner (ML-HEAD-AGREEMENT-JOIN) is NOT needed here (the shards carry regime_label).'
+  clears_when: conformal_abstain_eval.py merged with a synthetic-exchangeable self-test showing nominal coverage; then git mv this unit to research/queue/,
+    status queued, run.command [python3, scripts/research/conformal_abstain_eval.py, --unit, '{unit}', --out, '{out_dir}'].
+run:
+  workflow: null
+  note: 'Deliberately null: the instrument does not exist yet (see blocked_on). Fill run.command (no run.workflow: compute class routes it) when the lever
+    row closes.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-REGIME
+- M25
+related:
+- RQ-20261011-9da8-03
+- RQ-20261014-65cc-10
+- RQ-20261015-eda2-01
+- FRONTIER-LEVER-CONFORMAL
+- P2-AI-REGIME-BACKLOG-1016
+programme_link:
+  programme: P2
+  node: P2-Q1.5-conformal

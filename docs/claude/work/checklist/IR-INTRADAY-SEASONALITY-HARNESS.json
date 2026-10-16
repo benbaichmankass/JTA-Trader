@@ -1,0 +1,21 @@
+{
+  "id": "IR-INTRADAY-SEASONALITY-HARNESS",
+  "title": "Build: clock-entry harness (enter at a UTC time, exit at a UTC time or bracket) with the full cost stack, for crypto intraday seasonality",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager (filed by lane IDEA-REVIEW-1016)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Family: <=1h crypto strategies (RQ-20260930-504 ran pre-lookahead-fix; docs/research/idea-family-review-2026-10-16.md). Documented effects to test: BTC returns concentrated 21:00-23:00 UTC (Quantpedia, secondary, decayed 2022-23); intraday time-series momentum (Shen-Urquhart-Wang, primary); quarter-hour reversal then 8-12h drift (arXiv 2607.09426, preprint). backtest_trend.py has only --skip-hours / --flat-at-utc / --no-entry-after-utc. FIRST STEP: scripts/backtest_clock.py --symbol --entry-utc --exit-utc --side with execution_costs.resolve_cost_policy and --emit-trades; then a choose-on-2021-2023 / confirm-on-2024-2026 unit for BTC/ETH 21-23 UTC.",
+  "updated_at": "2026-10-16T09:08:35Z",
+  "updated_by": "lane-IDEA-REVIEW-1016",
+  "roadmap": [
+    "M22"
+  ],
+  "_seq": 536
+}

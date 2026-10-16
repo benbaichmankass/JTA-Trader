@@ -1,0 +1,22 @@
+{
+  "id": "LIVE-BT-STAGE-B",
+  "title": "Build: live-vs-backtest Stage B for xrp_pullback_2h / ada_pullback_2h (real money BELOW_BACKTEST) -- join each live close to its config-exact backtest twin and split the gap into cost / missed-extra signal / exit path / regime, plus the mirror-vs-live close-count gap",
+  "phase": "W42",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-16 lane P3-STRATEGY-BACKLOG-1016, from the programme-03 audit \u00a7 5.1 (PR #18532)] Promotes PI-20261015-10152047-0001 to a row: it is the highest-money P3 item. MEASURED from research/results/RQ-20261015-8bbc-01/-02 (2026-10-15 runs): bybit_2 realMoney xrp_pullback_2h -8.8427 R over 16 closes (3.4th pct of a 20000-draw bootstrap of the 55-trade record), ada_pullback_2h -7.0383 R over 15 (4.7th pct); the SAME results show the bybit_portfolio mirror closed 11 (xrp) and 9 (ada) -- fewer than live despite roster equality (test_bybit_portfolio_mirrors_bybit_2_exactly); cause NOT checked (MIRROR-QTY-DIVERGE is a different direction: live rejected at min-qty while the mirror held). Instrument gap: scripts/research/leg_replay_emit.py replays the harness only; the live half needs journal trades (needs_vm_data or a diag pull). Done when: a queue unit with a registered rule names the cause per leg (programme node P3-Q1-live-bt-stage-b authors it the day this lands). Runnable 'window' half already queued: RQ-20261016-c56e-10/-11 (Stage 0 on the four years before each record). [2026-10-16T11:00Z lane LIVE-PARITY-DIAG-1016] LIVE-vs-REPLAY PARITY explains 0 of the xrp_pullback_2h / ada_pullback_2h live-vs-backtest gap on the ENTRY-DECISION + ORDER-PRESENCE axis: both legs 0 divergences in all 13 daily live-replay-parity runs 2026-10-04..10-16 (83 2h bars per 7-day window; 10-16 run: 36 matched xrp signal bars, 11 ada). Source: comms/live_parity/2026-10-*.json, legs[].divergences. Parity does NOT measure fills, slippage, cost or exits, so the remaining gap must be in fills / slippage / cost / exits / sample size \u2014 that is where Stage B's split should look.",
+  "updated_at": "2026-10-16T10:56:43Z",
+  "updated_by": "session_01WvSGCWWdVxbud5rHiZGerj",
+  "roadmap": [
+    "L-LADDER",
+    "M21"
+  ],
+  "_seq": 527
+}

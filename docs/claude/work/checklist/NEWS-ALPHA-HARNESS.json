@@ -2,18 +2,21 @@
   "id": "NEWS-ALPHA-HARNESS",
   "title": "Lever: scripts/research/news_alpha_ic.py -- generic feature-panel -> target harness (TS IC, cross-sectional IC + quintile L/S, event study vs matched baseline), NW/bootstrap p, within-unit BH over the 600-test family budget, sealed holdout phase with Holm, net of resolve_cost_policy, HAR-RV / AR-volume baselines, placebo + future-shift leakage checks, verdict.json + TEST-LEDGER append",
   "phase": null,
-  "state": "queued",
-  "owner": "manager",
+  "state": "landed_unproven",
+  "owner": "lane NEWS-ALPHA-HARNESS-1016 (session_01NScR4y1z9Wb8UpMQUf9a3a)",
   "lane": null,
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    18558,
+    18563
+  ],
   "blocked_on": [],
-  "note": "[2026-10-12 lane NEWS-ALPHA-PROGRAM] Reads each unit's grid/grid_cells/decision_rule; refuses --phase holdout for a cell that was not a discovery survivor; refuses any run that would push research/news_alpha/TEST-LEDGER.jsonl over the declared budget without a ledgered pre-run amendment. Crypto candles via data.binance.vision USDM (runner-reachable) with the Bybit cost policy; a PASS is re-checked on the trainer's Bybit frames. Costs from src/runtime/execution_costs.resolve_cost_policy (never a local cost dict -- the two harnesses still lacking a full cost stack are named in CLAUDE.md). Serves units listed in docs/research/news-alpha-program-2026-10-12.md; program row NEWS-ALPHA-PROGRAM.",
-  "updated_at": "2026-10-12T14:01:53Z",
-  "updated_by": "session_01SPre8cB96Nn4sUTry1KAiX",
+  "note": "[2026-10-12 lane NEWS-ALPHA-PROGRAM] Reads each unit's grid/grid_cells/decision_rule; refuses --phase holdout for a cell that was not a discovery survivor; refuses any run that would push research/news_alpha/TEST-LEDGER.jsonl over the declared budget without a ledgered pre-run amendment. Crypto candles via data.binance.vision USDM (runner-reachable) with the Bybit cost policy; a PASS is re-checked on the trainer's Bybit frames. Costs from src/runtime/execution_costs.resolve_cost_policy (never a local cost dict -- the two harnesses still lacking a full cost stack are named in CLAUDE.md). Serves units listed in docs/research/news-alpha-program-2026-10-12.md; program row NEWS-ALPHA-PROGRAM. [2026-10-16 lane P4-MACRO-BACKLOG-1016] Audit of research/queue/blocked/: this row is the ONE blocker common to all 14 RQ-20261012-5bd1-* units (6 of them need no GDELT corpus: U01 live-log, U09 PM, U11 FOMC, U12 EDGAR, U13 Wiki, U14 conditional). scripts/research/news_alpha_ic.py does not exist on main (ls 2026-10-16). Building this first unblocks more units than any corpus build. [2026-10-16 lane NEWS-ALPHA-HARNESS-1016] BUILT + MERGED: scripts/research/news_alpha_ic.py + news_alpha_features.py (#18558, squash 4a08edef); per-population bar support for U07 rides the unblock PR. Tests 9 passed incl. planted-lookahead negative control (L1 -> producer_failed, nothing ledgered), noise control (fail, holdout never read), positive control (pass net of cost), ledger refusals. OBSERVED on real data (mechanics only, not a test): a U02-grid smoke on 2023-10..12 GDELT panel + Binance klines asserted L1 on 183,492 feature rows and computed all 36 cells. NOTE FOR THE READOUT: the units' own power.feasibility is source: none, so the dispatcher labels them power_state accruing; the harness grades only cells whose effective n reaches the registered floor (7.85/d^2), which is the evidence for an accrual_override_reason. Merged != observed: closes on the observation above.",
+  "updated_at": "2026-10-16T09:08:39Z",
+  "updated_by": "session_01NScR4y1z9Wb8UpMQUf9a3a",
   "roadmap": [
     "M28"
   ],
@@ -23,9 +26,9 @@
     "arch": "none: research tooling, no runtime contract"
   },
   "observation": {
-    "what": "The harness runs one unit end-to-end on a real panel through research-script-run(.yml/-trainer.yml) and lands a measured E5 record",
-    "how_to_check": "ls research/results/RQ-20261012-5bd1-*; jq . comms/research/RQ-20261012-5bd1-*/*/verdict.json",
-    "due_by": "2026-11-02"
+    "what": "A dispatched NEWS-ALPHA unit (any of RQ-20261012-5bd1-02/-03/-04/-05/-07/-08) lands a research/results record with read_state measured or a harness-written producer_failed naming its cause, plus comms/research/<unit>/<run_id>/{discovery.json,ledger_rows.jsonl,verdict.json}",
+    "how_to_check": "ls research/results/ | grep RQ-20261012-5bd1; ls comms/research/RQ-20261012-5bd1-0*/*/verdict.json; jq .read_state,.result_state,.note on each",
+    "due_by": "2026-10-26"
   },
   "_seq": 437
 }

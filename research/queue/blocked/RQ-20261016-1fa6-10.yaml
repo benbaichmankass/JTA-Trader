@@ -1,0 +1,73 @@
+id: RQ-20261016-1fa6-10
+title: 'Announcement-day premium (Savor-Wilson), POOLED: is ES=F''s prior-close -> release-day-close return on CPI / NFP / PPI / FOMC days higher than on non-announcement
+  days, net of the MES cost stack?'
+status: blocked
+cadence: once
+theme: macro
+priority: 2
+kind: experiment
+question: Pool the release days of cpi_mom, nfp, ppi_mom and fomc (deduplicated by date), long ES=F prior close -> release-day close. Choose on releases before 2021-01-01,
+  confirm on releases on/after. Compare against the same book shifted -6 trading days (placebo).
+why_this_matters: 'Savor & Wilson 2013: 11.4 bps excess on announcement days vs 1.1 bps otherwise, Sharpe ~10x. Never tested here (searched queue, docs, scripts,
+  comms, skills for savor / announcement-day / pre-FOMC: only caveats). The PPI sign book (RQ-20261014-4a4c-06) lost to all-long, and 69/140 PPI windows hold CPI
+  or FOMC within 5 days -- the all-long floor is plausibly collecting this premium, which the sign book shorted through. Pre-FOMC drift (Lucca-Moench 2015) is NOT
+  the target: Kurov-Wolfe-Gilbert 2021 show it disappeared after 2015.'
+power:
+  expected_n: 550
+  min_detectable_effect: 0.12
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: ~140 monthly releases x 3 kinds + ~95 FOMC days since 2015, minus same-day collisions ~ 550 days; INFERRED from the snapshot kind counts. 11 bps on ~1% daily
+    sd is d ~0.11; floor (2.8/0.12)^2 = 545 -- at the edge, stated. Per-half (pre/post 2021) n ~ 275 is underpowered for the confirm leg by itself; the confirm clause
+    is sign + placebo, not t.
+  feasibility:
+    source: none
+    accrual_basis: Fixed historical backfill; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261016-1fa6-10-ANNDAY
+  registered_at: '2026-10-16'
+  registered_before_run: true
+  statistic: Mean and t of the all-long release-day return net of the MES round trip (macro_event_study_run sign_book floor_all_long_net, pooled kinds), same for
+    the -6 td placebo book; per half (pre/post 2021-01-01).
+  rule: PASS IF pooled pre-2021 gross mean >= 5 bps with t >= 2.0 AND > placebo mean, AND the post-2021 mean is > 0 and > its placebo -> a timing/sizing input for
+    existing ES/MES exposure (a new unit asks whether the sleeve should hold through these days), never a standalone leg by this unit. FAIL IF n >= 400 and the pre-2021
+    clause fails. INDETERMINATE IF n < 400. Not changed after any result.
+  what_it_does_not_do: Not a strategy promotion; at 12.5 bps round trip a one-day hold is unlikely to clear cost on its own. No config.
+blocked_on:
+- kind: work_item
+  ref: IR-MACRO-ANNDAY-POOLED
+  what: macro_event_study_run.py takes one --kind and grades the sign book, not the all-long floor.
+  clears_when: --kind accepts a comma list (deduplicated by date) and a floor grading mode exists; then fill run.command and git mv into research/queue/.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 10
+  basis: Same shape as RQ-20261014-4a4c-06.
+run:
+  workflow: null
+  note: 'Deliberately null: the pooled/floor mode does not exist yet (see blocked_on).'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M28
+programme: P4
+related:
+- IR-MACRO-ANNDAY-POOLED
+- RQ-20261014-4a4c-06
+- MACRO-EVENT-RANKTILT-ARM
+- docs/research/idea-family-review-2026-10-16.md
+outside_evidence:
+- Savor & Wilson 2013 JFQA 'How Much Do Investors Care About Macroeconomic Risk?', https://ideas.repec.org/a/cup/jfinqa/v48y2013i02p343-375_00.html (primary)
+- Lucca & Moench 2015 JF, https://conference.nber.org/conf_papers/f64395/f64395.pdf (primary)
+- Kurov, Wolfe, Gilbert 2021 FRL 'The disappearing pre-FOMC announcement drift', https://www.skidmore.edu/economics/documents/KurovWolfeGilbert-TheDisappearingPre-FOMC-Announce-Drift-200914.pdf
+  (primary)
+origin:
+  lane: IDEA-REVIEW-1016
+  family: macro survey-surprise / announcement effects
+  family_verdict: A (an unconditional announcement-day hypothesis never tested)
+last_dispatched_at: null
