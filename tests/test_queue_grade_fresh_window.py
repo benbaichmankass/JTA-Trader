@@ -15,13 +15,22 @@ import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
+import pytest
 import yaml
 
+from scripts.ops import roadmap_map
 from scripts.research import dispatch_queue as dq
 from scripts.research import queue_grade as qg
 
 PID = "RQ-20300101-001"
 PASS_AT = "2030-01-01T06:00:00Z"
+FW = "fw-sweep.yml"   # a stub workflow with a fresh-window input (m20 gets none: holdout instead)
+
+
+@pytest.fixture(autouse=True)
+def _forward_window_workflow(monkeypatch):
+    monkeypatch.setitem(qg._FRESH_WINDOW_INPUTS, FW,
+                        lambda after: {"split_mode": "date", "split": (after + qg.timedelta(days=1)).date().isoformat()})
 
 
 def _unit(*, workflow: str = "m20-exit-lever-sweep.yml", cadence: str = "once", family: str = "m20-exit-lever",
@@ -54,7 +63,7 @@ def _repo(tmp_path: Path) -> Path:
 def test_template_pass_spawns_exactly_one_disjoint_window_confirmation(tmp_path):
     r = _repo(tmp_path)
     _rows(r, PID, "pass")
-    res = qg.grade_unit_full(r, PID, _unit(), "2030-01-02")
+    res = qg.grade_unit_full(r, PID, _unit(workflow=FW), "2030-01-02")
     assert res is not None
     parent_text, child = res
     parent = yaml.safe_load(parent_text)
@@ -81,7 +90,7 @@ def test_template_pass_spawns_exactly_one_disjoint_window_confirmation(tmp_path)
 def test_recurring_template_pass_reuses_its_one_confirmation(tmp_path):
     r = _repo(tmp_path)
     _rows(r, PID, "pass")
-    first = qg.grade_unit_full(r, PID, _unit(cadence="monthly"), "2030-01-02")
+    first = qg.grade_unit_full(r, PID, _unit(cadence="monthly", workflow=FW), "2030-01-02")
     assert first and first[1] is not None and yaml.safe_load(first[0])["status"] == "queued"
     # next month's PASS: the confirmation already exists -> carried forward, NOT a second one
     _rows(r, PID, "pass", at="2030-02-01T06:00:00Z")
@@ -115,7 +124,7 @@ def test_non_template_pass_opens_nothing(tmp_path):
 # ── grading the confirmation itself ─────────────────────────────────────────────────────────────
 def _child(r: Path) -> tuple:
     _rows(r, PID, "pass")
-    _p, (cid, text) = qg.grade_unit_full(r, PID, _unit(), "2030-01-02")
+    _p, (cid, text) = qg.grade_unit_full(r, PID, _unit(workflow=FW), "2030-01-02")
     return cid, text.replace("status: queued", "status: queued\nlast_dispatched_at: '2030-03-05T00:00:00+00:00'")
 
 
@@ -184,7 +193,7 @@ def _git(r: Path, *a: str) -> None:
 
 def test_verify_vouches_the_spawned_confirmation_and_refuses_a_tampered_one(tmp_path):
     r = _repo(tmp_path)
-    (r / "research" / "queue" / f"{PID}.yaml").write_text(_unit())
+    (r / "research" / "queue" / f"{PID}.yaml").write_text(_unit(workflow=FW))
     _rows(r, PID, "pass")
     subprocess.run(["git", "init", "-q", "-b", "main", str(r)], check=True)
     _git(r, "add", "-A")
@@ -207,3 +216,44 @@ def test_verify_vouches_the_spawned_confirmation_and_refuses_a_tampered_one(tmp_
     _git(r, "rm", "-q", str(child))
     _git(r, "commit", "-q", "-m", "drop child")
     assert any("does not add it" in p for p in qg.verify(r, "main"))
+
+
+# ── roadmap-map-guard: an authored confirmation unit must pass it (manager, 2026-10-16, #18611) ──
+def _guard_problems(units: dict) -> list:
+    spec = {"enforce_units_from": "20000101"}
+    return [p for p in roadmap_map.diff_problems(spec, {}, {}, units, {}, {}) if "roadmap" in p]
+
+
+def test_authored_confirmation_unit_passes_the_roadmap_guard(tmp_path):
+    """Clean: the unit inherits the family's milestone (queue_replenish.FAMILY_ROADMAP)."""
+    r = _repo(tmp_path)
+    _rows(r, PID, "pass")
+    _p, (cid, text) = qg.grade_unit_full(r, PID, _unit(workflow=FW), "2030-01-02")
+    cu = yaml.safe_load(text)
+    assert cu["roadmap"] == ["M20"]
+    assert _guard_problems({cid: cu}) == []
+    # the parent's own ref wins over the family map
+    own = _unit(workflow=FW).replace("lands:", "roadmap:\n- L-ATM\nlands:")
+    _p, (_cid2, text2) = qg.grade_unit_full(r, PID, own, "2030-01-02")
+    assert yaml.safe_load(text2)["roadmap"] == ["L-ATM"]
+
+
+def test_no_milestone_means_no_unit_and_needs_review(tmp_path):
+    """Planted: a unit the guard would refuse (no roadmap, unknown family) is never authored."""
+    r = _repo(tmp_path)
+    _rows(r, PID, "pass")
+    bare = _unit(workflow=FW, family="no-such-family")
+    assert _guard_problems({"RQ-20300101-abcd-01": {"id": "x"}})   # the guard does refuse a unit without one
+    parent_text, child = qg.grade_unit_full(r, PID, bare, "2030-01-02")
+    g = yaml.safe_load(parent_text)["grading"]
+    assert child is None and g["needs_review"] and "roadmap" in g["note"] and "confirm_unit" not in g
+
+
+def test_m20_pass_authors_no_forward_wait_unit(tmp_path):
+    """Operator 2026-10-16 'Holdout re-run': an m20 PASS waits for its holdout re-run, not 60 days."""
+    r = _repo(tmp_path)
+    _rows(r, PID, "pass")
+    parent_text, child = qg.grade_unit_full(r, PID, _unit(), "2030-01-02")
+    g = yaml.safe_load(parent_text)["grading"]
+    assert child is None and g["discovery"] == "unconfirmed" and "confirm_unit" not in g
+    assert "holdout" in g["note"].lower() and not g.get("needs_review")
