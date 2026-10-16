@@ -586,7 +586,12 @@ def render_node(node: Dict[str, Any], prog_path: str, prog_sha: str, programme: 
     rule.setdefault("registered_at", day)
     unit["decision_rule"] = rule
     run = dict(unit.get("run") or {})
-    if run.get("workflow") == "research-script-run.yml":
+    # A node cannot know its own id, and script_run.py --check refuses a command unit whose
+    # run.inputs.research_unit differs from it. Inject it for the explicit research-script-run
+    # workflow AND for a router-resolved command unit (no run.workflow, a run.command/commands):
+    # the router only ever sends those to the research-script-run* family (P1-ATM-BACKLOG-1016).
+    if run.get("workflow") == "research-script-run.yml" or (
+            not run.get("workflow") and (run.get("command") or run.get("commands"))):
         run["inputs"] = {**dict(run.get("inputs") or {}), "research_unit": unit_id}
     if run:
         unit["run"] = run
@@ -1040,6 +1045,8 @@ def _self_test() -> int:
         y = _yaml().safe_load(newu["text"])
         assert y["decision_rule"]["registered_before_run"] is True and y["roadmap"] == ["M20"] and y["value"]["usd_at_stake_per_month"] == 100
         assert y["generated"]["key"] == "programme:P1-Q1.fail" and y["programme_node"]["goal"] == "G1"
+        # a router-resolved command unit carries its own id (script_run.py --check requires it)
+        assert y["run"]["inputs"]["research_unit"] == newu["id"], y["run"]
         git("checkout", "-q", "-b", "gen")
         (r / QUEUE / f"{newu['id']}.yaml").write_text(newu["text"], encoding="utf-8")
         git("add", "-A")
