@@ -162,8 +162,10 @@ class DatasetBuilder(ABC):
             # Never fails the build: on refusal/failure no sidecar exists and
             # the readers use data.jsonl, exactly as before.
             result = write_sidecar(paths.root)
+            # `result` carries its own "status" (written/refused/failed): keep it
+            # under "sidecar" so the "parquet_sidecar" label is not overwritten.
             print(json.dumps({"status": "parquet_sidecar",
-                              "dir": str(paths.root), **result}),
+                              "dir": str(paths.root), "sidecar": result}),
                   file=sys.stderr)
 
         # Persist the effective scalar build params so the dir is
