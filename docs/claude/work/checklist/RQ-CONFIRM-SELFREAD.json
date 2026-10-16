@@ -1,0 +1,30 @@
+{
+  "id": "RQ-CONFIRM-SELFREAD",
+  "title": "Research-queue confirmatory re-run never fires on a same-day first FAIL; the grader then closes 'two consecutive FAIL passes' on ONE run",
+  "phase": "build",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Found 2026-10-16 by lane RESEARCH-FOLLOWUP-1016 reading RQ-20261015-4941-01/-02. MECHANISM (git log -p on 4941-01): first FAIL graded 2026-10-15 -> grader nulls last_dispatched_at (c8780e1c); queue_grade writes graded_at as a DATE '2026-10-15' (parsed midnight); dispatch_queue.confirmatory_requeue compared result_at 19:14:25 > midnight -> 'landed after grading' -> stamp_lost re-stamped the unit to run 1's own generated_at 2026-10-15T19:14:25 (92ab0ec1, stamp PR for run 38805339626); cadence once + a landed row -> never re-fired; grader confirmatory pass uses since=stamp and excludes only ts < since, so run 1's row (ts == since) was re-read -> 'two consecutive FAIL passes; closed as fail' (3365bb5d) with evidence = one file. FIX (this lane's PR, hold): confirmatory_requeue reads grading.evidence (a result file not in it is new) and compares DATES when graded_at is date-only; queue_grade's confirmatory pass drops rows from files the first pass already read. Tests: tests/test_research_queue_idempotence.py::test_a_same_day_requeue_with_a_date_only_graded_at_is_still_a_requeue. BLAST RADIUS (MEASURED 2026-10-16, crude scan of research/queue/*.yaml): 102 units carry the 'two consecutive FAIL passes' note; every one has <=1 evidence file or a stamp equal to a row's generated_at to the second -- i.e. most or all were closed on one run. For deterministic harnesses on a pinned window a re-run is identical, so most verdicts stand; the closure CLAIM ('never on one pass') is false for them. NOT DONE: (1) merged != deployed: the fix acts only from the next dispatcher/grader cycle after merge; CLOSES when a unit with a same-day first FAIL is observed to re-fire and land a second evidence file before closing. (2) decide whether the 102 need re-opening: only non-deterministic or moving-window units (prop_ev_sim with unpinned seeds, walk-forward on fresh data) can change; a session lists those and re-queues them, or kills this clause with that reason. [2026-10-16 manager ask] Re-queue clause DONE in #18533: of the 102 'two consecutive FAIL' closures, 90 had last_dispatched_at equal to a result row's generated_at (closed on run 1 alone). Of those: 47 have an UNPINNED input window (harness-dispatch default window, rolling --days, accruing macro/ledger stores, model training) and are RE-QUEUED (status queued, stamp null, confirmatory_run 1, evidence = every file already read; dry-run: all 47 would_dispatch); 43 have a pinned window (--end or committed ledgers only) and KEEP their verdict. The other 12 were not stamp-repaired from run 1 and keep theirs. REQUEUED (one run, window not pinned): RQ-20261006-006 RQ-20261006-007 RQ-20261006-010 RQ-20261006-012 RQ-20261006-013 RQ-20261006-014 RQ-20261006-015 RQ-20261006-019 RQ-20261006-022 RQ-20261006-023 RQ-20261006-024 RQ-20261006-025 RQ-20261006-026 RQ-20261006-028 RQ-20261006-029 RQ-20261006-030 RQ-20261006-033 RQ-20261007-014 RQ-20261007-015 RQ-20261007-016 RQ-20261007-209 RQ-20261007-210 RQ-20261007-211 RQ-20261007-212 RQ-20261007-213 RQ-20261007-214 RQ-20261007-226 RQ-20261007-228 RQ-20261007-231 RQ-20261007-234 RQ-20261007-236 RQ-20261007-237 RQ-20261012-75b2-20 RQ-20261012-75b2-21 RQ-20261014-65cc-01 RQ-20261014-65cc-02 RQ-20261014-65cc-03 RQ-20261014-65cc-04 RQ-20261014-65cc-05 RQ-20261014-65cc-09 RQ-20261014-9d20-02 RQ-20261014-9d20-03 RQ-20261014-de02-02 RQ-20261014-de02-03 RQ-20261014-de02-05 RQ-20261014-de02-06 RQ-20261015-72ad-01 KEPT (one run, pinned window or committed ledgers, deterministic): RQ-20261006-034 RQ-20261006-035 RQ-20261006-036 RQ-20261006-037 RQ-20261006-038 RQ-20261006-039 RQ-20261006-040 RQ-20261006-042 RQ-20261006-043 RQ-20261006-045 RQ-20261007-020 RQ-20261007-021 RQ-20261007-026 RQ-20261007-027 RQ-20261007-028 RQ-20261007-029 RQ-20261007-216 RQ-20261007-217 RQ-20261007-218 RQ-20261007-219 RQ-20261007-220 RQ-20261007-222 RQ-20261013-407c-06 RQ-20261013-407c-07 RQ-20261013-407c-09 RQ-20261013-407c-12 RQ-20261013-407c-18 RQ-20261013-407c-19 RQ-20261013-407c-20 RQ-20261014-470a-01 RQ-20261014-470a-02 RQ-20261014-470a-03 RQ-20261014-470a-04 RQ-20261014-470a-06 RQ-20261014-470a-07 RQ-20261014-470a-08 RQ-20261014-470a-10 RQ-20261014-f0e2-07 RQ-20261014-f0e2-09 RQ-20261014-f0e2-11 RQ-20261014-f0e2-12 RQ-20261015-4941-01 RQ-20261015-4941-02 KEPT (stamp not repaired from run 1: genuine second pass): RQ-20261006-005 RQ-20261006-032 RQ-20261013-1414-10 RQ-20261013-1414-11 RQ-20261013-1414-12 RQ-20261013-407c-01 RQ-20261013-407c-03 RQ-20261013-407c-04 RQ-20261013-407c-08 RQ-20261013-407c-10 RQ-20261013-407c-11 RQ-20261013-407c-17",
+  "updated_at": "2026-10-16T07:37:46Z",
+  "updated_by": "lane-RESEARCH-FOLLOWUP-1016",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "none: a grader correctness fix; no milestone measure or baseline changes",
+    "arch": "none: research-queue grading mechanics are documented in scripts/research/queue_grade.py and dispatch_queue.py docstrings, which this change updates"
+  },
+  "observation": {
+    "what": "The next research unit whose first FAIL is graded on the same day its result landed actually fires its confirmatory run (a new dispatch stamp later than run 1 generated_at) and is closed only after a SECOND, distinct evidence file under research/results/<id>/ is graded.",
+    "how_to_check": "git log -p -- research/queue/ | grep -B3 \"two consecutive FAIL\"; for each unit closed that way after the fix merges, grading.evidence must list >= 2 distinct files and last_dispatched_at must differ from every row generated_at; also python3 -m pytest tests/test_research_queue_idempotence.py.",
+    "due_by": "2026-10-23"
+  },
+  "_seq": 526
+}

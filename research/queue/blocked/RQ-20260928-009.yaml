@@ -4,7 +4,16 @@ title: >-
   actually wired (production thesis_tick.py AND the offline P4/S1 replay),
   does conviction-with-events clear calibration/edge where conviction-alone
   (thesis_p4_scorecard.json, committed 2026-09-27) failed?
-status: blocked
+status: retired
+retired_reason: >-
+  2026-10-16 lane P4-MACRO-BACKLOG-1016: superseded. Its offline half was re-specified on 2026-10-14 as
+  RQ-20261014-4a4c-09 (programme 04 Q3: "the offline half of RQ-20260928-009 / PI-CAA05-0002") with a concrete event
+  input (the registered surprise-sign mapping) instead of the unspecified watched_events/signal_ids join, and that
+  unit is retired today on its own clause (4a4c-06 FAIL). Of 15 scheduled-release kinds tested against a
+  point-in-time consensus (research/results/ 2026-10-13..16), one (ppi_mom) carries a drift and its sign book does
+  not beat all-long, so there is no event input today that this rescore could wire in. The question lives on as
+  programme node P4-Q3-event-axis. The PRODUCTION half (thesis_tick.py passes no events into
+  form_theses_from_reads) is PI-20260927-CAA05-0002's own row and is not closed by this retirement.
 cadence: once
 kind: experiment
 
