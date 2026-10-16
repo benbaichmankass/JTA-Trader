@@ -1,0 +1,81 @@
+# AUTHORED by scripts/research/queue_grade.py: the one fresh-window confirmation of RQ-20261009-005's PASS
+# (RESEARCH-CONFIRM-FRESH-WINDOW). Self-lands only while `queue_grade.py --verify` reproduces it.
+id: RQ-20261016-b9e7-01
+title: 'Fresh-window confirmation of RQ-20261009-005: M20 exit-lever sweep: trend_donchian_xrp_4h (generated,
+  monthly)'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 3
+question: 'CONFIRMATION of RQ-20261009-005''s PASS on a window it did not see (data after 2026-10-10T14:59:32+00:00),
+  under the SAME registered rule: Which hard exit levers (stale_stop, giveback_stop, trail_geometry, trail_decay,
+  vol_trail, momentum_trail, momentum_stale) clear the exit-refinement P2 gate on trend_donchian_xrp_4h
+  (XRPUSDT 4h) on the data available now -- and does last month''s answer still hold?'
+why_this_matters: Exit-lever evidence goes stale as new trades accrue; a monthly re-sweep per live leg
+  keeps docs/research/exit-refinement-coverage.json honest and turns a passing cell into a Tier-3 declare
+  proposal with a fresh record.
+power:
+  expected_n: 25
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: MIN_OOS_TRADES=25 is the gate's own floor (RULE-EXIT-REFINEMENT-P2-GATE); a leg below it grades
+    insufficient_base, not fail. The sweep derives the IS/OOS boundary to target that OOS count (split_mode
+    oos-trades).
+  feasibility:
+    source: none
+    accrual_basis: Runs on whatever history the trainer holds for the leg; nothing waits.
+decision_rule:
+  id: RULE-EXIT-REFINEMENT-P2-GATE
+  statistic: 'Per cell: IS and OOS delta net_R and delta maxDD vs the base book; base OOS trade count.'
+  rule: A cell PASSES iff it clears Path A (beats baseline on net_R AND maxDD in BOTH IS and OOS) OR Path
+    B (improves net_r_per_capital_day in BOTH IS and OOS with maxDD not worsening and net_R not falling
+    more than the declared floor), AND the base book holds >= 25 OOS trades, AND the drawdown grant is
+    capped at the base book's own D_b. Below the floor grades insufficient_base. No cell is shipped by
+    this unit.
+  registered_at: '2026-10-09'
+  registered_before_run: true
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 40
+  basis: one leg per unit; the workflow scp's the leg's frames from the trainer and sweeps on the runner.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+run:
+  workflow: m20-exit-lever-sweep.yml
+  inputs:
+    legs: trend_donchian_xrp_4h
+    tp_cap_pct: '0.099'
+    split_mode: date
+    research_unit: RQ-20261016-b9e7-01
+    split: '2026-10-11'
+requires_result:
+  unit: RQ-20261009-005
+  verdict: pass
+not_before: '2026-12-09T14:59:32+00:00'
+confirmation:
+  of: RQ-20261009-005
+  policy: 'operator 2026-10-16 (popup, ''Yes, adopt''): a single-window PASS on a template cell is a discovery;
+    it opens exactly one fresh-window confirmation unit before it can feed any Tier-3 proposal'
+  window:
+    after: '2026-10-10T14:59:32+00:00'
+    mode: most_recent_disjoint
+    wait_days: 60
+  selected_from_cells: 24
+  passing_cells:
+  - adx20_k0_t2.5
+  - adx25_k0_t2.5
+  - gb1R_afterMFE2R
+  note: RQ-20261009-005 PASSED on one window, selected from 24 cell(s); passing cell(s) ['adx20_k0_t2.5',
+    'adx25_k0_t2.5', 'gb1R_afterMFE2R']. That count is the multiple-testing denominator (row RESEARCH-TRIAL-LEDGER).
+    This unit re-asks on fresh data only; it CONFIRMS when it passes on at least one of those cells, and
+    until then RQ-20261009-005 may not feed a Tier-3 proposal.
+grading:
+  auto: true
