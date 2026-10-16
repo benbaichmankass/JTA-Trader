@@ -3,7 +3,19 @@ title: >-
   P4-Q3 event-scored conviction axis: does the inflation-surprise drift sign, carried as a second conviction axis on
   the M28 5-symbol universe at the debit-vertical cost proxy, add net return over the valuation-only axis AND the naive
   all-long floor, walk-forward? (blocked: confirmation set + lever)
-status: blocked
+status: retired
+retired_reason: >-
+  2026-10-16 lane P4-MACRO-BACKLOG-1016: this unit's own pre-registered clause retires it -- "If 03 PASSES (artifact)
+  or 06 FAILS, this unit is RETIRED with that reason, not run." RQ-20261014-4a4c-06 FAILED its registered rule
+  (research/results/RQ-20261014-4a4c-06/38843469740.jsonl, read_state measured): sign book mean net +0.00221 per trade,
+  t 1.531 < 2.0, n=118, MES cost stack 12.5 bps; all-long floor +0.00341 (t 2.41); book minus floor -0.0012 (t -0.59).
+  The rest of the clause held (03 placebo FAIL = clean; 01 and 02 PASS), so the PPI drift is real in RANK but a
+  symmetric sign mapping -- the mapping this replay was specified with -- does not beat being long. The grader had
+  not yet closed 06 (first FAIL re-queues one confirmatory run; the inputs are fixed history plus at most one new
+  release, and 03's confirmatory run repeated its FAIL). If 06's confirmatory run reads non-FAIL the grader routes
+  it to needs_review and this retirement is re-read. The axis question is NOT dropped: programme node
+  P4-Q3-event-axis (research/programmes/04-macro-sleeve.yaml) re-authors it with a magnitude-weighted RANK-TILT
+  mapping once RQ-20261016-7769-20 passes. Lever MACRO-EVENT-AXIS-HARNESS is not built and is not needed until then.
 cadence: once
 theme: macro
 priority: 1
