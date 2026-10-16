@@ -1,7 +1,7 @@
 id: RQ-20261016-65ff-24
 title: 'AI trader / drift at 1h on published data: do the 1h regime learners keep their LOG-LOSS lift over the class prior on the LAST 90 DAYS as well as
   under CV, on BTC, ETH and SOL 1h? (drift-remediation question for PI-20261016-P3PFA1GK-0001)'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -143,3 +143,17 @@ related:
 - .claude/skills/drift-remediation/SKILL.md
 - P2-AI-REGIME-BACKLOG-1016
 last_dispatched_at: '2026-10-16T16:06:10+00:00'
+grading:
+  attested: RULE-RQ2026101665ff24-ML-DRIFT-1H-LOGLOSS
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ2026101665ff24-ML-DRIFT-1H-LOGLOSS
+  evidence:
+  - research/results/RQ-20261016-65ff-24/38929317631.jsonl
+  graded_at: '2026-10-16'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

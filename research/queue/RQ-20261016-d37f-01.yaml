@@ -2,7 +2,7 @@
 # queue_grade.confirmation_unit: the holdout re-run of RQ-20260928-019's PASS (operator 2026-10-16, 'Holdout re-run').
 id: RQ-20261016-d37f-01
 title: 'Holdout re-run of RQ-20260928-019: M20 exit-lever sweep: ada_pullback_2h (generated, monthly)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -78,6 +78,26 @@ confirmation:
     may not feed a Tier-3 proposal. Holdout share 0.25: estimated from 284 lifetime base trades (IS+OOS
     of the nearest committed m20 corpus run for this leg); the sweep re-derives the boundary from the
     run''s own trades and grows the share to the 25-trade floor, capped at 0.40.'
+last_dispatched_at: '2026-10-16T17:10:31+00:00'
 grading:
   auto: true
-last_dispatched_at: '2026-10-16T17:10:31+00:00'
+  confirmation: not_replicated
+  confirms: RQ-20260928-019
+  decision_rule_id: RULE-EXIT-REFINEMENT-P2-GATE
+  evidence:
+  - research/results/RQ-20261016-d37f-01/38936634384.jsonl
+  graded_at: '2026-10-16'
+  grader: scripts/research/queue_grade.py
+  holdout:
+    base_trades: 69
+    boundary: '2024-11-21'
+    confirmation: no_discovery
+    confirmed_cells: []
+    selected_from: 25
+    share_used: 0.2526
+    state: ok
+  note: 'holdout re-run of RQ-20260928-019: not_replicated (selected from 25 cell(s), holdout from 2024-11-21,
+    base n 69). A FAIL closes the configuration, never the family.'
+  reason: 1 row(s), all measured, all no_action_warranted
+  rows: 1
+  verdict: no_action_warranted
