@@ -178,6 +178,17 @@ reading of mixed / non-mechanical rows (close it with a session `grading:` block
 rows -- the grader then never touches it again), a redesign unit, or a retirement with a reason. Minimum per
 pass: the whole bucket, or 8 units if it is larger -- oldest first; say how many remain in the record.
 
+**A triage is a WRITE, and it holds -- that is expected, not a reason to skip it** (RESEARCH-GRADING-BACKLOG-1016,
+MEASURED on the 2026-10-15/16 records: passes counted units as "triaged" while writing nothing, because any
+`research/queue/*.yaml` edit holds the PR for a human under E57 and the pass wanted its record PR to self-land --
+the 08:47Z pass wrote "no units authored so the PR can self-land"). So: put the run record + checklist/pipeline
+writes in the self-landing PR, and the triage `grading:` edits in a SEPARATE held PR in the same pass. "Triaged"
+counts only units whose file carries the disposition; `result_disposition_check.py --list` is the measure, not
+the record's own number. Where the rule genuinely cannot be applied (wiring_only, producer_failed, missing rows),
+the disposition is `grading.owner: <checklist row>` + `grading.owner_reason: <the specific gap and its PI/row>` --
+`queue_grade` keeps both across its 6-hourly re-grades while the unit still needs review (before 2026-10-16 it
+erased them). An owner with no named gap is not a triage.
+
 Population: every `status: queued` unit that is **not runnable**, plus every unit in
 `research/queue/blocked/`. Reuse the manager's watcher, do not re-implement it:
 
