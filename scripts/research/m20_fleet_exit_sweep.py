@@ -65,10 +65,6 @@ sys.path.insert(0, str(REPO / "scripts" / "research"))
 # restated so the producer and the reader can never drift on what counts as a
 # no-op — the same reasoning as `exit_capture` above.
 from m20_wf_effective import is_inert  # noqa: E402
-from m20_holdout import (  # noqa: E402  (RESEARCH-CONFIRM-FRESH-WINDOW holdout, operator 2026-10-16)
-    DEFAULT_SHARE as HOLDOUT_DEFAULT_SHARE, MAX_SHARE as HOLDOUT_MAX_SHARE, HoldoutGuard,
-    confirm_cells as holdout_confirm_cells, leg_confirmation as holdout_leg_confirmation,
-    plan_holdout)
 
 # families with harness exit-lever support; everything else is reported
 # no_harness_levers (vwap/turtle_soup/fade — pending harness levers).
@@ -217,10 +213,30 @@ CELL_TIMEOUT_S: float = 1800.0
 # Memo for run_cell, keyed on the full invocation. See run_cell's docstring for
 # why this is load-bearing rather than cosmetic.
 _CELL_CACHE: dict[tuple, dict] = {}
-#: The lookahead guard for `--holdout-frac` (m20_holdout.HoldoutGuard). Inactive unless a leg
-#: begins a holdout: then every run_cell window and every full-history emit is capped at the
-#: boundary during discovery, and a read past it raises HoldoutLeak.
-_HOLDOUT = HoldoutGuard()
+class _NoHoldout:
+    """Inert stand-in for m20_holdout.HoldoutGuard. `m20_holdout` is imported LAZILY, only when
+    `--holdout-frac` is set: this module sits in the web-api brief's in-process import closure,
+    and every module in that closure must be on the deploy's runtime allowlist
+    (tests/test_deploy_pull_restart_runtime_gate.py), a Tier-2 file."""
+    active = False
+
+    def window(self, start, end):
+        return start, end
+
+    def harness_args(self):
+        return []
+
+    def clip_fold(self, fs, fe):
+        return fs, fe
+
+    def end(self):
+        pass
+
+
+#: The lookahead guard for `--holdout-frac` (m20_holdout.HoldoutGuard, installed by main()).
+#: Inactive unless a leg begins a holdout: then every run_cell window and every full-history emit
+#: is capped at the day before the boundary during discovery, and a read past it raises HoldoutLeak.
+_HOLDOUT = _NoHoldout()
 
 FOLDS = [("2021", "2021-01-01", "2022-01-01"), ("2022", "2022-01-01", "2023-01-01"),
          ("2023", "2023-01-01", "2024-01-01"), ("2024", "2024-01-01", "2025-01-01"),
@@ -2522,7 +2538,7 @@ def capital_delta(cell: dict, base: dict) -> dict:
 
 
 def main(argv: list[str]) -> int:
-    global CELL_TIMEOUT_S
+    global CELL_TIMEOUT_S, _HOLDOUT
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--data-dir", default=str(REPO / "data"))
     ap.add_argument("--split", default="2025-07-01",
@@ -2553,8 +2569,7 @@ def main(argv: list[str]) -> int:
                          "share of each leg's history (by its base trades) BEFORE selection; cells are "
                          "chosen on the rest (IS/OOS inside it) and ONLY the selected cells are graded "
                          "once on the held-back span. The share grows to reach the "
-                         f"{MIN_OOS_TRADES}-trade floor, capped at {HOLDOUT_MAX_SHARE:.0%}. 0 = off. "
-                         f"Default share when used: {HOLDOUT_DEFAULT_SHARE}.")
+                         f"{MIN_OOS_TRADES}-trade floor, capped at 40%. 0 = off. The workflow default is 0.25.")
     ap.add_argument("--out", default=str(REPO / "runtime_logs" / "m20_fleet"))
     ap.add_argument("--only", default=None,
                     help="CSV of leg names to restrict to (debug)")
@@ -2916,6 +2931,11 @@ def main(argv: list[str]) -> int:
         results.flush()
 
     verdicts: dict = {}
+    if a.holdout_frac > 0:
+        from m20_holdout import (HoldoutGuard, plan_holdout,  # noqa: PLC0415 -- lazy, see _NoHoldout
+                                 confirm_cells as holdout_confirm_cells,
+                                 leg_confirmation as holdout_leg_confirmation)
+        _HOLDOUT = HoldoutGuard()
     for p in plan:
         leg = p["leg"]
         print(f"== {leg} ({p['symbol']} {p['tf']}) ==", flush=True)

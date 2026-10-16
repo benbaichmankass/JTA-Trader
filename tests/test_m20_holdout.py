@@ -45,6 +45,7 @@ def test_plan_uses_share_then_grows_to_floor_then_caps():
 def test_planted_lookahead_read_is_refused_by_run_cell(monkeypatch):
     called = []
     monkeypatch.setattr(sweep.subprocess, "run", lambda *a, **k: called.append(a) or None)
+    monkeypatch.setattr(sweep, "_HOLDOUT", HoldoutGuard())   # main() installs it under --holdout-frac
     sweep._HOLDOUT.begin("2025-01-01")
     try:
         with pytest.raises(HoldoutLeak):
@@ -65,6 +66,7 @@ def test_clean_discovery_reads_are_capped_and_folds_clipped(monkeypatch):
         return {"net_total_r": 1.0, "max_drawdown_r": 1.0, "total_trades": 30}
 
     monkeypatch.setattr(sweep, "run_cell", fake_run_cell)
+    monkeypatch.setattr(sweep, "_HOLDOUT", HoldoutGuard())
     sweep._HOLDOUT.begin("2024-06-01")
     try:
         g = HoldoutGuard()
@@ -142,6 +144,17 @@ def test_noise_leg_mostly_fails_the_holdout_and_real_effect_passes():
     assert noise_confirm <= 0.5, noise_confirm              # ... which the holdout mostly refuses
     assert real_confirm >= 0.9, real_confirm                # a real effect survives it
     assert real_confirm - noise_confirm >= 0.4
+
+
+def test_sweep_import_does_not_load_the_holdout_module_and_its_stub_is_inert():
+    """The sweep sits in the web-api brief's in-process closure: m20_holdout must load only under
+    --holdout-frac (tests/test_deploy_pull_restart_runtime_gate.py)."""
+    import subprocess
+    code = ("import sys; sys.path.insert(0, 'scripts/research'); "
+            "import m20_fleet_exit_sweep as m; print('m20_holdout' in sys.modules, m._HOLDOUT.active)")
+    out = subprocess.run([sys.executable, "-c", code],
+                         cwd=str(Path(__file__).resolve().parents[1]), capture_output=True, text=True, check=True)
+    assert out.stdout.split() == ["False", "False"], out.stdout + out.stderr
 
 
 def test_confirmation_states():
