@@ -172,10 +172,12 @@ def load_evidence(root: Path) -> Dict[str, Dict[str, Any]]:
 
 def real_money_legs(root: Path) -> List[str]:
     """Legs on a `real_money` account in `live` mode, in config order (bybit_2 then alpaca_live today)."""
+    import yaml
     try:
-        import yaml
         accts = (yaml.safe_load((root / ACCOUNTS).read_text(encoding="utf-8")) or {}).get("accounts") or {}
-    except Exception:  # noqa: BLE001 -- unreadable config means "could not look", reported as []
+    except (OSError, yaml.YAMLError) as exc:
+        # Could not look: said loudly, and the ledger's `real_money_legs: []` is then that, not "none".
+        print(f"::warning::trial_ledger: {ACCOUNTS} unreadable ({exc}); no leg is labelled real-money", file=sys.stderr)
         return []
     out: List[str] = []
     for _name, acc in accts.items():
@@ -300,7 +302,9 @@ def fold_queue(root: Path, touch) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, 
     for f in sorted((root / QUEUE_DIR).glob("RQ-*.yaml")):
         try:
             u = yaml.safe_load(f.read_text(encoding="utf-8"))
-        except Exception:  # noqa: BLE001 -- an unparseable unit is skipped here, refused by its own guard
+        except (OSError, yaml.YAMLError) as exc:
+            # skipped from the index, and said so; the unit's own validator refuses it
+            print(f"::warning::trial_ledger: {f.name} unreadable ({exc}); not indexed", file=sys.stderr)
             continue
         if not isinstance(u, dict):
             continue

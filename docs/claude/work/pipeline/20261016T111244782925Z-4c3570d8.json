@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "due_date": "2026-10-30",
+    "kind": "date"
+  },
+  "id": "PI-20261016-XJMMBA68-0001",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "operator",
+    "ref": "RESEARCH-OPS-BENCHMARK-1016 decision 3 (PR #18581); lane RESEARCH-TRIAL-LEDGER-1016",
+    "rerun": "ls research/results/RQ-20261016-6013-01/ && python3 scripts/research/trial_ledger.py --real-money-table  # >= 2 weekly ledger results on main = 2 weeks of data -> put the online-FDR question back to the operator"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 3,
+  "what": "Programme-level online FDR (alpha-wealth ledger per programme over the stream of research units; benchmark docs/research/research-ops-benchmark-2026-10-16.md section 4 item 3, source S21). OPERATOR DECISION 2026-10-16 (popup, relayed by Manager Session 2026-10-16 session_01VduHYzdaXe27wTDBLSu8ao), verbatim: \"Defer 2 weeks\". Re-ask the operator on 2026-10-30, once the trial ledger (comms/research/trial_ledger.json, regenerated weekly by RQ-20261016-6013-01) has 2 weeks of data -- without the ledger there is nothing to spend alpha-wealth against."
+}
