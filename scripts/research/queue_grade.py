@@ -318,10 +318,13 @@ CONFIRM_WAIT_DAYS = 60
 #: PASS's data>` makes OOS exactly the trades after the PASS run (the NEXT calendar day, so no
 #: same-day trade the PASS saw is in it). A workflow absent here gets its confirmation unit authored
 #: `blocked` with the reason, never a same-window re-run labelled fresh.
-_FRESH_WINDOW_INPUTS = {
-    "m20-exit-lever-sweep.yml": lambda after: {"split_mode": "date",
-                                               "split": (after + timedelta(days=1)).date().isoformat()},
-}
+_FRESH_WINDOW_INPUTS: Dict[str, Any] = {}
+#: Workflows whose PASSes get NO forward-wait unit. m20: the operator chose a pre-registered holdout
+#: instead (2026-10-16, "Holdout re-run": discovery and confirmation in one run, no wait); a 60-day
+#: forward wait reaches the 25-trade floor for none of the 13 current m20 PASS legs
+#: (PI-20261016-QOTFUEXV-0003). The PASS stays `discovery: unconfirmed` until its holdout re-run
+#: (row RESEARCH-CONFIRM-FRESH-WINDOW, PR #18614) confirms it.
+_NO_FORWARD_WAIT = frozenset({"m20-exit-lever-sweep.yml"})
 _POLICY = ("operator 2026-10-16 (popup, 'Yes, adopt'): a single-window PASS on a template cell is a "
            "discovery; it opens exactly one fresh-window confirmation unit before it can feed any Tier-3 proposal")
 
@@ -354,6 +357,20 @@ def _swap_id(obj: Any, old: str, new: str) -> Any:
     if isinstance(obj, dict):
         return {k: _swap_id(v, old, new) for k, v in obj.items()}
     return obj
+
+
+def confirmation_roadmap(unit: Dict[str, Any]) -> Optional[List[str]]:
+    """The roadmap milestone(s) a confirmation unit carries -- it is a NEW queue unit, and
+    roadmap-map-guard refuses one without (`enforce_units_from`). The parent's own `roadmap`, else the
+    milestone its template family maps to (queue_replenish.FAMILY_ROADMAP, the generator's one map),
+    else None: then no unit is authored at all."""
+    rm = unit.get("roadmap")
+    rm = [rm] if isinstance(rm, str) else rm
+    if isinstance(rm, list) and [m for m in rm if str(m).strip()]:
+        return [str(m) for m in rm if str(m).strip()]
+    from scripts.research.queue_replenish import FAMILY_ROADMAP  # noqa: PLC0415 -- one map, lazily
+    fam = FAMILY_ROADMAP.get(str((unit.get("generated") or {}).get("family") or ""))
+    return [str(m) for m in fam] if fam else None
 
 
 def confirmation_unit(unit: Dict[str, Any], g: Dict[str, Any], child_id: str) -> str:
@@ -391,6 +408,7 @@ def confirmation_unit(unit: Dict[str, Any], g: Dict[str, Any], child_id: str) ->
     for k, v in unit.items():
         if k not in skip:
             out[k] = _swap_id(v, pid, child_id) if k == "lands" else v
+    out["roadmap"] = confirmation_roadmap(unit)
     out["question"] = (f"CONFIRMATION of {pid}'s PASS on a window it did not see (data after "
                        f"{after.isoformat() if after else 'UNKNOWN'}), under the SAME registered rule: "
                        f"{unit.get('question')}")
@@ -635,6 +653,20 @@ def grade_unit_full(root: Path, unit_id: str, text: str,
     if d is None:
         return None
     child: Optional[Tuple[str, str]] = None
+    if d.get("spawn") and str((unit.get("run") or {}).get("workflow") or "") in _NO_FORWARD_WAIT:
+        d["grading"].pop("confirm_unit", None)
+        d["grading"]["note"] = ("single-window PASS: a discovery, not a confirmation. No forward-wait unit for this "
+                                "workflow -- it is confirmed by a pre-registered holdout re-run (operator 2026-10-16, "
+                                "'Holdout re-run'; row RESEARCH-CONFIRM-FRESH-WINDOW). No Tier-3 proposal until CONFIRMED")
+        d["spawn"] = None
+    if d.get("spawn") and confirmation_roadmap(unit) is None:
+        # Never author a unit roadmap-map-guard refuses: a session names the milestone.
+        d["grading"].pop("confirm_unit", None)
+        d["grading"].update({"needs_review": True,
+                             "note": "PASS is a discovery, but no roadmap milestone is known for its confirmation "
+                                     "unit (the unit carries none and its family is not in "
+                                     "queue_replenish.FAMILY_ROADMAP) -- a session authors it"})
+        d["spawn"] = None
     if d.get("spawn"):
         cid = d["spawn"]
         taken = root / QUEUE / f"{cid}.yaml"
