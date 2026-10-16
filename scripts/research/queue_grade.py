@@ -816,9 +816,11 @@ def grade_unit_full(root: Path, unit_id: str, text: str,
         if reuse:
             # A confirmation for this PASS already exists (a session-authored holdout re-run, or one an
             # earlier grade opened): exactly ONE per discovery, so point at it and open nothing.
+            n = d["grading"].get("selected_from_cells")
             d["grading"]["confirm_unit"] = reuse[0]["id"]
-            d["grading"]["note"] = (d["grading"].get("note", "") + f" Confirmation already open: {reuse[0]['id']} "
-                                    f"({reuse[0]['mode']}).").strip()
+            d["grading"]["note"] = (f"single-window PASS selected from {n if isinstance(n, int) else 'an unrecorded number of'} "
+                                    f"cell(s): a discovery, not a confirmation. Its confirmation is already open: "
+                                    f"{reuse[0]['id']} ({reuse[0]['mode']}); no Tier-3 proposal from this unit until it CONFIRMS")
             d["spawn"] = None
     elif d["grading"].get("confirm_unit") and not d["grading"].get("holdout"):
         live = [c for c in confirmations_for(root, pid) if c["mode"] == "holdout_rerun" and c["status"] != "retired"]
