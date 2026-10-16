@@ -7,6 +7,11 @@
   },
   "id": "PI-20261016-TT4AZN7N-0002",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-18",
+    "how_to_check": "latest research-queue-dispatch dispatch-job log: grep 'backpressure:' and count ' dispatched  ' rows; gh api repos/benbaichmankass/Metis-Insights/actions/runs?status=queued for the competing count",
+    "what": "after #18580 merges, a research-queue-dispatch cycle dispatches >=1 unit while PR CI runs are queued, its log showing 'workflow_run listener run(s) not counted'"
+  },
   "origin": {
     "kind": "session",
     "ref": "lane RESEARCH-DISPATCH-STALL-1016 (session_01PnDD59hUeWSKXsTt4aZN7n); incident dispatcher_fires@20261016T0936Z",
