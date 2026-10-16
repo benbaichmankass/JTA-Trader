@@ -4,12 +4,33 @@
 # see research/programmes/01-active-trade-management.yaml for the contract. Landing machinery:
 # every edit holds for a human merge. `value` figures are INFERRED planning weights.
 # 2026-10-16 lane P2-AI-REGIME-BACKLOG-1016: authored the four authoring-queue nodes (Q2.1/Q3.1/Q1.5/Q2.5), added Q1.3 drift,
-# Q4 successor and Q6 parity branches. The regime half (L-REGIME, REGIME-PROGRAM) lives in 02r-regime.yaml (same programme).
+# Q4 successor and Q6 parity branches. The regime half (L-REGIME, REGIME-PROGRAM) lives in 02-ai-trader.yaml (regime section) (same programme).
 # P2-Q4-et-mlp-extend REMOVED (manager directive 2026-10-16, audit s5.6): it materialised RQ-20261016-001, which repeated
 # RQ-20261015-ab54-01 (both tail_rows 43000); that unit is already closed by the grader, so it stays done (not re-graded). The
 # ensemble_stack line (ExtraTrees/MLP at 1h) is stopped: three INDETERMINATEs at two n; no further node.
 programme: P2
 plan: docs/research/programmes/02-AI-TRADER.md
+questions:
+  Q0:
+    state: carried
+    by: HEADLINE-MEASURE-CAPITAL-DAY, ML-LABEL-WALL, ML-SHARD-TRUNCATED, SIGNAL-CATALOG
+    why: 'Q0 rungs are builds (headline measure, label census, shard repair, signals catalog) plus closed census
+      units 9d20-01 (PASS) and d6e7-01 (PASS); the Q0.4 label census units RQ-20261011-17f4-01..03 sit on held PR
+      #17556.'
+  Q6:
+    state: carried
+    by: ML-PARITY-HARNESS, ML-PRODUCER-FUNDING, ML-PRODUCERS
+    why: Serve parity is a build track (02 s3 Q6). Its off-VM TRAINING-parity half is also covered by nodes P2-Q6-parity-*.
+  Q7:
+    state: by_design
+    by: ML-S3 (docs/plans/ml-plan-items.yaml)
+    why: '02 s3: the proposer stays parked; it unparks only on a PASS from Q2.3, Q3.4/3.5 or Q5 (ML-S3''s registered
+      gate). No unit in the next four weeks.'
+  Q8:
+    state: by_design
+    by: M18 / E50
+    why: '02 s3: the portfolio layer reopens only after the arbitration soak is observed writing again (E50). No
+      unit in the next four weeks.'
 nodes:
   # ── Q2 meta-labeling: 9d20-02 (thin-column baseline) closed FAIL ────────────
   - id: P2-Q2.1-fail
@@ -550,3 +571,267 @@ nodes:
     needs_authoring: Off-VM training parity FAILED for the RegimeClassifier class on identical rows. Register the
       root-cause measurement (library version / platform float drift / an unseeded path) as a unit before the class
       is moved; it stays on the trainer.
+  # ── Q1 REGIME half (L-REGIME, checklist row REGIME-PROGRAM), moved here from 02-ai-trader.yaml (regime section) on 2026-10-16:
+  #    scripts/research/programme_coverage.py keys a tree by its 2-char file prefix, so a second 02* file
+  #    shadowed this one and P2 read 9/9 uncovered. One file per programme. Original header follows. ──
+  # REGIME half (milestone L-REGIME, checklist row REGIME-PROGRAM): the machine-readable question tree for
+  # docs/research/programmes/02-AI-TRADER.md s3 Q1 and REGIME-PROGRAM deliverables 2-5. Same contract as 02-ai-trader.yaml
+  # (read by scripts/research/queue_replenish.py; every edit holds for a human merge; `value` figures are INFERRED weights).
+  # Authored 2026-10-16 by lane P2-AI-REGIME-BACKLOG-1016 (manager session_01VduHYzdaXe27wTDBLSu8ao).
+  #
+  # What is already answered (MEASURED, research/results/): TREND axis pooled -- 16 of 17 FAIL (RQ-20260930-701/703,
+  # RQ-20261012-75b2-01..15; the one PASS 75b2-05 fails at min_cell_n 20). Per-leg session/vol skips: PASS 407c-13/14/15/21,
+  # f0e2-10 (NOT confirmed by 470a-10); the rest FAIL or underpowered. The regime ML heads beat the class prior on log-loss
+  # (65cc-10, 4591-01/06, eda2-01) but not on 15m macro-F1 drift (75b2-16..18).
+  #
+  # The work queued from this tree (deliverable 5), every unit pre-registered:
+  #   RQ-20261016-65ff-01..04  fresh-window CONFIRMATIONS of the four unconfirmed regime-lever PASSes (manager audit s4.1)
+  #   RQ-20261016-65ff-05      TRANSFER of the sol VH90 gate to trend_donchian_sol_prop (real money + prop)
+  #   RQ-20261016-65ff-06..08  per-leg good-vs-bad trade conditions on the real-money PULLBACK legs (hot / cold vol; 07 grades
+  #                            ada's declared live cold-tail skip) (deliverable 3)
+  #   DROPPED before merge (2026-10-16, manager relay of IDEA-REVIEW-1016 s11): 11 donchian-leg SKIP units (session / hot vol /
+  #   cold vol / ADX floor on eth_4h, xrp_4h, sol_prop, eth_prop). In-repo evidence already reads against skips on trend legs
+  #   (donchian session 0/5 pass: 407c-10/11/12/19, f0e2-02; donchian hot-vol 1 pass of 6, not confirmed: 470a-10; trend axis
+  #   [ndon] FAIL: 75b2-01/02) and the literature predicts it (crisis alpha). The open regime question on trend legs is
+  #   continuous vol-TARGET SIZING, row IR-VOL-TARGET-SIZING-STAGE0 (IDEA-REVIEW-1016) -- not duplicated here; node P2-R5 waits on it.
+  #   blocked/RQ-20261016-65ff-28  classifier comparison on TRADE SEPARATION (ML vol head vs HMM vs ATR control; deliverable 2)
+  #   blocked/RQ-20261016-65ff-29  the real-money equity legs (alpaca_live)
+  #   blocked/RQ-20260927-006..009, RQ-20260928-006, RQ-20260929-109/110  retagged theme: regime, owner rows named
+  # Nodes below are the branches those results open. Builds are rows, not nodes: REGIME-WEIGHT-VARIANTS, REGIME-WF-VERDICT-WRAPPER,
+  # REGIME-VOL-LABELS-EXPORT, REGIME-EQUITY-LEG-FETCH, FUNDING-OI-DATASETS-ETH-SOL.
+  - id: P2-R3.c01-pass
+    question: Q1
+    goal: G1
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 150
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-01
+      verdict: pass
+    needs_authoring: 'RQ-20261016-65ff-01 CONFIRMED the first-window regime gate on xrp_pullback_2h on a disjoint
+      window. Not another backtest: prepare the regime-selectivity Tier-3 PACKET as a note on REGIME-PROGRAM (both
+      windows'' numbers, the account_compat_matrix, the exact strategies.yaml line it would change) for the manager;
+      the operator flips. A data-backed Tier-3 call may be taken under the 2026-09-27 standing authorization only
+      with the committed records of BOTH windows.'
+  - id: P2-R3.c02-pass
+    question: Q1
+    goal: G1
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 120
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-02
+      verdict: pass
+    needs_authoring: 'RQ-20261016-65ff-02 CONFIRMED the first-window regime gate on ada_pullback_2h on a disjoint
+      window. Not another backtest: prepare the regime-selectivity Tier-3 PACKET as a note on REGIME-PROGRAM (both
+      windows'' numbers, the account_compat_matrix, the exact strategies.yaml line it would change) for the manager;
+      the operator flips. A data-backed Tier-3 call may be taken under the 2026-09-27 standing authorization only
+      with the committed records of BOTH windows.'
+  - id: P2-R3.c03-pass
+    question: Q1
+    goal: G4
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 60
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-03
+      verdict: pass
+    needs_authoring: 'RQ-20261016-65ff-03 CONFIRMED the first-window regime gate on eth_pullback_2h on a disjoint
+      window. Not another backtest: prepare the regime-selectivity Tier-3 PACKET as a note on REGIME-PROGRAM (both
+      windows'' numbers, the account_compat_matrix, the exact strategies.yaml line it would change) for the manager;
+      the operator flips. A data-backed Tier-3 call may be taken under the 2026-09-27 standing authorization only
+      with the committed records of BOTH windows.'
+  - id: P2-R3.c04-pass
+    question: Q1
+    goal: G4
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 80
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-04
+      verdict: pass
+    needs_authoring: 'RQ-20261016-65ff-04 CONFIRMED the first-window regime gate on trend_donchian_sol on a disjoint
+      window. Not another backtest: prepare the regime-selectivity Tier-3 PACKET as a note on REGIME-PROGRAM (both
+      windows'' numbers, the account_compat_matrix, the exact strategies.yaml line it would change) for the manager;
+      the operator flips. A data-backed Tier-3 call may be taken under the 2026-09-27 standing authorization only
+      with the committed records of BOTH windows.'
+  - id: P2-R3.c05-pass
+    question: Q1
+    goal: G1
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 250
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-05
+      verdict: pass
+    needs_authoring: 'RQ-20261016-65ff-05 PASSED: a hot-vol entry skip TRANSFERS to trend_donchian_sol_prop on 2022-10-05..2024-10-04.
+      Per its registered rule this is a LEAD (the later window was smoke-read, VH90 fail): register ONE re-ask of
+      the chosen arm on 2020-10-05..2022-10-04 before any packet; prop legs also clear the superset ladder (prop EV/survival
+      gate).'
+  - id: P2-R3.g06-pass
+    question: Q1
+    goal: G1
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 120
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-06
+      verdict: pass
+    needs_authoring: 'RQ-20261016-65ff-06 (ada_pullback_2h, volhot axis) PASSED on 2024-10-05..2026-10-04 (or its
+      pinned window). Register the fresh-window CONFIRMATION exactly like RQ-20261016-65ff-01..04: the single chosen
+      arm only, B vs that arm, on the disjoint preceding 730 days, same bar / drawdown clause / 3-of-4 folds / 39
+      floor. Nothing goes to a packet before it confirms.'
+  - id: P2-R3.g07-pass
+    question: Q1
+    goal: G1
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 120
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-07
+      verdict: pass
+    needs_authoring: 'RQ-20261016-65ff-07 (ada_pullback_2h, volcold axis) PASSED on 2024-10-05..2026-10-04 (or its
+      pinned window). Register the fresh-window CONFIRMATION exactly like RQ-20261016-65ff-01..04: the single chosen
+      arm only, B vs that arm, on the disjoint preceding 730 days, same bar / drawdown clause / 3-of-4 folds / 39
+      floor. Nothing goes to a packet before it confirms.'
+  - id: P2-R3.g08-pass
+    question: Q1
+    goal: G1
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 150
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-08
+      verdict: pass
+    needs_authoring: 'RQ-20261016-65ff-08 (xrp_pullback_2h, volcold axis) PASSED on 2024-10-05..2026-10-04 (or its
+      pinned window). Register the fresh-window CONFIRMATION exactly like RQ-20261016-65ff-01..04: the single chosen
+      arm only, B vs that arm, on the disjoint preceding 730 days, same bar / drawdown clause / 3-of-4 folds / 39
+      floor. Nothing goes to a packet before it confirms.'
+  - id: P2-R2-classifier-pass
+    question: Q1
+    goal: G1
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 300
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-28
+      verdict: pass
+    needs_authoring: 'A regime classifier''s label separates money-losing entries out of sample. Per regime-selectivity
+      Rule 2: register the regime_cell_walkforward.py run on the actual 2-D (trend, vol) cell with --vol-labels from
+      THAT classifier (*_stable_drag under FOLD_PANEL 3/4/5, both directions read), via the REGIME-WF-VERDICT-WRAPPER
+      instrument.'
+  - id: P2-R2-classifier-fail
+    question: Q1
+    goal: G4
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 150
+      confidence: 0.2
+    after:
+    - unit: RQ-20261016-65ff-28
+      verdict: fail
+    needs_authoring: 'No classifier label (ML vol head, HMM, ATR control) separates trades on the vol axis. With the
+      trend axis already null (75b2-01..15), register the remaining regime-program question: per-LEG (not pooled)
+      conditions only -- the per-leg pullback units RQ-20261016-65ff-06..08 and the vol-target sizing line P2-R5 are
+      that line -- and a new information class (funding/OI, P2-R4) before any further pooled classifier work.'
+  - id: P2-R3-equity-read
+    question: Q1
+    goal: G1
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 100
+      confidence: 0.2
+    after:
+    - unit: RQ-20261016-65ff-29
+      verdict: any
+    needs_authoring: The real-money equity legs' vol-axis read closed. Per passing leg/arm register a fresh-window
+      confirmation (2006-2016 daily); a FAIL records the axis honest_negative for alpaca_live.
+  - id: P2-R1-softweight-read
+    question: Q1
+    goal: G4
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 120
+      confidence: 0.2
+    after:
+    - unit: RQ-20260927-006
+      verdict: any
+    - unit: RQ-20260927-009
+      verdict: any
+    needs_authoring: 'The two vol-axis SOFT-weight variants (advisory-head predict_proba, realised-vol percentile)
+      closed. Compare them to the HARD vol skips the per-leg units measured (65ff-06..08 and the 407c/f0e2/470a skips):
+      a soft weight that beats the hard skip on the same leg and window is the sizing-side regime lever (Tier-3 via
+      advisory_sizing), else record that hard skips suffice.'
+  - id: P2-R1-volcells-parity-read
+    question: Q1
+    goal: G1
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 150
+      confidence: 0.3
+    after:
+    - unit: RQ-20260928-006
+      verdict: any
+    needs_authoring: 'The offline parity re-check of the three volatile-keyed trend_vol OFF-cells closed. A cell that
+      is not *_stable_drag is a cosmetic cell (regime-selectivity Rule 1): register its removal packet (Tier-3) on
+      REGIME-PROGRAM; a cell that holds stays and is noted.'
+  - id: P2-R5-voltarget-sizing
+    question: Q1
+    goal: G1
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 300
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-04
+      verdict: any
+    needs_authoring: Per-leg continuous vol-TARGET SIZING on the real-money trend legs is the regime question the
+      skip units cannot answer. Its build is row IR-VOL-TARGET-SIZING-STAGE0 (vol_target_verdict.py over backtest_vol_target.py;
+      rule PASS iff dSharpe >= +0.10 net AND maxDD no worse AND dSharpe > 0 in >= 3/4 blocks, n >= 100/leg). Once
+      that row lands, author one unit per real-money trend leg (trend_donchian_eth_4h, _xrp_4h, _sol_prop, _eth_prop),
+      paired on the same window with the skip verdicts already on record, so sizing and gating are compared like for
+      like. Waits on 65ff-04 only so it surfaces once the last hot-skip lead on a trend leg is read.
+  - id: P2-R4-direction-baseline
+    question: Q5
+    goal: G4
+    roadmap:
+    - L-REGIME
+    - M23
+    value:
+      usd_at_stake_per_month: 150
+      confidence: 0.2
+    after:
+    - unit: RQ-20260929-109
+      verdict: any
+    - unit: RQ-20260929-110
+      verdict: any
+    needs_authoring: 'REGIME-PROGRAM deliverable 4 (a baseline structure + momentum direction model). On PRICE-ONLY
+      inputs it is answered: RQ-20261014-4591-02 FAIL (no learner beats the class prior on the 1h direction label),
+      1414-03 / 4591-05 INDETERMINATE -- so no further price-only direction unit (manager audit 2026-10-16 s5.6).
+      This node re-opens it only with a NEW information class: once the ETH/SOL funding-augmented heads (109/110)
+      have run, register the direction baseline with funding/OI covariates (logit first, then LightGBM) graded on
+      LOG-LOSS vs the class prior (never macro-F1 vs the prior: IDEA-REVIEW-1016 s9 metric artifact; row IR-DIRECTION-LABEL-V2),
+      then net of cost on a take-the-signal overlay, as the documented reference other work is measured against.'

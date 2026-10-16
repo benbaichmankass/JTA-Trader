@@ -17,6 +17,28 @@
 #                               is carried in 02-ai-trader.yaml Q6 (RQ-20261016-65ff-20..23)
 programme: P6
 plan: docs/research/programmes/06-DATA-INFRA.md
+questions:
+  Q2:
+    state: carried
+    by: DATA-KLINE-ARCHIVE, DATA-DERIV-ARCHIVE
+    why: Archives are builds (06 s4 Q2); priority of the 1m archive set by da7a-01 (information source).
+  Q4:
+    state: carried
+    by: DATA-LABEL-TIES, DATA-INTRADE-LABEL-STORE
+    why: Tie-aware labels and the per-bar label store are builds (06 s4 Q4); the effect question is node P6-Q1-scalp-needed.
+  Q6:
+    state: carried
+    by: DATA-CATALOG, ML-SHARD-TRUNCATED
+    why: Catalog and shard integrity are builds (06 s4 Q6).
+  Q7:
+    state: carried
+    by: DATA-STORE-PARQUET-GC
+    why: Parquet + GC is a Tier-2 build (06 s4 Q7).
+  Q8:
+    state: carried
+    by: ML-PARITY-HARNESS, ML-PRODUCER-FUNDING
+    why: Serve parity is already carried by these rows (06 s4 Q8); off-VM training parity is nodes P2-Q6-parity-*
+      in 02-ai-trader.yaml.
 nodes:
   - id: P6-Q1-scalp-reask
     goal: G4

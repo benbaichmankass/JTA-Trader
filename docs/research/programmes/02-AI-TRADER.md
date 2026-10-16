@@ -170,7 +170,7 @@ Status key: **queued** (dispatchable now) · **blocked** (named blocker) · **ro
 
 ### Update 2026-10-16 (lane P2-AI-REGIME-BACKLOG-1016) — read this before the W1–W4 tables
 
-The tables below are the 2026-10-14 plan; several "queued" items have since closed (manager audit `docs/research/programmes/reviews/2026-10-16/02-AI-REGIME-DATA.md`). The live tree is now machine-read: `research/programmes/02-ai-trader.yaml` (AI trader), `research/programmes/02r-regime.yaml` (the regime half, L-REGIME) and `research/programmes/06-data-infra.yaml` (programme 06). Added on 2026-10-16, held for a human merge:
+The tables below are the 2026-10-14 plan; several "queued" items have since closed (manager audit `docs/research/programmes/reviews/2026-10-16/02-AI-REGIME-DATA.md`). The live tree is now machine-read: `research/programmes/02-ai-trader.yaml` (AI trader), `research/programmes/02-ai-trader.yaml (regime section)` (the regime half, L-REGIME) and `research/programmes/06-data-infra.yaml` (programme 06). Added on 2026-10-16, held for a human merge:
 
 | what | units | state |
 |---|---|---|
