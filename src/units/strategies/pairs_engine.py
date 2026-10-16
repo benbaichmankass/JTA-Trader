@@ -14,7 +14,13 @@ placement; this module only computes, given two aligned close series:
     |z| ≤ exit_z, adverse spread-level stop, or max-hold timeout).
 
 The R-unit (the divergence stop) is ``risk = stop_z · std`` in log-spread units,
-matching the harness. The executor translates a spread-direction verdict into the
+matching the harness. ⚠️ With ``hedge_beta: rolling`` that std is taken over a
+series whose β changes bar to bar, so β drift × the log-price LEVEL inflates it
+(~775x measured on SOL/ETH 1h, checklist PAIRS-R-SCALE) and every leg sized off
+it is undersized by the same factor. ``fixed_beta_risk`` is the honest R unit —
+the same window with β frozen at the entry bar — and ``entry_signal`` reports
+both plus their ratio, so a caller can refuse to size on an inflated R unit.
+With ``hedge_beta: one`` the two are the same number by construction. The executor translates a spread-direction verdict into the
 two per-leg orders (long_spread ⇒ long A / short B; short_spread ⇒ short A / long B)
 and prices each leg's SL/TP from the spread stop/target.
 """
@@ -91,6 +97,37 @@ def _latest_valid(spread: np.ndarray, z: np.ndarray, std: np.ndarray
     return i, float(spi), float(zi), float(si)
 
 
+#: |risk / risk_fixed_beta − 1| at or under this is "the same R unit"
+#: (pandas' rolling std and numpy's std differ only in floating-point noise).
+RISK_SCALE_TOLERANCE = 0.01
+
+
+def fixed_beta_risk(close_a: Sequence[float], close_b: Sequence[float],
+                    params: PairParams, beta_entry: float) -> Optional[float]:
+    """The honest R unit for an entry on the LATEST bar: ``stop_z × std`` (ddof 0)
+    of ``logA − beta_entry·logB`` over the SAME shift-1 lookback window
+    ``entry_signal``'s std covers (the ``lookback`` bars before the latest),
+    with β FROZEN at the entry bar's value.
+
+    A position entered at β_entry makes money on ``N_A·(dlogA − β_entry·dlogB)``,
+    so the spread its stop and size must be measured on is the fixed-β one; the
+    rolling-β series also moves whenever β itself moves (PAIRS-R-SCALE).
+    None when not computable (short input, non-positive price, zero std)."""
+    a = np.asarray(close_a, dtype=float)
+    b = np.asarray(close_b, dtype=float)
+    n = len(a)
+    lb_n = int(params.lookback)
+    if n != len(b) or n <= lb_n + 1 or lb_n < 2:
+        return None
+    if not (np.all(a > 0) and np.all(b > 0)) or not np.isfinite(beta_entry):
+        return None
+    la, lb = np.log(a[n - 1 - lb_n:n - 1]), np.log(b[n - 1 - lb_n:n - 1])
+    sd = float(np.std(la - float(beta_entry) * lb, ddof=0))
+    if not np.isfinite(sd) or sd <= 0:
+        return None
+    return float(params.stop_z * sd)
+
+
 def entry_signal(close_a: Sequence[float], close_b: Sequence[float],
                  params: PairParams) -> Optional[Dict[str, Any]]:
     """ENTRY verdict for the latest closed bar when FLAT, or None. Mirrors the
@@ -110,10 +147,14 @@ def entry_signal(close_a: Sequence[float], close_b: Sequence[float],
     if risk <= 0:
         return None
     stop_spread = entry_spread - risk if direction == "long_spread" else entry_spread + risk
+    risk_fixed = fixed_beta_risk(close_a, close_b, params, float(beta[i]))
+    ratio = (risk / risk_fixed) if risk_fixed else None
     return {
         "direction": direction, "z": round(zi, 4), "entry_spread": round(entry_spread, 6),
         "std": round(si, 6), "risk": round(risk, 6), "stop_spread": round(stop_spread, 6),
         "beta": round(float(beta[i]), 6), "symbol_a": params.symbol_a, "symbol_b": params.symbol_b,
+        "risk_fixed_beta": round(risk_fixed, 6) if risk_fixed else None,
+        "risk_scale_ratio": round(ratio, 4) if ratio is not None else None,
     }
 
 
