@@ -272,6 +272,26 @@ Status grades: `ok` (nothing to flag) / `watch` (bounded anomaly) /
 Overall: `healthy` (all ok) / `caution` (≥1 watch, no concern) /
 `investigate` (any concern).
 
+## Research pipeline health (MANDATORY — 2026-10-16)
+
+The research pipeline is graded like the trading pipeline (operator, 2026-10-16: *"It's a pipeline like the other
+pipelines and needs the same infra setup as the trading pipeline."*). Grade one dimension `research_pipeline` ∈
+`ok | watch | concern`:
+
+1. Read every `comms/research/health/<date>.json` since the last review (`latest`, `runs`, `alert_state`; SLOs in
+   `scripts/research/research_slo.yaml`). No file for a day, or a `runs` gap > 4 h, means the monitor itself was
+   down — that is a `concern` and a finding on its own.
+2. For **every** SLO that was `breach` or `could_not_look` in the window: name the value, the threshold, how long it
+   was red, and its disposition — fixed (commit), a checklist row / pipeline item that moves it (with a near
+   `due_when`), or a reasoned threshold change in a PR. "Noted" is not a disposition (manager § "Research SLO
+   escalation").
+3. Check the alert actually reached the operator: each `change` / `reminder` run should carry
+   `delivered.telegram: true`; a false is an alert-delivery finding, same class as an undelivered trade ping.
+4. Positive control before reporting "all ok": `python3 scripts/research/research_slo.py --self-test`.
+
+`ok` = no red SLO in the window. `watch` = red SLOs, each with a dispatched lane. `concern` = a red SLO with no
+disposition, a missing status day, or an undelivered alert.
+
 ## Trainer service touch
 
 Grade exactly one dimension: `trainer_service` ∈

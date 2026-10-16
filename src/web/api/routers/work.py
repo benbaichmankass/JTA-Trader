@@ -2274,6 +2274,10 @@ def _brief_payload() -> dict[str, Any]:
             "mandates": b["mandatesState"],
         },
         "pipelineStats": b["pipeline"]["stats"],
+        # RESEARCH-PIPELINE-SLO: the research SLO table with its read state
+        # (read / absent / unreadable) and as-of, so the Workflow page can show
+        # a missing or stale table as a hole rather than as "all ok".
+        "researchSlo": {k: v for k, v in (b.get("researchSlo") or {}).items() if k != "lines"} or None,
         "coverageComplete": b["coverageComplete"],
         "freshness": {
             # Same working-tree discipline as `/checklist`: the route reads

@@ -194,6 +194,11 @@ CADENCE_REGISTRY: dict[str, dict] = {
         "why": "writes the incident ledger only when an incident occurs, so a quiet watchdog leaves no receipt by design; "
                "a stopped watchdog is observed by claude-run-failure-alert (crashed runs) and by research-ops reading the Actions run list",
     },
+    "research-slo.yml": {
+        "receipt": "comms/research/health",
+        "why": "every run writes the dated SLO status file and lands it through commit-to-main; the last commit "
+               "touching comms/research/health/ IS the receipt",
+    },
     "compute-util-telemetry.yml": {
         "receipt": "comms/cloud/compute_util_ledger.jsonl",
         "why": "the workflow rewrites the ledger every day and lands it through "
