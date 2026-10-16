@@ -69,6 +69,18 @@ fired run still measured something over some population. Such a result lands
 under `_unattributed/` — a named state, rather than loose at the store root
 where a path bug would look identical.
 
+## `produced_by.data_fingerprint` — what data the run read (since 2026-10-16)
+
+`produced_by.commit_sha` fixes the code; until 2026-10-16 nothing fixed the input, so a result could
+not be re-derived once a shard was re-cut (`ML-SHARD-TRUNCATED`). Runner records now carry
+`produced_by.data_fingerprint`, computed by `scripts/research/script_run.py::data_fingerprint` from
+the inputs the run itself names (argv paths, plus `verdict.json` `data_inputs` / `data_window`):
+`{"state": "fingerprinted", "sha256", "n_files", "files", "window", "truncated"}` or
+`{"state": "not_established", "why"}`. **`not_established` means the run named no input we could
+hash — never "the data did not matter".** Records from before 2026-10-16 have no such key; that is
+absence, not a fingerprint. `research_result.py --validate` refuses a present-but-empty one.
+(Row `RESEARCH-TRIAL-LEDGER`.)
+
 ## Why the unit id is in the PATH
 
 The key a later session holds is the queue unit. It opens
