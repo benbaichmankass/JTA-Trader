@@ -32,8 +32,9 @@ Tier-1 research tooling. No live path.
 from __future__ import annotations
 
 import math
+from collections.abc import Callable, Sequence
 from datetime import date, timedelta
-from typing import Any, Callable, Dict, List, Optional, Sequence
+from typing import Any
 
 DEFAULT_SHARE = 0.25
 MAX_SHARE = 0.40
@@ -44,7 +45,7 @@ class HoldoutLeak(RuntimeError):
 
 
 def plan_holdout(entry_stamps: Sequence[str], share: float, floor: int,
-                 cap: float = MAX_SHARE) -> Dict[str, Any]:
+                 cap: float = MAX_SHARE) -> dict[str, Any]:
     """Boundary for one leg. `entry_stamps` = the base's full-history entry times (ISO strings).
 
     Holdout size k = max(ceil(share * N), floor), clamped to floor(cap * N). The boundary is the
@@ -52,12 +53,12 @@ def plan_holdout(entry_stamps: Sequence[str], share: float, floor: int,
     reproduce it. Pure."""
     stamps = sorted(str(s) for s in entry_stamps if s)
     n = len(stamps)
-    out: Dict[str, Any] = {"lifetime_trades": n, "share_requested": share, "floor": floor,
+    out: dict[str, Any] = {"lifetime_trades": n, "share_requested": share, "floor": floor,
                            "cap": cap}
     if n == 0:
         return {**out, "boundary": None, "state": "no_trades"}
-    k = max(int(math.ceil(share * n)), floor)
-    k_cap = int(math.floor(cap * n))
+    k = max(math.ceil(share * n), floor)
+    k_cap = math.floor(cap * n)
     underpowered = k > k_cap
     k = min(k, k_cap)
     if k < 1:
@@ -74,11 +75,11 @@ class HoldoutGuard:
     """Caps/refuses harness windows by phase. `boundary` None = inactive (every window passes)."""
 
     def __init__(self) -> None:
-        self.boundary: Optional[str] = None
-        self.cap: Optional[str] = None
+        self.boundary: str | None = None
+        self.cap: str | None = None
         self.phase: str = "off"
 
-    def begin(self, boundary: Optional[str]) -> None:
+    def begin(self, boundary: str | None) -> None:
         """Discovery may read up to and including `cap` = the day BEFORE the boundary: the harnesses
         filter `timestamp <= end` and `>= start` (backtest_pullback._date_filter), so ending discovery
         AT the boundary would put that day's 00:00 bar in both spans."""
@@ -97,7 +98,7 @@ class HoldoutGuard:
     def active(self) -> bool:
         return self.phase != "off"
 
-    def window(self, start: Optional[str], end: Optional[str]):
+    def window(self, start: str | None, end: str | None):
         """(start, end) to actually run, or HoldoutLeak."""
         b = self.boundary
         if self.phase == "discovery":
@@ -107,12 +108,11 @@ class HoldoutGuard:
                 raise HoldoutLeak(f"discovery window ends at {end}, past the last discovery day {self.cap} "
                                   f"(holdout starts {b})")
             return start, (end or self.cap)
-        if self.phase == "confirm":
-            if not start or str(start)[:10] < b:
-                raise HoldoutLeak(f"confirm window starts at {start}, before the holdout boundary {b}")
+        if self.phase == "confirm" and (not start or str(start)[:10] < b):
+            raise HoldoutLeak(f"confirm window starts at {start}, before the holdout boundary {b}")
         return start, end
 
-    def harness_args(self) -> List[str]:
+    def harness_args(self) -> list[str]:
         """Extra argv for a full-history harness call made during discovery (emit / census)."""
         return ["--end", self.cap] if self.phase == "discovery" else []
 
@@ -125,8 +125,8 @@ class HoldoutGuard:
         return fs, (self.cap if fe[:10] > self.cap else fe)
 
 
-def confirm_cells(selected: List[Dict[str, Any]], run_window: Callable[[Optional[list], str], dict],
-                  beats: Callable[[dict, dict], bool], boundary: str, floor: int) -> Dict[str, Any]:
+def confirm_cells(selected: list[dict[str, Any]], run_window: Callable[[list | None, str], dict],
+                  beats: Callable[[dict, dict], bool], boundary: str, floor: int) -> dict[str, Any]:
     """Grade each selected cell ONCE on the holdout. `selected` = [{"cell": tag, "args": argv}];
     `run_window(args_or_None, start)` runs the base (None) or a cell from `start` to the end."""
     base = run_window(None, boundary)
@@ -156,7 +156,7 @@ def _delta(c: dict, b: dict, k: str):
         return None
 
 
-def leg_confirmation(selected_n: int, cells: List[Dict[str, Any]]) -> str:
+def leg_confirmation(selected_n: int, cells: list[dict[str, Any]]) -> str:
     """One word for the leg. A pass on ANY selected cell confirms that cell; the denominator rides
     beside it (`selected_from`), never folded in."""
     if selected_n == 0:

@@ -16,9 +16,14 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts" / "research"))
-import m20_fleet_exit_sweep as sweep  # noqa: E402
-from m20_holdout import (HoldoutGuard, HoldoutLeak, confirm_cells, leg_confirmation,  # noqa: E402
-                         plan_holdout)
+import m20_fleet_exit_sweep as sweep
+from m20_holdout import (
+    HoldoutGuard,
+    HoldoutLeak,
+    confirm_cells,
+    leg_confirmation,
+    plan_holdout,
+)
 
 
 def _stamps(n, start_year=2018):
