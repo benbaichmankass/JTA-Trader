@@ -12,7 +12,19 @@
   "prs": [],
   "blocked_on": [],
   "note": "Trades 3934/4422/6023/4710 closed 2026-08-05..09-24, all BEFORE the EXIT-CLUSTER relabel fix (deployed 2026-09-29 13:23Z, row done). MEASURED 2026-10-16: alpaca closes since 09-29T13:23Z n=7 (4 sl_cross, 3 sl, all priced), 0 exchange_flat_reconciled; 27 pre-fix alpaca exchange_flat_reconciled rows still carry no exit_price/pnl (a Tier-2 backfill from alpaca_order_history could price them; not done \u2014 soak grading is not to be changed, and the soak re-passes on the next clean trade). CLOSES WHEN: each of the 4 legs' next trade grades clean in soak_state.",
-  "updated_at": "2026-10-16T06:03:45Z",
+  "updated_at": "2026-10-16T06:13:13Z",
   "updated_by": "session_018LaUrmMUmBuGtEMUcWJ7Qd",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "none: L-LADDER next already reads act on every passed / mechanical_fail soak; this row is one such action",
+    "arch": "none: no runtime component, path or contract changed by this row"
+  },
+  "observation": {
+    "what": "each of gld_pullback_1d, iwm_trend_long_1d, qqq_trend_long_1d, scha_trend_long_1d (alpaca_paper) grades its next trade clean: exit journaled with a TP/SL/strategy reason, an exit price and fill+fees",
+    "how_to_check": "python3 scripts/ops/soak_state.py (leg state passed) or /api/diag/journal?table=trades: newest closed alpaca_paper row per leg has exit_reason != exchange_flat_reconciled and exit_price not null",
+    "due_by": "2026-11-15T00:00Z"
+  },
   "_seq": 525
 }
