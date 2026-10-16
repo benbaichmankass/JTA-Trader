@@ -457,6 +457,15 @@ def decide(unit: Dict[str, Any], g: Dict[str, Any], graded_at: str,
                        "note": f"fresh-window PASS under the same rule: {parent}'s discovery is CONFIRMED"})
     elif parent and gb.get("verdict") == "fail":
         gb.update({"confirms": parent, "confirmation": "not_replicated"})
+    if gb.get("needs_review"):
+        # RESEARCH-GRADING-BACKLOG-1016: a session's triage of a needs_review unit is its
+        # `grading.owner` (+ `owner_reason`), which result_disposition_check counts as owned. Until
+        # this, every 6-hourly pass rebuilt the block from `base` and erased the owner, so a
+        # generated recurring unit fell back to needs_review_unowned within hours of its triage.
+        # Kept only while the unit still needs review; a mechanical verdict supersedes it.
+        for k in ("owner", "owner_reason"):
+            if str(prior.get(k) or "").strip():
+                gb[k] = prior[k]
     return d
 
 
@@ -786,6 +795,12 @@ def _self_test() -> int:
     assert di29["grading"]["needs_review"] and "recheck_after_days" not in di29["grading"], di29
     assert decide(u, {"verdict": None, "rows": 0, "files": [], "reason": "0 result row(s)"}, "2030-01-01") is None
     assert decide(u, {"verdict": None, "rows": 2, "files": [], "reason": "verdicts not unanimous"}, "2030-01-01")["grading"]["needs_review"]
+    # a session's owner survives a re-grade that still needs review, and drops once a verdict lands
+    uo = {**u, "cadence": "weekly", "grading": {"auto": True, "needs_review": True, "owner": "ROW-X", "owner_reason": "why"}}
+    do = decide(uo, {"verdict": None, "rows": 1, "files": [], "reason": "verdicts not unanimous-mechanical"}, "2030-01-01")
+    assert do["grading"]["owner"] == "ROW-X" and do["grading"]["owner_reason"] == "why", do
+    dp = decide(uo, {"verdict": "pass", "rows": 1, "files": [], "reason": "r"}, "2030-01-01")
+    assert "owner" not in dp["grading"], dp
 
     with tempfile.TemporaryDirectory() as td:
         r = Path(td)
