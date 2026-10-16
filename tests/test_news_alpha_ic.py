@@ -237,3 +237,30 @@ def test_features_are_point_in_time_and_never_fabricate_zero():
     dh = d.dropna(subset=["max_available_at"])
     assert (dh["max_available_at"] < dh["ts"]).all()
     assert np.isnan(d.loc[d["ts"] == pd.Timestamp("2025-02-11", tz="UTC"), "tone_level"]).all()
+
+
+def test_mixed_bar_populations(tmp_path):
+    """One unit, an hourly population and a daily one (the U07 shape): each cell reads its own bar."""
+    pdir, fcsv = _world(tmp_path)
+    for s in SYMS:
+        h = pd.read_csv(pdir / f"{s}_1h.csv", parse_dates=["timestamp"]).set_index("timestamp")
+        d = h.resample("1D").agg({"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"})
+        d.reset_index().to_csv(pdir / f"{s}_1d.csv", index=False)
+    qdir, out = tmp_path / "q", tmp_path / "out"
+    p = _unit(qdir, ["planted"], ["fwd_rv"])
+    raw = yaml.safe_load(p.read_text())
+    raw["grid"] = {"features": ["planted"], "targets": ["fwd_rv"], "populations": ["hourly", "daily"],
+                   "horizons_hourly": ["4h"], "horizons_daily": ["1d", "5d"]}
+    raw["grid_cells"] = 3
+    raw["news_alpha"]["populations"] = {"hourly": SYMS, "daily": SYMS}
+    raw["news_alpha"]["population_bars"] = {"daily": "1d"}
+    p.write_text(yaml.safe_dump(raw))
+    spec = nai.load_spec(UNIT, qdir)
+    assert spec.bars == ["1d", "1h"] and spec.view("daily").h_bars("5d") == 5 and spec.view("hourly").h_bars("4h") == 4
+    led = _ledger(tmp_path)
+    assert _run(tmp_path, "discovery", fcsv, pdir, qdir, out, led) == 0
+    disc = json.loads((out / "discovery.json").read_text())
+    by = {c["cell"]: c for c in disc["cells"]}
+    assert set(by) == {"planted|fwd_rv|4h|hourly|all", "planted|fwd_rv|1d|daily|all", "planted|fwd_rv|5d|daily|all"}
+    assert all(c["state"] == "measured" for c in by.values()), by
+    assert by["planted|fwd_rv|1d|daily|all"]["rows"] < by["planted|fwd_rv|4h|hourly|all"]["rows"] / 10
