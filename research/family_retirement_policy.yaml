@@ -1,0 +1,54 @@
+# research/family_retirement_policy.yaml -- what a FAMILY RETIREMENT must carry (lane RESEARCH-ENGINE-1016).
+#
+# OPERATOR DIRECTIVE (2026-10-16, via the manager): "do not give up on an IDEA because one configuration
+# failed a few tests; a few tests don't prove a line of thinking is wasteful -- it may mean we tested it
+# wrong. Equally, don't sink resources into ideas with no potential: if an idea is viable there should be
+# outside information on how to do it better; if there is none anywhere, it probably isn't viable."
+#
+# TWO DIFFERENT ACTS, NEVER CONFLATED:
+#   * "this CONFIG failed"   -- a cell / unit closes FAIL against its own pre-registered rule. Automatic,
+#                               fine, and it closes ONLY the exact configuration tested (lever values,
+#                               leg, symbol, timeframe, window, features). The grader does this.
+#   * "this FAMILY is retired" -- nobody should spend more on the idea itself. Needs a REVIEW RECORD at
+#                               research/family_reviews/<family>.yaml meeting the minimums below, and
+#                               scripts/research/family_retirement_guard.py refuses any retirement without one.
+#
+# A FAMILY is the idea, not a config: an exit-lever kind (giveback stop, TP extension), an entry axis, a
+# model family (docs/plans/ml-plan-items.yaml `families:`), a strategy family (donchian, pullback, ...),
+# an information class (news veto, PM surprise). Name it the way the work names it.
+#
+# THRESHOLDS ARE PROVISIONAL and configurable here. Lane IDEA-REVIEW-1016 (deep research on the families
+# closed so far) proposes the protocol details; the manager forwards them and this file is the one place
+# they land. Change a number with the evidence for it in the PR body.
+policy_version: 1
+provisional: true
+minimums:
+  configs_tested: 3          # distinct configurations (lever values / feature sets / architectures) that FAILED
+  windows_tested: 2          # distinct time windows (incl. at least one the configs were not chosen on)
+  instruments_tested: 2      # distinct symbols / legs / markets (1 allowed only with breadth.single_instrument_why)
+  outside_sources: 2         # outside evidence: papers, practitioner write-ups, open-source implementations
+  reason_chars: 80           # the stated reason the IDEA itself is dead, not just that our configs failed
+# test_design_check.verdict must be `sound`. `flawed` means we tested it wrong: fix the test, do not retire.
+test_design_verdicts_allowed: [sound]
+# Words that, on an ADDED line in a research surface, assert a family-level closure. Each such line must
+# cite its review (`family_review: <family>` or the path research/family_reviews/<family>.yaml) -- otherwise
+# the guard refuses it. Config-level language ("this cell FAILED", "honest negative for this config") is fine.
+closure_language:
+  - '\b(family|idea|line of (research|thinking)|approach)\s+(is\s+)?(dead|retired|exhausted|closed|killed|abandoned)\b'
+  - '\b(retire|kill|close|abandon)s?\s+(the|this|that)\s+(whole\s+)?(family|idea|line|approach)\b'
+  - '\bline\s+is\s+exhausted\b'
+  - '\bfamily\s+exhausted\b'
+# Where the text check looks (added lines only, so history is never re-litigated).
+text_surfaces:
+  - research/queue/**
+  - research/programmes/**
+  - research/templates/**
+  - docs/plans/ml-plan-items.yaml
+  - docs/research/programmes/**
+  - comms/research/ops/**
+  - comms/perf_followup/**
+# A structured retirement is any of these; each must name a family with a valid review record.
+#   docs/plans/ml-plan-items.yaml   families.<f>.state in retired_states
+#   any research/queue unit          retires_family: <f>
+#   any research/programmes node     retires_family: <f>
+retired_states: [retired, exhausted, closed, dead, killed]
