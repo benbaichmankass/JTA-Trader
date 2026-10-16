@@ -1,0 +1,18 @@
+{
+  "id": "RQ-CONFIRM-SELFREAD",
+  "title": "Research-queue confirmatory re-run never fires on a same-day first FAIL; the grader then closes 'two consecutive FAIL passes' on ONE run",
+  "phase": "build",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Found 2026-10-16 by lane RESEARCH-FOLLOWUP-1016 reading RQ-20261015-4941-01/-02. MECHANISM (git log -p on 4941-01): first FAIL graded 2026-10-15 -> grader nulls last_dispatched_at (c8780e1c); queue_grade writes graded_at as a DATE '2026-10-15' (parsed midnight); dispatch_queue.confirmatory_requeue compared result_at 19:14:25 > midnight -> 'landed after grading' -> stamp_lost re-stamped the unit to run 1's own generated_at 2026-10-15T19:14:25 (92ab0ec1, stamp PR for run 38805339626); cadence once + a landed row -> never re-fired; grader confirmatory pass uses since=stamp and excludes only ts < since, so run 1's row (ts == since) was re-read -> 'two consecutive FAIL passes; closed as fail' (3365bb5d) with evidence = one file. FIX (this lane's PR, hold): confirmatory_requeue reads grading.evidence (a result file not in it is new) and compares DATES when graded_at is date-only; queue_grade's confirmatory pass drops rows from files the first pass already read. Tests: tests/test_research_queue_idempotence.py::test_a_same_day_requeue_with_a_date_only_graded_at_is_still_a_requeue. BLAST RADIUS (MEASURED 2026-10-16, crude scan of research/queue/*.yaml): 102 units carry the 'two consecutive FAIL passes' note; every one has <=1 evidence file or a stamp equal to a row's generated_at to the second -- i.e. most or all were closed on one run. For deterministic harnesses on a pinned window a re-run is identical, so most verdicts stand; the closure CLAIM ('never on one pass') is false for them. NOT DONE: (1) merged != deployed: the fix acts only from the next dispatcher/grader cycle after merge; CLOSES when a unit with a same-day first FAIL is observed to re-fire and land a second evidence file before closing. (2) decide whether the 102 need re-opening: only non-deterministic or moving-window units (prop_ev_sim with unpinned seeds, walk-forward on fresh data) can change; a session lists those and re-queues them, or kills this clause with that reason.",
+  "updated_at": "2026-10-16T07:16:15Z",
+  "updated_by": "lane-RESEARCH-FOLLOWUP-1016",
+  "_seq": 526
+}
