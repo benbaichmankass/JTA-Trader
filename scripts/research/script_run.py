@@ -448,9 +448,12 @@ def data_fingerprint(p: Plan, verdict: Optional[Dict[str, Any]], *, repo: Path =
     input we could hash -- never "the data did not matter"."""
     import hashlib
     out_abs = (repo / p.out_dir).resolve()
-    script_toks = {argv[1] for argv in p.commands if len(argv) > 1}
+    # getattr: callers (tests, the hyro/leg-replay contract checks) pass a duck-typed plan carrying only
+    # unit/out_dir/rule fields; a plan with no commands named no argv input, which is not an error.
+    commands = [a for a in (getattr(p, "commands", None) or []) if isinstance(a, list)]
+    script_toks = {argv[1] for argv in commands if len(argv) > 1}
     cands: List[str] = []
-    for argv in p.commands:
+    for argv in commands:
         cands.extend(t for t in argv[2:] if t not in script_toks)
     v = verdict if isinstance(verdict, dict) else {}
     declared = v.get("data_inputs")

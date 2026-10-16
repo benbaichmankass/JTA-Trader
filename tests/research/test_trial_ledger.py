@@ -291,3 +291,13 @@ def test_emit_cli_lands_the_fingerprint_and_refuses_junk(tmp_path):
     junk = [("8" if tok == "7" else tok) for tok in common]
     assert rr.main(junk + ["--data-fingerprint", "[1, 2]"]) == 1                   # planted-bad: not an object
     assert not list(tmp_path.rglob("8.jsonl"))
+
+
+def test_derive_record_accepts_a_duck_typed_plan_without_commands(tmp_path):
+    """Contract tests elsewhere pass a SimpleNamespace(unit, out_dir, rule_id, rule_registered_at);
+    the fingerprint must read that as 'named no input', never AttributeError (CI on #18594)."""
+    from types import SimpleNamespace
+    plan = SimpleNamespace(unit="RQ-20300101-001", out_dir=Path("comms/research/RQ-20300101-001/r1"),
+                           rule_id="RULE-X", rule_registered_at="2030-01-01")
+    rec = sr.derive_record(plan, repo=tmp_path)
+    assert json.loads(rec["data_fingerprint"])["state"] == "not_established"
