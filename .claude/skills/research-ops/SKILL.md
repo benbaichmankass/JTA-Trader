@@ -3,7 +3,7 @@ name: research-ops
 description: The routine research-OPERATIONS pass, run 4x/day (02:47, 08:47, 14:47, 20:47 UTC) as a bounded Sonnet lane. Checks the research pipeline is flowing (dispatcher, collector, receipts, stamps, stranded PRs), keeps the runnable floor of queue units topped up, audits every blocked / not-runnable unit and unlocks or retires it, reads every result landed since the last pass and applies its pre-registered rule, and files the follow-ups (research units and builds). Does NOT replace topic research (perf-followup, ML research, readouts on a specific question) — it only keeps the pipeline healthy and moving. Use when the manager dispatches a RESEARCH-OPS-<date>-<slot> lane, or the operator says "/research-ops", "check the research pipeline", "is research operations on track".
 ---
 
-> **Doc status:** `live` · category `instruction` · last verified `2026-10-15` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
+> **Doc status:** `live` · category `instruction` · last verified `2026-10-16` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
 # /research-ops — keep the research pipeline flowing
 
@@ -47,6 +47,36 @@ intake list did not include the research programme plans at all. The mechanism n
   (`recheck_after_days`), not monthly, and never land in `needs_review` -- do not retire them for that.
 - **The floor is computed** (`check_research_queue_health.computed_floor`: 19 h of supply at `fired_24h`, never below
   25); the health check prints it, the idle backends and the authoring-queue depth every dispatch cycle.
+
+## What changed on 2026-10-16 (lane RESEARCH-ENGINE-1016)
+
+MEASURED 07:15Z: runnable **2** against a computed floor of 50; theme `regime` (weight 5) held **0** queued units;
+79 of 112 queued units were generated re-runs; four of the six programme plans (03 STRATEGY, 04 MACRO, 05 PROP,
+06 DATA) had **no tree file**, so none of their questions could ever reach the authoring queue; and the last three
+passes drafted 1 programme node between them. The weights in `THEMES.yaml` are a share of fire slots **among
+themes that hold due work** -- an empty theme gets nothing however heavy it is. Weights are honoured by SUPPLY,
+and supply is this pass's step E. So the health check now prints, every dispatch cycle:
+
+- **`H1-THEME <theme>`** -- the floor split by weight, each theme's runnable units (authored + generated; generated
+  units credited for at most 40 % of a theme's slice). Each short theme is authoring work for step E: author toward
+  the largest shortfall first, from that theme's programme nodes or checklist research rows.
+- **`OPS-AUTHOR-SKIPPED`** -- one of the newest three run records drafted no programme node while the authoring
+  queue held questions. Step E.0 is **not optional**: when budget is short, draft at least ONE node before step D's
+  follow-ups, and record it in the `authoring` block (step F).
+- **programme coverage** -- `python3 scripts/research/programme_coverage.py` (guard `programme-coverage`, a
+  ratchet): per plan, the questions with no node. An uncovered question is fixed by ADDING a node (a
+  `needs_authoring:` line is enough) to `research/programmes/<NN>-*.yaml` -- that is how a plan question becomes
+  visible to the machine at all.
+
+- **`RESULTS-UNDISPOSITIONED`** -- `python3 scripts/research/result_disposition_check.py --list`: units whose
+  landed results carry no verdict and no OWNED `needs_review` (`grading.owner`). "Read" in the run record is not a
+  disposition; each of these gets its rule applied (step D) or an owner (step C). MEASURED 2026-10-16: 19 ungraded,
+  24 `needs_review` with no owner.
+- **Brief §0 `RESEARCH FLOOR GAP`** -- a gap at the end of your pass is now due work on the manager's brief, computed
+  from the queue; your handoff still names it, but the manager acts on §0.
+
+The dispatcher also now ranks **authored before generated inside a theme**, and a recurring unit ages from when it
+came **due**, not from its last stamp (a monthly re-run used to come due already "starved").
 
 ## Ceiling and "done"
 
@@ -288,7 +318,9 @@ Draw new units from, in this order, until the floor is met or sources are exhaus
 
 ## F. Record and report
 
-Write ONE durable, machine-readable record the next run reads as its baseline:
+Write ONE durable, machine-readable record the next run reads as its baseline (the `authoring` block is
+REQUIRED: `check_research_queue_health.ops_authoring_skips` reads `authoring.nodes_drafted` and warns
+`OPS-AUTHOR-SKIPPED` when it is 0 while `queue_depth` > 0):
 `comms/research/ops/<YYYYMMDDTHHMMZ>.json` (newest filename wins):
 
 ```json
@@ -303,6 +335,8 @@ Write ONE durable, machine-readable record the next run reads as its baseline:
   "unlocked": [], "retired": [{"unit": "RQ-…", "reason": "…"}],
   "levers_filed": [{"lever": "…", "ref": "PI-…|<checklist id>"}],
   "units_authored": [], "followups_filed": [],
+  "authoring": {"queue_depth": 6, "nodes_drafted": 1, "nodes": ["P2-Q4-et-mlp-extend"],
+                "theme_shortfall": {"regime": 12}},
   "not_run": [], "handoff": ["what the next pass or a topic lane must pick up"]
 }
 ```

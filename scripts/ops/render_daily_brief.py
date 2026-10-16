@@ -518,6 +518,8 @@ def build(*, today: date | None = None, root: Path | None = None) -> dict[str, A
 
     mandates_doc, mandates_state = read_yaml(_MANDATES, root)
 
+    research_t = _research_throughput(root)
+
     try:  # BLOCKER-WATCH: do the blocked / 'running' claims still hold?
         from scripts.ops import blocker_watch  # noqa: PLC0415
         bw = blocker_watch.build(repo=root)
@@ -529,7 +531,8 @@ def build(*, today: date | None = None, root: Path | None = None) -> dict[str, A
         "schemaVersion": 1,
         "forDate": today.isoformat(),
         "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
-        "researchThroughput": _research_throughput(root),
+        "researchThroughput": research_t,
+        "researchFloorLines": _research_floor_lines(research_t, root),
         "liveParity": _live_parity_line(root),
         "pipeline": {"stats": pipe_stats, "section0Lines": section0,
                      "healthy": pipe_res.healthy, "askOperator": ask_operator},
@@ -554,6 +557,10 @@ def _section0(b: dict) -> list[str]:
     # `section0_lines` emits its own "## §0 —" header. Due-ness comes from
     # pipeline.py (`due`, `due_bucket`), never re-derived here.
     L = list(b["pipeline"]["section0Lines"]) + [""]
+    # RESEARCH-ENGINE-1016 (2026-10-16): a research floor gap is DUE work computed on every render -- it
+    # reached the manager only as prose in research-ops handoffs before, and nobody acted on it.
+    if "researchFloorLines" in b:
+        L += list(b["researchFloorLines"])
     bw = b.get("blockerWatch")
     if bw is not None:
         from scripts.ops import blocker_watch  # noqa: PLC0415
@@ -666,6 +673,16 @@ def _research_throughput(root: Path | None) -> dict | None:
         return throughput(root or REPO_ROOT)
     except Exception:  # noqa: BLE001 -- a hole, declared in §4, not a crash of the whole brief
         return None
+
+
+def _research_floor_lines(t: dict | None, root: Path | None) -> list[str]:
+    """§0 lines for a research floor gap (RESEARCH-ENGINE-1016): computed on every render from the
+    throughput already read above, so a gap is due work the moment it exists -- not prose in a handoff."""
+    try:
+        from scripts.research.queue_throughput import floor_gap_lines  # noqa: PLC0415
+        return floor_gap_lines(t, root or REPO_ROOT)
+    except Exception:  # noqa: BLE001 -- a hole, declared, not a crash of the brief
+        return ["### 🚨 Research floor — COULD NOT BE READ (we did not look; this is not 'met')", ""]
 
 
 _LIVE_PARITY = Path("comms/live_parity/latest.json")

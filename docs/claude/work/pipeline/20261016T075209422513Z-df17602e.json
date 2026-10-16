@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "programme_coverage.py reports 0 uncovered questions in every programme (each covered by a node or a reasoned questions: discharge), and the 03-06 tree files are on main",
+    "due_date": "2026-10-20",
+    "kind": "date"
+  },
+  "id": "PI-20261016-6RBHEWTW-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-ENGINE-1016 (session_01LcBH3h7czfJaqx6RBHeWtw), PRs #18542 (guard) / #18541 (skeleton trees)",
+    "rerun": "python3 scripts/research/programme_coverage.py"
+  },
+  "state": "queued",
+  "terminal_reason": null,
+  "what": "[programme-coverage-fill] 39 of 48 plan questions are in no programme-tree node, so they can never reach the authoring queue (MEASURED 2026-10-16: P1 4/8 Q4,Q5,Q6,Q7; P2 5/9 Q0,Q5,Q6,Q7,Q8; P3 9/9; P4 7/7; P5 7/7; P6 8/8 -- P3..P6 had no tree file). Next step: one lane per programme adds a node per question (a needs_authoring line is enough; builds go in questions: with state carried + by + why), then lowers scripts/research/programme_coverage_baseline.json with --write-baseline. Edits to research/programmes/** hold for a human merge (landing machinery)."
+}

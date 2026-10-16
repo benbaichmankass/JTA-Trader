@@ -1,6 +1,6 @@
 # Programme 01 — Active trade management: brackets as predictions
 
-> **Doc status:** `unknown` · category `evidence` · last verified `2026-10-14` · registered in [`../../DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md) · lane `RESEARCH-PROGRAMMES` (manager dispatch, weekly planning 2026-10-14) · map: [`RESEARCH-MAP.md`](RESEARCH-MAP.md) · roadmap `M20` + `M31` · **Tier-1 document: it proposes tests; every flip it leads to is Tier-3 with an evidence record.**
+> **Doc status:** `unknown` · category `evidence` · last verified `2026-10-16` · registered in [`../../DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md) · lane `RESEARCH-PROGRAMMES` (manager dispatch, weekly planning 2026-10-14) · map: [`RESEARCH-MAP.md`](RESEARCH-MAP.md) · roadmap `M20` + `M31` · **Tier-1 document: it proposes tests; every flip it leads to is Tier-3 with an evidence record.**
 
 > **2026-10-14 amendment (lane `IN-TRADE-EXIT-MODEL`, operator direction via the manager):** the exit line now has a stated **destination — Q8, the in-trade exit model**: at every bar of an open trade, P(SL before TP | state now), and an exit-now rule graded net of cost. Q1–Q7 are the rungs that feed it or ship alongside it; nothing below was removed. The operator's words are verbatim on checklist row `IN-TRADE-EXIT-MODEL`.
 
@@ -13,7 +13,7 @@
 | measure | population | instrument | baseline (MEASURED 2026-10-14) |
 |---|---|---|---|
 | giveback R = peak R − realised R, per leg and per class | closed trades with a `position_telemetry` row and a readable `peak_r`, joined to `trades` on `order_package_id`, never pooled across account classes | `scripts/research/giveback_census.py` (new, this lane; unit `RQ-20261014-9807-01`, weekly) | **not yet measured** — the first run is the baseline; do not quote one until it lands |
-| TP-doctrine compliance | every (account, leg) routing in `config/accounts.yaml` | `python3 scripts/ci/check_tp_doctrine.py --json` | **0 of 50** routings compliant at 07:28Z; real money + prop = 13 routings: real-money entry states 4 sentinel / 3 declared, producer state `no_tp_verdict` on 5 and `rule_undeclared` on 2; all 6 prop routings `declared` / `rule_undeclared` |
+| TP-doctrine compliance | every (account, leg) routing in `config/accounts.yaml` | `python3 scripts/ci/check_tp_doctrine.py --json` | **0 of 50** routings compliant at 07:28Z (re-run 2026-10-16T07:15Z: **0 of 54**); real money + prop = 13 routings: real-money entry states 4 sentinel / 3 declared, producer state `no_tp_verdict` on 5 and `rule_undeclared` on 2; all 6 prop routings `declared` / `rule_undeclared` |
 | TP amended mid-trade | closed trades since 2026-09-01 with an entry-time target | amend census (PLANNING.md § 5; GEOM-CENSUS row) | 0 of 748 TP amends vs 131 of 752 SL amends (2026-10-07; re-run, do not quote) |
 | real-money expectancy | real-money closes | `/api/bot/performance` | −0.3231 R lifetime (n=431, 2026-09-21, pre-cut); latest window n=4 (G1 baseline) |
 
@@ -37,7 +37,7 @@ DESTINATION (Q8): per-bar path data ─▶ first-passage census ─▶ simple st
 | Q | question | why it is first/next | existing units (do not duplicate) |
 |---|---|---|---|
 | **Q1** | How much R does each live leg give back between its peak and its close, and what is its net R per capital-day? | The pain point has never been a number per leg; every cell choice in Q3/Q4 keys on it | none — new `RQ-20261014-9807-01` |
-| **Q2** | Where does each leg's own history say the move runs out — the entry-time TP as an MFE quantile, conditioned on entry volatility and regime? | Clause 1: a sentinel or venue-cap TP is not a prediction; `mi307` shows the real-money "declared" targets mostly rest at the cap and the predictive target sits at 2.0–2.5 R (INFERRED from the 2026-09-18 distribution) | unconditioned finite target: `RQ-20261010-419b-01` (eth_4h, queued), `RQ-20261006-061` (alpaca 1d, queued, expected `infeasible` per leg → family pooling follow-on), monthly E35 sweeps; head version `blocked/RQ-20261009-900/901`; **new conditioned version** `blocked/RQ-20261014-9807-02` |
+| **Q2** | Where does each leg's own history say the move runs out — the entry-time TP as an MFE quantile, conditioned on entry volatility and regime? | Clause 1: a sentinel or venue-cap TP is not a prediction; `mi307` shows the real-money "declared" targets mostly rest at the cap and the predictive target sits at 2.0–2.5 R (INFERRED from the 2026-09-18 distribution) | unconditioned finite target: `RQ-20261010-419b-01` (eth_4h, closed FAIL), `RQ-20261006-061` (alpaca 1d, closed INDETERMINATE → family pooling follow-on `RQ-20261015-cab7-06`, INDETERMINATE), monthly E35 sweeps; head version `blocked/RQ-20261009-900/901`; **new conditioned version** `blocked/RQ-20261014-9807-02` |
 | **Q3** | Does a per-bar revision rule (extend while the thesis holds; ATR-rescale; stall pull-in) beat the leg's bracket as it trades today, calibration first? | Clause 2; the landed 2026-10-08 runs already hold **PASS rows nobody has read**: `tp_extend` 6/24 cells on `xrp_pullback_2h` and 6/24 on `ada_pullback_2h` (`RQ-20261007-001`, OOS n=49 each), `tp_retarget` 2/9 on `trend_donchian_xrp_4h` (`RQ-20261007-003`, OOS n=31) — 0 ledger dispositions | `RQ-20261007-001/003` (landed), `RQ-20261007-080` (Donchian measured-move, queued); **new confirmation** `RQ-20261014-9807-03` |
 | **Q4** | When do we stop waiting — a giveback / exhaustion stop keyed to the measured giveback, and a momentum-keyed time stop? | Clause 3: the trail says when the thesis failed; today the cells are fixed (`gb1R_afterMFE1R/2R`), not keyed to any leg's distribution | `RQ-20261007-042` (ADX-tightening trail), `RQ-20261007-043` (momentum-keyed time stop), monthly M20 sweeps; **new census-keyed cells** `blocked/RQ-20261014-9807-04` |
 | **Q5** | Can a per-bar exhaustion signal (bars since peak, ADX falling, range contraction) predict that the rest of the path from here is negative — the "momentum turning" detector? | The operator's stated fix; it is a label study first (P(path from here < 0 | signal)) and only then a lever; the rows are M23 meta-labels for P2 | none; **new** `blocked/RQ-20261014-9807-05` (blocked on `ML-LEG-CORPUS`) |
@@ -105,6 +105,52 @@ Observe-only soak of the declared rule (`target_extension_soak`) on the confirme
 | **W2** (to 10-28) | **Q8:** read `d6e7-02/04`; `d6e7-03/05` (policies) dispatch on their PASS; `RQ-20261014-9807-04` once cells exist; `RQ-20261014-9807-02` once emits are retained; alpaca 1d family-pooled finite-target unit (061's named follow-on) | TP-DOCTRINE B1: draft the declared rule for the first CONFIRMED leg (no flip) | first Tier-3 declare proposal, or an honest "no cell confirmed" |
 | **W3** (to 11-04) | **Q8:** `d6e7-06` harness-native confirmation once the path emit lands and a policy passed; `RQ-20261014-9807-05` label study (on the offline path emit); second-leg confirmation on the monthly re-sweep | observe-only soak of the declared rule on the confirmed leg; prop dxtrade TP amend soak | parity read: harness decision == live decision on 1–2 trades |
 | **W4** (to 11-11) | census re-read: did giveback move on the flipped leg (population: that leg's closes since the flip; expect `insufficient_n`, say so) | Tier-3 flip PR with the record; GEOM-CENSUS weekly rerun observed | second leg enters Q6; the programme's W5+ plan is re-cut from the measured state |
+
+### 2026-10-16 re-cut — the running backlog (lane `P1-ATM-BACKLOG-1016`, operator: *"a lot of emphasis on trade management today"*)
+
+The tree [`research/programmes/01-active-trade-management.yaml`](../../../research/programmes/01-active-trade-management.yaml) is the machine-read form of this section. Its header says what changed and why. Every runnable question below is a materialised, pre-registered unit, ordered by money at stake. Every follow-on is a node gated on its prerequisite's verdict, registered before that verdict exists.
+
+**Why the re-cut (MEASURED 2026-10-16):**
+- `check_tp_doctrine.py --json`: 0 of 54 routings are compliant.
+- The fixed predictive-TP screen (RQ-20261015-cab7-01..06) returned INDETERMINATE on ada, xrp_pullback, xrp_4h, the pooled conditioned set and the alpaca 1d family. It FAILED on eth_4h. It was never run on the prop legs.
+- Every m20 PASS cell on a real-money or prop leg sat on one IS/OOS split, with no folds and no materiality read. Six of those P1 units were ungradable as registered (RESEARCH-GRADE-PILE). They are closed INDETERMINATE in this PR, with the honest_negative legs their own rules allow.
+
+| money | unit | node | question |
+|---|---|---|---|
+| bybit_2 | RQ-20261016-009 | P1-Q3-xrp-pb-tpx-confirm | the 6 tp_extend cells that passed twice, 6 calendar folds, ≥ 0.02 R/trade |
+| bybit_2 | RQ-20261016-008 | P1-Q3-ada-pb-tpx-confirm | the 5 tp_extend cells that passed twice |
+| bybit_2 | RQ-20261016-005 | P1-Q4-eth4h-momentum-confirm | adx20_k0_t2.5 / ms12_a20 / ms12_a25 on the sentinel leg |
+| bybit_2 | RQ-20261016-006 | P1-Q4-eth4h-stalldecay-rerun | the operator's a1df-01 question, re-asked without the failed record control |
+| bybit_2 | RQ-20261016-015 | P1-Q4-xrp4h-exit-confirm | momentum / giveback / tp_retarget cells over the whole history (68 trades, 4 folds) |
+| bybit_2 + prop | RQ-20261016-004 | P1-Q2-solprop-derive | sol_prop's predictive TP (6R reached by 1.9%) |
+| bybit_2 + prop | RQ-20261016-011 | P1-Q4-solprop-rrfloor-confirm | rrfloor0.5 at Bybit costs |
+| alpaca_live | RQ-20261016-014 | P1-Q2-alpaca-1d-pooled | the 1d family's predictive TP on the longest dukascopy window, gld added |
+| alpaca_live | RQ-20261016-016 | P1-Q4-slv1d-ms-confirm | ms8_a20 on slv 1d |
+| prop | RQ-20261016-007 | P1-Q2-ethprop-derive | eth_prop's predictive TP (6R reached by 0.9%) |
+| prop | RQ-20261016-010 | P1-Q4-ethprop-exit-confirm | 4 exit cells at the PROP cost stack |
+| Q8 | RQ-20261016-013 | P1-Q8.4-indet-policy | the decisive money test on the rich state (supersedes d6e7-05) |
+| Q8 | RQ-20261016-012 | P1-Q8.2-fail | the registered refinement: rich state at K = 3R |
+| soak books | RQ-20261016-017..021 | P1-Q4-*-soak-confirm | gdx / gld / qqq / splg / spy m20 cells, priority 3 |
+
+**Gated follow-ons:**
+- Ten nodes are gated, each `after:` its unit: the Q6 declare/parity steps per confirmed leg, the prop EV/survival scoring, the harness-native K* confirmations and the K = 3R policy rung.
+- Two ready `needs_authoring` nodes carry row PROP-EXIT-UNITS' prop questions, for research-ops.
+
+**Not authored, with the reason:**
+- ief, iwm and scha are below the 39-trade floor on the runner's history.
+- A longer-window fixed TP for ada and xrp_pullback cannot reach power.
+- The census-keyed stop cells (blocked/RQ-20261014-9807-04) stay blocked. Ledger-derived giveback reads negative on 20–50% of trades, because `mfe_r` is a lagged lower bound (MEASURED in the lane sandbox). They need EXIT-PATH-EMIT-OFFLINE.
+
+**Manager audit input, same day** (`docs/research/programmes/reviews/2026-10-16/01-ATM.md`, PR #18532):
+- `RQ-20261007-080` (Donchian measured-move TP revision) is session-graded **PASS** from its committed artifacts. At width_mult 1.0 the pooled result is +24.35 R over 1,439 control trades, with a fold majority at k = 3/4/5 and 46.1% of revisions cap-bound. It improves eth_4h and xrp_4h and worsens both prop legs.
+- Its per-leg confirmations (`P1-Q3-eth4h/xrp4h-measured-move-confirm`) are emitted by the replenisher once that grade is on `main`. The verifier refuses a same-PR unlock.
+- `9807-02` is retired as superseded by cab7-05.
+- The 16 per-leg 1d-equity e35 monthly units are retired: base OOS 4–11, never able to reach 39. The pooled lever `RQ-20261015-1bf3-01` is the powered form.
+
+**Builds filed:**
+- ABLATION-TP-CALIBRATION: calibration-first for revision cells.
+- QUEUE-GEN-ROSTER-SYNC: the generator minted 7 duplicate keys and never retires off-roster legs. 17 such sweep units were retired in this PR, each with a reason.
+- TP-REVISION-RECORD-CONTRACT: `tp_revision_sweep.py`'s records cannot be emitted, so 080's PASS never reached `research/results/`.
 
 **Q8 decision points:** the 8.1 census sets whether the prize funds the model rungs; 8.2/8.4 say whether the state carries information beyond where the trade is; 8.3/8.5 say whether that information pays for its exits. A FAIL at any rung is written back to row `IN-TRADE-EXIT-MODEL` and to `ROADMAP.md` L-ATM with the number; the live-history proposal `EXIT-PATH-TELEMETRY-LIVE` is scheduled only when a policy PASS needs a shadow.
 
