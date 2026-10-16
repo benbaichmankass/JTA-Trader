@@ -1,0 +1,21 @@
+{
+  "id": "OPTIONS-VERTICAL-REPRICE",
+  "title": "Lever (Tier-1 research tooling): scripts/research/options_vertical_reprice.py -- re-price committed evidence trades as the 1-wide debit vertical options_selector.select_debit_vertical would buy, BS mark at a labelled IV proxy, labelled spread cost; unblocks RQ-20261016-7769-21 (Stage 0 for alpaca_options_paper's 3 legs at the payoff the account trades)",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-16 lane P4-MACRO-BACKLOG-1016] WHY: config/accounts.yaml::alpaca_options_paper declares express_as: debit_vertical for slv_trend_1h (execution: shadow), slv_pullback_1d and gdx_pullback_1d, but their evidence records (comms/strategy_evidence/*.json, e55 2026-09-24: n_oos 68 / 11 / 10, net +53.1R / +2.48R / +3.78R) price LINEAR underlying exposure -- no record grades the capped-payoff, theta-bearing, two-leg trade the account actually places. MEASURED: grep -rln vertical scripts/ finds only scripts/macro/* thesis tools; nothing re-prices an evidence trades.jsonl. EXACT SCOPE: read --trades (comma list of e55 *__trades.jsonl), per trade build the vertical with the SAME selection rule as src/units/accounts/options_selector.py (import it; ~ATM long leg, next strike short, expiry nearest --target-dte within [--min-dte, --max-dte]) on a synthetic strike ladder at the underlying's listed strike increment; price entry and exit with Black-Scholes, r=0, IV = trailing-20d realised vol of the underlying (labelled PROXY, no PIT chain); cost = 4 half-spreads x --half-spread-usd per contract round trip, commission 0 (UNVERIFIED, labelled); output per-trade net / debit, per-leg and pooled {n, mean, t}, verdict.json in script_run.py shape with read_state measured and the proxies recorded. Tests: selector parity on a fixture chain, BS put-call parity, payoff capped at width. Done when RQ-20261016-7769-21 is git mv'd to research/queue/ and dispatch_queue.py dry-run reads would_dispatch. What the 3 legs ALSO need to be graded (not this row): a Stage-1 mechanical read of 1-2 clean trades per leg from the journal (/performance-review; slv_trend_1h is shadow so it cannot produce one -- Tier-3 question), and a TP-doctrine read (all three carry tp_r 50.0; under a vertical the short strike caps the payoff). Programme nodes P4-Q7-options-legs-pass/-fail.",
+  "updated_at": "2026-10-16T07:34:00Z",
+  "updated_by": "session_014MjFeoNDx7wkGRWLa6mBzD",
+  "roadmap": [
+    "M28"
+  ],
+  "_seq": 527
+}
