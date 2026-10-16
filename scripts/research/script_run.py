@@ -423,17 +423,102 @@ def _read_json(path: Path) -> Optional[Dict[str, Any]]:
     return raw if isinstance(raw, dict) else None
 
 
+#: RESEARCH-TRIAL-LEDGER (2026-10-16): bounds on what the data fingerprint hashes. A run that names a
+#: data DIRECTORY gets every file under it hashed; the caps keep a pathological tree from stalling
+#: the derive step, and a capped walk says so (`truncated`) rather than passing for a full one.
+FINGERPRINT_MAX_FILES = 5000
+FINGERPRINT_LISTED_FILES = 50
+
+
+def data_fingerprint(p: Plan, verdict: Optional[Dict[str, Any]], *, repo: Path = _REPO) -> Dict[str, Any]:
+    """What DATA this run read, as hashes -- so a result can be re-derived after a shard is re-cut.
+
+    WHY (RESEARCH-TRIAL-LEDGER, benchmark docs/research/research-ops-benchmark-2026-10-16.md § 2
+    "Reproducibility"): `produced_by` carried commit_sha + run_id, which fix the CODE, but nothing fixed
+    the INPUT -- `ML-SHARD-TRUNCATED` is a live case of a result that cannot be re-derived once its
+    candles change. Two sources, both declared by the run itself, never guessed:
+
+      * every argv token after the script that names an existing FILE or DIRECTORY in the checkout
+        (outside the run's own out_dir, which is output, not input) -- e.g. ``--data data/rq-x``;
+      * ``verdict.json`` ``data_inputs`` (repo-relative paths the script says it read) and
+        ``data_window`` (an object, e.g. ``{start, end, last_ts}``), passed through verbatim.
+
+    Returns ``{"state": "fingerprinted", "sha256", "n_files", "files", "window", "truncated"}`` or
+    ``{"state": "not_established", "why"}``. ⚠️ `not_established` is a statement that the run named no
+    input we could hash -- never "the data did not matter"."""
+    import hashlib
+    out_abs = (repo / p.out_dir).resolve()
+    # getattr: callers (tests, the hyro/leg-replay contract checks) pass a duck-typed plan carrying only
+    # unit/out_dir/rule fields; a plan with no commands named no argv input, which is not an error.
+    commands = [a for a in (getattr(p, "commands", None) or []) if isinstance(a, list)]
+    script_toks = {argv[1] for argv in commands if len(argv) > 1}
+    cands: List[str] = []
+    for argv in commands:
+        cands.extend(t for t in argv[2:] if t not in script_toks)
+    v = verdict if isinstance(verdict, dict) else {}
+    declared = v.get("data_inputs")
+    if isinstance(declared, list):
+        cands.extend(str(x) for x in declared if isinstance(x, str))
+    files: List[Path] = []
+    truncated = False
+    seen: set = set()
+    for tok in cands:
+        if not tok or ".." in tok or tok.startswith("/") or tok.startswith("-"):
+            continue
+        cand = (repo / tok)
+        try:
+            res = cand.resolve()
+        except OSError:
+            continue
+        if res == out_abs or out_abs in res.parents or not (res == repo.resolve() or repo.resolve() in res.parents):
+            continue
+        if res.is_file():
+            walk = [res]
+        elif res.is_dir() and res != repo.resolve():
+            walk = sorted(f for f in res.rglob("*") if f.is_file())
+        else:
+            continue
+        for f in walk:
+            if f in seen:
+                continue
+            if len(files) >= FINGERPRINT_MAX_FILES:
+                truncated = True
+                break
+            seen.add(f)
+            files.append(f)
+    window = v.get("data_window") if isinstance(v.get("data_window"), dict) else None
+    if not files:
+        return {"state": "not_established",
+                "why": "the run named no existing input file or directory in its argv or in "
+                       "verdict.json data_inputs" + ("; data_window was declared" if window else ""),
+                **({"window": window} if window else {})}
+    rows = []
+    for f in sorted(files):
+        h = hashlib.sha256()
+        with f.open("rb") as fh:
+            for chunk in iter(lambda: fh.read(1 << 20), b""):
+                h.update(chunk)
+        rows.append({"path": f.relative_to(repo.resolve()).as_posix(), "sha256": h.hexdigest(),
+                     "bytes": f.stat().st_size})
+    combined = hashlib.sha256("\n".join(f"{r['sha256']}:{r['path']}" for r in rows).encode("utf-8")).hexdigest()
+    return {"state": "fingerprinted", "sha256": combined, "n_files": len(rows),
+            "files": rows[:FINGERPRINT_LISTED_FILES], "truncated": truncated, "window": window}
+
+
 def derive_record(p: Plan, *, repo: Path = _REPO) -> Dict[str, Any]:
     """Map the run's outputs to the research-result action's inputs.
 
     Returns a flat dict of the action's `with:` keys (snake_case), plus
     `records_file`/`min_rows` when the verdict fans out per leg. Every
     branch states which of the three cases it took in `note`.
+    `data_fingerprint` (a JSON string, see ``data_fingerprint``) rides on every branch: a run that
+    failed still read what it read.
     """
     out_dir = repo / p.out_dir
     manifest = _read_json(out_dir / "run-manifest.json") or {}
     verdict = _read_json(out_dir / "verdict.json")
     base = {
+        "data_fingerprint": json.dumps(data_fingerprint(p, verdict, repo=repo), sort_keys=True),
         "decision_rule_id": p.rule_id,
         "decision_rule_registered_at": p.rule_registered_at,
         "artifact_store": p.out_dir.as_posix(),
@@ -581,6 +666,8 @@ def _self_test() -> int:
         assert json.loads((repo / rec["records_file"]).read_text().splitlines()[0])["read_state"] == "measured"
         assert (repo / rec["measurement_file"]).is_file()
         assert rec["decision_rule_id"] == "RULE-ST"
+        # the command named no input, so the data fingerprint says so -- never an empty "ok"
+        assert json.loads(rec["data_fingerprint"])["state"] == "not_established", rec["data_fingerprint"]
 
         # 2. a script that runs green but writes no verdict.json is NOT measured.
         write_unit(qdir, run={"command": ["python3", "scripts/research/_st_silent.py"]})
