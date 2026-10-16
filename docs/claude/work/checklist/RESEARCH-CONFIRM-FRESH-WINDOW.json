@@ -9,10 +9,12 @@
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    18593
+  ],
   "blocked_on": [],
   "note": "[2026-10-16 RESEARCH-OPS-BENCHMARK-1016] GAP (benchmark docs/research/research-ops-benchmark-2026-10-16.md section 2; S4, S8.4, S20). MEASURED: scripts/research/queue_grade.py docstring + confirm path (lines ~30-45, ~316-335): a template unit's first FAIL resets last_dispatched_at for a confirmatory re-run over the same window (deterministic replay; the hand path already dropped this for that reason), while a PASS closes done. P3 already applies 'best-of-3 PASS opens exactly one fresh-window confirmation, no Tier-3 until CONFIRMED' (row P3-STRATEGY-PROGRAMME) -- generalise it. Skill text landed in the benchmark PR (research-ops section D 'pass ->'). TOOLING SCOPE (Tier-1, after operator answers decision 2 in the benchmark): grader emits a confirmation unit (requires_result on the PASS, window = most recent N months not in the PASS window) for template/sweep PASS cells; FAIL on deterministic harnesses closes without replay (the family-retirement protocol, not the replay, protects ideas). FIRST STEP: measure over research/queue the template units with confirmatory_run: 1 -- how many confirmatory reads repeated the first verdict (if ~100%, the replay is wasted slots; quantify slot-hours). roadmap L-PROGRAMMES. [2026-10-16 RESEARCH-CONFIRM-FRESH-WINDOW-1016] OPERATOR DECISION, 2026-10-16, by popup: \"Yes, adopt\". This is the replication policy: (a) A single-window PASS on a template cell is a discovery. It opens exactly one fresh-window confirmation unit (a disjoint or most-recent window) before it can feed any Tier-3 proposal. The unit's note names how many cells the PASS was selected from. (b) For deterministic harnesses, drop queue_grade.py's same-window replay of a template's first FAIL. A FAIL still never retires a family; the family-retirement protocol (#18557) owns that. (Relayed by Manager Session 2026-10-16, session_01VduHYzdaXe27wTDBLSu8ao.) FIRST-STEP MEASUREMENT (main, 2026-10-16): 0 of 176 generated units carry grading.confirmatory_run -- the same-window replay never fired on a template cell, so (b) frees no measured slot-hours; it removes a latent path. Template PASSes on main: 0 once-cells; 16 m20-exit-lever monthly cells read pass (13 queued, 3 retired). IMPLEMENTATION: scripts/research/queue_grade.py (confirmation_unit / decide) + dispatch_queue.py not_before gate; dry run on main would open 13 m20 confirmation units (split_mode=date, split = day after the PASS data, not_before = PASS + 60d, selected_from 16-25 cells each).",
-  "updated_at": "2026-10-16T11:06:36Z",
+  "updated_at": "2026-10-16T11:28:16Z",
   "updated_by": "session_01Rbp2XYYVcNZ3EvqotFUExV",
   "roadmap": [
     "L-PROGRAMMES"
