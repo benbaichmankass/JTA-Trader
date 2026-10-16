@@ -65,7 +65,7 @@ def _rows(rdir: Path) -> List[Dict[str, Any]]:
     return out
 
 
-def classify(uid: str, u: Dict[str, Any], rows: List[Dict[str, Any]], latest: Optional[datetime],
+def classify(u: Dict[str, Any], rows: List[Dict[str, Any]], latest: Optional[datetime],
              now: datetime) -> str:
     from scripts.research.dispatch_queue import NON_VERDICT_READ_STATES
     g = u.get("grading") if isinstance(u.get("grading"), dict) else {}
@@ -95,7 +95,7 @@ def census(root: Path, *, now: Optional[datetime] = None) -> Dict[str, Any]:
         latest, n = latest_result_at(uid, root / "research" / "results")
         if n == 0:
             continue
-        states.setdefault(classify(uid, u, _rows(rdir), latest, now), []).append(uid)
+        states.setdefault(classify(u, _rows(rdir), latest, now), []).append(uid)
     with_results = sum(len(v) for v in states.values())
     return {"as_of": now.isoformat(), "units": len(units), "unreadable": bad, "with_results": with_results,
             "counts": {k: len(v) for k, v in sorted(states.items())}, "states": states,
