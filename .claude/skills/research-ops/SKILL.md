@@ -227,6 +227,11 @@ written after seeing the number:
 - **pass →** the follow-up the rule names: another queue unit, or — if it implies a
   strategy/params/risk/roster change — a **Tier-3 proposal written as a note on the owning
   checklist row for the manager**. Never a config edit, never a claim a leg is promoted.
+  **A PASS read on one window is a discovery, not a confirmation** (RESEARCH-OPS-BENCHMARK-1016,
+  `docs/research/research-ops-benchmark-2026-10-16.md` § 2; P3 already works this way): before it feeds a
+  Tier-3 proposal, its follow-up is ONE confirmation unit on a disjoint or most-recent window the PASS did not
+  see, registered with the same statistic and bar. Name in the note how many cells or configurations the
+  PASS was chosen from: that count is the multiple-testing denominator (row `RESEARCH-TRIAL-LEDGER`).
 - **fail →** the rule's disposition plus a kill or redirect follow-up (retire the dependent
   units whose `requires_result` can no longer be met).
 - **indeterminate →** extend n or redesign, in one line, and a unit that does it.

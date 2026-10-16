@@ -19,6 +19,12 @@ recurring planning session does.
   with its own rule. A dropped idea is a finding nobody can re-ask.
 - Every unit says what it does not do. An upper-bound or scoping unit says it is not a promotion case.
 - Units that need a prior result to be worth running use `requires_result`, not prose.
+- **Look before you re-test** (RESEARCH-OPS-BENCHMARK-1016; Arnott-Harvey-Markowitz 2019 "track every model tried").
+  Before authoring a unit, search what was already tried on the same leg or family: `grep -l <leg|family>
+  research/queue/*.yaml research/queue/blocked/*.yaml`, `research/results/`, `docs/research/m20-sweep-corpus.jsonl`,
+  `research/family_reviews/`. Cite the prior unit ids in the unit's `question` or `value.basis`. A re-test of a
+  configuration already closed states what is different (window, conditioning, harness fix). Otherwise it is
+  another draw from the same distribution and only inflates the number of trials.
 
 ## 1b. A unit declares WHAT KIND of test it is and what it is WORTH — never WHERE it runs (RESEARCH-ROUTER, 2026-10-13)
 Operator, 2026-10-13: Claude writes the unit (id + test structure); a dispatcher that spends no Claude tokens sends

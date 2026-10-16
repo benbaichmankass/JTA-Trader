@@ -1,0 +1,21 @@
+{
+  "id": "LIVE-DECAY-MONITOR",
+  "title": "Standing decay monitor for every Stage-2 + prop leg (live vs backtest, CUSUM at a declared false-alarm rate) whose trip opens a re-research unit BEFORE the demotion rule fires",
+  "phase": "W42",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-16 RESEARCH-OPS-BENCHMARK-1016] GAP (benchmark docs/research/research-ops-benchmark-2026-10-16.md section 2; S12, S14, S8.5). MEASURED: scripts/research/live_vs_backtest_verdict.py exists but only 2 weekly units call it (RQ-20261015-8bbc-01/02, xrp) vs 8 legs on bybit_2 (5) + alpaca_live (3) rosters (config/accounts.yaml); prop legs uncovered; MD-DEMOTE-S2-S1 is a demotion (two 20-trade windows < p10 and < 0), not an early re-research trigger. SCOPE (Tier-1): a research template research/templates/live-decay.yaml expanding over the Stage-2 roster + prop legs (weekly), grading via live_vs_backtest_verdict.py, plus a CUSUM statistic vs the leg's Stage-0 per-trade mean with a false-alarm rate declared in the template; a trip's registered follow-up is a cause-naming unit (regime/cost/fill/config drift), never a config edit. FIRST STEP: list the Stage-2 + prop legs that have a committed Stage-0 per-trade series (the CUSUM needs it) and those that do not. roadmap L-LADDER.",
+  "updated_at": "2026-10-16T09:46:56Z",
+  "updated_by": "session_016YtGa4nVhnWbckKhb6VYaV",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "_seq": 534
+}
