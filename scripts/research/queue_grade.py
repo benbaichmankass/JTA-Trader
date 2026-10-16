@@ -400,7 +400,15 @@ def grade_unit(root: Path, unit_id: str, text: str, graded_at: str) -> Optional[
     if rule_id.startswith("RULE-TPL-E35-BRACKET-"):
         g = grade_e35(e35_rows(root, unit_id))
     else:
-        g = grade_e5(e5_rows(root, unit_id, since), int(lands.get("min_rows") or 1))
+        rows = e5_rows(root, unit_id, since)
+        if confirmatory and isinstance(prior.get("evidence"), list):
+            # The first pass's evidence files were READ by it: a confirmatory pass that
+            # re-reads them "confirms" the FAIL with itself. `since` alone did not stop
+            # that when the stamp was repaired to run 1's own generated_at (ts == since
+            # is not < since) -- RQ-20261015-4941-01/-02, 2026-10-16.
+            read = {str(e) for e in prior["evidence"]}
+            rows = [(f, r) for f, r in rows if f not in read]
+        g = grade_e5(rows, int(lands.get("min_rows") or 1))
     if confirmatory and not g.get("rows"):
         return None    # the confirmatory run has not landed anything yet -- not due
     runs = _declared_runs(lands)

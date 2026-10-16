@@ -1,6 +1,6 @@
 id: RQ-20261015-8b93-02
 title: 'Training parity, OFF-VM side: does eth-regime-1h-lgbm-v1 trained in a Kaggle CPU kernel match the trainer-VM run on the same rows?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -92,3 +92,14 @@ related:
 - RQ-20261015-8b93-01
 - scripts/research/train_parity.py
 last_dispatched_at: '2026-10-16T01:27:12+00:00'
+grading:
+  attested: RULE-RQ20261015-8b93-02-TRAIN-PARITY
+  auto: true
+  decision_rule_id: RULE-RQ20261015-8b93-02-TRAIN-PARITY
+  evidence:
+  - research/results/RQ-20261015-8b93-02/38832438124.jsonl
+  graded_at: '2026-10-16'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
