@@ -178,6 +178,12 @@ class PathRecorder:
         """Close the trade. Returns the per-trade summary (``mae_r``, ``n_path_rows``)."""
         t = self._trade
         if self._pending is not None:
+            # The last bar the loop visited IS the exit bar on every exit path
+            # (break or timeout). A mismatch means the harness wired the
+            # recorder wrongly -- fail loudly rather than emit a short path.
+            if self._pending["bar_index"] != exit_idx:
+                raise ValueError(f"path recorder: last visited bar {self._pending['bar_index']} "
+                                 f"!= exit bar {exit_idx} for {t['key']}")
             self._close_pending(peak_r=peak_r, peak_j=peak_j,
                                 exit_price=exit_price, exit_reason=exit_reason)
         else:
