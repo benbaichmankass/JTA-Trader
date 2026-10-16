@@ -2,6 +2,8 @@ id: RQ-20260927-008
 title: Does a regime-transition-lag weight (recently-flipped bars down-weighted) beat the level-only soft weight?
 status: blocked
 cadence: once
+theme: regime
+priority: 3
 kind: experiment
 
 question: >-
@@ -80,6 +82,14 @@ routing:
   basis: Same trainer-VM data dependency as the sibling units in this family.
 
 blocked_on:
+  - kind: work_item
+    ref: REGIME-WEIGHT-VARIANTS
+    what: >-
+      Owner named 2026-10-16 (lane P2-AI-REGIME-BACKLOG-1016, deliverable 2 of the regime backlog): this unit waits on
+      the soft-weight build (regime-transition-lag weight) owned by row REGIME-WEIGHT-VARIANTS, child of REGIME-PROGRAM. The prose entries below are the original diagnosis and stay as written.
+    clears_when: >-
+      The owning row is done and its closing observation is recorded; then git mv this file to research/queue/, status queued,
+      run.command set (no run.workflow: declare compute).
   - what: >-
       No "bars since the regime series last crossed the soft-weight ceiling
       (or floor)" feature exists in `backtest_trend.py`, `backtest_pullback.py`,
@@ -107,6 +117,8 @@ lands:
   assert_field: label
   min_rows: 1
 
+roadmap:
+- L-REGIME
 related:
   - 'RQ-20260927-004 (the level-only soft weight this unit adds lag to)'
   - 'SRQ-20260618-001 missed_live_because (whipsaw in a chop/range regime — the failure mode this targets)'

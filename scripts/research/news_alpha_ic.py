@@ -267,6 +267,28 @@ class Spec:
     floor: float
     cells: List[Cell] = field(default_factory=list)
     panel_dir: str = "comms/news_alpha/gdelt_panel"
+    #: per-population overrides (a unit mixing hourly crypto and daily ETF cells, e.g. U07)
+    pop_bar: Dict[str, str] = field(default_factory=dict)
+    pop_price_source: Dict[str, str] = field(default_factory=dict)
+
+    def view(self, pop: str) -> "Spec":
+        """The spec as seen by one population: its bar, its price source, only its symbols."""
+        from dataclasses import replace
+        return replace(self, bar=self.pop_bar.get(pop, self.bar),
+                       price_source=self.pop_price_source.get(pop, self.price_source),
+                       populations={pop: self.populations[pop]})
+
+    @property
+    def bars(self) -> List[str]:
+        return sorted({self.pop_bar.get(p, self.bar) for p in {c.population for c in self.cells}})
+
+    def view_for_bar(self, bar: str) -> "Spec":
+        from dataclasses import replace
+        pops = {p: v for p, v in self.populations.items() if self.pop_bar.get(p, self.bar) == bar}
+        src = {self.pop_price_source.get(p, self.price_source) for p in pops}
+        if len(src) > 1:
+            raise ProducerFailed(f"populations on {bar} bars name more than one price source {sorted(src)}")
+        return replace(self, bar=bar, price_source=src.pop() if src else self.price_source, populations=pops)
 
     @property
     def bar_min(self) -> int:
@@ -350,15 +372,18 @@ def load_spec(unit: str, queue_dir: Path) -> Spec:
         discovery_start=pd.Timestamp(na["discovery_start"], tz="UTC"),
         holdout_start=pd.Timestamp(na["holdout"][0], tz="UTC"),
         holdout_end=pd.Timestamp(na["holdout"][1], tz="UTC") + pd.Timedelta(days=1),
-        floor=7.85 / mde ** 2, cells=cells, panel_dir=str(na.get("panel_dir") or "comms/news_alpha/gdelt_panel"))
+        floor=7.85 / mde ** 2, cells=cells, panel_dir=str(na.get("panel_dir") or "comms/news_alpha/gdelt_panel"),
+        pop_bar={str(k): str(v) for k, v in (na.get("population_bars") or {}).items()},
+        pop_price_source={str(k): str(v) for k, v in (na.get("population_price_source") or {}).items()})
     if spec.design not in ("ts", "xsec", "event"):
         raise ProducerFailed(f"news_alpha.design {spec.design!r} not in ts|xsec|event")
-    if spec.bar not in BAR_MIN:
-        raise ProducerFailed(f"news_alpha.bar {spec.bar!r} not supported")
+    for b in [spec.bar, *spec.pop_bar.values()]:
+        if b not in BAR_MIN:
+            raise ProducerFailed(f"news_alpha bar {b!r} not supported")
     for s in spec.symbols:
         spec.entity_of.setdefault(s, s[:-4] if s.endswith("USDT") else s)
     for c in cells:
-        spec.h_bars(c.horizon)
+        spec.view(c.population).h_bars(c.horizon)
     return spec
 
 
@@ -734,8 +759,10 @@ def _clean(v: Any) -> Any:
     return v
 
 
-def run_discovery(spec: Spec, feats: pd.DataFrame, prices: Dict[str, pd.DataFrame], out_dir: Path,
+def run_discovery(spec_all: Spec, feats_by_bar: Dict[str, pd.DataFrame],
+                  prices_by_bar: Dict[str, Dict[str, pd.DataFrame]], out_dir: Path,
                   ledger_rows: List[Dict[str, Any]], run_id: str) -> Dict[str, Any]:
+    spec = spec_all
     budget, _ = budget_of(ledger_rows)
     prior = [r for r in ledger_rows if r.get("kind") == "discovery_test" and r.get("unit") == spec.unit]
     if prior:
@@ -750,7 +777,9 @@ def run_discovery(spec: Spec, feats: pd.DataFrame, prices: Dict[str, pd.DataFram
     results: List[Dict[str, Any]] = []
     l1_rows = 0
     baselines: Dict[Tuple[str, str], Any] = {}
-    for cell in spec.cells:
+    for cell in spec_all.cells:
+        spec = spec_all.view(cell.population)
+        feats, prices = feats_by_bar[spec.bar], prices_by_bar[spec.bar]
         h = spec.h_bars(cell.horizon)
         d = assemble(spec, feats, prices, cell)
         fcols = [cell.feature] if spec.design != "event" else [c for c in d.columns if c.startswith("cls_")]
@@ -800,9 +829,11 @@ def run_discovery(spec: Spec, feats: pd.DataFrame, prices: Dict[str, pd.DataFram
         surv = bh_survivor(ps[idx], rank, budget)
         r["bh_pass"] = surv
         r["lead"] = bool(r.get("p") is not None and r["p"] < 0.05 and not surv)
-    for r, cell in zip(results, spec.cells):
+    for r, cell in zip(results, spec_all.cells):
         r["survivor"] = False
         if r.get("bh_pass") and r.get("graded"):
+            spec = spec_all.view(cell.population)
+            feats, prices = feats_by_bar[spec.bar], prices_by_bar[spec.bar]
             d = phase_slice(spec, assemble(spec, feats, prices, cell), "discovery")
             if cell.kind == "vol" and spec.design != "event":
                 d = add_residual(d, cell.target, baselines[(cell.target, cell.horizon)])
@@ -814,7 +845,8 @@ def run_discovery(spec: Spec, feats: pd.DataFrame, prices: Dict[str, pd.DataFram
              "survivor": r["survivor"], "run_id": run_id, "at": _now()} for r in results]
     append_ledger(out_dir, rows)
     doc = {"unit": spec.unit, "phase": "discovery", "run_id": run_id, "generated_at": _now(),
-           "design": spec.design, "bar": spec.bar, "budget": budget, "floor": spec.floor,
+           "design": spec.design, "bar": spec_all.bar, "population_bars": spec_all.pop_bar,
+           "budget": budget, "floor": spec.floor,
            "discovery_window": [str(spec.discovery_start), str(spec.holdout_start)],
            "l1_rows_asserted": l1_rows, "cells": results,
            "survivors": [r["cell"] for r in results if r["survivor"]]}
@@ -822,8 +854,10 @@ def run_discovery(spec: Spec, feats: pd.DataFrame, prices: Dict[str, pd.DataFram
     return doc
 
 
-def run_holdout(spec: Spec, feats: pd.DataFrame, prices: Dict[str, pd.DataFrame], out_dir: Path,
+def run_holdout(spec_all: Spec, feats_by_bar: Dict[str, pd.DataFrame],
+                prices_by_bar: Dict[str, Dict[str, pd.DataFrame]], out_dir: Path,
                 ledger_rows: List[Dict[str, Any]], run_id: str, disc_doc: Dict[str, Any]) -> Dict[str, Any]:
+    spec = spec_all
     _, cap = budget_of(ledger_rows)
     surv_ledgered = {r["cell"] for r in ledger_rows if r.get("kind") == "discovery_test"
                      and r.get("unit") == spec.unit and r.get("survivor")}
@@ -845,6 +879,8 @@ def run_holdout(spec: Spec, feats: pd.DataFrame, prices: Dict[str, pd.DataFrame]
     hold: List[Dict[str, Any]] = []
     for cid in survivors:
         cell, dr = cells[cid], by_id[cid]
+        spec = spec_all.view(cell.population)
+        feats, prices = feats_by_bar[spec.bar], prices_by_bar[spec.bar]
         h = spec.h_bars(cell.horizon)
         full = assemble(spec, feats, prices, cell)
         disc, ho = phase_slice(spec, full, "discovery"), phase_slice(spec, full, "holdout")
@@ -995,29 +1031,37 @@ def failed_verdict(unit: str, reason: str) -> Dict[str, Any]:
 
 # ── loading inputs ──────────────────────────────────────────────────────────────────────────────────────
 def load_inputs(spec: Spec, *, features_csv: Optional[Path], panel_dir: Optional[Path],
-                prices_dir: Optional[Path]) -> Tuple[pd.DataFrame, Dict[str, pd.DataFrame]]:
-    if features_csv is not None:
-        feats = pd.read_csv(features_csv)
-        feats["ts"] = pd.to_datetime(feats["ts"], utc=True)
-    else:
-        if spec.source != "gdelt_panel":
-            raise ProducerFailed(f"news_alpha.source {spec.source!r} has no loader in this harness")
-        from scripts.research import news_alpha_features as naf
-        try:
-            panel, cov = naf.load_panel(panel_dir or (REPO / spec.panel_dir))
-        except FileNotFoundError as exc:
-            raise ProducerFailed(f"input missing: {exc}") from exc
-        feats = naf.build_features(panel, cov, bar=spec.bar,
-                                   symbols_to_entity={s: spec.entity_of[s] for s in spec.symbols})
-    feats["max_available_at"] = pd.to_datetime(feats["max_available_at"], utc=True)
-    if feats.empty:
-        raise ProducerFailed("feature panel is empty")
-    start = max(spec.discovery_start, feats["ts"].min()) - pd.Timedelta(days=45)
-    end = min(spec.holdout_end, pd.Timestamp.now(tz="UTC")) + pd.Timedelta(days=7)
-    prices = fetch_prices(spec, start, end, prices_dir)
-    if not prices:
-        raise ProducerFailed("no price series could be loaded for any symbol")
-    return feats, prices
+                prices_dir: Optional[Path]) -> Tuple[Dict[str, pd.DataFrame], Dict[str, Dict[str, pd.DataFrame]]]:
+    """-> ({bar: feature panel}, {bar: {symbol: OHLCV}}) for every bar a population of the unit uses."""
+    feats_by_bar: Dict[str, pd.DataFrame] = {}
+    prices_by_bar: Dict[str, Dict[str, pd.DataFrame]] = {}
+    panel = cov = None
+    for bar in spec.bars:
+        sv = spec.view_for_bar(bar)
+        if features_csv is not None:
+            feats = pd.read_csv(features_csv)
+            feats["ts"] = pd.to_datetime(feats["ts"], utc=True)
+        else:
+            if spec.source != "gdelt_panel":
+                raise ProducerFailed(f"news_alpha.source {spec.source!r} has no loader in this harness")
+            from scripts.research import news_alpha_features as naf
+            if panel is None:
+                try:
+                    panel, cov = naf.load_panel(panel_dir or (REPO / spec.panel_dir))
+                except FileNotFoundError as exc:
+                    raise ProducerFailed(f"input missing: {exc}") from exc
+            feats = naf.build_features(panel, cov, bar=bar,
+                                       symbols_to_entity={s: spec.entity_of[s] for s in sv.symbols})
+        feats["max_available_at"] = pd.to_datetime(feats["max_available_at"], utc=True)
+        if feats.empty:
+            raise ProducerFailed("feature panel is empty")
+        start = max(spec.discovery_start, feats["ts"].min()) - pd.Timedelta(days=45)
+        end = min(spec.holdout_end, pd.Timestamp.now(tz="UTC")) + pd.Timedelta(days=7)
+        prices = fetch_prices(sv, start, end, prices_dir)
+        if not prices:
+            raise ProducerFailed(f"no price series could be loaded for any symbol on {bar} bars")
+        feats_by_bar[bar], prices_by_bar[bar] = feats, prices
+    return feats_by_bar, prices_by_bar
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
@@ -1066,8 +1110,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                                         panel_dir=Path(a.panel_dir) if a.panel_dir else None,
                                         prices_dir=Path(a.prices_dir) if a.prices_dir else None)
             (out / "prices_manifest.json").write_text(json.dumps(
-                {s: {"bars": int(len(df)), "first": str(df.index.min()), "last": str(df.index.max())}
-                 for s, df in prices.items()}, indent=2) + "\n", encoding="utf-8")
+                {f"{s}@{b}": {"bars": int(len(df)), "first": str(df.index.min()), "last": str(df.index.max())}
+                 for b, px in prices.items() for s, df in px.items()}, indent=2) + "\n", encoding="utf-8")
             disc = run_discovery(spec, feats, prices, out, ledger_rows, a.run_id)
             verdict = build_verdict(spec, disc, None)
     except ProducerFailed as exc:

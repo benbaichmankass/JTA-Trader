@@ -1,0 +1,147 @@
+name: news-gdelt-panel
+
+# NEWS-ALPHA-CORPUS-SLICE1 (lane NEWS-ALPHA-HARNESS-1016, 2026-10-16) -- the CHEAPEST GDELT build.
+#
+# WHAT. Keeps comms/news_alpha/gdelt_panel/ (one panel_YYYY-MM.csv.gz + coverage_YYYY-MM.csv.gz +
+# manifest_YYYY-MM.json per UTC month, 2023-10 onward) current: an aggregate-on-ingest hourly news panel built
+# from the GDELT 2.0 GKG 15-min files by scripts/research/news_hist_fetch.py --aggregate with the FROZEN map
+# research/news_alpha/entity_map_v1.json. The raw GKG stream (~0.68 TB zipped for 2023-10..) is streamed and
+# DISCARDED on the runner; only the panel lands (~4 KB/day measured on 2024-03-01, 97 files).
+#
+# HOW. `plan` lists every month whose coverage is not final (current month always; a past month until every
+# 15-min file is read or 404); `shard` folds up to MAX_MONTHS of them on a matrix (each shard re-reads only the
+# hours not already complete); `land` commits the touched months through ./.github/actions/commit-to-main with
+# verify-merged. Daily, so the current month is appended every day (the forward append) -- no trainer timer.
+#
+# CONSUMER. scripts/research/news_alpha_features.py -> scripts/research/news_alpha_ic.py (the NEWS-ALPHA units).
+#
+# no-durable-result: data producer (a point-in-time news panel), computes no research verdict; the panel months land on main through ./.github/actions/commit-to-main with verify-merged, and the NEWS-ALPHA units' runs land their own E5 records
+#
+# Tier-1: GitHub-hosted runner, public keyless data, writes only comms/news_alpha/gdelt_panel/**. No live path,
+# no order path, no VM.
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      max_months:
+        description: "Months to (re)build this run (oldest incomplete first)"
+        default: "12"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: news-gdelt-panel
+  cancel-in-progress: false
+
+env:
+  PANEL_DIR: comms/news_alpha/gdelt_panel
+  FIRST_MONTH: "2023-10"
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      months: ${{ steps.plan.outputs.months }}
+      any: ${{ steps.plan.outputs.any }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Plan the months to build
+        id: plan
+        env:
+          MAX_MONTHS: ${{ github.event.inputs.max_months || '12' }}
+        run: |
+          set -euo pipefail
+          python3 scripts/research/news_hist_fetch.py --out "${PANEL_DIR}" --plan-months "${FIRST_MONTH}" > status.json
+          python3 - <<'PY'
+          import json, os
+          st = json.load(open("status.json"))
+          cap = max(1, min(37, int(os.environ.get("MAX_MONTHS") or 12)))
+          todo = [m["month"] for m in st if not m["complete"]]
+          cur = [m for m in todo if any(s["month"] == m and s["current"] for s in st)]
+          past = [m for m in todo if m not in cur]
+          pick = (cur + past)[:cap]
+          print(f"{len(st)} month(s) tracked, {len(todo)} incomplete; building {pick}")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
+              fh.write(f"months={json.dumps(pick)}\n")
+              fh.write(f"any={'true' if pick else 'false'}\n")
+          PY
+
+  shard:
+    needs: plan
+    if: needs.plan.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      # Leave the shared runner pool room for system-actions and PR CI.
+      max-parallel: 4
+      matrix:
+        month: ${{ fromJson(needs.plan.outputs.months) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Fold the month (stream + discard the raw files)
+        env:
+          MONTH: ${{ matrix.month }}
+        run: |
+          set -euo pipefail
+          python3 scripts/research/news_hist_fetch.py --out "${PANEL_DIR}" --aggregate "${MONTH}" --workers 8
+          test -s "${PANEL_DIR}/coverage_${MONTH}.csv.gz"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gdelt-panel-${{ matrix.month }}
+          path: |
+            comms/news_alpha/gdelt_panel/panel_${{ matrix.month }}.csv.gz
+            comms/news_alpha/gdelt_panel/coverage_${{ matrix.month }}.csv.gz
+            comms/news_alpha/gdelt_panel/manifest_${{ matrix.month }}.json
+          retention-days: 7
+          if-no-files-found: error
+
+  land:
+    needs: [plan, shard]
+    # Land whatever shards finished: a failed month stays incomplete and is re-planned next run.
+    if: always() && needs.plan.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 95
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: gdelt-panel-*
+          path: ${{ env.PANEL_DIR }}
+          merge-multiple: true
+      - name: Count what landed
+        id: count
+        run: |
+          set -euo pipefail
+          n=$(git status --porcelain -- "${PANEL_DIR}" | wc -l)
+          echo "changed=${n}" >> "$GITHUB_OUTPUT"
+          git status --porcelain -- "${PANEL_DIR}"
+      - name: Land the panel months on main (auto-merge PR)
+        if: steps.count.outputs.changed != '0'
+        uses: ./.github/actions/commit-to-main
+        with:
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          paths: comms/news_alpha/gdelt_panel
+          message: "data(news-alpha): GDELT hourly panel months"
+          pr-title: "data(news-alpha): GDELT hourly panel months (auto)"
+          pr-body: "NEWS-ALPHA-CORPUS-SLICE1: aggregate-on-ingest GDELT GKG hourly panel months (news-gdelt-panel.yml). Data-only; auto-merge. Raw GKG files are never stored."
+          branch-prefix: automation/news-gdelt-panel
+          verify-merged: "true"

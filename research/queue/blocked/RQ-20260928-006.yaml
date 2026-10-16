@@ -2,6 +2,8 @@ id: RQ-20260928-006
 title: Offline parity re-check of the three volatile-keyed trend_vol regime cells against historical volatile windows
 status: blocked
 cadence: once
+theme: regime
+priority: 2
 kind: experiment
 
 question: >-
@@ -103,6 +105,14 @@ decision_rule:
     both of which are explicitly Tier-3, propose-only.
 
 blocked_on:
+  - kind: work_item
+    ref: REGIME-WF-VERDICT-WRAPPER
+    what: >-
+      Owner named 2026-10-16 (lane P2-AI-REGIME-BACKLOG-1016, deliverable 2 of the regime backlog): this unit waits on
+      a verdict.json wrapper over regime_cell_walkforward.py (row REGIME-WF-VERDICT-WRAPPER) AND committed vol-label streams (row REGIME-VOL-LABELS-EXPORT). The prose entries below are the original diagnosis and stay as written.
+    clears_when: >-
+      The owning row is done and its closing observation is recorded; then git mv this file to research/queue/, status queued,
+      run.command set (no run.workflow: declare compute).
   - what: >-
       Filed as `queued`, but `.github/workflows/regime-cell-walkforward.yml`
       as it stands today cannot actually run this unit's three dispatches.
@@ -186,6 +196,8 @@ lands:
     this tool exists yet, the dispatcher creates
     docs/research/regime-cell-walkforward-corpus.jsonl on first landing.
 
+roadmap:
+- L-REGIME
 related:
   - BL-20260730-VOL-AXIS-THREE-CELLS-DORMANT (the pipeline item this unit answers; operator-selected recommendation, triage 2026-09-28)
   - config/regime_policy.yaml (trending.volatile.trend_donchian:127, trending.volatile.ict_scalp_5m:132, chop.volatile.ict_scalp_5m:145)
