@@ -18,6 +18,13 @@ Entry  : ``z >= +entry_z`` -> SHORT the spread (short A, long B);
 Exit   : ``|z| <= exit_z`` (reverted), OR an adverse ``stop_z``-sigma move from
          entry (the R-normalizer / divergence stop), OR ``--max-hold-bars``.
 R      : risk = ``stop_z * sigma_at_entry`` (spread units); R = spread P&L / risk.
+         With ``--hedge-beta rolling`` β is FROZEN AT ENTRY (PAIRS-R-SCALE): the
+         rolling-β z only triggers the entry; sigma, the stop, the reversion z
+         and the P&L are all read on ``log A − β_entry·log B`` — the spread the
+         position holds. The rolling-β series also moves with β itself, which
+         inflated sigma (~775x on SOL/ETH 1h) and deflated every cost in R. The
+         fixed-β math is ``pairs_engine.fixed_beta_window``/``fixed_beta_bar``,
+         shared with the live engine so the two cannot drift apart.
 Fees   : TWO legs, each round-trip -> ``2 * FEE_BPS_ROUNDTRIP`` charged in return
          units (log-spread ≈ sum of log-returns, so the units line up).
 
@@ -47,6 +54,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from src.runtime import execution_costs  # noqa: E402  (the ONE shared cost model)
+from src.units.strategies import pairs_engine as _pe  # noqa: E402  (shared fixed-β math)
 
 FEE_BPS_ROUNDTRIP = execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP   # per leg, round-trip; two legs are charged
 
@@ -141,6 +149,9 @@ def run_backtest(m: pd.DataFrame, *, lookback: int, entry_z: float, exit_z: floa
     sp = spread.to_numpy()
     zz = z.to_numpy()
     sd = std.to_numpy()
+    bt = beta.to_numpy()
+    ca, cb = m["close_a"].to_numpy(dtype=float), m["close_b"].to_numpy(dtype=float)
+    fixed = hedge_beta == "rolling"
     n = len(m)
     trades: List[Trade] = []
     i = lookback + 1
@@ -160,7 +171,14 @@ def run_backtest(m: pd.DataFrame, *, lookback: int, entry_z: float, exit_z: floa
         direction = "short_spread" if zi > 0 else "long_spread"
         dir_sign = 1.0 if direction == "long_spread" else -1.0
         entry_spread = float(sp[i])
-        risk = float(stop_z * si)
+        beta_e = float(bt[i])
+        if fixed:
+            # β frozen at entry: R unit = stop_z × std of the fixed-β spread over
+            # the same shift-1 window (== pairs_engine.fixed_beta_risk).
+            w = _pe.fixed_beta_window(ca, cb, beta_e, i - lookback, i)
+            risk = float(stop_z * w[1]) if w is not None else 0.0
+        else:
+            risk = float(stop_z * si)
         if risk <= 0:
             i += 1
             continue
@@ -170,7 +188,10 @@ def run_backtest(m: pd.DataFrame, *, lookback: int, entry_z: float, exit_z: floa
         exit_idx = min(i + max_hold_bars, n - 1)
         outcome = "timeout"
         for j in range(i + 1, min(i + max_hold_bars + 1, n)):
-            sj, zj = float(sp[j]), zz[j]
+            if fixed:
+                sj, zj = _pe.fixed_beta_bar(ca, cb, beta_e, j, lookback)
+            else:
+                sj, zj = float(sp[j]), zz[j]
             # divergence stop (conservative: spread-level breach)
             if direction == "long_spread" and sj <= stop_spread:
                 exit_spread, exit_idx, outcome = stop_spread, j, "stop"
@@ -183,7 +204,8 @@ def run_backtest(m: pd.DataFrame, *, lookback: int, entry_z: float, exit_z: floa
                 exit_spread, exit_idx, outcome = sj, j, "revert"
                 break
         if exit_spread is None:
-            exit_spread = float(sp[exit_idx])
+            exit_spread = (_pe.fixed_beta_bar(ca, cb, beta_e, exit_idx, lookback)[0]
+                           if fixed else float(sp[exit_idx]))
         gross_r = (exit_spread - entry_spread) * dir_sign / risk
         trades.append(Trade(
             entry_time=m["timestamp"].iloc[i], direction=direction,
