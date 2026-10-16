@@ -1,0 +1,21 @@
+{
+  "id": "MACRO-EVENT-RANKTILT-ARM",
+  "title": "Lever (Tier-1 research tooling): --book rank_tilt / --rank-warmup arm on scripts/research/macro_event_study_run.py -- an exposure-matched, magnitude-weighted long tilt vs the all-long floor, z from PRIOR releases only, net of the cost stack; unblocks RQ-20261016-7769-20 (ES) and -22 (NQ)",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-16 lane P4-MACRO-BACKLOG-1016] WHY: RQ-20261014-4a4c-06 (PPI m/m sign book on ES, MES cost) FAILED: +0.00221/trade t 1.53 vs all-long +0.00341; book-minus-floor -0.0012 t -0.59. Arithmetic: book-floor = (pos-1)*r, zero on long windows and -2r on short ones, so a sign book beats being long only if the index FALLS after hot prints (it rises less). The exposure-matched SIGN tilt (w=1-sign) has excess identical to the sign book's own net (already t 1.53), so the refinement must use MAGNITUDE: the rank IC is t -3.43 while the sign book's hit rate is 54% (64 of 118 trades, n=118, RQ-20261014-4a4c-06 record). EXACT SCOPE: (1) argparse --book {sign,rank_tilt} (default sign = today's behaviour, every existing unit byte-identical) and --rank-warmup N (default 24); (2) rank_tilt(): per release in date order, z = 2*pct - 1 where pct = fraction of PRIOR releases' surprises < this one (ties 0.5), skip the first N; w = 1 - z for --expected-sign negative (a hot print UNDERweights), w = 1 + z for positive; excess = (w-1)*r_h - |w-1|*cost_frac(cost_symbol); report {n, mean, t} plus the warm-up length and cost_stack; (3) grade_tilt(): PASS iff n >= min_n AND mean > 0 AND t >= --trade-t-bar; FAIL iff n >= min_n and not; INDETERMINATE iff n < min_n; (4) tests in tests/test_macro_event_study_run.py: z uses ONLY prior releases (a future-leak fixture must not change earlier z), w mean ~1, default --book sign leaves sign_book output unchanged. Done when: tests pass and RQ-20261016-7769-20/-22 are git mv'd out of research/queue/blocked/ (status queued) and dispatch_queue.py dry-run reads would_dispatch. ~40 lines + tests. Programme: research/programmes/04-macro-sleeve.yaml (P4-Q3-event-axis keys on -20).",
+  "updated_at": "2026-10-16T07:41:16Z",
+  "updated_by": "session_014MjFeoNDx7wkGRWLa6mBzD",
+  "roadmap": [
+    "M28"
+  ],
+  "_seq": 526
+}
