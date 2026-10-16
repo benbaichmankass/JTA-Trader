@@ -3,30 +3,356 @@
 # Read by scripts/research/queue_replenish.py (programme source, RESEARCH-LOOP-AUDIT RC2/RC3);
 # see research/programmes/01-active-trade-management.yaml for the contract. Landing machinery:
 # every edit holds for a human merge. `value` figures are INFERRED planning weights.
+# 2026-10-16 lane P2-AI-REGIME-BACKLOG-1016: authored the four authoring-queue nodes (Q2.1/Q3.1/Q1.5/Q2.5), added Q1.3 drift,
+# Q4 successor and Q6 parity branches. The regime half (L-REGIME, REGIME-PROGRAM) lives in 02r-regime.yaml (same programme).
+# P2-Q4-et-mlp-extend is left as is: it materialised RQ-20261016-001, which repeats RQ-20261015-ab54-01 (both tail_rows 43000);
+# the ensemble_stack line gets no further node until that record is graded.
 programme: P2
 plan: docs/research/programmes/02-AI-TRADER.md
 nodes:
   # ── Q2 meta-labeling: 9d20-02 (thin-column baseline) closed FAIL ────────────
   - id: P2-Q2.1-fail
     goal: G4
-    roadmap: [M23]
-    value: {usd_at_stake_per_month: 300, confidence: 0.3}
-    after: [{unit: RQ-20261014-9d20-02, verdict: fail}]
-    needs_authoring: >-
-      The meta-label head on the thin committed columns FAILED. 02 § 6 already names the refinement:
-      widen the emits (row METALABEL-EMIT-FEATURES) and re-test as 9d20-04 (blocked on that row). Until
-      the row lands, register the cheapest measurable step that does not need it (e.g. the same head on
-      the families whose emits already carry the regime/vol columns) or state why none exists.
+    roadmap:
+    - M23
+    value:
+      usd_at_stake_per_month: 300
+      confidence: 0.3
+    after:
+    - unit: RQ-20261014-9d20-02
+      verdict: fail
+    - unit: RQ-20261014-9d20-04
+      verdict: fail
+    needs_authoring: 'AUTHORED 2026-10-16 (lane P2-AI-REGIME-BACKLOG-1016) as ''no cheaper step exists'': 9d20-02
+      already evaluated the pullback legs whose emits carry a real adx_at_entry (eth_pullback_2h, pullback_ada/doge/link_1h,
+      in its 17 legs at n >= 100), so ''the same head on families with regime columns'' has run and failed. The only
+      route is METALABEL-EMIT-FEATURES -> RQ-20261014-9d20-04 (blocked/). This node now waits on 9d20-04 FAILING too:
+      then register the M23 kill-or-redirect -- a pooled head on live+backtest labels gated by the pooling-parity
+      result (RQ-20261016-65ff-26), or a recorded exhaustion of the test-results route for the families that failed,
+      with the numbers.'
+  - id: P2-Q2.3-pass
+    goal: G4
+    roadmap:
+    - M23
+    value:
+      usd_at_stake_per_month: 400
+      confidence: 0.3
+    after:
+    - unit: RQ-20261014-9d20-04
+      verdict: pass
+    needs_authoring: M23 P3 PASSED for at least one family on the widened emits. Register (a) the disjoint-window
+      confirmation of the passing family's take/skip head, and (b) the shadow-registration proposal (P4, Tier-3 note
+      on AI-TRADER-PROGRAMME) only after (a) and the pooling-parity read (RQ-20261016-65ff-26) for that family.
   # ── Q3 giveback predictable at entry: 9d20-03 closed FAIL ───────────────────
   - id: P2-Q3.1-fail
     goal: G1
-    roadmap: [M23]
-    value: {usd_at_stake_per_month: 300, confidence: 0.3}
-    after: [{unit: RQ-20261014-9d20-03, verdict: fail}]
-    needs_authoring: >-
-      Large peak-to-exit giveback is NOT predictable at entry on the committed columns. That moves the
-      question in-trade: register the link to P1-Q8 (per-bar state, d6e7-02/04) rather than an entry-time
-      re-test, or a refinement with features the census says differ (01's census by class).
+    roadmap:
+    - M23
+    - L-ATM
+    value:
+      usd_at_stake_per_month: 300
+      confidence: 0.3
+    after:
+    - unit: RQ-20261014-9d20-03
+      verdict: fail
+    - unit: RQ-20261014-d6e7-04
+      verdict: indeterminate
+    unit:
+      theme: ml_health
+      priority: 1
+      title: 'AI trader / exit line, class split (P2-Q3.1): does the RICH in-trade state carry information about SL-before-TP
+        beyond where the trade is, on the DONCHIAN family alone? (refinement of RQ-20261014-d6e7-04, which was INDETERMINATE
+        pooled)'
+      question: 'RQ-20261014-9d20-03 FAILED (giveback is not predictable at entry), so the question moved in-trade
+        (02 s3 Q3 destination). RQ-20261014-d6e7-04 asked it pooled over every family and closed INDETERMINATE (gain
+        0.00054 nats, CI [-0.00118, 0.00245]). Same script, features, reference, K, folds and bar, restricted to the
+        donchian legs (--leg-re ''trend_donchian''): does the rich state beat the calibrated distance-only reference
+        by >= 0.002 nats with CI lower bound > 0?'
+      why_this_matters: 'A pooled null can hide a class that carries the signal and a class that carries none (01''s
+        census differs by class: pullback headroom 1.54 R/trade in 9d20-01). The three class units (P2-Q3.1-fail donchian,
+        -b pullback, -c scalp) are registered together, so the split is pre-registered, not mined; a single-class
+        PASS is a lead for a policy unit, confirmed on a disjoint window before anything else.'
+      power:
+        expected_n: 550
+        min_detectable_effect: 0.1
+        effect_units: sd
+        design: one_sample
+        alpha: 0.05
+        power: 0.8
+        basis: 'Unit = OOS test trade. d6e7-01''s census walked donchian legs for ~1100 trades; 4 of 5 time blocks
+          tested and timeouts excluded -> ~550 OOS trades (ESTIMATE). A 0.1 sd per-trade gain needs ~785, so this
+          class is near or below that: the rule grades INDETERMINATE under the 300 floor and a CI that spans the bar,
+          never FAIL on thin n.'
+        feasibility:
+          source: none
+          accrual_basis: Committed ledgers + public candles; nothing accrues.
+      decision_rule:
+        id: RULE-P2-Q3.1-RICHSTATE-DONCHIAN
+        statistic: 'Per OOS trade: mean over its bar events of logloss(reference dist) - logloss(model rich), trade-weighted;
+          pooled mean with a 1,000-draw trade bootstrap 95% CI; sign per fold (4 expanding purged time folds); calibration
+          slope. Identical to RQ-20261014-d6e7-04''s statistic, restricted by --leg-re.'
+        rule: 'PASS IF gain >= 0.002 nats AND CI lower bound > 0 AND gain > 0 in >= 3 of 4 folds AND calibration slope
+          in [0.7, 1.3]: the donchian family''s in-trade state carries information -> author the exit-now POLICY unit
+          for this class only (the d6e7-05 shape, requires this PASS) and a disjoint-window confirmation. FAIL IF
+          the CI upper bound < 0.002 nats: closes the rich state for this class on this corpus (note on IN-TRADE-EXIT-MODEL).
+          INDETERMINATE otherwise or under 300 OOS trades.'
+        min_n: 300 OOS trades in the class.
+        what_it_does_not_do: Trains nothing that serves; edits no exit lever, config or roster; the 0.002-nat bar,
+          K and folds are d6e7-04's, unchanged. Not a P&L claim -- the policy unit owns net R.
+      compute: cpu_light
+      value:
+        bucket: ai_trader
+        usd_at_stake_per_month: 300
+        confidence: 0.2
+        basis: 02 node P2-Q3.1 planning weight; the probability model behind the exit-now mechanism, per class.
+      routing:
+        needs_trainer_resident_data: false
+        needs_gpu: false
+        peak_memory_gb: 3.0
+        est_minutes: 60
+        basis: d6e7-04 budgeted 90 min for every family; a class subset fetches fewer symbols x timeframes.
+        why_runner: public candles + committed ledgers only; numpy IRLS -- no published shard covers 5m/2h/4h and
+          no GPU is useful.
+      run:
+        command:
+        - python3
+        - scripts/research/first_passage.py
+        - --mode
+        - baseline
+        - --features
+        - rich
+        - --ref
+        - dist
+        - --leg-re
+        - trend_donchian
+        - --policy-tp-r
+        - '2.0'
+        - --min-gain-nats
+        - '0.002'
+        - --min-folds
+        - '3'
+        - --min-n
+        - '300'
+        - --cache-dir
+        - '{out_dir}/candles'
+        - --out
+        - '{out_dir}'
+        timeout_minutes: 240
+      lands:
+        store: research/results/
+        assert_field: read_state
+        min_rows: 1
+      related:
+      - RQ-20261014-d6e7-04
+      - RQ-20261014-9d20-03
+      - IN-TRADE-EXIT-MODEL
+      - P2-AI-REGIME-BACKLOG-1016
+  - id: P2-Q3.1b-pullback
+    goal: G1
+    roadmap:
+    - M23
+    - L-ATM
+    value:
+      usd_at_stake_per_month: 300
+      confidence: 0.3
+    after:
+    - unit: RQ-20261014-9d20-03
+      verdict: fail
+    - unit: RQ-20261014-d6e7-04
+      verdict: indeterminate
+    unit:
+      theme: ml_health
+      priority: 1
+      title: 'AI trader / exit line, class split (P2-Q3.1): does the RICH in-trade state carry information about SL-before-TP
+        beyond where the trade is, on the PULLBACK family alone? (refinement of RQ-20261014-d6e7-04, which was INDETERMINATE
+        pooled)'
+      question: 'RQ-20261014-9d20-03 FAILED (giveback is not predictable at entry), so the question moved in-trade
+        (02 s3 Q3 destination). RQ-20261014-d6e7-04 asked it pooled over every family and closed INDETERMINATE (gain
+        0.00054 nats, CI [-0.00118, 0.00245]). Same script, features, reference, K, folds and bar, restricted to the
+        pullback legs (--leg-re ''pullback''): does the rich state beat the calibrated distance-only reference by
+        >= 0.002 nats with CI lower bound > 0?'
+      why_this_matters: 'A pooled null can hide a class that carries the signal and a class that carries none (01''s
+        census differs by class: pullback headroom 1.54 R/trade in 9d20-01). The three class units (P2-Q3.1-fail donchian,
+        -b pullback, -c scalp) are registered together, so the split is pre-registered, not mined; a single-class
+        PASS is a lead for a policy unit, confirmed on a disjoint window before anything else.'
+      power:
+        expected_n: 800
+        min_detectable_effect: 0.1
+        effect_units: sd
+        design: one_sample
+        alpha: 0.05
+        power: 0.8
+        basis: 'Unit = OOS test trade. d6e7-01''s census walked pullback legs for ~1600 trades; 4 of 5 time blocks
+          tested and timeouts excluded -> ~800 OOS trades (ESTIMATE). A 0.1 sd per-trade gain needs ~785, so this
+          class is near or below that: the rule grades INDETERMINATE under the 300 floor and a CI that spans the bar,
+          never FAIL on thin n.'
+        feasibility:
+          source: none
+          accrual_basis: Committed ledgers + public candles; nothing accrues.
+      decision_rule:
+        id: RULE-P2-Q3.1-RICHSTATE-PULLBACK
+        statistic: 'Per OOS trade: mean over its bar events of logloss(reference dist) - logloss(model rich), trade-weighted;
+          pooled mean with a 1,000-draw trade bootstrap 95% CI; sign per fold (4 expanding purged time folds); calibration
+          slope. Identical to RQ-20261014-d6e7-04''s statistic, restricted by --leg-re.'
+        rule: 'PASS IF gain >= 0.002 nats AND CI lower bound > 0 AND gain > 0 in >= 3 of 4 folds AND calibration slope
+          in [0.7, 1.3]: the pullback family''s in-trade state carries information -> author the exit-now POLICY unit
+          for this class only (the d6e7-05 shape, requires this PASS) and a disjoint-window confirmation. FAIL IF
+          the CI upper bound < 0.002 nats: closes the rich state for this class on this corpus (note on IN-TRADE-EXIT-MODEL).
+          INDETERMINATE otherwise or under 300 OOS trades.'
+        min_n: 300 OOS trades in the class.
+        what_it_does_not_do: Trains nothing that serves; edits no exit lever, config or roster; the 0.002-nat bar,
+          K and folds are d6e7-04's, unchanged. Not a P&L claim -- the policy unit owns net R.
+      compute: cpu_light
+      value:
+        bucket: ai_trader
+        usd_at_stake_per_month: 300
+        confidence: 0.2
+        basis: 02 node P2-Q3.1 planning weight; the probability model behind the exit-now mechanism, per class.
+      routing:
+        needs_trainer_resident_data: false
+        needs_gpu: false
+        peak_memory_gb: 3.0
+        est_minutes: 60
+        basis: d6e7-04 budgeted 90 min for every family; a class subset fetches fewer symbols x timeframes.
+        why_runner: public candles + committed ledgers only; numpy IRLS -- no published shard covers 5m/2h/4h and
+          no GPU is useful.
+      run:
+        command:
+        - python3
+        - scripts/research/first_passage.py
+        - --mode
+        - baseline
+        - --features
+        - rich
+        - --ref
+        - dist
+        - --leg-re
+        - pullback
+        - --policy-tp-r
+        - '2.0'
+        - --min-gain-nats
+        - '0.002'
+        - --min-folds
+        - '3'
+        - --min-n
+        - '300'
+        - --cache-dir
+        - '{out_dir}/candles'
+        - --out
+        - '{out_dir}'
+        timeout_minutes: 240
+      lands:
+        store: research/results/
+        assert_field: read_state
+        min_rows: 1
+      related:
+      - RQ-20261014-d6e7-04
+      - RQ-20261014-9d20-03
+      - IN-TRADE-EXIT-MODEL
+      - P2-AI-REGIME-BACKLOG-1016
+  - id: P2-Q3.1c-scalp
+    goal: G1
+    roadmap:
+    - M23
+    - L-ATM
+    value:
+      usd_at_stake_per_month: 200
+      confidence: 0.3
+    after:
+    - unit: RQ-20261014-9d20-03
+      verdict: fail
+    - unit: RQ-20261014-d6e7-04
+      verdict: indeterminate
+    unit:
+      theme: ml_health
+      priority: 2
+      title: 'AI trader / exit line, class split (P2-Q3.1): does the RICH in-trade state carry information about SL-before-TP
+        beyond where the trade is, on the SCALP family alone? (refinement of RQ-20261014-d6e7-04, which was INDETERMINATE
+        pooled)'
+      question: 'RQ-20261014-9d20-03 FAILED (giveback is not predictable at entry), so the question moved in-trade
+        (02 s3 Q3 destination). RQ-20261014-d6e7-04 asked it pooled over every family and closed INDETERMINATE (gain
+        0.00054 nats, CI [-0.00118, 0.00245]). Same script, features, reference, K, folds and bar, restricted to the
+        scalp legs (--leg-re ''ict_scalp''): does the rich state beat the calibrated distance-only reference by >=
+        0.002 nats with CI lower bound > 0?'
+      why_this_matters: 'A pooled null can hide a class that carries the signal and a class that carries none (01''s
+        census differs by class: pullback headroom 1.54 R/trade in 9d20-01). The three class units (P2-Q3.1-fail donchian,
+        -b pullback, -c scalp) are registered together, so the split is pre-registered, not mined; a single-class
+        PASS is a lead for a policy unit, confirmed on a disjoint window before anything else.'
+      power:
+        expected_n: 460
+        min_detectable_effect: 0.1
+        effect_units: sd
+        design: one_sample
+        alpha: 0.05
+        power: 0.8
+        basis: 'Unit = OOS test trade. d6e7-01''s census walked scalp legs for ~920 trades; 4 of 5 time blocks tested
+          and timeouts excluded -> ~460 OOS trades (ESTIMATE). A 0.1 sd per-trade gain needs ~785, so this class is
+          near or below that: the rule grades INDETERMINATE under the 300 floor and a CI that spans the bar, never
+          FAIL on thin n.'
+        feasibility:
+          source: none
+          accrual_basis: Committed ledgers + public candles; nothing accrues.
+      decision_rule:
+        id: RULE-P2-Q3.1-RICHSTATE-SCALP
+        statistic: 'Per OOS trade: mean over its bar events of logloss(reference dist) - logloss(model rich), trade-weighted;
+          pooled mean with a 1,000-draw trade bootstrap 95% CI; sign per fold (4 expanding purged time folds); calibration
+          slope. Identical to RQ-20261014-d6e7-04''s statistic, restricted by --leg-re.'
+        rule: 'PASS IF gain >= 0.002 nats AND CI lower bound > 0 AND gain > 0 in >= 3 of 4 folds AND calibration slope
+          in [0.7, 1.3]: the scalp family''s in-trade state carries information -> author the exit-now POLICY unit
+          for this class only (the d6e7-05 shape, requires this PASS) and a disjoint-window confirmation. FAIL IF
+          the CI upper bound < 0.002 nats: closes the rich state for this class on this corpus (note on IN-TRADE-EXIT-MODEL).
+          INDETERMINATE otherwise or under 300 OOS trades.'
+        min_n: 300 OOS trades in the class.
+        what_it_does_not_do: Trains nothing that serves; edits no exit lever, config or roster; the 0.002-nat bar,
+          K and folds are d6e7-04's, unchanged. Not a P&L claim -- the policy unit owns net R.
+      compute: cpu_light
+      value:
+        bucket: ai_trader
+        usd_at_stake_per_month: 300
+        confidence: 0.2
+        basis: 02 node P2-Q3.1 planning weight; the probability model behind the exit-now mechanism, per class.
+      routing:
+        needs_trainer_resident_data: false
+        needs_gpu: false
+        peak_memory_gb: 3.0
+        est_minutes: 60
+        basis: d6e7-04 budgeted 90 min for every family; a class subset fetches fewer symbols x timeframes.
+        why_runner: public candles + committed ledgers only; numpy IRLS -- no published shard covers 5m/2h/4h and
+          no GPU is useful.
+      run:
+        command:
+        - python3
+        - scripts/research/first_passage.py
+        - --mode
+        - baseline
+        - --features
+        - rich
+        - --ref
+        - dist
+        - --leg-re
+        - ict_scalp
+        - --policy-tp-r
+        - '2.0'
+        - --min-gain-nats
+        - '0.002'
+        - --min-folds
+        - '3'
+        - --min-n
+        - '300'
+        - --cache-dir
+        - '{out_dir}/candles'
+        - --out
+        - '{out_dir}'
+        timeout_minutes: 240
+      lands:
+        store: research/results/
+        assert_field: read_state
+        min_rows: 1
+      related:
+      - RQ-20261014-d6e7-04
+      - RQ-20261014-9d20-03
+      - IN-TRADE-EXIT-MODEL
+      - P2-AI-REGIME-BACKLOG-1016
   # ── Q4 family diversity: 9d20-05 closed INDETERMINATE ───────────────────────
   - id: P2-Q4-et-mlp-extend
     goal: G4
@@ -194,19 +520,195 @@ nodes:
   # ── Q1.5 conformal abstention: heads beat the prior on log-loss at 1h ───────
   - id: P2-Q1.5-conformal
     goal: G4
-    roadmap: [L-REGIME]
-    value: {usd_at_stake_per_month: 150, confidence: 0.3}
-    after: [{unit: RQ-20261014-65cc-10, verdict: pass}]
-    needs_authoring: >-
-      65cc-10 PASSED (1h heads beat the class prior on log-loss). 02 § 6 W3 #20 releases conformal
-      abstention RQ-20261011-9da8-03 on this condition: re-check it is dispatchable (blocked/ or queued)
-      and unlock it, or register the 1h conformal unit if 9da8-03 is scoped to 15m only.
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 150
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-25
+      verdict: pass
+    needs_authoring: 'AUTHORED 2026-10-16: 9da8-03 is scoped to the 15m shadow log and needs two levers, so the 1h
+      published-data variant was registered as blocked/RQ-20261016-65ff-25 (needs only the scorer, FRONTIER-LEVER-CONFORMAL).
+      On its PASS: register the disjoint-window confirmation, then the Tier-3 proposal of abstention as a per-trade
+      RiskManager refusal on the advisory heads (never a mode flip), and re-ask 9da8-03 on the 15m shadow log once
+      ML-HEAD-AGREEMENT-JOIN lands.'
+  - id: P2-Q1.5-fail
+    goal: G4
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 100
+      confidence: 0.2
+    after:
+    - unit: RQ-20261016-65ff-25
+      verdict: fail
+    needs_authoring: Conformal abstention at 1h FAILED (no selective-error gain, or coverage validity broken by drift).
+      Record the configuration in families.conformal_calibration.history; register ONE refinement (Mondrian by vol
+      bucket instead of predicted class, or an adaptive-conformal ACI variant for drift) before the family is fed
+      again, or retire 9da8-03 with the reason.
   # ── Q2.5 pooling parity (no unit yet) ───────────────────────────────────────
   - id: P2-Q2.5-pooling-parity
     goal: G4
-    roadmap: [M23]
-    value: {usd_at_stake_per_month: 200, confidence: 0.3}
-    needs_authoring: >-
-      Pooling parity: KS on feature marginals and realised-R per cell, test results vs live trade
-      outcomes (02 § 6 W3 #17; compute needs_vm_data -> trainer, which has idle windows). Decides whether
-      backtest-augmented labels can train the M23 head.
+    roadmap:
+    - M23
+    value:
+      usd_at_stake_per_month: 200
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-26
+      verdict: pass
+    needs_authoring: 'AUTHORED 2026-10-16 as blocked/RQ-20261016-65ff-26 (instrument row POOLING-PARITY-INSTRUMENT,
+      needs_vm_data). On PASS (parity holds): register the pooled within-family meta-label head with a source indicator,
+      live labels weighted, graded on live-only OOS folds.'
+  - id: P2-Q2.5-fail
+    goal: G4
+    roadmap:
+    - M23
+    value:
+      usd_at_stake_per_month: 150
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-26
+      verdict: fail
+    needs_authoring: 'Pooling parity FAILED (net R or features differ live vs backtest): do NOT pool. Register the
+      backtest-fidelity unit for the legs whose net R rejects (cost or fill model gap) and keep M23 on live labels
+      per GO cell from the label census.'
+  # ── Q1.3 drift (PI-20261016-P3PFA1GK-0001): branches of the 1h drift twin and the drift-artifact question ──
+  - id: P2-Q1.3-drift-1h-fail
+    goal: G4
+    roadmap:
+    - M25
+    value:
+      usd_at_stake_per_month: 100
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-24
+      verdict: fail
+    needs_authoring: '1h regime skill does not hold on the last 90 days for at least one symbol (persistent at 1h).
+      Per the drift-remediation skill: register the feature/label fix test for that symbol (e.g. HAR-RV horizons,
+      recency-weighted training, a vol-target re-definition) as an off-trainer bake-off; demotion only as interim
+      safety and operator-gated.'
+  - id: P2-Q1.3-drift-artifact
+    goal: G4
+    roadmap:
+    - M25
+    value:
+      usd_at_stake_per_month: 150
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-27
+      verdict: pass
+    needs_authoring: 'The persistent drift flag is mostly an instrument artifact or input-mix shift. Not a research
+      question: file the scan fix on ML-DRIFT-SPLIT-INSTRUMENT (version-pure scoring) and close PI-20261016-P3PFA1GK-0001
+      with the per-head reading; author a research unit only for the heads read DECAY.'
+  - id: P2-Q1.3-drift-decay
+    goal: G4
+    roadmap:
+    - M25
+    value:
+      usd_at_stake_per_month: 200
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-27
+      verdict: fail
+    needs_authoring: '>= 4 of the 9 flagged heads read DECAY. Register one drift-remediation bake-off per decayed
+      family (features, label, training window), off the trainer where the data is published; the advisory sol-regime-15m-lgbm-fc-pcv-v2
+      first.'
+  # ── Q4 family diversity: successors of the CatBoost confirmation and the two blocked frontier bake-offs ──
+  - id: P2-Q4-catboost-confirmed
+    goal: G4
+    roadmap:
+    - M25
+    value:
+      usd_at_stake_per_month: 80
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-30
+      verdict: pass
+    needs_authoring: 'CatBoost''s 1h regime log-loss win confirmed out of time and on SOL. Not another bake-off: the
+      Tier-3 candidate-manifest note on FRONTIER-RESEARCH; then register the net-of-cost question -- does the CatBoost
+      head''s vol label separate trades better than LightGBM''s (an arm of the RQ-20261016-65ff-28 classifier comparison).'
+  - id: P2-Q4-tabular-read
+    goal: G4
+    roadmap:
+    - M25
+    value:
+      usd_at_stake_per_month: 120
+      confidence: 0.25
+    after:
+    - unit: RQ-20261011-9da8-02
+      verdict: any
+    needs_authoring: The small-n tabular bake-off (TabICL / TabPFN / CatBoost vs LightGBM on the meta-label dataset)
+      closed. Write the verdict to families.tabular_foundation_model.history and register the next rung per the frontier
+      skill table (PASS -> candidate note + per-cell live-label head for the GO cells of the label census; FAIL ->
+      the exact configuration, family not closed).
+  - id: P2-Q4-tsfm-read
+    goal: G4
+    roadmap:
+    - M25
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 120
+      confidence: 0.25
+    after:
+    - unit: RQ-20261011-9da8-01
+      verdict: any
+    needs_authoring: The TSFM forecaster bake-off for the vol head closed (with the HAR-RV control). PASS -> the LoRA
+      rung (blocked/RQ-20261013-1414-08) and a serve-parity row; FAIL -> families.ts_foundation_model.history; the
+      covariate-native rung (1414-09) waits on FUNDING-OI-DATASETS-ETH-SOL either way.
+  # ── Q6 off-VM training parity per manifest class (PI-20261016-P3PFA1GK-0002). The regression class has NO parity unit:
+  #    all 15 regression manifests train on setup_candidates / setup_labels (OURS data, never published), so they stay on the
+  #    trainer by construction -- the stated reason that clears that half of the pipeline item. ──
+  - id: P2-Q6-parity-hmm-pass
+    goal: G4
+    roadmap:
+    - M25
+    value:
+      usd_at_stake_per_month: 100
+      confidence: 0.4
+    after:
+    - unit: RQ-20261016-65ff-21
+      verdict: pass
+    needs_authoring: 'Off-VM training parity PASSED for the HMM class. Not a research question: note it on KAGGLE-TRAIN-RUNNER-FIRST
+      and PI-20261016-P3PFA1GK-0002 (one class cleared); the one operator-gated off-VM registry write for this class
+      is a Tier-2 ask.'
+  - id: P2-Q6-parity-hmm-fail
+    goal: G4
+    roadmap:
+    - M25
+    value:
+      usd_at_stake_per_month: 100
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-21
+      verdict: fail
+    needs_authoring: Off-VM training parity FAILED for the HMM class on identical rows. Register the root-cause measurement
+      (library version / platform float drift / an unseeded path) as a unit before the class is moved; it stays on
+      the trainer.
+  - id: P2-Q6-parity-regimeclf-pass
+    goal: G4
+    roadmap:
+    - M25
+    value:
+      usd_at_stake_per_month: 100
+      confidence: 0.4
+    after:
+    - unit: RQ-20261016-65ff-23
+      verdict: pass
+    needs_authoring: 'Off-VM training parity PASSED for the RegimeClassifier class. Not a research question: note
+      it on KAGGLE-TRAIN-RUNNER-FIRST and PI-20261016-P3PFA1GK-0002 (one class cleared); the one operator-gated off-VM
+      registry write for this class is a Tier-2 ask.'
+  - id: P2-Q6-parity-regimeclf-fail
+    goal: G4
+    roadmap:
+    - M25
+    value:
+      usd_at_stake_per_month: 100
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-23
+      verdict: fail
+    needs_authoring: Off-VM training parity FAILED for the RegimeClassifier class on identical rows. Register the
+      root-cause measurement (library version / platform float drift / an unseeded path) as a unit before the class
+      is moved; it stays on the trainer.

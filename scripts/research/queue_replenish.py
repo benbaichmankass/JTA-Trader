@@ -586,7 +586,10 @@ def render_node(node: Dict[str, Any], prog_path: str, prog_sha: str, programme: 
     rule.setdefault("registered_at", day)
     unit["decision_rule"] = rule
     run = dict(unit.get("run") or {})
-    if run.get("workflow") == "research-script-run.yml":
+    # A compute-routed node (no run.workflow, a run.command: PLANNING.md s1b) is fired by the router onto a
+    # script-run workflow, which needs research_unit == the unit id exactly like research-script-run.yml does --
+    # and a node cannot know its id before it is minted (lane P2-AI-REGIME-BACKLOG-1016, 2026-10-16).
+    if run.get("workflow") == "research-script-run.yml" or (not run.get("workflow") and run.get("command")):
         run["inputs"] = {**dict(run.get("inputs") or {}), "research_unit": unit_id}
     if run:
         unit["run"] = run
@@ -867,7 +870,10 @@ def _self_test() -> int:
         p2 = plan(er, day="2030-01-01", target=25)
     assert [u["text"] for u in p1["new_units"]] == [u["text"] for u in p2["new_units"]], "not deterministic"
     assert p1["new_units"], "the live templates generate nothing from an empty queue -- a template or a grid source is broken"
-    assert plan(root, day="2030-01-01", target=live_have)["new_units"] == [], "a full queue must generate nothing"
+    # Template units only: a READY programme node is emitted whenever ready, not to fill a deficit (plan()), so a
+    # landed-but-not-yet-emitted node (the window between its PR's merge and the next replenish) is not a failure here.
+    assert [u for u in plan(root, day="2030-01-01", target=live_have)["new_units"]
+            if not str(u["family"]).startswith(PROGRAMME_FAMILY + ":")] == [], "a full queue must generate no TEMPLATE unit"
     # every generated unit is valid queue schema + a pre-registered rule
     from scripts.research.research_queue import validate, grade_power, grade_route
     yaml = _yaml()

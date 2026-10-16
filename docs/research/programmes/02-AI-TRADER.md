@@ -168,6 +168,23 @@ Rule of thumb this fortnight: **if a unit can be asked on the committed ledgers 
 
 Status key: **queued** (dispatchable now) · **blocked** (named blocker) · **row** (a build). Everything marked *new* was landed by this lane; everything else already existed and is named so the backlog is the whole picture, not only this lane's additions.
 
+### Update 2026-10-16 (lane P2-AI-REGIME-BACKLOG-1016) — read this before the W1–W4 tables
+
+The tables below are the 2026-10-14 plan; several "queued" items have since closed (manager audit `docs/research/programmes/reviews/2026-10-16/02-AI-REGIME-DATA.md`). The live tree is now machine-read: `research/programmes/02-ai-trader.yaml` (AI trader), `research/programmes/02r-regime.yaml` (the regime half, L-REGIME) and `research/programmes/06-data-infra.yaml` (programme 06). Added on 2026-10-16, held for a human merge:
+
+| what | units | state |
+|---|---|---|
+| Regime: fresh-window confirmations of the four unconfirmed lever PASSes + the sol VH90 transfer to the prop leg | `RQ-20261016-65ff-01..05` | runnable |
+| Regime: per-leg good-vs-bad trade conditions (session / hot vol / cold vol / ADX floor) on the real-money and prop crypto legs | `RQ-20261016-65ff-06..19` | runnable |
+| Regime: classifier comparison on trade separation (ML vol head vs HMM vs ATR control); the alpaca_live equity legs | `blocked/RQ-20261016-65ff-28`, `-29` | blocked on `REGIME-VOL-LABELS-EXPORT`, `REGIME-EQUITY-LEG-FETCH` |
+| Q6 off-VM training parity, HMM + RegimeClassifier classes (regression class: OURS data, stays on the trainer) | `RQ-20261016-65ff-20..23` | runnable (21/23 gated on 20/22) |
+| Q1.3 drift: 1h twin on published data; drift-flag artifact question for the 9 flagged heads | `RQ-20261016-65ff-24`; `blocked/-27` | runnable; blocked on `ML-DRIFT-SPLIT-INSTRUMENT` |
+| Q4 CatBoost confirmation out of time and on SOL (from `de02-01` PASS) | `RQ-20261016-65ff-30` | runnable |
+| Q1.5 conformal at 1h (scorer only); Q2.5 pooling parity | `blocked/RQ-20261016-65ff-25`, `-26` | blocked on `FRONTIER-LEVER-CONFORMAL`, `POOLING-PARITY-INSTRUMENT` |
+| Q3.1 rich in-trade state per class (refines `d6e7-04` INDETERMINATE; `d6e7-05` retired as moot) | nodes `P2-Q3.1-fail`, `-b-pullback`, `-c-scalp` | emitted by the next replenish |
+
+Corrections to the tables below: `RQ-20261011-17f4-02` (Q0.4) is **not** queued — it exists only on held PR #17556. The `75b2`/`1414` units listed as queued are done. `P2-Q2.1-fail`: no cheaper step than `METALABEL-EMIT-FEATURES` exists (9d20-02 already covered the legs whose emits carry `adx_at_entry`).
+
 ### W1 (Oct 14–20) — fix the labels, measure the headroom, run what the free compute can run
 
 | # | item | kind | compute | status |
