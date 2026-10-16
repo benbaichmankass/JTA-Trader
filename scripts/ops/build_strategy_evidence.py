@@ -468,8 +468,10 @@ def build_record(name: str, cfg: Dict[str, Any], *, workdir: str,
         return rec
 
     try:
+        # Opt-in only: the default call is byte-identical to before, so any
+        # caller (or test double) of run_one without the kwarg is unaffected.
         row = rdm.run_one(name, cfg, workdir, days=days,
-                          research_emits=research_emits)
+                          **({"research_emits": True} if research_emits else {}))
     except Exception as e:  # noqa: BLE001 - a leg-level failure must not stop the sweep
         rec["coverage_state"] = "harness_failed"
         rec["error"] = f"{type(e).__name__}: {e}"
