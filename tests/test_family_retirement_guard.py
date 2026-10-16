@@ -17,4 +17,5 @@ def test_main_tree_has_no_unbacked_structured_retirement():
 def test_policy_is_loadable_and_provisional():
     pol = g.load_policy(REPO)
     assert pol["provisional"] is True and pol["minimums"]["outside_sources"] >= 1
-    assert "sound" in pol["test_design_verdicts_allowed"] and "flawed" not in pol["test_design_verdicts_allowed"]
+    assert pol["retiring_verdicts"] == ["C"]                       # A (tested wrong) and B never retire
+    assert len(pol["test_design_checks"]) == 6 and len(pol["not_tested_dimensions"]) == 9
