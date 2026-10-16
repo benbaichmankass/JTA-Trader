@@ -86,7 +86,7 @@ Each unit's `decision_rule` is registered in the unit before the run; the grids 
 
 ## 6. Findings raised while writing this plan
 
-- **The generated Breakout prop-fit template targets a retired account.** `research/templates/prop-fit-breakout.yaml` generated RQ-20261014-002..005 today, each saying "a PASS is a Tier-3 roster proposal for **breakout_1**" — but `breakout_1` is retired (`dry_run`, empty roster) and the live Breakout account is `breakout_2` on the **Turbo** ruleset, while the template prices `config/prop_rulesets/breakout.yaml` (Classic). A PASS from those units cannot be acted on as written. Filed to the pipeline (see the PR); the units themselves still produce valid Classic-ruleset numbers.
+- **The generated Breakout prop-fit template targets a retired account.** `research/templates/prop-fit-breakout.yaml` generated RQ-20261014-002..005 today, each saying "a PASS is a Tier-3 roster proposal for **breakout_1**" — but `breakout_1` is retired (`dry_run`, empty roster) and the live Breakout account is `breakout_2` on the **Turbo** ruleset, while the template prices `config/prop_rulesets/breakout.yaml` (Classic). A PASS from those units cannot be acted on as written. Filed to the pipeline (see the PR); the units themselves still produce valid Classic-ruleset numbers. **Fixed 2026-10-16** (lane P5-PROP-BACKLOG-1016): the template now prices `breakout_turbo_1step.yaml` for breakout_2; RQ-20261016-002/003 (generated the same morning) had already run, so they are graded as Classic prices, not retired.
 
 **What this plan does not do.** It changes no config, roster, sizing or switch setting (all such moves are Tier-3 proposals with records). It does not re-open single-leg Tradeify fits (801..810), the SOL bracket (652), or 5m/15m pace legs (batch 1). It does not treat a live prop P&L as edge. Figures marked MEASURED were read this session from the files named; the per-account baselines are deliberately not quoted until `f516-01..03` land.
 
@@ -95,7 +95,7 @@ Each unit's `decision_rule` is registered in the unit before the run; the grids 
 **This plan's questions now live in [`research/programmes/05-prop.yaml`](../../../research/programmes/05-prop.yaml)** — the
 programme source `scripts/research/queue_replenish.py` reads (`--programme-state`, `--authoring-queue`). Until this
 date 05 had no tree, so none of its open questions reached the authoring queue. A `unit:` node is a fully
-pre-registered unit (the ready ones are materialised in the same PR); a `needs_authoring:` node is a branch
+pre-registered unit (the ready ones are materialised in the same PR, ids minted at merge time by the replenisher's band); a `needs_authoring:` node is a branch
 registered before its prerequisite's verdict exists. **Edit the tree, not this table, when the plan learns.**
 
 | Q | state (MEASURED from `research/queue` grading + `research/results`, 2026-10-16) | tree nodes |
@@ -106,7 +106,7 @@ registered before its prerequisite's verdict exists. **Edit the tree, not this t
 | Q4 | **closed.** velotrade_1 FAIL (f516-07, 0.8 confirmed). ⚠️ The 2026-10-15 note closed tradeify_1 / breakout_2 using **velotrade_1's** blocked count; their own Q1 sims record `dd_switch_trips` = `dd_switch_blocked` = 0 (counter absent = never incremented, `prop_ev_sim.py:837/:877`), so the "< 0.5 blocked per life" exit holds **on their own numbers** — same disposition, now verified. | — |
 | Q5 | pool admission PASS (f516-09/-10); every head-to-head so far priced 730 d incumbents against 1095 d 4h rows. The window-matched matched-risk head-to-heads at 0.005 for all three accounts are lane RESEARCH-FOLLOWUP-1016's RQ-20261016-e2db-05/-06/-07 (not duplicated); breakout_2 has no breadth test beyond the 4h pair | branches on e2db-05..07: `P5-Q5-4H-*-pass/-fail`; **eth_4h alone** on velotrade_1 at matched 0.005 / 0.0035 (`P5-Q5-E4H-VELO-005/-0035`: `sol_4h` is `execution` = shadow and on no roster, so eth_4h is the only gate-eligible 4h leg, manager audit 2026-10-16 § 4.2); `P5-Q5-ADA-BRK`; `P5-Q5-BRK-product` |
 | Gate | `comms/prop_survival/` is empty; no unit produced a per-leg record; the incumbents' exemptions lapse 2026-11-07 / 2026-12-11 | `P5-GATE-VELO/TRAD/BRK` (+ `-read` branches) |
-| Exits | no prop unit has varied the exit; the 4h pair declares `tp_r: 50` / `tp_intent: none` (TP-doctrine non-compliant) | `P5-EXIT-ETHPROP`, `-SOLPROP`, `-ETH4H-TP`, `-SOL4H-TP`, then `P5-EXIT-EV`, `P5-EXIT-4H-EV` |
+| Exits | **owned by Programme 01** (`research/programmes/01-active-trade-management.yaml`), not duplicated here: `P1-Q2-ethprop-derive` / `-solprop-derive` (predictive TP), `P1-Q4-ethprop-exit-confirm`, `P1-Q4-ethprop-ev`, `P1-Q4-solprop-propcost`, `P1-Q7-sol-tp3-prop`. eth_4h's fixed predictive TP already FAILED (RQ-20261015-cab7-04), so its TP-doctrine route is the stop (`P1-Q6-eth4h-stop-declare`) | — |
 | Q6/Q7 | blocked/f516-11 on PROP-EXIT-READ | `P5-Q6-fail`, `P5-Q7-tp-amend` (branches on f516-11) |
 
 **Noise.** `prop_ev_grid` compares `p_alive` per seed with a strict ≥ (no MC-SE tolerance; audit § 4.1). Every dominance rule in the tree carries a registered STRICT-SEED CAVEAT (a within-noise survival FAIL is reported as such, never re-graded post hoc); the tolerance fix is build row PROP-GRID-SURVIVAL-TOL.
