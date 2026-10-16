@@ -11,7 +11,7 @@
 # Edit rules: add/close items ONLY with the row/unit that carries them. `state` here is the PLAN's
 # view (open | done | killed | parked); the ref's own state is read live, never copied.
 schema: 1
-updated: '2026-10-15'
+updated: '2026-10-16'
 review_days: 14          # an open item whose ref has not moved in this long is flagged STALE
 items:
 # ---- Track S: the independent-AI-trader spine (operator goal 2026-07-01: one model that reads everything) ----
@@ -27,6 +27,7 @@ items:
 - {id: ML-R6, family: bayesian_probabilistic, track: R, title: "Regime label streams (ML vol head + causal HMM) exported for trade-separation tests (unblocks RQ-20261016-65ff-28 classifier comparison, RQ-20260928-006)", state: open, ref: REGIME-VOL-LABELS-EXPORT, close: "Label files on main for BTC/ETH/SOL for both classifiers; 65ff-28 leaves blocked/.", tier: 1}
 - {id: ML-R7, family: none, track: R, title: "Regime axes on the alpaca_live equity legs: exit_lever_ablation fetches non-crypto legs on the runner (unblocks RQ-20261016-65ff-29)", state: open, ref: REGIME-EQUITY-LEG-FETCH, close: "One non-crypto exit_lever_ablation unit lands a measured record; 65ff-29 split per leg and leaves blocked/.", tier: 1}
 - {id: ML-N1J, family: gbdt, track: R, title: "Lever for ML-N1: shadow-log -> realized vol joiner", state: open, ref: ML-HEAD-AGREEMENT-JOIN, close: "Joiner merged, unit moved out of blocked/.", tier: 1}
+- {id: ML-N1, track: R, title: "NEW IDEA: multi-timeframe regime-head agreement vs best single head", state: open, ref: RQ-20261011-17f4-03, close: "Joiner (ML-HEAD-AGREEMENT-JOIN) merged; unit graded by its pre-registered rule.", tier: 1}
 # ---- Track X: exit and take-profit heads ----
 - {id: ML-X1, family: gbdt, track: X, title: "ml2-live-leg-corpus lever (per-trade emits for the six live legs; mfe_r baselines)", state: open, ref: ML-LEG-CORPUS, close: "ml2_bracket_train_eval --per-leg prints four baselines per quantile; RQ-20261009-900 leaves blocked/.", tier: 1}
 - {id: ML-X2, family: gbdt, track: X, title: "TP doctrine predict-head: step 1 sharper-than-baseline, step 2 net-of-cost overlay", state: open, ref: TP-PREDICT-HEAD, close: "RQ-20261009-900 and -901 graded; head built only if both pass, else closed as 'B4 is enough'.", tier: 3}
@@ -36,9 +37,11 @@ items:
 - {id: ML-P0, family: gbdt, track: P, title: "Replay-parity harness (M0)", state: open, ref: ML-PARITY-HARNESS, close: "[scripts/ml/replay_parity.py merged; synthetic planted-gap test passes] still needs the recorded trainer run: harness merged and reproduces the known svble funding gap in a recorded trainer run.", tier: 1}
 - {id: ML-P1, family: gbdt, track: P, title: "Funding producer for btc-regime-1h-lgbm-funding-svble-v1 (M1)", state: open, ref: ML-PRODUCER-FUNDING, close: "Live shadow row with all declared features non-null AND non-default.", tier: 2}
 - {id: ML-P2, family: gbdt, track: P, title: "Flow feasibility, flow producer, retire setup-quality-lgbm-v2, conviction label gate (M2-M5)", state: open, ref: ML-PRODUCERS, close: "M2 go/stop note, M3 only if M2 passes, M4 operator decision, M5 answered by ML-D2.", tier: 2}
+- {id: ML-V1, track: P, title: "Advisory-head value-parity audit (present AND non-default AND equal)", state: open, ref: RQ-20261011-17f4-01, close: "Unit graded: PASS for all three advisory heads, or bug rows + demote proposal filed.", tier: 1}
 # ---- Track D: data, labels, hygiene ----
 - {id: ML-D1, family: gbdt, track: D, title: "setup_labels killzone/bias fix proven end to end", state: open, ref: ML-DATASET-FIXES, close: "dataset_audit ok for setup-quality-lgbm-v2 with nan_fraction<0.99 on both columns and a fresh registered run.", tier: 1}
 - {id: ML-D2, family: gbdt, track: D, title: "Label wall: per-cell labels vs the n>=300 / n>=1000 gates", state: open, ref: ML-LABEL-WALL, close: "Cell-vs-gate table committed and RQ-20261011-17f4-02 graded.", tier: 1}
+- {id: ML-D3, track: D, title: "Label-wall unit (pre-registered census)", state: open, ref: RQ-20261011-17f4-02, close: "Graded GO / PARK / NEEDS-BACKFILL by its rule.", tier: 1}
 - {id: ML-D4, family: rule_baseline, track: D, title: "ML hygiene: constant baselines, calibrator holdout, MES margin watch", state: open, ref: ML-HYGIENE, close: "PI-20261004-AHCVAAF5-0001/-0002 dispositioned; constant baselines soft-off or tagged as reference.", tier: 1}
 - {id: ML-D5, track: D, title: "Trainer disk and capacity", state: done, ref: TRAINER-DISK, close: "Trainer disk used_pct < 85 (read 43.8% on 2026-10-11).", tier: 2}
 # ---- Track N: open-ended new ideas and information classes (standing quota: >=1 per weekly cycle) ----

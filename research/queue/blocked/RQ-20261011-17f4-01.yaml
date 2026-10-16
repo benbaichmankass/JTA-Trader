@@ -1,0 +1,64 @@
+id: RQ-20261011-17f4-01
+title: 'ML plumbing: do the three ADVISORY regime heads serve at live exactly what they trained on (present
+  AND non-default, identical bars)? -- blocked on the replay-parity harness'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 1
+kind: deterministic
+why_not_inferential: Equality audit of two deterministic pipelines on identical inputs; the statistic
+  is a count of mismatches, not an estimate.
+question: 'Before any advisory head is trusted another week, on >=500 identical closed bars per head (btc-regime-15m-lgbm-fc-pcv-v2,
+  sol-regime-15m-lgbm-fc-pcv-v2, mes-regime-5m-lgbm-v2): does the live feature row (feature_row_for_predictor)
+  reproduce the offline training row (market_features) for every declared feature, in the sense that each
+  feature is present AND non-default in >=99% of bars with max abs diff <=1e-6? The 2026-10-04 ml-review
+  read ''served non-null'' (13/13, 7/7, 13/13) -- presence only; this adds the non-default and value-equality
+  tests that caught the funding gap.'
+why_this_matters: Presence-only parity is the check that let four heads sit in shadow serving defaults
+  for months (ML-DEMOTE 2026-09-29). Advisory heads are order-influencing; their parity must be value-equal,
+  not just non-null. Plan item ML-V1.
+power:
+  expected_n: 500
+  effect_units: bars
+  design: deterministic
+  basis: 'kind: deterministic -- a per-feature equality audit over a fixed bar set, no inference. 500
+    bars includes >=1 funding-settlement boundary and >=1 session boundary on every head.'
+decision_rule:
+  id: RULE-RQ1011-17F4-01-ADVISORY-VALUE-PARITY
+  registered_at: '2026-10-11'
+  registered_before_run: true
+  statistic: 'Per head, per declared feature: present% , non-default% (value != the family fill constant
+    and not NaN), max abs diff live-vs-offline, over the same >=500 closed bars.'
+  rule: 'PASS IF for all three heads every declared feature has non-default% >=99 AND max abs diff <=1e-6.
+    FAIL IF any declared feature of any advisory head violates either bound: file a Tier-1 bug row naming
+    head+feature+diff and a Tier-3 ''demote to shadow'' proposal for that head to the operator per the
+    data-backed-decision classification. UNDERPOWERED/UNMEASURABLE IF fewer than 500 bars could be built
+    for a head (record the head, the reason, and re-run when buildable) -- never lower the bar. A diff
+    explained purely by float summation order is not a failure; every other diff is.'
+  what_it_does_not_do: A PASS does not promote or re-stage anything; a FAIL does not itself demote --
+    it proposes. It does not test whether the head is any good, only whether it is fed what it was trained
+    on.
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 1.5
+  est_minutes: 20
+  basis: An estimate.
+blocked_on:
+- what: The replay-parity harness is merged (scripts/ml/replay_parity.py, ML-PRODUCERS M0) but its svble
+    self-check has not been read from a recorded trainer run (ML-PARITY-HARNESS is landed_unproven), and
+    no workflow runs it over the three advisory heads. _feature_parity_probe.py checks presence only.
+  ref: ML-PARITY-HARNESS (docs/claude/work/checklist/)
+  clears_when: The svble self-check run is read and reproduces the known funding gap, and a workflow or
+    trainer-vm-diag recipe runs replay_parity.py over the three advisory heads; then git mv this unit to
+    research/queue/ and fill run.workflow.
+run:
+  workflow: null
+  note: Deliberately null until blocked_on clears.
+lands:
+  store: research/results/ (once promoted)
+related:
+- ML-PARITY-HARNESS
+- ML-PRODUCERS
+- ML-ROADMAP-LOOP
+last_dispatched_at: null
