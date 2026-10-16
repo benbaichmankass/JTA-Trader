@@ -1,0 +1,33 @@
+{
+  "id": "RESEARCH-ENGINE-1016",
+  "title": "Research engine: plan question -> queued, dispatched, graded unit (coverage, theme supply, floor gap in \u00a70, result disposition, family retirement)",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    18542,
+    18557
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-16 lane session_01LcBH3h7czfJaqx6RBHeWtw] MERGED #18542 (coverage ratchet guard, H1-THEME / OPS-AUTHOR-SKIPPED / RESULTS-UNDISPOSITIONED health warnings, authored-first dispatch + aging from due time, brief \u00a70 RESEARCH FLOOR GAP, result_disposition_check.py). #18557 (family retirement: six-item review protocol from IDEA-REVIEW-1016, guard, macro-F1 caveat) lands with this row. #18541 skeleton trees CLOSED by manager (programme lanes write full trees). Filed: PI-20261016-6RBHEWTW-0001 (39 uncovered plan questions at 07:30Z; P4 now 0/7 after #18538), PI-20261016-6RBHEWTW-0002 (lower the coverage baseline as P3/P5/P6 trees land). Manager adopted the daily authoring lane (05:53Z). Landing-wait finding: unit-only PRs median 0.8h (11 PRs), so no narrower self-land was built.",
+  "updated_at": "2026-10-16T09:20:20Z",
+  "updated_by": "session_01LcBH3h7czfJaqx6RBHeWtw",
+  "roadmap": [
+    "L-PROGRAMMES"
+  ],
+  "observation": {
+    "what": "after #18542 deployed to the web-api (ict-git-sync pull + web-api reload): GET /api/bot/work/brief \u00a70 renders the line \"### \ud83d\udea8 RESEARCH FLOOR GAP \u2014 runnable N < floor M\" while runnable < floor, and the hourly research-queue-dispatch alarm step prints H1-THEME / programme coverage / result disposition lines",
+    "how_to_check": "diag relay: brief endpoint text contains RESEARCH FLOOR GAP (or no gap line when runnable >= floor); research-queue-dispatch.yml latest run log grep \"theme supply\"",
+    "due_by": "2026-10-17T12:00:00Z"
+  },
+  "writeback": {
+    "roadmap": "L-PROGRAMMES where: plan questions are machine-visible only through research/programmes trees, now measured by programme_coverage.py; weights are honoured by supply (H1-THEME)",
+    "arch": "none: Tier-1 research tooling; contract in research-ops SKILL + research/queue/PLANNING.md"
+  },
+  "_seq": 531
+}
