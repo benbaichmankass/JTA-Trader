@@ -419,8 +419,10 @@ def row_last_evidence(it: dict, act: dict, today: date) -> tuple[date | None, st
 
 # ── SOAKS — computed LIVE by scripts/ops/soak_state.py ──────────────────────
 # INTERFACE (agreed WORK-SYSTEM <-> SOAK-WATCH): `soak_state.soak_states() ->
-# list[dict]` with keys {leg, account, state, end_date, reason}; state is one of
-# accruing/ready/overdue/dead/unknown. Imported live, like `pipeline` — NOT read
+# list[dict]` with keys {leg, account, state, n_needed, progress, reason}; state is
+# one of passed/in_progress/awaiting_first_trade/mechanical_fail/unknown (the
+# MECHANICAL soak, operator 2026-10-15: 1-2 clean trades, no calendar — there is
+# no end date to show). Imported live, like `pipeline` — NOT read
 # from a committed file: the VM only PULLS git, so a VM-computed soak state can
 # never land in one, and a session-written file is the stale-state failure this
 # brief exists to end. `days_in` is computed here when the row carries `started`.
@@ -473,23 +475,25 @@ def _soak_lines(b: dict) -> list[str]:
     if not n:
         return L + ["_None declared._", ""]
     dash = lambda v: "—" if v in (None, "") else v  # noqa: E731
-    # Only the states that owe a decision are listed in full; `accruing` is a
-    # count plus the nearest end date (the soak alarm rule: accruing stays
-    # quiet). 48 full rows took the brief past its 16 KB cap on 2026-10-04.
-    loud = [r for r in sk["rows"] if r.get("state") != "accruing"]
-    order = {"ready": 0, "overdue": 1, "dead": 2, "unknown": 3}
+    # Only the states that owe something are listed in full: `mechanical_fail`
+    # (a fault to fix, then re-soak), `passed` (a promotion candidate) and
+    # `unknown`. `awaiting_first_trade` / `in_progress` are quiet counts — a soak
+    # with no signal yet is waiting, not failing, and has no deadline. 48 full
+    # rows took the brief past its 16 KB cap on 2026-10-04.
+    quiet_states = ("awaiting_first_trade", "in_progress")
+    loud = [r for r in sk["rows"] if r.get("state") not in quiet_states]
+    order = {"mechanical_fail": 0, "unknown": 1, "passed": 2}
     for r in sorted(loud, key=lambda r: (order.get(str(r.get("state")), 9), str(r.get("id")))):
         L.append(f"- **{dash(r.get('id'))}** {dash(r.get('leg'))} @{dash(r.get('account'))} · "
                  f"{dash(r.get('state'))} · started {dash(r.get('started'))} · "
                  f"day {dash(r.get('days_in'))} · {_clip(dash(r.get('progress')), 40)} · "
-                 f"ends {dash(r.get('end_date'))} · {_clip(dash(r.get('reason')), 50)}")
-    acc = [r for r in sk["rows"] if r.get("state") == "accruing"]
-    if acc:
-        ends = sorted(str(r["end_date"]) for r in acc if r.get("end_date"))
-        nearest = next((r for r in acc if str(r.get("end_date")) == ends[0]), None) if ends else None
-        L.append(f"- _{len(acc)} accruing (quiet); nearest end "
-                 + (f"{ends[0]} (`{dash(nearest.get('id'))}`)" if nearest else "—")
-                 + ". Full table: `docs/claude/work/SOAK-REPORT.md`._")
+                 f"{_clip(dash(r.get('reason')), 50)}")
+    for st in quiet_states:
+        q = [r for r in sk["rows"] if r.get("state") == st]
+        if q:
+            L.append(f"- _{len(q)} {st.replace('_', ' ')} (quiet, no deadline): "
+                     + ", ".join(f"`{dash(r.get('leg'))}`" for r in sorted(q, key=lambda r: str(r.get('id'))))
+                     + "._")
     L.append("")
     return L
 

@@ -14,12 +14,14 @@ a superset. The bar for a leg reaching a prop roster:
   2. a Stage-1 soak: the leg is on a Stage-1 roster (``soak_state.STAGE1_ACCOUNTS``) at HEAD
      OR carries a Stage-1 soak contract in ``docs/claude/work/SOAKS.json``; AND
      AMENDMENT (operator 2026-10-15): Stage-1 soak evidence may ALSO come from LIVE PROP trading —
-     a contract ``sources`` entry of kind ``prop_live`` (n, end_date, pass_rule) counts. Its pass rule,
-     per leg over live prop closes (n stated, MEASURED fills only): (i) mechanics clean (sl/tp/trail/
-     manual-labelled exits, no orphans); (ii) live_vs_backtest verdict CONSISTENT or better; (iii) cost
-     within tolerance — a bybit_2 promotion must use Bybit's own MEASURED cost for the symbol. A PASS
-     feeds MD-PROMOTE-S1-S2 (bybit_2 + bybit_portfolio together, human merge) and the evidence record must
-     carry a PORTFOLIO OVERLAP check. Nothing is promoted by this guard.
+     a contract ``sources`` entry of kind ``prop_live`` (``n_needed`` <= 2 and its mechanical
+     ``checklist``) counts. REDEFINED the same day (operator: "a soak is a mechanical verification ...
+     nothing needs to soak for more than one or two trades"): the soak PASSES on 1-2 clean trades
+     (signal, size/side, real SL+TP resting at the venue, management, journaled exit, fill recorded);
+     realized cost and live_vs_backtest are ONGOING MONITORING, not soak exit criteria. Grading:
+     ``scripts/ops/soak_state.py::grade_prop_signal``. A PASS feeds MD-PROMOTE-S1-S2 (bybit_2 +
+     bybit_portfolio together, human merge) and the evidence record must carry a PORTFOLIO OVERLAP
+     check. Nothing is promoted by this guard.
   3. a prop survival-gate record: ``comms/prop_survival/<leg>.json`` — see ``record_problems``
      for the fields (the EV/survival run under the firm's ruleset, a rule registered before the
      run, verdict pass).
@@ -31,8 +33,9 @@ list cannot walk around it. DEMOTION IS FREE: a removal produces nothing, ever.
 
 GRANDFATHERED, BY NAME, WITH A DUE DATE (not silently): ``GRANDFATHERED`` below. The two legs that
 reached prop rosters before this rule — ``trend_donchian_eth_prop`` and ``trend_donchian_sol_prop`` —
-are exempt from clauses 2 and 3 until their ``due`` date (their bybit_1 soak end, contract in
-SOAKS.json, row ``PROP-GATE-PARITY``). After ``due`` the exemption LAPSES: an add of that leg to
+are exempt from clauses 2 and 3 until their ``due`` date (row ``PROP-GATE-PARITY``; the dates were
+the end dates of the retired ACCRUAL soak contracts and are kept as the exemption's lapse dates — the
+mechanical soak that replaced them on 2026-10-15 has no end date). After ``due`` the exemption LAPSES: an add of that leg to
 another prop account is refused like any other, and the whole-tree check prints a loud lapse notice
 (a notice, not a failure — a CI-wide red on a calendar date is the desensitised alarm this repo
 refuses; the dated checklist row + soak state carry the actual alarm). An entry may only be removed,
@@ -73,11 +76,11 @@ STAGE1_ACCOUNTS = ("bybit_1", "alpaca_paper")
 #: leg -> (due date for its soak, citation). The ONLY exemption. See the module docstring.
 GRANDFATHERED: Dict[str, Dict[str, str]] = {
     "trend_donchian_eth_prop": {
-        "due": "2026-11-07",  # SOAK-stage1-bybit_1-trend_donchian_eth_prop end_date
+        "due": "2026-11-07",  # was SOAK-stage1-bybit_1-trend_donchian_eth_prop's (retired) end_date
         "decision": "operator 2026-10-15 'Yes, 1, 2 and 3a' (row PROP-GATE-PARITY)",
     },
     "trend_donchian_sol_prop": {
-        "due": "2026-12-11",  # SOAK-stage1-bybit_1-trend_donchian_sol_prop end_date
+        "due": "2026-12-11",  # was SOAK-stage1-bybit_1-trend_donchian_sol_prop's (retired) end_date
         "decision": "operator 2026-10-15 'Yes, 1, 2 and 3a' (row PROP-GATE-PARITY)",
     },
 }
@@ -119,16 +122,18 @@ def has_stage1_contract(leg: str, soaks: Sequence[Dict[str, Any]]) -> Optional[s
 def has_prop_live_soak(leg: str, soaks: Sequence[Dict[str, Any]]) -> Optional[str]:
     """Operator amendment 2026-10-15: Stage-1 soak evidence may ALSO come from LIVE PROP trading.
 
-    A contract for the leg carrying a ``sources`` entry of kind ``prop_live`` (n, end_date, pass_rule
-    stated) counts as a soak record. It is evidence for promotion decisions only — the cost clause for a
-    bybit_2 promotion must still use Bybit's own MEASURED costs for the symbol (see the contract).
+    A contract for the leg carrying a ``sources`` entry of kind ``prop_live`` with a mechanical
+    definition of done (``n_needed`` 1 or 2 and a ``checklist``) counts as a soak record. It is
+    evidence for promotion decisions only. A source with no n_needed, or one above 2 (the retired
+    accrual shape), does not count.
     """
     for c in soaks:
         if c.get("leg") != leg:
             continue
         for s in c.get("sources") or []:
-            if (isinstance(s, dict) and s.get("kind") == "prop_live" and s.get("n_needed")
-                    and s.get("end_date") and s.get("pass_rule")):
+            n = s.get("n_needed") if isinstance(s, dict) else None
+            if (isinstance(s, dict) and s.get("kind") == "prop_live" and isinstance(n, int)
+                    and not isinstance(n, bool) and 1 <= n <= 2 and s.get("checklist")):
                 return str(c.get("id"))
     return None
 
@@ -274,12 +279,15 @@ def self_test() -> int:
         c = [{"leg": "x", "kind": "stage1", "account": "bybit_1", "id": "SOAK-stage1-bybit_1-x"}]
         check("contract alone satisfies soak clause", grade(prop_adds(base, h), h, c, d, today), [])
         # amendment: a prop_live source on a contract also satisfies the soak clause
-        pl = [{"leg": "x", "id": "S", "sources": [{"kind": "prop_live", "n_needed": 10,
-                                                  "end_date": "2026-11-01", "pass_rule": "r"}]}]
+        pl = [{"leg": "x", "id": "S", "sources": [{"kind": "prop_live", "n_needed": 2,
+                                                  "checklist": ["signal_fired"]}]}]
         h2 = acc(["old", "x"], [])
         check("prop_live source satisfies soak clause", grade(prop_adds(base, h2), h2, pl, d, today), [])
-        pl[0]["sources"][0].pop("end_date")
-        check("prop_live source without end_date does not", len(grade(prop_adds(base, h2), h2, pl, d, today)), 1)
+        pl[0]["sources"][0]["n_needed"] = 10
+        check("a retired accrual-shaped prop_live source (n_needed 10) does not",
+              len(grade(prop_adds(base, h2), h2, pl, d, today)), 1)
+        pl[0]["sources"][0].update(n_needed=2, checklist=[])
+        check("prop_live source without a checklist does not", len(grade(prop_adds(base, h2), h2, pl, d, today)), 1)
         # bad record (verdict fail) refused
         (d / "x.json").write_text(json.dumps(dict(good, decision_rule={"id": "R", "registered_at": "z",
                                                                        "verdict": "fail"})))

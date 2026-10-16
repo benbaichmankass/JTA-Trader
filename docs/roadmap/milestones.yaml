@@ -118,7 +118,7 @@ milestones:
       provisional 5.0 bps (E62).
     next: >-
       Close B5/MANDATE-ARM on the first recorded promotion or decline; replace the provisional 5 bps with a measured value (E62);
-      finish the Gate-1 regrade of every ready/overdue soak (SOAK-GATE1-REGRADE); keep the 'Walk-forward re-run' units flowing.
+      act on every passed / mechanical_fail soak (SOAK-REDEFINE: the soak is mechanical, 1-2 clean trades); keep the 'Walk-forward re-run' units flowing.
     architecture: ["Promotion ladder, mandates and the roadmap loop"]
     owner: manager
     reviewed: 2026-10-11
@@ -229,7 +229,7 @@ milestones:
     where: >-
       Three prop accounts execute automatically (breakout_2 via the phone executor, tradeify_1 and velotrade_1 via DXtrade REST);
       ~30 'Stage-0 breadth for the prop book' units are queued. Open: per-leg sizing (PROP-PER-LEG-SIZING, PROP-PER-LEG-EV-GRID), the exit-price gap on
-      venue SL/TP closes (PROP-EXIT-READ), ticket supersede/reissue (in flight), Tradeify other platforms.
+      venue SL/TP closes (PROP-EXIT-READ), ticket supersede/reissue (in flight), Tradeify other platforms. Tradeify non-crypto on tradeify_1 (SILVER, XYZ100, SP500, USOIL; on the watchlist since 2026-10-15): quoted spread 0.1-1.7 bps, margin 5:1 (SILVER, USOIL) / 2:1 (indices) inferred, 24x7 schedule MEASURED (docs/research/tradeify-platforms-2026-10-15.md 2c); swap and commission stay firm-declared and unconfirmed; Stage-0 units RQ-20261015-24ca-01..05 + ca42-01, 24ca-01 graded FAIL.
     next: >-
       Programme 05 (docs/research/programmes/05-PROP.md, 2026-10-14) is the plan: per-account EV baselines as configured (RQ-20261014-f516-01..03),
       then sizing / per-leg / daily-DD-switch / breadth challengers against them (f516-04..10); live-vs-sim fidelity waits on gradable

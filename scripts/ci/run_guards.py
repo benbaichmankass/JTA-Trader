@@ -1575,6 +1575,19 @@ GUARDS: List[Dict[str, Any]] = [
                   ["python3", "scripts/ci/check_tp_doctrine.py"]],
     },
     {
+        "name": "prop-harness-full-costs-guard",
+        # PROP-EVAL-COSTS (operator 2026-10-15): no caller of the portfolio engine
+        # (prop evaluator / Monte-Carlo / alt-prop / compat matrix / panel builder /
+        # walk-forwards) may run fee-only. Extends the D1 cost-stack verification.
+        "when": {"globs": [
+            "scripts/backtest_system.py", "scripts/prop/*.py", "scripts/walkforward_*.py",
+            "scripts/research/build_backtest_panel.py", "src/research/run_costs.py",
+            "config/prop_rulesets/*.yaml", "scripts/ci/check_prop_harness_full_costs.py",
+        ]},
+        "steps": [["python3", "scripts/ci/check_prop_harness_full_costs.py", "--self-test"],
+                  ["python3", "scripts/ci/check_prop_harness_full_costs.py"]],
+    },
+    {
         "name": "automerge-trigger-guard",
         # UNGATED: `when: None`, so it runs on every PR regardless of the diff.
         # The registry's convention for "always" is an EXPLICIT `None`, never an
@@ -2244,7 +2257,11 @@ GUARDS: List[Dict[str, Any]] = [
     {
         "name": "soak-doctrine-guard",
         "when": None,
-        "steps": [["python3", "scripts/check_soak_doctrine.py"]],
+        # 2026-10-15 (SOAK-REDEFINE, operator: "I can't keep re-explaining it"): checks E-H scan
+        # every live doc/skill/plan and the soak generators' OUTPUT for the long-soak SHAPE, and
+        # the self-test plants each historical teaching (it must be caught) plus controls.
+        "steps": [["python3", "scripts/check_soak_doctrine.py", "--self-test"],
+                  ["python3", "scripts/check_soak_doctrine.py"]],
     },
     {
         "name": "strategy-coverage-guard",

@@ -24,7 +24,8 @@ ACTIONABLE things first:
 
   * NEW since the last digest, marked 🆕 (edge items, only on change):
       - a new ``ask_operator`` pipeline item;
-      - a soak moving into ``ready`` / ``overdue`` / ``dead``
+      - a soak moving into ``passed`` / ``mechanical_fail`` (the mechanical
+        soak, operator 2026-10-15: no calendar, so no overdue / dead)
         (``scripts/ops/soak_state.py::soak_states()``, SOAK-WATCH's live
         computation — never computed here);
       - a silence alarm breaching (re-sent at most every ``REALERT_HOURS``)
@@ -97,7 +98,10 @@ INFLIGHT_STALE_DAYS = 3      # an in_flight row nobody has touched in 3 days is 
 MANAGER_SILENT_HOURS = 30    # one daily review + 6h grace
 REALERT_HOURS = 24
 TOP_N = 8
-ALERT_SOAK_STATES = ("ready", "overdue", "dead")
+#: The mechanical soak (operator 2026-10-15): ``passed`` is a promotion candidate,
+#: ``mechanical_fail`` is a fault to fix (HIGH). ``awaiting_first_trade`` /
+#: ``in_progress`` are quiet — waiting is not failing and has no deadline.
+ALERT_SOAK_STATES = ("passed", "mechanical_fail")
 
 OK, BREACHED, UNKNOWN = "ok", "breached", "unknown"
 
@@ -189,7 +193,7 @@ def open_ask_operator(items: list[dict]) -> list[dict]:
 # committed file SOAK-WATCH owns; STATE is COMPUTED LIVE on the VM by
 # ``scripts/ops/soak_state.py::soak_states()`` (contracts + journal DB). The brief,
 # the report and this pass all call it. Never a session-written state field.
-SOAK_STATES = ("accruing", "ready", "overdue", "dead", "unknown")
+SOAK_STATES = ("passed", "in_progress", "awaiting_first_trade", "mechanical_fail", "unknown")
 
 
 def read_soak_states() -> tuple[str, list[dict]]:
@@ -646,7 +650,7 @@ def plan_messages(v: dict, state: dict, digest_now: bool = False) -> tuple[list[
         new["seed_ask_sent_at"] = now.isoformat()
     new["seen_ask_operator"] = sorted(seen | set(cur))
 
-    # (b2) soak transitions into ready / overdue / dead.
+    # (b2) soak transitions into passed / mechanical_fail.
     if v["soak_read"] == "read":
         prior = state.get("soak_states", {})
         cur_s = {_soak_key(r): str(r.get("state")) for r in v["soaks"]}
@@ -656,19 +660,17 @@ def plan_messages(v: dict, state: dict, digest_now: bool = False) -> tuple[list[
         if moved and "soak_states" in state:
             L = [f"🧪 {len(moved)} soak(s) changed state:"]
             for r in moved[:8]:
-                L.append(f"• {_soak_key(r)} → {r.get('state')}"
-                         f"{' (end ' + str(r.get('end_date')) + ')' if r.get('end_date') else ''}"
-                         f" {_short(r.get('reason'), 100)}")
-            pri = "high" if any(str(r.get("state")) in ("overdue", "dead") for r in moved) else "normal"
+                L.append(f"• {_soak_key(r)} → {r.get('state')} {_short(r.get('reason'), 100)}")
+            pri = "high" if any(str(r.get("state")) == "mechanical_fail" for r in moved) else "normal"
             msgs.append((pri, "\n".join(L)))
         if "seed_soaks_sent_at" not in state:
             # Seed line, same rule as ask_operator above: one count line, keyed
             # on its own marker — and only once the soak source was READ, so an
             # absent/unreadable first pass does not burn it.
             n = {k: sum(1 for s in cur_s.values() if s == k) for k in ALERT_SOAK_STATES}
-            msgs.append(("high" if n["overdue"] or n["dead"] else "normal",
-                         f"🧪 Soaks at deploy: {n['ready']} ready · {n['overdue']} overdue · "
-                         f"{n['dead']} dead (see report)"))
+            msgs.append(("high" if n["mechanical_fail"] else "normal",
+                         f"🧪 Soaks at deploy: {n['passed']} passed · "
+                         f"{n['mechanical_fail']} mechanical_fail (see report)"))
             new["seed_soaks_sent_at"] = now.isoformat()
         new["soak_states"] = cur_s
 
@@ -896,13 +898,13 @@ def _self_test() -> int:
     msgs7, _ = plan_messages(view(ask_operator=[ao, ao2]), st6)
     check("unknown does not silently clear a breach; the later OK sends one clear",
           len(msgs7) == 1 and msgs7[0][1].startswith("✅"), msgs7)
-    s1 = {"leg": "a", "account": "bybit_1", "state": "accruing"}
-    d1 = {"leg": "b", "account": "bybit_1", "state": "dead"}
+    s1 = {"leg": "a", "account": "bybit_1", "state": "awaiting_first_trade"}
+    d1 = {"leg": "b", "account": "bybit_1", "state": "mechanical_fail"}
     seed, _ = plan_messages(view(soak_read="read", soaks=[s1, d1]), st2)
     check("first soak read sends ONE seed line with the counts",
-          [b for _, b in seed] == ["🧪 Soaks at deploy: 0 ready · 0 overdue · 1 dead (see report)"], seed)
+          [b for _, b in seed] == ["🧪 Soaks at deploy: 0 passed · 1 mechanical_fail (see report)"], seed)
     legacy = {k: v for k, v in st2.items() if not k.startswith("seed_")}
-    legacy["soak_states"] = {"bybit_1:b": "dead"}
+    legacy["soak_states"] = {"bybit_1:b": "mechanical_fail"}
     late, late_st = plan_messages(view(soak_read="read", soaks=[d1]), legacy)
     check("order-independent: a state seeded WITHOUT markers still gets both seed lines once",
           sum(1 for _, b in late if "at deploy" in b) == 2, late)
@@ -914,9 +916,9 @@ def _self_test() -> int:
     check("an absent soak source does not burn the soak seed marker",
           "seed_soaks_sent_at" not in absent_st, absent_st)
     _, st8 = plan_messages(view(soak_read="read", soaks=[s1]), st2)
-    msgs9, _ = plan_messages(view(soak_read="read", soaks=[{**s1, "state": "dead"}]), st8)
-    check("a soak moving to dead alerts high",
-          len(msgs9) == 1 and msgs9[0][0] == "high" and "dead" in msgs9[0][1], msgs9)
+    msgs9, _ = plan_messages(view(soak_read="read", soaks=[{**s1, "state": "mechanical_fail"}]), st8)
+    check("a soak moving to mechanical_fail alerts high",
+          len(msgs9) == 1 and msgs9[0][0] == "high" and "mechanical_fail" in msgs9[0][1], msgs9)
     later = view(now=now + timedelta(days=1), today=today + timedelta(days=1))
     msgs10, _ = plan_messages(later, st2)
     check("next day sends the next digest", len(msgs10) == 1 and msgs10[0][1].startswith("📋"), msgs10)

@@ -2,6 +2,14 @@
 
 > **Doc status:** `unknown` · category `unknown` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · the register has no rule that can verify a decision pack; every figure below names its source
 
+> ⛔ **SUPERSEDED RECORD (2026-10-15).** The soak design this document grades — `n_needed` 10,
+> R3 cost-fidelity exits, end dates, `ready` / `overdue` / `dead` — was retired by the operator
+> (*"A soak is a mechanical verification that was already proven in backtesting, and nothing needs to
+> soak for more than one or two trades."*). It is kept only as the dated record its mandate cites.
+> **Do not copy a soak shape from it.** The rule: [`OPERATING-PLAN` § 2 "The soak is
+> MECHANICAL"](OPERATING-PLAN-2026-09-21.md). <!-- soak-doctrine: superseded-record -->
+
+
 **Lane:** SOAK-WATCH, answering the manager's 17:52Z review.
 
 **Sources:**

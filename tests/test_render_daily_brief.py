@@ -295,21 +295,22 @@ def test_soak_slot_absent_read_and_missing_fields():
     absent = rdb.render(_brief([], []))
     assert "source absent (we looked" in absent and "not 'no soaks'" in absent
     soaks = {"state": "read", "asOf": "2026-10-04", "rows": [
-        {"leg": "L1", "account": "bybit_1", "state": "overdue", "days_in": 3},
-        {"id": "A1", "leg": "L2", "account": "bybit_1", "state": "accruing", "days_in": 5,
-         "end_date": "2026-12-01"}]}
+        {"leg": "L1", "account": "bybit_1", "state": "mechanical_fail", "days_in": 3},
+        {"id": "A1", "leg": "L2", "account": "bybit_1", "state": "awaiting_first_trade", "days_in": 5}]}
     md = rdb.render(_brief([], [], soaks=soaks))
-    assert "L1" in md and "day 3" in md and "ends —" in md and "ends 0" not in md
-    assert "accruing 1" in md and "overdue 1" in md
-    # accruing is a quiet count + nearest end date, never a full row (16 KB cap)
-    assert "1 accruing (quiet); nearest end 2026-12-01 (`A1`)" in md and "L2 @" not in md
+    assert "L1" in md and "day 3" in md and "· — ·" in md and "progress 0" not in md
+    assert "awaiting_first_trade 1" in md and "mechanical_fail 1" in md
+    # a mechanical soak has no end date to show
+    assert "ends " not in md.split("### 🌱 SOAKS")[1].split("###")[0]
+    # awaiting is a quiet count, never a full row (16 KB cap) — waiting is not failing
+    assert "1 awaiting first trade (quiet, no deadline): `L2`" in md and "L2 @" not in md
 
 
 def test_read_soaks_imports_soak_state_live(tmp_path, monkeypatch):
     import types
     mod = types.ModuleType("scripts.ops.soak_state")
-    mod.soak_states = lambda: [{"leg": "L", "account": "a", "state": "overdue",
-                                "end_date": "2026-10-01", "reason": "r", "started": "2026-10-01"}]
+    mod.soak_states = lambda: [{"leg": "L", "account": "a", "state": "mechanical_fail",
+                                "reason": "r", "started": "2026-10-01"}]
     monkeypatch.setitem(sys.modules, "scripts.ops.soak_state", mod)
     got = rdb.read_soaks(TODAY)
     assert got["state"] == "read" and got["rows"][0]["days_in"] == 3

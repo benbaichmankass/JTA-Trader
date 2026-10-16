@@ -67,6 +67,12 @@ restrictions:
 
 funded_soak_days: 30
 
+# Firm-declared costs (read by src/research/run_costs.prop_declared_costs): 0.075% taker AND
+# maker per side (api.md "Trading Fees"). Funding is Hyperliquid's variable rate -> left to the
+# venue-aware default (no flat swap declared).
+costs:
+  commission_bps_per_side: 7.5
+
 economics:
   account_fee_usd: 25              # rulebook section 2, $5,000 Turbo 1-Step: $25
   rebuy_fee_usd: 25
