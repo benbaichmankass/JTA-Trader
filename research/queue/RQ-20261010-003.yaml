@@ -3,7 +3,7 @@
 # only while `queue_replenish.py --verify` reproduces it byte-for-byte from the template.
 id: RQ-20261010-003
 title: 'M20 exit-lever sweep: trend_donchian_xrp_4h (generated, monthly)'
-status: queued
+status: retired
 cadence: monthly
 kind: experiment
 theme: live_strategy
@@ -76,3 +76,7 @@ grading:
   reason: 1 row(s), all measured, all pass
   rows: 1
   verdict: pass
+retired_reason: '2026-10-16 P1-ATM-BACKLOG-1016: duplicate generated point -- RQ-20261009-005 carries
+  the same key (m20-exit-lever:leg=trend_donchian_xrp_4h) and template sha; two units for one key re-sweep
+  the same leg twice per month on the same frames. Kept the lower id. Generator gap (the replenisher minted
+  the same key twice) filed on checklist row QUEUE-GEN-ROSTER-SYNC.'

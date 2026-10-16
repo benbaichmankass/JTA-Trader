@@ -3,7 +3,7 @@
 # only while `queue_replenish.py --verify` reproduces it byte-for-byte from the template.
 id: RQ-20261009-003
 title: 'E35 bracket-geometry sweep: splg_trend_long_1d (generated, monthly)'
-status: queued
+status: retired
 cadence: monthly
 kind: experiment
 theme: live_strategy
@@ -78,3 +78,9 @@ grading:
   recheck_after_days: 90
   rows: 199
   verdict: indeterminate
+retired_reason: "2026-10-16 P1-ATM-BACKLOG-1016, on the manager's programme-01 audit input (STOP: docs/research/programmes/reviews/2026-10-16/01-ATM.md\
+  \ \xA7 5.6): the per-leg monthly e35 sweep on splg_trend_long_1d graded base_oos_trades 6 < 39 (this\
+  \ unit's own grading block), and a 1d leg cannot reach the floor on any cadence -- the grader's 90-day\
+  \ recheck would only re-measure the same shortfall. The powered form is the pooled e35 gate lever RQ-20261015-1bf3-01\
+  \ (blocked/, build named there). Overrides research-ops SKILL's 'do not retire for that' line by manager\
+  \ direction; stated, not silent."
