@@ -789,6 +789,22 @@ def serialized_workflow(wf_file: str, repo: Path = _REPO) -> bool:
     return bool(m) and "${{" not in m.group(1)
 
 
+def managed_first(jobs: List[Any], cfg: Dict[str, Any]) -> List[Any]:
+    """Fire order across the shared --max-research-inflight cap: units placed on a MANAGED backend first, then
+    units whose explicit run.workflow has no backend (compute_router.plan -> "unmanaged"), each group keeping
+    its fair_order. The cap (research_compute.yaml limits.max_total_inflight) is declared as the SUM of the
+    backends' slots, but an unmanaged unit is gated only by that cap -- so in pure fair order it can take every
+    slot. MEASURED 2026-10-16 (lane RESEARCH-DISPATCH-STALL-1016): the 08:10Z and 08:51Z cycles fired 8
+    research-harness-dispatch.yml units each and deferred trainer (RQ-20261012-75b2-20) and kaggle_cpu
+    (RQ-20261014-65cc-09) units on "research compute cap 8 reached" while both backends had 0 in flight; the
+    watchdog then escalated trainer idle 397 min / kaggle_cpu idle 336 min. A managed unit is still bounded
+    by its own backend's max_concurrent, so unmanaged units keep every slot no backend has due work for."""
+    def managed(j: Any) -> bool:
+        p = (getattr(j, "raw", None) or {}).get("_plan")
+        return isinstance(p, cr.Resolution) and p.ok and p.backend in cfg.get("backends", {})
+    return [j for j in jobs if managed(j)] + [j for j in jobs if not managed(j)]
+
+
 def research_workflow_names(jobs: List[Any], repo: Path = _REPO) -> Dict[str, str]:
     """{workflow file -> its `name:`} for every real workflow the queue routes
     to, plus the token-free runner. A run counts as research compute when its
@@ -820,7 +836,7 @@ def gh_runs(status: str, *, limit: int = 200) -> Optional[List[Dict[str, Any]]]:
     """`gh run list` rows for one status, or None when gh could not answer --
     a count we could not take is reported as such, never as zero."""
     cmd = ["gh", "run", "list", "--status", status, "--limit", str(limit),
-           "--json", "databaseId,workflowName,status,createdAt"]
+           "--json", "databaseId,workflowName,status,createdAt,event"]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
     except (OSError, subprocess.SubprocessError):
@@ -842,6 +858,14 @@ def gh_runs(status: str, *, limit: int = 200) -> Optional[List[Dict[str, Any]]]:
 #: in flight" were three `trainer-vm-diag` issue dispatches from the same
 #: morning. Counting them deferred every fire, and would have forever.
 STALE_PRESSURE_HOURS = 24.0
+
+#: Run events that do NOT count toward --max-repo-queued (manager decision 2026-10-16, lane
+#: RESEARCH-DISPATCH-STALL-1016). A `workflow_run` listener run is created for EVERY completion of a
+#: workflow it watches and mostly ends `skipped` without holding a runner. MEASURED 2026-10-16 09:37Z:
+#: the 27 fresh queued runs that deferred every fire were mostly claude-run-failure-alert (37 of ~60 of
+#: its runs since 08:00Z ended skipped). They still count for infra-yield (system-actions-cancel-guard is
+#: a listener AND infra) -- this only narrows the saturation count.
+NON_COMPETING_EVENTS = frozenset({"workflow_run"})
 
 
 def _run_age_hours(row: Dict[str, Any], now: datetime) -> Optional[float]:
@@ -907,19 +931,21 @@ def backpressure(research_names: Dict[str, str], *, max_inflight: int, max_queue
     for r in queued + inprog:
         if str(r.get("workflowName")) in names:
             by_name[str(r["workflowName"])] = by_name.get(str(r["workflowName"]), 0) + 1
+    competing = [r for r in queued if str(r.get("event") or "") not in NON_COMPETING_EVENTS]
+    listeners = len(queued) - len(competing)
     infra = set(infra_names or [])
     infra_waiting = sorted({str(r.get("workflowName")) for r in queued if str(r.get("workflowName")) in infra})
     infra_queued = sum(1 for r in queued if str(r.get("workflowName")) in infra)
-    out = {"inflight_research": inflight, "by_name": by_name, "repo_queued": len(queued), "stale_ignored": stale, "block": None,
-           "infra_queued": infra_queued,
+    out = {"inflight_research": inflight, "by_name": by_name, "repo_queued": len(competing), "stale_ignored": stale, "block": None,
+           "infra_queued": infra_queued, "listener_queued_ignored": listeners,
            "detail": f"research compute in flight {inflight} (cap {max_inflight}); repo runs queued "
-                     f"{len(queued)} (cap {max_queued}); {stale} stuck run(s) older than "
-                     f"{stale_after_hours:g} h ignored"}
+                     f"{len(competing)} (cap {max_queued}; {listeners} workflow_run listener run(s) not counted); "
+                     f"{stale} stuck run(s) older than {stale_after_hours:g} h ignored"}
     if infra_queued:
         out["block"] = (f"{infra_queued} infra run(s) queued ({', '.join(infra_waiting)}): research yields "
                         "the shared GitHub runner pool to infra -- deferring every fire this cycle")
-    elif len(queued) > max_queued:
-        out["block"] = (f"{len(queued)} workflow runs are queued repo-wide (> {max_queued}): research "
+    elif len(competing) > max_queued:
+        out["block"] = (f"{len(competing)} workflow runs are queued repo-wide (> {max_queued}): research "
                         "must not add to a saturated runner pool -- deferring every fire this cycle")
     elif inflight >= max_inflight:
         out["block"] = (f"{inflight} research compute run(s) already queued/in progress (cap "
@@ -1315,6 +1341,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                 due_by_be[be] = due_by_be.get(be, 0) + 1
     gpu_fired = 0
     fired_by_workflow: Dict[str, int] = {}
+    if args.fire and cfg is not None:
+        jobs = managed_first(jobs, cfg)
     for job in jobs:
         entry = job.raw
         row: Dict[str, Any] = {"id": job.id, "path": _display_path(job.path),
