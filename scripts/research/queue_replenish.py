@@ -872,7 +872,11 @@ def _self_test() -> int:
         p2 = plan(er, day="2030-01-01", target=25)
     assert [u["text"] for u in p1["new_units"]] == [u["text"] for u in p2["new_units"]], "not deterministic"
     assert p1["new_units"], "the live templates generate nothing from an empty queue -- a template or a grid source is broken"
-    assert plan(root, day="2030-01-01", target=live_have)["new_units"] == [], "a full queue must generate nothing"
+    # A full queue generates no TEMPLATE units. Ready programme nodes are emitted whatever the floor (plan()'s own
+    # comment), so on the live repo a node unlocked by a grade that has not been replenished yet is legitimate here
+    # -- asserting [] over them failed every branch that graded an unlocking unit (P1-ATM-BACKLOG-1016).
+    full = plan(root, day="2030-01-01", target=live_have)["new_units"]
+    assert [u for u in full if not u["family"].startswith(PROGRAMME_FAMILY + ":")] == [], "a full queue must generate no template units"
     # every generated unit is valid queue schema + a pre-registered rule
     from scripts.research.research_queue import validate, grade_power, grade_route
     yaml = _yaml()
