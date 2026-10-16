@@ -13,9 +13,11 @@ question: 'RQ-20261013-407c-21 PASSED (VH90 on the 1h sibling trend_donchian_sol
   6). While checking the driver this lane ran ONE sandbox smoke of B vs VH90 on trend_donchian_sol_prop over 2024-10-05..2026-10-04 and it read fail; that
   window is therefore NOT registered here (it is seen), only the unseen preceding window is. All three arms are kept, so the arm set was not edited after
   the smoke.'
-why_this_matters: trend_donchian_sol_prop trades real money AND prop (bybit_2, bybit_portfolio, breakout_2, tradeify_1, velotrade_1). regime-selectivity
+why_this_matters: 'trend_donchian_sol_prop trades real money AND prop (bybit_2, bybit_portfolio, breakout_2, tradeify_1, velotrade_1). regime-selectivity
   Rule 2 (walk-forward before Tier-3) and the f0e2-10 -> 470a-10 reversal (a best-of-3 single-window pass that did NOT confirm) are why a first-window pass
-  is a lead, not a gate. Manager audit 2026-10-16 (02-AI-REGIME-DATA s4.1) found this PASS with no confirmation unit, row or pipeline item.
+  is a lead, not a gate. Manager audit 2026-10-16 (02-AI-REGIME-DATA s4.1) found this PASS with no confirmation unit, row or pipeline item. Kept despite
+  IDEA-REVIEW-1016 s11: same reasoning as 65ff-04 -- it falsifies the one observed hot-skip PASS on the money-carrying sibling leg; the continuous vol-TARGET
+  SIZING alternative is row IR-VOL-TARGET-SIZING-STAGE0 (not duplicated here).'
 power:
   expected_n: 120
   min_detectable_effect: 0.45

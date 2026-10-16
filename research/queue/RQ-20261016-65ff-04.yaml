@@ -9,9 +9,11 @@ kind: experiment
 question: 'RQ-20261013-407c-21 PASSED (VH90: dR +11.36 R, dDD -1.01 R, 4/4 folds, n(B)=120) as the best of three arms on 2024-10-05..2026-10-04. Re-ask
   the single chosen arm (VH90 = --vol-skip-above-pctl=0.9) against the declared leg on the disjoint preceding window 2022-10-05 .. 2024-10-04 23:59: dR
   >= 2.0 R, no worse drawdown, >= 3 of 4 calendar folds.'
-why_this_matters: trend_donchian_sol trades no live roster (config/accounts.yaml 2026-10-16); the 1h sibling of trend_donchian_sol_prop. regime-selectivity
+why_this_matters: 'trend_donchian_sol trades no live roster (config/accounts.yaml 2026-10-16); the 1h sibling of trend_donchian_sol_prop. regime-selectivity
   Rule 2 (walk-forward before Tier-3) and the f0e2-10 -> 470a-10 reversal (a best-of-3 single-window pass that did NOT confirm) are why a first-window pass
-  is a lead, not a gate. Manager audit 2026-10-16 (02-AI-REGIME-DATA s4.1) found this PASS with no confirmation unit, row or pipeline item.
+  is a lead, not a gate. Manager audit 2026-10-16 (02-AI-REGIME-DATA s4.1) found this PASS with no confirmation unit, row or pipeline item. Kept despite
+  IDEA-REVIEW-1016 s11 (trend earns in high vol; hot-tail skips are predicted to fail on trend legs): this is not a new skip search but the cheapest FALSIFICATION
+  of an observed in-repo PASS (407c-21); a NOT CONFIRMED is the expected outcome under the literature and closes the lead.'
 power:
   expected_n: 110
   min_detectable_effect: 0.45

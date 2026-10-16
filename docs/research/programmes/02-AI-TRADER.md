@@ -175,7 +175,7 @@ The tables below are the 2026-10-14 plan; several "queued" items have since clos
 | what | units | state |
 |---|---|---|
 | Regime: fresh-window confirmations of the four unconfirmed lever PASSes + the sol VH90 transfer to the prop leg | `RQ-20261016-65ff-01..05` | runnable |
-| Regime: per-leg good-vs-bad trade conditions (session / hot vol / cold vol / ADX floor) on the real-money and prop crypto legs | `RQ-20261016-65ff-06..19` | runnable |
+| Regime: per-leg good-vs-bad trade conditions on the real-money pullback legs (hot / cold vol; 07 grades ada's declared cold skip). 11 donchian-leg skip units were dropped before merge (IDEA-REVIEW-1016 s11: skips are predicted to fail on trend legs and already read so in-repo); the trend-leg question is vol-target SIZING, row `IR-VOL-TARGET-SIZING-STAGE0`, node `P2-R5-voltarget-sizing` | `RQ-20261016-65ff-06..08` | runnable |
 | Regime: classifier comparison on trade separation (ML vol head vs HMM vs ATR control); the alpaca_live equity legs | `blocked/RQ-20261016-65ff-28`, `-29` | blocked on `REGIME-VOL-LABELS-EXPORT`, `REGIME-EQUITY-LEG-FETCH` |
 | Q6 off-VM training parity, HMM + RegimeClassifier classes (regression class: OURS data, stays on the trainer) | `RQ-20261016-65ff-20..23` | runnable (21/23 gated on 20/22) |
 | Q1.3 drift: 1h twin on published data; drift-flag artifact question for the 9 flagged heads | `RQ-20261016-65ff-24`; `blocked/-27` | runnable; blocked on `ML-DRIFT-SPLIT-INSTRUMENT` |

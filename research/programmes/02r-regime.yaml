@@ -11,8 +11,13 @@
 # The work queued from this tree (deliverable 5), every unit pre-registered:
 #   RQ-20261016-65ff-01..04  fresh-window CONFIRMATIONS of the four unconfirmed regime-lever PASSes (manager audit s4.1)
 #   RQ-20261016-65ff-05      TRANSFER of the sol VH90 gate to trend_donchian_sol_prop (real money + prop)
-#   RQ-20261016-65ff-06..19  per-leg good-vs-bad trade conditions (session / hot vol / cold vol / ADX floor) on every
-#                            real-money and prop crypto leg lacking that axis (deliverable 3)
+#   RQ-20261016-65ff-06..08  per-leg good-vs-bad trade conditions on the real-money PULLBACK legs (hot / cold vol; 07 grades
+#                            ada's declared live cold-tail skip) (deliverable 3)
+#   DROPPED before merge (2026-10-16, manager relay of IDEA-REVIEW-1016 s11): 11 donchian-leg SKIP units (session / hot vol /
+#   cold vol / ADX floor on eth_4h, xrp_4h, sol_prop, eth_prop). In-repo evidence already reads against skips on trend legs
+#   (donchian session 0/5 pass: 407c-10/11/12/19, f0e2-02; donchian hot-vol 1 pass of 6, not confirmed: 470a-10; trend axis
+#   [ndon] FAIL: 75b2-01/02) and the literature predicts it (crisis alpha). The open regime question on trend legs is
+#   continuous vol-TARGET SIZING, row IR-VOL-TARGET-SIZING-STAGE0 (IDEA-REVIEW-1016) -- not duplicated here; node P2-R5 waits on it.
 #   blocked/RQ-20261016-65ff-28  classifier comparison on TRADE SEPARATION (ML vol head vs HMM vs ATR control; deliverable 2)
 #   blocked/RQ-20261016-65ff-29  the real-money equity legs (alpaca_live)
 #   blocked/RQ-20260927-006..009, RQ-20260928-006, RQ-20260929-109/110  retagged theme: regime, owner rows named
@@ -137,160 +142,6 @@ nodes:
       pinned window). Register the fresh-window CONFIRMATION exactly like RQ-20261016-65ff-01..04: the single chosen
       arm only, B vs that arm, on the disjoint preceding 730 days, same bar / drawdown clause / 3-of-4 folds / 39
       floor. Nothing goes to a packet before it confirms.'
-  - id: P2-R3.g09-pass
-    goal: G1
-    roadmap:
-    - L-REGIME
-    value:
-      usd_at_stake_per_month: 150
-      confidence: 0.3
-    after:
-    - unit: RQ-20261016-65ff-09
-      verdict: pass
-    needs_authoring: 'RQ-20261016-65ff-09 (trend_donchian_eth_4h, volcold axis) PASSED on 2024-10-05..2026-10-04 (or
-      its pinned window). Register the fresh-window CONFIRMATION exactly like RQ-20261016-65ff-01..04: the single
-      chosen arm only, B vs that arm, on the disjoint preceding 730 days, same bar / drawdown clause / 3-of-4 folds
-      / 39 floor. Nothing goes to a packet before it confirms.'
-  - id: P2-R3.g10-pass
-    goal: G1
-    roadmap:
-    - L-REGIME
-    value:
-      usd_at_stake_per_month: 120
-      confidence: 0.3
-    after:
-    - unit: RQ-20261016-65ff-10
-      verdict: pass
-    needs_authoring: 'RQ-20261016-65ff-10 (trend_donchian_xrp_4h, volcold axis) PASSED on 2024-10-05..2026-10-04 (or
-      its pinned window). Register the fresh-window CONFIRMATION exactly like RQ-20261016-65ff-01..04: the single
-      chosen arm only, B vs that arm, on the disjoint preceding 730 days, same bar / drawdown clause / 3-of-4 folds
-      / 39 floor. Nothing goes to a packet before it confirms.'
-  - id: P2-R3.g11-pass
-    goal: G1
-    roadmap:
-    - L-REGIME
-    value:
-      usd_at_stake_per_month: 250
-      confidence: 0.3
-    after:
-    - unit: RQ-20261016-65ff-11
-      verdict: pass
-    needs_authoring: 'RQ-20261016-65ff-11 (trend_donchian_sol_prop, session axis) PASSED on 2024-10-05..2026-10-04
-      (or its pinned window). Register the fresh-window CONFIRMATION exactly like RQ-20261016-65ff-01..04: the single
-      chosen arm only, B vs that arm, on the disjoint preceding 730 days, same bar / drawdown clause / 3-of-4 folds
-      / 39 floor. Nothing goes to a packet before it confirms.'
-  - id: P2-R3.g12-pass
-    goal: G1
-    roadmap:
-    - L-REGIME
-    value:
-      usd_at_stake_per_month: 250
-      confidence: 0.3
-    after:
-    - unit: RQ-20261016-65ff-12
-      verdict: pass
-    needs_authoring: 'RQ-20261016-65ff-12 (trend_donchian_sol_prop, volcold axis) PASSED on 2024-10-05..2026-10-04
-      (or its pinned window). Register the fresh-window CONFIRMATION exactly like RQ-20261016-65ff-01..04: the single
-      chosen arm only, B vs that arm, on the disjoint preceding 730 days, same bar / drawdown clause / 3-of-4 folds
-      / 39 floor. Nothing goes to a packet before it confirms.'
-  - id: P2-R3.g13-pass
-    goal: G1
-    roadmap:
-    - L-REGIME
-    value:
-      usd_at_stake_per_month: 200
-      confidence: 0.3
-    after:
-    - unit: RQ-20261016-65ff-13
-      verdict: pass
-    needs_authoring: 'RQ-20261016-65ff-13 (trend_donchian_eth_prop, session axis) PASSED on 2024-10-05..2026-10-04
-      (or its pinned window). Register the fresh-window CONFIRMATION exactly like RQ-20261016-65ff-01..04: the single
-      chosen arm only, B vs that arm, on the disjoint preceding 730 days, same bar / drawdown clause / 3-of-4 folds
-      / 39 floor. Nothing goes to a packet before it confirms.'
-  - id: P2-R3.g14-pass
-    goal: G1
-    roadmap:
-    - L-REGIME
-    value:
-      usd_at_stake_per_month: 200
-      confidence: 0.3
-    after:
-    - unit: RQ-20261016-65ff-14
-      verdict: pass
-    needs_authoring: 'RQ-20261016-65ff-14 (trend_donchian_eth_prop, volhot axis) PASSED on 2024-10-05..2026-10-04
-      (or its pinned window). Register the fresh-window CONFIRMATION exactly like RQ-20261016-65ff-01..04: the single
-      chosen arm only, B vs that arm, on the disjoint preceding 730 days, same bar / drawdown clause / 3-of-4 folds
-      / 39 floor. Nothing goes to a packet before it confirms.'
-  - id: P2-R3.g15-pass
-    goal: G1
-    roadmap:
-    - L-REGIME
-    value:
-      usd_at_stake_per_month: 200
-      confidence: 0.3
-    after:
-    - unit: RQ-20261016-65ff-15
-      verdict: pass
-    needs_authoring: 'RQ-20261016-65ff-15 (trend_donchian_eth_prop, volcold axis) PASSED on 2024-10-05..2026-10-04
-      (or its pinned window). Register the fresh-window CONFIRMATION exactly like RQ-20261016-65ff-01..04: the single
-      chosen arm only, B vs that arm, on the disjoint preceding 730 days, same bar / drawdown clause / 3-of-4 folds
-      / 39 floor. Nothing goes to a packet before it confirms.'
-  - id: P2-R3.g16-pass
-    goal: G4
-    roadmap:
-    - L-REGIME
-    value:
-      usd_at_stake_per_month: 100
-      confidence: 0.3
-    after:
-    - unit: RQ-20261016-65ff-16
-      verdict: pass
-    needs_authoring: 'RQ-20261016-65ff-16 (trend_donchian_eth_4h, adx axis) PASSED on 2024-10-05..2026-10-04 (or its
-      pinned window). Register the fresh-window CONFIRMATION exactly like RQ-20261016-65ff-01..04: the single chosen
-      arm only, B vs that arm, on the disjoint preceding 730 days, same bar / drawdown clause / 3-of-4 folds / 39
-      floor. Nothing goes to a packet before it confirms.'
-  - id: P2-R3.g17-pass
-    goal: G4
-    roadmap:
-    - L-REGIME
-    value:
-      usd_at_stake_per_month: 80
-      confidence: 0.3
-    after:
-    - unit: RQ-20261016-65ff-17
-      verdict: pass
-    needs_authoring: 'RQ-20261016-65ff-17 (trend_donchian_xrp_4h, adx axis) PASSED on 2024-10-05..2026-10-04 (or its
-      pinned window). Register the fresh-window CONFIRMATION exactly like RQ-20261016-65ff-01..04: the single chosen
-      arm only, B vs that arm, on the disjoint preceding 730 days, same bar / drawdown clause / 3-of-4 folds / 39
-      floor. Nothing goes to a packet before it confirms.'
-  - id: P2-R3.g18-pass
-    goal: G4
-    roadmap:
-    - L-REGIME
-    value:
-      usd_at_stake_per_month: 150
-      confidence: 0.3
-    after:
-    - unit: RQ-20261016-65ff-18
-      verdict: pass
-    needs_authoring: 'RQ-20261016-65ff-18 (trend_donchian_sol_prop, adx axis) PASSED on 2024-10-05..2026-10-04 (or
-      its pinned window). Register the fresh-window CONFIRMATION exactly like RQ-20261016-65ff-01..04: the single
-      chosen arm only, B vs that arm, on the disjoint preceding 730 days, same bar / drawdown clause / 3-of-4 folds
-      / 39 floor. Nothing goes to a packet before it confirms.'
-  - id: P2-R3.g19-pass
-    goal: G4
-    roadmap:
-    - L-REGIME
-    value:
-      usd_at_stake_per_month: 150
-      confidence: 0.3
-    after:
-    - unit: RQ-20261016-65ff-19
-      verdict: pass
-    needs_authoring: 'RQ-20261016-65ff-19 (trend_donchian_eth_prop, adx axis) PASSED on 2024-10-05..2026-10-04 (or
-      its pinned window). Register the fresh-window CONFIRMATION exactly like RQ-20261016-65ff-01..04: the single
-      chosen arm only, B vs that arm, on the disjoint preceding 730 days, same bar / drawdown clause / 3-of-4 folds
-      / 39 floor. Nothing goes to a packet before it confirms.'
   - id: P2-R2-classifier-pass
     goal: G1
     roadmap:
@@ -317,8 +168,8 @@ nodes:
       verdict: fail
     needs_authoring: 'No classifier label (ML vol head, HMM, ATR control) separates trades on the vol axis. With the
       trend axis already null (75b2-01..15), register the remaining regime-program question: per-LEG (not pooled)
-      conditions only -- the per-leg axis units RQ-20261016-65ff-06..19 are that line -- and a new information class
-      (funding/OI, P2-R4) before any further pooled classifier work.'
+      conditions only -- the per-leg pullback units RQ-20261016-65ff-06..08 and the vol-target sizing line P2-R5 are
+      that line -- and a new information class (funding/OI, P2-R4) before any further pooled classifier work.'
   - id: P2-R3-equity-read
     goal: G1
     roadmap:
@@ -344,9 +195,9 @@ nodes:
     - unit: RQ-20260927-009
       verdict: any
     needs_authoring: 'The two vol-axis SOFT-weight variants (advisory-head predict_proba, realised-vol percentile)
-      closed. Compare them to the HARD vol skips the per-leg units measured (65ff-06..15): a soft weight that beats
-      the hard skip on the same leg and window is the sizing-side regime lever (Tier-3 via advisory_sizing), else
-      record that hard skips suffice.'
+      closed. Compare them to the HARD vol skips the per-leg units measured (65ff-06..08 and the 407c/f0e2/470a skips):
+      a soft weight that beats the hard skip on the same leg and window is the sizing-side regime lever (Tier-3 via
+      advisory_sizing), else record that hard skips suffice.'
   - id: P2-R1-volcells-parity-read
     goal: G1
     roadmap:
@@ -360,6 +211,22 @@ nodes:
     needs_authoring: 'The offline parity re-check of the three volatile-keyed trend_vol OFF-cells closed. A cell that
       is not *_stable_drag is a cosmetic cell (regime-selectivity Rule 1): register its removal packet (Tier-3) on
       REGIME-PROGRAM; a cell that holds stays and is noted.'
+  - id: P2-R5-voltarget-sizing
+    goal: G1
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 300
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-04
+      verdict: any
+    needs_authoring: Per-leg continuous vol-TARGET SIZING on the real-money trend legs is the regime question the
+      skip units cannot answer. Its build is row IR-VOL-TARGET-SIZING-STAGE0 (vol_target_verdict.py over backtest_vol_target.py;
+      rule PASS iff dSharpe >= +0.10 net AND maxDD no worse AND dSharpe > 0 in >= 3/4 blocks, n >= 100/leg). Once
+      that row lands, author one unit per real-money trend leg (trend_donchian_eth_4h, _xrp_4h, _sol_prop, _eth_prop),
+      paired on the same window with the skip verdicts already on record, so sizing and gating are compared like for
+      like. Waits on 65ff-04 only so it surfaces once the last hot-skip lead on a trend leg is read.
   - id: P2-R4-direction-baseline
     goal: G4
     roadmap:
@@ -377,5 +244,6 @@ nodes:
       inputs it is answered: RQ-20261014-4591-02 FAIL (no learner beats the class prior on the 1h direction label),
       1414-03 / 4591-05 INDETERMINATE -- so no further price-only direction unit (manager audit 2026-10-16 s5.6).
       This node re-opens it only with a NEW information class: once the ETH/SOL funding-augmented heads (109/110)
-      have run, register the direction baseline with funding/OI covariates (logit first, then LightGBM) vs the class
-      prior, net of cost on a take-the-signal overlay, as the documented reference other work is measured against.'
+      have run, register the direction baseline with funding/OI covariates (logit first, then LightGBM) graded on
+      LOG-LOSS vs the class prior (never macro-F1 vs the prior: IDEA-REVIEW-1016 s9 metric artifact; row IR-DIRECTION-LABEL-V2),
+      then net of cost on a take-the-signal overlay, as the documented reference other work is measured against.'

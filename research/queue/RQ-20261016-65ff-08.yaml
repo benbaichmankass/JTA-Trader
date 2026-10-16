@@ -11,9 +11,11 @@ question: 'Same harness argv builder as the evidence builder (regime_debt_matrix
   xrp_pullback_2h as declared (arm B) by >= 1.0 R with no worse drawdown and in >= 3 of 4 calendar folds? This asks whether the market condition at entry
   (the cold-volatility tail skipped at entry (ATR percentile)) separates the leg''s good trades from its bad ones well enough to gate on -- REGIME-PROGRAM
   deliverable 3.'
-why_this_matters: xrp_pullback_2h trades real money (bybit_2 + bybit_portfolio mirror, bybit_1 paper). The volcold axis has no committed unit for this leg
-  (coverage read from research/queue on 2026-10-16 by lane P2-AI-REGIME-BACKLOG-1016). Regime theme weight is 5 with 0 regime units queued (L-REGIME 'where');
-  this is the per-leg good-vs-bad trade condition study the operator asked for on 2026-10-11. A null is recorded honest_negative so the axis is not re-asked.
+why_this_matters: 'xrp_pullback_2h trades real money (bybit_2 + bybit_portfolio mirror, bybit_1 paper). The volcold axis has no committed unit for this
+  leg (coverage read from research/queue on 2026-10-16 by lane P2-AI-REGIME-BACKLOG-1016). Regime theme weight is 5 with 0 regime units queued (L-REGIME
+  ''where''); this is the per-leg good-vs-bad trade condition study the operator asked for on 2026-10-11. A null is recorded honest_negative so the axis
+  is not re-asked. Design check (IDEA-REVIEW-1016 s11): pullback entry (counter-move inside a trend), not a trend-following breakout; the one prior pullback
+  cold-tail test (f0e2-12, eth) FAILED, so this is one more leg, not a search; the sizing alternative is IR-VOL-TARGET-SIZING-STAGE0.'
 power:
   expected_n: 122
   min_detectable_effect: 0.45
