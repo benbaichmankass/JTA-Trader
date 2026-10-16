@@ -695,7 +695,7 @@ def _research_slo(root: Path | None) -> dict:
     (scripts/research/research_slo.py, written every 2 h by research-slo.yml). Absent / unreadable /
     stale are states rendered in §0, never an empty table read as healthy."""
     try:
-        from scripts.research import research_slo  # noqa: PLC0415
+        from scripts.ops import research_slo_view as research_slo  # noqa: PLC0415
         doc, state = research_slo.latest_status(root or REPO_ROOT)
         rows = (doc or {}).get("latest") or []
         return {"readState": state, "asOf": (doc or {}).get("as_of"), "counts": (doc or {}).get("counts"),

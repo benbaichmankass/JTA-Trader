@@ -412,17 +412,6 @@ def status_path(root: Path, now: datetime) -> Path:
     return root / HEALTH_DIR / f"{now.strftime('%Y-%m-%d')}.json"
 
 
-def latest_status(root: Path) -> tuple:
-    """(doc, read_state) of the newest dated status file: read / absent / unreadable."""
-    files = sorted((root / HEALTH_DIR).glob("2*.json"))
-    if not files:
-        return None, "absent"
-    try:
-        return json.loads(files[-1].read_text(encoding="utf-8")), "read"
-    except (OSError, ValueError):
-        return None, "unreadable"
-
-
 def write_status(root: Path, now: datetime, table: List[Dict[str, Any]], alert_state: Dict[str, Any],
                  alert: Optional[Dict[str, Any]], delivered: Optional[Dict[str, Any]]) -> Path:
     p = status_path(root, now)
@@ -446,28 +435,7 @@ def write_status(root: Path, now: datetime, table: List[Dict[str, Any]], alert_s
     return p
 
 
-def table_lines(doc: Optional[Dict[str, Any]], read_state: str, now: Optional[datetime] = None,
-                stale_hours: float = 6.0) -> List[str]:
-    """Brief §0 lines: the SLO table, or a declared hole. Never a silent zero."""
-    if doc is None:
-        return [f"### 🚨 Research pipeline SLOs — COULD NOT BE READ (status file {read_state}; we did not look, this is not 'ok')", ""]
-    now = now or datetime.now(timezone.utc)
-    asof = _ts(doc.get("as_of"))
-    age = _hours(now, asof) if asof else None
-    stale = age is None or age > stale_hours
-    bad = [r for r in doc.get("latest") or [] if r.get("state") != OK]
-    icon = "🚨" if bad or stale else "✅"
-    hdr = (f"### {icon} Research pipeline SLOs — {len(bad)} not ok of {len(doc.get('latest') or [])} "
-           f"(as of {doc.get('as_of')}, {_fmt(age)} h old{'; STALE — the monitor has not written for > %g h' % stale_hours if stale else ''})")
-    L = [hdr, "", "| SLO | value | target | state |", "|---|---|---|---|"]
-    for r in doc.get("latest") or []:
-        st = {"ok": "ok", "breach": "**BREACH**", "could_not_look": "**could not look**"}.get(r.get("state"), str(r.get("state")))
-        L.append(f"| {r['slo']} | {_fmt(r.get('value'))} | {r.get('op')} {_fmt(r.get('threshold'))} | {st} |")
-    L.append("")
-    if bad:
-        L += ["- A red research SLO is DUE today: dispatch an authoring / fix lane (manager SKILL § \"Research SLO "
-              "escalation\"). A note is not a disposition.", ""]
-    return L
+from scripts.ops.research_slo_view import latest_status, table_lines  # noqa: E402  (the brief's read side)
 
 
 # ── GitHub reads + effects ───────────────────────────────────────────────────────────────────────────────
