@@ -1,6 +1,6 @@
 {
   "id": "ABLATION-TP-CALIBRATION",
-  "title": "exit_lever_ablation.py: emit TP calibration per arm (share of trades exiting within +/-20% of their FINAL target) so a TP-revision confirmation grades calibration first",
+  "title": "exit_lever_ablation.py: emit TP calibration per arm (share of trades exiting within the m20 tp_cal tolerance band of their FINAL target) so a TP-revision confirmation grades calibration first",
   "phase": "research-infra",
   "state": "queued",
   "owner": "manager (Tier-1 build lane)",
@@ -11,8 +11,11 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "[2026-10-16 lane P1-ATM-BACKLOG-1016] TP doctrine clause 2 grades a TP revision on calibration BEFORE P&L ('P&L without prediction' fails). The m20 sweep writes tp_cal_cell/tp_cal_base per corpus row but those rows live on branch claude/m20-sweep-corpus and never reach main (why RQ-20261007-001/-003 and RQ-20261014-9807-03 were ungradable; RESEARCH-GRADE-PILE). exit_lever_ablation.py --grade replace (used by programme nodes P1-Q3-xrp-pb-tpx-confirm / P1-Q3-ada-pb-tpx-confirm / P1-Q4-xrp4h-exit-confirm) reports by_outcome only. BUILD: per arm, from the emitted trades (exit price vs the final tp in force, which the --tp-* harness paths already know), report tp_cal = share exiting within +/-20% of the final target and the reach rate of the final target; add it to the replace grade's candidate block (reported, not graded, so existing units are unchanged); self-test with a planted arm. Then the P1-Q6-*-declare nodes register the calibration-first read on any CONFIRMED revision cell before a Tier-3 proposal. RERUN: python3 scripts/research/exit_lever_ablation.py --self-test | grep -i calibration.",
-  "updated_at": "2026-10-16T07:34:56Z",
+  "note": "[2026-10-16 lane P1-ATM-BACKLOG-1016] TP doctrine clause 2 grades a TP revision on calibration BEFORE P&L ('P&L without prediction' fails). The m20 sweep writes tp_cal_cell/tp_cal_base per corpus row but those rows live on branch claude/m20-sweep-corpus and never reach main (why RQ-20261007-001/-003 and RQ-20261014-9807-03 were ungradable; RESEARCH-GRADE-PILE). exit_lever_ablation.py --grade replace (used by programme nodes P1-Q3-xrp-pb-tpx-confirm / P1-Q3-ada-pb-tpx-confirm / P1-Q4-xrp4h-exit-confirm) reports by_outcome only. BUILD: per arm, from the emitted trades (exit price vs the final tp in force, which the --tp-* harness paths already know), report tp_cal = share exiting within the m20 sweep's tp_cal tolerance band of the final target (the same constant, imported, not retyped) and the reach rate of the final target; add it to the replace grade's candidate block (reported, not graded, so existing units are unchanged); self-test with a planted arm. Then the P1-Q6-*-declare nodes register the calibration-first read on any CONFIRMED revision cell before a Tier-3 proposal. RERUN: python3 scripts/research/exit_lever_ablation.py --self-test | grep -i calibration.",
+  "updated_at": "2026-10-16T07:41:47Z",
   "updated_by": "session_01Kseu6sKgBb9ir5EcHMiBAx",
+  "roadmap": [
+    "L-ATM"
+  ],
   "_seq": 527
 }
