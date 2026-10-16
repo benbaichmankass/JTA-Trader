@@ -1388,6 +1388,7 @@ GUARDS: List[Dict[str, Any]] = [
             ["python3", "scripts/research/queue_replenish.py", "--self-test"],
             ["python3", "scripts/research/queue_grade.py", "--self-test"],
             ["python3", "scripts/ci/check_research_queue_health.py", "--self-test"],
+            ["python3", "scripts/research/result_disposition_check.py", "--self-test"],
         ],
     },
     {

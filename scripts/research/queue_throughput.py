@@ -62,6 +62,63 @@ def throughput(root: Path, *, now: Optional[datetime] = None,
             "idle_alarm": bool(h["runnable"] > 0 and (hrs is None or hrs > idle_hours))}
 
 
+#: THE FLOOR, in one place (moved here from check_research_queue_health.py by lane RESEARCH-ENGINE-1016,
+#: 2026-10-16, so the in-process brief and the CI health check compute the same number). Hours of supply
+#: the floor must cover at the observed fire rate -- the research-ops SKILL's own derivation (25 units =
+#: ~19 h at fired_24h 32, 2026-10-10), made mechanical.
+FLOOR_HOURS = 19.0
+MIN_FLOOR = 25
+OPS_DIR = Path("comms/research/ops")
+
+
+def computed_floor(fired_24h: Any, *, minimum: int = MIN_FLOOR) -> int:
+    """max(minimum, ceil(fired_24h x FLOOR_HOURS / 24)); `minimum` when the rate is unread."""
+    import math
+    try:
+        return max(minimum, math.ceil(float(fired_24h) * FLOOR_HOURS / 24.0))
+    except (TypeError, ValueError):
+        return minimum
+
+
+def floor_gap(t: Dict[str, Any], root: Path) -> Dict[str, Any]:
+    """{floor, runnable, gap, below_floor_passes, ops_records_read, since}: today's gap from the throughput
+    dict, plus how many CONSECUTIVE newest research-ops records (comms/research/ops/) also ended below
+    their own recorded floor -- a gap that research-ops has handed off pass after pass, which is the
+    manager-loop failure measured 2026-10-16 (runnable 22 -> 18 -> 9 while the floor rose 25 -> 46 -> 50,
+    every handoff naming it, nobody acting). Cheap: reads at most the 12 newest record files."""
+    floor = computed_floor(t.get("fired_24h"))
+    runnable = int(t.get("runnable") or 0)
+    streak, since, read = 0, None, 0
+    for f in sorted((root / OPS_DIR).glob("2*.json"), reverse=True)[:12]:
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+            rf = int(d.get("floor") or MIN_FLOOR)
+            ra = int((d.get("throughput") or {}).get("runnable_after"))
+        except (OSError, ValueError, TypeError):
+            break                                   # unreadable or unrecorded: the streak cannot be extended
+        read += 1
+        if ra >= rf:
+            break
+        streak, since = streak + 1, f.stem
+    return {"floor": floor, "runnable": runnable, "gap": max(0, floor - runnable),
+            "below_floor_passes": streak, "ops_records_read": read, "since": since}
+
+
+def floor_gap_lines(t: Optional[Dict[str, Any]], root: Path) -> list:
+    """Brief §0 lines: empty when the floor is met; a declared hole when throughput was unread."""
+    if t is None:
+        return ["### 🚨 Research floor — COULD NOT BE READ (we did not look; this is not 'met')", ""]
+    g = floor_gap(t, root)
+    if g["gap"] == 0:
+        return []
+    streak = (f"; below floor at the end of the last {g['below_floor_passes']} research-ops pass(es) (since {g['since']})"
+              if g["below_floor_passes"] else "")
+    return [f"### 🚨 RESEARCH FLOOR GAP — runnable {g['runnable']} < floor {g['floor']} (gap {g['gap']}){streak}", "",
+            "- This is DUE today: dispatch a same-day authoring lane (manager SKILL § \"The roadmap loop\" / research-ops "
+            "step E), sized to the gap and aimed at the themes `check_research_queue_health.py` lists as `H1-THEME`. "
+            "A handoff note is not a disposition.", ""]
+
+
 def summary_line(t: Dict[str, Any]) -> str:
     return (f"research queue (24h): fired {t['fired_24h']} · results landed {t['results_landed_24h']} · "
             f"runnable now {t['runnable']} of {t['queued']} queued · last fire "

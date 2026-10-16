@@ -68,6 +68,13 @@ and supply is this pass's step E. So the health check now prints, every dispatch
   `needs_authoring:` line is enough) to `research/programmes/<NN>-*.yaml` -- that is how a plan question becomes
   visible to the machine at all.
 
+- **`RESULTS-UNDISPOSITIONED`** -- `python3 scripts/research/result_disposition_check.py --list`: units whose
+  landed results carry no verdict and no OWNED `needs_review` (`grading.owner`). "Read" in the run record is not a
+  disposition; each of these gets its rule applied (step D) or an owner (step C). MEASURED 2026-10-16: 19 ungraded,
+  24 `needs_review` with no owner.
+- **Brief §0 `RESEARCH FLOOR GAP`** -- a gap at the end of your pass is now due work on the manager's brief, computed
+  from the queue; your handoff still names it, but the manager acts on §0.
+
 The dispatcher also now ranks **authored before generated inside a theme**, and a recurring unit ages from when it
 came **due**, not from its last stamp (a monthly re-run used to come due already "starved").
 

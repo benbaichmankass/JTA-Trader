@@ -85,9 +85,9 @@ DEFAULT_MAX_IDLE_HOURS = 12.0
 #: less. A page is for what a refill cannot fix: an unfillable gap, or a
 #: dispatcher that stopped firing (12 h idle, queue_throughput.py).
 EXIT_REFILL = 3
-#: Hours of supply the floor must cover at the observed fire rate -- the research-ops SKILL's
-#: own derivation (25 units = ~19 h at fired_24h 32, 2026-10-10), made mechanical.
-FLOOR_HOURS = 19.0
+# The floor formula lives in scripts/research/queue_throughput.py (one place: the brief computes the same
+# number in-process). Re-exported here so callers and the self-test keep their names.
+from scripts.research.queue_throughput import FLOOR_HOURS, computed_floor  # noqa: E402,F401
 UTILIZATION_DIR = Path("comms/research/utilization")
 OPS_DIR = Path("comms/research/ops")
 THEMES_FILE = Path("research/THEMES.yaml")
@@ -96,15 +96,6 @@ THEMES_FILE = Path("research/THEMES.yaml")
 #: were generated re-runs, so a census that credits them fully reads a theme as stocked when no question
 #: anybody asked is waiting. 0.4 keeps the re-runs useful as filler without letting them stand in for authoring.
 GENERATED_FLOOR_SHARE = 0.4
-
-
-def computed_floor(fired_24h, *, minimum: int = DEFAULT_MIN_RUNNABLE) -> int:
-    """max(minimum, ceil(fired_24h x FLOOR_HOURS / 24)); `minimum` when the rate is unread."""
-    import math
-    try:
-        return max(minimum, math.ceil(float(fired_24h) * FLOOR_HOURS / 24.0))
-    except (TypeError, ValueError):
-        return minimum
 
 
 def idle_backends(root: Path) -> dict:
@@ -336,7 +327,7 @@ def _self_test() -> int:
         assert ops_authoring_skips(r)["skipped"] == ["20300101T1800Z"], ops_authoring_skips(r)   # newest 3 only
         (od / "20300101T0000Z.json").write_text(_json.dumps({"authoring_queue_depth": 6, "units_authored": ["RQ-2 (programme node P2-Q4-x)"]}))
         assert ops_authoring_skips(r, last=4)["skipped"] == ["20300101T1800Z"], "a legacy record that drafted a node is not a skip"
-        assert _exit_code(["OPS-AUTHOR-SKIPPED x"]) == 0
+        assert _exit_code(["OPS-AUTHOR-SKIPPED x"]) == 0 and _exit_code(["RESULTS-UNDISPOSITIONED 3"]) == 0
         (r / "research" / "queue" / "RQ-20300101-005.yaml").write_text(": : [\n")
         assert any(x.startswith("H0") for x in grade(health(r, now=now), min_runnable=1, max_idle_hours=48))
     print("research-queue-health self-test OK")
@@ -346,7 +337,7 @@ def _self_test() -> int:
 def _exit_code(problems: list) -> int:
     """0 clean, or only an H1-AUTHOR (a scheduled drafting task, warned, not paged);
     EXIT_REFILL when every other problem is a fillable H1; else 1 (page)."""
-    pageable = [x for x in problems if not x.startswith(("H1-AUTHOR", "H1-THIN", "H1-THEME", "OPS-AUTHOR"))]
+    pageable = [x for x in problems if not x.startswith(("H1-AUTHOR", "H1-THIN", "H1-THEME", "OPS-AUTHOR", "RESULTS-UNDISPOSITIONED"))]
     if not pageable:
         return 0
     return EXIT_REFILL if all(x.startswith("H1-REFILL") for x in pageable) else 1
@@ -402,6 +393,16 @@ def main(argv=None) -> int:
                         f"{len(ops['records'])} drafted no programme node while the authoring queue held questions -- "
                         "step E is not optional (research-ops SKILL)")
     try:
+        from scripts.research.result_disposition_check import census, summary_line as rd_line  # noqa: PLC0415
+        rd = census(_REPO)
+        print(f"research-queue-health: {rd_line(rd)}")
+        if rd["findings"]:
+            problems.append(f"RESULTS-UNDISPOSITIONED {rd['findings']} unit(s) have landed results with no verdict and no "
+                            "owned needs_review (python3 scripts/research/result_disposition_check.py --list) -- "
+                            "research-ops steps C/D: apply the rule or set grading.owner")
+    except Exception as e:  # noqa: BLE001
+        print(f"::warning::research-queue-health: result disposition could not be measured ({e!r})")
+    try:
         from scripts.research.programme_coverage import coverage, summary_line  # noqa: PLC0415
         cov = coverage(_REPO)
         print(f"research-queue-health: programme coverage: {summary_line(cov)}")
@@ -409,7 +410,7 @@ def main(argv=None) -> int:
         print(f"::warning::research-queue-health: programme coverage could not be measured ({e!r})")
     rc = _exit_code(problems)
     for p in problems:
-        level = "warning" if p.startswith(("H1-AUTHOR", "H1-THIN", "H1-THEME", "OPS-AUTHOR")) else ("notice" if rc == EXIT_REFILL else "error")
+        level = "warning" if p.startswith(("H1-AUTHOR", "H1-THIN", "H1-THEME", "OPS-AUTHOR", "RESULTS-UNDISPOSITIONED")) else ("notice" if rc == EXIT_REFILL else "error")
         print(f"::{level}::research-queue-health: {p}")
     return rc
 
