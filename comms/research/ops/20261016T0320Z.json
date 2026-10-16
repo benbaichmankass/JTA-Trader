@@ -1,0 +1,81 @@
+{
+  "run": "RESEARCH-OPS-2026-10-16-0247",
+  "finished_at": "2026-10-16T03:20:00Z",
+  "by": "research-ops-lane-20261016-0247",
+  "floor": 50,
+  "floor_basis": "computed_floor(fired_24h 63)",
+  "authoring_queue_depth": 6,
+  "idle_backends": [
+    "github_runner_data",
+    "kaggle",
+    "kaggle_cpu"
+  ],
+  "needs_review_triaged": 0,
+  "needs_review_left": 32,
+  "needs_review_note": "NOT triaged this pass (budget went to result reading + the programme-node authoring); 32 remain, oldest-first triage is the next pass's FIRST work after authoring.",
+  "throughput": {
+    "runnable_before": 8,
+    "runnable_after": 9,
+    "queued": 106,
+    "fired_24h": 63,
+    "results_landed_24h": 70,
+    "hours_since_last_dispatch": 1.4,
+    "idle_alarm": false
+  },
+  "mechanism": {
+    "dispatch_receipt": "ok: liveness fresh (1.37h old)",
+    "collector": "ok: 14 verdict files landed since the 21:15Z record, all read_state measured",
+    "stranded_stamp_prs": "not_checked",
+    "incident": null,
+    "watchdog": "newest row in watchdog_incidents.jsonl is 2026-10-13 self_healed (backend:trainer); no open escalated incident"
+  },
+  "results_read": {
+    "pass": 7,
+    "fail": 5,
+    "indeterminate": 2,
+    "wiring_only": 0,
+    "units": [
+      "RQ-20261015-8bbc-03 fail / -04 pass / -05 pass: matched-risk controls -> Tier-3 note on PROP-BOOK-SEARCH-1095D (pair adds at risk<=0.0035, not at 0.0045; prop-venue Stage-0 for the 4h legs still missing, PI-20261015-WNBZB5WN-0003 routed)",
+      "RQ-20261015-8bbc-01 fail / -02 fail: live_vs_backtest divergence CONFIRMED for xrp_pullback_2h and ada_pullback_2h on bybit_2 realMoney; rule's follow-up (cause-naming build) is already filed as PI-20261015-10152047-0001, no duplicate",
+      "RQ-20261015-f01d-01 pass: trend_donchian_sol_prop stage0 +60.6R n=394, 6/8 folds positive -> ESCALATED to manager (rule's follow-up = new evidence record + mandate_resolver re-run + PR #18440 undraft is a real-money promotion step, not done by this lane)",
+      "RQ-20261015-f01d-02 indeterminate/control_failed: control arm 164 trades +10.26R vs record 163 +9.32R (0.94R > 0.5R bar); fold result NOT read -> PI-20261016-10160247-0001",
+      "RQ-20261014-4a4c-02 pass / -03 fail (placebo clean) / -04 pass: PPI->ES/NQ drift evidence -> note on P4-MACRO-PROGRAMME, not a leg",
+      "RQ-20261015-8b93-01 pass / -02 pass: trainer vs kaggle_cpu train parity (all deltas 0.0, agreement 1.0, n=8694); plan write-back already landed in 73f473b7 (KAGGLE-TRAIN-RUNNER-FIRST), not repeated",
+      "RQ-20261015-24ca-04 fail: spy_pullback_1h prop-fit ev<=0 on at least one seed (mechanical close by the grader); RQ-20261015-24ca-03 indeterminate"
+    ]
+  },
+  "unlocked": [],
+  "retired": [],
+  "levers_filed": [
+    {
+      "lever": "re-measure trend_donchian_eth_prop evidence record on the current corpus and re-register the f01d-02 control",
+      "ref": "PI-20261016-10160247-0001"
+    }
+  ],
+  "units_authored": [
+    "RQ-20261016-001 (programme node P2-Q4-et-mlp-extend: ExtraTrees/MLP vs LightGBM on the FULL 1h shard, tail_rows 43000, kaggle_cpu via published_data; rule thresholds identical to 9d20-05)"
+  ],
+  "routed_pipeline_items": [
+    "PI-20261014-20261014-0001",
+    "PI-20261014-IMQACAUN-0001",
+    "PI-20261014-ON01DGFQ-0002",
+    "PI-20261015-3SMHIER1-0001 -> RESEARCH-TOOLING-GAPS",
+    "PI-20261015-WNBZB5WN-0003 -> PROP-BOOK-SEARCH-1095D"
+  ],
+  "followups_filed": [
+    "PI-20261016-10160247-0001"
+  ],
+  "floor_met": false,
+  "not_run": [
+    "needs_review triage (0 of 32)",
+    "stranded automation/research-queue-* PR listing",
+    "authoring-queue nodes beyond P2-Q4 (6 still ready)",
+    "individual read of the 100+ 'unread' e35 accruing rows (power=accruing: cannot answer yet, not a verdict)",
+    "P2-Q1.5-conformal: 9da8-03 stays blocked on lever FRONTIER-LEVER-CONFORMAL (state queued, scripts/research/conformal_abstain_eval.py absent)"
+  ],
+  "handoff": [
+    "RUNNABLE 9 vs computed floor 50 (page 25 NOT met; H1-AUTHOR): templates + programme nodes hold 0 refill capacity. Authoring queue (6 ready): P2-Q3.1-fail, P1-Q8.2-fail, P1-Q2-alpaca-1d-pooled, P2-Q2.1-fail, P2-Q2.5-pooling-parity, P2-Q1.5-conformal -- author these FIRST next pass, preferring ones that land on the idle runner/kaggle backends",
+    "needs_review: 32 untriaged, oldest first",
+    "PI-20261006-1VPYTX8E-0001 (wiring_only rule mapping) and RQ-20260927-003 (60-min producer timeout) still open from the previous record"
+  ]
+}
