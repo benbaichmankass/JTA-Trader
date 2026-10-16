@@ -18,6 +18,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from scripts.ops import roadmap_map
 from scripts.research import dispatch_queue as dq
 from scripts.research import queue_grade as qg
 
@@ -209,7 +210,7 @@ def _git(r: Path, *a: str) -> None:
 
 def test_verify_vouches_the_spawned_confirmation_and_refuses_a_tampered_one(tmp_path):
     r = _repo(tmp_path)
-    (r / "research" / "queue" / f"{PID}.yaml").write_text(_unit())
+    (r / "research" / "queue" / f"{PID}.yaml").write_text(_unit())   # m20 -> a holdout re-run child
     _rows(r, PID, "pass")
     subprocess.run(["git", "init", "-q", "-b", "main", str(r)], check=True)
     _git(r, "add", "-A")
@@ -232,3 +233,45 @@ def test_verify_vouches_the_spawned_confirmation_and_refuses_a_tampered_one(tmp_
     _git(r, "rm", "-q", str(child))
     _git(r, "commit", "-q", "-m", "drop child")
     assert any("does not add it" in p for p in qg.verify(r, "main"))
+
+
+# ── roadmap-map-guard: an authored confirmation unit must pass it (manager, 2026-10-16, #18611) ──
+def _guard_problems(units: dict) -> list:
+    spec = {"enforce_units_from": "20000101"}
+    return [p for p in roadmap_map.diff_problems(spec, {}, {}, units, {}, {}) if "roadmap" in p]
+
+
+def test_authored_confirmation_unit_passes_the_roadmap_guard(tmp_path):
+    """Clean: the unit inherits the family's milestone (queue_replenish.FAMILY_ROADMAP)."""
+    r = _repo(tmp_path)
+    _rows(r, PID, "pass")
+    _p, (cid, text) = qg.grade_unit_full(r, PID, _unit(workflow=FW), "2030-01-02")
+    cu = yaml.safe_load(text)
+    assert cu["roadmap"] == ["M20"]
+    assert _guard_problems({cid: cu}) == []
+    # the parent's own ref wins over the family map
+    own = _unit(workflow=FW).replace("lands:", "roadmap:\n- L-ATM\nlands:")
+    _p, (_cid2, text2) = qg.grade_unit_full(r, PID, own, "2030-01-02")
+    assert yaml.safe_load(text2)["roadmap"] == ["L-ATM"]
+
+
+def test_no_milestone_means_no_unit_and_needs_review(tmp_path):
+    """Planted: a unit the guard would refuse (no roadmap, unknown family) is never authored."""
+    r = _repo(tmp_path)
+    _rows(r, PID, "pass")
+    bare = _unit(workflow=FW, family="no-such-family")
+    assert _guard_problems({"RQ-20300101-abcd-01": {"id": "x"}})   # the guard does refuse a unit without one
+    parent_text, child = qg.grade_unit_full(r, PID, bare, "2030-01-02")
+    g = yaml.safe_load(parent_text)["grading"]
+    assert child is None and g["needs_review"] and "roadmap" in g["note"] and "confirm_unit" not in g
+
+
+def test_m20_pass_authors_a_holdout_rerun_not_a_forward_wait_and_it_passes_the_guard(tmp_path):
+    """Operator 2026-10-16 'Holdout re-run': an m20 PASS gets a holdout re-run (no wait), and that
+    unit carries the family milestone, so roadmap-map-guard accepts it."""
+    r = _repo(tmp_path)
+    _rows(r, PID, "pass")
+    _parent, (cid, text) = qg.grade_unit_full(r, PID, _unit(), "2030-01-02")
+    cu = yaml.safe_load(text)
+    assert cu["confirmation"]["mode"] == "holdout_rerun" and "not_before" not in cu
+    assert cu["roadmap"] == ["M20"] and _guard_problems({cid: cu}) == []

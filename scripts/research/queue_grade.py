@@ -348,23 +348,17 @@ CONFIRM_WAIT_MAX_DAYS = 366
 _HOLDOUT_INPUTS = {
     "m20-exit-lever-sweep.yml": {"holdout_frac": "0.25"},
 }
-#: A confirmation unit is a NEW queue unit, so it must name a roadmap milestone (roadmap-map-guard):
-#: the parent's own ref when it has one, else the workflow's milestone, else M40 (research workflow).
-_DEFAULT_ROADMAP = {"m20-exit-lever-sweep.yml": ["L-ATM"]}
 _HOLDOUT_POLICY = ("operator 2026-10-16 (popup, 'Holdout re-run'): \"From now on, each sweep holds back the "
                    "most recent ~25% of history before it chooses settings, then tests the winner on that "
                    "held-back part, so discovery and confirmation come from one run with no wait. The 13 "
                    "current passes get re-run that way now, within days. Cost: each choice is made on 25% "
                    "less data.\"")
-#: Workflows whose inputs can confine the evidence to a window the PASS did not see, mapped to the
-#: input overrides that do it. m20-exit-lever-sweep: `split_mode: date` + `split: <day after the
-#: PASS's data>` makes OOS exactly the trades after the PASS run (the NEXT calendar day, so no
-#: same-day trade the PASS saw is in it). A workflow absent here gets its confirmation unit authored
-#: `blocked` with the reason, never a same-window re-run labelled fresh.
-_FRESH_WINDOW_INPUTS = {
-    "m20-exit-lever-sweep.yml": lambda after: {"split_mode": "date",
-                                               "split": (after + timedelta(days=1)).date().isoformat()},
-}
+#: FORWARD-WAIT workflows (a window input, no holdout input): workflow -> fn(after) giving the input
+#: overrides that confine the evidence to data after the PASS run. EMPTY today: m20 confirms by
+#: holdout re-run (`_HOLDOUT_INPUTS`), and no other harness can express a window yet
+#: (PI-20261016-QOTFUEXV-0002). A PASS on a workflow in neither map gets its confirmation unit
+#: authored `blocked` with the reason, never a same-window re-run labelled fresh.
+_FRESH_WINDOW_INPUTS: Dict[str, Any] = {}
 _POLICY = ("operator 2026-10-16 (popup, 'Yes, adopt'): a single-window PASS on a template cell is a "
            "discovery; it opens exactly one fresh-window confirmation unit before it can feed any Tier-3 proposal")
 
@@ -397,6 +391,20 @@ def _swap_id(obj: Any, old: str, new: str) -> Any:
     if isinstance(obj, dict):
         return {k: _swap_id(v, old, new) for k, v in obj.items()}
     return obj
+
+
+def confirmation_roadmap(unit: Dict[str, Any]) -> Optional[List[str]]:
+    """The roadmap milestone(s) a confirmation unit carries -- it is a NEW queue unit, and
+    roadmap-map-guard refuses one without (`enforce_units_from`). The parent's own `roadmap`, else the
+    milestone its template family maps to (queue_replenish.FAMILY_ROADMAP, the generator's one map),
+    else None: then no unit is authored at all."""
+    rm = unit.get("roadmap")
+    rm = [rm] if isinstance(rm, str) else rm
+    if isinstance(rm, list) and [m for m in rm if str(m).strip()]:
+        return [str(m) for m in rm if str(m).strip()]
+    from scripts.research.queue_replenish import FAMILY_ROADMAP  # noqa: PLC0415 -- one map, lazily
+    fam = FAMILY_ROADMAP.get(str((unit.get("generated") or {}).get("family") or ""))
+    return [str(m) for m in fam] if fam else None
 
 
 def forward_wait_days(unit: Dict[str, Any], g: Dict[str, Any]) -> Tuple[int, str]:
@@ -461,7 +469,7 @@ def confirmation_unit(unit: Dict[str, Any], g: Dict[str, Any], child_id: str,
     for k, v in unit.items():
         if k not in skip:
             out[k] = _swap_id(v, pid, child_id) if k == "lands" else v
-    out["roadmap"] = _roadmap_for(unit, wf)
+    out["roadmap"] = confirmation_roadmap(unit)
     out["question"] = (f"CONFIRMATION of {pid}'s PASS on a window it did not see (data after "
                        f"{after.isoformat() if after else 'UNKNOWN'}), under the SAME registered rule: "
                        f"{unit.get('question')}")
@@ -493,12 +501,6 @@ _GRADER_HEADER = ("# AUTHORED by scripts/research/queue_grade.py: the one confir
                   "# (RESEARCH-CONFIRM-FRESH-WINDOW). Self-lands only while `queue_grade.py --verify` reproduces it.\n")
 
 
-def _roadmap_for(unit: Dict[str, Any], wf: str) -> List[str]:
-    rm = unit.get("roadmap")
-    rm = [rm] if isinstance(rm, str) else rm
-    return list(rm) if isinstance(rm, list) and rm else list(_DEFAULT_ROADMAP.get(wf, ["M40"]))
-
-
 def _holdout_rerun_unit(unit: Dict[str, Any], g: Dict[str, Any], child_id: str, run: Dict[str, Any],
                         header: Optional[str]) -> str:
     """The confirmation of a PASS that did NOT hold out, on a workflow that can: the SAME run
@@ -522,7 +524,7 @@ def _holdout_rerun_unit(unit: Dict[str, Any], g: Dict[str, Any], child_id: str, 
     for k, v in unit.items():
         if k not in skip:
             out[k] = _swap_id(v, pid, child_id) if k == "lands" else v
-    out["roadmap"] = _roadmap_for(unit, wf)
+    out["roadmap"] = confirmation_roadmap(unit)
     out["question"] = (f"HOLDOUT RE-RUN of {pid}'s single-window PASS: with the latest ~"
                        f"{inputs['holdout_frac']} of each leg's history held back BEFORE selection, does a "
                        "cell still clear the SAME registered gate on the earlier span, and does it hold on the "
@@ -614,6 +616,15 @@ def decide(unit: Dict[str, Any], g: Dict[str, Any], graded_at: str,
                        "note": f"fresh-window PASS under the same rule: {parent}'s discovery is CONFIRMED"})
     elif parent and gb.get("verdict") == "fail":
         gb.update({"confirms": parent, "confirmation": "not_replicated"})
+    if gb.get("needs_review"):
+        # RESEARCH-GRADING-BACKLOG-1016: a session's triage of a needs_review unit is its
+        # `grading.owner` (+ `owner_reason`), which result_disposition_check counts as owned. Until
+        # this, every 6-hourly pass rebuilt the block from `base` and erased the owner, so a
+        # generated recurring unit fell back to needs_review_unowned within hours of its triage.
+        # Kept only while the unit still needs review; a mechanical verdict supersedes it.
+        for k in ("owner", "owner_reason"):
+            if str(prior.get(k) or "").strip():
+                gb[k] = prior[k]
     return d
 
 
@@ -837,6 +848,14 @@ def grade_unit_full(root: Path, unit_id: str, text: str,
         live = [c for c in confirmations_for(root, pid) if c["mode"] == "holdout_rerun" and c["status"] != "retired"]
         if live and live[0]["id"] != d["grading"]["confirm_unit"]:
             d["grading"]["confirm_unit"] = live[0]["id"]   # a forward-wait one was superseded
+    if d.get("spawn") and confirmation_roadmap(unit) is None:
+        # Never author a unit roadmap-map-guard refuses: a session names the milestone.
+        d["grading"].pop("confirm_unit", None)
+        d["grading"].update({"needs_review": True,
+                             "note": "PASS is a discovery, but no roadmap milestone is known for its confirmation "
+                                     "unit (the unit carries none and its family is not in "
+                                     "queue_replenish.FAMILY_ROADMAP) -- a session authors it"})
+        d["spawn"] = None
     if d.get("spawn"):
         cid = d["spawn"]
         taken = root / QUEUE / f"{cid}.yaml"
@@ -997,6 +1016,12 @@ def _self_test() -> int:
     assert di29["grading"]["needs_review"] and "recheck_after_days" not in di29["grading"], di29
     assert decide(u, {"verdict": None, "rows": 0, "files": [], "reason": "0 result row(s)"}, "2030-01-01") is None
     assert decide(u, {"verdict": None, "rows": 2, "files": [], "reason": "verdicts not unanimous"}, "2030-01-01")["grading"]["needs_review"]
+    # a session's owner survives a re-grade that still needs review, and drops once a verdict lands
+    uo = {**u, "cadence": "weekly", "grading": {"auto": True, "needs_review": True, "owner": "ROW-X", "owner_reason": "why"}}
+    do = decide(uo, {"verdict": None, "rows": 1, "files": [], "reason": "verdicts not unanimous-mechanical"}, "2030-01-01")
+    assert do["grading"]["owner"] == "ROW-X" and do["grading"]["owner_reason"] == "why", do
+    dp = decide(uo, {"verdict": "pass", "rows": 1, "files": [], "reason": "r"}, "2030-01-01")
+    assert "owner" not in dp["grading"], dp
 
     with tempfile.TemporaryDirectory() as td:
         r = Path(td)

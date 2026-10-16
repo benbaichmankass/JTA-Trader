@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "changes_landing_machinery",
+  "hold_text": "edits scripts/research/queue_grade.py, the E58 producer whose --verify vouches its own grading PRs; URGENT -- automated grading is blocked (#18611 red on roadmap-map-guard) until this merges.",
+  "why": "Hotfix for #18593: grader-authored confirmation units carried no `roadmap` ref, so roadmap-map-guard failed every automated grading PR (#18611). Units now inherit the parent's roadmap or its family's milestone (queue_replenish.FAMILY_ROADMAP); with neither, no unit is authored and the parent goes to needs_review. m20 PASSes author no forward-wait unit (operator 2026-10-16 'Holdout re-run'). Research tooling only."
+}

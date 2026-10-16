@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "no row under research/results/<id>/ carries a decision_rule.id belonging to a different unit",
+    "kind": "event"
+  },
+  "id": "PI-20261016-IKK5NFPO-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-GRADING-BACKLOG-1016 (manager session_01VduHYzdaXe27wTDBLSu8ao)",
+    "rerun": "grep -l TRADEIFY-FIT research/results/RQ-20261004-660/*.jsonl research/results/RQ-20261004-661/*.jsonl"
+  },
+  "state": "queued",
+  "what": "Misfiled result rows: research/results/RQ-20261004-660/37211274117.jsonl and research/results/RQ-20261004-661/37211275639.jsonl carry decision rules RULE-RQ1004-TRADEIFY-FIT-ict_scalp_xrp_15m-f075 / -ict_scalp_eth_15m-f050 (Tradeify prop-fit units) inside the results of the roster-walkforward units ief_pullback_1d / mgc_pullback_1d. Either a result-collector id mix-up or a reused id on 2026-10-04/05. Find the Tradeify units these rows belong to, move the rows (git mv, results are append-only evidence) and confirm the Tradeify units are graded from them."
+}
