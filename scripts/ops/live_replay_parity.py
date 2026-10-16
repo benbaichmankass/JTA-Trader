@@ -53,7 +53,10 @@ THE DIVERGENCE CLASSES (any one is a finding)
 ``dropped_no_package``  live signalled; no order package and no named downstream
                         gate (open_package_blocked, bar_debounce_blocked, …).
 ``dropped_no_order``    a package exists, but a live account on the leg's roster
-                        has no order and no named reason.
+                        has no order and no named reason. "On the leg's roster"
+                        means AT THE TIME OF THE SIGNAL, read from the git
+                        history of config/accounts.yaml (``roster_history``) —
+                        not today's roster applied to the whole window.
 
 COLLAPSED STATES
 ----------------
@@ -67,8 +70,11 @@ POSITIVE CONTROLS (part of done)
    its live records replaced by fabricated no-signal records; the check MUST
    flag it. Also plants a lost bar and an unexplained live signal.
 2. ``historical_positive`` — every live order package of a covered leg inside
-   the candle reach must classify as a MATCHED signal bar; named anchors
-   (``ANCHORS``) are reported individually.
+   the candle reach must sit in a bar whose SIGNAL the replay matched; named
+   anchors (``ANCHORS``) are reported individually. It is a control on the
+   replay INSTRUMENT: a bar whose only divergence is downstream of a matched
+   signal (``dropped_no_order``) still counts as matched here, and the drop is
+   reported as its own divergence class on the leg — never hidden.
 3. ``liveness`` — within the window at least one leg on some account went
    signal → order package → placed order. If not, said so.
 
@@ -88,6 +94,7 @@ import inspect
 import json
 import os
 import re
+import subprocess
 import sys
 import urllib.parse
 import urllib.request
@@ -159,6 +166,19 @@ ANCHORS = (
 )
 
 _ISO_FMT = "%Y-%m-%dT%H:%M:%S+00:00"
+
+#: Divergence classes that sit DOWNSTREAM of a matched signal: the replay
+#: reproduced live's decision, and something after it (package → order) is
+#: missing. Not a failure of the replay instrument.
+DOWNSTREAM_CLASSES = ("dropped_no_package", "dropped_no_order")
+
+#: config/accounts.yaml is re-read every tick (src/runtime/loaded_config.py),
+#: and ict-git-sync pulls main every ~5 min, so a roster join merged at T is in
+#: effect by about T + 10 min. A signal before T + this grace on a just-joined
+#: account is not expected to have an order there; it is reported as
+#: ``not_on_roster_at_signal``, never as a drop.
+ROSTER_DEPLOY_GRACE_S = 900
+ACCOUNTS_PATH = "config/accounts.yaml"
 
 
 # ── small helpers ────────────────────────────────────────────────────────────
@@ -237,6 +257,11 @@ class Leg:
     #: accounts on which no `trades` row is expected (prop ticket bridge,
     #: mode != live) — the order hop is reported as not checked there.
     no_order_accounts: set = field(default_factory=set)
+    #: account -> epoch the leg JOINED that account's roster, when the join is
+    #: inside the git history read by roster_history(). An account absent here
+    #: was on the roster for the whole window (or history could not tell —
+    #: then roster_history says so in the artifact).
+    roster_from: dict = field(default_factory=dict)
 
 
 def _builder_features(builder: Callable) -> dict:
@@ -298,6 +323,111 @@ def resolve_legs(accounts_doc: dict, strategies_doc: dict, *,
                 leg.no_order_accounts.add(acct)
     legs = [lg for lg in by_leg.values() if lg.real_money or lg.skip_reason is None]
     return sorted(legs, key=lambda lg: (not lg.real_money, lg.name))
+
+
+# ── roster history: which accounts carried the leg WHEN it signalled ──────────
+
+def _rosters(doc: dict) -> dict[str, set]:
+    accts = (doc or {}).get("accounts", doc) or {}
+    return {str(a): set(v.get("strategies") or []) for a, v in accts.items()
+            if isinstance(v, dict)}
+
+
+def _git(repo: Path, *args: str) -> str:
+    return subprocess.run(["git", "-C", str(repo), *args], check=True,
+                          capture_output=True, text=True, timeout=120).stdout
+
+
+def _accounts_versions(repo: Path, since: float, *, deepen: bool = True) -> tuple[list, str | None]:
+    """[(commit_epoch, rosters)] newest first for config/accounts.yaml, back to
+    and INCLUDING the version in effect at ``since``. Returns (versions, error).
+    On a shallow clone whose history stops after ``since`` it deepens once
+    (read-only ``git fetch --shallow-since``); if that fails the error says so."""
+    def log() -> list[tuple[str, float]]:
+        out = _git(repo, "log", "--format=%H %ct", "--", ACCOUNTS_PATH)
+        return [(h, float(t)) for h, t in (ln.split() for ln in out.splitlines() if ln.strip())]
+    try:
+        commits = log()
+        if deepen and (not commits or commits[-1][1] > since) and \
+                _git(repo, "rev-parse", "--is-shallow-repository").strip() == "true":
+            day = datetime.fromtimestamp(since - 3 * 86400, timezone.utc).strftime("%Y-%m-%d")
+            head = _git(repo, "rev-parse", "HEAD").strip()
+            try:
+                _git(repo, "fetch", "--quiet", f"--shallow-since={day}", "origin", head)
+            except subprocess.CalledProcessError:
+                _git(repo, "fetch", "--quiet", f"--shallow-since={day}", "origin")
+            commits = log()
+    except (OSError, subprocess.SubprocessError) as exc:
+        return [], f"git history unavailable: {type(exc).__name__}: {str(exc)[:120]}"
+    import tempfile
+    from src.config.accounts_loader import load_accounts_dict
+    versions = []
+    with tempfile.TemporaryDirectory() as td:
+        for h, t in commits:
+            errs: list = []
+            try:
+                tmp = Path(td) / f"{h}.yaml"
+                tmp.write_text(_git(repo, "show", f"{h}:{ACCOUNTS_PATH}"), encoding="utf-8")
+                doc = load_accounts_dict(tmp, errors=errs)
+            except (OSError, subprocess.SubprocessError) as exc:
+                errs.append({"error": type(exc).__name__})
+            if errs:
+                return versions, (f"could not read {ACCOUNTS_PATH}@{h[:10]}: "
+                                  f"{str(errs[0].get('error'))[:120]}")
+            versions.append((t, _rosters(doc)))
+            if t <= since:
+                break  # the version in effect at the start of the window
+    if not versions or versions[-1][0] > since:
+        return versions, (f"history of {ACCOUNTS_PATH} does not reach the window start "
+                          f"{iso(since)} (oldest version read: "
+                          f"{iso(versions[-1][0]) if versions else 'none'})")
+    return versions, None
+
+
+def roster_joins(versions: list, current: dict[str, set]) -> dict[tuple[str, str], float]:
+    """(leg, account) -> epoch the leg joined that account's roster, for every
+    pair on today's roster that was NOT on it in the version in effect at the
+    window start. ``versions`` is newest first, its last entry in effect at
+    ``since`` (see _accounts_versions)."""
+    joins = {}
+    for acct, legs in current.items():
+        for leg in legs:
+            join = None
+            for t, rost in versions:  # walk back while the leg is on the roster
+                if leg in rost.get(acct, set()):
+                    join = t
+                else:
+                    break
+            else:
+                continue  # present in every version back to the window start
+            if join is not None:
+                joins[(leg, acct)] = join
+            # join None: the newest version lacks it — today's roster came from
+            # an uncommitted edit; nothing to date it by, leave it unscoped.
+    return joins
+
+
+def roster_history(legs: list[Leg], current_doc: dict, since: float,
+                   repo: Path = REPO_ROOT) -> dict:
+    """Scope every leg's account list to the time of each signal. Mutates
+    ``leg.roster_from``; returns the artifact block. Could-not-check falls back
+    to today's roster for the whole window and SAYS so — the run is then exactly
+    as strict as before this existed, never laxer."""
+    versions, err = _accounts_versions(repo, since)
+    if err:
+        return {"state": "could_not_check", "reason": err,
+                "fallback": "today's roster applied to the whole window"}
+    joins = roster_joins(versions, _rosters(current_doc))
+    out = []
+    for lg in legs:
+        for a in lg.accounts:
+            j = joins.get((lg.name, a))
+            if j is not None:
+                lg.roster_from[a] = j
+                out.append({"leg": lg.name, "account": a, "joined": iso(j)})
+    return {"state": "checked", "versions_read": len(versions),
+            "oldest_version": iso(versions[-1][0]),
+            "grace_s": ROSTER_DEPLOY_GRACE_S, "joins_in_window": out}
 
 
 # ── data: the bundle ─────────────────────────────────────────────────────────
@@ -996,9 +1126,14 @@ def _downstream(leg: Leg, bundle: dict, signal_evals: list[EvalRow], b_end: floa
                 scoped_out |= set(v)
         if r.get("account"):
             scoped_out.add(str(r["account"]))
-    missing, unchecked = [], []
+    missing, unchecked, off_roster = [], [], []
+    t_sig = min([to_epoch(p.get("created_at")) or t0 for p in pkgs] + [t0])
     for a in leg.accounts:
         if a in by_acct or a in scoped_out:
+            continue
+        joined = leg.roster_from.get(a)
+        if joined is not None and t_sig < joined + ROSTER_DEPLOY_GRACE_S:
+            off_roster.append(a)  # the leg joined this roster after the signal
             continue
         if a in leg.no_order_accounts:
             unchecked.append(a)  # prop ticket bridge / dry_run: no trades row expected
@@ -1006,6 +1141,8 @@ def _downstream(leg: Leg, bundle: dict, signal_evals: list[EvalRow], b_end: floa
         missing.append(a)
     if unchecked:
         res["orders_not_checked"] = unchecked
+    if off_roster:
+        res["not_on_roster_at_signal"] = off_roster
     res["orders_by_account"] = {a: [{"id": t.get("id"), "status": t.get("status")} for t in v]
                                 for a, v in by_acct.items()}
     if missing:
@@ -1061,10 +1198,15 @@ def historical_positive(results: list[dict], bundle: dict) -> dict:
         bar = _bar_of(r, ct)
         if bar is None:
             continue
+        classes = set(bar.get("classes") or [])
+        signal_matched = bar["status"] == "matched_signal" or (
+            bar["status"] == "divergent" and (bar.get("signal_evals") or 0) > 0
+            and bool(classes) and classes <= set(DOWNSTREAM_CLASSES))
         checked.append({"leg": r["leg"], "package": p.get("order_package_id"),
                         "created_at": p.get("created_at"), "bar": bar["bar"],
-                        "status": bar["status"],
-                        "matched": bar["status"] == "matched_signal"})
+                        "status": bar["status"], "matched": signal_matched,
+                        **({"downstream_class": sorted(classes)} if signal_matched
+                           and classes else {})})
     anchors = []
     for a in ANCHORS:
         r = by_leg.get(a["leg"])
@@ -1077,6 +1219,7 @@ def historical_positive(results: list[dict], bundle: dict) -> dict:
             anchors.append({**a, "state": "matched" if bar["status"] == "matched_signal" else "FAILED",
                             "bar_status": bar["status"]})
     n_ok = sum(1 for c in checked if c["matched"])
+    n_down = sum(1 for c in checked if c.get("downstream_class"))
     a_fail = [a for a in anchors if a["state"] == "FAILED"]
     a_ok = [a for a in anchors if a["state"] == "matched"]
     if not checked and not a_ok and not a_fail:
@@ -1086,6 +1229,7 @@ def historical_positive(results: list[dict], bundle: dict) -> dict:
     else:
         state = "fail"
     return {"state": state, "packages_checked": len(checked), "packages_matched": n_ok,
+            "packages_matched_signal_downstream_divergent": n_down,
             "packages": checked[:40], "anchors": anchors}
 
 
@@ -1110,14 +1254,24 @@ def planted_defect(legs: list[Leg], results: list[dict], bundle: dict,
     target = None
     for lg in legs:
         r = by_leg.get(lg.name)
-        if r and r["state"] == "checked" and r.get("replay_signal_windows") and lg.decision_bar == "forming":
-            target = (lg, r)
+        if not (r and r["state"] == "checked" and lg.decision_bar == "forming"):
+            continue
+        # Only a window inside an ANALYSED bar can be planted: the replay cache
+        # also holds the last 15m window of the bar BEFORE `since` (a stale-frame
+        # candidate), and a plant there can never be flagged — measured
+        # 2026-10-16 (run 38878704887, since 08:45Z, plant 09:45Z in the 08:00
+        # 2h bar), on main's script too.
+        ws = [w for w in r.get("replay_signal_windows") or []
+              if (_bar_of(r, to_epoch(w.split("|")[0])) or {}).get("status")
+              not in (None, "not_comparable")]
+        if ws:
+            target = (lg, r, ws[0])
             break
     plants = []
     # Plant 1 (the mandated one): replay=signal, live=no-signal.
     if target:
-        lg, r = target
-        w, _side = r["replay_signal_windows"][0].split("|")
+        lg, r, w0 = target
+        w, _side = w0.split("|")
         wt = to_epoch(w)
         fake = [EvalRow(t=wt + 30 + 120 * k, side="none", reason="planted", adx=None,
                         confidence=None, close=None, channel=None) for k in range(5)]
@@ -1180,7 +1334,8 @@ def planted_defect(legs: list[Leg], results: list[dict], bundle: dict,
 
 # ── the run ──────────────────────────────────────────────────────────────────
 
-def run(bundle: dict, legs: list[Leg], since: float, until: float) -> dict:
+def run(bundle: dict, legs: list[Leg], since: float, until: float, *,
+        roster: dict | None = None) -> dict:
     results = [analyse_leg(lg, bundle, since, until) for lg in legs]
     for r in results:
         r.pop("_divs", None)
@@ -1228,6 +1383,9 @@ def run(bundle: dict, legs: list[Leg], since: float, until: float) -> dict:
             "divergences_all": divs_all,
         },
         "controls": controls,
+        "roster_history": roster or {"state": "could_not_check",
+                                     "reason": "not requested (library call)",
+                                     "fallback": "today's roster applied to the whole window"},
         "legs": results,
     }
     doc["headline"] = summary_line(doc)
@@ -1274,6 +1432,12 @@ def render_md(doc: dict) -> str:
     L += ["", "## Controls", ""]
     for k, v in doc["controls"].items():
         L.append(f"- **{k}**: `{v['state']}` — `{json.dumps({x: y for x, y in v.items() if x != 'state'}, default=str)[:900]}`")
+    rh = doc.get("roster_history") or {}
+    L += ["", "## Roster history (roster AT THE SIGNAL, from git)", "",
+          f"`{rh.get('state', 'could_not_check')}`"
+          + (f" — {rh.get('reason')}; {rh.get('fallback')}" if rh.get("reason") else "")
+          + "".join(f"\n- `{j['leg']}` joined `{j['account']}` at {j['joined']}"
+                    for j in rh.get("joins_in_window") or [])]
     divs = []
     for r in doc["legs"]:
         seen: dict = {}
@@ -1387,8 +1551,8 @@ def main(argv: list[str] | None = None) -> int:
         print(summary_line(doc))
         return 0
 
-    legs = resolve_legs(_load_yaml(REPO_ROOT / "config/accounts.yaml"),
-                        _load_yaml(REPO_ROOT / "config/strategies.yaml"),
+    accounts_doc = _load_yaml(REPO_ROOT / ACCOUNTS_PATH)
+    legs = resolve_legs(accounts_doc, _load_yaml(REPO_ROOT / "config/strategies.yaml"),
                         include_paper=not args.no_paper)
     if args.bundle:
         bundle = json.loads(Path(args.bundle).read_text(encoding="utf-8"))
@@ -1405,7 +1569,8 @@ def main(argv: list[str] | None = None) -> int:
         bundle = fetch_bundle(Fetcher(args.base_url, token), legs, since, until)
         if args.save_bundle:
             Path(args.save_bundle).write_text(json.dumps(bundle), encoding="utf-8")
-    doc = run(bundle, legs, since, until)
+    roster = roster_history(legs, accounts_doc, since)
+    doc = run(bundle, legs, since, until, roster=roster)
     text = json.dumps(doc, indent=1, default=str, sort_keys=False)
     if args.out:
         out = Path(args.out)
