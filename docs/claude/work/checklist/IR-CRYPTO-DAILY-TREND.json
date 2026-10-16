@@ -12,7 +12,11 @@
   "prs": [],
   "blocked_on": [],
   "note": "Family: Stage-0 breadth screens (A, docs/research/idea-family-review-2026-10-16.md). Trend at 1h on 3 years passed 10/13 alts, but the screen rule was net>0 & n>=39 with no folds and no multiplicity correction over ~60 cells; BTC/ETH/SOL 1h-4h ran on 180-day windows (n 20-66) because fetch_backtest_corpus.py pins roster pairs to 180 d; NO crypto daily bars exist in the corpus. Outside: Liu & Tsyvinski 2021 RFS -- crypto time-series momentum at 1-4 WEEK horizons (primary); Borgards 2021 (primary); Zarattini-Pagani-Barbon 2025 multi-lookback Donchian on BTC+alts (secondary). FIRST STEP: add BTC/ETH/SOL 1h at 1095 d to the corpus candidate table and a resample input (or a scripts/research wrapper running backtest_trend.py --timeframe 1d --resample 1D --donchian 20|55 per alt over 4 --start/--end folds, writing verdict.json). Then: (a) confirm the 10 1h PASS cells over 4 folds with Holm; (b) pooled daily alt Donchian, PASS iff net > 0, >= 3/4 folds, n >= 88.",
-  "updated_at": "2026-10-16T08:52:26Z",
+  "updated_at": "2026-10-16T09:08:35Z",
   "updated_by": "lane-IDEA-REVIEW-1016",
+  "roadmap": [
+    "L-PROP",
+    "L-LADDER"
+  ],
   "_seq": 540
 }
