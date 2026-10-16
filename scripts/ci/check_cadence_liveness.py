@@ -249,6 +249,12 @@ CADENCE_REGISTRY: dict[str, dict] = {
         "why": "full-regenerated from ALL committed captures every run and "
                "committed via commit-to-main -- a fixed, overwritten path",
     },
+    "news-gdelt-panel.yml": {
+        "receipt": "comms/news_alpha/gdelt_panel",
+        "why": "NEWS-ALPHA-CORPUS-SLICE1: every daily run re-folds the CURRENT month and commits "
+               "panel_/coverage_/manifest_YYYY-MM via commit-to-main, so the directory's newest "
+               "commit is the run's receipt",
+    },
     "econ-event-study.yml": {
         "receipt": "comms/macro/econ_event_study_scorecard.json",
         "why": "the eia_natgas_storage scorecard is rewritten every run and "
