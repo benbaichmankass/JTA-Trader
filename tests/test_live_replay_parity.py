@@ -353,7 +353,7 @@ def test_roster_history_reads_the_real_repo_history():
     """Against this checkout: accounts.yaml has history, so either the read
     reaches the window start or it says why — never a silent empty result."""
     import yaml
-    doc = yaml.safe_load(open(P.REPO_ROOT / P.ACCOUNTS_PATH))
+    doc = yaml.safe_load((P.REPO_ROOT / P.ACCOUNTS_PATH).read_text(encoding="utf-8"))
     now = __import__("time").time()
     out = P.roster_history([], doc, now - 86400, repo=P.REPO_ROOT)
     assert out["state"] in ("checked", "could_not_check")

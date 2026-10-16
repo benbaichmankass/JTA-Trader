@@ -399,7 +399,7 @@ def roster_joins(versions: list, current: dict[str, set]) -> dict[tuple[str, str
     return joins
 
 
-def roster_history(legs: list["Leg"], current_doc: dict, since: float,
+def roster_history(legs: list[Leg], current_doc: dict, since: float,
                    repo: Path = REPO_ROOT) -> dict:
     """Scope every leg's account list to the time of each signal. Mutates
     ``leg.roster_from``; returns the artifact block. Could-not-check falls back
