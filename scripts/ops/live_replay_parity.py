@@ -359,16 +359,24 @@ def _accounts_versions(repo: Path, since: float, *, deepen: bool = True) -> tupl
             commits = log()
     except (OSError, subprocess.SubprocessError) as exc:
         return [], f"git history unavailable: {type(exc).__name__}: {str(exc)[:120]}"
-    import yaml
+    import tempfile
+    from src.config.accounts_loader import load_accounts_dict
     versions = []
-    for h, t in commits:
-        try:
-            doc = yaml.safe_load(_git(repo, "show", f"{h}:{ACCOUNTS_PATH}"))
-        except (OSError, subprocess.SubprocessError, yaml.YAMLError) as exc:
-            return versions, f"could not read {ACCOUNTS_PATH}@{h[:10]}: {type(exc).__name__}"
-        versions.append((t, _rosters(doc)))
-        if t <= since:
-            break  # the version in effect at the start of the window
+    with tempfile.TemporaryDirectory() as td:
+        for h, t in commits:
+            errs: list = []
+            try:
+                tmp = Path(td) / f"{h}.yaml"
+                tmp.write_text(_git(repo, "show", f"{h}:{ACCOUNTS_PATH}"), encoding="utf-8")
+                doc = load_accounts_dict(tmp, errors=errs)
+            except (OSError, subprocess.SubprocessError) as exc:
+                errs.append({"error": type(exc).__name__})
+            if errs:
+                return versions, (f"could not read {ACCOUNTS_PATH}@{h[:10]}: "
+                                  f"{str(errs[0].get('error'))[:120]}")
+            versions.append((t, _rosters(doc)))
+            if t <= since:
+                break  # the version in effect at the start of the window
     if not versions or versions[-1][0] > since:
         return versions, (f"history of {ACCOUNTS_PATH} does not reach the window start "
                           f"{iso(since)} (oldest version read: "
