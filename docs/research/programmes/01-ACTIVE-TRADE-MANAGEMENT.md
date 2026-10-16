@@ -13,7 +13,7 @@
 | measure | population | instrument | baseline (MEASURED 2026-10-14) |
 |---|---|---|---|
 | giveback R = peak R − realised R, per leg and per class | closed trades with a `position_telemetry` row and a readable `peak_r`, joined to `trades` on `order_package_id`, never pooled across account classes | `scripts/research/giveback_census.py` (new, this lane; unit `RQ-20261014-9807-01`, weekly) | **not yet measured** — the first run is the baseline; do not quote one until it lands |
-| TP-doctrine compliance | every (account, leg) routing in `config/accounts.yaml` | `python3 scripts/ci/check_tp_doctrine.py --json` | **0 of 50** routings compliant at 07:28Z; real money + prop = 13 routings: real-money entry states 4 sentinel / 3 declared, producer state `no_tp_verdict` on 5 and `rule_undeclared` on 2; all 6 prop routings `declared` / `rule_undeclared` |
+| TP-doctrine compliance | every (account, leg) routing in `config/accounts.yaml` | `python3 scripts/ci/check_tp_doctrine.py --json` | **0 of 50** routings compliant at 07:28Z (re-run 2026-10-16T07:15Z: **0 of 54**); real money + prop = 13 routings: real-money entry states 4 sentinel / 3 declared, producer state `no_tp_verdict` on 5 and `rule_undeclared` on 2; all 6 prop routings `declared` / `rule_undeclared` |
 | TP amended mid-trade | closed trades since 2026-09-01 with an entry-time target | amend census (PLANNING.md § 5; GEOM-CENSUS row) | 0 of 748 TP amends vs 131 of 752 SL amends (2026-10-07; re-run, do not quote) |
 | real-money expectancy | real-money closes | `/api/bot/performance` | −0.3231 R lifetime (n=431, 2026-09-21, pre-cut); latest window n=4 (G1 baseline) |
 
@@ -37,7 +37,7 @@ DESTINATION (Q8): per-bar path data ─▶ first-passage census ─▶ simple st
 | Q | question | why it is first/next | existing units (do not duplicate) |
 |---|---|---|---|
 | **Q1** | How much R does each live leg give back between its peak and its close, and what is its net R per capital-day? | The pain point has never been a number per leg; every cell choice in Q3/Q4 keys on it | none — new `RQ-20261014-9807-01` |
-| **Q2** | Where does each leg's own history say the move runs out — the entry-time TP as an MFE quantile, conditioned on entry volatility and regime? | Clause 1: a sentinel or venue-cap TP is not a prediction; `mi307` shows the real-money "declared" targets mostly rest at the cap and the predictive target sits at 2.0–2.5 R (INFERRED from the 2026-09-18 distribution) | unconditioned finite target: `RQ-20261010-419b-01` (eth_4h, queued), `RQ-20261006-061` (alpaca 1d, queued, expected `infeasible` per leg → family pooling follow-on), monthly E35 sweeps; head version `blocked/RQ-20261009-900/901`; **new conditioned version** `blocked/RQ-20261014-9807-02` |
+| **Q2** | Where does each leg's own history say the move runs out — the entry-time TP as an MFE quantile, conditioned on entry volatility and regime? | Clause 1: a sentinel or venue-cap TP is not a prediction; `mi307` shows the real-money "declared" targets mostly rest at the cap and the predictive target sits at 2.0–2.5 R (INFERRED from the 2026-09-18 distribution) | unconditioned finite target: `RQ-20261010-419b-01` (eth_4h, closed FAIL), `RQ-20261006-061` (alpaca 1d, closed INDETERMINATE → family pooling follow-on `RQ-20261015-cab7-06`, INDETERMINATE), monthly E35 sweeps; head version `blocked/RQ-20261009-900/901`; **new conditioned version** `blocked/RQ-20261014-9807-02` |
 | **Q3** | Does a per-bar revision rule (extend while the thesis holds; ATR-rescale; stall pull-in) beat the leg's bracket as it trades today, calibration first? | Clause 2; the landed 2026-10-08 runs already hold **PASS rows nobody has read**: `tp_extend` 6/24 cells on `xrp_pullback_2h` and 6/24 on `ada_pullback_2h` (`RQ-20261007-001`, OOS n=49 each), `tp_retarget` 2/9 on `trend_donchian_xrp_4h` (`RQ-20261007-003`, OOS n=31) — 0 ledger dispositions | `RQ-20261007-001/003` (landed), `RQ-20261007-080` (Donchian measured-move, queued); **new confirmation** `RQ-20261014-9807-03` |
 | **Q4** | When do we stop waiting — a giveback / exhaustion stop keyed to the measured giveback, and a momentum-keyed time stop? | Clause 3: the trail says when the thesis failed; today the cells are fixed (`gb1R_afterMFE1R/2R`), not keyed to any leg's distribution | `RQ-20261007-042` (ADX-tightening trail), `RQ-20261007-043` (momentum-keyed time stop), monthly M20 sweeps; **new census-keyed cells** `blocked/RQ-20261014-9807-04` |
 | **Q5** | Can a per-bar exhaustion signal (bars since peak, ADX falling, range contraction) predict that the rest of the path from here is negative — the "momentum turning" detector? | The operator's stated fix; it is a label study first (P(path from here < 0 | signal)) and only then a lever; the rows are M23 meta-labels for P2 | none; **new** `blocked/RQ-20261014-9807-05` (blocked on `ML-LEG-CORPUS`) |
@@ -141,9 +141,16 @@ The tree [`research/programmes/01-active-trade-management.yaml`](../../../resear
 - A longer-window fixed TP for ada and xrp_pullback cannot reach power.
 - The census-keyed stop cells (blocked/RQ-20261014-9807-04) stay blocked. Ledger-derived giveback reads negative on 20–50% of trades, because `mfe_r` is a lagged lower bound (MEASURED in the lane sandbox). They need EXIT-PATH-EMIT-OFFLINE.
 
+**Manager audit input, same day** (`docs/research/programmes/reviews/2026-10-16/01-ATM.md`, PR #18532):
+- `RQ-20261007-080` (Donchian measured-move TP revision) is session-graded **PASS** from its committed artifacts. At width_mult 1.0 the pooled result is +24.35 R over 1,439 control trades, with a fold majority at k = 3/4/5 and 46.1% of revisions cap-bound. It improves eth_4h and xrp_4h and worsens both prop legs.
+- Its per-leg confirmations (`P1-Q3-eth4h/xrp4h-measured-move-confirm`) are emitted by the replenisher once that grade is on `main`. The verifier refuses a same-PR unlock.
+- `9807-02` is retired as superseded by cab7-05.
+- The 16 per-leg 1d-equity e35 monthly units are retired: base OOS 4–11, never able to reach 39. The pooled lever `RQ-20261015-1bf3-01` is the powered form.
+
 **Builds filed:**
 - ABLATION-TP-CALIBRATION: calibration-first for revision cells.
 - QUEUE-GEN-ROSTER-SYNC: the generator minted 7 duplicate keys and never retires off-roster legs. 17 such sweep units were retired in this PR, each with a reason.
+- TP-REVISION-RECORD-CONTRACT: `tp_revision_sweep.py`'s records cannot be emitted, so 080's PASS never reached `research/results/`.
 
 **Q8 decision points:** the 8.1 census sets whether the prize funds the model rungs; 8.2/8.4 say whether the state carries information beyond where the trade is; 8.3/8.5 say whether that information pays for its exits. A FAIL at any rung is written back to row `IN-TRADE-EXIT-MODEL` and to `ROADMAP.md` L-ATM with the number; the live-history proposal `EXIT-PATH-TELEMETRY-LIVE` is scheduled only when a policy PASS needs a shadow.
 
