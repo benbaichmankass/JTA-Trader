@@ -1,0 +1,23 @@
+{
+ "run": "RESEARCH-OPS-2026-10-16-1447", "finished_at": "2026-10-16T15:30:00Z", "by": "research-ops-lane-20261016-1447",
+ "floor": 66, "floor_basis": "computed_floor(fired_24h 83)", "authoring_queue_depth": 8,
+ "idle_backends": ["github_runner_data", "kaggle"], "needs_review_triaged": 0, "needs_review_left": 27,
+ "needs_review_note": "27 in the bucket; result_disposition_check reports 19 owned, 0 unowned. No grading edits written this pass (budget); UNGRADED 1 = RQ-20260928-006, an id collision with a blocked/ unit, already filed (PI-20261016-IKK5NFPO-0001) and routed to RQ-ID-ALLOCATOR this pass.",
+ "throughput": {"runnable_before": 113, "runnable_after": 113, "queued": 213, "fired_24h": 83, "results_landed_24h": 89, "hours_since_last_dispatch": 0.7, "idle_alarm": false},
+ "mechanism": {"dispatch_receipt": "ok: liveness fresh (0.67h)", "collector": "ok: 13 verdict files landed since 09:35Z, all measured", "stranded_stamp_prs": "one open automation/research-queue PR (#18611, opened 13:28Z, ~1.5h old at 15:00Z); age vs STRANDED_STAMP_HOURS not checked", "incident": null, "watchdog": "newest row 2026-10-13 self_healed; no open escalated incident"},
+ "results_read": {"pass": 5, "fail": 7, "indeterminate": 0, "wiring_only": 0, "not_applicable": 1,
+  "units": [
+   "RQ-20261016-65ff-05 PASS trend_donchian_sol_prop hot-vol skip, 2022-10..2024-10, VH80 dR +4.90 R n(B)=136 -> LEAD only: unit's own disclosure says a smoke on the recent window read fail; note on REGIME-PROGRAM, no packet",
+   "RQ-20261016-65ff-06 PASS ada_pullback_2h VH95 dR +7.27 R but VH80 -1.28 and VH90 -5.76 (best of 3) -> confirmation unit RQ-20261016-64d6-01 authored",
+   "RQ-20261016-65ff-01/-02/-07/-08 FAIL no reachable lever beats removed -> Tier-3 strip proposals stay with the manager; nothing edited",
+   "RQ-20261016-65ff-20/-22 PASS trainer parity reference; 65ff-21 not_applicable no_data (Kaggle side not landed yet) -> no action, re-asks itself",
+   "RQ-20261012-75b2-20 FAIL ML family, RQ-20261014-65cc-01 FAIL jobless-claims ES event study, RQ-20261014-9d20-02/-03 FAIL meta-label AUC spans prior -> no action, because each rule's FAIL closes its question; news layer and WEPE not retired"
+  ]},
+ "unlocked": [], "retired": [], "levers_filed": [],
+ "units_authored": ["RQ-20261016-64d6-01"], "followups_filed": ["RQ-20261016-64d6-01"],
+ "routed_pipeline_items": ["PI-20261016-IKK5NFPO-0001 -> RQ-ID-ALLOCATOR", "PI-20261016-IKK5NFPO-0003 -> RESEARCH-TOOLING-GAPS", "PI-20261016-QOTFUEXV-0001/-0002 -> RESEARCH-CONFIRM-FRESH-WINDOW", "PI-20261016-TT4AZN7N-0001 -> RESEARCH-PIPELINE-SLO", "PI-20261016-6RBHEWTW-0002 -> RESEARCH-PROGRAMME-PLANS"],
+ "authoring": {"queue_depth": 8, "nodes_drafted": 0, "nodes": [], "theme_shortfall": {"regime": 16, "ml_health": 4, "infra": 7},
+  "note": "0 programme nodes drafted: the top 8 authoring-queue nodes need an instrument or a window check (P3-Q1 waits on LIVE-BT-STAGE-B; P1-Q7 nodes need E65's window). One hand unit authored for regime instead."},
+ "not_run": ["needs_review triage writes (step C)", "programme node authoring (step E.0)", "blocked/ audit beyond the health check's warnings", "stamp PR #18611 age check"],
+ "handoff": ["OPS-AUTHOR-SKIPPED persists: next pass must draft P1-Q7-sol-tp3-prop or P1-Q7-gtd-timeclose-prop first", "regime theme still 0 runnable of 16 share: only 64d6-01 added; author from REGIME-PROGRAM", "SOL-prop hot-vol: third-window arbiter needs a SOL 1h history check from 2020-10", "check #18611"]
+}
