@@ -142,21 +142,26 @@ The fix is a Tier-1 harness change (row `PAIRS-R-SCALE`). After it lands, the re
 | **W3** (to 11-04) | Q2 on `trend_donchian_xrp_4h`'s remaining axes (`min_confidence`, side, `skip_hours`) if 06/07 read. Prop legs' fold inconsistency (2/4 on both): P5 picks the sizing half, P3 the entry half. Transfer of any CONFIRMED lever to the prop twins | `PERF-FU-LEG-REPLAY` (lane owned elsewhere) unblocks Q7 | M22 roster from the honest pairs record |
 | **W4** (to 11-11) | Q7 leave-one-out on the replay. Census re-read: did any change move a leg's grade? (population: that leg's record after the change) | — | W5+ re-cut from the measured census |
 
-### 5a. Machine tree and the W1 read (lane P3-STRATEGY-BACKLOG-1016, 2026-10-16)
+### 5a. Machine tree, the W1 read and the audit revision (lane P3-STRATEGY-BACKLOG-1016, 2026-10-16)
 
 The questions above are encoded in [`research/programmes/03-strategy-improvement.yaml`](../../../research/programmes/03-strategy-improvement.yaml), so `queue_replenish.py --authoring-queue` sees them.
 
 - **W1 verdicts (closed, from `research/results/`):**
-  - FAIL: `470a-01`, `-02`, `-03`, `-04`, `-06`, `-07`, `-08`, `-10`.
-  - PASS: `470a-05` (ada `pullback_frac` 0.618) and `-09` (eth_4h `min_confidence` 0.7). Their S0-C confirmations belong to lane RESEARCH-FOLLOWUP-1016.
-  - `f01d-02` (eth_prop, 8 folds) read INDETERMINATE / `control_failed`. The cause was ONE warm-up-boundary trade; all 163 record trades reproduced exactly. Build row `ABLATION-CONTROL-WARMUP`.
-- **Runnable now: 26 units, `RQ-20261016-c56e-01..26`.**
-  - **Q2 sweeps on real-money legs (01–09):** `xrp_pullback_2h` (`min_confidence`, cooldown, `trend_lookback`, `pullback_lookback`), `ada_pullback_2h` (cooldown, `trend_lookback`), `trend_donchian_eth_4h` (`donchian`, side) and `trend_donchian_xrp_4h` (`min_confidence`).
+  - All entry sweeps on the real-money legs FAILED, or passed on one window and then failed confirmation.
+  - **All four single-window best-of-3 PASSes failed their S0-C confirmation:** f0e2-05 → 470a-01, f0e2-10 → 470a-10, 470a-05 → RQ-20261015-4941-01, 470a-09 → RQ-20261015-4941-02.
+  - Rule § 2.3 therefore changes for new work. **A new entry sweep registers its confirmation inside the unit:** 8 calendar folds over about 6 years, and a candidate must win at least 7 of 8 (the f01d style). It does not get a single-window lead followed by a separate S0-C unit. Audit: `docs/research/programmes/reviews/2026-10-16/03-STRATEGY.md` § 4.1.
+  - f01d-02 (eth_prop, 8 folds) read INDETERMINATE / `control_failed`. That was ONE warm-up-boundary trade; all 163 record trades reproduced exactly. Build row `ABLATION-CONTROL-WARMUP`.
+- **Runnable now: 22 units, `RQ-20261016-c56e-05..26`.**
+  - **Q2, multi-fold, real money (05–09):** `ada_pullback_2h` (cooldown, `trend_lookback`), `trend_donchian_eth_4h` (`donchian`, side) and `trend_donchian_xrp_4h` (`min_confidence`).
   - **L-LADDER re-validation (10–13):** the four bybit_2 legs at Stage 0 on the disjoint window before their records.
-  - **`f01d-02` re-ask (14):** the same question on the five years before the record, which needs no control.
+  - **f01d-02 re-ask (14):** five years before the record, so no control is needed.
   - **Breadth (15):** `trend_donchian_sol_4h` on 2020–2023.
   - **Q3 power (16–26):** every alpaca 1d leg with a record, on about 15–18.5 years of Yahoo daily bars. GLD stands in as the power proxy for `iaum_pullback_1d`, which has identical params.
-- **The tree holds:** one S0-C node per sweep PASS; the fail branches (exhaustion, retire-or-keep inputs); `unit:` nodes for tuning the alpaca_live legs once they are graded at power; and the M22, M27 and M18 reads.
+- **Withdrawn before merge (01–04):** the four `xrp_pullback_2h` single-window entry sweeps. The audit asks the operator to mark that leg's entry axes exhausted and route it to P1 exits.
+- **Builds filed:**
+  - `LIVE-BT-STAGE-B`: the xrp/ada live-below-backtest cause, and the mirror-vs-live close-count gap.
+  - `GRADER-FAIL-WORDING`.
+  - `P3-QUEUE-HYGIENE`: 10 duplicates and 12 generated units on legs with no roster, re-verified.
 
 ## 6. What this plan does not do
 

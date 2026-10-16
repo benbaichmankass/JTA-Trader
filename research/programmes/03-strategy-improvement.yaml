@@ -5,74 +5,21 @@
 # every edit holds for a human merge. `value` figures are INFERRED planning weights (same scale as
 # the programme's units, e.g. 470a-04 declares $150 x 0.25), not measurements.
 # Lane P3-STRATEGY-BACKLOG-1016 (2026-10-16). The RUNNABLE-NOW questions are queue units
-# RQ-20261016-c56e-01..26 (registered directly, not via a node, so they dispatch on merge); the
+# RQ-20261016-c56e-05..26 (registered directly, not via a node, so they dispatch on merge; 01-04, single-window
+# xrp_pullback_2h entry sweeps, were withdrawn before merge after the 2026-10-16 programme audit); the
 # nodes below are what follows each verdict, plus the questions blocked on a build or not yet
 # authorable. NOT encoded (owned elsewhere, do not duplicate): the S0-C confirmations of
 # 470a-05 (ada pullback_frac 0.618) and 470a-09 (eth_4h min_confidence 0.7) -- lane
 # RESEARCH-FOLLOWUP-1016; the 8bbc-01/-02 cause-naming harness -- PI-20261015-10152047-0001;
 # the Q7 leave-one-out -- 419b-04 closed no_action_warranted; trend_donchian_1h's missing record --
 # RQ-20261007-032 (blocked). Weekly units (470a-11 census, 8bbc-01/-02) never close, so no node
-# can wait on them: their reads are research-ops' job (SKILL § D).
+# can wait on them: their reads are research-ops' job (SKILL § D). DESIGN RULE (audit 2026-10-16 § 4.1): all
+# four single-window best-of-3 PASSes failed their S0-C confirmation, so every new entry sweep here registers its
+# confirmation INSIDE the unit (8 calendar folds over ~6 years, a candidate must win >= 7 of 8).
 programme: P3
 plan: docs/research/programmes/03-STRATEGY-IMPROVEMENT.md
 nodes:
-- id: P3-Q2-xrp-pb-mc-confirm
-  goal: G1
-  roadmap:
-  - M21
-  value:
-    usd_at_stake_per_month: 150
-    confidence: 0.3
-  after:
-  - unit: RQ-20261016-c56e-01
-    verdict: pass
-  needs_authoring: 'RQ-20261016-c56e-01 PASSED (best-of-3 on xrp_pullback_2h, 2024-10..2026-10). Register the ONE
-    rung-S0-C confirmation: the passing arm alone vs B, on the disjoint window immediately preceding (2022-10-05
-    .. 2024-10-04 23:59), same bars, nothing re-selected, windows not pooled, same 1.0 R bar / dDD <= 0 / 3-of-4
-    folds / 39 floor. No Tier-3 proposal until it reads CONFIRMED (03 § 2.3).'
-- id: P3-Q2-xrp-pb-cd-confirm
-  goal: G1
-  roadmap:
-  - M21
-  value:
-    usd_at_stake_per_month: 150
-    confidence: 0.3
-  after:
-  - unit: RQ-20261016-c56e-02
-    verdict: pass
-  needs_authoring: 'RQ-20261016-c56e-02 PASSED (best-of-3 on xrp_pullback_2h, 2024-10..2026-10). Register the ONE
-    rung-S0-C confirmation: the passing arm alone vs B, on the disjoint window immediately preceding (2022-10-05
-    .. 2024-10-04 23:59), same bars, nothing re-selected, windows not pooled, same 1.0 R bar / dDD <= 0 / 3-of-4
-    folds / 39 floor. No Tier-3 proposal until it reads CONFIRMED (03 § 2.3).'
-- id: P3-Q2-xrp-pb-tl-confirm
-  goal: G1
-  roadmap:
-  - M21
-  value:
-    usd_at_stake_per_month: 150
-    confidence: 0.3
-  after:
-  - unit: RQ-20261016-c56e-03
-    verdict: pass
-  needs_authoring: 'RQ-20261016-c56e-03 PASSED (best-of-3 on xrp_pullback_2h, 2024-10..2026-10). Register the ONE
-    rung-S0-C confirmation: the passing arm alone vs B, on the disjoint window immediately preceding (2022-10-05
-    .. 2024-10-04 23:59), same bars, nothing re-selected, windows not pooled, same 1.0 R bar / dDD <= 0 / 3-of-4
-    folds / 39 floor. No Tier-3 proposal until it reads CONFIRMED (03 § 2.3).'
-- id: P3-Q2-xrp-pb-pl-confirm
-  goal: G1
-  roadmap:
-  - M21
-  value:
-    usd_at_stake_per_month: 150
-    confidence: 0.3
-  after:
-  - unit: RQ-20261016-c56e-04
-    verdict: pass
-  needs_authoring: 'RQ-20261016-c56e-04 PASSED (best-of-3 on xrp_pullback_2h, 2024-10..2026-10). Register the ONE
-    rung-S0-C confirmation: the passing arm alone vs B, on the disjoint window immediately preceding (2022-10-05
-    .. 2024-10-04 23:59), same bars, nothing re-selected, windows not pooled, same 1.0 R bar / dDD <= 0 / 3-of-4
-    folds / 39 floor. No Tier-3 proposal until it reads CONFIRMED (03 § 2.3).'
-- id: P3-Q2-ada-pb-cd-confirm
+- id: P3-Q2-ada-pb-cd-propose
   goal: G1
   roadmap:
   - M21
@@ -82,11 +29,12 @@ nodes:
   after:
   - unit: RQ-20261016-c56e-05
     verdict: pass
-  needs_authoring: 'RQ-20261016-c56e-05 PASSED (best-of-3 on ada_pullback_2h, 2024-10..2026-10). Register the ONE
-    rung-S0-C confirmation: the passing arm alone vs B, on the disjoint window immediately preceding (2022-10-05
-    .. 2024-10-04 23:59), same bars, nothing re-selected, windows not pooled, same 1.0 R bar / dDD <= 0 / 3-of-4
-    folds / 39 floor. No Tier-3 proposal until it reads CONFIRMED (03 § 2.3).'
-- id: P3-Q2-ada-pb-tl-confirm
+  needs_authoring: 'RQ-20261016-c56e-05 PASSED its one-unit multi-fold rule (ada_pullback_2h, cooldown: >= 7 of
+    8 folds over ~6 years, the R bar, dDD <= 0). The fold clause IS the registered confirmation (audit 2026-10-16:
+    no further single-window S0-C). Register the Tier-3 PROPOSAL note on the owning row with the record, after reading
+    the mandate resolver (scripts/ops/mandate_resolver.py) and the leg''s live_vs_backtest percentile; the mirror
+    follows by equality. No config edit by the research lane.'
+- id: P3-Q2-ada-pb-tl-propose
   goal: G1
   roadmap:
   - M21
@@ -96,11 +44,12 @@ nodes:
   after:
   - unit: RQ-20261016-c56e-06
     verdict: pass
-  needs_authoring: 'RQ-20261016-c56e-06 PASSED (best-of-3 on ada_pullback_2h, 2024-10..2026-10). Register the ONE
-    rung-S0-C confirmation: the passing arm alone vs B, on the disjoint window immediately preceding (2022-10-05
-    .. 2024-10-04 23:59), same bars, nothing re-selected, windows not pooled, same 1.0 R bar / dDD <= 0 / 3-of-4
-    folds / 39 floor. No Tier-3 proposal until it reads CONFIRMED (03 § 2.3).'
-- id: P3-Q2-eth4h-don-confirm
+  needs_authoring: 'RQ-20261016-c56e-06 PASSED its one-unit multi-fold rule (ada_pullback_2h, trend_lookback: >=
+    7 of 8 folds over ~6 years, the R bar, dDD <= 0). The fold clause IS the registered confirmation (audit 2026-10-16:
+    no further single-window S0-C). Register the Tier-3 PROPOSAL note on the owning row with the record, after reading
+    the mandate resolver (scripts/ops/mandate_resolver.py) and the leg''s live_vs_backtest percentile; the mirror
+    follows by equality. No config edit by the research lane.'
+- id: P3-Q2-eth4h-don-propose
   goal: G1
   roadmap:
   - M21
@@ -110,11 +59,12 @@ nodes:
   after:
   - unit: RQ-20261016-c56e-07
     verdict: pass
-  needs_authoring: 'RQ-20261016-c56e-07 PASSED (best-of-3 on trend_donchian_eth_4h, 2023-10..2026-10). Register
-    the ONE rung-S0-C confirmation: the passing arm alone vs B, on the disjoint window immediately preceding (2020-10-13
-    .. 2023-10-12 23:59), same bars, nothing re-selected, windows not pooled, same 2.0 R bar / dDD <= 0 / 3-of-4
-    folds / 39 floor. No Tier-3 proposal until it reads CONFIRMED (03 § 2.3).'
-- id: P3-Q2-eth4h-side-confirm
+  needs_authoring: 'RQ-20261016-c56e-07 PASSED its one-unit multi-fold rule (trend_donchian_eth_4h, donchian: >=
+    7 of 8 folds over ~6 years, the R bar, dDD <= 0). The fold clause IS the registered confirmation (audit 2026-10-16:
+    no further single-window S0-C). Register the Tier-3 PROPOSAL note on the owning row with the record, after reading
+    the mandate resolver (scripts/ops/mandate_resolver.py) and the leg''s live_vs_backtest percentile; the mirror
+    follows by equality. No config edit by the research lane.'
+- id: P3-Q2-eth4h-side-propose
   goal: G1
   roadmap:
   - M21
@@ -124,11 +74,12 @@ nodes:
   after:
   - unit: RQ-20261016-c56e-08
     verdict: pass
-  needs_authoring: 'RQ-20261016-c56e-08 PASSED (best-of-3 on trend_donchian_eth_4h, 2023-10..2026-10). Register
-    the ONE rung-S0-C confirmation: the passing arm alone vs B, on the disjoint window immediately preceding (2020-10-13
-    .. 2023-10-12 23:59), same bars, nothing re-selected, windows not pooled, same 2.0 R bar / dDD <= 0 / 3-of-4
-    folds / 39 floor. No Tier-3 proposal until it reads CONFIRMED (03 § 2.3).'
-- id: P3-Q2-xrp4h-mc-confirm
+  needs_authoring: 'RQ-20261016-c56e-08 PASSED its one-unit multi-fold rule (trend_donchian_eth_4h, side: >= 7 of
+    8 folds over ~6 years, the R bar, dDD <= 0). The fold clause IS the registered confirmation (audit 2026-10-16:
+    no further single-window S0-C). Register the Tier-3 PROPOSAL note on the owning row with the record, after reading
+    the mandate resolver (scripts/ops/mandate_resolver.py) and the leg''s live_vs_backtest percentile; the mirror
+    follows by equality. No config edit by the research lane.'
+- id: P3-Q2-xrp4h-mc-propose
   goal: G1
   roadmap:
   - M21
@@ -138,48 +89,41 @@ nodes:
   after:
   - unit: RQ-20261016-c56e-09
     verdict: pass
-  needs_authoring: 'RQ-20261016-c56e-09 PASSED (best-of-3 on trend_donchian_xrp_4h, 2022-10..2026-10). Register
-    the ONE rung-S0-C confirmation: the passing arm alone vs B, on the disjoint window immediately preceding (2018-10-13
-    .. 2022-10-12 23:59), same bars, nothing re-selected, windows not pooled, same 2.0 R bar / dDD <= 0 / 3-of-4
-    folds / 39 floor. No Tier-3 proposal until it reads CONFIRMED (03 § 2.3).'
-- id: P3-Q2-xrp-pb-exhausted
-  goal: G1
-  roadmap:
-  - M21
-  - L-LADDER
-  value:
-    usd_at_stake_per_month: 300
-    confidence: 0.4
-  after:
-  - unit: RQ-20261016-c56e-01
-    verdict: fail
-  - unit: RQ-20261016-c56e-02
-    verdict: fail
-  - unit: RQ-20261016-c56e-03
-    verdict: fail
-  - unit: RQ-20261016-c56e-04
-    verdict: fail
-  needs_authoring: 'Tune-before-retire is EXHAUSTED on the entry side of xrp_pullback_2h (real money): adx_min (470a-02),
-    pullback_frac (470a-04), vol-skip-above (f0e2-11), short side (419b-02) and now min_confidence, cooldown, trend_lookback
-    and pullback_lookback all FAILED. Register the retire-or-keep evidence case for the manager: read c56e-10 (Stage
-    0 on the four years before the record) and the cause-naming harness (PI-20261015-10152047-0001) beside it; the
-    case is a roster INPUT under MD-DEMOTE / the operator''s retire-only-on-registered-exhaustion rule (2026-09-27),
-    never a roster act here.'
-- id: P3-Q6-trend-lookback-family
+  needs_authoring: 'RQ-20261016-c56e-09 PASSED its one-unit multi-fold rule (trend_donchian_xrp_4h, min_confidence:
+    >= 7 of 8 folds over ~6 years, the R bar, dDD <= 0). The fold clause IS the registered confirmation (audit 2026-10-16:
+    no further single-window S0-C). Register the Tier-3 PROPOSAL note on the owning row with the record, after reading
+    the mandate resolver (scripts/ops/mandate_resolver.py) and the leg''s live_vs_backtest percentile; the mirror
+    follows by equality. No config edit by the research lane.'
+- id: P3-Q6-trend-lookback-transfer
   goal: G1
   roadmap:
   - M21
   value:
-    usd_at_stake_per_month: 200
+    usd_at_stake_per_month: 150
     confidence: 0.3
   after:
-  - unit: RQ-20261016-c56e-03
-    verdict: pass
   - unit: RQ-20261016-c56e-06
     verdict: pass
-  needs_authoring: 'trend_lookback PASSED on BOTH real-money 2h pullbacks (xrp c56e-03, ada c56e-06). A family property
-    is the reading (03 § 4 Q6): register the transfer of each leg''s passing value as ONE pre-fixed arm on eth_pullback_2h
-    and sol_pullback_2h (selection-free), after each leg''s own S0-C reads CONFIRMED.'
+  needs_authoring: 'trend_lookback PASSED multi-fold on ada_pullback_2h (c56e-06). Q6 transfer (03 § 4): register
+    the passing value as ONE pre-fixed arm (selection-free) on xrp_pullback_2h and eth_pullback_2h, same 6-year
+    8-fold design and 7-of-8 rule. If the operator has routed xrp_pullback_2h''s entry side to P1 (audit 2026-10-16
+    § 5.3), test eth_pullback_2h only and say so.'
+- id: P3-Q1-live-bt-stage-b
+  goal: G1
+  roadmap:
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 600
+    confidence: 0.4
+  needs_authoring: 'HIGHEST MONEY (audit 2026-10-16 § 5.1). xrp_pullback_2h and ada_pullback_2h trade real money
+    BELOW_BACKTEST (8bbc-01: -8.84 R over 16, 3.4th pct; 8bbc-02: -7.04 R over 15, 4.7th pct). Stage B: register
+    ONE unit that joins each live close to its config-exact backtest counterpart over the same bars and splits the
+    gap into cost (fee/slippage/funding vs the harness stack), missed/extra signals, exit-path differences and regime;
+    and in the same unit counts the mirror-vs-live close gap (bybit_portfolio 11 vs bybit_2 16 xrp; 9 vs 15 ada,
+    MEASURED in the 8bbc results). INSTRUMENT GAP: leg_replay_emit.py replays the harness only; the live join needs
+    trades from the journal (needs_vm_data) -- build row LIVE-BT-STAGE-B (PI-20261015-10152047-0001). Author the
+    unit the day that row lands; until then this ask stays here, not in a memo. c56e-10/-11 are the runnable ''window''
+    half.'
 - id: P3-L-xrp-pb-prewindow-fail
   goal: G1
   roadmap:
