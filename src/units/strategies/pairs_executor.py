@@ -76,7 +76,8 @@ def decide_pair(params: pe.PairParams, close_a: Sequence[float], close_b: Sequen
                 backstop_mult: float = 3.0,
                 min_leg_notional_usd: float = 10.0,
                 whole_units: bool = False,
-                leg_tp: str = "backstop") -> PairDecision:
+                leg_tp: str = "backstop",
+                require_fixed_beta_risk: bool = False) -> PairDecision:
     """PURE decision for one pair this tick. No I/O. `execution_mode` 'shadow'
     downgrades an would-be open/close to a shadow_* soak event with the legs still
     computed (observe-only). Returns a PairDecision.
@@ -89,7 +90,18 @@ def decide_pair(params: pe.PairParams, close_a: Sequence[float], close_b: Sequen
     level (``pairs_engine.leg_target_prices``; TP doctrine clause 1). A
     ``spread_target`` pair whose target cannot be computed does not open
     (``skip_no_tp_target``): a backstop TP standing in for it would be the
-    fictional TP the doctrine forbids."""
+    fictional TP the doctrine forbids.
+
+    ``require_fixed_beta_risk`` (the SESSION venue passes True): size only when
+    the R unit the stop and the sizing use IS the fixed-β R unit
+    (``pairs_engine.fixed_beta_risk``, within ``RISK_SCALE_TOLERANCE``);
+    otherwise ``skip_risk_scale`` and nothing is sized. This is how the Alpaca
+    path cannot inherit PAIRS-R-SCALE: a rolling-β R unit inflated by β drift
+    would undersize every leg, and here it is refused on the measured ratio,
+    not on a config field someone could change. ``hedge_beta: one`` passes by
+    construction. The Bybit sleeve does not pass it (operator 2026-10-16: its
+    paper legs keep running while PAIRS-R-SCALE is fixed); both R units ride
+    on its soak rows so the defect is measured there."""
     label = _pair_label(params.symbol_a, params.symbol_b)
     base = {"symbol_a": params.symbol_a, "symbol_b": params.symbol_b,
             "execution_mode": execution_mode}
@@ -114,6 +126,15 @@ def decide_pair(params: pe.PairParams, close_a: Sequence[float], close_b: Sequen
         return PairDecision("skip_concurrency", label,
                             soak={**base, "z": sig["z"], "direction": sig["direction"],
                                   "held": sorted(held_symbols)})
+    risk_scale = {"risk": sig["risk"], "risk_fixed_beta": sig.get("risk_fixed_beta"),
+                  "risk_scale_ratio": sig.get("risk_scale_ratio")}
+    if require_fixed_beta_risk:
+        ratio = sig.get("risk_scale_ratio")
+        if ratio is None or abs(float(ratio) - 1.0) > pe.RISK_SCALE_TOLERANCE:
+            return PairDecision("skip_risk_scale", label,
+                                soak={**base, "z": sig["z"], "direction": sig["direction"],
+                                      "beta": sig["beta"], "hedge_beta": params.hedge_beta,
+                                      **risk_scale})
     # size (with the correlation haircut for already-open correlated pairs)
     haircut = psz.correlation_haircut(correlation_open, factor=corr_factor)
     budget = float(risk_budget_usd) * haircut
@@ -135,7 +156,7 @@ def decide_pair(params: pe.PairParams, close_a: Sequence[float], close_b: Sequen
             or sizing["notional_a_usd"] < min_notional
             or sizing["notional_b_usd"] < min_notional):
         return PairDecision("skip_size", label,
-                            soak={**base, "z": sig["z"], "risk": sig["risk"],
+                            soak={**base, "z": sig["z"], **risk_scale,
                                   "budget_usd": round(budget, 2), "haircut": haircut,
                                   "notional_a_usd": round(sizing["notional_a_usd"], 2),
                                   "notional_b_usd": round(sizing["notional_b_usd"], 2),
@@ -163,7 +184,7 @@ def decide_pair(params: pe.PairParams, close_a: Sequence[float], close_b: Sequen
     ]
     ev = "shadow_open" if execution_mode == "shadow" else "open"
     soak = {**base, "z": sig["z"], "direction": sig["direction"], "beta": sig["beta"],
-            "risk": sig["risk"], "entry_spread": sig["entry_spread"], "stop_spread": sig["stop_spread"],
+            **risk_scale, "entry_spread": sig["entry_spread"], "stop_spread": sig["stop_spread"],
             "budget_usd": round(budget, 2), "haircut": haircut, "correlation_open": correlation_open,
             "tp_basis": tp_basis,
             "pairs_group_id": f"pair-{uuid.uuid4().hex[:12]}",
@@ -2064,7 +2085,8 @@ def run_pairs_tick(settings: Optional[Dict[str, Any]] = None) -> None:
                 risk_budget_usd=risk_budget, correlation_open=corr_open,
                 execution_mode=execution, corr_factor=corr_factor,
                 backstop_mult=backstop_mult, min_leg_notional_usd=min_leg_notional_usd,
-                whole_units=session, leg_tp=str(pair.get("leg_tp", "backstop")))
+                whole_units=session, leg_tp=str(pair.get("leg_tp", "backstop")),
+                require_fixed_beta_risk=session)
             if session:
                 decision.soak["decision_bar_source"] = bar_source
             if is_open:
