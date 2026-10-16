@@ -74,7 +74,10 @@ RECORD_INPUTS = "record-inputs.json"
 _ARTIFACT_RE = re.compile(r"^research-script-run(?:-trainer|-kaggle-cpu|-kaggle|-data)?-(RQ-\d{8}-(?:\d{3}|[0-9a-f]{4}-\d{2}))-(\d+)$")
 _EMIT_FIELDS = ("research_unit", "power_state", "decision_rule_id", "decision_rule_registered_at",
                 "verdict", "read_state", "population", "n", "tool", "measurement_file",
-                "records_file", "artifact_store", "artifact_locator", "note")
+                "records_file", "artifact_store", "artifact_locator", "note",
+                # RESEARCH-TRIAL-LEDGER (2026-10-16): script_run.derive_record's input-data hash. Absent from
+                # record-inputs.json written before then -> "" -> the record simply carries none.
+                "data_fingerprint")
 
 
 def _gh(args: List[str], *, timeout: int = 120) -> Optional[str]:
