@@ -1,0 +1,30 @@
+{
+  "id": "SOAK-MECH-A",
+  "title": "Soak fault A: alpaca_paper naked_rearm (gdx/iaum/qld/slv/tlt pullback/trend 1d) \u2014 stale pre-fix false positives; re-pass on next clean trade",
+  "phase": "W6",
+  "state": "landed_unproven",
+  "owner": "fix lane",
+  "lane": "session_018LaUrmMUmBuGtEMUcWJ7Qd",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Trades 5349/5352/6027/5873/5265: every naked_rearm repair stamped 2026-08-31..09-21 (protection_repair_first_at), all BEFORE FIX-SA-03's checker fix deployed 2026-09-29 ~18:05Z, which measured 20/20 such brackets NOT naked (checker could not see held stop legs). MEASURED 2026-10-16 over /api/diag/journal trades ids 2644-6643: 53 alpaca naked_rearm repairs, 0 after 09-29T18:05Z \u2014 but the denominator is thin: only 1 alpaca entry filled since (6395 tqqq_trend_long_1d, closed sl, no repair); the rest are holds/shadow no-ops. No new build; owner of the fix is FIX-SA-03. CLOSES WHEN: each of the 5 legs' next trade grades clean (no naked_rearm) in soak_state.",
+  "updated_at": "2026-10-16T06:13:13Z",
+  "updated_by": "session_018LaUrmMUmBuGtEMUcWJ7Qd",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "none: L-LADDER next already reads act on every passed / mechanical_fail soak; this row is one such action",
+    "arch": "none: no runtime component, path or contract changed by this row"
+  },
+  "observation": {
+    "what": "each of gdx_pullback_1d, iaum_pullback_1d, qld_trend_long_1d, slv_pullback_1d, tlt_pullback_1d (alpaca_paper) grades its next trade clean: no naked_rearm protection repair",
+    "how_to_check": "python3 scripts/ops/soak_state.py (leg state passed) or /api/diag/journal?table=trades: newest alpaca_paper row per leg has protection_repair_last_kind null",
+    "due_by": "2026-11-15T00:00Z"
+  },
+  "_seq": 524
+}
