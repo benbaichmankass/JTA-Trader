@@ -1,6 +1,6 @@
 id: RQ-20261015-8bbc-05
 title: 'velotrade_1 matched-risk control at 0.0035: does the 4h Donchian pair ADD ev/survival over the same 2-leg 1h book at the same risk? (follow-up to ee68-01 PASS)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: new_strategy_prop
@@ -93,3 +93,14 @@ related:
 what_it_does_not_do: Changes no roster, risk cap or config; does not re-grade ee68-01 or 1bf3-02. Window mismatch (1095 d 4h rows vs 730 d incumbents) reported, not equalised. Says nothing
   about live results.
 last_dispatched_at: '2026-10-15T22:14:45+00:00'
+grading:
+  attested: RULE-RQ-20261015-8bbc-05-MATCHED-RISK-0.0035
+  auto: true
+  decision_rule_id: RULE-RQ-20261015-8bbc-05-MATCHED-RISK-0.0035
+  evidence:
+  - research/results/RQ-20261015-8bbc-05/38815818730.jsonl
+  graded_at: '2026-10-16'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

@@ -1,0 +1,60 @@
+{
+  "dataset": {
+    "family": "market_features",
+    "symbol_scope": "ETHUSDT",
+    "timeframe": "1h",
+    "version": "v002"
+  },
+  "description": "Baseline LightGBM regime classifier for ETHUSDT 1h (range vs volatile from continuous vol + log-return features) \u2014 the no-cross-asset control for the S-CROSS-ASSET-PROBE A/B.",
+  "evaluator": "ml.evaluators.multiclass_classification.MulticlassClassificationEvaluator",
+  "evaluator_config": {
+    "holdout_fraction": 0.2,
+    "split_strategy": "time_aware_holdout",
+    "target_column": "regime_label",
+    "time_column": "ts"
+  },
+  "manifest_version": "v1",
+  "model_family": "classification_lightgbm",
+  "model_id": "eth-regime-1h-lgbm-v1",
+  "notes": "S-CROSS-ASSET-PROBE base leg. Identical to btc-regime-1h-lgbm-v2 except the\nsymbol (ETHUSDT) and the dataset version. Pair with\neth-regime-1h-lgbm-xasset-v1 (same dataset, same split) and read the\nf1_volatile / accuracy delta under the time-aware holdout. Leakage gate forbids\nforward_log_return / forward_log_return_vol / regime_label.\n",
+  "target_deployment_stage": "candidate",
+  "trainer": "ml.trainers.lightgbm_multiclass.LightGBMMulticlassTrainer",
+  "trainer_config": {
+    "categorical_columns": [
+      "vol_bucket",
+      "hour_of_day",
+      "dayofweek"
+    ],
+    "class_weight": {
+      "range": 1.0,
+      "volatile": 4.0
+    },
+    "feature_columns": [
+      "vol_bucket",
+      "rolling_log_return_vol",
+      "log_return",
+      "log_return_lag_1",
+      "log_return_lag_2",
+      "hour_of_day",
+      "dayofweek"
+    ],
+    "freeze_regime_spec": true,
+    "lgbm_params": {
+      "bagging_fraction": 0.9,
+      "bagging_freq": 5,
+      "feature_fraction": 0.9,
+      "learning_rate": 0.05,
+      "min_data_in_leaf": 50,
+      "num_leaves": 31
+    },
+    "n_iter": 200,
+    "sample_weight": {
+      "half_life_days": 90,
+      "time_column": "ts"
+    },
+    "seed": 42,
+    "target_column": "regime_label",
+    "vol_feature_column": "rolling_log_return_vol",
+    "vol_window_n": 20
+  }
+}

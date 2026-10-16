@@ -1,0 +1,23 @@
+{
+  "id": "SOAK-MECH-C",
+  "title": "Soak fault C: Bybit monitor close takes a same-side sibling's netted share (xrp_pullback_2h reconciler_filled)",
+  "phase": "W6",
+  "state": "in_flight",
+  "owner": "fix lane",
+  "lane": "session_018LaUrmMUmBuGtEMUcWJ7Qd",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [
+    18514
+  ],
+  "blocked_on": [],
+  "note": "ROOT CAUSE (measured, bybit_raw_order_history bybit_1 XRPUSDT 2026-09-26): 6193 ict_scalp_xrp_5m own PartialStopLoss filled 87674.6 @09:11:18; monitor sl_cross reduce-only close for 87674.6 @09:11:56 clamped by Bybit to 1221.9 = trade 6171's share; 6171 later journaled reconciler_filled at candle 1.5399 (real fill 1.5428). Recurred: 6289 ict_scalp_xrp_15m 2026-10-01 (2 reconciler_filled of 212 closes since 09-29). Reachable on bybit_2: xrp_pullback_2h + trend_donchian_xrp_4h share XRPUSDT. FIX #18514 (Tier-2 HOLD, manager merges): close_open_position Bybit sibling reserve. OBSERVATION THAT CLOSES IT: after deploy, a same-symbol close where the venue leg fired first logs 'own share already flat'/'clamped' and no sibling lands reconciler_filled; xrp_pullback_2h soak re-passes on its next clean trade.",
+  "updated_at": "2026-10-16T06:13:13Z",
+  "updated_by": "session_018LaUrmMUmBuGtEMUcWJ7Qd",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "_seq": 523
+}

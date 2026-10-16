@@ -389,7 +389,7 @@ class TestRosterCrossCheckAlreadyExists:
             account_open_positions(account)
 
         scoped = [c.get("symbol") for c in client.calls if "symbol" in c]
-        assert scoped == ["BTCUSDT", "ETHUSDT", "XRPUSDT", "ADAUSDT"], (
+        assert scoped == ["BTCUSDT", "ETHUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT"], (
             "an empty cfg roster must be backfilled from accounts.yaml"
         )
 

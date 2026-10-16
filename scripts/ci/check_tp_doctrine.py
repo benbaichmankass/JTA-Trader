@@ -223,6 +223,11 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     "bybit_2/trend_donchian_eth_4h": ER,
     "bybit_2/trend_donchian_xrp_4h": R,
     "bybit_2/xrp_pullback_2h": R,
+    # 2026-10-15 PROMOTE-PROP-LEGS (Tier-3, operator pre-authorized): trend_donchian_sol_prop is
+    # promoted with the SAME exit recipe it runs on the prop books (declared 6 R target, TP-REACH-FLOOR
+    # fail), so it inherits the breakout_2 / bybit_1 debt line verbatim. A visible, deliberate line on a
+    # REAL-MONEY routing: exit-refinement priority rises with it (money at stake).
+    "bybit_2/trend_donchian_sol_prop": ER,
     # ── prop ────────────────────────────────────────────────────────────────
     # breakout_1 legs removed 2026-10-07 (account retired, roster cleared).
     # R -> ER on 2026-10-15 (TP-REACH-FLOOR, operator-approved 2026-10-14): the
@@ -249,6 +254,7 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     "bybit_portfolio/trend_donchian_eth_4h": ER,
     "bybit_portfolio/trend_donchian_xrp_4h": R,
     "bybit_portfolio/xrp_pullback_2h": R,
+    "bybit_portfolio/trend_donchian_sol_prop": ER,   # mirrors bybit_2 (PROMOTE-PROP-LEGS, above)
     # ── paper ───────────────────────────────────────────────────────────────
     "alpaca_options_paper/gdx_pullback_1d": ER,
     "alpaca_options_paper/slv_pullback_1d": ER,

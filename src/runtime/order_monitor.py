@@ -929,6 +929,11 @@ def _venue_reports_position_already_flat(
     format, then the message wording.
     """
     if isinstance(exchange_response, dict):
+        # SOAK-MECH-FAULTS class C: close_open_position refused because this
+        # trade's share of a netted position is already gone (its own venue
+        # leg filled); what is left belongs to a sibling trade.
+        if exchange_response.get("own_share_already_flat") is True:
+            return True
         try:
             if int(exchange_response.get("retCode")) in _BYBIT_ALREADY_FLAT_CODES:
                 return True

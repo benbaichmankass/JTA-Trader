@@ -137,3 +137,10 @@ Fixed manifest: `eth-regime-1h-lgbm-v1` (ETH 1h is whole and published; LightGBM
 off-VM artefact entering the registry as `candidate` under a namespaced id (`<model_id>-offload`, §7 dual-writer rule) through the existing
 drain/ladder. It does not move the nightly cycle (phase 4, Tier-2 timer change) and does not cover the HMM / RegimeClassifier /
 regression classes, which need their own parity unit before their manifests leave the trainer.
+
+**Result (2026-10-16, measured).** RQ-20261015-8b93-02 PASSED on run 38832438124: the same input sha256, and the Kaggle-CPU and trainer
+models were bit-identical (every metric equal, agreement 1.0). RQ-20261016-8b93-01 re-ran the parity check on Kaggle CPU with `--emit-drop`
+(PASS, run 38843465348) and emitted the drop merged in #18513. The operator OK came at ~06:32Z ("Yes, register it"). Trainer diag #18521
+then ran `drain_inbox.py --apply --only eth-regime-1h-lgbm-v1/20261016T030629Z`. The result was `[ingested]`
+**`eth-regime-1h-lgbm-v1-offload`** at stage `candidate`, verified loadable, and a re-run of the drain reads `already_ingested`. The older
+2026-08-28 drop was left untouched. This is the first off-VM-trained artefact in the registry. It entered at `candidate` and was not promoted.

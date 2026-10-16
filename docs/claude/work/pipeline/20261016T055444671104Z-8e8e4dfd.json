@@ -1,0 +1,26 @@
+{
+  "based_on": "20261015T202115911007Z-efbb5bb7.json",
+  "due_when": {
+    "check_every_days": 1,
+    "due_date": "2026-10-16",
+    "kind": "date"
+  },
+  "id": "PI-20261015-FOYBZ9CV-0002",
+  "next_action": "ask_operator",
+  "observation": {
+    "due_by": "2026-10-16",
+    "how_to_check": "scripts/ops/diag_fetch.sh version; GET /api/bot/config",
+    "what": "/api/bot/config lists trend_donchian_sol_prop on bybit_2 and bybit_portfolio"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane PROMOTE-PROP-LEGS session_01TyFwUG9LYJXwJsFoyBZ9CV (manager session_01VduHYzdaXe27wTDBLSu8ao)",
+    "rerun": "grep -n 'strategies:' config/accounts.yaml | grep 'trend_donchian_eth_4h'  # both bybit_2 and bybit_portfolio lines must list trend_donchian_sol_prop"
+  },
+  "routed_to": "manager session_01VduHYzdaXe27wTDBLSu8ao",
+  "severity": "high",
+  "state": "done",
+  "terminal_reason": "PROMOTED: trend_donchian_sol_prop added to bybit_2 + bybit_portfolio in #18500 (merged ed645d6f 2026-10-16T04:45Z) under operator pre-auth 2026-10-15 ~22:47Z (\"you can promote the strategies waiting on fold tests if they pass\"); RQ-20261015-f01d-01 PASS (+60.60R n=394, 6/8 folds, full cost stack); mandate_resolver MD-PROMOTE-S1-S2 FIRE ALL-CLAUSES-PASS. DEPLOYED: /api/bot/config 04:58Z lists the leg + SOLUSDT on both accounts with no config_load_errors. First SOLUSDT live signal = the remaining observation.",
+  "tier": 3,
+  "what": "trend_donchian_sol_prop is READY for bybit_2 + bybit_portfolio under the operator pre-authorization of 2026-10-15 ~20:15Z, but NOT promoted: the config/accounts.yaml roster edit in lane session_01TyFwUG9LYJXwJsFoyBZ9CV was refused by Claude Code's auto-mode permission classifier and needs the operator's approval in-session. Readiness MEASURED 2026-10-15: Stage 0 comms/strategy_evidence/trend_donchian_sol_prop.json +5.19R n=65 fidelity faithful verdict pass; clean live-prop trade tradeify_1 prop-manual-c245b7e56125 (pkg-c58bbadd9b9a492f) fills #102 placed / #103 open (long, qty 32.03 vs 32.037, SL 110.169 + TP 121.094 = ticket) / #105 closed reason=sl exit 110.16. Change: append the leg to both rosters identically, add SOLUSDT to both symbols lists, risk unchanged. Revert: remove them."
+}

@@ -144,3 +144,12 @@ def test_cli_convert_and_verify(tmp_path: Path, capsys):
     assert ps.main(["verify", str(d)]) == 0
     out = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
     assert out[0]["status"] == "written" and out[1]["status"] == "PARITY"
+
+
+def test_build_logs_sidecar_outcome_under_its_own_label(tmp_path: Path, capsys):
+    _Toy().build(tmp_path, "v001", source="t", rows=_rows())
+    lines = [json.loads(line) for line in capsys.readouterr().err.splitlines()
+             if '"parquet_sidecar"' in line]
+    assert len(lines) == 1
+    assert lines[0]["status"] == "parquet_sidecar"
+    assert lines[0]["sidecar"]["status"] == "written"

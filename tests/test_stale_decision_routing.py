@@ -85,7 +85,10 @@ def test_prop_is_its_own_class_not_folded_into_real_money_or_paper() -> None:
     # ANCHOR RESTORED 2026-10-05: trend_donchian_sol_prop left tradeify_1 (#16598, RQ-20261005-807
     # FAIL alone) and was re-added the same day as part of the ETH+SOL book (Tier-3, data-backed:
     # RQ-20261005-902 INACTIVITY_SAFE_IMPROVEMENT, PR #16624), so it routes to a prop account again.
-    assert ROLLUP._leg_funding("trend_donchian_sol_prop", routing) == "prop"
+    # MOVED 2026-10-15 (PROMOTE-PROP-LEGS, Tier-3, operator pre-authorized): trend_donchian_sol_prop
+    # joined bybit_2 (real money), and a leg grades at its highest money-at-risk route, so it now
+    # reads `real_money` -- never `prop`, which would understate it. eth_prop stays the prop anchor.
+    assert ROLLUP._leg_funding("trend_donchian_sol_prop", routing) == "real_money"
     # Since 2026-10-05 (SOAK-GATE1, Stage-0 FAIL) bybit_1 no longer declares it,
     # so it reads `unresolved`; it must still never read `prop` again.
     assert ROLLUP._leg_funding("eth_pullback_prop_2h", routing) != "prop", (
