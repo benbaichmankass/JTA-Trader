@@ -1,0 +1,74 @@
+id: RQ-20261016-65ff-26
+title: 'AI trader / pooling parity (P2-Q2.5): do backtest test-result trades and live trade outcomes of the SAME leg share their decision-time feature marginals
+  and realised-R distribution, per (leg, regime cell)?'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 2
+kind: experiment
+question: 'For each leg with >= 30 provenance-trustworthy live closes (journal trades + order_packages.meta, MEASURED/ESTIMATED only) and a committed harness
+  ledger over the same calendar span: two-sample KS on (a) each shared decision-time feature (confidence, direction, entry hour, adx_at_entry, regime cell)
+  and (b) realised net R, per (leg, trend-cell); does parity hold so backtest-augmented labels can train the M23 head?'
+why_this_matters: 'The label wall (~78 real decisions per cell) is why M23 needs backtest-augmented labels; pooling them blind teaches the head the simulator.
+  02 s3 Q2.5 / s6 W3 #17. This is the only route past the label wall that keeps the label honest.'
+power:
+  expected_n: 6
+  min_detectable_effect: 0.5
+  effect_units: sd
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: Unit = (leg, cell) pair with >= 30 live closes; ESTIMATE ~6 real-money/mirror/paper legs qualify (live closes accrue ~2-15/leg/week). KS at n_live=30
+    vs n_bt>=100 detects a ~0.35 CDF gap; smaller gaps are not detectable and the rule says so.
+  feasibility:
+    source: journal
+    accrual_basis: Live closes accrue with trading; the run counts what exists and grades only qualifying pairs.
+decision_rule:
+  id: RULE-RQ2026101665ff26-POOLING-PARITY
+  statistic: 'Per qualifying (leg, cell): KS D and p for each shared feature and for net R (live vs backtest), Holm-corrected across the features within
+    a pair.'
+  rule: 'PASS (pool) IF in >= 2/3 of qualifying pairs no feature and not net R rejects at Holm-corrected alpha 0.05: backtest-augmented labels may train
+    the M23 head with a source indicator (next: the pooled within-family head). FAIL (do not pool) IF net R rejects in >= 1/2 of pairs: the head would learn
+    the simulator; the cost-fidelity gap goes to the backtest-fidelity line. INDETERMINATE IF < 3 qualifying pairs.'
+  min_n: 3 (leg, cell) pairs with >= 30 live closes each.
+  what_it_does_not_do: Trains nothing; changes no config; live P&L is used only as a distribution to compare against, never as edge evidence.
+  registered_at: '2026-10-16'
+  registered_before_run: true
+compute: needs_vm_data
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 200
+  confidence: 0.3
+  basis: 02 node P2-Q2.5 planning weight; decides whether M23 can train past the label wall
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  basis: Reads OURS data (journal trades/order_packages) that never leaves the VM (ml-data-classification-2026-10-13.md); trainer idle window.
+blocked_on:
+- kind: work_item
+  ref: POOLING-PARITY-INSTRUMENT
+  what: No script joins live closes to their harness counterparts per (leg, cell) and runs the KS battery. live_vs_backtest.py compares cumulative R bands
+    only (no feature marginals, no cells).
+  clears_when: scripts/research/pooling_parity.py merged (reads the trainer's synced journal + the leg's committed ledger, writes verdict.json in the E5
+    shape, self-test with a planted shift); then git mv, status queued, run.command set.
+run:
+  workflow: null
+  note: 'Deliberately null: the instrument does not exist yet (see blocked_on). Fill run.command (no run.workflow: compute class routes it) when the lever
+    row closes.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M23
+related:
+- RQ-20261014-9d20-04
+- ML-LABEL-WALL
+- METALABEL-EMIT-FEATURES
+- scripts/research/live_vs_backtest.py
+- P2-AI-REGIME-BACKLOG-1016
+programme_link:
+  programme: P2
+  node: P2-Q2.5-pooling-parity

@@ -1,0 +1,21 @@
+{
+  "id": "REGIME-EQUITY-LEG-FETCH",
+  "title": "Lever: exit_lever_ablation.py fetches non-crypto (equity/ETF) legs on the research runner, so regime-axis units can reach the alpaca_live real-money legs",
+  "phase": "W42",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-16 lane P2-AI-REGIME-BACKLOG-1016] MEASURED in the lane sandbox: exit_lever_ablation.py --leg ief_pullback_1d -> regime_debt_matrix._fetch_csv -> ModuleNotFoundError yfinance; .github/workflows/research-script-run.yml installs numpy pandas pyyaml requests python-dotenv dukascopy-python==4.0.1 only, so the same fault would hit on the runner. The dukascopy lane (scripts/ops/fetch_backtest_candles.py --source dukascopy, RQ-20261015-cab7-06) is already installed there and is the cheaper route; yfinance pinned in the workflow is the alternative (Yahoo 429s runner UAs, see regime_debt_matrix._yahoo_empty_reason). UNBLOCKS: blocked/RQ-20261016-65ff-29 (alpaca_live ief/slv/iaum pullback_1d vol axes). DONE WHEN: one exit_lever_ablation unit on a non-crypto leg lands a measured record on the runner and 65ff-29 is split per leg and leaves blocked/.",
+  "updated_at": "2026-10-16T07:50:08Z",
+  "updated_by": "session_01QseRmyoxCNTecxWrRma9Kc",
+  "roadmap": [
+    "L-REGIME"
+  ],
+  "_seq": 527
+}
