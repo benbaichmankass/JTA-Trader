@@ -284,22 +284,48 @@ def config_problem(entry: Dict[str, Any], repo: Optional[Path] = None) -> Option
     return None
 
 
-def confirmatory_requeue(entry: Dict[str, Any], result_at: Optional[datetime]) -> bool:
+def confirmatory_requeue(entry: Dict[str, Any], result_at: Optional[datetime],
+                         results_root: Optional[Path] = None) -> bool:
     """Did `queue_grade.decide` clear this unit's stamp to ask for a confirmatory
     run AFTER reading the rows that exist? True only when the grading block
-    says `confirmatory_run >= 1` and its `graded_at` is not before the latest
-    result row -- a row landed after the grading is a result of the
-    confirmatory run itself, and the unit is then not due again."""
+    says `confirmatory_run >= 1` and no result has landed since that grading --
+    a result landed after the grading is the confirmatory run itself, and the
+    unit is then not due again.
+
+    ⚠️ "Since the grading" is read from the grading's own `evidence` list when it
+    has one: the rows the grader READ are named there, so a result file NOT in
+    it is new. Only without that list does it fall back to `graded_at`, and the
+    grader writes `graded_at` as a DATE ('2026-10-15'), which parses to midnight:
+    comparing a same-day result (19:14) against it said "landed after the
+    grading", so `stamp_lost` re-stamped the deliberate re-queue with run 1's
+    own `generated_at`, the confirmatory run never fired, and the grader's
+    confirmatory pass (`since` = that stamp, rows with ts < since excluded) re-read
+    run 1 and closed the unit "two consecutive FAIL passes" on ONE run. MEASURED
+    2026-10-16 (lane RESEARCH-FOLLOWUP-1016): RQ-20261015-4941-01/-02 closed that
+    way, evidence one file each. A date-only fallback therefore compares DATES:
+    a result dated on or before the grading day counts as already read."""
     g = entry.get("grading") if isinstance(entry.get("grading"), dict) else {}
     try:
         if int(g.get("confirmatory_run") or 0) < 1:
             return False
     except (TypeError, ValueError):
         return False
-    graded = _parse_ts(g.get("graded_at"))
+    evidence = g.get("evidence")
+    uid = str(entry.get("id") or "")
+    if isinstance(evidence, list) and evidence and uid:
+        rdir = (results_root if results_root is not None else RESULTS_ROOT) / uid
+        read = {Path(str(e)).name for e in evidence}
+        landed = {f.name for f in rdir.glob("*.jsonl")} if rdir.is_dir() else set()
+        return landed <= read
+    raw = str(g.get("graded_at") or "")
+    graded = _parse_ts(raw)
     if graded is None:
         return False
-    return result_at is None or result_at <= graded
+    if result_at is None:
+        return True
+    if len(raw) == 10:   # date-only: the grading happened at an unknown time that day
+        return result_at.date() <= graded.date()
+    return result_at <= graded
 
 
 def stamp_lost(entry: Dict[str, Any]) -> Optional[datetime]:
