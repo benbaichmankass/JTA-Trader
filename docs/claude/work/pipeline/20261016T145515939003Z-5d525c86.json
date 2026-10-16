@@ -1,0 +1,19 @@
+{
+  "based_on": "20261016T084956078221Z-7a37e090.json",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "research/programmes/03-*, 05-* and 06-* trees are on main AND scripts/research/programme_coverage_baseline.json equals programme_coverage.py's current uncovered counts (lowered with --write-baseline)",
+    "kind": "observation"
+  },
+  "id": "PI-20261016-6RBHEWTW-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-ENGINE-1016 (session_01LcBH3h7czfJaqx6RBHeWtw), #18542; manager ack 2026-10-16 08:48Z point (4)",
+    "rerun": "python3 scripts/research/programme_coverage.py && cat scripts/research/programme_coverage_baseline.json"
+  },
+  "routed_to": "checklist row RESEARCH-PROGRAMME-PLANS (research-ops 2026-10-16 14:47Z)",
+  "state": "routed",
+  "terminal_reason": null,
+  "what": "[programme-coverage-baseline-tighten] The coverage ratchet baseline was written 2026-10-16 with P3 9, P5 7, P6 8 (no trees yet) and P4 0 (tree #18538). When the P3/P5/P6 lanes land their trees the uncovered counts fall but the baseline stays loose, so a later regression up to the old number would pass. Next step: after each tree lands, run `python3 scripts/research/programme_coverage.py --write-baseline` (it only ever lowers) in that lane's or the next research-ops PR."
+}
