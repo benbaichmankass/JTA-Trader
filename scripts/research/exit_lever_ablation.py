@@ -74,7 +74,8 @@ flags, never defaults chosen here:
   * ``replace`` (EXIT-REPLACE-ETH4H, 2026-10-15) -- baseline A is the INCUMBENT exit; every other
     arm is a candidate to REPLACE it. A candidate passes iff ``net_r(C) > net_r(A)`` (strictly)
     AND folds where ``net_r(C) >= net_r(A)`` (ties count) >= ``--fold-majority`` AND
-    ``maxDD(C) <= maxDD(A) * (1 + --dd-tol-frac)``. Several pass -> the highest net R. None ->
+    ``maxDD(C) <= maxDD(A) * (1 + --dd-tol-frac)`` AND (optional materiality, default off)
+    ``net_r(C) - net_r(A) >= --delta-r-per-trade * n(A)``. Several pass -> the highest net R. None ->
     fail: the incumbent stands. Each candidate also reports ``tp_doctrine`` (the share of its
     trades whose MFE reached its own declared tp_r vs ``check_tp_doctrine.REACH_FLOOR``) and
     ``lever_fired`` (False when the arm reproduces A exactly -- a dead lever).
@@ -194,14 +195,32 @@ def build_arm_argv(leg: str, cfg: dict[str, Any], csv: str, resample: str, emit:
     return argv, list(omitted)
 
 
-def fetch_candles(leg: str, cfg: dict[str, Any], days: int, csv: str) -> dict[str, Any]:
-    """The SAME fetch the evidence builder makes (regime_debt_matrix._fetch_csv)."""
+#: `--non-crypto-source dukascopy` interval codes (scripts/ops/fetch_backtest_candles.py --interval).
+_DUKA_INTERVAL = {"1h": "60", "2h": "120", "4h": "240", "1d": "D"}
+
+
+def fetch_candles(leg: str, cfg: dict[str, Any], days: int, csv: str,
+                  non_crypto_source: str = "auto") -> dict[str, Any]:
+    """The SAME fetch the evidence builder makes (regime_debt_matrix._fetch_csv).
+
+    ``non_crypto_source="dukascopy"`` (P1-ATM-BACKLOG-1016) sends a NON-crypto leg to the dukascopy
+    lane instead of yfinance: research-script-run.yml installs dukascopy-python but not yfinance,
+    so an equity/ETF leg could not be ablated on the runner at all. Crypto legs are unaffected, and
+    the default ("auto") is the evidence builder's own fetch, byte-for-byte."""
     import regime_debt_matrix as rdm
     sym = (cfg.get("symbols") or [None])[0]
     tf = cfg.get("timeframe")
     if not sym or not tf:
         raise ValueError(f"{leg}: no symbols[0]/timeframe in config")
     feed = rdm.resolve_feed(sym, tf)
+    if non_crypto_source == "dukascopy" and feed["source"] != "binance":
+        code = _DUKA_INTERVAL.get(str(tf))
+        if code is None:
+            raise ValueError(f"{leg}: no dukascopy interval code for timeframe {tf!r}")
+        subprocess.run([sys.executable, str(REPO / "scripts/ops/fetch_backtest_candles.py"), "--symbol", sym,
+                        "--source", "dukascopy", "--interval", code, "--days", str(days), "--output", csv],
+                       check=True, cwd=str(REPO))
+        return {**feed, "source": "dukascopy", "ticker": sym}
     rdm._fetch_csv(feed, days, csv)
     return feed
 
@@ -322,10 +341,16 @@ TP_REACH_FLOOR = 0.10  # == scripts/ci/check_tp_doctrine.REACH_FLOOR (TP-REACH-F
 
 def grade_replace(arms: dict[str, dict[str, Any]], *, baseline: str, candidates: list[str], fold_majority: int,
                   n_floor: int, dd_tol_frac: float, control: dict[str, Any] | None,
-                  tp_r_by_arm: dict[str, float | None] | None = None) -> dict[str, Any]:
+                  tp_r_by_arm: dict[str, float | None] | None = None,
+                  delta_r_per_trade: float = 0.0) -> dict[str, Any]:
     a = arms[baseline]
+    # MATERIALITY (P1-ATM-BACKLOG-1016): an optional per-trade bar, scaled by the INCUMBENT's n, so a
+    # unit can register "beats A by >= x R/trade" before n is known. 0.0 (the default) is the strict
+    # `net_r(C) > net_r(A)` the operator's rule used, byte-for-byte (RQ-20261015-a1df-01).
+    bar = round(delta_r_per_trade * a["n"], 4)
     m: dict[str, Any] = {"baseline": baseline, "candidates": {}, "fold_majority": fold_majority,
-                         "n_floor": n_floor, "dd_tol_frac": dd_tol_frac, "control": control}
+                         "n_floor": n_floor, "dd_tol_frac": dd_tol_frac, "control": control,
+                         "delta_r_per_trade": delta_r_per_trade, "delta_r_bar": bar}
     if control is not None and not control["ok"]:
         return {"verdict": "indeterminate", "label": "control_failed", **m,
                 "why": "the incumbent arm does not reproduce the committed record: the corpus differs"}
@@ -337,7 +362,8 @@ def grade_replace(arms: dict[str, dict[str, Any]], *, baseline: str, candidates:
         d_r = round(c["net_r"] - a["net_r"], 4)
         dd_cap = round(a["max_drawdown_r"] * (1.0 + dd_tol_frac), 4)
         wins = sum(1 for fc, fa in zip(c["folds"], a["folds"]) if fc["net_r"] >= fa["net_r"])
-        ok = c["net_r"] > a["net_r"] and wins >= fold_majority and c["max_drawdown_r"] <= dd_cap
+        ok = (c["net_r"] > a["net_r"] and d_r >= bar and wins >= fold_majority
+              and c["max_drawdown_r"] <= dd_cap)
         reach = c.get("reach_ge_6r")
         tp_r = (tp_r_by_arm or {}).get(cl)
         m["candidates"][cl] = {
@@ -443,6 +469,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--start", default=None, help="harness --start (ISO), pinned to the record's data_start")
     ap.add_argument("--end", default=None, help="harness --end (ISO datetime), pinned to the record's data_end")
     ap.add_argument("--data-csv", default=None, help="skip the fetch and use this candle CSV (tests)")
+    ap.add_argument("--non-crypto-source", choices=("auto", "dukascopy"), default="auto",
+                    help="non-crypto candle lane: auto = the evidence builder's yfinance fetch; dukascopy = the lane "
+                         "research-script-run.yml installs (history from ~2018 for US ETF CFDs)")
     ap.add_argument("--control", default=None, help="LABEL=<committed __bt.json> the arm must reproduce")
     ap.add_argument("--control-tol-n", type=float, default=0.02)
     ap.add_argument("--control-tol-r", type=float, default=0.5)
@@ -456,6 +485,9 @@ def main(argv: list[str] | None = None) -> int:
                     help="number of equal calendar folds (default 4; a longer window can carry more)")
     ap.add_argument("--n-floor", type=int, required=True)
     ap.add_argument("--dd-tol-frac", type=float, default=0.10, help="replace: max DD may exceed the incumbent's by this fraction")
+    ap.add_argument("--delta-r-per-trade", type=float, default=0.0,
+                    help="replace: a candidate must also beat the incumbent by this many R per incumbent trade "
+                         "(bar = x * n(incumbent)); 0 = the strict net-R rule alone")
     ap.add_argument("--control-since", action="store_true",
                     help="grade the control on trades entered on/after the record's data_start (window longer than the record's)")
     ap.add_argument("--out", required=True)
@@ -509,7 +541,7 @@ def main(argv: list[str] | None = None) -> int:
     csv = a.data_csv or str(wd / f"{a.leg}__data.csv")
     feed: dict[str, Any] = {"resample": base.get("timeframe"), "source": "explicit --data-csv"}
     if not a.data_csv:
-        feed = fetch_candles(a.leg, base, a.days, csv)
+        feed = fetch_candles(a.leg, base, a.days, csv, non_crypto_source=a.non_crypto_source)
     edges = fold_edges(csv, a.start, a.end)
     arms_dir = out / "arms"
     arms_dir.mkdir(exist_ok=True)
@@ -549,7 +581,8 @@ def main(argv: list[str] | None = None) -> int:
         cands = [lab for lab in labels if lab != a.baseline]
         tp_by = {lab: arm_cfg(base, sets, unsets).get("tp_r") for lab, sets, unsets, _x in specs}
         g = grade_replace(arms, baseline=a.baseline, candidates=cands, fold_majority=a.fold_majority,
-                          n_floor=a.n_floor, dd_tol_frac=a.dd_tol_frac, control=control, tp_r_by_arm=tp_by)
+                          n_floor=a.n_floor, dd_tol_frac=a.dd_tol_frac, control=control, tp_r_by_arm=tp_by,
+                          delta_r_per_trade=a.delta_r_per_trade)
     else:
         cands = [lab for lab in labels if lab != a.baseline and (not same_as or lab not in same_as)]
         g = grade_sweep(arms, baseline=a.baseline, candidates=cands, delta_r=a.delta_r,
@@ -667,6 +700,13 @@ def _self_test() -> int:
     g = grade_replace({"A": _arm(30, 1.0, 1.0, [0, 0, 0, 1]), "B": B1}, baseline="A", candidates=["B"], fold_majority=3,
                       n_floor=39, dd_tol_frac=0.10, control=None)
     check("replace: thin incumbent -> indeterminate", g["verdict"] == "indeterminate")
+    # materiality: B beats A by 2.0 R over 100 trades (0.02 R/trade) -- passes at 0.02, fails at 0.03
+    g = grade_replace({"A": A, "B": B1}, baseline="A", candidates=["B"], fold_majority=3, n_floor=39,
+                      dd_tol_frac=0.10, control=None, delta_r_per_trade=0.02)
+    check("replace: per-trade materiality bar met exactly -> pass", g["verdict"] == "pass" and g["delta_r_bar"] == 2.0)
+    g = grade_replace({"A": A, "B": B1}, baseline="A", candidates=["B"], fold_majority=3, n_floor=39,
+                      dd_tol_frac=0.10, control=None, delta_r_per_trade=0.03)
+    check("replace: below the per-trade materiality bar -> fail", g["verdict"] == "fail" and not g["candidates"]["B"]["passes"])
 
     # calendar folds: four equal spans, a trade binned by entry_time, the last edge inclusive
     import pandas as pd
