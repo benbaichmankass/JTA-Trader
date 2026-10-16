@@ -1,0 +1,176 @@
+{
+  "leg": "ada_pullback_2h",
+  "grade": {
+    "verdict": "pass",
+    "label": "stage0_edge",
+    "baseline": "B",
+    "net_r": 55.9061,
+    "n": 245,
+    "max_drawdown_r": 14.9294,
+    "folds_positive": 6,
+    "n_folds": 8,
+    "fold_majority": 5,
+    "n_floor": 39,
+    "control": null,
+    "why": "net_r=55.9061 > 0 with 6/8 positive folds at this arm's cost stack"
+  },
+  "arms": {
+    "B": {
+      "reach_ge_6r": 0.0,
+      "n": 245,
+      "net_r": 55.9061,
+      "net_r_fee_only": 62.6424,
+      "max_drawdown_r": 14.9294,
+      "by_outcome": {
+        "stop": 151,
+        "take_profit": 82,
+        "trail_stop": 11,
+        "timeout": 1
+      },
+      "mean_bars_held": 23.473,
+      "net_r_per_capital_day": 0.1167,
+      "cost_stack": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 10,
+        "pullback_frac": 0.5,
+        "atr_stop_mult": 1.5,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0,
+        "vol_skip_above_pctl": 0.0,
+        "vol_skip_below_pctl": 0.1,
+        "vol_pctl_window": 200,
+        "adx_min": 28.0,
+        "adx_period": 14
+      },
+      "data_start": "2020-10-05 00:00:00+00:00",
+      "data_end": "2024-10-04 22:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2020-10-05 00:00:00+00:00",
+          "end": "2021-04-05 14:59:52.500000+00:00",
+          "trades": 37,
+          "net_r": -8.9041
+        },
+        {
+          "fold": 2,
+          "start": "2021-04-05 14:59:52.500000+00:00",
+          "end": "2021-10-05 05:59:45+00:00",
+          "trades": 31,
+          "net_r": 3.9381
+        },
+        {
+          "fold": 3,
+          "start": "2021-10-05 05:59:45+00:00",
+          "end": "2022-04-05 20:59:37.500000+00:00",
+          "trades": 34,
+          "net_r": 20.4537
+        },
+        {
+          "fold": 4,
+          "start": "2022-04-05 20:59:37.500000+00:00",
+          "end": "2022-10-05 11:59:30+00:00",
+          "trades": 30,
+          "net_r": 0.0684
+        },
+        {
+          "fold": 5,
+          "start": "2022-10-05 11:59:30+00:00",
+          "end": "2023-04-06 02:59:22.500000+00:00",
+          "trades": 32,
+          "net_r": 14.9679
+        },
+        {
+          "fold": 6,
+          "start": "2023-04-06 02:59:22.500000+00:00",
+          "end": "2023-10-05 17:59:15+00:00",
+          "trades": 21,
+          "net_r": 16.6247
+        },
+        {
+          "fold": 7,
+          "start": "2023-10-05 17:59:15+00:00",
+          "end": "2024-04-05 08:59:07.500000+00:00",
+          "trades": 27,
+          "net_r": 9.319
+        },
+        {
+          "fold": 8,
+          "start": "2024-04-05 08:59:07.500000+00:00",
+          "end": "2024-10-04 23:59:00+00:00",
+          "trades": 33,
+          "net_r": -0.5612
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "10",
+        "--pullback-frac",
+        "0.5",
+        "--data",
+        "<data>",
+        "--symbol",
+        "ADAUSDT",
+        "--resample",
+        "2h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "7.5",
+        "--emit-trades",
+        "comms/research/RQ-20261016-c56e-11/38919859170/arms/B__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261016-c56e-11/38919859170/arms/B__bt.json",
+        "--adx-min",
+        "28",
+        "--vol-skip-below-pctl",
+        "0.1",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "4",
+        "--start",
+        "2020-10-05",
+        "--end",
+        "2024-10-04 23:59"
+      ]
+    }
+  },
+  "window": {
+    "start": "2020-10-05",
+    "end": "2024-10-04 23:59",
+    "fetch_days": 2240,
+    "feed": {
+      "source": "binance",
+      "ticker": "ADAUSDT",
+      "interval": "120",
+      "resample": "2h"
+    },
+    "fold_edges": [
+      "2020-10-05 00:00:00+00:00",
+      "2021-04-05 14:59:52.500000+00:00",
+      "2021-10-05 05:59:45+00:00",
+      "2022-04-05 20:59:37.500000+00:00",
+      "2022-10-05 11:59:30+00:00",
+      "2023-04-06 02:59:22.500000+00:00",
+      "2023-10-05 17:59:15+00:00",
+      "2024-04-05 08:59:07.500000+00:00",
+      "2024-10-04 23:59:00+00:00"
+    ]
+  }
+}

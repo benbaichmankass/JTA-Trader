@@ -1,0 +1,24 @@
+{
+  "based_on": "20261016T121815452925Z-7abd9481.json",
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "the 13 holdout re-run units RQ-20261016-d37f-01..13 are graded (status done, grading.confirmation set) or each is closed with a stated reason",
+    "kind": "event"
+  },
+  "id": "PI-20261016-QOTFUEXV-0003",
+  "next_action": "check_observation",
+  "note": "OPERATOR DECISION (popup, 2026-10-16 ~12:45Z, relayed by the manager), answer \"Holdout re-run\", verbatim: \"From now on, each sweep holds back the most recent ~25% of history before it chooses settings, then tests the winner on that held-back part, so discovery and confirmation come from one run with no wait. The 13 current passes get re-run that way now, within days. Cost: each choice is made on 25% less data.\" BUILD (lane RESEARCH-CONFIRM-FRESH-WINDOW-1016, branch claude/m20-holdout-confirm-1016): m20_fleet_exit_sweep --holdout-frac (workflow default 0.25, grown to the 25-trade floor, capped 40%; scripts/research/m20_holdout.py guard refuses any discovery read into the held-back span); queue_grade reads measurement.holdout.confirmation (confirmed/not_replicated/underpowered), opens a holdout re-run (no wait) for an m20 PASS that did not hold out, sizes any forward wait per leg from the measured trade rate, and retires a never-fired forward-wait unit superseded by a holdout re-run. The 13 m20 PASSes get holdout re-run units RQ-20261016-d37f-01..13 in the same PR. CLOSES WHEN: that PR merges and the 13 re-runs land results graded confirmed / not_replicated / underpowered.",
+  "observation": {
+    "due_by": "2026-10-23T00:00Z",
+    "how_to_check": "grep -l 'confirmation: ' research/queue/RQ-20261016-d37f-*.yaml | xargs grep -L 'status: done' (expect none once graded); for each: grep -A3 '^grading:' and read grading.confirmation; result rows under research/results/RQ-20261016-d37f-*/ carry measurement.holdout",
+    "what": "the 13 holdout re-run units RQ-20261016-d37f-01..13 dispatch after the build PR merges and land results whose rows carry measurement.holdout.confirmation, and queue_grade grades each (grading.confirmation confirmed / not_replicated / underpowered)"
+  },
+  "origin": {
+    "kind": "research",
+    "ref": "RESEARCH-CONFIRM-FRESH-WINDOW / PR #18593; manager trig_01ShWmHrUc7Rt25pdj1zfV6N",
+    "rerun": "python3 scripts/research/queue_grade.py --json | python3 -c \"import json,sys; print([s for s in json.load(sys.stdin)['spawned']])\"; per leg: OOS trades (research/results/<unit>/*.jsonl measurement.base_trades_OOS) / (PASS generated_at - corpus split, docs/research/m20-sweep-corpus.jsonl on branch claude/m20-sweep-corpus) vs the 25 floor"
+  },
+  "routed_to": "lane RESEARCH-CONFIRM-FRESH-WINDOW-1016 PR (branch claude/m20-holdout-confirm-1016); closes when the 13 holdout re-runs RQ-20261016-d37f-01..13 are graded",
+  "state": "routed",
+  "what": "MANAGER CONCERN, MEASURED: CONFIRM_WAIT_DAYS=60 forward-only cannot confirm ANY of the 13 m20 PASSes. Per-leg OOS trade rate (PASS OOS trades / days from split to PASS; corpus split + E5 measurement, 2026-10-16) gives 0.7-13.9 trades in 60 days against the rule's 25-OOS-trade floor; days to reach 25: ada 252, gdx 1067, gld 1225, iwm 2132, qqq 2104, scha 2252, slv 1017, splg 2076, spy 1243, eth_4h 260, eth_prop 108, sol_prop 179, xrp_4h 345. So at not_before (earliest 2026-11-28) every confirmation would fire, grade insufficient_base -> indeterminate (done, awaiting more_data) and the discovery stays unconfirmed with no automatic retry. BACKWARD-DISJOINT: not available inside the harness as built -- m20_fleet_exit_sweep.py has no start/lookback input and sweeps every bar the trainer holds, and the rule gates on IS AND OOS, so the PASS window is the whole held history (IS/OOS trade ratio 1.02-19.1 is history the PASS already used, not unseen history). SCOPE THE BUILD: (1) size the wait per leg from the measured rate (days to the rule's floor), not a constant; (2) a backward-disjoint confirmation needs the discovery itself to hold out an earliest span (template/harness change: a start-date input and a pre-registered holdout), else it does not exist; (3) until (1) lands, the 13 confirmation units should not fire at day 60 -- fix before 2026-11-28."
+}
