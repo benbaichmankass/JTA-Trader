@@ -231,6 +231,12 @@ weight in `THEMES.yaml`, verbatim "Prop first (Recommended)".)
   `research/results/<unit>/*.jsonl` holds a `read_state: measured` record (with that verdict, when given). The
   free-text `dispatch_precondition` is **advisory prose for humans and is NOT evaluated**; state a gate that must
   hold as `requires_result`, or it is not a gate.
+- **`not_before: <ISO time>`** (optional): the unit is not due before that moment; an unparseable value is
+  refused, never read as elapsed. The grader writes it on the fresh-window confirmation units it opens.
+- **Fresh-window confirmation (RESEARCH-CONFIRM-FRESH-WINDOW, operator 2026-10-16).** A PASS on a template
+  cell is a discovery: `queue_grade.py` adds ONE `confirmation:` unit (same rule, data after the PASS run) and
+  the cell may not feed a Tier-3 proposal until that unit grades `confirmation: confirmed`. A deterministic
+  template cell's FAIL closes with no same-window replay; it never retires the family (#18557 owns that).
 - Intake, planning and the weekly re-weighting: [`PLANNING.md`](PLANNING.md).
 
 ## Allocating a unit id (RQ-ID-ALLOCATOR)
