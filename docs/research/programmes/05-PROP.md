@@ -1,6 +1,6 @@
 # Programme 05 — Prop: evaluations as an expected-value question
 
-> **Doc status:** `unknown` · category `evidence` · last verified `2026-10-14` · registered in [`../../DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md) · lane `P5-PROP-PROGRAMME` (manager dispatch, weekly planning 2026-10-14) · map: [`RESEARCH-MAP.md`](RESEARCH-MAP.md) · roadmap `L-PROP` · **Tier-1 document: it proposes tests; every roster, sizing or switch change it leads to is Tier-3 with an evidence record.**
+> **Doc status:** `unknown` · category `evidence` · last verified `2026-10-16` · registered in [`../../DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md) · lane `P5-PROP-PROGRAMME` (manager dispatch, weekly planning 2026-10-14) · map: [`RESEARCH-MAP.md`](RESEARCH-MAP.md) · roadmap `L-PROP` · **Tier-1 document: it proposes tests; every roster, sizing or switch change it leads to is Tier-3 with an evidence record.**
 
 ## 1. End goal and measure
 
@@ -10,11 +10,11 @@
 
 | measure | population | instrument | baseline |
 |---|---|---|---|
-| E[profit per life] per account, as configured | the account's roster legs' committed 730 d trades, 5 seeds × 4,000 lives, the account's `backtest_ruleset`, its configured sizing, daily-DD switch armed at 0.8 | `prop_ev_grid.py` units `RQ-20261014-f516-01/02/03` | **not yet measured as configured** — the first run is the baseline; do not quote one until it lands |
+| E[profit per life] per account, as configured | the account's roster legs' committed 730 d trades, 5 seeds × 4,000 lives, the account's `backtest_ruleset`, its configured sizing, daily-DD switch armed at 0.8 | `prop_ev_grid.py` units `RQ-20261014-f516-01/02/03` | landed 2026-10-15 (f516-01..03, all `indeterminate`); seed-EV ranges and the velotrade_1 re-size are in § 7 |
 | gradable prop closes | automated closes on velotrade_1 / tradeify_1 / breakout_2 with exit price, P&L and a TP/SL reason | `prop_fills` via the diag relay | **0** gradable: the REST reconcile still writes `closed_on_terminal` with null exit price/P&L (PROP-EXIT-READ re-scoped to queued 2026-10-11); breakout_2 has no observed close |
 | TP-doctrine compliance on prop routings | the 6 prop (account, leg) routings | `python3 scripts/ci/check_tp_doctrine.py --json` | all 6 `declared` / `rule_undeclared` (RESEARCH-MAP, 07:28Z 2026-10-14; re-run, do not quote) |
 
-**What is live today** (MEASURED from `config/accounts.yaml` on `main`, 2026-10-14): three live evaluation accounts, each trading `trend_donchian_eth_prop` + `trend_donchian_sol_prop` (1h): **velotrade_1** ($5k, Velotrade Classic 1-Step, `risk_pct` 0.01), **tradeify_1** ($10k, Tradeify 24/7 1-Step, 0.005), **breakout_2** ($5k, Breakout 1-Step Turbo, 0.005, phone executor — stays open indefinitely, standing). `breakout_1` is retired (`dry_run`, empty roster). The daily-DD switch is `armed: true` on all three (row DAILY-DD-SWITCH; prop limit = 0.8 × the firm's daily limit, keep open / block new).
+**What is live today** (MEASURED from `config/accounts.yaml` on `main`, re-read 2026-10-16): three live evaluation accounts, each trading `trend_donchian_eth_prop` + `trend_donchian_sol_prop` (1h): **velotrade_1** ($5k, Velotrade Classic 1-Step, `risk_pct` 0.005 since VELOTRADE-RISK-050 / #18157, 2026-10-15; 0.01 when this plan was written), **tradeify_1** ($10k, Tradeify 24/7 1-Step, 0.005), **breakout_2** ($5k, Breakout 1-Step Turbo, 0.005, phone executor — stays open indefinitely, standing). `breakout_1` is retired (`dry_run`, empty roster). The daily-DD switch is `armed: true` on all three (row DAILY-DD-SWITCH; prop limit = 0.8 × the firm's daily limit, keep open / block new).
 
 ## 2. What is already known (do not re-run)
 
@@ -86,6 +86,35 @@ Each unit's `decision_rule` is registered in the unit before the run; the grids 
 
 ## 6. Findings raised while writing this plan
 
-- **The generated Breakout prop-fit template targets a retired account.** `research/templates/prop-fit-breakout.yaml` generated RQ-20261014-002..005 today, each saying "a PASS is a Tier-3 roster proposal for **breakout_1**" — but `breakout_1` is retired (`dry_run`, empty roster) and the live Breakout account is `breakout_2` on the **Turbo** ruleset, while the template prices `config/prop_rulesets/breakout.yaml` (Classic). A PASS from those units cannot be acted on as written. Filed to the pipeline (see the PR); the units themselves still produce valid Classic-ruleset numbers.
+- **The generated Breakout prop-fit template targets a retired account.** `research/templates/prop-fit-breakout.yaml` generated RQ-20261014-002..005 today, each saying "a PASS is a Tier-3 roster proposal for **breakout_1**" — but `breakout_1` is retired (`dry_run`, empty roster) and the live Breakout account is `breakout_2` on the **Turbo** ruleset, while the template prices `config/prop_rulesets/breakout.yaml` (Classic). A PASS from those units cannot be acted on as written. Filed to the pipeline (see the PR); the units themselves still produce valid Classic-ruleset numbers. **Fixed 2026-10-16** (lane P5-PROP-BACKLOG-1016): the template now prices `breakout_turbo_1step.yaml` for breakout_2; RQ-20261016-002/003 (generated the same morning) had already run, so they are graded as Classic prices, not retired.
 
 **What this plan does not do.** It changes no config, roster, sizing or switch setting (all such moves are Tier-3 proposals with records). It does not re-open single-leg Tradeify fits (801..810), the SOL bracket (652), or 5m/15m pace legs (batch 1). It does not treat a live prop P&L as edge. Figures marked MEASURED were read this session from the files named; the per-account baselines are deliberately not quoted until `f516-01..03` land.
+
+## 7. The machine tree and the state on 2026-10-16 (lane P5-PROP-BACKLOG-1016)
+
+**This plan's questions now live in [`research/programmes/05-prop.yaml`](../../../research/programmes/05-prop.yaml)** — the
+programme source `scripts/research/queue_replenish.py` reads (`--programme-state`, `--authoring-queue`). Until this
+date 05 had no tree, so none of its open questions reached the authoring queue. A `unit:` node is a fully
+pre-registered unit (the ready ones are materialised in the same PR, ids minted at merge time by the replenisher's band); a `needs_authoring:` node is a branch
+registered before its prerequisite's verdict exists. **Edit the tree, not this table, when the plan learns.**
+
+| Q | state (MEASURED from `research/queue` grading + `research/results`, 2026-10-16) | tree nodes |
+|---|---|---|
+| Q1 | f516-01/02/03 closed `indeterminate` (EV > 0 every seed, P(net>0) < 0.70). Seed EV: velotrade_1 $116–140 at 0.01 (then re-sized to 0.005 by VELOTRADE-RISK-050; f516-05 arm C050 $159–175), tradeify_1 $174–198, breakout_2 $32–36 (survival 0.003). Every node below re-measures its account's A arm on the window-matched ledgers. | — (answered) |
+| Q2 | velotrade_1 PASS (f516-05) → rung 2; tradeify_1 FAIL (closed); **breakout_2 never run** | `P5-Q2-SIZING-BRK` (+ pass branch), `P5-Q2R2-SIZING-VELO` |
+| Q3 | f516-04 NULL → the breakout_2 $25/$50 proposal is killed by its own rule; the SOL-down direction on tradeify_1 never priced | `P5-Q3-PERLEG-TRAD` |
+| Q4 | **closed.** velotrade_1 FAIL (f516-07, 0.8 confirmed). ⚠️ The 2026-10-15 note closed tradeify_1 / breakout_2 using **velotrade_1's** blocked count; their own Q1 sims record `dd_switch_trips` = `dd_switch_blocked` = 0 (counter absent = never incremented, `prop_ev_sim.py:837/:877`), so the "< 0.5 blocked per life" exit holds **on their own numbers** — same disposition, now verified. | — |
+| Q5 | pool admission PASS (f516-09/-10); every head-to-head so far priced 730 d incumbents against 1095 d 4h rows. The window-matched matched-risk head-to-heads at 0.005 for all three accounts are lane RESEARCH-FOLLOWUP-1016's RQ-20261016-e2db-05/-06/-07 (not duplicated); breakout_2 has no breadth test beyond the 4h pair | branches on e2db-05..07: `P5-Q5-4H-*-pass/-fail`; **eth_4h alone** on velotrade_1 at matched 0.005 / 0.0035 (`P5-Q5-E4H-VELO-005/-0035`: `sol_4h` is `execution` = shadow and on no roster, so eth_4h is the only gate-eligible 4h leg, manager audit 2026-10-16 § 4.2); `P5-Q5-ADA-BRK`; `P5-Q5-BRK-product` |
+| Gate | `comms/prop_survival/` is empty; no unit produced a per-leg record; the incumbents' exemptions lapse 2026-11-07 / 2026-12-11 | `P5-GATE-VELO/TRAD/BRK` (+ `-read` branches) |
+| Exits | **owned by Programme 01** (`research/programmes/01-active-trade-management.yaml`), not duplicated here: `P1-Q2-ethprop-derive` / `-solprop-derive` (predictive TP), `P1-Q4-ethprop-exit-confirm`, `P1-Q4-ethprop-ev`, `P1-Q4-solprop-propcost`, `P1-Q7-sol-tp3-prop`. eth_4h's fixed predictive TP already FAILED (RQ-20261015-cab7-04), so its TP-doctrine route is the stop (`P1-Q6-eth4h-stop-declare`) | — |
+| Q6/Q7 | blocked/f516-11 on PROP-EXIT-READ | `P5-Q6-fail`, `P5-Q7-tp-amend` (branches on f516-11) |
+
+**Noise.** `prop_ev_grid` compares `p_alive` per seed with a strict ≥ (no MC-SE tolerance; audit § 4.1). Every dominance rule in the tree carries a registered STRICT-SEED CAVEAT (a within-noise survival FAIL is reported as such, never re-graded post hoc); the tolerance fix is build row PROP-GRID-SURVIVAL-TOL.
+
+**Window-matched ledgers.** Every new prop_ev_grid unit prices the 1095 d prop-venue-stack Stage-0 arms of
+RQ-20261015-1bf3-03..06 (eth_prop 517, sol_prop 203, eth_4h 116, sol_4h 116 trades, 2023-10-13..2026-10-11).
+The sim re-prices `gross_r` under `--costs breakout`, so the harness stack is not charged twice.
+
+**Not encoded here, on purpose:** Tradeify non-crypto search (e2db-01..04) and the per-account matched-risk
+head-to-heads (e2db-05..07), lane RESEARCH-FOLLOWUP-1016; RQ-20261015-24ca-05 / ca42-01 (Tradeify non-crypto, queued); `trend_donchian_xrp_4h`
+(n 46 < 88 at 1460 d — nothing can answer it until it accrues); PROP-MISSION-MODEL (a build).
