@@ -789,6 +789,22 @@ def serialized_workflow(wf_file: str, repo: Path = _REPO) -> bool:
     return bool(m) and "${{" not in m.group(1)
 
 
+def managed_first(jobs: List[Any], cfg: Dict[str, Any]) -> List[Any]:
+    """Fire order across the shared --max-research-inflight cap: units placed on a MANAGED backend first, then
+    units whose explicit run.workflow has no backend (compute_router.plan -> "unmanaged"), each group keeping
+    its fair_order. The cap (research_compute.yaml limits.max_total_inflight) is declared as the SUM of the
+    backends' slots, but an unmanaged unit is gated only by that cap -- so in pure fair order it can take every
+    slot. MEASURED 2026-10-16 (lane RESEARCH-DISPATCH-STALL-1016): the 08:10Z and 08:51Z cycles fired 8
+    research-harness-dispatch.yml units each and deferred trainer (RQ-20261012-75b2-20) and kaggle_cpu
+    (RQ-20261014-65cc-09) units on "research compute cap 8 reached" while both backends had 0 in flight; the
+    watchdog then escalated trainer idle 397 min / kaggle_cpu idle 336 min. A managed unit is still bounded
+    by its own backend's max_concurrent, so unmanaged units keep every slot no backend has due work for."""
+    def managed(j: Any) -> bool:
+        p = (getattr(j, "raw", None) or {}).get("_plan")
+        return isinstance(p, cr.Resolution) and p.ok and p.backend in cfg.get("backends", {})
+    return [j for j in jobs if managed(j)] + [j for j in jobs if not managed(j)]
+
+
 def research_workflow_names(jobs: List[Any], repo: Path = _REPO) -> Dict[str, str]:
     """{workflow file -> its `name:`} for every real workflow the queue routes
     to, plus the token-free runner. A run counts as research compute when its
@@ -1315,6 +1331,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                 due_by_be[be] = due_by_be.get(be, 0) + 1
     gpu_fired = 0
     fired_by_workflow: Dict[str, int] = {}
+    if args.fire and cfg is not None:
+        jobs = managed_first(jobs, cfg)
     for job in jobs:
         entry = job.raw
         row: Dict[str, Any] = {"id": job.id, "path": _display_path(job.path),

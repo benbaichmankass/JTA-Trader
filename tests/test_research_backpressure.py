@@ -275,3 +275,29 @@ def test_every_configured_infra_workflow_name_exists():
     have = {yaml.safe_load(p.read_text()).get("name") for p in (REPO / ".github/workflows").glob("*.yml")}
     missing = [n for n in names if n not in have]
     assert not missing, missing
+
+
+# ── an unmanaged workflow cannot take a managed backend's slot (RESEARCH-DISPATCH-STALL-1016) ──
+def _fired_workflows(fired):
+    return [c[3] for c in fired]
+
+
+def test_unmanaged_units_do_not_take_the_slots_of_a_managed_backend(tmp_path, monkeypatch):
+    """MEASURED 2026-10-16: 08:10Z/08:51Z fired 8 research-harness-dispatch.yml units (no backend in
+    research_compute.yaml) and deferred trainer + kaggle_cpu units on 'research compute cap 8 reached' with
+    both backends at 0 in flight. Managed units are offered the shared cap first; unmanaged keep the rest."""
+    units = [(f"RQ-20300101-00{i}", "research-harness-dispatch.yml") for i in range(1, 4)] + \
+            [("RQ-20300101-009", "research-script-run-kaggle-cpu.yml")]
+    fired, stamped = _fired_cycle(tmp_path, monkeypatch, units, extra_args=("--max-research-inflight", "2"))
+    wfs = _fired_workflows(fired)
+    assert len(fired) == 2 and "research-script-run-kaggle-cpu.yml" in wfs, wfs
+    assert "RQ-20300101-009" in stamped
+
+
+def test_without_managed_first_the_harness_takes_every_slot(tmp_path, monkeypatch):
+    """The 2026-10-16 condition, reproduced: fair order alone gives every slot to the unmanaged units."""
+    monkeypatch.setattr(dq, "managed_first", lambda jobs, cfg: jobs)
+    units = [(f"RQ-20300101-00{i}", "research-harness-dispatch.yml") for i in range(1, 4)] + \
+            [("RQ-20300101-009", "research-script-run-kaggle-cpu.yml")]
+    fired, _ = _fired_cycle(tmp_path, monkeypatch, units, extra_args=("--max-research-inflight", "2"))
+    assert _fired_workflows(fired) == ["research-harness-dispatch.yml"] * 2
