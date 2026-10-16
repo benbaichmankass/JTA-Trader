@@ -1,0 +1,16 @@
+# Programme P6 -- data infrastructure: the machine-readable question tree for
+# docs/research/programmes/06-DATA-INFRA.md.
+# SKELETON created by lane RESEARCH-ENGINE-1016 (2026-10-16): until this file existed, nothing in that
+# plan could reach the machine -- queue_replenish.py reads research/programmes/*.yaml as its programme
+# source, and a question with no node never reaches the authoring queue (research-ops step E.0).
+# The programme lane fills the nodes; the contract is research/programmes/01-active-trade-management.yaml:
+#   * a `unit:` node (a full pre-registered unit body) is emitted once its `after` verdicts close;
+#   * a `needs_authoring:` node (one line) is listed in `queue_replenish.py --authoring-queue`;
+#   * a question that is a BUILD (a checklist row) or dormant by design is discharged in `questions:`
+#     with `state: carried|closed|by_design`, `by:` and `why:` -- never silently.
+# Uncovered at creation (scripts/research/programme_coverage.py): Q1 Q2 Q3 Q4 Q5 Q6 Q7 Q8.
+# Landing machinery (check_pr_landing.py): every edit holds for a human merge.
+programme: P6
+plan: docs/research/programmes/06-DATA-INFRA.md
+questions: {}
+nodes: []
