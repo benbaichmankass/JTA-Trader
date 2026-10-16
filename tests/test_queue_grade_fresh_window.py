@@ -234,7 +234,7 @@ def test_authored_confirmation_unit_passes_the_roadmap_guard(tmp_path):
     assert _guard_problems({cid: cu}) == []
     # the parent's own ref wins over the family map
     own = _unit(workflow=FW).replace("lands:", "roadmap:\n- L-ATM\nlands:")
-    _p, (cid2, text2) = qg.grade_unit_full(r, PID, own, "2030-01-02")
+    _p, (_cid2, text2) = qg.grade_unit_full(r, PID, own, "2030-01-02")
     assert yaml.safe_load(text2)["roadmap"] == ["L-ATM"]
 
 
