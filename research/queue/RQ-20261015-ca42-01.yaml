@@ -1,7 +1,7 @@
 id: RQ-20261015-ca42-01
 title: >-
   Tradeify non-crypto at the MEASURED leverage: SILVER fade (SLV 1h) and USOIL trend (USO 1h) re-run at --lev-cap 5 (marginRate 0.2, 5:1 INFERRED); does the 2:1 cap in RQ-20261015-24ca-01/-05 decide their verdicts?
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 2
@@ -180,3 +180,16 @@ related:
 - research/queue/RQ-20261015-24ca-05.yaml
 - research/results/RQ-20261015-24ca-01/38781718886.jsonl
 last_dispatched_at: '2026-10-16T03:01:41+00:00'
+grading:
+  attested: RULE-RQ-20261015-ca42-01
+  auto: true
+  decision_rule_id: RULE-RQ-20261015-ca42-01
+  evidence:
+  - research/results/RQ-20261015-ca42-01/38843463461.jsonl
+  graded_at: '2026-10-16'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
