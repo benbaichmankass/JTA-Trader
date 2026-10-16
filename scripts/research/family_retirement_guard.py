@@ -37,6 +37,7 @@ import argparse
 import fnmatch
 import re
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -331,6 +332,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--self-test", action="store_true")
     ap.add_argument("--base", default=None, help="also grade ADDED lines vs this base (R3)")
     args = ap.parse_args(argv)
+    # `--base` grades a COMMIT RANGE: say so when that is not the tree you edited
+    # (tests/test_dirty_tree_notice.py; notice only, no exit-code change).
+    sys.path.insert(0, str(_REPO / "scripts" / "ci"))
+    import _dirty_tree  # noqa: E402,PLC0415 -- path shim above
+    _dirty_tree.warn()
     if args.self_test:
         return _self_test()
     problems = check(_REPO, args.base)
