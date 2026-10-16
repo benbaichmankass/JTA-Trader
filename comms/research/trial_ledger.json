@@ -2904,15 +2904,15 @@
    "n_configs": 0
   }
  },
- "generated_at": "2026-10-16T11:06:16+00:00",
+ "generated_at": "2026-10-16T12:37:56+00:00",
  "generated_by": "scripts/research/trial_ledger.py",
  "inputs": {
   "e5": {
    "config_entries": 239,
-   "files": 794,
+   "files": 804,
    "glob": "research/results/*/*.jsonl",
-   "measured_rows": 962,
-   "rows": 1003
+   "measured_rows": 972,
+   "rows": 1013
   },
   "evidence": {
    "dir": "comms/strategy_evidence",
@@ -2928,7 +2928,7 @@
   "queue": {
    "glob": "research/queue/RQ-*.yaml",
    "graded_units": 503,
-   "units": 757
+   "units": 778
   }
  },
  "key": "leg::family",
@@ -3134,6 +3134,27 @@
       "status": "queued",
       "title": "Entry PLATEAU, not entry POINT: on ~6 years of ada_pullback_2h, does a CONTIGUOUS band of pullback_frac values (>= 3 adjacent grid arms) each beat the declared ",
       "unit": "RQ-20261016-1fa6-05",
+      "verdict": null
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "CONFIRM RQ-20261013-407c-15 on a fresh window: does ada_pullback_2h with SU still beat the declared leg on the 730 days BEFORE the window it was chosen on, net ",
+      "unit": "RQ-20261016-65ff-02",
+      "verdict": null
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Regime good-vs-bad, ada_pullback_2h: does a pre-registered hot-volatility tail skipped at entry (ATR percentile) (VH80, VH90, VH95) beat the leg as declared net",
+      "unit": "RQ-20261016-65ff-06",
+      "verdict": null
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Regime good-vs-bad, ada_pullback_2h: does a pre-registered cold-volatility tail skipped at entry (ATR percentile) (V0, VL20, VL30) beat the leg as declared net ",
+      "unit": "RQ-20261016-65ff-07",
       "verdict": null
      },
      {
@@ -3369,6 +3390,13 @@
       "title": "Volatility regime (cold tail), eth_pullback_2h: does moving vol-skip-below percentile (0.1, 0.2, 0.3) beat the declared setting net of the full cost stack?",
       "unit": "RQ-20261014-f0e2-12",
       "verdict": "fail"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "CONFIRM RQ-20261013-407c-13 on a fresh window: does eth_pullback_2h with SL still beat the declared leg on the 730 days BEFORE the window it was chosen on, net ",
+      "unit": "RQ-20261016-65ff-03",
+      "verdict": null
      }
     ]
    }
@@ -7736,6 +7764,13 @@
       "title": "In-trade exit line, rung 4: do momentum / ADX-slope / range / regime features in the in-trade state predict SL-before-TP beyond the distance-only reference -- t",
       "unit": "RQ-20261014-d6e7-04",
       "verdict": "indeterminate"
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "CONFIRM RQ-20261013-407c-21 on a fresh window: does trend_donchian_sol with VH90 still beat the declared leg on the 730 days BEFORE the window it was chosen on,",
+      "unit": "RQ-20261016-65ff-04",
+      "verdict": null
      }
     ]
    }
@@ -8062,6 +8097,13 @@
       "status": "queued",
       "title": "Programme 01 Q4, real money: does the rr_floor 0.5 cell that cleared the monthly m20 gate on trend_donchian_sol_prop beat the declared exit by a material margin",
       "unit": "RQ-20261016-011",
+      "verdict": null
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "TRANSFER RQ-20261013-407c-21 to trend_donchian_sol_prop on an unseen window: does a hot-vol entry skip (VH80, VH90, VH95) beat the declared prop leg on 2022-10-",
+      "unit": "RQ-20261016-65ff-05",
       "verdict": null
      }
     ]
@@ -8584,6 +8626,20 @@
       "status": "queued",
       "title": "Programme 01 Q3, real money: do the six tp_extend cells that cleared the m20 gate on BOTH partitions for xrp_pullback_2h (bybit_2) still beat the declared 3R br",
       "unit": "RQ-20261016-009",
+      "verdict": null
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "CONFIRM RQ-20261013-407c-14 on a fresh window: does xrp_pullback_2h with SA still beat the declared leg on the 730 days BEFORE the window it was chosen on, net ",
+      "unit": "RQ-20261016-65ff-01",
+      "verdict": null
+     },
+     {
+      "graded_at": null,
+      "status": "queued",
+      "title": "Regime good-vs-bad, xrp_pullback_2h: does a pre-registered cold-volatility tail skipped at entry (ATR percentile) (VL10, VL20, VL30) beat the leg as declared ne",
+      "unit": "RQ-20261016-65ff-08",
       "verdict": null
      },
      {
