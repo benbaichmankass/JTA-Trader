@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "each non-LightGBM manifest class has a train_parity PASS or a stated reason it stays on the trainer",
+    "due_date": "2026-10-23",
+    "kind": "date"
+  },
+  "id": "PI-20261016-P3PFA1GK-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane KAGGLE-TRAIN-RUNNER-FIRST (session_01YH1am2LXDBtyPPp3PFA1gk), design doc KAGGLE-TRAINING-PIPELINE-DESIGN-2026-10-13 section 10",
+    "rerun": "grep -l train_parity research/queue/*.yaml, read each unit's manifest trainer class, and compare against the trainer classes across ml manifests"
+  },
+  "state": "queued",
+  "terminal_reason": null,
+  "what": "[offload-parity-classes] The runner/Kaggle parity gate (scripts/research/train_parity.py) is proven ONLY for the LightGBM class (eth-regime-1h-lgbm-v1, bit-identical kaggle_cpu vs trainer, RQ-20261015-8b93-02 PASS). The other manifest classes (HMM, RegimeClassifier, regression) stay on the trainer until each has its own parity unit. Next step: one train_parity queue unit per class, each on a whole published dataset, with a trainer reference unit and a kaggle_cpu unit gated by requires_result, mirroring RQ-20261015-8b93-01/02. Of 73 manifests, 18 can run off-VM now and 45 are not exported (design doc section 10)."
+}
