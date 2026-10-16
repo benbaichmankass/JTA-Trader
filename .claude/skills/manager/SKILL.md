@@ -358,6 +358,28 @@ plans. The research-ops pass does not close that gap by itself: its authoring ca
 "what moved". Apply any Tier-3 proposal it leaves as a checklist note per § "Before any operator
 popup".
 
+### Research SLO escalation — a red research SLO is work TODAY (operator, 2026-10-16, binding)
+
+Operator: *"The health of the research pipeline must be something we monitor, report on and audit, so we never
+again end up realizing there's no actual work getting done."* The SLOs live in
+`scripts/research/research_slo.yaml`; `research-slo.yml` measures them every 2 h into
+`comms/research/health/<date>.json` and sends ONE message per state change to the system Telegram channel plus
+ONE comment on the ops-flags PR (marker `research-slo`; you are subscribed, so it wakes you). The brief's §0 shows
+the table on every render. **When any SLO is `breach` or `could_not_look`, the same day you dispatch the lane that
+moves it** — a note, a handoff line or a pipeline row with a far `due_when` is not a disposition:
+
+| red SLO | the lane you dispatch |
+|---|---|
+| `runnable_floor`, `authoring_supply_ratio_7d`, `theme_share_min_ratio`, `programme_coverage_pct` | an AUTHORING lane sized to the gap, aimed at the short themes / uncovered programme questions |
+| `undispositioned_24h`, `grade_latency_p*_d` | a GRADING lane over `result_disposition_check.py --list` |
+| `research_ops_not_run`, `research_ops_age_h` | the next research-ops slot is told to finish the named `not_run` steps first; a missed slot is re-dispatched |
+| `blocked_over_age` | an unblock-or-retire lane over the oldest blocked units |
+| `hold_pr_wait_h` | you land (or close with a reason) the held unit PRs — the wait is yours |
+| `fires_24h`, `lands_24h`, `dispatcher_age_h`, `collector_age_h`, `grader_age_h` | a fix lane on the stage named (the 15-min `research-watchdog` covers the emergencies; this is the trend) |
+
+A `could_not_look` is red too: fix the read, never read it as ok. Thresholds change only in the YAML, in a PR
+that says why; loosening one to clear a breach is the failure this section exists to stop.
+
 ### Weekly: the ML plan loop rides the Sunday `/ml-review` (operator, 2026-10-11)
 
 The ML / AI-trader build plan lives in `ROADMAP.md` § "AI trader (ML) — build plan" and
