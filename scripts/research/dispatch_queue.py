@@ -473,11 +473,29 @@ def _waiting_since(entry: Dict[str, Any], uid: str) -> Optional[datetime]:
     return datetime(int(m[1]), int(m[2]), int(m[3]), tzinfo=timezone.utc) if m else None
 
 
+def _due_since(entry: Dict[str, Any], uid: str) -> Optional[datetime]:
+    """When the unit became DUE -- the moment it started waiting for a slot. For a recurring unit that
+    is its last stamp PLUS its cadence gap, never the stamp itself.
+
+    ⚠️ RESEARCH-ENGINE-1016 (2026-10-16). Aging and starvation used to count from the last stamp
+    (`_waiting_since`), so a monthly re-run came due already "waiting" 30 days: 720 h > the router's
+    `starve_hours` 240, i.e. STARVED, sorting ahead of every authored unit in its theme, plus ten aging
+    steps of age_boost. 62 of the 112 queued units on 2026-10-16 were generated monthly sweeps (e35-bracket 26,
+    m20-exit-lever 36), so each month's rollover would put them all in front of the questions anybody asked.
+    A unit waits from when it is due; a `once` unit (and a recurring one never stamped) is due from creation."""
+    since = _waiting_since(entry, uid)
+    cadence = str(entry.get("cadence") or "once")
+    if since is not None and entry.get("last_dispatched_at") and cadence in _CADENCE_DAYS:
+        since = since + timedelta(days=max(_CADENCE_DAYS[cadence], recheck_after_days(entry)))
+    return since
+
+
 def effective_priority(entry: Dict[str, Any], uid: str, now: datetime, aging_hours: float) -> int:
-    """priority minus one step per `aging_hours` waited (floor 0): nothing starves inside its theme."""
+    """priority minus one step per `aging_hours` waited since the unit came DUE (floor 0): nothing
+    starves inside its theme."""
     prio = entry.get("priority")
     prio = prio if isinstance(prio, int) and not isinstance(prio, bool) else 3
-    since = _waiting_since(entry, uid)
+    since = _due_since(entry, uid)
     steps = int(max(0.0, (now - since).total_seconds()) // (aging_hours * 3600)) if since else 0
     return max(0, prio - steps)
 
@@ -530,14 +548,19 @@ def fair_order(jobs: List[Any], now: datetime, themes_doc: Dict[str, Any],
         starve = timedelta(hours=float(cfg["value"]["starve_hours"]))
         for th in cand:
             def _key(x, _fires=fires):
-                since = _waiting_since(x.raw, x.id)
+                since = _due_since(x.raw, x.id)
                 waited = (now - since) if since else timedelta(0)
                 steps = int(max(0.0, waited.total_seconds()) // (aging * 3600))
                 r = cr.score(x.raw, cfg, aging_steps=steps, fires=_fires)
                 r["starved"] = waited > starve
                 r["waited_h"] = round(waited.total_seconds() / 3600.0, 1)
                 x.raw["_rank"] = r
-                return (not r["starved"], -r["rank_value"], x.id)
+                # Authored before generated inside a theme (RESEARCH-ENGINE-1016): someone ASKED an authored
+                # question; a template re-run keeps the queue stocked. The 1.25 hand_written_boost alone let a
+                # generated sweep with a large declared value outrank an authored unit. Theme shares are
+                # untouched (this is within one theme), and a generated unit still fires whenever its theme has
+                # no authored unit due -- or first, once it has been DUE past starve_hours (nothing starves).
+                return (not r["starved"], isinstance(x.raw.get("generated"), dict), -r["rank_value"], x.id)
             cand[th].sort(key=_key)
     for th in cand if cfg is None else ():
         # Within one effective priority a hand-written unit (someone ASKED this question) goes
