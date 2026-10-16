@@ -128,17 +128,12 @@ related:
 last_dispatched_at: '2026-10-16T10:58:10+00:00'
 grading:
   auto: true
-  confirmatory_run: 1
   decision_rule_id: RULE-RQ20261014-65CC-09-LOGIT-NONINFERIOR-1H
   evidence:
-  - research/results/RQ-20261014-65cc-09/38519986015.jsonl
-  first_fail: 1 row(s), all measured, all fail
-  graded_at: '2026-10-14'
+  - research/results/RQ-20261014-65cc-09/38890742240.jsonl
+  graded_at: '2026-10-16'
   grader: scripts/research/queue_grade.py
-  note: 'RE-QUEUED 2026-10-16 (RQ-CONFIRM-SELFREAD, lane RESEARCH-FOLLOWUP-1016): the earlier ''two consecutive
-    FAIL passes'' close re-read run 1 as its own confirmation (stamp repaired to run 1''s generated_at);
-    this unit''s input window is not pinned, so a real second run can differ. Awaiting the confirmatory
-    run; evidence lists the files already read.'
-  reason: 1 row(s), all measured, all fail
+  needs_review: true
+  reason: 'read_state not unanimously measured: [''producer_failed'']'
   rows: 1
-  verdict: fail
+  verdict: null

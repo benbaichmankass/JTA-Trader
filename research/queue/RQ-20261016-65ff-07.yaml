@@ -1,7 +1,7 @@
 id: RQ-20261016-65ff-07
 title: 'Regime good-vs-bad, ada_pullback_2h: does a pre-registered cold-volatility tail skipped at entry (ATR percentile) (V0, VL20, VL30) beat the leg
   as declared net of the full cost stack on 2024-10-05..2026-10-04?'
-status: queued
+status: done
 cadence: once
 theme: regime
 priority: 1
@@ -109,3 +109,16 @@ related:
 - scripts/research/exit_lever_ablation.py
 - .claude/skills/regime-selectivity/SKILL.md
 last_dispatched_at: '2026-10-16T12:31:17+00:00'
+grading:
+  attested: RULE-RQ2026101665ff07-REGIME-VOLCOLD
+  auto: true
+  decision_rule_id: RULE-RQ2026101665ff07-REGIME-VOLCOLD
+  evidence:
+  - research/results/RQ-20261016-65ff-07/38901140814.jsonl
+  graded_at: '2026-10-16'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
