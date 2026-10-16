@@ -1,0 +1,77 @@
+name: research-slo
+
+# RESEARCH-PIPELINE-SLO (operator 2026-10-16): "The health of the research pipeline must be something we monitor,
+# report on and audit ... It's a pipeline like the other pipelines and needs the same infra setup as the trading
+# pipeline." Every 2 h: measure the SLOs in scripts/research/research_slo.yaml, write
+# comms/research/health/<date>.json, and on a CHANGE of the not-ok set send ONE message to the operator SYSTEM
+# Telegram channel + ONE comment on the ops-flags PR (the manager subscribes); a recovery message when an SLO
+# returns to ok; a reminder at most every alerting.realert_hours while unchanged.
+# Liveness emergencies stay with research-watchdog.yml (every 15 min); an SLO whose condition the watchdog already
+# escalated is left out of this flag (alerting.watchdog_overlap). NO HALTING: nothing here stops anything.
+#
+# Tier-1: reads the checkout + GitHub, comments on one PR, sends one Telegram message, lands one data file.
+
+on:
+  schedule:
+    - cron: "41 */2 * * *"
+  workflow_dispatch:
+    inputs:
+      live:
+        description: "Deliver alerts (Telegram + ops-flags comment). false = measure and write only."
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: read
+
+concurrency:
+  group: research-slo
+  cancel-in-progress: false
+
+jobs:
+  slo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 110   # commit-to-main verify-merged waits up to 80 min (tests/test_commit_to_main_callers.py)
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      TELEGRAM_SYSTEM_CHAT_ID: ${{ secrets.TELEGRAM_SYSTEM_CHAT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 200   # collector_age_h reads the newest commit touching research/results/
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install --quiet pyyaml
+
+      - name: Self-test (planted starved queue must alert; healthy control must not)
+        run: python3 scripts/research/research_slo.py --self-test
+
+      - name: Measure, write, alert
+        run: |
+          set -euo pipefail
+          LIVE=""
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.live }}" = "true" ]; then LIVE="--live"; fi
+          python3 scripts/research/research_slo.py ${LIVE} --write | tee /tmp/slo.txt
+          { echo '### research-slo'; cat /tmp/slo.txt; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Land the status file
+        uses: ./.github/actions/commit-to-main
+        with:
+          verify-merged: "true"
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          paths: comms/research/health
+          message: "chore(research-slo): research pipeline SLO status (run ${{ github.run_id }})"
+          pr-title: "chore(research-slo): SLO status (auto)"
+          pr-body: >-
+            Research-pipeline SLO status from scripts/research/research_slo.py (thresholds in
+            scripts/research/research_slo.yaml). Data-only; read by the daily brief §0, /health-review and
+            /weekly-audit.
+          branch-prefix: automation/research-slo

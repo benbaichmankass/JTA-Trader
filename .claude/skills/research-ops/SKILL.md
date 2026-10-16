@@ -100,6 +100,11 @@ ls -1 comms/research/ops/*.json | sort | tail -1     # newest = the previous run
 Its `runnable_after` / `results_read` / `units_authored` are this run's baseline; its
 `handoff` list is your first work. No record yet (first run) → baseline is "now", say so.
 
+Then read the newest `comms/research/health/<date>.json` (`latest`; written every 2 h by `research-slo.yml`).
+Every SLO that is not `ok` is named in your record's `handoff` with what this pass did about it. Your own
+record feeds two of them: `research_ops_not_run` (keep `not_run` to the steps you truly could not do) and
+`research_ops_age_h`.
+
 ## A. Pipeline health
 
 ```bash

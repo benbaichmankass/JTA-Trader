@@ -374,6 +374,15 @@ def _is_due(entry: Dict[str, Any], now: datetime) -> tuple:
     met, why = precondition_met(entry)
     if not met:
         return False, why
+    # RESEARCH-CONFIRM-FRESH-WINDOW (operator 2026-10-16): a fresh-window confirmation unit
+    # (queue_grade.confirmation_unit) needs data its PASS never saw, so it carries the earliest
+    # moment that data can exist. An unparseable value is refused, never read as "elapsed".
+    if entry.get("not_before") is not None:
+        nb = _parse_ts(entry.get("not_before"))
+        if nb is None:
+            return False, f"not_before={entry.get('not_before')!r} is unparseable -- refusing to fire"
+        if now < nb:
+            return False, f"not_before {nb.isoformat()} not reached (fresh window still accruing)"
     problem = config_problem(entry)
     if problem:
         return False, problem
