@@ -1365,6 +1365,19 @@ GUARDS: List[Dict[str, Any]] = [
                    "--base", "origin/{base_ref}"]],
     },
     {
+        # RESEARCH-ENGINE-1016 (2026-10-16): every question a programme PLAN asks
+        # (docs/research/programmes/<NN>-*.md) must have a node in its machine-read tree
+        # (research/programmes/<NN>-*.yaml), or nothing ever reaches the authoring queue. A
+        # RATCHET (scripts/research/programme_coverage_baseline.json): today's gap is work for
+        # the programme lanes, so the guard fails only when the uncovered count RISES.
+        "name": "programme-coverage",
+        "when": {"globs": ["docs/research/programmes/**", "research/programmes/**",
+                            "scripts/research/programme_coverage.py",
+                            "scripts/research/programme_coverage_baseline.json"]},
+        "steps": [["python3", "scripts/research/programme_coverage.py", "--self-test"],
+                  ["python3", "scripts/research/programme_coverage.py", "--check"]],
+    },
+    {
         # RQ-RUN (2026-09-28): the queue's self-replenishment + mechanical
         # grading + health alarm. Self-tests only: the live health read is
         # the DISPATCHER's alarm (it pages), not a PR gate -- a PR must not go
