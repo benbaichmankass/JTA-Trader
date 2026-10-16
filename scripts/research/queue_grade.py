@@ -348,6 +348,9 @@ CONFIRM_WAIT_MAX_DAYS = 366
 _HOLDOUT_INPUTS = {
     "m20-exit-lever-sweep.yml": {"holdout_frac": "0.25"},
 }
+#: A confirmation unit is a NEW queue unit, so it must name a roadmap milestone (roadmap-map-guard):
+#: the parent's own ref when it has one, else the workflow's milestone, else M40 (research workflow).
+_DEFAULT_ROADMAP = {"m20-exit-lever-sweep.yml": ["L-ATM"]}
 _HOLDOUT_POLICY = ("operator 2026-10-16 (popup, 'Holdout re-run'): \"From now on, each sweep holds back the "
                    "most recent ~25% of history before it chooses settings, then tests the winner on that "
                    "held-back part, so discovery and confirmation come from one run with no wait. The 13 "
@@ -458,6 +461,7 @@ def confirmation_unit(unit: Dict[str, Any], g: Dict[str, Any], child_id: str,
     for k, v in unit.items():
         if k not in skip:
             out[k] = _swap_id(v, pid, child_id) if k == "lands" else v
+    out["roadmap"] = _roadmap_for(unit, wf)
     out["question"] = (f"CONFIRMATION of {pid}'s PASS on a window it did not see (data after "
                        f"{after.isoformat() if after else 'UNKNOWN'}), under the SAME registered rule: "
                        f"{unit.get('question')}")
@@ -489,6 +493,12 @@ _GRADER_HEADER = ("# AUTHORED by scripts/research/queue_grade.py: the one confir
                   "# (RESEARCH-CONFIRM-FRESH-WINDOW). Self-lands only while `queue_grade.py --verify` reproduces it.\n")
 
 
+def _roadmap_for(unit: Dict[str, Any], wf: str) -> List[str]:
+    rm = unit.get("roadmap")
+    rm = [rm] if isinstance(rm, str) else rm
+    return list(rm) if isinstance(rm, list) and rm else list(_DEFAULT_ROADMAP.get(wf, ["M40"]))
+
+
 def _holdout_rerun_unit(unit: Dict[str, Any], g: Dict[str, Any], child_id: str, run: Dict[str, Any],
                         header: Optional[str]) -> str:
     """The confirmation of a PASS that did NOT hold out, on a workflow that can: the SAME run
@@ -512,6 +522,7 @@ def _holdout_rerun_unit(unit: Dict[str, Any], g: Dict[str, Any], child_id: str, 
     for k, v in unit.items():
         if k not in skip:
             out[k] = _swap_id(v, pid, child_id) if k == "lands" else v
+    out["roadmap"] = _roadmap_for(unit, wf)
     out["question"] = (f"HOLDOUT RE-RUN of {pid}'s single-window PASS: with the latest ~"
                        f"{inputs['holdout_frac']} of each leg's history held back BEFORE selection, does a "
                        "cell still clear the SAME registered gate on the earlier span, and does it hold on the "
