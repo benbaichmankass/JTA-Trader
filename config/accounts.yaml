@@ -423,8 +423,11 @@ accounts:
                                        # pre-authorization." Same day: "if they've passed a soak test
                                        # trading live on the prop accounts, that should count as a
                                        # pass and they can go live on bybit 2 as well".
-                                       # STAGE 0: comms/strategy_evidence/trend_donchian_sol_prop.json
-                                       #   net_r_oos +5.19R n=65, fidelity faithful, RULE-D1 pass.
+                                       # 2026-10-16 (lane PROMOTE-SOL-S2): operator, verbatim 2026-10-15
+                                       # ~22:47Z: "you can promote the strategies waiting on fold tests
+                                       # if they pass". STAGE 0: comms/strategy_evidence/trend_donchian_sol_prop.json
+                                       #   RQ-20261015-f01d-01: 8 calendar folds, 6/8 positive, net +60.60R
+                                       #   n=394 OOS, full cost stack. mandate_resolver MD-PROMOTE-S1-S2: FIRE.
                                        # MECHANICAL SOAK (live prop, /api/bot/prop/fills): tradeify_1
                                        #   ticket prop-manual-c245b7e56125 (pkg-c58bbadd9b9a492f),
                                        #   fills #102/#103/#105: long, SL+TP rested, exit reason=sl.
