@@ -1,0 +1,110 @@
+id: RQ-20261016-c56e-09
+title: 'Breakout strength floor, real money: does moving trend_donchian_xrp_4h''s min_confidence (0.6, 0.7, 0.9) beat the declared 0.8 on its 1460-day window,
+  net of the full cost stack?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 1
+kind: experiment
+question: On 2022-10-13 .. 2026-10-10 20:00, does any of the 3 pre-registered min_confidence arms on trend_donchian_xrp_4h beat the leg as declared by >=
+  2.0 R, with no worse drawdown, in >= 3 of 4 calendar folds? Arm values fixed here before any run.
+why_this_matters: 'trend_donchian_xrp_4h is a real-money leg (bybit_2 + mirror), 0.1266 R/capital-day, 3/4 folds. Axes measured on this window: cooldown
+  (470a-06 FAIL; every arm identical -- the lever does not bind on this short-only leg), vol-skip-above (470a-07 FAIL), skip-hours (f0e2-02 indeterminate).
+  min_confidence moved eth_4h (470a-09 PASS MC07, in confirmation); this asks the same axis where the leg declares 0.8, the highest floor on any 4h leg.'
+power:
+  expected_n: 46
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'd=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo''s standing E35 floor). expected_n=46 is MEASURED: arm B reproduced the committed 1460d
+    record (n=46, 8.14 R) exactly in RQ-20261014-470a-06. Raising the floor to 0.9 may drop that arm below 39 trades; the floor binds on B only, so a thin
+    candidate can still be graded. Bar 2.0 R.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched keyless Binance Vision candles over a pinned window; the harness replays history, nothing accrues.
+decision_rule:
+  id: RULE-RQ20261016c56e09
+  registered_at: '2026-10-16'
+  registered_before_run: true
+  statistic: 'Per arm, from the harness''s own --json summary (argv built by regime_debt_matrix.build_harness_cmd from config/strategies.yaml plus the arm''s
+    tokens; full cost stack: fee + resolved slippage + funding via execution_costs.resolve_cost_policy, never a zero default): total_trades, net_total_r,
+    max_drawdown_r, plus net_r per fold over FOUR equal calendar spans (same boundaries every arm). Arms: B = leg as declared (min_confidence 0.8); MC06
+    / MC07 / MC09 = 0.6 / 0.7 / 0.9. Per candidate C: dR = net_r(C) - net_r(B); dDD = maxDD(C) - maxDD(B); fold_wins = folds in which C out-earns B. Also
+    reported per arm, not graded: net_r_per_capital_day (the programme''s headline measure).'
+  rule: 'indeterminate IF the positive control fails (arm B must reproduce the committed record within 2% n and 0.5 R) or n(B) < 39 (underpowered: no verdict;
+    never FAIL on thin n). A candidate C PASSES iff dR >= 2.0 R AND dDD <= 0 AND fold_wins >= 3 of 4. PASS IF any candidate passes (best = highest dR).
+    FAIL IF none passes: the declared value stands and the axis is recorded honest_negative on this window for this leg. A PASS from a best-of-3 sweep is
+    a LEAD, not a finding: it opens exactly one fresh-window confirmation unit (the passing arm alone vs B, on the disjoint window immediately preceding
+    this one, same bars, no re-selection; 03-STRATEGY-IMPROVEMENT.md rung S0-C; programme node P3 tree), and no Tier-3 proposal is written until that unit
+    reads CONFIRMED. The 2.0 R bar, the drawdown clause, the 3-of-4 fold majority and the 39 floor are not changed after any result.'
+  what_it_does_not_do: Does not edit config or any roster. Does not mine values (fixed here). A PASS is a LEAD for rung S0-C, never a promotion case.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  bucket: own_losses
+  basis: 'stand-in: a real-money 4h leg plus its mirror; estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  basis: One keyless Binance Vision fetch of ~1475 days of XRPUSDT and 4 harness passes (470a-06 measured the same shape).
+  why_runner: exit_lever_ablation.py fetches its own keyless candles (Binance Vision / Yahoo) and runs the repo harnesses; the symbol/timeframe is not in
+    metis-market-data and the script has no published-data input, so the Kaggle-CPU and trainer backends cannot take it.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_xrp_4h
+  - --arm
+  - B=
+  - --arm
+  - MC06=min_confidence=0.6
+  - --arm
+  - MC07=min_confidence=0.7
+  - --arm
+  - MC09=min_confidence=0.9
+  - --days
+  - '1475'
+  - --start
+  - '2022-10-13'
+  - --end
+  - 2026-10-10 20:00
+  - --control
+  - B=comms/strategy_evidence/runs/2026-10-12-1460d/trend_donchian_xrp_4h__bt.json
+  - --control-tol-n
+  - '0.02'
+  - --control-tol-r
+  - '0.5'
+  - --grade
+  - sweep
+  - --baseline
+  - B
+  - --delta-r
+  - '2.0'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261016-c56e-09
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: research/results/RQ-20261016-c56e-09/<run_id>.jsonl via the batch collector; per-arm summaries and verdict.json under comms/research/RQ-20261016-c56e-09/<run_id>/.
+roadmap:
+- M21
+related:
+- P3-STRATEGY-BACKLOG-1016
+- docs/research/programmes/03-STRATEGY-IMPROVEMENT.md
+- research/programmes/03-strategy-improvement.yaml
+- scripts/research/exit_lever_ablation.py
+last_dispatched_at: null
