@@ -20,7 +20,7 @@ recurring planning session does.
 - **A FAIL branch closes the CONFIGURATION, never the family** (operator, 2026-10-16: "a few tests don't prove
   a line of thinking is wasteful -- it may mean we tested it wrong"). Write the FAIL disposition as what was
   tested and failed, plus the refinement that follows. Retiring a family needs a review record
-  (`research/family_retirement_policy.yaml`, `research/family_reviews/`), and `family-retirement-guard` refuses
+  (`scripts/research/family_retirement_policy.yaml`, `research/family_reviews/`), and `family-retirement-guard` refuses
   family-closure wording on an added line that cites none.
 - Every unit says what it does not do. An upper-bound or scoping unit says it is not a promotion case.
 - Units that need a prior result to be worth running use `requires_result`, not prose.

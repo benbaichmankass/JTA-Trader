@@ -70,7 +70,7 @@ flags, never defaults chosen here:
       fail   if none does (THESE lever settings are dead config on these legs and this
              window: honest negative for the configurations tested; removing them is
              a Tier-3 proposal; the lever FAMILY stays open -- family retirement needs a
-             review record, research/family_retirement_policy.yaml);
+             review record, scripts/research/family_retirement_policy.yaml);
       indeterminate if the control fails, a ``--same-as`` pair differs, or
                     n(B) < n_floor.
     ``--same-as S=N`` asserts two arms are IDENTICAL (n and net_r): the shipped
@@ -403,7 +403,7 @@ def grade_sweep(arms: dict[str, dict[str, Any]], *, baseline: str, candidates: l
             "why": "no candidate clears the bar: honest negative for the lever settings tested on these legs and "
                    "this window -- removing those config lines is a Tier-3 proposal (not done here); it closes "
                    "these CONFIGURATIONS, not the lever family (family retirement needs a review record, "
-                   "research/family_retirement_policy.yaml)"}
+                   "scripts/research/family_retirement_policy.yaml)"}
 
 
 def grade_stage0(arms: dict[str, dict[str, Any]], *, baseline: str, fold_majority: int, n_floor: int,

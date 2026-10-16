@@ -8,7 +8,7 @@ resources into ideas with no potential: if an idea is viable there should be out
 to do it better." A cell FAIL closes the CONFIGURATION it tested -- automatic and fine. Retiring the
 FAMILY is a different act and needs evidence of a different kind: a check that the test design was
 sound, breadth across configs / windows / instruments, outside evidence with sources, and a stated
-reason the idea itself is dead. Policy and thresholds: research/family_retirement_policy.yaml
+reason the idea itself is dead. Policy and thresholds: scripts/research/family_retirement_policy.yaml
 (PROVISIONAL; lane IDEA-REVIEW-1016 proposes the protocol details).
 
 WHAT IT REFUSES
@@ -37,7 +37,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 _REPO = Path(__file__).resolve().parents[2]
-POLICY = Path("research/family_retirement_policy.yaml")
+POLICY = Path("scripts/research/family_retirement_policy.yaml")
 REVIEWS = Path("research/family_reviews")
 ML_PLAN = Path("docs/plans/ml-plan-items.yaml")
 _NEG_RE = re.compile(r"\b(not|never|no longer|nor|doesn't|does not|do not|don't|cannot|isn't|is not)\b[^.;]*$", re.I)
@@ -188,6 +188,7 @@ def _self_test() -> int:
         (r / "research" / "programmes").mkdir(parents=True)
         (r / REVIEWS).mkdir(parents=True)
         (r / "docs" / "plans").mkdir(parents=True)
+        (r / POLICY).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(_REPO / POLICY, r / POLICY)
         pol = load_policy(r)
         (r / ML_PLAN).write_text("families:\n  deep_sequence: {history: [FAIL], state: retired}\n  gbdt: {history: []}\n")

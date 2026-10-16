@@ -1366,7 +1366,7 @@ GUARDS: List[Dict[str, Any]] = [
     },
     {
         # RESEARCH-ENGINE-1016 (operator 2026-10-16): a cell FAIL closes a CONFIG; retiring a FAMILY
-        # needs research/family_reviews/<family>.yaml meeting research/family_retirement_policy.yaml.
+        # needs research/family_reviews/<family>.yaml meeting scripts/research/family_retirement_policy.yaml.
         # Structured retirements are graded whole-tree; closure WORDING only on added lines (--base).
         "name": "family-retirement-guard",
         "when": {"globs": ["research/**", "docs/plans/ml-plan-items.yaml", "docs/research/programmes/**",

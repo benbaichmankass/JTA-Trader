@@ -1,7 +1,7 @@
 # research/family_reviews/ — one file per RETIRED research family
 
 A cell or unit FAIL closes the **configuration** it tested. Retiring the **family** (the idea itself) needs
-`research/family_reviews/<family>.yaml` here, in the shape `research/family_retirement_policy.yaml` sets
+`research/family_reviews/<family>.yaml` here, in the shape `scripts/research/family_retirement_policy.yaml` sets
 (thresholds there; PROVISIONAL until lane IDEA-REVIEW-1016's protocol lands). `family-retirement-guard`
 (`scripts/research/family_retirement_guard.py`) refuses a retirement without a valid record.
 
