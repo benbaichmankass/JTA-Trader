@@ -15,6 +15,7 @@ import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
+import pytest
 import yaml
 
 from scripts.research import dispatch_queue as dq
@@ -22,6 +23,13 @@ from scripts.research import queue_grade as qg
 
 PID = "RQ-20300101-001"
 PASS_AT = "2030-01-01T06:00:00Z"
+FW = "fw-sweep.yml"   # a stub workflow with a fresh-window input and NO holdout input
+
+
+@pytest.fixture(autouse=True)
+def _forward_window_workflow(monkeypatch):
+    monkeypatch.setitem(qg._FRESH_WINDOW_INPUTS, FW,
+                        lambda after: {"split_mode": "date", "split": after.date().isoformat()})
 
 
 def _unit(*, workflow: str = "m20-exit-lever-sweep.yml", cadence: str = "once", family: str = "m20-exit-lever",
@@ -37,12 +45,14 @@ def _unit(*, workflow: str = "m20-exit-lever-sweep.yml", cadence: str = "once", 
             f"{extra}last_dispatched_at: '2030-01-01T00:00:00+00:00'\n")
 
 
-def _rows(root: Path, uid: str, verdict: str, cells=("c1",), swept: int = 17, at: str = PASS_AT) -> None:
+def _rows(root: Path, uid: str, verdict: str, cells=("c1",), swept: int = 17, at: str = PASS_AT,
+          **measurement) -> None:
     d = root / "research" / "results" / uid
     d.mkdir(parents=True, exist_ok=True)
     (d / "1.jsonl").write_text(json.dumps({
         "verdict": verdict, "read_state": "measured", "generated_at": at,
-        "measurement": {"cells_swept": swept, "passing_cells": list(cells) if verdict == "pass" else []}}) + "\n")
+        "measurement": {"cells_swept": swept, "passing_cells": list(cells) if verdict == "pass" else [],
+                        **measurement}}) + "\n")
 
 
 def _repo(tmp_path: Path) -> Path:
@@ -54,7 +64,7 @@ def _repo(tmp_path: Path) -> Path:
 def test_template_pass_spawns_exactly_one_disjoint_window_confirmation(tmp_path):
     r = _repo(tmp_path)
     _rows(r, PID, "pass")
-    res = qg.grade_unit_full(r, PID, _unit(), "2030-01-02")
+    res = qg.grade_unit_full(r, PID, _unit(workflow=FW), "2030-01-02")
     assert res is not None
     parent_text, child = res
     parent = yaml.safe_load(parent_text)
@@ -66,7 +76,8 @@ def test_template_pass_spawns_exactly_one_disjoint_window_confirmation(tmp_path)
     assert cu["status"] == "queued" and cu["cadence"] == "once"
     assert cu["requires_result"] == {"unit": PID, "verdict": "pass"}
     # disjoint window: OOS starts at the PASS run's data end, and it cannot fire before data accrues
-    assert cu["run"]["inputs"]["split_mode"] == "date" and cu["run"]["inputs"]["split"] == "2030-01-02"
+    assert cu["run"]["inputs"]["split_mode"] == "date" and cu["run"]["inputs"]["split"] == "2030-01-01"
+    assert cu["confirmation"]["mode"] == "forward_wait"
     assert cu["run"]["inputs"]["research_unit"] == cu["id"]
     assert datetime.fromisoformat(cu["not_before"]) > datetime(2030, 1, 1, 6, tzinfo=timezone.utc)
     assert cu["confirmation"]["of"] == PID and cu["confirmation"]["selected_from_cells"] == 17
@@ -78,10 +89,24 @@ def test_template_pass_spawns_exactly_one_disjoint_window_confirmation(tmp_path)
     assert qg.grade_unit_full(r, PID, parent_text, "2030-01-03") is None
 
 
+def test_forward_wait_is_sized_per_leg_from_its_trade_rate(tmp_path):
+    """A flat wait could not reach the floor for any of the 13 m20 PASSes (PI-20261016-QOTFUEXV-0003)."""
+    r = _repo(tmp_path)
+    # 50 OOS trades over the 500 days from split to PASS = 0.1/day -> 25 trades need 250 days
+    _rows(r, PID, "pass", base_trades_OOS=50, split="2028-08-20")
+    _p, child = qg.grade_unit_full(r, PID, _unit(workflow=FW), "2030-01-02")
+    w = yaml.safe_load(child[1])["confirmation"]["window"]
+    assert 245 <= w["wait_days"] <= 255 and "measured" in w["wait_basis"], w
+    _rows(r, PID, "pass")                                  # no rate reported -> flat fallback, said so
+    _p, child = qg.grade_unit_full(r, PID, _unit(workflow=FW), "2030-01-02")
+    w = yaml.safe_load(child[1])["confirmation"]["window"]
+    assert w["wait_days"] == qg.CONFIRM_WAIT_DAYS and "fallback" in w["wait_basis"]
+
+
 def test_recurring_template_pass_reuses_its_one_confirmation(tmp_path):
     r = _repo(tmp_path)
     _rows(r, PID, "pass")
-    first = qg.grade_unit_full(r, PID, _unit(cadence="monthly"), "2030-01-02")
+    first = qg.grade_unit_full(r, PID, _unit(cadence="monthly", workflow=FW), "2030-01-02")
     assert first and first[1] is not None and yaml.safe_load(first[0])["status"] == "queued"
     # next month's PASS: the confirmation already exists -> carried forward, NOT a second one
     _rows(r, PID, "pass", at="2030-02-01T06:00:00Z")
@@ -115,7 +140,7 @@ def test_non_template_pass_opens_nothing(tmp_path):
 # ── grading the confirmation itself ─────────────────────────────────────────────────────────────
 def _child(r: Path) -> tuple:
     _rows(r, PID, "pass")
-    _p, (cid, text) = qg.grade_unit_full(r, PID, _unit(), "2030-01-02")
+    _p, (cid, text) = qg.grade_unit_full(r, PID, _unit(workflow=FW), "2030-01-02")
     return cid, text.replace("status: queued", "status: queued\nlast_dispatched_at: '2030-03-05T00:00:00+00:00'")
 
 
@@ -196,7 +221,7 @@ def test_verify_vouches_the_spawned_confirmation_and_refuses_a_tampered_one(tmp_
     _git(r, "commit", "-q", "-m", "grade")
     assert qg.verify(r, "main") == []
     child = r / "research" / "queue" / f"{res['spawned'][0]['id']}.yaml"
-    child.write_text(child.read_text().replace("split: '2030-01-02'", "split: '2029-01-01'"))
+    child.write_text(child.read_text().replace("holdout_frac: '0.25'", "holdout_frac: '0.05'"))
     _git(r, "commit", "-q", "-am", "tamper")
     assert any("does not reproduce as its parent's confirmation" in p for p in qg.verify(r, "main"))
     _git(r, "checkout", "-q", "HEAD~1")

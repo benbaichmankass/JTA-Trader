@@ -41,6 +41,17 @@ file moves):
     denominator). Programme nodes are excluded: their DAG owns confirmation.
     A recurring cell's later PASS reuses that one unit. The confirmation reads
     `confirmed` only when it passes on one of the parent's passing cells;
+  * HOLDOUT (operator 2026-10-16, "Holdout re-run"): when the run itself held
+    the latest span back before selection (rows carry
+    `measurement.holdout.confirmation`), discovery and confirmation came from
+    ONE run: the block records confirmed / not_replicated / underpowered and
+    NO further unit opens. A PASS that did not hold out, on a workflow in
+    `_HOLDOUT_INPUTS` (m20), opens a holdout RE-RUN that dispatches now
+    instead of a forward wait; a forward wait (sized per leg from the measured
+    OOS trade rate, `forward_wait_days`) remains only for harnesses with a
+    window input and no holdout input. An existing confirmation for the PASS
+    is reused, never duplicated, and a forward-wait unit that never fired is
+    retired as superseded by a live holdout re-run of the same PASS;
   * fail on a DETERMINISTIC template cell (or confirmation unit) -> `status:
     done`, verdict fail, NO same-window replay (it reproduces the same number).
     A FAIL closes a cell, never a family: the family-retirement protocol
@@ -277,8 +288,20 @@ def _selection(rows: List[Tuple[str, Dict[str, Any]]]) -> Dict[str, Any]:
     swept: Optional[int] = 0
     cells: set = set()
     seen: Optional[datetime] = None
+    holdout: Optional[Dict[str, Any]] = None
+    oos_n: Optional[int] = 0
+    split: Optional[datetime] = None
     for _f, r in rows:
         m = r.get("measurement") if isinstance(r.get("measurement"), dict) else {}
+        if holdout is None and isinstance(m.get("holdout"), dict):
+            holdout = m["holdout"]
+        try:
+            oos_n = None if oos_n is None or m.get("base_trades_OOS") is None else oos_n + int(m["base_trades_OOS"])
+        except (TypeError, ValueError):
+            oos_n = None
+        sp = _parse_ts(m.get("split"))
+        if sp and (split is None or sp < split):
+            split = sp
         try:
             swept = None if swept is None or m.get("cells_swept") is None else swept + int(m["cells_swept"])
         except (TypeError, ValueError):
@@ -288,8 +311,13 @@ def _selection(rows: List[Tuple[str, Dict[str, Any]]]) -> Dict[str, Any]:
         ts = _parse_ts(r.get("generated_at") or (r.get("run") or {}).get("started_at"))
         if ts and (seen is None or ts > seen):
             seen = ts
-    return {"cells_swept": swept if rows else None, "passing_cells": sorted(cells),
-            "seen_until": seen.isoformat() if seen else None}
+    out = {"cells_swept": swept if rows else None, "passing_cells": sorted(cells),
+           "seen_until": seen.isoformat() if seen else None}
+    if holdout is not None:
+        out["holdout"] = holdout
+    if rows and oos_n and split and seen and seen > split:
+        out["oos_trades_per_day"] = round(oos_n / max(1.0, (seen - split).total_seconds() / 86400), 6)
+    return out
 
 
 def grade_e35(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -308,11 +336,23 @@ def grade_e35(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 
 # ── fresh-window confirmation (RESEARCH-CONFIRM-FRESH-WINDOW, operator 2026-10-16) ──
-#: How long after the PASS run's last data a confirmation may fire: the window it reads must hold
-#: data the PASS never saw, and for a harness that reads history up to "now" that data only exists
-#: once it has accrued. Not derived from a power calculation; a confirmation that is still short of
-#: its rule's floor grades indeterminate (`awaiting: more_data`) like any other unit.
+#: FORWARD-WAIT fallback only (a harness with a window input but no holdout input): the wait is
+#: sized per leg from its measured OOS trade rate to the rule's floor (`forward_wait_days`); this
+#: constant is used only when the rate cannot be read. MEASURED 2026-10-16 (PI-20261016-QOTFUEXV-0003):
+#: a flat 60 days reached the 25-trade floor for none of the 13 m20 PASS legs.
 CONFIRM_WAIT_DAYS = 60
+CONFIRM_WAIT_MAX_DAYS = 366
+#: Workflows with a PRE-REGISTERED HOLDOUT input (operator decision 2026-10-16, "Holdout re-run"):
+#: discovery and confirmation in ONE run, so a PASS that did not hold out is re-run with it NOW
+#: instead of waiting for data to accrue. Preferred over `_FRESH_WINDOW_INPUTS` when both exist.
+_HOLDOUT_INPUTS = {
+    "m20-exit-lever-sweep.yml": {"holdout_frac": "0.25"},
+}
+_HOLDOUT_POLICY = ("operator 2026-10-16 (popup, 'Holdout re-run'): \"From now on, each sweep holds back the "
+                   "most recent ~25% of history before it chooses settings, then tests the winner on that "
+                   "held-back part, so discovery and confirmation come from one run with no wait. The 13 "
+                   "current passes get re-run that way now, within days. Cost: each choice is made on 25% "
+                   "less data.\"")
 #: Workflows whose inputs can confine the evidence to a window the PASS did not see, mapped to the
 #: input overrides that do it. m20-exit-lever-sweep: `split_mode: date` + `split: <day after the
 #: PASS's data>` makes OOS exactly the trades after the PASS run (the NEXT calendar day, so no
@@ -356,7 +396,31 @@ def _swap_id(obj: Any, old: str, new: str) -> Any:
     return obj
 
 
-def confirmation_unit(unit: Dict[str, Any], g: Dict[str, Any], child_id: str) -> str:
+def forward_wait_days(unit: Dict[str, Any], g: Dict[str, Any]) -> Tuple[int, str]:
+    """(days, basis) a forward-wait confirmation waits: until the leg's measured OOS trade rate
+    can have accrued the rule's floor (`power.expected_n`, else 25), clamped to a year. The flat
+    CONFIRM_WAIT_DAYS only when no rate was reported."""
+    floor = (unit.get("power") or {}).get("expected_n")
+    floor = floor if isinstance(floor, int) and not isinstance(floor, bool) and floor > 0 else 25
+    rate = g.get("oos_trades_per_day")
+    if isinstance(rate, (int, float)) and rate > 0:
+        import math
+        days = min(CONFIRM_WAIT_MAX_DAYS, max(1, int(math.ceil(floor / rate))))
+        return days, f"{floor} trades at the measured {rate:.4f} OOS trades/day"
+    return CONFIRM_WAIT_DAYS, "no OOS trade rate reported; flat fallback"
+
+
+def confirmation_mode(unit: Dict[str, Any]) -> Optional[str]:
+    """holdout_rerun / forward_wait for a confirmation unit (units authored before modes existed
+    carry `window.mode: most_recent_disjoint` and are forward-wait); None otherwise."""
+    c = unit.get("confirmation")
+    if not isinstance(c, dict):
+        return None
+    return str(c.get("mode") or "forward_wait")
+
+
+def confirmation_unit(unit: Dict[str, Any], g: Dict[str, Any], child_id: str,
+                      header: Optional[str] = None) -> str:
     """The ONE fresh-window confirmation unit a template-cell PASS opens. Same decision rule (id,
     statistic, rule text, registration) and same run as the PASS, re-pointed at the child id; the
     window is confined to data after the PASS run's last row when the workflow can say so
@@ -367,7 +431,10 @@ def confirmation_unit(unit: Dict[str, Any], g: Dict[str, Any], child_id: str) ->
     after = _parse_ts(g.get("seen_until")) or _parse_ts(unit.get("last_dispatched_at"))
     run = _swap_id(unit.get("run") or {}, pid, child_id)
     wf = str(run.get("workflow") or "")
+    if wf in _HOLDOUT_INPUTS:
+        return _holdout_rerun_unit(unit, g, child_id, run, header)
     window_fn = _FRESH_WINDOW_INPUTS.get(wf)
+    wait_days, wait_basis = forward_wait_days(unit, g)
     blocked = None
     if after is None:
         blocked = "the PASS run's data end is unknown (no dated row, no stamp), so no disjoint window can be named"
@@ -397,12 +464,13 @@ def confirmation_unit(unit: Dict[str, Any], g: Dict[str, Any], child_id: str) ->
     out["run"] = run
     out["requires_result"] = {"unit": pid, "verdict": "pass"}
     if after is not None:
-        out["not_before"] = (after + timedelta(days=CONFIRM_WAIT_DAYS)).isoformat()
+        out["not_before"] = (after + timedelta(days=wait_days)).isoformat()
     out["confirmation"] = {
         "of": pid,
+        "mode": "forward_wait",
         "policy": _POLICY,
         "window": {"after": after.isoformat() if after else None, "mode": "most_recent_disjoint",
-                   "wait_days": CONFIRM_WAIT_DAYS},
+                   "wait_days": wait_days, "wait_basis": wait_basis},
         "selected_from_cells": n_cells if isinstance(n_cells, int) else None,
         "passing_cells": cells,
         "note": (f"{pid} PASSED on one window, selected from {selected}; passing cell(s) {cells[:6] or 'not named'}. "
@@ -413,9 +481,58 @@ def confirmation_unit(unit: Dict[str, Any], g: Dict[str, Any], child_id: str) ->
     if blocked:
         out["blocked_reason"] = blocked
     out["grading"] = {"auto": True}
-    head = (f"# AUTHORED by scripts/research/queue_grade.py: the one fresh-window confirmation of {pid}'s PASS\n"
-            "# (RESEARCH-CONFIRM-FRESH-WINDOW). Self-lands only while `queue_grade.py --verify` reproduces it.\n")
-    return head + yaml.safe_dump(out, sort_keys=False, width=100, allow_unicode=True)
+    return (header or _GRADER_HEADER.format(pid=pid)) + yaml.safe_dump(out, sort_keys=False, width=100,
+                                                                       allow_unicode=True)
+
+
+_GRADER_HEADER = ("# AUTHORED by scripts/research/queue_grade.py: the one confirmation of {pid}'s PASS\n"
+                  "# (RESEARCH-CONFIRM-FRESH-WINDOW). Self-lands only while `queue_grade.py --verify` reproduces it.\n")
+
+
+def _holdout_rerun_unit(unit: Dict[str, Any], g: Dict[str, Any], child_id: str, run: Dict[str, Any],
+                        header: Optional[str]) -> str:
+    """The confirmation of a PASS that did NOT hold out, on a workflow that can: the SAME run
+    re-dispatched NOW with the pre-registered holdout (`_HOLDOUT_INPUTS`). Discovery is re-done on
+    the earlier span, ONLY the cells it selects are graded once on the held-back latest span, and
+    the result rows carry `measurement.holdout.confirmation`. No wait, no not_before."""
+    yaml = _yaml()
+    pid = str(unit.get("id"))
+    wf = str(run.get("workflow") or "")
+    inputs = {**(run.get("inputs") or {}), **_HOLDOUT_INPUTS[wf]}
+    if isinstance(g.get("holdout_frac"), str):
+        inputs["holdout_frac"] = g["holdout_frac"]
+    run = {**run, "inputs": inputs}
+    n_cells = g.get("cells_swept")
+    cells = list(g.get("passing_cells") or [])
+    out: Dict[str, Any] = {"id": child_id,
+                           "title": f"Holdout re-run of {pid}: {unit.get('title')}",
+                           "status": "queued", "cadence": "once"}
+    skip = {"id", "title", "status", "cadence", "generated", "grading", "last_dispatched_at",
+            "requires_result", "not_before", "confirmation", "run", "dispatch_precondition"}
+    for k, v in unit.items():
+        if k not in skip:
+            out[k] = _swap_id(v, pid, child_id) if k == "lands" else v
+    out["question"] = (f"HOLDOUT RE-RUN of {pid}'s single-window PASS: with the latest ~"
+                       f"{inputs['holdout_frac']} of each leg's history held back BEFORE selection, does a "
+                       "cell still clear the SAME registered gate on the earlier span, and does it hold on the "
+                       f"held-back span? Original question: {unit.get('question')}")
+    out["run"] = run
+    out["requires_result"] = {"unit": pid, "verdict": "pass"}
+    out["confirmation"] = {
+        "of": pid, "mode": "holdout_rerun", "policy": _HOLDOUT_POLICY,
+        "holdout_frac": inputs["holdout_frac"],
+        "selected_from_cells": n_cells if isinstance(n_cells, int) else None,
+        "passing_cells": cells,
+        "note": (f"{pid} PASSED on one full-history window, selected from "
+                 f"{n_cells if isinstance(n_cells, int) else 'an unrecorded number of'} cell(s); passing "
+                 f"{cells[:6] or 'not named'}. This re-run CONFIRMS only when a cell selected on the earlier "
+                 "span passes on the held-back span (measurement.holdout.confirmation == confirmed); "
+                 "not_replicated closes the configuration, never the family. Until then "
+                 f"{pid} may not feed a Tier-3 proposal." + (f" {g['holdout_note']}" if g.get("holdout_note") else "")),
+    }
+    out["grading"] = {"auto": True}
+    return (header or _GRADER_HEADER.format(pid=pid)) + yaml.safe_dump(out, sort_keys=False, width=100,
+                                                                       allow_unicode=True)
 
 
 def decide(unit: Dict[str, Any], g: Dict[str, Any], graded_at: str,
@@ -431,6 +548,35 @@ def decide(unit: Dict[str, Any], g: Dict[str, Any], graded_at: str,
     gb = d["grading"]
     prior = unit.get("grading") if isinstance(unit.get("grading"), dict) else {}
     parent = confirmation_of(unit)
+    held = g.get("holdout") if isinstance(g.get("holdout"), dict) else None
+    hconf = held.get("confirmation") if held else None
+    if hconf and gb.get("verdict") in ("pass", "no_action_warranted"):
+        # PRE-REGISTERED HOLDOUT in THIS run (operator 2026-10-16): discovery and confirmation came
+        # from one run, so no further unit is opened. `no_discovery` on a re-run means the PASS was
+        # not re-found on the earlier span -- not replicated. `error` is for a session.
+        conf = {"confirmed": "confirmed", "underpowered": "underpowered", "not_replicated": "not_replicated",
+                "no_discovery": "not_replicated"}.get(str(hconf))
+        hold = {k: held.get(k) for k in ("boundary", "share_used", "state", "base_trades", "selected_from",
+                                         "confirmation", "confirmed_cells")}
+        if conf is None:
+            d.update(status=None, reset_stamp=False)
+            gb.update({"verdict": None, "needs_review": True, "holdout": hold,
+                       "note": f"holdout confirmation {hconf!r} is not a grade -- a session reads the run"})
+            return d
+        if parent:
+            gb.update({"confirms": parent, "confirmation": conf, "holdout": hold,
+                       "note": (f"holdout re-run of {parent}: {conf} (selected from {held.get('selected_from')} "
+                                f"cell(s), holdout from {held.get('boundary')}, base n {held.get('base_trades')})."
+                                + (" A FAIL closes the configuration, never the family." if conf == "not_replicated" else ""))})
+            return d
+        if template_cell(unit) and gb.get("verdict") == "pass":
+            gb.update({"discovery": conf, "confirmation": conf, "holdout": hold,
+                       "selected_from_cells": held.get("selected_from"),
+                       "note": (f"discovery on the span before {held.get('boundary')}, confirmation on the held-back "
+                                f"span in the SAME run: {conf}. Only `confirmed` may feed a Tier-3 proposal.")})
+            if prior.get("confirm_unit"):
+                gb["confirm_unit"] = prior["confirm_unit"]
+            return d
     if prior.get("confirm_unit"):
         # exactly ONE confirmation per discovery: a recurring cell's later PASS reuses it
         gb["confirm_unit"] = prior["confirm_unit"]
@@ -567,12 +713,50 @@ def grade_unit(root: Path, unit_id: str, text: str, graded_at: str) -> Optional[
     return res[0] if res else None
 
 
+def confirmations_for(root: Path, parent_id: str) -> List[Dict[str, Any]]:
+    """Every queue unit that is a confirmation of `parent_id`: [{id, mode, status}], holdout first.
+    A pure read of the tree (E58 --verify re-derives it at HEAD)."""
+    yaml = _yaml()
+    out = []
+    for path in sorted((root / QUEUE).glob("*.yaml")):
+        t = path.read_text(encoding="utf-8")
+        if "confirmation:" not in t or parent_id not in t:
+            continue
+        try:
+            u = yaml.safe_load(t) or {}
+        except yaml.YAMLError:
+            continue
+        if isinstance(u, dict) and confirmation_of(u) == parent_id:
+            out.append({"id": str(u.get("id") or path.stem), "mode": confirmation_mode(u),
+                        "status": str(u.get("status") or "")})
+    return sorted(out, key=lambda x: (x["mode"] != "holdout_rerun", x["id"]))
+
+
+def _superseded_by(root: Path, unit: Dict[str, Any]) -> Optional[str]:
+    """A forward-wait confirmation that has not fired is superseded by a live holdout re-run of the
+    same PASS (operator 2026-10-16, "Holdout re-run"): the id of that re-run, else None."""
+    pid = confirmation_of(unit)
+    if not pid or confirmation_mode(unit) != "forward_wait" or unit.get("status") not in ("queued", "blocked") \
+            or unit.get("last_dispatched_at"):
+        return None
+    live = [c for c in confirmations_for(root, pid)
+            if c["mode"] == "holdout_rerun" and c["status"] not in ("retired",) and c["id"] != unit.get("id")]
+    return live[0]["id"] if live else None
+
+
 def grade_unit_full(root: Path, unit_id: str, text: str,
                     graded_at: str) -> Optional[Tuple[str, Optional[Tuple[str, str]]]]:
     """(new unit text, (child id, child text) | None), or None when nothing is to be written. The
     child is the fresh-window confirmation unit a template-cell PASS opens (`confirmation_unit`)."""
     yaml = _yaml()
     unit = yaml.safe_load(text)
+    if isinstance(unit, dict) and (sup := _superseded_by(root, unit)):
+        new = apply_text(text, {"status": "retired", "reset_stamp": False, "grading": {
+            "auto": True, "graded_at": graded_at, "grader": "scripts/research/queue_grade.py",
+            "superseded_by": sup, "verdict": None,
+            "note": (f"forward-wait confirmation superseded by the holdout re-run {sup} of the same PASS "
+                     "(operator 2026-10-16, 'Holdout re-run'); never dispatched")}})
+        return (new, None) if new != text else None
     if not isinstance(unit, dict) or unit.get("status") != "queued" or not unit.get("last_dispatched_at"):
         return None
     # ⚠️ ONLY units whose rule is mechanical by construction are graded here:
@@ -626,6 +810,20 @@ def grade_unit_full(root: Path, unit_id: str, text: str,
     if d is None:
         return None
     child: Optional[Tuple[str, str]] = None
+    pid = str(unit.get("id"))
+    if d.get("spawn"):
+        reuse = [c for c in confirmations_for(root, pid) if c["id"] != d["spawn"] and c["status"] != "retired"]
+        if reuse:
+            # A confirmation for this PASS already exists (a session-authored holdout re-run, or one an
+            # earlier grade opened): exactly ONE per discovery, so point at it and open nothing.
+            d["grading"]["confirm_unit"] = reuse[0]["id"]
+            d["grading"]["note"] = (d["grading"].get("note", "") + f" Confirmation already open: {reuse[0]['id']} "
+                                    f"({reuse[0]['mode']}).").strip()
+            d["spawn"] = None
+    elif d["grading"].get("confirm_unit") and not d["grading"].get("holdout"):
+        live = [c for c in confirmations_for(root, pid) if c["mode"] == "holdout_rerun" and c["status"] != "retired"]
+        if live and live[0]["id"] != d["grading"]["confirm_unit"]:
+            d["grading"]["confirm_unit"] = live[0]["id"]   # a forward-wait one was superseded
     if d.get("spawn"):
         cid = d["spawn"]
         taken = root / QUEUE / f"{cid}.yaml"
