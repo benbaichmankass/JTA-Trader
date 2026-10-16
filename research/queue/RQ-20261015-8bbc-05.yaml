@@ -1,0 +1,106 @@
+id: RQ-20261015-8bbc-05
+title: 'velotrade_1 matched-risk control at 0.0035: does the 4h Donchian pair ADD ev/survival over the same 2-leg 1h book at the same risk? (follow-up to ee68-01 PASS)'
+status: done
+cadence: once
+kind: experiment
+theme: new_strategy_prop
+priority: 1
+roadmap:
+- L-PROP
+question: At book-wide risk 0.0035, on the same 5 pinned seeds, does the 4-leg book (1h ETH+SOL plus trend_donchian_eth_4h + trend_donchian_sol_4h) beat the 2-leg 1h book at the SAME
+  0.0035 on ev_net_usd_per_life with >= its p_alive_at_horizon on EVERY seed?
+why_this_matters: 'FOLLOW-UP TO RQ-20261015-ee68-01 (research-ops 2026-10-15 20:47Z). ee68-01 read PASS (some C4Hxxx dominated A@0.005 on all 5 seeds; highest mean ev C4H045), but its
+  arms change TWO things at once vs A: the 4h pair AND the book-wide risk (0.005 -> X). A@0.005 has p_alive ~0.27 while C4H025 has ~0.92, so most of the survival gap may be the LOWER
+  RISK, not the 4h pair. This control holds risk fixed at X and varies only the roster, so a Tier-3 proposal is not read as ''add the pair'' when it is ''cut risk''. DISCLOSED BEFORE
+  REGISTRATION: ee68-01''s C4H arms at X are known (ev/p_alive per seed in research/results/RQ-20261015-ee68-01); the incumbents-only arm at X has NOT been run. Rule applied mechanically
+  by prop_ev_grid --grade any_c_dominates with A = incumbents@X, C = 4-leg@X.'
+power:
+  expected_n: 116
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: '4h pair: 116 committed 1095 d trades each (RQ-20261014-f516-10 record); incumbent ETH 355 / SOL committed 730 d trades. Same evidence as 1bf3-02. Two arms x 5 seeds, as 1bf3-02.'
+  feasibility:
+    source: none
+    accrual_basis: Re-pricing of committed trade evidence under the firm's rules; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261015-8bbc-05-MATCHED-RISK-0.0035
+  registered_at: '2026-10-15'
+  registered_before_run: true
+  statistic: Per seed and arm, path-mode ev_net_usd_per_life and p_alive_at_horizon (prop_ev_grid, velotrade_1 venue stack, switch armed 0.8). A = ETH+SOL 1h book at risk 0.0035; C4H
+    = A plus the 4h ETH+SOL Donchian legs, both at 0.0035.
+  rule: 'prop_ev_grid --grade any_c_dominates, mechanically: PASS IF C4H ev > A ev AND p_alive >= A p_alive on ALL 5 seeds -> the 4h pair adds value at risk 0.0035: strengthens the roster-add
+    Tier-3 note on the owning checklist row (never a config edit). FAIL IF it does not dominate on every seed -> the ee68-01 PASS at this level is a risk-level effect (or a trade-off),
+    the 4h pair is not shown to add at matched risk; the note says so. NULL if an arm is missing or shares no seed.'
+  min_n: '88'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 70
+  basis: 1bf3-02 ran 2 arms x 5 seeds at 4,000 lives in 61 min (run 38730577903, --jobs 4); this is the same shape.
+  backend_note: Repo data only (committed trade JSONL + ruleset), no GPU. The router sends cpu_long to github_runner; the trainer is reserved for trainer-resident data (1 OCPU, would
+    run this 20-cell grid several times slower inside the daily cycle's box) and kaggle_cpu takes only routing.published_data units, so neither idle backend fits.
+compute: cpu_long
+value:
+  bucket: information
+  usd_at_stake_per_month: 120
+  confidence: 0.3
+  basis: 'stand-in, same as 1bf3-02: pool-admission follow-up; information until a Tier-3 proposal. No balances stated.'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 300
+  command:
+  - python3
+  - scripts/research/prop_ev_grid.py
+  - --leg
+  - trend_donchian_eth_prop=comms/strategy_evidence/runs/2026-10-05-730d/trend_donchian_eth_prop__trades.jsonl
+  - --arm
+  - A=--sizing balance --risk-pct 0.0035 --dd-switch-frac 0.8
+  - --arm
+  - C4H=--sizing balance --risk-pct 0.0035 --dd-switch-frac 0.8 --trades trend_donchian_eth_4h=comms/strategy_evidence/runs/2026-10-12-1095d/trend_donchian_eth_4h__trades.jsonl --lev-cap
+    trend_donchian_eth_4h=5 --trades trend_donchian_sol_4h=comms/strategy_evidence/runs/2026-10-12-1095d/trend_donchian_sol_4h__trades.jsonl --lev-cap trend_donchian_sol_4h=5
+  - --common
+  - --trades trend_donchian_sol_prop=comms/strategy_evidence/runs/2026-10-05-730d/trend_donchian_sol_prop__trades.jsonl --ruleset config/prop_rulesets/velotrade_classic_1step.yaml --costs
+    breakout --commission-bps-rt 6 --slippage-bps-rt 3 --swap-daily 0.0005 --swap-model dxtrade --no-hedge --funded-start fresh --lev-cap trend_donchian_eth_prop=5 --lev-cap trend_donchian_sol_prop=5
+  - --seeds
+  - 1,2,3,4,5
+  - --grade
+  - any_c_dominates
+  - --out
+  - '{out_dir}'
+  - --jobs
+  - '4'
+  - --note
+  - 'RQ-20261015-8bbc-05: velotrade_1 matched-risk control at 0.0035'
+  inputs:
+    research_unit: RQ-20261015-8bbc-05
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261015-ee68-01.yaml
+- research/queue/RQ-20261015-1bf3-02.yaml
+- research/queue/RQ-20261015-1bf3-03.yaml
+- research/queue/RQ-20261015-1bf3-04.yaml
+- research/queue/RQ-20261015-1bf3-05.yaml
+- research/queue/RQ-20261015-1bf3-06.yaml
+- docs/research/programmes/05-PROP.md
+- docs/claude/work/checklist/PROP-BOOK-SEARCH-1095D.json
+what_it_does_not_do: Changes no roster, risk cap or config; does not re-grade ee68-01 or 1bf3-02. Window mismatch (1095 d 4h rows vs 730 d incumbents) reported, not equalised. Says nothing
+  about live results.
+last_dispatched_at: '2026-10-15T22:14:45+00:00'
+grading:
+  attested: RULE-RQ-20261015-8bbc-05-MATCHED-RISK-0.0035
+  auto: true
+  decision_rule_id: RULE-RQ-20261015-8bbc-05-MATCHED-RISK-0.0035
+  evidence:
+  - research/results/RQ-20261015-8bbc-05/38815818730.jsonl
+  graded_at: '2026-10-16'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

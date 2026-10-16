@@ -34,7 +34,11 @@ THE FOUR STATES — ``soak_alarm.py``'s, ported, never collapsed
   ``accruing``        evidence arriving, exit not met — NO row, context only.
                       A daily "not ready yet" page is the desensitised alarm.
 
-Populations 1-2 get a real grade from the latest R5 record. Populations 3-4
+Populations 1-2 get a real grade: a Stage-1 leg is ``ready`` when its SOAKS.json
+contract carries a mechanical PASS, ``dead`` when R5 measures its mechanics
+starved, otherwise ``accruing`` (the clean-trade state is computed live by
+soak_state.soak_states()). R5's COST fidelity never readies a soak — the soak is
+mechanical (docs/plans/OPERATING-PLAN-2026-09-21.md § 2 "The soak is MECHANICAL"). Populations 3-4
 carry free-text exit conditions no predicate here can evaluate, so they are
 ``could-not-look`` by construction and SAY so — that is the honest state, and
 the count of such rows is itself the finding.
@@ -79,7 +83,6 @@ STATE = Path("docs/claude/work/soak-state.json")
 CHECKLIST = Path("docs/claude/work/MANAGER-CHECKLIST.json")
 #: A grade older than this is a stale read -> could-not-look. Weekly cadence + 1d.
 GRADE_STALE_DAYS = 8
-COST_FLOOR = 10  # r3_cost_fidelity.N_FLOOR, per side (rule RULE-R5 / R3)
 _YAML = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 
 READY, DEAD, CNL, ACCRUING = "ready", "dead", "could-not-look", "accruing"
@@ -216,26 +219,32 @@ class Soak:
         return (today - d).days if d else None
 
 
-def _cost_n(cell: Any) -> Tuple[Optional[int], Optional[int]]:
-    if isinstance(cell, dict):
-        return cell.get("n_entry"), cell.get("n_exit")
-    return None, None
+def grade_stage1(leg: Optional[dict], grade_ok: bool, grade_day: str,
+                 contract: Optional[dict] = None) -> Tuple[str, str, str, str]:
+    """(verdict, progress, eta, why) for a Stage-1 leg.
 
-
-def grade_stage1(leg: Optional[dict], grade_ok: bool, grade_day: str) -> Tuple[str, str, str, str]:
-    """(verdict, progress, eta, why) for a Stage-1 leg from its R5 row."""
+    The soak is MECHANICAL (operator 2026-10-15; docs/plans/OPERATING-PLAN-2026-09-21.md
+    § 2 "The soak is MECHANICAL"): it passes on 1-2 clean trades and never waits on a
+    cost sample. So the exit is the leg's SOAKS.json contract, never R3/R5 cost
+    fidelity: a PASS disposition is READY (a promotion decision is owed); R5's
+    `kill` (mechanics starved: intents reach no order) is DEAD; anything else is
+    ACCRUING, because the clean-trade state is computed live on the VM by
+    soak_state.soak_states() and this runner cannot read the journal. R5's cost
+    fidelity is ongoing monitoring and decides nothing here."""
+    d = (contract or {}).get("disposition") or {}
+    if d.get("verdict") == "PASS":
+        return READY, f"PASS {d.get('decided_at')}: clean {d.get('trades')}", "—", \
+            "mechanical soak passed — the leg is a promotion candidate (MD-PROMOTE-S1-S2)"
     if not grade_ok:
         return CNL, "—", "—", f"no usable R5 grade newer than {GRADE_STALE_DAYS}d"
     if leg is None:
         return CNL, "—", "—", f"not in the {grade_day} grade (joined the roster after it, or the grade missed it)"
     mech = leg.get("mechanics") or {}
-    ne, nx = _cost_n(leg.get("cost_fidelity"))
     prog = (f"mechanics {mech.get('state', '—')} ({mech.get('intents', '—')} intents → "
-            f"{mech.get('received', '—')} received); cost fills entry {ne if ne is not None else '—'}"
-            f"/{COST_FLOOR}, exit {nx if nx is not None else '—'}/{COST_FLOOR}")
-    disp = leg.get("disposition")
-    v = {"healthy": READY, "tweak": READY, "kill": DEAD, "insufficient-data": ACCRUING}.get(disp, CNL)
-    return v, prog, str(leg.get("eta") or "—"), f"R5 {disp}: {str(leg.get('reason') or '')[:220]}"
+            f"{mech.get('received', '—')} received); clean-trade state: soak_state.soak_states()")
+    if leg.get("disposition") == "kill":
+        return DEAD, prog, "—", f"R5 kill (mechanics): {str(leg.get('reason') or '')[:220]}"
+    return ACCRUING, prog, "—", "waiting for 1-2 clean trades (no deadline); computed live by soak_state.py"
 
 
 # ── populations ─────────────────────────────────────────────────────────────
@@ -292,6 +301,11 @@ def build(today: date, ref: str = "HEAD", grade_file: Optional[Path] = None) -> 
         return sorted(i["id"] for i in open_items
                       if subject in str(i.get("what", "")) and not str(i["id"]).startswith("PI-SOAK-"))
 
+    try:
+        contracts = {c.get("id"): c for c in json.loads(
+            (REPO / "docs/claude/work/SOAKS.json").read_text(encoding="utf-8")).get("soaks") or []}
+    except (OSError, ValueError):
+        contracts = {}
     soaks: List[Soak] = []
     shadow_set = set(shadow)
     for s in stage1:
@@ -301,10 +315,11 @@ def build(today: date, ref: str = "HEAD", grade_file: Optional[Path] = None) -> 
                               "leg sends no order, so Gate 2 cannot apply", "—", "—", nxt, "see-shadow",
                               "shadow: no orders, no fills — R5 cannot grade it", refs_for(s)))
             continue
-        v, prog, eta, why = grade_stage1(legs.get(s), grade_ok, gfile or "—")
+        v, prog, eta, why = grade_stage1(legs.get(s), grade_ok, gfile or "—",
+                                         contracts.get(f"SOAK-stage1-{s.replace('/', '-', 1)}"))
         soaks.append(Soak("stage1", s, "Stage-1 soak leg", s1_start[s],
-                          "Gate 2: mechanics flowing AND R3 cost fidelity decisive at >=10 fills/side "
-                          "(RULE-R5-SOAK-BOOK-GRADE-v1)", prog, eta, nxt, v, why, refs_for(s)))
+                          "mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; "
+                          "contract in docs/claude/work/SOAKS.json)", prog, eta, nxt, v, why, refs_for(s)))
 
     rostered = {k: [a for a, x in (acc.get("accounts") or {}).items() if k in (x.get("strategies") or [])]
                 for k in shadow}
@@ -351,7 +366,9 @@ def build(today: date, ref: str = "HEAD", grade_file: Optional[Path] = None) -> 
     for row in ck.get("items") or []:
         if row.get("state") != "landed_unproven":
             continue
-        ds = [prs[p] for p in row.get("prs") or [] if isinstance(p, int) and p in prs]
+        rp = row.get("prs")
+        rp = rp if isinstance(rp, list) else ([rp] if rp is not None else [])  # a bare int occurs (PROP-MARKETABLE-ENTRY)
+        ds = [prs[p] for p in rp if isinstance(p, int) and p in prs]
         soaks.append(Soak("landed_unproven", row["id"], str(row.get("title", ""))[:140],
                           max(ds) if ds else "unknown (no PR merge found in git)",
                           exit_from_note(row.get("note", "")), "—", "—", "none declared",
@@ -536,10 +553,13 @@ def _self_test() -> int:
        next_grade_day(date(2026, 10, 4)) == date(2026, 10, 11))
     leg = {"disposition": "kill", "reason": "starved", "mechanics": {"state": "starved", "intents": 5,
            "received": 0}, "cost_fidelity": {"n_entry": 0, "n_exit": 0}}
-    ck("kill grades dead", grade_stage1(leg, True, "g")[0] == DEAD)
+    ck("R5 mechanics kill grades dead", grade_stage1(leg, True, "g")[0] == DEAD)
     ck("insufficient-data grades accruing (quiet)",
        grade_stage1(dict(leg, disposition="insufficient-data"), True, "g")[0] == ACCRUING)
-    ck("healthy grades ready", grade_stage1(dict(leg, disposition="healthy"), True, "g")[0] == READY)
+    ck("an R5 cost verdict alone NEVER readies a soak (cost is monitoring)",
+       grade_stage1(dict(leg, disposition="healthy"), True, "g")[0] == ACCRUING)
+    ck("a PASS contract disposition grades ready",
+       grade_stage1(leg, True, "g", {"disposition": {"verdict": "PASS", "trades": [1, 2]}})[0] == READY)
     ck("stale grade is could-not-look, never dead", grade_stage1(leg, False, "g")[0] == CNL)
     ck("leg absent from grade is could-not-look", grade_stage1(None, True, "g")[0] == CNL)
     ck("roster_members reads only Stage-1 rosters",
