@@ -836,7 +836,7 @@ def gh_runs(status: str, *, limit: int = 200) -> Optional[List[Dict[str, Any]]]:
     """`gh run list` rows for one status, or None when gh could not answer --
     a count we could not take is reported as such, never as zero."""
     cmd = ["gh", "run", "list", "--status", status, "--limit", str(limit),
-           "--json", "databaseId,workflowName,status,createdAt"]
+           "--json", "databaseId,workflowName,status,createdAt,event"]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
     except (OSError, subprocess.SubprocessError):
@@ -858,6 +858,14 @@ def gh_runs(status: str, *, limit: int = 200) -> Optional[List[Dict[str, Any]]]:
 #: in flight" were three `trainer-vm-diag` issue dispatches from the same
 #: morning. Counting them deferred every fire, and would have forever.
 STALE_PRESSURE_HOURS = 24.0
+
+#: Run events that do NOT count toward --max-repo-queued (manager decision 2026-10-16, lane
+#: RESEARCH-DISPATCH-STALL-1016). A `workflow_run` listener run is created for EVERY completion of a
+#: workflow it watches and mostly ends `skipped` without holding a runner. MEASURED 2026-10-16 09:37Z:
+#: the 27 fresh queued runs that deferred every fire were mostly claude-run-failure-alert (37 of ~60 of
+#: its runs since 08:00Z ended skipped). They still count for infra-yield (system-actions-cancel-guard is
+#: a listener AND infra) -- this only narrows the saturation count.
+NON_COMPETING_EVENTS = frozenset({"workflow_run"})
 
 
 def _run_age_hours(row: Dict[str, Any], now: datetime) -> Optional[float]:
@@ -923,19 +931,21 @@ def backpressure(research_names: Dict[str, str], *, max_inflight: int, max_queue
     for r in queued + inprog:
         if str(r.get("workflowName")) in names:
             by_name[str(r["workflowName"])] = by_name.get(str(r["workflowName"]), 0) + 1
+    competing = [r for r in queued if str(r.get("event") or "") not in NON_COMPETING_EVENTS]
+    listeners = len(queued) - len(competing)
     infra = set(infra_names or [])
     infra_waiting = sorted({str(r.get("workflowName")) for r in queued if str(r.get("workflowName")) in infra})
     infra_queued = sum(1 for r in queued if str(r.get("workflowName")) in infra)
-    out = {"inflight_research": inflight, "by_name": by_name, "repo_queued": len(queued), "stale_ignored": stale, "block": None,
-           "infra_queued": infra_queued,
+    out = {"inflight_research": inflight, "by_name": by_name, "repo_queued": len(competing), "stale_ignored": stale, "block": None,
+           "infra_queued": infra_queued, "listener_queued_ignored": listeners,
            "detail": f"research compute in flight {inflight} (cap {max_inflight}); repo runs queued "
-                     f"{len(queued)} (cap {max_queued}); {stale} stuck run(s) older than "
-                     f"{stale_after_hours:g} h ignored"}
+                     f"{len(competing)} (cap {max_queued}; {listeners} workflow_run listener run(s) not counted); "
+                     f"{stale} stuck run(s) older than {stale_after_hours:g} h ignored"}
     if infra_queued:
         out["block"] = (f"{infra_queued} infra run(s) queued ({', '.join(infra_waiting)}): research yields "
                         "the shared GitHub runner pool to infra -- deferring every fire this cycle")
-    elif len(queued) > max_queued:
-        out["block"] = (f"{len(queued)} workflow runs are queued repo-wide (> {max_queued}): research "
+    elif len(competing) > max_queued:
+        out["block"] = (f"{len(competing)} workflow runs are queued repo-wide (> {max_queued}): research "
                         "must not add to a saturated runner pool -- deferring every fire this cycle")
     elif inflight >= max_inflight:
         out["block"] = (f"{inflight} research compute run(s) already queued/in progress (cap "
