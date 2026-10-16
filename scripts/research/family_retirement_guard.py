@@ -60,7 +60,7 @@ def review_problems(root: Path, family: str, policy: Dict[str, Any]) -> List[str
         return [f"no review record {p.relative_to(root).as_posix()}"]
     try:
         r = _yaml().safe_load(p.read_text(encoding="utf-8")) or {}
-    except Exception as e:  # noqa: BLE001 -- an unreadable record is no record
+    except (OSError, UnicodeDecodeError, _yaml().YAMLError) as e:   # reported as a problem: an unreadable record is no record
         return [f"{p.name} unreadable ({e})"]
     mins = policy.get("minimums") or {}
     out = []
@@ -111,7 +111,9 @@ def structured_retirements(root: Path, policy: Dict[str, Any]) -> List[Dict[str,
     for p in sorted((root / "research" / "queue").rglob("*.yaml")):
         try:
             u = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
-        except Exception:  # noqa: BLE001 -- the queue validators own unreadable units
+        except (OSError, UnicodeDecodeError, yaml.YAMLError):
+            # allow-silent: an unreadable unit is reported by the queue validators
+            # (check_research_queue_decision_rule.py / queue_replenish existing_units `bad`), not here
             continue
         if isinstance(u, dict) and u.get("retires_family"):
             out.append({"family": str(u["retires_family"]), "where": p.relative_to(root).as_posix()})
