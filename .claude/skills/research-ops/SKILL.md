@@ -204,6 +204,10 @@ written after seeing the number:
   breadth across configs/windows/instruments, outside evidence with sources, a reason the idea is dead), and
   `family-retirement-guard` refuses family-closure wording or a `retires_family:` without one. When a family has
   several config FAILs and no review, the follow-up is a review or a differently-designed test, not a kill.
+  Write ONE line per FAIL in the run record's `results_read` (and the unit's follow-up note):
+  **"configuration closed: <what was tested>; family <name> stays open; next test = <unit id or the question>"**.
+  A unit may carry `family: <name>` (and `retires_family:` defaults to false); only a C-verdict review record
+  with all six protocol items (`research/family_reviews/README.md`) retires one.
 - **indeterminate →** extend n or redesign, in one line, and a unit that does it.
 
 Record each disposition with `research_disposition.py --record` (it routes to `append` and

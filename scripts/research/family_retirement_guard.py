@@ -17,9 +17,13 @@ WHAT IT REFUSES
         research/queue/**/*.yaml        retires_family: <f>
         research/programmes/*.yaml      a node with retires_family: <f>
       (whole-tree: a structured retirement is never grandfathered, it is a claim the record must back)
-  R2  a review record that is invalid: missing fields, breadth below the policy minimums, fewer outside
-      sources than required, test_design_check.verdict not in the allowed list ("flawed" = we tested it
-      wrong: fix the test, do not retire), or a reason shorter than reason_chars
+  R2  a review record missing any of the SIX protocol items (IDEA-REVIEW-1016, PR #18560): (1) a test-design
+      review answering every check in policy.test_design_checks; (2) breadth >= the minimums on configs /
+      disjoint windows or folds / instruments, each entry with n + power, indeterminate counting zero; (3) a
+      passing positive control (or none_exists_because); (4) >= outside_sources sources or the searches run,
+      and NO source naming an untested condition (that is verdict A, never C); (5) every not-tested dimension
+      covered_by a unit/row or irrelevant_because a reason; (6) a one-sentence mechanism-level reason. Only
+      verdict C retires; A (tested wrong) and B (not yet testable) never do.
   R3  (with --base) an ADDED line on a research text surface that uses family-closure language
       (policy.closure_language) without citing `family_review: <f>` / research/family_reviews/<f>.yaml
       for a family whose review is valid. Added lines only: history is not re-litigated.
@@ -53,8 +57,22 @@ def load_policy(root: Path) -> Dict[str, Any]:
     return _yaml().safe_load((root / POLICY).read_text(encoding="utf-8"))
 
 
+def _counted(entries: Any) -> List[Dict[str, Any]]:
+    """Breadth entries that COUNT: a mapping with n and power stated and a verdict that is not indeterminate."""
+    out = []
+    for e in entries or []:
+        if not isinstance(e, dict):
+            continue
+        if e.get("n") in (None, "") or not str(e.get("power") or "").strip():
+            continue
+        if str(e.get("verdict") or "").lower() in ("indeterminate", "underpowered", "accruing", ""):
+            continue
+        out.append(e)
+    return out
+
+
 def review_problems(root: Path, family: str, policy: Dict[str, Any]) -> List[str]:
-    """Empty when research/family_reviews/<family>.yaml is a valid retirement record."""
+    """Empty when research/family_reviews/<family>.yaml carries all six protocol items at the policy minimums."""
     p = root / REVIEWS / f"{family}.yaml"
     if not p.is_file():
         return [f"no review record {p.relative_to(root).as_posix()}"]
@@ -62,38 +80,79 @@ def review_problems(root: Path, family: str, policy: Dict[str, Any]) -> List[str
         r = _yaml().safe_load(p.read_text(encoding="utf-8")) or {}
     except (OSError, UnicodeDecodeError, _yaml().YAMLError) as e:   # reported as a problem: an unreadable record is no record
         return [f"{p.name} unreadable ({e})"]
+    return record_problems(r, family, policy)
+
+
+def record_problems(r: Dict[str, Any], family: str, policy: Dict[str, Any]) -> List[str]:
     mins = policy.get("minimums") or {}
     out = []
-    for k in ("family", "decided_at", "reviewed_by", "test_design_check", "breadth", "outside_evidence",
-              "reason_idea_dead"):
+    for k in ("family", "decided_at", "reviewed_by", "verdict", "test_design_review", "breadth", "positive_control",
+              "outside_evidence", "not_tested", "reason_idea_dead"):
         if not r.get(k):
             out.append(f"missing `{k}`")
     if r.get("family") and str(r["family"]) != family:
         out.append(f"`family` is {r['family']!r}, file is {family}")
-    tdc = r.get("test_design_check") or {}
-    if isinstance(tdc, dict):
-        if str(tdc.get("verdict")) not in [str(v) for v in policy.get("test_design_verdicts_allowed") or ["sound"]]:
-            out.append(f"test_design_check.verdict is {tdc.get('verdict')!r}: a flawed or unchecked test design "
-                       "means fix the test, not retire the idea")
-        if not str(tdc.get("notes") or "").strip():
-            out.append("test_design_check.notes is empty: say what was checked")
+    if r.get("verdict") and str(r["verdict"]) not in [str(v) for v in policy.get("retiring_verdicts") or ["C"]]:
+        out.append(f"verdict {r['verdict']!r} does not retire (A = tested wrong -> re-test; B = not testable -> a row)")
+    # (1) test-design review
+    tdr = r.get("test_design_review") or {}
+    if isinstance(tdr, dict):
+        if not str(tdr.get("first_skeptic_flaw") or "").strip():
+            out.append("test_design_review.first_skeptic_flaw: name the flaw a skeptic raises first and why it does not apply")
+        checks = tdr.get("checks") if isinstance(tdr.get("checks"), dict) else {}
+        for c in policy.get("test_design_checks") or []:
+            if not str(checks.get(c) or "").strip():
+                out.append(f"test_design_review.checks.{c} unanswered")
+        if str(tdr.get("verdict") or "sound") == "flawed":
+            out.append("test_design_review.verdict is `flawed`: we tested it wrong -- fix the test, do not retire")
+    # (2) breadth: counted entries only (n + power stated; indeterminate counts zero)
     br = r.get("breadth") or {}
     if isinstance(br, dict):
-        for key, mkey in (("configs", "configs_tested"), ("windows", "windows_tested"),
-                          ("instruments", "instruments_tested")):
-            have = len(br.get(key) or [])
-            need = int(mins.get(mkey) or 0)
-            if key == "instruments" and have == 1 and str(br.get("single_instrument_why") or "").strip():
-                continue
-            if have < need:
-                out.append(f"breadth.{key}: {have} < {need} ({mkey})")
-    srcs = [s for s in (r.get("outside_evidence") or []) if isinstance(s, dict)
-            and str(s.get("source") or "").strip() and str(s.get("finding") or "").strip()]
-    if len(srcs) < int(mins.get("outside_sources") or 0):
-        out.append(f"outside_evidence: {len(srcs)} source(s) with `source` + `finding` < {mins.get('outside_sources')} "
-                   "-- if a viable idea exists, someone outside has written about doing it better")
-    if len(str(r.get("reason_idea_dead") or "").strip()) < int(mins.get("reason_chars") or 0):
+        if not str(br.get("primary_axis") or "").strip():
+            out.append("breadth.primary_axis: name the family's main axis")
+        nc = len(_counted(br.get("configs")))
+        if nc < int(mins.get("configs_tested") or 0):
+            out.append(f"breadth.configs: {nc} counted (n + power, not indeterminate) < {mins.get('configs_tested')}")
+        nw, nf = len(_counted(br.get("windows"))), len(_counted(br.get("folds")))
+        if nw < int(mins.get("windows_disjoint") or 0) and nf < int(mins.get("folds_alternative") or 0):
+            out.append(f"breadth: {nw} disjoint window(s) < {mins.get('windows_disjoint')} and {nf} fold(s) < "
+                       f"{mins.get('folds_alternative')}")
+        ni = len(_counted(br.get("instruments")))
+        if ni < int(mins.get("instruments_tested") or 0) and not str(br.get("instrument_specific_why") or "").strip():
+            out.append(f"breadth.instruments: {ni} counted < {mins.get('instruments_tested')} and no instrument_specific_why")
+    # (3) positive control
+    pc = r.get("positive_control") or {}
+    if isinstance(pc, dict) and not (pc.get("passed") is True and str(pc.get("test") or "").strip()) \
+            and not str(pc.get("none_exists_because") or "").strip():
+        out.append("positive_control: name a test that should pass on the same instrument/data/join and show it passing "
+                   "(passed: true + test), or none_exists_because -- a negative needs a denominator")
+    # (4) outside evidence
+    oe = r.get("outside_evidence") or {}
+    if isinstance(oe, dict):
+        srcs = [s for s in (oe.get("sources") or []) if isinstance(s, dict)
+                and str(s.get("source") or "").strip() and str(s.get("finding") or "").strip()]
+        searches = [q for q in (oe.get("searches") or []) if str(q).strip()]
+        no_source_record = not srcs and len(searches) >= int(mins.get("searches_if_no_sources") or 0)
+        if len(srcs) < int(mins.get("outside_sources") or 0) and not no_source_record:
+            out.append(f"outside_evidence: {len(srcs)} source(s) < {mins.get('outside_sources')} and not a no-source "
+                       f"record with >= {mins.get('searches_if_no_sources')} searches listed")
+        named = [str(s.get("source")) for s in srcs if s.get("names_untested_condition")]
+        if named:
+            out.append(f"outside_evidence names an UNTESTED condition ({', '.join(named)}): verdict is A "
+                       "(tested wrong), never C -- register the re-test")
+    # (5) not-tested list
+    nt = r.get("not_tested") if isinstance(r.get("not_tested"), dict) else {}
+    for d in policy.get("not_tested_dimensions") or []:
+        e = nt.get(d)
+        if not (isinstance(e, dict) and (str(e.get("covered_by") or "").strip()
+                                         or str(e.get("irrelevant_because") or "").strip())):
+            out.append(f"not_tested.{d}: covered_by a unit/row, or irrelevant_because a reason")
+    # (6) the reason the IDEA is dead: one sentence about the mechanism
+    reason = str(r.get("reason_idea_dead") or "").strip()
+    if len(reason) < int(mins.get("reason_chars") or 0):
         out.append(f"reason_idea_dead shorter than {mins.get('reason_chars')} chars")
+    if re.search(r"\b(every|all)\s+(the\s+)?(cell|config\w*|unit|test)s?\b.*\bfail", reason, re.I):
+        out.append("reason_idea_dead restates the breadth ('every cell failed') -- name the MECHANISM")
     return out
 
 
@@ -181,47 +240,79 @@ def check(root: Path, base: Optional[str]) -> List[str]:
     return problems
 
 
+def _good_record(family: str = "deep_sequence") -> Dict[str, Any]:
+    ent = lambda i, n=300: {"id": i, "n": n, "power": 0.8, "verdict": "fail"}  # noqa: E731
+    return {
+        "family": family, "decided_at": "2030-01-01", "reviewed_by": "lane X", "verdict": "C",
+        "test_design_review": {
+            "first_skeptic_flaw": "window too short for the mechanism; it spans both vol regimes, so it does not apply",
+            "checks": {"window_vs_mechanism": "two years, both regimes", "metric_vs_baseline": "logloss vs prior",
+                       "label_vs_payoff": "R-weighted", "gate_vs_size": "fixed size, no gate",
+                       "harness_validity": "no known defect at run time", "reference_distribution": "block bootstrap"}},
+        "breadth": {"primary_axis": "architecture", "configs": [ent("c1"), ent("c2"), ent("c3")],
+                    "windows": [ent("w1"), ent("w2")], "instruments": [ent("BTC"), ent("ETH")]},
+        "positive_control": {"test": "RQ-POS", "passed": True},
+        "outside_evidence": {"sources": [{"source": s, "primary": True, "finding": "no edge at this horizon"}
+                                         for s in ("paper A", "repo B", "model card C")]},
+        "not_tested": {d: {"covered_by": f"RQ-{d}"} for d in
+                       ("horizon", "instrument", "conditioning", "cost", "label", "sizing", "exit", "regime", "holding_period")},
+        "reason_idea_dead": "the edge was lookahead in the label join and no independent test of the concept exists",
+    }
+
+
 def _self_test() -> int:
+    import copy
     import shutil
     import tempfile
+    yaml = _yaml()
     with tempfile.TemporaryDirectory() as td:
         r = Path(td)
-        (r / "research" / "queue").mkdir(parents=True)
-        (r / "research" / "programmes").mkdir(parents=True)
-        (r / REVIEWS).mkdir(parents=True)
-        (r / "docs" / "plans").mkdir(parents=True)
-        (r / POLICY).parent.mkdir(parents=True, exist_ok=True)
+        for d in (r / "research" / "queue", r / "research" / "programmes", r / REVIEWS, r / "docs" / "plans",
+                  (r / POLICY).parent):
+            d.mkdir(parents=True, exist_ok=True)
         shutil.copy(_REPO / POLICY, r / POLICY)
         pol = load_policy(r)
         (r / ML_PLAN).write_text("families:\n  deep_sequence: {history: [FAIL], state: retired}\n  gbdt: {history: []}\n")
         (r / "research" / "queue" / "RQ-1.yaml").write_text("id: RQ-1\nstatus: retired\nretires_family: giveback_stop\n")
+        (r / "research" / "queue" / "RQ-2.yaml").write_text("id: RQ-2\nstatus: done\nretires_family: false\n")  # default: no claim
         p = check(r, None)
         assert sum(x.startswith("R1") for x in p) == 2, p           # two structured retirements, no records
-        good = ("family: deep_sequence\ndecided_at: '2030-01-01'\nreviewed_by: lane X\n"
-                "test_design_check: {verdict: sound, notes: 'label, horizon and leakage re-checked'}\n"
-                "breadth: {configs: [tcn, lstm, patchtst], windows: [w1, w2], instruments: [BTC, ETH]}\n"
-                "outside_evidence:\n  - {source: 'paper A', finding: 'no edge at this horizon'}\n"
-                "  - {source: 'repo B', finding: 'same'}\n"
-                "reason_idea_dead: '" + "x" * 90 + "'\n")
-        (r / REVIEWS / "deep_sequence.yaml").write_text(good)
+        good = _good_record()
+        assert record_problems(good, "deep_sequence", pol) == [], record_problems(good, "deep_sequence", pol)
+        (r / REVIEWS / "deep_sequence.yaml").write_text(yaml.safe_dump(good))
         p = check(r, None)
         assert not any("deep_sequence" in x for x in p) and any("giveback_stop" in x for x in p), p
-        # R2: flawed design, thin breadth, one source -> refused, and the retirement it backs is refused too
-        (r / REVIEWS / "giveback_stop.yaml").write_text(
-            good.replace("deep_sequence", "giveback_stop").replace("verdict: sound", "verdict: flawed")
-                .replace("[tcn, lstm, patchtst]", "[gb1R]").replace("  - {source: 'repo B', finding: 'same'}\n", ""))
-        bad = review_problems(r, "giveback_stop", pol)
-        assert any("flawed" in b for b in bad) and any("breadth.configs" in b for b in bad) \
-            and any("outside_evidence" in b for b in bad), bad
+
+        def bad(mutate) -> List[str]:
+            rec = copy.deepcopy(good)
+            mutate(rec)
+            return record_problems(rec, "deep_sequence", pol)
+        # each of the six items, and the verdict letter, is enforced by name
+        assert any("does not retire" in b for b in bad(lambda x: x.update(verdict="A")))
+        assert any("flawed" in b for b in bad(lambda x: x["test_design_review"].update(verdict="flawed")))
+        assert any("checks.gate_vs_size" in b for b in bad(lambda x: x["test_design_review"]["checks"].pop("gate_vs_size")))
+        assert any("breadth.configs" in b for b in bad(lambda x: x["breadth"]["configs"][2].update(verdict="indeterminate")))
+        assert any("breadth.configs" in b for b in bad(lambda x: x["breadth"]["configs"][1].pop("power")))
+        assert not any(b.startswith("breadth:") for b in bad(lambda x: x["breadth"].update(
+            windows=[], folds=[{"id": f"f{i}", "n": 50, "power": 0.6, "verdict": "fail"} for i in range(4)])))
+        assert any(b.startswith("breadth:") for b in bad(lambda x: x["breadth"].update(windows=good["breadth"]["windows"][:1])))
+        assert any("breadth.instruments" in b for b in bad(lambda x: x["breadth"].update(instruments=[x["breadth"]["instruments"][0]])))
+        assert not bad(lambda x: x["breadth"].update(instruments=[x["breadth"]["instruments"][0]],
+                                                     instrument_specific_why="the idea is MES-session specific"))
+        assert any("positive_control" in b for b in bad(lambda x: x["positive_control"].update(passed=False)))
+        assert not bad(lambda x: x.update(positive_control={"none_exists_because": "no instrument has a known-good signal"}))
+        assert any("verdict is A" in b for b in bad(lambda x: x["outside_evidence"]["sources"][0].update(
+            names_untested_condition=True)))
+        assert any("outside_evidence" in b for b in bad(lambda x: x["outside_evidence"]["sources"].pop()))
+        assert not bad(lambda x: x.update(outside_evidence={"sources": [], "searches": ["q1", "q2", "q3"]}))
+        assert any("not_tested.regime" in b for b in bad(lambda x: x["not_tested"].pop("regime")))
+        assert not bad(lambda x: x["not_tested"].update(regime={"irrelevant_because": "no regime conditioning in the idea"}))
+        assert any("MECHANISM" in b for b in bad(lambda x: x.update(
+            reason_idea_dead="every config we ran failed at declared power on every window")))
+        # an invalid record does not back its retirement
+        (r / REVIEWS / "giveback_stop.yaml").write_text(yaml.safe_dump({**good, "family": "giveback_stop", "verdict": "A"}))
         assert any(x.startswith("R1 research/queue/RQ-1.yaml") for x in check(r, None))
-        # single instrument allowed only with a reason
-        one = good.replace("instruments: [BTC, ETH]", "instruments: [MES]")
-        (r / REVIEWS / "deep_sequence.yaml").write_text(one)
-        assert any("breadth.instruments" in b for b in review_problems(r, "deep_sequence", pol))
-        (r / REVIEWS / "deep_sequence.yaml").write_text(one.replace(
-            "instruments: [MES]", "instruments: [MES], single_instrument_why: 'only futures book we run'"))
-        assert review_problems(r, "deep_sequence", pol) == []
-        # R3: closure language on an added line; config language passes; a valid citation passes
+        # R3: closure language on an added line; config language and negations pass; a valid citation passes
         lines = [("research/queue/RQ-2.yaml", "result: the giveback family is dead after one FAIL"),
                  ("research/queue/RQ-3.yaml", "result: this cell FAILED -- honest negative for this config"),
                  ("docs/plans/ml-plan-items.yaml", "close: line is exhausted (family_review: deep_sequence)"),

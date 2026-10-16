@@ -22,6 +22,10 @@ recurring planning session does.
   tested and failed, plus the refinement that follows. Retiring a family needs a review record
   (`scripts/research/family_retirement_policy.yaml`, `research/family_reviews/`), and `family-retirement-guard` refuses
   family-closure wording on an added line that cites none.
+- **Direction / multi-class units register a proper score** (IDEA-REVIEW-1016, 2026-10-16): on a 3-class direction
+  label the class prior scores ~0.22 macro-F1 while a coin scores ~0.33, so "macro-F1 lift vs prior" can be pure
+  chance. Register `logloss` (or `brier`) vs the prior; `ml_bakeoff.py` now records a `metric_caveats` line on any
+  macro-F1/accuracy-vs-prior result with k >= 3 (the verdict is unchanged -- the rule is registered).
 - Every unit says what it does not do. An upper-bound or scoping unit says it is not a promotion case.
 - Units that need a prior result to be worth running use `requires_result`, not prose.
 

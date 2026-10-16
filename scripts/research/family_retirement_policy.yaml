@@ -17,19 +17,29 @@
 # model family (docs/plans/ml-plan-items.yaml `families:`), a strategy family (donchian, pullback, ...),
 # an information class (news veto, PM surprise). Name it the way the work names it.
 #
-# THRESHOLDS ARE PROVISIONAL and configurable here. Lane IDEA-REVIEW-1016 (deep research on the families
-# closed so far) proposes the protocol details; the manager forwards them and this file is the one place
-# they land. Change a number with the evidence for it in the PR body.
-policy_version: 1
+# THE PROTOCOL is lane IDEA-REVIEW-1016's (PR #18560, docs/research/idea-family-review-2026-10-16.md § "Proposed
+# NEGATIVE-RESULT PROTOCOL"), folded in by RESEARCH-ENGINE-1016. Verdict vocabulary from that review:
+#   A  viable, tested wrong  -- outside evidence names a condition we did not test -> a pre-registered re-test
+#   B  viable, not testable  -- needs data / a harness we lack -> a checklist row with its first step
+#   C  no supporting evidence -- retire, with the sources checked as the denominator
+# Only C retires a family, and only with ALL six items below; a record missing any leaves the family open.
+# Numbers are configurable here; change one with the evidence for it in the PR body.
+policy_version: 2
 provisional: true
+retiring_verdicts: [C]
 minimums:
-  configs_tested: 3          # distinct configurations (lever values / feature sets / architectures) that FAILED
-  windows_tested: 2          # distinct time windows (incl. at least one the configs were not chosen on)
-  instruments_tested: 2      # distinct symbols / legs / markets (1 allowed only with breadth.single_instrument_why)
-  outside_sources: 2         # outside evidence: papers, practitioner write-ups, open-source implementations
-  reason_chars: 80           # the stated reason the IDEA itself is dead, not just that our configs failed
-# test_design_check.verdict must be `sound`. `flawed` means we tested it wrong: fix the test, do not retire.
-test_design_verdicts_allowed: [sound]
+  configs_tested: 3          # (2) on the family's PRIMARY axis; each with n + power; indeterminate counts zero
+  windows_disjoint: 2        # (2) disjoint windows ...
+  folds_alternative: 4       #     ... or at least this many folds
+  instruments_tested: 2      # (2) unless breadth.instrument_specific_why says the idea is instrument-specific
+  outside_sources: 3         # (4) primary where possible ...
+  searches_if_no_sources: 3  #     ... or, where none is found, the searches that were run
+  reason_chars: 40           # (6) one sentence about the MECHANISM, not "every cell failed"
+# (1) the test-design review: every check named, each answered (why it does not apply, or what was done).
+test_design_checks: [window_vs_mechanism, metric_vs_baseline, label_vs_payoff, gate_vs_size, harness_validity,
+                     reference_distribution]
+# (5) the not-tested list: every dimension either covered_by a unit/row or irrelevant_because a reason.
+not_tested_dimensions: [horizon, instrument, conditioning, cost, label, sizing, exit, regime, holding_period]
 # Words that, on an ADDED line in a research surface, assert a family-level closure. Each such line must
 # cite its review (`family_review: <family>` or the path research/family_reviews/<family>.yaml) -- otherwise
 # the guard refuses it. Config-level language ("this cell FAILED", "honest negative for this config") is fine.
