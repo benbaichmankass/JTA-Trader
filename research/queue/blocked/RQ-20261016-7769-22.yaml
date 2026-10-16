@@ -1,0 +1,121 @@
+id: RQ-20261016-7769-22
+title: 'P4-Q2 refinement of the 4a4c-06 FAIL: does a MAGNITUDE-weighted, exposure-matched long TILT on NQ=F (overweight after cool PPI prints, underweight
+  after hot, weight from the surprise''s rank among PRIOR releases) beat the all-long floor net of the MNQ cost stack? (blocked: rank-tilt arm)'
+status: blocked
+cadence: once
+theme: macro
+priority: 1
+kind: experiment
+question: 'Per ppi_mom release after a 24-release warm-up: z = 2*(expanding percentile of the surprise among PRIOR releases only) - 1, in [-1, 1]; tilt
+  weight w = 1 - z (so mean exposure ~1, the floor''s); excess = (w - 1) * r_{h3} - |w - 1| * cost_frac(MNQ), with r the NQ=F 3-trading-day forward return
+  from the release-day close. Is mean excess > 0 with t >= 2.0 over n >= 100 releases?'
+why_this_matters: 'Parent lead: RQ-20261014-de02-04 (ppi_mom -> ES=F, n=139, h3 IC -0.281, t_eff -3.43) and its confirmation set, MEASURED from research/results/
+  2026-10-16: both sub-periods PASS (4a4c-01 n=68 h3 t -2.05; 4a4c-02 n=71 h3 t -2.79), placebo -10 td CLEAN (4a4c-03 h3 t -0.41, rerun -0.20), +10 td shift
+  clean (77dc-02 t -0.72), NQ=F PASS (4a4c-04 h3 t -2.93), ZN=F FAIL (4a4c-05, wrong-sign t +0.86/+1.24), net-of-MES-cost sign book FAIL (4a4c-06: mean
+  net +0.00221/trade, t 1.53, n=118; all-long floor +0.00341; book minus floor -0.0012, t -0.59). The drift is real in rank but a symmetric sign book does
+  not beat being long. Arithmetic from the 4a4c-06 record shows why it failed and what to test instead: for a sign book, book minus floor = (pos - 1) *
+  r, which is zero on long windows and -2r on short ones, so on an index that drifts up the book can only beat being long if the index FALLS after hot prints;
+  it does not (it rises less). The exposure-matched SIGN tilt (w = 1 - sign) has excess = the sign book''s own net return, already measured at +0.00221,
+  t 1.53 (fails t >= 2.0). The rank IC (t -3.43) is far stronger than the sign hit rate (54%), so the information is in the MAGNITUDE: weight by rank, not
+  sign. NQ h3 IC -0.242 (t -2.93, n 139); runs only after the NQ placebo (RQ-20261016-7769-01) is clean. This is the pre-registered refinement (operator
+  2026-09-27: refinement, not a one-strike kill), registered BEFORE any rank-tilt number exists.'
+power:
+  expected_n: 115
+  min_detectable_effect: 0.27
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Unit = one release with a defined surprise; 115 on file (MEASURED 2026-10-16 with econ_event_study.load_resolved_events_multi over the two committed
+    snapshot files (releases with a defined survey surprise, before the price join; the run prints the joined count)). Floor at the unit''s own bar |t|
+    >= 2.0: ((2.0+0.84)/0.27)^2 = 111 at d=0.27: CLEARED. Monthly releases with h<=5 trading days never overlap, so releases are not autocorrelated by construction.
+    n = 139 releases with a surprise minus the 24-release warm-up (z needs prior releases only); ESTIMATE until the run prints it.'
+  feasibility:
+    source: none
+    accrual_basis: 'n is bounded by the resolved releases on file (a fixed historical backfill 2015-01..2026-10, ~12/yr accrue). Not an accrual: a short
+      join lands INDETERMINATE, never padded.'
+decision_rule:
+  id: RULE-RQ-20261016-7769-22
+  registered_at: '2026-10-16'
+  registered_before_run: true
+  statistic: 'the rank-tilt arm of macro_event_study_run.py (lever MACRO-EVENT-RANKTILT-ARM): excess {n, mean, t}, the z warm-up length, the turnover cost
+    stack (recorded in the result), and the sign book beside it.'
+  rule: 'PASS IF n >= 100 AND mean excess (tilt minus all-long floor, net of the turnover cost) > 0 with t >= 2.0. FAIL IF n >= 100 and not PASS. INDETERMINATE
+    IF n < 100. The sign-book grade and the IC are reported beside it and do not decide. no_data / producer_failed: a route fault.'
+  what_it_does_not_do: Not an options book (linear futures upper bound; the sleeve trades debit verticals). Does not touch config, the sleeve or thesis_tick.py;
+    a PASS re-opens programme node P4-Q3-event-axis (the axis replay), never a leg.
+compute: cpu_light
+value:
+  bucket: information
+  usd_at_stake_per_month: 80
+  confidence: 0.2
+  basis: 'stand-in: completes the confirmation set of the one event-surprise lead that could seed an event-scored conviction axis for the M28 sleeve (alpaca_options_paper);
+    information value, not a P&L claim'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 10
+  basis: Same shape as RQ-20261014-4a4c-0x (one daily-close fetch, a few hundred snapshot rows, rank correlations); those ran in minutes on research-script-run.yml.
+  why_runner: 'cpu_light on the GitHub runner: the harness fetches daily closes off-VM (yfinance/Stooq) and reads two committed snapshot files; nothing
+    is trainer-resident and no published Kaggle dataset carries these instruments, so no idle backend can take it.'
+run:
+  command:
+  - python3
+  - scripts/research/macro_event_study_run.py
+  - --kind
+  - ppi_mom
+  - --snapshots
+  - comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl
+  - --symbol
+  - NQ=F
+  - --horizons
+  - '3'
+  - --primary-horizons
+  - '3'
+  - --min-n
+  - '100'
+  - --t-bar
+  - '2.4'
+  - --expected-sign
+  - negative
+  - --trade-horizon
+  - '3'
+  - --cost-symbol
+  - MNQ
+  - --trade-t-bar
+  - '2.0'
+  - --book
+  - rank_tilt
+  - --rank-warmup
+  - '24'
+  - --population
+  - ppi_mom releases after a 24-release warm-up; rank-weighted long tilt on NQ=F vs all-long, MNQ cost stack
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261016-7769-22
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M28
+programme: P4
+related:
+- P4-MACRO-BACKLOG-1016
+- P4-MACRO-PROGRAMME
+- docs/research/programmes/04-MACRO-SLEEVE.md
+- research/programmes/04-macro-sleeve.yaml
+- scripts/research/macro_event_study_run.py
+- .claude/skills/macro-research/SKILL.md
+last_dispatched_at: null
+blocked_on:
+- what: 'macro_event_study_run.py has no --book rank_tilt / --rank-warmup arm (MEASURED: its argparse has --trade-horizon/--cost-symbol/--trade-t-bar only,
+    2026-10-16); the command above would exit on an unknown argument.'
+  ref: checklist MACRO-EVENT-RANKTILT-ARM (Tier-1 research tooling)
+  clears_when: the arm lands with a test asserting z uses PRIOR releases only, then git mv this file back to research/queue/ with status queued
+requires_result:
+  unit: RQ-20261016-7769-01
+  verdict: fail
