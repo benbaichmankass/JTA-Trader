@@ -125,15 +125,19 @@ related:
 - RQ-20261013-1414-01
 - scripts/research/market_data_export.py
 - scripts/research/research_compute.yaml
-last_dispatched_at: '2026-10-16T10:58:10+00:00'
+last_dispatched_at: '2026-10-16T17:30:37+00:00'
 grading:
   auto: true
+  confirmatory_run: 1
   decision_rule_id: RULE-RQ20261014-65CC-09-LOGIT-NONINFERIOR-1H
   evidence:
+  - research/results/RQ-20261014-65cc-09/38519986015.jsonl
   - research/results/RQ-20261014-65cc-09/38890742240.jsonl
+  first_fail: 1 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s)
+    superseded)
   graded_at: '2026-10-16'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
+  reason: 1 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
   rows: 1
-  verdict: null
+  verdict: fail
