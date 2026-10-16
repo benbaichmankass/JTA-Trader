@@ -122,3 +122,21 @@ result_2026_10_12: >-
   per-account and not independent signals; 373 of 634 rows carry a nonzero adjustment but only 23 are
   labelled boost/reduce (the other ~350 are small neutral-labelled tilts). This is an operator decision, not an action: no config touched and
   NEWS_VETO_ENABLED unchanged.
+grading:
+  decision_rule_id: RULE-RQ1009-902-NEWS-VETO-NET-R
+  evidence:
+  - research/results/RQ-20261009-902/session-local-20261012.jsonl
+  graded_at: '2026-10-16'
+  graded_by: session_0158Sm5wGaURcQjaikk5nfpo (lane RESEARCH-GRADING-BACKLOG-1016, manager session_01VduHYzdaXe27wTDBLSu8ao)
+  note: 'Scope (operator 2026-10-12, NEWS-VETO-EVAL row): this FAIL grades the OVERLAY only (news adjustment
+    vs taken-trade net R). Retirement of the news layer is OFF the table; the standalone information question
+    is RQ-20261012-5bd1-01 under NEWS-ALPHA-PROGRAM. No config change.'
+  population: 634 distinct taken trades (Arm A); vetoed signals < 25 (Arm B)
+  read_state: measured
+  reason: 'Arm A FAIL: Spearman rho -0.014 (one-sided p 0.64) over 634 distinct taken trades (>= 49),
+    so IC <= 0; also the reduce bucket (-0.65 R, n 11) is BELOW boost (+1.17 R, n 12), so that FAIL clause
+    does not fire -- the IC clause alone fails it. Arm B UNDERPOWERED (distinct vetoed n < 25): never
+    a pass, never a kill. Unit-level G1 read as registered: RETIRE-OR-REPLACE (Arm A FAILS). Population:
+    news_decisions.jsonl signals joined to journal taken trades, net of fee + slippage + funding.'
+  rows: 1
+  verdict: fail
