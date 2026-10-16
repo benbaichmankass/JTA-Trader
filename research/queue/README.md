@@ -237,6 +237,11 @@ weight in `THEMES.yaml`, verbatim "Prop first (Recommended)".)
   cell is a discovery: `queue_grade.py` adds ONE `confirmation:` unit (same rule, data after the PASS run) and
   the cell may not feed a Tier-3 proposal until that unit grades `confirmation: confirmed`. A deterministic
   template cell's FAIL closes with no same-window replay; it never retires the family (#18557 owns that).
+- **Pre-registered holdout (operator 2026-10-16, "Holdout re-run").** Every m20 sweep holds back the latest ~25%
+  of each leg's history (grown to the 25-trade floor, capped at 40%) before it selects cells, then grades only the
+  selected cells once on that span (`scripts/research/m20_holdout.py`). The result rows carry
+  `measurement.holdout.confirmation`, so discovery and confirmation come from one run with no wait. A PASS that did
+  not hold out gets one holdout re-run unit (`confirmation.mode: holdout_rerun`), not a forward wait.
 - Intake, planning and the weekly re-weighting: [`PLANNING.md`](PLANNING.md).
 
 ## Allocating a unit id (RQ-ID-ALLOCATOR)

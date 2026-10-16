@@ -24,13 +24,13 @@ from scripts.research import queue_grade as qg
 
 PID = "RQ-20300101-001"
 PASS_AT = "2030-01-01T06:00:00Z"
-FW = "fw-sweep.yml"   # a stub workflow with a fresh-window input (m20 gets none: holdout instead)
+FW = "fw-sweep.yml"   # a stub workflow with a fresh-window input and NO holdout input
 
 
 @pytest.fixture(autouse=True)
 def _forward_window_workflow(monkeypatch):
     monkeypatch.setitem(qg._FRESH_WINDOW_INPUTS, FW,
-                        lambda after: {"split_mode": "date", "split": (after + qg.timedelta(days=1)).date().isoformat()})
+                        lambda after: {"split_mode": "date", "split": after.date().isoformat()})
 
 
 def _unit(*, workflow: str = "m20-exit-lever-sweep.yml", cadence: str = "once", family: str = "m20-exit-lever",
@@ -46,12 +46,14 @@ def _unit(*, workflow: str = "m20-exit-lever-sweep.yml", cadence: str = "once", 
             f"{extra}last_dispatched_at: '2030-01-01T00:00:00+00:00'\n")
 
 
-def _rows(root: Path, uid: str, verdict: str, cells=("c1",), swept: int = 17, at: str = PASS_AT) -> None:
+def _rows(root: Path, uid: str, verdict: str, cells=("c1",), swept: int = 17, at: str = PASS_AT,
+          **measurement) -> None:
     d = root / "research" / "results" / uid
     d.mkdir(parents=True, exist_ok=True)
     (d / "1.jsonl").write_text(json.dumps({
         "verdict": verdict, "read_state": "measured", "generated_at": at,
-        "measurement": {"cells_swept": swept, "passing_cells": list(cells) if verdict == "pass" else []}}) + "\n")
+        "measurement": {"cells_swept": swept, "passing_cells": list(cells) if verdict == "pass" else [],
+                        **measurement}}) + "\n")
 
 
 def _repo(tmp_path: Path) -> Path:
@@ -75,7 +77,8 @@ def test_template_pass_spawns_exactly_one_disjoint_window_confirmation(tmp_path)
     assert cu["status"] == "queued" and cu["cadence"] == "once"
     assert cu["requires_result"] == {"unit": PID, "verdict": "pass"}
     # disjoint window: OOS starts at the PASS run's data end, and it cannot fire before data accrues
-    assert cu["run"]["inputs"]["split_mode"] == "date" and cu["run"]["inputs"]["split"] == "2030-01-02"
+    assert cu["run"]["inputs"]["split_mode"] == "date" and cu["run"]["inputs"]["split"] == "2030-01-01"
+    assert cu["confirmation"]["mode"] == "forward_wait"
     assert cu["run"]["inputs"]["research_unit"] == cu["id"]
     assert datetime.fromisoformat(cu["not_before"]) > datetime(2030, 1, 1, 6, tzinfo=timezone.utc)
     assert cu["confirmation"]["of"] == PID and cu["confirmation"]["selected_from_cells"] == 17
@@ -85,6 +88,20 @@ def test_template_pass_spawns_exactly_one_disjoint_window_confirmation(tmp_path)
     assert "generated" not in cu and "last_dispatched_at" not in cu and cu["grading"] == {"auto": True}
     # exactly one: the closed parent is never graded again
     assert qg.grade_unit_full(r, PID, parent_text, "2030-01-03") is None
+
+
+def test_forward_wait_is_sized_per_leg_from_its_trade_rate(tmp_path):
+    """A flat wait could not reach the floor for any of the 13 m20 PASSes (PI-20261016-QOTFUEXV-0003)."""
+    r = _repo(tmp_path)
+    # 50 OOS trades over the 500 days from split to PASS = 0.1/day -> 25 trades need 250 days
+    _rows(r, PID, "pass", base_trades_OOS=50, split="2028-08-20")
+    _p, child = qg.grade_unit_full(r, PID, _unit(workflow=FW), "2030-01-02")
+    w = yaml.safe_load(child[1])["confirmation"]["window"]
+    assert 245 <= w["wait_days"] <= 255 and "measured" in w["wait_basis"], w
+    _rows(r, PID, "pass")                                  # no rate reported -> flat fallback, said so
+    _p, child = qg.grade_unit_full(r, PID, _unit(workflow=FW), "2030-01-02")
+    w = yaml.safe_load(child[1])["confirmation"]["window"]
+    assert w["wait_days"] == qg.CONFIRM_WAIT_DAYS and "fallback" in w["wait_basis"]
 
 
 def test_recurring_template_pass_reuses_its_one_confirmation(tmp_path):
@@ -193,7 +210,7 @@ def _git(r: Path, *a: str) -> None:
 
 def test_verify_vouches_the_spawned_confirmation_and_refuses_a_tampered_one(tmp_path):
     r = _repo(tmp_path)
-    (r / "research" / "queue" / f"{PID}.yaml").write_text(_unit(workflow=FW))
+    (r / "research" / "queue" / f"{PID}.yaml").write_text(_unit())   # m20 -> a holdout re-run child
     _rows(r, PID, "pass")
     subprocess.run(["git", "init", "-q", "-b", "main", str(r)], check=True)
     _git(r, "add", "-A")
@@ -205,7 +222,7 @@ def test_verify_vouches_the_spawned_confirmation_and_refuses_a_tampered_one(tmp_
     _git(r, "commit", "-q", "-m", "grade")
     assert qg.verify(r, "main") == []
     child = r / "research" / "queue" / f"{res['spawned'][0]['id']}.yaml"
-    child.write_text(child.read_text().replace("split: '2030-01-02'", "split: '2029-01-01'"))
+    child.write_text(child.read_text().replace("holdout_frac: '0.25'", "holdout_frac: '0.05'"))
     _git(r, "commit", "-q", "-am", "tamper")
     assert any("does not reproduce as its parent's confirmation" in p for p in qg.verify(r, "main"))
     _git(r, "checkout", "-q", "HEAD~1")
@@ -249,11 +266,12 @@ def test_no_milestone_means_no_unit_and_needs_review(tmp_path):
     assert child is None and g["needs_review"] and "roadmap" in g["note"] and "confirm_unit" not in g
 
 
-def test_m20_pass_authors_no_forward_wait_unit(tmp_path):
-    """Operator 2026-10-16 'Holdout re-run': an m20 PASS waits for its holdout re-run, not 60 days."""
+def test_m20_pass_authors_a_holdout_rerun_not_a_forward_wait_and_it_passes_the_guard(tmp_path):
+    """Operator 2026-10-16 'Holdout re-run': an m20 PASS gets a holdout re-run (no wait), and that
+    unit carries the family milestone, so roadmap-map-guard accepts it."""
     r = _repo(tmp_path)
     _rows(r, PID, "pass")
-    parent_text, child = qg.grade_unit_full(r, PID, _unit(), "2030-01-02")
-    g = yaml.safe_load(parent_text)["grading"]
-    assert child is None and g["discovery"] == "unconfirmed" and "confirm_unit" not in g
-    assert "holdout" in g["note"].lower() and not g.get("needs_review")
+    _parent, (cid, text) = qg.grade_unit_full(r, PID, _unit(), "2030-01-02")
+    cu = yaml.safe_load(text)
+    assert cu["confirmation"]["mode"] == "holdout_rerun" and "not_before" not in cu
+    assert cu["roadmap"] == ["M20"] and _guard_problems({cid: cu}) == []
