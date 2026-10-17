@@ -789,6 +789,11 @@ def grade_unit_full(root: Path, unit_id: str, text: str,
     # this grader's to second-guess -- it stays in the session's queue.
     auto = isinstance(unit.get("generated"), dict) or \
         (isinstance(unit.get("grading"), dict) and unit["grading"].get("auto") is True)
+    if isinstance(unit.get("generated"), dict) and session_owned(unit):
+        # A generated unit is auto-graded, but a session's hand grade (`auto: false` / a verdict
+        # block without `auto: true`) is a human read the 6-hourly pass must not erase: run
+        # 39062231812 reverted #18783's gradings on RQ-20261016-027/-028 to needs_review/unowned.
+        return None
     attested = False
     if not auto:
         if session_owned(unit):
@@ -1125,6 +1130,10 @@ def _self_test() -> int:
         # RC1 delta (2026-10-15): an attested unit that opted out, or that a session already graded, is never touched
         assert grade_unit(r, "RQ-20300101-002", hand + "grading:\n  auto: false\n", "2030-01-02") is None
         assert grade_unit(r, "RQ-20300101-002", hand + "grading:\n  verdict: fail\n  by: a session\n", "2030-01-02") is None
+        # ... also a TEMPLATE-GENERATED unit: a session's hand grade survives the pass (2026-10-17 regression)
+        gen = hand + "generated:\n  template: t\n"
+        assert grade_unit(r, "RQ-20300101-002", gen + "grading:\n  auto: false\n  verdict: fail\n", "2030-01-02") is None
+        assert grade_unit(r, "RQ-20300101-002", gen, "2030-01-02") is not None     # ungraded generated unit still graded
         # ... and a declared multi-dispatch unit waits for every run's result FILE (2 rows in 1 file, runs: 2)
         (d / "1.jsonl").write_text(own("pass") + "\n" + own("pass") + "\n")
         multi = hand.replace("  min_rows: 1\n", "  min_rows: 1\n  runs: 2\n")

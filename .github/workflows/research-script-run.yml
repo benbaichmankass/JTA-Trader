@@ -98,6 +98,11 @@ jobs:
           # maintainer Eghosa Osayande, homepage github.com/Eghosa-Osayande/dukascopy
           # (PyPI metadata). The same package e35-bracket-sweep.yml already installs.
           pip install dukascopy-python==4.0.1
+          # yfinance: the 1d ETF candle lane of scripts/research/regime_debt_matrix._fetch_csv (used by
+          # exit_lever_ablation.py for alpaca 1d legs). Absent, every such unit died exit=1 with
+          # ModuleNotFoundError (RQ-20261016-c56e-16/-17/-18, 2026-10-17). 1.7.0 is the version
+          # requirements-backtest.txt pins as the first that returns SPY/GDX rows.
+          pip install yfinance==1.7.0
       - name: Check the unit's declared command against the allowlist
         env:
           UNIT: ${{ inputs.research_unit }}
