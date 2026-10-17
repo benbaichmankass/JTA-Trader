@@ -37,6 +37,14 @@
 # "no edge", not "unsafe". CAVEAT: on the taker paper venue every pair is NET-negative
 # (7.5bps × 2 legs sinks the thin gross edge); paper placement is for EXECUTION
 # validation while the maker-fee + live-β-rehedge fix is built, NOT for paper PnL.
+# SUPERSEDED 2026-10-16 (operator decision "Fix + shadow", checklist row
+# PAIRS-R-SCALE): all FOUR Bybit pairs are `shadow`. The G2 figures above were
+# measured on an R unit inflated by rolling-β drift; the honest fixed-β-at-entry
+# re-run is net-negative on every pair (SOL/BTC −0.112, BNB/BTC −0.376, ETH/BTC
+# −0.526, SOL/ETH −0.383 R/trade, n 254-271), and the β-at-entry sizing fix
+# (PR #18648) would grow Bybit pair legs by up to ~87x on a path with no notional
+# cap. Re-entry to `live` waits on the pre-registered fixed-β ENTRY-trigger test
+# (research unit RQ-20261017-9582-01). GLD/GDX (hedge_beta: one) is unaffected.
 # Flipping a pair to `shadow` is the one-line rollback (config re-read each tick).
 # Tier-3: flip only with operator approval.
 #
@@ -64,7 +72,7 @@ pairs:
   - name: pairs_sol_btc
     symbol_a: SOLUSDT
     symbol_b: BTCUSDT
-    execution: shadow    # shadow-guard: allow — NO EDGE (G2 2026-07-16): fee-free fixed-β-hold $ is NEGATIVE (−$295), so it stays shadow even on paper per the "not negative → paper" rule. (The min-qty safety reason is resolved by the #6591 gate; this is now an economics hold.)
+    execution: shadow    # shadow-guard: allow — OPERATOR DECISION 2026-10-16 "Fix + shadow" (popup answer to the manager; checklist row PAIRS-R-SCALE): honest fixed-β R re-run is NET-NEGATIVE (−0.112 R/trade, n=267; was already shadow on the G2 2026-07-16 no-edge hold). Shadow so PR #18648 (β frozen at entry) cannot size this pair up ~87x on an uncapped sleeve. Rollback: back to live only on a passing fixed-β entry-trigger test.
     timeframe: 1h
     lookback: 15
     entry_z: 2.0
@@ -76,7 +84,7 @@ pairs:
   - name: pairs_bnb_btc
     symbol_a: BNBUSDT
     symbol_b: BTCUSDT
-    execution: live      # PAPER (operator-approved 2026-07-16, Tier-3): fee-free fixed-β-hold $ is POSITIVE (+$357, marginal) so it qualifies for the "not negative → paper" rule. Places both legs on bybit_1 (paper); the #6591 min-qty gate skips cleanly if the BTC leg is sub-min (no naked leg). NET-negative on taker fees — paper is for execution validation, not PnL. Rollback: set back to shadow.
+    execution: shadow    # shadow-guard: allow — OPERATOR DECISION 2026-10-16 "Fix + shadow" (popup answer to the manager; checklist row PAIRS-R-SCALE): honest fixed-β R re-run is NET-NEGATIVE (−0.376 R/trade, n=254), and PR #18648 (β frozen at entry) would grow its legs by up to ~87x with no notional cap on the Bybit pairs path. Was live on paper since 2026-07-16. Rollback: set back to live (one line) — only on a passing fixed-β entry-trigger test.
     timeframe: 1h
     lookback: 15
     entry_z: 2.0
@@ -88,7 +96,7 @@ pairs:
   - name: pairs_eth_btc
     symbol_a: ETHUSDT
     symbol_b: BTCUSDT
-    execution: shadow    # shadow-guard: allow — NO EDGE (G2 2026-07-16): fee-free fixed-β-hold $ is the MOST negative (−$855), so it stays shadow even on paper per the "not negative → paper" rule. (The min-qty safety reason is resolved by the #6591 gate; this is now an economics hold.)
+    execution: shadow    # shadow-guard: allow — OPERATOR DECISION 2026-10-16 "Fix + shadow" (popup answer to the manager; checklist row PAIRS-R-SCALE): honest fixed-β R re-run is NET-NEGATIVE (−0.526 R/trade, n=270; was already shadow on the G2 2026-07-16 no-edge hold). Shadow so PR #18648 (β frozen at entry) cannot size this pair up ~87x on an uncapped sleeve. Rollback: back to live only on a passing fixed-β entry-trigger test.
     timeframe: 1h
     lookback: 15
     entry_z: 2.0
@@ -100,7 +108,7 @@ pairs:
   - name: pairs_sol_eth
     symbol_a: SOLUSDT
     symbol_b: ETHUSDT
-    execution: live      # PAPER (operator-approved 2026-07-16, Tier-3): fee-free fixed-β-hold $ is the BEST (+$1279) → qualifies for "not negative → paper". Places both legs on bybit_1 (paper); both legs clear Bybit min-qty. Executor bugs fixed: qty_override (#6554), clamped leg SL/TP (#6549), balance×risk_pct basis (#6554). NET-negative on taker fees — paper is for execution validation, not PnL. Rollback: set back to shadow.
+    execution: shadow    # shadow-guard: allow — OPERATOR DECISION 2026-10-16 "Fix + shadow" (popup answer to the manager; checklist row PAIRS-R-SCALE): honest fixed-β R re-run is NET-NEGATIVE (−0.383 R/trade, n=271), and PR #18648 (β frozen at entry) would grow its legs by up to ~87x with no notional cap on the Bybit pairs path. Was live on paper since 2026-07-16. Rollback: set back to live (one line) — only on a passing fixed-β entry-trigger test.
     timeframe: 1h
     lookback: 15
     entry_z: 2.0
