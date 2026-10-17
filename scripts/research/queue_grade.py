@@ -787,12 +787,13 @@ def grade_unit_full(root: Path, unit_id: str, text: str,
     # wants 3 legs over 3 dispatches with lands.min_rows 1 per run) would be
     # misread from its first row, and a session's multi-run design is not
     # this grader's to second-guess -- it stays in the session's queue.
-    if isinstance(unit.get("generated"), dict) and isinstance(unit.get("grading"), dict) \
-            and unit["grading"].get("auto") is False:
-        return None    # a session hand-graded a template unit and opted it out: never overwrite that read
-                       # (runs 39062231812 reverted RQ-20261016-027/-028's hand grades, 2026-10-17)
     auto = isinstance(unit.get("generated"), dict) or \
         (isinstance(unit.get("grading"), dict) and unit["grading"].get("auto") is True)
+    if isinstance(unit.get("generated"), dict) and session_owned(unit):
+        # A generated unit is auto-graded, but a session's hand grade (`auto: false` / a verdict
+        # block without `auto: true`) is a human read the 6-hourly pass must not erase: run
+        # 39062231812 reverted #18783's gradings on RQ-20261016-027/-028 to needs_review/unowned.
+        return None
     attested = False
     if not auto:
         if session_owned(unit):
@@ -1129,6 +1130,10 @@ def _self_test() -> int:
         # RC1 delta (2026-10-15): an attested unit that opted out, or that a session already graded, is never touched
         assert grade_unit(r, "RQ-20300101-002", hand + "grading:\n  auto: false\n", "2030-01-02") is None
         assert grade_unit(r, "RQ-20300101-002", hand + "grading:\n  verdict: fail\n  by: a session\n", "2030-01-02") is None
+        # ... also a TEMPLATE-GENERATED unit: a session's hand grade survives the pass (2026-10-17 regression)
+        gen = hand + "generated:\n  template: t\n"
+        assert grade_unit(r, "RQ-20300101-002", gen + "grading:\n  auto: false\n  verdict: fail\n", "2030-01-02") is None
+        assert grade_unit(r, "RQ-20300101-002", gen, "2030-01-02") is not None     # ungraded generated unit still graded
         # ... including a TEMPLATE-generated unit a session opted out (runs 39062231812 reverted two such hand grades)
         gen = hand + "generated:\n  template: t\ngrading:\n  auto: false\n  verdict: fail\n"
         assert grade_unit(r, "RQ-20300101-002", gen, "2030-01-02") is None
