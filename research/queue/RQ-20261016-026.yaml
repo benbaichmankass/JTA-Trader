@@ -4,7 +4,7 @@
 id: RQ-20261016-026
 title: 'Prop EV/survival gate on breakout_2 (breakout_turbo_1step): per leg, alone, at breakout_2''s configured
   sizing, is EV per life > 0 on every seed? (the grandfathered incumbents and the pool-admitted 4h pair)'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROP
@@ -138,3 +138,13 @@ generated:
   params:
     node: P5-GATE-BRK
 last_dispatched_at: '2026-10-17T09:18:43+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P5-GATE-BRK-PER-LEG
+  evidence:
+  - research/results/RQ-20261016-026/39020655482.jsonl
+  graded_at: '2026-10-17'
+  grader: scripts/research/queue_grade.py
+  reason: 4 row(s), all measured, all pass
+  rows: 4
+  verdict: pass
