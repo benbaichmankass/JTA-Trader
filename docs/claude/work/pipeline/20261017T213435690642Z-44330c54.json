@@ -7,7 +7,12 @@
     "last_checked": "2026-10-17"
   },
   "id": "BL-20260821-PAIRS-SOL-ETH-STRANDS-ON-EVERY-OPEN",
-  "next_action": "check_observation",
+  "next_action": "dispatch_lane",
+  "observation": {
+    "due_by": "2026-10-29",
+    "how_to_check": "grep -n 'execution:' config/pairs.yaml; python3 scripts/ops/pipeline.py --version-of AUD-20260927-CA-A02",
+    "what": "Bybit pairs sleeve is still shadow and the netting root cause (AUD-20260927-CA-A02) is fixed before any pair returns to live"
+  },
   "origin": {
     "kind": "review",
     "ref": "docs/archive/2026-09-21-operating-reset/registers/health-review-backlog.json#BL-20260821-PAIRS-SOL-ETH-STRANDS-ON-EVERY-OPEN",
