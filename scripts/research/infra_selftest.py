@@ -71,7 +71,7 @@ def queue_integrity() -> Dict[str, Any]:
     for f in sorted((ROOT / "research" / "queue").glob("RQ-*.yaml")):
         try:
             u = yaml.safe_load(f.read_text(encoding="utf-8"))
-        except Exception as e:                       # noqa: BLE001 -- an unparseable unit is the finding
+        except (yaml.YAMLError, OSError, UnicodeDecodeError) as e:   # an unparseable unit is the finding, recorded below
             bad[f.stem] = [f"unparseable: {type(e).__name__}"]
             continue
         if not isinstance(u, dict) or u.get("status") != "queued":
