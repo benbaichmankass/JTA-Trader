@@ -1558,6 +1558,7 @@ class MainActivity : Activity() {
         d.optJSONObject("probe")?.let { pr ->
             ctl.put("${pr.optString("at")} w=${pr.optInt("w")} h=${pr.optInt("h")} new=${pr.optInt("n_new")} dlg=${pr.optInt("dialogs")}".take(40))
             ctl.put("tabs details=${pr.optInt("details_tabs")} tpsl=${pr.optInt("tpsl_tabs")}")
+            pr.optJSONArray("ev")?.let { a -> for (i in 0 until a.length()) ctl.put("ev: " + a.optString(i).take(35)) }
             pr.optJSONArray("leaves")?.let { a -> for (i in 0 until a.length()) ctl.put("new: " + a.optString(i).take(34)) }
             pr.optJSONArray("chain")?.let { a -> for (i in 0 until a.length()) ctl.put("up: " + a.optString(i).take(35)) }
         }
