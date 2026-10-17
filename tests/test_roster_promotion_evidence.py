@@ -353,11 +353,13 @@ def test_population_census_is_computable_and_reports_its_denominator():
 REAL_PAIRS = (REPO / "config/pairs.yaml").read_text(encoding="utf-8")
 
 
-def _pairs_with_override(pair_name: str, account: str) -> str:
+def _pairs_with_override(pair_name: str, account: str, execution: str | None = None) -> str:
     data = yaml.safe_load(REAL_PAIRS)
     hit = [p for p in data["pairs"] if p.get("name") == pair_name]
     assert hit, f"{pair_name} must exist in the real config/pairs.yaml"
     hit[0]["account_id"] = account
+    if execution is not None:
+        hit[0]["execution"] = execution
     return yaml.safe_dump(data)
 
 
@@ -367,8 +369,11 @@ def test_real_pairs_config_is_clean_against_itself():
 
 def test_per_pair_account_override_onto_real_money_is_caught():
     """The top-level `account_id: bybit_1` is untouched; ONE live pair gains
-    `account_id: bybit_2`. The executor would honour it; so must the guard."""
-    head = _pairs_with_override("pairs_sol_eth", "bybit_2")
+    `account_id: bybit_2`. The executor would honour it; so must the guard.
+    The pair is forced `execution: live` in the fixture: since 2026-10-16
+    (operator "Fix + shadow", PAIRS-R-SCALE) no Bybit pair is live in the real
+    config, and a shadow pair places nothing wherever it points."""
+    head = _pairs_with_override("pairs_sol_eth", "bybit_2", execution="live")
     found = G.promotions(REAL_ACCOUNTS, REAL_ACCOUNTS, REAL_PAIRS, head)
     assert [(f["kind"], f["leg"], f["account"]) for f in found] == [
         ("pairs_repoint", "pairs_sol_eth", "bybit_2")]
