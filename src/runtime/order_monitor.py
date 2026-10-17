@@ -14319,7 +14319,7 @@ def _sweep_local_pnl_for_unpriced(db) -> Dict[str, int]:
             contract_value_usd_for,
         )
         from src.runtime.exit_anchor import ANCHOR_SOURCE, AnchorBudget, bar_close_at
-        from src.runtime.fills_pnl import FILL_EXIT_SOURCE
+        from src.runtime.fills_pnl import FILL_EXIT_SOURCE, exit_from_one_order_fills
         from src.runtime.provenance import UNMEASURED_MARKER
         from src.units.accounts.clients import account_has_broker_pnl_reader
     except Exception as exc:  # noqa: BLE001
@@ -14409,6 +14409,39 @@ def _sweep_local_pnl_for_unpriced(db) -> Dict[str, int]:
             # not where THIS order filled.
             exit_price = _safe_float(row.get("exit_price"))
             exit_source = "recorded_exit_price"
+            own_fill: Optional[Dict[str, Any]] = None
+            if (not exit_price or exit_price <= 0) and row.get("closed_at"):
+                # SOAK-MECH-B / PI-20261010-RNCT2YDP-0001: before the candle,
+                # the ONE venue order that closed this row. The broker sweep's
+                # cumulative fills read refuses on a netted position (a
+                # sibling's fills overshoot the qty), which is how bybit_1 6171
+                # was booked at the 1.5399 candle with its 1.5428 fill on disk.
+                # Bounded by the close (+60 s skew), never open-ended.
+                _open_ms = _isoformat_to_ms(row.get("created_at"))
+                _close_ms = _isoformat_to_ms(row.get("closed_at"))
+                if _open_ms is not None and _close_ms is not None:
+                    _own_ids: tuple = ()
+                    try:
+                        _c = db.connect()
+                        try:
+                            _r = _c.execute(
+                                "SELECT sl_order_id, tp_order_id FROM trades "
+                                " WHERE id = ?", (int(row["id"]),)).fetchone()
+                        finally:
+                            _c.close()
+                        _own_ids = tuple(_r) if _r else ()
+                    except Exception:  # noqa: BLE001 — no leg ids: qty match only
+                        _own_ids = ()
+                    own_fill = exit_from_one_order_fills(
+                        account_id=str(aid or ""), symbol=symbol,
+                        direction=str(row.get("direction") or ""),
+                        opened_at_ms=_open_ms, closed_at_ms=_close_ms + 60_000,
+                        qty=qty,
+                        own_order_ids=_own_ids,
+                    )
+                if own_fill:
+                    exit_price = _safe_float(own_fill.get("avg_exit_price"))
+                    exit_source = FILL_EXIT_SOURCE
             if not exit_price or exit_price <= 0:
                 anchored, anchor_status = bar_close_at(
                     symbol, row.get("closed_at"), budget=anchor_budget,
@@ -14463,6 +14496,13 @@ def _sweep_local_pnl_for_unpriced(db) -> Dict[str, int]:
 
             notes = _decode_notes(row.get("notes"))
             updates_exit_reason: Optional[str] = None
+            if own_fill:
+                notes["close_fees_usd"] = own_fill.get("fees") or 0.0
+                # Detail only: unprotected, so the 500-char cap may shed it;
+                # exit_price_source (protected) is what consumers grade.
+                notes["exit_fill"] = {"order_id": own_fill.get("order_id"),
+                                      "match": own_fill.get("match")}
+                notes["exit_price_source"] = FILL_EXIT_SOURCE
             # Net out the close-side fees when the exit came from real fills
             # that recorded them (stamped at close by the fills resolver). This
             # arithmetic was fee-BLIND, and that is a CORRECTNESS bug, not a
@@ -14501,7 +14541,7 @@ def _sweep_local_pnl_for_unpriced(db) -> Dict[str, int]:
             # branch did not — it only read a number already on the row — so it
             # must not claim to know where that number came from, and must
             # leave any existing stamp alone.
-            if exit_source == ANCHOR_SOURCE or not notes.get("exit_price_source"):
+            if exit_source in (ANCHOR_SOURCE, FILL_EXIT_SOURCE) or not notes.get("exit_price_source"):
                 notes["exit_price_source"] = exit_source
             notes["contract_value_usd"] = cvu
             # A row that previously declared itself unmeasured and has now been

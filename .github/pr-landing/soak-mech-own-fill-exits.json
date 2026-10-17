@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Runtime monitor sweep (src/runtime/order_monitor.py _sweep_local_pnl_for_unpriced) + a new Tier-2 DB-writeback system-action (backfill-own-fill-exits). Lane dispatch (manager session_01VduHYzdaXe27wTDBLSu8ao, WR-20261017-0550Z soak faults): PRs use landing: hold; the manager merges.",
+  "why": "Price reconciler/watchdog closes from the ONE venue order that closed them before the close-time candle (netted bybit_1 XRPUSDT 6171: candle 1.5399 vs own fill 1.5428), and an allowlisted, ids-scoped, dry-run-default backfill that prices the faulted soak trades (3934/4422/4710/6171) from their venue fills. Never changes exit_reason, never touches a MEASURED row, no order placed."
+}

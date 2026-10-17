@@ -1,0 +1,24 @@
+{
+  "based_on": "20261017T073303570205Z-9433d35a.json",
+  "due_when": {
+    "due_date": "2026-10-18",
+    "kind": "date"
+  },
+  "id": "PI-20261017-VMDGITZI-0002",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-20T00:00Z",
+    "how_to_check": "system-action disk-usage-report (Tier 1) and /api/diag/status vm_health.disk",
+    "what": "live VM root disk below 85% after prune-db-backups apply, and the number of <db>.bak-* files bounded (<= the newest 2 + those under 7 days) on the next disk-usage-report"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "PI-20261017-VSMHZYHF-0001 (health review); lane session_01KnbLCJ4zpEyBNivmdGitZi; status-check #18736",
+    "rerun": "system-action status-check (df) + disk-usage-report; /api/diag/status vm_health.disk; /api/diag/db_info size_bytes"
+  },
+  "routed_to": "lane session_01KnbLCJ4zpEyBNivmdGitZi (PR for disk-usage-report + prune-db-backups)",
+  "severity": "high",
+  "state": "routed",
+  "tier": "2",
+  "what": "[health] Live VM root disk 96% (45 G, 2.4 G free; status-check #18736 07:3xZ). /data/bot-data is a directory on the same root disk. The journal is 2.09 GB (db_info), and ~10 Tier-2 writeback helpers each take a FULL journal copy (<db>.bak-*) with no retention (grep scripts/ops). This lane's two backfill applies alone added ~4.2 GB at 07:22Z/07:26Z. PREVENTION: (1) prune-db-backups action (default retain 7 d, keep newest 2) run after merge; (2) follow-up build: one shared backup helper with retention used by every backup-taking script, refusing to back up when free space < 2x DB size; (3) the signals table holds 4.18M rows, the dominant share of the 2.09 GB, and has no retention, so it needs a retention decision (Tier 2/3). || 2026-10-17 09:20Z PRUNE DONE + OBSERVED: disk-usage-report #18747 (before: 95%, 2.4G free; 13 journal backups = 17G; runtime_logs 10G incl. signal_audit.jsonl 1.3G; /var/log 5.8G (journald 3.9G, syslog+syslog.1 1.4G); /home/ubuntu 4.5G (.cache 1.2G)). prune-db-backups dry-run #18750 then apply #18751 (days 1, keep 2): deleted 11 backups, df 95% -> 68% (15G free); /api/diag/status vm_health.disk 67.5%, heartbeat fresh. Kept both 2026-10-17 backups (days:0 not needed). REMAINING (prevention, not done): (a) shared backup helper with retention + free-space floor; (b) signals table retention decision (4.18M rows); (c) PROPOSED, not run: journald vacuum (3.9G), runtime_logs rotation (10G), ~/.cache prune (1.2G)."
+}

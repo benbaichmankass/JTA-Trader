@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "due_date": "2026-10-19",
+    "kind": "date"
+  },
+  "id": "PI-20261017-VSMHZYHF-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane HEALTH-REVIEW-20261017",
+    "rerun": "curl -s https://ict-bot.duckdns.org/api/bot/health/latest | python3 -c \"import json,sys;print(json.load(sys.stdin)['snapshot']['checks']['disk'])\"  # free_pct below 10 means still open"
+  },
+  "routed_to": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "what": "[health] ict-bot-arm root filesystem is at 93.1% used (9.3% free, 4.2 GB; n=1 reading of /api/diag/status vm_health plus the 2 warn snapshots) on 2026-10-17T07:25Z; the health-snapshot disk check went warn at 04:28Z and 07:25Z, after 755 ok snapshots in the prior 168h (757 snapshots total, 2 non-ok, 2026-10-10..2026-10-17). Cause not identified from the relay (no du pull this run). A full disk stalls SQLite journal/WAL writes behind every trade record."
+}

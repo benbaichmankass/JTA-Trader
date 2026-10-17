@@ -2,7 +2,7 @@
 # queue_grade.confirmation_unit: the holdout re-run of RQ-20261005-813's PASS (operator 2026-10-16, 'Holdout re-run').
 id: RQ-20261016-d37f-08
 title: 'Holdout re-run of RQ-20261005-813: M20 exit-lever sweep: splg_trend_long_1d (generated, monthly)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -79,5 +79,27 @@ confirmation:
     of the nearest committed m20 corpus run for this leg); the sweep re-derives the boundary from the
     run''s own trades and grows the share to the 25-trade floor, capped at 0.40. The default 25% holds
     only ~19 trades here (< the 25 floor), so the share is raised to 0.33.'
+last_dispatched_at: '2026-10-17T03:02:58+00:00'
 grading:
   auto: true
+  confirmation: confirmed
+  confirms: RQ-20261005-813
+  decision_rule_id: RULE-EXIT-REFINEMENT-P2-GATE
+  evidence:
+  - research/results/RQ-20261016-d37f-08/38997307662.jsonl
+  graded_at: '2026-10-17'
+  grader: scripts/research/queue_grade.py
+  holdout:
+    base_trades: 25
+    boundary: '2021-03-15'
+    confirmation: confirmed
+    confirmed_cells:
+    - vt_hot80_t2
+    selected_from: 24
+    share_used: 0.3377
+    state: ok
+  note: 'holdout re-run of RQ-20261005-813: confirmed (selected from 24 cell(s), holdout from 2021-03-15,
+    base n 25).'
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

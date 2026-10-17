@@ -1,7 +1,7 @@
 id: RQ-20261012-5bd1-05
 title: 'NEWS-ALPHA U05: event study: do classified crypto news events (hack/exploit, enforcement/regulatory, listing/ETF,
   macro shock) move the named coin beyond a matched baseline?'
-status: queued
+status: done
 roadmap: M28
 program: NEWS-ALPHA-PROGRAM
 cadence: once
@@ -122,7 +122,7 @@ related:
 - research/news_alpha/TEST-LEDGER.jsonl
 - docs/claude/work/checklist/NEWS-ALPHA-PROGRAM.json
 - docs/claude/work/checklist/WEPE-BUILDOUT.json
-last_dispatched_at: null
+last_dispatched_at: '2026-10-17T03:02:58+00:00'
 news_alpha:
   source: gdelt_panel
   panel_dir: comms/news_alpha/gdelt_panel
@@ -176,3 +176,16 @@ resolved_blockers:
   clears_when: 'NEWS-ALPHA-HARNESS is done: writes a script_run verdict.json and appends to research/news_alpha/TEST-LEDGER.jsonl'
   resolved_by: NEWS-ALPHA-HARNESS
   resolved_at: '2026-10-16'
+grading:
+  attested: RULE-RQ1012-5bd1-05-NEWS-ALPHA
+  auto: true
+  decision_rule_id: RULE-RQ1012-5bd1-05-NEWS-ALPHA
+  evidence:
+  - research/results/RQ-20261012-5bd1-05/38997301553.jsonl
+  graded_at: '2026-10-17'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 32 row(s), all measured, all fail
+  rows: 32
+  verdict: fail

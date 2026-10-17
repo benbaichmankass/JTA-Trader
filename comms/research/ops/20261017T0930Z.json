@@ -1,0 +1,23 @@
+{
+  "run": "RESEARCH-OPS-2026-10-17-0847", "finished_at": "2026-10-17T09:30:00Z", "by": "research-ops-lane-20261017-0847",
+  "floor": 78, "floor_basis": "computed_floor(fired_24h 98)", "authoring_queue_depth": 15,
+  "idle_backends": ["github_runner_data", "kaggle", "kaggle_cpu", "trainer"], "needs_review_triaged": 0, "needs_review_left": 34,
+  "needs_review_note": "result_disposition_check --list at start: UNOWNED 2 (5bd1-03/-04, graded FAIL by the 0247 pass in a HELD PR not yet on main), UNGRADED 3 (RQ-20260928-006 id collision PI-20261016-IKK5NFPO-0001; 8bbc-01/-02 weekly recurring). No new triage written this pass: the 0247 held PR already carries 5bd1-03/-04.",
+  "throughput": {"runnable_before": 81, "runnable_after": 81, "queued": 151, "fired_24h": 98, "results_landed_24h": 241, "hours_since_last_dispatch": 0.8, "idle_alarm": false},
+  "mechanism": {"dispatch_receipt": "ok: last dispatch 0.8h ago", "collector": "ok: 0 unreadable result files", "stranded_stamp_prs": "none: 0 of 19 open PRs have an automation/research-queue-* head", "incident": null, "watchdog": "newest row 2026-10-17T01:34Z resolved conflicted_automation; no open escalated incident"},
+  "results_read": {"pass": 4, "fail": 9, "indeterminate": 3, "units": [
+    "RQ-20261016-077e-04 PASS/confirmed ada_pullback_2h: C7 selected from 9 on discovery, +24.08 R over n=97 held-back trades (A NOT selected) -> Tier-3 config proposal evidence for the manager, never an edit here; multiple-testing denominator 9; confirmation on a later window is a time-forward unit",
+    "RQ-20261016-077e-05 PASS/confirmed trend_donchian_sol_prop: C5 (atr_stop 2.5, trail 4.5) selected from 9, +5.28 R over n=96 held-back -> same disposition",
+    "RQ-20261016-077e-07 PASS/confirmed slv_pullback_1d: C1 selected from 9, +3.49 R over n=28 held-back (floor 25) -> same disposition; thinnest of the three",
+    "RQ-20261016-c56e-15 PASS stage0_edge trend_donchian_sol_4h: +21.65 R, n=147, 5/6 folds on 2020-10-13..2023-10-12 -> overlap read authored as node P3-Q8-sol4h-overlap (RQ-20261017-007 on merge); re-entry under MD-PROMOTE-S0-S1 goes to the manager after it",
+    "RQ-20261016-077e-06 FAIL ief_pullback_1d (no_discovery) / 077e-08 INDETERMINATE iaum_pullback_1d (n=59) -> closes tested configs only; no action",
+    "RQ-20261012-5bd1-05 FAIL news (32 cells), 24ca-05 FAIL uso_trend_1h, 72ad-01 FAIL eth+avax long-drag NOT_CONFIRMED, 1fa6-06/-07 FAIL, e2db-06/-07 FAIL eth_prop A_UNDOMINATED -> auto-graded by research-queue-grade; no action, because a FAIL closes tested configs only; news layer and WEPE NOT retired",
+    "RQ-20261016-d37f-08/-11 confirmed, -09/-10 not_replicated (auto-graded RULE-EXIT-REFINEMENT-P2-GATE) -> exit-refinement owners read these; no action here",
+    "RQ-20261017-003/-004 INDETERMINATE, -006 MIXED (recurring TP-sweep units, queued) -> not verdicts"
+  ]},
+  "unlocked": [], "retired": [], "levers_filed": [], "units_authored": ["RQ-20261017-007 (via node P3-Q8-sol4h-overlap)"], "followups_filed": [],
+  "authoring": {"queue_depth": 15, "nodes_drafted": 1, "nodes": ["P3-Q8-sol4h-overlap"],
+    "theme_shortfall": {"regime": 19, "ml_health": 12, "new_strategy_prop": 16, "infra": 8}},
+  "not_run": ["step C blocked/ audit and blocker_watch (bounded budget)", "pipeline routing of due items (10 unrouted, oldest 57d; needs judgement per item)"],
+  "handoff": ["MANAGER: three holdout PASSes selected non-declared arms (ada_pullback_2h C7, trend_donchian_sol_prop C5, slv_pullback_1d C1): Tier-3 proposal inputs, denominator 9 each, read once on holdout; a time-forward confirmation unit should precede any config proposal", "MANAGER: trend_donchian_sol_4h MD-PROMOTE-S0-S1 re-entry case after RQ-20261017-007 reads", "held PR from the 0247 pass (5bd1-03/-04 grading) still unmerged: UNOWNED 2 until it lands", "author toward regime (0 runnable vs share 19), ml_health, new_strategy_prop, infra; 14 authoring-queue nodes remain", "route the 10 unrouted due pipeline items (alarm 57d, BL-20260821-PAIRS-SOL-ETH-STRANDS-ON-EVERY-OPEN)", "blocked/ audit has not run since before 2026-10-17"]
+}

@@ -1,0 +1,25 @@
+{
+  "run": "RESEARCH-OPS-2026-10-16-2047", "finished_at": "2026-10-16T21:30:00Z", "by": "research-ops-lane-20261016-2047",
+  "floor": 67, "floor_basis": "computed_floor(fired_24h 84)", "authoring_queue_depth": 13,
+  "idle_backends": ["github_runner_data", "kaggle"], "needs_review_triaged": 5, "needs_review_left": 27,
+  "needs_review_note": "result_disposition_check --list at 20:49Z: owned 19 / UNOWNED 5 / UNGRADED 1. The 5 unowned got grading.owner + owner_reason in HELD PR claude/research-ops-triage-20261016-2047 (E57 holds queue edits); after it merges the count reads owned 24 / unowned 0 (verified on that branch). Not counted as triaged until it merges. UNGRADED 1 = RQ-20260928-006, id collision already filed (PI-20261016-IKK5NFPO-0001).",
+  "throughput": {"runnable_before": 117, "runnable_after": 117, "queued": 191, "fired_24h": 84, "results_landed_24h": 194, "hours_since_last_dispatch": 3.3, "idle_alarm": false},
+  "mechanism": {"dispatch_receipt": "ok: last dispatch 17:30Z, receipts/stamps landing on main", "collector": "ok: 13 verdict files since 15:30Z, all read_state measured", "stranded_stamp_prs": "not checked (see not_run)", "incident": null, "watchdog": "newest row 2026-10-13 self_healed; no open escalated incident"},
+  "results_read": {"pass": 6, "fail": 5, "indeterminate": 2, "wiring_only": 0, "not_applicable": 0,
+   "units": [
+    "RQ-20261016-077e-01/-02/-03 PASS confirmed holdout, non-A arm selected from 9 (xrp_pullback_2h C5 +4.87R n=90; trend_donchian_eth_4h C3 +19.23R n=75; trend_donchian_xrp_4h C1 +4.13R n=25) -> Tier-3 config-proposal evidence, note on PROMOTION-BAR-MULTIPLICITY; confirmation unit on a disjoint window is the follow-up (handoff)",
+    "RQ-20261016-c56e-10/-11/-12 PASS Stage-0 re-validation as declared (xrp_pullback_2h 251 trades net +13.85R 5/8 folds; trend_donchian_eth_4h 148 trades +33.25R 7/8 folds; -11 same pass) -> no action, because each pass is the confirmation of a record, no config implied",
+    "RQ-20261016-64d6-01 FAIL ada_pullback_2h VH95 does not confirm on fresh 730d (dR +1.07R, 2/4 folds) -> lead dead, note on REGIME-PROGRAM",
+    "RQ-20261016-e2db-01 FAIL slv_squeeze_1h prop EV <= 0 on a seed (103 trades) -> no action, because the FAIL closes the question; new-strategy-prop search continues elsewhere",
+    "RQ-20261016-1fa6-08 FAIL logit_har trails LightGBM; auto-graded, confirmatory re-run queued -> no action",
+    "RQ-20261012-5bd1-02/-03 FAIL news-attention shocks (30 fail + 6 indeterminate, 0 pass cells) -> no action, because the rule FAIL closes that question; news layer and WEPE NOT retired",
+    "RQ-20261016-65ff-24/-30 INDETERMINATE 1h regime drift: the holdout clause had no measured folds (unmeasured window, not a FAIL) -> redesign handoff"
+   ]},
+  "unlocked": [], "retired": [], "levers_filed": [],
+  "units_authored": [], "followups_filed": [],
+  "routed_pipeline_items": [],
+  "authoring": {"queue_depth": 13, "nodes_drafted": 0, "nodes": [], "theme_shortfall": {"regime": 16, "ml_health": 8, "infra": 7},
+   "note": "0 nodes drafted again (OPS-AUTHOR-SKIPPED persists): this pass's budget went to reading 13 results and the needs_review ownership; none of the top nodes could be drafted without first reading its instrument. P2-R3.g06-pass is stale (confirmation 64d6-01 already ran and failed)."},
+  "not_run": ["pipeline routing of due items: pipeline.py --due shows 74 due, those in the first 20 lines all already routed; an exact unrouted count was NOT established, nothing routed this pass", "programme node authoring (step E.0)", "blocked/ audit beyond health-check warnings", "stranded stamp PR check", "GitHub Actions run listing for dispatcher/collector/grader"],
+  "handoff": ["OPS-AUTHOR-SKIPPED persists: next pass drafts a node FIRST, before reading results: candidates P3-Q8-eth-1h-family, P3-Q8-new-symbols, P1-Q7-sol-tp3-prop", "regime theme still 0 runnable of 16 share", "confirmation units on a disjoint window for 077e-01/-02/-03 before any Tier-3 proposal", "retire stale node P2-R3.g06-pass", "65ff-24 redesign: 1h holdout has no measured folds -- widen holdout or extend data", "merge held triage PR claude/research-ops-triage-20261016-2047 (needs a manager merge)", "route due pipeline items (not run this pass)"]
+}

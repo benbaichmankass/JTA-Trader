@@ -5,7 +5,7 @@ id: RQ-20261016-025
 title: 'velotrade_1: does adding trend_donchian_eth_4h ALONE (the only gate-eligible 4h leg) to the 1h
   ETH+SOL book beat it at the SAME risk 0.005 on EV per life with no worse survival on every seed? (window-matched
   1095 d)'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROP
@@ -126,4 +126,16 @@ generated:
   key: programme:P5-Q5-E4H-VELO-005
   params:
     node: P5-Q5-E4H-VELO-005
-last_dispatched_at: null
+last_dispatched_at: '2026-10-17T04:19:46+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P5-Q5-E4H-VELO-005
+  evidence:
+  - research/results/RQ-20261016-025/39002167673.jsonl
+  graded_at: '2026-10-17'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

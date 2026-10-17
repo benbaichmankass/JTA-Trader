@@ -2,7 +2,7 @@
 # queue_grade.confirmation_unit: the holdout re-run of RQ-20261005-014's PASS (operator 2026-10-16, 'Holdout re-run').
 id: RQ-20261016-d37f-06
 title: 'Holdout re-run of RQ-20261005-014: M20 exit-lever sweep: scha_trend_long_1d (generated, monthly)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -85,5 +85,27 @@ confirmation:
     (< the 25 floor), so the share is raised to 0.34. The discovery span keeps ~49 trades, under the 2x25
     the IS/OOS split needs, so discovery may report insufficient_base for every cell (an honest outcome:
     the leg is too thin to both select and confirm in one history).'
+last_dispatched_at: '2026-10-16T23:34:49+00:00'
 grading:
   auto: true
+  confirmation: confirmed
+  confirms: RQ-20261005-014
+  decision_rule_id: RULE-EXIT-REFINEMENT-P2-GATE
+  evidence:
+  - research/results/RQ-20261016-d37f-06/38982214766.jsonl
+  graded_at: '2026-10-17'
+  grader: scripts/research/queue_grade.py
+  holdout:
+    base_trades: 25
+    boundary: '2020-08-03'
+    confirmation: confirmed
+    confirmed_cells:
+    - vt_hot90_t2
+    selected_from: 24
+    share_used: 0.3421
+    state: ok
+  note: 'holdout re-run of RQ-20261005-014: confirmed (selected from 24 cell(s), holdout from 2020-08-03,
+    base n 25).'
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

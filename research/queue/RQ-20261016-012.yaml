@@ -4,7 +4,7 @@
 id: RQ-20261016-012
 title: 'In-trade exit line, rung 2 FAILED -> the registered refinement: does the RICH in-trade state predict
   SL-before-TP beyond the calibrated distance-only reference at a LONGER horizon (K = 3R)?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -115,4 +115,16 @@ generated:
   key: programme:P1-Q8.2-fail
   params:
     node: P1-Q8.2-fail
-last_dispatched_at: null
+last_dispatched_at: '2026-10-16T21:12:30+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-Q8-RICH-STATE-K3
+  evidence:
+  - research/results/RQ-20261016-012/38965312507.jsonl
+  graded_at: '2026-10-17'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
