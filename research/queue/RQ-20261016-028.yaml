@@ -140,3 +140,13 @@ generated:
   params:
     node: P5-GATE-VELO
 last_dispatched_at: '2026-10-17T10:56:41+00:00'
+grading:
+  auto: false
+  decision_rule_id: RULE-P5-GATE-VELO-PER-LEG
+  evidence:
+  - research/results/RQ-20261016-028/39026833909.jsonl
+  graded_at: '2026-10-17'
+  graded_by: 'research-ops-lane-20261017-1447 (per-leg rule, overall=all: trend_donchian_sol_prop FAIL (ev <= 0 on a seed) => unit FAIL; eth_prop, eth_4h, sol_4h PASS per leg)'
+  needs_review: false
+  reason: 'Read against the unit''s registered rule verbatim: per-leg ev>0 on all 5 seeds; sol_prop on velotrade_1 fails it (ev -1.55..+2.04), the other three pass. No comms/prop_survival record is written for velotrade_1 here: the record schema is one file per leg with a single ruleset (see PROP-GATE-PARITY note).'
+  verdict: fail
