@@ -1462,13 +1462,25 @@ class MainActivity : Activity() {
         // opened no sheet (the group tap only expanded the row). Each row is now touched NATIVELY (a MotionEvent the
         // WebView receives as a trusted touch) at the centre exec.js re-checked; every miss still records what the page
         // showed after it (viewport, new visible texts, the touched cell's ancestor chain)
+        // TARGETS (2026-10-17, 1b.253 08:03Z + 12:03Z MEASURED): the Market cell got a fully trusted finger touch
+        // (pdown:touch w9 tr1 .. click:touch tr1) and opened nothing, while click() on the group cell reaches the row's
+        // handler; so the cell was wrong, not the touch. The child row is tried at its Market cell, then its Opening
+        // price cell, then its "n TP / n SL" text. The GROUP row only toggles expand: it is touched ONLY when no child
+        // row is in the DOM (to expand it, then the child targets run), never while one is (08:03Z: that collapsed it).
         var probe: JSONObject? = null
-        for (which in if (opened.isEmpty()) listOf("child", "group") else emptyList()) {
+        val queue = ArrayDeque(if (opened.isEmpty()) listOf("child", "child_entry", "child_tpsl") else emptyList())
+        var grouped = false
+        while (queue.isNotEmpty()) {
+            val which = queue.removeFirst()
             p.js("__ex.domMark()")
             val r = nativeTap(p, sym, which)
             tries.put("$which/native:$r".take(40))
             lastTapGeom.forEach { tries.put(it.take(40)) }
-            if (!r.startsWith("touched")) { if (r == "no_grid") break; continue }
+            if (!r.startsWith("touched")) {
+                if (r == "no_grid" || (which == "group" && r == "none")) break
+                if (which == "child" && r == "none" && !grouped) { grouped = true; queue.clear(); queue.addAll(listOf("group", "child", "child_entry", "child_tpsl")) }
+                continue
+            }
             delay(1200); p.ensure()
             // which touch preceded a modal (manager 11:58Z: attribute any Edit SL/TP modal to the tap that opened it); a
             // modal is dismissed (Cancel/Escape, never Confirm) and NOTHING further is attempted on this read
@@ -1479,8 +1491,9 @@ class MainActivity : Activity() {
             if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") == true) { opened = "$which/native"; break }
             delay(1500); p.ensure()
             if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") == true) { opened = "$which/native"; break }
-            tries.put("$which/native:no_sheet")
             probe = p.obj("__ex.domDiff()")?.put("at", "$which/native")
+            // per touch: how many elements appeared and whether a [Position details] tab did (a sheet the reader missed)
+            tries.put("$which/native:no_sheet n${probe?.optInt("n_new") ?: -1} d${probe?.optInt("details_tabs") ?: -1}".take(40))
         }
         if (opened.isEmpty()) {
             val m1 = dismissModal(p)
@@ -1559,7 +1572,8 @@ class MainActivity : Activity() {
             ctl.put("${pr.optString("at")} w=${pr.optInt("w")} h=${pr.optInt("h")} new=${pr.optInt("n_new")} dlg=${pr.optInt("dialogs")}".take(40))
             ctl.put("tabs details=${pr.optInt("details_tabs")} tpsl=${pr.optInt("tpsl_tabs")}")
             pr.optJSONArray("ev")?.let { a -> for (i in 0 until a.length()) ctl.put("ev: " + a.optString(i).take(35)) }
-            pr.optJSONArray("leaves")?.let { a -> for (i in 0 until a.length()) ctl.put("new: " + a.optString(i).take(34)) }
+            pr.optJSONArray("hd")?.let { a -> for (i in 0 until a.length()) ctl.put("hd: " + a.optString(i).take(35)) }
+            pr.optJSONArray("leaves")?.let { a -> for (i in 0 until minOf(a.length(), 10)) ctl.put("new: " + a.optString(i).take(34)) }
             pr.optJSONArray("chain")?.let { a -> for (i in 0 until a.length()) ctl.put("up: " + a.optString(i).take(35)) }
         }
         orders?.optJSONArray("rows")?.let { rs ->
