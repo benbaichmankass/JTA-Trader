@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import dukascopy_span_probe as probe  # noqa: E402
+import dukascopy_span_probe as probe
 
 TARGET_DAYS = 7300   # ~2006-10 from 2026-10
 
