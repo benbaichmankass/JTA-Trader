@@ -106,6 +106,12 @@ grading:
   graded_at: '2026-10-17'
   grader: scripts/research/queue_grade.py
   needs_review: true
+  owner: RESEARCH-AUTHOR-GRADE-1017
+  owner_reason: 'Rule cannot be applied: the only row is producer_failed (exit=1). Cause: research-script-run.yml
+    did not install yfinance, which exit_lever_ablation.py needs for 1d ETF candles (regime_debt_matrix._fetch_csv
+    imports it); reproduced locally as ModuleNotFoundError. Fix: tooling PR adds `pip install yfinance==1.7.0`
+    to the workflow; the dispatcher auto-re-arms producer_failed units (attempt 1 of 2), so no stamp edit
+    is needed. Closes when a measured row lands and the grader grades it. Not a verdict.'
   reason: 'read_state not unanimously measured: [''producer_failed'']'
   rows: 1
   verdict: null

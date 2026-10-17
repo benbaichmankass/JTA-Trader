@@ -97,3 +97,17 @@ related:
 - research/programmes/03-strategy-improvement.yaml
 - scripts/research/exit_lever_ablation.py
 last_dispatched_at: '2026-10-17T18:43:21+00:00'
+grading:
+  attested: RULE-RQ20261016c56e17
+  auto: true
+  decision_rule_id: RULE-RQ20261016c56e17
+  evidence:
+  - research/results/RQ-20261016-c56e-17/39059368568.jsonl
+  graded_at: '2026-10-17'
+  grader: scripts/research/queue_grade.py
+  needs_review: true
+  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  rows: 1
+  verdict: null
+  owner: RESEARCH-AUTHOR-GRADE-1017
+  owner_reason: 'Rule cannot be applied: the only row is producer_failed (exit=1). Cause: research-script-run.yml did not install yfinance, which exit_lever_ablation.py needs for 1d ETF candles (regime_debt_matrix._fetch_csv imports it); fix is in the tooling PR (`pip install yfinance==1.7.0`). The dispatcher auto-re-arms producer_failed units (attempt 1 of 2). Closes when a measured row lands and the grader grades it. Not a verdict.'

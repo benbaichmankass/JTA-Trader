@@ -72,7 +72,7 @@ value:
   basis: 'INFERRED stand-in: 8bbc-04/-05 matched-risk +pair gains of ~$320-480/life on velotrade_1 (730
     d vs 1095 d); this asks how much survives with the one leg that can actually be added.'
 run:
-  timeout_minutes: 240
+  timeout_minutes: 330
   command:
   - python3
   - scripts/research/prop_ev_grid.py
@@ -132,7 +132,7 @@ generated:
   key: programme:P5-Q5-E4H-VELO-0035
   params:
     node: P5-Q5-E4H-VELO-0035
-last_dispatched_at: '2026-10-17T07:58:48+00:00'
+last_dispatched_at: null
 grading:
   auto: true
   decision_rule_id: RULE-P5-Q5-E4H-VELO-0035
@@ -144,3 +144,5 @@ grading:
   reason: 'read_state not unanimously measured: [''producer_failed'']'
   rows: 1
   verdict: null
+  owner: RESEARCH-AUTHOR-GRADE-1017
+  owner_reason: 'Rule cannot be applied: the single row is producer_failed (timed out at 240 min with 12 of 15 sim cells landed under comms/research/RQ-20261016-024/39015654952/sims). The est_minutes 110 scaled from 1bf3-02 under-called C4H (4 legs) by >2x. Fix in this PR: run.timeout_minutes 240 -> 330 (the script_run ceiling; sibling heavy nodes in 05-prop.yaml already use 330) and last_dispatched_at null so the unit is re-run; node P5-Q5-E4H-VELO-0035 carries the same value. Closes when the re-run lands. Not a verdict.'

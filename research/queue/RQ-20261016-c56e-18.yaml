@@ -109,6 +109,11 @@ grading:
   graded_at: '2026-10-17'
   grader: scripts/research/queue_grade.py
   needs_review: true
+  owner: RESEARCH-AUTHOR-GRADE-1017
+  owner_reason: 'Rule cannot be applied: both rows are producer_failed (exit=1). Cause: research-script-run.yml
+    did not install yfinance (ModuleNotFoundError in regime_debt_matrix._fetch_csv); fix is in the tooling
+    PR. This unit has used 1 of 2 auto-re-arms, so it fires once more after the workflow fix merges --
+    merge the tooling PR BEFORE that attempt. Closes when a measured row lands. Not a verdict.'
   reason: 'read_state not unanimously measured: [''producer_failed'']'
   rows: 2
   verdict: null

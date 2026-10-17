@@ -596,7 +596,7 @@ nodes:
   #   continuous vol-TARGET SIZING, row IR-VOL-TARGET-SIZING-STAGE0 (IDEA-REVIEW-1016) -- not duplicated here; node P2-R5 waits on it.
   #   blocked/RQ-20261016-65ff-28  classifier comparison on TRADE SEPARATION (ML vol head vs HMM vs ATR control; deliverable 2)
   #   blocked/RQ-20261016-65ff-29  the real-money equity legs (alpaca_live)
-  #   blocked/RQ-20260927-006..009, RQ-20260928-006, RQ-20260929-109/110  retagged theme: regime, owner rows named
+  #   blocked/RQ-20260927-006..009, RQ-20260928-ae17-01 (was a second RQ-20260928-006, renamed 2026-10-17), RQ-20260929-109/110  retagged theme: regime, owner rows named
   # Nodes below are the branches those results open. Builds are rows, not nodes: REGIME-WEIGHT-VARIANTS, REGIME-WF-VERDICT-WRAPPER,
   # REGIME-VOL-LABELS-EXPORT, REGIME-EQUITY-LEG-FETCH, FUNDING-OI-DATASETS-ETH-SOL.
   - id: P2-R3.c01-pass
@@ -792,7 +792,7 @@ nodes:
       usd_at_stake_per_month: 150
       confidence: 0.3
     after:
-    - unit: RQ-20260928-006
+    - unit: RQ-20260928-ae17-01
       verdict: any
     needs_authoring: 'The offline parity re-check of the three volatile-keyed trend_vol OFF-cells closed. A cell that
       is not *_stable_drag is a cosmetic cell (regime-selectivity Rule 1): register its removal packet (Tier-3) on
