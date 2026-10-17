@@ -50,6 +50,8 @@ DOC = REPO_ROOT / "docs" / "claude" / "system-actions.md"
 EXPECTED_ACTIONS = {
     # Tier 1 — read-only / analysis
     "status-check": "status_check.sh",
+    # Read-only du breakdown of the live VM disk (PI-20261017-VSMHZYHF-0001).
+    "disk-usage-report": "disk_usage_report.sh",
     # Read-only listening-port + host-firewall inventory (security audit 2026-06-28).
     "list-listening-ports": "list_listening_ports.sh",
     "pull-latest-logs": "pull_logs.sh",
@@ -274,6 +276,7 @@ EXPECTED_ACTIONS = {
     "supersede-intent-reduce-phantom-pnl": "supersede_intent_reduce_phantom_pnl_action.sh",
     "backfill-intent-reduce-pnl": "backfill_intent_reduce_pnl_action.sh",
     "backfill-own-fill-exits": "backfill_own_fill_exits_action.sh",
+    "prune-db-backups": "prune_db_backups.sh",
     # 2026-07-06 — one-shot repair of the mis-linked ETH prop close
     # (BL-20260706-PROP-CLOSE-MISLINK; root cause fixed in #5744): relink the
     # close fill to the real position ticket, close it, restore the phantom.
@@ -445,6 +448,7 @@ TIER_2_ACTIONS = {
     "supersede-intent-reduce-phantom-pnl",
     "backfill-intent-reduce-pnl",
     "backfill-own-fill-exits",
+    "prune-db-backups",
     "fix-prop-mislinked-close",
     "prop-ticket-expire",
     "prop-ticket-reissue",
