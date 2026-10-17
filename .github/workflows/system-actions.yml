@@ -646,6 +646,11 @@ jobs:
                      | grep -i -m1 '^[[:space:]]*apply[[:space:]]*:' \
                      | sed -E 's/^[[:space:]]*[Aa]pply[[:space:]]*:[[:space:]]*//' \
                      | tr -d '[:space:]' || true)
+            # prune-db-backups: optional count of newest backups always kept.
+            keep=$(printf '%s\n' "${ISSUE_BODY}" \
+                     | grep -i -m1 '^[[:space:]]*keep[[:space:]]*:' \
+                     | sed -E 's/^[[:space:]]*[Kk]eep[[:space:]]*:[[:space:]]*//' \
+                     | tr -d '[:space:]' || true)
             # supersede-*-artifacts: optional comma-separated trade-id allowlist.
             ids=$(printf '%s\n' "${ISSUE_BODY}" \
                      | grep -i -m1 '^[[:space:]]*ids[[:space:]]*:' \
@@ -759,6 +764,7 @@ jobs:
           echo "ACTION_FORCE_CLIENT_ID=${force_client_id:-}" >>"$GITHUB_ENV"
           echo "ACTION_ALLOW_MIRROR=${allow_mirror:-}" >>"$GITHUB_ENV"
           echo "ACTION_IDS=${ids:-}" >>"$GITHUB_ENV"
+          echo "ACTION_KEEP=${keep:-}" >>"$GITHUB_ENV"
           echo "ACTION_EQUAL_ONLY=${equal_only:-}" >>"$GITHUB_ENV"
           echo "ACTION_EXIT_PRICE=${exit_price:-}" >>"$GITHUB_ENV"
           echo "ACTION_CLOSED_AT=${closed_at:-}" >>"$GITHUB_ENV"
@@ -1261,10 +1267,14 @@ jobs:
               exit 1
             fi
           fi
-          # prune-db-backups: days is a whole number >= 1; apply true/false.
+          # prune-db-backups: days >= 0, keep 1-99 (the newest backup is never pruned); apply true/false.
           if [ "${ACTION}" = "prune-db-backups" ]; then
-            if [ -n "${ACTION_DAYS// }" ] && ! printf '%s' "${ACTION_DAYS}" | grep -Eq '^[1-9][0-9]*$'; then
-              echo "::error::prune-db-backups days must be a whole number >= 1 (got '${ACTION_DAYS}')."
+            if [ -n "${ACTION_KEEP// }" ] && ! printf '%s' "${ACTION_KEEP}" | grep -Eq '^[1-9][0-9]?$'; then
+              echo "::error::prune-db-backups keep must be a whole number 1-99 (got '${ACTION_KEEP}')."
+              exit 1
+            fi
+            if [ -n "${ACTION_DAYS// }" ] && ! printf '%s' "${ACTION_DAYS}" | grep -Eq '^[0-9]+$'; then
+              echo "::error::prune-db-backups days must be a whole number >= 0 (got '${ACTION_DAYS}')."
               exit 1
             fi
             case "${ACTION_APPLY:-}" in
@@ -1957,7 +1967,7 @@ jobs:
             REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACTION_IDS=$(printf '%q' "${ACTION_IDS:-}") ${REMOTE_CMD}"
           fi
           if [ "${ACTION}" = "prune-db-backups" ]; then
-            REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACTION_DAYS=$(printf '%q' "${ACTION_DAYS:-}") ${REMOTE_CMD}"
+            REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACTION_DAYS=$(printf '%q' "${ACTION_DAYS:-}") ACTION_KEEP=$(printf '%q' "${ACTION_KEEP:-}") ${REMOTE_CMD}"
           fi
           if [ "${ACTION}" = "backfill-own-fill-exits" ]; then
             REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACTION_IDS=$(printf '%q' "${ACTION_IDS:-}") ${REMOTE_CMD}"

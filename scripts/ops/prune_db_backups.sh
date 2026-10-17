@@ -14,7 +14,8 @@
 #
 # Env (passed by system-actions.yml):
 #   ACTION_APPLY  - "true" to delete; else dry-run
-#   ACTION_DAYS   - retention in days (default 7, minimum 1)
+#   ACTION_DAYS   - retention in days (default 7; 0 = age is no protection, keep still applies)
+#   ACTION_KEEP   - always keep this many newest backups (default 2, minimum 1)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -23,9 +24,10 @@ source "${SCRIPT_DIR}/_lib.sh"
 
 DB_PATH="$(runtime_db_path)"
 RETAIN_DAYS="${ACTION_DAYS:-7}"
-KEEP=2
+KEEP="${ACTION_KEEP:-2}"
+case "${KEEP}" in ''|*[!0-9]*) echo "ERROR: keep must be a whole number (got '${KEEP}')"; exit 2 ;; esac
+if [ "${KEEP}" -lt 1 ]; then echo "ERROR: keep must be >= 1 (the newest backup is never pruned)"; exit 2; fi
 case "${RETAIN_DAYS}" in ''|*[!0-9]*) echo "ERROR: days must be a whole number (got '${RETAIN_DAYS}')"; exit 2 ;; esac
-if [ "${RETAIN_DAYS}" -lt 1 ]; then echo "ERROR: days must be >= 1"; exit 2; fi
 
 echo ">>> live DB: ${DB_PATH} (never touched)"
 echo ">>> retention: older than ${RETAIN_DAYS} day(s), always keep the newest ${KEEP} backups"
