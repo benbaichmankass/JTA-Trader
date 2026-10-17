@@ -703,6 +703,22 @@
     x.dispatchEvent(new MouseEvent("click", o));
     return "tapped";
   }
+  // MEASURE (2026-10-17, native touches "touched" both rows and opened no sheet): what the page actually RECEIVED from
+  // the next native touch -- event type, pointerType, contact size and isTrusted -- so a miss tells whether the press
+  // looked like a finger to the page. Capture phase on window, passive, never stops or changes an event. Read by domDiff.
+  function evWatch() {
+    window.__exEv = [];
+    if (!window.__exEvOn) {
+      window.__exEvOn = true;
+      ["pointerdown", "pointerup", "touchstart", "touchend", "click"].forEach(function (k) {
+        window.addEventListener(k, function (e) {
+          var a = window.__exEv; if (!a || a.length >= 6) return;
+          var pt = e.pointerType !== undefined ? (e.pointerType || "none") : (e.touches !== undefined ? "touchev" : "-");
+          a.push((k.replace("pointer", "p").replace("touch", "t") + ":" + pt + " w" + Math.round(e.width || 0) + " tr" + (e.isTrusted ? 1 : 0)).slice(0, 24));
+        }, {capture: true, passive: true});
+      });
+    }
+  }
   function textEls(root, re, max) {   // innermost visible elements whose own text matches re
     return innermost(Array.prototype.slice.call((root || document).querySelectorAll("*")).filter(function (e) {
       if (!vis(e)) return false; var s = t(e); return s.length > 0 && s.length <= (max || 40) && re.test(s);
@@ -1381,6 +1397,7 @@
             " e" + efp + " sc" + f(se.scrollTop) + " dpr" + (window.devicePixelRatio || 0).toFixed(2) + (document.hidden ? " hid" : "")).slice(0, 40)};
       }
       for (var e = pe; e && e !== h.parentElement; e = e.parentElement) { var de = denied(e); if (de) return {ok: false, why: "point_" + de}; }
+      if (!scroll) evWatch();
       return {ok: true, x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, vw: window.innerWidth, vh: window.innerHeight};
     },
     // MEASURE (BREAKOUT-NATIVE-TAP finding a): after the group row expands, the child row shows the side as TEXT
@@ -1416,6 +1433,7 @@
           (e.hasAttribute("tabindex") ? " ti" : "") + (e.getAttribute("data-state") ? " ds=" + e.getAttribute("data-state") : "")).slice(0, 40));
       }
       return {w: window.innerWidth, h: window.innerHeight, n_new: nw.length, dialogs: dialogs().length, leaves: leaves.slice(0, 15),
+        ev: (window.__exEv || []).slice(0, 6),
         details_tabs: textEls(document, SHEET_TAB.details).length, tpsl_tabs: textEls(document, SHEET_TAB.tpsl).length, chain: chain};
     },
     // The open sheet: {open, n, title_ok (a title equal to the symbol), subtitle (digits masked), tabs present}

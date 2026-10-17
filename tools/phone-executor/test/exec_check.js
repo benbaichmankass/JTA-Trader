@@ -889,6 +889,16 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
   await tp.mouse.click(nt.x, nt.y);
   eq([await tp.evaluate("__ex.sheetInfo('ETHUSD').open"), await tp.evaluate("window.__danger")], [true, 0], "native: a trusted tap at that point opens the sheet; nothing denied clicked");
   eq((await tp.evaluate("__ex.sheetTarget('ETHUSD','child',false)")).why, "sheet_open", "native: never targeted with the sheet already open");
+  // 2026-10-17 (1b.253 touched both rows, no sheet): the final pre-touch check arms a passive record of what the page
+  // RECEIVED from the touch (type, pointerType, contact width, isTrusted); domDiff returns it as ev
+  const tq = await onHost(tr);
+  let nq = await tq.evaluate("__ex.sheetTarget('ETHUSD','child',true)");
+  nq = await tq.evaluate("__ex.sheetTarget('ETHUSD','child',false)");
+  await tq.evaluate("__ex.domMark()");
+  await tq.mouse.click(nq.x, nq.y);
+  const rcv = (await tq.evaluate("__ex.domDiff()")).ev;
+  eq([nq.ok, rcv.length > 0, rcv.some((x) => /^click:\S+ w\d+ tr1$/.test(x)), rcv.some((x) => /^pdown:mouse w\d+ tr1$/.test(x))], [true, true, true, true], "native: domDiff.ev records the received events (type:pointerType w<size> tr<trusted>)");
+  eq(await tq.evaluate("__ex.sheetInfo('ETHUSD').open"), true, "native: the passive record never blocks the trusted tap");
   // a point covered by another element (an overlay, a row ✕ drawn over the cell) is refused, never touched
   const cv = await onHost(sheetPage().replace("</body>", "<div id=ov style='position:fixed;left:0;top:0;width:100%;height:100%'></div></body>"));
   let cvr = await cv.evaluate("__ex.sheetTarget('ETHUSD','child',false)");
