@@ -6,10 +6,10 @@ cadence: once
 theme: live_strategy
 priority: 1
 kind: experiment
-question: With PR #18648's fixed-beta-at-entry R scale, and the ENTRY condition changed from the rolling-beta z to |z| >= entry_z on the
+question: 'With PR #18648''s fixed-beta-at-entry R scale, and the ENTRY condition changed from the rolling-beta z to |z| >= entry_z on the
   fixed-beta spread (beta = the rolling OLS beta at the decision bar, frozen; z over the lookback on that frozen spread), do pairs_sol_btc,
   pairs_bnb_btc, pairs_eth_btc and pairs_sol_eth each show net_total_r > 0 net of fee + slippage + funding at n >= 39, with the $ ledger at
-  true notionals agreeing in sign?
+  true notionals agreeing in sign?'
 why_this_matters: 'Operator decision 2026-10-16 "Fix + shadow" asked for this test. MEASURED by lane PAIRS-R-SCALE-FIX-1016 (checklist
   PAIRS-R-SCALE, Binance Vision 1h 2026-04-19..10-15, fee 7.5 + slip 3 + funding 1 bps/leg): on the honest R scale all four Bybit pairs are
   net-negative (SOL/BTC -0.112, BNB/BTC -0.376, ETH/BTC -0.526, SOL/ETH -0.383 R/trade; n 254-271). The same lane found the entry trigger
@@ -45,7 +45,7 @@ decision_rule:
   what_it_does_not_do: Does not edit config/pairs.yaml or the pairs executor. Does not re-tune entry_z / lookback / stop. Does not decide
     prop fit or any real-money placement.
 blocked_on:
-- what: PR #18648 (fixed-beta-at-entry R scale in pairs_engine + backtest_pairs.py) is not merged.
+- what: 'PR #18648 (fixed-beta-at-entry R scale in pairs_engine + backtest_pairs.py) is not merged.'
   ref: docs/claude/work/checklist/PAIRS-R-SCALE.json
   clears_when: '#18648 is merged to main.'
 - what: 'backtest_pairs.py has no fixed-beta entry-trigger arm: entries fire on the rolling-beta z only.'
