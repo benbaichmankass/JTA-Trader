@@ -5,7 +5,7 @@ id: RQ-20261017-003
 title: 'AI trader / exit line, class split (P2-Q3.1): does the RICH in-trade state carry information about
   SL-before-TP beyond where the trade is, on the DONCHIAN family alone? (refinement of RQ-20261014-d6e7-04,
   which was INDETERMINATE pooled)'
-status: queued
+status: done
 cadence: once
 roadmap:
 - M23
@@ -117,3 +117,16 @@ generated:
   params:
     node: P2-Q3.1-fail
 last_dispatched_at: '2026-10-17T06:56:26+00:00'
+grading:
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-P2-Q3.1-RICHSTATE-DONCHIAN
+  evidence:
+  - research/results/RQ-20261017-003/39011789606.jsonl
+  graded_at: '2026-10-17'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate
