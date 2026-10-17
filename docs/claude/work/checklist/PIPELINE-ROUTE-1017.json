@@ -1,0 +1,21 @@
+{
+  "id": "PIPELINE-ROUTE-1017",
+  "title": "Pipeline routing 1017: exit-head retirement record (PI-20261010-JD1HZX7C-0001) + ml_vol label-fidelity replay (PI-20261010-JD1HZX7C-0003)",
+  "phase": "research",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-17 RESEARCH-AUTHOR-GRADE-1017] Owns two ML-RESEARCH-W41 follow-throughs routed here from the unrouted alarm. (1) PI-20261010-JD1HZX7C-0001: RQ-20261008-900 graded FAIL (k=1/3 folds, pooled R -1.938); docs/research/exit-refinement-coverage.json ict_scalp_xrp_15m.exit_head_ml still cites only the 2026-08-13/14 reads (status honest_negative, ref does not cite research/results/RQ-20261008-900/38059199318.jsonl) -- append the citation and the retirement. Tier-1 doc edit; run scripts/ci checks that read the matrix (check_matrix_corpus_agreement) before landing. (2) PI-20261010-JD1HZX7C-0003: run scripts/research/ml_vol_label_replay.py verify for BTCUSDT/SOLUSDT once live regime_ml_vol_shadow rows overlap the v002 datasets, then restamp RQ-20261008-902/903 fidelity; if BTC legs still emit no ml-advisory rows, name why. Closes when both PIs are done with evidence.",
+  "updated_at": "2026-10-17T20:57:47Z",
+  "updated_by": "research-author-grade-1017-fork",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "_seq": 549
+}
