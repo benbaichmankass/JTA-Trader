@@ -42,7 +42,9 @@ def grade(by_instrument: list, target: int = TARGET_DAYS) -> dict:
 
 
 def _self_test() -> int:
-    mk = lambda i, claim, e: {"instrument": i, "depth_claim": claim, "earliest_bars_anchor": e}
+    def mk(i, claim, e):
+        return {"instrument": i, "depth_claim": claim, "earliest_bars_anchor": e}
+
     assert grade([mk("a", "measured", 7300), mk("b", "measured", 7300)])["verdict"] == "pass"
     assert grade([mk("a", "measured", 7300), mk("b", "measured", 3650)])["verdict"] == "fail"
     assert grade([mk("a", "measured", 3650), mk("b", "lower_bound_some_anchors_errored", 3650)])["verdict"] == "indeterminate"
