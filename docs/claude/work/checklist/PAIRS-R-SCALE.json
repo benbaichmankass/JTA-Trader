@@ -27,5 +27,14 @@
       "archived_at": "2026-10-17T12:04:59Z"
     }
   ],
+  "observation": {
+    "what": "the #18648 engine half exercised live: the first Bybit pairs shadow_open or skip_size soak row after 2026-10-17T11:13Z carries beta_entry and risk_scale_ratio ~1 (pre-fix rows read 226..1769)",
+    "how_to_check": "curl -sS 'https://ict-bot.duckdns.org/api/bot/pairs/soak?limit=200' | jq '.records[] | select(.logged_at_utc > \"2026-10-17T11:13\" and (.event==\"shadow_open\" or .event==\"skip_size\")) | {logged_at_utc,pair,beta_entry,risk_scale_ratio}'",
+    "due_by": "2026-10-24T00:00Z"
+  },
+  "writeback": {
+    "roadmap": "M22 where/next updated 2026-10-17 (four Bybit pairs shadow; next = entry-trigger arm + RQ-20261017-9582-01)",
+    "arch": "ARCHITECTURE-CANONICAL decision-log row 2026-10-16 PAIRS-R-SCALE-FIX-1016 (added by #18648)"
+  },
   "_seq": 495
 }
