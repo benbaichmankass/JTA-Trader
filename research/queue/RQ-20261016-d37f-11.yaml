@@ -2,7 +2,7 @@
 # queue_grade.confirmation_unit: the holdout re-run of RQ-20261009-002's PASS (operator 2026-10-16, 'Holdout re-run').
 id: RQ-20261016-d37f-11
 title: 'Holdout re-run of RQ-20261009-002: M20 exit-lever sweep: trend_donchian_eth_prop (generated, monthly)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -85,6 +85,28 @@ confirmation:
     of the nearest committed m20 corpus run for this leg); the sweep re-derives the boundary from the
     run''s own trades and grows the share to the 25-trade floor, capped at 0.40. The default 25% holds
     only ~245 trades here (< the 25 floor), so the share is raised to 0.26.'
+last_dispatched_at: '2026-10-17T05:53:51+00:00'
 grading:
   auto: true
-last_dispatched_at: '2026-10-17T05:53:51+00:00'
+  confirmation: confirmed
+  confirms: RQ-20261009-002
+  decision_rule_id: RULE-EXIT-REFINEMENT-P2-GATE
+  evidence:
+  - research/results/RQ-20261016-d37f-11/39007948996.jsonl
+  graded_at: '2026-10-17'
+  grader: scripts/research/queue_grade.py
+  holdout:
+    base_trades: 246
+    boundary: '2025-01-13'
+    confirmation: confirmed
+    confirmed_cells:
+    - adx25_k0_t1.8
+    - adx25_k3_t1.8
+    selected_from: 25
+    share_used: 0.2605
+    state: ok
+  note: 'holdout re-run of RQ-20261009-002: confirmed (selected from 25 cell(s), holdout from 2025-01-13,
+    base n 246).'
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
