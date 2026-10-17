@@ -4,7 +4,7 @@
 id: RQ-20261016-032
 title: 'breakout_2 (Turbo) breadth: does adding pullback_ada_1h (ADAUSD, a routed Breakout symbol) to
   the incumbent ETH+SOL book beat it at the same risk on EV per life with no worse survival on every seed?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROP
@@ -121,3 +121,15 @@ generated:
   params:
     node: P5-Q5-ADA-BRK
 last_dispatched_at: '2026-10-17T13:44:21+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P5-Q5-ADA-BRK-TURBO
+  evidence:
+  - research/results/RQ-20261016-032/39037821779.jsonl
+  graded_at: '2026-10-17'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
