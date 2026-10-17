@@ -1,0 +1,32 @@
+{
+  "id": "RESEARCH-OPS-20261017-2047",
+  "title": "Research-ops pass 2026-10-17 20:47Z",
+  "phase": "research",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "research-ops-lane-20261017-2047",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    18817
+  ],
+  "blocked_on": [],
+  "note": "[lane done] runnable 64->57 vs floor 48 (7 equity units blocked, not failures); 1 result read PASS (6013-01); UNOWNED 5->0; grader defect fixed (auto:false ignored on generated units, reverted 027/028); 20 e35 underpowered dispositions; 1 node authored (P3-Q8-sol-1h-family); levers: REGIME-EQUITY-LEG-FETCH (costing runs), prop_ev_grid resume. Not run: blocked/ per-file audit, due routing, stranded-PR check, m20 read. Record comms/research/ops/20261017T2130Z.json. HELD PR.",
+  "updated_at": "2026-10-17T21:04:10Z",
+  "updated_by": "research-ops-lane-20261017-2047",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "none: operations pass",
+    "arch": "none: no component changed"
+  },
+  "observation": {
+    "what": "next grader run leaves RQ-20261016-027/-028 hand grades intact",
+    "how_to_check": "python3 scripts/research/result_disposition_check.py --list  (027/028 not unowned) after the next research-queue-grade run",
+    "due_by": "2026-10-19"
+  },
+  "_seq": 549
+}
