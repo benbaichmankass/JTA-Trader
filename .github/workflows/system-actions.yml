@@ -406,7 +406,11 @@ jobs:
           ISSUE_TITLE: ${{ github.event.issue.title }}
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          # $GITHUB_EVENT_NAME, not the github.event_name expression: a run
+          # script holding any expression is evaluated as ONE template capped at
+          # 21000 chars, and this step crossed it on 2026-10-17 (a6f9a1707:
+          # GitHub rejected the whole workflow, so no system-action ran).
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
             action="${DISPATCH_ACTION}"
             reason="${DISPATCH_REASON}"
             account_id="${DISPATCH_ACCOUNT_ID}"
@@ -771,7 +775,7 @@ jobs:
           echo "ACTION_FROM_PLACED=${from_placed:-}" >>"$GITHUB_ENV"
           echo "ACTION_ROW=${row_id:-}" >>"$GITHUB_ENV"
           echo "ACTION_EXIT_KIND=${exit_kind:-}" >>"$GITHUB_ENV"
-          echo ">>> Resolved ACTION=${action:-} REASON=${reason:-} ACCOUNT_ID=${account_id:-} MODE=${mode:-} TRADE_ID=${trade_id:-} SYMBOL=${symbol:-} DAYS=${days:-} WINDOWS=${windows:-} WINDOW_DAYS=${window_days:-} BT_MODE=${bt_mode:-} RECENT_ONLY_FRAC=${recent_only_frac:-} (event=${{ github.event_name }})"
+          echo ">>> Resolved ACTION=${action:-} REASON=${reason:-} ACCOUNT_ID=${account_id:-} MODE=${mode:-} TRADE_ID=${trade_id:-} SYMBOL=${symbol:-} DAYS=${days:-} WINDOWS=${windows:-} WINDOW_DAYS=${window_days:-} BT_MODE=${bt_mode:-} RECENT_ONLY_FRAC=${recent_only_frac:-} (event=${GITHUB_EVENT_NAME})"
 
       - name: Validate action and tier policy
         run: |

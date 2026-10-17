@@ -1103,3 +1103,21 @@ def test_notify_run_loads_runtime_env_before_send_ping() -> None:
     text = (OPS_DIR / "notify_run.sh").read_text()
     assert "load_runtime_env" in text
     assert text.index("load_runtime_env") < text.index('"${SEND_PING}"')
+
+
+def test_no_long_run_script_holds_an_expression() -> None:
+    """GitHub evaluates a `run:` script that contains any `${{ }}` expression
+    as ONE template, capped at 21000 chars after escaping. The Resolve step
+    crossed it on 2026-10-17 (a6f9a1707): GitHub rejected the whole workflow
+    and no system-action ran. Long scripts read context through env vars
+    (e.g. $GITHUB_EVENT_NAME) instead."""
+    if yaml is None:
+        pytest.skip("pyyaml not installed")
+    wf = yaml.safe_load(WORKFLOW.read_text())
+    offenders = [
+        (job, step.get("name"), len(step["run"]))
+        for job, spec in wf["jobs"].items()
+        for step in spec.get("steps", [])
+        if "run" in step and len(step["run"]) > 15000 and "${{" in step["run"]
+    ]
+    assert not offenders, offenders
