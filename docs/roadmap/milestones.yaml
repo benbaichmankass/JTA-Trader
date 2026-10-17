@@ -158,16 +158,15 @@ milestones:
     name: Small-timeframe edge and the pairs sleeve
     status: active
     where: >-
-      Small-TF question dormant since 2026-07-16 (E53). The pairs sleeve it owns is live (isolated 2-leg order path) and its
-      Stage-0 verdict at configured parameters is being re-measured: four 'Stage-0 at the CONFIGURED parameters' units are
-      queued (RQ-20261007-005..008). It is single-account by construction (E36).
+      Small-TF question dormant since 2026-07-16 (E53). The four Bybit pairs are SHADOW since 2026-10-17 (operator "Fix +
+      shadow", #18756; observed shadow soak rows 12:03Z): on the honest fixed-beta R scale (PAIRS-R-SCALE fix #18648, beta
+      frozen at entry, deployed) all four are net-negative (-0.112..-0.526 R/trade, n 254-271). GLD/GDX (alpaca_paper,
+      hedge_beta one) stays live on its Stage-1 paper soak. It is single-account by construction (E36).
     next: >-
-      The four pairs Stage-0 units (RQ-20261007-005..008) all graded PASS, but MEASURED 2026-10-14 (P3 lane) backtest_pairs.py's
-      rolling-beta R scale inflates 1R ~775x and understates cost-in-R by the same factor, so those PASSes are unreadable as
-      net-of-cost evidence (sign unknown). Fix PAIRS-R-SCALE, re-measure with RQ-20261014-470a-12, then decide the sleeve's
-      roster from that record, not from the sprint log (E37).
+      Add a --entry-trigger fixed_beta arm to backtest_pairs.py, then run RQ-20261017-9582-01 (fixed-beta ENTRY-trigger test,
+      pre-registered) and RQ-20261014-470a-12; a Bybit pair returns to live only on a PASS, and a FAIL is a retire proposal.
     owner: manager
-    reviewed: 2026-10-14
+    reviewed: 2026-10-17
   - id: M27
     goal: G1
     name: Scalp expansion (ict_scalp family)
