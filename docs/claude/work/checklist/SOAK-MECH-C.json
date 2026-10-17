@@ -2,7 +2,7 @@
   "id": "SOAK-MECH-C",
   "title": "Soak fault C: Bybit monitor close takes a same-side sibling's netted share (xrp_pullback_2h reconciler_filled)",
   "phase": "W6",
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "fix lane",
   "lane": "session_018LaUrmMUmBuGtEMUcWJ7Qd",
   "model": null,
@@ -13,11 +13,20 @@
     18514
   ],
   "blocked_on": [],
-  "note": "ROOT CAUSE (measured, bybit_raw_order_history bybit_1 XRPUSDT 2026-09-26): 6193 ict_scalp_xrp_5m own PartialStopLoss filled 87674.6 @09:11:18; monitor sl_cross reduce-only close for 87674.6 @09:11:56 clamped by Bybit to 1221.9 = trade 6171's share; 6171 later journaled reconciler_filled at candle 1.5399 (real fill 1.5428). Recurred: 6289 ict_scalp_xrp_15m 2026-10-01 (2 reconciler_filled of 212 closes since 09-29). Reachable on bybit_2: xrp_pullback_2h + trend_donchian_xrp_4h share XRPUSDT. FIX #18514 (Tier-2 HOLD, manager merges): close_open_position Bybit sibling reserve. OBSERVATION THAT CLOSES IT: after deploy, a same-symbol close where the venue leg fired first logs 'own share already flat'/'clamped' and no sibling lands reconciler_filled; xrp_pullback_2h soak re-passes on its next clean trade.",
-  "updated_at": "2026-10-16T06:13:13Z",
-  "updated_by": "session_018LaUrmMUmBuGtEMUcWJ7Qd",
+  "note": "ROOT CAUSE (measured, bybit_raw_order_history bybit_1 XRPUSDT 2026-09-26): 6193 ict_scalp_xrp_5m own PartialStopLoss filled 87674.6 @09:11:18; monitor sl_cross reduce-only close for 87674.6 @09:11:56 clamped by Bybit to 1221.9 = trade 6171's share; 6171 later journaled reconciler_filled at candle 1.5399 (real fill 1.5428). Recurred: 6289 ict_scalp_xrp_15m 2026-10-01 (2 reconciler_filled of 212 closes since 09-29). Reachable on bybit_2: xrp_pullback_2h + trend_donchian_xrp_4h share XRPUSDT. FIX #18514 (Tier-2 HOLD, manager merges): close_open_position Bybit sibling reserve. OBSERVATION THAT CLOSES IT: after deploy, a same-symbol close where the venue leg fired first logs 'own share already flat'/'clamped' and no sibling lands reconciler_filled; xrp_pullback_2h soak re-passes on its next clean trade. [2026-10-17 lane session_01KnbLCJ4zpEyBNivmdGitZi] #18514 MERGED (005f46075) and DEPLOYED: running trader git_sha 6685d2b93 (diag status 05:55Z) contains it (git merge-base --is-ancestor). NOT YET OBSERVED: the next same-symbol close where a sibling's venue leg fired first. Live protection 05:55Z: every bybit_1/bybit_2/bybit_portfolio position has a resting SL+TP (bybit_open_orders). Pricing half (6171 booked at the 1.5399 candle, own fill 1.5428) is fixed forward + backfilled by SOAK-MECH-B's PR.",
+  "updated_at": "2026-10-17T06:12:14Z",
+  "updated_by": "session_01KnbLCJ4zpEyBNivmdGitZi",
   "roadmap": [
     "L-LADDER"
   ],
+  "observation": {
+    "what": "a same-symbol Bybit close where a sibling trade's venue leg fired first logs own share already flat / clamped in journalctl ict-trader-live, and no sibling row closes reconciler_filled; xrp_pullback_2h (bybit_1) grades its next trade clean",
+    "how_to_check": "python3 scripts/ops/soak_state.py (xrp_pullback_2h passed) and diag journal?table=trades: no bybit reconciler_filled close since 2026-10-16 deploy",
+    "due_by": "2026-11-15T00:00Z"
+  },
+  "writeback": {
+    "roadmap": "none: L-LADDER next already reads act on every passed / mechanical_fail soak",
+    "arch": "none: close_open_position contract unchanged (it clamps to its own share)"
+  },
   "_seq": 523
 }
