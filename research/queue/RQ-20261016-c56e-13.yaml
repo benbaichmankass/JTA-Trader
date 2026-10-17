@@ -1,7 +1,7 @@
 id: RQ-20261016-c56e-13
 title: 'Re-validation at power, real money: does trend_donchian_xrp_4h AS DECLARED clear Stage 0 on the disjoint window before its committed record (2018-10-13
   .. 2022-10-12), net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -97,3 +97,17 @@ related:
 - research/programmes/03-strategy-improvement.yaml
 - scripts/research/exit_lever_ablation.py
 last_dispatched_at: '2026-10-17T15:28:14+00:00'
+grading:
+  attested: RULE-RQ20261016c56e13
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261016c56e13
+  evidence:
+  - research/results/RQ-20261016-c56e-13/39045204308.jsonl
+  graded_at: '2026-10-17'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

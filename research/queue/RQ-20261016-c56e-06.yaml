@@ -1,7 +1,7 @@
 id: RQ-20261016-c56e-06
 title: 'Trend definition length, real money, multi-fold: does moving ada_pullback_2h''s trend_lookback (20, 60, 80 bars) beat the declared trend_lookback
   40 in >= 7 of 8 folds over ~6 years, net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -107,3 +107,16 @@ related:
 - research/programmes/03-strategy-improvement.yaml
 - scripts/research/exit_lever_ablation.py
 last_dispatched_at: '2026-10-17T17:14:08+00:00'
+grading:
+  attested: RULE-RQ20261016c56e06
+  auto: true
+  decision_rule_id: RULE-RQ20261016c56e06
+  evidence:
+  - research/results/RQ-20261016-c56e-06/39052421068.jsonl
+  graded_at: '2026-10-17'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
