@@ -1,0 +1,19 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "each of the three Oct-4 m20 passing cells has a fresh-window confirmation unit registered with the P2 gate (or a stated reason it cannot be: n_oos), or is killed with a reason",
+    "due_date": "2026-10-24",
+    "kind": "date"
+  },
+  "id": "PI-20261017-RADE1017-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-AUTHOR-GRADE-1017: research_disposition --unread-only, m20 stamps 2026-10-04T15:08/17:57",
+    "rerun": "python3 scripts/research/research_disposition.py --unread-only"
+  },
+  "routed_to": "RESEARCH-AUTHOR-GRADE-1017",
+  "state": "routed",
+  "terminal_reason": null,
+  "what": "Three m20 sweep stamps from 2026-10-04 were never read and each holds a gate-clearing cell: trend_donchian_xrp_4h trail4 (base n_oos 60), spy_trend_long_1d decay_stall6_t2 (n_oos 49), scha_trend_long_1d decay_stall10_t2 (n_oos 36; 3 other scha cells wf_fail). A pass on one window is a discovery (research-ops step D): each needs ONE confirmation unit on a disjoint window with the same statistic, never a config edit. Six sibling stamps (qld, fvg_range_15m, squeeze_breakout_4h, ict_scalp_5m/avax/sol) had 0 passing cells and were recorded no_action_warranted."
+}
