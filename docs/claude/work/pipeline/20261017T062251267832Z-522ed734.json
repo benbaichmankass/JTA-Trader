@@ -6,6 +6,11 @@
   },
   "id": "PI-20261010-RNCT2YDP-0001",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-20T00:00Z",
+    "how_to_check": "diag journal?table=trades (ids 6549, 6528 and closes since the #18720 deploy) \u2014 notes.exit_price_source",
+    "what": "bybit_2 trades 6549 and 6528 read notes.exit_price_source=exchange_fill with exit_price 0.2477 / 1.4024; and the next watchdog/reconciler close after #18720 deploys carries exchange_fill, not candle_at_close"
+  },
   "origin": {
     "kind": "session",
     "ref": "WATCHDOG-PAST-STOP (session_01FKmg4ZrDWBViBwRncT2yDP); PI-20261010-WQAPZD8B-0001",

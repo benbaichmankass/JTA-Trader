@@ -5,6 +5,11 @@
   },
   "id": "PI-20261017-VMDGITZI-0001",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-19T23:59Z",
+    "how_to_check": "diag journal?table=trades&limit=1000&offset=0..2000, filter those ids; system-action backfill-own-fill-exits dry-run output",
+    "what": "trades 3934, 4422, 4710 and 6171 carry exit_price 385.333056 / 296.705887 / 34.41 / 1.5428 with notes.exit_price_source=exchange_fill; 6023 stays unpriced (no attributable fill)"
+  },
   "origin": {
     "kind": "session",
     "ref": "WR-20261017-0550Z soak faults lane session_01KnbLCJ4zpEyBNivmdGitZi; PR #18720; SOAK-MECH-B",
