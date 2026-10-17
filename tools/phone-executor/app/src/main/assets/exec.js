@@ -727,7 +727,14 @@
   // the ONE Positions row cell to tap for `sym`: which = "child" -> the position row's Market cell ("ETH 5x", a
   // leverage badge); "group" -> the group row's ("ETH 1", the symbol + a count). Only inside the Positions grid panel.
   // The element, or why not: no_grid | no_panel | none | rows_<n>
+  // which = "child_entry" / "child_tpsl" (2026-10-17, 1b.253 08:03Z): the child row's Market cell received click(), a
+  // synthetic pointer tap AND a trusted finger touch (pdown:touch w9 tr1 ... click:touch tr1) and none opened the sheet,
+  // while click() on the group cell did reach the row's handler (it expanded). So the event was never the problem; the
+  // element was. Other cells of the SAME child row are tapped: "Opening price" (a plain value cell, reaches a row-level
+  // handler) and the "n TP / n SL" text of the TP / SL cell (the operator's own sheet, 2026-10-15 12:43Z, was showing
+  // that tab). The TP / SL target is only the element whose text IS "n TP / n SL" -- never an empty cell or an icon.
   function sheetHit(sym, which) {
+    if (which === "child_entry" || which === "child_tpsl") return rowCell(sym, which.slice(6));
     var g = gridHeaders(POS_COLS); if (g.length !== 1) return "no_grid";
     var panel = gridPanel(g[0]); if (!panel) return "no_panel";
     var b = base(sym).replace(/[^A-Z0-9]/g, ""), sfx = "(USD[TC]?|PERP)?";
@@ -736,6 +743,49 @@
     var hits = textEls(panel, re, 24).filter(function (e) { return !g[0].contains(e); });
     if (!hits.length) return "none"; if (hits.length > 1) return "rows_" + hits.length;
     return hits[0];
+  }
+  // the child row that holds the ONE Market hit for `sym`, and in it the cell under the header for key ("entry" ->
+  // Opening price, "tpsl" -> TP / SL). The element, or why not: the sheetHit reasons | no_row | no_col | no_cell | no_tpsl
+  function rowCell(sym, key) {
+    var m = sheetHit(sym, "child"); if (typeof m === "string") return m;
+    var h = gridHeaders(POS_COLS)[0], hs = kids(h).map(t), n = hs.length;
+    var pool = childRows(h, gridRowsOf(h).rows.filter(isGroupRow)).concat(gridRowsOf(h).rows);
+    var row = pool.filter(function (r) { return r.contains(m) && kids(r).length === n && !isGroupRow(r); })[0];
+    if (!row) return "no_row";
+    var idx = -1; hs.forEach(function (s, i) { if (idx < 0 && (key === "tpsl" ? /^tp\s*\/\s*sl$/i.test(s) : colKey(s, POS_COLS) === key)) idx = i; });
+    if (idx < 0) return "no_col";
+    var cell = kids(row)[idx]; if (!cell) return "no_cell";
+    if (key !== "tpsl") return cell;
+    var tx = textEls(cell, SHEET_TAB.tpsl, 20); return tx.length === 1 ? tx[0] : "no_tpsl";
+  }
+  // MEASURE (passive): the page's own handlers. React keeps each element's props on a "__reactProps$*" key (React 16:
+  // "__reactEventHandlers$*"); a function there is a handler the app wired. Names only, abbreviated. [] when none.
+  var RH = ["onClick", "onPointerUp", "onPointerDown", "onMouseUp", "onMouseDown", "onTouchEnd", "onTouchStart"];
+  function reactHandlers(e) {
+    var k = Object.keys(e).filter(function (x) { return x.indexOf("__reactProps$") === 0 || x.indexOf("__reactEventHandlers$") === 0; })[0];
+    if (!k) return null;
+    var pr = e[k] || {};
+    return RH.filter(function (n) { return typeof pr[n] === "function"; }).map(function (n) { return n.slice(2).replace("Pointer", "P").replace("Mouse", "M").replace("Touch", "T"); });
+  }
+  // for the tapped element: each ancestor with handlers ("up<a..j> <tag> Click") and, in its Positions row, every cell
+  // whose subtree holds a handler ("<col key> cell|in Click"). "no_react" when no element on the way carries React props.
+  function handlerMap(x) {
+    var out = [], react = false, L = "abcdefghij", row = null, h = gridHeaders(POS_COLS)[0], n = h ? kids(h).length : -1;
+    for (var e = x, k = 0; e && k < 10 && e !== document.body; e = e.parentElement, k++) {
+      var hd = reactHandlers(e); if (hd) react = true;
+      if (hd && hd.length) out.push(("up" + L[k] + " " + e.tagName.toLowerCase() + " " + hd.join("+")).slice(0, 34));
+      if (!row && h && e !== x && kids(e).length === n && !e.contains(h)) row = e;
+    }
+    if (row) kids(row).forEach(function (c, i) {
+      var hx = t(kids(h)[i]), key = /^tp\s*\/\s*sl$/i.test(hx) ? "tpsl" : (colKey(hx, POS_COLS) || ("c" + L[i % 10]));
+      [c].concat(Array.prototype.slice.call(c.querySelectorAll("*")).slice(0, 40)).some(function (e) {
+        var hd = reactHandlers(e); if (hd) react = true;
+        if (hd && hd.length) { out.push((key + " " + (e === c ? "cell" : "in") + " " + hd.join("+")).slice(0, 34)); return true; }
+        return false;
+      });
+    });
+    if (!react) out.push("no_react");
+    return out.slice(0, 12);
   }
   // stray-modal roots (see cancelModals): open non-form dialogs + Edit SL/TP modals, outermost first, no duplicates
   function strayRoots() {
@@ -1433,7 +1483,7 @@
           (e.hasAttribute("tabindex") ? " ti" : "") + (e.getAttribute("data-state") ? " ds=" + e.getAttribute("data-state") : "")).slice(0, 40));
       }
       return {w: window.innerWidth, h: window.innerHeight, n_new: nw.length, dialogs: dialogs().length, leaves: leaves.slice(0, 15),
-        ev: (window.__exEv || []).slice(0, 6),
+        ev: (window.__exEv || []).slice(0, 6), hd: window.__exTap ? handlerMap(window.__exTap) : [],
         details_tabs: textEls(document, SHEET_TAB.details).length, tpsl_tabs: textEls(document, SHEET_TAB.tpsl).length, chain: chain};
     },
     // The open sheet: {open, n, title_ok (a title equal to the symbol), subtitle (digits masked), tabs present}

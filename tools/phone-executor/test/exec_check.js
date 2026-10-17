@@ -907,6 +907,29 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
   const dz = await onHost(sheetPage().replace('<div id=chm>ETH <span>5x</span></div>', '<div id=chm style="position:relative">ETH <span>5x</span><i aria-label="Close" style="position:absolute;left:0;top:0;right:0;bottom:0"></i></div>'));
   eq(/^(point_)?deny_/.test((await dz.evaluate("__ex.sheetTarget('ETHUSD','child',false)")).why), true, "native: a close control under the point is refused");
   eq((await (await onHost(sheetPage({noChild: true}))).evaluate("__ex.sheetTarget('ETHUSD','child',false)")).why, "none", "native: no child row -> none (the amend path reads none as no position only with group none too)");
+  // 2026-10-17 (1b.253 08:03Z/12:03Z: the Market cell got a TRUSTED finger touch, click:touch tr1, and no sheet opened):
+  // the cell was wrong, not the touch. Here the Market cell keeps its own click (stopPropagation, as a market link
+  // would) and the sheet opens from (a) the row, reached from any plain cell, or (b) only the "1 TP / 1 SL" text.
+  const tpslRow = (s) => s.replace('<div><i class=dot></i></div><div>1,318.20USD</div><div>2,461.52USD</div><div>2,440.65USD</div><div></div><div>20.10USD</div>', '<div><i class=dot></i></div><div>1,318.20USD</div><div>2,461.52USD</div><div>2,440.65USD</div><div><span id=tps>1 TP / 1 SL</span></div><div>20.10USD</div>')
+    .replace("</script>", "document.getElementById('chm').addEventListener('click',function(e){e.stopPropagation();window.__mkt=(window.__mkt||0)+1});</script>");
+  const rowOpens = await onHost(tpslRow(sheetPage()));
+  const tapAt = async (pg, which) => { const a = await pg.evaluate(`__ex.sheetTarget('ETHUSD','${which}',true)`); if (!a.ok) return a.why; const b = await pg.evaluate(`__ex.sheetTarget('ETHUSD','${which}',false)`); if (!b.ok) return b.why; await pg.mouse.click(b.x, b.y); return "touched"; };
+  eq([await tapAt(rowOpens, "child"), await rowOpens.evaluate("__ex.sheetInfo('ETHUSD').open"), await rowOpens.evaluate("window.__mkt")], ["touched", false, 1], "targets: a trusted touch on the Market cell is eaten by the cell's own handler, no sheet");
+  eq([await tapAt(rowOpens, "child_entry"), await rowOpens.evaluate("__ex.sheetInfo('ETHUSD').open"), await rowOpens.evaluate("window.__danger")], ["touched", true, 0], "targets: the child row's Opening price cell reaches the row handler, sheet opens, nothing denied");
+  const tpOnly = await onHost(tpslRow(sheetPage()).replace("document.getElementById('chd').addEventListener('click'", "document.getElementById('tps').addEventListener('click'"));
+  await tpOnly.evaluate("Object.defineProperty(document.getElementById('tps'),'__reactProps$t',{value:{onClick:function(){}},enumerable:true});document.querySelectorAll('#chd > div').forEach(function(d){Object.defineProperty(d,'__reactProps$t',{value:{},enumerable:true})})");
+  eq([await tapAt(tpOnly, "child_entry"), await tpOnly.evaluate("__ex.sheetInfo('ETHUSD').open")], ["touched", false], "targets: a plain cell does nothing when only the TP / SL text opens the sheet");
+  const tpT = await tpOnly.evaluate("__ex.sheetTarget('ETHUSD','child_tpsl',false)");
+  eq([tpT.ok, await tpOnly.evaluate(`document.elementFromPoint(${tpT.x},${tpT.y}).id`)], [true, "tps"], "targets: child_tpsl is the '1 TP / 1 SL' text itself");
+  await tpOnly.evaluate("__ex.domMark()");
+  await tpOnly.mouse.click(tpT.x, tpT.y);
+  eq([await tpOnly.evaluate("__ex.sheetInfo('ETHUSD').open"), await tpOnly.evaluate("window.__danger")], [true, 0], "targets: the TP / SL text opens it; nothing denied touched");
+  const hdm = (await tpOnly.evaluate("__ex.domDiff()")).hd;
+  eq([hdm.includes("upa span Click"), hdm.includes("tpsl in Click") || hdm.includes("tpsl cell Click"), hdm.includes("no_react"), hdm.every((x) => x.length <= 34)], [true, true, false, true], "targets: domDiff.hd names the React handler on the tapped text and its column");
+  eq((await (await onHost(sheetPage())).evaluate("__ex.sheetTarget('ETHUSD','child_tpsl',false)")).why, "no_tpsl", "targets: an empty TP / SL cell is never a target");
+  eq((await (await onHost(sheetPage({noChild: true}))).evaluate("__ex.sheetTarget('ETHUSD','child_entry',false)")).why, "none", "targets: no child row -> none for the other cells too");
+  await rowOpens.evaluate("__ex.domMark()");
+  eq((await rowOpens.evaluate("__ex.domDiff()")).hd, ["no_react"], "targets: a page without React props says so (no_react), never an empty map read as 'no handler'");
   // finding (a): the EXPANDED child row carries the side as text; childShape measures it and positionsRead reads it
   const ex = await onHost(sheetPage().replace('<div><i class=dot></i></div><div>1,318.20USD</div><div>2,461.52USD</div><div>2,440.65USD</div><div></div><div>20.10USD</div>', '<div>Short</div><div>1,318.20USD</div><div>2,461.52USD</div><div>2,440.65USD</div><div>1 TP / 1 SL</div><div>20.10USD</div>'));
   let cs = await ex.evaluate("__ex.childShape()");
