@@ -1,31 +1,31 @@
-id: RQ-20261016-c56e-26
-title: 'Re-validation at power, soak book: does scha_trend_long_1d AS DECLARED clear Stage 0 on the disjoint window before its committed record (2010-03-01
+id: RQ-20261016-c56e-24
+title: 'Re-validation at power, soak book: does tlt_pullback_1d AS DECLARED clear Stage 0 on the disjoint window before its committed record (2006-10-02
   .. 2025-04-09), net of the full cost stack?'
-status: queued
+status: blocked
 cadence: once
 theme: live_strategy
 priority: 3
 kind: experiment
-question: On 2010-03-01 .. 2025-04-09 (disjoint from, and immediately preceding, the committed record's window), is scha_trend_long_1d at its configured
-  params net-positive with >= 5 of 8 calendar folds net > 0, at n >= 39?
+question: On 2006-10-02 .. 2025-04-09 (disjoint from, and immediately preceding, the committed record's window), is tlt_pullback_1d at its configured params
+  net-positive with >= 5 of 8 calendar folds net > 0, at n >= 39?
 why_this_matters: 'Programme 03 Q3 / L-LADDER: a soak-book leg whose 365d record is NEGATIVE or flat and underpowered cannot be told apart from a leg with
-  no edge. A long-window grade either gives it a Stage-0 case or retires the question with a number. scha_trend_long_1d sits on alpaca_paper: -0.07 R on
-  n=7 (365d). SCHA lists 2009-11-03.'
+  no edge. A long-window grade either gives it a Stage-0 case or retires the question with a number. tlt_pullback_1d sits on the soak books (alpaca_paper,
+  ib_paper): -3.61 R on n=8 (365d). It was pulled from alpaca_live by A6 (#12673) on 2026-09-21.'
 power:
-  expected_n: 106
+  expected_n: 148
   min_detectable_effect: 0.45
   effect_units: sd
   design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: 'd=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo''s standing E35 floor). expected_n=106 is an ESTIMATE: the 365d record''s 7 trades
-    x 15.1 yr. Cost stack: Alpaca equity fee 0 + the provisional 5 bps slippage (E62) + no funding. Window 2010-03-01 (after the instrument''s listing)
+  basis: 'd=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo''s standing E35 floor). expected_n=148 is an ESTIMATE: the 365d record''s 8 trades
+    x 18.5 yr. Cost stack: Alpaca equity fee 0 + the provisional 5 bps slippage (E62) + no funding. Window 2006-10-02 (after the instrument''s listing)
     .. 2025-04-09 (the day before every 1d record''s data_start 2025-04-10). Folds 8, majority 5.'
   feasibility:
     source: none
     accrual_basis: Re-measurement on freshly fetched keyless candles over a pinned historical window; nothing accrues.
 decision_rule:
-  id: RULE-RQ20261016c56e26
+  id: RULE-RQ20261016c56e24
   registered_at: '2026-10-16'
   registered_before_run: true
   statistic: 'ONE arm B = the leg exactly as declared in config/strategies.yaml (argv built by regime_debt_matrix.build_harness_cmd; full cost stack fee
@@ -34,8 +34,8 @@ decision_rule:
     exists on this window (it is disjoint from and immediately precedes the leg''s record), the precedent being RQ-20261014-470a-01; the argv is built by
     the same builder the committed record used, from the same config keys.'
   rule: 'indeterminate IF n(B) < 39 (underpowered: no verdict, never FAIL on thin n). PASS IF net_r(B) > 0 AND >= 5 of 8 calendar folds net > 0: the leg
-    is graded at power for the first time: Stage-0 evidence at n >= 39 over 15.1 years -- the evidence a soak-book leg needs before any Gate-2 case. FAIL
-    IF n >= 39 and that does not hold: the leg has no fold-consistent edge over 15.1 years at its configured params -- it has no path to Stage 2 at these
+    is graded at power for the first time: Stage-0 evidence at n >= 39 over 18.5 years -- the evidence a soak-book leg needs before any Gate-2 case. FAIL
+    IF n >= 39 and that does not hold: the leg has no fold-consistent edge over 18.5 years at its configured params -- it has no path to Stage 2 at these
     params; recorded on L-LADDER. Windows are never pooled with the committed record''s; the record keeps its own grade. The 0 R bar, the 5-of-8 fold majority
     and the 39 floor are not changed after any result.'
   what_it_does_not_do: Does not edit config or any roster, does not tune (one arm, as declared), does not pool windows. Not a promotion case.
@@ -50,7 +50,7 @@ routing:
   needs_gpu: false
   peak_memory_gb: 2.0
   est_minutes: 10
-  basis: One keyless candle fetch of ~6075 days and ONE harness pass over the pinned window.
+  basis: One keyless candle fetch of ~7414 days and ONE harness pass over the pinned window.
   why_runner: exit_lever_ablation.py fetches its own keyless candles (Binance Vision / Yahoo) and runs the repo harnesses; the symbol/timeframe is not in
     metis-market-data and the script has no published-data input, so the Kaggle-CPU and trainer backends cannot take it.
 run:
@@ -58,13 +58,13 @@ run:
   - python3
   - scripts/research/exit_lever_ablation.py
   - --leg
-  - scha_trend_long_1d
+  - tlt_pullback_1d
   - --arm
   - B=
   - --days
-  - '6075'
+  - '7414'
   - --start
-  - '2010-03-01'
+  - '2006-10-02'
   - --end
   - '2025-04-09'
   - --grade
@@ -83,12 +83,12 @@ run:
   - '{out_dir}'
   timeout_minutes: 60
   inputs:
-    research_unit: RQ-20261016-c56e-26
+    research_unit: RQ-20261016-c56e-24
 lands:
   store: research/results/
   assert_field: read_state
   min_rows: 1
-  note: research/results/RQ-20261016-c56e-26/<run_id>.jsonl via the batch collector; per-arm summaries and verdict.json under comms/research/RQ-20261016-c56e-26/<run_id>/.
+  note: research/results/RQ-20261016-c56e-24/<run_id>.jsonl via the batch collector; per-arm summaries and verdict.json under comms/research/RQ-20261016-c56e-24/<run_id>/.
 roadmap:
 - L-LADDER
 related:
@@ -97,3 +97,16 @@ related:
 - research/programmes/03-strategy-improvement.yaml
 - scripts/research/exit_lever_ablation.py
 last_dispatched_at: null
+blocked_on:
+  - what: >-
+      The runner cannot fetch this equity/ETF leg's candles: exit_lever_ablation.py --non-crypto-source
+      defaults to auto -> regime_debt_matrix._fetch_csv -> `import yfinance`, and research-script-run.yml
+      installs numpy pandas pyyaml requests python-dotenv dukascopy-python only. MEASURED on main
+      2026-10-17: RQ-20261016-c56e-16/-17/-18 (same driver, same window) all landed producer_failed,
+      exit 1 in 0.6 s (c56e-18 twice). Dispatching this unit would burn runner slots on the same fault.
+    ref: REGIME-EQUITY-LEG-FETCH
+    clears_when: >-
+      research-script-run.yml installs a pinned yfinance (>= 2 weeks old) OR this unit's argv gains
+      `--non-crypto-source dukascopy` AFTER a span probe shows the runner's dukascopy history reaches
+      the 2006-10-02 window start (docs/research/dukascopy-coverage-adjudication-2026-08-24.md says the
+      depth was never measured). Then git mv back to research/queue/, set status: queued.
