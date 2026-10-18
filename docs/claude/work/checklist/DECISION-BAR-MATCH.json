@@ -1,6 +1,6 @@
 {
   "id": "DECISION-BAR-MATCH",
-  "title": "Evidence must describe the traded bar set: re-base eth_prop + xrp_pullback_2h under decision_bar=forming, then decide switch-to-closed vs demote",
+  "title": "Evidence must describe the traded bar set: test closed vs forming per leg as an IMPROVEMENT test and run whichever wins; demote only if neither passes",
   "phase": "now",
   "state": "queued",
   "owner": "manager",
@@ -11,9 +11,9 @@
   "tier": 3,
   "prs": [],
   "blocked_on": [],
-  "note": "OPERATOR DECISION 2026-10-18 ~15:08Z (popup, verbatim choice 'No - must match'): a closed-bar Stage-0 record does NOT count as evidence for a leg whose live builder trades the forming bar. Resolves the ask_operator on PI-20261018-WCDIDFTE-0002 (trend_donchian_eth_prop) and the same-shape PI-20260929-VOLSKIP-SIGNAL-0003 (xrp_pullback_2h). Facts given to the operator (RQ-20261018-2a10-01, docs/research/evidence/decision-bar-holdout-2026-10-18.json): eth_prop closed +9.32R n=163 last year vs forming -9.45R n=250 (Binance 1m proxy, Bybit cost stack); full history closed +89.14R vs forming +74.68R; latest 25% closed +10.99R vs forming +1.32R; the pre-registered holdout did NOT select closed (2 of 4 folds). WORK: (1) re-base both legs' strategy_evidence under decision_bar=forming and grade them against RULE-D1; (2) one pre-registered unit for each failing leg: switch the live builder to decision_bar=closed vs demote; (3) propose the standing mandate clause ('evidence trade set == live trade set') in config/mandates.yaml proposed:; (4) close both pipeline items with this decision as the terminal_reason. The legs keep trading meanwhile (no gate added). Prop money is at stake (breakout_2, tradeify_1, velotrade_1), so this sits at rank 3.",
+  "note": "OPERATOR 2026-10-18 ~15:12Z, a refinement of the WORK above: treat this as an IMPROVEMENT test, not a demotion test. For each leg (eth_prop, xrp_pullback_2h), compare decision_bar=closed against forming net of the full cost stack, under a selection rule registered before the run. If closed beats forming, SWITCH the live builder to closed, which is a data-backed Tier-3 change. Demotion applies only if NEITHER variant clears RULE-D1. The selection rule must still require out-of-sample robustness, e.g. fold-majority. The 2026-10-18 eth_prop holdout showed closed ahead on the full history (+89 vs +75R) and on the latest 25% (+11.0 vs +1.3R), but it won only 2 of 4 discovery folds. The new unit should pre-register the comparison (a paired per-fold delta with a materiality floor) rather than reuse that rule unexamined. Item (2) above is replaced by this.",
   "priority_rank": 3,
-  "updated_at": "2026-10-18T15:06:51Z",
+  "updated_at": "2026-10-18T15:09:15Z",
   "updated_by": "session_01VduHYzdaXe27wTDBLSu8ao",
   "roadmap": [
     "L-PROP"
