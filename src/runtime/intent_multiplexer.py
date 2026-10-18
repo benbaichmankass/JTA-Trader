@@ -103,6 +103,7 @@ from src.runtime.strategy_signal_builders import (
     trend_donchian_eth_prop_signal_builder,
     trend_donchian_sol_prop_signal_builder,
     trend_donchian_eth_4h_signal_builder,
+    trend_donchian_eth_mm05_signal_builder,
     trend_donchian_sol_4h_signal_builder,
     trend_donchian_xrp_4h_signal_builder,
     trend_donchian_ada_4h_signal_builder,
@@ -308,6 +309,7 @@ def _default_intent_builders() -> Dict[str, IntentBuilder]:
         # account) so arbitration never fires. Builders honour the YAML
         # `enabled` flag.
         "trend_donchian_eth_4h": trend_donchian_eth_4h_signal_builder,
+        "trend_donchian_eth_mm05": trend_donchian_eth_mm05_signal_builder,
         "trend_donchian_sol_4h": trend_donchian_sol_4h_signal_builder,
         "trend_donchian_xrp_4h": trend_donchian_xrp_4h_signal_builder,
         "trend_donchian_ada_4h": trend_donchian_ada_4h_signal_builder,

@@ -2151,6 +2151,12 @@ def trend_donchian_sol_4h_signal_builder(settings: dict) -> Dict[str, Any]:
     return _trend_donchian_variant_builder("trend_donchian_sol_4h", settings)
 
 
+def trend_donchian_eth_mm05_signal_builder(settings: dict) -> Dict[str, Any]:
+    """trend_donchian on ETHUSDT 4h with the measured-move TP revision declared — bybit_1
+    (Bybit demo) soak alias of trend_donchian_eth_4h (TIER3-PACKETS-1018)."""
+    return _trend_donchian_variant_builder("trend_donchian_eth_mm05", settings)
+
+
 def trend_donchian_xrp_4h_signal_builder(settings: dict) -> Dict[str, Any]:
     """trend_donchian on XRPUSDT 4h — bybit_1 demo soak (paper_ready)."""
     return _trend_donchian_variant_builder("trend_donchian_xrp_4h", settings)
@@ -6104,6 +6110,7 @@ for _builder, _monitor_unit in (
     (trend_donchian_eth_prop_signal_builder, "trend_donchian"),
     # trend_4h alt cells — bybit_1 demo soak (paper_ready, 2026-06-18).
     (trend_donchian_eth_4h_signal_builder, "trend_donchian"),
+    (trend_donchian_eth_mm05_signal_builder, "trend_donchian"),
     (trend_donchian_sol_4h_signal_builder, "trend_donchian"),
     (trend_donchian_xrp_4h_signal_builder, "trend_donchian"),
     (trend_donchian_ada_4h_signal_builder, "trend_donchian"),

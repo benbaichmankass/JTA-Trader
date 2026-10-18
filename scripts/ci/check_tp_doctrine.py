@@ -214,6 +214,7 @@ class Paths:
 #: the scan itself: a line that no longer matches FAILS the guard.
 R: frozenset[str] = frozenset({DIM_REVISION})
 ER: frozenset[str] = frozenset({DIM_ENTRY, DIM_REVISION})
+E: frozenset[str] = frozenset({DIM_ENTRY})  # entry_tp only: a tp_revision rule is declared and plumbed
 BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # ── real_money ──────────────────────────────────────────────────────────
     "alpaca_live/iaum_pullback_1d": ER,
@@ -275,7 +276,9 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     "alpaca_paper/tqqq_trend_long_1d": ER,
     "bybit_1/ada_pullback_2h": R,
     "bybit_1/trend_donchian_1h": ER,
-    "bybit_1/trend_donchian_eth_4h": ER,
+    # 2026-10-18 TIER3-PACKETS-1018: the incumbent leaves bybit_1 for its soak alias, which DECLARES
+    # tp_revision (tp_revision compliant); only entry_tp (the 50 R sentinel) remains debt.
+    "bybit_1/trend_donchian_eth_mm05": E,
     # 2026-10-15 PROP-GATE-PARITY: the two prop legs enter the Stage-1 soak on bybit_1 with the
     # SAME exit recipe they run on the prop books (declared 6 R target, TP-REACH-FLOOR fail), so
     # they inherit the breakout_2 debt lines above verbatim. A visible, deliberate line.
