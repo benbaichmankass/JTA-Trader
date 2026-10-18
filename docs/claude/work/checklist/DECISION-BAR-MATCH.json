@@ -1,0 +1,22 @@
+{
+  "id": "DECISION-BAR-MATCH",
+  "title": "Evidence must describe the traded bar set: test closed vs forming per leg as an IMPROVEMENT test and run whichever wins; demote only if neither passes",
+  "phase": "now",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR 2026-10-18 ~15:12Z, a refinement of the WORK above: treat this as an IMPROVEMENT test, not a demotion test. For each leg (eth_prop, xrp_pullback_2h), compare decision_bar=closed against forming net of the full cost stack, under a selection rule registered before the run. If closed beats forming, SWITCH the live builder to closed, which is a data-backed Tier-3 change. Demotion applies only if NEITHER variant clears RULE-D1. The selection rule must still require out-of-sample robustness, e.g. fold-majority. The 2026-10-18 eth_prop holdout showed closed ahead on the full history (+89 vs +75R) and on the latest 25% (+11.0 vs +1.3R), but it won only 2 of 4 discovery folds. The new unit should pre-register the comparison (a paired per-fold delta with a materiality floor) rather than reuse that rule unexamined. Item (2) above is replaced by this.",
+  "priority_rank": 3,
+  "updated_at": "2026-10-18T15:09:15Z",
+  "updated_by": "session_01VduHYzdaXe27wTDBLSu8ao",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "_seq": 567
+}
