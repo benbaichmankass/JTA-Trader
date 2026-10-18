@@ -1,0 +1,21 @@
+{
+  "id": "ML-PROMOREADY-OOSEDGE-MEASURE",
+  "title": "Measure whether oos_edge now fits the trainer (MB-20260719-PROMOREADY-OOSEDGE-OOM): peak RSS of one head's compute_oos_edge on the largest shadow dataset, and a --datasets-root sweep inside its timer",
+  "phase": "ml",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-18 lane RESEARCH-AUTHOR-GRADE-1017] Owns MB-20260719-PROMOREADY-OOSEDGE-OOM. FIELD STATE on main: scripts/ops/run_promotion_readiness.sh still defaults PROMOREADY_OOS_EDGE=off (sweep runs without --datasets-root; oos_edge = insufficient_data for every head; comment says re-measured 2026-08-20 at 5.19 GB vs 4.5 GiB MemoryMax). NEW since: DATA-STORE-PARQUET-GC built a data.parquet sidecar and ml/promotion/oos_edge.py:269 now loads via parquet_sidecar.load_dataset_rows(dataset_dir, keep=_referenced_columns(manifest)) (391 MB JSONL -> 20 MB parquet measured on the trainer). The item's clears_when needs a MEASURED peak RSS (/usr/bin/time -v on the trainer, largest shadow dataset, must be < 4500 MiB) and a full-registry sweep with --datasets-root finishing in its timer window; neither has been taken since the sidecar. NEXT: read-only trainer-vm-diag measurement; if both hold, flip PROMOREADY_OOS_EDGE default (Tier-2) and correct the script comment; if not, say which head and by how much.",
+  "updated_at": "2026-10-18T00:03:34Z",
+  "updated_by": "research-pipeline-route-1018-fork",
+  "roadmap": [
+    "M25"
+  ],
+  "_seq": 551
+}
