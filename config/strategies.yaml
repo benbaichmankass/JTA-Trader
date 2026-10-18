@@ -2977,7 +2977,14 @@ strategies:
       - ADAUSDT
     trend_lookback: 40
     pullback_lookback: 10
-    pullback_frac: 0.5
+    # pullback_frac 0.5 -> 0.618 (Tier-3 PROPOSAL, holdout arm C7, HOLD for operator approval).
+    #   Evidence: comms/research/RQ-20261016-077e-04/38989350528/verdict.json -- C7 selected from
+    #   9 arms on discovery only (2020-07-01 .. 2025-03-20: n=352, +42.32 R, 3/4 folds; the
+    #   declared arm A n=291, +43.74 R, 2/4 folds = NOT eligible under the fold-majority rule)
+    #   and read ONCE on the held-back span: C7 n=97 +24.08 R (0.248 R/trade) vs declared A
+    #   n=86 +23.08 R (0.268 R/trade), net of fee 7.5 + slippage 3 bps rt + funding 1 bps/8h.
+    #   ROLLBACK: pullback_frac 0.5.
+    pullback_frac: 0.618
     atr_period: 14
     # atr_stop_mult 2.5 -> 1.5 (Tier-3, operator-approved 2026-08-23). Swept because
     # cap_r = (0.099 x entry) / (atr_stop_mult x ATR) is INVERSELY proportional to this
