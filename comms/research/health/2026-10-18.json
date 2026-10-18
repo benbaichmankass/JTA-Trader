@@ -1,23 +1,23 @@
 {
  "schema": 1,
- "as_of": "2026-10-18T11:12:30Z",
+ "as_of": "2026-10-18T11:44:05Z",
  "producer": "scripts/research/research_slo.py",
  "config": "scripts/research/research_slo.yaml",
  "counts": {
-  "ok": 13,
-  "breach": 3,
+  "ok": 12,
+  "breach": 4,
   "could_not_look": 0
  },
  "latest": [
   {
    "slo": "runnable_floor",
-   "state": "ok",
-   "value": 49,
+   "state": "breach",
+   "value": 47,
    "op": ">=",
-   "threshold": 49,
+   "threshold": 50,
    "what": "runnable units >= the computed floor (queue_throughput.computed_floor: max(25, ceil(fired_24h x 19/24)))",
    "evidence": {
-    "fired_24h_stamps": 61,
+    "fired_24h_stamps": 63,
     "queued": 160,
     "basis": "queue_replenish.runnable(); floor = queue_throughput.computed_floor(fired_24h)",
     "read_state": "measured"
@@ -111,7 +111,7 @@
    "what": "authored (non-generated) units created in 7 d / authored units first-or-re-fired in 7 d",
    "evidence": {
     "authored_7d": 431,
-    "consumed_7d": 352,
+    "consumed_7d": 354,
     "authored_since_yesterday": 52,
     "basis": "non-generated units: id date in 7 d / last_dispatched_at in 7 d",
     "read_state": "measured"
@@ -225,7 +225,7 @@
   {
    "slo": "dispatcher_age_h",
    "state": "ok",
-   "value": 0.31,
+   "value": 0.84,
    "op": "<=",
    "threshold": 3,
    "what": "hours since the newest dispatcher utilization record on main (one per dispatch cycle that ran; lands ~1 h late)",
@@ -238,7 +238,7 @@
   {
    "slo": "collector_age_h",
    "state": "ok",
-   "value": 0.02,
+   "value": 0.55,
    "op": "<=",
    "threshold": 6,
    "what": "hours since the newest commit on main touching research/results/ (a result landed)",
@@ -251,7 +251,7 @@
   {
    "slo": "grader_age_h",
    "state": "ok",
-   "value": 2.33,
+   "value": 2.86,
    "op": "<=",
    "threshold": 14,
    "what": "hours since the last SUCCESSFUL research-queue-grade.yml run (GitHub; could_not_look without a token)",
@@ -264,7 +264,7 @@
   {
    "slo": "research_ops_age_h",
    "state": "ok",
-   "value": 1.71,
+   "value": 2.23,
    "op": "<=",
    "threshold": 8,
    "what": "hours since the newest research-ops pass record (comms/research/ops/*.json finished_at); the pass runs 4x/day",
@@ -309,6 +309,10 @@
  ],
  "alert_state": {
   "open": {
+   "runnable_floor": {
+    "since": "2026-10-18T11:44:05Z",
+    "state": "breach"
+   },
    "grade_latency_p90_d": {
     "since": "2026-10-16T12:53:53Z",
     "state": "breach"
@@ -322,7 +326,7 @@
     "state": "breach"
    }
   },
-  "last_alert": "2026-10-17T22:40:56Z",
+  "last_alert": "2026-10-18T11:44:05Z",
   "suppressed_by_watchdog": []
  },
  "runs": [
@@ -430,6 +434,26 @@
    ],
    "alert": null,
    "delivered": null
+  },
+  {
+   "at": "2026-10-18T11:44:05Z",
+   "counts": {
+    "ok": 12,
+    "breach": 4,
+    "could_not_look": 0
+   },
+   "not_ok": [
+    "runnable_floor",
+    "grade_latency_p90_d",
+    "theme_share_min_ratio",
+    "research_ops_not_run"
+   ],
+   "alert": "change",
+   "delivered": {
+    "telegram": true,
+    "ops_flags_comment": true,
+    "ops_flags_pr": 17895
+   }
   }
  ]
 }
