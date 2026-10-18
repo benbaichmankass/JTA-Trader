@@ -383,7 +383,7 @@ def load_unit(unit: str, queue_dir: Path | None = None) -> tuple[dict[str, Any],
 
 
 # ── self-test: exchangeable synthetic data must give nominal coverage ─────────
-def _linear_synthetic(n: int, seed: int, n_classes: int = 3):
+def _linear_synthetic(n: int, seed: int):
     """Exchangeable rows with a LINEARLY separable-ish 3-class latent, so the dependency-free logit is an
     informative scorer (ml_bakeoff's synthetic frame has an x0*x1 interaction a logit cannot learn, which
     leaves every nonconformity score at ~2/3 and makes the quantile ill-conditioned -- a test of the
