@@ -1012,7 +1012,6 @@ meanwhile and every refusal alerts the operator with the stop to set by hand.
 **Done when** the drill passes 3 times in a row on the operator's phone (`breakout_2`), with captures showing
 each step; then the live amend runs on the same logic. Row: `PHONE-EXEC-OBSERVABLE-1018`.
 
-<<<<<<< HEAD
 **The drill may open and close a real test trade (operator grant `MD-EXEC-DEV-TEST-TRADES`, 2026-10-18; PR 6).**
 Waiting for a live trail amend to exercise the sheet meant one attempt every 8 bars; the operator ended that too,
 verbatim in `config/mandates.yaml`: *"we can open and close trades when needed in order to verify or understand how
@@ -1025,8 +1024,9 @@ bound when the phone claims the ticket and refuses it otherwise. Such a trade is
 (`strategy: exec_test`, `meta.origin: exec_test`, ids `exec-test-*`): the trades snapshot, the prop overview's
 closed set, soak grading and the trade-quality review drop it; an OPEN test position stays visible in the overview
 because it is real money. A test trade the drill fails to close by `close_by` raises one alert naming it; nothing
-halts. The drill extension that writes the ticket, confirms the amend and closes the position is the next PR.
-=======
+halts. The drill extension that writes the ticket, confirms the amend and closes the position is PR 3's `symbol:`
+option (server) and the app PR that follows.
+
 **Piece 3 and piece 5 as built (PR 5).** `tools/phone-executor/test/fixture_from_capture.py` turns one
 `NNN-<step>.dom.json` (read from `GET /api/diag/phone_capture_file`) into `fixtures/<name>.html` + `.meta.json`:
 every element laid out absolutely at the rect it had on the phone, same tags / roles / attributes / nesting, the
@@ -1044,7 +1044,6 @@ ONE Telegram line **on every refusal** (not only the first of a streak, which st
 the symbol, direction, the stop to set by hand and the stop it moves from, plus the diag link to that attempt's
 step captures (`capture_run` in the phone's `amend_result`, stored on the amend record). The trail's backoff, the
 red flag after five failures and the recovery ping are unchanged.
->>>>>>> 7edf2dc89 (feat(phone-exec): real-page fixtures from captured DOM snapshots + ONE Telegram per refused live amend with the stop to set by hand (PHONE-EXEC-OBSERVABLE-1018 PR 5) [Tier-2, HOLD])
 
 **Capture contract (PR 1).** One POST per step: `run_id` (`[A-Za-z0-9][A-Za-z0-9._-]{2,79}`, e.g.
 `amend-<ticket>-a<seq>-<UTC stamp>`), `flow` (`entry|amend|drill|positions|login|probe`), `step`
