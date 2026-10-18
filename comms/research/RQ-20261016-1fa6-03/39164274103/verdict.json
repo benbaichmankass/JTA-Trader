@@ -1,0 +1,70 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "initial_jobless_claims releases with a defined survey surprise; RELEASE-DAY window (prior close -> release-day close) on ZN=F daily closes",
+  "n": 598,
+  "measurement": {
+    "kind": "initial_jobless_claims",
+    "symbol": "ZN=F",
+    "snapshot_files": [
+      "comms/macro/econ_calendar_snapshots.jsonl",
+      "comms/macro/econ_calendar_snapshots_survey_backfill.jsonl"
+    ],
+    "releases": 598,
+    "releases_with_value": 598,
+    "price_bars": 5471,
+    "first_release": "2015-01-08",
+    "last_release": "2026-10-15",
+    "release_start": null,
+    "release_end": null,
+    "anchor_shift_td": -1,
+    "releases_after_window": 598,
+    "rows": [
+      {
+        "horizon_days": 1,
+        "n": 598,
+        "ic": 0.141542,
+        "ic_t": 3.491,
+        "overlap_factor": 1.0,
+        "n_eff": 598.0,
+        "ic_t_eff": 3.491,
+        "pearson": 0.039121,
+        "sign_hit_rate": 0.551056,
+        "mean_fwd_return": 4.6e-05
+      }
+    ],
+    "summary": {
+      "max_n": 598,
+      "min_honest_n": 12,
+      "sufficient_history": true,
+      "any_flagged_horizon": true,
+      "any_flagged_horizon_overlap_corrected": true,
+      "strongest_ic_horizon_days": 1,
+      "strongest_ic": 0.141542,
+      "strongest_ic_t": 3.491,
+      "strongest_ic_t_eff": 3.491,
+      "t_flag": 2.0,
+      "verdict": "surprise_predicts_forward_return"
+    },
+    "rule": {
+      "primary": [
+        1
+      ],
+      "min_n": 100,
+      "t_bar": 2.4,
+      "expected_sign": "positive"
+    },
+    "per_horizon": [
+      {
+        "horizon_days": 1,
+        "n": 598,
+        "ic": 0.141542,
+        "ic_t_eff": 3.491,
+        "n_ok": true,
+        "t_reached": true,
+        "sign_ok": true
+      }
+    ]
+  },
+  "note": "a pre-registered horizon reached the t-bar in the expected sign (evidence for a build row, not a leg: costs, tradeable timing and a placebo are still owed)"
+}
