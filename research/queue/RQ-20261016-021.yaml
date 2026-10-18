@@ -5,7 +5,7 @@ id: RQ-20261016-021
 title: 'Programme 01 Q4, soak book: does decay_stall6_t2, the one cell that cleared the monthly m20 gate
   on spy_trend_long_1d (alpaca_paper), beat the declared exit in 3 of 4 calendar folds over 2018-03..2026-10,
   net of cost?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -136,3 +136,15 @@ generated:
   params:
     node: P1-Q4-spy-trend-long-1d-soak-confirm
 last_dispatched_at: '2026-10-18T10:17:19+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-Q4-SPY-TREND-LONG-1D-SOAK-CONFIRM
+  evidence:
+  - research/results/RQ-20261016-021/39118679654.jsonl
+  graded_at: '2026-10-18'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
