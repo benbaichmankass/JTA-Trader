@@ -6,6 +6,11 @@
   },
   "id": "PI-20261018-WH81NW96-0001",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-21",
+    "how_to_check": "origin.rerun (the /api/bot/ml/status read + the trainer-vm-diag wc -l / tail -1 loop)",
+    "what": "after the first ict-trainer cycle on a main that carries PR #18891 (merged 2026-10-18 07:19Z): /api/bot/ml/status dataset_builds_24h.failed == 0 AND the four market_raw shards (BTCUSDT 1h, BTCUSDT 5m, ETHUSDT 1h, ADAUSDT 15m) are whole (last ts = the previous UTC day, rows not a page multiple)"
+  },
   "origin": {
     "kind": "session",
     "ref": "lane ML-UNBLOCK-1018 (session_019BtYk72AWwvaGkwH81nW96) / ML-SHARD-TRUNCATED / PR #18891",
