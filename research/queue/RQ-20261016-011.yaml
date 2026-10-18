@@ -5,7 +5,7 @@ id: RQ-20261016-011
 title: 'Programme 01 Q4, real money: does the rr_floor 0.5 cell that cleared the monthly m20 gate on trend_donchian_sol_prop
   beat the declared exit by a material margin in 5 of 6 calendar folds over 2020-10..2026-10, at the Bybit
   cost stack?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -136,3 +136,15 @@ generated:
   params:
     node: P1-Q4-solprop-rrfloor-confirm
 last_dispatched_at: '2026-10-18T07:04:08+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-Q4-SOLPROP-RRFLOOR-CONFIRM
+  evidence:
+  - research/results/RQ-20261016-011/39103757543.jsonl
+  graded_at: '2026-10-18'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

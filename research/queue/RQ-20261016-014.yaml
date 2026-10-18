@@ -5,7 +5,7 @@ id: RQ-20261016-014
 title: 'Programme 01 Q2, real money: the alpaca 1d sentinel family''s predictive TP on the LONGEST available
   history (dukascopy from 2018-02, ~8.7 y vs cab7-06''s 5 y) with gld added to the pool -- can the pooled
   test reach a verdict?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -108,3 +108,16 @@ generated:
   params:
     node: P1-Q2-alpaca-1d-pooled
 last_dispatched_at: '2026-10-18T07:04:09+00:00'
+grading:
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-P1-Q2-ALPACA1D-LONG-PREDICTIVE-TP
+  evidence:
+  - research/results/RQ-20261016-014/39103759555.jsonl
+  graded_at: '2026-10-18'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

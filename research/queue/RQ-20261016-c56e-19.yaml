@@ -1,7 +1,7 @@
 id: RQ-20261016-c56e-19
 title: 'Re-validation at power, soak book: does gdx_pullback_1d AS DECLARED clear Stage 0 on the disjoint window before its committed record (2006-10-02
   .. 2025-04-09), net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -103,11 +103,11 @@ grading:
   decision_rule_id: RULE-RQ20261016c56e19
   evidence:
   - research/results/RQ-20261016-c56e-19/39062698191.jsonl
+  - research/results/RQ-20261016-c56e-19/39106329269.jsonl
   graded_at: '2026-10-18'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: REGIME-EQUITY-LEG-FETCH
-  owner_reason: 'Result is producer_failed (fired 2026-10-17T19:29Z, before runner yfinance install #18821 at 22:57Z; cmd log not on main so the cause is INFERRED). Not a verdict on gdx_pullback_1d. Re-queued (last_dispatched_at null) so the dispatcher re-fires it on the fixed runner.'
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
   rows: 1
-  verdict: null
+  verdict: fail
