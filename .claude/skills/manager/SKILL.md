@@ -55,7 +55,8 @@ register, never in a session's head or a trigger prompt: a new manager inherits 
    self-land, a research hold PR) is landed now (Tier 1/2), or put to the operator on its recorded approval
    path (Tier 3). A green PR waiting on the manager is the manager's failure.
 5. **CLOSE.** `list_sessions(mine=true)` → `lane_reconcile.py`; run § "Archive protocol" on every
-   finished lane — after checking it owns no open PR — then `checklist.py archive-lane <ROW>`.
+   finished lane it lists — only this project's, after checking it owns no open PR — then
+   `checklist.py archive-lane <ROW>`.
 6. **REPORT.** Three lines to the operator: **capacity** (reading, rate, lanes chosen) · **running**
    (lanes and their rows) · **next** (the top of the queue). Say nothing when nothing changed.
 
@@ -223,23 +224,15 @@ about a leg that is losing, its lane runs `scripts/research/live_vs_backtest.py`
 
 ## The budget
 
-The pace is § "The operating loop", step 2: the sustainable rate. Two older doctrines are **retired**
-(operator, 2026-10-18), and `manager-pacing-guard` keeps them out:
-- "10% a day, and spend it": a daily share plus a licence to run into the 30% margin.
-- Lanes launched as many as possible in one message, with an hourly check-in.
-
-Both measured badly the same day: six parallel lanes moved the weekly bar 55% → 73% in about 3 h
-(`USAGE-READINGS.jsonl`, 2026-10-18).
-
-The account-level weekly bar aggregates every surface and project the operator touches. Report it with
-its reading time; never blend it with per-lane dollars (`spend_meter.py`'s two populations).
+The pace is § "The operating loop", step 2. Retired 2026-10-18 (and kept out by `manager-pacing-guard`):
+"10% a day, and spend it" into the margin, and mass parallel launches with hourly check-ins. That day
+six parallel lanes moved the weekly bar 55% → 73% in ~3 h. The weekly bar covers every project the
+operator runs: report it with its reading time, never blended with per-lane dollars.
 
 ### Output per unit spent: practices that worked (operator-noted 2026-09-27)
 
-- **The manager reads narrowly.** Targeted greps and single-field extracts; the `get_session` summary
-  plus the PR body is the lane's report. Deep reading and diag work belong to lanes.
-- **Lane prompts are self-contained**: exact ids, paths, evidence already established, the done
-  condition, the landing recipe and the shape of the final message.
+- **The manager reads narrowly**; the `get_session` summary plus the PR body is the lane's report.
+- **Lane prompts are self-contained**: ids, paths, established evidence, done condition, landing recipe.
 - **Model follows risk, per the table.** Sonnet by default; Opus only on an order path or a real-money
   judgment call.
 - **Record the decision on the register BEFORE dispatch** and point the lane at it (step 1 of the loop).
@@ -316,9 +309,6 @@ design intent.
 ### How lane PRs land
 
 A Tier-1 lane self-lands its PR using a fixed process: create `.github/pr-landing/<slug>.json` with `tier: 1` and `landing: self`, create `.github/pr-automerge-requests/<slug>.txt`, run `python3 scripts/ops/claim_merge_slot.py --branch-claim --branch <branch> --held-by <session_id>` to claim the merge slot, and arm GitHub auto-merge with `gh api -X PUT repos/<owner>/<repo>/pulls/<n>/ccr/auto_merge -f merge_method=squash`. If Claude Code's classifier refuses the auto-merge arming (returns "Merge Without Review"), the lane re-declares the PR with `landing: hold` and `hold_reason: operator_asked_to_hold`, reports the exact refused command to the manager in one line, and the manager lands the PR. Tier-2/3 lane PRs always carry `landing: hold` — the manager (Tier 2) or operator's recorded approval (Tier 3) lands them. Measured precedent: PR #16719.
-
-- **Tier-1 lanes:** self-land when the classifier arms auto-merge; report blocked arming to the manager in one line; manager lands if blocked.
-- **Tier-2/3 lanes:** hold for manager (T2) or operator approval (T3); never self-land.
 
 ### After a `/performance-review` merges: dispatch `PERF-FOLLOWUP-<week>` (operator, 2026-10-10)
 
@@ -477,9 +467,8 @@ clicks, and your job is to **surface it, not clear it**.
 its head*.** Never when the context it needs is on disk — that is what disk is
 for. Subject-area overlap is not benefit.
 
-Measured 2026-09-17 on two resumed lanes: 91.1M and 102.4M cache-read tokens
-($55.82 / $69.23) against 141k / 227k output tokens. A fresh session starts near
-40k. Resume is not free and it is the default if you say nothing.
+Measured 2026-09-17: two resumed lanes read 91–102M cache tokens ($56/$69) for 141k/227k output; a
+fresh session starts near 40k. Resume is the default if you say nothing.
 
 ### One question per lane
 
@@ -509,11 +498,18 @@ closing finished sessions, that falls under the management mandate."* The same
 day the manager told the operator a finished lane could be closed "whenever
 suits you" — the failure this protocol removes.
 
-**Why it matters.** A finished lane that stays open keeps costing (A9 went $37.13 → $50.78 **after**
-its work merged). MEASURED: 22 unarchived finished sessions holding $2,088.73 on 2026-09-22, and about
-300, mostly from August and September, on 2026-10-18 — because no check-in step ran this protocol. It is
-now step 5 of § "The operating loop".
+**Why.** A finished lane that stays open keeps costing (A9: $37.13 → $50.78 **after** merging). 22
+were found unarchived on 2026-09-22 and ~300 on 2026-10-18, because no check-in ran this protocol; it
+is now step 5 of § "The operating loop".
 
+0. **Scope — this project's sessions only** (operator, 2026-10-18: *"the manager session should only
+   archive sessions attached to this project ... Other sessions should be left alone."*). `list_sessions`
+   lists the whole account; a bulk sweep that day archived 9 sessions of another project. A session is
+   eligible only with (a) a project repo (Metis-Insights, ict-trading-bot, ict-trader-dashboard,
+   ict-trader-android), (b) the project environment `env_01A9rfUVrcEo1i5pKP1kWnp3`, or (c) a mention in a
+   manager log (a row's `lane` / `lane_history`, or a `manager:` tag). **A foreign repo is never eligible.**
+   `lane_reconcile.py` applies this test (`archive_eligible`): archive only what it lists; its "LEFT
+   ALONE" block is never archived.
 1. **Ownership.** `archive_session` on a finished lane is the **manager's** job.
    The operator is never asked to close a lane, and the manager never tells the
    operator to ("you can close it whenever suits you" is a violation).

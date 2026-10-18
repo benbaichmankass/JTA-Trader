@@ -2264,6 +2264,14 @@ GUARDS: List[Dict[str, Any]] = [
         "steps": [["python3", "scripts/secret_scan.py"]],
     },
     {
+        "name": "lane-reconcile-guard",
+        # 2026-10-18: the manager's CLOSE step (§ "Archive protocol") archives only what
+        # lane_reconcile lists, so its archive-scope test (operator: archive ONLY this project's
+        # sessions; a foreign repo is never eligible) must not silently regress.
+        "when": {"regex": r"^scripts/ops/lane_reconcile\.py$"},
+        "steps": [["python3", "scripts/ops/lane_reconcile.py", "--self-test"]],
+    },
+    {
         "name": "manager-pacing-guard",
         # 2026-10-18 (MANAGER-PACING-STRUCTURAL): the manager's pacing is stated ONCE, in manager
         # SKILL.md § "The operating loop". Fails if a live doc/skill/the spend meter brings back a
