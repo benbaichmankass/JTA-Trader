@@ -219,12 +219,22 @@ weight in `THEMES.yaml`, verbatim "Prop first (Recommended)".)
 - Every queued unit carries `theme:` (a key of [`research/THEMES.yaml`](../THEMES.yaml): `regime`,
   `live_strategy`, `ml_health`, `new_strategy_prop`, `macro`, `infra`) and `priority:` 1-3 within the theme.
   `validate` refuses a queued/running/blocked unit without both; `done`/`retired` units are exempt.
-- **Weights live in ONE file, `research/THEMES.yaml`.** `dispatch_queue.fair_order` repeatedly picks the theme
-  with the lowest (stamps in the last `share_window_hours` + picks so far) / weight among themes that still hold
-  a due unit, then that theme's best unit. Low weight means fewer slots, never none: a theme with due work and no
-  recent fire has usage 0 and is served before any theme over its share.
-- **Aging:** every `aging_hours` a unit has waited (since its last stamp, else the date in its id) lowers its
-  effective priority by one (floor 0), so nothing starves inside its theme.
+- **MONEY FIRST across themes (operator 2026-10-18, "Fix now, money first").** `dispatch_queue.fair_order` takes
+  the theme whose NEXT unit scores highest on the router's value score (`scripts/research/research_compute.yaml`
+  `value:` -- $ at stake x confidence x bucket share x hand-written x age / cost), so a real-money / prop /
+  own-losses unit fires before a cheap unit in any other theme. A unit DUE past `value.starve_hours` goes first in
+  any theme (nothing starves). Inside a theme an ASKED unit (authored, or a programme node `generated.family:
+  programme:*`) precedes a template refill; the refill fires when its theme has nothing asked due, or when starved.
+  MEASURED cause of the rule: run 39098686264 fired two regime units scoring 6.5 and an infra unit at 30.7 while
+  the P1 real-money units (141.9 down) deferred on "github_runner at capacity", because until then the cross-theme
+  step was a round-robin by (stamps in `share_window_hours` + picks) / weight.
+- **Weights live in ONE file, `research/THEMES.yaml`, and they break ties.** Between two themes whose next units
+  score EQUAL, the one with the lower (stamps in the last `share_window_hours` + picks so far) / weight goes
+  first, then the heavier weight. A theme holding only low-value units therefore fires on spare capacity or at
+  starve_hours, and `theme_share_min_ratio` (research_slo.yaml) recovers more slowly than under the round-robin:
+  the share is honoured by SUPPLY of valuable units in the short theme (`H1-THEME`), not by ranking.
+- **Aging:** every `aging_hours` a unit has waited since it came DUE lowers its effective priority by one (floor 0)
+  and lifts its value score by `age_step`; past `starve_hours` it sorts first everywhere.
 - Not candidates, kept in id order after the ranked ones: units that are done, not yet due, invalid, session-bound
   (`run.workflow` is prose) or whose precondition is unmet. Cadence, power and route gates are unchanged.
 - **Preconditions.** `requires_result: {unit, verdict?}` is evaluated: the unit is not due until

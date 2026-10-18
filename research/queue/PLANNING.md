@@ -107,11 +107,18 @@ run:
   queued units on the 16th. `check_research_queue_health.py` splits the floor by weight every cycle and prints an
   `H1-THEME` warning per short theme (generated re-runs credited for at most 40 % of a slice); that is the
   authoring target list for research-ops step E. Inside a theme, authored units rank before generated ones.
+- **MONEY FIRST across themes** (operator 2026-10-18, popup "Fix now, money first"; lane DISPATCH-MONEY-FIRST-1018).
+  `fair_order` no longer round-robins the themes: it takes the theme whose next unit has the highest router value
+  score, a starved unit first in any theme, and the weight share only breaks an EQUAL score. Programme nodes
+  (`generated.family: programme:*`) count as asked units, not refills. A theme stocked only with low-value units now
+  fires on spare capacity or at `starve_hours`, so the theme-share SLO recovers through SUPPLY of valuable units in
+  the short theme -- author them with a `value:` block that states the money at stake.
 
 ## 3. Aging
 `aging_hours` (THEMES.yaml) lowers a waiting unit's effective priority one step per period, counted from when the
 unit came DUE (a recurring unit: its last stamp plus its cadence gap; since 2026-10-16, `dispatch_queue._due_since`). It is the
-starvation backstop inside a theme; fair share is the backstop between themes. If a unit is old and still
+starvation backstop inside a theme; `starve_hours` (research_compute.yaml) is the backstop between themes since
+2026-10-18 (a starved unit sorts first everywhere). If a unit is old and still
 unrun, read why (precondition, gate, route) before lowering anything.
 
 ## 4. What the recurring research-planning session does, every time

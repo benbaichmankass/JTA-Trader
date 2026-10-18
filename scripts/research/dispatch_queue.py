@@ -509,21 +509,47 @@ def effective_priority(entry: Dict[str, Any], uid: str, now: datetime, aging_hou
     return max(0, prio - steps)
 
 
+def is_refill(entry: Dict[str, Any]) -> bool:
+    """A template / sweep re-run (research/templates family) as opposed to a question somebody ASKED.
+
+    MONEY-FIRST (operator 2026-10-18): a programme node (`generated.family: programme:*`) is emitted from an
+    authored programme tree (research/programmes/), so it is an asked question, not a refill -- the same line
+    `queue_grade.template_cell` draws. MEASURED 2026-10-18 on the committed queue: the 17 P1 real-money
+    trade-management units (RQ-20261017-002 score 145, RQ-20261016-004..021) carried `generated:` and so sorted
+    behind 11 authored equity units (scores 13..27) inside live_strategy, on top of the cross-theme round-robin."""
+    gen = entry.get("generated")
+    return isinstance(gen, dict) and not str(gen.get("family") or "").startswith("programme:")
+
+
 def fair_order(jobs: List[Any], now: datetime, themes_doc: Dict[str, Any],
                cfg: Optional[Dict[str, Any]] = None) -> List[Any]:
-    """Dispatch order: weighted fair share across themes, aged priority within a theme.
+    """Dispatch order. With ``cfg`` (the live dispatcher): MONEY FIRST across themes, theme share breaks ties.
+    Without ``cfg``: the pre-router weighted fair share across themes, aged priority within a theme, unchanged.
 
-    Repeatedly pick the theme with the lowest (fired in the last `share_window_hours` + picked so far)
-    / weight, among themes that still hold a due job, and take that theme's best job (lowest effective
-    priority, then id). Stateless: the only memory is the stamps already on the units. A theme with
-    runnable work and no recent fire has usage 0, so it is served before any theme over its share:
-    low weight means fewer slots, never none. Jobs that are not due (done, cadence not elapsed, unmet
-    precondition, session-bound, invalid) keep id order after the candidates, unchanged.
+    MONEY FIRST (operator decision 2026-10-18, verbatim "Fix now, money first"; lane DISPATCH-MONEY-FIRST-1018).
+    Until then the cross-theme step was a round-robin: repeatedly pick the theme with the lowest (fired in the
+    last `share_window_hours` + picked so far) / weight and take its best unit, so the VALUE score ordered units
+    only inside a theme. MEASURED on run 39098686264 (2026-10-18 04:56Z): github_runner's three slots went to
+    RQ-20261017-ae17-08/-09 (regime, score 6.5) and ae17-45 (infra, 30.7) while RQ-20261017-002 (own_losses,
+    141.9) and the other P1 real-money units deferred on "github_runner at capacity (3/3 in flight)" -- a starved
+    theme took every scarce slot regardless of what the unit was worth. The operator declined to raise the runner
+    cap and chose: real-money / prop / own-losses work dispatches first; theme balancing only breaks ties and uses
+    spare capacity.
 
-    RESEARCH-ROUTER (2026-10-13): with ``cfg`` (scripts/research/research_compute.yaml) a theme's candidates are
-    ordered by VALUE per unit cost (compute_router.score) instead of by effective priority alone; a unit
-    that has waited past ``value.starve_hours`` sorts first. Each ranked job carries ``raw['_rank']`` (score +
-    derivation) for the decision line. Without ``cfg`` the order is the pre-router one, unchanged."""
+    The order now, with ``cfg``:
+      1. Inside a theme (unchanged shape): starved first (DUE past ``value.starve_hours``), then ASKED units
+         (authored, or a programme node -- see `is_refill`) before template refills, then by ``compute_router.score``
+         (value per cost, bucket shares, hand-written and age boosts), then id.
+      2. Across themes: take the theme whose NEXT unit is worth most -- a starved head first (nothing starves past
+         starve_hours, in any theme), then the highest score. Theme share (fired in the window + picked so far,
+         over THEMES.yaml weight) decides only between EQUAL scores, then the heavier theme, then the name.
+    A theme holding only low-value units therefore fires when capacity is spare or when its units starve (240 h),
+    so ``theme_share_min_ratio`` recovers more slowly than under the round-robin -- stated on the SLO's config and
+    on checklist row RESEARCH-PIPELINE-SLO, deliberately not re-thresholded. The share is still honoured by SUPPLY
+    (check_research_queue_health.py `theme_supply`): authoring valuable units in a short theme is how it recovers.
+    Each ranked job carries ``raw['_rank']`` (score + derivation + ``pick``: "starved" or "value") for the
+    decision line. Jobs that are not due (done, cadence not elapsed, unmet precondition, session-bound, invalid)
+    keep id order after the candidates, unchanged. Stateless: the only memory is the stamps already on the units."""
     themes = themes_doc["themes"]
     window = timedelta(hours=float(themes_doc["share_window_hours"]))
     aging = float(themes_doc["aging_hours"])
@@ -563,13 +589,12 @@ def fair_order(jobs: List[Any], now: datetime, themes_doc: Dict[str, Any],
                 r = cr.score(x.raw, cfg, aging_steps=steps, fires=_fires)
                 r["starved"] = waited > starve
                 r["waited_h"] = round(waited.total_seconds() / 3600.0, 1)
+                r["refill"] = is_refill(x.raw)
                 x.raw["_rank"] = r
-                # Authored before generated inside a theme (RESEARCH-ENGINE-1016): someone ASKED an authored
-                # question; a template re-run keeps the queue stocked. The 1.25 hand_written_boost alone let a
-                # generated sweep with a large declared value outrank an authored unit. Theme shares are
-                # untouched (this is within one theme), and a generated unit still fires whenever its theme has
-                # no authored unit due -- or first, once it has been DUE past starve_hours (nothing starves).
-                return (not r["starved"], isinstance(x.raw.get("generated"), dict), -r["rank_value"], x.id)
+                # Asked before refill inside a theme (RESEARCH-ENGINE-1016, kept): someone ASKED an authored
+                # question or registered a programme node; a template re-run keeps the queue stocked. A refill
+                # still fires whenever its theme has no asked unit due -- or first, once DUE past starve_hours.
+                return (not r["starved"], r["refill"], -r["rank_value"], x.id)
             cand[th].sort(key=_key)
     for th in cand if cfg is None else ():
         # Within one effective priority a hand-written unit (someone ASKED this question) goes
@@ -581,12 +606,18 @@ def fair_order(jobs: List[Any], now: datetime, themes_doc: Dict[str, Any],
                                      isinstance(x.raw.get("generated"), dict), x.id))
     out: List[Any] = []
     while any(cand.values()):
-        th = min((t for t in cand if cand[t]),
-                 key=lambda t: (used[t] / float(themes[t]["weight"]), -float(themes[t]["weight"]), t))
+        if cfg is None:
+            th = min((t for t in cand if cand[t]),
+                     key=lambda t: (used[t] / float(themes[t]["weight"]), -float(themes[t]["weight"]), t))
+        else:
+            # MONEY FIRST: the theme whose next unit is worth most; share only breaks an equal score.
+            th = min((t for t in cand if cand[t]),
+                     key=lambda t: (not cand[t][0].raw["_rank"]["starved"], -cand[t][0].raw["_rank"]["rank_value"],
+                                    used[t] / float(themes[t]["weight"]), -float(themes[t]["weight"]), t))
+            cand[th][0].raw["_rank"]["pick"] = "starved" if cand[th][0].raw["_rank"]["starved"] else "value"
         out.append(cand[th].pop(0))
         used[th] += 1
     return out + rest
-
 
 def due_within(entry: Dict[str, Any], now: datetime, hours: float = 0.0) -> bool:
     """Would the dispatcher fire this unit at ``now + hours``? The ONE due rule
@@ -1212,8 +1243,9 @@ def main(argv: Optional[List[str]] = None) -> int:
               f"This is NOT an empty queue.", file=sys.stderr)
         return 2
 
-    # Fire order: weighted fair share across themes (research/THEMES.yaml), aged priority within
-    # a theme. load_queue returns files sorted by id, which made this a pure FIFO: a cycle fires at
+    # Fire order (fair_order): MONEY FIRST across themes by the router's value score, theme share
+    # (research/THEMES.yaml) breaking ties, starved units first, asked before refill inside a theme.
+    # load_queue returns files sorted by id, which made this a pure FIFO: a cycle fires at
     # most --max-research-inflight units, so the newest ids waited behind every older one.
     cfg: Optional[Dict[str, Any]] = None
     try:
@@ -1449,6 +1481,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         if entry.get("_rank"):
             row["value_score"] = round(entry["_rank"]["rank_value"], 2)
             row["value_derivation"] = entry["_rank"]["derivation"]
+            if entry["_rank"].get("pick"):       # money-first: "value" (score across themes) or "starved"
+                row["pick"] = entry["_rank"]["pick"]
+                row["value_derivation"] += f" | pick={row['pick']}" + (" (refill)" if entry["_rank"].get("refill") else "")
         if res is not None and res.ok and res.wait:
             row.update(outcome=DEFERRED, reason=f"waiting for compute: {res.reason}")
             decisions.append(row)
