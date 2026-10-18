@@ -109,10 +109,6 @@ _TREND_UNMODELLED: Set[str] = {
     "trail_decay_arm_r", "trail_decay_stall_bars", "trail_decay_tight_mult",
     "trail_vol_below_pctl", "trail_vol_tight_mult", "vol_pctl_window",
     "vol_skip_above_pctl", "vol_skip_below_pctl",
-    # tp_revision (TP doctrine B1): replayed by scripts/research/exit_lever_ablation.py
-    # (--tp-revision / --tp-revision-width-mult, RQ-20261018-007), NOT by the debt matrix's argv
-    # builder, so a leg declaring it degrades to `approximate` here on purpose (2026-10-18).
-    "tp_revision",
 }
 _PB_UNMODELLED: Set[str] = {
     "skip_hours", "timeout_bars",
