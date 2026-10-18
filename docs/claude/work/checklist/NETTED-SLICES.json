@@ -1,0 +1,28 @@
+{
+  "id": "NETTED-SLICES",
+  "title": "NETTED-SLICES: per-strategy slices with own brackets + score allocation, bybit_1 first (PR #18455)",
+  "phase": "B",
+  "state": "in_flight",
+  "owner": "lane",
+  "lane": "session_013oEUJzaNgUnEAFrpHccwkx",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [
+    18455
+  ],
+  "blocked_on": [],
+  "note": "Row created 2026-10-18 11:25Z by lane ACTIVE-MGMT-DRIVE-1018 taking over the archived NETTED-SLICES lane (session_012ogCc58pJF5f9xFBLtjk1G; its PR #18455 and pipeline items PI-20261015-FBLTJK1G-0001/-0002 are the record). OPERATOR 2026-10-18, popup answer verbatim 'Merge + deploy on bybit_1 (Recommended)', relayed by the manager ~11:05Z. Scope: bybit_1 (paper) only via config/accounts.yaml position_model: slices; rollout to bybit_2 + bybit_portfolio is a separate operator decision. 2026-10-18 11:22Z: origin/main merged into claude/netted-slices (merge commit f7dd1860e, no conflicts, 436 commits behind), pushed; local: PR test files + mirror/monocle suites 96 passed 1 skipped, guards 81 PASS, pinned ruff 0.15.22 clean, import-linter 6 kept. CI pending; the manager merges on green. DEPLOY: after merge, restart-bot-service via system-actions, then /api/diag/status git_sha_running at or past the merge sha. OBSERVE: bybit_1's first shared-symbol signal (ETHUSDT eth_4h+eth_prop, or XRPUSDT xrp_4h+xrp_pullback_2h): each slice carries its own qty-scoped Partial bracket, allocation weights logged in package meta, no other account's behaviour changed. MERGED: no. DEPLOYED: no. OBSERVED: no.",
+  "updated_at": "2026-10-18T11:29:10Z",
+  "updated_by": "session_013oEUJzaNgUnEAFrpHccwkx",
+  "roadmap": [
+    "M18"
+  ],
+  "observation": {
+    "what": "(1) MERGED: #18455 merged; (2) DEPLOYED: restart-bot-service ran after ict-git-sync and /api/diag/status git_sha_running is at or past the merge sha; (3) OBSERVED: on bybit_1 the first tick where two rostered strategies signal the same side on one symbol produces two journal rows with distinct sl_order_id/tp_order_id each sized to its own slice qty, the package meta carries allocation weights, and bybit_2/bybit_portfolio/alpaca rows for the same tick are unchanged in shape",
+    "how_to_check": "scripts/ops/diag_fetch.sh status | grep -o \"git_sha_running[^,]*\" ; scripts/ops/diag_fetch.sh \"journal?table=trades&limit=200\" filtered account_id=bybit_1 grouped by symbol+created_at minute: >=2 open rows with different strategy_name and different sl_order_id; scripts/ops/diag_fetch.sh \"journal?table=order_packages&limit=100\" meta.allocation_weights present",
+    "due_by": "2026-11-01"
+  },
+  "_seq": 565
+}
