@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 by the guard's own path table (ml/datasets/adapters/bybit_offvm.py is trainer-side dataset tooling the nightly trainer cycle deploys by git reset --hard origin/main). Approval sought from the MANAGER (acting with operator authority; lane ML-UNBLOCK-1018 dispatch 2026-10-18: 'Tier-2 changes on the trainer go through the system-actions / vm-ops path with a hold PR'). The manager reads and merges; the next ict-trainer cycle deploys it.",
+  "why": "Task 1 of ML-UNBLOCK-1018: fix the 5 failing dataset builds. Root cause MEASURED on the trainer (dataset_builds.jsonl via trainer-vm-diag #18882/#18883): 12 market_raw failures 2026-10-13..18, all Bybit retCode 10016 'svc error: Get kline failed' on the first attempt; the off-VM adapter retried transient ccxt CLASSES only and 10016 arrives as a plain ExchangeError. The adapter now retries it with backoff (7 attempts, 1..60 s) and the build-log rows carry symbol/timeframe. No live path, no config, no order path; revert = revert the PR."
+}
