@@ -339,3 +339,54 @@ def test_ranked_items_is_the_order_section0_uses():
     items = [_pi(1, what="plain"), _pi(2, what="MONEY", severity="high")]
     res = pipeline.LoadResult(items={i["id"]: i for i in items}, records=2)
     assert [i["what"] for i in rdb.ranked_items(res, TODAY)] == ["MONEY", "plain"]
+
+
+# ── Active trade management (Programme P1) standing line — operator 2026-10-18 ─────────
+
+def _write_unit(root: Path, uid: str, **over):
+    import yaml
+    u = {"id": uid, "status": "queued", "programme": "P1", "title": "t", "theme": "live_strategy",
+         "priority": 1, "kind": "experiment", "run": {"workflow": "research-script-run.yml"},
+         "lands": {"store": "research/results/"}}
+    u.update(over)
+    d = root / "research/queue"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / f"{uid}.yaml").write_text(yaml.safe_dump(u), encoding="utf-8")
+
+
+def test_atm_line_counts_p1_units_by_state_and_verdict(tmp_path):
+    _write_unit(tmp_path, "RQ-1", status="done", grading={"verdict": "fail"})
+    _write_unit(tmp_path, "RQ-2", status="done", grading={"verdict": "pass"})
+    _write_unit(tmp_path, "RQ-3", status="queued")
+    _write_unit(tmp_path, "RQ-4", status="queued", last_dispatched_at="2026-10-18T09:20:00Z")
+    _write_unit(tmp_path, "RQ-5", status="queued", programme=None,
+                programme_node={"programme": "P1", "node": "P1-X"})
+    _write_unit(tmp_path, "RQ-9", status="queued", programme="P2")      # not P1: excluded
+    v = rdb.atm_view(tmp_path)
+    assert v["readState"] == "read"
+    assert v["units"] == 5
+    assert v["counts"] == {"done": 2, "queued": 3}
+    assert v["verdicts"] == {"fail": 1, "pass": 1}
+    assert v["fired"] == 1          # the dispatcher stamp with no record newer than it
+    import datetime
+    b = rdb.build(today=datetime.date(2026, 10, 18), root=tmp_path)
+    md = rdb.render(b)
+    assert "Active trade management (P1) — units 5: queued 3 (fired, record pending ≥ 1) · landed 2: " in md
+    assert "fail 1 · pass 1" in md or "pass 1 · fail 1" in md
+    assert "next decision:" in md
+
+
+def test_atm_line_declares_an_absent_queue_instead_of_zero(tmp_path):
+    import datetime
+    b = rdb.build(today=datetime.date(2026, 10, 18), root=tmp_path)
+    assert b["activeTradeManagement"]["readState"] == "absent"
+    md = rdb.render(b)
+    assert "Active trade management (P1) — COULD NOT BE READ" in md
+    assert "units 0:" not in md
+
+
+def test_atm_line_on_the_live_tree_reads_and_names_a_next_decision():
+    v = rdb.atm_view(REPO_ROOT)
+    assert v["readState"] in ("read", "partial")
+    assert v["units"] >= 21            # the 2026-10-16 re-cut materialised 21 P1 units
+    assert "COULD NOT BE READ" not in v["nextDecision"]
