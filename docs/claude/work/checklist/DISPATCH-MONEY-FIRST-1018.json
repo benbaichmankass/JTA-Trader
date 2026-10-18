@@ -9,10 +9,12 @@
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    18894
+  ],
   "blocked_on": [],
   "note": "[2026-10-18 lane DISPATCH-MONEY-FIRST-1018] Operator popup ~06:40Z 'Fix now, money first' (runner cap NOT raised, operator declined). MEASURED on run 39098686264 (04:56Z): github_runner 3/3 slots -> RQ-20261017-ae17-08/-09 (regime, 6.5) + ae17-45 (infra, 30.7); RQ-20261017-002 (own_losses, 141.9) and the P1 units deferred 'at capacity'. Cause: fair_order round-robined THEMES by used/weight; value ranked only within a theme. Second cause found: the 17 P1 units carry generated.family programme:P1 and so sorted behind 11 authored c56e units (13..27) inside live_strategy. Rule now: starved first anywhere; then highest value score across themes; theme share breaks EQUAL scores only; inside a theme asked (authored or programme:*) before refill. Replay on the committed queue at 06:5xZ: first 9 picks = P1 units 145.0..64.4. Tests tests/test_research_dispatch_money_first.py (10). theme_share_min_ratio will recover more slowly: threshold left at 0.5 on purpose (comment on the SLO). CLOSES when the first post-merge research-queue-dispatch run's decision lines show the P1 units dispatched ahead of any sub-10-score unit. [2026-10-18 ~06:45Z lane] EXTENSION (manager relay of operator ~06:20Z, verbatim 'Those two items are our highest priority, we need to make sure we're pushing forward on them' -- P1 active trade management, P2 AI trader; arrived as the scheduled task 'Manager -> DISPATCH-MONEY-FIRST: P1+P2 top priority'): research_compute.yaml value.programme_priority: [P1, P2] (ordered, operator-editable). A due unit of a listed programme (programme_node.programme / generated.family programme:<id>) ranks first on every backend, in list order, above every theme and other programme; then money-first value; theme share breaks ties; only a starved unit precedes it. Decision line: pick=programme:P1. Tests: 6 more in tests/test_research_dispatch_money_first.py (a low-score P1 unit outranks a 4800-score non-P1 unit; list order; reorder/empty the list changes the dispatch; starve guard still first; committed config pinned to [P1, P2]). No queued P2 unit exists on 2026-10-18 (census: 17 P1, 3 P5, 1 P6).",
-  "updated_at": "2026-10-18T06:48:50Z",
+  "updated_at": "2026-10-18T06:59:19Z",
   "updated_by": "session_01694UavUX2zc5qearbVjqyT",
   "roadmap": [
     "L-ATM"
