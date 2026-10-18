@@ -1012,6 +1012,20 @@ meanwhile and every refusal alerts the operator with the stop to set by hand.
 **Done when** the drill passes 3 times in a row on the operator's phone (`breakout_2`), with captures showing
 each step; then the live amend runs on the same logic. Row: `PHONE-EXEC-OBSERVABLE-1018`.
 
+**The drill may open and close a real test trade (operator grant `MD-EXEC-DEV-TEST-TRADES`, 2026-10-18; PR 6).**
+Waiting for a live trail amend to exercise the sheet meant one attempt every 8 bars; the operator ended that too,
+verbatim in `config/mandates.yaml`: *"we can open and close trades when needed in order to verify or understand how
+to do the operations. That is a standing mandate."* `src/prop/exec_test_trades.py` reads the granted entry (absent =
+refuse) and writes ONE minimum-size long with a protective stop and a 30-minute `close_by`, under the bounds the
+manager set and the operator can change in the entry: the three phone-executed prop accounts only, the account's
+declared instruments, 6 per account per UTC day, never when the day loss is past half the daily-DD switch limit or
+cannot be read, never while a strategy ticket or position is open on the same symbol. `claim_next` re-checks every
+bound when the phone claims the ticket and refuses it otherwise. Such a trade is execution plumbing, not a strategy
+(`strategy: exec_test`, `meta.origin: exec_test`, ids `exec-test-*`): the trades snapshot, the prop overview's
+closed set, soak grading and the trade-quality review drop it; an OPEN test position stays visible in the overview
+because it is real money. A test trade the drill fails to close by `close_by` raises one alert naming it; nothing
+halts. The drill extension that writes the ticket, confirms the amend and closes the position is the next PR.
+
 **Capture contract (PR 1).** One POST per step: `run_id` (`[A-Za-z0-9][A-Za-z0-9._-]{2,79}`, e.g.
 `amend-<ticket>-a<seq>-<UTC stamp>`), `flow` (`entry|amend|drill|positions|login|probe`), `step`
 (`[a-z][a-z0-9_]{1,39}`), `seq`, `ok` (true/false/null), `note` (≤300 chars, scrubbed), optional `ticket_id`,
