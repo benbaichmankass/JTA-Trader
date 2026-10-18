@@ -9,6 +9,10 @@
      "note": "sheet orders: the stop trigger READS (the USD leaf), not null — the #a8 null read is fixed"},
     {"call": "__ex.sheetOrders().rows[0].icons.map(function (c) { return [c.pencil, c.deny]; })", "expect": [[true, ""], [false, "deny_word"]],
      "note": "sheet orders: the Edit control is the pencil; the Cancel-order control is denied"},
+    {"call": "__ex.sheetEditStopTarget(false)", "expect": {"ok": true, "tag": "button", "label": "Edit order"},
+     "note": "edit target (drill 1 2026-10-18 failed at modal_open: click() on the pencil's WRAPPER span opened nothing): the Stop row's pencil resolves to the <button aria-label='Edit order'> inside its span[tabindex] wrapper, and a touch point inside it is found (not covered, not denied)"},
+    {"call": "(function () { var t = __ex.sheetEditStopTarget(false), b = document.querySelector('button[aria-label=\"Edit order\"]').getBoundingClientRect(); return t.x >= b.left && t.x <= b.right && t.y >= b.top && t.y <= b.bottom; })()", "expect": true,
+     "note": "edit target: the point lies inside the Edit order button's own rect (the Stop row's, the only one in this capture)"},
     {"call": "__ex.sheetDetails().ok", "expect": false, "note": "sheet details: NOT readable while the orders tab is shown (the flow reads details first, then switches tabs)"},
     {"call": "__ex.modalInfo()", "expect": {"n": 0}, "note": "no edit modal open"},
     {"call": "__ex.modalsOpen()", "expect": {"n": 0}, "note": "no stray modal"}

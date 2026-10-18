@@ -59,9 +59,16 @@ def replace_numbers(text: str, salt: str = "") -> str:
     return _NUM_RE.sub(one, text)
 
 
-def _style(node: Dict[str, Any], fixed: bool) -> str:
+def _style(node: Dict[str, Any], fixed: bool, origin: Any = (0, 0)) -> str:
+    """The node's box. The snapshot's ``r`` is viewport-relative (getBoundingClientRect); an absolute box is laid out
+    relative to its CONTAINING block, which here is its rendered parent (every rendered node is positioned), so the
+    parent's origin is subtracted -- MEASURED 2026-10-18 (drill 1 follow-up): with raw viewport coordinates on every
+    nested node the offsets ADDED UP (the Stop row's Edit button rendered at 1383,4926 instead of 335,392) and the first
+    geometry assertion on a nested element (``sheetEditStopTarget``) read "clipped". A fixed node is relative to the
+    viewport (no transforms in a fixture), so its coordinates stay raw."""
     r = node.get("r") or [0, 0, 0, 0]
-    parts = [f"position:{'fixed' if fixed else 'absolute'}", f"left:{int(r[0])}px", f"top:{int(r[1])}px",
+    ox, oy = (0, 0) if fixed else (origin[0], origin[1])
+    parts = [f"position:{'fixed' if fixed else 'absolute'}", f"left:{int(r[0]) - int(ox)}px", f"top:{int(r[1]) - int(oy)}px",
              f"width:{int(r[2])}px", f"height:{int(r[3])}px", "box-sizing:border-box", "margin:0", "padding:0"]
     s = node.get("s") or {}
     if "ov" in s:
@@ -103,7 +110,9 @@ def _attrs(node: Dict[str, Any], salt: str) -> str:
     return "".join(out)
 
 
-def _render(node: Dict[str, Any], salt: str, depth: int, out: List[str], counter: List[int]) -> None:
+def _render(node: Dict[str, Any], salt: str, depth: int, out: List[str], counter: List[int], origin: Any = (0, 0)) -> None:
+    """``origin`` = the containing block's viewport position: (0, 0) for a root tree (its wrapper is static, so the
+    initial containing block applies; the snapshot's scroll is [0, 0]), else the rendered parent's ``r``."""
     tag = str(node.get("t") or "div").lower()
     if not re.match(r"^[a-z][a-z0-9-]*$", tag):
         tag = "div"
@@ -114,18 +123,33 @@ def _render(node: Dict[str, Any], salt: str, depth: int, out: List[str], counter
     counter[0] += 1
     s = node.get("s") or {}
     fixed = s.get("pos") == "fixed"
+    r = node.get("r") or [0, 0, 0, 0]
     text = html.escape(replace_numbers(str(node.get("x") or ""), salt))
     if tag == "svg":
-        out.append(f'<svg{_attrs(node, salt)} style="{_style(node, fixed)}"></svg>')
+        out.append(f'<svg{_attrs(node, salt)} style="{_style(node, fixed, origin)}"></svg>')
         return
     if tag in VOID:
-        out.append(f'<{tag}{_attrs(node, salt)} style="{_style(node, fixed)}">')
+        out.append(f'<{tag}{_attrs(node, salt)} style="{_style(node, fixed, origin)}">')
         return
-    out.append(f'<{tag}{_attrs(node, salt)} style="{_style(node, fixed)}">{text}')
+    out.append(f'<{tag}{_attrs(node, salt)} style="{_style(node, fixed, origin)}">{text}')
     for c in node.get("c") or []:
         if isinstance(c, dict):
-            _render(c, salt, depth + 1, out, counter)
+            _render(c, salt, depth + 1, out, counter, (r[0], r[1]))
     out.append(f"</{tag}>")
+
+
+def _refs(node: Dict[str, Any], acc: List[int]) -> None:
+    """The priority-root placeholders ({"ref": <index into snapshot.roots>}) under ``node``, in DOM (depth-first) order."""
+    if not isinstance(node, dict):
+        return
+    if node.get("ref") is not None:
+        try:
+            acc.append(int(node["ref"]))
+        except (TypeError, ValueError):
+            pass
+        return
+    for c in node.get("c") or []:
+        _refs(c, acc)
 
 
 def build(snapshot: Dict[str, Any], *, name: str, note: str = "", source: str = "") -> Dict[str, Any]:
@@ -136,8 +160,20 @@ def build(snapshot: Dict[str, Any], *, name: str, note: str = "", source: str = 
     roots = [r for r in (snapshot.get("roots") or []) if isinstance(r, dict) and isinstance(r.get("tree"), dict)]
     body_parts: List[str] = []
     counter = [0]
-    # the body root first (it holds the placeholders), then each priority root on top in its own wrapper
-    order = sorted(roots, key=lambda r: 0 if r.get("k") == "body" else 1)
+    # the body root first (it holds the placeholders), then each priority root on top in its own wrapper -- in the
+    # order the page PAINTS them: roots with a placeholder in the body tree in placeholder (DOM) order, then roots
+    # without one (a portal outside the captured body subtree, e.g. the position sheet dialog) last, so they sit on top.
+    # MEASURED 2026-10-18 (drill 1 follow-up): in the snapshot's priority order (sheet, grid) the grid's table painted
+    # over the sheet and sheetEditStopTarget read the pencil as "covered" on a page where the phone's sheet is on top.
+    raw = snapshot.get("roots") or []
+    body_roots = [r for r in roots if r.get("k") == "body"]
+    others = [r for r in roots if r.get("k") != "body"]
+    ref_order: List[int] = []
+    for b in body_roots:
+        _refs(b["tree"], ref_order)
+    by_ref = [raw[i] for i in ref_order if 0 <= i < len(raw)]
+    order = body_roots + [r for r in by_ref if any(r is o for o in others)]
+    order += [r for r in others if not any(r is o for o in order)]
     for r in order:
         k = str(r.get("k") or "root")
         body_parts.append(f'<div data-root="{html.escape(k)}" data-chain="{html.escape(" > ".join(r.get("chain") or []))}">')
