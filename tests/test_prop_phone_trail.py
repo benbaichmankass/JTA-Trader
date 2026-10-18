@@ -523,3 +523,42 @@ def test_hold_from_a_genuine_human_move_is_never_released_by_the_planner(_iso):
     out = ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=1), candles_fn=lambda s, tf: later)
     assert "human" in _trail()["human_hold"] and out["emitted"] == []
     assert ptr.claim_amend(_dev(), now=NOW + timedelta(hours=1)) is None
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# A NEW signed exec.js waives a running backoff ONCE (operator 2026-10-18: breakout_2 #a8 sat at fails=7 = an 8-bar
+# wait while the reader fix shipped signed; the fix is tried on the next plan, not tomorrow).
+# ---------------------------------------------------------------------------------------------------------------
+def test_new_served_exec_js_waives_the_backoff_once(_iso, monkeypatch):
+    monkeypatch.setattr(ptr, "_served_exec_js", lambda: "2026-10-18.3")
+    a = _claimed()
+    _report(a, "refused", reason="sheet volume 0.5 != ticket qty 0.52")
+    assert _trail()["backoff"] == {"n": 1, "since": a["claimed_at"], "exec_js": "2026-10-18.3"}
+    # a second failure one bar later: 2 closed bars of backoff (until NOW+3h), recorded against the same script
+    b = _attempt(2, "refused", reason="sheet volume 0.5 != ticket qty 0.52")
+    assert b is not None and _trail()["fails"] == 2 and _trail()["backoff"]["exec_js"] == "2026-10-18.3"
+    later = _rising(6)
+    # same script, next closed bar, still inside the 2-bar wait (until NOW+4h): nothing emitted
+    out = ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=3, minutes=5), candles_fn=lambda s, tf: later)
+    assert out["emitted"] == []
+    # a NEWER served script: the wait is waived once, the plan emits from the server's resting stop
+    monkeypatch.setattr(ptr, "_served_exec_js", lambda: "2026-10-18.4")
+    out = ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=3, minutes=6), candles_fn=lambda s, tf: later)
+    assert out["emitted"] == ["T1#a3"], out["log"]
+    assert any("backoff waived once" in x.get("why", "") for x in out["log"])
+    assert _trail()["backoff"]["exec_js"] == "2026-10-18.4"
+    # ... and only once per version: a failure on the new script backs off normally (4 bars now)
+    c = ptr.claim_amend(_dev(), now=NOW + timedelta(hours=3, minutes=6))
+    _report(c, "refused", reason="sheet volume 0.5 != ticket qty 0.52")
+    assert _trail()["fails"] == 3
+    out = ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=4, minutes=5), candles_fn=lambda s, tf: later)
+    assert out["emitted"] == []
+
+
+def test_backoff_without_a_served_script_keeps_its_clock(_iso, monkeypatch):
+    monkeypatch.setattr(ptr, "_served_exec_js", lambda: None)
+    a = _claimed()
+    _report(a, "refused", reason="x")
+    assert _trail()["backoff"]["exec_js"] is None
+    later = _candles([2520, 2560, 2600, 2640])
+    assert ptr.plan_amends("breakout_2", now=NOW + timedelta(minutes=30), candles_fn=lambda s, tf: later)["emitted"] == []

@@ -229,13 +229,25 @@ def _backoff_bars(n: int) -> int:
     return min(2 ** max(int(n) - 1, 0), BACKOFF_CAP_BARS)
 
 
+def _served_exec_js() -> Optional[str]:
+    """The exec.js version the server currently SERVES to the phone (signed and matching the tree), else None.
+    Recorded on every failed attempt; a newer served version waives that attempt's backoff once."""
+    try:
+        from src.prop import phone_exec_js
+        st = phone_exec_js.status()
+        return str((st.get("tree") or {}).get("version") or "") if st.get("served") else None
+    except Exception:  # noqa: BLE001  # allow-silent: the backoff keeps its normal clock when the status is unreadable
+        logger.warning("phone_trail: exec.js status unreadable", exc_info=True)
+        return None
+
+
 def _fail(tr: Dict[str, Any], tid: str, at: str, what: str, alerts: List[str], *, counter: str = "fails",
           flag_at: int = FLAG_AFTER, first: Optional[str] = None) -> None:
     """One attempt failed: count it, back off, ping on the first of a streak, ONE red flag at
     ``flag_at`` (0 = never flag). Never ends or locks the trail."""
     n = int(tr.get(counter) or 0) + 1
     tr[counter] = n
-    tr["backoff"] = {"n": n, "since": at}
+    tr["backoff"] = {"n": n, "since": at, "exec_js": _served_exec_js()}
     if n == 1 and first:
         alerts.append(f"{tid}: {first}")
     if flag_at and n == flag_at and not tr.get("flagged"):
@@ -370,7 +382,16 @@ def _plan_one(conn: Any, r: Any, account_id: str, now: datetime, legs: Mapping[s
     bo = tr.get("backoff") or {}
     since = _parse(bo.get("since"))
     if since is not None and now < since + timedelta(minutes=tf_min * _backoff_bars(int(bo.get("n") or 1))):
-        return  # backing off after a failed attempt: retried once the wait has passed, never dropped
+        # backing off after a failed attempt: retried once the wait has passed, never dropped. ONE exception
+        # (operator 2026-10-18, breakout_2 #a8 at fails=7 = an 8-bar wait): a NEW signed exec.js is a new reader,
+        # so the wait is waived ONCE per served version — the fix is tried on the next plan, not tomorrow.
+        served = _served_exec_js()
+        if not served or bo.get("exec_js") == served:
+            return
+        was = bo.get("exec_js") or "unknown"
+        tr["backoff"] = {**bo, "exec_js": served, "waived_at": now.isoformat()}
+        out["log"].append({"ticket_id": tid, "why": f"backoff waived once: exec.js {served} is newer than the "
+                                                    f"script the last attempt ran ({was})"})
     bar = _closed_bar_start(now, tf_min)
     if tr.get("last_bar") == bar:
         return
