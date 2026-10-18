@@ -6,7 +6,7 @@
   // PHONE-EXEC-OBSERVABLE-1018: this file is also served SIGNED by our own API and swapped in at runtime
   // (RemoteJs.kt): a newer version replaces the installed helpers on the next ensure(); the same version is
   // never injected twice. Bump on every change (CI signs the file; the app pins by version).
-  var EXEC_VERSION = "2026-10-18.1";
+  var EXEC_VERSION = "2026-10-18.2";
   if (window.__ex && window.__ex.version === EXEC_VERSION) return;
   function hostOk() { return /(^|\.)breakoutprop\.com$/.test(location.hostname || ""); }
   function vis(el) { if (!el) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }
@@ -1848,6 +1848,22 @@
     // the denylist, exposed for the test: why `sel`'s ONE element must never be clicked, or "" when it may be
     deniedSel: function (sel) { var e = document.querySelectorAll(sel); return e.length === 1 ? (denied(e[0]) || "") : "n" + e.length; },
     safeClickSel: function (sel) { var e = document.querySelectorAll(sel); return e.length === 1 ? safeClick(e[0]) : "n" + e.length; },
+    // TEST-TRADE CLOSE (MD-EXEC-DEV-TEST-TRADES, operator grant 2026-10-18): the ONE deliberate exception to the denylist.
+    // The app arms it for exactly one symbol right before the click (allowClose); sheetClosePosition then clicks the
+    // open sheet's ONE "Close position" text button only if that sheet is titled with the armed symbol. The arm is
+    // spent by the call whether or not it lands and dies after 15 s. Every other path keeps refusing every close /
+    // cancel control (denied()). not_armed | no_sheet | sheet_symbol_mismatch | n<count> | clicked
+    allowClose: function (sym) { window.__exCloseArm = {sym: norm(sym || ""), at: Date.now()}; return "armed"; },
+    sheetClosePosition: function (sym) {
+      var arm = window.__exCloseArm; window.__exCloseArm = null;
+      if (!arm || !arm.sym || arm.sym !== norm(sym || "") || Date.now() - arm.at > 15000) return "not_armed";
+      var r = sheetRoot(); if (!r) return "no_sheet";
+      var b = base(sym).replace(/[^A-Z0-9]/g, "");
+      if (!textEls(r, new RegExp("^" + b + "(USD[TC]?|PERP)?$", "i"), 16).length) return "sheet_symbol_mismatch";
+      var btns = Array.prototype.slice.call(r.querySelectorAll("button,[role=button]")).filter(function (x) { return vis(x) && /^close\s*position$/i.test(t(x)); });
+      if (btns.length !== 1) return "n" + btns.length;
+      btns[0].click(); return "clicked";
+    },
     rowClose: function (sym, sideRe) {
       var n = norm(sym); var rx = new RegExp(sideRe, "i");
       var r = all("tr,[role=row]").filter(function (r) { var s = t(r); return norm(s).indexOf(n) >= 0 && rx.test(s); })[0];

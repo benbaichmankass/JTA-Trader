@@ -1008,5 +1008,14 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
   eq(typeof grid.r[2] === "number" && grid.c.length >= 3, true, "snapshot grid: rects and children present");
   const small = await snapPg.evaluate("__ex.snapshot('roots', 30)");
   eq([small.cut, small.roots.every((r) => r.k !== "body")], [true, true], "snapshot: a node budget cuts and says so; scope roots has no body");
+  // TEST-TRADE CLOSE (MD-EXEC-DEV-TEST-TRADES): the sheet's "Close position" is clickable ONLY when armed for that symbol
+  const tc = await onHost(sheetPage().replace('<div id=sheet style="display:none">', '<div id=sheet>'));
+  eq(await tc.evaluate("__ex.sheetClosePosition('ETHUSD')"), "not_armed", "test close: unarmed -> refused, nothing clicked");
+  eq(await tc.evaluate("__ex.deniedSel('#pd [data-danger]')"), "deny_close_position", "test close: every other path still refuses Close position");
+  await tc.evaluate("__ex.allowClose('SOLUSD')");
+  eq([await tc.evaluate("__ex.sheetClosePosition('ETHUSD')"), await tc.evaluate("window.__danger")], ["not_armed", 0], "test close: an arm for another symbol never fires, and is spent");
+  await tc.evaluate("__ex.allowClose('ETHUSD')");
+  eq([await tc.evaluate("__ex.sheetClosePosition('ETHUSD')"), await tc.evaluate("window.__danger")], ["clicked", 1], "test close: armed for the sheet's symbol -> the ONE Close position button is clicked");
+  eq(await tc.evaluate("__ex.sheetClosePosition('ETHUSD')"), "not_armed", "test close: one arm, one click");
   await b.close(); console.log("exec_check: all passed");
 })().catch((e) => { console.error(e); process.exit(1); });
