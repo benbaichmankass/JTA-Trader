@@ -72,6 +72,9 @@ jobs:
           npm init -y >/dev/null && npm i playwright@1.49.1 >/dev/null
           npx playwright install --with-deps chromium >/dev/null
           cd "$GITHUB_WORKSPACE" && NODE_PATH="$RUNNER_TEMP/pw/node_modules" node tools/phone-executor/test/exec_check.js
+      - name: Real-page fixtures (captured DOM snapshots, numbers replaced; PHONE-EXEC-OBSERVABLE-1018)
+        timeout-minutes: 10
+        run: NODE_PATH="$RUNNER_TEMP/pw/node_modules" node tools/phone-executor/test/exec_fixtures_check.js
 
   apk:
     needs: check

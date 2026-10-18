@@ -180,6 +180,18 @@ def _fail(tr: Dict[str, Any], tid: str, at: str, what: str, alerts: List[str], *
         logger.warning("phone_trail: %s: attempt failed again (%s x%d): %s", tid, counter, n, what)
 
 
+def _hand_set_alert(tid: str, row: Mapping[str, Any], am: Mapping[str, Any], reason: str, cap_run: str) -> str:
+    """A LIVE amend the phone refused before any click (PHONE-EXEC-OBSERVABLE-1018, piece 5; operator 2026-10-18):
+    the trail keeps retrying with backoff, and EVERY refusal tells the operator the exact stop to set by hand, with
+    the link to that attempt's per-step captures (``capture_run`` from the phone's report)."""
+    from src.prop import phone_captures
+    tp = f"; TP -> {am.get('tp')}" if am.get("tp") is not None and am.get("tp") != am.get("from_tp") else ""
+    link = phone_captures.capture_link(str(row["account_id"]), cap_run) if cap_run else "none posted"
+    return (f"{tid}: LIVE amend REFUSED before any click ({reason[:120]}). SET THE STOP BY HAND on the terminal: "
+            f"{row['symbol']} {row['direction']} stop -> {am.get('sl')} (from {am.get('from_sl')}){tp}. "
+            f"The trail retries with backoff. Step captures: {link}")
+
+
 def _ok(tr: Dict[str, Any], tid: str, alerts: List[str]) -> None:
     """An attempt succeeded: the streak and its backoff clear; a raised flag is announced recovered once."""
     tr["fails"], tr["no_position"], tr["absent"] = 0, 0, 0
@@ -461,6 +473,7 @@ def record_amend_result(device: Any, body: Mapping[str, Any], *, now: Optional[d
         raise ValueError("amend_result.result invalid")
     reason = str(body.get("reason") or "")[:300]
     form = body.get("form") if isinstance(body.get("form"), dict) else {}
+    from src.prop import phone_captures, phone_executor as pe
     from src.utils.json_notes import dump_capped
 
     conn = prop_journal._connect()
@@ -484,7 +497,11 @@ def record_amend_result(device: Any, body: Mapping[str, Any], *, now: Optional[d
             if not (sl_ok and tp_ok):
                 reason = f"phone said amended but read back sl={sl_read} tp={tp_read} (asked sl={am['sl']} tp={am.get('tp')}); " + reason
                 result = "mismatch"
-        am.update(status=result, reported_at=now.isoformat(), reason_reported=reason, sl_read=sl_read, tp_read=tp_read)
+        cap_run = str(body.get("capture_run") or "")
+        if cap_run and not phone_captures._RUN_RE.match(cap_run):
+            cap_run = ""
+        am.update(status=result, reported_at=now.isoformat(), reason_reported=reason, sl_read=sl_read, tp_read=tp_read,
+                  **({"capture_run": cap_run} if cap_run else {}))
         if form:
             am["form"] = json.loads(dump_capped(form, 12000))
         tr["amend"] = am
@@ -518,8 +535,12 @@ def record_amend_result(device: Any, body: Mapping[str, Any], *, now: Optional[d
                       first="the phone found no matching row in Positions (limit not filled yet, or a layout it "
                             "cannot read; rows dump in the ticket's phone_trail); re-checked with backoff")
         elif result == "refused":
+            live = pe.submit_mode(acct, test=False) == "live"
             _fail(tr, tid, at, f"refused before any click: {reason[:120]}", alerts,
-                  first=f"amend to SL {am.get('sl')} refused before any click ({reason[:120]}); retried with backoff")
+                  first=None if live else f"amend to SL {am.get('sl')} refused before any click ({reason[:120]}); "
+                                           "retried with backoff")
+            if live:
+                alerts.append(_hand_set_alert(tid, r, am, reason, cap_run))
         elif result == "human_moved":
             tr["human_hold"] = f"{_HUMAN_LOCK_PREFIX} from the server's: a human moved it"
             alerts.append(f"{tid}: the terminal shows a stop/target other than the server's ({reason[:120]}); "
