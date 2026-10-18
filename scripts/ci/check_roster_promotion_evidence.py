@@ -98,8 +98,9 @@ THE PAIRS SLEEVE IS A SECOND DOOR, SO IT IS COVERED
 The M22 market-neutral sleeve is an ISOLATED 2-leg order path
 (`src.units.strategies.pairs_executor`) whose gate lives in `config/pairs.yaml`,
 not in `strategies.yaml`. Measured 2026-09-21: `account_id: bybit_1` (paper) with
-`pairs_bnb_btc` and `pairs_sol_eth` at `execution: live`. So repointing ONE
-`account_id:` line arms two live pairs on a real-money account, touching neither
+`pairs_bnb_btc` and `pairs_sol_eth` at `execution: live` (both shadow since
+2026-10-16, PAIRS-R-SCALE; only non-shadow pairs are counted). So repointing ONE
+`account_id:` line could arm every live pair on a real-money account, touching neither
 roster this guard would otherwise read. That is the same question through a
 different file, so it is the same guard.
 

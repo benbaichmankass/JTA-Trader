@@ -1,0 +1,21 @@
+{
+  "id": "PROP-PKG-DBONLY-CLOSE",
+  "title": "breakout_2 pkg-c8cf8f06ac524830 reads closed/sl_cross @2427.28 while the venue position is OPEN (DB-only close against a different SL)",
+  "phase": null,
+  "state": "queued",
+  "owner": "unassigned",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-18T08:05Z lane session_01F9PWVy6Mb5mrtGm5xu31cG; operator-approved filing relayed by manager 08:00Z] MEASURED 2026-10-17 14:46Z: /api/bot/prop/tickets?account_id=breakout_2, ticket prop-manual-c1dba3c376b3 (status filled, phone ETH short 0.52 @2405.89, resting SL inferred 2452.65 -- the ticket message's stop) has its order package pkg-c8cf8f06ac524830 at op_status=closed, close_reason=sl_cross, op sl 2427.27914 (not the 2452.65 the phone placed). The package row closed DB-only while the venue position is open, so the trade will be graded on a fabricated sl_cross exit. Next: find which monitor closed it (src/runtime/order_monitor.py sl_cross path vs prop phone accounts) and why its SL is 2427.28; fix so phone-executed prop packages close only from phone_reconcile (MEASURED venue close). Rerun: curl /api/bot/prop/tickets?account_id=breakout_2 and read op_status/close_reason/sl for that ticket.",
+  "updated_at": "2026-10-18T08:10:09Z",
+  "updated_by": "session_01F9PWVy6Mb5mrtGm5xu31cG",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "_seq": 561
+}

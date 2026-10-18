@@ -1,6 +1,6 @@
 id: RQ-20261015-8b93-01
 title: 'Training parity, REFERENCE side: train eth-regime-1h-lgbm-v1 on the trainer VM on rows ts < 2026-10-01 (no registry write)'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -77,16 +77,16 @@ related:
 - RQ-20261015-8b93-02
 - scripts/research/train_parity.py
 - docs/plans/KAGGLE-TRAINING-PIPELINE-DESIGN-2026-10-13.md
-last_dispatched_at: null
+last_dispatched_at: '2026-10-15T23:42:10+00:00'
 grading:
   attested: RULE-RQ20261015-8b93-01-PARITY-REFERENCE
   auto: true
   decision_rule_id: RULE-RQ20261015-8b93-01-PARITY-REFERENCE
   evidence:
   - research/results/RQ-20261015-8b93-01/38730580651.jsonl
-  graded_at: '2026-10-15'
+  - research/results/RQ-20261015-8b93-01/38825178156.jsonl
+  graded_at: '2026-10-16'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  reason: 1 row(s), all measured, all pass (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
   rows: 1
-  verdict: null
+  verdict: pass

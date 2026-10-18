@@ -1,0 +1,102 @@
+{
+  "kind": "ppi_mom",
+  "symbol": "ES=F",
+  "snapshot_files": [
+    "comms/macro/econ_calendar_snapshots.jsonl",
+    "comms/macro/econ_calendar_snapshots_survey_backfill.jsonl"
+  ],
+  "releases": 140,
+  "releases_with_value": 140,
+  "price_bars": 5489,
+  "first_release": "2015-01-15",
+  "last_release": "2026-10-15",
+  "release_start": null,
+  "release_end": null,
+  "anchor_shift_td": 0,
+  "releases_after_window": 140,
+  "rows": [
+    {
+      "horizon_days": 3,
+      "n": 139,
+      "ic": -0.281432,
+      "ic_t": -3.433,
+      "overlap_factor": 1.0,
+      "n_eff": 139.0,
+      "ic_t_eff": -3.433,
+      "pearson": -0.318122,
+      "sign_hit_rate": 0.40678,
+      "mean_fwd_return": 0.003645
+    }
+  ],
+  "summary": {
+    "max_n": 139,
+    "min_honest_n": 12,
+    "sufficient_history": true,
+    "any_flagged_horizon": true,
+    "any_flagged_horizon_overlap_corrected": true,
+    "strongest_ic_horizon_days": 3,
+    "strongest_ic": -0.281432,
+    "strongest_ic_t": -3.433,
+    "strongest_ic_t_eff": -3.433,
+    "t_flag": 2.0,
+    "verdict": "surprise_predicts_forward_return"
+  },
+  "rule": {
+    "primary": [
+      3
+    ],
+    "min_n": 100,
+    "t_bar": 2.4,
+    "expected_sign": "negative"
+  },
+  "per_horizon": [
+    {
+      "horizon_days": 3,
+      "n": 139,
+      "ic": -0.281432,
+      "ic_t_eff": -3.433,
+      "n_ok": true,
+      "t_reached": true,
+      "sign_ok": true
+    }
+  ],
+  "sign_book": {
+    "horizon_days": 3,
+    "cost_frac_roundtrip": 0.00125,
+    "book_net": {
+      "n": 118,
+      "mean": 0.00221264,
+      "t": 1.531
+    },
+    "floor_all_long_net": {
+      "n": 118,
+      "mean": 0.00341019,
+      "t": 2.409
+    },
+    "book_minus_floor": {
+      "n": 118,
+      "mean": -0.00119755,
+      "t": -0.587
+    },
+    "book_hit_rate": 0.5424,
+    "cost_stack": {
+      "cost_symbol": "MES",
+      "fee_bps_roundtrip": 7.5,
+      "fee_source": "execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP (venue rate unset)",
+      "slippage_bps_roundtrip": 5.0,
+      "funding_bps_per_window": 0.0,
+      "funding_applied": false,
+      "total_bps_roundtrip": 12.5,
+      "cost_frac": 0.00125
+    }
+  },
+  "ic_grade": {
+    "verdict": "pass",
+    "note": "a pre-registered horizon reached the t-bar in the expected sign (evidence for a build row, not a leg: costs, tradeable timing and a placebo are still owed)"
+  },
+  "trade_rule": {
+    "horizon": 3,
+    "min_n": 100,
+    "t_bar": 2.0
+  }
+}

@@ -65,7 +65,11 @@ def harness_kwargs(block: dict, family: str) -> Tuple[Dict[str, Any], List[str]]
     kw: Dict[str, Any] = dict(FIXED)
     unmodelled = []
     for k, v in block.items():
-        if k in NON_LEVER:
+        if k in NON_LEVER or k.startswith("decision_bar"):
+            # decision_bar* keys are the LIVE decision mode and its windows, never a
+            # harness lever: the two arms set decision_bar themselves. Passing the
+            # block's `decision_bar: closed` through crashed the forming arm on
+            # trend_donchian_xrp_4h (DECISION-BAR-CLOSED-1018, 2026-10-18).
             continue
         if k in accepted:
             kw[k] = str(v) if k == "skip_hours" else v

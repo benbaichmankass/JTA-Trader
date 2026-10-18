@@ -6,6 +6,51 @@
 # this guard must remain "route the work to a session", because that is the
 # behaviour wanted.
 exceptions:
+  - id: MGR-20261018-EXEC-TEST-TRADES-GRANT
+    status: active
+    expires: "2026-10-21"
+    paths:
+      - "config/mandates.yaml"
+    reason: >-
+      OPERATOR GRANT, 2026-10-18 ~08:05Z, in manager session
+      session_01VduHYzdaXe27wTDBLSu8ao: a standing mandate for test trades to
+      verify the phone executor's operations (verbatim text in the
+      MD-EXEC-DEV-TEST-TRADES entry's source). The lane's classifier refused
+      the write because the grant reached it only relayed. The operator then
+      told the manager, verbatim: "the default fix for permissions is always to
+      try taking you off auto mode to impelment the changes first, not giving
+      me text to paste into a seperate session", and "Off auto mode". That
+      names the MANAGER as the author, so routing it to a lane is not what was
+      asked.
+
+      WHAT IT COVERS: the single commit that adds MD-EXEC-DEV-TEST-TRADES to
+      config/mandates.yaml. Nothing else in that file.
+  - id: MGR-20261015-SOAK-AMEND-GRANT
+    status: active
+    expires: "2026-10-18"
+    paths:
+      - "config/mandates.yaml"
+      - "tests/test_mandate_resolver.py"
+    reason: >-
+      OPERATOR GRANT, 2026-10-15 ~21:05Z, popup in manager session
+      session_01VduHYzdaXe27wTDBLSu8ao, verbatim "Grant as written
+      (Recommended)" on MD-PROMOTE-S1-S2-SOAK-AMEND. The SOAK-REDEFINE lane's
+      write was refused by the permission classifier, and so was the manager's
+      first attempt; the operator then told the manager in chat, verbatim:
+      "go ahead, retry the mandates.yaml grant write", and for this exception
+      entry, verbatim: "granted permision for the rewrite", then answered the
+      unlock popup "Approve one prompt (Recommended)" and left auto mode for
+      it. That names the MANAGER as the author, so the guard's normal remedy
+      (route it to a session) is not what was asked, and a lane re-committing
+      it would misattribute a real-money authorization.
+
+      WHAT IT COVERS: PR #18445 commit eeb0de70 only -- folds
+      MD-PROMOTE-S1-S2-SOAK-AMEND into MD-PROMOTE-S1-S2 (amended_at /
+      amendment_source, never: soak = SOAKS.json passed, fires_when:
+      venue-symbol measured cost, bar.soak_passed, bar.cost_basis:
+      venue_symbol, proposed: []) plus the GLD R-AFFORD test fixture, which
+      needs a passed soak contract now that the soak clause precedes
+      affordability. Nothing else in those files.
   - id: MGR-20261005-AUTOMERGE-BRANCH-WIDEN
     status: active
     expires: "2026-10-08"

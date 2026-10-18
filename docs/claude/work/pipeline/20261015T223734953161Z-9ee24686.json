@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "the rerun prints nothing",
+    "due_date": "2026-10-17",
+    "kind": "date"
+  },
+  "id": "PI-20261015-OAKREDEF-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane SOAK-REDEFINE 2026-10-15 (session_01U3P3WrxwXu4Zjg6vryRGjF), PR #18445",
+    "rerun": "grep -n 'soak accrues' config/accounts.yaml"
+  },
+  "state": "queued",
+  "terminal_reason": null,
+  "what": "[doc-drift] config/accounts.yaml:229 comment teaches an accruing soak ('they STAY LIVE there while this soak accrues'), contrary to the mechanical soak rule (OPERATING-PLAN §2, SOAK-RULE-CANONICAL; PR #18445). Lane SOAK-REDEFINE was forbidden to edit accounts.yaml; a lane granted accounts.yaml rewrites the comment to the mechanical wording (a soak passes on 1-2 clean trades). Comment-only, no roster/field change."
+}

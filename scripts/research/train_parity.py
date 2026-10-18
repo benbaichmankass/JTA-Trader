@@ -173,7 +173,7 @@ def train_once(manifest_path: Path, root: Path, cutoff: str, workdir: Path) -> D
             "eval_predictions": codes, "class_labels": labels,
             "eval_predictions_sha256": hashlib.sha256(codes.encode()).hexdigest(),
             "model_state_sha256": hashlib.sha256(artifacts.model_state_path.read_bytes()).hexdigest(),
-            "train_wall_s": round(wall, 2)}
+            "train_wall_s": round(wall, 2), "_experiment_dir": str(artifacts.experiment_dir)}
 
 
 def compare(ref: Dict[str, Any], cur: Dict[str, Any]) -> Dict[str, Any]:
@@ -228,6 +228,27 @@ def latest_reference(unit: str, repo: Path = _REPO) -> Optional[Dict[str, Any]]:
     return best
 
 
+def emit_drop(parity_verdict: str, experiment_dir: Optional[str], out: Path, a: argparse.Namespace,
+              rec: Dict[str, Any]) -> Dict[str, Any]:
+    """Only a parity PASS may leave as a drop: the gate is what admits an off-VM artefact (design doc section 4)."""
+    if parity_verdict != "pass":
+        return {"state": "not_emitted", "note": f"parity verdict {parity_verdict}; only a PASS is emitted"}
+    if not experiment_dir:
+        return {"state": "not_emitted", "note": "no experiment dir"}
+    from scripts.ml.offload import emit_bundle  # noqa: PLC0415
+    inbox = out / "offload-inbox"
+    inbox.mkdir(parents=True, exist_ok=True)
+    ds = rec.get("dataset") or {}
+    parts = str(ds.get("rel_path", "")).split("/")      # datasets-out/<family>/<symbol>/<tf>/<version>/data.jsonl
+    state, note, row = emit_bundle.emit(
+        run_dir=Path(experiment_dir), inbox=inbox, source=f"train-parity-{a.backend}",
+        code_revision=os.environ.get("GITHUB_SHA", "unknown"), run_url="",
+        symbol=parts[2] if len(parts) > 5 else "", timeframe=parts[3] if len(parts) > 5 else "",
+        dataset_version=parts[4] if len(parts) > 5 else "", emitted_at=datetime.now(timezone.utc).isoformat())
+    return {"state": state, "note": note, "artifact_dir": (row or {}).get("artifact_dir"),
+            "input_sha256": ds.get("sha256_used"), "model_state_sha256": rec.get("model_state_sha256")}
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--manifest", required=True, help="manifest id under ml/configs/ (no .yaml)")
@@ -237,6 +258,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--unit", default=None)
     ap.add_argument("--reference-unit", default=None, help="compare against this unit's newest record (off-VM side)")
     ap.add_argument("--datasets-root", default=None, help="default datasets-out (ignored when $ML_DATA_ROOT is set)")
+    ap.add_argument("--emit-drop", action="store_true",
+                    help="on a parity PASS only, materialize the trained run as an ml/offload-inbox drop under "
+                         "<out>/offload-inbox/ (emit_bundle format). Registers nothing; the drain stays unarmed.")
     a = ap.parse_args(argv)
 
     out = Path(a.out)
@@ -253,13 +277,21 @@ def main(argv: Optional[List[str]] = None) -> int:
         declared = ((yaml.safe_load(unit_file.read_text()) or {}).get("train_parity") or {}).get("manifest")
         if declared != a.manifest:   # the router checked the published allowlist against train_parity.manifest
             rec["error"] = f"--manifest {a.manifest!r} != the unit's train_parity.manifest {declared!r}"
-    with tempfile.TemporaryDirectory(prefix="train_parity_") as tmp:
-        try:
-            if rec.get("error"):
-                raise RuntimeError(rec["error"])
-            rec.update(train_once(manifest_path, data_root(a.datasets_root), a.cutoff, Path(tmp)))
-        except Exception as exc:  # noqa: BLE001  # allow-silent: recorded in train_parity.json and graded producer_failed
-            rec["error"] = f"{type(exc).__name__}: {exc}"
+    tmp = tempfile.mkdtemp(prefix="train_parity_")
+    try:
+        return _run(a, out, manifest_path, rec, Path(tmp))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def _run(a: argparse.Namespace, out: Path, manifest_path: Path, rec: Dict[str, Any], tmp: Path) -> int:
+    try:
+        if rec.get("error"):
+            raise RuntimeError(rec["error"])
+        rec.update(train_once(manifest_path, data_root(a.datasets_root), a.cutoff, tmp))
+    except Exception as exc:  # noqa: BLE001  # allow-silent: recorded in train_parity.json and graded producer_failed
+        rec["error"] = f"{type(exc).__name__}: {exc}"
+    experiment_dir = rec.pop("_experiment_dir", None)
     (out / RECORD).write_text(json.dumps(rec, indent=1, sort_keys=True) + "\n")
 
     if rec.get("error"):
@@ -292,6 +324,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                        "measurement": {"agreement": c["agreement"], "deltas": c["deltas"],
                                        "train_wall_s": {"reference": ref.get("train_wall_s"), "candidate": rec.get("train_wall_s")}},
                        "note": "; ".join(c["reasons"]) or "all metrics within tolerance"}
+            if a.emit_drop:
+                verdict["measurement"]["drop"] = emit_drop(c["verdict"], experiment_dir, out, a, rec)
     (out / "verdict.json").write_text(json.dumps(verdict, indent=1, sort_keys=True) + "\n")
     print(json.dumps({k: verdict[k] for k in ("verdict", "read_state", "note") if k in verdict}))
     return 0

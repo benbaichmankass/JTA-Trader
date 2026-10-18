@@ -1,0 +1,166 @@
+{
+  "leg": "gld_pullback_1d",
+  "grade": {
+    "verdict": "pass",
+    "label": "stage0_edge",
+    "baseline": "B",
+    "net_r": 46.3103,
+    "n": 135,
+    "max_drawdown_r": 8.6957,
+    "folds_positive": 8,
+    "n_folds": 8,
+    "fold_majority": 5,
+    "n_floor": 39,
+    "control": null,
+    "why": "net_r=46.3103 > 0 with 8/8 positive folds at this arm's cost stack"
+  },
+  "arms": {
+    "B": {
+      "reach_ge_6r": 0.0074,
+      "n": 135,
+      "net_r": 46.3103,
+      "net_r_fee_only": 49.121,
+      "max_drawdown_r": 8.6957,
+      "by_outcome": {
+        "trail_stop": 41,
+        "take_profit": 26,
+        "stop": 68
+      },
+      "mean_bars_held": 21.333,
+      "net_r_per_capital_day": 0.0161,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 15,
+        "pullback_frac": 0.618,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2006-10-02 00:00:00+00:00",
+      "data_end": "2025-04-09 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2006-10-02 00:00:00+00:00",
+          "end": "2009-01-24 12:00:00+00:00",
+          "trades": 17,
+          "net_r": 6.4254
+        },
+        {
+          "fold": 2,
+          "start": "2009-01-24 12:00:00+00:00",
+          "end": "2011-05-20 00:00:00+00:00",
+          "trades": 19,
+          "net_r": 8.0172
+        },
+        {
+          "fold": 3,
+          "start": "2011-05-20 00:00:00+00:00",
+          "end": "2013-09-11 12:00:00+00:00",
+          "trades": 16,
+          "net_r": 2.4747
+        },
+        {
+          "fold": 4,
+          "start": "2013-09-11 12:00:00+00:00",
+          "end": "2016-01-05 00:00:00+00:00",
+          "trades": 21,
+          "net_r": 0.0395
+        },
+        {
+          "fold": 5,
+          "start": "2016-01-05 00:00:00+00:00",
+          "end": "2018-04-29 12:00:00+00:00",
+          "trades": 18,
+          "net_r": 4.6081
+        },
+        {
+          "fold": 6,
+          "start": "2018-04-29 12:00:00+00:00",
+          "end": "2020-08-22 00:00:00+00:00",
+          "trades": 13,
+          "net_r": 15.8047
+        },
+        {
+          "fold": 7,
+          "start": "2020-08-22 00:00:00+00:00",
+          "end": "2022-12-15 12:00:00+00:00",
+          "trades": 16,
+          "net_r": 3.3264
+        },
+        {
+          "fold": 8,
+          "start": "2022-12-15 12:00:00+00:00",
+          "end": "2025-04-09 00:00:00+00:00",
+          "trades": 15,
+          "net_r": 5.6141
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "15",
+        "--pullback-frac",
+        "0.618",
+        "--data",
+        "<data>",
+        "--symbol",
+        "GLD",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261016-c56e-18/39106327970/arms/B__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261016-c56e-18/39106327970/arms/B__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--start",
+        "2006-10-02",
+        "--end",
+        "2025-04-09"
+      ]
+    }
+  },
+  "window": {
+    "start": "2006-10-02",
+    "end": "2025-04-09",
+    "fetch_days": 7414,
+    "feed": {
+      "source": "yahoo",
+      "ticker": "GLD",
+      "interval": "1d",
+      "resample": "1d"
+    },
+    "fold_edges": [
+      "2006-10-02 00:00:00+00:00",
+      "2009-01-24 12:00:00+00:00",
+      "2011-05-20 00:00:00+00:00",
+      "2013-09-11 12:00:00+00:00",
+      "2016-01-05 00:00:00+00:00",
+      "2018-04-29 12:00:00+00:00",
+      "2020-08-22 00:00:00+00:00",
+      "2022-12-15 12:00:00+00:00",
+      "2025-04-09 00:00:00+00:00"
+    ]
+  }
+}

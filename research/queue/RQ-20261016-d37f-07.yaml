@@ -1,0 +1,104 @@
+# AUTHORED by lane RESEARCH-CONFIRM-FRESH-WINDOW-1016 (session_01Rbp2XYYVcNZ3EvqotFUExV) with
+# queue_grade.confirmation_unit: the holdout re-run of RQ-20261005-015's PASS (operator 2026-10-16, 'Holdout re-run').
+id: RQ-20261016-d37f-07
+title: 'Holdout re-run of RQ-20261005-015: M20 exit-lever sweep: slv_pullback_1d (generated, monthly)'
+status: done
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 3
+question: 'HOLDOUT RE-RUN of RQ-20261005-015''s single-window PASS: with the latest ~0.26 of each leg''s
+  history held back BEFORE selection, does a cell still clear the SAME registered gate on the earlier
+  span, and does it hold on the held-back span? Original question: Which hard exit levers (stale_stop,
+  giveback_stop, trail_geometry, trail_decay, vol_trail) clear the exit-refinement P2 gate on slv_pullback_1d
+  (SLV 1d) on the data available now -- and does last month''s answer still hold?'
+why_this_matters: Exit-lever evidence goes stale as new trades accrue; a monthly re-sweep per live leg
+  keeps docs/research/exit-refinement-coverage.json honest and turns a passing cell into a Tier-3 declare
+  proposal with a fresh record.
+power:
+  expected_n: 25
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: MIN_OOS_TRADES=25 is the gate's own floor (RULE-EXIT-REFINEMENT-P2-GATE); a leg below it grades
+    insufficient_base, not fail. The sweep derives the IS/OOS boundary to target that OOS count (split_mode
+    oos-trades).
+  feasibility:
+    source: none
+    accrual_basis: Runs on whatever history the trainer holds for the leg; nothing waits.
+decision_rule:
+  id: RULE-EXIT-REFINEMENT-P2-GATE
+  statistic: 'Per cell: IS and OOS delta net_R and delta maxDD vs the base book; base OOS trade count.'
+  rule: A cell PASSES iff it clears Path A (beats baseline on net_R AND maxDD in BOTH IS and OOS) OR Path
+    B (improves net_r_per_capital_day in BOTH IS and OOS with maxDD not worsening and net_R not falling
+    more than the declared floor), AND the base book holds >= 25 OOS trades, AND the drawdown grant is
+    capped at the base book's own D_b. Below the floor grades insufficient_base. No cell is shipped by
+    this unit.
+  registered_at: '2026-10-05'
+  registered_before_run: true
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 40
+  basis: one leg per unit; the workflow scp's the leg's frames from the trainer and sweeps on the runner.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-ATM
+run:
+  workflow: m20-exit-lever-sweep.yml
+  inputs:
+    legs: slv_pullback_1d
+    tp_cap_pct: '0.099'
+    split_mode: oos-trades
+    research_unit: RQ-20261016-d37f-07
+    holdout_frac: '0.26'
+requires_result:
+  unit: RQ-20261005-015
+  verdict: pass
+confirmation:
+  of: RQ-20261005-015
+  mode: holdout_rerun
+  policy: 'operator 2026-10-16 (popup, ''Holdout re-run''): "From now on, each sweep holds back the most
+    recent ~25% of history before it chooses settings, then tests the winner on that held-back part, so
+    discovery and confirmation come from one run with no wait. The 13 current passes get re-run that way
+    now, within days. Cost: each choice is made on 25% less data."'
+  holdout_frac: '0.26'
+  selected_from_cells: 25
+  passing_cells:
+  - ms8_a20
+  note: 'RQ-20261005-015 PASSED on one full-history window, selected from 25 cell(s); passing [''ms8_a20''].
+    This re-run CONFIRMS only when a cell selected on the earlier span passes on the held-back span (measurement.holdout.confirmation
+    == confirmed); not_replicated closes the configuration, never the family. Until then RQ-20261005-015
+    may not feed a Tier-3 proposal. Holdout share 0.26: estimated from 195 lifetime base trades (IS+OOS
+    of the nearest committed m20 corpus run for this leg); the sweep re-derives the boundary from the
+    run''s own trades and grows the share to the 25-trade floor, capped at 0.40. The default 25% holds
+    only ~48 trades here (< the 25 floor), so the share is raised to 0.26.'
+last_dispatched_at: '2026-10-17T01:05:06+00:00'
+grading:
+  auto: true
+  confirmation: not_replicated
+  confirms: RQ-20261005-015
+  decision_rule_id: RULE-EXIT-REFINEMENT-P2-GATE
+  evidence:
+  - research/results/RQ-20261016-d37f-07/38989355934.jsonl
+  graded_at: '2026-10-17'
+  grader: scripts/research/queue_grade.py
+  holdout:
+    base_trades: 50
+    boundary: '2021-03-22'
+    confirmation: no_discovery
+    confirmed_cells: []
+    selected_from: 25
+    share_used: 0.264
+    state: ok
+  note: 'holdout re-run of RQ-20261005-015: not_replicated (selected from 25 cell(s), holdout from 2021-03-22,
+    base n 50). A FAIL closes the configuration, never the family.'
+  reason: 1 row(s), all measured, all no_action_warranted
+  rows: 1
+  verdict: no_action_warranted

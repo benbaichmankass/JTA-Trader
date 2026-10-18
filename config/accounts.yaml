@@ -421,7 +421,28 @@ accounts:
     market_type: linear                # PR 3 — Bybit V5 USDT-margined
                                        # linear perpetuals. Was
                                        # spot-margin pre-cutover.
-    strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h]
+    strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop]
+                                       # ── PROMOTE-PROP-LEGS, 2026-10-15 (Tier-3, operator PRE-AUTHORIZED).
+                                       # ONE LEG ADDED, identically and in the same order on
+                                       # bybit_2 AND bybit_portfolio: trend_donchian_sol_prop.
+                                       # OPERATOR, verbatim 2026-10-15 ~20:15Z: "And if those legs
+                                       # are ready to be promoted, then promote them. You have
+                                       # pre-authorization." Same day: "if they've passed a soak test
+                                       # trading live on the prop accounts, that should count as a
+                                       # pass and they can go live on bybit 2 as well".
+                                       # 2026-10-16 (lane PROMOTE-SOL-S2): operator, verbatim 2026-10-15
+                                       # ~22:47Z: "you can promote the strategies waiting on fold tests
+                                       # if they pass". STAGE 0: comms/strategy_evidence/trend_donchian_sol_prop.json
+                                       #   RQ-20261015-f01d-01: 8 calendar folds, 6/8 positive, net +60.60R
+                                       #   n=394 OOS, full cost stack. mandate_resolver MD-PROMOTE-S1-S2: FIRE.
+                                       # MECHANICAL SOAK (live prop, /api/bot/prop/fills): tradeify_1
+                                       #   ticket prop-manual-c245b7e56125 (pkg-c58bbadd9b9a492f),
+                                       #   fills #102/#103/#105: long, SL+TP rested, exit reason=sl.
+                                       # Risk sizing UNCHANGED. SOLUSDT added to `symbols:` below.
+                                       # trend_donchian_eth_prop is NOT added: it waits on per-strategy
+                                       # netted slices (lane NETTED-SLICES, PI-20261015-FOYBZ9CV-0001).
+                                       # REVERT: remove trend_donchian_sol_prop here and SOLUSDT from
+                                       # `symbols:`, on BOTH bybit_2 and bybit_portfolio.
                                        # ── R8 WIRING, 2026-09-22 (Tier-3). ONE LEG ADDED:
                                        #   ada_pullback_2h   4/4 folds  +21.93R  n=44
                                        # It passes RULE-D1-STAGE0-NET-OF-FULL-COST on the
@@ -708,7 +729,7 @@ accounts:
                                        # normally via native Bybit SL/TP brackets (S3:
                                        # 96% native bracket fires) — de-routing stops
                                        # NEW entries + trail updates, not exits.
-    symbols: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT]
+    symbols: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT]   # SOLUSDT: PROMOTE-PROP-LEGS 2026-10-15
                                        # ── AVAXUSDT WAS ADDED HERE 2026-09-22 AND THEN
                                        # REVERTED THE SAME DAY. Keeping the record because
                                        # the NEAR-MISS is the point, not the symbol:
@@ -793,7 +814,11 @@ accounts:
     mode: live                         # demo = paper money; live is correct.
     market_type: linear                # USDT-margined linear perps (mirrors
                                        # bybit_2); set-leverage fires at boot.
-    strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h]
+    strategies: [xrp_pullback_2h, trend_donchian_eth_4h, trend_donchian_xrp_4h, ada_pullback_2h, trend_donchian_sol_prop]
+                                       # ── PROMOTE-PROP-LEGS, 2026-10-15 — FOLLOWS bybit_2's addition
+                                       # of trend_donchian_sol_prop IDENTICALLY (ordered mirror
+                                       # equality, test_bybit_portfolio_mirrors_bybit_2_exactly).
+                                       # Evidence + revert: see bybit_2's comment.
                                        # ── R8 WIRING, 2026-09-22 — FOLLOWS bybit_2's
                                        # single addition IDENTICALLY AND IN THE SAME
                                        # ORDER, in the same commit. This is not
@@ -858,7 +883,7 @@ accounts:
                                        # execution: live since the 2026-07-20 Tier-3
                                        # re-promotion, so this book was EXECUTING it,
                                        # not shadow-logging it. Field beats comment.
-    symbols: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT]  # mirrors bybit_2.symbols.
+    symbols: [BTCUSDT, ETHUSDT, XRPUSDT, ADAUSDT, SOLUSDT]  # mirrors bybit_2.symbols.
     risk:
       max_dd_pct: 0.05                 # mirrors bybit_2's caps.
       daily_loss_pct: 0.05

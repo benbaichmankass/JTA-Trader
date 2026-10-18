@@ -1,0 +1,116 @@
+id: RQ-20261016-c56e-14
+title: 'Re-validation at power, prop (MD-PROMOTE-S1-S2 clause): does trend_donchian_eth_prop AS DECLARED clear Stage 0 on the disjoint window before its
+  committed record (2020-10-15 .. 2025-10-06), net of the full cost stack?'
+status: done
+cadence: once
+theme: new_strategy_prop
+priority: 1
+kind: experiment
+question: On 2020-10-15 .. 2025-10-06 23:00 (disjoint from, and immediately preceding, the committed record's window), is trend_donchian_eth_prop at its
+  configured params net-positive with >= 5 of 8 calendar folds net > 0, at n >= 39?
+why_this_matters: 'Re-ask of RQ-20261015-f01d-02 (MD-PROMOTE-S1-S2 fold-majority clause for a prop leg, PROP-GATE-PARITY), which closed INDETERMINATE /
+  control_failed. MEASURED this lane from the committed run: all 163 record trades reappear in arm B with identical net_r; the ONE extra trade (entry 2025-10-07
+  14:00, +0.936 R) sits 14 bars after the record''s data_start, inside its 20-bar Donchian warm-up, so the record could not take it. The corpus does not
+  differ; --control-since does not skip warm-up (build row ABLATION-CONTROL-WARMUP). Rather than loosen the tolerance after seeing 0.94 R, this unit asks
+  the same fold-majority question on the window BEFORE the record, where no control is needed. f01d-02''s unread arm is not quoted.'
+power:
+  expected_n: 860
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo's standing E35 floor). expected_n=860 is an ESTIMATE from RQ-20261015-f01d-02's own
+    arm B (1029 trades over 2020-10-15..2026-10-06, of which 164 fall in the record's year), i.e. ~865 before it. Folds 8, majority 5 -- the same fold count
+    and majority f01d-02 registered.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched keyless candles over a pinned historical window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261016c56e14
+  registered_at: '2026-10-16'
+  registered_before_run: true
+  statistic: 'ONE arm B = the leg exactly as declared in config/strategies.yaml (argv built by regime_debt_matrix.build_harness_cmd; full cost stack fee
+    + resolved slippage + funding via execution_costs.resolve_cost_policy), graded by exit_lever_ablation.py --grade stage0: net_total_r, n, max_drawdown_r,
+    and net_r per fold over 8 equal calendar spans of the window. Reported, not graded: net_r_per_capital_day. NO positive control: no committed record
+    exists on this window (it is disjoint from and immediately precedes the leg''s record), the precedent being RQ-20261014-470a-01; the argv is built by
+    the same builder the committed record used, from the same config keys.'
+  rule: 'indeterminate IF n(B) < 39 (underpowered: no verdict, never FAIL on thin n). PASS IF net_r(B) > 0 AND >= 5 of 8 calendar folds net > 0: the leg
+    is positive in a fold majority over the five years before its record -- the fold-majority clause input MD-PROMOTE-S1-S2 asked f01d-02 for (the record
+    keeps its own 2/4 grade; the mandate resolver reads both). FAIL IF n >= 39 and that does not hold: the leg''s edge is not fold-consistent over five
+    years -- the prop leg does not meet the superset bar on this clause; a roster input for PROP-GATE-PARITY, nothing changed here. Windows are never pooled
+    with the committed record''s; the record keeps its own grade. The 0 R bar, the 5-of-8 fold majority and the 39 floor are not changed after any result.'
+  what_it_does_not_do: Does not edit config or any roster, does not tune (one arm, as declared), does not pool windows. Not a promotion case.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 400
+  confidence: 0.4
+  bucket: own_losses
+  basis: 'stand-in: prop leg live on three prop books plus the S1->S2 promotion case; same basis class as RQ-20261015-f01d-02. Estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  basis: One keyless candle fetch of ~2240 days and ONE harness pass over the pinned window.
+  why_runner: exit_lever_ablation.py fetches its own keyless candles (Binance Vision / Yahoo) and runs the repo harnesses; the symbol/timeframe is not in
+    metis-market-data and the script has no published-data input, so the Kaggle-CPU and trainer backends cannot take it.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_eth_prop
+  - --arm
+  - B=
+  - --days
+  - '2240'
+  - --start
+  - '2020-10-15'
+  - --end
+  - 2025-10-06 23:00
+  - --grade
+  - stage0
+  - --baseline
+  - B
+  - --delta-r
+  - '0'
+  - --folds
+  - '8'
+  - --fold-majority
+  - '5'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261016-c56e-14
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: research/results/RQ-20261016-c56e-14/<run_id>.jsonl via the batch collector; per-arm summaries and verdict.json under comms/research/RQ-20261016-c56e-14/<run_id>/.
+roadmap:
+- L-LADDER
+- L-PROP
+related:
+- P3-STRATEGY-BACKLOG-1016
+- docs/research/programmes/03-STRATEGY-IMPROVEMENT.md
+- research/programmes/03-strategy-improvement.yaml
+- scripts/research/exit_lever_ablation.py
+- RQ-20261015-f01d-02
+- PROP-GATE-PARITY
+- ABLATION-CONTROL-WARMUP
+last_dispatched_at: '2026-10-16T23:34:49+00:00'
+grading:
+  attested: RULE-RQ20261016c56e14
+  auto: true
+  decision_rule_id: RULE-RQ20261016c56e14
+  evidence:
+  - research/results/RQ-20261016-c56e-14/38982209722.jsonl
+  graded_at: '2026-10-17'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

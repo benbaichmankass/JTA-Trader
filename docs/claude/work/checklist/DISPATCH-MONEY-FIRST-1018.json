@@ -1,0 +1,33 @@
+{
+  "id": "DISPATCH-MONEY-FIRST-1018",
+  "title": "Research dispatcher: money first across themes (value score ranks across themes; theme share breaks ties; programme nodes count as asked)",
+  "phase": "W6",
+  "state": "done",
+  "owner": "lane DISPATCH-MONEY-FIRST-1018",
+  "lane": "session_01694UavUX2zc5qearbVjqyT",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    18894,
+    18912
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-18 lane DISPATCH-MONEY-FIRST-1018] Operator popup ~06:40Z 'Fix now, money first' (runner cap NOT raised, operator declined). MEASURED on run 39098686264 (04:56Z): github_runner 3/3 slots -> RQ-20261017-ae17-08/-09 (regime, 6.5) + ae17-45 (infra, 30.7); RQ-20261017-002 (own_losses, 141.9) and the P1 units deferred 'at capacity'. Cause: fair_order round-robined THEMES by used/weight; value ranked only within a theme. Second cause found: the 17 P1 units carry generated.family programme:P1 and so sorted behind 11 authored c56e units (13..27) inside live_strategy. Rule now: starved first anywhere; then highest value score across themes; theme share breaks EQUAL scores only; inside a theme asked (authored or programme:*) before refill. Replay on the committed queue at 06:5xZ: first 9 picks = P1 units 145.0..64.4. Tests tests/test_research_dispatch_money_first.py (10). theme_share_min_ratio will recover more slowly: threshold left at 0.5 on purpose (comment on the SLO). CLOSES when the first post-merge research-queue-dispatch run's decision lines show the P1 units dispatched ahead of any sub-10-score unit. [2026-10-18 ~06:45Z lane] EXTENSION (manager relay of operator ~06:20Z, verbatim 'Those two items are our highest priority, we need to make sure we're pushing forward on them' -- P1 active trade management, P2 AI trader; arrived as the scheduled task 'Manager -> DISPATCH-MONEY-FIRST: P1+P2 top priority'): research_compute.yaml value.programme_priority: [P1, P2] (ordered, operator-editable). A due unit of a listed programme (programme_node.programme / generated.family programme:<id>) ranks first on every backend, in list order, above every theme and other programme; then money-first value; theme share breaks ties; only a starved unit precedes it. Decision line: pick=programme:P1. Tests: 6 more in tests/test_research_dispatch_money_first.py (a low-score P1 unit outranks a 4800-score non-P1 unit; list order; reorder/empty the list changes the dispatch; starve guard still first; committed config pinned to [P1, P2]). No queued P2 unit exists on 2026-10-18 (census: 17 P1, 3 P5, 1 P6). [2026-10-18 ~07:20Z lane] State is in_flight because PR #18894 is OPEN (landing: hold, manager merges), not merged: merged != deployed != observed. On merge set state=landed_unproven (the observation + writeback are already on the row); it closes to done when the first post-merge research-queue-dispatch run shows the P1 units dispatched with pick=programme:P1. [2026-10-18 ~08:05Z lane] OBSERVED, closes the row. PR #18894 merged 07:46:23Z (merge 6474fb98; head 31412b53 green: pytest-collect, pytest-run, guards, repo-inventory). First post-merge research-queue-dispatch run 39109175643 (07:50Z, sha d2ab40e1 contains the merge), Grade-and-dispatch decision lines: dispatched RQ-20261016-017 and RQ-20261016-018 (P1, score 6.4, pick=programme:P1) FIRST, then RQ-20261016-65ff-25 (kaggle_cpu, 35.3, pick=value); 48 deferred on 'github_runner at capacity', all pick=value, max score 51.4 (macro 4a4c-06/07/08) -- no higher-value unit waited behind a lower one, and the programme tier outranked a 35.3 value unit exactly as declared. The 12 higher-score P1 units (RQ-20261017-002, RQ-20261016-004..011, -014..016) were NOT due in that run because benbaichmankass had dispatched them by hand at 06:21Z (research-script-run runs 39103734048..39103764915, all success) and the 07:01Z pre-merge run's collector re-stamped them at 07:04Z (#18907); the 07:01Z run itself still fired under the old round-robin (024, c56e-18, c56e-19). Merged + deployed (the dispatcher runs from main) + observed. Follow-through: PI-20261018-ARBVJQYT-0001 (theme_share read, due 2026-10-25).",
+  "updated_at": "2026-10-18T08:02:49Z",
+  "updated_by": "session_01694UavUX2zc5qearbVjqyT",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "observation": {
+    "what": "The first research-queue-dispatch run after the merge dispatches the P1 real-money units (RQ-20261017-002, RQ-20261016-004..011) ahead of every unit scoring < 10, with pick=value on their decision lines; the deferred list no longer holds a > 100-score unit while a < 10-score unit fired on the same backend.",
+    "how_to_check": "Read the Grade-and-dispatch step log of the first post-merge research-queue-dispatch run (gh run view <id> --log, or comms/research/utilization/<run_id>.json dispatched[] after it lands): the dispatched ids and their value scores.",
+    "due_by": "2026-10-19"
+  },
+  "writeback": {
+    "roadmap": "none: dispatcher ordering only; L-ATM measure unchanged -- its P1 units now reach the runner first",
+    "arch": "none: no contract change; research/queue/README.md section Scheduling and scripts/research/research_compute.yaml carry the rule"
+  },
+  "_seq": 558
+}

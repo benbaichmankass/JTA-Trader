@@ -191,6 +191,13 @@ class _FakeBybitExchange:
 class TestBybitOffvmFetch:
     """Wiring of `_fetch_bars` past the env-gate (S-AI-WS5-B-PART-2 PR 2A)."""
 
+    @pytest.fixture(autouse=True)
+    def _no_sleep(self, monkeypatch):
+        # The adapter re-fetches an empty page with backoff before stepping past
+        # it (ML-SHARD-TRUNCATED); keep the canned-page tests instant.
+        from ml.datasets.adapters import bybit_offvm as _mod
+        monkeypatch.setattr(_mod.time, "sleep", lambda s: None)
+
     def test_paginates_until_end(self, monkeypatch):
         monkeypatch.setenv(OFFVM_ENV, "1")
         page_a = [
@@ -254,7 +261,11 @@ class TestBybitOffvmFetch:
         assert len(rows) == 2
         assert rows[-1]["ts"] == "2025-01-01T01:00:00Z"
 
-    def test_empty_first_page_returns_no_rows(self, monkeypatch):
+    def test_empty_fetch_is_a_failure_not_an_empty_shard(self, monkeypatch):
+        # Until 2026-10-18 this test asserted `rows == []`: an exchange that
+        # answered nothing produced an "ok" empty shard. An empty page before
+        # `end` is now re-fetched, then stepped past, and a fetch that never
+        # produced a bar RAISES so the builder cannot write it (ML-SHARD-TRUNCATED).
         monkeypatch.setenv(OFFVM_ENV, "1")
         fake = _FakeBybitExchange(pages=[[]])
         monkeypatch.setattr(
@@ -262,15 +273,15 @@ class TestBybitOffvmFetch:
             "_build_exchange",
             classmethod(lambda cls, **kw: fake),
         )
-        rows = list(
-            BybitOffvmMarketRawAdapter().iter_bars(
-                symbol="BTCUSDT",
-                timeframe="1h",
-                start="2025-01-01T00:00:00Z",
-                end="2025-01-02T00:00:00Z",
+        with pytest.raises(RuntimeError, match="truncated shard"):
+            list(
+                BybitOffvmMarketRawAdapter().iter_bars(
+                    symbol="BTCUSDT",
+                    timeframe="1h",
+                    start="2025-01-01T00:00:00Z",
+                    end="2025-01-02T00:00:00Z",
+                )
             )
-        )
-        assert rows == []
 
     def test_unknown_timeframe_raises(self, monkeypatch):
         monkeypatch.setenv(OFFVM_ENV, "1")
@@ -342,14 +353,17 @@ class TestBybitOffvmFetch:
             "_build_exchange",
             classmethod(fake_builder),
         )
-        list(
-            BybitOffvmMarketRawAdapter().iter_bars(
-                symbol="BTCUSDT",
-                timeframe="1h",
-                start="2025-01-01T00:00:00Z",
-                end="2025-01-02T00:00:00Z",
+        # the credentials are captured when the exchange is BUILT; an exchange
+        # that then answers nothing is a failed fetch (ML-SHARD-TRUNCATED)
+        with pytest.raises(RuntimeError, match="truncated shard"):
+            list(
+                BybitOffvmMarketRawAdapter().iter_bars(
+                    symbol="BTCUSDT",
+                    timeframe="1h",
+                    start="2025-01-01T00:00:00Z",
+                    end="2025-01-02T00:00:00Z",
+                )
             )
-        )
         assert captured == {
             "api_key": "env-key",
             "api_secret": "env-secret",
@@ -373,17 +387,18 @@ class TestBybitOffvmFetch:
             "_build_exchange",
             classmethod(fake_builder),
         )
-        list(
-            BybitOffvmMarketRawAdapter().iter_bars(
-                symbol="BTCUSDT",
-                timeframe="1h",
-                start="2025-01-01T00:00:00Z",
-                end="2025-01-02T00:00:00Z",
-                api_key="kw-key",
-                api_secret="kw-secret",
-                testnet=True,
+        with pytest.raises(RuntimeError, match="truncated shard"):
+            list(
+                BybitOffvmMarketRawAdapter().iter_bars(
+                    symbol="BTCUSDT",
+                    timeframe="1h",
+                    start="2025-01-01T00:00:00Z",
+                    end="2025-01-02T00:00:00Z",
+                    api_key="kw-key",
+                    api_secret="kw-secret",
+                    testnet=True,
+                )
             )
-        )
         assert captured == {
             "api_key": "kw-key",
             "api_secret": "kw-secret",

@@ -1,0 +1,21 @@
+{
+  "id": "PROMOTION-CORRELATION-CHECK",
+  "title": "Correlation/overlap with the existing book at promotion: verify where CLAUDE.md's 'portfolio-overlap check' is computed; if nowhere, build a report the promotion PR must carry",
+  "phase": "W42",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-16 RESEARCH-OPS-BENCHMARK-1016] GAP (benchmark docs/research/research-ops-benchmark-2026-10-16.md section 2; S5, S11, S15). CLAUDE.md says a prop Stage-1 pass feeds MD-PROMOTE-S1-S2 'after a portfolio-overlap check'; MEASURED: scripts/ops/mandate_resolver.py has no return-correlation / overlap computation (grep overlap|correlat: only 'non-overlapping 20-trade windows'); perf-followup Track 4 does overlap as research, not at the gate; the 25% auto-promotion cap is by risk, not correlation. NOT VERIFIED: whether the check lives in another script or is done by hand in the PR -- first step finds out. SCOPE (Tier-1 report): scripts/research/promotion_overlap.py -- candidate leg's Stage-0 per-trade/daily R series vs each leg on the target roster: return correlation, same-symbol/same-direction overlap, marginal contribution to portfolio drawdown; written into the promotion evidence. Making it a gating clause is Tier-3 (operator). roadmap L-LADDER.",
+  "updated_at": "2026-10-16T09:46:56Z",
+  "updated_by": "session_016YtGa4nVhnWbckKhb6VYaV",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "_seq": 535
+}

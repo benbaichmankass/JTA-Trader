@@ -2,19 +2,33 @@
   "id": "FRONTIER-LEVER-CONFORMAL",
   "title": "Lever: conformal_abstain_eval script over the shadow-log mirror",
   "phase": "W41",
-  "state": "queued",
-  "owner": "unassigned (manager dispatches by capacity)",
-  "lane": null,
+  "state": "landed_unproven",
+  "owner": "lane ML-UNBLOCK-1018 (built); manager merges #18890",
+  "lane": "ML-UNBLOCK-1018",
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    18890
+  ],
   "blocked_on": [],
-  "note": "Unblocks RQ-20261011-9da8-03. Done when: scripts/research/conformal_abstain_eval.py (split-conformal + plain-threshold baseline, rolling-window coverage) writes verdict.json and a synthetic-exchangeable test shows nominal coverage. Parent: FRONTIER-RESEARCH.  [2026-10-11 ML-RQ-RUNNER, priority HIGH rank 3] Still needs its own scorer (conformal evaluates a score stream, not a learner list): scripts/research/conformal_abstain_eval.py, run through the same script_run path (research-script-run.yml, no trainer data needed if the shadow-log mirror is in the repo checkout) so it lands as the same E5 record. [2026-10-15 ML-FRONTIER-W42] SEQUENCED behind RQ-20261015-eda2-01 (the 1414-02 re-run, operator 'Approve all' item 3): no conformal script work until that unit is graded. 1414-02 was indeterminate only because its holdout was empty; its CV log-loss deltas vs the prior were positive on all three symbols. 9da8-03 has a SECOND blocker independent of this lever: the realised-label joiner ML-HEAD-AGREEMENT-JOIN (queued). Both must clear.",
-  "updated_at": "2026-10-15T06:24:34Z",
-  "updated_by": "lane-ML-FRONTIER-W42",
+  "note": "PR #18890 merged 2026-10-18 07:31Z (scorer scripts/research/conformal_abstain_eval.py on main; RQ-20261016-65ff-25 queued). Stays landed_unproven until the unit's first collected verdict.json carries coverage_matched and a per-level selective_error.",
+  "updated_at": "2026-10-18T07:40:14Z",
+  "updated_by": "session_019BtYk72AWwvaGkwH81nW96",
   "priority": "high",
   "priority_rank": 3,
+  "roadmap": [
+    "M25"
+  ],
+  "writeback": {
+    "roadmap": "ROADMAP.md ML block, Update 2026-10-18: FRONTIER-LEVER-CONFORMAL built (PR #18890), RQ-20261016-65ff-25 queued, 9da8-03 keeps only the joiner blocker; milestone M25 / Track F step 2",
+    "arch": "none: research tooling only (scripts/research/conformal_abstain_eval.py); the architecture doc describes no research scorer. The E5 record contract it writes is already documented at scripts/research/script_run.py"
+  },
+  "observation": {
+    "what": "research/results/RQ-20261016-65ff-25/ holds a collected verdict.json whose result carries coverage_matched per level and a per-level selective_error for both arms (the scorer ran end to end on the published 1h shards)",
+    "how_to_check": "find research/results/RQ-20261016-65ff-25 -name verdict.json -exec grep -o \"\\\"verdict\\\": *\\\"[a-z_]*\\\"\" {} + ; grep -c coverage_matched research/results/RQ-20261016-65ff-25/*/result.json",
+    "due_by": "2026-10-25"
+  },
   "_seq": 408
 }

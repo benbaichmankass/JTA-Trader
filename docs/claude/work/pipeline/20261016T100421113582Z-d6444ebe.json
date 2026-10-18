@@ -1,0 +1,24 @@
+{
+  "based_on": "20261016T094950097993Z-8cd50dd1.json",
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "after #18580 merges: a research-queue-dispatch cycle fires research while PR CI is busy (dispatch log 'workflow_run listener run(s) not counted' and >=1 dispatched), and the SLO definition names backpressure-starved cycles",
+    "kind": "observation"
+  },
+  "id": "PI-20261016-TT4AZN7N-0002",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-18",
+    "how_to_check": "latest research-queue-dispatch dispatch-job log: grep 'backpressure:' and count ' dispatched  ' rows; gh api repos/benbaichmankass/Metis-Insights/actions/runs?status=queued for the competing count",
+    "what": "after #18580 merges, a research-queue-dispatch cycle dispatches >=1 unit while PR CI runs are queued, its log showing 'workflow_run listener run(s) not counted'"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-DISPATCH-STALL-1016 (session_01PnDD59hUeWSKXsTt4aZN7n); incident dispatcher_fires@20261016T0936Z",
+    "rerun": "gh api 'repos/benbaichmankass/Metis-Insights/actions/runs?status=queued&per_page=100' --jq '.workflow_runs[]|\"\\(.created_at) \\(.name)\"' | sort; grep 'deferring every fire' in the latest research-queue-dispatch dispatch-job log"
+  },
+  "routed_to": "PR #18580 (lane RESEARCH-DISPATCH-STALL-1016); SLO half -> lane RESEARCH-PIPELINE-SLO-1016",
+  "state": "routed",
+  "terminal_reason": null,
+  "what": "[research-starved-by-ci-backlog] research-queue-dispatch defers EVERY fire when > 10 runs are queued repo-wide (--max-repo-queued 10). At 09:37Z 2026-10-16 the 27 fresh queued runs were mostly claude-run-failure-alert (13 created 09:35-09:45Z; 37 of ~60 runs since 08:00Z end `skipped` -- it is a workflow_run listener on ~60 workflows incl. pytest-run, and every completion creates a run that queues for a slot even when its job `if:` will skip) while ~20 runs (pytest-run x9, Guards x6) held the account's concurrent-job pool. So lane CI bursts starve research for whole cycles. Options for the manager: (a) exclude workflow_run-listener runs from the repo-queued count, (b) add `branches: [main]` / narrow claude-run-failure-alert's trigger so PR pytest-run completions do not create runs, (c) raise the cap. Separately 38 queued runs are debris from 2026-05-15 / 09-12/13 / 08-06 / 10-01 (vm-web-api-recover, vm-cloud-fix, trainer-vm-diag, ...) that never start; the dispatcher already ignores >24h, but humans reading status=queued are misled (manager read '62 queued'). Cancelling them via the API was refused in this lane's session. || DECISION (manager, 2026-10-16 09:53Z, Tier 1, from this lane's measurements): do (a) and (b), not (c). (a) --max-repo-queued counts only runs that compete for runners: workflow_run-listener runs are excluded (NON_COMPETING_EVENTS) and runs >24h old stay excluded; the 37 ghost runs are uncancellable (manager tried cancel + force-cancel on 25906694928: 409 'not been queued yet'), so every status=queued reader must ignore them -- the watchdog (STALE_ACTIVE_HOURS) and dispatcher already do; the SLO monitor must too. (b) claude-run-failure-alert workflow_run gets branches: [main] so PR CI does not create listener runs. Both in PR #18580. The SLO lane RESEARCH-PIPELINE-SLO-1016 must add 'cycles where backpressure deferred every fire' as an SLO."
+}

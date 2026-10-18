@@ -1,0 +1,20 @@
+{
+  "run": "RESEARCH-OPS-2026-10-17-0247", "finished_at": "2026-10-17T03:00:00Z", "by": "research-ops-lane-20261017-0247",
+  "floor": 73, "floor_basis": "computed_floor(fired_24h 91)", "authoring_queue_depth": null,
+  "idle_backends": ["github_runner_data", "kaggle", "kaggle_cpu"],
+  "needs_review_triaged": 2, "needs_review_left": 24,
+  "needs_review_note": "result_disposition_check --list before: owned 24 / UNOWNED 2 / UNGRADED 3; 5bd1-03/-04 given a session grading block (verdict fail) in this PR (held, E57); after it merges UNOWNED reads 0. UNGRADED 3 left: RQ-20260928-006 (id collision, PI-20261016-IKK5NFPO-0001) and 8bbc-01/-02 (weekly recurring, see handoff).",
+  "throughput": {"runnable_before": 97, "runnable_after": 97, "queued": 163, "fired_24h": 91, "results_landed_24h": 209, "hours_since_last_dispatch": 1.7, "idle_alarm": false},
+  "mechanism": {"dispatch_receipt": "ok: liveness fresh 1.74h", "collector": "ok: 0 unreadable result files", "stranded_stamp_prs": "not checked", "incident": null, "watchdog": "newest row 2026-10-17 resolved conflicted_automation; no open escalated incident"},
+  "results_read": {"pass": 0, "fail": 4, "indeterminate": 0, "units": [
+    "RQ-20261012-5bd1-03 FAIL news GDELT tone: 0 discovery survivors, 25 underpowered cells not graded -> closed with session grading; no action, because FAIL closes tested configs only; news layer and WEPE NOT retired; 5 unadjusted leads are wave-2 seeds",
+    "RQ-20261012-5bd1-04 FAIL news cross-sectional: every survivor failed holdout -> same disposition",
+    "RQ-20261015-8bbc-01 FAIL xrp_pullback_2h BELOW_BACKTEST on realMoney (-8.84R over 16, pctile 3.4) -> rule follow-up is PI-20261015-10152047-0001 (cause-naming work); no roster/config change, R4 unchanged",
+    "RQ-20261015-8bbc-02 FAIL ada_pullback_2h BELOW_BACKTEST on realMoney (-7.04R over 15, pctile 4.7) -> same follow-up"
+  ]},
+  "unlocked": [], "retired": [], "levers_filed": [], "units_authored": [], "followups_filed": [],
+  "authoring": {"queue_depth": null, "nodes_drafted": 0, "nodes": [], "theme_shortfall": {"regime": 18, "new_strategy_prop": 11, "ml_health": 10, "infra": 7},
+    "note": "0 nodes drafted AGAIN (OPS-AUTHOR-SKIPPED, 4th consecutive pass): this pass ran with a bounded budget on grading the undispositioned results; H1-THEME shortfalls remain. Escalated to manager as a standing authoring-capacity gap, not a pipeline fault."},
+  "not_run": ["step C blocked/ audit and blocker_watch", "step E authoring (see authoring.note)", "stranded automation/research-queue-* PR check", "pipeline routing of due items (111 due, routing alarm oldest 57d)"],
+  "handoff": ["author toward regime (0 runnable vs share 18), new_strategy_prop, ml_health, infra shortfalls", "8bbc-01/-02 weekly FAIL: confirm PI-20261015-10152047-0001 has an owner; unit stays ungraded because recurring", "route the 111 due pipeline items (alarm 57d)", "5 unadjusted news leads (4h alts tone) -> wave-2 unit on untouched data"]
+}

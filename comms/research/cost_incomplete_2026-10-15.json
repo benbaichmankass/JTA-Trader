@@ -1,0 +1,47 @@
+{
+  "kind": "cost_incomplete_registry",
+  "lane": "PROP-EVAL-COSTS",
+  "recorded": "2026-10-15",
+  "pipeline_item": "PI-20261015-WODD53KG-0001",
+  "defect": "scripts/backtest_system.py run_system_backtest read module globals SLIPPAGE_BPS_ROUNDTRIP / FUNDING_BPS_PER_WINDOW defaulting to 0.0, set only by its CLI main(); every in-process caller ran FEE-ONLY with nothing in the result saying so.",
+  "fixed_in_this_change": [
+    "scripts/backtest_system.py (run_system_backtest: costs= / require_full_costs=, result stamped cost_policy)",
+    "scripts/prop/evaluate_prop.py",
+    "scripts/prop/montecarlo_prop.py",
+    "scripts/prop/validate_alt_prop.py (engine: fee+slippage; funding applied downstream by src.prop.funding)",
+    "scripts/prop/account_compat_matrix.py (engine path)",
+    "scripts/research/build_backtest_panel.py (backtest_system adapter)",
+    "scripts/walkforward_flip_policy.py",
+    "scripts/walkforward_netting_guard.py"
+  ],
+  "verified_not_affected": {
+    "scripts/research/prop_ev_grid.py + prop_ev_sim.py": "re-price committed trade evidence with an explicit commission+slippage+swap stack (--costs breakout is the default; recomputed from raw gross fields). The RQ-20261015-ee68-01, RQ-20261015-24ca-* and RQ-20260928-011 style units use this path, not backtest_system / evaluate_prop, so they are NOT fee-only.",
+    "scripts/research/nbook_portfolio.py": "sets bs.SLIPPAGE/FUNDING from execution_costs in main()",
+    "scripts/research/m20_trail_attribution.py, vol_skip_forming_bar_replay.py": "set the globals from execution_costs",
+    "account_compat_matrix --ledger path (gld-compat-matrix)": "scores a ledger already emitted (and costed) by the upstream harness"
+  },
+  "cost_incomplete_results": [
+    {
+      "artifact": "research/results/RQ-20260922-007/36239257289.jsonl",
+      "producer": "research-exit-head-build -> build_backtest_panel._adapter_backtest_system (harness: backtest_system, fee-only; label cost_r=0.0, exit_fee_r=0.0)",
+      "headline": "head-BUILD arm FAILED its bar (mean net-R improvement -0.1958/trade, n=300)",
+      "disposition": "marked cost-incomplete, not deleted. NOT re-queued: the direction cannot flip (adding the missing slippage+funding only lowers net R), and the same unit's decisive replay arm (36257896539 / 36318264512, backtest_trend replay) is already full venue stack.",
+      "gated_live_prop_roster": false
+    },
+    {
+      "artifact": "docs/research/flip-override-walkforward-2026-08-11.md",
+      "producer": "walkforward_flip_policy.py -> run_system_backtest (fee-only, BTCUSDT)",
+      "headline": "flip-confidence override walk-forward (relative A/B between flip policies)",
+      "disposition": "marked cost-incomplete, not deleted. NOT re-queued: it is a relative policy comparison on BTCUSDT, it gated no prop roster, and the flip override is not a prop-leg survival input.",
+      "gated_live_prop_roster": false
+    },
+    {
+      "artifact": "expiring run artifacts of research-panel-build / prop-tp-r-gate / flip-override-walkforward (never committed)",
+      "producer": "build_backtest_panel / account_compat_matrix engine path / walkforward_flip_policy",
+      "disposition": "nothing durable to mark; any rerun now carries cost_policy and refuses a fee-only stack."
+    }
+  ],
+  "comms_prop_survival_records_affected": [],
+  "live_prop_legs_relying_on_fee_only_survival": "NONE ESTABLISHED. comms/prop_survival/ holds no records (README only); trend_donchian_eth_prop and trend_donchian_sol_prop are grandfathered by name, and the survival/EV evidence cited for them in the queue comes from prop_ev_grid/prop_ev_sim (full commission+slippage+swap stack). Not established either way: any survival number a past session quoted from an in-process evaluate_prop / montecarlo_prop run that was never committed.",
+  "requeued_units": []
+}

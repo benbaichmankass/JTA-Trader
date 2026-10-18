@@ -1,0 +1,22 @@
+{
+  "id": "IR-DIRECTION-LABEL-V2",
+  "title": "Build: a v00N market_features shard with a cost-aware direction label (longer horizon, k*sigma dead-band / triple-barrier) + verified non-zero flow columns; direction units graded on log-loss vs prior, never macro-F1 vs prior",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager (filed by lane IDEA-REVIEW-1016)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Family: direction labels on price-only inputs (B, docs/research/idea-family-review-2026-10-16.md). Every unit used a 5-bar sign label with no dead-band on 6 price columns; all learners lose to the prior on log-loss (4591-02/-05). The macro-F1 'lift' in 1414-03/65cc-07 is a metric artifact: a majority-class prior scores ~0.22 macro-F1 on 3 classes, a coin flip ~0.33 (BTC 15m learner folds 0.32-0.34). Outside: Liu-Tsyvinski-Wu 2022 JF and Fieberg et al. 2025 JFQA (CTREND) find crypto predictability cross-sectionally; Kim & Hansen arXiv 2607.09426 (preprint) find order imbalance predicts 4-12 h returns. FIRST STEP: check published-data.json / shard rows that funding_rate_zscore, open_interest_change_zscore, ofi_zscore, order_imbalance are non-zero (all-zero = route fault); then build the label variant (forward_window_m 24, direction_threshold k*sigma). Cross-sectional ranking stays on FRONTIER-LEVER-XSEC-RUNNER.",
+  "updated_at": "2026-10-16T09:08:35Z",
+  "updated_by": "lane-IDEA-REVIEW-1016",
+  "roadmap": [
+    "M9",
+    "L-DATA"
+  ],
+  "_seq": 538
+}

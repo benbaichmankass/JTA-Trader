@@ -60,6 +60,9 @@
 #   bar:                min_n_closed / expectancy_gt / fold_majority /
 #                       cost_tolerance_bps. A mandate with no `bar:` REFUSES --
 #                       "a mandate with no bar is not a mandate".
+#                       Since 2026-10-16 the two promotion bars also carry
+#                       holdout_required / holdout_min_n (operator decision
+#                       "Require holdout"; resolver clause R-HOLDOUT).
 #   cap:                basis / max_auto_share. Required for `add_risk`.
 #
 # ⚠️ ONE FURTHER FIELD, ADDED 2026-09-25, SHIPPED UNSET, AND ARMED ON EXACTLY ONE
@@ -301,6 +304,22 @@ mandates:
       min_n_closed: 30
       expectancy_gt: 0
       fold_majority: true
+      # OPERATOR DECISION 2026-10-16 (popup "Require holdout", relayed by Manager
+      # Session 2026-10-16 session_01VduHYzdaXe27wTDBLSu8ao; verbatim on checklist
+      # row PROMOTION-BAR-MULTIPLICITY): "From now on, promotion needs a pass on the
+      # held-back 25% you just approved. That's one setting tested once, so no
+      # deflation is needed. Live legs are not demoted on this number (live
+      # net-of-cost results still govern demotion), but all 8 real-money legs get
+      # holdout re-runs first." The Stage-0 record must carry `holdout_confirmation`:
+      # the configuration SELECTED on the earliest span, evaluated ONCE on a
+      # pre-registered, never-seen latest span (~25%, grown to holdout_min_n trades,
+      # capped at 40%), same rule, full cost stack, positive net of cost.
+      # mandate_resolver.py clause R-HOLDOUT: absent or unreadable -> NEEDS-DATA
+      # naming the holdout unit, never REFUSE; a valid confirmation that failed ->
+      # REFUSE. holdout_min_n (25) is the held-back trade floor from the same
+      # dispatch. Nothing else in this entry changed; MD-DEMOTE-S2-S1 is untouched.
+      holdout_required: true
+      holdout_min_n: 25
     cap:
       basis: uniform_account_risk_pct_share_of_roster
       max_auto_share: 0.25
@@ -310,6 +329,19 @@ mandates:
     direction: add_risk
     granted_by: operator (Ben)
     granted_at: '2026-09-24'
+    amended_at: '2026-10-15'
+    amendment_source: >-
+      MD-PROMOTE-S1-S2-SOAK-AMEND, proposed by lane SOAK-REDEFINE and granted by
+      the operator via popup in manager session_01VduHYzdaXe27wTDBLSu8ao,
+      2026-10-15 ~21:05Z, verbatim "Grant as written (Recommended)"; write
+      re-confirmed by the operator in chat ~21:25Z ("go ahead, retry the
+      mandates.yaml grant write"). Basis: the operator's soak definition the same
+      day, verbatim "A soak is a mechanical verification that was already proven
+      in backtesting, and nothing needs to soak for more than one or two
+      trades". Changes `never:` (soak = SOAKS.json `passed`), `fires_when:`
+      (venue-symbol measured cost replaces per-leg R3, which becomes monitoring)
+      and adds bar.soak_passed / bar.cost_basis. Unchanged: B1 clauses, Stage-0
+      bar, 25% cap, 5.0 bps provisional basis, mirror equality, human merge.
     source: >-
       Popup in session_01Ljhs6sFAdWHdMDhJpL5aBP, 2026-09-24 ~17:15Z, verbatim
       "Grant all 10 as written"; recorded on checklist row B5. The underlying
@@ -423,26 +455,29 @@ mandates:
     # `cost_tolerance_bps` is now `2.0` and `blocked_until` was removed. See
     # the 2026-09-28 correction note near the top of this entry.]
     fires_when: >-
-      A leg already on the Stage-1 soak roster for its exchange has a committed
+      A leg already on the Stage-1 soak roster for its exchange (or trading live
+      on a prop account -- a `prop_live` soak source counts) has a committed
       Stage-0 evidence record that passes B1's four clauses and its identity
-      check, clears the bar below, and whose PER-LEG cost-fidelity verdict reads
-      `consistent` under RULE-R3-GATE1-COST-FIDELITY-v1
-      (docs/research/r3-gate1-cost-fidelity-rule-2026-09-25.md), taken from the
-      newest committed dated record under comms/research/r3_cost_fidelity/ and
-      graded at bar.cost_tolerance_bps against the slippage that leg's own
-      record modelled. `consistent` means the cell's 95% CI upper bound is at or
-      below modelled + tolerance; where a leg has both a market and a simulator
-      cell the MARKET cell decides. `divergent`, `inconclusive`,
-      `insufficient_n` and `no_record` are each NOT a pass: only `consistent` is
-      the Gate-1 pass, and a promotion may not fire on a verdict that says the
-      measurement cannot yet decide. On alpaca_equities and ibkr_futures, where
-      no decisive verdict exists yet, the operator-accepted 5.0 bps provisional
-      basis in `never:` below still applies and is checked first -- a
-      measurement never buys a way around it, and a `divergent` verdict refuses
-      there too. The edit ADDS the leg to the Stage-2 account AND to its mirror
-      -- Stage 2 is one stage, and the mirror carries the identical roster.
+      check, clears the bar below, whose SOAK-stage1 contract reads `passed`
+      (bar.soak_passed), and whose VENUE's measured round-trip cost for the
+      leg's SYMBOL (bar.cost_basis: venue_symbol -- the venue's own MEASURED
+      cost for that symbol, not a per-leg accrual) has a 95% CI upper bound at
+      or below the slippage the leg's record modelled + bar.cost_tolerance_bps.
+      An `inconclusive`, `insufficient_n` or absent venue-symbol measurement is
+      NEEDS_DATA, never a pass. The PER-LEG R3 cost-fidelity verdict
+      (RULE-R3-GATE1-COST-FIDELITY-v1) is no longer a promotion gate: it is
+      ONGOING monitoring that feeds MD-DEMOTE-S2-S1 / MD-DEMOTE-S1-OFF
+      (operator amendment 2026-10-15). On alpaca_equities and ibkr_futures,
+      where no decisive measurement exists yet, the operator-accepted 5.0 bps
+      provisional basis in `never:` below still applies and is checked first --
+      a measurement never buys a way around it. The edit ADDS the leg to the
+      Stage-2 account AND to its mirror -- Stage 2 is one stage, and the mirror
+      carries the identical roster.
     never: >-
-      Never a leg that has not soaked at Stage 1. Never while `blocked_until`
+      Never a leg whose Stage-1 soak contract SOAK-stage1-<account>-<leg> in
+      docs/claude/work/SOAKS.json is not `passed` (n_needed <= 2 clean trades,
+      each clearing the mechanical checklist; a `prop_live` source counts).
+      Never while `blocked_until`
       stands. Never onto an account whose account_class is not `real_money`.
       Never past the cap: total declared risk across AUTO-PROMOTED legs may not
       exceed 25% of the account's configured risk budget. Never on an equities
@@ -475,6 +510,27 @@ mandates:
       # session, answered verbatim "Arm, tolerance 2 bps"; recorded on
       # checklist row MANDATE-ARM. This supersedes the INFERRED 0.0 above.
       cost_tolerance_bps: 2.0
+      # GRANTED 2026-10-15 (MD-PROMOTE-S1-S2-SOAK-AMEND): the soak gate is the
+      # mechanical SOAKS.json result, and clause 3 reads the venue's measured
+      # cost for the leg's symbol. Neither changes the Stage-0 bar above.
+      soak_passed: true
+      cost_basis: venue_symbol
+      # OPERATOR DECISION 2026-10-16 (popup "Require holdout", relayed by Manager
+      # Session 2026-10-16 session_01VduHYzdaXe27wTDBLSu8ao; verbatim on checklist
+      # row PROMOTION-BAR-MULTIPLICITY): "From now on, promotion needs a pass on the
+      # held-back 25% you just approved. That's one setting tested once, so no
+      # deflation is needed. Live legs are not demoted on this number (live
+      # net-of-cost results still govern demotion), but all 8 real-money legs get
+      # holdout re-runs first." The Stage-0 record must carry `holdout_confirmation`:
+      # the configuration SELECTED on the earliest span, evaluated ONCE on a
+      # pre-registered, never-seen latest span (~25%, grown to holdout_min_n trades,
+      # capped at 40%), same rule, full cost stack, positive net of cost.
+      # mandate_resolver.py clause R-HOLDOUT: absent or unreadable -> NEEDS-DATA
+      # naming the holdout unit, never REFUSE; a valid confirmation that failed ->
+      # REFUSE. holdout_min_n (25) is the held-back trade floor from the same
+      # dispatch. Nothing else in this entry changed; MD-DEMOTE-S2-S1 is untouched.
+      holdout_required: true
+      holdout_min_n: 25
     cap:
       basis: uniform_account_risk_pct_share_of_roster
       max_auto_share: 0.25
@@ -928,8 +984,9 @@ mandates:
       account's roster. Never on a record that is missing, unreadable,
       fee-only, stale against the leg's config, or cites a source_run absent
       from the repo: "could not look" is not a cut signal. Never on a soak
-      that is accruing, dead, unknown, absent from the snapshot, or read from
-      a stale snapshot. Never an `execution: shadow` leg (not a Stage-1 soak).
+      that is awaiting_first_trade, in_progress, unknown, absent from the
+      snapshot, or read from a stale snapshot (vocabulary re-mapped
+      2026-10-15 from accruing / dead / unknown; see bar.soak_states). Never an `execution: shadow` leg (not a Stage-1 soak).
       Never lands itself: no `autoland:`; the PR declares `landing: hold` and
       a human merges.
     evidence_required: >-
@@ -949,8 +1006,81 @@ mandates:
       # "fails on folds", which is the promotion bar's fold clause.)
       fold_majority: true
       affordability: true
-      # soak_state.STATES: complete = n reached (ready) or end date passed (overdue).
-      soak_states: [ready, overdue]
+      # soak_state.STATES. RE-MAPPED 2026-10-15 (lane SOAK-REDEFINE, landing:
+      # hold, the manager merges) because the operator redefined the soak the same
+      # day (verbatim: "A soak is a mechanical verification that was already
+      # proven in backtesting, and nothing needs to soak for more than one or two
+      # trades"). The old values were "complete = n reached (ready) or end date
+      # passed (overdue)"; NEITHER STATE EXISTS ANY MORE (a mechanical soak has no
+      # sample size and no end date), so left unchanged this mandate could never
+      # fire again. The translation keeps the clause's meaning -- "the soak has
+      # reached a verdict": passed (n_needed <= 2 clean trades) or mechanical_fail
+      # (a fault, to fix and re-soak). awaiting_first_trade / in_progress /
+      # unknown stay NEEDS_DATA, as accruing / dead / unknown did.
+      # ⚠️ FOR THE OPERATOR: since edge is decided OFFLINE, a failing Stage-0
+      # record is arguably enough to cut a paper leg whatever its soak state.
+      # Dropping this clause would WIDEN the mandate (it would then cut legs still
+      # awaiting a first trade), so it is not done here -- it is the operator's.
+      soak_states: [passed, mechanical_fail]
       soak_snapshot_max_age_days: 7
 
+  # ── GRANTED 2026-10-18 by the operator, in manager session_01VduHYzdaXe27wTDBLSu8ao ──
+  # Recorded by the MANAGER (scope exception MGR-20261018-EXEC-TEST-TRADES-GRANT):
+  # lane PHONE-EXEC-OBSERVABLE-1018's classifier refused the write because the grant
+  # reached it only as a relayed prompt; the operator's standing rule is that the
+  # manager leaves auto mode and records it itself rather than relaying text.
+  - id: MD-EXEC-DEV-TEST-TRADES
+    grants: open_and_close_exec_test_trades_on_prop_accounts
+    proposed_by: session_01Cqmpr14msnNhk7ZQrmYRfS
+    proposed_at: '2026-10-18'
+    granted_by: operator (Ben)
+    granted_at: '2026-10-18'
+    source: >-
+      Operator, in chat with manager session_01VduHYzdaXe27wTDBLSu8ao,
+      2026-10-18 ~08:05Z, verbatim: "we can't develop an app waiting only for
+      the actual live events to happen that trigger it ... I'm giving you
+      permission that as part of the research, we can open and close trades
+      when needed in order to verify or understand how to do the operations.
+      That is a standing mandate. Do whatever you need to do to make sure that
+      it's there." Then, verbatim: "Okay, I'm taking you off of auto mode so
+      that you can get the permission you need in order to hand over that
+      mandate." And ~09:50Z, verbatim: "the default fix for permissions is
+      always to try taking you off auto mode to impelment the changes first,
+      not giving me text to paste into a seperate session", followed by
+      "Off auto mode".
+    recurrence: >-
+      The phone executor's stop-amend and entry flows on breakout_2 were fixed
+      by guesswork for three days (2026-10-15..18) because they could only be
+      exercised on live strategy events; the operator directed that test
+      trades be used to verify the operations instead.
+    fires_when: >-
+      A phone-executor drill or development run needs a real ticket to verify
+      an operation (entry, stop amend, close) on breakout_2, tradeify_1 or
+      velotrade_1, and every bound below holds when re-checked at claim time.
+    bounds:
+      accounts: [breakout_2, tradeify_1, velotrade_1]
+      size: venue_minimum
+      protective_stop_at_entry: required
+      max_hold_minutes: 30
+      max_test_trades_per_account_per_utc_day: 6
+      max_day_loss_fraction_of_daily_dd_switch_limit: 0.5
+      refuse_when_day_loss_unreadable: true
+      refuse_when_same_symbol_strategy_position_or_ticket: true
+      tagging: {strategy: exec_test, meta_origin: exec_test, ticket_id_prefix: exec-test-}
+      excluded_from: [performance, soak_grading, prop_survival, trade_quality_review]
+      reporting: one Telegram line per drill
+    never: >-
+      Never above venue minimum size, never without a protective stop at entry,
+      never held past the drill (30 min max), never on a symbol where a
+      strategy holds a position or ticket, never when the day's loss cannot be
+      read or is at or over half the daily-DD switch limit, never on a Bybit or
+      Alpaca account, and never counted in performance, soak or prop-survival
+      statistics.
+    evidence_required: >-
+      Per drill: the ticket id (exec-test-*), the per-step capture run id, the
+      open and close fills, and the Telegram line.
+
+# MD-PROMOTE-S1-S2-SOAK-AMEND (proposed 2026-10-15 by lane SOAK-REDEFINE) was
+# GRANTED by the operator the same day and folded into MD-PROMOTE-S1-S2 above
+# -- see that entry's `amended_at` / `amendment_source`.
 proposed: []

@@ -1,0 +1,21 @@
+{
+  "id": "POOLING-PARITY-INSTRUMENT",
+  "title": "Lever: scripts/research/pooling_parity.py -- KS on decision-time feature marginals and realised net R, live closes vs the same leg's committed harness ledger, per (leg, trend cell)",
+  "phase": "W42",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-16 lane P2-AI-REGIME-BACKLOG-1016] 02 s3 Q2.5 / s6 W3 #17 (authoring-queue node P2-Q2.5-pooling-parity). The only route past the M23 label wall that keeps the label honest: backtest-augmented labels may train the meta-label head only if test results and live outcomes share their feature marginals and realised-R distribution. live_vs_backtest.py compares cumulative R bands only (no features, no cells). BUILD (Tier-1 research tooling): read the trainer's synced journal (trades + order_packages.meta, provenance MEASURED/ESTIMATED only via src/runtime/provenance.py) and the leg's committed ledger (comms/strategy_evidence/<leg>.json source_run), KS + Holm per (leg, cell), verdict.json in the E5 shape, a self-test with a planted shift. Runs needs_vm_data (OURS data never leaves the VM). UNBLOCKS: blocked/RQ-20261016-65ff-26. DONE WHEN: the script is merged and 65ff-26 leaves blocked/.",
+  "updated_at": "2026-10-16T07:50:08Z",
+  "updated_by": "session_01QseRmyoxCNTecxWrRma9Kc",
+  "roadmap": [
+    "M23"
+  ],
+  "_seq": 528
+}

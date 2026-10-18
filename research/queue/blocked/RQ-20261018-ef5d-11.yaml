@@ -1,0 +1,96 @@
+id: RQ-20261018-ef5d-11
+title: >-
+  Programme 07 TIMEFRAMES, short arm B5 (BLOCKED on TF-IGNITION-HARNESS): momentum-IGNITION breakout -- a 15m bar whose range
+  is >= 2 x ATR14 with volume z-score >= 2, entered on its close in its direction, 1R stop / 1.5R target / 8-bar time stop
+  -- on the six Bybit perps, net of the full cost stack
+status: blocked
+cadence: once
+theme: timeframes
+priority: 3
+kind: experiment
+question: >-
+  On Binance USD-M 15m candles for the six perps over 2021-01-01..2026-10-17, does entering on the close of an ignition bar
+  (range >= k x ATR14, volume z >= z over 96 bars) in the bar's direction, with a 1 x ATR stop, a fixed target and a short
+  time stop, read net-positive pooled with >= 4 of 6 folds at pooled n >= 88? Arms fixed now: K2Z2_TP15 (k 2.0, z 2.0, tp
+  1.5R, 8 bars), K3Z2_TP15 (k 3.0), K2Z2_TP1 (tp 1.0R).
+why_this_matters: >-
+  Operator 2026-10-18: breakout-style entries that anticipate a jump/drop and catch just that wave, at horizons where fees
+  dominate. No repo harness keys an entry on single-bar range/volume expansion (checked 2026-10-18: squeeze keys on compression,
+  trend on channel breaks, fade on failed breaks, ict_scalp on sweeps + FVG). Registered now so the design is fixed before
+  the harness is written (row TF-IGNITION-HARNESS). Prior short-horizon work this builds on and does NOT repeat: RQ-20260930-504
+  (<=1h discovery grid at live/default params, FAIL at taker cost; squeeze/fade/pullback/fvg/chop had NO Stage-A survivor
+  at 5m-30m), blocked/RQ-20260930-505 (its 1m arm), RQ-20261016-1fa6-07 (maker entries do not rescue the 15m scalp book, FAIL),
+  the 2026-10-06 prop breadth batch RQ-20261006-005..031 (5m-15m taker FAIL as a configuration class), docs/research/idea-family-review-2026-10-16.md
+  s13/s16, rows IR-CRYPTO-DAILY-TREND and IR-INTRADAY-SEASONALITY-HARNESS.
+power:
+  expected_n: 500
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    88 pooled trades at d=0.3; expected_n=500 is an ESTIMATE: a 2-ATR / 2-sigma-volume bar is rare (~1-2% of 15m bars), ~2,000-4,000
+    per symbol over 5.8 years before the cooldown.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Blocked on the instrument (TF-IGNITION-HARNESS); nothing accrues. Re-measurement on fetched Binance Vision 15m candles
+      once the harness exists.
+decision_rule:
+  id: RULE-P7-B5-IGNITION-15M
+  registered_at: '2026-10-18'
+  registered_before_run: true
+  statistic: >-
+    Once TF-IGNITION-HARNESS lands: harness_stage0.py --family ignition --timeframe 15m with the three arms above (scripts/backtest_ignition.py
+    --range-mult --vol-z --tp-r --atr-stop-mult 1.0 --timeout-bars 8), full cost stack via execution_costs.resolve_cost_policy;
+    per cell n, net_r, max_drawdown_r, 6 calendar folds; pooled.
+  rule: >-
+    Arms fixed now. Flags: --folds 6 --fold-majority 4 --n-floor 39 --pooled-n-floor 88 --breadth-frac 0.5. PASS iff any arm
+    passes the pooled Stage-0 rule -> node P7-B5-confirm (the passing arm alone at 5m and 1h). FAIL iff every arm fails ->
+    ignition at these three configurations is closed on this window. INDETERMINATE otherwise. Thresholds not changed after
+    any result.
+  what_it_does_not_do: >-
+    Does not edit config/strategies.yaml, config/accounts.yaml or any roster; does not tune beyond the fixed arms listed;
+    does not pool windows with any committed record; is not a promotion case. Candles are Binance USD-M (a PROXY for Bybit
+    linear; prices track within a few bps) and the funding term is a directionless magnitude (execution_costs P1), both stated
+    in the record. Cannot run until the ignition harness exists.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 100
+  confidence: 0.15
+  bucket: frontier
+  basis: 'stand-in: a candidate ignition leg; an estimate.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 90
+  basis: 6 x 15m fetches over 2200 d (~210k bars each) x 3 arms; a single-pass per-bar harness. Estimate.
+  why_runner: public candles + a repo harness; CPU-only.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-TIMEFRAMES
+- M22
+programme: P7
+related:
+- TF-IGNITION-HARNESS
+- RQ-20261018-ef5d-02
+- RQ-20261018-ef5d-08
+- docs/research/programmes/07-TIMEFRAMES.md
+- research/programmes/07-timeframes.yaml
+blocked_on:
+- kind: work_item
+  ref: TF-IGNITION-HARNESS
+  what: >-
+    No harness keys an entry on a single bar's range/volume expansion; row TF-IGNITION-HARNESS names what to build (scripts/backtest_ignition.py
+    + a classify()/build_harness_cmd branch).
+  clears_when: >-
+    TF-IGNITION-HARNESS is done and harness_stage0.py routes --family ignition. Then git mv this unit to research/queue/,
+    fill run.command with the registered arms, and it dispatches.
+run:
+  workflow: null
+  note: Deliberately null until TF-IGNITION-HARNESS lands (the instrument does not exist yet).

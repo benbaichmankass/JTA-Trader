@@ -573,8 +573,8 @@ strategies:
 
   # ---------------------------------------------------------------------
   # M27 P0 Batch-1 ict_scalp alt variants (2026-07-21, Tier-3
-  # operator-approved promotion to bybit_1 demo soak — accrue live
-  # paper-trade data toward a real-money decision).
+  # operator-approved promotion to bybit_1 demo soak — a mechanical
+  # check on 1-2 clean trades, OPERATING-PLAN § 2).
   #
   # Config-exact copies of ict_scalp_5m's params on a different symbol —
   # the point of the M27 transfer study was testing the SAME live setup
@@ -1422,8 +1422,27 @@ strategies:
       - ETHUSDT
     donchian: 20
     atr_period: 14
-    atr_stop_mult: 2  # M20 e35 re-check 2026-08-29: cell sm2 (path_b_wf_pass, wf 6/6, d_net_r +28.7348); was 2.5
-    trail_mult: 5.0
+    # atr_stop_mult 2 -> 1.5 + trail_mult 5.0 -> 6.0 (Tier-3 PROPOSAL, holdout arm C3,
+    #   HOLD for operator approval). Evidence: comms/research/RQ-20261016-077e-02/38936621580/
+    #   verdict.json -- C3 selected from 9 arms on discovery only (2020-07-01 .. 2025-03-20,
+    #   n=187, +69.04 R, 4/4 folds; declared arm A n=174, +38.87 R, 4/4) and read ONCE on the
+    #   held-back span: C3 n=75 +19.23 R (0.256 R/trade) vs declared A n=70 +17.01 R
+    #   (0.243 R/trade), net of fee 7.5 + slippage 3 bps rt + funding 1 bps/8h.
+    #   ROLLBACK: atr_stop_mult 2, trail_mult 5.0.
+    atr_stop_mult: 1.5  # was 2 (M20 e35 re-check 2026-08-29: cell sm2, path_b_wf_pass, wf 6/6, d_net_r +28.7348; was 2.5 before that)
+    trail_mult: 6.0
+    # trail_decay stall 10 / tight 1.8 (Tier-3 PROPOSAL, lane ACTIVE-MGMT-DRIVE-1018, HOLD for operator
+    #   approval). Evidence: RQ-20261016-006 (P1-Q4-eth4h-stalldecay-rerun; rule RULE-P1-Q4-ETH4H-STALLDECAY-RERUN,
+    #   registered 2026-10-16) -- exit_lever_ablation --grade replace against THIS incumbent (atr 1.5 / trail 6.0),
+    #   ETHUSDT 4h 2022-10-15 .. 2026-10-14, net of fee 7.5 + slippage 3 bps rt + funding 1 bps/8h: arm D
+    #   (trail_decay_stall_bars 10, trail_decay_tight_mult 1.8, no arm_r) 70.03 R / 180 trades / maxDD 19.36 vs
+    #   A 61.08 R / 160 / 18.06; 3 of 4 calendar folds (fold 4, 2025-09..2026-10: -2.98 vs -10.62); net R per
+    #   capital-day 0.205 vs 0.127. Mechanism: once 10 bars have printed since the trade's peak the trail
+    #   tightens from 6.0 to 1.8 ATR (src/runtime/trail_decay.py; absent = off; the prop legs carry the same lever).
+    #   Does NOT touch the TP: entry_tp stays the 50 R sentinel (TP-doctrine state unchanged, see the PR).
+    #   ROLLBACK: delete these two lines.
+    trail_decay_stall_bars: 10
+    trail_decay_tight_mult: 1.8
     tp_r: 50.0
     tp_intent:
       mode: none
@@ -2970,7 +2989,14 @@ strategies:
       - ADAUSDT
     trend_lookback: 40
     pullback_lookback: 10
-    pullback_frac: 0.5
+    # pullback_frac 0.5 -> 0.618 (Tier-3 PROPOSAL, holdout arm C7, HOLD for operator approval).
+    #   Evidence: comms/research/RQ-20261016-077e-04/38989350528/verdict.json -- C7 selected from
+    #   9 arms on discovery only (2020-07-01 .. 2025-03-20: n=352, +42.32 R, 3/4 folds; the
+    #   declared arm A n=291, +43.74 R, 2/4 folds = NOT eligible under the fold-majority rule)
+    #   and read ONCE on the held-back span: C7 n=97 +24.08 R (0.248 R/trade) vs declared A
+    #   n=86 +23.08 R (0.268 R/trade), net of fee 7.5 + slippage 3 bps rt + funding 1 bps/8h.
+    #   ROLLBACK: pullback_frac 0.5.
+    pullback_frac: 0.618
     atr_period: 14
     # atr_stop_mult 2.5 -> 1.5 (Tier-3, operator-approved 2026-08-23). Swept because
     # cap_r = (0.099 x entry) / (atr_stop_mult x ATR) is INVERSELY proportional to this

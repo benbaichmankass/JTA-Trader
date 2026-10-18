@@ -1,0 +1,108 @@
+id: RQ-20261016-1fa6-07
+title: 'ict_scalp maker entries on the CAUSAL harness: RQ-20260930-502''s post-only test ran on the pre-#15341 (lookahead) harness -- does the 15m book clear net
+  with limit entries now that the HTF bias is causal?'
+status: done
+cadence: once
+theme: new_strategy_prop
+priority: 2
+kind: experiment
+question: 'Re-run RQ-20260930-502 verbatim (same script, mode, legs, days, fill model, fee basis and rule) on current main, where backtest_ict_scalp.py''s HTF bias
+  is causal (ICT-SCALP-HTF, #15341, merged 2026-10-01; verified 2026-10-16: resample(closed=''left'', label=''right'') is unconditional).'
+why_this_matters: 502 (limit arm +61.9 R, n 1,573) and 504 (all five Stage-A survivors were ict_scalp cells) both ran on commit bcc5c75 (2026-09-30), BEFORE the lookahead
+  fix. On the causal harness the market-entry book is -3.26 R over n 996 (~-0.003 R/trade, RQ-20260930-501), while 502's maker advantage was ~+0.023 R/trade -- so
+  the sign of the causal maker book is OPEN, and every 'maker does not save the 15m book' / 'no profitable <=1h strategy' reading rests on a void harness. The ICT
+  concepts themselves have no independent outside support (only vendor pages found), so this unit tests the execution condition, not the concept.
+power:
+  expected_n: 300
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Copied from RQ-20260930-502: registered floor 300 filled trades. INFERRED from 996 causal market-entry trades over 1830 days times a 50-99% fill rate (502
+    measured 0.99 on the void harness).'
+  feasibility:
+    source: none
+    accrual_basis: Historical re-run on fetched candles; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261016-1fa6-07
+  registered_at: '2026-10-16'
+  registered_before_run: true
+  statistic: 'As RQ-20260930-502 (scripts/research/hyro_fit_verdict.py --mode limit): n_filled, fill_rate, pooled full-cost net R of FILLED trades, net R per SIGNAL,
+    and gates B and C of RQ-20260930-501 on the filled ledger. Fill model and fee basis exactly as 502 registered (limit at signal close, fill only if a later bar
+    trades strictly through within 3 bars; maker 2.0 + taker 5.5 bps/side).'
+  rule: 'UNDERPOWERED IF n_filled < 300. ELSE PASS IF fill_rate >= 0.50 AND pooled net R of filled trades > 0 AND net R per signal > 0 AND gates B and C hold -> a
+    Stage-0 evidence input for a maker-entry variant of the 15m scalp book (prop fit and a fold-stability unit next), never a roster act. ELSE FAIL: the maker condition
+    does not rescue the causal 15m scalp book; combined with RQ-20261002-701 that retires ''ICT 15m scalp as an edge source'' with sources recorded in docs/research/idea-family-review-2026-10-16.md.
+    Not changed after any result.'
+  what_it_does_not_do: Does not re-tune the fill model or any ict_scalp parameter. Does not test 5m (701 failed it powered at taker cost; the cost wall is larger
+    there). No config.
+compute: cpu_long
+value:
+  bucket: structural
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  basis: 'stand-in: whether a short-timeframe book exists for the prop accounts at maker cost; an estimate.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 120
+  basis: Same command as RQ-20260930-502 (timeout 240 there).
+  why_runner: public candles; the harness is CPU-only; the job is long, not GPU-shaped.
+run:
+  command:
+  - python3
+  - scripts/research/hyro_fit_verdict.py
+  - --mode
+  - limit
+  - --leg
+  - ict_scalp_eth_15m
+  - --leg
+  - ict_scalp_sol_15m
+  - --leg
+  - ict_scalp_xrp_15m
+  - --days
+  - '1830'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261016-1fa6-07
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M27
+programme: P5
+related:
+- RQ-20260930-502
+- RQ-20260930-501
+- RQ-20260930-504
+- RQ-20261002-701
+- docs/research/idea-family-review-2026-10-16.md
+- scripts/research/hyro_fit_verdict.py
+outside_evidence:
+- Search 2026-10-16 for independent tests of FVG / order blocks / liquidity sweeps returned vendor how-to pages only (e.g. https://www.tradezella.com/blog/backtest-ict-strategy)
+  -- no peer-reviewed or independent evidence (denominator for the concept-level C)
+- Fil & Kristoufek 2020 IEEE Access -- crypto intraday results highly sensitive to costs, https://starfos.tacr.cz/vysledky-vyzkumu/RIV%2F00216208%3A11230%2F20%3A10416379
+  (primary; abstract read)
+origin:
+  lane: IDEA-REVIEW-1016
+  family: ict_scalp (5m/15m)
+  family_verdict: C for the ICT concepts as an edge source; A for the one execution condition (maker entries) that was only ever tested on the void lookahead harness
+last_dispatched_at: '2026-10-17T07:58:48+00:00'
+grading:
+  auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-RQ-20261016-1fa6-07
+  evidence:
+  - research/results/RQ-20261016-1fa6-07/39015653803.jsonl
+  first_fail: 1 row(s), all measured, all fail
+  graded_at: '2026-10-17'
+  grader: scripts/research/queue_grade.py
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

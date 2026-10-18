@@ -436,7 +436,10 @@ def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None) -> dict:
                  "trail_decay_arm_r", "trail_decay_stall_bars",
                  "trail_decay_tight_mult",
                  "trail_vol_above_pctl", "trail_vol_below_pctl",
-                 "trail_vol_tight_mult", "vol_pctl_window"):
+                 "trail_vol_tight_mult", "vol_pctl_window",
+                 # MOMENTUM-LEVERS-LIVE (2026-10-18): src/runtime/momentum_levers.py.
+                 "trail_adx_below", "trail_adx_falling_bars", "trail_adx_tight_mult",
+                 "momentum_stale_bars", "momentum_stale_adx_below", "adx_period"):
         if cfg.get(_key) is not None:
             package["meta"][_key] = cfg[_key]
     if skip_hour_set:
@@ -699,6 +702,20 @@ def monitor(cfg, candles_df, open_pkg):
             return _st
     except Exception:  # noqa: BLE001 — a lever must never break the monitor
         pass
+    # MOMENTUM-LEVERS-LIVE: momentum-keyed time stop, after giveback -> stale
+    # as scripts/backtest_pullback.py orders its close verbs (momentum_stale
+    # follows the stale check there too). Shared rule, YAML-declared, fail-safe.
+    # Confirmed cell: RQ-20261016-016 ms8_a20 on slv_pullback_1d (alpaca_live).
+    try:
+        from src.runtime.momentum_levers import momentum_stale_verdict
+
+        _ms = momentum_stale_verdict(meta, cfg_dict, open_pkg, candles_df,
+                                     current_price, direction,
+                                     default_label="htf_pullback_trend_2h")
+        if _ms is not None:
+            return _ms
+    except Exception:  # noqa: BLE001 — a lever must never break the monitor
+        pass
 
     atr = _coerce_float(meta.get("atr"))
     if atr is None or atr <= 0:
@@ -742,6 +759,17 @@ def monitor(cfg, candles_df, open_pkg):
         trail_mult = resolve_vol_trail_mult(meta, cfg_dict, candles_df,
                                             trail_mult, direction,
                                             open_pkg=open_pkg)
+    except Exception:  # noqa: BLE001 — the lever must never break the trail
+        pass
+    # MOMENTUM-LEVERS-LIVE: the ADX-conditioned trail, composed by min() after
+    # decay and vol (trail_levers.effective_trail_mult order). Undeclared =
+    # base mult. See trend_donchian._trail_verdict for the contract.
+    try:
+        from src.runtime.momentum_levers import resolve_momentum_trail_mult
+
+        trail_mult = resolve_momentum_trail_mult(meta, cfg_dict, candles_df,
+                                                 trail_mult, direction,
+                                                 open_pkg=open_pkg)
     except Exception:  # noqa: BLE001 — the lever must never break the trail
         pass
     # P5 live-parity instrument (M20-EXITS): LOG-ONLY shadow of the vol_trail

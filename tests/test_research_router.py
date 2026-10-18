@@ -137,8 +137,12 @@ def test_fair_order_ranks_by_value_per_cost_within_a_theme_and_theme_share_still
     assert order[0] == big.id and order[-1] == small.id
     assert big.raw["_rank"]["derivation"].startswith("score ")
     other = job(9, workflow="research-script-run.yml", theme="regime")
-    firsts = {j.raw["theme"] for j in dq.fair_order([small, mid, big, other], NOW, TH, CFG)[:2]}
-    assert firsts == {"live_strategy", "regime"}                           # fair share across themes is unchanged
+    # MONEY FIRST (operator 2026-10-18): across themes too, value decides -- `other` (regime, no value block and
+    # the default est, 18.75) sorts after big (750), mid (75) and small (32.1) of live_strategy; before 2026-10-18
+    # the cross-theme round-robin put it second. Theme share now only breaks an equal score
+    # (tests/test_research_dispatch_money_first.py).
+    order = [j.id for j in dq.fair_order([small, mid, big, other], NOW, TH, CFG)]
+    assert order == [big.id, mid.id, small.id, other.id]
 
 
 def test_nothing_starves_a_long_waiting_low_value_unit_sorts_first_in_its_theme():
@@ -315,3 +319,27 @@ def test_idle_fill_pulls_an_opted_in_recurring_unit_forward_only_into_free_capac
     dec2, _ = _dry(tmp_path / "b", monkeypatch, units, fire=True, runs={"in_progress": busy}) \
         if (tmp_path / "b").mkdir() is None else (None, None)
     assert dec2["RQ-20300110-002"]["outcome"] != dq.DISPATCHED
+
+
+def test_authored_units_rank_before_generated_ones_inside_a_theme():
+    # RESEARCH-ENGINE-1016: a generated sweep with a large declared value used to outrank an authored unit
+    # (the 1.25 hand_written_boost was the only preference). Authored first, theme shares unchanged.
+    gen = job(1, workflow="research-script-run.yml", value={"usd_at_stake_per_month": 5000, "confidence": 0.9},
+              routing={"est_minutes": 10}, generated={"family": "e35-bracket", "key": "k"})
+    hand = job(2, workflow="research-script-run.yml", routing={"est_minutes": 60})
+    assert [j.id for j in dq.fair_order([gen, hand], NOW, TH, CFG)] == [hand.id, gen.id]
+
+
+def test_a_recurring_unit_waits_from_when_it_came_due_not_from_its_last_stamp():
+    # A monthly re-run stamped 31 days ago has been DUE one day: it is not starved (240 h) and must not
+    # jump an authored unit; it read as waiting 744 h -> starved -> first in its theme until 2026-10-16.
+    stamp = (NOW - timedelta(days=31)).isoformat()
+    monthly = job(1, workflow="research-script-run.yml", cadence="monthly", last_dispatched_at=stamp,
+                  generated={"family": "m20-exit-lever", "key": "k"})
+    hand = job(2, workflow="research-script-run.yml")
+    order = dq.fair_order([monthly, hand], NOW, TH, CFG)
+    assert order[0] is hand and not monthly.raw["_rank"]["starved"] and monthly.raw["_rank"]["waited_h"] == 24.0
+    assert dq._due_since(monthly.raw, monthly.id) == NOW - timedelta(days=1)
+    # due long enough, it still gets served first: nothing starves
+    monthly.raw["last_dispatched_at"] = (NOW - timedelta(days=41)).isoformat()
+    assert dq.fair_order([monthly, hand], NOW, TH, CFG)[0] is monthly

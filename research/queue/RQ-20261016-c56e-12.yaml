@@ -1,0 +1,109 @@
+id: RQ-20261016-c56e-12
+title: 'Re-validation at power, real money: does trend_donchian_eth_4h AS DECLARED clear Stage 0 on the disjoint window before its committed record (2019-10-13
+  .. 2023-10-12), net of the full cost stack?'
+status: done
+cadence: once
+theme: live_strategy
+priority: 1
+kind: experiment
+question: On 2019-10-13 .. 2023-10-12 23:59 (disjoint from, and immediately preceding, the committed record's window), is trend_donchian_eth_4h at its configured
+  params net-positive with >= 5 of 8 calendar folds net > 0, at n >= 39?
+why_this_matters: trend_donchian_eth_4h is the largest real-money Stage-0 contributor (+33.3 R on 1095d). Its record starts 2023-10-13 and has never been
+  measured before that; the min_confidence confirmation (RESEARCH-FOLLOWUP-1016) tests a candidate, not the declared leg.
+power:
+  expected_n: 155
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'd=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo''s standing E35 floor). expected_n=155 is an ESTIMATE: the 1095d record''s 116 trades
+    scale to ~39/yr x 4 yr. Folds 8, majority 5.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched keyless candles over a pinned historical window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261016c56e12
+  registered_at: '2026-10-16'
+  registered_before_run: true
+  statistic: 'ONE arm B = the leg exactly as declared in config/strategies.yaml (argv built by regime_debt_matrix.build_harness_cmd; full cost stack fee
+    + resolved slippage + funding via execution_costs.resolve_cost_policy), graded by exit_lever_ablation.py --grade stage0: net_total_r, n, max_drawdown_r,
+    and net_r per fold over 8 equal calendar spans of the window. Reported, not graded: net_r_per_capital_day. NO positive control: no committed record
+    exists on this window (it is disjoint from and immediately precedes the leg''s record), the precedent being RQ-20261014-470a-01; the argv is built by
+    the same builder the committed record used, from the same config keys.'
+  rule: 'indeterminate IF n(B) < 39 (underpowered: no verdict, never FAIL on thin n). PASS IF net_r(B) > 0 AND >= 5 of 8 calendar folds net > 0: the edge
+    exists outside the window the record was measured on -- the record''s grade stands and the leg''s Stage-0 evidence now spans both windows (a re-validation
+    input for L-LADDER). FAIL IF n >= 39 and that does not hold: the record''s window carries the edge alone -- a roster-retention case for the manager
+    (tune-before-retire: the leg''s open P3 sweeps are read first). It is NOT a demotion signal by itself (Gate 2''s demotion signal is the mirror''s net-of-cost
+    window) and nothing is changed here. Windows are never pooled with the committed record''s; the record keeps its own grade. The 0 R bar, the 5-of-8
+    fold majority and the 39 floor are not changed after any result.'
+  what_it_does_not_do: Does not edit config or any roster, does not tune (one arm, as declared), does not pool windows. Not a promotion case.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 300
+  confidence: 0.25
+  bucket: own_losses
+  basis: 'stand-in: the leg''s book at stake if its edge turns out window-specific; estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  basis: One keyless candle fetch of ~2610 days and ONE harness pass over the pinned window.
+  why_runner: exit_lever_ablation.py fetches its own keyless candles (Binance Vision / Yahoo) and runs the repo harnesses; the symbol/timeframe is not in
+    metis-market-data and the script has no published-data input, so the Kaggle-CPU and trainer backends cannot take it.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_eth_4h
+  - --arm
+  - B=
+  - --days
+  - '2610'
+  - --start
+  - '2019-10-13'
+  - --end
+  - 2023-10-12 23:59
+  - --grade
+  - stage0
+  - --baseline
+  - B
+  - --delta-r
+  - '0'
+  - --folds
+  - '8'
+  - --fold-majority
+  - '5'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261016-c56e-12
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: research/results/RQ-20261016-c56e-12/<run_id>.jsonl via the batch collector; per-arm summaries and verdict.json under comms/research/RQ-20261016-c56e-12/<run_id>/.
+roadmap:
+- L-LADDER
+related:
+- P3-STRATEGY-BACKLOG-1016
+- docs/research/programmes/03-STRATEGY-IMPROVEMENT.md
+- research/programmes/03-strategy-improvement.yaml
+- scripts/research/exit_lever_ablation.py
+last_dispatched_at: '2026-10-16T16:06:10+00:00'
+grading:
+  attested: RULE-RQ20261016c56e12
+  auto: true
+  decision_rule_id: RULE-RQ20261016c56e12
+  evidence:
+  - research/results/RQ-20261016-c56e-12/38929314898.jsonl
+  graded_at: '2026-10-16'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

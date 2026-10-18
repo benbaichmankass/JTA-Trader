@@ -284,22 +284,48 @@ def config_problem(entry: Dict[str, Any], repo: Optional[Path] = None) -> Option
     return None
 
 
-def confirmatory_requeue(entry: Dict[str, Any], result_at: Optional[datetime]) -> bool:
+def confirmatory_requeue(entry: Dict[str, Any], result_at: Optional[datetime],
+                         results_root: Optional[Path] = None) -> bool:
     """Did `queue_grade.decide` clear this unit's stamp to ask for a confirmatory
     run AFTER reading the rows that exist? True only when the grading block
-    says `confirmatory_run >= 1` and its `graded_at` is not before the latest
-    result row -- a row landed after the grading is a result of the
-    confirmatory run itself, and the unit is then not due again."""
+    says `confirmatory_run >= 1` and no result has landed since that grading --
+    a result landed after the grading is the confirmatory run itself, and the
+    unit is then not due again.
+
+    ⚠️ "Since the grading" is read from the grading's own `evidence` list when it
+    has one: the rows the grader READ are named there, so a result file NOT in
+    it is new. Only without that list does it fall back to `graded_at`, and the
+    grader writes `graded_at` as a DATE ('2026-10-15'), which parses to midnight:
+    comparing a same-day result (19:14) against it said "landed after the
+    grading", so `stamp_lost` re-stamped the deliberate re-queue with run 1's
+    own `generated_at`, the confirmatory run never fired, and the grader's
+    confirmatory pass (`since` = that stamp, rows with ts < since excluded) re-read
+    run 1 and closed the unit "two consecutive FAIL passes" on ONE run. MEASURED
+    2026-10-16 (lane RESEARCH-FOLLOWUP-1016): RQ-20261015-4941-01/-02 closed that
+    way, evidence one file each. A date-only fallback therefore compares DATES:
+    a result dated on or before the grading day counts as already read."""
     g = entry.get("grading") if isinstance(entry.get("grading"), dict) else {}
     try:
         if int(g.get("confirmatory_run") or 0) < 1:
             return False
     except (TypeError, ValueError):
         return False
-    graded = _parse_ts(g.get("graded_at"))
+    evidence = g.get("evidence")
+    uid = str(entry.get("id") or "")
+    if isinstance(evidence, list) and evidence and uid:
+        rdir = (results_root if results_root is not None else RESULTS_ROOT) / uid
+        read = {Path(str(e)).name for e in evidence}
+        landed = {f.name for f in rdir.glob("*.jsonl")} if rdir.is_dir() else set()
+        return landed <= read
+    raw = str(g.get("graded_at") or "")
+    graded = _parse_ts(raw)
     if graded is None:
         return False
-    return result_at is None or result_at <= graded
+    if result_at is None:
+        return True
+    if len(raw) == 10:   # date-only: the grading happened at an unknown time that day
+        return result_at.date() <= graded.date()
+    return result_at <= graded
 
 
 def stamp_lost(entry: Dict[str, Any]) -> Optional[datetime]:
@@ -348,6 +374,15 @@ def _is_due(entry: Dict[str, Any], now: datetime) -> tuple:
     met, why = precondition_met(entry)
     if not met:
         return False, why
+    # RESEARCH-CONFIRM-FRESH-WINDOW (operator 2026-10-16): a fresh-window confirmation unit
+    # (queue_grade.confirmation_unit) needs data its PASS never saw, so it carries the earliest
+    # moment that data can exist. An unparseable value is refused, never read as "elapsed".
+    if entry.get("not_before") is not None:
+        nb = _parse_ts(entry.get("not_before"))
+        if nb is None:
+            return False, f"not_before={entry.get('not_before')!r} is unparseable -- refusing to fire"
+        if now < nb:
+            return False, f"not_before {nb.isoformat()} not reached (fresh window still accruing)"
     problem = config_problem(entry)
     if problem:
         return False, problem
@@ -447,30 +482,100 @@ def _waiting_since(entry: Dict[str, Any], uid: str) -> Optional[datetime]:
     return datetime(int(m[1]), int(m[2]), int(m[3]), tzinfo=timezone.utc) if m else None
 
 
+def _due_since(entry: Dict[str, Any], uid: str) -> Optional[datetime]:
+    """When the unit became DUE -- the moment it started waiting for a slot. For a recurring unit that
+    is its last stamp PLUS its cadence gap, never the stamp itself.
+
+    ⚠️ RESEARCH-ENGINE-1016 (2026-10-16). Aging and starvation used to count from the last stamp
+    (`_waiting_since`), so a monthly re-run came due already "waiting" 30 days: 720 h > the router's
+    `starve_hours` 240, i.e. STARVED, sorting ahead of every authored unit in its theme, plus ten aging
+    steps of age_boost. 62 of the 112 queued units on 2026-10-16 were generated monthly sweeps (e35-bracket 26,
+    m20-exit-lever 36), so each month's rollover would put them all in front of the questions anybody asked.
+    A unit waits from when it is due; a `once` unit (and a recurring one never stamped) is due from creation."""
+    since = _waiting_since(entry, uid)
+    cadence = str(entry.get("cadence") or "once")
+    if since is not None and entry.get("last_dispatched_at") and cadence in _CADENCE_DAYS:
+        since = since + timedelta(days=max(_CADENCE_DAYS[cadence], recheck_after_days(entry)))
+    return since
+
+
 def effective_priority(entry: Dict[str, Any], uid: str, now: datetime, aging_hours: float) -> int:
-    """priority minus one step per `aging_hours` waited (floor 0): nothing starves inside its theme."""
+    """priority minus one step per `aging_hours` waited since the unit came DUE (floor 0): nothing
+    starves inside its theme."""
     prio = entry.get("priority")
     prio = prio if isinstance(prio, int) and not isinstance(prio, bool) else 3
-    since = _waiting_since(entry, uid)
+    since = _due_since(entry, uid)
     steps = int(max(0.0, (now - since).total_seconds()) // (aging_hours * 3600)) if since else 0
     return max(0, prio - steps)
 
 
+def is_refill(entry: Dict[str, Any]) -> bool:
+    """A template / sweep re-run (research/templates family) as opposed to a question somebody ASKED.
+
+    MONEY-FIRST (operator 2026-10-18): a programme node (`generated.family: programme:*`) is emitted from an
+    authored programme tree (research/programmes/), so it is an asked question, not a refill -- the same line
+    `queue_grade.template_cell` draws. MEASURED 2026-10-18 on the committed queue: the 17 P1 real-money
+    trade-management units (RQ-20261017-002 score 145, RQ-20261016-004..021) carried `generated:` and so sorted
+    behind 11 authored equity units (scores 13..27) inside live_strategy, on top of the cross-theme round-robin."""
+    gen = entry.get("generated")
+    return isinstance(gen, dict) and not str(gen.get("family") or "").startswith("programme:")
+
+
+def programme_of(entry: Dict[str, Any]) -> str:
+    """The research programme a unit belongs to ("" when none): `programme_node.programme`, else the
+    `generated.family: programme:<id>` the programme emitter writes (both are on every P1 unit, 2026-10-18)."""
+    pn = entry.get("programme_node")
+    if isinstance(pn, dict) and pn.get("programme"):
+        return str(pn["programme"])
+    gen = entry.get("generated")
+    fam = str(gen.get("family") or "") if isinstance(gen, dict) else ""
+    return fam[len("programme:"):] if fam.startswith("programme:") else ""
+
+
+def programme_tier(entry: Dict[str, Any], cfg: Dict[str, Any]) -> int:
+    """Position of the unit's programme in ``value.programme_priority`` (0 = the operator's first priority);
+    len(list) for every unit outside it. PROGRAMME PRIORITY (operator 2026-10-18, ~06:20Z): P1 active trade
+    management and P2 AI trader rank first on every backend, above other themes and programmes."""
+    order = [str(x) for x in (cfg.get("value", {}).get("programme_priority") or [])]
+    prog = programme_of(entry)
+    return order.index(prog) if prog and prog in order else len(order)
+
+
 def fair_order(jobs: List[Any], now: datetime, themes_doc: Dict[str, Any],
                cfg: Optional[Dict[str, Any]] = None) -> List[Any]:
-    """Dispatch order: weighted fair share across themes, aged priority within a theme.
+    """Dispatch order. With ``cfg`` (the live dispatcher): MONEY FIRST across themes, theme share breaks ties.
+    Without ``cfg``: the pre-router weighted fair share across themes, aged priority within a theme, unchanged.
 
-    Repeatedly pick the theme with the lowest (fired in the last `share_window_hours` + picked so far)
-    / weight, among themes that still hold a due job, and take that theme's best job (lowest effective
-    priority, then id). Stateless: the only memory is the stamps already on the units. A theme with
-    runnable work and no recent fire has usage 0, so it is served before any theme over its share:
-    low weight means fewer slots, never none. Jobs that are not due (done, cadence not elapsed, unmet
-    precondition, session-bound, invalid) keep id order after the candidates, unchanged.
+    MONEY FIRST (operator decision 2026-10-18, verbatim "Fix now, money first"; lane DISPATCH-MONEY-FIRST-1018).
+    Until then the cross-theme step was a round-robin: repeatedly pick the theme with the lowest (fired in the
+    last `share_window_hours` + picked so far) / weight and take its best unit, so the VALUE score ordered units
+    only inside a theme. MEASURED on run 39098686264 (2026-10-18 04:56Z): github_runner's three slots went to
+    RQ-20261017-ae17-08/-09 (regime, score 6.5) and ae17-45 (infra, 30.7) while RQ-20261017-002 (own_losses,
+    141.9) and the other P1 real-money units deferred on "github_runner at capacity (3/3 in flight)" -- a starved
+    theme took every scarce slot regardless of what the unit was worth. The operator declined to raise the runner
+    cap and chose: real-money / prop / own-losses work dispatches first; theme balancing only breaks ties and uses
+    spare capacity.
 
-    RESEARCH-ROUTER (2026-10-13): with ``cfg`` (scripts/research/research_compute.yaml) a theme's candidates are
-    ordered by VALUE per unit cost (compute_router.score) instead of by effective priority alone; a unit
-    that has waited past ``value.starve_hours`` sorts first. Each ranked job carries ``raw['_rank']`` (score +
-    derivation) for the decision line. Without ``cfg`` the order is the pre-router one, unchanged."""
+    The order now, with ``cfg``:
+      1. Inside a theme (unchanged shape): starved first (DUE past ``value.starve_hours``), then the operator's
+         PROGRAMME PRIORITY (``value.programme_priority``, an ordered list; `programme_tier`), then ASKED units
+         (authored, or a programme node -- see `is_refill`) before template refills, then by ``compute_router.score``
+         (value per cost, bucket shares, hand-written and age boosts), then id.
+      2. Across themes: take the theme whose NEXT unit is worth most -- a starved head first (nothing starves past
+         starve_hours, in any theme), then the lowest programme tier, then the highest score. Theme share (fired in
+         the window + picked so far, over THEMES.yaml weight) decides only between EQUAL scores, then the heavier
+         theme, then the name.
+    PROGRAMME PRIORITY (operator 2026-10-18 ~06:20Z, verbatim "Those two items are our highest priority, we need to
+    make sure we're pushing forward on them": P1 active trade management, P2 AI trader). A due unit of a listed
+    programme ranks first on every backend, above every other theme and programme, P1 before P2 (the list is
+    ordered); only a starved unit goes ahead of it. Edit the list in research_compute.yaml to change the priority.
+    A theme holding only low-value units therefore fires when capacity is spare or when its units starve (240 h),
+    so ``theme_share_min_ratio`` recovers more slowly than under the round-robin -- stated on the SLO's config and
+    on checklist row RESEARCH-PIPELINE-SLO, deliberately not re-thresholded. The share is still honoured by SUPPLY
+    (check_research_queue_health.py `theme_supply`): authoring valuable units in a short theme is how it recovers.
+    Each ranked job carries ``raw['_rank']`` (score + derivation + ``pick``: "starved" or "value") for the
+    decision line. Jobs that are not due (done, cadence not elapsed, unmet precondition, session-bound, invalid)
+    keep id order after the candidates, unchanged. Stateless: the only memory is the stamps already on the units."""
     themes = themes_doc["themes"]
     window = timedelta(hours=float(themes_doc["share_window_hours"]))
     aging = float(themes_doc["aging_hours"])
@@ -504,14 +609,21 @@ def fair_order(jobs: List[Any], now: datetime, themes_doc: Dict[str, Any],
         starve = timedelta(hours=float(cfg["value"]["starve_hours"]))
         for th in cand:
             def _key(x, _fires=fires):
-                since = _waiting_since(x.raw, x.id)
+                since = _due_since(x.raw, x.id)
                 waited = (now - since) if since else timedelta(0)
                 steps = int(max(0.0, waited.total_seconds()) // (aging * 3600))
                 r = cr.score(x.raw, cfg, aging_steps=steps, fires=_fires)
                 r["starved"] = waited > starve
                 r["waited_h"] = round(waited.total_seconds() / 3600.0, 1)
+                r["refill"] = is_refill(x.raw)
+                r["programme"] = programme_of(x.raw)
+                r["programme_tier"] = programme_tier(x.raw, cfg)
                 x.raw["_rank"] = r
-                return (not r["starved"], -r["rank_value"], x.id)
+                # Programme priority first (operator 2026-10-18: P1, P2), then asked before refill inside a theme
+                # (RESEARCH-ENGINE-1016, kept): someone ASKED an authored question or registered a programme node;
+                # a template re-run keeps the queue stocked. A refill still fires whenever its theme has no asked
+                # unit due -- or first, once DUE past starve_hours.
+                return (not r["starved"], r["programme_tier"], r["refill"], -r["rank_value"], x.id)
             cand[th].sort(key=_key)
     for th in cand if cfg is None else ():
         # Within one effective priority a hand-written unit (someone ASKED this question) goes
@@ -523,12 +635,23 @@ def fair_order(jobs: List[Any], now: datetime, themes_doc: Dict[str, Any],
                                      isinstance(x.raw.get("generated"), dict), x.id))
     out: List[Any] = []
     while any(cand.values()):
-        th = min((t for t in cand if cand[t]),
-                 key=lambda t: (used[t] / float(themes[t]["weight"]), -float(themes[t]["weight"]), t))
+        if cfg is None:
+            th = min((t for t in cand if cand[t]),
+                     key=lambda t: (used[t] / float(themes[t]["weight"]), -float(themes[t]["weight"]), t))
+        else:
+            # Starved first; then the operator's programme priority; then MONEY FIRST: the theme whose next unit is
+            # worth most; theme share only breaks an equal score.
+            th = min((t for t in cand if cand[t]),
+                     key=lambda t: (not cand[t][0].raw["_rank"]["starved"], cand[t][0].raw["_rank"]["programme_tier"],
+                                    -cand[t][0].raw["_rank"]["rank_value"],
+                                    used[t] / float(themes[t]["weight"]), -float(themes[t]["weight"]), t))
+            _r = cand[th][0].raw["_rank"]
+            _r["pick"] = ("starved" if _r["starved"]
+                          else f"programme:{_r['programme']}" if _r["programme_tier"] < len(cfg["value"].get("programme_priority") or [])
+                          else "value")
         out.append(cand[th].pop(0))
         used[th] += 1
     return out + rest
-
 
 def due_within(entry: Dict[str, Any], now: datetime, hours: float = 0.0) -> bool:
     """Would the dispatcher fire this unit at ``now + hours``? The ONE due rule
@@ -740,6 +863,22 @@ def serialized_workflow(wf_file: str, repo: Path = _REPO) -> bool:
     return bool(m) and "${{" not in m.group(1)
 
 
+def managed_first(jobs: List[Any], cfg: Dict[str, Any]) -> List[Any]:
+    """Fire order across the shared --max-research-inflight cap: units placed on a MANAGED backend first, then
+    units whose explicit run.workflow has no backend (compute_router.plan -> "unmanaged"), each group keeping
+    its fair_order. The cap (research_compute.yaml limits.max_total_inflight) is declared as the SUM of the
+    backends' slots, but an unmanaged unit is gated only by that cap -- so in pure fair order it can take every
+    slot. MEASURED 2026-10-16 (lane RESEARCH-DISPATCH-STALL-1016): the 08:10Z and 08:51Z cycles fired 8
+    research-harness-dispatch.yml units each and deferred trainer (RQ-20261012-75b2-20) and kaggle_cpu
+    (RQ-20261014-65cc-09) units on "research compute cap 8 reached" while both backends had 0 in flight; the
+    watchdog then escalated trainer idle 397 min / kaggle_cpu idle 336 min. A managed unit is still bounded
+    by its own backend's max_concurrent, so unmanaged units keep every slot no backend has due work for."""
+    def managed(j: Any) -> bool:
+        p = (getattr(j, "raw", None) or {}).get("_plan")
+        return isinstance(p, cr.Resolution) and p.ok and p.backend in cfg.get("backends", {})
+    return [j for j in jobs if managed(j)] + [j for j in jobs if not managed(j)]
+
+
 def research_workflow_names(jobs: List[Any], repo: Path = _REPO) -> Dict[str, str]:
     """{workflow file -> its `name:`} for every real workflow the queue routes
     to, plus the token-free runner. A run counts as research compute when its
@@ -771,7 +910,7 @@ def gh_runs(status: str, *, limit: int = 200) -> Optional[List[Dict[str, Any]]]:
     """`gh run list` rows for one status, or None when gh could not answer --
     a count we could not take is reported as such, never as zero."""
     cmd = ["gh", "run", "list", "--status", status, "--limit", str(limit),
-           "--json", "databaseId,workflowName,status,createdAt"]
+           "--json", "databaseId,workflowName,status,createdAt,event"]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
     except (OSError, subprocess.SubprocessError):
@@ -793,6 +932,14 @@ def gh_runs(status: str, *, limit: int = 200) -> Optional[List[Dict[str, Any]]]:
 #: in flight" were three `trainer-vm-diag` issue dispatches from the same
 #: morning. Counting them deferred every fire, and would have forever.
 STALE_PRESSURE_HOURS = 24.0
+
+#: Run events that do NOT count toward --max-repo-queued (manager decision 2026-10-16, lane
+#: RESEARCH-DISPATCH-STALL-1016). A `workflow_run` listener run is created for EVERY completion of a
+#: workflow it watches and mostly ends `skipped` without holding a runner. MEASURED 2026-10-16 09:37Z:
+#: the 27 fresh queued runs that deferred every fire were mostly claude-run-failure-alert (37 of ~60 of
+#: its runs since 08:00Z ended skipped). They still count for infra-yield (system-actions-cancel-guard is
+#: a listener AND infra) -- this only narrows the saturation count.
+NON_COMPETING_EVENTS = frozenset({"workflow_run"})
 
 
 def _run_age_hours(row: Dict[str, Any], now: datetime) -> Optional[float]:
@@ -858,19 +1005,21 @@ def backpressure(research_names: Dict[str, str], *, max_inflight: int, max_queue
     for r in queued + inprog:
         if str(r.get("workflowName")) in names:
             by_name[str(r["workflowName"])] = by_name.get(str(r["workflowName"]), 0) + 1
+    competing = [r for r in queued if str(r.get("event") or "") not in NON_COMPETING_EVENTS]
+    listeners = len(queued) - len(competing)
     infra = set(infra_names or [])
     infra_waiting = sorted({str(r.get("workflowName")) for r in queued if str(r.get("workflowName")) in infra})
     infra_queued = sum(1 for r in queued if str(r.get("workflowName")) in infra)
-    out = {"inflight_research": inflight, "by_name": by_name, "repo_queued": len(queued), "stale_ignored": stale, "block": None,
-           "infra_queued": infra_queued,
+    out = {"inflight_research": inflight, "by_name": by_name, "repo_queued": len(competing), "stale_ignored": stale, "block": None,
+           "infra_queued": infra_queued, "listener_queued_ignored": listeners,
            "detail": f"research compute in flight {inflight} (cap {max_inflight}); repo runs queued "
-                     f"{len(queued)} (cap {max_queued}); {stale} stuck run(s) older than "
-                     f"{stale_after_hours:g} h ignored"}
+                     f"{len(competing)} (cap {max_queued}; {listeners} workflow_run listener run(s) not counted); "
+                     f"{stale} stuck run(s) older than {stale_after_hours:g} h ignored"}
     if infra_queued:
         out["block"] = (f"{infra_queued} infra run(s) queued ({', '.join(infra_waiting)}): research yields "
                         "the shared GitHub runner pool to infra -- deferring every fire this cycle")
-    elif len(queued) > max_queued:
-        out["block"] = (f"{len(queued)} workflow runs are queued repo-wide (> {max_queued}): research "
+    elif len(competing) > max_queued:
+        out["block"] = (f"{len(competing)} workflow runs are queued repo-wide (> {max_queued}): research "
                         "must not add to a saturated runner pool -- deferring every fire this cycle")
     elif inflight >= max_inflight:
         out["block"] = (f"{inflight} research compute run(s) already queued/in progress (cap "
@@ -1128,8 +1277,9 @@ def main(argv: Optional[List[str]] = None) -> int:
               f"This is NOT an empty queue.", file=sys.stderr)
         return 2
 
-    # Fire order: weighted fair share across themes (research/THEMES.yaml), aged priority within
-    # a theme. load_queue returns files sorted by id, which made this a pure FIFO: a cycle fires at
+    # Fire order (fair_order): MONEY FIRST across themes by the router's value score, theme share
+    # (research/THEMES.yaml) breaking ties, starved units first, asked before refill inside a theme.
+    # load_queue returns files sorted by id, which made this a pure FIFO: a cycle fires at
     # most --max-research-inflight units, so the newest ids waited behind every older one.
     cfg: Optional[Dict[str, Any]] = None
     try:
@@ -1266,6 +1416,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                 due_by_be[be] = due_by_be.get(be, 0) + 1
     gpu_fired = 0
     fired_by_workflow: Dict[str, int] = {}
+    if args.fire and cfg is not None:
+        jobs = managed_first(jobs, cfg)
     for job in jobs:
         entry = job.raw
         row: Dict[str, Any] = {"id": job.id, "path": _display_path(job.path),
@@ -1363,6 +1515,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         if entry.get("_rank"):
             row["value_score"] = round(entry["_rank"]["rank_value"], 2)
             row["value_derivation"] = entry["_rank"]["derivation"]
+            if entry["_rank"].get("pick"):       # "programme:<id>" (operator priority), "value" (score across themes) or "starved"
+                row["pick"] = entry["_rank"]["pick"]
+                row["value_derivation"] += f" | pick={row['pick']}" + (" (refill)" if entry["_rank"].get("refill") else "")
         if res is not None and res.ok and res.wait:
             row.update(outcome=DEFERRED, reason=f"waiting for compute: {res.reason}")
             decisions.append(row)

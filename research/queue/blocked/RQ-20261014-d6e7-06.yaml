@@ -49,13 +49,18 @@ decision_rule:
     Requires a rung-3 or rung-5 PASS to be worth running; it is the confirmation, not a new search. Changes no config.
 blocked_on:
 - what: >-
-    No harness emits per-bar in-trade paths with the stop/target in force at each bar; harness --emit-trades rows are per-trade,
-    and first_passage.py's re-walk can only reconstruct a FIXED bracket.
-  ref: docs/claude/work/checklist/EXIT-PATH-EMIT-OFFLINE.json
+    2026-10-18 (lane ACTIVE-MGMT-DRIVE-1018): the harness side is DONE -- #18536 (EXIT-PATH-EMIT-OFFLINE) landed --emit-paths on
+    backtest_trend.py + backtest_pullback.py (one row per trade x bar with the stop and target in force). What is still missing is
+    the READER: scripts/research/first_passage.py takes only --ledgers (per-trade rows) and re-walks public candles with a FIXED
+    bracket; it has no --paths input, so the harness-native census and policy cannot be run yet.
+  ref: docs/claude/work/checklist/FIRST-PASSAGE-ON-PATHS.json
   clears_when: >-
-    EXIT-PATH-EMIT-OFFLINE lands --emit-paths on backtest_trend.py + backtest_pullback.py with its parity test, AND RQ-20261014-d6e7-03
-    or -05 has graded PASS. Then git mv to research/queue/, status queued, set run.command (a --paths reader mode on first_passage.py)
-    and requires_result.
+    FIRST-PASSAGE-ON-PATHS lands a --paths <glob> input on first_passage.py (events, labels and feature sets built from the emitted
+    rows; the free null and the distance-only reference unchanged; a random-walk self-test). Then git mv to research/queue/, status
+    queued, run.command = first_passage.py --paths ... --mode census (then baseline) on config-exact emits of the real-money legs.
+    The former second clause ("RQ-20261014-d6e7-03 or -05 has graded PASS") is DROPPED: both policy rungs FAILED on the fixed-bracket
+    reconstruction (RQ-20261016-013, RQ-20261016-1fa6-06; -03/-05 retired), and that is exactly why the question moves to the legs
+    as traded. The registered rule above is unchanged; the question's (b) runs the 8.4 rich state as the candidate policy.
 compute: cpu_light
 value:
   bucket: ai_trader
@@ -70,7 +75,7 @@ routing:
   basis: 'Estimate: config-exact harness runs of ~7 legs plus the policy pass.'
 run:
   workflow: null
-  note: Null until EXIT-PATH-EMIT-OFFLINE lands (blocked_on).
+  note: Null until FIRST-PASSAGE-ON-PATHS lands (blocked_on; the emit itself landed 2026-10-16, #18536).
 lands:
   store: research/results/
   assert_field: read_state
@@ -84,4 +89,5 @@ related:
 - docs/research/programmes/02-AI-TRADER.md (Q3)
 - scripts/research/first_passage.py
 - EXIT-PATH-EMIT-OFFLINE
+- FIRST-PASSAGE-ON-PATHS
 last_dispatched_at: null

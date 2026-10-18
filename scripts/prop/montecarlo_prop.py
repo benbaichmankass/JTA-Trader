@@ -31,6 +31,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 import scripts.backtest_system as bt  # noqa: E402
+from src.research.run_costs import add_cost_args, costs_from_args  # noqa: E402
 from src.prop.montecarlo import run_ev_montecarlo, run_montecarlo  # noqa: E402
 from src.prop.ruleset import PropRuleset, load_ruleset  # noqa: E402
 
@@ -95,7 +96,8 @@ def _run_one_combo(
             daily_loss_pct=args.daily_loss_pct, signal_ttl_bars=args.signal_ttl_bars,
             overrides={}, refresh=args.refresh_signals, clock_tf=args.clock_tf,
             flip_policy=args.flip_policy, reentry_policy="suppress",
-            attach_full=True,
+            attach_full=True, symbol=args.symbol,
+            costs=args.costs, require_full_costs=not args.fee_only_arm,
         )
     except Exception as exc:  # noqa: BLE001 — one bad combo must not abort the sweep
         print(f"[mc] combo {roster_str} engine failed: {exc}", file=sys.stderr)
@@ -283,6 +285,7 @@ def _render_ev_markdown(
 
 def run(args: argparse.Namespace) -> int:
     ruleset = load_ruleset(args.ruleset)
+    args.costs = costs_from_args(args, args.symbol, ruleset)
     rosters = _parse_combos(args.combos)
     if not rosters:
         print("ERROR: no valid combos resolved", file=sys.stderr)
@@ -334,6 +337,7 @@ def run(args: argparse.Namespace) -> int:
             "flip_policy": args.flip_policy, "data": args.data,
         },
         "data_window": data_window,
+        "cost_policy": args.costs,
         "results": results,
     }
     (out_dir / "montecarlo.json").write_text(json.dumps(payload, indent=2, default=str))
@@ -351,6 +355,7 @@ def run(args: argparse.Namespace) -> int:
         (out_dir / "ev.json").write_text(json.dumps(
             {"generated_at": generated_at, "ruleset": ruleset.to_dict(),
              "params": payload["params"], "data_window": data_window,
+             "cost_policy": args.costs,
              "ev": [{"combo": r["combo"], "ev_cells": r.get("ev_cells", [])} for r in results]},
             indent=2, default=str))
         print(ev_md)
@@ -376,6 +381,8 @@ def main(argv: List[str]) -> int:
     p.add_argument("--daily-loss-pct", type=float, default=3.0,
                    help="In-sim daily-loss halt %% for the engine run (not the MC check).")
     p.add_argument("--signal-ttl-bars", type=int, default=1)
+    p.add_argument("--symbol", default="BTCUSDT", help="Symbol the candles are for (prices its cost stack).")
+    add_cost_args(p)
     p.add_argument("--clock-tf", default="1h", choices=list(bt._PANDAS_TF.keys()))
     p.add_argument("--flip-policy", default="hold", choices=["reverse", "hold", "flat"])
     p.add_argument("--refresh-signals", action="store_true")

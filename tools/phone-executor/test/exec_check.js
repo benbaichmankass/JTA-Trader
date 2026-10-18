@@ -889,6 +889,16 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
   await tp.mouse.click(nt.x, nt.y);
   eq([await tp.evaluate("__ex.sheetInfo('ETHUSD').open"), await tp.evaluate("window.__danger")], [true, 0], "native: a trusted tap at that point opens the sheet; nothing denied clicked");
   eq((await tp.evaluate("__ex.sheetTarget('ETHUSD','child',false)")).why, "sheet_open", "native: never targeted with the sheet already open");
+  // 2026-10-17 (1b.253 touched both rows, no sheet): the final pre-touch check arms a passive record of what the page
+  // RECEIVED from the touch (type, pointerType, contact width, isTrusted); domDiff returns it as ev
+  const tq = await onHost(tr);
+  let nq = await tq.evaluate("__ex.sheetTarget('ETHUSD','child',true)");
+  nq = await tq.evaluate("__ex.sheetTarget('ETHUSD','child',false)");
+  await tq.evaluate("__ex.domMark()");
+  await tq.mouse.click(nq.x, nq.y);
+  const rcv = (await tq.evaluate("__ex.domDiff()")).ev;
+  eq([nq.ok, rcv.length > 0, rcv.some((x) => /^click:\S+ w\d+ tr1$/.test(x)), rcv.some((x) => /^pdown:mouse w\d+ tr1$/.test(x))], [true, true, true, true], "native: domDiff.ev records the received events (type:pointerType w<size> tr<trusted>)");
+  eq(await tq.evaluate("__ex.sheetInfo('ETHUSD').open"), true, "native: the passive record never blocks the trusted tap");
   // a point covered by another element (an overlay, a row ✕ drawn over the cell) is refused, never touched
   const cv = await onHost(sheetPage().replace("</body>", "<div id=ov style='position:fixed;left:0;top:0;width:100%;height:100%'></div></body>"));
   let cvr = await cv.evaluate("__ex.sheetTarget('ETHUSD','child',false)");
@@ -897,6 +907,55 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
   const dz = await onHost(sheetPage().replace('<div id=chm>ETH <span>5x</span></div>', '<div id=chm style="position:relative">ETH <span>5x</span><i aria-label="Close" style="position:absolute;left:0;top:0;right:0;bottom:0"></i></div>'));
   eq(/^(point_)?deny_/.test((await dz.evaluate("__ex.sheetTarget('ETHUSD','child',false)")).why), true, "native: a close control under the point is refused");
   eq((await (await onHost(sheetPage({noChild: true}))).evaluate("__ex.sheetTarget('ETHUSD','child',false)")).why, "none", "native: no child row -> none (the amend path reads none as no position only with group none too)");
+  // 2026-10-17 (1b.253 08:03Z/12:03Z: the Market cell got a TRUSTED finger touch, click:touch tr1, and no sheet opened):
+  // the cell was wrong, not the touch. Here the Market cell keeps its own click (stopPropagation, as a market link
+  // would) and the sheet opens from (a) the row, reached from any plain cell, or (b) only the "1 TP / 1 SL" text.
+  const tpslRow = (s) => s.replace('<div><i class=dot></i></div><div>1,318.20USD</div><div>2,461.52USD</div><div>2,440.65USD</div><div></div><div>20.10USD</div>', '<div><i class=dot></i></div><div>1,318.20USD</div><div>2,461.52USD</div><div>2,440.65USD</div><div><span id=tps>1 TP / 1 SL</span></div><div>20.10USD</div>')
+    .replace("</script>", "document.getElementById('chm').addEventListener('click',function(e){e.stopPropagation();window.__mkt=(window.__mkt||0)+1});</script>");
+  const rowOpens = await onHost(tpslRow(sheetPage()));
+  const tapAt = async (pg, which) => { const a = await pg.evaluate(`__ex.sheetTarget('ETHUSD','${which}',true)`); if (!a.ok) return a.why; const b = await pg.evaluate(`__ex.sheetTarget('ETHUSD','${which}',false)`); if (!b.ok) return b.why; await pg.mouse.click(b.x, b.y); return "touched"; };
+  eq([await tapAt(rowOpens, "child"), await rowOpens.evaluate("__ex.sheetInfo('ETHUSD').open"), await rowOpens.evaluate("window.__mkt")], ["touched", false, 1], "targets: a trusted touch on the Market cell is eaten by the cell's own handler, no sheet");
+  eq([await tapAt(rowOpens, "child_entry"), await rowOpens.evaluate("__ex.sheetInfo('ETHUSD').open"), await rowOpens.evaluate("window.__danger")], ["touched", true, 0], "targets: the child row's Opening price cell reaches the row handler, sheet opens, nothing denied");
+  const tpOnly = await onHost(tpslRow(sheetPage()).replace("document.getElementById('chd').addEventListener('click'", "document.getElementById('tps').addEventListener('click'"));
+  await tpOnly.evaluate("Object.defineProperty(document.getElementById('tps'),'__reactProps$t',{value:{onClick:function(){}},enumerable:true});document.querySelectorAll('#chd > div').forEach(function(d){Object.defineProperty(d,'__reactProps$t',{value:{},enumerable:true})})");
+  eq([await tapAt(tpOnly, "child_entry"), await tpOnly.evaluate("__ex.sheetInfo('ETHUSD').open")], ["touched", false], "targets: a plain cell does nothing when only the TP / SL text opens the sheet");
+  const tpT = await tpOnly.evaluate("__ex.sheetTarget('ETHUSD','child_tpsl',false)");
+  eq([tpT.ok, await tpOnly.evaluate(`document.elementFromPoint(${tpT.x},${tpT.y}).id`)], [true, "tps"], "targets: child_tpsl is the '1 TP / 1 SL' text itself");
+  await tpOnly.evaluate("__ex.domMark()");
+  await tpOnly.mouse.click(tpT.x, tpT.y);
+  eq([await tpOnly.evaluate("__ex.sheetInfo('ETHUSD').open"), await tpOnly.evaluate("window.__danger")], [true, 0], "targets: the TP / SL text opens it; nothing denied touched");
+  const hdm = (await tpOnly.evaluate("__ex.domDiff()")).hd;
+  eq([hdm.includes("upa span Click"), hdm.includes("tpsl in Click") || hdm.includes("tpsl cell Click"), hdm.includes("no_react"), hdm.every((x) => x.length <= 34)], [true, true, false, true], "targets: domDiff.hd names the React handler on the tapped text and its column");
+  eq((await (await onHost(sheetPage())).evaluate("__ex.sheetTarget('ETHUSD','child_tpsl',false)")).why, "no_tpsl", "targets: an empty TP / SL cell is never a target");
+  eq((await (await onHost(sheetPage({noChild: true}))).evaluate("__ex.sheetTarget('ETHUSD','child_entry',false)")).why, "none", "targets: no child row -> none for the other cells too");
+  // 1b.261 20:03Z: child_entry / child_tpsl read no_row on the live grid while handlerMap found the row by walking up
+  // from the Market hit. The row is now found the same way, wherever the expanded child row is nested.
+  const deep = tpslRow(sheetPage()).replace('<div class=r id=chd>', '<div class=sub><div class=sub2><div class=r id=chd>').replace('✕</button></div></div>\n</div></div>', '✕</button></div></div></div></div>\n</div></div>');
+  const dp = await onHost(deep);
+  eq([await dp.evaluate("document.querySelector('.sub2 #chd') !== null"), await tapAt(dp, "child_entry"), await dp.evaluate("__ex.sheetInfo('ETHUSD').open"), await dp.evaluate("window.__danger")], [true, "touched", true, 0], "targets: a child row nested two wrappers deep is still found; its Opening price cell opens the sheet");
+  // 1b.263 05:00Z (amend #a6 refused): child_entry/native:covered + child_tpsl/native:covered from the SCROLL call (no
+  // geometry posted), then child/native touched the Market <a> (hd: "upe a Click" / "uph div Click") and no sheet. Fixture
+  // of that shape: the grid in a narrow horizontal scroller, a sticky Market column, the Market content an <a> whose click
+  // stops propagation, the ROW holding the opener, and the Opening price cell's CENTRE under a non-control overlay.
+  const k5 = sheetPage().replace("#hdr,.r{display:grid;grid-template-columns:repeat(9,90px);min-height:20px}",
+      "#panel{width:300px;overflow-x:auto}#hdr,.r{display:grid;grid-template-columns:repeat(9,120px);min-height:24px;width:1080px}#hdr>div:first-child,.r>div:first-child{position:sticky;left:0;background:#fff;z-index:2}.cv{position:absolute;left:-80px;width:50px;top:0;bottom:0;background:#eee;z-index:1}")
+    .replace('<div id=chm>ETH <span>5x</span></div>', '<div id=chm><a href="#" id=mk>ETH <span>5x</span></a></div>')
+    .replace('<div class=r id=chd><div id=chm><a href="#" id=mk>ETH <span>5x</span></a></div><div>20.88USD</div><div><i class=dot></i></div><div>1,318.20USD</div><div>2,461.52USD</div><div>2,440.65USD</div>',
+      '<div class=r id=chd><div id=chm><a href="#" id=mk>ETH <span>5x</span></a></div><div>20.88USD</div><div><i class=dot></i></div><div>1,318.20USD</div><div>2,461.52USD</div><div style="position:relative">2,440.65USD<span class=cv></span></div>')
+    .replace("</script>", "document.getElementById('mk').addEventListener('click',function(e){e.preventDefault();e.stopPropagation();window.__mkt=(window.__mkt||0)+1});</script>");
+  const kp = await onHost(k5);
+  eq(await kp.evaluate("!!document.querySelector('#chd .cv')"), true, "1b.263 fixture: built (an overlay from the next cell over the Opening price centre)");
+  const k5s = await kp.evaluate("__ex.sheetTarget('ETHUSD','child_entry',true)");
+  const k5t = await kp.evaluate("__ex.sheetTarget('ETHUSD','child_entry',false)");
+  const k5hit = k5t.ok ? await kp.evaluate(`(function(){var e=document.elementFromPoint(${k5t.x},${k5t.y});return !!e.closest('#chd') && !e.classList.contains('cv') && e.closest('#chm')===null;})()`) : false;
+  eq([k5s.ok, k5t.ok, k5hit], [true, true, true], "1b.263 fixture: the scroll call never refuses on the point; the check call finds an uncovered point of the Opening price cell");
+  await kp.mouse.click(k5t.x, k5t.y);
+  eq([await kp.evaluate("__ex.sheetInfo('ETHUSD').open"), await kp.evaluate("window.__mkt || 0"), await kp.evaluate("window.__danger")], [true, 0, 0], "1b.263 fixture: that touch reaches the row and opens the sheet; the Market link is never touched; nothing denied");
+  const kq = await onHost(k5.replace("left:-80px;width:50px", "left:-120px;width:120px"));
+  const kqr = (await kq.evaluate("[__ex.sheetTarget('ETHUSD','child_entry',true), __ex.sheetTarget('ETHUSD','child_entry',false)]"))[1];
+  eq([kqr.ok, kqr.why, /^vis -?\d+_-?\d+_\d+x\d+$/.test(kqr.g3 || ""), kqr.g1.length <= 40 && (kqr.g3 || "").length <= 40], [false, "covered", true, true], "1b.263 fixture: a FULLY covered cell is refused with its geometry incl. the visible part (g3)");
+  await rowOpens.evaluate("__ex.domMark()");
+  eq((await rowOpens.evaluate("__ex.domDiff()")).hd, ["no_react"], "targets: a page without React props says so (no_react), never an empty map read as 'no handler'");
   // finding (a): the EXPANDED child row carries the side as text; childShape measures it and positionsRead reads it
   const ex = await onHost(sheetPage().replace('<div><i class=dot></i></div><div>1,318.20USD</div><div>2,461.52USD</div><div>2,440.65USD</div><div></div><div>20.10USD</div>', '<div>Short</div><div>1,318.20USD</div><div>2,461.52USD</div><div>2,440.65USD</div><div>1 TP / 1 SL</div><div>20.10USD</div>'));
   let cs = await ex.evaluate("__ex.childShape()");
@@ -914,5 +973,40 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
   let dm = await tm2.evaluate("__ex.dismissModals()");
   eq([dm.found, dm.cancelled, dm.esc, (await tm2.evaluate("__ex.modalsOpen()")).n, await tm2.evaluate("window.__saved")], [1, 1, false, 0, 0], "dismiss: its Cancel clicked, nothing left, Confirm never clicked");
   eq([(await tm2.evaluate("__ex.dismissModals()")).found, await tm2.evaluate("__ex.cancelModals()")], [0, 0], "dismiss: nothing open -> nothing found / cancelled");
+  // PHONE-EXEC-OBSERVABLE-1018: the script carries its version, a same-version re-injection is a no-op and a NEWER
+  // version replaces the helpers (RemoteJs swaps the verified remote script in without an APK)
+  const vp = await onHost(sheetPage());
+  const ver = await vp.evaluate("__ex.version");
+  eq(/^\d{4}-\d{2}-\d{2}\.\d+$/.test(ver), true, "version: __ex.version is the YYYY-MM-DD.N pin");
+  await vp.evaluate("window.__exMarker = 1; window.__ex.marker = 'old'");
+  await vp.addScriptTag({ content: src });
+  eq(await vp.evaluate("__ex.marker"), "old", "version: the same version injected again changes nothing");
+  await vp.addScriptTag({ content: src.replace(/var EXEC_VERSION = "[^"]+";/, 'var EXEC_VERSION = "2099-01-01.1";') });
+  eq([await vp.evaluate("__ex.version"), await vp.evaluate("__ex.marker")], ["2099-01-01.1", undefined], "version: a newer script replaces the helpers");
+  // DOM SNAPSHOT (PHONE-EXEC-OBSERVABLE-1018): the sheet, the modal and the Positions grid come back as geometry-carrying
+  // subtrees with React handler names; ON-DEVICE REDACTION masks the position id, every P&L / value / margin / balance /
+  // portfolio figure and the account path, and KEEPS prices, quantities and triggers (what a fixture needs)
+  const snapPg = await onHost(sheetPage({upnl: "20.88 USD"}).replace("<div id=bottom>", "<div id=top><button>Portfolio 4,947.72 USD</button><div>Balance 4,930.42</div></div><div id=bottom>")
+    .replace('<div id=sheet style="display:none">', '<div id=sheet>').replace('<div id=modal style="display:none">', '<div id=modal>').replace('<div id=ps style="display:none">', '<div id=ps>'));
+  await snapPg.evaluate("Object.defineProperty(document.getElementById('chd'),'__reactProps$x',{value:{onClick:function(){}},enumerable:true})");
+  const snap = await snapPg.evaluate("__ex.snapshot('page')");
+  const stxt = JSON.stringify(snap);
+  eq(snap.roots.map((r) => r.k).sort(), ["body", "grid", "modal", "sheet"], "snapshot: sheet / modal / grid / body subtrees");
+  eq([snap.v === ver, snap.nodes > 40, snap.redact.length > 5, snap.vw > 0, snap.path.includes("/account/ACCT")], [true, true, true, true, true], "snapshot: version, node count, redaction rects, viewport, masked account path");
+  for (const keep of ["Position – ID", "2,461.52USD", "2,440.65USD", "0.54 ETH", "2,504.25 USD", "Short 0.54 ETH @ 2,461.52 USD", "\"h\":[\"Click\"]"]) {
+    eq(stxt.includes(keep), true, `snapshot keeps: ${keep}`);
+  }
+  for (const keep of ["1,318.20USD", "\"x\":\"1 TP / 1 SL\"", "Positions1"]) {   // Value (= qty x mark, both kept) and the counts the readers key on
+    eq(stxt.includes(keep), true, `snapshot keeps: ${keep}`);
+  }
+  for (const leak of ["7f3a9c", "20.88", "4,947.72", "4,930.42", "265.84", "7.85", "A1/trade", "2026-10-14"]) {
+    eq(stxt.includes(leak), false, `snapshot never carries: ${leak}`);
+  }
+  const grid = snap.roots.find((r) => r.k === "grid").tree;
+  const cells = JSON.stringify(grid);
+  eq([cells.includes("\"x\":\"Sum ##.##USD\""), cells.includes("\"x\":\"2,461.52USD\"")], [true, true], "snapshot grid: the Sum (P&L) cell is masked, the Opening price cell is kept");
+  eq(typeof grid.r[2] === "number" && grid.c.length >= 3, true, "snapshot grid: rects and children present");
+  const small = await snapPg.evaluate("__ex.snapshot('roots', 30)");
+  eq([small.cut, small.roots.every((r) => r.k !== "body")], [true, true], "snapshot: a node budget cuts and says so; scope roots has no body");
   await b.close(); console.log("exec_check: all passed");
 })().catch((e) => { console.error(e); process.exit(1); });

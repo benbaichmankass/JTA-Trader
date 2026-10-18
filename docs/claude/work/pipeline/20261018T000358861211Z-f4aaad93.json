@@ -1,0 +1,22 @@
+{
+  "based_on": "20261011T060636951986Z-d63de6c9.json",
+  "due_when": {
+    "due_date": "2026-10-18",
+    "kind": "date"
+  },
+  "filed": "2026-10-11",
+  "id": "PI-20261011-OSERECON-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "by": "session_01RWg7kVbhDTsptgKjFCkV8x",
+    "kind": "session",
+    "ref": "VELO-CLOSE-RECON",
+    "rerun": "grep -n cashTransactions src/prop/platform/dxtrade_api.py  # empty = net P&L still not read; velotrade_1 closes carry pnl_basis 'gross of commission/financing'"
+  },
+  "routed_2026_10_18": "[RESEARCH-AUTHOR-GRADE-1017 2026-10-18] Still open: grep cashTransactions over src and scripts returns nothing, so velotrade_1 close P&L is still gross. New row owns the read and netting.",
+  "routed_to": "VELO-NET-PNL-CASHTX",
+  "severity": "medium",
+  "state": "routed",
+  "tier": 2,
+  "what": "velotrade_1 close P&L is GROSS: the REST order history carries no commission/financing on executions (MEASURED #17505), so VELO-CLOSE-RECON computes (exit-entry) x size. prop-manual-6fbebc711fa6: gross -34.50 vs balance 4993.07 (03:48Z) -> 4955.98 (03:53Z) = -37.09 at the close, and 4999.97 -> 4955.98 = -43.99 over the trade (~9.49 of commission/financing unattributed). Each order carries a 'cashTransactions' key whose shape is unread. Extend scripts/prop/velotrade_trade_history_read.py to print cashTransactions KEY NAMES and amounts (no ids), dispatch it once, then net them into venue_exit's pnl (pnl_basis -> net) if they hold commission/financing."
+}

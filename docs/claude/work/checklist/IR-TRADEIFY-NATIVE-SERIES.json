@@ -1,0 +1,21 @@
+{
+  "id": "IR-TRADEIFY-NATIVE-SERIES",
+  "title": "Build: ~23h continuous-futures 1h series (SI=F, CL=F, ES=F, NQ=F) in the backtest corpus, so Tradeify non-crypto prop fits are priced on the instrument's own session instead of regular-hours ETF candles",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager (filed by lane IDEA-REVIEW-1016)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Family: Tradeify non-crypto prop fits (B, docs/research/idea-family-review-2026-10-16.md). RQ-20261015-24ca-01..04 and ca42-01 were priced on yfinance SLV/SPY/QQQ/USO 1h (US regular hours, ~7 bars/day with overnight gaps; USO roll drag) while Tradeify's SILVER/SP500/XYZ100/USOIL are ~23h CFDs; daily trend legs (24ca-02/03) land EV = -fee on every seed with P(alive) ~1.0 -- the evaluation clock, not trend, decides them (Moskowitz-Ooi-Pedersen 2012: TSMOM is a 1-12 month effect). FIRST STEP: add SI=F, CL=F, ES=F, NQ=F 1h at 720 d to scripts/ops/fetch_backtest_corpus.py's candidate table (MGC 1h is the precedent), then re-queue the 24ca units against those series with the measured costs from TRADEIFY-INSTR-SPECS. Do not send daily trend to a prop evaluation; it stays a real-money Stage-0 question.",
+  "updated_at": "2026-10-16T09:08:35Z",
+  "updated_by": "lane-IDEA-REVIEW-1016",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "_seq": 542
+}

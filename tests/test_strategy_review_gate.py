@@ -262,15 +262,18 @@ class TestOverrides:
         # No further demotion available — record continued loss; hold.
         assert d.action == "hold"
 
-    def test_promote_requires_14_day_soak(self):
+    def test_promote_never_waits_on_shadow_soak_days(self):
+        # Override 4 (>= 14 days shadow soak) was removed 2026-10-15: a soak is
+        # mechanical and has no calendar (OPERATING-PLAN § 2).
         h = _headline(
             n_closed=120, n_wins=72, win_rate=0.60, pnl_total=240.0,
             expectancy=2.0, max_drawdown=-5.0,
         )
         cells = [_cell(policy="on")]
-        d = decide(h, cells, _diag(), execution="shadow", shadow_soak_days=5)
-        assert d.action == "hold"
-        assert any("14 days shadow soak" in r for r in d.reasons)
+        short = decide(h, cells, _diag(), execution="shadow", shadow_soak_days=5)
+        long_ = decide(h, cells, _diag(), execution="shadow", shadow_soak_days=60)
+        assert short.action == long_.action
+        assert not any("requires" in r and "soak" in r for r in short.reasons)
 
 
 # ---------------------------------------------------------------------------

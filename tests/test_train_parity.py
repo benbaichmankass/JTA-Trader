@@ -142,3 +142,31 @@ def test_every_verdict_shape_is_accepted_by_the_runner(tmp_path, monkeypatch):
     out = tmp_path / "fail"
     tp.main(["--manifest", MANIFEST, "--cutoff", "2026-02-15T00:00:00Z", "--backend", "kaggle_cpu", "--out", str(out)])
     _assert_runner_accepts(json.loads((out / "verdict.json").read_text()))
+
+
+def test_emit_drop_only_on_a_parity_pass(tmp_path, monkeypatch):
+    data = _shard(tmp_path / "a")
+    ref = _run(tmp_path, "trainer", data, monkeypatch)
+    out = tmp_path / "emit"
+    monkeypatch.setattr(tp, "latest_reference", lambda unit: ref["rec"])
+    tp.main(["--manifest", MANIFEST, "--cutoff", "2026-02-15T00:00:00Z", "--backend", "kaggle_cpu",
+             "--out", str(out), "--reference-unit", "RQ-20261015-aaaa-01", "--emit-drop"])
+    v = json.loads((out / "verdict.json").read_text())
+    assert v["verdict"] == "pass" and v["measurement"]["drop"]["state"] == "emitted", v["measurement"]["drop"]
+    idx = [json.loads(ln) for ln in (out / "offload-inbox" / "index.jsonl").read_text().splitlines() if ln.strip()]
+    assert len(idx) == 1 and idx[0]["model_id"] == MANIFEST and idx[0]["drain_policy"] == "namespaced_candidate"
+    run_dir = out / "offload-inbox" / MANIFEST / idx[0]["run_id"]
+    assert (run_dir / "model_state.json").is_file()
+    # emit_bundle re-serialises the JSON (indent=2, sort_keys), so the drop's bytes differ from the run's; the
+    # content is the same model -- the drop's class labels are the trained ones.
+    assert json.loads((run_dir / "model_state.json").read_text())["class_labels"] == ref["rec"]["class_labels"]
+    # a failed parity emits nothing
+    bad = json.loads(json.dumps(ref["rec"]))
+    bad["metrics"]["accuracy"] += 0.5
+    out2 = tmp_path / "emit2"
+    monkeypatch.setattr(tp, "latest_reference", lambda unit: bad)
+    tp.main(["--manifest", MANIFEST, "--cutoff", "2026-02-15T00:00:00Z", "--backend", "kaggle_cpu",
+             "--out", str(out2), "--reference-unit", "RQ-20261015-aaaa-01", "--emit-drop"])
+    v2 = json.loads((out2 / "verdict.json").read_text())
+    assert v2["verdict"] == "fail" and v2["measurement"]["drop"]["state"] == "not_emitted"
+    assert not (out2 / "offload-inbox" / "index.jsonl").exists()

@@ -1365,6 +1365,19 @@ GUARDS: List[Dict[str, Any]] = [
                    "--base", "origin/{base_ref}"]],
     },
     {
+        # RESEARCH-ENGINE-1016 (2026-10-16): every question a programme PLAN asks
+        # (docs/research/programmes/<NN>-*.md) must have a node in its machine-read tree
+        # (research/programmes/<NN>-*.yaml), or nothing ever reaches the authoring queue. A
+        # RATCHET (scripts/research/programme_coverage_baseline.json): today's gap is work for
+        # the programme lanes, so the guard fails only when the uncovered count RISES.
+        "name": "programme-coverage",
+        "when": {"globs": ["docs/research/programmes/**", "research/programmes/**",
+                            "scripts/research/programme_coverage.py",
+                            "scripts/research/programme_coverage_baseline.json"]},
+        "steps": [["python3", "scripts/research/programme_coverage.py", "--self-test"],
+                  ["python3", "scripts/research/programme_coverage.py", "--check"]],
+    },
+    {
         # RQ-RUN (2026-09-28): the queue's self-replenishment + mechanical
         # grading + health alarm. Self-tests only: the live health read is
         # the DISPATCHER's alarm (it pages), not a PR gate -- a PR must not go
@@ -1375,6 +1388,8 @@ GUARDS: List[Dict[str, Any]] = [
             ["python3", "scripts/research/queue_replenish.py", "--self-test"],
             ["python3", "scripts/research/queue_grade.py", "--self-test"],
             ["python3", "scripts/ci/check_research_queue_health.py", "--self-test"],
+            ["python3", "scripts/research/result_disposition_check.py", "--self-test"],
+            ["python3", "scripts/research/research_slo.py", "--self-test"],
         ],
     },
     {
@@ -1573,6 +1588,19 @@ GUARDS: List[Dict[str, Any]] = [
         # here before the scan is trusted to say anything.
         "steps": [["python3", "scripts/ci/check_tp_doctrine.py", "--self-test"],
                   ["python3", "scripts/ci/check_tp_doctrine.py"]],
+    },
+    {
+        "name": "prop-harness-full-costs-guard",
+        # PROP-EVAL-COSTS (operator 2026-10-15): no caller of the portfolio engine
+        # (prop evaluator / Monte-Carlo / alt-prop / compat matrix / panel builder /
+        # walk-forwards) may run fee-only. Extends the D1 cost-stack verification.
+        "when": {"globs": [
+            "scripts/backtest_system.py", "scripts/prop/*.py", "scripts/walkforward_*.py",
+            "scripts/research/build_backtest_panel.py", "src/research/run_costs.py",
+            "config/prop_rulesets/*.yaml", "scripts/ci/check_prop_harness_full_costs.py",
+        ]},
+        "steps": [["python3", "scripts/ci/check_prop_harness_full_costs.py", "--self-test"],
+                  ["python3", "scripts/ci/check_prop_harness_full_costs.py"]],
     },
     {
         "name": "automerge-trigger-guard",
@@ -1998,6 +2026,24 @@ GUARDS: List[Dict[str, Any]] = [
         ],
     },
     {
+        "name": "same-symbol-allocation-guard",
+        # Operator 2026-10-15 (re-scoped ~20:25Z): legs MAY share a netted position if we know how much of it belongs
+        # to each strategy. Whole-tree: a shared (account, symbol) needs slice support for the account (empty until lane
+        # NETTED-SLICES lands its config) or a committed allocation-weights record in comms/same_symbol_allocation/.
+        # Today's pairs are grandfathered BY NAME with the unit that feeds them and a due date inside the script.
+        # Checklist row SAME-SYMBOL-ALLOCATION.
+        "when": {"globs": [
+            "config/accounts.yaml",
+            "config/strategies.yaml",
+            "comms/same_symbol_allocation/**",
+            "scripts/ci/check_same_symbol_allocation.py",
+        ]},
+        "steps": [
+            ["python3", "scripts/ci/check_same_symbol_allocation.py", "--self-test"],
+            ["python3", "scripts/ci/check_same_symbol_allocation.py"],
+        ],
+    },
+    {
         "name": "prop-roster-gate-guard",
         # Operator 2026-10-15 ("Yes, 1, 2 and 3a"; "the prop accounts should have a higher bar to clear
         # because of the DD limits"): a leg added to an `account_class: prop` roster needs a Stage-1 soak
@@ -2226,7 +2272,11 @@ GUARDS: List[Dict[str, Any]] = [
     {
         "name": "soak-doctrine-guard",
         "when": None,
-        "steps": [["python3", "scripts/check_soak_doctrine.py"]],
+        # 2026-10-15 (SOAK-REDEFINE, operator: "I can't keep re-explaining it"): checks E-H scan
+        # every live doc/skill/plan and the soak generators' OUTPUT for the long-soak SHAPE, and
+        # the self-test plants each historical teaching (it must be caught) plus controls.
+        "steps": [["python3", "scripts/check_soak_doctrine.py", "--self-test"],
+                  ["python3", "scripts/check_soak_doctrine.py"]],
     },
     {
         "name": "strategy-coverage-guard",

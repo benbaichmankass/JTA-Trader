@@ -3,7 +3,7 @@
 # only while `queue_replenish.py --verify` reproduces it byte-for-byte from the template.
 id: RQ-20261005-002
 title: 'E35 bracket-geometry sweep: iwm_trend_long_1d (generated, monthly)'
-status: queued
+status: retired
 cadence: monthly
 kind: experiment
 theme: live_strategy
@@ -75,3 +75,7 @@ grading:
   reason: base_oos_trades 5 < 39 (unresolvable_at_current_n)
   rows: 199
   verdict: indeterminate
+retired_reason: '2026-10-16 P1-ATM-BACKLOG-1016: duplicate generated point -- RQ-20261004-654 carries
+  the same key (e35-bracket:leg=iwm_trend_long_1d) and template sha; two units for one key re-sweep the
+  same leg twice per month on the same frames. Kept the lower id. Generator gap (the replenisher minted
+  the same key twice) filed on checklist row QUEUE-GEN-ROSTER-SYNC.'

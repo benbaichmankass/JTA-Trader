@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Lane PAIRS-BYBIT-SHADOW (dispatched by Manager Session 2026-10-16/17): config/pairs.yaml (the M22 pairs execution gate) sets all four Bybit pairs (sol_btc, bnb_btc, eth_btc, sol_eth) to execution: shadow; bnb_btc and sol_eth were live on bybit_1 (paper), sol_btc and eth_btc were already shadow (markers updated). GLD/GDX untouched. HELD for the manager to merge FIRST, before #18648.",
+  "why": "Operator decision 2026-10-16 'Fix + shadow' (popup answer to the manager; checklist row PAIRS-R-SCALE): PR #18648 freezes the pairs beta at entry, which grows Bybit pair legs by up to ~87x on a path with no notional cap, and the honest fixed-beta re-run is net-negative on all four pairs (-0.112 / -0.376 / -0.526 / -0.383 R per trade, n 254-271)."
+}

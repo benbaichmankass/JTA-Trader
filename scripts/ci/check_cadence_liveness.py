@@ -194,6 +194,11 @@ CADENCE_REGISTRY: dict[str, dict] = {
         "why": "writes the incident ledger only when an incident occurs, so a quiet watchdog leaves no receipt by design; "
                "a stopped watchdog is observed by claude-run-failure-alert (crashed runs) and by research-ops reading the Actions run list",
     },
+    "research-slo.yml": {
+        "receipt": "comms/research/health",
+        "why": "every run writes the dated SLO status file and lands it through commit-to-main; the last commit "
+               "touching comms/research/health/ IS the receipt",
+    },
     "compute-util-telemetry.yml": {
         "receipt": "comms/cloud/compute_util_ledger.jsonl",
         "why": "the workflow rewrites the ledger every day and lands it through "
@@ -248,6 +253,12 @@ CADENCE_REGISTRY: dict[str, dict] = {
         "receipt": "comms/macro/econ_calendar_upcoming.json",
         "why": "full-regenerated from ALL committed captures every run and "
                "committed via commit-to-main -- a fixed, overwritten path",
+    },
+    "news-gdelt-panel.yml": {
+        "receipt": "comms/news_alpha/gdelt_panel",
+        "why": "NEWS-ALPHA-CORPUS-SLICE1: every daily run re-folds the CURRENT month and commits "
+               "panel_/coverage_/manifest_YYYY-MM via commit-to-main, so the directory's newest "
+               "commit is the run's receipt",
     },
     "econ-event-study.yml": {
         "receipt": "comms/macro/econ_event_study_scorecard.json",
@@ -372,6 +383,10 @@ CADENCE_REGISTRY: dict[str, dict] = {
     "ict-trainer-git-sync.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
     "ict-web-api-watchdog.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
     "ict-work-digest.timer": {"receipt": None, "why": "VM-side; diag relay is the surface"},
+    # PHONE-EXEC-OBSERVABLE-1018 (2026-10-18): the daily 7-day purge of phone step captures. Its run is visible
+    # on the VM only: the one JSON line it prints to its journal (/api/diag/journalctl?unit=ict-phone-capture-purge)
+    # and the capture store's own .last_purge marker; the same purge also runs on every capture POST.
+    "ict-phone-capture-purge.timer": {"receipt": None, "why": "VM-side; diag relay is the surface (journalctl + the capture store's .last_purge marker)"},
     "ict-work-report.timer": {"receipt": None, "why": "VM-side (WORK-SYSTEM); its receipt is the report itself, runtime_logs/work_reports/latest.json, served by GET /api/bot/work/report and alarmed by attention_watch probe_report"},
 }
 

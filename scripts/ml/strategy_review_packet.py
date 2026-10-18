@@ -1182,11 +1182,19 @@ def decide(
                 "already at shadow — record continued loss, no further demotion available."
             )
 
-    # --- Override 4: promote requires cohort time.
-    if decision.action == "promote" and shadow_soak_days < 14:
-        decision.action = "hold"
+    # --- Override 4 REMOVED 2026-10-15 (operator, verbatim: "A soak is a
+    # mechanical verification that was already proven in backtesting, and
+    # nothing needs to soak for more than one or two trades"). It held every
+    # `promote` until the leg had sat >= 14 days in shadow -- a calendar soak,
+    # the exact "N days at stage" construct CLAUDE-RULES-CANONICAL § "Promotion
+    # evidence" clause 3 forbids. `shadow_soak_days` is still accepted (callers
+    # pass it) and decides nothing. The soak rule: OPERATING-PLAN § 2.
+    # Clause 3's remedy is "computed + reported, non-blocking", so the days are
+    # REPORTED on a promote and gate nothing.
+    if decision.action == "promote" and execution == "shadow":
         decision.reasons.append(
-            f"promote requires >=14 days shadow soak; current = {shadow_soak_days}d."
+            f"context only, not a gate: {shadow_soak_days}d in shadow (a soak is mechanical, "
+            "1-2 clean trades -- OPERATING-PLAN § 2)."
         )
 
     # --- Override 5: TUNE BEFORE DEMOTE (operator directive 2026-08-23).

@@ -1,0 +1,127 @@
+id: RQ-20261016-e2db-07
+title: >-
+  velotrade_1 CLEAN matched-risk head-to-head, window-matched 1095 d: incumbent ETH+SOL 1h prop book vs the same book PLUS trend_donchian_eth_4h + trend_donchian_sol_4h,
+  BOTH arms at the configured per-trade risk 0.005
+status: done
+cadence: once
+theme: new_strategy_prop
+priority: 1
+kind: experiment
+roadmap:
+- L-PROP
+question: >-
+  With per-trade risk held IDENTICAL at velotrade_1's configured 0.005 on both arms, and every leg's ledger drawn from the SAME 1095 d window (2023-10-13 .. 2026-10-11
+  20:00), does adding the 4h ETH+SOL Donchian pair raise ev_net_usd_per_life AND keep p_alive_at_horizon >= the incumbent book's on EVERY one of 5 pinned seeds, under
+  velotrade_classic_1step.yaml with the daily DD switch armed at 0.8?
+why_this_matters: >-
+  Operator, daily sync 2026-10-16: "Matched-risk test first" -- isolate the ROSTER effect from the RISK effect before any prop sizing call. RQ-20261015-8bbc-03 showed
+  velotrade_1 fails at matched risk 0.0045 while the risk-sweep RQ-20261015-ee68-01 passed, i.e. part of the earlier pass was a risk-level effect. velotrade_1 at
+  its configured 0.005 read FAIL in RQ-20261015-1bf3-02, on mixed windows (below). The earlier head-to-heads also mixed windows: the incumbent ledgers were the 730
+  d records (comms/strategy_evidence/runs/2026-10-05-730d/) and the 4h ledgers 1095 d, so in path mode the C arm carried a year of 4h trades (2023-10..2024-10) against
+  an incumbent book with no trades at all -- a roster comparison confounded by sample length. This unit removes that confound: incumbents use their window-matched
+  1095 d config-exact ledgers (RQ-20261015-1bf3-05 PASS, n=517 ETH; -06 PASS, n=203 SOL), the 4h pair its 1095 d records (n=116 each). One C arm only, fixed before
+  the run: nothing to select among.
+power:
+  expected_n: 952
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    MEASURED ledger sizes (wc -l, 2026-10-16): incumbent ETH 517 + SOL 203 = 720 trades in A; A + 116 + 116 = 952 in C4H, all on 2023-10-13 .. 2026-10-11. Every leg
+    clears the 88 prop-fit floor (smallest is 116). Re-pricing of committed evidence; nothing accrues.
+  feasibility:
+    source: none
+    accrual_basis: Committed trade ledgers re-simulated under the firm's rules; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261016-e2db-07-MATCHED-RISK-1095D
+  registered_at: '2026-10-16'
+  registered_before_run: true
+  statistic: >-
+    Per seed and arm, path-mode ev_net_usd_per_life and p_alive_at_horizon (prop_ev_grid, velotrade_1 venue stack from velotrade_classic_1step.yaml, switch armed
+    0.8). A = trend_donchian_eth_prop + trend_donchian_sol_prop (1095 d ledgers) at 0.005; C4H = A plus trend_donchian_eth_4h + trend_donchian_sol_4h at 0.005.
+  rule: >-
+    prop_ev_grid --grade any_c_dominates, mechanically: PASS IF C4H ev > A ev AND C4H p_alive >= A p_alive on ALL 5 seeds -> the 4h pair adds value at matched risk
+    on velotrade_1; that is input to a Tier-3 roster note on the owning checklist row (PROP-ROSTER-EXPAND) for the manager, never a config edit, and the 4h legs still
+    need the prop superset (Stage 0 at the venue stack is RQ-20261015-1bf3-03/-04 PASS; mechanical soak; cost fidelity; prop-roster-gate-guard). FAIL IF C4H does
+    not dominate on every seed -> at matched risk the 4h pair is not shown to add on this account; any earlier pass on this account is read as a risk-level effect
+    or a trade-off. NULL IF an arm is missing or the arms share no seed. Disclosed: velotrade_1's mixed-window results at 0.0025/0.0035/0.0045/0.005 are known before
+    this run (8bbc-04/-05 pass, 8bbc-03 and 1bf3-02 fail); the window-matched arms on this account have not been run. OPERATOR RULE (2026-10-15, binding on every
+    prop leg): a prop leg clears a SUPERSET of the real-money ladder: Stage 0 net of the full cost stack, THEN a mechanical soak (1-2 clean live prop trades count),
+    THEN cost fidelity, PLUS prop DD survival under the account's rules. This unit supplies Stage 0 and the prop-survival simulation only. A PASS authorizes NO roster
+    edit, NO account opening and NO order.
+  what_it_does_not_do: >-
+    Changes no roster, risk cap or config; does not re-grade any earlier unit. Does not test a risk level other than the configured one (that is the sizing question,
+    asked only after this). Says nothing about live results.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 70
+  basis: >-
+    Same prop_ev_grid book shape as RQ-20261015-8bbc-03 (2 arms x 5 seeds, --jobs 4, ~61-70 min); repo data only.
+compute: cpu_long
+value:
+  bucket: information
+  usd_at_stake_per_month: 120
+  confidence: 0.3
+  basis: >-
+    stand-in, same as RQ-20261015-8bbc-03: pool-admission information until a Tier-3 proposal. No balances stated.
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 300
+  command:
+  - python3
+  - scripts/research/prop_ev_grid.py
+  - --leg
+  - trend_donchian_eth_prop=comms/research/RQ-20261015-1bf3-05/38713761684/arms/P__trades.jsonl
+  - --arm
+  - A=--sizing balance --risk-pct 0.005 --dd-switch-frac 0.8
+  - --arm
+  - >-
+    C4H=--sizing balance --risk-pct 0.005 --dd-switch-frac 0.8 --trades trend_donchian_eth_4h=comms/strategy_evidence/runs/2026-10-12-1095d/trend_donchian_eth_4h__trades.jsonl
+    --lev-cap trend_donchian_eth_4h=5 --trades trend_donchian_sol_4h=comms/strategy_evidence/runs/2026-10-12-1095d/trend_donchian_sol_4h__trades.jsonl --lev-cap trend_donchian_sol_4h=5
+  - --common
+  - >-
+    --trades trend_donchian_sol_prop=comms/research/RQ-20261015-1bf3-06/38730575207/arms/P__trades.jsonl --ruleset config/prop_rulesets/velotrade_classic_1step.yaml
+    --costs breakout --commission-bps-rt 6 --slippage-bps-rt 3 --swap-daily 0.0005 --swap-model dxtrade --no-hedge --funded-start fresh --lev-cap trend_donchian_eth_prop=5
+    --lev-cap trend_donchian_sol_prop=5
+  - --seeds
+  - 1,2,3,4,5
+  - --grade
+  - any_c_dominates
+  - --out
+  - '{out_dir}'
+  - --jobs
+  - '4'
+  - --note
+  - 'RQ-20261016-e2db-07: velotrade_1 matched-risk 0.005, window-matched 1095 d'
+  inputs:
+    research_unit: RQ-20261016-e2db-07
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261015-8bbc-03.yaml
+- research/queue/RQ-20261015-6504-02.yaml
+- research/queue/RQ-20261015-1bf3-02.yaml
+- research/queue/RQ-20261015-1bf3-05.yaml
+- research/queue/RQ-20261015-1bf3-06.yaml
+- docs/research/programmes/05-PROP.md
+- docs/claude/work/checklist/PROP-ROSTER-EXPAND.json
+last_dispatched_at: '2026-10-17T01:05:06+00:00'
+grading:
+  attested: RULE-RQ-20261016-e2db-07-MATCHED-RISK-1095D
+  auto: true
+  decision_rule_id: RULE-RQ-20261016-e2db-07-MATCHED-RISK-1095D
+  evidence:
+  - research/results/RQ-20261016-e2db-07/38989353471.jsonl
+  graded_at: '2026-10-17'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

@@ -1,0 +1,24 @@
+{
+  "based_on": "20261017T062251723587Z-3e6b59f2.json",
+  "due_when": {
+    "due_date": "2026-10-19",
+    "kind": "date"
+  },
+  "id": "PI-20261017-VMDGITZI-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-19T23:59Z",
+    "how_to_check": "diag journal?table=trades&limit=1000&offset=0..2000, filter those ids; system-action backfill-own-fill-exits dry-run output",
+    "what": "trades 3934, 4422, 4710 and 6171 carry exit_price 385.333056 / 296.705887 / 34.41 / 1.5428 with notes.exit_price_source=exchange_fill; 6023 stays unpriced (no attributable fill)"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "WR-20261017-0550Z soak faults lane session_01KnbLCJ4zpEyBNivmdGitZi; PR #18720; SOAK-MECH-B",
+    "rerun": "Diag journal?table=trades&limit=1000&offset=0..2000 for ids 3934,4422,4710,6023,6171: exit_price null or notes.exit_price_source candle_at_close == still owed; venue truth via /api/diag/alpaca_order_history?account_id=alpaca_paper&order_ids=<2f158adf,ab52154a,4a51cae7 full ids> and bybit_raw_order_history bybit_1 XRPUSDT 2026-09-26T08:00-09:30Z"
+  },
+  "severity": "medium",
+  "state": "done",
+  "terminal_reason": "Applied 2026-10-17 07:22Z via system-action #18731 after dry-run #18730 (deployed sha bb5731e71). WROTE 4/4: 3934 GLD 385.333056 pnl -1491.81; 4422 IWM 296.705887 pnl -784.19; 4710 SCHA 34.41 pnl -548.64; 6171 XRP 1.5428 pnl -30.4846 (was candle 1.5399). 6023 QQQ SKIP (no attributable fill). OBSERVED via diag journal 07:2xZ: all four exit_price_source=exchange_fill, exit_reason unchanged. Backup /data/bot-data/trade_journal.db.bak-own-fill-exits-20261017T072240Z.",
+  "tier": "2",
+  "what": "[health] After #18720 merges and ict-git-sync pulls: open a system-action issue with `action: backfill-own-fill-exits` and `ids: 3934,4422,4710,6023,6171` (dry-run). Confirm PLAN 3934 GLD exit 385.333056, 4422 IWM 296.705887, 4710 SCHA 34.41, 6171 XRP 1.5428, and SKIP 6023 (no attributable fill). Then re-run with `apply: true` and verify with a diag journal read. exit_reason stays as it is: soak grades are unchanged, and the 10 legs re-soak on their next clean trade."
+}

@@ -1,0 +1,99 @@
+id: RQ-20261016-7ea6-01
+title: 'HOLDOUT for pairs_gld_gdx: does the GLD/GDX 1d pairs configuration RQ-20261007-025 confirmed hold up net of the
+  full cost stack when read ONCE on 2006-05-22..2016-10-05, a span no GLD/GDX pairs run has ever read?'
+status: queued
+cadence: once
+roadmap:
+- M22
+- L-LADDER
+theme: new_strategy_prop
+priority: 2
+kind: experiment
+holdout_rerun:
+  leg: pairs_gld_gdx
+question: 'pairs_gld_gdx runs on alpaca_paper (Stage-1 soak, operator 2026-10-12 and 2026-10-16). Under the promotion-bar
+  decision of 2026-10-16 (R-HOLDOUT, PR #18626) a real-money move needs a holdout confirmation: one configuration, read
+  ONCE, on a span that was never read for selection. RQ-20261007-025''s OOS span (2022-01-03..2026-10-02) CANNOT serve:
+  (1) RQ-20260929-105 read the whole 2016-10-06..2026-10-02 window, OOS included, in its pooled pass, and that pass is
+  what selected GLD/GDX over SPY/QQQ for confirmation; (2) RQ-20261007-025 itself read the OOS span 1 + 9 times (split
+  arm + neighbourhood) and the 2022..2026 years again in the walk-forward. The parameters were never tuned (they are the
+  scripts/backtest_pairs.py defaults), but the span was read repeatedly and the pair was chosen on it. Every GLD/GDX pairs
+  run so far starts 2016-10-06 (yfinance 3650 d). GDX trades from 2006-05-22 and GLD from 2004-11-18, so ~10.4 years
+  before the first read are untouched. Does the confirmed configuration, unchanged, make money net of cost there?'
+why_this_matters: 'OPERATOR DECISION 2026-10-16 (popup, relayed by Manager Session 2026-10-16 session_01VduHYzdaXe27wTDBLSu8ao,
+  checklist PAIRS-ALPACA-BUILD-QUESTION), verbatim: "Build the Alpaca pairs executor now, after the pairs risk-scaling fix
+  lands, and run GLD/GDX on alpaca_paper. Real money needs the normal ladder, a 1-2 trade mechanical soak and then Stage
+  2." And the promotion bar decided the same day (PROMOTION-BAR-MULTIPLICITY): "From now on, promotion needs a pass on the
+  held-back 25% you just approved. That''s one setting tested once, so no deflation is needed." Without this unit the
+  GLD/GDX leg has no holdout confirmation and R-HOLDOUT returns NEEDS-DATA at Gate 2. Money at stake today: none (paper).'
+power:
+  expected_n: 150
+  min_detectable_effect: 0.23
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'expected_n is an ESTIMATE: the committed 2016-10..2026-10 rate (RQ-20260929-105: n=144 over 10.0 years, 14.4
+    trades/yr) x ~10.4 years of untouched span = ~150. The holdout floor is 25 trades (R-HOLDOUT holdout_min_n); at n=25
+    a one-sample test detects d = (1.96 + 0.8416)/sqrt(25) = 0.56 sd; at the expected 150, 0.23 sd. Not verified that
+    yfinance serves GDX back to 2006-05-22; the run records the first aligned bar.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public daily candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261016-7ea6-01
+  registered_before_run: true
+  registered_at: '2026-10-16'
+  statistic: 'ONE run of scripts/backtest_pairs.py --symbol-a GLD --symbol-b GDX --timeframe 1d --start 2006-05-22 --end
+    2016-10-06 at the configuration config/pairs.yaml::pairs_gld_gdx declares and RQ-20261007-025 confirmed: lookback 20,
+    entry-z 2.0, exit-z 0.5, stop-z 2.0, max-hold-bars 20, cooldown-bars 1, hedge-beta one; venue-aware costs (Alpaca equity
+    fee + slippage via execution_costs.resolve_cost_policy, funding 0 for a non-perp leg; the run records the policy) with
+    --json and --emit-trades. Statistic: net_total_r and n_trades on that span. No selection is made: one configuration,
+    fixed before the run. Discovery span for the R-HOLDOUT block = 2016-10-06..2026-10-02 (RQ-20260929-105 +
+    RQ-20261007-025); held-back span = 2006-05-22..2016-10-05; they do not overlap.'
+  rule: 'INDETERMINATE/underpowered IF n_trades < 25. PASS/confirmed IF n_trades >= 25 AND net_total_r > 0: write the
+    holdout_confirmation block (source_run -> the committed result) into comms/strategy_evidence/pairs_gld_gdx.json in
+    the shape R-HOLDOUT reads. FAIL/not_replicated IF n_trades >= 25 AND net_total_r <= 0: the configuration is unconfirmed;
+    a note on PAIRS-ALPACA-BUILD for the manager; the paper soak is NOT pulled on it (paper is execution validation).
+    The 25 floor and the > 0 bar are fixed before the run.'
+  what_it_does_not_do: 'Edits no config, roster or record beyond the evidence block on PASS, and places no order. OPEN for
+    the manager, not decided here: the held-back span lies BEFORE the discovery span, not after it. It is unread, it does
+    not overlap, and it is read once, which are the validity conditions R-HOLDOUT checks; whether a backward span satisfies
+    "the held-back 25%" in the operator''s words is a question for the manager. The only forward alternative is GLD/GDX
+    history after 2026-10-02, which needs ~1.8 years to reach 25 trades at the committed rate. The 2006-2016 regime differs
+    (GFC, 2011 gold peak, 2013 miners crash); that is a reason to read it, not a reason to discount a FAIL.'
+compute: cpu_light
+value:
+  bucket: structural
+  usd_at_stake_per_month: 0
+  confidence: 0.3
+  basis: 'paper leg today; the unit decides whether a real-money GLD/GDX leg can ever clear R-HOLDOUT.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 10
+  basis: Two daily-bar fetches (~2,600 bars each) and one pairs harness run; each run is seconds.
+run:
+  workflow: session-local
+  note: 'SESSION-LOCAL for the reason RQ-20261007-025 gives: research-harness-dispatch.yml (pairs) passes no --start/--end,
+    and research-script-run.yml has no data fetch step. The lane: python3 scripts/ops/fetch_backtest_candles.py --symbol GLD
+    --interval D --source yfinance --start-date 2006-05-01 --end-date 2016-10-06 --output data/GLD_1d_2006.csv ; the same
+    for GDX ; then python3 scripts/backtest_pairs.py --symbol-a GLD --symbol-b GDX --data-a data/GLD_1d_2006.csv --data-b
+    data/GDX_1d_2006.csv --timeframe 1d --start 2006-05-22 --end 2016-10-06 --lookback 20 --entry-z 2.0 --exit-z 0.5 --stop-z
+    2.0 --max-hold-bars 20 --cooldown-bars 1 --hedge-beta one --json <run>/holdout.json --emit-trades <run>/holdout.jsonl
+    under comms/research/RQ-20261016-7ea6-01/<run_id>/ ; commit them and land one research_result.py record under
+    research/results/RQ-20261016-7ea6-01/. Read the span ONCE: no exploratory run on 2006-2016 data before the registered
+    one, by this lane or any other.'
+  inputs:
+    research_unit: RQ-20261016-7ea6-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261007-025
+- RQ-20260929-105
+- PAIRS-ALPACA-BUILD
+- PAIRS-ALPACA-BUILD-QUESTION
+- PROMOTION-BAR-MULTIPLICITY

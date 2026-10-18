@@ -1,0 +1,20 @@
+{
+  "based_on": "20261015T203827248260Z-c015ef5f.json",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "run_system_backtest resolves non-zero venue cost by default, with a test that a direct call records slippage>0 for a perp symbol",
+    "due_date": "2026-10-22",
+    "kind": "date"
+  },
+  "id": "PI-20261015-WODD53KG-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane SAME-SYMBOL-ALLOCATION (session_011n9PXPv7wvEFMSwodD53kG), PR #18439",
+    "rerun": "grep -n 'SLIPPAGE_BPS_ROUNDTRIP\\|execution_costs' scripts/research/build_backtest_panel.py scripts/prop/evaluate_prop.py; grep -rn 'run_system_backtest(' --include=*.py scripts src"
+  },
+  "routed_to": null,
+  "state": "done",
+  "terminal_reason": "FIXED: run_system_backtest now takes costs=/require_full_costs= and stamps cost_policy; all 7 in-process callers (evaluate_prop, montecarlo_prop, validate_alt_prop, account_compat_matrix engine path, build_backtest_panel adapter, walkforward_flip_policy, walkforward_netting_guard) resolve fee+slippage+funding via execution_costs.resolve_cost_policy and a fee-only call raises; guard prop-harness-full-costs-guard; tests/test_prop_eval_full_costs.py. Affected committed results marked in comms/research/cost_incomplete_2026-10-15.json.",
+  "what": "backtest_system.run_system_backtest reads module globals SLIPPAGE_BPS_ROUNDTRIP / FUNDING_BPS_PER_WINDOW that default to 0.0 and are set only inside backtest_system.main(). Direct callers that never set them run FEE-ONLY: scripts/research/build_backtest_panel.py:276 (panel P&L used downstream) and scripts/prop/evaluate_prop.py:~178 (prop-firm pass/fail evaluator). grep of both files for SLIPPAGE/execution_costs returned nothing. Fix: make run_system_backtest resolve the venue-aware cost policy itself when the globals are unset (or take explicit cost params), then re-state any panel/prop figure produced before. scripts/research/same_symbol_head_to_head.py already sets them (apply_cost_policy). Prop figures are the money-relevant ones: a fee-only prop evaluation overstates survival."
+}

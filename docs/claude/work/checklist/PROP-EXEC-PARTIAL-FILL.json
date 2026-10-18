@@ -1,0 +1,21 @@
+{
+  "id": "PROP-EXEC-PARTIAL-FILL",
+  "title": "Prop executor partial-fill handling: submit-cycle confirm read skips _suspected_partial_fill; DXtrade orders 'Size' semantics unverified (PI-20260930-KMYJ5XC7-0006/-0009)",
+  "phase": "prop",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-18 lane RESEARCH-AUTHOR-GRADE-1017] Owns PI-20260930-KMYJ5XC7-0006 and -0009, whose old owner BREAKOUT-ATTRITION is dropped. WHY IT IS STILL LIVE: accounts.yaml has breakout_2, tradeify_1 and velotrade_1 mode: live on the prop executor (breakout_1 is the retired one). -0009 FIELD STATE: src/prop/prop_executor.py run_cycle's submit-cycle re-read (~l.1606-1618, 'immediate re-read') goes straight to _contain with no _suspected_partial_fill call, whereas the step-3 reconcile loop does (l.1154); a partial fill seen on the first read is alerted/halted one cycle late (T+5 not T+0), fail-safe, no write-off in between. Fix: call _suspected_partial_fill on that read and trip the halt as step 3 does, plus a test (after_submit shows 0.2 position + 0.3 order). -0006 FIELD STATE: dxtrade.py:411 prefers 'Left Qty' and falls back to _QTY_NAMES incl. 'Size'; the measured live headers carry only 'Size', so whether Size is original or remaining quantity after a partial fill is still UNVERIFIED (establish from existing DOM dumps or DXtrade docs; no live probe without a plan the manager has seen). Tier-2 (live order path); manager approves.",
+  "updated_at": "2026-10-18T00:03:34Z",
+  "updated_by": "research-pipeline-route-1018-fork",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "_seq": 554
+}

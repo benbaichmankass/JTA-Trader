@@ -76,7 +76,8 @@ def decide_pair(params: pe.PairParams, close_a: Sequence[float], close_b: Sequen
                 backstop_mult: float = 3.0,
                 min_leg_notional_usd: float = 10.0,
                 whole_units: bool = False,
-                leg_tp: str = "backstop") -> PairDecision:
+                leg_tp: str = "backstop",
+                require_fixed_beta_risk: bool = False) -> PairDecision:
     """PURE decision for one pair this tick. No I/O. `execution_mode` 'shadow'
     downgrades an would-be open/close to a shadow_* soak event with the legs still
     computed (observe-only). Returns a PairDecision.
@@ -89,7 +90,18 @@ def decide_pair(params: pe.PairParams, close_a: Sequence[float], close_b: Sequen
     level (``pairs_engine.leg_target_prices``; TP doctrine clause 1). A
     ``spread_target`` pair whose target cannot be computed does not open
     (``skip_no_tp_target``): a backstop TP standing in for it would be the
-    fictional TP the doctrine forbids."""
+    fictional TP the doctrine forbids.
+
+    ``require_fixed_beta_risk`` (the SESSION venue passes True): size only when
+    the R unit the stop and the sizing use IS the fixed-β R unit
+    (``pairs_engine.fixed_beta_risk``, within ``RISK_SCALE_TOLERANCE``);
+    otherwise ``skip_risk_scale`` and nothing is sized — a non-recurrence check
+    on the measured ratio, not on a config field someone could change. Since
+    PAIRS-R-SCALE's fix the engine freezes β at entry and sizes every venue on
+    the fixed-β R unit, so the ratio is 1 on every pair; ``risk_rolling_beta``
+    (the old, inflated R unit) rides on the soak rows so the size of the
+    correction stays measured. ``beta_entry`` is stamped so the exits and the
+    TP revision read the same fixed-β spread."""
     label = _pair_label(params.symbol_a, params.symbol_b)
     base = {"symbol_a": params.symbol_a, "symbol_b": params.symbol_b,
             "execution_mode": execution_mode}
@@ -98,12 +110,14 @@ def decide_pair(params: pe.PairParams, close_a: Sequence[float], close_b: Sequen
     if open_state is not None:
         ex = pe.exit_signal(close_a, close_b, params, open_state)
         if ex is None:
-            return PairDecision("hold", label, soak={**base, "bars_held": open_state.bars_held})
+            return PairDecision("hold", label, soak={**base, "bars_held": open_state.bars_held,
+                                                     "beta_entry": open_state.beta_entry})
         ev = "shadow_close" if execution_mode == "shadow" else "close"
         return PairDecision(ev, label, close=(execution_mode != "shadow"),
                             soak={**base, "outcome": ex.get("outcome"),
                                   "exit_spread": ex.get("exit_spread"),
-                                  "bars_held": open_state.bars_held})
+                                  "bars_held": open_state.bars_held,
+                                  "beta_entry": open_state.beta_entry})
 
     # --- FLAT: check entry ---
     sig = pe.entry_signal(close_a, close_b, params)
@@ -114,6 +128,16 @@ def decide_pair(params: pe.PairParams, close_a: Sequence[float], close_b: Sequen
         return PairDecision("skip_concurrency", label,
                             soak={**base, "z": sig["z"], "direction": sig["direction"],
                                   "held": sorted(held_symbols)})
+    risk_scale = {"risk": sig["risk"], "risk_fixed_beta": sig.get("risk_fixed_beta"),
+                  "risk_scale_ratio": sig.get("risk_scale_ratio"),
+                  "risk_rolling_beta": sig.get("risk_rolling_beta")}
+    if require_fixed_beta_risk:
+        ratio = sig.get("risk_scale_ratio")
+        if ratio is None or abs(float(ratio) - 1.0) > pe.RISK_SCALE_TOLERANCE:
+            return PairDecision("skip_risk_scale", label,
+                                soak={**base, "z": sig["z"], "direction": sig["direction"],
+                                      "beta": sig["beta"], "hedge_beta": params.hedge_beta,
+                                      **risk_scale})
     # size (with the correlation haircut for already-open correlated pairs)
     haircut = psz.correlation_haircut(correlation_open, factor=corr_factor)
     budget = float(risk_budget_usd) * haircut
@@ -135,7 +159,7 @@ def decide_pair(params: pe.PairParams, close_a: Sequence[float], close_b: Sequen
             or sizing["notional_a_usd"] < min_notional
             or sizing["notional_b_usd"] < min_notional):
         return PairDecision("skip_size", label,
-                            soak={**base, "z": sig["z"], "risk": sig["risk"],
+                            soak={**base, "z": sig["z"], **risk_scale,
                                   "budget_usd": round(budget, 2), "haircut": haircut,
                                   "notional_a_usd": round(sizing["notional_a_usd"], 2),
                                   "notional_b_usd": round(sizing["notional_b_usd"], 2),
@@ -145,7 +169,8 @@ def decide_pair(params: pe.PairParams, close_a: Sequence[float], close_b: Sequen
     sl_b, tp_b = psz.leg_protective_levels(legdirs["b"], price_b, sig["risk"], backstop_mult)
     tp_basis = "backstop"
     if leg_tp == "spread_target":
-        tgt = pe.reversion_target_spread(close_a, close_b, params, sig["direction"])
+        tgt = pe.reversion_target_spread(close_a, close_b, params, sig["direction"],
+                                         beta_entry=sig.get("beta_entry"))
         tps = (pe.leg_target_prices(sig["direction"], price_a, price_b,
                                     tgt["spread_now"], tgt["target_spread"], tgt["beta"])
                if tgt else None)
@@ -163,7 +188,8 @@ def decide_pair(params: pe.PairParams, close_a: Sequence[float], close_b: Sequen
     ]
     ev = "shadow_open" if execution_mode == "shadow" else "open"
     soak = {**base, "z": sig["z"], "direction": sig["direction"], "beta": sig["beta"],
-            "risk": sig["risk"], "entry_spread": sig["entry_spread"], "stop_spread": sig["stop_spread"],
+            "beta_entry": sig.get("beta_entry"),
+            **risk_scale, "entry_spread": sig["entry_spread"], "stop_spread": sig["stop_spread"],
             "budget_usd": round(budget, 2), "haircut": haircut, "correlation_open": correlation_open,
             "tp_basis": tp_basis,
             "pairs_group_id": f"pair-{uuid.uuid4().hex[:12]}",
@@ -621,8 +647,13 @@ def _open_pair_from_meta(meta: Dict[str, Any]) -> pe.OpenPair:
         opened_dt = opened_dt.replace(tzinfo=timezone.utc)
     held_s = (datetime.now(timezone.utc) - opened_dt).total_seconds()
     bars_held = max(0, int(held_s // max(1, bar_seconds)))
+    # Absent on a package stamped before PAIRS-R-SCALE's fix: that position
+    # exits on the legacy rolling-β basis its stop was computed on.
+    be = meta.get("beta_entry")
+    beta_entry = float(be) if be is not None and math.isfinite(float(be)) else None
     return pe.OpenPair(direction=pd, entry_spread=entry_spread,
-                       stop_spread=stop_spread, bars_held=bars_held)
+                       stop_spread=stop_spread, bars_held=bars_held,
+                       beta_entry=beta_entry)
 
 
 # ── NO-HALT: rebuild an unreadable open-state from the open leg rows ────────
@@ -745,17 +776,25 @@ def _rebuild_open_state_from_legs(params: pe.PairParams, rows: tuple,
         bars_held = max(0, int(held_s // max(1, int(bar_seconds))))
 
     entry_spread = stop_spread = float("nan")
+    beta_entry: Optional[float] = None
     if direction is not None and bars_held is not None:
         try:
             pa, pb = float(ra.get("entry_price")), float(rb.get("entry_price"))
             n = min(len(closes_a), len(closes_b))
-            _, _, std, beta = pe.compute_spread_z(
-                list(closes_a)[-n:], list(closes_b)[-n:], params.lookback, params.hedge_beta)
+            ca, cb = list(closes_a)[-n:], list(closes_b)[-n:]
+            _, _, std, beta = pe.compute_spread_z(ca, cb, params.lookback, params.hedge_beta)
             k = n - 1 - bars_held
-            if (k >= 0 and pa > 0 and pb > 0 and math.isfinite(float(std[k]))
-                    and float(std[k]) > 0 and math.isfinite(float(beta[k]))):
+            sd_k = float(std[k]) if k >= 0 else float("nan")
+            if k >= 0 and params.hedge_beta == "rolling" and math.isfinite(float(beta[k])):
+                # β frozen at the entry bar: the R unit is the fixed-β std
+                # over the same shift-1 window (PAIRS-R-SCALE).
+                w = pe.fixed_beta_window(ca, cb, float(beta[k]), k - params.lookback, k)
+                sd_k = w[1] if w is not None else float("nan")
+                beta_entry = float(beta[k])
+            if (k >= 0 and pa > 0 and pb > 0 and math.isfinite(sd_k)
+                    and sd_k > 0 and math.isfinite(float(beta[k]))):
                 entry_spread = math.log(pa) - float(beta[k]) * math.log(pb)
-                risk = float(params.stop_z) * float(std[k])
+                risk = float(params.stop_z) * sd_k
                 stop_spread = (entry_spread - risk if direction == "long_spread"
                                else entry_spread + risk)
         except Exception as exc:  # noqa: BLE001 — partial rebuild, never raise
@@ -768,13 +807,15 @@ def _rebuild_open_state_from_legs(params: pe.PairParams, rows: tuple,
         not_computable.append("max_hold_bars")
     open_pair = pe.OpenPair(direction=direction or "unknown",
                             entry_spread=entry_spread, stop_spread=stop_spread,
-                            bars_held=bars_held if bars_held is not None else 0)
+                            bars_held=bars_held if bars_held is not None else 0,
+                            beta_entry=beta_entry)
     if not_computable:
         return ("rebuilt_partial", open_pair, None, not_computable)
     meta = {
         "pair_direction": direction,
         "entry_spread": round(entry_spread, 6),
         "stop_spread": round(stop_spread, 6),
+        "beta_entry": round(beta_entry, 6) if beta_entry is not None else None,
         "opened_at_utc": opened_dt.isoformat(),
         "bar_seconds": int(bar_seconds),
         "trade_ids": [ra.get("id"), rb.get("id")],
@@ -975,6 +1016,8 @@ def _place_pair(client: Any, account_cfg: dict, pair: Dict[str, Any],
         "pair_direction": decision.soak.get("direction"),
         "entry_spread": decision.soak.get("entry_spread"),
         "stop_spread": decision.soak.get("stop_spread"),
+        # β frozen at entry (PAIRS-R-SCALE): the exits read this spread.
+        "beta_entry": decision.soak.get("beta_entry"),
         "opened_at_utc": opened_at, "bar_seconds": bar_seconds,
         "signal_logic": f"pairs {decision.pair} {decision.soak.get('direction')} "
                         f"z={decision.soak.get('z')} beta={decision.soak.get('beta')}",
@@ -1606,7 +1649,8 @@ def _dd_switch_blocks(account_id: str, acct_cfg: dict, equity: Optional[float]) 
 
 def _revise_leg_tps(client: Any, account_cfg: dict, pair: Dict[str, Any],
                     params: pe.PairParams, closes_a: Sequence[float],
-                    closes_b: Sequence[float], direction: str) -> List[Dict[str, Any]]:
+                    closes_b: Sequence[float], direction: str,
+                    beta_entry: Optional[float] = None) -> List[Dict[str, Any]]:
     """Re-estimate the reversion target on this bar and move each open leg's
     resting TP to it (TP doctrine clause 2) through the ONE amend path,
     ``execute.modify_open_order``, scoped to the leg's own qty. The journal's
@@ -1615,7 +1659,8 @@ def _revise_leg_tps(client: Any, account_cfg: dict, pair: Dict[str, Any],
     and is retried at the next bar."""
     out: List[Dict[str, Any]] = []
     try:
-        tgt = pe.reversion_target_spread(closes_a, closes_b, params, direction)
+        tgt = pe.reversion_target_spread(closes_a, closes_b, params, direction,
+                                         beta_entry=beta_entry)
         if not tgt:
             return [{"revised": False, "reason": "target_not_computable"}]
         tps = pe.leg_target_prices(direction, float(closes_a[-1]), float(closes_b[-1]),
@@ -2016,7 +2061,8 @@ def run_pairs_tick(settings: Optional[Dict[str, Any]] = None) -> None:
                         open_state = pe.OpenPair(
                             direction=open_state.direction,
                             entry_spread=open_state.entry_spread,
-                            stop_spread=open_state.stop_spread, bars_held=int(n_held))
+                            stop_spread=open_state.stop_spread, bars_held=int(n_held),
+                            beta_entry=open_state.beta_entry)
                     not_computable = list(not_computable)
                     if held_basis == "unknown":
                         not_computable.append("bars_held_trading_days")
@@ -2064,7 +2110,8 @@ def run_pairs_tick(settings: Optional[Dict[str, Any]] = None) -> None:
                 risk_budget_usd=risk_budget, correlation_open=corr_open,
                 execution_mode=execution, corr_factor=corr_factor,
                 backstop_mult=backstop_mult, min_leg_notional_usd=min_leg_notional_usd,
-                whole_units=session, leg_tp=str(pair.get("leg_tp", "backstop")))
+                whole_units=session, leg_tp=str(pair.get("leg_tp", "backstop")),
+                require_fixed_beta_risk=session)
             if session:
                 decision.soak["decision_bar_source"] = bar_source
             if is_open:
@@ -2147,7 +2194,8 @@ def run_pairs_tick(settings: Optional[Dict[str, Any]] = None) -> None:
                   and open_state.direction in ("long_spread", "short_spread")):
                 decision.soak["tp_revision"] = _revise_leg_tps(
                     _client_for(account_id), acct_cfg, pair, params,
-                    closes_a, closes_b, open_state.direction)
+                    closes_a, closes_b, open_state.direction,
+                    beta_entry=open_state.beta_entry)
 
             rec = build_pairs_soak_record(
                 event=decision.event,

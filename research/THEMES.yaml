@@ -1,9 +1,14 @@
 # research/THEMES.yaml — the ONE place dispatch weights live.
 #
 # Every non-done queue unit carries `theme:` (a key below) and `priority:` (1 = most urgent .. 3 = least,
-# WITHIN its theme). The dispatcher does NOT run themes in strict order: it allocates fire slots by weighted
-# fair share over the last `share_window_hours` of stamps, so a theme with runnable work and no recent fire
-# is served before any theme that is over its share. A low-weight theme therefore still gets slots.
+# WITHIN its theme). The dispatcher does NOT run themes in strict order, and since 2026-10-18 it does not
+# round-robin them either: PROGRAMME PRIORITY first (operator, same day: research_compute.yaml
+# value.programme_priority, [P1, P2] -- those units rank first on every backend), then MONEY FIRST (operator,
+# "Fix now, money first") -- due units are taken across themes by
+# the router's value score (scripts/research/research_compute.yaml `value:`), a starved unit first in any theme,
+# and the weighted share over the last `share_window_hours` of stamps decides only between EQUAL scores. A theme
+# therefore gets slots by holding VALUABLE due work, or spare capacity, or starve_hours -- not by its weight alone;
+# the weights are honoured by SUPPLY (check_research_queue_health.py theme_supply names the short themes).
 # Rules and the weekly revisit: research/queue/PLANNING.md.
 #
 # Weights are the operator's 2026-09-30 order (regime first, macro last), revisited by the planning session.
@@ -19,3 +24,9 @@ themes:
   new_strategy_prop: {weight: 6, what: "Stage-0 coverage, new strategies, prop-account fit"}
   macro:             {weight: 1, what: "macro / value sleeve and event studies"}
   infra:             {weight: 2, what: "research tooling and pipeline self-tests that are units"}
+  # 2026-10-18 OPERATOR REQUEST (relayed by the manager, lane FRONTIER-TIMEFRAMES-1018, paraphrased): "the LOWEST-priority
+  # research theme, but start planning it now and get tests into the queue soon" -- test different time frames on the
+  # frontier end (daily/weekly holds of weeks; sub-hour breakout families that clear the fee+slippage stack). Weight 1 =
+  # the floor (ties macro; a weight never goes below 1, PLANNING.md s2), so it gets slots but never leads the fair share.
+  # Programme 07: research/programmes/07-timeframes.yaml; milestone L-TIMEFRAMES.
+  timeframes:        {weight: 1, what: "horizon frontier: daily/weekly position trades and sub-hour breakout families, net of cost"}

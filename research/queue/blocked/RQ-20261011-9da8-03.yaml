@@ -1,19 +1,16 @@
 id: RQ-20261011-9da8-03
-title: 'Frontier: conformal abstention on the advisory volatility-regime heads (Mondrian split-conformal vs a plain probability
-  threshold at matched coverage)'
+title: 'Frontier: conformal abstention on the advisory volatility-regime heads (Mondrian split-conformal vs a plain probability threshold at matched coverage)'
 status: blocked
 cadence: once
 theme: ml_health
 priority: 2
 kind: experiment
-question: On the shadow log of the three advisory regime heads (btc/sol-regime-15m-lgbm-fc-pcv-v2, mes-regime-5m-lgbm-v2),
-  does a rolling-calibrated Mondrian (per vol-bucket) split-conformal abstention rule give a lower selective error rate than
-  the plain max-probability threshold at the SAME coverage, while keeping empirical coverage within 3 points of nominal in
-  every rolling 30-day window?
-why_this_matters: 'Calibrated abstention is the direct answer to ''the head is right only when it is confident'' and a family
-  the registry has never tried (conformal_calibration: 0 models). It adds no new learner and costs almost nothing, so it is
-  the cheapest family-diversity test. Honest limit (arXiv 2607.24875): conformal guarantees assume exchangeability, which
-  regime shifts weaken -- that is why the rule tests rolling-window validity, not just average coverage.'
+question: On the shadow log of the three advisory regime heads (btc/sol-regime-15m-lgbm-fc-pcv-v2, mes-regime-5m-lgbm-v2), does a rolling-calibrated Mondrian
+  (per vol-bucket) split-conformal abstention rule give a lower selective error rate than the plain max-probability threshold at the SAME coverage, while
+  keeping empirical coverage within 3 points of nominal in every rolling 30-day window?
+why_this_matters: 'Calibrated abstention is the direct answer to ''the head is right only when it is confident'' and a family the registry has never tried
+  (conformal_calibration: 0 models). It adds no new learner and costs almost nothing, so it is the cheapest family-diversity test. Honest limit (arXiv 2607.24875):
+  conformal guarantees assume exchangeability, which regime shifts weaken -- that is why the rule tests rolling-window validity, not just average coverage.'
 power:
   expected_n: 3
   min_detectable_effect: 0.3
@@ -21,30 +18,34 @@ power:
   design: paired
   alpha: 0.05
   power: 0.8
-  basis: 'Three heads, ~10^4-10^5 labelled shadow rows each (shadow/stats: 69,706 retained rows across 36 models since 2026-09-26)
-    -- the unit of analysis is the rolling window, ~30 days x 3 heads.'
+  basis: 'Three heads, ~10^4-10^5 labelled shadow rows each (shadow/stats: 69,706 retained rows across 36 models since 2026-09-26) -- the unit of analysis
+    is the rolling window, ~30 days x 3 heads.'
   feasibility:
     source: none
-    accrual_basis: Row counts per head are read from the shadow log at run time; windows with < 200 labelled rows are excluded
-      and counted.
+    accrual_basis: Row counts per head are read from the shadow log at run time; windows with < 200 labelled rows are excluded and counted.
 decision_rule:
   id: RULE-RQ1011-9DA8-03-CONFORMAL-ABSTAIN
   registered_at: '2026-10-11'
   registered_before_run: true
-  statistic: 'Per head: selective error rate (misclassification rate among non-abstained rows) of (a) the plain threshold
-    and (b) the conformal rule, at matched coverage in {50%, 70%, 90%}; empirical coverage per rolling 30-day window vs nominal.'
-  rule: PASS IF on at least two of three heads the conformal rule has selective error lower than the plain threshold at all
-    three coverage levels AND rolling-window coverage stays within +/-3 points of nominal in >= 90% of windows. FAIL IF either
-    condition fails on two or more heads (validity broken by drift, or no gain). INDETERMINATE IF fewer than 6 usable windows
-    per head.
-  what_it_does_not_do: Does not change any head, threshold or order path. 'Abstain' here is measured offline on the shadow
-    log; wiring it as a per-trade RiskManager refusal is a separate Tier-3 proposal. No halting, no mode flip.
+  statistic: 'Per head: selective error rate (misclassification rate among non-abstained rows) of (a) the plain threshold and (b) the conformal rule, at
+    matched coverage in {50%, 70%, 90%}; empirical coverage per rolling 30-day window vs nominal.'
+  rule: PASS IF on at least two of three heads the conformal rule has selective error lower than the plain threshold at all three coverage levels AND rolling-window
+    coverage stays within +/-3 points of nominal in >= 90% of windows. FAIL IF either condition fails on two or more heads (validity broken by drift, or
+    no gain). INDETERMINATE IF fewer than 6 usable windows per head.
+  what_it_does_not_do: Does not change any head, threshold or order path. 'Abstain' here is measured offline on the shadow log; wiring it as a per-trade
+    RiskManager refusal is a separate Tier-3 proposal. No halting, no mode flip.
 blocked_on:
 - kind: work_item
   ref: FRONTIER-LEVER-CONFORMAL
-  what: 'Conformal evaluates a SCORE STREAM, not a learner list, so it needs its own scorer (the ml_bakeoff engine does not cover it). MEASURED on the trainer 2026-10-11: the shadow log is runtime_logs/shadow_predictions.jsonl (68,810 rows, 61 MB, TRAINER-resident -> run via research-script-run-trainer.yml); rows carry model_id, stage, score and feature_row but NO realised label -- the shadow-log -> realised-vol joiner is the open lever ML-HEAD-AGREEMENT-JOIN (ML-N1J).'
-  clears_when: scripts/research/conformal_abstain_eval.py (split-conformal + plain-threshold baseline at matched coverage, rolling-window coverage; writes verdict.json in the E5 shape) exists with a synthetic-exchangeable test, AND the realised-label joiner exists (ML-HEAD-AGREEMENT-JOIN). Then git mv and fill run.workflow, run.command, lands.store.
-
+  what: '[2026-10-18 lane ML-UNBLOCK-1018] The SCORER now exists: scripts/research/conformal_abstain_eval.py (split-conformal, Mondrian per predicted class,
+    vs a plain max-probability threshold at matched coverage; rolling-window validity in 2 combined SE; verdict.json in the E5 shape; self-test on exchangeable
+    data). It grades a LABELLED score stream -- the published-shard twin RQ-20261016-65ff-25 is queued on it. THIS unit''s stream is the trainer-resident
+    shadow log (runtime_logs/shadow_predictions.jsonl, 85 MB on 2026-10-18) whose rows carry model_id/stage/score/feature_row but NO realised label, so
+    the one remaining blocker is the shadow-log -> realised-vol joiner ML-HEAD-AGREEMENT-JOIN (ML-N1J): it must emit (ts, proba[], y) rows per head, which
+    evaluate_stream() consumes unchanged.'
+  clears_when: 'ML-HEAD-AGREEMENT-JOIN merged and one joined file per advisory head exists on the trainer; then add a `conformal.stream: {kind: joined_shadow_log,
+    path: ...}` loader to conformal_abstain_eval.py (a ~30-line reader, no new statistics), git mv to research/queue/, run.workflow research-script-run-trainer.yml,
+    run.command [python3, scripts/research/conformal_abstain_eval.py, --unit, ''{unit}'', --out, ''{out_dir}''].'
 routing:
   needs_trainer_resident_data: false
   needs_gpu: false

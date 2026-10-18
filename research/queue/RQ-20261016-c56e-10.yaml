@@ -1,0 +1,111 @@
+id: RQ-20261016-c56e-10
+title: 'Re-validation at power, real money: does xrp_pullback_2h AS DECLARED clear Stage 0 on the disjoint window before its committed record (2020-10-05
+  .. 2024-10-04), net of the full cost stack?'
+status: done
+cadence: once
+theme: live_strategy
+priority: 1
+kind: experiment
+question: On 2020-10-05 .. 2024-10-04 23:59 (disjoint from, and immediately preceding, the committed record's window), is xrp_pullback_2h at its configured
+  params net-positive with >= 5 of 8 calendar folds net > 0, at n >= 39?
+why_this_matters: 'xrp_pullback_2h (real money, bybit_2 + mirror) is the census''s `drag` leg (2/4 folds) on a 365d record. Its live book is BELOW_BACKTEST
+  (8bbc-01: -8.84 R over 16, 3.4th pct); the cause-naming build is filed (PI-20261015-10152047-0001). This unit is the runnable half of the ''overfit /
+  window'' cause: if the edge is absent on the four years before the record, the record''s window -- not live execution -- is the first suspect. '
+power:
+  expected_n: 240
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'd=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo''s standing E35 floor). expected_n=240 is an ESTIMATE: the 730d record''s 122 trades
+    scale to ~61/yr x 4 yr. Folds 8 (half-year spans) so a single regime cannot carry the verdict; majority 5 of 8 as in RQ-20261015-f01d-01.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched keyless candles over a pinned historical window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261016c56e10
+  registered_at: '2026-10-16'
+  registered_before_run: true
+  statistic: 'ONE arm B = the leg exactly as declared in config/strategies.yaml (argv built by regime_debt_matrix.build_harness_cmd; full cost stack fee
+    + resolved slippage + funding via execution_costs.resolve_cost_policy), graded by exit_lever_ablation.py --grade stage0: net_total_r, n, max_drawdown_r,
+    and net_r per fold over 8 equal calendar spans of the window. Reported, not graded: net_r_per_capital_day. NO positive control: no committed record
+    exists on this window (it is disjoint from and immediately precedes the leg''s record), the precedent being RQ-20261014-470a-01; the argv is built by
+    the same builder the committed record used, from the same config keys.'
+  rule: 'indeterminate IF n(B) < 39 (underpowered: no verdict, never FAIL on thin n). PASS IF net_r(B) > 0 AND >= 5 of 8 calendar folds net > 0: the edge
+    exists outside the window the record was measured on -- the record''s grade stands and the leg''s Stage-0 evidence now spans both windows (a re-validation
+    input for L-LADDER). FAIL IF n >= 39 and that does not hold: the record''s window carries the edge alone -- a roster-retention case for the manager
+    (tune-before-retire: the leg''s open P3 sweeps are read first). It is NOT a demotion signal by itself (Gate 2''s demotion signal is the mirror''s net-of-cost
+    window) and nothing is changed here. Windows are never pooled with the committed record''s; the record keeps its own grade. The 0 R bar, the 5-of-8
+    fold majority and the 39 floor are not changed after any result.'
+  what_it_does_not_do: Does not edit config or any roster, does not tune (one arm, as declared), does not pool windows. Not a promotion case.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 300
+  confidence: 0.3
+  bucket: own_losses
+  basis: 'stand-in: the leg''s book at stake if its edge turns out window-specific; estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 25
+  basis: One keyless candle fetch of ~2240 days and ONE harness pass over the pinned window.
+  why_runner: exit_lever_ablation.py fetches its own keyless candles (Binance Vision / Yahoo) and runs the repo harnesses; the symbol/timeframe is not in
+    metis-market-data and the script has no published-data input, so the Kaggle-CPU and trainer backends cannot take it.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - xrp_pullback_2h
+  - --arm
+  - B=
+  - --days
+  - '2240'
+  - --start
+  - '2020-10-05'
+  - --end
+  - 2024-10-04 23:59
+  - --grade
+  - stage0
+  - --baseline
+  - B
+  - --delta-r
+  - '0'
+  - --folds
+  - '8'
+  - --fold-majority
+  - '5'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 75
+  inputs:
+    research_unit: RQ-20261016-c56e-10
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: research/results/RQ-20261016-c56e-10/<run_id>.jsonl via the batch collector; per-arm summaries and verdict.json under comms/research/RQ-20261016-c56e-10/<run_id>/.
+roadmap:
+- L-LADDER
+- M21
+related:
+- P3-STRATEGY-BACKLOG-1016
+- docs/research/programmes/03-STRATEGY-IMPROVEMENT.md
+- research/programmes/03-strategy-improvement.yaml
+- scripts/research/exit_lever_ablation.py
+last_dispatched_at: '2026-10-16T14:56:12+00:00'
+grading:
+  attested: RULE-RQ20261016c56e10
+  auto: true
+  decision_rule_id: RULE-RQ20261016c56e10
+  evidence:
+  - research/results/RQ-20261016-c56e-10/38919854733.jsonl
+  graded_at: '2026-10-16'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

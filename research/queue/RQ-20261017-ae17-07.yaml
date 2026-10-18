@@ -1,0 +1,125 @@
+id: RQ-20261017-ae17-07
+title: 'Direction (side filter), ada_pullback_2h: does restricting ada_pullback_2h to long-only or short-only beat the two-sided leg net of the
+  full cost stack?'
+status: done
+cadence: once
+theme: regime
+priority: 2
+kind: experiment
+question: >-
+  On the full candle history the data source serves (Binance Vision, ~2019 onward) up to 2026-10-17, same cost stack and same harness argv builder
+  as the evidence builder, does any of the 2 pre-registered side_filter arms on ada_pullback_2h (long, short) beat the leg as declared by a material
+  margin (>= 1.0 R), with no worse drawdown and in at least 3 of 4 calendar folds? Arm values are fixed in this unit before any run; this is an
+  offline Stage-0 re-measurement and never a book decision.
+why_this_matters: "Theme regime (weight 5) held 0 runnable units on 2026-10-17 and its 7 d fire share was 0.36 of its weight (research-slo theme_share_min_ratio).\
+  \ ada_pullback_2h is a live/shadow-roster mean-reversion leg whose side_filter axis is not in the committed matrix or the queue (checked against\
+  \ research/queue on 2026-10-17). Pullback legs only: the 2026-10-16 programme review DROPPED skip units on the trend (donchian) legs on in-repo\
+  \ evidence (research/programmes/02-ai-trader.yaml) and this lane honours that. A null is recorded honest_negative so the axis is not re-asked.\
+  \ One of 28 sibling axis units (RQ-20261017-ae17-01..28) registered together: a lone pass is a LEAD, confirmed on a disjoint window before any\
+  \ Tier-3 proposal (research-ops step D). "
+power:
+  expected_n: 40
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo's standing E35 floor). expected_n=40 is an ESTIMATE, not a measurement: the baseline
+    count over the full history is not committed for ada_pullback_2h; below 39 baseline trades the unit grades indeterminate (underpowered), never
+    FAIL, and that outcome is itself the finding (the leg cannot support this axis). The R bar is a MATERIALITY bar over the whole window, not
+    a significance test; the 3-of-4 calendar-fold majority refuses a one-period artifact.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched keyless candles (ada_pullback_2h); the harness replays history, nothing accrues.
+decision_rule:
+  id: RULE-RQ20261017ae1707-AXIS
+  registered_at: '2026-10-17'
+  registered_before_run: true
+  statistic: >-
+    Per arm, from the harness's own --json summary of scripts/backtest_pullback.py (argv built by regime_debt_matrix.build_harness_cmd plus the
+    arm's tokens; full cost stack: fee + resolved slippage + funding, never a zero default): total_trades, net_total_r, max_drawdown_r, plus net_r
+    per fold over FOUR equal calendar spans (same boundaries every arm). Arms: B = leg as declared; SL = --side-filter=long; SS = --side-filter=short.
+    Per candidate C: dR = net_r(C) - net_r(B); dDD = maxDD(C) - maxDD(B); fold_wins = folds in which C out-earns B.
+  rule: >-
+    indeterminate IF n(B) < 39 (underpowered: no verdict, extend the window or redesign; never FAIL on thin n). A candidate C PASSES iff dR >=
+    1.0 R AND dDD <= 0 AND fold_wins >= 3 of 4. PASS IF any candidate passes (best = highest dR): a LEAD, followed by ONE confirmation unit on
+    a disjoint window with the same statistic and bar; only a confirmed pass becomes a Tier-3 PROPOSAL note on the owning checklist row for the
+    manager, never a config edit. Two passing candidates within 0.5 R of each other is a preference, not a finding. FAIL IF none passes: the declared
+    setting stands; the axis is recorded honest_negative on this history. The bar, the drawdown clause, the 3-of-4 fold majority, the 39 floor
+    and the arm values are not changed after any result.
+  what_it_does_not_do: >-
+    Does not mine values: the arm values are fixed here and may not be edited after seeing any result. Does not edit config, and a single-leg
+    pass is a LEAD only. Does not test any other axis.
+  min_n: '39'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 60
+  confidence: 0.2
+  bucket: structural
+  basis: 'stand-in: placeholder for a small edge on a live/mirror book from one pre-registered entry-regime setting; estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  basis: >-
+    One keyless candle fetch of the full history and 3 harness passes over it; GitHub-hosted runner, no trainer data (same shape as RQ-20261014-f0e2-09..13
+    and RQ-20261016-c56e-16).
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - ada_pullback_2h
+  - --arm
+  - B=
+  - --arm
+  - SL=--side-filter=long
+  - --arm
+  - SS=--side-filter=short
+  - --days
+  - '7300'
+  - --end
+  - '2026-10-17'
+  - --grade
+  - sweep
+  - --baseline
+  - B
+  - --delta-r
+  - '1.0'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261017-ae17-07
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: >-
+    research/results/RQ-20261017-ae17-07/<run_id>.jsonl via the batch collector; per-arm summaries and verdict.json under comms/research/RQ-20261017-ae17-07/<run_id>/.
+roadmap:
+- L-REGIME
+related:
+- RESEARCH-AUTHOR-GRADE-1017
+- scripts/research/exit_lever_ablation.py
+- docs/research/entry-refinement-coverage.json
+last_dispatched_at: '2026-10-18T03:27:03+00:00'
+grading:
+  attested: RULE-RQ20261017ae1707-AXIS
+  auto: true
+  decision_rule_id: RULE-RQ20261017ae1707-AXIS
+  evidence:
+  - research/results/RQ-20261017-ae17-07/39093683539.jsonl
+  graded_at: '2026-10-18'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

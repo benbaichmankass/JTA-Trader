@@ -1,0 +1,166 @@
+id: RQ-20261016-65ff-30
+title: 'Frontier / CatBoost CONFIRMATION out of time and out of symbol: does the RQ-20261014-de02-01 CatBoost log-loss win over LightGBM on the 1h regime
+  label hold on the last 90 days (BTC, ETH) and on SOL 1h, which de02-01 never saw?'
+status: done
+cadence: once
+theme: ml_health
+priority: 2
+kind: experiment
+question: 'RQ-20261014-de02-01 PASSED: CatBoost beat LightGBM on 1h regime log-loss by +0.0035 (BTC) / +0.0053 (ETH) nats on the CV mean, both CIs > 0.
+  Same learners and params, same six features, same folds: does CatBoost stay >= +0.003 nats better than LightGBM on the holdout after 2026-07-16 on BTC
+  AND ETH, and not worse (>= 0) on SOL 1h under CV and holdout?'
+why_this_matters: 'A best-of-three CV pass is a lead (frontier-research skill: PASS -> confirm, then a candidate-manifest note, never a stage change). The
+  out-of-time holdout tests the drift question (PI-20261016-P3PFA1GK-0001 flags btc-regime-1h heads) and SOL is an unseen symbol. A PASS is the evidence
+  for a Tier-3 candidate-manifest note on FRONTIER-RESEARCH (a CatBoost 1h regime manifest); a FAIL records the configuration in families.gbdt.history.'
+power:
+  expected_n: 24000
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'tail_rows 40000 with min_train_frac 0.4 leaves ~24000 out-of-sample rows over 5 folds per symbol; d=0.1 paired needs ~785 rows, so each symbol
+    is above the row floor on rows, but bars are autocorrelated so effective n is lower: the rule also requires the same-direction CV mean on BOTH symbols.'
+  feasibility:
+    source: none
+    accrual_basis: 'Fixed by construction (tail_rows of a nightly-rebuilt shard): n does not grow with waiting, so an underpowered result is reported as
+      such and the follow-up is a larger or different dataset, not a re-run.'
+decision_rule:
+  id: RULE-RQ2026101665ff30-CATBOOST-CONFIRM
+  registered_at: '2026-10-16'
+  registered_before_run: true
+  statistic: Paired per-fold multiclass log-loss difference (LightGBM minus CatBoost, positive = CatBoost better) on identical purged folds (5, embargo
+    24) and on one holdout (ts >= 2026-07-16), per symbol; ml_bakeoff.py evaluate_rule.
+  rule: 'PASS IF CatBoost beats LightGBM by >= +0.003 nats on the HOLDOUT on BTC AND ETH, AND by >= 0 on SOL under CV and holdout: CONFIRMED -> Tier-3 candidate-manifest
+    note on FRONTIER-RESEARCH, families.gbdt.history PASS. FAIL IF CatBoost is not >= 0 vs LightGBM on the holdout on ANY symbol: de02-01 was a CV/in-sample
+    artifact; families.gbdt.history FAIL with this configuration. INDETERMINATE otherwise, if folds < 3, holdout rows < 20, or an arm is unavailable.'
+  min_n: 3 usable CV folds per symbol; holdout >= 20 rows.
+  what_it_does_not_do: Trains, registers and promotes nothing; edits no manifest, stage or config; a log-loss win is not edge or P&L.
+compute: auto
+value:
+  bucket: frontier
+  usd_at_stake_per_month: 80
+  confidence: 0.3
+  basis: 'stand-in: a better-calibrated regime head feeds advisory sizing and the conformal lever; not a measured P&L'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  published_data: metis-market-data
+  peak_memory_gb: 3.0
+  est_minutes: 40
+  basis: 'Estimate, NOT measured: CPU-capable bake-off on published BTC/ETH 1h v002 shards (the same shards RQ-20261014-65cc-10 read successfully); compute:
+    auto routes it to the Kaggle CPU kernel (published data; not metered by the GPU quota).'
+ml_bakeoff:
+  task: classification
+  metric: logloss
+  higher_is_better: false
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT_1h:
+        path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+      ETHUSDT_1h:
+        path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+      SOLUSDT_1h:
+        path: datasets-out/market_features/SOLUSDT/1h/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    tail_rows: 40000
+    holdout_after: '2026-07-16'
+  cv:
+    folds: 5
+    embargo_rows: 24
+    min_train_frac: 0.4
+  baseline: lgbm
+  controls:
+  - prior
+  candidates:
+  - catboost
+  learners:
+    prior:
+      kind: prior
+    lgbm:
+      kind: lightgbm
+      params:
+        n_estimators: 200
+        learning_rate: 0.05
+        num_leaves: 31
+        min_child_samples: 50
+    catboost:
+      kind: catboost
+      params:
+        iterations: 300
+        learning_rate: 0.05
+        depth: 6
+  rule:
+    min_folds: 3
+    pass_if:
+    - group:
+      - BTCUSDT_1h
+      - ETHUSDT_1h
+      vs: baseline
+      window: holdout
+      op: '>='
+      value: 0.003
+    - group:
+      - SOLUSDT_1h
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.0
+    - group:
+      - SOLUSDT_1h
+      vs: baseline
+      window: holdout
+      op: '>='
+      value: 0.0
+    fail_if_no_candidate_reaches:
+    - group: any
+      vs: baseline
+      window: holdout
+      op: '>='
+      value: 0.0
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261016-65ff-30
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M25
+related:
+- RQ-20261014-de02-01
+- FRONTIER-RESEARCH
+- PI-20261016-P3PFA1GK-0001
+- P2-AI-REGIME-BACKLOG-1016
+last_dispatched_at: '2026-10-16T14:56:12+00:00'
+grading:
+  attested: RULE-RQ2026101665ff30-CATBOOST-CONFIRM
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ2026101665ff30-CATBOOST-CONFIRM
+  evidence:
+  - research/results/RQ-20261016-65ff-30/38919863182.jsonl
+  graded_at: '2026-10-16'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

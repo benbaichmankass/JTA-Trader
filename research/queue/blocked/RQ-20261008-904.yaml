@@ -2,7 +2,7 @@ id: RQ-20261008-904
 title: >-
   Regime head as entry gate: does the mes-regime-5m-lgbm-v2 vol label (advisory) drop money-
   losing entries on MES legs out of sample? BLOCKED (see blocked_on)
-status: blocked
+status: retired
 cadence: once
 theme: live_strategy
 priority: 3
@@ -93,3 +93,8 @@ related:
 - scripts/research/regime_cell_walkforward.py
 - comms/reviews/ml-review-20261004-125000.json
 last_dispatched_at: null
+retired_reason: '2026-10-16 lane P2-AI-REGIME-BACKLOG-1016: retired, precondition cannot be met as written and no owner lever exists. The MES advisory head
+  is 5m and mes_trend_long_1d trades 1d bars (no committed 5m->1d label mapping), the head degraded on its 2026-10-04 retrain (PI-20261004-AHCVAAF5-0001),
+  and the leg trades only on ib_paper. The question it asked (does a regime head''s label drop money-losing entries) is carried for the real-money crypto
+  book by RQ-20261016-65ff-28 (classifier comparison on trade separation) and the per-leg units RQ-20261016-65ff-01..08. Re-ask for MES only if mes_trend_long_1d
+  reaches a real-money roster.'

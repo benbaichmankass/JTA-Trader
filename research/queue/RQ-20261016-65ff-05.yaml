@@ -1,0 +1,125 @@
+id: RQ-20261016-65ff-05
+title: 'TRANSFER RQ-20261013-407c-21 to trend_donchian_sol_prop on an unseen window: does a hot-vol entry skip (VH80, VH90, VH95) beat the declared prop
+  leg on 2022-10-05..2024-10-04, net of the full cost stack?'
+status: done
+cadence: once
+theme: regime
+priority: 1
+kind: experiment
+question: 'RQ-20261013-407c-21 PASSED (VH90 on the 1h sibling trend_donchian_sol: dR +11.36 R, 4/4 folds, n(B)=120; VH80 and VH95 also passed) as the best
+  of three arms on 2024-10-05..2026-10-04. Re-ask the pre-registered arms (VH80 = --vol-skip-above-pctl=0.8, VH90 = --vol-skip-above-pctl=0.9, VH95 = --vol-skip-above-pctl=0.95)
+  against the declared leg on the disjoint preceding window 2022-10-05 .. 2024-10-04 23:59: dR >= 2.0 R, no worse drawdown, >= 3 of 4 calendar folds. DISCLOSED:
+  TRANSFER, not a re-ask: trend_donchian_sol_prop differs from trend_donchian_sol (long-only, atr_stop_mult 2.5, trail_mult 3.5, min_confidence 0.8, tp_r
+  6). While checking the driver this lane ran ONE sandbox smoke of B vs VH90 on trend_donchian_sol_prop over 2024-10-05..2026-10-04 and it read fail; that
+  window is therefore NOT registered here (it is seen), only the unseen preceding window is. All three arms are kept, so the arm set was not edited after
+  the smoke.'
+why_this_matters: 'trend_donchian_sol_prop trades real money AND prop (bybit_2, bybit_portfolio, breakout_2, tradeify_1, velotrade_1). regime-selectivity
+  Rule 2 (walk-forward before Tier-3) and the f0e2-10 -> 470a-10 reversal (a best-of-3 single-window pass that did NOT confirm) are why a first-window pass
+  is a lead, not a gate. Manager audit 2026-10-16 (02-AI-REGIME-DATA s4.1) found this PASS with no confirmation unit, row or pipeline item. Kept despite
+  IDEA-REVIEW-1016 s11: same reasoning as 65ff-04 -- it falsifies the one observed hot-skip PASS on the money-carrying sibling leg; the continuous vol-TARGET
+  SIZING alternative is row IR-VOL-TARGET-SIZING-STAGE0 (not duplicated here).'
+power:
+  expected_n: 120
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'd=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo''s standing E35 floor). expected_n=120 is an ESTIMATE: from the first window''s n(B)
+    over the same 730-day length; crypto history before 2024 had fewer trending months so it may be lower. Below 39 baseline trades the unit grades indeterminate
+    (underpowered), never FAIL. The R bar is a MATERIALITY bar over the whole window, not a significance test; the 3-of-4 calendar-fold majority refuses
+    a one-period artifact.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched keyless Binance Vision candles over a pinned window; the harness replays history, nothing accrues.
+decision_rule:
+  id: RULE-RQ2026101665ff05-REGIME-CONFIRM
+  registered_at: '2026-10-16'
+  registered_before_run: true
+  statistic: 'Per arm, from the harness''s own --json summary (argv built by regime_debt_matrix.build_harness_cmd plus the arm''s tokens; full cost stack:
+    fee + resolved slippage + funding via execution_costs.resolve_cost_policy, never a zero default): total_trades, net_total_r, max_drawdown_r, plus net_r
+    per fold over FOUR equal calendar spans (same boundaries every arm). Arms: B = leg as declared; VH80 = --vol-skip-above-pctl=0.8; VH90 = --vol-skip-above-pctl=0.9;
+    VH95 = --vol-skip-above-pctl=0.95. Per candidate C: dR = net_r(C) - net_r(B); dDD = maxDD(C) - maxDD(B); fold_wins = folds in which C out-earns B. Also
+    reported per arm, not graded: net_r_per_capital_day (the programme headline measure).'
+  rule: 'indeterminate IF n(B) < 39 (no committed record exists on this exact window, so arm B is reported as the baseline itself) (underpowered: no verdict,
+    never FAIL on thin n). A candidate C PASSES iff dR >= 2.0 R AND dDD <= 0 AND fold_wins >= 3 of 4. PASS IF any candidate passes (best = highest dR):
+    the vol-hot gate TRANSFERS to this leg on this unseen window -- a LEAD, because the later window was smoke-read (VH90 fail, disclosed in the question);
+    the follow-up is ONE re-ask of the chosen arm on 2020-10-05 .. 2022-10-04 23:59 before any packet, never a config edit. FAIL IF none passes: the 1h-sibling
+    result does not transfer to the prop leg''s geometry; recorded honest_negative for this leg. The 2.0 R bar, the drawdown clause, the 3-of-4 fold majority
+    and the 39 floor are not changed after any result.'
+  what_it_does_not_do: 'Does not mine values: the arms are fixed here and may not be edited after any result. Does not edit config/strategies.yaml, config/regime_policy.yaml
+    or any roster; a pass is a lead/packet for the manager (Tier-3), never a promotion case. Live/paper P&L plays no part. Tests no other axis.'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 250
+  confidence: 0.3
+  bucket: own_losses
+  basis: 'stand-in: real-money/prop leg; a gate that removes a repeatable drag on trend_donchian_sol_prop; estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  basis: One keyless Binance Vision fetch of ~1480 days and 4 harness passes; GitHub-hosted runner, no trainer data.
+  why_runner: the harness fetches public Binance Vision candles itself and needs no published shard, no trainer data and no GPU; the runner is the only
+    backend whose env carries the harness deps.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_sol_prop
+  - --arm
+  - B=
+  - --arm
+  - VH80=--vol-skip-above-pctl=0.8
+  - --arm
+  - VH90=--vol-skip-above-pctl=0.9
+  - --arm
+  - VH95=--vol-skip-above-pctl=0.95
+  - --days
+  - '1480'
+  - --start
+  - '2022-10-05'
+  - --end
+  - 2024-10-04 23:59
+  - --grade
+  - sweep
+  - --baseline
+  - B
+  - --delta-r
+  - '2.0'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261016-65ff-05
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: research/results/RQ-20261016-65ff-05/<run_id>.jsonl via the batch collector; per-arm summaries and verdict.json under comms/research/RQ-20261016-65ff-05/<run_id>/.
+roadmap:
+- L-REGIME
+related:
+- REGIME-PROGRAM
+- P2-AI-REGIME-BACKLOG-1016
+- scripts/research/exit_lever_ablation.py
+- .claude/skills/regime-selectivity/SKILL.md
+- RQ-20261013-407c-21
+last_dispatched_at: '2026-10-16T11:45:53+00:00'
+grading:
+  attested: RULE-RQ2026101665ff05-REGIME-CONFIRM
+  auto: true
+  decision_rule_id: RULE-RQ2026101665ff05-REGIME-CONFIRM
+  evidence:
+  - research/results/RQ-20261016-65ff-05/38895967315.jsonl
+  graded_at: '2026-10-16'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

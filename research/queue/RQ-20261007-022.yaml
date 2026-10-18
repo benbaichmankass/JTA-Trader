@@ -96,3 +96,22 @@ related:
 - 'RQ-20260928-019 (M20 exit-lever sweep for this leg, monthly, dispatchable: the exit-side complement)'
 - RQ-20260928-016 (E35 bracket sweep for this leg, monthly, dispatchable)
 - RQ-20260928-030 (weekly walk-forward re-run, 180d fetch window)
+grading:
+  branch: KEEP
+  decision_rule_id: RULE-RQ1007-ADA-M8-TUNE-BEFORE-DEMOTE
+  evidence:
+  - research/results/RQ-20261007-022/ro0847-RQ-20261007-022.jsonl
+  graded_at: '2026-10-16'
+  graded_by: session_0158Sm5wGaURcQjaikk5nfpo (lane RESEARCH-GRADING-BACKLOG-1016, manager session_01VduHYzdaXe27wTDBLSu8ao)
+  note: The tune-before-demote attempt is on record; the leg is re-graded on the next M7 packet (rule).
+    No config change.
+  population: ada_pullback_2h OOS, 730d, 4 folds, n 50 at the live params
+  read_state: measured
+  reason: 'KEEP branch: current atr_stop_mult 1.5 / adx_min 28 OOS net +14.97 R at n 50 (>= 39, so not
+    underpowered). No TUNE-CANDIDATE: the only robust (4/4-fold) alternatives are adx_min 32 (n 32, +20.47
+    R) and 36 (n 25, +21.36 R), both below the 39 trade floor; adx_min 22 (n 77, +30.45 R) is 3/4 folds,
+    not robust; atr_stop_mult has 0 robust alternatives. TUNED-AND-STILL-FAILS needs current net <= 0;
+    it is +14.97. Population: ada_pullback_2h, scripts/backtest_pullback.py, 730d window 2024-10-12..2026-10-11,
+    4 anchored OOS folds, fee 7.5 + slippage 3.0 bps rt + funding 1.0 bps/window.'
+  rows: 1
+  verdict: no_action_warranted

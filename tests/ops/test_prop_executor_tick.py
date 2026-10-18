@@ -404,3 +404,45 @@ def test_wrapper_exports_the_accounts_login_keys_for_a_rest_tick():
     sh = (Path(__file__).resolve().parents[2] / "scripts/ops/prop_executor_tick.sh").read_text()
     assert 'LOGIN_KEYS="$(cd "${REPO_DIR}" && python3 scripts/prop/prop_env_keys.py "${ACCOUNT}"' in sh
     assert "for ckey in ${MODE_KEY} ${LOGIN_KEYS:-} DASHBOARD_API_TOKEN; do" in sh
+
+
+# ── exit 6 (session wait) is a hand-off to the feed, not a unit failure ──
+# 2026-10-17 05:13Z: Tradeify's "Platform maintenance" page expired the saved
+# session; every tick exited 6 and systemd's OnFailure pinged "unit FAILED"
+# while the feed was already retrying (it owns that red flag at failure 3).
+
+
+def test_session_wait_exits_0_and_escalates_only_when_it_persists_with_a_healthy_feed(tmp_path):
+    repo, base, calls = _setup(tmp_path)
+    acct = base / "accounts" / "tradeify_1"
+    env = {"STUB_RC": "6", "PROP_EXECUTOR_SESSION_WAIT_MAX": "3"}
+    for k in (1, 2):
+        r = _tick(tmp_path, repo, base, account="tradeify_1", extra_env=env)
+        assert r.returncode == 0, r.stdout + r.stderr
+        assert f"session wait {k}/3" in r.stdout + r.stderr
+    r = _tick(tmp_path, repo, base, account="tradeify_1", extra_env=env)
+    assert r.returncode == 6 and "session wait 3/3" in r.stdout + r.stderr
+    assert len(_argv_calls(calls)) == 3          # every tick still ran: no halt
+    # A good tick resets the count.
+    r = _tick(tmp_path, repo, base, account="tradeify_1")
+    assert r.returncode == 0 and not (acct / "executor" / "session_wait").exists()
+    r = _tick(tmp_path, repo, base, account="tradeify_1", extra_env=env)
+    assert r.returncode == 0 and "session wait 1/3" in r.stdout + r.stderr
+
+
+def test_session_wait_never_fails_the_unit_while_the_feed_is_backing_off(tmp_path):
+    repo, base, calls = _setup(tmp_path)
+    acct = base / "accounts" / "tradeify_1"
+    (acct / "feed").mkdir(parents=True)
+    (acct / "feed" / "backoff").write_text("consecutive_failures=4\nflagged=1\nreason=unknown_page\n")
+    env = {"STUB_RC": "6", "PROP_EXECUTOR_SESSION_WAIT_MAX": "2"}
+    for _ in range(4):
+        r = _tick(tmp_path, repo, base, account="tradeify_1", extra_env=env)
+        assert r.returncode == 0, r.stdout + r.stderr
+        assert "the feed is backing off and owns the red flag" in r.stdout + r.stderr
+
+
+def test_other_failures_still_fail_the_unit(tmp_path):
+    repo, base, calls = _setup(tmp_path)
+    r = _tick(tmp_path, repo, base, account="tradeify_1", extra_env={"STUB_RC": "3"})
+    assert r.returncode == 3

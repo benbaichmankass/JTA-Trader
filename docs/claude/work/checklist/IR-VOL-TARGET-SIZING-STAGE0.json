@@ -1,0 +1,22 @@
+{
+  "id": "IR-VOL-TARGET-SIZING-STAGE0",
+  "title": "Build: verdict.json grading wrapper for backtest_vol_target.py so per-leg continuous vol-target SIZING (not on/off gating) gets a pre-registered Stage-0 test on the real-money trend legs",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager (filed by lane IDEA-REVIEW-1016)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Family: regime vol-axis gating (A, docs/research/idea-family-review-2026-10-16.md). We tested binary hot/cold vol SKIPS heavily (407c-20, f0e2-08/09/11/12, 470a-07/10 -- all fail/indeterminate) and P2 is queuing more (65ff-06..19). Literature predicts gating fails for trend (Hurst-Ooi-Pedersen 'crisis alpha': trend earns in high vol) while vol-SCALING is where momentum's documented gain lives (Kim-Tse-Wald 2016; Cederburg et al. 2020: vol management fails out of sample broadly EXCEPT momentum; Barroso-Detzel: costs must be in). The only vol-target result (docs/research/P1-vol-target-result-2026-06-26.md, +0.10..0.20 dSharpe, book level) predates the full cost stack and was never pre-registered. FIRST STEP: scripts/research/vol_target_verdict.py running backtest_vol_target.py --trades <leg ledger> --basis exit --short 20 --long 60 --retarget monthly --cap-lo 0.5 --cap-hi 1.5 --cost-symbol <sym> and writing verdict.json (dSharpe, dMaxDD, per-block sign over 4 blocks). Rule to register: PASS iff dSharpe >= +0.10 net AND maxDD no worse AND dSharpe > 0 in >= 3/4 blocks, n >= 100/leg.",
+  "updated_at": "2026-10-16T09:08:35Z",
+  "updated_by": "lane-IDEA-REVIEW-1016",
+  "roadmap": [
+    "L-REGIME",
+    "M16"
+  ],
+  "_seq": 539
+}

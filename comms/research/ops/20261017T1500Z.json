@@ -1,0 +1,24 @@
+{
+  "run": "RESEARCH-OPS-2026-10-17-1447", "finished_at": "2026-10-17T15:30:00Z", "by": "research-ops-lane-20261017-1447",
+  "floor": 54, "floor_basis": "computed_floor(fired_24h 67)", "authoring_queue_depth": 15,
+  "idle_backends": ["github_runner_data", "kaggle", "kaggle_cpu", "trainer"],
+  "needs_review_triaged": 5, "needs_review_left": 27,
+  "needs_review_note": "result_disposition_check --list: UNOWNED 4 -> 0 (027, 028 graded fail by per-leg rule; 5bd1-03/-04 owner NEWS-VETO-EVAL; 006 owner RESEARCH-TOOLING-GAPS, fix = open PR #18527). 27 needs_review now all owned; UNGRADED 3 left (RQ-20260928-006 id collision PI-20261016-IKK5NFPO-0001; 8bbc-01/-02 weekly recurring).",
+  "throughput": {"runnable_before": 75, "runnable_after": 75, "queued": 145, "fired_24h": 67, "results_landed_24h": 223, "hours_since_last_dispatch": 1.1, "idle_alarm": false},
+  "mechanism": {"dispatch_receipt": "ok: fresh 1.08h", "collector": "ok: 0 unreadable result files", "stranded_stamp_prs": "none seen among open PRs (no automation/research-queue-* head in the first page of 17)", "incident": null, "watchdog": "newest row 2026-10-17T10:53Z dispatcher self_healed (87 min gap) + conflicted_automation resolved; no open escalated incident"},
+  "results_read": {"pass": 1, "fail": 3, "indeterminate": 1, "units": [
+    "RQ-20261016-026 PASS breakout_2 per-leg gate: eth_prop, sol_prop, eth_4h, sol_4h all ev>0 on 5/5 seeds -> comms/prop_survival/<leg>.json written for the 4 legs (rule's own instruction); gate is EV-only (p_floor 0.0), p_breach 0.93/0.60/0.63/0.48 recorded for the manager",
+    "RQ-20261016-027 FAIL tradeify_1: sol_prop ev -32.9..-43.1 on 5/5 seeds; eth_prop/eth_4h/sol_4h pass -> no records; Tier-3 pull-or-resize input for trend_donchian_sol_prop (grandfather lapses 2026-12-11) on PROP-GATE-PARITY",
+    "RQ-20261016-028 FAIL velotrade_1: sol_prop ev -1.55..+2.04 (sign flips) fails; others pass -> same disposition",
+    "RQ-20261016-1fa6-07 FAIL ict_scalp maker entries (causal harness; two consecutive fails) -> auto-graded; no action, because a FAIL closes the tested configuration only",
+    "RQ-20261017-005 INDETERMINATE P2-Q3.1 scalp rich-state (auto-graded awaiting more_data) -> not a verdict, no action",
+    "RQ-20261016-024 landed, ungraded by the grader this pass (eth_prop prop_ev_grid any_c_dominates); not read — handoff"
+  ]},
+  "unlocked": [], "retired": [],
+  "levers_filed": [{"lever": "comms/prop_survival keyed by (leg, ruleset) + guard matches the adding account's ruleset", "ref": "PROP-GATE-PARITY (note appended)"}],
+  "units_authored": ["P3-Q8-eth-1h-family (emits on next queue_replenish)"], "followups_filed": ["P3-Q8-sol-1h-family needs_authoring node"],
+  "authoring": {"queue_depth": 15, "nodes_drafted": 1, "nodes": ["P3-Q8-eth-1h-family"],
+                "theme_shortfall": {"regime": 13, "ml_health": 8, "new_strategy_prop": 14, "infra": 6}},
+  "not_run": ["step C blocked/ audit (blocker_watch ran: only UNPROVEN_OVERDUE checklist rows, no NOT_RUNNING/NEEDS_LANE/STALE_BLOCK; research/queue/blocked/ files not individually audited)", "pipeline routing of the 10 unrouted due items", "RQ-20261016-024 read"],
+  "handoff": ["MANAGER (held PR): merge the run PR; it carries 4 comms/prop_survival records, 2 gradings and 3 owner stamps in research/queue (E57 hold)", "MANAGER Tier-3 input: trend_donchian_sol_prop FAILS the per-leg gate on tradeify_1 and velotrade_1 (passes on breakout_2) — pull/resize decision before 2026-12-11", "MANAGER: comms/prop_survival is one-file-per-leg and the guard does not check ruleset vs account; breakout_2 records must not be read as clearing other firms — schema lever on PROP-GATE-PARITY", "NEWS-VETO-EVAL owner: classify primary vs secondary cells for 5bd1-03/-04", "after PR #18527 merges re-fire RQ-20261017-006", "read RQ-20261016-024 (eth_4h velotrade_1 any_c_dominates)", "author toward regime, ml_health, new_strategy_prop, infra; author P3-Q8-sol-1h-family", "blocked/ audit and the 10 unrouted due items still not done"]
+}
