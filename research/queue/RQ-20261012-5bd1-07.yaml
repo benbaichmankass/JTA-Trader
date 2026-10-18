@@ -174,14 +174,12 @@ resolved_blockers:
   resolved_by: NEWS-ALPHA-HARNESS
   resolved_at: '2026-10-16'
 grading:
-  attested: RULE-RQ1012-5bd1-07-NEWS-ALPHA
-  auto: true
+  auto: false
   decision_rule_id: RULE-RQ1012-5bd1-07-NEWS-ALPHA
   evidence:
   - research/results/RQ-20261012-5bd1-07/39068669691.jsonl
   graded_at: '2026-10-18'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'verdicts not unanimous-mechanical: [''fail'', ''indeterminate'']'
-  rows: 5
-  verdict: null
+  graded_by: 'research-ops-lane-20261018-0247'
+  needs_review: false
+  reason: 'Rule verbatim: fail needs n >= unit floor on EVERY primary cell; 3 of 5 rows are indeterminate with n 409-2060 below the 2180.6 floor (power_state accruing), so INDETERMINATE, not FAIL. 0 discovery survivors (bh_pass false on all 5), 0 LEADS. Closes nothing about news (operator 2026-10-12). No wave-2 seed; re-ask when n reaches the floor.'
+  verdict: indeterminate
