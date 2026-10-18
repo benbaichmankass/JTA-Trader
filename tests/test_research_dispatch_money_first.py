@@ -14,6 +14,7 @@ to RQ-20261017-ae17-08/-09 (regime, structural, score 6.5) and ae17-45 (infra, 3
 old cross-theme step was a round-robin by (fires in window + picks) / weight, so the theme with no recent fire took
 the scarce slot whatever its unit was worth.
 """
+import copy
 import io
 import json
 from contextlib import redirect_stdout
@@ -202,7 +203,6 @@ def test_the_committed_themes_file_keeps_the_rule_honest_and_the_decision_line_s
 
 
 # ── programme priority: a declared, ordered list the operator edits ─────────────────────────────────────────────
-import copy
 
 
 def cfg_with(priority):
