@@ -1443,6 +1443,18 @@ strategies:
     #   ROLLBACK: delete these two lines.
     trail_decay_stall_bars: 10
     trail_decay_tight_mult: 1.8
+    # tp_revision donchian_measured_move width_mult 0.5 (Tier-3 PROPOSAL, lane TIER3-PACKETS-1018, HOLD for
+    #   operator approval). The resting entry TP stays the 50 R sentinel (venue cap); this moves the TP each closed
+    #   bar to the Donchian measured move (src/runtime/tp_revision.py), merged into the trail verdict.
+    #   Evidence: RQ-20261018-007 (rule RULE-P1-Q3-ETH4H-MEASURED-MOVE-W05-CONFIRM, registered before the run),
+    #   ETHUSDT 4h 2020-07-01..2026-10-15, net of fee 7.5 + slippage 3 bps rt + funding 1 bps/8h: A (leg as declared)
+    #   n=290 +99.23 R maxDD 19.36 vs MM05 n=275 +115.95 R maxDD 20.38 (delta +16.72 vs bar 5.8; 5 of 6 folds;
+    #   DD cap 26.14); 41% of revisions clamped at the venue cap (1374/3319); net R/capital-day 0.194 vs 0.187.
+    #   Operator directive 2026-10-18: a config-only improvement to an existing strategy ships live and its first
+    #   1-2 live amends are monitored (no soak alias). ROLLBACK: delete the tp_revision block.
+    tp_revision:
+      rule: donchian_measured_move
+      width_mult: 0.5
     tp_r: 50.0
     tp_intent:
       mode: none
