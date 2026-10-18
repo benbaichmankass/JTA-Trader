@@ -758,6 +758,46 @@ def _is_p1(u: dict) -> bool:
     return u.get("programme") == _P1 or (isinstance(pn, dict) and pn.get("programme") == _P1)
 
 
+def _stamp_ts(value: Any) -> float:
+    """ISO timestamp -> epoch seconds; 0.0 when absent or unparseable (declared below as 'no stamp')."""
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00")).timestamp()
+    except Exception:  # noqa: BLE001 -- an unparseable stamp counts as no stamp, never as 'newest'
+        return 0.0
+
+
+def _latest_record_ts(rdir: Path) -> float:
+    """The newest `generated_at` over EVERY record file under research/results/<unit>/ (all of
+    them are read; none is picked by name or mtime). 0.0 = no readable record."""
+    latest = 0.0
+    if not rdir.is_dir():
+        return latest
+    for f in sorted(rdir.glob("*.jsonl")):
+        for line in _lines_or_none(f) or []:
+            # provenance: _record_generated_ts — the newest DECLARED generated_at over EVERY record of every
+            # file; no file is picked by name, position or mtime, so nothing here is an implicit input choice
+            latest = max(latest, _record_generated_ts(line))
+    return latest
+
+
+def _lines_or_none(f: Path) -> list[str] | None:
+    """The file's lines, or None when it cannot be read (an unreadable record contributes nothing)."""
+    try:
+        return f.read_text(encoding="utf-8").splitlines()
+    except Exception:  # noqa: BLE001 -- stated above: unreadable = contributes nothing, never 'newest'
+        return None
+
+
+def _record_generated_ts(line: str) -> float:
+    """One JSONL record's `generated_at` as epoch seconds; 0.0 for a blank or malformed line."""
+    if not line.strip():
+        return 0.0
+    try:
+        return _stamp_ts(json.loads(line).get("generated_at"))
+    except Exception:  # noqa: BLE001 -- a malformed record contributes nothing, never 'newest'
+        return 0.0
+
+
 def atm_view(root: Path | None = None) -> dict[str, Any]:
     """{readState, units, counts, verdicts, fired, nextDecision}: Programme P1 (active trade
     management) units by state. `fired` = status queued AND a dispatcher `last_dispatched_at`
@@ -771,7 +811,7 @@ def atm_view(root: Path | None = None) -> dict[str, Any]:
         return {"readState": "absent", "units": 0, "counts": {}, "verdicts": {}, "fired": 0,
                 "nextDecision": "COULD NOT BE READ (no research/queue/)"}
     try:
-        import yaml  # noqa: PLC0415
+        import yaml
     except Exception:  # noqa: BLE001
         return {"readState": "unreadable", "units": 0, "counts": {}, "verdicts": {}, "fired": 0,
                 "nextDecision": "COULD NOT BE READ (yaml unavailable)"}
@@ -795,17 +835,15 @@ def atm_view(root: Path | None = None) -> dict[str, Any]:
             v = str(((u.get("grading") or {}).get("verdict")) or "ungraded")
             verdicts[v] = verdicts.get(v, 0) + 1
         elif st == "queued" and u.get("last_dispatched_at"):
-            rdir = root / "research/results" / uid
-            newest = max((x.stat().st_mtime for x in rdir.glob("*.jsonl")), default=0.0) if rdir.is_dir() else 0.0
-            try:
-                stamp = datetime.fromisoformat(str(u["last_dispatched_at"]).replace("Z", "+00:00")).timestamp()
-            except Exception:  # noqa: BLE001
-                stamp = 0.0
-            if stamp > newest:
+            # "Fired, record pending" = the dispatcher stamp is newer than every record the unit
+            # has LANDED. The comparison reads each record's own `generated_at` (a declared field
+            # of the E5 record), never file order or mtimes, so a re-collected or re-ordered file
+            # cannot make a landed run look pending or a pending run look landed.
+            if _stamp_ts(u.get("last_dispatched_at")) > _latest_record_ts(root / "research/results" / uid):
                 fired += 1
     nxt: str
     try:
-        from scripts.research import queue_replenish as qr  # noqa: PLC0415
+        from scripts.research import queue_replenish as qr
         plan = qr.programme_plan(root, units)
         ready = [a for a in plan.get("authoring_queue", []) if a.get("programme") == _P1]
         emit = [e for e in plan.get("emit", []) if (e.get("programme") if isinstance(e, dict) else None) in (_P1, None)]
@@ -823,8 +861,8 @@ def atm_view(root: Path | None = None) -> dict[str, Any]:
 def _atm_lines(b: dict) -> list[str]:
     v = b.get("activeTradeManagement") or {}
     if v.get("readState") in (None, "absent", "unreadable"):
-        return [f"### 🎯 Active trade management (P1) — COULD NOT BE READ ({v.get('nextDecision', 'not computed')}; "
-                "we did not look, this is not zero)", ""]
+        hole = f"COULD NOT BE READ ({v.get('nextDecision', 'not computed')}; we did not look, this is not zero)"
+        return [f"### 🎯 Active trade management (P1) — {hole}", ""]
     c, vd = v["counts"], v["verdicts"]
     done = c.get("done", 0)
     vtxt = " · ".join(f"{k} {n}" for k, n in sorted(vd.items(), key=lambda kv: -kv[1])) or "—"
