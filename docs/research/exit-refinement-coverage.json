@@ -805,57 +805,6 @@
    }
   },
   {
-   "strategy": "trend_donchian_eth_mm05",
-   "symbol": "ETHUSDT",
-   "tf": "4h",
-   "execution": "live",
-   "alias_of": "trend_donchian_eth_4h",
-   "trail_geometry": {
-    "status": "pending",
-    "ref": "NEW soak alias of trend_donchian_eth_4h (TIER3-PACKETS-1018, 2026-10-18): identical geometry/exits, so NO verdict is inherited here (see the incumbent row); the only difference is the declared tp_revision (RQ-20261018-007 PASS, Tier-3 HOLD)."
-   },
-   "stale_stop": {
-    "status": "pending",
-    "ref": "NEW soak alias of trend_donchian_eth_4h (TIER3-PACKETS-1018, 2026-10-18): identical geometry/exits, so NO verdict is inherited here (see the incumbent row); the only difference is the declared tp_revision (RQ-20261018-007 PASS, Tier-3 HOLD)."
-   },
-   "giveback_stop": {
-    "status": "pending",
-    "ref": "NEW soak alias of trend_donchian_eth_4h (TIER3-PACKETS-1018, 2026-10-18): identical geometry/exits, so NO verdict is inherited here (see the incumbent row); the only difference is the declared tp_revision (RQ-20261018-007 PASS, Tier-3 HOLD)."
-   },
-   "exit_ladder": {
-    "status": "pending",
-    "ref": "NEW soak alias of trend_donchian_eth_4h (TIER3-PACKETS-1018, 2026-10-18): identical geometry/exits, so NO verdict is inherited here (see the incumbent row); the only difference is the declared tp_revision (RQ-20261018-007 PASS, Tier-3 HOLD)."
-   },
-   "exit_head_ml": {
-    "status": "pending",
-    "ref": "NEW soak alias of trend_donchian_eth_4h (TIER3-PACKETS-1018, 2026-10-18): identical geometry/exits, so NO verdict is inherited here (see the incumbent row); the only difference is the declared tp_revision (RQ-20261018-007 PASS, Tier-3 HOLD)."
-   },
-   "trail_decay": {
-    "status": "pending",
-    "ref": "NEW soak alias of trend_donchian_eth_4h (TIER3-PACKETS-1018, 2026-10-18): identical geometry/exits, so NO verdict is inherited here (see the incumbent row); the only difference is the declared tp_revision (RQ-20261018-007 PASS, Tier-3 HOLD)."
-   },
-   "regime_flip_exit": {
-    "status": "pending",
-    "ref": "NEW soak alias of trend_donchian_eth_4h (TIER3-PACKETS-1018, 2026-10-18): identical geometry/exits, so NO verdict is inherited here (see the incumbent row); the only difference is the declared tp_revision (RQ-20261018-007 PASS, Tier-3 HOLD)."
-   },
-   "vol_trail": {
-    "status": "pending",
-    "ref": "NEW soak alias of trend_donchian_eth_4h (TIER3-PACKETS-1018, 2026-10-18): identical geometry/exits, so NO verdict is inherited here (see the incumbent row); the only difference is the declared tp_revision (RQ-20261018-007 PASS, Tier-3 HOLD)."
-   },
-   "bracket_geometry": {
-    "status": "pending",
-    "ref": "NEW soak alias of trend_donchian_eth_4h (TIER3-PACKETS-1018, 2026-10-18): identical geometry/exits, so NO verdict is inherited here (see the incumbent row); the only difference is the declared tp_revision (RQ-20261018-007 PASS, Tier-3 HOLD)."
-   },
-   "tp_extend": {
-    "status": "pending",
-    "ref": "NEW soak alias of trend_donchian_eth_4h (TIER3-PACKETS-1018, 2026-10-18): identical geometry/exits, so NO verdict is inherited here (see the incumbent row); the only difference is the declared tp_revision (RQ-20261018-007 PASS, Tier-3 HOLD)."
-   },
-   "tp_retarget": {
-    "status": "pending",
-    "ref": "NEW soak alias of trend_donchian_eth_4h (TIER3-PACKETS-1018, 2026-10-18): identical geometry/exits, so NO verdict is inherited here (see the incumbent row); the only difference is the declared tp_revision (RQ-20261018-007 PASS, Tier-3 HOLD)."
-   }
-  },
-  {
    "strategy": "trend_donchian_sol_4h",
    "symbol": "SOLUSDT",
    "tf": "4h",
@@ -3483,7 +3432,7 @@
   "ABSENT_means_unrecorded": "⚠️ A MISSING tp_geometry MEANS 'WE DID NOT LOOK', NOT 'presumably fine'. Absence collapses three different conditions — (a) measured at live parity and nobody stamped it, (b) measured on the pre-cutover no-TP default, which is the DEFAULT EXPECTATION for anything dated before the cutover, and (c) nobody looked. The reassuring reading is the one that is wrong for most of the population. The roll-up counts these as `unrecorded` and reports the fraction rather than listing marked cells, so completeness is never inferred from the cells that happen to carry a value.",
   "_coverage_2026_08_16": "170 of 416 cells (40.9%) carry a value: live_parity 167, no_take_profit 3, absent 246. Measured directly off this file. The roll-up's own figure is over the LIVE-leg population (a different, smaller denominator) — both are correct and neither is the other.",
   "_remaining_work": "Stamping the 246 absent cells is NOT done here and must not be guessed from dates: BL-20260814-TP-GEOMETRY-RECORDED-ON-2-PERCENT-OF-CELLS-SO-ABSENCE-CANNOT-MEAN-ANYTHING criterion (2) requires each cell's own `ref` to establish live_parity or no_take_profit, with `unrecorded` stamped only where the ref establishes neither. A date is a proxy, and that row exists because a proxy was trusted.",
-  "_unstamped_ceiling": 278,
+  "_unstamped_ceiling": 267,
   "_unstamped_ceiling_note": "193 -> 191 on 2026-10-02 (lane M20-EXITS-4): two cells (trend_donchian_xrp_4h/giveback_stop, ief_pullback_1d/trail_geometry) were re-swept at live parity and stamped tp_geometry=live_parity with base counts as fields; no leg left the denominator. PRIOR NOTES, PRESERVED: 229 -> 193 on 2026-09-28 (lane EXIT-OPS), and the REASON matters more than the number, same discipline as every prior move on this field. Six legs were demoted live -> shadow in this diff (PI-20260924-TJTOJHYE-0001: trend_donchian_ada_4h/avax_4h/sol_4h; PI-20260922-UTN353OZ-0001: ict_scalp_5m/sol_5m/avax_5m), taking their cells out of the live_only denominator. Leaving the ceiling at 229 would have left slack in which a live cell could silently lose its tp_geometry stamp with the guard still green -- exactly the loosening this field exists to make visible rather than absorb silently. Measured via `python3 scripts/research/m20_coverage_rollup.py --check` on this diff: unstamped-live count is 193 with the six rows `shadow`. PRIOR NOTES, PRESERVED: STAYED 229 on 2026-09-22 (avax_pullback_2h promotion declined same day); 234 -> 229 on 2026-08-24 (slv_trend_1h demoted, 5 unstamped cells left the denominator).",
   "_ceiling_raised_2026_10_07": "191 -> 267 (+76) in the diff that adds the tp_extend / tp_retarget columns (GEOM-B1-HARNESS): 38 live legs x 2 new columns, every one `pending` or `blocked:no_harness_levers`, i.e. NOTHING has been measured for them yet, so there is no geometry to stamp and stamping one would be a guess. The ratchet is meant to make a growing unmeasured population visible to the reviewer, and this is that. Each cell is stamped `live_parity` by the sweep that first measures it (m20_fleet_exit_sweep passes --tp-cap-pct 0.099 by default), which lowers this number again."
  },

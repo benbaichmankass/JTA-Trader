@@ -2,6 +2,6 @@
   "tier": 3,
   "landing": "hold",
   "hold_reason": "tier_2_3_needs_approval",
-  "hold_text": "Adds soak alias trend_donchian_eth_mm05 (identical to trend_donchian_eth_4h plus the donchian_measured_move TP revision, width 0.5) and rosters it on bybit_1 INSTEAD of the incumbent; bybit_2 and bybit_portfolio are untouched. First exchange TP amends on a Bybit order happen on the paper book. Strategy exit logic is Tier-3; evidence is RQ-20261018-007. Manager decision 2026-10-18 (option 1). Closing observation: 1-2 clean exchange TP amends on bybit_1 vs the backtest's revised TP (row TP-DOCTRINE).",
-  "why": "stages the first tp_revision declaration on a paper-book soak alias after a pre-registered PASS"
+  "hold_text": "Declares the donchian_measured_move TP revision (width_mult 0.5) on the real-money trend_donchian_eth_4h leg (bybit_2 + bybit_portfolio mirror + bybit_1), per the operator directive of 2026-10-18 that a config-only improvement to an existing strategy goes live and its first trades are monitored. Strategy exit logic is Tier-3; evidence is RQ-20261018-007. First production use of the exchange TP-amend path on a Bybit order: closing observation is the first 1-2 live amends on bybit_2 and bybit_1 executing correctly and matching the backtest's revised TP (row TP-DOCTRINE). Revert = delete the tp_revision block.",
+  "why": "declares the first tp_revision on a live leg after a pre-registered PASS"
 }

@@ -1443,46 +1443,6 @@ strategies:
     #   ROLLBACK: delete these two lines.
     trail_decay_stall_bars: 10
     trail_decay_tight_mult: 1.8
-    tp_r: 50.0
-    tp_intent:
-      mode: none
-      # DELIBERATE: the trail is the sole profit-exit. Stated in the unit docstring
-      # (trend_donchian.py:25 / htf_pullback_trend_2h.py "NOT a tight target"), never
-      # in config — which is why 50.0 read as an omission rather than as a decision.
-      # The 50R value is retained ONLY so the venue rests an exchange-valid order at
-      # 9.9%; it is NOT a prediction and must never be read as one.
-      reason: trail_is_the_profit_exit
-      evidence: no_gate_passing_timeout_free_tp_cell   # e35 corpus, leg's latest sweep
-    min_confidence: 0.60
-    # shadow_model_ids OMITTED (soak-everything, symbol-aware auto-wire): ETHUSDT
-    # signals auto-wire the symbol-agnostic decision/meta models; the symbol
-    # filter keeps BTC/MES regime heads off. Observe-only.
-
-  # SOAK ALIAS of trend_donchian_eth_4h (Tier-3 PROPOSAL, lane TIER3-PACKETS-1018, HOLD; manager decision
-  # 2026-10-18 15:42Z "option 1"). Identical to the incumbent except it DECLARES tp_revision, and it is rostered on
-  # bybit_1 ONLY (INSTEAD of the incumbent), so the first exchange TP amends happen on the paper book while
-  # bybit_2 + bybit_portfolio stay on the incumbent together. Name avoids the incumbent's signal_prefixes
-  # (attribution is by substring). Closing observation: 1-2 clean exchange TP amends on bybit_1 matched against
-  # the backtest's revised TP (row TP-DOCTRINE); a PASS feeds a follow-up Tier-3 PR declaring MM05 on the
-  # incumbent for bybit_2 + bybit_portfolio together. ROLLBACK: restore trend_donchian_eth_4h on bybit_1 and
-  # delete this block.
-  trend_donchian_eth_mm05:
-    model: null
-    signal_prefixes: [trend_donchian_eth_mm05]
-    enabled: true
-    execution: live          # bybit_1 (Bybit demo, paper money) ONLY (config/accounts.yaml).
-    timeframe: "4h"
-    symbols:
-      - ETHUSDT
-    donchian: 20
-    atr_period: 14
-    # Geometry, trail-decay, tp_r and min_confidence below are copied VERBATIM from the incumbent
-    # trend_donchian_eth_4h (see its comments for their evidence); keep the two in step. Only
-    # tp_revision (and the signal prefix) differs, so RQ-20261018-007's arm A == the incumbent.
-    atr_stop_mult: 1.5
-    trail_mult: 6.0
-    trail_decay_stall_bars: 10
-    trail_decay_tight_mult: 1.8
     # tp_revision donchian_measured_move width_mult 0.5 (Tier-3 PROPOSAL, lane TIER3-PACKETS-1018, HOLD for
     #   operator approval). The resting entry TP stays the 50 R sentinel (venue cap); this moves the TP each closed
     #   bar to the Donchian measured move (src/runtime/tp_revision.py), merged into the trail verdict.
@@ -1490,7 +1450,8 @@ strategies:
     #   ETHUSDT 4h 2020-07-01..2026-10-15, net of fee 7.5 + slippage 3 bps rt + funding 1 bps/8h: A (leg as declared)
     #   n=290 +99.23 R maxDD 19.36 vs MM05 n=275 +115.95 R maxDD 20.38 (delta +16.72 vs bar 5.8; 5 of 6 folds;
     #   DD cap 26.14); 41% of revisions clamped at the venue cap (1374/3319); net R/capital-day 0.194 vs 0.187.
-    #   ROLLBACK: delete the tp_revision block.
+    #   Operator directive 2026-10-18: a config-only improvement to an existing strategy ships live and its first
+    #   1-2 live amends are monitored (no soak alias). ROLLBACK: delete the tp_revision block.
     tp_revision:
       rule: donchian_measured_move
       width_mult: 0.5
