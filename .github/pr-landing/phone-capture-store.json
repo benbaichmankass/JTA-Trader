@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "PHONE-EXEC-OBSERVABLE-1018 PR 1 of 5 (manager session_01VduHYzdaXe27wTDBLSu8ao; operator decision 2026-10-18: captures server-only, 7-day TTL, never committed). Tier 2 by path (a new write route on ict-web-api + a new daily systemd timer). What lands: POST /api/bot/prop/phone/capture (per-device bearer) stores an off-screen WebView bitmap + a sanitized DOM snapshot per flow step under <trade_journal.db dir>/phone_captures/<acct>/<run>/, scrubbed a second time server-side and bounded per capture/run/account; GET /api/diag/phone_captures|phone_capture|phone_capture_file (diag token) read them back; /prop/status gains phone_captures_last; ict-phone-capture-purge.timer (03:17Z daily) + an at-most-hourly purge on the POST enforce the 7-day TTL. No order path, no ticket logic, no APK change. Revert = revert this PR (the store is files; nothing reads it yet).",
+  "why": "operator 2026-10-18 after four guess-fix APKs on one click (#18709 #18775 #18811 #18901): the app must record its own actions without anything on screen and show what it did right and wrong; this is the server half of that recording, the first of the five decided pieces."
+}

@@ -1,0 +1,21 @@
+# ============================================
+# ICT PHONE CAPTURE PURGE TIMER (PHONE-EXEC-OBSERVABLE-1018, 2026-10-18)
+# Fires deploy/ict-phone-capture-purge.service once a day at 03:17 UTC (off
+# the :00 boundary other jobs cluster on). Persistent=true: a missed day is
+# caught up after boot, since the purge is idempotent and cheap.
+#
+# Auto-enabled on the trader box by scripts/install_systemd_units.sh.
+# Save to: /etc/systemd/system/ict-phone-capture-purge.timer
+# ============================================
+
+[Unit]
+Description=Trigger ict-phone-capture-purge daily (7-day TTL on phone step captures)
+
+[Timer]
+OnCalendar=*-*-* 03:17:00
+AccuracySec=5m
+Persistent=true
+Unit=ict-phone-capture-purge.service
+
+[Install]
+WantedBy=timers.target

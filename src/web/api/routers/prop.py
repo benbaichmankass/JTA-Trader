@@ -21,6 +21,9 @@ Endpoints:
   realized P&L; DASH-PROP-OVERVIEW).
 - ``GET  /api/bot/prop/reconcile?account_id=`` — un-acted tickets (emitted, past
   validity, no matching fill) + a summary.
+- ``POST /api/bot/prop/phone/capture`` — one step capture from the phone executor (per-device
+  bearer; PHONE-EXEC-OBSERVABLE-1018): an off-screen bitmap + a sanitized DOM snapshot, stored
+  on the VM data volume with a 7-day TTL, read back on ``GET /api/diag/phone_capture*``.
 
 The read endpoints are Tier-1; the POST is Tier-2 (a DB write + notification).
 """
@@ -158,6 +161,12 @@ def _phone_sheet_diag(acct: str) -> dict[str, Any] | None:
     return phone_executor.last_sheet_diag(acct) if phone_executor.is_phone_account(acct) else None
 
 
+def _phone_captures_last(acct: str) -> dict[str, Any] | None:
+    from src.prop import phone_captures, phone_executor
+
+    return phone_captures.latest_run_ref(acct) if phone_executor.is_phone_account(acct) else None
+
+
 def _phone_events(acct: str) -> list[dict[str, Any]] | None:
     from src.prop import phone_executor
 
@@ -196,6 +205,9 @@ def get_status(account_id: str | None = None) -> dict[str, Any]:
             # BREAKOUT-NATIVE-TAP: the latest position-SHEET probe (sheet_* / amend_sheet_* / child_*), kept apart so
             # the Positions miss posted right after it no longer overwrites it (null = none since the slot existed)
             "phone_sheet_diag": _phone_sheet_diag(acct),
+            # PHONE-EXEC-OBSERVABLE-1018: the newest step-capture run (run_id, flow, steps, failed steps; null = none
+            # recorded). The captures themselves are read on the diag tier (GET /api/diag/phone_capture*).
+            "phone_captures_last": _phone_captures_last(acct),
         }
     except Exception:  # noqa: BLE001  # allow-silent: degrade to present:false, not a 500
         logger.warning("prop: /status read failed; degrading to present:false", exc_info=True)
@@ -376,5 +388,23 @@ async def phone_test_ticket(request: Request,
         raise HTTPException(status_code=400, detail="symbol not mapped for this account")
     try:
         return await asyncio.to_thread(pe.make_test_ticket, dev, symbol=sym)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/phone/capture")
+async def phone_capture(request: Request,
+                        authorization: str | None = Header(default=None)) -> dict[str, Any]:
+    """One STEP CAPTURE from the phone (PHONE-EXEC-OBSERVABLE-1018, operator 2026-10-18): what the app's own
+    WebView showed (an off-screen bitmap, redaction boxes painted on the device) and a sanitized DOM snapshot, at
+    one step of one flow (``run_id`` / ``flow`` / ``step`` / ``seq`` / ``ok``). Stored under the VM data dir
+    (never in git), scrubbed a second time here, auto-deleted after 7 days; the POST also runs that purge at most
+    hourly. Bounded: an over-size or malformed capture is 400; a quota refusal answers ``ok: false`` and the
+    flow on the phone carries on (the capture is evidence, never a gate on the trade)."""
+    from src.prop import phone_captures as pcap
+    dev = _phone_device(authorization)
+    body = await _json_body(request)
+    try:
+        return await asyncio.to_thread(pcap.store_capture, dev.account_id, body)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

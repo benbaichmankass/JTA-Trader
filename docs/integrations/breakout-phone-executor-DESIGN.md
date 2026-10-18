@@ -990,3 +990,32 @@ the new build (or the next attempt posts its `inbox` line) and it reads `ok`, th
 - **Not read:** the Funded Trader Agreement, the Terms of Service, the private Android repo (this session).
 - **Inherited without re-checking:** the Android app facts in § 1.1 (a 2026-09-30 reading of a commit dated 2026-08-13).
 - **Not claimed:** that any part of this works. It is a plan with a stop at Phase 1.
+
+### 7.20 Observable and testable, built once (PHONE-EXEC-OBSERVABLE-1018, operator decision 2026-10-18)
+
+**Why.** Between 2026-10-17 and 2026-10-18 four APKs (#18709, #18775, #18811, #18901) each guessed why one
+native tap on Breakout's Positions row opened no sheet, waited for the next live trail amend, and read a
+40-character diag line. The operator ended that loop (popups, ~08:00Z): *the app must know what it is doing,
+record its own actions without anything popping up on screen, and show what it did right and wrong.* DECIDED
+(all five pieces; reversal = a new operator decision on the same row): captures stored on the server only,
+auto-deleted after 7 days, never committed to this public repo; live `breakout_2` trail amends keep trying
+meanwhile and every refusal alerts the operator with the stop to set by hand.
+
+| piece | what it is | where |
+|---|---|---|
+| 1 RECORDING | at each step of every flow (positions read, row find, tap, sheet open, field set, confirm/abort) the app draws its own WebView to an off-screen bitmap (no MediaProjection, nothing on screen), paints redaction boxes over account ids / balances / equity / P&L, takes a sanitized DOM snapshot (`__ex.snapshot`), and posts both to `POST /api/bot/prop/phone/capture`. The server scrubs a second time, bounds every write, stores under `<trade_journal.db dir>/phone_captures/<acct>/<run>/` and purges after 7 days (`ict-phone-capture-purge.timer` + an at-most-hourly purge on the POST). Read on the diag tier: `GET /api/diag/phone_captures`, `phone_capture`, `phone_capture_file`. | `src/prop/phone_captures.py`, PR 1 |
+| 2 REHEARSAL | a server-issued **drill**: the full stop-amend flow on a real open position up to the final Confirm, then Cancel and close the sheet. Pass/fail per step with captures. Triggered on demand by a system-action. Never an order change. | PR 3 |
+| 3 REAL-PAGE TESTS | tooling that turns a captured DOM snapshot into an `exec_check.js` fixture with the numbers replaced, so CI proves a fix against the real Breakout page. | PR 5 |
+| 4 SIGNED REMOTE LOGIC | `exec.js` fetched from our own API at startup and on a version bump, pinned by version, verified with an embedded ed25519 public key, bundled copy as the fallback. Signed in CI with a key in Actions secrets. Native/Kotlin changes still need an APK. | PR 2 (app) + PR 4 (CI + route) |
+| 5 ALERT | when a live amend is refused: ONE Telegram message with the stop to set by hand and a link to the step captures. | PR 5 |
+
+**Done when** the drill passes 3 times in a row on the operator's phone (`breakout_2`), with captures showing
+each step; then the live amend runs on the same logic. Row: `PHONE-EXEC-OBSERVABLE-1018`.
+
+**Capture contract (PR 1).** One POST per step: `run_id` (`[A-Za-z0-9][A-Za-z0-9._-]{2,79}`, e.g.
+`amend-<ticket>-a<seq>-<UTC stamp>`), `flow` (`entry|amend|drill|positions|login|probe`), `step`
+(`[a-z][a-z0-9_]{1,39}`), `seq`, `ok` (true/false/null), `note` (≤300 chars, scrubbed), optional `ticket_id`,
+`app_version`, `page` (`fg|bg`), `png_b64` + `png_type` (JPEG/PNG/WebP ≤ 900 KB, magic bytes checked), `dom`
+(JSON tree ≤ 600 KB). Stored as `NNN-<step>.json` (meta) + `.jpg|.png|.webp` + `.dom.json`. Caps: 80 steps per
+run, 400 runs per account (oldest dropped), 400 MB per account (refused with `ok: false`, the flow carries on).
+The write's `ok` and the step's `ok` are two fields (`{"ok": true, "stored": true, "capture": {... "ok": false}}`).

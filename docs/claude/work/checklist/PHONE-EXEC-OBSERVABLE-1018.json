@@ -1,0 +1,30 @@
+{
+  "id": "PHONE-EXEC-OBSERVABLE-1018",
+  "title": "breakout_2 phone executor made OBSERVABLE and TESTABLE, built once: step captures (server-only, 7-day TTL) + rehearsal drill + real-page fixtures + signed remote exec.js + one refusal alert (operator decision 2026-10-18)",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "lane PHONE-EXEC-OBSERVABLE-1018 (Fable)",
+  "lane": "session_01Cqmpr14msnNhk7ZQrmYRfS",
+  "model": "claude-fable-5-1",
+  "ceiling_usd": 60,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-18 lane session_01Cqmpr14msnNhk7ZQrmYRfS] OPERATOR (2026-10-18 ~08:00Z popups, relayed by manager session_01VduHYzdaXe27wTDBLSu8ao, binding): the guess-per-build loop on one click (#18709 #18775 #18811 #18901) is not acceptable; the app must know what it is doing, record its own actions WITHOUT anything on screen, and show what it did right and wrong. Decided: all five pieces (RECORDING, REHEARSAL drill, REAL-PAGE fixtures, SIGNED REMOTE exec.js, ALERT); captures on the server only, auto-deleted after 7 days, never committed; live breakout_2 trail amends keep trying meanwhile and each refusal alerts the operator with the stop to set by hand. DONE WHEN the drill passes 3x in a row on the operator's phone with captures per step; then the live amend runs on the same logic. PR 1 (claude/phone-capture-store, Tier-2 HOLD): POST /api/bot/prop/phone/capture (per-device bearer) -> <journal dir>/phone_captures/<acct>/<run>/ (bitmap + sanitized DOM, second scrub server-side, bounded), GET /api/diag/phone_captures|phone_capture|phone_capture_file (diag tier), phone_captures_last on /prop/status, ict-phone-capture-purge.timer (daily) + at-most-hourly purge on the POST. Takes over lane BREAKOUT-SHEET-1017's open work (row BREAKOUT-SL-AMEND-CLICK; its last PR #18901 merged, no open PR of its own).",
+  "updated_at": "2026-10-18T08:17:20Z",
+  "updated_by": "session_01Cqmpr14msnNhk7ZQrmYRfS",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "observation": {
+    "what": "the stop-amend DRILL passes 3 times in a row on the operator phone (breakout_2) with a capture per step, then one live trail amend applies on the same logic (SL moves on the sheet, read back)",
+    "how_to_check": "GET /api/diag/phone_drill?account_id=breakout_2 (3 consecutive pass) + GET /api/diag/phone_captures?account_id=breakout_2 (a run per drill) + /api/bot/prop/status phone_trail amend status amended",
+    "due_by": "2026-10-25T00:00Z"
+  },
+  "writeback": {
+    "roadmap": "L-PROP: the phone executor is observable (step captures) and testable (drill + real-page fixtures); logic ships signed without an APK",
+    "arch": "ARCHITECTURE-CANONICAL: phone executor section gains the capture store, the drill and the signed remote logic once landed"
+  },
+  "_seq": 561
+}
