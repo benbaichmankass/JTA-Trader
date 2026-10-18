@@ -189,3 +189,22 @@ The 8.1 census (`RQ-20261014-d6e7-01`, PASS, oracle saving 0.656 R/trade) still 
 | `ief_pullback_1d`, `iaum_pullback_1d` (alpaca_live) | sentinel 50 R | ride the pooled `RQ-20261016-014` (ief below the 39 floor per leg; iaum is the proxy) | same |
 
 Every one of these is Stage 0 → a **held Tier-3 proposal with the record**; nothing here edits config. The standing brief line (`render_daily_brief.py`, "Active trade management") carries the counts from this day on.
+
+**06:50Z — the 12 fired units, read against their rules** (from the run artifacts; the records land under `comms/research/<unit>/<run>/` at the 07:20Z collector and `queue_grade` closes them; MEASURED, re-run before quoting):
+
+| unit | leg | verdict | the number | disposition |
+|---|---|---|---|---|
+| `RQ-20261016-005` | eth_4h (bybit_2) | **PASS** | M1 ADX-trail (20 / 2.5): 111.37 vs 88.27 R, n 270/262, 5 of 6 folds, DD 16.1 vs 18.1 | no live producer → build `MOMENTUM-LEVERS-LIVE` (Tier-2), then Q6 |
+| `RQ-20261016-006` | eth_4h | **PASS** | D trail_decay (stall 10 / tight 1.8): 70.03 vs 61.08 R, n 180/160, 3 of 4, DD 19.4 vs 18.1, capital-day 0.205 vs 0.127 | producer exists → **held Tier-3 PR** |
+| `RQ-20261016-015` | xrp_4h (bybit_2) | **PASS** | M2 ADX-trail (25 / 2.5): 17.07 vs 14.30 R, n 68, 4 of 4; **R1 tp_retarget stall_pull_in 16.55 R, 3 of 4** (a TP that moves) | ADX → same build; R1 → needs a `stall_pull_in` rule in `tp_revision.py` |
+| `RQ-20261016-016` | slv_1d (alpaca_live) | **PASS** | momentum-stale (8 / ADX 20): 20.73 vs 12.82 R, n 89/69, 3 of 4 (all +), DD 6.4 vs 7.0 | no producer → same build; node `P1-Q6-slv1d-declare` |
+| `RQ-20261016-010` | eth_prop (3 prop) | **PASS** | T1 trail 4.5: 122.04 vs 76.02 R, n 1,070/1,085, 6 of 6, DD 21.7 vs 21.2 (prop costs) | prop superset → `P1-Q4-ethprop-ev` (prop_ev_grid) first |
+| `RQ-20261016-004` | sol_prop (bybit_2 + prop) | **PASS_NONINFERIOR** | K* = 2.5 R: reach OOS 0.230 (6 R: 0.095), gap 0.001, Δ +0.041 R/trade CI [−0.025, +0.111], n 314 | confirm unit `P1-Q2-solprop-confirm-kstar` authored; then prop cost + EV; then one declare |
+| `RQ-20261016-009` | xrp_pb (bybit_2) | FAIL | six tp_extend cells +0.75..+1.75 R / 394 (bar 7.88) | cells retired; route Q8 on paths |
+| `RQ-20261016-008` | ada_pb (bybit_2) | FAIL | best cell +0.51 R / 449 (bar 8.98) vs the new incumbent | retired |
+| `RQ-20261016-011` | sol_prop | FAIL | rr_floor 0.5: −2.37 R / 400 | retired |
+| `RQ-20261017-002` | xrp_4h | FAIL | measured-move w1.0: +2.59 R / 68 but 2 of 4 folds; 91% cap-clamped | retired on xrp_4h |
+| `RQ-20261016-014` | alpaca 1d family | INDETERMINATE | K* = 3.5 R: reach 0.278, gap 0.019, Δ +0.003, CI [−0.061, +0.069], n 326 = the whole 8.7 y | **operator decision** (no more data exists) |
+| `RQ-20261016-007` | eth_prop | INDETERMINATE | K* = 2.5 R: reach 0.135 (6 R: 0.034), Δ −0.028, CI [−0.066, +0.006], n 870 | **operator decision** |
+
+Two reads that bind the next step: **the ADX-trail family is corroborated across two Donchian 4h legs** (eth M1, xrp M1/M2) and **a TP-revision cell passed on a real-money leg for the first time** (xrp_4h R1) — both unshippable only because the live producer is missing. The build rows carry those, and the coverage matrix now reads `passed_unshipped` on each with the run id.
