@@ -21,12 +21,42 @@ SEQ = "_seq"
 _ID_OK = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
-__all__ = ["ChecklistError", "HEADER", "MONOLITH", "MONOLITH_NAME", "REPO", "SEQ", "STORE",
-           "HISTORY_PATHS", "check", "exists", "is_checklist_path", "load", "load_at", "load_path", "read_row", "render", "seeded", "seed", "write_header", "write_row"]
+__all__ = ["ChecklistError", "HEADER", "MONOLITH", "MONOLITH_NAME", "RANK", "REPO", "SEQ", "STORE",
+           "HISTORY_PATHS", "check", "queue", "rank_problem", "exists", "is_checklist_path", "load", "load_at", "load_path", "read_row", "render", "seeded", "seed", "write_header", "write_row"]
 
 
 class ChecklistError(ValueError):
     pass
+
+
+#: THE RANKED QUEUE IS A REGISTER FIELD (MANAGER-PACING-STRUCTURAL, 2026-10-18): the manager's
+#: dispatch order used to live in its own head and in a trigger prompt, so no successor could
+#: inherit it. `priority_rank` (1 = dispatch next) was already on 7 rows ad hoc; this makes it
+#: the one declared rank. Unranked rows sort after every ranked one -- never silently "rank 0".
+RANK = "priority_rank"
+
+
+def rank_problem(value) -> str | None:
+    """Why ``value`` is not a valid ``priority_rank`` (a positive number, or null), else None."""
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
+        return f"{RANK} must be a positive number (1 = dispatch next) or null, not {value!r}"
+    return None
+
+
+def queue(data: dict) -> list[dict]:
+    """The runnable queue in dispatch order: ``queued`` rows with nothing in ``blocked_on``,
+    by ``priority_rank`` (unranked last), then register order. ``data`` is ``load()``'s shape."""
+    rows = [r for r in (data.get("items") or [])
+            if isinstance(r, dict) and r.get("state") == "queued" and not r.get("blocked_on")]
+    order = {id(r): n for n, r in enumerate(rows)}
+
+    def key(r):
+        rank = r.get(RANK)
+        ranked = rank_problem(rank) is None and rank is not None
+        return (0 if ranked else 1, rank if ranked else 0, order[id(r)])
+    return sorted(rows, key=key)
 
 
 def _dump(obj) -> str:

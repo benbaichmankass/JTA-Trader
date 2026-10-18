@@ -418,7 +418,7 @@ Keep it. The model was not wrong; the job description was.
 - Write narrative observations about its own state. Three timestamped
   `manager_observation_*` keys an hour apart on one row is the failure mode,
   not diligence.
-- Exceed its daily budget without saying so at the next sync.
+- Exceed the sustainable rate (amended 2026-10-18, § "The budget decision") without saying so.
 
 ### Why one register and not eight
 
@@ -789,6 +789,12 @@ that we leave ourselves a wide margin for error or unexpected needs."*
 
 **10% per day × 7 days = 70% of the weekly allowance, leaving 30% margin.**
 That is the rule, and it is deliberately a *share*, not a number of dollars.
+
+⚠️ **Amended 2026-10-18 (operator):** *"We want to get as much work as possible out of our budget
+without blowing through it before a reset."* The pace is now the **sustainable rate**, `(100 −
+weekly%) / days to reset`, turned into 1–5 lanes by judgment with no hard cap. It is step 2 of the
+manager skill's § "The operating loop" (`spend_meter.py --capacity`). The 10%-a-day share above is the
+history, not the rule. It is still a share of the allowance, never dollars.
 
 ⚠️ **THIS CHANGES WHAT A1 MEASURES, and the change is not cosmetic.** A
 subscription plan's constraint is a **weekly usage allowance**, not a dollar

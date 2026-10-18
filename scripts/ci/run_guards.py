@@ -2264,6 +2264,16 @@ GUARDS: List[Dict[str, Any]] = [
         "steps": [["python3", "scripts/secret_scan.py"]],
     },
     {
+        "name": "manager-pacing-guard",
+        # 2026-10-18 (MANAGER-PACING-STRUCTURAL): the manager's pacing is stated ONCE, in manager
+        # SKILL.md § "The operating loop". Fails if a live doc/skill/the spend meter brings back a
+        # retired idiom ("dispatch in parallel", "spend the daily budget", ...) or the section or
+        # its Start-of-session pointer goes missing. Self-test plants each retired idiom + controls.
+        "when": None,
+        "steps": [["python3", "scripts/ci/check_manager_pacing.py", "--self-test"],
+                  ["python3", "scripts/ci/check_manager_pacing.py"]],
+    },
+    {
         "name": "silent-empty-guard",
         "when": {"regex": r"\.py$|\.ya?ml$|\.sh$"},
         "steps": [["python3", "scripts/check_silent_empty_in_diff.py", "{pr_diff}"]],
