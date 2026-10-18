@@ -923,9 +923,11 @@
   // REDACTION HAPPENS HERE, ON THE DEVICE (operator decision): account ids (the URL's /account/<id>/, the sheet's
   // "Position – <id>"), balances, equity, portfolio and every P&L / value / margin figure are masked before the
   // snapshot leaves the phone. Digits survive ONLY in a text whose column header, field label or detail label is a
-  // price / quantity / trigger / leverage context (KEEP_CTX); everything else has its digits turned into "#".
+  // price / quantity / trigger / leverage context (KEEP_CTX; the Value column too -- it is qty x mark, both kept, and
+  // positionsRead's only qty source on the grid); everything else has its digits turned into "#". Counts the
+  // readers key on ("1 TP / 1 SL", "Positions 1", "ETH 5x") are kept: a masked tab blinds sheetInfo on a fixture.
   // Each masked element's rect is returned in `redact` so the app paints a box over it on the bitmap.
-  var KEEP_CTX = /opening price|current price|avg\.?\s*opening|entry price|mark price|trigger|limit price|^price$|quantity|\bqty\b|total open volume|\bsize\b|stop\s*loss|take\s*profit|^tp\s*\/\s*sl$|^sl\s*\/\s*tp$|^lev|distance|\bsl\b|\btp\b|^market$/i;
+  var KEEP_CTX = /opening price|current price|avg\.?\s*opening|entry price|mark price|trigger|limit price|^price$|quantity|\bqty\b|total open volume|^value$|\bsize\b|stop\s*loss|take\s*profit|^tp\s*\/\s*sl$|^sl\s*\/\s*tp$|^lev|distance|\bsl\b|\btp\b|^market$/i;
   var MASK_CTX = /balance|equity|portfolio|p\s*&\s*l|pnl|value|margin|roe|fee|funding|liq|notional|time|date|position\s*[–—-]|order id|id$/i;
   var SNAP_ATTRS = ["role", "type", "name", "placeholder", "disabled", "aria-disabled", "aria-selected", "aria-expanded",
     "aria-checked", "aria-label", "aria-labelledby", "aria-controls", "aria-haspopup", "aria-modal", "title", "alt", "tabindex",
@@ -982,6 +984,8 @@
   function redactText(s, el) {
     if (!s || !/\d/.test(s)) return {text: s, masked: false};
     if (SUBTITLE_RE.test(s)) return {text: s.replace(/^(position\s*[–—-]\s*)\S+/i, "$1ID"), masked: true};
+    // counts the readers key on, never money: the sheet's "1 TP / 1 SL" tab, the "Positions 1" tab, "ETH 5x"
+    if (SHEET_TAB.tpsl.test(s) || /^positions\s*\d*$/i.test(s) || /^[A-Z]{2,8}\s+\d{1,3}x$/i.test(s) || /^\d{1,3}x$/i.test(s)) return {text: s, masked: false};
     var ctx = gridCtxOf(el) || labelCtxOf(el);
     var hdr = ctx || "";
     var cellIsLabel = /^[A-Za-z .\/&%()-]+$/.test(s);           // "Opening price" itself: no digits anyway

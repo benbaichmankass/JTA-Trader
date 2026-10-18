@@ -996,7 +996,10 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
   for (const keep of ["Position – ID", "2,461.52USD", "2,440.65USD", "0.54 ETH", "2,504.25 USD", "Short 0.54 ETH @ 2,461.52 USD", "\"h\":[\"Click\"]"]) {
     eq(stxt.includes(keep), true, `snapshot keeps: ${keep}`);
   }
-  for (const leak of ["7f3a9c", "20.88", "1,318.20", "4,947.72", "4,930.42", "265.84", "7.85", "A1/trade", "2026-10-14"]) {
+  for (const keep of ["1,318.20USD", "\"x\":\"1 TP / 1 SL\"", "Positions1"]) {   // Value (= qty x mark, both kept) and the counts the readers key on
+    eq(stxt.includes(keep), true, `snapshot keeps: ${keep}`);
+  }
+  for (const leak of ["7f3a9c", "20.88", "4,947.72", "4,930.42", "265.84", "7.85", "A1/trade", "2026-10-14"]) {
     eq(stxt.includes(leak), false, `snapshot never carries: ${leak}`);
   }
   const grid = snap.roots.find((r) => r.k === "grid").tree;
