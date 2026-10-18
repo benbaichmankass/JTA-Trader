@@ -136,7 +136,13 @@ def test_coverage_matrix_carries_both_columns_on_every_row():
             assert isinstance(cell, dict) and cell.get("status"), (row["strategy"], col)
             fam = sw.classify(row["strategy"])
             if fam in sw.TP_GEOMETRY_FAMILIES:
-                assert cell["status"] == "pending", (row["strategy"], col)
+                # A family WITH the harness lever starts `pending` and may later RESOLVE to a
+                # verdict (2026-10-18: xrp/ada pullback tp_extend -> honest_negative, xrp_4h
+                # tp_retarget -> passed_unshipped, from Programme 01 confirmations). What it
+                # may never read is the no-lever block, and a resolved cell must cite its run.
+                assert cell["status"] != "blocked:no_harness_levers", (row["strategy"], col)
+                if cell["status"] != "pending":
+                    assert "RQ-" in str(cell.get("ref", "")), (row["strategy"], col, "a resolved cell names its unit")
             else:
                 assert cell["status"] == "blocked:no_harness_levers", (row["strategy"], col)
     rc = subprocess.run([sys.executable, str(REPO / "scripts/research/m20_coverage_rollup.py"),
