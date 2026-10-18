@@ -1,0 +1,18 @@
+{
+  "id": "MANAGER-PACING-STRUCTURAL",
+  "title": "Manager pacing: replace the wrong budget doctrine with the real mandate; wire the EXISTING spend meter into the check-in; make the toolbox findable",
+  "phase": "now",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "REVISED 2026-10-18 ~09:45Z after operator correction. The first version proposed a hard 2-lane cap, a new meter and a write-every-correction rule; all three were rejected. THE MANDATE (operator, verbatim): 'We want to get as much work as possible out of our budget without blowing through it before a reset - that is the mandate.' At least one lane always runs; up to 5 by judgment, depending on spare capacity and what the lanes are doing. Hard limits only bound the error; they do not make a manager do the job. ROOT CAUSES: (1) The manager SKILL.md budget section ('The budget - DAILY, and spend it') teaches the opposite of the mandate: 'spend the daily budget', 'passing into the margin is authorized', 'the weekly bar is not the manager's meter', 'dispatch in parallel', and Fable as a free second pool. The section-5 footer of scripts/ops/spend_meter.py repeats the same doctrine. (2) The meter EXISTS: scripts/ops/spend_meter.py (A1, built 2026-09-21, guard spend-meter-guard). The manager skill never names it, and docs/claude/work/USAGE-READINGS.jsonl had ZERO readings before 2026-10-18. Today's manager proposed rebuilding it. That is a findability failure, not a missing tool. (3) The skill is 81 KB, and the operating loop a manager actually needs is buried in it. BUILD (one small Sonnet lane): (a) Replace the budget section with the mandate above plus the pacing loop. At each check-in, record the operator's latest reading via spend_meter.py --record, compute (100 - weekly%) / days-to-reset as the sustainable rate, and pick 1-5 lanes for that rate and what is queued. No fixed cap. (b) Fix the section-5 footer of spend_meter.py to state the same mandate. (c) Add a short 'Toolbox' table near the top of the manager skill, one line each, for the existing tools a manager needs: spend_meter, checklist.py, mandate_resolver, roadmap_map, live_vs_backtest, the merge recipe. Net skill length goes DOWN. NOT IN SCOPE: hard caps, a new meter, a rule that codifies every operator remark. DONE WHEN merged, and the next manager check-in records a reading and states its lane count against the computed rate.",
+  "updated_at": "2026-10-18T09:30:28Z",
+  "updated_by": "session_01VduHYzdaXe27wTDBLSu8ao",
+  "_seq": 563
+}
