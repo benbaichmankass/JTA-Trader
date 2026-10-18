@@ -1,7 +1,7 @@
 id: RQ-20261017-ae17-07
 title: 'Direction (side filter), ada_pullback_2h: does restricting ada_pullback_2h to long-only or short-only beat the two-sided leg net of the
   full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: regime
 priority: 2
@@ -110,3 +110,16 @@ related:
 - scripts/research/exit_lever_ablation.py
 - docs/research/entry-refinement-coverage.json
 last_dispatched_at: '2026-10-18T03:27:03+00:00'
+grading:
+  attested: RULE-RQ20261017ae1707-AXIS
+  auto: true
+  decision_rule_id: RULE-RQ20261017ae1707-AXIS
+  evidence:
+  - research/results/RQ-20261017-ae17-07/39093683539.jsonl
+  graded_at: '2026-10-18'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
