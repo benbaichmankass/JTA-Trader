@@ -30,8 +30,9 @@ def test_declared_rule_and_width_resolve_exactly_as_tested():
 
 
 def test_declaration_threads_into_package_meta():
-    from src.units.strategies import trend_donchian as td
     import inspect
+
+    from src.units.strategies import trend_donchian as td
     assert '"tp_revision"' in inspect.getsource(td.order_package)
 
 
