@@ -16,7 +16,7 @@ question: >-
   and mean hold in days per cell (the 'large P&L per trade' question is read off R/trade and hold, never off a book).
 why_this_matters: >-
   Operator 2026-10-18: can large P&L per trade be extracted on daily bars with weeks-long holds (trend/momentum/position trading)?
-  The real-money crypto book decides on 2h/4h bars; no crypto daily-bar record exists in the repo (row IR-CRYPTO-DAILY-TREND,
+  The real-money crypto book decides on 1h (trend_donchian_sol_prop), 2h and 4h bars; no crypto daily-bar record exists in the repo (row IR-CRYPTO-DAILY-TREND,
   read 2026-10-18), while the outside evidence puts crypto time-series momentum at 1-4 week horizons (Liu-Tsyvinski 2021 RFS,
   primary; Zarattini-Pagani-Barbon 2025 multi-lookback Donchian, secondary). A per-symbol daily Donchian makes ~3 trades a
   year (ETHUSDT 2025-09..2026-10 smoke, 2026-10-18: 3 trades, mean hold 97 days), so the honest design pools six symbols and

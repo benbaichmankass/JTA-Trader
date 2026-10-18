@@ -2,7 +2,7 @@
   "id": "TIMEFRAMES-PROGRAMME",
   "title": "Programme 07 TIMEFRAMES (operator 2026-10-18, lowest-priority theme): plan + machine tree, the cost-aware break-even instrument (scripts/research/timeframe_breakeven.py), the synthetic-leg Stage-0 wrapper (scripts/research/harness_stage0.py), theme timeframes (weight 1), milestone L-TIMEFRAMES, units RQ-20261018-ef5d-01..11",
   "phase": null,
-  "state": "in_flight",
+  "state": "blocked",
   "owner": "manager",
   "lane": "FRONTIER-TIMEFRAMES-1018",
   "model": "fable",
@@ -12,9 +12,15 @@
   "prs": [
     18895
   ],
-  "blocked_on": [],
+  "blocked_on": [
+    {
+      "kind": "work_item",
+      "ref": "PR #18895",
+      "what": "lane FRONTIER-TIMEFRAMES-1018 finished 2026-10-18; the PR is landing: hold and waits on the manager merge. On merge -> landed_unproven (observation that closes it: RQ-20261018-ef5d-01 and -02 land measured records under research/results/ and the first long-arm (ef5d-03/-04/-05) and short-arm (ef5d-07/-08/-09) Stage-0 units grade)."
+    }
+  ],
   "note": "Lane FRONTIER-TIMEFRAMES-1018 (Fable; dispatched by the manager session_01VduHYzdaXe27wTDBLSu8ao from the operator's 2026-10-18 request, 'Plan now, run in parallel'). Deliverable: ONE Tier-1 PR, landing hold (manager merges). Two arms -- (a) longer horizons: daily/weekly bars, weeks-long holds, regime-filtered position trading; (b) shorter horizons: new breakout families (volatility compression, range/opening breakout, momentum ignition, liquidity-sweep reversal) whose expected move clears the full cost stack. First unit per arm is the break-even study (ef5d-01 long, ef5d-02 short). Prior short-horizon work built on, not repeated: RQ-20260930-504/505 (<=1h discovery grid, FAIL at taker cost), RQ-20261016-1fa6-07 (maker entries, FAIL), the 2026-10-06 prop breadth batch (5m-15m FAIL as a configuration class), docs/research/idea-family-review-2026-10-16.md s13/s16, rows IR-CRYPTO-DAILY-TREND / IR-INTRADAY-SEASONALITY-HARNESS. landed_unproven when the PR merges; done when ef5d-01 and ef5d-02 have landed measured records and the first long-arm and short-arm Stage-0 units have graded. 2026-10-18: PR #18895 open (draft, landing hold, manager merges). Local: 154 research-queue tests pass; all diff-scoped guards OK; repo-wide ruff and lint-imports are red on main / absent in the sandbox, not this diff.",
-  "updated_at": "2026-10-18T07:00:08Z",
+  "updated_at": "2026-10-18T07:01:43Z",
   "updated_by": "lane-FRONTIER-TIMEFRAMES-1018",
   "roadmap": [
     "L-TIMEFRAMES"
