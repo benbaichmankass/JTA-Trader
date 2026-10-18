@@ -1,0 +1,18 @@
+{
+  "id": "MANAGER-PACING-STRUCTURAL",
+  "title": "Manager pacing: WIP cap + intake-to-queue + spend meter + correction write-back, enforced not prose",
+  "phase": "now",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator 2026-10-18 ~09:30Z: 'keep one lane always running, but keep to the limits we set... new items are scoped and added to the work queue by priority, taken by capacity; no tons of lanes, but no silence... fix once and for all, not band-aids.' ROOT CAUSES (manager SKILL.md on main): (1) the contract TEACHES the binge: section Budget 'spend the daily budget... passing into the margin is authorized', 'the weekly bar is not the manager's meter', 'Under-spending is a failure'; practices 'dispatch in parallel (one message, many lanes)'; L423 'Fable second budget is unused' -> treated as free. (2) No concurrency limit anywhere; 'the one-lane rule' is cited at L393 and defined nowhere. (3) No meter: usage is visible only in operator screenshots; lane cost_usd exists in get_session but is never recorded or summed. (4) Intake goes straight to create_session; no step forces new operator items into rows ranked by priority. (5) Operator corrections stay in chat and die with the session, so every new manager restarts from the binge text. BUILD (one lane): (a) rewrite Budget + practices: WIP floor 1 / cap 2 lanes total incl. routines; intake rule; pull-based dispatch on lane completion; delete the spend/parallel/Fable-free lines; define the one-lane rule. (b) mechanical gate: checklist.py add/set lane= refuses when rows with a live lane >= cap, unless --displace <row> names a row being paused; self-test. (c) meter: lane close records cost_usd on the row; brief Spend sums today's lane cost against a daily cap calibrated from 2026-10-18 (55%->73% weekly in ~3h vs summed lane cost_usd in that window). (d) correction write-back: any operator correction to manager operation lands in the skill the same day. (e) doctrine guard (soak-doctrine-guard pattern) refusing reintroduction of the parallel-dispatch / spend-the-budget text. DONE WHEN: merged + next manager check-in passes the gate with <=2 live lanes and the brief shows today's lane spend.",
+  "updated_at": "2026-10-18T09:21:15Z",
+  "updated_by": "session_01VduHYzdaXe27wTDBLSu8ao",
+  "_seq": 563
+}
