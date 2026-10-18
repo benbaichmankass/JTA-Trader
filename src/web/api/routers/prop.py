@@ -27,6 +27,10 @@ Endpoints:
 - ``POST /api/bot/prop/phone/drill/claim`` / ``drill/result`` — the REHEARSAL drill (per-device
   bearer): claim the outstanding drill, report its per-step result; ``GET /phone/pending`` says
   when one waits (``drill``). Read on ``GET /api/diag/phone_drill``.
+- ``GET /api/bot/prop/phone/exec.js?have=`` — the SIGNED page-side script newer than ``have``
+  (per-device bearer; served only while the working-tree file matches the stored signature);
+  ``POST /api/bot/prop/phone/exec-js-signature`` — CI publishes ``{version, sha256, sig}``
+  (``DASHBOARD_API_TOKEN``, fail-closed). Read on ``GET /api/diag/phone_exec_js``.
 
 The read endpoints are Tier-1; the POST is Tier-2 (a DB write + notification).
 """
@@ -437,5 +441,32 @@ async def phone_drill_result(request: Request,
     body = await _json_body(request)
     try:
         return await asyncio.to_thread(phone_drill.record_result, dev, body)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/phone/exec.js")
+async def phone_exec_js(have: str = "",
+                        authorization: str | None = Header(default=None)) -> dict[str, Any]:
+    """The SIGNED page-side script (PHONE-EXEC-OBSERVABLE-1018, piece 4): the working-tree exec.js with its
+    version, sha256 and the CI signature, ONLY while the stored signature matches the tree file byte for byte;
+    ``unchanged: true`` when ``have`` is already that version; ``ok: false`` + why otherwise (the phone keeps what
+    it runs). The server holds no private key and never signs: the phone verifies with the embedded public key."""
+    from src.prop import phone_exec_js
+    _phone_device(authorization)
+    return await asyncio.to_thread(phone_exec_js.bundle, str(have or "")[:40])
+
+
+@router.post("/phone/exec-js-signature")
+async def phone_exec_js_signature(request: Request,
+                                  authorization: str | None = Header(default=None)) -> dict[str, Any]:
+    """CI publishes the signature of the exec.js it just signed on main (phone-exec-js-sign.yml). Same fail-closed
+    ``DASHBOARD_API_TOKEN`` gate as ``POST /prop/report``. Stores ``{version, sha256, sig}`` beside the journal and
+    answers whether the VM's working tree already carries those bytes (``match``; git-sync lag is not an error)."""
+    from src.prop import phone_exec_js
+    _require_write_token(authorization)
+    body = await _json_body(request)
+    try:
+        return await asyncio.to_thread(phone_exec_js.store_signature, body)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
