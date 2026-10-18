@@ -133,6 +133,18 @@ needs to soak for more than one or two trades."*
 - **Open:** the granted `MD-PROMOTE-S1-S2` still reads a per-leg R3 `consistent` verdict (a cost sample).
   Its amendment is PROPOSED in `config/mandates.yaml` (`MD-PROMOTE-S1-S2-SOAK-AMEND`); granting it is the
   operator's.
+- **Exception — a config-only improvement to an existing, already-live strategy (operator, 2026-10-18,
+  binding).** Verbatim: *"in general, yes, things need to pass a mechanical test on paper, but if it's an
+  improvement like this to an existing strategy, and it's just configuration that's already based on, like,
+  the theory that's proven itself, then we should move forward with that and just monitor the first trades
+  to make sure that they execute correctly."* So a change that is **configuration only** on a leg that is
+  **already live**, backed by a **committed, pre-registered evidence record** (net of the full cost stack,
+  clearing a rule registered before the run), goes live directly — no soak alias, no separate soak stage —
+  and its **first 1–2 live trades are monitored** for correct execution. The monitoring is a named closing
+  observation on the change's PR and checklist row (what executes, what it is compared against); a fault
+  there is a mechanical fault like any other (fix it, or revert the config). **New strategies and new code
+  paths still soak** as above; so does anything that needs code to run. This relaxes the *placement* of the
+  mechanical check (live, watched), not the evidence bar, and it does not touch the prop superset below.
 
 **Stage 2 is one stage, not two.** The mirror and the live account carry the
 same strategies and take the same trades at all times (operator, 2026-09-21).
