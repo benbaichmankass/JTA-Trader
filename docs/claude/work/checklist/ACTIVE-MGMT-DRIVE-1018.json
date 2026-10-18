@@ -11,11 +11,13 @@
   "tier": 1,
   "prs": [
     18892,
-    18893
+    18893,
+    18921,
+    18940
   ],
   "blocked_on": [],
   "note": "[2026-10-18 06:25Z lane] Dispatched by the manager (session_01VduHYzdaXe27wTDBLSu8ao) 06:30Z. MEASURED at start: 21 P1 units -- 4 done (all FAIL: RQ-20261016-012/-013, RQ-20261016-1fa6-06, RQ-20261017-001), 17 queued with last_dispatched_at null (dispatcher value-ranking starved them). 06:20-06:24Z: the 12 priority-1 units (RQ-20261016-004..011, -014, -015, -016, RQ-20261017-002) fired by hand on research-script-run.yml (workflow_dispatch, ref main); the 5 priority-3 soak-book units (-017..-021) left to the dispatcher. Results land via collect_runner_results at the next research-queue-dispatch cycle (xx:20). [06:55Z] All 12 runs completed by 06:23Z (58-90 s each). Read from artifacts: PASS 005/006/015/016/010/004; FAIL 008/009/011/017-002; INDETERMINATE 007/014. Written back to the P1 tree header, TP-DOCTRINE, PROP-EXIT-UNITS, the coverage matrix; nodes authored: P1-Q2-solprop-confirm-kstar (unit), -kstar-propcost, P1-Q6-slv1d-declare, re-texted ethprop-ev / eth4h-stop-declare / xrp4h-declare. Build rows filed: FIRST-PASSAGE-ON-PATHS (Tier-1), MOMENTUM-LEVERS-LIVE (Tier-2). Tier-3 proposal: eth_4h trail_decay (RQ-20261016-006 arm D) as a held PR. [07:25Z] OBSERVED half of the row's observation: the collector landed all 12 hand-fired records on main at 07:21Z (#18899, dispatcher run 39106152887) and every verdict matches the artifact read in the tree header (6 pass / 4 fail / 2 indeterminate, read_state measured on all 12). The units still read status queued: queue_grade closes them at the next research-queue-dispatch cycle (08:20Z), after which the brief's P1 line reads landed >= 16. The 05:50Z-cron replenisher ran at 07:2xZ from templates only (#18898); the three new P1 nodes emit only after #18892 merges and the replenisher runs again. [07:55Z] #18893 merged by the operator at 07:51Z (Tier-3 approved). Merged != deployed != observed: VM one commit behind at 07:52Z; observation item filed in the pipeline. #18892 (Tier-1) still open: guards green, pytest-run in progress on b997cb863.",
-  "updated_at": "2026-10-18T07:53:42Z",
+  "updated_at": "2026-10-18T10:29:34Z",
   "updated_by": "session_013oEUJzaNgUnEAFrpHccwkx",
   "roadmap": [
     "L-ATM"
