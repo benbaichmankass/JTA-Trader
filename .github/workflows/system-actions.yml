@@ -1204,6 +1204,12 @@ jobs:
               echo "::error::phone-drill account '${ACCOUNT_ID}' invalid (allowed: A-Z a-z 0-9 _ -)."
               exit 1
             fi
+            # `symbol` (optional) = a drill WITH a minimum-size test trade (MD-EXEC-DEV-TEST-TRADES);
+            # shape-checked here, every bound checked on the VM by src.prop.exec_test_trades.
+            if [ -n "${ACTION_SYMBOL// }" ] && ! printf '%s' "${ACTION_SYMBOL}" | grep -Eq '^[A-Za-z0-9]+$'; then
+              echo "::error::phone-drill symbol '${ACTION_SYMBOL}' invalid (allowed: A-Z a-z 0-9)."
+              exit 1
+            fi
           fi
           # repair-prop-fill-direction: prop-journal hygiene. `account` is
           # OPTIONAL (omitted = every account), because the defect is a class
@@ -1948,6 +1954,12 @@ jobs:
           # meta.source names the dispatch that asked for it.
           if [ "${ACTION}" = "phone-dry-test" ]; then
             REMOTE_CMD="ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID}") ACTION_SYMBOL=$(printf '%q' "${ACTION_SYMBOL:-ETHUSDT}") ACTION_ISSUE=$(printf '%q' "${CLEAR_HALT_ISSUE:-}") ${REMOTE_CMD}"
+          fi
+          # phone-drill: the account (required) and, for a drill WITH a test trade,
+          # the symbol (optional, EMPTY = a plain rehearsal); the issue number names
+          # the dispatch in the request's `by`.
+          if [ "${ACTION}" = "phone-drill" ]; then
+            REMOTE_CMD="ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID}") ACTION_SYMBOL=$(printf '%q' "${ACTION_SYMBOL:-}") ACTION_ISSUE=$(printf '%q' "${CLEAR_HALT_ISSUE:-}") ${REMOTE_CMD}"
           fi
           if [ "${ACTION}" = "backfill-exit-labels" ]; then
             # ORDER-AUDIT-4: `apply: false` = preview (dry run only).

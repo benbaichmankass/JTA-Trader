@@ -173,6 +173,10 @@ EXPECTED_ACTIONS = {
     # the same writer as the in-app Dry test button. Tier 1: one prop_tickets
     # row, no exchange socket, no non-test path; account + symbol allowlisted.
     "phone-dry-test": "phone_dry_test_action.sh",
+    # 2026-10-18 (PHONE-EXEC-OBSERVABLE-1018) — ONE phone rehearsal-drill request
+    # file beside the journal (src.prop.phone_drill). Tier 1: a file write, the
+    # account allowlisted against phone_accounts; no exchange socket.
+    "phone-drill": "phone_drill_action.sh",
     # M7 — autonomous strategy-review-packet generator (Tier 1: read-only
     # SQL + write to runtime_logs/strategy_reviews/).
     "generate-strategy-review-packets": "generate_strategy_review_packets_action.sh",
