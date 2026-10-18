@@ -747,6 +747,30 @@
     if (!hits.length) return "none"; if (hits.length > 1) return "rows_" + hits.length;
     return hits[0];
   }
+  // the part of x's box a touch can reach: its rect clipped by the viewport and by every ancestor that clips overflow
+  // ({l,t,r,b} in CSS px), or null when nothing of it is visible
+  function visibleRect(x) {
+    var r = x.getBoundingClientRect(), v = {l: Math.max(r.left, 0), t: Math.max(r.top, 0), r: Math.min(r.right, window.innerWidth), b: Math.min(r.bottom, window.innerHeight)};
+    for (var a = x.parentElement; a && a !== document.body && a !== document.documentElement; a = a.parentElement) {
+      var cs = gcs(a);
+      if (!/(hidden|auto|scroll|clip)/.test(cs.overflowX + " " + cs.overflowY)) continue;
+      var ar = a.getBoundingClientRect();
+      v = {l: Math.max(v.l, ar.left), t: Math.max(v.t, ar.top), r: Math.min(v.r, ar.right), b: Math.min(v.b, ar.bottom)};
+    }
+    return (v.r - v.l >= 2 && v.b - v.t >= 2) ? v : null;
+  }
+  // the first point inside visible rect v (its centre, then a 5x3 grid nearest-first) whose topmost element is x or
+  // inside it: {x, y}; {why: "point_deny_*"} as soon as a hit's chain up to x holds a denied control; null when none
+  function pointIn(x, v) {
+    var fx = [0.5, 0.3, 0.7, 0.15, 0.85], fy = [0.5, 0.3, 0.7];
+    for (var j = 0; j < fy.length; j++) for (var i = 0; i < fx.length; i++) {
+      var px = v.l + (v.r - v.l) * fx[i], py = v.t + (v.b - v.t) * fy[j], pe = document.elementFromPoint(px, py);
+      if (!pe || !x.contains(pe)) continue;
+      for (var e = pe; e && e !== x.parentElement; e = e.parentElement) { var de = denied(e); if (de) return {why: "point_" + de}; }
+      return {x: px, y: py};
+    }
+    return null;
+  }
   // the child row that holds the ONE Market hit for `sym`, and in it the cell under the header for key ("entry" ->
   // Opening price, "tpsl" -> TP / SL). The element, or why not: the sheetHit reasons | no_row | no_col | no_cell | no_tpsl
   function rowCell(sym, key) {
@@ -1439,22 +1463,34 @@
       var h = sheetHit(sym, which); if (typeof h === "string") return {ok: false, why: h};
       window.__exTap = h;
       var d = denied(h); if (d) return {ok: false, why: d};
-      if (scroll && h.scrollIntoView) h.scrollIntoView({block: "center", inline: "nearest"});
+      // 1b.263 05:00Z: child_entry AND child_tpsl both read "covered" from the SCROLL call (its geometry was never
+      // posted), i.e. the centre was checked right after scrollIntoView, before the grid settled, and only the centre
+      // was tried. Now: centre the cell both ways, and in the scroll call never refuse on the point (the caller waits
+      // and asks again); the decision is the second call's, which tries the centre of the cell's VISIBLE part (the cell
+      // clipped by the viewport and by every overflow-clipping ancestor, e.g. the grid's horizontal scroller or a sticky
+      // column) and then a few more points inside it, each re-checked with elementFromPoint and the denylist.
+      if (scroll && h.scrollIntoView) h.scrollIntoView({block: "center", inline: "center"});
       var r = h.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
-      if (!(r.width > 0 && r.height > 0) || x < 0 || y < 0 || x >= window.innerWidth || y >= window.innerHeight) return {ok: false, why: "offscreen"};
-      var pe = document.elementFromPoint(x, y);
-      if (!pe || !h.contains(pe)) {
+      var vr = visibleRect(h), pt = vr ? pointIn(h, vr) : null;
+      if (pt && pt.why) return {ok: false, why: pt.why};
+      if (pt) { x = pt.x; y = pt.y; }
+      else if (scroll) return {ok: true, pending: true, x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, vw: window.innerWidth, vh: window.innerHeight};
+      else {
         // MEASURE (1b.233 10:40Z: both rows "covered" with NO element at the centre): the geometry, so the next build
         // is fixed from evidence -- point vs viewport vs the cell's rect, the visual viewport, how many elements the
-        // point hits at all, and the page scroll. Numbers only, joined with the server scrub's kept characters (_ / x).
+        // point hits at all, the page scroll, and the visible part (g3). Numbers only, joined with the scrub's kept chars.
+        if (!(r.width > 0 && r.height > 0) || x < 0 || y < 0 || x >= window.innerWidth || y >= window.innerHeight) {
+          if (!vr) return {ok: false, why: "offscreen"};
+        }
+        var pe = (x >= 0 && y >= 0 && x < window.innerWidth && y < window.innerHeight) ? document.elementFromPoint(x, y) : null;
         var vv = window.visualViewport, se = document.scrollingElement || document.documentElement, f = function (n) { return Math.round(n); };
         var efp = document.elementsFromPoint ? document.elementsFromPoint(x, y).length : -1;
-        return {ok: false, why: "covered", top: pe ? (pe.tagName.toLowerCase() + (pe.getAttribute("role") ? "/" + pe.getAttribute("role") : "")).slice(0, 20) : "",
+        return {ok: false, why: vr ? "covered" : "clipped", top: pe ? (pe.tagName.toLowerCase() + (pe.getAttribute("role") ? "/" + pe.getAttribute("role") : "")).slice(0, 20) : "",
           g1: ("p" + f(x) + "_" + f(y) + " v" + window.innerWidth + "x" + window.innerHeight + " r" + f(r.left) + "_" + f(r.top) + "_" + f(r.width) + "x" + f(r.height)).slice(0, 40),
           g2: ("vv" + (vv ? f(vv.width) + "x" + f(vv.height) + "/" + f(vv.offsetLeft) + "_" + f(vv.offsetTop) + "s" + vv.scale.toFixed(2) : "-") +
-            " e" + efp + " sc" + f(se.scrollTop) + " dpr" + (window.devicePixelRatio || 0).toFixed(2) + (document.hidden ? " hid" : "")).slice(0, 40)};
+            " e" + efp + " sc" + f(se.scrollTop) + " dpr" + (window.devicePixelRatio || 0).toFixed(2) + (document.hidden ? " hid" : "")).slice(0, 40),
+          g3: vr ? ("vis " + f(vr.l) + "_" + f(vr.t) + "_" + f(vr.r - vr.l) + "x" + f(vr.b - vr.t)) : "vis none"};
       }
-      for (var e = pe; e && e !== h.parentElement; e = e.parentElement) { var de = denied(e); if (de) return {ok: false, why: "point_" + de}; }
       if (!scroll) evWatch();
       return {ok: true, x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, vw: window.innerWidth, vh: window.innerHeight};
     },
