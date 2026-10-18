@@ -6,7 +6,7 @@
   // PHONE-EXEC-OBSERVABLE-1018: this file is also served SIGNED by our own API and swapped in at runtime
   // (RemoteJs.kt): a newer version replaces the installed helpers on the next ensure(); the same version is
   // never injected twice. Bump on every change (CI signs the file; the app pins by version).
-  var EXEC_VERSION = "2026-10-18.4";
+  var EXEC_VERSION = "2026-10-18.5";
   if (window.__ex && window.__ex.version === EXEC_VERSION) return;
   function hostOk() { return /(^|\.)breakoutprop\.com$/.test(location.hostname || ""); }
   function vis(el) { if (!el) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }
@@ -914,6 +914,27 @@
     return u.filter(function (x) { return !u.some(function (o) { return o !== x && o.contains(x); }); });
   }
   function isPencil(x) { var s = t(x); return (PENCIL_GLYPH.test(s) || /\b(edit|pencil|modify)\b/i.test(ctlWords(x))) && !denied(x); }
+  // The element to CLICK / TOUCH for an icon rowIcons returned. MEASURED 2026-10-18 (drill 1 on 1b.300 + exec.js .4,
+  // captures 009-pencil / 010-modal_open): the real Stop row's edit control is span[tabindex] > button[aria-label=
+  // "Edit order"] > svg. rowIcons keeps the OUTERMOST interactive element (the span), and click() on an ancestor never
+  // reaches the button's handler (events bubble up, not down): the terminal opened nothing. So: the icon itself when it
+  // IS a button / role=button / link, else its ONE visible button / role=button / link inside, else the icon.
+  function ctlOf(x) {
+    if (!x || !x.querySelectorAll) return x;
+    if (x.matches && x.matches("button,[role=button],a")) return x;
+    var b = Array.prototype.slice.call(x.querySelectorAll("button,[role=button],a")).filter(vis);
+    return b.length === 1 ? b[0] : x;
+  }
+  // the ONE pencil of the ONE Stop row, resolved to its control (ctlOf), or why not: no_sheet | stops_<n> | no_edit |
+  // ambiguous. Shared by the click (sheetEditStop) and the native-tap target (sheetEditStopTarget).
+  function stopPencil() {
+    var r = sheetRoot(); if (!r) return "no_sheet";
+    var st = sheetOrderRows(r).filter(function (o) { return o.type === "stop"; });
+    if (st.length !== 1 || !st[0].el) return "stops_" + st.length;
+    var p = rowIcons(st[0].el, [st[0].typeEl].concat(st[0].px)).filter(isPencil);
+    if (!p.length) return "no_edit"; if (p.length > 1) return "ambiguous";
+    return ctlOf(p[0]);
+  }
   function iconDump(x) {
     var m = function (s) { return (s || "").replace(/\d/g, "#"); };
     return {tag: x.tagName.toLowerCase(), role: x.getAttribute("role") || "", text: m(t(x)).slice(0, 8),
@@ -1807,16 +1828,38 @@
       return {ok: true, n_stop: rows.filter(function (x) { return x.type === "stop"; }).length,
         n_take: rows.filter(function (x) { return x.type === "take"; }).length, rows: rows};
     },
-    // Click the ONE pencil of the ONE Stop row (never the ⓧ next to it). clicked | no_sheet | stops_<n> | no_edit |
-    // ambiguous | deny_*
+    // Click the ONE pencil of the ONE Stop row (never the ⓧ next to it) -- its CONTROL (ctlOf: the button inside the
+    // icon's wrapper, 2026-10-18 drill 1), never the wrapper. clicked | no_sheet | stops_<n> | no_edit | ambiguous |
+    // deny_*
     sheetEditStop: function () {
       if (!hostOk()) return "bad_host";
-      var r = sheetRoot(); if (!r) return "no_sheet";
-      var st = sheetOrderRows(r).filter(function (o) { return o.type === "stop"; });
-      if (st.length !== 1 || !st[0].el) return "stops_" + st.length;
-      var p = rowIcons(st[0].el, [st[0].typeEl].concat(st[0].px)).filter(isPencil);
-      if (!p.length) return "no_edit"; if (p.length > 1) return "ambiguous";
-      return safeClick(p[0]);
+      var h = stopPencil(); if (typeof h === "string") return h;
+      return safeClick(h);
+    },
+    // NATIVE TAP target for that pencil (2026-10-18 drill 1: click() on the pencil's wrapper opened no modal; the app
+    // touches the control the way it touches the Positions row -- sheetTarget's rules: the ONE control, denylist-
+    // checked, the point re-checked with elementFromPoint, scroll=true brings it into view first and the caller asks
+    // again right before it touches). {ok, x, y, vw, vh, tag, label (masked)} in CSS px, or {ok:false, why}:
+    // bad_host | modal_open | no_sheet | stops_<n> | no_edit | ambiguous | deny_* | point_deny_* | covered | clipped
+    sheetEditStopTarget: function (scroll) {
+      if (!hostOk()) return {ok: false, why: "bad_host"};
+      if (modalRoot().length) return {ok: false, why: "modal_open"};
+      var h = stopPencil(); if (typeof h === "string") return {ok: false, why: h};
+      var d = denied(h); if (d) return {ok: false, why: d};
+      if (scroll && h.scrollIntoView) h.scrollIntoView({block: "nearest", inline: "nearest"});
+      var r = h.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2, f = function (n) { return Math.round(n * 10) / 10; };
+      var vr = visibleRect(h), pt = vr ? pointIn(h, vr) : null;
+      if (pt && pt.why) return {ok: false, why: pt.why};
+      if (pt) { x = pt.x; y = pt.y; }
+      else if (scroll) return {ok: true, pending: true, x: f(x), y: f(y), vw: window.innerWidth, vh: window.innerHeight};
+      else {
+        var pe = (x >= 0 && y >= 0 && x < window.innerWidth && y < window.innerHeight) ? document.elementFromPoint(x, y) : null;
+        return {ok: false, why: vr ? "covered" : "clipped", top: pe ? (pe.tagName.toLowerCase() + (pe.getAttribute("role") ? "/" + pe.getAttribute("role") : "")).slice(0, 20) : "",
+          g1: ("p" + Math.round(x) + "_" + Math.round(y) + " v" + window.innerWidth + "x" + window.innerHeight + " r" + Math.round(r.left) + "_" + Math.round(r.top) + "_" + Math.round(r.width) + "x" + Math.round(r.height)).slice(0, 40)};
+      }
+      if (!scroll) evWatch();
+      return {ok: true, x: f(x), y: f(y), vw: window.innerWidth, vh: window.innerHeight, tag: h.tagName.toLowerCase(),
+        label: (h.getAttribute("aria-label") || t(h) || "").replace(/\d/g, "#").slice(0, 20)};
     },
     // The edit modal: {n, kind stop|take, side, qty, unit, entry (from the "Short 0.54 ETH @ 2,461.52 USD" header),
     // inputs [{label, value}], triggers (count of the Trigger input), buttons (masked)}

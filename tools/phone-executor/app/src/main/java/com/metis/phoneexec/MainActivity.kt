@@ -1599,6 +1599,26 @@ class MainActivity : Activity() {
         return p.tap(r.getDouble("x"), r.getDouble("y"), r.getDouble("vw")) + (if (p === fg) " fg" else " bg")
     }
 
+    /** One NATIVE touch on the Stop row's pencil (2026-10-18 drill 1 on 1b.300 + exec.js .4 FAILED at modal_open: the
+     *  pencil rowIcons returned was the span[tabindex] WRAPPING the "Edit order" button, click() on the wrapper never
+     *  reached the button's handler, and the terminal opened nothing). exec.js .5 resolves the control (the button) and
+     *  gives its point the way sheetTarget gives the row's: denylist-checked, elementFromPoint re-checked, asked once to
+     *  bring it into view and again right before the touch; then the same trusted finger the row needed. "touched k=.."
+     *  or why not; a geometry refusal (covered / clipped) falls back to the synthetic click on the control itself and the
+     *  note carries both ("covered@div click:clicked"). */
+    private suspend fun pencilTap(p: Page): String {
+        val s = p.obj("__ex.sheetEditStopTarget(true)") ?: return "unanswered"
+        if (!s.optBoolean("ok")) return s.optString("why", "refused")
+        delay(350)
+        val r = p.obj("__ex.sheetEditStopTarget(false)") ?: return "unanswered"
+        if (!r.optBoolean("ok")) {
+            val why = r.optString("why", "refused") + (if (r.optString("top").isNotEmpty()) "@" + r.optString("top") else "") + (if (r.optString("g1").isNotEmpty()) " " + r.optString("g1") else "")
+            return if (why.startsWith("covered") || why.startsWith("clipped")) "$why click:${p.js("__ex.sheetEditStop()")}" else why
+        }
+        return p.tap(r.getDouble("x"), r.getDouble("y"), r.getDouble("vw"))
+    }
+    private fun pencilOk(e: String): Boolean = e.startsWith("touched") || e.endsWith("click:clicked")
+
     /** Stray-modal dismiss before / after a sheet attempt: exec.js dismissModals (the ONE rule cancelModals also uses --
      *  each open non-form dialog / Edit SL/TP modal gets its own exactly-one "Cancel" clicked, NEVER Confirm; Escape if
      *  one holding a Confirm stays), then a re-check. "" when nothing was open; else "f<found> c<cancelled>[ esc]" plus
@@ -1787,8 +1807,8 @@ class MainActivity : Activity() {
         }
         // 4. the Stop row's ONE pencil -> the ONE "Edit Stop loss" modal
         if (stop.optInt("pencils") != 1) return bail("stop row pencils n=${stop.optInt("pencils")}", so)
-        val e = js("__ex.sheetEditStop()")
-        if (e != "clicked") return bail("stop edit control: $e", so)
+        val e = pencilTap(cur)
+        if (!pencilOk(e)) return bail("stop edit control: $e", so)
         delay(1200); ensure()
         suspend fun mbail(why: String, dump: JSONObject?) { cap(cap, cur, "modal_refused", false, why); val c = js("__ex.modalCancel()"); delay(600); bail("$why (modal cancel: $c)", dump) }
         cap(cap, cur, "pencil", true, e)
@@ -1985,8 +2005,8 @@ class MainActivity : Activity() {
         // mechanics failure; ok=null records it without failing the drill)
         if (!x.restingSl.isNaN()) x.mark("stop_matches_server", if (close(trig, x.restingSl, pStep)) true else null, "terminal $trig server ${fmt(x.restingSl, pStep)}")
         if (!x.mark("pencil_unique", stop!!.optInt("pencils") == 1, "pencils=${stop.optInt("pencils")} icons=${stop.optJSONArray("icon_lines")?.toString()?.take(100)}")) return
-        val e = js("__ex.sheetEditStop()")
-        if (!x.mark("pencil", e == "clicked", e)) return
+        val e = pencilTap(cur)
+        if (!x.mark("pencil", pencilOk(e), e)) return
         delay(1200); ensure()
         x.modalOpened = true
         val mi = jsObj("__ex.modalInfo()")

@@ -36,5 +36,11 @@ capture: it proves the tooling end to end and is replaced by the first real one.
 
 | fixture | source | what it proves |
 |---|---|---|
-| `sample-positions-sheet-synthetic` | `exec_check.js`'s synthetic sheet page | the tooling end to end (replaced by real ones) |
-| `breakout-sheet-tpsl-stop-row` | breakout_2, app 1b.300, 2026-10-18 14:32Z, amend #a8 step `003-stop_row` | the REAL [1 TP / 1 SL] rows carry the trigger (USD) **and** the quantity (ETH) as separate bare numbers; `sheetOrders` reads the trigger by the quote unit (exec.js ≥ 2026-10-18.4; ≤ .3 returned null here and the app reported `human_moved`) and the row's Edit control is the one pencil |
+| `sample-positions-sheet-synthetic` | `exec_check.js`'s synthetic sheet page | the tooling end to end (replaced by real ones); built BEFORE the geometry fix below and left as is — it carries no geometry check, and its exact build recipe (which synthetic variant, which tabs shown) was not recorded, so rebuild it from a recorded recipe or retire it before asserting a point on it |
+| `breakout-sheet-tpsl-stop-row` | breakout_2, app 1b.300, 2026-10-18 14:32Z, amend #a8 step `003-stop_row` | the REAL [1 TP / 1 SL] rows carry the trigger (USD) **and** the quantity (ETH) as separate bare numbers; `sheetOrders` reads the trigger by the quote unit (exec.js ≥ 2026-10-18.4; ≤ .3 returned null here and the app reported `human_moved`) and the row's Edit control is the one pencil; the pencil is `span[tabindex] > button "Edit order"` and `sheetEditStopTarget` resolves it to the BUTTON with a touch point inside its rect (exec.js ≥ 2026-10-18.5; drill 1 clicked the wrapper span and opened nothing) |
+
+**Geometry (fixed 2026-10-18):** every rendered node is `position:absolute`, so a node's `left/top` are relative to
+its rendered PARENT (the containing block), not the viewport; the tool subtracts the parent's rect. Fixtures built
+before that fix placed nested nodes at accumulated offsets (the Stop row's Edit button at 1383,4926 instead of
+335,392), which no read-only spec noticed and the first point-in-rect assertion did. Rebuild any fixture from its
+capture with the current tool before adding a geometry check to it.

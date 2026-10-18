@@ -855,6 +855,20 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
   const sn = await onHost(sheetPage({pen: "<button class=ib><svg width=8 height=8></svg></button>"}));
   await sn.evaluate("__ex.sheetOpen('ETHUSD','child')"); await sn.evaluate("__ex.sheetTab('tpsl')");
   eq([await sn.evaluate("__ex.sheetEditStop()"), await sn.evaluate("window.__danger"), (await sn.evaluate("__ex.modalInfo()")).n], ["no_edit", 0, 0], "edit: an unidentified icon is never clicked (no_edit)");
+  // 2026-10-18 drill 1 (1b.300 + exec.js .4, captures 009-pencil / 010-modal_open): the REAL Stop row's edit control is
+  // span[tabindex] > button[aria-label="Edit order"] > svg, rowIcons returned the wrapper span, and click() on it opened
+  // nothing (a click on an ancestor never reaches the button's handler). The click and the native-tap target resolve to
+  // the BUTTON; the page's handler sits on the button, as the terminal's does.
+  const sw = await onHost(sheetPage({pen: "<span tabindex=0><button class=ib data-k=edit aria-label='Edit order'><svg width=20 height=20></svg></button></span>"}));
+  await sw.evaluate("__ex.sheetOpen('ETHUSD','child')"); await sw.evaluate("__ex.sheetTab('tpsl')");
+  eq((await sw.evaluate("__ex.sheetOrders()")).rows.find((r) => r.type === "stop").pencils, 1, "edit (wrapped): the wrapper span still counts as the row's one pencil");
+  const swt = await sw.evaluate("__ex.sheetEditStopTarget(false)");
+  const swr = await sw.evaluate("(function () { var r = document.querySelector('[data-k=edit]').getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom]; })()");
+  eq([swt.ok, swt.tag, swt.label, swt.x >= swr[0] && swt.x <= swr[2] && swt.y >= swr[1] && swt.y <= swr[3], swt.vw > 0], [true, "button", "Edit order", true, true], "edit target (wrapped): resolves to the button inside the wrapper; the touch point lies inside it");
+  eq([await sw.evaluate("__ex.sheetEditStop()"), (await sw.evaluate("__ex.modalInfo()")).n, await sw.evaluate("window.__danger")], ["clicked", 1, 0], "edit (wrapped): the click reaches the BUTTON (the modal opens), never the ⓧ");
+  eq((await sw.evaluate("__ex.sheetEditStopTarget(false)")).why, "modal_open", "edit target: refused while the modal is open");
+  await sw.evaluate("__ex.modalCancel()");
+  eq((await sn.evaluate("__ex.sheetEditStopTarget(true)")).why, "no_edit", "edit target: an unidentified icon is never a target (no_edit)");
   // a signed uPnL is MEASURED with its sign; a side that is not exactly Long/Short is null
   const su = await onHost(sheetPage({upnl: "−12.40 USD", side: "Short 5x"}));
   await su.evaluate("__ex.sheetOpen('ETHUSD','child')");

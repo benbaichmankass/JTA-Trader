@@ -801,9 +801,21 @@ design and every such refusal counted as a failure; instead the plan is logged, 
 the gate, nothing backs off, and the first plan after the gate opens emits at once (a gated plan never consumes the
 exec.js waiver).
 
-**UNMEASURED:** no capture has shown Breakout's Positions row edit control or its dialog. The headless fixtures
-(`test/exec_check.js`, "amend") prove the helpers' mechanics on synthetic DOM only. The first real amend, dry or live,
-either passes or refuses with the dump (row headers and controls, dialog inputs and buttons) that names the label to fix.
+**The edit control is MEASURED; its dialog is not yet** (2026-10-18, drill 1 on breakout_2, run
+`drill-drill-20261018-163942-9541d8-20261018T163959Z`, 1b.300 + exec.js 2026-10-18.4). The first drill after #18996
+passed every step up to `pencil` — `stop_row` read `trigger 2452.65`, `stop_matches_server` read the same as the
+server — and FAILED at `modal_open` (`n=0`). The captures `009-pencil` / `010-modal_open` show why: the Stop row's
+edit control is `span[tabindex] > button[aria-label="Edit order"] > svg`; `rowIcons` keeps the OUTERMOST interactive
+element (the wrapper span), `sheetEditStop` called `.click()` on it, and a click on an ancestor never reaches the
+button's handler (events bubble up, not down) — the DOM after the click holds only the Position details dialog. exec.js
+2026-10-18.5 resolves an icon to its control (`ctlOf`: the ONE button / role=button / link inside the wrapper) before
+clicking, and adds `sheetEditStopTarget(scroll)` — the pencil's touch point under `sheetTarget`'s rules — so the app
+(`pencilTap`, from the next APK) touches the pencil with the same trusted finger the Positions row needed; a 1b.300
+phone picks up `.5` over the signed remote script and clicks the button. Both are proven on the real-page fixture
+`breakout-sheet-tpsl-stop-row` (the control resolves to `button "Edit order"`, the point lies inside its rect) and
+on a synthetic wrapped-pencil page (the click opens the modal). **UNMEASURED:** the "Edit Stop loss" dialog itself —
+the next drill either reads it (`modal_open` → `trigger_set` → `modal_cancel`) or refuses with the capture that names
+the label to fix.
 
 ### 7.15 The device-local ARMED switch is removed: live vs dry is decided only by the server (2026-10-06, lane ARMED-GATE)
 

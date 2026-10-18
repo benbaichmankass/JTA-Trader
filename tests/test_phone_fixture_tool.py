@@ -47,10 +47,32 @@ def test_build_renders_roots_at_their_rects_with_handlers_and_masks():
     assert "Sum ##.##USD" in html and "Position – ID" in html
     assert 'id="chd"' in html and 'data-h="Click"' in html and "__reactProps$fx" in html
     assert "position:absolute;left:10px;top:20px;width:100px;height:30px" in html
+    # a NESTED box is laid out relative to its rendered parent (the containing block), never at raw viewport
+    # coordinates: the span at viewport (12, 22) inside the div at (10, 20) renders at (2, 2) -- with raw coordinates the
+    # offsets add up (2026-10-18: the real Stop row's Edit button rendered at 1383,4926 instead of 335,392)
+    assert "position:absolute;left:2px;top:2px;width:60px;height:20px" in html
     assert "position:fixed;left:0px;top:60px" in html and "z-index:5" in html and "cursor:pointer" in html
     assert re.search(r'<input value="2\d{3}\.\d{2}" type="text"', html) and "2504.25" not in html
     assert html.count('data-root="') == 2 and 'data-root="sheet"' in html and 'data-chain="div &gt; div"' in html
     assert meta["nodes_rendered"] == 6 and meta["roots"] == ["body", "sheet"] and meta["vw"] == 390 and meta["cut"] is False
+
+
+def test_build_paints_roots_in_dom_order_with_portals_on_top():
+    """Priority roots render after the body in the order of their placeholders in the body tree; a root with NO
+    placeholder (a portal outside the captured body subtree -- the position sheet dialog) renders LAST, on top.
+    2026-10-18: in the snapshot's priority order (sheet, grid) the grid's table painted over the sheet's pencil."""
+    m = _mod()
+    snap = {"v": "2026-10-18.5", "vw": 411, "vh": 733, "dpr": 2.625, "path": "/app/account/ACCT/trade", "nodes": 5, "cut": False,
+            "roots": [
+                {"k": "sheet", "chain": ["div"], "tree": {"t": "div", "r": [0, 230, 411, 272], "a": {"role": "dialog"}, "c": [
+                    {"t": "button", "r": [335, 392, 28, 28], "a": {"aria-label": "Edit order"}}]}},
+                {"k": "grid", "chain": ["div"], "tree": {"t": "div", "r": [0, 180, 411, 400], "a": {"role": "table"}}},
+                {"k": "body", "chain": [], "tree": {"t": "body", "r": [0, 0, 411, 733], "c": [
+                    {"t": "div", "r": [0, 0, 411, 60], "x": "Trade"}, {"t": "div", "ref": 1}]}}]}
+    html = m.build(snap, name="t-order", note="n", source="run/009-pencil")["html"]
+    assert [x for x in re.findall(r'data-root="([a-z]+)"', html)] == ["body", "grid", "sheet"]
+    # the button inside the (absolute) dialog is laid out relative to it: viewport (335, 392) -> (335, 162)
+    assert 'aria-label="Edit order" style="position:absolute;left:335px;top:162px;width:28px;height:28px' in html
 
 
 def test_sample_fixture_in_repo_matches_its_meta_and_spec_shape():
