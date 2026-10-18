@@ -813,9 +813,28 @@ clicking, and adds `sheetEditStopTarget(scroll)` — the pencil's touch point un
 (`pencilTap`, from the next APK) touches the pencil with the same trusted finger the Positions row needed; a 1b.300
 phone picks up `.5` over the signed remote script and clicks the button. Both are proven on the real-page fixture
 `breakout-sheet-tpsl-stop-row` (the control resolves to `button "Edit order"`, the point lies inside its rect) and
-on a synthetic wrapped-pencil page (the click opens the modal). **UNMEASURED:** the "Edit Stop loss" dialog itself —
-the next drill either reads it (`modal_open` → `trigger_set` → `modal_cancel`) or refuses with the capture that names
-the label to fix.
+on a synthetic wrapped-pencil page (the click opens the modal).
+
+**The "Edit Stop loss" modal is MEASURED, and Cancel closes the whole sheet** (2026-10-18 19:00Z, drill 2 on
+breakout_2, run `drill-drill-20261018-185905-39549f-20261018T190001Z`, 1b.300 + exec.js 2026-10-18.5; fixture
+`breakout-modal-edit-stop-loss` from its `010-modal_open` capture). The pencil's button click opened the modal; it
+holds Quantity (`name=protectionStopLossSize`), **Trigger (`name=protectionStopLossPrice`, unit USD)**, Entry
+distance (`protectionStopLossDistance`, %), and under them the "Stop loss Entry distance" **slider** (`input
+type=range` inside `div.ds-slider`), R:R, Cancel and Confirm. The drill typed 2452.63 into the Trigger input, read it
+back, left the quantity at 0.52, and the slider's thumb did not move between the before and after captures while the
+terminal recomputed its "Est. maximum loss" from the typed price — the operator's rule (via the manager, same day:
+*click the field with the price level for the SL and type a new value; never the slider*) is what the code does, and
+exec.js 2026-10-18.6 makes it explicit: `modalSetTrigger` refuses anything but a text input outside any slider, reports
+the resolved input's `name`/`type`, and `modalInfo` counts the modal's `sliders` so a capture shows the slider seen and
+left alone. The drill then FAILED at `stop_unchanged` (`before 2452.65 after null`): the modal's **Cancel closed the
+whole position sheet**, not just the modal (captures `014-modal_cancel` / `015-stop_unchanged` show the Positions
+grid, no sheet root — and the modal capture itself holds no sheet root), so the re-read found no sheet. The live
+amend's read-back after Confirm reads the sheet the same way, which would have reported `mismatch` with a null read on a
+stop that had in fact moved, and the next attempt would have called the new level a human move. So (app, next APK):
+every Stop-row re-read after a modal goes through `sheetEnsureOpen` (re-opens the sheet with the same native touch,
+recorded as `sheet_after_cancel` / in the `stop_reread` note), and an amend that finds the terminal already at the
+ASKED level reports `amended` with that read instead of `human_moved`. **UNMEASURED:** whether Confirm also closes
+the sheet (expected, same dialog stack) — the first live amend's `stop_reread` note (`sheet open|reopened …`) says.
 
 ### 7.15 The device-local ARMED switch is removed: live vs dry is decided only by the server (2026-10-06, lane ARMED-GATE)
 

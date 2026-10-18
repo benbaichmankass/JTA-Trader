@@ -11,8 +11,8 @@
   "tier": 2,
   "prs": [],
   "blocked_on": [],
-  "note": "2026-10-18 ~17:05Z lane: drill 1/3 (#19008, run drill-drill-20261018-163942-9541d8-20261018T163959Z, 1b.300 + exec.js .4) FAILED at modal_open after stop_row read trigger 2452.65 = server. Root cause from captures 009/010: the pencil rowIcons returned is the span[tabindex] WRAPPING the Edit order button; .click() on the wrapper never reaches the button. Fix PR (Tier-2 HOLD, branch claude/phone-exec-pencil-control): exec.js .5 clicks the control inside the icon + sheetEditStopTarget for a native pencil touch (app pencilTap, next APK); fixture tool geometry fix (nested offsets accumulated); real-page fixture proves the control is button Edit order. Drill 2 waits for .5 served.",
-  "updated_at": "2026-10-18T17:01:46Z",
+  "note": "2026-10-18 ~19:10Z lane: #19010 merged (70ab415e), exec.js .5 on the phone 18:28Z. Drill 2 (#19026, 19:00Z) passed pencil -> modal_open -> trigger_set (typed 2452.63 into the Trigger PRICE input, slider untouched) -> modal_cancel, then FAILED stop_unchanged: Cancel closed the whole sheet, re-read null. Operator rule (via manager): type into the price field, never the slider. PR (Tier-2 HOLD, branch claude/phone-exec-modal-fixture): exec.js .6 hardening + real modal fixture; app re-opens the sheet before every post-modal stop re-read (also the live Confirm read-back) and reports amended when the terminal already shows the asked level. Gate still 0/3; #a9 not emitted; no stop moved by the system today. Next APK install needed for the re-open.",
+  "updated_at": "2026-10-18T19:09:27Z",
   "updated_by": "session_01Cqmpr14msnNhk7ZQrmYRfS",
   "roadmap": [
     "L-PROP"
