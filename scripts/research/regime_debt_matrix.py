@@ -213,6 +213,14 @@ _TREND_LEVER_FLAG = {
     "trail_vol_above_pctl": "--trail-vol-above-pctl",
     "trail_vol_below_pctl": "--trail-vol-below-pctl",
     "trail_vol_tight_mult": "--trail-vol-tight-mult",
+    # MOMENTUM-LEVERS-LIVE (2026-10-18): once a leg declares the ADX trail or the
+    # momentum-keyed time stop, a config-exact A arm must carry it, or every
+    # later ablation would measure the leg without the lever it trades.
+    "trail_adx_below": "--trail-adx-below",
+    "trail_adx_falling_bars": "--trail-adx-falling-bars",
+    "trail_adx_tight_mult": "--trail-adx-tight-mult",
+    "momentum_stale_bars": "--momentum-stale-bars",
+    "momentum_stale_adx_below": "--momentum-stale-adx-below",
 }
 # Pullback lever config-key -> harness flag (these the pullback harness DOES model).
 _PB_LEVER_FLAG = {
@@ -221,6 +229,12 @@ _PB_LEVER_FLAG = {
     "trail_vol_below_pctl": "--trail-vol-below-pctl", "trail_vol_above_pctl": "--trail-vol-above-pctl",
     "trail_vol_tight_mult": "--trail-vol-tight-mult", "vol_pctl_window": "--vol-pctl-window",
     "side_filter": "--side-filter",  # see the note on _TREND_LEVER_FLAG above
+    # MOMENTUM-LEVERS-LIVE (2026-10-18), as on _TREND_LEVER_FLAG.
+    "trail_adx_below": "--trail-adx-below",
+    "trail_adx_falling_bars": "--trail-adx-falling-bars",
+    "trail_adx_tight_mult": "--trail-adx-tight-mult",
+    "momentum_stale_bars": "--momentum-stale-bars",
+    "momentum_stale_adx_below": "--momentum-stale-adx-below",
 }
 _PB_PLAIN = {"model", "signal_prefixes", "enabled", "execution", "timeframe", "symbols",
              "trend_lookback", "pullback_lookback", "pullback_frac", "atr_period",
