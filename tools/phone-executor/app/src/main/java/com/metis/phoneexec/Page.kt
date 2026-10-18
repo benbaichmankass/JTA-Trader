@@ -24,13 +24,18 @@ class JsTimeout : Exception("page did not answer")
 
 /** One WebView + exec.js. Every call is bounded: a frozen WebView never answers, and an unbounded wait wedged the
  *  loop (PI-20261006-APBY4NTV-0006). Main thread only. */
-class Page(val web: WebView, private val execSrc: String) {
+class Page(val web: WebView) {
     var timeouts = 0
     private fun unq(raw: String?): String = try { JSONArray("[" + raw + "]").get(0).toString() } catch (e: Exception) { raw ?: "" }
     suspend fun js(code: String): String =
         withTimeoutOrNull(JS_TIMEOUT_MS) { suspendCancellableCoroutine<String> { c -> web.evaluateJavascript(code) { if (c.isActive) c.resume(unq(it)) } } }
             ?: run { timeouts += 1; throw JsTimeout() }
-    suspend fun ensure() { if (js("typeof window.__ex") != "object") { js(execSrc + ";'ok'"); delay(100) } }
+    /** Inject the CURRENT script (ExecJs: bundled, or the verified remote one) unless the page already runs that
+     *  exact version; a newer verified script therefore replaces the helpers on the next call (PHONE-EXEC-OBSERVABLE-1018). */
+    suspend fun ensure() {
+        if (ExecJs.src.isEmpty()) return
+        if (js("(window.__ex&&window.__ex.version)||''") != ExecJs.version) { js(ExecJs.src + ";'ok'"); delay(100) }
+    }
     /** null on anything unreadable, a timeout included (the kiosk's jsObj semantics; js() still counts the timeout) */
     suspend fun obj(code: String): JSONObject? = try { JSONObject(js("JSON.stringify($code)")) } catch (e: Exception) { null }
     fun load(url: String) = web.loadUrl(url)
@@ -111,7 +116,7 @@ object BgWeb {
         private set
 
     @SuppressLint("SetJavaScriptEnabled")
-    fun attach(c: Context, execSrc: String): Page? {
+    fun attach(c: Context): Page? {
         val app = c.applicationContext
         val p = page ?: try {
             val w = WebView(app)
@@ -122,7 +127,7 @@ object BgWeb {
             CookieManager.getInstance().setAcceptCookie(true)
             CookieManager.getInstance().setAcceptThirdPartyCookies(w, true)
             w.webViewClient = WebViewClient()   // every navigation stays in this WebView (as in the kiosk)
-            Page(w, execSrc).also { page = it }
+            Page(w).also { page = it }
         } catch (e: Exception) { return null }
         if (attached) return p
         val dm = app.resources.displayMetrics

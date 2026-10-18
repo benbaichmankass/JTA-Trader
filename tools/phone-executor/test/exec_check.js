@@ -973,5 +973,40 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
   let dm = await tm2.evaluate("__ex.dismissModals()");
   eq([dm.found, dm.cancelled, dm.esc, (await tm2.evaluate("__ex.modalsOpen()")).n, await tm2.evaluate("window.__saved")], [1, 1, false, 0, 0], "dismiss: its Cancel clicked, nothing left, Confirm never clicked");
   eq([(await tm2.evaluate("__ex.dismissModals()")).found, await tm2.evaluate("__ex.cancelModals()")], [0, 0], "dismiss: nothing open -> nothing found / cancelled");
+  // PHONE-EXEC-OBSERVABLE-1018: the script carries its version, a same-version re-injection is a no-op and a NEWER
+  // version replaces the helpers (RemoteJs swaps the verified remote script in without an APK)
+  const vp = await onHost(sheetPage());
+  const ver = await vp.evaluate("__ex.version");
+  eq(/^\d{4}-\d{2}-\d{2}\.\d+$/.test(ver), true, "version: __ex.version is the YYYY-MM-DD.N pin");
+  await vp.evaluate("window.__exMarker = 1; window.__ex.marker = 'old'");
+  await vp.addScriptTag({ content: src });
+  eq(await vp.evaluate("__ex.marker"), "old", "version: the same version injected again changes nothing");
+  await vp.addScriptTag({ content: src.replace(/var EXEC_VERSION = "[^"]+";/, 'var EXEC_VERSION = "2099-01-01.1";') });
+  eq([await vp.evaluate("__ex.version"), await vp.evaluate("__ex.marker")], ["2099-01-01.1", undefined], "version: a newer script replaces the helpers");
+  // DOM SNAPSHOT (PHONE-EXEC-OBSERVABLE-1018): the sheet, the modal and the Positions grid come back as geometry-carrying
+  // subtrees with React handler names; ON-DEVICE REDACTION masks the position id, every P&L / value / margin / balance /
+  // portfolio figure and the account path, and KEEPS prices, quantities and triggers (what a fixture needs)
+  const snapPg = await onHost(sheetPage({upnl: "20.88 USD"}).replace("<div id=bottom>", "<div id=top><button>Portfolio 4,947.72 USD</button><div>Balance 4,930.42</div></div><div id=bottom>")
+    .replace('<div id=sheet style="display:none">', '<div id=sheet>').replace('<div id=modal style="display:none">', '<div id=modal>').replace('<div id=ps style="display:none">', '<div id=ps>'));
+  await snapPg.evaluate("Object.defineProperty(document.getElementById('chd'),'__reactProps$x',{value:{onClick:function(){}},enumerable:true})");
+  const snap = await snapPg.evaluate("__ex.snapshot('page')");
+  const stxt = JSON.stringify(snap);
+  eq(snap.roots.map((r) => r.k).sort(), ["body", "grid", "modal", "sheet"], "snapshot: sheet / modal / grid / body subtrees");
+  eq([snap.v === ver, snap.nodes > 40, snap.redact.length > 5, snap.vw > 0, snap.path.includes("/account/ACCT")], [true, true, true, true, true], "snapshot: version, node count, redaction rects, viewport, masked account path");
+  for (const keep of ["Position – ID", "2,461.52USD", "2,440.65USD", "0.54 ETH", "2,504.25 USD", "Short 0.54 ETH @ 2,461.52 USD", "\"h\":[\"Click\"]"]) {
+    eq(stxt.includes(keep), true, `snapshot keeps: ${keep}`);
+  }
+  for (const keep of ["1,318.20USD", "\"x\":\"1 TP / 1 SL\"", "Positions1"]) {   // Value (= qty x mark, both kept) and the counts the readers key on
+    eq(stxt.includes(keep), true, `snapshot keeps: ${keep}`);
+  }
+  for (const leak of ["7f3a9c", "20.88", "4,947.72", "4,930.42", "265.84", "7.85", "A1/trade", "2026-10-14"]) {
+    eq(stxt.includes(leak), false, `snapshot never carries: ${leak}`);
+  }
+  const grid = snap.roots.find((r) => r.k === "grid").tree;
+  const cells = JSON.stringify(grid);
+  eq([cells.includes("\"x\":\"Sum ##.##USD\""), cells.includes("\"x\":\"2,461.52USD\"")], [true, true], "snapshot grid: the Sum (P&L) cell is masked, the Opening price cell is kept");
+  eq(typeof grid.r[2] === "number" && grid.c.length >= 3, true, "snapshot grid: rects and children present");
+  const small = await snapPg.evaluate("__ex.snapshot('roots', 30)");
+  eq([small.cut, small.roots.every((r) => r.k !== "body")], [true, true], "snapshot: a node budget cuts and says so; scope roots has no body");
   await b.close(); console.log("exec_check: all passed");
 })().catch((e) => { console.error(e); process.exit(1); });

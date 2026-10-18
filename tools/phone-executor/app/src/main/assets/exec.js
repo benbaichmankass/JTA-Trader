@@ -3,7 +3,11 @@
 // Nothing here reads cookies, storage or credentials. Values returned are OUR OWN typed order values and the
 // visible control labels; account numbers and balances are never returned.
 (function () {
-  if (window.__ex) return;
+  // PHONE-EXEC-OBSERVABLE-1018: this file is also served SIGNED by our own API and swapped in at runtime
+  // (RemoteJs.kt): a newer version replaces the installed helpers on the next ensure(); the same version is
+  // never injected twice. Bump on every change (CI signs the file; the app pins by version).
+  var EXEC_VERSION = "2026-10-18.1";
+  if (window.__ex && window.__ex.version === EXEC_VERSION) return;
   function hostOk() { return /(^|\.)breakoutprop\.com$/.test(location.hostname || ""); }
   function vis(el) { if (!el) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }
   function t(el) { return ((el && (el.innerText || el.textContent)) || "").replace(/\s+/g, " ").trim(); }
@@ -912,7 +916,200 @@
   var MODAL_HDR = /^(long|short)\s+(\d[\d,]*(?:\.\d+)?)\s*([A-Za-z]{2,8})?\s*@\s*(\d[\d,]*(?:\.\d+)?)\s*(USD[TC]?)?$/i;
   function modalInputs(root) { return inputs(root).map(function (i) { return {label: labelFor(i).replace(/\s+/g, " ").trim().slice(0, 40), value: i.value}; }); }
   function triggerInput(root) { return inputs(root).filter(function (i) { var l = labelFor(i); return /trigger/i.test(l) && !/distance|%|r\s*:\s*r|quantity/i.test(l); }); }
+  // ---- DOM SNAPSHOT (PHONE-EXEC-OBSERVABLE-1018, operator 2026-10-18: the app records what it did, right and
+  // wrong, without anything on screen). A sanitized, geometry-carrying tree of the VISIBLE page that the server
+  // stores for 7 days and tools/phone-executor/test/fixture_from_capture.py turns into a fixture with the numbers
+  // replaced, so a fix is proven in CI against the real Breakout page instead of guessed per APK.
+  // REDACTION HAPPENS HERE, ON THE DEVICE (operator decision): account ids (the URL's /account/<id>/, the sheet's
+  // "Position – <id>"), balances, equity, portfolio and every P&L / value / margin figure are masked before the
+  // snapshot leaves the phone. Digits survive ONLY in a text whose column header, field label or detail label is a
+  // price / quantity / trigger / leverage context (KEEP_CTX; the Value column too -- it is qty x mark, both kept, and
+  // positionsRead's only qty source on the grid); everything else has its digits turned into "#". Counts the
+  // readers key on ("1 TP / 1 SL", "Positions 1", "ETH 5x") are kept: a masked tab blinds sheetInfo on a fixture.
+  // Each masked element's rect is returned in `redact` so the app paints a box over it on the bitmap.
+  var KEEP_CTX = /opening price|current price|avg\.?\s*opening|entry price|mark price|trigger|limit price|^price$|quantity|\bqty\b|total open volume|^value$|\bsize\b|stop\s*loss|take\s*profit|^tp\s*\/\s*sl$|^sl\s*\/\s*tp$|^lev|distance|\bsl\b|\btp\b|^market$/i;
+  var MASK_CTX = /balance|equity|portfolio|p\s*&\s*l|pnl|value|margin|roe|fee|funding|liq|notional|time|date|position\s*[–—-]|order id|id$/i;
+  var SNAP_ATTRS = ["role", "type", "name", "placeholder", "disabled", "aria-disabled", "aria-selected", "aria-expanded",
+    "aria-checked", "aria-label", "aria-labelledby", "aria-controls", "aria-haspopup", "aria-modal", "title", "alt", "tabindex",
+    "for", "id", "href", "data-state", "data-testid", "data-radix-collection-item", "data-orientation", "checked", "value"];
+  var SNAP_SKIP = /^(SCRIPT|STYLE|NOSCRIPT|TEMPLATE|LINK|META|HEAD|PATH|G|DEFS|USE|CIRCLE|RECT|LINE|POLYGON|POLYLINE|CLIPPATH|MASK|LINEARGRADIENT|STOP|TITLE|DESC|SYMBOL|FILTER|FEGAUSSIANBLUR|FEOFFSET|FEBLEND|FEMERGE|FEMERGENODE|FECOLORMATRIX)$/i;
+  function maskDigits(s) { return (s || "").replace(/\d/g, "#"); }
+  function gridCtxOf(el) {   // the column header text over a grid cell (div grid or table), "" when not in one
+    var g = gridHeaders(POS_COLS).concat(gridHeaders(CLOSED_COLS));
+    for (var i = 0; i < g.length; i++) {
+      var h = g[i], n = kids(h).length, panel = gridPanel(h) || h.parentElement;
+      if (!panel.contains(el) || h.contains(el)) continue;   // only a cell INSIDE that grid's panel, never the header
+      for (var a = el, k = 0; a && k < 10 && a !== panel; a = a.parentElement, k++) {
+        if (a.parentElement && kids(a.parentElement).length === n && !a.parentElement.contains(h)) {
+          var idx = kids(a.parentElement).indexOf(a); if (idx >= 0) return t(kids(h)[idx]) || "";
+        }
+      }
+    }
+    // a column header ROW over a sibling row (the sheet's [n TP / n SL] list: SIDE | TYPE | TRIGGER PRICE): the first
+    // digit-free sibling with the same cell count, read at the cell's index
+    for (var b = el, j = 0; b && j < 4 && b !== document.body; b = b.parentElement, j++) {
+      var row = b.parentElement; if (!row || !row.parentElement) continue;
+      var cells = kids(row), ci = cells.indexOf(b); if (ci < 0 || cells.length < 2) continue;
+      var sibs = kids(row.parentElement);
+      for (var q = 0; q < sibs.length; q++) {
+        var sr = sibs[q]; if (sr === row) continue;
+        var hs = kids(sr).map(t);   // a header row has no digits and at least as many cells as this cell's index
+        if (hs.length < 2 || hs.length > cells.length || ci >= hs.length || hs.some(function (x) { return /\d/.test(x) || !x; })) continue;
+        return hs[ci] || "";
+      }
+    }
+    var td = el.closest("td,[role=cell],[role=gridcell]");
+    if (td) {
+      var tb = td.closest("table,[role=table],[role=grid]"), hs = tb ? Array.prototype.slice.call(tb.querySelectorAll("th,[role=columnheader]")).map(t) : [];
+      var row = td.parentElement, ci = row ? Array.prototype.slice.call(row.children).indexOf(td) : -1;
+      if (ci >= 0 && hs[ci]) return hs[ci];
+    }
+    return "";
+  }
+  function labelCtxOf(el) {   // a sheet detail / modal header label near a value, or an input's label
+    if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") return labelFor(el);
+    var keys = Object.keys(DETAIL_LABELS);
+    for (var a = el.parentElement, k = 0; a && k < 3 && a !== document.body; a = a.parentElement, k++) {
+      for (var i = 0; i < keys.length; i++) { var ls = textEls(a, DETAIL_LABELS[keys[i]]); if (ls.length === 1 && ls[0] !== el) return t(ls[0]); }
+      var lab = Array.prototype.slice.call(a.querySelectorAll("label")).filter(vis)[0]; if (lab && lab !== el && t(lab).length <= 40) return t(lab);
+    }
+    return "";
+  }
+  function ownText(el) {
+    var out = [];
+    for (var i = 0; i < el.childNodes.length; i++) { var n = el.childNodes[i]; if (n.nodeType === 3 && n.nodeValue.trim()) out.push(n.nodeValue.trim()); }
+    return out.join(" ").replace(/\s+/g, " ").trim();
+  }
+  // the redaction decision for one text in one element: {text, masked}
+  function redactText(s, el) {
+    if (!s || !/\d/.test(s)) return {text: s, masked: false};
+    if (SUBTITLE_RE.test(s)) return {text: s.replace(/^(position\s*[–—-]\s*)\S+/i, "$1ID"), masked: true};
+    // counts the readers key on, never money: the sheet's "1 TP / 1 SL" tab, the "Positions 1" tab, "ETH 5x"
+    if (SHEET_TAB.tpsl.test(s) || /^positions\s*\d*$/i.test(s) || /^[A-Z]{2,8}\s+\d{1,3}x$/i.test(s) || /^\d{1,3}x$/i.test(s)) return {text: s, masked: false};
+    var ctx = gridCtxOf(el) || labelCtxOf(el);
+    var hdr = ctx || "";
+    var cellIsLabel = /^[A-Za-z .\/&%()-]+$/.test(s);           // "Opening price" itself: no digits anyway
+    if (cellIsLabel) return {text: s, masked: false};
+    if (!hdr) {
+      // no context: a price-looking leaf next to a price label (modal header "Short 0.54 ETH @ 2,461.52 USD")
+      if (MODAL_HDR.test(s)) return {text: s, masked: false};
+      return {text: maskDigits(s), masked: true};
+    }
+    if (MASK_CTX.test(hdr) && !KEEP_CTX.test(hdr)) return {text: maskDigits(s), masked: true};
+    if (KEEP_CTX.test(hdr)) return {text: s, masked: false};
+    return {text: maskDigits(s), masked: true};
+  }
+  function snapAttrs(e, isInput) {
+    var o = {};
+    SNAP_ATTRS.forEach(function (k) {
+      if (k === "value" && !isInput) return;
+      var v = e.getAttribute(k); if (v == null) return;
+      if (k === "href") { try { var u = new URL(v, location.href); v = u.pathname.replace(/\/account\/[^\/]+/, "/account/ACCT").replace(/\d/g, "#").slice(0, 60); } catch (x) { v = "#"; } }
+      else if (k === "id" || k === "for" || k === "aria-controls" || k === "aria-labelledby") v = v.slice(0, 40);
+      else if (k === "value") v = redactText(String(e.value != null ? e.value : v), e).text.slice(0, 40);
+      else v = maskDigits(String(v)).slice(0, 60);
+      o[k] = v;
+    });
+    var cls = typeof e.className === "string" ? e.className : (e.getAttribute("class") || "");
+    if (cls) o["class"] = cls.split(/\s+/).filter(Boolean).slice(0, 8).map(function (c) { return c.slice(0, 32); }).join(" ");
+    if (isInput && typeof e.checked === "boolean" && e.type === "checkbox") o.checked = String(e.checked);
+    if (isInput && e.value != null && !("value" in o)) o.value = redactText(String(e.value), e).text.slice(0, 40);
+    if (e.hasAttribute("onclick")) o.onclick = "1";
+    return o;
+  }
+  function snapStyle(e) {
+    var cs = gcs(e), o = {};
+    if (/(hidden|auto|scroll|clip)/.test(cs.overflowX + " " + cs.overflowY)) o.ov = (cs.overflowX + "/" + cs.overflowY).replace(/visible/g, "v");
+    if (cs.position && cs.position !== "static") o.pos = cs.position;
+    if (cs.zIndex && cs.zIndex !== "auto") o.z = cs.zIndex;
+    if (cs.pointerEvents === "none") o.pe = "none";
+    if (cs.display === "none") o.d = "none"; else if (/^(flex|grid|inline-flex|inline-grid|inline-block|inline|table|table-cell|table-row)$/.test(cs.display)) o.d = cs.display;
+    if (cs.visibility && cs.visibility !== "visible") o.vis = cs.visibility;
+    if (cs.opacity && cs.opacity !== "1") o.op = cs.opacity;
+    if (cs.cursor === "pointer") o.cur = "p";
+    return o;
+  }
+  function snapNode(e, budget, redact, depth) {
+    if (budget.n >= budget.max) { budget.cut = true; return null; }
+    if (SNAP_SKIP.test(e.tagName) || !vis(e)) return null;
+    budget.n++;
+    var r = e.getBoundingClientRect(), isInput = e.tagName === "INPUT" || e.tagName === "TEXTAREA" || e.tagName === "SELECT";
+    var node = {t: e.tagName.toLowerCase(), r: [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)]};
+    var a = snapAttrs(e, isInput); if (Object.keys(a).length) node.a = a;
+    var st = snapStyle(e); if (Object.keys(st).length) node.s = st;
+    var hd = reactHandlers(e); if (hd && hd.length) node.h = hd;
+    var tx = ownText(e);
+    if (tx) { var rd = redactText(tx.slice(0, 80), e); node.x = rd.text; if (rd.masked && redact.length < 200) redact.push(node.r); }
+    if (e.tagName === "SVG" || e.tagName === "svg") { node.svg = 1; return node; }
+    if (depth >= 40) return node;
+    var c = [];
+    for (var i = 0; i < e.children.length; i++) { var ch = snapNode(e.children[i], budget, redact, depth + 1); if (ch) c.push(ch); if (budget.cut) break; }
+    if (c.length) node.c = c;
+    return node;
+  }
+  function snapshot(scope, maxNodes) {
+    var redact = [], budget = {n: 0, max: maxNodes || 2200, cut: false};
+    var roots = [];
+    // the parts a fixture must keep intact come first with their own share: the sheet, the edit modals, dialogs,
+    // the Positions / Closed grid panel, the order form; then the page body with those subtrees cut out
+    var pri = [];
+    sheetRoots().forEach(function (r) { pri.push({k: "sheet", el: r}); });
+    modalRoot().forEach(function (m) { pri.push({k: "modal", el: m.root}); });
+    dialogs().forEach(function (d) { pri.push({k: "dialog", el: d}); });
+    gridHeaders(POS_COLS).forEach(function (h) { var p = gridPanel(h) || h.parentElement; pri.push({k: "grid", el: p}); });
+    gridHeaders(CLOSED_COLS).forEach(function (h) { var p = gridPanel(h) || h.parentElement; pri.push({k: "closed", el: p}); });
+    var f = form(); if (f) pri.push({k: "form", el: f});
+    pri = pri.filter(function (x, i) { return x.el && !pri.some(function (y, j) { return j < i && (y.el === x.el || y.el.contains(x.el)); }); });
+    var taken = pri.map(function (x) { return x.el; });
+    pri.forEach(function (x) {
+      var b2 = {n: 0, max: Math.max(Math.floor(budget.max / 2), Math.min(300, budget.max)), cut: false};
+      var tree = snapNode(x.el, b2, redact, 0);
+      budget.n += b2.n;
+      if (tree) roots.push({k: x.k, chain: chainOf(x.el), cut: b2.cut, tree: tree});
+      if (b2.cut) budget.cut = true;
+    });
+    if (scope !== "roots") {
+      var body = snapNodeSkipping(document.body, budget, redact, taken);
+      if (body) roots.push({k: "body", cut: budget.cut, tree: body});
+    }
+    var vv = window.visualViewport;
+    return {v: EXEC_VERSION, host: location.hostname, path: (location.pathname || "/").replace(/\/account\/[^\/]+/, "/account/ACCT").replace(/\d/g, "#").slice(0, 80),
+      vw: window.innerWidth, vh: window.innerHeight, dpr: window.devicePixelRatio || 1,
+      vv: vv ? [Math.round(vv.offsetLeft), Math.round(vv.offsetTop), Math.round(vv.width), Math.round(vv.height), Math.round(vv.scale * 100) / 100] : null,
+      scroll: [Math.round(window.scrollX || 0), Math.round(window.scrollY || 0)], nodes: budget.n, cut: budget.cut,
+      redact: redact, roots: roots};
+  }
+  function chainOf(el) {   // tag/role/first class of each ancestor to body, outermost first (where the subtree sits)
+    var out = [];
+    for (var a = el.parentElement, k = 0; a && a !== document.body && k < 12; a = a.parentElement, k++) {
+      var cls = (typeof a.className === "string" ? a.className : "").split(/\s+/).filter(Boolean)[0] || "";
+      out.unshift((a.tagName.toLowerCase() + (a.getAttribute("role") ? "/" + a.getAttribute("role") : "") + (cls ? "." + cls.slice(0, 24) : "")).slice(0, 40));
+    }
+    return out;
+  }
+  function snapNodeSkipping(e, budget, redact, taken) {
+    if (taken.indexOf(e) >= 0) { budget.n++; return {t: e.tagName.toLowerCase(), ref: taken.indexOf(e), r: [0, 0, 0, 0]}; }
+    if (budget.n >= budget.max) { budget.cut = true; return null; }
+    if (SNAP_SKIP.test(e.tagName) || !vis(e)) return null;
+    budget.n++;
+    var r = e.getBoundingClientRect(), isInput = e.tagName === "INPUT" || e.tagName === "TEXTAREA" || e.tagName === "SELECT";
+    var node = {t: e.tagName.toLowerCase(), r: [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)]};
+    var a = snapAttrs(e, isInput); if (Object.keys(a).length) node.a = a;
+    var st = snapStyle(e); if (Object.keys(st).length) node.s = st;
+    var hd = reactHandlers(e); if (hd && hd.length) node.h = hd;
+    var tx = ownText(e);
+    if (tx) { var rd = redactText(tx.slice(0, 80), e); node.x = rd.text; if (rd.masked && redact.length < 200) redact.push(node.r); }
+    if (e.tagName === "SVG" || e.tagName === "svg") { node.svg = 1; return node; }
+    var c = [];
+    for (var i = 0; i < e.children.length; i++) { var ch = snapNodeSkipping(e.children[i], budget, redact, taken); if (ch) c.push(ch); if (budget.cut) break; }
+    if (c.length) node.c = c;
+    return node;
+  }
   window.__ex = {
+    version: EXEC_VERSION,
+    // PHONE-EXEC-OBSERVABLE-1018: the sanitized DOM snapshot (see the section above). scope "page" (default) =
+    // the priority roots + the body; "roots" = the sheet / modal / dialog / grid / form subtrees only.
+    snapshot: function (scope, maxNodes) { try { return snapshot(scope || "page", maxNodes); } catch (e) { return {v: EXEC_VERSION, error: String(e && e.message || e).slice(0, 80), roots: [], redact: []}; } },
     state: function () {
       var pw = all("input[type=password]").length > 0;
       var email = all("input[type=email],input[autocomplete=email],input[name*=mail i]").length > 0;
