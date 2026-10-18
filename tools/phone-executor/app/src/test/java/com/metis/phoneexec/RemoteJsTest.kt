@@ -59,6 +59,17 @@ class RemoteJsTest {
         assertFalse("wrong-length signature", RemoteJs.accept(pubB64, js, v, Base64.getEncoder().encodeToString(ByteArray(10))))
     }
 
+    /** INTEROP with the CI signer: a fixed vector produced by `openssl genpkey -algorithm ed25519` +
+     *  `openssl pkeyutl -sign -rawin` (the phone-exec-js-sign workflow's exact commands), the raw 32-byte public key
+     *  from `openssl pkey -pubout -outform DER | tail -c 32`. If this fails, the app and CI disagree on Ed25519. */
+    @Test fun verifiesAnOpensslProducedSignature() {
+        val pub = "3QX06sUHYA6E2+TMb7zX7wXvLYZm7jWhLjSH6fm6KcY="
+        val msg = RemoteJs.message("2026-10-18.1", "abc")
+        val sig = "NOTh1Vyjs6cOCqOLqrjyDZdxX+568VBQs7IXCm6ePiIG8SLuXZXVZM+LZpID7MHxzwJ4e7SK0ToH6rqhLvkTDg=="
+        assertTrue(RemoteJs.verify(pub, msg, sig))
+        assertFalse(RemoteJs.verify(pub, msg + "x", sig))
+    }
+
     @Test fun theBundledScriptCarriesAVersionPin() {
         val src = java.io.File("src/main/assets/exec.js").readText()
         val v = RemoteJs.versionOf(src)

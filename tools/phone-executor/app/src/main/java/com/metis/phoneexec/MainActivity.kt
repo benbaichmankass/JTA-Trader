@@ -151,6 +151,7 @@ class MainActivity : Activity() {
     private var lastPosCapMs = 0L
     private var drillFrontNextMs = 0L
     private var drillsRun = 0; private var drillLast = ""
+    private var curAmendCap: CaptureRun? = null   // the running amend's capture run: its id rides the amend_result
     private var bgTickets = 0; private var bgTicketLast = ""
     private var bgTicketOffUntilMs = 0L // tickets go to the front until this (BgTicket fallback)
     private var bgTicketNextMs = 0L     // an engine ticket job that reached no claim is not repeated before this
@@ -1397,6 +1398,7 @@ class MainActivity : Activity() {
         val fromTp = t.optDouble("from_tp", Double.NaN); val tp = t.optDouble("tp", Double.NaN)
         if (fromSl.isNaN() || sl.isNaN()) return amendRefuse(t, "amend has no from_sl/sl", null)
         val cap = CaptureRun("amend", aid)
+        curAmendCap = cap
         // the sheet's pencil / Confirm gate is the SERVER's claim config (PHONE-EXEC-OBSERVABLE-1018), never a build constant
         val sheetEdit = cfg.optBoolean("sheet_edit", false)
         val tpChange = !tp.isNaN() && !(!fromTp.isNaN() && close(tp, fromTp, pStep))
@@ -2020,6 +2022,8 @@ class MainActivity : Activity() {
     private suspend fun amendResult(t: JSONObject, result: String, why: String, slRead: Double?, tpRead: Double?, dump: JSONObject?) {
         val b = JSONObject().put("kind", "amend_result").put("ticket_id", t.optString("ticket_id"))
             .put("amend_id", t.optString("amend_id")).put("result", result).put("reason", why).put("form", dump ?: JSONObject())
+            // PHONE-EXEC-OBSERVABLE-1018: the capture run that recorded this amend's steps (the refusal alert links it)
+            .put("capture_run", curAmendCap?.takeIf { it.posted > 0 }?.id ?: "")
         if (slRead != null) b.put("sl_read", slRead)
         if (tpRead != null) b.put("tp_read", tpRead)
         api.post("report", b)
