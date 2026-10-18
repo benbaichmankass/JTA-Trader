@@ -35,7 +35,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import re
 import uuid
 from datetime import datetime, timezone
@@ -309,8 +308,8 @@ def claim(device: Any, now: Optional[datetime] = None) -> Dict[str, Any]:
 
 
 def _capture_link(account_id: str, run_id: str) -> str:
-    base = os.environ.get("PUBLIC_API_BASE", "https://ict-bot.duckdns.org").rstrip("/")
-    return f"{base}/api/diag/phone_capture?account_id={account_id}&run_id={run_id}" if run_id else ""
+    from src.prop.phone_captures import capture_link
+    return capture_link(account_id, run_id)
 
 
 def _f(v: Any) -> Optional[float]:

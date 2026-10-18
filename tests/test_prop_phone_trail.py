@@ -213,11 +213,25 @@ def test_amended_claim_that_does_not_match_the_ask_is_a_mismatch_and_retries(_is
 
 def test_refused_amend_does_not_stop_the_next_attempt(_iso):
     a = _claimed()
-    _report(a, "refused", reason="edit control not found")
+    _report(a, "refused", reason="edit control not found", capture_run="T1-a1-20261018T120000Z")
     assert _trail()["fails"] == 1 and "locked" not in _trail()
-    b = _attempt(1)
+    # a LIVE refusal (PHONE-EXEC-OBSERVABLE-1018 piece 5): EVERY one names the stop to set by hand + the captures
+    assert len(_iso) == 1 and "SET THE STOP BY HAND" in _iso[0] and "ETHUSDT long stop -> 2530.0 (from 2450.0)" in _iso[0]
+    assert "/api/diag/phone_capture?account_id=breakout_2&run_id=T1-a1-20261018T120000Z" in _iso[0]
+    assert _trail()["amend"]["capture_run"] == "T1-a1-20261018T120000Z"
+    b = _attempt(1, capture_run="bad run id!")
     assert b is not None and b["amend_id"] == "T1#a2"
+    assert sum("refused before any click" in m.lower() for m in _iso) == 2, "a live refusal is never silent, streak or not"
+    assert "Step captures: none posted" in _iso[1] and "capture_run" not in _trail()["amend"]
+
+
+def test_dry_refusal_pings_once_per_streak_without_a_hand_set_ask(_iso, monkeypatch):
+    monkeypatch.setenv("PROP_PHONE_MODE_BREAKOUT_2", "dry")
+    a = _claimed()
+    _report(a, "refused", reason="edit control not found")
+    assert _attempt(1) is not None
     assert sum("refused before any click" in m for m in _iso) == 1  # first of the streak only
+    assert not any("SET THE STOP BY HAND" in m for m in _iso), "nothing to set by hand when no live amend was due"
 
 
 def test_backoff_then_retry():
@@ -240,7 +254,9 @@ def test_repeated_failures_raise_one_red_flag_and_keep_trying_then_recover(_iso)
     tr = _trail()
     assert tr["fails"] == 6 and tr["flagged"] and "locked" not in tr
     assert sum(m.startswith("📱 trail breakout_2: 🚩") for m in _iso) == 1   # exactly ONE red flag
-    assert len(_iso) == 2                                                   # first failure + the flag
+    # every LIVE refusal names the stop to set by hand (5 of the 6 failures are refusals; the mismatch is not the
+    # first of its streak) + the one flag
+    assert len(_iso) == 6 and sum('SET THE STOP BY HAND' in m for m in _iso) == 5
     assert _attempt(31, "amended", sl_read=2520.0 + 40 * 33 - 70, tp_read=2800.0) is not None
     assert sum("RECOVERED" in m for m in _iso) == 1 and not _trail().get("flagged") and _trail()["fails"] == 0
 
