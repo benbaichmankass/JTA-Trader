@@ -41,6 +41,9 @@ def _iso(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr("src.runtime.notify.send_telegram_direct", lambda m, **k: sent.append(m) or True)
     import src.prop.prop_trail as pt
     monkeypatch.setattr(pt, "_load_legs", lambda *a, **k: LEGS)
+    # the live pencil + Confirm gate (3 drill passes or the operator's pin) is OPEN for the amend-path tests; the
+    # closed-gate behaviour has its own tests below
+    monkeypatch.setattr(ptr, "_sheet_edit_gate", lambda acct: {"enabled": True, "source": "config", "passes": 0})
     return sent
 
 
@@ -562,3 +565,44 @@ def test_backoff_without_a_served_script_keeps_its_clock(_iso, monkeypatch):
     assert _trail()["backoff"]["exec_js"] is None
     later = _candles([2520, 2560, 2600, 2640])
     assert ptr.plan_amends("breakout_2", now=NOW + timedelta(minutes=30), candles_fn=lambda s, tf: later)["emitted"] == []
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# THE GATE: while sheet_edit is closed (drill passes < 3, no pin) the server emits NO amend — the app would refuse the
+# pencil by design and every refusal burned the backoff (measured 2026-10-18). One alert per ticket; nothing backs off;
+# the first plan after the gate opens emits at once, and the exec.js waiver is not consumed by a gated plan.
+# ---------------------------------------------------------------------------------------------------------------
+def test_closed_sheet_edit_gate_emits_nothing_and_alerts_once(_iso, monkeypatch):
+    monkeypatch.setattr(ptr, "_sheet_edit_gate", lambda acct: {"enabled": False, "source": "drills", "passes": 1, "needed": 3})
+    _parent()
+    out = ptr.plan_amends("breakout_2", now=NOW, candles_fn=lambda s, tf: UP)
+    assert out["emitted"] == [] and any("gate closed (drills: passes 1/3)" in x["why"] for x in out["log"])
+    assert sum("no amend emitted while the sheet_edit gate closed" in m for m in _iso) == 1
+    tr = _trail()
+    assert tr.get("gate_alerted") and "backoff" not in tr and "last_bar" not in tr and "amend" not in tr
+    # a second gated plan: logged, not alerted again
+    out = ptr.plan_amends("breakout_2", now=NOW + timedelta(minutes=5), candles_fn=lambda s, tf: UP)
+    assert out["emitted"] == [] and sum("no amend emitted" in m for m in _iso) == 1
+    # the gate opens (3 passes): the very next plan emits from the server's resting stop
+    monkeypatch.setattr(ptr, "_sheet_edit_gate", lambda acct: {"enabled": True, "source": "drills", "passes": 3, "needed": 3})
+    out = ptr.plan_amends("breakout_2", now=NOW + timedelta(minutes=6), candles_fn=lambda s, tf: UP)
+    assert out["emitted"] == ["T1#a1"]
+    assert ptr.claim_amend(_dev(), now=NOW + timedelta(minutes=6))["from_sl"] == 2450.0
+
+
+def test_gated_plans_do_not_consume_the_exec_js_waiver(_iso, monkeypatch):
+    monkeypatch.setattr(ptr, "_served_exec_js", lambda: "2026-10-18.3")
+    a = _claimed()
+    _report(a, "refused", reason="sheet read verified; the pencil click waits for the server's sheet_edit")
+    b = _attempt(2, "refused", reason="sheet read verified; the pencil click waits for the server's sheet_edit")
+    assert b is not None and _trail()["backoff"]["n"] == 2   # 2 closed bars: until NOW+4h
+    later = _rising(6)
+    # the gate closes; a newer script is served; gated plans return before the backoff check (waiver untouched)
+    monkeypatch.setattr(ptr, "_sheet_edit_gate", lambda acct: {"enabled": False, "source": "drills", "passes": 2, "needed": 3})
+    monkeypatch.setattr(ptr, "_served_exec_js", lambda: "2026-10-18.4")
+    out = ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=2, minutes=10), candles_fn=lambda s, tf: later)
+    assert out["emitted"] == [] and _trail()["backoff"]["exec_js"] == "2026-10-18.3"
+    # the gate opens inside the wait: the waiver fires now and the amend emits
+    monkeypatch.setattr(ptr, "_sheet_edit_gate", lambda acct: {"enabled": True, "source": "drills", "passes": 3, "needed": 3})
+    out = ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=3, minutes=5), candles_fn=lambda s, tf: later)
+    assert out["emitted"] == ["T1#a3"] and _trail()["backoff"]["exec_js"] == "2026-10-18.4"

@@ -795,7 +795,11 @@ starts with it; USD/USDT/USDC = price, the coin = quantity), reports `n_usd` / `
 `tools/phone-executor/test/fixtures/breakout-sheet-tpsl-stop-row` (built from that capture with
 `fixture_from_capture.py`) proves the read in CI. Same day, the planner: a running backoff is waived ONCE when a
 NEWER signed exec.js is served than the one the last attempt ran (`backoff.exec_js`, `_served_exec_js`), so a reader
-fix is tried on the next plan instead of after the 8-bar cap (#a8 sat at `fails: 7`).
+fix is tried on the next plan instead of after the 8-bar cap (#a8 sat at `fails: 7`). And the planner emits **no
+amend while the `sheet_edit` gate is closed** (drill passes < 3 and no pin): the app would refuse the pencil by
+design and every such refusal counted as a failure; instead the plan is logged, ONE alert per ticket names what arms
+the gate, nothing backs off, and the first plan after the gate opens emits at once (a gated plan never consumes the
+exec.js waiver).
 
 **UNMEASURED:** no capture has shown Breakout's Positions row edit control or its dialog. The headless fixtures
 (`test/exec_check.js`, "amend") prove the helpers' mechanics on synthetic DOM only. The first real amend, dry or live,

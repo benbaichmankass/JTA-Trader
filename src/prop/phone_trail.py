@@ -229,6 +229,21 @@ def _backoff_bars(n: int) -> int:
     return min(2 ** max(int(n) - 1, 0), BACKOFF_CAP_BARS)
 
 
+PASSES_TO_ARM = 3   # mirrors src.prop.phone_drill.PASSES_TO_ARM (the gate's own constant is read through the gate)
+
+
+def _sheet_edit_gate(account_id: str) -> Dict[str, Any]:
+    """The live pencil + Confirm gate the claim config carries to the app (:func:`src.prop.phone_drill.sheet_edit`).
+    Fail CLOSED on a read error, like the claim config does."""
+    try:
+        from src.prop import phone_drill
+        g = dict(phone_drill.sheet_edit(account_id) or {})
+        return g
+    except Exception:  # noqa: BLE001  # allow-silent: a gate that cannot be read is closed; logged
+        logger.warning("phone_trail: sheet_edit gate read failed for %s", account_id, exc_info=True)
+        return {"enabled": False, "source": "unreadable", "passes": None}
+
+
 def _served_exec_js() -> Optional[str]:
     """The exec.js version the server currently SERVES to the phone (signed and matching the tree), else None.
     Recorded on every failed attempt; a newer served version waives that attempt's backoff once."""
@@ -337,6 +352,23 @@ def _plan_one(conn: Any, r: Any, account_id: str, now: datetime, legs: Mapping[s
     if not leg:
         return
     tr = _load_trail(m, tid)
+    gate = _sheet_edit_gate(account_id)
+    if not gate.get("enabled"):
+        # THE GATE (PHONE-EXEC-OBSERVABLE-1018): the app refuses the pencil click until the server's sheet_edit says
+        # so (3 drill passes, or the operator's pin). Emitting an amend it will refuse by design only burns the
+        # ticket's backoff (measured 2026-10-18: every refusal counted as a failure). So the server does not emit
+        # while the gate is closed: the plan is logged, ONE alert per ticket names what arms it, nothing backs off,
+        # and the next plan after the gate opens emits at once.
+        why = (f"sheet_edit gate closed ({gate.get('source') or 'drills'}: passes {gate.get('passes')}/"
+               f"{gate.get('needed') or PASSES_TO_ARM})")
+        out["log"].append({"ticket_id": tid, "why": why})
+        if not tr.get("gate_alerted"):
+            tr["gate_alerted"] = now.isoformat()
+            if _cas(conn, tid, raw, {**m, KEY: tr}):
+                out["alerts"].append(f"{tid}: no amend emitted while the {why}; the live stop edit arms after "
+                                     f"{PASSES_TO_ARM} rehearsal-drill passes on this phone (phone-drill) or the "
+                                     "operator's phone_accounts.<acct>.sheet_edit pin")
+        return
     if tr.get("human_hold"):
         released = _release_unread_hold(tr, tid, now)
         if released is None:
