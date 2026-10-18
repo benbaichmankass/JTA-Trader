@@ -6,6 +6,25 @@
 # this guard must remain "route the work to a session", because that is the
 # behaviour wanted.
 exceptions:
+  - id: MGR-20261018-EXEC-TEST-TRADES-GRANT
+    status: active
+    expires: "2026-10-21"
+    paths:
+      - "config/mandates.yaml"
+    reason: >-
+      OPERATOR GRANT, 2026-10-18 ~08:05Z, in manager session
+      session_01VduHYzdaXe27wTDBLSu8ao: a standing mandate for test trades to
+      verify the phone executor's operations (verbatim text in the
+      MD-EXEC-DEV-TEST-TRADES entry's source). The lane's classifier refused
+      the write because the grant reached it only relayed. The operator then
+      told the manager, verbatim: "the default fix for permissions is always to
+      try taking you off auto mode to impelment the changes first, not giving
+      me text to paste into a seperate session", and "Off auto mode". That
+      names the MANAGER as the author, so routing it to a lane is not what was
+      asked.
+
+      WHAT IT COVERS: the single commit that adds MD-EXEC-DEV-TEST-TRADES to
+      config/mandates.yaml. Nothing else in that file.
   - id: MGR-20261015-SOAK-AMEND-GRANT
     status: active
     expires: "2026-10-18"
