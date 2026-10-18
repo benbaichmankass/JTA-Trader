@@ -78,6 +78,19 @@ and supply is this pass's step E. So the health check now prints, every dispatch
 The dispatcher also now ranks **authored before generated inside a theme**, and a recurring unit ages from when it
 came **due**, not from its last stamp (a monthly re-run used to come due already "starved").
 
+**PROGRAMME PRIORITY (operator 2026-10-18 ~06:20Z: P1 active trade management + P2 AI trader are "our highest
+priority").** `research_compute.yaml` `value.programme_priority: [P1, P2]` (ordered) -- a due unit of a listed
+programme ranks first on every backend, above every theme and other programme; only a starved unit precedes it.
+When you author for those programmes, set `programme_node.programme` (the emitter does) so the unit is recognised.
+
+**MONEY FIRST across themes (operator 2026-10-18, "Fix now, money first").** Since that day `fair_order` does not
+round-robin the themes: a due unit is taken by the router's value score across ALL themes (real-money / prop /
+own-losses work first), a starved unit first in any theme, and the THEMES.yaml weight share only breaks an equal
+score. Programme nodes (`generated.family: programme:*`) count as asked units. What that means for this pass: a
+short theme (`H1-THEME`, `theme_share_min_ratio`) no longer recovers by waiting its turn -- it recovers when you
+author units there that carry an honest `value:` block (money at stake, confidence), or on spare capacity, or at
+`starve_hours`. Do not loosen the SLO to clear it; author the work.
+
 ## Ceiling and "done"
 
 - **Model Sonnet, dollar ceiling ~$5 per run** (manager hard cap $6). One question per
@@ -330,7 +343,7 @@ Draw new units from, in this order, until the floor is met or sources are exhaus
   `value:` block (`usd_at_stake_per_month`, `confidence`, `bucket`, `basis`). Do **not** write
   `run.workflow` on a new unit: the token-free dispatcher resolves class -> backend from
   `scripts/research/research_compute.yaml` (runner / trainer / Kaggle GPU), enforces each backend's capacity and the
-  Kaggle weekly quota, and ranks due units by value per cost. GPU work goes to Kaggle through
+  Kaggle weekly quota, and ranks due units by value per cost across every theme (money first). GPU work goes to Kaggle through
   `research-script-run-kaggle.yml` and comes back through the same collector, so a result is read exactly like
   any other. A class change or a capacity edit is a `scripts/research/research_compute.yaml` change (Tier 1, reviewed),
   not a unit edit.

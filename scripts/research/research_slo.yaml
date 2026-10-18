@@ -48,6 +48,12 @@ slos:
   theme_share_min_ratio:
     what: "worst theme's (fire share over 7 d) / (weight share in research/THEMES.yaml)"
     op: min
+    # MONEY FIRST (operator 2026-10-18, lane DISPATCH-MONEY-FIRST-1018): the dispatcher now ranks due units across
+    # themes by value and uses the weight share only to break ties, so this ratio recovers MORE SLOWLY than under the
+    # 2026-10-16 round-robin -- a theme holding only low-value units fires on spare capacity or at starve_hours
+    # (240 h, longer than this 7 d window). The threshold is deliberately NOT lowered: a breach here is the signal to
+    # author valuable units in the short theme (research-ops step E, H1-THEME), which is the recovery path the operator
+    # chose over raising the runner cap. Re-threshold only by a PR that says why.
     threshold: 0.5
   blocked_over_age:
     what: "blocked units whose id date is older than blocked_age_days (no blocked_at field exists; id date is an upper bound)"

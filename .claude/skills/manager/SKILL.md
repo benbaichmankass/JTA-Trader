@@ -370,7 +370,7 @@ moves it** — a note, a handoff line or a pipeline row with a far `due_when` is
 
 | red SLO | the lane you dispatch |
 |---|---|
-| `runnable_floor`, `authoring_supply_ratio_7d`, `theme_share_min_ratio`, `programme_coverage_pct` | an AUTHORING lane sized to the gap, aimed at the short themes / uncovered programme questions |
+| `runnable_floor`, `authoring_supply_ratio_7d`, `theme_share_min_ratio`, `programme_coverage_pct` | an AUTHORING lane sized to the gap, aimed at the short themes / uncovered programme questions. Since 2026-10-18 (money first: `fair_order` ranks across themes by value, weight only breaks ties) `theme_share_min_ratio` recovers only through valuable units authored in the short theme, spare capacity, or `starve_hours` -- it is expected to read red longer; the lever is supply, never the threshold |
 | `undispositioned_24h`, `grade_latency_p*_d` | a GRADING lane over `result_disposition_check.py --list` |
 | `research_ops_not_run`, `research_ops_age_h` | the next research-ops slot is told to finish the named `not_run` steps first; a missed slot is re-dispatched |
 | `blocked_over_age` | an unblock-or-retire lane over the oldest blocked units |

@@ -43,7 +43,10 @@ runnable 2 against a computed floor of 50, theme `regime` (weight 5) holding 0 q
 112 queued units generated monthly/weekly sweeps. The fair share in `dispatch_queue.fair_order` is
 weighted only among themes that HOLD due work, so an empty theme gets no slots however high its weight
 (fires 2026-10-13..16, 181 total from comms/research/utilization/: regime 20 = 11 % against a 24 % weight
-share). The weights cannot be honoured by ranking; they have to be honoured by SUPPLY. So:
+share). The weights cannot be honoured by ranking; they have to be honoured by SUPPLY -- and since 2026-10-18
+(MONEY FIRST, operator: `fair_order` takes due units across themes by the router's value score, a weight only
+breaks an equal score) ranking honours them even less, by design: a short theme recovers through valuable
+authored units, spare capacity or `starve_hours`, so `theme_share_min_ratio` is expected to read red longer. So:
   * `theme_supply` splits the floor by THEMES.yaml weight and reports each theme's runnable units,
     crediting generated (template / sweep) units for at most GENERATED_FLOOR_SHARE of a theme's share,
     so a theme stocked only with re-runs still reads as short of authored work. A short theme is an

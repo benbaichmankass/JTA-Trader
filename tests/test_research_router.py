@@ -137,8 +137,12 @@ def test_fair_order_ranks_by_value_per_cost_within_a_theme_and_theme_share_still
     assert order[0] == big.id and order[-1] == small.id
     assert big.raw["_rank"]["derivation"].startswith("score ")
     other = job(9, workflow="research-script-run.yml", theme="regime")
-    firsts = {j.raw["theme"] for j in dq.fair_order([small, mid, big, other], NOW, TH, CFG)[:2]}
-    assert firsts == {"live_strategy", "regime"}                           # fair share across themes is unchanged
+    # MONEY FIRST (operator 2026-10-18): across themes too, value decides -- `other` (regime, no value block and
+    # the default est, 18.75) sorts after big (750), mid (75) and small (32.1) of live_strategy; before 2026-10-18
+    # the cross-theme round-robin put it second. Theme share now only breaks an equal score
+    # (tests/test_research_dispatch_money_first.py).
+    order = [j.id for j in dq.fair_order([small, mid, big, other], NOW, TH, CFG)]
+    assert order == [big.id, mid.id, small.id, other.id]
 
 
 def test_nothing_starves_a_long_waiting_low_value_unit_sorts_first_in_its_theme():
