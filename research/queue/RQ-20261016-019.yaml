@@ -5,7 +5,7 @@ id: RQ-20261016-019
 title: 'Programme 01 Q4, soak book: does decay_stall10_t2, the one cell that cleared the monthly m20 gate
   on qqq_trend_long_1d (alpaca_paper), beat the declared exit in 3 of 4 calendar folds over 2018-03..2026-10,
   net of cost?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -136,3 +136,13 @@ generated:
   params:
     node: P1-Q4-qqq-trend-long-1d-soak-confirm
 last_dispatched_at: '2026-10-18T08:55:18+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-Q4-QQQ-TREND-LONG-1D-SOAK-CONFIRM
+  evidence:
+  - research/results/RQ-20261016-019/39113339488.jsonl
+  graded_at: '2026-10-18'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

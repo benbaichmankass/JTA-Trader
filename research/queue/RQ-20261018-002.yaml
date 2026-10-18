@@ -5,7 +5,7 @@ id: RQ-20261018-002
 title: 'CONFIRM RQ-20261016-65ff-06 on a fresh window: does ada_pullback_2h with VH95 (--vol-skip-above-pctl=0.95)
   still beat the declared leg on the 730 days BEFORE the window it was chosen on, net of the full cost
   stack, with no re-selection?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-REGIME
@@ -131,3 +131,13 @@ generated:
   params:
     node: P2-R3.g06-pass
 last_dispatched_at: '2026-10-18T10:17:19+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-RQ2026101665ff06-REGIME-VOLHOT-CONFIRM
+  evidence:
+  - research/results/RQ-20261018-002/39118681101.jsonl
+  graded_at: '2026-10-18'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
