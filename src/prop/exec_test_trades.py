@@ -144,12 +144,12 @@ def count_today(account_id: str, now: Optional[datetime] = None) -> int:
     """Test tickets written today (UTC) for the account that reached, or may still reach, the venue."""
     from src.prop import prop_journal
     now = now or _now()
-    day = now.strftime("%Y-%m-%d")
+    day_start = now.strftime("%Y-%m-%dT00:00:00")
     conn = prop_journal._connect()
     try:
         prop_journal.ensure_tables(conn)
-        rows = conn.execute("SELECT status FROM prop_tickets WHERE account_id = ? AND strategy = ? AND created_at >= ?",
-                            (account_id, STRATEGY, day)).fetchall()
+        rows = conn.execute("SELECT status FROM prop_tickets WHERE account_id = ? AND strategy = ? "
+                            "AND datetime(created_at) >= datetime(?)", (account_id, STRATEGY, day_start)).fetchall()
     finally:
         conn.close()
     return sum(1 for r in rows if str(r["status"] or "") not in _NOT_SENT)
