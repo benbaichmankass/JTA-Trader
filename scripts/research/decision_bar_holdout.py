@@ -165,8 +165,13 @@ def grade_leg(a_closed: List[dict], b_forming: List[dict], lo: Any, hi: Any, *,
     else:
         verdict, reason = "FORMING_STANDS", ("forming_ahead" if d_disc < 0 else "closed_not_robust")
     if incumbent == "closed":
+        # Labelling only (the statistics and thresholds are the same): a leg already on
+        # the closed bar keeps it; the label says what the rule found. FORMING_STANDS
+        # splits by its reason — forming ahead on discovery is a research flag, closed
+        # ahead but not robust across folds is not a finding against the incumbent.
         verdict = {"CLOSED_WINS": "KEEP_CLOSED", "CLOSED_NOT_REPLICATED": "KEEP_CLOSED_UNCONFIRMED",
-                   "FORMING_STANDS": "RESEARCH_FLAG_FORMING_AHEAD"}.get(verdict, verdict)
+                   "FORMING_STANDS": ("RESEARCH_FLAG_FORMING_AHEAD" if reason == "forming_ahead"
+                                      else "KEEP_CLOSED_NOT_SELECTED")}.get(verdict, verdict)
     proposal = ("decision_bar: closed (Tier-3, operator approval)" if verdict == PROPOSAL
                 else None)
     return {

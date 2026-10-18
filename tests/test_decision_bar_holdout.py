@@ -115,6 +115,9 @@ def test_closed_incumbent_never_proposes_a_revert():
     assert g["verdict"] == "RESEARCH_FLAG_FORMING_AHEAD" and g["proposal"] is None
     g2 = dbh.grade_leg(_monthly(0.6), _monthly(-0.2), LO, HI, incumbent="closed")
     assert g2["verdict"] == "KEEP_CLOSED" and g2["proposal"] is None
+    # closed ahead on discovery but not across the fold majority: not a flag against closed
+    g3 = dbh.grade_leg(_monthly(lambda i: 1.5 if i < 9 else -0.1), _monthly(0.0), LO, HI, incumbent="closed")
+    assert g3["reason"] == "closed_not_robust" and g3["verdict"] == "KEEP_CLOSED_NOT_SELECTED"
     with pytest.raises(ValueError):
         dbh.grade_leg(a, b, LO, HI, incumbent="sideways")
 

@@ -4,7 +4,7 @@ title: >-
   (what Stage 0 scored) beat the live FORMING-bar decision net of the full cost stack,
   by the operator's holdout standard (select on the earliest span, read the one selected
   configuration ONCE on the held-back latest span)?
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-LADDER
@@ -125,6 +125,11 @@ decision_rule:
     KEEP_CLOSED_UNCONFIRMED / RESEARCH_FLAG_FORMING_AHEAD / INDETERMINATE; a reversion to
     forming is a permissive change that would need its own evidence and is NOT proposed
     here. Thresholds are not changed after any result.
+    LABEL AMENDMENT AFTER THE RUN (2026-10-18, statistics and thresholds untouched): for the
+    closed incumbent, FORMING_STANDS with reason closed_not_robust maps to
+    KEEP_CLOSED_NOT_SELECTED, not RESEARCH_FLAG_FORMING_AHEAD — the original mapping
+    labelled "closed ahead on discovery but not across the fold majority" as a flag
+    against closed, which it is not. The result's label_note records the re-grade.
   what_it_does_not_do: >-
     Edits no config, roster or record and places no order. Uses no live-book P&L as
     evidence of edge: the live join (live_bt_trade_join.py, committed beside) tests the
@@ -187,6 +192,45 @@ lands:
   note: verdict.json committed to the store path; per-arm trades under
     comms/research/RQ-20261018-2a10-01/arms/ (the closed arm feeds live_bt_trade_join.py).
 
+last_dispatched_at: '2026-10-18T06:36:00+00:00'
+verdict: NO_LEG_CLEARS_CLOSED_WINS
+result: >-
+  docs/research/evidence/decision-bar-holdout-2026-10-18.json; per-arm trades under
+  comms/research/RQ-20261018-2a10-01/arms/. Rule committed at a652c60bf (PR #18884) before the
+  run; run locally in the lane's container (4 workers; the first attempt crashed on
+  trend_donchian_xrp_4h's own decision_bar key reaching run_backtest, fixed at c6afbe88c and the
+  whole run repeated — xrp_pullback_2h arms byte-identical across the two runs). Binance USD-M 1m
+  proxy 2020-01 .. 2026-10-16 23:59Z, full cost stack (fee 7.5 + slippage 3 bps rt + funding 1
+  bps/8h), arms config-exact to config/strategies.yaml at 4241f2039 (so ada_pullback_2h at
+  pullback_frac 0.618 and trend_donchian_eth_4h at atr_stop_mult 1.5 / trail_mult 6.0, the
+  #18868/#18869 values). FULL HISTORY, closed ahead on all six: xrp_pullback_2h closed n=414
+  +44.91R vs forming n=499 +26.24R (J 0.20); ada_pullback_2h 479 +74.95R vs 656 +63.79R (0.19);
+  trend_donchian_eth_4h 282 +98.58R vs 420 +80.82R (0.41); trend_donchian_xrp_4h 74 +14.25R vs
+  138 +7.05R (0.42); trend_donchian_eth_prop 1172 +89.14R vs 1682 +74.68R (0.47);
+  trend_donchian_sol_prop 402 +53.97R vs 588 +36.89R (0.46). Every month-block 90% interval of
+  the full-history dR straddles 0 (MDE 31-81R), as RQ-301/302 found. THE RULE: closed is
+  SELECTED on no leg — on every leg it leads in exactly 2 of 4 discovery folds (fold majority
+  needs 3), and on ada_pullback_2h it trails on discovery (-10.17R). Held-back span (latest 25%,
+  from 2025-02): closed ahead on xrp_pullback_2h +15.68R (closed 100 +14.82R vs forming 126
+  -0.86R), ada_pullback_2h +21.32R (103 +24.63R vs 143 +3.31R), trend_donchian_eth_prop +9.67R
+  (295 +10.99R vs 430 +1.32R); forming ahead on trend_donchian_eth_4h -10.01R (80 +17.50R vs 103
+  +27.50R), trend_donchian_sol_prop -3.50R, trend_donchian_xrp_4h -0.68R (25 vs 44 trades).
+  Verdicts: FORMING_STANDS x5 (ada forming_ahead; the other four closed_not_robust),
+  trend_donchian_xrp_4h KEEP_CLOSED_NOT_SELECTED. NO Tier-3 decision_bar PR is opened from this
+  record. REPORTED, not graded: the holdout span is read AFTER selection failed, so its sign is
+  descriptive — three of the five forming legs would have been ahead on the held-back span had
+  closed been selected; a rule keyed on the two pullback legs' direction could not have been
+  registered honestly after seeing this. STANDING_AT_RISK (record restatement, the leg's own
+  record window): xrp_pullback_2h closed +11.44R (n=57) vs forming -5.88R (n=74) — again
+  (PI-20260929-VOLSKIP-SIGNAL-0003); trend_donchian_eth_prop closed +10.26R (n=164) vs forming
+  -9.45R (n=250) — NEW, three prop accounts, filed PI-20261018-WCDIDFTE-0002. Live join
+  (comms/research/live_bt_join/2026-10-18-decision-bar/): the FORMING arm fires on 6 of the 9
+  xrp_pullback_2h live-only bybit_2 trades (closed never does) — the entry gap IS forming-bar
+  timing; trend_donchian_eth_4h live +8.84R gross vs closed-bar window -4.19R (entry +4.54R, exit
+  +7.92R; forming helped this leg live); trend_donchian_xrp_4h 7 live trades, 4 live-only (2 fire
+  under forming), too few to read. ada and eth_4h live trades were taken under the pre-#18868/9
+  parameters, so their joins against the current-config arms are confounded (ada: forming fires
+  on 1 of 6 live-only).
 related:
 - DECISION-BAR-CLOSED-1018
 - LIVE-BT-STAGE-B (PR #18870, comms/research/live_bt_join/2026-10-18/)
