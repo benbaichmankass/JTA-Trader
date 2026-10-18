@@ -5,7 +5,7 @@ id: RQ-20261016-009
 title: 'Programme 01 Q3, real money: do the six tp_extend cells that cleared the m20 gate on BOTH partitions
   for xrp_pullback_2h (bybit_2) still beat the declared 3R bracket by a material margin in 5 of 6 calendar
   folds over 2020-07..2026-10, net of cost?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -155,3 +155,15 @@ generated:
   params:
     node: P1-Q3-xrp-pb-tpx-confirm
 last_dispatched_at: '2026-10-18T07:04:01+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-Q3-XRPPB-TPX-CONFIRM
+  evidence:
+  - research/results/RQ-20261016-009/39103734048.jsonl
+  graded_at: '2026-10-18'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

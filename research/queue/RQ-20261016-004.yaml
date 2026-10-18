@@ -5,7 +5,7 @@ id: RQ-20261016-004
 title: 'Programme 01 Q2, real money + prop: derive trend_donchian_sol_prop''s PREDICTIVE take-profit from
   its own uncapped MFE distribution (bybit_2, bybit_portfolio and the three prop accounts trade the 6R
   target reached by 1.9% of trades)'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -112,3 +112,13 @@ generated:
   params:
     node: P1-Q2-solprop-derive
 last_dispatched_at: '2026-10-18T07:04:07+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-Q2-SOLPROP-PREDICTIVE-TP
+  evidence:
+  - research/results/RQ-20261016-004/39103755688.jsonl
+  graded_at: '2026-10-18'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
