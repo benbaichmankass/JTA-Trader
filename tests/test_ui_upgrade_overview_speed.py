@@ -177,6 +177,19 @@ def test_snapshot_partitions(monkeypatch):
     assert sum(body["counts"].values()) == body["total"] == len(items)
 
 
+def test_snapshot_next_is_the_ranked_runnable_queue(monkeypatch):
+    """`next` is what the manager dispatches next: ranked rows first, blocked rows excluded."""
+    items = ([{"id": f"Q{i}", "state": "queued"} for i in range(3)]
+             + [{"id": "R2", "state": "queued", "priority_rank": 2},
+                {"id": "R1", "state": "queued", "priority_rank": 1},
+                {"id": "RB", "state": "queued", "priority_rank": 1,
+                 "blocked_on": [{"kind": "work_item", "ref": "R1"}]}])
+    _fake_store(monkeypatch, items)
+    body = wk.get_work_snapshot()
+    assert [r["id"] for r in body["next"]] == ["R1", "R2", "Q0", "Q1", "Q2"]
+    assert body["next"][0]["priorityRank"] == 1 and body["next"][2]["priorityRank"] is None
+
+
 def test_snapshot_unreadable_is_not_empty_work(monkeypatch):
     from src.runtime import checklist_store
 

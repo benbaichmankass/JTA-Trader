@@ -166,3 +166,29 @@ def test_check_after_the_cutover_reports_the_store_instead_of_crashing(capsys):
     assert cl.main(["--check"]) == 0
     out = capsys.readouterr().out
     assert "monolith retired" in out and "readable" in out
+
+
+def test_priority_rank_is_validated_and_queue_orders_runnable_rows_by_it(tmp_path, capsys):
+    """The ranked queue is a register field (MANAGER-PACING-STRUCTURAL): `priority_rank` orders
+    the runnable rows, unranked rows sort last, and a bad rank is refused at the keyboard."""
+    repo = _seeded_repo(tmp_path)
+    assert _cli(repo, "add", "Q-LATE", "--title", "t", "--rank", "3") == 0
+    assert _cli(repo, "add", "Q-FIRST", "--title", "t") == 0
+    assert _cli(repo, "set", "Q-FIRST", "priority_rank=1") == 0
+    assert _cli(repo, "add", "Q-BLOCKED", "--title", "t", "--rank", "1") == 0
+    assert _cli(repo, "set", "Q-BLOCKED", 'blocked_on=[{"kind": "work_item", "ref": "Q-FIRST", "what": "x"}]') == 0
+    assert _cli(repo, "add", "Q-DONE", "--title", "t", "--state", "done", "--rank", "1") == 0
+    assert _cli(repo, "set", "Q-LATE", "priority_rank=0") == 1, "rank 0 is refused"
+    assert _cli(repo, "set", "Q-LATE", "priority_rank=soon") == 1, "a non-number is refused"
+    assert C.read_row("Q-LATE", repo)["priority_rank"] == 3, "a refused edit writes nothing"
+    ids = [r["id"] for r in C.queue(C.load(repo))]
+    mine = [i for i in ids if i.startswith("Q-")]
+    assert mine == ["Q-FIRST", "Q-LATE"], "lowest rank first"
+    ranks = [C.read_row(i, repo).get("priority_rank") for i in ids]
+    n = sum(r is not None for r in ranks)
+    assert None not in ranks[:n] and ranks[:n] == sorted(ranks[:n]), "ranked rows lead, in rank order; unranked last"
+    assert "Q-BLOCKED" not in ids and "Q-DONE" not in ids, "blocked and non-queued rows are not runnable"
+    capsys.readouterr()
+    assert _cli(repo, "queue") == 0
+    out = capsys.readouterr().out
+    assert out.index("Q-FIRST") < out.index("Q-LATE") and "runnable" in out
