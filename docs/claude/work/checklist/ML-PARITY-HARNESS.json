@@ -2,7 +2,7 @@
   "id": "ML-PARITY-HARNESS",
   "title": "ML plan P0: replay-parity harness (train row vs live row on identical bars; per-feature present%, non-default%, max abs diff) shared by every producer",
   "phase": "W41",
-  "state": "landed_unproven",
+  "state": "done",
   "owner": "manager (dispatch by capacity)",
   "lane": null,
   "model": null,
@@ -11,13 +11,20 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "[2026-10-11 ML-ROADMAP-LOOP] Plan item ML-P0 (= ML-PRODUCERS milestone M0, docs/plans/ml-producers-milestones-2026-10-08.md). Build on scripts/ml/_feature_parity_probe.py. Sonnet lane, ceiling $2. GO test: it reproduces the known funding gap on btc-regime-1h-lgbm-funding-svble-v1 (funding x3 absent). STOP if it cannot run on the trainer without the OOM noted in S-ML-FEATURE-GAPS (then do M1 parity inline). Observation that would close: harness merged AND one run printing per-feature present%/non-default%/max-abs-diff for the svble head, trainer-vm-diag issue number recorded here. Landed_unproven until that run is read. [2026-10-11 lane session_01Q3TKbDwLym8fEtnZ79Kuki] scripts/ml/replay_parity.py + tests/test_replay_parity.py written (train row = MarketFeaturesBuilder.iter_rows, live row = regime_shadow.feature_row_for_predictor on the trailing 200-bar window; per-feature live present%/non-default%/train non-default%/max_abs_diff/verdict). Planted-gap test: funding x3 train-filled but never live-emitted -> ABSENT/DEFAULT_LIVE, other 6 columns OK on 250 paired bars. landed_unproven until the trainer run is read: python3 scripts/ml/replay_parity.py --model-id btc-regime-1h-lgbm-funding-svble-v1 --symbol BTCUSDT --timeframe 1h --market-raw <market_raw dir> --funding-oi <funding_oi dir> via trainer-vm-diag after merge.",
-  "updated_at": "2026-10-11T12:43:24Z",
-  "updated_by": "session_01Q3TKbDwLym8fEtnZ79Kuki",
+  "note": "[2026-10-11 ML-ROADMAP-LOOP] Plan item ML-P0 (= ML-PRODUCERS milestone M0, docs/plans/ml-producers-milestones-2026-10-08.md). Build on scripts/ml/_feature_parity_probe.py. Sonnet lane, ceiling $2. GO test: it reproduces the known funding gap on btc-regime-1h-lgbm-funding-svble-v1 (funding x3 absent). STOP if it cannot run on the trainer without the OOM noted in S-ML-FEATURE-GAPS (then do M1 parity inline). Observation that would close: harness merged AND one run printing per-feature present%/non-default%/max-abs-diff for the svble head, trainer-vm-diag issue number recorded here. Landed_unproven until that run is read. [2026-10-11 lane session_01Q3TKbDwLym8fEtnZ79Kuki] scripts/ml/replay_parity.py + tests/test_replay_parity.py written (train row = MarketFeaturesBuilder.iter_rows, live row = regime_shadow.feature_row_for_predictor on the trailing 200-bar window; per-feature live present%/non-default%/train non-default%/max_abs_diff/verdict). Planted-gap test: funding x3 train-filled but never live-emitted -> ABSENT/DEFAULT_LIVE, other 6 columns OK on 250 paired bars. landed_unproven until the trainer run is read: python3 scripts/ml/replay_parity.py --model-id btc-regime-1h-lgbm-funding-svble-v1 --symbol BTCUSDT --timeframe 1h --market-raw <market_raw dir> --funding-oi <funding_oi dir> via trainer-vm-diag after merge. [2026-10-18 lane ML-UNBLOCK-1018] OBSERVED -> done. GO test met on the trainer (trainer-vm-diag #18883, run 39103913849): replay_parity.py --model-id btc-regime-1h-lgbm-funding-svble-v1 over 500 paired BTCUSDT 1h bars prints funding_rate / funding_rate_zscore / funding_rate_abs_z ABSENT_LIVE (0% live present) and the 6 other declared features OK (100% present, max_abs_diff 0.0) -- the known funding gap reproduced. Also run over the three ADVISORY heads: mes-regime-5m-lgbm-v2 HEAD_VERDICT OK (7/7 features value-equal, max_abs_diff 0.0; log_return non-default 95.8% on both sides) -- the V1 value-parity audit PASSES for that head. btc/sol-regime-15m-lgbm-fc-pcv-v2 print the six fc_* columns ABSENT_LIVE, but that is a HARNESS SCOPE LIMIT, not a live gap: the harness rebuilds the live row with regime_shadow.feature_row_for_predictor, which has no forecast join, while the live shadow rows DO carry fc_* (shadow/stats row_keys_seen, forecast_serve served=true for BTCUSDT and SOLUSDT at 05:45Z). Lever filed: ML-PARITY-FC-SHADOWLOG (pair the logged shadow feature_row against the training shard at the same bar; covers fc_* and every other column). RQ-20261011-17f4-01 stays blocked on that lever for the two fc heads; its mes head is answered.",
+  "updated_at": "2026-10-18T07:06:46Z",
+  "updated_by": "session_019BtYk72AWwvaGkwH81nW96",
   "observation": {
     "what": "one recorded trainer run of replay_parity.py on btc-regime-1h-lgbm-funding-svble-v1 printing per-feature verdicts with funding_rate/zscore/abs_z not OK (ABSENT_LIVE or DEFAULT_LIVE)",
     "how_to_check": "after the PR merges, open a trainer-vm-diag issue with cmd: python3 scripts/ml/replay_parity.py --model-id btc-regime-1h-lgbm-funding-svble-v1 --symbol BTCUSDT --timeframe 1h --market-raw <market_raw dir> --funding-oi <funding_oi dir>; record the issue number on the row",
     "due_by": "2026-10-18"
   },
+  "writeback": {
+    "roadmap": "ML-P0 closed 2026-10-18: scripts/ml/replay_parity.py reproduces the svble funding gap in a recorded trainer run (trainer-vm-diag #18883, run 39103913849): funding_rate / funding_rate_zscore / funding_rate_abs_z ABSENT_LIVE, 6 other features OK over 500 paired bars",
+    "arch": "docs/ARCHITECTURE-CANONICAL.md \u00a7 ML serve parity: the replay-parity harness is the per-feature present/non-default/value-equal check; it pairs market_raw-derived features and the funding side-stream, NOT the fc_* forecast side-stream (that pairing is the ML-PARITY-FC-SHADOWLOG lever)"
+  },
+  "roadmap": [
+    "M25"
+  ],
   "_seq": 400
 }
