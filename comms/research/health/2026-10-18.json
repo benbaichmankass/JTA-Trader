@@ -1,6 +1,6 @@
 {
  "schema": 1,
- "as_of": "2026-10-18T00:25:42Z",
+ "as_of": "2026-10-18T01:12:45Z",
  "producer": "scripts/research/research_slo.py",
  "config": "scripts/research/research_slo.yaml",
  "counts": {
@@ -14,10 +14,10 @@
    "state": "ok",
    "value": 75,
    "op": ">=",
-   "threshold": 40,
+   "threshold": 37,
    "what": "runnable units >= the computed floor (queue_throughput.computed_floor: max(25, ceil(fired_24h x 19/24)))",
    "evidence": {
-    "fired_24h_stamps": 50,
+    "fired_24h_stamps": 46,
     "queued": 172,
     "basis": "queue_replenish.runnable(); floor = queue_throughput.computed_floor(fired_24h)",
     "read_state": "measured"
@@ -26,12 +26,12 @@
   {
    "slo": "fires_24h",
    "state": "ok",
-   "value": 56,
+   "value": 52,
    "op": ">=",
    "threshold": 24,
    "what": "units fired in the last 24 h (sum of `dispatched` over comms/research/utilization/ records)",
    "evidence": {
-    "dispatch_runs_24h": 21,
+    "dispatch_runs_24h": 20,
     "basis": "sum(len(dispatched)) over comms/research/utilization records in 24 h",
     "read_state": "measured"
    }
@@ -39,7 +39,7 @@
   {
    "slo": "lands_24h",
    "state": "ok",
-   "value": 119,
+   "value": 115,
    "op": ">=",
    "threshold": 12,
    "what": "result rows landed in the last 24 h whose read_state is a verdict (not producer_failed / no_data)",
@@ -105,13 +105,13 @@
   {
    "slo": "authoring_supply_ratio_7d",
    "state": "ok",
-   "value": 1.19,
+   "value": 1.2,
    "op": ">=",
    "threshold": 1.0,
    "what": "authored (non-generated) units created in 7 d / authored units first-or-re-fired in 7 d",
    "evidence": {
     "authored_7d": 415,
-    "consumed_7d": 349,
+    "consumed_7d": 346,
     "authored_since_yesterday": 36,
     "basis": "non-generated units: id date in 7 d / last_dispatched_at in 7 d",
     "read_state": "measured"
@@ -218,7 +218,7 @@
   {
    "slo": "dispatcher_age_h",
    "state": "ok",
-   "value": 0.92,
+   "value": 1.7,
    "op": "<=",
    "threshold": 3,
    "what": "hours since the newest dispatcher utilization record on main (one per dispatch cycle that ran; lands ~1 h late)",
@@ -231,7 +231,7 @@
   {
    "slo": "collector_age_h",
    "state": "ok",
-   "value": 0.62,
+   "value": 1.41,
    "op": "<=",
    "threshold": 6,
    "what": "hours since the newest commit on main touching research/results/ (a result landed)",
@@ -244,7 +244,7 @@
   {
    "slo": "grader_age_h",
    "state": "ok",
-   "value": 3.38,
+   "value": 4.16,
    "op": "<=",
    "threshold": 14,
    "what": "hours since the last SUCCESSFUL research-queue-grade.yml run (GitHub; could_not_look without a token)",
@@ -257,7 +257,7 @@
   {
    "slo": "research_ops_age_h",
    "state": "ok",
-   "value": 2.93,
+   "value": 3.71,
    "op": "<=",
    "threshold": 8,
    "what": "hours since the newest research-ops pass record (comms/research/ops/*.json finished_at); the pass runs 4x/day",
@@ -323,6 +323,21 @@
  "runs": [
   {
    "at": "2026-10-18T00:25:42Z",
+   "counts": {
+    "ok": 13,
+    "breach": 3,
+    "could_not_look": 0
+   },
+   "not_ok": [
+    "grade_latency_p90_d",
+    "theme_share_min_ratio",
+    "research_ops_not_run"
+   ],
+   "alert": null,
+   "delivered": null
+  },
+  {
+   "at": "2026-10-18T01:12:45Z",
    "counts": {
     "ok": 13,
     "breach": 3,
