@@ -3014,6 +3014,15 @@ strategies:
     tp_r: 4  # M20 e35 re-check 2026-08-29: cell tp4 (wf_pass, wf 4/6, d_net_r +12.8231); was 50.0
     min_confidence: 0.0
     vol_skip_below_pctl: 0.1   # M21 E-2 round 4 vol_lo10 (wf 4/6, 2026-07-14) — skip entries whose trigger-bar ATR sits in the dead-vol bottom decile (trailing 200-bar pctl); IS net_R 31.0 -> 32.3 (dd 16.1 -> 15.1), OOS 5.4 -> 7.4 (dd 12.0 -> 10.9). Rollback = delete this line.
+    # vol_skip_above_pctl 0 -> 0.95 (Tier-3 PROPOSAL, lane TIER3-PACKETS-1018, HOLD for operator approval).
+    #   Skip entries whose trigger-bar ATR sits in the hot-vol top 5% (trailing 200-bar pctl); entry filter only,
+    #   exits untouched. Evidence: RQ-20261016-65ff-06 (VH95 chosen from 3 arms, 2024-10-05..2026-10-04: dR +7.27 R,
+    #   dDD -2.01 R, 3/4 folds) CONFIRMED on the disjoint preceding window by RQ-20261018-002 (rule
+    #   RULE-RQ2026101665ff06-REGIME-VOLHOT-CONFIRM, registered before the run), 2022-10-05..2024-10-04, ADAUSDT 2h,
+    #   net of fee 7.5 + slippage 3 bps rt + funding 1 bps/8h: B (leg as declared) n=134 +38.04 R maxDD 9.17 vs
+    #   VH95 n=122 +40.19 R maxDD 8.52 (dR +2.16, dDD -0.65, folds 3/4). Record: research/results/RQ-20261018-002/.
+    #   ROLLBACK: delete this line.
+    vol_skip_above_pctl: 0.95
     adx_min: 28             # ADX>=28 regime gate (Tier-3, operator-approved 2026-07-20; raised from 25). Per-year OOS walk-forward: 28 wins 2024/25/26, ties 2023, ~flat 2022; lowers maxDD 4/5 yrs, halves the worst year (2025 net -7.6->-2.2, dd 13.1->7.2). Filters ADA marginal-trend fakeouts (ADX just-over-25 entries that fail). XRP stays 25 (grid showed raising it degrades). ROLLBACK: set back to 25.
     # shadow_model_ids OMITTED (symbol-aware auto-wire). Observe-only.
 
