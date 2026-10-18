@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-3: operator approval required. Exit parameters of a REAL-MONEY leg (trend_donchian_eth_4h on bybit_2 + its strict mirror bybit_portfolio + paper bybit_1) in config/strategies.yaml: declare trail_decay_stall_bars 10 / trail_decay_tight_mult 1.8. Proposed by lane ACTIVE-MGMT-DRIVE-1018 from Programme 01 confirmation RQ-20261016-006 (rule RULE-P1-Q4-ETH4H-STALLDECAY-RERUN, registered 2026-10-16, run 39103750121); never merged by a lane.",
+  "why": "Arm D (trail_decay stall 10 / tight 1.8 on the #18868 incumbent atr 1.5 / trail 6.0) 70.03 R / 180 trades / maxDD 19.36 vs the incumbent 61.08 R / 160 / 18.06 over ETHUSDT 4h 2022-10-15..2026-10-14, 3 of 4 calendar folds, net R per capital-day 0.205 vs 0.127, net of fee 7.5 + slippage 3 bps rt + funding 1 bps/8h. The live producer exists (src/runtime/trail_decay.py); absent = off; rollback = delete two lines."
+}
