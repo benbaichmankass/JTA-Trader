@@ -15,14 +15,17 @@ why_this_matters: '65cc-10, 4591-01, 4591-06 and eda2-01 all PASSED (the regime 
   joiner ML-HEAD-AGREEMENT-JOIN). This 1h variant reads labelled published shards, so it needs ONLY the scorer: it removes the joiner from the critical
   path and runs off the saturated trainer. conformal_calibration has 0 registered models (ml_plan_status --diversity).'
 power:
-  expected_n: 3
-  min_detectable_effect: 0.3
+  expected_n: 24000
+  min_detectable_effect: 0.1
   effect_units: sd
-  design: paired
+  design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: Three symbols x ~24 rolling 30-day windows over the CV test span (tail_rows 40000 at min_train_frac 0.4 -> ~24000 OOS rows ~ 1000 days); the unit
-    of analysis is the (symbol, coverage level) selective-error comparison, with window-level validity.
+  basis: 'The selective-error comparison is PAIRED over folds and rows: a paired comparison is a one-sample test on the differences, so design is one_sample
+    (the queue''s power grader accepts one_sample | two_sample; ''paired'' was refused on 2026-10-18 when the unit left blocked/). Rows: tail_rows 40000
+    at min_train_frac 0.4 leaves ~24,000 OOS rows per symbol over 5 folds; d=0.1 paired needs ~785 rows, so rows are not the limit; bars are autocorrelated,
+    so the rule also needs >= 2 of 3 symbols and >= 6 windows per symbol rather than one significance test. The earlier basis counted 3 symbols as n; that
+    was the number of groups, not the sample.'
   feasibility:
     source: none
     accrual_basis: Fixed published shard; nothing accrues.
@@ -53,6 +56,12 @@ amendments:
     valid rule fails it in ~13% of windows by chance -- the registered >= 90% share would then grade validity as a coin flip. The 2-SE band tests what the
     clause means (exchangeability holds inside the window). Matched coverage was implicit in ''at the SAME coverage''; a weak model cannot keep 90% singleton
     sets, and comparing unmatched kept shares is not the registered comparison. The unit had not run; no result was seen.'
+- at: '2026-10-18'
+  by: lane ML-UNBLOCK-1018
+  before_any_run: true
+  what: 'power block: design paired -> one_sample; expected_n 3 -> 24000 (OOS rows per symbol), d 0.3 -> 0.1'
+  why: tests/test_research_queue.py::test_every_committed_job_is_both_powered_and_routable refused 'paired' (unverifiable) once the unit entered the dispatch
+    queue; the paired design is a one-sample test on differences, and the sample is rows, not symbols. No result was seen.
 compute: auto
 value:
   bucket: ai_trader
