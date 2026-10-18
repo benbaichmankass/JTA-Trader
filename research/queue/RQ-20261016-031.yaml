@@ -5,7 +5,7 @@ id: RQ-20261016-031
 title: 'tradeify_1 per-leg $ risk: does cutting trend_donchian_sol_prop''s ticket below ETH''s (SOL $25
   or $35 vs the configured $50 on both) beat the configured book on EV per life with no worse survival
   on every seed?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROP
@@ -120,3 +120,15 @@ generated:
   params:
     node: P5-Q3-PERLEG-TRAD
 last_dispatched_at: '2026-10-17T18:43:21+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P5-Q3-PERLEG-TRAD
+  evidence:
+  - research/results/RQ-20261016-031/39059367558.jsonl
+  graded_at: '2026-10-18'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
