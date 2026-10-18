@@ -78,6 +78,11 @@ and supply is this pass's step E. So the health check now prints, every dispatch
 The dispatcher also now ranks **authored before generated inside a theme**, and a recurring unit ages from when it
 came **due**, not from its last stamp (a monthly re-run used to come due already "starved").
 
+**PROGRAMME PRIORITY (operator 2026-10-18 ~06:20Z: P1 active trade management + P2 AI trader are "our highest
+priority").** `research_compute.yaml` `value.programme_priority: [P1, P2]` (ordered) -- a due unit of a listed
+programme ranks first on every backend, above every theme and other programme; only a starved unit precedes it.
+When you author for those programmes, set `programme_node.programme` (the emitter does) so the unit is recognised.
+
 **MONEY FIRST across themes (operator 2026-10-18, "Fix now, money first").** Since that day `fair_order` does not
 round-robin the themes: a due unit is taken by the router's value score across ALL themes (real-money / prop /
 own-losses work first), a starved unit first in any theme, and the THEMES.yaml weight share only breaks an equal

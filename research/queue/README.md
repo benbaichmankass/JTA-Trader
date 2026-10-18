@@ -219,6 +219,12 @@ weight in `THEMES.yaml`, verbatim "Prop first (Recommended)".)
 - Every queued unit carries `theme:` (a key of [`research/THEMES.yaml`](../THEMES.yaml): `regime`,
   `live_strategy`, `ml_health`, `new_strategy_prop`, `macro`, `infra`) and `priority:` 1-3 within the theme.
   `validate` refuses a queued/running/blocked unit without both; `done`/`retired` units are exempt.
+- **PROGRAMME PRIORITY (operator 2026-10-18 ~06:20Z, verbatim "Those two items are our highest priority, we need to
+  make sure we're pushing forward on them": P1 active trade management, P2 AI trader).** `research_compute.yaml`
+  `value.programme_priority` is an ORDERED list of programme ids; a due unit of a listed programme
+  (`programme_node.programme` / `generated.family: programme:<id>`) ranks first on every backend, above every other
+  theme and programme, earlier entries first, then the rules below. Only a starved unit goes ahead of it. Edit the
+  list to change the priority; the decision line prints `pick=programme:<id>`.
 - **MONEY FIRST across themes (operator 2026-10-18, "Fix now, money first").** `dispatch_queue.fair_order` takes
   the theme whose NEXT unit scores highest on the router's value score (`scripts/research/research_compute.yaml`
   `value:` -- $ at stake x confidence x bucket share x hand-written x age / cost), so a real-money / prop /

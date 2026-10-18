@@ -2,7 +2,9 @@
 #
 # Every non-done queue unit carries `theme:` (a key below) and `priority:` (1 = most urgent .. 3 = least,
 # WITHIN its theme). The dispatcher does NOT run themes in strict order, and since 2026-10-18 it does not
-# round-robin them either: MONEY FIRST (operator, "Fix now, money first") -- due units are taken across themes by
+# round-robin them either: PROGRAMME PRIORITY first (operator, same day: research_compute.yaml
+# value.programme_priority, [P1, P2] -- those units rank first on every backend), then MONEY FIRST (operator,
+# "Fix now, money first") -- due units are taken across themes by
 # the router's value score (scripts/research/research_compute.yaml `value:`), a starved unit first in any theme,
 # and the weighted share over the last `share_window_hours` of stamps decides only between EQUAL scores. A theme
 # therefore gets slots by holding VALUABLE due work, or spare capacity, or starve_hours -- not by its weight alone;

@@ -3,6 +3,11 @@
 The dispatcher orders due units ACROSS themes by the router's value score; theme share only breaks ties; starved
 units still go first; inside a theme an asked unit (authored or a programme node) still precedes a template refill.
 
+PROGRAMME PRIORITY (operator 2026-10-18 ~06:20Z, "Those two items are our highest priority, we need to make sure we're
+pushing forward on them": P1 active trade management, P2 AI trader): a due unit of a programme listed in
+research_compute.yaml `value.programme_priority` ranks first on every backend, in list order, above every other
+theme and programme; only a starved unit goes ahead of it.
+
 The reproduced case is research-queue-dispatch run 39098686264 (2026-10-18 04:56Z): github_runner's three slots went
 to RQ-20261017-ae17-08/-09 (regime, structural, score 6.5) and ae17-45 (infra, 30.7) while RQ-20261017-002
 (live_strategy, own_losses, 141.9) and the other P1 real-money units deferred on "github_runner at capacity". The
@@ -83,7 +88,11 @@ def test_the_142_own_losses_unit_fires_before_the_6_5_structural_unit_in_the_und
     assert abs(cheap.raw["_rank"]["rank_value"] - 6.5) < 0.3, cheap.raw["_rank"]["derivation"]
     # and the precondition of the old failure holds: regime had NO fire in the window, live_strategy had 30
     assert not any(j.raw["theme"] == "regime" for j in window_as_measured())
-    assert money.raw["_rank"]["pick"] == "value" and cheap.raw["_rank"]["pick"] == "value"
+    # the P1 unit is taken under the operator's programme priority; the regime unit by value
+    assert money.raw["_rank"]["pick"] == "programme:P1" and cheap.raw["_rank"]["pick"] == "value"
+    # and with the programme list emptied it STILL fires first, on value alone (the money-first rule on its own)
+    order2 = ranked(dq.fair_order(window_as_measured() + [regime_unit(), p1_unit()], NOW, TH, cfg_with([])))
+    assert [j.raw["theme"] for j in order2] == ["live_strategy", "regime"] and order2[0].raw["_rank"]["pick"] == "value"
 
 
 def test_the_old_round_robin_is_what_the_no_cfg_path_still_does_so_the_change_is_the_cfg_merge():
@@ -187,5 +196,78 @@ def test_the_committed_themes_file_keeps_the_rule_honest_and_the_decision_line_s
         dq.main(["--queue-dir", str(q), "--json", "--ref", "main"])
     rows = [r for r in json.loads(buf.getvalue())["decisions"] if r["outcome"] == "would_dispatch"]
     assert [r["id"] for r in rows] == ["RQ-20300110-001", "RQ-20300110-002"]
-    assert rows[0]["pick"] == "value" and rows[0]["value_score"] > 100 and "pick=value" in rows[0]["value_derivation"]
+    assert rows[0]["pick"] == "programme:P1" and rows[0]["value_score"] > 100 and "pick=programme:P1" in rows[0]["value_derivation"]
+    assert rows[1]["pick"] == "value" and "pick=value" in rows[1]["value_derivation"]
     assert rows[1]["value_score"] < 10
+
+
+# ── programme priority: a declared, ordered list the operator edits ─────────────────────────────────────────────
+import copy
+
+
+def cfg_with(priority):
+    c = copy.deepcopy(CFG)
+    c["value"]["programme_priority"] = priority
+    return c
+
+
+def prog_unit(i, prog, theme="live_strategy", usd=20, **kw):
+    """A low-value programme node (programme_node + generated.family, as the emitter writes both)."""
+    return job(i, theme, value={"bucket": "structural", "usd_at_stake_per_month": usd, "confidence": 0.2},
+               routing={"est_minutes": 10}, programme_node={"programme": prog, "node": f"{prog}-Q1"},
+               generated={"family": f"programme:{prog}", "key": f"programme:{prog}-Q1"}, **kw)
+
+
+def test_the_committed_config_declares_the_operators_programme_priority_p1_then_p2():
+    # Pinned to the operator's words (2026-10-18): P1 and P2 first, in that order. A re-prioritisation is a visible
+    # edit of research_compute.yaml value.programme_priority, never drift.
+    assert [str(x) for x in CFG["value"]["programme_priority"]] == ["P1", "P2"]
+
+
+def test_a_p1_unit_outranks_a_higher_score_non_p1_unit_in_any_theme():
+    p1 = prog_unit(1, "P1", usd=20)                                             # score ~3.4
+    rich = job(2, "regime", value={"bucket": "structural", "usd_at_stake_per_month": 5000, "confidence": 0.9},
+               routing={"est_minutes": 10})                                     # score ~4800
+    rich_same_theme = job(3, "live_strategy", value={"bucket": "structural", "usd_at_stake_per_month": 5000,
+                          "confidence": 0.9}, routing={"est_minutes": 10})
+    order = ranked(dq.fair_order([rich, rich_same_theme, p1], NOW, TH, CFG))
+    assert order[0] is p1 and p1.raw["_rank"]["rank_value"] < rich.raw["_rank"]["rank_value"]
+    assert p1.raw["_rank"]["pick"] == "programme:P1" and p1.raw["_rank"]["programme_tier"] == 0
+    assert rich.raw["_rank"]["programme_tier"] == 2                             # outside the list: len(list)
+
+
+def test_programmes_rank_in_list_order_then_value_decides_inside_a_tier():
+    p2_rich = prog_unit(1, "P2", theme="regime", usd=400)
+    p1_poor = prog_unit(2, "P1", usd=20)
+    p1_mid = prog_unit(3, "P1", theme="infra", usd=60)
+    p5 = prog_unit(4, "P5", theme="regime", usd=900)                            # a programme, but not a listed one
+    other = job(5, "infra", value={"bucket": "structural", "usd_at_stake_per_month": 300}, routing={"est_minutes": 10})
+    order = ranked(dq.fair_order([other, p5, p1_poor, p2_rich, p1_mid], NOW, TH, CFG))
+    assert [j.id for j in order] == [p1_mid.id, p1_poor.id, p2_rich.id, p5.id, other.id]
+    assert p2_rich.raw["_rank"]["pick"] == "programme:P2" and p5.raw["_rank"]["pick"] == "value"
+
+
+def test_the_list_is_the_priority_reordering_or_emptying_it_changes_the_dispatch():
+    p2, p1 = prog_unit(1, "P2", theme="regime", usd=20), prog_unit(2, "P1", usd=20)
+    rich = job(3, "infra", value={"bucket": "structural", "usd_at_stake_per_month": 5000, "confidence": 0.9},
+               routing={"est_minutes": 10})
+    assert [j.id for j in ranked(dq.fair_order([rich, p2, p1], NOW, TH, cfg_with(["P2", "P1"])))] == [p2.id, p1.id, rich.id]
+    assert ranked(dq.fair_order([rich, p2, p1], NOW, TH, cfg_with([])))[0] is rich      # no list: pure money first
+    assert ranked(dq.fair_order([rich, p2, p1], NOW, TH, cfg_with(["P1"])))[1] is rich  # P2 unlisted: by value
+
+
+def test_a_starved_unit_still_goes_ahead_of_the_programme_priority():
+    starved = job(1, "macro" if "macro" in TH["themes"] else "infra", priority=3, routing={"est_minutes": 300})
+    starved.raw["id"] = "RQ-20291201-001"                                       # due ~40 days: past starve_hours
+    p1 = prog_unit(2, "P1", usd=500)
+    order = ranked(dq.fair_order([p1, starved], NOW, TH, CFG))
+    assert order[0] is starved and order[1] is p1 and starved.raw["_rank"]["pick"] == "starved"
+
+
+def test_programme_of_reads_the_node_field_or_the_generated_family():
+    assert dq.programme_of({"programme_node": {"programme": "P1"}}) == "P1"
+    assert dq.programme_of({"generated": {"family": "programme:P2"}}) == "P2"
+    assert dq.programme_of({"generated": {"family": "e35-bracket"}}) == ""
+    assert dq.programme_of({}) == ""
+    assert dq.programme_tier({"generated": {"family": "programme:P1"}}, CFG) == 0
+    assert dq.programme_tier({}, CFG) == len(CFG["value"]["programme_priority"])

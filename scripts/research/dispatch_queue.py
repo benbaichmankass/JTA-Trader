@@ -521,6 +521,26 @@ def is_refill(entry: Dict[str, Any]) -> bool:
     return isinstance(gen, dict) and not str(gen.get("family") or "").startswith("programme:")
 
 
+def programme_of(entry: Dict[str, Any]) -> str:
+    """The research programme a unit belongs to ("" when none): `programme_node.programme`, else the
+    `generated.family: programme:<id>` the programme emitter writes (both are on every P1 unit, 2026-10-18)."""
+    pn = entry.get("programme_node")
+    if isinstance(pn, dict) and pn.get("programme"):
+        return str(pn["programme"])
+    gen = entry.get("generated")
+    fam = str(gen.get("family") or "") if isinstance(gen, dict) else ""
+    return fam[len("programme:"):] if fam.startswith("programme:") else ""
+
+
+def programme_tier(entry: Dict[str, Any], cfg: Dict[str, Any]) -> int:
+    """Position of the unit's programme in ``value.programme_priority`` (0 = the operator's first priority);
+    len(list) for every unit outside it. PROGRAMME PRIORITY (operator 2026-10-18, ~06:20Z): P1 active trade
+    management and P2 AI trader rank first on every backend, above other themes and programmes."""
+    order = [str(x) for x in (cfg.get("value", {}).get("programme_priority") or [])]
+    prog = programme_of(entry)
+    return order.index(prog) if prog and prog in order else len(order)
+
+
 def fair_order(jobs: List[Any], now: datetime, themes_doc: Dict[str, Any],
                cfg: Optional[Dict[str, Any]] = None) -> List[Any]:
     """Dispatch order. With ``cfg`` (the live dispatcher): MONEY FIRST across themes, theme share breaks ties.
@@ -537,12 +557,18 @@ def fair_order(jobs: List[Any], now: datetime, themes_doc: Dict[str, Any],
     spare capacity.
 
     The order now, with ``cfg``:
-      1. Inside a theme (unchanged shape): starved first (DUE past ``value.starve_hours``), then ASKED units
+      1. Inside a theme (unchanged shape): starved first (DUE past ``value.starve_hours``), then the operator's
+         PROGRAMME PRIORITY (``value.programme_priority``, an ordered list; `programme_tier`), then ASKED units
          (authored, or a programme node -- see `is_refill`) before template refills, then by ``compute_router.score``
          (value per cost, bucket shares, hand-written and age boosts), then id.
       2. Across themes: take the theme whose NEXT unit is worth most -- a starved head first (nothing starves past
-         starve_hours, in any theme), then the highest score. Theme share (fired in the window + picked so far,
-         over THEMES.yaml weight) decides only between EQUAL scores, then the heavier theme, then the name.
+         starve_hours, in any theme), then the lowest programme tier, then the highest score. Theme share (fired in
+         the window + picked so far, over THEMES.yaml weight) decides only between EQUAL scores, then the heavier
+         theme, then the name.
+    PROGRAMME PRIORITY (operator 2026-10-18 ~06:20Z, verbatim "Those two items are our highest priority, we need to
+    make sure we're pushing forward on them": P1 active trade management, P2 AI trader). A due unit of a listed
+    programme ranks first on every backend, above every other theme and programme, P1 before P2 (the list is
+    ordered); only a starved unit goes ahead of it. Edit the list in research_compute.yaml to change the priority.
     A theme holding only low-value units therefore fires when capacity is spare or when its units starve (240 h),
     so ``theme_share_min_ratio`` recovers more slowly than under the round-robin -- stated on the SLO's config and
     on checklist row RESEARCH-PIPELINE-SLO, deliberately not re-thresholded. The share is still honoured by SUPPLY
@@ -590,11 +616,14 @@ def fair_order(jobs: List[Any], now: datetime, themes_doc: Dict[str, Any],
                 r["starved"] = waited > starve
                 r["waited_h"] = round(waited.total_seconds() / 3600.0, 1)
                 r["refill"] = is_refill(x.raw)
+                r["programme"] = programme_of(x.raw)
+                r["programme_tier"] = programme_tier(x.raw, cfg)
                 x.raw["_rank"] = r
-                # Asked before refill inside a theme (RESEARCH-ENGINE-1016, kept): someone ASKED an authored
-                # question or registered a programme node; a template re-run keeps the queue stocked. A refill
-                # still fires whenever its theme has no asked unit due -- or first, once DUE past starve_hours.
-                return (not r["starved"], r["refill"], -r["rank_value"], x.id)
+                # Programme priority first (operator 2026-10-18: P1, P2), then asked before refill inside a theme
+                # (RESEARCH-ENGINE-1016, kept): someone ASKED an authored question or registered a programme node;
+                # a template re-run keeps the queue stocked. A refill still fires whenever its theme has no asked
+                # unit due -- or first, once DUE past starve_hours.
+                return (not r["starved"], r["programme_tier"], r["refill"], -r["rank_value"], x.id)
             cand[th].sort(key=_key)
     for th in cand if cfg is None else ():
         # Within one effective priority a hand-written unit (someone ASKED this question) goes
@@ -610,11 +639,16 @@ def fair_order(jobs: List[Any], now: datetime, themes_doc: Dict[str, Any],
             th = min((t for t in cand if cand[t]),
                      key=lambda t: (used[t] / float(themes[t]["weight"]), -float(themes[t]["weight"]), t))
         else:
-            # MONEY FIRST: the theme whose next unit is worth most; share only breaks an equal score.
+            # Starved first; then the operator's programme priority; then MONEY FIRST: the theme whose next unit is
+            # worth most; theme share only breaks an equal score.
             th = min((t for t in cand if cand[t]),
-                     key=lambda t: (not cand[t][0].raw["_rank"]["starved"], -cand[t][0].raw["_rank"]["rank_value"],
+                     key=lambda t: (not cand[t][0].raw["_rank"]["starved"], cand[t][0].raw["_rank"]["programme_tier"],
+                                    -cand[t][0].raw["_rank"]["rank_value"],
                                     used[t] / float(themes[t]["weight"]), -float(themes[t]["weight"]), t))
-            cand[th][0].raw["_rank"]["pick"] = "starved" if cand[th][0].raw["_rank"]["starved"] else "value"
+            _r = cand[th][0].raw["_rank"]
+            _r["pick"] = ("starved" if _r["starved"]
+                          else f"programme:{_r['programme']}" if _r["programme_tier"] < len(cfg["value"].get("programme_priority") or [])
+                          else "value")
         out.append(cand[th].pop(0))
         used[th] += 1
     return out + rest
@@ -1481,7 +1515,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         if entry.get("_rank"):
             row["value_score"] = round(entry["_rank"]["rank_value"], 2)
             row["value_derivation"] = entry["_rank"]["derivation"]
-            if entry["_rank"].get("pick"):       # money-first: "value" (score across themes) or "starved"
+            if entry["_rank"].get("pick"):       # "programme:<id>" (operator priority), "value" (score across themes) or "starved"
                 row["pick"] = entry["_rank"]["pick"]
                 row["value_derivation"] += f" | pick={row['pick']}" + (" (refill)" if entry["_rank"].get("refill") else "")
         if res is not None and res.ok and res.wait:
