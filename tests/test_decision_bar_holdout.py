@@ -128,3 +128,15 @@ def test_discovery_never_sees_the_held_back_span():
     hold_n = g["holdout"]["closed"]["n"] + g["holdout"]["forming"]["n"]
     assert disc_n + hold_n <= len(a) + len(b)
     assert all(pd.Timestamp(f["end"]) <= boundary for f in g["discovery"]["folds"])
+
+
+def test_harness_kwargs_never_forward_the_live_decision_bar_keys():
+    """trend_donchian_xrp_4h declares decision_bar: closed; the arms set decision_bar
+    themselves, so the block's key must not reach run_backtest (it crashed the forming arm)."""
+    import forming_bar_pooled_regrade as fbr
+    block = {"enabled": True, "symbols": ["XRPUSDT"], "timeframe": "4h", "donchian": 20,
+             "decision_bar": "closed", "decision_bar_fresh_seconds": 600, "atr_stop_mult": 2}
+    kw, unmodelled = fbr.harness_kwargs(block, "trend")
+    assert not any(k.startswith("decision_bar") for k in kw)
+    assert not any(k.startswith("decision_bar") for k in unmodelled)
+    assert kw["donchian"] == 20 and kw["atr_stop_mult"] == 2

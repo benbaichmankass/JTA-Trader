@@ -266,6 +266,7 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
         results[leg] = res
         _write_jsonl(out_dir / "arms" / f"{leg}__A_closed__trades.jsonl", r["_A"])
         _write_jsonl(out_dir / "arms" / f"{leg}__B_forming__trades.jsonl", r["_B"])
+        _write_verdict(out_dir, args, legs, results, partial=True)  # a later crash keeps this leg
         print(f"{leg:26s} closed n={r['A_closed']['n']:4d} {r['A_closed']['net_r']:+8.2f}R | "
               f"forming n={r['B_forming']['n']:4d} {r['B_forming']['net_r']:+8.2f}R | "
               f"disc dR={g['discovery']['delta_r']:+.2f} folds {g['discovery']['folds_closed_ahead']}/"
@@ -274,6 +275,11 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
     for f in tmp.glob("*"):
         f.unlink()
     tmp.rmdir()
+    return _write_verdict(out_dir, args, legs, results, partial=False)
+
+
+def _write_verdict(out_dir: Path, args: argparse.Namespace, legs: List[str],
+                   results: Dict[str, Any], *, partial: bool) -> Dict[str, Any]:
     out = {
         "unit": args.research_unit or UNIT, "rule": RULE, "params": dict(PARAMS),
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -281,6 +287,7 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
         "population": (f"{len(legs)} legs ({', '.join(legs)}): every (account, leg) routing of each is "
                        f"listed under legs[].routings; arms config-exact to config/strategies.yaml; "
                        f"entries on bars with a 200-bar live frame"),
+        "complete": not partial, "legs_graded": sorted(results),
         "legs": results,
     }
     (out_dir / "verdict.json").write_text(json.dumps(out, indent=1, default=str) + "\n", encoding="utf-8")
