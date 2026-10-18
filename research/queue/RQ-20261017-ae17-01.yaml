@@ -1,7 +1,7 @@
 id: RQ-20261017-ae17-01
 title: 'Volatility regime (hot tail), eth_pullback_2h: does moving vol-skip-above percentile (0.8, 0.9, 0.95) beat the declared setting net of
   the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: regime
 priority: 2
@@ -113,3 +113,14 @@ related:
 - scripts/research/exit_lever_ablation.py
 - docs/research/entry-refinement-coverage.json
 last_dispatched_at: '2026-10-17T23:30:38+00:00'
+grading:
+  attested: RULE-RQ20261017ae1701-AXIS
+  auto: true
+  decision_rule_id: RULE-RQ20261017ae1701-AXIS
+  evidence:
+  - research/results/RQ-20261017-ae17-01/39079331648.jsonl
+  graded_at: '2026-10-18'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

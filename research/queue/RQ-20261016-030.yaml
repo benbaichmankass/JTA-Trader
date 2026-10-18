@@ -4,7 +4,7 @@
 id: RQ-20261016-030
 title: 'velotrade_1 sizing rung 2: around the adopted 0.5%, does a nearby flat level or room sizing dominate
   on the window-matched 1095 d ledgers?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROP
@@ -123,3 +123,15 @@ generated:
   params:
     node: P5-Q2R2-SIZING-VELO
 last_dispatched_at: '2026-10-17T18:43:21+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P5-Q2R2-SIZING-VELO
+  evidence:
+  - research/results/RQ-20261016-030/39059369684.jsonl
+  graded_at: '2026-10-18'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

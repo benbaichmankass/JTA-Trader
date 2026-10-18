@@ -5,7 +5,7 @@ id: RQ-20261017-001
 title: 'Programme 01 Q3, real money: does the Donchian measured-move TP revision (width_mult 1.0, the
   arm RQ-20261007-080 passed) beat trend_donchian_eth_4h''s declared bracket over 2020-07..2026-10 by
   a material margin in 5 of 6 calendar folds, net of cost?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -143,3 +143,15 @@ generated:
   params:
     node: P1-Q3-eth4h-measured-move-confirm
 last_dispatched_at: '2026-10-17T22:25:46+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-Q3-ETH4H-MEASURED-MOVE-CONFIRM
+  evidence:
+  - research/results/RQ-20261017-001/39075061181.jsonl
+  graded_at: '2026-10-18'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
