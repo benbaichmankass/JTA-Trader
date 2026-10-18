@@ -5,7 +5,7 @@ id: RQ-20261016-024
 title: 'velotrade_1: does adding trend_donchian_eth_4h ALONE (the only gate-eligible 4h leg) to the 1h
   ETH+SOL book beat it at the SAME risk 0.0035 on EV per life with no worse survival on every seed? (window-matched
   1095 d)'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROP
@@ -138,16 +138,11 @@ grading:
   decision_rule_id: RULE-P5-Q5-E4H-VELO-0035
   evidence:
   - research/results/RQ-20261016-024/39015654952.jsonl
+  - research/results/RQ-20261016-024/39106326582.jsonl
   graded_at: '2026-10-18'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: RESEARCH-AUTHOR-GRADE-1017
-  owner_reason: 'Rule cannot be applied: the single row is producer_failed (timed out at 240 min with
-    12 of 15 sim cells landed under comms/research/RQ-20261016-024/39015654952/sims). The est_minutes
-    110 scaled from 1bf3-02 under-called C4H (4 legs) by >2x. Fix in this PR: run.timeout_minutes 240
-    -> 330 (the script_run ceiling; sibling heavy nodes in 05-prop.yaml already use 330) and last_dispatched_at
-    null so the unit is re-run; node P5-Q5-E4H-VELO-0035 carries the same value. Closes when the re-run
-    lands. Not a verdict.'
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
-  rows: 1
-  verdict: null
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 2 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
+  rows: 2
+  verdict: fail

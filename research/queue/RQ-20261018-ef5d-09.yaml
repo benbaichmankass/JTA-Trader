@@ -3,7 +3,7 @@ title: >-
   Programme 07 TIMEFRAMES, short arm B3: LIQUIDITY-SWEEP reversal (failed Donchian-20 break that pierces >= 0.25 ATR and closes
   back inside) on 1h bars for the six Bybit perps, 2021-01-01..2026-10-17 -- far-side target vs a 1R catch-the-wave target
   -- vs the default fade
-status: queued
+status: done
 cadence: once
 theme: timeframes
 priority: 2
@@ -142,3 +142,16 @@ related:
 - docs/research/programmes/07-TIMEFRAMES.md
 - research/programmes/07-timeframes.yaml
 last_dispatched_at: '2026-10-18T19:13:09+00:00'
+grading:
+  attested: RULE-P7-B3-SWEEP-REVERSAL-1H
+  auto: true
+  decision_rule_id: RULE-P7-B3-SWEEP-REVERSAL-1H
+  evidence:
+  - research/results/RQ-20261018-ef5d-09/39157781583.jsonl
+  graded_at: '2026-10-18'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
