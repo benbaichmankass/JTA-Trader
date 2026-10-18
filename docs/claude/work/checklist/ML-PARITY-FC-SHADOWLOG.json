@@ -1,0 +1,21 @@
+{
+  "id": "ML-PARITY-FC-SHADOWLOG",
+  "title": "Lever for RQ-20261011-17f4-01 (V1 value-parity audit): replay_parity.py --shadow-log mode pairing each head's LOGGED live feature_row (runtime_logs/shadow_predictions.jsonl, trainer-resident) against the training shard row at the same bar -- covers fc_* (the forecast side-stream the recompute path cannot pair) and every other declared feature",
+  "phase": "W42",
+  "state": "queued",
+  "owner": "unassigned (manager dispatches by capacity; Sonnet, ceiling $4)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-18 lane ML-UNBLOCK-1018] MEASURED (trainer-vm-diag #18883): replay_parity.py over btc/sol-regime-15m-lgbm-fc-pcv-v2 reports the six fc_* features ABSENT_LIVE on 500 bars while the live shadow rows carry them (shadow/stats row_keys_seen lists fc_q10_rel..fc_up_prob for both heads; forecast_serve served=true 05:45Z). The harness's live side is a RECOMPUTE (feature_row_for_predictor over market_raw) with no forecast join, so it cannot judge the fc heads. Spec: --shadow-log <path> [--since] reads the head's rows, joins on bar ts to the shard's rows (market_features/<SYM>/<tf>/v002, fc_* included), and prints the same per-feature present%/non-default%/max_abs_diff table; a synthetic planted-gap test. DONE WHEN: one trainer run prints the table for both fc heads and RQ-20261011-17f4-01 is graded by its rule (PASS or a Tier-1 bug row + Tier-3 demote proposal).",
+  "updated_at": "2026-10-18T06:59:25Z",
+  "updated_by": "session_019BtYk72AWwvaGkwH81nW96",
+  "roadmap": [
+    "M25"
+  ],
+  "_seq": 558
+}

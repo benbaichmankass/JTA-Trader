@@ -313,3 +313,24 @@ def test_unit_declared_verbose_does_not_collide_with_engine_default(monkeypatch)
     seen.clear()
     mb._mk_catboost({})
     assert seen["verbose"] == 0
+
+
+def test_calibrated_logit_learner_is_registered_and_beats_the_prior_on_a_linear_latent():
+    """ML-UNBLOCK-1018: the calibrated linear head is a registered, non-research-only kind. ml_bakeoff's synthetic
+    frame has an x0*x1 interaction a linear model cannot learn, so the probability-quality check runs on a linear
+    latent built here: log-loss must beat the class prior."""
+    pytest.importorskip("sklearn")
+    assert mb.probe_learner("sklearn_logit_calibrated", {}) is None
+    assert mb.LEARNERS["sklearn_logit_calibrated"][2] is False
+    rng = np.random.default_rng(3)
+    n = 3000
+    X = rng.normal(size=(n, 4))
+    logits = np.column_stack([1.5 * X[:, 0], 1.5 * X[:, 1], -0.8 * (X[:, 0] + X[:, 1])]) + rng.gumbel(size=(n, 3))
+    y = np.argmax(logits, axis=1)
+    tr, te = np.arange(2000), np.arange(2000, n)
+    fit = mb.LEARNERS["sklearn_logit_calibrated"][0]
+    P = fit(X[tr], y[tr], X[te], 3, {"method": "sigmoid", "cv": 3})
+    assert P.shape == (len(te), 3) and np.allclose(P.sum(axis=1), 1.0, atol=1e-6)
+    ll = mb.compute_metric("logloss", y[te], P, [0, 1, 2])
+    ll_prior = mb.compute_metric("logloss", y[te], mb._fit_prior(X[tr], y[tr], X[te], 3, {}), [0, 1, 2])
+    assert ll < ll_prior - 0.1, (ll, ll_prior)

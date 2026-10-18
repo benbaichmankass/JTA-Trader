@@ -36,6 +36,8 @@ THE UNIT BLOCK (``ml_bakeoff:`` in the unit YAML — registered BEFORE the run, 
       candidates: [chronos2, ...]     # names in learners (the arms under test)
       learners:
         incumbent: {kind: lightgbm, params: {...}, feature_blocks: [...]}
+        # kinds: prior · numpy_logit · lightgbm · catboost · sklearn_hgb · sklearn_extratrees · sklearn_mlp ·
+        #        sklearn_logit_calibrated (isotonic/sigmoid-calibrated linear head) · tabicl · tabpfn (research-only)
         ...
       rule: {...}                     # machine form of decision_rule.rule — see ``evaluate_rule``
 
@@ -281,6 +283,27 @@ def _mk_mlp(p):
                                           "early_stopping": True, "random_state": 0, **p}))
 
 
+def _mk_logit_calibrated(p):
+    """Calibrated LINEAR head (linear_logit family, ML-UNBLOCK-1018): a standardised multinomial logistic
+    regression wrapped in CalibratedClassifierCV (isotonic by default; `method: sigmoid` for Platt). The point is
+    probability QUALITY -- log-loss / Brier against the GBDT incumbent -- not rank skill; it is the cheapest
+    family that can serve on the money box (numpy at inference) if it ever earns a candidate manifest."""
+    try:
+        from sklearn.calibration import CalibratedClassifierCV
+        from sklearn.impute import SimpleImputer
+        from sklearn.linear_model import LogisticRegression
+        from sklearn.pipeline import make_pipeline
+        from sklearn.preprocessing import StandardScaler
+    except ImportError as e:
+        raise Unavailable(f"scikit-learn not importable: {e}")
+    q = dict(p or {})
+    method = str(q.pop("method", "isotonic"))
+    cv = int(q.pop("cv", 5))
+    base = LogisticRegression(**{"C": 1.0, "max_iter": 500, **q})
+    return make_pipeline(SimpleImputer(strategy="median"), StandardScaler(),
+                         CalibratedClassifierCV(base, method=method, cv=cv))
+
+
 def _mk_tabicl(p):
     try:
         from tabicl import TabICLClassifier
@@ -306,6 +329,7 @@ LEARNERS: Dict[str, Tuple[Callable, str, bool]] = {
     "sklearn_hgb": (_fit_sklearn_like(_mk_hgb), "BSD-3-Clause", False),
     "sklearn_extratrees": (_fit_sklearn_like(_mk_extratrees), "BSD-3-Clause", False),
     "sklearn_mlp": (_fit_sklearn_like(_mk_mlp), "BSD-3-Clause", False),
+    "sklearn_logit_calibrated": (_fit_sklearn_like(_mk_logit_calibrated), "BSD-3-Clause", False),
     "tabicl": (_fit_sklearn_like(_mk_tabicl), "BSD-3-Clause (verify on the Hub)", False),
     # Prior Labs weights are `license:other` (non-commercial): offline research evaluation ONLY.
     "tabpfn": (_fit_sklearn_like(_mk_tabpfn), "Prior Labs non-commercial (license:other)", True),
@@ -318,7 +342,8 @@ def probe_learner(kind: str, params: Dict[str, Any]) -> Optional[str]:
         return f"unknown learner kind {kind!r} (known: {sorted(LEARNERS)})"
     try:
         probe = {"lightgbm": _mk_lightgbm, "catboost": _mk_catboost, "sklearn_hgb": _mk_hgb,
-                 "sklearn_extratrees": _mk_extratrees, "sklearn_mlp": _mk_mlp, "tabicl": _mk_tabicl, "tabpfn": _mk_tabpfn}.get(kind)
+                 "sklearn_extratrees": _mk_extratrees, "sklearn_mlp": _mk_mlp,
+                 "sklearn_logit_calibrated": _mk_logit_calibrated, "tabicl": _mk_tabicl, "tabpfn": _mk_tabpfn}.get(kind)
         if probe:
             probe(dict(params or {}))
     except Unavailable as e:
