@@ -19,3 +19,9 @@ themes:
   new_strategy_prop: {weight: 6, what: "Stage-0 coverage, new strategies, prop-account fit"}
   macro:             {weight: 1, what: "macro / value sleeve and event studies"}
   infra:             {weight: 2, what: "research tooling and pipeline self-tests that are units"}
+  # 2026-10-18 OPERATOR REQUEST (relayed by the manager, lane FRONTIER-TIMEFRAMES-1018, paraphrased): "the LOWEST-priority
+  # research theme, but start planning it now and get tests into the queue soon" -- test different time frames on the
+  # frontier end (daily/weekly holds of weeks; sub-hour breakout families that clear the fee+slippage stack). Weight 1 =
+  # the floor (ties macro; a weight never goes below 1, PLANNING.md s2), so it gets slots but never leads the fair share.
+  # Programme 07: research/programmes/07-timeframes.yaml; milestone L-TIMEFRAMES.
+  timeframes:        {weight: 1, what: "horizon frontier: daily/weekly position trades and sub-hour breakout families, net of cost"}

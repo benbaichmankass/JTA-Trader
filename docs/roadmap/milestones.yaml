@@ -227,6 +227,28 @@ milestones:
     no_rows_reason: the Alpaca arm is complete; OANDA/IBKR-live carry no roster and no operator request is open
     owner: manager
     reviewed: 2026-10-11
+  - id: L-TIMEFRAMES
+    goal: G1
+    name: Horizon frontier -- longer (daily/weekly, weeks-long holds) and shorter (sub-hour breakout families) time frames, net of cost
+    status: active
+    where: >-
+      Created 2026-10-18 (operator request relayed by the manager, lane FRONTIER-TIMEFRAMES-1018: "the LOWEST-priority
+      research theme, but start planning it now"). Field 2026-10-18: every real-money leg decides on 2h/4h (crypto) or 1d
+      (Alpaca) bars with holds of hours to days; the only sub-hour work is the retired ict_scalp family and the 2026-09-30
+      <=1h discovery sweep (RQ-20260930-504, FAIL at taker cost, pre-lookahead-fix) and the 2026-10-06 prop breadth
+      screens (5m-15m FAIL as a configuration class, idea-family review 2026-10-16 s16); there are no crypto daily-bar or
+      weekly-bar records at all (row IR-CRYPTO-DAILY-TREND). Programme 07 (docs/research/programmes/07-TIMEFRAMES.md)
+      opens both arms with a cost-aware break-even study (RQ-20261018-ef5d-01/-02) that decides which horizons can pay
+      before any strategy is tried on them. Theme `timeframes` (weight 1, the floor) in research/THEMES.yaml.
+    next: >-
+      Land the break-even frontier per (venue/symbol, bar, hold); run the long-arm Stage-0 units (daily crypto Donchian /
+      pullback pooled across the six perps, weekly ETF/futures trend, regime-filtered position trading) and the short-arm
+      breakout-family units (vol-gated 30m breakout, 1h compression breakout with a catch-the-wave exit, 1h sweep
+      reversal) through scripts/research/harness_stage0.py; build the two missing harness levers (TF-ORB-COST-STACK,
+      TF-IGNITION-HARNESS) and the equity intraday candle lane (TF-EQUITY-INTRADAY-BARS). A PASS here is a lead for a
+      same-symbol overlap read against the live 2h/4h legs and then a re-entry case under MD-PROMOTE-S0-S1; never a roster act.
+    owner: manager (programme 07, weekly research programme review)
+    reviewed: 2026-10-18
   # ── G2 ──────────────────────────────────────────────────────────────────
   - id: L-PROP
     goal: G2

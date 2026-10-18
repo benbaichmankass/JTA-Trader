@@ -1,0 +1,101 @@
+id: RQ-20261018-ef5d-10
+title: >-
+  Programme 07 TIMEFRAMES, short arm B4 (BLOCKED on TF-ORB-COST-STACK): opening-range breakout on crypto perps -- the first
+  N 5m bars after the 00:00 UTC daily open and after the 13:30 UTC US cash open, break of the range, flat by session end --
+  net of the full cost stack
+status: blocked
+cadence: once
+theme: timeframes
+priority: 3
+kind: experiment
+question: >-
+  On Binance USD-M 5m candles for the six perps over 2021-01-01..2026-10-17, does an opening-range breakout (range = the first
+  3 / 6 five-minute bars after the session open; entry on the first close beyond it; stop at the opposite side of the range;
+  flat at session end) read net-positive pooled with >= 4 of 6 folds at pooled n >= 88, for session opens 00:00 UTC (the perp
+  funding/daily boundary) and 13:30 UTC (US cash open)? Arms: OR3_00, OR6_00, OR3_1330, OR6_1330, fixed now.
+why_this_matters: >-
+  Operator 2026-10-18 names range/opening breakouts among the families to test. scripts/backtest_orb.py exists but models
+  fees in POINTS, no slippage, no funding, RTH-only sessions, so CLAUDE.md excludes it from every promotion corpus (D1) and
+  RQ-20260930-504 excluded it from its grid for the same reason. Nothing can be read until row TF-ORB-COST-STACK lands; the
+  question is registered now so the design is fixed before any run. Prior short-horizon work this builds on and does NOT repeat:
+  RQ-20260930-504 (<=1h discovery grid at live/default params, FAIL at taker cost; squeeze/fade/pullback/fvg/chop had NO Stage-A
+  survivor at 5m-30m), blocked/RQ-20260930-505 (its 1m arm), RQ-20261016-1fa6-07 (maker entries do not rescue the 15m scalp
+  book, FAIL), the 2026-10-06 prop breadth batch RQ-20261006-005..031 (5m-15m taker FAIL as a configuration class), docs/research/idea-family-review-2026-10-16.md
+  s13/s16, rows IR-CRYPTO-DAILY-TREND and IR-INTRADAY-SEASONALITY-HARNESS.
+power:
+  expected_n: 600
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    88 pooled trades at d=0.3; expected_n=600 is an ESTIMATE: one trade a day at most per session per symbol over ~5.8 years
+    is ~2,000 opportunities per cell; a wide-range no-trade filter (range > 1.5 ATR, the harness's own) removes some.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Blocked on the instrument (TF-ORB-COST-STACK); nothing accrues. Re-measurement on fetched Binance Vision 5m candles
+      once the harness exists.
+decision_rule:
+  id: RULE-P7-B4-ORB-CRYPTO-SESSIONS
+  registered_at: '2026-10-18'
+  registered_before_run: true
+  statistic: >-
+    Once TF-ORB-COST-STACK lands: harness_stage0.py --family orb --timeframe 5m with arms OR3_00 / OR6_00 / OR3_1330 / OR6_1330
+    (or the equivalent backtest_orb.py flags --or-bars 3|6 --session-start 00:00|13:30 UTC), full cost stack via execution_costs.resolve_cost_policy;
+    per cell n, net_r, max_drawdown_r, 6 calendar folds; pooled.
+  rule: >-
+    Arms fixed now. Flags: --folds 6 --fold-majority 4 --n-floor 39 --pooled-n-floor 88 --breadth-frac 0.5. PASS iff any arm
+    passes the pooled Stage-0 rule -> node P7-B4-confirm (the passing session/range alone on the 17 equity symbols' 1h-resampled
+    sessions is NOT the confirmation -- equities need TF-EQUITY-INTRADAY-BARS; the confirmation is the other open time on
+    the same symbols). FAIL iff every arm fails. INDETERMINATE otherwise. Thresholds not changed after any result.
+  what_it_does_not_do: >-
+    Does not edit config/strategies.yaml, config/accounts.yaml or any roster; does not tune beyond the fixed arms listed;
+    does not pool windows with any committed record; is not a promotion case. Candles are Binance USD-M (a PROXY for Bybit
+    linear; prices track within a few bps) and the funding term is a directionless magnitude (execution_costs P1), both stated
+    in the record. Cannot run until the ORB harness carries the bps cost stack; a run on the points-fee harness would not
+    be net of cost and is refused.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 100
+  confidence: 0.15
+  bucket: frontier
+  basis: 'stand-in: a candidate session-breakout leg; an estimate.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 120
+  basis: >-
+    6 x 5m fetches over 2200 d (~630k bars each) x 4 arms; the ORB harness is per-session and fast. Estimate.
+  why_runner: public candles + a repo harness; CPU-only.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-TIMEFRAMES
+- M22
+programme: P7
+related:
+- TF-ORB-COST-STACK
+- scripts/backtest_orb.py
+- RQ-20260929-108
+- RQ-20260930-504
+- docs/research/programmes/07-TIMEFRAMES.md
+- research/programmes/07-timeframes.yaml
+blocked_on:
+- kind: work_item
+  ref: TF-ORB-COST-STACK
+  what: >-
+    scripts/backtest_orb.py has no bps cost stack (fees in points, no slippage, no funding) and no 24h UTC-session mode; regime_debt_matrix.classify
+    has no orb branch, so harness_stage0.py cannot run it. Row TF-ORB-COST-STACK names what to build.
+  clears_when: >-
+    TF-ORB-COST-STACK is done: backtest_orb.py takes --fee-bps-roundtrip/--slippage-bps-roundtrip/--funding-bps-per-window
+    through execution_costs.resolve_cost_policy, --session-start/--session-end in UTC with a 24h mode, emits trade rows, and
+    harness_stage0.py routes --family orb. Then git mv this unit to research/queue/, fill run.command with the registered
+    arms, and it dispatches.
+run:
+  workflow: null
+  note: Deliberately null until TF-ORB-COST-STACK lands (the instrument does not exist yet).
