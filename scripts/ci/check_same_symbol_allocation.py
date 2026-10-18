@@ -58,7 +58,10 @@ Key = Tuple[str, str]  # (account, symbol)
 
 #: "account/SYMBOL" -> exemption. The ONLY one. ``unit`` is the research unit whose landing closes it.
 GRANDFATHERED: Dict[str, Dict[str, Any]] = {
-    "bybit_1/ETHUSDT": {"legs": ["trend_donchian_eth_4h", "trend_donchian_eth_prop"],
+    # 2026-10-18 TIER3-PACKETS-1018: bybit_1 runs the soak alias trend_donchian_eth_mm05 (an exact copy of
+    # trend_donchian_eth_4h plus a declared tp_revision) in place of the incumbent: SAME pair, SAME unit and
+    # due date, one leg renamed. bybit_2 / bybit_portfolio keep the incumbent (bybit_2 entry below).
+    "bybit_1/ETHUSDT": {"legs": ["trend_donchian_eth_mm05", "trend_donchian_eth_prop"],
                         "unit": "RQ-20261015-1631-01", "due": "2026-10-29"},
     "bybit_1/XRPUSDT": {"legs": ["trend_donchian_xrp_4h", "xrp_pullback_2h"],
                         "unit": "RQ-20261015-1631-02", "due": "2026-10-29"},
