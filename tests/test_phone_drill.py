@@ -187,3 +187,102 @@ def test_cli_request_and_status(capsys):
     assert cli(["--request", "--account", "bybit_2"]) == 1
     assert cli(["--status", "--account", "breakout_2"]) == 0
     assert json.loads(capsys.readouterr().out.strip().splitlines()[-1])["pending"]["status"] == "requested"
+
+
+@pytest.fixture
+def _test_trade_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """A phone account whose bounds allow a test trade on ETHUSDT (MD-EXEC-DEV-TEST-TRADES)."""
+    from src.prop import exec_test_trades as et
+    plat = tmp_path / "platforms.yaml"
+    plat.write_text(yaml.safe_dump({"phone_accounts": {"breakout_2": {"platform": "breakout_phone", "instruments": {
+        "ETHUSDT": {"venue": "ETHUSD", "qty_step": 0.01, "price_step": 0.01}}}}}))
+    monkeypatch.setattr(pe, "PLATFORMS_PATH", plat)
+    acc = tmp_path / "accounts.yaml"
+    acc.write_text(yaml.safe_dump({"accounts": {"breakout_2": {"mode": "live"}}}))
+    monkeypatch.setattr(pe, "ACCOUNTS_PATH", acc)
+    monkeypatch.delenv("PROP_PHONE_MODE_BREAKOUT_2", raising=False)
+    monkeypatch.setattr(pe, "_unserved_dry_test_request", lambda acct: None)
+    monkeypatch.setattr(pe, "_bybit_last", lambda sym: 2500.0)
+    monkeypatch.setattr(et, "_day_loss", lambda a, n: {"loss_usd": 0.0, "limit_usd": 120.0, "fraction": 0.0, "tripped": False})
+    return et
+
+
+def test_test_trade_drill_writes_the_ticket_at_claim_and_journals_the_close(_iso, _test_trade_env):
+    et, sent = _test_trade_env, _iso
+    with pytest.raises(ValueError, match="symbol_not_declared"):
+        pd.request_drill("breakout_2", test_trade="BTCUSDT")
+    assert pd.status("breakout_2")["pending"] is None, "a refused request writes nothing"
+    r = pd.request_drill("breakout_2", by="phone-drill#7", test_trade="ethusdt")
+    did = r["drill"]["id"]
+    assert r["drill"]["test_trade"] == {"symbol": "ETHUSDT", "qty": 0.01}
+    assert prop_journal.list_tickets(account_id="breakout_2") == [], "the ticket is written at CLAIM, not at request"
+    d = pd.claim(_dev())["drill"]
+    tt = d["test_trade"]
+    assert tt["ticket_id"].startswith("exec-test-") and tt["symbol"] == "ETHUSDT" and tt["confirm"] is True and tt["qty"] == 0.01
+    assert tt["venue_symbol"] == "ETHUSD" and tt["direction"] == "long" and tt["sl"] < tt["entry"] < tt["tp"] and tt["close_by"]
+    assert (d["venue_symbol"], d["direction"], d["qty"], d["resting_sl"], d["price_step"]) == ("ETHUSD", "long", 0.01, tt["sl"], 0.01)
+    assert prop_journal.get_ticket(tt["ticket_id"])["strategy"] == "exec_test"
+    # the phone then claims the entry ticket as any other: served LIVE on a live account
+    e = pe.claim_next(_dev())
+    assert e["ticket_id"] == tt["ticket_id"] and e["submit"] == "live"
+    body = _result(did, True)
+    body["test_trade"] = {"ticket_id": tt["ticket_id"], "placed": True, "amended_sl": tt["sl"] + 1, "closed": True,
+                          "exit_price": 2506.0, "entry_price": 2505.0}
+    out = pd.record_result(_dev(), body)
+    assert out["ok"] is True and out["result"] == "pass" and out["test_trade"]["state"] == "closed"
+    row = pd.status("breakout_2")["results"][0]
+    assert row["test_trade"]["ticket_id"] == tt["ticket_id"] and row["test_trade"]["amended_sl"] == tt["sl"] + 1
+    assert prop_journal.get_ticket(tt["ticket_id"])["status"] == "closed"
+    fills = prop_journal.list_fills(account_id="breakout_2")
+    assert len(fills) == 1 and fills[0]["status"] == "closed" and fills[0]["ticket_id"] == tt["ticket_id"]
+    assert et.is_exec_test_fill(fills[0]) and fills[0]["exit_price"] == 2506.0
+    assert f"Test trade {tt['ticket_id']}: closed" in sent[-1] and "CLOSE IT BY HAND" not in sent[-1]
+    assert et.count_today("breakout_2") == 1
+    assert pd.status("breakout_2")["test_trades_overdue"] == []
+
+
+def test_test_trade_left_open_alerts_once_and_a_refusal_at_claim_is_a_failed_drill(_iso, _test_trade_env, monkeypatch):
+    et, sent = _test_trade_env, _iso
+    did = pd.request_drill("breakout_2", test_trade="ETHUSDT")["drill"]["id"]
+    tt = pd.claim(_dev())["drill"]["test_trade"]
+    pe.claim_next(_dev())
+    body = _result(did, False, failed="close_click")
+    body["test_trade"] = {"ticket_id": tt["ticket_id"], "placed": True, "amended_sl": None, "closed": False}
+    out = pd.record_result(_dev(), body)
+    assert out["result"] == "fail" and out["test_trade"]["state"] == "OPEN_UNCLOSED"
+    assert "CLOSE IT BY HAND" in sent[-1] and "ETHUSDT long 0.01" in sent[-1]
+    assert prop_journal.list_fills(account_id="breakout_2") == [], "nothing journaled as closed"
+    # a claimed test drill that never reports: the timeout alerts with the ticket id
+    now = datetime.now(timezone.utc)
+    did2 = pd.request_drill("breakout_2", test_trade="ETHUSDT", now=now)["drill"]["id"]
+    tt2 = pd.claim(_dev(), now=now)["drill"]["test_trade"]
+    row = pd.expire("breakout_2", now=now + timedelta(minutes=11))
+    assert row["id"] == did2 and row["result"] == "unreported" and row["test_trade"]["ticket_id"] == tt2["ticket_id"]
+    assert "never reported" in sent[-1] and tt2["ticket_id"] in sent[-1]
+    # a bound that moved between request and claim: the drill fails before any ticket is written
+    monkeypatch.setattr(et, "_day_loss", lambda a, n: {"loss_usd": 100.0, "limit_usd": 120.0, "fraction": 100 / 120, "tripped": False})
+    with pytest.raises(ValueError, match="day_loss_past_bound"):
+        pd.request_drill("breakout_2", test_trade="ETHUSDT")
+    monkeypatch.setattr(et, "_day_loss", lambda a, n: {"loss_usd": 0.0, "limit_usd": 120.0, "fraction": 0.0, "tripped": False})
+    did3 = pd.request_drill("breakout_2", test_trade="ETHUSDT")["drill"]["id"]
+    monkeypatch.setattr(et, "_day_loss", lambda a, n: {"loss_usd": None, "limit_usd": None, "fraction": None})
+    c = pd.claim(_dev())
+    assert c["drill"] is None and c["refused"][0].startswith("day_loss_unreadable")
+    r = pd.status("breakout_2")["results"][0]
+    assert r["id"] == did3 and r["result"] == "fail" and r["failed_steps"] == ["test_trade_bounds"] and r["test_trade"]["ticket_id"] is None
+    assert "refused before any ticket" in sent[-1]
+    n_before = len(prop_journal.list_tickets(account_id="breakout_2"))
+    assert n_before == 2, "two tickets from the two claimed drills; none from the refusal"
+    assert pd.consecutive_passes("breakout_2") == 0
+
+
+def test_test_trade_cli_and_action_wiring(capsys, _test_trade_env):
+    from scripts.prop.phone_drill import main as cli
+    assert cli(["--request", "--account", "breakout_2", "--test-trade", "BTCUSDT"]) == 1
+    assert "symbol_not_declared" in json.loads(capsys.readouterr().out.strip().splitlines()[-1])["refused"]
+    assert cli(["--request", "--account", "breakout_2", "--test-trade", "ETHUSDT"]) == 0
+    assert json.loads(capsys.readouterr().out.strip().splitlines()[-1])["drill"]["test_trade"]["symbol"] == "ETHUSDT"
+    root = Path(__file__).resolve().parents[1]
+    assert "--test-trade" in (root / "scripts" / "ops" / "phone_drill_action.sh").read_text()
+    assert "phone-drill symbol" in (root / ".github" / "workflows" / "system-actions.yml").read_text()
+    assert "MD-EXEC-DEV-TEST-TRADES" in (root / "docs" / "claude" / "system-actions.md").read_text()

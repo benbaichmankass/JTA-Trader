@@ -49,8 +49,15 @@ if [ ! -f "${WRITER}" ]; then
     exit 1
 fi
 
-log "Requesting ONE phone rehearsal drill (account=${ACCOUNT_ID} source=${SOURCE})."
-if OUT="$(cd "${REPO_DIR}" && /usr/bin/python3 "${WRITER}" --request --account "${ACCOUNT_ID}" --source "${SOURCE}")"; then
+# symbol: (optional) = a drill WITH A TEST TRADE under MD-EXEC-DEV-TEST-TRADES: the
+# server writes ONE minimum-size exec-test ticket at claim (bounds checked), the
+# app places it, amends its stop INCLUDING Confirm, reads back and CLOSES it.
+TEST_TRADE="${ACTION_SYMBOL:-}"
+EXTRA=()
+if [ -n "${TEST_TRADE// }" ]; then EXTRA=(--test-trade "${TEST_TRADE}"); fi
+
+log "Requesting ONE phone rehearsal drill (account=${ACCOUNT_ID} source=${SOURCE}${TEST_TRADE:+ test_trade=${TEST_TRADE}})."
+if OUT="$(cd "${REPO_DIR}" && /usr/bin/python3 "${WRITER}" --request --account "${ACCOUNT_ID}" --source "${SOURCE}" "${EXTRA[@]}")"; then
     printf '%s\n' "${OUT}"
     record_audit "phone-drill" "ok" "{\"account\": \"${ACCOUNT_ID}\", \"result\": ${OUT:-null}}" >/dev/null || true
     log "phone-drill: request written; the phone claims it on its next poll and reports per step (GET /api/diag/phone_drill)."

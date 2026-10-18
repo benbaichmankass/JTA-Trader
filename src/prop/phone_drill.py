@@ -20,6 +20,16 @@ State lives beside the other phone diag files (``<trade_journal.db dir>/phone_dr
 results, newest last). Requested by the ``phone-drill`` system-action (Tier 1: a file write, no order change) or
 :func:`request_drill`; served on ``GET /phone/pending`` (``drill``), claimed atomically on ``POST /phone/drill/claim``,
 reported on ``POST /phone/drill/result``; read on ``GET /api/diag/phone_drill``. One Telegram line per result.
+
+A drill WITH A TEST TRADE (operator grant ``MD-EXEC-DEV-TEST-TRADES``, 2026-10-18; ``src.prop.exec_test_trades``).
+``request_drill(..., test_trade="ETHUSDT")`` (system-action ``phone-drill`` with ``symbol:``) asks for the WHOLE
+operation on a real, minimum-size position of our own: at CLAIM the server writes ONE exec-test ticket (every bound
+checked then, and again when the phone claims the ticket), the app places it with its protective stop, runs the
+stop-amend flow INCLUDING the final Confirm, reads the new stop back, CLOSES the position and reports; the server
+journals the close as a fill linked to the ticket. A position the app reports open, or a claimed test drill that
+never reports, is ONE alert naming the ticket -- the operator closes it by hand; nothing halts. Confirm and the
+close are allowed to the app ONLY on the drill's own test ticket (``test_trade.confirm``), never on a strategy
+position; a drill without a test trade keeps its no-Confirm, no-close contract above.
 """
 from __future__ import annotations
 
@@ -160,6 +170,13 @@ def expire(account_id: str, now: Optional[datetime] = None) -> Optional[Dict[str
         if at and (now - at).total_seconds() > CLAIM_TIMEOUT_S:
             row = {"id": req.get("id"), "result": "unreported", "at": now.isoformat(), "requested_by": req.get("by"),
                    "claimed_at": req.get("claimed_at"), "why": "claimed and never reported (app died or the page hung)"}
+            tt = req.get("test_trade") if isinstance(req.get("test_trade"), dict) else None
+            if tt and tt.get("ticket_id"):
+                # the test position may be open with nobody reporting it: ONE alert, the operator checks; no halt
+                row["test_trade"] = {**tt, "state": "unreported"}
+                _send(f"📱 drill {account_id}: ⚠️ {req.get('id')} claimed with test ticket {tt['ticket_id']} and never reported. "
+                      f"CHECK the terminal and close {tt.get('symbol')} long {tt.get('qty')} by hand if it is open "
+                      f"(close_by {tt.get('close_by')}).", None)
             _append_history(account_id, row)
             _write_request(account_id, None)
             return row
@@ -170,8 +187,12 @@ def expire(account_id: str, now: Optional[datetime] = None) -> Optional[Dict[str
     return None
 
 
-def request_drill(account_id: str, *, by: str = "manual", note: str = "", now: Optional[datetime] = None) -> Dict[str, Any]:
-    """Ask for ONE drill. Idempotent while one is outstanding (the existing request is returned)."""
+def request_drill(account_id: str, *, by: str = "manual", note: str = "", now: Optional[datetime] = None,
+                  test_trade: Optional[str] = None) -> Dict[str, Any]:
+    """Ask for ONE drill. Idempotent while one is outstanding (the existing request is returned). ``test_trade`` =
+    a symbol: the drill opens, amends (with Confirm) and closes a minimum-size test position of our own; every bound
+    of MD-EXEC-DEV-TEST-TRADES is checked here (a refusal writes nothing) and again when the ticket is written at
+    claim and when the phone claims the ticket."""
     from src.prop.phone_executor import is_phone_account
     now = now or _now()
     if not is_phone_account(account_id):
@@ -182,6 +203,13 @@ def request_drill(account_id: str, *, by: str = "manual", note: str = "", now: O
         return {"ok": True, "existing": True, "drill": cur}
     req = {"id": f"drill-{now.strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}", "status": "requested",
            "requested_at": now.isoformat(), "by": _scrub(by, 80), "note": _scrub(note, 160)}
+    if test_trade:
+        from src.prop import exec_test_trades
+        sym = str(test_trade).strip().upper()
+        v = exec_test_trades.check_bounds(account_id, sym, now=now)
+        if not v["ok"]:
+            raise ValueError("test trade refused: " + "; ".join(v["refusals"]))
+        req["test_trade"] = {"symbol": sym, "qty": v["qty"]}
     _write_request(account_id, req)
     logger.info("phone_drill: requested %s for %s by %s", req["id"], account_id, req["by"])
     return {"ok": True, "existing": False, "drill": req}
@@ -234,16 +262,102 @@ def claim(device: Any, now: Optional[datetime] = None) -> Dict[str, Any]:
     req = _read_request(acct)
     if not req or req.get("status") != "requested":
         return {"ok": True, "drill": None}
+    tt = req.get("test_trade") if isinstance(req.get("test_trade"), dict) else None
+    if tt and not tt.get("ticket_id"):
+        # MD-EXEC-DEV-TEST-TRADES: the test ticket is written NOW, bounds re-checked; a refusal is a failed drill
+        from src.prop import exec_test_trades
+        try:
+            v = exec_test_trades.write_ticket(acct, str(tt.get("symbol") or ""), by=f"drill {req['id']}", now=now)
+        except Exception as exc:  # noqa: BLE001 — a writer fault is a refusal, never an unserved claim
+            v = {"ok": False, "refusals": [f"{type(exc).__name__}: {str(exc)[:80]}"]}
+        if not v.get("ok"):
+            why = _scrub("; ".join(v.get("refusals") or []), 160)
+            row = {"id": req["id"], "result": "fail", "at": now.isoformat(), "requested_by": req.get("by"),
+                   "device_id": device.device_id, "run_id": None, "captures": None,
+                   "steps": [{"step": "test_trade_bounds", "ok": False, "why": why}], "failed_steps": ["test_trade_bounds"],
+                   "test_trade": {"symbol": tt.get("symbol"), "ticket_id": None, "state": "refused"}}
+            _append_history(acct, row)
+            _write_request(acct, None)
+            _send(f"📱 drill {acct}: FAIL ❌ {req['id']} — test trade refused before any ticket: {why}", None)
+            logger.warning("phone_drill: %s test trade refused: %s", req["id"], why)
+            return {"ok": True, "drill": None, "refused": v.get("refusals")}
+        tt.update(ticket_id=v["ticket_id"], entry=v["entry"], sl=v["sl"], tp=v["tp"], qty=v["qty"], close_by=v["close_by"])
+        req["test_trade"] = tt
     req.update(status="claimed", claimed_at=now.isoformat(), device_id=device.device_id)
     _write_request(acct, req)
-    ctx = _position_context(acct)
-    logger.info("phone_drill: %s claimed by %s (%s)", req["id"], device.device_id, acct)
+    if tt:
+        from src.prop.phone_executor import phone_config, venue_symbol
+        sym = str(tt.get("symbol") or "")
+        inst = (phone_config(acct).get("instruments") or {}).get(sym) or {}
+        ctx = {"ticket_id": tt.get("ticket_id"), "symbol": sym, "venue_symbol": venue_symbol(acct, sym), "direction": "long",
+               "qty": tt.get("qty"), "resting_sl": tt.get("sl"), "price_step": inst.get("price_step"),
+               "test_trade": {**tt, "venue_symbol": venue_symbol(acct, sym), "direction": "long",
+                              "price_step": inst.get("price_step"), "confirm": True}}
+        ctx = {k: v for k, v in ctx.items() if v is not None}
+    else:
+        ctx = _position_context(acct)
+    logger.info("phone_drill: %s claimed by %s (%s)%s", req["id"], device.device_id, acct,
+                f" test trade {tt.get('ticket_id')}" if tt else "")
     return {"ok": True, "drill": {"id": req["id"], "requested_at": req.get("requested_at"), "note": req.get("note"), **ctx}}
 
 
 def _capture_link(account_id: str, run_id: str) -> str:
     base = os.environ.get("PUBLIC_API_BASE", "https://ict-bot.duckdns.org").rstrip("/")
     return f"{base}/api/diag/phone_capture?account_id={account_id}&run_id={run_id}" if run_id else ""
+
+
+def _f(v: Any) -> Optional[float]:
+    try:
+        x = float(v)
+    except (TypeError, ValueError):
+        return None
+    return x if x == x else None
+
+
+def _send(msg: str, send: Any) -> None:
+    try:
+        if send is None:
+            from src.runtime.notify import send_telegram_direct
+            send = send_telegram_direct
+        send(msg, parse_mode=None)
+    except Exception:  # noqa: BLE001  # allow-silent: logged; the record is written either way
+        logger.warning("phone_drill: ping failed", exc_info=True)
+
+
+def _test_trade_outcome(account_id: str, tt_req: Dict[str, Any], tt_in: Dict[str, Any], now: datetime) -> Dict[str, Any]:
+    """What became of the drill's test trade, from the app's report: ``closed`` journals the close as a fill linked to
+    the ticket (``prop_report.ingest_report``); a placed position the app could not close is ``OPEN_UNCLOSED`` (the
+    caller alerts; the operator closes it by hand); nothing placed is ``not_placed`` with the ticket's own status."""
+    from src.prop import prop_journal
+    tid = str(tt_req.get("ticket_id") or "")
+    out: Dict[str, Any] = {"ticket_id": tid or None, "symbol": tt_req.get("symbol"), "placed": tt_in.get("placed") is True,
+                           "closed": tt_in.get("closed") is True, "amended_sl": _f(tt_in.get("amended_sl")),
+                           "exit_price": _f(tt_in.get("exit_price")), "state": "not_written"}
+    if not tid:
+        return out
+    if str(tt_in.get("ticket_id") or "") not in ("", tid):
+        out["state"] = "ticket_mismatch"
+        return out
+    t = prop_journal.get_ticket(tid) or {}
+    st = str(t.get("status") or "")
+    if out["closed"]:
+        try:
+            from src.prop.prop_report import ingest_report
+            ingest_report({"kind": "fill", "account_id": account_id, "ticket_id": tid, "symbol": tt_req.get("symbol"),
+                           "direction": "long", "qty": tt_req.get("qty"),
+                           "entry_price": _f(tt_in.get("entry_price")) or tt_req.get("entry"), "exit_price": out["exit_price"],
+                           "sl": out["amended_sl"] or tt_req.get("sl"), "tp": tt_req.get("tp"), "status": "closed",
+                           "closed_at": now.isoformat(), "reason": "exec_test drill close (MD-EXEC-DEV-TEST-TRADES)",
+                           "source": "phone_drill", "origin": "exec_test"})
+            out["state"] = "closed"
+        except Exception as exc:  # noqa: BLE001 — the close happened on the venue; say the journal missed it
+            logger.warning("phone_drill: test trade close not journaled: %s", exc)
+            out["state"] = f"closed_unjournaled: {type(exc).__name__}"
+    elif out["placed"] or st in ("placed", "filled", "open"):
+        out["state"] = "OPEN_UNCLOSED"
+    else:
+        out["state"] = f"not_placed ({st or 'no ticket'})"
+    return out
 
 
 def record_result(device: Any, body: Dict[str, Any], *, now: Optional[datetime] = None, send=None) -> Dict[str, Any]:
@@ -275,6 +389,16 @@ def record_result(device: Any, body: Dict[str, Any], *, now: Optional[datetime] 
            "captures": int(body.get("captures") or 0) if isinstance(body.get("captures"), int) else None,
            "app_version": _scrub(body.get("app_version"), 24), "exec_js": _scrub(body.get("exec_js"), 24),
            "steps": steps, "failed_steps": [s["step"] for s in steps if s["ok"] is False]}
+    tt_req = req.get("test_trade") if isinstance(req.get("test_trade"), dict) else None
+    tt_line = ""
+    if tt_req:
+        tt_in = body.get("test_trade") if isinstance(body.get("test_trade"), dict) else {}
+        row["test_trade"] = _test_trade_outcome(acct, tt_req, tt_in, now)
+        state = row["test_trade"]["state"]
+        tt_line = f" Test trade {row['test_trade']['ticket_id'] or '(none)'}: {state}."
+        if state == "OPEN_UNCLOSED":
+            tt_line += (f" ⚠️ CLOSE IT BY HAND on the terminal: {tt_req.get('symbol')} long {tt_req.get('qty')}"
+                        f" (close_by {tt_req.get('close_by')}).")
     _append_history(acct, row)
     _write_request(acct, None)
     gate = sheet_edit(acct)
@@ -284,24 +408,26 @@ def record_result(device: Any, body: Dict[str, Any], *, now: Optional[datetime] 
            + f". Consecutive passes {gate['passes']}"
            + (f"/{gate.get('needed')}" if gate.get("source") == "drills" else "")
            + f"; live sheet edit {'ARMED' if gate['enabled'] else 'off'} ({gate['source']})."
+           + tt_line
            + (f" Captures: {link}" if link else ""))
-    try:
-        if send is None:
-            from src.runtime.notify import send_telegram_direct
-            send = send_telegram_direct
-        send(msg, parse_mode=None)
-    except Exception:  # noqa: BLE001  # allow-silent: logged; the result is recorded either way
-        logger.warning("phone_drill: result ping failed", exc_info=True)
+    _send(msg, send)
     logger.info("phone_drill: %s %s for %s (passes %s)", did, row["result"], acct, gate["passes"])
-    return {"ok": True, "result": row["result"], "passes": gate["passes"], "sheet_edit": gate}
+    return {"ok": True, "result": row["result"], "passes": gate["passes"], "sheet_edit": gate,
+            **({"test_trade": row["test_trade"]} if tt_req else {})}
 
 
 def status(account_id: str, limit: int = 20) -> Dict[str, Any]:
     """The read surface (``GET /api/diag/phone_drill``): pending request, the gate, recent results newest first."""
     expire(account_id)
     hist = history(account_id, limit=limit)
+    try:
+        from src.prop import exec_test_trades
+        overdue = [t["ticket_id"] for t in exec_test_trades.overdue(account_id)]
+    except Exception:  # noqa: BLE001  # allow-silent: a read surface; the list is best effort and says so (null)
+        overdue = None
     return {"account_id": account_id, "pending": _read_request(account_id), "sheet_edit": sheet_edit(account_id),
-            "passes_to_arm": PASSES_TO_ARM, "results": list(reversed(hist)), "present": bool(hist) or _read_request(account_id) is not None}
+            "passes_to_arm": PASSES_TO_ARM, "results": list(reversed(hist)), "present": bool(hist) or _read_request(account_id) is not None,
+            "test_trades_overdue": overdue}
 
 
 def main(argv: Optional[list] = None) -> int:
@@ -312,6 +438,8 @@ def main(argv: Optional[list] = None) -> int:
     ap.add_argument("--account", required=True)
     ap.add_argument("--source", default="phone-drill")
     ap.add_argument("--note", default="")
+    ap.add_argument("--test-trade", default="", metavar="SYMBOL",
+                    help="open, amend (Confirm) and close a minimum-size test position on this symbol (MD-EXEC-DEV-TEST-TRADES)")
     ap.add_argument("--status", action="store_true")
     a = ap.parse_args(argv)
     if a.status:
@@ -319,7 +447,7 @@ def main(argv: Optional[list] = None) -> int:
         return 0
     if a.request:
         try:
-            print(json.dumps(request_drill(a.account, by=a.source, note=a.note)))
+            print(json.dumps(request_drill(a.account, by=a.source, note=a.note, test_trade=a.test_trade or None)))
             return 0
         except ValueError as exc:
             print(json.dumps({"ok": False, "refused": str(exc)}))
