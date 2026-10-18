@@ -111,7 +111,7 @@ def cost_stack(symbol: str) -> dict[str, float | bool]:
     try:
         from src.core.profile_loader import roundtrip_fee_bps_for
         fee = roundtrip_fee_bps_for(symbol)
-    except Exception as exc:  # noqa: BLE001 -- research fallback to the single-owner default, stated in the output
+    except Exception as exc:  # allow-silent: falls back to the single-owner default fee and says so (fee_resolved false + a stderr warning)  # noqa: BLE001
         fee = None
         _warn(f"{symbol}: profile_loader fee lookup failed ({exc}); default {ec.DEFAULT_FEE_BPS_ROUNDTRIP} bps")
     slip, fund = ec.resolve_cost_policy(symbol)
@@ -338,7 +338,7 @@ def run(a: argparse.Namespace) -> dict[str, Any]:
                                    marginal_cost_r=a.marginal_cost_r, viable_coverage=a.viable_coverage,
                                    min_bars=a.min_bars)
                 fr["source"] = "binance_vision (USD-M futures, PROXY for Bybit linear)" if sym.upper().endswith("USDT") else "yfinance"
-            except Exception as exc:  # noqa: BLE001 -- a failed frame is RECORDED, never dropped (the denominator stays whole)
+            except Exception as exc:  # allow-silent: a failed frame lands as state fetch_failed with the exception text; the denominator stays whole  # noqa: BLE001
                 fr = {"symbol": sym, "bar": bar, "state": "fetch_failed", "why": f"{type(exc).__name__}: {exc}",
                       "cost_stack": stack, "cells": []}
                 _warn(f"{key}: {fr['why']}")

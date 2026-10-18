@@ -271,7 +271,7 @@ def run(a: argparse.Namespace) -> dict[str, Any]:
                 inputs.append(str(csvs[sym].resolve().relative_to(REPO.resolve())))  # type: ignore[union-attr]
             except ValueError:
                 pass
-        except Exception as exc:  # noqa: BLE001 -- recorded per cell below, never dropped
+        except Exception as exc:  # allow-silent: the fetch failure is RECORDED on every cell of that symbol below (state fetch_failed), never dropped  # noqa: BLE001
             csvs[sym] = None
             fetch_why[sym] = f"{type(exc).__name__}: {exc}"
             _warn(f"{sym}: fetch failed: {fetch_why[sym]}")
@@ -292,7 +292,7 @@ def run(a: argparse.Namespace) -> dict[str, Any]:
             try:
                 r = run_cell(name, cfg, csvs[sym], a.timeframe, list(extra), a.start, a.end, work,  # type: ignore[arg-type]
                              folds=a.folds, timeout_s=a.cell_timeout_s)
-            except Exception as exc:  # noqa: BLE001 -- a crashed cell is a RECORDED state
+            except Exception as exc:  # allow-silent: a crashed cell lands as state harness_failed with the exception text; the denominator stays whole  # noqa: BLE001
                 r = {"state": "harness_failed", "why": f"{type(exc).__name__}: {exc}"}
             if r["state"] != "measured":
                 cells[sym] = {k: v for k, v in r.items() if k != "trades"}
