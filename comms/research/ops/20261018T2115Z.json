@@ -1,0 +1,82 @@
+{
+  "run": "RESEARCH-OPS-2026-10-18-2047",
+  "finished_at": "2026-10-18T21:15:00Z",
+  "by": "session_research_ops_20261018_2047",
+  "mode": "wind-down: keep the queue full (manager addendum, weekly usage 90%, reset Wed 2026-10-21 ~17:59Z); lean pass",
+  "floor": 61,
+  "floor_basis": "computed_floor(fired_24h 76)",
+  "authoring_queue_depth": 19,
+  "idle_backends": [
+    "github_runner_data",
+    "kaggle",
+    "kaggle_cpu",
+    "trainer"
+  ],
+  "needs_review_triaged": 0,
+  "needs_review_left": 38,
+  "needs_review_note": "result_disposition_check: UNOWNED 0, UNGRADED 0 (30 owned, 15 in grace, 125 legacy prose); no triage written, per the addendum (lean pass).",
+  "throughput": {
+    "runnable_before": 38,
+    "runnable_after": 82,
+    "queued": 201,
+    "fired_24h": 76,
+    "results_landed_24h": 124,
+    "hours_since_last_dispatch": 1.6,
+    "idle_alarm": false
+  },
+  "mechanism": {
+    "dispatch_receipt": "not separately re-run (health check: last dispatch 1.6 h ago)",
+    "collector": "ok: result_files_unreadable 0",
+    "stranded_stamp_prs": "not listed (GitHub PR list too large to read; no stamp PR seen in the 17 results batch)",
+    "incident": null
+  },
+  "results_read": {
+    "pass": 2,
+    "fail": 8,
+    "indeterminate": 0,
+    "wiring_only": 1,
+    "population": "11 result dirs under research/results touched on main since the previous record (15:10Z); verdict from each file's first row; research_disposition --unread-only: unread 0",
+    "units": [
+      "RQ-20261018-ef5d-06 PASS (P7 A4 regime-filtered daily, 1 of 4 arms pass, pooled net_r 109.79: a discovery, not a roster act; follow-up is ONE confirmation unit on a disjoint window)",
+      "RQ-20261016-1fa6-01 PASS (evidence for a build row, not a leg)",
+      "RQ-20261018-ef5d-08 FAIL; RQ-20261014-65cc-04/-05 and de02-02/-03/-05/-06 FAIL (macro surprise event studies: no horizon reached the t-bar; incumbents stand, news layer and WEPE NOT retired on these)",
+      "RQ-20261018-ff8f-03 FAIL (the Kaggle re-run completed this time: the 15:10Z producer_failed was a one-off)",
+      "RQ-20261003-011 wiring_only (E7 harness dispatchable)"
+    ]
+  },
+  "unlocked": [],
+  "retired": [],
+  "levers_filed": [],
+  "units_authored": [
+    "44 units: RQ-20261018-010..012 (the 3 ready ethprop prop-EV nodes) and 41 from new P1-Q9-* programme nodes: exit_lever_ablation --grade replace, one lever family per unit (tp3, timeout, giveback, momentum, adx, decay, retarget, stale) across trend_donchian_{sol_prop,eth_prop,eth_4h,xrp_4h}, xrp/ada_pullback_2h and the three shadow 4h Donchian legs; compute cpu_light, runner; identical shape to the confirmed RQ-20261016-005/-008/-015"
+  ],
+  "followups_filed": [
+    "P1-Q9-* nodes in research/programmes/01-active-trade-management.yaml"
+  ],
+  "authoring": {
+    "queue_depth": 19,
+    "nodes_drafted": 41,
+    "nodes": [
+      "P1-Q9-* (41 nodes, replace-grade lever grid)"
+    ],
+    "theme_shortfall": {
+      "regime": 14,
+      "ml_health": 9,
+      "new_strategy_prop": 17,
+      "infra": 2,
+      "timeframes": 3
+    }
+  },
+  "not_run": [
+    "step C needs_review triage and the blocked/ audit (addendum: blocked/ audit deferred to row RESEARCH-BLOCKED-AUDIT; triage skipped, lean pass)",
+    "pipeline due-item routing (not done in this lean pass)",
+    "stranded stamp PR listing"
+  ],
+  "handoff": [
+    "MANAGER (held PR): merge the run PR; it hand-edits the P1 programme file and emits queue units (E57 hold)",
+    "Runnable 82 (floor 61) is ~1 day of runner throughput at fired_24h 76, but the 41 new units are all github_runner cpu_light, so the backends listed idle (kaggle, kaggle_cpu, trainer, github_runner_data) stay idle: H1-THEME shortfalls remain in regime, ml_health, new_strategy_prop (different themes need their own instruments; the 19 authoring-queue nodes are mostly gated on builds or verdicts, see ask text)",
+    "Many Q9 PASSes will be best-of-several arms of ~130 cells across 10 legs: the multiple-testing denominator for any Tier-3 note is the lever-family count tried on that leg, and a PASS needs its disjoint-window confirmation unit first",
+    "RQ-20261018-ef5d-06 PASS needs ONE disjoint-window confirmation unit (P7)",
+    "ids RQ-20261018-010..053 are contiguous; an eth_4h trail-decay node was authored then dropped before emission because P1-Q4-eth4h-stalldecay-rerun already asks it"
+  ]
+}
