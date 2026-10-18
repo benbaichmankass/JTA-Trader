@@ -1,24 +1,24 @@
 {
  "schema": 1,
- "as_of": "2026-10-18T11:44:05Z",
+ "as_of": "2026-10-18T13:12:18Z",
  "producer": "scripts/research/research_slo.py",
  "config": "scripts/research/research_slo.yaml",
  "counts": {
-  "ok": 12,
-  "breach": 4,
+  "ok": 13,
+  "breach": 3,
   "could_not_look": 0
  },
  "latest": [
   {
    "slo": "runnable_floor",
-   "state": "breach",
-   "value": 47,
+   "state": "ok",
+   "value": 50,
    "op": ">=",
    "threshold": 50,
    "what": "runnable units >= the computed floor (queue_throughput.computed_floor: max(25, ceil(fired_24h x 19/24)))",
    "evidence": {
-    "fired_24h_stamps": 63,
-    "queued": 160,
+    "fired_24h_stamps": 62,
+    "queued": 163,
     "basis": "queue_replenish.runnable(); floor = queue_throughput.computed_floor(fired_24h)",
     "read_state": "measured"
    }
@@ -26,12 +26,12 @@
   {
    "slo": "fires_24h",
    "state": "ok",
-   "value": 56,
+   "value": 55,
    "op": ">=",
    "threshold": 24,
    "what": "units fired in the last 24 h (sum of `dispatched` over comms/research/utilization/ records)",
    "evidence": {
-    "dispatch_runs_24h": 21,
+    "dispatch_runs_24h": 20,
     "basis": "sum(len(dispatched)) over comms/research/utilization records in 24 h",
     "read_state": "measured"
    }
@@ -39,7 +39,7 @@
   {
    "slo": "lands_24h",
    "state": "ok",
-   "value": 98,
+   "value": 94,
    "op": ">=",
    "threshold": 12,
    "what": "result rows landed in the last 24 h whose read_state is a verdict (not producer_failed / no_data)",
@@ -105,13 +105,13 @@
   {
    "slo": "authoring_supply_ratio_7d",
    "state": "ok",
-   "value": 1.22,
+   "value": 1.23,
    "op": ">=",
    "threshold": 1.0,
    "what": "authored (non-generated) units created in 7 d / authored units first-or-re-fired in 7 d",
    "evidence": {
     "authored_7d": 431,
-    "consumed_7d": 354,
+    "consumed_7d": 351,
     "authored_since_yesterday": 52,
     "basis": "non-generated units: id date in 7 d / last_dispatched_at in 7 d",
     "read_state": "measured"
@@ -225,7 +225,7 @@
   {
    "slo": "dispatcher_age_h",
    "state": "ok",
-   "value": 0.84,
+   "value": 2.31,
    "op": "<=",
    "threshold": 3,
    "what": "hours since the newest dispatcher utilization record on main (one per dispatch cycle that ran; lands ~1 h late)",
@@ -238,7 +238,7 @@
   {
    "slo": "collector_age_h",
    "state": "ok",
-   "value": 0.55,
+   "value": 2.02,
    "op": "<=",
    "threshold": 6,
    "what": "hours since the newest commit on main touching research/results/ (a result landed)",
@@ -251,12 +251,12 @@
   {
    "slo": "grader_age_h",
    "state": "ok",
-   "value": 2.86,
+   "value": 1.42,
    "op": "<=",
    "threshold": 14,
    "what": "hours since the last SUCCESSFUL research-queue-grade.yml run (GitHub; could_not_look without a token)",
    "evidence": {
-    "newest": "2026-10-18T08:52:46+00:00",
+    "newest": "2026-10-18T11:46:54+00:00",
     "basis": "last successful research-queue-grade.yml run",
     "read_state": "measured"
    }
@@ -264,7 +264,7 @@
   {
    "slo": "research_ops_age_h",
    "state": "ok",
-   "value": 2.23,
+   "value": 3.71,
    "op": "<=",
    "threshold": 8,
    "what": "hours since the newest research-ops pass record (comms/research/ops/*.json finished_at); the pass runs 4x/day",
@@ -309,10 +309,6 @@
  ],
  "alert_state": {
   "open": {
-   "runnable_floor": {
-    "since": "2026-10-18T11:44:05Z",
-    "state": "breach"
-   },
    "grade_latency_p90_d": {
     "since": "2026-10-16T12:53:53Z",
     "state": "breach"
@@ -326,7 +322,7 @@
     "state": "breach"
    }
   },
-  "last_alert": "2026-10-18T11:44:05Z",
+  "last_alert": "2026-10-18T13:12:18Z",
   "suppressed_by_watchdog": []
  },
  "runs": [
@@ -444,6 +440,25 @@
    },
    "not_ok": [
     "runnable_floor",
+    "grade_latency_p90_d",
+    "theme_share_min_ratio",
+    "research_ops_not_run"
+   ],
+   "alert": "change",
+   "delivered": {
+    "telegram": true,
+    "ops_flags_comment": true,
+    "ops_flags_pr": 17895
+   }
+  },
+  {
+   "at": "2026-10-18T13:12:18Z",
+   "counts": {
+    "ok": 13,
+    "breach": 3,
+    "could_not_look": 0
+   },
+   "not_ok": [
     "grade_latency_p90_d",
     "theme_share_min_ratio",
     "research_ops_not_run"
