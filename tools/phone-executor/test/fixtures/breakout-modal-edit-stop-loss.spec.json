@@ -1,0 +1,17 @@
+{
+  "note": "REAL capture: breakout_2, app 1b.300 + exec.js 2026-10-18.5, 2026-10-18 19:00Z, rehearsal drill 2 (drill-drill-20261018-185905-39549f-20261018T190001Z) step 010-modal_open — the 'Edit Stop loss' modal over the Positions grid, opened by the Stop row's pencil (its BUTTON, exec.js >= .5). Inputs: Quantity (name protectionStopLossSize), Trigger (name protectionStopLossPrice, unit USD), Entry distance (name protectionStopLossDistance, %); under them the 'Stop loss Entry distance' SLIDER (input type=range inside div.ds-slider); R:R; Cancel + Confirm. Operator 2026-10-18 (via the manager): the executor must type into the price field and never touch the slider. Every number is replaced; the header's quantity and price were REDACTED on the device. No sheet root is in this capture: with the modal up the position sheet is gone (and after Cancel it stayed gone — drill 2 step 015-stop_unchanged read null), so every stop re-read after the modal re-opens the sheet first.",
+  "checks": [
+    {"call": "__ex.modalInfo()", "expect": {"n": 1, "kind": "stop", "title": "Edit Stop loss", "triggers": 1, "trigger_name": "protectionStopLossPrice", "trigger_type": "text", "sliders": 1, "inputs": [{"label": "Quantity"}, {"label": "Trigger"}, {"label": "Entry distance"}]},
+     "note": "modal: ONE Edit Stop loss modal; the ONE Trigger input is the PRICE field (name protectionStopLossPrice, a text input); the modal's one slider is seen and counted, never among the inputs"},
+    {"call": "__ex.modalInfo().buttons.slice(0, 2)", "expect": ["Cancel", "Confirm"], "note": "modal: Cancel and Confirm are the text buttons (the X close is the third)"},
+    {"call": "__ex.modalInfo().hdr_n", "expect": 0, "note": "modal header: quantity and price REDACTED on the device, so side/qty read null HERE (on the phone drill 2 read side short qty 0.52)"},
+    {"call": "__ex.modalTrigger()", "expect": {"n": 1, "value": "re:^2\\d{3}\\.\\d{2}$"}, "note": "modal: the Trigger input reads a (replaced) price"},
+    {"call": "(function () { var r = document.querySelector('[role=dialog] input[type=range]'), v = r.value, s = __ex.modalSetTrigger('2452.63'); return [s.n, s.value, s.name, s.type, r.value === v, document.querySelector('[role=dialog] input[name=protectionStopLossPrice]').value]; })()", "expect": [1, "2452.63", "protectionStopLossPrice", "text", true, "2452.63"],
+     "note": "modalSetTrigger types ONLY into the price input (name protectionStopLossPrice) and reads it back; the slider's value is untouched"},
+    {"call": "__ex.modalInfo().inputs.map(function (i) { return i.value; })", "expect": ["re:^0\\.\\d{2}$", "2452.63", "re:^\\d\\.\\d{2}$"],
+     "note": "after the trigger is typed: quantity and entry-distance keep their (replaced) values, the Trigger input holds the typed price"},
+    {"call": "__ex.modalsOpen()", "expect": {"n": 1}, "note": "one modal open"},
+    {"call": "__ex.sheetInfo('ETHUSD')", "expect": {"open": false}, "note": "NO position sheet while the modal is up (measured: the sheet is gone with the modal, and stays gone after Cancel) — a stop re-read must re-open it"},
+    {"call": "__ex.sheetOrders()", "expect": {"ok": false, "why": "no_sheet"}, "note": "sheetOrders says why: no_sheet (drill 2 step 015 read trigger null for exactly this reason)"}
+  ]
+}

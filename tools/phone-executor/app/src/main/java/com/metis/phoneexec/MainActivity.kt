@@ -1794,6 +1794,15 @@ class MainActivity : Activity() {
             return bail(why, so)
         }
         if (!close(trig, fromSl, pStep)) {
+            // 2026-10-18 (drill 2): the terminal already shows the ASKED level -- an earlier attempt's Confirm landed but
+            // its read-back missed (Confirm / Cancel close the whole sheet, measured). That is our own move, read back
+            // now: never a human hold on the level we asked for.
+            if (close(trig, sl, pStep)) {
+                cap(cap, cur, "stop_already_at_target", true, "terminal stop $trig == asked ${fmt(sl, pStep)} (expected from ${fmt(fromSl, pStep)})")
+                val c = sheetClose(cur, venue); ledger.append(aid, "amended")
+                amendResult(t, "amended", "the terminal already shows the asked stop ${fmt(sl, pStep)} (from ${fmt(fromSl, pStep)}): read back, nothing typed (sheet close: $c)", trig, null, so)
+                setStatus("amend $aid: SL already ${fmt(sl, pStep)} on the terminal"); return
+            }
             cap(cap, cur, "human_moved", false, "terminal stop $trig != expected ${fmt(fromSl, pStep)}")
             val c = sheetClose(cur, venue)
             return amendHuman(t, "terminal stop $trig != expected ${fmt(fromSl, pStep)} (sheet close: $c)", so)
@@ -1851,21 +1860,23 @@ class MainActivity : Activity() {
             js("__ex.modalCancel()"); delay(600); val c = sheetClose(cur, venue); ledger.append(aid, "unconfirmed")
             return amendResult(t, "mismatch", "edit modal still open after Confirm (sheet close: $c)", null, null, jsObj("__ex.modalInfo()"))
         }
-        // 6. re-read the Stop row on the sheet
+        // 6. re-read the Stop row on the sheet -- re-opened first: Confirm closes the whole sheet, as Cancel does
+        //    (MEASURED 2026-10-18 drill 2, captures 014-modal_cancel / 015-stop_unchanged: trigger null, no sheet)
+        val ro = sheetEnsureOpen(venue, cap)
         cur.js("__ex.sheetTab('tpsl')"); delay(1000); ensure()
         val so2 = jsObj("__ex.sheetOrders()")
         val rs2 = so2?.optJSONArray("rows") ?: JSONArray()
         val stops2 = (0 until rs2.length()).map { rs2.optJSONObject(it) }.filter { it?.optString("type") == "stop" }
         val vSl = if (stops2.size == 1 && !stops2[0]!!.isNull("trigger")) stops2[0]!!.optDouble("trigger") else null
-        cap(cap, cur, "stop_reread", close(vSl, sl, pStep), "stop $vSl asked ${fmt(sl, pStep)}")
+        cap(cap, cur, "stop_reread", close(vSl, sl, pStep), "stop $vSl asked ${fmt(sl, pStep)} sheet $ro")
         val c = sheetClose(cur, venue)
         if (close(vSl, sl, pStep)) {
             ledger.append(aid, "amended")
-            amendResult(t, "amended", "confirmed and read back on the position sheet (sheet close: $c)", vSl, null, so2)
+            amendResult(t, "amended", "confirmed and read back on the position sheet (sheet $ro; close: $c)", vSl, null, so2)
             setStatus("LIVE amend $aid: SL ${fmt(sl, pStep)} read back")
         } else {
             ledger.append(aid, "unconfirmed")
-            amendResult(t, "mismatch", "after Confirm the sheet shows stop $vSl (asked ${fmt(sl, pStep)}; stops n=${stops2.size}; sheet close: $c)", vSl, null, so2)
+            amendResult(t, "mismatch", "after Confirm the sheet shows stop $vSl (asked ${fmt(sl, pStep)}; stops n=${stops2.size}; sheet $ro; close: $c)", vSl, null, so2)
             setStatus("amend $aid NOT VERIFIED — operator check")
         }
     }
@@ -2034,12 +2045,12 @@ class MainActivity : Activity() {
         if (x.ttConfirm) {
             // THE FINAL CONFIRM, on the drill's own test position only (server test_trade.confirm); then the stop is
             // read back off the sheet and the position is CLOSED
-            val cfm = drillConfirmStop()
+            val cfm = drillConfirmStop(venue, x.run)
             x.modalOpened = cfm.optInt("left") != 0
             if (!x.mark("modal_confirm", cfm.optString("confirm") == "clicked" && cfm.optInt("left") == 0, "confirm ${cfm.optString("confirm")} modals left ${cfm.optInt("left")}")) return
             val trig3 = if (cfm.isNull("trigger")) null else cfm.optDouble("trigger")
             x.ttAmendedSl = trig3
-            if (!x.mark("stop_reread", close(trig3, drillSl, pStep), "asked ${fmt(drillSl, pStep)} read $trig3")) return
+            if (!x.mark("stop_reread", close(trig3, drillSl, pStep), "asked ${fmt(drillSl, pStep)} read $trig3 sheet ${cfm.optString("sheet")}")) return
             val cl = drillCloseTest(venue, x.baseSym, x.run)
             x.ttClosed = cl == "closed"
             x.sheetOpened = jsObj("__ex.sheetInfo(${q(venue)})")?.optBoolean("open") == true
@@ -2054,12 +2065,16 @@ class MainActivity : Activity() {
         val left = jsObj("__ex.modalInfo()")?.optInt("n") ?: -1
         x.modalOpened = left != 0
         if (!x.mark("modal_cancel", c == "clicked" && left == 0, "cancel $c modals left $left")) return
+        // MEASURED 2026-10-18 drill 2 (19:00Z): Cancel closed the WHOLE position sheet, not just the modal, and the
+        // re-read found no sheet (trigger null). The sheet is re-opened first (recorded, never a failure by itself).
+        val ro = sheetEnsureOpen(venue, x.run)
+        x.mark("sheet_after_cancel", if (ro == "open") true else null, ro)
         cur.js("__ex.sheetTab('tpsl')"); delay(800); ensure()
         val so2 = jsObj("__ex.sheetOrders()")
         val rs2 = so2?.optJSONArray("rows") ?: JSONArray()
         val stop2 = (0 until rs2.length()).map { rs2.optJSONObject(it) }.firstOrNull { it?.optString("type") == "stop" }
         val trig2 = if (stop2 == null || stop2.isNull("trigger")) null else stop2.optDouble("trigger")
-        if (!x.mark("stop_unchanged", close(trig2, trig, pStep), "before $trig after $trig2")) return
+        if (!x.mark("stop_unchanged", close(trig2, trig, pStep), "before $trig after $trig2 sheet $ro${if (so2?.has("why") == true) " " + so2.optString("why") else ""}")) return
         val sc = sheetClose(cur, venue)
         x.sheetOpened = sc.startsWith("still_open")
         x.mark("sheet_close", !x.sheetOpened, sc)
@@ -2098,15 +2113,28 @@ class MainActivity : Activity() {
 
     /** The final Confirm of the Edit Stop loss modal (test position only), then the Stop row re-read off [n TP / n SL].
      *  {confirm: clicked|…, left: modals still open, trigger: the stop read back or null} */
-    private suspend fun drillConfirmStop(): JSONObject {
+    private suspend fun drillConfirmStop(venue: String, run: CaptureRun): JSONObject {
         val cf = js("__ex.modalConfirm()"); delay(1500); ensure()
         val left = jsObj("__ex.modalInfo()")?.optInt("n") ?: -1
+        val ro = sheetEnsureOpen(venue, run)   // Confirm closes the sheet as Cancel does (drill 2): re-open before the read
         cur.js("__ex.sheetTab('tpsl')"); delay(1000); ensure()
         val so = jsObj("__ex.sheetOrders()")
         val rs = so?.optJSONArray("rows") ?: JSONArray()
         val stop = (0 until rs.length()).map { rs.optJSONObject(it) }.firstOrNull { it?.optString("type") == "stop" }
         val trig = if (stop == null || stop.isNull("trigger")) null else stop.optDouble("trigger")
-        return JSONObject().put("confirm", cf).put("left", left).put("trigger", trig ?: JSONObject.NULL)
+        return JSONObject().put("confirm", cf).put("left", left).put("trigger", trig ?: JSONObject.NULL).put("sheet", ro)
+    }
+
+    /** The position sheet, re-opened when the terminal closed it. MEASURED 2026-10-18 drill 2 (19:00Z, captures
+     *  014-modal_cancel / 015-stop_unchanged): the edit modal's Cancel closed the WHOLE sheet, not just the modal, so the
+     *  stop re-read found no sheet and returned null (and the live amend's read-back after Confirm reads the same way).
+     *  Every Stop-row re-read after a modal goes through here first: "open" when the sheet is still there, "reopened <by>"
+     *  after the same native touch the first open used (captures on [run]), else "not_open <why>" -- nothing is read off
+     *  a closed sheet. */
+    private suspend fun sheetEnsureOpen(venue: String, run: CaptureRun?): String {
+        if (jsObj("__ex.sheetInfo(${q(venue)})")?.optBoolean("open") == true) return "open"
+        val sd = sheetRead(cur, venue, run)
+        return if (sd.optBoolean("ok")) "reopened ${sd.optString("opened_by")}" else "not_open ${sd.optString("why")}"
     }
 
     /** The ONE deliberate close, on the test position only: the open sheet's "Close position" (armed for this symbol for

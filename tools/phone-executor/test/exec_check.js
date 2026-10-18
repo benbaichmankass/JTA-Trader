@@ -790,7 +790,7 @@ ${opts.noChild ? "" : `<div class=r id=chd><div id=chm>ETH <span>5x</span></div>
 <div class=or><span>Long</span><span>Take p…</span><span>2,214.87 USD</span><span><span>0.54</span><span class=u><span>ETH</span></span></span><button class=ib aria-label='Edit'>✎</button><button class=ib data-danger>ⓧ</button></div></div></div>
 <div id=modal style="display:none"><h3 id=mt>Edit Stop loss</h3><p>Short 0.54 ETH @ 2,461.52 USD</p>
 <label for=mq>Quantity</label><input id=mq value="0.54"><label for=mtr>Trigger USD</label><input id=mtr value="2504.25"><label for=md>Entry distance %</label><input id=md value="1.74">
-<label for=mr>R:R</label><input id=mr value="2.6"><button id=mc>Cancel</button><button id=mok>Confirm</button></div>
+<label for=mr>R:R</label><input id=mr value="2.6"><div class="ds-slider"><input id=mrange type=range min=0 max=100 value=40 aria-label="Stop loss Entry distance"></div><button id=mc>Cancel</button><button id=mok>Confirm</button></div>
 <script>window.__danger=0;window.__saved=0;
 document.querySelectorAll('[data-danger]').forEach(function(b){b.onclick=function(){window.__danger++}});
 var S=document.getElementById('sheet'),M=document.getElementById('modal');
@@ -836,8 +836,11 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
   eq([await ev("__ex.sheetEditStop()"), await ev("window.__danger")], ["clicked", 0], "edit: the stop row's pencil clicked, never the ⓧ");
   let mi = await ev("__ex.modalInfo()");
   eq([mi.n, mi.kind, mi.side, mi.qty, mi.unit, mi.entry, mi.triggers], [1, "stop", "short", 0.54, "ETH", 2461.52, 1], "modal: Edit Stop loss, header Short 0.54 ETH @ 2461.52, one Trigger input");
-  // 5. set ONLY the Trigger; quantity untouched; Cancel (dry) saves nothing
-  eq(await ev("__ex.modalSetTrigger('2471.94')"), {n: 1, value: "2471.94"}, "modal: trigger set + read back");
+  // 5. set ONLY the Trigger; quantity untouched; Cancel (dry) saves nothing. 2026-10-18 (operator, drill 2): the real
+  // modal carries a "Stop loss Entry distance" SLIDER under the inputs -- it is seen (sliders: 1), never an input, and
+  // its value never moves when the trigger is typed into the price field
+  eq([mi.sliders, mi.trigger_type], [1, "text"], "modal: the slider is seen and counted; the one Trigger input is a text field");
+  eq([await ev("__ex.modalSetTrigger('2471.94')"), await ev("document.getElementById('mrange').value")], [{n: 1, value: "2471.94", name: "", type: "text"}, "40"], "modal: trigger typed into the price input + read back; the slider untouched");
   eq((await ev("__ex.modalInfo()")).inputs.find((i) => /quantity/i.test(i.label)).value, "0.54", "modal: quantity untouched");
   eq([await ev("__ex.modalCancel()"), await ev("window.__saved"), (await ev("__ex.modalInfo()")).n], ["clicked", 0, 0], "modal (dry): Cancel saves nothing");
   // live: Confirm, then 6. re-read the stop trigger
