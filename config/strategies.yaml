@@ -1422,8 +1422,15 @@ strategies:
       - ETHUSDT
     donchian: 20
     atr_period: 14
-    atr_stop_mult: 2  # M20 e35 re-check 2026-08-29: cell sm2 (path_b_wf_pass, wf 6/6, d_net_r +28.7348); was 2.5
-    trail_mult: 5.0
+    # atr_stop_mult 2 -> 1.5 + trail_mult 5.0 -> 6.0 (Tier-3 PROPOSAL, holdout arm C3,
+    #   HOLD for operator approval). Evidence: comms/research/RQ-20261016-077e-02/38936621580/
+    #   verdict.json -- C3 selected from 9 arms on discovery only (2020-07-01 .. 2025-03-20,
+    #   n=187, +69.04 R, 4/4 folds; declared arm A n=174, +38.87 R, 4/4) and read ONCE on the
+    #   held-back span: C3 n=75 +19.23 R (0.256 R/trade) vs declared A n=70 +17.01 R
+    #   (0.243 R/trade), net of fee 7.5 + slippage 3 bps rt + funding 1 bps/8h.
+    #   ROLLBACK: atr_stop_mult 2, trail_mult 5.0.
+    atr_stop_mult: 1.5  # was 2 (M20 e35 re-check 2026-08-29: cell sm2, path_b_wf_pass, wf 6/6, d_net_r +28.7348; was 2.5 before that)
+    trail_mult: 6.0
     tp_r: 50.0
     tp_intent:
       mode: none
