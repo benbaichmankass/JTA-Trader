@@ -509,7 +509,8 @@ def graded_for(conn: sqlite3.Connection, c: Dict[str, Any]) -> List[Dict[str, An
             out.append((str(t.get("closed_at")), grade_trade(t, pk[0] if pk else None)))
         if any((s or {}).get("kind") == "prop_live" for s in c.get("sources") or []) \
                 and _has_table(conn, "prop_tickets") and _has_table(conn, "prop_fills"):
-            tks = _rows(conn, "SELECT * FROM prop_tickets WHERE strategy=?", (c["leg"],))
+            from src.prop.exec_test_trades import exclude_exec_test
+            tks = exclude_exec_test(_rows(conn, "SELECT * FROM prop_tickets WHERE strategy=?", (c["leg"],)))  # never a test trade
             by_pkg: Dict[str, List[Dict[str, Any]]] = {}
             for tk in tks:
                 by_pkg.setdefault(str(tk.get("order_package_id")), []).append(tk)

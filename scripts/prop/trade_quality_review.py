@@ -113,9 +113,10 @@ def load_from_api(base: str, account: str, limit: int) -> Tuple[List[dict], List
 
 def load_from_db(account: str, limit: int) -> Tuple[List[dict], List[dict]]:
     from src.prop import prop_journal
-    fills = prop_journal.list_fills(account_id=account, limit=limit)
-    tickets = prop_journal.list_outbound_tickets(account_id=account, limit=limit)
-    return fills, tickets
+    from src.prop.exec_test_trades import exclude_exec_test
+    fills = exclude_exec_test(prop_journal.list_fills(account_id=account, limit=limit), fills=True)
+    tickets = exclude_exec_test(prop_journal.list_outbound_tickets(account_id=account, limit=limit))
+    return fills, tickets   # MD-EXEC-DEV-TEST-TRADES: test trades are never reviewed as strategy performance
 
 
 # ── classification (pure) ─────────────────────────────────────────────

@@ -312,6 +312,18 @@ def claim_next(device: PhoneDevice, now: Optional[datetime] = None,
             if vu is None or vu <= now:
                 continue
             m = _meta(r)
+            if m.get("origin") == "exec_test":
+                # MD-EXEC-DEV-TEST-TRADES: every bound again at claim time; a refused ticket is never served
+                from src.prop import exec_test_trades
+                v = exec_test_trades.check_bounds(acct, r["symbol"], now=now, skip_count_for=r["ticket_id"])
+                if not v["ok"]:
+                    m["exec_test"] = {**(m.get("exec_test") or {}), "refused_at_claim": v["refusals"],
+                                      "refused_at": now.isoformat()}
+                    conn.execute("UPDATE prop_tickets SET status = 'refused', meta = ? "
+                                 "WHERE ticket_id = ? AND status = 'emitted'", (json.dumps(m), r["ticket_id"]))
+                    conn.commit()
+                    logger.warning("phone_executor: exec test ticket %s refused at claim: %s", r["ticket_id"], v["refusals"])
+                    continue
             m["phone"] = {"device_id": device.device_id, "claimed_at": now.isoformat()}
             cur = conn.execute(
                 "UPDATE prop_tickets SET status = 'claimed', meta = ? "
