@@ -380,6 +380,10 @@ def monitor_produces_tp(unit_src: str) -> bool | None:
 
 
 _RULE_RE = re.compile(r"@register_rule\(\s*[\"']([A-Za-z0-9_]+)[\"']\s*\)")
+#: `@register_rule(RULE_X)` where `RULE_X = "name"` is a module constant in the same file
+#: (donchian_measured_move registers this way; the literal-only regex read it as unregistered).
+_RULE_NAME_RE = re.compile(r"@register_rule\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)")
+_CONST_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*[\"']([A-Za-z0-9_]+)[\"']\s*$", re.MULTILINE)
 
 
 def read_registered_rules(*sources: Path) -> set[str]:
@@ -387,7 +391,10 @@ def read_registered_rules(*sources: Path) -> set[str]:
     names: set[str] = set()
     for src in sources:
         try:
-            names |= set(_RULE_RE.findall(src.read_text(encoding="utf-8")))
+            text = src.read_text(encoding="utf-8")
+            names |= set(_RULE_RE.findall(text))
+            consts = dict(_CONST_RE.findall(text))
+            names |= {consts[n] for n in _RULE_NAME_RE.findall(text) if n in consts}
         except OSError:
             continue
     return names
