@@ -1766,6 +1766,13 @@ class MainActivity : Activity() {
         val rs = so.optJSONArray("rows") ?: JSONArray()
         val stop = (0 until rs.length()).map { rs.optJSONObject(it) }.first { it?.optString("type") == "stop" }!!
         val trig = if (stop.isNull("trigger")) null else stop.optDouble("trigger")
+        // UNREAD is not a human move (operator 2026-10-18, breakout_2 #a7 on 1b.265: "terminal stop null" was reported
+        // human_moved and the server held a trail nobody had touched). A Stop row whose trigger did not read (0 or 2+
+        // price cells: n_px / why from exec.js) is a REFUSED attempt — retried with backoff — never human_moved.
+        if (trig == null) {
+            val why = "stop trigger UNREAD on the sheet (price cells n=${stop.optInt("n_px", -1)} ${stop.optString("why")} shapes=${stop.optJSONArray("px_shapes") ?: ""})"
+            return bail(why, so)
+        }
         if (!close(trig, fromSl, pStep)) {
             cap(cap, cur, "human_moved", false, "terminal stop $trig != expected ${fmt(fromSl, pStep)}")
             val c = sheetClose(cur, venue)
@@ -1792,6 +1799,7 @@ class MainActivity : Activity() {
         if (m0.optString("side") != want || mq.isNaN() || abs(mq - sq) > max(1e-9, QTY_TOL_FRAC * sq)) return mbail("modal header ${m0.optString("side")} $mq != $want $sq", m0)
         if (m0.optInt("triggers") != 1) return mbail("modal Trigger inputs n=${m0.optInt("triggers")}", m0)
         val mt = num(jsObj("__ex.modalTrigger()")?.optString("value"))
+        if (mt == null) return mbail("modal trigger UNREAD (the Trigger input carried no number): not a human move", m0)
         if (!close(mt, fromSl, pStep)) { js("__ex.modalCancel()"); delay(600); val c = sheetClose(cur, venue); return amendHuman(t, "modal trigger $mt != expected ${fmt(fromSl, pStep)} (sheet close: $c)", m0) }
         fun qtyField(m: JSONObject?): String {
             val ins = m?.optJSONArray("inputs") ?: return "?"

@@ -6,7 +6,7 @@
   // PHONE-EXEC-OBSERVABLE-1018: this file is also served SIGNED by our own API and swapped in at runtime
   // (RemoteJs.kt): a newer version replaces the installed helpers on the next ensure(); the same version is
   // never injected twice. Bump on every change (CI signs the file; the app pins by version).
-  var EXEC_VERSION = "2026-10-18.2";
+  var EXEC_VERSION = "2026-10-18.3";
   if (window.__ex && window.__ex.version === EXEC_VERSION) return;
   function hostOk() { return /(^|\.)breakoutprop\.com$/.test(location.hostname || ""); }
   function vis(el) { if (!el) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }
@@ -1772,7 +1772,11 @@
       var rows = sheetOrderRows(r).map(function (o) {
         if (!o.el) return {type: o.type, trigger: null, why: "no_row"};
         var ic = rowIcons(o.el, [o.typeEl].concat(o.px)).map(iconDump);
+        // trigger reads ONLY from exactly one price cell; otherwise null with `why` + the cells' digit-masked shapes,
+        // so an UNREAD stop is diagnosable from the dump and is never mistaken for a moved one (2026-10-18, #a7).
         return {type: o.type, trigger: o.px.length === 1 ? firstNumber(t(o.px[0])) : null, n_px: o.px.length,
+          why: o.px.length === 1 ? undefined : (o.px.length ? "many_prices" : "no_price"),
+          px_shapes: o.px.slice(0, 4).map(function (x) { return t(x).replace(/\d/g, "d").slice(0, 16); }),
           close_side: sideOf(wt(o.el)) || "", icons: ic, icon_lines: iconLines(ic), pencils: ic.filter(function (c) { return c.pencil; }).length};
       });
       return {ok: true, n_stop: rows.filter(function (x) { return x.type === "stop"; }).length,
