@@ -24,8 +24,11 @@ Sprint history:
 from __future__ import annotations
 
 import os
+import sys
+import time
+from collections.abc import Iterator, Mapping
 from datetime import datetime, timezone
-from typing import Any, ClassVar, Iterator, Mapping
+from typing import Any, ClassVar
 
 from .base import MarketRawAdapter
 
@@ -48,6 +51,37 @@ _TIMEFRAME_MS: Mapping[str, int] = {
 # ccxt's bybit fetch_ohlcv default page size; 1000 is the documented
 # Bybit V5 max per request.
 _PAGE_LIMIT = 1000
+
+# Retry budget per page: 7 attempts, backoff 1,2,4,...,60 s (~2 min max).
+_MAX_ATTEMPTS = 7
+
+# ccxt exception CLASS names that are transient by construction.
+_TRANSIENT_CLASS_KEYS = ("RateLimit", "DDoS", "Network", "Timeout", "ExchangeNotAvailable")
+
+# Bybit V5 retCodes that are server-side transients but surface as a plain
+# ``ccxt.ExchangeError`` (class name carries nothing). From Bybit's V5 error
+# table: 10016 "Server error" / "svc error: Get kline failed", 10002 "Request
+# not authorized -- timestamp / request timeout" (clock-skew + timeout class).
+_TRANSIENT_RET_CODES = ("10016", "10002")
+
+
+def _is_transient(exc: BaseException) -> bool:
+    """Is this fetch failure worth retrying?
+
+    True for the transient ccxt classes (rate limit, DDoS guard, network,
+    timeout, exchange-unavailable) AND for a plain ``ExchangeError`` whose
+    message carries one of Bybit's transient retCodes. Everything else --
+    bad symbol, auth, a programming error -- is NOT transient and must
+    surface on the first attempt.
+    """
+    name = type(exc).__name__
+    if any(k in name for k in _TRANSIENT_CLASS_KEYS):
+        return True
+    msg = str(exc)
+    return any(
+        f'"retCode":{code}' in msg or f'"retCode": {code}' in msg or f"retCode={code}" in msg
+        for code in _TRANSIENT_RET_CODES
+    )
 
 
 class OffVmGuardrailViolation(RuntimeError):
@@ -132,20 +166,39 @@ class BybitOffvmMarketRawAdapter(MarketRawAdapter):
             # retCode 10006 RateLimitExceeded, DDoS guard, network blips) so
             # a deep multi-million-bar pull (e.g. years of 1m) survives the
             # exchange's per-minute cap instead of aborting mid-stream.
+            #
+            # Bybit's SERVER-SIDE transient ("retCode":10016 "svc error: Get
+            # kline failed", and 10002 request-timeout) arrives as a plain
+            # ccxt ``ExchangeError`` -- a class name the list above never
+            # matched, so ONE such page aborted the whole shard. MEASURED on
+            # the trainer (dataset_builds.jsonl, trainer-vm-diag #18882): 12
+            # ``market_raw`` failures 2026-10-13..18, every one retCode 10016,
+            # every one on the first try. Transient-by-message is retried
+            # the same way; everything else still raises immediately.
             page = None
-            for _attempt in range(7):
+            last_exc: Exception | None = None
+            for _attempt in range(_MAX_ATTEMPTS):
                 try:
                     page = exchange.fetch_ohlcv(
                         symbol, timeframe=timeframe, since=cursor, limit=_PAGE_LIMIT,
                     )
                     break
-                except Exception as exc:  # noqa: BLE001
-                    name = type(exc).__name__
-                    if any(k in name for k in ("RateLimit", "DDoS", "Network", "Timeout", "ExchangeNotAvailable")):
-                        import time
-                        time.sleep(min(2 ** _attempt, 60))
+                except Exception as exc:
+                    if _is_transient(exc) and _attempt < _MAX_ATTEMPTS - 1:
+                        last_exc = exc
+                        delay = min(2 ** _attempt, 60)
+                        print(
+                            f"bybit_offvm: transient {type(exc).__name__} on "
+                            f"{symbol} {timeframe} since={cursor} "
+                            f"(attempt {_attempt + 1}/{_MAX_ATTEMPTS}, retry in {delay}s): "
+                            f"{str(exc)[:160]}",
+                            file=sys.stderr,
+                        )
+                        time.sleep(delay)
                         continue
                     raise
+            else:  # pragma: no cover - the loop only falls through after re-raising
+                raise last_exc  # type: ignore[misc]
             if not page:
                 break
             advanced = False
@@ -178,7 +231,6 @@ class BybitOffvmMarketRawAdapter(MarketRawAdapter):
             if pause > 0:
                 # Extra throttle on top of ccxt's enableRateLimit so a deep
                 # multi-year pull stays gentle on the public API.
-                import time
                 time.sleep(pause)
 
     @classmethod
