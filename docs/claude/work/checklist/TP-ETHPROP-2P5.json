@@ -1,0 +1,22 @@
+{
+  "id": "TP-ETHPROP-2P5",
+  "title": "trend_donchian_eth_prop: pursue tp_r 2.5 as the predictive TP (prop-cost ablation + per-firm prop_ev_grid first, then declare)",
+  "phase": "now",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR DECISION 2026-10-18 ~17:58Z (popup 'Pursue 2.5R'). Resolves PI-20261018-ROPKSTAR-0001. Evidence: RQ-20261016-007, n 870, OOS 348 (2021-10..2026-10). K*=2.5 R reaches 13.5% OOS. Calibration gap 0.005. OOS delta -0.028 R/trade, CI [-0.066,+0.006]. The 6 R target reaches only 3.4% and is graded unreachable. Prop legs clear a SUPERSET, so: (1) run the prop-cost ablation and prop_ev_grid per firm (breakout_2, tradeify_1, velotrade_1), using the same nodes as sol_prop (P1-Q2-solprop-confirm-kstar); (2) declare tp_r 2.5 only if those pass. If they fail, record the 6 R as accepted doctrine debt on TP-DOCTRINE. Interacts with DECISION-BAR-MATCH, which re-tests the same leg on forming vs closed bars: pre-register on the bar set the leg will trade.",
+  "priority_rank": 5,
+  "updated_at": "2026-10-18T17:57:45Z",
+  "updated_by": "session_01VduHYzdaXe27wTDBLSu8ao",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "_seq": 570
+}
