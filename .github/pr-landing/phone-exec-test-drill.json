@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "PHONE-EXEC-OBSERVABLE-1018 app PR (lane session_01Cqmpr14msnNhk7ZQrmYRfS; manager session_01VduHYzdaXe27wTDBLSu8ao). Tier 3 by content: the phone app's drill, when the SERVER's claim carries test_trade.confirm (PR 3 #18920 on the mandate MD-EXEC-DEV-TEST-TRADES, #18936/#18937), claims and places the drill's OWN minimum-size ticket like any entry, runs the stop-amend flow and on that position only presses the final Confirm, reads the new stop back, and CLOSES the position through the sheet's 'Close position' (exec.js allowClose + sheetClosePosition: armed for one symbol for one click; every other close / cancel control stays refused by the denylist), then reports placed / amended stop / closed on the drill result; a position left open gets one retry and is reported, never hidden. A drill without test_trade keeps the no-Confirm, no-close contract. exec.js 2026-10-18.2 (page-side helpers; signed and served remotely once #18922 lands). Needs the ONE APK build after #18922 merges (the public key is embedded there). Revert = reinstall the previous APK / revert exec.js (the server never issues test_trade without the mandate).",
+  "why": "operator 2026-10-18 (verbatim, this lane's session): 'I grant MD-EXEC-DEV-TEST-TRADES: the phone drill may open and close minimum-size test trades on breakout_2 / tradeify_1 / velotrade_1 under the bounds you proposed, including the final Confirm.' -- the whole operation exercised on demand instead of per live trail event."
+}
