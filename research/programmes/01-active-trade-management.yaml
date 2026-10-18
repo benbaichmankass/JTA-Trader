@@ -2637,21 +2637,344 @@ nodes:
   goal: G1
   roadmap:
   - L-ATM
+  - L-PROP
   value:
     usd_at_stake_per_month: 300
     confidence: 0.3
   after:
   - node: P1-Q4-ethprop-exit-confirm
     verdict: pass
-  needs_authoring: 'CONFIRMED 2026-10-18 (RQ-20261016-010, run 39103764915): T1 = trail_mult 4.5 (vs 3.5) 122.04 vs 76.02 R
-    over 1,070 / 1,085 trades, 6 of 6 folds, maxDD 21.68 vs 21.16, net R/capital-day 0.181 vs 0.119, 2020-07..2026-10
-    at the prop cost stack; the three momentum cells FAILED. Register the prop_ev_grid head-to-head: --trades
-    trend_donchian_eth_prop=comms/research/RQ-20261016-010/39103764915/arms/T1__trades.jsonl vs
-    arms/A__trades.jsonl, per prop ruleset (tradeify_1, velotrade_1, breakout_2), 5 seeds, the RQ-20261015-6504-01
-    shape, rule: T1 must not lower P(net > 0) or ev_net_usd on ANY firm (prop superset) -- before any Tier-3
-    proposal. NOTE the 2026-08-13 coverage row: trail4.5 cleared Path A then FAILED the 6-fold walk-forward 3 of 6 on
-    the 2021..2026 window (wf_fail); this run has it 6 of 6 over 2020-07..2026-10 with 1,085 trades. Both reads go in
-    the proposal; a lever that flips between windows is noted as such.'
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    cadence: once
+    title: 'Programme 01 Q4, prop money (breakout_2): does the confirmed trail_mult 4.5 arm (T1) of trend_donchian_eth_prop
+      beat the declared 3.5 arm (A) on EV with no lower survival on all 5 seeds under the breakout_2 ruleset, prop cost
+      stack?'
+    question: 'RQ-20261016-010 (run 39103764915, MEASURED from its committed arm files) CONFIRMED on trend_donchian_eth_prop
+      at the prop cost stack: T1 (trail_mult 4.5) 122.04 vs A (3.5) 76.02 R over 1,085 / 1,070 trades, 6 of 6 folds, maxDD
+      21.68 vs 21.16 R, 2020-07..2026-10. That is trade-level R, not a firm-rules result. The prop superset requires the
+      lever to hold under each firm''s own drawdown/target rules. Re-price the SAME two committed trade sets through prop_ev_grid
+      under breakout_turbo_1step.yaml (breakout_2): does T1 beat A on ev_net_usd_per_life with p_alive_at_horizon >= A''s
+      on all 5 seeds?'
+    why_this_matters: trend_donchian_eth_prop is PROP money on breakout_2, tradeify_1 and velotrade_1 (and paper bybit_1);
+      trail_mult is a leg-level field shared by every routing, so one Tier-3 declare PR needs ALL THREE firm units to pass
+      (this unit and its two siblings P1-Q4-ethprop-ev-tradeify / -velotrade, or P1-Q4-ethprop-ev for breakout_2). Prop
+      legs clear a superset of the ladder (CLAUDE.md), never a lower bar.
+    power:
+      expected_n: 1070
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: n = 1,070 (A) / 1,085 (T1) committed trades from RQ-20261016-010; far above the 88 floor prop_ev_grid grades
+        UNDERPOWERED under.
+      feasibility:
+        source: none
+        accrual_basis: Re-pricing of committed trade evidence under the firm's rules; nothing accrues.
+    decision_rule:
+      id: RULE-P1-Q4-ETHPROP-EV-BREAKOUT2
+      registered_at: '2026-10-18'
+      registered_before_run: true
+      statistic: Per seed (1..5) and arm, path-mode ev_net_usd_per_life and p_alive_at_horizon from prop_ev_grid over the
+        single-leg trend_donchian_eth_prop book under config/prop_rulesets/breakout_turbo_1step.yaml, sizing as the breakout_2
+        account declares it (--sizing room --risk-pct 0.015 --room-frac 0.33 --min-risk 10), switch not armed (the sim default).
+        A = the declared trail_mult 3.5 trades (arms/A__trades.jsonl); C_T1 = the trail_mult 4.5 trades (arms/T1__trades.jsonl).
+        Both files are the committed RQ-20261016-010 outputs.
+      rule: 'prop_ev_grid --grade cushion_vs_flat, mechanically: PASS IF C_T1 beats A on ev_net_usd_per_life AND has >=
+        A''s p_alive_at_horizon on ALL 5 seeds. FAIL IF A is undominated on any seed (T1 does not hold under this firm''s
+        rules; the lever is not proposed for any prop routing, because trail_mult is leg-level). NULL (indeterminate) otherwise.
+        PASS here is one of three firm gates (breakout_2, tradeify_1, velotrade_1): a Tier-3 trail_mult proposal needs all
+        three, plus the walk-forward conflict below stated in the note, as a note on the owning checklist row for the manager,
+        never a config edit. Thresholds are not changed after any result.'
+      min_n: '88'
+    what_it_does_not_do: 'Edits no config or roster and claims no promotion. Does not price the sol_prop leg (single-leg
+      book, so cross-leg drawdown interaction on the real multi-leg account is not modelled). NOTE the 2026-08-13 coverage
+      row: trail 4.5 cleared Path A then FAILED the 6-fold walk-forward 3 of 6 on the 2021..2026 window (wf_fail); the 6-of-6
+      read here is on 2020-07..2026-10. A PASS here must carry both reads into the proposal, and a lever that flips between
+      windows is noted as such. T1 was the best of FOUR arms (A + T1 + three momentum cells in RQ-010), the multiple-testing
+      denominator for the proposal.'
+    compute: cpu_long
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 300
+      confidence: 0.3
+      basis: 'stand-in: one prop leg on three prop accounts; not a P&L measurement.'
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 2.0
+      est_minutes: 90
+      why_runner: Reads committed trade files only; no candle fetch.
+      basis: prop_ev_grid 2 arms x 5 seeds at the default lives, --jobs 4. RQ-20261015-6504-01 (3 arms, a 4-leg 730 d book) MEASURED 500-2,300 s per cell; this book is one leg but 1,085 trades, so est 90 min.
+    run:
+      command:
+      - python3
+      - scripts/research/prop_ev_grid.py
+      - --leg
+      - trend_donchian_eth_prop=comms/research/RQ-20261016-010/39103764915/arms/A__trades.jsonl
+      - --arm
+      - A=--sizing room --risk-pct 0.015 --room-frac 0.33 --min-risk 10
+      - --arm
+      - C_T1=--sizing room --risk-pct 0.015 --room-frac 0.33 --min-risk 10 --trades trend_donchian_eth_prop=comms/research/RQ-20261016-010/39103764915/arms/T1__trades.jsonl
+      - --common
+      - --ruleset config/prop_rulesets/breakout_turbo_1step.yaml --costs breakout --funded-start fresh --swap-model prorated
+        --lev-cap trend_donchian_eth_prop=5 --no-hedge
+      - --seeds
+      - 1,2,3,4,5
+      - --grade
+      - cushion_vs_flat
+      - --n-floor
+      - '88'
+      - --out
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --note
+      - 'P1-Q4-ethprop-ev: T1 vs A under breakout_turbo_1step'
+      timeout_minutes: 180
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    roadmap:
+    - L-ATM
+    - L-PROP
+    related:
+    - RQ-20261016-010
+    - RQ-20261015-6504-01
+    - scripts/research/prop_ev_grid.py
+    - TP-DOCTRINE
+- id: P1-Q4-ethprop-ev-tradeify
+  goal: G1
+  roadmap:
+  - L-ATM
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.3
+  after:
+  - node: P1-Q4-ethprop-exit-confirm
+    verdict: pass
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    cadence: once
+    title: 'Programme 01 Q4, prop money (tradeify_1): does the confirmed trail_mult 4.5 arm (T1) of trend_donchian_eth_prop
+      beat the declared 3.5 arm (A) on EV with no lower survival on all 5 seeds under the tradeify_1 ruleset, prop cost
+      stack?'
+    question: 'RQ-20261016-010 (run 39103764915, MEASURED from its committed arm files) CONFIRMED on trend_donchian_eth_prop
+      at the prop cost stack: T1 (trail_mult 4.5) 122.04 vs A (3.5) 76.02 R over 1,085 / 1,070 trades, 6 of 6 folds, maxDD
+      21.68 vs 21.16 R, 2020-07..2026-10. That is trade-level R, not a firm-rules result. The prop superset requires the
+      lever to hold under each firm''s own drawdown/target rules. Re-price the SAME two committed trade sets through prop_ev_grid
+      under tradeify_247_1step.yaml (tradeify_1): does T1 beat A on ev_net_usd_per_life with p_alive_at_horizon >= A''s
+      on all 5 seeds?'
+    why_this_matters: trend_donchian_eth_prop is PROP money on breakout_2, tradeify_1 and velotrade_1 (and paper bybit_1);
+      trail_mult is a leg-level field shared by every routing, so one Tier-3 declare PR needs ALL THREE firm units to pass
+      (this unit and its two siblings P1-Q4-ethprop-ev-tradeify / -velotrade, or P1-Q4-ethprop-ev for breakout_2). Prop
+      legs clear a superset of the ladder (CLAUDE.md), never a lower bar.
+    power:
+      expected_n: 1070
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: n = 1,070 (A) / 1,085 (T1) committed trades from RQ-20261016-010; far above the 88 floor prop_ev_grid grades
+        UNDERPOWERED under.
+      feasibility:
+        source: none
+        accrual_basis: Re-pricing of committed trade evidence under the firm's rules; nothing accrues.
+    decision_rule:
+      id: RULE-P1-Q4-ETHPROP-EV-TRADEIFY1
+      registered_at: '2026-10-18'
+      registered_before_run: true
+      statistic: Per seed (1..5) and arm, path-mode ev_net_usd_per_life and p_alive_at_horizon from prop_ev_grid over the
+        single-leg trend_donchian_eth_prop book under config/prop_rulesets/tradeify_247_1step.yaml, sizing as the tradeify_1
+        account declares it (--sizing balance --risk-pct 0.005), switch not armed (the sim default). A = the declared trail_mult
+        3.5 trades (arms/A__trades.jsonl); C_T1 = the trail_mult 4.5 trades (arms/T1__trades.jsonl). Both files are the
+        committed RQ-20261016-010 outputs.
+      rule: 'prop_ev_grid --grade cushion_vs_flat, mechanically: PASS IF C_T1 beats A on ev_net_usd_per_life AND has >=
+        A''s p_alive_at_horizon on ALL 5 seeds. FAIL IF A is undominated on any seed (T1 does not hold under this firm''s
+        rules; the lever is not proposed for any prop routing, because trail_mult is leg-level). NULL (indeterminate) otherwise.
+        PASS here is one of three firm gates (breakout_2, tradeify_1, velotrade_1): a Tier-3 trail_mult proposal needs all
+        three, plus the walk-forward conflict below stated in the note, as a note on the owning checklist row for the manager,
+        never a config edit. Thresholds are not changed after any result.'
+      min_n: '88'
+    what_it_does_not_do: 'Edits no config or roster and claims no promotion. Does not price the sol_prop leg (single-leg
+      book, so cross-leg drawdown interaction on the real multi-leg account is not modelled). NOTE the 2026-08-13 coverage
+      row: trail 4.5 cleared Path A then FAILED the 6-fold walk-forward 3 of 6 on the 2021..2026 window (wf_fail); the 6-of-6
+      read here is on 2020-07..2026-10. A PASS here must carry both reads into the proposal, and a lever that flips between
+      windows is noted as such. T1 was the best of FOUR arms (A + T1 + three momentum cells in RQ-010), the multiple-testing
+      denominator for the proposal.'
+    compute: cpu_long
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 150
+      confidence: 0.3
+      basis: 'stand-in: one prop leg on three prop accounts; not a P&L measurement.'
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 2.0
+      est_minutes: 90
+      why_runner: Reads committed trade files only; no candle fetch.
+      basis: prop_ev_grid 2 arms x 5 seeds at the default lives, --jobs 4. RQ-20261015-6504-01 (3 arms, a 4-leg 730 d book) MEASURED 500-2,300 s per cell; this book is one leg but 1,085 trades, so est 90 min.
+    run:
+      command:
+      - python3
+      - scripts/research/prop_ev_grid.py
+      - --leg
+      - trend_donchian_eth_prop=comms/research/RQ-20261016-010/39103764915/arms/A__trades.jsonl
+      - --arm
+      - A=--sizing balance --risk-pct 0.005
+      - --arm
+      - C_T1=--sizing balance --risk-pct 0.005 --trades trend_donchian_eth_prop=comms/research/RQ-20261016-010/39103764915/arms/T1__trades.jsonl
+      - --common
+      - --ruleset config/prop_rulesets/tradeify_247_1step.yaml --lev-cap trend_donchian_eth_prop=5 --no-hedge --swap-model
+        prorated --funded-start fresh
+      - --seeds
+      - 1,2,3,4,5
+      - --grade
+      - cushion_vs_flat
+      - --n-floor
+      - '88'
+      - --out
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --note
+      - 'P1-Q4-ethprop-ev-tradeify: T1 vs A under tradeify_247_1step'
+      timeout_minutes: 180
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    roadmap:
+    - L-ATM
+    - L-PROP
+    related:
+    - RQ-20261016-010
+    - RQ-20261015-6504-01
+    - scripts/research/prop_ev_grid.py
+    - TP-DOCTRINE
+- id: P1-Q4-ethprop-ev-velotrade
+  goal: G1
+  roadmap:
+  - L-ATM
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.3
+  after:
+  - node: P1-Q4-ethprop-exit-confirm
+    verdict: pass
+  unit:
+    theme: new_strategy_prop
+    priority: 1
+    kind: experiment
+    cadence: once
+    title: 'Programme 01 Q4, prop money (velotrade_1): does the confirmed trail_mult 4.5 arm (T1) of trend_donchian_eth_prop
+      beat the declared 3.5 arm (A) on EV with no lower survival on all 5 seeds under the velotrade_1 ruleset, prop cost
+      stack?'
+    question: 'RQ-20261016-010 (run 39103764915, MEASURED from its committed arm files) CONFIRMED on trend_donchian_eth_prop
+      at the prop cost stack: T1 (trail_mult 4.5) 122.04 vs A (3.5) 76.02 R over 1,085 / 1,070 trades, 6 of 6 folds, maxDD
+      21.68 vs 21.16 R, 2020-07..2026-10. That is trade-level R, not a firm-rules result. The prop superset requires the
+      lever to hold under each firm''s own drawdown/target rules. Re-price the SAME two committed trade sets through prop_ev_grid
+      under velotrade_classic_1step.yaml (velotrade_1): does T1 beat A on ev_net_usd_per_life with p_alive_at_horizon >=
+      A''s on all 5 seeds?'
+    why_this_matters: trend_donchian_eth_prop is PROP money on breakout_2, tradeify_1 and velotrade_1 (and paper bybit_1);
+      trail_mult is a leg-level field shared by every routing, so one Tier-3 declare PR needs ALL THREE firm units to pass
+      (this unit and its two siblings P1-Q4-ethprop-ev-tradeify / -velotrade, or P1-Q4-ethprop-ev for breakout_2). Prop
+      legs clear a superset of the ladder (CLAUDE.md), never a lower bar.
+    power:
+      expected_n: 1070
+      min_detectable_effect: 0.3
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: n = 1,070 (A) / 1,085 (T1) committed trades from RQ-20261016-010; far above the 88 floor prop_ev_grid grades
+        UNDERPOWERED under.
+      feasibility:
+        source: none
+        accrual_basis: Re-pricing of committed trade evidence under the firm's rules; nothing accrues.
+    decision_rule:
+      id: RULE-P1-Q4-ETHPROP-EV-VELOTRADE1
+      registered_at: '2026-10-18'
+      registered_before_run: true
+      statistic: Per seed (1..5) and arm, path-mode ev_net_usd_per_life and p_alive_at_horizon from prop_ev_grid over the
+        single-leg trend_donchian_eth_prop book under config/prop_rulesets/velotrade_classic_1step.yaml, sizing as the velotrade_1
+        account declares it (--sizing balance --risk-pct 0.005), switch not armed (the sim default). A = the declared trail_mult
+        3.5 trades (arms/A__trades.jsonl); C_T1 = the trail_mult 4.5 trades (arms/T1__trades.jsonl). Both files are the
+        committed RQ-20261016-010 outputs.
+      rule: 'prop_ev_grid --grade cushion_vs_flat, mechanically: PASS IF C_T1 beats A on ev_net_usd_per_life AND has >=
+        A''s p_alive_at_horizon on ALL 5 seeds. FAIL IF A is undominated on any seed (T1 does not hold under this firm''s
+        rules; the lever is not proposed for any prop routing, because trail_mult is leg-level). NULL (indeterminate) otherwise.
+        PASS here is one of three firm gates (breakout_2, tradeify_1, velotrade_1): a Tier-3 trail_mult proposal needs all
+        three, plus the walk-forward conflict below stated in the note, as a note on the owning checklist row for the manager,
+        never a config edit. Thresholds are not changed after any result.'
+      min_n: '88'
+    what_it_does_not_do: 'Edits no config or roster and claims no promotion. Does not price the sol_prop leg (single-leg
+      book, so cross-leg drawdown interaction on the real multi-leg account is not modelled). NOTE the 2026-08-13 coverage
+      row: trail 4.5 cleared Path A then FAILED the 6-fold walk-forward 3 of 6 on the 2021..2026 window (wf_fail); the 6-of-6
+      read here is on 2020-07..2026-10. A PASS here must carry both reads into the proposal, and a lever that flips between
+      windows is noted as such. T1 was the best of FOUR arms (A + T1 + three momentum cells in RQ-010), the multiple-testing
+      denominator for the proposal.'
+    compute: cpu_long
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 150
+      confidence: 0.3
+      basis: 'stand-in: one prop leg on three prop accounts; not a P&L measurement.'
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 2.0
+      est_minutes: 90
+      why_runner: Reads committed trade files only; no candle fetch.
+      basis: prop_ev_grid 2 arms x 5 seeds at the default lives, --jobs 4. RQ-20261015-6504-01 (3 arms, a 4-leg 730 d book) MEASURED 500-2,300 s per cell; this book is one leg but 1,085 trades, so est 90 min.
+    run:
+      command:
+      - python3
+      - scripts/research/prop_ev_grid.py
+      - --leg
+      - trend_donchian_eth_prop=comms/research/RQ-20261016-010/39103764915/arms/A__trades.jsonl
+      - --arm
+      - A=--sizing balance --risk-pct 0.005
+      - --arm
+      - C_T1=--sizing balance --risk-pct 0.005 --trades trend_donchian_eth_prop=comms/research/RQ-20261016-010/39103764915/arms/T1__trades.jsonl
+      - --common
+      - --ruleset config/prop_rulesets/velotrade_classic_1step.yaml --lev-cap trend_donchian_eth_prop=5 --no-hedge --swap-model
+        prorated --funded-start fresh
+      - --seeds
+      - 1,2,3,4,5
+      - --grade
+      - cushion_vs_flat
+      - --n-floor
+      - '88'
+      - --out
+      - '{out_dir}'
+      - --jobs
+      - '4'
+      - --note
+      - 'P1-Q4-ethprop-ev-velotrade: T1 vs A under velotrade_classic_1step'
+      timeout_minutes: 180
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    roadmap:
+    - L-ATM
+    - L-PROP
+    related:
+    - RQ-20261016-010
+    - RQ-20261015-6504-01
+    - scripts/research/prop_ev_grid.py
+    - TP-DOCTRINE
 - id: P1-Q2-solprop-confirm-kstar
   goal: G1
   roadmap:
@@ -3029,3 +3352,132 @@ nodes:
     waits on build row MOMENTUM-LEVERS-LIVE (Tier-2). Then Q6 parity on 1-2 trades (position_path_history), then the
     Tier-3 declare for alpaca_live + alpaca_portfolio (alpaca_paper / alpaca_options_paper carry the same leg by
     roster). The leg''s entry TP stays the 50 R sentinel: this is a stop-side lever, not the doctrine answer.'
+- id: P1-Q4-adapb-live-levers
+  goal: G1
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 500
+    confidence: 0.3
+  unit:
+    theme: live_strategy
+    priority: 1
+    kind: experiment
+    title: 'Operator question 2026-10-18 on the open bybit_2 ADAUSDT short: do the live-capable exit levers (stall
+      trail-decay 10/1.8 as on eth_4h, stall trail-decay 10/2.5, giveback 1.0 R after 2 R) beat REAL-MONEY ada_pullback_2h
+      as declared today (pullback_frac 0.618, tp 4 R, trail 5 ATR)?'
+    question: 'The 2026-07-12 fleet sweeps tested trail geometry, stale, giveback and trail_decay on ada_pullback_2h
+      and every cell failed (trail_decay stall 10 / tight 2.5: 3 of 6 folds), but against an older incumbent: tp_r
+      4 shipped 2026-08-30 and pullback_frac 0.618 merged 2026-10-18 (#18869). The live monitor (htf_pullback_trend_2h.monitor)
+      reads trail_decay_* and giveback_* keys, so a passing arm is declarable without code. On the open trade
+      (pkg-fa7365f5edff45ba, entry 0.2305, peak 2.37 R at 0.2142, 5-ATR trail = 0.23713 = the original stop) the
+      arms would lock +1.17 R (10/1.8), +0.70 R (10/2.5) or exit at +1.37 R (giveback); the question is whether
+      any of them pays net of cost over the leg''s history, not whether it saves this trade.'
+    why_this_matters: Real-money leg (bybit_2 + mirror bybit_portfolio + bybit_1). The operator asked why the stop
+      has not moved; the answer must be a measured lever record on the current incumbent, not a hand-moved stop.
+    power:
+      expected_n: 200
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: 'Floor: (1.96 + 0.8416)^2 / 0.45^2 = 38.76 -> 39 incumbent trades (the repo''s E35/exit-refinement
+        floor). ESTIMATE: RQ-20261016-008 (same leg, same window shape) reported ~449 incumbent trades over 2020-10..2026-10;
+        the 0.618 pullback_frac admits fewer entries, so expect 150-300. Trade sequences autocorrelate, so the floor
+        is necessary, not sufficient; the calendar-fold majority carries the rest.'
+      feasibility:
+        source: none
+        accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+    decision_rule:
+      id: RULE-P1-Q4-ADAPB-LIVE-LEVERS
+      statistic: 'From scripts/research/exit_lever_ablation.py --grade replace on ada_pullback_2h, window 2020-10-05
+        .. 2026-10-15 23:59 (4 equal calendar folds; a trade is binned by entry time), net of the full cost stack
+        the harness resolves per venue (fee + slippage + funding per 8 h window on Bybit perps, via execution_costs.resolve_cost_policy;
+        recorded per arm as cost_stack). Per arm, from the harness''s own --json summary: n, net_total_r, max_drawdown_r,
+        net R per fold. A = the leg as declared in config/strategies.yaml on this branch (argv built by regime_debt_matrix.build_harness_cmd;
+        the pullback builder does not forward trail_decay/giveback keys, so the candidates pass them as raw harness
+        flags). Candidates: D18 = --trail-decay-stall-bars 10 --trail-decay-tight-mult 1.8; D25 = --trail-decay-stall-bars
+        10 --trail-decay-tight-mult 2.5; G = --giveback-min-mfe-r 2.0 --giveback-r 1.0. Per candidate C: delta
+        = net_r(C) - net_r(A); folds_ge = folds where net_r(C) >= net_r(A) (ties count); maxDD(C) vs maxDD(A). Reported,
+        not graded: by_outcome, lever_fired, tp_doctrine.'
+      rule: 'INDETERMINATE IF n(A) < 39 (underpowered: no verdict, never FAIL on thin n). A candidate C PASSES iff
+        net_r(C) > net_r(A) AND delta >= 0.02 R x n(A) (materiality: ~2x the cost of one extra exit) AND folds_ge
+        >= 3 of 4 AND maxDD(C) <= maxDD(A) x 1.1. PASS IF one or more pass: the passing candidate with the highest
+        net R is named -> a data-backed Tier-3 PROPOSAL (config/strategies.yaml ada_pullback_2h: trail_decay_stall_bars
+        + trail_decay_tight_mult, or giveback_min_mfe_r + giveback_r) for the manager under the standing authorization;
+        the live monitor re-reads strategies.yaml by mtime so it applies to the open package once merged and synced.
+        FAIL IF none passes -> the incumbent exit stands and the open trade rides it; the four lever cells are recorded
+        honest_negative on the CURRENT incumbent in the coverage matrix. Thresholds (0.02 R/trade, 3 of 4 folds,
+        the 0.1 drawdown tolerance, the 39 floor) are not changed after any result.'
+      what_it_does_not_do: 'Edits no config and places no order: a PASS is an evidence record for a Tier-3 proposal,
+        never a change, and nothing here touches the open position. It does not test TP geometry (RQ-20261016-008
+        already failed tp_extend on this leg) or entry filters. Three candidates against one incumbent is a multiple
+        comparison; the fold majority and the materiality bar are what guard it. It overlaps the 2026-07-12 sweep''s
+        history, so it is a re-test on the new incumbent, not an independent holdout.'
+    compute: cpu_light
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 500
+      confidence: 0.3
+      basis: 'stand-in: operator-raised exit question on a real-money leg with an open position.'
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 2.0
+      est_minutes: 25
+      why_runner: Fetches keyless public candles (Binance Vision) for a pinned window; Kaggle CPU runs with the internet
+        off and metis-market-data carries no 2h candles for this leg; reads no trainer data.
+      basis: 'Runner. One exit_lever_ablation.py invocation: one keyless candle fetch + one harness pass per arm.
+        MEASURED 2026-10-16 in the lane sandbox: 2 arms on xrp_pullback_2h over 2020-07..2026-10 took 74 s wall
+        incl. the fetch; four arms here.'
+    run:
+      command:
+      - python3
+      - scripts/research/exit_lever_ablation.py
+      - --leg
+      - ada_pullback_2h
+      - --arm
+      - A=
+      - --arm
+      - D18=--trail-decay-stall-bars=10;--trail-decay-tight-mult=1.8
+      - --arm
+      - D25=--trail-decay-stall-bars=10;--trail-decay-tight-mult=2.5
+      - --arm
+      - G=--giveback-min-mfe-r=2.0;--giveback-r=1.0
+      - --days
+      - '2240'
+      - --start
+      - '2020-10-05'
+      - --end
+      - 2026-10-15 23:59
+      - --grade
+      - replace
+      - --baseline
+      - A
+      - --delta-r
+      - '0'
+      - --delta-r-per-trade
+      - '0.02'
+      - --folds
+      - '4'
+      - --fold-majority
+      - '3'
+      - --dd-tol-frac
+      - '0.1'
+      - --n-floor
+      - '39'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 120
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    roadmap:
+    - L-ATM
+    - M20
+    related:
+    - docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md
+    - scripts/research/exit_lever_ablation.py
+    - docs/research/exit-refinement-coverage.json (ada_pullback_2h row, 2026-07-12 cells)

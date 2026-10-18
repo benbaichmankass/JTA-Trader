@@ -291,6 +291,40 @@ is genuine selection. Design + single-account simulation:
 The decider remains research-stage — no live simulator script is wired
 yet; research harnesses live under `scripts/research/`.
 
+**Slice accounts (NETTED-SLICES, 2026-10-15, operator-ordered; Tier-2 hold
+until merged).** An account declaring `position_model: slices` in
+`config/accounts.yaml` (today: `bybit_1` only) does NOT elect one strategy per
+symbol. Operator, verbatim: *"We can have different strategies working with
+netted positions as long as we know how much of that position belongs to each
+strategy, and each piece of that position has its own brackets."* Built on what
+already existed, with no parallel allocator:
+- **Ledger and admission** extend `src/runtime/positions.py` from Option A to
+  per-slice. A slice is one open `trades` row (strategy, qty, entry, SL, TP,
+  `sl_order_id`/`tp_order_id`). The venue net must equal the signed sum of the
+  open slices (`reconcile`: reconciled / divergent / unreadable).
+- **Allocation** extends `src/runtime/allocator_ev.py` with
+  `intent_allocation_score`. It is the existing `conviction.compute_conviction`
+  blend over the stamped c_strat/c_setup/c_wr/c_reg, plus two new inputs:
+  c_bt (measured backtest expectancy) and c_live (live win rate). It also
+  records the cost-aware EV_R. Weights live in `config/slice_allocation.yaml`
+  and are Tier-3 to change.
+- **Planning.** The planner (`arbitration_fanout.plan_per_account_election`)
+  still runs `elect_from_gated` once to pick the tick's side. It then splits
+  the per-symbol risk budget across the same-side candidates by
+  `score / Σ score`, with one round per allocated strategy.
+- **Admission** (`positions.admit_slice`) runs in the coordinator after the
+  RiskManager sizes the trade. The delta basis is the strategy's OWN slice,
+  and Option A's same-strategy guard is kept. It refuses, per trade, an add
+  when:
+  - the book is divergent or unreadable;
+  - the book is non-flat and not in Partial TP/SL mode;
+  - the slice is opposite to the book on a ONE-WAY book (it is admitted on a
+    hedge book);
+  - the symbol's budget is exhausted.
+- **Brackets.** A slice is never resized or reversed by a later signal. It
+  exits through its own qty-scoped Partial bracket or its strategy's
+  per-trade close. Every other account is unchanged.
+
 ### Step 4 — Risk gating
 Before any order reaches broker execution, risk controls decide whether
 to allow the signal:
@@ -1431,6 +1465,8 @@ filtered to architecture-level deltas only.
 | 2026-10-16 | PAIRS-ALPACA-BUILD-1016 (lane, Tier-3-by-path hold) | **The pairs session venue (Alpaca) refuses to size on an inflated R unit.** `pairs_engine.entry_signal` sizes and stops on `risk = stop_z · std` of the log-spread; with `hedge_beta: rolling` that std is taken over a series whose β moves every bar, so β drift × the log-price level inflates it and every leg is undersized by the same factor (checklist PAIRS-R-SCALE: ~775x measured in the harness; ~87x on the planted SOL/ETH-like fixture). New `pairs_engine.fixed_beta_risk` = `stop_z ×` std of `logA − β_entry·logB` over the same shift-1 window, β frozen at entry; `entry_signal` reports `risk_fixed_beta` and `risk_scale_ratio`, and every open/skip_size soak row on every venue carries both. `decide_pair(require_fixed_beta_risk=True)` (passed by `run_pairs_tick` for session venues only) returns `skip_risk_scale` and sizes nothing when the ratio is off 1 by more than `RISK_SCALE_TOLERANCE` (1%). `hedge_beta: one` passes by construction. Not a gate: a per-decision refusal on a measured quantity, like `skip_size`. The Bybit sleeve is unchanged (operator 2026-10-16: its paper legs keep running while PAIRS-R-SCALE is fixed); the full fix (freeze β at entry, read stop/revert on the fixed-β spread) lands with the harness fix. | `src/units/strategies/pairs_engine.py`, `src/units/strategies/pairs_executor.py`, `tests/test_pairs_risk_scale.py` | On merge + deploy: `pairs_gld_gdx` soak rows carry `risk_scale_ratio` 1.0; Bybit rows carry the measured inflation. Not deployed or observed as of this row. |
 | 2026-10-16 | PAIRS-R-SCALE-FIX-1016 (lane, Tier-3-by-path hold) | **The pairs engine and harness freeze β at entry (PAIRS-R-SCALE fix).** With `hedge_beta: rolling` the rolling-β z only triggers the entry; the R unit (`stop_z ×` fixed-β std over the shift-1 window, = `fixed_beta_risk`), the stop, the reversion z, the timeout exit spread and the spread-target TP are all read on `logA − β_entry·logB`. `OpenPair.beta_entry` carries β_entry; `_place_pair` stamps it in `order_packages.meta`, `_open_pair_from_meta` and the leg-row rebuild restore it, `_revise_leg_tps` uses it. A package stamped before this change has no `beta_entry` and exits on the legacy rolling-β basis its stop was computed on. The harness uses the same `pairs_engine.fixed_beta_window`/`fixed_beta_bar`, so live = harness (paired replay test). Sizing on every venue moves from the inflated rolling-β R unit to the fixed-β one, so Bybit leg notionals grow by the inflation factor (`risk_rolling_beta / risk` on the soak row); `risk_scale_ratio` reads 1. `hedge_beta: one` is unchanged. Harness re-run (Binance Vision 1h 2026-04-19..10-15, configured params, full cost stack): all four Bybit pairs go from +0.14..+0.38 to −0.11..−0.53 net R per trade; cost per trade 0.0006–0.0014 R → 0.44–0.66 R. Research evidence, not a promotion case. | `src/units/strategies/pairs_engine.py`, `src/units/strategies/pairs_executor.py`, `scripts/backtest_pairs.py`, `tests/test_pairs_risk_scale.py`, `tests/test_pairs_engine.py` | On merge + deploy: the first Bybit pair `open`/`skip_size` soak row with `risk_scale_ratio` ≈ 1 and a `beta_entry` field. Not deployed or observed as of this row. |
 | 2026-10-18 | DECISION-BAR-CLOSED-1018 (lane, Tier-2 hold) | **The pullback variant builder honours `decision_bar: closed|forming`** (default forming, byte-identical). Until now only `_trend_donchian_variant_builder` read the key, so a `decision_bar: closed` line on `xrp_pullback_2h` / `ada_pullback_2h` would have been a silent no-op. `_htf_pullback_variant_builder` now runs the same closed-bar path: `_closed_window_skip` (no fetch outside the window), cache-bypassed fetch, `_decision_frame` (forming row dropped), `_record_closed_decision` into the on-disk ledger once the decision completed, and the caught-up price check. Evidence for flipping any pullback leg is the holdout unit RQ-20261018-2a10-01 (separate Tier-3 PRs); this PR flips nothing. | `src/runtime/strategy_signal_builders.py`, `tests/test_pullback_decision_bar.py` | None until a pullback leg declares `decision_bar: closed` (Tier-3, operator approval). Not deployed or observed as of this row. |
+
+| 2026-10-15 | NETTED-SLICES (lane, Tier-2 hold) | **Per-strategy slices on one (account, symbol), replacing pick-one on `position_model: slices` accounts** (§ Step 3). Built by EXTENDING existing modules: `positions.py` Option A → per-slice ledger + `admit_slice` (per-trade refusals, delta basis = own slice); `allocator_ev.intent_allocation_score` = the existing `conviction` blend + c_bt + c_live (weights `config/slice_allocation.yaml`). `accounts_in_more_than_one_round` now allows an account in several rounds only when every one allocates it a share, never twice for one strategy. Brackets: existing qty-scoped Partial TP/SL with per-slice leg ids. Opposite slices are admitted only on hedge books. | `src/runtime/positions.py`, `src/runtime/allocator_ev.py`, `src/runtime/arbitration_fanout.py`, `src/runtime/intent_multiplexer.py`, `src/core/coordinator.py`, `src/units/accounts/__init__.py`, `config/accounts.yaml` (bybit_1), `config/slice_allocation.yaml` | `tests/test_slice_*.py`; mirror test `test_mirror_carries_the_same_position_model_as_live`. Live: 1–2 clean multi-slice trades on bybit_1 before bybit_2 + bybit_portfolio. |
 
 ## Known gaps
 

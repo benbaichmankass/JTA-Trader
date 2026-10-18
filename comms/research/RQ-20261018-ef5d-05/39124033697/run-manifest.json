@@ -1,0 +1,50 @@
+{
+  "unit": "RQ-20261018-ef5d-05",
+  "run_id": "39124033697",
+  "commit_sha": "ec3123f00b156f0961ffef3e740b2f9c85148441",
+  "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/39124033697",
+  "timeout_minutes": 120,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/harness_stage0.py",
+        "--family",
+        "trend",
+        "--symbols",
+        "SPY,QQQ,IWM,GLD,SLV,TLT,IEF,USO,GDX,TQQQ,QLD,SPLG,IAUM,SCHA,MES,MGC,MHG",
+        "--timeframe",
+        "1w",
+        "--days",
+        "7300",
+        "--arm",
+        "LO=--long-only",
+        "--arm",
+        "BOTH=",
+        "--folds",
+        "6",
+        "--fold-majority",
+        "4",
+        "--n-floor",
+        "10",
+        "--pooled-n-floor",
+        "39",
+        "--breadth-frac",
+        "0.5",
+        "--non-crypto-source",
+        "yfinance",
+        "--rule-id",
+        "RULE-P7-A3-WEEKLY-ETF-TREND",
+        "--data-dir",
+        "comms/research/RQ-20261018-ef5d-05/39124033697/data",
+        "--out",
+        "comms/research/RQ-20261018-ef5d-05/39124033697"
+      ],
+      "log": "comms/research/RQ-20261018-ef5d-05/39124033697/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 37.4
+    }
+  ],
+  "all_ok": true
+}
