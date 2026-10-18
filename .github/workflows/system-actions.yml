@@ -131,6 +131,7 @@ on:
           - send-ping
           - send-prop-test-ping
           - phone-dry-test
+          - phone-drill
           - generate-strategy-review-packets
           - grade-closed-trades
           - set-env
@@ -781,7 +782,7 @@ jobs:
         run: |
           set -euo pipefail
           case "${ACTION}" in
-            status-check|verify-account-mode|disk-usage-report|list-listening-ports|gateway-logs|gateway-forensics|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|send-ping|send-prop-test-ping|phone-dry-test|generate-strategy-review-packets|grade-closed-trades|net-r-regrade|get-env|passkey-enrol-code)
+            status-check|verify-account-mode|disk-usage-report|list-listening-ports|gateway-logs|gateway-forensics|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|send-ping|send-prop-test-ping|phone-dry-test|phone-drill|generate-strategy-review-packets|grade-closed-trades|net-r-regrade|get-env|passkey-enrol-code)
               echo "tier=1" >>"$GITHUB_ENV"
               ;;
             pull-and-deploy|init-web-session-pepper|install-web-api-deps|restart-bot-service|stop-bot-service|start-bot-service|reboot-vm|enable-closed-flat-invariant|disable-closed-flat-invariant|set-mobile-push-secrets|enable-insights-generator|disable-insights-generator|inspect-insights|kick-insights|enable-signal-dual-write|disable-signal-dual-write|backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|set-account-mode|fix-data-dir|rotate-account-keys|init-diag-token|set-env|unset-env|scrub-env-noncompliant|pause-autoheal|resume-autoheal|sync-clock|purge-cloudflared|purge-vm-runner|flatten-ib-position|flatten-bybit-position|switch-bybit-position-mode|flatten-alpaca-position|rearm-alpaca-protective|cancel-ib-order|attach-ib-target|close-stranded-journal-row|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|fix-prop-mislinked-close|prop-ticket-expire|prop-ticket-reissue|prop-report-close|repair-prop-fill-direction|breakout-login-check|breakout-terminal-probe|egress-landing-probe|velotrade-api-probe|velotrade-api-roundtrip|velotrade-trade-history-read|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm|cancel-stale-tpsl-legs|backfill-tpsl-leg-ids|reattach-stranded-package-legs)
@@ -1187,6 +1188,26 @@ jobs:
             fi
             if [ -n "${ACTION_SYMBOL// }" ] && ! printf '%s' "${ACTION_SYMBOL}" | grep -Eq '^[A-Za-z0-9]+$'; then
               echo "::error::phone-dry-test symbol '${ACTION_SYMBOL}' invalid (allowed: A-Z a-z 0-9)."
+              exit 1
+            fi
+          fi
+          # phone-drill (PHONE-EXEC-OBSERVABLE-1018): ONE phone rehearsal drill
+          # request (a file beside the journal; no order change). `account` is
+          # REQUIRED, shape-checked here and allowlisted on the VM against
+          # config/prop_platforms.yaml::phone_accounts by src.prop.phone_drill.
+          if [ "${ACTION}" = "phone-drill" ]; then
+            if [ -z "${ACCOUNT_ID// }" ]; then
+              echo "::error::phone-drill requires 'account: <phone_accounts key>' (issue body) or 'account_id' (workflow_dispatch)."
+              exit 1
+            fi
+            if ! printf '%s' "${ACCOUNT_ID}" | grep -Eq '^[A-Za-z0-9_-]+$'; then
+              echo "::error::phone-drill account '${ACCOUNT_ID}' invalid (allowed: A-Z a-z 0-9 _ -)."
+              exit 1
+            fi
+            # `symbol` (optional) = a drill WITH a minimum-size test trade (MD-EXEC-DEV-TEST-TRADES);
+            # shape-checked here, every bound checked on the VM by src.prop.exec_test_trades.
+            if [ -n "${ACTION_SYMBOL// }" ] && ! printf '%s' "${ACTION_SYMBOL}" | grep -Eq '^[A-Za-z0-9]+$'; then
+              echo "::error::phone-drill symbol '${ACTION_SYMBOL}' invalid (allowed: A-Z a-z 0-9)."
               exit 1
             fi
           fi
@@ -1674,6 +1695,7 @@ jobs:
             send-ping)                          SCRIPT="send_ping_action.sh" ;;
             send-prop-test-ping)                SCRIPT="send_prop_test_ping_action.sh" ;;
             phone-dry-test)                     SCRIPT="phone_dry_test_action.sh" ;;
+            phone-drill)                        SCRIPT="phone_drill_action.sh" ;;
             set-env)                            SCRIPT="set_env.sh" ;;
             get-env)                            SCRIPT="get_env_action.sh" ;;
             unset-env)                          SCRIPT="unset_env.sh" ;;
@@ -1932,6 +1954,12 @@ jobs:
           # meta.source names the dispatch that asked for it.
           if [ "${ACTION}" = "phone-dry-test" ]; then
             REMOTE_CMD="ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID}") ACTION_SYMBOL=$(printf '%q' "${ACTION_SYMBOL:-ETHUSDT}") ACTION_ISSUE=$(printf '%q' "${CLEAR_HALT_ISSUE:-}") ${REMOTE_CMD}"
+          fi
+          # phone-drill: the account (required) and, for a drill WITH a test trade,
+          # the symbol (optional, EMPTY = a plain rehearsal); the issue number names
+          # the dispatch in the request's `by`.
+          if [ "${ACTION}" = "phone-drill" ]; then
+            REMOTE_CMD="ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID}") ACTION_SYMBOL=$(printf '%q' "${ACTION_SYMBOL:-}") ACTION_ISSUE=$(printf '%q' "${CLEAR_HALT_ISSUE:-}") ${REMOTE_CMD}"
           fi
           if [ "${ACTION}" = "backfill-exit-labels" ]; then
             # ORDER-AUDIT-4: `apply: false` = preview (dry run only).
