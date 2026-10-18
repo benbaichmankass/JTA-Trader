@@ -1,0 +1,22 @@
+{
+  "id": "FIRST-PASSAGE-ON-PATHS",
+  "title": "first_passage.py reads harness --emit-paths rows (the leg AS TRADED) instead of re-walking ledgers with a fixed bracket -- the instrument Programme 01 Q8.6 / blocked RQ-20261014-d6e7-06 waits on",
+  "phase": "research-infra",
+  "state": "queued",
+  "owner": "manager (Tier-1 build lane)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-18 lane ACTIVE-MGMT-DRIVE-1018] WHY: the whole fixed-bracket Q8 line closed FAIL (d6e7-02, RQ-20261016-012/-013, 1fa6-06; see IN-TRADE-EXIT-MODEL note), and the honest residual is that the reconstruction (a fixed bracket: the stop at the entry risk, the target at K multiples of it) is not the bracket any leg trades. #18536 landed --emit-paths on backtest_trend.py + backtest_pullback.py (one row per trade x bar with the stop and target IN FORCE), but scripts/research/first_passage.py has no input for it: its argparse takes --ledgers (per-trade rows) and re-walks public candles. BUILD: a --paths <glob> input (mutually exclusive with --ledgers) that builds the per-bar events, labels (TP first / SL first / exit-by-trail / timeout, from the emitted exit) and the same feature sets from the emitted rows; the free null and the calibrated distance-only reference unchanged; a self-test that a pure random-walk path set grades no information. Then blocked/RQ-20261014-d6e7-06 promotes (git mv, run.command = first_passage.py --paths ...). Consumer: that unit; detector: tests/test_first_passage*.py; cost ~1 Opus lane / $15. Not a question (the question is d6e7-06), a build.",
+  "updated_at": "2026-10-18T06:37:14Z",
+  "updated_by": "session_013oEUJzaNgUnEAFrpHccwkx",
+  "roadmap": [
+    "L-ATM",
+    "M23"
+  ],
+  "_seq": 559
+}

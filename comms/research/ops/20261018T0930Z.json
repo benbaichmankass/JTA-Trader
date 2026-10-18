@@ -1,0 +1,22 @@
+{
+  "run": "RESEARCH-OPS-2026-10-18-0847", "finished_at": "2026-10-18T09:30:00Z", "by": "session_01BCKs9p5mUMrwZ6XbMG7YRD",
+  "floor": 46, "floor_basis": "computed_floor(fired_24h 58)", "authoring_queue_depth": 15,
+  "idle_backends": ["github_runner_data", "kaggle", "trainer"], "needs_review_triaged": 0, "needs_review_left": 40,
+  "needs_review_note": "result_disposition_check: UNOWNED 0, UNGRADED 0; the 40 needs_review units are all owned (32 owned in the health line + c56e-16..19 re-queued). No triage written this pass.",
+  "throughput": {"runnable_before": 51, "runnable_after": 52, "queued": 166, "fired_24h": 58, "results_landed_24h": 104, "hours_since_last_dispatch": 0.9, "idle_alarm": false},
+  "mechanism": {"dispatch_receipt": "ok: fresh 0.95h", "collector": "ok: 0 unreadable result files", "stranded_stamp_prs": [], "incident": null, "watchdog": "newest rows 2026-10-17 (dispatcher self_healed 10:53Z, backend:github_runner self_healed 23:27Z); no open escalated incident"},
+  "results_read": {"pass": 0, "fail": 0, "indeterminate": 0, "units": [], "note": "research_disposition --unread-only: unread 0 (dispositioned 159, superseded_unread 294); the units that landed since 03:30Z (RQ-20261016-004..016, c56e-18/19, 20261017-002, ae17-04..11/43..45/50) are all dispositioned or graded; none newly needs a rule applied by hand"},
+  "unlocked": [], "retired": [], "levers_filed": [],
+  "units_authored": ["P2-R3.c05-pass (programme node: fresh-window VH80 confirmation for trend_donchian_sol_prop on 2020-10-05..2022-10-04; emits RQ-20261018-005 on the next queue_replenish, verified by a dry run)"],
+  "followups_filed": ["P2-R3.c05-pass, the follow-up that RQ-20261016-65ff-05's PASS rule requires (one confirmation on a disjoint window)"],
+  "authoring": {"queue_depth": 15, "nodes_drafted": 1, "nodes": ["P2-R3.c05-pass"],
+                "theme_shortfall": {"regime": 10, "ml_health": 4, "new_strategy_prop": 14, "infra": 5}},
+  "slo_breaches_read": ["grade_latency_p90_d", "theme_share_min_ratio", "research_ops_not_run"],
+  "not_run": ["step C per-file audit of research/queue/blocked/ (78 files)", "authoring beyond one node: budget", "routing of unrouted due items (22 unrouted, no alarm breached, oldest 0 days; soak items route to SOAK-WATCH)"],
+  "handoff": [
+    "MANAGER (held PR): merge the run PR -- it edits research/programmes/02-ai-trader.yaml (hand-authored node, E57 hold)",
+    "RQ-20261016-65ff-05's PASS was best of THREE arms (VH80/VH90/VH95), so the c05 confirmation is the denominator-3 check before any Tier-3 packet; SOL prop also needs the prop EV/survival gate",
+    "theme supply is still short in regime (10), ml_health (4), new_strategy_prop (14), infra (5); next in the authoring queue: P1-Q7-sol-tp3-prop, P1-Q7-gtd-timeclose-prop, P3-Q8-new-symbols",
+    "the blocked/ audit has now been not_run on consecutive passes; give it a dedicated lane"
+  ]
+}

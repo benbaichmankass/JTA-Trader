@@ -535,6 +535,7 @@ def build(*, today: date | None = None, root: Path | None = None) -> dict[str, A
         "researchFloorLines": _research_floor_lines(research_t, root),
         "researchSlo": _research_slo(root),
         "liveParity": _live_parity_line(root),
+        "activeTradeManagement": atm_view(root),
         "pipeline": {"stats": pipe_stats, "section0Lines": section0,
                      "healthy": pipe_res.healthy, "askOperator": ask_operator},
         "activity": git_activity(root, today),
@@ -742,10 +743,141 @@ def _parity_lines(b: dict) -> list[str]:
     return [f"### 🔁 {line}", ""]
 
 
+# ── Active trade management (Programme P1) — a standing line, operator 2026-10-18 ──────
+# The operator named active trade management and ML "our highest priority" (2026-10-18
+# ~06:20Z, lane ACTIVE-MGMT-DRIVE-1018). Until this existed the brief could not say how
+# many P1 units were queued, fired, landed, or what they decided -- and 17 of 21 sat
+# un-dispatched for two days without the brief noticing. Computed on EVERY render from
+# research/queue/ (+ blocked/) and the units' own grading; never a file that can go stale.
+_P1 = "P1"
+_P1_PLAN = "research/programmes/01-active-trade-management.yaml"
+
+
+def _is_p1(u: dict) -> bool:
+    pn = u.get("programme_node")
+    return u.get("programme") == _P1 or (isinstance(pn, dict) and pn.get("programme") == _P1)
+
+
+def _stamp_ts(value: Any) -> float:
+    """ISO timestamp -> epoch seconds; 0.0 when absent or unparseable (declared below as 'no stamp')."""
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00")).timestamp()
+    except Exception:  # noqa: BLE001 -- an unparseable stamp counts as no stamp, never as 'newest'
+        return 0.0
+
+
+def _latest_record_ts(rdir: Path) -> float:
+    """The newest `generated_at` over EVERY record file under research/results/<unit>/ (all of
+    them are read; none is picked by name or mtime). 0.0 = no readable record."""
+    latest = 0.0
+    if not rdir.is_dir():
+        return latest
+    for f in sorted(rdir.glob("*.jsonl")):
+        for line in _lines_or_none(f) or []:
+            # provenance: _record_generated_ts — the newest DECLARED generated_at over EVERY record of every
+            # file; no file is picked by name, position or mtime, so nothing here is an implicit input choice
+            latest = max(latest, _record_generated_ts(line))
+    return latest
+
+
+def _lines_or_none(f: Path) -> list[str] | None:
+    """The file's lines, or None when it cannot be read (an unreadable record contributes nothing)."""
+    try:
+        return f.read_text(encoding="utf-8").splitlines()
+    except Exception:  # noqa: BLE001 -- stated above: unreadable = contributes nothing, never 'newest'
+        return None
+
+
+def _record_generated_ts(line: str) -> float:
+    """One JSONL record's `generated_at` as epoch seconds; 0.0 for a blank or malformed line."""
+    if not line.strip():
+        return 0.0
+    try:
+        return _stamp_ts(json.loads(line).get("generated_at"))
+    except Exception:  # noqa: BLE001 -- a malformed record contributes nothing, never 'newest'
+        return 0.0
+
+
+def atm_view(root: Path | None = None) -> dict[str, Any]:
+    """{readState, units, counts, verdicts, fired, nextDecision}: Programme P1 (active trade
+    management) units by state. `fired` = status queued AND a dispatcher `last_dispatched_at`
+    stamp newer than any landed record -- a FLOOR: a hand-dispatched run (workflow_dispatch
+    from a session) carries no stamp until the collector lands it, so it reads as `queued`.
+    `nextDecision` = the ready `needs_authoring` nodes of the P1 tree (the plan's own
+    authoring queue), or the reason it could not be read."""
+    root = root or REPO_ROOT
+    qdir = root / "research/queue"
+    if not qdir.is_dir():
+        return {"readState": "absent", "units": 0, "counts": {}, "verdicts": {}, "fired": 0,
+                "nextDecision": "COULD NOT BE READ (no research/queue/)"}
+    try:
+        import yaml
+    except Exception:  # noqa: BLE001
+        return {"readState": "unreadable", "units": 0, "counts": {}, "verdicts": {}, "fired": 0,
+                "nextDecision": "COULD NOT BE READ (yaml unavailable)"}
+    units: dict[str, dict] = {}
+    unreadable = 0
+    for f in sorted(qdir.glob("*.yaml")) + sorted((qdir / "blocked").glob("*.yaml")):
+        try:
+            u = yaml.safe_load(f.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001 -- counted, never silently skipped
+            unreadable += 1
+            continue
+        if isinstance(u, dict) and _is_p1(u):
+            units[str(u.get("id") or f.stem)] = u
+    counts: dict[str, int] = {}
+    verdicts: dict[str, int] = {}
+    fired = 0
+    for uid, u in units.items():
+        st = str(u.get("status") or "unknown")
+        counts[st] = counts.get(st, 0) + 1
+        if st == "done":
+            v = str(((u.get("grading") or {}).get("verdict")) or "ungraded")
+            verdicts[v] = verdicts.get(v, 0) + 1
+        elif st == "queued" and u.get("last_dispatched_at"):
+            # "Fired, record pending" = the dispatcher stamp is newer than every record the unit
+            # has LANDED. The comparison reads each record's own `generated_at` (a declared field
+            # of the E5 record), never file order or mtimes, so a re-collected or re-ordered file
+            # cannot make a landed run look pending or a pending run look landed.
+            if _stamp_ts(u.get("last_dispatched_at")) > _latest_record_ts(root / "research/results" / uid):
+                fired += 1
+    nxt: str
+    try:
+        from scripts.research import queue_replenish as qr
+        plan = qr.programme_plan(root, units)
+        ready = [a for a in plan.get("authoring_queue", []) if a.get("programme") == _P1]
+        emit = [e for e in plan.get("emit", []) if (e.get("programme") if isinstance(e, dict) else None) in (_P1, None)]
+        if ready:
+            nxt = (f"{len(ready)} P1 node(s) ready to author: "
+                   + ", ".join(str(a.get("node")) for a in ready[:3]) + (" …" if len(ready) > 3 else ""))
+        else:
+            nxt = f"no P1 node ready to author; {len(emit)} programme node(s) ready to emit at the next replenish"
+    except Exception as exc:  # noqa: BLE001 -- a hole, declared
+        nxt = f"COULD NOT BE READ ({type(exc).__name__} reading {_P1_PLAN})"
+    return {"readState": "read" if not unreadable else "partial", "units": len(units), "counts": counts,
+            "verdicts": verdicts, "fired": fired, "unreadable": unreadable, "nextDecision": nxt}
+
+
+def _atm_lines(b: dict) -> list[str]:
+    v = b.get("activeTradeManagement") or {}
+    if v.get("readState") in (None, "absent", "unreadable"):
+        hole = f"COULD NOT BE READ ({v.get('nextDecision', 'not computed')}; we did not look, this is not zero)"
+        return [f"### 🎯 Active trade management (P1) — {hole}", ""]
+    c, vd = v["counts"], v["verdicts"]
+    done = c.get("done", 0)
+    vtxt = " · ".join(f"{k} {n}" for k, n in sorted(vd.items(), key=lambda kv: -kv[1])) or "—"
+    line = (f"### 🎯 Active trade management (P1) — units {v['units']}: queued {c.get('queued', 0)} "
+            f"(fired, record pending ≥ {v['fired']}) · landed {done}: {vtxt} · blocked {c.get('blocked', 0)}"
+            f" · retired {c.get('retired', 0)} · next decision: {v['nextDecision']}")
+    if v.get("unreadable"):
+        line += f" · ⚠️ {v['unreadable']} queue file(s) unreadable (counts are a floor)"
+    return [line, ""]
+
+
 def _section4(b: dict) -> list[str]:
     if b["checklistState"] != "read":
         return ["---", "", "## §4 — WHAT IS RUNNING", "",
-                f"{_HOLE[b['checklistState']]} — `docs/claude/work/MANAGER-CHECKLIST.json`.", ""] + _soak_lines(b) + _research_lines(b) + _parity_lines(b)
+                f"{_HOLE[b['checklistState']]} — `docs/claude/work/MANAGER-CHECKLIST.json`.", ""] + _soak_lines(b) + _research_lines(b) + _atm_lines(b) + _parity_lines(b)
     ck = b["checklist"]
     today = date.fromisoformat(b["forDate"])
     act = b.get("activity") or {"state": "unreadable", "commits": [], "coversDays": None}
@@ -790,7 +922,7 @@ def _section4(b: dict) -> list[str]:
     if other:
         L += ["_Everything else, by count only: "
               + ", ".join(f"`{k}` {v}" for k, v in other.items()) + "._", ""]
-    return L + _soak_lines(b) + _research_lines(b) + _parity_lines(b)
+    return L + _soak_lines(b) + _research_lines(b) + _atm_lines(b) + _parity_lines(b)
 
 
 def _section5(b: dict) -> list[str]:
