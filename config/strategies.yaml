@@ -1431,6 +1431,18 @@ strategies:
     #   ROLLBACK: atr_stop_mult 2, trail_mult 5.0.
     atr_stop_mult: 1.5  # was 2 (M20 e35 re-check 2026-08-29: cell sm2, path_b_wf_pass, wf 6/6, d_net_r +28.7348; was 2.5 before that)
     trail_mult: 6.0
+    # trail_decay stall 10 / tight 1.8 (Tier-3 PROPOSAL, lane ACTIVE-MGMT-DRIVE-1018, HOLD for operator
+    #   approval). Evidence: RQ-20261016-006 (P1-Q4-eth4h-stalldecay-rerun; rule RULE-P1-Q4-ETH4H-STALLDECAY-RERUN,
+    #   registered 2026-10-16) -- exit_lever_ablation --grade replace against THIS incumbent (atr 1.5 / trail 6.0),
+    #   ETHUSDT 4h 2022-10-15 .. 2026-10-14, net of fee 7.5 + slippage 3 bps rt + funding 1 bps/8h: arm D
+    #   (trail_decay_stall_bars 10, trail_decay_tight_mult 1.8, no arm_r) 70.03 R / 180 trades / maxDD 19.36 vs
+    #   A 61.08 R / 160 / 18.06; 3 of 4 calendar folds (fold 4, 2025-09..2026-10: -2.98 vs -10.62); net R per
+    #   capital-day 0.205 vs 0.127. Mechanism: once 10 bars have printed since the trade's peak the trail
+    #   tightens from 6.0 to 1.8 ATR (src/runtime/trail_decay.py; absent = off; the prop legs carry the same lever).
+    #   Does NOT touch the TP: entry_tp stays the 50 R sentinel (TP-doctrine state unchanged, see the PR).
+    #   ROLLBACK: delete these two lines.
+    trail_decay_stall_bars: 10
+    trail_decay_tight_mult: 1.8
     tp_r: 50.0
     tp_intent:
       mode: none
