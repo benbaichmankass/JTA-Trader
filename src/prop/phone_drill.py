@@ -172,7 +172,14 @@ def expire(account_id: str, now: Optional[datetime] = None) -> Optional[Dict[str
                    "claimed_at": req.get("claimed_at"), "why": "claimed and never reported (app died or the page hung)"}
             tt = req.get("test_trade") if isinstance(req.get("test_trade"), dict) else None
             if tt and tt.get("ticket_id"):
-                # the test position may be open with nobody reporting it: ONE alert, the operator checks; no halt
+                # the test position may be open with nobody reporting it: ONE alert, the operator checks; no halt.
+                # A ticket still emitted (never claimed) is expired so the normal poll never opens it later.
+                try:
+                    from src.prop import prop_journal
+                    t = prop_journal.get_ticket(tt["ticket_id"]) or {}
+                    _retire_unplaced(tt["ticket_id"], str(t.get("status") or ""))
+                except Exception:  # noqa: BLE001  # allow-silent: logged in _retire_unplaced / validity expires it
+                    pass
                 row["test_trade"] = {**tt, "state": "unreported"}
                 _send(f"📱 drill {account_id}: ⚠️ {req.get('id')} claimed with test ticket {tt['ticket_id']} and never reported. "
                       f"CHECK the terminal and close {tt.get('symbol')} long {tt.get('qty')} by hand if it is open "
@@ -357,7 +364,20 @@ def _test_trade_outcome(account_id: str, tt_req: Dict[str, Any], tt_in: Dict[str
         out["state"] = "OPEN_UNCLOSED"
     else:
         out["state"] = f"not_placed ({st or 'no ticket'})"
+        _retire_unplaced(tid, st)
     return out
+
+
+def _retire_unplaced(ticket_id: str, status: str) -> None:
+    """A test ticket the drill never placed must not be picked up later by the normal entry poll (it would open a
+    position nobody closes): an ``emitted`` one is expired now. ``refused`` / ``expired`` / ``skipped`` stay as they are."""
+    if status != "emitted":
+        return
+    try:
+        from src.prop import prop_journal
+        prop_journal.set_ticket_status(ticket_id, "expired")
+    except Exception:  # noqa: BLE001  # allow-silent: logged; the 10-min validity expires it anyway
+        logger.warning("phone_drill: could not expire unplaced test ticket %s", ticket_id, exc_info=True)
 
 
 def record_result(device: Any, body: Dict[str, Any], *, now: Optional[datetime] = None, send=None) -> Dict[str, Any]:

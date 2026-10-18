@@ -276,6 +276,26 @@ def test_test_trade_left_open_alerts_once_and_a_refusal_at_claim_is_a_failed_dri
     assert pd.consecutive_passes("breakout_2") == 0
 
 
+def test_an_unplaced_test_ticket_is_expired_so_the_normal_poll_never_opens_it_later(_iso, _test_trade_env):
+    et = _test_trade_env
+    did = pd.request_drill("breakout_2", test_trade="ETHUSDT")["drill"]["id"]
+    tt = pd.claim(_dev())["drill"]["test_trade"]
+    assert prop_journal.get_ticket(tt["ticket_id"])["status"] == "emitted"
+    body = _result(did, False, failed="test_ticket_claim")
+    body["test_trade"] = {"ticket_id": tt["ticket_id"], "placed": False, "closed": False}
+    out = pd.record_result(_dev(), body)
+    assert out["test_trade"]["state"].startswith("not_placed")
+    assert prop_journal.get_ticket(tt["ticket_id"])["status"] == "expired"
+    assert pe.claim_next(_dev()) is None, "nothing left for the entry poll to pick up"
+    assert et.count_today("breakout_2") == 0
+    # the same for a claimed test drill that never reports
+    now = datetime.now(timezone.utc)
+    pd.request_drill("breakout_2", test_trade="ETHUSDT", now=now)
+    tt2 = pd.claim(_dev(), now=now)["drill"]["test_trade"]
+    pd.expire("breakout_2", now=now + timedelta(minutes=11))
+    assert prop_journal.get_ticket(tt2["ticket_id"])["status"] == "expired"
+
+
 def test_test_trade_cli_and_action_wiring(capsys, _test_trade_env):
     from scripts.prop.phone_drill import main as cli
     assert cli(["--request", "--account", "breakout_2", "--test-trade", "BTCUSDT"]) == 1
