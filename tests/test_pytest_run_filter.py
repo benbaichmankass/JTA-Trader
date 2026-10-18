@@ -74,6 +74,11 @@ def _matches(path: str) -> bool:
 # Trees the suite ASSERTS OVER using non-.py files. A change to any of these can
 # redden the suite, so a diff touching them must not short-circuit.
 COVERED = {
+    "tools/phone-executor/test/fixtures":
+        "tests/test_phone_fixture_tool.py asserts over the COMMITTED real-page "
+        "fixtures (every <name>.html carries a .meta.json and a .spec.json and no "
+        "account/position id); a fixtures-only PR must run the suite, else a "
+        "capture that leaks an id merges on a green that executed nothing",
     "scripts/ops/purge_vm_runner.sh":
         "tests/ops/test_system_actions_workflow.py reads scripts/ops/*.sh (OPS_DIR)",
     "deploy/ict-trader-live.service":
