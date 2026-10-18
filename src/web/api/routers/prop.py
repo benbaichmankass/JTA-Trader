@@ -24,6 +24,13 @@ Endpoints:
 - ``POST /api/bot/prop/phone/capture`` — one step capture from the phone executor (per-device
   bearer; PHONE-EXEC-OBSERVABLE-1018): an off-screen bitmap + a sanitized DOM snapshot, stored
   on the VM data volume with a 7-day TTL, read back on ``GET /api/diag/phone_capture*``.
+- ``POST /api/bot/prop/phone/drill/claim`` / ``drill/result`` — the REHEARSAL drill (per-device
+  bearer): claim the outstanding drill, report its per-step result; ``GET /phone/pending`` says
+  when one waits (``drill``). Read on ``GET /api/diag/phone_drill``.
+- ``GET /api/bot/prop/phone/exec.js?have=`` — the SIGNED page-side script newer than ``have``
+  (per-device bearer; served only while the working-tree file matches the stored signature);
+  ``POST /api/bot/prop/phone/exec-js-signature`` — CI publishes ``{version, sha256, sig}``
+  (``DASHBOARD_API_TOKEN``, fail-closed). Read on ``GET /api/diag/phone_exec_js``.
 
 The read endpoints are Tier-1; the POST is Tier-2 (a DB write + notification).
 """
@@ -305,7 +312,7 @@ async def phone_claim(request: Request,
     ticket = await asyncio.to_thread(pe.claim_next, dev, None, accepts)
     return {"ok": True, "account_id": dev.account_id, "ticket": ticket,
             "kill_switch": pe.kill_switch(dev.account_id),
-            "config": pe.phone_config(dev.account_id)}
+            "config": await asyncio.to_thread(pe.phone_claim_config, dev.account_id)}
 
 
 @router.get("/phone/pending")
@@ -323,8 +330,11 @@ async def phone_pending(accepts: str = "",
     expired = await asyncio.to_thread(pe.expire_stale_claims, dev.account_id)
     if expired:
         await asyncio.to_thread(pe.alert_expired, dev.account_id, expired)
+    from src.prop import phone_drill
     return {"ok": True, "pending": await asyncio.to_thread(pe.pending_count, dev, None, _accepts(accepts)),
-            "status_age_hours": await asyncio.to_thread(pe.account_status_age_hours, dev.account_id)}
+            "status_age_hours": await asyncio.to_thread(pe.account_status_age_hours, dev.account_id),
+            # PHONE-EXEC-OBSERVABLE-1018: a REHEARSAL drill waiting for this device's account ({id} or null)
+            "drill": await asyncio.to_thread(phone_drill.pending, dev.account_id)}
 
 
 @router.post("/phone/report")
@@ -406,5 +416,57 @@ async def phone_capture(request: Request,
     body = await _json_body(request)
     try:
         return await asyncio.to_thread(pcap.store_capture, dev.account_id, body)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/phone/drill/claim")
+async def phone_drill_claim(request: Request,
+                            authorization: str | None = Header(default=None)) -> dict[str, Any]:
+    """Claim the outstanding REHEARSAL drill for the device's account (PHONE-EXEC-OBSERVABLE-1018): the full
+    stop-amend flow on the real open position up to the final Confirm, then cancel; never an order change. One
+    attempt per request; ``drill: null`` when none waits."""
+    from src.prop import phone_drill
+    dev = _phone_device(authorization)
+    return await asyncio.to_thread(phone_drill.claim, dev)
+
+
+@router.post("/phone/drill/result")
+async def phone_drill_result(request: Request,
+                             authorization: str | None = Header(default=None)) -> dict[str, Any]:
+    """The drill's per-step pass/fail + the capture run id; appended to the history, one Telegram line, and the
+    live sheet-edit gate re-evaluated (3 consecutive passes arm it)."""
+    from src.prop import phone_drill
+    dev = _phone_device(authorization)
+    body = await _json_body(request)
+    try:
+        return await asyncio.to_thread(phone_drill.record_result, dev, body)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/phone/exec.js")
+async def phone_exec_js(have: str = "",
+                        authorization: str | None = Header(default=None)) -> dict[str, Any]:
+    """The SIGNED page-side script (PHONE-EXEC-OBSERVABLE-1018, piece 4): the working-tree exec.js with its
+    version, sha256 and the CI signature, ONLY while the stored signature matches the tree file byte for byte;
+    ``unchanged: true`` when ``have`` is already that version; ``ok: false`` + why otherwise (the phone keeps what
+    it runs). The server holds no private key and never signs: the phone verifies with the embedded public key."""
+    from src.prop import phone_exec_js
+    _phone_device(authorization)
+    return await asyncio.to_thread(phone_exec_js.bundle, str(have or "")[:40])
+
+
+@router.post("/phone/exec-js-signature")
+async def phone_exec_js_signature(request: Request,
+                                  authorization: str | None = Header(default=None)) -> dict[str, Any]:
+    """CI publishes the signature of the exec.js it just signed on main (phone-exec-js-sign.yml). Same fail-closed
+    ``DASHBOARD_API_TOKEN`` gate as ``POST /prop/report``. Stores ``{version, sha256, sig}`` beside the journal and
+    answers whether the VM's working tree already carries those bytes (``match``; git-sync lag is not an error)."""
+    from src.prop import phone_exec_js
+    _require_write_token(authorization)
+    body = await _json_body(request)
+    try:
+        return await asyncio.to_thread(phone_exec_js.store_signature, body)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

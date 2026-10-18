@@ -4,7 +4,7 @@ theme: ml_health
 kind: experiment
 title: 'Shadow->advisory champion-challenger for the BTC/SOL 15m regime head: the range-vol (yz) feature set vs the ADVISORY fc feature set vs both, on
   identical purged folds (the offline evidence a swap proposal needs)'
-status: queued
+status: done
 priority: 1
 question: 'On the published BTC/SOL 15m v002 market_features shards (the advisory btc/sol-regime-15m-lgbm-fc-pcv-v2 train on BTC/SOL 15m v002), with LightGBM
   on identical purged folds: does the shadow head btc-regime-15m-lgbm-yz-v1''s feature set (base 6 + 4 range-vol estimators) beat the advisory head''s feature
@@ -212,3 +212,17 @@ related:
 - ML-UNBLOCK-1018
 - 'trainer-vm-diag #18887'
 last_dispatched_at: '2026-10-18T08:55:18+00:00'
+grading:
+  attested: RULE-RQ20261018-FF8F-01-YZ-VS-FC-CHAMPION-CHALLENGER
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261018-FF8F-01-YZ-VS-FC-CHAMPION-CHALLENGER
+  evidence:
+  - research/results/RQ-20261018-ff8f-01/39113342384.jsonl
+  graded_at: '2026-10-18'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

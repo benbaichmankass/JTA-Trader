@@ -164,6 +164,12 @@ def _dir_bytes(p: Path) -> int:
     return total
 
 
+def capture_link(account_id: str, run_id: str) -> str:
+    """The diag-tier link a Telegram line carries for one run's step captures (manager/operator read; DIAG token)."""
+    base = os.environ.get("PUBLIC_API_BASE", "https://ict-bot.duckdns.org").rstrip("/")
+    return f"{base}/api/diag/phone_capture?account_id={account_id}&run_id={run_id}" if run_id else ""
+
+
 def store_capture(account_id: str, body: Dict[str, Any], *, now: Optional[datetime] = None) -> Dict[str, Any]:
     """Validate and write one step capture. Raises ``ValueError`` on a malformed body; answers
     ``{"ok": False, "why": ...}`` on a quota refusal (the app carries on). On success ``{"ok": True, "stored": True,

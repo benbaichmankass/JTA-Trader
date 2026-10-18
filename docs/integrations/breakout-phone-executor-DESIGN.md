@@ -771,6 +771,20 @@ ticket's trail (the trail never fights a human's stop) until the human's `{kind:
 record, then resumes from them. A `locked`/`ended` state left by the old code is ignored on load with a log line (an old
 human-moved lock is kept as the hold). The trail only ever tightens.
 
+**An UNREAD stop is never a human move (operator, 2026-10-18).** breakout_2 `prop-manual-c1dba3c376b3#a7` on app
+1b.265: `sheetOrders()` returned `trigger: null` for the Stop row (its ancestor held 0 or 2+ price-shaped cells, so
+no single value was read), `close(null, fromSl)` was false, the app reported `human_moved` with *"terminal stop null !=
+expected 2452.65"*, and the server held a trail nobody had touched — the operator had not moved the stop. *"We did not
+read it"* and *"we read it and it differs"* are distinct states (the collapsed-states rule) and are now kept apart at
+every layer: exec.js returns `why: no_price | many_prices` and the cells' digit-masked `px_shapes` beside the null
+(exec.js 2026-10-18.3, signed); the app refuses the attempt as *"stop trigger UNREAD"* (and *"modal trigger UNREAD"*)
+instead of calling it a human move; the server (`phone_trail._unread_stop`) records a `human_moved` report that carries
+no read value and whose evidence is a null/absent reading as status `unread` — failed like any other attempt, backoff,
+retried, one Telegram per live attempt naming the stop the plan wants and the step captures — and never a hold. A
+`human_hold` already written from such a report is released by the next plan (`_release_unread_hold`, a `hold_released`
+history row), so the trail resumes on its own with no journal edit by hand. A report naming two numbers (*"terminal
+stop 2470 != expected 2450"*) or carrying a read-back value stays a human move and still holds.
+
 **UNMEASURED:** no capture has shown Breakout's Positions row edit control or its dialog. The headless fixtures
 (`test/exec_check.js`, "amend") prove the helpers' mechanics on synthetic DOM only. The first real amend, dry or live,
 either passes or refuses with the dump (row headers and controls, dialog inputs and buttons) that names the label to fix.
@@ -1024,7 +1038,26 @@ bound when the phone claims the ticket and refuses it otherwise. Such a trade is
 (`strategy: exec_test`, `meta.origin: exec_test`, ids `exec-test-*`): the trades snapshot, the prop overview's
 closed set, soak grading and the trade-quality review drop it; an OPEN test position stays visible in the overview
 because it is real money. A test trade the drill fails to close by `close_by` raises one alert naming it; nothing
-halts. The drill extension that writes the ticket, confirms the amend and closes the position is the next PR.
+halts. The drill extension that writes the ticket, confirms the amend and closes the position is PR 3's `symbol:`
+option (server) and the app PR that follows.
+
+**Piece 3 and piece 5 as built (PR 5).** `tools/phone-executor/test/fixture_from_capture.py` turns one
+`NNN-<step>.dom.json` (read from `GET /api/diag/phone_capture_file`) into `fixtures/<name>.html` + `.meta.json`:
+every element laid out absolutely at the rect it had on the phone, same tags / roles / attributes / nesting, the
+React handler names restored, **every digit run replaced** (same length and leading digit, seeded by the value so one
+value maps to one replacement across the page); ids and money were already masked on the device.
+`exec_fixtures_check.js` serves each fixture on the trade host and runs its `<name>.spec.json` (partial deep match)
+against the bundled `exec.js`; it is a step of the APK workflow's `check` job. A fixture proves READS and TARGETS; a
+tap that must open something is the drill's job. The raw capture never enters the repo. The first fixture
+(`sample-positions-sheet-synthetic`) is built from `exec_check.js`'s synthetic page to prove the tooling; a real
+capture replaces it. Building it found two on-device redaction bugs fixed in PR 2: the sheet's "1 TP / 1 SL" tab
+and the Positions count were masked (blinding `sheetInfo`), and the Value column was masked although it is the
+kept quantity times the kept mark price and `positionsRead`'s only quantity source on the grid.
+The alert (`src/prop/phone_trail.py::_hand_set_alert`): a **live** amend the phone refused before any click sends
+ONE Telegram line **on every refusal** (not only the first of a streak, which stays the dry-mode behaviour) naming
+the symbol, direction, the stop to set by hand and the stop it moves from, plus the diag link to that attempt's
+step captures (`capture_run` in the phone's `amend_result`, stored on the amend record). The trail's backoff, the
+red flag after five failures and the recovery ping are unchanged.
 
 **Capture contract (PR 1).** One POST per step: `run_id` (`[A-Za-z0-9][A-Za-z0-9._-]{2,79}`, e.g.
 `amend-<ticket>-a<seq>-<UTC stamp>`), `flow` (`entry|amend|drill|positions|login|probe`), `step`

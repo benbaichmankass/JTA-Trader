@@ -41,6 +41,18 @@ Contract (every rule fails closed):
   :func:`note_human_amend`); the trail then resumes from them. That is the operator acting,
   not a self-halt. A ``locked``/``ended`` state persisted by the pre-2026-10-09 code is
   ignored on load with a log line (a human-moved lock is carried over as ``human_hold``).
+* **An UNREAD stop is never a human move** (operator, 2026-10-18, breakout_2
+  ``prop-manual-c1dba3c376b3#a7``: the app 1b.265 reported ``human_moved`` with *"terminal
+  stop null != expected 2452.65"* — ``sheetOrders()`` returns ``trigger: null`` when the Stop
+  row holds 0 or 2+ price cells, and ``close(null, …)`` is false — and the server held the
+  trail although nobody had moved anything). *"We did not read it"* and *"we read it and it
+  differs"* are distinct states (the collapsed-states rule): a ``human_moved`` report that
+  carries no read value and whose evidence is a null/absent reading (:func:`_unread_stop`)
+  is recorded as ``unread`` — THAT attempt failed, backoff, retried, flagged like any other
+  failure, one alert per live attempt naming the stop the plan wants — and never a hold. A
+  ``human_hold`` already written from such a report is released on the next plan
+  (:func:`_release_unread_hold`, a ``hold_released`` history row), so the trail resumes on
+  its own; no journal edit by hand.
 * ``submit`` follows the entry path's own decision (:func:`phone_executor.submit_mode`);
   there is no device-local switch on top (ARMED-GATE). No new gate.
 * TP: :func:`request_tp_amend` publishes a TP revision through the same slot for lane
@@ -51,6 +63,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict, List, Mapping, Optional
 
@@ -67,6 +80,7 @@ MAX_NO_POSITION = 6              # never-seen position reads -> ONE red flag (re
 MAX_AGE_DAYS = 14                # parent tickets older than this are not planned
 PARENT_STATUSES = ("placed", "filled")
 RESULTS = ("amended", "dry_amended", "refused", "no_position", "human_moved", "mismatch")
+UNREAD = "unread"                # recorded status of a human_moved report that read nothing (never a hold)
 QUOTE_BUFFER_ATR = 0.1           # prop_trail.QUOTE_BUFFER_ATR: the new stop clears the price by this many ATRs
 _HISTORY_MAX = 12
 
@@ -142,6 +156,59 @@ def _levels(row: Mapping[str, Any], tr: Mapping[str, Any], step: Optional[float]
 
 
 _HUMAN_LOCK_PREFIX = "the terminal's stop differs"
+_UNREAD_RE = re.compile(r"(terminal stop|modal trigger|stop trigger|trigger)\s*(=|!=|is)?\s*(null|none|nan|unread)\b"
+                        r"|stop\s+unread|unread\s+stop", re.IGNORECASE)
+
+
+def _stop_rows(form: Any) -> List[Mapping[str, Any]]:
+    """The Stop rows of a ``sheetOrders()`` dump the app attached as ``form`` ({rows: [{type, trigger, n_px}]})."""
+    rows = form.get("rows") if isinstance(form, Mapping) else None
+    return [x for x in (rows or []) if isinstance(x, Mapping) and str(x.get("type") or "") == "stop"]
+
+
+def _unread_stop(reason: str, sl_read: Any, form: Any) -> Optional[str]:
+    """Why a ``human_moved`` report is an UNREAD stop rather than a different one, or None when it
+    carries a reading. Evidence, in order: the app read a value (``sl_read``) -> not unread; the
+    attached ``sheetOrders`` dump shows the Stop row with ``trigger: null`` (0 or 2+ price cells,
+    ``n_px``) or no Stop row at all; else the reason text says the reading was null/unread. A
+    reason that names two numbers ("terminal SL 2470 != 2450") is a genuine mismatch: a human."""
+    if _f(sl_read) is not None:
+        return None
+    stops = _stop_rows(form)
+    if stops:
+        st = stops[0]
+        if _f(st.get("trigger")) is None:
+            n = st.get("n_px")
+            why = st.get("why")
+            return (f"the Stop row's trigger did not read (price cells n={n})" if n is not None
+                    else f"the Stop row's trigger did not read ({why or 'no value'})")
+    elif isinstance(form, Mapping) and form.get("rows") is not None:
+        return "no Stop row read on the [TP/SL] tab"
+    m = _UNREAD_RE.search(str(reason or ""))
+    if m:
+        return f"the stop did not read ({m.group(0).strip()})"
+    return None
+
+
+def _release_unread_hold(tr: Dict[str, Any], tid: str, now: datetime) -> Optional[str]:
+    """Drop a ``human_hold`` that an UNREAD-stop report wrote (the pre-fix classifier, or an older
+    app), with a ``hold_released`` history row. Returns the reason, or None when the hold stands
+    (a genuine human move, or no evidence either way: a hold is never dropped on a guess)."""
+    hold = tr.get("human_hold")
+    if not hold:
+        return None
+    am = tr.get("amend") or {}
+    if str(am.get("status") or "") != "human_moved":
+        return None
+    why = _unread_stop(str(am.get("reason_reported") or ""), am.get("sl_read"), am.get("form"))
+    if why is None:
+        return None
+    tr.pop("human_hold", None)
+    tr["amend"] = {**am, "status": UNREAD, "read_state": "unread", "hold_released_at": now.isoformat()}
+    _hist(tr, {"status": "hold_released", "at": now.isoformat(), "amend_id": am.get("id"),
+               "why": f"human_moved was an unread stop, not a human move: {why}"})
+    logger.warning("phone_trail: %s: released human_hold (%s): %s", tid, hold, why)
+    return why
 
 
 def _load_trail(m: Mapping[str, Any], tid: str) -> Dict[str, Any]:
@@ -178,6 +245,18 @@ def _fail(tr: Dict[str, Any], tid: str, at: str, what: str, alerts: List[str], *
                       "stop and target on the terminal")
     elif n > 1:
         logger.warning("phone_trail: %s: attempt failed again (%s x%d): %s", tid, counter, n, what)
+
+
+def _hand_set_alert(tid: str, row: Mapping[str, Any], am: Mapping[str, Any], reason: str, cap_run: str) -> str:
+    """A LIVE amend the phone refused before any click (PHONE-EXEC-OBSERVABLE-1018, piece 5; operator 2026-10-18):
+    the trail keeps retrying with backoff, and EVERY refusal tells the operator the exact stop to set by hand, with
+    the link to that attempt's per-step captures (``capture_run`` from the phone's report)."""
+    from src.prop import phone_captures
+    tp = f"; TP -> {am.get('tp')}" if am.get("tp") is not None and am.get("tp") != am.get("from_tp") else ""
+    link = phone_captures.capture_link(str(row["account_id"]), cap_run) if cap_run else "none posted"
+    return (f"{tid}: LIVE amend REFUSED before any click ({reason[:120]}). SET THE STOP BY HAND on the terminal: "
+            f"{row['symbol']} {row['direction']} stop -> {am.get('sl')} (from {am.get('from_sl')}){tp}. "
+            f"The trail retries with backoff. Step captures: {link}")
 
 
 def _ok(tr: Dict[str, Any], tid: str, alerts: List[str]) -> None:
@@ -247,7 +326,15 @@ def _plan_one(conn: Any, r: Any, account_id: str, now: datetime, legs: Mapping[s
         return
     tr = _load_trail(m, tid)
     if tr.get("human_hold"):
-        return  # a human's stop is on the terminal: never fought; resumes on their {kind: amend} report
+        released = _release_unread_hold(tr, tid, now)
+        if released is None:
+            return  # a human's stop is on the terminal: never fought; resumes on their {kind: amend} report
+        m2 = {**m, KEY: tr}
+        if not _cas(conn, tid, raw, m2):
+            return
+        raw, m = json.dumps(m2), m2
+        out["alerts"].append(f"{tid}: hold RELEASED — the 'human_moved' on record was an unread stop, not a human "
+                             f"move ({released}); the trail re-plans from the server's resting stop")
     am = dict(tr.get("amend") or {})
     st = am.get("status")
     # Watchdog: a CLAIMED amend with no report means the stop on the terminal is UNKNOWN. That attempt
@@ -461,6 +548,7 @@ def record_amend_result(device: Any, body: Mapping[str, Any], *, now: Optional[d
         raise ValueError("amend_result.result invalid")
     reason = str(body.get("reason") or "")[:300]
     form = body.get("form") if isinstance(body.get("form"), dict) else {}
+    from src.prop import phone_captures, phone_executor as pe
     from src.utils.json_notes import dump_capped
 
     conn = prop_journal._connect()
@@ -484,7 +572,11 @@ def record_amend_result(device: Any, body: Mapping[str, Any], *, now: Optional[d
             if not (sl_ok and tp_ok):
                 reason = f"phone said amended but read back sl={sl_read} tp={tp_read} (asked sl={am['sl']} tp={am.get('tp')}); " + reason
                 result = "mismatch"
-        am.update(status=result, reported_at=now.isoformat(), reason_reported=reason, sl_read=sl_read, tp_read=tp_read)
+        cap_run = str(body.get("capture_run") or "")
+        if cap_run and not phone_captures._RUN_RE.match(cap_run):
+            cap_run = ""
+        am.update(status=result, reported_at=now.isoformat(), reason_reported=reason, sl_read=sl_read, tp_read=tp_read,
+                  **({"capture_run": cap_run} if cap_run else {}))
         if form:
             am["form"] = json.loads(dump_capped(form, 12000))
         tr["amend"] = am
@@ -518,8 +610,26 @@ def record_amend_result(device: Any, body: Mapping[str, Any], *, now: Optional[d
                       first="the phone found no matching row in Positions (limit not filled yet, or a layout it "
                             "cannot read; rows dump in the ticket's phone_trail); re-checked with backoff")
         elif result == "refused":
+            live = pe.submit_mode(acct, test=False) == "live"
             _fail(tr, tid, at, f"refused before any click: {reason[:120]}", alerts,
-                  first=f"amend to SL {am.get('sl')} refused before any click ({reason[:120]}); retried with backoff")
+                  first=None if live else f"amend to SL {am.get('sl')} refused before any click ({reason[:120]}); "
+                                           "retried with backoff")
+            if live:
+                alerts.append(_hand_set_alert(tid, r, am, reason, cap_run))
+        elif result == "human_moved" and (unread := _unread_stop(reason, sl_read, form)) is not None:
+            # NOT a human move: the app could not read the resting stop (operator 2026-10-18, see the module
+            # doc). Recorded as its own state, failed like any other attempt, retried with backoff; never a hold.
+            am.update(status=UNREAD, read_state="unread")
+            tr["amend"] = am
+            live = pe.submit_mode(acct, test=False) == "live"
+            _fail(tr, tid, at, f"stop unread on the terminal: {unread}", alerts,
+                  first=None if live else f"amend to SL {am.get('sl')}: the resting stop did not READ on the "
+                                           f"terminal ({unread}); not a human move, retried with backoff")
+            if live:
+                link = phone_captures.capture_link(acct, cap_run) if cap_run else "none posted"
+                alerts.append(f"{tid}: LIVE amend to SL {am.get('sl')} (from {am.get('from_sl')}): the resting stop "
+                              f"did NOT READ on the terminal ({unread}; the app reported '{reason[:100]}'). Not a "
+                              "human move, nothing held: the trail retries with backoff. Step captures: " + link)
         elif result == "human_moved":
             tr["human_hold"] = f"{_HUMAN_LOCK_PREFIX} from the server's: a human moved it"
             alerts.append(f"{tid}: the terminal shows a stop/target other than the server's ({reason[:120]}); "
