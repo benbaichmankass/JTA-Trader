@@ -933,6 +933,27 @@ document.getElementById('mok').onclick=function(){window.__saved++;document.getE
   const deep = tpslRow(sheetPage()).replace('<div class=r id=chd>', '<div class=sub><div class=sub2><div class=r id=chd>').replace('✕</button></div></div>\n</div></div>', '✕</button></div></div></div></div>\n</div></div>');
   const dp = await onHost(deep);
   eq([await dp.evaluate("document.querySelector('.sub2 #chd') !== null"), await tapAt(dp, "child_entry"), await dp.evaluate("__ex.sheetInfo('ETHUSD').open"), await dp.evaluate("window.__danger")], [true, "touched", true, 0], "targets: a child row nested two wrappers deep is still found; its Opening price cell opens the sheet");
+  // 1b.263 05:00Z (amend #a6 refused): child_entry/native:covered + child_tpsl/native:covered from the SCROLL call (no
+  // geometry posted), then child/native touched the Market <a> (hd: "upe a Click" / "uph div Click") and no sheet. Fixture
+  // of that shape: the grid in a narrow horizontal scroller, a sticky Market column, the Market content an <a> whose click
+  // stops propagation, the ROW holding the opener, and the Opening price cell's CENTRE under a non-control overlay.
+  const k5 = sheetPage().replace("#hdr,.r{display:grid;grid-template-columns:repeat(9,90px);min-height:20px}",
+      "#panel{width:300px;overflow-x:auto}#hdr,.r{display:grid;grid-template-columns:repeat(9,120px);min-height:24px;width:1080px}#hdr>div:first-child,.r>div:first-child{position:sticky;left:0;background:#fff;z-index:2}.cv{position:absolute;left:-80px;width:50px;top:0;bottom:0;background:#eee;z-index:1}")
+    .replace('<div id=chm>ETH <span>5x</span></div>', '<div id=chm><a href="#" id=mk>ETH <span>5x</span></a></div>')
+    .replace('<div class=r id=chd><div id=chm><a href="#" id=mk>ETH <span>5x</span></a></div><div>20.88USD</div><div><i class=dot></i></div><div>1,318.20USD</div><div>2,461.52USD</div><div>2,440.65USD</div>',
+      '<div class=r id=chd><div id=chm><a href="#" id=mk>ETH <span>5x</span></a></div><div>20.88USD</div><div><i class=dot></i></div><div>1,318.20USD</div><div>2,461.52USD</div><div style="position:relative">2,440.65USD<span class=cv></span></div>')
+    .replace("</script>", "document.getElementById('mk').addEventListener('click',function(e){e.preventDefault();e.stopPropagation();window.__mkt=(window.__mkt||0)+1});</script>");
+  const kp = await onHost(k5);
+  eq(await kp.evaluate("!!document.querySelector('#chd .cv')"), true, "1b.263 fixture: built (an overlay from the next cell over the Opening price centre)");
+  const k5s = await kp.evaluate("__ex.sheetTarget('ETHUSD','child_entry',true)");
+  const k5t = await kp.evaluate("__ex.sheetTarget('ETHUSD','child_entry',false)");
+  const k5hit = k5t.ok ? await kp.evaluate(`(function(){var e=document.elementFromPoint(${k5t.x},${k5t.y});return !!e.closest('#chd') && !e.classList.contains('cv') && e.closest('#chm')===null;})()`) : false;
+  eq([k5s.ok, k5t.ok, k5hit], [true, true, true], "1b.263 fixture: the scroll call never refuses on the point; the check call finds an uncovered point of the Opening price cell");
+  await kp.mouse.click(k5t.x, k5t.y);
+  eq([await kp.evaluate("__ex.sheetInfo('ETHUSD').open"), await kp.evaluate("window.__mkt || 0"), await kp.evaluate("window.__danger")], [true, 0, 0], "1b.263 fixture: that touch reaches the row and opens the sheet; the Market link is never touched; nothing denied");
+  const kq = await onHost(k5.replace("left:-80px;width:50px", "left:-120px;width:120px"));
+  const kqr = (await kq.evaluate("[__ex.sheetTarget('ETHUSD','child_entry',true), __ex.sheetTarget('ETHUSD','child_entry',false)]"))[1];
+  eq([kqr.ok, kqr.why, /^vis -?\d+_-?\d+_\d+x\d+$/.test(kqr.g3 || ""), kqr.g1.length <= 40 && (kqr.g3 || "").length <= 40], [false, "covered", true, true], "1b.263 fixture: a FULLY covered cell is refused with its geometry incl. the visible part (g3)");
   await rowOpens.evaluate("__ex.domMark()");
   eq((await rowOpens.evaluate("__ex.domDiff()")).hd, ["no_react"], "targets: a page without React props says so (no_react), never an empty map read as 'no handler'");
   // finding (a): the EXPANDED child row carries the side as text; childShape measures it and positionsRead reads it

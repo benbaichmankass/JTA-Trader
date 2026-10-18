@@ -1521,15 +1521,17 @@ class MainActivity : Activity() {
     private var lastTapGeom: List<String> = emptyList()
     private suspend fun nativeTap(p: Page, sym: String, which: String): String {
         lastTapGeom = emptyList()
+        // a refusal from EITHER call carries its geometry and the element on top (1b.263 05:00Z: two "covered" from the
+        // scroll call posted neither, so the miss could not be placed)
+        fun refused(o: JSONObject): String {
+            lastTapGeom = listOf(o.optString("g1"), o.optString("g2"), o.optString("g3"), p.viewInfo() + (if (p === fg) " fg" else " bg")).filter { it.isNotEmpty() }
+            return o.optString("why", "refused") + (if (o.optString("top").isNotEmpty()) "@" + o.optString("top") else "")
+        }
         val s = p.obj("__ex.sheetTarget(${q(sym)}, ${q(which)}, true)") ?: return "unanswered"
-        if (!s.optBoolean("ok")) return s.optString("why", "refused")
+        if (!s.optBoolean("ok")) return if (s.optString("why") in listOf("none", "no_grid")) s.optString("why") else refused(s)
         delay(350)
         val r = p.obj("__ex.sheetTarget(${q(sym)}, ${q(which)}, false)") ?: return "unanswered"
-        if (!r.optBoolean("ok")) {
-            // geometry of a covered point (measure-only; 1b.233 read "covered" with nothing at the centre)
-            lastTapGeom = listOf(r.optString("g1"), r.optString("g2"), p.viewInfo() + (if (p === fg) " fg" else " bg")).filter { it.isNotEmpty() }
-            return r.optString("why", "refused") + (if (r.optString("top").isNotEmpty()) "@" + r.optString("top") else "")
-        }
+        if (!r.optBoolean("ok")) return if (r.optString("why") in listOf("none", "no_grid")) r.optString("why") else refused(r)
         // which WebView took the touch (PHONE-FGS-EXEC: the background engine's non-touchable overlay or the kiosk);
         // MotionEvents go to the view directly, never through the window, but the two are measured apart
         return p.tap(r.getDouble("x"), r.getDouble("y"), r.getDouble("vw")) + (if (p === fg) " fg" else " bg")
