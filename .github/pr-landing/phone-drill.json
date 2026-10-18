@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "PHONE-EXEC-OBSERVABLE-1018 PR 3 of 5 (manager session_01VduHYzdaXe27wTDBLSu8ao; operator decision 2026-10-18). Tier 2 by path (new phone routes on ict-web-api + a system-action). What lands: the REHEARSAL drill server half -- src/prop/phone_drill.py (request file beside the journal, atomic claim with the position the server expects, per-step result history, claim timeout), POST /phone/drill/claim + /phone/drill/result, GET /phone/pending carries `drill`, GET /api/diag/phone_drill, the Tier-1 `phone-drill` system-action (writes one request file; no order change), and the SERVER-side sheet-edit gate: the claim config now carries `sheet_edit` = 3 consecutive drill passes (or an explicit phone_accounts.<acct>.sheet_edit pin), replacing the app's SHEET_EDIT_MEASURED build constant (PR 2). Heartbeat keys for exec_js / captures / drills. No order path change; the drill never confirms an edit. Revert = revert this PR (sheet_edit then reads absent = false on the app: no click).",
+  "why": "operator 2026-10-18: a drill that runs the full stop-amend flow on a real open position up to the final Confirm, then aborts, reporting pass/fail per step with captures; done when it passes 3x in a row on the operator's phone, then the live amend runs on the same logic -- so the pass streak IS the live gate."
+}

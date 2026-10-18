@@ -24,6 +24,9 @@ Endpoints:
 - ``POST /api/bot/prop/phone/capture`` — one step capture from the phone executor (per-device
   bearer; PHONE-EXEC-OBSERVABLE-1018): an off-screen bitmap + a sanitized DOM snapshot, stored
   on the VM data volume with a 7-day TTL, read back on ``GET /api/diag/phone_capture*``.
+- ``POST /api/bot/prop/phone/drill/claim`` / ``drill/result`` — the REHEARSAL drill (per-device
+  bearer): claim the outstanding drill, report its per-step result; ``GET /phone/pending`` says
+  when one waits (``drill``). Read on ``GET /api/diag/phone_drill``.
 
 The read endpoints are Tier-1; the POST is Tier-2 (a DB write + notification).
 """
@@ -305,7 +308,7 @@ async def phone_claim(request: Request,
     ticket = await asyncio.to_thread(pe.claim_next, dev, None, accepts)
     return {"ok": True, "account_id": dev.account_id, "ticket": ticket,
             "kill_switch": pe.kill_switch(dev.account_id),
-            "config": pe.phone_config(dev.account_id)}
+            "config": await asyncio.to_thread(pe.phone_claim_config, dev.account_id)}
 
 
 @router.get("/phone/pending")
@@ -323,8 +326,11 @@ async def phone_pending(accepts: str = "",
     expired = await asyncio.to_thread(pe.expire_stale_claims, dev.account_id)
     if expired:
         await asyncio.to_thread(pe.alert_expired, dev.account_id, expired)
+    from src.prop import phone_drill
     return {"ok": True, "pending": await asyncio.to_thread(pe.pending_count, dev, None, _accepts(accepts)),
-            "status_age_hours": await asyncio.to_thread(pe.account_status_age_hours, dev.account_id)}
+            "status_age_hours": await asyncio.to_thread(pe.account_status_age_hours, dev.account_id),
+            # PHONE-EXEC-OBSERVABLE-1018: a REHEARSAL drill waiting for this device's account ({id} or null)
+            "drill": await asyncio.to_thread(phone_drill.pending, dev.account_id)}
 
 
 @router.post("/phone/report")
@@ -406,5 +412,30 @@ async def phone_capture(request: Request,
     body = await _json_body(request)
     try:
         return await asyncio.to_thread(pcap.store_capture, dev.account_id, body)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/phone/drill/claim")
+async def phone_drill_claim(request: Request,
+                            authorization: str | None = Header(default=None)) -> dict[str, Any]:
+    """Claim the outstanding REHEARSAL drill for the device's account (PHONE-EXEC-OBSERVABLE-1018): the full
+    stop-amend flow on the real open position up to the final Confirm, then cancel; never an order change. One
+    attempt per request; ``drill: null`` when none waits."""
+    from src.prop import phone_drill
+    dev = _phone_device(authorization)
+    return await asyncio.to_thread(phone_drill.claim, dev)
+
+
+@router.post("/phone/drill/result")
+async def phone_drill_result(request: Request,
+                             authorization: str | None = Header(default=None)) -> dict[str, Any]:
+    """The drill's per-step pass/fail + the capture run id; appended to the history, one Telegram line, and the
+    live sheet-edit gate re-evaluated (3 consecutive passes arm it)."""
+    from src.prop import phone_drill
+    dev = _phone_device(authorization)
+    body = await _json_body(request)
+    try:
+        return await asyncio.to_thread(phone_drill.record_result, dev, body)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

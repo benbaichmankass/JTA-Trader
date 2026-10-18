@@ -4310,3 +4310,17 @@ def get_phone_capture_file(request: Request, run_id: str, name: str, account_id:
         raise HTTPException(status_code=404, detail="no such capture file")
     data, ctype = got
     return Response(content=data, media_type=ctype, headers={"Cache-Control": "no-store"})
+
+
+@router.get("/phone_drill")
+def get_phone_drill(request: Request, account_id: str = "breakout_2", limit: int = 20) -> dict[str, Any]:
+    """The phone executor's REHEARSAL drills (PHONE-EXEC-OBSERVABLE-1018): the pending request (requested /
+    claimed, or null), the live sheet-edit gate (`enabled`, `source` config|drills, consecutive `passes` toward
+    `passes_to_arm`), and the recent results newest first (per-step pass/fail, failed steps, the capture run id to
+    read on /api/diag/phone_capture). Pure file read."""
+    _require_diag_token(request)
+    from src.prop import phone_drill
+    try:
+        return phone_drill.status(account_id, limit=max(1, min(int(limit), 200)))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
