@@ -6,7 +6,7 @@
   // PHONE-EXEC-OBSERVABLE-1018: this file is also served SIGNED by our own API and swapped in at runtime
   // (RemoteJs.kt): a newer version replaces the installed helpers on the next ensure(); the same version is
   // never injected twice. Bump on every change (CI signs the file; the app pins by version).
-  var EXEC_VERSION = "2026-10-18.5";
+  var EXEC_VERSION = "2026-10-18.6";
   if (window.__ex && window.__ex.version === EXEC_VERSION) return;
   function hostOk() { return /(^|\.)breakoutprop\.com$/.test(location.hostname || ""); }
   function vis(el) { if (!el) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }
@@ -1867,16 +1867,34 @@
       var ms = modalRoot(); if (ms.length !== 1) return {n: ms.length};
       var r = ms[0].root, kind = /stop/i.test(t(ms[0].title)) ? "stop" : "take";
       var h = textEls(r, MODAL_HDR, 60), m = h.length === 1 ? MODAL_HDR.exec(t(h[0])) : null;
+      var ti = triggerInput(r);
       return {n: 1, kind: kind, title: t(ms[0].title).slice(0, 30), hdr_n: h.length,
         side: m ? m[1].toLowerCase() : null, qty: m ? parseFloat(m[2].replace(/,/g, "")) : null, unit: m ? (m[3] || "") : "",
-        entry: m ? parseFloat(m[4].replace(/,/g, "")) : null, inputs: modalInputs(r), triggers: triggerInput(r).length,
+        entry: m ? parseFloat(m[4].replace(/,/g, "")) : null, inputs: modalInputs(r), triggers: ti.length,
+        // the resolved Trigger input's name / type and how many sliders (input type=range) the modal holds that are
+        // NOT targets (2026-10-18: the operator must be able to see the slider is seen and left alone)
+        trigger_name: ti.length === 1 ? (ti[0].name || "") : "", trigger_type: ti.length === 1 ? (ti[0].type || "text") : "",
+        sliders: Array.prototype.slice.call(r.querySelectorAll("input[type=range],[role=slider]")).filter(vis).length,
         buttons: Array.prototype.slice.call(r.querySelectorAll("button,[role=button]")).filter(vis).map(function (x) { return t(x).replace(/\d/g, "#").slice(0, 20); }).slice(0, 10)};
     },
-    // Set ONLY the modal's ONE Trigger input. {n, value} (n = how many Trigger inputs matched; nothing typed unless 1)
+    // Set ONLY the modal's ONE Trigger PRICE input. MEASURED 2026-10-18 drill 2 (19:00Z, capture 010-modal_open, fixture
+    // breakout-modal-edit-stop-loss): the real "Edit Stop loss" modal holds Quantity (name protectionStopLossSize),
+    // Trigger (name protectionStopLossPrice, unit USD), Entry distance (name protectionStopLossDistance, %), and UNDER
+    // them the "Stop loss Entry distance" SLIDER (input type=range inside div.ds-slider). The slider is never a target:
+    // inputs() drops type=range, and the one Trigger match is refused unless it is a typeable text input outside any
+    // slider. The field is focused (what a finger's tap does), selected whole, set through the native value setter with
+    // input + change (the terminal recomputed its "Est. maximum loss" from the typed price on the phone), read back,
+    // then blurred. {n, value, name, type} (n = how many Trigger inputs matched; nothing typed unless exactly 1;
+    // n: -1 + why when the one match is not a typeable price input)
     modalSetTrigger: function (v) {
       var ms = modalRoot(); if (ms.length !== 1) return {n: -ms.length};
       var ins = triggerInput(ms[0].root); if (ins.length !== 1) return {n: ins.length};
-      var i = ins[0]; i.focus(); setVal(i, String(v)); i.blur(); return {n: 1, value: i.value};
+      var i = ins[0], ty = (i.type || "text").toLowerCase();
+      if (ty !== "text" && ty !== "number" && ty !== "tel") return {n: -1, why: "not_text_input:" + ty};
+      if (i.closest("[role=slider],.ds-slider,[class*=slider]")) return {n: -1, why: "in_slider"};
+      i.focus(); try { i.select(); } catch (e) {}
+      setVal(i, String(v)); i.blur();
+      return {n: 1, value: i.value, name: i.name || "", type: ty};
     },
     modalTrigger: function () {
       var ms = modalRoot(); if (ms.length !== 1) return {n: -ms.length};
