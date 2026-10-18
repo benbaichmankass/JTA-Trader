@@ -1,0 +1,18 @@
+{
+  "based_on": "20261018T071643803791Z-0736470f.json",
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the daily live-replay-parity run reports 0 of this class for this leg, with the cause root-caused, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261018-LRP-A882A1A0",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "live-replay-parity:ada_pullback_2h:missed_signal",
+    "rerun": "python3 scripts/ops/live_replay_parity.py --base-url <tunnel to the live web-api> --days 7  (or label an issue `live-replay-parity`; the workflow .github/workflows/live-replay-parity.yml runs it daily and commits comms/live_parity/latest.json)"
+  },
+  "routed_to": "LIVE-PARITY",
+  "state": "routed",
+  "what": "Live-vs-replay parity: leg `ada_pullback_2h` — missed_signal ×34 (REAL-MONEY roster) in window 2026-10-11T06:45:00+00:00..2026-10-18T06:45:00+00:00. MEASURED by scripts/ops/live_replay_parity.py; artifact comms/live_parity/2026-10-18.json. Examples: [{\"class\": \"missed_signal\", \"bar\": \"2026-10-13T14:00:00+00:00\", \"t\": \"2026-10-13T15:38:48+00:00\", \"live\": {\"side\": \"none\", \"adx\": 28.0195, \"close\": 0.234, \"reason\": \"Strategy 'ada_pullback_2h': no trend-pullback-confirmation setup on the latest bar (non-actionable).\"}, \"replay\": {\"sides\": [\"short\"], \"adx_range\": [28.0195, 28.0195], \"candidates\": [\"2026-10-13T15:30:00+00:00\"], \"diag_adx\": {\"final_bar_200\": 28.0195, \"closed_only_199\": 27.7986, \"closed_only_200\": 27.7986, \"next_bar_200\": 28.2246}, \"fine_candle\": {\"time\": 1791905400, \"low\": 0.2337, \"high\": 0.2353}}}, {\"class\": \"missed_signal\", \"bar\": \"2026-10-13T14:00:00+00:00\", \"t\": \"2026-10-13T15:41:09+00:00\", \"live\": {\"side\": \"none\", \"adx\": 28.0195, \"close\": 0.234, \"reason\": \"Strategy 'ada_pullback_2h': no trend-pullback-confirmation setup on the latest bar (non-actionable).\"}, \"replay\": {\"sides\": [\"short\"], \"adx_range\": [28.0195, 28.0195"
+}
