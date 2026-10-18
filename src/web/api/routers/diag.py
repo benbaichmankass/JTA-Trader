@@ -4324,3 +4324,13 @@ def get_phone_drill(request: Request, account_id: str = "breakout_2", limit: int
         return phone_drill.status(account_id, limit=max(1, min(int(limit), 200)))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/phone_exec_js")
+def get_phone_exec_js(request: Request) -> dict[str, Any]:
+    """The signed remote exec.js state (PHONE-EXEC-OBSERVABLE-1018): the working tree's version/sha256, the stored
+    CI signature record (never the signature itself), and `served` -- whether GET /phone/exec.js would hand the
+    phone a script right now. Pure file read; no script body."""
+    _require_diag_token(request)
+    from src.prop import phone_exec_js
+    return phone_exec_js.status()
