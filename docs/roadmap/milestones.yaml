@@ -106,6 +106,15 @@ milestones:
       and an exit-now rule net of cost, graded per capital-day vs the fixed bracket (Programme 01 Q8). Ladder units
       RQ-20261014-d6e7-01..06; binding gap is per-bar path data -> EXIT-PATH-EMIT-OFFLINE (Tier-1, first) and
       EXIT-PATH-TELEMETRY-LIVE (Tier-2 proposal).
+      2026-10-18 (lane ACTIVE-MGMT-DRIVE-1018, MEASURED from research/results): the fixed-bracket Q8 line is CLOSED FAIL --
+      d6e7-02 FAIL, RQ-20261016-012 FAIL (rich state K=3R, -0.00126 nats), RQ-20261016-013 FAIL (rich policy K=2R, CI
+      [-0.045, +0.031] R/trade), RQ-20261016-1fa6-06 FAIL x2 (HTF K=3R) -- while the 8.1 prize stands (d6e7-01 PASS, oracle
+      0.656 R/trade). Next: FIRST-PASSAGE-ON-PATHS (first_passage.py reads --emit-paths rows; #18536 landed the emit) then
+      blocked/RQ-20261014-d6e7-06 on the legs as traded. EXIT-PATH-EMIT-OFFLINE and EXIT-PATH-TELEMETRY-LIVE are both landed
+      (telemetry OBSERVED and done 2026-10-18). RQ-20261017-001 FAIL: measured-move width 1.0 on eth_4h (4 of 6 folds, 92%
+      cap-clamped, worse per capital-day) -> width 0.5 confirm authored (P1-Q3-eth4h-measured-move-w05-confirm). The 12
+      priority-1 P1 units (RQ-20261016-004..011, -014..-016, RQ-20261017-002) fired 2026-10-18 06:20Z after the dispatcher
+      starved them; per-leg doctrine path table in 01-ACTIVE-TRADE-MANAGEMENT.md § 2026-10-18.
     architecture: ["TP doctrine"]
     owner: manager
     reviewed: 2026-10-14

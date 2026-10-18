@@ -155,3 +155,37 @@ The tree [`research/programmes/01-active-trade-management.yaml`](../../../resear
 **Q8 decision points:** the 8.1 census sets whether the prize funds the model rungs; 8.2/8.4 say whether the state carries information beyond where the trade is; 8.3/8.5 say whether that information pays for its exits. A FAIL at any rung is written back to row `IN-TRADE-EXIT-MODEL` and to `ROADMAP.md` L-ATM with the number; the live-history proposal `EXIT-PATH-TELEMETRY-LIVE` is scheduled only when a policy PASS needs a shadow.
 
 **What this plan does not do.** It changes no config, roster or account (all Tier-3 flips are proposals with records). It does not re-open the entry-time ladder answered `honest_negative` ×6 on 2026-08-10, nor the scalp revision question (0/5 ×7 legs). It does not treat a paper or mirror book as evidence of edge; mirrors carry the real-money verdicts by roster equality. Numbers above marked MEASURED were measured this session from the files named; the 2.0–2.5 R predictive-target figure is INFERRED from the 2026-09-18 MFE distribution and must be re-derived by Q2 before it is used.
+
+### 2026-10-18 drive — the four FAILs read, the starved units fired, the doctrine path per money leg (lane `ACTIVE-MGMT-DRIVE-1018`)
+
+Operator, 2026-10-18 ~06:20Z: active trade management and ML are *"our highest priority"*. State at 06:20Z, MEASURED from `research/queue/` + `research/results/` (re-run, never quote): 21 P1 units — 4 `done`, all FAIL; 17 `queued`, none ever dispatched (the value-ranked dispatcher starved them; lane `DISPATCH-MONEY-FIRST-1018` is fixing the ordering). The 12 priority-1 units were fired by hand on `research-script-run.yml` at 06:20–06:24Z; the 5 priority-3 soak-book units stay with the dispatcher. The tree header in [`01-active-trade-management.yaml`](../../../research/programmes/01-active-trade-management.yaml) carries the same block in machine-adjacent form.
+
+**What each FAIL rules out, and what stays live.**
+
+| unit (node) | rule outcome | rules out | still live → next node |
+|---|---|---|---|
+| `RQ-20261016-012` (P1-Q8.2-fail) | FAIL: rich state at K = 3 R, −0.00126 nats vs the distance-only reference, CI [−0.00295, +0.00044], 2 of 4 folds +, n_oos 2,192 | a linear per-bar model on price-derived state carrying information beyond *where the trade is*, at a longer horizon, on the fixed-bracket reconstruction | nothing on this corpus; `P1-Q8-k3-policy` moot |
+| `RQ-20261016-013` (P1-Q8.4-indet-policy) | FAIL: rich exit-now policy at K = 2 R, policy − bracket CI [−0.0445, +0.0313] R/trade, 1 of 4 folds +, early-exit share 0.79–0.90, 3,926 trades / 27 legs | an exit-now policy on that model paying for its exits | — |
+| `RQ-20261016-1fa6-06` | FAIL ×2: HTF legs at K = 3 R, CI [−0.233, +0.002] R/trade, 0 of 4 folds +, n 695 | the same on the pullback_2h + Donchian 4h legs where a truncation costs least | — |
+| `RQ-20261017-001` (P1-Q3-eth4h-measured-move-confirm) | FAIL on fold majority (4 of 6; fold 3 by 0.09 R); Δ +15.49 R and maxDD 8.02 vs 12.52 both clear; **net R per capital-day 0.0649 vs 0.0708 (worse)**; **5,810 of 6,318 revisions clamped at the venue cap (92%)** | width 1.0 measured-move on `trend_donchian_eth_4h` as a doctrine-compliant revision — 92% at the cap is the cap under a target's label (clause 1), whatever the P&L | width 0.5 (the 080 eth_4h arm with 57.8 R / DD 6.8 / 50% clamp) against the **new** incumbent: `P1-Q3-eth4h-measured-move-w05-confirm` |
+
+The 8.1 census (`RQ-20261014-d6e7-01`, PASS, oracle saving 0.656 R/trade) still says the prize exists. What the three Q8 FAILs close is the **fixed-bracket linear line**; the honest residual is that the reconstruction (initial SL −1 R, TP K R) is not the bracket any leg trades. `--emit-paths` landed (#18536) but `first_passage.py` has no `--paths` input — build row **`FIRST-PASSAGE-ON-PATHS`**; `blocked/RQ-20261014-d6e7-06` now clears on it (its 8.3/8.5-PASS clause dropped, stated in the unit). A GBDT or sequence learner stays earned-by-a-linear-PASS (8.7).
+
+**Two facts that change how the running units are read.** (1) `#18868` / `#18869` merged at 06:05Z: `trend_donchian_eth_4h` is now `atr_stop_mult 1.5 / trail_mult 6.0`, `ada_pullback_2h` carries `pullback_frac 0.618`. Every arm **A is "the leg as declared"**, so `RQ-20261016-005/-006/-008` run against the new incumbents (017-001 ran against the old). (2) `EXIT-PATH-TELEMETRY-LIVE` is not a proposal: `#18166` is merged and deployed, and the observation is met (7 of 7 closes since the 10-15 deploy have `position_path_history` rows, none after `terminal_at`; direct diag 06:28Z) — row `done`. Q6 parity reads use that table.
+
+**Doctrine read on every Q6 declare (authoring instruction, not a rule change):** the harness's `tp_revisions_clamped / tp_revisions_applied` per arm is read before any declare; a PASS with a clamped share ≥ 0.5 (xrp_4h at width 1.0 was 88% in 080) is forwarded to the manager as *"P&L at the cap, not a prediction"*. The units' registered rules grade P&L / folds / drawdown exactly as written.
+
+**Path to a doctrine-compliant predictive TP, per real-money and prop leg** (guard 06:20Z: 0 of 54 routings compliant; real money 8, prop 6):
+
+| leg (accounts) | entry_tp today | deciding unit(s) now running / next | ETA of the decision |
+|---|---|---|---|
+| `xrp_pullback_2h` (bybit_2 + mirror) | declared 3 R, reach OK; revision fails | `RQ-20261016-009` (6 tp_extend cells, 6 folds) → `P1-Q6-xrp-pb-declare` | record ~07:30Z 2026-10-18; declare draft same day on PASS |
+| `ada_pullback_2h` (bybit_2 + mirror) | declared 4 R; revision fails | `RQ-20261016-008` (5 tp_extend cells vs the **new** incumbent) → `P1-Q6-ada-pb-declare` | same |
+| `trend_donchian_xrp_4h` (bybit_2 + mirror) | declared 3 R; revision fails | `RQ-20261017-002` (measured-move w1.0, clamp read required) and `RQ-20261016-015` (stop / retarget cells) → `P1-Q6-xrp4h-*` | same |
+| `trend_donchian_eth_4h` (bybit_2 + mirror) | **sentinel 50 R**; cab7-04 FAIL; w1.0 FAIL | `RQ-20261016-005/-006` (stops, not TP) + **new** `P1-Q3-eth4h-measured-move-w05-confirm` (emits at the 05:50Z replenish) | w05 record ~2026-10-19; else route Q8 on paths |
+| `trend_donchian_sol_prop` (bybit_2 + 3 prop) | **unreachable 6 R** (reach 1.9%) | `RQ-20261016-004` (K* derive) → `P1-Q2-solprop-confirm-kstar`; `RQ-20261016-011` (rr_floor) | derive record ~07:30Z; K* confirm unit authored same day on PASS |
+| `trend_donchian_eth_prop` (3 prop) | **unreachable 6 R** (reach 0.9%) | `RQ-20261016-007` (K* derive) → `P1-Q2-ethprop-confirm-kstar`; `RQ-20261016-010` (exit cells at prop cost) | same |
+| `slv_pullback_1d` (alpaca_live + mirror) | sentinel 50 R | `RQ-20261016-014` (pooled 1d K*, 8.7 y) → `P1-Q2-alpaca-1d-confirm-kstar`; `RQ-20261016-016` (ms8_a20 stop) | record ~07:40Z |
+| `ief_pullback_1d`, `iaum_pullback_1d` (alpaca_live) | sentinel 50 R | ride the pooled `RQ-20261016-014` (ief below the 39 floor per leg; iaum is the proxy) | same |
+
+Every one of these is Stage 0 → a **held Tier-3 proposal with the record**; nothing here edits config. The standing brief line (`render_daily_brief.py`, "Active trade management") carries the counts from this day on.
