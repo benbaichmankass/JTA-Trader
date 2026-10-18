@@ -1,0 +1,38 @@
+# ============================================
+# ICT PHONE CAPTURE PURGE (PHONE-EXEC-OBSERVABLE-1018, 2026-10-18)
+# Operator decision 2026-10-18: phone step captures (off-screen WebView bitmaps +
+# sanitized DOM snapshots posted by the Breakout phone executor) are stored on
+# the server only and auto-deleted after 7 days.
+#
+# Runs scripts/ops/phone_capture_purge.sh once a day (ict-phone-capture-purge.timer):
+# it loads the runtime env the way every system-action wrapper does
+# (scripts/ops/_lib.sh load_runtime_env: systemctl unit > .env > drop-in, so
+# DATA_DIR / TRADE_JOURNAL_DB resolve to the data volume, never a repo-relative
+# fallback) and runs scripts/prop/phone_capture_purge.py, which removes every
+# capture run older than 7 days under <trade_journal.db dir>/phone_captures/.
+# The same purge also runs on every capture POST (at most hourly), so the TTL
+# holds without this unit; this is the second path for a phone that went quiet.
+#
+# LIVE-TRADER BOX ONLY (the captures live on its data volume).
+# Save to: /etc/systemd/system/ict-phone-capture-purge.service
+# (installed by scripts/install_systemd_units.sh's deploy/*.service glob; in
+#  deploy_pull_restart.sh DEFAULT_SKIP: a deploy never fires an unscheduled purge)
+# ============================================
+
+[Unit]
+Description=ICT phone capture purge — delete phone step captures older than 7 days
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/ict-trading-bot
+Environment=PYTHONUNBUFFERED=1
+TimeoutStartSec=120
+Nice=10
+ExecStart=/bin/bash /home/ubuntu/ict-trading-bot/scripts/ops/phone_capture_purge.sh
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
