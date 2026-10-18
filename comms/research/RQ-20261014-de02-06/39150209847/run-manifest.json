@@ -1,0 +1,40 @@
+{
+  "unit": "RQ-20261014-de02-06",
+  "run_id": "39150209847",
+  "commit_sha": "ad8e5c928423a8476127dccf38b248830cc36e3d",
+  "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/39150209847",
+  "timeout_minutes": 30,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/macro_event_study_run.py",
+        "--kind",
+        "api_crude_stocks",
+        "--snapshots",
+        "comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl",
+        "--symbol",
+        "CL=F",
+        "--horizons",
+        "1,3,5",
+        "--primary-horizons",
+        "1,3,5",
+        "--min-n",
+        "100",
+        "--t-bar",
+        "2.4",
+        "--expected-sign",
+        "negative",
+        "--population",
+        "api_crude_stocks releases (live feed + survey-consensus backfill) joined to CL=F daily closes",
+        "--out",
+        "comms/research/RQ-20261014-de02-06/39150209847"
+      ],
+      "log": "comms/research/RQ-20261014-de02-06/39150209847/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 1.6
+    }
+  ],
+  "all_ok": true
+}
