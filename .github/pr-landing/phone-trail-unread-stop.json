@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "P0 (manager session_01VduHYzdaXe27wTDBLSu8ao, operator 2026-10-18): breakout_2 prop-manual-c1dba3c376b3 was HELD as human_moved although nobody moved the stop — the app 1b.265 read the Stop row's trigger as null (0 or 2+ price cells) and reported 'terminal stop null != expected 2452.65'; the server holds on any human_moved. Tier 2 by path: src/prop/phone_trail.py (the live amend channel's report handler + planner). What lands: an unread stop is its own state (`unread`): a failed attempt with backoff, one Telegram per live attempt, NEVER a hold; a hold already written from such a report is released on the next plan through a code path (hold_released history row), so this ticket re-plans and amends on its own. exec.js 2026-10-18.3 (signed; why + masked cell shapes beside a null trigger) and the app (UNREAD -> refused, never human_moved) carry the same distinction. A report naming two numbers still holds. No order path change. Revert = revert this PR (the hold comes back on the next null read).",
+  "why": "operator 2026-10-18: 'I definitely did not move the stop ... the system needs to be able to do it on its own' — read failure and a genuine mismatch must be distinct states; the false hold must be impossible to repeat silently and this ticket must resume without a hand edit."
+}
