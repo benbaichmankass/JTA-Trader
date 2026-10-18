@@ -5,7 +5,7 @@ id: RQ-20261018-006
 title: 'Programme 01 Q2, real money + prop: does trend_donchian_sol_prop''s data-derived predictive TP
   (K* = 2.5 R, RQ-20261016-004 PASS_NONINFERIOR) beat the declared 6 R bracket as the leg trades on bybit_2,
   harness-native, over 2020-10..2026-10 in 5 of 6 calendar folds, net of the Bybit cost stack?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -139,3 +139,15 @@ generated:
   params:
     node: P1-Q2-solprop-confirm-kstar
 last_dispatched_at: '2026-10-18T14:40:06+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-Q2-SOLPROP-KSTAR-CONFIRM
+  evidence:
+  - research/results/RQ-20261018-006/39129948154.jsonl
+  graded_at: '2026-10-18'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail
