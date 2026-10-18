@@ -55,6 +55,18 @@ _PAGE_LIMIT = 1000
 # Retry budget per page: 7 attempts, backoff 1,2,4,...,60 s (~2 min max).
 _MAX_ATTEMPTS = 7
 
+# An empty page before `end`: re-fetch the same cursor this many times, then
+# step forward by whole pages at most this many times before giving up (a
+# genuine listing gap longer than 30 pages is not something a daily rebuild
+# should paper over silently; the completeness check below then fails it).
+_EMPTY_PAGE_RETRIES = 3
+_MAX_EMPTY_PAGE_SKIPS = 30
+
+# A fetch whose last bar is further than this many bars before `end` did not
+# finish; the adapter raises instead of letting the builder write it as `ok`.
+# 2 pages leaves room for the exchange's own publication lag at any timeframe.
+_SHORT_FETCH_BARS = 2 * _PAGE_LIMIT
+
 # ccxt exception CLASS names that are transient by construction.
 _TRANSIENT_CLASS_KEYS = ("RateLimit", "DDoS", "Network", "Timeout", "ExchangeNotAvailable")
 
@@ -155,6 +167,8 @@ class BybitOffvmMarketRawAdapter(MarketRawAdapter):
 
         cursor = start_ms
         last_cursor = -1
+        empty_streak = 0
+        last_bar_ms: int | None = None
         while cursor < end_ms:
             if cursor == last_cursor:
                 # Defensive: stale `since` (exchange returned the same
@@ -200,7 +214,36 @@ class BybitOffvmMarketRawAdapter(MarketRawAdapter):
             else:  # pragma: no cover - the loop only falls through after re-raising
                 raise last_exc  # type: ignore[misc]
             if not page:
-                break
+                # An EMPTY page before `end` is NOT end-of-data. MEASURED on the
+                # trainer (trainer-vm-diag #18889, 2026-10-18): shards cut at an
+                # exact multiple of the 1000-row page and rebuilt that way every
+                # night -- BTCUSDT 1h 27,000 rows ending 2024-11-15, ETHUSDT 1h
+                # 24,000 ending 2024-07-13, BTCUSDT 5m 105,000 ending 2022-10-17,
+                # ADAUSDT 15m 149,000 ending 2026-01-16 -- while SOLUSDT 1h over
+                # the same window is whole (43,824). `break` here wrote each of
+                # those as an `ok` build (row ML-SHARD-TRUNCATED). Retry the same
+                # cursor a few times, then step one page forward and keep going;
+                # the completeness check after the loop refuses a short fetch.
+                empty_streak += 1
+                if empty_streak <= _EMPTY_PAGE_RETRIES:
+                    print(
+                        f"bybit_offvm: empty page on {symbol} {timeframe} since={_ms_to_iso(cursor)} "
+                        f"before end (attempt {empty_streak}/{_EMPTY_PAGE_RETRIES}); retrying",
+                        file=sys.stderr,
+                    )
+                    time.sleep(min(2 ** empty_streak, 30))
+                    last_cursor = -1   # re-fetch the SAME cursor
+                    continue
+                if empty_streak > _EMPTY_PAGE_RETRIES + _MAX_EMPTY_PAGE_SKIPS:
+                    break
+                print(
+                    f"bybit_offvm: empty page on {symbol} {timeframe} since={_ms_to_iso(cursor)} "
+                    f"persists; stepping one page ({_PAGE_LIMIT} bars) forward",
+                    file=sys.stderr,
+                )
+                cursor += _PAGE_LIMIT * bar_ms
+                continue
+            empty_streak = 0
             advanced = False
             for candle in page:
                 # ccxt OHLCV row is [ts_ms, open, high, low, close, volume].
@@ -223,6 +266,7 @@ class BybitOffvmMarketRawAdapter(MarketRawAdapter):
                     "source": self.source,
                 }
                 advanced = True
+                last_bar_ms = ts_ms
                 cursor = ts_ms + bar_ms
             if not advanced:
                 # Page came back but every bar was filtered out.
@@ -232,6 +276,19 @@ class BybitOffvmMarketRawAdapter(MarketRawAdapter):
                 # Extra throttle on top of ccxt's enableRateLimit so a deep
                 # multi-year pull stays gentle on the public API.
                 time.sleep(pause)
+        # Completeness: a fetch that stopped more than `_SHORT_FETCH_BARS` bars
+        # before `end` is a FAILED build, never an `ok` one. The old shard stays
+        # in place because the builder writes to a temp file and renames on
+        # success (ml/datasets/builder.py). A symbol listed after `start` still
+        # passes (Bybit returns its first bars for an early `since`); a symbol
+        # with no data at all raises here rather than writing an empty shard.
+        if last_bar_ms is None or (end_ms - last_bar_ms) > _SHORT_FETCH_BARS * bar_ms:
+            last_txt = _ms_to_iso(last_bar_ms) if last_bar_ms is not None else "none"
+            raise RuntimeError(
+                f"bybit_offvm: fetch for {symbol} {timeframe} ended at {last_txt}, more than "
+                f"{_SHORT_FETCH_BARS} bars before end {_ms_to_iso(end_ms)} -- refusing to write a "
+                "truncated shard (ML-SHARD-TRUNCATED)"
+            )
 
     @classmethod
     def _build_exchange(

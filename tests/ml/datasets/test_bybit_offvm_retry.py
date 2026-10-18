@@ -55,13 +55,18 @@ def no_sleep(monkeypatch):
     return slept
 
 
-def _run(monkeypatch, fake):
+def _run(monkeypatch, fake, end="2025-01-01T02:00:00Z"):
     monkeypatch.setenv(OFFVM_ENV, "1")
     monkeypatch.setattr(BybitOffvmMarketRawAdapter, "_build_exchange",
                         classmethod(lambda cls, **kw: fake))
     return list(BybitOffvmMarketRawAdapter().iter_bars(
         symbol="BTCUSDT", timeframe="1h",
-        start="2025-01-01T00:00:00Z", end="2025-01-01T02:00:00Z"))
+        start="2025-01-01T00:00:00Z", end=end))
+
+
+def _bars(start_hour: int, n: int):
+    return [[_iso_to_ms("2025-01-01T00:00:00Z") + (start_hour + i) * 3_600_000, 1, 2, 0, 1.5, 10]
+            for i in range(n)]
 
 
 def test_is_transient_classifies_bybit_ret_codes_and_ccxt_classes():
@@ -98,3 +103,36 @@ def test_transient_that_never_clears_gives_up_after_the_budget(monkeypatch, no_s
         _run(monkeypatch, fake)
     assert fake.calls == mod._MAX_ATTEMPTS
     assert len(no_sleep) == mod._MAX_ATTEMPTS - 1
+
+
+# ── empty pages (ML-SHARD-TRUNCATED) ────────────────────────────────────────
+def test_empty_page_mid_history_is_refetched_and_the_fetch_continues(monkeypatch, no_sleep):
+    """MEASURED 2026-10-18 (trainer-vm-diag #18889): BTCUSDT 1h cut at 27,000 rows (2024-11-15), ETHUSDT 1h at
+    24,000, BTCUSDT 5m at 105,000 -- exact page multiples, rebuilt that way nightly -- because one empty page made
+    the loop `break` and the builder wrote the prefix as an `ok` shard."""
+    page_a, page_b = _bars(0, 2), _bars(2, 2)
+    fake = _FlakyExchange([page_a, [], [], page_b])     # two transient empties, then data resumes
+    rows = _run(monkeypatch, fake, end="2025-01-01T04:00:00Z")
+    assert [r["ts"][11:13] for r in rows] == ["00", "01", "02", "03"]
+    assert fake.calls == 4       # the window ends on page_b's last bar: no further fetch
+    assert len(no_sleep) == 2    # the two re-fetches backed off
+
+
+def test_persistent_empty_page_is_stepped_past_not_treated_as_end(monkeypatch, no_sleep):
+    # 3 retries exhausted -> step one page (1000 bars) forward; data there -> continue
+    page_far = [[_iso_to_ms("2025-01-01T00:00:00Z") + 1000 * 3_600_000 + i * 3_600_000, 1, 2, 0, 1.5, 10]
+                for i in range(2)]
+    fake = _FlakyExchange([_bars(0, 1), [], [], [], [], page_far])
+    end = "2025-02-11T18:00:00Z"   # 1000 h + 2 bars after start
+    rows = _run(monkeypatch, fake, end=end)
+    # bar 0 + the bar at the stepped-to cursor (1001 h); the 1000 h bar sits before the advanced cursor and is
+    # dropped by the pre-existing pre-window filter -- the point is that the fetch CONTINUED past the gap
+    assert [r["ts"] for r in rows] == ["2025-01-01T00:00:00Z", "2025-02-11T17:00:00Z"]
+    assert fake.calls == 6
+
+
+def test_fetch_that_ends_far_before_end_raises_instead_of_writing_a_prefix(monkeypatch, no_sleep):
+    # exchange answers one page then nothing for ever: never an `ok` shard
+    fake = _FlakyExchange([_bars(0, 2)] + [[]] * 200)
+    with pytest.raises(RuntimeError, match="truncated shard"):
+        _run(monkeypatch, fake, end="2025-12-31T00:00:00Z")
