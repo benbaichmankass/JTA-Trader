@@ -4,7 +4,7 @@
 id: RQ-20261018-013
 title: 'Programme 01 Q9, runway fill: does a bar-count time-close replace the declared exit of trend_donchian_eth_4h
   on net R in 5 of 6 calendar folds over 2020-07..2026-10, at the Bybit cost stack?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -125,3 +125,15 @@ generated:
   params:
     node: P1-Q9-eth4h-timeout-replace
 last_dispatched_at: '2026-10-19T00:28:15+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-Q9-ETH4H-TIMEOUT-REPLACE
+  evidence:
+  - research/results/RQ-20261018-013/39180944850.jsonl
+  graded_at: '2026-10-19'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
