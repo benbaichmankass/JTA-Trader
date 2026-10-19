@@ -200,6 +200,23 @@ def _attempt(hours, result="refused", **kw):
     return a
 
 
+def test_sl_only_amend_verifies_the_stop_only_a_tp_not_read_is_still_amended(_iso):
+    """MEASURED 2026-10-18 (#a9 on breakout_2, 1b.311): the app's amend edits the Stop row's modal and reads the STOP
+    back; it has no TP to read and reports tp_read None, while the ticket's TP rides along on the amend unchanged. The
+    server called that a mismatch (fails 8) on a stop that HAD moved 2452.65 -> 2391.18 and been read back. An sl-only
+    amend verifies the stop only; a stop that does not match is still a mismatch."""
+    a = _claimed()
+    assert a["amend_kind"] == "sl" and a["tp"] is not None
+    r = _report(a, "amended", sl_read=2530.0, tp_read=None)
+    assert r["ok"] and r["result"] == "amended"
+    tr = _trail()
+    assert tr["resting_sl"] == 2530.0 and tr["seen"] and not tr.get("human_hold") and not tr.get("fails")
+    assert any("READ BACK" in m for m in _iso) and not any("NOT verified" in m for m in _iso)
+    # the stop itself still has to match: a wrong stop with no TP read is the mismatch it always was
+    b = _attempt(1, "amended", sl_read=2500.0, tp_read=None)
+    assert b is not None and _trail()["amend"]["status"] == "mismatch" and _trail()["fails"] == 1
+
+
 def test_amended_claim_that_does_not_match_the_ask_is_a_mismatch_and_retries(_iso):
     a = _claimed()
     r = _report(a, "amended", sl_read=2520.0, tp_read=2800.0)

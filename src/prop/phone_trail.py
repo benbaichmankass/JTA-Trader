@@ -621,7 +621,12 @@ def record_amend_result(device: Any, body: Mapping[str, Any], *, now: Optional[d
         sl_read, tp_read = _f(body.get("sl_read")), _f(body.get("tp_read"))
         if result == "amended":
             sl_ok = sl_read is not None and abs(sl_read - float(am["sl"])) <= tol
-            tp_ok = am.get("tp") is None or (tp_read is not None and abs(tp_read - float(am["tp"])) <= tol)
+            # An sl-only amend (kind "sl") never touches the TP: the app edits the Stop row's modal and reads the STOP
+            # back; it has no TP to read and reports tp_read None, while the ticket's TP rides along on the amend
+            # unchanged. MEASURED 2026-10-18 #a9 on breakout_2: the stop moved 2452.65 -> 2391.18 on the terminal and
+            # was read back, and this check called it a mismatch (fails 8) over tp=None. Only a TP amend verifies the TP.
+            tp_ok = (am.get("kind") == "sl" or am.get("tp") is None
+                     or (tp_read is not None and abs(tp_read - float(am["tp"])) <= tol))
             if not (sl_ok and tp_ok):
                 reason = f"phone said amended but read back sl={sl_read} tp={tp_read} (asked sl={am['sl']} tp={am.get('tp')}); " + reason
                 result = "mismatch"

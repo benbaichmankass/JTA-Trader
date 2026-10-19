@@ -833,8 +833,23 @@ amend's read-back after Confirm reads the sheet the same way, which would have r
 stop that had in fact moved, and the next attempt would have called the new level a human move. So (app, next APK):
 every Stop-row re-read after a modal goes through `sheetEnsureOpen` (re-opens the sheet with the same native touch,
 recorded as `sheet_after_cancel` / in the `stop_reread` note), and an amend that finds the terminal already at the
-ASKED level reports `amended` with that read instead of `human_moved`. **UNMEASURED:** whether Confirm also closes
-the sheet (expected, same dialog stack) — the first live amend's `stop_reread` note (`sheet open|reopened …`) says.
+ASKED level reports `amended` with that read instead of `human_moved`.
+
+**The system moved a live stop on its own — OBSERVED 2026-10-18 20:54Z** (breakout_2, ticket
+`prop-manual-c1dba3c376b3`, 1b.311 + exec.js 2026-10-18.6). After #19029 merged and the operator installed 1b.311
+(20:25Z), rehearsal drills 3/4/5 (issues #19035 / #19036 / #19038) passed every step on the real position — the sheet
+re-opened after Cancel each time — and armed `sheet_edit` at 20:53:59Z. The planner's next pass (20:54:38Z) waived the
+backoff for the newer script and emitted #a9 (tighten 2452.65 → 2391.18); the phone applied it by 20:55:11Z: capture
+`amend-prop-manual-c1dba3c376b3-a9-20261018T205440Z` (11 steps, none failed) — pencil touched, modal opened, 2391.18
+typed into the price input and read back, Confirm clicked live, **the sheet re-opened after Confirm** (so Confirm
+closes it exactly as Cancel does — now MEASURED), `stop_reread 2391.18 asked 2391.18`. The stop sits below the
+2405.89 entry: profit locked, no human in the path. **The server then mis-recorded the success:**
+`record_amend_result` demanded the TP read back too (*"phone said amended but read back sl=2391.18 tp=None (asked
+sl=2391.18 tp=2167.19)"*) and wrote `mismatch` (fails 8), while an sl-only amend never touches the TP — the app
+edits the Stop row's modal and reads the stop back; it has no TP to read — and every test had passed `tp_read`. Fixed
+the same day: an sl-only amend (`kind: sl`) verifies the stop only; a TP amend still verifies the TP; a wrong stop
+with no TP read is still a mismatch. Residual on that ticket until its next tighten: the trail's `resting_sl` is
+2391.18 (the terminal's truth) while the fill's `open_risk.sl` still reads 2452.65.
 
 ### 7.15 The device-local ARMED switch is removed: live vs dry is decided only by the server (2026-10-06, lane ARMED-GATE)
 
