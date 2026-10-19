@@ -102,7 +102,11 @@ def test_every_bound_refuses(monkeypatch):
     assert et.check_bounds("breakout_2", "SOLUSDT", now=NOW)["refusals"][0].startswith("strategy_position_on_symbol: open fill")
 
 
-def test_daily_cap_counts_only_tickets_that_reached_the_venue():
+def test_daily_cap_counts_only_tickets_that_reached_the_venue(monkeypatch):
+    # The journal stamps created_at from the wall clock while this test pins NOW; count_today only has a lower
+    # bound, so from the day after NOW the "+1 day" probe counted the wall-clock tickets (red 2026-10-19). Pin the
+    # journal clock too, so the test says the same thing on every date.
+    monkeypatch.setattr(prop_journal, "_now_iso", lambda: NOW.isoformat())
     for i in range(6):
         r = et.write_ticket("breakout_2", "ETHUSDT", by="test", now=NOW + timedelta(minutes=i))
         assert r["ok"] is True, r
