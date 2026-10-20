@@ -1,0 +1,40 @@
+{
+  "unit": "RQ-20261018-040",
+  "run_id": "39397157694",
+  "commit_sha": "5e60cd3a769fe8af2bd6f195e3b7605aa26c1dbb",
+  "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/39397157694",
+  "timeout_minutes": 180,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/prop_ev_grid.py",
+        "--leg",
+        "trend_donchian_eth_prop=comms/research/RQ-20261016-010/39103764915/arms/A__trades.jsonl",
+        "--arm",
+        "A=--sizing balance --risk-pct 0.005",
+        "--arm",
+        "C_T1=--sizing balance --risk-pct 0.005 --trades trend_donchian_eth_prop=comms/research/RQ-20261016-010/39103764915/arms/T1__trades.jsonl",
+        "--common",
+        "--ruleset config/prop_rulesets/tradeify_247_1step.yaml --lev-cap trend_donchian_eth_prop=5 --no-hedge --swap-model prorated --funded-start fresh",
+        "--seeds",
+        "1,2,3,4,5",
+        "--grade",
+        "cushion_vs_flat",
+        "--n-floor",
+        "88",
+        "--out",
+        "comms/research/RQ-20261018-040/39397157694",
+        "--jobs",
+        "4",
+        "--note",
+        "P1-Q4-ethprop-ev-tradeify: T1 vs A under tradeify_247_1step"
+      ],
+      "log": "comms/research/RQ-20261018-040/39397157694/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 5114.1
+    }
+  ],
+  "all_ok": true
+}
