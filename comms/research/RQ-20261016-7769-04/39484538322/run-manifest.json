@@ -1,0 +1,40 @@
+{
+  "unit": "RQ-20261016-7769-04",
+  "run_id": "39484538322",
+  "commit_sha": "1ad8037b13cf556da1812a847fdbdab2435762fd",
+  "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/39484538322",
+  "timeout_minutes": 30,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/macro_event_study_run.py",
+        "--kind",
+        "average_hourly_earnings_mom",
+        "--snapshots",
+        "comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl",
+        "--symbol",
+        "ES=F",
+        "--horizons",
+        "1,3,5",
+        "--primary-horizons",
+        "3",
+        "--min-n",
+        "100",
+        "--t-bar",
+        "2.4",
+        "--expected-sign",
+        "negative",
+        "--population",
+        "average_hourly_earnings_mom releases (live + survey backfill) joined to ES=F daily closes",
+        "--out",
+        "comms/research/RQ-20261016-7769-04/39484538322"
+      ],
+      "log": "comms/research/RQ-20261016-7769-04/39484538322/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 1.4
+    }
+  ],
+  "all_ok": true
+}
