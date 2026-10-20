@@ -5,7 +5,7 @@ id: RQ-20261018-009
 title: 'Operator question 2026-10-18 on the open bybit_2 ADAUSDT short: do the live-capable exit levers
   (stall trail-decay 10/1.8 as on eth_4h, stall trail-decay 10/2.5, giveback 1.0 R after 2 R) beat REAL-MONEY
   ada_pullback_2h as declared today (pullback_frac 0.618, tp 4 R, trail 5 ATR)?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -146,3 +146,15 @@ generated:
   params:
     node: P1-Q4-adapb-live-levers
 last_dispatched_at: '2026-10-18T14:40:09+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-Q4-ADAPB-LIVE-LEVERS
+  evidence:
+  - research/results/RQ-20261018-009/39134613396.jsonl
+  graded_at: '2026-10-20'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail
