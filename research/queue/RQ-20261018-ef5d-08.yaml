@@ -3,7 +3,7 @@ title: >-
   Programme 07 TIMEFRAMES, short arm B1: volatility-COMPRESSION breakout (BB-inside-KC squeeze) on 1h bars for the six Bybit
   perps, 2021-01-01..2026-10-17, with a CATCH-THE-WAVE exit (fixed 1.5R / 2R target + 12-bar time stop) vs the default trail
   -- does taking just the expansion move beat trailing it, net of cost?
-status: queued
+status: done
 cadence: once
 theme: timeframes
 priority: 2
@@ -148,3 +148,16 @@ related:
 - docs/research/programmes/07-TIMEFRAMES.md
 - research/programmes/07-timeframes.yaml
 last_dispatched_at: '2026-10-18T14:40:17+00:00'
+grading:
+  attested: RULE-P7-B1-COMPRESSION-WAVE-1H
+  auto: true
+  decision_rule_id: RULE-P7-B1-COMPRESSION-WAVE-1H
+  evidence:
+  - research/results/RQ-20261018-ef5d-08/39137059685.jsonl
+  graded_at: '2026-10-20'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
