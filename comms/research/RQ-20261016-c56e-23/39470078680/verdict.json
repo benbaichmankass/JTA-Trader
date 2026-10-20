@@ -1,0 +1,212 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "qld_trend_long_1d: 101 trades in the baseline arm 'B' on QLD 1d candles 2006-10-02 .. 2025-04-09, net of fee+slippage+funding (the harness's venue-aware stack); arms ['B']",
+  "n": 101,
+  "measurement": {
+    "leg": "qld_trend_long_1d",
+    "label": "stage0_edge",
+    "grade": {
+      "verdict": "pass",
+      "label": "stage0_edge",
+      "baseline": "B",
+      "net_r": 38.079,
+      "n": 101,
+      "max_drawdown_r": 5.265,
+      "folds_positive": 7,
+      "n_folds": 8,
+      "fold_majority": 5,
+      "n_floor": 39,
+      "control": null,
+      "why": "net_r=38.079 > 0 with 7/8 positive folds at this arm's cost stack"
+    },
+    "arms": {
+      "B": {
+        "reach_ge_6r": 0.0,
+        "n": 101,
+        "net_r": 38.079,
+        "net_r_fee_only": 38.8902,
+        "max_drawdown_r": 5.265,
+        "by_outcome": {
+          "take_profit": 51,
+          "stop": 28,
+          "trail_stop": 22
+        },
+        "mean_bars_held": 20.129,
+        "net_r_per_capital_day": 0.0187,
+        "cost_stack": {
+          "fee_bps_roundtrip": 0.0,
+          "slippage_bps_roundtrip": 5.0,
+          "funding_bps_per_window": 0.0
+        },
+        "params": {
+          "donchian": 30,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 4.0,
+          "min_confidence": 0.0
+        },
+        "data_start": "2006-10-02 00:00:00+00:00",
+        "data_end": "2025-04-09 00:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2006-10-02 00:00:00+00:00",
+            "end": "2009-01-24 12:00:00+00:00",
+            "trades": 10,
+            "net_r": -0.2409
+          },
+          {
+            "fold": 2,
+            "start": "2009-01-24 12:00:00+00:00",
+            "end": "2011-05-20 00:00:00+00:00",
+            "trades": 15,
+            "net_r": 4.7386
+          },
+          {
+            "fold": 3,
+            "start": "2011-05-20 00:00:00+00:00",
+            "end": "2013-09-11 12:00:00+00:00",
+            "trades": 13,
+            "net_r": 5.0483
+          },
+          {
+            "fold": 4,
+            "start": "2013-09-11 12:00:00+00:00",
+            "end": "2016-01-05 00:00:00+00:00",
+            "trades": 11,
+            "net_r": 3.2541
+          },
+          {
+            "fold": 5,
+            "start": "2016-01-05 00:00:00+00:00",
+            "end": "2018-04-29 12:00:00+00:00",
+            "trades": 14,
+            "net_r": 7.6314
+          },
+          {
+            "fold": 6,
+            "start": "2018-04-29 12:00:00+00:00",
+            "end": "2020-08-22 00:00:00+00:00",
+            "trades": 14,
+            "net_r": 9.1937
+          },
+          {
+            "fold": 7,
+            "start": "2020-08-22 00:00:00+00:00",
+            "end": "2022-12-15 12:00:00+00:00",
+            "trades": 11,
+            "net_r": 1.0867
+          },
+          {
+            "fold": 8,
+            "start": "2022-12-15 12:00:00+00:00",
+            "end": "2025-04-09 00:00:00+00:00",
+            "trades": 13,
+            "net_r": 7.3674
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+          "--donchian",
+          "30",
+          "--data",
+          "<data>",
+          "--symbol",
+          "QLD",
+          "--resample",
+          "1d",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "4.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261016-c56e-23/39470078680/arms/B__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261016-c56e-23/39470078680/arms/B__bt.json",
+          "--long-only",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--start",
+          "2006-10-02",
+          "--end",
+          "2025-04-09"
+        ]
+      }
+    },
+    "window": {
+      "start": "2006-10-02",
+      "end": "2025-04-09",
+      "fetch_days": 7414,
+      "feed": {
+        "source": "yahoo",
+        "ticker": "QLD",
+        "interval": "1d",
+        "resample": "1d"
+      },
+      "fold_edges": [
+        "2006-10-02 00:00:00+00:00",
+        "2009-01-24 12:00:00+00:00",
+        "2011-05-20 00:00:00+00:00",
+        "2013-09-11 12:00:00+00:00",
+        "2016-01-05 00:00:00+00:00",
+        "2018-04-29 12:00:00+00:00",
+        "2020-08-22 00:00:00+00:00",
+        "2022-12-15 12:00:00+00:00",
+        "2025-04-09 00:00:00+00:00"
+      ]
+    },
+    "argv": {
+      "B": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+          "--donchian",
+          "30",
+          "--data",
+          "<data>",
+          "--symbol",
+          "QLD",
+          "--resample",
+          "1d",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "4.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261016-c56e-23/39470078680/arms/B__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261016-c56e-23/39470078680/arms/B__bt.json",
+          "--long-only",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--start",
+          "2006-10-02",
+          "--end",
+          "2025-04-09"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": []
+      }
+    }
+  },
+  "note": "PASS / stage0_edge: net_r=38.079 > 0 with 7/8 positive folds at this arm's cost stack"
+}
