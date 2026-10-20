@@ -1,0 +1,40 @@
+{
+  "unit": "RQ-20261018-028",
+  "run_id": "39373549663",
+  "commit_sha": "1299ef185ee5f571417fb8b35b54650fd49552cc",
+  "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/39373549663",
+  "timeout_minutes": 180,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/prop_ev_grid.py",
+        "--leg",
+        "trend_donchian_eth_prop=comms/research/RQ-20261016-010/39103764915/arms/A__trades.jsonl",
+        "--arm",
+        "A=--sizing room --risk-pct 0.015 --room-frac 0.33 --min-risk 10",
+        "--arm",
+        "C_T1=--sizing room --risk-pct 0.015 --room-frac 0.33 --min-risk 10 --trades trend_donchian_eth_prop=comms/research/RQ-20261016-010/39103764915/arms/T1__trades.jsonl",
+        "--common",
+        "--ruleset config/prop_rulesets/breakout_turbo_1step.yaml --costs breakout --funded-start fresh --swap-model prorated --lev-cap trend_donchian_eth_prop=5 --no-hedge",
+        "--seeds",
+        "1,2,3,4,5",
+        "--grade",
+        "cushion_vs_flat",
+        "--n-floor",
+        "88",
+        "--out",
+        "comms/research/RQ-20261018-028/39373549663",
+        "--jobs",
+        "4",
+        "--note",
+        "P1-Q4-ethprop-ev: T1 vs A under breakout_turbo_1step"
+      ],
+      "log": "comms/research/RQ-20261018-028/39373549663/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 602.0
+    }
+  ],
+  "all_ok": true
+}
