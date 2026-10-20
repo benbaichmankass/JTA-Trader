@@ -1,24 +1,24 @@
 {
  "schema": 1,
- "as_of": "2026-10-20T21:12:20Z",
+ "as_of": "2026-10-20T21:53:43Z",
  "producer": "scripts/research/research_slo.py",
  "config": "scripts/research/research_slo.yaml",
  "counts": {
-  "ok": 10,
-  "breach": 6,
+  "ok": 12,
+  "breach": 4,
   "could_not_look": 0
  },
  "latest": [
   {
    "slo": "runnable_floor",
-   "state": "breach",
-   "value": 22,
+   "state": "ok",
+   "value": 47,
    "op": ">=",
-   "threshold": 42,
+   "threshold": 44,
    "what": "runnable units >= the computed floor (queue_throughput.computed_floor: max(25, ceil(fired_24h x 19/24)))",
    "evidence": {
-    "fired_24h_stamps": 52,
-    "queued": 124,
+    "fired_24h_stamps": 55,
+    "queued": 152,
     "basis": "queue_replenish.runnable(); floor = queue_throughput.computed_floor(fired_24h)",
     "read_state": "measured"
    }
@@ -109,13 +109,13 @@
   {
    "slo": "authoring_supply_ratio_7d",
    "state": "ok",
-   "value": 1.09,
+   "value": 1.08,
    "op": ">=",
    "threshold": 1.0,
    "what": "authored (non-generated) units created in 7 d / authored units first-or-re-fired in 7 d",
    "evidence": {
     "authored_7d": 325,
-    "consumed_7d": 297,
+    "consumed_7d": 300,
     "authored_since_yesterday": 0,
     "basis": "non-generated units: id date in 7 d / last_dispatched_at in 7 d",
     "read_state": "measured"
@@ -230,7 +230,7 @@
   {
    "slo": "dispatcher_age_h",
    "state": "ok",
-   "value": 0.52,
+   "value": 1.21,
    "op": "<=",
    "threshold": 3,
    "what": "hours since the newest dispatcher utilization record on main (one per dispatch cycle that ran; lands ~1 h late)",
@@ -243,7 +243,7 @@
   {
    "slo": "collector_age_h",
    "state": "ok",
-   "value": 0.26,
+   "value": 0.95,
    "op": "<=",
    "threshold": 6,
    "what": "hours since the newest commit on main touching research/results/ (a result landed)",
@@ -256,7 +256,7 @@
   {
    "slo": "grader_age_h",
    "state": "ok",
-   "value": 1.07,
+   "value": 1.75,
    "op": "<=",
    "threshold": 14,
    "what": "hours since the last SUCCESSFUL research-queue-grade.yml run (GitHub; could_not_look without a token)",
@@ -268,14 +268,14 @@
   },
   {
    "slo": "research_ops_age_h",
-   "state": "breach",
-   "value": 24.21,
+   "state": "ok",
+   "value": 0.81,
    "op": "<=",
    "threshold": 8,
    "what": "hours since the newest research-ops pass record (comms/research/ops/*.json finished_at); the pass runs 4x/day",
    "evidence": {
-    "newest": "20261019T2100Z.json",
-    "finished_at": "2026-10-19T21:00:00+00:00",
+    "newest": "20261020T2100Z.json",
+    "finished_at": "2026-10-20T21:05:00+00:00",
     "basis": "newest comms/research/ops record",
     "read_state": "measured"
    }
@@ -283,18 +283,17 @@
   {
    "slo": "research_ops_not_run",
    "state": "breach",
-   "value": 5,
+   "value": 4,
    "op": "<=",
    "threshold": 2,
    "what": "steps the newest research-ops pass declared not_run",
    "evidence": {
-    "record": "20261019T2100Z.json",
+    "record": "20261020T2100Z.json",
     "not_run": [
      "blocked/ audit (manager addendum: RESEARCH-BLOCKED-AUDIT)",
-     "needs_review triage",
-     "step D results read / disposition",
-     "stranded-PR and dispatch-liveness checks",
-     "pipeline unrouted-item routing"
+     "needs_review triage (wind-down)",
+     "step D results read (wind-down; RESULTS-UNDISPOSITIONED 4)",
+     "stranded-PR and dispatch-receipt checks"
     ],
     "basis": "not_run of the newest research-ops record",
     "read_state": "measured"
@@ -303,30 +302,19 @@
   {
    "slo": "hold_pr_wait_h",
    "state": "ok",
-   "value": 0.19,
+   "value": 0.0,
    "op": "<=",
    "threshold": 24,
    "what": "hours the oldest open non-automation PR adding research/queue/ unit files has waited (hold PRs)",
    "evidence": {
-    "open_unit_prs": 1,
-    "oldest": [
-     {
-      "pr": 19250,
-      "hours": 0.19,
-      "title": "research-ops 2026-10-20 20:47Z: top up runnable 22\u219250 (wind-down)"
-     }
-    ],
-    "basis": "open non-automation PRs adding research/queue/*.yaml, age since creation",
+    "open_unit_prs": 0,
+    "basis": "no open non-automation PR adds research/queue/ files",
     "read_state": "measured"
    }
   }
  ],
  "alert_state": {
   "open": {
-   "runnable_floor": {
-    "since": "2026-10-20T17:13:07Z",
-    "state": "breach"
-   },
    "grade_latency_p90_d": {
     "since": "2026-10-16T12:53:53Z",
     "state": "breach"
@@ -339,16 +327,12 @@
     "since": "2026-10-19T00:31:20Z",
     "state": "breach"
    },
-   "research_ops_age_h": {
-    "since": "2026-10-20T05:13:52Z",
-    "state": "breach"
-   },
    "research_ops_not_run": {
     "since": "2026-10-17T15:26:39Z",
     "state": "breach"
    }
   },
-  "last_alert": "2026-10-20T17:13:07Z",
+  "last_alert": "2026-10-20T21:53:43Z",
   "suppressed_by_watchdog": []
  },
  "runs": [
@@ -549,6 +533,26 @@
    ],
    "alert": null,
    "delivered": null
+  },
+  {
+   "at": "2026-10-20T21:53:43Z",
+   "counts": {
+    "ok": 12,
+    "breach": 4,
+    "could_not_look": 0
+   },
+   "not_ok": [
+    "grade_latency_p90_d",
+    "theme_share_min_ratio",
+    "blocked_over_age",
+    "research_ops_not_run"
+   ],
+   "alert": "change",
+   "delivered": {
+    "telegram": true,
+    "ops_flags_comment": true,
+    "ops_flags_pr": 17895
+   }
   }
  ]
 }
