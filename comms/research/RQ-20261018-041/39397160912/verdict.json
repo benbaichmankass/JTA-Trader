@@ -1,0 +1,154 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "1 leg(s) [trend_donchian_eth_prop], 1085 committed trades in total; grade=cushion_vs_flat, overall=all",
+  "n": 1085,
+  "measurement": {
+    "leg_verdicts": {
+      "trend_donchian_eth_prop": "pass"
+    },
+    "grade": "cushion_vs_flat",
+    "overall": "all",
+    "cells": 10
+  },
+  "note": "trend_donchian_eth_prop: CUSHION_FIT_WINS: C_T1 beats A on ev with >= survival on all 5 seeds | P1-Q4-ethprop-ev-velotrade: T1 vs A under velotrade_classic_1step",
+  "records": [
+    {
+      "verdict": "pass",
+      "read_state": "measured",
+      "population": "trend_donchian_eth_prop: 1085 committed trades from comms/research/RQ-20261016-010/39103764915/arms/A__trades.jsonl (pinned by --leg); prop_ev_sim path-mode over 2 arm(s) x 5 seed(s), --ruleset config/prop_rulesets/velotrade_classic_1step.yaml --lev-cap trend_donchian_eth_prop=5 --no-hedge --swap-model prorated --funded-start fresh",
+      "n": 1085,
+      "measurement": {
+        "leg": "trend_donchian_eth_prop",
+        "trades_file": "comms/research/RQ-20261016-010/39103764915/arms/A__trades.jsonl",
+        "arms": {
+          "A": {
+            "1": {
+              "ev": 144.32,
+              "ev_se": 4.04,
+              "p_net_positive": 0.5165,
+              "p_alive_at_horizon": 0.6913,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.0125,
+                "180": 0.1275
+              },
+              "rule_v2_verdict": "indeterminate"
+            },
+            "2": {
+              "ev": 137.25,
+              "ev_se": 3.97,
+              "p_net_positive": 0.5018,
+              "p_alive_at_horizon": 0.691,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.012,
+                "180": 0.1232
+              },
+              "rule_v2_verdict": "pass"
+            },
+            "3": {
+              "ev": 130.76,
+              "ev_se": 3.96,
+              "p_net_positive": 0.4878,
+              "p_alive_at_horizon": 0.689,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.0147,
+                "180": 0.1258
+              },
+              "rule_v2_verdict": "pass"
+            },
+            "4": {
+              "ev": 144.25,
+              "ev_se": 4.11,
+              "p_net_positive": 0.514,
+              "p_alive_at_horizon": 0.6987,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.0138,
+                "180": 0.1235
+              },
+              "rule_v2_verdict": "pass"
+            },
+            "5": {
+              "ev": 141.13,
+              "ev_se": 4.06,
+              "p_net_positive": 0.506,
+              "p_alive_at_horizon": 0.6965,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.016,
+                "180": 0.1298
+              },
+              "rule_v2_verdict": "pass"
+            }
+          },
+          "C_T1": {
+            "1": {
+              "ev": 333.16,
+              "ev_se": 5.63,
+              "p_net_positive": 0.73,
+              "p_alive_at_horizon": 0.7408,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.042,
+                "180": 0.232
+              },
+              "rule_v2_verdict": "pass"
+            },
+            "2": {
+              "ev": 329.17,
+              "ev_se": 5.45,
+              "p_net_positive": 0.736,
+              "p_alive_at_horizon": 0.7532,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.038,
+                "180": 0.233
+              },
+              "rule_v2_verdict": "pass"
+            },
+            "3": {
+              "ev": 328.87,
+              "ev_se": 5.43,
+              "p_net_positive": 0.738,
+              "p_alive_at_horizon": 0.746,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.0345,
+                "180": 0.223
+              },
+              "rule_v2_verdict": "pass"
+            },
+            "4": {
+              "ev": 336.26,
+              "ev_se": 5.6,
+              "p_net_positive": 0.731,
+              "p_alive_at_horizon": 0.7418,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.032,
+                "180": 0.2203
+              },
+              "rule_v2_verdict": "pass"
+            },
+            "5": {
+              "ev": 344.6,
+              "ev_se": 5.66,
+              "p_net_positive": 0.7452,
+              "p_alive_at_horizon": 0.7505,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.039,
+                "180": 0.2392
+              },
+              "rule_v2_verdict": "pass"
+            }
+          }
+        }
+      },
+      "note": "CUSHION_FIT_WINS: C_T1 beats A on ev with >= survival on all 5 seeds | P1-Q4-ethprop-ev-velotrade: T1 vs A under velotrade_classic_1step"
+    }
+  ]
+}
