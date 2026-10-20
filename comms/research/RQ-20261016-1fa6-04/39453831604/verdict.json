@@ -1,0 +1,70 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "initial_jobless_claims releases with a defined survey surprise; RELEASE-DAY window (prior close -> release-day close) on ES=F daily closes",
+  "n": 257,
+  "measurement": {
+    "kind": "initial_jobless_claims",
+    "symbol": "ES=F",
+    "snapshot_files": [
+      "comms/macro/econ_calendar_snapshots.jsonl",
+      "comms/macro/econ_calendar_snapshots_survey_backfill.jsonl"
+    ],
+    "releases": 257,
+    "releases_with_value": 257,
+    "price_bars": 5492,
+    "first_release": "2015-01-08",
+    "last_release": "2019-12-26",
+    "release_start": "2015-01-01",
+    "release_end": "2020-01-01",
+    "anchor_shift_td": -1,
+    "releases_after_window": 257,
+    "rows": [
+      {
+        "horizon_days": 1,
+        "n": 257,
+        "ic": 0.005432,
+        "ic_t": 0.087,
+        "overlap_factor": 1.0,
+        "n_eff": 257.0,
+        "ic_t_eff": 0.087,
+        "pearson": -0.011045,
+        "sign_hit_rate": 0.514286,
+        "mean_fwd_return": 0.000744
+      }
+    ],
+    "summary": {
+      "max_n": 257,
+      "min_honest_n": 12,
+      "sufficient_history": true,
+      "any_flagged_horizon": false,
+      "any_flagged_horizon_overlap_corrected": false,
+      "strongest_ic_horizon_days": 1,
+      "strongest_ic": 0.005432,
+      "strongest_ic_t": 0.087,
+      "strongest_ic_t_eff": 0.087,
+      "t_flag": 2.0,
+      "verdict": "no_edge_at_tested_horizons"
+    },
+    "rule": {
+      "primary": [
+        1
+      ],
+      "min_n": 100,
+      "t_bar": 2.4,
+      "expected_sign": "positive"
+    },
+    "per_horizon": [
+      {
+        "horizon_days": 1,
+        "n": 257,
+        "ic": 0.005432,
+        "ic_t_eff": 0.087,
+        "n_ok": true,
+        "t_reached": false,
+        "sign_ok": true
+      }
+    ]
+  },
+  "note": "no pre-registered horizon reached the t-bar in the expected sign"
+}
