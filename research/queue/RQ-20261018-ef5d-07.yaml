@@ -3,7 +3,7 @@ title: >-
   Programme 07 TIMEFRAMES, short arm B2: COST-GATED breakout -- Donchian-20 channel breaks on 30m bars for the six Bybit perps,
   2021-01-01..2026-10-17, taken only when the ATR percentile at entry is >= 50 / 75 / 90 (so the stop, and 1R, is large relative
   to the fixed bps cost) vs ungated
-status: queued
+status: done
 cadence: once
 theme: timeframes
 priority: 2
@@ -152,3 +152,17 @@ related:
 - docs/research/programmes/07-TIMEFRAMES.md
 - research/programmes/07-timeframes.yaml
 last_dispatched_at: '2026-10-18T19:13:09+00:00'
+grading:
+  attested: RULE-P7-B2-COST-GATED-BREAKOUT-30M
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-P7-B2-COST-GATED-BREAKOUT-30M
+  evidence:
+  - research/results/RQ-20261018-ef5d-07/39157783308.jsonl
+  graded_at: '2026-10-20'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

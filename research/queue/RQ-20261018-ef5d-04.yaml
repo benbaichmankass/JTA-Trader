@@ -3,7 +3,7 @@ title: >-
   Programme 07 TIMEFRAMES, long arm A2b: DAILY-bar trend-pullback (htf_pullback family, pullback_frac 0.5 and 0.618) on the
   six Bybit perps pooled, 2020-01-01..2026-10-17 -- does the other real-money family hold a weeks-long edge on daily bars
   net of the full cost stack?
-status: queued
+status: done
 cadence: once
 theme: timeframes
 priority: 2
@@ -131,3 +131,16 @@ related:
 - docs/research/programmes/07-TIMEFRAMES.md
 - research/programmes/07-timeframes.yaml
 last_dispatched_at: '2026-10-18T14:40:04+00:00'
+grading:
+  attested: RULE-P7-A2B-DAILY-PULLBACK
+  auto: true
+  decision_rule_id: RULE-P7-A2B-DAILY-PULLBACK
+  evidence:
+  - research/results/RQ-20261018-ef5d-04/39124031926.jsonl
+  graded_at: '2026-10-20'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail
