@@ -4,7 +4,7 @@ theme: ml_health
 kind: experiment
 title: 'Frontier / tabular foundation model at FULL n: TabICL vs LightGBM on the BTC/ETH/SOL 15m volatility-regime head (tabular_foundation_model, trainer-resident;
   TabPFN rides as an observed arm, research-only)'
-status: queued
+status: done
 priority: 2
 question: On the trainer's BTC/ETH/SOL 15m v002 shards (last 12,000 rows, the 6 shared features), under identical purged folds, does the pretrained in-context
   learner TabICL beat LightGBM by >= +0.010 macro-F1 on at least 2 of 3 symbols with the same sign on the third -- at a training-set size an order of magnitude
@@ -159,3 +159,17 @@ related:
 - ML-TABPFN-LICENCE
 - ML-UNBLOCK-1018
 last_dispatched_at: '2026-10-18T08:55:18+00:00'
+grading:
+  attested: RULE-RQ20261018-FF8F-02-TABICL-FULL-N-15M
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261018-FF8F-02-TABICL-FULL-N-15M
+  evidence:
+  - research/results/RQ-20261018-ff8f-02/39113344166.jsonl
+  graded_at: '2026-10-20'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 2 row(s), all measured, all indeterminate
+  rows: 2
+  verdict: indeterminate
