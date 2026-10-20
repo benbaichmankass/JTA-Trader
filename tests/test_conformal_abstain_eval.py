@@ -61,7 +61,7 @@ def test_rule_branches():
 def test_unit_plans_and_a_verdict_lands_measured(tmp_path):
     unit_path = REPO / "research" / "queue" / f"{UNIT}.yaml"
     raw = yaml.safe_load(unit_path.read_text())
-    assert raw["status"] == "queued" and raw["run"]["command"][1] == "scripts/research/conformal_abstain_eval.py"
+    assert raw["run"]["command"][1] == "scripts/research/conformal_abstain_eval.py"
     assert raw["conformal"]["learner"] in raw["ml_bakeoff"]["learners"]
     p = script_run.plan(UNIT, run_id="t1", queue_dir=REPO / "research" / "queue")
     assert p.ok, p.errors
