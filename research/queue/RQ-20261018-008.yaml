@@ -5,7 +5,7 @@ id: RQ-20261018-008
 title: 'CONFIRM RQ-20261016-65ff-05 on a fresh window: does trend_donchian_sol_prop with VH80 (--vol-skip-above-pctl=0.8)
   still beat the declared leg on the 730 days BEFORE the window it was chosen on, net of the full cost
   stack, with no re-selection?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-REGIME
@@ -133,3 +133,15 @@ generated:
   params:
     node: P2-R3.c05-pass
 last_dispatched_at: '2026-10-18T14:40:08+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-RQ2026101665ff05-REGIME-VOLHOT-CONFIRM2
+  evidence:
+  - research/results/RQ-20261018-008/39129951755.jsonl
+  graded_at: '2026-10-20'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail
