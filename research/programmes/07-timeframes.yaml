@@ -22,6 +22,11 @@
 programme: P7
 plan: docs/research/programmes/07-TIMEFRAMES.md
 questions:
+  Q1:
+    state: closed
+    by: RQ-20261018-ef5d-01
+    why: >-
+      PASS 2026-10-20: all 14 (bar x hold) cells at 4h and 1d (holds 1-30) are cost-viable on >= 3 of the 6 core perps; the shortest viable long-arm bar is 4h for every perp and ETF, 1d for MES. The long arm is open at every horizon it asked about, so the daily/weekly Stage-0 units (ef5d-03..06) were the right next step. Written into 07 s1 by the programme review.
   Q10:
     state: carried
     by: TF-ORB-COST-STACK (checklist row) + research/queue/blocked/RQ-20261018-ef5d-10
@@ -49,34 +54,18 @@ questions:
       build, not a question. ef5d-02 flags those frames short_window and its verdict rests on the crypto core.
 nodes:
 # ── Q1 / Q2 -- the break-even frontier reads ────────────────────────────────────────────────────────────────────────────
-- id: P7-Q1-frontier-read
-  goal: G1
-  roadmap: [L-TIMEFRAMES]
-  value: {usd_at_stake_per_month: 100, confidence: 0.5}
-  after:
-  - {unit: RQ-20261018-ef5d-01, verdict: any}
-  needs_authoring: >-
-    ef5d-01 (long-arm break-even) has landed. Read measurement.frontier and the per-cell table: for each perp and each
-    equity/futures symbol, the shortest viable (bar, hold) and the median |move| / p90 at 1d x 5-20 and 1w x 1-5 (the
-    weeks-long holds the operator asked about). Write the frontier line into 07-TIMEFRAMES.md s1 (MEASURED, with the record
-    path) and re-rank ef5d-03/-04/-05/-06 priorities within the theme: a symbol whose daily frames read marginal or dead
-    drops out of the pooled Stage-0 units' expectation, never out of their grid (the grids are registered). If the arm read
-    FAIL (no viable long horizon on half the perps -- implausible at a 2.5 ATR daily stop, which is why it must be checked),
-    the long arm's next unit is a cost-change arm (maker fee column) re-read, not a strategy.
 - id: P7-Q2-frontier-pass
   goal: G1
   roadmap: [L-TIMEFRAMES, M22]
   value: {usd_at_stake_per_month: 150, confidence: 0.3}
   after:
-  - {unit: RQ-20261018-ef5d-02, verdict: pass}
+  - {unit: RQ-20261021-7c2b-05, verdict: any}
   needs_authoring: >-
-    ef5d-02 PASSED: a sub-hour (bar, hold) is viable on at least half the perps. Author the family units for the SHORTEST
-    viable bar in the frontier (likely 15m or 5m): the cost-gated breakout (ef5d-07's arms transferred, no re-selection of the
-    gate percentile), the compression breakout with the catch-the-wave exit (ef5d-08's arms) and the sweep reversal (ef5d-09's
-    arms), each on harness_stage0.py with the same folds/breadth/baseline rules, pooled n floor 88, on the viable symbols only
-    (state the frontier record each one was read against). Also register the 1m arm of the discovery grid
-    (blocked/RQ-20260930-505) as runnable ONLY if 1m reads viable or marginal for >= 3 perps -- otherwise retire 505 with the
-    frontier record as the terminal reason.
+    Programme review 2026-10-21 authored the 15m cost-gated breakout on the 15m-viable perps (ADA/AVAX/SOL) as
+    RQ-20261021-7c2b-05 and the 30m re-ask on all six as 7c2b-01 (ef5d-07 passed percentiles on a 0-100 scale to a 0-1
+    flag). Compression (ef5d-08) and sweep (ef5d-09) FAILED at 1h net of cost and are NOT transferred down. On 7c2b-05's
+    verdict: PASS -> confirm by transfer at 30m/1h (no re-selection); FAIL -> the short arm's next lever is maker cost.
+    The 1m arm (blocked/RQ-20260930-505) stays blocked: the frontier puts no perp below 15m.
 - id: P7-Q2-frontier-fail
   goal: G1
   roadmap: [L-TIMEFRAMES, M22]
@@ -104,18 +93,6 @@ nodes:
     (position trading proper), long-only, and the pullback family (ef5d-04). Author at most ONE follow-on: the exit geometry
     arm (trail 8 ATR vs a 60-bar time stop) on the SAME window, baseline D20, materiality 0.10 R/trade -- and say in the unit
     why that lever and not another.
-- id: P7-Q3-pullback-fail
-  goal: G1
-  roadmap: [L-TIMEFRAMES, L-LADDER]
-  value: {usd_at_stake_per_month: 200, confidence: 0.3}
-  after:
-  - {unit: RQ-20261018-ef5d-04, verdict: fail}
-  needs_authoring: >-
-    ef5d-04 FAILED: the daily pullback family at pullback_frac 0.5 / 0.618 has no fold-consistent pooled edge on the six perps
-    2020-2026. Closes the configuration. Together with ef5d-03's verdict this decides whether the daily crypto horizon stays
-    open: if BOTH families failed and ef5d-06's filters did not rescue Donchian, record the daily-crypto horizon as closed on
-    this history with the three records as the reason (a stated reason the IDEA is dead, protocol item 6), else name the
-    surviving family's next rung.
 - id: P7-Q3-indeterminate
   goal: G1
   roadmap: [L-TIMEFRAMES]
@@ -156,13 +133,12 @@ nodes:
   roadmap: [L-TIMEFRAMES, L-REGIME]
   value: {usd_at_stake_per_month: 150, confidence: 0.3}
   after:
-  - {unit: RQ-20261018-ef5d-06, verdict: pass}
+  - {unit: RQ-20261021-7c2b-03, verdict: any}
   needs_authoring: >-
-    ef5d-06 PASSED: a regime filter (ADX20 / VOL50 / LONG -- the record names which) beats the unfiltered daily Donchian by
-    >= 0.10 R/trade with breadth. Confirmation is a TRANSFER, never a re-selection: author ONE unit applying the passing filter
-    alone (same lever, same value) vs the unfiltered arm on ef5d-05's 17 equity/futures weekly cells (a different asset class
-    and bar), same materiality bar. CONFIRMED there -> the filter is a declared lever for every long-arm re-entry case (node
-    P7-Q6-*); NOT CONFIRMED -> the filter is a crypto-daily-specific lead, carried into P7-Q6-daily-donchian only.
+    Programme review 2026-10-21 authored the transfer as RQ-20261021-7c2b-03 (LONG vs B on BNB/DOGE/LINK/LTC/BCH/DOT
+    daily, delta 0.10 R). On its verdict: PASS -> the overlap read in P7-Q6-daily-donchian uses the LONG arm; FAIL ->
+    the ef5d-06 win was symbol-selected, record it here and on 07 s1; INDETERMINATE -> say which cells were under the
+    floor, never lower it.
 - id: P7-Q5-indeterminate
   goal: G1
   roadmap: [L-TIMEFRAMES, L-REGIME]
@@ -180,6 +156,7 @@ nodes:
   roadmap: [L-TIMEFRAMES, L-LADDER, M18]
   value: {usd_at_stake_per_month: 250, confidence: 0.3}
   after:
+  - {unit: RQ-20261021-7c2b-04, verdict: pass}
   - {unit: RQ-20261018-ef5d-03, verdict: pass}
   needs_authoring: >-
     ef5d-03 PASSED (the record names the best arm, D20 or D55). Before any re-entry case: a same-symbol OVERLAP read of the
@@ -253,18 +230,6 @@ nodes:
     bars, no re-selection), plus the prop fit through prop_ev_grid.py on ETH/SOL under the three live rulesets (programme 05
     Q5 pool admission, p_floor 0.0). CONFIRMED -> a bybit_1 soak candidate record; the TP doctrine is satisfied by construction
     (a real predictive target at entry). NOT CONFIRMED -> a 1h-only lead, no roster case.
-- id: P7-Q8-fail
-  goal: G1
-  roadmap: [L-TIMEFRAMES, M22]
-  value: {usd_at_stake_per_month: 100, confidence: 0.3}
-  after:
-  - {unit: RQ-20261018-ef5d-08, verdict: fail}
-  needs_authoring: >-
-    ef5d-08 FAILED: catch-the-wave exits do not lift the 1h compression breakout over its cost. With RQ-20260930-504 (<=30m),
-    RQ-20261006-006 (XRP 1h) and the 2026-10-06 alt screens, the squeeze family now has FAILs at 5m-4h with both exit
-    geometries on the six perps: run the negative-result protocol (six items) and decide whether the FAMILY is closed on Bybit
-    perps -- a review record, not a FAIL count. Not tested: the compression DEPTH (kc_mult 1.0 vs 1.5) and a volume
-    confirmation on the breakout bar; name whether either is worth one more unit.
 # ── Q9 -- liquidity-sweep reversal (arm B3) ────────────────────────────────────────────────────────────────────────────
 - id: P7-Q9-confirm
   goal: G1
@@ -277,17 +242,6 @@ nodes:
     Confirmation: the passing arm alone vs FAR at 15m and 4h on the same symbols, AND a read against fade_breakout_4h's own
     committed 4h record (the live shadow leg) -- if the 4h cell of this run and the leg's record disagree in sign on the
     overlapping window, the instrument is the finding. CONFIRMED -> a bybit_1 soak candidate record, routed via the manager.
-- id: P7-Q9-fail
-  goal: G1
-  roadmap: [L-TIMEFRAMES, M22]
-  value: {usd_at_stake_per_month: 80, confidence: 0.3}
-  after:
-  - {unit: RQ-20261018-ef5d-09, verdict: fail}
-  needs_authoring: >-
-    ef5d-09 FAILED: the sweep-depth condition does not lift the 1h fade over its cost. Closes the configuration (pierce 0.25,
-    far / 1R exits) at 1h. Not tested: the ADX chop gate the live 4h leg declares (adx_max), a 2-bar close-back-inside
-    confirmation, and 15m. Name whether fade_breakout_4h's own Stage-0 record (programme 03) still carries the family or
-    whether this is its second FAIL window -> the negative-result protocol.
 # ── Q14 -- the cost lever (maker route) -- authored only from P7-Q2-frontier-fail ────────────────────────────────────────
 - id: P7-Q14-maker-frontier
   goal: G1

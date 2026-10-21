@@ -1,0 +1,134 @@
+id: RQ-20261021-7c2b-13
+title: >-
+  Programme 03 Q8 BREADTH for the real-money book: does trend_donchian_sol_prop AS DECLARED clear Stage 0 on six liquid perps no roster
+  carries (BNB, DOGE, LINK, LTC, BCH, DOT)?
+status: queued
+cadence: once
+theme: new_strategy_prop
+priority: 1
+kind: experiment
+question: >-
+  On Binance USD-M 1h candles for BNB/DOGE/LINK/LTC/BCH/DOT over 2020-06-01..2026-10-20, with every lever fixed at trend_donchian_sol_prop's
+  declared value in config/strategies.yaml (as read 2026-10-21), does the declared configuration pass the pooled Stage-0 rule net of
+  the full cost stack, with breadth (half the powered cells)?
+why_this_matters: >-
+  Operator 2026-10-16: research is the main focus; node P3-Q8-new-symbols. The two families that carry real money (4h Donchian, 2h pullback)
+  trade only ETH/XRP/ADA/SOL (+AVAX on paper). Breadth is the cheapest path to more real-money legs because the configuration already
+  cleared Stage 0 and a soak; the question is whether it is a family edge or a symbol fit. The second prop Donchian leg (long-only,
+  confidence 0.8); its grandfathered prop exemption lapses 2026-12-11 (PROP-GATE-PARITY), so a family-level read is due anyway. Passing
+  cells feed P5-Q6, conditional on the firm offering the symbol.
+power:
+  expected_n: 400
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    trend_donchian_sol_prop is long-only at min_confidence 0.8: roughly half the eth_prop entry rate -> ~400 pooled over six cells x
+    6.3 y (ESTIMATE).
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on fetched public candles over a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-P3-Q8-BREADTH-TREND-DONCHIAN-SOL-PROP
+  registered_at: '2026-10-21'
+  registered_before_run: true
+  statistic: >-
+    harness_stage0.py --family trend --timeframe 1h, one arm B = trend_donchian_sol_prop as declared (params + raw flags listed in run.command);
+    per cell n, net_r, max_drawdown_r, 6 calendar folds (majority 4), net_r_per_capital_day; pooled across six cells.
+  rule: >-
+    PASS iff B passes -> the passing CELLS (not the pool) are candidates: node P3-Q8 Stage B = a same-book correlation/overlap read
+    against the live bybit_2 legs, then a per-symbol re-entry case under MD-PROMOTE-S0-S1 for a bybit_1 soak, each as a new evidence
+    record. FAIL -> the declared configuration is a symbol fit on these perps; recorded on P3-Q8, no symbol is added. INDETERMINATE
+    otherwise (cells under the floor are named; never lower it). Verdicts are the script's own (scripts/research/harness_stage0.py,
+    grades fixed by these flags): per CELL pass iff n >= n_floor AND net_r > 0 AND >= fold_majority of the calendar folds net > 0, fail
+    iff n >= n_floor and not, indeterminate iff n < n_floor; per ARM pass iff pooled n >= pooled_n_floor AND pooled net_r > 0 AND pooled
+    folds >= fold_majority AND >= breadth_frac of the POWERED cells pass (and, with --baseline, beats the baseline's pooled net R/trade
+    by >= delta), indeterminate iff pooled n < pooled_n_floor or < 2 powered cells or < half the declared cells measured (a fetch/harness
+    fault is recorded per cell, never dropped), fail otherwise. Holm-corrected one-sided t p-values are REPORTED, not graded. Thresholds
+    are not changed after any result.
+  what_it_does_not_do: >-
+    Does not edit config/strategies.yaml, config/accounts.yaml or any roster; does not tune beyond the fixed arms listed; does not pool
+    windows with any committed record; is not a promotion case. Candles are Binance USD-M (a PROXY for Bybit linear; prices track within
+    a few bps) and the funding term is a directionless magnitude (execution_costs P1), both stated in the record.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  bucket: structural
+  basis: 'stand-in: more symbols for the prop Donchian books; an estimate.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 180
+  basis: >-
+    Estimate from the ef5d-0x harness_stage0 runs (2026-10-18/20) scaled by cells x arms x bars; the first run replaces it.
+  why_runner: >-
+    harness_stage0.py fetches public candles and runs the repo harnesses; CPU-only; not trainer-resident.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - trend
+  - --symbols
+  - BNBUSDT,DOGEUSDT,LINKUSDT,LTCUSDT,BCHUSDT,DOTUSDT
+  - --timeframe
+  - 1h
+  - --days
+  - '2400'
+  - --start
+  - '2020-06-01'
+  - --end
+  - '2026-10-20'
+  - --param
+  - donchian=20
+  - --param
+  - atr_period=14
+  - --param
+  - atr_stop_mult=2.5
+  - --param
+  - trail_mult=3.5
+  - --param
+  - min_confidence=0.8
+  - --arm
+  - B=--long-only;--tp-r=6.0
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '39'
+  - --pooled-n-floor
+  - '88'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-P3-Q8-BREADTH-TREND-DONCHIAN-SOL-PROP
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261021-7c2b-13
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-LADDER
+- M18
+programme: P3
+related:
+- docs/research/programmes/03-STRATEGY-IMPROVEMENT.md
+- research/programmes/03-strategy-improvement.yaml
+- scripts/research/harness_stage0.py
+- config/strategies.yaml::trend_donchian_sol_prop
+programme_node:
+  programme: P3
+  node: P3-Q8-new-symbols
+  goal: G1
+  after: []
