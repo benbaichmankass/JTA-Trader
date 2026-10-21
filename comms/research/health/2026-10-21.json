@@ -1,6 +1,6 @@
 {
  "schema": 1,
- "as_of": "2026-10-21T17:40:22Z",
+ "as_of": "2026-10-21T18:56:00Z",
  "producer": "scripts/research/research_slo.py",
  "config": "scripts/research/research_slo.yaml",
  "counts": {
@@ -12,7 +12,7 @@
   {
    "slo": "runnable_floor",
    "state": "breach",
-   "value": 35,
+   "value": 32,
    "op": ">=",
    "threshold": 38,
    "what": "runnable units >= the computed floor (queue_throughput.computed_floor: max(25, ceil(fired_24h x 19/24)))",
@@ -161,33 +161,33 @@
      },
      "live_strategy": {
       "fires": 190,
-      "share": 0.471,
+      "share": 0.468,
       "weight_share": 0.182,
-      "ratio": 2.59
+      "ratio": 2.57
      },
      "ml_health": {
       "fires": 42,
-      "share": 0.104,
+      "share": 0.103,
       "weight_share": 0.136,
       "ratio": 0.76
      },
      "new_strategy_prop": {
       "fires": 80,
-      "share": 0.199,
+      "share": 0.197,
       "weight_share": 0.273,
-      "ratio": 0.73
+      "ratio": 0.72
      },
      "macro": {
       "fires": 44,
-      "share": 0.109,
+      "share": 0.108,
       "weight_share": 0.045,
-      "ratio": 2.4
+      "ratio": 2.38
      },
      "infra": {
-      "fires": 20,
-      "share": 0.05,
+      "fires": 23,
+      "share": 0.057,
       "weight_share": 0.091,
-      "ratio": 0.55
+      "ratio": 0.62
      },
      "timeframes": {
       "fires": 6,
@@ -196,7 +196,7 @@
       "ratio": 0.33
      }
     },
-    "fires_themed": 403,
+    "fires_themed": 406,
     "fires_untheme_or_unknown": 0,
     "basis": "7 d of utilization `dispatched` ids joined to unit theme vs THEMES.yaml weight share",
     "read_state": "measured"
@@ -230,12 +230,12 @@
   {
    "slo": "dispatcher_age_h",
    "state": "ok",
-   "value": 1.66,
+   "value": 1.23,
    "op": "<=",
    "threshold": 3,
    "what": "hours since the newest dispatcher utilization record on main (one per dispatch cycle that ran; lands ~1 h late)",
    "evidence": {
-    "newest": "2026-10-21T16:00:42.233028+00:00",
+    "newest": "2026-10-21T17:42:09.947456+00:00",
     "basis": "newest utilization record generated_at",
     "read_state": "measured"
    }
@@ -243,12 +243,12 @@
   {
    "slo": "collector_age_h",
    "state": "ok",
-   "value": 1.43,
+   "value": 0.85,
    "op": "<=",
    "threshold": 6,
    "what": "hours since the newest commit on main touching research/results/ (a result landed)",
    "evidence": {
-    "newest": "2026-10-21T16:14:17+00:00",
+    "newest": "2026-10-21T18:04:50+00:00",
     "basis": "git log -1 -- research/results (commit time)",
     "read_state": "measured"
    }
@@ -256,12 +256,12 @@
   {
    "slo": "grader_age_h",
    "state": "ok",
-   "value": 4.0,
+   "value": 1.23,
    "op": "<=",
    "threshold": 14,
    "what": "hours since the last SUCCESSFUL research-queue-grade.yml run (GitHub; could_not_look without a token)",
    "evidence": {
-    "newest": "2026-10-21T13:40:11+00:00",
+    "newest": "2026-10-21T17:42:16+00:00",
     "basis": "last successful research-queue-grade.yml run",
     "read_state": "measured"
    }
@@ -269,7 +269,7 @@
   {
    "slo": "research_ops_age_h",
    "state": "breach",
-   "value": 20.59,
+   "value": 21.85,
    "op": "<=",
    "threshold": 8,
    "what": "hours since the newest research-ops pass record (comms/research/ops/*.json finished_at); the pass runs 4x/day",
@@ -302,13 +302,25 @@
   {
    "slo": "hold_pr_wait_h",
    "state": "ok",
-   "value": 0.0,
+   "value": 0.34,
    "op": "<=",
    "threshold": 24,
    "what": "hours the oldest open non-automation PR adding research/queue/ unit files has waited (hold PRs)",
    "evidence": {
-    "open_unit_prs": 0,
-    "basis": "no open non-automation PR adds research/queue/ files",
+    "open_unit_prs": 2,
+    "oldest": [
+     {
+      "pr": 19344,
+      "hours": 0.34,
+      "title": "Research programme review 2026-10-21: 14 pre-registered units, programme trees + plans, pe"
+     },
+     {
+      "pr": 19348,
+      "hours": 0.23,
+      "title": "research: blocked/ audit \u2014 unlock 3, gate 2 by not_before, retire 4 (PIPELINE-HEALTH-1021 "
+     }
+    ],
+    "basis": "open non-automation PRs adding research/queue/*.yaml, age since creation",
     "read_state": "measured"
    }
   }
@@ -537,6 +549,24 @@
     "ops_flags_comment": true,
     "ops_flags_pr": 17895
    }
+  },
+  {
+   "at": "2026-10-21T18:56:00Z",
+   "counts": {
+    "ok": 10,
+    "breach": 6,
+    "could_not_look": 0
+   },
+   "not_ok": [
+    "runnable_floor",
+    "grade_latency_p90_d",
+    "theme_share_min_ratio",
+    "blocked_over_age",
+    "research_ops_age_h",
+    "research_ops_not_run"
+   ],
+   "alert": null,
+   "delivered": null
   }
  ]
 }
