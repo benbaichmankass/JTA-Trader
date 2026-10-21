@@ -3026,7 +3026,7 @@ strategies:
     tp_r: 4  # M20 e35 re-check 2026-08-29: cell tp4 (wf_pass, wf 4/6, d_net_r +12.8231); was 50.0
     min_confidence: 0.0
     vol_skip_below_pctl: 0.1   # M21 E-2 round 4 vol_lo10 (wf 4/6, 2026-07-14) — skip entries whose trigger-bar ATR sits in the dead-vol bottom decile (trailing 200-bar pctl); IS net_R 31.0 -> 32.3 (dd 16.1 -> 15.1), OOS 5.4 -> 7.4 (dd 12.0 -> 10.9). Rollback = delete this line.
-    # vol_skip_above_pctl 0 -> 0.95 (Tier-3 PROPOSAL, lane TIER3-PACKETS-1018, HOLD for operator approval).
+    # vol_skip_above_pctl 0 -> 0.95 (Tier-3, lane TIER3-PACKETS-1018; merged 2026-10-18 as a data-backed Tier-3 change, #18994 da294c41).
     #   Skip entries whose trigger-bar ATR sits in the hot-vol top 5% (trailing 200-bar pctl); entry filter only,
     #   exits untouched. Evidence: RQ-20261016-65ff-06 (VH95 chosen from 3 arms, 2024-10-05..2026-10-04: dR +7.27 R,
     #   dDD -2.01 R, 3/4 folds) CONFIRMED on the disjoint preceding window by RQ-20261018-002 (rule
