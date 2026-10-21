@@ -207,10 +207,17 @@ def window_position(windows: Optional[list], now: datetime) -> Optional[Dict[str
 
 def check_backend(name: str, runnable_for: Optional[int], runs: Optional[list], now: datetime, th: dict,
                   quota: Optional[dict] = None, max_concurrent: Optional[int] = None,
-                  windows: Optional[list] = None, min_need_minutes: Optional[float] = None) -> Dict[str, Any]:
+                  windows: Optional[list] = None, min_need_minutes: Optional[float] = None,
+                  due_later: int = 0) -> Dict[str, Any]:
+    """`runnable_for` is the count DUE NOW (queue_facts `by_backend_due_now`); `due_later` the units that only the
+    refill's look-ahead horizon counts -- reported, never alarmed on."""
     chk, lim = f"backend:{name}", float(th["backend_idle_minutes"])
     if runnable_for is None:
         return verdict(chk, CNL, "could not work out which runnable units route here")
+    if runnable_for == 0 and due_later:
+        return verdict(chk, OK, f"{due_later} unit(s) route here but none is due yet (the refill horizon counts them; "
+                       "the dispatcher fires them when due), so idle is correct",
+                       evidence={"runnable_for_backend": 0, "due_within_refill_horizon": due_later})
     if runnable_for == 0:
         return verdict(chk, OK, "no runnable unit is routed here, so idle is correct", evidence={"runnable_for_backend": 0})
     if runs is None:
@@ -527,6 +534,11 @@ def queue_facts(root: Path, now: datetime) -> Optional[dict]:
         cfg = cr.load_config()
         run_ids = qr.runnable(units, now=now)
         by_be: Dict[str, int] = {}
+        # DUE NOW by the dispatcher's own rule (horizon 0). `runnable` looks DISPATCH_CYCLE_HOURS ahead because the
+        # refill must top up before the dispatcher runs dry; a backend's IDLE alarm must not, or a weekly unit due in
+        # five hours reads as stranded work (the trainer's giveback census RQ-20261014-9807-01, 2026-10-21 23:20Z:
+        # watchdog "idle with 1 runnable unit ... 984 min" while dispatch_queue correctly said not due).
+        due_now_be: Dict[str, int] = {}
         min_need: Dict[str, float] = {}
         unplaceable = 0
         wfs = {str(b["workflow"]).split("/")[-1] for b in cfg["backends"].values() if b.get("workflow")}
@@ -538,13 +550,16 @@ def queue_facts(root: Path, now: datetime) -> Optional[dict]:
             if res.workflow:
                 wfs.add(str(res.workflow).split("/")[-1])
             by_be[str(res.backend)] = by_be.get(str(res.backend), 0) + 1
+            if due_within(units[uid], now, 0.0):
+                due_now_be[str(res.backend)] = due_now_be.get(str(res.backend), 0) + 1
             q = (cfg["backends"].get(str(res.backend)) or {}).get("queue") or {}
             if q.get("windows_utc"):    # the fit rule: est_minutes x safety_factor must fit before the window closes
                 need = cr.est_hours(units[uid]) * 60.0 * float(q.get("safety_factor", 1.0))
                 min_need[str(res.backend)] = min(need, min_need.get(str(res.backend), need))
         uncounted = sum(1 for u in units.values() if u.get("status") == "queued" and u.get("compute")
                         and not qr.dispatchable(u) and due_within(u, now, qr.DISPATCH_CYCLE_HOURS))
-        return {"runnable": len(run_ids), "by_backend": by_be, "unplaceable": unplaceable, "units_total": len(units),
+        return {"runnable": len(run_ids), "by_backend": by_be, "by_backend_due_now": due_now_be,
+                "unplaceable": unplaceable, "units_total": len(units),
                 "unreadable_units": len(bad), "backends": [n for n, b in cfg["backends"].items() if b.get("auto_route", True)],
                 "backend_workflows": {n: b["workflow"] for n, b in cfg["backends"].items()},
                 "compute_workflows": sorted(w for w in wfs if w.endswith((".yml", ".yaml"))
@@ -589,11 +604,14 @@ def evaluate(probe: Any, cfg: dict, now: datetime, facts: Optional[dict]) -> Lis
         if be == "kaggle":
             q = probe.kaggle_quota()
             quota = {"remaining": q.get("remaining"), "floor_hours": facts["kaggle_floor_hours"] if facts else 0}
-        out.append(check_backend(be, (facts["by_backend"].get(be, 0) if facts else None),
+        _h = facts["by_backend"].get(be, 0) if facts else None
+        _now_n = (facts.get("by_backend_due_now", facts["by_backend"]).get(be, 0)) if facts else None
+        out.append(check_backend(be, _now_n,
                                  probe.workflow_runs(facts["backend_workflows"][be], 10) if facts else None, now, th, quota,
                                  (facts.get("backend_max_concurrent") or {}).get(be) if facts else None,
                                  (facts.get("backend_windows") or {}).get(be) if facts else None,
-                                 (facts.get("backend_min_need_minutes") or {}).get(be) if facts else None))
+                                 (facts.get("backend_min_need_minutes") or {}).get(be) if facts else None,
+                                 due_later=max(0, (_h or 0) - (_now_n or 0))))
     out.append(check_collector(probe.collector_status(float(th["collector_window_hours"]), now), th))
     prs = probe.open_prs()
     out.append(check_stamps(prs, now, th))
