@@ -124,17 +124,6 @@ def safe_place_order(order: Dict[str, Any], settings: Any, client: Any) -> dict[
                     f" MAX_DAILY_LOSS_USD {max_daily_loss}"
                 )
 
-    max_open_raw = _get_value(settings, "MAX_OPEN_POSITIONS", None)
-    if max_open_raw not in (None, ""):
-        max_open = int(float(max_open_raw))
-        current_open_raw = _get_value(settings, "CURRENT_OPEN_POSITIONS", None)
-        if current_open_raw not in (None, ""):
-            if int(float(current_open_raw)) >= max_open:
-                raise ValueError(
-                    f"Order aborted: open positions {int(float(current_open_raw))}"
-                    f" has reached MAX_OPEN_POSITIONS {max_open}"
-                )
-
     # Per-strategy caps (S-005 M2): only applied when the order carries a strategy name.
     _strategy_name = (order.get("meta") or {}).get("strategy_name")
     if _strategy_name:

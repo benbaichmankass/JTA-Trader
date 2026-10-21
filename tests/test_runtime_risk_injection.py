@@ -1,16 +1,15 @@
 """
 Tests for _inject_runtime_counters in src.runtime.pipeline.
 
-Verifies that CURRENT_OPEN_POSITIONS and CURRENT_DAILY_LOSS_USD are
-correctly injected into the settings dict before safe_place_order is called.
+Verifies that CURRENT_DAILY_LOSS_USD is correctly injected into the
+settings dict before safe_place_order is called (CURRENT_OPEN_POSITIONS was
+retired 2026-10-21).
 
 All tests are network-free and DB-free (in-memory SQLite where needed).
 
 Tests:
   1. No exchange, no DB   — counters absent, original settings unchanged.
-  2. Exchange 0 positions — CURRENT_OPEN_POSITIONS = "0".
-  3. Exchange N positions — CURRENT_OPEN_POSITIONS = "3".
-  4. Exchange error       — counter absent, no exception propagated.
+  2-4. (retired) positions counter is never injected.
   5. Daily loss below cap — CURRENT_DAILY_LOSS_USD = "50.0" (negative pnl).
   6. Daily loss positive  — CURRENT_DAILY_LOSS_USD = "0.0" (profit day → 0 loss).
   7. Backtest exclusion   — is_backtest=1 row ignored; is_backtest=0 row counted.
@@ -21,7 +20,6 @@ import os
 import sqlite3
 import tempfile
 from datetime import date
-from unittest.mock import MagicMock
 
 
 from src.runtime.risk_counters import inject_runtime_counters as _inject_runtime_counters
@@ -60,22 +58,13 @@ def _db_with_trades(rows: list[dict]) -> str:
     return path
 
 
-def _fake_exchange(positions: list | None = None, raise_on_call: bool = False):
-    ex = MagicMock()
-    if raise_on_call:
-        ex.get_positions.side_effect = RuntimeError("network error")
-    else:
-        ex.get_positions.return_value = positions or []
-    return ex
-
-
 # ---------------------------------------------------------------------------
 # Test 1: no exchange, no DB → counters absent
 # ---------------------------------------------------------------------------
 
-def test_no_exchange_no_db_leaves_settings_unchanged():
+def test_no_db_leaves_settings_unchanged():
     settings = {"SYMBOL": "BTCUSDT"}
-    result = _inject_runtime_counters(settings, exchange_client=None)
+    result = _inject_runtime_counters(settings)
     assert "CURRENT_OPEN_POSITIONS" not in result
     assert "CURRENT_DAILY_LOSS_USD" not in result
     assert result["SYMBOL"] == "BTCUSDT"
@@ -83,42 +72,21 @@ def test_no_exchange_no_db_leaves_settings_unchanged():
 
 def test_original_settings_dict_not_mutated():
     settings = {"SYMBOL": "BTCUSDT"}
-    _inject_runtime_counters(settings, exchange_client=None)
+    _inject_runtime_counters(settings)
     assert "CURRENT_OPEN_POSITIONS" not in settings
 
 
 # ---------------------------------------------------------------------------
-# Test 2: exchange returns 0 positions
+# Retired 2026-10-21 (RETIRE-GLOBAL-POSCAP): no positions fetch, no exchange arg
 # ---------------------------------------------------------------------------
 
-def test_exchange_zero_positions_injects_zero():
-    result = _inject_runtime_counters({}, exchange_client=_fake_exchange([]))
-    assert result["CURRENT_OPEN_POSITIONS"] == "0"
-
-
-# ---------------------------------------------------------------------------
-# Test 3: exchange returns N positions
-# ---------------------------------------------------------------------------
-
-def test_exchange_three_positions_injects_three():
-    positions = [{"contracts": 1}, {"contracts": 2}, {"contracts": 0.5}]
-    result = _inject_runtime_counters({}, exchange_client=_fake_exchange(positions))
-    assert result["CURRENT_OPEN_POSITIONS"] == "3"
-
-
-# ---------------------------------------------------------------------------
-# Test 4: exchange error → counter absent, no exception
-# ---------------------------------------------------------------------------
-
-def test_exchange_error_no_counter_no_raise():
-    result = _inject_runtime_counters({}, exchange_client=_fake_exchange(raise_on_call=True))
-    assert "CURRENT_OPEN_POSITIONS" not in result
-
-
-def test_exchange_missing_method_no_counter():
-    ex = object()  # no get_positions attribute
-    result = _inject_runtime_counters({}, exchange_client=ex)
-    assert "CURRENT_OPEN_POSITIONS" not in result
+def test_open_position_counter_never_injected():
+    path = _db_with_trades([{"pnl": -1.0, "status": "closed", "is_backtest": 0}])
+    try:
+        result = _inject_runtime_counters({"TRADE_JOURNAL_DB": path})
+        assert "CURRENT_OPEN_POSITIONS" not in result
+    finally:
+        os.unlink(path)
 
 
 # ---------------------------------------------------------------------------
@@ -128,7 +96,7 @@ def test_exchange_missing_method_no_counter():
 def test_daily_loss_negative_pnl():
     path = _db_with_trades([{"pnl": -50.0, "status": "closed", "is_backtest": 0}])
     try:
-        result = _inject_runtime_counters({"TRADE_JOURNAL_DB": path}, exchange_client=None)
+        result = _inject_runtime_counters({"TRADE_JOURNAL_DB": path})
         assert result["CURRENT_DAILY_LOSS_USD"] == "50.0"
     finally:
         os.unlink(path)
@@ -141,7 +109,7 @@ def test_daily_loss_negative_pnl():
 def test_daily_loss_positive_pnl_is_zero():
     path = _db_with_trades([{"pnl": 200.0, "status": "closed", "is_backtest": 0}])
     try:
-        result = _inject_runtime_counters({"TRADE_JOURNAL_DB": path}, exchange_client=None)
+        result = _inject_runtime_counters({"TRADE_JOURNAL_DB": path})
         assert result["CURRENT_DAILY_LOSS_USD"] == "0.0"
     finally:
         os.unlink(path)
@@ -160,7 +128,7 @@ def test_backtest_rows_excluded_from_daily_loss():
     ]
     path = _db_with_trades(rows)
     try:
-        result = _inject_runtime_counters({"TRADE_JOURNAL_DB": path}, exchange_client=None)
+        result = _inject_runtime_counters({"TRADE_JOURNAL_DB": path})
         assert result["CURRENT_DAILY_LOSS_USD"] == "50.0"
     finally:
         os.unlink(path)
@@ -173,7 +141,6 @@ def test_backtest_rows_excluded_from_daily_loss():
 def test_db_error_no_counter_no_raise():
     result = _inject_runtime_counters(
         {"TRADE_JOURNAL_DB": "/nonexistent/path/that/cannot/exist.db"},
-        exchange_client=None,
     )
     assert "CURRENT_DAILY_LOSS_USD" not in result
 
@@ -182,7 +149,7 @@ def test_open_trades_excluded_from_daily_loss():
     """status='open' rows must not contribute to the daily loss figure."""
     path = _db_with_trades([{"pnl": -300.0, "status": "open", "is_backtest": 0}])
     try:
-        result = _inject_runtime_counters({"TRADE_JOURNAL_DB": path}, exchange_client=None)
+        result = _inject_runtime_counters({"TRADE_JOURNAL_DB": path})
         # No closed trades → SUM is NULL → loss = 0.0
         assert result["CURRENT_DAILY_LOSS_USD"] == "0.0"
     finally:

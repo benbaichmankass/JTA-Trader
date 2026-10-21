@@ -167,14 +167,6 @@ def validate_startup() -> None:
         except ValueError:
             errors.append(f"MAX_DAILY_LOSS_USD must be a positive number, got {_max_daily_loss_raw!r}")
 
-    _max_open_raw = _env("MAX_OPEN_POSITIONS")
-    if _max_open_raw:
-        try:
-            if int(float(_max_open_raw)) <= 0:
-                errors.append(f"MAX_OPEN_POSITIONS must be > 0, got {_max_open_raw!r}")
-        except ValueError:
-            errors.append(f"MAX_OPEN_POSITIONS must be a positive integer, got {_max_open_raw!r}")
-
     # ---- DRY_RUN / ALLOW_LIVE_TRADING / MODE — REMOVED (operator directive 2026-05-03)
     # The single dry/live toggle in the codebase is per-account
     # ``mode: live | dry_run`` in ``config/accounts.yaml``, applied by
@@ -214,7 +206,6 @@ def build_settings_from_env() -> dict:
         # None when unset; safe_place_order() skips the guard when value is None.
         # (MAX_QTY / MAX_POSITION_USD removed 2026-06-24 — no notional/qty cap.)
         "MAX_DAILY_LOSS_USD": _env("MAX_DAILY_LOSS_USD") or None,
-        "MAX_OPEN_POSITIONS": _env("MAX_OPEN_POSITIONS") or None,
         # THE HALT FLAG — the orders layer's kill switch, wired 2026-08-16
         # (Tier-3, operator-approved; BL-20260813-ORDERS-HALT-CHECK-INERT-WITHOUT-SETTINGS-KEY).
         #
