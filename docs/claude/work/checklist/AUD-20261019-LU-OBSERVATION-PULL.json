@@ -1,0 +1,32 @@
+{
+  "id": "AUD-20261019-LU-OBSERVATION-PULL",
+  "title": "72 of 188 landed_unproven rows are past their observation.due_by and nothing pulls them: feed overdue observations into the brief's due section",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    19340
+  ],
+  "blocked_on": [],
+  "note": "[WEEKLY-AUDIT-2026-10-19, session_014UeddhjFnc6fSA41bo5V65] CLAIM: landed_unproven's closing observation has no puller. EVIDENCE: scan of docs/claude/work/checklist/*.json 2026-10-21: landed_unproven 188, observation.due_by < 2026-10-21 for 72 (e.g. MIRROR-QTY-DIVERGE 10-19, LIVE-PARITY 10-17, PROTECTION-HARDENING 10-19, 14 RESEARCH-OPS-* lanes); grep of scripts/ops/render_daily_brief.py shows landed_unproven rendered only under section 3 'moved', never as due. EXPECTED: per close-out check 3 the observation is named and dated so it gets made. BUILD: a checklist-side due() (observation.due_by passed) merged into section 0 with the same cap/ranking; RESEARCH-OPS-* lane rows auto-closable by the next research-ops pass. DETECTOR: brief self-test planting an overdue landed_unproven row that must appear in section 0. [2026-10-21 session_014UeddhjFnc6fSA41bo5V65] Built in #19340 (render_daily_brief.py section 0b, self-test 'landed_unproven past due_by is derived-due; today and future are not'). Live store: 73 rows listed.",
+  "updated_at": "2026-10-21T18:51:25Z",
+  "updated_by": "session_014UeddhjFnc6fSA41bo5V65",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "observation": {
+    "what": "the brief served on the Workflow page shows section 0b with a landed_unproven-past-due_by count matching a fresh checklist scan",
+    "how_to_check": "curl -sS https://ict-bot.duckdns.org/api/bot/work/brief | grep -A3 \"0b\"; compare with python3 scripts/ops/render_daily_brief.py | sed -n /0b/,+2p on main",
+    "due_by": "2026-10-23"
+  },
+  "writeback": {
+    "roadmap": "none: brief rendering detector; no milestone measure changed",
+    "arch": "none: brief section added in a read-only renderer; no pipeline/trade architecture change"
+  },
+  "_seq": 579
+}
