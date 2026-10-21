@@ -96,7 +96,7 @@ def test_executor_unlisted_leg_keeps_account_value_even_under_higher_cap(tmp_pat
     acct = _breakout_2_cfg(tmp_path, max_risk_usd=50,
                            per_leg_risk_usd={"trend_donchian_sol_prop": 50})
     _, eth = _emit(dict(_ETH), acct)
-    assert eth.risk_usd == 25.0  # account risk_pct 0.5% x $5k, NOT the $50 cap
+    assert eth.risk_usd == 17.5  # account risk_pct 0.35% x $5k (BRK2-RISK-035), NOT the $50 cap
 
 
 def test_per_leg_journal_row_records_the_override(tmp_path, monkeypatch):
