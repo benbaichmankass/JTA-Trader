@@ -1,0 +1,21 @@
+{
+  "id": "AUD-20261019-LU-OBSERVATION-PULL",
+  "title": "72 of 188 landed_unproven rows are past their observation.due_by and nothing pulls them: feed overdue observations into the brief's due section",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[WEEKLY-AUDIT-2026-10-19, session_014UeddhjFnc6fSA41bo5V65] CLAIM: landed_unproven's closing observation has no puller. EVIDENCE: scan of docs/claude/work/checklist/*.json 2026-10-21: landed_unproven 188, observation.due_by < 2026-10-21 for 72 (e.g. MIRROR-QTY-DIVERGE 10-19, LIVE-PARITY 10-17, PROTECTION-HARDENING 10-19, 14 RESEARCH-OPS-* lanes); grep of scripts/ops/render_daily_brief.py shows landed_unproven rendered only under section 3 'moved', never as due. EXPECTED: per close-out check 3 the observation is named and dated so it gets made. BUILD: a checklist-side due() (observation.due_by passed) merged into section 0 with the same cap/ranking; RESEARCH-OPS-* lane rows auto-closable by the next research-ops pass. DETECTOR: brief self-test planting an overdue landed_unproven row that must appear in section 0.",
+  "updated_at": "2026-10-21T18:21:13Z",
+  "updated_by": "session_014UeddhjFnc6fSA41bo5V65",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 579
+}
