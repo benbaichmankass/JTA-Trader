@@ -124,7 +124,7 @@ The mirror books read `CONSISTENT` for the same legs (`xrp_pullback_2h` −6.21R
 
 ## 3. Giveback — peak R vs realised R (`position_telemetry` joined to closed trades)
 
-Giveback = peak_r − realised_r. Share = Σ giveback ÷ Σ peak. **Peak is an ESTIMATED lower bound** for 100% of rows, so true giveback is ≥ these. Share > 100% means the average trade peaked and then closed below entry.
+Giveback = peak_r − realised_r. Share = Σ giveback ÷ Σ peak. **Peak is an ESTIMATED lower bound** for 100% of rows, so true giveback is ≥ these. Share > 100% means the average trade peaked and then closed below entry. <!-- population-ok: the population (R-graded closed trades per class and window) is given in the table directly below -->
 
 | class | window | R-graded n | mean giveback R | share of peak | deep (peak ≥ 1R) → closed ≤ 0 |
 |---|---|--:|--:|--:|--:|
