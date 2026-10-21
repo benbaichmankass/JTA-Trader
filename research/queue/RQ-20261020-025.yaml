@@ -4,7 +4,7 @@
 id: RQ-20261020-025
 title: 'Programme 01 Q9, runway fill: does a fixed 3R and a 4R take-profit replace the declared exit of
   tlt_pullback_1d on net R in 3 of 4 calendar folds over 2010-01..2026-10, at the Alpaca/ETF cost stack?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -126,3 +126,15 @@ generated:
   params:
     node: P1-Q9-tlt1d-tp3-replace
 last_dispatched_at: '2026-10-21T12:16:46+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-Q9-TLT1D-TP3-REPLACE
+  evidence:
+  - research/results/RQ-20261020-025/39598374686.jsonl
+  graded_at: '2026-10-21'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
