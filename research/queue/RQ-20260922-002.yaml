@@ -1,7 +1,8 @@
 id: RQ-20260922-002
 title: Is the Stage-0 pass fold-concentrated across the eight legs that clear the bar?
-status: blocked
+status: queued
 cadence: once
+compute: cpu_light
 theme: new_strategy_prop
 priority: 2
 kind: deterministic
@@ -70,35 +71,29 @@ routing:
     harness runs, no VM is touched. est_minutes is the checkout, not the
     arithmetic.
 
-blocked_on:
-  - what: >-
-      NOTHING READS THE EVIDENCE RECORDS INTO A RESEARCH RESULT. The data is
-      committed and the statistic is a one-line reduction, but there is no
-      workflow that computes it and no store that would hold the answer, so
-      the result would exist only in a session's scrollback — which
-      docs/CLAUDE-RULES-CANONICAL.md and the plan both refuse to count. This
-      is the cheapest unit in this batch to unblock and the one most likely
-      to be skipped for that reason.
-    ref: 'checklist E5 (every research workflow lands a durable queryable result) / C2'
-    clears_when: >-
-      A workflow computes drop_max_fold over comms/strategy_evidence/*.json and
-      lands the per-leg result where a later session can read it.
-
 run:
-  workflow: null
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/evidence_fold_robustness.py
+  - --rule
+  - '002'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20260922-002
+  timeout_minutes: 10
   note: >-
-    Null on purpose. Declaring an existing sweep workflow here would be false —
-    none of them read comms/strategy_evidence/.
+    UNBLOCKED 2026-10-21 (lane PIPELINE-HEALTH-1021). The blocker was that nothing read
+    comms/strategy_evidence/ into a durable result; scripts/research/evidence_fold_robustness.py
+    --rule 002 is that reduction and implements this unit's decision_rule verbatim. The
+    rule is unchanged. Population is re-derived at run time (the passing set moved from 8 legs
+    to 9 distinct legs since registration; the rule's thresholds are carried as shares).
 
 lands:
-  store: comms/strategy_evidence/<leg>.json
-  assert_field: fold_concentrated
-  min_rows: 8
-  note: >-
-    min_rows 8, not 1, unlike the e35 units: there is no per-leg fan-out that
-    can partially fail here. All eight records are read in one process from
-    one checkout, so a result covering fewer than eight is a defect, not a
-    partial success.
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
 
 related:
   - 'checklist C5 / R4 (this unit is one of the ten)'

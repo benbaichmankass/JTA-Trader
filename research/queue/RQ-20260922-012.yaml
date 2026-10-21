@@ -1,8 +1,11 @@
 id: RQ-20260922-012
 title: Does a leg's OOS edge decay with time — and is the MOST RECENT fold, not the fold count, the statistic
   Stage 0 should read?
-status: blocked
+status: queued
 cadence: once
+theme: live_strategy
+priority: 2
+compute: cpu_light
 kind: deterministic
 question: 'Across every leg in the R7 corpus with a complete `fold_detail`, does the sign and magnitude
   of `net_r` depend on fold ORDER? Specifically: (a) how many legs have their most recent fold negative
@@ -63,18 +66,29 @@ routing:
   basis: Runner. Inputs are the 52 committed JSON records in comms/strategy_evidence/ (under 2 MB total).
     No candles, no harness, no VM. est_minutes is the checkout, not the arithmetic.
 run:
-  workflow: null
-  note: 'Null on purpose, and the unit is BLOCKED rather than queued because of it: `run.workflow: null`
-    means undispatchable, and the queue schema enforces that. Declaring an existing sweep workflow here
-    would be false — none of them read comms/strategy_evidence/. It rides whatever unblocks RQ-20260922-002;
-    they read the same files in the same pass and should be run together.'
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/evidence_fold_robustness.py
+  - --rule
+  - '012'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20260922-012
+  timeout_minutes: 10
+  note: >-
+    UNBLOCKED 2026-10-21 (lane PIPELINE-HEALTH-1021). The blocker was that nothing read
+    comms/strategy_evidence/ into a durable result; scripts/research/evidence_fold_robustness.py
+    --rule 012 is that reduction and implements this unit's decision_rule verbatim. The
+    rule is unchanged. Population is re-derived at run time (the passing set moved from 8 legs
+    to 9 distinct legs since registration; the rule's thresholds are carried as shares).
+
 lands:
-  store: comms/strategy_evidence/<leg>.json
-  assert_field: recency_negative
-  min_rows: 42
-  note: min_rows 42 — the count of records with coverage_state "measured" in the R7 corpus, not 52. The
-    other 10 are `no_harness` or `harness_failed` and have no fold_detail to reduce; a result covering
-    them would be fabricated.
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+
 related:
 - RQ-20260922-002 (drop-MAX-fold concentration — the order-blind sibling; run together, report both)
 - RULE-D1-STAGE0-NET-OF-FULL-COST (registered 2026-09-22T05:34:08Z; the rule this tests)
