@@ -38,7 +38,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 REPO = Path(__file__).resolve().parents[2]
 EVIDENCE = REPO / "comms" / "strategy_evidence"
@@ -53,8 +53,8 @@ RULE_IDS = {"002": "RULE-RQ0922-002-FOLD-ROBUSTNESS", "012": "RULE-RQ0922-012-FO
             "001": "RULE-RQ0922-001-JACKKNIFE-STAGE0"}
 
 
-def _records(evidence_dir: Path) -> Dict[str, Dict[str, Any]]:
-    out: Dict[str, Dict[str, Any]] = {}
+def _records(evidence_dir: Path) -> dict[str, dict[str, Any]]:
+    out: dict[str, dict[str, Any]] = {}
     for p in sorted(evidence_dir.glob("*.json")):
         try:
             d = json.loads(p.read_text())
@@ -65,7 +65,7 @@ def _records(evidence_dir: Path) -> Dict[str, Dict[str, Any]]:
     return out
 
 
-def _folds(rec: Dict[str, Any]) -> Optional[List[Dict[str, Any]]]:
+def _folds(rec: dict[str, Any]) -> list[dict[str, Any]] | None:
     fd = rec.get("fold_detail")
     if str(rec.get("coverage_state") or "").lower() != "measured" or not isinstance(fd, list):
         return None
@@ -80,7 +80,7 @@ def _band(share: float, yes: float, no: float) -> str:
     return "pass" if share >= yes else ("fail" if share <= no else "indeterminate")
 
 
-def rule_002(records: Dict[str, Dict[str, Any]], passing_legs: List[str]) -> Dict[str, Any]:
+def rule_002(records: dict[str, dict[str, Any]], passing_legs: list[str]) -> dict[str, Any]:
     per, skipped = {}, []
     for leg in passing_legs:
         fd = _folds(records[leg]) if leg in records else None
@@ -102,7 +102,7 @@ def rule_002(records: Dict[str, Dict[str, Any]], passing_legs: List[str]) -> Dic
             "population": f"{n} distinct legs clearing the roster-promotion bar (census passes_bar, re-derived at run time)"}
 
 
-def rule_012(records: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+def rule_012(records: dict[str, dict[str, Any]]) -> dict[str, Any]:
     per = {}
     for leg, rec in records.items():
         fd = _folds(rec)
@@ -126,13 +126,13 @@ def rule_012(records: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
             "population": f"{len(pos)} legs with net_r_oos > 0 among {len(per)} measured records carrying a complete fold_detail"}
 
 
-def _oos_trades(rec: Dict[str, Any], repo: Path) -> Optional[List[float]]:
+def _oos_trades(rec: dict[str, Any], repo: Path) -> list[float] | None:
     src = rec.get("source_run")
     fd = _folds(rec)
     if not src or fd is None or not (repo / src).is_file():
         return None
     spans = [(str(f["start"]), str(f["end"])) for f in fd]
-    out: List[float] = []
+    out: list[float] = []
     for line in (repo / src).read_text().splitlines():
         try:
             t = json.loads(line)
@@ -144,7 +144,7 @@ def _oos_trades(rec: Dict[str, Any], repo: Path) -> Optional[List[float]]:
     return out
 
 
-def rule_001(records: Dict[str, Dict[str, Any]], legs: List[str], repo: Path = REPO) -> Dict[str, Any]:
+def rule_001(records: dict[str, dict[str, Any]], legs: list[str], repo: Path = REPO) -> dict[str, Any]:
     per, skipped = {}, {}
     for leg in legs:
         rec = records.get(leg)
@@ -164,16 +164,26 @@ def rule_001(records: Dict[str, Dict[str, Any]], legs: List[str], repo: Path = R
             "population": f"{len(per)} alpaca_live legs with a committed per-trade ledger"}
 
 
-def grade(rule: str, evidence_dir: Path = EVIDENCE, repo: Path = REPO) -> Dict[str, Any]:
+def _roster_text(repo: Path) -> str:
+    """The roster as the census wants it (YAML text), read through the canonical loader."""
+    import yaml
+
+    from src.config.accounts_loader import load_accounts_dict
+    return yaml.safe_dump({"accounts": load_accounts_dict(repo / "config" / "accounts.yaml")})
+
+
+def _strategies(repo: Path) -> dict[str, Any]:
+    import yaml
+    return (yaml.safe_load((repo / "config" / "strategies.yaml").read_text()) or {}).get("strategies") or {}
+
+
+def grade(rule: str, evidence_dir: Path = EVIDENCE, repo: Path = REPO) -> dict[str, Any]:
     records = _records(evidence_dir)
     base = {"rule_id": RULE_IDS[rule], "decision_rule": {"id": RULE_IDS[rule]}, "tool": "scripts/research/evidence_fold_robustness.py"}
     if rule == "012":
         return dict(base, **rule_012(records))
-    import yaml
     from scripts.ci import check_roster_promotion_evidence as cr
-    accounts_text = (repo / "config" / "accounts.yaml").read_text()
-    strategies = (yaml.safe_load((repo / "config" / "strategies.yaml").read_text()) or {}).get("strategies") or {}
-    cen = cr.census(accounts_text, strategies, evidence_dir)
+    cen = cr.census(_roster_text(repo), _strategies(repo), evidence_dir)
     if rule == "002":
         legs = sorted({s["leg"] for s in cen["slots"] if s["passes_bar"]})
         return dict(base, **rule_002(records, legs))
@@ -181,7 +191,7 @@ def grade(rule: str, evidence_dir: Path = EVIDENCE, repo: Path = REPO) -> Dict[s
     return dict(base, **rule_001(records, legs, repo))
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--rule", required=True, choices=sorted(RULE_IDS))
     ap.add_argument("--evidence-dir", default=str(EVIDENCE))
