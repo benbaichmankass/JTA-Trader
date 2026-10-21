@@ -36,6 +36,26 @@ Population: units whose `grading.graded_at` is 2026-10-14..2026-10-21 and whose 
 - `P1-Q11-path-metric-giveback`: chop, efficiency ratio and MAE/MFE path shape as giveback predictors (label study), then a
   partial-TP lever arm. Chained after the giveback census 9807-01 and the ada_pullback_2h sweep RQ-20260928-019.
 
+**Overnight 2026-10-21/22 (lane EXITS-OVERNIGHT-1021, Tier-1; nothing live changed)**
+- **Q9 TP crash root-caused** (PI-20261021-6SBYWRKB-0001). `trend_donchian_eth_4h` is the only leg declaring
+  `tp_revision`, and a GEOM-B1 TP arm on top of it is two TP movers: `backtest_trend` raises `ValueError`. Only
+  RQ-20261018-012/-014 were hit; the 22 other TP-lever units measured. The fix (#19423) refuses that arm up front and
+  lands `failure.json` and run logs; `.gitignore` had been dropping `*.log` from the landing bundle. Re-armed with
+  `-tp_revision` (#19425). Local, unregistered preview: the measured-move incumbent stands (A +115.95 R vs 78–88 R).
+- **Field beats the review above:** the P1-Q6 ADX/momentum declares are no longer build-gated. `src/runtime/momentum_levers.py`
+  is in both monitors (#18921, merged 10-18; deployment not checked this session). The one declare ready for the
+  operator is **xrp_4h ADX trail 25/2.5** (MOMENTUM-LEVERS-LIVE note, 2026-10-22).
+  - eth_4h's ADX trail is superseded: it FAILS against the current incumbent (RQ-20261019-010/-011).
+  - slv_1d momentum-stale is parameter-fragile: 8 bars passes, 12 bars fails. Not proposed.
+- **Q10 built and registered:** `--trail-level {swing,fvg,round}` lives in both harnesses (`src/research/trail_levers.py`,
+  default byte-identical). Registered units RQ-20261022-001/-002 use tight 2.5/3.0. An unregistered tight-1.5 look is
+  disclosed in each unit (all three kinds below the incumbent on both legs).
+- **Q11 unblocked and registered.** It had been stuck `waiting` because recurring prerequisites never reach `done`
+  (`queue_replenish.chain_verdict`). The rung-1 label-study unit sits on the node; script `path_metric_giveback.py`.
+- **Confirmation gap filed** (PI-20261021-IGHT1021-0001): 10 Q9 PASS discoveries have no confirmation unit.
+  - No earlier disjoint window exists on the feed: the perps' klines start 2019-12/2020-01.
+  - The proposed build is a replace-on-holdout grade.
+
 **Cross-programme feeds**
 - → P5: trail 4.5 on eth_prop is priced on all three books; the prop EV read (P5) decides adoption.
 - ← P7: the daily Donchian (ef5d-03, D55) is a new position-trade family that will need exit processing if its transfer

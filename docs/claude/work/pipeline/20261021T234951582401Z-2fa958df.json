@@ -1,0 +1,20 @@
+{
+  "based_on": "20261021T205125388964Z-b3d5a573.json",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "a TP-lever arm run of exit_lever_ablation.py lands measured, and failed runs commit logs/cmd-0.log",
+    "due_date": "2026-10-24",
+    "kind": "date"
+  },
+  "id": "PI-20261021-6SBYWRKB-0001",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261021-2047 step C/D",
+    "rerun": "python3 scripts/research/result_disposition_check.py --list; ls comms/research/RQ-20261018-012/*/logs"
+  },
+  "routed_to": "PR #19423 (fix, self-land) + PR #19425 (re-arm, hold)",
+  "state": "routed",
+  "terminal_reason": null,
+  "what": "[producer_failed, cause not read] RQ-20261018-012 (stall-pull-in retarget) and RQ-20261018-014 (fixed 3R/4R TP) on trend_donchian_eth_4h both exited 1 after arm A completed (41s / 29s) and no logs/cmd-0.log landed on main, so the failing arm's error cannot be read. The 5 sibling Q9 units whose arms use trail-decay/giveback/timeout/adx levers (-009,-010,-011,-013,-015) ran clean. Common factor of the two failures: the TP levers --tp-target-r / --tp-retarget-mode. Both flags exist in scripts/backtest_trend.py --help on main. Two defects: (1) the TP-lever arm crashes, (2) a failed run leaves no log on main. Until fixed, P1-Q9 TP-lever replace verdicts for eth4h are NOT MEASURED, not FAIL; the 28 Q9 units authored 2026-10-20 with tp3/retarget arms will likely fail the same way. || [2026-10-22 EXITS-OVERNIGHT-1021] ROOT-CAUSED: the leg declares tp_revision (forwarded as --tp-revision) and the arm adds GEOM-B1 TP flags; backtest_trend.run_backtest raises ValueError on two TP movers. Only eth4h declares tp_revision, so only -012/-014 were hit: the 22 other TP-lever units (incl. all 25 Q9 units of 10-20) MEASURED. Logs: the dispatcher bundle's ls-files --exclude-standard dropped *.log/logs/. Fix PR #19423 (refuse + failure.json + logs bundled, tests); re-arm with -tp_revision PR #19425 (hold)."
+}
