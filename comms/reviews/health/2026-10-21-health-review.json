@@ -9,11 +9,11 @@
   "findings": {
     "max_open_positions_guard": {
       "status": "concern",
-      "note": "MEASURED: global guard not enforced on real-money books. safe_place_order has 0 production callers in src/ (only tests + scripts/smoke_test_trade.py); separately risk_counters logged 'bybit requires \"apiKey\" credential' at 2026-10-21T15:01:42Z on an actionable ETHUSDT buy so CURRENT_OPEN_POSITIONS is never injected. UNVERIFIED: whether MAX_OPEN_POSITIONS is set in the live env (no read-only diag route). Filed PI-20261021-0261021B-0001."
+      "note": "MEASURED: global guard not enforced on real-money books. safe_place_order has 0 production callers in src/ (only tests + scripts/smoke_test_trade.py); separately risk_counters logged 'bybit requires \"apiKey\" credential' at 2026-10-21T15:01:42Z on an actionable ETHUSDT buy so CURRENT_OPEN_POSITIONS is never injected. UNVERIFIED: whether MAX_OPEN_POSITIONS is set in the live env (no read-only diag route). Filed PI-20261021-ZRSAEUMT-0001."
     },
     "liveness_watchdog": {
       "status": "concern",
-      "note": "MEASURED false URGENT: last alert 2026-10-19T14:00Z signals=5 trades=0; the 5 counted rows were SELLs from long-only ETF legs (side_filter: long on Alpaca live+mirror). Trades rows for that hour not pulled. Filed PI-20261021-20261021-0001."
+      "note": "MEASURED false URGENT: last alert 2026-10-19T14:00Z signals=5 trades=0; the 5 counted rows were SELLs from long-only ETF legs (side_filter: long on Alpaca live+mirror). Trades rows for that hour not pulled. Filed PI-20261021-ZRSAEUMT-0002."
     },
     "broker_reachability": {
       "status": "ok",
@@ -56,7 +56,7 @@
   },
   "backlog_drain": [],
   "anomalies": [
-    "The two PI ids named in the dispatch (PI-20261021-0261021B-0001, PI-20261021-20261021-0001) did not exist anywhere in docs/claude/work on main at start (git grep origin/main empty); filed here under those exact ids with intent=new so the references resolve.",
+    "The two PI ids named in the dispatch (PI-20261021-ZRSAEUMT-0001, PI-20261021-ZRSAEUMT-0002) did not exist anywhere in docs/claude/work on main at start (git grep origin/main empty); filed here under those exact ids with intent=new so the references resolve.",
     "Two diag requests returned HTTP 400/timeout (log_file?name=signal_audit, one audit_query) - transient or wrong param; not root-caused."
   ],
   "recommended_action": "Operator/Tier-2 decision: wire or retire the global MAX_OPEN_POSITIONS guard (PI-...0261021B-0001); patch liveness watchdog to ignore side-filtered signals (PI-...20261021-0001). Schedule the skipped sections."
