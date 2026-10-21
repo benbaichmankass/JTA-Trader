@@ -31,6 +31,11 @@ Population: units whose `grading.graded_at` is 2026-10-14..2026-10-21 and whose 
   constraint is the two builds above, and research without a live producer cannot reach a declare.
 - Week of 10-26: once MOMENTUM-LEVERS-LIVE lands, Q6 parity on 1–2 live trades per confirmed leg, then the held declare PRs.
 
+**Operator ideas folded in (IDEAS.md, manager routing 2026-10-21)**
+- `P1-Q10-level-triggered-trail`: price-level (FVG / swing / round-level) triggered trail tightening. Needs a harness flag first (none exists).
+- `P1-Q11-path-metric-giveback`: chop, efficiency ratio and MAE/MFE path shape as giveback predictors (label study), then a
+  partial-TP lever arm. Chained after the giveback census 9807-01 and the ada_pullback_2h sweep RQ-20260928-019.
+
 **Cross-programme feeds**
 - → P5: trail 4.5 on eth_prop is priced on all three books; the prop EV read (P5) decides adoption.
 - ← P7: the daily Donchian (ef5d-03, D55) is a new position-trade family that will need exit processing if its transfer

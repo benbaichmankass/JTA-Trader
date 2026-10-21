@@ -38,6 +38,11 @@ Population: units whose `grading.graded_at` is 2026-10-14..2026-10-21 and whose 
 - P2-R5 vol-target sizing waits on IR-VOL-TARGET-SIZING-STAGE0 (verdict wrapper over `backtest_vol_target.py`).
 - Re-ask P2-Q3.1 only when the ledger has grown ~50% (≈ 2026-12); file nothing earlier.
 
+**Operator ideas folded in (IDEAS.md, manager routing 2026-10-21)**
+- `P2-Q4-var-price-vector`: a multivariate linear/VAR next-bar price-vector arm as the linear baseline in the ML-F1 bake-off.
+- `P2-Q4-cross-asset-features`: rolling cross-symbol correlation, basket PC1 share and point-in-time ES/DXY/gold returns as
+  regime-learner features, graded on log-loss gain. It goes beyond FRONTIER-LEVER-LEADLAG's BTC->alt 5m lead-lag.
+
 **Cross-programme feeds**
 - → P1/P5: VH95 ada packet (live leg) and the failed sol_prop VH80 both belong on REGIME-PROGRAM's Tier-3 list.
 

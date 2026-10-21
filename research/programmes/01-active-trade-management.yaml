@@ -14724,3 +14724,38 @@ nodes:
     related:
     - docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md
     - scripts/research/exit_lever_ablation.py
+# ── Operator ideas inbox (manager routing 2026-10-21, docs/claude/work/IDEAS.md via PR #19342): exits / giveback ────────
+# Operator: exits and giveback are this week's standing priority. Pre-registered QUESTIONS (needs_authoring); the unit spec
+# is written when its prerequisite closes. Do not duplicate: R-triggered activation and momentum stops already exist
+# (RQ-20261016-005 / -010 / -016).
+- id: P1-Q10-level-triggered-trail
+  goal: G1
+  roadmap: [M20]
+  value: {usd_at_stake_per_month: 150, confidence: 0.3}
+  after: []
+  needs_authoring: >-
+    OPERATOR IDEA (IDEAS.md 2026-10-21): tighten the trail when PRICE reaches a structural level (an opposing fair-value gap,
+    the prior swing high/low, or a round level) rather than when R or momentum says so. Before registering, check whether
+    the harness can express it: backtest_trend.py / backtest_pullback.py have R-armed (--trail-decay-arm-r), stall- and
+    ADX-keyed trails but NO level trigger (checked 2026-10-21 against their argparse). If none exists, file a build row
+    (level-trigger flag in both harnesses + a producer in the monitor) and register the unit against it in blocked/: arms
+    = tighten to 1.5 x ATR on first touch of (a) the nearest opposing 1h FVG, (b) the prior swing extreme, vs the leg as
+    declared, on trend_donchian_eth_4h and ada_pullback_2h, exit_lever_ablation folds, delta 1.0 R, one lever per cell.
+- id: P1-Q11-path-metric-giveback
+  goal: G1
+  roadmap: [M20]
+  value: {usd_at_stake_per_month: 200, confidence: 0.3}
+  after:
+  - {unit: RQ-20261014-9807-01, verdict: any}
+  - {unit: RQ-20260928-019, verdict: any}
+  needs_authoring: >-
+    OPERATOR IDEA (IDEAS.md 2026-10-21; the motivating case is the live ADA trade's swings): do in-trade PATH metrics --
+    chop (choppiness index over the trade so far), Kaufman efficiency ratio, MAE/MFE path shape (MFE reached early then
+    stalled vs grinding) -- predict giveback (peak-to-exit R) beyond what bars-in-trade and current R already explain?
+    Chained after the giveback census (9807-01, which gives the per-leg giveback distribution) and the ada_pullback_2h
+    sweep (RQ-20260928-019). Rung 1 is a LABEL study, never a lever: on the census legs' harness trades with
+    --emit-paths, regress peak-to-exit R on the three metrics measured at k bars after entry (k fixed before the run),
+    out-of-sample by calendar fold, graded on log-loss/R2 gain over the bars+R baseline. Only a rung-1 PASS opens rung 2:
+    the LEVER arm -- a split / partial take-profit (bank 50% at +1 R) when the metric crosses its rung-1 threshold vs the
+    leg as declared, net of cost. P2-Q3.1's rich in-trade state read INDETERMINATE on the live ledger (n-bound), so this
+    runs on HARNESS paths, not the ledger.
