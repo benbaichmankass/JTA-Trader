@@ -1031,3 +1031,29 @@ nodes:
       have run, register the direction baseline with funding/OI covariates (logit first, then LightGBM) graded on
       LOG-LOSS vs the class prior (never macro-F1 vs the prior: IDEA-REVIEW-1016 s9 metric artifact; row IR-DIRECTION-LABEL-V2),
       then net of cost on a take-the-signal overlay, as the documented reference other work is measured against.'
+  # ── Operator ideas inbox (manager routing 2026-10-21, docs/claude/work/IDEAS.md via PR #19342) ──────────────────────
+  - id: P2-Q4-var-price-vector
+    goal: G4
+    roadmap: [M23]
+    value: {usd_at_stake_per_month: 80, confidence: 0.3}
+    after: []
+    needs_authoring: >-
+      OPERATOR IDEA (IDEAS.md 2026-10-21): a multivariate linear / VAR model that predicts the NEXT-BAR PRICE VECTOR
+      (returns of BTC, ETH, SOL, XRP, ADA jointly, lags fixed by BIC on the training fold only) as a BASELINE arm in the
+      forecaster bake-off track (plan item ML-F1). It is the honest linear floor every TSFM / GBDT forecaster must beat:
+      graded on out-of-fold MSE and directional log-loss vs a per-symbol AR(p) and vs the random walk, purged walk-forward
+      folds, published 1h market_features shards (metis-market-data, compute auto). Register it as an arm of the next ML-F1
+      bake-off unit rather than a stand-alone race; if no bake-off is due within two weeks, register it alone.
+  - id: P2-Q4-cross-asset-features
+    goal: G4
+    roadmap: [M23]
+    value: {usd_at_stake_per_month: 100, confidence: 0.25}
+    after: []
+    needs_authoring: >-
+      OPERATOR IDEA (IDEAS.md 2026-10-21): cross-symbol and cross-asset CORRELATION features beyond
+      FRONTIER-LEVER-LEADLAG (which covers only BTC->alt 5m lead-lag). Candidates, each fixed before the run: rolling 1h
+      correlation of the symbol to BTC and to the alt basket (24 / 168 bars), its change, the basket's first principal
+      component share (a crowding/regime read), and ES/DXY/gold 1d returns joined point-in-time for the crypto heads. Rung
+      1: add the set to the 1h regime learner (same folds as RQ-20261014-65cc-10) and grade the LOG-LOSS gain over the
+      six shared features on >= 2 of 3 symbols; a PASS feeds the P3 portfolio-overlap reads as well (programme 03 Q7).
+      Data check first: the equity/DXY daily series must be in metis-market-data point-in-time, else file the data row.

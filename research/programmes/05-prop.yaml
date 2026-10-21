@@ -42,6 +42,19 @@
 # until it accrues); PROP-MISSION-MODEL (a build, label undefined).
 programme: P5
 plan: docs/research/programmes/05-PROP.md
+# questions: map added by the programme review 2026-10-21 (lane RESEARCH-PROGRAMME-REVIEW-1021) to discharge plan
+# questions that had no node (programme_coverage.py); each names its record and why.
+questions:
+  Q1:
+    state: closed
+    by: RQ-20261014-f516-01, RQ-20261014-f516-02, RQ-20261014-f516-03
+    why: >-
+      Baselines answered: EV > 0 on every seed, P(net > 0) < 0.70 on all three accounts (indeterminate by the B6 bar). Every later unit re-measures its account A arm window-matched.
+  Q4:
+    state: closed
+    by: RQ-20261014-f516-07
+    why: >-
+      velotrade_1 FAIL confirmed the 0.8 switch; tradeify_1 / breakout_2 sims record zero switch trips at 0.5% risk, so the "< 0.5 blocked per life" exit holds on their own numbers.
 nodes:
 - id: P5-Q5-4H-VELO-pass
   goal: G2
@@ -73,19 +86,6 @@ nodes:
     on 2023-10..2025-04 and 2025-04..2026-10 separately; needs a ledger split, prop_ev_grid reads whole files) and
     read Programme 01''s eth_4h exit nodes (P1-Q4-eth4h-*, P1-Q6-eth4h-stop-declare) for the TP-doctrine route.
     The add also needs P5-GATE-TRAD''s per-leg 4h records. Write the outcome to PROP-BOOK-SEARCH-1095D.'
-- id: P5-Q5-4H-TRAD-fail
-  goal: G2
-  roadmap:
-  - L-PROP
-  value:
-    usd_at_stake_per_month: 100
-    confidence: 0.3
-  after:
-  - unit: RQ-20261016-e2db-06
-    verdict: fail
-  needs_authoring: 'RQ-20261016-e2db-06 FAILED: the 4h pair does not add on tradeify_1 at matched risk window-matched.
-    Close Q5''s 4h line for this account on PROP-BOOK-SEARCH-1095D, or register ONE matched-risk control at a lower
-    level (P5-Q5-E4H-VELO-0035 shape) only if the account''s Q2 sizing record points below 0.005.'
 - id: P5-Q5-4H-BRK-pass
   goal: G2
   roadmap:
@@ -101,19 +101,6 @@ nodes:
     on 2023-10..2025-04 and 2025-04..2026-10 separately; needs a ledger split, prop_ev_grid reads whole files) and
     read Programme 01''s eth_4h exit nodes (P1-Q4-eth4h-*, P1-Q6-eth4h-stop-declare) for the TP-doctrine route.
     The add also needs P5-GATE-BRK''s per-leg 4h records. Write the outcome to PROP-BOOK-SEARCH-1095D.'
-- id: P5-Q5-4H-BRK-fail
-  goal: G2
-  roadmap:
-  - L-PROP
-  value:
-    usd_at_stake_per_month: 100
-    confidence: 0.3
-  after:
-  - unit: RQ-20261016-e2db-05
-    verdict: fail
-  needs_authoring: 'RQ-20261016-e2db-05 FAILED: the 4h pair does not add on breakout_2 at matched risk window-matched.
-    Close Q5''s 4h line for this account on PROP-BOOK-SEARCH-1095D, or register ONE matched-risk control at a lower
-    level (P5-Q5-E4H-VELO-0035 shape) only if the account''s Q2 sizing record points below 0.005.'
 - id: P5-Q5-E4H-VELO-005
   goal: G2
   roadmap:
@@ -578,12 +565,14 @@ nodes:
   value:
     usd_at_stake_per_month: 150
     confidence: 0.3
-  after:
-  - node: P5-Q2-SIZING-BRK
     verdict: pass
-  needs_authoring: 'A smaller/room sizing dominated on breakout_2. Q2 rung 2: register the continuous grid between
-    the winning level and its neighbours (or a balance-conditioned rule: room in eval, flat when funded) on the
-    same ledgers, so the change applied is the refined level, not the first that dominated.'
+  after:
+  - {unit: RQ-20261021-7c2b-12, verdict: any}
+  needs_authoring: >-
+    Programme review 2026-10-21 authored rung 2 as RQ-20261021-7c2b-12 (A = flat 0.35%, the rung-1 winner; C0030, C0040,
+    CROOM35; same ledgers, 5 seeds). On its verdict: the dominating arm, or 0.35% if none, is the breakout_2 sizing
+    PROPOSAL (0.5% today); apply it only through the standing data-backed Tier-3 authorization with p_breach_max_dd <=
+    the reference on every seed, else the manager takes the record to the operator.
 - id: P5-Q2R2-SIZING-VELO
   goal: G2
   roadmap:
