@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the daily live-replay-parity run reports 0 of this class for this leg, with the cause root-caused, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261021-LRP-84007D08",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "live-replay-parity:xrp_pullback_2h:candle_mismatch",
+    "rerun": "python3 scripts/ops/live_replay_parity.py --base-url <tunnel to the live web-api> --days 7  (or label an issue `live-replay-parity`; the workflow .github/workflows/live-replay-parity.yml runs it daily and commits comms/live_parity/latest.json)"
+  },
+  "state": "queued",
+  "what": "Live-vs-replay parity: leg `xrp_pullback_2h` — candle_mismatch ×2 (REAL-MONEY roster) in window 2026-10-14T07:45:00+00:00..2026-10-21T07:45:00+00:00. MEASURED by scripts/ops/live_replay_parity.py; artifact comms/live_parity/2026-10-21.json. Examples: [{\"class\": \"candle_mismatch\", \"bar\": \"2026-10-20T14:00:00+00:00\", \"t\": \"2026-10-20T14:06:51+00:00\", \"live\": {\"side\": \"none\", \"adx\": 22.5599, \"close\": 1.3204, \"reason\": \"Strategy 'xrp_pullback_2h': no trend-pullback-confirmation setup on the latest bar (non-actionable).\"}, \"replay\": {\"sides\": [\"none\"], \"adx_range\": [23.6068, 23.7149], \"candidates\": [\"2026-10-20T14:00:00+00:00\"], \"diag_adx\": {\"final_bar_200\": 24.2807, \"closed_only_199\": 24.2485, \"closed_only_200\": 24.2483, \"next_bar_200\": 24.3105}, \"fine_candle\": {\"time\": 1792504800, \"low\": 1.3097, \"high\": 1.3366}}}, {\"class\": \"candle_mismatch\", \"bar\": \"2026-10-20T14:00:00+00:00\", \"t\": \"2026-10-20T14:09:18+00:00\", \"live\": {\"side\": \"none\", \"adx\": 22.5599, \"close\": 1.3204, \"reason\": \"Strategy 'xrp_pullback_2h': no trend-pullback-confirmation setup on the latest bar (non-actionable).\"}, \"replay\": {\"sides\": [\"none\"], \"adx_range\": [23.6068, 23."
+}
