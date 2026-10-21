@@ -37,23 +37,8 @@ def captured_reports():
 
 
 # ---------------------------------------------------------------------------
-# risk_counters: positions fetch + daily-loss DB failure
+# risk_counters: daily-loss DB failure
 # ---------------------------------------------------------------------------
-
-
-def test_positions_fetch_failure_reports_warn(captured_reports):
-    from src.runtime.risk_counters import inject_runtime_counters
-
-    bad_client = MagicMock()
-    bad_client.get_positions.side_effect = RuntimeError("exchange 503")
-
-    inject_runtime_counters({}, bad_client)
-
-    matches = [r for r in captured_reports
-               if r["action"] == "risk_counters" and r["status"] == "positions_fetch_failed"]
-    assert len(matches) == 1
-    assert matches[0]["level"] == "warn"
-    assert "exchange 503" in (matches[0]["reason"] or "")
 
 
 def test_daily_loss_db_failure_reports_warn(captured_reports, tmp_path):
@@ -61,7 +46,7 @@ def test_daily_loss_db_failure_reports_warn(captured_reports, tmp_path):
 
     # Point at a bad path so sqlite3.connect raises
     bogus_db = tmp_path / "does-not-exist-dir" / "tj.db"
-    inject_runtime_counters({"TRADE_JOURNAL_DB": str(bogus_db)}, exchange_client=None)
+    inject_runtime_counters({"TRADE_JOURNAL_DB": str(bogus_db)})
 
     matches = [r for r in captured_reports
                if r["status"] == "daily_loss_fetch_failed"]

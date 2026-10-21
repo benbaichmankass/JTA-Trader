@@ -5,6 +5,7 @@ from src.runtime.signal_writer import _write_ict_signals_from_meta  # noqa: E402
 from src.runtime.order_bridge import _signal_to_order_package  # noqa: E402
 from src.runtime.runtime_flags import _centralized_allocator_enabled, is_strategy_paused  # noqa: E402 (D11)
 from src.utils.signal_audit_logger import log_signal
+from src.runtime.liveness_watchdog import count_placed_accounts
 from src.runtime.risk_counters import inject_runtime_counters, inject_per_strategy_counters
 from src.news.news_pipeline import get_news_score
 from src.news.news_client import is_active as news_is_active
@@ -1195,7 +1196,7 @@ def run_pipeline(
         logger.warning("Trader is HALTED — flag file present. Skipping order placement.")
         result = {"status": "halted", "reason": "halt_flag_active"}
     else:
-        settings = inject_runtime_counters(settings, exchange_client)
+        settings = inject_runtime_counters(settings)
         _strat_name = (signal.get("meta") or {}).get("strategy_name")
         if _strat_name:
             settings = inject_per_strategy_counters(settings, _strat_name)
@@ -1600,6 +1601,12 @@ def run_pipeline(
                 "price": signal.get("entry") or signal.get("entry_price") or signal.get("price"),
                 "status": result.get("status"),
                 "reason": result.get("reason"),
+                **(
+                    {"accounts_placed": count_placed_accounts(
+                        result.get("multi_account_results"))}
+                    if result.get("status") == "multi_account_dispatched"
+                    else {}
+                ),
             }
         )
     except Exception as _audit_exc:  # noqa: BLE001

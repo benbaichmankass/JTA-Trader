@@ -84,7 +84,7 @@ def test_build_settings_from_env_keys():
     assert set(s.keys()) == {
         "exchange", "symbol", "timeframe",
         "risk_per_trade", "log_level", "tick_interval", "loop",
-        "MAX_DAILY_LOSS_USD", "MAX_OPEN_POSITIONS",
+        "MAX_DAILY_LOSS_USD",
         "HALT_FLAG_PATH",
     }
     assert s["exchange"] == "bybit"

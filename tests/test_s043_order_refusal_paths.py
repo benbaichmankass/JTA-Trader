@@ -189,18 +189,6 @@ class TestHaltFlagPrecedence:
         assert result["status"] == "halted"
         assert result["reason"] == "halt_flag_active"
 
-    def test_halt_flag_beats_max_open_positions(self, tmp_path):
-        flag = tmp_path / "halt.flag"
-        flag.write_text("halted")
-        settings = _settings(
-            HALT_FLAG_PATH=str(flag),
-            MAX_OPEN_POSITIONS="1",
-            CURRENT_OPEN_POSITIONS="5",  # would also fire
-        )
-        result = safe_place_order(_order(), settings, _Client())
-        assert result["status"] == "halted"
-
-
 # ---------------------------------------------------------------------------
 # RiskManager.evaluate — direct (allow, reason) tuple contract
 # ---------------------------------------------------------------------------

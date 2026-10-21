@@ -199,7 +199,7 @@ These apply to every task unless Ben explicitly overrides:
 Before any strategy goes live on mainnet:
 
 1. ✅ ≥50 validated backtest trades across multiple symbols/timeframes
-2. ✅ M3 risk caps enforced at order layer (`MAX_POSITION_USD`, `MAX_DAILY_LOSS_USD`, `MAX_OPEN_POSITIONS`)
+2. ✅ M3 risk caps enforced at order layer (`MAX_POSITION_USD`, `MAX_DAILY_LOSS_USD`; `MAX_OPEN_POSITIONS` retired 2026-10-21)
 3. ✅ Telegram kill-switch (`/halt`, `/resume`, `/status`) operational
 4. ✅ ≥2 weeks clean dry-run on staging service
 5. ✅ Tests prove risk refusal at the order layer
