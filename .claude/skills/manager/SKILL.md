@@ -649,6 +649,16 @@ This is not a third category of work. A build is a checklist row and a question 
 
 ## Weekly planning (Wednesday) and the weekly cycle (operator, 2026-10-13/14, binding)
 
+### Reviews first after the reset, planning Thursday morning (operator, 2026-10-19, binding)
+
+Operator, 2026-10-19 (in substance): *"right after the reset, we kick off all of the weekly reviews — performance review, the ML review, the audit, a regular system review — make sure especially the research and training pipelines are healthy, and then we go on to the planning session on Thursday morning based on those insights and knowing how much capacity we actually have left for the week."*
+
+1. **Order is binding.** After every weekly usage reset (Wed ~18:00Z) the manager starts ALL the weekly reviews first: performance, ML (+ frontier scan), the weekly audit, and a regular system/health review. Research and training pipeline health is checked explicitly in that pass.
+2. **Planning comes after, on Thursday morning,** and is built on those review outputs plus a **post-review capacity reading** (`python3 scripts/ops/spend_meter.py --capacity` after the reviews have spent their share) — the workplan's allotments are sized to the capacity actually left for the week, not to the full allowance.
+3. Triggers whose time contradicts this order are re-timed by the manager (a lane may propose, never edit them). The schedule table below is the pre-2026-10-19 timing until the manager re-times it; the order above wins where they disagree.
+4. Mirrored in [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 7b.
+
+
 Row `WEEKLY-PLANNING`; trigger `trig_01Pm8AMPiigZX9ndobeyT6dE`, Wednesdays **08:20Z**, ahead of the weekly usage reset
 (Wed ~18:00Z), so the plan is set before the reset and the new week starts with work already queued. First run 2026-10-14;
 planning doc: https://claude.ai/code/artifact/27fd3e97-ed3f-49ba-be2c-5e56997df95a.
@@ -913,6 +923,18 @@ incident.
    on the checklist (`checklist.py header last_review '<json>'` after the cutover), then push. Per-item dispositions live on the
    pipeline items, so the next review sees what is new.
 
+**Prep always runs, and the scratch pad feeds it (operator, 2026-10-21, binding).** The operator, paraphrased from chat:
+*the prep for the daily review should happen whether or not I actually do it — I might not always have time, though you should
+try to remind me — prepare the summary and reports, send the summary to the bot so I can see it without going into the session,
+and take the notes from the past day's scratch pad (the Google Doc) and add those items to the work plan.* So every review run:
+- **Reads the scratch pad.** That is the Google Doc "Metis — Ideas inbox", read with the Google Drive connector. Every item added
+  since the last review is copied verbatim into `docs/claude/work/IDEAS.md` and triaged, in that run, into a checklist row, a
+  `research/queue` unit, or `killed` with a reason.
+- **Publishes a short work-plan status whether or not the operator joins.** It covers what moved, what is running, where work was
+  left off, the decisions waiting, the scratch-pad items and their homes, and the next step on the standing priorities.
+- **Sends that status to @claude_ict_comms_bot** with the `send-ping` system-action, so the operator can read it without opening the
+  session. It also sends one reminder that the review is ready. A review the operator skipped is still a review that ran.
+
 **Roadmap hook (2026-10-11).** After step 5, run `python3 scripts/ops/roadmap_map.py --report` and work its findings per § "The roadmap loop" (orphans, empty active milestones, an overdue weekly pass).
 
 ### Manager ↔ lane: PUSH plus POLL (operator directive 2026-10-04, binding)
@@ -1000,6 +1022,11 @@ Typical reasons:
 - **Context past ~300k tokens.** Cost per turn scales with context; the 2026-10-11 session reached 730k tokens and $165 by 2026-10-13.
 - **A natural boundary**, such as after a weekly planning pass or a review.
 - **Degraded recall.**
+
+**The rotation check is periodic, not remembered (operator ideas inbox, 2026-10-21).** The operator does not want to be the one
+who notices. So every run of § "The operating loop", and the first turn after every context compaction, starts with one check:
+call `get_session` on yourself and read `external_metadata.context_usage.used_tokens`. Past ~300k tokens, or with degraded recall,
+**plan** the handover for the next natural boundary and say so in that loop's operator line. Below that, carry on silently.
 
 **Never mid-incident, and never with a merge or deploy half-done.** Finish or hold it first.
 

@@ -1,0 +1,21 @@
+{
+  "id": "RETIRE-GLOBAL-POSCAP",
+  "title": "Retire the dead MAX_OPEN_POSITIONS guard + its broken risk_counters injection; fix liveness-watchdog false URGENT",
+  "phase": "now",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR DECISION 2026-10-21 ~18:40Z (popup), answer 'Retire it'. The question put: 'The live order path has no cap on how many positions are open at once. The old global cap (MAX_OPEN_POSITIONS) only exists in a legacy order function that nothing calls any more. Each real-money trade is still sized per account by its risk per trade, and a daily-loss guard exists.' Chosen option: 'Delete the dead guard and its broken counter (the log warning goes away). Rely on per-trade risk sizing plus the per-account daily drawdown switch.' Evidence: HEALTH-REVIEW-20261021 (PR #19341, session_01UsQDRwXzoHAQA1zRSAEumt) MEASURED safe_place_order has 0 production callers (src/runtime/orders.py; coordinator.py:977 says the same), and risk_counters logs 'bybit requires apiKey credential' (legacy unsuffixed BYBIT_API_KEY), so CURRENT_OPEN_POSITIONS is never injected. Pipeline items PI-20261021-0261021B-0001 (cap) and PI-20261021-20261021-0001 (watchdog counts refused/dry/side-filtered signals as actionable; false URGENT 2026-10-19T14:00Z) ride this row. Scope: remove the MAX_OPEN_POSITIONS check and the counter that cannot authenticate; leave MAX_DAILY_LOSS_USD semantics unchanged unless it shares the dead path (report, do not remove, if so); fix _count_actionable_signals to exclude refused/dry/side-filtered. Tier 2 (src/runtime): data-backed and operator-decided, so hold for a manager merge, then verify the warning stops in the trader log after deploy.",
+  "updated_at": "2026-10-21T18:38:21Z",
+  "updated_by": "session_01CSwhZWiw15rVCkjsJ8Cpuh",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 576
+}
