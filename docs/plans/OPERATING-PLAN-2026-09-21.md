@@ -758,11 +758,13 @@ register wearing a calendar.
 
 | row kind | where it comes from |
 |---|---|
-| **Cadenced sessions** | the daily sync; `/health-review`, `/performance-review`, `/ml-review` on their own cadences |
+| **Cadenced sessions** | the daily sync; `/health-review`, `/performance-review`, `/ml-review` on their own cadences — **weekly reviews run first after the weekly reset, planning follows** (below) |
 | **Decisions due** | pipeline rows whose `next_action` is `ask_operator` (§ 3b) |
 | **Monitoring due** | pipeline `due_when.check_every_days` coming up |
 | **Automated jobs** | cron cadences **read from the workflow files**, never retyped |
 | **Lanes running** | the checklist's `in_flight` rows with their spend |
+
+⚠️ **Weekly order: reviews right after the reset, planning Thursday morning** (operator, 2026-10-19, binding). Verbatim in substance: *"right after the reset, we kick off all of the weekly reviews — performance, ML, the audit, a regular system review — make sure especially the research and training pipelines are healthy, and then we go on to the planning session on Thursday morning based on those insights and knowing how much capacity we actually have left for the week."* The reset is Wed ~18:00Z; planning (Thursday morning) is built on the review outputs plus a post-review capacity reading (`spend_meter.py --capacity`). Contract and the trigger re-timing: [`.claude/skills/manager/SKILL.md`](../../.claude/skills/manager/SKILL.md) § "Weekly planning … and the weekly cycle".
 
 ⚠️ **The cron column is derived, not declared.** A schedule that states a
 cadence a second time is free to drift from the workflow that actually carries

@@ -649,6 +649,16 @@ This is not a third category of work. A build is a checklist row and a question 
 
 ## Weekly planning (Wednesday) and the weekly cycle (operator, 2026-10-13/14, binding)
 
+### Reviews first after the reset, planning Thursday morning (operator, 2026-10-19, binding)
+
+Operator, 2026-10-19 (in substance): *"right after the reset, we kick off all of the weekly reviews — performance review, the ML review, the audit, a regular system review — make sure especially the research and training pipelines are healthy, and then we go on to the planning session on Thursday morning based on those insights and knowing how much capacity we actually have left for the week."*
+
+1. **Order is binding.** After every weekly usage reset (Wed ~18:00Z) the manager starts ALL the weekly reviews first: performance, ML (+ frontier scan), the weekly audit, and a regular system/health review. Research and training pipeline health is checked explicitly in that pass.
+2. **Planning comes after, on Thursday morning,** and is built on those review outputs plus a **post-review capacity reading** (`python3 scripts/ops/spend_meter.py --capacity` after the reviews have spent their share) — the workplan's allotments are sized to the capacity actually left for the week, not to the full allowance.
+3. Triggers whose time contradicts this order are re-timed by the manager (a lane may propose, never edit them). The schedule table below is the pre-2026-10-19 timing until the manager re-times it; the order above wins where they disagree.
+4. Mirrored in [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 7b.
+
+
 Row `WEEKLY-PLANNING`; trigger `trig_01Pm8AMPiigZX9ndobeyT6dE`, Wednesdays **08:20Z**, ahead of the weekly usage reset
 (Wed ~18:00Z), so the plan is set before the reset and the new week starts with work already queued. First run 2026-10-14;
 planning doc: https://claude.ai/code/artifact/27fd3e97-ed3f-49ba-be2c-5e56997df95a.
