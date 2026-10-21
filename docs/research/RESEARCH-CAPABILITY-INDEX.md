@@ -288,6 +288,7 @@ uniqueness-weighted**. That is stricter than the plain harnesses in §1.
 | Per-candidate (features → forward net-R) dataset | `scripts/research/allocator_candidate_dataset.py` |
 | Walk-forward ranker quality | `scripts/research/allocator_ranker_eval.py` |
 | Within-leg confidence → full-cost R (M16 re-scope, RQ-20260930-601) | `scripts/research/m16_within_leg_confidence.py` |
+| Fold-level robustness of the committed Stage-0 evidence (fold concentration RQ-20260922-002, last-fold recency RQ-20260922-012, single-trade jackknife on alpaca_live RQ-20260922-001; `--rule 002\|012\|001`) | `scripts/research/evidence_fold_robustness.py` |
 | Within-cell veto information in a meta-model over costed harness trades (M19 S1-v0: walk-forward, purge + embargo, permutation null, confidence-only baseline; `--census` for the population, `--self-test`) | `scripts/research/meta_veto_walkforward.py` |
 | Does the LIVE news layer (score/veto/influence) add net R — replayed point-in-time over years of GDELT GKG headlines, never from the live log (NEWS-HIST-REPLAY; trade arm + signal-agnostic event study, pre-registered grading in code, leakage tests) | `scripts/research/news_hist_replay.py` (corpus: `news_hist_fetch.py`; candles: `news_hist_candles.py`) |
 | News-layer outcome test (WEPE G1): does the news `adjustment` stamped on order packages rank-predict taken-trade net R, full cost stack; counts veto log rows for the underpowered veto arm (`--input-dir` or live via diag_fetch) | `scripts/research/news_veto_eval.py` |

@@ -104,6 +104,14 @@ blocked_on:
       The evidence record names the config keys the fingerprint is taken over
       (or the harness records the fingerprint's source block verbatim), so a
       later session can date it without guessing what was hashed.
+  - kind: work_item
+    ref: RQ-EVIDENCE-006-KEYSET
+    what: >-
+      2026-10-21 PIPELINE-HEALTH-1021: owner row filed (checklist RQ-EVIDENCE-006-KEYSET, queued, unassigned).
+      The durable-store half is cleared: each evidence record's source_run is now a committed ledger.
+    clears_when: >-
+      The owning row is done and its closing observation is recorded; then git mv this file to research/queue/
+      and fill run.command.
 
 run:
   workflow: null

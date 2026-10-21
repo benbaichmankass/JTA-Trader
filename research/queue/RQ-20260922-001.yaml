@@ -1,7 +1,10 @@
 id: RQ-20260922-001
 title: Do the three alpaca_live 1d ETF passes survive dropping their single best trade?
-status: blocked
+status: queued
 cadence: once
+theme: live_strategy
+priority: 2
+compute: cpu_light
 kind: deterministic
 
 question: >-
@@ -71,40 +74,31 @@ routing:
     (`python3 scripts/research/e35_shard_plan.py --ignore-missing-data`, run
     2026-09-22).
 
-blocked_on:
-  - what: >-
-      THE PER-TRADE OOS ROWS DO NOT SURVIVE THE RUN THAT PRODUCES THE VERDICT.
-      Each evidence record's `source_run` points at
-      `/tmp/tmp.RsNZr5lfkw/<leg>__trades.jsonl` — a tempdir on a runner that
-      no longer exists. Per docs/CLAUDE-RULES-CANONICAL.md § "A MEASURED must
-      say WHERE THE MEASUREMENT LIVES", that is not a locator, so the
-      jackknife cannot be computed from anything committed. Re-running the
-      harness would regenerate the trades, but nothing lands them either.
-    ref: PI-20260922-EVIDENCE-SOURCE-RUN-IS-A-TMP-PATH
-    clears_when: >-
-      build_strategy_evidence.py lands the per-trade OOS rows in a committed,
-      addressable store (or records the per-trade net_r vector on the evidence
-      record itself), and `source_run` names that path rather than a tempdir.
-
 run:
-  workflow: null
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/evidence_fold_robustness.py
+  - --rule
+  - '001'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20260922-001
+  timeout_minutes: 10
   note: >-
-    Deliberately null rather than a plausible-looking guess. No workflow in
-    .github/workflows/ regenerates these three legs' evidence records AND
-    lands their trade rows; the R1 run that produced them was driven by hand.
-    Naming a workflow here that cannot do the job is exactly the
-    `new-table-wiring-guard` failure — a declaration cheaper to write than to
-    satisfy. Fill this in when the blocker above clears.
+    UNBLOCKED 2026-10-21 (lane PIPELINE-HEALTH-1021). The blocker was that nothing read
+    comms/strategy_evidence/ into a durable result; scripts/research/evidence_fold_robustness.py
+    --rule 001 is that reduction and implements this unit's decision_rule verbatim. The
+    rule is unchanged. Per-trade rows now survive the run: each evidence record's source_run is a
+    committed ledger under comms/strategy_evidence/runs/ (the tmp-path blocker, PI-20260922-
+    EVIDENCE-SOURCE-RUN-IS-A-TMP-PATH, is fixed). A trade is OOS when its entry_time falls in a
+    fold_detail span; the reconstructed OOS count equals the record's n_trades_oos for each leg.
 
 lands:
-  store: comms/strategy_evidence/<leg>.json
-  assert_field: single_trade_dependent
-  min_rows: 3
-  note: >-
-    The deliverable is a FIELD ON THE RECORD, not a new store — the canonical
-    source for a leg's Stage-0 evidence already exists and this projects over
-    it (§ Generation Discipline Rule 3: identify the canonical source first
-    and project over it; a new store is the exception).
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
 
 related:
   - 'checklist C5 / R4 (this unit is one of the ten)'

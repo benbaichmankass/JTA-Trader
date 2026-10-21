@@ -1,7 +1,12 @@
 id: RQ-20260930-901
 title: Fresh-holdout re-grade of ONE cell — ada_pullback_2h vol_trail vt_hot90_t2.5 (PR #14053), data after 2026-09-29 only
-status: blocked
+status: queued
 cadence: once
+theme: live_strategy
+priority: 3
+not_before: '2027-06-08T00:00:00Z'
+unblocked: >-
+  2026-10-21 PIPELINE-HEALTH-1021: accrual gate expressed as the dispatcher's own not_before, from this unit's own measured rate (0.099 trades/day -> n>=25 after 2026-09-29 at ~2027-06-08). The rate is a point estimate; a run before n clears grades insufficient_base, which is not evidence either way.
 kind: experiment
 
 question: >-
@@ -22,16 +27,6 @@ why_not_inferential: >-
   One pre-named cell, one fixed rule, no cell selection: the sweep runs all
   cells but ONLY vt_hot90_t2.5 is graded, and no other cell can be substituted
   after the result is seen.
-
-blocked_reason: >-
-  Holdout data is thin. Rate MEASURED from the committed corpus row (run_id
-  2026-09-29T00:56:49.355532+00:00, split 2025-05-23): 49 base OOS trades over
-  2025-05-23 -> 2026-09-28 (493 days) = 0.099 trades/day (~3 per month). The
-  floor below (n >= 25 base OOS trades after 2026-09-29) is therefore expected
-  at 25 / 0.099 = ~252 days -> ~2027-06-08 (earlier or later with the trade
-  rate; the rate is a point estimate, not a guarantee). Until then a run would
-  grade insufficient_base, which is not evidence either way. Unblock (manager) when a dry
-  sweep with --split-mode date --split 2026-09-29 reports base_trades_OOS >= 25.
 
 power:
   expected_n: 25

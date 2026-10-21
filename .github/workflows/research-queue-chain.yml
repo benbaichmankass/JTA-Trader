@@ -1,0 +1,81 @@
+# research-queue-chain: keep the research dispatcher's cadence event-driven.
+#
+# WHY (PIPELINE-HEALTH-1021, MEASURED 2026-10-21 from the Actions API):
+#   research-queue-dispatch.yml's `20 * * * *` cron is not what makes it run hourly. GitHub created
+#   its `schedule` runs 04:56, 10:14, 15:18 on 2026-10-21 (3-5 h apart), and schedule-keeper's own
+#   `7 * * * *` floor fired at 10:04, 12:27, 15:12, 17:40. Everything between those came from the
+#   keeper's `push`-to-main trigger -- so the dispatcher's cadence was bounded by how often something
+#   merged to main. Whenever main went quiet (10:42 -> 12:14 on 2026-10-21, 94 min with no keeper run
+#   at all) the dispatcher sat idle with 20-70 units runnable: the 75-135 min gaps the research
+#   watchdog (dispatcher / github_runner checks) self-healed on 10-19 and 10-21, and the 3.5 h
+#   `dispatcher_age_h` breach. github_runner capacity is 3 slots per cycle, so every missed cycle is
+#   3 fewer fires and the low-value themes (regime) starve behind money-first ranking.
+#
+# WHAT: when a dispatch run COMPLETES (any conclusion -- a failed or skipped run must not break the
+#   chain), wait until 60 min after that run was CREATED, then dispatch the next one unless a newer
+#   run already exists (cron or keeper got there first -- that run's own completion re-arms the
+#   chain). `workflow_run` is an event, not a schedule, so it does not depend on the throttled
+#   scheduler. The dispatcher's own `concurrency: research-queue-dispatch` group still serialises
+#   runs, `dispatch_queue.py` still refuses to re-fire a unit with an open stamp PR, and a
+#   `workflow_dispatch` by github-actions[bot] already means FIRE (research-queue-dispatch.yml
+#   `env.FIRE`), exactly as for the keeper. This workflow changes WHEN a cycle starts, never what
+#   it decides. It adds no gate and halts nothing.
+#
+# FAILURE: if this job itself fails, schedule-keeper (push + cron) and the cron are unchanged
+#   fallbacks, and the research watchdog still self-heals; a red run here is reported by
+#   claude-run-failure-alert like any other.
+name: research-queue-chain
+
+on:
+  workflow_run:
+    workflows: ["research-queue-dispatch"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      after:
+        description: "Bootstrap: treat this ISO time as the previous run's creation time (default: now - 60 min => dispatch immediately)"
+        required: false
+        default: ""
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: research-queue-chain
+  cancel-in-progress: false
+
+env:
+  CYCLE_MIN: "60"
+
+jobs:
+  chain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - name: Wait for the next slot, then dispatch unless a newer run exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PREV_CREATED: ${{ github.event.workflow_run.created_at || inputs.after }}
+        run: |
+          set -euo pipefail
+          now=$(date -u +%s)
+          if [ -z "${PREV_CREATED}" ]; then prev=$(( now - CYCLE_MIN*60 )); else prev=$(date -u -d "${PREV_CREATED}" +%s); fi
+          target=$(( prev + CYCLE_MIN*60 ))
+          wait=$(( target - now ))
+          if [ "$wait" -gt $(( CYCLE_MIN*60 )) ]; then wait=$(( CYCLE_MIN*60 )); fi
+          if [ "$wait" -gt 0 ]; then
+            echo "previous dispatch run created $(date -u -d @${prev} +%FT%TZ); next slot in ${wait}s"
+            sleep "$wait"
+          fi
+          # Any dispatch run created after the previous one means the chain is already carried
+          # (cron or keeper). Its own completion fires this workflow again.
+          newer=$(gh api "repos/${REPO}/actions/workflows/research-queue-dispatch.yml/runs?per_page=5" \
+                    --jq "[.workflow_runs[] | select((.created_at | fromdateiso8601) > ${prev})] | length")
+          if [ "${newer}" -gt 0 ]; then
+            echo "::notice::${newer} dispatch run(s) already created since the previous one -- chain is carried, nothing to do"
+            exit 0
+          fi
+          echo "no dispatch run since $(date -u -d @${prev} +%FT%TZ): dispatching the next cycle"
+          gh workflow run research-queue-dispatch.yml --repo "${REPO}" --ref main

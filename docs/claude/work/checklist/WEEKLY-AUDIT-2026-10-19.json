@@ -1,0 +1,32 @@
+{
+  "id": "WEEKLY-AUDIT-2026-10-19",
+  "title": "Weekly audit 2026-10-19 (run 2026-10-21 after skipped Monday): core C1-C9 + deep pass 3 DESIGN CRITICISM",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": "opus",
+  "ceiling_usd": 15,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    19340
+  ],
+  "blocked_on": [],
+  "note": "Dispatched by manager session_01VduHYzdaXe27wTDBLSu8ao, ceiling $15. Monday run skipped during usage wind-down; run 2026-10-21. Report docs/reviews/2026-10-19-weekly-audit.md, PR #19340 (self-land). 10 findings: 1 fixed in PR, 9 rows (+1 design row), 1 pipeline item; 6 stale in_flight rows corrected. Spend: not readable from inside this session.",
+  "updated_at": "2026-10-21T18:34:17Z",
+  "updated_by": "session_014UeddhjFnc6fSA41bo5V65",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "observation": {
+    "what": "PR #19340 merged to main and the 10 AUD-20261019-* rows are visible on the Workflow page (GET /api/bot/work/checklist)",
+    "how_to_check": "git log origin/main --grep=#19340; curl -sS https://ict-bot.duckdns.org/api/bot/work/checklist | grep -c AUD-20261019",
+    "due_by": "2026-10-23"
+  },
+  "writeback": {
+    "roadmap": "none: audit run; findings filed as AUD-20261019-* rows carrying roadmap L-OPS, no milestone measure changed",
+    "arch": "none: no architecture change; one read-only audit instrument fix"
+  },
+  "_seq": 576
+}

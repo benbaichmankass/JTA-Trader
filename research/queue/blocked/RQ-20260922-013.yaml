@@ -1,7 +1,7 @@
 id: RQ-20260922-013
 title: Can avax_pullback_2h be refined into a leg whose edge is present in the RECENT window, or is the
   2026-07-22 demotion simply correct?
-status: blocked
+status: retired
 cadence: once
 kind: inferential
 question: avax_pullback_2h pools +12.6729R over n=45 net of the full cost stack and passes RULE-D1, while
@@ -105,3 +105,10 @@ run:
   note: Null because it is TRUE, not as a placeholder. Verified by reading the inputs of every candidate
     sweep workflow (see blocked_on). Naming one that cannot run this grid, or cannot honour the date-fixed
     split, would be the false declaration the queue schema exists to refuse.
+retired_reason: >-
+  2026-10-21 PIPELINE-HEALTH-1021: premise superseded. The unit asked for a parameter fix for avax_pullback_2h on
+  the strength of +12.6729R / n=45 / passes RULE-D1. The regenerated record (comms/strategy_evidence/
+  avax_pullback_2h.json, 2026-09-25) reads net_r_oos -1.3981 / n=57 / 2 of 4 folds positive: the leg no longer
+  passes, and config/accounts.yaml routes it to no account (only comments name it). Nothing money-bearing rides on
+  the grid, and no workflow can run a date-split pullback grid anyway. The registered rule stays in this file; if
+  the leg is ever re-proposed, re-register against the then-current record.
