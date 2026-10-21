@@ -166,13 +166,13 @@ Population: **54 routings / 26 distinct legs**, every account in `config/account
 2. **Trade 6131 (`spy_pullback_1h`) has `closed_at` stored as the epoch-millisecond string `1790835474843`** (= 2026-10-01T06:17Z) while the other 1,544 non-null `closed_at` values are ISO strings. A lexical date filter silently drops it; I normalised it before windowing. One row of 3,000 pulled.
 3. **`journalTrust` for the bybit_2 `trend_donchian_sol_prop` close (trade 6692) reads `known_divergent`**, and its mirror (6693, `bybit_portfolio`) reads `no_record`. I did not resolve what divergence it records; the figures above use the API `realizedPnl` as stored.
 
-## 7. Candidate follow-ups (for the walk-through; NOT run, NOT filed except where noted)
+## 7. Candidate follow-ups (for the walk-through; NOT run — items 1, 4 and 8 are filed in the pipeline)
 
-1. **Two real-money legs are `BELOW_BACKTEST` (Step 0):** `bybit_2` `xrp_pullback_2h` (n=17, −9.92R, pct 2.2) and `ada_pullback_2h` (n=15, −6.91R, pct 3.3). Per the skill, this is a fidelity/regime investigation unit, **not a demote**: attribute regime / cost / execution / overfit first. Highest-priority follow-up in this brief.
+1. **Two real-money legs are `BELOW_BACKTEST` (Step 0):** `bybit_2` `xrp_pullback_2h` (n=17, −9.92R, pct 2.2) and `ada_pullback_2h` (n=15, −6.91R, pct 3.3). Per the skill, this is a fidelity/regime investigation unit, **not a demote**: attribute regime / cost / execution / overfit first. Highest-priority follow-up in this brief. **Filed:** `PI-20261021-4ZLRFEV1-0001` (related open item `PI-20261021-LRP-8CA903B8`, an `ada_pullback_2h` candle-mismatch finding on the same real-money leg).
 2. **Giveback is the dominant leak on paper+mirror and is stable:** ~85–87% of peak R given back in W30 and 90-day; ~14–15% of ≥1R trades close ≤ 0. Input for exit-refinement / Programme 01 levers (the census unit `RQ-20261014-9807-01` has three landed result files on `main`; not read this session beyond that fact).
 3. **TP doctrine: 0/54 compliant.** Real-money-first: the 5 real-money entry_tp failures, then the 6 prop `unreachable` TPs (declared `tp_r: 6`, measured reach 0.9–1.9%).
-4. **`ict_scalp_mgc_15m` valuation/sizing check (§6-1)** before any `ib_paper` $ is used to grade IB legs; the seven `unverified` zeros should be backfilled or marked, not left at `0`.
+4. **`ict_scalp_mgc_15m` valuation/sizing check (§6-1)** before any `ib_paper` $ is used to grade IB legs; the seven `unverified` zeros should be backfilled or marked, not left at `0`. **Filed:** `PI-20261021-4ZLRFEV1-0002`.
 5. **Negative-R measured scalps:** `ict_scalp_sol_5m` (−1.01 R/cap-day, R-n=8), `ict_scalp_sol_15m` (−1.58, n=6), `ict_scalp_mgc_15m` (−0.72, n=8) — all `insufficient_n`; diagnose before any demote.
 6. **Positive-R legs to understand, not promote:** `ict_scalp_avax_5m` (R-n=19, +5.94 R/cap-day, 64% giveback share, the only measured positive leg), `ict_scalp_xrp_5m` (+4.21, n=8). Paper only.
 7. **Real-money is n ≤ 5 per leg in W30** — no leg is gradeable in-window; the question is accrual, not a verdict.
-8. **Tooling:** `giveback_census.py` ignores `--since-days` on the JSON-dump path (§5); epoch-ms `closed_at` on trade 6131 (§6-2). Both are small Tier-1 follow-ups; neither is filed by this lane.
+8. **Tooling:** `giveback_census.py` ignores `--since-days` on the JSON-dump path (§5); epoch-ms `closed_at` on trade 6131 (§6-2). Both are small Tier-1 follow-ups. **Filed:** `PI-20261021-4ZLRFEV1-0003`.
