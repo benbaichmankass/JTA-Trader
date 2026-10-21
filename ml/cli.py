@@ -620,6 +620,8 @@ def _cmd_drift_retrain(args: argparse.Namespace) -> int:
         delta=args.delta,
         min_window=args.min_window,
         max_window=args.max_window,
+        scan_days=args.scan_days,
+        recent_days=args.recent_days,
     )
     written = 0
     if args.log_path:
@@ -630,6 +632,7 @@ def _cmd_drift_retrain(args: argparse.Namespace) -> int:
             "total": len(decisions),
             "dispatch": [d.model_id for d in decisions if d.action == "dispatch"],
             "skip_no_drift": sum(1 for d in decisions if d.action == "skip_no_drift"),
+            "skip_stale_drift": sum(1 for d in decisions if d.action == "skip_stale_drift"),
             "skip_no_manifest": sum(1 for d in decisions if d.action == "skip_no_manifest"),
             "skip_thin_data": sum(1 for d in decisions if d.action == "skip_thin_data"),
         },
@@ -1014,6 +1017,17 @@ def _build_parser() -> argparse.ArgumentParser:
     p_dr.add_argument(
         "--max-window", type=int, default=10_000,
         help="cap on per-head ADWIN window length (FIFO trim above this)",
+    )
+    p_dr.add_argument(
+        "--scan-days", type=float, default=14.0,
+        help="stream only this many days of real-time scores into ADWIN",
+    )
+    p_dr.add_argument(
+        "--recent-days", type=float, default=3.0,
+        help=(
+            "dispatch only when ADWIN's latest cut is at most this old; an "
+            "older cut is skip_stale_drift (a retrain cannot rewrite it)"
+        ),
     )
     p_dr.add_argument(
         "--log-path", default=None,

@@ -35,12 +35,22 @@ def _seed_configs(tmp_path: Path) -> Path:
     return configs
 
 
-def _write_shadow_log(log_path: Path, model_id: str, scores: list[float]) -> None:
-    base = datetime(2026, 6, 1, tzinfo=timezone.utc)
+def _write_shadow_log(
+    log_path: Path,
+    model_id: str,
+    scores: list[float],
+    *,
+    base: datetime | None = None,
+    step: timedelta = timedelta(minutes=1),
+) -> None:
+    # Default: the stream ENDS about now, so it sits inside the scan window
+    # and any cut in it is fresh.
+    if base is None:
+        base = datetime.now(timezone.utc) - step * (len(scores) + 1)
     with log_path.open("w") as fh:
         for i, score in enumerate(scores):
             fh.write(json.dumps({
-                "predicted_at_utc": (base + timedelta(minutes=i)).isoformat(),
+                "predicted_at_utc": (base + step * i).isoformat(),
                 "model_id": model_id,
                 "stage": "shadow",
                 "score": score,
@@ -127,7 +137,7 @@ def test_backfill_records_excluded_from_detector(tmp_path: Path):
     reg = _seed_registry(tmp_path)
     cfg = _seed_configs(tmp_path)
     log = tmp_path / "shadow.jsonl"
-    base = datetime(2026, 6, 1, tzinfo=timezone.utc)
+    base = datetime.now(timezone.utc) - timedelta(minutes=401)
     with log.open("w") as fh:
         for i in range(400):
             fh.write(json.dumps({
@@ -144,6 +154,59 @@ def test_backfill_records_excluded_from_detector(tmp_path: Path):
     )
     assert decisions[0].action == "skip_thin_data"
     assert decisions[0].n_observations == 0
+
+
+def test_stale_cut_is_not_dispatched(tmp_path: Path):
+    # DRIFT-REMEDIATION-9: a step that happened 6 days ago and has been flat
+    # since is a past excursion, not a head that is drifting now. A retrain
+    # cannot rewrite those scores, so it must not be dispatched on every scan.
+    reg = _seed_registry(tmp_path)
+    cfg = _seed_configs(tmp_path)
+    log = tmp_path / "shadow.jsonl"
+    scores = [0.1] * 200 + [0.9] * 400
+    # Hourly cadence: 600 obs span 25 d, so the step (at obs 200) is ~16 d old
+    # and ADWIN fires shortly after it.
+    now = datetime.now(timezone.utc)
+    _write_shadow_log(log, "drift-head", scores,
+                      base=now - timedelta(hours=600), step=timedelta(hours=1))
+    d = evaluate_models(
+        registry_root=reg, shadow_log=log, configs_root=cfg,
+        scan_days=30.0, recent_days=3.0, now_utc=now,
+    )[0]
+    assert d.drift_detected is True
+    assert d.action == "skip_stale_drift"
+    assert d.last_drift_age_days is not None and d.last_drift_age_days > 3.0
+    assert d.last_drift_at is not None
+
+
+def test_recent_cut_is_dispatched_with_its_age(tmp_path: Path):
+    reg = _seed_registry(tmp_path)
+    cfg = _seed_configs(tmp_path)
+    log = tmp_path / "shadow.jsonl"
+    now = datetime.now(timezone.utc)
+    _write_shadow_log(log, "drift-head", [0.1] * 200 + [0.9] * 200,
+                      base=now - timedelta(minutes=401))
+    d = evaluate_models(
+        registry_root=reg, shadow_log=log, configs_root=cfg, now_utc=now,
+    )[0]
+    assert d.action == "dispatch"
+    assert d.last_drift_age_days is not None and d.last_drift_age_days < 0.5
+
+
+def test_records_older_than_scan_window_are_not_streamed(tmp_path: Path):
+    # The excursion is 20 d old; with a 14 d scan window it is not even seen.
+    reg = _seed_registry(tmp_path)
+    cfg = _seed_configs(tmp_path)
+    log = tmp_path / "shadow.jsonl"
+    now = datetime.now(timezone.utc)
+    _write_shadow_log(log, "drift-head", [0.1] * 100 + [0.9] * 100,
+                      base=now - timedelta(days=20), step=timedelta(minutes=10))
+    d = evaluate_models(
+        registry_root=reg, shadow_log=log, configs_root=cfg,
+        scan_days=14.0, now_utc=now,
+    )[0]
+    assert d.action == "skip_thin_data"
+    assert d.n_observations == 0
 
 
 def test_write_log_appends_jsonl(tmp_path: Path):
