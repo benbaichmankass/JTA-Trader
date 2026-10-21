@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "operator decides wire-or-retire for the global guard and, if wired, a journal window with an actionable Bybit signal shows no 'requires apiKey' from risk_counters and CURRENT_OPEN_POSITIONS injected; or killed with stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261021-0261021B-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "health-review-2026-10-21:max-open-positions-guard",
+    "rerun": "grep -rn 'safe_place_order(' src --include=*.py (expect a production caller); scripts/ops/diag_fetch.sh journalctl?unit=ict-trader-live.service&since=<iso>&limit=200 and look for 'requires \"apiKey\"' from src.runtime.risk_counters"
+  },
+  "state": "queued",
+  "what": "MAX_OPEN_POSITIONS global guard is NOT enforced on any real-money book (bybit_2/bybit_portfolio). Two independent causes, both MEASURED 2026-10-21 (health review): (1) src.runtime.orders.safe_place_order, which holds the guard, has ZERO production callers in src/ (grep: only tests and scripts/smoke_test_trade.py) -- matches CA-A02 safe-place-order-guards-have-no-callers; (2) separately, the process-level Bybit client lacks credentials: journal 2026-10-21T15:01:42Z src.runtime.risk_counters 'inject_runtime_counters: exchange positions error - bybit requires \"apiKey\" credential' on an actionable ETHUSDT buy, so CURRENT_OPEN_POSITIONS is never injected (guard would be skipped even if wired). UNVERIFIED: whether MAX_OPEN_POSITIONS is set in the live unit env (no read-only diag route exposes env; CA-A15 said unset in config/env). Per-account caps, if any, are a different mechanism and were not assessed. Fix is Tier-2/3 (src/runtime/orders.py, risk_counters.py, or retire the dead guard and say so in docs): needs operator decision on whether a global cap is wanted."
+}
