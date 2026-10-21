@@ -1,5 +1,7 @@
 # Manager handover 2026-10-21: session_01VduHYz… → session_01CSwhZWiw15rVCkjsJ8Cpuh
 
+> **Doc status:** `unknown` · category `unknown` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../../DOCUMENT-INDEX.md)
+
 Operator asked for the roll at ~18:15Z (the old manager's context had reached ~680k tokens). The old manager handed over in a
 trigger prompt, not a committed doc, so the **new** manager wrote this record from its own reading
 (`list_triggers` / `get_trigger`, 2026-10-21 ~18:12–18:16Z).
