@@ -26,7 +26,7 @@ slos:
   # grading.graded_at is a DATE (measured 2026-10-16: 495 of 495 values are YYYY-MM-DD), so latency is in whole
   # DAYS: 0 = graded the day its newest result row landed.
   grade_latency_p50_d:
-    what: "days from a unit's newest result row (on or before graded_at) to grading.graded_at, p50 over units graded in the last 7 d"
+    what: "days from a unit's newest result row to the grading stamped on or after it, p50 over units whose newest result landed in the last 7 d (re-grades of an unchanged old result are not latency; fresh results with no grading are counted in ungraded_fresh)"
     op: max
     threshold: 1             # the grader runs 6-hourly: most results are graded the same or next day
   grade_latency_p90_d:
