@@ -4,6 +4,38 @@
 
 > **2026-10-14 amendment (lane `IN-TRADE-EXIT-MODEL`, operator direction via the manager):** the exit line now has a stated **destination — Q8, the in-trade exit model**: at every bar of an open trade, P(SL before TP | state now), and an exit-now rule graded net of cost. Q1–Q7 are the rungs that feed it or ship alongside it; nothing below was removed. The operator's words are verbatim on checklist row `IN-TRADE-EXIT-MODEL`.
 
+## Programme review 2026-10-21 (lane RESEARCH-PROGRAMME-REVIEW-1021)
+
+Population: units whose `grading.graded_at` is 2026-10-14..2026-10-21 and whose file names this programme (`programme:` or `programme_node.programme`), read from `research/queue/*.yaml` on main at 2026-10-21 ~18Z. Units with no programme field (486 of the 657 graded in the window) are counted in the research map, not here.
+
+**Graded in the window: 122** — 23 pass, 95 fail, 2 indeterminate, 2 not yet graded.
+
+**What was learned**
+- The exit levers that confirm are **momentum/stall-keyed trails and stall-keyed TP pull-ins**, not fixed brackets. Confirmed on a
+  window they were not chosen on: ADX-conditioned trail on `trend_donchian_eth_4h` (RQ-20261016-005, 5 of 6 folds) and
+  `trend_donchian_xrp_4h` (-015, 4 of 4); momentum-stale time stop on `slv_pullback_1d` (-016); measured-move TP width 0.5 on
+  eth_4h (RQ-20261018-007); trail_mult 4.5 on `trend_donchian_eth_prop` priced on all three prop books (-028/-040/-041).
+- The Q9 runway fill passed the same lever family on more legs (stall decay on xrp/ada/sol 4h; ADX trail on xrp_4h, ief/slv/gld 1d;
+  fixed 3R/4R TP on sol_4h; bar-close stale exit on slv_1d). These are leads per leg; each still needs Q6 parity.
+- The 95 FAILs are mostly single-cell exit arms on the m20 grid: they close cells, not families.
+
+**Answered / unlocked / retired**
+- Answered: Q3/Q4 for eth_4h, xrp_4h, slv_1d (confirmed). Coverage: Q1 is carried by the weekly census RQ-20261014-9807-01 and
+  Q5 by blocked/RQ-20261014-9807-05; both are now in the tree's `questions:` map.
+- Unlocked but **build-gated, not unit-gated**: P1-Q6 declares wait on build row **MOMENTUM-LEVERS-LIVE** (the ADX/momentum levers are
+  harness-only, `src/research/trail_levers.py`) and on a `stall_pull_in` rule in `src/runtime/tp_revision.py`. The authoring queue's
+  top P1 nodes (Q6 eth4h measured-move, eth4h stop, xrp4h, slv1d) are Tier-3 declare drafts, not research units.
+
+**Next 3–4 weeks (pre-registered)**
+- Queued P1 units (3) plus the generated m20/e35 exit families (29 queued). No new P1 unit was authored this review: the binding
+  constraint is the two builds above, and research without a live producer cannot reach a declare.
+- Week of 10-26: once MOMENTUM-LEVERS-LIVE lands, Q6 parity on 1–2 live trades per confirmed leg, then the held declare PRs.
+
+**Cross-programme feeds**
+- → P5: trail 4.5 on eth_prop is priced on all three books; the prop EV read (P5) decides adoption.
+- ← P7: the daily Donchian (ef5d-03, D55) is a new position-trade family that will need exit processing if its transfer
+  (RQ-20261021-7c2b-04) passes.
+
 ## 1. End goal and measure
 
 **Goal.** Every leg's bracket is a prediction that is kept honest through the trade: the TP at entry is where the leg's own history says the move runs out, it is re-estimated every bar from current conditions and moved through the existing `{"tp"}` verdict path, and the SL is the point where we stop waiting — a rule, not a hope. The giveback (a trade that reaches deep profit, pulls back and stops out) shrinks because the TP is reachable and the stop tightens when the thesis dies.

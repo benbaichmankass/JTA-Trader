@@ -6,6 +6,24 @@
 
 How this fits the work system: a programme is a *plan*, not a third category of work (CLAUDE.md § "Two categories"). Each question below becomes a `research/queue/` unit and each build a checklist row, every one carrying a `roadmap` milestone ref. Full plan per programme: `01-ACTIVE-TRADE-MANAGEMENT.md`, `02-AI-TRADER.md`, `03-STRATEGY-IMPROVEMENT.md` (lane P3-STRATEGY-PROGRAMME), `04-MACRO-SLEEVE.md` (lane P4-MACRO-PROGRAMME) and `05-PROP.md` (lane P5-PROP-PROGRAMME) are all landed (2026-10-14); none is owed.
 
+## Programme review 2026-10-21 (lane RESEARCH-PROGRAMME-REVIEW-1021)
+
+**Population:** every unit in `research/queue/*.yaml` with `grading.graded_at` 2026-10-14..2026-10-21, read on main at ~18Z:
+**657 graded** -- 171 carry a programme field (P1 122, P2 7, P3 2, P4 20, P5 10, P6 1, P7 9) and 486 do not (by theme:
+new_strategy_prop 157, live_strategy 170, ml_health 58, regime 53, macro 22, infra 13, none 13). Per-programme readings are in
+each plan's "Programme review 2026-10-21" section.
+
+| feed | from -> to | state |
+|---|---|---|
+| momentum/stall-keyed exit levers confirmed on eth_4h, xrp_4h, slv_1d (+ Q9 leads) | P1 -> live roster | build-gated: MOMENTUM-LEVERS-LIVE, `stall_pull_in` TP rule |
+| trail 4.5 on eth_prop, priced on three prop books | P1 -> P5 | EV read done; adoption is a P5/Tier-3 call |
+| breakout_2 sizing 0.5% -> 0.35% dominates (RQ-20261016-029) | P5 -> config | NOT applied; rung 2 queued (7c2b-12) |
+| family breadth on six new perps (7c2b-06..-10) | P3 -> P5 (1h cells), P1 (exit processing of any new leg) | queued |
+| daily Donchian D55 / LONG filter transfers (7c2b-03/-04) | P7 -> P3 overlap read | queued |
+| ATR-percentile scale error (ef5d-06/-07) | P7 -> P3 Q5 instrument fidelity | harness guard landed; re-asks 7c2b-01/-02 |
+| PPI drift real but sub-cost | P4 -> (an ES/NQ leg to tilt) | parked until such a leg exists |
+| ml_health supply | P2 -> infra builds | build-bound: 15 blocked ml_health units, 0 runnable |
+
 ## 1. The programmes, in order
 
 | # | programme | goal | the measure it moves | roadmap | core questions, in dependency order |

@@ -1425,6 +1425,14 @@ def main(argv: List[str]) -> int:
                         "regime cell proxy, rolling log-return vol, 20-bar return, UTC "
                         "hour/dow) to every --emit-trades row. Existing keys unchanged.")
     args = p.parse_args(argv[1:])
+    # The ATR percentile these flags compare against is rolling rank(pct=True), a 0-1 scale.
+    # A value > 1 (e.g. "50" meant as the 50th percentile) skips every bar once the window
+    # fills, so the run silently measures only warm-up entries (RQ-20261018-ef5d-06/-07).
+    for _flag in ("vol_skip_above_pctl", "vol_skip_below_pctl",
+                  "trail_vol_above_pctl", "trail_vol_below_pctl"):
+        _v = getattr(args, _flag, 0.0) or 0.0
+        if not 0.0 <= float(_v) <= 1.0:
+            p.error(f"--{_flag.replace('_', '-')} {_v} is outside [0, 1]: the ATR percentile is a 0-1 rank")
     # --- data-source resolution (BL-20260912-FIFTEEN-MORE-HARNESSES...) ---
     # --data/--symbol default to None so a bare invocation REFUSES rather
     # than silently reaching the 5,001-row BTC fixture (docs/claude/work/
