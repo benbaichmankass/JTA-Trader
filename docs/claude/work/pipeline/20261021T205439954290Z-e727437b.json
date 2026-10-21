@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "the operator decides retire-or-wire and a PR lands it; or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261021-UTQZPZBN-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "session_01FShRZU9iZpU36ZuTqzpZbN (RETIRE-GLOBAL-POSCAP lane, PR #19375)",
+    "rerun": "grep -rn safe_place_order src/ (expect only comments/definition); grep -rn MAX_DAILY_LOSS_USD src/"
+  },
+  "state": "queued",
+  "what": "MAX_DAILY_LOSS_USD is enforced only inside safe_place_order, which has no production caller in src/ (only scripts/smoke_test_trade.py; Coordinator.multi_account_execute is the live order path). inject_runtime_counters still computes CURRENT_DAILY_LOSS_USD for it, so the global daily-loss guard is inert. Left in place by RETIRE-GLOBAL-POSCAP (scope: do not change MAX_DAILY_LOSS_USD semantics). The live daily-loss control is the per-account daily_dd_switch (default off, armed per account in accounts.yaml). Decide: retire the dead guard and counter, or wire it to the live path."
+}
