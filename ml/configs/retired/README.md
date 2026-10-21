@@ -66,3 +66,4 @@ vt00 threshold arms ×4, baselines ×3) are plausible future drops but were left
 here because no citable verdict was found for them this pass; a manifest retired without
 a quotable verdict is the same anti-pattern as a guard that is cheaper to lie to than to
 satisfy.
+| `baseline-setup-quality.yaml` | `setup-quality-baseline-v0` | 2026-10-21 | **Operator decision 2026-10-21 (popup ~22:15Z, "Retire it (Recommended)"):** stop training it to free trainer time and memory. Evidence: PI-20261021-K43EKTZA-0001 -- degenerate, flat scores after 172 retrains. Setup quality may return later as a new model with a proper design. Revert: move the file back to `ml/configs/`. Registry stage flip is a trainer-VM `promote-stage` after merge. |
