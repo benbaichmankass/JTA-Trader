@@ -13,8 +13,8 @@
     19354
   ],
   "blocked_on": [],
-  "note": "MERGED, NOT DEPLOYED, NOT OBSERVED. Operator decision 2026-10-21 ~18:45Z popup 'Apply 0.35%'. #19354 merged as e6079c63 (2026-10-21T22:11Z): config/accounts.yaml breakout_2.risk.risk_pct 0.005 -> 0.0035 (~$17.50/ticket on $5k; ruleset flat cap max_risk_usd 25 untouched). Gate (checked before the edit): RQ-20261016-029 p_breach_max_dd, C0035 vs A, trend_donchian_eth_prop, 5 seeds x 4 modes: C0035 lower in 40/40 (seed1 realized 0.991 -> 0.838). Also comment-only fix on ada_pullback_2h vol_skip_above_pctl. Revert = restore risk_pct 0.005. At 22:13Z /api/bot/config still showed risk_pct 0.005 on deployed cbe1910b6/9238aaf15 (pre-merge), i.e. not yet deployed.",
-  "updated_at": "2026-10-21T22:13:28Z",
+  "note": "MERGED, NOT DEPLOYED, NOT OBSERVED. Operator decision 2026-10-21 ~18:45Z popup 'Apply 0.35%'. #19354 merged as e6079c63 (2026-10-21T22:11Z): config/accounts.yaml breakout_2.risk.risk_pct 0.005 -> 0.0035 (~$17.50/ticket on $5k; ruleset flat cap max_risk_usd 25 untouched). Gate (checked before the edit): RQ-20261016-029 p_breach_max_dd, C0035 vs A, trend_donchian_eth_prop, 5 seeds x 4 modes: C0035 lower in 40/40 (seed1 realized 0.991 -> 0.838). Also comment-only fix on ada_pullback_2h vol_skip_above_pctl. Revert = restore risk_pct 0.005. At 22:13Z /api/bot/config still showed risk_pct 0.005 on deployed cbe1910b6/9238aaf15 (pre-merge), i.e. not yet deployed.  [!] UPDATE 22:15Z (diag, read-only): git-sync pulled e6079c63d to disk and /api/bot/config shows breakout_2 risk_pct 0.0035, BUT /api/diag/version still shows the RUNNING trader at 9238aaf15 and restart_pending=true for ict-trader-live and ict-web-api. So: merged yes, on disk yes, config endpoint yes; trader PROCESS on e6079c63 NOT established; whether the trader re-reads accounts.yaml without a restart is NOT established (not checked in code). Check the next ticket's risk_usd, not just the config.",
+  "updated_at": "2026-10-21T22:15:18Z",
   "updated_by": "session_01QiBqpSraECtQBZf5YM2sYJ",
   "observation": {
     "what": "breakout_2 next 1-2 phone tickets sized at 0.35% risk (risk_usd ~ 17.5), after #19354 (e6079c63) is deployed",
