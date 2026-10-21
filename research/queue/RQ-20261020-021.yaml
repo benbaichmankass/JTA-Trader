@@ -4,7 +4,7 @@
 id: RQ-20261020-021
 title: 'Programme 01 Q9, runway fill: does a giveback stop after 2R of MFE replace the declared exit of
   tlt_pullback_1d on net R in 3 of 4 calendar folds over 2010-01..2026-10, at the Alpaca/ETF cost stack?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -124,3 +124,15 @@ generated:
   params:
     node: P1-Q9-tlt1d-giveback-replace
 last_dispatched_at: '2026-10-21T08:56:24+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-Q9-TLT1D-GIVEBACK-REPLACE
+  evidence:
+  - research/results/RQ-20261020-021/39573115809.jsonl
+  graded_at: '2026-10-21'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
