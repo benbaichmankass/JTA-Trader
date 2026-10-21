@@ -913,6 +913,18 @@ incident.
    on the checklist (`checklist.py header last_review '<json>'` after the cutover), then push. Per-item dispositions live on the
    pipeline items, so the next review sees what is new.
 
+**Prep always runs, and the scratch pad feeds it (operator, 2026-10-21, binding).** The operator, paraphrased from chat:
+*the prep for the daily review should happen whether or not I actually do it — I might not always have time, though you should
+try to remind me — prepare the summary and reports, send the summary to the bot so I can see it without going into the session,
+and take the notes from the past day's scratch pad (the Google Doc) and add those items to the work plan.* So every review run:
+- **Reads the scratch pad.** That is the Google Doc "Metis — Ideas inbox", read with the Google Drive connector. Every item added
+  since the last review is copied verbatim into `docs/claude/work/IDEAS.md` and triaged, in that run, into a checklist row, a
+  `research/queue` unit, or `killed` with a reason.
+- **Publishes a short work-plan status whether or not the operator joins.** It covers what moved, what is running, where work was
+  left off, the decisions waiting, the scratch-pad items and their homes, and the next step on the standing priorities.
+- **Sends that status to @claude_ict_comms_bot** with the `send-ping` system-action, so the operator can read it without opening the
+  session. It also sends one reminder that the review is ready. A review the operator skipped is still a review that ran.
+
 **Roadmap hook (2026-10-11).** After step 5, run `python3 scripts/ops/roadmap_map.py --report` and work its findings per § "The roadmap loop" (orphans, empty active milestones, an overdue weekly pass).
 
 ### Manager ↔ lane: PUSH plus POLL (operator directive 2026-10-04, binding)
