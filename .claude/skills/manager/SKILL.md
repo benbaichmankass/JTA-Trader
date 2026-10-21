@@ -1013,6 +1013,11 @@ Typical reasons:
 - **A natural boundary**, such as after a weekly planning pass or a review.
 - **Degraded recall.**
 
+**The rotation check is periodic, not remembered (operator ideas inbox, 2026-10-21).** The operator does not want to be the one
+who notices. So every run of § "The operating loop", and the first turn after every context compaction, starts with one check:
+call `get_session` on yourself and read `external_metadata.context_usage.used_tokens`. Past ~300k tokens, or with degraded recall,
+**plan** the handover for the next natural boundary and say so in that loop's operator line. Below that, carry on silently.
+
 **Never mid-incident, and never with a merge or deploy half-done.** Finish or hold it first.
 
 ### Steps
