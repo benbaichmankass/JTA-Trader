@@ -1,7 +1,8 @@
 id: RQ-20260922-010
 title: Can fvg_range_15m be given a Stage-0 number at all, and what is the minimum change that does it?
-status: blocked
+status: retired
 cadence: once
+compute: cpu_light
 theme: new_strategy_prop
 priority: 2
 kind: deterministic
@@ -135,3 +136,11 @@ related:
   - 'checklist E7 / C4 (wire the 9 orphan backtest harnesses) — the likely home of any harness change this unit specifies'
   - 'PI-20260922-R1-REMAINING-CORPUS (R1 filed the fvg_range harness gap; this asks whether it is closable)'
 last_dispatched_at: null
+retired_reason: >-
+  2026-10-21 PIPELINE-HEALTH-1021: ANSWERED, not blocked. The question was which existing harness can represent the
+  fvg_range family; scripts/backtest_fvg_range.py exists and comms/strategy_evidence/fvg_range_15m.json is a
+  coverage_state=measured, fidelity=faithful, harness=fvg_range record (net_r_oos -9.6953, n_trades_oos 17,
+  generated 2026-09-25). The unit's premise ("NO harness at all", leg trading real money on bybit_2) is false in the
+  field on both counts: the harness exists, and the leg was removed from every roster on 2026-10-05 (SOAK-GATE1,
+  config/accounts.yaml: its Stage-0 record fails RULE-D1; bybit_1 only, none on bybit_2 / bybit_portfolio).
+  Nothing remains to inventory.
