@@ -4,6 +4,35 @@
 
 **Standing (operator):** the news layer and WEPE are **not retired** (NEWS-ALPHA-PROGRAM directive 2026-10-12; WEPE-BUILDOUT 2026-10-08). The research queue is fed only from programme plans; this is P4's.
 
+## Programme review 2026-10-21 (lane RESEARCH-PROGRAMME-REVIEW-1021)
+
+Population: units whose `grading.graded_at` is 2026-10-14..2026-10-21 and whose file names this programme (`programme:` or `programme_node.programme`), read from `research/queue/*.yaml` on main at 2026-10-21 ~18Z. Units with no programme field (486 of the 657 graded in the window) are counted in the research map, not here.
+
+**Graded in the window: 20** — 7 pass, 13 fail.
+
+**What was learned**
+- The PPI m/m surprise -> equity-index drift holds: ES=F in BOTH sub-periods (RQ-20261014-4a4c-01/-02), the pre-release placebo
+  is null on ES and NQ (-03, 7769-01 FAIL as intended), and it extends to NQ=F (-04) and RTY=F (7769-02). It does NOT extend to
+  ZN=F (-05) or GC=F (7769-03).
+- **As a trade it fails net of cost**: the PPI-surprise sign book on ES (enter release-day close, hold 3 days) FAILED
+  (RQ-20261014-4a4c-06). The drift is real and too small to pay the cost stack on its own.
+- The other inflation surprises do not move ES forward returns: core CPI, core PCE, AHE, ISM prices paid, import prices, GDP
+  price index all FAILED (4a4c-07/-08, 7769-04..-07); CPI -> ZN forward also FAILED (7769-08).
+- Positive controls PASS (NFP, CPI, claims move ZN on the release day: 1fa6-01..-03), so the instrument can see an effect when
+  there is one. The expansion-regime sign flip for claims (1fa6-04) FAILED.
+
+**Answered / unlocked / retired**
+- Answered: P4-Q2's PPI line is a real but sub-cost effect; the inflation-surprise family beyond PPI is closed for ES forward
+  returns on this history. P4-Q4 (G2 PM-implied surprise) stays n-bound: not before 2026-11-07 (node P4-Q4-g2-rerun).
+
+**Next 3–4 weeks**
+- 14 P4 units are queued (macro theme runnable 6+3 against a share of 2 — supply exceeds weight). No new macro unit authored.
+- The open question worth asking next is a COMBINATION, not a new surprise: PPI surprise as a sizing/direction tilt on an
+  existing ES/NQ position leg (where it pays no extra entry cost). File as a P4 node when an ES/NQ leg exists to tilt.
+
+**Cross-programme feeds**
+- → P3: none until an index-future leg is on a roster.
+
 ## 1. End goal and measure
 
 **Goal.** A thesis-driven, weeks-horizon macro sleeve whose **conviction axes** each add net return through defined-risk instruments (debit verticals on `alpaca_options_paper`, `config/macro_theses.yaml::sleeve`), with every axis earning its place offline, against the naive floor, before it shapes a thesis.
