@@ -1,6 +1,6 @@
 # Weekly audit — 2026-10-19 (run 2026-10-21)
 
-> **Doc status:** `live` · category `evidence` · last verified `2026-10-21` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · lane `WEEKLY-AUDIT-2026-10-19` (session_014UeddhjFnc6fSA41bo5V65, dispatched by manager session_01VduHYzdaXe27wTDBLSu8ao) · window 2026-10-14 → 2026-10-21 · live reads captured 2026-10-21 18:13–18:20Z
+> **Doc status:** `unknown` · category `evidence` · last verified `2026-10-21` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · lane `WEEKLY-AUDIT-2026-10-19` (session_014UeddhjFnc6fSA41bo5V65, dispatched by manager session_01VduHYzdaXe27wTDBLSu8ao) · window 2026-10-14 → 2026-10-21 · live reads captured 2026-10-21 18:13–18:20Z
 >
 > Monday run skipped during the usage wind-down; run Wednesday. Deep pass = **3 DESIGN CRITICISM** (ISO week 43 mod 4 = 3). First weekly audit under the skill — there is no previous report, so C9 reads closed rows instead.
 
