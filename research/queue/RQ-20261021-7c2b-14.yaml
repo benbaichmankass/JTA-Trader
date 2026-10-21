@@ -1,0 +1,112 @@
+id: RQ-20261021-7c2b-14
+title: >-
+  Prop pace, transfer of the 2026-10-06 batch-1 PASS: does the pullback harness at its DEFAULT params on 1h clear Stage 0 on five perps
+  batch 1 never tested (BNB, LTC, BCH, DOT, BTC)?
+status: queued
+cadence: once
+theme: new_strategy_prop
+priority: 2
+kind: experiment
+question: >-
+  On Binance USD-M 1h candles for BNBUSDT/LTCUSDT/BCHUSDT/DOTUSDT/BTCUSDT over 2020-06-01..2026-10-20, does the pullback family at the
+  harness defaults batch 1 ran (no --param, no raw flags) pass the pooled Stage-0 rule with breadth?
+why_this_matters: >-
+  Batch 1 (RQ-20261006-005..031, prop pace search) found its only 1h PASSes in the pullback family on ADA, DOGE and LINK at harness
+  defaults, each one symbol, one 1095-day window. A per-symbol pass chosen from a batch is a LEAD; the family claim needs a transfer
+  to symbols it was not chosen on. Prop books want pace: 1h legs resolve in hours to days.
+power:
+  expected_n: 1500
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    Batch 1 MEASURED ~500 entries per symbol per 1095 d at 1h for this family (RQ-20261006 pullback cells); five cells x 6.3 y -> well
+    above the 88 pooled floor (ESTIMATE).
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on fetched public candles over a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ1021-7C2B14-PULLBACK-1H-TRANSFER
+  registered_at: '2026-10-21'
+  registered_before_run: true
+  statistic: >-
+    harness_stage0.py --family pullback --timeframe 1h, one arm B (harness defaults); per cell and pooled across five cells.
+  rule: >-
+    PASS iff B passes (pooled + breadth) -> the passing cells are prop candidates: node P5-Q6 (prop EV/survival on the B6 bar) and a
+    same-book overlap read against the live 2h pullback legs. FAIL -> the batch-1 1h pullback PASSes were symbol fits. INDETERMINATE
+    otherwise. Verdicts are the script's own (scripts/research/harness_stage0.py, grades fixed by these flags): per CELL pass iff n
+    >= n_floor AND net_r > 0 AND >= fold_majority of the calendar folds net > 0, fail iff n >= n_floor and not, indeterminate iff n
+    < n_floor; per ARM pass iff pooled n >= pooled_n_floor AND pooled net_r > 0 AND pooled folds >= fold_majority AND >= breadth_frac
+    of the POWERED cells pass (and, with --baseline, beats the baseline's pooled net R/trade by >= delta), indeterminate iff pooled
+    n < pooled_n_floor or < 2 powered cells or < half the declared cells measured (a fetch/harness fault is recorded per cell, never
+    dropped), fail otherwise. Holm-corrected one-sided t p-values are REPORTED, not graded. Thresholds are not changed after any result.
+  what_it_does_not_do: >-
+    Does not edit config/strategies.yaml, config/accounts.yaml or any roster; does not tune beyond the fixed arms listed; does not pool
+    windows with any committed record; is not a promotion case. Candles are Binance USD-M (a PROXY for Bybit linear; prices track within
+    a few bps) and the funding term is a directionless magnitude (execution_costs P1), both stated in the record.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  bucket: structural
+  basis: 'stand-in: a faster-resolving leg family for the prop books; an estimate.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 90
+  basis: >-
+    Estimate from the ef5d-0x harness_stage0 runs (2026-10-18/20) scaled by cells x arms x bars; the first run replaces it.
+  why_runner: >-
+    harness_stage0.py fetches public candles and runs the repo harnesses; CPU-only; not trainer-resident.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - pullback
+  - --symbols
+  - BNBUSDT,LTCUSDT,BCHUSDT,DOTUSDT,BTCUSDT
+  - --timeframe
+  - 1h
+  - --days
+  - '2400'
+  - --start
+  - '2020-06-01'
+  - --end
+  - '2026-10-20'
+  - --arm
+  - B=
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '39'
+  - --pooled-n-floor
+  - '88'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ1021-7C2B14-PULLBACK-1H-TRANSFER
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261021-7c2b-14
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-PROP
+programme: P5
+related:
+- RQ-20261006-005
+- RQ-20261006-031
+- scripts/backtest_pullback.py
+- scripts/research/harness_stage0.py

@@ -8,6 +8,44 @@
 
 ---
 
+## Programme review 2026-10-21 (lane RESEARCH-PROGRAMME-REVIEW-1021)
+
+Population: units whose `grading.graded_at` is 2026-10-14..2026-10-21 and whose file names this programme (`programme:` or `programme_node.programme`), read from `research/queue/*.yaml` on main at 2026-10-21 ~18Z. Units with no programme field (486 of the 657 graded in the window) are counted in the research map, not here.
+
+**Graded in the window: 7** — 1 pass, 2 fail, 4 indeterminate. ml_health-theme units with no programme field graded 58: 14 pass,
+13 fail, 28 indeterminate, 3 open.
+
+**What was learned**
+- Regime gating transfers unevenly: VH95 on `ada_pullback_2h` CONFIRMED on a disjoint window (RQ-20261018-002). The line is MERGED
+  on main (`ada_pullback_2h: vol_skip_above_pctl: 0.95`), though its comment still reads "HOLD for operator approval" -- field
+  beats comment; deployed/observed not checked this review, while VH80 on `trend_donchian_sol_prop` FAILED its fresh window (RQ-20261018-008).
+- The rich in-trade state (P2-Q3.1, RQ-20261017-003/-004/-005) read INDETERMINATE on all three families: the samples are bounded by
+  one year of live ledger (e.g. 73 trend_donchian closes on BTC 1h, 57 per pullback leg). More ledger is the only fix; a
+  re-run before ~2026-12 would re-measure the same n.
+- Conformal abstention at 1h FAILED (RQ-20261016-65ff-25): the conformal rule had HIGHER selective error than the plain
+  max-probability threshold on BTC at matched coverage, and coverage was not matched at every level. With two classes the
+  Mondrian-per-class rule is close to a threshold; `conformal_abstain_eval.py` supports only `predicted_class | none`, so the
+  vol-bucket refinement P2-Q1.5-fail asks for is a scorer build, not a unit.
+- Learner family is second-order (RQ-20261016-1fa6-08 FAIL; ExtraTrees/MLP vs LightGBM indeterminate, RQ-20261016-001).
+
+**Answered / unlocked / retired**
+- Answered: P2-R3.c03 / c04 PASS -> Tier-3 packets (not units). P2-R3.c05 (sol_prop VH80) FAIL -> that gate stays off.
+- Not authored, and why: ml_health supply is **build-bound** — every blocked ml_health unit (15) waits on a build (label
+  joiner, exit-head transfer, TSFM serving, pooling parity). No runnable ml_health unit worth its compute could be written
+  this review; the H1-THEME ml_health shortfall (0 of 5) is a build-queue fact for the manager, not an authoring gap.
+
+**Next 3–4 weeks**
+- P2-R5 vol-target sizing waits on IR-VOL-TARGET-SIZING-STAGE0 (verdict wrapper over `backtest_vol_target.py`).
+- Re-ask P2-Q3.1 only when the ledger has grown ~50% (≈ 2026-12); file nothing earlier.
+
+**Operator ideas folded in (IDEAS.md, manager routing 2026-10-21)**
+- `P2-Q4-var-price-vector`: a multivariate linear/VAR next-bar price-vector arm as the linear baseline in the ML-F1 bake-off.
+- `P2-Q4-cross-asset-features`: rolling cross-symbol correlation, basket PC1 share and point-in-time ES/DXY/gold returns as
+  regime-learner features, graded on log-loss gain. It goes beyond FRONTIER-LEVER-LEADLAG's BTC->alt 5m lead-lag.
+
+**Cross-programme feeds**
+- → P1/P5: VH95 ada packet (live leg) and the failed sol_prop VH80 both belong on REGIME-PROGRAM's Tier-3 list.
+
 ## 0. Operator direction this programme is built from (2026-10-14, relayed by the manager)
 
 1. Research is the main focus: a long-term, deep, well-researched roster per goal; no one-off queue filler.

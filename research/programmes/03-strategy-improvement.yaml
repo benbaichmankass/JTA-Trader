@@ -18,6 +18,29 @@
 # confirmation INSIDE the unit (8 calendar folds over ~6 years, a candidate must win >= 7 of 8).
 programme: P3
 plan: docs/research/programmes/03-STRATEGY-IMPROVEMENT.md
+# questions: map added by the programme review 2026-10-21 (lane RESEARCH-PROGRAMME-REVIEW-1021) to discharge plan
+# questions that had no node (programme_coverage.py); each names its record and why.
+questions:
+  Q2-C:
+    state: closed
+    by: RQ-20261014-470a-01, RQ-20261014-470a-10
+    why: >-
+      Both disjoint-window confirmations FAILED: the 2026-10-14 best-of-3 PASSes did not survive a window they were not chosen on. Closed; the leads are recorded as selection artefacts.
+  Q4:
+    state: closed
+    by: RQ-20261010-419b-02, RQ-20261010-419b-03, RQ-20261010-419b-04
+    why: >-
+      419b-02 (pullback short side) and -03 (trend long/short asymmetry) FAILED; -04 (portfolio) closed no_action_warranted. Further lessons come from each perf-followup Track 2 run, which files its own units.
+  Q5:
+    state: carried
+    by: PAIRS-R-SCALE (checklist row) + research/queue/blocked/RQ-20261014-470a-12
+    why: >-
+      Instrument fidelity is a build: the pairs R-scale fix is the row, the re-measure is pre-registered in blocked/. Programme review 2026-10-21 added a second instance: ef5d-06/-07 passed ATR percentiles on a 0-100 scale to a 0-1 flag; backtest_trend/pullback now refuse it and RQ-20261021-7c2b-01/-02 re-ask.
+  Q7:
+    state: carried
+    by: PERF-FU-LEG-REPLAY (checklist row); RQ-20261018-001 (SOL same-symbol overlap)
+    why: >-
+      Leg overlap is answered per symbol by same-symbol overlap reads (RQ-20261018-001 landed 2026-10-21, ungraded); the portfolio-wide leave-one-out waits on the leg-replay build. 419b-04 closed no_action_warranted.
 nodes:
 - id: P3-Q2-ada-pb-cd-propose
   goal: G1
@@ -318,14 +341,14 @@ nodes:
   value:
     usd_at_stake_per_month: 200
     confidence: 0.2
-  needs_authoring: 'BREADTH for the real-money crypto book (operator 2026-10-16: research is the main focus). The
-    two families that carry real money (4h Donchian, 2h pullback) have NO leg on liquid Bybit perps beyond ETH/XRP/ADA/SOL
-    (e.g. BNB, DOGE, LINK, LTC, BCH). Register Stage-0 units at FIXED family params (the eth_4h / ada_2h declared
-    values, not mined), one per symbol, net of the full cost stack with Bybit''s MEASURED cost for the symbol. INSTRUMENT
-    GAP to state in the unit: exit_lever_ablation.py takes only a config/strategies.yaml leg key and fetches by
-    the leg''s symbol, and research-harness-dispatch.yml runs harness defaults without a registered rule -- so either
-    a `--symbol` override (Tier-1 build) or a direct backtest_trend.py / backtest_pullback.py command with the declared
-    params spelled out. NOT backtest_orb.py or src/backtest/backtester.py (no full cost stack).'
+  after:
+  - {unit: RQ-20261021-7c2b-06, verdict: any}
+  needs_authoring: >-
+    Programme review 2026-10-21 authored Stage A as five units on BNB/DOGE/LINK/LTC/BCH/DOT at declared params: 7c2b-06
+    (trend_donchian_eth_4h), -07 (trend_donchian_xrp_4h), -08 (xrp_pullback_2h), -09 (ada_pullback_2h), -10
+    (trend_donchian_eth_prop 1h). When they close: for each PASSING CELL, Stage B = a same-book return-correlation /
+    overlap read against the live bybit_2 legs, then a per-symbol re-entry case under MD-PROMOTE-S0-S1 for a bybit_1
+    soak. A family that FAILS on all six is a symbol fit -- write that into 03 s1.
 - id: P3-Q8-eth-1h-family
   goal: G1
   roadmap:
