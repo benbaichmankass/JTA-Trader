@@ -1,0 +1,429 @@
+{
+  "leg": "iaum_pullback_1d",
+  "grade": {
+    "verdict": "indeterminate",
+    "label": "underpowered",
+    "baseline": "B",
+    "candidates": {},
+    "delta_r_bar": 1.0,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": null,
+    "why": "baseline n=32 < n_floor 39"
+  },
+  "arms": {
+    "B": {
+      "reach_ge_6r": 0.0,
+      "n": 32,
+      "net_r": 19.0393,
+      "net_r_fee_only": 19.7742,
+      "max_drawdown_r": 5.0339,
+      "by_outcome": {
+        "stop": 12,
+        "trail_stop": 13,
+        "take_profit": 7
+      },
+      "mean_bars_held": 25.281,
+      "net_r_per_capital_day": 0.0235,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 15,
+        "pullback_frac": 0.618,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2021-07-01 00:00:00+00:00",
+      "data_end": "2026-10-16 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-07-01 00:00:00+00:00",
+          "end": "2022-10-27 12:00:00+00:00",
+          "trades": 9,
+          "net_r": 1.8835
+        },
+        {
+          "fold": 2,
+          "start": "2022-10-27 12:00:00+00:00",
+          "end": "2024-02-23 00:00:00+00:00",
+          "trades": 11,
+          "net_r": 1.4496
+        },
+        {
+          "fold": 3,
+          "start": "2024-02-23 00:00:00+00:00",
+          "end": "2025-06-20 12:00:00+00:00",
+          "trades": 6,
+          "net_r": 12.3125
+        },
+        {
+          "fold": 4,
+          "start": "2025-06-20 12:00:00+00:00",
+          "end": "2026-10-17 00:00:00+00:00",
+          "trades": 6,
+          "net_r": 3.3936
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "15",
+        "--pullback-frac",
+        "0.618",
+        "--data",
+        "<data>",
+        "--symbol",
+        "IAUM",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261017-ae17-15/39661523663/arms/B__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261017-ae17-15/39661523663/arms/B__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--end",
+        "2026-10-17"
+      ]
+    },
+    "VH80": {
+      "reach_ge_6r": 0.0,
+      "n": 31,
+      "net_r": 11.7036,
+      "net_r_fee_only": 12.4819,
+      "max_drawdown_r": 5.6619,
+      "by_outcome": {
+        "stop": 16,
+        "trail_stop": 10,
+        "take_profit": 5
+      },
+      "mean_bars_held": 17.194,
+      "net_r_per_capital_day": 0.022,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 15,
+        "pullback_frac": 0.618,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0,
+        "vol_skip_above_pctl": 0.8,
+        "vol_skip_below_pctl": 0.0,
+        "vol_pctl_window": 200
+      },
+      "data_start": "2021-07-01 00:00:00+00:00",
+      "data_end": "2026-10-16 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-07-01 00:00:00+00:00",
+          "end": "2022-10-27 12:00:00+00:00",
+          "trades": 9,
+          "net_r": 1.3257
+        },
+        {
+          "fold": 2,
+          "start": "2022-10-27 12:00:00+00:00",
+          "end": "2024-02-23 00:00:00+00:00",
+          "trades": 12,
+          "net_r": 0.4644
+        },
+        {
+          "fold": 3,
+          "start": "2024-02-23 00:00:00+00:00",
+          "end": "2025-06-20 12:00:00+00:00",
+          "trades": 4,
+          "net_r": 7.4382
+        },
+        {
+          "fold": 4,
+          "start": "2025-06-20 12:00:00+00:00",
+          "end": "2026-10-17 00:00:00+00:00",
+          "trades": 6,
+          "net_r": 2.4752
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "15",
+        "--pullback-frac",
+        "0.618",
+        "--data",
+        "<data>",
+        "--symbol",
+        "IAUM",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261017-ae17-15/39661523663/arms/VH80__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261017-ae17-15/39661523663/arms/VH80__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--vol-skip-above-pctl",
+        "0.8",
+        "--end",
+        "2026-10-17"
+      ]
+    },
+    "VH90": {
+      "reach_ge_6r": 0.0,
+      "n": 33,
+      "net_r": 20.0527,
+      "net_r_fee_only": 20.8217,
+      "max_drawdown_r": 5.0343,
+      "by_outcome": {
+        "stop": 14,
+        "trail_stop": 12,
+        "take_profit": 7
+      },
+      "mean_bars_held": 21.606,
+      "net_r_per_capital_day": 0.0281,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 15,
+        "pullback_frac": 0.618,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0,
+        "vol_skip_above_pctl": 0.9,
+        "vol_skip_below_pctl": 0.0,
+        "vol_pctl_window": 200
+      },
+      "data_start": "2021-07-01 00:00:00+00:00",
+      "data_end": "2026-10-16 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-07-01 00:00:00+00:00",
+          "end": "2022-10-27 12:00:00+00:00",
+          "trades": 9,
+          "net_r": 1.8835
+        },
+        {
+          "fold": 2,
+          "start": "2022-10-27 12:00:00+00:00",
+          "end": "2024-02-23 00:00:00+00:00",
+          "trades": 11,
+          "net_r": 1.4491
+        },
+        {
+          "fold": 3,
+          "start": "2024-02-23 00:00:00+00:00",
+          "end": "2025-06-20 12:00:00+00:00",
+          "trades": 7,
+          "net_r": 12.0639
+        },
+        {
+          "fold": 4,
+          "start": "2025-06-20 12:00:00+00:00",
+          "end": "2026-10-17 00:00:00+00:00",
+          "trades": 6,
+          "net_r": 4.6561
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "15",
+        "--pullback-frac",
+        "0.618",
+        "--data",
+        "<data>",
+        "--symbol",
+        "IAUM",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261017-ae17-15/39661523663/arms/VH90__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261017-ae17-15/39661523663/arms/VH90__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--vol-skip-above-pctl",
+        "0.9",
+        "--end",
+        "2026-10-17"
+      ]
+    },
+    "VH95": {
+      "reach_ge_6r": 0.0,
+      "n": 36,
+      "net_r": 17.5253,
+      "net_r_fee_only": 18.3391,
+      "max_drawdown_r": 5.8449,
+      "by_outcome": {
+        "stop": 16,
+        "trail_stop": 13,
+        "take_profit": 7
+      },
+      "mean_bars_held": 20.944,
+      "net_r_per_capital_day": 0.0232,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 15,
+        "pullback_frac": 0.618,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0,
+        "vol_skip_above_pctl": 0.95,
+        "vol_skip_below_pctl": 0.0,
+        "vol_pctl_window": 200
+      },
+      "data_start": "2021-07-01 00:00:00+00:00",
+      "data_end": "2026-10-16 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-07-01 00:00:00+00:00",
+          "end": "2022-10-27 12:00:00+00:00",
+          "trades": 9,
+          "net_r": 1.8835
+        },
+        {
+          "fold": 2,
+          "start": "2022-10-27 12:00:00+00:00",
+          "end": "2024-02-23 00:00:00+00:00",
+          "trades": 11,
+          "net_r": 1.4496
+        },
+        {
+          "fold": 3,
+          "start": "2024-02-23 00:00:00+00:00",
+          "end": "2025-06-20 12:00:00+00:00",
+          "trades": 10,
+          "net_r": 9.928
+        },
+        {
+          "fold": 4,
+          "start": "2025-06-20 12:00:00+00:00",
+          "end": "2026-10-17 00:00:00+00:00",
+          "trades": 6,
+          "net_r": 4.264
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "15",
+        "--pullback-frac",
+        "0.618",
+        "--data",
+        "<data>",
+        "--symbol",
+        "IAUM",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261017-ae17-15/39661523663/arms/VH95__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261017-ae17-15/39661523663/arms/VH95__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--vol-skip-above-pctl",
+        "0.95",
+        "--end",
+        "2026-10-17"
+      ]
+    }
+  },
+  "window": {
+    "start": null,
+    "end": "2026-10-17",
+    "fetch_days": 7300,
+    "feed": {
+      "source": "yahoo",
+      "ticker": "IAUM",
+      "interval": "1d",
+      "resample": "1d"
+    },
+    "fold_edges": [
+      "2021-07-01 00:00:00+00:00",
+      "2022-10-27 12:00:00+00:00",
+      "2024-02-23 00:00:00+00:00",
+      "2025-06-20 12:00:00+00:00",
+      "2026-10-17 00:00:00+00:00"
+    ]
+  }
+}
