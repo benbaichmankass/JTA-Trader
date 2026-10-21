@@ -4,7 +4,7 @@
 id: RQ-20261020-008
 title: 'Programme 01 Q9, runway fill: does an ADX-conditioned tighter trail replace the declared exit
   of gdx_pullback_1d on net R in 3 of 4 calendar folds over 2010-01..2026-10, at the Alpaca/ETF cost stack?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -126,3 +126,15 @@ generated:
   params:
     node: P1-Q9-gdx1d-adx-replace
 last_dispatched_at: '2026-10-21T01:03:47+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-Q9-GDX1D-ADX-REPLACE
+  evidence:
+  - research/results/RQ-20261020-008/39525136137.jsonl
+  graded_at: '2026-10-21'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

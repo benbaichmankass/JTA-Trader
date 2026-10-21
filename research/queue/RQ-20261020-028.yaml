@@ -5,7 +5,7 @@ id: RQ-20261020-028
 title: 'Programme 01 Q9, runway fill: does a bar-close stale exit (12 or 24 4h bars) replace the declared
   exit of trend_donchian_sol_4h on net R in 3 of 4 calendar folds over 2020-10..2026-10, at the Bybit
   cost stack?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -127,3 +127,15 @@ generated:
   params:
     node: P1-Q9-sol4h-stale-replace
 last_dispatched_at: '2026-10-21T01:03:47+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-Q9-SOL4H-STALE-REPLACE
+  evidence:
+  - research/results/RQ-20261020-028/39525133640.jsonl
+  graded_at: '2026-10-21'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
