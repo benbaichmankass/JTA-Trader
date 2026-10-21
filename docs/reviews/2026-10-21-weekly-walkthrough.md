@@ -1,5 +1,7 @@
 # Weekly walkthrough 2026-10-21 — ML + frontier section
 
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · **nobody has verified this document's status — do not act on it as current**
+
 > Lane `ML-FRONTIER-PREP-20261021` (Tier 1, read-only). Reads: `ml_plan_status.py --diversity/--plumbing`,
 > live API `/api/bot/ml/{status,registry}` + `shadow/{stats,drift}` (pulled 2026-10-21 ~19:00Z),
 > `research/results/`, Hugging Face Hub + web search. **Not run:** the trainer-VM pull
