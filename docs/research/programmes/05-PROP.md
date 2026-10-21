@@ -27,6 +27,8 @@ Population: units whose `grading.graded_at` is 2026-10-14..2026-10-21 and whose 
 - RQ-20261021-7c2b-12: rung 2 around 0.35% (0.30 / 0.40 / room at 0.35) on the same ledgers.
 - RQ-20261021-7c2b-11: squeeze time stop 6/12/24 vs 48 bars on DOGE/ADA/LINK 1h (pace), superseding blocked RQ-20261007-241
   now that `harness_stage0.py` can pass `timeout_bars` and write a verdict.
+- RQ-20261021-7c2b-13 (`trend_donchian_sol_prop` as declared on the six new perps) and -14 (the batch-1 1h pullback PASS
+  transferred to BNB/LTC/BCH/DOT/BTC at harness defaults): the prop symbol-breadth leads for P5-Q6.
 - P5-GATE-BRK-read (write `comms/prop_survival/` records for breakout_2's passing legs) is a session task for the manager.
 
 **Cross-programme feeds**

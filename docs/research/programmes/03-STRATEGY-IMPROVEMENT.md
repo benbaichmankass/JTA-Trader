@@ -27,7 +27,7 @@ live_strategy theme without a programme field (live_strategy graded 170 in the w
 **Next 3–4 weeks (pre-registered this review)**
 - RQ-20261021-7c2b-06..-10: each real-money/prop family AS DECLARED on six liquid perps no roster carries (BNB, DOGE, LINK, LTC,
   BCH, DOT), 2020-06..2026-10, pooled Stage 0 with breadth: `trend_donchian_eth_4h`, `trend_donchian_xrp_4h`, `xrp_pullback_2h`,
-  `ada_pullback_2h`, `trend_donchian_eth_prop` (1h). A passing CELL opens Stage B (overlap read, then a re-entry case for a
+  `ada_pullback_2h`, `trend_donchian_eth_prop` (1h); and -13 `trend_donchian_sol_prop` (1h). A passing CELL opens Stage B (overlap read, then a re-entry case for a
   bybit_1 soak); a family that fails all six is a symbol fit.
 
 **Cross-programme feeds**

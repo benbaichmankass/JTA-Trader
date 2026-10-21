@@ -18,7 +18,7 @@ each plan's "Programme review 2026-10-21" section.
 | momentum/stall-keyed exit levers confirmed on eth_4h, xrp_4h, slv_1d (+ Q9 leads) | P1 -> live roster | build-gated: MOMENTUM-LEVERS-LIVE, `stall_pull_in` TP rule |
 | trail 4.5 on eth_prop, priced on three prop books | P1 -> P5 | EV read done; adoption is a P5/Tier-3 call |
 | breakout_2 sizing 0.5% -> 0.35% dominates (RQ-20261016-029) | P5 -> config | NOT applied; rung 2 queued (7c2b-12) |
-| family breadth on six new perps (7c2b-06..-10) | P3 -> P5 (1h cells), P1 (exit processing of any new leg) | queued |
+| family breadth on new perps (7c2b-06..-10, -13, -14) | P3 -> P5 (1h cells), P1 (exit processing of any new leg) | queued |
 | daily Donchian D55 / LONG filter transfers (7c2b-03/-04) | P7 -> P3 overlap read | queued |
 | ATR-percentile scale error (ef5d-06/-07) | P7 -> P3 Q5 instrument fidelity | harness guard landed; re-asks 7c2b-01/-02 |
 | PPI drift real but sub-cost | P4 -> (an ES/NQ leg to tilt) | parked until such a leg exists |
