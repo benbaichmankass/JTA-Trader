@@ -2028,7 +2028,13 @@ accounts:
       max_dd_pct: 0.03                 # Turbo STATIC 3% = $150 (floor $4,850).
       daily_loss_pct: 0.03             # 3% of the 00:30 UTC balance = $150.
       daily_usd: 150                   # absolute fallback (= 3% of $5k).
-      risk_pct: 0.005                  # FLAT $25/ticket (0.5% x $5k): the flat arm chosen by the rule registered in
+      # risk_pct 0.005 -> 0.0035 (Tier-3, operator decision 2026-10-21 popup "Apply 0.35%"; lane BRK2-RISK-035).
+      #   Evidence: RQ-20261016-029 (rule RULE-P5-Q2-SIZING-BRK; comms/research/RQ-20261016-029/39030716646/):
+      #   C0035 beat A on ev with >= survival on every seed (5 seeds), and p_breach_max_dd fell on every seed in all 4
+      #   modes (realized/bridge/stop/path), e.g. seed 1 realized 0.991 -> 0.838. Now ~$17.50/ticket; the ruleset
+      #   flat cap (max_risk_usd 25) stays a ceiling and is untouched.
+      #   ROLLBACK: set risk_pct back to 0.005.
+      risk_pct: 0.0035                 # was 0.005: FLAT $25/ticket (0.5% x $5k): the flat arm chosen by the rule registered in
                                        # RQ-20261005-853/814 before the run (ETH -> $25; SOL -> $50 not applied: risk is per account,
                                        # per-leg sizing PI-20261005-YUVCGTMJ-0006); ruleset sizing.flat.max_risk_usd matches.
       # breach_guards: NOT set -> `enforce` (the default) for the prop ticket risk gate
