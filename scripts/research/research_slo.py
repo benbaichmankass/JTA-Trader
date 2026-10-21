@@ -181,22 +181,31 @@ def gather_facts(root: Path, now: datetime, cfg: Dict[str, Any], gh: Optional["G
     f["lands_24h"] = _safe(lands_24h, "lands_24h")
 
     def grade_latency():
+        # POPULATION (PIPELINE-HEALTH-1021): units whose NEWEST result row landed in the last 7 d, measured from
+        # that row to the grading stamped on or after it. `grading.graded_at` is re-stamped on every mechanical
+        # re-grade of an UNCHANGED result (research-queue-grade.yml touches ~240 monthly/weekly units a day), so
+        # the old population "graded in 7 d" read a 22-day-old result re-graded today as 22 days of lag and put
+        # p90 at 6 d (n=629) when fresh results were graded at p90 2 d (n=389, 2026-10-21). A fresh result with
+        # no grading on or after it is counted in `ungraded_fresh`, never silently dropped.
         from scripts.research.result_disposition_check import _rows
         lat: List[float] = []
+        ungraded = 0
         for uid, u in units.items():
+            res = [t for r in _rows(root / "research" / "results" / uid) if (t := _ts(r.get("generated_at")))]
+            if not res or max(res) < since7:
+                continue
+            newest = max(res).date()
             g = u.get("grading") if isinstance(u.get("grading"), dict) else {}
             ga = _ts(g.get("graded_at"))
-            if not ga or ga < since7 - timedelta(days=1):
+            if not ga or ga.date() < newest:
+                ungraded += 1
                 continue
-            ga_day = ga.date()
-            res = [t.date() for r in _rows(root / "research" / "results" / uid) if (t := _ts(r.get("generated_at")))
-                   and t.date() <= ga_day]
-            if res:
-                lat.append(float((ga_day - max(res)).days))
+            lat.append(float((ga.date() - newest).days))
         if not lat:
-            return _cnl("no unit graded in the last 7 d with a result row on or before its graded_at")
-        return _fact(None, p50=_pct(lat, 0.5), p90=_pct(lat, 0.9), n=len(lat),
-                     basis="whole days (graded_at is a date); units graded in 7 d")
+            return _cnl("no unit with a result row in the last 7 d has a grading on or after it")
+        return _fact(None, p50=_pct(lat, 0.5), p90=_pct(lat, 0.9), n=len(lat), ungraded_fresh=ungraded,
+                     basis="whole days (graded_at is a date); units whose newest result landed in 7 d, "
+                           "newest result -> grading on or after it")
     gl = _safe(grade_latency, "grade_latency")
     f["grade_latency_p50_d"] = dict(gl, value=gl.get("p50")) if gl["read_state"] != CNL else gl
     f["grade_latency_p90_d"] = dict(gl, value=gl.get("p90")) if gl["read_state"] != CNL else gl

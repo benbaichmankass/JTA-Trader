@@ -269,6 +269,78 @@ def section0_lines(res: Any, today: date) -> list[str]:
     L.append("")
     return L
 
+# ── §0b — DERIVED due-ness (AUD-20261019-DESIGN-WORK-LIVENESS) ─────────────
+# Operator, 2026-10-21 popup "Show now (Recommended)": grow §0 by derived
+# due-ness now and let the daily reviews work it down. Two shapes `pipeline.due`
+# cannot see, because each lives in the JOIN of two stores:
+#   * a pipeline item ROUTED to a checklist row that has since closed -- nothing
+#     will ever pick it up (62 of 253 due items on 2026-10-21);
+#   * a `landed_unproven` row whose observation.due_by has passed -- the closing
+#     observation has no puller (72 of 188 rows on 2026-10-21).
+# The pipeline's own due() is untouched; this is an additional, separately
+# counted block, so the §0 headline count keeps meaning what it meant.
+
+_CLOSED_ROW_STATES = ("done", "dropped", "killed")
+_ROW_REF = re.compile(r"\s*`?([A-Z0-9][A-Za-z0-9_-]+)")
+
+
+def _routed_row_id(item: dict) -> str | None:
+    m = _ROW_REF.match(str(item.get("routed_to") or ""))
+    return m.group(1) if m else None
+
+
+def derived_due(pipe_items: list[dict], rows: list[dict], today: date) -> dict[str, list]:
+    """``{"routed_to_closed": [(item, row)], "observation_overdue": [row]}``.
+
+    Open pipeline items only (a terminal item is finished whatever it points at);
+    a row id that resolves to no row is not graded here (it is not evidence the
+    target closed)."""
+    by_id = {str(r.get("id")): r for r in rows if isinstance(r, dict) and r.get("id")}
+    closed = []
+    for it in pipe_items:
+        if it.get("state") in pipeline.TERMINAL_STATES or it.get("state") != "routed":
+            continue
+        row = by_id.get(_routed_row_id(it) or "")
+        if row is not None and row.get("state") in _CLOSED_ROW_STATES:
+            closed.append((it, row))
+    overdue = []
+    for r in by_id.values():
+        if r.get("state") != _NOT_DONE_BUT_MERGED:
+            continue
+        due_by = str(((r.get("observation") or {}).get("due_by")) or "")[:10]
+        try:
+            if due_by and date.fromisoformat(due_by) < today:
+                overdue.append(r)
+        except ValueError:
+            continue
+    closed.sort(key=lambda p: str(p[0].get("id")))
+    overdue.sort(key=lambda r: (str((r.get("observation") or {}).get("due_by")), str(r.get("id"))))
+    return {"routed_to_closed": closed, "observation_overdue": overdue}
+
+
+def derived_due_lines(d: dict[str, list]) -> list[str]:
+    closed, overdue = d["routed_to_closed"], d["observation_overdue"]
+    L = ["### §0b — DERIVED DUE (joins the pipeline to the checklist)", ""]
+    if not closed and not overdue:
+        return L + ["Nothing derived-due: no routed item points at a closed row, and no "
+                    "`landed_unproven` row is past its observation date.", ""]
+    L.append(f"**{len(closed)} routed item(s) point at a closed row** (close or re-route each) · "
+             f"**{len(overdue)} `landed_unproven` row(s) past observation.due_by** (make the "
+             "observation, or re-date it with what you read).")
+    for it, row in closed[:TOP_DUE]:
+        L.append(f"- **{it.get('id')}** → `{row.get('id')}` is `{row.get('state')}` · "
+                 f"{_clip(it.get('what'), _LINE)}")
+    if len(closed) > TOP_DUE:
+        L.append(f"- … {len(closed) - TOP_DUE} more routed-to-closed item(s).")
+    for r in overdue[:TOP_DUE]:
+        o = r.get("observation") or {}
+        L.append(f"- **{r.get('id')}** observation due `{o.get('due_by')}` · "
+                 f"{_clip(o.get('how_to_check') or o.get('what'), _LINE)}")
+    if len(overdue) > TOP_DUE:
+        L.append(f"- … {len(overdue) - TOP_DUE} more overdue observation(s).")
+    return L + [""]
+
+
 # ── §2/§3/§4 — checklist views ─────────────────────────────────────────────
 
 def checklist_view(doc: Any) -> dict[str, Any]:
@@ -515,6 +587,14 @@ def build(*, today: date | None = None, root: Path | None = None) -> dict[str, A
 
     checklist_doc, checklist_state = read_json(_CHECKLIST, root)
     ck = checklist_view(checklist_doc) if checklist_state == "read" else checklist_view({})
+    # §0b: derived due-ness, only when the checklist was actually read -- an
+    # unread checklist is "we did not look", never "nothing derived-due".
+    if checklist_state == "read":
+        section0 = section0 + derived_due_lines(derived_due(
+            pipe_items, (checklist_doc or {}).get("items") or [], today))
+    else:
+        section0 = section0 + ["### §0b — DERIVED DUE — COULD NOT BE COMPUTED "
+                               f"(checklist `{checklist_state}`; we did not look, this is not zero)", ""]
 
     mandates_doc, mandates_state = read_yaml(_MANDATES, root)
 
@@ -995,6 +1075,37 @@ def _self_test() -> int:
     check("§0 is built from pipeline.due via section0_lines, not re-derived",
           "**1 item(s) due. Each needs a disposition today.**" in md_due
           and "- **X**" in md_due)
+
+    # ── §0b: derived due-ness joins the pipeline to the checklist ──────────
+    _items = [
+        {"id": "R1", "state": "routed", "routed_to": "ROW-DONE — lane x", "what": "orphaned"},
+        {"id": "R2", "state": "routed", "routed_to": "ROW-OPEN", "what": "still owned"},
+        {"id": "R3", "state": "done", "routed_to": "ROW-DONE", "what": "finished",
+         "terminal_reason": "t"},
+        {"id": "R4", "state": "routed", "routed_to": "NO-SUCH-ROW", "what": "unresolvable"},
+    ]
+    _rows = [
+        {"id": "ROW-DONE", "state": "done"},
+        {"id": "ROW-OPEN", "state": "queued"},
+        {"id": "LU-LATE", "state": "landed_unproven",
+         "observation": {"what": "w", "how_to_check": "h", "due_by": "2026-09-20"}},
+        {"id": "LU-FUTURE", "state": "landed_unproven",
+         "observation": {"what": "w", "how_to_check": "h", "due_by": "2026-09-22T00:00Z"}},
+        {"id": "LU-TODAY", "state": "landed_unproven",
+         "observation": {"what": "w", "how_to_check": "h", "due_by": "2026-09-21"}},
+    ]
+    dd = derived_due(_items, _rows, today)
+    check("§0b: a routed item whose row is done is derived-due; open, terminal and "
+          "unresolvable ones are not",
+          [i["id"] for i, _ in dd["routed_to_closed"]] == ["R1"])
+    check("§0b: landed_unproven past due_by is derived-due; today and future are not",
+          [r["id"] for r in dd["observation_overdue"]] == ["LU-LATE"])
+    _l = "\n".join(derived_due_lines(dd))
+    check("§0b renders both populations with their counts",
+          "**1 routed item(s) point at a closed row**" in _l and "**LU-LATE**" in _l
+          and "**R1** → `ROW-DONE`" in _l)
+    check("§0b renders an explicit nothing-line, never silence",
+          "Nothing derived-due" in "\n".join(derived_due_lines(derived_due([], [], today))))
 
     # ── an unreadable pipeline store is a declared floor, not a clean 0 ────
     res_bad = pipeline.LoadResult(unreadable=[(3, "JSONDecodeError: x")])

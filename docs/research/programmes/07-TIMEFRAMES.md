@@ -4,6 +4,30 @@
 
 Machine tree: [`research/programmes/07-timeframes.yaml`](../../../research/programmes/07-timeframes.yaml). Units: `RQ-20261018-ef5d-01..09` (runnable), `blocked/RQ-20261018-ef5d-10/-11`. Instruments (this lane): `scripts/research/timeframe_breakeven.py`, `scripts/research/harness_stage0.py`. Numbers marked MEASURED were measured in this lane on 2026-10-18 from the file or command named beside them; re-run the command rather than quoting the figure.
 
+## Programme review 2026-10-21 (lane RESEARCH-PROGRAMME-REVIEW-1021)
+
+Population: the eleven ef5d units (RQ-20261018-ef5d-01..-11), graded 2026-10-20.
+
+**Frontier (MEASURED, P7-Q1 closed).** Long arm (ef5d-01, PASS): all 14 (bar x hold) cells at 4h and 1d, holds 1-30 bars, are
+cost-viable on >= 3 of the 6 core perps; shortest viable long-arm bar is 4h for every perp and ETF (MES 1d). Short arm (ef5d-02,
+PASS): shortest viable bar is **15m for ADA, AVAX, SOL** and **30m for BTC, ETH** (median cost 0.07-0.09 R); 5m only for GDX/SLV.
+No perp is viable below 15m, so the 1m discovery arm (blocked/RQ-20260930-505) stays blocked.
+
+**Stage-0 results.** Daily Donchian PASS (ef5d-03: D55 0.42 R/trade n 179, D20 0.27 n 256); weekly Donchian on ETFs PASS (ef5d-05,
+LO 0.41 n 312); regime-filtered daily PASS with best arm LONG (ef5d-06: 0.51 n 216 vs unfiltered 0.27); daily pullback FAIL
+(ef5d-04); 1h compression breakout FAIL (ef5d-08); 1h sweep reversal FAIL (ef5d-09).
+**Instrument error:** ef5d-07 (30m cost-gated, INDETERMINATE) and ef5d-06's VOL50 arm passed `--vol-skip-below-pctl 50/75/90`; the flag
+is compared to a 0-1 rank, so those arms measured only warm-up entries. The harnesses now refuse it; re-asked as
+RQ-20261021-7c2b-01 (30m) and -02 (daily VOL50/VOL75).
+
+**Closed:** P7-Q3 (daily pullback FAIL; the daily horizon stays open on Donchian), P7-Q8 / P7-Q9 (1h squeeze and 1h sweep
+configurations closed; untested variants -- ADX chop gate, 2-bar confirm, 15m -- are low priority after the frontier put 1h
+breakouts at the margin).
+
+**Next 3-4 weeks (pre-registered this review):** 7c2b-01 (30m gate re-ask), -02 (daily vol floor re-ask), -03 (LONG filter transfer
+to BNB/DOGE/LINK/LTC/BCH/DOT), -04 (D55 transfer to the same six; P7-Q6's overlap read now waits on it), -05 (15m cost-gated
+breakout on ADA/AVAX/SOL). ef5d-10/-11 stay blocked on TF-ORB-COST-STACK and TF-IGNITION-HARNESS.
+
 ## 0. Operator direction (2026-10-18, relayed by the manager, paraphrased closely)
 
 The **lowest-priority** research theme, but plan it now and get tests into the queue soon. Test different time frames on the frontier end:
