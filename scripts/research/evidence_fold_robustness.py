@@ -122,7 +122,7 @@ def rule_012(records: dict[str, dict[str, Any]]) -> dict[str, Any]:
     return {"verdict": _band(share, R012_YES, R012_NO), "read_state": "measured", "n": len(pos),
             "measurement": {"recency_negative": k, "share": round(share, 4), "bars": {"yes": R012_YES, "no": R012_NO},
                             "legs_with_fold_detail": len(per), "per_leg": per,
-                            "would_stop_passing": sorted(l for l, v in pos.items() if v["recency_negative"])},
+                            "would_stop_passing": sorted(leg for leg, v in pos.items() if v["recency_negative"])},
             "population": f"{len(pos)} legs with net_r_oos > 0 among {len(per)} measured records carrying a complete fold_detail"}
 
 
@@ -158,7 +158,7 @@ def rule_001(records: dict[str, dict[str, Any]], legs: list[str], repo: Path = R
                     "max_trade_net_r": round(max(tr), 4), "jackknife_min": jk, "single_trade_dependent": jk <= 0}
     if not per:
         return {"verdict": "not_applicable", "read_state": "no_data", "n": 0, "skipped": skipped}
-    dep = [l for l, v in per.items() if v["single_trade_dependent"]]
+    dep = [leg for leg, v in per.items() if v["single_trade_dependent"]]
     return {"verdict": "pass" if dep else "fail", "read_state": "measured", "n": len(per),
             "measurement": {"single_trade_dependent_legs": dep, "per_leg": per, "skipped": skipped},
             "population": f"{len(per)} alpaca_live legs with a committed per-trade ledger"}
