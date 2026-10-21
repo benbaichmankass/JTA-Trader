@@ -1,0 +1,22 @@
+{
+  "id": "AUD-20261019-RESEARCH-SLO-RED",
+  "title": "Research SLOs red every run for 6/6 days (grade latency, theme share, research-ops not run); blocked_over_age and runnable_floor red since 10-18/19; 3 days with monitor gaps > 4h",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[WEEKLY-AUDIT-2026-10-19, session_014UeddhjFnc6fSA41bo5V65] CLAIM: the research pipeline SLO monitor has alerted for a week without a same-day disposition. EVIDENCE: comms/research/health/2026-10-16..21.json: not_ok in every run of every day for grade_latency_p90_d, theme_share_min_ratio, research_ops_not_run (n=72 runs); blocked_over_age every run 10-19..21; runnable_floor 6/15 runs 10-18, 4/12 10-20, 10/10 10-21; max inter-run gap 4.3h (10-16), 4.6h (10-19), 4.1h (10-20) > the 4h liveness bound. Context: usage wind-down until weekly reset 2026-10-21 18:00Z explains research_ops_not_run, not grade latency or theme share. POSITIVE CONTROL: research_slo.py --self-test OK (planted starved queue alerts once). NEXT: manager dispatches research-ops after the reset and records per-SLO disposition (fix, threshold PR, or row). DETECTOR: research-slo.yml itself; this row closes when one full day of runs has no grade_latency/research_ops_not_run breach.",
+  "updated_at": "2026-10-21T18:21:14Z",
+  "updated_by": "session_014UeddhjFnc6fSA41bo5V65",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "next_action": "dispatch_lane",
+  "_seq": 582
+}
