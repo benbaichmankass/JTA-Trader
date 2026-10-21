@@ -12,7 +12,10 @@
   "prs": [],
   "blocked_on": [],
   "note": "[2026-10-21 PIPELINE-HEALTH-1021] RQ-20260922-006 (was every risk-bearing record's param_selection_provenance=not_established dated against the shipped params?) is blocked 29 d on one fact: scripts/ops/build_strategy_evidence.py computes config_fingerprint but records no key set, so the reverse lookup to the config block is undefined. Build: record the keys (or the source block verbatim) on the evidence record; then a script like scripts/research/evidence_fold_robustness.py (committed, reads comms/strategy_evidence/) dates each fingerprint via git history. Done when RQ-20260922-006 leaves research/queue/blocked/ and lands a result. Needs a deep clone for the git-history half.",
-  "updated_at": "2026-10-21T18:39:42Z",
+  "updated_at": "2026-10-21T18:54:21Z",
   "updated_by": "session_01GmMQXaChSzQiiZWG8oPb7N",
+  "roadmap": [
+    "L-OPS"
+  ],
   "_seq": 577
 }

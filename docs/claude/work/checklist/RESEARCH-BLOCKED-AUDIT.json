@@ -13,7 +13,7 @@
   "blocked_on": [],
   "note": "From research-ops #18923 and #18987, relayed by the assistant manager at 18:22Z. Both passes reported the blocked/ audit NOT RUN, and 80 files have gone unrun on consecutive passes. Queued at rank 8, NOT dispatched: weekly usage was 90% at 18:20Z and the meter allows 0.14 lanes continuous until the reset at Wed 2026-10-21 18:00Z. Dispatch one Sonnet lane after the reset. The RQ-20261018-009 ID collision is already resolved: #18978 merged at 15:0xZ. [2026-10-21 PIPELINE-HEALTH-1021] AUDIT RAN (67 blocked units after; was 76; 17 over 21 d -> 10). UNLOCKED (lever built): RQ-20260922-001/002/012 -> scripts/research/evidence_fold_robustness.py, queued with research-script-run.yml. TIME-GATED, now the dispatcher's own gate (not_before): RQ-20260930-602 (2026-12-23, n=2453 of 2828 needed), RQ-20260930-901 (2027-06-08). RETIRED with reasons: RQ-20260922-010 (harness exists, leg off every roster since 2026-10-05), -013 (avax_pullback_2h now -1.40R/n=57, unrostered), RQ-20260928-008 (ict_scalp_xrp_5m now -27.0R/n=169, unrostered), -014 (re-asked via PI-20261021-WG8OPB7N-0001, due 2026-12-26). REMAINING >21 d, each owned: see PI-20261021-WG8OPB7N-0004. Also fixed: blocker_watch tagged 33 compute-class units NEEDS_LANE (dispatch_queue said would_dispatch) and flagged not_before units NOT_RUNNING.",
   "priority_rank": 8,
-  "updated_at": "2026-10-21T18:39:43Z",
+  "updated_at": "2026-10-21T18:54:21Z",
   "updated_by": "session_01GmMQXaChSzQiiZWG8oPb7N",
   "roadmap": [
     "L-OPS"
@@ -26,6 +26,10 @@
       "roadmap": "none",
       "arch": "none"
     }
+  },
+  "writeback": {
+    "roadmap": "none: scheduling/queue-hygiene fix, no milestone line changes",
+    "arch": "none: no architecture section changes"
   },
   "_seq": 571
 }
