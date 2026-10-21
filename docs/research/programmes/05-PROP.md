@@ -2,6 +2,39 @@
 
 > **Doc status:** `unknown` · category `evidence` · last verified `2026-10-16` · registered in [`../../DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md) · lane `P5-PROP-PROGRAMME` (manager dispatch, weekly planning 2026-10-14) · map: [`RESEARCH-MAP.md`](RESEARCH-MAP.md) · roadmap `L-PROP` · **Tier-1 document: it proposes tests; every roster, sizing or switch change it leads to is Tier-3 with an evidence record.**
 
+## Programme review 2026-10-21 (lane RESEARCH-PROGRAMME-REVIEW-1021)
+
+Population: units whose `grading.graded_at` is 2026-10-14..2026-10-21 and whose file names this programme (`programme:` or `programme_node.programme`), read from `research/queue/*.yaml` on main at 2026-10-21 ~18Z. Units with no programme field (486 of the 657 graded in the window) are counted in the research map, not here.
+
+**Graded in the window: 10** — 2 pass, 8 fail.
+
+**What was learned**
+- The prop EV/survival gate PASSED on breakout_2 (RQ-20261016-026) and FAILED on tradeify_1 (-027) and velotrade_1 (-028).
+- breakout_2 sizing (RQ-20261016-029 PASS, means over 5 seeds): configured 0.5% ev $85 / p_alive 0.008; **0.35% ev $111 /
+  p_alive 0.147** (dominates); 0.25% $74 / 0.53; room sizing at 0.5% $67 / 0.96. **breakout_2 still trades 0.5%**
+  (`config/accounts.yaml`, read 2026-10-21) — the rung-1 result has not been applied.
+- Breadth and add-ons failed: ADA 1h on breakout_2 (-032), eth_4h alone on velotrade_1 (-024/-025), the 4h pair on breakout_2
+  and tradeify_1 (e2db-05/-06), maker ict_scalp on the causal harness (1fa6-07). velotrade_1 rung-2 sizing (-030) and
+  tradeify_1 per-leg $ risk (-031) FAILED: their configured sizing stands.
+
+**Answered / unlocked / retired**
+- Closed: Q5's 4h line on breakout_2 and tradeify_1 (nodes P5-Q5-4H-BRK-fail / -TRAD-fail removed: the matched-risk head-to-head
+  failed at 0.005, and a lower-level control is not justified when the 1h book itself fails the gate on tradeify_1).
+  Q1 and Q4 recorded closed in the tree's `questions:` map.
+- Unlocked: P5-Q2 rung 2 on breakout_2 -> RQ-20261021-7c2b-12.
+
+**Next 3–4 weeks (pre-registered this review)**
+- RQ-20261021-7c2b-12: rung 2 around 0.35% (0.30 / 0.40 / room at 0.35) on the same ledgers.
+- RQ-20261021-7c2b-11: squeeze time stop 6/12/24 vs 48 bars on DOGE/ADA/LINK 1h (pace), superseding blocked RQ-20261007-241
+  now that `harness_stage0.py` can pass `timeout_bars` and write a verdict.
+- RQ-20261021-7c2b-13 (`trend_donchian_sol_prop` as declared on the six new perps) and -14 (the batch-1 1h pullback PASS
+  transferred to BNB/LTC/BCH/DOT/BTC at harness defaults): the prop symbol-breadth leads for P5-Q6.
+- P5-GATE-BRK-read (write `comms/prop_survival/` records for breakout_2's passing legs) is a session task for the manager.
+
+**Cross-programme feeds**
+- ← P3: 7c2b-10 (eth_prop config on six new perps) supplies candidate symbols for P5-Q6.
+- ← P1: trail 4.5 on eth_prop is priced on all three books.
+
 ## 1. End goal and measure
 
 **Goal.** The prop accounts execute, protect themselves and clear evaluations, and every decision about them — which legs, what size, what buffer, keep or buy fresh — is read off **the expected dollars banked before the account dies**, not off how far it is from a drawdown line. B6's finding is the frame: *the prop bar is an expected-value question, not a drawdown-avoidance one*, and the decision that moves money is the **sizing rule and the book**, not whether to keep a given account (B6, MEASURED 2026-09-27: continuing a damaged account was worth +$3..+$6; a fresh account at cushion-fit sizing +$112/life vs −$12 at flat 1.5%).
