@@ -126,4 +126,10 @@ origin:
 last_dispatched_at: '2026-10-17T22:25:39+00:00'
 grading:
   auto: false
-  reason: the plateau rule reads the per-candidate block; the harness's top-level pass is any-candidate, so mechanical grading would apply the wrong rule
+  evidence:
+  - research/results/RQ-20261016-1fa6-05/39073140126.jsonl
+  graded_at: '2026-10-21'
+  graded_by: 'RESEARCH-OPS-20261021-2047 (session_017nHnumgZDpnVm16sBYWrkb); plateau rule read from the per-candidate block'
+  needs_review: false
+  reason: 'RULE-RQ-20261016-1fa6-05-PLATEAU applied verbatim: n(B)=356 >= 39, all 7 arms evaluated. Qualifying arms (dR >= 3.0 R, dDD <= 0, fold_wins >= 5/6): none. Best arm F055 dR +2.62 R, fold_wins 4/6. So no run of 3 adjacent arms qualifies = FAIL, pullback_frac on ada_pullback_2h is honest_negative over 6 years; no isolated arm qualified, so no noise lead either. No config change.'
+  verdict: fail
