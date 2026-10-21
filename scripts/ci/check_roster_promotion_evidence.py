@@ -190,7 +190,6 @@ FIDELITY_BASELINE: Dict[Tuple[str, str], str] = {
     # alpaca_live — omitted trail_decay_stall_bars / trail_decay_tight_mult.
     # RQ-20261011-6707-01 faithful arm, record window, full cost stack: ief +2.33R
     # (n=8), slv +2.48R (n=11), iaum +9.85R (n=8) — all clear RULE-D1.
-    ("alpaca_live", "ief_pullback_1d"): "RQ-20261011-6707-01",
     ("alpaca_live", "slv_pullback_1d"): "RQ-20261011-6707-01",
     ("alpaca_live", "iaum_pullback_1d"): "RQ-20261011-6707-01",
 }
