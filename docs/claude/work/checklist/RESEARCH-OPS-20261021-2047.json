@@ -2,7 +2,7 @@
   "id": "RESEARCH-OPS-20261021-2047",
   "title": "Research-ops pass 2026-10-21 20:47Z",
   "phase": "research",
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": "research-ops-lane-20261021-2047",
   "model": null,
@@ -11,15 +11,15 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "[lane] research-ops pass started 20:47Z; baseline runnable 43 vs floor 38, fired_24h 47.",
-  "updated_at": "2026-10-21T20:50:16Z",
+  "note": "[lane] runnable 43 vs computed floor 38 (fired_24h 47); no top-up needed. Results: 1fa6-05 graded FAIL (plateau rule, held PR claude/research-ops-20261021-2047-grading); 001/012/014 producer_failed owned here; filed PI-20261021-6SBYWRKB-0001 (eth4h TP-lever arm crash, no failed-run log). TIER-3 NOTE FOR MANAGER: alpaca_live legs ief_pullback_1d (c56e-16 FAIL, -0.85R, 3/8 folds) and slv_pullback_1d (c56e-17 FAIL, +5.03R, 4/8 folds) have no fold-consistent edge over 18.5y; roster-retention case; mirror follows by equality; gld passed. Not run: blocked/ audit, stranded-PR check, step E authoring. Record comms/research/ops/20261021T2115Z.json.",
+  "updated_at": "2026-10-21T20:53:08Z",
   "updated_by": "session_017nHnumgZDpnVm16sBYWrkb",
   "roadmap": [
     "L-LADDER"
   ],
   "observation": {
-    "what": "pass record landed and queue stays >= computed floor",
-    "how_to_check": "python3 scripts/ci/check_research_queue_throughput.py --json",
+    "what": "held grading PR merged and PI-20261021-6SBYWRKB-0001 dispositioned",
+    "how_to_check": "python3 scripts/research/result_disposition_check.py --list; python3 scripts/ops/pipeline.py --due",
     "due_by": "2026-10-24"
   },
   "writeback": {
