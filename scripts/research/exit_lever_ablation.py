@@ -181,6 +181,29 @@ def arm_cfg(base: dict[str, Any], sets: dict[str, Any], unsets: list[str]) -> di
     return cfg
 
 
+#: Raw harness flags that arm a GEOM-B1 take-profit mover (scripts/research/tp_geometry.py).
+_GEOM_TP_FLAGS = ("--tp-target-r", "--tp-extend-r", "--tp-retarget-mode", "--tp-report")
+
+
+def tp_mover_conflict(label: str, cfg: dict[str, Any], extra: list[str]) -> str | None:
+    """A message when the arm would arm TWO take-profit movers, else None.
+
+    A leg that declares ``tp_revision`` (TP doctrine B1, e.g. trend_donchian_eth_4h since
+    2026-10-18) has its rule forwarded by the argv builder as ``--tp-revision``; a GEOM-B1 flag on
+    the same arm makes backtest_trend.run_backtest raise ``ValueError`` (each moves tp_price), so
+    the arm died exit 1 after the baseline had already run (RQ-20261018-012/-014,
+    PI-20261021-6SBYWRKB-0001). Caught here, before any fetch, with the remedy: a candidate that
+    REPLACES the declared TP mover says so with ``-tp_revision``."""
+    if not cfg.get("tp_revision"):
+        return None
+    hit = [f for f in extra if f in _GEOM_TP_FLAGS]
+    if not hit:
+        return None
+    return (f"arm {label!r}: the leg declares tp_revision and the arm arms a GEOM-B1 TP lever "
+            f"({', '.join(hit)}); the harness refuses two TP movers in one run. Add '-tp_revision' to "
+            "the arm so the candidate replaces the declared mover.")
+
+
 # ── harness runs ────────────────────────────────────────────────────────────
 def _replace_opt(argv: list[str], flag: str, value: str) -> list[str]:
     out = list(argv)
@@ -645,6 +668,14 @@ def _run_holdout(a: Any, base: dict[str, Any], specs: list[Any], labels: list[st
 
 
 # ── main ────────────────────────────────────────────────────────────────────
+def _write_failure(out: Path, info: dict[str, Any]) -> None:
+    """``<out>/failure.json``: why the run stopped, in a file the landing keeps.
+
+    The ``__stderr.log`` files and the runner's ``logs/cmd-0.log`` match ``.gitignore``'s ``*.log``,
+    so a failed run used to land on main with nothing that said why (PI-20261021-6SBYWRKB-0001)."""
+    (out / "failure.json").write_text(json.dumps(info, indent=2, default=str) + "\n", encoding="utf-8")
+
+
 def main(argv: list[str] | None = None) -> int:
     if "--self-test" in (sys.argv[1:] if argv is None else argv):
         return _self_test()
@@ -703,6 +734,12 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     specs = [parse_arm(s) for s in a.arm]
     labels = [s[0] for s in specs]
+    conflicts = [m for m in (tp_mover_conflict(lab, arm_cfg(base, st, un), ex) for lab, st, un, ex in specs) if m]
+    if conflicts:
+        for m in conflicts:
+            print(f"ERROR: {m}", file=sys.stderr)
+        _write_failure(out, {"stage": "preflight", "errors": conflicts})
+        return 2
     if len(set(labels)) != len(labels):
         print(f"ERROR: duplicate arm labels {labels}", file=sys.stderr)
         return 2
@@ -751,6 +788,8 @@ def main(argv: list[str] | None = None) -> int:
         (arms_dir / f"{label}__stderr.log").write_text(r.stderr[-20000:], encoding="utf-8")
         if r.returncode != 0:
             print(f"ERROR: arm {label} harness exit {r.returncode}: {r.stderr[-800:]}", file=sys.stderr)
+            _write_failure(out, {"stage": "harness", "arm": label, "exit_code": r.returncode, "argv": shown,
+                                 "arms_completed": sorted(arms), "stderr_tail": r.stderr[-4000:]})
             return 1
         arms[label] = summarize_arm(jout, emit, edges)
         arms[label]["argv"] = shown
