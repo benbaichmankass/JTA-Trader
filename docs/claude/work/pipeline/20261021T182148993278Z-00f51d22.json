@@ -5,6 +5,11 @@
   },
   "id": "PI-20261021-41BO5V65-0001",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-24",
+    "how_to_check": "scripts/ops/diag_fetch.sh status | jq .status.git_sha_on_disk vs curl -sS https://ict-bot.duckdns.org/api/bot/health/latest | jq .snapshot.checks.git_drift.ctx.head; git cat-file -t on each after git fetch origin main",
+    "what": "one read of both surfaces at the same minute shows the same on-disk SHA, or the wrong reader is named and filed"
+  },
   "origin": {
     "kind": "session",
     "ref": "WEEKLY-AUDIT-2026-10-19 (session_014UeddhjFnc6fSA41bo5V65) C8",
