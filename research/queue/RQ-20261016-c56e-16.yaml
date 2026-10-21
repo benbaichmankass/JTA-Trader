@@ -1,7 +1,7 @@
 id: RQ-20261016-c56e-16
 title: 'Re-validation at power, real money: does ief_pullback_1d AS DECLARED clear Stage 0 on the disjoint window before its committed record (2006-10-02
   .. 2025-04-09), net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -103,11 +103,11 @@ grading:
   decision_rule_id: RULE-RQ20261016c56e16
   evidence:
   - research/results/RQ-20261016-c56e-16/39052885389.jsonl
-  graded_at: '2026-10-17'
+  - research/results/RQ-20261016-c56e-16/39623994544.jsonl
+  graded_at: '2026-10-21'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: REGIME-EQUITY-LEG-FETCH
-  owner_reason: 'Result is producer_failed (exit 1 in 0.6 s): the runner lacks yfinance for the ETF candle fetch. Not a verdict on ief_pullback_1d. Lever is the row named here; re-fire after it clears.'
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
   rows: 1
-  verdict: null
+  verdict: fail

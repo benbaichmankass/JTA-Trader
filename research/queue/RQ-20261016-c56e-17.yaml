@@ -1,7 +1,7 @@
 id: RQ-20261016-c56e-17
 title: 'Re-validation at power, real money: does slv_pullback_1d AS DECLARED clear Stage 0 on the disjoint window before its committed record (2006-10-02
   .. 2025-04-09), net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -103,11 +103,11 @@ grading:
   decision_rule_id: RULE-RQ20261016c56e17
   evidence:
   - research/results/RQ-20261016-c56e-17/39059368568.jsonl
-  graded_at: '2026-10-17'
+  - research/results/RQ-20261016-c56e-17/39623999436.jsonl
+  graded_at: '2026-10-21'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
   rows: 1
-  verdict: null
-  owner: RESEARCH-AUTHOR-GRADE-1017
-  owner_reason: 'Rule cannot be applied: the only row is producer_failed (exit=1). Cause: research-script-run.yml did not install yfinance, which exit_lever_ablation.py needs for 1d ETF candles (regime_debt_matrix._fetch_csv imports it); fix is in the tooling PR (`pip install yfinance==1.7.0`). The dispatcher auto-re-arms producer_failed units (attempt 1 of 2). Closes when a measured row lands and the grader grades it. Not a verdict.'
+  verdict: fail
