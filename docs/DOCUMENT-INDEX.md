@@ -489,6 +489,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/claude/work/SOAK-REPORT.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/designs/world-event-prediction-engine-v0.1.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/findings/E18-starved-triage-post-E35-20260926.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/claude/work/handoffs/2026-10-21-01VduHYz-to-new.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/work/triage-2026-09-28.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/workplan.md` | plan | historical | — | 2026-09-07 | `name:workplan-is-a-forward-commitment / mi159:plan-status-header:historical` | — |
 | `docs/cross-asset-regime-conviction-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
@@ -1041,6 +1042,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/xrp-pullback-trail-axis-and-inert-levers-2026-08-23.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/reviews/2026-10-15-weekly-walkthrough-ml.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reviews/2026-10-15-weekly-walkthrough-perf.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/reviews/2026-10-19-weekly-audit.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
 | `docs/runbooks/alpaca-integration.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/backfill-orphan-pnl.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/devnull-guard.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |

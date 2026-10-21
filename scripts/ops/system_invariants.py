@@ -392,6 +392,11 @@ def inv_exit_loop_meets_requirement(ctx) -> Result:
     if not h:
         return Result(NOT_MEASURED, "exit-loop passes", 0, detail="payload absent")
     body = h.get("content") if isinstance(h, dict) and "content" in h else h
+    # /api/diag/log_file serves the file as a ``lines`` list (one entry per
+    # line of the pretty-printed JSON), not ``content`` — read live 2026-10-21,
+    # when this check reported not_measured over a payload that said "within".
+    if isinstance(body, dict) and isinstance(body.get("lines"), list) and "requirement_state" not in body:
+        body = "\n".join(str(x) for x in body["lines"])
     if isinstance(body, str):
         try:
             body = json.loads(body)
@@ -1280,6 +1285,24 @@ def _self_test() -> int:
                                     "max_interval_ms": 59951.2}
     expect("a near miss passes on n=4 rather than being refused",
            "INV-EXIT-INTERVAL", nearmiss, PASS)
+
+    # (e3) the LIVE route shape: /api/diag/log_file wraps the file as a `lines`
+    #      list. Until 2026-10-21 this read as not_measured; a breach in that
+    #      shape must FAIL, not vanish.
+    import json as _json
+    def _as_log_file(body):
+        return {"name": "exit_loop_health", "present": True,
+                "lines": _json.dumps(body, indent=1).split("\n")}
+    wrapped_bad = _fx_good()
+    wrapped_bad["exit_loop_health"] = _as_log_file(
+        {"requirement_state": "breached", "intervals_measured": 694, "max_interval_ms": 91000})
+    expect("exit-interval reads the log_file `lines` shape (breach FAILS)",
+           "INV-EXIT-INTERVAL", wrapped_bad, FAIL)
+    wrapped_good = _fx_good()
+    wrapped_good["exit_loop_health"] = _as_log_file(
+        {"requirement_state": "within", "intervals_measured": 694, "max_interval_ms": 44000})
+    expect("exit-interval reads the log_file `lines` shape (within PASSES)",
+           "INV-EXIT-INTERVAL", wrapped_good, PASS)
 
     ok = sum(1 for _, good_, _ in checks if good_)
     for name, good_, why in checks:
