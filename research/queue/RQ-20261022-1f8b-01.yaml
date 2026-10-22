@@ -1,0 +1,102 @@
+id: RQ-20261022-1f8b-01
+title: 'Programme 01 Q11 rung 1 CONFIRMATION: do in-trade path metrics at bar 6 predict peak-to-exit giveback beyond bars-in-trade and current R on the DISJOINT window
+  2018-10..2020-06 (same four legs, same statistic and bar)?'
+status: queued
+cadence: once
+priority: 2
+kind: experiment
+theme: live_strategy
+question: RQ-20261022-007 read PASS on 2020-07-01..2026-10-15 (pooled ll_gain 0.0137, 5 of 6 folds; r2_gain -0.0038). Its pass came from the log-loss criterion only,
+  driven by ada_pullback_2h (ll_gain 0.0222) while trend_donchian_eth_4h read no_gain_over_bars_and_r. On 2018-10-01 .. 2020-06-30 23:59 (disjoint from and preceding
+  that window), with the same four legs, the same features, k=6 and the same thresholds, does adding chop_k, er_k, shape_k and early_k to the baseline of open_r_k,
+  peak_r_k and bars_since_peak_k raise out-of-sample R2 on giveback by >= 0.02, or lower log-loss on giveback >= the training folds' median by >= 0.01, with the fold
+  majority below?
+why_this_matters: 'A PASS on one window is a discovery, not a confirmation (research-ops benchmark 2026-10-16). Rung 2 (the giveback LEVER arm) is a build and a Tier-3
+  path; it should open only on a metric that survives a window the PASS never saw. The first window''s PASS is thin (R2 gain negative, one criterion, one leg carrying
+  it), so the confirmation is the proportionate next step. Multiple-testing denominator: the Q11 PASS was one pooled test with two criteria over four legs.'
+power:
+  expected_n: 230
+  min_detectable_effect: 0.15
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: The window is ~1.75 y against the first read's 6.3 y (835 pooled trades open at bar 6), so about 230 pooled trades are expected, below the 349 the 0.15 sd
+    floor asks for; the unit may therefore read INDETERMINATE by its own n-floor and that is a legitimate answer (extend to a third window or pool), never a FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261022-1F8B-01-Q11-CONFIRM
+  registered_at: '2026-10-22'
+  registered_before_run: true
+  statistic: 'From scripts/research/path_metric_giveback.py (the SAME script, features, label and k=6 as RQ-20261022-007), window 2018-10-01 .. 2020-06-30 23:59,
+    4 calendar folds (the window is shorter; the fold majority is raised proportionally from 4 of 6 to 3 of 4, which is the stricter bar), leave-one-fold-out, pooled
+    over the four legs: r2_gain = R2_oos(full) - R2_oos(base); ll_gain = logloss_oos(base) - logloss_oos(full); fold wins = folds where the gain > 0.'
+  rule: 'INDETERMINATE IF pooled n < 100. PASS IF (r2_gain >= 0.02 AND r2 fold wins >= 3 of 4) OR (ll_gain >= 0.01 AND ll fold wins >= 3 of 4): the rung-1 metric
+    is CONFIRMED and the follow-up is the rung-2 lever arm registered as its own unit (bank 50% at +1 R when the metric crosses its threshold, net of cost), never
+    a config change. FAIL otherwise: the first-window PASS is not confirmed and rung 2 is not opened on it. Per-leg verdicts are reported, not graded. Thresholds
+    are not changed after any result.'
+  what_it_does_not_do: 'A label study, not a lever: edits no config, places no order, tests no exit. Harness paths are not live paths. Volatility is a confound (a
+    choppier path also has larger R swings), so a PASS says the metrics carry information, not that chop causes giveback.'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 500
+  confidence: 0.3
+  basis: 'stand-in: money legs; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  why_runner: Fetches keyless public candles (Binance Vision) for a pinned window; reads no trainer data.
+  basis: Same script and four legs as RQ-20261022-007 (about 60 s per leg MEASURED 2026-10-21) on a shorter window.
+run:
+  command:
+  - python3
+  - scripts/research/path_metric_giveback.py
+  - --leg
+  - trend_donchian_eth_4h
+  - --leg
+  - trend_donchian_xrp_4h
+  - --leg
+  - ada_pullback_2h
+  - --leg
+  - xrp_pullback_2h
+  - --k
+  - '6'
+  - --days
+  - '2960'
+  - --start
+  - '2018-10-01'
+  - --end
+  - 2020-06-30 23:59
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '100'
+  - --min-r2-gain
+  - '0.02'
+  - --min-ll-gain
+  - '0.01'
+  - --big-quantile
+  - '0.5'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261022-1f8b-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-ATM
+- M20
+related:
+- research/queue/RQ-20261022-007.yaml
+- docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md
+- scripts/research/path_metric_giveback.py
