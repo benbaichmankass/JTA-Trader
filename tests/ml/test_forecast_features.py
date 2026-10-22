@@ -261,3 +261,48 @@ class TestMarketFeaturesIntegration:
         for r in rows:
             for c in FORECAST_FEATURE_COLUMNS:
                 assert c in r
+
+
+# ── FRONTIER-LEVER-TSFM: backend switch + both Chronos output shapes ─────────────────────────────────────────────────
+def test_backend_registry_resolves_known_and_refuses_unknown():
+    from ml.datasets.forecast_features import FORECAST_BACKENDS, FORECAST_MODEL_ID, resolve_backend
+    import pytest as _pt
+
+    assert resolve_backend("chronos-bolt-tiny") == FORECAST_MODEL_ID  # the incumbent is still the default model
+    assert resolve_backend("chronos-2") == "amazon/chronos-2" and "chronos-2" in FORECAST_BACKENDS
+    for unloadable in ("timesfm-2.5", "tirex-2", "kronos-base", "ttm-r2"):
+        with _pt.raises(ValueError, match="unknown forecast backend"):
+            resolve_backend(unloadable)
+
+
+def test_last_step_quantiles_reads_bolt_and_chronos2_shapes_identically():
+    from ml.datasets.forecast_features import last_step_quantiles
+    import pytest as _pt
+
+    levels = [0.1, 0.5, 0.9]
+    step = [[1.0, 2.0, 3.0], [10.0, 20.0, 30.0]]  # horizon=2; the LAST step is the one read
+    bolt = [step]                                   # (batch=1, horizon, n_q)
+    chronos2 = [[step]]                             # list of per-series (n_variates=1, horizon, n_q)
+    want = {0.1: 10.0, 0.5: 20.0, 0.9: 30.0}
+    assert last_step_quantiles(bolt, 0, levels) == want
+    assert last_step_quantiles(chronos2, 0, levels) == want
+    with _pt.raises(ValueError, match="univariate"):
+        last_step_quantiles([[step, step]], 0, levels)  # 2 variates: refuse, never read variate 0
+
+
+def test_build_forecasts_cli_backend_sets_model_id_and_records_it(tmp_path, monkeypatch):
+    import scripts.ml.build_forecasts as bf
+
+    market = tmp_path / "BTCUSDT" / "15m" / "v001"
+    market.mkdir(parents=True)
+    (market / "data.jsonl").write_text("\n".join(json.dumps(r) for r in _bar_rows(40)) + "\n")
+    seen = {}
+    monkeypatch.setattr(bf, "forecast_available", lambda: True)
+    monkeypatch.setattr(bf, "chronos_forecast_fn",
+                        lambda model_id: seen.setdefault("m", model_id) and
+                        (lambda ws, h, qs: [{q: ws[i][-1] * (1 + (q - 0.5) * 0.01) for q in qs} for i in range(len(ws))]))
+    out = tmp_path / "out"
+    assert bf.main(["--target", str(market), "--out", str(out), "--backend", "chronos-2",
+                    "--context-len", "8", "--min-context", "8", "--stride", "4"]) == 0
+    meta = json.loads((out / "metadata.json").read_text())
+    assert seen["m"] == "amazon/chronos-2" and meta["backend"] == "chronos-2" and meta["model_id"] == "amazon/chronos-2"
