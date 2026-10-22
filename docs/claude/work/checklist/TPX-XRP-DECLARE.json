@@ -14,7 +14,7 @@
     "TPX-PULLBACK-PRODUCER"
   ],
   "note": "[2026-10-22 lane] RULE FIRES, DECLARE BLOCKED. Family read (RULE-W43-*-TPX-SIBLING-COMPLIANCE): X6 passes eth (+5.48 R, 6/6), sol (+0.13 R, 6/6), avax (+0.11 R, 5/6) = 3 of 3; X5 2 of 3 (fails avax -0.51 R). Doctrine read clears for X6 on all three (tp_share 0.30/0.40/0.37, lever fired, R/capital-day not lower). Named cell X6 tpx_t3_a0.85_e1_m3. No config PR: the registered rule conditions the declare on the pullback tp producer, which does not exist (tp_revision.RULES has only donchian_measured_move; htf_pullback_trend_2h emits no tp verdict); a probe declaring tp_revision on xrp left all 3 routings FAIL. Build filed: TPX-PULLBACK-PRODUCER. decision_bar closed (#19513) aligns live with the harness (strengthens transfer); BELOW_BACKTEST is an entry/fidelity question, not touched by a relative exit read. Record docs/research/evidence/tpx-xrp-family-read-2026-10-22.json.",
-  "updated_at": "2026-10-22T14:29:24Z",
+  "updated_at": "2026-10-22T14:30:21Z",
   "updated_by": "session_011SQcruvhK7evd6Yzen5fu2",
   "roadmap": [
     "L-ATM"
@@ -23,6 +23,10 @@
     "what": "xrp_pullback_2h declares the X6 tp_extend revision and check_tp_doctrine reads its 3 routings compliant",
     "how_to_check": "python3 scripts/ci/check_tp_doctrine.py | grep xrp_pullback_2h",
     "due_by": "2026-11-05"
+  },
+  "writeback": {
+    "roadmap": "none: no milestone moves until the X6 declare lands (blocked on TPX-PULLBACK-PRODUCER); outcome recorded on TP-DOCTRINE-W43",
+    "arch": "none: no architecture change (evidence record only)"
   },
   "_seq": 597
 }
