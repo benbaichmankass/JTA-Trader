@@ -47,7 +47,7 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts" / "research"))
@@ -70,17 +70,17 @@ def incumbent_arm(leg: str, strategies_yaml: Path) -> str:
     return "closed" if str(block.get("decision_bar") or "forming").lower() == "closed" else "forming"
 
 
-def grade_arm(rows: List[Dict[str, Any]], *, n_floor: int, folds: int, fold_majority: int,
-              holdout_frac: float, holdout_min: int) -> Dict[str, Any]:
+def grade_arm(rows: list[dict[str, Any]], *, n_floor: int, folds: int, fold_majority: int,
+              holdout_frac: float, holdout_min: int) -> dict[str, Any]:
     rows = sorted(rows, key=lambda r: _ts(r["entry_time"]))
     n = len(rows)
     net = round(sum(float(r["net_r"]) for r in rows), 4)
-    out: Dict[str, Any] = {"n": n, "net_r_total": net,
+    out: dict[str, Any] = {"n": n, "net_r_total": net,
                            "mean_net_r": round(net / n, 4) if n else None}
     if n < n_floor:
         out.update(verdict="indeterminate", why=f"n {n} < n_floor {n_floor}")
         return out
-    k = max(holdout_min, int(round(n * holdout_frac)))
+    k = max(holdout_min, round(n * holdout_frac))
     hold = rows[n - k:]
     out["holdout"] = {"n": len(hold), "from": str(hold[0]["entry_time"]),
                       "net_r": round(sum(float(r["net_r"]) for r in hold), 4)}
@@ -104,7 +104,7 @@ def grade_arm(rows: List[Dict[str, Any]], *, n_floor: int, folds: int, fold_majo
     return out
 
 
-def live_band(leg: str, xs: List[float], recent: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+def live_band(leg: str, xs: list[float], recent: dict[str, Any] | None) -> dict[str, Any]:
     if recent is None:
         return {"state": "not_measured", "why": "live fetch not requested or failed"}
     import live_vs_backtest as lvb
@@ -116,7 +116,7 @@ def live_band(leg: str, xs: List[float], recent: Optional[Dict[str, Any]]) -> Di
     return {"state": "measured", **lvb.judge(float(lr), xs, int(n))}
 
 
-def run(args: argparse.Namespace) -> Dict[str, Any]:
+def run(args: argparse.Namespace) -> dict[str, Any]:
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
     if args.arms_dir:
@@ -141,7 +141,7 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
             recent = lvb._fetch(args.live_url)
         except (OSError, ValueError) as e:  # URLError is an OSError; bad JSON is a ValueError. Recorded as not_measured, never fabricated
             print(f"live fetch failed: {e!r}", file=sys.stderr)
-    legs: Dict[str, Any] = {}
+    legs: dict[str, Any] = {}
     for leg in args.leg:
         arm = incumbent_arm(leg, Path(args.strategies))
         p = arms_dir / f"{leg}__{ARM_FILE[arm]}__trades.jsonl"
@@ -178,7 +178,7 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
     return res
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--leg", action="append", required=True)
     ap.add_argument("--out", required=True)
