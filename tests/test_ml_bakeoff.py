@@ -481,3 +481,17 @@ def test_common_rows_restricts_every_arm_to_rows_all_side_streams_cover():
     res = mb.run_group(df, spec, ls, "macro_f1", {})
     assert res["n_common_rows"] == 300                                         # every 8th of 2400
     assert res["arms"]["a"]["windows"]["cv"]["n_test_rows"] == res["arms"]["b"]["windows"]["cv"]["n_test_rows"]
+
+
+def test_group_placeholder_and_peer_skip_serve_every_symbol(tmp_path):
+    import pandas as pd
+    df, spec = _var_frames(tmp_path)
+    df.attrs["group"] = "BTC"
+    spec = dict(spec, own="{group}", peers={"BTC": str(tmp_path / "peer.jsonl"), "ETH": str(tmp_path / "peer.jsonl")})
+    out = mb.block_var_price_vector(df, spec)
+    assert {"var_ret_BTC", "var_ret_ETH"} <= set(out) and "var_ret_BTC" in out   # own not double-counted
+    assert len([k for k in out if k.startswith("var_ret_") and k != "var_ret_own"]) == 2
+    side = tmp_path / "side_BTC.jsonl"
+    pd.DataFrame({"ts": df["ts"], "fc_ret_med": 1.0}).to_json(side, orient="records", lines=True, date_format="iso")
+    j = mb.block_join_columns(df, {"path": str(tmp_path / "side_{group}.jsonl"), "columns": ["fc_ret_med"]})
+    assert np.allclose(j["fc_ret_med"], 1.0)

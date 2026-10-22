@@ -159,10 +159,27 @@ def block_har_rv(df, spec: Dict[str, Any]) -> Dict[str, np.ndarray]:
     return {"har_rv_d": _roll_mean(r2, d * sc), "har_rv_w": _roll_mean(r2, w * sc), "har_rv_m": _roll_mean(r2, m * sc)}
 
 
+def _fmt(text: str, df) -> str:
+    """Substitute ``{group}`` (the dataset group this frame belongs to) in a block's path/name strings, so ONE learner
+    spec serves every symbol of a multi-group bake-off."""
+    return str(text).replace("{group}", str(getattr(df, "attrs", {}).get("group", "")))
+
+
+def _read_jsonl_cols(path: str, cols: List[str], tail: int = 0):
+    import pandas as pd
+    rows = []
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            if line.strip():
+                r = json.loads(line)
+                rows.append({c: r.get(c) for c in cols})
+    return pd.DataFrame(rows[-tail:] if tail else rows)
+
+
 def block_join_columns(df, spec: Dict[str, Any]) -> Dict[str, np.ndarray]:
     """Join a precomputed side-stream (e.g. fc_* from build_forecasts.py for another backend) on ts."""
     import pandas as pd
-    path = _resolve_path(str(spec["path"]))
+    path = _resolve_path(_fmt(spec["path"], df))
     sp = str(path)
     if sp.endswith(".parquet"):
         side = pd.read_parquet(path)
@@ -204,7 +221,7 @@ def block_var_price_vector(df, spec: Dict[str, Any]) -> Dict[str, np.ndarray]:
     Emits ``<prefix>ret_<SYM>`` / ``<prefix>abs_<SYM>`` (the vector) plus ``<prefix>ret_own`` / ``<prefix>abs_own``
     for the group's own asset. No forward information: row t's prediction uses returns up to and including t.
 
-    spec: own (symbol name of this group's asset), return_col (default log_return), peers {SYM: jsonl/csv/parquet
+    spec: own (symbol name of this group's asset; ``{group}`` ok), return_col (default log_return), peers {SYM: jsonl/csv/parquet
     path with ts + return_col}, lags (default 4), window (default 2000 rows), refit_every (default 96), ridge (default 1.0)
     """
     import pandas as pd
@@ -215,13 +232,17 @@ def block_var_price_vector(df, spec: Dict[str, Any]) -> Dict[str, np.ndarray]:
     step = int(spec.get("refit_every", 96))
     lam = float(spec.get("ridge", 1.0))
     pre = spec.get("prefix", "var_")
-    own = str(spec.get("own", "OWN"))
+    own = _fmt(spec.get("own", "OWN"), df)
     t = pd.to_datetime(df[on], utc=True)
     series = {own: np.asarray(df[rc], dtype=float)}
     for sym, path in (spec.get("peers") or {}).items():
-        fp = str(_resolve_path(str(path)))
-        side = pd.read_json(fp, lines=True) if fp.endswith(".jsonl") else (
-            pd.read_parquet(fp) if fp.endswith(".parquet") else pd.read_csv(fp))
+        if str(sym) == own:
+            continue
+        fp = str(_resolve_path(_fmt(path, df)))
+        if fp.endswith(".jsonl"):
+            side = _read_jsonl_cols(fp, [on, rc], int(spec.get("peer_tail_rows", 0)))   # shards are 480 MB wide
+        else:
+            side = pd.read_parquet(fp) if fp.endswith(".parquet") else pd.read_csv(fp)
         side[on] = pd.to_datetime(side[on], utc=True)
         m = pd.DataFrame({on: t}).merge(side[[on, rc]], on=on, how="left")
         series[str(sym)] = m[rc].to_numpy(dtype=float)
@@ -863,6 +884,8 @@ def run_spec(spec: Dict[str, Any], *, unit: str = "(inline)") -> Dict[str, Any]:
     better_high = metric_higher_is_better(metric, spec.get("higher_is_better"))
     status = {n: probe_learner(ls["kind"], ls.get("params") or {}) for n, ls in learners.items()}
     gdata = load_groups(spec["dataset"])
+    for g, df in gdata.items():
+        df.attrs["group"] = g
     groups = {g: run_group(df, spec, learners, metric, status) for g, df in gdata.items()}
     arm_status: Dict[str, str] = {}
     for n in learners:
