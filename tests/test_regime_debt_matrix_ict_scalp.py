@@ -159,7 +159,9 @@ def test_every_enabled_leg_now_routes_except_turtle_soup():
     legs = {n: c for n, c in _live_legs().items()
             if isinstance(c, dict) and c.get("enabled")}
     unrouted = sorted(n for n, c in legs.items() if rdm.classify(c) is None)
-    assert len(legs) == 52
+    # 52 -> 53 on 2026-10-22: trend_donchian_xrp_adx25, the bybit_1 soak alias of
+    # trend_donchian_xrp_4h (OPERATOR-DECISIONS-1022); it routes like the incumbent.
+    assert len(legs) == 53
     assert unrouted == ["turtle_soup"]
 
 
