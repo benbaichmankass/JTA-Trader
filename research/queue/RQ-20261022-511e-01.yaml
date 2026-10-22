@@ -2,7 +2,7 @@ id: RQ-20261022-511e-01
 title: 'Corroboration of RQ-20261016-015 M2: does the ADX-tightened trail cell adx25_k0_t2.5
   (trail_adx_below 25 / trail_adx_tight_mult 2.5) beat the declared exit on a sibling trend_donchian
   4h leg (eth_4h, sol_4h) over 2020-07..2026-10 in 3 of 4 calendar folds, net of cost?'
-status: done
+status: queued
 cadence: once
 roadmap:
 - L-ATM
@@ -165,12 +165,21 @@ related:
 - docs/research/d1-cost-stack-verification-2026-09-25.md (harness cost stack)
 last_dispatched_at: '2026-10-22T11:18:24+00:00'
 grading:
-  graded_at: '2026-10-22'
-  graded_by: lane EXITS-GIVEBACK-W43 (session_013boLrFb4hM4JJ2Naq19bqS), dispatched by Manager Session 2026-10-22
-    (session_01Hsp3aD8ccAyhHiyYARqEqh)
+  auto: false
   decision_rule_id: RULE-ODC1022-ADX25-SIBLING-CORROBORATE
+  evidence:
+  - research/results/RQ-20261022-511e-01/39769641439.jsonl
+  - comms/research/RQ-20261022-511e-01/39769641439/logs/cmd-0.log
+  graded_at: '2026-10-22'
+  graded_by: 'RESEARCH-OPS-20261022-1447 (session). Hand-written unit whose two per-leg commands shared one {out_dir}:
+    the sol_4h command overwrote the eth_4h summary, so only 1 row landed (min_rows 2).'
+  needs_review: false
+  reason: 'Rule applied verbatim. sol_4h (structured row): n(A) 267 >= 39, M2 net_r 60.83 vs A 68.61 (delta -7.78
+    < bar +5.34), folds_ge 1 of 4 -> FAIL. eth_4h (cmd-0.log only, its row was overwritten; no n or delta recoverable):
+    harness grade printed verdict fail / incumbent_stands, and a thin-n leg prints indeterminate, so it is a measured
+    FAIL. FAIL on both siblings -> UNIT FAIL: the ADX25 cell stays on the bybit_1 alias only; real money is not
+    declared on it. Not re-run: eth_4h had already graded FAIL on the current incumbent in RQ-20261019-010.'
   verdict: fail
-  record: research/results/RQ-20261022-511e-01/39769641439.jsonl
   disposition: 'REGISTERED VERDICT: UNIT FAIL (M2 measured and failing on BOTH siblings; n(A) >= 39). The shared-record
     grader read only the last invocation (min_rows 2, 1 row landed) because both commands wrote to the SAME --out
     dir, so the sol_4h row overwrote the eth_4h row: sol_4h is on record (A 68.61 R n 267; M2 60.83 R n 283; delta
@@ -180,6 +189,7 @@ grading:
     FAILS vs the current eth_4h incumbent). CONSEQUENCE per the registered rule: the lever stays on the bybit_1
     alias (trend_donchian_xrp_adx25) only; real money (bybit_2 + bybit_portfolio) is NOT declared on trail_adx_below
     25 / trail_adx_tight_mult 2.5. The xrp_4h M2 PASS (RQ-20261016-015: n 68, 4 of 4 folds) stands as an uncorroborated
-    single-leg discovery. Tooling defect filed: RESEARCH-MULTICMD-OUTDIR.'
+    single-leg discovery. Tooling defect filed: RESEARCH-MULTICMD-OUTDIR. [Added by EXITS-GIVEBACK-W43 on merge
+    with RESEARCH-OPS-20261022-1447''s grade; the verdict agrees.]'
   evidence_gap: eth_4h per-arm numbers overwritten by sol_4h in the shared out dir; eth verdict from logs/cmd-0.log
     only
