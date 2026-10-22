@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "due_date": "2026-10-29",
+    "kind": "date"
+  },
+  "filed": "2026-10-22",
+  "id": "PI-20261022-LOWUPW43-0003",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "review",
+    "ref": "lane PERF-FOLLOWUP-2026W43 lesson L4 (comms/perf_followup/perf-followup-20261021-walkthrough.json)",
+    "rerun": "python3 -c \"import json;r=json.loads(open('research/results/RQ-20261014-9807-01/38674510250.jsonl').readline());print([s for s in r['measurement']['strategies'] if s['strategy']=='ict_scalp_xrp_5m'])\""
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "[performance][data-quality] ict_scalp_xrp_5m (paper) in the giveback census reads realised_r_mean -1.2553 but realised_r_p50 +0.5744 over n=17, with 10 of 17 trades peaking >= 1R and NONE of those closing <= 0 (deep_then_loss 0.0) -- arithmetically one or two trades must sit far below -1R (sum ~ -21R). A stop-bracketed scalp cannot lose several R at a 1R stop unless the stop failed, the fill slipped, or the R basis is wrong; one row's R comes from pnl_over_risk_usd rather than telemetry (realised_provenance). MEASURED: research/results/RQ-20261014-9807-01/38674510250.jsonl strategies[ict_scalp_xrp_5m] (90d window to 2026-10-15). Check: pull the 17 rows (diag position_telemetry + trades by order_package_id), name the outlier(s), and classify -- R-basis bug (fix the census/telemetry) vs a real beyond-stop loss (execution bug: a checklist row). Not a strategy finding until then; this outlier also inflates the walk-through's pooled giveback mean."
+}

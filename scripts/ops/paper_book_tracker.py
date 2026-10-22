@@ -34,6 +34,27 @@ import yaml
 _REPO = __file__.rsplit("/scripts/", 1)[0]
 _DEFAULT_COHORT = f"{_REPO}/config/research/diversified_paper_book.yaml"
 _DEFAULT_TRACKER = f"{_REPO}/docs/research/paper-book-tracker.jsonl"
+_DEFAULT_ACCOUNTS = f"{_REPO}/config/accounts.yaml"
+
+
+def _rostered(accounts_path: str) -> set[str] | None:
+    """Every strategy on ANY account's `strategies:` roster, or None if unreadable.
+
+    PI-20261010-ERFFUW41-0002: the cohort yaml is the 2026-06-18 banked book, so
+    legs that later left every roster (avax_/sol_pullback_2h, 2026-10-05) kept
+    driving the family headline. None means "could not look" -- the rostered
+    split is then omitted, never reported as an empty roster.
+    """
+    try:
+        accts = yaml.safe_load(open(accounts_path)) or {}
+    except (OSError, yaml.YAMLError):
+        return None
+    accts = accts.get("accounts", accts) if isinstance(accts, dict) else {}
+    out: set[str] = set()
+    for a in accts.values():
+        if isinstance(a, dict) and isinstance(a.get("strategies"), list):
+            out.update(str(x) for x in a["strategies"])
+    return out
 
 
 def _get(d: dict, *keys, default=None):
@@ -99,6 +120,8 @@ def main(argv: list[str]) -> int:
     p.add_argument("--tracker", default=_DEFAULT_TRACKER)
     p.add_argument("--no-append", action="store_true", help="compute + print but don't append a snapshot")
     p.add_argument("--asof", default=None, help="snapshot date override (ISO; default now UTC)")
+    p.add_argument("--accounts", default=_DEFAULT_ACCOUNTS,
+                   help="accounts.yaml whose rosters define the CURRENT-roster split")
     a = p.parse_args(argv)
 
     cohort = yaml.safe_load(open(a.cohort))
@@ -132,6 +155,22 @@ def main(argv: list[str]) -> int:
     for fam in sorted(cohort.get("families", {})):
         per_fam[fam] = _agg([r for r in book if fam_of.get(_cell_of(r)) == fam])
 
+    # Current-roster split (PI-20261010-ERFFUW41-0002): the historical cohort
+    # above stays as-is; this adds the same aggregates over cells that are still
+    # on some account's roster, so a headline can be read for live legs only.
+    rostered = _rostered(a.accounts)
+    roster_split = None
+    if rostered is not None:
+        live_cells = sorted(c for c in cells if c in rostered)
+        roster_split = {
+            "rostered_cells": live_cells,
+            "off_roster_cells": sorted(c for c in cells if c not in rostered),
+            "book": _agg([r for r in book if _cell_of(r) in rostered]),
+            "per_family": {fam: _agg([r for r in book if _cell_of(r) in rostered
+                                      and fam_of.get(_cell_of(r)) == fam])
+                           for fam in sorted(cohort.get("families", {}))},
+        }
+
     book_agg = _agg(book)
     recent_agg = _agg(recent)
     prior_agg = _agg(prior)
@@ -143,7 +182,8 @@ def main(argv: list[str]) -> int:
     snap = {"asof": asof.isoformat(), "book": book_agg, "recent_window_days": rec_days,
             "recent": recent_agg, "prior": prior_agg, "per_family": per_fam,
             "per_cell": per_cell, "decay_flag": decay_flag,
-            "active_cells": sum(1 for c in per_cell.values() if c["n"] > 0)}
+            "active_cells": sum(1 for c in per_cell.values() if c["n"] > 0),
+            "current_roster": roster_split}
 
     # delta vs previous snapshot
     prev = None
@@ -162,6 +202,12 @@ def main(argv: list[str]) -> int:
           f"| prior: n={prior_agg['n']} net=${prior_agg['net_usd']} mean=${prior_agg['mean_usd']}")
     print(f"  families: trend net=${per_fam.get('trend',{}).get('net_usd')}  "
           f"pullback net=${per_fam.get('pullback',{}).get('net_usd')}")
+    if roster_split is None:
+        print("  current roster: — (accounts.yaml unreadable; split not computed)")
+    else:
+        rb = roster_split["book"]
+        print(f"  current roster ({len(roster_split['rostered_cells'])} cells): n={rb['n']} net=${rb['net_usd']}  "
+              f"off-roster: {', '.join(roster_split['off_roster_cells']) or 'none'}")
     if prev:
         d_n = book_agg["n"] - prev["book"]["n"]
         d_net = round(book_agg["net_usd"] - prev["book"]["net_usd"], 2)
