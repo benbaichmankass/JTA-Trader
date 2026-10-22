@@ -2,7 +2,7 @@
   "id": "AUD-20261019-LU-OBSERVATION-PULL",
   "title": "72 of 188 landed_unproven rows are past their observation.due_by and nothing pulls them: feed overdue observations into the brief's due section",
   "phase": null,
-  "state": "landed_unproven",
+  "state": "done",
   "owner": "manager",
   "lane": null,
   "model": null,
@@ -13,8 +13,8 @@
     19340
   ],
   "blocked_on": [],
-  "note": "[WEEKLY-AUDIT-2026-10-19, session_014UeddhjFnc6fSA41bo5V65] CLAIM: landed_unproven's closing observation has no puller. EVIDENCE: scan of docs/claude/work/checklist/*.json 2026-10-21: landed_unproven 188, observation.due_by < 2026-10-21 for 72 (e.g. MIRROR-QTY-DIVERGE 10-19, LIVE-PARITY 10-17, PROTECTION-HARDENING 10-19, 14 RESEARCH-OPS-* lanes); grep of scripts/ops/render_daily_brief.py shows landed_unproven rendered only under section 3 'moved', never as due. EXPECTED: per close-out check 3 the observation is named and dated so it gets made. BUILD: a checklist-side due() (observation.due_by passed) merged into section 0 with the same cap/ranking; RESEARCH-OPS-* lane rows auto-closable by the next research-ops pass. DETECTOR: brief self-test planting an overdue landed_unproven row that must appear in section 0. [2026-10-21 session_014UeddhjFnc6fSA41bo5V65] Built in #19340 (render_daily_brief.py section 0b, self-test 'landed_unproven past due_by is derived-due; today and future are not'). Live store: 73 rows listed.",
-  "updated_at": "2026-10-21T18:51:25Z",
+  "note": "[WEEKLY-AUDIT-2026-10-19, session_014UeddhjFnc6fSA41bo5V65] CLAIM: landed_unproven's closing observation has no puller. EVIDENCE: scan of docs/claude/work/checklist/*.json 2026-10-21: landed_unproven 188, observation.due_by < 2026-10-21 for 72 (e.g. MIRROR-QTY-DIVERGE 10-19, LIVE-PARITY 10-17, PROTECTION-HARDENING 10-19, 14 RESEARCH-OPS-* lanes); grep of scripts/ops/render_daily_brief.py shows landed_unproven rendered only under section 3 'moved', never as due. EXPECTED: per close-out check 3 the observation is named and dated so it gets made. BUILD: a checklist-side due() (observation.due_by passed) merged into section 0 with the same cap/ranking; RESEARCH-OPS-* lane rows auto-closable by the next research-ops pass. DETECTOR: brief self-test planting an overdue landed_unproven row that must appear in section 0. [2026-10-21 session_014UeddhjFnc6fSA41bo5V65] Built in #19340 (render_daily_brief.py section 0b, self-test 'landed_unproven past due_by is derived-due; today and future are not'). Live store: 73 rows listed. [2026-10-21T19:58Z session_014UeddhjFnc6fSA41bo5V65] OBSERVED: GET /api/bot/work/brief renders '\u00a70b \u2014 DERIVED DUE' (served from the VM after git-sync of 09a5d44cf). -> done.",
+  "updated_at": "2026-10-21T19:58:34Z",
   "updated_by": "session_014UeddhjFnc6fSA41bo5V65",
   "roadmap": [
     "L-OPS"
