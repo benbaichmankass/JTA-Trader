@@ -1,0 +1,30 @@
+{
+  "id": "RESEARCH-OPS-20261022-0847",
+  "title": "Research-ops pass 2026-10-22 08:47Z",
+  "phase": "research",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "research-ops-lane-20261022-0847",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[lane] runnable 45 vs floor 50 (fired_24h 62), H1-AUTHOR. 12 results read, own-rule graded: Q11 PASS (thin: ll only, ada-driven) -> confirmation unit 1f8b-01; Q10 x6 FAIL incumbent stands; 7c2b-12 FAIL -> 0.35% sizing Tier-3 input (P5-PROP-PROGRAMME). Overdue CROSS-SIGNAL readout applied (memo s8). Blocked audit: 72 files, 2 findings filed (PI-20261022-HOPS0847-0001/-0002). needs_review: 2 unowned units dispositioned, 34 already owned/retired. Authored 1 unit + 1 programme node (soak equity overlap, script soak_equity_overlap.py). Not run: new_strategy_prop/infra/ml_health authoring beyond that (template space minted; rest needs builds). Record comms/research/ops/20261022T0925Z.json. PR holds (unvouchable_paths).",
+  "updated_at": "2026-10-22T09:09:09Z",
+  "updated_by": "session_01Fz7Hik1HiHWrxGeht5b3ur",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "observation": {
+    "what": "this PR merged (held, E57); RQ-20261022-1f8b-01 dispatched and the soak-overlap node emitted by the 05:50Z replenish",
+    "how_to_check": "python3 scripts/ops/pipeline.py --due | grep HOPS0847; ls research/results | grep 1f8b",
+    "due_by": "2026-10-29"
+  },
+  "writeback": {
+    "roadmap": "none: operations pass",
+    "arch": "none: no component changed"
+  },
+  "_seq": 595
+}
