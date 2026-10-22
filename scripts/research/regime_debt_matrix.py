@@ -243,7 +243,13 @@ _PB_LEVER_FLAG = {
 _PB_PLAIN = {"model", "signal_prefixes", "enabled", "execution", "timeframe", "symbols",
              "trend_lookback", "pullback_lookback", "pullback_frac", "atr_period",
              "atr_stop_mult", "trail_mult", "tp_r", "min_confidence", "adx_min",
-             "adx_max", "adx_period", "shadow_model_ids", "description", "tp_intent"}
+             "adx_max", "adx_period", "shadow_model_ids", "description", "tp_intent",
+             # decision_bar: closed == what the pullback harness does by construction
+             # (closed bar, Stage 0), as for _TREND_PLAIN; an explicit `forming` is NOT
+             # modelled and is added to the omitted set in build_harness_cmd. Without
+             # this, xrp/ada_pullback_2h's operator-approved `decision_bar: closed`
+             # (DECISION-BAR-MATCH, 2026-10-22) graded their records `approximate`.
+             "decision_bar"}
 # Squeeze (TTM-style BB-inside-KC) lever config-key -> harness flag. The squeeze
 # harness (scripts/backtest_squeeze.py) is the SAME harness that validated the
 # strategy in docs/audits/squeeze-breakout-complement-2026-05-24.md — it was simply
@@ -1092,7 +1098,9 @@ def build_harness_cmd(name: str, cfg: dict, harness: str, csv: str, resample: st
         argv += _tp_r_flags(cfg)
         omitted = sorted(set(k for k in cfg
                              if k not in _PB_PLAIN and k not in _PB_LEVER_FLAG)
-                         | set(conditional_omissions("pullback", cfg, argv)))
+                         | set(conditional_omissions("pullback", cfg, argv))
+                         | ({"decision_bar"}
+                            if str(cfg.get("decision_bar") or "").lower() == "forming" else set()))
         faithful = not omitted
     # EXIT-PATH-EMIT-OFFLINE / METALABEL-EMIT-FEATURES (opt-in, default False =
     # byte-identical argv): ask the trend/pullback harnesses for the per-bar path
