@@ -1,7 +1,7 @@
 id: RQ-20261017-ae17-14
 title: 'Volatility regime (cold tail), slv_pullback_1d: does moving vol-skip-below percentile (0.1, 0.2, 0.3) beat the declared setting net of
   the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: regime
 priority: 2
@@ -117,3 +117,16 @@ related:
 requires_result:
   unit: RQ-20261016-c56e-16
 last_dispatched_at: '2026-10-21T19:25:00+00:00'
+grading:
+  attested: RULE-RQ20261017ae1714-AXIS
+  auto: true
+  decision_rule_id: RULE-RQ20261017ae1714-AXIS
+  evidence:
+  - research/results/RQ-20261017-ae17-14/39656877673.jsonl
+  graded_at: '2026-10-22'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
