@@ -4,7 +4,7 @@ id: RQ-20261022-bea9-03
 title: 'TP doctrine COMPLIANCE, real money + prop: does trend_donchian_sol_prop with a REACHABLE 3R entry target
   plus the Donchian measured-move revision (width 0.5 / 1.0) no worse than the declared unreachable 6R bracket in
   5 of 6 folds over 2020-10..2026-10, at the Bybit cost stack?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -140,3 +140,16 @@ related:
 - docs/research/tp-doctrine-w43-proposals-2026-10-22.md
 - src/runtime/tp_revision.py
 last_dispatched_at: '2026-10-22T07:53:47+00:00'
+grading:
+  attested: RULE-W43-SOLPROP-ENTRY3-MM-COMPLIANCE
+  auto: true
+  decision_rule_id: RULE-W43-SOLPROP-ENTRY3-MM-COMPLIANCE
+  evidence:
+  - research/results/RQ-20261022-bea9-03/39743796441.jsonl
+  graded_at: '2026-10-22'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

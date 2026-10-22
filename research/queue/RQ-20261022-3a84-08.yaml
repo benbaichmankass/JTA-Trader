@@ -4,7 +4,7 @@ theme: ml_health
 kind: experiment
 title: 'Range-vol feature lift for the ETHUSDT 15m regime head: LightGBM with the four range-vol estimators (yz set) vs the base feature set, identical
   purged folds'
-status: queued
+status: done
 priority: 2
 question: On the published ETHUSDT 15m v002 market_features shard, with LightGBM on identical purged folds, does adding the four range-vol estimators (parkinson,
   garman_klass, rogers_satchell, yang_zhang) to the base 6 features lift macro-F1 on the regime_label by >= +0.010 (CV mean) with the same sign on the post-2026-07-12
@@ -149,3 +149,17 @@ related:
 - RQ-20261018-ff8f-01
 - btc-regime-15m-lgbm-yz-v1
 last_dispatched_at: '2026-10-22T07:53:47+00:00'
+grading:
+  attested: RULE-RQ20261022-3A84-08-YZ-VS-BASE
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261022-3A84-08-YZ-VS-BASE
+  evidence:
+  - research/results/RQ-20261022-3a84-08/39743809119.jsonl
+  graded_at: '2026-10-22'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate
