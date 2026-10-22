@@ -1,0 +1,24 @@
+{
+  "based_on": "20261018T065240410145Z-95a634df.json",
+  "due_when": {
+    "due_date": "2026-10-19",
+    "kind": "date"
+  },
+  "evidence": "comms/research/RQ-20261016-014/39103759555/verdict.json (lands at the 07:20Z collector); checklist TP-DOCTRINE note 2026-10-18 06:55Z; #19479 (f8a9b6fd7); /api/bot/config 2026-10-22T09:55Z",
+  "filed_by": "lane ACTIVE-MGMT-DRIVE-1018 session_013oEUJzaNgUnEAFrpHccwkx",
+  "id": "PI-20261018-ACAKSTAR-0001",
+  "money_path": true,
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "research",
+    "ref": "research/results/RQ-20261016-014 (run 39103759555)",
+    "rerun": "python3 scripts/research/tp_prediction_derive.py --legs iaum_pullback_1d,ief_pullback_1d,slv_pullback_1d,gdx_pullback_1d,tlt_pullback_1d,gld_pullback_1d --days 3180 --pool"
+  },
+  "roadmap": [
+    "L-ATM"
+  ],
+  "routed_to": null,
+  "state": "done",
+  "terminal_reason": "Operator decided YES 2026-10-22 (walk-through popup, verbatim \"Declare 3.5R (Recommended)\", checklist OPERATOR-DECISIONS-1022): tp_r 3.5 declared on slv/iaum/gdx/tlt/gld/ief_pullback_1d via #19479, merged f8a9b6fd7, running on the trader 2026-10-22 09:55Z, /api/bot/config shows tp_r 3.5 r_multiple on all six. The first-entry observation (a 3.5 R TP resting at the venue) lives on checklist row TP-DECLARE-ALPACA-PB1D (landed_unproven), not here.",
+  "what": "OPERATOR DECISION (TP doctrine, alpaca_live): declare tp_r 3.5 as the predictive TP of the 1d pullback family (slv/ief/iaum on alpaca_live + alpaca_portfolio; gdx/tlt/gld paper), replacing the 50 R sentinel -- or keep the sentinel. RQ-20261016-014 is INDETERMINATE at the family's WHOLE history (n 326, n_oos 133 over 2018-02..2026-10): K* = 3.5 R reaches 27.8% of OOS trades (reach floor 10%), calibration gap 0.019, OOS delta vs the sentinel +0.003 R/trade with CI [-0.061, +0.069] straddling the -0.05 bar. No longer window exists, so this is a preference, not a data gap: a calibrated, reachable prediction at a P&L cost bounded by ~-0.06 R/trade vs a sentinel the doctrine forbids. YES -> Tier-3 declare PR (tp_r 3.5 on slv/ief/iaum/gdx/tlt/gld 1d, mirror-equality tests) + per-leg harness-native ablation as the observation; NO -> the family's route is the trail (clause 3 says that does not exempt it) + Q8 on paths, recorded on TP-DOCTRINE."
+}
