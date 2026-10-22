@@ -1561,19 +1561,51 @@ strategies:
     # ROLLBACK: delete these two lines (reverts to the plain 5.0 ATR trail).
     trail_decay_arm_r: 2.0
     trail_decay_tight_mult: 2.5
-    # MOMENTUM-LEVERS-LIVE ADX-tightened trail (Tier-3, OPERATOR-DECIDED 2026-10-22, walk-through
-    # answer "Ship it (Recommended)"; checklist OPERATOR-DECISIONS-1022). On a closed 4h bar whose
-    # Wilder ADX(14) < 25 the chandelier mult tightens to 2.5 ATR (min() with trail_decay above).
-    # Live producer: src/runtime/momentum_levers.py via trend_donchian.monitor (#18921, running).
-    # EVIDENCE: research/results/RQ-20261016-015/39103752013.jsonl, RULE-P1-Q4-XRP4H-EXIT-CONFIRM
-    # registered before the run, XRPUSDT 4h 2020-07..2026-10, net of fee+slippage+funding:
-    # A n 68 +14.30 R maxDD 4.57 vs M2 n 68 +17.07 R maxDD 4.15, 4 of 4 folds >= A.
-    # Applies to every roster carrying the leg (bybit_2, bybit_portfolio, bybit_1).
-    # ROLLBACK: delete these two lines.
+    # shadow_model_ids OMITTED (symbol-aware auto-wire). Observe-only.
+
+
+  # SOAK ALIAS of trend_donchian_xrp_4h (Tier-3, OPERATOR-DECIDED 2026-10-22, popup answer verbatim:
+  # "bybit_1 now, real money after corroboration (Recommended)"; checklist OPERATOR-DECISIONS-1022).
+  # Identical to the incumbent except it DECLARES the MOMENTUM-LEVERS-LIVE ADX-tightened trail, and it is
+  # rostered on bybit_1 ONLY (INSTEAD of the incumbent), so bybit_2 + bybit_portfolio stay on the incumbent
+  # together (strict mirror equality). Name avoids the incumbent's signal_prefixes (attribution is by
+  # substring). WHY NOT REAL MONEY YET: RQ-20261016-015's own what_it_does_not_do -- "68 trades is thin:
+  # a PASS is a candidate a second leg must corroborate, not a ship". The corroboration unit tests the same
+  # cell (adx25_k0_t2.5) on sibling trend_donchian legs; a PASS on >= 1 sibling is the evidence record for
+  # declaring the lever on the incumbent for bybit_2 + bybit_portfolio together.
+  # EVIDENCE: research/results/RQ-20261016-015/39103752013.jsonl, RULE-P1-Q4-XRP4H-EXIT-CONFIRM registered
+  # before the run, XRPUSDT 4h 2020-07..2026-10, net of fee+slippage+funding: A n 68 +14.30 R maxDD 4.57 vs
+  # M2 n 68 +17.07 R maxDD 4.15, 4 of 4 folds >= A. Live producer: src/runtime/momentum_levers.py via
+  # trend_donchian.monitor (#18921, in the running sha).
+  # ROLLBACK: restore trend_donchian_xrp_4h on bybit_1 (config/accounts.yaml) and delete this block.
+  trend_donchian_xrp_adx25:
+    model: null
+    signal_prefixes: [trend_donchian_xrp_adx25]
+    enabled: true
+    decision_bar: closed
+    execution: live          # bybit_1 (Bybit demo, paper money) ONLY (config/accounts.yaml).
+    # Everything below except the two trail_adx_* keys is copied VERBATIM from the incumbent
+    # trend_donchian_xrp_4h (see its comments for the evidence); keep the two in step, so
+    # RQ-20261016-015's arm A == the incumbent and arm M2 == this alias.
+    side_filter: short
+    timeframe: "4h"
+    symbols:
+      - XRPUSDT
+    donchian: 20
+    atr_period: 14
+    atr_stop_mult: 2
+    trail_mult: 5.0
+    stale_exit_bars: 8
+    stale_exit_below_r: 0.0
+    tp_r: 3
+    min_confidence: 0.80
+    skip_hours: "0"
+    vol_skip_above_pctl: 0.9
+    trail_decay_arm_r: 2.0
+    trail_decay_tight_mult: 2.5
     trail_adx_below: 25
     trail_adx_tight_mult: 2.5
     # shadow_model_ids OMITTED (symbol-aware auto-wire). Observe-only.
-
   trend_donchian_ada_4h:
     model: null
     signal_prefixes: [trend_donchian_ada_4h, donchian_ada_4h]

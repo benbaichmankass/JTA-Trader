@@ -3,21 +3,21 @@
   "strategy": "trend_donchian_xrp_4h",
   "symbol": "XRPUSDT",
   "timeframe": "4h",
-  "config_fingerprint": "sha256:bb54e9c5f2474d3dcb67cb146f5c3ef0",
+  "config_fingerprint": "sha256:02970f3827937b68671b116a7f027ab4",
   "basis": "harness_timefolds",
   "coverage_state": "measured",
   "fidelity": "faithful",
   "omitted_levers": [],
-  "net_r_oos": 10.1496,
-  "expectancy_r_oos": 0.2206,
+  "net_r_oos": 8.1437,
+  "expectancy_r_oos": 0.177,
   "n_trades_oos": 46,
   "folds": 4,
   "fold_detail": [
     {
       "fold": 1,
       "trades": 11,
-      "net_r": 2.2484,
-      "expectancy_r": 0.2044,
+      "net_r": 1.7808,
+      "expectancy_r": 0.1619,
       "start": "2022-11-08 16:00:00+00:00",
       "end": "2023-09-11 04:00:00+00:00"
     },
@@ -32,16 +32,16 @@
     {
       "fold": 3,
       "trades": 11,
-      "net_r": 3.1319,
-      "expectancy_r": 0.2847,
+      "net_r": 2.7067,
+      "expectancy_r": 0.2461,
       "start": "2025-01-27 04:00:00+00:00",
       "end": "2025-12-15 12:00:00+00:00"
     },
     {
       "fold": 4,
       "trades": 13,
-      "net_r": 4.8899,
-      "expectancy_r": 0.3761,
+      "net_r": 3.7768,
+      "expectancy_r": 0.2905,
       "start": "2025-12-31 16:00:00+00:00",
       "end": "2026-10-08 12:00:00+00:00"
     }
@@ -52,14 +52,14 @@
   "path_stats": {
     "series_location": "source_run (the per-trade rows, in order, with net_r)",
     "n": 46,
-    "max_drawdown_r": 4.1466,
+    "max_drawdown_r": 4.5718,
     "max_drawdown_at_trade": 27,
-    "final_equity_r": 10.1496,
-    "max_equity_r": 11.8351,
-    "worst_trade_r": -1.0462,
+    "final_equity_r": 8.1437,
+    "max_equity_r": 10.4747,
+    "worst_trade_r": -1.0675,
     "best_trade_r": 2.9511,
-    "worst_day_r": -1.0462,
-    "worst_day_date": "2026-01-26",
+    "worst_day_r": -1.0675,
+    "worst_day_date": "2026-07-29",
     "trades_without_exit_time": 0,
     "ordering": "by entry_time ascending; pooled ACROSS folds, so this is the full-window path, not a per-fold one",
     "not_a_verdict": "Descriptive only. No bar is applied here -- the prop bar is B6's to register, and it must be registered before these numbers are read."
@@ -69,9 +69,9 @@
     "slippage": 3.0,
     "funding": 1.0,
     "unit": "bps_roundtrip (funding: bps per funding window)",
-    "source": "comms/strategy_evidence/runs/2026-10-22-odc1022/trend_donchian_xrp_4h__bt.json"
+    "source": "comms/strategy_evidence/runs/2026-10-12-1460d/trend_donchian_xrp_4h__bt.json"
   },
-  "net_r_oos_fee_only": 11.0297,
+  "net_r_oos_fee_only": 9.0354,
   "decision_rule": {
     "id": "RULE-D1-STAGE0-NET-OF-FULL-COST",
     "rule": "Stage 0 requires net_r_oos -- pooled net_total_r from the harness's out-of-sample time-folds, net of the FULL cost stack (fee + slippage + funding) -- to be > 0. Restates the existing promotion-ladder Stage-0 bar as a checkable predicate over this record's own fields; does not itself authorize or perform any roster change.",
@@ -79,9 +79,9 @@
     "verdict": "pass"
   },
   "param_selection_provenance": "not_established",
-  "generated_at": "2026-10-22T07:38:09.436580+00:00",
+  "generated_at": "2026-10-12T08:52:22.940867+00:00",
   "generated_by": "scripts/ops/build_strategy_evidence.py",
-  "source_run": "comms/strategy_evidence/runs/2026-10-22-odc1022/trend_donchian_xrp_4h__trades.jsonl",
+  "source_run": "comms/strategy_evidence/runs/2026-10-12-1460d/trend_donchian_xrp_4h__trades.jsonl",
   "error": null,
   "harness": "trend",
   "venue_bracket_arm": null

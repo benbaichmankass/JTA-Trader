@@ -280,7 +280,9 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # they inherit the breakout_2 debt lines above verbatim. A visible, deliberate line.
     "bybit_1/trend_donchian_eth_prop": ER,
     "bybit_1/trend_donchian_sol_prop": ER,
-    "bybit_1/trend_donchian_xrp_4h": R,
+    # 2026-10-22 OPERATOR-DECISIONS-1022: the incumbent leaves bybit_1 for its soak alias (same tp_r 3,
+    # plus the declared ADX trail); tp_revision is still undeclared, so the debt is unchanged.
+    "bybit_1/trend_donchian_xrp_adx25": R,
     "bybit_1/xrp_pullback_2h": R,
     "ib_paper/ict_scalp_mgc_15m": R,
     "ib_paper/iwm_trend_long_1d": R,
