@@ -6,6 +6,11 @@
   },
   "id": "PI-20261022-MENTSW43-0002",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-24",
+    "how_to_check": "python3 scripts/ops/ml_plan_status.py --plumbing | grep -E 'REGISTRY-STAGES-CHANGED|SILENT\\(UNTRACKED\\)'",
+    "what": "plumbing registry stages and the untracked silent head are either explained by a recorded decision or restored"
+  },
   "origin": {
     "kind": "session",
     "ref": "lane ML-INSTRUMENTS-W43 / ml-plan-items.yaml plumbing block",
