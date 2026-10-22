@@ -4,7 +4,7 @@ theme: ml_health
 kind: experiment
 title: 'Frontier / sequence model with a NEW input shape: a small GRU over 32-bar windows of the 6 shared features (plus the 4 range-vol estimators) vs
   LightGBM on the BTC/ETH/SOL 15m regime head'
-status: queued
+status: done
 priority: 3
 question: Under identical purged folds on the trainer's BTC/ETH/SOL 15m v002 shards, does a 2-layer GRU (hidden 32) that reads a 32-bar window of [6 shared
   features + 4 range-vol estimators] beat LightGBM on the same rows (which sees only the current bar and two return lags) by >= +0.010 macro-F1 on >= 2
@@ -153,3 +153,17 @@ related:
 - FRONTIER-LEVER-SEQUENCE-LEARNER
 - ML-UNBLOCK-1018
 last_dispatched_at: '2026-10-22T09:03:01+00:00'
+grading:
+  attested: RULE-RQ20261018-FF8F-04-GRU-FEATURE-WINDOW-15M
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261018-FF8F-04-GRU-FEATURE-WINDOW-15M
+  evidence:
+  - research/results/RQ-20261018-ff8f-04/39752478144.jsonl
+  graded_at: '2026-10-22'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

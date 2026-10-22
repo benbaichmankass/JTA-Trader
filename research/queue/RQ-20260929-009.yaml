@@ -65,8 +65,6 @@ generated:
     timeframe: 15m
 last_dispatched_at: '2026-09-30T18:54:34+00:00'
 grading:
-  owner: ICT-SCALP-EVIDENCE
-  owner_reason: 'No gradeable cell: the sweep swept 0 cells (corpus_rows 1, base_trades_OOS null) because ict_scalp_mgc_15m has no futures candle feed (Yahoo 15m serves ~60 d). Lever: the MGC futures feed named in PI-20261001-JWZSVYVS-0005 on row ICT-SCALP-EVIDENCE; re-asked monthly and resolves once the feed exists. Triaged by RESEARCH-OPS-20261022-0847.'
   auto: true
   decision_rule_id: RULE-EXIT-REFINEMENT-P2-GATE
   evidence:
@@ -75,6 +73,11 @@ grading:
   grader: scripts/research/queue_grade.py
   latest: true
   needs_review: true
+  owner: ICT-SCALP-EVIDENCE
+  owner_reason: 'No gradeable cell: the sweep swept 0 cells (corpus_rows 1, base_trades_OOS null) because
+    ict_scalp_mgc_15m has no futures candle feed (Yahoo 15m serves ~60 d). Lever: the MGC futures feed
+    named in PI-20261001-JWZSVYVS-0005 on row ICT-SCALP-EVIDENCE; re-asked monthly and resolves once the
+    feed exists. Triaged by RESEARCH-OPS-20261022-0847.'
   reason: 1 row(s), all measured, all indeterminate
   rows: 1
   verdict: indeterminate
