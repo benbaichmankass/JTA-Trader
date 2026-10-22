@@ -407,7 +407,9 @@ def test_torch_gru_sees_a_lagged_signal_a_flat_learner_cannot():
     gru = mb.LEARNERS["torch_gru"][0](X[tr], y[tr], X[te], 2, params)
     flat = mb.LEARNERS["numpy_logit"][0](X[tr], y[tr], X[te], 2, {})
     assert gru.shape == (800, 2) and np.allclose(gru.sum(axis=1), 1.0, atol=1e-5)
-    acc = lambda P: float((P.argmax(1) == y[te]).mean())
+    def acc(P):
+        return float((P.argmax(1) == y[te]).mean())
+
     assert acc(flat) < 0.58 and acc(gru) > 0.8, (acc(flat), acc(gru))
     again = mb.LEARNERS["torch_gru"][0](X[tr], y[tr], X[te], 2, params)
     assert np.allclose(gru, again, atol=1e-5)  # seeded: the arm is reproducible

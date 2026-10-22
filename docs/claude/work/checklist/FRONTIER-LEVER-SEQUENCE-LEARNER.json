@@ -12,10 +12,19 @@
   "prs": [],
   "blocked_on": [],
   "note": "[2026-10-18 lane ML-UNBLOCK-1018] Filed from Task 3 (family diversity): deep_sequence has one FAIL (price-only TCN, MB-20260703-001) and the frontier scan dropped PatchTST-class models as the same input class; the untested question is a sequence model over the ENGINEERED feature window. Not built in this lane: the sandbox has no torch, and a learner written without running it is how a wrong arm ships. DONE WHEN: torch_gru merged with tests/test_ml_bakeoff.py coverage (synthetic sequence with a lagged signal a flat learner cannot see), probe_learner reports unavailable without torch, and RQ-20261018-ff8f-04 leaves research/queue/blocked/ with run.workflow research-script-run-trainer.yml. [2026-10-22 lane ML-INSTRUMENTS-W43] BUILT (PR pending): torch_gru kind in scripts/research/ml_bakeoff.py (windows built inside each fold block, head edge-padded, seeded, CPU, probe_learner reports unavailable without torch); tests tests/test_ml_bakeoff.py::test_torch_gru_sees_a_lagged_signal_a_flat_learner_cannot (planted lag-3 sign: logit ~0.53 acc, GRU >0.8), ::test_torch_gru_test_windows_never_look_across_the_block_boundary, ::test_torch_gru_is_unavailable_not_silent_without_torch -- these importorskip torch, so they RUN only where torch is installed (they ran in the lane sandbox with torch 2.14.1+cpu; CI without torch skips them). RQ-20261018-ff8f-04 moved out of blocked/ and routes (dispatch_queue dry run: deferred only for the trainer busy window). NOT DONE: the arm has not run on the trainer venv (torch 2.9.1+cpu there) -- closes when a ff8f-04 result record shows arm_status.gru == ok.",
-  "updated_at": "2026-10-22T06:59:47Z",
+  "updated_at": "2026-10-22T07:21:47Z",
   "updated_by": "lane-ML-INSTRUMENTS-W43",
   "roadmap": [
     "M25"
   ],
+  "observation": {
+    "what": "RQ-20261018-ff8f-04 result record shows arm_status.gru == ok on the trainer venv",
+    "how_to_check": "python3 -c \"import json,glob;[print(json.loads(l)[\"measurement\"][\"arm_status\"]) for f in glob.glob(\"research/results/RQ-20261018-ff8f-04/*.jsonl\") for l in open(f)]\"",
+    "due_by": "2026-10-29"
+  },
+  "writeback": {
+    "roadmap": "none: lever for ML-F22 only; ROADMAP M25 line unchanged until the unit is graded",
+    "arch": "none: research tooling, no architecture section describes ml_bakeoff learner kinds"
+  },
   "_seq": 560
 }
