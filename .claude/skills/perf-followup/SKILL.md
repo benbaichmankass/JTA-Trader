@@ -40,6 +40,14 @@ repo has 404 of them. So:
 If the diag relay fails, run what the review JSON alone supports, say what was not
 pulled, and **do not fabricate** (same rule as `/performance-review`).
 
+## Reading results: a FAIL is not a dead idea
+
+When Step 0 or Track 1 reads a unit that FAILED its registered rule, that settles only the live/config
+question the rule asked. Diagnose why (legs/regime, grid, trigger definition, cost drag, n/power, test
+design), check outside sources, author pre-registered variant units, and record the programme as
+**"first test failed → variants queued"**, never "dead". Policy and operator quote: `research-ops` § D;
+family retirement: `scripts/research/family_retirement_policy.yaml`.
+
 ## Step 0 — close the loop on the PREVIOUS run (always first)
 
 The previous run's units are this run's first input. For each entry in the newest
