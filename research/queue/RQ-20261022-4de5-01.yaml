@@ -1,0 +1,156 @@
+id: RQ-20261022-4de5-01
+title: >-
+  DECISION BAR MATCH, per real-money / prop leg whose committed evidence bar differs from the bar it
+  trades: is CLOSED or FORMING the better entry decision (paired per-fold delta, materiality floor,
+  6 calendar folds, net of the full cost stack), and does the chosen bar clear RULE-D1 on the leg's
+  own record window -> switch to closed, keep forming and re-base the record, or demote.
+status: done
+cadence: once
+roadmap:
+- L-PROP
+- L-LADDER
+theme: live_strategy
+priority: 1
+kind: experiment
+
+question: >-
+  Lane DECISION-BAR-MATCH (manager session_01CSwhZWiw15rVCkjsJ8Cpuh, 2026-10-22). Operator decision
+  2026-10-22 ~06:40Z (checklist DECISION-BAR-MATCH, verbatim): a closed-bar backtest does NOT count as
+  evidence for a forming-bar leg -- "No — match the bar (Recommended)". Operator 2026-10-18 ~15:12Z on
+  the same row: treat it as an IMPROVEMENT test (closed vs forming, net of the full cost stack, a
+  selection rule registered before the run with out-of-sample robustness such as fold-majority, a
+  paired per-fold delta with a materiality floor); SWITCH to closed if closed wins; demote only if
+  NEITHER variant clears RULE-D1. POPULATION (read 2026-10-22 from config/accounts.yaml +
+  config/strategies.yaml + src/runtime/strategy_signal_builders.py): the real-money (bybit_2,
+  alpaca_live) and prop (breakout_2, tradeify_1, velotrade_1) legs. Traded bar = the builder's
+  `decision_bar` (default `forming`, _decision_frame; _htf_pullback_variant_builder honours the key
+  since #18885). Evidence bar = the Stage-0 harness's, which scores the CLOSED bar
+  (comms/strategy_evidence/<leg>.json, harness_timefolds). Mismatched and measurable on Binance 1m:
+  xrp_pullback_2h, ada_pullback_2h, trend_donchian_eth_4h (bybit_2), trend_donchian_sol_prop (bybit_2
+  + three prop accounts), trend_donchian_eth_prop (three prop accounts). trend_donchian_xrp_4h already
+  declares `decision_bar: closed` (matched; not graded). alpaca_live slv_pullback_1d /
+  iaum_pullback_1d decide on the forming SESSION bar and cannot be replayed from Binance klines: out
+  of scope here, row DECISION-BAR-SESSION-INSTRUMENT.
+
+why_this_matters: >-
+  Real and prop money. On the leg's own record window the 2026-10-18 restatement
+  (docs/research/evidence/decision-bar-holdout-2026-10-18.json) read eth_prop closed +10.26R vs forming
+  -9.45R and xrp_pullback_2h fails RULE-D1 under forming (PI-20260929-VOLSKIP-SIGNAL-0003) -- the
+  record that admitted them describes a trade set they do not trade. The 2026-10-18 holdout rule
+  (RULE-RQ-20261018-2a10-01) asked a different question (is closed robustly better than the
+  incumbent) and selected nothing; this unit asks the operator's question (which bar, then match the
+  evidence to it).
+
+power:
+  expected_n: 280
+  min_detectable_effect: 0.2
+  effect_units: sd
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    MEASURED closed-arm full-history counts on the same proxy (2026-10-18 record): xrp_pullback_2h 414,
+    ada 479, eth_4h 282, sol_prop 402, eth_prop 1172; the smallest (eth_4h) gives ~47 closed trades per
+    fold over 6 folds. The rule grades fold SIGNS above a materiality floor, not a t-statistic; the
+    power line is the conventional n for a paired per-trade difference and is an ESTIMATE.
+  feasibility:
+    source: none
+    accrual_basis: Replays history on public 1m klines pinned to 2026-10-20 23:59Z; nothing accrues.
+
+design:
+  data: >-
+    Binance USD-M perp 1m klines (data.binance.vision) ETHUSDT / XRPUSDT / ADAUSDT / SOLUSDT,
+    2020-01 .. 2026-10-20 23:59Z (pinned with --end), resampled to [open, open+tf) bars by
+    vol_skip_forming_bar_replay.build_bars. A LABELLED PROXY for Bybit (api.bybit.com is geo-blocked
+    from the research containers; the 2026-10-18 record reproduced eth_prop's committed record within
+    0.94R on this proxy).
+  arms: >-
+    A_closed / B_forming = forming_bar_pooled_regrade.leg_run, unchanged: the Stage-0 harness
+    config-exact to the leg's config/strategies.yaml block, full cost stack from execution_costs
+    (fee + venue slippage + perp funding), B deciding at the live 2-min tick cadence on the forming
+    bar. Only the entry decision differs. Prop legs costed at the Bybit stack here; the prop venue's
+    stack is applied by the prop survival step below.
+  tool: scripts/research/decision_bar_match.py (grades; imports leg_run / restate / calendar_edges).
+
+decision_rule:
+  id: RULE-RQ-20261022-4de5-01
+  registered_at: '2026-10-22'
+  registered_before_run: true
+  statistic: >-
+    Per leg, trades entered on bars with a 200-bar live frame over [first_decision_bar, 2026-10-20
+    23:59Z]. 6 equal calendar folds of that window. Per fold k: dR_k = net R(A_closed) - net
+    R(B_forming); materiality floor m_k = max(1.0R, 0.02R x max(n_closed_k, n_forming_k)). Fold k is
+    CLOSED if dR_k >= m_k, FORMING if dR_k <= -m_k, else TIE. dR_full = sum of dR_k. RULE-D1 per arm on
+    the leg's committed record window (forming_bar_pooled_regrade.restate: net R of the arm's trades
+    entered in [record data_start, data_end] > 0 -- the record's own predicate restated on the proxy).
+  rule: >-
+    BETTER BAR: CLOSED_BETTER iff >= 4 of 6 folds CLOSED AND <= 1 fold FORMING AND dR_full > 0;
+    FORMING_BETTER iff >= 4 of 6 folds FORMING AND <= 1 fold CLOSED AND dR_full < 0; otherwise
+    NO_MATERIAL_DIFFERENCE. PREFERRED = the better bar; on NO_MATERIAL_DIFFERENCE, CLOSED (pre-registered
+    tie-break: the leg's committed Stage-0 record already describes the closed set, so matching needs
+    no new record; stated, not an edge claim). VERDICT: if PREFERRED passes RULE-D1 on the record
+    window -> SWITCH_TO_CLOSED (PREFERRED closed; Tier-3 proposal `decision_bar: closed`, revert = delete
+    the line) or KEEP_FORMING_REBASE_RECORD (PREFERRED forming; the evidence record is regenerated under
+    decision_bar=forming and must pass RULE-D1 on its own). Else if the OTHER bar passes RULE-D1 and is
+    not the materially worse one (i.e. the verdict was NO_MATERIAL_DIFFERENCE) -> adopt the other bar
+    with the same mapping. Else -> DEMOTE_CANDIDATE (neither matched bar clears RULE-D1; the Stage-2 /
+    prop standing goes to the manager as a Tier-3 demotion proposal). PROP LEGS (trend_donchian_eth_prop,
+    trend_donchian_sol_prop) additionally run the adopted bar's full-window ledger through
+    prop_ev_grid per firm they trade on (breakout_2 breakout_turbo_1step risk 0.0035; tradeify_1
+    tradeify_247_1step risk 0.005; velotrade_1 velotrade_classic_1step risk 0.005; --sizing start
+    --dd-switch-frac 0.8 --costs breakout --swap-model prorated --funded-start fresh --lev-cap 5, seeds
+    1-5, --grade pass_all_seeds --p-floor 0.0 --n-floor 88, the RULE-P5-GATE-BRK-PER-LEG shape): a firm
+    that FAILS (ev <= 0 on any seed) makes the proposal for that firm's routing a removal (pull), not a
+    bar switch. Thresholds are not changed after any result.
+  what_it_does_not_do: >-
+    Edits no config, roster or evidence record; places no order. A switch or demotion is a PROPOSAL to
+    the manager (data-backed Tier-3 under the 2026-09-27 standing authorization). Uses no live-book P&L
+    as evidence of edge. Does not grade the US-session legs (no instrument; DECISION-BAR-SESSION-INSTRUMENT).
+
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 300
+  confidence: 0.3
+  bucket: own_losses
+  basis: stand-in for the real-money + prop legs whose admitting record does not describe their trade set; an estimate.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 120
+  basis: the 2026-10-18 six-leg run on the same harness; session-local in the lane's container.
+  why_runner: session-local (lane DECISION-BAR-MATCH ran it in its container; public klines, CPU only).
+run:
+  workflow: none — session-local, scripts/research/decision_bar_match.py (command in the result record)
+lands:
+  store: docs/research/evidence/decision-bar-match-2026-10-22.json
+  assert_field: verdicts
+  note: per-leg verdict.json + arm ledgers under comms/research/RQ-20261022-4de5-01/{eth,eth4h,sol,xrp_ada}/;
+    per-firm prop sim cells under comms/research/RQ-20261022-4de5-01/prop/.
+related:
+- research/queue/RQ-20261018-2a10-01.yaml
+- docs/research/evidence/decision-bar-holdout-2026-10-18.json
+- docs/claude/work/checklist/DECISION-BAR-MATCH.json
+- docs/claude/work/pipeline/20261018T064623923141Z-e6856c60.json
+last_dispatched_at: '2026-10-22T06:50:00+00:00'
+verdict: SWITCH_TO_CLOSED_ALL_FIVE
+result: >-
+  docs/research/evidence/decision-bar-match-2026-10-22.json. Rule committed at 726c5c09 (window pin
+  amended to 2026-10-20 23:59Z at ea1c3e27/f7faa8bd, before any run: the 10-21 daily archive was not
+  published). Run in the lane's container. trend_donchian_eth_4h first crashed on its YAML
+  tp_revision dict reaching backtest_trend (harness_kwargs fixed at 02fcf732, the leg re-run in
+  eth4h/; the other legs carry no tp_revision). Binance 1m proxy, full cost stack. Closed vs forming,
+  full window, 6 folds (C/F/T = folds closed / forming / tie past the floor), RULE-D1 on the
+  record window (closed / forming): trend_donchian_eth_prop +86.3R (n 1175) vs +72.4R (n 1685), 3/3/0,
+  +10.26 / -9.45R; xrp_pullback_2h +44.7 (415) vs +25.7 (499), 2/2/2, +11.44 / -5.88R;
+  ada_pullback_2h +99.9 (428) vs +79.3 (594), 3/3/0, +27.43 / -2.08R; trend_donchian_sol_prop
+  +52.9 (403) vs +36.6 (589), 4/2/0, +60.60 / +45.55R; trend_donchian_eth_4h +130.9 (295) vs +143.3
+  (446), 2/4/0, +54.59 / +59.40R. Every leg reads NO_MATERIAL_DIFFERENCE (none reaches 4 folds with
+  <= 1 opposite), so PREFERRED = closed by the registered tie-break, and closed passes RULE-D1 on
+  every record window -> SWITCH_TO_CLOSED on all five. Stated plainly: no leg showed closed
+  materially better; on eth_4h forming led (+12.4R, 4 of 6 folds) and also passes RULE-D1, so the
+  switch there is the tie-break alone. PROP GATE (closed ledger, RULE-P5-GATE-BRK-PER-LEG shape, 5
+  seeds, path mode, seed-median EV USD/life, seed-min EV): eth_prop breakout_2 PASS +65.4 (min
+  +62.3), tradeify_1 PASS +217.9 (+207.9), velotrade_1 PASS +154.0 (+148.7); sol_prop breakout_2
+  PASS +11.5 (+10.0), tradeify_1 PASS +1.2 (+0.3, thin), velotrade_1 PASS +22.4 (+22.1). No firm
+  fails, so no pull is proposed.
