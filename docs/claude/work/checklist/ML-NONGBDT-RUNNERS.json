@@ -1,0 +1,30 @@
+{
+  "id": "ML-NONGBDT-RUNNERS",
+  "title": "Make catboost/tabicl/tabpfn importable on every research backend running ml_bakeoff (runner, Kaggle, trainer venv), prove via probe_learner, disposition ff8f-04, confirm 4a3b-01 routes",
+  "phase": "ml",
+  "state": "landed_unproven",
+  "owner": null,
+  "lane": "session_01RjtFgRugTi5ix1ri7orffk",
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 8,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-22 lane] dispatched by Manager Session 2026-10-22. ceiling $8, model claude-sonnet-5-5, roadmap M25. [2026-10-22 lane] Built: requirements-research-learners.txt, scripts/research/probe_learners.py, install+probe steps in research-script-run{,-data}.yml, wheel bundling in kaggle_run.py/kernel_main.py + both kaggle workflows, probe line in the trainer workflow. 4a3b-01: routes to the trainer (compute needs_vm_data, run.workflow research-script-run-trainer.yml); already dispatched run 39759003561 at 09:54Z so dispatch_queue reports not_due (cadence once) -- tabicl imports there per ff8f-02. OPEN: probe on real backends after merge. [2026-10-22 lane] ff8f-04 DISPOSITION (run 39752478144; 3 symbols x 5 folds, 24,000 OOS rows each; arm_status gru/lightgbm/prior all ok). GRU minus LightGBM macro-F1, CV mean [95% CI over folds]: BTC +0.0018 [-0.020,+0.023], ETH +0.0163 [-0.020,+0.053], SOL +0.0060 [-0.012,+0.024]. Only ETH clears +0.010, so PASS is not met; FAIL needs GRU<=0 on every symbol and it is >0 on all three, so FAIL is unreachable and INDETERMINATE is what the rule returns. Baseline is NOT broken: LightGBM beats the prior on ETH (+0.037) and SOL (+0.062), CIs exclude 0; ties it on BTC. n is fixed by construction; the gap is resolution (fold SD ~0.02, 5 folds => CI half-widths 0.02-0.04, wider than the +0.010 bar). Reading: no GRU edge detectable at >= ~0.02 macro-F1 on this window; point estimates positive but inside noise; does not close the family. Follow-up if wanted: same question at 8-10 folds / larger tail as a NEW pre-registered unit (not authored here).",
+  "updated_at": "2026-10-22T14:40:09Z",
+  "updated_by": "session_01RjtFgRugTi5ix1ri7orffk",
+  "roadmap": [
+    "M25"
+  ],
+  "observation": {
+    "what": "a PROBE_LEARNERS line from each backend (github_runner, kaggle, trainer) shows catboost/tabicl/tabpfn ok",
+    "how_to_check": "grep PROBE_LEARNERS in the run logs of the next ml_bakeoff unit on each backend (comms/research/<unit>/<run_id>/logs)",
+    "due_by": "2026-10-29"
+  },
+  "writeback": {
+    "roadmap": "none: research tooling under M25, no milestone line changes",
+    "arch": "none: no architecture section describes runner installs"
+  },
+  "_seq": 597
+}

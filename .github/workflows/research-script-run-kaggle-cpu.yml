@@ -83,8 +83,12 @@ jobs:
           echo "::add-mask::$USERNAME"
           scrub() { sed "s|$USERNAME|<user>|g"; }
           # no quota gate: a CPU kernel (enable_gpu=false) draws none of the weekly GPU hours
+          # ML-NONGBDT-RUNNERS: the kernel has no internet, so ship the pure-python learner wheels in the bundle (best effort: a failed
+          # download only leaves those arms `unavailable`, which the kernel's probe line records).
+          mkdir -p /tmp/kb/wheels
+          pip download --no-deps --only-binary=:all: -d /tmp/kb/wheels tabicl==2.2.0 tabpfn==9.1.0 einops skrub || echo "learner wheel download failed (arms will report unavailable)"
           python3 scripts/research/kaggle_run.py bundle --unit "$UNIT" --run-id "$GITHUB_RUN_ID" \
-              --username "$USERNAME" --accelerator cpu --out /tmp/kb/bundle --sha "$GITHUB_SHA" | tee /tmp/kb/info.json | tee -a "$OUT/kaggle-session.log"
+              --username "$USERNAME" --accelerator cpu --out /tmp/kb/bundle --sha "$GITHUB_SHA" --wheels /tmp/kb/wheels | tee /tmp/kb/info.json | tee -a "$OUT/kaggle-session.log"
           # dataset: create the first time, new version afterwards. The CLI can exit non-zero while the dataset
           # is still being created (observed run 38396475640: output "Your private Dataset is being created"), so the
           # exit code is NOT the verdict -- polling `datasets status` for "ready" is.

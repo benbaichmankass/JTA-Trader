@@ -22,11 +22,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import subprocess
 import sys
 import tarfile
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 _REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_REPO))
@@ -50,7 +51,7 @@ def _tracked(paths: List[str], repo: Path) -> List[str]:
 
 
 def bundle(unit: str, run_id: str, username: str, out: Path, *, repo: Path = _REPO, sha: str = "",
-           accelerator: str = "gpu") -> Dict[str, Any]:
+           accelerator: str = "gpu", wheels: Optional[Path] = None) -> Dict[str, Any]:
     if accelerator not in SLUGS:
         raise SystemExit(f"accelerator must be one of {sorted(SLUGS)}, not {accelerator!r}")
     dataset_slug, kernel_slug = SLUGS[accelerator]
@@ -84,6 +85,14 @@ def bundle(unit: str, run_id: str, username: str, out: Path, *, repo: Path = _RE
     size_mb = tgz.stat().st_size / 1e6
     if size_mb > MAX_BUNDLE_MB:
         raise SystemExit(f"bundle is {size_mb:.0f} MB > {MAX_BUNDLE_MB} MB cap -- trim run.bundle_paths")
+    # ML-NONGBDT-RUNNERS: internet is off in the kernel, so the non-GBDT learner packages (tabicl / tabpfn / einops / skrub,
+    # all pure-python wheels the Kaggle image lacks) travel in the bundle; kernel_main.py installs them with --no-index.
+    n_wheels = 0
+    if wheels is not None and Path(wheels).is_dir():
+        # flat in the bundle root: `kaggle datasets version` skips sub-directories unless --dir-mode is given
+        for w in sorted(Path(wheels).glob("*.whl")):
+            shutil.copy2(w, out / w.name)
+            n_wheels += 1
     (out / "spec.json").write_text(json.dumps({"unit": unit, "run_id": run_id, "commit_sha": sha}) + "\n")
     (out / "dataset-metadata.json").write_text(json.dumps({
         "title": dataset_slug, "id": f"{username}/{dataset_slug}", "licenses": [{"name": "CC0-1.0"}],
@@ -103,7 +112,7 @@ def bundle(unit: str, run_id: str, username: str, out: Path, *, repo: Path = _RE
         "dataset_sources": [f"{username}/{dataset_slug}", *[f"{username}/{d}" for d in published]],
         "competition_sources": [],
         "kernel_sources": [], "model_sources": []}, indent=1) + "\n")
-    return {"accelerator": accelerator, "dataset_slug": dataset_slug, "kernel_slug": kernel_slug, "published_data": published, "files": len(files), "bundle_mb": round(size_mb, 2), "timeout_minutes": p.timeout_minutes,
+    return {"accelerator": accelerator, "dataset_slug": dataset_slug, "kernel_slug": kernel_slug, "published_data": published, "files": len(files), "wheels": n_wheels, "bundle_mb": round(size_mb, 2), "timeout_minutes": p.timeout_minutes,
             "kernel_dir": str(kdir)}
 
 
@@ -183,6 +192,7 @@ def main(argv: List[str] | None = None) -> int:
     b.add_argument("--out", required=True)
     b.add_argument("--sha", default="")
     b.add_argument("--accelerator", choices=sorted(SLUGS), default="gpu")
+    b.add_argument("--wheels", default="", help="dir of *.whl to ship in the bundle (learner packages the kernel image lacks)")
     g = sub.add_parser("gate")
     g.add_argument("--quota-file", required=True)
     g.add_argument("--unit", required=True)
@@ -199,7 +209,7 @@ def main(argv: List[str] | None = None) -> int:
         print(f"VERIFY rc={res['rc']}: {res['reason']}")
         return res["rc"]
     if a.cmd == "bundle":
-        print(json.dumps(bundle(a.unit, a.run_id, a.username, Path(a.out), sha=a.sha, accelerator=a.accelerator)))
+        print(json.dumps(bundle(a.unit, a.run_id, a.username, Path(a.out), sha=a.sha, accelerator=a.accelerator, wheels=Path(a.wheels) if a.wheels else None)))
         return 0
     if a.cmd == "gate":
         import yaml

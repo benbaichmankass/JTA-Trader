@@ -103,6 +103,20 @@ jobs:
           # ModuleNotFoundError (RQ-20261016-c56e-16/-17/-18, 2026-10-17). 1.7.0 is the version
           # requirements-backtest.txt pins as the first that returns SPY/GDX rows.
           pip install yfinance==1.7.0
+      - name: Install the ml_bakeoff learners (catboost / tabicl / tabpfn / torch) and probe them
+        # ML-NONGBDT-RUNNERS (2026-10-22). Only for a unit that runs ml_bakeoff.py; every other unit skips the ~1 GB torch wheel.
+        # Absent, lightgbm/catboost/tabicl/tabpfn/torch_gru all landed `unavailable` on this backend. A failed install is reported
+        # by the probe line below and the unit still runs (an unavailable arm is a recorded fact, never a halt).
+        continue-on-error: true
+        env:
+          UNIT: ${{ inputs.research_unit }}
+        run: |
+          if grep -qs "ml_bakeoff" "research/queue/${UNIT}.yaml"; then
+            pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements-research-learners.txt
+            python3 scripts/research/probe_learners.py --backend github_runner
+          else
+            echo "unit does not run ml_bakeoff: learners not installed"
+          fi
       - name: Check the unit's declared command against the allowlist
         env:
           UNIT: ${{ inputs.research_unit }}
