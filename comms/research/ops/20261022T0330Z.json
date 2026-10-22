@@ -1,0 +1,28 @@
+{
+  "run": "RESEARCH-OPS-2026-10-22-0247", "finished_at": "2026-10-22T03:30:00Z", "by": "session_01NLKoStKVJkucggr3dFW7ik",
+  "floor": 45, "floor_basis": "computed_floor(fired_24h 56)", "authoring_queue_depth": 23,
+  "idle_backends": ["github_runner_data", "kaggle", "kaggle_cpu", "trainer"],
+  "needs_review_triaged": 0, "needs_review_left": 38,
+  "throughput": {"runnable_before": 31, "runnable_after": 31, "queued": 114, "fired_24h": 56,
+                 "results_landed_24h": 56, "hours_since_last_dispatch": 1.0, "idle_alarm": false},
+  "mechanism": {"dispatch_receipt": "ok (fresh 1.05h)", "collector": "ok (56 landed/24h, 0 unreadable)",
+                "stranded_stamp_prs": "not_checked_in_detail: open automation PRs seen on list (results batch 19358 and 18963; ~15 research-queue grade PRs dated 10-18..10-20; SLO PRs) but the results they carry are already on main", "incident": null},
+  "results_read": {"pass": 4, "fail": 9, "indeterminate": 1, "units": [
+    "RQ-20260922-001 pass, -012 pass, -002 indeterminate (own-rule, graded 2026-10-22 by the grader)",
+    "RQ-20261016-7769-14/15/16 fail (no horizon reached t-bar)",
+    "RQ-20261017-ae17-17/18/20/21/23/24 fail; ae17-19 pass (tlt VH95); ae17-22 pass (gdx VL30)",
+    "RQ-20261018-005 fail"]},
+  "unlocked": [], "retired": [],
+  "levers_filed": [{"lever": "instrument for P3-Q3-soak-equity-overlap (overlap/leave-one-out script over committed arm trade files)", "ref": "PI-20261022-R3DFW7IK-0002"}],
+  "units_authored": [], "followups_filed": ["PI-20261022-R3DFW7IK-0001", "PI-20261022-R3DFW7IK-0002"],
+  "authoring": {"queue_depth": 23, "nodes_drafted": 0, "nodes": [],
+                "theme_shortfall": {"regime": 7, "live_strategy": 1, "ml_health": 7, "new_strategy_prop": 6, "infra": 5},
+                "why_zero": "head of the authoring queue needs a build, a Tier-3 packet or a manager disposition, not a pre-registered unit; filed as PI-20261022-R3DFW7IK-0002"},
+  "not_run": ["blocked/ audit (RESEARCH-BLOCKED-AUDIT)", "needs_review triage (38 left)", "stranded-PR check in detail", "step E unit authoring (0 nodes: OPS-AUTHOR-SKIPPED will warn)"],
+  "handoff": [
+    "MANAGER: ~15 open automation/research-queue-grade-* PRs (10-18..10-20) and results-batch PRs #18963/#19358 sit open; results are on main, so confirm they are superseded and close them, or say why they strand",
+    "MANAGER: OPS-AUTHOR-SKIPPED has now fired on 2 consecutive passes; the authoring queue head needs builds (PI-20261022-R3DFW7IK-0002). Consider a dedicated authoring lane for ml_health/infra/regime themes (runnable 0/0/4 vs shares 7/5/11)",
+    "ae17 siblings: 7 of 24 measured PASS, each best-of-3 arms; leads only, confirmation needs a forward window (PI-20261022-R3DFW7IK-0001); no Tier-3 note",
+    "P3-Q3-ief-fail/slv-fail: retention cases already with the manager; PR #19403 (held, Tier-3) moves ief to paper"
+  ]
+}
