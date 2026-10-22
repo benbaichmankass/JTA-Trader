@@ -2,7 +2,7 @@ id: RQ-20261022-fd06-01
 title: 'Operator ''split into two trades'' idea, re-asked on a CAPPED tail: now that ada_pullback_2h declares a finite TP
   (tp_r 4), does banking half the position at +1.0/+1.5 R (remainder on the declared exit) replace the declared exit on net
   R in 5 of 6 calendar folds over 2020-07..2026-10, at the venue cost stack?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -127,15 +127,16 @@ related:
 - comms/perf_followup/perf-followup-20261021-walkthrough.json
 last_dispatched_at: null
 grading:
-  auto: true
-  confirmatory_run: 1
-  decision_rule_id: RULE-PERF-FU-W43-BANK-ADA-PULLBACK-2H
-  evidence:
-  - research/results/RQ-20261022-fd06-01/39752467937.jsonl
-  first_fail: 1 row(s), all measured, all fail
   graded_at: '2026-10-22'
-  grader: scripts/research/queue_grade.py
-  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
-  reason: 1 row(s), all measured, all fail
-  rows: 1
+  graded_by: lane EXITS-GIVEBACK-W43 (session_013boLrFb4hM4JJ2Naq19bqS), dispatched by Manager Session 2026-10-22
+    (session_01Hsp3aD8ccAyhHiyYARqEqh)
+  decision_rule_id: RULE-PERF-FU-W43-BANK-ADA-PULLBACK-2H
   verdict: fail
+  record: research/results/RQ-20261022-fd06-01/39752467937.jsonl
+  disposition: 'REGISTERED VERDICT: fail. Rule applied verbatim (ada_pullback_2h, window 2020-07-01..2026-10-15,
+    6 folds, net of fee+slippage+funding). A net_r 92.09; B1 35.12 (delta -56.97, 0/6 folds), B15 49.29 (-42.80,
+    0/6), B1E 23.79 (-68.30, 1/6). No bank arm clears the 0.02 R/trade materiality bar or the 5-of-6 fold majority.
+    The grader''s ''first FAIL -> confirmatory re-run'' is WAIVED: the harness is deterministic over a pinned window
+    (RQ-20261022-003..006 closed the same way, #18557), so a same-window replay cannot change the verdict. Family
+    not retired: a FIXED threshold is answered here; a metric-TRIGGERED split stays with Q11 rung 2 (RQ-20261022-eba2-07/-08).'
+  confirmatory_run: 'waived: deterministic harness'

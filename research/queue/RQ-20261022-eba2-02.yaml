@@ -1,0 +1,121 @@
+id: RQ-20261022-eba2-02
+title: 'Programme 01 Q11 rung 1c (PROP legs): do path metrics at bar 12 predict peak-to-exit giveback beyond bars-in-trade
+  and current R on trend_donchian_eth_prop and trend_donchian_sol_prop (1h), 2020-07..2026-10, by calendar fold?'
+cadence: once
+roadmap:
+- L-ATM
+- M20
+theme: live_strategy
+priority: 2
+kind: experiment
+question: The prop Donchian legs are 1h with a finite 6R TP and a 3.5-ATR trail; the 4h/2h legs of 007 hold k=6 bars for 12-24
+  h, which on 1h bars is a different slice of the trade. With the same features and label as 007 but k=12 (12 hours, fixed
+  by this unit before the run), does adding chop_k, er_k, shape_k, early_k raise out-of-sample R2 on giveback by >= 0.02 or
+  lower log-loss by >= 0.01, in >= 4 of 6 calendar folds, pooled over trend_donchian_eth_prop and trend_donchian_sol_prop?
+why_this_matters: 'Prop legs carry the DD limits, so a giveback lever there is worth more per R, and they clear a SUPERSET
+  of the ladder (CLAUDE.md): the prop EV/survival gate comes AFTER any lever evidence. n is large (A read n 1085 and 400 over
+  2020-07/2020-10..2026-10 in RQ-20261022-005/-003), so this label study is the best-powered test of the path-metric idea
+  in the repo.'
+power:
+  expected_n: 900
+  min_detectable_effect: 0.15
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Same arithmetic as 007: floor 349 pooled trades at 0.15 sd. Incumbents read n 1085 (eth_prop) and 400 (sol_prop)
+    in RQ-20261022-005 / -003 (MEASURED); the share still open at bar 12 is NOT measured, so a pooled n < 100 reads INDETERMINATE.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-P1-Q11-R1C-PROP
+  registered_at: '2026-10-22'
+  registered_before_run: true
+  statistic: 'From scripts/research/path_metric_giveback.py (the SAME script, features, label, ridge/logistic models and k=12
+    (bars of the leg, 1h) as RQ-20261022-007), legs trend_donchian_eth_prop, trend_donchian_sol_prop, window 2020-07-01 ..
+    2026-10-15 23:59, 6 calendar folds by entry time, leave-one-fold-out, pooled over legs: r2_gain = R2_oos(full) - R2_oos(base);
+    ll_gain = logloss_oos(base) - logloss_oos(full); fold wins = folds where the gain > 0; net of the venue cost stack the
+    harness resolves per leg.'
+  rule: 'INDETERMINATE IF pooled n < 100. PASS IF (r2_gain >= 0.02 AND r2 fold wins >= 4 of 6) OR (ll_gain >= 0.01 AND ll
+    fold wins >= 4 of 6): the metric carries information on the prop legs and rung 2 on them (RQ-20261022-eba2-08) unblocks
+    on the build row HARNESS-METRIC-TRIGGER -- never a config change, and the prop EV/survival gate still applies. FAIL otherwise:
+    path metrics add nothing measurable on the prop legs at k=12. Per-leg verdicts are reported, not graded. Thresholds are
+    not changed after any result.'
+what_it_does_not_do: 'A label study, not a lever: edits no config, places no order. k=12 is a single pre-registered choice,
+  not a sweep. Volatility is an uncontrolled confound (eba2-04 controls it, on the bybit_2 legs). Harness paths are not live
+  paths. No look at these legs'' path metrics was taken before registration.'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 400
+  confidence: 0.3
+  basis: 'stand-in: prop legs carry the DD limits; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  why_runner: Fetches keyless public candles (Binance Vision) for a pinned window; reads no trainer data.
+  basis: Six keyless candle fetches + six harness passes with --emit-paths (~60 s each MEASURED 2026-10-21 for 007) + numpy
+    fits.
+run:
+  command:
+  - python3
+  - scripts/research/path_metric_giveback.py
+  - --leg
+  - trend_donchian_eth_prop
+  - --leg
+  - trend_donchian_sol_prop
+  - --k
+  - '12'
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '100'
+  - --min-r2-gain
+  - '0.02'
+  - --min-ll-gain
+  - '0.01'
+  - --big-quantile
+  - '0.5'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261022-eba2-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261022-007.yaml
+- research/queue/RQ-20261022-1f8b-01.yaml
+- scripts/research/path_metric_giveback.py
+- docs/claude/work/IDEAS.md
+programme_node:
+  programme: P1
+  node: P1-Q11-path-metric-giveback
+  goal: G1
+  after:
+  - unit: RQ-20261014-9807-01
+    verdict: any
+  - unit: RQ-20260928-019
+    verdict: any
+generated:
+  family: programme:P1
+  template: research/programmes/01-active-trade-management.yaml
+  template_sha: 2dab2a42372f
+  key: programme:P1-Q11-path-metric-giveback
+  params:
+    node: P1-Q11-path-metric-giveback
+status: queued
+last_dispatched_at: null

@@ -56,6 +56,41 @@ Population: units whose `grading.graded_at` is 2026-10-14..2026-10-21 and whose 
   - No earlier disjoint window exists on the feed: the perps' klines start 2019-12/2020-01.
   - The proposed build is a replace-on-holdout grade.
 
+**W43 exits/giveback read, 2026-10-22 (lane EXITS-GIVEBACK-W43, Tier-1; nothing live changed)**
+Each unit's pre-registered rule applied verbatim; numbers are in the unit's `grading` block (re-run, do not quote).
+- **What the day's exit results decide.** Nothing ships. The declared exits stand on every money leg against: level-triggered
+  tightening (RQ-20261022-001..006, FAIL x6), a fixed 50% bank (fd06-01/-02/-03, FAIL x3; on ada_pb 23.8-49.3 R against the
+  declared 92.1 R), and the ADX corroboration (511e-01, UNIT FAIL: **the xrp_4h ADX trail stays on the bybit_1 alias only**,
+  noted on MOMENTUM-LEVERS-LIVE and OPERATOR-DECISIONS-1022). The pattern across levels, bank and the 1R giveback stop is one
+  finding: the wide trail earns its R in the right tail, so any rule applied to EVERY trade costs more than it saves. The
+  remaining hypothesis is selectivity, which is exactly the operator's metric idea.
+- **Giveback census 9807-01 (PASS, a REPORT rule).** Paper pool: giveback_share_of_peak 0.92, deep_then_loss 0.15, n 336, every
+  peak a lower bound. Real money: n 7, `insufficient_n` -- the real-money giveback has still never been measured; the live
+  telemetry is accruing (EXIT-PATH-TELEMETRY-LIVE). The 90-day 13%-of-peak figure in the weekly walkthrough is a different
+  population (paper + mirror, n 328); both say the same thing.
+- **Q11 rung 1 is a discovery, not a confirmation.** 007 PASSED on the log-loss clause alone (r2_gain -0.0038), carried by two
+  legs; eth_4h read FAIL, xrp_4h underpowered; the time-disjoint confirmation 1f8b-01 is INDETERMINATE (58 trades; the perps'
+  klines start 2019-12, so no longer disjoint window exists). By 1f8b-01's own rule rung 2 is NOT opened on 007 alone. The way
+  to a decisive read is by LEG (eba2-01, eba2-02) and by controlling volatility (eba2-04).
+- **Next units (8, all pre-registered, `would_dispatch` in a `dispatch_queue.py` dry run for the three runnable ones):**
+  | unit | question | state |
+  |---|---|---|
+  | RQ-20261022-eba2-01 | Q11 transfer: path metrics on 6 legs 007 was not selected on | queued |
+  | RQ-20261022-eba2-02 | Q11 on the two prop legs (1h, k=12) | queued |
+  | RQ-20261022-eba2-03 | R-armed tight trail (1.5/2.0/3.0 R -> 2.5 ATR) on ada_pullback_2h -- the operator's "once past N R the stop becomes a tight trail" | queued |
+  | RQ-20261022-eba2-04 | Q11 rung 1d: path metrics beyond realised-vol-vs-entry-vol | blocked: PATHMETRIC-VOLCTL |
+  | RQ-20261022-eba2-05 / -06 | fractional giveback exit (0.5/0.6/0.7 x peak after 2R) on ada_pb / xrp_pb | blocked: GIVEBACK-FRAC-FLAG |
+  | RQ-20261022-eba2-07 / -08 | Q11 rung 2: metric-TRIGGERED bank / tight trail vs an unconditional control, ada_pb / xrp_pb | blocked: HARNESS-METRIC-TRIGGER + eba2-01 pass |
+- **Operator's idea mapped.** Efficiency ratio, chop, MAE/MFE shape: rung 1 (007, eba2-01/-02). Realised vol vs entry vol: eba2-04.
+  R-triggered tight trail: eba2-03 (the lever exists). Split / partial exit: fixed (fd06, closed) and metric-triggered (eba2-07/-08).
+  Price-level triggers: Q10 (closed on six legs; xrp_4h `fvg` never fired). Loss-of-momentum triggers: the ADX / momentum family
+  (MOMENTUM-LEVERS-LIVE).
+- **Not authored, with the reason.** A fixed bank on eth_4h / eth_prop / sol_prop: three FAILs by 2.6-68 R make the prior strongly
+  negative and the metric-triggered arm is the better use of the slot. Rung 2 on eth_4h / xrp_4h: rung 1 read FAIL / underpowered
+  there (a prop rung 2 is node `P1-Q11-prop-rung2`, gated on eba2-02).
+- **Builds filed (checklist, all Tier 1, roadmap L-ATM):** HARNESS-METRIC-TRIGGER, PATHMETRIC-VOLCTL, GIVEBACK-FRAC-FLAG,
+  RESEARCH-MULTICMD-OUTDIR (a multi-command unit shares one `{out_dir}`; 511e-01 lost its eth_4h numbers to it).
+
 **Cross-programme feeds**
 - → P5: trail 4.5 on eth_prop is priced on all three books; the prop EV read (P5) decides adoption.
 - ← P7: the daily Donchian (ef5d-03, D55) is a new position-trade family that will need exit processing if its transfer

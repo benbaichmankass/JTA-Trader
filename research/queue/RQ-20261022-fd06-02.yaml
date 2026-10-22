@@ -2,7 +2,7 @@ id: RQ-20261022-fd06-02
 title: 'Operator ''split into two trades'' idea, re-asked on a CAPPED tail: now that xrp_pullback_2h declares a finite TP
   (tp_r 3.0), does banking half the position at +1.0/+1.5 R (remainder on the declared exit) replace the declared exit on
   net R in 5 of 6 calendar folds over 2020-07..2026-10, at the venue cost stack?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -127,15 +127,17 @@ related:
 - comms/perf_followup/perf-followup-20261021-walkthrough.json
 last_dispatched_at: null
 grading:
-  auto: true
-  confirmatory_run: 1
-  decision_rule_id: RULE-PERF-FU-W43-BANK-XRP-PULLBACK-2H
-  evidence:
-  - research/results/RQ-20261022-fd06-02/39752471538.jsonl
-  first_fail: 1 row(s), all measured, all fail
   graded_at: '2026-10-22'
-  grader: scripts/research/queue_grade.py
-  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
-  reason: 1 row(s), all measured, all fail
-  rows: 1
+  graded_by: lane EXITS-GIVEBACK-W43 (session_013boLrFb4hM4JJ2Naq19bqS), dispatched by Manager Session 2026-10-22
+    (session_01Hsp3aD8ccAyhHiyYARqEqh)
+  decision_rule_id: RULE-PERF-FU-W43-BANK-XRP-PULLBACK-2H
   verdict: fail
+  record: research/results/RQ-20261022-fd06-02/39752471538.jsonl
+  disposition: 'REGISTERED VERDICT: fail. Rule applied verbatim (xrp_pullback_2h, window 2020-07-01..2026-10-15,
+    6 folds, net of fee+slippage+funding). A net_r 29.65; B1 10.84 (delta -18.81, 1/6 folds), B15 22.72 (-6.93,
+    2/6), B1E 1.27 (-28.38, 2/6, maxDD 24.61 > cap 21.83). No bank arm clears the 0.02 R/trade materiality bar or
+    the 5-of-6 fold majority. The grader''s ''first FAIL -> confirmatory re-run'' is WAIVED: the harness is deterministic
+    over a pinned window (RQ-20261022-003..006 closed the same way, #18557), so a same-window replay cannot change
+    the verdict. Family not retired: a FIXED threshold is answered here; a metric-TRIGGERED split stays with Q11
+    rung 2 (RQ-20261022-eba2-07/-08).'
+  confirmatory_run: 'waived: deterministic harness'
