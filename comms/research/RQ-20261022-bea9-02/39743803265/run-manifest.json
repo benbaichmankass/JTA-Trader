@@ -1,0 +1,52 @@
+{
+  "unit": "RQ-20261022-bea9-02",
+  "run_id": "39743803265",
+  "commit_sha": "c6b1d4e213f7f2b7a9fa6231499a60d80c307c47",
+  "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/39743803265",
+  "timeout_minutes": 120,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/exit_lever_ablation.py",
+        "--leg",
+        "sol_pullback_2h",
+        "--arm",
+        "S3=--tp-target-r=3",
+        "--arm",
+        "X5=--tp-target-r=3;--tp-extend-r=0.5;--tp-approach-frac=0.85;--tp-max-extends=3;--tp-thesis=native",
+        "--arm",
+        "X6=--tp-target-r=3;--tp-extend-r=1;--tp-approach-frac=0.85;--tp-max-extends=3;--tp-thesis=native",
+        "--days",
+        "2330",
+        "--start",
+        "2020-07-01",
+        "--end",
+        "2026-10-15 23:59",
+        "--grade",
+        "replace",
+        "--baseline",
+        "S3",
+        "--delta-r",
+        "0",
+        "--delta-r-per-trade",
+        "0",
+        "--folds",
+        "6",
+        "--fold-majority",
+        "5",
+        "--dd-tol-frac",
+        "0.35",
+        "--n-floor",
+        "39",
+        "--out",
+        "comms/research/RQ-20261022-bea9-02/39743803265"
+      ],
+      "log": "comms/research/RQ-20261022-bea9-02/39743803265/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 64.0
+    }
+  ],
+  "all_ok": true
+}

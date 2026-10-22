@@ -407,6 +407,7 @@ DEFAULT_PRIORITIES: Dict[str, int] = {
     "trend_donchian_eth_4h": 0,
     "trend_donchian_sol_4h": 0,
     "trend_donchian_xrp_4h": 0,
+    "trend_donchian_xrp_adx25": 0,
     "trend_donchian_ada_4h": 0,
     "trend_donchian_avax_4h": 0,
     "sol_pullback_2h": 0,

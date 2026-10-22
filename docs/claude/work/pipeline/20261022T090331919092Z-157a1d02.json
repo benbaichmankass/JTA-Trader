@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-10-29",
+    "kind": "date"
+  },
+  "id": "PI-20261022-HOPS0847-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261022-0847 step C blocked/ audit",
+    "rerun": "ls research/queue/blocked/RQ-20261014-9807-04.yaml; grep -c cells research/queue/blocked/RQ-20261014-9807-04.yaml  # still in blocked/ with no filled cells => still open"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "[research-ops 0847] RQ-20261014-9807-04 (giveback-keyed stop / trail_decay cells, once) is blocked only on deriving per-leg giveback_r p25/p50, peak_r p50 and median bars_since_peak from per-bar PATH rows (ledger mfe_r is a lagged lower bound; census 9807-01 real-money pool insufficient_n 7 < 20). The path-row emitter that was the blocker (EXIT-PATH-EMIT-OFFLINE, --emit-paths, 2026-10-18) is landed and was exercised by RQ-20261022-007 (835 pooled trades, comms/research/RQ-20261022-007/*/). Derive the cells from those emits (a small script or a path_metric_giveback.py option writing a cells JSON), fill run.inputs.cells (JSON list of {leg, lever, tag, params}), set status queued and git mv to research/queue/. Do not key cells from ledgers."
+}

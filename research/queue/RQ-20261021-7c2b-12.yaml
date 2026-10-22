@@ -2,7 +2,7 @@ id: RQ-20261021-7c2b-12
 title: >-
   Programme 05 Q2 rung 2, breakout_2 (Turbo): around the 0.35% flat risk that dominated the configured 0.5% (RQ-20261016-029), does
   a neighbouring level or room sizing at 0.35% dominate it?
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 1
@@ -107,3 +107,16 @@ related:
 - docs/research/programmes/05-PROP.md
 - research/programmes/05-prop.yaml
 last_dispatched_at: '2026-10-22T01:46:28+00:00'
+grading:
+  attested: RULE-P5-Q2-SIZING-BRK-RUNG2
+  auto: true
+  decision_rule_id: RULE-P5-Q2-SIZING-BRK-RUNG2
+  evidence:
+  - research/results/RQ-20261021-7c2b-12/39707655350.jsonl
+  graded_at: '2026-10-22'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

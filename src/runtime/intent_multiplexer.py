@@ -105,6 +105,7 @@ from src.runtime.strategy_signal_builders import (
     trend_donchian_eth_4h_signal_builder,
     trend_donchian_sol_4h_signal_builder,
     trend_donchian_xrp_4h_signal_builder,
+    trend_donchian_xrp_adx25_signal_builder,
     trend_donchian_ada_4h_signal_builder,
     trend_donchian_avax_4h_signal_builder,
     trend_donchian_signal_builder,
@@ -310,6 +311,7 @@ def _default_intent_builders() -> Dict[str, IntentBuilder]:
         "trend_donchian_eth_4h": trend_donchian_eth_4h_signal_builder,
         "trend_donchian_sol_4h": trend_donchian_sol_4h_signal_builder,
         "trend_donchian_xrp_4h": trend_donchian_xrp_4h_signal_builder,
+        "trend_donchian_xrp_adx25": trend_donchian_xrp_adx25_signal_builder,
         "trend_donchian_ada_4h": trend_donchian_ada_4h_signal_builder,
         "trend_donchian_avax_4h": trend_donchian_avax_4h_signal_builder,
         # mes_trend_long_1d: MES daily long-only equity-index diversifier on

@@ -227,7 +227,7 @@ accounts:
                                        # pick-one. bybit_1 first; bybit_2 + bybit_portfolio
                                        # together after 1-2 clean multi-slice trades here
                                        # (mirror equality test). ROLLBACK: delete this line.
-    strategies: [trend_donchian_1h, trend_donchian_eth_4h, trend_donchian_xrp_4h, xrp_pullback_2h, ada_pullback_2h, trend_donchian_eth_prop, trend_donchian_sol_prop]
+    strategies: [trend_donchian_1h, trend_donchian_eth_4h, trend_donchian_xrp_adx25, xrp_pullback_2h, ada_pullback_2h, trend_donchian_eth_prop, trend_donchian_sol_prop]
                                        # 2026-10-15 PROP-GATE-PARITY (Tier-3 roster add on PAPER, operator 'Yes, 1, 2 and 3a'):
                                        # trend_donchian_eth_prop + trend_donchian_sol_prop join the Stage-1 soak. Operator: "if anything,
                                        # the prop accounts should have a higher bar to clear because of the DD limits" -- a prop leg must
@@ -372,7 +372,9 @@ accounts:
                                        # %-of-equity cap scales with the account.
       daily_usd: 100                   # absolute FALLBACK only — used when no
                                        # equity snapshot is available (cold start)
-      risk_pct: 0.015                   # 1.5% balance risked per trade (S-026 G2)
+      risk_pct: 0.0075                  # 0.75% per trade (Tier-3, operator 2026-10-22: "Cut its risk
+                                       # to ~0.75%"; OPERATOR-DECISIONS-1022). Was 1.5% (S-026 G2);
+                                       # ROLLBACK: 0.015.
       leverage: 3                      # 3× leverage — same as bybit_2; applied
                                        # via /v5/position/set-leverage at boot.
       daily_dd_switch:                 # The ONE automatic daily off (operator 2026-10-09, rule 7
