@@ -204,14 +204,17 @@ milestones:
     reviewed: 2026-10-22
   - id: M24
     goal: G1
-    name: Net-R and cost-aware modelling
-    status: dormant
+    name: Net-R and cost-aware modelling -- RETIRED 2026-10-22
+    status: closed
     where: >-
-      The cost stack this milestone exists for was finished under the reset (E3, R1, R7; E53). Remaining work is carried by
-      L-LADDER (cost fidelity, E62) rather than by an M24 row.
-      2026-10-22 weekly pass: still 0 rows and 0 queue units resolve here; no commit on main since 2026-10-11 names M24. No change; the cost-label trust condition was not re-measured.
-    next: Reopen only for the contrastive net-R ranker once the cost labels are trusted.
-    no_rows_reason: cost-stack work completed under L-LADDER rows; ranker track parked until labels are trusted (E53 sweep 2026-09-24, not re-measured 2026-10-11)
+      RETIRED 2026-10-22 (operator, popup "Apply all (Recommended)" on the manager's dormant-milestone recommendation, lane
+      ROADMAP-DORMANT-1022). The cost stack this milestone exists for was finished under the reset (E3, R1, R7; E53) and cost fidelity
+      is carried by L-LADDER (E62). 0 rows and 0 queue units resolved here on the 2026-10-22 pass. Its one live idea, a contrastive
+      net-R ranker, moved into the ML plan as item ML-N6 (parked, gated on re-measuring whether the cost labels are trustworthy; last
+      measured E53 sweep 2026-09-24). The id stays for history.
+    next: >-
+      Nothing under this id. The net-R ranker is ML-N6 in docs/plans/ml-plan-items.yaml (gate: cost-label trust re-measured).
+    no_rows_reason: retired 2026-10-22; cost-stack work lives under L-LADDER and the ranker idea under ML-N6
     owner: manager
     reviewed: 2026-10-22
   - id: M16
@@ -231,14 +234,14 @@ milestones:
     reviewed: 2026-10-22
   - id: M15
     goal: G1
-    name: Market and platform migration (Alpaca, OANDA, IBKR)
-    status: dormant
+    name: Market and platform migration (Alpaca, OANDA, IBKR) -- RETIRED 2026-10-22
+    status: closed
     where: >-
-      Alpaca arm shipped: alpaca_live is a live real-money book with 3 legs. oanda_practice and ib_live exist as accounts with 0 strategies
-      (config/accounts.yaml, 2026-10-11).
-      2026-10-22 weekly pass (config/accounts.yaml read this session): oanda_practice and ib_live are still dry_run with 0 strategies; alpaca_live is live with 2 legs (3 on 2026-10-11). Still 0 rows, 0 units, no operator request open.
-    next: New venues enter through Stage-0 questions on L-LADDER, not through a migration build.
-    no_rows_reason: the Alpaca arm is complete; OANDA/IBKR-live carry no roster and no operator request is open
+      RETIRED 2026-10-22 (operator, popup "Apply all (Recommended)", lane ROADMAP-DORMANT-1022). The Alpaca arm shipped (alpaca_live is a
+      live real-money book). oanda_practice and ib_live exist as accounts with 0 strategies (config/accounts.yaml read 2026-10-22) and
+      no operator request is open. The id stays for history.
+    next: Nothing under this id; a new venue enters through a Stage-0 question on L-LADDER, not a migration build.
+    no_rows_reason: retired 2026-10-22; Alpaca arm complete, OANDA/IBKR-live carry no roster and no open request
     owner: manager
     reviewed: 2026-10-22
   - id: L-TIMEFRAMES
@@ -332,13 +335,14 @@ milestones:
     reviewed: 2026-10-22
   - id: M26
     goal: G4
-    name: Regime-transition and directional-conflict intelligence
-    status: dormant
+    name: Regime-transition and directional-conflict intelligence -- RETIRED 2026-10-22
+    status: closed
     where: >-
-      Idle since 2026-08-12 when the flip-confidence override was disarmed on the walk-forward result (E53 sweep 2026-09-24).
-      2026-10-22 weekly pass: still 0 rows, 0 units; no commit on main since 2026-10-11 names M26. Dormant with its reason unchanged.
-    next: Folded into L-REGIME deliverable 3 (good-vs-bad trade conditions); reopen only from a regime-program result.
-    no_rows_reason: disarmed on evidence 2026-08-12; successor question lives in the regime program
+      RETIRED 2026-10-22 (operator, popup "Apply all (Recommended)", lane ROADMAP-DORMANT-1022). Idle since 2026-08-12 when the
+      flip-confidence override was disarmed on the walk-forward result (E53 sweep 2026-09-24); 0 rows and 0 units on the 2026-10-22 pass.
+      The successor question (good-vs-bad trade conditions) lives in the regime programme, L-REGIME deliverable 3. The id stays for history.
+    next: Nothing under this id; reopen only from an L-REGIME result.
+    no_rows_reason: retired 2026-10-22; disarmed on evidence 2026-08-12, successor question lives in L-REGIME
     owner: manager
     reviewed: 2026-10-22
   - id: M23
@@ -412,8 +416,10 @@ milestones:
     where: >-
       Opened 2026-09-04 on the operator's directive, not started; nothing on main matches it since 2026-08-31 (E53).
       2026-10-22 weekly pass: no row, unit or commit naming M41 found (checklist store grep and git log since 2026-10-11). Unchanged, still awaiting an owner decision.
-    next: Needs an owner decision before any build; ML-ROADMAP-LOOP may fold it into the ML plan.
-    no_rows_reason: not started; filed as a milestone only (E53 CURRENT)
+    next: >-
+      Decided on evidence (operator, 2026-10-22, popup "Apply all"): no build. A cheap scoping item rides Sunday's frontier scan
+      (pipeline PI-20261022-J9X7ACR3-0001, due 2026-10-26): what a local LLM would do for us, what it costs, can it run on our VMs.
+    no_rows_reason: scoping only -- the frontier-scan question is pipeline item PI-20261022-J9X7ACR3-0001, not a build row
     owner: ML-ROADMAP-LOOP lane
     reviewed: 2026-10-22
   # ── G5 ──────────────────────────────────────────────────────────────────
@@ -485,13 +491,14 @@ milestones:
     reviewed: 2026-10-14
   - id: M36
     goal: G6
-    name: Consolidation and integration umbrella
-    status: dormant
+    name: Consolidation and integration umbrella -- RETIRED 2026-10-22
+    status: closed
     where: >-
-      Idle since 2026-07-27; its four tracks continue as rows under M26/M27/M28/M29 (E53).
-      2026-10-22 weekly pass: one queued Tier-1 row (P4-DOCS-SYNC, 2026-10-16) resolves here; the umbrella is otherwise unchanged and still not retired.
-    next: Retire the umbrella at the next milestone-table cleanup; nothing to build here.
-    no_rows_reason: umbrella by design -- tracks A-D live on M26, M27, M28, M29
+      RETIRED 2026-10-22 (operator, popup "Apply all (Recommended)", lane ROADMAP-DORMANT-1022). An umbrella by design, idle since
+      2026-07-27; its tracks continue as rows under M26/M27/M28/M29 (E53). Its one queued docs row, P4-DOCS-SYNC, was re-pointed to
+      M28 and M29, the milestones its text concerns. The id stays for history.
+    next: Nothing under this id.
+    no_rows_reason: retired 2026-10-22; umbrella by design, its one row re-homed to M28/M29
     owner: manager
     reviewed: 2026-10-22
   # ── G7 ──────────────────────────────────────────────────────────────────
