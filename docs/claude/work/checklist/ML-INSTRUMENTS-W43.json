@@ -1,0 +1,34 @@
+{
+  "id": "ML-INSTRUMENTS-W43",
+  "title": "Unblock non-GBDT model families (gbdt is 76 of 97 registered models on 2026-10-21; every other family indeterminate/fail on tooling): TSFM backends, TabPFN CPU >5000-sample limit, torch GRU kind; close the CLOSED-OPEN plan items",
+  "phase": "ml",
+  "state": "landed_unproven",
+  "owner": null,
+  "lane": "session_01UwV3mZM8HA8zat9g7u9KhK",
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 15,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    19477,
+    19478
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-22 07:50Z manager] Lane done + archived. MERGED #19477 (6091b450d: capped TabPFN/TabICL ensemble, torch_gru kind, 6 CLOSED-OPEN plan items closed, units RQ-20261018-ff8f-04 unblocked + RQ-20261022-4a3b-01) and #19478 (b09a61f8f, Tier 2 by path, offline research only: Chronos-2/Bolt TSFM backend in build_forecasts.py; merged by manager under the data-backed Tier-2 authorization). NOT DEPLOYED/OBSERVED on the trainer. Real TabPFN CPU path unverified (stand-in test). Filed PI-20261022-MENTSW43-0001 (Chronos-2 side-streams, Tier-2 trainer run) and -0002 (registry shadow 20/candidate 73 vs 21/72 + SILENT setup-quality-baseline-v0). Closes when the first non-GBDT unit (ff8f-04 or 4a3b-01) returns a graded result.",
+  "priority_rank": 4,
+  "updated_at": "2026-10-22T08:00:15Z",
+  "updated_by": "session_01CSwhZWiw15rVCkjsJ8Cpuh",
+  "roadmap": [
+    "M25"
+  ],
+  "observation": {
+    "what": "first non-GBDT unit (RQ-20261018-ff8f-04 or RQ-20261022-4a3b-01) returns a graded result",
+    "how_to_check": "research/queue/<unit>.yaml status done with a grade block; result under research/results/",
+    "due_by": "2026-10-26"
+  },
+  "writeback": {
+    "roadmap": "none: lane outcome recorded on the row; milestone lines updated in #19475 roadmap pass",
+    "arch": "none: no architecture change"
+  },
+  "_seq": 592
+}

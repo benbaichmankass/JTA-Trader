@@ -1,0 +1,142 @@
+# Hand-authored 2026-10-22 by lane TP-DOCTRINE-W43 (session_017BJaq4hC2mKhEmPT76E6Xm), manager dispatch.
+# Decision rule registered BEFORE any candidate arm was run on this window.
+id: RQ-20261022-bea9-03
+title: 'TP doctrine COMPLIANCE, real money + prop: does trend_donchian_sol_prop with a REACHABLE 3R entry target
+  plus the Donchian measured-move revision (width 0.5 / 1.0) no worse than the declared unreachable 6R bracket in
+  5 of 6 folds over 2020-10..2026-10, at the Bybit cost stack?'
+status: queued
+cadence: once
+roadmap:
+- L-ATM
+- M20
+theme: live_strategy
+priority: 1
+kind: experiment
+question: 'trend_donchian_sol_prop trades on bybit_2 (real money), bybit_portfolio, bybit_1 and three prop books
+  (breakout_2, tradeify_1, velotrade_1): 6 routings + 3 at stake, the most of any leg, and it FAILS BOTH doctrine
+  dimensions -- the 6R target is reached by 1.9% of 370 harness trades (below the 10% TP-REACH-FLOOR) and the leg
+  declares no revision rule. Fixed-target replacements all failed the replacement bar on 2020-10..2026-10 (MEASURED:
+  RQ-20261018-006 K25 -4.67 R 2/6 folds; RQ-20261018-024 T3 -2.38 R 4/6, T4 +1.05 R 3/6; RQ-20261018-022 stall-pull-in
+  retarget R2 +2.08 R 3/6). Two things are untested on this leg: a target that MOVES by the leg''s own structure
+  (the measured-move rule live on trend_donchian_eth_4h since 2026-10-18, src/runtime/tp_revision.py) and the doctrine''s
+  full shape -- a reachable entry prediction (3R: reach 15.3% uncapped, RQ-20261016-004) that then moves. Neither
+  arm has ever been run, so this window is not spent for them.'
+why_this_matters: 'Every earlier TP-lever unit on this leg asked a REPLACEMENT question -- beat the incumbent by
+  a materiality bar of 0.02 R x n(A) -- which is the right bar for a P&L-motivated swap. The TP doctrine (docs/ARCHITECTURE-CANONICAL.md
+  § ''TP doctrine'', operator 2026-10-06, binding) makes compliance itself the motive, so a revision that is no
+  worse than the incumbent is the doctrine''s answer; a materiality bar makes compliance unreachable for any roughly
+  P&L-neutral revision. This unit asks the COMPLIANCE question: everything as the programme''s replace bar (fold
+  supermajority, 0.35 drawdown tolerance, 39-trade floor) except the materiality term, which is 0. Real-money +
+  prop routings are first by money at stake; this is the one leg where entry_tp and tp_revision both fail.'
+power:
+  expected_n: 400
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Floor 39 incumbent trades. MEASURED (not re-run here): the declared arm carries 400 trades over this exact
+    window and cost stack (comms/research/RQ-20261018-006/39129948154/verdict.json, arm A).'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-W43-SOLPROP-ENTRY3-MM-COMPLIANCE
+  statistic: 'From scripts/research/exit_lever_ablation.py --grade replace on trend_donchian_sol_prop, window 2020-10-01
+    .. 2026-10-15 23:59 (6 equal calendar folds; a trade is binned by entry time), net of the full cost stack the
+    harness resolves per venue (execution_costs.resolve_cost_policy; recorded per arm as cost_stack). Per arm from
+    the harness''s own --json summary: n, net_total_r, max_drawdown_r, net R per fold, net_r_per_capital_day, by_outcome.
+    A = the leg as declared in config/strategies.yaml on the run''s ref (argv built by regime_debt_matrix.build_harness_cmd).
+    Candidates: E3MM05 = tp_r 3.0 + tp_revision donchian_measured_move width_mult 0.5; E3MM10 = the same at width_mult
+    1.0 (named before this run). Per candidate C: delta = net_r(C) - net_r(A); folds_ge = folds where net_r(C) >=
+    net_r(A) (ties count); maxDD(C) vs maxDD(A). Reported, not graded (the doctrine read below): tp_share = by_outcome.take_profit
+    / n(C) (the realised reach of the final target), lever_fired, net_r_per_capital_day(C) vs (A); clamped_share
+    = params.tp_revisions_clamped / params.tp_revisions_applied (a share >= 0.5 means the moving target mostly sits
+    at the venue cap).'
+  rule: 'INDETERMINATE IF n(A) < 39 (underpowered: no verdict, never FAIL on thin n). A candidate C PASSES iff net_r(C)
+    > net_r(A) AND folds_ge >= 5 of 6 AND maxDD(C) <= maxDD(A) x 1.35 (the harness grades exactly this with --delta-r
+    0 --delta-r-per-trade 0, so the unit is gradable as registered). PASS IF one or more pass: the passing candidate
+    with the highest net R is named, and the follow-on is the DOCTRINE READ, registered here: if tp_share(C) < 0.10
+    (the TP-REACH-FLOOR) OR lever_fired is false OR net_r_per_capital_day(C) < net_r_per_capital_day(A), the PASS
+    is forwarded to the manager as ''P&L without a reachable prediction'', not a declare; otherwise it is the evidence
+    record for a Tier-3 declare proposal of tp_r 3.0 + that tp_revision block on bybit_2 + bybit_portfolio + bybit_1
+    (mirror equality) -- with clamped_share >= 0.5 also forwarding it as ''at the cap''; the three PROP routings
+    additionally wait on the prop EV/survival gate at the prop cost stack (Programme 01 node P1-Q4-solprop-propcost),
+    never a lower bar -- a note on row TP-DOCTRINE-W43 (or TP-DOCTRINE) for the manager, never a config edit. FAIL IF none passes
+    -> the measured-move family is retired on sol_prop at both widths under the compliance bar; the leg''s doctrine
+    route is the in-trade exit model on the legs as traded (Programme 01 Q8), and the 6R sentinel-under-another-name
+    stays reported as debt. Thresholds (zero materiality, 5/6 folds, the 0.35 drawdown tolerance, the 39 floor,
+    the 0.10 tp_share read) are not changed after any result.'
+  what_it_does_not_do: Edits no config and places no order. Not a prop-cost measurement (Bybit stack only). tp_share
+    is a reach proxy, not calibration (row ABLATION-TP-CALIBRATION). Two candidates on one window is a multiple
+    comparison; the 5/6 fold supermajority carries it.
+  registered_before_run: true
+  registered_at: '2026-10-22'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 600
+  confidence: 0.3
+  basis: 'stand-in: TP-doctrine compliance of a leg''s bracket; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 25
+  why_runner: Fetches keyless public candles (Binance Vision / dukascopy) for a pinned window; Kaggle CPU runs with
+    the internet off and metis-market-data carries no 2h/4h/1d candles for these legs; reads no trainer data.
+  basis: Runner. One harness invocation per unit; the 2-arm precedent (RQ-20261016-009) took 74 s wall incl. the
+    fetch; est_minutes carries headroom for runner fetch latency.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_sol_prop
+  - --arm
+  - A=
+  - --arm
+  - E3MM05=tp_r=3.0;--tp-revision=donchian_measured_move;--tp-revision-width-mult=0.5
+  - --arm
+  - E3MM10=tp_r=3.0;--tp-revision=donchian_measured_move;--tp-revision-width-mult=1.0
+  - --days
+  - '2210'
+  - --start
+  - '2020-10-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '5'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261022-bea9-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- TP-DOCTRINE-W43
+- RQ-20261016-004
+- RQ-20261018-006
+- RQ-20261018-024
+- RQ-20261018-022
+- RQ-20261018-007
+- docs/research/tp-doctrine-w43-proposals-2026-10-22.md
+- src/runtime/tp_revision.py
+last_dispatched_at: '2026-10-22T07:53:47+00:00'

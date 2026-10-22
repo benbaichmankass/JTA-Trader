@@ -3,8 +3,8 @@ cadence: once
 theme: ml_health
 kind: experiment
 title: 'Frontier / sequence model with a NEW input shape: a small GRU over 32-bar windows of the 6 shared features (plus the 4 range-vol estimators) vs
-  LightGBM on the BTC/ETH/SOL 15m regime head -- blocked on the torch_gru learner kind'
-status: blocked
+  LightGBM on the BTC/ETH/SOL 15m regime head'
+status: queued
 priority: 3
 question: Under identical purged folds on the trainer's BTC/ETH/SOL 15m v002 shards, does a 2-layer GRU (hidden 32) that reads a 32-bar window of [6 shared
   features + 4 range-vol estimators] beat LightGBM on the same rows (which sees only the current bar and two return lags) by >= +0.010 macro-F1 on >= 2
@@ -50,14 +50,6 @@ routing:
   peak_memory_gb: 5.0
   est_minutes: 240
   basis: 'Estimate: a 2x32 GRU on 40k x 32 x 10 windows per fold on 1 OCPU; re-declare from the first run.'
-blocked_on:
-- kind: work_item
-  ref: FRONTIER-LEVER-SEQUENCE-LEARNER
-  what: 'scripts/research/ml_bakeoff.py has no sequence learner: every kind consumes a flat row. A `torch_gru` kind (window_bars, hidden, epochs params;
-    windows built per fold block; CPU; seeded; records `unavailable` when torch is absent) is the lever, with a CPU smoke test. Writing it untested from
-    a sandbox without torch is how a wrong learner ships, so it is a lever row, not part of this lane''s PR.'
-  clears_when: 'torch_gru merged with its test; then fill ml_bakeoff.learners.gru {kind: torch_gru, params: {window_bars: 32, hidden: 32, layers: 2, epochs:
-    8}} with feature_blocks df_columns [parkinson_vol, garman_klass_vol, rogers_satchell_vol, yang_zhang_vol], git mv to research/queue/, run.workflow research-script-run-trainer.yml.'
 ml_bakeoff:
   task: classification
   metric: macro_f1
@@ -114,7 +106,7 @@ ml_bakeoff:
       feature_blocks:
       - kind: df_columns
         columns: *id001
-      note: kind does not exist yet (FRONTIER-LEVER-SEQUENCE-LEARNER); the engine records it `unavailable`, never scored
+      note: torch_gru landed with ML-INSTRUMENTS-W43 (FRONTIER-LEVER-SEQUENCE-LEARNER); windows are built inside each fold block, test-block head edge-padded
   rule:
     min_folds: 3
     pass_if:
@@ -138,8 +130,17 @@ ml_bakeoff:
       op: '>'
       value: 0.0
 run:
-  workflow: null
-  note: Deliberately null until the torch_gru learner kind exists (blocked_on); then research-script-run-trainer.yml with the standard ml_bakeoff command.
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261018-ff8f-04
 lands:
   store: research/results/
   assert_field: read_state
@@ -151,3 +152,4 @@ related:
 - docs/research/frontier-scan-2026-10-11.md
 - FRONTIER-LEVER-SEQUENCE-LEARNER
 - ML-UNBLOCK-1018
+last_dispatched_at: '2026-10-22T09:03:01+00:00'

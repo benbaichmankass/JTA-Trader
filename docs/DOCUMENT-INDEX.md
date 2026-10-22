@@ -957,6 +957,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/relative-value-families-2026-10-07.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/research-loop-audit-2026-10-15.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Research loop as built vs intended: why results go ungraded, why intake reads exhausted, compute use, root causes and the proposed build (lane RESEARCH-LOOP-AUDIT-AND-DRIVER). |
 | `docs/research/research-ops-benchmark-2026-10-16.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Research loop benchmarked against published research-ops practice (quant multiple testing, MLOps tracking, pre-registration, stage-gate, SRE): gap table, filed rows and operator decisions (lane RESEARCH-OPS-BENCHMARK-1016). |
+| `docs/research/tp-doctrine-w43-proposals-2026-10-22.md` | evidence | unknown | — | 2026-10-22 | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/trainer-workload-2026-10-13.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/velotrade-fit-2026-10-06.md` | evidence | unknown | — | 2026-10-06 | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/velotrade-api-probe-2026-10-05.md` | evidence | unknown | — | 2026-10-05 | `dir:research-is-measurement / not-assessed` | — |
@@ -1044,6 +1045,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/reviews/2026-10-15-weekly-walkthrough-perf.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reviews/2026-10-19-weekly-audit.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
 | `docs/reviews/2026-10-21-weekly-walkthrough.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/reviews/2026-10-22-weekly-planning-preread.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/runbooks/alpaca-integration.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/backfill-orphan-pnl.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/devnull-guard.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |

@@ -205,6 +205,43 @@ def quantile_forecast_features(
 
 # --- The lazily-imported real forecaster (torch/chronos, trainer-side only) ----
 
+# Forecast BACKENDS (FRONTIER-LEVER-TSFM): name -> (Hub model id, python module that must import). Only backends whose
+# loader is the Chronos `BaseChronosPipeline` live here -- chronos-forecasting >= 2.x dispatches on the checkpoint's
+# `chronos_pipeline_class`, so Bolt and Chronos-2 share this path. TimesFM / TiRex / Kronos / TTM have DIFFERENT
+# loaders and packages (not installed on the trainer, 2026-10-11); they are deliberately absent so asking for one is a
+# loud error rather than a silently-wrong Chronos run. Add one only with its own forecast_fn and a test.
+FORECAST_BACKENDS: dict[str, tuple[str, str]] = {
+    "chronos-bolt-tiny": (FORECAST_MODEL_ID, "chronos"),
+    "chronos-bolt-small": ("amazon/chronos-bolt-small", "chronos"),
+    "chronos-2": ("amazon/chronos-2", "chronos"),
+}
+
+
+def resolve_backend(name: str) -> str:
+    """Hub model id for a registered backend; ``ValueError`` (naming the known set) for anything else."""
+    if name not in FORECAST_BACKENDS:
+        raise ValueError(
+            f"unknown forecast backend {name!r}; known: {sorted(FORECAST_BACKENDS)} "
+            "(timesfm / tirex / kronos / ttm need their own loader -- not implemented)"
+        )
+    return FORECAST_BACKENDS[name][0]
+
+
+def last_step_quantiles(q: Any, i: int, levels: Sequence[float]) -> dict[float, float]:
+    """Quantile -> predicted price at the LAST forecast step for window ``i``, from either pipeline output shape.
+
+    Chronos-Bolt returns one tensor ``(batch, horizon, n_q)``; Chronos-2 returns a LIST of per-series tensors
+    ``(n_variates, horizon, n_q)``. A multivariate output is refused rather than silently reading variate 0 -- these
+    features are univariate by contract."""
+    item = q[i]
+    rows = item.tolist() if hasattr(item, "tolist") else item
+    if rows and rows[0] and isinstance(rows[0][0], (list, tuple)):  # (n_variates, horizon, n_q)
+        if len(rows) != 1:
+            raise ValueError(f"expected a univariate forecast, got {len(rows)} variates")
+        rows = rows[0]
+    last_step = rows[-1]
+    return {lvl: float(last_step[j]) for j, lvl in enumerate(levels)}
+
 _PIPELINE_CACHE: dict[str, Any] = {}
 
 
@@ -270,17 +307,15 @@ def chronos_forecast_fn(
             quantile_levels=levels,
         )
         try:  # pragma: no cover
-            q = quantiles.to(torch.float32).tolist()
+            q = (
+                quantiles.to(torch.float32)
+                if hasattr(quantiles, "to")
+                else [t.to(torch.float32) for t in quantiles]
+            )
         except Exception as exc:  # pragma: no cover
             raise ImportError(f"unexpected forecaster output shape: {exc}") from exc
 
-        out: list[dict[float, float]] = []
-        for i in range(len(windows)):  # pragma: no cover
-            last_step = q[i][-1]  # (len(levels),) at the horizon-th step
-            out.append(
-                {lvl: float(last_step[j]) for j, lvl in enumerate(levels)}
-            )
-        return out
+        return [last_step_quantiles(q, i, levels) for i in range(len(windows))]
 
     return _forecast
 

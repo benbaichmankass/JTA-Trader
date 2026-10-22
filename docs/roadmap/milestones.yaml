@@ -10,7 +10,7 @@
 # Other lanes (e.g. ML-ROADMAP-LOOP) add their milestones as new list items under their own goal;
 # never reword another lane's entry in the same PR.
 version: 1
-reviewed: 2026-10-14          # date of the last full weekly pass (2026-10-14: the Wednesday planning dialogue, which replaces the Monday pass)
+reviewed: 2026-10-22          # date of the last full weekly pass (2026-10-22: lane RESEARCH-HEALTH-W43 evidence-only update of the 15 overdue milestones; no scope or priority decisions)
 review_cadence_days: 8        # report flags a milestone whose `reviewed` is older than this
 enforce_from_seq: 400         # checklist rows with _seq >= this must carry `roadmap` (+ `writeback` when closed) -- only when the diff touches them
 row_fallback: docs/roadmap/backfill-2026-10-11.json  # rows without their own `roadmap` field resolve here (explicit field wins); `--backfill` materialises it
@@ -127,12 +127,13 @@ milestones:
       instead of a popup. Not yet closed: B3/B5/MANDATE-ARM sit at landed_unproven -- no alpaca_live close counts as
       clause-(b) evidence yet (B5 note, PI-20261011-MJ5KSFIO-0002). Slippage for Alpaca equities/IBKR futures is still a
       provisional 5.0 bps (E62).
+      2026-10-22 weekly pass (re-read this session from the checklist store, config/mandates.yaml, config/accounts.yaml; population = rows whose roadmap ref or fallback resolves to L-LADDER): 78 rows = 42 landed_unproven, 15 done, 18 queued, 1 in_flight, 2 blocked. SOAK-REDEFINE closed done 2026-10-21. config/mandates.yaml now lists 16 granted entries. B3, B5, MANDATE-ARM, E30, E62 are still landed_unproven (last row updates 2026-10-09..10-15; no closing observation in their notes). alpaca_live is 2 legs now (ief_pullback_1d moved to paper, #19403) vs 3 above. The provisional 5 bps (E62) was not re-measured.
     next: >-
       Close B5/MANDATE-ARM on the first recorded promotion or decline; replace the provisional 5 bps with a measured value (E62);
       act on every passed / mechanical_fail soak (SOAK-REDEFINE: the soak is mechanical, 1-2 clean trades); keep the 'Walk-forward re-run' units flowing.
     architecture: ["Promotion ladder, mandates and the roadmap loop"]
     owner: manager
-    reviewed: 2026-10-11
+    reviewed: 2026-10-22
   - id: M20
     goal: G1
     name: Active trade management (exits, geometry, TP doctrine) -- MERGED INTO L-ATM 2026-10-14
@@ -197,9 +198,10 @@ milestones:
     where: >-
       Propose-only for the allocator itself. The arbitration thread moved: per-account election off the once-gated set (E35),
       fan-out allowlist subtraction (E33) and a silent soak (E50) are all landed_unproven.
+      2026-10-22 weekly pass (population = 5 rows resolving to M18): E33 done; E35, E50, SAME-SYMBOL-ALLOCATION, NETTED-SLICES landed_unproven (latest row update 2026-10-18; NETTED-SLICES first multi-slice tick moved to the post-reset agenda). The arbitration_fanout_soak output was not re-read live this pass (not re-measured).
     next: Observe arbitration_fanout_soak writing again (E50); only then reopen the allocator proposal.
     owner: manager
-    reviewed: 2026-10-11
+    reviewed: 2026-10-22
   - id: M24
     goal: G1
     name: Net-R and cost-aware modelling
@@ -207,10 +209,11 @@ milestones:
     where: >-
       The cost stack this milestone exists for was finished under the reset (E3, R1, R7; E53). Remaining work is carried by
       L-LADDER (cost fidelity, E62) rather than by an M24 row.
+      2026-10-22 weekly pass: still 0 rows and 0 queue units resolve here; no commit on main since 2026-10-11 names M24. No change; the cost-label trust condition was not re-measured.
     next: Reopen only for the contrastive net-R ranker once the cost labels are trusted.
     no_rows_reason: cost-stack work completed under L-LADDER rows; ranker track parked until labels are trusted (E53 sweep 2026-09-24, not re-measured 2026-10-11)
     owner: manager
-    reviewed: 2026-10-11
+    reviewed: 2026-10-22
   - id: M16
     goal: G1
     name: Unified confidence risk architecture
@@ -220,11 +223,12 @@ milestones:
       RQ-20260930-601 graded FAIL (rho 0.019, p 0.197, n_eval 2328; research/results/RQ-20260930-601). ROADMAP's M16 cell still said
       "not yet run" until this pass. The confirmatory run RQ-20260930-602 is blocked until the ledgers grow by >= 500 eval trades.
       The reductive conviction-sizing arm on bybit_1 (demo only) rests on the same within-leg assumption.
+      2026-10-22 weekly pass: one queued row (IR-VOL-TARGET-SIZING-STAGE0, 2026-10-16, a vol-target sizing grader) resolves here; whether RQ-20260930-602's >= 500 eval-trade data condition is met was not re-measured.
     next: >-
       Wait for RQ-20260930-602's data condition; until then no widening of conviction sizing beyond the demo account (Tier-3 either way).
       Decide at that read whether M16 closes negative.
     owner: manager
-    reviewed: 2026-10-11
+    reviewed: 2026-10-22
   - id: M15
     goal: G1
     name: Market and platform migration (Alpaca, OANDA, IBKR)
@@ -232,10 +236,11 @@ milestones:
     where: >-
       Alpaca arm shipped: alpaca_live is a live real-money book with 3 legs. oanda_practice and ib_live exist as accounts with 0 strategies
       (config/accounts.yaml, 2026-10-11).
+      2026-10-22 weekly pass (config/accounts.yaml read this session): oanda_practice and ib_live are still dry_run with 0 strategies; alpaca_live is live with 2 legs (3 on 2026-10-11). Still 0 rows, 0 units, no operator request open.
     next: New venues enter through Stage-0 questions on L-LADDER, not through a migration build.
     no_rows_reason: the Alpaca arm is complete; OANDA/IBKR-live carry no roster and no operator request is open
     owner: manager
-    reviewed: 2026-10-11
+    reviewed: 2026-10-22
   - id: L-TIMEFRAMES
     goal: G1
     name: Horizon frontier -- longer (daily/weekly, weeks-long holds) and shorter (sub-hour breakout families) time frames, net of cost
@@ -268,13 +273,14 @@ milestones:
       Three prop accounts execute automatically (breakout_2 via the phone executor, tradeify_1 and velotrade_1 via DXtrade REST);
       ~30 'Stage-0 breadth for the prop book' units are queued. Open: per-leg sizing (PROP-PER-LEG-SIZING, PROP-PER-LEG-EV-GRID), the exit-price gap on
       venue SL/TP closes (PROP-EXIT-READ), ticket supersede/reissue (in flight), Tradeify other platforms. Tradeify non-crypto on tradeify_1 (SILVER, XYZ100, SP500, USOIL; on the watchlist since 2026-10-15): quoted spread 0.1-1.7 bps, margin 5:1 (SILVER, USOIL) / 2:1 (indices) inferred, 24x7 schedule MEASURED (docs/research/tradeify-platforms-2026-10-15.md 2c); swap and commission stay firm-declared and unconfirmed; Stage-0 units RQ-20261015-24ca-01..05 + ca42-01, 24ca-01 graded FAIL.
+      2026-10-22 weekly pass (config/accounts.yaml and the checklist store re-read; population = rows resolving to L-PROP): breakout_2, tradeify_1 and velotrade_1 are each live with 2 legs (unchanged); 80 rows = 30 landed_unproven, 25 done, 23 queued, 1 dropped, 1 blocked (PHONE-EXEC-OBSERVABLE-1018). Newest: BRK2-RISK-035 and BREAKOUT-POS-UNPARSED landed_unproven 2026-10-21; queued prop items from 2026-10-18 include PROP-GATE-ADA-XRP, SOL-PROP-GATE-FIX, TP-ETHPROP-2P5, VELO-NET-PNL-CASHTX. Prop survival-gate and EV results were not re-read this pass.
     next: >-
       Programme 05 (docs/research/programmes/05-PROP.md, 2026-10-14) is the plan: per-account EV baselines as configured (RQ-20261014-f516-01..03),
       then sizing / per-leg / daily-DD-switch / breadth challengers against them (f516-04..10); live-vs-sim fidelity waits on gradable
       closes (PROP-EXIT-READ, blocked/f516-11). Keep the EV question (B6) ahead of drawdown avoidance.
     architecture: ["Prop ticket flow"]
     owner: manager
-    reviewed: 2026-10-11
+    reviewed: 2026-10-22
   # ── G3 ──────────────────────────────────────────────────────────────────
   - id: M39
     goal: G3
@@ -283,10 +289,11 @@ milestones:
     where: >-
       The audit findings (FIX-CA-*, FIX-SA-*, PROTECTION-HARDENING, RECON*, GATE-SCOPE, RESTART-SAFE, LIVE-PARITY) are mostly merged and
       waiting on observation (landed_unproven). E53 had already noted this work lands as rows that never name M39.
+      2026-10-22 weekly pass (population = 44 rows resolving to M39): 29 landed_unproven, 8 done, 7 queued. New since 2026-10-11: MIRROR-QTY-DIVERGE (bybit_2 vs bybit_portfolio quantity divergence, landed_unproven 2026-10-21) and queued IR-LVB-FULL-HISTORY-REF. WEEKLY-AUDIT-2026-10-19 closed done 2026-10-21 (filed under L-OPS). No landed_unproven row was observed closed this pass.
     next: Drive each landed_unproven row to its named observation or close it; do not add new guards without a measured failure.
     architecture: ["Prime Directive"]
     owner: manager
-    reviewed: 2026-10-11
+    reviewed: 2026-10-22
   - id: M31
     goal: G3
     name: Position telemetry (peak-R between entry and exit) -- MERGED INTO L-ATM 2026-10-14
@@ -319,18 +326,21 @@ milestones:
     where: >-
       Four ML rows open (ML-HYGIENE, ML-STAGE-DECISIONS, ML-PRODUCERS, ML-DATASET-FIXES) after the 2026-10-08 stage decisions that demoted four heads.
       The ML slice's own plan is being written by ML-ROADMAP-LOOP.
+      2026-10-22 weekly pass (population = 44 rows resolving to M25): 17 queued, 13 done, 13 landed_unproven, 1 blocked (ML-RQ-RUNNER). Closed since 2026-10-11: ML-PARITY-HARNESS (10-18), ML-TABPFN-AND-STAGE-TRACE and TRAINER-DRIFT-NEXT (10-21), ML-PROMOREADY-OOSEDGE-MEASURE (10-22); ML-TABPFN-LICENCE and ML-UNBLOCK-1018 are landed_unproven. The 'four open ML rows' figure above is superseded by these counts; model-registry stage counts were not re-measured.
     next: Producers for the four demoted heads; apply the stage decisions; the ML lane owns the rest of this slice.
     owner: ML-ROADMAP-LOOP lane
-    reviewed: 2026-10-11
+    reviewed: 2026-10-22
   - id: M26
     goal: G4
     name: Regime-transition and directional-conflict intelligence
     status: dormant
-    where: Idle since 2026-08-12 when the flip-confidence override was disarmed on the walk-forward result (E53 sweep 2026-09-24).
+    where: >-
+      Idle since 2026-08-12 when the flip-confidence override was disarmed on the walk-forward result (E53 sweep 2026-09-24).
+      2026-10-22 weekly pass: still 0 rows, 0 units; no commit on main since 2026-10-11 names M26. Dormant with its reason unchanged.
     next: Folded into L-REGIME deliverable 3 (good-vs-bad trade conditions); reopen only from a regime-program result.
     no_rows_reason: disarmed on evidence 2026-08-12; successor question lives in the regime program
     owner: manager
-    reviewed: 2026-10-11
+    reviewed: 2026-10-22
   - id: M23
     goal: G4
     name: Meta-labeling plus the signals catalog
@@ -354,16 +364,20 @@ milestones:
     goal: G4
     name: ML optimization program (validation discipline, features, MLOps)
     status: dormant
-    where: Idle as M14 since 2026-06-04 (E53); ML work since ran under M19 (manifests retired 2026-08-06) and M25.
+    where: >-
+      Idle as M14 since 2026-06-04 (E53); ML work since ran under M19 (manifests retired 2026-08-06) and M25.
+      2026-10-22 weekly pass: 5 rows resolve here (3 landed_unproven, 1 done, 1 queued): COMPUTE-GPU-WIRE, ML-DATA-OFF-TRAINER, ML-SHARD-TRUNCATED (2026-10-18), ML-DATA-RUNNER-FETCH done, ML-RUNPOD-RESULT-LANDING queued. They are ML compute/data plumbing filed against this id; the milestone stays dormant as a work item.
     next: Subsumed by M25 and the ML-ROADMAP-LOOP plan.
     no_rows_reason: superseded by M25 and the ML roadmap loop
     owner: ML-ROADMAP-LOOP lane
-    reviewed: 2026-10-11
+    reviewed: 2026-10-22
   - id: M9
     goal: G4
     name: AI traders and the HF/data pipeline (M9 WS1-WS10 with M10)
     status: dormant
-    where: "WS1-WS5 shipped and WS7-WS10 recorded in progress (ROADMAP section 'M9 / M10'); E53 found 0 commits since 2026-08-31 naming M9/M10 or touching ml/data. Active ML work now runs under M25 and the ML-ROADMAP-LOOP plan."
+    where: >-
+      WS1-WS5 shipped and WS7-WS10 recorded in progress (ROADMAP section 'M9 / M10'); E53 found 0 commits since 2026-08-31 naming M9/M10 or touching ml/data. Active ML work now runs under M25 and the ML-ROADMAP-LOOP plan.
+      2026-10-22 weekly pass: 2 queued rows resolve here (COMPUTE-HF-SOURCING 2026-10-13, IR-DIRECTION-LABEL-V2 2026-10-16); no change in disposition.
     next: >-
       Subsumed by the ML-ROADMAP-LOOP plan; this entry exists so the historical M9/M10 rows have a disposition.
       2026-10-14 (DATA-INFRA-PROGRAMME, operator directive): the HF/data-pipeline half is SUPERSEDED by L-DATA -- not revived,
@@ -371,7 +385,7 @@ milestones:
       New data work is filed under L-DATA; rows still naming M9 (COMPUTE-HF-SOURCING, DATA-INFRA-PROGRAMME) keep resolving here.
     no_rows_reason: superseded by M25 and the ML roadmap loop (AI-trader half) and by L-DATA (data half, 2026-10-14)
     owner: ML-ROADMAP-LOOP lane
-    reviewed: 2026-10-11
+    reviewed: 2026-10-22
   - id: L-DATA
     goal: G4
     name: "Data infrastructure: ingest, process, label, learn"
@@ -395,11 +409,13 @@ milestones:
     goal: G4
     name: Production-ready local LLM
     status: backlog
-    where: Opened 2026-09-04 on the operator's directive, not started; nothing on main matches it since 2026-08-31 (E53).
+    where: >-
+      Opened 2026-09-04 on the operator's directive, not started; nothing on main matches it since 2026-08-31 (E53).
+      2026-10-22 weekly pass: no row, unit or commit naming M41 found (checklist store grep and git log since 2026-10-11). Unchanged, still awaiting an owner decision.
     next: Needs an owner decision before any build; ML-ROADMAP-LOOP may fold it into the ML plan.
     no_rows_reason: not started; filed as a milestone only (E53 CURRENT)
     owner: ML-ROADMAP-LOOP lane
-    reviewed: 2026-10-11
+    reviewed: 2026-10-22
   # ── G5 ──────────────────────────────────────────────────────────────────
   - id: L-PROGRAMMES
     goal: G5
@@ -425,10 +441,11 @@ milestones:
     where: >-
       The queue runs end to end (dispatcher, runner, collector) but it is lopsided: the open queue is dominated by generated monthly M20/E35 sweeps and
       prop breadth units; 17 hand-written units ran and sit without a verdict (RESEARCH-GRADE-PILE); blocked units lacking an owning row are tracked in BLOCKED-UNIT-ORPHANS.
+      2026-10-22 weekly pass (population = 32 rows resolving to M40): 11 queued, 11 done, 9 landed_unproven, 1 blocked (IDEA-REVIEW-1016). Whole queue, counted from research/queue/*.yaml status fields this session: 996 units = 826 done, 122 queued, 48 retired, plus 73 files in research/queue/blocked/ (475 units on 2026-10-11 counted a different set; do not compare). RESEARCH-TOOLING-GAPS and RESEARCH-CAPS-RAISE are still queued; whether the 17-unit ungraded pile was cleared was not re-measured.
     next: Grade the pile; fix the tooling gaps that stop auto-grading (RESEARCH-TOOLING-GAPS); make queue themes follow THEMES.yaml weights (see L-REGIME).
     architecture: ["Promotion ladder, mandates and the roadmap loop"]
     owner: manager (research-ops lane 4x/day)
-    reviewed: 2026-10-11
+    reviewed: 2026-10-22
   - id: L-OPS
     goal: G5
     name: Manager loop, work system, cost discipline
@@ -439,9 +456,10 @@ milestones:
       Research loop 2026-10-15 (RESEARCH-LOOP-AUDIT-AND-DRIVER, done): hand-written once-units grade mechanically when every row attests the unit's own
       rule (first observed in grade run 38742167761); programme question nodes are a queue_replenish source with a ranked authoring queue; queue health
       uses a computed floor and names idle backends.
+      2026-10-22 weekly pass (population = 98 rows resolving to L-OPS): 42 queued, 32 landed_unproven, 13 done, 5 in_flight, 5 dropped, 1 blocked. Whole checklist store this session: 727 rows = 316 done, 197 landed_unproven, 168 queued, 27 dropped, 11 blocked, 7 in_flight (415 rows on 2026-10-11 was a different cut). WEEKLY-AUDIT-2026-10-19 closed done 2026-10-21; PACE-W40 in_flight; RQ-DISPATCH-CHAIN and RESEARCH-BLOCKED-AUDIT landed_unproven 2026-10-21. TP doctrine guard (check_tp_doctrine.py) read this session: compliant = 0 on the mirror and paper groups shown, baselined debt 52 routings.
     next: Run the weekly roadmap pass; keep landed_unproven rows moving to done or killed.
     owner: manager
-    reviewed: 2026-10-11
+    reviewed: 2026-10-22
   # ── G6 ──────────────────────────────────────────────────────────────────
   - id: M28
     goal: G6
@@ -469,11 +487,13 @@ milestones:
     goal: G6
     name: Consolidation and integration umbrella
     status: dormant
-    where: Idle since 2026-07-27; its four tracks continue as rows under M26/M27/M28/M29 (E53).
+    where: >-
+      Idle since 2026-07-27; its four tracks continue as rows under M26/M27/M28/M29 (E53).
+      2026-10-22 weekly pass: one queued Tier-1 row (P4-DOCS-SYNC, 2026-10-16) resolves here; the umbrella is otherwise unchanged and still not retired.
     next: Retire the umbrella at the next milestone-table cleanup; nothing to build here.
     no_rows_reason: umbrella by design -- tracks A-D live on M26, M27, M28, M29
     owner: manager
-    reviewed: 2026-10-11
+    reviewed: 2026-10-22
   # ── G7 ──────────────────────────────────────────────────────────────────
   - id: M6
     goal: G7

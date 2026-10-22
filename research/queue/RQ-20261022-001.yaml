@@ -5,7 +5,7 @@ id: RQ-20261022-001
 title: 'Programme 01 Q10: does a level-triggered trail (tighten to 2.5 x ATR on first touch of the prior
   swing extreme, the nearest unfilled opposing FVG, or the next round number) replace the declared exit
   of ada_pullback_2h on net R in 5 of 6 calendar folds over 2020-07..2026-10, at the venue cost stack?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -133,3 +133,15 @@ generated:
   params:
     node: P1-Q10-adapb-level-trail
 last_dispatched_at: '2026-10-22T04:58:48+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-Q10-ADAPB-LEVEL-TRAIL
+  evidence:
+  - research/results/RQ-20261022-001/39725429856.jsonl
+  graded_at: '2026-10-22'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

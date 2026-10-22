@@ -5,7 +5,7 @@ id: RQ-20261022-007
 title: 'Programme 01 Q11 rung 1 (label study): do in-trade path metrics at bar 6 -- chop, Kaufman efficiency
   ratio, MFE share, peak position -- predict peak-to-exit giveback beyond bars-in-trade and current R,
   out of sample by calendar fold, on the four bybit_2 money legs?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -133,3 +133,13 @@ generated:
   params:
     node: P1-Q11-path-metric-giveback
 last_dispatched_at: '2026-10-22T03:36:33+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-Q11-PATH-METRIC-GIVEBACK-R1
+  evidence:
+  - research/results/RQ-20261022-007/39717823045.jsonl
+  graded_at: '2026-10-22'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

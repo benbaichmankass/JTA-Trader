@@ -1,6 +1,6 @@
 id: RQ-20260922-011
 title: Is there ANY pairs configuration whose edge survives the fee stack, or is the sleeve structurally unviable?
-status: blocked
+status: retired
 cadence: once
 kind: experiment
 
@@ -154,3 +154,8 @@ routing:
     OF THEM to a workflow — the same defect class as E25 (fvg_range) and E28
     (ict_scalp). est_minutes is null rather than guessed: no run of this
     sweep has been timed.
+retired_reason: >-
+  2026-10-22 RESEARCH-HEALTH-W43: superseded. The per-pair evidence this unit fed (E37) is served by RQ-20261007-005..008 (the four configured
+  pairs, net of the full cost stack), no pairs leg is routed to any account in config/accounts.yaml, and the universe-scan script it needs carries a
+  known false-positive screen (ADF -2.86 vs ~-3.34 critical value; CA-B04) with no owner row to fix it. The registered rule stays in this file; if a
+  pairs universe scan is ever re-proposed, re-register against the then-current harness.

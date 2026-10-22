@@ -2,7 +2,7 @@
   "id": "TP-ETHPROP-2P5",
   "title": "trend_donchian_eth_prop: pursue tp_r 2.5 as the predictive TP (prop-cost ablation + per-firm prop_ev_grid first, then declare)",
   "phase": "now",
-  "state": "queued",
+  "state": "done",
   "owner": "manager",
   "lane": null,
   "model": null,
@@ -11,12 +11,22 @@
   "tier": 3,
   "prs": [],
   "blocked_on": [],
-  "note": "Population: n=870 trades of trend_donchian_eth_prop, n=348 out-of-sample, window 2021-10-01 to 2026-10-15 (RQ-20261016-007). [2026-10-22 lane DECISION-BAR-MATCH, session_01B7EoDeNYn9AmiGkk7q6etd] RESULT RQ-20261022-4de5-02 (RULE-RQ-20261022-4de5-02 registered at 726c5c09 before the run; evidence docs/research/evidence/decision-bar-match-2026-10-22.json tp_eth_prop_2p5). On the closed bar (the bar -01 adopts), prop_ev_sim per firm, 5 seeds, seed-median EV USD/life tp2.5 vs tp6.0: breakout_2 +40.7 vs +65.4, tradeify_1 +125.4 vs +217.9, velotrade_1 +100.8 vs +154.0; survival p_alive slightly BETTER at 2.5 on every firm (+1 to +3.5pp). EV non-inferiority (10%) FAILS on all three (-35% to -42%). VERDICT NOT_DECLARED: do not declare tp_r 2.5. The leg stays TP-doctrine non-compliant (tp_r 6.0 unreachable); its route is the per-bar revision rule / in-trade exit model on row TP-DOCTRINE, not a fixed target. Row can close as killed with that reason.",
+  "note": "Population: n=870 trades of trend_donchian_eth_prop, n=348 out-of-sample, window 2021-10-01 to 2026-10-15 (RQ-20261016-007). [2026-10-22 ~06:40Z OPERATOR DECISION, Thursday walk-through popup, relayed by manager session_01CSwhZWiw15rVCkjsJ8Cpuh] eth_prop tp_r 2.5: \"Prop cost test first (Recommended)\" -- run the prop EV/survival check against the firms' DD limits, then declare. Owned with DECISION-BAR-MATCH this week. [2026-10-22 lane DECISION-BAR-MATCH, session_01B7EoDeNYn9AmiGkk7q6etd] RESULT RQ-20261022-4de5-02 (RULE-RQ-20261022-4de5-02 registered at 726c5c09 before the run; evidence docs/research/evidence/decision-bar-match-2026-10-22.json tp_eth_prop_2p5). On the closed bar (the bar -01 adopts), prop_ev_sim per firm, 5 seeds, seed-median EV USD/life tp2.5 vs tp6.0: breakout_2 +40.7 vs +65.4, tradeify_1 +125.4 vs +217.9, velotrade_1 +100.8 vs +154.0; survival p_alive slightly BETTER at 2.5 on every firm (+1 to +3.5pp). EV non-inferiority (10%) FAILS on all three (-35% to -42%). VERDICT NOT_DECLARED: do not declare tp_r 2.5. The leg stays TP-doctrine non-compliant (tp_r 6.0 unreachable); its route is the per-bar revision rule / in-trade exit model on row TP-DOCTRINE, not a fixed target. Row can close as killed with that reason.",
   "priority_rank": 5,
-  "updated_at": "2026-10-22T09:49:04Z",
+  "updated_at": "2026-10-22T10:00:44Z",
   "updated_by": "session_01B7EoDeNYn9AmiGkk7q6etd",
   "roadmap": [
     "L-PROP"
+  ],
+  "writeback": {
+    "roadmap": "none: tp_r 2.5 not declared; no milestone measure moved",
+    "arch": "none: no TP change shipped"
+  },
+  "lane_history": [
+    {
+      "lane": "session_01B7EoDeNYn9AmiGkk7q6etd",
+      "archived_at": "2026-10-22T10:00:44Z"
+    }
   ],
   "_seq": 570
 }

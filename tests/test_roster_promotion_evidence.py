@@ -95,10 +95,10 @@ def test_a_real_money_account_in_dry_run_is_still_risk_bearing():
 @pytest.mark.parametrize("account", ["alpaca_live", "bybit_2", "breakout_1"])
 def test_adding_a_leg_to_a_real_money_roster_is_caught(account, tmp_path):
     """The edit the OLD guard cannot see: no `mode:` / `execution:` line moves."""
-    head = _with_leg(account, "tlt_pullback_1d")
+    head = _with_leg(account, "tlt_pullback_1h")
     found = G.promotions(REAL_ACCOUNTS, head)
     assert [(f["kind"], f["leg"], f["account"]) for f in found] == [
-        ("roster_add", "tlt_pullback_1d", account)]
+        ("roster_add", "tlt_pullback_1h", account)]
     findings = G.grade(found, REAL_STRATEGIES, EVIDENCE)
     assert len(findings) == 1, "a leg with no passing record must produce a finding"
     # ⚠️ THIS ASSERTION READ `C3 FAIL and C4 FAIL` UNTIL 2026-09-22 AND THE TEST
@@ -110,8 +110,13 @@ def test_adding_a_leg_to_a_real_money_roster_is_caught(account, tmp_path):
     #
     # The property under test never was "C3 fails". It is that a roster_add of
     # a leg WITHOUT A PASSING RECORD is refused, and that the finding NAMES THE
-    # CLAUSE it was refused on. `tlt_pullback_1d` is still refused, now on C4:
+    # CLAUSE it was refused on. `tlt_pullback_1d` was refused on C4 until 2026-10-22:
     # its record grades net_r_oos -4.4309 over n=8, verdict 'fail'.
+    # 2026-10-22 (OPERATOR-DECISIONS-1022): tlt_pullback_1d's record was rebuilt after its
+    # tp_r 50 -> 3.5 declare and now grades net_r_oos +0.384 over n=7, so it no longer
+    # fails C4 and stopped being a valid fixture. The fixture is now `tlt_pullback_1h`
+    # (record net_r_oos -6.7285 over n=94, verdict 'fail', on no real-money roster) --
+    # the same property, a leg whose record is still a robust fail.
     #
     # So both clauses stay pinned, in their CURRENT states rather than loosened
     # to "something failed". C3 PASS is asserted deliberately: if the corpus
@@ -122,7 +127,7 @@ def test_adding_a_leg_to_a_real_money_roster_is_caught(account, tmp_path):
         "C3 regressed: this leg's record lost its cost_stack. R7 (PR #12720) "
         "gave every enabled leg one; a FAIL here means the corpus went backwards.")
     assert "C4 FAIL" in findings[0], (
-        "C4 is the clause that must still refuse this add -- tlt_pullback_1d's "
+        "C4 is the clause that must still refuse this add -- tlt_pullback_1h's "
         "record carries verdict='fail'. A PASS here means either the record or "
         "the rule moved, and the roster bar just got weaker.")
 

@@ -2156,6 +2156,12 @@ def trend_donchian_xrp_4h_signal_builder(settings: dict) -> Dict[str, Any]:
     return _trend_donchian_variant_builder("trend_donchian_xrp_4h", settings)
 
 
+def trend_donchian_xrp_adx25_signal_builder(settings: dict) -> Dict[str, Any]:
+    """trend_donchian on XRPUSDT 4h with the ADX-tightened trail declared — bybit_1
+    (Bybit demo) soak alias of trend_donchian_xrp_4h (OPERATOR-DECISIONS-1022)."""
+    return _trend_donchian_variant_builder("trend_donchian_xrp_adx25", settings)
+
+
 def trend_donchian_ada_4h_signal_builder(settings: dict) -> Dict[str, Any]:
     """trend_donchian on ADAUSDT 4h — bybit_1 demo soak (paper_ready)."""
     return _trend_donchian_variant_builder("trend_donchian_ada_4h", settings)
@@ -6106,6 +6112,7 @@ for _builder, _monitor_unit in (
     (trend_donchian_eth_4h_signal_builder, "trend_donchian"),
     (trend_donchian_sol_4h_signal_builder, "trend_donchian"),
     (trend_donchian_xrp_4h_signal_builder, "trend_donchian"),
+    (trend_donchian_xrp_adx25_signal_builder, "trend_donchian"),
     (trend_donchian_ada_4h_signal_builder, "trend_donchian"),
     (trend_donchian_avax_4h_signal_builder, "trend_donchian"),
     (mes_trend_long_1d_signal_builder, "trend_donchian"),
