@@ -2,7 +2,7 @@ id: RQ-20261022-fd06-03
 title: 'Operator ''split into two trades'' idea, re-asked on a CAPPED tail: now that trend_donchian_xrp_4h declares a finite
   TP (tp_r 3), does banking half the position at +1.0/+1.5 R (remainder on the declared exit) replace the declared exit on
   net R in 3 of 4 calendar folds over 2020-07..2026-10, at the venue cost stack?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -131,11 +131,11 @@ grading:
   confirmatory_run: 1
   decision_rule_id: RULE-PERF-FU-W43-BANK-TREND-DONCHIAN-XRP-4H
   evidence:
-  - research/results/RQ-20261022-fd06-03/39758988398.jsonl
+  - research/results/RQ-20261022-fd06-03/39790957235.jsonl
   first_fail: 1 row(s), all measured, all fail
   graded_at: '2026-10-22'
   grader: scripts/research/queue_grade.py
-  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
   reason: 1 row(s), all measured, all fail
   rows: 1
   verdict: fail

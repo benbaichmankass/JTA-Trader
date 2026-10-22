@@ -4,7 +4,7 @@ theme: ml_health
 kind: experiment
 title: 'CONFIRMATION of RQ-20261022-3a84-11: does the four-estimator range-vol lift on the SOLUSDT 1h regime head hold on a longer tail that adds ~20000 earlier bars
   the first read never saw?'
-status: queued
+status: done
 priority: 2
 question: 'RQ-20261022-3a84-11 PASSED on SOLUSDT 1h (tail_rows 40000) while BTC 1h read FAIL and ETH 1h/15m read INDETERMINATE, so the pass is one symbol, one window.
   Same shard, same learners, same folds count and the same thresholds, with tail_rows raised from 40000 to 60000: the extra ~20000 oldest bars are rows the first
@@ -150,3 +150,14 @@ related:
 - btc-regime-15m-lgbm-yz-v1
 - research/queue/RQ-20261022-3a84-11.yaml
 last_dispatched_at: '2026-10-22T15:19:13+00:00'
+grading:
+  attested: RULE-RQ20261022-C584-01-YZ-CONFIRM
+  auto: true
+  decision_rule_id: RULE-RQ20261022-C584-01-YZ-CONFIRM
+  evidence:
+  - research/results/RQ-20261022-c584-01/39803788862.jsonl
+  graded_at: '2026-10-22'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

@@ -1,7 +1,7 @@
 id: RQ-20261016-7769-19
 title: 'P4-Q2 rates channel (sleeve IEF/TLT): does the cpi_mom survey surprise predict GC=F forward returns from the release-day close at h=3 trading days
   (either sign, |t_eff| >= 3.0, n~140)?'
-status: queued
+status: done
 cadence: once
 theme: macro
 priority: 2
@@ -94,3 +94,17 @@ related:
 - scripts/research/macro_event_study_run.py
 - .claude/skills/macro-research/SKILL.md
 last_dispatched_at: '2026-10-22T15:19:13+00:00'
+grading:
+  attested: RULE-RQ-20261016-7769-19
+  auto: true
+  decision_rule_id: RULE-RQ-20261016-7769-19
+  evidence:
+  - research/results/RQ-20261016-7769-19/39803108844.jsonl
+  - research/results/RQ-20261016-7769-19/39803792959.jsonl
+  graded_at: '2026-10-22'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

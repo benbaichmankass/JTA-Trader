@@ -2,7 +2,7 @@ id: RQ-20261021-7c2b-01
 title: >-
   Programme 07 TIMEFRAMES B2 RE-ASK (instrument error in ef5d-07): COST-GATED Donchian-20 breakout on 30m bars, six perps, ATR-percentile
   gate at 0.50 / 0.75 / 0.90 on the harness's 0-1 scale vs ungated
-status: queued
+status: done
 cadence: once
 theme: timeframes
 priority: 2
@@ -127,3 +127,16 @@ related:
 - scripts/research/harness_stage0.py
 - docs/research/programmes/07-TIMEFRAMES.md
 last_dispatched_at: '2026-10-22T15:37:06+00:00'
+grading:
+  attested: RULE-P7-B2-COST-GATED-30M-REASK
+  auto: true
+  decision_rule_id: RULE-P7-B2-COST-GATED-30M-REASK
+  evidence:
+  - research/results/RQ-20261021-7c2b-01/39803796642.jsonl
+  graded_at: '2026-10-22'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
