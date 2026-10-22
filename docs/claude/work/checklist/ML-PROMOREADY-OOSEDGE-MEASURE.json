@@ -14,10 +14,19 @@
   ],
   "blocked_on": [],
   "note": "[2026-10-18 lane RESEARCH-AUTHOR-GRADE-1017] Owns MB-20260719-PROMOREADY-OOSEDGE-OOM. FIELD STATE on main: scripts/ops/run_promotion_readiness.sh still defaults PROMOREADY_OOS_EDGE=off (sweep runs without --datasets-root; oos_edge = insufficient_data for every head; comment says re-measured 2026-08-20 at 5.19 GB vs 4.5 GiB MemoryMax). NEW since: DATA-STORE-PARQUET-GC built a data.parquet sidecar and ml/promotion/oos_edge.py:269 now loads via parquet_sidecar.load_dataset_rows(dataset_dir, keep=_referenced_columns(manifest)) (391 MB JSONL -> 20 MB parquet measured on the trainer). The item's clears_when needs a MEASURED peak RSS (/usr/bin/time -v on the trainer, largest shadow dataset, must be < 4500 MiB) and a full-registry sweep with --datasets-root finishing in its timer window; neither has been taken since the sidecar. NEXT: read-only trainer-vm-diag measurement; if both hold, flip PROMOREADY_OOS_EDGE default (Tier-2) and correct the script comment; if not, say which head and by how much. [2026-10-18 lane ML-UNBLOCK-1018] MEASURED (/usr/bin/time -v on the trainer, gate-check --db --datasets-root --shadow-log, relays #18887/#18888): peak RSS 1h heads 1,052-1,062 MB (~51 s each), mes-regime-1d 833 MB, btc-regime-15m-lgbm-yz-v1 2,241 MB (1:51), sol-regime-5m-lgbm-v1 4,690,924 kB = 4.47 GiB (4:07), eth-regime-5m-lgbm-v1 4,704,256 kB = 4.49 GiB (4:05) -- the two 525,888-row 5m shards are the largest shadow datasets and sit < 1% under the 4.5 GiB MemoryMax. The parquet sidecar made every other head fit with room; the 5m heads do not leave a safe margin. RECOMMENDATION (Tier-2, manager's call, not flipped here): flip PROMOREADY_OOS_EDGE on with either MemoryMax raised to 5.2G (box has 5.9 GB; the readiness timer runs after the cycle) or the sweep skipping heads whose dataset exceeds ~300k rows (tail_rows for oos_edge). Full-registry sweep time at these per-head numbers: ~21 shadow heads x ~1-4 min = under 40 min. Both clears_when halves are now measured; the flip is the remaining step. [2026-10-22 03:20Z manager session_01CSwhZWiw15rVCkjsJ8Cpuh] FLIPPED (operator popup 2026-10-21: 'Yes, measure then raise'; measure first). Whole-sweep peak with oos_edge on was MEASURED at 1215 MiB on the trainer, so MemoryMax stays 4500M and only the flag moved: #19402 (87c160e7) adds Environment=PROMOREADY_OOS_EDGE=on to deploy/trainer/ict-promotion-readiness.service + cloud-init. MERGED and DEPLOYED: unit installed via trainer-vm-diag #19418, systemctl show confirms Environment PROMOREADY_OOS_EDGE=on, MemoryMax=4718592000. NOT OBSERVED: closes when the 2026-10-22 04:00Z readiness sweep finishes with no OOM kill and real (not insufficient_data) oos_edge values in its report; if a 5m head OOMs, fall back to the 5200M raise the operator already approved.",
-  "updated_at": "2026-10-22T03:17:07Z",
+  "updated_at": "2026-10-22T03:28:09Z",
   "updated_by": "session_01CSwhZWiw15rVCkjsJ8Cpuh",
   "roadmap": [
     "M25"
   ],
+  "observation": {
+    "what": "2026-10-22 04:00Z promotion-readiness sweep runs with PROMOREADY_OOS_EDGE=on",
+    "how_to_check": "trainer-vm-diag: journalctl -u ict-promotion-readiness.service --since 2026-10-22T03:55Z (no OOM-kill / oom-kill result) and the latest readiness report shows numeric oos_edge (not insufficient_data) for shadow heads",
+    "due_by": "2026-10-22"
+  },
+  "writeback": {
+    "roadmap": "none: observation pending; the M25 line is updated when the sweep confirms real oos_edge values",
+    "arch": "none: flag default flip on an existing timer, no architecture change"
+  },
   "_seq": 551
 }
