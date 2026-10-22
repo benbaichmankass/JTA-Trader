@@ -1,0 +1,21 @@
+{
+  "id": "HARNESS-METRIC-TRIGGER",
+  "title": "Harness: apply bank / tight-trail only to trades flagged by an out-of-fold path-metric trigger file (Q11 rung 2 instrument)",
+  "phase": "Research",
+  "state": "queued",
+  "owner": "unassigned (filed by EXITS-GIVEBACK-W43)",
+  "lane": "EXITS-GIVEBACK-W43",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-22 EXITS-GIVEBACK-W43] Instrument for blocked units RQ-20261022-eba2-07/-08 (Programme 01 Q11 rung 2). BUILD (scripts/ only, default byte-identical): (a) scripts/research/path_metric_giveback.py --emit-triggers FILE writes one row per trade {trade_key, trigger} using the rung-1 FULL model fit on the OTHER calendar folds only (fitted P(big giveback) >= 0.5 at bar k); (b) backtest_pullback.py and backtest_trend.py take --trigger-file FILE, --trigger-action bank|tight and --trigger-all K (unconditional control: act on every trade still open at bar K). DONE WHEN: a smoke run on ada_pullback_2h shows an empty trigger file => arms byte-identical to A, a populated file => the action fires only on flagged trades, and tests cover both plus a self-test planting a leaky trigger the out-of-fold construction must reject. Gate: do not build before RQ-20261022-eba2-01 lands verdict pass (otherwise the instrument has no hypothesis behind it).",
+  "updated_at": "2026-10-22T14:37:04Z",
+  "updated_by": "session_013boLrFb4hM4JJ2Naq19bqS",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "_seq": 598
+}
