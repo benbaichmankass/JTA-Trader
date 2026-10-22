@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# wiring: manual-only - run by the research queue unit on node P1-Q11-path-metric-giveback (research-script-run.yml, emitted by queue_replenish once chain_verdict lands); otherwise a session runs it by hand.
 """P1-Q11 rung 1: do in-trade PATH metrics at bar k predict later giveback? (a LABEL study, never a lever)
 
 Operator idea (IDEAS.md 2026-10-21; the motivating case was the live ADA trade's swings): chop, the
@@ -297,7 +298,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             rows, meta = run_leg_paths(leg, base, days=a.days, start=a.start, end=a.end, wd=wd,
                                        data_csv=a.data_csv, non_crypto_source=a.non_crypto_source)
-        except Exception as exc:  # noqa: BLE001 -- the cause must land, whatever it is
+        except Exception as exc:  # noqa: BLE001  # allow-silent: not silent -- the cause is printed, written to failure.json and the run exits 1
             print(f"ERROR: {exc}", file=sys.stderr)
             (out / "failure.json").write_text(json.dumps({"stage": "harness", "leg": leg, "error": str(exc)},
                                                          indent=2) + "\n")
