@@ -127,17 +127,23 @@ related:
 - comms/perf_followup/perf-followup-20261021-walkthrough.json
 last_dispatched_at: '2026-10-22T13:53:29+00:00'
 grading:
-  graded_at: '2026-10-22'
-  graded_by: lane EXITS-GIVEBACK-W43 (session_013boLrFb4hM4JJ2Naq19bqS), dispatched by Manager Session 2026-10-22
-    (session_01Hsp3aD8ccAyhHiyYARqEqh)
+  auto: true
+  confirmatory_run: 1
   decision_rule_id: RULE-PERF-FU-W43-BANK-TREND-DONCHIAN-XRP-4H
+  evidence:
+  - research/results/RQ-20261022-fd06-03/39790957235.jsonl
+  first_fail: 1 row(s), all measured, all fail
+  graded_at: '2026-10-22'
+  grader: scripts/research/queue_grade.py
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
+  reason: 1 row(s), all measured, all fail
+  rows: 1
   verdict: fail
-  record: research/results/RQ-20261022-fd06-03/39758988398.jsonl
-  disposition: 'REGISTERED VERDICT: fail. Rule applied verbatim (trend_donchian_xrp_4h, window 2020-07-01..2026-10-15,
-    4 folds, fold majority 3, net of fee+slippage+funding). A net_r 14.30, n 68 (above the 39 floor, but thin);
-    B1 9.46 (delta -4.84, 0/4 folds), B15 11.67 (-2.63, 2/4), B1E 9.38 (-4.92, 1/4). No bank arm clears the 0.02
-    R/trade materiality bar (1.36 R) or the 3-of-4 fold majority. The grader''s ''first FAIL -> confirmatory re-run''
-    is WAIVED: the harness is deterministic over a pinned window (RQ-20261022-003..006 closed the same way, #18557),
-    so a same-window replay cannot change the verdict. Family not retired: a FIXED threshold is answered here; a
-    metric-TRIGGERED split stays with Q11 rung 2.'
-  confirmatory_run: 'waived: deterministic harness'
+  disposition: 'REGISTERED VERDICT: fail. Rule applied verbatim (trend_donchian_xrp_4h, window 2020-07-01..2026-10-15, 4 folds,
+      fold majority 3, net of fee+slippage+funding). A net_r 14.30, n 68 (above the 39 floor, but thin); B1 9.46 (delta
+      -4.84, 0/4 folds), B15 11.67 (-2.63, 2/4), B1E 9.38 (-4.92, 1/4). No bank arm clears the 0.02 R/trade materiality
+      bar (1.36 R) or the 3-of-4 fold majority. The grader''s ''first FAIL -> confirmatory re-run'' is WAIVED: the harness
+      is deterministic over a pinned window (RQ-20261022-003..006 closed the same way, #18557), so a same-window replay
+      cannot change the verdict. Family not retired: a FIXED threshold is answered here; a metric-TRIGGERED split stays
+      with Q11 rung 2.'
+  graded_by: lane EXITS-GIVEBACK-W43 (session_013boLrFb4hM4JJ2Naq19bqS); confirmatory re-run done by queue_grade on main

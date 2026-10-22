@@ -4,7 +4,7 @@
 id: RQ-20261022-008
 title: 'Soak-book equity overlap: are the four passing 1d equity legs (QQQ, SPY, IWM, QLD trend-long)
   at least 2 distinct bets (N_eff >= 2.0) once each trade''s R is spread over its holding days?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-LADDER
@@ -100,3 +100,13 @@ generated:
   params:
     node: P3-Q3-soak-equity-overlap
 last_dispatched_at: '2026-10-22T16:08:11+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-RQ-20261022-1F8B-02-SOAK-EQUITY-OVERLAP
+  evidence:
+  - research/results/RQ-20261022-008/39811409457.jsonl
+  graded_at: '2026-10-22'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

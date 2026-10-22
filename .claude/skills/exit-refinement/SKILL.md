@@ -275,6 +275,14 @@ question at wiring time — where the move is expected to run out, what revises
 that prediction, and what thesis condition extends it — or its coverage row is
 `pending`, whatever its lever columns read.
 
+## Reading a FAIL — it is not a dead lever
+
+A lever that misses its registered bar settles only the ship/config question that rule asked. Before
+filing it as closed: diagnose why (legs/regime, grid, trigger definition, cost drag, n/power, test
+design), check outside sources, and author pre-registered variant units; the lever's status is
+**"first test failed → variants queued"**, never "dead". Wording, operator quote and family
+retirement: `research-ops` § D (`scripts/research/family_retirement_policy.yaml`).
+
 ## Hard rules
 
 These rules are also codified generically (for any research skill, not just
