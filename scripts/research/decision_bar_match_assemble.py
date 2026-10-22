@@ -2,7 +2,10 @@
 """RQ-20261022-4de5-01/-02: assemble docs/research/evidence/decision-bar-match-2026-10-22.json from the replay verdicts
 and the per-firm prop sim cells
 (prop_ev_sim.py, argv identical to prop_ev_grid; re-run: python3 scripts/research/decision_bar_match_assemble.py). Applies RULE-RQ-20261022-4de5-02 (TP) exactly as registered."""
-import json, glob, statistics, sys
+import glob
+import json
+import statistics
+import sys
 from pathlib import Path
 R = Path(__file__).resolve().parents[2]
 S = R / 'comms/research/RQ-20261022-4de5-01/prop'  # <g>/<firm>/<leg>__CFG__seed<n>.json
@@ -11,7 +14,9 @@ legs = {}
 for p in sorted(glob.glob(str(R / A / '*/verdict.json'))):
     d = json.load(open(p))
     for k, r in d['legs'].items():
-        r = dict(r); r['source'] = str(Path(p).relative_to(R)); legs[k] = r
+        r = dict(r)
+        r['source'] = str(Path(p).relative_to(R))
+        legs[k] = r
 FIRMS = {'breakout_2': ('breakout_turbo_1step', 0.0035), 'tradeify_1': ('tradeify_247_1step', 0.005),
          'velotrade_1': ('velotrade_classic_1step', 0.005)}
 def grid(dirpath, leg, ledger):
@@ -30,8 +35,10 @@ def grid(dirpath, leg, ledger):
                       'p_pass_eval': pr.get('p_pass_eval')})
     if not cells:
         return None
-    n = sum(1 for l in open(R / ledger) if l.strip())
-    med = lambda k: statistics.median(x[k] for x in cells) if all(x[k] is not None for x in cells) else None
+    n = sum(1 for line in open(R / ledger) if line.strip())
+
+    def med(k):
+        return statistics.median(x[k] for x in cells) if all(x[k] is not None for x in cells) else None
     v, why = peg.grade_pass_all_seeds({'CFG': {c['seed']: c for c in cells}}, n=n, n_floor=88, p_floor=0.0)
     if len(cells) < 5:
         v, why = 'indeterminate', f'only {len(cells)} of 5 seeds ran'
@@ -53,7 +60,9 @@ ok_all, indet = True, False
 for f in FIRMS:
     t6, t25 = prop['trend_donchian_eth_prop'][f], prop['eth_prop_tp2.5'][f]
     if not t6 or not t25 or t25['n_trades'] < 88 or len(t25['cells']) < 5 or len(t6['cells']) < 5 or t25['seed_median_p_alive'] is None:
-        indet = True; tp['per_firm'][f] = {'state': 'INDETERMINATE'}; continue
+        indet = True
+        tp['per_firm'][f] = {'state': 'INDETERMINATE'}
+        continue
     a = t25['pass_all_seeds'] == 'pass'
     b = t25['seed_median_p_alive'] >= t6['seed_median_p_alive'] - 0.02
     c = t25['seed_median_ev'] >= t6['seed_median_ev'] - 0.10 * abs(t6['seed_median_ev'])
