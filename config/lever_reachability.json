@@ -785,6 +785,42 @@
       }
     },
     {
+      "strategy": "trend_donchian_xrp_adx25",
+      "lever": "trail_decay_arm_r",
+      "arm_r": 2.0,
+      "verdict": "reachable",
+      "disposition": "ok",
+      "observations": 6,
+      "basis": "order_packages/risk_per_unit — TRUNCATED (6 newest of up to 25; relay #9624)",
+      "cap_r_min": 1.97,
+      "cap_r_p50": 3.18,
+      "cap_r_max": 4.1,
+      "reach_share_pct": 83.3,
+      "measured_at": "2026-08-16",
+      "note": "COPIED from the trend_donchian_xrp_4h entry (OPERATOR-DECISIONS-1022, 2026-10-22): trend_donchian_xrp_adx25 is a bybit_1-only soak alias with the IDENTICAL geometry (atr_stop_mult 2, trail_decay_arm_r 2.0, tp_r 3), so the arm's reachability is the incumbent's measurement on the incumbent's entries, NOT a measurement on this alias's own entries (it has none yet). Incumbent note: Measured BECAUSE this guard demanded it: PR #9549 declares this arm on a real-money leg (bybit_2) and had no reachability record, so the guard would have failed it — the first live catch, within the hour. The measurement SUPPORTS the PR: 5 of 6 recent entries clear arm 2.0, risk/entry 2.416-5.021%. The one miss is marginal (risk/entry 5.021% -> cap_R 1.97 vs arm 2.00), so a high-vol entry can still land just under the arm; that is a real characteristic of the leg, not a defect, and it is why the verdict is `reachable` rather than a claim that it always arms. Sample is truncated and recency-biased (55KB relay budget) — not a lifetime rate. Entry added ahead of #9549 merging so the two PRs are mergeable in either order.",
+      "evidence": {
+        "bases": [
+          {
+            "basis_id": "live_entry_conditioned_2026_08_16",
+            "kind": "live_entry_conditioned",
+            "geometry": "unknown",
+            "k": 5,
+            "n": 6,
+            "source": "this entry's `basis` -- order_packages/risk_per_unit, TRUNCATED (6 newest of up to 25; relay #9624), reach_share_pct 83.3",
+            "note": "[!] TRUNCATED AND RECENCY-BIASED, which the interval CANNOT see: a confidence interval assumes the sample is a random draw, and this one is the 6 newest rows. The flag grades sampling NOISE only. Read this entry's own note, which already says the sample is not a lifetime rate.",
+            "share_pct": 83.3,
+            "ci_low_pct": 35.9,
+            "ci_high_pct": 99.6,
+            "flag": "unsettled",
+            "settled_reachable_if_reach_cut_at_or_below_pct": 35.9,
+            "settled_inert_if_inert_cut_above_pct": 99.6
+          }
+        ],
+        "primary_basis": "live_entry_conditioned_2026_08_16",
+        "flag": "unsettled"
+      }
+    },
+    {
       "strategy": "avax_pullback_2h",
       "lever": "trail_decay_arm_r",
       "arm_r": 4.86,
