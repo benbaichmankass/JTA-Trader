@@ -2,21 +2,33 @@
   "id": "RESEARCH-HEALTH-W43",
   "title": "Research pipeline health week 43: 6/16 SLOs breached (runnable 30 vs floor 46, authoring supply, blocked units, missed research-ops runs); weekly roadmap pass (15/29 milestones overdue); triage+close stale automation PRs (#19030-#19189, #19358) and salvage #18963",
   "phase": "ops",
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": null,
   "lane": "session_01KkUj2KreKuPvHN2ZbEwvKe",
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 12,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    19474,
+    19475
+  ],
   "blocked_on": [],
-  "note": "",
+  "note": "[2026-10-22 07:50Z manager] Lane done + archived. MERGED #19474 (13 units RQ-20261022-3a84-01..13; retired RQ-20260922-011) 9328d04e9 and #19475 (roadmap pass: 15 milestones re-dated with evidence; run record comms/research/ops/20261022T0710Z.json; 2 salvaged utilization records) b9d414e3d. 20 stale PRs closed after file-by-file compare (18963, 19030..19189 set, 19358). NOT OBSERVED: runnable count (27->41 is a dry run; SLO bot 07:16Z still read 28 vs 48 pre-merge). Open: needs_review triage (38), new_strategy_prop/live_strategy authoring shortfall, dormant milestones M24/M15/M26/M36/M41 (manager decision), goal baselines G1-G7 not re-measured. Closes when the research SLO reads runnable >= floor on a post-merge run.",
   "priority_rank": 5,
-  "updated_at": "2026-10-22T06:48:49Z",
+  "updated_at": "2026-10-22T08:00:15Z",
   "updated_by": "session_01CSwhZWiw15rVCkjsJ8Cpuh",
   "roadmap": [
     "L-OPS"
   ],
+  "observation": {
+    "what": "research SLO runnable_floor ok after #19474 units are counted",
+    "how_to_check": "python3 scripts/ops/research_slo.py (or the research-slo comment on ops-flags #17895): runnable >= floor",
+    "due_by": "2026-10-24"
+  },
+  "writeback": {
+    "roadmap": "none: lane outcome recorded on the row; milestone lines updated in #19475 roadmap pass",
+    "arch": "none: no architecture change"
+  },
   "_seq": 593
 }
