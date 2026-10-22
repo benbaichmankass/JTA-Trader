@@ -37,7 +37,9 @@ THE UNIT BLOCK (``ml_bakeoff:`` in the unit YAML — registered BEFORE the run, 
       learners:
         incumbent: {kind: lightgbm, params: {...}, feature_blocks: [...]}
         # kinds: prior · numpy_logit · lightgbm · catboost · sklearn_hgb · sklearn_extratrees · sklearn_mlp ·
-        #        sklearn_logit_calibrated (isotonic/sigmoid-calibrated linear head) · tabicl · tabpfn (research-only)
+        #        sklearn_logit_calibrated (isotonic/sigmoid-calibrated linear head) · tabicl · tabpfn (research-only;
+        #        CPU-capped: params max_train_rows (5000) / n_members / subsample random|recent) · torch_gru (window_bars, hidden,
+        #        layers, epochs, lr, seed)
         ...
       rule: {...}                     # machine form of decision_rule.rule — see ``evaluate_rule``
 
@@ -309,15 +311,146 @@ def _mk_tabicl(p):
         from tabicl import TabICLClassifier
     except ImportError as e:
         raise Unavailable(f"tabicl not importable: {e}")
-    return TabICLClassifier(**p)
+    return _capped(lambda q: TabICLClassifier(**q), p, 10**9) if {"max_train_rows", "n_members"} & set(p or {}) \
+        else TabICLClassifier(**p)
+
+
+class _CappedEnsemble:
+    """Wrap an in-context learner whose CPU path refuses large inputs (TabPFN: >5,000 samples on CPU).
+
+    ``fit`` gives each of ``n_members`` fresh base models at most ``max_train_rows`` training rows (seeded, order-
+    preserving subsample; ``recent`` takes the newest rows instead) and ``predict_proba`` averages the members, scoring
+    the test block in chunks of at most ``max_predict_rows``. With ``n_members=1`` and n <= cap it is a plain
+    pass-through. The cap is a declared PARAMETER, so the result record shows what the arm actually saw -- an
+    ensemble of 5k-row members is a different (cheaper) learner than a full-n fit, and is graded as such."""
+
+    def __init__(self, make_base: Callable[[], Any], max_train_rows: int, n_members: int, subsample: str,
+                 seed: int, max_predict_rows: int):
+        self._make_base, self._cap, self._members = make_base, int(max_train_rows), max(1, int(n_members))
+        self._mode, self._seed, self._chunk = subsample, int(seed), int(max_predict_rows)
+        self._fitted: List[Any] = []
+        self.classes_: np.ndarray = np.array([])
+
+    def _rows(self, n: int, j: int) -> np.ndarray:
+        if n <= self._cap:
+            return np.arange(n)
+        if self._mode == "recent":
+            return np.arange(n - self._cap, n)
+        return np.sort(np.random.RandomState(self._seed + j).choice(n, self._cap, replace=False))
+
+    def fit(self, X, y):
+        y = np.asarray(y)
+        self.classes_ = np.array(sorted(set(y.tolist())))
+        self._fitted = []
+        for j in range(self._members):
+            idx = self._rows(len(X), j)
+            m = self._make_base()
+            m.fit(X[idx], y[idx])
+            self._fitted.append(m)
+            if self._mode == "recent" or len(X) <= self._cap:
+                break  # identical draws -- more members would only repeat the same fit
+        return self
+
+    def predict_proba(self, X):
+        out = np.zeros((len(X), len(self.classes_)))
+        for m in self._fitted:
+            cols = [int(np.searchsorted(self.classes_, c)) for c in m.classes_]
+            for a in range(0, len(X), self._chunk):
+                out[a:a + self._chunk][:, cols] += m.predict_proba(X[a:a + self._chunk])
+        return out / max(len(self._fitted), 1)
+
+
+def _capped(make_base: Callable[[Dict[str, Any]], Any], p: Dict[str, Any], default_cap: int):
+    q = dict(p or {})
+    cap = int(q.pop("max_train_rows", default_cap))
+    members = int(q.pop("n_members", 1))
+    mode = str(q.pop("subsample", "random"))
+    seed = int(q.pop("subsample_seed", 0))
+    chunk = int(q.pop("max_predict_rows", cap))
+    if mode not in ("random", "recent"):
+        raise ValueError(f"subsample must be 'random' or 'recent', got {mode!r}")
+    return _CappedEnsemble(lambda: make_base(dict(q)), cap, members, mode, seed, chunk)
 
 
 def _mk_tabpfn(p):
+    """TabPFN on CPU refuses > 5,000 training samples (ff8f-02 arm_status.tabpfn == error, 2026-10-18). The cap is
+    therefore ON by default: members never see more than ``max_train_rows`` (default 5000) rows; raise ``n_members``
+    to recover coverage of a larger set. Weights still need the Prior Labs licence + TABPFN_TOKEN (ML-TABPFN-LICENCE)
+    -- that gate is separate and is reported as the arm's own error if it is the thing that fails."""
     try:
         from tabpfn import TabPFNClassifier
     except ImportError as e:
         raise Unavailable(f"tabpfn not importable: {e}")
-    return TabPFNClassifier(**p)
+    return _capped(lambda q: TabPFNClassifier(**q), p, 5000)
+
+
+def _fit_torch_gru(Xtr, ytr, Xte, k, params):
+    """GRU over a trailing window of the ENGINEERED feature columns (deep_sequence family, ML-F22).
+
+    Windows are built INSIDE each block (train rows only see earlier train rows; test rows only see earlier rows of
+    the test block, the first ``window_bars - 1`` rows of a block being edge-padded), so no test information reaches
+    training and no row looks forward. CPU, seeded, fixed epochs, standardised on train statistics; the newest
+    ``max_train_windows`` train rows are used so the cost stays bounded. ``Unavailable`` without torch."""
+    try:
+        import torch
+        from torch import nn
+    except ImportError as e:
+        raise Unavailable(f"torch not importable: {e}")
+    W = int(params.get("window_bars", 32))
+    hidden, layers = int(params.get("hidden", 32)), int(params.get("layers", 1))
+    epochs, batch = int(params.get("epochs", 8)), int(params.get("batch_size", 256))
+    lr, seed = float(params.get("lr", 3e-3)), int(params.get("seed", 0))
+    cap = int(params.get("max_train_windows", 20000))
+    mu, sd = np.nanmean(Xtr, axis=0), np.nanstd(Xtr, axis=0) + 1e-9
+    mu = np.nan_to_num(mu)
+
+    def windows(X):
+        Z = np.nan_to_num((X - mu) / sd).astype(np.float32)
+        Zp = np.vstack([np.repeat(Z[:1], W - 1, axis=0), Z]) if W > 1 else Z
+        idx = np.arange(len(Z))[:, None] + np.arange(W)[None, :]
+        return torch.from_numpy(Zp[idx])  # (n, W, F)
+
+    Xw, yt = windows(Xtr), torch.from_numpy(ytr.astype(np.int64))
+    if len(Xw) > cap:
+        Xw, yt = Xw[-cap:], yt[-cap:]
+    torch.manual_seed(seed)
+    torch.set_num_threads(max(1, int(params.get("threads", 1))))
+
+    class Net(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.rnn = nn.GRU(Xw.shape[2], hidden, num_layers=layers, batch_first=True)
+            self.head = nn.Linear(hidden, k)
+
+        def forward(self, x):
+            o, _ = self.rnn(x)
+            return self.head(o[:, -1])
+
+    net = Net()
+    opt = torch.optim.Adam(net.parameters(), lr=lr)
+    lossf = nn.CrossEntropyLoss()
+    g = torch.Generator().manual_seed(seed)
+    net.train()
+    for _ in range(epochs):
+        perm = torch.randperm(len(Xw), generator=g)
+        for a in range(0, len(perm), batch):
+            b = perm[a:a + batch]
+            opt.zero_grad()
+            lossf(net(Xw[b]), yt[b]).backward()
+            opt.step()
+    net.eval()
+    Tw, outs = windows(Xte), []
+    with torch.no_grad():
+        for a in range(0, len(Tw), 2048):
+            outs.append(torch.softmax(net(Tw[a:a + 2048]), dim=1).numpy())
+    return np.vstack(outs) if outs else np.zeros((0, k))
+
+
+def _probe_torch_gru(_p):
+    try:
+        import torch  # noqa: F401  # imported only to prove it is importable
+    except ImportError as e:
+        raise Unavailable(f"torch not importable: {e}")
 
 
 # kind -> (fit_predict, licence, research_only)
@@ -333,6 +466,7 @@ LEARNERS: Dict[str, Tuple[Callable, str, bool]] = {
     "tabicl": (_fit_sklearn_like(_mk_tabicl), "BSD-3-Clause (verify on the Hub)", False),
     # Prior Labs weights are `license:other` (non-commercial): offline research evaluation ONLY.
     "tabpfn": (_fit_sklearn_like(_mk_tabpfn), "Prior Labs non-commercial (license:other)", True),
+    "torch_gru": (_fit_torch_gru, "BSD-3-Clause (torch)", False),
 }
 
 
@@ -343,7 +477,8 @@ def probe_learner(kind: str, params: Dict[str, Any]) -> Optional[str]:
     try:
         probe = {"lightgbm": _mk_lightgbm, "catboost": _mk_catboost, "sklearn_hgb": _mk_hgb,
                  "sklearn_extratrees": _mk_extratrees, "sklearn_mlp": _mk_mlp,
-                 "sklearn_logit_calibrated": _mk_logit_calibrated, "tabicl": _mk_tabicl, "tabpfn": _mk_tabpfn}.get(kind)
+                 "sklearn_logit_calibrated": _mk_logit_calibrated, "tabicl": _mk_tabicl, "tabpfn": _mk_tabpfn,
+                 "torch_gru": _probe_torch_gru}.get(kind)
         if probe:
             probe(dict(params or {}))
     except Unavailable as e:
