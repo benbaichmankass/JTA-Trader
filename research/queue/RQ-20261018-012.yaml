@@ -4,7 +4,7 @@
 id: RQ-20261018-012
 title: 'Programme 01 Q9, runway fill: does a stall-pull-in TP retarget replace the declared exit of trend_donchian_eth_4h
   on net R in 5 of 6 calendar folds over 2020-07..2026-10, at the Bybit cost stack?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -125,19 +125,6 @@ generated:
   params:
     node: P1-Q9-eth4h-retarget-replace
 last_dispatched_at: '2026-10-22T03:36:33+00:00'
-grading:
-  auto: true
-  decision_rule_id: RULE-P1-Q9-ETH4H-RETARGET-REPLACE
-  evidence:
-  - research/results/RQ-20261018-012/39172602396.jsonl
-  graded_at: '2026-10-21'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
-  rows: 1
-  verdict: null
-  owner: RESEARCH-OPS-20261021-2047
-  owner_reason: 'producer_failed on the TP-retarget arm after arm A completed; no log landed. Lever and filing: PI-20261021-6SBYWRKB-0001. Not a verdict.'
 amended:
   at: '2026-10-21'
   by: EXITS-OVERNIGHT-1021
@@ -147,3 +134,16 @@ amended:
     The candidate now REPLACES the declared TP mover, which is what a replace grade asks. Decision rule,
     thresholds, window and baseline arm A are unchanged; no candidate outcome had been read.'
   evidence: PI-20261021-6SBYWRKB-0001; exit_lever_ablation.tp_mover_conflict; tests/test_exit_lever_ablation_tp_movers.py
+grading:
+  auto: true
+  decision_rule_id: RULE-P1-Q9-ETH4H-RETARGET-REPLACE
+  evidence:
+  - research/results/RQ-20261018-012/39172602396.jsonl
+  - research/results/RQ-20261018-012/39717818565.jsonl
+  graded_at: '2026-10-22'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
+  rows: 1
+  verdict: fail
