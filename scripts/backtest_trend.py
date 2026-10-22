@@ -47,11 +47,15 @@ if str(_REPO_ROOT) not in sys.path:
 from src.runtime import execution_costs  # noqa: E402  (the ONE shared cost model)
 from src.research.trail_levers import (  # noqa: E402  (the ONE trail-lever rule)
     effective_trail_mult,
+    level_flag_errors,
+    level_touched,
+    level_trail_armed,
     momentum_flag_errors,
     momentum_stale_armed,
     momentum_stale_fires,
     momentum_trail_armed,
     momentum_trail_fired,
+    trade_level,
     vol_trail_armed,
 )
 # scripts/research/, not src/research/ — this is Tier-1 backtest-only tooling
@@ -119,6 +123,8 @@ class Trade:
     confidence: float = 0.0
     # MOMENTUM-TRAIL-LEVER attribution; None unless a momentum lever is armed.
     mom: Optional[Dict[str, Any]] = None
+    # P1-Q10 level-triggered trail attribution; None unless --trail-level is armed.
+    level: Optional[Dict[str, Any]] = None
     # SRQ-20260618-001 soft regime-weight refinement (scripts/research/regime_weight.py):
     # the entry-bar ADX (None when never computed) and the continuous weight
     # applied to r_multiple. weight is always 1.0 when the lever is unset, so
@@ -313,6 +319,11 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                  trail_adx_below: float = 0.0,
                  trail_adx_falling_bars: int = 0,
                  trail_adx_tight_mult: float = 0.0,
+                 trail_level: str = "",
+                 trail_level_tight_mult: float = 0.0,
+                 trail_level_lookback: int = 60,
+                 trail_level_pivot_k: int = 3,
+                 trail_level_round_step: float = 0.0,
                  momentum_stale_bars: int = 0,
                  momentum_stale_adx_below: float = 0.0,
                  be_floor_r: float = 0.0,
@@ -405,6 +416,13 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
     mom_stale_on = momentum_stale_armed(momentum_stale_bars,
                                         momentum_stale_adx_below)
     mom_any = mom_trail_on or mom_stale_on
+    # P1-Q10 level-triggered trail (default off = byte-identical): ONE structural
+    # level per trade, fixed at entry (src/research/trail_levers.trade_level); on
+    # the first bar that trades through it the trail tightens to
+    # trail_level_tight_mult x ATR for the rest of the trade (latched).
+    level_on = level_trail_armed(trail_level, trail_level_tight_mult)
+    _lv_hi = df["high"].to_numpy() if level_on else None
+    _lv_lo = df["low"].to_numpy() if level_on else None
     adx_series = None
     if mom_any:
         adx_series = df["adx"] if adx_active else _adx(df, adx_period)
@@ -765,6 +783,10 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
         mom_fired_bars = 0        # momentum_trail attribution (only read if armed)
         mom_tightened = False
         _trail_prev = trail
+        _lvl = (trade_level(trail_level, _lv_hi, _lv_lo, entry_i, entry, direction == "long",
+                            trail_level_lookback, trail_level_pivot_k, trail_level_round_step)
+                if level_on else None)
+        _lvl_touch_j: Optional[int] = None
         # entry_override only: a stop/target touched in the entry bar's range
         # AFTER the entry tick exits on the entry bar (SL-first, no ratchet on
         # that remainder — conservative). None on every harness-decided entry.
@@ -832,6 +854,9 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                     trail_vol_tight_mult, mom_trail_on, adx_series,
                     trail_adx_below, trail_adx_falling_bars,
                     trail_adx_tight_mult) * atr)
+                if level_on and (_lvl_touch_j is not None or level_touched(_lvl, True, bh, bl)):
+                    _lvl_touch_j = j if _lvl_touch_j is None else _lvl_touch_j
+                    trail = max(trail, ext - trail_level_tight_mult * atr)
                 mfe = max(mfe, (ext - entry) / risk)
                 # MI-165 break-even FLOOR lever (0 = off, byte-identical).
                 # Once the trade has SEEN >= be_floor_r R, the stop may never
@@ -857,6 +882,9 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                     trail_vol_tight_mult, mom_trail_on, adx_series,
                     trail_adx_below, trail_adx_falling_bars,
                     trail_adx_tight_mult) * atr)
+                if level_on and (_lvl_touch_j is not None or level_touched(_lvl, False, bh, bl)):
+                    _lvl_touch_j = j if _lvl_touch_j is None else _lvl_touch_j
+                    trail = min(trail, ext + trail_level_tight_mult * atr)
                 mfe = max(mfe, (entry - ext) / risk)
                 # MI-165 break-even FLOOR — short side. `min()` is the
                 # tightening direction here, mirroring the ratchet above.
@@ -1039,6 +1067,9 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
             regime_weight=round(regime_weight, 4),
             mom=_mom_attribution(adx_series, entry_i, exit_idx, mom_fired_bars,
                                  mom_tightened) if mom_any else None,
+            level=({"level_price": _lvl, "level_touched": _lvl_touch_j is not None,
+                    "level_touch_bars": (None if _lvl_touch_j is None else _lvl_touch_j - entry_i)}
+                   if level_on else None),
             **({} if _tpt is None else dict(
                 final_target_r=_tpt.final_target_r, n_extends=_tpt.n_extends,
                 n_retargets=_tpt.n_retargets, tp_exit_r=round(_tp_exit_r, 4))),
@@ -1116,6 +1147,7 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                     "confidence": t.confidence, "adx_at_entry": t.adx_at_entry,
                     "regime_weight": t.regime_weight,
                     **(t.mom or {}),
+                    **(t.level or {}),
                     **(_tpg_row(t) if tp_geom.armed else {}),
                     **(t.extra or {})}, default=str) + "\n")
     params: Dict[str, Any] = {"donchian": donchian, "atr_stop_mult": atr_stop_mult,
@@ -1154,6 +1186,10 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
         params["trail_adx_falling_bars"] = trail_adx_falling_bars
         params["trail_adx_tight_mult"] = trail_adx_tight_mult
         params["adx_period"] = adx_period
+    if level_on:
+        params.update(trail_level=trail_level, trail_level_tight_mult=trail_level_tight_mult,
+                      trail_level_lookback=trail_level_lookback, trail_level_pivot_k=trail_level_pivot_k,
+                      trail_level_round_step=trail_level_round_step)
     if mom_stale_on:
         params["momentum_stale_bars"] = momentum_stale_bars
         params["momentum_stale_adx_below"] = momentum_stale_adx_below
@@ -1187,6 +1223,11 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                           tp_r_effective=_tp_r_effective,
                           rr_min_per_trade=_rr_min_per_trade,
                           rr_floor_state=rr_floor_state)
+    if level_on:
+        _with = [t for t in trades if t.level and t.level["level_price"] is not None]
+        _summary["level_trail"] = {
+            "kind": trail_level, "n_trades": len(trades), "n_with_level": len(_with),
+            "n_touched": sum(1 for t in _with if t.level["level_touched"])}
     if tp_geom.armed:
         _summary["tp_geometry"] = _tpg.summarize_geometry([
             {**_tpg_row(t), "outcome": t.outcome} for t in trades])
@@ -1617,6 +1658,21 @@ def main(argv: List[str]) -> int:
     p.add_argument("--trail-adx-tight-mult", type=float, default=0.0,
                    help="The tightened trail mult while the momentum condition "
                         "fires (0 disables the lever; must be < --trail-mult).")
+    p.add_argument("--trail-level", choices=["swing", "fvg", "round"], default="",
+                   help="P1-Q10 level-triggered trail ('' = off, byte-identical): ONE level per "
+                        "trade fixed at entry -- the prior confirmed swing extreme beyond entry, the "
+                        "nearest unfilled opposing FVG, or the next round number -- and on first "
+                        "touch the trail tightens to --trail-level-tight-mult x ATR (latched). The "
+                        "R-armed variant is --trail-decay-arm-r.")
+    p.add_argument("--trail-level-tight-mult", type=float, default=0.0,
+                   help="Trail mult after the level is touched (must be < --trail-mult).")
+    p.add_argument("--trail-level-lookback", type=int, default=60,
+                   help="Bars before entry searched for a swing / FVG level.")
+    p.add_argument("--trail-level-pivot-k", type=int, default=3,
+                   help="Swing pivot half-width in bars (confirmed before the entry bar).")
+    p.add_argument("--trail-level-round-step", type=float, default=0.0,
+                   help="Round-number step in price (0 = auto: one decade below the price's "
+                        "leading digit, e.g. ETH 2500 -> 100).")
     p.add_argument("--momentum-stale-bars", type=int, default=0,
                    help="MOMENTUM-TRAIL-LEVER `momentum_stale` (0=off, "
                         "byte-identical): close at bar CLOSE after N bars once "
@@ -1701,6 +1757,13 @@ def main(argv: List[str]) -> int:
         for _e in _mom_errs:
             print(f"ERROR: {_e}", file=sys.stderr)
         return 2
+    _lvl_errs = level_flag_errors(args.trail_level, args.trail_level_tight_mult, args.trail_mult,
+                                  args.trail_level_lookback, args.trail_level_pivot_k,
+                                  args.trail_level_round_step)
+    if _lvl_errs:
+        for _e in _lvl_errs:
+            print(f"ERROR: {_e}", file=sys.stderr)
+        return 2
     if args.rr_floor > 0.0 and args.tp_cap_pct <= 0.0:
         print("ERROR: --rr-floor requires --tp-cap-pct > 0 (production uses "
               "0.099). Without a capped TP there is no r_to_target, so the "
@@ -1773,6 +1836,11 @@ def main(argv: List[str]) -> int:
                      trail_adx_below=args.trail_adx_below,
                      trail_adx_falling_bars=args.trail_adx_falling_bars,
                      trail_adx_tight_mult=args.trail_adx_tight_mult,
+                     trail_level=args.trail_level,
+                     trail_level_tight_mult=args.trail_level_tight_mult,
+                     trail_level_lookback=args.trail_level_lookback,
+                     trail_level_pivot_k=args.trail_level_pivot_k,
+                     trail_level_round_step=args.trail_level_round_step,
                      momentum_stale_bars=args.momentum_stale_bars,
                      momentum_stale_adx_below=args.momentum_stale_adx_below)
     decision_kw: Dict[str, Any] = {}
