@@ -470,7 +470,6 @@ def test_var_price_vector_uses_the_peer_lead(tmp_path):
 
 
 def test_common_rows_restricts_every_arm_to_rows_all_side_streams_cover():
-    import pandas as pd
     df = mb.synthetic_frame(2400, 5, 1.5)
     df["fcA"] = np.where(np.arange(len(df)) % 4 == 0, df["x0"], np.nan)      # stride-4 stream
     df["fcB"] = np.where(np.arange(len(df)) % 8 == 0, df["x1"], np.nan)      # stride-8 stream
