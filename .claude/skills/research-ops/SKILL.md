@@ -261,8 +261,16 @@ written after seeing the number:
   Tier-3 proposal, its follow-up is ONE confirmation unit on a disjoint or most-recent window the PASS did not
   see, registered with the same statistic and bar. Name in the note how many cells or configurations the
   PASS was chosen from: that count is the multiple-testing denominator (row `RESEARCH-TRIAL-LEDGER`).
-- **fail →** the rule's disposition plus a kill or redirect follow-up (retire the dependent
-  units whose `requires_result` can no longer be met).
+- **fail →** the rule's disposition, then the **fail-is-not-dead** read (operator, 2026-10-22: *"we don't
+  just drop an idea because we ran one test and it didn't pass… we need to study them, do open source
+  research, build a bunch of different tests and tweak them"*; default in
+  `docs/plans/OPERATING-PLAN-2026-09-21.md` — *"never to just kill ideas because of one bad pass"*):
+  a FAIL settles only the live/config question its registered rule asked. (1) Diagnose why it failed —
+  legs/regime, grid, trigger definition, cost drag, n/power, test design. (2) Check outside sources
+  (`frontier-research`). (3) Author pre-registered variant units, each with its own rule. (4) Programme
+  status is **"first test failed → variants queued"**, never "dead". Retire dependent units whose
+  `requires_result` can no longer be met, but retire a *family* only through
+  `scripts/research/family_retirement_policy.yaml`.
 - **indeterminate →** extend n or redesign, in one line, and a unit that does it.
 
 Record each disposition with `research_disposition.py --record` (it routes to `append` and
