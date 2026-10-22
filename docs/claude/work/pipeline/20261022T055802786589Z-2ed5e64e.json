@@ -1,0 +1,20 @@
+{
+  "based_on": "20261021T190731823301Z-f47b0749.json",
+  "due_when": {
+    "check_every_days": 3,
+    "due_date": "2026-10-23",
+    "kind": "date"
+  },
+  "id": "PI-20261018-WH81NW96-0004",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-UNBLOCK-1018 (session_019BtYk72AWwvaGkwH81nW96) / ML-PROMOREADY-OOSEDGE-MEASURE / trainer-vm-diag #18887 #18888",
+    "rerun": "grep -n 'PROMOREADY_OOS_EDGE' scripts/ops/run_promotion_readiness.sh; trainer-vm-diag: systemctl show ict-promotion-readiness.service --property=MemoryMax; head -c 600 runtime_logs/trainer_mirror/promotion_readiness/$(date -u +%F)/SUMMARY.md"
+  },
+  "severity": "medium",
+  "state": "done",
+  "terminal_reason": "OBSERVED 2026-10-22 by the manager: #19402 (87c160e7) set PROMOREADY_OOS_EDGE=on with MemoryMax unchanged at 4500M (whole-sweep peak measured 1215 MiB, so the approved 5200M raise was not needed). The 04:00Z sweep finished Result=success at 04:21:42Z with no OOM (trainer-vm-diag #19461). Shadow/advisory heads blocked on oos_edge: 21/24 on 2026-10-21 (flag off) -> 4/23 on 2026-10-22, the 4 being baseline heads (#19464). Revert: drop the Environment= line.",
+  "tier": 2,
+  "what": "[ml] Tier-2 decision for the manager: flip PROMOREADY_OOS_EDGE on in scripts/ops/run_promotion_readiness.sh now that peak RSS is MEASURED (1h ~1.06 GB, 15m 2.24 GB, 5m 4.69-4.70 GB vs the 4.5 GiB MemoryMax -- the two 5m heads leave < 1% margin; population: 2 of 8 shadow heads gate-checked on the trainer 2026-10-18, relay #18888, n=2 5m heads): choose (a) raise MemoryMax to 5.2G in deploy/trainer ict-promotion-readiness.service, or (b) cap the sweep's oos_edge at ~300k rows per head. Until flipped, the daily readiness report holds every shadow head on oos_edge insufficient_data and can never propose a promotion"
+}
