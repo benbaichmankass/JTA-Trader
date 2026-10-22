@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# wiring: manual-only - run by the research queue unit emitted from programme node P3-Q3-soak-equity-overlap (research-script-run.yml, via queue_replenish); otherwise a session runs it by hand.
 """Overlap / leave-one-out read of the soak-book 1d legs' committed Stage-0 trade ledgers.
 
 Question (programme 03 node P3-Q3-soak-equity-overlap): SPY / QQQ / QLD / IWM trend legs are one
