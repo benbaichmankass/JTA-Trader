@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-10-29",
+    "kind": "date"
+  },
+  "id": "PI-20261022-PT76E6XM-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane TP-DOCTRINE-W43 (session_017BJaq4hC2mKhEmPT76E6Xm), docs/research/tp-doctrine-w43-proposals-2026-10-22.md",
+    "rerun": "python3 scripts/ci/check_tp_doctrine.py | grep trend_donchian_eth_4h  # entry_tp reads 'sentinel 50' while the declared tp_revision (donchian_measured_move w0.5) is live"
+  },
+  "severity": "high",
+  "state": "queued",
+  "tier": 3,
+  "what": "[tp-doctrine] BUILD: trend_donchian_eth_4h (bybit_2 real money + bybit_portfolio + bybit_1) places the 50 R sentinel as its ENTRY TP (rests at the venue cap) even though its declared tp_revision donchian_measured_move w0.5 (live since 2026-10-18, RQ-20261018-007 PASS) can compute a target at the signal bar -- _donchian_measured_move's managed span starts at the bar holding entry_time. Seed the entry bracket's TP with plan_tp_revision(...) at bracket construction (fall back to the declared tp_r only when the rule returns None), add a harness flag so the seeded-entry arm can be measured against MM05 (expected near-identical: harness revisions bind from the next bar, so only the entry bar differs), and teach check_tp_doctrine.py to grade a seeded rule as entry_tp=declared. Closes the leg's last doctrine dimension; it is the template for every leg that gains a revision rule. Tier-3 (bracket construction on a real-money leg) -- prepare + evidence, manager executes under the data-backed authorization."
+}
