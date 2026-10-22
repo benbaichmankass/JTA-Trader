@@ -15578,3 +15578,130 @@ nodes:
     - docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md
     - scripts/research/path_metric_giveback.py
     - research/queue/RQ-20261014-9807-01.yaml
+
+# ── 2026-10-22 W43 (lane EXIT-PATH-METRICS-W43): per-bar path-state units, hand-authored in research/queue/ and blocked/ ───
+# Measurement (docs/research/exit-path-metrics-2026-10-22.md): the pooled X=1.5 path-state pass vanishes once room-to-stop is in the baseline.
+- id: P1-Q13-pathstate-transfer
+  goal: G1
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 500
+    confidence: 0.1
+  after:
+  - unit: RQ-20261022-b7e1-01
+    verdict: any
+  needs_authoring: 'Rung 1e TRANSFER (RQ-20261022-b7e1-01, runnable): per-bar path state vs "gives back >= 1.5 R from here", stop room controlled, six legs not in the discovery run. Hand unit; this node only follows its verdict. PASS -> ONE confirmation unit on a disjoint partition, then Q6 parity and a Tier-3 proposal (never a config edit). FAIL -> variants named in the unit (a first-test fail is not a dead idea).'
+- id: P1-Q13-pathstate-w12
+  goal: G1
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 500
+    confidence: 0.1
+  after:
+  - unit: RQ-20261022-b7e1-02
+    verdict: any
+  needs_authoring: 'Rung 1e WINDOW VARIANT (RQ-20261022-b7e1-02, runnable): w=12 on ada/xrp pullback_2h + eth_4h, stop room controlled. Hand unit; this node only follows its verdict. PASS -> ONE confirmation unit on a disjoint partition, then Q6 parity and a Tier-3 proposal (never a config edit). FAIL -> variants named in the unit (a first-test fail is not a dead idea).'
+- id: P1-Q13-pathstate-prop
+  goal: G1
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 500
+    confidence: 0.1
+  after:
+  - unit: RQ-20261022-b7e1-03
+    verdict: any
+  needs_authoring: 'Rung 1e PROP (RQ-20261022-b7e1-03, runnable): X=1.0 on eth/sol prop 1h legs, w=12, stop room controlled; INDETERMINATE is possible (positives are scarce). Hand unit; this node only follows its verdict. PASS -> ONE confirmation unit on a disjoint partition, then Q6 parity and a Tier-3 proposal (never a config edit). FAIL -> variants named in the unit (a first-test fail is not a dead idea).'
+- id: P1-Q14-er-gated-trail-ada
+  goal: G1
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 500
+    confidence: 0.1
+  after:
+  - unit: RQ-20261022-b7e1-04
+    verdict: any
+  - node: P1-Q13-pathstate-transfer
+    verdict: any
+  needs_authoring: 'ER-gated tight trail on ada_pullback_2h (RQ-20261022-b7e1-04, blocked/ on PATHSTATE-TRAIL-GATE). Hand unit; this node only follows its verdict. PASS -> ONE confirmation unit on a disjoint partition, then Q6 parity and a Tier-3 proposal (never a config edit). FAIL -> variants named in the unit (a first-test fail is not a dead idea).'
+- id: P1-Q14-er-gated-trail-xrp
+  goal: G1
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 500
+    confidence: 0.1
+  after:
+  - unit: RQ-20261022-b7e1-05
+    verdict: any
+  - node: P1-Q13-pathstate-transfer
+    verdict: any
+  needs_authoring: 'ER-gated tight trail on xrp_pullback_2h (RQ-20261022-b7e1-05, blocked/ on PATHSTATE-TRAIL-GATE). Hand unit; this node only follows its verdict. PASS -> ONE confirmation unit on a disjoint partition, then Q6 parity and a Tier-3 proposal (never a config edit). FAIL -> variants named in the unit (a first-test fail is not a dead idea).'
+- id: P1-Q14-atr-contraction-trail-ada
+  goal: G1
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 500
+    confidence: 0.1
+  after:
+  - unit: RQ-20261022-b7e1-06
+    verdict: any
+  - node: P1-Q13-pathstate-w12
+    verdict: any
+  needs_authoring: 'ATR-contraction (Chandelier-style, vol-adaptive) tight trail on ada_pullback_2h (RQ-20261022-b7e1-06, blocked/). Hand unit; this node only follows its verdict. PASS -> ONE confirmation unit on a disjoint partition, then Q6 parity and a Tier-3 proposal (never a config edit). FAIL -> variants named in the unit (a first-test fail is not a dead idea).'
+- id: P1-Q14-chop-gated-trail-ada
+  goal: G1
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 500
+    confidence: 0.1
+  after:
+  - unit: RQ-20261022-b7e1-07
+    verdict: any
+  - node: P1-Q13-pathstate-w12
+    verdict: any
+  needs_authoring: 'Choppiness-gated tight trail on ada_pullback_2h (RQ-20261022-b7e1-07, blocked/). Hand unit; this node only follows its verdict. PASS -> ONE confirmation unit on a disjoint partition, then Q6 parity and a Tier-3 proposal (never a config edit). FAIL -> variants named in the unit (a first-test fail is not a dead idea).'
+- id: P1-Q14-gated-bank-ada
+  goal: G1
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 500
+    confidence: 0.1
+  after:
+  - unit: RQ-20261022-b7e1-08
+    verdict: any
+  - node: P1-Q13-pathstate-transfer
+    verdict: any
+  needs_authoring: 'Split/partial exit gated on ER, vs the ungated far-rung bank, on ada_pullback_2h (RQ-20261022-b7e1-08, blocked/). Hand unit; this node only follows its verdict. PASS -> ONE confirmation unit on a disjoint partition, then Q6 parity and a Tier-3 proposal (never a config edit). FAIL -> variants named in the unit (a first-test fail is not a dead idea).'
+- id: P1-Q14-time-in-chop-stop-ada
+  goal: G1
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 500
+    confidence: 0.1
+  after:
+  - unit: RQ-20261022-b7e1-09
+    verdict: any
+  - node: P1-Q13-pathstate-w12
+    verdict: any
+  needs_authoring: 'Time-in-chop stop on ada_pullback_2h (RQ-20261022-b7e1-09, blocked/). Hand unit; this node only follows its verdict. PASS -> ONE confirmation unit on a disjoint partition, then Q6 parity and a Tier-3 proposal (never a config edit). FAIL -> variants named in the unit (a first-test fail is not a dead idea).'
+- id: P1-Q14-prop-er-trail-eth
+  goal: G1
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 500
+    confidence: 0.1
+  after:
+  - unit: RQ-20261022-b7e1-10
+    verdict: any
+  - node: P1-Q13-pathstate-prop
+    verdict: any
+  needs_authoring: 'Prop eth: ER-gated tight trail in both directions, TP untouched (RQ-20261022-b7e1-10, blocked/; prop EV/survival gate follows any PASS). Hand unit; this node only follows its verdict. PASS -> ONE confirmation unit on a disjoint partition, then Q6 parity and a Tier-3 proposal (never a config edit). FAIL -> variants named in the unit (a first-test fail is not a dead idea).'
