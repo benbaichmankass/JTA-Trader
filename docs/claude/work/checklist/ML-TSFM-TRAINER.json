@@ -12,10 +12,19 @@
   "prs": [],
   "blocked_on": [],
   "note": "Deliverables 1-4 done in PR #19550 (hold; manager merges). Verified: smoke #19547, side-streams #19607, ml_bakeoff block exercised end-to-end on synthetic shards (not yet on real data), dispatch dry run would_dispatch, PI-20261022-MENTSW43-0001 closed with evidence. Open: first real run of RQ-20261011-9da8-01 after merge. Filed: PI-20261022-5AEVV1RL-0001 (other TSFM loaders), -0002 (replay_pregate_fleet bypassed the heavy lock).",
-  "updated_at": "2026-10-22T18:23:46Z",
+  "updated_at": "2026-10-22T18:37:17Z",
   "updated_by": "session_01DRYR8RsCR3Nw4S5AEVv1rL",
   "roadmap": [
     "M25"
   ],
+  "observation": {
+    "what": "RQ-20261011-9da8-01 (Chronos-2 vs incumbent vs HAR-RV vs VAR bake-off) emits its first measured verdict.json on the trainer after PR #19550 merges",
+    "how_to_check": "ls research/results/RQ-20261011-9da8-01/ ; python3 scripts/research/dispatch_queue.py --only RQ-20261011-9da8-01 --json (outcome/last_dispatched_at); read verdict + read_state in the landed row",
+    "due_by": "2026-10-29"
+  },
+  "writeback": {
+    "roadmap": "none: outcome unknown until the unit's first verdict lands; the M25 milestone line is updated by whichever row reads that verdict",
+    "arch": "none: no architecture change -- offline research tooling and trainer-resident side-streams only"
+  },
   "_seq": 597
 }
