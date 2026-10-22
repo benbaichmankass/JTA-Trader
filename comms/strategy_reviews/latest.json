@@ -1,15 +1,15 @@
 {
  "schema": "stage_aware_v1",
- "generated_at": "2026-10-22T05:14:17.042169+00:00",
+ "generated_at": "2026-10-22T16:10:13.291254+00:00",
  "utc_date": "2026-10-22",
  "generated_by": "scripts/ops/strategy_review_stage_aware.py",
- "graded": 29,
- "verdict_reached": 1,
- "actionable": 1,
+ "graded": 28,
+ "verdict_reached": 2,
+ "actionable": 2,
  "by_action": {
-  "S1:insufficient-data": 20,
-  "S1:kill": 1,
-  "S2:abstain": 8
+  "S1:insufficient-data": 19,
+  "S1:kill": 2,
+  "S2:abstain": 7
  },
  "question": "Per leg, graded with the instrument its STAGE calls for: Stage 2 (bybit_2/alpaca_live + mirrors) on MONEY via R4's demotion verdict; Stage 1 (bybit_1, alpaca_paper) on MECHANICS + COST FIDELITY via R5 -- never expectancy, per root CLAUDE.md's promotion ladder ('a live or paper book never establishes edge').",
  "stage2": {
@@ -21,7 +21,7 @@
   "verdict_source": "scripts/ops/r4_demotion_gate.py (R4)",
   "window": "last40",
   "since": null,
-  "n_legs": 8,
+  "n_legs": 7,
   "verdict_reached": 0,
   "actionable": 0
  },
@@ -33,12 +33,26 @@
   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
   "window_hours": 168,
   "n_legs": 21,
-  "verdict_reached": 1,
-  "actionable": 1,
+  "verdict_reached": 2,
+  "actionable": 2,
   "mechanics_read_state": "measured",
   "cost_fidelity_read_state": "measured"
  },
  "rows": [
+  {
+   "stage": "S1",
+   "account": "bybit_1",
+   "strategy": "ada_pullback_2h",
+   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
+   "proposed_action": "S1:kill",
+   "verdict_reached": true,
+   "actionable": true,
+   "disposition": "kill",
+   "execution": "live",
+   "n_needed": null,
+   "eta": null,
+   "reason": "starved: 320 actionable intent(s) (30 episode(s)) in the window, 0 order(s)/ticket(s) received, held_back=0, no open position held. This leg's soak purpose (prove the pipeline works) is unmet: it never reaches an order regardless of what cost fidelity reads."
+  },
   {
    "stage": "S1",
    "account": "alpaca_paper",
@@ -55,20 +69,6 @@
   },
   {
    "stage": "S1",
-   "account": "bybit_1",
-   "strategy": "ada_pullback_2h",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "live",
-   "n_needed": "needs 0 more entry fill(s) and 3 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=19, exit=7); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
-   "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity insufficient_n (entry n=19, exit n=7; need >= 10 each)"
-  },
-  {
-   "stage": "S1",
    "account": "alpaca_paper",
    "strategy": "gdx_pullback_1d",
    "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
@@ -77,9 +77,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": "needs 7 more entry fill(s) and 9 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=3, exit=1); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "n_needed": "needs 8 more entry fill(s) and 9 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=2, exit=1); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
    "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity insufficient_n (entry n=3, exit n=1; need >= 10 each)"
+   "reason": "flowing; cost fidelity insufficient_n (entry n=2, exit n=1; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -287,9 +287,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": "needs 5 more entry fill(s) and 5 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=5, exit=5); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "n_needed": "needs 4 more entry fill(s) and 5 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=6, exit=5); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
    "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity insufficient_n (entry n=5, exit n=5; need >= 10 each)"
+   "reason": "flowing; cost fidelity insufficient_n (entry n=6, exit n=5; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -308,7 +308,7 @@
   {
    "stage": "S1",
    "account": "bybit_1",
-   "strategy": "trend_donchian_xrp_4h",
+   "strategy": "trend_donchian_xrp_adx25",
    "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
    "proposed_action": "S1:insufficient-data",
    "verdict_reached": false,
@@ -329,9 +329,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": "needs 0 more entry fill(s) and 7 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=14, exit=3); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "n_needed": "needs 0 more entry fill(s) and 6 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=14, exit=4); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
    "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity insufficient_n (entry n=14, exit n=3; need >= 10 each)"
+   "reason": "flowing; cost fidelity insufficient_n (entry n=14, exit n=4; need >= 10 each)"
   },
   {
    "stage": "S2",
@@ -373,29 +373,7 @@
    "net_r_net_of_full_cost": -1.4705,
    "r_population": 1,
    "t3_windows_r": [],
-   "t3_p10": 11.30573,
-   "abstain": "thin",
-   "reason": "fewer than 40 closed trades on either book: 1 closed rows < min_trades 40"
-  },
-  {
-   "stage": "S2",
-   "account": "alpaca_live",
-   "strategy": "ief_pullback_1d",
-   "verdict_source": "scripts/ops/r4_demotion_gate.py (R4)",
-   "proposed_action": "S2:abstain",
-   "verdict_reached": false,
-   "actionable": false,
-   "r4_status": "abstain_thin",
-   "chosen_source": "real_money",
-   "n_closed": 1,
-   "pnl_coverage_measured": 1.0,
-   "coverage_floor": 0.6,
-   "min_trades": 40,
-   "net_usd_measured": -0.435,
-   "net_r_net_of_full_cost": -0.4772,
-   "r_population": 1,
-   "t3_windows_r": [],
-   "t3_p10": 14.9357,
+   "t3_p10": 8.10513,
    "abstain": "thin",
    "reason": "fewer than 40 closed trades on either book: 1 closed rows < min_trades 40"
   },
@@ -417,7 +395,7 @@
    "net_r_net_of_full_cost": -1.0255,
    "r_population": 1,
    "t3_windows_r": [],
-   "t3_p10": -3.33349,
+   "t3_p10": -2.08126,
    "abstain": "thin",
    "reason": "fewer than 40 closed trades on either book: 1 closed rows < min_trades 40"
   },
@@ -439,7 +417,7 @@
    "net_r_net_of_full_cost": 7.2912,
    "r_population": 15,
    "t3_windows_r": [],
-   "t3_p10": -4.71458,
+   "t3_p10": -6.80765,
    "abstain": "thin",
    "reason": "fewer than 40 closed trades on either book: 15 closed rows < min_trades 40"
   },
@@ -461,7 +439,7 @@
    "net_r_net_of_full_cost": -1.9579,
    "r_population": 2,
    "t3_windows_r": [],
-   "t3_p10": -4.46111,
+   "t3_p10": -6.0757,
    "abstain": "thin",
    "reason": "fewer than 40 closed trades on either book: 2 closed rows < min_trades 40"
   },
@@ -497,17 +475,17 @@
    "actionable": false,
    "r4_status": "abstain_thin",
    "chosen_source": "real_money",
-   "n_closed": 17,
-   "pnl_coverage_measured": 0.6471,
+   "n_closed": 18,
+   "pnl_coverage_measured": 0.6667,
    "coverage_floor": 0.6,
    "min_trades": 40,
-   "net_usd_measured": -26.7603,
-   "net_r_net_of_full_cost": -9.9238,
-   "r_population": 17,
+   "net_usd_measured": -29.6523,
+   "net_r_net_of_full_cost": -10.9047,
+   "r_population": 18,
    "t3_windows_r": [],
    "t3_p10": -5.95372,
    "abstain": "thin",
-   "reason": "fewer than 40 closed trades on either book: 17 closed rows < min_trades 40"
+   "reason": "fewer than 40 closed trades on either book: 18 closed rows < min_trades 40"
   }
  ]
 }
