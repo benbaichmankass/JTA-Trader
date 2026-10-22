@@ -55,12 +55,12 @@ power:
     power line is the conventional n for a paired per-trade difference and is an ESTIMATE.
   feasibility:
     source: none
-    accrual_basis: Replays history on public 1m klines pinned to 2026-10-21 23:59Z; nothing accrues.
+    accrual_basis: Replays history on public 1m klines pinned to 2026-10-20 23:59Z; nothing accrues.
 
 design:
   data: >-
     Binance USD-M perp 1m klines (data.binance.vision) ETHUSDT / XRPUSDT / ADAUSDT / SOLUSDT,
-    2020-01 .. 2026-10-21 23:59Z (pinned with --end), resampled to [open, open+tf) bars by
+    2020-01 .. 2026-10-20 23:59Z (pinned with --end), resampled to [open, open+tf) bars by
     vol_skip_forming_bar_replay.build_bars. A LABELLED PROXY for Bybit (api.bybit.com is geo-blocked
     from the research containers; the 2026-10-18 record reproduced eth_prop's committed record within
     0.94R on this proxy).
