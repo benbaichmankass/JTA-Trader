@@ -165,14 +165,13 @@ related:
 - docs/research/d1-cost-stack-verification-2026-09-25.md (harness cost stack)
 last_dispatched_at: '2026-10-22T11:18:24+00:00'
 grading:
-  attested: RULE-ODC1022-ADX25-SIBLING-CORROBORATE
-  auto: true
+  auto: false
   decision_rule_id: RULE-ODC1022-ADX25-SIBLING-CORROBORATE
   evidence:
   - research/results/RQ-20261022-511e-01/39769641439.jsonl
+  - comms/research/RQ-20261022-511e-01/39769641439/logs/cmd-0.log
   graded_at: '2026-10-22'
-  grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 1 result row(s) on main, lands.min_rows is 2
-  rows: 1
-  verdict: null
+  graded_by: 'RESEARCH-OPS-20261022-1447 (session). Hand-written unit whose two per-leg commands shared one {out_dir}: the sol_4h command overwrote the eth_4h summary, so only 1 row landed (min_rows 2).'
+  needs_review: false
+  reason: 'Rule applied verbatim. sol_4h (structured row): n(A) 267 >= 39, M2 net_r 60.83 vs A 68.61 (delta -7.78 < bar +5.34), folds_ge 1 of 4 -> FAIL. eth_4h (cmd-0.log only, its row was overwritten; no n or delta recoverable): harness grade printed verdict fail / incumbent_stands, and a thin-n leg prints indeterminate, so it is a measured FAIL. FAIL on both siblings -> UNIT FAIL: the ADX25 cell stays on the bybit_1 alias only; real money is not declared on it. Not re-run: eth_4h had already graded FAIL on the current incumbent in RQ-20261019-010.'
+  verdict: fail
