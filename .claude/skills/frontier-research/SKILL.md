@@ -43,6 +43,15 @@ configuration tested** (checkpoint, input, target, horizon) — write down what 
 before moving the family's status. The frozen-TSFM result is the cautionary case: Chronos-Bolt-Tiny,
 frozen, on a 4.6%-base-rate volatility label closed *that*, not "time-series foundation models".
 
+### Step 0b — standing scoping questions (read the pipeline)
+
+Run `python3 scripts/ops/pipeline.py --due` and take any due item whose `origin.ref` names a roadmap milestone
+scoping question for this scan. Standing now: **`PI-20261022-J9X7ACR3-0001` (M41, production-ready local LLM,
+operator 2026-10-22)** -- what would a local LLM do for us, what does it cost, can it run on our VMs. Answer it
+with the same four gates as Step 3 and record the verdict in the scan doc and the run record; close the item
+`done` (verdict + evidence) or `killed` (no use case clears a gate), and set M41's `next` in
+`docs/roadmap/milestones.yaml` to match.
+
 ## Step 1 — measure where we are concentrated
 
 ```
