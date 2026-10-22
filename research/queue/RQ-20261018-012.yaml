@@ -75,9 +75,9 @@ run:
   - --arm
   - A=
   - --arm
-  - R1=--tp-target-r=3;--tp-retarget-mode=stall_pull_in;--tp-retarget-stall-bars=10
+  - R1=-tp_revision;--tp-target-r=3;--tp-retarget-mode=stall_pull_in;--tp-retarget-stall-bars=10
   - --arm
-  - R2=--tp-target-r=3;--tp-retarget-mode=atr_rescale
+  - R2=-tp_revision;--tp-target-r=3;--tp-retarget-mode=atr_rescale
   - --days
   - '2330'
   - --start
@@ -124,7 +124,7 @@ generated:
   key: programme:P1-Q9-eth4h-retarget-replace
   params:
     node: P1-Q9-eth4h-retarget-replace
-last_dispatched_at: '2026-10-18T22:30:59+00:00'
+last_dispatched_at: null
 grading:
   auto: true
   decision_rule_id: RULE-P1-Q9-ETH4H-RETARGET-REPLACE
@@ -138,3 +138,12 @@ grading:
   verdict: null
   owner: RESEARCH-OPS-20261021-2047
   owner_reason: 'producer_failed on the TP-retarget arm after arm A completed; no log landed. Lever and filing: PI-20261021-6SBYWRKB-0001. Not a verdict.'
+amended:
+  at: '2026-10-21'
+  by: EXITS-OVERNIGHT-1021
+  what: 'Each TP-lever arm now carries -tp_revision. The leg declares tp_revision (live since 2026-10-18),
+    which the argv builder forwards as --tp-revision; a GEOM-B1 TP flag on the same arm made backtest_trend
+    raise ValueError (two TP movers in one run), so run 1 died after arm A and no candidate was ever measured.
+    The candidate now REPLACES the declared TP mover, which is what a replace grade asks. Decision rule,
+    thresholds, window and baseline arm A are unchanged; no candidate outcome had been read.'
+  evidence: PI-20261021-6SBYWRKB-0001; exit_lever_ablation.tp_mover_conflict; tests/test_exit_lever_ablation_tp_movers.py
