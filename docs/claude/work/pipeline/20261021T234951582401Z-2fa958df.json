@@ -8,6 +8,11 @@
   },
   "id": "PI-20261021-6SBYWRKB-0001",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-24",
+    "how_to_check": "python3 -c \"import json,glob;[print(f,json.loads(open(f).readline())['read_state']) for u in ('RQ-20261018-012','RQ-20261018-014') for f in sorted(glob.glob(f'research/results/{u}/*.jsonl'))]\"; ls comms/research/RQ-20261018-01[24]/*/",
+    "what": "RQ-20261018-012 and RQ-20261018-014 each land a research/results row with read_state measured (TP arms ran with -tp_revision), and any future failed run on main carries comms/research/<unit>/<run>/logs/cmd-0.log or failure.json"
+  },
   "origin": {
     "kind": "session",
     "ref": "RESEARCH-OPS-20261021-2047 step C/D",
