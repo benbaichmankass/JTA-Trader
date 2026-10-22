@@ -221,7 +221,11 @@ def test_measured_state_2026_08_17():
     # passed_unshipped (RQ-20261016-015 R1 stall_pull_in, 3 of 4 folds, no live
     # producer). A resolved cell is the cut doing its job; the pin moves WITH the
     # matrix and says why, exactly as the 2026-10-07 and 2026-09-29 notes above.
-    assert len(movable) == 73
+    # 73 -> 74 on 2026-10-22 (lane OPERATOR-DECISIONS-1022): the NEW live soak alias
+    # trend_donchian_xrp_adx25 (bybit_1 only) mirrors the incumbent trend_donchian_xrp_4h row,
+    # whose one movable cell is tp_extend `pending`; the alias therefore adds exactly one, in a
+    # column already pinned above.
+    assert len(movable) == 74
     #
     # E65 (2026-09-24, PR #12868): 4 -> 2. The `exit_ladder` cells on
     # trend_donchian_eth_prop and trend_donchian_sol_prop RESOLVED to
@@ -265,7 +269,7 @@ def test_internal_keys_are_not_printed_as_buckets():
     # ...while the measured count IS rendered (0 since the 2026-09-29
     # out_of_scope_family correction, 1 since the 2026-09-29
     # regime_flip_exit resolution; see test_measured_state_2026_08_17 above).
-    assert "MOVABLE BY A SESSION: 73" in text   # 0 before GEOM-B1 added the two tp columns; 76 -> 73 on 2026-10-18 (three tp cells resolved)
+    assert "MOVABLE BY A SESSION: 74" in text   # 0 before GEOM-B1 added the two tp columns; 76 -> 73 on 2026-10-18 (three tp cells resolved); 73 -> 74 on 2026-10-22 (xrp_adx25 soak alias mirrors the incumbent tp_extend pending cell)
     assert "NO SWEEP PATH AT ALL: 1" in text
 
 

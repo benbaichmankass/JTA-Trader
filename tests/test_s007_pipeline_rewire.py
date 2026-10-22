@@ -112,6 +112,8 @@ def test_registry_roster_is_exactly_turtle_soup_and_vwap():
         "trend_donchian_sol_4h",
         "trend_donchian_sol_prop",
         "trend_donchian_xrp_4h",
+        # bybit_1 soak alias of trend_donchian_xrp_4h (ADX trail, OPERATOR-DECISIONS-1022):
+        "trend_donchian_xrp_adx25",
         "turtle_soup",
         "uso_trend_1h",
         "vwap",
