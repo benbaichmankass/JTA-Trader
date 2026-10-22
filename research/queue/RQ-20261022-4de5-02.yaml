@@ -3,7 +3,7 @@ title: >-
   trend_donchian_eth_prop tp_r 2.5 vs the incumbent tp_r 6.0, through the prop EV/survival sim against
   EACH firm's DD limits (breakout_2, tradeify_1, velotrade_1), on the decision bar the leg will trade
   -> declare tp_r 2.5 as the leg's predictive TP, or not.
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROP
@@ -90,10 +90,23 @@ routing:
 run:
   workflow: none — session-local, scripts/research/decision_bar_match.py + scripts/research/prop_ev_grid.py
 lands:
-  store: docs/research/evidence/
-  assert_field: verdict
-  min_rows: 1
+  store: docs/research/evidence/decision-bar-match-2026-10-22.json
+  assert_field: tp_eth_prop_2p5
+  note: ledgers comms/research/RQ-20261022-4de5-01/eth/arms/trend_donchian_eth_prop{,__tp2.5}__A_closed__trades.jsonl;
+    sim cells comms/research/RQ-20261022-4de5-01/prop/{eth_T6,eth_T25}/<firm>/.
 related:
 - research/queue/RQ-20261016-007.yaml
 - research/queue/RQ-20261022-4de5-01.yaml
 - docs/claude/work/checklist/TP-ETHPROP-2P5.json
+last_dispatched_at: '2026-10-22T07:00:00+00:00'
+verdict: NOT_DECLARED
+result: >-
+  docs/research/evidence/decision-bar-match-2026-10-22.json (tp_eth_prop_2p5). Bar = closed
+  (RQ-20261022-4de5-01 SWITCH_TO_CLOSED). Seed-median path EV USD/life and p_alive, T25 vs T6:
+  breakout_2 +40.7 vs +65.4, 0.437 vs 0.402; tradeify_1 +125.4 vs +217.9, 0.619 vs 0.598;
+  velotrade_1 +100.8 vs +154.0, 0.723 vs 0.712. (a) EV > 0 on all seeds: pass on every firm;
+  (b) survival non-inferior: pass on every firm (2.5R is slightly safer); (c) EV within 10%:
+  FAIL on every firm (-38% / -42% / -35%). -> NOT_DECLARED: no change; tp_r 2.5 is not the leg's
+  predictive TP at prop cost. Reported: full-window net R on the Bybit stack, closed arm, tp 2.5
+  +69.96R (n 1184) vs tp 6.0 +86.27R (n 1175); record window +0.88R vs +10.26R. The TP-doctrine
+  gap stays open on row TP-DOCTRINE (per-bar revision / in-trade exit model).

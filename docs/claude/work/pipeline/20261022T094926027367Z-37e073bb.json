@@ -1,0 +1,19 @@
+{
+  "based_on": "20261018T064623923141Z-e6856c60.json",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "the leg's live builder decides on the closed bar (config/strategies.yaml decision_bar: closed merged AND the first live order package after the merge shows a closed-bar decision), or the leg is demoted; the reason is recorded here",
+    "kind": "observation",
+    "last_checked": "2026-10-22"
+  },
+  "id": "PI-20261018-WCDIDFTE-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "RQ-20261018-2a10-01 record_restatement.trend_donchian_eth_prop (lane DECISION-BAR-CLOSED-1018, PR #18884)",
+    "rerun": "python3 scripts/research/decision_bar_holdout.py --fetch --klines-dir /tmp/klines --end '2026-10-16 23:59' --leg trend_donchian_eth_prop --out /tmp/dbh && python3 -c \"import json;print(json.load(open('/tmp/dbh/verdict.json'))['legs']['trend_donchian_eth_prop']['record_restatement'])\"  # holds while STANDING_AT_RISK is true"
+  },
+  "routed_to": "DECISION-BAR-MATCH | [2026-10-22 lane DECISION-BAR-MATCH] Operator decided 2026-10-22 (checklist DECISION-BAR-MATCH, verbatim \"No — match the bar\"): a closed-bar record does not count for a forming-bar leg. RQ-20261022-4de5-01 (docs/research/evidence/decision-bar-match-2026-10-22.json) graded this leg SWITCH_TO_CLOSED: forming FAILS RULE-D1 on the record window, closed passes. The Tier-3 'decision_bar: closed' proposal is on checklist DECISION-BAR-MATCH for the manager to execute. Proxy record window: closed +10.26R vs forming -9.45R. The prop gate passes on all three firms on the closed ledger.",
+  "state": "routed",
+  "what": "[strategy][stage-2-standing][prop] trend_donchian_eth_prop (PROP money: breakout_2, tradeify_1, velotrade_1; paper bybit_1) passes RULE-D1 on its closed-bar record (comms/strategy_evidence/trend_donchian_eth_prop.json: +9.32R, n=163, window 2025-10-07..2026-10-06) but FAILS it under decision_bar=forming, which is what the live builder trades: RQ-20261018-2a10-01 (docs/research/evidence/decision-bar-holdout-2026-10-18.json, Binance 1m proxy, full cost stack at the Bybit stack, not the prop firms') proxy closed +10.26R (n=164) reproduces the record within 0.94R; forming -9.45R (n=250) over the same window. Full history 2020-01..2026-10-16: closed n=1172 +89.14R vs forming n=1682 +74.68R; held-back latest 25% closed +10.99R (n=295) vs forming +1.32R (n=430). The pre-registered holdout rule did NOT select closed (2 of 4 discovery folds), so no decision_bar PR was opened. SAME DECISION SHAPE as PI-20260929-VOLSKIP-SIGNAL-0003 (xrp_pullback_2h): a Stage-0 record that does not describe the traded (forming-bar) trade set -- a decision arriving twice in the same shape; raise as 'should this become a mandate clause?' (CLAUDE.md § standing authorizations). Not acted on by the lane; prop legs clear a SUPERSET of the ladder (operator 2026-10-15), and this leg is already soaking on bybit_1 under PROP-GATE-PARITY (due 2026-11-07)."
+}

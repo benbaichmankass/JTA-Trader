@@ -1,0 +1,19 @@
+{
+  "based_on": "20261018T064623712920Z-025cdf3f.json",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "the leg's live builder decides on the closed bar (config/strategies.yaml decision_bar: closed merged AND the first live order package after the merge shows a closed-bar decision), or the leg is demoted; the reason is recorded here",
+    "kind": "observation",
+    "last_checked": "2026-10-22"
+  },
+  "id": "PI-20260929-VOLSKIP-SIGNAL-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane VOLSKIP-SIGNAL (manager session_01HYq6XtfesZ57VyaQrK6CL1), 2026-09-29, RQ-20260929-302",
+    "rerun": "python3 scripts/research/forming_bar_pooled_regrade.py --fetch --klines-dir /tmp/klines --out /tmp/p.json --leg xrp_pullback_2h  # holds while evidence_restatement.xrp_pullback_2h.STANDING_AT_RISK is true"
+  },
+  "routed_to": "DECISION-BAR-MATCH | [2026-10-22 lane DECISION-BAR-MATCH] Operator decided 2026-10-22 (checklist DECISION-BAR-MATCH, verbatim \"No — match the bar\"): a closed-bar record does not count for a forming-bar leg. RQ-20261022-4de5-01 (docs/research/evidence/decision-bar-match-2026-10-22.json) graded this leg SWITCH_TO_CLOSED: forming FAILS RULE-D1 on the record window, closed passes. The Tier-3 'decision_bar: closed' proposal is on checklist DECISION-BAR-MATCH for the manager to execute. Proxy record window: closed +11.44R vs forming -5.88R. The flip needs #18885 running on the VM (pullback builder honours decision_bar).",
+  "state": "routed",
+  "what": "[strategy][stage-2-standing] xrp_pullback_2h (REAL MONEY bybit_2) passes RULE-D1-STAGE0-NET-OF-FULL-COST on its closed-bar evidence record (comms/strategy_evidence/xrp_pullback_2h.json: +12.79R, n=57, window 2025-09-25..2026-09-24) but FAILS it under decision_bar=forming, which is what the live builder trades (RQ-20260929-302, Binance 1m proxy, full cost stack: proxy closed arm +11.75R n=58 reproduces the record within 1.04R; forming arm -7.56R n=77 over the same window). Full history 2020-01..2026-09: closed n=413 +43.42R vs forming n=497 +25.30R. The rule flags it to the manager for the demotion mandate's own clauses (MD-DEMOTE-S2-S1 is armed for auto-land); not acted on by the lane. Decision needed: whether a Stage-0 record that does not describe the traded (forming-bar) trade set still counts as this leg's evidence. || 2026-10-18 lane DECISION-BAR-CLOSED-1018 (RQ-20261018-2a10-01, docs/research/evidence/decision-bar-holdout-2026-10-18.json): STANDING_AT_RISK AGAIN on the leg's CURRENT record window 2025-10-08..2026-10-06 -- closed +11.44R (n=57) vs forming -5.88R (n=74), full cost stack, Binance 1m proxy; full history 2020-01..2026-10-16 closed n=414 +44.91R vs forming n=499 +26.24R; held-back latest 25% (from 2025-02-09) closed +14.82R (n=100) vs forming -0.86R (n=126). By the pre-registered holdout rule closed is NOT selected (ahead in 2 of 4 discovery folds, discovery dR +3.02R < 5R), so no decision_bar PR was opened. The live join (comms/research/live_bt_join/2026-10-18-decision-bar/xrp_pullback_2h.json) shows the FORMING replay fires on 6 of the 9 live-only bybit_2 trades: the entry gap is forming-bar timing. Decision still open: whether the closed-bar Stage-0 record counts as this leg's evidence while it trades the forming set."
+}

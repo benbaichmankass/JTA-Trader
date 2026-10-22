@@ -4,7 +4,7 @@ title: >-
   trades: is CLOSED or FORMING the better entry decision (paired per-fold delta, materiality floor,
   6 calendar folds, net of the full cost stack), and does the chosen bar clear RULE-D1 on the leg's
   own record window -> switch to closed, keep forming and re-base the record, or demote.
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROP
@@ -123,11 +123,34 @@ routing:
 run:
   workflow: none — session-local, scripts/research/decision_bar_match.py (command in the result record)
 lands:
-  store: docs/research/evidence/
-  assert_field: verdict
-  min_rows: 1
+  store: docs/research/evidence/decision-bar-match-2026-10-22.json
+  assert_field: verdicts
+  note: per-leg verdict.json + arm ledgers under comms/research/RQ-20261022-4de5-01/{eth,eth4h,sol,xrp_ada}/;
+    per-firm prop sim cells under comms/research/RQ-20261022-4de5-01/prop/.
 related:
 - research/queue/RQ-20261018-2a10-01.yaml
 - docs/research/evidence/decision-bar-holdout-2026-10-18.json
 - docs/claude/work/checklist/DECISION-BAR-MATCH.json
 - docs/claude/work/pipeline/20261018T064623923141Z-e6856c60.json
+last_dispatched_at: '2026-10-22T06:50:00+00:00'
+verdict: SWITCH_TO_CLOSED_ALL_FIVE
+result: >-
+  docs/research/evidence/decision-bar-match-2026-10-22.json. Rule committed at 726c5c09 (window pin
+  amended to 2026-10-20 23:59Z at ea1c3e27/f7faa8bd, before any run: the 10-21 daily archive was not
+  published). Run in the lane's container. trend_donchian_eth_4h first crashed on its YAML
+  tp_revision dict reaching backtest_trend (harness_kwargs fixed at 02fcf732, the leg re-run in
+  eth4h/; the other legs carry no tp_revision). Binance 1m proxy, full cost stack. Closed vs forming,
+  full window, 6 folds (C/F/T = folds closed / forming / tie past the floor), RULE-D1 on the
+  record window (closed / forming): trend_donchian_eth_prop +86.3R (n 1175) vs +72.4R (n 1685), 3/3/0,
+  +10.26 / -9.45R; xrp_pullback_2h +44.7 (415) vs +25.7 (499), 2/2/2, +11.44 / -5.88R;
+  ada_pullback_2h +99.9 (428) vs +79.3 (594), 3/3/0, +27.43 / -2.08R; trend_donchian_sol_prop
+  +52.9 (403) vs +36.6 (589), 4/2/0, +60.60 / +45.55R; trend_donchian_eth_4h +130.9 (295) vs +143.3
+  (446), 2/4/0, +54.59 / +59.40R. Every leg reads NO_MATERIAL_DIFFERENCE (none reaches 4 folds with
+  <= 1 opposite), so PREFERRED = closed by the registered tie-break, and closed passes RULE-D1 on
+  every record window -> SWITCH_TO_CLOSED on all five. Stated plainly: no leg showed closed
+  materially better; on eth_4h forming led (+12.4R, 4 of 6 folds) and also passes RULE-D1, so the
+  switch there is the tie-break alone. PROP GATE (closed ledger, RULE-P5-GATE-BRK-PER-LEG shape, 5
+  seeds, path mode, seed-median EV USD/life, seed-min EV): eth_prop breakout_2 PASS +65.4 (min
+  +62.3), tradeify_1 PASS +217.9 (+207.9), velotrade_1 PASS +154.0 (+148.7); sol_prop breakout_2
+  PASS +11.5 (+10.0), tradeify_1 PASS +1.2 (+0.3, thin), velotrade_1 PASS +22.4 (+22.1). No firm
+  fails, so no pull is proposed.
