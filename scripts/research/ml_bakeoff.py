@@ -163,7 +163,13 @@ def block_join_columns(df, spec: Dict[str, Any]) -> Dict[str, np.ndarray]:
     """Join a precomputed side-stream (e.g. fc_* from build_forecasts.py for another backend) on ts."""
     import pandas as pd
     path = _resolve_path(str(spec["path"]))
-    side = pd.read_parquet(path) if str(path).endswith(".parquet") else pd.read_csv(path)
+    sp = str(path)
+    if sp.endswith(".parquet"):
+        side = pd.read_parquet(path)
+    elif sp.endswith(".jsonl"):
+        side = pd.read_json(path, lines=True)
+    else:
+        side = pd.read_csv(path)
     on = spec.get("on", "ts")
     side[on] = pd.to_datetime(side[on], utc=True)
     left = pd.DataFrame({on: pd.to_datetime(df[on], utc=True)})
@@ -180,8 +186,82 @@ def block_df_columns(df, spec: Dict[str, Any]) -> Dict[str, np.ndarray]:
     return {c: np.asarray(df[c], dtype=float) for c in spec["columns"]}
 
 
+def _ridge_solve(X: np.ndarray, Y: np.ndarray, lam: float) -> np.ndarray:
+    """Ridge with an unpenalised intercept; returns the (p+1, m) coefficient matrix."""
+    Xa = np.column_stack([np.ones(len(X)), X])
+    pen = lam * np.eye(Xa.shape[1])
+    pen[0, 0] = 0.0
+    return np.linalg.solve(Xa.T @ Xa + pen, Xa.T @ Y)
+
+
+def block_var_price_vector(df, spec: Dict[str, Any]) -> Dict[str, np.ndarray]:
+    """Multivariate linear (VAR-style) PREDICTED PRICE VECTOR -- the BASELINE arm every TSFM must beat
+    (operator IDEAS 2026-10-21: "a predictive ML that uses multivariate regressions to create a predicted price vector").
+
+    Causal rolling ridge VAR(p) over K assets' 1-bar log returns r and absolute returns |r| (the second block is what
+    makes it informative for a VOLATILITY head): at each refit point the model is fit ONLY on rows whose next-bar
+    target is already known, then used to predict the next-bar [r_{t+1}] and [|r_{t+1}|] vectors for every asset.
+    Emits ``<prefix>ret_<SYM>`` / ``<prefix>abs_<SYM>`` (the vector) plus ``<prefix>ret_own`` / ``<prefix>abs_own``
+    for the group's own asset. No forward information: row t's prediction uses returns up to and including t.
+
+    spec: own (symbol name of this group's asset), return_col (default log_return), peers {SYM: jsonl/csv/parquet
+    path with ts + return_col}, lags (default 4), window (default 2000 rows), refit_every (default 96), ridge (default 1.0)
+    """
+    import pandas as pd
+    on = spec.get("on", "ts")
+    rc = spec.get("return_col", "log_return")
+    p = int(spec.get("lags", 4))
+    win = int(spec.get("window", 2000))
+    step = int(spec.get("refit_every", 96))
+    lam = float(spec.get("ridge", 1.0))
+    pre = spec.get("prefix", "var_")
+    own = str(spec.get("own", "OWN"))
+    t = pd.to_datetime(df[on], utc=True)
+    series = {own: np.asarray(df[rc], dtype=float)}
+    for sym, path in (spec.get("peers") or {}).items():
+        fp = str(_resolve_path(str(path)))
+        side = pd.read_json(fp, lines=True) if fp.endswith(".jsonl") else (
+            pd.read_parquet(fp) if fp.endswith(".parquet") else pd.read_csv(fp))
+        side[on] = pd.to_datetime(side[on], utc=True)
+        m = pd.DataFrame({on: t}).merge(side[[on, rc]], on=on, how="left")
+        series[str(sym)] = m[rc].to_numpy(dtype=float)
+    syms = list(series)
+    n, K = len(df), len(syms)
+    R = np.column_stack([np.nan_to_num(series[s]) for s in syms])      # (n, K)
+    A = np.abs(R)
+    Z = np.column_stack([R, A])                                         # (n, 2K) state at t
+    feats = np.column_stack([np.roll(Z, j, axis=0) for j in range(p)])  # lags 0..p-1 -> (n, 2K*p)
+    feats[: p - 1] = np.nan
+    Y = np.roll(Z, -1, axis=0)                                          # next-bar vector, known from t+1
+    Y[-1] = np.nan
+    pred = np.full((n, 2 * K), np.nan)
+    first = max(win // 2, p + 10)
+    for a in range(first, n, step):
+        lo = max(p - 1, a - win)
+        hi = a - 1                                                     # rows lo..hi-1 have a target at <= a-1+... known by a
+        Xtr, Ytr = feats[lo:hi], Y[lo:hi]
+        ok = np.isfinite(Xtr).all(axis=1) & np.isfinite(Ytr).all(axis=1)
+        if ok.sum() < 4 * feats.shape[1]:
+            continue
+        W = _ridge_solve(Xtr[ok], Ytr[ok], lam)
+        b = min(a + step, n)
+        Xb = feats[a:b]
+        good = np.isfinite(Xb).all(axis=1)
+        pb = np.full((b - a, 2 * K), np.nan)
+        pb[good] = np.column_stack([np.ones(good.sum()), Xb[good]]) @ W
+        pred[a:b] = pb
+    out: Dict[str, np.ndarray] = {}
+    for i, s in enumerate(syms):
+        out[f"{pre}ret_{s}"] = pred[:, i]
+        out[f"{pre}abs_{s}"] = pred[:, K + i]
+    out[f"{pre}ret_own"] = pred[:, 0]
+    out[f"{pre}abs_own"] = pred[:, K]
+    return out
+
+
 FEATURE_BLOCKS: Dict[str, Callable[..., Dict[str, np.ndarray]]] = {
-    "har_rv": block_har_rv, "join_columns": block_join_columns, "df_columns": block_df_columns}
+    "har_rv": block_har_rv, "join_columns": block_join_columns, "df_columns": block_df_columns,
+    "var_price_vector": block_var_price_vector}
 
 
 # ── learners ─────────────────────────────────────────────────────────────────

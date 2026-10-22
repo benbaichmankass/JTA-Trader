@@ -432,3 +432,38 @@ def test_torch_gru_is_unavailable_not_silent_without_torch(monkeypatch):
     assert "torch" in (mb.probe_learner("torch_gru", {}) or "")
     with pytest.raises(mb.Unavailable):
         mb.LEARNERS["torch_gru"][0](np.zeros((50, 2)), np.zeros(50, int), np.zeros((5, 2)), 2, {})
+
+
+def _var_frames(tmp_path, n=900, seed=3):
+    import pandas as pd
+    rng = np.random.default_rng(seed)
+    ts = pd.date_range("2025-01-01", periods=n, freq="15min", tz="UTC")
+    base = rng.normal(scale=0.01, size=n)
+    own = base + rng.normal(scale=0.004, size=n)
+    peer = np.roll(base, -1) * 0.8 + rng.normal(scale=0.004, size=n)     # peer LEADS own by one bar
+    pd.DataFrame({"ts": ts, "log_return": peer}).to_json(tmp_path / "peer.jsonl", orient="records", lines=True,
+                                                         date_format="iso")
+    return pd.DataFrame({"ts": ts, "log_return": own}), {"own": "BTC", "peers": {"ETH": str(tmp_path / "peer.jsonl")},
+                                                           "lags": 3, "window": 400, "refit_every": 48}
+
+
+def test_var_price_vector_is_causal_and_emits_the_vector(tmp_path):
+    df, spec = _var_frames(tmp_path)
+    a = mb.block_var_price_vector(df, spec)
+    assert {"var_ret_BTC", "var_ret_ETH", "var_abs_BTC", "var_abs_ETH", "var_ret_own", "var_abs_own"} <= set(a)
+    assert np.isfinite(a["var_ret_own"][-1]) and np.isnan(a["var_ret_own"][:100]).all()
+    df2 = df.copy()
+    df2.loc[700:, "log_return"] = 9.9                                   # corrupt the FUTURE of own
+    b = mb.block_var_price_vector(df2, spec)
+    for k in a:
+        assert np.allclose(a[k][:700], b[k][:700], equal_nan=True), k
+
+
+def test_var_price_vector_uses_the_peer_lead(tmp_path):
+    df, spec = _var_frames(tmp_path)
+    with_peer = mb.block_var_price_vector(df, spec)["var_ret_own"]
+    solo = mb.block_var_price_vector(df, {k: v for k, v in spec.items() if k != "peers"})["var_ret_own"]
+    nxt = np.roll(df["log_return"].to_numpy(), -1)
+    m = np.isfinite(with_peer) & np.isfinite(solo)
+    m[-1] = False
+    assert np.corrcoef(with_peer[m], nxt[m])[0, 1] > np.corrcoef(solo[m], nxt[m])[0, 1]
