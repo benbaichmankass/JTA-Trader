@@ -1,7 +1,7 @@
 id: RQ-20261022-326f-04
 title: >-
   Low-volatility entry skip, trend_donchian_xrp_4h: does an arm beat the declared setting net of the full cost stack (R>=1.0, >= 3 of 4 calendar folds, no worse drawdown)?
-status: queued
+status: done
 cadence: once
 theme: regime
 priority: 1
@@ -104,3 +104,16 @@ related:
 - RQ-20261022-3a84-01
 - THEME-AUTHOR-1022
 last_dispatched_at: '2026-10-22T14:56:53+00:00'
+grading:
+  attested: RULE-RQ20261022-326F-04-VOL-SKIP-BELOW-PCTL
+  auto: true
+  decision_rule_id: RULE-RQ20261022-326F-04-VOL-SKIP-BELOW-PCTL
+  evidence:
+  - research/results/RQ-20261022-326f-04/39800264871.jsonl
+  graded_at: '2026-10-22'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
