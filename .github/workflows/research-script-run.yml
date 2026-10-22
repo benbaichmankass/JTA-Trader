@@ -112,7 +112,7 @@ jobs:
           UNIT: ${{ inputs.research_unit }}
         run: |
           if grep -qs "ml_bakeoff" "research/queue/${UNIT}.yaml"; then
-            pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements-research-learners.txt
+            pip install --extra-index-url https://download.pytorch.org/whl/cpu -r scripts/research/requirements-learners.txt
             python3 scripts/research/probe_learners.py --backend github_runner
           else
             echo "unit does not run ml_bakeoff: learners not installed"
