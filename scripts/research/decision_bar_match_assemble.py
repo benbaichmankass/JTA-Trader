@@ -1,3 +1,4 @@
+# wiring: manual-only - assembles the committed RQ-20261022-4de5-01/-02 evidence record from committed cells; re-run by hand to reproduce it
 """RQ-20261022-4de5-01/-02: assemble docs/research/evidence/decision-bar-match-2026-10-22.json from the replay verdicts
 and the per-firm prop sim cells
 (prop_ev_sim.py, argv identical to prop_ev_grid; re-run: python3 scripts/research/decision_bar_match_assemble.py). Applies RULE-RQ-20261022-4de5-02 (TP) exactly as registered."""

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# wiring: manual-only - session-local research harness for RQ-20261022-4de5-01/-02 (unit run.workflow: none — session-local); re-run per the unit result block
 """Decision-bar MATCH: which bar should a leg decide on, and does its evidence describe that bar?
 
 RQ-20261022-4de5-01 / RULE-RQ-20261022-4de5-01 (checklist DECISION-BAR-MATCH). Also builds the
