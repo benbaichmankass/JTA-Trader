@@ -332,8 +332,15 @@ def test_real_stage2_thresholds_match_the_operators_pricing():
     Re-stated 2026-10-12 (RQ-20261007-023 PASS, RULE-RQ1007-XRP4H-STAGE0-1460D):
     the 1460d xrp_4h record (n=46, p10 -3.885) replaced the 365d n=16 one, and its
     p10 is NEGATIVE, so xrp_4h now pins False. SIGNAL-0005's pricing is reported
-    to the operator as changed, not silently kept."""
-    for leg, positive in (("trend_donchian_xrp_4h", False), ("ief_pullback_1d", True),
+    to the operator as changed, not silently kept.
+
+    Re-stated 2026-10-22 (OPERATOR-DECISIONS-1022): the six 1d pullback records and
+    xrp_4h were rebuilt after the tp_r 3.5 / ADX-trail declares (records were STALE
+    on config_fingerprint). ief_pullback_1d's rebuilt 365d record (n_oos 6, window to
+    2026-10-22) has p10 -5.4691 (was +14.9357), so ief now pins False. ief left the
+    real-money rosters in #19403, so no live book's pricing rests on it; the change
+    is reported to the operator through the manager, not silently kept."""
+    for leg, positive in (("trend_donchian_xrp_4h", False), ("ief_pullback_1d", False),
                           ("iaum_pullback_1d", True), ("xrp_pullback_2h", False),
                           ("ada_pullback_2h", False), ("trend_donchian_eth_4h", False),
                           ("slv_pullback_1d", False)):

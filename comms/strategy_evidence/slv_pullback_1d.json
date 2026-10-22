@@ -3,7 +3,7 @@
   "strategy": "slv_pullback_1d",
   "symbol": "SLV",
   "timeframe": "1d",
-  "config_fingerprint": "sha256:bb3862777429932bab7d8813a0382351",
+  "config_fingerprint": "sha256:b3a10439190b5e91b50fa1e4164c3920",
   "basis": "harness_timefolds",
   "coverage_state": "measured",
   "fidelity": "approximate",
@@ -11,41 +11,41 @@
     "trail_decay_stall_bars",
     "trail_decay_tight_mult"
   ],
-  "net_r_oos": 2.4842,
-  "expectancy_r_oos": 0.2258,
-  "n_trades_oos": 11,
+  "net_r_oos": 3.0026,
+  "expectancy_r_oos": 0.3003,
+  "n_trades_oos": 10,
   "folds": 4,
   "fold_detail": [
     {
       "fold": 1,
       "trades": 2,
-      "net_r": 1.9207,
-      "expectancy_r": 0.9603,
-      "start": "2025-07-29 00:00:00+00:00",
-      "end": "2025-08-01 00:00:00+00:00"
+      "net_r": 4.1223,
+      "expectancy_r": 2.0612,
+      "start": "2025-08-01 00:00:00+00:00",
+      "end": "2025-10-22 00:00:00+00:00"
     },
     {
       "fold": 2,
       "trades": 2,
-      "net_r": 3.0669,
-      "expectancy_r": 1.5334,
-      "start": "2025-10-22 00:00:00+00:00",
-      "end": "2025-11-18 00:00:00+00:00"
+      "net_r": 2.6148,
+      "expectancy_r": 1.3074,
+      "start": "2025-11-18 00:00:00+00:00",
+      "end": "2026-02-24 00:00:00+00:00"
     },
     {
       "fold": 3,
       "trades": 2,
-      "net_r": -0.2694,
-      "expectancy_r": -0.1347,
-      "start": "2026-02-24 00:00:00+00:00",
-      "end": "2026-04-07 00:00:00+00:00"
+      "net_r": -2.0117,
+      "expectancy_r": -1.0058,
+      "start": "2026-04-07 00:00:00+00:00",
+      "end": "2026-04-21 00:00:00+00:00"
     },
     {
       "fold": 4,
-      "trades": 5,
-      "net_r": -2.234,
-      "expectancy_r": -0.4468,
-      "start": "2026-04-21 00:00:00+00:00",
+      "trades": 4,
+      "net_r": -1.7228,
+      "expectancy_r": -0.4307,
+      "start": "2026-06-16 00:00:00+00:00",
       "end": "2026-09-18 00:00:00+00:00"
     }
   ],
@@ -54,15 +54,15 @@
   "fee_bps_roundtrip": 0.0,
   "path_stats": {
     "series_location": "source_run (the per-trade rows, in order, with net_r)",
-    "n": 11,
-    "max_drawdown_r": 3.2389,
-    "max_drawdown_at_trade": 11,
-    "final_equity_r": 2.4842,
-    "max_equity_r": 5.7231,
-    "worst_trade_r": -1.014,
+    "n": 10,
+    "max_drawdown_r": 3.7345,
+    "max_drawdown_at_trade": 10,
+    "final_equity_r": 3.0026,
+    "max_equity_r": 6.7371,
+    "worst_trade_r": -1.0083,
     "best_trade_r": 2.9347,
-    "worst_day_r": -1.014,
-    "worst_day_date": "2025-07-30",
+    "worst_day_r": -1.0083,
+    "worst_day_date": "2026-09-28",
     "trades_without_exit_time": 0,
     "ordering": "by entry_time ascending; pooled ACROSS folds, so this is the full-window path, not a per-fold one",
     "not_a_verdict": "Descriptive only. No bar is applied here -- the prop bar is B6's to register, and it must be registered before these numbers are read."
@@ -72,9 +72,9 @@
     "slippage": 5.0,
     "funding": 0.0,
     "unit": "bps_roundtrip (funding: bps per funding window)",
-    "source": "comms/strategy_evidence/runs/2026-09-24-e55/slv_pullback_1d__bt.json"
+    "source": "comms/strategy_evidence/runs/2026-10-22-odc1022/slv_pullback_1d__bt.json"
   },
-  "net_r_oos_fee_only": 2.5756,
+  "net_r_oos_fee_only": 3.0799,
   "decision_rule": {
     "id": "RULE-D1-STAGE0-NET-OF-FULL-COST",
     "rule": "Stage 0 requires net_r_oos -- pooled net_total_r from the harness's out-of-sample time-folds, net of the FULL cost stack (fee + slippage + funding) -- to be > 0. Restates the existing promotion-ladder Stage-0 bar as a checkable predicate over this record's own fields; does not itself authorize or perform any roster change.",
@@ -82,9 +82,10 @@
     "verdict": "pass"
   },
   "param_selection_provenance": "not_established",
-  "generated_at": "2026-09-24T12:45:00.216444+00:00",
+  "generated_at": "2026-10-22T07:38:14.590719+00:00",
   "generated_by": "scripts/ops/build_strategy_evidence.py",
-  "source_run": "comms/strategy_evidence/runs/2026-09-24-e55/slv_pullback_1d__trades.jsonl",
+  "source_run": "comms/strategy_evidence/runs/2026-10-22-odc1022/slv_pullback_1d__trades.jsonl",
   "error": null,
-  "harness": "pullback"
+  "harness": "pullback",
+  "venue_bracket_arm": null
 }
