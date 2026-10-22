@@ -41,8 +41,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import candle_io  # noqa: E402  (shared OHLCV reader; see _load_candles)
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
+# The repo root goes FIRST even when it is already on sys.path (PYTHONPATH=<repo>, as
+# pytest-run sets): otherwise scripts/ (inserted above) shadows the top-level `ml`
+# package with scripts/ml, and --emit-paths dies on `ml.datasets` (harness_emit ->
+# src.runtime.regime_shadow). Same remove-then-insert as scripts/backtest_pullback.py.
+if str(_REPO_ROOT) in sys.path:
+    sys.path.remove(str(_REPO_ROOT))
+sys.path.insert(0, str(_REPO_ROOT))
 
 from src.runtime import execution_costs  # noqa: E402  (the ONE shared cost model)
 from src.research.trail_levers import (  # noqa: E402  (the ONE trail-lever rule)
