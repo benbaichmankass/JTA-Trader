@@ -46,7 +46,7 @@ decision_rule:
     recorded honest_negative on this history. The bar, the drawdown clause, the fold majority, the 39 floor and the arm values are not changed after any result.
   what_it_does_not_do: >-
     Does not mine values: the arm values are fixed here and may not be edited after seeing any result. Does not edit config, place an order or touch a roster; a single-leg
-    pass is a LEAD only, not a promotion case. Does not test any other axis.
+    pass is a LEAD only, not a promotion case. Does not test any other axis. The leg declares tp_revision, so each T arm REPLACES the declared TP mover (-tp_revision) with a fixed GEOM-B1 target; this is a replace-the-mover test, not an add-on.
   min_n: '39'
 compute: cpu_light
 value:
@@ -72,9 +72,9 @@ run:
   - --arm
   - B=
   - --arm
-  - T3=--tp-target-r=3
+  - T3=-tp_revision;--tp-target-r=3
   - --arm
-  - T4=--tp-target-r=4
+  - T4=-tp_revision;--tp-target-r=4
   - --days
   - '7300'
   - --end
