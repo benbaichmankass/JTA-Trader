@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the daily live-replay-parity run reports 0 of this class for this leg, with the cause root-caused, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261022-LRP-32329EEC",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "live-replay-parity:xrp_pullback_2h:lost_bar",
+    "rerun": "python3 scripts/ops/live_replay_parity.py --base-url <tunnel to the live web-api> --days 7  (or label an issue `live-replay-parity`; the workflow .github/workflows/live-replay-parity.yml runs it daily and commits comms/live_parity/latest.json)"
+  },
+  "state": "queued",
+  "what": "Live-vs-replay parity: leg `xrp_pullback_2h` — lost_bar ×1 (REAL-MONEY roster) in window 2026-10-15T16:00:00+00:00..2026-10-22T16:00:00+00:00. MEASURED by scripts/ops/live_replay_parity.py; artifact comms/live_parity/2026-10-22.json. Examples: [{\"class\": \"lost_bar\", \"bar\": \"2026-10-22T14:00:00+00:00\", \"detail\": \"no xrp_pullback_2h_eval in the 360s window after close\"}]"
+}
