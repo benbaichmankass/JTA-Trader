@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-10-29",
+    "kind": "date"
+  },
+  "id": "PI-20261022-HOPS1447-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261022-1447 step D (RQ-20261022-1f8b-01)",
+    "rerun": "python3 - <<'X'\nimport json;r=json.loads(open('research/results/RQ-20261022-1f8b-01/39769634866.jsonl').readline());print(r['verdict'],r['population']['n'])\nX  # still indeterminate at n < 100 => unresolved"
+  },
+  "severity": "low",
+  "state": "queued",
+  "tier": 1,
+  "what": "[research-ops 1447] Programme 01 Q11 rung 1 confirmation RQ-20261022-1f8b-01 read INDETERMINATE: 58 trades open at k=6 against n_floor 100 on the disjoint 2018-10..2020-06 window (history cannot add more; this is a window-size limit, not a pooled result). The first-window PASS (ll_gain 0.0137, 5/6 folds, ada-driven) is therefore UNCONFIRMED and rung 2 (bank 50% at +1R when the metric crosses its threshold) must not be opened on it. Decide ONE of: (a) re-ask on the live leg path history (position_path_history) once it holds >= 100 closed trades per the same statistic as a new pre-registered unit; (b) retire Q11 rung 2 with a stated reason. Rule not edited."
+}

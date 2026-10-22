@@ -145,6 +145,8 @@ jobs:
           echo "== trainer git: $(git rev-parse --short HEAD) python: $($PY -V 2>&1)"
           echo "== mem: $(free -m | awk '/Mem:/ {print $7" MB available"}')"
           export PATH="/home/ubuntu/ict-trading-bot/.venv/bin:$PATH"
+          # ML-NONGBDT-RUNNERS: report which ml_bakeoff arms import in THIS venv (read-only; a missing arm is a fact, not a halt).
+          if [ -f scripts/research/probe_learners.py ]; then python3 scripts/research/probe_learners.py --backend trainer; fi
           python3 scripts/research/script_run.py --unit "$UNIT" --run-id "$RUN_ID" --run
           RC=$?
           echo "== script_run exit: $RC"

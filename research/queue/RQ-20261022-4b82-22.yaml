@@ -1,0 +1,106 @@
+id: RQ-20261022-4b82-22
+title: 'Giveback VARIANT with a non-degenerate target: is a giveback above 80% of the peak predictable from the entry columns within the four
+  ledgers with n >= 300?'
+status: queued
+cadence: once
+roadmap:
+- M23
+- M25
+theme: ml_health
+priority: 2
+kind: experiment
+question: RQ-20261014-9d20-03 (giveback_gt 0.5, all six entry columns, 17 legs at n >= 100) graded FAIL. On the committed per-trade test-result
+  ledgers restricted to the legs with n >= 300 (squeeze_doge_1h, pullback_link_1h, pullback_doge_1h, pullback_ada_1h), does a numpy logit on the
+  six entry columns predict a peak-to-exit giveback above 80% of the peak (5 purged folds with embargo 5, AUC gain >= 0.05 over the class prior
+  with the interval lower bound > 0 AND selection lift >= 0.05 R).
+why_this_matters: 'Operator directive 2026-10-22: an idea that failed one test is not dead; it failed the first test. This unit is a registered
+  VARIANT of that first test. First test: RQ-20261014-9d20-03 (giveback_gt 0.5, all six entry columns, 17 legs at n >= 100) graded FAIL. DIAGNOSIS
+  (one line): two problems: (1) per-leg n was 116-549 over 4 folds, so each test fold held 25-137 trades and the AUC-gain intervals spanned +-0.3
+  to +-0.8 (ict_scalp_5m [-0.41, +0.28]); (2) a local smoke run of a sibling variant (discarded, not a registered result) showed the 0.5 target''s
+  positive rate is 0.80-0.94 on these four legs, i.e. almost every trade gives back more than half its peak, so 0.5 is a near-degenerate class
+  and the AUC has little to separate. 0.8 is chosen from that base-rate look; the AUC at 0.8 has not been seen. Lane AUTHOR-FLOOR-1022 (research
+  runnable floor 33 vs 65 at 17:40Z). Prior ids: RQ-20261014-9d20-03. ml_health was short (0 runnable) in the 17:40Z health check; this unit is
+  not a sequence model, a tabular bake-off or a forecaster.'
+power:
+  expected_n: 1708
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: The four legs with n >= 300 in the newest committed ledgers hold 1708 trades (squeeze_doge_1h 549, pullback_link_1h 400, pullback_doge_1h
+    384, pullback_ada_1h 375, counted from RQ-20261014-9d20-02's measurement); a per-leg AUC test of d=0.1 needs well over 100 test trades per
+    fold-pool, so legs below the floor are excluded, not tested.
+  feasibility:
+    source: none
+    accrual_basis: Re-reads committed ledgers under comms/strategy_evidence/runs/; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261022-4B82-22-GIVEBACK-80
+  registered_at: '2026-10-22'
+  registered_before_run: true
+  statistic: 'scripts/research/ledger_metalabel.py --mode classify --legs ^(squeeze_doge_1h|pullback_(link|doge|ada)_1h)$ --target giveback_gt
+    --threshold 0.8 --learners prior,numpy_logit --min-leg-n 300 --folds 5 --embargo 5 --skip-quantile 0.2 --auc-gain 0.05 --lift-r 0.05; per
+    (leg, arm): fold AUC, AUC minus the class prior with a 95% interval across folds, selection_lift_r at the skip quantile, n; arms prior and
+    numpy_logit.'
+  rule: 'Fixed now. UNDERPOWERED (indeterminate) IF fewer than 2 legs qualify at --min-leg-n 300. PASS IF for at least one (leg, arm) the AUC
+    gain >= 0.05 with the interval lower bound > 0 AND selection_lift_r >= 0.05 R: the columns carry a within-leg take/skip signal at adequate
+    n; the follow-up is the within-FAMILY confirmation on the same legs. FAIL IF every evaluated arm on every qualifying leg has an AUC interval
+    containing 0.5 with >= 100 test trades per fold-pool: with the first test''s power problem removed, these columns carry no signal and the
+    line is closed for them. Per-leg positive-class degeneracy clause (the grading session reads it from the record''s base_rate field): a leg
+    whose base_rate for the target is outside 0.15..0.85 is excluded as degenerate and named; INDETERMINATE IF fewer than 2 legs remain. A FAIL
+    closes only these columns on these legs; richer entry features (METALABEL-EMIT-FEATURES) remain the next lever.'
+  what_it_does_not_do: Trains and promotes no model, edits no config, gates no trade; reads committed ledgers only. Not a promotion case; a PASS
+    authorises only a budget-matched path-dependent A/B per leg under the exit-refinement skill.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 60
+  confidence: 0.15
+  bucket: ai_trader
+  basis: 'stand-in: a within-leg take/skip filter on a live-family leg; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 10
+  why_runner: Fetches public candles / reads committed files; CPU only; not trainer-resident.
+  basis: Estimate from the comparable harness_stage0 / exit_lever_ablation runs of 2026-10-16..22; the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/ledger_metalabel.py
+  - --mode
+  - classify
+  - --legs
+  - ^(squeeze_doge_1h|pullback_(link|doge|ada)_1h)$
+  - --target
+  - giveback_gt
+  - --threshold
+  - '0.8'
+  - --learners
+  - prior,numpy_logit
+  - --min-leg-n
+  - '300'
+  - --folds
+  - '5'
+  - --embargo
+  - '5'
+  - --skip-quantile
+  - '0.2'
+  - --auc-gain
+  - '0.05'
+  - --lift-r
+  - '0.05'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261022-4b82-22
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P2
+related:
+- scripts/research/ledger_metalabel.py
+- RQ-20261014-9d20-03
+- AUTHOR-FLOOR-1022
