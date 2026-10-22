@@ -334,3 +334,99 @@ def test_calibrated_logit_learner_is_registered_and_beats_the_prior_on_a_linear_
     ll = mb.compute_metric("logloss", y[te], P, [0, 1, 2])
     ll_prior = mb.compute_metric("logloss", y[te], mb._fit_prior(X[tr], y[tr], X[te], 3, {}), [0, 1, 2])
     assert ll < ll_prior - 0.1, (ll, ll_prior)
+
+
+# ── ML-INSTRUMENTS-W43: the non-GBDT arms that errored or could not run ─────────────────────────────────────────────
+class _CpuLimited:
+    """Stand-in for TabPFN's CPU refusal: raises above 5,000 training rows, otherwise a class-frequency model."""
+    LIMIT = 5000
+
+    def __init__(self, **kw):
+        self.kw = kw
+
+    def fit(self, X, y):
+        if len(X) > self.LIMIT:
+            raise RuntimeError("Running on CPU with more than 5000 samples is not allowed by default")
+        self.classes_ = np.array(sorted(set(np.asarray(y).tolist())))
+        self.p_ = np.array([(np.asarray(y) == c).mean() for c in self.classes_])
+        return self
+
+    def predict_proba(self, X):
+        assert len(X) <= self.LIMIT, "predict called with more rows than the cap"
+        return np.tile(self.p_, (len(X), 1))
+
+
+def test_tabpfn_cpu_row_limit_is_subsampled_not_an_error(monkeypatch):
+    import types
+    monkeypatch.setitem(sys.modules, "tabpfn", types.SimpleNamespace(TabPFNClassifier=_CpuLimited))
+    rng = np.random.RandomState(0)
+    X, y = rng.normal(size=(12000, 3)), rng.randint(0, 3, 12000)
+    P = mb.LEARNERS["tabpfn"][0](X[:9000], y[:9000], X[9000:], 3, {})  # 9,000 train + 3,000 test: both sides capped
+    assert P.shape == (3000, 3) and np.allclose(P.sum(axis=1), 1.0)
+    with pytest.raises(RuntimeError):  # the uncapped base really does refuse this size (the failure being fixed)
+        _CpuLimited().fit(X[:9000], y[:9000])
+
+
+def test_capped_ensemble_averages_members_and_handles_a_class_missing_from_a_member():
+    rng = np.random.RandomState(1)
+    y = np.concatenate([np.zeros(6000, int), np.ones(6000, int), [2] * 5])  # class 2 is rare: most draws miss it
+    X = rng.normal(size=(len(y), 2))
+    ens = mb._CappedEnsemble(lambda: _CpuLimited(), 3000, 4, "random", 0, 3000).fit(X, y)
+    assert len(ens._fitted) == 4
+    P = ens.predict_proba(X[:10])
+    assert P.shape == (10, 3) and np.allclose(P.sum(axis=1), 1.0)
+    # different members drew different rows (seeded per member), and the draw is reproducible
+    assert not all(np.array_equal(ens._rows(len(y), 0), ens._rows(len(y), j)) for j in (1, 2, 3))
+    assert np.array_equal(ens._rows(len(y), 2), ens._rows(len(y), 2))
+    recent = mb._CappedEnsemble(lambda: _CpuLimited(), 3000, 4, "recent", 0, 3000).fit(X, y)
+    assert len(recent._fitted) == 1 and np.array_equal(recent._rows(len(y), 0), np.arange(len(y) - 3000, len(y)))
+
+
+def test_tabpfn_arm_runs_through_the_engine_when_capped(monkeypatch):
+    import types
+    monkeypatch.setitem(sys.modules, "tabpfn", types.SimpleNamespace(TabPFNClassifier=_CpuLimited))
+    spec = _spec(dataset={"kind": "synthetic", "groups": ["A"], "n": 9000, "signal": 2.0, "ts_col": "ts",
+                          "target": "label", "features": ["x0", "x1", "x2", "x3"]},
+                 candidates=["pfn"], learners={"prior": {"kind": "prior"}, "pfn": {"kind": "tabpfn", "params": {"n_members": 2}}},
+                 rule={"min_folds": 3, "pass_if": [{"group": ["A"], "vs": "baseline", "op": ">=", "value": -1.0}],
+                       "fail_if_no_candidate_reaches": [{"group": "any", "vs": "baseline", "op": ">", "value": -1.0}]})
+    arm = mb.run_spec(spec, unit="t")["measurement"]["groups"]["A"]["arms"]["pfn"]
+    assert arm["status"] == "ok", arm  # 9,000 rows x 4 folds: was status=error before the cap
+
+
+def test_torch_gru_sees_a_lagged_signal_a_flat_learner_cannot():
+    torch = pytest.importorskip("torch")
+    assert torch
+    rng = np.random.RandomState(0)
+    n = 3200
+    X = rng.normal(size=(n, 3))
+    y = np.zeros(n, dtype=int)
+    y[3:] = (X[:-3, 0] > 0).astype(int)  # the label is the SIGN of feature 0 three rows ago: invisible to a row-wise learner
+    tr, te = slice(0, 2400), slice(2400, n)
+    params = {"window_bars": 8, "hidden": 16, "epochs": 40, "lr": 1e-2, "seed": 0}
+    gru = mb.LEARNERS["torch_gru"][0](X[tr], y[tr], X[te], 2, params)
+    flat = mb.LEARNERS["numpy_logit"][0](X[tr], y[tr], X[te], 2, {})
+    assert gru.shape == (800, 2) and np.allclose(gru.sum(axis=1), 1.0, atol=1e-5)
+    acc = lambda P: float((P.argmax(1) == y[te]).mean())
+    assert acc(flat) < 0.58 and acc(gru) > 0.8, (acc(flat), acc(gru))
+    again = mb.LEARNERS["torch_gru"][0](X[tr], y[tr], X[te], 2, params)
+    assert np.allclose(gru, again, atol=1e-5)  # seeded: the arm is reproducible
+
+
+def test_torch_gru_test_windows_never_look_across_the_block_boundary():
+    pytest.importorskip("torch")
+    rng = np.random.RandomState(2)
+    X = rng.normal(size=(1200, 2))
+    y = rng.randint(0, 2, 1200)
+    p = {"window_bars": 6, "hidden": 8, "epochs": 2, "seed": 3}
+    a = mb.LEARNERS["torch_gru"][0](X[:800], y[:800], X[800:], 2, p)
+    # a row's output depends only on the rows at or before it in the test block
+    c = mb.LEARNERS["torch_gru"][0](X[:800], y[:800], X[800:1000], 2, p)
+    assert np.allclose(a[:200], c, atol=1e-5)
+
+
+def test_torch_gru_is_unavailable_not_silent_without_torch(monkeypatch):
+    monkeypatch.setitem(sys.modules, "torch", None)
+    assert "torch" in (mb.probe_learner("torch_gru", {}) or "")
+    with pytest.raises(mb.Unavailable):
+        mb.LEARNERS["torch_gru"][0](np.zeros((50, 2)), np.zeros(50, int), np.zeros((5, 2)), 2, {})
