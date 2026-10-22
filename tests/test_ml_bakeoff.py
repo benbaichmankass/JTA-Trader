@@ -467,3 +467,17 @@ def test_var_price_vector_uses_the_peer_lead(tmp_path):
     m = np.isfinite(with_peer) & np.isfinite(solo)
     m[-1] = False
     assert np.corrcoef(with_peer[m], nxt[m])[0, 1] > np.corrcoef(solo[m], nxt[m])[0, 1]
+
+
+def test_common_rows_restricts_every_arm_to_rows_all_side_streams_cover():
+    import pandas as pd
+    df = mb.synthetic_frame(2400, 5, 1.5)
+    df["fcA"] = np.where(np.arange(len(df)) % 4 == 0, df["x0"], np.nan)      # stride-4 stream
+    df["fcB"] = np.where(np.arange(len(df)) % 8 == 0, df["x1"], np.nan)      # stride-8 stream
+    spec = {"task": "classification", "common_rows": True, "cv": {"folds": 3, "embargo_rows": 4, "min_train_frac": 0.4},
+            "dataset": {"ts_col": "ts", "target": "label", "features": ["x2"]}}
+    ls = {"a": {"kind": "prior", "feature_blocks": [{"kind": "df_columns", "columns": ["fcA"], "require_finite": True}]},
+          "b": {"kind": "prior", "feature_blocks": [{"kind": "df_columns", "columns": ["fcB"], "require_finite": True}]}}
+    res = mb.run_group(df, spec, ls, "macro_f1", {})
+    assert res["n_common_rows"] == 300                                         # every 8th of 2400
+    assert res["arms"]["a"]["windows"]["cv"]["n_test_rows"] == res["arms"]["b"]["windows"]["cv"]["n_test_rows"]

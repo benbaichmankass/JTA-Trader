@@ -682,6 +682,22 @@ def run_group(df, spec: Dict[str, Any], learner_specs: Dict[str, Dict[str, Any]]
         tr = tr[: max(0, len(tr) - int(cv.get("embargo_rows", 0)))]
         windows["holdout"] = [(tr, te)] if len(tr) >= 50 and len(te) >= 20 else []
     res: Dict[str, Any] = {"n_rows": int(len(df)), "classes": [str(c) for c in classes], "arms": {}}
+    if spec.get("common_rows"):
+        # SAME ROWS for every arm (RQ-20261011-9da8-01 'identical rows'): a feature block marked ``require_finite: true``
+        # (a sparse fc_* side-stream: one forecast per stride, NaN between) votes; train/test indices are restricted to
+        # rows where EVERY available arm's marked columns are finite. Without this, arms with a denser or sparser
+        # side-stream would be graded on different rows.
+        common = np.ones(len(df), dtype=bool)
+        for name, ls in learner_specs.items():
+            if status.get(name):
+                continue
+            for blk in ls.get("feature_blocks") or []:
+                if blk.get("require_finite"):
+                    for arr in FEATURE_BLOCKS[blk["kind"]](df, blk).values():
+                        common &= np.isfinite(arr)
+        windows = {w: [(tr[common[tr]], te[common[te]]) for tr, te in wf] for w, wf in windows.items()}
+        windows = {w: [(tr, te) for tr, te in wf if len(tr) >= 50 and len(te) >= 20] for w, wf in windows.items()}
+        res["n_common_rows"] = int(common.sum())
     for name, ls in learner_specs.items():
         why = status.get(name)
         if why:
