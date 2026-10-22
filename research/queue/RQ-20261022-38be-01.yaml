@@ -1,0 +1,168 @@
+id: RQ-20261022-38be-01
+cadence: once
+theme: ml_health
+kind: experiment
+title: 'REDESIGN of 4a3b-01 (timed out at 300 min with the CPU TabPFN control in the run; control dropped, rule unchanged): Frontier / tabular foundation model, capped-ensemble arm on the WIDER feature set: TabICL (3 x 4,000-row members) vs LightGBM on the BTC/ETH/SOL 15m
+  volatility-regime head, both fed the 4 range-vol estimators (tabular_foundation_model; TabPFN rides as an observed, CPU-capped, research-only control)'
+status: queued
+priority: 3
+question: On the trainer's BTC/ETH/SOL 15m v002 shards (last 12,000 rows, the 6 shared features PLUS parkinson/garman_klass/rogers_satchell/yang_zhang vol given
+  to BOTH arms), under identical purged folds, does a 3-member TabICL ensemble (each member fits <= 4,000 rows) beat LightGBM by >= +0.010 macro-F1 on at least
+  2 of 3 symbols with the same sign on the third?
+why_this_matters: 'ML-INSTRUMENTS-W43 (operator week priority: non-GBDT families). tabular_foundation_model has one INDETERMINATE (ff8f-02 2026-10-18: tabicl
+  ran, deltas vs lightgbm were BTC +0.0001 / ETH -0.0005 / SOL -0.0966 mean macro-F1, none clearing +0.010; tabpfn arm_status error on the CPU >5,000-sample
+  refusal). Two things changed since: (1) the bake-off engine now caps and ensembles in-context learners (`max_train_rows`, `n_members`; tests/test_ml_bakeoff.py
+  ::test_tabpfn_*), so the TabPFN control can reach its licence gate instead of dying on row count -- the token (ML-TABPFN-LICENCE) is STILL the operator-owed
+  gate and its arm_status is recorded, never decisive; (2) this unit changes the INPUT, not just n: the tree baseline wins on these engineered features, so
+  the fair question for an in-context learner is whether the range-vol estimators (which ff8f-02 withheld from both arms) move it. A different member count at
+  the same 6 features would be a re-run of ff8f-02, not new evidence. Trading metric: a PASS releases the net-of-cost regime-cell walk-forward with the
+  LightGBM head as the baseline to beat (see decision_rule); nothing is served or registered.'
+power:
+  expected_n: 7200
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: tail_rows 12000 at min_train_frac 0.4 leaves ~7,200 OOS rows over 5 folds per symbol (same as ff8f-02); d=0.1 paired needs ~785 rows; autocorrelation
+    makes the true requirement higher, so the rule asks 2 of 3 symbols plus the sign on the third rather than one significance test.
+  feasibility:
+    source: none
+    accrual_basis: Fixed by construction (tail_rows of the nightly shard); n does not grow with waiting.
+decision_rule:
+  id: RULE-RQ20261022-38BE-01-TABICL-ENSEMBLE-WIDE-FEATURES-15M
+  registered_at: '2026-10-22'
+  registered_before_run: true
+  statistic: 'Per symbol: paired purged-CV delta macro_f1 (tabicl_ens minus lightgbm) on identical rows and identical feature columns; a BTC > 0 headline check; (no tabpfn control in this redesign: it never decided the verdict and its CPU fits are what exhausted the 4a3b-01 300-minute timeout).'
+  rule: 'PASS IF tabicl_ens beats lightgbm by >= +0.010 macro_f1 (CV mean) on >= 2 of BTC/ETH/SOL AND > 0 on the third: family history tabular_foundation_model
+    PASS; follow-up is the net-of-cost regime-cell walk-forward with the LightGBM head as the baseline (a candidate manifest proposal is a Tier-3 note ONLY
+    after that beats the LightGBM head in net R). FAIL IF tabicl_ens does not reach > 0 vs lightgbm on any symbol AND the arm was evaluated on all three:
+    family history FAIL for a capped TabICL ensemble on the 10-feature set (closes that configuration only). INDETERMINATE otherwise, if folds < 3, or if
+    the tabicl_ens arm is unavailable/errored on any symbol. The tabpfn control''s status never decides the verdict.'
+  min_n: 3 usable CV folds per symbol; reported n_rows per symbol.
+  what_it_does_not_do: 'Serves nothing, registers nothing, touches no config. TabPFN is research-only (Prior Labs non-commercial weights): its arm reports
+    status and metrics for the record; any live use is an operator licence decision. A feature-lift PASS is not edge.'
+compute: needs_vm_data
+value:
+  bucket: frontier
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  basis: 'stand-in: a genuinely different learner family on the one head that influences orders; not a measured P&L'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 5.0
+  est_minutes: 240
+  basis: 'Estimate, NOT measured: ff8f-02 ran TabICL at 12k rows on this box; 3 members x 4k rows x 5 folds x 3 symbols is the guess. Re-declare from the first
+    run''s run-manifest.json.'
+ml_bakeoff:
+  task: classification
+  metric: macro_f1
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT:
+        path: datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl
+      ETHUSDT:
+        path: datasets-out/market_features/ETHUSDT/15m/v002/data.jsonl
+      SOLUSDT:
+        path: datasets-out/market_features/SOLUSDT/15m/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    tail_rows: 12000
+    extra_columns: &id001
+    - parkinson_vol
+    - garman_klass_vol
+    - rogers_satchell_vol
+    - yang_zhang_vol
+  cv:
+    folds: 5
+    embargo_rows: 96
+    min_train_frac: 0.4
+  baseline: lightgbm
+  controls:
+  - prior
+  candidates:
+  - tabicl_ens
+  learners:
+    prior:
+      kind: prior
+    lightgbm:
+      kind: lightgbm
+      params:
+        n_estimators: 200
+        learning_rate: 0.05
+        num_leaves: 31
+        min_child_samples: 50
+      feature_blocks:
+      - kind: df_columns
+        columns: *id001
+    tabicl_ens:
+      kind: tabicl
+      params:
+        max_train_rows: 4000
+        n_members: 3
+        subsample: random
+      feature_blocks:
+      - kind: df_columns
+        columns: *id001
+  rule:
+    min_folds: 3
+    pass_if:
+    - group:
+      - BTCUSDT
+      - ETHUSDT
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.01
+    - group:
+      - SOLUSDT
+      vs: baseline
+      window: cv
+      op: '>'
+      value: 0.0
+    fail_if_no_candidate_reaches:
+    - group: any
+      vs: baseline
+      window: cv
+      op: '>'
+      value: 0.0
+    headline_checks:
+    - name: tabicl_ens_macro_f1_btc
+      learner: tabicl_ens
+      vs: baseline
+      group:
+      - BTCUSDT
+      op: '>'
+      value: 0.0
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261022-38be-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M25
+related:
+- RQ-20261022-4a3b-01
+- RQ-20261018-ff8f-02
+- ML-TABPFN-LICENCE
+- ML-INSTRUMENTS-W43
