@@ -18,16 +18,16 @@ why_this_matters: 'Only ONE TSFM (Chronos-Bolt-Tiny) has ever been tested, froze
   good thing dictate scope. Kronos is reported (secondary source, unverified) to be pretrained on 45 exchanges incl. crypto, so the registered rule also reads a post-2025-09-01
   holdout where overlap with pretraining is least likely (the pretraining cutoff is UNVERIFIED).'
 power:
-  expected_n: 18000
+  expected_n: 78000
   min_detectable_effect: 0.025
   effect_units: sd
   design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: 'RE-DECLARED 2026-10-22 (before any run; lane ML-TSFM-TRAINER) because the dispatcher''s power gate does not know design "paired" (the original block said paired / expected_n 3 symbols, which it reports as unverifiable and refuses to route). Unit = out-of-sample test row: 3 symbols x ~6000 cv test rows (last 40000 bars, stride-4 common grid ~10000 rows/symbol, 60% of it out of sample) = ~18000; d needed at n=18000 is (1.96+0.8416)/sqrt(18000) = 0.021 sd, so 0.025 is met on rows. Rows are autocorrelated and the conversion from +0.010 macro_f1 points to sd was NOT measured, so the rule keeps its own guard: the same sign on all three symbols plus the post-2025-09-01 holdout, not a significance test on one. The first run replaces this with the measured n.'
+  basis: 'RE-DECLARED 2026-10-22 (before any run; lane ML-TSFM-TRAINER) because the dispatcher''s power gate does not know design "paired" (the original block said paired / expected_n 3 symbols, which it reports as unverifiable and refuses to route). Unit = out-of-sample test row: 3 symbols x ~26000 cv test rows (full 175k-bar history, stride-4 common grid ~43800 rows/symbol, 60% of it out of sample) = ~78000; d needed at n=78000 is (1.96+0.8416)/sqrt(78000) = 0.010 sd, so 0.025 is met on rows with margin. Rows are autocorrelated and the conversion from +0.010 macro_f1 points to sd was NOT measured, so the rule keeps its own guard: the same sign on all three symbols plus the post-2025-09-01 holdout, not a significance test on one. The first run replaces this with the measured n.'
   feasibility:
     source: none
-    accrual_basis: 'Nothing needs to accrue: the window is the last 40000 bars of fixed history, and the Chronos-2 side-streams are built once on the trainer (c2-v001).'
+    accrual_basis: 'Nothing needs to accrue: the window is fixed history, and the Chronos-2 side-streams are built once on the trainer (datasets-out/forecasts/<SYM>/15m/c2-v002).'
 decision_rule:
   id: RULE-RQ1011-9DA8-01-TSFM-BAKEOFF
   registered_at: '2026-10-11'
@@ -55,7 +55,7 @@ decision_rule:
     arm_added: 'var_control = scripts/research/ml_bakeoff.py block var_price_vector: a causal rolling ridge VAR(4) over the 3 symbols'' 1-bar log returns and absolute returns (refit every 96 bars on the trailing 2000), emitting the predicted next-bar return/|return| vector per asset, fed to the same LightGBM head. It is a BASELINE: a TSFM candidate must beat it, not the other way round.'
     clause_added: 'PASS additionally requires delta macro_f1 > 0 vs var_control on BTC (cv). This tightens the PASS bar only; the FAIL floor and every other clause are unchanged. If var_control >= the incumbent on BTC, that is reported as a headline alongside the HAR-RV one.'
     scope_note: 'Candidates evaluated in THIS run: chronos-2 only. TimesFM-2.5, TiRex-2, Kronos and the TTM arms have NO loader on the trainer (build_forecasts.py registers chronos-bolt-tiny/-small and chronos-2 only), so they are not in `candidates` and a FAIL here closes only Chronos-2 zero-shot on this head, as the rule already states. They stay open under FRONTIER-LEVER-TSFM.'
-    population_note: 'Last 40000 15m bars of each symbol (~14 months; covers the 2025-09-01 holdout), rows where BOTH the incumbent fc_* and the Chronos-2 fc_* are finite (stride 4 on the same grid; common_rows), dataset market_features v002 (the nightly shard present for all three symbols; the unit text said v003, which has no SOL shard). NOT the full 175k history: a full-history Chronos-2 build is ~26 h on the 1-CPU trainer (measured 0.72 s/forecast, 2026-10-22 smoke).'
+    population_note: 'Full market_features v002 history of each symbol (175272 rows, 2021-10 to 2026-10), restricted by common_rows to the stride-4 grid where BOTH the incumbent fc_* and the Chronos-2 fc_* are finite (~43800 rows/symbol), dataset market_features v002 (the nightly shard present for all three symbols; the unit text said v003, which has no SOL shard). Chronos-2 built zero-shot on the trainer 2026-10-22: context 64, stride 4, horizon 1 (measured ~7 min per 10000 forecasts on the 1-CPU trainer).'
   what_it_does_not_do: 'Does not train, promote or serve anything; does not touch config/*.yaml; no live-box dependency (torch
     stays trainer-side, forecasts are mirror-published like fc). A feature-lift PASS is not edge: it earns a candidate manifest
     and the downstream net-of-cost regime-cell walk-forward, nothing more. Says nothing about fine-tuned (LoRA) variants --
@@ -73,7 +73,6 @@ ml_bakeoff:
     target: regime_label
     features: [rolling_log_return_vol, log_return, log_return_lag_1, log_return_lag_2, hour_of_day, dayofweek]
     extra_columns: [fc_ret_med, fc_range_rel, fc_up_prob, fc_skew, fc_q10_rel, fc_q90_rel]
-    tail_rows: 40000
     holdout_after: '2025-09-01'
   common_rows: true
   cv: {folds: 5, embargo_rows: 96, min_train_frac: 0.4}
@@ -100,7 +99,6 @@ ml_bakeoff:
           lags: 4
           window: 2000
           refit_every: 96
-          peer_tail_rows: 40300
           peers:
             BTCUSDT: datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl
             ETHUSDT: datasets-out/market_features/ETHUSDT/15m/v002/data.jsonl
@@ -109,7 +107,7 @@ ml_bakeoff:
       kind: lightgbm
       params: *lgbm
       feature_blocks:
-        - {kind: join_columns, path: 'datasets-out/forecasts/{group}/15m/c2-v001/data.jsonl', columns: [fc_ret_med, fc_range_rel, fc_up_prob, fc_skew, fc_q10_rel, fc_q90_rel], require_finite: true}
+        - {kind: join_columns, path: 'datasets-out/forecasts/{group}/15m/c2-v002/data.jsonl', columns: [fc_ret_med, fc_range_rel, fc_up_prob, fc_skew, fc_q10_rel, fc_q90_rel], require_finite: true}
   rule:
     min_folds: 3
     pass_if:
@@ -128,7 +126,7 @@ routing:
   needs_gpu: false
   peak_memory_gb: 4.5
   est_minutes: 120
-  basis: 'Estimate, not a measurement: 3 symbols x 4 LightGBM arms x (5 cv folds + holdout) on the last 40000 rows of each 15m shard (tail_rows bounds the read to declared columns; the VAR arm streams two peer shards for ts+log_return only). The first run replaces it.'
+  basis: 'Estimate, not a measurement: 3 symbols x 4 LightGBM arms x (5 cv folds + holdout) on the full history of each 15m shard (the loader keeps only declared columns; the VAR arm streams two peer shards for ts+log_return only). The first run replaces it.'
 run:
   workflow: research-script-run-trainer.yml
   timeout_minutes: 240
