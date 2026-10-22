@@ -1,0 +1,150 @@
+id: RQ-20261022-3a84-09
+cadence: once
+theme: ml_health
+kind: experiment
+title: 'Range-vol feature lift for the BTCUSDT 1h regime head: LightGBM with the four range-vol estimators (yz set) vs the base feature set, identical purged
+  folds'
+status: queued
+priority: 2
+question: On the published BTCUSDT 1h v002 market_features shard, with LightGBM on identical purged folds, does adding the four range-vol estimators (parkinson,
+  garman_klass, rogers_satchell, yang_zhang) to the base 6 features lift macro-F1 on the regime_label by >= +0.010 (CV mean) with the same sign on the post-2026-07-12
+  holdout?
+why_this_matters: Theme ml_health (weight 3) held 0 runnable units on 2026-10-22 against a computed share of 7 (health check H1-THEME). The yz feature lift
+  was measured only on BTC/SOL 15m (RQ-20261018-ff8f-01, against the fc set); ETH 15m and the 1h heads have no feature-set evidence, so a new head or a
+  feature add for them is unguided. Offline feature comparison, not a P&L figure. Lane RESEARCH-HEALTH-W43.
+power:
+  expected_n: 24000.0
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: tail_rows 60000 with min_train_frac 0.4 leaves ~36,000 OOS rows over 5 folds per symbol (as RQ-20261013-1414-04); d=0.1 paired needs ~785 rows,
+    so rows are not the limit; bars are autocorrelated so the rule also needs the same sign on SOL and on the holdout.
+  feasibility:
+    source: none
+    accrual_basis: 'Fixed by construction (tail_rows of a nightly-rebuilt published shard); n does not grow with waiting. The published BTC 15m shard was
+      whole on 2026-10-18 (175,296 rows, trainer-vm-diag #18889); the exporter withholds a cut shard, which lands as producer_failed (a route fault, never
+      a verdict).'
+decision_rule:
+  id: RULE-RQ20261022-3A84-09-YZ-VS-BASE
+  registered_at: '2026-10-22'
+  registered_before_run: true
+  statistic: Paired purged-CV delta macro_f1 (lgbm_yz minus lgbm_base) on identical rows of BTCUSDT 1h, and the same delta on the post-2026-07-12 holdout;
+    f1_class:volatile reported as a headline check.
+  rule: 'PASS IF lgbm_yz beats lgbm_base by >= +0.010 macro_f1 (CV mean) AND > 0 on the holdout. FAIL IF lgbm_yz does not reach > +0.005 vs lgbm_base (CV
+    mean): range-vol features add nothing here. INDETERMINATE otherwise, or if folds < 3, the holdout has < 20 rows, or an arm is unavailable. A PASS is
+    NOT a promotion: it releases a challenger-manifest note for the manager and a net-of-cost regime-cell walk-forward as the trading gate.'
+  min_n: 3 usable CV folds per symbol; holdout >= 20 test rows.
+  what_it_does_not_do: Promotes nothing, edits no manifest, stage or config. A feature-lift PASS is not edge.
+compute: auto
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 120
+  confidence: 0.25
+  basis: 'stand-in: the vol/regime head gates intents on real-money legs; a better head changes which trades are refused. Not a measured P&L.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  published_data: metis-market-data
+  peak_memory_gb: 4.0
+  est_minutes: 30
+  basis: 'Estimate, NOT measured: 1 shard x 2 LightGBM arms x 5 folds + holdout at tail_rows 40000 (same shape as RQ-20261018-ff8f-01 with half the arms);
+    Kaggle CPU via published data. Re-declare from the first run.'
+ml_bakeoff:
+  task: classification
+  metric: macro_f1
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT:
+        path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    tail_rows: 40000
+    holdout_after: '2026-07-12'
+    extra_columns:
+    - parkinson_vol
+    - garman_klass_vol
+    - rogers_satchell_vol
+    - yang_zhang_vol
+  cv:
+    folds: 5
+    embargo_rows: 96
+    min_train_frac: 0.4
+  baseline: lgbm_base
+  controls:
+  - prior
+  candidates:
+  - lgbm_yz
+  learners:
+    lgbm_base:
+      kind: lightgbm
+      params: &id001
+        n_estimators: 200
+        learning_rate: 0.05
+        num_leaves: 31
+        min_child_samples: 50
+    lgbm_yz:
+      kind: lightgbm
+      params: *id001
+      feature_blocks:
+      - kind: df_columns
+        columns:
+        - parkinson_vol
+        - garman_klass_vol
+        - rogers_satchell_vol
+        - yang_zhang_vol
+    prior:
+      kind: prior
+  rule:
+    min_folds: 3
+    pass_if:
+    - group:
+      - BTCUSDT
+      vs: baseline
+      op: '>='
+      value: 0.01
+      window: cv
+    - group:
+      - BTCUSDT
+      vs: baseline
+      op: '>'
+      value: 0.0
+      window: holdout
+    fail_if_no_candidate_reaches:
+    - group:
+      - BTCUSDT
+      vs: baseline
+      op: '>'
+      value: 0.005
+      window: cv
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261022-3a84-09
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M25
+- L-REGIME
+related:
+- RESEARCH-HEALTH-W43
+- RQ-20261018-ff8f-01
+- btc-regime-15m-lgbm-yz-v1
