@@ -365,3 +365,19 @@ def test_windows_do_not_hide_an_active_run_or_change_unwindowed_backends():
 def test_the_router_config_declares_the_trainer_windows_the_watchdog_reads():
     from scripts.research import compute_router as cr
     assert cr.load_config()["backends"]["trainer"]["queue"]["windows_utc"] == WIN
+
+
+# ── due now vs due within the refill horizon (EXITS-OVERNIGHT-1021, 2026-10-22) ──
+def test_backend_with_only_not_yet_due_units_is_ok_not_idle():
+    # the 2026-10-21 23:20Z false escalation: the weekly census was due at 04:43Z, inside the 6 h refill horizon
+    v = w.check_backend("trainer", 0, [run(1, 984)], NOW, TH, due_later=1)
+    assert v["state"] == w.OK and "none is due yet" in v["detail"]
+    assert v["evidence"]["due_within_refill_horizon"] == 1
+    assert w.check_backend("trainer", 1, [run(1, 984)], NOW, TH, due_later=0)["state"] == w.BAD
+
+
+def test_queue_facts_due_now_never_exceeds_the_horizon_count():
+    f = _REAL_QUEUE_FACTS(w._REPO, datetime.now(timezone.utc))
+    assert f is not None
+    for be, n in f["by_backend_due_now"].items():
+        assert n <= f["by_backend"].get(be, 0)
