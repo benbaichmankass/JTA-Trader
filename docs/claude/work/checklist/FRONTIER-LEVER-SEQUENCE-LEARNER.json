@@ -2,7 +2,7 @@
   "id": "FRONTIER-LEVER-SEQUENCE-LEARNER",
   "title": "Lever: a torch_gru learner kind in scripts/research/ml_bakeoff.py (window_bars/hidden/layers/epochs; windows built per fold block; CPU, seeded; 'unavailable' without torch) + a CPU smoke test -- unblocks RQ-20261018-ff8f-04 (deep_sequence on the engineered feature window)",
   "phase": "W42",
-  "state": "landed_unproven",
+  "state": "done",
   "owner": "unassigned (manager dispatches by capacity; Sonnet, ceiling $6)",
   "lane": null,
   "model": null,
@@ -11,9 +11,9 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "[2026-10-18 lane ML-UNBLOCK-1018] Filed from Task 3 (family diversity): deep_sequence has one FAIL (price-only TCN, MB-20260703-001) and the frontier scan dropped PatchTST-class models as the same input class; the untested question is a sequence model over the ENGINEERED feature window. Not built in this lane: the sandbox has no torch, and a learner written without running it is how a wrong arm ships. DONE WHEN: torch_gru merged with tests/test_ml_bakeoff.py coverage (synthetic sequence with a lagged signal a flat learner cannot see), probe_learner reports unavailable without torch, and RQ-20261018-ff8f-04 leaves research/queue/blocked/ with run.workflow research-script-run-trainer.yml. [2026-10-22 lane ML-INSTRUMENTS-W43] BUILT (PR pending): torch_gru kind in scripts/research/ml_bakeoff.py (windows built inside each fold block, head edge-padded, seeded, CPU, probe_learner reports unavailable without torch); tests tests/test_ml_bakeoff.py::test_torch_gru_sees_a_lagged_signal_a_flat_learner_cannot (planted lag-3 sign: logit ~0.53 acc, GRU >0.8), ::test_torch_gru_test_windows_never_look_across_the_block_boundary, ::test_torch_gru_is_unavailable_not_silent_without_torch -- these importorskip torch, so they RUN only where torch is installed (they ran in the lane sandbox with torch 2.14.1+cpu; CI without torch skips them). RQ-20261018-ff8f-04 moved out of blocked/ and routes (dispatch_queue dry run: deferred only for the trainer busy window). NOT DONE: the arm has not run on the trainer venv (torch 2.9.1+cpu there) -- closes when a ff8f-04 result record shows arm_status.gru == ok.",
-  "updated_at": "2026-10-22T07:21:47Z",
-  "updated_by": "lane-ML-INSTRUMENTS-W43",
+  "note": "[2026-10-18 lane ML-UNBLOCK-1018] Filed from Task 3 (family diversity): deep_sequence has one FAIL (price-only TCN, MB-20260703-001) and the frontier scan dropped PatchTST-class models as the same input class; the untested question is a sequence model over the ENGINEERED feature window. Not built in this lane: the sandbox has no torch, and a learner written without running it is how a wrong arm ships. DONE WHEN: torch_gru merged with tests/test_ml_bakeoff.py coverage (synthetic sequence with a lagged signal a flat learner cannot see), probe_learner reports unavailable without torch, and RQ-20261018-ff8f-04 leaves research/queue/blocked/ with run.workflow research-script-run-trainer.yml. [2026-10-22 lane ML-INSTRUMENTS-W43] BUILT (PR pending): torch_gru kind in scripts/research/ml_bakeoff.py (windows built inside each fold block, head edge-padded, seeded, CPU, probe_learner reports unavailable without torch); tests tests/test_ml_bakeoff.py::test_torch_gru_sees_a_lagged_signal_a_flat_learner_cannot (planted lag-3 sign: logit ~0.53 acc, GRU >0.8), ::test_torch_gru_test_windows_never_look_across_the_block_boundary, ::test_torch_gru_is_unavailable_not_silent_without_torch -- these importorskip torch, so they RUN only where torch is installed (they ran in the lane sandbox with torch 2.14.1+cpu; CI without torch skips them). RQ-20261018-ff8f-04 moved out of blocked/ and routes (dispatch_queue dry run: deferred only for the trainer busy window). NOT DONE: the arm has not run on the trainer venv (torch 2.9.1+cpu there) -- closes when a ff8f-04 result record shows arm_status.gru == ok. [2026-10-22 lane ML-NONGBDT-RUNNERS] DONE CONDITION MET: research/results/RQ-20261018-ff8f-04/39752478144.jsonl measurement.arm_status = {gru: ok, lightgbm: ok, prior: ok} (trainer venv, run 39752478144); unit left blocked/ and routes via research-script-run-trainer.yml. Verdict is indeterminate (see ML-NONGBDT-RUNNERS).",
+  "updated_at": "2026-10-22T14:39:58Z",
+  "updated_by": "session_01RjtFgRugTi5ix1ri7orffk",
   "roadmap": [
     "M25"
   ],

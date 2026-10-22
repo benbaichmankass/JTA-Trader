@@ -86,6 +86,15 @@ _pub = sorted(m for m in glob.glob("/kaggle/input/**/MANIFEST.json", recursive=T
 if _pub:
     env["ML_DATA_ROOT"] = os.path.dirname(_pub[0])
     print("== ML_DATA_ROOT:", env["ML_DATA_ROOT"])
+# ML-NONGBDT-RUNNERS: learner wheels shipped in the bundle (internet is off). Installed --no-deps/--no-index so nothing the
+# Kaggle image already pins can move; a wheel that cannot install is reported by the probe line, never a halt.
+_wh = sorted(glob.glob(os.path.join(bundle_dir, "*.whl")))
+if _wh:
+    _r = subprocess.run([sys.executable, "-m", "pip", "install", "-q", "--no-index", "--no-deps", *_wh],
+                        capture_output=True, text=True, check=False)
+    print("== learner wheels:", len(_wh), "pip rc", _r.returncode, (_r.stderr or "")[-400:])
+if os.path.exists(os.path.join(repo, "scripts", "research", "probe_learners.py")):
+    subprocess.run([sys.executable, "scripts/research/probe_learners.py", "--backend", "kaggle"], cwd=repo, env=env, check=False)
 rc = subprocess.run([sys.executable, "scripts/research/script_run.py", "--unit", unit, "--run-id", run_id, "--run"],
                     cwd=repo, env=env).returncode
 print("== script_run exit:", rc)
