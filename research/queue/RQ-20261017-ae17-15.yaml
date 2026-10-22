@@ -1,7 +1,7 @@
 id: RQ-20261017-ae17-15
 title: 'Volatility regime (hot tail), iaum_pullback_1d: does moving vol-skip-above percentile (0.8, 0.9, 0.95) beat the declared setting net of
   the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: regime
 priority: 2
@@ -117,3 +117,17 @@ related:
 requires_result:
   unit: RQ-20261016-c56e-16
 last_dispatched_at: '2026-10-21T19:25:06+00:00'
+grading:
+  attested: RULE-RQ20261017ae1715-AXIS
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261017ae1715-AXIS
+  evidence:
+  - research/results/RQ-20261017-ae17-15/39661523663.jsonl
+  graded_at: '2026-10-22'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

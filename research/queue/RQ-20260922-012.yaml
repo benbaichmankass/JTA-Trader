@@ -1,7 +1,7 @@
 id: RQ-20260922-012
 title: Does a leg's OOS edge decay with time — and is the MOST RECENT fold, not the fold count, the statistic
   Stage 0 should read?
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -113,3 +113,14 @@ blocked_on:
   clears_when: A workflow computes the statistic over comms/strategy_evidence/*.json and lands the per-leg
     result where a later session can read it. E5's deliverable is exactly that, and E5 was told to NAME
     the research units it unblocks individually — this should be one of them.
+grading:
+  attested: RULE-RQ0922-012-FOLD-RECENCY
+  auto: true
+  decision_rule_id: RULE-RQ0922-012-FOLD-RECENCY
+  evidence:
+  - research/results/RQ-20260922-012/39672873253.jsonl
+  graded_at: '2026-10-22'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

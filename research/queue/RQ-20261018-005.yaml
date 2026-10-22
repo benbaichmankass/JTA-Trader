@@ -4,7 +4,7 @@
 id: RQ-20261018-005
 title: 'Tune at power (programme 03 Q2 after Q3): does moving gld_pullback_1d''s pullback_frac (0.382,
   0.5, 0.75) beat the declared 0.618 over 2006-10-02 .. 2025-04-09, net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - M21
@@ -130,3 +130,15 @@ generated:
   params:
     node: P3-Q3-gld-iaum-tune
 last_dispatched_at: '2026-10-21T23:24:50+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P3-Q3-GLD-IAUM-TUNE
+  evidence:
+  - research/results/RQ-20261018-005/39693289511.jsonl
+  graded_at: '2026-10-22'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
