@@ -235,7 +235,9 @@ def test_real_yaml_loads():
     # re-targeted onto MGC micro-gold futures (live-tradeable on ib_paper, unlike
     # XAUUSD's shelved OANDA venue). Evidence:
     # docs/research/M27-P0-MGC-15m-findings-2026-07-28.md.
-    assert len(strategies) == 55
+    # 55 → 56 by trend_donchian_xrp_adx25 (2026-10-22, Tier-3, OPERATOR-DECISIONS-1022): bybit_1-only
+    # soak alias of trend_donchian_xrp_4h declaring the ADX-tightened trail.
+    assert len(strategies) == 56
 
 
 def test_real_yaml_has_required_strategies():
@@ -259,7 +261,7 @@ def test_real_yaml_has_required_strategies():
         "eth_pullback_2h",
         "trend_donchian_sol", "trend_donchian_eth",
         # 9 paper_ready alt cells on bybit_1 DEMO (2026-06-18, Tier-3):
-        "trend_donchian_eth_4h", "trend_donchian_sol_4h", "trend_donchian_xrp_4h",
+        "trend_donchian_eth_4h", "trend_donchian_sol_4h", "trend_donchian_xrp_4h", "trend_donchian_xrp_adx25",
         "trend_donchian_ada_4h", "trend_donchian_avax_4h",
         "sol_pullback_2h", "xrp_pullback_2h", "ada_pullback_2h", "avax_pullback_2h",
         # swap-robust prop variant — breakout_1 shadow soak (DRAFT, Tier-3, 2026-06-25):
