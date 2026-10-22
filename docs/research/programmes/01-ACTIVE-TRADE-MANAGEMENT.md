@@ -72,7 +72,7 @@ Each unit's pre-registered rule applied verbatim; numbers are in the unit's `gra
   legs; eth_4h read FAIL, xrp_4h underpowered; the time-disjoint confirmation 1f8b-01 is INDETERMINATE (58 trades; the perps'
   klines start 2019-12, so no longer disjoint window exists). By 1f8b-01's own rule rung 2 is NOT opened on 007 alone. The way
   to a decisive read is by LEG (eba2-01, eba2-02) and by controlling volatility (eba2-04).
-- **Next units (8, all pre-registered, `would_dispatch` in a `dispatch_queue.py` dry run for the three runnable ones):**
+- **Next units (15, all pre-registered; the 3 runnable + 6 variant units are `would_dispatch` in a `dispatch_queue.py` dry run):**
   | unit | question | state |
   |---|---|---|
   | RQ-20261022-eba2-01 | Q11 transfer: path metrics on 6 legs 007 was not selected on | queued |
@@ -81,14 +81,36 @@ Each unit's pre-registered rule applied verbatim; numbers are in the unit's `gra
   | RQ-20261022-eba2-04 | Q11 rung 1d: path metrics beyond realised-vol-vs-entry-vol | blocked: PATHMETRIC-VOLCTL |
   | RQ-20261022-eba2-05 / -06 | fractional giveback exit (0.5/0.6/0.7 x peak after 2R) on ada_pb / xrp_pb | blocked: GIVEBACK-FRAC-FLAG |
   | RQ-20261022-eba2-07 / -08 | Q11 rung 2: metric-TRIGGERED bank / tight trail vs an unconditional control, ada_pb / xrp_pb | blocked: HARNESS-METRIC-TRIGGER + eba2-01 pass |
+  | RQ-20261022-eba2-09 / -10 | Q10 variant: swing level with a WIDER tight mult, FVG lookback 120 (xrp_pb / eth_prop) | queued |
+  | RQ-20261022-eba2-11 | Q10 variant: swing level AND peak R >= 1.5 / 2.0 (xrp_pb) | blocked: LEVEL-TRAIL-R-GATE |
+  | RQ-20261022-eba2-12 / -13 / -14 | bank variant: far rung (2-3 R), small size (25-33%), and partial + R-armed tight trail (ada_pb / xrp_pb / eth_prop) | queued |
+  | RQ-20261022-eba2-15 | ADX variant: momentum LOSS (ADX < 20; ADX < 30 or 20 AND falling 3 bars) on eth_4h | queued |
 - **Operator's idea mapped.** Efficiency ratio, chop, MAE/MFE shape: rung 1 (007, eba2-01/-02). Realised vol vs entry vol: eba2-04.
   R-triggered tight trail: eba2-03 (the lever exists). Split / partial exit: fixed (fd06, closed) and metric-triggered (eba2-07/-08).
   Price-level triggers: Q10 (closed on six legs; xrp_4h `fvg` never fired). Loss-of-momentum triggers: the ADX / momentum family
   (MOMENTUM-LEVERS-LIVE).
-- **Not authored, with the reason.** A fixed bank on eth_4h / eth_prop / sol_prop: three FAILs by 2.6-68 R make the prior strongly
-  negative and the metric-triggered arm is the better use of the slot. Rung 2 on eth_4h / xrp_4h: rung 1 read FAIL / underpowered
-  there (a prop rung 2 is node `P1-Q11-prop-rung2`, gated on eba2-02).
-- **Builds filed (checklist, all Tier 1, roadmap L-ATM):** HARNESS-METRIC-TRIGGER, PATHMETRIC-VOLCTL, GIVEBACK-FRAC-FLAG,
+- **Not authored, with the reason.** A far-rung bank on eth_4h / sol_prop / xrp_4h: eth_4h already stacks a stall decay and a
+  TP revision (two TP movers have crashed the harness before, PI-20261021-6SBYWRKB-0001), sol_prop is the same family as eth_prop
+  (eba2-14 goes first), and xrp_4h has n 68. Rung 2 on eth_4h / xrp_4h: rung 1 read FAIL / underpowered there (a prop rung 2 is
+  node `P1-Q11-prop-rung2`, gated on eba2-02).
+- **Idea status (operator 2026-10-22: "those aren't dead, they just didn't pass the first test"; family retirement stays with
+  `scripts/research/family_retirement_policy.yaml`, nothing here retires one).** Each fail settles only the config question its
+  rule asked.
+  | idea | first test | status | why it failed (diagnosis, MEASURED where stated) | variants queued |
+  |---|---|---|---|---|
+  | level-triggered tight trail | Q10 x6 FAIL | **first test failed -> variants queued** | round levels exist on 100% of trades and are touched on 60-75% (an unconditional tight trail; worst arm everywhere); FVG exists on 4-36% of trades (4 of 68 on xrp_4h, inert); swing was the only selective trigger and the only arm near A (eth_prop +2.2 R, maxDD 16.5 vs 22.0); tight mult fixed at HALF the trail, never wider; the tight exit frees re-entry (n +4-15%). Osler (2000) finds published levels predict short-horizon interruptions, these legs hold 12-48 h | eba2-09, -10, -11 |
+  | partial TP / split | fd06 x3 FAIL | **first test failed -> variants queued** | the +1 R rung is reached by about half of all trades (census peak p50 0.9-1.1 R) and 50% size halves every winner that reaches the 3-4 R target (127 of 402 ada_pb trades): the rung sat inside the median trade | eba2-12, -13, -14 (far rung, small size, + R-armed trail), eba2-07/-08 (metric-triggered) |
+  | ADX / momentum trail | 511e-01 UNIT FAIL | **first test failed -> variants queued** (the real-money declare stays off: bybit_1 alias only) | ADX < 25 on 4h crypto holds for a large share of bars (near-unconditional); sol_4h / xrp_4h / eth_4h already carry their own tighteners that compose by minimum; cell carried from one n 68 leg; practitioners exit on ADX turning DOWN from a high level, not sitting low | eba2-15 |
+  | R-armed tight trail | never registered on ada_pb | queued | operator-named; the lever exists | eba2-03 |
+  | path-metric predictors | 007 PASS (ll-only); 1f8b-01 INDETERMINATE | discovery, unconfirmed | n-bound and volatility-confounded | eba2-01, -02, -04 |
+- **Sources.** Osler, "Support for Resistance", FRBNY Economic Policy Review 6(2), 2000
+  (https://www.newyorkfed.org/medialibrary/media/research/epr/00v06n2/0007osle.pdf) is the one primary source. The rest are
+  practitioner / secondary and carry no validated result: NexusFi MFE scale-out guide (https://nexusfi.com/a/risk-management/maximum-favorable-excursion-mfe),
+  MQL5 article 24466 (R-multiple MFE percentile scale-out), LuxAlgo "Scaling Out" and "MAE/MFE Distributions" (luxalgo.com/library/concept),
+  TradingView ATR Chandelier and ADX-exhaustion scripts, StrategyQuant / LuxAlgo on Kaufman's efficiency ratio. A search for a
+  controlled study of scale-out vs full exit on trend systems, and for drawdown results of ER-scaled stops, found none; rungs
+  fitted to MFE percentiles are flagged by the same sources as fragile, hence fixed pre-registered rungs.
+- **Builds filed (checklist, all Tier 1, roadmap L-ATM):** HARNESS-METRIC-TRIGGER, PATHMETRIC-VOLCTL, GIVEBACK-FRAC-FLAG, LEVEL-TRAIL-R-GATE,
   RESEARCH-MULTICMD-OUTDIR (a multi-command unit shares one `{out_dir}`; 511e-01 lost its eth_4h numbers to it).
 
 **Cross-programme feeds**
