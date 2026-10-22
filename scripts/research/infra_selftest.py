@@ -14,6 +14,8 @@ shape scripts/research/script_run.py derives an E5 record from. A check that can
   disposition_census  result_disposition_check findings (ungraded + needs_review without an owner) <= 5
   programme_coverage  plan questions with a programme node or a reasoned discharge >= 75 %
   machinery_selftests the grader, replenisher, runner-plan and disposition-check self-tests all pass
+  blocked_over_age    units in research/queue/blocked/ older than the SLO age (research_slo.yaml blocked_over_age)
+  theme_supply        every theme weighted >= 2 holds at least 3 queued authored units (weights are honoured by supply)
 """
 from __future__ import annotations
 
@@ -132,9 +134,45 @@ def machinery_selftests() -> dict[str, Any]:
             "measurement": {"results": out, "failed": failed}}
 
 
+def blocked_over_age() -> dict[str, Any]:
+    import re
+    from datetime import date
+    import yaml
+    cfg = yaml.safe_load((ROOT / "scripts" / "research" / "research_slo.yaml").read_text()) or {}
+    age = int(((cfg.get("slos") or cfg).get("blocked_over_age") or {}).get("blocked_age_days", 21))
+    today = date.today()
+    old, total = [], 0
+    for f in sorted((ROOT / "research" / "queue" / "blocked").glob("RQ-*.yaml")):
+        total += 1
+        m = re.match(r"RQ-(\d{4})(\d{2})(\d{2})", f.stem)
+        if m and (today - date(*map(int, m.groups()))).days > age:
+            old.append(f.stem)
+    return {"verdict": "fail" if len(old) > 10 else "pass", "read_state": "measured" if total else "no_data",
+            "population": f"{total} unit(s) in research/queue/blocked/ (age from the RQ id date)",
+            "n": total, "measurement": {"over_age": len(old), "age_days": age, "max": 10, "sample": old[:10]}}
+
+
+def theme_supply() -> dict[str, Any]:
+    import yaml
+    themes = (yaml.safe_load((ROOT / "research" / "THEMES.yaml").read_text()) or {}).get("themes") or {}
+    held: dict[str, int] = {t: 0 for t, c in themes.items() if (c or {}).get("weight", 0) >= 2}
+    for f in sorted((ROOT / "research" / "queue").glob("RQ-*.yaml")):
+        try:
+            u = yaml.safe_load(f.read_text(encoding="utf-8"))
+        except (yaml.YAMLError, OSError, UnicodeDecodeError):   # unparseable units are queue_integrity's finding
+            continue
+        if isinstance(u, dict) and u.get("status") == "queued" and u.get("theme") in held and not u.get("generated"):
+            held[u["theme"]] += 1
+    empty = sorted(t for t, n in held.items() if n < 3)
+    return {"verdict": "fail" if empty else "pass", "read_state": "measured",
+            "population": f"{len(held)} theme(s) with weight >= 2, queued authored units counted",
+            "n": len(held), "measurement": {"held": held, "empty": empty}}
+
+
 CHECKS = {"runner_deps": runner_deps, "results_readable": results_readable, "queue_integrity": queue_integrity,
           "disposition_census": disposition_census, "programme_coverage": programme_coverage,
-          "machinery_selftests": machinery_selftests}
+          "machinery_selftests": machinery_selftests,
+          "blocked_over_age": blocked_over_age, "theme_supply": theme_supply}
 
 
 def main() -> int:

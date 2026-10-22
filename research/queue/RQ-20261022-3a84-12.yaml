@@ -1,0 +1,52 @@
+id: RQ-20261022-3a84-12
+title: 'Blocked backlog: are at most 10 units in research/queue/blocked/ older than the SLO age (21 days by id date)?'
+status: queued
+cadence: daily
+theme: infra
+priority: 2
+kind: deterministic
+question: 'Blocked backlog: are at most 10 units in research/queue/blocked/ older than the SLO age (21 days by id date)?'
+why_this_matters: Research SLO blocked_over_age / theme_share_min_ratio breached on 2026-10-22; this puts the cause on the queue as a daily detector instead
+  of a once-a-week SLO read. Lane RESEARCH-HEALTH-W43.
+why_not_inferential: 'A deterministic self-test of repo state on the runner: the property either holds or it does not. There is no sampling question to
+  power.'
+decision_rule:
+  id: RULE-RQ20261022-3A84-12-BLOCKED-OVER-AGE
+  registered_at: '2026-10-22'
+  registered_before_run: true
+  statistic: scripts/research/infra_selftest.py --check blocked_over_age
+  rule: 'PASS IF over_age <= 10. FAIL IF more: the units are named in measurement.sample and each needs a lever + owner row or a retirement with a reason
+    (research-ops step C). A producer_failed or no_data record is NOT a verdict.'
+  what_it_does_not_do: Measures nothing about any strategy, model or market; edits no config, registry, account or queue unit.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 80
+  confidence: 0.5
+  bucket: structural
+  basis: 'infrastructure detector: a stand-in figure for the research throughput a silent pipeline fault costs, not a measured P&L'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 5
+  basis: Reads only the repo checkout on a GitHub-hosted runner; no network, no secret.
+run:
+  command:
+  - python3
+  - scripts/research/infra_selftest.py
+  - --check
+  - blocked_over_age
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 20
+  inputs:
+    research_unit: RQ-20261022-3a84-12
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-OPS
+related:
+- RESEARCH-HEALTH-W43
+- scripts/research/infra_selftest.py
