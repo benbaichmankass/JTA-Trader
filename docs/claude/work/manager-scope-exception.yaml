@@ -6,6 +6,25 @@
 # this guard must remain "route the work to a session", because that is the
 # behaviour wanted.
 exceptions:
+  - id: MGR-20261022-DECISION-BAR-SPLIT
+    status: active
+    expires: "2026-10-24"
+    paths:
+      - "config/strategies.yaml"
+    reason: >-
+      OPERATOR DECISION, 2026-10-22 ~10:40Z, popup in manager session
+      session_01CSwhZWiw15rVCkjsJ8Cpuh, verbatim "Split: 3 to closed, 2 stay
+      (Recommended)" (row DECISION-BAR-MATCH). The owning lane
+      (session_01B7EoDeNYn9AmiGkk7q6etd) was refused the edit by its auto-mode
+      classifier, and so was the manager's first commit. The operator then
+      answered the manager's popup, verbatim "Take me off auto mode
+      (Recommended)", and told the manager in chat, verbatim "Off auto mode".
+      That names the MANAGER as the author.
+
+      WHAT IT COVERS: the single commit that adds `decision_bar: closed` to
+      xrp_pullback_2h, ada_pullback_2h and trend_donchian_eth_prop in
+      config/strategies.yaml. Nothing else in that file. The lane finishes the
+      fingerprints, tests and the held Tier-3 PR.
   - id: MGR-20261018-EXEC-TEST-TRADES-GRANT
     status: active
     expires: "2026-10-21"
