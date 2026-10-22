@@ -548,6 +548,24 @@ def closed_verdict(u: Optional[Dict[str, Any]]) -> Optional[str]:
     return None
 
 
+def chain_verdict(u: Optional[Dict[str, Any]]) -> Optional[str]:
+    """The verdict a prerequisite offers a chained node: `closed_verdict`, or -- for a RECURRING unit,
+    which never reaches `done` -- its latest graded verdict once a grade exists and needs no review.
+
+    Without this a node chained after a weekly/monthly unit waited forever: P1-Q11 sat `waiting` behind
+    the weekly giveback census RQ-20261014-9807-01 (graded PASS 2026-10-15) and the monthly
+    RQ-20260928-019 (graded PASS) although both had answered (EXITS-OVERNIGHT-1021)."""
+    v = closed_verdict(u)
+    if v is not None or not isinstance(u, dict):
+        return v
+    if str(u.get("cadence") or "once") == "once" or u.get("status") not in (None, "queued"):
+        return None
+    g = u.get("grading") if isinstance(u.get("grading"), dict) else {}
+    if g.get("verdict") and not g.get("needs_review"):
+        return str(g["verdict"])
+    return None
+
+
 def node_state(node: Dict[str, Any], units: Dict[str, Dict[str, Any]], by_key: Dict[str, str]) -> Tuple[str, List[str]]:
     """('ready'|'waiting'|'moot', reasons). moot = a prerequisite closed with a verdict this
     node's `after` does not accept (or was retired): the branch was not taken."""
@@ -556,7 +574,7 @@ def node_state(node: Dict[str, Any], units: Dict[str, Dict[str, Any]], by_key: D
     for a in node.get("after") or []:
         uid = str(a.get("unit") or by_key.get(node_key(str(a.get("node") or ""))) or "")
         want = str(a["verdict"])
-        got = closed_verdict(units.get(uid)) if uid else None
+        got = chain_verdict(units.get(uid)) if uid else None
         label = a.get("unit") or f"node {a.get('node')}"
         if got is None:
             state = "waiting" if state != "moot" else state
