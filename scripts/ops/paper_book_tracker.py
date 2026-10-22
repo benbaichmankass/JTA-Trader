@@ -45,11 +45,13 @@ def _rostered(accounts_path: str) -> set[str] | None:
     driving the family headline. None means "could not look" -- the rostered
     split is then omitted, never reported as an empty roster.
     """
-    try:
-        accts = yaml.safe_load(open(accounts_path)) or {}
-    except (OSError, yaml.YAMLError):
+    if _REPO not in sys.path:
+        sys.path.insert(0, _REPO)
+    from src.config.accounts_loader import load_accounts_dict
+    errors: list = []
+    accts = load_accounts_dict(accounts_path, errors=errors)
+    if errors or not accts:
         return None
-    accts = accts.get("accounts", accts) if isinstance(accts, dict) else {}
     out: set[str] = set()
     for a in accts.values():
         if isinstance(a, dict) and isinstance(a.get("strategies"), list):
@@ -121,7 +123,7 @@ def main(argv: list[str]) -> int:
     p.add_argument("--no-append", action="store_true", help="compute + print but don't append a snapshot")
     p.add_argument("--asof", default=None, help="snapshot date override (ISO; default now UTC)")
     p.add_argument("--accounts", default=_DEFAULT_ACCOUNTS,
-                   help="accounts.yaml whose rosters define the CURRENT-roster split")
+                   help="accounts config whose strategies: rosters define the CURRENT-roster split")
     a = p.parse_args(argv)
 
     cohort = yaml.safe_load(open(a.cohort))
@@ -203,7 +205,7 @@ def main(argv: list[str]) -> int:
     print(f"  families: trend net=${per_fam.get('trend',{}).get('net_usd')}  "
           f"pullback net=${per_fam.get('pullback',{}).get('net_usd')}")
     if roster_split is None:
-        print("  current roster: — (accounts.yaml unreadable; split not computed)")
+        print("  current roster: — (accounts config unreadable; split not computed)")
     else:
         rb = roster_split["book"]
         print(f"  current roster ({len(roster_split['rostered_cells'])} cells): n={rb['n']} net=${rb['net_usd']}  "

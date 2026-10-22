@@ -139,7 +139,7 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
         try:
             import live_vs_backtest as lvb
             recent = lvb._fetch(args.live_url)
-        except Exception as e:  # noqa: BLE001 -- recorded, never fabricated
+        except (OSError, ValueError) as e:  # URLError is an OSError; bad JSON is a ValueError. Recorded as not_measured, never fabricated
             print(f"live fetch failed: {e!r}", file=sys.stderr)
     legs: Dict[str, Any] = {}
     for leg in args.leg:
