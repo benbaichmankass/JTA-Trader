@@ -1,0 +1,94 @@
+id: RQ-20261022-4b82-20
+title: 'Macro RATES-channel VARIANT: does the Michigan consumer-sentiment surprise predict TLT forward returns at 1-5 trading days?'
+status: queued
+cadence: once
+roadmap:
+- M28
+theme: macro
+priority: 3
+kind: experiment
+question: RQ-20261014-65cc-04 (Michigan sentiment surprise -> ES=F, 1-5 d) graded FAIL. Does the michigan_sentiment survey surprise predict TLT
+  forward returns at 1, 3 and 5 trading days (pre-registered horizons, either sign, |t_eff| >= 3.0, n >= 100)? The pre-registered hypothesis is
+  that the rates market, not equities, prices this release.
+why_this_matters: 'Operator directive 2026-10-22: an idea that failed one test is not dead; it failed the first test. This unit is a registered
+  VARIANT of that first test. First test: RQ-20261014-65cc-04 (Michigan sentiment surprise -> ES=F, 1-5 d) graded FAIL. DIAGNOSIS (one line):
+  equities absorb a sentiment surprise through earnings and risk premia at a lag, while a sentiment/inflation-expectations release hits the rates
+  market on the day (the survey carries 1-year inflation expectations); ES=F was the equity channel only. Lane AUTHOR-FLOOR-1022 (research runnable
+  floor 33 vs 65 at 17:40Z). Prior ids: RQ-20261014-65cc-04, RQ-20261014-65cc-03. macro was short in the 17:40Z health check.'
+power:
+  expected_n: 531
+  min_detectable_effect: 0.2
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: n=531 is the count of michigan_sentiment rows carrying both actual and consensus in comms/macro/econ_calendar_snapshots*.jsonl (counted
+    2026-10-22); r=0.2 needs ~194 observations at alpha 0.05 / power 0.8, so a thinner n grades indeterminate, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Re-reads committed point-in-time snapshots and fetches daily closes; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261022-4B82-20-MICHIGAN-TLT
+  registered_at: '2026-10-22'
+  registered_before_run: true
+  statistic: scripts/research/macro_event_study_run.py --kind michigan_sentiment --symbol TLT --horizons 1,3,5 --primary-horizons 1,3,5 --min-n
+    100 --t-bar 3.0 --expected-sign either; surprise = actual - PIT survey consensus joined to daily closes (point-in-time econ_calendar_snapshots
+    + survey backfill).
+  rule: PASS IF at some horizon in {1,3,5} with n >= 100, |ic_t_eff| >= 3.0 AND the sign of the IC is either. FAIL IF every horizon has n >= 100
+    and none reaches |t_eff| >= 3.0 in the either direction (a significant WRONG-sign horizon is reported but is not a pass; a FAIL closes only
+    this surprise definition, instrument and these horizons). INDETERMINATE IF any horizon has n < 100. A PASS starts this kind's own placebo
+    (anchor shifted -10 trading days) and early/late sub-period rungs; it is not money and not a trade case.
+  what_it_does_not_do: 'An IC is not money: no cost stack is applied here and a PASS needs its own sign-book net-of-cost unit. The horizons and
+    threshold are fixed now. Family-breadth multiplicity (the P4 event family already holds many IC tests) is reported by the reader; a PASS is
+    a lead, not a finding.'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 20
+  confidence: 0.15
+  bucket: information
+  basis: 'stand-in: a second event-surprise lead for the M28 sleeve; low prior, information value, not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 15
+  why_runner: Fetches public candles / reads committed files; CPU only; not trainer-resident.
+  basis: Estimate from the comparable harness_stage0 / exit_lever_ablation runs of 2026-10-16..22; the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/macro_event_study_run.py
+  - --kind
+  - michigan_sentiment
+  - --snapshots
+  - comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl
+  - --symbol
+  - TLT
+  - --horizons
+  - 1,3,5
+  - --primary-horizons
+  - 1,3,5
+  - --min-n
+  - '100'
+  - --t-bar
+  - '3.0'
+  - --expected-sign
+  - either
+  - --population
+  - michigan_sentiment releases (live feed + survey-consensus backfill) joined to TLT daily closes
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261022-4b82-20
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P4
+related:
+- scripts/research/macro_event_study_run.py
+- comms/macro/econ_calendar_snapshots.jsonl
+- RQ-20261014-65cc-04
+- RQ-20261014-65cc-03
+- AUTHOR-FLOOR-1022
