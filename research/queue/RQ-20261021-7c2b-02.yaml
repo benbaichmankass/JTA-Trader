@@ -2,7 +2,7 @@ id: RQ-20261021-7c2b-02
 title: >-
   Programme 07 TIMEFRAMES A4 RE-ASK of the VOL arm (instrument error in ef5d-06): daily Donchian-20 on the six perps with the ATR-percentile
   floor at 0.50 / 0.75 on the 0-1 scale vs unfiltered
-status: queued
+status: done
 cadence: once
 theme: timeframes
 priority: 2
@@ -120,3 +120,16 @@ related:
 - scripts/backtest_trend.py
 - scripts/research/harness_stage0.py
 last_dispatched_at: '2026-10-22T12:56:06+00:00'
+grading:
+  attested: RULE-P7-A4-VOL-FLOOR-REASK
+  auto: true
+  decision_rule_id: RULE-P7-A4-VOL-FLOOR-REASK
+  evidence:
+  - research/results/RQ-20261021-7c2b-02/39782537773.jsonl
+  graded_at: '2026-10-22'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

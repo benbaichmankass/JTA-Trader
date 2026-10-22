@@ -432,3 +432,65 @@ def test_torch_gru_is_unavailable_not_silent_without_torch(monkeypatch):
     assert "torch" in (mb.probe_learner("torch_gru", {}) or "")
     with pytest.raises(mb.Unavailable):
         mb.LEARNERS["torch_gru"][0](np.zeros((50, 2)), np.zeros(50, int), np.zeros((5, 2)), 2, {})
+
+
+def _var_frames(tmp_path, n=900, seed=3):
+    import pandas as pd
+    rng = np.random.default_rng(seed)
+    ts = pd.date_range("2025-01-01", periods=n, freq="15min", tz="UTC")
+    base = rng.normal(scale=0.01, size=n)
+    own = base + rng.normal(scale=0.004, size=n)
+    peer = np.roll(base, -1) * 0.8 + rng.normal(scale=0.004, size=n)     # peer LEADS own by one bar
+    pd.DataFrame({"ts": ts, "log_return": peer}).to_json(tmp_path / "peer.jsonl", orient="records", lines=True,
+                                                         date_format="iso")
+    return pd.DataFrame({"ts": ts, "log_return": own}), {"own": "BTC", "peers": {"ETH": str(tmp_path / "peer.jsonl")},
+                                                           "lags": 3, "window": 400, "refit_every": 48}
+
+
+def test_var_price_vector_is_causal_and_emits_the_vector(tmp_path):
+    df, spec = _var_frames(tmp_path)
+    a = mb.block_var_price_vector(df, spec)
+    assert {"var_ret_BTC", "var_ret_ETH", "var_abs_BTC", "var_abs_ETH", "var_ret_own", "var_abs_own"} <= set(a)
+    assert np.isfinite(a["var_ret_own"][-1]) and np.isnan(a["var_ret_own"][:100]).all()
+    df2 = df.copy()
+    df2.loc[700:, "log_return"] = 9.9                                   # corrupt the FUTURE of own
+    b = mb.block_var_price_vector(df2, spec)
+    for k in a:
+        assert np.allclose(a[k][:700], b[k][:700], equal_nan=True), k
+
+
+def test_var_price_vector_uses_the_peer_lead(tmp_path):
+    df, spec = _var_frames(tmp_path)
+    with_peer = mb.block_var_price_vector(df, spec)["var_ret_own"]
+    solo = mb.block_var_price_vector(df, {k: v for k, v in spec.items() if k != "peers"})["var_ret_own"]
+    nxt = np.roll(df["log_return"].to_numpy(), -1)
+    m = np.isfinite(with_peer) & np.isfinite(solo)
+    m[-1] = False
+    assert np.corrcoef(with_peer[m], nxt[m])[0, 1] > np.corrcoef(solo[m], nxt[m])[0, 1]
+
+
+def test_common_rows_restricts_every_arm_to_rows_all_side_streams_cover():
+    df = mb.synthetic_frame(2400, 5, 1.5)
+    df["fcA"] = np.where(np.arange(len(df)) % 4 == 0, df["x0"], np.nan)      # stride-4 stream
+    df["fcB"] = np.where(np.arange(len(df)) % 8 == 0, df["x1"], np.nan)      # stride-8 stream
+    spec = {"task": "classification", "common_rows": True, "cv": {"folds": 3, "embargo_rows": 4, "min_train_frac": 0.4},
+            "dataset": {"ts_col": "ts", "target": "label", "features": ["x2"]}}
+    ls = {"a": {"kind": "prior", "feature_blocks": [{"kind": "df_columns", "columns": ["fcA"], "require_finite": True}]},
+          "b": {"kind": "prior", "feature_blocks": [{"kind": "df_columns", "columns": ["fcB"], "require_finite": True}]}}
+    res = mb.run_group(df, spec, ls, "macro_f1", {})
+    assert res["n_common_rows"] == 300                                         # every 8th of 2400
+    assert res["arms"]["a"]["windows"]["cv"]["n_test_rows"] == res["arms"]["b"]["windows"]["cv"]["n_test_rows"]
+
+
+def test_group_placeholder_and_peer_skip_serve_every_symbol(tmp_path):
+    import pandas as pd
+    df, spec = _var_frames(tmp_path)
+    df.attrs["group"] = "BTC"
+    spec = dict(spec, own="{group}", peers={"BTC": str(tmp_path / "peer.jsonl"), "ETH": str(tmp_path / "peer.jsonl")})
+    out = mb.block_var_price_vector(df, spec)
+    assert {"var_ret_BTC", "var_ret_ETH"} <= set(out) and "var_ret_BTC" in out   # own not double-counted
+    assert len([k for k in out if k.startswith("var_ret_") and k != "var_ret_own"]) == 2
+    side = tmp_path / "side_BTC.jsonl"
+    pd.DataFrame({"ts": df["ts"], "fc_ret_med": 1.0}).to_json(side, orient="records", lines=True, date_format="iso")
+    j = mb.block_join_columns(df, {"path": str(tmp_path / "side_{group}.jsonl"), "columns": ["fc_ret_med"]})
+    assert np.allclose(j["fc_ret_med"], 1.0)

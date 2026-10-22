@@ -2,7 +2,7 @@ id: RQ-20261021-7c2b-03
 title: >-
   Programme 07 Q5 CONFIRM by transfer: does the LONG-only filter that won ef5d-06 also beat unfiltered daily Donchian-20 on six perps
   it was NOT selected on (BNB, DOGE, LINK, LTC, BCH, DOT)?
-status: queued
+status: done
 cadence: once
 theme: timeframes
 priority: 2
@@ -120,3 +120,16 @@ programme_node:
   goal: G1
   after: []
 last_dispatched_at: '2026-10-22T12:56:06+00:00'
+grading:
+  attested: RULE-P7-Q5-LONG-TRANSFER
+  auto: true
+  decision_rule_id: RULE-P7-Q5-LONG-TRANSFER
+  evidence:
+  - research/results/RQ-20261021-7c2b-03/39782534709.jsonl
+  graded_at: '2026-10-22'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

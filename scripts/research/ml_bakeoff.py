@@ -159,11 +159,34 @@ def block_har_rv(df, spec: Dict[str, Any]) -> Dict[str, np.ndarray]:
     return {"har_rv_d": _roll_mean(r2, d * sc), "har_rv_w": _roll_mean(r2, w * sc), "har_rv_m": _roll_mean(r2, m * sc)}
 
 
+def _fmt(text: str, df) -> str:
+    """Substitute ``{group}`` (the dataset group this frame belongs to) in a block's path/name strings, so ONE learner
+    spec serves every symbol of a multi-group bake-off."""
+    return str(text).replace("{group}", str(getattr(df, "attrs", {}).get("group", "")))
+
+
+def _read_jsonl_cols(path: str, cols: List[str], tail: int = 0):
+    import pandas as pd
+    rows = []
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            if line.strip():
+                r = json.loads(line)
+                rows.append({c: r.get(c) for c in cols})
+    return pd.DataFrame(rows[-tail:] if tail else rows)
+
+
 def block_join_columns(df, spec: Dict[str, Any]) -> Dict[str, np.ndarray]:
     """Join a precomputed side-stream (e.g. fc_* from build_forecasts.py for another backend) on ts."""
     import pandas as pd
-    path = _resolve_path(str(spec["path"]))
-    side = pd.read_parquet(path) if str(path).endswith(".parquet") else pd.read_csv(path)
+    path = _resolve_path(_fmt(spec["path"], df))
+    sp = str(path)
+    if sp.endswith(".parquet"):
+        side = pd.read_parquet(path)
+    elif sp.endswith(".jsonl"):
+        side = pd.read_json(path, lines=True)
+    else:
+        side = pd.read_csv(path)
     on = spec.get("on", "ts")
     side[on] = pd.to_datetime(side[on], utc=True)
     left = pd.DataFrame({on: pd.to_datetime(df[on], utc=True)})
@@ -180,8 +203,86 @@ def block_df_columns(df, spec: Dict[str, Any]) -> Dict[str, np.ndarray]:
     return {c: np.asarray(df[c], dtype=float) for c in spec["columns"]}
 
 
+def _ridge_solve(X: np.ndarray, Y: np.ndarray, lam: float) -> np.ndarray:
+    """Ridge with an unpenalised intercept; returns the (p+1, m) coefficient matrix."""
+    Xa = np.column_stack([np.ones(len(X)), X])
+    pen = lam * np.eye(Xa.shape[1])
+    pen[0, 0] = 0.0
+    return np.linalg.solve(Xa.T @ Xa + pen, Xa.T @ Y)
+
+
+def block_var_price_vector(df, spec: Dict[str, Any]) -> Dict[str, np.ndarray]:
+    """Multivariate linear (VAR-style) PREDICTED PRICE VECTOR -- the BASELINE arm every TSFM must beat
+    (operator IDEAS 2026-10-21: "a predictive ML that uses multivariate regressions to create a predicted price vector").
+
+    Causal rolling ridge VAR(p) over K assets' 1-bar log returns r and absolute returns |r| (the second block is what
+    makes it informative for a VOLATILITY head): at each refit point the model is fit ONLY on rows whose next-bar
+    target is already known, then used to predict the next-bar [r_{t+1}] and [|r_{t+1}|] vectors for every asset.
+    Emits ``<prefix>ret_<SYM>`` / ``<prefix>abs_<SYM>`` (the vector) plus ``<prefix>ret_own`` / ``<prefix>abs_own``
+    for the group's own asset. No forward information: row t's prediction uses returns up to and including t.
+
+    spec: own (symbol name of this group's asset; ``{group}`` ok), return_col (default log_return), peers {SYM: jsonl/csv/parquet
+    path with ts + return_col}, lags (default 4), window (default 2000 rows), refit_every (default 96), ridge (default 1.0)
+    """
+    import pandas as pd
+    on = spec.get("on", "ts")
+    rc = spec.get("return_col", "log_return")
+    p = int(spec.get("lags", 4))
+    win = int(spec.get("window", 2000))
+    step = int(spec.get("refit_every", 96))
+    lam = float(spec.get("ridge", 1.0))
+    pre = spec.get("prefix", "var_")
+    own = _fmt(spec.get("own", "OWN"), df)
+    t = pd.to_datetime(df[on], utc=True)
+    series = {own: np.asarray(df[rc], dtype=float)}
+    for sym, path in (spec.get("peers") or {}).items():
+        if str(sym) == own:
+            continue
+        fp = str(_resolve_path(_fmt(path, df)))
+        if fp.endswith(".jsonl"):
+            side = _read_jsonl_cols(fp, [on, rc], int(spec.get("peer_tail_rows", 0)))   # shards are 480 MB wide
+        else:
+            side = pd.read_parquet(fp) if fp.endswith(".parquet") else pd.read_csv(fp)
+        side[on] = pd.to_datetime(side[on], utc=True)
+        m = pd.DataFrame({on: t}).merge(side[[on, rc]], on=on, how="left")
+        series[str(sym)] = m[rc].to_numpy(dtype=float)
+    syms = list(series)
+    n, K = len(df), len(syms)
+    R = np.column_stack([np.nan_to_num(series[s]) for s in syms])      # (n, K)
+    A = np.abs(R)
+    Z = np.column_stack([R, A])                                         # (n, 2K) state at t
+    feats = np.column_stack([np.roll(Z, j, axis=0) for j in range(p)])  # lags 0..p-1 -> (n, 2K*p)
+    feats[: p - 1] = np.nan
+    Y = np.roll(Z, -1, axis=0)                                          # next-bar vector, known from t+1
+    Y[-1] = np.nan
+    pred = np.full((n, 2 * K), np.nan)
+    first = max(win // 2, p + 10)
+    for a in range(first, n, step):
+        lo = max(p - 1, a - win)
+        hi = a - 1                                                     # rows lo..hi-1 have a target at <= a-1+... known by a
+        Xtr, Ytr = feats[lo:hi], Y[lo:hi]
+        ok = np.isfinite(Xtr).all(axis=1) & np.isfinite(Ytr).all(axis=1)
+        if ok.sum() < 4 * feats.shape[1]:
+            continue
+        W = _ridge_solve(Xtr[ok], Ytr[ok], lam)
+        b = min(a + step, n)
+        Xb = feats[a:b]
+        good = np.isfinite(Xb).all(axis=1)
+        pb = np.full((b - a, 2 * K), np.nan)
+        pb[good] = np.column_stack([np.ones(good.sum()), Xb[good]]) @ W
+        pred[a:b] = pb
+    out: Dict[str, np.ndarray] = {}
+    for i, s in enumerate(syms):
+        out[f"{pre}ret_{s}"] = pred[:, i]
+        out[f"{pre}abs_{s}"] = pred[:, K + i]
+    out[f"{pre}ret_own"] = pred[:, 0]
+    out[f"{pre}abs_own"] = pred[:, K]
+    return out
+
+
 FEATURE_BLOCKS: Dict[str, Callable[..., Dict[str, np.ndarray]]] = {
-    "har_rv": block_har_rv, "join_columns": block_join_columns, "df_columns": block_df_columns}
+    "har_rv": block_har_rv, "join_columns": block_join_columns, "df_columns": block_df_columns,
+    "var_price_vector": block_var_price_vector}
 
 
 # ── learners ─────────────────────────────────────────────────────────────────
@@ -602,6 +703,22 @@ def run_group(df, spec: Dict[str, Any], learner_specs: Dict[str, Dict[str, Any]]
         tr = tr[: max(0, len(tr) - int(cv.get("embargo_rows", 0)))]
         windows["holdout"] = [(tr, te)] if len(tr) >= 50 and len(te) >= 20 else []
     res: Dict[str, Any] = {"n_rows": int(len(df)), "classes": [str(c) for c in classes], "arms": {}}
+    if spec.get("common_rows"):
+        # SAME ROWS for every arm (RQ-20261011-9da8-01 'identical rows'): a feature block marked ``require_finite: true``
+        # (a sparse fc_* side-stream: one forecast per stride, NaN between) votes; train/test indices are restricted to
+        # rows where EVERY available arm's marked columns are finite. Without this, arms with a denser or sparser
+        # side-stream would be graded on different rows.
+        common = np.ones(len(df), dtype=bool)
+        for name, ls in learner_specs.items():
+            if status.get(name):
+                continue
+            for blk in ls.get("feature_blocks") or []:
+                if blk.get("require_finite"):
+                    for arr in FEATURE_BLOCKS[blk["kind"]](df, blk).values():
+                        common &= np.isfinite(arr)
+        windows = {w: [(tr[common[tr]], te[common[te]]) for tr, te in wf] for w, wf in windows.items()}
+        windows = {w: [(tr, te) for tr, te in wf if len(tr) >= 50 and len(te) >= 20] for w, wf in windows.items()}
+        res["n_common_rows"] = int(common.sum())
     for name, ls in learner_specs.items():
         why = status.get(name)
         if why:
@@ -767,6 +884,8 @@ def run_spec(spec: Dict[str, Any], *, unit: str = "(inline)") -> Dict[str, Any]:
     better_high = metric_higher_is_better(metric, spec.get("higher_is_better"))
     status = {n: probe_learner(ls["kind"], ls.get("params") or {}) for n, ls in learners.items()}
     gdata = load_groups(spec["dataset"])
+    for g, df in gdata.items():
+        df.attrs["group"] = g
     groups = {g: run_group(df, spec, learners, metric, status) for g, df in gdata.items()}
     arm_status: Dict[str, str] = {}
     for n in learners:
