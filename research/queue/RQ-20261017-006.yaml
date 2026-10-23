@@ -5,7 +5,7 @@ id: RQ-20261017-006
 title: 'Programme 06 Q1 re-ask on the SCALP family alone (L-DATA): is the SL-first tie convention a material
   first-passage label error for ict_scalp, measured on ALL its committed trades instead of <= 400 per
   leg?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-DATA
@@ -117,17 +117,16 @@ generated:
 last_dispatched_at: '2026-10-23T14:59:38+00:00'
 grading:
   auto: true
+  awaiting: more_data
   decision_rule_id: RULE-P6-Q1-SCALP-TIE-FIDELITY
   evidence:
   - research/results/RQ-20261017-006/39011788378.jsonl
+  - research/results/RQ-20261017-006/39974455121.jsonl
   graded_at: '2026-10-23'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: RESEARCH-TOOLING-GAPS
-  owner_reason: 'producer_failed, not a verdict: scripts/research/intrabar_label_fidelity.py writes verdict
-    ''MIXED'' which the verdict.json contract rejects; fix is open PR #18527 (contract-valid verdict.json
-    for intrabar_label_fidelity). Once it merges, re-fire the once unit (last_dispatched_at: null) so
-    the rule (NEEDED >= 0.02 at any K / NOT_NEEDED < 0.005 at every K) is applied to a real verdict.'
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate (1 earlier producer_failed / re-graded wiring_only
+    row(s) superseded)
   rows: 1
-  verdict: null
+  verdict: indeterminate

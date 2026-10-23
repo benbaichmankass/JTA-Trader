@@ -1,7 +1,7 @@
 id: RQ-20261022-eba2-06
 title: 'Giveback as a FRACTION of the peak: does exiting when open profit falls to 60% of the peak (once peak >= 2.0 R) replace
   the declared exit of xrp_pullback_2h on net R in 5 of 6 calendar folds over 2020-07..2026-10, at the venue cost stack?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -118,3 +118,16 @@ related:
 - research/queue/RQ-20261019-018.yaml
 - scripts/research/exit_lever_ablation.py
 last_dispatched_at: '2026-10-23T17:55:02+00:00'
+grading:
+  attested: RULE-P1-Q12-XRP-PULLBACK-2H-FRAC-GIVEBACK
+  auto: true
+  decision_rule_id: RULE-P1-Q12-XRP-PULLBACK-2H-FRAC-GIVEBACK
+  evidence:
+  - research/results/RQ-20261022-eba2-06/39999074227.jsonl
+  graded_at: '2026-10-23'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
