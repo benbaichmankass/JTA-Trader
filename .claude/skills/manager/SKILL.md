@@ -943,6 +943,14 @@ and take the notes from the past day's scratch pad (the Google Doc) and add thos
    blocked, or has something the manager must act on: `create_trigger(persistent_session_id=<manager>)`
    then `fire_trigger`. If that prompts, the fallback is a PR comment. The
    manager acts on a wake immediately.
+   **Measured rule (MANAGER-WAKE-REFUSED, 2026-10-23): the wake works only
+   from a session at lineage depth ≤ 7 (limit 8).** `get_session` (no id)
+   returns `lineage: {depth, limit}`. A session at 8/8 cannot create
+   triggers or sessions; its refusal reads "lineage depth limit". So the
+   manager must itself sit at depth ≤ 6, so its lanes sit at ≤ 7, and a
+   manager rotation is created by a shallow session, never by the manager.
+   A lane that finds itself at 8 reports by PR comment (the 3 h check-in
+   reads it) and does not retry the trigger.
 2. **POLL (backup).** The routine "Manager lane check-in" (cron `17 */3 * * *`)
    runs § "The operating loop" every 3 h. Its prompt is that one line. Within
    it, restart or re-dispatch any lane that is dead, stalled, finished without
