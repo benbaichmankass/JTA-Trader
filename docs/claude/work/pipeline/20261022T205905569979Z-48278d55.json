@@ -1,0 +1,19 @@
+{
+  "due_when": {
+    "due_date": "2026-10-27",
+    "kind": "date"
+  },
+  "filed": "2026-10-22",
+  "id": "PI-20261022-HOPS2047-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "by": "research-ops-2047",
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261022-2047 blocked/ audit: RQ-20261009-900 (ML-LEG-CORPUS)",
+    "rerun": "python3 -c \"import json;r=json.loads(open('research/results/RQ-20261014-736c-01/38738465656.jsonl').readline());print(r['read_state'],r['verdict'])\"; ls research/queue/blocked/RQ-20261009-900.yaml  # expect 'measured pass' and the file still in blocked/"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "RQ-20261009-900 clears_when is HALF met: its prerequisite RQ-20261014-736c-01 landed read_state measured / verdict pass and the corpus exists on main (comms/research/RQ-20261014-736c-01/38738465656/ml2_live_leg_corpus.jsonl). The unit stays in blocked/ because the remaining clause is a BUILD: a small grader that runs ml2_bracket_train_eval.py --corpus <that path> --outcome mfe_r --per-leg --per-stratum and writes verdict.json per the unit's pre-registered rule, then git mv to research/queue/ with run.workflow research-script-run.yml and lands.store. Known caveat from the unit: S1 eval size ~74 < 88 floor, so S1 will grade INDETERMINATE unless the window is lengthened (the rule is not edited). 9807-02/05 and 901 remain blocked on other levers. (The local eval run timed out at 120 s in this sandbox, so the baselines print was NOT observed here.)"
+}
