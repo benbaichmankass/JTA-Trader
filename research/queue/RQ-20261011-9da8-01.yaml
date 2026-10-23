@@ -152,6 +152,8 @@ grading:
   graded_at: '2026-10-23'
   grader: scripts/research/queue_grade.py
   needs_review: true
+  owner: RESEARCH-OPS-20261023-1447
+  owner_reason: 'latest row 39923386978 is producer_failed (ml_bakeoff exit 75, trainer heavy_lock_timeout after 3600 s), not a verdict; an earlier measured FM bake-off FAIL was diagnosed on 2026-10-23 08:47Z. The unit re-dispatches on its own; if it fails the same way on 3 consecutive fires, route it to gpu-burst-train per docs/claude/trainer-resource-protocol.md (lever, not a retirement).'
   reason: 'read_state not unanimously measured: [''producer_failed'']'
   rows: 1
   verdict: null

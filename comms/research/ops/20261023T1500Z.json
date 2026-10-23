@@ -1,0 +1,38 @@
+{
+  "run": "RESEARCH-OPS-20261023-1447", "finished_at": "2026-10-23T15:00:00Z", "by": "session_01TGmyi7oEnwc7Gc3Unwzvaz",
+  "floor": 57, "floor_basis": "computed_floor(fired_24h 72)", "authoring_queue_depth": 29,
+  "idle_backends": ["github_runner_data", "kaggle"], "needs_review_triaged": 1, "needs_review_left": 31,
+  "throughput": {"runnable_before": 45, "runnable_after": 47, "queued": 132, "fired_24h": 72, "results_landed_24h": 79, "hours_since_last_dispatch": 0.9, "idle_alarm": false,
+                 "after_basis": "dispatch_queue.py dry run lists 7e83-01/-02 would_dispatch; they count runnable once this PR merges"},
+  "mechanism": {"dispatch_receipt": "ok (fresh, 0.88 h)", "collector": "ok (79 results landed 24h, 0 unreadable)", "stranded_stamp_prs": [], "incident": null,
+                "watchdog": "newest watchdog_incidents.jsonl row is 2026-10-17; no open escalation"},
+  "results_read": {"pass": 3, "fail": 11, "indeterminate": 2, "wiring_only": 1, "producer_failed": 1,
+                   "units": ["RQ-20261021-7c2b-10 pass (eth_prop breadth, lead)", "RQ-20261022-326f-11 pass (pullback 4h, lead)", "RQ-20261022-4b82-14 pass (eth_pullback_2h VW100, lead, 3 arms)",
+                             "RQ-20261022-38be-02 indeterminate (pooled n 67 < 88)", "RQ-20261022-c0d2-01 indeterminate (GRU variant between bars)",
+                             "RQ-20261021-2d98-01 fail", "RQ-20261021-7c2b-13 fail", "RQ-20261022-326f-07 fail", "RQ-20261022-326f-09 fail", "RQ-20261022-326f-10 fail", "RQ-20261022-326f-12 fail",
+                             "RQ-20261022-4b82-01 fail", "RQ-20261022-4b82-02 fail", "RQ-20261022-4b82-16 fail", "RQ-20261022-4b82-17 fail", "RQ-20261022-3a84-12 fail (infra self-test)",
+                             "RQ-20261006-004 wiring_only", "RQ-20261011-9da8-01 producer_failed (trainer heavy_lock_timeout)"],
+                   "note": "research_disposition.py --unread-only: unread 0; the grades are the mechanism's, not re-done here. Each PASS is a single-window lead: its follow-up is a confirmation, never a config change. FAILs are variant-queue input per fail-is-not-dead; the failed 4b82-16/-17 (funding-hours) and 326f-07 (vol-skip) legs read 'dead config, no reachable lever' - owed variants stay in PI-20261023-GGAWBEOX-0001."},
+  "unlocked": [], "retired": [],
+  "levers_filed": [],
+  "units_authored": ["RQ-20261023-7e83-01 (xrp_pullback_2h VW100 cross-symbol confirmation)", "RQ-20261023-7e83-02 (ada_pullback_2h VW100 cross-symbol confirmation)"],
+  "followups_filed": [
+    {"what": "38be-02 INDETERMINATE n67<88: successor unit needs more legs or a forward window", "ref": "PI-20261023-3UNWZVAZ-0001"},
+    {"what": "4b82-14 VW100 lead: Tier-3 note deferred until 7e83-01/-02 read; multiple-testing denominator 3 recorded", "ref": "REGIME-PROGRAM note"},
+    {"what": "9da8-01 producer_failed given an owner and a named gap (re-dispatches itself; gpu-burst route after 3 consecutive heavy-lock timeouts)", "ref": "RESEARCH-OPS-20261023-1447 / grading.owner"}
+  ],
+  "authoring": {"queue_depth": 29, "nodes_drafted": 0, "nodes": [],
+                "theme_shortfall": {"regime": 5, "ml_health": 2, "new_strategy_prop": 9, "infra": 1},
+                "why_short": "0 programme nodes drafted, stated plainly: the head of the authoring queue is still gated (P3-Q1 on LIVE-BT-STAGE-B, P1-Q11 on HARNESS-METRIC-TRIGGER, P1-Q6 declares are Tier-3 notes, P3-Q3 slv/ief resolved as SLV-PB1D-RETENTION-T3). Budget went to two hand units that answer a result (the 4b82-14 PASS confirmation), which is the step-D follow-up, in the regime theme (the largest short)."},
+  "not_run": [
+    "authoring of programme nodes from the authoring queue (0 drafted; see authoring.why_short)",
+    "needs_review triage beyond the one unowned unit: the other 31 are owned with a named gap; not re-audited this pass",
+    "blocked/ audit: blocker_watch.py not re-run this pass (previous pass: 77 units, all name a lever)"
+  ],
+  "handoff": [
+    "MANAGER (held PR): merge this run PR; it hand-authors RQ-20261023-7e83-01/-02 and sets grading.owner on RQ-20261011-9da8-01 (landing hold unvouchable_paths, E57)",
+    "MANAGER: draft PR #18527 (contract-valid verdict.json for intrabar_label_fidelity) still open and still the sole blocker of RQ-20261017-006 (per the 09:30Z record; not re-checked)",
+    "next research-ops: read 7e83-01/-02; draft at least one programme node first (step E.0); author a 38be-02 successor (PI-20261023-3UNWZVAZ-0001); run blocker_watch.py",
+    "No Tier-3 change is implied by any result this pass; SLV-PB1D-RETENTION-T3 from the previous pass still awaits the manager"
+  ]
+}
