@@ -123,11 +123,5 @@ generated:
   key: programme:P1-Q11-path-metric-giveback
   params:
     node: P1-Q11-path-metric-giveback
-status: blocked
+status: queued
 last_dispatched_at: null
-blocked_on:
-- what: scripts/research/path_metric_giveback.py has no vol_ratio_k feature and no --baseline-extra flag (rung 1 has only
-    the four path metrics over the three-feature baseline).
-  ref: PATHMETRIC-VOLCTL
-  clears_when: PATHMETRIC-VOLCTL is done (feature + flag + self-test planting a vol-only signal that the contrast must NOT
-    credit to the path metrics); then git mv to research/queue/, status queued.

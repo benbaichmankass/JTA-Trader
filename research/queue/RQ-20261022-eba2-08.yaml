@@ -1,7 +1,7 @@
-id: RQ-20261022-eba2-07
-title: 'Programme 01 Q11 rung 2 (LEVER ARM): on ada_pullback_2h, does a metric-TRIGGERED bank (50% at +1 R) or tight trail
+id: RQ-20261022-eba2-08
+title: 'Programme 01 Q11 rung 2 (LEVER ARM): on xrp_pullback_2h, does a metric-TRIGGERED bank (50% at +1 R) or tight trail
   (2.5 x ATR) at bar 6 beat the declared exit AND the same action applied to every trade, on net R in 5 of 6 folds over 2020-07..2026-10?'
-status: blocked
+status: queued
 cadence: once
 roadmap:
 - L-ATM
@@ -10,7 +10,7 @@ theme: live_strategy
 priority: 1
 kind: experiment
 question: 'If the bar-6 path metrics carry information about giveback (007 PASS, eba2-01 transfer PASS, and eba2-04 if it
-  has run), the operator''s idea is a SELECTIVE exit: act only on the trades the metrics flag. On ada_pullback_2h over 2020-07-01
+  has run), the operator''s idea is a SELECTIVE exit: act only on the trades the metrics flag. On xrp_pullback_2h over 2020-07-01
   .. 2026-10-15 23:59 (replace grade, 6 calendar folds by entry time), with out-of-fold triggers (for each held-out fold the
   full model of path_metric_giveback.py is fit on the OTHER folds and a trade is flagged when its fitted P(big giveback) >=
   0.5 at bar 6; no trade''s flag sees its own fold), do arms MB (flagged trades bank 50% at +1.0 R), MT (flagged trades tighten
@@ -21,22 +21,22 @@ why_this_matters: The fixed bank (-43..-68 R on ada_pullback_2h) and the uncondi
   control arm is what stops a PASS from being 'any early action' (the 007 PASS cannot distinguish that). Rung 2 exists only
   on legs where rung 1 passed (ada_pullback_2h, xrp_pullback_2h); eth_4h read FAIL and xrp_4h underpowered in 007.
 power:
-  expected_n: 402
+  expected_n: 394
   min_detectable_effect: 0.45
   effect_units: sd
   design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: Floor 39 incumbent trades; the incumbent read n 402 (MEASURED). Flagged subset is smaller; the rule grades whole-leg
+  basis: Floor 39 incumbent trades; the incumbent read n 394 (MEASURED). Flagged subset is smaller; the rule grades whole-leg
     net R, so n(A) is the denominator.
   feasibility:
     source: none
     accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
 decision_rule:
-  id: RULE-P1-Q11-R2-ADA-PULLBACK-2H
+  id: RULE-P1-Q11-R2-XRP-PULLBACK-2H
   registered_at: '2026-10-22'
   registered_before_run: true
-  statistic: 'From scripts/research/exit_lever_ablation.py --grade replace on ada_pullback_2h with arms A, MB, MT, UB, UT
+  statistic: 'From scripts/research/exit_lever_ablation.py --grade replace on xrp_pullback_2h with arms A, MB, MT, UB, UT
     (build HARNESS-METRIC-TRIGGER: out-of-fold trigger file from path_metric_giveback.py --emit-triggers, consumed by --trigger-file
     / --trigger-action in the harness), window 2020-07-01 .. 2026-10-15 23:59, 6 equal calendar folds, net of the full cost
     stack (resolve_cost_policy, recorded per arm). Per arm: n, net_total_r (full-position R), max_drawdown_r, net R per fold.'
@@ -72,13 +72,15 @@ run:
   - python3
   - scripts/research/exit_lever_ablation.py
   - --leg
-  - ada_pullback_2h
+  - xrp_pullback_2h
+  - --trigger-from-path-metrics
+  - '6'
   - --arm
   - A=
   - --arm
-  - MB=--trigger-action=bank;--bank-frac=0.5;--bank-at-r=1.0;--trigger-file={trigger_file}
+  - MB=--trigger-action=bank;--bank-frac=0.5;--bank-at-r=1.0;--trigger-file=@trigger_file
   - --arm
-  - MT=--trigger-action=tight;--trail-decay-tight-mult=2.5;--trigger-file={trigger_file}
+  - MT=--trigger-action=tight;--trail-decay-tight-mult=2.5;--trigger-file=@trigger_file
   - --arm
   - UB=--trigger-action=bank;--bank-frac=0.5;--bank-at-r=1.0;--trigger-all=6
   - --arm
@@ -109,8 +111,8 @@ run:
   - '{out_dir}'
   timeout_minutes: 120
   inputs:
-    research_unit: RQ-20261022-eba2-07
-    trigger_producer: python3 scripts/research/path_metric_giveback.py --leg ada_pullback_2h --k 6 --emit-triggers {trigger_file}
+    research_unit: RQ-20261022-eba2-08
+    trigger_producer: built in -- exit_lever_ablation.py --trigger-from-path-metrics 6 scores the leg with path_metric_giveback.oof_triggers (full model, other folds only, big-quantile 0.5, --folds 6) and substitutes the file for the literal token @trigger_file
       (flags per eba2-01)
 lands:
   store: research/results/
@@ -125,10 +127,3 @@ related:
 requires_result:
   unit: RQ-20261022-eba2-01
   verdict: pass
-blocked_on:
-- what: No harness flag applies an action to trades flagged by an out-of-fold trigger file (--trigger-file, --trigger-action,
-    --trigger-all) and path_metric_giveback.py has no --emit-triggers.
-  ref: HARNESS-METRIC-TRIGGER
-  clears_when: HARNESS-METRIC-TRIGGER is done AND RQ-20261022-eba2-01 lands verdict pass (requires_result); then substitute
-    {trigger_file} per the build's contract, git mv to research/queue/, status queued.
-last_dispatched_at: null

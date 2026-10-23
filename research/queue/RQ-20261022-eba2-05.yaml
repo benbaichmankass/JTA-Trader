@@ -1,7 +1,7 @@
-id: RQ-20261022-eba2-06
+id: RQ-20261022-eba2-05
 title: 'Giveback as a FRACTION of the peak: does exiting when open profit falls to 60% of the peak (once peak >= 2.0 R) replace
-  the declared exit of xrp_pullback_2h on net R in 5 of 6 calendar folds over 2020-07..2026-10, at the venue cost stack?'
-status: blocked
+  the declared exit of ada_pullback_2h on net R in 5 of 6 calendar folds over 2020-07..2026-10, at the venue cost stack?'
+status: queued
 cadence: once
 roadmap:
 - L-ATM
@@ -11,7 +11,7 @@ priority: 1
 kind: experiment
 question: 'The census (RQ-20261014-9807-01) measures giveback as a SHARE of peak R (paper pool 0.92, deep_then_loss 0.15;
   every peak a lower bound), but every giveback stop tested so far is an ABSOLUTE R (RQ-20261019-004/-018: 1R after 2R MFE,
-  FAIL). An absolute stop is tight at a 2R peak and loose at a 6R peak; a fractional one scales with the peak. On xrp_pullback_2h
+  FAIL). An absolute stop is tight at a 2R peak and loose at a 6R peak; a fractional one scales with the peak. On ada_pullback_2h
   over 2020-07-01 .. 2026-10-15 23:59 (replace grade, 6 calendar folds), does any of three arms -- F60 (exit when open R <=
   0.60 x peak after peak >= 2.0 R), F50 (0.50 x peak), F70 (0.70 x peak) -- beat the declared exit (A) by >= 0.02 R/trade
   in >= 5 of 6 folds within the Path B drawdown bar?'
@@ -21,22 +21,22 @@ why_this_matters: 'Giveback share of peak is the operator''s standing metric. Th
   (RQ-20261019-004/-018) all FAILED against the declared exit on the Bybit money legs, by margins of -3 to -68 R over n 68-402;
   the declared wide trail earns its R in the right tail.'
 power:
-  expected_n: 394
+  expected_n: 402
   min_detectable_effect: 0.45
   effect_units: sd
   design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: Floor 39 incumbent trades (0.45 sd); the incumbent read n 394 over this window (MEASURED, RQ-20261022-fd06). Fold
+  basis: Floor 39 incumbent trades (0.45 sd); the incumbent read n 402 over this window (MEASURED, RQ-20261022-fd06). Fold
     majority carries autocorrelation.
   feasibility:
     source: none
     accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
 decision_rule:
-  id: RULE-P1-Q12-XRP-PULLBACK-2H-FRAC-GIVEBACK
+  id: RULE-P1-Q12-ADA-PULLBACK-2H-FRAC-GIVEBACK
   registered_at: '2026-10-22'
   registered_before_run: true
-  statistic: 'From scripts/research/exit_lever_ablation.py --grade replace on xrp_pullback_2h, window 2020-07-01 .. 2026-10-15
+  statistic: 'From scripts/research/exit_lever_ablation.py --grade replace on ada_pullback_2h, window 2020-07-01 .. 2026-10-15
     23:59 (6 equal calendar folds; a trade is binned by entry time), net of the full cost stack the harness resolves per venue
     (execution_costs.resolve_cost_policy, recorded per arm as cost_stack). Per arm: n, net_total_r, max_drawdown_r, net R
     per fold. A = the leg as declared. Per candidate C: delta = net_r(C) - net_r(A); folds_ge; maxDD(C) vs maxDD(A).'
@@ -71,7 +71,7 @@ run:
   - python3
   - scripts/research/exit_lever_ablation.py
   - --leg
-  - xrp_pullback_2h
+  - ada_pullback_2h
   - --arm
   - A=
   - --arm
@@ -106,7 +106,7 @@ run:
   - '{out_dir}'
   timeout_minutes: 120
   inputs:
-    research_unit: RQ-20261022-eba2-06
+    research_unit: RQ-20261022-eba2-05
 lands:
   store: research/results/
   assert_field: read_state
@@ -117,10 +117,3 @@ related:
 - research/queue/RQ-20261019-004.yaml
 - research/queue/RQ-20261019-018.yaml
 - scripts/research/exit_lever_ablation.py
-blocked_on:
-- what: 'Neither backtest_pullback.py nor backtest_trend.py has a fractional giveback exit: --giveback-r is an absolute R
-    and --giveback-min-mfe-r the arming peak; there is no --giveback-frac.'
-  ref: GIVEBACK-FRAC-FLAG
-  clears_when: GIVEBACK-FRAC-FLAG is done (flag in both harnesses, default byte-identical, tests); then git mv to research/queue/,
-    status queued.
-last_dispatched_at: null

@@ -1,7 +1,7 @@
 id: RQ-20261022-eba2-11
 title: 'Q10 variant (combination): does a SWING-level tight trail that latches ONLY once the trade has also reached +1.5 R
   / +2.0 R replace the declared exit of xrp_pullback_2h on net R in 5 of 6 folds?'
-status: blocked
+status: queued
 cadence: once
 roadmap:
 - L-ATM
@@ -123,8 +123,3 @@ related:
 - scripts/research/exit_lever_ablation.py
 - docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md
 last_dispatched_at: null
-blocked_on:
-- what: 'No --trail-level-min-r flag: the level trail latches on the first touch of the level whatever the trade''s peak R.'
-  ref: LEVEL-TRAIL-R-GATE
-  clears_when: LEVEL-TRAIL-R-GATE is done (flag in backtest_pullback.py and backtest_trend.py, default 0 = byte-identical,
-    tests); then git mv to research/queue/, status queued.

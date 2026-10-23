@@ -70,11 +70,17 @@ for _p in (REPO / "scripts" / "research", REPO / "scripts" / "ops", REPO / "scri
 
 BASE_FEATURES = ("open_r_k", "peak_r_k", "bars_since_peak_k")
 PATH_FEATURES = ("chop_k", "er_k", "shape_k", "early_k")
+#: PATHMETRIC-VOLCTL: features that may be MOVED into the baseline with ``--baseline-extra`` so the
+#: full-minus-base contrast is the four path metrics BEYOND them. ``vol_ratio_k`` = mean bar true range over
+#: bars 1..k / ATR at entry, both in R; "ATR at entry" is the first path row's ``atr_r`` (bar 1's Wilder ATR,
+#: the same convention as path_state_giveback.py -- the recorder carries no entry-bar ATR and bar 1 is
+#: inside the 1..k window, so nothing past bar k is read).
+EXTRA_FEATURES = ("vol_ratio_k",)
 VERDICTS = ("pass", "fail", "indeterminate")
 
 
 # ── features ────────────────────────────────────────────────────────────────
-def path_features(rows: list[dict[str, Any]], k: int) -> dict[str, Any] | None:
+def path_features(rows: list[dict[str, Any]], k: int, extra: tuple[str, ...] = ()) -> dict[str, Any] | None:
     """Features from bars 1..k of ONE trade's ordered path rows, or None if it exited by bar k.
 
     ``rows`` are harness_path_v1 rows for one trade sorted by bar_offset. The trade is in the population
@@ -97,8 +103,12 @@ def path_features(rows: list[dict[str, Any]], k: int) -> dict[str, Any] | None:
     peak, mae = float(last["peak_r"]), float(last["mae_r"])
     shape = peak / (peak + mae) if (peak + mae) > 0 else 0.5
     bsp = int(last["bars_since_peak"])
-    return {"open_r_k": float(last["open_r"]), "peak_r_k": peak, "bars_since_peak_k": float(bsp),
-            "chop_k": chop, "er_k": er, "shape_k": shape, "early_k": 1.0 - min(bsp, k) / k}
+    out = {"open_r_k": float(last["open_r"]), "peak_r_k": peak, "bars_since_peak_k": float(bsp),
+           "chop_k": chop, "er_k": er, "shape_k": shape, "early_k": 1.0 - min(bsp, k) / k}
+    if "vol_ratio_k" in extra:
+        atr0 = head[0].get("atr_r")
+        out["vol_ratio_k"] = (tr_sum / k) / float(atr0) if (atr0 is not None and float(atr0) > 0) else None
+    return out
 
 
 def giveback_label(rows: list[dict[str, Any]]) -> float:
@@ -107,7 +117,8 @@ def giveback_label(rows: list[dict[str, Any]]) -> float:
     return max(0.0, float(end["peak_r"]) - float(end["open_r"]))
 
 
-def build_table(path_rows: list[dict[str, Any]], k: int) -> tuple[list[dict[str, Any]], int, int]:
+def build_table(path_rows: list[dict[str, Any]], k: int, extra: tuple[str, ...] = (),
+                missing: list[int] | None = None) -> tuple[list[dict[str, Any]], int, int]:
     by: dict[str, list[dict[str, Any]]] = {}
     for r in path_rows:
         by.setdefault(r["trade_key"], []).append(r)
@@ -115,9 +126,15 @@ def build_table(path_rows: list[dict[str, Any]], k: int) -> tuple[list[dict[str,
     for key, rows in by.items():
         rows.sort(key=lambda r: int(r["bar_offset"]))
         total += 1
-        f = path_features(rows, k)
+        f = path_features(rows, k, extra)
         if f is None:
             exited += 1
+            continue
+        if any(f.get(x) is None for x in extra):
+            # a requested baseline feature the recorder could not supply (no ATR on the row): outside the
+            # population, counted apart from exits so it is never read as "exited by k"
+            if missing is not None:
+                missing[0] += 1
             continue
         table.append({"trade_key": key, "entry_ts": key.split("|")[2], **f, "giveback": giveback_label(rows)})
     return table, exited, total
@@ -178,18 +195,21 @@ def fold_of(entry_ts: list[Any], folds: int) -> list[int]:
 
 
 def grade_table(table: list[dict[str, Any]], *, folds: int, fold_majority: int, n_floor: int,
-                min_r2_gain: float, min_ll_gain: float, big_quantile: float) -> dict[str, Any]:
+                min_r2_gain: float, min_ll_gain: float, big_quantile: float,
+                extra: tuple[str, ...] = ()) -> dict[str, Any]:
     import numpy as np
     n = len(table)
     out: dict[str, Any] = {"n": n, "n_floor": n_floor, "folds": folds, "fold_majority": fold_majority,
                            "min_r2_gain": min_r2_gain, "min_ll_gain": min_ll_gain, "big_quantile": big_quantile}
+    if extra:
+        out["baseline_extra"] = list(extra)
     if n < n_floor:
         return {**out, "verdict": "indeterminate", "label": "underpowered",
                 "why": f"{n} trades open at k < n_floor {n_floor}"}
     y = np.array([t["giveback"] for t in table], dtype=float)
     yb = np.full(n, np.nan)
-    xb = np.array([[t[f] for f in BASE_FEATURES] for t in table], dtype=float)
-    xf = np.array([[t[f] for f in BASE_FEATURES + PATH_FEATURES] for t in table], dtype=float)
+    xb = np.array([[t[f] for f in BASE_FEATURES + extra] for t in table], dtype=float)
+    xf = np.array([[t[f] for f in BASE_FEATURES + extra + PATH_FEATURES] for t in table], dtype=float)
     fid = np.array(fold_of([t["entry_ts"] for t in table], folds))
     pb, pf = np.full(n, np.nan), np.full(n, np.nan)
     qb, qf = np.full(n, np.nan), np.full(n, np.nan)
@@ -235,6 +255,33 @@ def grade_table(table: list[dict[str, Any]], *, folds: int, fold_majority: int, 
             "per_fold": per_fold}
 
 
+# ── out-of-fold triggers (HARNESS-METRIC-TRIGGER) ───────────────────────────
+def oof_triggers(table: list[dict[str, Any]], k: int, *, folds: int, big_quantile: float,
+                 extra: tuple[str, ...] = (), p_threshold: float = 0.5) -> list[dict[str, Any]]:
+    """One row per trade still open at bar k: ``{trade_key, k, trigger, p}`` where ``p`` is the FULL model's
+    P(big giveback) for that trade from a logistic fit on the OTHER calendar folds only, and the 'big' cut
+    is the other folds' ``big_quantile`` giveback (the same construction grade_table scores). A trade's own
+    label, and every label in its own fold, are never read for its row. A fold with < 10 training trades
+    gets ``trigger: false, p: null`` (we could not score it, which is not "scored low")."""
+    import numpy as np
+    n = len(table)
+    if n == 0:
+        return []
+    y = np.array([t["giveback"] for t in table], dtype=float)
+    x = np.array([[t[f] for f in BASE_FEATURES + extra + PATH_FEATURES] for t in table], dtype=float)
+    fid = np.array(fold_of([t["entry_ts"] for t in table], folds))
+    p = np.full(n, np.nan)
+    for f in range(folds):
+        te, tr = fid == f, fid != f
+        if te.sum() == 0 or tr.sum() < 10:
+            continue
+        a, b = _std(x[tr], x[te])
+        ytr = (y[tr] >= float(np.quantile(y[tr], big_quantile))).astype(float)
+        p[te] = _logit(a, ytr, b) if len(set(ytr.tolist())) == 2 else ytr.mean()
+    return [{"trade_key": t["trade_key"], "k": k, "trigger": bool(p[i] >= p_threshold),
+             "p": (None if np.isnan(p[i]) else round(float(p[i]), 6))} for i, t in enumerate(table)]
+
+
 # ── harness run ─────────────────────────────────────────────────────────────
 def run_leg_paths(leg: str, base: dict[str, Any], *, days: int, start: str | None, end: str | None,
                   wd: Path, data_csv: str | None, non_crypto_source: str) -> tuple[list[dict[str, Any]], dict]:
@@ -273,9 +320,17 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--min-ll-gain", type=float, required=True)
     ap.add_argument("--big-quantile", type=float, required=True,
                     help="binary label: giveback >= this quantile of the TRAINING folds' giveback")
+    ap.add_argument("--baseline-extra", action="append", default=[], choices=EXTRA_FEATURES,
+                    help="PATHMETRIC-VOLCTL: move this feature into the BASELINE (repeatable), so the contrast "
+                         "is the four path metrics beyond it. Default none = byte-identical to rung 1.")
+    ap.add_argument("--emit-triggers", default=None,
+                    help="HARNESS-METRIC-TRIGGER: write {trade_key,k,trigger,p} per trade open at bar k, "
+                         "from the FULL model fit on the OTHER folds only (P(big giveback) >= 0.5), for "
+                         "backtest_{pullback,trend}.py --trigger-file")
     ap.add_argument("--out", required=True)
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
+    extra = tuple(dict.fromkeys(a.baseline_extra))
     if a.k < 2 or a.folds < 2 or not 1 <= a.fold_majority <= a.folds or not 0.0 < a.big_quantile < 1.0:
         print("ERROR: need --k >= 2, --folds >= 2, 1 <= --fold-majority <= --folds, 0 < --big-quantile < 1",
               file=sys.stderr)
@@ -287,6 +342,9 @@ def main(argv: list[str] | None = None) -> int:
     legs = legs.get("strategies", legs)
     kw = dict(folds=a.folds, fold_majority=a.fold_majority, n_floor=a.n_floor, min_r2_gain=a.min_r2_gain,
               min_ll_gain=a.min_ll_gain, big_quantile=a.big_quantile)
+    if extra:
+        kw["extra"] = extra
+    n_missing = [0]
     wd = Path(tempfile.mkdtemp(prefix="path_metric_giveback_"))
     per_leg, pooled, runs = {}, [], {}
     for leg in a.leg:
@@ -303,7 +361,7 @@ def main(argv: list[str] | None = None) -> int:
             (out / "failure.json").write_text(json.dumps({"stage": "harness", "leg": leg, "error": str(exc)},
                                                          indent=2) + "\n")
             return 1
-        table, exited, total = build_table(rows, a.k)
+        table, exited, total = build_table(rows, a.k, extra, n_missing)
         g = grade_table(table, **kw)
         per_leg[leg] = {**g, "n_trades": total, "n_exited_by_k": exited, "cost_policy":
                         {f: meta["bt"].get(f) for f in ("fee_bps_roundtrip", "slippage_bps_roundtrip",
@@ -313,6 +371,14 @@ def main(argv: list[str] | None = None) -> int:
         (out / f"{leg}__table.jsonl").write_text("".join(json.dumps(t) + "\n" for t in table), encoding="utf-8")
     gp = grade_table(pooled, **kw)
     verdict = gp["verdict"]
+    trig_meta = None
+    if a.emit_triggers:
+        trows = oof_triggers(pooled, a.k, folds=a.folds, big_quantile=a.big_quantile, extra=extra)
+        Path(a.emit_triggers).parent.mkdir(parents=True, exist_ok=True)
+        Path(a.emit_triggers).write_text("".join(json.dumps(r) + "\n" for r in trows), encoding="utf-8")
+        trig_meta = {"file": str(a.emit_triggers), "n_scored": len(trows),
+                     "n_flagged": sum(1 for r in trows if r["trigger"]), "k": a.k, "folds": a.folds,
+                     "construction": "full model fit on the other calendar folds only; p >= 0.5"}
     pop = (f"{len(pooled)} harness trades still open after bar {a.k} across {a.leg} "
            f"({sum(p['n_trades'] for p in per_leg.values())} trades in all), window {a.start} .. {a.end}, "
            "config-exact, net of the harness's venue-aware cost stack; features from bars 1..k only, label = "
@@ -321,6 +387,11 @@ def main(argv: list[str] | None = None) -> int:
            "measurement": {"k": a.k, "pooled": gp, "per_leg": per_leg, "runs": runs,
                            "features": {"base": BASE_FEATURES, "path": PATH_FEATURES}},
            "note": f"{verdict.upper()} / {gp.get('label')}: {gp.get('why')}"}
+    if extra:
+        rec["measurement"]["baseline_extra"] = list(extra)
+        rec["measurement"]["n_missing_baseline_feature"] = n_missing[0]
+    if trig_meta:
+        rec["measurement"]["triggers"] = trig_meta
     (out / "verdict.json").write_text(json.dumps(rec, indent=2, default=str) + "\n", encoding="utf-8")
     print(json.dumps({"verdict": verdict, "why": gp.get("why"),
                       "per_leg": {k: (v["verdict"], v.get("why")) for k, v in per_leg.items()}}, indent=1))
@@ -357,6 +428,33 @@ def _synthetic(n_trades: int, planted: bool, seed: int = 3) -> list[dict[str, An
     return rows
 
 
+def _synthetic_vol(n_trades: int, k: int = 6, seed: int = 5) -> list[dict[str, Any]]:
+    """A VOLATILITY-ONLY giveback signal: the label is a function of vol_ratio_k alone (plus small noise).
+    Path shape (chop / ER) is only a noisy PROXY for it, so a model given the path metrics but not the
+    volatility ratio appears to find a signal, and one given the ratio in its baseline must not."""
+    import numpy as np
+    import pandas as pd
+    rng = np.random.default_rng(seed)
+    t0 = pd.Timestamp("2021-01-01", tz="UTC")
+    rows = []
+    for i in range(n_trades):
+        scale = float(np.exp(rng.normal(-0.3, 0.8)))            # this trade's bar-to-bar volatility
+        key = f"leg|SYM|{t0 + pd.Timedelta(days=3 * i)}|long"
+        c, peak, mae, mine = 0.0, 0.0, 0.0, []
+        for b in range(1, k + 1):
+            c += rng.normal(0.05, 0.5 * scale)
+            fav, adv = c + abs(rng.normal(0, 0.1 * scale)), c - abs(rng.normal(0, 0.1 * scale))
+            peak, mae = max(peak, fav), max(mae, -min(adv, 0.0))
+            mine.append({"trade_key": key, "bar_offset": b, "c_r": c, "fav_r": fav, "adv_r": adv, "open_r": c,
+                         "peak_r": peak, "mae_r": mae, "bars_since_peak": 0, "is_exit": False, "atr_r": 0.5})
+        vr = path_features(mine, k, ("vol_ratio_k",))["vol_ratio_k"]
+        rows += mine
+        rows.append({"trade_key": key, "bar_offset": k + 1, "c_r": c, "fav_r": c, "adv_r": c,
+                     "open_r": peak - (0.2 + 1.0 * vr + rng.normal(0, 0.05)), "peak_r": peak, "mae_r": mae,
+                     "bars_since_peak": 0, "is_exit": True, "atr_r": 0.5})
+    return rows
+
+
 def _self_test() -> int:
     fails = []
 
@@ -381,6 +479,40 @@ def _self_test() -> int:
     f = path_features(rows, 3)
     check("a straight path has ER 1 and shape 1", f is not None and abs(f["er_k"] - 1.0) < 1e-9
           and abs(f["shape_k"] - 1.0) < 1e-9)
+    # PATHMETRIC-VOLCTL: a volatility-only signal. Without the control the path metrics are credited with it;
+    # with vol_ratio_k in the baseline the contrast must read no gain.
+    tv, _, _ = build_table(_synthetic_vol(400), k=6, extra=("vol_ratio_k",))
+    kwv = dict(folds=4, fold_majority=3, n_floor=50, min_r2_gain=0.02, min_ll_gain=0.01, big_quantile=0.5)
+    g_raw = grade_table(tv, **kwv)
+    g_ctl = grade_table(tv, **kwv, extra=("vol_ratio_k",))
+    check(f"vol-only plant, no control -> path metrics credited ({g_raw['why']})", g_raw["verdict"] == "pass")
+    check(f"vol-only plant, --baseline-extra vol_ratio_k -> no gain ({g_ctl['why']})", g_ctl["verdict"] == "fail")
+    check("default table has no vol_ratio_k column (byte-identical to rung 1)",
+          "vol_ratio_k" not in build_table(_synthetic(40, planted=True), k=6)[0][0])
+    # HARNESS-METRIC-TRIGGER: out-of-fold construction. (1) a trade's triggers never move when the labels of
+    # ITS OWN fold are rewritten; (2) they do move when another fold's labels are; (3) on a signal-free table
+    # a LEAKY in-sample fit (every label visible, a wide feature set) 'predicts' the labels far above chance
+    # while the out-of-fold triggers stay near it.
+    import numpy as np
+    tn, _, _ = build_table(_synthetic(240, planted=False), k=6)
+    base_rows = oof_triggers(tn, 6, folds=4, big_quantile=0.5)
+    fid = fold_of([t["entry_ts"] for t in tn], 4)
+    tw = [dict(t, giveback=(9.0 - t["giveback"]) if fid[i] == 0 else t["giveback"]) for i, t in enumerate(tn)]
+    own = oof_triggers(tw, 6, folds=4, big_quantile=0.5)
+    same = all(a["p"] == b["p"] for a, b, f in zip(base_rows, own, fid) if f == 0)
+    other = any(a["p"] != b["p"] for a, b, f in zip(base_rows, own, fid) if f != 0)
+    check("OOF: rewriting a fold's own labels leaves that fold's triggers unchanged", same)
+    check("OOF: rewriting a fold's labels does move the OTHER folds' triggers", other)
+    yb = np.array([t["giveback"] for t in tn])
+    big = (yb >= np.quantile(yb, 0.5)).astype(float)
+    rng = np.random.default_rng(0)
+    xw = np.c_[np.array([[t[f] for f in BASE_FEATURES + PATH_FEATURES] for t in tn]), rng.normal(size=(len(tn), 150))]
+    xs, _ = _std(xw, xw)
+    leaky = (_logit(xs, big, xs, lam=0.01) >= 0.5).astype(float)
+    clean = np.array([r["trigger"] for r in base_rows], dtype=float)
+    acc_leaky, acc_clean = float((leaky == big).mean()), float((clean == big).mean())
+    check(f"OOF rejects the leak: in-sample fit hits {acc_leaky:.2f} of a null label, out-of-fold {acc_clean:.2f}",
+          acc_leaky > 0.8 and acc_clean < 0.65)
     print("self-test:", "FAIL" if fails else "ok")
     return 1 if fails else 0
 

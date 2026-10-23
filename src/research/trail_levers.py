@@ -201,7 +201,8 @@ def level_trail_armed(kind: str, tight_mult: float) -> bool:
 
 
 def level_flag_errors(kind: str, tight_mult: float, trail_mult: float,
-                      lookback: int, pivot_k: int, round_step: float) -> list:
+                      lookback: int, pivot_k: int, round_step: float,
+                      min_r: float = 0.0) -> list:
     """Refusals for a half-declared / inert level trail (same contract as
     `momentum_flag_errors`: a lever that cannot act reports a zero delta that is
     NOT a measurement of it)."""
@@ -218,6 +219,54 @@ def level_flag_errors(kind: str, tight_mult: float, trail_mult: float,
         errs.append("--trail-level-lookback must be >= 3 and --trail-level-pivot-k >= 1")
     if round_step < 0.0:
         errs.append("--trail-level-round-step must be >= 0 (0 = auto from the entry price)")
+    if min_r < 0.0:
+        errs.append("--trail-level-min-r must be >= 0 (0 = no R gate, byte-identical)")
+    if min_r > 0.0 and not kind:
+        errs.append("--trail-level-min-r needs --trail-level: an R gate on an undeclared level is inert")
+    return errs
+
+
+def level_r_gate_open(min_r: float, peak_r: float) -> bool:
+    """LEVEL-TRAIL-R-GATE: may a level touch LATCH the tight trail on this bar?
+
+    The level trail and the R-armed decay trail are independent tighteners that
+    compose by minimum (OR). The operator's framing for Q10-variant is AND: the
+    level counts only once the trade has ALSO reached ``min_r`` R of peak open
+    profit. ``peak_r`` is the trade's running peak INCLUDING the current bar. A touch on
+    a bar where the gate is shut does not latch; the level is a price, so it is
+    re-tested on every later bar and latches the first bar the gate is open AND
+    price is at or through it. ``min_r <= 0`` is always open (byte-identical)."""
+    return min_r <= 0.0 or peak_r >= min_r
+
+
+def giveback_fires(mfe: float, open_r: float, min_mfe_r: float, giveback_r: float,
+                   frac: float = 0.0) -> bool:
+    """The ONE giveback-stop firing rule, absolute or as a share of the peak.
+
+    Armed once the peak open profit ``mfe`` reaches ``min_mfe_r`` (> 0; 0 = off).
+    Absolute (``frac`` 0, the legacy rule, byte-identical): fires when ``giveback_r``
+    R has been surrendered, ``mfe - open_r >= giveback_r``. Fractional (GIVEBACK-FRAC-FLAG,
+    ``0 < frac < 1``): fires when open profit has fallen to ``frac`` of the peak,
+    ``open_r <= frac * mfe``; the absolute ``giveback_r`` is then NOT consulted (a
+    fractional arm must not also carry a default 1 R absolute stop). Both read a bar
+    CLOSE and are the caller's to apply only when the protective stop did not hit."""
+    if min_mfe_r <= 0.0 or mfe < min_mfe_r:
+        return False
+    if frac > 0.0:
+        return open_r <= frac * mfe
+    return (mfe - open_r) >= giveback_r
+
+
+def giveback_flag_errors(min_mfe_r: float, frac: float) -> list:
+    """Refusals for an inert / malformed fractional giveback (same contract as the
+    other ``*_flag_errors``: a lever that cannot act reports a zero delta that is
+    NOT a measurement of it)."""
+    errs = []
+    if frac < 0.0 or frac >= 1.0:
+        errs.append(f"--giveback-frac must be in [0, 1) (0 = off), got {frac}")
+    if frac > 0.0 and min_mfe_r <= 0.0:
+        errs.append("--giveback-frac needs --giveback-min-mfe-r > 0: it is the arming peak, and "
+                    "without it the lever never arms")
     return errs
 
 
