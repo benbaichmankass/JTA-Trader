@@ -1,0 +1,17 @@
+{
+  "based_on": "20261016T131920695187Z-9895c956.json",
+  "due_when": {
+    "due_date": "2026-10-20",
+    "kind": "date"
+  },
+  "id": "PI-20261016-IKK5NFPO-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-GRADING-BACKLOG-1016 (manager session_01VduHYzdaXe27wTDBLSu8ao)",
+    "rerun": "grep -c RQ-20261007-024 docs/research/m20-sweep-corpus.jsonl"
+  },
+  "routed_to": "RESEARCH-TOOLING-GAPS",
+  "state": "routed",
+  "what": "RQ-20261007-024 (ief_pullback_1d vt_hot80_t2.5 third-partition check) cannot be graded: its rule needs the corpus row's split date and per-fold inert flags, but docs/research/m20-sweep-corpus.jsonl holds 0 rows with research_unit RQ-20261007-024; the E5 row (m20 run 37740393762, 2026-10-08) says only 0 of 3 cells passed at base OOS n 53. The run's artifact (runtime_logs/m20_fleet) is a 14-day Actions artifact, so it EXPIRES ~2026-10-22: pull it before then (actions artifacts for run 37740393762) and append its rows to the corpus, then grade; otherwise re-dispatch the unit with split_mode date and split 2019-01-01 as the rule's own fallback. Owner on the unit: RESEARCH-GRADE-PILE."
+}

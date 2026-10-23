@@ -76,7 +76,7 @@ run:
   - --timeframe
   - 4h
   - --days
-  - '1600'
+  - '3400'
   - --start
   - '2018-01-01'
   - --end
@@ -130,7 +130,7 @@ programme_node:
   node: P3-Q8-new-symbols
   goal: G1
   after: []
-last_dispatched_at: '2026-10-23T04:43:22+00:00'
+last_dispatched_at: null
 grading:
   attested: RULE-RQ20261022-38BE-02-CONFIRM-DONCHIAN-ETH-4H-BREADTH
   auto: true
@@ -140,6 +140,8 @@ grading:
   graded_at: '2026-10-23'
   grader: scripts/research/queue_grade.py
   needs_review: true
+  owner: RESEARCH-OPS-20261023-0847
+  owner_reason: 'producer_failed 2026-10-23: --days 1600 is TRAILING from today (fetch started 2022-06-06) while --start 2018-01-01 pins an earlier window, so every cell hit empty window. Fixed to --days 3400 (fetch covers the pinned window; rule untouched) and re-armed; if Binance Vision holds < n_floor bars pre-2020-06 the re-run grades INDETERMINATE on n, which is the honest answer.'
   reason: 'read_state not unanimously measured: [''producer_failed'']'
   rows: 1
   verdict: null
