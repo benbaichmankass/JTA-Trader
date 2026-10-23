@@ -14,7 +14,7 @@
   ],
   "blocked_on": [],
   "note": "[2026-10-22 EXITS-GIVEBACK-W43] Instrument for blocked unit RQ-20261022-eba2-11 (Q10 variant: level AND R). --trail-level and --trail-decay-arm-r are independent tighteners composing by minimum (OR); the operator's framing needs AND. BUILD: --trail-level-min-r R in backtest_pullback.py and backtest_trend.py (src/research/trail_levers.py owns the rule; default 0 = byte-identical). DONE WHEN: tests show default byte-identity and that a level touch before peak R reaches N does not latch while a touch after does; exit_lever_ablation.py accepts the arm string used in eba2-11. [2026-10-23 EXIT-BUILDS-W43] BUILT in PR #19739 (merged != observed). Flags default-off, byte-identical (old-vs-new main on armed configs), tests/test_exit_builds_w43.py. Unit(s) eba2-11 moved out of blocked/, dispatch_queue dry run would_dispatch. CLOSES (done) when eba2-11 lands its first result carrying the new flag in its recorded argv.",
-  "updated_at": "2026-10-23T16:55:56Z",
+  "updated_at": "2026-10-23T17:04:56Z",
   "updated_by": "session_01WJ6zAKX6HBJBgdJWsCd6P3",
   "roadmap": [
     "L-ATM"
@@ -23,6 +23,10 @@
     "what": "first result of the unblocked unit(s) eba2-11 (RQ-20261022-) lands in research/results/ with a graded verdict whose recorded argv carries the new flag",
     "how_to_check": "ls research/results/ for the unit ids; python3 scripts/research/result_disposition_check.py --list",
     "due_by": "2026-10-27"
+  },
+  "writeback": {
+    "roadmap": "none: research harness flag only, no milestone where/next change",
+    "arch": "none: research tooling, no runtime component/path/contract change"
   },
   "_seq": 602
 }

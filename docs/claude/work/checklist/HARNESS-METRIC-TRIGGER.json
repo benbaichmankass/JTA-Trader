@@ -14,7 +14,7 @@
   ],
   "blocked_on": [],
   "note": "[2026-10-22 EXITS-GIVEBACK-W43] Instrument for blocked units RQ-20261022-eba2-07/-08 (Programme 01 Q11 rung 2). BUILD (scripts/ only, default byte-identical): (a) scripts/research/path_metric_giveback.py --emit-triggers FILE writes one row per trade {trade_key, trigger} using the rung-1 FULL model fit on the OTHER calendar folds only (fitted P(big giveback) >= 0.5 at bar k); (b) backtest_pullback.py and backtest_trend.py take --trigger-file FILE, --trigger-action bank|tight and --trigger-all K (unconditional control: act on every trade still open at bar K). DONE WHEN: a smoke run on ada_pullback_2h shows an empty trigger file => arms byte-identical to A, a populated file => the action fires only on flagged trades, and tests cover both plus a self-test planting a leaky trigger the out-of-fold construction must reject. Gate: do not build before RQ-20261022-eba2-01 lands verdict pass (otherwise the instrument has no hypothesis behind it).  [2026-10-23 research-ops 0247] PREREQUISITE VERDICT LANDED: RQ-20261022-eba2-01 read PASS (path_metrics_predict_giveback, ll_gain +0.0115, 5/6 folds, pooled n 1209 on 6 legs not selected on; r2_gain -0.0046 so the PASS rests on the log-loss clause only). With 007 that is two independent reads, so blocked/RQ-20261022-eba2-07 and -08 now wait ONLY on this build. Rank it up: it is the single lever behind both units. [2026-10-23 EXIT-BUILDS-W43] BUILT in PR #19739 (merged != observed). Flags default-off, byte-identical (old-vs-new main on armed configs), tests/test_exit_builds_w43.py. Unit(s) eba2-07/-08 moved out of blocked/, dispatch_queue dry run would_dispatch. CLOSES (done) when eba2-07/-08 lands its first result carrying the new flag in its recorded argv.",
-  "updated_at": "2026-10-23T16:55:56Z",
+  "updated_at": "2026-10-23T17:04:55Z",
   "updated_by": "session_01WJ6zAKX6HBJBgdJWsCd6P3",
   "roadmap": [
     "L-ATM"
@@ -23,6 +23,10 @@
     "what": "first result of the unblocked unit(s) eba2-07,-08 (RQ-20261022-) lands in research/results/ with a graded verdict whose recorded argv carries the new flag",
     "how_to_check": "ls research/results/ for the unit ids; python3 scripts/research/result_disposition_check.py --list",
     "due_by": "2026-10-27"
+  },
+  "writeback": {
+    "roadmap": "none: research harness flag only, no milestone where/next change",
+    "arch": "none: research tooling, no runtime component/path/contract change"
   },
   "_seq": 598
 }
