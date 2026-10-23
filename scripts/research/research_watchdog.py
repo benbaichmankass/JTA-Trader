@@ -54,6 +54,12 @@ CONFIG = _REPO / "scripts" / "research" / "research_watchdog.yaml"
 LEDGER = _REPO / "comms" / "research" / "ops" / "watchdog_incidents.jsonl"
 DISPATCH_WORKFLOW = "research-queue-dispatch.yml"
 STAMP_PREFIX = "automation/research-queue-stamp"
+# The FLOOR of the research-compute set, never the whole of it. ⚠️ MEASURED 2026-10-16 09:36Z (lane
+# RESEARCH-DISPATCH-STALL-1016): this tuple WAS the whole set, so the dispatcher's 08:12Z and 08:57Z fires -- 12
+# research-harness-dispatch.yml runs, all created, their results landed on main -- were invisible here and
+# dispatcher_fires escalated "no research compute run started for 160 min". The dispatcher counts every workflow a
+# unit routes to (dispatch_queue.research_workflow_names); this watchdog now unions in the workflow every RUNNABLE
+# unit resolves to (queue_facts -> compute_workflows), so a new route can never fall outside the count again.
 RESEARCH_WORKFLOWS = ("research-script-run.yml", "research-script-run-trainer.yml", "research-script-run-kaggle.yml",
                       "research-script-run-kaggle-cpu.yml")
 STALE_ACTIVE_HOURS = 24.0     # a run "in flight" longer than this is stuck debris, not load (dispatch_queue.STALE_PRESSURE_HOURS)
@@ -151,7 +157,8 @@ def _active(runs: list, now: datetime) -> list:
             and (_age_min(r.get("created_at"), now) or 0) <= STALE_ACTIVE_HOURS * 60]
 
 
-def check_fires(runnable_n: Optional[int], research_runs: Optional[list], now: datetime, th: dict) -> Dict[str, Any]:
+def check_fires(runnable_n: Optional[int], research_runs: Optional[list], now: datetime, th: dict,
+                workflows: Optional[List[str]] = None) -> Dict[str, Any]:
     lim = float(th["fires_idle_minutes"])
     if runnable_n is None or research_runs is None:
         return verdict("dispatcher_fires", CNL, "could not count runnable units or list research compute runs")
@@ -160,7 +167,8 @@ def check_fires(runnable_n: Optional[int], research_runs: Optional[list], now: d
     act = _active(research_runs, now)
     ages = [a for a in (_age_min(r.get("created_at"), now) for r in research_runs) if a is not None]
     ev = {"runnable": runnable_n, "active_research_runs": len(act), "runs_listed": len(research_runs),
-          "minutes_since_last_research_run_created": round(min(ages), 1) if ages else None}
+          "minutes_since_last_research_run_created": round(min(ages), 1) if ages else None,
+          "workflows_counted": list(workflows) if workflows is not None else list(RESEARCH_WORKFLOWS)}
     if act:
         return verdict("dispatcher_fires", OK, f"{len(act)} research compute run(s) queued/in progress", evidence=ev)
     if ages and min(ages) <= lim:
@@ -199,10 +207,17 @@ def window_position(windows: Optional[list], now: datetime) -> Optional[Dict[str
 
 def check_backend(name: str, runnable_for: Optional[int], runs: Optional[list], now: datetime, th: dict,
                   quota: Optional[dict] = None, max_concurrent: Optional[int] = None,
-                  windows: Optional[list] = None, min_need_minutes: Optional[float] = None) -> Dict[str, Any]:
+                  windows: Optional[list] = None, min_need_minutes: Optional[float] = None,
+                  due_later: int = 0) -> Dict[str, Any]:
+    """`runnable_for` is the count DUE NOW (queue_facts `by_backend_due_now`); `due_later` the units that only the
+    refill's look-ahead horizon counts -- reported, never alarmed on."""
     chk, lim = f"backend:{name}", float(th["backend_idle_minutes"])
     if runnable_for is None:
         return verdict(chk, CNL, "could not work out which runnable units route here")
+    if runnable_for == 0 and due_later:
+        return verdict(chk, OK, f"{due_later} unit(s) route here but none is due yet (the refill horizon counts them; "
+                       "the dispatcher fires them when due), so idle is correct",
+                       evidence={"runnable_for_backend": 0, "due_within_refill_horizon": due_later})
     if runnable_for == 0:
         return verdict(chk, OK, "no runnable unit is routed here, so idle is correct", evidence={"runnable_for_backend": 0})
     if runs is None:
@@ -519,23 +534,36 @@ def queue_facts(root: Path, now: datetime) -> Optional[dict]:
         cfg = cr.load_config()
         run_ids = qr.runnable(units, now=now)
         by_be: Dict[str, int] = {}
+        # DUE NOW by the dispatcher's own rule (horizon 0). `runnable` looks DISPATCH_CYCLE_HOURS ahead because the
+        # refill must top up before the dispatcher runs dry; a backend's IDLE alarm must not, or a weekly unit due in
+        # five hours reads as stranded work (the trainer's giveback census RQ-20261014-9807-01, 2026-10-21 23:20Z:
+        # watchdog "idle with 1 runnable unit ... 984 min" while dispatch_queue correctly said not due).
+        due_now_be: Dict[str, int] = {}
         min_need: Dict[str, float] = {}
         unplaceable = 0
+        wfs = {str(b["workflow"]).split("/")[-1] for b in cfg["backends"].values() if b.get("workflow")}
         for uid in run_ids:
             res = cr.plan(units[uid], cfg)
             if not res.ok:
                 unplaceable += 1
                 continue
+            if res.workflow:
+                wfs.add(str(res.workflow).split("/")[-1])
             by_be[str(res.backend)] = by_be.get(str(res.backend), 0) + 1
+            if due_within(units[uid], now, 0.0):
+                due_now_be[str(res.backend)] = due_now_be.get(str(res.backend), 0) + 1
             q = (cfg["backends"].get(str(res.backend)) or {}).get("queue") or {}
             if q.get("windows_utc"):    # the fit rule: est_minutes x safety_factor must fit before the window closes
                 need = cr.est_hours(units[uid]) * 60.0 * float(q.get("safety_factor", 1.0))
                 min_need[str(res.backend)] = min(need, min_need.get(str(res.backend), need))
         uncounted = sum(1 for u in units.values() if u.get("status") == "queued" and u.get("compute")
                         and not qr.dispatchable(u) and due_within(u, now, qr.DISPATCH_CYCLE_HOURS))
-        return {"runnable": len(run_ids), "by_backend": by_be, "unplaceable": unplaceable, "units_total": len(units),
+        return {"runnable": len(run_ids), "by_backend": by_be, "by_backend_due_now": due_now_be,
+                "unplaceable": unplaceable, "units_total": len(units),
                 "unreadable_units": len(bad), "backends": [n for n, b in cfg["backends"].items() if b.get("auto_route", True)],
                 "backend_workflows": {n: b["workflow"] for n, b in cfg["backends"].items()},
+                "compute_workflows": sorted(w for w in wfs if w.endswith((".yml", ".yaml"))
+                                            and (root / ".github" / "workflows" / w).is_file()),
                 "backend_max_concurrent": {n: b.get("max_concurrent") for n, b in cfg["backends"].items()},
                 "backend_windows": {n: (b.get("queue") or {}).get("windows_utc") for n, b in cfg["backends"].items()},
                 "backend_min_need_minutes": min_need,
@@ -546,18 +574,26 @@ def queue_facts(root: Path, now: datetime) -> Optional[dict]:
         return None
 
 
+def compute_workflows(facts: Optional[dict]) -> List[str]:
+    """The workflows whose runs count as research compute for dispatcher_fires: the RESEARCH_WORKFLOWS floor plus
+    every backend workflow and every workflow a runnable unit resolves to (queue_facts). Unreadable facts fall back
+    to the floor -- check_fires then reports could_not_look on the runnable count anyway."""
+    return sorted(set(RESEARCH_WORKFLOWS) | set((facts or {}).get("compute_workflows") or ()))
+
+
 def evaluate(probe: Any, cfg: dict, now: datetime, facts: Optional[dict]) -> List[Dict[str, Any]]:
     th = cfg["thresholds"]
     out = [check_dispatcher(probe.workflow_runs(DISPATCH_WORKFLOW, 20), probe.run_jobs, now, th)]
     research_runs: Optional[list] = []
-    for wf in RESEARCH_WORKFLOWS:
+    counted = compute_workflows(facts)
+    for wf in counted:
         r = probe.workflow_runs(wf, 10)
         if r is None:
             research_runs = None
             break
         research_runs += r
     n = facts["runnable"] if facts else None
-    out.append(check_fires(n, research_runs, now, th))
+    out.append(check_fires(n, research_runs, now, th, counted))
     out.append(check_queue(n, th, {k: facts[k] for k in ("by_backend", "unplaceable", "router_style_due_not_counted_by_dispatchable")}
                            if facts else None))
     skip = set(cfg.get("backends_not_graded") or [])
@@ -568,11 +604,14 @@ def evaluate(probe: Any, cfg: dict, now: datetime, facts: Optional[dict]) -> Lis
         if be == "kaggle":
             q = probe.kaggle_quota()
             quota = {"remaining": q.get("remaining"), "floor_hours": facts["kaggle_floor_hours"] if facts else 0}
-        out.append(check_backend(be, (facts["by_backend"].get(be, 0) if facts else None),
+        _h = facts["by_backend"].get(be, 0) if facts else None
+        _now_n = (facts.get("by_backend_due_now", facts["by_backend"]).get(be, 0)) if facts else None
+        out.append(check_backend(be, _now_n,
                                  probe.workflow_runs(facts["backend_workflows"][be], 10) if facts else None, now, th, quota,
                                  (facts.get("backend_max_concurrent") or {}).get(be) if facts else None,
                                  (facts.get("backend_windows") or {}).get(be) if facts else None,
-                                 (facts.get("backend_min_need_minutes") or {}).get(be) if facts else None))
+                                 (facts.get("backend_min_need_minutes") or {}).get(be) if facts else None,
+                                 due_later=max(0, (_h or 0) - (_now_n or 0))))
     out.append(check_collector(probe.collector_status(float(th["collector_window_hours"]), now), th))
     prs = probe.open_prs()
     out.append(check_stamps(prs, now, th))

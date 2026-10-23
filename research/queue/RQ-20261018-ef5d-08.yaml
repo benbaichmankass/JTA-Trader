@@ -1,0 +1,163 @@
+id: RQ-20261018-ef5d-08
+title: >-
+  Programme 07 TIMEFRAMES, short arm B1: volatility-COMPRESSION breakout (BB-inside-KC squeeze) on 1h bars for the six Bybit
+  perps, 2021-01-01..2026-10-17, with a CATCH-THE-WAVE exit (fixed 1.5R / 2R target + 12-bar time stop) vs the default trail
+  -- does taking just the expansion move beat trailing it, net of cost?
+status: done
+cadence: once
+theme: timeframes
+priority: 2
+kind: experiment
+question: >-
+  On Binance USD-M 1h candles for BTC/ETH/SOL/XRP/ADA/AVAX over 2021-01-01..2026-10-17, with baseline arm TRAIL = scripts/backtest_squeeze.py
+  at harness defaults (bb 20/2.0, kc_mult 1.5, 2.5 x ATR14 stop, 3.5 x ATR trail, 48-bar timeout), do the candidate arms TP2
+  (--tp-cap-pct 0.099 --tp-r 2.0 --timeout-bars 12) or TP15 (--tp-r 1.5, same) pass the pooled Stage-0 rule AND beat TRAIL's
+  pooled net R per trade by >= 0.05 R? The hypothesis is the operator's: a compression breakout anticipates a jump; take that
+  wave and leave, rather than trail a move that mean-reverts after the expansion.
+why_this_matters: >-
+  Operator 2026-10-18: breakout-style entries that anticipate a jump and catch just that wave. Squeeze has been run only with
+  a TRAIL exit: RQ-20260930-504 (<=30m, defaults, no survivor), RQ-20261006-006 (XRPUSDT 1h, FAIL) and the 2026-10-06 alt
+  screens. The untested variable is the EXIT GEOMETRY for this family -- a fixed target sized to the expected expansion plus
+  a short time stop -- and the TP doctrine (ARCHITECTURE-CANONICAL 'TP doctrine') asks for a real predictive target at entry
+  anyway. Prior short-horizon work this builds on and does NOT repeat: RQ-20260930-504 (<=1h discovery grid at live/default
+  params, FAIL at taker cost; squeeze/fade/pullback/fvg/chop had NO Stage-A survivor at 5m-30m), blocked/RQ-20260930-505 (its
+  1m arm), RQ-20261016-1fa6-07 (maker entries do not rescue the 15m scalp book, FAIL), the 2026-10-06 prop breadth batch RQ-20261006-005..031
+  (5m-15m taker FAIL as a configuration class), docs/research/idea-family-review-2026-10-16.md s13/s16, rows IR-CRYPTO-DAILY-TREND
+  and IR-INTRADAY-SEASONALITY-HARNESS.
+requires_result:
+  unit: RQ-20261018-ef5d-02
+power:
+  expected_n: 300
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    88 pooled trades at d=0.3 (the 504 floor). expected_n=300 is an ESTIMATE: squeeze at 1h on ~5.8 years x 6 symbols; the
+    smoke on 29 days of ETH 1h made 20 trades, which scales to far more than 88 pooled.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on fetched Binance Vision 1h candles (2200 d) over a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-P7-B1-COMPRESSION-WAVE-1H
+  registered_at: '2026-10-18'
+  registered_before_run: true
+  statistic: >-
+    harness_stage0.py --family squeeze --timeframe 1h --baseline TRAIL --delta-r-per-trade 0.05, arms TRAIL, TP2, TP15; per
+    cell n, net_r, max_drawdown_r, by_outcome (take_profit / stop / timeout / trail_stop), 6 calendar folds, net_r_per_capital_day,
+    hold; pooled; delta vs TRAIL.
+  rule: >-
+    Arms fixed now: TRAIL (baseline), TP2, TP15 (candidates). Flags: --folds 6 --fold-majority 4 --n-floor 39 --pooled-n-floor
+    88 --breadth-frac 0.5 --baseline TRAIL --delta-r-per-trade 0.05. A candidate passes iff it passes the pooled Stage-0 rule
+    AND beats TRAIL's pooled net R/trade by >= 0.05 R. PASS iff any candidate passes -> node P7-B1-confirm (the passing target
+    alone vs TRAIL at 30m and 4h; and the prop fit through prop_ev_grid.py, since ETH/SOL are prop-listed). FAIL iff every
+    candidate fails -> catch-the-wave exits do not lift the 1h compression breakout over its cost here; closed at these two
+    targets on this window. INDETERMINATE otherwise. Verdicts are the script's own (scripts/research/harness_stage0.py, grades
+    fixed by these flags): per CELL pass iff n >= n_floor AND net_r > 0 AND >= fold_majority of folds calendar folds net >
+    0, fail iff n >= n_floor and not, indeterminate iff n < n_floor; per ARM pass iff pooled n >= pooled_n_floor AND pooled
+    net_r > 0 AND pooled folds >= fold_majority AND >= half the POWERED cells (n >= n_floor) pass, indeterminate iff pooled
+    n < pooled_n_floor or < 2 powered cells or < half the declared cells measured (a fetch/harness fault is recorded per cell,
+    never dropped), fail otherwise. Holm-corrected one-sided t p-values across the arm's cells are REPORTED, not graded. A
+    PASS is a LEAD: it opens the programme-07 node named in the tree (a same-symbol overlap read against the live legs, then
+    a re-entry case under MD-PROMOTE-S0-S1 built as a new evidence record), never a roster act; a FAIL closes the CONFIGURATION
+    on this window, never the family (idea-family review 2026-10-16 negative-result protocol). Thresholds are not changed
+    after any result.
+  what_it_does_not_do: >-
+    Does not edit config/strategies.yaml, config/accounts.yaml or any roster; does not tune beyond the fixed arms listed;
+    does not pool windows with any committed record; is not a promotion case. Candles are Binance USD-M (a PROXY for Bybit
+    linear; prices track within a few bps) and the funding term is a directionless magnitude (execution_costs P1), both stated
+    in the record. --tp-cap-pct 0.099 is the live Bybit TP-distance clamp the harness needs to consult --tp-r; it binds only
+    when 2R exceeds 9.9% of price, which at 1h it never does.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  bucket: frontier
+  basis: >-
+    stand-in: a candidate 1h breakout leg for the prop book (ETH/SOL listed) and bybit_1; an estimate, not a measurement.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: 6 x 1h fetches over 2200 d (~53k bars each) x 3 arms = 18 squeeze passes (~1 min each). Estimate.
+  why_runner: >-
+    harness_stage0.py fetches public candles and runs the repo harnesses; 1h ETH/SOL are in metis-market-data only at 1h for
+    BTC/ETH/SOL (not XRP/ADA/AVAX) and the harness reads CSVs, so the runner lane is the one that serves all six.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - squeeze
+  - --symbols
+  - BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,ADAUSDT,AVAXUSDT
+  - --timeframe
+  - 1h
+  - --days
+  - '2200'
+  - --start
+  - '2021-01-01'
+  - --end
+  - '2026-10-17'
+  - --arm
+  - TRAIL=
+  - --arm
+  - TP2=--tp-cap-pct=0.099;--tp-r=2.0;--timeout-bars=12
+  - --arm
+  - TP15=--tp-cap-pct=0.099;--tp-r=1.5;--timeout-bars=12
+  - --baseline
+  - TRAIL
+  - --delta-r-per-trade
+  - '0.05'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '39'
+  - --pooled-n-floor
+  - '88'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-P7-B1-COMPRESSION-WAVE-1H
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261018-ef5d-08
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-TIMEFRAMES
+- M22
+- L-PROP
+programme: P7
+related:
+- RQ-20261018-ef5d-02
+- RQ-20261006-006
+- RQ-20260930-504
+- scripts/research/harness_stage0.py
+- scripts/backtest_squeeze.py
+- docs/research/programmes/07-TIMEFRAMES.md
+- research/programmes/07-timeframes.yaml
+last_dispatched_at: '2026-10-18T14:40:17+00:00'
+grading:
+  attested: RULE-P7-B1-COMPRESSION-WAVE-1H
+  auto: true
+  decision_rule_id: RULE-P7-B1-COMPRESSION-WAVE-1H
+  evidence:
+  - research/results/RQ-20261018-ef5d-08/39137059685.jsonl
+  graded_at: '2026-10-20'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

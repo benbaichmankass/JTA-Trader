@@ -1,0 +1,82 @@
+id: RQ-20261017-9582-01
+title: 'M22 Bybit pairs: does a FIXED-BETA ENTRY TRIGGER (z read on logA - beta_entry*logB, the same spread the stop/target/R unit use)
+  turn any of the four Bybit pairs net-positive, net of the full cost stack, at configured params?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 1
+kind: experiment
+question: 'With PR #18648''s fixed-beta-at-entry R scale, and the ENTRY condition changed from the rolling-beta z to |z| >= entry_z on the
+  fixed-beta spread (beta = the rolling OLS beta at the decision bar, frozen; z over the lookback on that frozen spread), do pairs_sol_btc,
+  pairs_bnb_btc, pairs_eth_btc and pairs_sol_eth each show net_total_r > 0 net of fee + slippage + funding at n >= 39, with the $ ledger at
+  true notionals agreeing in sign?'
+why_this_matters: 'Operator decision 2026-10-16 "Fix + shadow" asked for this test. MEASURED by lane PAIRS-R-SCALE-FIX-1016 (checklist
+  PAIRS-R-SCALE, Binance Vision 1h 2026-04-19..10-15, fee 7.5 + slip 3 + funding 1 bps/leg): on the honest R scale all four Bybit pairs are
+  net-negative (SOL/BTC -0.112, BNB/BTC -0.376, ETH/BTC -0.526, SOL/ETH -0.383 R/trade; n 254-271). The same lane found the entry trigger
+  is still the rolling-beta z: on the fixed-beta spread at entry the median z is ~0, 45-54% of entries are on the wrong side, only 10-16%
+  have |z| >= 2, and 21-27% exit after 1 bar. So the honest result may be measuring a mis-specified trigger, not the absence of a
+  reversion edge. This unit separates the two. All four pairs are shadow until it passes.'
+power:
+  expected_n: 60
+  min_detectable_effect: 0.4
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED: the fixed-beta trigger fires only where |z_fixed| >= 2, which was 10-16% of the ~270 rolling-trigger entries; the
+    candidate count on the full window is unknown until run. Window extended to 3 years (2023-10-15..2026-10-15) so n >= 39 is plausible;
+    d=0.4 needs ~52. n < 39 is a declared indeterminate, not a fail.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on public candles; nothing accrues.
+decision_rule:
+  id: RULE-RQ202610179582-01-PAIRS-FIXED-BETA-ENTRY
+  registered_at: '2026-10-17'
+  registered_before_run: true
+  statistic: 'Per pair, at configured params (lookback 15, entry_z 2.0, exit_z 0.5, stop_z 2.0, max_hold 20, hedge_beta rolling-at-entry),
+    window 2023-10-15..2026-10-15 1h, IS = first 2 years, OOS = last 1 year: n, net_total_r (full stack: fee + slippage from
+    execution_costs.resolve_cost_policy + funding), net R/trade, mean cost_r, and the $ ledger net at true notionals; plus the fraction of
+    entries with |z_fixed| >= entry_z (positive control) for both trigger arms.'
+  rule: 'PASS per pair iff OOS net_total_r > 0 AND IS net_total_r > 0 AND OOS n >= 39 AND the $ ledger net > 0 (signs agree). FAIL iff OOS
+    net_total_r <= 0 at OOS n >= 39: no Stage-0 edge with the fixed-beta trigger -> the pair stays shadow and a retire proposal for that
+    pair goes to the manager. Signs disagree, or IS/OOS disagree: indeterminate. OOS n < 39: indeterminate. Positive control: if fewer than
+    99% of the fixed-beta arm''s entries have |z_fixed| >= entry_z, or mean cost_r < 0.01 R, the trigger or the R scale is not what this
+    unit specifies -> indeterminate, back to the build. A PASS is a Gate-1 input (Stage-1 paper soak on bybit_1), never a real-money one.'
+  what_it_does_not_do: Does not edit config/pairs.yaml or the pairs executor. Does not re-tune entry_z / lookback / stop. Does not decide
+    prop fit or any real-money placement.
+blocked_on:
+- what: 'PR #18648 (fixed-beta-at-entry R scale in pairs_engine + backtest_pairs.py) is not merged.'
+  ref: docs/claude/work/checklist/PAIRS-R-SCALE.json
+  clears_when: '#18648 is merged to main.'
+- what: 'backtest_pairs.py has no fixed-beta entry-trigger arm: entries fire on the rolling-beta z only.'
+  ref: docs/claude/work/checklist/PAIRS-R-SCALE.json
+  clears_when: 'backtest_pairs.py takes --entry-trigger {rolling,fixed_beta} (default rolling = current behaviour) with a self-test that
+    plants a case where the two triggers disagree, and pairs_configured_stage0.py passes it through. Then git mv to research/queue/, status
+    queued, run.command = pairs_configured_stage0.py --pair <each> --entry-trigger fixed_beta --start 2023-10-15 --end 2026-10-15 --fetch.'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 200
+  confidence: 0.4
+  bucket: own_losses
+  basis: four Bybit paper pair sleeves now in shadow and the M22 roster decision; estimate.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 30
+  basis: Same fetch + engine as RQ-20261014-470a-12, 6x the window.
+run:
+  workflow: null
+  note: Null until both blocked_on clauses clear.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M22
+related:
+- PAIRS-R-SCALE
+- RQ-20261014-470a-12
+- scripts/backtest_pairs.py
+- scripts/research/pairs_configured_stage0.py
+- src/units/strategies/pairs_engine.py

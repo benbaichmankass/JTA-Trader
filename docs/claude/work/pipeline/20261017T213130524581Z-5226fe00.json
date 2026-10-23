@@ -1,0 +1,19 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a pre-registered vol-skip-above sweep on slv_pullback_1d over candles AFTER 2026-10-17 (>= 39 baseline trades, or marked infeasible) is graded; the lead is then confirmed, killed or declared unpowered",
+    "due_date": "2026-11-17",
+    "kind": "date"
+  },
+  "id": "PI-20261017-RADE1017-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-AUTHOR-GRADE-1017: author smoke of exit_lever_ablation.py --leg slv_pullback_1d --arm VH80/VH90/VH95 --days 7300 --end 2026-10-04 --grade sweep (verdict read: pass; per-arm numbers not inspected)",
+    "rerun": "python3 scripts/research/exit_lever_ablation.py --leg slv_pullback_1d --arm B= --arm VH80=--vol-skip-above-pctl=0.8 --arm VH90=--vol-skip-above-pctl=0.9 --arm VH95=--vol-skip-above-pctl=0.95 --days 7300 --end 2026-10-04 --grade sweep --baseline B --delta-r 1.0 --fold-majority 3 --n-floor 39 --out /tmp/slv_hot"
+  },
+  "routed_to": "RESEARCH-AUTHOR-GRADE-1017",
+  "state": "routed",
+  "terminal_reason": null,
+  "what": "[lead, NOT a result] While validating the argv for the 1d ETF regime units the author ran one unregistered sweep, slv_pullback_1d hot-vol skip (0.8/0.9/0.95), full Yahoo history, and read verdict 'pass'. It was run before any rule was registered for it, so it is a lead and NOT evidence; the slv hot-vol unit was deliberately left out of the 28 ae17 regime units for that reason. Only data after 2026-10-17 can test it cleanly: register the sweep once about a month of new daily bars has accrued, rule unchanged (dR >= 1.0 R, dDD <= 0, 3 of 4 folds, n >= 39), and state up front that n will likely be infeasible on one month rather than wait for it."
+}

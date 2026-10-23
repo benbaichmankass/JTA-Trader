@@ -151,6 +151,7 @@ SENDERS: Final[dict[str, tuple[str, ...]]] = {
     "src/prop/prop_fills_staleness.py": ("prop_alert",),
     "src/prop/phone_executor.py": ("prop_alert",),
     "src/prop/phone_trail.py": ("prop_alert",),
+    "src/prop/phone_drill.py": ("prop_alert",),
     "scripts/check_heartbeat.py": ("alert",),
     "scripts/check_ib_gateway.py": ("alert",),
     "scripts/check_web_api.py": ("alert",),

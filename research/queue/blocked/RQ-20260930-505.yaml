@@ -68,6 +68,16 @@ blocked_on:
     clears_when: >-
       RQ-20260930-504 has run (so the sweep is proven on real harness output at a smaller scale) and a run route
       for 1m is chosen and registered.
+  - kind: work_item
+    ref: DATA-KLINE-ARCHIVE
+    what: >-
+      2026-10-21 PIPELINE-HEALTH-1021: first clause CLEARED -- RQ-20260930-504 ran (research/results/
+      RQ-20260930-504/36691408944.jsonl, verdict fail, read_state measured). The remaining blocker is the 1m
+      candles themselves: the 1m archive is built by checklist row DATA-KLINE-ARCHIVE (state queued, 2026-10-14).
+    clears_when: >-
+      DATA-KLINE-ARCHIVE is done (trainer-resident 1m archive); then declare compute: needs_vm_data and
+      git mv this file to research/queue/. The per-family split stays a pre-registered design change, not an
+      improvisation.
 
 run:
   workflow: null

@@ -29,7 +29,9 @@ import src.runtime.pipeline as pl
 from src.runtime import strategy_monocle as sm
 from src.units.db.database import Database
 
-STRAT, SYM = "ief_pullback_1d", "IEF"
+# slv_pullback_1d: still on the alpaca_live + alpaca_portfolio rosters. ief_pullback_1d left both on
+# 2026-10-21 (operator decision), so the Stage-1/Stage-2 shapes below need a leg that is still on them.
+STRAT, SYM = "slv_pullback_1d", "SLV"
 
 
 @pytest.fixture
@@ -142,8 +144,8 @@ def test_a_closed_leg_does_not_hold_its_account(journal, audit):
 def test_other_symbol_and_strategy_are_independent(journal, audit):
     _pkg(journal, "pkg-tlt", symbol="TLT")
     _leg(journal, "pkg-tlt", "alpaca_live", symbol="TLT")
-    _pkg(journal, "pkg-other", strategy="slv_pullback_1d")
-    _leg(journal, "pkg-other", "alpaca_live", strategy="slv_pullback_1d")
+    _pkg(journal, "pkg-other", strategy="gld_pullback_1d")
+    _leg(journal, "pkg-other", "alpaca_live", strategy="gld_pullback_1d")
     assert pl._open_package_round(_sig(), None) == (None, None)
 
 

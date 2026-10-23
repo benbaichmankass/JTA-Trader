@@ -471,6 +471,11 @@ def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None) -> dict:
                  # M20-X vol-conditional trail (paper test, 2026-07-15):
                  "trail_vol_below_pctl", "trail_vol_above_pctl",
                  "trail_vol_tight_mult", "vol_pctl_window",
+                 # MOMENTUM-LEVERS-LIVE (2026-10-18): the ADX-conditioned trail
+                 # and the momentum-keyed time stop (src/runtime/momentum_levers.py).
+                 # Absent = off, byte-identical.
+                 "trail_adx_below", "trail_adx_falling_bars", "trail_adx_tight_mult",
+                 "momentum_stale_bars", "momentum_stale_adx_below", "adx_period",
                  # TP doctrine B1: the declared TP-revision rule
                  # (src/runtime/tp_revision.py). Absent = no revision.
                  "tp_revision"):
@@ -755,6 +760,24 @@ def monitor(cfg, candles_df, open_pkg):
     if giveback_verdict is not None:
         return giveback_verdict
 
+    # 2.57 MOMENTUM-LEVERS-LIVE: the momentum-keyed time stop (harness
+    # `--momentum-stale-bars` / `--momentum-stale-adx-below`; rule in
+    # src/research/trail_levers.momentum_stale_fires, the SAME function the
+    # harness calls). YAML-declared per leg (Tier-3); undeclared = None,
+    # byte-identical. Placed after the stale / giveback close verbs and before
+    # the trail, matching scripts/backtest_trend.py's per-bar order. Confirmed
+    # cells: RQ-20261016-005 M2 (eth_4h) and RQ-20261016-016 (slv_pullback_1d).
+    try:
+        from src.runtime.momentum_levers import momentum_stale_verdict
+
+        _ms = momentum_stale_verdict(meta, cfg_dict, open_pkg, candles_df,
+                                     current_price, direction,
+                                     default_label="trend_donchian")
+        if _ms is not None:
+            return _ms
+    except Exception:  # noqa: BLE001 -- a lever must never break the monitor
+        pass
+
     # 2.6 M20 exit head — E2 shadow scoring + E3 apply (memo § 9; program
     # doc § E3). Scoring logs once per closed bar and never raises; a
     # missing artifact (mirror not published / dev sandbox) is a cheap
@@ -847,6 +870,20 @@ def _trail_verdict(meta, cfg_dict, open_pkg, candles_df, current_price, directio
         trail_mult = resolve_vol_trail_mult(meta, cfg_dict, candles_df,
                                             trail_mult, direction,
                                             open_pkg=open_pkg)
+    except Exception:  # noqa: BLE001 — the lever must never break the trail
+        pass
+    # MOMENTUM-LEVERS-LIVE: the ADX-conditioned trail (harness `--trail-adx-*`;
+    # rule in src/research/trail_levers.momentum_trail_fired, shared with the
+    # harness). Composes by min() with the decay and vol tighteners above,
+    # exactly as trail_levers.effective_trail_mult does. Undeclared = base
+    # mult unchanged. Confirmed cells: RQ-20261016-005 M1 (eth_4h, 5 of 6
+    # folds), RQ-20261016-015 M1/M2 (xrp_4h, 4 of 4). Fail-safe; never raises.
+    try:
+        from src.runtime.momentum_levers import resolve_momentum_trail_mult
+
+        trail_mult = resolve_momentum_trail_mult(meta, cfg_dict, candles_df,
+                                                 trail_mult, direction,
+                                                 open_pkg=open_pkg)
     except Exception:  # noqa: BLE001 — the lever must never break the trail
         pass
     # M31 P2 — position telemetry (observe-only). Hooked HERE because `window`

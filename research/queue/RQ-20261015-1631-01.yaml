@@ -99,4 +99,22 @@ related:
 - scripts/research/same_symbol_head_to_head.py
 - scripts/ci/check_same_symbol_allocation.py
 - src/runtime/intents.py
-last_dispatched_at: '2026-10-16T01:27:20+00:00'
+last_dispatched_at: '2026-10-17T21:58:07+00:00'
+grading:
+  attested: RULE-RQ-20261015-1631-01-SAME-SYMBOL-REPORT
+  auto: true
+  decision_rule_id: RULE-RQ-20261015-1631-01-SAME-SYMBOL-REPORT
+  evidence:
+  - research/results/RQ-20261015-1631-01/38835234592.jsonl
+  - research/results/RQ-20261015-1631-01/39073141515.jsonl
+  graded_at: '2026-10-23'
+  grader: scripts/research/queue_grade.py
+  needs_review: true
+  owner: SAME-SYMBOL-ALLOCATION
+  owner_reason: 'producer_failed: same_symbol_head_to_head.py wrote read_state ''unavailable'' (not in
+    the result contract), so script_run refused verdict.json and the fault reason was lost. Fixed in this
+    PR (route faults land producer_failed + not_applicable with the reason); last_dispatched_at reset
+    so it re-runs on the fixed script. Not a verdict.'
+  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  rows: 2
+  verdict: null

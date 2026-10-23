@@ -222,6 +222,8 @@ on:
       - doc-audit-weekly
       - econ-calendar-produce
       - econ-event-study
+      # Added 2026-10-16 with the workflow itself (NEWS-ALPHA-CORPUS-SLICE1): no self-notify path.
+      - news-gdelt-panel
       - macro-producer-liveness
       - macro-valuation-snapshot
       - purge-artifacts
@@ -248,6 +250,8 @@ on:
       - journal-offvm-backup
       - compute-util-telemetry
       - research-watchdog
+      # RESEARCH-PIPELINE-SLO (2026-10-16): the 2-hourly research SLO monitor; its death would leave the brief's SLO table stale and breaches unannounced.
+      - research-slo
       - Health Snapshot
       # ── added 2026-08-31: the two the hand-maintained list had missed.
       #    research-queue-dispatch is the research queue's scheduler and
@@ -310,6 +314,15 @@ on:
       # which are visible on their PR (ordinary CI is deliberately out of scope here).
       - pytest-run
     types: [completed]
+    # MAIN ONLY at the trigger (manager decision 2026-10-16, lane RESEARCH-DISPATCH-STALL-1016). `branches`
+    # filters on the WATCHED run's head_branch, so a PR's pytest-run completion no longer CREATES a run here
+    # at all. Before, every one did and then skipped on the job `if:` below -- MEASURED 2026-10-16: 72 of the
+    # last 100 runs ended `skipped`, 13 were created 09:35-09:45Z, and those queued listener runs pushed the
+    # repo-wide queued count past the research dispatcher's cap and deferred every research fire. Of the 57
+    # watched workflows only pytest-run has a pull_request/merge_group trigger; the other 56 ran off main
+    # only for lane debugging (board-rotate pushes 2026-09-08, research-loss-detector dispatches 2026-09-26)
+    # in the last 50 runs each, which the dispatching session watches itself.
+    branches: [main]
 
 permissions:
   contents: read

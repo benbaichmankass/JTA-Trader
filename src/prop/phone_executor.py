@@ -79,6 +79,9 @@ _EVENT_KINDS = {
     # PHONE-FGS-EXEC: a ticket the background engine claimed ended badly; the app brings itself to the front for the
     # next tickets for a while, then retries the engine (pinged: the operator should know the fallback is in use)
     "bg_ticket_fallback",
+    # PHONE-EXEC-OBSERVABLE-1018: the app's own line at the end of a rehearsal drill (quiet: phone_drill.record_result
+    # already sends the ONE result ping with the capture link)
+    "drill",
 }
 # terminal_miss carries the control texts the page showed (our own UI labels, scrubbed like a reason) so the
 # next "terminal did not load" is self-diagnosing; only the LATEST one per account is kept, beside the journal.
@@ -153,6 +156,24 @@ def phone_config(account_id: str, path: Optional[Path] = None) -> Dict[str, Any]
     p = Path(path) if path else PLATFORMS_PATH
     data = yaml.safe_load(p.read_text()) or {}
     return dict((data.get("phone_accounts") or {}).get(account_id) or {})
+
+
+def phone_claim_config(account_id: str) -> Dict[str, Any]:
+    """The config the claim answer carries to the app: ``phone_config`` plus ``sheet_edit`` -- the live pencil +
+    Confirm gate on the position sheet (PHONE-EXEC-OBSERVABLE-1018). The gate is the SERVER's, never a build
+    constant: :func:`src.prop.phone_drill.sheet_edit` (3 consecutive rehearsal-drill passes, or an explicit
+    ``phone_accounts.<acct>.sheet_edit`` pin). A read failure answers False (fail closed: no click)."""
+    cfg = phone_config(account_id)
+    try:
+        from src.prop import phone_drill
+        gate = phone_drill.sheet_edit(account_id)
+    except Exception:  # noqa: BLE001  # allow-silent: fail closed, the app does not click; logged
+        logger.warning("phone_executor: sheet_edit gate read failed for %s", account_id, exc_info=True)
+        gate = {"enabled": False, "source": "error", "passes": None}
+    cfg["sheet_edit"] = bool(gate.get("enabled"))
+    cfg["sheet_edit_source"] = str(gate.get("source") or "")
+    cfg["sheet_edit_passes"] = gate.get("passes")
+    return cfg
 
 
 def kill_switch(account_id: str, env: Optional[Dict[str, str]] = None) -> str:
@@ -312,6 +333,18 @@ def claim_next(device: PhoneDevice, now: Optional[datetime] = None,
             if vu is None or vu <= now:
                 continue
             m = _meta(r)
+            if m.get("origin") == "exec_test":
+                # MD-EXEC-DEV-TEST-TRADES: every bound again at claim time; a refused ticket is never served
+                from src.prop import exec_test_trades
+                v = exec_test_trades.check_bounds(acct, r["symbol"], now=now, skip_count_for=r["ticket_id"])
+                if not v["ok"]:
+                    m["exec_test"] = {**(m.get("exec_test") or {}), "refused_at_claim": v["refusals"],
+                                      "refused_at": now.isoformat()}
+                    conn.execute("UPDATE prop_tickets SET status = 'refused', meta = ? "
+                                 "WHERE ticket_id = ? AND status = 'emitted'", (json.dumps(m), r["ticket_id"]))
+                    conn.commit()
+                    logger.warning("phone_executor: exec test ticket %s refused at claim: %s", r["ticket_id"], v["refusals"])
+                    continue
             m["phone"] = {"device_id": device.device_id, "claimed_at": now.isoformat()}
             cur = conn.execute(
                 "UPDATE prop_tickets SET status = 'claimed', meta = ? "
@@ -631,7 +664,7 @@ def record_event(device: PhoneDevice, body: Dict[str, Any], *, send=None) -> Dic
     # logged in phone_events but not pinged; the phone sends ONE login_failed red flag after 3 in a row instead.
     # login_diag (PHONE-AUTOLOGIN-2): one scrubbed structure snapshot per re-login attempt -- step reached, how many
     # numeric candidates the page / mail showed, timings; never a value -- kept in phone_events, not pinged.
-    quiet = (kind == "app_started" and not body.get("ping")) or kind in ("terminal_miss", "heartbeat", "login_retry", "login_diag", "positions_miss")
+    quiet = (kind == "app_started" and not body.get("ping")) or kind in ("terminal_miss", "heartbeat", "login_retry", "login_diag", "positions_miss", "drill")
     sent = False
     if not quiet:
         try:
@@ -766,7 +799,10 @@ _HB_KEYS = {"st", "paused", "hold", "host", "onAccount", "path_depth", "ready", 
             "app_version",
             # PHONE-FGS-EXEC (2026-10-15): tickets the background engine claimed, the last one's ledger state, minutes
             # left on the bring-to-front fallback
-            "bg_tickets", "bg_ticket_last", "bg_ticket_off_min"}
+            "bg_tickets", "bg_ticket_last", "bg_ticket_off_min",
+            # PHONE-EXEC-OBSERVABLE-1018: which page-side script runs (version, bundled|remote, last refresh answer),
+            # captures posted this process + the last capture error, drills run + the last drill's outcome
+            "exec_js", "exec_src", "js_refresh", "captures", "capture_err", "drills", "drill_last"}
 
 
 def _write_heartbeat(account_id: str, reason: str, state: Any) -> None:

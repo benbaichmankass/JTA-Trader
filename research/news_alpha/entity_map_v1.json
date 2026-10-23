@@ -1,0 +1,46 @@
+{
+  "version": "entity_map_v1",
+  "frozen_at": "2026-10-16",
+  "frozen_before_any_outcome": true,
+  "purpose": "FROZEN keyword/theme map for the NEWS-ALPHA GDELT aggregate-on-ingest panel (checklist NEWS-ALPHA-CORPUS-SLICE1). Committed before any NEWS-ALPHA outcome was computed; its sha256 is stamped on every panel month's manifest and on TEST-LEDGER. Changing it is a new map version and a ledgered pre-run amendment, never an edit.",
+  "match_text": "lower-cased PAGE_TITLE + ' ' + the article URL's path with -/_ turned into spaces; patterns are Python regexes, applied with word boundaries as written",
+  "entities": {
+    "BTC": ["\\bbitcoin\\b", "\\bbtc\\b"],
+    "ETH": ["\\bethereum\\b", "\\beth\\b", "\\bether\\b"],
+    "SOL": ["\\bsolana\\b"],
+    "XRP": ["\\bxrp\\b", "\\bripple (labs|ceo|lawsuit|sec|price|token)\\b"],
+    "BNB": ["\\bbnb\\b", "\\bbinance coin\\b"],
+    "DOGE": ["\\bdogecoin\\b"],
+    "ADA": ["\\bcardano\\b"],
+    "AVAX": ["\\bavax\\b", "\\bava labs\\b", "\\bavalanche (network|blockchain|foundation|token)\\b"],
+    "LINK": ["\\bchainlink\\b"],
+    "DOT": ["\\bpolkadot\\b"],
+    "LTC": ["\\blitecoin\\b"],
+    "BCH": ["\\bbitcoin cash\\b", "\\bbch\\b"],
+    "TRX": ["\\btrx\\b", "\\bjustin sun\\b", "\\btron (network|blockchain|dao|foundation|founder|token)\\b"],
+    "NEAR": ["\\bnear protocol\\b"],
+    "SUI": ["\\bmysten labs\\b", "\\bsui (network|blockchain|token|ecosystem|foundation)\\b"],
+    "APT": ["\\baptos\\b"],
+    "ARB": ["\\barbitrum\\b"],
+    "OP": ["\\bop mainnet\\b", "\\boptimism (network|mainnet|foundation|collective|token)\\b"],
+    "ATOM": ["\\batom token\\b", "\\bcosmos (hub|network|ecosystem|blockchain)\\b"],
+    "UNI": ["\\buniswap\\b"],
+    "CRYPTO": ["\\bcrypto\\b", "\\bcryptocurrenc(y|ies)\\b", "\\bblockchain\\b", "\\bstablecoins?\\b", "\\bdefi\\b"]
+  },
+  "macro_entity": "MACRO",
+  "macro_entity_rule": "every GKG row counts toward MACRO (n = all ingested articles); topic counts below are taken on MACRO",
+  "topics_by_theme": {
+    "conflict": ["ARMEDCONFLICT", "WB_2433_CONFLICT_AND_VIOLENCE", "WB_2462_POLITICAL_VIOLENCE_AND_WAR", "MILITARY", "TERROR", "WB_2468_CONVENTIONAL_WAR"],
+    "central_bank": ["ECON_CENTRALBANK", "WB_1235_CENTRAL_BANKS", "EPU_POLICY_CENTRAL_BANK", "ECON_INTEREST_RATES", "EPU_POLICY_INTEREST_RATES", "EPU_CATS_MONETARY_POLICY", "WB_444_MONETARY_POLICY"],
+    "inflation": ["ECON_INFLATION", "WB_442_INFLATION"],
+    "energy": ["ENV_OIL", "ECON_OILPRICE", "ENV_NATURALGAS", "ECON_NATGASPRICE", "FUELPRICES", "ECON_GASOLINEPRICE", "WB_507_ENERGY_AND_EXTRACTIVES"],
+    "trade_policy": ["ECON_TRADE_DISPUTE", "EPU_CATS_TRADE_POLICY", "WB_775_TRADE_POLICY_AND_INTEGRATION", "WB_776_TRADE_POLICY", "SANCTIONS", "WB_778_NON_TARIFF_MEASURES"]
+  },
+  "event_classes": {
+    "hack_exploit": ["\\bhack(s|ed|er|ers)?\\b", "\\bexploit(s|ed)?\\b", "\\bbreach(es|ed)?\\b", "\\bdrain(s|ed)?\\b", "\\bstolen\\b", "\\btheft\\b", "\\bheist\\b"],
+    "regulatory_enforcement": ["\\bsec\\b", "\\bcftc\\b", "\\bdoj\\b", "\\blawsuit\\b", "\\bsue[ds]?\\b", "\\bcharge[ds]?\\b", "\\bindict(ed|ment)?\\b", "\\benforcement\\b", "\\bregulators?\\b", "\\bban(s|ned)?\\b", "\\bcrackdown\\b", "\\bfined?\\b", "\\bsettle(s|d|ment)?\\b"],
+    "listing_etf": ["\\betfs?\\b", "\\blisting\\b", "\\bdelist(s|ed|ing)?\\b", "\\blists?\\b"],
+    "macro_shock": ["\\bfed\\b", "\\bfomc\\b", "\\brate (hike|cut)s?\\b", "\\bcpi\\b", "\\binflation\\b", "\\brecession\\b", "\\btariffs?\\b", "\\bsanctions?\\b", "\\bwar\\b"]
+  },
+  "event_classes_apply_to": "the crypto coin entities only (BTC..UNI); counted per (hour, entity) when the article matches the entity AND the class"
+}

@@ -60,7 +60,10 @@ Key = Tuple[str, str]  # (account, symbol)
 GRANDFATHERED: Dict[str, Dict[str, Any]] = {
     "bybit_1/ETHUSDT": {"legs": ["trend_donchian_eth_4h", "trend_donchian_eth_prop"],
                         "unit": "RQ-20261015-1631-01", "due": "2026-10-29"},
-    "bybit_1/XRPUSDT": {"legs": ["trend_donchian_xrp_4h", "xrp_pullback_2h"],
+    # 2026-10-22 OPERATOR-DECISIONS-1022: bybit_1 runs the soak alias trend_donchian_xrp_adx25 (an exact copy
+    # of trend_donchian_xrp_4h plus the declared ADX trail) in place of the incumbent: SAME pair, SAME unit and
+    # due date, one leg renamed. bybit_2 / bybit_portfolio keep the incumbent (entries below).
+    "bybit_1/XRPUSDT": {"legs": ["trend_donchian_xrp_adx25", "xrp_pullback_2h"],
                         "unit": "RQ-20261015-1631-02", "due": "2026-10-29"},
     "bybit_2/XRPUSDT": {"legs": ["trend_donchian_xrp_4h", "xrp_pullback_2h"],
                         "unit": "RQ-20261015-1631-02", "due": "2026-10-29"},

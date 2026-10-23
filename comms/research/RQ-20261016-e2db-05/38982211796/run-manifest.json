@@ -1,0 +1,38 @@
+{
+  "unit": "RQ-20261016-e2db-05",
+  "run_id": "38982211796",
+  "commit_sha": "2b3f859b59cce2b01b81660615c594f3c582d4d5",
+  "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/38982211796",
+  "timeout_minutes": 300,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/prop_ev_grid.py",
+        "--leg",
+        "trend_donchian_eth_prop=comms/research/RQ-20261015-1bf3-05/38713761684/arms/P__trades.jsonl",
+        "--arm",
+        "A=--sizing start --risk-pct 0.005 --dd-switch-frac 0.8",
+        "--arm",
+        "C4H=--sizing start --risk-pct 0.005 --dd-switch-frac 0.8 --trades trend_donchian_eth_4h=comms/strategy_evidence/runs/2026-10-12-1095d/trend_donchian_eth_4h__trades.jsonl --lev-cap trend_donchian_eth_4h=5 --trades trend_donchian_sol_4h=comms/strategy_evidence/runs/2026-10-12-1095d/trend_donchian_sol_4h__trades.jsonl --lev-cap trend_donchian_sol_4h=5",
+        "--common",
+        "--trades trend_donchian_sol_prop=comms/research/RQ-20261015-1bf3-06/38730575207/arms/P__trades.jsonl --ruleset config/prop_rulesets/breakout_turbo_1step.yaml --costs breakout --swap-model prorated --funded-start fresh --lev-cap trend_donchian_eth_prop=5 --lev-cap trend_donchian_sol_prop=5",
+        "--seeds",
+        "1,2,3,4,5",
+        "--grade",
+        "any_c_dominates",
+        "--out",
+        "comms/research/RQ-20261016-e2db-05/38982211796",
+        "--jobs",
+        "4",
+        "--note",
+        "RQ-20261016-e2db-05: breakout_2 matched-risk 0.005, window-matched 1095 d"
+      ],
+      "log": "comms/research/RQ-20261016-e2db-05/38982211796/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 2081.4
+    }
+  ],
+  "all_ok": true
+}

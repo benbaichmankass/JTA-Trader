@@ -133,6 +133,18 @@ needs to soak for more than one or two trades."*
 - **Open:** the granted `MD-PROMOTE-S1-S2` still reads a per-leg R3 `consistent` verdict (a cost sample).
   Its amendment is PROPOSED in `config/mandates.yaml` (`MD-PROMOTE-S1-S2-SOAK-AMEND`); granting it is the
   operator's.
+- **Exception — a config-only improvement to an existing, already-live strategy (operator, 2026-10-18,
+  binding).** Verbatim: *"in general, yes, things need to pass a mechanical test on paper, but if it's an
+  improvement like this to an existing strategy, and it's just configuration that's already based on, like,
+  the theory that's proven itself, then we should move forward with that and just monitor the first trades
+  to make sure that they execute correctly."* So a change that is **configuration only** on a leg that is
+  **already live**, backed by a **committed, pre-registered evidence record** (net of the full cost stack,
+  clearing a rule registered before the run), goes live directly — no soak alias, no separate soak stage —
+  and its **first 1–2 live trades are monitored** for correct execution. The monitoring is a named closing
+  observation on the change's PR and checklist row (what executes, what it is compared against); a fault
+  there is a mechanical fault like any other (fix it, or revert the config). **New strategies and new code
+  paths still soak** as above; so does anything that needs code to run. This relaxes the *placement* of the
+  mechanical check (live, watched), not the evidence bar, and it does not touch the prop superset below.
 
 **Stage 2 is one stage, not two.** The mirror and the live account carry the
 same strategies and take the same trades at all times (operator, 2026-09-21).
@@ -418,7 +430,7 @@ Keep it. The model was not wrong; the job description was.
 - Write narrative observations about its own state. Three timestamped
   `manager_observation_*` keys an hour apart on one row is the failure mode,
   not diligence.
-- Exceed its daily budget without saying so at the next sync.
+- Exceed the sustainable rate (amended 2026-10-18, § "The budget decision") without saying so.
 
 ### Why one register and not eight
 
@@ -506,8 +518,8 @@ evidence without a human in the path.
 
 | mandate | grants | direction |
 |---|---|---|
-| `MD-PROMOTE-S0-S1` | add a leg to the soak book (`bybit_1`, `alpaca_paper`) on a passing Stage-0 record | `add_risk` (paper) |
-| `MD-PROMOTE-S1-S2` | **add a leg to a REAL-MONEY roster** on a passing Stage-0 record plus Stage-1 cost fidelity | `add_risk` (real) |
+| `MD-PROMOTE-S0-S1` | add a leg to the soak book (`bybit_1`, `alpaca_paper`) on a passing Stage-0 record — **since 2026-10-16 (operator, "Require holdout") the record must also carry a passing `holdout_confirmation`: the selected configuration tested once on a held-back latest span; `config/mandates.yaml` is the source** | `add_risk` (paper) |
+| `MD-PROMOTE-S1-S2` | **add a leg to a REAL-MONEY roster** on a passing Stage-0 record plus Stage-1 cost fidelity — **plus the same holdout confirmation since 2026-10-16** | `add_risk` (real) |
 | `MD-DEMOTE-S2-S1` | demote a Stage-2 leg when the mirror goes net-negative net-of-cost over the declared window — **since 2026-09-29 (operator, "Last 20 + strict test (Recommended)") the T3 ∧ net<0 rule: both of the last two 20-trade windows below the leg's Stage-0 p10 and below 0; `config/mandates.yaml` is the source** | `derisk_only` |
 | `MD-DEMOTE-S1-OFF` | drop a Stage-1 leg whose realized cost diverges from its harness assumption | `derisk_only` |
 | `MD-KILL-QUESTION` | close a research question that failed its own pre-registered rule | `derisk_only` |
@@ -746,11 +758,13 @@ register wearing a calendar.
 
 | row kind | where it comes from |
 |---|---|
-| **Cadenced sessions** | the daily sync; `/health-review`, `/performance-review`, `/ml-review` on their own cadences |
+| **Cadenced sessions** | the daily sync; `/health-review`, `/performance-review`, `/ml-review` on their own cadences — **weekly reviews run first after the weekly reset, planning follows** (below) |
 | **Decisions due** | pipeline rows whose `next_action` is `ask_operator` (§ 3b) |
 | **Monitoring due** | pipeline `due_when.check_every_days` coming up |
 | **Automated jobs** | cron cadences **read from the workflow files**, never retyped |
 | **Lanes running** | the checklist's `in_flight` rows with their spend |
+
+⚠️ **Weekly order: reviews right after the reset, planning Thursday morning** (operator, 2026-10-19, binding). Verbatim in substance: *"right after the reset, we kick off all of the weekly reviews — performance, ML, the audit, a regular system review — make sure especially the research and training pipelines are healthy, and then we go on to the planning session on Thursday morning based on those insights and knowing how much capacity we actually have left for the week."* The reset is Wed ~18:00Z; planning (Thursday morning) is built on the review outputs plus a post-review capacity reading (`spend_meter.py --capacity`). Contract and the trigger re-timing: [`.claude/skills/manager/SKILL.md`](../../.claude/skills/manager/SKILL.md) § "Weekly planning … and the weekly cycle".
 
 ⚠️ **The cron column is derived, not declared.** A schedule that states a
 cadence a second time is free to drift from the workflow that actually carries
@@ -789,6 +803,12 @@ that we leave ourselves a wide margin for error or unexpected needs."*
 
 **10% per day × 7 days = 70% of the weekly allowance, leaving 30% margin.**
 That is the rule, and it is deliberately a *share*, not a number of dollars.
+
+⚠️ **Amended 2026-10-18 (operator):** *"We want to get as much work as possible out of our budget
+without blowing through it before a reset."* The pace is now the **sustainable rate**, `(100 −
+weekly%) / days to reset`, turned into 1–5 lanes by judgment with no hard cap. It is step 2 of the
+manager skill's § "The operating loop" (`spend_meter.py --capacity`). The 10%-a-day share above is the
+history, not the rule. It is still a share of the allowance, never dollars.
 
 ⚠️ **THIS CHANGES WHAT A1 MEASURES, and the change is not cosmetic.** A
 subscription plan's constraint is a **weekly usage allowance**, not a dollar

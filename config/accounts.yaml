@@ -220,7 +220,14 @@ accounts:
     market_type: linear                # USDT-margined linear perpetuals — same
                                        # as bybit_2. set-leverage fires at boot
                                        # via _apply_per_account_leverage.
-    strategies: [trend_donchian_1h, trend_donchian_eth_4h, trend_donchian_xrp_4h, xrp_pullback_2h, ada_pullback_2h, trend_donchian_eth_prop, trend_donchian_sol_prop]
+    position_model: slices             # NETTED-SLICES (operator 2026-10-15, Tier-2 soak):
+                                       # several strategies may each hold a SLICE of one
+                                       # symbol, each with its own qty-scoped Partial bracket;
+                                       # allocation by config/slice_allocation.yaml instead of
+                                       # pick-one. bybit_1 first; bybit_2 + bybit_portfolio
+                                       # together after 1-2 clean multi-slice trades here
+                                       # (mirror equality test). ROLLBACK: delete this line.
+    strategies: [trend_donchian_1h, trend_donchian_eth_4h, trend_donchian_xrp_adx25, xrp_pullback_2h, ada_pullback_2h, trend_donchian_eth_prop, trend_donchian_sol_prop]
                                        # 2026-10-15 PROP-GATE-PARITY (Tier-3 roster add on PAPER, operator 'Yes, 1, 2 and 3a'):
                                        # trend_donchian_eth_prop + trend_donchian_sol_prop join the Stage-1 soak. Operator: "if anything,
                                        # the prop accounts should have a higher bar to clear because of the DD limits" -- a prop leg must
@@ -365,7 +372,9 @@ accounts:
                                        # %-of-equity cap scales with the account.
       daily_usd: 100                   # absolute FALLBACK only — used when no
                                        # equity snapshot is available (cold start)
-      risk_pct: 0.015                   # 1.5% balance risked per trade (S-026 G2)
+      risk_pct: 0.0075                  # 0.75% per trade (Tier-3, operator 2026-10-22: "Cut its risk
+                                       # to ~0.75%"; OPERATOR-DECISIONS-1022). Was 1.5% (S-026 G2);
+                                       # ROLLBACK: 0.015.
       leverage: 3                      # 3× leverage — same as bybit_2; applied
                                        # via /v5/position/set-leverage at boot.
       daily_dd_switch:                 # The ONE automatic daily off (operator 2026-10-09, rule 7
@@ -1304,7 +1313,9 @@ accounts:
                                        # test_alpaca_portfolio_trade_shaping_fields_equal_alpaca_live.
                                        # ROLLBACK: delete this key (and that test's side_filter row).
     strategies:                        # alpaca_live's roster MINUS the affordability
-      - ief_pullback_1d                # proxies (SPLG/IAUM) — see ROSTER-SYNC above.
+      # 2026-10-21 OPERATOR DECISION (popup ~22:15Z, "Move to paper (Recommended)"), Tier 3: ief_pullback_1d
+      # REMOVED from alpaca_portfolio (mirror of alpaca_live, strict equality). Evidence RQ-20261016-c56e-16: FAIL, net -0.85R, 3 of 8 folds, n 87.
+      # It keeps trading on alpaca_paper so the record continues. REVERT = add the line back (Tier 3).
       - slv_pullback_1d
       # ⚠️ CUT FROM 14 TO 2 ON 2026-09-21, BY EXPLICIT OPERATOR APPROVAL, asked
       # and answered directly. The 12 removed were:
@@ -1579,8 +1590,9 @@ accounts:
       #
       # ROLLBACK: re-add the two lines. Tier-3 again — re-adding a leg to a
       # real-money roster IS the live-trading moment, as the header above says.
-      - ief_pullback_1d      # IEF 1d pullback. 67/67 (1 sh, $0.89-0.94).
-                             # Already in alpaca_portfolio.
+      # 2026-10-21 OPERATOR DECISION (popup ~22:15Z, "Move to paper (Recommended)"), Tier 3: ief_pullback_1d
+      # REMOVED from alpaca_live. Evidence RQ-20261016-c56e-16: FAIL, net -0.85R, 3 of 8 folds, n 87.
+      # It keeps trading on alpaca_paper so the record continues. REVERT = add the line back (Tier 3).
       - slv_pullback_1d      # SLV 1d pullback. 217/217 (1 sh, $3.54-3.90).
                              # Already in alpaca_portfolio.
       - iaum_pullback_1d     # IAUM 1d pullback — the declared GOLD AFFORDABILITY
@@ -2021,7 +2033,13 @@ accounts:
       max_dd_pct: 0.03                 # Turbo STATIC 3% = $150 (floor $4,850).
       daily_loss_pct: 0.03             # 3% of the 00:30 UTC balance = $150.
       daily_usd: 150                   # absolute fallback (= 3% of $5k).
-      risk_pct: 0.005                  # FLAT $25/ticket (0.5% x $5k): the flat arm chosen by the rule registered in
+      # risk_pct 0.005 -> 0.0035 (Tier-3, operator decision 2026-10-21 popup "Apply 0.35%"; lane BRK2-RISK-035).
+      #   Evidence: RQ-20261016-029 (rule RULE-P5-Q2-SIZING-BRK; comms/research/RQ-20261016-029/39030716646/):
+      #   C0035 beat A on ev with >= survival on every seed (5 seeds), and p_breach_max_dd fell on every seed in all 4
+      #   modes (realized/bridge/stop/path), e.g. seed 1 realized 0.991 -> 0.838. Now ~$17.50/ticket; the ruleset
+      #   flat cap (max_risk_usd 25) stays a ceiling and is untouched.
+      #   ROLLBACK: set risk_pct back to 0.005.
+      risk_pct: 0.0035                 # was 0.005: FLAT $25/ticket (0.5% x $5k): the flat arm chosen by the rule registered in
                                        # RQ-20261005-853/814 before the run (ETH -> $25; SOL -> $50 not applied: risk is per account,
                                        # per-leg sizing PI-20261005-YUVCGTMJ-0006); ruleset sizing.flat.max_risk_usd matches.
       # breach_guards: NOT set -> `enforce` (the default) for the prop ticket risk gate

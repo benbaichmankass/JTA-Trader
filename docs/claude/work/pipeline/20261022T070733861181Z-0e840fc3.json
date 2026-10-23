@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "due_date": "2026-11-05",
+    "kind": "date"
+  },
+  "filed": "2026-10-22",
+  "id": "PI-20261022-LOWUPW43-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "lane PERF-FOLLOWUP-2026W43 lesson L1 (comms/perf_followup/perf-followup-20261021-walkthrough.json)",
+    "rerun": "python3 -c \"import json,glob;[print(f, round(100*sum(max(r['mfe_r'],0)-r['gross_r'] for r in R)/sum(max(r['mfe_r'],0) for r in R),1)) for f in sorted(glob.glob('comms/research/RQ-20261018-2a10-01/arms/*__trades.jsonl')) for R in [[json.loads(l) for l in open(f)]]]\""
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "[performance][tooling] The giveback headline has no benchmark, so it reads as a leak when it is mostly the exits' design. MEASURED this lane from the committed per-trade arms of RQ-20261018-2a10-01 (gross_r vs mfe_r, mfe_r a lagged lower bound as in live telemetry): the money legs' own Stage-0-positive backtests give back 72-90% of peak -- forming arms ada 87.8% (n=656), xrp_pb 89.5% (n=499), eth_4h 81.9% (n=420), xrp_4h 88.4% (n=138), eth_prop 90.0% (n=1682), sol_prop 90.5% (n=588); closed arms 72-88%. The walk-through's paper+mirror 85.5% (W30, n=131) / 87.3% (90d, n=328) sits inside that range, and live deep->loss (15.3% of 59) is BELOW the backtests' 27-44%. Fix (Tier 1): scripts/research/giveback_census.py prints, per leg, the giveback share of that leg's committed Stage-0 record (comms/strategy_evidence/<leg>.json source_run per-trade mfe_r/gross_r) beside the live share, and the brief quotes live-minus-backtest, not the raw share. Population caveat stays: peak is a lower bound on both sides. Rides with PI-20261021-4ZLRFEV1-0003 (same script)."
+}

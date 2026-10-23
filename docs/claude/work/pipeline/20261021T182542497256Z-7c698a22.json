@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a patch lands that stops counting side-filtered/dry/refused signals and liveness_watchdog_state shows no new alert with a side_filter-explained window; or killed with stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261021-ZRSAEUMT-0002",
+  "next_action": "dispatch_lane",
+  "note_reid": "re-id'd from PI-20261021-20261021-0001 by WEEKLY-AUDIT-2026-10-19 (session_014UeddhjFnc6fSA41bo5V65) 2026-10-21: the id collided with an unrelated earlier record, so load() shadowed it (pipeline-guard red on main after #19341)",
+  "origin": {
+    "kind": "audit",
+    "ref": "health-review-2026-10-21:liveness-watchdog-false-urgent",
+    "rerun": "scripts/ops/diag_fetch.sh log_file?name=liveness_watchdog_state; then audit_query?since=<last_alert_at-1h>&until=<last_alert_at>&side=sell and side=buy, count status in {submitted,multi_account_dispatched,dry_run}, compare to account side_filter"
+  },
+  "state": "queued",
+  "what": "Liveness watchdog (src/runtime/liveness_watchdog.py) false-positive URGENT CONFIRMED on a live sample. State file shows last alert 2026-10-19T14:00Z with signals=5, trades=0. audit_query for 13:00-14:00Z that day: the exactly-5 rows the watchdog counts (status=multi_account_dispatched) are all SELL signals from long-only ETF legs (ief/gld/tlt/iaum/gdx pullback_1d at 13:31-13:34Z); config/accounts.yaml has side_filter: long on the Alpaca live+mirror accounts, so a short is dispatched but suppressed and 0 fills is expected. _count_actionable_signals counts status+side only, never side-filter/dry/refusal outcome; the only exemption (_count_intentional_holds) matches journaled rejected trades rows with netting/intent_noop markers, which a side-filtered short does not produce. Not verified this run: the trades-table rows for that hour (journal tail does not reach 10-19). Fix is Tier-2 (src/runtime): count only signals that reach an order attempt, or exempt side_filter suppression, plus a test with a short + side_filter: long."
+}

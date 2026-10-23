@@ -74,7 +74,8 @@ flags, never defaults chosen here:
   * ``replace`` (EXIT-REPLACE-ETH4H, 2026-10-15) -- baseline A is the INCUMBENT exit; every other
     arm is a candidate to REPLACE it. A candidate passes iff ``net_r(C) > net_r(A)`` (strictly)
     AND folds where ``net_r(C) >= net_r(A)`` (ties count) >= ``--fold-majority`` AND
-    ``maxDD(C) <= maxDD(A) * (1 + --dd-tol-frac)``. Several pass -> the highest net R. None ->
+    ``maxDD(C) <= maxDD(A) * (1 + --dd-tol-frac)`` AND (optional materiality, default off)
+    ``net_r(C) - net_r(A) >= --delta-r-per-trade * n(A)``. Several pass -> the highest net R. None ->
     fail: the incumbent stands. Each candidate also reports ``tp_doctrine`` (the share of its
     trades whose MFE reached its own declared tp_r vs ``check_tp_doctrine.REACH_FLOOR``) and
     ``lever_fired`` (False when the arm reproduces A exactly -- a dead lever).
@@ -86,6 +87,33 @@ flags, never defaults chosen here:
     flags). pass iff net_r > 0 AND n >= n_floor AND >= fold_majority folds net
     > 0; fail otherwise at n >= n_floor; indeterminate when n < n_floor or a
     ``--control`` arm does not reproduce its committed record.
+  * ``holdout`` (PROMOTION-BAR-HOLDOUT-1016; operator decision 2026-10-16, "Require holdout":
+    *"promotion needs a pass on the held-back 25% ... one setting tested once, so no deflation
+    is needed"*) -- SELECT on the earliest span, then test the ONE selected arm ONCE on the latest
+    span. Every arm runs once over the whole pinned window (one continuous harness pass, so
+    indicators warm up exactly as the record's run did); the boundary is fixed BEFORE any outcome
+    is read: the latest ``--holdout-frac`` (default 0.25) of the calendar window, grown in 1%
+    steps until it holds ``--holdout-min-trades`` (default 25) of the BASELINE arm's entries
+    (entry times only, never an outcome), capped at ``--holdout-max-frac`` (default 0.40); a leg
+    still short at the cap is run anyway and grades ``underpowered``. DISCOVERY sees only trades
+    whose entry AND exit precede the boundary (``discovery_trades`` raises ``HoldoutLeak`` on
+    anything else; a trade straddling the boundary is in neither span). SELECTION: an arm is
+    eligible iff its discovery n >= ``--n-floor``, discovery net R > 0 and >= ``--fold-majority``
+    of ``--folds`` calendar folds of the discovery span are net-positive; the eligible arm with
+    the highest discovery net R is selected (a tie goes to ``--baseline``, then declaration
+    order). HOLDOUT: the selected arm's trades entered on/after the boundary, read once.
+      pass / ``confirmed``          if n_holdout >= --holdout-min-trades and net R > 0;
+      fail / ``not_replicated``     if n_holdout >= the floor and net R <= 0 (closes the
+                                    CONFIGURATION, never the family);
+      fail / ``no_discovery``       if no arm is eligible on discovery (nothing to confirm) while at
+                                    least one arm held >= --n-floor discovery trades;
+      indeterminate / ``insufficient_discovery`` if every arm held < --n-floor discovery trades
+                                    (a power shortfall, never evidence against the leg);
+      indeterminate / ``underpowered`` if n_holdout < the floor.
+    The verdict carries ``holdout_confirmation`` in the exact shape
+    ``scripts/ops/mandate_resolver.py`` clause ``R-HOLDOUT`` reads from a Stage-0 record
+    (``source_run`` is null here: whoever writes the record points it at the committed
+    ``verdict.json``).
 Honesty notes. ``maxDD`` and ``net_total_r`` are read from the harness's own
 ``--json`` summary, never re-derived. ``delta_r`` is a MATERIALITY bar in R
 over the whole window (the unit says why that value), not a significance test;
@@ -110,7 +138,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(REPO / "scripts" / "research"), str(REPO / "scripts"), str(REPO)]
 
 VERDICTS = ("pass", "fail", "indeterminate")
-GRADES = ("parity", "sweep", "stage0", "replace")
+GRADES = ("parity", "sweep", "stage0", "replace", "holdout")
 N_FOLDS = 4
 
 
@@ -151,6 +179,29 @@ def arm_cfg(base: dict[str, Any], sets: dict[str, Any], unsets: list[str]) -> di
         cfg.pop(k, None)
     cfg.update(sets)
     return cfg
+
+
+#: Raw harness flags that arm a GEOM-B1 take-profit mover (scripts/research/tp_geometry.py).
+_GEOM_TP_FLAGS = ("--tp-target-r", "--tp-extend-r", "--tp-retarget-mode", "--tp-report")
+
+
+def tp_mover_conflict(label: str, cfg: dict[str, Any], extra: list[str]) -> str | None:
+    """A message when the arm would arm TWO take-profit movers, else None.
+
+    A leg that declares ``tp_revision`` (TP doctrine B1, e.g. trend_donchian_eth_4h since
+    2026-10-18) has its rule forwarded by the argv builder as ``--tp-revision``; a GEOM-B1 flag on
+    the same arm makes backtest_trend.run_backtest raise ``ValueError`` (each moves tp_price), so
+    the arm died exit 1 after the baseline had already run (RQ-20261018-012/-014,
+    PI-20261021-6SBYWRKB-0001). Caught here, before any fetch, with the remedy: a candidate that
+    REPLACES the declared TP mover says so with ``-tp_revision``."""
+    if not cfg.get("tp_revision"):
+        return None
+    hit = [f for f in extra if f in _GEOM_TP_FLAGS]
+    if not hit:
+        return None
+    return (f"arm {label!r}: the leg declares tp_revision and the arm arms a GEOM-B1 TP lever "
+            f"({', '.join(hit)}); the harness refuses two TP movers in one run. Add '-tp_revision' to "
+            "the arm so the candidate replaces the declared mover.")
 
 
 # ── harness runs ────────────────────────────────────────────────────────────
@@ -194,14 +245,32 @@ def build_arm_argv(leg: str, cfg: dict[str, Any], csv: str, resample: str, emit:
     return argv, list(omitted)
 
 
-def fetch_candles(leg: str, cfg: dict[str, Any], days: int, csv: str) -> dict[str, Any]:
-    """The SAME fetch the evidence builder makes (regime_debt_matrix._fetch_csv)."""
+#: `--non-crypto-source dukascopy` interval codes (scripts/ops/fetch_backtest_candles.py --interval).
+_DUKA_INTERVAL = {"1h": "60", "2h": "120", "4h": "240", "1d": "D"}
+
+
+def fetch_candles(leg: str, cfg: dict[str, Any], days: int, csv: str,
+                  non_crypto_source: str = "auto") -> dict[str, Any]:
+    """The SAME fetch the evidence builder makes (regime_debt_matrix._fetch_csv).
+
+    ``non_crypto_source="dukascopy"`` (P1-ATM-BACKLOG-1016) sends a NON-crypto leg to the dukascopy
+    lane instead of yfinance: research-script-run.yml installs dukascopy-python but not yfinance,
+    so an equity/ETF leg could not be ablated on the runner at all. Crypto legs are unaffected, and
+    the default ("auto") is the evidence builder's own fetch, byte-for-byte."""
     import regime_debt_matrix as rdm
     sym = (cfg.get("symbols") or [None])[0]
     tf = cfg.get("timeframe")
     if not sym or not tf:
         raise ValueError(f"{leg}: no symbols[0]/timeframe in config")
     feed = rdm.resolve_feed(sym, tf)
+    if non_crypto_source == "dukascopy" and feed["source"] != "binance":
+        code = _DUKA_INTERVAL.get(str(tf))
+        if code is None:
+            raise ValueError(f"{leg}: no dukascopy interval code for timeframe {tf!r}")
+        subprocess.run([sys.executable, str(REPO / "scripts/ops/fetch_backtest_candles.py"), "--symbol", sym,
+                        "--source", "dukascopy", "--interval", code, "--days", str(days), "--output", csv],
+                       check=True, cwd=str(REPO))
+        return {**feed, "source": "dukascopy", "ticker": sym}
     rdm._fetch_csv(feed, days, csv)
     return feed
 
@@ -322,10 +391,16 @@ TP_REACH_FLOOR = 0.10  # == scripts/ci/check_tp_doctrine.REACH_FLOOR (TP-REACH-F
 
 def grade_replace(arms: dict[str, dict[str, Any]], *, baseline: str, candidates: list[str], fold_majority: int,
                   n_floor: int, dd_tol_frac: float, control: dict[str, Any] | None,
-                  tp_r_by_arm: dict[str, float | None] | None = None) -> dict[str, Any]:
+                  tp_r_by_arm: dict[str, float | None] | None = None,
+                  delta_r_per_trade: float = 0.0) -> dict[str, Any]:
     a = arms[baseline]
+    # MATERIALITY (P1-ATM-BACKLOG-1016): an optional per-trade bar, scaled by the INCUMBENT's n, so a
+    # unit can register "beats A by >= x R/trade" before n is known. 0.0 (the default) is the strict
+    # `net_r(C) > net_r(A)` the operator's rule used, byte-for-byte (RQ-20261015-a1df-01).
+    bar = round(delta_r_per_trade * a["n"], 4)
     m: dict[str, Any] = {"baseline": baseline, "candidates": {}, "fold_majority": fold_majority,
-                         "n_floor": n_floor, "dd_tol_frac": dd_tol_frac, "control": control}
+                         "n_floor": n_floor, "dd_tol_frac": dd_tol_frac, "control": control,
+                         "delta_r_per_trade": delta_r_per_trade, "delta_r_bar": bar}
     if control is not None and not control["ok"]:
         return {"verdict": "indeterminate", "label": "control_failed", **m,
                 "why": "the incumbent arm does not reproduce the committed record: the corpus differs"}
@@ -337,7 +412,8 @@ def grade_replace(arms: dict[str, dict[str, Any]], *, baseline: str, candidates:
         d_r = round(c["net_r"] - a["net_r"], 4)
         dd_cap = round(a["max_drawdown_r"] * (1.0 + dd_tol_frac), 4)
         wins = sum(1 for fc, fa in zip(c["folds"], a["folds"]) if fc["net_r"] >= fa["net_r"])
-        ok = c["net_r"] > a["net_r"] and wins >= fold_majority and c["max_drawdown_r"] <= dd_cap
+        ok = (c["net_r"] > a["net_r"] and d_r >= bar and wins >= fold_majority
+              and c["max_drawdown_r"] <= dd_cap)
         reach = c.get("reach_ge_6r")
         tp_r = (tp_r_by_arm or {}).get(cl)
         m["candidates"][cl] = {
@@ -425,6 +501,129 @@ def grade_stage0(arms: dict[str, dict[str, Any]], *, baseline: str, fold_majorit
             "why": f"net_r={b['net_r']} with {pos}/{N_FOLDS} positive folds (needs > 0 and >= {fold_majority})"}
 
 
+# ── holdout (pure; see the module docstring's ``holdout`` grade) ───────────────
+class HoldoutLeak(ValueError):
+    """A trade at or after the holdout boundary reached the selection step."""
+
+
+def holdout_boundary(entry_times: list[Any], lo: Any, hi: Any, *, frac: float, min_trades: int,
+                     max_frac: float) -> dict[str, Any]:
+    """Place the boundary from the calendar window and the BASELINE arm's entry times only.
+
+    The share starts at ``frac`` and grows in 1% steps until the span [boundary, hi] holds
+    ``min_trades`` entries, capped at ``max_frac``. Returns the boundary, the share used, the
+    baseline entries in the span, and whether the cap was hit short of the floor."""
+    if not (0.0 < frac <= max_frac < 1.0):
+        raise ValueError(f"need 0 < holdout_frac <= holdout_max_frac < 1 (got {frac}, {max_frac})")
+    ts = sorted(_ts(t) for t in entry_times)
+    steps = int(round((max_frac - frac) * 100))
+    share = frac
+    for i in range(steps + 1):
+        share = round(frac + i / 100.0, 4)
+        boundary = hi - (hi - lo) * share
+        n = sum(1 for t in ts if boundary <= t <= hi)
+        if n >= min_trades:
+            return {"boundary": boundary, "share": share, "baseline_n_holdout": n, "grown": i > 0,
+                    "short_at_cap": False}
+    boundary = hi - (hi - lo) * max_frac
+    n = sum(1 for t in ts if boundary <= t <= hi)
+    return {"boundary": boundary, "share": max_frac, "baseline_n_holdout": n, "grown": True,
+            "short_at_cap": True}
+
+
+def discovery_trades(trades: list[dict[str, Any]], boundary: Any) -> list[dict[str, Any]]:
+    """Trades whose entry AND exit precede the boundary; anything that touches the held-back
+    span is dropped here, so the selection step cannot see it."""
+    out = []
+    for t in trades:
+        ex = t.get("exit_time")
+        if ex and _ts(t["entry_time"]) < boundary and _ts(ex) < boundary:
+            out.append(t)
+    return out
+
+
+def holdout_trades(trades: list[dict[str, Any]], boundary: Any, hi: Any) -> list[dict[str, Any]]:
+    return [t for t in trades if boundary <= _ts(t["entry_time"]) <= hi]
+
+
+def _assert_discovery_only(trades: list[dict[str, Any]], boundary: Any) -> None:
+    for t in trades:
+        if _ts(t["entry_time"]) >= boundary or not t.get("exit_time") or _ts(t["exit_time"]) >= boundary:
+            raise HoldoutLeak(f"trade entered {t.get('entry_time')} / exited {t.get('exit_time')} touches the "
+                              f"held-back span (boundary {boundary}) and reached selection")
+
+
+def _span_stats(trades: list[dict[str, Any]], edges: list[Any] | None) -> dict[str, Any]:
+    net = round(sum(float(t.get("net_r") or 0.0) for t in trades), 4)
+    out: dict[str, Any] = {"n": len(trades), "net_r": net,
+                           "expectancy_r": round(net / len(trades), 4) if trades else None}
+    if edges is not None:
+        folds = fold_net_r(trades, edges)
+        out["folds"] = folds
+        out["folds_positive"] = sum(1 for f in folds if f["net_r"] > 0)
+    return out
+
+
+def select_on_discovery(disc: dict[str, list[dict[str, Any]]], *, order: list[str], baseline: str,
+                        boundary: Any, edges: list[Any], n_floor: int, fold_majority: int
+                        ) -> tuple[str | None, dict[str, Any]]:
+    """The pre-registered selection rule over DISCOVERY trades only (see the docstring)."""
+    table: dict[str, Any] = {}
+    best, best_r = None, None
+    ranked = [baseline] + [lab for lab in order if lab != baseline]
+    for lab in ranked:
+        _assert_discovery_only(disc[lab], boundary)
+        st = _span_stats(disc[lab], edges)
+        ok = st["n"] >= n_floor and st["net_r"] > 0 and st["folds_positive"] >= fold_majority
+        st["eligible"] = ok
+        table[lab] = st
+        if ok and (best_r is None or st["net_r"] > best_r):
+            best, best_r = lab, st["net_r"]
+    return best, table
+
+
+def grade_holdout(selected: str | None, held: dict[str, Any] | None, *, min_trades: int,
+                  plan: dict[str, Any], table: dict[str, Any], n_floor: int = 0) -> dict[str, Any]:
+    m = {"selected": selected, "selected_from": len(table), "discovery": table, "plan": plan,
+         "holdout": held, "holdout_min_trades": min_trades, "discovery_n_floor": n_floor,
+         "evaluations_on_holdout": 1 if selected else 0}
+    if selected is None and table and all((st.get("n") or 0) < n_floor for st in table.values()):
+        return {"verdict": "indeterminate", "label": "insufficient_discovery", **m,
+                "why": f"every arm holds < {n_floor} discovery trades: selection could not be made, which is a "
+                       "power shortfall, not evidence against the leg"}
+    if selected is None:
+        return {"verdict": "fail", "label": "no_discovery", **m,
+                "why": "no arm is eligible on the discovery span (n floor, net R > 0, fold majority): nothing to confirm"}
+    if held["n"] < min_trades:
+        return {"verdict": "indeterminate", "label": "underpowered", **m,
+                "why": f"{selected} holds n={held['n']} held-back trades < {min_trades}: the span cannot decide"}
+    if held["net_r"] > 0.0:
+        return {"verdict": "pass", "label": "confirmed", **m,
+                "why": f"{selected} (selected from {len(table)} on discovery) reads net_r={held['net_r']} over "
+                       f"n={held['n']} held-back trades, read once"}
+    return {"verdict": "fail", "label": "not_replicated", **m,
+            "why": f"{selected} reads net_r={held['net_r']} over n={held['n']} held-back trades: the configuration "
+                   "does not replicate (closes the configuration, never the family)"}
+
+
+def holdout_confirmation(g: dict[str, Any], *, fingerprint: str | None, cost_stack: dict[str, Any],
+                         lo: Any, hi: Any, unit: str | None) -> dict[str, Any]:
+    """The block mandate_resolver.py R-HOLDOUT reads off a Stage-0 record."""
+    plan, held = g["plan"], g.get("holdout") or {}
+    import pandas as pd
+    b = plan["boundary"]
+    disc_end = str(b - pd.Timedelta(seconds=1))
+    return {"verdict": g["label"], "research_unit": unit,
+            "decision_rule": {"id": f"RULE-{unit}" if unit else None, "registered_before_run": True},
+            "selected_label": g["selected"], "selected_config_fingerprint": fingerprint,
+            "selected_from": g["selected_from"], "evaluations_on_holdout": g["evaluations_on_holdout"],
+            "discovery": {"start": str(lo), "end": disc_end},
+            "holdout": {"start": str(b), "end": str(hi), "share": plan["share"],
+                        "short_at_cap": plan["short_at_cap"]},
+            "n_holdout": held.get("n"), "net_r_holdout": held.get("net_r"),
+            "expectancy_r_holdout": held.get("expectancy_r"), "cost_stack": cost_stack, "source_run": None}
+
+
 def verdict_record(grade: dict[str, Any], *, leg: str, arms: dict[str, dict[str, Any]], population: str,
                    n: int, extra: dict[str, Any]) -> dict[str, Any]:
     return {"verdict": grade["verdict"], "read_state": "measured", "population": population, "n": n,
@@ -432,7 +631,51 @@ def verdict_record(grade: dict[str, Any], *, leg: str, arms: dict[str, dict[str,
             "note": f"{grade['verdict'].upper()} / {grade.get('label')}: {grade.get('why')}"}
 
 
+def _run_holdout(a: Any, base: dict[str, Any], specs: list[Any], labels: list[str], arms_dir: Path,
+                 edges: list[Any], arms: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """Boundary from the baseline arm's entry times, selection on discovery, one read of the winner."""
+    sys.path.insert(0, str(REPO / "scripts" / "ci"))
+    from check_roster_promotion_evidence import config_fingerprint
+    lo, hi = edges[0], edges[-1]
+    trades = {lab: _load_trades(str(arms_dir / f"{lab}__trades.jsonl")) for lab in labels}
+    plan = holdout_boundary([t["entry_time"] for t in trades[a.baseline]], lo, hi, frac=a.holdout_frac,
+                            min_trades=a.holdout_min_trades, max_frac=a.holdout_max_frac)
+    b = plan["boundary"]
+    step = (b - lo) / N_FOLDS
+    d_edges = [lo + step * i for i in range(N_FOLDS)] + [b]
+    disc = {lab: discovery_trades(trades[lab], b) for lab in labels}
+    sel, table = select_on_discovery(disc, order=labels, baseline=a.baseline, boundary=b, edges=d_edges,
+                                     n_floor=a.n_floor, fold_majority=a.fold_majority)
+    held = _span_stats(holdout_trades(trades[sel], b, hi), None) if sel else None
+    plan_out = {**plan, "boundary": b, "discovery_fold_edges": [str(e) for e in d_edges],
+                "straddling_excluded": {lab: sum(1 for t in trades[lab] if _ts(t["entry_time"]) < b)
+                                        - len(disc[lab]) for lab in labels}}
+    g = grade_holdout(sel, held, min_trades=a.holdout_min_trades, plan=plan_out, table=table, n_floor=a.n_floor)
+    # The cost stack every arm ran at (the selected arm's; the baseline's when nothing was selected).
+    c = arms[sel or a.baseline]["cost_stack"]
+    cs = {"fees": c.get("fee_bps_roundtrip"), "slippage": c.get("slippage_bps_roundtrip"),
+          "funding": c.get("funding_bps_per_window"), "unit": "bps_roundtrip (funding: bps per funding window)"}
+    fp = None
+    if sel:
+        spec = next(sp for sp in specs if sp[0] == sel)
+        fp = config_fingerprint(arm_cfg(base, spec[1], spec[2]))
+        if spec[3]:
+            g["raw_flag_warning"] = (f"{sel} carries raw harness flags {spec[3]} the config fingerprint does not "
+                                     "see: a record cannot be bound to it")
+    g["_block"] = holdout_confirmation(g, fingerprint=fp, cost_stack=cs, lo=lo, hi=hi, unit=a.research_unit)
+    g["plan"]["boundary"] = str(b)
+    return g
+
+
 # ── main ────────────────────────────────────────────────────────────────────
+def _write_failure(out: Path, info: dict[str, Any]) -> None:
+    """``<out>/failure.json``: why the run stopped, in a file the landing keeps.
+
+    The ``__stderr.log`` files and the runner's ``logs/cmd-0.log`` match ``.gitignore``'s ``*.log``,
+    so a failed run used to land on main with nothing that said why (PI-20261021-6SBYWRKB-0001)."""
+    (out / "failure.json").write_text(json.dumps(info, indent=2, default=str) + "\n", encoding="utf-8")
+
+
 def main(argv: list[str] | None = None) -> int:
     if "--self-test" in (sys.argv[1:] if argv is None else argv):
         return _self_test()
@@ -443,6 +686,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--start", default=None, help="harness --start (ISO), pinned to the record's data_start")
     ap.add_argument("--end", default=None, help="harness --end (ISO datetime), pinned to the record's data_end")
     ap.add_argument("--data-csv", default=None, help="skip the fetch and use this candle CSV (tests)")
+    ap.add_argument("--non-crypto-source", choices=("auto", "dukascopy"), default="auto",
+                    help="non-crypto candle lane: auto = the evidence builder's yfinance fetch; dukascopy = the lane "
+                         "research-script-run.yml installs (history from ~2018 for US ETF CFDs)")
     ap.add_argument("--control", default=None, help="LABEL=<committed __bt.json> the arm must reproduce")
     ap.add_argument("--control-tol-n", type=float, default=0.02)
     ap.add_argument("--control-tol-r", type=float, default=0.5)
@@ -456,6 +702,15 @@ def main(argv: list[str] | None = None) -> int:
                     help="number of equal calendar folds (default 4; a longer window can carry more)")
     ap.add_argument("--n-floor", type=int, required=True)
     ap.add_argument("--dd-tol-frac", type=float, default=0.10, help="replace: max DD may exceed the incumbent's by this fraction")
+    ap.add_argument("--delta-r-per-trade", type=float, default=0.0,
+                    help="replace: a candidate must also beat the incumbent by this many R per incumbent trade "
+                         "(bar = x * n(incumbent)); 0 = the strict net-R rule alone")
+    ap.add_argument("--holdout-frac", type=float, default=0.25,
+                    help="holdout: the latest share of the calendar window held back (grown to the trade floor)")
+    ap.add_argument("--holdout-min-trades", type=int, default=25,
+                    help="holdout: baseline entries the held-back span must hold; also its grading floor")
+    ap.add_argument("--holdout-max-frac", type=float, default=0.40, help="holdout: cap on the held-back share")
+    ap.add_argument("--research-unit", default=None, help="holdout: the unit id, carried into the block")
     ap.add_argument("--control-since", action="store_true",
                     help="grade the control on trades entered on/after the record's data_start (window longer than the record's)")
     ap.add_argument("--out", required=True)
@@ -479,6 +734,12 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     specs = [parse_arm(s) for s in a.arm]
     labels = [s[0] for s in specs]
+    conflicts = [m for m in (tp_mover_conflict(lab, arm_cfg(base, st, un), ex) for lab, st, un, ex in specs) if m]
+    if conflicts:
+        for m in conflicts:
+            print(f"ERROR: {m}", file=sys.stderr)
+        _write_failure(out, {"stage": "preflight", "errors": conflicts})
+        return 2
     if len(set(labels)) != len(labels):
         print(f"ERROR: duplicate arm labels {labels}", file=sys.stderr)
         return 2
@@ -509,7 +770,7 @@ def main(argv: list[str] | None = None) -> int:
     csv = a.data_csv or str(wd / f"{a.leg}__data.csv")
     feed: dict[str, Any] = {"resample": base.get("timeframe"), "source": "explicit --data-csv"}
     if not a.data_csv:
-        feed = fetch_candles(a.leg, base, a.days, csv)
+        feed = fetch_candles(a.leg, base, a.days, csv, non_crypto_source=a.non_crypto_source)
     edges = fold_edges(csv, a.start, a.end)
     arms_dir = out / "arms"
     arms_dir.mkdir(exist_ok=True)
@@ -527,6 +788,8 @@ def main(argv: list[str] | None = None) -> int:
         (arms_dir / f"{label}__stderr.log").write_text(r.stderr[-20000:], encoding="utf-8")
         if r.returncode != 0:
             print(f"ERROR: arm {label} harness exit {r.returncode}: {r.stderr[-800:]}", file=sys.stderr)
+            _write_failure(out, {"stage": "harness", "arm": label, "exit_code": r.returncode, "argv": shown,
+                                 "arms_completed": sorted(arms), "stderr_tail": r.stderr[-4000:]})
             return 1
         arms[label] = summarize_arm(jout, emit, edges)
         arms[label]["argv"] = shown
@@ -549,7 +812,10 @@ def main(argv: list[str] | None = None) -> int:
         cands = [lab for lab in labels if lab != a.baseline]
         tp_by = {lab: arm_cfg(base, sets, unsets).get("tp_r") for lab, sets, unsets, _x in specs}
         g = grade_replace(arms, baseline=a.baseline, candidates=cands, fold_majority=a.fold_majority,
-                          n_floor=a.n_floor, dd_tol_frac=a.dd_tol_frac, control=control, tp_r_by_arm=tp_by)
+                          n_floor=a.n_floor, dd_tol_frac=a.dd_tol_frac, control=control, tp_r_by_arm=tp_by,
+                          delta_r_per_trade=a.delta_r_per_trade)
+    elif a.grade == "holdout":
+        g = _run_holdout(a, base, specs, labels, arms_dir, edges, arms)
     else:
         cands = [lab for lab in labels if lab != a.baseline and (not same_as or lab not in same_as)]
         g = grade_sweep(arms, baseline=a.baseline, candidates=cands, delta_r=a.delta_r,
@@ -560,8 +826,13 @@ def main(argv: list[str] | None = None) -> int:
            f"{feed.get('ticker', base.get('symbols', ['?'])[0])} {base.get('timeframe')} candles "
            f"{a.start or arms[a.baseline].get('data_start')} .. {a.end or arms[a.baseline].get('data_end')}, "
            f"net of fee+slippage+funding (the harness's venue-aware stack); arms {labels}")
+    extra_m: dict[str, Any] = {"window": window, "argv": argvs}
+    if a.grade == "holdout":
+        extra_m["holdout_confirmation"] = g.pop("_block")
+        pop += (f"; holdout boundary {g['plan']['boundary']} (share {g['plan']['share']}), selection on "
+                "discovery trades only, the selected arm read once on the held-back span")
     rec = verdict_record(g, leg=a.leg, arms=arms, population=pop, n=arms[a.baseline]["n"],
-                         extra={"window": window, "argv": argvs})
+                         extra=extra_m)
     (out / "verdict.json").write_text(json.dumps(rec, indent=2, default=str) + "\n", encoding="utf-8")
     (out / "summary.json").write_text(json.dumps({"leg": a.leg, "grade": g, "arms": arms, "window": window},
                                                  indent=2, default=str) + "\n", encoding="utf-8")
@@ -667,6 +938,13 @@ def _self_test() -> int:
     g = grade_replace({"A": _arm(30, 1.0, 1.0, [0, 0, 0, 1]), "B": B1}, baseline="A", candidates=["B"], fold_majority=3,
                       n_floor=39, dd_tol_frac=0.10, control=None)
     check("replace: thin incumbent -> indeterminate", g["verdict"] == "indeterminate")
+    # materiality: B beats A by 2.0 R over 100 trades (0.02 R/trade) -- passes at 0.02, fails at 0.03
+    g = grade_replace({"A": A, "B": B1}, baseline="A", candidates=["B"], fold_majority=3, n_floor=39,
+                      dd_tol_frac=0.10, control=None, delta_r_per_trade=0.02)
+    check("replace: per-trade materiality bar met exactly -> pass", g["verdict"] == "pass" and g["delta_r_bar"] == 2.0)
+    g = grade_replace({"A": A, "B": B1}, baseline="A", candidates=["B"], fold_majority=3, n_floor=39,
+                      dd_tol_frac=0.10, control=None, delta_r_per_trade=0.03)
+    check("replace: below the per-trade materiality bar -> fail", g["verdict"] == "fail" and not g["candidates"]["B"]["passes"])
 
     # calendar folds: four equal spans, a trade binned by entry_time, the last edge inclusive
     import pandas as pd

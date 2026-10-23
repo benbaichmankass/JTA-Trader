@@ -2,7 +2,7 @@ id: RQ-20261014-9807-02
 title: 'Programme 01 Q2, conditioned entry target: is the per-leg MFE-quantile take-profit better CALIBRATED when conditioned on
   entry volatility tercile and ADX regime than the unconditioned quantile, on the 7 real-money legs? BLOCKED: no retained
   per-trade harness emits (ML-LEG-CORPUS)'
-status: blocked
+status: retired
 cadence: once
 theme: live_strategy
 priority: 1
@@ -105,3 +105,9 @@ related:
 - docs/research/mi307-offline-mfe-2026-09-18.json (the unconditioned distribution and reach-rates)
 - docs/research/ml2-predictive-bracket-2026-09-06.md (ML-2 refuted; per-leg quantile is the answer)
 last_dispatched_at: null
+retired_reason: "2026-10-16 P1-ATM-BACKLOG-1016 (manager audit input, docs/research/programmes/reviews/2026-10-16/01-ATM.md\
+  \ \xA7 4.6): superseded by RQ-20261015-cab7-05, which ran the regime-conditioned entry TP (entry-vol\
+  \ tercile; the emits carry no adx_at_entry) pooled over the four Bybit real-money legs and closed INDETERMINATE\
+  \ (OOS delta vs unconditioned +0.029 R/trade, CI [-0.054, +0.105], n_oos 262; research/results/RQ-20261015-cab7-05/38792318689.jsonl).\
+  \ Re-asking per leg on fewer trades cannot be better powered; cab7-05's own rule names a DIFFERENT conditioning\
+  \ as the only reason to revive this."

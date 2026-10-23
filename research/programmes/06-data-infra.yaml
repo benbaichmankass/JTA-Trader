@@ -1,0 +1,207 @@
+# Programme P6 -- data infrastructure (L-DATA): the machine-readable question tree for docs/research/programmes/06-DATA-INFRA.md
+# s4 (Q1..Q8) and s7 (W1..W4). Same contract as research/programmes/01-active-trade-management.yaml (read by
+# scripts/research/queue_replenish.py; every edit holds for a human merge; `value` figures are INFERRED planning weights).
+# Authored 2026-10-16 by lane P2-AI-REGIME-BACKLOG-1016 (no skeleton existed on origin/main at 2026-10-16 ~08:30Z).
+#
+# Questions vs builds. Only Q1, Q3 and Q5 are research questions; Q2/Q4/Q6/Q7 are builds and live as checklist rows, not nodes:
+#   Q1 tie-label error ........ RQ-20261014-da7a-01 CLOSED indeterminate (fidelity class MIXED: worst ict_scalp K=1 0.54%, n 919;
+#                               pullback 0%, donchian 0.27%, squeeze 0.24%) -> P6-Q1-scalp-reask below
+#   Q2 archives ............... rows DATA-KLINE-ARCHIVE (priority: information source, per Q1), DATA-DERIV-ARCHIVE
+#   Q3 Binance vs Bybit 1m .... blocked/RQ-20261014-da7a-02 (on DATA-KLINE-ARCHIVE) -> P6-Q3-pass/fail
+#   Q4 tie-aware labels ....... rows DATA-LABEL-TIES, DATA-INTRADE-LABEL-STORE
+#   Q5 derivatives info lift .. blocked/RQ-20261014-da7a-03 (on DATA-DERIV-ARCHIVE) -> P6-Q5-pass/fail; also gates
+#                               FUNDING-OI-DATASETS-ETH-SOL -> RQ-20260929-109/110 (regime tree P2-R4)
+#   Q6 catalog ................ row DATA-CATALOG (+ ML-SHARD-TRUNCATED)
+#   Q7 Parquet + GC ........... row DATA-STORE-PARQUET-GC (Tier-2)
+#   Q8 serve parity ........... ML-PARITY-HARNESS, ML-PRODUCER-FUNDING (not re-filed); off-VM TRAINING parity per manifest class
+#                               is carried in 02-ai-trader.yaml Q6 (RQ-20261016-65ff-20..23)
+programme: P6
+plan: docs/research/programmes/06-DATA-INFRA.md
+questions:
+  Q2:
+    state: carried
+    by: DATA-KLINE-ARCHIVE, DATA-DERIV-ARCHIVE
+    why: Archives are builds (06 s4 Q2); priority of the 1m archive set by da7a-01 (information source).
+  Q4:
+    state: carried
+    by: DATA-LABEL-TIES, DATA-INTRADE-LABEL-STORE
+    why: Tie-aware labels and the per-bar label store are builds (06 s4 Q4); the effect question is node P6-Q1-scalp-needed.
+  Q6:
+    state: carried
+    by: DATA-CATALOG, ML-SHARD-TRUNCATED
+    why: Catalog and shard integrity are builds (06 s4 Q6).
+  Q7:
+    state: carried
+    by: DATA-STORE-PARQUET-GC
+    why: Parquet + GC is a Tier-2 build (06 s4 Q7).
+  Q8:
+    state: carried
+    by: ML-PARITY-HARNESS, ML-PRODUCER-FUNDING
+    why: Serve parity is already carried by these rows (06 s4 Q8); off-VM training parity is nodes P2-Q6-parity-*
+      in 02-ai-trader.yaml.
+nodes:
+  - id: P6-Q1-scalp-reask
+    goal: G4
+    roadmap:
+    - L-DATA
+    value:
+      usd_at_stake_per_month: 100
+      confidence: 0.4
+    after:
+    - unit: RQ-20261014-da7a-01
+      verdict: indeterminate
+    unit:
+      theme: infra
+      priority: 2
+      title: 'Programme 06 Q1 re-ask on the SCALP family alone (L-DATA): is the SL-first tie convention a material
+        first-passage label error for ict_scalp, measured on ALL its committed trades instead of <= 400 per leg?'
+      question: 'RQ-20261014-da7a-01 closed INDETERMINATE (between the bars): the worst family was ict_scalp at K=1,
+        0.54% mislabelled on 919 walked trades -- just above the 0.5% NOT_NEEDED bar, SE ~0.24%, so the reading cannot
+        tell NEEDED from NOT_NEEDED for scalp. Same script, bars, horizon, entry offset and control, restricted to
+        the ict_scalp legs with the per-leg cap lifted (--max-trades-per-leg 5000): is scalp''s mislabel share >=
+        2% (NEEDED), < 0.5% (NOT_NEEDED), or between?'
+      why_this_matters: The only family near a bar is the shortest-timeframe one, which is where a 1m archive matters
+        most (programme 06 s3 gap 1). NEEDED makes DATA-KLINE-ARCHIVE + DATA-LABEL-TIES a label prerequisite for the
+        scalp exit/meta-label rows; NOT_NEEDED closes the tie question for every family and leaves the archive an
+        information source (W3).
+      power:
+        expected_n: 1500
+        min_detectable_effect: 0.015
+        effect_units: proportion
+        sd: 0.14
+        design: one_sample
+        alpha: 0.05
+        power: 0.8
+        basis: 'ESTIMATE: the committed scalp ledgers hold more than the 919 walked under the 400/leg cap (d6e7-01''s
+          census walked 919 scalp trades with the same cap); lifting it is expected to reach ~1,500. sd 0.14 is the
+          Bernoulli sd at p = 0.02 (INFERRED); at n 1,500 the SE near p = 0.005 is ~0.18%, separating 0.5% from 2%.'
+        feasibility:
+          source: none
+          accrual_basis: Re-walk of committed ledgers over the public Binance Vision 1m archive; nothing accrues.
+      decision_rule:
+        id: RULE-P6-Q1-SCALP-TIE-FIDELITY
+        statistic: mislabel_frac per K in {1, 2, 3} on the ict_scalp family (MISLABEL = both levels touched in the
+          bar and 1m says TP first), the da7a-01 statistic.
+        rule: 'PASS (NEEDED) IF mislabel_frac >= 0.02 at ANY K: the 1m archive and tie-aware labels are a label prerequisite
+          for the scalp family (raise DATA-KLINE-ARCHIVE / DATA-LABEL-TIES priority for it). NO_ACTION (NOT_NEEDED)
+          IF < 0.005 at EVERY K: the tie convention is not material for any family; DATA-KLINE-ARCHIVE is an information
+          source only. INDETERMINATE otherwise (between the bars: recorded as information-only, not re-asked again),
+          or under 100 walked trades, or if the archive could not be fetched.'
+        min_n: 100 walked scalp trades at every K.
+        what_it_does_not_do: Builds no archive, changes no label code or config; not an edge or promotion case.
+      compute: cpu_long
+      value:
+        bucket: information
+        usd_at_stake_per_month: 100
+        confidence: 0.4
+        basis: 'stand-in: sets the scalp family''s label prerequisite'
+      routing:
+        needs_trainer_resident_data: false
+        needs_gpu: false
+        peak_memory_gb: 3.0
+        est_minutes: 90
+        basis: da7a-01 budgeted 120 min for all families; scalp only is fewer symbols but more trades per leg.
+        why_runner: public Binance Vision 1m zips + committed ledgers; no published shard carries 1m, no GPU use.
+      run:
+        command:
+        - python3
+        - scripts/research/intrabar_label_fidelity.py
+        - --out
+        - '{out_dir}'
+        - --legs
+        - ict_scalp
+        - --tp-r
+        - 1,2,3
+        - --horizon-bars
+        - '60'
+        - --max-trades-per-leg
+        - '5000'
+        - --entry-offset-bars
+        - '1'
+        - --control-max-breach
+        - '0.05'
+        - --min-n
+        - '100'
+        - --needed-frac
+        - '0.02'
+        - --not-needed-frac
+        - '0.005'
+        timeout_minutes: 300
+      lands:
+        store: research/results/
+        assert_field: read_state
+        min_rows: 1
+        note: 'Needs PR #18527 (VERDICT_MAP: MIXED -> indeterminate) merged before it fires; if it fires first and
+          lands producer_failed on ''MIXED'', that is a route fault, re-queue (not a verdict).'
+      related:
+      - RQ-20261014-da7a-01
+      - DATA-KLINE-ARCHIVE
+      - DATA-LABEL-TIES
+      - P2-AI-REGIME-BACKLOG-1016
+  - id: P6-Q1-scalp-needed
+    goal: G4
+    roadmap:
+    - L-DATA
+    value:
+      usd_at_stake_per_month: 150
+      confidence: 0.4
+    after:
+    - node: P6-Q1-scalp-reask
+      verdict: pass
+    needs_authoring: 'Scalp tie labels are materially wrong (>= 2%). Register the effect question once DATA-LABEL-TIES
+      lands: re-run the scalp first-passage census (d6e7-01 shape) on 1m-resolved labels and compare the exit-now
+      saving to the SL-first labels.'
+  - id: P6-Q3-pass
+    goal: G4
+    roadmap:
+    - L-DATA
+    value:
+      usd_at_stake_per_month: 100
+      confidence: 0.3
+    after:
+    - unit: RQ-20261014-da7a-02
+      verdict: pass
+    needs_authoring: 'Binance UM 1m agrees with Bybit linear 1m on first-passage labels (>= 98% per family). Not a
+      research question: note on DATA-INTRADE-LABEL-STORE that the free archive may label our venue''s trades; author
+      per-family label-store units only for a consumer that exists (IN-TRADE-EXIT-MODEL, M23).'
+  - id: P6-Q3-fail
+    goal: G4
+    roadmap:
+    - L-DATA
+    value:
+      usd_at_stake_per_month: 100
+      confidence: 0.3
+    after:
+    - unit: RQ-20261014-da7a-02
+      verdict: fail
+    needs_authoring: Binance 1m does NOT agree with Bybit on our trades' labels for some family. Register the Bybit-native
+      1m backfill feasibility (Bybit V5 kline depth and rate limits) for that family, or restrict the archive's label
+      role to the agreeing families.
+  - id: P6-Q5-pass
+    goal: G4
+    roadmap:
+    - L-DATA
+    - M25
+    value:
+      usd_at_stake_per_month: 200
+      confidence: 0.3
+    after:
+    - unit: RQ-20261014-da7a-03
+      verdict: pass
+    needs_authoring: Perp derivatives metrics (OI change, taker imbalance, long/short) carry information for the 1h
+      heads on >= 2 of 3 symbols. Register (a) the trade-separation test with the derivatives-augmented label (an
+      arm of RQ-20261016-65ff-28) and (b) the funding-augmented direction baseline (node P2-R4-direction-baseline);
+      a serving producer is a Tier-2 row (ML-PRODUCER-FUNDING).
+  - id: P6-Q5-fail
+    goal: G4
+    roadmap:
+    - L-DATA
+    value:
+      usd_at_stake_per_month: 100
+      confidence: 0.2
+    after:
+    - unit: RQ-20261014-da7a-03
+      verdict: fail
+    needs_authoring: Derivatives metrics add no log-loss information to the 1h regime heads. Record it on DATA-DERIV-ARCHIVE
+      (archive stays for the giveback / exit question, 02 Q3.1) and register the same metrics as features for the
+      in-trade first-passage model instead.

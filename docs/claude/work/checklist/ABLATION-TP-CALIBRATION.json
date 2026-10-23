@@ -1,0 +1,21 @@
+{
+  "id": "ABLATION-TP-CALIBRATION",
+  "title": "exit_lever_ablation.py: emit TP calibration per arm (share of trades exiting within the m20 tp_cal tolerance band of their FINAL target) so a TP-revision confirmation grades calibration first",
+  "phase": "research-infra",
+  "state": "queued",
+  "owner": "manager (Tier-1 build lane)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-16 lane P1-ATM-BACKLOG-1016] TP doctrine clause 2 grades a TP revision on calibration BEFORE P&L ('P&L without prediction' fails). The m20 sweep writes tp_cal_cell/tp_cal_base per corpus row but those rows live on branch claude/m20-sweep-corpus and never reach main (why RQ-20261007-001/-003 and RQ-20261014-9807-03 were ungradable; RESEARCH-GRADE-PILE). exit_lever_ablation.py --grade replace (used by programme nodes P1-Q3-xrp-pb-tpx-confirm / P1-Q3-ada-pb-tpx-confirm / P1-Q4-xrp4h-exit-confirm) reports by_outcome only. BUILD: per arm, from the emitted trades (exit price vs the final tp in force, which the --tp-* harness paths already know), report tp_cal = share exiting within the m20 sweep's tp_cal tolerance band of the final target (the same constant, imported, not retyped) and the reach rate of the final target; add it to the replace grade's candidate block (reported, not graded, so existing units are unchanged); self-test with a planted arm. Then the P1-Q6-*-declare nodes register the calibration-first read on any CONFIRMED revision cell before a Tier-3 proposal. RERUN: python3 scripts/research/exit_lever_ablation.py --self-test | grep -i calibration.  [research-ops 2026-10-22 14:47Z] bea9-01/-02/-04 (tp_extend X5/X6 cross-symbol, 6 folds) read PASS by their rule but materially tiny: eth_pullback_2h X6 -3.61 vs -9.09 R (leg net negative, n 375), sol_pullback_2h +0.13 R (n 148), avax_pullback_2h X6 +0.11 R (n 422; X5 failed). xrp's own read FAILED the 0.02 R/trade bar. Direction is consistently positive, size is ~0.001 R/trade on the legs that earn; no leg is on a roster. No Tier-3 packet filed from this; 6 cells chosen from 3 legs x 2 candidates is the multiple-testing denominator. bea9-03 (other leg) FAIL.",
+  "updated_at": "2026-10-22T14:56:51Z",
+  "updated_by": "session_019iupCCboS2jsn1kNq46oGU",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "_seq": 527
+}

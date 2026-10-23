@@ -1,0 +1,80 @@
+id: RQ-20261016-65ff-28
+title: 'Regime classifier comparison on TRADE SEPARATION (REGIME-PROGRAM deliverable 2 / 02 Q1.4): does gating on the ML vol head''s label, the causal-HMM
+  label, or the rule-based ATR-percentile label separate a leg''s money-losing entries out of sample?'
+status: blocked
+cadence: once
+theme: regime
+priority: 1
+kind: experiment
+question: 'With per-symbol label streams exported from the trainer (ml_vol_label_replay.py for the advisory LightGBM vol head; the causal-HMM head btc-regime-1h-hmm-v1
+  / eth-regime-15m-hmm-cw-v1 for the unsupervised arm), run regime_impact_scoping.py --axis vol on the committed crypto-perp ledger population with the
+  701 selection arm (cells selected on train blocks, dropped on test blocks): does any classifier''s label reach pooled delta >= 0.03 R/trade with p5 >
+  0, and which classifier separates best?'
+why_this_matters: 'REGIME-PROGRAM deliverables 2-3: compare regime classifiers on the ONE metric that matters -- does it separate a strategy''s good trades
+  from bad, net of cost. The trend axis answered NO (16 of 17 FAIL, 75b2-01..15). The vol axis with the ML label has never had a usable unit (RQ-20260930-704
+  done with no record, power-bounded). regime-selectivity Rule 3 requires the label the router reads (predict_proba[''volatile'']), which only the trainer
+  can replay.'
+power:
+  expected_n: 3000
+  min_detectable_effect: 0.03
+  effect_units: R
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: The 75b2 'full' population (~3,000 crypto-perp ledger trades on symbols with a label stream); 704 was power-bounded at 673 < 785 on one symbol,
+    pooling BTC/ETH/SOL clears that.
+  feasibility:
+    source: none
+    accrual_basis: Committed ledgers + exported label files; nothing accrues.
+decision_rule:
+  id: RULE-RQ2026101665ff28-CLASSIFIER-SEPARATION
+  statistic: 'Per classifier arm (ML vol head, HMM, ATR-percentile tercile control): regime_impact_scoping pooled delta R/trade at A=0.70 with bootstrap
+    p5, 701 selection arm, min_cell_n 20.'
+  rule: 'PASS IF any arm reaches pooled delta >= 0.03 R/trade with p5 > 0 (a LEAD for regime_cell_walkforward.py on the actual 2-D cell, never a cell flip).
+    The best arm is named only if it beats the ATR-percentile control by >= 0.01 R/trade. FAIL IF every arm''s p5 <= 0: no classifier separates trades on
+    this population; the classifier line is closed for the vol axis on these ledgers (recorded on REGIME-PROGRAM). INDETERMINATE IF < 785 trades carry a
+    label for the arm.'
+  min_n: 785 labelled trades per arm.
+  what_it_does_not_do: Authors no regime cell; edits no config/regime_policy.yaml; a PASS is a walk-forward candidate under the regime-selectivity skill,
+    not a Tier-3 packet.
+  registered_at: '2026-10-16'
+  registered_before_run: true
+compute: cpu_light
+value:
+  bucket: structural
+  usd_at_stake_per_month: 300
+  confidence: 0.2
+  basis: 'stand-in: the regime program''s central question across the real-money book'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  basis: Committed ledgers + committed label files once exported; runner.
+  why_runner: once the label files are committed the run reads only repo files
+blocked_on:
+- kind: work_item
+  ref: REGIME-VOL-LABELS-EXPORT
+  what: Per-symbol label streams ({ts, vol_regime, p_volatile}) for the ML vol head and an HMM head are trainer-resident or not produced at all; regime_impact_scoping
+    --vol-labels needs them as committed files (market-only, publishable per ml-data-classification-2026-10-13).
+  clears_when: label files for BTC/ETH/SOL committed under docs/research/regime-labels/ (or published in metis-market-data) for both classifiers; then git
+    mv, status queued, run.command [python3, scripts/research/regime_impact_scoping.py, --axis, vol, --vol-labels, ..., --out, '{out_dir}'] with one arm
+    per classifier.
+run:
+  workflow: null
+  note: 'Deliberately null: the instrument does not exist yet (see blocked_on). Fill run.command (no run.workflow: compute class routes it) when the lever
+    row closes.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-REGIME
+related:
+- REGIME-PROGRAM
+- RQ-20260930-704
+- RQ-20261012-75b2-01
+- scripts/research/regime_impact_scoping.py
+- scripts/research/ml_vol_label_replay.py
+- .claude/skills/regime-selectivity/SKILL.md
+- P2-AI-REGIME-BACKLOG-1016

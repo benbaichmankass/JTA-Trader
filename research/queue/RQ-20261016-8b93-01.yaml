@@ -1,6 +1,6 @@
 id: RQ-20261016-8b93-01
 title: 'Training parity re-run WITH artefact: eth-regime-1h-lgbm-v1 on a Kaggle CPU kernel vs the trainer reference; on PASS emit the ml/offload-inbox drop for the one operator-gated registry write'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -93,3 +93,14 @@ related:
 - RQ-20261015-8b93-02
 - scripts/research/train_parity.py
 last_dispatched_at: '2026-10-16T03:01:41+00:00'
+grading:
+  attested: RULE-RQ20261016-8b93-01-TRAIN-PARITY-EMIT
+  auto: true
+  decision_rule_id: RULE-RQ20261016-8b93-01-TRAIN-PARITY-EMIT
+  evidence:
+  - research/results/RQ-20261016-8b93-01/38843465348.jsonl
+  graded_at: '2026-10-16'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

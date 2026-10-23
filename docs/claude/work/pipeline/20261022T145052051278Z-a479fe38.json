@@ -1,0 +1,21 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "xrp_pullback_2h has >=2 closed live trades decided on the closed bar after 2026-10-22T11:51Z",
+    "kind": "observation"
+  },
+  "id": "PI-20261022-YZEN5FU2-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-29",
+    "how_to_check": "scripts/ops/diag_fetch.sh 'journal?table=trades&limit=1000' -> keep strategy_name='xrp_pullback_2h' AND status='closed' AND is_backtest=0 AND timestamp > '2026-10-22T11:51:00Z' (entry after the #19513 decision_bar: closed deploy); count per account_id (bybit_2, bybit_portfolio, bybit_1). Clears at >= 2 such trades.",
+    "what": "xrp_pullback_2h >= 2 closed-bar live trades after #19513, then operator review of the X6 declare"
+  },
+  "origin": {
+    "kind": "operator",
+    "ref": "TPX-XRP-DECLARE",
+    "rerun": "scripts/ops/diag_fetch.sh 'journal?table=trades&limit=1000' -> keep strategy_name='xrp_pullback_2h' AND status='closed' AND is_backtest=0 AND timestamp > '2026-10-22T11:51:00Z' (entry after the #19513 decision_bar: closed deploy); count per account_id (bybit_2, bybit_portfolio, bybit_1). Clears at >= 2 such trades."
+  },
+  "state": "queued",
+  "what": "Re-raise the xrp_pullback_2h X6 tp_extend declare (TPX-XRP-DECLARE) once the leg has live trades decided on the CLOSED bar after #19513. OPERATOR, verbatim 2026-10-22: \"And if we just switch XRP this morning, then give it more time before making a decision, obviously, basically means like one trade. It's definitely not enough.\" The family read already fired (X6 passes eth/sol/avax 3 of 3; record docs/research/evidence/tpx-xrp-family-read-2026-10-22.json). The declare also needs build row TPX-PULLBACK-PRODUCER (no tp_extend producer on main). When this clears: put both facts in front of the operator for review; never merge on the count alone."
+}

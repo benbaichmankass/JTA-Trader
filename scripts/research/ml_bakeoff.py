@@ -36,6 +36,10 @@ THE UNIT BLOCK (``ml_bakeoff:`` in the unit YAML — registered BEFORE the run, 
       candidates: [chronos2, ...]     # names in learners (the arms under test)
       learners:
         incumbent: {kind: lightgbm, params: {...}, feature_blocks: [...]}
+        # kinds: prior · numpy_logit · lightgbm · catboost · sklearn_hgb · sklearn_extratrees · sklearn_mlp ·
+        #        sklearn_logit_calibrated (isotonic/sigmoid-calibrated linear head) · tabicl · tabpfn (research-only;
+        #        CPU-capped: params max_train_rows (5000) / n_members / subsample random|recent) · torch_gru (window_bars, hidden,
+        #        layers, epochs, lr, seed)
         ...
       rule: {...}                     # machine form of decision_rule.rule — see ``evaluate_rule``
 
@@ -155,11 +159,34 @@ def block_har_rv(df, spec: Dict[str, Any]) -> Dict[str, np.ndarray]:
     return {"har_rv_d": _roll_mean(r2, d * sc), "har_rv_w": _roll_mean(r2, w * sc), "har_rv_m": _roll_mean(r2, m * sc)}
 
 
+def _fmt(text: str, df) -> str:
+    """Substitute ``{group}`` (the dataset group this frame belongs to) in a block's path/name strings, so ONE learner
+    spec serves every symbol of a multi-group bake-off."""
+    return str(text).replace("{group}", str(getattr(df, "attrs", {}).get("group", "")))
+
+
+def _read_jsonl_cols(path: str, cols: List[str], tail: int = 0):
+    import pandas as pd
+    rows = []
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            if line.strip():
+                r = json.loads(line)
+                rows.append({c: r.get(c) for c in cols})
+    return pd.DataFrame(rows[-tail:] if tail else rows)
+
+
 def block_join_columns(df, spec: Dict[str, Any]) -> Dict[str, np.ndarray]:
     """Join a precomputed side-stream (e.g. fc_* from build_forecasts.py for another backend) on ts."""
     import pandas as pd
-    path = _resolve_path(str(spec["path"]))
-    side = pd.read_parquet(path) if str(path).endswith(".parquet") else pd.read_csv(path)
+    path = _resolve_path(_fmt(spec["path"], df))
+    sp = str(path)
+    if sp.endswith(".parquet"):
+        side = pd.read_parquet(path)
+    elif sp.endswith(".jsonl"):
+        side = pd.read_json(path, lines=True)
+    else:
+        side = pd.read_csv(path)
     on = spec.get("on", "ts")
     side[on] = pd.to_datetime(side[on], utc=True)
     left = pd.DataFrame({on: pd.to_datetime(df[on], utc=True)})
@@ -176,8 +203,86 @@ def block_df_columns(df, spec: Dict[str, Any]) -> Dict[str, np.ndarray]:
     return {c: np.asarray(df[c], dtype=float) for c in spec["columns"]}
 
 
+def _ridge_solve(X: np.ndarray, Y: np.ndarray, lam: float) -> np.ndarray:
+    """Ridge with an unpenalised intercept; returns the (p+1, m) coefficient matrix."""
+    Xa = np.column_stack([np.ones(len(X)), X])
+    pen = lam * np.eye(Xa.shape[1])
+    pen[0, 0] = 0.0
+    return np.linalg.solve(Xa.T @ Xa + pen, Xa.T @ Y)
+
+
+def block_var_price_vector(df, spec: Dict[str, Any]) -> Dict[str, np.ndarray]:
+    """Multivariate linear (VAR-style) PREDICTED PRICE VECTOR -- the BASELINE arm every TSFM must beat
+    (operator IDEAS 2026-10-21: "a predictive ML that uses multivariate regressions to create a predicted price vector").
+
+    Causal rolling ridge VAR(p) over K assets' 1-bar log returns r and absolute returns |r| (the second block is what
+    makes it informative for a VOLATILITY head): at each refit point the model is fit ONLY on rows whose next-bar
+    target is already known, then used to predict the next-bar [r_{t+1}] and [|r_{t+1}|] vectors for every asset.
+    Emits ``<prefix>ret_<SYM>`` / ``<prefix>abs_<SYM>`` (the vector) plus ``<prefix>ret_own`` / ``<prefix>abs_own``
+    for the group's own asset. No forward information: row t's prediction uses returns up to and including t.
+
+    spec: own (symbol name of this group's asset; ``{group}`` ok), return_col (default log_return), peers {SYM: jsonl/csv/parquet
+    path with ts + return_col}, lags (default 4), window (default 2000 rows), refit_every (default 96), ridge (default 1.0)
+    """
+    import pandas as pd
+    on = spec.get("on", "ts")
+    rc = spec.get("return_col", "log_return")
+    p = int(spec.get("lags", 4))
+    win = int(spec.get("window", 2000))
+    step = int(spec.get("refit_every", 96))
+    lam = float(spec.get("ridge", 1.0))
+    pre = spec.get("prefix", "var_")
+    own = _fmt(spec.get("own", "OWN"), df)
+    t = pd.to_datetime(df[on], utc=True)
+    series = {own: np.asarray(df[rc], dtype=float)}
+    for sym, path in (spec.get("peers") or {}).items():
+        if str(sym) == own:
+            continue
+        fp = str(_resolve_path(_fmt(path, df)))
+        if fp.endswith(".jsonl"):
+            side = _read_jsonl_cols(fp, [on, rc], int(spec.get("peer_tail_rows", 0)))   # shards are 480 MB wide
+        else:
+            side = pd.read_parquet(fp) if fp.endswith(".parquet") else pd.read_csv(fp)
+        side[on] = pd.to_datetime(side[on], utc=True)
+        m = pd.DataFrame({on: t}).merge(side[[on, rc]], on=on, how="left")
+        series[str(sym)] = m[rc].to_numpy(dtype=float)
+    syms = list(series)
+    n, K = len(df), len(syms)
+    R = np.column_stack([np.nan_to_num(series[s]) for s in syms])      # (n, K)
+    A = np.abs(R)
+    Z = np.column_stack([R, A])                                         # (n, 2K) state at t
+    feats = np.column_stack([np.roll(Z, j, axis=0) for j in range(p)])  # lags 0..p-1 -> (n, 2K*p)
+    feats[: p - 1] = np.nan
+    Y = np.roll(Z, -1, axis=0)                                          # next-bar vector, known from t+1
+    Y[-1] = np.nan
+    pred = np.full((n, 2 * K), np.nan)
+    first = max(win // 2, p + 10)
+    for a in range(first, n, step):
+        lo = max(p - 1, a - win)
+        hi = a - 1                                                     # rows lo..hi-1 have a target at <= a-1+... known by a
+        Xtr, Ytr = feats[lo:hi], Y[lo:hi]
+        ok = np.isfinite(Xtr).all(axis=1) & np.isfinite(Ytr).all(axis=1)
+        if ok.sum() < 4 * feats.shape[1]:
+            continue
+        W = _ridge_solve(Xtr[ok], Ytr[ok], lam)
+        b = min(a + step, n)
+        Xb = feats[a:b]
+        good = np.isfinite(Xb).all(axis=1)
+        pb = np.full((b - a, 2 * K), np.nan)
+        pb[good] = np.column_stack([np.ones(good.sum()), Xb[good]]) @ W
+        pred[a:b] = pb
+    out: Dict[str, np.ndarray] = {}
+    for i, s in enumerate(syms):
+        out[f"{pre}ret_{s}"] = pred[:, i]
+        out[f"{pre}abs_{s}"] = pred[:, K + i]
+    out[f"{pre}ret_own"] = pred[:, 0]
+    out[f"{pre}abs_own"] = pred[:, K]
+    return out
+
+
 FEATURE_BLOCKS: Dict[str, Callable[..., Dict[str, np.ndarray]]] = {
-    "har_rv": block_har_rv, "join_columns": block_join_columns, "df_columns": block_df_columns}
+    "har_rv": block_har_rv, "join_columns": block_join_columns, "df_columns": block_df_columns,
+    "var_price_vector": block_var_price_vector}
 
 
 # ── learners ─────────────────────────────────────────────────────────────────
@@ -281,20 +386,172 @@ def _mk_mlp(p):
                                           "early_stopping": True, "random_state": 0, **p}))
 
 
+def _mk_logit_calibrated(p):
+    """Calibrated LINEAR head (linear_logit family, ML-UNBLOCK-1018): a standardised multinomial logistic
+    regression wrapped in CalibratedClassifierCV (isotonic by default; `method: sigmoid` for Platt). The point is
+    probability QUALITY -- log-loss / Brier against the GBDT incumbent -- not rank skill; it is the cheapest
+    family that can serve on the money box (numpy at inference) if it ever earns a candidate manifest."""
+    try:
+        from sklearn.calibration import CalibratedClassifierCV
+        from sklearn.impute import SimpleImputer
+        from sklearn.linear_model import LogisticRegression
+        from sklearn.pipeline import make_pipeline
+        from sklearn.preprocessing import StandardScaler
+    except ImportError as e:
+        raise Unavailable(f"scikit-learn not importable: {e}")
+    q = dict(p or {})
+    method = str(q.pop("method", "isotonic"))
+    cv = int(q.pop("cv", 5))
+    base = LogisticRegression(**{"C": 1.0, "max_iter": 500, **q})
+    return make_pipeline(SimpleImputer(strategy="median"), StandardScaler(),
+                         CalibratedClassifierCV(base, method=method, cv=cv))
+
+
 def _mk_tabicl(p):
     try:
         from tabicl import TabICLClassifier
     except ImportError as e:
         raise Unavailable(f"tabicl not importable: {e}")
-    return TabICLClassifier(**p)
+    return _capped(lambda q: TabICLClassifier(**q), p, 10**9) if {"max_train_rows", "n_members"} & set(p or {}) \
+        else TabICLClassifier(**p)
+
+
+class _CappedEnsemble:
+    """Wrap an in-context learner whose CPU path refuses large inputs (TabPFN: >5,000 samples on CPU).
+
+    ``fit`` gives each of ``n_members`` fresh base models at most ``max_train_rows`` training rows (seeded, order-
+    preserving subsample; ``recent`` takes the newest rows instead) and ``predict_proba`` averages the members, scoring
+    the test block in chunks of at most ``max_predict_rows``. With ``n_members=1`` and n <= cap it is a plain
+    pass-through. The cap is a declared PARAMETER, so the result record shows what the arm actually saw -- an
+    ensemble of 5k-row members is a different (cheaper) learner than a full-n fit, and is graded as such."""
+
+    def __init__(self, make_base: Callable[[], Any], max_train_rows: int, n_members: int, subsample: str,
+                 seed: int, max_predict_rows: int):
+        self._make_base, self._cap, self._members = make_base, int(max_train_rows), max(1, int(n_members))
+        self._mode, self._seed, self._chunk = subsample, int(seed), int(max_predict_rows)
+        self._fitted: List[Any] = []
+        self.classes_: np.ndarray = np.array([])
+
+    def _rows(self, n: int, j: int) -> np.ndarray:
+        if n <= self._cap:
+            return np.arange(n)
+        if self._mode == "recent":
+            return np.arange(n - self._cap, n)
+        return np.sort(np.random.RandomState(self._seed + j).choice(n, self._cap, replace=False))
+
+    def fit(self, X, y):
+        y = np.asarray(y)
+        self.classes_ = np.array(sorted(set(y.tolist())))
+        self._fitted = []
+        for j in range(self._members):
+            idx = self._rows(len(X), j)
+            m = self._make_base()
+            m.fit(X[idx], y[idx])
+            self._fitted.append(m)
+            if self._mode == "recent" or len(X) <= self._cap:
+                break  # identical draws -- more members would only repeat the same fit
+        return self
+
+    def predict_proba(self, X):
+        out = np.zeros((len(X), len(self.classes_)))
+        for m in self._fitted:
+            cols = [int(np.searchsorted(self.classes_, c)) for c in m.classes_]
+            for a in range(0, len(X), self._chunk):
+                out[a:a + self._chunk][:, cols] += m.predict_proba(X[a:a + self._chunk])
+        return out / max(len(self._fitted), 1)
+
+
+def _capped(make_base: Callable[[Dict[str, Any]], Any], p: Dict[str, Any], default_cap: int):
+    q = dict(p or {})
+    cap = int(q.pop("max_train_rows", default_cap))
+    members = int(q.pop("n_members", 1))
+    mode = str(q.pop("subsample", "random"))
+    seed = int(q.pop("subsample_seed", 0))
+    chunk = int(q.pop("max_predict_rows", cap))
+    if mode not in ("random", "recent"):
+        raise ValueError(f"subsample must be 'random' or 'recent', got {mode!r}")
+    return _CappedEnsemble(lambda: make_base(dict(q)), cap, members, mode, seed, chunk)
 
 
 def _mk_tabpfn(p):
+    """TabPFN on CPU refuses > 5,000 training samples (ff8f-02 arm_status.tabpfn == error, 2026-10-18). The cap is
+    therefore ON by default: members never see more than ``max_train_rows`` (default 5000) rows; raise ``n_members``
+    to recover coverage of a larger set. Weights still need the Prior Labs licence + TABPFN_TOKEN (ML-TABPFN-LICENCE)
+    -- that gate is separate and is reported as the arm's own error if it is the thing that fails."""
     try:
         from tabpfn import TabPFNClassifier
     except ImportError as e:
         raise Unavailable(f"tabpfn not importable: {e}")
-    return TabPFNClassifier(**p)
+    return _capped(lambda q: TabPFNClassifier(**q), p, 5000)
+
+
+def _fit_torch_gru(Xtr, ytr, Xte, k, params):
+    """GRU over a trailing window of the ENGINEERED feature columns (deep_sequence family, ML-F22).
+
+    Windows are built INSIDE each block (train rows only see earlier train rows; test rows only see earlier rows of
+    the test block, the first ``window_bars - 1`` rows of a block being edge-padded), so no test information reaches
+    training and no row looks forward. CPU, seeded, fixed epochs, standardised on train statistics; the newest
+    ``max_train_windows`` train rows are used so the cost stays bounded. ``Unavailable`` without torch."""
+    try:
+        import torch
+        from torch import nn
+    except ImportError as e:
+        raise Unavailable(f"torch not importable: {e}")
+    W = int(params.get("window_bars", 32))
+    hidden, layers = int(params.get("hidden", 32)), int(params.get("layers", 1))
+    epochs, batch = int(params.get("epochs", 8)), int(params.get("batch_size", 256))
+    lr, seed = float(params.get("lr", 3e-3)), int(params.get("seed", 0))
+    cap = int(params.get("max_train_windows", 20000))
+    mu, sd = np.nanmean(Xtr, axis=0), np.nanstd(Xtr, axis=0) + 1e-9
+    mu = np.nan_to_num(mu)
+
+    def windows(X):
+        Z = np.nan_to_num((X - mu) / sd).astype(np.float32)
+        Zp = np.vstack([np.repeat(Z[:1], W - 1, axis=0), Z]) if W > 1 else Z
+        idx = np.arange(len(Z))[:, None] + np.arange(W)[None, :]
+        return torch.from_numpy(Zp[idx])  # (n, W, F)
+
+    Xw, yt = windows(Xtr), torch.from_numpy(ytr.astype(np.int64))
+    if len(Xw) > cap:
+        Xw, yt = Xw[-cap:], yt[-cap:]
+    torch.manual_seed(seed)
+    torch.set_num_threads(max(1, int(params.get("threads", 1))))
+
+    class Net(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.rnn = nn.GRU(Xw.shape[2], hidden, num_layers=layers, batch_first=True)
+            self.head = nn.Linear(hidden, k)
+
+        def forward(self, x):
+            o, _ = self.rnn(x)
+            return self.head(o[:, -1])
+
+    net = Net()
+    opt = torch.optim.Adam(net.parameters(), lr=lr)
+    lossf = nn.CrossEntropyLoss()
+    g = torch.Generator().manual_seed(seed)
+    net.train()
+    for _ in range(epochs):
+        perm = torch.randperm(len(Xw), generator=g)
+        for a in range(0, len(perm), batch):
+            b = perm[a:a + batch]
+            opt.zero_grad()
+            lossf(net(Xw[b]), yt[b]).backward()
+            opt.step()
+    net.eval()
+    Tw, outs = windows(Xte), []
+    with torch.no_grad():
+        for a in range(0, len(Tw), 2048):
+            outs.append(torch.softmax(net(Tw[a:a + 2048]), dim=1).numpy())
+    return np.vstack(outs) if outs else np.zeros((0, k))
+
+
+def _probe_torch_gru(_p):
+    try:
+        import torch  # noqa: F401  # imported only to prove it is importable
+    except ImportError as e:
+        raise Unavailable(f"torch not importable: {e}")
 
 
 # kind -> (fit_predict, licence, research_only)
@@ -306,9 +563,11 @@ LEARNERS: Dict[str, Tuple[Callable, str, bool]] = {
     "sklearn_hgb": (_fit_sklearn_like(_mk_hgb), "BSD-3-Clause", False),
     "sklearn_extratrees": (_fit_sklearn_like(_mk_extratrees), "BSD-3-Clause", False),
     "sklearn_mlp": (_fit_sklearn_like(_mk_mlp), "BSD-3-Clause", False),
+    "sklearn_logit_calibrated": (_fit_sklearn_like(_mk_logit_calibrated), "BSD-3-Clause", False),
     "tabicl": (_fit_sklearn_like(_mk_tabicl), "BSD-3-Clause (verify on the Hub)", False),
     # Prior Labs weights are `license:other` (non-commercial): offline research evaluation ONLY.
     "tabpfn": (_fit_sklearn_like(_mk_tabpfn), "Prior Labs non-commercial (license:other)", True),
+    "torch_gru": (_fit_torch_gru, "BSD-3-Clause (torch)", False),
 }
 
 
@@ -318,7 +577,9 @@ def probe_learner(kind: str, params: Dict[str, Any]) -> Optional[str]:
         return f"unknown learner kind {kind!r} (known: {sorted(LEARNERS)})"
     try:
         probe = {"lightgbm": _mk_lightgbm, "catboost": _mk_catboost, "sklearn_hgb": _mk_hgb,
-                 "sklearn_extratrees": _mk_extratrees, "sklearn_mlp": _mk_mlp, "tabicl": _mk_tabicl, "tabpfn": _mk_tabpfn}.get(kind)
+                 "sklearn_extratrees": _mk_extratrees, "sklearn_mlp": _mk_mlp,
+                 "sklearn_logit_calibrated": _mk_logit_calibrated, "tabicl": _mk_tabicl, "tabpfn": _mk_tabpfn,
+                 "torch_gru": _probe_torch_gru}.get(kind)
         if probe:
             probe(dict(params or {}))
     except Unavailable as e:
@@ -442,6 +703,22 @@ def run_group(df, spec: Dict[str, Any], learner_specs: Dict[str, Dict[str, Any]]
         tr = tr[: max(0, len(tr) - int(cv.get("embargo_rows", 0)))]
         windows["holdout"] = [(tr, te)] if len(tr) >= 50 and len(te) >= 20 else []
     res: Dict[str, Any] = {"n_rows": int(len(df)), "classes": [str(c) for c in classes], "arms": {}}
+    if spec.get("common_rows"):
+        # SAME ROWS for every arm (RQ-20261011-9da8-01 'identical rows'): a feature block marked ``require_finite: true``
+        # (a sparse fc_* side-stream: one forecast per stride, NaN between) votes; train/test indices are restricted to
+        # rows where EVERY available arm's marked columns are finite. Without this, arms with a denser or sparser
+        # side-stream would be graded on different rows.
+        common = np.ones(len(df), dtype=bool)
+        for name, ls in learner_specs.items():
+            if status.get(name):
+                continue
+            for blk in ls.get("feature_blocks") or []:
+                if blk.get("require_finite"):
+                    for arr in FEATURE_BLOCKS[blk["kind"]](df, blk).values():
+                        common &= np.isfinite(arr)
+        windows = {w: [(tr[common[tr]], te[common[te]]) for tr, te in wf] for w, wf in windows.items()}
+        windows = {w: [(tr, te) for tr, te in wf if len(tr) >= 50 and len(te) >= 20] for w, wf in windows.items()}
+        res["n_common_rows"] = int(common.sum())
     for name, ls in learner_specs.items():
         why = status.get(name)
         if why:
@@ -607,6 +884,8 @@ def run_spec(spec: Dict[str, Any], *, unit: str = "(inline)") -> Dict[str, Any]:
     better_high = metric_higher_is_better(metric, spec.get("higher_is_better"))
     status = {n: probe_learner(ls["kind"], ls.get("params") or {}) for n, ls in learners.items()}
     gdata = load_groups(spec["dataset"])
+    for g, df in gdata.items():
+        df.attrs["group"] = g
     groups = {g: run_group(df, spec, learners, metric, status) for g, df in gdata.items()}
     arm_status: Dict[str, str] = {}
     for n in learners:

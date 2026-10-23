@@ -63,11 +63,15 @@ from regime_weight import soft_regime_weight, soft_weight_armed  # noqa: E402
 import tp_geometry as _tpg  # noqa: E402  (GEOM-B1: a take-profit that moves; every lever off by default)
 from src.research.trail_levers import (  # noqa: E402  (the ONE trail-lever rule)
     effective_trail_mult,
+    level_flag_errors,
+    level_touched,
+    level_trail_armed,
     momentum_flag_errors,
     momentum_stale_armed,
     momentum_stale_fires,
     momentum_trail_armed,
     momentum_trail_fired,
+    trade_level,
     vol_trail_armed,
 )
 
@@ -103,6 +107,8 @@ class Trade:
     confidence: float = 0.0
     # MOMENTUM-TRAIL-LEVER attribution; None unless a momentum lever is armed.
     mom: Optional[Dict[str, Any]] = None
+    # P1-Q10 level-triggered trail attribution; None unless --trail-level is armed.
+    level: Optional[Dict[str, Any]] = None
     # SRQ-20260618-002 soft regime-weight refinement — see backtest_trend.py's
     # identical fields and scripts/research/regime_weight.py for the shared rule.
     adx_at_entry: Optional[float] = None
@@ -113,6 +119,11 @@ class Trade:
     n_extends: Optional[int] = None
     n_retargets: Optional[int] = None
     tp_exit_r: Optional[float] = None
+    # EXIT-PATH-EMIT-OFFLINE / METALABEL-EMIT-FEATURES (scripts/research/
+    # harness_emit.py): mae_r plus the decision-time f_* columns. None unless
+    # --emit-paths or --emit-features is passed, so a default emit row is
+    # byte-identical.
+    extra: Optional[Dict[str, Any]] = None
 
 
 def _load_candles(path: str) -> pd.DataFrame:
@@ -247,6 +258,11 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                  trail_adx_below: float = 0.0,
                  trail_adx_falling_bars: int = 0,
                  trail_adx_tight_mult: float = 0.0,
+                 trail_level: str = "",
+                 trail_level_tight_mult: float = 0.0,
+                 trail_level_lookback: int = 60,
+                 trail_level_pivot_k: int = 3,
+                 trail_level_round_step: float = 0.0,
                  momentum_stale_bars: int = 0,
                  momentum_stale_adx_below: float = 0.0,
                  side_filter: str = "both",
@@ -258,7 +274,9 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                  decision_bar: str = "closed",
                  decision_1m: Optional[pd.DataFrame] = None,
                  decision_cfg: Optional[Dict[str, Any]] = None,
-                 decision_workers: int = 4) -> Dict[str, Any]:
+                 decision_workers: int = 4,
+                 emit_paths_path: Optional[str] = None,
+                 emit_features: bool = False) -> Dict[str, Any]:
     # FORMING-BAR DECISION MODE (PI-20260929-VOLSKIP-SIGNAL-0002; default
     # "closed" = byte-identical). Live evaluates the WHOLE entry signal on the
     # still-forming bar every ~2 min; "forming" replays that decision with the
@@ -390,6 +408,11 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
     mom_stale_on = momentum_stale_armed(momentum_stale_bars,
                                         momentum_stale_adx_below)
     mom_any = mom_trail_on or mom_stale_on
+    # P1-Q10 level-triggered trail (default off = byte-identical); the rule and its
+    # rationale live in src/research/trail_levers.trade_level / backtest_trend.py.
+    level_on = level_trail_armed(trail_level, trail_level_tight_mult)
+    _lv_hi = df["high"].to_numpy() if level_on else None
+    _lv_lo = df["low"].to_numpy() if level_on else None
     adx_series = None
     if mom_any:
         adx_series = df["adx"] if adx_active else _adx(df, adx_period)
@@ -411,6 +434,18 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
 
     trades: List[Trade] = []
     subbar_missing_bars = 0
+    # OPT-IN research emits (scripts/research/harness_emit.py; both None by
+    # default, so nothing below allocates or changes on a flag-off run). The
+    # recorder is driven from THIS loop -- no re-walk -- and reads the engine's
+    # own `mfe`/`trail`/`tp_price`/`ext_j` at LEG-bar grain (in the sub-bar
+    # arms the exit bar's final state includes its sub-bar ratchet).
+    _prec = _dctx = None
+    if emit_paths_path or emit_features:
+        import harness_emit as _he
+        _prec = _he.PathRecorder(df, strategy=strategy_name, symbol=symbol,
+                                 keep_rows=bool(emit_paths_path))
+        if emit_features:
+            _dctx = _he.DecisionContext(df)
 
     # Per-entry live-TP distance in R -- answers whether the 9.9% clamp
 
@@ -638,6 +673,10 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
 
         mom_fired_bars = 0        # momentum_trail attribution (only read if armed)
         mom_tightened = False
+        _lvl = (trade_level(trail_level, _lv_hi, _lv_lo, i, entry, direction == "long",
+                            trail_level_lookback, trail_level_pivot_k, trail_level_round_step)
+                if level_on else None)
+        _lvl_touch_j: Optional[int] = None
 
         def _tm(peak_px: float, peak_j: int, j: int) -> float:
             # The chandelier mult in force on leg bar j: M20 P4.1 trail-decay,
@@ -679,12 +718,15 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
             # Advances ext/mfe/trail over ONE window — a leg bar in arm A,
             # a sub-bar in B/C. `ext_j` stays a LEG-bar index so the
             # stall-armed decay keeps counting in the strategy's own bars.
-            nonlocal ext, ext_j, trail, mfe, mom_tightened
+            nonlocal ext, ext_j, trail, mfe, mom_tightened, _lvl_touch_j
             _trail_prev = trail
             if direction == "long":
                 if h > ext:
                     ext, ext_j = h, j
                 trail = max(trail, ext - _tm(ext, ext_j, j) * atr)
+                if level_on and (_lvl_touch_j is not None or level_touched(_lvl, True, h, lo)):
+                    _lvl_touch_j = j if _lvl_touch_j is None else _lvl_touch_j
+                    trail = max(trail, ext - trail_level_tight_mult * atr)
                 mfe = max(mfe, (ext - entry) / risk)
                 # MI-165 break-even FLOOR (0 = off, byte-identical). Once the
                 # trade has SEEN >= be_floor_r R, the stop may never again sit
@@ -699,6 +741,9 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                 if lo < ext:
                     ext, ext_j = lo, j
                 trail = min(trail, ext + _tm(ext, ext_j, j) * atr)
+                if level_on and (_lvl_touch_j is not None or level_touched(_lvl, False, h, lo)):
+                    _lvl_touch_j = j if _lvl_touch_j is None else _lvl_touch_j
+                    trail = min(trail, ext + trail_level_tight_mult * atr)
                 mfe = max(mfe, (entry - ext) / risk)
                 # MI-165 break-even FLOOR — short side; `min()` tightens here.
                 if be_floor_r > 0.0 and mfe >= be_floor_r:
@@ -767,7 +812,16 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
             # reads "stop"); tests/test_backtest_trend_live_tp.py pins that it
             # is the only SL-first site.
             _rest_hit = _stop_or_target(float(_ov["rest_high"]), float(_ov["rest_low"]))
+        if _prec is not None:
+            _prec.start(trade_key=_he.trade_key(strategy_name, symbol,
+                                                df["timestamp"].iloc[i], direction),
+                        entry_i=i, entry=entry, risk=risk,
+                        is_long=(direction == "long"))
         for j in range(i + 1, min(i + timeout_bars + 1, n)) if _rest_hit is None else ():
+            if _prec is not None:
+                # Closes bar j-1's row with the state as it stands now (its end
+                # state) and opens bar j with the stop/target it is tested against.
+                _prec.bar(j, stop=trail, target=tp_price, peak_r=mfe, peak_j=ext_j)
             bh, bl = float(df["high"].iloc[j]), float(df["low"].iloc[j])
             # M20 partial-TP bank lever (0=off, byte-identical): bank
             # `bank_frac` at entry ± bank_at_r × risk; remainder keeps the
@@ -851,6 +905,12 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
             _rr_min_per_trade.append(rr_min)
         if exit_price is None:
             exit_price = float(df["close"].iloc[exit_idx])
+        _extra = None
+        if _prec is not None:
+            _extra = {"mae_r": _prec.finish(exit_idx, exit_price, exit_reason,
+                                            peak_r=mfe, peak_j=ext_j)["mae_r"]}
+            if _dctx is not None:
+                _extra.update(_dctx.at(i))
         r = ((exit_price - entry) / risk if direction == "long"
              else (entry - exit_price) / risk)
         _tp_exit_r = r      # raw price R, before bank / regime weighting (calibration)
@@ -877,11 +937,17 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
             regime_weight=round(regime_weight, 4),
             mom=_mom_attribution(adx_series, i, exit_idx, mom_fired_bars,
                                  mom_tightened) if mom_any else None,
+            level=({"level_price": _lvl, "level_touched": _lvl_touch_j is not None,
+                    "level_touch_bars": (None if _lvl_touch_j is None else _lvl_touch_j - i)}
+                   if level_on else None),
             **({} if _tpt is None else dict(
                 final_target_r=_tpt.final_target_r, n_extends=_tpt.n_extends,
-                n_retargets=_tpt.n_retargets, tp_exit_r=round(_tp_exit_r, 4)))))
+                n_retargets=_tpt.n_retargets, tp_exit_r=round(_tp_exit_r, 4))),
+            extra=_extra))
         next_idx = exit_idx + 1 + cooldown_bars
         i = next_idx
+    if emit_paths_path and _prec is not None:
+        _prec.write(emit_paths_path)
     if emit_path:
         Path(emit_path).parent.mkdir(parents=True, exist_ok=True)
         with open(emit_path, "w", encoding="utf-8") as fh:
@@ -925,7 +991,9 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                     "mfe_r": t.mfe_r,
                     "exit_reason": t.outcome,
                     **(t.mom or {}),
-                    **(_tpg_row(t) if tp_geom.armed else {})}, default=str) + "\n")
+                    **(t.level or {}),
+                    **(_tpg_row(t) if tp_geom.armed else {}),
+                    **(t.extra or {})}, default=str) + "\n")
     params: Dict[str, Any] = {"trend_lookback": trend_lookback,
                               "pullback_lookback": pullback_lookback,
                               "pullback_frac": pullback_frac,
@@ -956,6 +1024,10 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
         params["trail_adx_falling_bars"] = trail_adx_falling_bars
         params["trail_adx_tight_mult"] = trail_adx_tight_mult
         params["adx_period"] = adx_period
+    if level_on:
+        params.update(trail_level=trail_level, trail_level_tight_mult=trail_level_tight_mult,
+                      trail_level_lookback=trail_level_lookback, trail_level_pivot_k=trail_level_pivot_k,
+                      trail_level_round_step=trail_level_round_step)
     if mom_stale_on:
         params["momentum_stale_bars"] = momentum_stale_bars
         params["momentum_stale_adx_below"] = momentum_stale_adx_below
@@ -982,6 +1054,11 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                       tp_r_effective=_tp_r_effective,
                       rr_min_per_trade=_rr_min_per_trade,
                       rr_floor_state=rr_floor_state)
+    if level_on:
+        _with = [t for t in trades if t.level and t.level["level_price"] is not None]
+        summary["level_trail"] = {
+            "kind": trail_level, "n_trades": len(trades), "n_with_level": len(_with),
+            "n_touched": sum(1 for t in _with if t.level["level_touched"])}
     # The exit grain the numbers above were produced at, plus how much of the
     # leg-bar population the finer frame ACTUALLY covered. A verdict over an
     # unstated denominator is the failure this reports around: an arm that
@@ -1336,6 +1413,17 @@ def main(argv: List[str]) -> int:
     p.add_argument("--trail-adx-tight-mult", type=float, default=0.0,
                    help="The tightened trail mult while the momentum condition "
                         "fires (0 disables the lever; must be < --trail-mult).")
+    p.add_argument("--trail-level", choices=["swing", "fvg", "round"], default="",
+                   help="P1-Q10 level-triggered trail ('' = off, byte-identical); see "
+                        "scripts/backtest_trend.py --help and src/research/trail_levers.py.")
+    p.add_argument("--trail-level-tight-mult", type=float, default=0.0,
+                   help="Trail mult after the level is touched (must be < --trail-mult).")
+    p.add_argument("--trail-level-lookback", type=int, default=60,
+                   help="Bars before entry searched for a swing / FVG level.")
+    p.add_argument("--trail-level-pivot-k", type=int, default=3,
+                   help="Swing pivot half-width in bars (confirmed before the entry bar).")
+    p.add_argument("--trail-level-round-step", type=float, default=0.0,
+                   help="Round-number step in price (0 = auto from the entry price).")
     p.add_argument("--momentum-stale-bars", type=int, default=0,
                    help="MOMENTUM-TRAIL-LEVER `momentum_stale` (0=off, "
                         "byte-identical): close at bar CLOSE after N bars once "
@@ -1376,7 +1464,25 @@ def main(argv: List[str]) -> int:
                         "describes the run, not a per-leg trade.")
     p.add_argument("--emit-trades", default=None, metavar="PATH",
                    help="Write per-trade {entry_time, net_r, confidence} JSONL for regime tagging.")
+    p.add_argument("--emit-paths", default=None, metavar="PATH",
+                   help="EXIT-PATH-EMIT-OFFLINE (opt-in): write one JSONL row per (trade, "
+                        "in-trade bar) -- bar in R, stop/target in force, open/peak/mae R, "
+                        "bars_since_peak, ATR, ADX (scripts/research/harness_emit.py). "
+                        "Also adds mae_r to every --emit-trades row. Off = byte-identical.")
+    p.add_argument("--emit-features", action="store_true",
+                   help="METALABEL-EMIT-FEATURES (opt-in): add mae_r and the decision-time "
+                        "f_* context columns (ADX-14 + label, ATR pct/percentile/bucket, "
+                        "regime cell proxy, rolling log-return vol, 20-bar return, UTC "
+                        "hour/dow) to every --emit-trades row. Existing keys unchanged.")
     args = p.parse_args(argv[1:])
+    # The ATR percentile these flags compare against is rolling rank(pct=True), a 0-1 scale.
+    # A value > 1 (e.g. "50" meant as the 50th percentile) skips every bar once the window
+    # fills, so the run silently measures only warm-up entries (RQ-20261018-ef5d-06/-07).
+    for _flag in ("vol_skip_above_pctl", "vol_skip_below_pctl",
+                  "trail_vol_above_pctl", "trail_vol_below_pctl"):
+        _v = getattr(args, _flag, 0.0) or 0.0
+        if not 0.0 <= float(_v) <= 1.0:
+            p.error(f"--{_flag.replace('_', '-')} {_v} is outside [0, 1]: the ATR percentile is a 0-1 rank")
     # --- data-source resolution (BL-20260912-FIFTEEN-MORE-HARNESSES...) ---
     # --data/--symbol default to None so a bare invocation REFUSES rather
     # than silently reaching the 5,001-row BTC fixture (docs/claude/work/
@@ -1405,6 +1511,13 @@ def main(argv: List[str]) -> int:
         args.momentum_stale_adx_below)
     if _mom_errs:
         for _e in _mom_errs:
+            print(f"ERROR: {_e}", file=sys.stderr)
+        return 2
+    _lvl_errs = level_flag_errors(args.trail_level, args.trail_level_tight_mult, args.trail_mult,
+                                  args.trail_level_lookback, args.trail_level_pivot_k,
+                                  args.trail_level_round_step)
+    if _lvl_errs:
+        for _e in _lvl_errs:
             print(f"ERROR: {_e}", file=sys.stderr)
         return 2
     if args.rr_floor > 0.0 and args.tp_cap_pct <= 0.0:
@@ -1481,6 +1594,8 @@ def main(argv: List[str]) -> int:
                        timeframe=args.timeframe,
                        symbol=args.symbol,
                        emit_path=args.emit_trades, strategy_name=args.strategy_name,
+                       emit_paths_path=args.emit_paths,
+                       emit_features=args.emit_features,
                        min_confidence=args.min_confidence,
                        adx_min=args.adx_min,
                        adx_max=args.adx_max,
@@ -1512,6 +1627,11 @@ def main(argv: List[str]) -> int:
                        trail_adx_below=args.trail_adx_below,
                        trail_adx_falling_bars=args.trail_adx_falling_bars,
                        trail_adx_tight_mult=args.trail_adx_tight_mult,
+                       trail_level=args.trail_level,
+                       trail_level_tight_mult=args.trail_level_tight_mult,
+                       trail_level_lookback=args.trail_level_lookback,
+                       trail_level_pivot_k=args.trail_level_pivot_k,
+                       trail_level_round_step=args.trail_level_round_step,
                        momentum_stale_bars=args.momentum_stale_bars,
                        momentum_stale_adx_below=args.momentum_stale_adx_below,
                        side_filter=args.side_filter,

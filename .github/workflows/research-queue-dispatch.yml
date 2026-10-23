@@ -290,6 +290,11 @@ jobs:
           mkdir -p /tmp/payload
           git ls-files -m -o --exclude-standard -- comms/research research/results research/queue \
             docs/claude/work/research-queue-dispatch-receipt.json > /tmp/payload/changed.txt
+          # A run's logs/cmd-0.log and arms/*.log match .gitignore's `*.log` / `logs/`, so
+          # --exclude-standard dropped them and a failed run landed with no readable cause
+          # (PI-20261021-6SBYWRKB-0001). Name them explicitly; the land step adds with -f.
+          git ls-files -o -i --exclude-standard -- 'comms/research/*/*/logs/*.log' \
+            'comms/research/*/*/arms/*.log' >> /tmp/payload/changed.txt || true
           cat /tmp/payload/changed.txt
           if [ -f /tmp/collected.json ]; then cp /tmp/collected.json /tmp/payload/collected.json; fi
           tar czf /tmp/payload/landing.tgz --ignore-failed-read -T /tmp/payload/changed.txt

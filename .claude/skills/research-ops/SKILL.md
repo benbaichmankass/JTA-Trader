@@ -3,7 +3,7 @@ name: research-ops
 description: The routine research-OPERATIONS pass, run 4x/day (02:47, 08:47, 14:47, 20:47 UTC) as a bounded Sonnet lane. Checks the research pipeline is flowing (dispatcher, collector, receipts, stamps, stranded PRs), keeps the runnable floor of queue units topped up, audits every blocked / not-runnable unit and unlocks or retires it, reads every result landed since the last pass and applies its pre-registered rule, and files the follow-ups (research units and builds). Does NOT replace topic research (perf-followup, ML research, readouts on a specific question) — it only keeps the pipeline healthy and moving. Use when the manager dispatches a RESEARCH-OPS-<date>-<slot> lane, or the operator says "/research-ops", "check the research pipeline", "is research operations on track".
 ---
 
-> **Doc status:** `live` · category `instruction` · last verified `2026-10-15` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
+> **Doc status:** `live` · category `instruction` · last verified `2026-10-16` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
 # /research-ops — keep the research pipeline flowing
 
@@ -48,6 +48,49 @@ intake list did not include the research programme plans at all. The mechanism n
 - **The floor is computed** (`check_research_queue_health.computed_floor`: 19 h of supply at `fired_24h`, never below
   25); the health check prints it, the idle backends and the authoring-queue depth every dispatch cycle.
 
+## What changed on 2026-10-16 (lane RESEARCH-ENGINE-1016)
+
+MEASURED 07:15Z: runnable **2** against a computed floor of 50; theme `regime` (weight 5) held **0** queued units;
+79 of 112 queued units were generated re-runs; four of the six programme plans (03 STRATEGY, 04 MACRO, 05 PROP,
+06 DATA) had **no tree file**, so none of their questions could ever reach the authoring queue; and the last three
+passes drafted 1 programme node between them. The weights in `THEMES.yaml` are a share of fire slots **among
+themes that hold due work** -- an empty theme gets nothing however heavy it is. Weights are honoured by SUPPLY,
+and supply is this pass's step E. So the health check now prints, every dispatch cycle:
+
+- **`H1-THEME <theme>`** -- the floor split by weight, each theme's runnable units (authored + generated; generated
+  units credited for at most 40 % of a theme's slice). Each short theme is authoring work for step E: author toward
+  the largest shortfall first, from that theme's programme nodes or checklist research rows.
+- **`OPS-AUTHOR-SKIPPED`** -- one of the newest three run records drafted no programme node while the authoring
+  queue held questions. Step E.0 is **not optional**: when budget is short, draft at least ONE node before step D's
+  follow-ups, and record it in the `authoring` block (step F).
+- **programme coverage** -- `python3 scripts/research/programme_coverage.py` (guard `programme-coverage`, a
+  ratchet): per plan, the questions with no node. An uncovered question is fixed by ADDING a node (a
+  `needs_authoring:` line is enough) to `research/programmes/<NN>-*.yaml` -- that is how a plan question becomes
+  visible to the machine at all.
+
+- **`RESULTS-UNDISPOSITIONED`** -- `python3 scripts/research/result_disposition_check.py --list`: units whose
+  landed results carry no verdict and no OWNED `needs_review` (`grading.owner`). "Read" in the run record is not a
+  disposition; each of these gets its rule applied (step D) or an owner (step C). MEASURED 2026-10-16: 19 ungraded,
+  24 `needs_review` with no owner.
+- **Brief §0 `RESEARCH FLOOR GAP`** -- a gap at the end of your pass is now due work on the manager's brief, computed
+  from the queue; your handoff still names it, but the manager acts on §0.
+
+The dispatcher also now ranks **authored before generated inside a theme**, and a recurring unit ages from when it
+came **due**, not from its last stamp (a monthly re-run used to come due already "starved").
+
+**PROGRAMME PRIORITY (operator 2026-10-18 ~06:20Z: P1 active trade management + P2 AI trader are "our highest
+priority").** `research_compute.yaml` `value.programme_priority: [P1, P2]` (ordered) -- a due unit of a listed
+programme ranks first on every backend, above every theme and other programme; only a starved unit precedes it.
+When you author for those programmes, set `programme_node.programme` (the emitter does) so the unit is recognised.
+
+**MONEY FIRST across themes (operator 2026-10-18, "Fix now, money first").** Since that day `fair_order` does not
+round-robin the themes: a due unit is taken by the router's value score across ALL themes (real-money / prop /
+own-losses work first), a starved unit first in any theme, and the THEMES.yaml weight share only breaks an equal
+score. Programme nodes (`generated.family: programme:*`) count as asked units. What that means for this pass: a
+short theme (`H1-THEME`, `theme_share_min_ratio`) no longer recovers by waiting its turn -- it recovers when you
+author units there that carry an honest `value:` block (money at stake, confidence), or on spare capacity, or at
+`starve_hours`. Do not loosen the SLO to clear it; author the work.
+
 ## Ceiling and "done"
 
 - **Model Sonnet, dollar ceiling ~$5 per run** (manager hard cap $6). One question per
@@ -69,6 +112,11 @@ ls -1 comms/research/ops/*.json | sort | tail -1     # newest = the previous run
 
 Its `runnable_after` / `results_read` / `units_authored` are this run's baseline; its
 `handoff` list is your first work. No record yet (first run) → baseline is "now", say so.
+
+Then read the newest `comms/research/health/<date>.json` (`latest`; written every 2 h by `research-slo.yml`).
+Every SLO that is not `ok` is named in your record's `handoff` with what this pass did about it. Your own
+record feeds two of them: `research_ops_not_run` (keep `not_run` to the steps you truly could not do) and
+`research_ops_age_h`.
 
 ## A. Pipeline health
 
@@ -143,6 +191,17 @@ reading of mixed / non-mechanical rows (close it with a session `grading:` block
 rows -- the grader then never touches it again), a redesign unit, or a retirement with a reason. Minimum per
 pass: the whole bucket, or 8 units if it is larger -- oldest first; say how many remain in the record.
 
+**A triage is a WRITE, and it holds -- that is expected, not a reason to skip it** (RESEARCH-GRADING-BACKLOG-1016,
+MEASURED on the 2026-10-15/16 records: passes counted units as "triaged" while writing nothing, because any
+`research/queue/*.yaml` edit holds the PR for a human under E57 and the pass wanted its record PR to self-land --
+the 08:47Z pass wrote "no units authored so the PR can self-land"). So: put the run record + checklist/pipeline
+writes in the self-landing PR, and the triage `grading:` edits in a SEPARATE held PR in the same pass. "Triaged"
+counts only units whose file carries the disposition; `result_disposition_check.py --list` is the measure, not
+the record's own number. Where the rule genuinely cannot be applied (wiring_only, producer_failed, missing rows),
+the disposition is `grading.owner: <checklist row>` + `grading.owner_reason: <the specific gap and its PI/row>` --
+`queue_grade` keeps both across its 6-hourly re-grades while the unit still needs review (before 2026-10-16 it
+erased them). An owner with no named gap is not a triage.
+
 Population: every `status: queued` unit that is **not runnable**, plus every unit in
 `research/queue/blocked/`. Reuse the manager's watcher, do not re-implement it:
 
@@ -197,8 +256,21 @@ written after seeing the number:
 - **pass →** the follow-up the rule names: another queue unit, or — if it implies a
   strategy/params/risk/roster change — a **Tier-3 proposal written as a note on the owning
   checklist row for the manager**. Never a config edit, never a claim a leg is promoted.
-- **fail →** the rule's disposition plus a kill or redirect follow-up (retire the dependent
-  units whose `requires_result` can no longer be met).
+  **A PASS read on one window is a discovery, not a confirmation** (RESEARCH-OPS-BENCHMARK-1016,
+  `docs/research/research-ops-benchmark-2026-10-16.md` § 2; P3 already works this way): before it feeds a
+  Tier-3 proposal, its follow-up is ONE confirmation unit on a disjoint or most-recent window the PASS did not
+  see, registered with the same statistic and bar. Name in the note how many cells or configurations the
+  PASS was chosen from: that count is the multiple-testing denominator (row `RESEARCH-TRIAL-LEDGER`).
+- **fail →** the rule's disposition, then the **fail-is-not-dead** read (operator, 2026-10-22: *"we don't
+  just drop an idea because we ran one test and it didn't pass… we need to study them, do open source
+  research, build a bunch of different tests and tweak them"*; default in
+  `docs/plans/OPERATING-PLAN-2026-09-21.md` — *"never to just kill ideas because of one bad pass"*):
+  a FAIL settles only the live/config question its registered rule asked. (1) Diagnose why it failed —
+  legs/regime, grid, trigger definition, cost drag, n/power, test design. (2) Check outside sources
+  (`frontier-research`). (3) Author pre-registered variant units, each with its own rule. (4) Programme
+  status is **"first test failed → variants queued"**, never "dead". Retire dependent units whose
+  `requires_result` can no longer be met, but retire a *family* only through
+  `scripts/research/family_retirement_policy.yaml`.
 - **indeterminate →** extend n or redesign, in one line, and a unit that does it.
 
 Record each disposition with `research_disposition.py --record` (it routes to `append` and
@@ -279,7 +351,7 @@ Draw new units from, in this order, until the floor is met or sources are exhaus
   `value:` block (`usd_at_stake_per_month`, `confidence`, `bucket`, `basis`). Do **not** write
   `run.workflow` on a new unit: the token-free dispatcher resolves class -> backend from
   `scripts/research/research_compute.yaml` (runner / trainer / Kaggle GPU), enforces each backend's capacity and the
-  Kaggle weekly quota, and ranks due units by value per cost. GPU work goes to Kaggle through
+  Kaggle weekly quota, and ranks due units by value per cost across every theme (money first). GPU work goes to Kaggle through
   `research-script-run-kaggle.yml` and comes back through the same collector, so a result is read exactly like
   any other. A class change or a capacity edit is a `scripts/research/research_compute.yaml` change (Tier 1, reviewed),
   not a unit edit.
@@ -288,7 +360,9 @@ Draw new units from, in this order, until the floor is met or sources are exhaus
 
 ## F. Record and report
 
-Write ONE durable, machine-readable record the next run reads as its baseline:
+Write ONE durable, machine-readable record the next run reads as its baseline (the `authoring` block is
+REQUIRED: `check_research_queue_health.ops_authoring_skips` reads `authoring.nodes_drafted` and warns
+`OPS-AUTHOR-SKIPPED` when it is 0 while `queue_depth` > 0):
 `comms/research/ops/<YYYYMMDDTHHMMZ>.json` (newest filename wins):
 
 ```json
@@ -303,6 +377,8 @@ Write ONE durable, machine-readable record the next run reads as its baseline:
   "unlocked": [], "retired": [{"unit": "RQ-…", "reason": "…"}],
   "levers_filed": [{"lever": "…", "ref": "PI-…|<checklist id>"}],
   "units_authored": [], "followups_filed": [],
+  "authoring": {"queue_depth": 6, "nodes_drafted": 1, "nodes": ["P2-Q4-et-mlp-extend"],
+                "theme_shortfall": {"regime": 12}},
   "not_run": [], "handoff": ["what the next pass or a topic lane must pick up"]
 }
 ```

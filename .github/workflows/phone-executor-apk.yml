@@ -12,7 +12,9 @@ name: phone-executor-apk
 #     first runs racing. The keystore file is written to $RUNNER_TEMP and deleted at the end of the job.
 #   - if the secrets are absent AND the PAT is unavailable, the job fails loudly instead of shipping an
 #     unstable debug key.
-# The APK holds no secret: the device token is minted on the phone at first run.
+# The APK holds no secret: the device token is minted on the phone at first run. It embeds the PUBLIC half of
+# the exec.js signing key (assets/exec_pubkey.b64, PHONE-EXEC-OBSERVABLE-1018) so the page-side script can ship
+# signed from our API without a reinstall (phone-exec-js-sign.yml).
 
 on:
   push:
@@ -70,6 +72,9 @@ jobs:
           npm init -y >/dev/null && npm i playwright@1.49.1 >/dev/null
           npx playwright install --with-deps chromium >/dev/null
           cd "$GITHUB_WORKSPACE" && NODE_PATH="$RUNNER_TEMP/pw/node_modules" node tools/phone-executor/test/exec_check.js
+      - name: Real-page fixtures (captured DOM snapshots, numbers replaced; PHONE-EXEC-OBSERVABLE-1018)
+        timeout-minutes: 10
+        run: NODE_PATH="$RUNNER_TEMP/pw/node_modules" node tools/phone-executor/test/exec_fixtures_check.js
 
   apk:
     needs: check
@@ -122,6 +127,26 @@ jobs:
           echo "PHONE_EXEC_KEYSTORE_PASSWORD=$PASS" >> "$GITHUB_ENV"
           # The certificate fingerprint is public (it is in every APK); print it so a reinstall can be checked.
           keytool -list -keystore "$KS" -storepass "$PASS" -alias phoneexec | grep -i "SHA-256" || true
+      - name: Embed the exec.js signing PUBLIC key (PHONE-EXEC-OBSERVABLE-1018)
+        # The phone verifies the SIGNED remote exec.js (GET /phone/exec.js, phone-exec-js-sign.yml) against this
+        # 32-byte ed25519 public key, derived here from the same secret the signer uses. Public by nature (it is
+        # in every APK). Absent secret = the APK runs the bundled script only (RemoteJs: "disabled"), never an
+        # unverified one; the key is created by the first phone-exec-js-sign run, so build again after it.
+        env:
+          KEY_B64: ${{ secrets.PHONE_EXEC_JS_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          ASSET=tools/phone-executor/app/src/main/assets/exec_pubkey.b64
+          if [ -z "${KEY_B64}" ]; then
+            echo "::warning::PHONE_EXEC_JS_SIGNING_KEY is unset: this APK embeds no public key and will run the bundled exec.js only (remote logic disabled). Run phone-exec-js-sign once, then rebuild."
+            rm -f "$ASSET"
+          else
+            KEY="$RUNNER_TEMP/exec-js-signing.pem"
+            printf '%s' "${KEY_B64}" | base64 -d > "$KEY"
+            openssl pkey -in "$KEY" -pubout -outform DER | tail -c 32 | base64 -w0 > "$ASSET"
+            rm -f "$KEY"
+            echo "embedded public key: $(cat "$ASSET")"
+          fi
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'

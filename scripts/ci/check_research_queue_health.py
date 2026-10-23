@@ -38,6 +38,25 @@ trainer backends sat idle with nothing due. Now:
   * idle backends (free capacity, nothing due) from the newest
     comms/research/utilization/*.json are reported, so supply SHAPE is visible, not only size.
 
+THEME SHARE, AUTHORING AND COVERAGE (lane RESEARCH-ENGINE-1016, 2026-10-16). MEASURED that morning:
+runnable 2 against a computed floor of 50, theme `regime` (weight 5) holding 0 queued units, and 79 of
+112 queued units generated monthly/weekly sweeps. The fair share in `dispatch_queue.fair_order` is
+weighted only among themes that HOLD due work, so an empty theme gets no slots however high its weight
+(fires 2026-10-13..16, 181 total from comms/research/utilization/: regime 20 = 11 % against a 24 % weight
+share). The weights cannot be honoured by ranking; they have to be honoured by SUPPLY -- and since 2026-10-18
+(MONEY FIRST, operator: `fair_order` takes due units across themes by the router's value score, a weight only
+breaks an equal score) ranking honours them even less, by design: a short theme recovers through valuable
+authored units, spare capacity or `starve_hours`, so `theme_share_min_ratio` is expected to read red longer. So:
+  * `theme_supply` splits the floor by THEMES.yaml weight and reports each theme's runnable units,
+    crediting generated (template / sweep) units for at most GENERATED_FLOOR_SHARE of a theme's share,
+    so a theme stocked only with re-runs still reads as short of authored work. A short theme is an
+    `H1-THEME` warning (authoring work for research-ops step E), never a page;
+  * `ops_authoring_skips` reads the newest research-ops records (comms/research/ops/): a pass that left
+    the authoring step undone while the authoring queue held questions is an `OPS-AUTHOR-SKIPPED`
+    warning -- the step was `not_run` on 8 of 8 passes before 2026-10-15 and nothing said so;
+  * the programme coverage summary (scripts/research/programme_coverage.py) is printed every cycle, so a
+    plan whose questions have no tree node is visible where the floor is.
+
 Exit 1 on a problem a refill cannot fix (an unfillable H1, or H2), so the caller
 (research-queue-dispatch.yml's alarm step) pages; exit 3 (EXIT_REFILL) when the
 ONLY problem is an H1 the committed templates can fill, so the caller fires
@@ -69,19 +88,17 @@ DEFAULT_MAX_IDLE_HOURS = 12.0
 #: less. A page is for what a refill cannot fix: an unfillable gap, or a
 #: dispatcher that stopped firing (12 h idle, queue_throughput.py).
 EXIT_REFILL = 3
-#: Hours of supply the floor must cover at the observed fire rate -- the research-ops SKILL's
-#: own derivation (25 units = ~19 h at fired_24h 32, 2026-10-10), made mechanical.
-FLOOR_HOURS = 19.0
+# The floor formula lives in scripts/research/queue_throughput.py (one place: the brief computes the same
+# number in-process). Re-exported here so callers and the self-test keep their names.
+from scripts.research.queue_throughput import FLOOR_HOURS, computed_floor  # noqa: E402,F401
 UTILIZATION_DIR = Path("comms/research/utilization")
-
-
-def computed_floor(fired_24h, *, minimum: int = DEFAULT_MIN_RUNNABLE) -> int:
-    """max(minimum, ceil(fired_24h x FLOOR_HOURS / 24)); `minimum` when the rate is unread."""
-    import math
-    try:
-        return max(minimum, math.ceil(float(fired_24h) * FLOOR_HOURS / 24.0))
-    except (TypeError, ValueError):
-        return minimum
+OPS_DIR = Path("comms/research/ops")
+THEMES_FILE = Path("research/THEMES.yaml")
+#: Generated (template / programme-free sweep) units may fill at most this share of a theme's slice of the
+#: floor. DECIDED by lane RESEARCH-ENGINE-1016 (2026-10-16) from the measurement above: 79 of 112 queued
+#: were generated re-runs, so a census that credits them fully reads a theme as stocked when no question
+#: anybody asked is waiting. 0.4 keeps the re-runs useful as filler without letting them stand in for authoring.
+GENERATED_FLOOR_SHARE = 0.4
 
 
 def idle_backends(root: Path) -> dict:
@@ -103,6 +120,68 @@ def idle_backends(root: Path) -> dict:
                   and int(b.get("free_slots_after") or 0) > 0 and int(b.get("due_total") or 0) == 0
                   and name != "runpod")    # runpod is a fallback, never a first choice: idle by design
     return {"read_state": "measured", "run_id": d.get("run_id"), "idle": idle}
+
+
+def theme_supply(root: Path, floor: int, *, now: datetime = None) -> list:
+    """[{theme, weight, share, authored, generated, credited, short}] -- the floor split by THEMES.yaml weight
+    (ceil), each theme's runnable units split authored vs generated, generated credited up to
+    GENERATED_FLOOR_SHARE of the share. Population: every research/queue/**/*.yaml at the checkout."""
+    import math
+    import yaml
+    from scripts.research.queue_replenish import existing_units, runnable
+    themes = (yaml.safe_load((root / THEMES_FILE).read_text(encoding="utf-8")) or {}).get("themes") or {}
+    total = sum(float(t.get("weight") or 0) for t in themes.values()) or 1.0
+    units, _bad = existing_units(root)
+    run = runnable(units, now=now)
+    out = []
+    for name, t in themes.items():
+        w = float(t.get("weight") or 0)
+        share = math.ceil(floor * w / total)
+        mine = [u for u in run if str(units[u].get("theme") or "") == name]
+        gen = sum(1 for u in mine if isinstance(units[u].get("generated"), dict))
+        auth = len(mine) - gen
+        credited = auth + min(gen, int(share * GENERATED_FLOOR_SHARE))
+        out.append({"theme": name, "weight": w, "share": share, "authored": auth, "generated": gen,
+                    "credited": credited, "short": max(0, share - credited)})
+    return out
+
+
+def theme_problems(supply: list) -> list:
+    """`H1-THEME` warnings, one per theme short of its weighted slice of the floor."""
+    return [f"H1-THEME {s['theme']} (weight {s['weight']:g}): runnable {s['authored']} authored + {s['generated']} generated "
+            f"(credited {s['credited']}, generated capped at {GENERATED_FLOOR_SHARE:.0%} of its share) < share {s['share']} "
+            f"of the floor -- author {s['short']} {s['theme']} unit(s) (research-ops step E); weights are honoured by supply"
+            for s in supply if s["short"] > 0]
+
+
+def ops_authoring_skips(root: Path, *, last: int = 3) -> dict:
+    """{read_state, records, skipped: [record names]} over the newest `last` research-ops records. A record SKIPPED
+    authoring when its authoring queue held questions (`authoring.queue_depth` or `authoring_queue_depth` > 0,
+    or unrecorded) and it drafted no node: `authoring.nodes_drafted == 0`, or -- for records written before that
+    field -- no `units_authored` entry naming a programme node (`P<n>-Q...`)."""
+    import json
+    import re
+    files = sorted((root / OPS_DIR).glob("2*.json"))[-last:]
+    if not files:
+        return {"read_state": "could_not_look", "records": [], "skipped": []}
+    skipped = []
+    for f in files:
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            skipped.append(f"{f.stem} (unreadable)")
+            continue
+        a = d.get("authoring") if isinstance(d.get("authoring"), dict) else {}
+        depth = a.get("queue_depth", d.get("authoring_queue_depth"))
+        if depth is not None and int(depth) == 0:
+            continue
+        if "nodes_drafted" in a:
+            if int(a.get("nodes_drafted") or 0) == 0:
+                skipped.append(f.stem)
+            continue
+        if not any(re.search(r"\bP\d+-Q", str(x)) for x in d.get("units_authored") or []):
+            skipped.append(f.stem)
+    return {"read_state": "measured", "records": [f.stem for f in files], "skipped": skipped}
 
 
 def refill_capacity(root: Path, *, target: int) -> dict:
@@ -221,6 +300,37 @@ def _self_test() -> int:
         assert idle_backends(r) == {"read_state": "measured", "run_id": "1", "idle": ["kaggle"]}, idle_backends(r)
         (r / "research" / "queue" / "RQ-20300101-004.yaml").write_text("id: RQ-20300101-004\nstatus: queued\nrun:\n  workflow: 'none — session-local'\n")
         assert health(r, now=now)["runnable"] == 3, "a session-bound note is not runnable"
+        # RESEARCH-ENGINE-1016: theme supply. Two themes, weight 3:1, floor 8 -> shares 6 and 2. Theme `a`
+        # holds 5 GENERATED runnable units and no authored one: credited only int(6 x 0.4) = 2, so it is short 4
+        # (re-runs do not stand in for authored work); theme `b` holds 2 authored and is not short.
+        (r / THEMES_FILE).write_text("share_window_hours: 48\naging_hours: 72\nthemes:\n  a: {weight: 3}\n  b: {weight: 1}\n")
+        q = r / "research" / "queue"
+        for i in range(5):
+            (q / f"RQ-20300102-{i+1:03d}.yaml").write_text(
+                f"id: RQ-20300102-{i+1:03d}\nstatus: queued\ntheme: a\ncadence: monthly\nrun:\n  workflow: x.yml\n"
+                "generated: {family: e35-bracket, key: k%d}\nlast_dispatched_at: null\n" % i)
+        for i in range(2):
+            (q / f"RQ-20300102-9{i+1:02d}.yaml").write_text(
+                f"id: RQ-20300102-9{i+1:02d}\nstatus: queued\ntheme: b\ncadence: once\nrun:\n  workflow: x.yml\n"
+                "last_dispatched_at: null\n")
+        sup = {s["theme"]: s for s in theme_supply(r, 8, now=now)}
+        assert sup["a"]["share"] == 6 and sup["a"]["generated"] == 5 and sup["a"]["credited"] == 2 and sup["a"]["short"] == 4, sup
+        assert sup["b"]["share"] == 2 and sup["b"]["authored"] == 2 and sup["b"]["short"] == 0, sup
+        tp = theme_problems(list(sup.values()))
+        assert len(tp) == 1 and tp[0].startswith("H1-THEME a") and _exit_code(tp) == 0, tp
+        # ops authoring skips: structured field wins; legacy not_run text is read; depth 0 is never a skip
+        od = r / OPS_DIR
+        od.mkdir(parents=True)
+        assert ops_authoring_skips(r)["read_state"] == "could_not_look"
+        (od / "20300101T0000Z.json").write_text(_json.dumps({"authoring_queue_depth": 6, "units_authored": ["RQ-1 (hand unit)"]}))
+        (od / "20300101T0600Z.json").write_text(_json.dumps({"authoring": {"queue_depth": 0, "nodes_drafted": 0}}))
+        (od / "20300101T1200Z.json").write_text(_json.dumps({"authoring": {"queue_depth": 4, "nodes_drafted": 2}}))
+        assert ops_authoring_skips(r)["skipped"] == ["20300101T0000Z"], ops_authoring_skips(r)
+        (od / "20300101T1800Z.json").write_text(_json.dumps({"authoring": {"queue_depth": 4, "nodes_drafted": 0}}))
+        assert ops_authoring_skips(r)["skipped"] == ["20300101T1800Z"], ops_authoring_skips(r)   # newest 3 only
+        (od / "20300101T0000Z.json").write_text(_json.dumps({"authoring_queue_depth": 6, "units_authored": ["RQ-2 (programme node P2-Q4-x)"]}))
+        assert ops_authoring_skips(r, last=4)["skipped"] == ["20300101T1800Z"], "a legacy record that drafted a node is not a skip"
+        assert _exit_code(["OPS-AUTHOR-SKIPPED x"]) == 0 and _exit_code(["RESULTS-UNDISPOSITIONED 3"]) == 0
         (r / "research" / "queue" / "RQ-20300101-005.yaml").write_text(": : [\n")
         assert any(x.startswith("H0") for x in grade(health(r, now=now), min_runnable=1, max_idle_hours=48))
     print("research-queue-health self-test OK")
@@ -230,7 +340,7 @@ def _self_test() -> int:
 def _exit_code(problems: list) -> int:
     """0 clean, or only an H1-AUTHOR (a scheduled drafting task, warned, not paged);
     EXIT_REFILL when every other problem is a fillable H1; else 1 (page)."""
-    pageable = [x for x in problems if not x.startswith(("H1-AUTHOR", "H1-THIN"))]
+    pageable = [x for x in problems if not x.startswith(("H1-AUTHOR", "H1-THIN", "H1-THEME", "OPS-AUTHOR", "RESULTS-UNDISPOSITIONED"))]
     if not pageable:
         return 0
     return EXIT_REFILL if all(x.startswith("H1-REFILL") for x in pageable) else 1
@@ -273,9 +383,37 @@ def main(argv=None) -> int:
           + (f"; refill capacity {refill['capacity']} (templates {refill['templates']}, programme nodes "
              f"{refill['programme_ready']}) for deficit {refill['deficit']}; authoring queue {refill['authoring_queue']}"
              if refill else ""))
+    try:
+        supply = theme_supply(_REPO, args.min_runnable)
+        print("research-queue-health: theme supply (runnable authored+generated / share of floor): " + ", ".join(
+            f"{s['theme']} {s['authored']}+{s['generated']}/{s['share']}" for s in supply))
+        problems += theme_problems(supply)
+    except Exception as e:  # noqa: BLE001 -- a census that cannot run is said aloud, never read as balanced
+        print(f"::warning::research-queue-health: theme supply could not be measured ({e!r})")
+    ops = ops_authoring_skips(_REPO)
+    if ops["skipped"]:
+        problems.append(f"OPS-AUTHOR-SKIPPED research-ops record(s) {', '.join(ops['skipped'])} of the newest "
+                        f"{len(ops['records'])} drafted no programme node while the authoring queue held questions -- "
+                        "step E is not optional (research-ops SKILL)")
+    try:
+        from scripts.research.result_disposition_check import census, summary_line as rd_line  # noqa: PLC0415
+        rd = census(_REPO)
+        print(f"research-queue-health: {rd_line(rd)}")
+        if rd["findings"]:
+            problems.append(f"RESULTS-UNDISPOSITIONED {rd['findings']} unit(s) have landed results with no verdict and no "
+                            "owned needs_review (python3 scripts/research/result_disposition_check.py --list) -- "
+                            "research-ops steps C/D: apply the rule or set grading.owner")
+    except Exception as e:  # noqa: BLE001
+        print(f"::warning::research-queue-health: result disposition could not be measured ({e!r})")
+    try:
+        from scripts.research.programme_coverage import coverage, summary_line  # noqa: PLC0415
+        cov = coverage(_REPO)
+        print(f"research-queue-health: programme coverage: {summary_line(cov)}")
+    except Exception as e:  # noqa: BLE001
+        print(f"::warning::research-queue-health: programme coverage could not be measured ({e!r})")
     rc = _exit_code(problems)
     for p in problems:
-        level = "warning" if p.startswith(("H1-AUTHOR", "H1-THIN")) else ("notice" if rc == EXIT_REFILL else "error")
+        level = "warning" if p.startswith(("H1-AUTHOR", "H1-THIN", "H1-THEME", "OPS-AUTHOR", "RESULTS-UNDISPOSITIONED")) else ("notice" if rc == EXIT_REFILL else "error")
         print(f"::{level}::research-queue-health: {p}")
     return rc
 

@@ -286,6 +286,26 @@ def test_a_result_landed_after_the_grading_means_the_confirmatory_run_already_ra
     assert not dq.confirmatory_requeue({}, None)
 
 
+def test_a_same_day_requeue_with_a_date_only_graded_at_is_still_a_requeue(tmp_path, monkeypatch):
+    """The grader writes graded_at as a DATE. A first FAIL graded the same day its
+    result landed (19:14) must still read as a deliberate re-queue, not a lost stamp
+    (RQ-20261015-4941-01/-02 closed 'two consecutive FAIL passes' on ONE run)."""
+    day = {"confirmatory_run": 1, "graded_at": "2030-01-09"}
+    assert dq.confirmatory_requeue({"grading": day}, datetime(2030, 1, 9, 19, 14, tzinfo=timezone.utc))
+    assert not dq.confirmatory_requeue({"grading": day}, datetime(2030, 1, 10, 1, tzinfo=timezone.utc))
+    # With an evidence list, the files already READ decide, whatever the clock says.
+    root = _results(tmp_path, UID, [_row("2030-01-09T19:14:25+00:00", run_id="55")], run_id="55")
+    monkeypatch.setattr(dq, "RESULTS_ROOT", root)
+    ev = {**day, "evidence": [f"research/results/{UID}/55.jsonl"]}
+    late = datetime(2030, 1, 12, tzinfo=timezone.utc)
+    assert dq.confirmatory_requeue({"id": UID, "grading": ev}, late)
+    (root / UID / "77.jsonl").write_text(_row("2030-01-12T00:00:00+00:00", run_id="77") + "\n")
+    assert not dq.confirmatory_requeue({"id": UID, "grading": ev}, late)
+    # ... so stamp_lost never re-stamps a same-day re-queue from run 1's own row.
+    (root / UID / "77.jsonl").unlink()
+    assert dq.stamp_lost({"id": UID, "last_dispatched_at": None, "grading": ev}) is None
+
+
 # ── 4. the workflow lands each throwaway branch from the checked-out base ────
 
 def test_each_landing_returns_to_the_checked_out_base():

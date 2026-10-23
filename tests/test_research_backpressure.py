@@ -275,3 +275,86 @@ def test_every_configured_infra_workflow_name_exists():
     have = {yaml.safe_load(p.read_text()).get("name") for p in (REPO / ".github/workflows").glob("*.yml")}
     missing = [n for n in names if n not in have]
     assert not missing, missing
+
+
+# ── an unmanaged workflow cannot take a managed backend's slot (RESEARCH-DISPATCH-STALL-1016) ──
+def _fired_workflows(fired):
+    return [c[3] for c in fired]
+
+
+def test_unmanaged_units_do_not_take_the_slots_of_a_managed_backend(tmp_path, monkeypatch):
+    """MEASURED 2026-10-16: 08:10Z/08:51Z fired 8 research-harness-dispatch.yml units (no backend in
+    research_compute.yaml) and deferred trainer + kaggle_cpu units on 'research compute cap 8 reached' with
+    both backends at 0 in flight. Managed units are offered the shared cap first; unmanaged keep the rest."""
+    units = [(f"RQ-20300101-00{i}", "research-harness-dispatch.yml") for i in range(1, 4)] + \
+            [("RQ-20300101-009", "research-script-run-kaggle-cpu.yml")]
+    fired, stamped = _fired_cycle(tmp_path, monkeypatch, units, extra_args=("--max-research-inflight", "2"))
+    wfs = _fired_workflows(fired)
+    assert len(fired) == 2 and "research-script-run-kaggle-cpu.yml" in wfs, wfs
+    assert "RQ-20300101-009" in stamped
+
+
+def test_without_managed_first_the_harness_takes_every_slot(tmp_path, monkeypatch):
+    """The 2026-10-16 condition, reproduced: fair order alone gives every slot to the unmanaged units."""
+    monkeypatch.setattr(dq, "managed_first", lambda jobs, cfg: jobs)
+    units = [(f"RQ-20300101-00{i}", "research-harness-dispatch.yml") for i in range(1, 4)] + \
+            [("RQ-20300101-009", "research-script-run-kaggle-cpu.yml")]
+    fired, _ = _fired_cycle(tmp_path, monkeypatch, units, extra_args=("--max-research-inflight", "2"))
+    assert _fired_workflows(fired) == ["research-harness-dispatch.yml"] * 2
+
+
+# ── workflow_run listener runs do not count toward the repo-queued cap (manager decision 2026-10-16) ──
+def _evruns(pairs, age_min=5):
+    from datetime import datetime, timedelta, timezone
+    ts = (datetime.now(timezone.utc) - timedelta(minutes=age_min)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return [{"databaseId": i, "workflowName": n, "status": "queued", "createdAt": ts, "event": ev}
+            for i, (n, ev) in enumerate(pairs)]
+
+
+def test_the_measured_listener_flood_of_2026_10_16_no_longer_defers_every_fire():
+    """09:37Z: 27 fresh queued runs, mostly claude-run-failure-alert (workflow_run), deferred every fire."""
+    queued = _evruns([("claude-run-failure-alert", "workflow_run")] * 20 + [("pytest-run", "pull_request")] * 4
+                     + [("pr-landing hold-merge alarm", "push")] * 2 + [("work-digest", "push")])
+    r = dq.backpressure(RESEARCH, max_inflight=8, max_queued=10, runs_by_status={"queued": queued, "in_progress": []})
+    assert r["block"] is None and r["repo_queued"] == 7 and r["listener_queued_ignored"] == 20, r
+    assert "20 workflow_run listener run(s) not counted" in r["detail"]
+
+
+def test_competing_runs_over_the_cap_still_defer():
+    queued = _evruns([("pytest-run", "pull_request")] * 11 + [("claude-run-failure-alert", "workflow_run")] * 5)
+    r = dq.backpressure(RESEARCH, max_inflight=8, max_queued=10, runs_by_status={"queued": queued, "in_progress": []})
+    assert r["block"] and "11 workflow runs are queued repo-wide" in r["block"]
+
+
+def test_a_queued_infra_listener_still_makes_research_yield():
+    # system-actions-cancel-guard is BOTH a workflow_run listener and an infra workflow: the yield is unchanged
+    queued = _evruns([("system-actions-cancel-guard", "workflow_run")])
+    r = dq.backpressure(RESEARCH, max_inflight=8, max_queued=10, runs_by_status={"queued": queued, "in_progress": []},
+                        infra_names=["system-actions-cancel-guard"])
+    assert r["block"] and "infra run(s) queued" in r["block"]
+
+
+def test_ghost_runs_older_than_a_day_and_listeners_are_both_ignored():
+    queued = _evruns([("vm-web-api-recover", "issues")] * 37, age_min=60 * 24 * 150) + \
+             _evruns([("claude-run-failure-alert", "workflow_run")] * 13)
+    r = dq.backpressure(RESEARCH, max_inflight=8, max_queued=10, runs_by_status={"queued": queued, "in_progress": []})
+    assert r["block"] is None and r["repo_queued"] == 0 and r["stale_ignored"] == 37
+
+
+def test_gh_runs_asks_for_the_event_field(monkeypatch):
+    seen = {}
+
+    def fake_run(cmd, *a, **k):
+        seen["cmd"] = cmd
+        return type("P", (), {"returncode": 0, "stdout": "[]", "stderr": ""})()
+    monkeypatch.setattr(dq.subprocess, "run", fake_run)
+    assert dq.gh_runs("queued") == []
+    assert "event" in seen["cmd"][seen["cmd"].index("--json") + 1].split(",")
+
+
+def test_the_failure_alert_listener_is_created_only_for_main_runs():
+    """(b) of the 2026-10-16 decision: PR CI completions must not create claude-run-failure-alert runs."""
+    import yaml
+    d = yaml.safe_load((REPO / ".github/workflows/claude-run-failure-alert.yml").read_text())
+    wr = (d.get(True) or d["on"])["workflow_run"]
+    assert wr.get("branches") == ["main"] and "pytest-run" in wr["workflows"]

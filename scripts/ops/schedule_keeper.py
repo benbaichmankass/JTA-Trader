@@ -112,6 +112,13 @@ TARGETS: dict[str, dict] = {
     # concurrency group. stale_hours 2 = four missed ticks before the keeper pages.
     "pytest-run.yml": {"stale_hours": 2, "starved_min": 30,
                        "self_dedupes": "scripts/ci/pytest_run_backstop.py no-ops a tick whose HEAD is already graded"},
+    # RESEARCH-PIPELINE-SLO (manager 2026-10-16): the `41 */2 * * *` cron (merged 11:17Z, #18579)
+    # NEVER fired -- its 12:41Z and 14:41Z slots created no run; the only runs were manual dispatches.
+    # 2-hourly cron => stale_hours 3 (one missed slot + grace pages). It needs no `dedupe` job: the
+    # alert is change-keyed (a run only messages on a CHANGE of the not-ok set, or a realert_hours
+    # reminder), so a late scheduled run after a keeper dispatch re-measures and sends nothing new.
+    "research-slo.yml": {"stale_hours": 3,
+                         "self_dedupes": "alerts are change-keyed (research_slo.py): a second run of one slot re-measures and re-sends nothing"},
 }
 
 #: A slot younger than this is left to GitHub's own scheduler.

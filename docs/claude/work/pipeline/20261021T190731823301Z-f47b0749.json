@@ -1,0 +1,24 @@
+{
+  "based_on": "20261021T183849726267Z-ea53ecf3.json",
+  "due_when": {
+    "check_every_days": 3,
+    "due_date": "2026-10-23",
+    "kind": "date"
+  },
+  "id": "PI-20261018-WH81NW96-0004",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-UNBLOCK-1018 (session_019BtYk72AWwvaGkwH81nW96) / ML-PROMOREADY-OOSEDGE-MEASURE / trainer-vm-diag #18887 #18888",
+    "rerun": "grep -n 'PROMOREADY_OOS_EDGE' scripts/ops/run_promotion_readiness.sh; trainer-vm-diag: systemctl show ict-promotion-readiness.service --property=MemoryMax; head -c 600 runtime_logs/trainer_mirror/promotion_readiness/$(date -u +%F)/SUMMARY.md"
+  },
+  "redate": {
+    "evidence": "manager relay 2026-10-21 ~19:10Z (operator popup answers)",
+    "observation": "OPERATOR ANSWER relayed by the manager 2026-10-21 ~19:10Z, verbatim: \"Raise to 5200M (Recommended)\"; asked to confirm after the cost was explained (no money cost; trainer is a 6 GB Always-Free VM, real cost is headroom): \"Yes, measure then raise\". Execution order set by the manager: (a) one read-only fleet-peak measurement via trainer-vm-diag (running: issue #19365, detached unit ph1021, heavy lock held, output /tmp only); (b) if the peak fits under 5200M with enough VM headroom, raise MemoryMax to 5200M through the sanctioned path and turn PROMOREADY_OOS_EDGE on (Tier 2, operator-approved; revert = 4500M); (c) else the 300k-row cap fallback; (d) observe the next 5m training cycle with no OOM kill.",
+    "observed_at": "2026-10-21"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 2,
+  "what": "[ml] Tier-2 decision for the manager: flip PROMOREADY_OOS_EDGE on in scripts/ops/run_promotion_readiness.sh now that peak RSS is MEASURED (1h ~1.06 GB, 15m 2.24 GB, 5m 4.69-4.70 GB vs the 4.5 GiB MemoryMax -- the two 5m heads leave < 1% margin; population: 2 of 8 shadow heads gate-checked on the trainer 2026-10-18, relay #18888, n=2 5m heads): choose (a) raise MemoryMax to 5.2G in deploy/trainer ict-promotion-readiness.service, or (b) cap the sweep's oos_edge at ~300k rows per head. Until flipped, the daily readiness report holds every shadow head on oos_edge insufficient_data and can never propose a promotion"
+}

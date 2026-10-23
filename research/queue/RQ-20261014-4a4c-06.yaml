@@ -1,7 +1,7 @@
 id: RQ-20261014-4a4c-06
 title: 'P4-Q2 net of cost: does a PPI-surprise SIGN BOOK on ES (enter release-day close, hold 3 days) make money net of the full MES cost stack AND beat the all-long naive floor? (n~118
   trades)'
-status: queued
+status: done
 cadence: once
 theme: macro
 priority: 1
@@ -97,6 +97,17 @@ related:
 - RQ-20261014-de02-04
 - scripts/research/macro_event_study_run.py
 - .claude/skills/macro-research/SKILL.md
+last_dispatched_at: '2026-10-18T14:40:10+00:00'
 grading:
   auto: true
-last_dispatched_at: '2026-10-16T03:01:41+00:00'
+  confirmatory_run: 1
+  decision_rule_id: RULE-RQ-20261014-4a4c-06
+  evidence:
+  - research/results/RQ-20261014-4a4c-06/39135604524.jsonl
+  first_fail: 1 row(s), all measured, all fail
+  graded_at: '2026-10-20'
+  grader: scripts/research/queue_grade.py
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

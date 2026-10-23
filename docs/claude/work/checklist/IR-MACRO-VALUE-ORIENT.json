@@ -1,0 +1,21 @@
+{
+  "id": "IR-MACRO-VALUE-ORIENT",
+  "title": "Build: scripts/research wrapper (verdict.json) for horizon_ic_scan per symbol, then run blocked RQ-20261016-1fa6-09 (TLT/IEF valuation ORIENTATION check at 180/365 d)",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager (filed by lane IDEA-REVIEW-1016)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Family: M28 valuation read (A narrow, docs/research/idea-family-review-2026-10-16.md). FIELD FINDING 2026-10-16: config/macro_valuation.yaml:27 sets TLT/IEF real_yield_10y higher_is_cheaper: false ('high real yield => duration RICH'); for a bond, high yield = cheap price, so the cheap_score looks inverted, and pooling it with GLD/SLV can cancel. horizon_ic_scan.py lives in scripts/macro/, which script_run.py may not execute, and writes no verdict.json. FIRST STEP: scripts/research/value_orientation_scan.py wrapping fetch_macro_candles + horizon_ic_scan for ONE symbol, emitting verdict.json; then git mv research/queue/blocked/RQ-20261016-1fa6-09.yaml into research/queue/. Any orientation change is Tier-3 (config), never this row.",
+  "updated_at": "2026-10-16T09:08:34Z",
+  "updated_by": "lane-IDEA-REVIEW-1016",
+  "roadmap": [
+    "M28"
+  ],
+  "_seq": 534
+}

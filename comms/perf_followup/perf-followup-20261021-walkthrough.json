@@ -1,0 +1,252 @@
+{
+ "run_at": "2026-10-22T07:15:00Z",
+ "reviewer": "claude (perf-followup)",
+ "session": "session_017BQvdNkQGBh9s5U63Q3xWr",
+ "lane": "PERF-FOLLOWUP-2026W43",
+ "review": "docs/reviews/2026-10-21-weekly-walkthrough.md (PERFORMANCE section, merged #19362); pre-read docs/reviews/2026-10-22-weekly-planning-preread.md (PR #19473 branch)",
+ "window": [
+  "2026-09-21T00:00:00Z",
+  "2026-10-21T17:00:00Z"
+ ],
+ "operator_priority": "EXITS / GIVEBACK first (IDEAS.md 2026-10-21 'surf the volatility'); Track 1 xrp/ada_pullback_2h BELOW_BACKTEST",
+ "previous_run": {
+  "record": "comms/perf_followup/perf-followup-20261015-walkthrough.json",
+  "also_closed": "comms/perf_followup/perf-followup-20261010-191000.json",
+  "units_total": 5,
+  "ran_and_read": 5,
+  "ran_unread": 0,
+  "not_run": 0,
+  "underpowered": 0,
+  "killed": 0,
+  "actions": [
+   "W42 RQ-20261015-72ad-01 fail/NOT_CONFIRMED (research/results/RQ-20261015-72ad-01/39007945691.jsonl) -> pre-registered consequence applied: PI-20261011-HOPS1447-0001 killed",
+   "W41 RQ-20261010-419b-01..04 all ran_and_read (research-ops 2026-10-11T15:00Z); PI-20261010-ERFFUW41-0003 already done 2026-10-15",
+   "PI-20261010-ERFFUW41-0001 FIXED + done (shadow != refusal rule in .claude/skills/performance-review/SKILL.md)",
+   "PI-20261010-ERFFUW41-0002 FIXED + done (scripts/ops/paper_book_tracker.py current_roster split, tests/test_paper_book_tracker_roster_split.py)",
+   "checklist PERF-FOLLOWUP-2026W41 and -2026W42 -> done"
+  ]
+ },
+ "tune": [
+  {
+   "leg": "xrp_pullback_2h (bybit_2 real money)",
+   "cause": "execution",
+   "detail": "ENTRY: live decides on the forming 2h bar, the record scores closed bars (live_bt_trade_join 2026-10-18, EXIT/EXECUTION gaps ~0). Live -9.92R n=17 sits at pct 1.8 of the forming-arm band (full, n=499) and 4.2 (latest 25%, mean +0.001R/trade); as-traded Stage 0 MIXED (folds 3-4 -0.04/-0.86R, holdout +0.17R/125). EXPLORATORY.",
+   "retest_ref": "scripts/research/as_traded_stage0.py over comms/research/RQ-20261018-2a10-01/arms",
+   "ends_in": "PI-20261022-LOWUPW43-0001 (routed DECISION-BAR-MATCH: run the operator's pre-registered closed-vs-forming improvement unit; demotion clauses only if neither clears RULE-D1)"
+  },
+  {
+   "leg": "ada_pullback_2h (bybit_2 real money)",
+   "cause": "execution",
+   "detail": "Same ENTRY cause plus a regime share. Live -6.91R n=15 sits at pct 11.0 (full, n=656) / 12.4 (latest 25%) of the forming arm it trades -> CONSISTENT with what it trades; as-traded Stage 0 PASS (+63.8R, holdout +10.1R, 3/4 folds). EXPLORATORY.",
+   "retest_ref": "same",
+   "ends_in": "no action, because live is consistent with the as-traded band: keep accruing and R4 decides at its threshold; the bar-match re-evidence rides PI-20261022-LOWUPW43-0001 and the exit question rides RQ-20261022-fd06-01"
+  },
+  {
+   "leg": "ict_scalp_sol_5m / ict_scalp_sol_15m / ict_scalp_mgc_15m (paper)",
+   "cause": "regime",
+   "detail": "negative R/cap-day in W30 at R-n 8/6/8",
+   "retest_ref": "walk-through table W30",
+   "ends_in": "no action, because every one is insufficient_n (R-n < 10) on paper books and the mgc $ is a sizing/valuation defect already filed as PI-20261021-4ZLRFEV1-0002"
+  }
+ ],
+ "lessons": [
+  {
+   "id": "L1",
+   "kind": "weakness",
+   "claim": "The giveback headline (85-87% of peak) is read as a leak but has no benchmark: the money legs' own Stage-0-positive backtests give back 72-90% of peak, so the live figure is the declared exits' design, not a live failure.",
+   "evidence": [
+    "comms/research/RQ-20261018-2a10-01/arms/ada_pullback_2h__B_forming__trades.jsonl",
+    "comms/research/RQ-20261018-2a10-01/arms/xrp_pullback_2h__B_forming__trades.jsonl",
+    "comms/research/RQ-20261018-2a10-01/arms/trend_donchian_eth_4h__B_forming__trades.jsonl",
+    "comms/research/RQ-20261018-2a10-01/arms/trend_donchian_xrp_4h__B_forming__trades.jsonl",
+    "comms/research/RQ-20261018-2a10-01/arms/trend_donchian_eth_prop__B_forming__trades.jsonl",
+    "comms/research/RQ-20261018-2a10-01/arms/trend_donchian_sol_prop__B_forming__trades.jsonl",
+    "docs/reviews/2026-10-21-weekly-walkthrough.md#3"
+   ],
+   "population": "backtest: 6 crypto money legs, forming + closed arms of RQ-20261018-2a10-01 (Binance 1m proxy, 2020-01..2026-10-16, n 74..1682 per arm, gross_r vs lagged mfe_r); live: paper+mirror R-graded W30 n=131, 90d n=328",
+   "confidence": "measured",
+   "ends_in": "PI-20261022-LOWUPW43-0002"
+  },
+  {
+   "id": "L2",
+   "kind": "strength",
+   "claim": "The exit path executes as backtested: on matched live/backtest pairs the EXIT component is small (+0.66R xrp_pb, -0.26R ada_pb) and live deep->loss (15.3% of 59) is below the backtests' 27-44%, so giveback improvement is an exit-DESIGN question, not an execution fix.",
+   "evidence": [
+    "comms/research/live_bt_join/2026-10-18/",
+    "PI-20261015-10152047-0001 terminal_reason",
+    "docs/reviews/2026-10-21-weekly-walkthrough.md#3"
+   ],
+   "population": "bybit_2 closed trades joined within 1 bar to arm A of the holdout run (xrp_pb 5 matched pairs, ada_pb matched set); live paper+mirror W30 deep n=59",
+   "confidence": "suggestive",
+   "ends_in": "no action, because exit DESIGN on the money legs is already queued: Programme 01 Q9/Q10/Q11 (RQ-20261018-012/-014, RQ-20261022-001..007) plus this lane's RQ-20261022-fd06-01..03"
+  },
+  {
+   "id": "L3",
+   "kind": "weakness",
+   "claim": "Deciding on the FORMING bar costs every crypto money leg twice: lower mean net R AND higher giveback than the closed-bar arm, on all six legs.",
+   "evidence": [
+    "comms/research/RQ-20261018-2a10-01/arms/ada_pullback_2h__A_closed__trades.jsonl",
+    "comms/research/RQ-20261018-2a10-01/arms/ada_pullback_2h__B_forming__trades.jsonl",
+    "comms/research/RQ-20261018-2a10-01/arms/xrp_pullback_2h__A_closed__trades.jsonl",
+    "comms/research/RQ-20261018-2a10-01/arms/xrp_pullback_2h__B_forming__trades.jsonl",
+    "comms/research/RQ-20261018-2a10-01/arms/trend_donchian_eth_4h__A_closed__trades.jsonl",
+    "comms/research/RQ-20261018-2a10-01/arms/trend_donchian_eth_4h__B_forming__trades.jsonl"
+   ],
+   "population": "6 legs x 2 arms of RQ-20261018-2a10-01; mean net R closed->forming: ada .156->.097, xrp_pb .108->.053, eth_4h .350->.192, xrp_4h .193->.051, eth_prop .076->.044, sol_prop .134->.063; giveback share closed->forming: 83.0->87.8, 83.5->89.5, 71.9->81.9, 73.6->88.4, 87.6->90.0, 85.0->90.5",
+   "confidence": "measured",
+   "ends_in": "PI-20261022-LOWUPW43-0001"
+  },
+  {
+   "id": "L4",
+   "kind": "weakness",
+   "claim": "One paper scalp's census row is arithmetically impossible for a 1R-stop bracket (mean -1.26R, median +0.57R, 10/17 peaked >= 1R and none closed <= 0), so an outlier R basis or a beyond-stop loss is inflating the pooled giveback.",
+   "evidence": [
+    "research/results/RQ-20261014-9807-01/38674510250.jsonl strategies[ict_scalp_xrp_5m]"
+   ],
+   "population": "ict_scalp_xrp_5m paper, 90d to 2026-10-15, n=17 (16 telemetry_final + 1 pnl_over_risk_usd)",
+   "confidence": "anecdote",
+   "ends_in": "PI-20261022-LOWUPW43-0003"
+  },
+  {
+   "id": "L5",
+   "kind": "weakness",
+   "claim": "43.6% of the giveback census population is paper ict_scalp legs (139 of 319), which none of the queued exit units touch.",
+   "evidence": [
+    "research/results/RQ-20261014-9807-01/38674510250.jsonl"
+   ],
+   "population": "census paper class n=319 (90d to 2026-10-15)",
+   "confidence": "measured",
+   "ends_in": "no action, because the scalp exit family was already answered (TP revision 0/5 x 7 legs; M19 S2-exit RQ-20260928-005 / RQ-20260929-401 done), these are paper-only legs (last in money rank), and per L1 the share is not a leak until benchmarked (PI-20261022-LOWUPW43-0002)"
+  },
+  {
+   "id": "L6",
+   "kind": "strength",
+   "claim": "The low-giveback, positive-R legs on paper are trend legs that let a tail run: trend_donchian_avax_4h (35% share, +1.01R mean), uso_trend_1h (37%, +1.08R), trend_donchian_ada_4h (51%, +0.79R).",
+   "evidence": [
+    "research/results/RQ-20261014-9807-01/38674510250.jsonl"
+   ],
+   "population": "census paper, n=12 / 8 / 8",
+   "confidence": "anecdote",
+   "ends_in": "no action, because n <= 12 per leg cannot support a claim; the census re-runs weekly (RQ-20261014-9807-01) and will accrue it"
+  },
+  {
+   "id": "L7",
+   "kind": "weakness",
+   "claim": "The operator's 'split into two trades' idea already has a July answer (banking cut net R in 20/20 cells) whose stated reason -- giving away an UNCAPPED tail -- no longer holds for legs that now declare a finite TP.",
+   "evidence": [
+    "docs/research/M20-exit-refinement-2026-07-12.md#6.2",
+    "config/strategies.yaml ada_pullback_2h tp_r 4, xrp_pullback_2h tp_r 3.0, trend_donchian_xrp_4h tp_r 3, trend_donchian_eth_4h tp_r 50.0",
+    "docs/claude/work/IDEAS.md 2026-10-21"
+   ],
+   "population": "July: 20 banking cells, donchian + pullback families, 5y IS/OOS; today: 4 bybit_2 money legs' declared TP",
+   "confidence": "measured",
+   "ends_in": "RQ-20261022-fd06-01, RQ-20261022-fd06-02, RQ-20261022-fd06-03"
+  }
+ ],
+ "extrapolate": [
+  {
+   "lesson": "L3",
+   "applies_to": [
+    "trend_donchian_eth_4h",
+    "trend_donchian_sol_prop",
+    "trend_donchian_eth_prop",
+    "ada_pullback_2h"
+   ],
+   "new_hypothesis": "the operator's 'match the bar' answer covers every forming-bar money leg, not only eth_prop and xrp_pullback_2h; four of them PASS as-traded and can be matched by re-evidencing, not by a builder switch",
+   "ends_in": "PI-20261022-LOWUPW43-0001"
+  },
+  {
+   "lesson": "L7",
+   "applies_to": [
+    "xrp_pullback_2h",
+    "trend_donchian_xrp_4h"
+   ],
+   "new_hypothesis": "a fixed-threshold bank pays once the TP caps the tail",
+   "ends_in": "RQ-20261022-fd06-02, RQ-20261022-fd06-03"
+  },
+  {
+   "lesson": "L7",
+   "applies_to": [
+    "trend_donchian_eth_4h"
+   ],
+   "new_hypothesis": "",
+   "ends_in": "no action, because eth_4h still declares the 50R sentinel (uncapped tail, tp_revision measured-move), so the July verdict's reason applies unchanged"
+  },
+  {
+   "lesson": "L7",
+   "applies_to": [
+    "trend_donchian_eth_prop",
+    "trend_donchian_sol_prop"
+   ],
+   "new_hypothesis": "",
+   "ends_in": "no action, because prop legs are graded on the prop EV/survival gate against the firm's DD limits, not on net R, and Breakout carries no exchange-side management for a second TP leg; a prop banking unit needs that gate as its statistic"
+  },
+  {
+   "lesson": "L1",
+   "applies_to": [
+    "every leg in the giveback census"
+   ],
+   "new_hypothesis": "",
+   "ends_in": "PI-20261022-LOWUPW43-0002"
+  },
+  {
+   "lesson": "frontier (Track 3.3)",
+   "applies_to": [],
+   "new_hypothesis": "",
+   "ends_in": "no action, because the 2026-10-21 walk-through ran this week's frontier scan (its section 4) and the operator ranked exits first this week; the 3-unit strategy-frontier allowance is unused, not dropped"
+  }
+ ],
+ "portfolio": [
+  {
+   "question": "Are xrp_pullback_2h and ada_pullback_2h (both BELOW_BACKTEST together) the same bet twice?",
+   "finding": "No: daily-R corr 0.19, co-drawdown overlap 0.22 (RQ-20261010-419b-04, config-exact replay); the joint underperformance is the shared forming-bar ENTRY cause (L3), not a shared position",
+   "ends_in": "no action, because RQ-20261010-419b-04 measured it (no_action_warranted) and the rosters have not changed since"
+  },
+  {
+   "question": "Real-money concentration and contribution",
+   "finding": "W30 real money n=23, -$48, R-graded n=5: no leg is gradeable in-window",
+   "ends_in": "no action, because real-money R-n <= 5 per leg is insufficient_n; accrual, not a verdict"
+  },
+  {
+   "question": "Paper $ concentration",
+   "finding": "ict_scalp_mgc_15m carries 56% of paper W30 $ (both ESTIMATED, 96/150 contracts)",
+   "ends_in": "no action, because it is a sizing/valuation defect already filed as PI-20261021-4ZLRFEV1-0002; no paper $ is a decision number until it is fixed"
+  },
+  {
+   "question": "Removal: xrp_pullback_2h on bybit_2",
+   "finding": "as-traded set MIXED, holdout +0.17R/125; closed arm holds",
+   "ends_in": "PI-20261022-LOWUPW43-0001 (tier-3 proposal routed to DECISION-BAR-MATCH; improvement test first, demotion only if neither bar clears RULE-D1)"
+  }
+ ],
+ "queue_units": [
+  "RQ-20261022-fd06-01 (ada_pullback_2h bank, dispatchable)",
+  "RQ-20261022-fd06-02 (xrp_pullback_2h bank, dispatchable)",
+  "RQ-20261022-fd06-03 (trend_donchian_xrp_4h bank, dispatchable)"
+ ],
+ "pipeline_items": [
+  "PI-20261022-LOWUPW43-0001 (new, tier-3 proposal, routed DECISION-BAR-MATCH)",
+  "PI-20261022-LOWUPW43-0002 (new, tier-1 tooling)",
+  "PI-20261022-LOWUPW43-0003 (new, data-quality check)",
+  "PI-20261022-LOWUPW43-0004 (new, tier-1: replay units admitted as 'accruing' but graded as tests; 567 queue files)",
+  "PI-20261021-4ZLRFEV1-0001 (done)",
+  "PI-20261011-HOPS1447-0001 (killed)",
+  "PI-20261010-ERFFUW41-0001 (done)",
+  "PI-20261010-ERFFUW41-0002 (done)"
+ ],
+ "checklist_rows": [
+  "PERF-FOLLOWUP-2026W41 (done)",
+  "PERF-FOLLOWUP-2026W42 (done)",
+  "PERF-FOLLOWUP-2026W43 (row on PR #19473's branch; counts reported to the manager, not edited here to avoid an add/add conflict)"
+ ],
+ "tooling": [
+  "scripts/research/as_traded_stage0.py + tests/test_as_traded_stage0.py",
+  "scripts/ops/paper_book_tracker.py current_roster + tests/test_paper_book_tracker_roster_split.py",
+  ".claude/skills/performance-review/SKILL.md shadow != refusal"
+ ],
+ "cost_usd": null,
+ "cost_note": "not metered in-session; ceiling 15",
+ "done": {
+  "every_entry_ends": true,
+  "previous_run_closed": true
+ }
+}

@@ -1,0 +1,36 @@
+{
+  "id": "PHONE-EXEC-OBSERVABLE-1018",
+  "title": "breakout_2 phone executor made OBSERVABLE and TESTABLE, built once: step captures (server-only, 7-day TTL) + rehearsal drill + real-page fixtures + signed remote exec.js + one refusal alert (operator decision 2026-10-18)",
+  "phase": null,
+  "state": "blocked",
+  "owner": "lane PHONE-EXEC-OBSERVABLE-1018 (Fable)",
+  "lane": "session_01Cqmpr14msnNhk7ZQrmYRfS",
+  "model": "claude-fable-5-1",
+  "ceiling_usd": 60,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [
+    19010,
+    19029,
+    19072
+  ],
+  "blocked_on": [
+    "PR #19072 (Tier-2 HOLD, manager merge) \u2014 the sl-only amend record fix; lane stopped 2026-10-19 05:10Z on the manager budget directive, no further drills until told"
+  ],
+  "note": "2026-10-18 20:54Z OBSERVED on the terminal: after #19029 (exec.js .6) + APK 1b.311 installed 20:25Z, drills 3/4/5 (#19035/#19036/#19038) PASSED on the real position (every step, sheet re-opened after Cancel), sheet_edit armed 20:53:59Z, #a9 emitted 20:54:38Z (backoff waived) and APPLIED by 20:55:11Z: capture amend-prop-manual-c1dba3c376b3-a9-20261018T205440Z, 11 steps 0 failed, typed 2391.18 into the price input, Confirm live, sheet re-opened, stop_reread 2391.18 == asked. The stop moved 2452.65 -> 2391.18 by the system alone. Server-side defect found: record_amend_result demanded a TP read-back on an sl-only amend (phone reports tp None) and recorded mismatch (fails 8); fix PR branch claude/phone-trail-sl-only-verify (Tier-2 HOLD). Residual until the next tighten: the fill open_risk sl still reads 2452.65 while the trail resting_sl is 2391.18. 2026-10-19 05:10Z lane close-out (budget stop, manager directive 04:47Z): the P0 standard is OBSERVED (stop moved by the system alone, 20:54Z); the row stays open on three named observations, none yet made: (1) after #19072 merges + ict-web-api picks it up, the next sl-only amend on breakout_2 records status amended in /api/bot/prop/status phone_trail (closes the fix, and the residual: the fill open_risk sl 2452.65 vs trail resting_sl 2391.18 reconciles on the next tighten); (2) the capture-purge timer first run at 03:17Z daily (diag journalctl?unit=ict-phone-capture-purge; OnCalendar 03:17 UTC in deploy/ict-phone-capture-purge.timer); (3) the drill with a symbol: test trade (MD-EXEC-DEV-TEST-TRADES) has not been run. Local guards: ruff-lint FAIL is the sandbox ruff 0.16 artifact; CI guards green on bb5aa2bca. 2026-10-19 05:55Z: main CI is red by date, not by this PR \u2014 tests/test_exec_test_trades.py::test_daily_cap_counts_only_tickets_that_reached_the_venue pins NOW=2026-10-18 while prop_journal.record_ticket stamps created_at from the wall clock and count_today has no upper bound, so every pytest-run after 2026-10-19 00:00Z fails (reproduced locally on files identical to main). Blocks the #19072 merge if pytest-run is required. Proposed 2-line fix (record_ticket honours ticket created_at; write_ticket passes now) verified locally, posted on #19072, NOT pushed (manager: one PR). Needs its own Tier-2-by-path PR (src/prop) or a test-only variant when the manager says. 2026-10-19 05:55Z: manager chose a TEST-ONLY fix on this branch (pin prop_journal._now_iso to NOW in the daily-cap test; no src change) \u2014 pushed as fb76796b8; the src created_at patch above stays unapplied.",
+  "updated_at": "2026-10-19T05:55:42Z",
+  "updated_by": "session_01Cqmpr14msnNhk7ZQrmYRfS",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "observation": {
+    "what": "the stop-amend DRILL passes 3 times in a row on the operator phone (breakout_2) with a capture per step, then one live trail amend applies on the same logic (SL moves on the sheet, read back)",
+    "how_to_check": "GET /api/diag/phone_drill?account_id=breakout_2 (3 consecutive pass) + GET /api/diag/phone_captures?account_id=breakout_2 (a run per drill) + /api/bot/prop/status phone_trail amend status amended",
+    "due_by": "2026-10-25T00:00Z"
+  },
+  "writeback": {
+    "roadmap": "L-PROP: the phone executor is observable (step captures) and testable (drill + real-page fixtures); logic ships signed without an APK",
+    "arch": "ARCHITECTURE-CANONICAL: phone executor section gains the capture store, the drill and the signed remote logic once landed"
+  },
+  "_seq": 561
+}

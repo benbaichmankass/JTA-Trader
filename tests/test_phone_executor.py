@@ -335,7 +335,7 @@ def test_pending_peek_counts_without_claiming(monkeypatch):
     c = TestClient(api_main.app, raise_server_exceptions=False)
     assert c.get("/api/bot/prop/phone/pending").status_code == 401
     h = {"Authorization": "Bearer " + TOKEN}
-    assert c.get("/api/bot/prop/phone/pending", headers=h).json() == {"ok": True, "pending": 0, "status_age_hours": None}
+    assert c.get("/api/bot/prop/phone/pending", headers=h).json() == {"ok": True, "pending": 0, "status_age_hours": None, "drill": None}
     _ticket("old", minutes=-1)
     _ticket("t1")
     assert c.get("/api/bot/prop/phone/pending", headers=h).json()["pending"] == 1

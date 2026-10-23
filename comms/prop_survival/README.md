@@ -17,4 +17,4 @@ Required fields (fail closed; a PR body is not a record):
 | `decision_rule` | `{id, registered_at, verdict: "pass"}` — the rule registered BEFORE the run |
 
 The directory is empty by design today: `trend_donchian_eth_prop` and `trend_donchian_sol_prop` are
-grandfathered by name (soak due 2026-11-07 / 2026-12-11, row `PROP-GATE-PARITY`).
+grandfathered by name (grandfather exemption lapses 2026-11-07 / 2026-12-11, row `PROP-GATE-PARITY`; the soak itself is mechanical, 1-2 clean trades, OPERATING-PLAN § 2). Programme 05 nodes `P5-GATE-*` (research/programmes/05-prop.yaml) produce the per-leg inputs for these records.

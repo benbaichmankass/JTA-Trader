@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "grep over research/templates/*.yaml finds no 're-queues for a confirmatory run' text, or the manager records that the prose is left as-is with a reason",
+    "kind": "event"
+  },
+  "id": "PI-20261016-QOTFUEXV-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-CONFIRM-FRESH-WINDOW / PR #18593",
+    "rerun": "grep -n 're-queues for a confirmatory run' research/templates/*.yaml"
+  },
+  "state": "queued",
+  "what": "Template rule prose for prop-fit-breakout and roster-walkforward still says 'a FAIL re-queues for a confirmatory run', but since #18593 (operator decision 2026-10-16, row RESEARCH-CONFIRM-FRESH-WINDOW) queue_grade closes a deterministic template cell's first FAIL with no same-window replay. Prose in research/templates/prop-fit-breakout.yaml (decision_rule.rule) and roster-walkforward.yaml (decision_rule.rule) disagrees with the grader (field beats comment). NOTE: editing a template changes its sha/family key and the generator's next units; research/templates/** is Tier-2 (check_pr_landing TIER2_PATHS), so this is a held PR that a human reads."
+}

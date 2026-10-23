@@ -70,6 +70,8 @@ on:
         type: choice
         options:
           - status-check
+          - disk-usage-report
+          - prune-db-backups
           - list-listening-ports
           - gateway-logs
           - gateway-forensics
@@ -129,6 +131,7 @@ on:
           - send-ping
           - send-prop-test-ping
           - phone-dry-test
+          - phone-drill
           - generate-strategy-review-packets
           - grade-closed-trades
           - set-env
@@ -153,6 +156,7 @@ on:
           - supersede-reset-orphan-artifacts
           - supersede-intent-reduce-phantom-pnl
           - backfill-intent-reduce-pnl
+          - backfill-own-fill-exits
           - fix-prop-mislinked-close
           - prop-ticket-expire
           - prop-ticket-reissue
@@ -403,7 +407,11 @@ jobs:
           ISSUE_TITLE: ${{ github.event.issue.title }}
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          # $GITHUB_EVENT_NAME, not the github.event_name expression: a run
+          # script holding any expression is evaluated as ONE template capped at
+          # 21000 chars, and this step crossed it on 2026-10-17 (a6f9a1707:
+          # GitHub rejected the whole workflow, so no system-action ran).
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
             action="${DISPATCH_ACTION}"
             reason="${DISPATCH_REASON}"
             account_id="${DISPATCH_ACCOUNT_ID}"
@@ -643,6 +651,11 @@ jobs:
                      | grep -i -m1 '^[[:space:]]*apply[[:space:]]*:' \
                      | sed -E 's/^[[:space:]]*[Aa]pply[[:space:]]*:[[:space:]]*//' \
                      | tr -d '[:space:]' || true)
+            # prune-db-backups: optional count of newest backups always kept.
+            keep=$(printf '%s\n' "${ISSUE_BODY}" \
+                     | grep -i -m1 '^[[:space:]]*keep[[:space:]]*:' \
+                     | sed -E 's/^[[:space:]]*[Kk]eep[[:space:]]*:[[:space:]]*//' \
+                     | tr -d '[:space:]' || true)
             # supersede-*-artifacts: optional comma-separated trade-id allowlist.
             ids=$(printf '%s\n' "${ISSUE_BODY}" \
                      | grep -i -m1 '^[[:space:]]*ids[[:space:]]*:' \
@@ -756,22 +769,23 @@ jobs:
           echo "ACTION_FORCE_CLIENT_ID=${force_client_id:-}" >>"$GITHUB_ENV"
           echo "ACTION_ALLOW_MIRROR=${allow_mirror:-}" >>"$GITHUB_ENV"
           echo "ACTION_IDS=${ids:-}" >>"$GITHUB_ENV"
+          echo "ACTION_KEEP=${keep:-}" >>"$GITHUB_ENV"
           echo "ACTION_EQUAL_ONLY=${equal_only:-}" >>"$GITHUB_ENV"
           echo "ACTION_EXIT_PRICE=${exit_price:-}" >>"$GITHUB_ENV"
           echo "ACTION_CLOSED_AT=${closed_at:-}" >>"$GITHUB_ENV"
           echo "ACTION_FROM_PLACED=${from_placed:-}" >>"$GITHUB_ENV"
           echo "ACTION_ROW=${row_id:-}" >>"$GITHUB_ENV"
           echo "ACTION_EXIT_KIND=${exit_kind:-}" >>"$GITHUB_ENV"
-          echo ">>> Resolved ACTION=${action:-} REASON=${reason:-} ACCOUNT_ID=${account_id:-} MODE=${mode:-} TRADE_ID=${trade_id:-} SYMBOL=${symbol:-} DAYS=${days:-} WINDOWS=${windows:-} WINDOW_DAYS=${window_days:-} BT_MODE=${bt_mode:-} RECENT_ONLY_FRAC=${recent_only_frac:-} (event=${{ github.event_name }})"
+          echo ">>> Resolved ACTION=${action:-} REASON=${reason:-} ACCOUNT_ID=${account_id:-} MODE=${mode:-} TRADE_ID=${trade_id:-} SYMBOL=${symbol:-} DAYS=${days:-} WINDOWS=${windows:-} WINDOW_DAYS=${window_days:-} BT_MODE=${bt_mode:-} RECENT_ONLY_FRAC=${recent_only_frac:-} (event=${GITHUB_EVENT_NAME})"
 
       - name: Validate action and tier policy
         run: |
           set -euo pipefail
           case "${ACTION}" in
-            status-check|verify-account-mode|list-listening-ports|gateway-logs|gateway-forensics|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|send-ping|send-prop-test-ping|phone-dry-test|generate-strategy-review-packets|grade-closed-trades|net-r-regrade|get-env|passkey-enrol-code)
+            status-check|verify-account-mode|disk-usage-report|list-listening-ports|gateway-logs|gateway-forensics|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|send-ping|send-prop-test-ping|phone-dry-test|phone-drill|generate-strategy-review-packets|grade-closed-trades|net-r-regrade|get-env|passkey-enrol-code)
               echo "tier=1" >>"$GITHUB_ENV"
               ;;
-            pull-and-deploy|init-web-session-pepper|install-web-api-deps|restart-bot-service|stop-bot-service|start-bot-service|reboot-vm|enable-closed-flat-invariant|disable-closed-flat-invariant|set-mobile-push-secrets|enable-insights-generator|disable-insights-generator|inspect-insights|kick-insights|enable-signal-dual-write|disable-signal-dual-write|backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|set-account-mode|fix-data-dir|rotate-account-keys|init-diag-token|set-env|unset-env|scrub-env-noncompliant|pause-autoheal|resume-autoheal|sync-clock|purge-cloudflared|purge-vm-runner|flatten-ib-position|flatten-bybit-position|switch-bybit-position-mode|flatten-alpaca-position|rearm-alpaca-protective|cancel-ib-order|attach-ib-target|close-stranded-journal-row|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|fix-prop-mislinked-close|prop-ticket-expire|prop-ticket-reissue|prop-report-close|repair-prop-fill-direction|breakout-login-check|breakout-terminal-probe|egress-landing-probe|velotrade-api-probe|velotrade-api-roundtrip|velotrade-trade-history-read|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm|cancel-stale-tpsl-legs|backfill-tpsl-leg-ids|reattach-stranded-package-legs)
+            pull-and-deploy|init-web-session-pepper|install-web-api-deps|restart-bot-service|stop-bot-service|start-bot-service|reboot-vm|enable-closed-flat-invariant|disable-closed-flat-invariant|set-mobile-push-secrets|enable-insights-generator|disable-insights-generator|inspect-insights|kick-insights|enable-signal-dual-write|disable-signal-dual-write|backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|set-account-mode|fix-data-dir|rotate-account-keys|init-diag-token|set-env|unset-env|scrub-env-noncompliant|pause-autoheal|resume-autoheal|sync-clock|purge-cloudflared|purge-vm-runner|flatten-ib-position|flatten-bybit-position|switch-bybit-position-mode|flatten-alpaca-position|rearm-alpaca-protective|cancel-ib-order|attach-ib-target|close-stranded-journal-row|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|fix-prop-mislinked-close|prop-ticket-expire|prop-ticket-reissue|prop-report-close|repair-prop-fill-direction|breakout-login-check|breakout-terminal-probe|egress-landing-probe|velotrade-api-probe|velotrade-api-roundtrip|velotrade-trade-history-read|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm|cancel-stale-tpsl-legs|backfill-tpsl-leg-ids|reattach-stranded-package-legs)
               echo "tier=2" >>"$GITHUB_ENV"
               if [ -z "${REASON// }" ]; then
                 echo "::error::Tier-2 action '${ACTION}' requires a non-empty 'reason' input."
@@ -1177,6 +1191,26 @@ jobs:
               exit 1
             fi
           fi
+          # phone-drill (PHONE-EXEC-OBSERVABLE-1018): ONE phone rehearsal drill
+          # request (a file beside the journal; no order change). `account` is
+          # REQUIRED, shape-checked here and allowlisted on the VM against
+          # config/prop_platforms.yaml::phone_accounts by src.prop.phone_drill.
+          if [ "${ACTION}" = "phone-drill" ]; then
+            if [ -z "${ACCOUNT_ID// }" ]; then
+              echo "::error::phone-drill requires 'account: <phone_accounts key>' (issue body) or 'account_id' (workflow_dispatch)."
+              exit 1
+            fi
+            if ! printf '%s' "${ACCOUNT_ID}" | grep -Eq '^[A-Za-z0-9_-]+$'; then
+              echo "::error::phone-drill account '${ACCOUNT_ID}' invalid (allowed: A-Z a-z 0-9 _ -)."
+              exit 1
+            fi
+            # `symbol` (optional) = a drill WITH a minimum-size test trade (MD-EXEC-DEV-TEST-TRADES);
+            # shape-checked here, every bound checked on the VM by src.prop.exec_test_trades.
+            if [ -n "${ACTION_SYMBOL// }" ] && ! printf '%s' "${ACTION_SYMBOL}" | grep -Eq '^[A-Za-z0-9]+$'; then
+              echo "::error::phone-drill symbol '${ACTION_SYMBOL}' invalid (allowed: A-Z a-z 0-9)."
+              exit 1
+            fi
+          fi
           # repair-prop-fill-direction: prop-journal hygiene. `account` is
           # OPTIONAL (omitted = every account), because the defect is a class
           # and scoping the sweep to one id is how the previous three instances
@@ -1257,6 +1291,37 @@ jobs:
               echo "::error::breakout-terminal-probe symbol '${ACTION_SYMBOL}' invalid (allowed: A-Z a-z 0-9 . _ -)."
               exit 1
             fi
+          fi
+          # prune-db-backups: days >= 0, keep 1-99 (the newest backup is never pruned); apply true/false.
+          if [ "${ACTION}" = "prune-db-backups" ]; then
+            if [ -n "${ACTION_KEEP// }" ] && ! printf '%s' "${ACTION_KEEP}" | grep -Eq '^[1-9][0-9]?$'; then
+              echo "::error::prune-db-backups keep must be a whole number 1-99 (got '${ACTION_KEEP}')."
+              exit 1
+            fi
+            if [ -n "${ACTION_DAYS// }" ] && ! printf '%s' "${ACTION_DAYS}" | grep -Eq '^[0-9]+$'; then
+              echo "::error::prune-db-backups days must be a whole number >= 0 (got '${ACTION_DAYS}')."
+              exit 1
+            fi
+            case "${ACTION_APPLY:-}" in
+              ""|true|false) ;;
+              *)
+                echo "::error::prune-db-backups apply must be true or false (got '${ACTION_APPLY}')."
+                exit 1 ;;
+            esac
+          fi
+          # backfill-own-fill-exits: ids are numeric (passed to python as an
+          # allowlist); apply is true/false and the helper refuses apply without ids.
+          if [ "${ACTION}" = "backfill-own-fill-exits" ]; then
+            if [ -n "${ACTION_IDS// }" ] && ! printf '%s' "${ACTION_IDS}" | grep -Eq '^[0-9]+(,[0-9]+)*$'; then
+              echo "::error::backfill-own-fill-exits ids must be comma-separated trade ids (got '${ACTION_IDS}')."
+              exit 1
+            fi
+            case "${ACTION_APPLY:-}" in
+              ""|true|false) ;;
+              *)
+                echo "::error::backfill-own-fill-exits apply must be true or false (got '${ACTION_APPLY}')."
+                exit 1 ;;
+            esac
           fi
           # backfill-tpsl-leg-ids: same contract as cancel-stale-tpsl-legs
           # (account_id + symbol required; apply gates dry-run-vs-write). The
@@ -1564,6 +1629,8 @@ jobs:
           # the script name resolved from the validated `ACTION`.
           case "${ACTION}" in
             status-check)                       SCRIPT="status_check.sh" ;;
+            disk-usage-report)                  SCRIPT="disk_usage_report.sh" ;;
+            prune-db-backups)                   SCRIPT="prune_db_backups.sh" ;;
             list-listening-ports)               SCRIPT="list_listening_ports.sh" ;;
             gateway-logs)                       SCRIPT="gateway_logs.sh" ;;
             gateway-forensics)                  SCRIPT="gateway_forensics.sh" ;;
@@ -1628,6 +1695,7 @@ jobs:
             send-ping)                          SCRIPT="send_ping_action.sh" ;;
             send-prop-test-ping)                SCRIPT="send_prop_test_ping_action.sh" ;;
             phone-dry-test)                     SCRIPT="phone_dry_test_action.sh" ;;
+            phone-drill)                        SCRIPT="phone_drill_action.sh" ;;
             set-env)                            SCRIPT="set_env.sh" ;;
             get-env)                            SCRIPT="get_env_action.sh" ;;
             unset-env)                          SCRIPT="unset_env.sh" ;;
@@ -1650,6 +1718,7 @@ jobs:
             supersede-reset-orphan-artifacts)   SCRIPT="supersede_reset_orphan_artifacts_action.sh" ;;
             supersede-intent-reduce-phantom-pnl) SCRIPT="supersede_intent_reduce_phantom_pnl_action.sh" ;;
             backfill-intent-reduce-pnl)         SCRIPT="backfill_intent_reduce_pnl_action.sh" ;;
+            backfill-own-fill-exits)            SCRIPT="backfill_own_fill_exits_action.sh" ;;
             fix-prop-mislinked-close)           SCRIPT="prop_fix_mislinked_close_action.sh" ;;
             prop-ticket-expire)                 SCRIPT="prop_ticket_expire_action.sh" ;;
             prop-ticket-reissue)                SCRIPT="prop_ticket_reissue_action.sh" ;;
@@ -1886,6 +1955,12 @@ jobs:
           if [ "${ACTION}" = "phone-dry-test" ]; then
             REMOTE_CMD="ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID}") ACTION_SYMBOL=$(printf '%q' "${ACTION_SYMBOL:-ETHUSDT}") ACTION_ISSUE=$(printf '%q' "${CLEAR_HALT_ISSUE:-}") ${REMOTE_CMD}"
           fi
+          # phone-drill: the account (required) and, for a drill WITH a test trade,
+          # the symbol (optional, EMPTY = a plain rehearsal); the issue number names
+          # the dispatch in the request's `by`.
+          if [ "${ACTION}" = "phone-drill" ]; then
+            REMOTE_CMD="ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID}") ACTION_SYMBOL=$(printf '%q' "${ACTION_SYMBOL:-}") ACTION_ISSUE=$(printf '%q' "${CLEAR_HALT_ISSUE:-}") ${REMOTE_CMD}"
+          fi
           if [ "${ACTION}" = "backfill-exit-labels" ]; then
             # ORDER-AUDIT-4: `apply: false` = preview (dry run only).
             REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
@@ -1921,6 +1996,12 @@ jobs:
             REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACTION_IDS=$(printf '%q' "${ACTION_IDS:-}") ACTION_EQUAL_ONLY=$(printf '%q' "${ACTION_EQUAL_ONLY:-}") ${REMOTE_CMD}"
           fi
           if [ "${ACTION}" = "backfill-intent-reduce-pnl" ]; then
+            REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACTION_IDS=$(printf '%q' "${ACTION_IDS:-}") ${REMOTE_CMD}"
+          fi
+          if [ "${ACTION}" = "prune-db-backups" ]; then
+            REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACTION_DAYS=$(printf '%q' "${ACTION_DAYS:-}") ACTION_KEEP=$(printf '%q' "${ACTION_KEEP:-}") ${REMOTE_CMD}"
+          fi
+          if [ "${ACTION}" = "backfill-own-fill-exits" ]; then
             REMOTE_CMD="ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACTION_IDS=$(printf '%q' "${ACTION_IDS:-}") ${REMOTE_CMD}"
           fi
           if [ "${ACTION}" = "fix-prop-mislinked-close" ]; then

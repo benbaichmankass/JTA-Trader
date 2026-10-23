@@ -1,0 +1,142 @@
+id: RQ-20261016-e2db-04
+title: >-
+  Tradeify NEW-strategy search, non-crypto: range mean-reversion (FVG range fade) (backtest_fvg_range, harness defaults) on QQQ 1h priced as XYZ100/USD -- a family
+  no live leg runs on this instrument
+status: done
+cadence: once
+theme: new_strategy_prop
+priority: 1
+kind: experiment
+roadmap:
+- L-PROP
+question: >-
+  Does range mean-reversion (FVG range fade) (scripts/backtest_fvg_range.py at its harness DEFAULTS, nothing tuned) on QQQ 1h show net edge AND survive Tradeify 24/7
+  1-Step (3% daily on live equity, 6% static drawdown) at flat 0.5% risk and the venue leverage cap 2:1, priced with Tradeify's cost stack, on the trainer's multi-year
+  QQQ 1h history as the proxy for the XYZ100/USD synthetic perp listed on tradeify_1?
+why_this_matters: >-
+  Operator, daily sync 2026-10-16 (verbatim): "If non if the existing strategies match that we should investigate some ones, maybe for symbols that we don't currently
+  trade." Every unit that re-priced an EXISTING leg on Tradeify non-crypto failed or was underpowered: RQ-20261015-24ca-01 (SLV fade, fail), -04 (SPY pullback 1h,
+  fail), -02/-03 (QQQ/SPY trend 1d, indeterminate n<88);  This unit asks a DIFFERENT entry family on XYZ100/USD: same reasoning as the SP500 sibling (RQ-20261016-e2db-03)
+  on the higher-beta index; QQQ 1h pullback (RQ-20261006-029) failed and the SPY/QQQ 1h pair (RQ-20260929-106) read no_action_warranted. Families were picked from
+  what the instrument does, using only harnesses that already resolve the full cost stack; session-open mean-reversion and carry/seasonality have no cost-complete
+  harness in the repo and are not tested here. MULTIPLICITY, disclosed before the run: this is one of FOUR sibling units (RQ-20261016-e2db-01..04, one family per
+  instrument, harness defaults, no parameter selection). A PASS is a LEAD, not a promotion case: it still needs the mechanical soak, cost fidelity and the Tier-3
+  roster decision, and the manager should read four-way multiplicity into a single marginal pass.
+power:
+  expected_n: 100
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    d=0.3 needs ~87-90 observations at alpha 0.05 / power 0.8 (the repo's prop-fit floor, RQ-20260928-011/-012/-013, the same floor as RQ-20261015-24ca-01..05). expected_n=100
+    is a GUESS, not a measurement: backtest_fvg_range has never run on QQQ 1h. Below 88 the unit grades UNDERPOWERED (indeterminate), never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Fixed historical backfill over the trainer's QQQ 1h candles (to 2026-06-18, ~8 years, verified trainer-diag #18392); nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261016-e2db-04
+  registered_at: '2026-10-16'
+  registered_before_run: true
+  statistic: >-
+    Per seed 1-5: prop_ev_sim path-mode ev_net_usd_per_life and p_net_positive over the leg's trade ledger (n = ledger rows), as graded by scripts/research/prop_ev_grid.py
+    --grade pass_all_seeds.
+  rule: >-
+    PASS IF n_trades >= 88 AND ev_net_usd_per_life > 0 on ALL 5 seeds AND p_net_positive >= 0.70 on ALL 5 seeds (prop_ev_sim path mode, config/prop_rulesets/tradeify_247_1step.yaml,
+    flat 0.5% risk, --lev-cap qqq_fvg_range_1h=2, --no-hedge, prorated swap, funded-start fresh). FAIL IF ev_net_usd_per_life <= 0 on ANY seed. INDETERMINATE (UNDERPOWERED)
+    IF n_trades < 88; INDETERMINATE (NULL) IF ev > 0 on all seeds but p_net_positive < 0.70 on any seed. The harness's own Stage-0 number (net_total_r at the same
+    costs) is written to harness.json and reported, not graded separately: a leg with no net edge cannot show ev > 0 on all 5 seeds. Tradeify cost stack: commission
+    0.04%/side = 8 bps round trip and swap 0.033%/day, both FIRM-DECLARED and UNCONFIRMED (config/prop_rulesets/tradeify_247_1step.yaml, accepted as declared by the
+    manager 2026-10-15 21:20Z, checklist TRADEIFY-INSTR-SPECS); slippage 3 bps round trip DECLARED, which is >= the MEASURED one-snapshot spread for every instrument
+    here (bps of mid, run 38807791311: SILVER 1.74, XYZ100 1.00, SP500 0.13, USOIL 1.04), so the measured spread is inside the slippage term, not added on top of
+    it. Leverage: 2:1 (marginRate 0.5 MEASURED by REST probe run 38812053334 for XYZ100 and SP500, 2:1 INFERRED; matches the firm's declared index cap). OPERATOR
+    RULE (2026-10-15, binding on every prop leg): a prop leg clears a SUPERSET of the real-money ladder: Stage 0 net of the full cost stack, THEN a mechanical soak
+    (1-2 clean live prop trades count), THEN cost fidelity, PLUS prop DD survival under the account's rules. This unit supplies Stage 0 and the prop-survival simulation
+    only. A PASS authorizes NO roster edit, NO account opening and NO order.
+  what_it_does_not_do: >-
+    Does not tune: harness defaults only, so there is nothing to select among. Does not touch config/strategies.yaml, config/accounts.yaml or config/prop_platforms.yaml,
+    places no order, and does not claim the synthetic perp's own price path: candles are the QQQ ETF series (regular + extended hours only), not the Hyperliquid-fed
+    24x7 instrument, so overnight/weekend gaps the perp would trade through are absent here.
+compute: needs_vm_data
+value:
+  bucket: structural
+  usd_at_stake_per_month: 200
+  confidence: 0.2
+  basis: >-
+    stand-in, not a measurement (same as RQ-20261015-24ca-01): a non-crypto prop leg widens tradeify_1 beyond the ETH/SOL pair
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 25
+  basis: >-
+    Single-symbol harness over ~8 years of 1h candles + 5 prop_ev_sim seeds; reads trainer-resident data/QQQ_1h.csv (not in metis-market-data), same shape as RQ-20261015-24ca-01.
+run:
+  commands:
+  - - python3
+    - scripts/backtest_fvg_range.py
+    - --symbol
+    - QQQ
+    - --timeframe
+    - 1h
+    - --fee-bps-roundtrip
+    - '8.0'
+    - --slippage-bps-roundtrip
+    - '3.0'
+    - --funding-bps-per-window
+    - '1.1'
+    - --emit-trades
+    - '{out_dir}/trades.jsonl'
+    - --json
+    - '{out_dir}/harness.json'
+  - - python3
+    - scripts/research/prop_ev_grid.py
+    - --leg
+    - qqq_fvg_range_1h={out_dir}/trades.jsonl
+    - --arm
+    - A=--sizing balance --risk-pct 0.005
+    - --common
+    - >-
+      --ruleset config/prop_rulesets/tradeify_247_1step.yaml --lev-cap qqq_fvg_range_1h=2 --no-hedge --swap-model prorated --funded-start fresh
+    - --seeds
+    - 1,2,3,4,5
+    - --grade
+    - pass_all_seeds
+    - --p-floor
+    - '0.70'
+    - --n-floor
+    - '88'
+    - --out
+    - '{out_dir}'
+    - --jobs
+    - '2'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261016-e2db-04
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- TRADEIFY-INSTR-SPECS
+- docs/research/tradeify-platforms-2026-10-15.md
+- config/prop_rulesets/tradeify_247_1step.yaml
+- research/queue/RQ-20261015-24ca-01.yaml
+- research/queue/RQ-20261015-ca42-01.yaml
+last_dispatched_at: '2026-10-16T21:55:40+00:00'
+grading:
+  attested: RULE-RQ-20261016-e2db-04
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ-20261016-e2db-04
+  evidence:
+  - research/results/RQ-20261016-e2db-04/38972617467.jsonl
+  graded_at: '2026-10-17'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

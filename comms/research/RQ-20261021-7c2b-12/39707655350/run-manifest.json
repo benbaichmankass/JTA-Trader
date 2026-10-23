@@ -1,0 +1,42 @@
+{
+  "unit": "RQ-20261021-7c2b-12",
+  "run_id": "39707655350",
+  "commit_sha": "6d14ca247216f4b7d137d292502187bf7ba8b2b1",
+  "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/39707655350",
+  "timeout_minutes": 330,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/prop_ev_grid.py",
+        "--leg",
+        "trend_donchian_eth_prop=comms/research/RQ-20261015-1bf3-05/38713761684/arms/P__trades.jsonl",
+        "--arm",
+        "A=--sizing start --risk-pct 0.0035 --dd-switch-frac 0.8",
+        "--arm",
+        "C0030=--sizing start --risk-pct 0.003 --dd-switch-frac 0.8",
+        "--arm",
+        "C0040=--sizing start --risk-pct 0.004 --dd-switch-frac 0.8",
+        "--arm",
+        "CROOM35=--sizing room --risk-pct 0.0035 --room-frac 0.45 --dd-switch-frac 0.8",
+        "--common",
+        "--trades trend_donchian_sol_prop=comms/research/RQ-20261015-1bf3-06/38730575207/arms/P__trades.jsonl --ruleset config/prop_rulesets/breakout_turbo_1step.yaml --costs breakout --swap-model prorated --funded-start fresh --lev-cap trend_donchian_eth_prop=5 --lev-cap trend_donchian_sol_prop=5",
+        "--seeds",
+        "1,2,3,4,5",
+        "--grade",
+        "any_c_dominates",
+        "--out",
+        "comms/research/RQ-20261021-7c2b-12/39707655350",
+        "--jobs",
+        "4",
+        "--note",
+        "P5 Q2 sizing rung 2, breakout_2 Turbo"
+      ],
+      "log": "comms/research/RQ-20261021-7c2b-12/39707655350/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 3965.1
+    }
+  ],
+  "all_ok": true
+}

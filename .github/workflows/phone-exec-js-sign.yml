@@ -1,0 +1,120 @@
+name: phone-exec-js-sign
+
+# SIGNED REMOTE LOGIC for the Breakout phone executor (PHONE-EXEC-OBSERVABLE-1018, operator decision 2026-10-18).
+#
+# Every push to main that changes tools/phone-executor/app/src/main/assets/exec.js (or this workflow) signs that
+# exact file with an ed25519 key that lives ONLY in the Actions secret PHONE_EXEC_JS_SIGNING_KEY and publishes
+# {version, sha256, sig} to the live API (POST /api/bot/prop/phone/exec-js-signature, DASHBOARD_API_TOKEN). The
+# phone then fetches the script from GET /phone/exec.js, verifies it against the PUBLIC key embedded in the APK
+# (phone-executor-apk.yml derives it from the same secret), and swaps it in without a reinstall.
+#
+# KEY LIFECYCLE, with no operator step and nothing in this PUBLIC repo (same pattern as the APK keystore):
+#   - the FIRST run that finds the secret absent generates a key with openssl and stores it with `gh secret set`
+#     (stdin, never echoed) using BRANCH_PROTECTION_TOKEN; every later run reuses it. A concurrency group stops two
+#     first runs racing. The PEM is written to $RUNNER_TEMP and deleted at the end of the job.
+#   - the key is never printed; only its PUBLIC half (32 bytes, base64) and the signature are.
+#   - if the secret is absent AND the PAT is unavailable, the job fails loudly: nothing is signed, the phone keeps
+#     its bundled copy (fail closed, never an unsigned script).
+# message = "metis-exec-js\n<version>\n<sha256hex of the file bytes>"; version = the `var EXEC_VERSION = "..."`
+# line inside exec.js (RemoteJs.kt / src/prop/phone_exec_js.py read the same line). The server serves the script
+# only while its working tree's sha256 equals the signed one (git-sync pulls main every ~5 min).
+#
+# Verify a run: the job prints the version, sha256 and the server's `match`; a session reads
+# GET /api/diag/phone_exec_js (tree vs signature, served true/false) and the phone's heartbeat exec_js / exec_src.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/phone-executor/app/src/main/assets/exec.js'
+      - '.github/workflows/phone-exec-js-sign.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phone-exec-js-signing
+  cancel-in-progress: false
+
+jobs:
+  sign:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Signing key (create once into Actions secrets, never printed)
+        env:
+          KEY_B64: ${{ secrets.PHONE_EXEC_JS_SIGNING_KEY }}
+          GH_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          KEY="$RUNNER_TEMP/exec-js-signing.pem"
+          if [ -n "${KEY_B64}" ]; then
+            printf '%s' "${KEY_B64}" | base64 -d > "$KEY"
+            echo "signing: reusing the stored key"
+          else
+            if [ -z "${GH_TOKEN}" ]; then
+              echo "::error::PHONE_EXEC_JS_SIGNING_KEY absent and BRANCH_PROTECTION_TOKEN unavailable: cannot create a signing key; nothing signed (the phone keeps its bundled exec.js)."
+              exit 1
+            fi
+            openssl genpkey -algorithm ed25519 -out "$KEY" 2>/dev/null
+            base64 -w0 "$KEY" | gh secret set PHONE_EXEC_JS_SIGNING_KEY --repo "$REPO"
+            echo "signing: generated a NEW ed25519 key and stored it in Actions secrets (first run)"
+          fi
+          chmod 600 "$KEY"
+          echo "PHONE_EXEC_JS_KEY=$KEY" >> "$GITHUB_ENV"
+          # the PUBLIC key is public (it is in every APK): print it so the embedded asset can be checked
+          echo "public key (raw 32 bytes, base64): $(openssl pkey -in "$KEY" -pubout -outform DER | tail -c 32 | base64 -w0)"
+
+      - name: Sign exec.js
+        run: |
+          set -euo pipefail
+          JS=tools/phone-executor/app/src/main/assets/exec.js
+          VERSION=$(grep -oE 'var EXEC_VERSION = "[0-9]{4}-[0-9]{2}-[0-9]{2}\.[0-9]+";' "$JS" | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+          if [ -z "${VERSION}" ]; then
+            echo "::error::exec.js carries no 'var EXEC_VERSION = \"YYYY-MM-DD.N\";' pin; refusing to sign an unversioned script."
+            exit 1
+          fi
+          SHA=$(sha256sum "$JS" | cut -d' ' -f1)
+          printf 'metis-exec-js\n%s\n%s' "$VERSION" "$SHA" > "$RUNNER_TEMP/msg.txt"
+          SIG=$(openssl pkeyutl -sign -inkey "$PHONE_EXEC_JS_KEY" -rawin -in "$RUNNER_TEMP/msg.txt" | base64 -w0)
+          echo "version=$VERSION sha256=$SHA sig=$SIG"
+          echo "EXEC_JS_VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "EXEC_JS_SHA=$SHA" >> "$GITHUB_ENV"
+          echo "EXEC_JS_SIG=$SIG" >> "$GITHUB_ENV"
+
+      - name: Publish the signature to the live API
+        env:
+          DASHBOARD_API_TOKEN: ${{ secrets.DASHBOARD_API_TOKEN }}
+          BOT_API_BASE: ${{ vars.BOT_API_BASE || 'https://ict-bot.duckdns.org' }}
+          COMMIT: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DASHBOARD_API_TOKEN}" ]; then
+            echo "::error::DASHBOARD_API_TOKEN secret is unset: the signature cannot be published (the phone keeps its bundled exec.js)."
+            exit 1
+          fi
+          BODY=$(python3 - <<'EOF'
+          import json, os
+          print(json.dumps({"version": os.environ["EXEC_JS_VERSION"], "sha256": os.environ["EXEC_JS_SHA"], "sig": os.environ["EXEC_JS_SIG"],
+                            "commit": os.environ["COMMIT"], "signer": "phone-exec-js-sign " + os.environ["RUN_URL"]}))
+          EOF
+          )
+          OUT=$(curl -sS --fail --max-time 30 --retry 3 --retry-delay 10 \
+                -H "Authorization: Bearer ${DASHBOARD_API_TOKEN}" -H 'Content-Type: application/json' \
+                -X POST "${BOT_API_BASE}/api/bot/prop/phone/exec-js-signature" -d "${BODY}")
+          echo "server: ${OUT}"
+          MATCH=$(printf '%s' "${OUT}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("match"))')
+          if [ "${MATCH}" != "True" ]; then
+            echo "::warning::the VM working tree does not carry these bytes yet (git-sync pulls main every ~5 min); the server serves the script only once it does — re-run this workflow if that never happens."
+          fi
+
+      - name: Remove the key file
+        if: always()
+        run: rm -f "$RUNNER_TEMP/exec-js-signing.pem" "$RUNNER_TEMP/msg.txt"
+
+# no-durable-result: the result is the signature record on the VM (GET /api/diag/phone_exec_js), not this job

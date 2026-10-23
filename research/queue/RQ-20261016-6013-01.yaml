@@ -1,0 +1,83 @@
+id: RQ-20261016-6013-01
+title: 'RESEARCH-TRIAL-LEDGER weekly regenerate: per (leg, family) n_configs + effective N, and DSR / Harvey-Liu haircut on every comms/strategy_evidence record (report-only)'
+status: queued
+cadence: weekly
+theme: infra
+priority: 2
+kind: deterministic
+roadmap:
+- L-LADDER
+question: >-
+  Checklist row RESEARCH-TRIAL-LEDGER. Re-fold docs/research/m20-sweep-corpus.jsonl, research/results/**
+  (E5, measured backtest rows) and research/queue grading blocks into the trial ledger keyed by
+  (leg, family): how many configurations have been tried per leg, the effective N after return-
+  correlation clustering, and, for every comms/strategy_evidence record, the DSR and the Harvey-Liu
+  haircut net expectancy at that N. Each week the factory adds trials, so N only grows; this re-asks it.
+why_not_inferential: >-
+  A deterministic fold of committed stores: every row is read, nothing is sampled, and no hypothesis is
+  tested by this unit. The DSR / haircut numbers it writes are deterministic functions of committed
+  per-trade series and the counted N. Report-only by operator decision 2026-10-16
+  (PROMOTION-BAR-MULTIPLICITY, "Measure first (Recommended)").
+decision_rule:
+  id: RULE-RQ20261016-6013-01-TRIAL-LEDGER-BUILD
+  registered_at: '2026-10-16'
+  registered_before_run: true
+  statistic: >-
+    scripts/research/trial_ledger.py verdict_for(): per comms/strategy_evidence record, its state
+    (computed / no_series / not_a_leg_record / unreadable) and N_used; the count of Stage-0 PASS records
+    and of those with DSR > 0.95 AND BHY-haircut net expectancy > 0.
+  rule: >-
+    PASS IF every evidence record carries a state in {computed, no_series, not_a_leg_record} and every
+    computed record carries N_used: the ledger at comms/research/RQ-20261016-6013-01/<run_id>/trial_ledger.json
+    is the current one, and its survival count goes to PROMOTION-BAR-MULTIPLICITY for the operator.
+    INDETERMINATE otherwise (a record unreadable or without a state): the previous ledger stands and the
+    failing record is named in measurement.records_without_state. NO_DATA if no evidence record was read.
+  what_it_does_not_do: >-
+    Changes no bar, mandate, roster or config (config/mandates.yaml untouched). A record that fails the
+    deflated bar is NOT demoted or blocked by this unit; the bar decision is the operator's
+    (PROMOTION-BAR-MULTIPLICITY).
+compute: cpu_light
+value:
+  bucket: structural
+  usd_at_stake_per_month: 100
+  confidence: 0.3
+  basis: 'stand-in: keeps the multiplicity measurement behind PROMOTION-BAR-MULTIPLICITY current; not a measured P&L'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 0.5
+  est_minutes: 2
+  basis: 'MEASURED 2026-10-16 in the authoring sandbox: a full build over 1,493 m20 rows, 1,003 E5 rows, 757 units and 53 records took ~6 s wall.'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 15
+  command:
+  - python3
+  - scripts/research/trial_ledger.py
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261016-6013-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RESEARCH-TRIAL-LEDGER
+- PROMOTION-BAR-MULTIPLICITY
+- scripts/research/trial_ledger.py
+- comms/research/trial_ledger.json
+- docs/research/research-ops-benchmark-2026-10-16.md
+last_dispatched_at: '2026-10-16T14:09:54+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-RQ20261016-6013-01-TRIAL-LEDGER-BUILD
+  evidence:
+  - research/results/RQ-20261016-6013-01/38913578533.jsonl
+  graded_at: '2026-10-23'
+  grader: scripts/research/queue_grade.py
+  latest: true
+  needs_review: false
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

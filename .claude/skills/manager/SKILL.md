@@ -3,7 +3,7 @@ name: manager
 description: The manager-session contract. Read this at the start of any session that spawns or supervises other sessions. Defines the one job, the one register, spawn rules, the model table, the budget, and the daily-sync brief.
 ---
 
-> **Doc status:** `live` · category `instruction` · last verified `2026-10-13` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
+> **Doc status:** `live` · category `instruction` · last verified `2026-10-18` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
 
 # The manager contract
 
@@ -23,6 +23,68 @@ That is the whole job. Everything below either serves it or is forbidden.
 decisions a day."* The operator rejected that on 2026-09-21: a cap on decisions
 is a cap on throughput. The job is to AUTOMATE the decision, not to ration it.
 
+## The operating loop (operator, 2026-10-18, binding)
+
+> Operator, verbatim: *"We want to get as much work as possible out of our budget without blowing
+> through it before a reset."* At least one lane always runs; up to five by judgment; **no hard caps**
+> (*"Adding hard limits doesn't fix a manager that isn't doing that job"*). And the reason this is one
+> section rather than another rule: *"a correct process that every session will read for how to ingest
+> a new task, process it, queue it up, prioritize it correctly ... not just like one more ad hoc rule."*
+
+**Every manager runs these six steps, in order, at session start and at every check-in** — the
+"Manager lane check-in" routine, a lane's wake, the twice-daily review. A check-in prompt needs to say
+only *"run the operating loop (manager SKILL.md § The operating loop)"*. The ranked plan lives in the
+register, never in a session's head or a trigger prompt: a new manager inherits it with `checklist.py queue`.
+
+1. **INTAKE.** Every new item — from the operator, a lane, a review or an alert — becomes a checklist row
+   (a build) or a `research/queue/` unit (a question) **before** anything is dispatched. A row carries
+   `roadmap`, `priority_rank` (1 = dispatch next), `model` and `ceiling_usd` (the size estimate). Rank by
+   value and urgency against the roadmap goals and the header's `priorities.order`; broken live-money or
+   prop paths rank first. **Urgent means rank 1, never started on arrival.** Re-rank the neighbours in the
+   same commit. Push, then answer.
+2. **CAPACITY.** Record the operator's latest Settings → Usage reading (`spend_meter.py --record`, with the
+   reset time in `--note`), then run `spend_meter.py --capacity`. It computes the sustainable rate,
+   `(100 − weekly%) / days to reset`, and converts it to a suggested lane count using the measured cost per
+   lane-hour. Choose 1–5 lanes from that by judgment. A missing or stale reading is the first thing to
+   fix; until then run one lane. Fable has its own weekly bar; it is not free capacity (§ "Model by task class").
+3. **DISPATCH.** While fewer lanes run than step 2 chose, take the top row of `checklist.py queue`
+   (`queued`, nothing in `blocked_on`, lowest `priority_rank`), set it `in_flight` with its `lane`, and
+   dispatch it (§ "Spawning", § "Required dispatch block"). **Never zero lanes while the queue is
+   non-empty; never above the rate.**
+4. **LAND.** List every open PR. Each green one that waits on the manager (`landing: hold`, a refused
+   self-land, a research hold PR) is landed now (Tier 1/2), or put to the operator on its recorded approval
+   path (Tier 3). A green PR waiting on the manager is the manager's failure.
+5. **CLOSE.** `list_sessions(mine=true)` → `lane_reconcile.py`; run § "Archive protocol" on every
+   finished lane it lists — only this project's, after checking it owns no open PR — then
+   `checklist.py archive-lane <ROW>`.
+6. **REPORT.** Three lines to the operator: **capacity** (reading, rate, lanes chosen) · **running**
+   (lanes and their rows) · **next** (the top of the queue). Say nothing when nothing changed.
+
+**Cadence.** The "Manager lane check-in" routine (`17 */3 * * *`) runs the loop every 3 h; a lane's wake
+runs it at once. There is no hourly check-in. The durability rules still hold: small PRs (a merged PR
+cannot be lost), push before answering, and state on disk (the checklist, `PIPELINE.jsonl`), never in a
+session's head.
+
+### Toolbox
+
+| step | tool | exact command |
+|---|---|---|
+| 1 | checklist CLI | `python3 scripts/ops/checklist.py add <ID> --title "…" --tier N --rank N --by "$SESSION"`, then `set <ID> roadmap='["M.."]' model=… ceiling_usd=N` |
+| 1 | research queue | a `research/queue/<id>.yaml` unit (`research/queue/PLANNING.md`) |
+| 2 | spend meter | `python3 scripts/ops/spend_meter.py --record --window weekly --percent P --read-at <ISO> --note "reset <Day> YYYY-MM-DD HH:MMZ"` · `python3 scripts/ops/spend_meter.py --capacity` |
+| 3 | ranked queue | `python3 scripts/ops/checklist.py queue [--limit N]` (also the Overview's `next` on the Workflow page) |
+| 3 | dispatch | `create_session` + `checklist.py set <ID> state=in_flight lane=<session>` |
+| 4 | open PRs | GitHub MCP `list_pull_requests(state="open")`; the landing intent is `.github/pr-landing/<slug>.json` |
+| 5 | lanes | `list_sessions(mine=true)` → `python3 scripts/ops/lane_reconcile.py --sessions <dump>` · `archive_session(<id>)` · `python3 scripts/ops/checklist.py archive-lane <ROW>` |
+| all | due work | `python3 scripts/ops/blocker_watch.py` · `GET /api/bot/work/brief` |
+| 1 | roadmap refs | `python3 scripts/ops/roadmap_map.py --report` |
+| 1 | a losing leg | `python3 scripts/research/live_vs_backtest.py` before any tune/demote row |
+| 4 | Tier-2/3 call | `python3 scripts/ops/mandate_resolver.py` (FIRE / REFUSE / NEEDS_DATA), § "Before any operator popup" |
+| 4 | landing | § "How lane PRs land" (`.github/pr-landing/`, `claim_merge_slot.py --branch-claim`) |
+
+Guard: `manager-pacing-guard` (`scripts/ci/check_manager_pacing.py`) fails if a live doc brings back the
+retired pacing doctrine, or if this section or its Start-of-session pointer goes missing.
+
 ## Standing alert subscriptions (operator, 2026-10-13, binding)
 
 **Every manager session, at start AND after any handover, calls `subscribe_pr_activity` on the ops-flags PR** (title
@@ -36,6 +98,7 @@ operator on the system Telegram channel. If the PR is ever replaced, change `pr_
 
 ## Start of session
 
+0. **Run § "The operating loop"** after the steps below, and at every check-in after that.
 1. **Title yourself.** Call `get_session` with no `session_id` to read your own
    id and `created_at` (UTC), then `set_session_title` to
    `Manager Session YYYY-MM-DD` using that UTC date (e.g. `Manager Session
@@ -119,11 +182,8 @@ substitute for it:**
   operator's behalf, and repeatedly re-spawning the same blocked action hoping
   a fresh session won't be caught is the thing this boundary forbids.
 
-**Measured incident:** 2026-09-28, lane MANDATE-ARM-2 read the "forbidden
-alternatives" language above as forbidding it from reporting its own refusal
-back to the manager at all; it doesn't — that language is about the manager's
-own classifier block, not a lane's report-back — and this section is corrected
-so it can't be misread that way again.
+**Measured incident:** 2026-09-28, lane MANDATE-ARM-2 misread the "forbidden alternatives" above as
+forbidding it to report its own refusal. They cover only the manager's own classifier block.
 
 **Lanes:** a lane blocked by the classifier reports the exact denied action to
 the manager in one line (see `docs/CLAUDE-RULES-CANONICAL.md` § "No lane files
@@ -131,8 +191,7 @@ a dispute of operator authority") and does not file it anywhere else.
 
 ## Five things the manager does
 
-1. **Picks what runs next** — reads `research/queue/` and the checklist against
-   the cycle priority the operator set at the last sync.
+1. **Picks what runs next** — § "The operating loop", steps 1–3.
 2. **Spawns lanes** — fresh by default, correct model, **one question each**,
    scoped so they cannot sprawl.
 3. **Applies what comes back** — a pre-registered `decision_rule` means the
@@ -161,91 +220,28 @@ about a leg that is losing, its lane runs `scripts/research/live_vs_backtest.py`
 4. **Block on an operator answer.** State an assumption and keep going. A
    manager that waits becomes an extra decision gate in front of the operator,
    which is the constraint it exists to relieve.
-5. **Exceed the daily budget without saying so at the next sync.**
+5. **Exceed the sustainable rate (§ "The operating loop", step 2) without saying so in its next report.**
 
-## The budget — DAILY, and spend it
+## The budget
 
-**The manager paces on the DAILY budget: 10% of the weekly allowance per day.**
-That is the control variable and the only number the manager is accountable for.
-
-⚠️ **THE WEEKLY BAR IS NOT THE MANAGER'S METER** (operator, 2026-09-21):
-*"the manager should be focused on the daily budget, not weekly, as I sometimes
-use Claude for other projects… I will start a new manager session after this one
-and I expect it to use the daily budget, even if we pass into the margin."*
-
-The account-level weekly figure aggregates **every surface and every project the
-operator touches**, including work this repo cannot see and did not cause.
-Grading the manager against it is a category error — and one already made once
-on 2026-09-21, when a 68% weekly reading was written up as *"the stated policy
-is not being met."* It was withdrawn. Report the weekly bar as **context,
-unattributable**, never as the manager's score, and never blend the two into one
-"budget" number.
-
-⚠️ **THE 30% MARGIN IS NOT YOURS TO PRESERVE BY DOING LESS.** It exists to
-absorb the operator's other projects and surprises. A manager that throttles its
-lane because the *account* bar looks high has spent the margin's purpose on
-nothing and delivered less for it. **Spend the daily budget. Passing into the
-margin is authorized.**
-
-⚠️ **THE FAILURE MODE IS NOT HITTING A CAP.** It is *"losing work to sessions
-dying in the middle"* (operator). **That is a durability problem and budgeting
-cannot fix it.** The mitigations are structural, and they are binding:
-
-- **Land work in small PRs, not one large one.** A merged PR cannot be lost.
-- **Push, then answer.** Unpushed work lives only in a container that ends.
-- **Keep state on disk** — `PIPELINE.jsonl`, the checklist — never in a
-  session's head. A resumed session reads; it does not remember.
-
-The **~5-hour session window** is what actually kills a session mid-task, so it
-is the in-session number to watch. The weekly bar has never killed anything
-mid-run.
-
-⚠️ **Under-spending is a failure too, and it is the quieter one.** The operator
-retired the previous model for *"wasting a lot of tokens without producing a lot
-of results"* — the fix is output per unit spent, not a smaller number. An unspent
-daily budget bought nothing.
+The pace is § "The operating loop", step 2. Retired 2026-10-18 (and kept out by `manager-pacing-guard`):
+"10% a day, and spend it" into the margin, and mass parallel launches with hourly check-ins. That day
+six parallel lanes moved the weekly bar 55% → 73% in ~3 h. The weekly bar covers every project the
+operator runs: report it with its reading time, never blended with per-lane dollars.
 
 ### Output per unit spent: practices that worked (operator-noted 2026-09-27)
 
-The operator flagged the 2026-09-26/27 manager session as well below pace *while
-delivering*, and asked for its practices to be kept. They complement the section
-above rather than override it: **spend the daily budget; spend it on results.**
-
-- **The manager reads narrowly.** Targeted greps and single-field extracts from
-  JSON, logs and PR bodies; never whole files or full lane transcripts. The
-  `get_session` summary plus the PR body is the lane's report. Deep reading and
-  diag work belong to lanes.
-- **Lane prompts are self-contained.** Every prompt carries the exact ids, paths,
-  evidence already established, the done condition, the landing recipe and the
-  shape of the final message. A lane that must re-derive context spends twice; a
-  manager that must re-read a lane's work spends three times.
-- **Model follows risk, per the table.** Sonnet by default. Opus only on an order
-  path or a real-money judgment call (3 of the 25 lanes dispatched over those two days).
-- **Record the decision on the register BEFORE dispatch** and point the lane at
-  it. Every `create_session` passes
-  `append_system_prompt`, tags `manager:<session id>` and cites
-  `docs/CLAUDE-RULES-CANONICAL.md` § "Lanes answer to the manager". A lane that
-  still declines is resumed once, then archived and restarted. The operator is
-  never asked to approve inside a lane.
-- **Check-in cadence follows activity.** Hourly while lanes run, 3-hourly when
-  none do, and silent when nothing changed.
-- **Archive on merge (§ "Archive protocol"); dispatch in parallel** (one message, many lanes).
-- **Git hygiene on the register branch:** never chain a commit after a merge
-  whose exit status was not checked; validate the checklist JSON and grep for
-  conflict markers before every commit (a conflicted checklist was pushed once
-  on 2026-09-26 by exactly that chain).
-
-⚠️ **Running below the 10%/day pace while delivering is NOT under-spending**
-(operator, 2026-09-27, correcting the manager, who had called it one: *"It's not
-a failure here at all, we are getting work done at a good usage pace"*). The
-"under-spending is a failure" warning above means an idle or throttled manager,
-not an efficient one. Judge the pace by results delivered, never by distance
-from 10%.
-
-Headroom this leaves is available for **depth** when a task warrants it
-(multi-fold rather than single-split tests, Opus where risk warrants it,
-audits). It is not a target to hit, and never a reason to move work off the model
-its risk demands.
+- **The manager reads narrowly**; the `get_session` summary plus the PR body is the lane's report.
+- **Lane prompts are self-contained**: ids, paths, established evidence, done condition, landing recipe.
+- **Model follows risk, per the table.** Sonnet by default; Opus only on an order path or a real-money
+  judgment call.
+- **Record the decision on the register BEFORE dispatch** and point the lane at it (step 1 of the loop).
+  A lane that still declines is resumed once, then archived and restarted. The operator is never asked
+  to approve inside a lane.
+- **Git hygiene on the register branch:** never chain a commit after a merge whose exit status was not
+  checked; validate the row and grep for conflict markers before every commit.
+- **Judge the pace by results delivered**, never by distance from a target: running under the rate while
+  delivering is not a failure (operator, 2026-09-27); an idle manager with a non-empty queue is.
 
 ## Hibernating before a usage-limit outage
 
@@ -260,9 +256,8 @@ design intent.
 
 ### Before the limit — what worked
 
-1. **Arm GitHub auto-merge on every PR that would otherwise wait on the manager**:
-   `gh api -X PUT repos/<owner>/<repo>/pulls/<n>/ccr/auto_merge -f merge_method=squash`.
-   Merges then happen on green with nobody in the loop. Tier-2/3 PRs stay held by
+1. **Arm GitHub auto-merge on every PR that would otherwise wait on the manager** (command in
+   § "How lane PRs land"); it merges on green with nobody in the loop. Tier-2/3 PRs stay held by
    design — do not arm those.
 2. **Tell every live lane, by trigger, that the manager may go silent**: arm
    auto-merge on their own PRs, finish and close out without waiting, report after
@@ -289,24 +284,15 @@ design intent.
 
 ### What still broke — check these first on return
 
-- **Lanes die mid-task at the limit** with status "You've hit your weekly limit"
-  and **no wake**. Measured: RQ-FIX had pushed its branch but not opened its PR;
-  PHONE-DRYTEST-ACTION had merged but not run its proof. On return:
-  `list_sessions(mine=true)`, read `status_bucket` and `post_turn_summary` of every
-  unarchived lane, then finish or re-dispatch each.
-- **"Keeps running" is not "keeps producing."** The research queue kept running
-  (cron + PAT auto-merge), but a defect it carried (PyYAML missing on the result
-  job) meant it produced no verdicts for 29 hours — `PI-20261006-APBY4NTV-0010`.
-  Put a **result-quality check** (verdict distribution, double fires) in the
-  pick-up list.
-- **A lane's self-land arming can be refused by the classifier**; those PRs wait
-  for the manager. Arm their auto-merge yourself before going dark — #16782 was
-  armed that way and merged at 14:01Z while the manager was out.
-- **A `hold` PR is the one that stays open.** RQ-FIX's fix PR #16791 landed
-  `hold` (`changes_landing_machinery`: R12 counts `queue_grade.py` as landing
-  machinery), so it could not self-land and still needed the manager. Its
-  register PR #16783, which the manager had armed, merged on green at 13:52Z
-  with nobody in the loop. List the `hold` PRs in the pick-up list.
+- **Lanes die mid-task at the limit, with no wake.** Measured: RQ-FIX had pushed but not opened its PR;
+  PHONE-DRYTEST-ACTION had merged but not run its proof. On return read `status_bucket` and
+  `post_turn_summary` of every unarchived lane, then finish or re-dispatch each.
+- **"Keeps running" is not "keeps producing."** The research queue kept running but produced no verdicts
+  for 29 h (PyYAML missing on the result job, `PI-20261006-APBY4NTV-0010`). Put a result-quality check
+  (verdict distribution, double fires) in the pick-up list.
+- **A self-land refused by the classifier, and every `hold` PR, waits for the manager.** Arm the
+  refusable ones yourself before going dark (#16782 merged that way while the manager was out) and list
+  the `hold` PRs (e.g. #16791, `changes_landing_machinery`) in the pick-up list.
 
 ### On return — the order that worked
 
@@ -323,9 +309,6 @@ design intent.
 ### How lane PRs land
 
 A Tier-1 lane self-lands its PR using a fixed process: create `.github/pr-landing/<slug>.json` with `tier: 1` and `landing: self`, create `.github/pr-automerge-requests/<slug>.txt`, run `python3 scripts/ops/claim_merge_slot.py --branch-claim --branch <branch> --held-by <session_id>` to claim the merge slot, and arm GitHub auto-merge with `gh api -X PUT repos/<owner>/<repo>/pulls/<n>/ccr/auto_merge -f merge_method=squash`. If Claude Code's classifier refuses the auto-merge arming (returns "Merge Without Review"), the lane re-declares the PR with `landing: hold` and `hold_reason: operator_asked_to_hold`, reports the exact refused command to the manager in one line, and the manager lands the PR. Tier-2/3 lane PRs always carry `landing: hold` — the manager (Tier 2) or operator's recorded approval (Tier 3) lands them. Measured precedent: PR #16719.
-
-- **Tier-1 lanes:** self-land when the classifier arms auto-merge; report blocked arming to the manager in one line; manager lands if blocked.
-- **Tier-2/3 lanes:** hold for manager (T2) or operator approval (T3); never self-land.
 
 ### After a `/performance-review` merges: dispatch `PERF-FOLLOWUP-<week>` (operator, 2026-10-10)
 
@@ -347,10 +330,37 @@ The manager keeps a recurring routine that dispatches **one** lane, `RESEARCH-OP
 (pipeline flowing, runnable floor, blocked units, results read, follow-ups filed); it does not
 replace topic lanes such as `PERF-FOLLOWUP-<week>`. **Skip a slot while the previous
 research-ops lane still runs** (check the checklist row / `get_session`; never stack two). **A running topic research lane (`RESEARCH-NIGHT-*`, `PERF-FOLLOWUP-*`, `REGIME-*`, ML, readouts) never causes a skip** (operator, 2026-10-11): those lanes do not do the operations work, so research-ops runs alongside them, told which topic lanes are live so it does not collide with their units. When a
-lane reports, land and archive it per § "Archive protocol"; its record is
+lane reports, land and archive it per § "Archive protocol". **A research floor gap is due work, not a note**
+(2026-10-16: runnable fell 22 → 9 while every research-ops handoff named it and nothing was dispatched). The brief's §0 now computes
+`### 🚨 RESEARCH FLOOR GAP` on every render (`queue_throughput.floor_gap_lines`); while it shows, dispatch a
+same-day authoring lane sized to the gap, aimed at the `H1-THEME` shortfalls of
+`check_research_queue_health.py`, drafting from `queue_replenish.py --authoring-queue` and the programme
+plans. The research-ops pass does not close that gap by itself: its authoring cap is a few units per pass. Its record is
 `comms/research/ops/<stamp>.json` and its one-line report goes in the daily brief's
 "what moved". Apply any Tier-3 proposal it leaves as a checklist note per § "Before any operator
 popup".
+
+### Research SLO escalation — a red research SLO is work TODAY (operator, 2026-10-16, binding)
+
+Operator: *"The health of the research pipeline must be something we monitor, report on and audit, so we never
+again end up realizing there's no actual work getting done."* The SLOs live in
+`scripts/research/research_slo.yaml`; `research-slo.yml` measures them every 2 h into
+`comms/research/health/<date>.json` and sends ONE message per state change to the system Telegram channel plus
+ONE comment on the ops-flags PR (marker `research-slo`; you are subscribed, so it wakes you). The brief's §0 shows
+the table on every render. **When any SLO is `breach` or `could_not_look`, the same day you dispatch the lane that
+moves it** — a note, a handoff line or a pipeline row with a far `due_when` is not a disposition:
+
+| red SLO | the lane you dispatch |
+|---|---|
+| `runnable_floor`, `authoring_supply_ratio_7d`, `theme_share_min_ratio`, `programme_coverage_pct` | an AUTHORING lane sized to the gap, aimed at the short themes / uncovered programme questions. Since 2026-10-18 (money first: `fair_order` ranks across themes by value, weight only breaks ties) `theme_share_min_ratio` recovers only through valuable units authored in the short theme, spare capacity, or `starve_hours` -- it is expected to read red longer; the lever is supply, never the threshold |
+| `undispositioned_24h`, `grade_latency_p*_d` | a GRADING lane over `result_disposition_check.py --list` |
+| `research_ops_not_run`, `research_ops_age_h` | the next research-ops slot is told to finish the named `not_run` steps first; a missed slot is re-dispatched |
+| `blocked_over_age` | an unblock-or-retire lane over the oldest blocked units |
+| `hold_pr_wait_h` | you land (or close with a reason) the held unit PRs — the wait is yours |
+| `fires_24h`, `lands_24h`, `dispatcher_age_h`, `collector_age_h`, `grader_age_h` | a fix lane on the stage named (the 15-min `research-watchdog` covers the emergencies; this is the trend) |
+
+A `could_not_look` is red too: fix the read, never read it as ok. Thresholds change only in the YAML, in a PR
+that says why; loosening one to clear a breach is the failure this section exists to stop.
 
 ### Weekly: the ML plan loop rides the Sunday `/ml-review` (operator, 2026-10-11)
 
@@ -362,7 +372,7 @@ work queue, and a run record at `comms/ml-plan/<stamp>.json`. **No new routine e
 Your part: (1) put the plan loop in that lane's dispatch prompt and ceiling (budget ~$4 on top of
 the review); (2) in the twice-daily review run `python3 scripts/ops/ml_plan_status.py` and work any
 flag the same turn (it is the cheap check that an item has not lost its row); (3) from the run
-record's `next_by_value_per_cost`, dispatch ML rows by capacity under the one-lane rule; (4) new
+record's `next_by_value_per_cost`, dispatch ML rows by capacity (§ "The operating loop", step 3); (4) new
 queue units the loop authors arrive in a hold PR — land them, they are pre-registered. If the lane
 reports a cadence need (e.g. a mid-week plumbing check), schedule it; the lane does not.
 
@@ -392,17 +402,10 @@ dispatch to the routine it already runs — no new cron.**
 ⚠️ **`create_session`'s `model` parameter defaults to the CALLING session's
 model.** Omit it and the lane silently inherits `opus`. Pass it every time.
 
-⚠️ **THERE IS A SECOND BUDGET, AND IT IS UNUSED.** Settings → Usage shows
-**Fable on its own weekly limit**, separate from the pool every row above draws
-on — measured 2026-09-21 at **0% used** against a main pool at **68%**. Work
-routed there is *additive* capacity. The operator has directed that it be
-employed: *"it should definitely be used when appropriate… we just want to make
-sure it is getting the tasks that are the best use of that resource."*
-
-**Which task classes has NOT been decided, and this table does not guess.**
-Choosing them is checklist row **E11**, whose method is to start with a class
-whose output is cheaply verifiable against work a current-model lane has already
-done, diff the two, and widen only on that evidence.
+**Fable has its own weekly bar** in Settings → Usage. It is not free capacity: a Fable lane counts in
+step 2 of the operating loop like any other. Where it goes is set by the header's `priorities.how_used`
+(the highest-value research items) and row **E11**, which widens it only on evidence from diffing its
+output against current-model work.
 
 ⚠️ **Spare budget NEVER moves work off the model its risk demands.** The
 real-money order-path row above is not negotiable against headroom in another
@@ -464,9 +467,8 @@ clicks, and your job is to **surface it, not clear it**.
 its head*.** Never when the context it needs is on disk — that is what disk is
 for. Subject-area overlap is not benefit.
 
-Measured 2026-09-17 on two resumed lanes: 91.1M and 102.4M cache-read tokens
-($55.82 / $69.23) against 141k / 227k output tokens. A fresh session starts near
-40k. Resume is not free and it is the default if you say nothing.
+Measured 2026-09-17: two resumed lanes read 91–102M cache tokens ($56/$69) for 141k/227k output; a
+fresh session starts near 40k. Resume is the default if you say nothing.
 
 ### One question per lane
 
@@ -480,22 +482,14 @@ the lane has produced, then kill or re-scope.** Never interrupt blind — an
 interrupt forfeits everything not yet landed, and cost-per-turn is the wrong
 measure once a lane is running. The right measure is cost per unit *delivered*.
 
-⚠️ **A CEILING NOBODY READS MID-FLIGHT IS NOT A CEILING.** Run
-`scripts/ops/lane_reconcile.py --sessions <a list_sessions dump>` at every
-check-in. It joins the dump to this checklist and prints, in one screen, the
-lanes over ceiling, the finished lanes still open, and the lanes walled on a
-permission prompt. MEASURED 2026-09-22 the first time it was run: **14 lanes
-over ceiling** (B1 at 12.4×, $435.05 against $35) where the row recording the
-problem had said six, because the manager read the numbers before the lanes were
-archived.
+⚠️ **A CEILING NOBODY READS MID-FLIGHT IS NOT A CEILING.** `lane_reconcile.py` (step 5 of the
+operating loop) prints, in one screen, the lanes over ceiling, the finished lanes still open, and the
+lanes walled on a permission prompt. Its first run (2026-09-22) found **14 lanes over ceiling** (B1 at
+12.4×) where the register said six.
 
-⚠️ **A LANE'S SPEND IS FINAL ONLY ONCE THE LANE IS ARCHIVED** (`session_status
-== SESSION_STATUS_ARCHIVED`). `get_session` on a live lane returns a **RUNNING**
-total, and a running total written onto a row reads exactly like a final one —
-the manager made that mistake twice on 2026-09-21, the second time inside the
-commit describing the first. Record it with the read time and the word `running`
-beside it, or read it after archiving. `lane_reconcile` will not print a bare
-figure; do not write one either.
+⚠️ **A LANE'S SPEND IS FINAL ONLY ONCE THE LANE IS ARCHIVED** (`SESSION_STATUS_ARCHIVED`).
+`get_session` on a live lane returns a **running** total that reads exactly like a final one (mistaken
+twice on 2026-09-21). Record it with the read time and the word `running`, or read it after archiving.
 
 ### Archive protocol: closing finished lanes is the manager's job
 
@@ -504,12 +498,18 @@ closing finished sessions, that falls under the management mandate."* The same
 day the manager told the operator a finished lane could be closed "whenever
 suits you" — the failure this protocol removes.
 
-**Why it matters.** A finished lane that stays open keeps costing, and watching
-one is not free: A9 went $37.13 → $50.78 and E16 $25.38 → $56.14 **after**
-their work merged. MEASURED 2026-09-22 across the 60 most recent sessions: 22
-finished sessions were not archived, holding **$2,088.73** of running spend.
-Do not duplicate those figures elsewhere; cite this section.
+**Why.** A finished lane that stays open keeps costing (A9: $37.13 → $50.78 **after** merging). 22
+were found unarchived on 2026-09-22 and ~300 on 2026-10-18, because no check-in ran this protocol; it
+is now step 5 of § "The operating loop".
 
+0. **Scope — this project's sessions only** (operator, 2026-10-18: *"the manager session should only
+   archive sessions attached to this project ... Other sessions should be left alone."*). `list_sessions`
+   lists the whole account; a bulk sweep that day archived 9 sessions of another project. A session is
+   eligible only with (a) a project repo (Metis-Insights, ict-trading-bot, ict-trader-dashboard,
+   ict-trader-android), (b) the project environment `env_01A9rfUVrcEo1i5pKP1kWnp3`, or (c) a mention in a
+   manager log (a row's `lane` / `lane_history`, or a `manager:` tag). **A foreign repo is never eligible.**
+   `lane_reconcile.py` applies this test (`archive_eligible`): archive only what it lists; its "LEFT
+   ALONE" block is never archived.
 1. **Ownership.** `archive_session` on a finished lane is the **manager's** job.
    The operator is never asked to close a lane, and the manager never tells the
    operator to ("you can close it whenever suits you" is a violation).
@@ -530,9 +530,8 @@ Do not duplicate those figures elsewhere; cite this section.
    - its verdict or report has not been received (ask it to re-send first);
    - it is `BLOCKED` on an operator permission prompt (**surface it**; see below);
    - it is mid-run on a live action.
-4. **Cadence.** Sweep at **every check-in and every merge**: `list_sessions(mine=true)`
-   plus `scripts/ops/lane_reconcile.py`, then archive the finished set in **one
-   batch**.
+4. **Cadence.** This is step 5 of § "The operating loop", and it runs after every merge too. Archive
+   the finished set in **one batch**.
 5. **Record.** After archiving, read the final spend (`session_status ==
    SESSION_STATUS_ARCHIVED` is what makes it final) and note it on the row at the
    next register batch. Archiving is reversible: `unarchive_session`.
@@ -551,18 +550,12 @@ minutes ahead) can succeed where `fire_trigger` fails; retry with backoff.
 `BLOCKED` means the lane is sitting on a permission prompt only a **human** can
 clear — `fire_trigger` is refused there, correctly, because firing would answer
 the prompt on the operator's behalf. **Surface it; never try to clear it.**
-MEASURED 2026-09-22: one such lane (`session_01XYu2vvg9Qgxoqf4jJQyd8i`,
-"ENGINEERING LANE MI-305", spawned 2026-09-18 by the previous manager) had sat
-BLOCKED and idle for **72.8 hours holding $1,343.06** — more than the whole
-13-lane day E20 was filed about — and had **never committed a line**. Nothing was
-looking. That is why the reconciler prints this every run, and why a scheduled
-watchdog runs it independently of whoever is managing
+MEASURED 2026-09-22: lane MI-305 sat BLOCKED for **72.8 h holding $1,343.06** and never committed a
+line. The reconciler prints this every run; a watchdog runs it independently
 (`docs/claude/work/LANE-WATCHDOG-PROMPT.md`).
 
-⚠️ **Do not write a rule about which command shapes trip a permission prompt.**
-E20 hypothesised a compound piped `git` command and said in terms that it was a
-hypothesis; `list_sessions` does not expose the pending action, so nobody has
-established it. Surface the condition, and measure before ruling.
+⚠️ **Do not write a rule about which command shapes trip a permission prompt**: `list_sessions` does
+not expose the pending action, so nobody has established it (E20's was a stated hypothesis).
 
 ### Record the choice
 
@@ -573,21 +566,18 @@ reason**. A successor reads the reasoning, not just the value.
 
 ### How to edit it — the recipe (PI-20261004-APBY4NTV-0003)
 
-**Before the cutover** (it happened 2026-10-08; the monolith `docs/claude/work/MANAGER-CHECKLIST.json` is deleted) the register was one file.
-**From the cutover** (the day `docs/claude/work/checklist/_header.json` exists -- it does) it is
-**one file per row** under `docs/claude/work/checklist/<ROW-ID>.json`, and **no
-session edits it with ad-hoc python again** — a single shared array is why every
-concurrent row edit conflicted on GitHub (measured: 20 of 41 commits appended a row,
-11 touched the shared header). Use the CLI; it writes ONE row file atomically,
-checks the row against the file's own declared `states`, and never touches the
-shared header:
+The register is **one file per row** under `docs/claude/work/checklist/<ROW-ID>.json` (the monolith
+was deleted at the 2026-10-08 cutover; one shared array made every concurrent edit conflict). **Never
+edit it with ad-hoc python.** The CLI writes one row atomically, checks it against the header's
+declared `states` (and `priority_rank`: a positive number or null), and never touches the shared header:
 
 ```bash
-python3 scripts/ops/checklist.py add  NEW-ROW --title "one line" --state queued --owner me --tier 1 --by "$SESSION"
+python3 scripts/ops/checklist.py add  NEW-ROW --title "one line" --state queued --owner me --tier 1 --rank 3 --by "$SESSION"
 python3 scripts/ops/checklist.py set  A3 state=in_flight lane=session_01... ceiling_usd=25 --by "$SESSION"
 python3 scripts/ops/checklist.py set  A3 prs='[123,456]' blocked_on='[]'     # values parse as JSON, else string
 python3 scripts/ops/checklist.py note A3 "what is true about this row"        # --append to add to it
 python3 scripts/ops/checklist.py archive-lane A3                              # lane -> lane_history, lane = null
+python3 scripts/ops/checklist.py queue --limit 10                             # the ranked runnable queue
 python3 scripts/ops/checklist.py header last_review '{"report_id": "...", "reviewed_at": "..."}'   # rare: the header is shared
 ```
 
@@ -600,24 +590,7 @@ nothing. Rows carry their own `updated_at` / `updated_by`; the top-level
 (`checklist-readers-guard`). History of a row is `git log -- docs/claude/work/checklist/<ID>.json`.
 `python3 scripts/ops/checklist.py --render` prints the served shape.
 
-One file: `docs/claude/work/MANAGER-CHECKLIST.json` (rows under `docs/claude/work/checklist/` after the cutover). Row schema:
-
-```json
-{
-  "id": "A3",
-  "title": "Daily brief generator",
-  "phase": "A",
-  "state": "queued",
-  "owner": "build lane",
-  "lane": null,
-  "model": null,
-  "ceiling_usd": null,
-  "spend_usd": null,
-  "prs": [],
-  "blocked_on": [{"kind": "work_item", "ref": "A1", "what": "why"}],
-  "note": ""
-}
-```
+Row schema: the header's `item_schema`, plus `roadmap`, `writeback` and `priority_rank`.
 
 `state` is one of — and these are never collapsed:
 
@@ -675,6 +648,16 @@ This is not a third category of work. A build is a checklist row and a question 
 4. **Slices plug in, they do not fork.** A lane that owns one slice (ML-ROADMAP-LOOP for G4, REGIME-PROGRAM for L-REGIME) adds and edits its own milestones under its goal in `milestones.yaml` and runs steps 1-7 for them inside the same weekly pass; the report and guard cover it with no extra wiring.
 
 ## Weekly planning (Wednesday) and the weekly cycle (operator, 2026-10-13/14, binding)
+
+### Reviews first after the reset, planning Thursday morning (operator, 2026-10-19, binding)
+
+Operator, 2026-10-19 (in substance): *"right after the reset, we kick off all of the weekly reviews — performance review, the ML review, the audit, a regular system review — make sure especially the research and training pipelines are healthy, and then we go on to the planning session on Thursday morning based on those insights and knowing how much capacity we actually have left for the week."*
+
+1. **Order is binding.** After every weekly usage reset (Wed ~18:00Z) the manager starts ALL the weekly reviews first: performance, ML (+ frontier scan), the weekly audit, and a regular system/health review. Research and training pipeline health is checked explicitly in that pass.
+2. **Planning comes after, on Thursday morning,** and is built on those review outputs plus a **post-review capacity reading** (`python3 scripts/ops/spend_meter.py --capacity` after the reviews have spent their share) — the workplan's allotments are sized to the capacity actually left for the week, not to the full allowance.
+3. Triggers whose time contradicts this order are re-timed by the manager (a lane may propose, never edit them). The schedule table below is the pre-2026-10-19 timing until the manager re-times it; the order above wins where they disagree.
+4. Mirrored in [`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 7b.
+
 
 Row `WEEKLY-PLANNING`; trigger `trig_01Pm8AMPiigZX9ndobeyT6dE`, Wednesdays **08:20Z**, ahead of the weekly usage reset
 (Wed ~18:00Z), so the plan is set before the reset and the new week starts with work already queued. First run 2026-10-14;
@@ -940,6 +923,18 @@ incident.
    on the checklist (`checklist.py header last_review '<json>'` after the cutover), then push. Per-item dispositions live on the
    pipeline items, so the next review sees what is new.
 
+**Prep always runs, and the scratch pad feeds it (operator, 2026-10-21, binding).** The operator, paraphrased from chat:
+*the prep for the daily review should happen whether or not I actually do it — I might not always have time, though you should
+try to remind me — prepare the summary and reports, send the summary to the bot so I can see it without going into the session,
+and take the notes from the past day's scratch pad (the Google Doc) and add those items to the work plan.* So every review run:
+- **Reads the scratch pad.** That is the Google Doc "Metis — Ideas inbox", read with the Google Drive connector. Every item added
+  since the last review is copied verbatim into `docs/claude/work/IDEAS.md` and triaged, in that run, into a checklist row, a
+  `research/queue` unit, or `killed` with a reason.
+- **Publishes a short work-plan status whether or not the operator joins.** It covers what moved, what is running, where work was
+  left off, the decisions waiting, the scratch-pad items and their homes, and the next step on the standing priorities.
+- **Sends that status to @claude_ict_comms_bot** with the `send-ping` system-action, so the operator can read it without opening the
+  session. It also sends one reminder that the review is ready. A review the operator skipped is still a review that ran.
+
 **Roadmap hook (2026-10-11).** After step 5, run `python3 scripts/ops/roadmap_map.py --report` and work its findings per § "The roadmap loop" (orphans, empty active milestones, an overdue weekly pass).
 
 ### Manager ↔ lane: PUSH plus POLL (operator directive 2026-10-04, binding)
@@ -949,13 +944,9 @@ incident.
    then `fire_trigger`. If that prompts, the fallback is a PR comment. The
    manager acts on a wake immediately.
 2. **POLL (backup).** The routine "Manager lane check-in" (cron `17 */3 * * *`)
-   runs every 3h while any lane is live. It is separate from the twice-daily
-   review. Each pass:
-   - `get_session` every live lane;
-   - restart, re-dispatch, act on or archive any lane that is dead, stalled,
-     finished without pinging, or over its ceiling;
-   - read `mergeable_state` on lane PRs;
-   - record it when a lane missed its wake.
+   runs § "The operating loop" every 3 h. Its prompt is that one line. Within
+   it, restart or re-dispatch any lane that is dead, stalled, finished without
+   pinging, or over its ceiling, and record it when a lane missed its wake.
 
 **Required dispatch block.** Every `create_session` for a lane has:
 - `source_url` set;
@@ -1005,8 +996,9 @@ arrives twice in the same shape is raised as *"should this become a mandate?"*
 
 1. Title yourself and read the canonical docs (§ "Start of session").
 2. **Run `list_triggers`.** Routines bound to a session die with it.
-   - Recreate or rebind both **"Manager lane check-in"** (`17 */3 * * *`) and
-     the **twice-daily review** (05:52Z, 17:52Z) to YOUR session.
+   - Recreate or rebind both **"Manager lane check-in"** (`17 */3 * * *`, prompt:
+     "run the operating loop (manager SKILL.md § The operating loop)") and the
+     **twice-daily review** (05:52Z, 17:52Z) to YOUR session.
    - The review prompt must name `GET /api/bot/work/report?since=…` and
      § "The daily review" above.
 3. **Tell every live lane your session id**, using its own trigger. Its wake
@@ -1031,6 +1023,11 @@ Typical reasons:
 - **A natural boundary**, such as after a weekly planning pass or a review.
 - **Degraded recall.**
 
+**The rotation check is periodic, not remembered (operator ideas inbox, 2026-10-21).** The operator does not want to be the one
+who notices. So every run of § "The operating loop", and the first turn after every context compaction, starts with one check:
+call `get_session` on yourself and read `external_metadata.context_usage.used_tokens`. Past ~300k tokens, or with degraded recall,
+**plan** the handover for the next natural boundary and say so in that loop's operator line. Below that, carry on silently.
+
 **Never mid-incident, and never with a merge or deploy half-done.** Finish or hold it first.
 
 ### Steps
@@ -1041,12 +1038,15 @@ Typical reasons:
 - operator asks and decisions in flight, in their exact wording;
 - every trigger and `send_later` that targets the old session (from `list_triggers`), by id and name;
 - artifacts and PRs the old session watches;
-- budget and pacing state (today's spend against the daily budget);
+- capacity state (the latest reading and the sustainable rate, § "The operating loop" step 2);
 - operator directives from this session **not yet in checklist rows**: put them in rows first, then list the row ids;
 - the new manager's first actions;
 - the handover checklist block below, copied in.
 
-Commit it through a self-land PR (§ "How lane PRs land").
+Do not commit it from the manager session: `manager-scope-guard` refuses the
+`docs/DOCUMENT-INDEX.md` row a handoff doc needs when it comes from a manager session. A small
+lane (Haiku, ~$1; precedent HANDOFF-LAND-1022, #19521) lands it through a self-land PR
+(§ "How lane PRs land").
 
 **2. CREATE.** `create_session` with:
 - `model`: **Opus** (the manager stays on Opus, operator); pass it explicitly;

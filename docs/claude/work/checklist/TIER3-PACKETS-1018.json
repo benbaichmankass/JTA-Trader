@@ -1,0 +1,36 @@
+{
+  "id": "TIER3-PACKETS-1018",
+  "title": "Tier-3 packets for PASSED units RQ-20261018-002 (ada_pullback_2h VH95) and RQ-20261018-007 (eth_4h MM05 TP)",
+  "phase": "now",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Research-ops 14:47Z flagged both as PASS and as Tier-3 candidates with nothing proposed. Lane dispatched at 15:05Z: re-read each result against its rule, then open one HOLD PR per unit with the exact config change and the evidence. The manager lands each under the data-backed Tier-3 authorization and notifies the operator. The ada VH95 change interacts with RQ-20261018-009 (ada exit levers, ACTIVE-MGMT).  [2026-10-22 17:55Z manager session_01Hsp3aD8ccAyhHiyYARqEqh] Lane archived (completed): #18994, #18995, #19009 MERGED; deploy + live TP amends NOT verified by the lane. Row -> landed_unproven with the observation above.",
+  "updated_at": "2026-10-22T18:59:37Z",
+  "updated_by": "session_01Hsp3aD8ccAyhHiyYARqEqh",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "observation": {
+    "what": "live TP amends from #18994/#18995/#19009 (eth_4h MM05 TP on bybit_2/bybit_portfolio/bybit_1; ada_pullback_2h VH95) appear on the first live trade of each leg after merge",
+    "how_to_check": "diag journal?table=order_packages + trades for trend_donchian_eth_4h / ada_pullback_2h after 2026-10-18T17:30Z; position_telemetry tp revisions",
+    "due_by": "2026-10-29T12:00Z"
+  },
+  "lane_history": [
+    {
+      "lane": "session_01PAZmJGXKikuiXMoE6vjh4F",
+      "archived_at": "2026-10-22T17:54:15Z"
+    }
+  ],
+  "writeback": {
+    "roadmap": "none: L-ATM where/next updates when the live TP amends are observed",
+    "arch": "none: config-only TP changes, no component or contract changed"
+  },
+  "_seq": 568
+}

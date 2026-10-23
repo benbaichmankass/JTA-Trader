@@ -305,7 +305,10 @@ def build_overview(window: str = "7d", *, accounts: Optional[Dict[str, Any]] = N
         all_fills.extend(prop_journal.list_fills(account_id=aid, limit=_FILL_LIMIT))
 
     open_rows, closed = split_fills(all_fills)
-    trade_u = {f.get("id"): _trade_unrealized(f, acct_rows, open_rows) for f in open_rows}
+    # MD-EXEC-DEV-TEST-TRADES: an OPEN test position is real money and stays visible; a CLOSED one is not performance
+    from src.prop.exec_test_trades import exclude_exec_test
+    closed = exclude_exec_test(closed, fills=True)
+    trade_u ={f.get("id"): _trade_unrealized(f, acct_rows, open_rows) for f in open_rows}
     for row in acct_rows:   # the venue's own position count: a check on the journal, visible beside it
         vps = row.get("_venue_positions")
         row["venue_open_positions"] = len(vps) if vps is not None else None

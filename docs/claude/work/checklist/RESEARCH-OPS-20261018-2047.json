@@ -1,0 +1,32 @@
+{
+  "id": "RESEARCH-OPS-20261018-2047",
+  "title": "Research-ops pass 2026-10-18 20:47Z (wind-down: keep the queue full)",
+  "phase": "research",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "research-ops-lane-20261018-2047",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    19043
+  ],
+  "blocked_on": [],
+  "note": "[lane done] MERGED #19043 (merged, not yet deployed/observed): runnable 38 -> 82 (floor 61); 44 units (3 ethprop prop-EV + 41 P1-Q9 replace-grade). Closes when their results land: python3 scripts/ci/check_research_queue_throughput.py --json; python3 scripts/research/result_disposition_check.py --list (due 2026-10-21). NOT run: needs_review triage, blocked/ audit (RESEARCH-BLOCKED-AUDIT), pipeline routing. Record comms/research/ops/20261018T2115Z.json.",
+  "updated_at": "2026-10-18T21:41:02Z",
+  "updated_by": "session_research_ops_20261018_2047",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "observation": {
+    "what": "41 P1-Q9-* units + 3 ethprop prop-EV units dispatch and each lands a measured replace-grade verdict",
+    "how_to_check": "python3 scripts/ci/check_research_queue_throughput.py --json; python3 scripts/research/result_disposition_check.py --list",
+    "due_by": "2026-10-21"
+  },
+  "writeback": {
+    "roadmap": "none: operations pass",
+    "arch": "none: no component changed"
+  },
+  "_seq": 572
+}

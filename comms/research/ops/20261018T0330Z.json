@@ -1,0 +1,28 @@
+{
+  "run": "RESEARCH-OPS-2026-10-18-0247", "finished_at": "2026-10-18T03:30:00Z", "by": "session_01EpYh89EKZSypJoVuQNXcDw",
+  "floor": 42, "floor_basis": "computed_floor(fired_24h 52)", "authoring_queue_depth": 18,
+  "idle_backends": ["github_runner_data", "kaggle", "kaggle_cpu", "trainer"],
+  "needs_review_triaged": 3, "needs_review_left": 40,
+  "needs_review_note": "result_disposition_check --list UNOWNED 3 -> 0. 5bd1-07 and 5bd1-08 graded INDETERMINATE under their own rules (primary cells below the n floor, 0 discovery survivors). c56e-19 producer_failed owner-stamped REGIME-EQUITY-LEG-FETCH and re-queued (it fired 19:29Z, before the runner yfinance install #18821 at 22:57Z; cmd log not on main, cause INFERRED). The 40 left are owned.",
+  "throughput": {"runnable_before": 69, "runnable_after": 70, "queued": 166, "fired_24h": 52, "results_landed_24h": 130, "hours_since_last_dispatch": 0.7, "idle_alarm": false},
+  "mechanism": {"dispatch_receipt": "ok: fresh 0.7h", "collector": "ok: 0 unreadable result files", "stranded_stamp_prs": [], "incident": null, "watchdog": "newest rows 2026-10-17: dispatcher self_healed 10:53Z, backend:github_runner self_healed 23:27Z; no open escalated incident"},
+  "results_read": {"pass": 0, "fail": 0, "indeterminate": 2, "units": [
+    "RQ-20261012-5bd1-07 INDETERMINATE: 3 of 5 rows n 409-2060 < floor 2180.6 (accruing), 0 survivors, 0 leads",
+    "RQ-20261012-5bd1-08 INDETERMINATE: 10 of 30 rows n 1375 < floor 4906.2 (accruing), 0 survivors, 8 fwd_rv LEADS (not seeded to wave-2 on touched data)",
+    "RQ-20261016-c56e-19 producer_failed: not a verdict"
+  ]},
+  "unlocked": ["RQ-20261016-c56e-19 re-queued (last_dispatched_at null)"], "retired": [],
+  "levers_filed": [],
+  "units_authored": ["P2-R3.g06-pass (programme node: fresh-window VH95 confirmation for ada_pullback_2h, emits on next queue_replenish)"], "followups_filed": [],
+  "authoring": {"queue_depth": 18, "nodes_drafted": 1, "nodes": ["P2-R3.g06-pass"],
+                "theme_shortfall": {"regime": 4, "ml_health": 6, "new_strategy_prop": 11, "infra": 1}},
+  "not_run": ["step C per-file audit of research/queue/blocked/", "routing of the 135 due pipeline items", "authoring beyond one node: budget"],
+  "handoff": [
+    "MANAGER (held PR): merge the run PR -- it edits research/queue (E57 hold) and research/programmes/02-ai-trader.yaml",
+    "Watch c56e-16..26: first measured equity-leg record on the runner clears REGIME-EQUITY-LEG-FETCH; if one lands producer_failed again after #18821 the yfinance cause was wrong -- read its cmd log",
+    "P2-R3.g06-pass emits a confirmation of VH95 on 2022-10-05..2024-10-04; the first-window PASS was best of 3 arms and the SU confirmation (65ff-02) on this leg read FAIL",
+    "author toward new_strategy_prop (shortfall 11), ml_health (6), regime (4); next in authoring queue: P1-Q7-sol-tp3-prop, P2-R3.c05-pass, P3-Q1-live-bt-stage-b (waits on row LIVE-BT-STAGE-B)",
+    "pipeline holds 135 due items (soaks ready/dead are routed to SOAK-WATCH); routing alarm stands",
+    "RESEARCH-OPS-20261015..16 rows are UNPROVEN_OVERDUE in blocker_watch: they await manager merges of held PRs"
+  ]
+}

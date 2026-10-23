@@ -356,6 +356,11 @@ _CANONICAL_UNITS: tuple[str, ...] = (
     "ict-prop-executor@velotrade_1.timer",
     "ict-exchange-funding-pull.service",
     "ict-exchange-funding-pull.timer",
+    # 2026-10-18 (PHONE-EXEC-OBSERVABLE-1018) — daily purge of phone step
+    # captures older than 7 days; queryable so a session can confirm the TTL
+    # job fires and tail its one-line result.
+    "ict-phone-capture-purge.service",
+    "ict-phone-capture-purge.timer",
     "ict-mes-ibkr-pull.service",
     "ict-mes-ibkr-pull.timer",
     # 2026-07-31 (full-system audit P2.4) — the HOURLY IBKR executions pull
@@ -4252,3 +4257,80 @@ async def get_alpaca_open_orders(
         "count": len(out),
         "accounts": out,
     }
+
+
+# ---------------------------------------------------------------------------
+# Phone step captures (PHONE-EXEC-OBSERVABLE-1018, operator 2026-10-18): the
+# manager's read side of what the Breakout phone executor recorded at each step
+# of a flow (off-screen WebView bitmap + sanitized DOM snapshot, posted to
+# POST /api/bot/prop/phone/capture, stored on the VM data volume, 7-day TTL).
+# Token-gated like every diag read; file reads are name-validated and never
+# leave the run's directory (src.prop.phone_captures.read_file).
+# ---------------------------------------------------------------------------
+
+
+@router.get("/phone_captures")
+def get_phone_captures(request: Request, account_id: str = "breakout_2", limit: int = 20) -> dict[str, Any]:
+    """Capture runs for a phone account, newest first: run_id, flow, step count, failed steps, ticket, app
+    version, bytes. ``present: false`` = no capture directory yet (the phone never posted one), distinct from an
+    empty list."""
+    _require_diag_token(request)
+    from src.prop import phone_captures as pcap
+    try:
+        return pcap.list_runs(account_id, limit=limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/phone_capture")
+def get_phone_capture(request: Request, run_id: str, account_id: str = "breakout_2") -> dict[str, Any]:
+    """One run: every step's meta (seq, step, ok, note, image/dom file names) in order."""
+    _require_diag_token(request)
+    from src.prop import phone_captures as pcap
+    try:
+        run = pcap.get_run(account_id, run_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if run is None:
+        raise HTTPException(status_code=404, detail="no such capture run")
+    return run
+
+
+@router.get("/phone_capture_file")
+def get_phone_capture_file(request: Request, run_id: str, name: str, account_id: str = "breakout_2"):
+    """One stored file of a run (the step's image or its DOM snapshot JSON), raw, with its content type."""
+    from fastapi.responses import Response
+    _require_diag_token(request)
+    from src.prop import phone_captures as pcap
+    try:
+        got = pcap.read_file(account_id, run_id, name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if got is None:
+        raise HTTPException(status_code=404, detail="no such capture file")
+    data, ctype = got
+    return Response(content=data, media_type=ctype, headers={"Cache-Control": "no-store"})
+
+
+@router.get("/phone_drill")
+def get_phone_drill(request: Request, account_id: str = "breakout_2", limit: int = 20) -> dict[str, Any]:
+    """The phone executor's REHEARSAL drills (PHONE-EXEC-OBSERVABLE-1018): the pending request (requested /
+    claimed, or null), the live sheet-edit gate (`enabled`, `source` config|drills, consecutive `passes` toward
+    `passes_to_arm`), and the recent results newest first (per-step pass/fail, failed steps, the capture run id to
+    read on /api/diag/phone_capture). Pure file read."""
+    _require_diag_token(request)
+    from src.prop import phone_drill
+    try:
+        return phone_drill.status(account_id, limit=max(1, min(int(limit), 200)))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/phone_exec_js")
+def get_phone_exec_js(request: Request) -> dict[str, Any]:
+    """The signed remote exec.js state (PHONE-EXEC-OBSERVABLE-1018): the working tree's version/sha256, the stored
+    CI signature record (never the signature itself), and `served` -- whether GET /phone/exec.js would hand the
+    phone a script right now. Pure file read; no script body."""
+    _require_diag_token(request)
+    from src.prop import phone_exec_js
+    return phone_exec_js.status()

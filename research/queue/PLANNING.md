@@ -19,6 +19,12 @@ recurring planning session does.
   with its own rule. A dropped idea is a finding nobody can re-ask.
 - Every unit says what it does not do. An upper-bound or scoping unit says it is not a promotion case.
 - Units that need a prior result to be worth running use `requires_result`, not prose.
+- **Look before you re-test** (RESEARCH-OPS-BENCHMARK-1016; Arnott-Harvey-Markowitz 2019 "track every model tried").
+  Before authoring a unit, search what was already tried on the same leg or family: `grep -l <leg|family>
+  research/queue/*.yaml research/queue/blocked/*.yaml`, `research/results/`, `docs/research/m20-sweep-corpus.jsonl`,
+  `research/family_reviews/`. Cite the prior unit ids in the unit's `question` or `value.basis`. A re-test of a
+  configuration already closed states what is different (window, conditioning, harness fix). Otherwise it is
+  another draw from the same distribution and only inflates the number of trials.
 
 ## 1b. A unit declares WHAT KIND of test it is and what it is WORTH — never WHERE it runs (RESEARCH-ROUTER, 2026-10-13)
 Operator, 2026-10-13: Claude writes the unit (id + test structure); a dispatcher that spends no Claude tokens sends
@@ -95,9 +101,28 @@ run:
   outranks research breadth, and no single topic may starve the rest, so a weight never goes below 1 and a theme
   holding due work is checked against its fired count.
 
+- **Weights are honoured by SUPPLY, not by ranking** (lane RESEARCH-ENGINE-1016, 2026-10-16). `fair_order` shares
+  slots among themes that hold due work, so a theme with nothing queued gets nothing: MEASURED over the 181 fires in
+  `comms/research/utilization/` 2026-10-13..16, `regime` took 20 (11 %) against a 24 % weight share, while it held 0
+  queued units on the 16th. `check_research_queue_health.py` splits the floor by weight every cycle and prints an
+  `H1-THEME` warning per short theme (generated re-runs credited for at most 40 % of a slice); that is the
+  authoring target list for research-ops step E. Inside a theme, authored units rank before generated ones.
+- **PROGRAMME PRIORITY** (operator 2026-10-18 ~06:20Z: P1 active trade management and P2 AI trader are "our highest
+  priority"). `research_compute.yaml` `value.programme_priority: [P1, P2]` -- an ordered list; a due unit of a listed
+  programme ranks first on every backend, in list order, above every theme and other programme; only a starved unit
+  precedes it. Re-prioritising is an edit of that list in a PR that quotes the decision.
+- **MONEY FIRST across themes** (operator 2026-10-18, popup "Fix now, money first"; lane DISPATCH-MONEY-FIRST-1018).
+  `fair_order` no longer round-robins the themes: it takes the theme whose next unit has the highest router value
+  score, a starved unit first in any theme, and the weight share only breaks an EQUAL score. Programme nodes
+  (`generated.family: programme:*`) count as asked units, not refills. A theme stocked only with low-value units now
+  fires on spare capacity or at `starve_hours`, so the theme-share SLO recovers through SUPPLY of valuable units in
+  the short theme -- author them with a `value:` block that states the money at stake.
+
 ## 3. Aging
-`aging_hours` (THEMES.yaml) lowers a waiting unit's effective priority one step per period. It is the
-starvation backstop inside a theme; fair share is the backstop between themes. If a unit is old and still
+`aging_hours` (THEMES.yaml) lowers a waiting unit's effective priority one step per period, counted from when the
+unit came DUE (a recurring unit: its last stamp plus its cadence gap; since 2026-10-16, `dispatch_queue._due_since`). It is the
+starvation backstop inside a theme; `starve_hours` (research_compute.yaml) is the backstop between themes since
+2026-10-18 (a starved unit sorts first everywhere). If a unit is old and still
 unrun, read why (precondition, gate, route) before lowering anything.
 
 ## 4. What the recurring research-planning session does, every time

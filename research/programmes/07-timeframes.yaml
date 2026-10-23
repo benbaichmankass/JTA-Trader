@@ -1,0 +1,257 @@
+# Programme P7 -- TIMEFRAMES (the horizon frontier): the machine-readable question tree for
+# docs/research/programmes/07-TIMEFRAMES.md (s3 questions Q1-Q14, s5 backlog W1-W4).
+# Same contract as research/programmes/01-active-trade-management.yaml (read by scripts/research/queue_replenish.py;
+# every edit holds for a human merge; `value` figures are INFERRED planning weights, not measurements).
+# Authored 2026-10-18 by lane FRONTIER-TIMEFRAMES-1018 (manager dispatch; operator 2026-10-18: "the LOWEST-priority
+# research theme, but start planning it now and get tests into the queue soon").
+#
+# Two arms, one instrument first. Arm A (longer horizons: daily/weekly bars, weeks-long holds, regime-filtered position
+# trading) and arm B (shorter horizons: NEW breakout families whose expected move clears the full fee+slippage stack).
+# Each arm opens with the cost-aware break-even study (scripts/research/timeframe_breakeven.py: RQ-20261018-ef5d-01 long,
+# -02 short), which decides which horizons can pay before any strategy is tried on them. The Stage-0 units run on
+# scripts/research/harness_stage0.py (a harness family at FIXED params on symbols/bars no roster carries; calendar folds;
+# pooled across symbols; breadth over powered cells; Holm reported). Units registered directly (they dispatch on merge):
+# RQ-20261018-ef5d-01..09 in research/queue/; ef5d-10 (ORB) and -11 (ignition) in research/queue/blocked/ on the two
+# harness rows below. The nodes here are what follows each verdict, plus the questions carried by builds.
+#
+# Prior work this programme builds on (do not re-run): RQ-20260930-504/505 (<=1h discovery grid at live/default params,
+# FAIL at taker cost), RQ-20261016-1fa6-07 (maker entries, FAIL on the causal 15m scalp book), the 2026-10-06 prop
+# breadth batch RQ-20261006-005..031 (5m-15m taker FAIL as a configuration class), the idea-family review
+# docs/research/idea-family-review-2026-10-16.md s11/s13/s16, rows IR-CRYPTO-DAILY-TREND (its first step is delivered by
+# harness_stage0.py) and IR-INTRADAY-SEASONALITY-HARNESS.
+programme: P7
+plan: docs/research/programmes/07-TIMEFRAMES.md
+questions:
+  Q1:
+    state: closed
+    by: RQ-20261018-ef5d-01
+    why: >-
+      PASS 2026-10-20: all 14 (bar x hold) cells at 4h and 1d (holds 1-30) are cost-viable on >= 3 of the 6 core perps; the shortest viable long-arm bar is 4h for every perp and ETF, 1d for MES. The long arm is open at every horizon it asked about, so the daily/weekly Stage-0 units (ef5d-03..06) were the right next step. Written into 07 s1 by the programme review.
+  Q10:
+    state: carried
+    by: TF-ORB-COST-STACK (checklist row) + research/queue/blocked/RQ-20261018-ef5d-10
+    why: >-
+      Opening-range breakouts need backtest_orb.py to carry the bps cost stack and a 24h UTC-session mode (it models fees in
+      points, RTH-only; CLAUDE.md D1 excludes it from every corpus). The question is pre-registered in the blocked unit with
+      fixed arms; the build row names what to build and what observation closes it.
+  Q11:
+    state: carried
+    by: TF-IGNITION-HARNESS (checklist row) + research/queue/blocked/RQ-20261018-ef5d-11
+    why: >-
+      No harness keys an entry on a single bar's range/volume expansion (checked 2026-10-18). The momentum-ignition question is
+      pre-registered in the blocked unit with fixed arms; the row builds scripts/backtest_ignition.py and its classify branch.
+  Q12:
+    state: carried
+    by: IR-INTRADAY-SEASONALITY-HARNESS (checklist row, filed 2026-10-16)
+    why: >-
+      Clock-entry (UTC time-of-day) effects are not a breakout family and already have their build row and first-step design
+      (scripts/backtest_clock.py); this programme does not duplicate it. A clock unit is authored from that row when it lands.
+  Q13:
+    state: carried
+    by: TF-EQUITY-INTRADAY-BARS (checklist row)
+    why: >-
+      The equity/futures short arm cannot be measured at power below 1h on Yahoo's ~60-day 5m/15m lane; the data lane is a
+      build, not a question. ef5d-02 flags those frames short_window and its verdict rests on the crypto core.
+nodes:
+# ── Q1 / Q2 -- the break-even frontier reads ────────────────────────────────────────────────────────────────────────────
+- id: P7-Q2-frontier-pass
+  goal: G1
+  roadmap: [L-TIMEFRAMES, M22]
+  value: {usd_at_stake_per_month: 150, confidence: 0.3}
+  after:
+  - {unit: RQ-20261021-7c2b-05, verdict: any}
+  needs_authoring: >-
+    Programme review 2026-10-21 authored the 15m cost-gated breakout on the 15m-viable perps (ADA/AVAX/SOL) as
+    RQ-20261021-7c2b-05 and the 30m re-ask on all six as 7c2b-01 (ef5d-07 passed percentiles on a 0-100 scale to a 0-1
+    flag). Compression (ef5d-08) and sweep (ef5d-09) FAILED at 1h net of cost and are NOT transferred down. On 7c2b-05's
+    verdict: PASS -> confirm by transfer at 30m/1h (no re-selection); FAIL -> the short arm's next lever is maker cost.
+    The 1m arm (blocked/RQ-20260930-505) stays blocked: the frontier puts no perp below 15m.
+- id: P7-Q2-frontier-fail
+  goal: G1
+  roadmap: [L-TIMEFRAMES, M22]
+  value: {usd_at_stake_per_month: 150, confidence: 0.4}
+  after:
+  - {unit: RQ-20261018-ef5d-02, verdict: fail}
+  needs_authoring: >-
+    ef5d-02 FAILED: no sub-hour cell is viable at taker cost on any perp. The short arm's next lever is a COST change, not an
+    entry: read the maker_cost_bps column per cell and author ONE unit that re-grades the frontier at maker-entry/taker-exit
+    cost (fee/2) with a fill-rate haircut (RQ-20260930-502 / RQ-20261016-1fa6-07 lineage: fill only if a later bar trades
+    through within 3 bars) -- Q14. Record on the tree which (bar, hold) cells flip viable at maker cost; if none do, the short
+    arm below 1h is closed at Bybit taker AND maker cost on this history, and ef5d-07/-08/-09 (30m-1h, already registered)
+    stand as its last runnable units. Retire blocked/RQ-20260930-505 with this record as the terminal reason.
+# ── Q3 -- daily crypto trend / pullback (arm A2) ────────────────────────────────────────────────────────────────────────
+- id: P7-Q3-donchian-fail
+  goal: G1
+  roadmap: [L-TIMEFRAMES, L-LADDER]
+  value: {usd_at_stake_per_month: 200, confidence: 0.3}
+  after:
+  - {unit: RQ-20261018-ef5d-03, verdict: fail}
+  needs_authoring: >-
+    ef5d-03 FAILED: daily Donchian 20/55 with a 5-ATR trail has no fold-consistent pooled edge on the six perps 2020-2026. Per
+    the negative-result protocol (idea-family review 2026-10-16), this closes the configuration, not the horizon. Not tested
+    and still open: the regime-filtered arms (ef5d-06, which still runs), a longer trail / no trail with a weekly time stop
+    (position trading proper), long-only, and the pullback family (ef5d-04). Author at most ONE follow-on: the exit geometry
+    arm (trail 8 ATR vs a 60-bar time stop) on the SAME window, baseline D20, materiality 0.10 R/trade -- and say in the unit
+    why that lever and not another.
+- id: P7-Q3-indeterminate
+  goal: G1
+  roadmap: [L-TIMEFRAMES]
+  value: {usd_at_stake_per_month: 100, confidence: 0.3}
+  after:
+  - {unit: RQ-20261018-ef5d-03, verdict: indeterminate}
+  needs_authoring: >-
+    ef5d-03 read INDETERMINATE (pooled n < 39, fewer than 2 powered cells, or half the cells unmeasured). Read the record: if
+    it is thin n, pool the two daily families (ef5d-03 + ef5d-04 trades) in one unit on the same window rather than lower the
+    floor; if it is a fetch/harness fault on >= 3 cells, that is a route fault for research-ops (producer side), not a
+    research question -- file it on TIMEFRAMES-PROGRAMME and re-queue.
+# ── Q4 -- weekly ETF / futures trend (arm A3) ───────────────────────────────────────────────────────────────────────────
+- id: P7-Q4-fail
+  goal: G1
+  roadmap: [L-TIMEFRAMES, L-LADDER]
+  value: {usd_at_stake_per_month: 120, confidence: 0.3}
+  after:
+  - {unit: RQ-20261018-ef5d-05, verdict: fail}
+  needs_authoring: >-
+    ef5d-05 FAILED: weekly Donchian-20 (long-only and both) has no fold-consistent pooled edge across the 17 equity/futures
+    cells. Closes the configuration on this history. Still open, and the literature's actual claim (Moskowitz-Ooi-Pedersen
+    2012: 1-12 MONTH lookback time-series momentum, not a 20-week channel): a TSMOM arm (sign of the trailing 26/52-week return,
+    monthly rebalance, vol-scaled) needs a harness lever -- file a row (TF-TSMOM-LEVER) with what to build (a --signal tsmom
+    mode on backtest_trend.py or a small backtest_tsmom.py with the full cost stack) and the unit in blocked/.
+- id: P7-Q4-indeterminate
+  goal: G1
+  roadmap: [L-TIMEFRAMES]
+  value: {usd_at_stake_per_month: 80, confidence: 0.3}
+  after:
+  - {unit: RQ-20261018-ef5d-05, verdict: indeterminate}
+  needs_authoring: >-
+    ef5d-05 read INDETERMINATE. If pooled n < 39 even over 17 symbols and ~20 years, the weekly bar is too slow for a
+    Stage-0 verdict by construction: record that (the n is the finding) and move the equity long arm to 1d bars with a weekly
+    TIME stop (hold 5-20 trading days) as the next unit, same symbols and rules.
+# ── Q5 -- regime-filtered daily position trading (arm A4) ───────────────────────────────────────────────────────────────
+- id: P7-Q5-confirm
+  goal: G1
+  roadmap: [L-TIMEFRAMES, L-REGIME]
+  value: {usd_at_stake_per_month: 150, confidence: 0.3}
+  after:
+  - {unit: RQ-20261021-7c2b-03, verdict: any}
+  needs_authoring: >-
+    Programme review 2026-10-21 authored the transfer as RQ-20261021-7c2b-03 (LONG vs B on BNB/DOGE/LINK/LTC/BCH/DOT
+    daily, delta 0.10 R). On its verdict: PASS -> the overlap read in P7-Q6-daily-donchian uses the LONG arm; FAIL ->
+    the ef5d-06 win was symbol-selected, record it here and on 07 s1; INDETERMINATE -> say which cells were under the
+    floor, never lower it.
+- id: P7-Q5-indeterminate
+  goal: G1
+  roadmap: [L-TIMEFRAMES, L-REGIME]
+  value: {usd_at_stake_per_month: 80, confidence: 0.3}
+  after:
+  - {unit: RQ-20261018-ef5d-06, verdict: indeterminate}
+  needs_authoring: >-
+    ef5d-06 read INDETERMINATE: the filtered arms kept too few trades to grade (expected for VOL50/ADX20 on ~110 pooled
+    entries). The finding is the selectivity: report each filter's kept share and R/trade beside the baseline in the plan's s1
+    table, and re-ask the filter question once on the two-family daily pool (Donchian + pullback trades together) so the
+    filtered arm reaches 39 -- never lower the floor.
+# ── Q6 -- overlap with the live book and the re-entry case (arm A, after any long-arm PASS) ─────────────────────────────
+- id: P7-Q6-daily-donchian
+  goal: G1
+  roadmap: [L-TIMEFRAMES, L-LADDER, M18]
+  value: {usd_at_stake_per_month: 250, confidence: 0.3}
+  after:
+  - {unit: RQ-20261021-7c2b-04, verdict: pass}
+  - {unit: RQ-20261018-ef5d-03, verdict: pass}
+  needs_authoring: >-
+    ef5d-03 PASSED (the record names the best arm, D20 or D55). Before any re-entry case: a same-symbol OVERLAP read of the
+    passing daily arm against the live bybit_2 legs on the same symbols (trend_donchian_eth_4h, trend_donchian_xrp_4h,
+    trend_donchian_sol_prop, xrp_pullback_2h, ada_pullback_2h): correlation of daily R series, share of calendar days both are
+    in the market on the same side, combined drawdown vs each alone, R per capital-day of each book (programme 03 Q8 shape;
+    scripts/research/same_symbol_head_to_head.py needs the daily leg registered in backtest_system.ROSTER -- if it cannot take a
+    synthetic leg, that is the instrument gap to file, not a reason to skip the read). Then the re-entry case under
+    MD-PROMOTE-S0-S1 as a NEW evidence record at the fixed params (bybit_1 soak), through the manager; the mandate requires a
+    holdout confirmation (operator 2026-10-16), so the record must carry one (exit_lever_ablation --grade holdout once the leg
+    exists in config, or harness_stage0 with a declared holdout split -- state which). No config edit by the research lane.
+- id: P7-Q6-daily-pullback
+  goal: G1
+  roadmap: [L-TIMEFRAMES, L-LADDER, M18]
+  value: {usd_at_stake_per_month: 250, confidence: 0.3}
+  after:
+  - {unit: RQ-20261018-ef5d-04, verdict: pass}
+  needs_authoring: >-
+    ef5d-04 PASSED. Same overlap read as P7-Q6-daily-donchian against the live 2h pullback legs (xrp_pullback_2h,
+    ada_pullback_2h) and the 4h Donchian legs, then the re-entry case with a holdout confirmation. If ef5d-03 also passed,
+    read the two daily families against EACH OTHER first (one combined daily book vs each alone): two passes on the same
+    symbols and bar are likely one bet.
+- id: P7-Q6-weekly-etf
+  goal: G1
+  roadmap: [L-TIMEFRAMES, L-LADDER, M18]
+  value: {usd_at_stake_per_month: 150, confidence: 0.3}
+  after:
+  - {unit: RQ-20261018-ef5d-05, verdict: pass}
+  needs_authoring: >-
+    ef5d-05 PASSED (LO or BOTH, the record names it). Overlap read against the live alpaca_live legs (ief/slv/iaum_pullback_1d)
+    and the alpaca_paper 1d trend legs: SPY/QQQ/QLD/TQQQ/SPLG/IWM/SCHA are one equity-beta factor (programme 03 node
+    P3-Q3-soak-equity-overlap) -- the weekly arm's per-symbol passes must be read as one bet before any count of 'passing
+    cells' is quoted. Then a re-entry case on alpaca_paper under MD-PROMOTE-S0-S1 with a holdout confirmation; the futures
+    proxies (ES=F/GC=F/HG=F) are NOT re-entry candidates from a Yahoo continuous series -- an IBKR candidate needs the
+    account's own fills and the per-contract commission modelled first.
+# ── Q7 -- cost-gated 30m breakout (arm B2) ─────────────────────────────────────────────────────────────────────────────
+- id: P7-Q7-confirm
+  goal: G1
+  roadmap: [L-TIMEFRAMES, M22]
+  value: {usd_at_stake_per_month: 150, confidence: 0.3}
+  after:
+  - {unit: RQ-20261018-ef5d-07, verdict: pass}
+  needs_authoring: >-
+    ef5d-07 PASSED: a vol-percentile gate (V50/V75/V90, the record names it) lifts the 30m Donchian breakout over its cost by
+    >= 0.05 R/trade with breadth. Confirmation is the transfer across BARS, no re-selection of the percentile: ONE unit with the
+    passing gate alone vs ungated at 15m and at 1h on the same symbols and window (two cells of a two-arm run, same rules).
+    CONFIRMED on both -> a Stage-0 evidence record for a bybit_1 soak candidate (new strategy key, Tier-3 wiring via the
+    new-strategy skill, manager-routed) and the prop fit (prop_ev_grid.py, ETH/SOL). CONFIRMED on one -> the gate is a
+    bar-specific lead; record which. NOT CONFIRMED -> the 30m PASS stands as a single-bar finding, no roster case.
+- id: P7-Q7-fail
+  goal: G1
+  roadmap: [L-TIMEFRAMES, M22]
+  value: {usd_at_stake_per_month: 100, confidence: 0.3}
+  after:
+  - {unit: RQ-20261018-ef5d-07, verdict: fail}
+  needs_authoring: >-
+    ef5d-07 FAILED: no vol gate lifts the 30m breakout over its cost on the six perps. Closes the gate lever at 30m (not
+    tested: 15m/1h, a time-of-day gate (Q12), maker entries (Q14)). Record which the break-even frontier predicted (if ef5d-02
+    graded 30m dead for these symbols the FAIL is the expected reading and the arm's next unit is at the frontier's viable
+    bar, if any; if it graded 30m viable, the gate itself is what failed). Name the next lever in one line on the tree.
+# ── Q8 -- compression breakout, catch the wave (arm B1) ────────────────────────────────────────────────────────────────
+- id: P7-Q8-confirm
+  goal: G1
+  roadmap: [L-TIMEFRAMES, M22, L-PROP]
+  value: {usd_at_stake_per_month: 150, confidence: 0.3}
+  after:
+  - {unit: RQ-20261018-ef5d-08, verdict: pass}
+  needs_authoring: >-
+    ef5d-08 PASSED: a fixed target (TP2 or TP15 + 12-bar time stop, the record names it) beats trailing the 1h compression
+    breakout by >= 0.05 R/trade with breadth. Confirmation: the passing target alone vs TRAIL at 30m and 4h (transfer across
+    bars, no re-selection), plus the prop fit through prop_ev_grid.py on ETH/SOL under the three live rulesets (programme 05
+    Q5 pool admission, p_floor 0.0). CONFIRMED -> a bybit_1 soak candidate record; the TP doctrine is satisfied by construction
+    (a real predictive target at entry). NOT CONFIRMED -> a 1h-only lead, no roster case.
+# ── Q9 -- liquidity-sweep reversal (arm B3) ────────────────────────────────────────────────────────────────────────────
+- id: P7-Q9-confirm
+  goal: G1
+  roadmap: [L-TIMEFRAMES, M22]
+  value: {usd_at_stake_per_month: 120, confidence: 0.3}
+  after:
+  - {unit: RQ-20261018-ef5d-09, verdict: pass}
+  needs_authoring: >-
+    ef5d-09 PASSED: a sweep-depth floor (SWEEP or SWEEP_TP1, the record names it) lifts the 1h fade over its cost with breadth.
+    Confirmation: the passing arm alone vs FAR at 15m and 4h on the same symbols, AND a read against fade_breakout_4h's own
+    committed 4h record (the live shadow leg) -- if the 4h cell of this run and the leg's record disagree in sign on the
+    overlapping window, the instrument is the finding. CONFIRMED -> a bybit_1 soak candidate record, routed via the manager.
+# ── Q14 -- the cost lever (maker route) -- authored only from P7-Q2-frontier-fail ────────────────────────────────────────
+- id: P7-Q14-maker-frontier
+  goal: G1
+  roadmap: [L-TIMEFRAMES, M22]
+  value: {usd_at_stake_per_month: 150, confidence: 0.3}
+  after:
+  - {unit: RQ-20261018-ef5d-02, verdict: fail}
+  needs_authoring: >-
+    Q14 is reached only when ef5d-02 FAILS (the same gate as P7-Q2-frontier-fail, which drafts the re-grade this node names) (the short arm is dead at taker cost): the maker-cost re-grade of the
+    break-even frontier described there. If it reads viable at maker cost on >= 3 perps, the next unit is the EXECUTION
+    question, not a strategy: a post-only entry route does not exist in src/ (every crypto entry is a Market order,
+    docs/research/hyro-strategy-feasibility-2026-09-30.md s2) -- file the Tier-2 build row with the fill-model evidence attached
+    and keep the strategy units in blocked/ on it.

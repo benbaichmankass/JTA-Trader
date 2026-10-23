@@ -1,0 +1,32 @@
+{
+  "id": "RESEARCH-OPS-20261016-0847",
+  "title": "Research-ops pass 2026-10-16 08:47Z",
+  "phase": "research",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "research-ops-lane-20261016-0847",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": 3,
+  "tier": 1,
+  "prs": [
+    18559
+  ],
+  "blocked_on": [],
+  "note": "[lane done] runnable 71 vs floor 50 (met, no top-up, no units authored); 27 results read (p2/f8/i3): eda2-01 PASS raises conformal lever, 001 INDETERMINATE (shard exhausted; ML-F18), ML-N3 WEPE G2 FAIL (not retired), macro ES results FAIL, Stage-0 XRP/ADA/BNB FAIL; needs_review 8 of 34 read, rest grouped; PI-20261016-10160847-0001 filed; 12 due PIs routed (0 unrouted); parity DIVERGENT escalated to manager. Record comms/research/ops/20261016T0935Z.json. PR #18559.",
+  "updated_at": "2026-10-16T08:57:58Z",
+  "updated_by": "research-ops-lane-20261016-0847",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "none: operations pass",
+    "arch": "none: no component changed"
+  },
+  "observation": {
+    "what": "PR 18559 merges (self-land on green); grader closes the 6 Stage-0 FAIL units and 2 indeterminate prop-fit units on its next 6-hourly run; manager takes the live-parity escalation",
+    "how_to_check": "git log origin/main --oneline -3 -- comms/research/ops/20261016T0935Z.json; python3 scripts/research/queue_grade.py (expect 0 changed)",
+    "due_by": "2026-10-18"
+  },
+  "_seq": 531
+}

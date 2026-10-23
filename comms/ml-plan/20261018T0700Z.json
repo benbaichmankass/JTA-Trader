@@ -1,0 +1,195 @@
+{
+  "run": "ML-UNBLOCK-1018 (lane, session_019BtYk72AWwvaGkwH81nW96; Fable; manager session_01VduHYzdaXe27wTDBLSu8ao) -- the week's ML plan writeback",
+  "finished_at": "2026-10-18T07:00:00Z",
+  "plan_items": "re-run scripts/ops/ml_plan_status.py (this record was written before the checker count was final)",
+  "open": "re-run the checker",
+  "flags": [
+    "BUILDS-FAILED-24H 5 -> root cause Bybit retCode 10016 not retried + empty page read as end-of-data (ML-SHARD-TRUNCATED mechanism); PR #18891",
+    "REGISTRY-STAGES-CHANGED candidate 71 -> 72 = eth-regime-1h-lgbm-v1-offload registered 2026-10-16 (no stage flip); expected_registry_stages updated",
+    "11 UNPLANNED rows folded into the plan (ML-D6, ML-V3..V6, ML-R8, ML-F2T, ML-F23..F26) or already in flight (ML-TABPFN-AND-STAGE-TRACE -> ML-F26)"
+  ],
+  "plumbing_findings": [
+    "market_raw shards truncated at exact 1000-row page multiples and rebuilt nightly as ok: BTCUSDT 1h 27,000 rows ending 2024-11-15; ETHUSDT 1h 24,000 ending 2024-07-13; BTCUSDT 5m 105,000 ending 2022-10-17; ADAUSDT 15m 149,000 ending 2026-01-16 (trainer-vm-diag #18889)",
+    "gate-check labels_accruing 0/2667 on every BTC/ETH 1h shadow head (the candle base above); 15m/5m/1d heads label at 0.69-1.00 (trainer-vm-diag #18887, #18888)",
+    "live_parity gate resets with the daily retrain: 4-12 rows scored since the 00:29Z cycle, needs >= 20 -> run gate-check ~20 h after the cycle for 1h/15m heads",
+    "promotion-readiness timer runs with PROMOREADY_OOS_EDGE=off -> every shadow head holds on oos_edge insufficient_data; peak RSS measured per head (5m heads 4.69-4.70 GB vs 4.5 GiB MemoryMax)",
+    "TABPFN_TOKEN: 0 occurrences in the trainer env (operator-owed secret)",
+    "replay_parity.py cannot pair the fc_* forecast side-stream (recompute path); live rows DO carry fc_* (shadow/stats row_keys_seen; forecast_serve served=true 05:45Z)"
+  ],
+  "results_read": [
+    {
+      "unit": "RQ-20261016-001",
+      "verdict": "indeterminate",
+      "plan_item": "ML-F18 (already closed 10-16)"
+    },
+    {
+      "unit": "gate-check packets (not queue units)",
+      "verdict": "none ready",
+      "plan_item": "ML-F19 filed as the offline evidence a proposal needs"
+    }
+  ],
+  "ideas": [
+    {
+      "id": "RQ-20261018-ff8f-01",
+      "source": "a",
+      "rule_registered": true,
+      "what": "yz vs advisory fc feature set, identical folds (champion-challenger)"
+    },
+    {
+      "id": "RQ-20261018-ff8f-02",
+      "source": "d",
+      "rule_registered": true,
+      "what": "TabICL at full n on the 15m regime head"
+    },
+    {
+      "id": "RQ-20261018-ff8f-03",
+      "source": "d",
+      "rule_registered": true,
+      "what": "calibrated linear head non-inferiority on log-loss"
+    },
+    {
+      "id": "RQ-20261018-ff8f-04",
+      "source": "d",
+      "rule_registered": true,
+      "what": "GRU on the engineered feature window (blocked: torch_gru kind)"
+    }
+  ],
+  "frontier": {
+    "run": "ML-UNBLOCK-1018 (not a full scan; the diversity half and the kept/dropped register)",
+    "finished_at": "2026-10-18T07:00:00Z",
+    "previous_scan_read": [
+      {
+        "unit": "RQ-20261015-eda2-01",
+        "verdict": "PASS",
+        "family": "conformal_calibration"
+      },
+      {
+        "unit": "RQ-20261016-001",
+        "verdict": "INDETERMINATE",
+        "family": "ensemble_stack"
+      },
+      {
+        "unit": "RQ-20261011-9da8-01",
+        "verdict": "not-run",
+        "family": "ts_foundation_model"
+      },
+      {
+        "unit": "RQ-20261011-9da8-02",
+        "verdict": "not-run",
+        "family": "tabular_foundation_model"
+      },
+      {
+        "unit": "RQ-20261011-9da8-03",
+        "verdict": "not-run",
+        "family": "conformal_calibration"
+      },
+      {
+        "unit": "RQ-20261011-9da8-04",
+        "verdict": "not-run",
+        "family": "rl_bandit"
+      }
+    ],
+    "diversity": {
+      "command": "ml_plan_status.py --diversity",
+      "findings": [
+        "every non-offline registered model is LightGBM or a baseline (manager read 2026-10-18 06:30Z); no CONCENTRATION/FAIL-STREAK flag printed by the checker; tabular_foundation_model, deep_sequence, conformal_calibration and linear_logit each receive one NEW pre-registered unit this week"
+      ]
+    },
+    "sources_checked": [
+      {
+        "source": "trainer venv (pip list via trainer-vm-diag #18883)",
+        "date": "2026-10-18",
+        "note": "tabicl 2.2.0, tabpfn 9.1.0, catboost 1.2.10, timesfm 3.0.2, tirex-ts 1.4.2, chronos-forecasting 2.3.0, torch 2.9.1+cpu importable; no outside web scan this lane"
+      }
+    ],
+    "candidates": [
+      {
+        "name": "TabICL at full n (15m regime head)",
+        "family": "tabular_foundation_model",
+        "licence": "BSD-3-Clause (as recorded by ml_bakeoff; verify on the Hub) (primary: package metadata)",
+        "gate_failed": "none",
+        "kept": true,
+        "unit_or_row": "RQ-20261018-ff8f-02",
+        "baseline": "LightGBM on identical folds; then the regime-cell walk-forward net of cost",
+        "kill": "FAIL if not > 0 vs LightGBM on any symbol with the arm evaluated on all three"
+      },
+      {
+        "name": "Calibrated linear head (isotonic multinomial logit)",
+        "family": "linear_logit",
+        "licence": "BSD-3-Clause (scikit-learn)",
+        "gate_failed": "none",
+        "kept": true,
+        "unit_or_row": "RQ-20261018-ff8f-03",
+        "baseline": "LightGBM log-loss (non-inferiority within 0.005 nats) and the class prior",
+        "kill": "FAIL if worse than LightGBM by > 0.02 nats on >= 2 symbols"
+      },
+      {
+        "name": "GRU over the engineered feature window",
+        "family": "deep_sequence",
+        "licence": "torch BSD",
+        "gate_failed": "none (instrument missing)",
+        "kept": true,
+        "unit_or_row": "RQ-20261018-ff8f-04 + FRONTIER-LEVER-SEQUENCE-LEARNER",
+        "baseline": "LightGBM on identical rows; then the walk-forward net of cost",
+        "kill": "FAIL if not > 0 vs LightGBM on any symbol"
+      },
+      {
+        "name": "TabPFN research-eval arm",
+        "family": "tabular_foundation_model",
+        "licence": "Prior Labs license:other (non-commercial; operator 2026-10-15 'Accept, research only')",
+        "gate_failed": "licence (token not stored)",
+        "kept": false,
+        "unit_or_row": "ML-TABPFN-LICENCE; rides as an observed control in ff8f-02",
+        "baseline": "n/a",
+        "kill": "n/a"
+      },
+      {
+        "name": "Chronos-2 / TimesFM / TiRex / TTM bake-off",
+        "family": "ts_foundation_model",
+        "licence": "apache-2.0 (Hub, read 2026-10-11)",
+        "gate_failed": "none (instrument missing: build_forecasts backends)",
+        "kept": true,
+        "unit_or_row": "RQ-20261011-9da8-01 (blocked on FRONTIER-LEVER-TSFM, third scan)",
+        "baseline": "incumbent fc + HAR-RV",
+        "kill": "registered in the unit"
+      }
+    ],
+    "strategy_ideas": [],
+    "none_because": null
+  },
+  "writebacks": [
+    "ROADMAP.md (Update 2026-10-18 in the ML block)",
+    "docs/plans/ml-plan-items.yaml",
+    "docs/claude/work/checklist/{ML-UNBLOCK-1018,ML-PARITY-HARNESS,ML-PARITY-FC-SHADOWLOG,FRONTIER-LEVER-CONFORMAL,FRONTIER-LEVER-SEQUENCE-LEARNER,ML-SHARD-TRUNCATED,ML-PROMOREADY-OOSEDGE-MEASURE,ML-RQ-RUNNER,ML-HEAD-AGREEMENT-JOIN,EXIT-HEAD-PULLBACK-DRIVER,ML-LABEL-WALL,ML-TABPFN-LICENCE,FRONTIER-LEVER-TSFM}.json",
+    "docs/claude/work/pipeline/ (PI-20261018-WH81NW96-0001..0004)"
+  ],
+  "rows_filed": [
+    "ML-UNBLOCK-1018",
+    "ML-PARITY-FC-SHADOWLOG",
+    "FRONTIER-LEVER-SEQUENCE-LEARNER"
+  ],
+  "units_filed": [
+    "RQ-20261018-ff8f-01",
+    "RQ-20261018-ff8f-02",
+    "RQ-20261018-ff8f-03",
+    "RQ-20261018-ff8f-04 (blocked)",
+    "RQ-20261016-65ff-25 (unblocked, queued)"
+  ],
+  "prs": {
+    "18891": "dataset-build fix + shard truncation (Tier-2 hold)",
+    "18890": "conformal scorer + 65ff-25 (Tier-1 hold)",
+    "writeback": "this record, plan, roadmap, rows, units, ml_bakeoff calibrated-logit kind (Tier-1 hold)"
+  },
+  "next_by_value_per_cost": [
+    "Merge #18891 and read the next cycle (shards whole, builds 0 failed, 1h labels_accruing > 0): it unblocks the 1h heads' entire promotion path (~$0 beyond the merge)",
+    "FRONTIER-LEVER-TSFM: a chronos-2 smoke via --model-id amazon/chronos-2 on the trainer (~$2), then the backends",
+    "ML-HEAD-AGREEMENT-JOIN joiner (Sonnet ~$6): unblocks 17f4-03 and 9da8-03",
+    "ML-PROMOREADY-OOSEDGE-MEASURE Tier-2 flip (manager decision PI-20261018-WH81NW96-0004)",
+    "ML-LABEL-WALL count script (Sonnet ~$5): grades 17f4-02 and gates 9da8-02"
+  ],
+  "handoff": [
+    "Manager: land #18891 first (every other ML finding this week sits behind whole shards), then #18890 and the writeback PR (hand-authored units, E57).",
+    "Manager: dispatch the gate-check re-check ~20 h after a cycle (PI-20261018-WH81NW96-0003) before reading any shadow head as promotable.",
+    "Next ml-review (2026-10-25): read ff8f-01/-02/-03 and 65ff-25 results; the conformal family history moves on 65ff-25's verdict."
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "id": "QUEUE-GEN-ROSTER-SYNC",
+  "title": "queue_replenish: retire generated units whose leg left the roster, re-mint when it returns, and refuse a duplicate key",
+  "phase": "research-infra",
+  "state": "queued",
+  "owner": "manager (Tier-1 build lane)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-16 lane P1-ATM-BACKLOG-1016] MEASURED on main 2026-10-16 (research/queue/*.yaml grouped on generated.key; rosters via src.config.accounts_loader): (1) 10 queued m20/e35 units swept legs routed to NO account (ict_scalp_eth_15m, ict_scalp_sol_15m, ict_scalp_xrp_15m, ict_scalp_xrp_5m, qqq_pullback_1h x2, gld_pullback_1h x2, eth_pullback_2h x2) -- the generator never retires a generated unit whose leg leaves queue_replenish.repo_facts()['legs'], so each kept re-sweeping monthly; (2) 7 keys were minted TWICE with the same template sha (m20 mgc/mhg/qld/qqq_pullback_1h/sol_prop/xrp_4h; e35 iwm/mes) -- plan() dedupes on the branch's own seen_keys, so two replenish PRs cut before either merges both mint the key; (3) seen_keys counts RETIRED units, so a leg that returns to a roster is never re-minted. This lane retired all 17 with retired_reason (PR for P1-ATM-BACKLOG-1016) but did not change the generator (dispatch scope). BUILD: in plan(), (a) emit a retirement for any queued generated unit whose grid point is no longer in expand() (status retired + retired_reason, the same PR), (b) treat only queued/blocked/done units as holding a key so a retired one can be re-minted, (c) in verify(), refuse an added unit whose generated.key is already held by a queued unit on the base. Self-test cases for each. RERUN: python3 -c \"import yaml,glob,collections; c=collections.Counter((yaml.safe_load(open(p)).get('generated') or {}).get('key') for p in glob.glob('research/queue/*.yaml') if yaml.safe_load(open(p)).get('status')=='queued'); print([k for k,v in c.items() if k and v>1])\" -> [] when fixed.",
+  "updated_at": "2026-10-16T07:41:41Z",
+  "updated_by": "session_01Kseu6sKgBb9ir5EcHMiBAx",
+  "roadmap": [
+    "L-PROGRAMMES"
+  ],
+  "_seq": 526
+}

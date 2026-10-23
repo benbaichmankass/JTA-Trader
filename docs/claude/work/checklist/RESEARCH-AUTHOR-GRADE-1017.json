@@ -1,0 +1,30 @@
+{
+  "id": "RESEARCH-AUTHOR-GRADE-1017",
+  "title": "Research SLOs red 2026-10-17: grade the aged results, author the starved themes, name the 3 not_run ops steps",
+  "phase": "research",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "lane RESEARCH-AUTHOR-GRADE-1017 (session_01R5gxKTnLKNXdwF7vhpU9Bp)",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[lane RESEARCH-AUTHOR-GRADE-1017, 2026-10-17] Three PRs (all landing: hold, manager merges; MERGE ORDER tooling first): TOOLING (queue_grade.py no longer erases a session's hand grade on a template-generated unit -- #18805 reverted the #18783 gradings of RQ-20261016-027/-028; research-script-run.yml installs yfinance -- its absence killed RQ-20261016-c56e-16/-17/-18 with exit=1), GRADES (restores 027/028; hand-grades RQ-20260928-006 pass; opts 8bbc-01/-02 and 6013-01 into the mechanical grader; owner on the 4 producer_failed units; re-queues RQ-20261016-024 at timeout 330 after its 240-min timeout; renames the duplicate-id blocked RQ-20260928-006 to RQ-20260928-ae17-01 so the sweep's grade is visible), UNITS (28 regime axis sweeps on pullback legs -- donchian skips stay dropped per the 2026-10-16 programme review -- and 6 daily infra self-tests via scripts/research/infra_selftest.py). MEASURED locally on the grades branch: result_disposition_check UNOWNED 5 -> 0, UNGRADED 4 -> 1 until the grader's next pass (the 3 auto units), regime runnable 0 -> 11 now / 28 after c56e-16 lands, infra 0 -> 6. research_ops_not_run 3 steps (record 20261017T1500Z): (1) blocked/ audit: census run (78 files, 72 name a lever ref, 5 name one in prose only, RQ-20260930-901 only a blocked_reason, 9 have no theme); (2) routing the 10 unrouted: done in PR #18816, unrouted 0; (3) RQ-20261016-024 read: producer_failed timeout, re-queued. THE HONEST LIMIT: theme_share_min_ratio is a 7-day rolling share and the hand-authored once-units drain in about two days; sustained >= 0.5 needs theme-aware replenishment, filed PI-20261017-RADE1017-0001 (routed to QUEUE-THEME-ALIGN, due 2026-10-24). [2026-10-17 23:00Z] #18816, #18821, #18822, #18823 MERGED by the manager (observed, not mine to confirm green post-merge). #18833 (hold): unblocks RQ-20261016-c56e-20..26, re-queues c56e-16/-17/-18, records 9 m20 dispositions (PI-20261017-RADE1017-0003 owns the 3 passing cells). research_ops_not_run 5 (record 20261017T2130Z) dispositioned: (1) blocked/ per-file audit: 78 files, 7 unblocked here, 71 remain, each names clears_when (RQ-20260930-901 has only a blocked_reason, 9 have no theme) -- not individually reopened; (2) the ~106 due pipeline items: unrouted is 0 (pipeline.py --stats), the due ones are dated observations, not re-dated here; (3) stranded stamp PR: only #18831, 15 min old, auto; (4) m20 unread: 9 -> 0; (5) authoring: 35 units authored. research-slo.yml dispatched 22:59Z, run 39077259663 -- it measures main BEFORE the new units have fired, so expect theme_share_min_ratio still red; read the next runs after the ae17 units dispatch.",
+  "updated_at": "2026-10-17T22:59:49Z",
+  "updated_by": "session_01R5gxKTnLKNXdwF7vhpU9Bp",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "writeback": {
+    "roadmap": "none: operations lane",
+    "arch": "none: no component changed"
+  },
+  "observation": {
+    "what": "a fresh research-slo measurement (comms/research/health/<date>.json) after the manager merges the three RESEARCH-AUTHOR-GRADE-1017 PRs reads grade_latency_p90_d <= 2, theme_share_min_ratio >= 0.5 and research_ops_not_run <= 2; if theme_share_min_ratio is < 0.5 once the ae17 units drain, PI-20261017-RADE1017-0001 owns the structural fix",
+    "how_to_check": "python3 -c \"import json,datetime;d=json.load(open(\\\"comms/research/health/\\\"+datetime.date.today().isoformat()+\\\".json\\\"));print([(s[\\\"slo\\\"],s[\\\"state\\\"],s[\\\"value\\\"]) for s in d[\\\"latest\\\"] if s[\\\"slo\\\"] in (\\\"grade_latency_p90_d\\\",\\\"theme_share_min_ratio\\\",\\\"research_ops_not_run\\\")])\"",
+    "due_by": "2026-10-24"
+  },
+  "_seq": 549
+}

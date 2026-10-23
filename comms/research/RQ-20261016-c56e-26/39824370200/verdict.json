@@ -1,0 +1,212 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "scha_trend_long_1d: 68 trades in the baseline arm 'B' on SCHA 1d candles 2010-03-01 .. 2025-04-09, net of fee+slippage+funding (the harness's venue-aware stack); arms ['B']",
+  "n": 68,
+  "measurement": {
+    "leg": "scha_trend_long_1d",
+    "label": "stage0_edge",
+    "grade": {
+      "verdict": "pass",
+      "label": "stage0_edge",
+      "baseline": "B",
+      "net_r": 2.3482,
+      "n": 68,
+      "max_drawdown_r": 8.3076,
+      "folds_positive": 5,
+      "n_folds": 8,
+      "fold_majority": 5,
+      "n_floor": 39,
+      "control": null,
+      "why": "net_r=2.3482 > 0 with 5/8 positive folds at this arm's cost stack"
+    },
+    "arms": {
+      "B": {
+        "reach_ge_6r": 0.0,
+        "n": 68,
+        "net_r": 2.3482,
+        "net_r_fee_only": 3.2139,
+        "max_drawdown_r": 8.3076,
+        "by_outcome": {
+          "take_profit": 25,
+          "trail_stop": 23,
+          "stop": 20
+        },
+        "mean_bars_held": 22.912,
+        "net_r_per_capital_day": 0.0015,
+        "cost_stack": {
+          "fee_bps_roundtrip": 0.0,
+          "slippage_bps_roundtrip": 5.0,
+          "funding_bps_per_window": 0.0
+        },
+        "params": {
+          "donchian": 30,
+          "atr_stop_mult": 3.0,
+          "trail_mult": 4.0,
+          "min_confidence": 0.0
+        },
+        "data_start": "2010-03-01 00:00:00+00:00",
+        "data_end": "2025-04-09 00:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2010-03-01 00:00:00+00:00",
+            "end": "2012-01-19 18:00:00+00:00",
+            "trades": 7,
+            "net_r": 3.5436
+          },
+          {
+            "fold": 2,
+            "start": "2012-01-19 18:00:00+00:00",
+            "end": "2013-12-09 12:00:00+00:00",
+            "trades": 10,
+            "net_r": 1.1391
+          },
+          {
+            "fold": 3,
+            "start": "2013-12-09 12:00:00+00:00",
+            "end": "2015-10-30 06:00:00+00:00",
+            "trades": 7,
+            "net_r": -4.3579
+          },
+          {
+            "fold": 4,
+            "start": "2015-10-30 06:00:00+00:00",
+            "end": "2017-09-19 00:00:00+00:00",
+            "trades": 11,
+            "net_r": -2.4713
+          },
+          {
+            "fold": 5,
+            "start": "2017-09-19 00:00:00+00:00",
+            "end": "2019-08-09 18:00:00+00:00",
+            "trades": 9,
+            "net_r": -0.8725
+          },
+          {
+            "fold": 6,
+            "start": "2019-08-09 18:00:00+00:00",
+            "end": "2021-06-29 12:00:00+00:00",
+            "trades": 10,
+            "net_r": 3.3935
+          },
+          {
+            "fold": 7,
+            "start": "2021-06-29 12:00:00+00:00",
+            "end": "2023-05-20 06:00:00+00:00",
+            "trades": 5,
+            "net_r": 0.6489
+          },
+          {
+            "fold": 8,
+            "start": "2023-05-20 06:00:00+00:00",
+            "end": "2025-04-09 00:00:00+00:00",
+            "trades": 9,
+            "net_r": 1.3246
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+          "--donchian",
+          "30",
+          "--data",
+          "<data>",
+          "--symbol",
+          "SCHA",
+          "--resample",
+          "1d",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "3.0",
+          "--trail-mult",
+          "4.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261016-c56e-26/39824370200/arms/B__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261016-c56e-26/39824370200/arms/B__bt.json",
+          "--long-only",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "1.5",
+          "--start",
+          "2010-03-01",
+          "--end",
+          "2025-04-09"
+        ]
+      }
+    },
+    "window": {
+      "start": "2010-03-01",
+      "end": "2025-04-09",
+      "fetch_days": 6075,
+      "feed": {
+        "source": "yahoo",
+        "ticker": "SCHA",
+        "interval": "1d",
+        "resample": "1d"
+      },
+      "fold_edges": [
+        "2010-03-01 00:00:00+00:00",
+        "2012-01-19 18:00:00+00:00",
+        "2013-12-09 12:00:00+00:00",
+        "2015-10-30 06:00:00+00:00",
+        "2017-09-19 00:00:00+00:00",
+        "2019-08-09 18:00:00+00:00",
+        "2021-06-29 12:00:00+00:00",
+        "2023-05-20 06:00:00+00:00",
+        "2025-04-09 00:00:00+00:00"
+      ]
+    },
+    "argv": {
+      "B": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+          "--donchian",
+          "30",
+          "--data",
+          "<data>",
+          "--symbol",
+          "SCHA",
+          "--resample",
+          "1d",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "3.0",
+          "--trail-mult",
+          "4.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261016-c56e-26/39824370200/arms/B__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261016-c56e-26/39824370200/arms/B__bt.json",
+          "--long-only",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "1.5",
+          "--start",
+          "2010-03-01",
+          "--end",
+          "2025-04-09"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": []
+      }
+    }
+  },
+  "note": "PASS / stage0_edge: net_r=2.3482 > 0 with 5/8 positive folds at this arm's cost stack"
+}

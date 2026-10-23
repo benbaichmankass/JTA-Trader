@@ -54,6 +54,9 @@ dependencies {
     // IMAP (read-only folder open) for the dedicated Breakout-login inbox.
     implementation("com.sun.mail:android-mail:1.6.7")
     implementation("com.sun.mail:android-activation:1.6.7")
-    // JVM unit tests of the pure login matcher (LoginMatch), run by CI before the APK is uploaded
+    // ed25519 verify of the SIGNED remote exec.js (RemoteJs, PHONE-EXEC-OBSERVABLE-1018): pure Java, RFC 8032,
+    // works from minSdk 26 (java.security "Ed25519" exists only from API 33)
+    implementation("net.i2p.crypto:eddsa:0.3.0")
+    // JVM unit tests (login matcher, liveness, background-ticket routing, remote-script verify, capture ids), run by CI before the APK is uploaded
     testImplementation("junit:junit:4.13.2")
 }

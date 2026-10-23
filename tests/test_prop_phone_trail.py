@@ -41,6 +41,9 @@ def _iso(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr("src.runtime.notify.send_telegram_direct", lambda m, **k: sent.append(m) or True)
     import src.prop.prop_trail as pt
     monkeypatch.setattr(pt, "_load_legs", lambda *a, **k: LEGS)
+    # the live pencil + Confirm gate (3 drill passes or the operator's pin) is OPEN for the amend-path tests; the
+    # closed-gate behaviour has its own tests below
+    monkeypatch.setattr(ptr, "_sheet_edit_gate", lambda acct: {"enabled": True, "source": "config", "passes": 0})
     return sent
 
 
@@ -197,6 +200,23 @@ def _attempt(hours, result="refused", **kw):
     return a
 
 
+def test_sl_only_amend_verifies_the_stop_only_a_tp_not_read_is_still_amended(_iso):
+    """MEASURED 2026-10-18 (#a9 on breakout_2, 1b.311): the app's amend edits the Stop row's modal and reads the STOP
+    back; it has no TP to read and reports tp_read None, while the ticket's TP rides along on the amend unchanged. The
+    server called that a mismatch (fails 8) on a stop that HAD moved 2452.65 -> 2391.18 and been read back. An sl-only
+    amend verifies the stop only; a stop that does not match is still a mismatch."""
+    a = _claimed()
+    assert a["amend_kind"] == "sl" and a["tp"] is not None
+    r = _report(a, "amended", sl_read=2530.0, tp_read=None)
+    assert r["ok"] and r["result"] == "amended"
+    tr = _trail()
+    assert tr["resting_sl"] == 2530.0 and tr["seen"] and not tr.get("human_hold") and not tr.get("fails")
+    assert any("READ BACK" in m for m in _iso) and not any("NOT verified" in m for m in _iso)
+    # the stop itself still has to match: a wrong stop with no TP read is the mismatch it always was
+    b = _attempt(1, "amended", sl_read=2500.0, tp_read=None)
+    assert b is not None and _trail()["amend"]["status"] == "mismatch" and _trail()["fails"] == 1
+
+
 def test_amended_claim_that_does_not_match_the_ask_is_a_mismatch_and_retries(_iso):
     a = _claimed()
     r = _report(a, "amended", sl_read=2520.0, tp_read=2800.0)
@@ -213,11 +233,25 @@ def test_amended_claim_that_does_not_match_the_ask_is_a_mismatch_and_retries(_is
 
 def test_refused_amend_does_not_stop_the_next_attempt(_iso):
     a = _claimed()
-    _report(a, "refused", reason="edit control not found")
+    _report(a, "refused", reason="edit control not found", capture_run="T1-a1-20261018T120000Z")
     assert _trail()["fails"] == 1 and "locked" not in _trail()
-    b = _attempt(1)
+    # a LIVE refusal (PHONE-EXEC-OBSERVABLE-1018 piece 5): EVERY one names the stop to set by hand + the captures
+    assert len(_iso) == 1 and "SET THE STOP BY HAND" in _iso[0] and "ETHUSDT long stop -> 2530.0 (from 2450.0)" in _iso[0]
+    assert "/api/diag/phone_capture?account_id=breakout_2&run_id=T1-a1-20261018T120000Z" in _iso[0]
+    assert _trail()["amend"]["capture_run"] == "T1-a1-20261018T120000Z"
+    b = _attempt(1, capture_run="bad run id!")
     assert b is not None and b["amend_id"] == "T1#a2"
+    assert sum("refused before any click" in m.lower() for m in _iso) == 2, "a live refusal is never silent, streak or not"
+    assert "Step captures: none posted" in _iso[1] and "capture_run" not in _trail()["amend"]
+
+
+def test_dry_refusal_pings_once_per_streak_without_a_hand_set_ask(_iso, monkeypatch):
+    monkeypatch.setenv("PROP_PHONE_MODE_BREAKOUT_2", "dry")
+    a = _claimed()
+    _report(a, "refused", reason="edit control not found")
+    assert _attempt(1) is not None
     assert sum("refused before any click" in m for m in _iso) == 1  # first of the streak only
+    assert not any("SET THE STOP BY HAND" in m for m in _iso), "nothing to set by hand when no live amend was due"
 
 
 def test_backoff_then_retry():
@@ -240,7 +274,9 @@ def test_repeated_failures_raise_one_red_flag_and_keep_trying_then_recover(_iso)
     tr = _trail()
     assert tr["fails"] == 6 and tr["flagged"] and "locked" not in tr
     assert sum(m.startswith("📱 trail breakout_2: 🚩") for m in _iso) == 1   # exactly ONE red flag
-    assert len(_iso) == 2                                                   # first failure + the flag
+    # every LIVE refusal names the stop to set by hand (5 of the 6 failures are refusals; the mismatch is not the
+    # first of its streak) + the one flag
+    assert len(_iso) == 6 and sum('SET THE STOP BY HAND' in m for m in _iso) == 5
     assert _attempt(31, "amended", sl_read=2520.0 + 40 * 33 - 70, tp_read=2800.0) is not None
     assert sum("RECOVERED" in m for m in _iso) == 1 and not _trail().get("flagged") and _trail()["fails"] == 0
 
@@ -425,3 +461,165 @@ def test_trail_crossed_no_amend_when_the_resting_stop_is_already_tighter():
     tr = _trail()
     assert out["emitted"] == [] and "amend" not in tr
     assert tr["last_plan"]["action"] == "exit" and "already at or inside" in tr["last_plan"]["why"]
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# An UNREAD stop is never a human move (operator 2026-10-18, breakout_2 prop-manual-c1dba3c376b3#a7: the app
+# reported human_moved with "terminal stop null != expected 2452.65" and the server held a trail nobody had touched).
+# ---------------------------------------------------------------------------------------------------------------
+_UNREAD_FORM = {"ok": True, "n_stop": 1, "n_take": 1, "rows": [{"type": "stop", "trigger": None, "n_px": 2},
+                                                              {"type": "take", "trigger": 2800.0, "n_px": 1}]}
+
+
+def test_unread_stop_report_is_a_failed_attempt_not_a_human_move(_iso):
+    a = _claimed()
+    r = _report(a, "human_moved", reason="terminal stop null != expected 2450.0 (sheet close: escape)",
+                form=_UNREAD_FORM)
+    assert r["ok"]
+    tr = _trail()
+    assert not tr.get("human_hold"), "an unread stop must never hold the trail"
+    assert tr["amend"]["status"] == ptr.UNREAD and tr["amend"]["read_state"] == "unread"
+    assert tr["fails"] == 1 and tr["backoff"]["n"] == 1
+    assert not any("will not override a human" in m for m in _iso)
+    live = [m for m in _iso if "did NOT READ" in m]
+    assert len(live) == 1 and "n=2" in live[0] and "2530.0" in live[0], live
+    # the next plan re-emits from the server's resting stop once the backoff has passed: nothing is held
+    later = _candles([2520, 2560, 2600, 2640])
+    ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=2), candles_fn=lambda s, tf: later)
+    c = ptr.claim_amend(_dev(), now=NOW + timedelta(hours=2))
+    assert c is not None and c["from_sl"] == 2450.0
+
+
+def test_unread_is_decided_by_the_evidence_not_the_word_human(_iso):
+    # no dump, reason text says the reading was null -> unread
+    assert ptr._unread_stop("terminal stop null != expected 2452.65 (sheet close: escape)", None, {}) is not None
+    assert ptr._unread_stop("modal trigger null != expected 2452.65", None, None) is not None
+    # a dump whose Stop row carries no trigger -> unread, whatever the text says
+    assert "n=2" in ptr._unread_stop("terminal differs", None, _UNREAD_FORM)
+    assert "no Stop row" in ptr._unread_stop("terminal differs", None, {"ok": True, "rows": []})
+    # two numbers, or a value the app read back -> a genuine human move, never reclassified
+    assert ptr._unread_stop("terminal SL 2470 != 2450", None, {}) is None
+    assert ptr._unread_stop("terminal stop 2470.0 != expected 2450.0", None, {}) is None
+    assert ptr._unread_stop("terminal stop null != expected 2450.0", 2470.0, {}) is None
+    assert ptr._unread_stop("terminal differs", None,
+                            {"rows": [{"type": "stop", "trigger": 2470.0, "n_px": 1}]}) is None
+
+
+def test_a_genuine_human_move_still_holds(_iso):
+    a = _claimed()
+    _report(a, "human_moved", reason="terminal stop 2470.0 != expected 2450.0 (sheet close: escape)",
+            form={"ok": True, "n_stop": 1, "rows": [{"type": "stop", "trigger": 2470.0, "n_px": 1}]})
+    assert "human" in _trail()["human_hold"]
+    assert sum("will not override a human" in m for m in _iso) == 1
+
+
+def _held_meta(reason: str, *, trigger=None, n_px=2):
+    return {ptr.KEY: {
+        "seq": 1, "last_bar": "2026-10-07T13:00:00+00:00",
+        "amend": {"id": "T1#a1", "status": "human_moved", "kind": "sl", "from_sl": 2450.0, "sl": 2530.0,
+                  "emitted_at": NOW.isoformat(), "reported_at": NOW.isoformat(), "reason_reported": reason,
+                  "sl_read": None, "tp_read": None,
+                  "form": {"ok": True, "n_stop": 1, "rows": [{"type": "stop", "trigger": trigger, "n_px": n_px}]}},
+        "human_hold": "the terminal's stop differs from the server's: a human moved it", "fails": 6}}
+
+
+def test_hold_written_from_an_unread_report_is_released_on_the_next_plan(_iso):
+    """The breakout_2 shape on main at 13:01Z: held by an older app's null reading. The next plan releases the
+    hold through a code path (a hold_released history row), re-plans from the server's stop, and emits."""
+    _parent(meta=_held_meta("terminal stop null != expected 2450.0 (sheet close: escape)"))
+    later = _candles([2520, 2560, 2600, 2640])
+    out = ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=1), candles_fn=lambda s, tf: later)
+    tr = _trail()
+    assert not tr.get("human_hold")
+    assert tr["history"][-1]["status"] == "hold_released" and "unread stop" in tr["history"][-1]["why"]
+    assert any("hold RELEASED" in a for a in out["alerts"])
+    assert out["emitted"] == ["T1#a2"] and tr["amend"]["from_sl"] == 2450.0
+    assert ptr.claim_amend(_dev(), now=NOW + timedelta(hours=1))["amend_id"] == "T1#a2"
+
+
+def test_hold_from_a_genuine_human_move_is_never_released_by_the_planner(_iso):
+    _parent(meta=_held_meta("terminal stop 2470.0 != expected 2450.0 (sheet close: escape)", trigger=2470.0, n_px=1))
+    later = _candles([2520, 2560, 2600, 2640])
+    out = ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=1), candles_fn=lambda s, tf: later)
+    assert "human" in _trail()["human_hold"] and out["emitted"] == []
+    assert ptr.claim_amend(_dev(), now=NOW + timedelta(hours=1)) is None
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# A NEW signed exec.js waives a running backoff ONCE (operator 2026-10-18: breakout_2 #a8 sat at fails=7 = an 8-bar
+# wait while the reader fix shipped signed; the fix is tried on the next plan, not tomorrow).
+# ---------------------------------------------------------------------------------------------------------------
+def test_new_served_exec_js_waives_the_backoff_once(_iso, monkeypatch):
+    monkeypatch.setattr(ptr, "_served_exec_js", lambda: "2026-10-18.3")
+    a = _claimed()
+    _report(a, "refused", reason="sheet volume 0.5 != ticket qty 0.52")
+    assert _trail()["backoff"] == {"n": 1, "since": a["claimed_at"], "exec_js": "2026-10-18.3"}
+    # a second failure one bar later: 2 closed bars of backoff (until NOW+3h), recorded against the same script
+    b = _attempt(2, "refused", reason="sheet volume 0.5 != ticket qty 0.52")
+    assert b is not None and _trail()["fails"] == 2 and _trail()["backoff"]["exec_js"] == "2026-10-18.3"
+    later = _rising(6)
+    # same script, next closed bar, still inside the 2-bar wait (until NOW+4h): nothing emitted
+    out = ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=3, minutes=5), candles_fn=lambda s, tf: later)
+    assert out["emitted"] == []
+    # a NEWER served script: the wait is waived once, the plan emits from the server's resting stop
+    monkeypatch.setattr(ptr, "_served_exec_js", lambda: "2026-10-18.4")
+    out = ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=3, minutes=6), candles_fn=lambda s, tf: later)
+    assert out["emitted"] == ["T1#a3"], out["log"]
+    assert any("backoff waived once" in x.get("why", "") for x in out["log"])
+    assert _trail()["backoff"]["exec_js"] == "2026-10-18.4"
+    # ... and only once per version: a failure on the new script backs off normally (4 bars now)
+    c = ptr.claim_amend(_dev(), now=NOW + timedelta(hours=3, minutes=6))
+    _report(c, "refused", reason="sheet volume 0.5 != ticket qty 0.52")
+    assert _trail()["fails"] == 3
+    out = ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=4, minutes=5), candles_fn=lambda s, tf: later)
+    assert out["emitted"] == []
+
+
+def test_backoff_without_a_served_script_keeps_its_clock(_iso, monkeypatch):
+    monkeypatch.setattr(ptr, "_served_exec_js", lambda: None)
+    a = _claimed()
+    _report(a, "refused", reason="x")
+    assert _trail()["backoff"]["exec_js"] is None
+    later = _candles([2520, 2560, 2600, 2640])
+    assert ptr.plan_amends("breakout_2", now=NOW + timedelta(minutes=30), candles_fn=lambda s, tf: later)["emitted"] == []
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# THE GATE: while sheet_edit is closed (drill passes < 3, no pin) the server emits NO amend — the app would refuse the
+# pencil by design and every refusal burned the backoff (measured 2026-10-18). One alert per ticket; nothing backs off;
+# the first plan after the gate opens emits at once, and the exec.js waiver is not consumed by a gated plan.
+# ---------------------------------------------------------------------------------------------------------------
+def test_closed_sheet_edit_gate_emits_nothing_and_alerts_once(_iso, monkeypatch):
+    monkeypatch.setattr(ptr, "_sheet_edit_gate", lambda acct: {"enabled": False, "source": "drills", "passes": 1, "needed": 3})
+    _parent()
+    out = ptr.plan_amends("breakout_2", now=NOW, candles_fn=lambda s, tf: UP)
+    assert out["emitted"] == [] and any("gate closed (drills: passes 1/3)" in x["why"] for x in out["log"])
+    assert sum("no amend emitted while the sheet_edit gate closed" in m for m in _iso) == 1
+    tr = _trail()
+    assert tr.get("gate_alerted") and "backoff" not in tr and "last_bar" not in tr and "amend" not in tr
+    # a second gated plan: logged, not alerted again
+    out = ptr.plan_amends("breakout_2", now=NOW + timedelta(minutes=5), candles_fn=lambda s, tf: UP)
+    assert out["emitted"] == [] and sum("no amend emitted" in m for m in _iso) == 1
+    # the gate opens (3 passes): the very next plan emits from the server's resting stop
+    monkeypatch.setattr(ptr, "_sheet_edit_gate", lambda acct: {"enabled": True, "source": "drills", "passes": 3, "needed": 3})
+    out = ptr.plan_amends("breakout_2", now=NOW + timedelta(minutes=6), candles_fn=lambda s, tf: UP)
+    assert out["emitted"] == ["T1#a1"]
+    assert ptr.claim_amend(_dev(), now=NOW + timedelta(minutes=6))["from_sl"] == 2450.0
+
+
+def test_gated_plans_do_not_consume_the_exec_js_waiver(_iso, monkeypatch):
+    monkeypatch.setattr(ptr, "_served_exec_js", lambda: "2026-10-18.3")
+    a = _claimed()
+    _report(a, "refused", reason="sheet read verified; the pencil click waits for the server's sheet_edit")
+    b = _attempt(2, "refused", reason="sheet read verified; the pencil click waits for the server's sheet_edit")
+    assert b is not None and _trail()["backoff"]["n"] == 2   # 2 closed bars: until NOW+4h
+    later = _rising(6)
+    # the gate closes; a newer script is served; gated plans return before the backoff check (waiver untouched)
+    monkeypatch.setattr(ptr, "_sheet_edit_gate", lambda acct: {"enabled": False, "source": "drills", "passes": 2, "needed": 3})
+    monkeypatch.setattr(ptr, "_served_exec_js", lambda: "2026-10-18.4")
+    out = ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=2, minutes=10), candles_fn=lambda s, tf: later)
+    assert out["emitted"] == [] and _trail()["backoff"]["exec_js"] == "2026-10-18.3"
+    # the gate opens inside the wait: the waiver fires now and the amend emits
+    monkeypatch.setattr(ptr, "_sheet_edit_gate", lambda acct: {"enabled": True, "source": "drills", "passes": 3, "needed": 3})
+    out = ptr.plan_amends("breakout_2", now=NOW + timedelta(hours=3, minutes=5), candles_fn=lambda s, tf: later)
+    assert out["emitted"] == ["T1#a3"] and _trail()["backoff"]["exec_js"] == "2026-10-18.4"

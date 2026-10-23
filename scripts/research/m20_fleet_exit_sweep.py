@@ -213,6 +213,30 @@ CELL_TIMEOUT_S: float = 1800.0
 # Memo for run_cell, keyed on the full invocation. See run_cell's docstring for
 # why this is load-bearing rather than cosmetic.
 _CELL_CACHE: dict[tuple, dict] = {}
+class _NoHoldout:
+    """Inert stand-in for m20_holdout.HoldoutGuard. `m20_holdout` is imported LAZILY, only when
+    `--holdout-frac` is set: this module sits in the web-api brief's in-process import closure,
+    and every module in that closure must be on the deploy's runtime allowlist
+    (tests/test_deploy_pull_restart_runtime_gate.py), a Tier-2 file."""
+    active = False
+
+    def window(self, start, end):
+        return start, end
+
+    def harness_args(self):
+        return []
+
+    def clip_fold(self, fs, fe):
+        return fs, fe
+
+    def end(self):
+        pass
+
+
+#: The lookahead guard for `--holdout-frac` (m20_holdout.HoldoutGuard, installed by main()).
+#: Inactive unless a leg begins a holdout: then every run_cell window and every full-history emit
+#: is capped at the day before the boundary during discovery, and a read past it raises HoldoutLeak.
+_HOLDOUT = _NoHoldout()
 
 FOLDS = [("2021", "2021-01-01", "2022-01-01"), ("2022", "2022-01-01", "2023-01-01"),
          ("2023", "2023-01-01", "2024-01-01"), ("2024", "2024-01-01", "2025-01-01"),
@@ -1739,7 +1763,8 @@ def resolve_split(harness: str, base: list[str], mode: str,
     os.close(_fd)
     Path(tmp).unlink(missing_ok=True)
     cmd = [sys.executable, str(REPO / harness), *base,
-           "--emit-trades", tmp, "--json", "/tmp/m20_split_metrics.json"]
+           "--emit-trades", tmp, "--json", "/tmp/m20_split_metrics.json",
+           *_HOLDOUT.harness_args()]
     try:
         p = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
         if p.returncode != 0:
@@ -1803,6 +1828,27 @@ def resolve_split(harness: str, base: list[str], mode: str,
     boundary = stamps[-target_oos][:10]          # YYYY-MM-DD
     meta["split"] = boundary
     return boundary, meta
+
+
+def holdout_entry_stamps(harness: str, base: list[str]) -> list[str] | None:
+    """The base's FULL-history entry times, for placing the holdout boundary (m20_holdout.
+    plan_holdout). Run BEFORE the guard is armed, so it is the one read of the held-back span
+    discovery makes -- and it reads only entry TIMES, never an outcome. None = could not look."""
+    _fd, tmp = tempfile.mkstemp(prefix="m20_holdout_emit_", suffix=".jsonl")
+    os.close(_fd)
+    Path(tmp).unlink(missing_ok=True)
+    cmd = [sys.executable, str(REPO / harness), *base,
+           "--emit-trades", tmp, "--json", "/tmp/m20_holdout_metrics.json"]
+    try:
+        p = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
+        if p.returncode != 0:
+            return None
+        return sorted(str(json.loads(ln).get("entry_time")) for ln in Path(tmp).read_text().splitlines()
+                      if ln.strip() and json.loads(ln).get("entry_time"))
+    except (OSError, json.JSONDecodeError, ValueError, TypeError, subprocess.TimeoutExpired):
+        return None
+    finally:
+        Path(tmp).unlink(missing_ok=True)
 
 
 def summary_split_line(leg: str, v: dict) -> str:
@@ -2042,6 +2088,8 @@ def run_cell(harness: str, args: list[str], start=None, end=None) -> dict:
     is handed out so a caller that annotates a result cannot poison the entry
     for the next reader.
     """
+    if _HOLDOUT.active:
+        start, end = _HOLDOUT.window(start, end)   # HoldoutLeak on a read into the held-back span
     key = (harness, tuple(args), start, end)
     hit = _CELL_CACHE.get(key)
     if hit is not None:
@@ -2334,6 +2382,12 @@ def walkforward(harness: str, base_args_: list, cell_args: list,
     wins = usable = inert_wins = 0
     folds = []
     for fname, fs, fe in FOLDS:
+        clipped = _HOLDOUT.clip_fold(fs, fe)
+        if clipped is None:
+            # Wholly inside the held-back span: discovery may not look at it.
+            folds.append({"fold": fname, "usable": False, "why": "held_back_for_holdout"})
+            continue
+        fs, fe = clipped
         fb = run_cell(harness, base_args_, start=fs, end=fe)
         fc = run_cell(harness, cell_args, start=fs, end=fe)
         log({"leg": leg, "cell": f"{tag}@wf{fname}", "window": "fold",
@@ -2484,7 +2538,7 @@ def capital_delta(cell: dict, base: dict) -> dict:
 
 
 def main(argv: list[str]) -> int:
-    global CELL_TIMEOUT_S
+    global CELL_TIMEOUT_S, _HOLDOUT
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--data-dir", default=str(REPO / "data"))
     ap.add_argument("--split", default="2025-07-01",
@@ -2510,6 +2564,12 @@ def main(argv: list[str]) -> int:
                          "A thin leg is NOT refused by the higher target: "
                          "resolve_split clamps to len(stamps)//2 and records "
                          "split_target_clamped_from/to.")
+    ap.add_argument("--holdout-frac", type=float, default=0.0,
+                    help="RESEARCH-CONFIRM-FRESH-WINDOW (operator 2026-10-16): hold back the latest "
+                         "share of each leg's history (by its base trades) BEFORE selection; cells are "
+                         "chosen on the rest (IS/OOS inside it) and ONLY the selected cells are graded "
+                         "once on the held-back span. The share grows to reach the "
+                         f"{MIN_OOS_TRADES}-trade floor, capped at 40%. 0 = off. The workflow default is 0.25.")
     ap.add_argument("--out", default=str(REPO / "runtime_logs" / "m20_fleet"))
     ap.add_argument("--only", default=None,
                     help="CSV of leg names to restrict to (debug)")
@@ -2871,9 +2931,30 @@ def main(argv: list[str]) -> int:
         results.flush()
 
     verdicts: dict = {}
+    if a.holdout_frac > 0:
+        from m20_holdout import (HoldoutGuard, plan_holdout,  # noqa: PLC0415 -- lazy, see _NoHoldout
+                                 confirm_cells as holdout_confirm_cells,
+                                 leg_confirmation as holdout_leg_confirmation)
+        _HOLDOUT = HoldoutGuard()
     for p in plan:
         leg = p["leg"]
         print(f"== {leg} ({p['symbol']} {p['tf']}) ==", flush=True)
+        _HOLDOUT.end()   # a previous leg's `continue` must not leave its boundary armed
+        hold_plan = None
+        if a.holdout_frac > 0:
+            _stamps = holdout_entry_stamps(p["harness"], p["base"])
+            hold_plan = (plan_holdout(_stamps, a.holdout_frac, MIN_OOS_TRADES)
+                         if _stamps is not None else {"state": "emit_unreadable", "boundary": None})
+            if not hold_plan.get("boundary"):
+                # No boundary = no holdout. Sweeping full history here would label a
+                # single-window run as discovery+confirmation, so the leg is not swept.
+                print(f"    holdout: UNPLACEABLE ({hold_plan.get('state')}) -- leg skipped")
+                verdicts[leg] = {"status": "holdout_unplaceable", "holdout": {"plan": hold_plan}}
+                continue
+            print(f"    holdout: from {hold_plan['boundary']} ({hold_plan['holdout_trades_planned']} of "
+                  f"{hold_plan['lifetime_trades']} base trades, share {hold_plan['share_used']}, "
+                  f"{hold_plan['state']}); selection sees only the span before it")
+            _HOLDOUT.begin(hold_plan["boundary"])
         # PER-LEG boundary. A fixed date makes trade FREQUENCY decide whether a
         # leg can be graded at all; see resolve_split(). The split is resolved
         # once per leg and reused for every cell, so IS/OOS means the same thing
@@ -2902,6 +2983,7 @@ def main(argv: list[str]) -> int:
                              "error": base_is.get("error") or base_oos.get("error")}
             continue
         leg_v = {"proxy": p["proxy"], "family": p["family"], "levers": {},
+                 **({"holdout": {"plan": hold_plan}} if hold_plan else {}),
                  **split_meta,
                  # Cells the grid deliberately did not ask, and why. Without
                  # this the verdict file cannot distinguish a cell that was
@@ -3372,6 +3454,30 @@ def main(argv: list[str]) -> int:
                 if e.get("verdict") == "path_b_wf_pass"
                 and e.get("path_b_rate_ok") is None),
         }
+        if hold_plan:
+            # CONFIRMATION on the held-back span: ONLY the cells discovery selected (the
+            # E5 pass definition, `is_oos_pass`), each graded once, same Path A comparison,
+            # same base-trades floor. The selection denominator rides beside the answer.
+            _extra = {tag: extra for tag, _lv, extra in p["cells"]}
+            _sel = [{"cell": e["cell"], "args": p["base"] + _extra[e["cell"]]}
+                    for e in _all_entries if e.get("is_oos_pass") is True and e.get("cell") in _extra]
+            _HOLDOUT.confirm()
+            _conf = holdout_confirm_cells(
+                _sel, lambda args, start: run_cell(p["harness"], p["base"] if args is None else args,
+                                                   start=start),
+                beats, hold_plan["boundary"], MIN_OOS_TRADES)
+            _HOLDOUT.end()
+            _by = {c["cell"]: c for c in _conf["cells"]}
+            for e in _all_entries:
+                e["holdout"] = _by.get(e.get("cell"), {"holdout_verdict": "not_selected"})
+            leg_v["holdout"].update({
+                "selected_from": len(_all_entries), "selected": [x["cell"] for x in _sel],
+                "base_trades": _conf["base_trades"], "base_net_r": _conf["base_net_r"],
+                "confirmation": holdout_leg_confirmation(len(_sel), _conf["cells"]),
+                "cells": _conf["cells"]})
+            log_result({"leg": leg, "cell": "holdout", "window": "HOLDOUT", **leg_v["holdout"]})
+            print(f"    holdout: {leg_v['holdout']['confirmation']} -- {len(_sel)} selected of "
+                  f"{len(_all_entries)} cells, holdout base n={_conf['base_trades']}", flush=True)
         # The proposed arm's reachability check rides in the verdict, so a
         # downstream reader never has to re-derive it from the run log.
         leg_v["p80_arm_reach"] = arm_ceiling
@@ -3431,6 +3537,9 @@ def main(argv: list[str]) -> int:
          # empty or wholly-ungraded run for a measurement without branching on
          # it. The per-cell records were always honest; nothing rolled them up.
          "grading_census": _census,
+         # PRE-REGISTERED HOLDOUT share requested (0 = none); per-leg boundary + result
+         # live in each leg's `holdout` block (m20_holdout).
+         "holdout_frac": a.holdout_frac,
          "split_fallback_date": a.split, "split_mode": a.split_mode,
          "split_target_oos": a.split_target_oos, "tp_cap_pct": a.tp_cap_pct,
          # The router value ACTUALLY used by the harness runs above — recorded

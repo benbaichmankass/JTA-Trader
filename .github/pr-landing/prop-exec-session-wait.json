@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Prop executor exit 6 (manager session_01VduHYzdaXe27wTDBLSu8ao; operator Telegram 2026-10-17 'systemd unit FAILED: ict-prop-executor@tradeify_1.service (exit=6)'). Tier 2 by path (service tick wrapper). Exit 6 = the feed's saved session was not accepted (Tradeify showed 'Platform maintenance - come back in 15 minutes' at 05:16Z); the feed already retries and owns the red flag at its 3rd consecutive failure. Exit 6 now exits 0 and is counted; it fails the unit (one OnFailure ping) only after 6 consecutive waits while the feed is NOT backing off. No order path, no click, no login change. Revert = revert this PR. The manager merges.",
+  "why": "journalctl ict-prop-executor@tradeify_1 2026-10-17 05:13:53Z 'session: not_accepted' exit 6 -> unit FAILED; feed journal 05:17:31Z page_shape.title 'Platform maintenance', failure 1 (red flag at 3)."
+}

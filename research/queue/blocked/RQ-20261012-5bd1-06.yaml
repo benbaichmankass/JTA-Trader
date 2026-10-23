@@ -1,6 +1,6 @@
 id: RQ-20261012-5bd1-06
-title: 'NEWS-ALPHA U06: do macro/geopolitical news-topic intensities predict ETF (SPY QQQ TLT GLD USO UUP) vol and
-  returns at 1d/5d?'
+title: 'NEWS-ALPHA U06: do macro/geopolitical news-topic intensities predict ETF (SPY QQQ TLT GLD USO UUP) vol and returns
+  at 1d/5d?'
 status: blocked
 roadmap: M28
 program: NEWS-ALPHA-PROGRAM
@@ -8,12 +8,11 @@ cadence: once
 kind: experiment
 theme: macro
 priority: 2
-question: 'Feature: daily GKG theme intensity z (conflict/military, central bank, inflation/prices, energy supply,
-  trade policy/tariffs), items available before the 16:00 ET close of day t; target from close t.'
-why_this_matters: 'Tests the macro sleeve''s natural instruments; topic-level rather than entity-level news. Program
-  index: docs/research/news-alpha-program-2026-10-12.md.'
-populations: 'SPY QQQ TLT GLD USO UUP (daily: yfinance/Stooq via fetch_macro_candles; intraday: Dukascopy CFDs via
-  fetch_dukascopy_ohlcv)'
+question: 'Feature: daily GKG theme intensity z (conflict/military, central bank, inflation/prices, energy supply, trade policy/tariffs),
+  items available before the 16:00 ET close of day t; target from close t.'
+why_this_matters: 'Tests the macro sleeve''s natural instruments; topic-level rather than entity-level news. Program index:
+  docs/research/news-alpha-program-2026-10-12.md.'
+populations: 'SPY QQQ TLT GLD USO UUP (daily: yfinance/Stooq via fetch_macro_candles; intraday: Dukascopy CFDs via fetch_dukascopy_ohlcv)'
 grid:
   features:
   - conflict
@@ -43,55 +42,52 @@ power:
   design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: 'Effect is a rank correlation r treated as d (n ~ 7.85/r^2): floor 2180.2 at d=0.06. 2019-01..2025-09 =
-    ~1,700 trading days per asset with the corpus extension (500 on the short corpus); floor 2,180 at d=0.06 ->
-    UNDERPOWERED per asset on the short corpus, stated; the pooled-asset read is reported. The floor is per-test
-    and unadjusted; the unit''s 120 cells are controlled by the family BH over 600 declared tests (rule), so survival
-    needs |t| well above 2 -- the conservative direction.'
+  basis: 'Effect is a rank correlation r treated as d (n ~ 7.85/r^2): floor 2180.2 at d=0.06. 2019-01..2025-09 = ~1,700 trading
+    days per asset with the corpus extension (500 on the short corpus); floor 2,180 at d=0.06 -> UNDERPOWERED per asset on
+    the short corpus, stated; the pooled-asset read is reported. The floor is per-test and unadjusted; the unit''s 120 cells
+    are controlled by the family BH over 600 declared tests (rule), so survival needs |t| well above 2 -- the conservative
+    direction.'
   feasibility:
     source: none
-    accrual_basis: 'No observed news-feature data exists in the repo or on the trainer today: the NEWS-HIST-REPLAY
-      GKG corpus (2023-10-01..2026-10-12, 1.42M title-only items) lived in that session''s scratch and is not persisted.
-      expected_n is arithmetic from the window and population, to be replaced by the harness''s measured n.'
+    accrual_basis: 'No observed news-feature data exists in the repo or on the trainer today: the NEWS-HIST-REPLAY GKG corpus
+      (2023-10-01..2026-10-12, 1.42M title-only items) lived in that session''s scratch and is not persisted. expected_n is
+      arithmetic from the window and population, to be replaced by the harness''s measured n.'
 decision_rule:
   id: RULE-RQ1012-5bd1-06-NEWS-ALPHA
   registered_at: '2026-10-12'
   registered_before_run: true
-  statistic: 'Per registered cell (feature x target x horizon x population, enumerated in `grid` and counted in
-    `grid_cells`): on the DISCOVERY window only, the cell statistic named in `cell_statistic` with its two-sided
-    p from a Newey-West t (lag = ceil(1.5 x horizon in bars)) for time-series cells, from the NW t of the per-period
-    cross-sectional IC series for cross-sectional cells, and from a 2,000-resample day-block bootstrap against the
-    matched non-event baseline for event cells; n stated per cell. Discovery survivors = cells whose p <= 0.10 x
-    r / 600 where r is the cell''s p-rank WITHIN THIS UNIT (family BH at q=0.10 over the declared wave-1 budget
-    of 600 tests, unrun cells counted as p=1 -- conservative and computable per unit). Each survivor gets ONE confirmatory
-    test on the sealed holdout 2025-10-01..2026-09-30 (same cell, same sign required), Holm-adjusted across ALL
-    program holdout tests at alpha 0.05, cap 20 holdout tests in wave 1, logged in research/news_alpha/TEST-LEDGER.jsonl.
-    Leakage tests run before any statistic and gate the run (failure => read_state producer_failed): (L1) every
-    feature row asserts max(item available_at) < the bar time the target window opens (GDELT: V2.1DATE ingest time;
-    publisher time is never used for availability); (L2) a +1-bar FUTURE-shifted feature is computed and reported
-    -- if the true feature''s IC is not materially below the future-shifted one on the volatility cells, the alignment
-    is suspect and is reported; (L3) a circular-shift placebo (shift by a random offset >= 30 days, 200 draws) must
-    put the true cell outside the placebo''s central 95% to count; (L4) holdout rows are not readable in --phase
-    discovery (harness refuses).'
-  rule: 'DIRECTION cells (target = forward return): PASS additionally requires the sign-of-feature (time-series)
-    or quintile long-short (cross-sectional) strategy''s holdout mean return NET of the full cost stack (src/runtime/execution_costs.resolve_cost_policy
-    per symbol: fee + slippage + perp funding, charged per unit turnover) to have NW t >= 2.0 and the discovery-window
-    net mean > 0; a cell that confirms in rank but not net of cost reads PASS_RANK_ONLY (information, not edge).
-    VOL/VOLUME cells (target = realized vol, |return| or volume): graded SEPARATELY -- PASS iff the holdout QLIKE
-    (vol) or MSE-of-log (volume) loss of baseline+feature beats the declared baseline (HAR-RV for vol; AR(5) of
-    log volume for volume) by >= 2% with a one-sided Diebold-Mariano p < 0.05 after the same Holm adjustment; a
-    vol PASS is a sizing/risk input, never direction. VERDICTS: pass = >= 1 cell PASS (direction or vol, reported
-    separately); fail = n >= the unit floor on every primary cell AND no discovery survivor, or every survivor fails
-    its holdout (a DISCOVERY_ONLY cell is a FAIL for that exact configuration); indeterminate = any primary cell
-    below its n floor, or a leakage check fails (then read_state producer_failed, never a verdict). Cells with unadjusted
-    p < 0.05 that do not survive are reported as LEADS: they may seed a wave-2 unit only on data the discovery window
-    did not touch. A FAIL closes ONLY the configuration tested (feature definition, source, population, horizon)
-    -- never ''news''. Every PASS also files a PROSPECTIVE unit graded on data after 2026-10-12 (the holdout window
+  statistic: 'Per registered cell (feature x target x horizon x population, enumerated in `grid` and counted in `grid_cells`):
+    on the DISCOVERY window only, the cell statistic named in `cell_statistic` with its two-sided p from a Newey-West t (lag
+    = ceil(1.5 x horizon in bars)) for time-series cells, from the NW t of the per-period cross-sectional IC series for cross-sectional
+    cells, and from a 2,000-resample day-block bootstrap against the matched non-event baseline for event cells; n stated
+    per cell. Discovery survivors = cells whose p <= 0.10 x r / 600 where r is the cell''s p-rank WITHIN THIS UNIT (family
+    BH at q=0.10 over the declared wave-1 budget of 600 tests, unrun cells counted as p=1 -- conservative and computable per
+    unit). Each survivor gets ONE confirmatory test on the sealed holdout 2025-10-01..2026-09-30 (same cell, same sign required),
+    Holm-adjusted across ALL program holdout tests at alpha 0.05, cap 20 holdout tests in wave 1, logged in research/news_alpha/TEST-LEDGER.jsonl.
+    Leakage tests run before any statistic and gate the run (failure => read_state producer_failed): (L1) every feature row
+    asserts max(item available_at) < the bar time the target window opens (GDELT: V2.1DATE ingest time; publisher time is
+    never used for availability); (L2) a +1-bar FUTURE-shifted feature is computed and reported -- if the true feature''s
+    IC is not materially below the future-shifted one on the volatility cells, the alignment is suspect and is reported; (L3)
+    a circular-shift placebo (shift by a random offset >= 30 days, 200 draws) must put the true cell outside the placebo''s
+    central 95% to count; (L4) holdout rows are not readable in --phase discovery (harness refuses).'
+  rule: 'DIRECTION cells (target = forward return): PASS additionally requires the sign-of-feature (time-series) or quintile
+    long-short (cross-sectional) strategy''s holdout mean return NET of the full cost stack (src/runtime/execution_costs.resolve_cost_policy
+    per symbol: fee + slippage + perp funding, charged per unit turnover) to have NW t >= 2.0 and the discovery-window net
+    mean > 0; a cell that confirms in rank but not net of cost reads PASS_RANK_ONLY (information, not edge). VOL/VOLUME cells
+    (target = realized vol, |return| or volume): graded SEPARATELY -- PASS iff the holdout QLIKE (vol) or MSE-of-log (volume)
+    loss of baseline+feature beats the declared baseline (HAR-RV for vol; AR(5) of log volume for volume) by >= 2% with a
+    one-sided Diebold-Mariano p < 0.05 after the same Holm adjustment; a vol PASS is a sizing/risk input, never direction.
+    VERDICTS: pass = >= 1 cell PASS (direction or vol, reported separately); fail = n >= the unit floor on every primary cell
+    AND no discovery survivor, or every survivor fails its holdout (a DISCOVERY_ONLY cell is a FAIL for that exact configuration);
+    indeterminate = any primary cell below its n floor, or a leakage check fails (then read_state producer_failed, never a
+    verdict). Cells with unadjusted p < 0.05 that do not survive are reported as LEADS: they may seed a wave-2 unit only on
+    data the discovery window did not touch. A FAIL closes ONLY the configuration tested (feature definition, source, population,
+    horizon) -- never ''news''. Every PASS also files a PROSPECTIVE unit graded on data after 2026-10-12 (the holdout window
     was partly viewed by RQ-20261012-2a7b-01, disclosed in docs/research/news-alpha-program-2026-10-12.md).'
-  what_it_does_not_do: 'Touches no config, no order path, no NEWS_VETO_ENABLED, no roster. A PASS is not a promotion:
-    a direction PASS earns a Stage-0 new_strategy unit on an existing cost-complete harness; a vol PASS earns a
-    sizing/risk research unit. Does not evaluate the live veto overlay (that is RQ-20261009-902 / RQ-20261012-2a7b-01).
-    Does not retire the news layer on a FAIL (operator 2026-10-12: retirement is off the table).'
+  what_it_does_not_do: 'Touches no config, no order path, no NEWS_VETO_ENABLED, no roster. A PASS is not a promotion: a direction
+    PASS earns a Stage-0 new_strategy unit on an existing cost-complete harness; a vol PASS earns a sizing/risk research unit.
+    Does not evaluate the live veto overlay (that is RQ-20261009-902 / RQ-20261012-2a7b-01). Does not retire the news layer
+    on a FAIL (operator 2026-10-12: retirement is off the table).'
 routing:
   needs_trainer_resident_data: false
   needs_gpu: false
@@ -99,23 +95,21 @@ routing:
   est_minutes: 30
   basis: Panel IC / event study over a precomputed feature panel; no model fitting beyond HAR/AR baselines.
 blocked_on:
-- what: Persistent point-in-time GDELT GKG corpus with tone/themes/entities columns on the trainer
-  ref: checklist NEWS-ALPHA-CORPUS (extends scripts/research/news_hist_fetch.py from NEWS-HIST-REPLAY)
-  clears_when: 'NEWS-ALPHA-CORPUS is done: corpus 2019-01-01.. on the trainer with a gap ledger and a daily forward
-    append'
-- what: Feature-family builder producing the point-in-time feature panel this unit reads
-  ref: checklist NEWS-ALPHA-FEATURES
-  clears_when: NEWS-ALPHA-FEATURES is done and its L1 leakage assertion test passes on a real slice
-- what: Generic signal->target harness with sealed holdout, BH/Holm, HAC p, net-of-cost and HAR/AR baselines
-  ref: checklist NEWS-ALPHA-HARNESS (scripts/research/news_alpha_ic.py)
-  clears_when: 'NEWS-ALPHA-HARNESS is done: writes a script_run verdict.json and appends to research/news_alpha/TEST-LEDGER.jsonl'
+- what: 'The 2019-01-01.. GDELT depth: on the short corpus (2023-10..) every ETF per-asset cell is UNDERPOWERED by the unit''s
+    own power.basis (~500 trading days vs floor 2,180) and the grid has no pooled cell, so running now spends 120 family tests
+    on an indeterminate by construction'
+  ref: checklist NEWS-ALPHA-CORPUS-SLICE1 (extend FIRST_MONTH to 2019-01 in news-gdelt-panel.yml) / NEWS-ALPHA-CORPUS
+  clears_when: comms/news_alpha/gdelt_panel/ holds complete months from 2019-01 (each per-asset ETF cell can reach the floor),
+    then add the news_alpha block (populations = the six ETFs, bar 1d, price_source dukascopy; UUP is unadjudicated in scripts/ops/dukascopy_instruments.py)
+  updated_at: '2026-10-16'
+  updated_by: lane NEWS-ALPHA-HARNESS-1016
 run:
   workflow: null
   inputs:
     research_unit: RQ-20261012-5bd1-06
-  note: Becomes research-script-run.yml with run.command [python3, scripts/research/news_alpha_ic.py, --unit, '{unit}',
-    --phase, discovery, --out, '{out_dir}'] once the blocked_on rows land; the holdout phase is a second, ledgered
-    invocation (--phase holdout) on discovery survivors only.
+  note: Becomes research-script-run.yml with run.command [python3, scripts/research/news_alpha_ic.py, --unit, '{unit}', --phase,
+    discovery, --out, '{out_dir}'] once the blocked_on rows land; the holdout phase is a second, ledgered invocation (--phase
+    holdout) on discovery survivors only.
 lands:
   store: research/results/
   assert_field: read_state
@@ -126,3 +120,9 @@ related:
 - docs/claude/work/checklist/NEWS-ALPHA-PROGRAM.json
 - docs/claude/work/checklist/WEPE-BUILDOUT.json
 last_dispatched_at: null
+resolved_blockers:
+- what: Generic signal->target harness with sealed holdout, BH/Holm, HAC p, net-of-cost and HAR/AR baselines
+  ref: checklist NEWS-ALPHA-HARNESS (scripts/research/news_alpha_ic.py)
+  clears_when: 'NEWS-ALPHA-HARNESS is done: writes a script_run verdict.json and appends to research/news_alpha/TEST-LEDGER.jsonl'
+  resolved_by: 'NEWS-ALPHA-HARNESS (scripts/research/news_alpha_ic.py, PR #18558, merged 2026-10-16)'
+  resolved_at: '2026-10-16'

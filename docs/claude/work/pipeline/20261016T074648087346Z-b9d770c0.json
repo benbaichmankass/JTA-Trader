@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "queue_grade.py closes a hand-written deterministic once-unit carrying grading: {auto: true} on its FIRST measured FAIL (no confirmatory re-dispatch), with a self-test asserting it; or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261016-WLA6MBZD-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "P4-MACRO-BACKLOG-1016 / manager audit 04-MACRO 2026-10-16 ('4a4c-03 was dispatched twice')",
+    "rerun": "grep -l '^  auto: true' research/queue/*.yaml | xargs grep -L '^generated:' | xargs grep -L 'ml_bakeoff\\|seeds' | wc -l   # hand-written, non-stochastic units that take the template confirmatory path; then read scripts/research/queue_grade.py grade_unit(): `auto` units only become `attested` when grading.attested is already present"
+  },
+  "state": "queued",
+  "what": "Research grader wastes a runner slot on every first FAIL of a hand-written DETERMINISTIC unit that declares grading: {auto: true}. MEASURED 2026-10-16: RQ-20261014-4a4c-03 (fixed-history placebo) was re-dispatched after its first FAIL (grading.confirmatory_run 1; second result 38843467501 read the identical verdict, t -0.41 -> -0.20 with one extra release). Root cause in scripts/research/queue_grade.py: a unit whose grading block says auto: true is treated as auto, and attested is computed only when grading.attested is ALREADY present (line ~385), so it falls to decide()'s template branch -> 'first FAIL: re-queued for a confirmatory run' -- the very re-run confirm_fail()'s docstring says deterministic replays must not get. Population: 225 hand-written, non-generated, non-ML/seeds queue units carry grading: {auto: true} (count from origin.rerun, 2026-10-16), incl. all of 4a4c-01..08 and 77dc-02. Fix (Tier-1, one branch): in the auto branch, for non-generated units compute attested = rule_attested(root, unit_id, unit) unconditionally, + a self-test. Workaround applied in PR #18538: the 22 new P4 units carry no grading block, so they take the attested path."
+}

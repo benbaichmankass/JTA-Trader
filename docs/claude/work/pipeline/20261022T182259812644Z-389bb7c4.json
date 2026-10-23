@@ -1,0 +1,20 @@
+{
+  "based_on": "20261022T065930973698Z-b94a2a34.json",
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-10-26",
+    "kind": "date"
+  },
+  "id": "PI-20261022-MENTSW43-0001",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-INSTRUMENTS-W43 / FRONTIER-LEVER-TSFM / RQ-20261011-9da8-01",
+    "rerun": "python3 -c \"from ml.datasets.forecast_features import FORECAST_BACKENDS as b; print(sorted(b))\"; ls research/queue/blocked/RQ-20261011-9da8-01.yaml; trainer-vm-diag: ls datasets-out/forecasts/*/15m/"
+  },
+  "severity": "medium",
+  "state": "done",
+  "terminal_reason": "Delivered 2026-10-22 (lane ML-TSFM-TRAINER): Chronos-2 fc_* side-streams built on the trainer for BTC/ETH/SOL 15m, FULL history, datasets-out/forecasts/<SYM>/15m/c2-v002, 43823 rows each (relay #19607; 43818 rows shared with the incumbent fc_* per symbol). RQ-20261011-9da8-01 carries its ml_bakeoff block and is out of blocked/ (dispatch_queue dry run: would_dispatch). Asks (1)-(3) met; the timesfm/tirex/kronos/ttm-r2 loaders are filed separately.",
+  "tier": 1,
+  "what": "[ml] TSFM side-streams: FRONTIER-LEVER-TSFM's code half landed (build_forecasts.py --backend chronos-2, verified end-to-end on CPU with real amazon/chronos-2 weights; tests/ml/test_forecast_features.py::test_backend_*). Still missing before RQ-20261011-9da8-01 can leave blocked/: (1) Chronos-2 fc_* side-streams built on the trainer for BTC/ETH/SOL 15m (a trainer run, Tier-2 as a mutation of datasets-out/), (2) the unit's ml_bakeoff block (HAR-RV control is the existing `har_rv` feature block) + run.* filled in, (3) timesfm / tirex / kronos / ttm-r2 arms have NO loader and are not registered -- they stay `unavailable`, not silently Chronos."
+}

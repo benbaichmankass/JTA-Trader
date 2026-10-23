@@ -1,8 +1,8 @@
 """
 Live risk counter injection for the pipeline.
 
-Fetches CURRENT_OPEN_POSITIONS and CURRENT_DAILY_LOSS_USD at order time
-so that safe_place_order's hard risk guards have real values to check.
+Fetches CURRENT_DAILY_LOSS_USD at order time so that safe_place_order's
+daily-loss guard has a real value to check.
 
 Also provides inject_per_strategy_counters (S-005 M2) which injects
 STRATEGY_OPEN_POSITIONS and STRATEGY_DAILY_PNL for a named strategy.
@@ -15,47 +15,27 @@ from __future__ import annotations
 import logging
 import os
 import sqlite3
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-def inject_runtime_counters(settings: dict, exchange_client: Any) -> dict:
-    """Return a copy of *settings* augmented with live risk counters.
+def inject_runtime_counters(settings: dict) -> dict:
+    """Return a copy of *settings* augmented with the live daily-loss counter.
 
-    CURRENT_OPEN_POSITIONS  — from exchange_client.get_positions() if the
-                              method is available (Bybit/Binance connectors).
     CURRENT_DAILY_LOSS_USD  — from the trade journal DB: sum of pnl for
                               closed, non-backtest trades dated today.
                               Formula: abs(min(0, sum_pnl)) so a positive
                               PnL day yields 0 loss, not a negative value.
 
-    Both fetches swallow all exceptions.  Any error leaves the counter
-    absent from the returned dict so the corresponding safe_place_order
-    guard is silently skipped rather than blocking a tick on a flaky
-    exchange API or DB.
+    A fetch error is swallowed and leaves the counter absent from the
+    returned dict so the safe_place_order guard is skipped rather than
+    blocking a tick on a flaky DB.
+
+    The CURRENT_OPEN_POSITIONS exchange fetch (and the MAX_OPEN_POSITIONS
+    guard it fed) was retired 2026-10-21 (operator, RETIRE-GLOBAL-POSCAP):
+    it used the unsuffixed BYBIT_API_KEY and could never authenticate.
     """
     s = dict(settings)
-
-    # ---- open positions: exchange ground truth ----
-    if exchange_client is not None and hasattr(exchange_client, "get_positions"):
-        try:
-            positions = exchange_client.get_positions()
-            s["CURRENT_OPEN_POSITIONS"] = str(len(positions))
-        except Exception as exc:
-            logger.warning("inject_runtime_counters: exchange positions error — %s", exc)
-            # Surfaced via outcomes so a flaky exchange API doesn't
-            # silently disable the MAX_OPEN_POSITIONS guard.
-            try:
-                from src.runtime.outcomes import Level, report
-                report(
-                    "risk_counters",
-                    "positions_fetch_failed",
-                    level=Level.WARN,
-                    reason=f"{type(exc).__name__}: {exc}",
-                )
-            except Exception:  # noqa: BLE001
-                pass  # outcomes shouldn't crash the tick
 
     # ---- daily loss: trade journal DB (closed live trades only) ----
     # NOTE: risk_counters intentionally engages the journal ONLY when one is

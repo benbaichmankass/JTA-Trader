@@ -2,7 +2,7 @@
   "id": "PAIRS-ALPACA-BUILD-QUESTION",
   "title": "Operator preference: build an Alpaca pairs executor? GLD/GDX confirmatory PASSED (RQ-20261007-025)",
   "phase": "research",
-  "state": "queued",
+  "state": "done",
   "owner": "manager",
   "lane": null,
   "model": null,
@@ -11,11 +11,15 @@
   "tier": 3,
   "prs": [],
   "blocked_on": [],
-  "note": "[RESEARCH-OPS-20261012-0847] RQ-20261007-025 PASS on all three registered conditions: OOS 2022-01..2026-10 n=69 net +5.25R; 8 of 10 calendar years net-positive; 8 of 9 neighbourhood cells positive (worst lookback 30/entry-z 2.5, -2.00R, n=32); costs fee 7.5 + slippage 5.0 bps/leg, funding 0. Sibling SPY/QQQ 1h (RQ-20260929-106) FAILED at -121.96R. Per the unit's rule the build question goes to the operator as a bucket-3 preference with both reads attached; PI-20261004-P24XMV4V-0003 and PI-20261004-UQ9JJPRQ-0002 clear on that hand-off. No live leg, no alpaca pairs executor, no config/pairs.yaml change proposed by research-ops. Records: research/results/RQ-20261007-025/, comms/research/RQ-20261007-025/ro0847/.",
-  "updated_at": "2026-10-12T08:58:43Z",
-  "updated_by": "session_01K3YNoSWcFrHPY45DzknGf4",
+  "note": "[RESEARCH-OPS-20261012-0847] RQ-20261007-025 PASS on all three registered conditions: OOS 2022-01..2026-10 n=69 net +5.25R; 8 of 10 calendar years net-positive; 8 of 9 neighbourhood cells positive (worst lookback 30/entry-z 2.5, -2.00R, n=32); costs fee 7.5 + slippage 5.0 bps/leg, funding 0. Sibling SPY/QQQ 1h (RQ-20260929-106) FAILED at -121.96R. Per the unit's rule the build question goes to the operator as a bucket-3 preference with both reads attached; PI-20261004-P24XMV4V-0003 and PI-20261004-UQ9JJPRQ-0002 clear on that hand-off. No live leg, no alpaca pairs executor, no config/pairs.yaml change proposed by research-ops. Records: research/results/RQ-20261007-025/, comms/research/RQ-20261007-025/ro0847/. [2026-10-16 lane PAIRS-ALPACA-BUILD-1016, dispatched by Manager Session 2026-10-16 session_01VduHYzdaXe27wTDBLSu8ao] OPERATOR DECISION 2026-10-16 (popup), choice \"Build, paper first\", verbatim: \"Build the Alpaca pairs executor now, after the pairs risk-scaling fix lands, and run GLD/GDX on alpaca_paper. Real money needs the normal ladder, a 1\u20132 trade mechanical soak and then Stage 2.\" Evidence: RQ-20261007-025 PASS (OOS 2022-01..2026-10 n=69 net +5.25 R; 8/10 years positive; 8/9 neighbourhood cells positive; fee 7.5 + slippage 5 bps per leg); sibling SPY/QQQ FAILED -121.96 R. FIELD STATE AT DISPATCH (measured on main dbfc24a6): the build this decision asks for ALREADY LANDED under the 2026-10-12 answer to this same question (\"Build, paper soak\") -- PR #17747 merged 2026-10-12 17:44Z (row PAIRS-ALPACA-BUILD, landed_unproven): pairs_venue.py session venue, config/pairs.yaml pairs_gld_gdx account_id alpaca_paper execution live hedge_beta one leg_tp spread_target. This row was never closed after that answer, so the question was asked twice. Disposition: today's answer is consistent with what is on main (paper only, ladder for real money); the remaining work is the risk-scale non-recurrence hardening (Tier-2 HELD PR, see PAIRS-ALPACA-BUILD) and the holdout unit RQ-20261016-7ea6-01. Closed: answered.",
+  "updated_at": "2026-10-16T16:04:39Z",
+  "updated_by": "session_011oTW6tqazY28JPQJakH6xn",
   "roadmap": [
     "L-PROP"
   ],
+  "writeback": {
+    "roadmap": "none: a question row; the build and its M22 writeback are owed by PAIRS-ALPACA-BUILD at its close",
+    "arch": "none: no architecture change from answering the question; the pairs session-venue row (2026-10-12) and the risk-scale row (2026-10-16, the Tier-2 PR) carry it"
+  },
   "_seq": 432
 }

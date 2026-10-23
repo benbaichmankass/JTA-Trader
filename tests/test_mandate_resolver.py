@@ -332,8 +332,15 @@ def test_real_stage2_thresholds_match_the_operators_pricing():
     Re-stated 2026-10-12 (RQ-20261007-023 PASS, RULE-RQ1007-XRP4H-STAGE0-1460D):
     the 1460d xrp_4h record (n=46, p10 -3.885) replaced the 365d n=16 one, and its
     p10 is NEGATIVE, so xrp_4h now pins False. SIGNAL-0005's pricing is reported
-    to the operator as changed, not silently kept."""
-    for leg, positive in (("trend_donchian_xrp_4h", False), ("ief_pullback_1d", True),
+    to the operator as changed, not silently kept.
+
+    Re-stated 2026-10-22 (OPERATOR-DECISIONS-1022): the six 1d pullback records and
+    xrp_4h were rebuilt after the tp_r 3.5 / ADX-trail declares (records were STALE
+    on config_fingerprint). ief_pullback_1d's rebuilt 365d record (n_oos 6, window to
+    2026-10-22) has p10 -5.4691 (was +14.9357), so ief now pins False. ief left the
+    real-money rosters in #19403, so no live book's pricing rests on it; the change
+    is reported to the operator through the manager, not silently kept."""
+    for leg, positive in (("trend_donchian_xrp_4h", False), ("ief_pullback_1d", False),
                           ("iaum_pullback_1d", True), ("xrp_pullback_2h", False),
                           ("ada_pullback_2h", False), ("trend_donchian_eth_4h", False),
                           ("slv_pullback_1d", False)):
@@ -1243,3 +1250,139 @@ def test_the_unamended_mandate_still_reads_the_per_leg_verdict(repo):
     root = _amended_repo(repo)
     _w(root, mr.MANDATES_REL, MANDATES, as_yaml=True)
     _needs_data(_s1s2(root), "R-COST-FIDELITY")
+
+
+# ── R-HOLDOUT (operator decision 2026-10-16, "Require holdout") ────────────
+# Planted/clean pairs over ONE valid confirmation: each planted test breaks
+# exactly one thing in it. The clean controls (FIRE on both promotions) are what
+# stop a resolver that answers NEEDS-DATA to everything from passing them all.
+HBAR = {**BAR, "holdout_required": True, "holdout_min_n": 25}
+H_MANDATES = {"mandates": [
+    _mandate("MD-PROMOTE-S0-S1", "add_risk", bar=dict(HBAR)),
+    _mandate("MD-PROMOTE-S1-S2", "add_risk", bar=dict(HBAR)),
+    _mandate("MD-DEMOTE-S2-S1", "derisk_only"),
+    _mandate("MD-DEMOTE-S1-OFF", "derisk_only"),
+], "proposed": []}
+H_SRC = "comms/research/RQ-HOLDOUT-TEST/1/verdict.json"
+
+
+def _hc(cfg=LEG_CFG, **over):
+    hc = {"verdict": "confirmed", "research_unit": "RQ-HOLDOUT-TEST",
+          "decision_rule": {"id": "RULE-HOLDOUT-TEST", "registered_at": "2026-10-16",
+                            "registered_before_run": True},
+          "selected_config_fingerprint": mr.b1.config_fingerprint(cfg), "selected_from": 9,
+          "evaluations_on_holdout": 1,
+          "discovery": {"start": "2020-10-15 00:00:00+00:00", "end": "2025-03-01 00:00:00+00:00"},
+          "holdout": {"start": "2025-03-02 00:00:00+00:00", "end": "2026-10-15 00:00:00+00:00",
+                      "share": 0.25},
+          "n_holdout": 40, "net_r_holdout": 6.0, "expectancy_r_holdout": 0.15,
+          "cost_stack": {"fees": 7.5, "slippage": 3.0, "funding": 1.0},
+          "source_run": H_SRC}
+    hc.update(over)
+    return hc
+
+
+def _h_repo(repo, hc=..., *, s0s1=False):
+    rec = _record(LEG, LEG_CFG)
+    if hc is ...:
+        hc = _hc()
+    if hc is not None:
+        rec[mr.HOLDOUT_FIELD] = hc
+    kw = {}
+    if s0s1:
+        kw["accounts"] = {"accounts": {**ACCOUNTS["accounts"],
+                                       "bybit_1": _acct("paper", "bybit", ["l1", "l2", "l3"])}}
+    root = repo(mandates=H_MANDATES, records={LEG: rec, EQ_LEG: _record(EQ_LEG, EQ_CFG)}, **kw)
+    _w(root, H_SRC, {"verdict": "pass"})
+    return root
+
+
+def _plant_unit(root, leg=LEG, uid="RQ-20261016-hold-01"):
+    _w(root, f"{mr.QUEUE_DIR_REL}/{uid}.yaml",
+       {"id": uid, "status": "queued", "holdout_rerun": {"leg": leg}}, as_yaml=True)
+
+
+def test_holdout_clean_confirmation_fires_s1_s2(repo):
+    res = _s1s2(_h_repo(repo))
+    assert res["verdict"] == "FIRE", res
+    assert res["evidence"]["holdout"]["passed"] is True
+
+
+def test_holdout_clean_confirmation_fires_s0_s1(repo):
+    res = mr.resolve(LEG, "S0", "S1", "bybit_1", root=_h_repo(repo, s0s1=True))
+    assert res["verdict"] == "FIRE", res
+
+
+@pytest.mark.parametrize("frm,to,account", [("S1", "S2", "bybit_2"), ("S0", "S1", "bybit_1")])
+def test_holdout_absent_is_needs_data_naming_the_unit_never_refuse(repo, frm, to, account):
+    root = _h_repo(repo, hc=None, s0s1=(frm == "S0"))
+    _plant_unit(root)
+    res = mr.resolve(LEG, frm, to, account, root=root)
+    _needs_data(res, mr.HOLDOUT_CLAUSE)
+    assert res["verdict"] != mr.REFUSE
+    assert res["data_task"]["research_unit"] == "RQ-20261016-hold-01"
+    assert "RQ-20261016-hold-01" in res["data_task"]["what"]
+    item = mr.needs_data_pipeline_item(res, "session_test")
+    assert "R-HOLDOUT" in item["what"] and item["origin"]["rerun"]
+
+
+def test_holdout_absent_without_a_unit_says_author_one(repo):
+    res = _s1s2(_h_repo(repo, hc=None))
+    _needs_data(res, mr.HOLDOUT_CLAUSE)
+    assert res["data_task"]["research_unit"] is None
+    assert "author and run a holdout re-run unit" in res["data_task"]["what"]
+
+
+def test_a_unit_for_another_leg_is_not_named(repo):
+    root = _h_repo(repo, hc=None)
+    _plant_unit(root, leg="some_other_leg")
+    assert _s1s2(root)["data_task"]["research_unit"] is None
+
+
+@pytest.mark.parametrize("over,why", [
+    ({"evaluations_on_holdout": 2}, "evaluations_on_holdout"),
+    ({"evaluations_on_holdout": 0}, "evaluations_on_holdout"),
+    ({"verdict": "no_discovery", "evaluations_on_holdout": 1}, "evaluations_on_holdout"),
+    ({"decision_rule": {"id": "R", "registered_before_run": False}}, "registered before the run"),
+    ({"source_run": "comms/research/nope/verdict.json"}, "not a committed file"),
+    ({"cost_stack": {"fees": 0.0, "slippage": 3.0, "funding": 1.0}}, "full stack"),
+    ({"cost_stack": {"fees": 7.5, "funding": 1.0}}, "full stack"),
+    ({"holdout": {"start": "2025-02-01 00:00:00+00:00", "end": "2026-10-15"}}, "not disjoint"),
+    ({"selected_config_fingerprint": "deadbeef"}, "unconfirmed"),
+    ({"verdict": "looks_good"}, "verdict"),
+    ({"verdict": "underpowered", "n_holdout": 12, "net_r_holdout": 3.0,
+      "expectancy_r_holdout": 0.25}, "below the floor"),
+    ({"n_holdout": 24, "net_r_holdout": 2.4, "expectancy_r_holdout": 0.1}, "below the floor"),
+    ({"expectancy_r_holdout": 0.9}, "disagrees with itself"),
+    ({"verdict": "insufficient_discovery", "evaluations_on_holdout": 0,
+      "selected_config_fingerprint": None}, "too few discovery trades"),
+])
+def test_holdout_planted_invalid_or_thin_is_needs_data(repo, over, why):
+    res = _s1s2(_h_repo(repo, hc=_hc(**over)))
+    _needs_data(res, mr.HOLDOUT_CLAUSE)
+    assert why in res["detail"], res["detail"]
+
+
+@pytest.mark.parametrize("over", [
+    {"verdict": "not_replicated", "net_r_holdout": -2.0, "expectancy_r_holdout": -0.05},
+    {"verdict": "confirmed", "net_r_holdout": 0.0, "expectancy_r_holdout": 0.0},
+    {"verdict": "no_discovery", "evaluations_on_holdout": 0, "selected_config_fingerprint": None,
+     "n_holdout": None, "net_r_holdout": None, "expectancy_r_holdout": None},
+])
+def test_holdout_valid_but_failed_is_a_decisive_refuse(repo, over):
+    _refused(_s1s2(_h_repo(repo, hc=_hc(**over))), mr.HOLDOUT_CLAUSE)
+
+
+def test_holdout_clause_is_dormant_without_the_bar_field(repo):
+    # The pre-2026-10-16 bar (no holdout_required) never reads the block.
+    assert _s1s2(repo())["verdict"] == "FIRE"
+
+
+def test_real_mandates_require_holdout_on_both_promotions_and_not_on_demotion():
+    doc = yaml.safe_load((REPO / mr.MANDATES_REL).read_text(encoding="utf-8"))
+    by_id = {m["id"]: m for m in doc["mandates"]}
+    for mid in ("MD-PROMOTE-S0-S1", "MD-PROMOTE-S1-S2"):
+        assert by_id[mid]["bar"]["holdout_required"] is True, mid
+        assert by_id[mid]["bar"]["holdout_min_n"] == 25, mid
+    # Demotion stays on live net-of-cost (operator, 2026-10-16).
+    assert "holdout" not in json.dumps(by_id["MD-DEMOTE-S2-S1"])

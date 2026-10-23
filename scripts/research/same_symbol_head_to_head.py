@@ -134,30 +134,32 @@ def run(unit_path: Path, out_dir: Path) -> int:
             "population": population, "n": n, "measurement": rec, "note": verdict.get("reason")}, default=str))
         return 0
 
+    def fault(reason: str) -> int:
+        # A route/harness fault is not a verdict (the unit's own rule). research_result's contract:
+        # read_state producer_failed -> verdict not_applicable, n null. Until 2026-10-16 these exits
+        # wrote read_state 'unavailable' + verdict 'indeterminate', which the collector refused as a
+        # malformed verdict.json, so the REASON never reached the record (RQ-20261015-1631-01/-02).
+        return finish({"verdict": "not_applicable", "reason": reason}, f"{symbol} {legs}", None,
+                      read_state="producer_failed")
+
     bs = _load_bs()
     missing = [leg for leg in legs if leg not in bs.ROSTER]
     if missing:
-        return finish({"verdict": "indeterminate",
-                       "reason": f"legs not registered in backtest_system.ROSTER: {missing} — harness gap, not a verdict"},
-                      f"{symbol} {legs}", "null", read_state="no_data")
+        return fault(f"legs not registered in backtest_system.ROSTER: {missing} — harness gap, not a verdict")
     from src.research import risk_basis
     from src.runtime.intents import aggregate_intents  # noqa: F401  (import proves the live election is reachable)
 
     try:
         src = bs._backtest_data_source.resolve_or_refuse(symbol, "5m", h.get("data"))
-    except (OSError, ValueError, KeyError) as exc:  # allow-silent: not swallowed -- landed as read_state=no_data with the reason in verdict.json
-        return finish({"verdict": "indeterminate", "reason": f"data source: {exc}"},
-                      f"{symbol} {legs}", "null", read_state="no_data")
+    except (OSError, ValueError, KeyError) as exc:  # allow-silent: not swallowed -- landed as read_state=producer_failed with the reason in verdict.json
+        return fault(f"data source: {exc}")
     if not src.ok:
-        return finish({"verdict": "indeterminate",
-                       "reason": "no 5m candle source for the symbol: " + str(getattr(src, "reason", "unresolved"))},
-                      f"{symbol} {legs}", "null", read_state="no_data")
+        return fault("no 5m candle source for the symbol: " + str(getattr(src, "reason", "unresolved")))
     from src.research.run_costs import resolve_run_costs
     cost = resolve_run_costs(symbol)  # the full fee+slippage+funding stack, applied via costs= below
     live = risk_basis.live_risk(h.get("risk_account", risk_basis.DEFAULT_REFERENCE_ACCOUNT))
     if not live.ok or live.percent is None:
-        return finish({"verdict": "indeterminate", "reason": f"live risk unresolved: {live.describe()}"},
-                      f"{symbol} {legs}", "null", read_state="no_data")
+        return fault(f"live risk unresolved: {live.describe()}")
     base5m = bs._load_candles(src.path)
 
     def one(roster: List[str]) -> Dict[str, Any]:

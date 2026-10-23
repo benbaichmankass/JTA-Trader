@@ -42,7 +42,9 @@ def test_population_is_enabled_and_live(mod):
     # 44 -> 38 on 2026-09-28 (lane EXIT-OPS): 6 legs demoted execution:
     # live -> shadow (PI-20260922-UTN353OZ-0001 / PI-20260924-TJTOJHYE-0001),
     # taking them out of the enabled+live population this test defines.
-    assert len(legs) == 38, f"population drifted from the 2026-09-28 denominator: {len(legs)}"
+    # 38 -> 39 on 2026-10-22: trend_donchian_xrp_adx25 (bybit_1 soak alias of
+    # trend_donchian_xrp_4h, OPERATOR-DECISIONS-1022) joins the enabled+live population.
+    assert len(legs) == 39, f"population drifted from the 2026-10-22 denominator: {len(legs)}"
     for name, cfg in legs.items():
         assert cfg.get("enabled") is True, name
         assert str(cfg.get("execution", "live")).lower() == "live", name

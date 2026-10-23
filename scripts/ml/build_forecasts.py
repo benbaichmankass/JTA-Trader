@@ -47,10 +47,12 @@ from ml.datasets.forecast_features import (  # noqa: E402
     DEFAULT_STRIDE,
     FORECAST_FEATURE_COLUMNS,
     FORECAST_MODEL_ID,
+    FORECAST_BACKENDS,
     FORECAST_QUANTILES,
     chronos_forecast_fn,
     compute_forecast_feature_rows,
     forecast_available,
+    resolve_backend,
 )
 
 
@@ -80,13 +82,18 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--target", required=True, type=Path,
                     help="Target symbol's market_raw dataset dir.")
     ap.add_argument("--out", required=True, type=Path, help="Output dataset dir.")
-    ap.add_argument("--model-id", default=FORECAST_MODEL_ID)
+    ap.add_argument("--backend", choices=sorted(FORECAST_BACKENDS), default=None,
+                    help="named forecaster (chronos-bolt-tiny = the shipped incumbent; chronos-2 = FRONTIER-LEVER-TSFM). "
+                         "Sets --model-id; the output meta records both.")
+    ap.add_argument("--model-id", default=None, help=f"explicit Hub id (default: the backend's, else {FORECAST_MODEL_ID})")
     ap.add_argument("--context-len", type=int, default=DEFAULT_CONTEXT_LEN)
     ap.add_argument("--stride", type=int, default=DEFAULT_STRIDE)
     ap.add_argument("--min-context", type=int, default=DEFAULT_MIN_CONTEXT)
     ap.add_argument("--horizon", type=int, default=DEFAULT_HORIZON,
                     help="how many bars ahead to forecast (default 1 = next bar).")
     args = ap.parse_args(argv)
+    if args.model_id is None:
+        args.model_id = resolve_backend(args.backend) if args.backend else FORECAST_MODEL_ID
 
     if not forecast_available():
         ap.error(
@@ -117,6 +124,7 @@ def main(argv: list[str] | None = None) -> int:
         "family": "tsfm_forecasts",
         "target_symbol": target_symbol,
         "model_id": args.model_id,
+        "backend": args.backend or "chronos-bolt-tiny",
         "feature_columns": list(FORECAST_FEATURE_COLUMNS),
         "context_len": args.context_len,
         "stride": args.stride,

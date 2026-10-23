@@ -252,6 +252,237 @@ def archive_rows(fh: Iterable[str]) -> Iterator[Dict[str, Any]]:
                "cc": countries[:15], "ti": re.sub(r"\s+", " ", tm.group(1)).strip() if tm else ""}
 
 
+# ── AGGREGATE profile (NEWS-ALPHA-CORPUS-SLICE1): stream each 15-min file -> per (ingest hour, entity) counts ─
+# The raw GKG stream is ~6.4 MB zipped per 15-min file (~0.68 TB for 2023-10..; ~1.7 TB for 2019..), so the raw
+# corpus is NEVER persisted: each file is downloaded, folded into per-(hour, entity) sums with the FROZEN map
+# research/news_alpha/entity_map_v1.json, and discarded. What is kept per UTC month under --out:
+#   panel_YYYY-MM.csv.gz     hour, entity, n, n_dom, tone_sum, tone_sq, tone_min, tone_max, cls_<c>..., top_<t>...
+#   coverage_YYYY-MM.csv.gz  hour, files_ok, files_missing, files_error, max_avail
+#   manifest_YYYY-MM.json    counts + the entity map's sha256
+# ``hour`` is the floor of the FILE stamp (= V2.1DATE ingest), so everything in it is available by hour+45min;
+# a missing (404) or failed file is a GAP in coverage, never zero news (scripts/research/news_alpha_features.py
+# turns any hour with files_ok < 4 into NaN). Re-running a month is incremental: hours already fully read are
+# kept, everything else is re-fetched (a 404 is re-tried too; GDELT does have permanent gaps).
+AGG_SCHEMA = "gdelt-gkg-hourly-panel-v1"
+ENTITY_MAP = REPO / "research" / "news_alpha" / "entity_map_v1.json"
+
+
+def load_entity_map(path: Path = ENTITY_MAP) -> Dict[str, Any]:
+    raw = path.read_bytes()
+    m = json.loads(raw)
+    m["_sha256"] = hashlib.sha256(raw).hexdigest()
+    m["_ent_re"] = {e: re.compile("|".join(ps)) for e, ps in m["entities"].items()}
+    m["_any_re"] = re.compile("|".join(p for ps in m["entities"].values() for p in ps))
+    m["_cls_re"] = {c: re.compile("|".join(ps)) for c, ps in m["event_classes"].items()}
+    m["_top"] = {t: frozenset(ths) for t, ths in m["topics_by_theme"].items()}
+    m["_coins"] = frozenset(e for e in m["entities"] if e != "CRYPTO")
+    return m
+
+
+def _url_words(url: str) -> str:
+    from urllib.parse import urlparse
+    try:
+        path = urlparse(url).path
+    except ValueError:
+        return ""
+    return re.sub(r"[-_/.+%0-9]+", " ", path).lower()
+
+
+def _acc(bucket: Dict[str, Any], tone: Optional[float], domain: str) -> None:
+    bucket["n"] = bucket.get("n", 0) + 1
+    bucket.setdefault("_dom", set()).add(domain)
+    if tone is not None:
+        bucket["tone_sum"] = bucket.get("tone_sum", 0.0) + tone
+        bucket["tone_sq"] = bucket.get("tone_sq", 0.0) + tone * tone
+        bucket["tone_min"] = min(bucket.get("tone_min", tone), tone)
+        bucket["tone_max"] = max(bucket.get("tone_max", tone), tone)
+        bucket["n_tone"] = bucket.get("n_tone", 0) + 1
+
+
+def aggregate_rows(fh: Iterable[str], emap: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    """Fold one decoded GKG file into {entity: sums}. Pure; the map is the only matching policy."""
+    out: Dict[str, Dict[str, Any]] = {}
+    macro = emap["macro_entity"]
+    for line in fh:
+        r = line.rstrip("\r\n").split("\t")
+        if len(r) < 27:
+            continue
+        domain = r[C_DOMAIN].lower()
+        try:
+            tone: Optional[float] = float(r[C_TONE].split(",")[0])
+        except ValueError:
+            tone = None
+        mb = out.setdefault(macro, {})
+        _acc(mb, tone, domain)
+        themes = {t.split(",")[0] for t in r[C_THEMES].split(";") if t}
+        for t, ths in emap["_top"].items():
+            if themes & ths:
+                mb[f"top_{t}"] = mb.get(f"top_{t}", 0) + 1
+        tm = _TITLE_RE.search(r[C_EXTRAS])
+        title = re.sub(r"\s+", " ", tm.group(1)).strip().lower() if tm else ""
+        text = title + " " + _url_words(r[C_URL])
+        if not emap["_any_re"].search(text):
+            continue
+        classes = [c for c, rx in emap["_cls_re"].items() if rx.search(text)]
+        for ent, rx in emap["_ent_re"].items():
+            if rx.search(text):
+                b = out.setdefault(ent, {})
+                _acc(b, tone, domain)
+                if ent in emap["_coins"]:
+                    for c in classes:
+                        b[f"cls_{c}"] = b.get(f"cls_{c}", 0) + 1
+    return out
+
+
+def aggregate_one(ts: datetime, emap_path: str) -> Tuple[datetime, str, Dict[str, Dict[str, Any]], int]:
+    """-> (ts, status, {entity: sums}, rows_scanned). status: ok | missing | error:<msg>."""
+    emap = load_entity_map(Path(emap_path))
+    url = GKG_URL.format(ts=ts.strftime("%Y%m%d%H%M%S"))
+    try:
+        blob = _download(url)
+    except Exception as e:  # noqa: BLE001  # allow-silent: recorded as status error:<msg> in coverage, never counted ok
+        return ts, f"error:{e}"[:200], {}, 0
+    if blob is None:
+        return ts, "missing", {}, 0
+    try:
+        with zipfile.ZipFile(io.BytesIO(blob)) as z:
+            text = io.TextIOWrapper(z.open(z.namelist()[0]), encoding="utf-8", errors="replace")
+            lines = list(text)
+        return ts, "ok", aggregate_rows(lines, emap), len(lines)
+    except Exception as e:  # noqa: BLE001  # allow-silent: recorded as status error:<msg> in coverage, never counted ok
+        return ts, f"error:{e}"[:200], {}, 0
+
+
+def _month_bounds(month: str) -> Tuple[datetime, datetime]:
+    y, m = (int(x) for x in month.split("-"))
+    start = datetime(y, m, 1, tzinfo=timezone.utc)
+    end = datetime(y + (m == 12), m % 12 + 1, 1, tzinfo=timezone.utc)
+    return start, end
+
+
+def _read_gz_csv(path: Path) -> List[Dict[str, str]]:
+    import csv
+    if not path.is_file():
+        return []
+    with gzip.open(path, "rt", encoding="utf-8") as fh:
+        return list(csv.DictReader(fh))
+
+
+def _write_gz_csv(path: Path, cols: Sequence[str], rows: Iterable[Dict[str, Any]]) -> None:
+    import csv
+    tmp = path.with_suffix(".tmp")
+    with gzip.open(tmp, "wt", encoding="utf-8", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=list(cols), extrasaction="ignore")
+        w.writeheader()
+        for r in rows:
+            w.writerow(r)
+    tmp.replace(path)
+
+
+def aggregate_month(month: str, out: Path, *, workers: int = 8, now: Optional[datetime] = None,
+                    emap_path: Path = ENTITY_MAP) -> Dict[str, Any]:
+    emap = load_entity_map(emap_path)
+    start, end = _month_bounds(month)
+    now = now or datetime.now(timezone.utc)
+    end = min(end, floor15(now - timedelta(minutes=30)) + STEP)
+    out.mkdir(parents=True, exist_ok=True)
+    ppath, cpath = out / f"panel_{month}.csv.gz", out / f"coverage_{month}.csv.gz"
+    cov_prev = {r["hour"]: r for r in _read_gz_csv(cpath)}
+    done_hours = {h for h, r in cov_prev.items() if int(r["files_ok"]) == 4}
+    files = [f for f in files_in_range(start, end - timedelta(seconds=1))
+             if iso_z(f.replace(minute=0)) not in done_hours]
+    print(f"{month}: {len(files)} file(s) to fetch, {len(done_hours)} hour(s) already complete")
+    hours: Dict[str, Dict[str, Any]] = {}
+    agg: Dict[Tuple[str, str], Dict[str, Any]] = {}
+    scanned = 0
+    if workers <= 1:   # in-process (tests; a tiny month)
+        results: Iterable[Any] = (aggregate_one(f, str(emap_path)) for f in files)
+        ex = None
+    else:
+        ex = ProcessPoolExecutor(max_workers=workers)
+        results = (fu.result() for fu in as_completed([ex.submit(aggregate_one, f, str(emap_path)) for f in files]))
+    try:
+        for k, (ts, status, ents, nrows) in enumerate(results, 1):
+            h = iso_z(ts.replace(minute=0))
+            c = hours.setdefault(h, {"hour": h, "files_ok": 0, "files_missing": 0, "files_error": 0, "max_avail": ""})
+            if status == "ok":
+                c["files_ok"] += 1
+                c["max_avail"] = max(c["max_avail"], iso_z(ts))
+                scanned += nrows
+                for ent, b in ents.items():
+                    a = agg.setdefault((h, ent), {})
+                    for key, v in b.items():
+                        if key == "_dom":
+                            a.setdefault("_dom", set()).update(v)
+                        elif key == "tone_min":
+                            a[key] = min(a.get(key, v), v)
+                        elif key == "tone_max":
+                            a[key] = max(a.get(key, v), v)
+                        else:
+                            a[key] = a.get(key, 0) + v
+            elif status == "missing":
+                c["files_missing"] += 1
+            else:
+                c["files_error"] += 1
+            if k % 200 == 0:
+                print(f"  {month}: {k}/{len(files)}", flush=True)
+    finally:
+        if ex is not None:
+            ex.shutdown()
+    cls_cols = [f"cls_{c}" for c in emap["event_classes"]]
+    top_cols = [f"top_{t}" for t in emap["topics_by_theme"]]
+    cols = ["hour", "entity", "n", "n_dom", "n_tone", "tone_sum", "tone_sq", "tone_min", "tone_max"] + cls_cols + top_cols
+    new_rows = []
+    for (h, ent), a in agg.items():
+        r = {k: v for k, v in a.items() if k != "_dom"}
+        r.update({"hour": h, "entity": ent, "n_dom": len(a.get("_dom", ()))})
+        for k in ("tone_sum", "tone_sq", "tone_min", "tone_max"):
+            if k in r:
+                r[k] = round(r[k], 4)
+        new_rows.append(r)
+    kept = [r for r in _read_gz_csv(ppath) if r["hour"] in done_hours]
+    rows = sorted(kept + new_rows, key=lambda r: (r["hour"], r["entity"]))
+    cov = dict(cov_prev)
+    cov.update(hours)
+    cov_rows = [cov[h] for h in sorted(cov)]
+    _write_gz_csv(ppath, cols, rows)
+    _write_gz_csv(cpath, ["hour", "files_ok", "files_missing", "files_error", "max_avail"], cov_rows)
+    man = {
+        "schema": AGG_SCHEMA, "month": month, "generated_at": iso_z(now),
+        "source": "GDELT 2.0 GKG 15-min files (https://data.gdeltproject.org/gdeltv2/)",
+        "entity_map": str(emap_path.relative_to(REPO)) if emap_path.is_relative_to(REPO) else str(emap_path),
+        "entity_map_sha256": emap["_sha256"],
+        "hours": len(cov_rows),
+        "hours_complete": sum(1 for r in cov_rows if int(r["files_ok"]) == 4),
+        "files_ok": sum(int(r["files_ok"]) for r in cov_rows),
+        "files_missing": sum(int(r["files_missing"]) for r in cov_rows),
+        "files_error": sum(int(r["files_error"]) for r in cov_rows),
+        "rows_scanned_this_run": scanned, "panel_rows": len(rows),
+        "availability_rule": "hour = floor(GKG file stamp = V2.1DATE ingest); max_avail = latest ok stamp in the hour",
+        "note": "files_ok < 4 marks an hour as NOT fully read: features over it are NaN, never zero news",
+    }
+    (out / f"manifest_{month}.json").write_text(json.dumps(man, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps(man, indent=2))
+    return man
+
+
+def months_status(out: Path, first: str, now: Optional[datetime] = None) -> List[Dict[str, Any]]:
+    """Every month first..now with whether its coverage is FINAL (every past file read ok or 404)."""
+    now = now or datetime.now(timezone.utc)
+    y, m = (int(x) for x in first.split("-"))
+    res = []
+    while (y, m) <= (now.year, now.month):
+        month = f"{y:04d}-{m:02d}"
+        start, end = _month_bounds(month)
+        cov = _read_gz_csv(out / f"coverage_{month}.csv.gz")
+        expect = int((min(end, now) - start).total_seconds() // 3600)
+        final_hours = sum(1 for r in cov if int(r["files_ok"]) + int(r["files_missing"]) >= 4)
+        res.append({"month": month, "hours_expected": expect, "hours_final": final_hours,
+                    "complete": end <= now and final_hours >= expect, "current": end > now})
+        y, m = (y + (m == 12), m % 12 + 1)
+    return res
+
+
 def floor15(dt: datetime) -> datetime:
     return dt.replace(minute=dt.minute - dt.minute % 15, second=0, microsecond=0)
 
@@ -391,11 +622,22 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--archive", action="store_true",
                     help="ARCHIVE profile: every row, compact tone/theme/entity metadata, gz shards (no keyword/domain filter)")
     ap.add_argument("--workers", type=int, default=12, help="processes (download + parse are CPU-heavy)")
+    ap.add_argument("--aggregate", metavar="YYYY-MM", default=None,
+                    help="AGGREGATE profile: fold one UTC month into panel/coverage/manifest files under --out "
+                         "(NEWS-ALPHA-CORPUS-SLICE1); the raw files are never kept")
+    ap.add_argument("--plan-months", metavar="YYYY-MM", default=None,
+                    help="print JSON: every month from this one to now with its coverage state under --out")
     ap.add_argument("--manifest", help="write manifest JSON here (commit this, not the data)")
     ap.add_argument("--dry-run", action="store_true", help="list how many files would be fetched")
     a = ap.parse_args(argv)
 
     out = Path(a.out)
+    if a.plan_months:
+        print(json.dumps(months_status(out, a.plan_months)))
+        return 0
+    if a.aggregate:
+        aggregate_month(a.aggregate, out, workers=a.workers)
+        return 0
     domains = (None if a.sources == "all" else
                feed_domain_allowlist() | (BROAD_DOMAINS if a.sources == "broad" else frozenset()))
     kws = relevance_keywords()

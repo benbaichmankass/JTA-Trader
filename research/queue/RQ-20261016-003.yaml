@@ -4,7 +4,7 @@
 id: RQ-20261016-003
 title: 'Breakout prop fit: trend_donchian_sol_prop at sizing cushion-fit room 0.50 at 1.5% under RULE-B6
   V2 (generated)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: new_strategy_prop
@@ -94,4 +94,17 @@ generated:
     symbol: SOLUSDT
     timeframe: 1h
     trades_file: comms/research/RQ-20261015-f01d-01/38825176384/arms/B__trades.jsonl
-last_dispatched_at: null
+last_dispatched_at: '2026-10-16T06:59:38+00:00'
+grading:
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-TPL-PROP-FIT-B6V2-trend_donchian_sol_prop-room050
+  evidence:
+  - research/results/RQ-20261016-003/38864422527.jsonl
+  graded_at: '2026-10-16'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

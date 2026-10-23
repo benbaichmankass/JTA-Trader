@@ -209,12 +209,24 @@ class DatasetBuilder(ABC):
         iter_rows_kwargs: Mapping[str, Any],
     ) -> int:
         count = 0
-        with data_path.open("w", encoding="utf-8") as fh:
-            for row in self.iter_rows(**iter_rows_kwargs):
-                self._validate_row(row, allowed_fields)
-                fh.write(json.dumps(row, sort_keys=True))
-                fh.write("\n")
-                count += 1
+        # Write to a temp file and rename on success. Writing data.jsonl in
+        # place meant a fetch that died mid-stream (a Bybit 10016 on page N)
+        # left a PREFIX of the shard beside the previous build's metadata.json:
+        # MEASURED 2026-10-13 (row ML-SHARD-TRUNCATED) as BTCUSDT 15m data.jsonl
+        # 151,000 rows / metadata row_count 175,296, SOLUSDT 64,000 / 175,104.
+        # A failed build now leaves the previous data.jsonl untouched.
+        tmp_path = data_path.with_name(data_path.name + ".tmp")
+        try:
+            with tmp_path.open("w", encoding="utf-8") as fh:
+                for row in self.iter_rows(**iter_rows_kwargs):
+                    self._validate_row(row, allowed_fields)
+                    fh.write(json.dumps(row, sort_keys=True))
+                    fh.write("\n")
+                    count += 1
+        except BaseException:
+            tmp_path.unlink(missing_ok=True)
+            raise
+        tmp_path.replace(data_path)
         return count
 
     def _validate_row(

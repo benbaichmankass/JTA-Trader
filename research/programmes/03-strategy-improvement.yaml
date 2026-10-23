@@ -1,0 +1,1100 @@
+# Programme P3 -- strategy improvement: the machine-readable question tree for
+# docs/research/programmes/03-STRATEGY-IMPROVEMENT.md (§ 3 questions Q1-Q8, § 5 backlog W1-W4).
+# Read by scripts/research/queue_replenish.py (programme source, RESEARCH-LOOP-AUDIT RC2/RC3);
+# see research/programmes/01-active-trade-management.yaml for the contract. Landing machinery:
+# every edit holds for a human merge. `value` figures are INFERRED planning weights (same scale as
+# the programme's units, e.g. 470a-04 declares $150 x 0.25), not measurements.
+# Lane P3-STRATEGY-BACKLOG-1016 (2026-10-16). The RUNNABLE-NOW questions are queue units
+# RQ-20261016-c56e-05..26 (registered directly, not via a node, so they dispatch on merge; 01-04, single-window
+# xrp_pullback_2h entry sweeps, were withdrawn before merge after the 2026-10-16 programme audit); the
+# nodes below are what follows each verdict, plus the questions blocked on a build or not yet
+# authorable. NOT encoded (owned elsewhere, do not duplicate): the S0-C confirmations of
+# 470a-05 (ada pullback_frac 0.618) and 470a-09 (eth_4h min_confidence 0.7) -- lane
+# RESEARCH-FOLLOWUP-1016; the 8bbc-01/-02 cause-naming harness -- PI-20261015-10152047-0001;
+# the Q7 leave-one-out -- 419b-04 closed no_action_warranted; trend_donchian_1h's missing record --
+# RQ-20261007-032 (blocked). Weekly units (470a-11 census, 8bbc-01/-02) never close, so no node
+# can wait on them: their reads are research-ops' job (SKILL § D). DESIGN RULE (audit 2026-10-16 § 4.1): all
+# four single-window best-of-3 PASSes failed their S0-C confirmation, so every new entry sweep here registers its
+# confirmation INSIDE the unit (8 calendar folds over ~6 years, a candidate must win >= 7 of 8).
+programme: P3
+plan: docs/research/programmes/03-STRATEGY-IMPROVEMENT.md
+# questions: map added by the programme review 2026-10-21 (lane RESEARCH-PROGRAMME-REVIEW-1021) to discharge plan
+# questions that had no node (programme_coverage.py); each names its record and why.
+questions:
+  Q2-C:
+    state: closed
+    by: RQ-20261014-470a-01, RQ-20261014-470a-10
+    why: >-
+      Both disjoint-window confirmations FAILED: the 2026-10-14 best-of-3 PASSes did not survive a window they were not chosen on. Closed; the leads are recorded as selection artefacts.
+  Q4:
+    state: closed
+    by: RQ-20261010-419b-02, RQ-20261010-419b-03, RQ-20261010-419b-04
+    why: >-
+      419b-02 (pullback short side) and -03 (trend long/short asymmetry) FAILED; -04 (portfolio) closed no_action_warranted. Further lessons come from each perf-followup Track 2 run, which files its own units.
+  Q5:
+    state: carried
+    by: PAIRS-R-SCALE (checklist row) + research/queue/blocked/RQ-20261014-470a-12
+    why: >-
+      Instrument fidelity is a build: the pairs R-scale fix is the row, the re-measure is pre-registered in blocked/. Programme review 2026-10-21 added a second instance: ef5d-06/-07 passed ATR percentiles on a 0-100 scale to a 0-1 flag; backtest_trend/pullback now refuse it and RQ-20261021-7c2b-01/-02 re-ask.
+  Q7:
+    state: carried
+    by: PERF-FU-LEG-REPLAY (checklist row); RQ-20261018-001 (SOL same-symbol overlap)
+    why: >-
+      Leg overlap is answered per symbol by same-symbol overlap reads (RQ-20261018-001 landed 2026-10-21, ungraded); the portfolio-wide leave-one-out waits on the leg-replay build. 419b-04 closed no_action_warranted.
+nodes:
+- id: P3-Q2-ada-pb-cd-propose
+  goal: G1
+  roadmap:
+  - M21
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.3
+  after:
+  - unit: RQ-20261016-c56e-05
+    verdict: pass
+  needs_authoring: 'RQ-20261016-c56e-05 PASSED its one-unit multi-fold rule (ada_pullback_2h, cooldown: >= 7 of
+    8 folds over ~6 years, the R bar, dDD <= 0). The fold clause IS the registered confirmation (audit 2026-10-16:
+    no further single-window S0-C). Register the Tier-3 PROPOSAL note on the owning row with the record, after reading
+    the mandate resolver (scripts/ops/mandate_resolver.py) and the leg''s live_vs_backtest percentile; the mirror
+    follows by equality. No config edit by the research lane.'
+- id: P3-Q2-ada-pb-tl-propose
+  goal: G1
+  roadmap:
+  - M21
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.3
+  after:
+  - unit: RQ-20261016-c56e-06
+    verdict: pass
+  needs_authoring: 'RQ-20261016-c56e-06 PASSED its one-unit multi-fold rule (ada_pullback_2h, trend_lookback: >=
+    7 of 8 folds over ~6 years, the R bar, dDD <= 0). The fold clause IS the registered confirmation (audit 2026-10-16:
+    no further single-window S0-C). Register the Tier-3 PROPOSAL note on the owning row with the record, after reading
+    the mandate resolver (scripts/ops/mandate_resolver.py) and the leg''s live_vs_backtest percentile; the mirror
+    follows by equality. No config edit by the research lane.'
+- id: P3-Q2-eth4h-don-propose
+  goal: G1
+  roadmap:
+  - M21
+  value:
+    usd_at_stake_per_month: 250
+    confidence: 0.3
+  after:
+  - unit: RQ-20261016-c56e-07
+    verdict: pass
+  needs_authoring: 'RQ-20261016-c56e-07 PASSED its one-unit multi-fold rule (trend_donchian_eth_4h, donchian: >=
+    7 of 8 folds over ~6 years, the R bar, dDD <= 0). The fold clause IS the registered confirmation (audit 2026-10-16:
+    no further single-window S0-C). Register the Tier-3 PROPOSAL note on the owning row with the record, after reading
+    the mandate resolver (scripts/ops/mandate_resolver.py) and the leg''s live_vs_backtest percentile; the mirror
+    follows by equality. No config edit by the research lane.'
+- id: P3-Q2-eth4h-side-propose
+  goal: G1
+  roadmap:
+  - M21
+  value:
+    usd_at_stake_per_month: 250
+    confidence: 0.3
+  after:
+  - unit: RQ-20261016-c56e-08
+    verdict: pass
+  needs_authoring: 'RQ-20261016-c56e-08 PASSED its one-unit multi-fold rule (trend_donchian_eth_4h, side: >= 7 of
+    8 folds over ~6 years, the R bar, dDD <= 0). The fold clause IS the registered confirmation (audit 2026-10-16:
+    no further single-window S0-C). Register the Tier-3 PROPOSAL note on the owning row with the record, after reading
+    the mandate resolver (scripts/ops/mandate_resolver.py) and the leg''s live_vs_backtest percentile; the mirror
+    follows by equality. No config edit by the research lane.'
+- id: P3-Q2-xrp4h-mc-propose
+  goal: G1
+  roadmap:
+  - M21
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.3
+  after:
+  - unit: RQ-20261016-c56e-09
+    verdict: pass
+  needs_authoring: 'RQ-20261016-c56e-09 PASSED its one-unit multi-fold rule (trend_donchian_xrp_4h, min_confidence:
+    >= 7 of 8 folds over ~6 years, the R bar, dDD <= 0). The fold clause IS the registered confirmation (audit 2026-10-16:
+    no further single-window S0-C). Register the Tier-3 PROPOSAL note on the owning row with the record, after reading
+    the mandate resolver (scripts/ops/mandate_resolver.py) and the leg''s live_vs_backtest percentile; the mirror
+    follows by equality. No config edit by the research lane.'
+- id: P3-Q6-trend-lookback-transfer
+  goal: G1
+  roadmap:
+  - M21
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.3
+  after:
+  - unit: RQ-20261016-c56e-06
+    verdict: pass
+  needs_authoring: 'trend_lookback PASSED multi-fold on ada_pullback_2h (c56e-06). Q6 transfer (03 § 4): register
+    the passing value as ONE pre-fixed arm (selection-free) on xrp_pullback_2h and eth_pullback_2h, same 6-year
+    8-fold design and 7-of-8 rule. If the operator has routed xrp_pullback_2h''s entry side to P1 (audit 2026-10-16
+    § 5.3), test eth_pullback_2h only and say so.'
+- id: P3-Q1-live-bt-stage-b
+  goal: G1
+  roadmap:
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 600
+    confidence: 0.4
+  needs_authoring: 'HIGHEST MONEY (audit 2026-10-16 § 5.1). xrp_pullback_2h and ada_pullback_2h trade real money
+    BELOW_BACKTEST (8bbc-01: -8.84 R over 16, 3.4th pct; 8bbc-02: -7.04 R over 15, 4.7th pct). Stage B: register
+    ONE unit that joins each live close to its config-exact backtest counterpart over the same bars and splits the
+    gap into cost (fee/slippage/funding vs the harness stack), missed/extra signals, exit-path differences and regime;
+    and in the same unit counts the mirror-vs-live close gap (bybit_portfolio 11 vs bybit_2 16 xrp; 9 vs 15 ada,
+    MEASURED in the 8bbc results). INSTRUMENT GAP: leg_replay_emit.py replays the harness only; the live join needs
+    trades from the journal (needs_vm_data) -- build row LIVE-BT-STAGE-B (PI-20261015-10152047-0001). Author the
+    unit the day that row lands; until then this ask stays here, not in a memo. c56e-10/-11 are the runnable ''window''
+    half.'
+- id: P3-L-xrp-pb-prewindow-fail
+  goal: G1
+  roadmap:
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 300
+    confidence: 0.4
+  after:
+  - unit: RQ-20261016-c56e-10
+    verdict: fail
+  needs_authoring: 'RQ-20261016-c56e-10 FAILED: xrp_pullback_2h (real money) has no fold-consistent Stage-0 edge
+    on the four years BEFORE its committed record. Register the roster-retention case for the manager: both windows''
+    grades side by side (never pooled), the leg''s open P3 sweeps and S0-C reads, the live book''s live_vs_backtest
+    percentile, and the mandate resolver''s verdict. Also register whether a regime cell (regime-selectivity skill:
+    walk-forward before Tier 3) separates the two windows -- a leg whose edge lives in one regime is a gating question,
+    not a retire.'
+- id: P3-L-ada-pb-prewindow-fail
+  goal: G1
+  roadmap:
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 300
+    confidence: 0.4
+  after:
+  - unit: RQ-20261016-c56e-11
+    verdict: fail
+  needs_authoring: 'RQ-20261016-c56e-11 FAILED: ada_pullback_2h (real money) has no fold-consistent Stage-0 edge
+    on the four years BEFORE its committed record. Register the roster-retention case for the manager: both windows''
+    grades side by side (never pooled), the leg''s open P3 sweeps and S0-C reads, the live book''s live_vs_backtest
+    percentile, and the mandate resolver''s verdict. Also register whether a regime cell (regime-selectivity skill:
+    walk-forward before Tier 3) separates the two windows -- a leg whose edge lives in one regime is a gating question,
+    not a retire.'
+- id: P3-L-eth4h-prewindow-fail
+  goal: G1
+  roadmap:
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 300
+    confidence: 0.4
+  after:
+  - unit: RQ-20261016-c56e-12
+    verdict: fail
+  needs_authoring: 'RQ-20261016-c56e-12 FAILED: trend_donchian_eth_4h (real money) has no fold-consistent Stage-0
+    edge on the four years BEFORE its committed record. Register the roster-retention case for the manager: both
+    windows'' grades side by side (never pooled), the leg''s open P3 sweeps and S0-C reads, the live book''s live_vs_backtest
+    percentile, and the mandate resolver''s verdict. Also register whether a regime cell (regime-selectivity skill:
+    walk-forward before Tier 3) separates the two windows -- a leg whose edge lives in one regime is a gating question,
+    not a retire.'
+- id: P3-L-xrp4h-prewindow-fail
+  goal: G1
+  roadmap:
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.4
+  after:
+  - unit: RQ-20261016-c56e-13
+    verdict: fail
+  needs_authoring: 'RQ-20261016-c56e-13 FAILED: trend_donchian_xrp_4h (real money) has no fold-consistent Stage-0
+    edge on the four years BEFORE its committed record. Register the roster-retention case for the manager: both
+    windows'' grades side by side (never pooled), the leg''s open P3 sweeps and S0-C reads, the live book''s live_vs_backtest
+    percentile, and the mandate resolver''s verdict. Also register whether a regime cell (regime-selectivity skill:
+    walk-forward before Tier 3) separates the two windows -- a leg whose edge lives in one regime is a gating question,
+    not a retire.'
+- id: P3-L-xrp4h-prewindow-underpowered
+  goal: G1
+  roadmap:
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 100
+    confidence: 0.3
+  after:
+  - unit: RQ-20261016-c56e-13
+    verdict: indeterminate
+  needs_authoring: c56e-13 read INDETERMINATE (n < 39 on 2018-10..2022-10 for the short-only, min_confidence 0.8
+    leg). State the leg `infeasible at 4y` on L-LADDER and decide whether the record's own 4-fold grade is the only
+    Stage-0 evidence it can carry, or whether the both-sides arm (side_filter both) is worth a separate Stage-0
+    question.
+- id: P3-L-eth-prop-fold-fail
+  goal: G1
+  roadmap:
+  - L-LADDER
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 400
+    confidence: 0.4
+  after:
+  - unit: RQ-20261016-c56e-14
+    verdict: fail
+  needs_authoring: 'c56e-14 FAILED: trend_donchian_eth_prop is not fold-consistent over the five years before its
+    record, so it does not meet the superset bar (PROP-GATE-PARITY) on the MD-PROMOTE-S1-S2 fold-majority clause.
+    Register the prop-roster input for the manager (the leg is grandfathered to 2026-11-07) and the sizing-vs-entry
+    split with programme 05 (P5 owns sizing).'
+- id: P3-Q8-sol4h-overlap
+  goal: G1
+  roadmap:
+  - L-LADDER
+  - M18
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.3
+  after:
+  - unit: RQ-20261016-c56e-15
+    verdict: pass
+  unit:
+    title: 'Same-symbol overlap read, SOLUSDT (bybit_2 book): per-leg OOS net R per capital-day, solo vs shared slot, for trend_donchian_sol_4h and trend_donchian_sol_prop'
+    cadence: once
+    theme: live_strategy
+    priority: 2
+    kind: experiment
+    question: On SOLUSDT, what is each of trend_donchian_sol_4h and trend_donchian_sol_prop's OOS net R per capital-day when it has the slot to itself,
+      and what is the combined book's when both share one slot under the live election, net of the full cost stack, OOS from 2025-01-01?
+    why_this_matters: 'RQ-20261016-c56e-15 PASSED (trend_donchian_sol_4h: net +21.65 R, n=147, 5/6 folds on 2020-10-13 .. 2023-10-12, disjoint from the
+      leg''s committed record): the leg has Stage-0 evidence on two disjoint windows and is a re-entry case under MD-PROMOTE-S0-S1 (bybit_1 soak) only after
+      this overlap read against trend_donchian_sol_prop (SOLUSDT, bybit_2 real money). INSTRUMENT: both legs are registered in backtest_system.ROSTER (read
+      2026-10-17: trend_donchian_sol_4h tf 4h, trend_donchian_sol_prop tf 1h), so scripts/research/same_symbol_head_to_head.py reads them as a pair with no
+      shadow add and no --legs override; the earlier node text feared a roster gap, and it was the harness ROSTER, not accounts.yaml, that the driver checks.
+      One input to the existing allocator, no winner picked (operator 2026-10-15 re-scope).'
+    power:
+      expected_n: 40
+      min_detectable_effect: 0.5
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: Unit = OOS closed trade per arm; min_oos_trades 20 per arm is a floor on reporting a usable input, not a significance claim. No effect is tested and
+        nothing is ranked. Bars are autocorrelated; treat per-leg figures as noisy.
+      feasibility:
+        source: none
+        accrual_basis: Re-measurement on freshly fetched candles over a pinned historical window; an arm below 20 OOS trades returns indeterminate naming it.
+    decision_rule:
+      id: RULE-P3-Q8-SOL4H-OVERLAP-REPORT
+      registered_before_run: true
+      statistic: Per-leg and combined-book OOS net R per capital-day (scripts/research/same_symbol_head_to_head.py), full venue cost stack via execution_costs,
+        live risk basis of bybit_2.
+      rule: 'Arms (fixed now): solo:<leg> for each leg and together (both legs under the live aggregate_intents election, one shared slot). Metric per arm: OOS
+        net R per capital-day = sum(pnl/(qty*|entry-entry_stop|)) / sum(holding days), pnl net of fee+slippage+funding, OOS = entries on/after 2025-01-01. REPORT
+        each leg''s solo metric and the combined book''s. IF every arm has >= 20 OOS trades THEN verdict pass (inputs usable); IF any arm is below 20 or has zero
+        capital-days THEN indeterminate, naming the starved arm. NO winner and NO exclusion verdict, whatever the numbers. read_state producer_failed (no candles / leg
+        not in backtest_system.ROSTER) is a ROUTE/HARNESS FAULT, never a verdict.'
+      what_it_does_not_do: Picks no leg, cuts no leg, edits no config or roster. Not a promotion case; a re-entry case under MD-PROMOTE-S0-S1 goes to the manager
+        with this read attached.
+    compute: cpu_long
+    head_to_head:
+      symbol: SOLUSDT
+      legs:
+      - trend_donchian_sol_4h
+      - trend_donchian_sol_prop
+      accounts:
+      - bybit_2
+      oos_start: '2025-01-01'
+      min_oos_trades: 20
+      clock_tf: 15m
+      risk_account: bybit_2
+      initial_balance: 10000.0
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 200
+      confidence: 0.3
+      basis: 'stand-in: gates a candidate fifth crypto leg re-entry; estimate, not a measurement.'
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 3.0
+      est_minutes: 60
+      basis: Estimate, copied from RQ-20261015-1631-01 (same driver). UNVERIFIED whether the runner can obtain 5m SOLUSDT candles; if not the driver lands producer_failed (a route fault to fix, never a verdict).
+    run:
+      command:
+      - python3
+      - scripts/research/same_symbol_head_to_head.py
+      - --unit
+      - '{unit}'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 180
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    roadmap:
+    - M18
+    - L-LADDER
+    related:
+    - P3-Q8-sol4h-overlap
+    - scripts/research/same_symbol_head_to_head.py
+    - research/programmes/03-strategy-improvement.yaml
+- id: P3-Q8-new-symbols
+  goal: G1
+  roadmap:
+  - L-LADDER
+  - M21
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.2
+  after:
+  - {unit: RQ-20261021-7c2b-06, verdict: any}
+  needs_authoring: >-
+    Programme review 2026-10-21 authored Stage A as five units on BNB/DOGE/LINK/LTC/BCH/DOT at declared params: 7c2b-06
+    (trend_donchian_eth_4h), -07 (trend_donchian_xrp_4h), -08 (xrp_pullback_2h), -09 (ada_pullback_2h), -10
+    (trend_donchian_eth_prop 1h). When they close: for each PASSING CELL, Stage B = a same-book return-correlation /
+    overlap read against the live bybit_2 legs, then a per-symbol re-entry case under MD-PROMOTE-S0-S1 for a bybit_1
+    soak. A family that FAILS on all six is a symbol fit -- write that into 03 s1.
+- id: P3-Q8-eth-1h-family
+  goal: G1
+  roadmap:
+  - L-LADDER
+  - M18
+  value:
+    usd_at_stake_per_month: 100
+    confidence: 0.2
+  unit:
+    title: 'Re-validation at power, breadth: does trend_donchian_eth (ETHUSDT 1h, on no roster) AS DECLARED clear Stage 0 on 2022-10-13 .. 2025-10-12, net of the full cost stack?'
+    cadence: once
+    theme: live_strategy
+    priority: 2
+    kind: experiment
+    compute: cpu_light
+    question: On 2022-10-13 .. 2025-10-12 23:59 (disjoint from the leg's 365 d record, which ends a year later), is trend_donchian_eth at its configured params net-positive
+      with >= 4 of 6 calendar folds net > 0, at n >= 39?
+    why_this_matters: 'BREADTH for the real-money crypto book. trend_donchian_eth is enabled and on no roster; its only record is +16.2 R, n=107 on 365 d. This is the Stage-0-at-power read on
+      a disjoint three-year window (c56e-15 template). A PASS makes it a re-entry case under MD-PROMOTE-S0-S1 only AFTER a same-symbol overlap read against trend_donchian_eth_4h and
+      trend_donchian_eth_prop (M18); this unit prices no overlap and picks no winner.'
+    value:
+      usd_at_stake_per_month: 100
+      confidence: 0.2
+      bucket: structural
+      basis: 'stand-in: a candidate extra ETH leg at the book''s per-leg risk; estimate, not a measurement.'
+    routing:
+      basis: One keyless candle fetch of ~1540 days and ONE harness pass over the pinned window.
+      est_minutes: 20
+      needs_gpu: false
+      needs_trainer_resident_data: false
+      peak_memory_gb: 2.0
+      why_runner: exit_lever_ablation.py fetches its own keyless candles and runs the repo harnesses; the 1h ETHUSDT series is not in metis-market-data, so the Kaggle-CPU and trainer backends cannot take it.
+    run:
+      command:
+      - python3
+      - scripts/research/exit_lever_ablation.py
+      - --leg
+      - trend_donchian_eth
+      - --arm
+      - B=
+      - --days
+      - '1540'
+      - --start
+      - '2022-10-13'
+      - --end
+      - 2025-10-12 23:59
+      - --grade
+      - stage0
+      - --baseline
+      - B
+      - --delta-r
+      - '0'
+      - --folds
+      - '6'
+      - --fold-majority
+      - '4'
+      - --n-floor
+      - '39'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 60
+    lands:
+      assert_field: read_state
+      min_rows: 1
+      store: research/results/
+    power:
+      expected_n: 300
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: 'd=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo''s standing E35 floor). expected_n=300 is an ESTIMATE: 107 trades on the 365 d record x 3 yr, halved for
+        regime uncertainty is still >> 39. Folds 6 (half-years), majority 4.'
+      feasibility:
+        source: none
+        accrual_basis: Re-measurement on freshly fetched keyless candles over a pinned historical window; nothing accrues.
+    decision_rule:
+      id: RULE-P3-Q8-ETH1H-STAGE0
+      registered_before_run: true
+      statistic: 'ONE arm B = the leg exactly as declared in config/strategies.yaml (argv built by regime_debt_matrix.build_harness_cmd; full cost stack fee + resolved slippage +
+        funding via execution_costs.resolve_cost_policy), graded by exit_lever_ablation.py --grade stage0: net_total_r, n, max_drawdown_r, and net_r per fold over 6 equal calendar
+        spans. No positive control: the window is disjoint from the committed record, the precedent being RQ-20261016-c56e-15.'
+      rule: 'indeterminate IF n(B) < 39 (underpowered: no verdict, never FAIL on thin n). PASS IF net_r(B) > 0 AND >= 4 of 6 calendar folds net > 0: the leg has Stage-0 evidence on
+        a second disjoint window -- a re-entry case under MD-PROMOTE-S0-S1 only after the same-symbol overlap read, routed through the manager. FAIL IF n >= 39 and that does not hold:
+        the leg stays off every roster, recorded honest_negative. Windows are never pooled with the committed record''s. The 0 R bar, the 4-of-6 majority and the 39 floor are not
+        changed after any result.'
+    what_it_does_not_do: Does not edit config or any roster, does not tune (one arm, as declared), does not pool windows, does not price same-symbol overlap. Not a promotion case.
+- id: P3-Q8-sol-1h-family
+  goal: G1
+  roadmap:
+  - L-LADDER
+  - M18
+  value:
+    usd_at_stake_per_month: 60
+    confidence: 0.2
+  unit:
+    title: 'Re-validation at power, breadth: does trend_donchian_sol (SOLUSDT 1h, on no roster) AS DECLARED clear Stage 0 on 2022-10-13 .. 2025-10-12, net of the full cost stack?'
+    cadence: once
+    theme: live_strategy
+    priority: 2
+    kind: experiment
+    compute: cpu_light
+    question: On 2022-10-13 .. 2025-10-12 23:59 (disjoint from the leg's 365 d record, which ends a year later), is trend_donchian_sol at its configured params net-positive
+      with >= 4 of 6 calendar folds net > 0, at n >= 39?
+    why_this_matters: 'BREADTH for the real-money crypto book. trend_donchian_sol is enabled and on no roster; its only record is +4.5 R, n=59 on 365 d. This is the Stage-0-at-power read on
+      a disjoint three-year window (c56e-15 template). A PASS makes it a re-entry case under MD-PROMOTE-S0-S1 only AFTER a same-symbol overlap read against trend_donchian_sol_4h and
+      trend_donchian_sol_prop (M18); this unit prices no overlap and picks no winner.'
+    value:
+      usd_at_stake_per_month: 60
+      confidence: 0.2
+      bucket: structural
+      basis: 'stand-in: a candidate extra SOL leg at the book''s per-leg risk; estimate, not a measurement.'
+    routing:
+      basis: One keyless candle fetch of ~1540 days and ONE harness pass over the pinned window.
+      est_minutes: 20
+      needs_gpu: false
+      needs_trainer_resident_data: false
+      peak_memory_gb: 2.0
+      why_runner: exit_lever_ablation.py fetches its own keyless candles and runs the repo harnesses; the 1h SOLUSDT series is not in metis-market-data, so the Kaggle-CPU and trainer backends cannot take it.
+    run:
+      command:
+      - python3
+      - scripts/research/exit_lever_ablation.py
+      - --leg
+      - trend_donchian_sol
+      - --arm
+      - B=
+      - --days
+      - '1540'
+      - --start
+      - '2022-10-13'
+      - --end
+      - 2025-10-12 23:59
+      - --grade
+      - stage0
+      - --baseline
+      - B
+      - --delta-r
+      - '0'
+      - --folds
+      - '6'
+      - --fold-majority
+      - '4'
+      - --n-floor
+      - '39'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 60
+    lands:
+      assert_field: read_state
+      min_rows: 1
+      store: research/results/
+    power:
+      expected_n: 170
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: 'd=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo''s standing E35 floor). expected_n=170 is an ESTIMATE: 59 trades on the 365 d record x 3 yr, halved for
+        regime uncertainty is still >> 39. Folds 6 (half-years), majority 4.'
+      feasibility:
+        source: none
+        accrual_basis: Re-measurement on freshly fetched keyless candles over a pinned historical window; nothing accrues.
+    decision_rule:
+      id: RULE-P3-Q8-SOL1H-STAGE0
+      registered_before_run: true
+      statistic: 'ONE arm B = the leg exactly as declared in config/strategies.yaml (argv built by regime_debt_matrix.build_harness_cmd; full cost stack fee + resolved slippage +
+        funding via execution_costs.resolve_cost_policy), graded by exit_lever_ablation.py --grade stage0: net_total_r, n, max_drawdown_r, and net_r per fold over 6 equal calendar
+        spans. No positive control: the window is disjoint from the committed record, the precedent being RQ-20261016-c56e-15.'
+      rule: 'indeterminate IF n(B) < 39 (underpowered: no verdict, never FAIL on thin n). PASS IF net_r(B) > 0 AND >= 4 of 6 calendar folds net > 0: the leg has Stage-0 evidence on
+        a second disjoint window -- a re-entry case under MD-PROMOTE-S0-S1 only after the same-symbol overlap read, routed through the manager. FAIL IF n >= 39 and that does not hold:
+        the leg stays off every roster, recorded honest_negative. Windows are never pooled with the committed record''s. The 0 R bar, the 4-of-6 majority and the 39 floor are not
+        changed after any result.'
+    what_it_does_not_do: Does not edit config or any roster, does not tune (one arm, as declared), does not pool windows, does not price same-symbol overlap. Not a promotion case.
+- id: P3-Q3-ief-tune
+  goal: G1
+  roadmap:
+  - M21
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 60
+    confidence: 0.3
+  after:
+  - unit: RQ-20261016-c56e-16
+    verdict: pass
+  unit:
+    title: 'Tune at power (programme 03 Q2 after Q3): does moving ief_pullback_1d''s pullback_frac (0.382, 0.618,
+      0.75) beat the declared 0.5 over 2006-10-02 .. 2025-04-09, net of the full cost stack?'
+    cadence: once
+    theme: live_strategy
+    priority: 1
+    kind: experiment
+    question: On 2006-10-02 .. 2025-04-09 (the window RQ-20261016-c56e-16 graded the declared leg on), does any
+      of the 3 pre-registered pullback_frac arms on ief_pullback_1d beat the leg as declared by >= 1.0 R, with no
+      worse drawdown, in >= 3 of 4 calendar folds?
+    why_this_matters: 'RQ-20261016-c56e-16 PASSED: ief_pullback_1d has a Stage-0 grade at power for the first time,
+      so it can now be tuned (tune-before-retire, programme 03 § 4 Q2). pullback_frac is the axis that moved ada_pullback_2h
+      (470a-05 PASS).'
+    power:
+      expected_n: 55
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo's standing E35 floor). expected_n=55 is
+        an ESTIMATE (RQ-20261016-c56e-16's own n replaces it on the first run). Bar 1.0 R over the window.
+      feasibility:
+        source: none
+        accrual_basis: 'Yahoo daily history via yfinance (regime_debt_matrix._fetch_csv: period is uncapped for
+          1d). INFERRED, not measured this lane: no committed run has yet fetched >2y of 1d bars this way; the first
+          run''s verdict.json window/data_start is the check. Nothing accrues.'
+    decision_rule:
+      id: RULE-P3-Q3-IEF-TUNE
+      registered_before_run: true
+      statistic: 'Per arm, from the harness''s own --json summary (argv built by regime_debt_matrix.build_harness_cmd
+        from config/strategies.yaml plus the arm''s tokens; full cost stack: fee + resolved slippage + funding via
+        execution_costs.resolve_cost_policy, never a zero default): total_trades, net_total_r, max_drawdown_r, plus
+        net_r per fold over FOUR equal calendar spans (same boundaries every arm). Arms: B = leg as declared (pullback_frac
+        0.5); F0382=pullback_frac=0.382; F0618=pullback_frac=0.618; F075=pullback_frac=0.75. Per candidate C: dR
+        = net_r(C) - net_r(B); dDD = maxDD(C) - maxDD(B); fold_wins = folds in which C out-earns B. Also reported
+        per arm, not graded: net_r_per_capital_day (the programme''s headline measure).'
+      rule: 'indeterminate IF n(B) < 39 (underpowered: no verdict; never FAIL on thin n). A candidate C PASSES iff
+        dR >= 1.0 R AND dDD <= 0 AND fold_wins >= 3 of 4. PASS IF any candidate passes (best = highest dR). FAIL
+        IF none passes: the declared value stands and the axis is recorded honest_negative on this window for this
+        leg. A PASS from a best-of-3 sweep is a LEAD, not a finding: it opens exactly one fresh-window confirmation
+        unit (the passing arm alone vs B, on the disjoint window AFTER this one (2025-04-10 .. the latest close;
+        the leg''s own record window), same bars, no re-selection; 03-STRATEGY-IMPROVEMENT.md rung S0-C; programme
+        node P3 tree), and no Tier-3 proposal is written until that unit reads CONFIRMED. The 1.0 R bar, the drawdown
+        clause, the 3-of-4 fold majority and the 39 floor are not changed after any result.'
+      what_it_does_not_do: Does not edit config or any roster. Does not mine values (fixed here). A PASS is a LEAD
+        for rung S0-C, never a promotion case.
+    compute: cpu_light
+    value:
+      usd_at_stake_per_month: 60
+      confidence: 0.3
+      bucket: own_losses
+      basis: 'stand-in: a small real-money alpaca_live leg; estimate, not a measurement.'
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 2.0
+      est_minutes: 10
+      basis: One Yahoo 1d fetch of ~20 years and 4 harness passes over it.
+      why_runner: exit_lever_ablation.py fetches its own keyless candles (Binance Vision / Yahoo) and runs the repo
+        harnesses; the symbol/timeframe is not in metis-market-data and the script has no published-data input,
+        so the Kaggle-CPU and trainer backends cannot take it.
+    run:
+      command:
+      - python3
+      - scripts/research/exit_lever_ablation.py
+      - --leg
+      - ief_pullback_1d
+      - --arm
+      - B=
+      - --arm
+      - F0382=pullback_frac=0.382
+      - --arm
+      - F0618=pullback_frac=0.618
+      - --arm
+      - F075=pullback_frac=0.75
+      - --days
+      - '7414'
+      - --start
+      - '2006-10-02'
+      - --end
+      - '2025-04-09'
+      - --grade
+      - sweep
+      - --baseline
+      - B
+      - --delta-r
+      - '1.0'
+      - --fold-majority
+      - '3'
+      - --n-floor
+      - '39'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 60
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+      note: research/results/RQ-NODE/<run_id>.jsonl via the batch collector; per-arm summaries and verdict.json
+        under comms/research/RQ-NODE/<run_id>/.
+    roadmap:
+    - M21
+    - L-LADDER
+    related:
+    - P3-STRATEGY-BACKLOG-1016
+    - docs/research/programmes/03-STRATEGY-IMPROVEMENT.md
+    - research/programmes/03-strategy-improvement.yaml
+    - scripts/research/exit_lever_ablation.py
+- id: P3-Q3-slv-tune
+  goal: G1
+  roadmap:
+  - M21
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 60
+    confidence: 0.3
+  after:
+  - unit: RQ-20261016-c56e-17
+    verdict: pass
+  unit:
+    title: 'Tune at power (programme 03 Q2 after Q3): does moving slv_pullback_1d''s pullback_frac (0.382, 0.5,
+      0.75) beat the declared 0.618 over 2006-10-02 .. 2025-04-09, net of the full cost stack?'
+    cadence: once
+    theme: live_strategy
+    priority: 1
+    kind: experiment
+    question: On 2006-10-02 .. 2025-04-09 (the window RQ-20261016-c56e-17 graded the declared leg on), does any
+      of the 3 pre-registered pullback_frac arms on slv_pullback_1d beat the leg as declared by >= 1.0 R, with no
+      worse drawdown, in >= 3 of 4 calendar folds?
+    why_this_matters: 'RQ-20261016-c56e-17 PASSED: slv_pullback_1d has a Stage-0 grade at power for the first time,
+      so it can now be tuned (tune-before-retire, programme 03 § 4 Q2). pullback_frac is the axis that moved ada_pullback_2h
+      (470a-05 PASS).'
+    power:
+      expected_n: 200
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo's standing E35 floor). expected_n=200 is
+        an ESTIMATE (RQ-20261016-c56e-17's own n replaces it on the first run). Bar 1.0 R over the window.
+      feasibility:
+        source: none
+        accrual_basis: 'Yahoo daily history via yfinance (regime_debt_matrix._fetch_csv: period is uncapped for
+          1d). INFERRED, not measured this lane: no committed run has yet fetched >2y of 1d bars this way; the first
+          run''s verdict.json window/data_start is the check. Nothing accrues.'
+    decision_rule:
+      id: RULE-P3-Q3-SLV-TUNE
+      registered_before_run: true
+      statistic: 'Per arm, from the harness''s own --json summary (argv built by regime_debt_matrix.build_harness_cmd
+        from config/strategies.yaml plus the arm''s tokens; full cost stack: fee + resolved slippage + funding via
+        execution_costs.resolve_cost_policy, never a zero default): total_trades, net_total_r, max_drawdown_r, plus
+        net_r per fold over FOUR equal calendar spans (same boundaries every arm). Arms: B = leg as declared (pullback_frac
+        0.618); F0382=pullback_frac=0.382; F05=pullback_frac=0.5; F075=pullback_frac=0.75. Per candidate C: dR =
+        net_r(C) - net_r(B); dDD = maxDD(C) - maxDD(B); fold_wins = folds in which C out-earns B. Also reported
+        per arm, not graded: net_r_per_capital_day (the programme''s headline measure).'
+      rule: 'indeterminate IF n(B) < 39 (underpowered: no verdict; never FAIL on thin n). A candidate C PASSES iff
+        dR >= 1.0 R AND dDD <= 0 AND fold_wins >= 3 of 4. PASS IF any candidate passes (best = highest dR). FAIL
+        IF none passes: the declared value stands and the axis is recorded honest_negative on this window for this
+        leg. A PASS from a best-of-3 sweep is a LEAD, not a finding: it opens exactly one fresh-window confirmation
+        unit (the passing arm alone vs B, on the disjoint window AFTER this one (2025-04-10 .. the latest close;
+        the leg''s own record window), same bars, no re-selection; 03-STRATEGY-IMPROVEMENT.md rung S0-C; programme
+        node P3 tree), and no Tier-3 proposal is written until that unit reads CONFIRMED. The 1.0 R bar, the drawdown
+        clause, the 3-of-4 fold majority and the 39 floor are not changed after any result.'
+      what_it_does_not_do: Does not edit config or any roster. Does not mine values (fixed here). A PASS is a LEAD
+        for rung S0-C, never a promotion case.
+    compute: cpu_light
+    value:
+      usd_at_stake_per_month: 60
+      confidence: 0.3
+      bucket: own_losses
+      basis: 'stand-in: a small real-money alpaca_live leg; estimate, not a measurement.'
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 2.0
+      est_minutes: 10
+      basis: One Yahoo 1d fetch of ~20 years and 4 harness passes over it.
+      why_runner: exit_lever_ablation.py fetches its own keyless candles (Binance Vision / Yahoo) and runs the repo
+        harnesses; the symbol/timeframe is not in metis-market-data and the script has no published-data input,
+        so the Kaggle-CPU and trainer backends cannot take it.
+    run:
+      command:
+      - python3
+      - scripts/research/exit_lever_ablation.py
+      - --leg
+      - slv_pullback_1d
+      - --arm
+      - B=
+      - --arm
+      - F0382=pullback_frac=0.382
+      - --arm
+      - F05=pullback_frac=0.5
+      - --arm
+      - F075=pullback_frac=0.75
+      - --days
+      - '7414'
+      - --start
+      - '2006-10-02'
+      - --end
+      - '2025-04-09'
+      - --grade
+      - sweep
+      - --baseline
+      - B
+      - --delta-r
+      - '1.0'
+      - --fold-majority
+      - '3'
+      - --n-floor
+      - '39'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 60
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+      note: research/results/RQ-NODE/<run_id>.jsonl via the batch collector; per-arm summaries and verdict.json
+        under comms/research/RQ-NODE/<run_id>/.
+    roadmap:
+    - M21
+    - L-LADDER
+    related:
+    - P3-STRATEGY-BACKLOG-1016
+    - docs/research/programmes/03-STRATEGY-IMPROVEMENT.md
+    - research/programmes/03-strategy-improvement.yaml
+    - scripts/research/exit_lever_ablation.py
+- id: P3-Q3-gld-iaum-tune
+  goal: G1
+  roadmap:
+  - M21
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 80
+    confidence: 0.3
+  after:
+  - unit: RQ-20261016-c56e-18
+    verdict: pass
+  unit:
+    title: 'Tune at power (programme 03 Q2 after Q3): does moving gld_pullback_1d''s pullback_frac (0.382, 0.5,
+      0.75) beat the declared 0.618 over 2006-10-02 .. 2025-04-09, net of the full cost stack?'
+    cadence: once
+    theme: live_strategy
+    priority: 1
+    kind: experiment
+    question: On 2006-10-02 .. 2025-04-09 (the window RQ-20261016-c56e-18 graded the declared leg on), does any
+      of the 3 pre-registered pullback_frac arms on gld_pullback_1d beat the leg as declared by >= 1.0 R, with no
+      worse drawdown, in >= 3 of 4 calendar folds?
+    why_this_matters: 'RQ-20261016-c56e-18 PASSED: gld_pullback_1d has a Stage-0 grade at power for the first time,
+      so it can now be tuned (tune-before-retire, programme 03 § 4 Q2). pullback_frac is the axis that moved ada_pullback_2h
+      (470a-05 PASS).'
+    power:
+      expected_n: 130
+      min_detectable_effect: 0.45
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo's standing E35 floor). expected_n=130 is
+        an ESTIMATE (RQ-20261016-c56e-18's own n replaces it on the first run). Bar 1.0 R over the window.
+      feasibility:
+        source: none
+        accrual_basis: 'Yahoo daily history via yfinance (regime_debt_matrix._fetch_csv: period is uncapped for
+          1d). INFERRED, not measured this lane: no committed run has yet fetched >2y of 1d bars this way; the first
+          run''s verdict.json window/data_start is the check. Nothing accrues.'
+    decision_rule:
+      id: RULE-P3-Q3-GLD-IAUM-TUNE
+      registered_before_run: true
+      statistic: 'Per arm, from the harness''s own --json summary (argv built by regime_debt_matrix.build_harness_cmd
+        from config/strategies.yaml plus the arm''s tokens; full cost stack: fee + resolved slippage + funding via
+        execution_costs.resolve_cost_policy, never a zero default): total_trades, net_total_r, max_drawdown_r, plus
+        net_r per fold over FOUR equal calendar spans (same boundaries every arm). Arms: B = leg as declared (pullback_frac
+        0.618); F0382=pullback_frac=0.382; F05=pullback_frac=0.5; F075=pullback_frac=0.75. Per candidate C: dR =
+        net_r(C) - net_r(B); dDD = maxDD(C) - maxDD(B); fold_wins = folds in which C out-earns B. Also reported
+        per arm, not graded: net_r_per_capital_day (the programme''s headline measure).'
+      rule: 'indeterminate IF n(B) < 39 (underpowered: no verdict; never FAIL on thin n). A candidate C PASSES iff
+        dR >= 1.0 R AND dDD <= 0 AND fold_wins >= 3 of 4. PASS IF any candidate passes (best = highest dR). FAIL
+        IF none passes: the declared value stands and the axis is recorded honest_negative on this window for this
+        leg. A PASS from a best-of-3 sweep is a LEAD, not a finding: it opens exactly one fresh-window confirmation
+        unit (the passing arm alone vs B, on the disjoint window AFTER this one (2025-04-10 .. the latest close;
+        the leg''s own record window), same bars, no re-selection; 03-STRATEGY-IMPROVEMENT.md rung S0-C; programme
+        node P3 tree), and no Tier-3 proposal is written until that unit reads CONFIRMED. The 1.0 R bar, the drawdown
+        clause, the 3-of-4 fold majority and the 39 floor are not changed after any result.'
+      what_it_does_not_do: Does not edit config or any roster. Does not mine values (fixed here). A PASS is a LEAD
+        for rung S0-C, never a promotion case.
+    compute: cpu_light
+    value:
+      usd_at_stake_per_month: 80
+      confidence: 0.3
+      bucket: own_losses
+      basis: 'stand-in: a small real-money alpaca_live leg; estimate, not a measurement.'
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 2.0
+      est_minutes: 10
+      basis: One Yahoo 1d fetch of ~20 years and 4 harness passes over it.
+      why_runner: exit_lever_ablation.py fetches its own keyless candles (Binance Vision / Yahoo) and runs the repo
+        harnesses; the symbol/timeframe is not in metis-market-data and the script has no published-data input,
+        so the Kaggle-CPU and trainer backends cannot take it.
+    run:
+      command:
+      - python3
+      - scripts/research/exit_lever_ablation.py
+      - --leg
+      - gld_pullback_1d
+      - --arm
+      - B=
+      - --arm
+      - F0382=pullback_frac=0.382
+      - --arm
+      - F05=pullback_frac=0.5
+      - --arm
+      - F075=pullback_frac=0.75
+      - --days
+      - '7414'
+      - --start
+      - '2006-10-02'
+      - --end
+      - '2025-04-09'
+      - --grade
+      - sweep
+      - --baseline
+      - B
+      - --delta-r
+      - '1.0'
+      - --fold-majority
+      - '3'
+      - --n-floor
+      - '39'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 60
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+      note: research/results/RQ-NODE/<run_id>.jsonl via the batch collector; per-arm summaries and verdict.json
+        under comms/research/RQ-NODE/<run_id>/.
+    roadmap:
+    - M21
+    - L-LADDER
+    related:
+    - P3-STRATEGY-BACKLOG-1016
+    - docs/research/programmes/03-STRATEGY-IMPROVEMENT.md
+    - research/programmes/03-strategy-improvement.yaml
+    - scripts/research/exit_lever_ablation.py
+- id: P3-Q3-ief-fail
+  goal: G1
+  roadmap:
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 60
+    confidence: 0.4
+  after:
+  - unit: RQ-20261016-c56e-16
+    verdict: fail
+  needs_authoring: 'RQ-20261016-c56e-16 FAILED: ief_pullback_1d has no fold-consistent edge over ~18.5 years at
+    its configured params. Register the alpaca_live roster-retention case for the manager (real money; the mirror
+    alpaca_portfolio follows by equality) with the 365d record''s grade beside it, and whether a finite-TP cell
+    (P1, RQ-20261015-1bf3-01 pooled) changes the reading.'
+- id: P3-Q3-slv-fail
+  goal: G1
+  roadmap:
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 60
+    confidence: 0.4
+  after:
+  - unit: RQ-20261016-c56e-17
+    verdict: fail
+  needs_authoring: 'RQ-20261016-c56e-17 FAILED: slv_pullback_1d has no fold-consistent edge over ~18.5 years at
+    its configured params. Register the alpaca_live roster-retention case for the manager (real money; the mirror
+    alpaca_portfolio follows by equality) with the 365d record''s grade beside it, and whether a finite-TP cell
+    (P1, RQ-20261015-1bf3-01 pooled) changes the reading.'
+- id: P3-Q3-gld-iaum-fail
+  goal: G1
+  roadmap:
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 60
+    confidence: 0.4
+  after:
+  - unit: RQ-20261016-c56e-18
+    verdict: fail
+  needs_authoring: 'RQ-20261016-c56e-18 FAILED: gld_pullback_1d (iaum_pullback_1d proxy) has no fold-consistent
+    edge over ~18.5 years at its configured params. Register the alpaca_live roster-retention case for the manager
+    (real money; the mirror alpaca_portfolio follows by equality) with the 365d record''s grade beside it, and whether
+    a finite-TP cell (P1, RQ-20261015-1bf3-01 pooled) changes the reading.'
+- id: P3-Q3-soak-equity-overlap
+  goal: G1
+  roadmap:
+  - L-LADDER
+  - M18
+  value:
+    usd_at_stake_per_month: 60
+    confidence: 0.3
+  after:
+  - unit: RQ-20261016-c56e-19
+    verdict: any
+  - unit: RQ-20261016-c56e-20
+    verdict: any
+  - unit: RQ-20261016-c56e-21
+    verdict: any
+  - unit: RQ-20261016-c56e-22
+    verdict: any
+  - unit: RQ-20261016-c56e-23
+    verdict: any
+  unit:
+    title: 'Soak-book equity overlap: are the four passing 1d equity legs (QQQ, SPY, IWM, QLD trend-long) at least 2 distinct bets (N_eff >= 2.0)
+      once each trade''s R is spread over its holding days?'
+    cadence: once
+    priority: 2
+    kind: deterministic
+    theme: new_strategy_prop
+    question: Using the committed Stage-0 arm-B trade ledgers of qqq_trend_long_1d, spy_trend_long_1d, iwm_trend_long_1d and qld_trend_long_1d (RQ-20261016-c56e-20..23,
+      each PASS), with each trade's net R spread evenly over its calendar holding days and summed to weekly series over the common weeks, is the participation-ratio
+      effective number of independent bets N_eff of their correlation matrix at least 2.0, and which leg's removal lowers the pooled weekly information
+      ratio most?
+    why_this_matters: 'SPY, QQQ, QLD and IWM are one equity-beta factor on priors. Any MD-PROMOTE-S1-S2 case for them counts the same bet up to four
+      times unless this is measured (programme 03 node P3-Q3-soak-equity-overlap). gdx_pullback_1d (c56e-19) read FAIL and is excluded. Disclosure:
+      a smoke run of an earlier variant of the script that binned each trade at its EXIT week was seen before registration (it read N_eff 3.86 of
+      4); that variant was discarded on measure-validity grounds (exit-week bins ignore holding overlap, so multi-week trend trades of the same bet
+      exit in different weeks and look independent). This holding-period-spread variant had not been read when registered, and the thresholds were
+      set before either variant ran.'
+    why_not_inferential: 'A descriptive measurement on committed ledgers: the property N_eff >= 2.0 either holds or does not on these series. There
+      is no sampling question to power.'
+    decision_rule:
+      id: RULE-RQ-20261022-1F8B-02-SOAK-EQUITY-OVERLAP
+      registered_at: '2026-10-22'
+      registered_before_run: true
+      statistic: 'scripts/research/soak_equity_overlap.py on the four committed arm-B ledgers: weekly (W-SUN) net R with each trade''s net_r spread
+        evenly over entry..exit calendar days, common weeks only; N_eff = (sum lambda)^2 / sum lambda^2 of the correlation matrix; pairs with Pearson
+        r >= 0.5 are ''same bet''; leave-one-out pooled mean/sd of the equal-weight weekly series.'
+      rule: 'INDETERMINATE IF common weeks < 104. PASS IF N_eff >= 2.0: the legs are at least two distinct bets and the same_bet_pairs are named in
+        measurement. FAIL IF N_eff < 2.0: they are effectively one equity bet and at most ONE of them is carried to an MD-PROMOTE-S1-S2 case (the
+        leave-one-out table names the strongest). Thresholds are not changed after any result.'
+      what_it_does_not_do: Promotes nothing and edits no config. It measures overlap of realised Stage-0 R, not a Gate-2 case, a cost check or a prop
+        survival gate; a PASS does not make any leg promotable.
+    compute: cpu_light
+    value:
+      bucket: structural
+      usd_at_stake_per_month: 100
+      confidence: 0.3
+      basis: 'stand-in: guards a promotion count against double-counting one factor; not a P&L measurement.'
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 1.0
+      est_minutes: 5
+      why_runner: Reads committed ledgers in the repo checkout; no network, no secret.
+      basis: Four JSONL files of 84-131 rows and a 4x4 eigen decomposition.
+    run:
+      command:
+      - python3
+      - scripts/research/soak_equity_overlap.py
+      - --leg
+      - qqq=comms/research/RQ-20261016-c56e-20/39462143593/arms/B__trades.jsonl
+      - --leg
+      - spy=comms/research/RQ-20261016-c56e-21/39470070325/arms/B__trades.jsonl
+      - --leg
+      - iwm=comms/research/RQ-20261016-c56e-22/39470074338/arms/B__trades.jsonl
+      - --leg
+      - qld=comms/research/RQ-20261016-c56e-23/39470078680/arms/B__trades.jsonl
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 20
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    roadmap:
+    - L-LADDER
+    related:
+    - docs/research/programmes/03-STRATEGY-IMPROVEMENT.md
+    - scripts/research/soak_equity_overlap.py
+    - research/queue/RQ-20261016-c56e-20.yaml
+- id: P3-L-slv-trend-1h-outlier
+  goal: G1
+  roadmap:
+  - L-LADDER
+  value:
+    usd_at_stake_per_month: 60
+    confidence: 0.3
+  needs_authoring: 'slv_trend_1h (alpaca_paper, alpaca_options_paper; execution shadow) reads 1.06 R per capital-day
+    (n=68, +53.1 R on 365d) -- ~6x any other leg (programme 03 § 1: check before anyone quotes it). A preceding-window
+    Stage 0 is underpowered (Yahoo 1h is capped at ~730 days: ~5 months before the record, ~19 trades). Register
+    a data-fidelity unit instead: the same leg on Alpaca 1h bars vs Yahoo 1h bars over the record window (same argv),
+    asserting trade-level agreement, so the figure is either confirmed as data or named as a feed artifact.'
+- id: P3-M22-pairs-roster
+  goal: G1
+  roadmap:
+  - M22
+  value:
+    usd_at_stake_per_month: 300
+    confidence: 0.4
+  after:
+  - unit: RQ-20261014-470a-12
+    verdict: any
+  needs_authoring: 'The honest-R-scale pairs re-measure (470a-12, unblocked by build row PAIRS-R-SCALE) closed.
+    Decide the M22 sleeve from THAT record, not the sprint log: PASS -> a Tier-3 keep note per pair with both records;
+    FAIL -> the retire case per pair through the manager (config/pairs.yaml is the sleeve''s own gate); INDETERMINATE
+    with mean cost_r < 0.01 R -> the R-scale fix did not land, reopen PAIRS-R-SCALE, nothing else.'
+- id: P3-M22-small-tf-scoping
+  goal: G1
+  roadmap:
+  - M22
+  value:
+    usd_at_stake_per_month: 100
+    confidence: 0.2
+  needs_authoring: 'M22''s small-timeframe question has been dormant since 2026-07-16 (E53). Register ONE scoping
+    unit whose data is in metis-market-data (BTC/ETH/SOL 15m market_raw; declare `published_data: metis-market-data`,
+    `compute: auto`, so it lands on the idle Kaggle-CPU backend per PLANNING § 1b RC5): which existing harness family
+    (Donchian, pullback) at 15m clears Stage 0 net of the full cost stack at n >= 39, at fixed family params. NOTE
+    BTC/SOL 15m shards were cut short (ML-SHARD-TRUNCATED, 2026-10-13): check published-data.json before reading.'
+- id: P3-M27-htf-pass
+  goal: G1
+  roadmap:
+  - M27
+  value:
+    usd_at_stake_per_month: 100
+    confidence: 0.3
+  after:
+  - unit: RQ-20260928-001
+    verdict: pass
+  needs_authoring: 'The HTF trend-bias filter ADDS net-of-cost edge on the ict_scalp variants (RQ-20260928-001 PASS,
+    after ICT-SCALP-HTF made the HTF fetch real). Before any Tier-3 note: register the S0-C confirmation on a disjoint
+    window, and re-grade with the ict_scalp evidence outlier removed (build row ICT-SCALP-EVIDENCE: the xrp_15m
+    54.6 R cost trade) -- a PASS carried by one tiny-stop trade is not a finding.'
+- id: P3-M27-htf-fail
+  goal: G1
+  roadmap:
+  - M27
+  value:
+    usd_at_stake_per_month: 60
+    confidence: 0.3
+  after:
+  - unit: RQ-20260928-001
+    verdict: fail
+  needs_authoring: The HTF trend-bias filter does NOT add edge on the 7 ict_scalp variants that declare it (RQ-20260928-001
+    FAIL). Register the declared-equals-executable case (strip htf_trend_filter_enabled where it is dead weight,
+    Tier 3, through the manager) and decide whether M27 has any remaining Stage-0 question on the 15m variants (xrp_15m
+    +4.07 R, eth_15m +1.32 R on 365d) after the ICT-SCALP-EVIDENCE outlier fix, or goes dormant with that number.
+- id: P3-M18-same-symbol-read
+  goal: G1
+  roadmap:
+  - M18
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.3
+  after:
+  - unit: RQ-20261015-1631-01
+    verdict: any
+  - unit: RQ-20261015-1631-02
+    verdict: any
+  needs_authoring: 'Both same-symbol allocation inputs closed (ETH: eth_4h vs eth_prop; XRP: xrp_4h vs xrp_pullback_2h).
+    Read solo vs shared net R per capital-day for each pair and register the next M18 question: is the live election
+    (src/runtime/intents.py, ties broken by NAME) costing the book R measurably -- a replay of the contested ticks
+    under a backtest-quality tie-break vs the live one -- or a stated no-action with the number. Propose-only for
+    the allocator (M18 `next`: observe arbitration_fanout_soak first, E50).'
