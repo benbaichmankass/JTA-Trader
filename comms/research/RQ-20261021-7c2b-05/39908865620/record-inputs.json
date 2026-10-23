@@ -1,0 +1,18 @@
+{
+  "artifact_locator": "comms/research/RQ-20261021-7c2b-05/39908865620/ (run-manifest.json + verdict.json + logs/)",
+  "artifact_store": "comms/research/RQ-20261021-7c2b-05/39908865620",
+  "data_fingerprint": "{\"state\": \"not_established\", \"why\": \"the run named no existing input file or directory in its argv or in verdict.json data_inputs\"}",
+  "decision_rule_id": "RULE-P7-Q2-COST-GATED-15M",
+  "decision_rule_registered_at": "2026-10-21",
+  "measurement_file": "comms/research/RQ-20261021-7c2b-05/39908865620/measurement.json",
+  "min_rows": "1",
+  "n": "31318",
+  "note": "FAIL: B: pooled net_r <= 0 or folds short; G50: net_r/trade -0.0214 beats the baseline's -0.0504 by 0.029 < the 0.05 materiality bar; G75: pooled passes but only 1 of 3 powered cells pass (< 3): one symbol's edge; G90: pooled net_r <= 0 or folds short. Thresholds: n_floor 39, pooled_n_floor 88, folds 6 majority 4, breadth 0.67 over >= 2 powered cells, holm alpha 0.05, baseline B with materiality 0.05 R/trade. Crypto candles are Binance USD-M (PROXY for Bybit linear); the cost stack is the harness's venue-aware fee + slippage + funding. A pass is an input to a re-entry case, never a roster act.",
+  "population": "family=trend timeframe=15m symbols=ADAUSDT,AVAXUSDT,SOLUSDT arms=['B', 'G50', 'G75', 'G90'] window=2022-01-01..2026-10-20 days=1760; 12 of 12 cells measured; trades net of fee+slippage+funding",
+  "power_state": "accruing",
+  "read_state": "measured",
+  "records_file": "",
+  "research_unit": "RQ-20261021-7c2b-05",
+  "tool": "python3 scripts/research/harness_stage0.py",
+  "verdict": "fail"
+}
