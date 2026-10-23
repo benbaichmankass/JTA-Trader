@@ -2,7 +2,7 @@ id: RQ-20261022-eba2-10
 title: 'Q10 variant (first test failed -> variant): does a SWING-level trail with a wider tight mult (2.5 / 3.0 x ATR of the
   declared 3.5) or a longer FVG lookback (120) replace the declared exit of trend_donchian_eth_prop on net R in 5 of 6 folds,
   or cut drawdown at no R cost?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -127,3 +127,16 @@ related:
 - scripts/research/exit_lever_ablation.py
 - docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md
 last_dispatched_at: '2026-10-23T00:28:23+00:00'
+grading:
+  attested: RULE-P1-Q10V-ETHPROP-WIDE-LEVEL
+  auto: true
+  decision_rule_id: RULE-P1-Q10V-ETHPROP-WIDE-LEVEL
+  evidence:
+  - research/results/RQ-20261022-eba2-10/39878359084.jsonl
+  graded_at: '2026-10-23'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

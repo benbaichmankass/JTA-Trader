@@ -4,7 +4,7 @@
 id: RQ-20261020-003
 title: 'P4-Q2 placebo for RQ-20261016-7769-02 (ppi_mom -> RTY=F): does the surprise ''predict'' RTY=F
   over a window that ENDS BEFORE the release (anchor -10 trading days)? Expected FAIL'
-status: queued
+status: done
 cadence: once
 roadmap:
 - M28
@@ -101,3 +101,15 @@ generated:
   params:
     node: P4-Q2-ppi-rty-placebo
 last_dispatched_at: '2026-10-23T04:43:22+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P4-Q2-ppi-rty-placebo
+  evidence:
+  - research/results/RQ-20261020-003/39901855785.jsonl
+  graded_at: '2026-10-23'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
