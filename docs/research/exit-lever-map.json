@@ -187,6 +187,14 @@
     "--trail-level-round-step": {
       "state": "needs_column",
       "reason": "P1-Q10 `level_trail` (2026-10-22, lane EXITS-OVERNIGHT-1021): tighten the chandelier trail to --trail-level-tight-mult x ATR on first touch of ONE structural level fixed at entry (prior confirmed swing extreme / nearest unfilled opposing FVG / next round number; src/research/trail_levers.trade_level). Measured by exit_lever_ablation replace units RQ-20261022-001/-002 (raw flags), not by m20_fleet_exit_sweep; the coverage matrix has NO level_trail column yet (same schema-change reason as momentum_trail). No live producer."
+    },
+    "--giveback-frac": {
+      "state": "mapped_to_column",
+      "column": "giveback_stop"
+    },
+    "--trail-level-min-r": {
+      "state": "needs_column",
+      "reason": "LEVEL-TRAIL-R-GATE (2026-10-23, lane EXIT-BUILDS-W43): gates the P1-Q10 `level_trail` so a level touch latches the tight trail only once peak open profit has reached N R (AND with the level, where --trail-decay-arm-r composes by OR). It modifies --trail-level, which is itself needs_column, so it has no lever column of its own; unit RQ-20261022-eba2-11 tests it on xrp_pullback_2h."
     }
   },
   "summary_2026_09_12": {
