@@ -2,7 +2,7 @@ id: RQ-20261023-8961-01
 title: 'ADX variant 2 (eba2-15 failed on eth_4h -> same arms on the sibling): do momentum-LOSS triggers (ADX below 20 -> tight 3.5; ADX below 30 or
   20 AND falling over 3 bars -> tight 3.5 / 3.0) replace the declared exit of trend_donchian_sol_4h on net R in 5 of 6 folds
   over 2020-07..2026-10?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -126,3 +126,16 @@ related:
 - scripts/research/exit_lever_ablation.py
 - docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md
 last_dispatched_at: '2026-10-23T03:27:35+00:00'
+grading:
+  attested: RULE-P1-Q14-SOL4H-ADX-MOMENTUM-LOSS
+  auto: true
+  decision_rule_id: RULE-P1-Q14-SOL4H-ADX-MOMENTUM-LOSS
+  evidence:
+  - research/results/RQ-20261023-8961-01/39895168157.jsonl
+  graded_at: '2026-10-23'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
