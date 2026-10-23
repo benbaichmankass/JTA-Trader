@@ -106,15 +106,24 @@ LEVERS: Dict[str, Dict[str, Any]] = {
     # PASSING cell here cannot be declared yet. Clear it by implementing the
     # producer in the units, NOT by adding these to exit_mechanism_coverage.
     # `cells_kwargs`: the cells are OPT-IN in cells_for, so the probe must ask.
+    #
+    # ⚠️ CORRECTED 2026-10-22 (TPX-PULLBACK-PRODUCER): the "no live monitor()
+    # returns a `tp` verdict" text was false from 2026-10-07 (trend_donchian,
+    # rule donchian_measured_move). tp_extend now HAS a live producer for the
+    # htf_pullback family (tp_revision rule `tp_extend`, declared per leg as
+    # `tp_revision:`); it stays exempt here only because
+    # exit_mechanism_coverage.MECHANISMS does not yet see tp_revision rules
+    # (PI-20261022-FVTMGYXW-0002). tp_retarget has no live producer.
     "tp_extend": {"sweep_lever": "tp_extend", "probe_family": "donchian",
                   "cells_kwargs": {"tp_geometry_cells": True},
                   "runnable_exempt":
-                      "backtest-only; no live monitor() returns a `tp` verdict yet "
-                      "(GEOM-B1-HARNESS measures; TP-DOCTRINE / BUILD B1 produces)"},
+                      "live producer exists for htf_pullback only (tp_revision rule "
+                      "`tp_extend`); exit_mechanism_coverage does not yet see "
+                      "tp_revision rules (PI-20261022-FVTMGYXW-0002)"},
     "tp_retarget": {"sweep_lever": "tp_retarget", "probe_family": "donchian",
                     "cells_kwargs": {"tp_geometry_cells": True},
                     "runnable_exempt":
-                        "backtest-only; no live monitor() returns a `tp` verdict yet "
+                        "backtest-only; no tp_revision rule implements it "
                         "(GEOM-B1-HARNESS measures; TP-DOCTRINE / BUILD B1 produces)"},
     # exit_head is REGISTERED and expected to be runnable+visible, but it is
     # scored from an ML artifact rather than swept as a parameter cell, so it
