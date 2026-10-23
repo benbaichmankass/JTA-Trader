@@ -1,0 +1,129 @@
+id: RQ-20261022-eba2-07
+title: 'Programme 01 Q11 rung 2 (LEVER ARM): on ada_pullback_2h, does a metric-TRIGGERED bank (50% at +1 R) or tight trail
+  (2.5 x ATR) at bar 6 beat the declared exit AND the same action applied to every trade, on net R in 5 of 6 folds over 2020-07..2026-10?'
+status: queued
+cadence: once
+roadmap:
+- L-ATM
+- M20
+theme: live_strategy
+priority: 1
+kind: experiment
+question: 'If the bar-6 path metrics carry information about giveback (007 PASS, eba2-01 transfer PASS, and eba2-04 if it
+  has run), the operator''s idea is a SELECTIVE exit: act only on the trades the metrics flag. On ada_pullback_2h over 2020-07-01
+  .. 2026-10-15 23:59 (replace grade, 6 calendar folds by entry time), with out-of-fold triggers (for each held-out fold the
+  full model of path_metric_giveback.py is fit on the OTHER folds and a trade is flagged when its fitted P(big giveback) >=
+  0.5 at bar 6; no trade''s flag sees its own fold), do arms MB (flagged trades bank 50% at +1.0 R), MT (flagged trades tighten
+  the trail to 2.5 x ATR) beat the declared exit A AND the unconditional control UB/UT (the same action on EVERY trade still
+  open at bar 6) by >= 0.02 R/trade in >= 5 of 6 folds within the Path B drawdown bar?'
+why_this_matters: The fixed bank (-43..-68 R on ada_pullback_2h) and the unconditional tight trail are the cost of acting
+  on every trade; rung 2 asks whether acting only on the flagged ones is a different, positive-sum thing. The unconditional
+  control arm is what stops a PASS from being 'any early action' (the 007 PASS cannot distinguish that). Rung 2 exists only
+  on legs where rung 1 passed (ada_pullback_2h, xrp_pullback_2h); eth_4h read FAIL and xrp_4h underpowered in 007.
+power:
+  expected_n: 402
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: Floor 39 incumbent trades; the incumbent read n 402 (MEASURED). Flagged subset is smaller; the rule grades whole-leg
+    net R, so n(A) is the denominator.
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-P1-Q11-R2-ADA-PULLBACK-2H
+  registered_at: '2026-10-22'
+  registered_before_run: true
+  statistic: 'From scripts/research/exit_lever_ablation.py --grade replace on ada_pullback_2h with arms A, MB, MT, UB, UT
+    (build HARNESS-METRIC-TRIGGER: out-of-fold trigger file from path_metric_giveback.py --emit-triggers, consumed by --trigger-file
+    / --trigger-action in the harness), window 2020-07-01 .. 2026-10-15 23:59, 6 equal calendar folds, net of the full cost
+    stack (resolve_cost_policy, recorded per arm). Per arm: n, net_total_r (full-position R), max_drawdown_r, net R per fold.'
+  rule: 'INDETERMINATE IF n(A) < 39 or IF a candidate arm is byte-identical to A. Candidate C in {MB, MT} PASSES iff net_r(C)
+    > net_r(A) AND delta vs A >= 0.02 R x n(A) AND folds_ge(A) >= 5 of 6 AND maxDD(C) <= maxDD(A) x 1.35 AND net_r(C) > net_r(its
+    unconditional control, UB for MB, UT for MT). PASS IF one or more pass: ONE confirmation unit on a disjoint partition
+    (a PASS on one window is a discovery), then Q6 parity and a Tier-3 declare proposal -- never a config edit. FAIL IF none
+    passes: selective banking/tightening on these triggers does not pay on this leg; the declared exit stands. Thresholds
+    (0.5 trigger, bar 6, 1.0 R, 2.5 x ATR) are not changed after any result.'
+  what_it_does_not_do: 'Edits no config and places no order; a PASS needs a live producer that computes the path metrics bar
+    by bar (position_path_history exists; the monitor does not read it for exits) and a Tier-3 declare with the mirror in
+    the same PR. Out-of-fold triggers make the harness result honest but the live model would be fit on all history. PRIOR
+    INFORMATION, disclosed: on 2026-10-22 the fixed 50% bank (RQ-20261022-fd06-01/-02/-03), level-triggered tightening (RQ-20261022-001..006)
+    and a 1R giveback stop (RQ-20261019-004/-018) all FAILED against the declared exit on the Bybit money legs, by margins
+    of -3 to -68 R over n 68-402; the declared wide trail earns its R in the right tail.'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 500
+  confidence: 0.15
+  basis: 'stand-in: real-money leg; the operator named giveback as the standing priority; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  why_runner: Fetches keyless public candles (Binance Vision) for a pinned window; reads no trainer data.
+  basis: 'One exit_lever_ablation.py invocation: one keyless candle fetch + one harness pass per arm (2 arms on xrp_pullback_2h
+    over 2020-07..2026-10 took 74 s wall MEASURED 2026-10-16).'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - ada_pullback_2h
+  - --trigger-from-path-metrics
+  - '6'
+  - --arm
+  - A=
+  - --arm
+  - MB=--trigger-action=bank;--bank-frac=0.5;--bank-at-r=1.0;--trigger-file=@trigger_file
+  - --arm
+  - MT=--trigger-action=tight;--trail-decay-tight-mult=2.5;--trigger-file=@trigger_file
+  - --arm
+  - UB=--trigger-action=bank;--bank-frac=0.5;--bank-at-r=1.0;--trigger-all=6
+  - --arm
+  - UT=--trigger-action=tight;--trail-decay-tight-mult=2.5;--trigger-all=6
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '5'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261022-eba2-07
+    trigger_producer: built in -- exit_lever_ablation.py --trigger-from-path-metrics 6 scores the leg with path_metric_giveback.oof_triggers (full model, other folds only, big-quantile 0.5, --folds 6) and substitutes the file for the literal token @trigger_file
+      (flags per eba2-01)
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- docs/claude/work/IDEAS.md
+- research/queue/RQ-20261022-007.yaml
+- research/queue/RQ-20261022-eba2-01.yaml
+- research/queue/RQ-20261022-eba2-04.yaml
+- research/queue/RQ-20261022-fd06-01.yaml
+requires_result:
+  unit: RQ-20261022-eba2-01
+  verdict: pass

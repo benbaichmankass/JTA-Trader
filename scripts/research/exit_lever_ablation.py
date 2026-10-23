@@ -711,6 +711,14 @@ def main(argv: list[str] | None = None) -> int:
                     help="holdout: baseline entries the held-back span must hold; also its grading floor")
     ap.add_argument("--holdout-max-frac", type=float, default=0.40, help="holdout: cap on the held-back share")
     ap.add_argument("--research-unit", default=None, help="holdout: the unit id, carried into the block")
+    ap.add_argument("--trigger-from-path-metrics", type=int, default=0, metavar="K",
+                    help="HARNESS-METRIC-TRIGGER: before the arms run, score this leg's trades at bar offset K "
+                         "with path_metric_giveback.py's out-of-fold FULL model (--folds calendar folds, "
+                         "--trigger-big-quantile) and substitute the resulting file for the literal token @trigger_file (NOT a {brace} placeholder: script_run refuses those) in the "
+                         "arms' tokens. 0 = off: an arm that names @trigger_file is then refused.")
+    ap.add_argument("--trigger-big-quantile", type=float, default=0.5,
+                    help="with --trigger-from-path-metrics: the 'big giveback' cut, a quantile of the "
+                         "TRAINING folds' giveback (the eba2-01 construction)")
     ap.add_argument("--control-since", action="store_true",
                     help="grade the control on trades entered on/after the record's data_start (window longer than the record's)")
     ap.add_argument("--out", required=True)
@@ -772,6 +780,37 @@ def main(argv: list[str] | None = None) -> int:
     if not a.data_csv:
         feed = fetch_candles(a.leg, base, a.days, csv, non_crypto_source=a.non_crypto_source)
     edges = fold_edges(csv, a.start, a.end)
+    trigger_meta: dict[str, Any] | None = None
+    if a.trigger_from_path_metrics:
+        if str(feed["resample"]) != str(base.get("timeframe")):
+            print(f"ERROR: --trigger-from-path-metrics scores at the leg's own timeframe "
+                  f"({base.get('timeframe')}), but the feed resamples to {feed['resample']}", file=sys.stderr)
+            return 2
+        import path_metric_giveback as pm
+        try:
+            prow, _pmeta = pm.run_leg_paths(a.leg, base, days=a.days, start=a.start, end=a.end, wd=wd,
+                                            data_csv=csv, non_crypto_source=a.non_crypto_source)
+        except Exception as exc:  # noqa: BLE001  # allow-silent: not silent -- printed, written to failure.json, exit 1
+            print(f"ERROR: trigger producer: {exc}", file=sys.stderr)
+            _write_failure(out, {"stage": "trigger_producer", "error": str(exc)})
+            return 1
+        ptable, _ex, _tot = pm.build_table(prow, a.trigger_from_path_metrics)
+        trows = pm.oof_triggers(ptable, a.trigger_from_path_metrics, folds=a.folds,
+                                big_quantile=a.trigger_big_quantile)
+        trig_file = out / f"triggers__{a.leg}.jsonl"
+        trig_file.write_text("".join(json.dumps(r) + "\n" for r in trows), encoding="utf-8")
+        trigger_meta = {"file": trig_file.name, "k": a.trigger_from_path_metrics, "n_scored": len(trows),
+                        "n_flagged": sum(1 for r in trows if r["trigger"]), "folds": a.folds,
+                        "big_quantile": a.trigger_big_quantile,
+                        "construction": "path_metric_giveback.oof_triggers: FULL model fit on the other "
+                                        "calendar folds only; P(big giveback) >= 0.5"}
+        print(f"[triggers] {trigger_meta}", flush=True)
+        specs = [(lab, st, un, [x.replace("@trigger_file", str(trig_file)) for x in ex])
+                 for lab, st, un, ex in specs]
+    elif any("@trigger_file" in x for _l, _s, _u, ex in specs for x in ex):
+        print("ERROR: an arm names @trigger_file but --trigger-from-path-metrics K was not given",
+              file=sys.stderr)
+        return 2
     arms_dir = out / "arms"
     arms_dir.mkdir(exist_ok=True)
     arms: dict[str, dict[str, Any]] = {}
@@ -827,6 +866,8 @@ def main(argv: list[str] | None = None) -> int:
            f"{a.start or arms[a.baseline].get('data_start')} .. {a.end or arms[a.baseline].get('data_end')}, "
            f"net of fee+slippage+funding (the harness's venue-aware stack); arms {labels}")
     extra_m: dict[str, Any] = {"window": window, "argv": argvs}
+    if trigger_meta:
+        extra_m["trigger"] = trigger_meta
     if a.grade == "holdout":
         extra_m["holdout_confirmation"] = g.pop("_block")
         pop += (f"; holdout boundary {g['plan']['boundary']} (share {g['plan']['share']}), selection on "

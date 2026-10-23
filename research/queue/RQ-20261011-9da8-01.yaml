@@ -142,18 +142,20 @@ related:
 - ROADMAP.md T0.1/T0.4
 - docs/research/frontier-scan-2026-10-11.md
 - FRONTIER-RESEARCH
-last_dispatched_at: '2026-10-23T08:15:09+00:00'
+last_dispatched_at: null
 grading:
   attested: RULE-RQ1011-9DA8-01-TSFM-BAKEOFF
   auto: true
+  confirmatory_run: 1
   decision_rule_id: RULE-RQ1011-9DA8-01-TSFM-BAKEOFF
   evidence:
+  - research/results/RQ-20261011-9da8-01/39844193455.jsonl
   - research/results/RQ-20261011-9da8-01/39923386978.jsonl
+  first_fail: 1 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s)
+    superseded)
   graded_at: '2026-10-23'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: RESEARCH-OPS-20261023-1447
-  owner_reason: 'latest row 39923386978 is producer_failed (ml_bakeoff exit 75, trainer heavy_lock_timeout after 3600 s), not a verdict; an earlier measured FM bake-off FAIL was diagnosed on 2026-10-23 08:47Z. The unit re-dispatches on its own; if it fails the same way on 3 consecutive fires, route it to gpu-burst-train per docs/claude/trainer-resource-protocol.md (lever, not a retirement).'
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
+  reason: 1 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
   rows: 1
-  verdict: null
+  verdict: fail

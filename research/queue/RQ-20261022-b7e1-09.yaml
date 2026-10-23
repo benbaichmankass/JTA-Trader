@@ -1,0 +1,132 @@
+id: RQ-20261022-b7e1-09
+title: 'Q14 lever (TIME-IN-CHOP STOP): on ada_pullback_2h, once a trade has been >= 1 R up, does exiting the remainder after
+  6 / 10 / 14 consecutive bars with the 6-bar efficiency ratio below 0.25 while open profit sits at or below half the peak
+  beat the declared exit on net R in 5 of 6 folds?'
+status: queued
+cadence: once
+roadmap:
+- L-ATM
+- M20
+theme: live_strategy
+priority: 1
+kind: experiment
+question: 'On ada_pullback_2h, does a stop that closes the position after N = 6 / 10 / 14 consecutive bars of er_6 < 0.25
+  (peak_r >= 1.0 and open_r <= 0.5 x peak_r throughout) beat A by >= 0.02 R/trade in >= 5 of 6 folds within the Path B drawdown
+  bar? It is the capital-efficiency reading of "stop paying for dead trades" (Path B: net_r_per_capital_day) applied to a
+  winning-then-stalled trade, not a price stop.'
+why_this_matters: 'Operator idea (IDEAS.md 2026-10-21): surf the volatility instead of holding through it. Today''s results
+  say acting on EVERY trade fails (fixed 50% bank -43..-68 R on ada_pullback_2h, level-triggered tightening, 1R giveback stop;
+  RQ-20261022-fd06-*, -001..006): the declared wide trail earns its R in the right tail. This unit asks the SELECTIVE form
+  with a feature chosen from the in-trade path measurement. No unconditional control exists for a state-defined stop (the
+  stale-stop lever keys on bars-in-trade and open R, the baseline features, and is graded in its own units); the arm must
+  beat A on net R, and Path B (net R per capital day, maxDD not worse, net R falling no more than the declared floor) is reported
+  beside it.'
+power:
+  expected_n: 402
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Floor (1.96 + 0.8416)^2 / 0.45^2 = 38.76 -> 39 incumbent trades; incumbent n is MEASURED per leg in the sibling
+    units (ada_pb 402, xrp_pb 394, eth_prop 1085). Trade sequences autocorrelate: the fold majority carries the rest.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-P1-Q14-TIME-IN-CHOP-STOP-09
+  registered_at: '2026-10-22'
+  registered_before_run: true
+  statistic: 'From scripts/research/exit_lever_ablation.py --grade replace on ada_pullback_2h, window 2020-07-01 .. 2026-10-15
+    23:59, 6 equal calendar folds by entry time, net of the full cost stack (resolve_cost_policy, recorded per arm). Per arm:
+    n, net_total_r, max_drawdown_r, net R per fold. A = the leg as declared. Arms: K6, K10, K14. Gate flags are the build
+    PATHSTATE-TRAIL-GATE contract (path-state features computed from bars <= t of the trade, in R/ATR units, by the SAME function
+    the path_state_giveback.py study uses).'
+  rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the gate never fired). A candidate C
+    PASSES iff net_r(C) > net_r(A) AND delta >= 0.02 R x n(A) AND folds_ge(A) >= 5 of 6 AND maxDD(C) <= maxDD(A) x 1.35. PASS
+    IF one or more pass: ONE confirmation unit on a disjoint partition (a PASS on one window is a discovery), then Q6 parity
+    and a Tier-3 declare proposal -- never a config edit. FAIL IF none passes: the family is NOT retired -- variants queued:
+    (1) er threshold 0.15 and 0.35, (2) require open_r <= 0.25 x peak, (3) the same stop on xrp_pullback_2h and trend_donchian_eth_4h.
+    Thresholds and the arm grid are not changed after any result.'
+  what_it_does_not_do: 'Edits no config and places no order. A PASS needs a live producer that computes the path state bar
+    by bar (position_path_history exists; the monitor does not read it for exits; src/runtime/trail_decay.py is the nearest
+    live producer) and a Tier-3 declare with the mirror in the same PR. The stop closes at market like the leg''s other exits;
+    the declared TP is unchanged, and a closed-by-chop-stop exit is a strategy close, not a new close reason class (live producer
+    must tag it). PRIOR INFORMATION, disclosed: the fixed bank, level-triggered tightening and the 1R giveback stop all failed
+    vs the declared exit on the Bybit money legs on 2026-10-22; the in-trade measurement (docs/research/exit-path-metrics-2026-10-22.md)
+    screens a full exit at the first flagged state as LOSING vs the declared exit on every pullback/trend leg (so these arms
+    tighten or partially bank, never exit outright, except the time-in-chop unit). No look at any arm here was taken before
+    registration.'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 500
+  confidence: 0.1
+  basis: 'stand-in: money/prop leg; the operator named giveback the standing priority; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  why_runner: Fetches keyless public candles (Binance Vision) for a pinned window; reads no trainer data.
+  basis: One harness invocation per arm on freshly fetched public candles (74 s wall for 2 arms on xrp_pullback_2h MEASURED
+    2026-10-16; the 5-leg path_state_giveback measurement run took ~15 min wall, 1h legs dominating).
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - ada_pullback_2h
+  - --arm
+  - A=
+  - --arm
+  - K6=--chop-stop-feature=er;--chop-stop-window=6;--chop-stop-thr=0.25;--chop-stop-bars=6;--chop-stop-min-peak-r=1.0;--chop-stop-max-open-frac=0.5
+  - --arm
+  - K10=--chop-stop-feature=er;--chop-stop-window=6;--chop-stop-thr=0.25;--chop-stop-bars=10;--chop-stop-min-peak-r=1.0;--chop-stop-max-open-frac=0.5
+  - --arm
+  - K14=--chop-stop-feature=er;--chop-stop-window=6;--chop-stop-thr=0.25;--chop-stop-bars=14;--chop-stop-min-peak-r=1.0;--chop-stop-max-open-frac=0.5
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '5'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261022-b7e1-09
+    gate_flags_contract: PATHSTATE-TRAIL-GATE
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- docs/claude/work/IDEAS.md
+- scripts/research/path_state_giveback.py
+- research/queue/RQ-20261022-007.yaml
+- docs/research/exit-path-metrics-2026-10-22.md
+- research/queue/RQ-20261022-eba2-03.yaml
+- src/research/trail_levers.py
+programme_node:
+  programme: P1
+  node: P1-Q14-time-in-chop-stop-ada
+  goal: G1
+last_dispatched_at: null
