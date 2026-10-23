@@ -2,7 +2,7 @@ id: RQ-20261021-7c2b-05
 title: >-
   Programme 07 Q2 (frontier PASS): cost-gated Donchian-20 breakout at 15m on the three perps whose shortest viable bar is 15m (ADA,
   AVAX, SOL), gate on the 0-1 scale
-status: queued
+status: done
 cadence: once
 theme: timeframes
 priority: 2
@@ -128,3 +128,16 @@ programme_node:
   goal: G1
   after: []
 last_dispatched_at: '2026-10-23T05:59:29+00:00'
+grading:
+  attested: RULE-P7-Q2-COST-GATED-15M
+  auto: true
+  decision_rule_id: RULE-P7-Q2-COST-GATED-15M
+  evidence:
+  - research/results/RQ-20261021-7c2b-05/39908865620.jsonl
+  graded_at: '2026-10-23'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

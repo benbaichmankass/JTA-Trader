@@ -1,0 +1,17 @@
+{
+  "based_on": "20261012T133115445520Z-26b536d7.json",
+  "due_when": {
+    "due_date": "2026-10-19",
+    "kind": "date"
+  },
+  "id": "PI-20261012-UFJZ63WF-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane NEWS-HIST-REPLAY session_01WXLa6RcvP6XnbXuFjz63wF, 2026-10-12",
+    "rerun": "python3 scripts/research/news_hist_replay.py --help; jq .grades comms/research/RQ-20261012-2a7b-01/verdict.json"
+  },
+  "routed_to": "NEWS-VETO-EVAL",
+  "state": "routed",
+  "what": "NEWS-HIST-REPLAY follow-up: the offline G1 corpus is TITLE-ONLY (GDELT GKG has no summary/body) so the live veto (single item sentiment<-0.6 AND impact>0.7) is unreachable offline (0 of 87,305 relevant items) and arm E of RQ-20261012-2a7b-01 is INSUFFICIENT_BASE. Build a body/summary-bearing point-in-time corpus (candidates: Common Crawl CC-NEWS, Bigdata.com connector -- licence/cost unknown) or an article-summary fetch for the kept GKG URLs, then re-run the unit's arm E."
+}
