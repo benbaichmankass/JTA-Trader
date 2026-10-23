@@ -1019,7 +1019,7 @@ The manager rotates **at its own discretion**; no operator OK is needed to start
 ### When
 
 Typical reasons:
-- **Context past ~300k tokens.** Cost per turn scales with context; the 2026-10-11 session reached 730k tokens and $165 by 2026-10-13.
+- **Context past ~300k tokens.** Cost per turn scales with context; the 2026-10-11 session reached 730k tokens and $165 by 2026-10-13. Past it, the outgoing manager drives the rotation itself and never hands it to the operator.
 - **A natural boundary**, such as after a weekly planning pass or a review.
 - **Degraded recall.**
 
@@ -1048,12 +1048,12 @@ Do not commit it from the manager session: `manager-scope-guard` refuses the
 lane (Haiku, ~$1; precedent HANDOFF-LAND-1022, #19521) lands it through a self-land PR
 (§ "How lane PRs land").
 
-**2. CREATE.** `create_session` with:
+**2. CREATE.** The new manager is created by a **SHALLOW session**, normally the assistant manager, **never by the outgoing manager**. The outgoing manager asks for it with a one-off fired trigger to the assistant manager carrying the parameters below. Each manager-created manager adds one level of session lineage; the limit is 8 and a session at depth 8 cannot create lane sessions (MEASURED 2026-10-23: `session_01Nk7tgM` landed at 8/8 and was abandoned; its replacement `session_01YHnEs6` was created by the assistant manager and sits at 6/8). The creator calls `create_session` with:
 - `model`: **Opus** (the manager stays on Opus, operator); pass it explicitly;
 - the same `environment_id`; `source_url` set; `permission_mode: "auto"`;
 - tags `["manager", "predecessor:<old id>"]`;
 - title `Manager Session YYYY-MM-DD`;
-- prompt: read `CLAUDE.md`, this skill and the handoff doc; then perform V1 and **wait for the old manager's diff**. Do not start routine work yet.
+- prompt: read `CLAUDE.md`, this skill and the handoff doc; then perform V1 (including its own depth, `get_session` → lineage) and **wait for the old manager's diff**. Do not start routine work yet.
 
 **3. REWIRE.** `update_trigger` **cannot change a trigger's target session**, so:
 - (a) For every trigger whose `persistent_session_id` is the old session: `create_trigger` the same name, cron and prompt with `persistent_session_id=<new>`, then `update_trigger(enabled=false)` on the old one. Do not delete the old ones until step 5.
@@ -1066,7 +1066,7 @@ lane (Haiku, ~$1; precedent HANDOFF-LAND-1022, #19521) lands it through a self-l
 | # | Check | Pass means |
 |---|---|---|
 | **V1** | **Read-back** | The new manager restates, **from its own reading** (checklist, `list_sessions`, `list_triggers`, the handoff doc), the live lanes, pending operator decisions and the next 24 h of scheduled events. The old manager diffs this against its own list; every mismatch is fixed and re-read. |
-| **V2** | **Trigger audit** | The new manager is subscribed to the ops-flags PR (a `subscribe_pr_activity` call on it returns subscribed, not "already watched by another session"). `list_triggers` shows **zero enabled** triggers targeting the old session id. Every recurring routine, by name, exists, is enabled and targets the new one. Counts match the pre-handover list from step 1. |
+| **V2** | **Trigger audit** | The new manager is subscribed to the ops-flags PR (a `subscribe_pr_activity` call on it returns subscribed, not "already watched by another session"). `list_triggers` shows **zero enabled** triggers targeting the old session id. Every recurring routine, by name, exists, is enabled and targets the new one, including the "Manager lane check-in" routine (`17 */3 * * *`) (MEASURED 2026-10-23: dropped at the 10-21 and 10-22 rotations, a 4.7 h gap from 09:16Z to 13:59Z with no manager action). Counts match the pre-handover list from step 1. |
 | **V3** | **Id sweep** | The ops-flags subscription is held by the new session only. No enabled trigger prompt, assistant-manager charter or live lane brief still names the old session id as the escalation target. Grep the prompts from `list_triggers` / `get_trigger` for the old id. |
 | **V4** | **Wake round-trips** | (a) old → new: a test trigger is answered by a trigger back. (b) assistant manager → new: the assistant fires its escalation path and the new manager answers. (c) one live lane, if any, is told the new id and acknowledges. |
 | **V5** | **Operator notified, in one message** | New session link, what moved, and anything **not** moved with the reason. |
@@ -1084,12 +1084,12 @@ A grep that returns nothing proves nothing until the same grep is shown to find 
 
 ```
 - [ ] Handoff doc committed and merged to main (PR #__)
-- [ ] New session created: <id / link>, Opus, tags manager + predecessor:<old id>
+- [ ] New session created by a shallow session (assistant manager), not by the old manager: <id / link>, Opus, tags manager + predecessor:<old id>; depth reported in V1: __/8
 - [ ] Triggers recreated against the new session; old ones disabled (n recreated = __, pre-handover n = __)
 - [ ] Prompts naming the old id updated; checklist references updated and pushed
 - [ ] New manager subscribed to the PRs it must watch, incl. the ops-flags PR
 - [ ] V1 read-back diffed against the old manager's list; mismatches fixed: <evidence>
-- [ ] V2 trigger audit: 0 enabled triggers on old id; recurring routines present, enabled, on new id: <list_triggers evidence>
+- [ ] V2 trigger audit: 0 enabled triggers on old id; recurring routines present, enabled, on new id, incl. "Manager lane check-in" (17 */3 * * *): <list_triggers evidence>
 - [ ] V3 id sweep: grep of prompts / charters / lane briefs for old id finds none (positive control shown): <evidence>
 - [ ] V4 wake round-trips: (a) old->new <trigger id>  (b) assistant->new <evidence>  (c) lane ack <lane id>
 - [ ] V5 operator told in one message: new link, what moved, what did not and why
