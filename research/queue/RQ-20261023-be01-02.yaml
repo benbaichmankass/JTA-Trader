@@ -1,4 +1,4 @@
-id: RQ-20261023-pe01-02
+id: RQ-20261023-be01-02
 title: 'HOLDOUT RE-RUN, soak book: does tqqq_trend_long_1d''s configuration, SELECTED on the earliest ~75% of its history, hold up net of the
   full cost stack when tested ONCE on the held-back latest ~25%?'
 cadence: once
@@ -28,7 +28,7 @@ power:
     source: none
     accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
 decision_rule:
-  id: RULE-RQ-20261023-pe01-02
+  id: RULE-RQ-20261023-be01-02
   statistic: 'scripts/research/exit_lever_ablation.py --grade holdout on tqqq_trend_long_1d, window 2010-06-01 .. 2026-10-22 23:59, every arm
     ONE continuous harness pass (argv via regime_debt_matrix.build_harness_cmd, the evidence builder''s own), net of the full cost stack the harness
     resolves for Alpaca equities (fee + the operator-reaffirmed provisional 5.0 bps slippage); per-trade net_r from the harness''s --emit-trades.
@@ -107,18 +107,18 @@ run:
   - --holdout-max-frac
   - '0.40'
   - --research-unit
-  - RQ-20261023-pe01-02
+  - RQ-20261023-be01-02
   - --out
   - '{out_dir}'
   timeout_minutes: 120
   inputs:
-    research_unit: RQ-20261023-pe01-02
+    research_unit: RQ-20261023-be01-02
 lands:
   store: research/results/
   assert_field: read_state
   min_rows: 1
-  note: research/results/RQ-20261023-pe01-02/<run_id>.jsonl via the batch collector; verdict.json (with measurement.holdout_confirmation) + arms
-    under comms/research/RQ-20261023-pe01-02/<run_id>/.
+  note: research/results/RQ-20261023-be01-02/<run_id>.jsonl via the batch collector; verdict.json (with measurement.holdout_confirmation) + arms
+    under comms/research/RQ-20261023-be01-02/<run_id>/.
 holdout_rerun:
   leg: tqqq_trend_long_1d
   decision: PROMOTION-BAR-MULTIPLICITY (operator, 2026-10-16, "Require holdout")
