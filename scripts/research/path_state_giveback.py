@@ -53,49 +53,68 @@ FEATS = ("er_w", "chop_w", "vol_ratio_t", "atr_ratio_t", "dist_atr_t", "dd_frac_
 HYP = {"er_w": -1, "chop_w": +1, "vol_ratio_t": +1, "atr_ratio_t": +1, "dist_atr_t": +1, "dd_frac_t": +1}
 
 
-def trade_states(rows: list[dict[str, Any]], w: int, min_peak: float) -> list[dict[str, Any]]:
-    """One dict per qualifying (trade, bar) state of ONE trade's ordered rows. Features use rows <= t only."""
-    exit_r = float(rows[-1]["open_r"])
-    n = len(rows)
-    out: list[dict[str, Any]] = []
+def state_at(rows: list[dict[str, Any]], t: int, w: int, entry_sd: float | None = None) -> dict[str, Any] | None:
+    """The feature dict of ONE trade at bar index ``t`` of its ordered rows, from ``rows[0..t]`` ONLY.
+
+    The single home of the per-bar features: ``trade_states`` (the screen) and the harness path-state gates
+    (``src/research/path_state_gate.py``, PATHSTATE-TRAIL-GATE) both call it, so a gate cannot drift from the
+    measurement that motivated it. ``None`` where a feature is undefined (t < w-1, no ATR, a flat entry window).
+    ``entry_sd`` (std of the first w bar moves) may be passed to skip recomputing it per bar."""
+    if t < w - 1 or t >= len(rows):
+        return None
     atr0 = rows[0].get("atr_r")
 
     def bar_moves(a: int, b: int) -> list[float]:
         return [float(rows[i]["c_r"]) - (float(rows[i - 1]["c_r"]) if i > 0 else 0.0) for i in range(a, b)]
 
-    entry_moves = bar_moves(0, min(w, n))
-    entry_sd = _sd(entry_moves)
+    if entry_sd is None:
+        entry_sd = _sd(bar_moves(0, w))
+    r = rows[t]
+    peak, openr = float(r["peak_r"]), float(r["open_r"])
+    win = rows[t - w + 1:t + 1]
+    prev_c = float(rows[t - w]["c_r"]) if t - w >= 0 else 0.0
+    tr_sum, moves, hi, lo = 0.0, 0.0, -math.inf, math.inf
+    for x in win:
+        fav, adv, c = float(x["fav_r"]), float(x["adv_r"]), float(x["c_r"])
+        tr_sum += max(fav, prev_c) - min(adv, prev_c)
+        moves += abs(c - prev_c)
+        hi, lo = max(hi, fav), min(lo, adv)
+        prev_c = c
+    rng = hi - lo
+    chop = math.log10(tr_sum / rng) / math.log10(w) if rng > 0 and tr_sum > 0 and w > 1 else 0.0
+    net = float(win[-1]["c_r"]) - (float(rows[t - w]["c_r"]) if t - w >= 0 else 0.0)
+    er = abs(net) / moves if moves > 0 else 0.0
+    sd_t = _sd(bar_moves(t - w + 1, t + 1))
+    atr_t = r.get("atr_r")
+    dist_atr = (peak - openr) / atr_t if atr_t else None
+    atr_ratio = (atr_t / atr0) if (atr_t and atr0) else None
+    if dist_atr is None or atr_ratio is None or entry_sd <= 0:
+        return None
+    return {"open_r": openr, "peak_r": peak, "bsp_t": float(r["bars_since_peak"]), "bars_in": float(t + 1),
+            "er_w": er, "chop_w": chop, "vol_ratio_t": sd_t / entry_sd, "atr_ratio_t": atr_ratio,
+            "dist_atr_t": dist_atr, "dd_frac_t": (peak - openr) / peak if peak > 0 else 0.0,
+            "stop_room_r": float(r.get("dist_to_stop_r") or 0.0), "t": t}
+
+
+def trade_states(rows: list[dict[str, Any]], w: int, min_peak: float) -> list[dict[str, Any]]:
+    """One dict per qualifying (trade, bar) state of ONE trade's ordered rows. Features use rows <= t only."""
+    exit_r = float(rows[-1]["open_r"])
+    n = len(rows)
+    out: list[dict[str, Any]] = []
+    entry_sd = _sd([float(rows[i]["c_r"]) - (float(rows[i - 1]["c_r"]) if i > 0 else 0.0)
+                    for i in range(0, min(w, n))])
     for t in range(w - 1, n - 1):               # never the exit bar (n-1)
         r = rows[t]
         if r.get("is_exit"):
             break
-        peak, openr = float(r["peak_r"]), float(r["open_r"])
-        if peak < min_peak:
+        if float(r["peak_r"]) < min_peak:
             continue
-        win = rows[t - w + 1:t + 1]
-        prev_c = float(rows[t - w]["c_r"]) if t - w >= 0 else 0.0
-        tr_sum, moves, hi, lo = 0.0, 0.0, -math.inf, math.inf
-        for x in win:
-            fav, adv, c = float(x["fav_r"]), float(x["adv_r"]), float(x["c_r"])
-            tr_sum += max(fav, prev_c) - min(adv, prev_c)
-            moves += abs(c - prev_c)
-            hi, lo = max(hi, fav), min(lo, adv)
-            prev_c = c
-        rng = hi - lo
-        chop = math.log10(tr_sum / rng) / math.log10(w) if rng > 0 and tr_sum > 0 and w > 1 else 0.0
-        net = float(win[-1]["c_r"]) - (float(rows[t - w]["c_r"]) if t - w >= 0 else 0.0)
-        er = abs(net) / moves if moves > 0 else 0.0
-        sd_t = _sd(bar_moves(t - w + 1, t + 1))
-        atr_t = r.get("atr_r")
-        dist_atr = (peak - openr) / atr_t if atr_t else None
-        atr_ratio = (atr_t / atr0) if (atr_t and atr0) else None
-        if dist_atr is None or atr_ratio is None or entry_sd <= 0:
+        st = state_at(rows, t, w, entry_sd)
+        if st is None:
             continue
-        out.append({"open_r": openr, "peak_r": peak, "bsp_t": float(r["bars_since_peak"]), "bars_in": float(t + 1),
-                    "er_w": er, "chop_w": chop, "vol_ratio_t": sd_t / entry_sd, "atr_ratio_t": atr_ratio,
-                    "dist_atr_t": dist_atr, "dd_frac_t": (peak - openr) / peak if peak > 0 else 0.0,
-                    "stop_room_r": float(r.get("dist_to_stop_r") or 0.0),
-                    "exit_r": exit_r, "bars_to_exit": float(n - 1 - t), "t": t})
+        st["exit_r"] = exit_r
+        st["bars_to_exit"] = float(n - 1 - t)
+        out.append(st)
     return out
 
 

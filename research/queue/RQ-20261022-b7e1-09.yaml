@@ -2,7 +2,7 @@ id: RQ-20261022-b7e1-09
 title: 'Q14 lever (TIME-IN-CHOP STOP): on ada_pullback_2h, once a trade has been >= 1 R up, does exiting the remainder after
   6 / 10 / 14 consecutive bars with the 6-bar efficiency ratio below 0.25 while open profit sits at or below half the peak
   beat the declared exit on net R in 5 of 6 folds?'
-status: blocked
+status: queued
 cadence: once
 roadmap:
 - L-ATM
@@ -129,11 +129,4 @@ programme_node:
   programme: P1
   node: P1-Q14-time-in-chop-stop-ada
   goal: G1
-blocked_on:
-- what: 'The harness has no path-state gate: effective_trail_mult / the bank and stale paths cannot condition on efficiency
-    ratio, choppiness, ATR-vs-entry ratio or distance-from-peak (only R-armed, stall-armed, ATR-percentile and ADX gates exist).'
-  ref: PATHSTATE-TRAIL-GATE
-  clears_when: PATHSTATE-TRAIL-GATE is done (flags --trail-state-feature/-window/-op/-thr/-arm-r/-tight-mult, --bank-state-*,
-    --chop-stop-*; default-off byte-identical vs main; self-test planting a gate-only signal), then git mv to research/queue/,
-    status queued.
 last_dispatched_at: null

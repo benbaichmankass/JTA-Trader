@@ -1,8 +1,8 @@
-id: RQ-20261022-b7e1-06
-title: 'Q14 lever (VOLATILITY-ADAPTIVE / Chandelier-style): on ada_pullback_2h, once a trade is >= 1.5 R up AND ATR has CONTRACTED
-  to <= 0.9 / 0.8 / 0.7 of its entry value, does tightening the trail to 3.0 x ATR beat the declared exit AND the ungated
-  tighten, on net R in 5 of 6 folds?'
-status: blocked
+id: RQ-20261022-b7e1-08
+title: 'Q14 lever (SPLIT / PARTIAL EXIT GATED on the feature): on ada_pullback_2h, does banking 25% / 33% / 50% at +2.0 R
+  ONLY when the 6-bar efficiency ratio is below 0.30 beat the declared exit AND the ungated far-rung bank on net R in 5 of
+  6 folds?'
+status: queued
 cadence: once
 roadmap:
 - L-ATM
@@ -10,17 +10,16 @@ roadmap:
 theme: live_strategy
 priority: 1
 kind: experiment
-question: On ada_pullback_2h, does a trail that tightens from 5.0 to 3.0 x ATR (the Chandelier-exit default multiple, Le Beau/Elder)
-  only while peak_r >= 1.5 AND atr_t / atr_entry <= 0.9 / 0.8 / 0.7 (declared now) beat A by >= 0.02 R/trade in >= 5 of 6
-  folds within the Path B drawdown bar AND beat the ungated UT15 tighten? Practitioners widen stops in expansion and tighten
-  in contraction; the discovery run read atr_ratio_t same-side in 6 of 6 folds pooled at X=1.5 (higher ATR-vs-entry -> LESS
-  further giveback).
+question: 'The fixed 50%-at-1R bank failed (-43..-68 R); the far-rung variants (eba2-12..14) ask small sizes at far rungs
+  ungated. This unit adds the gate: on ada_pullback_2h, do arms BG25 / BG33 / BG50 (bank that fraction at +2.0 R only if er_6
+  < 0.30 when the +2.0 R level is reached) beat A by >= 0.02 R/trade in >= 5 of 6 folds within the Path B drawdown bar AND
+  beat the SAME bank taken ungated (UB25 / UB33 / UB50)? The operator''s picture: had the ADA trade been split in two, the
+  first half would have banked the swing.'
 why_this_matters: 'Operator idea (IDEAS.md 2026-10-21): surf the volatility instead of holding through it. Today''s results
   say acting on EVERY trade fails (fixed 50% bank -43..-68 R on ada_pullback_2h, level-triggered tightening, 1R giveback stop;
   RQ-20261022-fd06-*, -001..006): the declared wide trail earns its R in the right tail. This unit asks the SELECTIVE form
-  with a feature chosen from the in-trade path measurement. Discovery pooled X=1.5: atr_ratio_t AUC 0.459 (6/6 folds same
-  side), but with stop room controlled the pooled path-state gain is +0.0022 (3 of 6 folds): the prior for this gate is weak
-  and the unit reads after rung 1e (b7e1-01..03).'
+  with a feature chosen from the in-trade path measurement. Banking returns capital at a known R but sells the right tail;
+  gating it on a low-efficiency path is the only form of the split the measurement does not already contradict.'
 power:
   expected_n: 402
   min_detectable_effect: 0.45
@@ -34,21 +33,21 @@ power:
     source: none
     accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
 decision_rule:
-  id: RULE-P1-Q14-ATR-CONTRACTION-TRAIL-06
+  id: RULE-P1-Q14-GATED-BANK-08
   registered_at: '2026-10-22'
   registered_before_run: true
   statistic: 'From scripts/research/exit_lever_ablation.py --grade replace on ada_pullback_2h, window 2020-07-01 .. 2026-10-15
     23:59, 6 equal calendar folds by entry time, net of the full cost stack (resolve_cost_policy, recorded per arm). Per arm:
-    n, net_total_r, max_drawdown_r, net R per fold. A = the leg as declared. Arms: V90, V80, V70; controls: UT15. Gate flags
-    are the build PATHSTATE-TRAIL-GATE contract (path-state features computed from bars <= t of the trade, in R/ATR units,
-    by the SAME function the path_state_giveback.py study uses).'
+    n, net_total_r, max_drawdown_r, net R per fold. A = the leg as declared. Arms: BG25, BG33, BG50; controls: UB25, UB33,
+    UB50. Gate flags are the build PATHSTATE-TRAIL-GATE contract (path-state features computed from bars <= t of the trade,
+    in R/ATR units, by the SAME function the path_state_giveback.py study uses).'
   rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the gate never fired). A candidate C
     PASSES iff net_r(C) > net_r(A) AND delta >= 0.02 R x n(A) AND folds_ge(A) >= 5 of 6 AND maxDD(C) <= maxDD(A) x 1.35 AND
-    net_r(C) > net_r(UT15) (the UNCONDITIONAL control: the same action on every trade the gate would reach, so a PASS cannot
-    be "any early action"). PASS IF one or more pass: ONE confirmation unit on a disjoint partition (a PASS on one window
-    is a discovery), then Q6 parity and a Tier-3 declare proposal -- never a config edit. FAIL IF none passes: the family
-    is NOT retired -- variants queued: (1) tight mult 2.5 and 3.5, (2) the contraction measured against a 20-bar ATR mean
-    instead of entry ATR, (3) the same gate on xrp_pullback_2h. Thresholds and the arm grid are not changed after any result.'
+    net_r(C) > net_r(UB25/UB33/UB50) (the UNCONDITIONAL control: the same action on every trade the gate would reach, so a
+    PASS cannot be "any early action"). PASS IF one or more pass: ONE confirmation unit on a disjoint partition (a PASS on
+    one window is a discovery), then Q6 parity and a Tier-3 declare proposal -- never a config edit. FAIL IF none passes:
+    the family is NOT retired -- variants queued: (1) rung +1.5 and +3.0, (2) gate on dist_atr >= 1.5 instead of ER, (3) the
+    gated bank on xrp_pullback_2h. Thresholds and the arm grid are not changed after any result.'
   what_it_does_not_do: 'Edits no config and places no order. A PASS needs a live producer that computes the path state bar
     by bar (position_path_history exists; the monitor does not read it for exits; src/runtime/trail_decay.py is the nearest
     live producer) and a Tier-3 declare with the mirror in the same PR. TP is untouched (every arm keeps the leg''s declared
@@ -82,13 +81,17 @@ run:
   - --arm
   - A=
   - --arm
-  - V90=--trail-state-feature=atr_ratio;--trail-state-window=6;--trail-state-op=lt;--trail-state-thr=0.9;--trail-state-arm-r=1.5;--trail-state-tight-mult=3.0
+  - BG25=--bank-state-feature=er;--bank-state-window=6;--bank-state-op=lt;--bank-state-thr=0.30;--bank-frac=0.25;--bank-at-r=2.0
   - --arm
-  - V80=--trail-state-feature=atr_ratio;--trail-state-window=6;--trail-state-op=lt;--trail-state-thr=0.8;--trail-state-arm-r=1.5;--trail-state-tight-mult=3.0
+  - BG33=--bank-state-feature=er;--bank-state-window=6;--bank-state-op=lt;--bank-state-thr=0.30;--bank-frac=0.33;--bank-at-r=2.0
   - --arm
-  - V70=--trail-state-feature=atr_ratio;--trail-state-window=6;--trail-state-op=lt;--trail-state-thr=0.7;--trail-state-arm-r=1.5;--trail-state-tight-mult=3.0
+  - BG50=--bank-state-feature=er;--bank-state-window=6;--bank-state-op=lt;--bank-state-thr=0.30;--bank-frac=0.50;--bank-at-r=2.0
   - --arm
-  - UT15=--trail-decay-arm-r=1.5;--trail-decay-tight-mult=2.5
+  - UB25=--bank-frac=0.25;--bank-at-r=2.0
+  - --arm
+  - UB33=--bank-frac=0.33;--bank-at-r=2.0
+  - --arm
+  - UB50=--bank-frac=0.50;--bank-at-r=2.0
   - --days
   - '2330'
   - --start
@@ -115,7 +118,7 @@ run:
   - '{out_dir}'
   timeout_minutes: 120
   inputs:
-    research_unit: RQ-20261022-b7e1-06
+    research_unit: RQ-20261022-b7e1-08
     gate_flags_contract: PATHSTATE-TRAIL-GATE
 lands:
   store: research/results/
@@ -130,13 +133,6 @@ related:
 - src/research/trail_levers.py
 programme_node:
   programme: P1
-  node: P1-Q14-atr-contraction-trail-ada
+  node: P1-Q14-gated-bank-ada
   goal: G1
-blocked_on:
-- what: 'The harness has no path-state gate: effective_trail_mult / the bank and stale paths cannot condition on efficiency
-    ratio, choppiness, ATR-vs-entry ratio or distance-from-peak (only R-armed, stall-armed, ATR-percentile and ADX gates exist).'
-  ref: PATHSTATE-TRAIL-GATE
-  clears_when: PATHSTATE-TRAIL-GATE is done (flags --trail-state-feature/-window/-op/-thr/-arm-r/-tight-mult, --bank-state-*,
-    --chop-stop-*; default-off byte-identical vs main; self-test planting a gate-only signal), then git mv to research/queue/,
-    status queued.
 last_dispatched_at: null

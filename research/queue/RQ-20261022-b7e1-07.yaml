@@ -1,8 +1,8 @@
-id: RQ-20261022-b7e1-05
-title: 'Q14 lever (EFFICIENCY-RATIO-GATED tight trail): on xrp_pullback_2h, once a trade is >= 1.5 R up AND the 6-bar efficiency
-  ratio is below 0.20 / 0.30 / 0.40, does tightening the trail to 2.5 x ATR beat the declared exit AND the same tightening
-  applied ungated, on net R in 5 of 6 folds?'
-status: blocked
+id: RQ-20261022-b7e1-07
+title: 'Q14 lever (CHOPPINESS-GATED tight trail): on ada_pullback_2h, once a trade is >= 1.5 R up AND the 6-bar choppiness
+  index exceeds 0.55 / 0.65 / 0.75, does tightening the trail to 2.5 x ATR beat the declared exit AND the ungated tighten,
+  on net R in 5 of 6 folds?'
+status: queued
 cadence: once
 roadmap:
 - L-ATM
@@ -10,19 +10,16 @@ roadmap:
 theme: live_strategy
 priority: 1
 kind: experiment
-question: On xrp_pullback_2h (real money on bybit_2 + mirror), does a trail that tightens from the declared 5.0 x ATR to 2.5
-  x ATR only while peak_r >= 1.5 AND er_6 < thr (thr 0.20 / 0.30 / 0.40 declared now, not tuned) beat the declared exit A
-  by >= 0.02 R/trade in >= 5 of 6 folds within the Path B drawdown bar, AND beat the ungated R-armed tight trail UT15 (peak
-  >= 1.5 -> 2.5, the RQ-20261022-eba2-03 arm)? Kaufman's efficiency ratio is the practitioner measure of how much of the move
-  was directional; a LOW ratio after a profitable run is the chop-after-trend state.
+question: On ada_pullback_2h, does tightening 5.0 -> 2.5 x ATR only while peak_r >= 1.5 AND chop_6 > 0.55 / 0.65 / 0.75 (declared
+  now) beat A by >= 0.02 R/trade in >= 5 of 6 folds within the Path B drawdown bar AND beat the ungated UT15? The choppiness
+  index is the measure of a path that traversed much more range than it netted (the live ADA trade's up-and-down).
 why_this_matters: 'Operator idea (IDEAS.md 2026-10-21): surf the volatility instead of holding through it. Today''s results
   say acting on EVERY trade fails (fixed 50% bank -43..-68 R on ada_pullback_2h, level-triggered tightening, 1R giveback stop;
   RQ-20261022-fd06-*, -001..006): the declared wide trail earns its R in the right tail. This unit asks the SELECTIVE form
-  with a feature chosen from the in-trade path measurement. Discovery (X=1.0, xrp_pullback_2h): er_w AUC 0.472, same side
-  in 5 of 6 folds (lower ER -> more giveback), n 170/145 trades with a state; modest, which is why the control is the ungated
-  tighten.'
+  with a feature chosen from the in-trade path measurement. Discovery (X=1.0, ada_pb): chop_w AUC 0.545, same side in 5 of
+  6 folds -- the weakest of the three gates, included because the operator named chop explicitly.'
 power:
-  expected_n: 394
+  expected_n: 402
   min_detectable_effect: 0.45
   effect_units: sd
   design: one_sample
@@ -34,12 +31,12 @@ power:
     source: none
     accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
 decision_rule:
-  id: RULE-P1-Q14-ER-GATED-TRAIL-05
+  id: RULE-P1-Q14-CHOP-GATED-TRAIL-07
   registered_at: '2026-10-22'
   registered_before_run: true
-  statistic: 'From scripts/research/exit_lever_ablation.py --grade replace on xrp_pullback_2h, window 2020-07-01 .. 2026-10-15
+  statistic: 'From scripts/research/exit_lever_ablation.py --grade replace on ada_pullback_2h, window 2020-07-01 .. 2026-10-15
     23:59, 6 equal calendar folds by entry time, net of the full cost stack (resolve_cost_policy, recorded per arm). Per arm:
-    n, net_total_r, max_drawdown_r, net R per fold. A = the leg as declared. Arms: E20, E30, E40; controls: UT15. Gate flags
+    n, net_total_r, max_drawdown_r, net R per fold. A = the leg as declared. Arms: C55, C65, C75; controls: UT15. Gate flags
     are the build PATHSTATE-TRAIL-GATE contract (path-state features computed from bars <= t of the trade, in R/ATR units,
     by the SAME function the path_state_giveback.py study uses).'
   rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the gate never fired). A candidate C
@@ -47,9 +44,8 @@ decision_rule:
     net_r(C) > net_r(UT15) (the UNCONDITIONAL control: the same action on every trade the gate would reach, so a PASS cannot
     be "any early action"). PASS IF one or more pass: ONE confirmation unit on a disjoint partition (a PASS on one window
     is a discovery), then Q6 parity and a Tier-3 declare proposal -- never a config edit. FAIL IF none passes: the family
-    is NOT retired -- variants queued from a written diagnosis: (1) thr 0.50 and a 2-bar persistence requirement, (2) tight
-    mult 3.5 instead of 2.5, (3) the same gate on the OTHER pullback leg; file as a new unit, never drop the family on one
-    grid. Thresholds and the arm grid are not changed after any result.'
+    is NOT retired -- variants queued: (1) chop window 12, (2) chop AND er jointly, (3) tight mult 3.5. Thresholds and the
+    arm grid are not changed after any result.'
   what_it_does_not_do: 'Edits no config and places no order. A PASS needs a live producer that computes the path state bar
     by bar (position_path_history exists; the monitor does not read it for exits; src/runtime/trail_decay.py is the nearest
     live producer) and a Tier-3 declare with the mirror in the same PR. TP is untouched (every arm keeps the leg''s declared
@@ -79,15 +75,15 @@ run:
   - python3
   - scripts/research/exit_lever_ablation.py
   - --leg
-  - xrp_pullback_2h
+  - ada_pullback_2h
   - --arm
   - A=
   - --arm
-  - E20=--trail-state-feature=er;--trail-state-window=6;--trail-state-op=lt;--trail-state-thr=0.2;--trail-state-arm-r=1.5;--trail-state-tight-mult=2.5
+  - C55=--trail-state-feature=chop;--trail-state-window=6;--trail-state-op=gt;--trail-state-thr=0.55;--trail-state-arm-r=1.5;--trail-state-tight-mult=2.5
   - --arm
-  - E30=--trail-state-feature=er;--trail-state-window=6;--trail-state-op=lt;--trail-state-thr=0.3;--trail-state-arm-r=1.5;--trail-state-tight-mult=2.5
+  - C65=--trail-state-feature=chop;--trail-state-window=6;--trail-state-op=gt;--trail-state-thr=0.65;--trail-state-arm-r=1.5;--trail-state-tight-mult=2.5
   - --arm
-  - E40=--trail-state-feature=er;--trail-state-window=6;--trail-state-op=lt;--trail-state-thr=0.4;--trail-state-arm-r=1.5;--trail-state-tight-mult=2.5
+  - C75=--trail-state-feature=chop;--trail-state-window=6;--trail-state-op=gt;--trail-state-thr=0.75;--trail-state-arm-r=1.5;--trail-state-tight-mult=2.5
   - --arm
   - UT15=--trail-decay-arm-r=1.5;--trail-decay-tight-mult=2.5
   - --days
@@ -116,7 +112,7 @@ run:
   - '{out_dir}'
   timeout_minutes: 120
   inputs:
-    research_unit: RQ-20261022-b7e1-05
+    research_unit: RQ-20261022-b7e1-07
     gate_flags_contract: PATHSTATE-TRAIL-GATE
 lands:
   store: research/results/
@@ -131,13 +127,12 @@ related:
 - src/research/trail_levers.py
 programme_node:
   programme: P1
-  node: P1-Q14-er-gated-trail-xrp
+  node: P1-Q14-chop-gated-trail-ada
   goal: G1
-blocked_on:
-- what: 'The harness has no path-state gate: effective_trail_mult / the bank and stale paths cannot condition on efficiency
-    ratio, choppiness, ATR-vs-entry ratio or distance-from-peak (only R-armed, stall-armed, ATR-percentile and ADX gates exist).'
-  ref: PATHSTATE-TRAIL-GATE
-  clears_when: PATHSTATE-TRAIL-GATE is done (flags --trail-state-feature/-window/-op/-thr/-arm-r/-tight-mult, --bank-state-*,
-    --chop-stop-*; default-off byte-identical vs main; self-test planting a gate-only signal), then git mv to research/queue/,
-    status queued.
+# GRADER NOTE (PATHSTATE-TRAIL-GATE, 2026-10-23): unblocked by the build; the gate flags exist on both harnesses.
+# b7e1-01..03 (the discovery re-check on legs the screen did NOT include): their result rows in research/results/ read
+# read_state=measured, verdict=fail on all three as of this unblock (builder read the field only, not the rule behind it).
+# Whoever grades this unit: read b7e1-01..03 first -- if ALL THREE FAIL, the ER / chop / ATR-contraction arms registered
+# here (b7e1-04..07) have lost their motivation: drop them and keep b7e1-08..10. This note changes no registered rule;
+# the drop decision is the grader's (the manager asked the builder to ship every arm), not the builder's.
 last_dispatched_at: null
