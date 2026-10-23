@@ -147,6 +147,30 @@ questions:
     why: >-
       The momentum-turn detector is pre-registered as a label study in blocked/ (needs the in-trade path labels); the ADX/momentum trail levers that Q4 confirmed on eth_4h, xrp_4h and slv_1d are its lever form and wait on build row MOMENTUM-LEVERS-LIVE.
 nodes:
+# ── 2026-10-22 W43 (lane EXITS-GIVEBACK-W43, manager dispatch; operator week priority "Exits / giveback") ───────────────
+# Today's exit results, each read against its own registered rule (numbers in the unit's grading block; re-run, do not quote):
+#   * Q10 level-triggered trail, RQ-20261022-001..006: FAIL on all six legs (best arm on any leg: eth_prop LS +2.2 R on n 1085,
+#     2 of 6 folds, bar 21.7). Family NOT retired: on xrp_4h the LF arm never fired (identical to A), so fvg-on-4h is unmeasured.
+#   * Fixed bank, RQ-20261022-fd06-01/-02/-03: FAIL (ada_pb -43..-68 R vs A 92.1 R; xrp_pb -7..-28 R vs 29.6; xrp_4h -2.6..-4.9 R
+#     vs 14.3). The declared wide trail earns its R in the right tail; acting on EVERY trade costs more than it saves. The
+#     metric-TRIGGERED split stays open (Q11 rung 2).
+#   * ADX corroboration, RQ-20261022-511e-01: UNIT FAIL (sol_4h 1 of 4 folds, eth_4h fail). The xrp_4h ADX trail stays on the
+#     bybit_1 alias only. (Its eth_4h numbers were lost to a shared out dir: row RESEARCH-MULTICMD-OUTDIR.)
+#   * Q11 rung 1, RQ-20261022-007: PASS on the log-loss clause only (pooled ll_gain 0.0137, 5 of 6 folds; r2_gain -0.0038), carried
+#     by ada_pb and xrp_pb; eth_4h FAIL (0 of 6), xrp_4h underpowered. Its time-disjoint confirmation 1f8b-01 is INDETERMINATE
+#     (58 open at k < 100; no earlier perps history exists). Per 1f8b-01's rule rung 2 is NOT opened on 007 alone.
+#   * Giveback census 9807-01 PASS (a REPORT rule): paper pool giveback_share_of_peak 0.92, n 336; real money n 7 = insufficient_n.
+#     Every peak is a lower bound (peak_lower_bound_share 1.0), so the share is an over-statement of the true giveback.
+# New units (hand-authored; programme nodes below only follow their verdicts):
+#   runnable now: eba2-01 (Q11 transfer, 6 legs not selected on), eba2-02 (Q11 on the two prop legs, k=12), eba2-03 (R-armed
+#   tight trail on ada_pullback_2h, the operator's 'once past N R the stop becomes a tight trail').
+#   held in research/queue/blocked/ on a named build: eba2-04 (volatility-controlled label, PATHMETRIC-VOLCTL), eba2-05/-06
+#   (fractional giveback exit on ada_pb / xrp_pb, GIVEBACK-FRAC-FLAG), eba2-07/-08 (Q11 rung 2: metric-triggered bank / tight
+#   trail vs an unconditional control, HARNESS-METRIC-TRIGGER; requires_result eba2-01 pass).
+# Manager directive 2026-10-22 (a first-test fail is not a dead idea) added the VARIANT units, each from a written diagnosis (plan doc,
+#   'Idea status'): runnable eba2-09/-10 (swing level, wider tight mult), eba2-12/-13/-14 (far-rung small-size bank + R-armed trail),
+#   eba2-15 (ADX momentum-loss on eth_4h); blocked eba2-11 (level AND R, LEVEL-TRAIL-R-GATE). Status of Q10 / bank / ADX:
+#   'first test failed -> variants queued', none retired.
 - id: P1-Q3-xrp-pb-tpx-confirm
   goal: G1
   roadmap:
@@ -2625,7 +2649,7 @@ nodes:
   after:
   - node: P1-Q4-xrp4h-exit-confirm
     verdict: pass
-  needs_authoring: 'CONFIRMED 2026-10-18 (RQ-20261016-015, run 39103754166, n 68): M2 trail_adx_below 25 / tight 2.5 17.07 vs
+  needs_authoring: 'STATUS 2026-10-22: FIRST CORROBORATION FAILED -> VARIANTS QUEUED (not retired; operator 2026-10-22: a first-test fail is not a dead idea). RQ-20261022-511e-01 graded UNIT FAIL (M2 adx25_k0_t2.5 fails on sol_4h, 1 of 4 folds, and eth_4h), so the real-money declare stays OFF (xrp_4h ADX trail on the bybit_1 alias trend_donchian_xrp_adx25 only). DIAGNOSIS: ADX < 25 on 4h crypto holds for a large share of bars (near-unconditional); sol_4h / eth_4h / xrp_4h already carry their own tighteners that compose by minimum; the cell was carried from ONE n 68 leg. VARIANTS: RQ-20261022-eba2-15 (momentum LOSS on eth_4h: ADX < 20; ADX < 30 or 20 AND falling 3 bars). Next: read eba2-15; a PASS there is the corroboration this node waits for (then a sibling/xrp_4h cell on the same trigger), a FAIL leaves this node open for a further variant (sol_4h, other thresholds). UPDATE 2026-10-23: eba2-15 read FAIL on eth_4h (M3 +1.56 R, M5 +0.50 R vs a 5.5 R bar, 6 and 5 of 6 folds, DD not worse -- small and consistent, not refuted); the sibling-leg variant is RQ-20261023-8961-01 (same arms, sol_4h). Read it next; a PASS there is the corroboration this node waits for. ORIGINAL TEXT: CONFIRMED 2026-10-18 (RQ-20261016-015, run 39103754166, n 68): M2 trail_adx_below 25 / tight 2.5 17.07 vs
     14.30 R, 4 of 4 folds, DD 4.15 vs 4.57; M1 (adx 20) also passes; R1 tp_retarget stall_pull_in (target 3 R, 10
     bars) 16.55 R, 3 of 4 folds, DD 4.04 -- the one TP-side pass on a real-money leg today. The corroboration this
     node asked for EXISTS: the ADX-trail family passed on trend_donchian_eth_4h the same day (RQ-20261016-005 M1,
@@ -15578,6 +15602,51 @@ nodes:
     - docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md
     - scripts/research/path_metric_giveback.py
     - research/queue/RQ-20261014-9807-01.yaml
+
+- id: P1-Q11-transfer-read
+  goal: G1
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 500
+    confidence: 0.3
+  after:
+  - unit: RQ-20261022-eba2-01
+    verdict: any
+  needs_authoring: 'Read RQ-20261022-eba2-01 (hand unit; nothing to draft until it closes). PASS -> the 007 PASS transfers to six
+    legs it was not selected on: build HARNESS-METRIC-TRIGGER, then promote blocked/RQ-20261022-eba2-07 and -08 (git mv, status
+    queued, substitute {trigger_file}); if eba2-04 (vol-controlled) has run, its verdict is read with this one. FAIL -> rung 2 is not
+    built on 007; record the exact configuration and leave the family open only through eba2-04. INDETERMINATE (pooled n < 100) ->
+    extend the window or add legs in ONE new unit, never lower the floor.'
+- id: P1-Q11-prop-rung2
+  goal: G1
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 400
+    confidence: 0.2
+  after:
+  - unit: RQ-20261022-eba2-02
+    verdict: pass
+  needs_authoring: 'Q11 rung 2 on trend_donchian_eth_prop and trend_donchian_sol_prop (k=12 on 1h): same shape as blocked/RQ-20261022-eba2-07
+    (out-of-fold triggers, MB/MT arms vs the A baseline AND the unconditional UB/UT control, replace grade, 6 folds, 5 of 6, maxDD
+    <= 1.35 x A), ONE unit per leg (RESEARCH-MULTICMD-OUTDIR: never two --leg commands in one unit), at PROP costs. Gate afterwards:
+    the prop EV/survival sim against each firm''s DD limits (P1-Q4-ethprop-ev) BEFORE any proposal; prop legs clear a superset of the ladder.'
+- id: P1-Q12-ada-r-armed-read
+  goal: G1
+  roadmap:
+  - L-ATM
+  value:
+    usd_at_stake_per_month: 500
+    confidence: 0.25
+  after:
+  - unit: RQ-20261022-eba2-03
+    verdict: any
+  needs_authoring: 'Read RQ-20261022-eba2-03 (hand unit; R-armed tight trail on ada_pullback_2h, arms 1.5 / 2.0 / 3.0 R -> 2.5 x ATR).
+    PASS -> ONE confirmation unit on a disjoint partition (same statistic and bar), then Q6 parity; the live producer already exists
+    (src/runtime/trail_decay.py), so the declare is a Tier-3 strategies.yaml change for bybit_2 + bybit_portfolio together. FAIL ->
+    the R-armed family is closed for ada_pb at these three arms; the sibling xrp_pb read FAIL for arm < 3 R (RQ-20261007-021); the
+    remaining untested real-money leg is eth_4h (declares stall decay) -- file one unit only if its declared decay is removed.'
 
 # ── 2026-10-22 W43 (lane EXIT-PATH-METRICS-W43): per-bar path-state units, hand-authored in research/queue/ and blocked/ ───
 # Measurement (docs/research/exit-path-metrics-2026-10-22.md): the pooled X=1.5 path-state pass vanishes once room-to-stop is in the baseline.

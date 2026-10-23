@@ -1,7 +1,7 @@
 {
   "id": "EXIT-PATH-METRICS-W43",
-  "title": "Which in-trade path measures predict giveback early enough to act on, and which exit levers to pre-register (W43, operator idea 2026-10-21)",
-  "phase": "research",
+  "title": "In-trade path metrics (efficiency ratio, MAE/MFE shape, chop, realised-vs-entry vol) as giveback predictors: measurement + pre-registered lever units (operator idea 2026-10-21)",
+  "phase": null,
   "state": "in_flight",
   "owner": "lane EXIT-PATH-METRICS-W43",
   "lane": "EXIT-PATH-METRICS-W43",
@@ -9,14 +9,16 @@
   "ceiling_usd": 12,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    19620
+  ],
   "blocked_on": [],
-  "note": "[2026-10-22 lane EXIT-PATH-METRICS-W43] Per-bar path-state study (scripts/research/path_state_giveback.py, tests/test_path_state_giveback.py) on xrp/ada pullback_2h, eth_4h, eth/sol prop (958 trades / 18,770 states, 6 calendar folds, harness cost stack): the pooled X=1.5 pass (+0.0115 ll, 5/6 folds) DISAPPEARS when room-to-stop is controlled (+0.0022, 3/6; AUC 0.784->0.778) -- stop room is the predictor (AUC 0.81). Memo docs/research/exit-path-metrics-2026-10-22.md. 10 units pre-registered RQ-20261022-b7e1-01..10 (01-03 runnable rung-1e, 04-10 lever units in blocked/ on build PATHSTATE-TRAIL-GATE); programme nodes P1-Q13/Q14. PR: landing hold, operator merges. CLOSES WHEN: b7e1-01..03 are graded and PATHSTATE-TRAIL-GATE is built or dropped by their reading.",
-  "priority_rank": 2,
-  "updated_at": "2026-10-22T19:56:20Z",
+  "note": "Headroom lane per operator popup 2026-10-22 ~19:40Z, verbatim \"More exits/giveback lanes (Recommended)\". Book keeps ~13% of peak R (90d paper+mirror n=328, docs/reviews/2026-10-21-weekly-walkthrough.md). Must not duplicate eba2-* units from #19553.  [2026-10-22 lane EXIT-PATH-METRICS-W43] Per-bar path-state study (scripts/research/path_state_giveback.py, tests/test_path_state_giveback.py) on xrp/ada pullback_2h, eth_4h, eth/sol prop (958 trades / 18,770 states, 6 calendar folds, harness cost stack): the pooled X=1.5 pass (+0.0115 ll, 5/6 folds) DISAPPEARS when room-to-stop is controlled (+0.0022, 3/6; AUC 0.784->0.778) -- stop room is the predictor (AUC 0.81). Memo docs/research/exit-path-metrics-2026-10-22.md. 10 units pre-registered RQ-20261022-b7e1-01..10 (01-03 runnable rung-1e, 04-10 lever units in blocked/ on build PATHSTATE-TRAIL-GATE); programme nodes P1-Q13/Q14. PR: landing hold, operator merges. CLOSES WHEN: b7e1-01..03 are graded and PATHSTATE-TRAIL-GATE is built or dropped by their reading.",
+  "priority_rank": 5,
+  "updated_at": "2026-10-23T05:57:25Z",
   "updated_by": "session_01T64Ym5BAAxy68B2ixCwyY7",
   "roadmap": [
     "L-ATM"
   ],
-  "_seq": 599
+  "_seq": 601
 }

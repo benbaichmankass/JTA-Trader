@@ -2,18 +2,20 @@
   "id": "TPX-PULLBACK-PRODUCER",
   "title": "Build: tp_extend TP-revision producer for the pullback unit (rule in src/runtime/tp_revision.py + htf_pullback_trend_2h.monitor() emits {tp}), parity vs backtest_pullback.py --tp-extend-r; unblocks the xrp_pullback_2h X6 declare",
   "phase": "build",
-  "state": "queued",
+  "state": "in_flight",
   "owner": null,
-  "lane": null,
-  "model": null,
-  "ceiling_usd": null,
+  "lane": "session_019e4aiFMZNMs91KFVtMgyXW",
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 18,
   "spend_usd": null,
   "tier": 3,
-  "prs": [],
+  "prs": [
+    19615
+  ],
   "blocked_on": [],
-  "note": "Filed by lane TPX-XRP-DECLARE 2026-10-22. WHY: RULE-W43 family read FIRES for xrp_pullback_2h on cell X6 (tpx_t3_a0.85_e1_m3: passes eth/sol/avax 3 of 3; X5 2 of 3), but the registered rule makes the declare conditional on this producer, which does not exist on main 55397d3f: tp_revision.RULES = {donchian_measured_move} only; the guard reads producer no_tp_verdict on all 3 xrp routings and a probe declaring the rule left them FAIL. Record: docs/research/evidence/tpx-xrp-family-read-2026-10-22.json. DONE WHEN: (1) rule + monitor verdict merged with a parity test reproducing the harness X6 exits on a fixed fixture; (2) then the one-line Tier-3 declare on xrp_pullback_2h (bybit_2 + bybit_portfolio + bybit_1) with check_tp_doctrine moving 3 routings to compliant. Same producer serves ada_pullback_2h's registered follow-on (4R-anchored replay, a note on TP-DOCTRINE-W43, not a declare). Order-path code, inert by config until declared (B1 precedent: Tier-2 by path).",
-  "updated_at": "2026-10-22T14:29:24Z",
-  "updated_by": "session_011SQcruvhK7evd6Yzen5fu2",
+  "note": "Lane session_019e4aiFMZNMs91KFVtMgyXW 2026-10-22: DONE-WHEN (1) built in PR #19615 (HOLD tier_2_3_needs_approval): tp_extend rule + htf_pullback monitor verdict + parity test vs backtest_pullback.py X6 (53 trades / 32 extended / 26 TP-after-extend exits match on seeded fixtures). Inert: no leg declares it. Scratch probe: declaring on xrp_pullback_2h moves bybit_2/bybit_portfolio/bybit_1 to PASS. Next: manager merges + verifies deploy inert; then (2) the Tier-3 declare (also removes 3 baseline lines) after the operator gate (live closed-bar trades + review). ORIGINAL: Filed by lane TPX-XRP-DECLARE 2026-10-22. WHY: RULE-W43 family read FIRES for xrp_pullback_2h on cell X6 (tpx_t3_a0.85_e1_m3: passes eth/sol/avax 3 of 3; X5 2 of 3), but the registered rule makes the declare conditional on this producer, which does not exist on main 55397d3f: tp_revision.RULES = {donchian_measured_move} only; the guard reads producer no_tp_verdict on all 3 xrp routings and a probe declaring the rule left them FAIL. Record: docs/research/evidence/tpx-xrp-family-read-2026-10-22.json. DONE WHEN: (1) rule + monitor verdict merged with a parity test reproducing the harness X6 exits on a fixed fixture; (2) then the one-line Tier-3 declare on xrp_pullback_2h (bybit_2 + bybit_portfolio + bybit_1) with check_tp_doctrine moving 3 routings to compliant. Same producer serves ada_pullback_2h's registered follow-on (4R-anchored replay, a note on TP-DOCTRINE-W43, not a declare). Order-path code, inert by config until declared (B1 precedent: Tier-2 by path).",
+  "updated_at": "2026-10-22T19:37:26Z",
+  "updated_by": "session_019e4aiFMZNMs91KFVtMgyXW",
   "roadmap": [
     "L-ATM"
   ],

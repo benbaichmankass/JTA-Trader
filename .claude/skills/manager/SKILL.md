@@ -1043,7 +1043,10 @@ call `get_session` on yourself and read `external_metadata.context_usage.used_to
 - the new manager's first actions;
 - the handover checklist block below, copied in.
 
-Commit it through a self-land PR (§ "How lane PRs land").
+Do not commit it from the manager session: `manager-scope-guard` refuses the
+`docs/DOCUMENT-INDEX.md` row a handoff doc needs when it comes from a manager session. A small
+lane (Haiku, ~$1; precedent HANDOFF-LAND-1022, #19521) lands it through a self-land PR
+(§ "How lane PRs land").
 
 **2. CREATE.** `create_session` with:
 - `model`: **Opus** (the manager stays on Opus, operator); pass it explicitly;
