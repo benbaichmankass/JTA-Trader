@@ -1,0 +1,26 @@
+{
+  "id": "AUTHOR-FLOOR-1023",
+  "title": "Research runnable-floor gap 2026-10-23: author ~20 pre-registered units for live_strategy/ml_health/infra/regime/macro/timeframes, first-test-fail variants preferred, idle backends used",
+  "phase": "research",
+  "state": "in_flight",
+  "owner": null,
+  "lane": "session_01CxxQMa276s1wbDzEQrxn5c",
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 8,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "2026-10-23 lane AUTHOR-FLOOR-1023 (manager Manager Session 2026-10-22): authored 19 pre-registered units RQ-20261023-a1f3-01..19 (live_strategy 9: far-rung bank x4, BE-floor-alone x4, wide-level trail x1; regime 3: hot-vol trail on xrp_4h/eth_prop/sol_prop; ml_health 5: published-data bake-offs on direction/range-vol; macro 1; timeframes 1). 18 are registered VARIANTS of first-test FAILs (operator 2026-10-22) each with a one-line diagnosis and prior ids; the diagnoses are hypotheses stated as such. All 19 would_dispatch on dispatch_queue.py dry run; decision-rule guard OK; argv of the 12 exit_lever_ablation units parse-checked by launching them (ran past 12 s, no argparse error); the 5 ml_bakeoff units load their spec and stop only at the missing local dataset (NOT smoke-executed). MEASURED on this branch tree (check_research_queue_health.py): runnable 40 -> 59 against floor 57; theme supply regime 10->13, live_strategy 3+1->12+1, ml_health 3->8, macro 2->2+1, timeframes 2->3; infra 3/6 STILL SHORT by 3 (not met: all 8 infra_selftest checks are already queued, the intrabar re-ask waits on PR #18527, and a kaggle_cpu smoke unit was BLOCKED_ROUTE because published_data needs an ml_bakeoff dataset, so it was discarded). Idle backends: 5 units route to kaggle_cpu (dry run); github_runner_data is explicit-workflow only since KAGGLE-CPU-ROUTE and kaggle needs GPU-shaped work, neither used. Landing: hold (unvouchable_paths); merged != deployed != observed.",
+  "updated_at": "2026-10-23T09:29:27Z",
+  "updated_by": "session_01CxxQMa276s1wbDzEQrxn5c",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "observation": {
+    "what": "runnable floor holds and a1f3 units fire; first results graded",
+    "how_to_check": "python3 scripts/ci/check_research_queue_health.py; ls research/results | grep a1f3",
+    "due_by": "2026-10-26T00:00Z"
+  },
+  "_seq": 614
+}
