@@ -50,9 +50,13 @@ if str(_REPO_ROOT) in sys.path:
 sys.path.insert(0, str(_REPO_ROOT))
 
 from src.runtime import execution_costs  # noqa: E402  (the ONE shared cost model)
+from src.research.metric_trigger import TriggerPlan, trigger_flag_errors  # noqa: E402  (HARNESS-METRIC-TRIGGER)
 from src.research.trail_levers import (  # noqa: E402  (the ONE trail-lever rule)
     effective_trail_mult,
+    giveback_fires,
+    giveback_flag_errors,
     level_flag_errors,
+    level_r_gate_open,
     level_touched,
     level_trail_armed,
     momentum_flag_errors,
@@ -329,6 +333,11 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                  trail_level_lookback: int = 60,
                  trail_level_pivot_k: int = 3,
                  trail_level_round_step: float = 0.0,
+                 trail_level_min_r: float = 0.0,
+                 giveback_frac: float = 0.0,
+                 trigger_action: str = "",
+                 trigger_file: str = "",
+                 trigger_all: int = 0,
                  momentum_stale_bars: int = 0,
                  momentum_stale_adx_below: float = 0.0,
                  be_floor_r: float = 0.0,
@@ -426,6 +435,11 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
     # the first bar that trades through it the trail tightens to
     # trail_level_tight_mult x ATR for the rest of the trade (latched).
     level_on = level_trail_armed(trail_level, trail_level_tight_mult)
+    # HARNESS-METRIC-TRIGGER (default off = byte-identical): act only on trades an out-of-fold
+    # metric flagged (or on every trade open at bar K, the control); src/research/metric_trigger.py.
+    _trig = TriggerPlan(trigger_action, trigger_file, trigger_all)
+    if _trig.on:
+        from harness_emit import trade_key as _trigger_trade_key  # same key --emit-trades / paths use
     _lv_hi = df["high"].to_numpy() if level_on else None
     _lv_lo = df["low"].to_numpy() if level_on else None
     adx_series = None
@@ -792,6 +806,13 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                             trail_level_lookback, trail_level_pivot_k, trail_level_round_step)
                 if level_on else None)
         _lvl_touch_j: Optional[int] = None
+        _trig_k = (_trig.k_for(_trigger_trade_key(strategy_name, symbol, df["timestamp"].iloc[entry_i],
+                                                  direction)) if _trig.on else None)
+        _trig_live = False        # the trigger bar has closed; the action binds from the next bar
+
+        def _trig_tight(m: float) -> float:
+            # --trigger-action tight: from the bar after the trigger bar the mult is at most the tight one
+            return min(m, trail_decay_tight_mult) if (_trig_live and trigger_action == "tight") else m
         # entry_override only: a stop/target touched in the entry bar's range
         # AFTER the entry tick exits on the entry bar (SL-first, no ratchet on
         # that remainder — conservative). None on every harness-decided entry.
@@ -837,7 +858,7 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
             # risk. Checked BEFORE the stop so a bar that trades through the rung
             # and then stops out still credits the banked fraction at the rung —
             # the conservative reading (the remainder takes the stop).
-            if bank_frac > 0.0 and not banked:
+            if bank_frac > 0.0 and not banked and (trigger_action != "bank" or _trig_live):
                 rung = (entry + bank_at_r * risk if direction == "long"
                         else entry - bank_at_r * risk)
                 if (bh >= rung) if direction == "long" else (bl <= rung):
@@ -851,15 +872,17 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                 if bh > ext:
                     peak_j = j
                 ext = max(ext, bh)
-                trail = max(trail, ext - _effective_trail_mult(
+                trail = max(trail, ext - _trig_tight(_effective_trail_mult(
                     trail_mult, (ext - entry) / risk, j - peak_j,
                     trail_decay_on, trail_decay_arm_r, trail_decay_stall_bars,
                     trail_decay_tight_mult, vol_trail_on, atr_pctl, j,
                     trail_vol_above_pctl, trail_vol_below_pctl,
                     trail_vol_tight_mult, mom_trail_on, adx_series,
                     trail_adx_below, trail_adx_falling_bars,
-                    trail_adx_tight_mult) * atr)
-                if level_on and (_lvl_touch_j is not None or level_touched(_lvl, True, bh, bl)):
+                    trail_adx_tight_mult)) * atr)
+                if level_on and (_lvl_touch_j is not None or (
+                        level_touched(_lvl, True, bh, bl)
+                        and level_r_gate_open(trail_level_min_r, (ext - entry) / risk))):
                     _lvl_touch_j = j if _lvl_touch_j is None else _lvl_touch_j
                     trail = max(trail, ext - trail_level_tight_mult * atr)
                 mfe = max(mfe, (ext - entry) / risk)
@@ -879,15 +902,17 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                 if bl < ext:
                     peak_j = j
                 ext = min(ext, bl)
-                trail = min(trail, ext + _effective_trail_mult(
+                trail = min(trail, ext + _trig_tight(_effective_trail_mult(
                     trail_mult, (entry - ext) / risk, j - peak_j,
                     trail_decay_on, trail_decay_arm_r, trail_decay_stall_bars,
                     trail_decay_tight_mult, vol_trail_on, atr_pctl, j,
                     trail_vol_above_pctl, trail_vol_below_pctl,
                     trail_vol_tight_mult, mom_trail_on, adx_series,
                     trail_adx_below, trail_adx_falling_bars,
-                    trail_adx_tight_mult) * atr)
-                if level_on and (_lvl_touch_j is not None or level_touched(_lvl, False, bh, bl)):
+                    trail_adx_tight_mult)) * atr)
+                if level_on and (_lvl_touch_j is not None or (
+                        level_touched(_lvl, False, bh, bl)
+                        and level_r_gate_open(trail_level_min_r, (entry - ext) / risk))):
                     _lvl_touch_j = j if _lvl_touch_j is None else _lvl_touch_j
                     trail = min(trail, ext + trail_level_tight_mult * atr)
                 mfe = max(mfe, (entry - ext) / risk)
@@ -935,7 +960,7 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                 bc = float(df["close"].iloc[j])
                 r_close = ((bc - entry) / risk if direction == "long"
                            else (entry - bc) / risk)
-                if mfe >= giveback_min_mfe_r and (mfe - r_close) >= giveback_r:
+                if giveback_fires(mfe, r_close, giveback_min_mfe_r, giveback_r, giveback_frac):
                     exit_price, exit_idx = bc, j
                     exit_reason = "giveback_stop"
                     break
@@ -1027,6 +1052,11 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                         tp_price = _cand
                         _tp_revisions += 1
                         _tp_revisions_clamped += int(_clamped)
+            # HARNESS-METRIC-TRIGGER: the trade survived bar offset k's close, so the metric's
+            # decision exists now; the action binds from bar k+1.
+            if _trig_k is not None and not _trig_live and (j - entry_i) == _trig_k:
+                _trig_live = True
+                _trig.n_acted += 1
         if _rest_hit is not None:
             exit_price, exit_reason = _rest_hit
             exit_idx = entry_i
@@ -1180,6 +1210,13 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
     if giveback_min_mfe_r:
         params["giveback_min_mfe_r"] = giveback_min_mfe_r
         params["giveback_r"] = giveback_r
+    if giveback_frac > 0.0:
+        params["giveback_frac"] = giveback_frac
+    if level_on and trail_level_min_r > 0.0:
+        params["trail_level_min_r"] = trail_level_min_r
+    if _trig.on:
+        params["trigger_action"] = trigger_action
+        params["trigger_all"] = trigger_all
     if trail_decay_on:
         params["trail_decay_arm_r"] = trail_decay_arm_r
         params["trail_decay_stall_bars"] = trail_decay_stall_bars
@@ -1233,6 +1270,8 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
         _summary["level_trail"] = {
             "kind": trail_level, "n_trades": len(trades), "n_with_level": len(_with),
             "n_touched": sum(1 for t in _with if t.level["level_touched"])}
+    if _trig.on:
+        _summary["metric_trigger"] = _trig.summary()
     if tp_geom.armed:
         _summary["tp_geometry"] = _tpg.summarize_geometry([
             {**_tpg_row(t), "outcome": t.outcome} for t in trades])
@@ -1678,6 +1717,22 @@ def main(argv: List[str]) -> int:
     p.add_argument("--trail-level-round-step", type=float, default=0.0,
                    help="Round-number step in price (0 = auto: one decade below the price's "
                         "leading digit, e.g. ETH 2500 -> 100).")
+    p.add_argument("--trail-level-min-r", type=float, default=0.0,
+                   help="LEVEL-TRAIL-R-GATE (0 = off, byte-identical): a level touch latches the tight "
+                        "trail only once the trade's peak open profit has reached this many R (AND, not "
+                        "the OR a --trail-decay-arm-r composition gives). Needs --trail-level.")
+    p.add_argument("--giveback-frac", type=float, default=0.0,
+                   help="GIVEBACK-FRAC-FLAG (0 = off, byte-identical): giveback stop as a SHARE of the "
+                        "peak -- exit at the bar close when open R <= F x peak R, armed by "
+                        "--giveback-min-mfe-r. Replaces the absolute --giveback-r when set.")
+    p.add_argument("--trigger-action", choices=["bank", "tight"], default="",
+                   help="HARNESS-METRIC-TRIGGER: the action applied to triggered trades only ('bank' = the "
+                        "--bank-frac/--bank-at-r rung; 'tight' = trail mult -> --trail-decay-tight-mult), "
+                        "from the bar after the trigger bar. Needs --trigger-file or --trigger-all.")
+    p.add_argument("--trigger-file", default="",
+                   help="JSONL of {trade_key, k, trigger, p} from path_metric_giveback.py --emit-triggers.")
+    p.add_argument("--trigger-all", type=int, default=0,
+                   help="Unconditional control: act on every trade still open at bar offset K.")
     p.add_argument("--momentum-stale-bars", type=int, default=0,
                    help="MOMENTUM-TRAIL-LEVER `momentum_stale` (0=off, "
                         "byte-identical): close at bar CLOSE after N bars once "
@@ -1764,7 +1819,11 @@ def main(argv: List[str]) -> int:
         return 2
     _lvl_errs = level_flag_errors(args.trail_level, args.trail_level_tight_mult, args.trail_mult,
                                   args.trail_level_lookback, args.trail_level_pivot_k,
-                                  args.trail_level_round_step)
+                                  args.trail_level_round_step, args.trail_level_min_r)
+    _lvl_errs += giveback_flag_errors(args.giveback_min_mfe_r, args.giveback_frac)
+    _lvl_errs += trigger_flag_errors(
+        args.trigger_action, args.trigger_file, args.trigger_all, args.bank_frac, args.bank_at_r,
+        args.trail_mult, args.trail_decay_tight_mult, args.trail_decay_arm_r, args.trail_decay_stall_bars)
     if _lvl_errs:
         for _e in _lvl_errs:
             print(f"ERROR: {_e}", file=sys.stderr)
@@ -1846,6 +1905,11 @@ def main(argv: List[str]) -> int:
                      trail_level_lookback=args.trail_level_lookback,
                      trail_level_pivot_k=args.trail_level_pivot_k,
                      trail_level_round_step=args.trail_level_round_step,
+                     trail_level_min_r=args.trail_level_min_r,
+                     giveback_frac=args.giveback_frac,
+                     trigger_action=args.trigger_action,
+                     trigger_file=args.trigger_file,
+                     trigger_all=args.trigger_all,
                      momentum_stale_bars=args.momentum_stale_bars,
                      momentum_stale_adx_below=args.momentum_stale_adx_below)
     decision_kw: Dict[str, Any] = {}
