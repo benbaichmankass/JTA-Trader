@@ -1,6 +1,6 @@
 {
  "schema": 1,
- "as_of": "2026-10-23T13:27:55Z",
+ "as_of": "2026-10-23T13:49:59Z",
  "producer": "scripts/research/research_slo.py",
  "config": "scripts/research/research_slo.yaml",
  "counts": {
@@ -12,13 +12,13 @@
   {
    "slo": "runnable_floor",
    "state": "breach",
-   "value": 27,
+   "value": 24,
    "op": ">=",
-   "threshold": 56,
+   "threshold": 58,
    "what": "runnable units >= the computed floor (queue_throughput.computed_floor: max(25, ceil(fired_24h x 19/24)))",
    "evidence": {
-    "fired_24h_stamps": 70,
-    "queued": 126,
+    "fired_24h_stamps": 73,
+    "queued": 110,
     "basis": "queue_replenish.runnable(); floor = queue_throughput.computed_floor(fired_24h)",
     "read_state": "measured"
    }
@@ -60,8 +60,8 @@
    "evidence": {
     "p50": 0.0,
     "p90": 2.0,
-    "n": 386,
-    "ungraded_fresh": 17,
+    "n": 401,
+    "ungraded_fresh": 2,
     "basis": "whole days (graded_at is a date); units whose newest result landed in 7 d, newest result -> grading on or after it",
     "read_state": "measured"
    }
@@ -76,8 +76,8 @@
    "evidence": {
     "p50": 0.0,
     "p90": 2.0,
-    "n": 386,
-    "ungraded_fresh": 17,
+    "n": 401,
+    "ungraded_fresh": 2,
     "basis": "whole days (graded_at is a date); units whose newest result landed in 7 d, newest result -> grading on or after it",
     "read_state": "measured"
    }
@@ -85,16 +85,17 @@
   {
    "slo": "undispositioned_24h",
    "state": "ok",
-   "value": 0,
+   "value": 1,
    "op": "<=",
    "threshold": 5,
    "what": "units with a landed result older than 24 h and no verdict / no owned needs_review (result_disposition_check findings)",
    "evidence": {
     "counts": {
-     "graded": 807,
-     "in_grace": 17,
+     "graded": 822,
+     "in_grace": 2,
      "legacy_prose": 125,
-     "needs_review": 30,
+     "needs_review": 29,
+     "needs_review_unowned": 1,
      "non_verdict_only": 1,
      "retired": 1
     },
@@ -107,13 +108,13 @@
   {
    "slo": "authoring_supply_ratio_7d",
    "state": "ok",
-   "value": 1.06,
+   "value": 1.05,
    "op": ">=",
    "threshold": 1.0,
    "what": "authored (non-generated) units created in 7 d / authored units first-or-re-fired in 7 d",
    "evidence": {
     "authored_7d": 251,
-    "consumed_7d": 237,
+    "consumed_7d": 240,
     "authored_since_yesterday": 79,
     "basis": "non-generated units: id date in 7 d / last_dispatched_at in 7 d",
     "read_state": "measured"
@@ -228,7 +229,7 @@
   {
    "slo": "dispatcher_age_h",
    "state": "ok",
-   "value": 0.36,
+   "value": 0.73,
    "op": "<=",
    "threshold": 3,
    "what": "hours since the newest dispatcher utilization record on main (one per dispatch cycle that ran; lands ~1 h late)",
@@ -241,7 +242,7 @@
   {
    "slo": "collector_age_h",
    "state": "ok",
-   "value": 0.04,
+   "value": 0.4,
    "op": "<=",
    "threshold": 6,
    "what": "hours since the newest commit on main touching research/results/ (a result landed)",
@@ -254,12 +255,12 @@
   {
    "slo": "grader_age_h",
    "state": "ok",
-   "value": 1.26,
+   "value": 0.02,
    "op": "<=",
    "threshold": 14,
    "what": "hours since the last SUCCESSFUL research-queue-grade.yml run (GitHub; could_not_look without a token)",
    "evidence": {
-    "newest": "2026-10-23T12:12:20+00:00",
+    "newest": "2026-10-23T13:48:39+00:00",
     "basis": "last successful research-queue-grade.yml run",
     "read_state": "measured"
    }
@@ -267,7 +268,7 @@
   {
    "slo": "research_ops_age_h",
    "state": "ok",
-   "value": 3.97,
+   "value": 4.33,
    "op": "<=",
    "threshold": 8,
    "what": "hours since the newest research-ops pass record (comms/research/ops/*.json finished_at); the pass runs 4x/day",
@@ -298,7 +299,7 @@
   {
    "slo": "hold_pr_wait_h",
    "state": "ok",
-   "value": 17.34,
+   "value": 17.71,
    "op": "<=",
    "threshold": 24,
    "what": "hours the oldest open non-automation PR adding research/queue/ unit files has waited (hold PRs)",
@@ -307,22 +308,22 @@
     "oldest": [
      {
       "pr": 19620,
-      "hours": 17.34,
+      "hours": 17.71,
       "title": "EXIT-PATH-METRICS-W43: per-bar path-state study, 10 pre-registered exit-lever units (b7e1)"
      },
      {
       "pr": 19671,
-      "hours": 7.41,
+      "hours": 7.78,
       "title": "promo: refresh tqqq/tlt/scha Stage-0 evidence, soak dispositions, holdout units (MD-PROMOT"
      },
      {
       "pr": 19685,
-      "hours": 4.26,
+      "hours": 4.63,
       "title": "research(SLV-RETENTION-DATA): verdict on SLV-PB1D-RETENTION-T3 (keep, variants queued) + u"
      },
      {
       "pr": 19690,
-      "hours": 3.97,
+      "hours": 4.34,
       "title": "research(queue): AUTHOR-FLOOR-1023 \u2014 19 pre-registered variant units"
      }
     ],
@@ -448,6 +449,20 @@
   },
   {
    "at": "2026-10-23T13:27:55Z",
+   "counts": {
+    "ok": 14,
+    "breach": 2,
+    "could_not_look": 0
+   },
+   "not_ok": [
+    "runnable_floor",
+    "theme_share_min_ratio"
+   ],
+   "alert": null,
+   "delivered": null
+  },
+  {
+   "at": "2026-10-23T13:49:59Z",
    "counts": {
     "ok": 14,
     "breach": 2,
