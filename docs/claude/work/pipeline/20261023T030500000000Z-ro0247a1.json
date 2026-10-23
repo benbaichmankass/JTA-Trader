@@ -1,0 +1,19 @@
+{
+  "due_when": {
+    "due_date": "2026-10-27",
+    "kind": "date"
+  },
+  "filed": "2026-10-23",
+  "id": "PI-20261023-GGAWBEOX-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "by": "research-ops-0247",
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261023-0247 step D: fail-is-not-dead variants owed",
+    "rerun": "for u in RQ-20261022-4b82-12 RQ-20261022-4b82-15 RQ-20261022-4b82-22 RQ-20261022-4b82-23 RQ-20261022-eba2-02 RQ-20261022-eba2-03 RQ-20261022-eba2-09 RQ-20261022-eba2-12 RQ-20261011-9da8-01 RQ-20261020-002; do python3 -c \"import json,glob,sys;f=sorted(glob.glob('research/results/'+sys.argv[1]+'/*.jsonl'))[-1];r=json.loads(open(f).readline());print(sys.argv[1],r['verdict'])\" $u; done; ls research/queue | grep -c 8961  # expect fail x10, and variants authored for the families below"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "Variants owed after first-test FAILs read 2026-10-23 (operator 2026-10-22: a first fail is not a dead idea). Authored this pass: RQ-20261023-8961-01 (ADX momentum-LOSS arms on sol_4h; eba2-15 eth_4h failed with M3 +1.56 R / M5 +0.50 R vs a 5.5 R bar, 6 and 5 of 6 folds, DD not worse -- small and consistent, not refuted). NOT yet authored, each needs a diagnosis then a pre-registered variant: (1) hot-vol trail-tighten xrp/ada_pullback_2h 4b82-12/-15 FAIL 'no_reachable_lever_beats_removed: lever lines are dead config' -- fifth failed hot-vol form on these legs (f0e2-11, 64d6-01, ae17-06, 4b82-12/15); the diagnosis in the result is that the declared lever is dead config, so the next unit should test the lever LIVE on the removed-vs-declared contrast, not another tightening grid; (2) giveback predictability 4b82-22/-23 FAIL, every arm's AUC interval contains the prior on every leg (with 9d20-03 that is three FAILs on the entry-column meta-label): the Q11 path-metric route (eba2-01 PASS, ll 5/6 folds) is the live alternative, not more entry-column variants; (3) eba2-02 prop-leg k=12 giveback FAIL (gain +0.0016 ll) -- prop legs are 6R-TP so a different label, see P1-Q11-prop-rung2; (4) eba2-03 R-armed tight trail, eba2-09 wider swing trail, eba2-12 far-rung bank all FAIL incumbent_stands: three exit-geometry families failed on the same incumbent; diagnose whether the incumbent already captures the effect before a fourth grid; (5) 9da8-01 time-series foundation-model bake-off FAIL 'no candidate reaches the floor on any clause' with power_state accruing -- check measurement.arm_status for unavailable arms before reading it as a model verdict (frontier-research table); (6) ppi_mom RTY: 7769-02 earlier sub-period indeterminate (n<50), later 0020-002 FAIL, so the effect is unproven in both halves -- no config question, close the P4 node as 'tested, not supported at available n' only through family_retirement_policy.yaml. Pass leads, not actions: ae17-43/44/45 PASS (best-of-3 arms) join the ae17 sibling list already under PI-20261022-R3DFW7IK-0001 -- forward window only."
+}
