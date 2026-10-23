@@ -4,7 +4,7 @@
 id: RQ-20261020-002
 title: 'P4-Q2 stability for RQ-20261016-7769-02 (ppi_mom -> RTY=F): is the effect present in the LATER
   (releases >= 2021-01-01) sub-period alone? (n~70; underpowered by design)'
-status: queued
+status: done
 cadence: once
 roadmap:
 - M28
@@ -102,3 +102,15 @@ generated:
   params:
     node: P4-Q2-ppi-rty-late
 last_dispatched_at: '2026-10-22T21:55:39+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P4-Q2-ppi-rty-late
+  evidence:
+  - research/results/RQ-20261020-002/39861148676.jsonl
+  graded_at: '2026-10-23'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
