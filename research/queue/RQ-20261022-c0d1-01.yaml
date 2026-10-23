@@ -3,7 +3,7 @@ cadence: once
 theme: ml_health
 kind: experiment
 title: 'Sequence learner variant 1/3 -- FAIR CONTROL: GRU(32 bars) vs LightGBM given the SAME 10 features, 8 folds'
-status: queued
+status: done
 priority: 3
 question: With LightGBM handed the same 6 shared + 4 range-vol features (current bar), does the 32-bar GRU still beat it by >= +0.010 macro-F1 on all of BTC/ETH/SOL
   over 8 purged folds -- i.e. does TEMPORAL structure add anything beyond the range-vol features?
@@ -170,3 +170,17 @@ related:
 - RQ-20261018-ff8f-04
 - ML-NONGBDT-RUNNERS
 last_dispatched_at: '2026-10-22T21:55:39+00:00'
+grading:
+  attested: RULE-RQ20261022C0D101-GRU-VARIANT
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261022C0D101-GRU-VARIANT
+  evidence:
+  - research/results/RQ-20261022-c0d1-01/39861151923.jsonl
+  graded_at: '2026-10-23'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

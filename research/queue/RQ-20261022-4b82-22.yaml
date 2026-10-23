@@ -1,7 +1,7 @@
 id: RQ-20261022-4b82-22
 title: 'Giveback VARIANT with a non-degenerate target: is a giveback above 80% of the peak predictable from the entry columns within the four
   ledgers with n >= 300?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - M23
@@ -105,3 +105,16 @@ related:
 - RQ-20261014-9d20-03
 - AUTHOR-FLOOR-1022
 last_dispatched_at: '2026-10-22T21:13:15+00:00'
+grading:
+  attested: RULE-RQ20261022-4B82-22-GIVEBACK-80
+  auto: true
+  decision_rule_id: RULE-RQ20261022-4B82-22-GIVEBACK-80
+  evidence:
+  - research/results/RQ-20261022-4b82-22/39855506645.jsonl
+  graded_at: '2026-10-23'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
