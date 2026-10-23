@@ -2,18 +2,20 @@
   "id": "LEVEL-TRAIL-R-GATE",
   "title": "Harness: --trail-level-min-r (latch the level-triggered tight trail only once peak R >= N)",
   "phase": "Research",
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "unassigned (filed by EXITS-GIVEBACK-W43)",
   "lane": "EXITS-GIVEBACK-W43",
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    19739
+  ],
   "blocked_on": [],
-  "note": "[2026-10-22 EXITS-GIVEBACK-W43] Instrument for blocked unit RQ-20261022-eba2-11 (Q10 variant: level AND R). --trail-level and --trail-decay-arm-r are independent tighteners composing by minimum (OR); the operator's framing needs AND. BUILD: --trail-level-min-r R in backtest_pullback.py and backtest_trend.py (src/research/trail_levers.py owns the rule; default 0 = byte-identical). DONE WHEN: tests show default byte-identity and that a level touch before peak R reaches N does not latch while a touch after does; exit_lever_ablation.py accepts the arm string used in eba2-11.",
-  "updated_at": "2026-10-22T14:46:19Z",
-  "updated_by": "session_013boLrFb4hM4JJ2Naq19bqS",
+  "note": "[2026-10-22 EXITS-GIVEBACK-W43] Instrument for blocked unit RQ-20261022-eba2-11 (Q10 variant: level AND R). --trail-level and --trail-decay-arm-r are independent tighteners composing by minimum (OR); the operator's framing needs AND. BUILD: --trail-level-min-r R in backtest_pullback.py and backtest_trend.py (src/research/trail_levers.py owns the rule; default 0 = byte-identical). DONE WHEN: tests show default byte-identity and that a level touch before peak R reaches N does not latch while a touch after does; exit_lever_ablation.py accepts the arm string used in eba2-11. [2026-10-23 EXIT-BUILDS-W43] BUILT in PR #19739 (merged != observed). Flags default-off, byte-identical (old-vs-new main on armed configs), tests/test_exit_builds_w43.py. Unit(s) eba2-11 moved out of blocked/, dispatch_queue dry run would_dispatch. CLOSES (done) when eba2-11 lands its first result carrying the new flag in its recorded argv.",
+  "updated_at": "2026-10-23T16:40:29Z",
+  "updated_by": "session_01WJ6zAKX6HBJBgdJWsCd6P3",
   "roadmap": [
     "L-ATM"
   ],
