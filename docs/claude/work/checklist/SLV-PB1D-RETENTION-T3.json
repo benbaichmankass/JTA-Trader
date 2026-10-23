@@ -1,0 +1,25 @@
+{
+  "id": "SLV-PB1D-RETENTION-T3",
+  "title": "Tier-3 roster-retention case: slv_pullback_1d on alpaca_live (+ alpaca_portfolio mirror) failed Stage-0 at power",
+  "phase": "research",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[research-ops 2026-10-23 08:47Z] RQ-20261016-c56e-17 FAIL (rule RULE-RQ20261016c56e17, registered before run): slv_pullback_1d as declared, Yahoo SLV 1d 2006-10-02..2025-04-09, slippage 5 bps/rt in the cost stack: n=160, net_r +5.03, maxDD 13.09 R, 4 of 8 calendar folds positive (needs >= 5); label stage0_no_edge. The rule names this a roster-retention case for alpaca_live sent to the manager; nothing changed here. Read honestly: net R is positive and 4/8 folds is one fold short, so this is 'no fold-consistent edge', not 'negative edge'; fee_bps_roundtrip 0.0 in the argv (equity fee-free). The leg is on alpaca_live and alpaca_portfolio (mirror follows by strict equality); ief_pullback_1d (c56e-16 also FAIL) is NOT on alpaca_live now (paper only), so that half of P3-Q3 is moot. DECISION FOR MANAGER (Tier-3, data-backed): keep (4/8 folds, positive net, 1 fold short) vs demote via MD-DEMOTE-S2-S1 path; fail-is-not-dead variants are owed either way (rule bar and fold majority unchanged). Not a promotion case.",
+  "updated_at": "2026-10-23T08:58:06Z",
+  "updated_by": "session_014aKhz5de3aJVNnLwFPMbfr",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "none: proposal note",
+    "arch": "none"
+  },
+  "_seq": 613
+}

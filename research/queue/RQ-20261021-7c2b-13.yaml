@@ -2,7 +2,7 @@ id: RQ-20261021-7c2b-13
 title: >-
   Programme 03 Q8 BREADTH for the real-money book: does trend_donchian_sol_prop AS DECLARED clear Stage 0 on six liquid perps no roster
   carries (BNB, DOGE, LINK, LTC, BCH, DOT)?
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 1
@@ -132,3 +132,17 @@ programme_node:
   node: P3-Q8-new-symbols
   goal: G1
   after: []
+last_dispatched_at: '2026-10-23T11:11:48+00:00'
+grading:
+  attested: RULE-P3-Q8-BREADTH-TREND-DONCHIAN-SOL-PROP
+  auto: true
+  decision_rule_id: RULE-P3-Q8-BREADTH-TREND-DONCHIAN-SOL-PROP
+  evidence:
+  - research/results/RQ-20261021-7c2b-13/39944447656.jsonl
+  graded_at: '2026-10-23'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
