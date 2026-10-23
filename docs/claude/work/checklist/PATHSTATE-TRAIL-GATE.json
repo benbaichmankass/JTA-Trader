@@ -2,26 +2,31 @@
   "id": "PATHSTATE-TRAIL-GATE",
   "title": "BUILD: path-state gates for the exit harnesses (efficiency ratio, choppiness, ATR-vs-entry, distance-from-peak) -- unblocks queue units RQ-20261022-b7e1-04..10",
   "phase": "build",
-  "state": "queued",
-  "owner": null,
-  "lane": null,
+  "state": "landed_unproven",
+  "owner": "session_01TWgvhBknmFngPAjupXbfTQ",
+  "lane": "PATHSTATE-TRAIL-GATE",
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "[2026-10-22 lane EXIT-PATH-METRICS-W43] BUILD (Tier-1 offline research tooling; no order path, no config). WHY: units RQ-20261022-b7e1-04..10 (research/queue/blocked/) gate a tight trail / partial bank / time-in-chop stop on in-trade path state; the harness has only R-armed, stall-armed, ATR-percentile and ADX gates (src/research/trail_levers.py::effective_trail_mult, single-homed). CONTRACT: add to scripts/backtest_pullback.py and scripts/backtest_trend.py, default-off and byte-identical vs main (filecmp on 6 configs, as EXIT-PATH-EMIT-OFFLINE): --trail-state-feature {er,chop,atr_ratio,dist_atr} --trail-state-window W --trail-state-op {lt,gt} --trail-state-thr X --trail-state-arm-r R --trail-state-tight-mult M (tight mult applies on bars where peak_r>=R AND the feature condition holds, composing by MINIMUM with the other tighteners); --bank-state-* (same gate on the partial bank); --chop-stop-feature/-window/-thr/-bars/-min-peak-r/-max-open-frac (close at market after N consecutive qualifying bars). The feature functions MUST be the ones scripts/research/path_state_giveback.py::trade_states uses (import, do not re-derive) and use bars <= t only. TESTS: a self-test planting a gate-only signal; flag-off byte-identity; a no-lookahead test (changing bars after t cannot change the gate at t). DONE WHEN: the flags exist on both harnesses with those tests green on main, then git mv research/queue/blocked/RQ-20261022-b7e1-04..10 to research/queue/ (status queued) -- but read b7e1-01..03 first: if all three FAIL, drop the ER/chop/ATR-contraction arms from 04-07 (registered in each unit) and keep 08-10. RERUN: python3 scripts/research/dispatch_queue.py (dry run) lists the unblocked units as would_dispatch.",
+  "note": "[2026-10-22 lane EXIT-PATH-METRICS-W43] BUILD (Tier-1 offline research tooling; no order path, no config). WHY: units RQ-20261022-b7e1-04..10 (research/queue/blocked/) gate a tight trail / partial bank / time-in-chop stop on in-trade path state; the harness has only R-armed, stall-armed, ATR-percentile and ADX gates (src/research/trail_levers.py::effective_trail_mult, single-homed). CONTRACT: add to scripts/backtest_pullback.py and scripts/backtest_trend.py, default-off and byte-identical vs main (filecmp on 6 configs, as EXIT-PATH-EMIT-OFFLINE): --trail-state-feature {er,chop,atr_ratio,dist_atr} --trail-state-window W --trail-state-op {lt,gt} --trail-state-thr X --trail-state-arm-r R --trail-state-tight-mult M (tight mult applies on bars where peak_r>=R AND the feature condition holds, composing by MINIMUM with the other tighteners); --bank-state-* (same gate on the partial bank); --chop-stop-feature/-window/-thr/-bars/-min-peak-r/-max-open-frac (close at market after N consecutive qualifying bars). The feature functions MUST be the ones scripts/research/path_state_giveback.py::trade_states uses (import, do not re-derive) and use bars <= t only. TESTS: a self-test planting a gate-only signal; flag-off byte-identity; a no-lookahead test (changing bars after t cannot change the gate at t). DONE WHEN: the flags exist on both harnesses with those tests green on main, then git mv research/queue/blocked/RQ-20261022-b7e1-04..10 to research/queue/ (status queued) -- but read b7e1-01..03 first: if all three FAIL, drop the ER/chop/ATR-contraction arms from 04-07 (registered in each unit) and keep 08-10. RERUN: python3 scripts/research/dispatch_queue.py (dry run) lists the unblocked units as would_dispatch.  [2026-10-23 lane PATHSTATE-TRAIL-GATE] BUILT: --trail-state-*, --bank-state-*, --chop-stop-* on backtest_pullback.py + backtest_trend.py; shared tracker src/research/path_state_gate.py; features = scripts/research/path_state_giveback.py::state_at (extracted from trade_states, output byte-identical on a planted path; trade_states now calls it). Flags default-off: byte-identical vs main on 12 armed/plain configs (trend+pullback x plain/decay/bank/giveback-frac/stale/trigger), tests/test_pathstate_trail_gate.py (planted gate-only signal, never-true gate == baseline, engine no-lookahead with a feed altered after bar X). Units b7e1-04..10 moved out of blocked/ (would_dispatch). FINDING: b7e1-01..03 results already exist and read verdict=fail on all three; per the manager the arms 04-07 were still shipped, with a grader note in each -- the drop decision (keep 08-10) is for the grader/manager. CLOSES (done) when b7e1-04 lands its first result carrying the new flags in its argv.",
   "priority_rank": 6,
-  "updated_at": "2026-10-23T15:00:32Z",
+  "updated_at": "2026-10-23T18:03:35Z",
   "updated_by": "session_01YHnEs6mehRvD74aubi5DJw",
   "roadmap": [
     "L-ATM",
     "M20"
   ],
   "writeback": {
-    "roadmap": "none: offline tooling; the L-ATM outcome is written back when b7e1-04..10 are graded",
-    "arch": "none: opt-in research flags on offline harnesses"
+    "roadmap": "none: offline research flags; the L-ATM outcome is written back when b7e1-04..10 are graded",
+    "arch": "none: opt-in research flags on offline harnesses, no runtime component/contract change"
+  },
+  "observation": {
+    "what": "first result of unit RQ-20261022-b7e1-04 (or -07/-08/-09) lands in research/results/ with a recorded argv carrying --trail-state-*/--bank-state-*/--chop-stop-*",
+    "how_to_check": "ls research/results/ | grep b7e1; python3 scripts/research/result_disposition_check.py --list",
+    "due_by": "2026-10-28"
   },
   "_seq": 600
 }

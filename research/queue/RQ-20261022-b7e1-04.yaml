@@ -2,7 +2,7 @@ id: RQ-20261022-b7e1-04
 title: 'Q14 lever (EFFICIENCY-RATIO-GATED tight trail): on ada_pullback_2h, once a trade is >= 1.5 R up AND the 6-bar efficiency
   ratio is below 0.20 / 0.30 / 0.40, does tightening the trail to 2.5 x ATR beat the declared exit AND the same tightening
   applied ungated, on net R in 5 of 6 folds?'
-status: blocked
+status: queued
 cadence: once
 roadmap:
 - L-ATM
@@ -133,11 +133,10 @@ programme_node:
   programme: P1
   node: P1-Q14-er-gated-trail-ada
   goal: G1
-blocked_on:
-- what: 'The harness has no path-state gate: effective_trail_mult / the bank and stale paths cannot condition on efficiency
-    ratio, choppiness, ATR-vs-entry ratio or distance-from-peak (only R-armed, stall-armed, ATR-percentile and ADX gates exist).'
-  ref: PATHSTATE-TRAIL-GATE
-  clears_when: PATHSTATE-TRAIL-GATE is done (flags --trail-state-feature/-window/-op/-thr/-arm-r/-tight-mult, --bank-state-*,
-    --chop-stop-*; default-off byte-identical vs main; self-test planting a gate-only signal), then git mv to research/queue/,
-    status queued.
+# GRADER NOTE (PATHSTATE-TRAIL-GATE, 2026-10-23): unblocked by the build; the gate flags exist on both harnesses.
+# b7e1-01..03 (the discovery re-check on legs the screen did NOT include): their result rows in research/results/ read
+# read_state=measured, verdict=fail on all three as of this unblock (builder read the field only, not the rule behind it).
+# Whoever grades this unit: read b7e1-01..03 first -- if ALL THREE FAIL, the ER / chop / ATR-contraction arms registered
+# here (b7e1-04..07) have lost their motivation: drop them and keep b7e1-08..10. This note changes no registered rule;
+# the drop decision is the grader's (the manager asked the builder to ship every arm), not the builder's.
 last_dispatched_at: null
