@@ -2,9 +2,9 @@
   "id": "EXIT-PATH-METRICS-W43",
   "title": "In-trade path metrics (efficiency ratio, MAE/MFE shape, chop, realised-vs-entry vol) as giveback predictors: measurement + pre-registered lever units (operator idea 2026-10-21)",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "lane EXIT-PATH-METRICS-W43",
-  "lane": "EXIT-PATH-METRICS-W43",
+  "lane": null,
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 12,
   "spend_usd": null,
@@ -13,12 +13,27 @@
     19620
   ],
   "blocked_on": [],
-  "note": "Headroom lane per operator popup 2026-10-22 ~19:40Z, verbatim \"More exits/giveback lanes (Recommended)\". Book keeps ~13% of peak R (90d paper+mirror n=328, docs/reviews/2026-10-21-weekly-walkthrough.md). Must not duplicate eba2-* units from #19553.  [2026-10-22 lane EXIT-PATH-METRICS-W43] Per-bar path-state study (scripts/research/path_state_giveback.py, tests/test_path_state_giveback.py) on xrp/ada pullback_2h, eth_4h, eth/sol prop (958 trades / 18,770 states, 6 calendar folds, harness cost stack): the pooled X=1.5 pass (+0.0115 ll, 5/6 folds) DISAPPEARS when room-to-stop is controlled (+0.0022, 3/6; AUC 0.784->0.778) -- stop room is the predictor (AUC 0.81). Memo docs/research/exit-path-metrics-2026-10-22.md. 10 units pre-registered RQ-20261022-b7e1-01..10 (01-03 runnable rung-1e, 04-10 lever units in blocked/ on build PATHSTATE-TRAIL-GATE); programme nodes P1-Q13/Q14. PR: landing hold, operator merges. CLOSES WHEN: b7e1-01..03 are graded and PATHSTATE-TRAIL-GATE is built or dropped by their reading.",
+  "note": "Headroom lane per operator popup 2026-10-22 ~19:40Z, verbatim \"More exits/giveback lanes (Recommended)\". Book keeps ~13% of peak R (90d paper+mirror n=328, docs/reviews/2026-10-21-weekly-walkthrough.md). Must not duplicate eba2-* units from #19553.  [2026-10-22 lane EXIT-PATH-METRICS-W43] Per-bar path-state study (scripts/research/path_state_giveback.py, tests/test_path_state_giveback.py) on xrp/ada pullback_2h, eth_4h, eth/sol prop (958 trades / 18,770 states, 6 calendar folds, harness cost stack): the pooled X=1.5 pass (+0.0115 ll, 5/6 folds) DISAPPEARS when room-to-stop is controlled (+0.0022, 3/6; AUC 0.784->0.778) -- stop room is the predictor (AUC 0.81). Memo docs/research/exit-path-metrics-2026-10-22.md. 10 units pre-registered RQ-20261022-b7e1-01..10 (01-03 runnable rung-1e, 04-10 lever units in blocked/ on build PATHSTATE-TRAIL-GATE); programme nodes P1-Q13/Q14. PR: landing hold, operator merges. CLOSES WHEN: b7e1-01..03 are graded and PATHSTATE-TRAIL-GATE is built or dropped by their reading. [2026-10-23T21:20Z manager session_01G3UtWJrCibCYuX2wFxsYbR] #19620 merged; its lane session_01T64Ym5 is archived (the lane field held the row id, not a session). Set to landed_unproven.",
   "priority_rank": 5,
-  "updated_at": "2026-10-23T05:57:25Z",
-  "updated_by": "session_01T64Ym5BAAxy68B2ixCwyY7",
+  "updated_at": "2026-10-23T21:18:37Z",
+  "updated_by": "session_01G3UtWJrCibCYuX2wFxsYbR",
   "roadmap": [
     "L-ATM"
+  ],
+  "writeback": {
+    "roadmap": "none: measurement + pre-registered units; PATHSTATE-TRAIL-GATE built (#19750)",
+    "arch": "none: research tooling only"
+  },
+  "observation": {
+    "what": "RQ-20261022-b7e1-01..03 graded and b7e1-04..10 fire now that PATHSTATE-TRAIL-GATE (#19750) unblocked them",
+    "how_to_check": "ls research/results | grep b7e1; python3 scripts/research/result_disposition_check.py --list",
+    "due_by": "2026-10-27T00:00Z"
+  },
+  "lane_history": [
+    {
+      "lane": "EXIT-PATH-METRICS-W43",
+      "archived_at": "2026-10-23T21:18:37Z"
+    }
   ],
   "_seq": 601
 }
