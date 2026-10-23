@@ -1,0 +1,22 @@
+{
+  "id": "AUTOMERGE-ARMING-RACE",
+  "title": "claude-pr-automerge never arms the PRs it opens itself: arming gate reads none_attached seconds after a PAT open, before CI attaches",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 6,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-23T23:58Z manager session_01G3UtWJrCibCYuX2wFxsYbR] CLAIM: the self-land relay never lands a PR it opens. EVIDENCE (job logs of .github/workflows/claude-pr-automerge.yml, 3 of 3 sampled): #19748 (mgr/review-1023-pm), #19781 (mgr/dispatch-1023-2332), #19783 (mgr/usage-1023-2334) each log 'opened PR #N (opener: pat)' then within the same job 'arming gate: none_attached ... signature of a PR opened under GITHUB_TOKEN' and 'NOT ARMING'. The opener is the PAT, so pull_request DOES fire and the required checks attach ~1 min later (#19781: 5/5 green, mergeable_state clean, still unmerged 20 min on). The gate's inference 'nothing attached => GITHUB_TOKEN open' is wrong for a PAT open; it samples too early. EFFECT: every Tier-1 self-land PR the relay opens waits for a manual merge, and the manager's own merge is refused by the auto-mode classifier ('Merge Without Review'), so register PRs need the operator to toggle auto mode. FIX (sketch): after a PAT open, poll for the required checks to attach (bounded, e.g. 3 min) before grading arming; or arm on opener==pat regardless. Keep the GITHUB_TOKEN branch of the gate. DETECTOR: the workflow's own self-test, plus a planted PAT-open fixture that must ARM. POPULATION: claude-pr-automerge runs that opened a PR themselves.",
+  "priority_rank": 6,
+  "updated_at": "2026-10-23T23:53:18Z",
+  "updated_by": "session_01G3UtWJrCibCYuX2wFxsYbR",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 619
+}
