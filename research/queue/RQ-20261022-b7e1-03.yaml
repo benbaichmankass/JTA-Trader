@@ -3,7 +3,7 @@ title: 'Programme 01 Q11 rung 1e (PER-BAR STATE, stop-room controlled): at any b
   12-bar path state (efficiency ratio, choppiness, realised-vol ratio, ATR-vs-entry ratio, distance from peak in ATR) predict
   "gives back >= 1.0 R from here" beyond open R, peak R, bars-since-peak, bars-in-trade AND room-to-stop, on the eth/sol prop
   legs (1h, finite 6R TP) at a 12-bar window?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -120,3 +120,16 @@ programme_node:
   node: P1-Q13-pathstate-prop
   goal: G1
 last_dispatched_at: '2026-10-23T14:59:38+00:00'
+grading:
+  attested: RULE-P1-Q11-R1E-PATHSTATE-03
+  auto: true
+  decision_rule_id: RULE-P1-Q11-R1E-PATHSTATE-03
+  evidence:
+  - research/results/RQ-20261022-b7e1-03/39974450524.jsonl
+  graded_at: '2026-10-23'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
