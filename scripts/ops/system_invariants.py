@@ -54,6 +54,10 @@ the invariants read, and the route each comes from:
     positions.json           /api/bot/positions
     journal_trades.json      /api/diag/journal?table=trades
     exit_loop_health.json    /api/diag/log_file?name=exit_loop_health
+    prop_status.json         /api/bot/prop/status?account_id=<id>  (one response, a list of
+                             responses, or {account_id: response})
+    prop_fills.json          /api/bot/prop/fills?limit=500   (journal side: open fills)
+    prop_tickets.json        /api/bot/prop/tickets?limit=500 (fallback journal side)
 
 ⚠️ A payload that is simply ABSENT makes its invariants report
 ``not_measured``, which is correct but is byte-identical to a blind read of a
@@ -313,8 +317,10 @@ def inv_declared_target_rests(ctx) -> Result:
 def inv_journal_matches_exchange(ctx) -> Result:
     """Journal open qty per (account, symbol) must reconcile to exchange size."""
     ex, pos = ctx.get("exchange_positions"), ctx.get("positions")
-    if ex is None or pos is None:
+    prop_g = _prop_grade(ctx)
+    if (ex is None or pos is None) and not (prop_g and prop_g[0]):
         return Result(NOT_MEASURED, "(account, symbol) pairs", 0, detail="payload absent")
+    ex, pos = ex or {}, pos or []
     exch: Dict[Any, float] = {}
     blind: List[Any] = []
     readable: set = set()
@@ -350,7 +356,20 @@ def inv_journal_matches_exchange(ctx) -> Result:
     paired = readable & pos_accounts
     unpaired = sorted(str(a) for a in (readable - pos_accounts))
     keys = {k for k in (set(exch) | set(jr)) if k[0] in paired}
-    if not keys:
+    # Prop manual-bridge accounts are blind on /api/diag/exchange_positions
+    # (positions=null); when a prop_status payload read them cleanly, grade them
+    # here against the journal's open fills so they are not silently skipped.
+    prop_viol: List[str] = []
+    prop_note = ""
+    pgraded: Dict[str, List[str]] = {}
+    if prop_g is not None:
+        pgraded, pblind, psrc = prop_g
+        for vs in pgraded.values():
+            prop_viol.extend(vs)
+        blind = [b for b in blind if b not in pgraded]
+        prop_note = (f" · prop reconciled via prop_status/{psrc}: {sorted(pgraded)} "
+                     f"· prop could-not-read: {pblind}")
+    if not keys and not pgraded:
         return Result(NOT_MEASURED, "(account, symbol) pairs observed on BOTH sides", 0,
                       detail=f"no account observed on both sides "
                              f"(could-not-read: {blind} · exchange-only: {unpaired})")
@@ -364,10 +383,11 @@ def inv_journal_matches_exchange(ctx) -> Result:
             ratio = (j / e) if e else float("inf")
             viol.append(f"{k[0]}/{k[1]}: journal {j:g} vs exchange {e:g} (ratio {ratio:.2f}x)")
     unread = sorted({str(p.get("account")) for p in rows} - readable)
+    viol = viol + prop_viol
     return Result(FAIL if viol else PASS, "(account, symbol) pairs observed on BOTH sides",
-                  len(keys), viol,
+                  len(keys) + len(pgraded), viol,
                   detail=f"could-not-read: {blind} · journal-only (excluded): {unread} "
-                         f"· exchange-only (excluded): {unpaired}")
+                         f"· exchange-only (excluded): {unpaired}{prop_note}")
 
 
 def inv_exit_loop_meets_requirement(ctx) -> Result:
@@ -844,6 +864,158 @@ def inv_package_legs_reachable(ctx) -> Result:
     return Result(FAIL if viol else PASS, pop, graded, viol, detail=detail)
 
 
+# ------------------------------------------------------------- prop accounts
+# The manual-bridge prop accounts (breakout_*, tradeify_*, velotrade_*) have no
+# exchange API the bot can read, so /api/diag/exchange_positions returns
+# positions=null for them and INV-JOURNAL-EXCHANGE could not grade them. Their
+# venue positions are the phone/operator's Positions read, served on
+# GET /api/bot/prop/status as status.raw.{positions_state, positions}. Only
+# positions_state == "read" is a look; anything else is could-not-read.
+_PROP_OPEN = {"open", "filled"}
+
+
+def _prop_dir(v: Any) -> str:
+    d = str(v or "").strip().lower()
+    return {"buy": "long", "sell": "short"}.get(d, d)
+
+
+def _prop_status_responses(payload: Any) -> List[Dict[str, Any]]:
+    if isinstance(payload, list):
+        return [r for r in payload if isinstance(r, dict)]
+    if isinstance(payload, dict):
+        if "account_id" in payload:
+            return [payload]
+        out = []
+        for k, v in payload.items():
+            if isinstance(v, dict):
+                out.append(v if "account_id" in v else {**v, "account_id": k})
+        return out
+    return []
+
+
+def _prop_venue(resp: Dict[str, Any]):
+    """-> (positions | None, why). None means we could not look."""
+    if not resp.get("present"):
+        return None, "status snapshot absent"
+    if resp.get("status_freshness") not in (None, "ok"):
+        return None, f"snapshot freshness={resp.get('status_freshness')}"
+    st = resp.get("status") or {}
+    raw = st.get("raw")
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except ValueError:
+            return None, "raw unparseable"
+    if not isinstance(raw, dict):
+        return None, "no raw block"
+    if raw.get("positions_state") != "read":
+        return None, f"positions_state={raw.get('positions_state')!r}"
+    pos = raw.get("positions")
+    if not isinstance(pos, list):
+        return None, "positions not a list"
+    return pos, ""
+
+
+def _prop_journal_side(ctx):
+    """-> ({(acct,sym,dir): qty}, source) from open fills (newest per position key),
+    falling back to tickets in an open/filled state. (None, why) when neither payload is present."""
+    fills = ctx.get("prop_fills")
+    if fills is not None:
+        rows = fills.get("fills") if isinstance(fills, dict) else fills
+        if not isinstance(fills, dict) or fills.get("present") is not False:
+            latest: Dict[Any, Dict[str, Any]] = {}
+            for f in rows or []:  # newest first (ORDER BY id DESC)
+                k = (f.get("account_id"), str(f.get("symbol") or "").upper(), _prop_dir(f.get("direction")))
+                latest.setdefault(k, f)
+            return ({k: abs(_num(f.get("qty")) or 0.0) for k, f in latest.items()
+                     if str(f.get("status") or "").lower() in _PROP_OPEN}, "prop_fills")
+    tk = ctx.get("prop_tickets")
+    if tk is not None and not (isinstance(tk, dict) and tk.get("present") is False):
+        rows = tk.get("tickets") if isinstance(tk, dict) else tk
+        out: Dict[Any, float] = {}
+        for t in rows or []:
+            if str(t.get("status") or "").lower() in _PROP_OPEN:
+                k = (t.get("account_id"), str(t.get("symbol") or "").upper(), _prop_dir(t.get("direction")))
+                out[k] = out.get(k, 0.0) + abs(_num(t.get("qty")) or 0.0)
+        return out, "prop_tickets"
+    return None, "neither prop_fills nor prop_tickets payload present"
+
+
+def _prop_grade(ctx):
+    """-> (graded: {acct: [violations]}, blind: {acct: why}, journal_source) or None when prop_status is absent.
+
+    Three states per account: reconciled (empty list), mismatch (non-empty), could-not-read (blind)."""
+    ps = ctx.get("prop_status")
+    if ps is None:
+        return None
+    resps = _prop_status_responses(ps)
+    jr, src = _prop_journal_side(ctx)
+    graded: Dict[str, List[str]] = {}
+    blind: Dict[str, str] = {}
+    for r in resps:
+        aid = str(r.get("account_id"))
+        pos, why = _prop_venue(r)
+        if pos is None:
+            blind[aid] = why
+            continue
+        if jr is None:
+            blind[aid] = src
+            continue
+        venue: Dict[Any, float] = {}
+        for p in pos:
+            k = (aid, str(p.get("symbol") or p.get("venue_symbol") or "").upper(), _prop_dir(p.get("direction")))
+            venue[k] = venue.get(k, 0.0) + abs(_num(p.get("qty")) or 0.0)
+        mine = {k: q for k, q in jr.items() if k[0] == aid}
+        viol = []
+        for k in sorted(set(venue) | set(mine), key=str):
+            v, j = venue.get(k, 0.0), mine.get(k, 0.0)
+            if v <= 0 and j <= 0:
+                continue
+            if abs(v - j) / max(v, j, 1e-9) > 0.02:
+                kind = ("venue position with NO open journal fill/ticket" if j <= 0 else
+                        "journal open with NO venue position" if v <= 0 else "qty differs")
+                viol.append(f"{k[0]}/{k[1]}/{k[2]}: venue {v:g} vs journal {j:g} — {kind}")
+        graded[aid] = viol
+    return graded, blind, src
+
+
+def inv_prop_positions_reconcile(ctx) -> Result:
+    """Every prop account's venue position qty must equal its open journal fills/tickets.
+
+    Three states, never collapsed: reconciled (pass) · mismatch (FAIL, loud) · could-not-read
+    (account excluded and named; if NO account was readable the verdict is not_measured)."""
+    g = _prop_grade(ctx)
+    if g is None:
+        return Result(NOT_MEASURED, "prop accounts", 0, detail="prop_status payload absent")
+    graded, blind, src = g
+    if not graded:
+        return Result(NOT_MEASURED, "prop accounts with a clean positions read", 0,
+                      detail=f"could-not-read: {blind}")
+    viol = [v for vs in graded.values() for v in vs]
+    return Result(FAIL if viol else PASS, "prop accounts with a clean positions read",
+                  len(graded), viol,
+                  detail=f"reconciled: {sorted(a for a, v in graded.items() if not v)} "
+                         f"· could-not-read: {blind} · journal side: {src}")
+
+
+def inv_prop_stop_journaled(ctx) -> Result:
+    """Every open prop fill must carry a journaled stop (an unknown stop is unbounded risk, never zero)."""
+    fills = ctx.get("prop_fills")
+    if fills is None or (isinstance(fills, dict) and fills.get("present") is False):
+        return Result(NOT_MEASURED, "open prop fills", 0, detail="prop_fills payload absent")
+    rows = fills.get("fills") if isinstance(fills, dict) else fills
+    latest: Dict[Any, Dict[str, Any]] = {}
+    for f in rows or []:
+        k = (f.get("account_id"), str(f.get("symbol") or "").upper(), _prop_dir(f.get("direction")))
+        latest.setdefault(k, f)
+    openf = [f for f in latest.values() if str(f.get("status") or "").lower() in _PROP_OPEN]
+    if not openf:
+        return Result(NOT_MEASURED, "open prop fills", 0, detail="no open prop fill in the payload")
+    viol = [f"{f.get('account_id')}/{f.get('symbol')}/{_prop_dir(f.get('direction'))} fill {f.get('id')}: "
+            f"no journaled stop — risk unknown" for f in openf if not ((_num(f.get('sl')) or 0) > 0)]
+    return Result(FAIL if viol else PASS, "open prop fills", len(openf), viol)
+
+
 INVARIANTS: List[Dict[str, Any]] = [
     {"id": "INV-PROTECT-STOP", "blast": "money-at-risk",
      "q": "Does every open IB position have a resting stop covering its size?",
@@ -860,6 +1032,12 @@ INVARIANTS: List[Dict[str, Any]] = [
     {"id": "INV-JOURNAL-EXCHANGE", "blast": "accounting",
      "q": "Does journal open qty reconcile to exchange position size?",
      "fn": inv_journal_matches_exchange},
+    {"id": "INV-PROP-POSITIONS", "blast": "money-at-risk",
+     "q": "Does each prop account's venue position reconcile to its open journal fills/tickets?",
+     "fn": inv_prop_positions_reconcile},
+    {"id": "INV-PROP-STOP", "blast": "money-at-risk",
+     "q": "Does every open prop fill carry a journaled stop?",
+     "fn": inv_prop_stop_journaled},
     {"id": "INV-NETTED-DUP-UPNL", "blast": "accounting",
      "q": "Do sibling rows on one netted position each carry the whole uPnL?",
      "fn": inv_no_netted_duplicate_upnl},
@@ -1077,6 +1255,23 @@ def _fx_pkg_leg_below_journal_window() -> Dict[str, Any]:
     }
 
 
+def _fx_prop(kind: str = "good") -> Dict[str, Any]:
+    """kind: good (matched) · orphan (venue position, no open fill) · blind (positions_state != read)."""
+    def resp(aid, state, positions):
+        return {"account_id": aid, "present": True, "status_freshness": "ok",
+                "status": {"raw": {"positions_state": state, "positions": positions}}}
+    pos = [{"symbol": "ETHUSDT", "direction": "long", "qty": 0.73}]
+    fills = [{"id": 9, "account_id": "breakout_2", "symbol": "ETHUSDT", "direction": "buy",
+              "qty": 0.73, "status": "open", "sl": 2400.0}]
+    if kind == "orphan":
+        fills = []
+    if kind == "blind":
+        return {"prop_status": [resp("breakout_2", "not_read", None)],
+                "prop_fills": {"present": True, "fills": fills}}
+    return {"prop_status": [resp("breakout_2", "read", pos)],
+            "prop_fills": {"present": True, "fills": fills}}
+
+
 def _self_test() -> int:
     checks: List[tuple] = []
 
@@ -1267,6 +1462,20 @@ def _self_test() -> int:
     ghost["positions"] = [q for q in ghost["positions"] if q["id"] != "4347"]
     expect("a closed package whose legs have all closed does NOT fail the suite",
            "INV-PACKAGE-LEG-REACHABLE", ghost, PASS)
+
+    # (g) prop accounts: planted orphan must FAIL, matched must PASS, absent/blind must be not_measured
+    expect("prop position with no open fill FAILS", "INV-PROP-POSITIONS", _fx_prop("orphan"), FAIL)
+    expect("prop orphan also FAILS through INV-JOURNAL-EXCHANGE", "INV-JOURNAL-EXCHANGE", _fx_prop("orphan"), FAIL)
+    expect("prop matched position PASSES", "INV-PROP-POSITIONS", _fx_prop("good"), PASS)
+    expect("prop matched position PASSES through INV-JOURNAL-EXCHANGE", "INV-JOURNAL-EXCHANGE", _fx_prop("good"), PASS)
+    expect("absent prop_status is not_measured, never ok", "INV-PROP-POSITIONS", absent, NOT_MEASURED)
+    expect("positions_state != read is not_measured, never ok", "INV-PROP-POSITIONS", _fx_prop("blind"), NOT_MEASURED)
+    expect("prop_status without a journal side is not_measured", "INV-PROP-POSITIONS",
+           {"prop_status": _fx_prop("good")["prop_status"]}, NOT_MEASURED)
+    nostop = _fx_prop("good"); nostop["prop_fills"]["fills"][0]["sl"] = None
+    expect("open prop fill with no journaled stop FAILS", "INV-PROP-STOP", nostop, FAIL)
+    expect("open prop fill with a stop PASSES", "INV-PROP-STOP", _fx_prop("good"), PASS)
+    expect("absent prop_fills is not_measured", "INV-PROP-STOP", absent, NOT_MEASURED)
 
     # (e) small-n must NOT read as a pass
     small = _fx_good()
