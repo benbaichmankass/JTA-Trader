@@ -4,15 +4,15 @@
   "phase": null,
   "state": "landed_unproven",
   "owner": "lane",
-  "lane": "AUD-20261019-PROP-INVARIANT-BLIND",
+  "lane": null,
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "[WEEKLY-AUDIT-2026-10-19, session_014UeddhjFnc6fSA41bo5V65] CLAIM: the money-at-risk invariant suite grades no prop position. EVIDENCE: python3 scripts/ops/system_invariants.py --payloads <diag pull 2026-10-21T18:13Z> -> INV-JOURNAL-EXCHANGE could-not-read ['ib_live','oanda_practice','breakout_1','breakout_2','tradeify_1','velotrade_1']; /api/diag/exchange_positions returns positions=null for all four breakout-exchange accounts, while GET /api/bot/prop/status serves breakout_2 positions_state=read provenance=MEASURED (ETHUSDT long 0.73, SOLUSDT long 12.56). The health snapshot likewise skips the 4 manual-bridge accounts in accounts_api. EXPECTED: prop positions (DD-limited, highest bar per operator 2026-10-15) are reconciled against journal/tickets like every other live account. POPULATION: 14 accounts, 3 live prop. BLAST: money-at-risk. BUILD: a prop_status payload stem + reader in system_invariants.py (position qty vs open tickets/fills from prop/tickets), with --self-test bad/good/absent fixtures. DETECTOR: the new invariant's self-test (fails on a planted prop position with no open ticket).",
-  "updated_at": "2026-10-23T23:45:08Z",
+  "note": "[WEEKLY-AUDIT-2026-10-19, session_014UeddhjFnc6fSA41bo5V65] CLAIM: the money-at-risk invariant suite grades no prop position. EVIDENCE: python3 scripts/ops/system_invariants.py --payloads <diag pull 2026-10-21T18:13Z> -> INV-JOURNAL-EXCHANGE could-not-read ['ib_live','oanda_practice','breakout_1','breakout_2','tradeify_1','velotrade_1']; /api/diag/exchange_positions returns positions=null for all four breakout-exchange accounts, while GET /api/bot/prop/status serves breakout_2 positions_state=read provenance=MEASURED (ETHUSDT long 0.73, SOLUSDT long 12.56). The health snapshot likewise skips the 4 manual-bridge accounts in accounts_api. EXPECTED: prop positions (DD-limited, highest bar per operator 2026-10-15) are reconciled against journal/tickets like every other live account. POPULATION: 14 accounts, 3 live prop. BLAST: money-at-risk. BUILD: a prop_status payload stem + reader in system_invariants.py (position qty vs open tickets/fills from prop/tickets), with --self-test bad/good/absent fixtures. DETECTOR: the new invariant's self-test (fails on a planted prop position with no open ticket). [2026-10-24T01:20Z manager session_01G3UtWJrCibCYuX2wFxsYbR] #19788 merged 01:19:44Z; lane session_011wRtoL archived, final spend $2.89.",
+  "updated_at": "2026-10-24T01:20:29Z",
   "updated_by": "session_011wRtoL6y51eqwUb8AQeKfb",
   "roadmap": [
     "L-OPS"
@@ -27,5 +27,11 @@
     "roadmap": "L-OPS: prop positions now inside the money-at-risk invariant suite (2 new invariants)",
     "arch": "none: invariant suite is a read-only audit tool; no architecture contract changed"
   },
+  "lane_history": [
+    {
+      "lane": "AUD-20261019-PROP-INVARIANT-BLIND",
+      "archived_at": "2026-10-24T01:20:29Z"
+    }
+  ],
   "_seq": 577
 }
