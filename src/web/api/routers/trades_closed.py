@@ -17,7 +17,7 @@ Wire-shape (camelCase per the dashboard ``ClosedTrade`` interface):
 
     { id, account, symbol, side, pattern, qty, entryPrice, exitPrice,
       realizedPnl, realizedPnlPct, openedAt, closedAt, closeReason,
-      pnlProvenance }
+      pnlProvenance, reconstructedPnl, reconstructedPnlProvenance }
 
 See ``docs/api-tier-policy.md`` Tier 1.
 """
@@ -44,7 +44,8 @@ from src.web.api._closed_at import (
     closed_at_norm_sql,
     normalize_closed_at_value,
 )
-from src.runtime.provenance import classify_pnl
+from src.runtime.local_pnl import compute_realized_pnl, contract_value_usd_for
+from src.runtime.provenance import UNVERIFIED, classify_pnl
 from src.runtime.broker_truth import journal_trust_for, journal_trust_map
 
 logger = logging.getLogger(__name__)
@@ -138,6 +139,30 @@ def _decode_notes_closed_at(notes: Any) -> Optional[str]:
     return str(val) if val is not None else None
 
 
+def _unmeasured_zero_reconstruction(row: sqlite3.Row) -> Optional[float]:
+    """USD value of a close whose stored ``pnl`` is a 0.0 that means "unvalued".
+
+    ``ib_execution`` closes written before PROV-IB (2026-10-11) stored IB's
+    UNSET ``realizedPNL`` (coerced to 0.0) as ``pnl``. ``classify_pnl`` already
+    demotes such a row to UNVERIFIED because the row's own entry->exit move is
+    non-zero (``ict_scalp_mgc_15m``: 9 rows, 77 contracts at 4169.9 -> 4196.39
+    stored 0.0 against -20,397 at the MGC multiplier of 10). Returns the
+    ESTIMATED value rebuilt from the row's own entry / exit / qty and the
+    instrument multiplier, or ``None`` when the 0.0 is not that case (a genuine
+    flat, or a row we cannot value).
+    """
+    if row["pnl"] is None or float(row["pnl"]) != 0.0:
+        return None
+    bucket, why = classify_pnl(row)
+    if bucket != UNVERIFIED or "is not a measurement" not in why:
+        return None
+    return compute_realized_pnl(
+        entry_price=row["entry_price"], exit_price=row["exit_price"],
+        qty=row["position_size"], direction=row["direction"],
+        contract_value_usd=contract_value_usd_for(row["symbol"]),
+    )
+
+
 def _row_to_wire(row: sqlite3.Row,
                  trust_map: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     notes_closed_at = _decode_notes_closed_at(row["notes"])
@@ -152,6 +177,12 @@ def _row_to_wire(row: sqlite3.Row,
         or _normalize_closed_at_value(notes_closed_at)
     )
     raw_pnl = row["pnl"]
+    # A stored 0.0 that is really "could not value" (see
+    # _unmeasured_zero_reconstruction) is rendered null, never $0.00; the
+    # rebuilt figure rides beside it labelled ESTIMATED.
+    reconstructed = _unmeasured_zero_reconstruction(row)
+    if reconstructed is not None:
+        raw_pnl = None
     return {
         "id": str(row["id"]),
         "account": row["account_id"],
@@ -191,6 +222,15 @@ def _row_to_wire(row: sqlite3.Row,
         # the per-row sibling of /performance's pnlCoverage (P0.3, 2026-07-31).
         "pnlProvenance": (
             classify_pnl(row)[0].lower() if raw_pnl is not None else None
+        ),
+        # ``reconstructedPnl`` — non-null ONLY when the stored pnl was an
+        # unvalued 0.0 (realizedPnl is then null): entry/exit/qty x the
+        # contract multiplier, provenance ESTIMATED. Not broker truth.
+        "reconstructedPnl": (
+            round(reconstructed, 4) if reconstructed is not None else None
+        ),
+        "reconstructedPnlProvenance": (
+            "estimated" if reconstructed is not None else None
         ),
         # ``journalTrust`` — is this ACCOUNT's per-row pnl known to disagree
         # with the broker? (2026-08-26.) ``pnlProvenance`` above grades how
