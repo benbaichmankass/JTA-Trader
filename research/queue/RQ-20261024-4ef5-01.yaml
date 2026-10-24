@@ -1,6 +1,6 @@
 id: RQ-20261024-4ef5-01
 title: 'Profit-lock STEP on ada_pullback_2h: once a trade has SEEN m R, floor the stop at +k R (m/k = 2.5/1.5, 3.0/1.0, 3.0/2.0, 3.4/2.5)'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -115,3 +115,16 @@ related:
 - research/queue/RQ-20261022-eba2-03.yaml
 programme: P1
 last_dispatched_at: '2026-10-24T16:41:33+00:00'
+grading:
+  attested: RULE-202610244ef501
+  auto: true
+  decision_rule_id: RULE-202610244ef501
+  evidence:
+  - research/results/RQ-20261024-4ef5-01/40112767874.jsonl
+  graded_at: '2026-10-24'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

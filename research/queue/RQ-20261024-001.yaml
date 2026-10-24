@@ -5,7 +5,7 @@ id: RQ-20261024-001
 title: 'AI trader / conformal abstention at 1h, VARIANT (first test failed -> variant, P2-Q1.5-fail):
   does a GLOBAL (non-Mondrian) split-conformal rule beat the plain max-probability threshold at matched
   coverage on the BTC/ETH/SOL 1h regime learner?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-REGIME
@@ -176,11 +176,11 @@ grading:
   confirmatory_run: 1
   decision_rule_id: RULE-P2-Q1.5-CONFORMAL-1H-GLOBAL
   evidence:
-  - research/results/RQ-20261024-001/40077914075.jsonl
+  - research/results/RQ-20261024-001/40099595877.jsonl
   first_fail: 1 row(s), all measured, all fail
   graded_at: '2026-10-24'
   grader: scripts/research/queue_grade.py
-  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
   reason: 1 row(s), all measured, all fail
   rows: 1
   verdict: fail
