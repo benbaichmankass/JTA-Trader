@@ -2,7 +2,7 @@ id: RQ-20261024-09a6-04
 title: 'AI-ATM rung C1: a policy layer -- per trade, can a state-conditioned chooser pick among the already-validated rule exits (stall
   trail decay, ADX trail, momentum-stale, measured-move / stall pull-in TP) better than the best single fixed choice? Full-information
   counterfactuals, no propensities.'
-status: blocked
+status: queued
 cadence: once
 roadmap:
 - L-ATM
@@ -54,12 +54,7 @@ decision_rule:
     a trade; ship rules per leg by their own records (exit-refinement), and no policy model is built on these arms. Thresholds are not
     changed after any result.'
   min_n: 600 joined trades pooled
-blocked_on:
-- kind: work_item
-  ref: docs/claude/work/checklist/EXIT-ARM-CHOICE-CORPUS.json
-  what: exit_lever_ablation.py grades arms but no tool keeps per-arm trade emits joined on entry and fits a chooser over them.
-  clears_when: EXIT-ARM-CHOICE-CORPUS lands the per-arm emit join (entry-set agreement reported) and the chooser grader with a self-test
-    (a planted arm-state interaction is found; a shuffled state finds nothing).
+blocked_on: []
 compute: cpu_light
 value:
   bucket: ai_trader
@@ -76,8 +71,57 @@ routing:
   basis: 'Estimate: six harness passes with --emit-paths (one per leg, ~1-2 min each MEASURED for exit_lever_ablation arms 2026-10-16)
     plus the fit.'
 run:
-  workflow: null
-  note: Null until the blocked_on build lands; then git mv to research/queue/, status queued, fill run.command.
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/exit_arm_chooser.py
+  - --leg
+  - trend_donchian_eth_4h
+  - --leg
+  - trend_donchian_xrp_4h
+  - --leg
+  - xrp_pullback_2h
+  - --leg
+  - ada_pullback_2h
+  - --leg
+  - trend_donchian_eth_prop
+  - --leg
+  - trend_donchian_sol_prop
+  - --arm
+  - A=
+  - --arm
+  - D=--trail-decay-stall-bars=10;--trail-decay-tight-mult=1.8
+  - --arm
+  - M=--trail-adx-below=25;--trail-adx-tight-mult=2.5
+  - --arm
+  - S=--momentum-stale-bars=8;--momentum-stale-adx-below=20
+  - --arm
+  - T=--tp-target-r=3;--tp-retarget-mode=stall_pull_in;--tp-retarget-stall-bars=10
+  - --baseline
+  - A
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --n-folds
+  - '6'
+  - --n-boot
+  - '2000'
+  - --min-n
+  - '600'
+  - --max-excluded
+  - '0.10'
+  - --min-gain-r
+  - '0.03'
+  - --min-folds
+  - '4'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261024-09a6-04
 lands:
   store: research/results/
   assert_field: read_state
