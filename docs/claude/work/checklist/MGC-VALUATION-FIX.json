@@ -2,7 +2,7 @@
   "id": "MGC-VALUATION-FIX",
   "title": "ict_scalp_mgc_15m on ib_paper: fix the mis-valued ESTIMATED PnL (56% of W30 paper+mirror loss) per PI-20261021-4ZLRFEV1-0002",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": "session_01WS5LdfpbvLZYUY1vHrXP7K",
   "model": "claude-sonnet-5-5",
@@ -13,12 +13,21 @@
     19806
   ],
   "blocked_on": [],
-  "note": "Week plan 2026-10-22 (Sat). Source: 2026-10-21 walkthrough PERFORMANCE. [2026-10-24T03:18Z manager session_01G3UtWJrCibCYuX2wFxsYbR] Dispatched lane session_01WS5Ldf (Sonnet, fresh, $6): rank 8, top of runnable queue; reporting/estimation fix, told to stop and report if it reaches the order path. Capacity 1 lane (weekly 19% at 23:34Z, reset Wed 18:00Z). [2026-10-24T03:50Z manager session_01G3UtWJrCibCYuX2wFxsYbR] Lane delivered #19806 (head 0be9f540, landing hold: Tier-2 by path, src/web/api/routers/trades_closed.py). The change is read-only and additive: a stored pnl 0.0 that classify_pnl already marks UNVERIFIED now serves realizedPnl=null, plus reconstructedPnl (ESTIMATED) from entry/exit/qty x the existing contract_value_usd_for. Manager reviewed the diff. DB backfill of the 9 zero rows is NOT done and is deliberately not proposed: writing a reconstruction into trades.pnl would fold ESTIMATED into the measured column (CLAUDE.md provenance rule); the API now serves it labelled instead. Sizing finding filed as MGC-SIZING-OVERSIZE.",
+  "note": "Week plan 2026-10-22 (Sat). Source: 2026-10-21 walkthrough PERFORMANCE. [2026-10-24T03:18Z manager session_01G3UtWJrCibCYuX2wFxsYbR] Dispatched lane session_01WS5Ldf (Sonnet, fresh, $6): rank 8, top of runnable queue; reporting/estimation fix, told to stop and report if it reaches the order path. Capacity 1 lane (weekly 19% at 23:34Z, reset Wed 18:00Z). [2026-10-24T03:50Z manager session_01G3UtWJrCibCYuX2wFxsYbR] Lane delivered #19806 (head 0be9f540, landing hold: Tier-2 by path, src/web/api/routers/trades_closed.py). The change is read-only and additive: a stored pnl 0.0 that classify_pnl already marks UNVERIFIED now serves realizedPnl=null, plus reconstructedPnl (ESTIMATED) from entry/exit/qty x the existing contract_value_usd_for. Manager reviewed the diff. DB backfill of the 9 zero rows is NOT done and is deliberately not proposed: writing a reconstruction into trades.pnl would fold ESTIMATED into the measured column (CLAUDE.md provenance rule); the API now serves it labelled instead. Sizing finding filed as MGC-SIZING-OVERSIZE. [lane session_01WS5Ldf, 2026-10-24T03:24Z] ROOT CAUSE (2026-10-24 lane): the headline $ is NOT mis-multiplied. Population: live /api/bot/trades/closed + journal?table=trades limit=1000, symbol=MGC strategy ict_scalp_mgc_15m with exit_price, n=11. Trades 6610/6603: (exit-entry)*qty*10 = 23.3*96*10 = 22368 and 12.2*150*10 = 18300, exactly the stored pnl, so the MGC multiplier (10 oz, contract_value_usd=10) is right. The -40,668 is REAL ARITHMETIC ON AN OVERSIZED QTY: 96 and 150 micro contracts is about USD 4.0M notional at 4173.8; that is SIZING (order path, Tier 3, not changed here) - filed for the manager. SECOND DEFECT (fixed): 9 of 11 rows (6450 6389 6345 6170 6058 6022 5995 5892 5817) stored pnl=0.0 from IB UNSET realizedPNL (ib_execution) pre-PROV-IB 2026-10-11; e.g. 6450 short 77 4169.9->4196.39 is -20397 at x10. Writer already fixed for new rows (exchange_fills_ib.py), history never backfilled. FIX: trades/closed now emits realizedPnl null plus reconstructedPnl (ESTIMATED) for that case. DB backfill not done (Tier 2).",
   "priority_rank": 8,
-  "updated_at": "2026-10-24T06:55:57Z",
+  "updated_at": "2026-10-24T07:15:00Z",
   "updated_by": "session_01UETC6mFiwMgXk6URsuWzZb",
   "roadmap": [
     "L-OPS"
   ],
+  "observation": {
+    "what": "GET /api/bot/trades/closed row 6450 shows realizedPnl null and reconstructedPnl about -20397.3 estimated, after deploy",
+    "how_to_check": "curl -s \"https://ict-bot.duckdns.org/api/bot/trades/closed?since=2026-08-01&limit=200&include_paper=true\" | python3 -c \"import sys,json;[print(r[\\\"id\\\"],r[\\\"realizedPnl\\\"],r.get(\\\"reconstructedPnl\\\")) for r in json.load(sys.stdin) if r[\\\"id\\\"]==\\\"6450\\\"]\"",
+    "due_by": "2026-10-31T00:00Z"
+  },
+  "writeback": {
+    "roadmap": "L-OPS: ib_paper MGC paper $ is sizing, not valuation",
+    "arch": "docs/ARCHITECTURE-CANONICAL.md: n/a - read-path field addition, api reference updated"
+  },
   "_seq": 602
 }

@@ -99,6 +99,9 @@ def test_returns_closed_trade_with_full_shape(db, client):
         # seed account here is the divergent one
         # (BL-20260826-JOURNAL-READS-DO-NOT-CONSULT-THE-BROKER-TRUTH-LEDGER).
         "journalTrust": "known_divergent",
+        # no unvalued-zero here -> nothing reconstructed
+        "reconstructedPnl": None,
+        "reconstructedPnlProvenance": None,
     }
 
 
@@ -669,3 +672,61 @@ def test_pnl_provenance_null_when_pnl_null(db, client):
     rows = client.get("/api/bot/trades/closed").json()
     assert rows[0]["realizedPnl"] is None
     assert rows[0]["pnlProvenance"] is None
+
+
+# ---------------------------------------------------------------------------
+# MGC valuation (PI-20261021-4ZLRFEV1-0002): an unvalued 0.0 is null, not $0
+# ---------------------------------------------------------------------------
+
+
+def _mgc_row(db, *, pnl, notes, exit_price=4196.39, direction="short"):
+    _insert_trade(
+        db,
+        timestamp="2026-10-05T06:00:00Z", symbol="MGC",
+        direction=direction, entry_price=4169.9, exit_price=exit_price,
+        position_size=77.0, exit_reason="sl_cross", pnl=pnl,
+        status="closed", is_backtest=0, strategy_name="ict_scalp_mgc_15m",
+        account_id="ib_paper", notes=json.dumps(notes),
+    )
+
+
+def test_mgc_unvalued_zero_is_null_with_estimated_reconstruction(db, client):
+    """Short 77 MGC 4169.9 -> 4196.39 stored pnl 0.0 (IB UNSET realizedPNL).
+
+    MGC multiplier is 10 ($/point), so the loss is 26.49 * 77 * 10 = 20,397.3
+    -- the stored 0.0 must not render as a $0.00 flat.
+    """
+    _mgc_row(db, pnl=0.0, notes={"exit_price_source": "ib_execution",
+                                 "ib_execution": 0.0})
+    row = client.get("/api/bot/trades/closed?include_paper=true").json()[0]
+    assert row["realizedPnl"] is None
+    assert row["pnlProvenance"] is None
+    assert row["reconstructedPnl"] == pytest.approx(-20397.3, abs=0.01)
+    assert row["reconstructedPnlProvenance"] == "estimated"
+
+
+def test_mgc_estimated_loss_is_untouched_and_not_reconstructed(db, client):
+    """A real local_compute value (96 contracts, trade 6610 shape) is passed
+    through at multiplier 10 -- no reconstruction rides beside it."""
+    _insert_trade(
+        db,
+        timestamp="2026-10-14T06:00:00Z", symbol="MGC", direction="long",
+        entry_price=4173.8, exit_price=4150.5, position_size=96.0,
+        exit_reason="sl_cross", pnl=-22368.0, status="closed",
+        is_backtest=0, strategy_name="ict_scalp_mgc_15m",
+        account_id="ib_paper",
+        notes=json.dumps({"exit_price_source": "verdict",
+                          "pnl_source": "local_compute"}),
+    )
+    row = client.get("/api/bot/trades/closed?include_paper=true").json()[0]
+    assert row["realizedPnl"] == -22368.0
+    assert row["pnlProvenance"] == "estimated"
+    assert row["reconstructedPnl"] is None
+
+
+def test_genuine_flat_zero_is_not_reconstructed(db, client):
+    _mgc_row(db, pnl=0.0, exit_price=4169.9,
+             notes={"exit_price_source": "ib_execution", "ib_execution": 0.0})
+    row = client.get("/api/bot/trades/closed?include_paper=true").json()[0]
+    assert row["realizedPnl"] == 0.0
+    assert row["reconstructedPnl"] is None
