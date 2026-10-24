@@ -187,6 +187,9 @@ def _venue_state(client, cfg: dict[str, Any], symbol: str, direction: str,
 
 
 def _ping(leg: dict[str, Any], new_sl: float, n_legs: int) -> None:
+    """One SL-moved ping, the same one the monitor sends on a trail move.
+    Kind ``trade-update``: ``execution_diagnostics`` routes it to the TRADES
+    channel through ``src.runtime.telegram_channels``."""
     try:
         from src.runtime.execution_diagnostics import enqueue_trade_update
 

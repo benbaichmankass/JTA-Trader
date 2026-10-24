@@ -3,5 +3,5 @@
   "landing": "hold",
   "hold_reason": "tier_2_3_needs_approval",
   "hold_text": "Lane AMEND-SL-ACTION (manager session 2026-10-24, operator popup 'Build the action now'): Tier 2 on the order path -- build and validate, do not merge. The manager merges on the operator's OK, then dispatches the action.",
-  "why": "New Tier-2 system-action amend-position-sl: a one-shot ops script that tightens one live Bybit stop through the EXISTING monitor modify seam (order_monitor._send_modify_to_exchange -> execute.modify_open_order) and writes order_packages.sl + trades.stop_loss together. No change to src/, the trader runtime, strategy config or risk caps; it runs only when dispatched via the system-actions workflow."
+  "why": "New Tier-2 system-action amend-position-sl: a one-shot ops script that tightens one live Bybit stop through the EXISTING monitor modify seam (order_monitor._send_modify_to_exchange -> execute.modify_open_order) and writes order_packages.sl + trades.stop_loss together. Only src/ change: one registry entry in src/runtime/telegram_channels.py::SENDERS mapping the script to its trade-update ping (no behaviour change). No trader runtime, strategy config or risk-cap change; it runs only when dispatched via the system-actions workflow."
 }
