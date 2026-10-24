@@ -1039,14 +1039,18 @@ def gate_set(items: Iterable[dict], rows: dict[str, dict], today: date | None = 
     for it in due(items, today):
         n_due += 1
         if it.get("state") != "routed":
-            classes["unrouted"].append(it["id"]); continue
+            classes["unrouted"].append(it["id"])
+            continue
         kind, ref = owner_of(it, rows, unit_exists)
         if kind == "unresolved":
-            classes["unrouted"].append(it["id"]); continue
+            classes["unrouted"].append(it["id"])
+            continue
         if kind == "row" and rows[ref].get("state") in GATE_CLOSED_ROW_STATES:
-            classes["owner_closed"].append(it["id"]); continue
+            classes["owner_closed"].append(it["id"])
+            continue
         if str(it.get("severity") or "").lower() == "high":
-            classes["high_severity"].append(it["id"]); continue
+            classes["high_severity"].append(it["id"])
+            continue
         excluded[{"row": "owner_row_live", "unit": "owner_unit", "pr": "owner_pr"}[kind]] += 1
     gate = sum(len(v) for v in classes.values())
     assert gate + sum(excluded.values()) == n_due
