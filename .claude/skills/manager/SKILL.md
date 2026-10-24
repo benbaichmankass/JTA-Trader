@@ -106,6 +106,13 @@ operator on the system Telegram channel. If the PR is ever replaced, change `pr_
    finds the manager among dozens of lanes.
 2. Read `CLAUDE.md`, `docs/CLAUDE-RULES-CANONICAL.md` and this file; then the
    checklist rows that are `in_flight` or `blocked`.
+   **Rotation case (an incoming manager created by § "Manager handover"): read less.**
+   Read this skill and the handoff doc in full. `CLAUDE.md` is already in the system prompt, so do not
+   re-read it. From `docs/CLAUDE-RULES-CANONICAL.md` (144 KB) read only: RULE ONE; Permission Tiers +
+   Data-backed Tier-2/3 decisions; Prime Directive; Lanes answer to the manager / Reading is never gated.
+   This narrows the "read in full" instruction (SessionStart contract item 1, `.claude/settings.json`)
+   **for the manager-rotation case only, by operator decision of 2026-10-24** (MANAGER-HANDOVER-SLIM).
+   Every other session, and a manager that starts fresh rather than by rotation, still reads in full.
 2b. **Subscribe to the ops-flags PR** (§ "Standing alert subscriptions").
 3. Take over every live lane: `get_session` it, then send it a trigger naming
    you as its manager (the reply channel is described under § "Every spawn
@@ -962,6 +969,7 @@ and take the notes from the past day's scratch pad (the Google Doc) and add thos
   prompts it needs to wake you.
 - `model` set explicitly;
 - a checklist row (id, lane, ceiling), written before dispatch.
+- Never merge a manager branch that has not landed on main into your branch; wait for it to land. A manager branch's unsquashed commit carries a merge-slot claim for another branch and fails manager-scope-guard (incident #19876, 2026-10-24).
 
 The prompt ends with this block, filled in:
 
@@ -1027,13 +1035,14 @@ The manager rotates **at its own discretion**; no operator OK is needed to start
 ### When
 
 Typical reasons:
-- **Context past ~300k tokens.** Cost per turn scales with context; the 2026-10-11 session reached 730k tokens and $165 by 2026-10-13. Past it, the outgoing manager drives the rotation itself and never hands it to the operator.
+- **Context past ~650k tokens.** Cost per turn scales with context; the 2026-10-11 session reached 730k tokens and $165 by 2026-10-13. Past it, the outgoing manager drives the rotation itself and never hands it to the operator.
+  > **Operator decision, 2026-10-24 (popup answer, verbatim):** "~650k + slimmer handover (Recommended)". The concern, verbatim: "if we're always switching and the switch itself is using all that capacity, then we haven't really accomplished much here." The threshold was ~300k until then. MEASURED 2026-10-24: the outgoing manager sat at 664k context and $26.76 for the day; the handover's own share (~130-150k) is the manager's estimate (INFERRED), which is why the handover is slimmed below as well.
 - **A natural boundary**, such as after a weekly planning pass or a review.
 - **Degraded recall.**
 
 **The rotation check is periodic, not remembered (operator ideas inbox, 2026-10-21).** The operator does not want to be the one
 who notices. So every run of § "The operating loop", and the first turn after every context compaction, starts with one check:
-call `get_session` on yourself and read `external_metadata.context_usage.used_tokens`. Past ~300k tokens, or with degraded recall,
+call `get_session` on yourself and read `external_metadata.context_usage.used_tokens`. Past ~650k tokens, or with degraded recall,
 **plan** the handover for the next natural boundary and say so in that loop's operator line. Below that, carry on silently.
 
 **Never mid-incident, and never with a merge or deploy half-done.** Finish or hold it first.
@@ -1061,7 +1070,7 @@ lane (Haiku, ~$1; precedent HANDOFF-LAND-1022, #19521) lands it through a self-l
 - the same `environment_id`; `source_url` set; `permission_mode: "auto"`;
 - tags `["manager", "predecessor:<old id>"]`;
 - title `Manager Session YYYY-MM-DD`;
-- prompt: read `CLAUDE.md`, this skill and the handoff doc; then perform V1 (including its own depth, `get_session` → lineage) and **wait for the old manager's diff**. Do not start routine work yet.
+- prompt: read this skill and the handoff doc in full; `CLAUDE.md` is already in the system prompt (do not re-read it); from `docs/CLAUDE-RULES-CANONICAL.md` read only the sections named in § "Start of session" step 2. Then perform V1 (the SHORT diff, including its own depth, `get_session` → lineage) and **wait for the old manager's diff**. Do not start routine work yet.
 
 **3. REWIRE.** `update_trigger` **cannot change a trigger's target session**, so:
 - (a) For every trigger whose `persistent_session_id` is the old session: `create_trigger` the same name, cron and prompt with `persistent_session_id=<new>`, then `update_trigger(enabled=false)` on the old one. Do not delete the old ones until step 5.
@@ -1073,13 +1082,15 @@ lane (Haiku, ~$1; precedent HANDOFF-LAND-1022, #19521) lands it through a self-l
 
 | # | Check | Pass means |
 |---|---|---|
-| **V1** | **Read-back** | The new manager restates, **from its own reading** (checklist, `list_sessions`, `list_triggers`, the handoff doc), the live lanes, pending operator decisions and the next 24 h of scheduled events. The old manager diffs this against its own list; every mismatch is fixed and re-read. |
+| **V1** | **Short diff** | The new manager lists **only what differs from the handoff doc** (lanes, PRs, triggers, operator decisions) and nothing that matches. Read with targeted calls: `list_sessions(mine=true, limit=10)` and `list_triggers(enabled=true)`, not full dumps; `get_session` on itself for depth. The old manager checks the diff against its own list; every mismatch is fixed and re-read. Record the incoming manager's `used_tokens` here: the target is under ~80k for the whole handover (MANAGER-HANDOVER-SLIM). |
 | **V2** | **Trigger audit** | The new manager is subscribed to the ops-flags PR (a `subscribe_pr_activity` call on it returns subscribed, not "already watched by another session"). `list_triggers` shows **zero enabled** triggers targeting the old session id. Every recurring routine, by name, exists, is enabled and targets the new one, including the "Manager lane check-in" routine (`17 */3 * * *`) (MEASURED 2026-10-23: dropped at the 10-21 and 10-22 rotations, a 4.7 h gap from 09:16Z to 13:59Z with no manager action). Counts match the pre-handover list from step 1. |
 | **V3** | **Id sweep** | The ops-flags subscription is held by the new session only. No enabled trigger prompt, assistant-manager charter or live lane brief still names the old session id as the escalation target. Grep the prompts from `list_triggers` / `get_trigger` for the old id. |
 | **V4** | **Wake round-trips** | (a) old → new: a test trigger is answered by a trigger back. (b) assistant manager → new: the assistant fires its escalation path and the new manager answers. (c) one live lane, if any, is told the new id and acknowledges. |
 | **V5** | **Operator notified, in one message** | New session link, what moved, and anything **not** moved with the reason. |
 
 A grep that returns nothing proves nothing until the same grep is shown to find the old id on a known positive (RULE ONE): run V3's search on the pre-rewire prompt list first.
+
+V2-V5 are unchanged as checks; do them with targeted reads (`get_trigger` on the named routines, a grep over the already-fetched enabled list), not full re-dumps.
 
 **5. STAND DOWN.** Only after V1–V5 pass:
 - the old manager takes no further actions;

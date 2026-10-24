@@ -1,0 +1,25 @@
+{
+  "id": "MANAGER-HANDOVER-SLIM",
+  "title": "Manager rotation: plan handover at ~650k (was ~300k) and slim the handover (targeted canonical read, short V1 diff, no full dumps); add 'lanes never merge an unmerged manager branch' to the dispatch block",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "session_01SX3Cx8hA6D6V8kJV3iiPB2",
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 5,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-24T15:05Z manager session_01UETC6mFiwMgXk6URsuWzZb] OPERATOR, verbatim in chat: \"if we're always switching and the switch itself is using all that capacity, then we haven't really accomplished much here\". OPERATOR popup answer, verbatim: \"~650k + slimmer handover (Recommended)\". MEASURED on session_01UETC6m at 15:01Z (get_session): 664k context and $26.76 for the whole day of managing. The handover share (about 130-150k) is the manager's own estimate (INFERRED): full reads of 3 canonical docs (~100k, CLAUDE-RULES alone is 144 KB), the handoff doc, full trigger and session dumps, and the V1-V4 exchange. Repeated PR-wake boilerplate came to about 100k more. [2026-10-24 lane session_01SX3Cx8hA6D6V8kJV3iiPB2] Landed: threshold ~300k->~650k, slimmer incoming read (targeted CANONICAL sections), short V1 diff, dispatch-block line (incident #19876), SessionStart hook carve-out for the rotation case. No CI guard enforced a full read (grep scripts/ci); only the hook text did.",
+  "priority_rank": 2,
+  "updated_at": "2026-10-24T15:04:29Z",
+  "updated_by": "session_01UETC6mFiwMgXk6URsuWzZb",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 628,
+  "observation": "the next manager rotation's handover costs under ~80k tokens of the incoming manager's context, measured by get_session at V1",
+  "due": "2026-11-07",
+  "writeback": "manager SKILL.md \u00a7 Manager handover (threshold ~650k, short V1) and \u00a7 Start of session (rotation read); milestone L-OPS"
+}
