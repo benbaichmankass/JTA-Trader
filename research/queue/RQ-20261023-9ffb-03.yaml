@@ -1,7 +1,7 @@
 id: RQ-20261023-9ffb-03
 title: 'Trend-strength floor, long-only, real money, held-out: does an ADX floor (adx_min 20, 25) on slv_pullback_1d beat the ungated long-only leg on the latest
   ~25% of 2006-2025, selected on the earlier span only?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -114,3 +114,16 @@ related:
 - research/programmes/03-strategy-improvement.yaml
 - scripts/research/exit_lever_ablation.py
 last_dispatched_at: '2026-10-24T08:23:56+00:00'
+grading:
+  attested: RULE-RQ202610239ffb03
+  auto: true
+  decision_rule_id: RULE-RQ202610239ffb03
+  evidence:
+  - research/results/RQ-20261023-9ffb-03/40077915182.jsonl
+  graded_at: '2026-10-24'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

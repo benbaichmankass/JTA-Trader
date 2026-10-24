@@ -1,7 +1,7 @@
 id: RQ-20261023-9ffb-01
 title: 'Retention at the traded population, real money: does slv_pullback_1d LONG-ONLY at its current declared exits (tp_r 3.5, trail decay) clear Stage 0 over 2006-10-02..2025-04-09,
   net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -102,3 +102,16 @@ related:
 - research/programmes/03-strategy-improvement.yaml
 - scripts/research/exit_lever_ablation.py
 last_dispatched_at: '2026-10-24T07:24:41+00:00'
+grading:
+  attested: RULE-RQ202610239ffb01
+  auto: true
+  decision_rule_id: RULE-RQ202610239ffb01
+  evidence:
+  - research/results/RQ-20261023-9ffb-01/40074059168.jsonl
+  graded_at: '2026-10-24'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
