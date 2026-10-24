@@ -1000,6 +1000,60 @@ def unrouted_count(items: Iterable[dict], today: date | None = None) -> int:
     return len(unrouted(items, today))
 
 
+# ── HEALTH-GATE-NARROW (operator, 2026-10-24: "Narrow the gate (Recommended)") ─
+# The /health-review per-item drain gate counts ONLY: (1) unrouted items (incl.
+# an owner that cannot be resolved), (2) items whose owner checklist row has
+# CLOSED (done/dropped) while the item is still due, (3) high-severity items.
+# Owner-routed items with a LIVE owner are the owner's job; blocker_watch's
+# UNPROVEN_OVERDUE sweep tracks them. MEASURED 2026-10-24: due 369, 349 routed
+# to a live row. The excluded count is returned, never dropped silently.
+GATE_CLOSED_ROW_STATES = ("done", "dropped")
+_OWNER_TOKEN = re.compile(r"[A-Za-z0-9_.\-]+")
+_OWNER_PR = re.compile(r"PR\s*#\d+")
+
+
+def owner_of(item: dict, rows: dict[str, dict], unit_exists=lambda uid: False) -> tuple[str, str]:
+    """-> (kind, ref) kind in row|unit|pr|unresolved. ``routed_to`` is free text
+    that leads with the owner ('A7', 'checklist row A7 | ...', 'RQ-..', 'PR #1')."""
+    text = re.sub(r"^checklist row\s+", "", str(item.get("routed_to") or "").strip())
+    if _OWNER_PR.match(text):
+        return "pr", _OWNER_PR.match(text).group(0)
+    m = _OWNER_TOKEN.match(text)
+    tok = m.group(0) if m else ""
+    if tok in rows:
+        return "row", tok
+    if tok.startswith("RQ-") and unit_exists(tok):
+        return "unit", tok
+    return "unresolved", tok
+
+
+def gate_set(items: Iterable[dict], rows: dict[str, dict], today: date | None = None,
+             unit_exists=lambda uid: False) -> dict:
+    """The health-review drain-gate population, COMPUTED. Returns the gate ids
+    per class, ``gate`` (union size), and the denominator: ``due`` and
+    ``excluded`` with the reason (live owner row / unit / PR). A due item in
+    several classes counts once, under the first of unrouted > owner_closed > high."""
+    classes: dict[str, list[str]] = {"unrouted": [], "owner_closed": [], "high_severity": []}
+    excluded = {"owner_row_live": 0, "owner_unit": 0, "owner_pr": 0}
+    n_due = 0
+    for it in due(items, today):
+        n_due += 1
+        if it.get("state") != "routed":
+            classes["unrouted"].append(it["id"]); continue
+        kind, ref = owner_of(it, rows, unit_exists)
+        if kind == "unresolved":
+            classes["unrouted"].append(it["id"]); continue
+        if kind == "row" and rows[ref].get("state") in GATE_CLOSED_ROW_STATES:
+            classes["owner_closed"].append(it["id"]); continue
+        if str(it.get("severity") or "").lower() == "high":
+            classes["high_severity"].append(it["id"]); continue
+        excluded[{"row": "owner_row_live", "unit": "owner_unit", "pr": "owner_pr"}[kind]] += 1
+    gate = sum(len(v) for v in classes.values())
+    assert gate + sum(excluded.values()) == n_due
+    return {"due": n_due, "gate": gate, "counts": {k: len(v) for k, v in classes.items()},
+            "ids": classes, "excluded": excluded, "excluded_total": n_due - gate}
+
+
 def stats(res: LoadResult, today: date | None = None) -> dict:
     items = list(res.items.values())
     by_state = {s: sum(1 for i in items if i.get("state") == s) for s in STATES}
@@ -1551,6 +1605,35 @@ def _selftest() -> int:
               "(loud, not silently passed)",
               gid in out2.getvalue())
 
+    print("— HEALTH-GATE-NARROW: the drain-gate set is COMPUTED, with its denominator —")
+    gt = date(2026, 9, 21)
+    grows = {"LIVE": {"id": "LIVE", "state": "landed_unproven"},
+             "GONE": {"id": "GONE", "state": "done"},
+             "DROP": {"id": "DROP", "state": "dropped"}}
+    gitems = [
+        base(id="G-UNROUTED", state="queued"),
+        base(id="G-CLOSED-DONE", state="routed", routed_to="checklist row GONE | note"),
+        base(id="G-CLOSED-DROPPED", state="routed", routed_to="DROP (re-routed)"),
+        base(id="G-HIGH", state="routed", routed_to="LIVE", severity="high"),
+        base(id="G-NOROW", state="routed", routed_to="no such row at all"),
+        base(id="X-LIVE", state="routed", routed_to="LIVE | x"),
+        base(id="X-UNIT", state="routed", routed_to="RQ-1 (unit)"),
+        base(id="X-PR", state="routed", routed_to="PR #12 held"),
+        base(id="X-NOTDUE", state="routed", routed_to="GONE",
+             due_when={"kind": "date", "due_date": "2027-01-01"}),
+    ]
+    gs = gate_set(gitems, grows, gt, unit_exists=lambda u: u == "RQ-1")
+    check("planted unrouted item (+ unresolvable owner) is in the gate",
+          sorted(gs["ids"]["unrouted"]) == ["G-NOROW", "G-UNROUTED"])
+    check("planted owner-closed items (done and dropped) are in the gate",
+          sorted(gs["ids"]["owner_closed"]) == ["G-CLOSED-DONE", "G-CLOSED-DROPPED"])
+    check("planted high-severity item with a live owner is in the gate",
+          gs["ids"]["high_severity"] == ["G-HIGH"])
+    check("live-owner row/unit/PR items are EXCLUDED, and counted by reason",
+          gs["excluded"] == {"owner_row_live": 1, "owner_unit": 1, "owner_pr": 1})
+    check("denominator: gate + excluded == due (not-due item in neither)",
+          gs["due"] == 8 and gs["gate"] == 5 and gs["excluded_total"] == 3)
+
     print("— POSITIVE CONTROL: two branches each appending one record merge "
           "cleanly with plain git (the actual property this re-point buys) —")
     _check_git_merge_safety(check)
@@ -1695,6 +1778,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--all", action="store_true",
                     help="with --due: render every due item (no cap, no truncation)")
     ap.add_argument("--stats", action="store_true")
+    ap.add_argument("--gate", action="store_true",
+                    help="print the health-review drain-gate set + its denominator")
     ap.add_argument("--version-of", metavar="ID",
                     help="print the version token of ID's latest record (the "
                          "value append(..., based_on=) needs) and exit")
@@ -1734,6 +1819,19 @@ def main(argv: list[str] | None = None) -> int:
     if args.check:
         return _check(store)
     res = read_log(store)
+    if args.gate:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+        from src.runtime import checklist_store
+        cl = checklist_store.load()
+        rows = {r["id"]: r for r in (cl.get("rows") or cl.get("items") or [])}
+        if not rows:  # could-not-look must not read as "every owner unresolved"
+            print("pipeline: --gate could not read any checklist rows")
+            return 1
+        qdir = Path(__file__).resolve().parents[2] / "research" / "queue"
+        g = gate_set(res.items.values(), rows,
+                     unit_exists=lambda u: (qdir / f"{u}.yaml").exists())
+        print(json.dumps(g, indent=2, sort_keys=True))
+        return 0 if res.healthy else 1
     if args.stats:
         print(json.dumps(stats(res), indent=2, sort_keys=True))
         return 0 if res.healthy else 1
