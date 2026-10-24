@@ -87,8 +87,8 @@ def sweep(since, until, trainer_ip, allow=frozenset(), window=timedelta(minutes=
             stack.append((mid, b))
             stack.append((a, mid))
             continue
-        for l in lines:
-            m = _ACCEPT.match(l)
+        for line in lines:
+            m = _ACCEPT.match(line)
             if not m:
                 continue
             res["total_accepts"] += 1
