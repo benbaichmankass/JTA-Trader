@@ -54,6 +54,7 @@ adversarial head, and a planted predictable-extent synthetic that must PASS.
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import math
 import sys
@@ -91,7 +92,7 @@ def build_trades(path_rows: list[dict[str, Any]], tinfo: dict[str, dict[str, Any
         rows.sort(key=lambda r: int(r["bar_offset"]))
         if len(rows) < 2 or not rows[-1].get("is_exit") or key not in tinfo:
             continue
-        a = lambda f: np.array([_num(r.get(f)) for r in rows], dtype=float)  # noqa: E731
+        a = lambda f, rows=rows: np.array([_num(r.get(f)) for r in rows], dtype=float)
         out.append({"key": key, "leg": leg, "info": tinfo[key], "n": len(rows),
                     "entry_ts": np.datetime64(str(tinfo[key]["entry_time"]).replace("+00:00", "")),
                     "ts": [str(r["ts"]) for r in rows], "offset": a("bar_offset"),
@@ -110,7 +111,7 @@ def trade_states(t: dict[str, Any]) -> tuple[np.ndarray, np.ndarray, np.ndarray]
     atr = t["atr"][i]
     c = t["c"]
     cext = np.concatenate([[0.0], c])                     # cext[j+1] = c_r of bar j; cext[0] = entry
-    mom = lambda k: (cext[i + 1] - cext[np.maximum(i + 1 - k, 0)]) / atr  # noqa: E731
+    mom = lambda k: (cext[i + 1] - cext[np.maximum(i + 1 - k, 0)]) / atr
     stop_n, tgt_n = t["stop"][i + 1], t["target"][i + 1]  # in force for the NEXT bar: known at this close
     absent = np.isnan(tgt_n)
     fav, adv = t["fav"], t["adv"]
@@ -236,8 +237,8 @@ def net_r_for(t: dict[str, Any], exit_idx: int, exit_r: float | None, cost: dict
 
 
 def _bar_minutes(trades: list[dict[str, Any]]) -> float | None:
-    import pandas as pd
     import capital_efficiency as ca
+    import pandas as pd
     best = max(trades, key=lambda t: t["n"])
     return ca.bar_minutes_from_frame(pd.DataFrame({"timestamp": pd.to_datetime(best["ts"], utc=True)}))
 
@@ -317,7 +318,7 @@ def grade(trades: list[dict[str, Any]], cost_by_leg: dict[str, dict[str, float]]
                 net_a = float(t["info"]["net_r"])
                 net_p = net_r_for(t, r["exit_idx"], r["exit_r"], cost) if r["filled"] else net_a
                 bars_a, bars_p = float(t["offset"][-1]), float(t["offset"][r["exit_idx"]])
-                d = lambda b: ca.days_from_bars(b, bm[t["leg"]]) or 0.0  # noqa: E731
+                d = lambda b, t=t: ca.days_from_bars(b, bm[t["leg"]]) or 0.0
                 rows.append({"fold": int(fid[i]), "net_a": net_a, "net_p": net_p, "days_a": d(bars_a), "days_p": d(bars_p),
                              "pulled": r["pulled"], "filled": r["filled"], "leg": t["leg"],
                              "exit_a": t["last_ts"], "exit_p": np.datetime64(t["ts"][r["exit_idx"]][:19])})
@@ -488,7 +489,7 @@ def _synth(n_trades: int, planted: bool, seed: int, hazard: float = 0.08) -> tup
     paths, info = [], {}
     for k in range(n_trades):
         entry_ts = t0 + np.timedelta64(int(k * (3 * 365 * 24) / n_trades), "h")
-        key = f"synth|SYN|{str(entry_ts)}+00:00|long"
+        key = f"synth|SYN|{entry_ts!s}+00:00|long"
         rows, c, peak, peak_j, mae = [], 0.0, 0.0, 0, 0.0
         E = rng.uniform(1.5, 4.0)
         j = 0
@@ -535,8 +536,8 @@ def rows_peaked(rows: list[dict[str, Any]], E: float) -> bool:
     return bool(rows) and rows[-1]["peak_r"] >= E - 0.2
 
 
-GRADE_KW = dict(taus=[0.5, 0.7], folds=6, clause1_folds=4, clause2_folds=5, cov_tol=0.05, atr_buffer=0.25, min_diff=-0.02,
-                ci_lb=-0.05, dd_mult=1.35, min_trades=600, min_fill_share=0.05, bootstrap=300)
+GRADE_KW = {"taus": [0.5, 0.7], "folds": 6, "clause1_folds": 4, "clause2_folds": 5, "cov_tol": 0.05, "atr_buffer": 0.25, "min_diff": -0.02,
+                "ci_lb": -0.05, "dd_mult": 1.35, "min_trades": 600, "min_fill_share": 0.05, "bootstrap": 300}
 
 
 def _synth_grade(planted: bool, n: int, seed: int) -> tuple[dict[str, Any], list[dict[str, Any]]]:
@@ -556,7 +557,6 @@ def _self_test() -> int:
     # 1. random walk: no calibration gain, verdict not PASS
     g, trades = _synth_grade(False, 900, 5)
     for tau, v in g["per_tau"].items():
-        gains = [p["gain"] for p in v["clause1"]["per_fold"] if p.get("gain") is not None]
         rel = float(np.mean([p["gain"] / p["loss_q0"] for p in v["clause1"]["per_fold"] if p.get("gain") is not None]))
         check(f"random-walk tau={tau}: no calibration gain (mean rel gain {rel:.4f} < 0.01)", rel < 0.01)
         check(f"random-walk tau={tau}: not a PASS", v["verdict"] != "pass", v["verdict"])
@@ -564,14 +564,13 @@ def _self_test() -> int:
     # 2. a TP never moves up -- even for an adversarial head whose Q rises every bar
     t = trades[0]
     n1 = t["n"] - 1
-    ok_mask = np.ones(n1, dtype=bool)
     for name, Q in (("rising", np.linspace(0.0, 5.0, n1)), ("falling", np.linspace(5.0, 0.0, n1)),
                     ("random", np.random.default_rng(1).uniform(0, 3, n1))):
         worst = True
         for tr in trades[:200]:
             q = np.resize(Q, tr["n"] - 1)
             tp_path = replay(tr, q, np.ones(tr["n"] - 1, dtype=bool), 0.25)["tp_path"]
-            worst &= all(b <= a + 1e-12 for a, b in zip(tp_path, tp_path[1:]))
+            worst &= all(b <= a + 1e-12 for a, b in itertools.pairwise(tp_path))
         check(f"TP never moves up ({name} head, 200 trades)", worst)
     # 3. planted predictable-extent PASSES
     gp, _ = _synth_grade(True, 900, 7)
