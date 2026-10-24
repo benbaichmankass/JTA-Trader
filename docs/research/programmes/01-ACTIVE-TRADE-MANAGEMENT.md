@@ -1,8 +1,136 @@
-# Programme 01 — Active trade management: brackets as predictions
+# Programme 01 — AI active trade management: brackets as predictions, moved by models
 
 > **Doc status:** `unknown` · category `evidence` · last verified `2026-10-16` · registered in [`../../DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md) · lane `RESEARCH-PROGRAMMES` (manager dispatch, weekly planning 2026-10-14) · map: [`RESEARCH-MAP.md`](RESEARCH-MAP.md) · roadmap `M20` + `M31` · **Tier-1 document: it proposes tests; every flip it leads to is Tier-3 with an evidence record.**
 
 > **2026-10-14 amendment (lane `IN-TRADE-EXIT-MODEL`, operator direction via the manager):** the exit line now has a stated **destination — Q8, the in-trade exit model**: at every bar of an open trade, P(SL before TP | state now), and an exit-now rule graded net of cost. Q1–Q7 are the rungs that feed it or ship alongside it; nothing below was removed. The operator's words are verbatim on checklist row `IN-TRADE-EXIT-MODEL`.
+
+## AI active trade management — the merged programme (2026-10-24, lane `ATM-AI-MERGE`)
+
+> **Operator, verbatim (2026-10-24, relayed by Manager Session 2026-10-24, row `ATM-AI-MERGE`):** *"I want to start sort of trying to merge our two top priorities and trying to get active management, like under AI management, and seeing like what kind of models we can build to help us like with the live management of trades and moving the brackets as conditions change."*
+>
+> **What changed.** Programme 01 (active trade management) and Programme 02 Q3 (exit models) are now **one programme, this document**. 02 Q3 points here and keeps no separate ladder. Q1–Q8 below remain the history and the rule-lever track; this section is the plan of record for models that manage live trades. It is a Tier-1 plan: it authorises nothing, and every bracket flip it leads to is Tier-3 with an evidence record.
+
+### Operator one-pager
+
+**Build first: `FIRST-PASSAGE-ON-PATHS`, then `REMAINING-MOVE-HEAD`.** Every model that has failed here was graded on a bracket no leg trades (a fixed −1 R / +K R reconstruction), or on per-trade targets with ~20–120 out-of-sample trades. The harness can now replay each money leg **as it trades**, bar by bar, with its real stop and target (`--emit-paths`, #18536). The research reader for that is not built: `first_passage.py` takes `--ledgers` only (checked 2026-10-24). That one build unblocks the decisive test. Each rung below is a pre-registered unit whose rule was written before the run.
+
+| rung | what it would prove | unit | gated on | compute |
+|---|---|---|---|---|
+| **A1** | Does momentum/ADX state say *"holding from here loses to exiting now"* beyond where the trade sits against its own stop and target? Linear model. | `blocked/RQ-20261024-09a6-01` | `FIRST-PASSAGE-ON-PATHS` | runner, cpu_light, ~1 h |
+| **A1-policy** | Does an exit-now rule on that state beat each leg's own exit, net of cost, in ≥ 5 of 6 folds? | `blocked/RQ-20261014-d6e7-06` (already registered) | same build | runner, ~1 h |
+| **B1** | Can a model predict how much further the move runs from here, and does pulling the TP in to that point raise net R per capital-day? | `blocked/RQ-20261024-09a6-03` | `REMAINING-MOVE-HEAD` | runner, ~1.5 h |
+| **C1** | Can a chooser pick, per trade, among the rule exits that already confirmed, better than the single best fixed rule? | `blocked/RQ-20261024-09a6-04` | `EXIT-ARM-CHOICE-CORPUS` | runner, ~2 h |
+| **A2** | Do funding, taker flow and open interest add exit information beyond price? | `blocked/RQ-20261024-09a6-02` | `PATH-FLOW-JOIN` + A1 graded | runner, ~1 h |
+| **D** | Can a predictor GATE the validated levers (tighten only on flagged trades) better than a random flag? | `RQ-20261024-9a7e-01..04` (queued); `RQ-20261022-b7e1-04..10` graded **FAIL ×7** | — | runner |
+
+**Cost.**
+- Each build is one Tier-1 lane: ~$15 Opus for `FIRST-PASSAGE-ON-PATHS` (its row's estimate), and ~$8–15 each for the other three. INFERRED from comparable lanes.
+- Every unit runs on the free GitHub runner over keyless public candles. No GPU and no trainer time until a linear rung passes.
+
+**What it would take to reach a live bracket-moving model.**
+1. One rung PASSES offline: A1 + A1-policy, B1 or C1.
+2. A harness-native confirmation on each leg under the exit-refinement P2 gate (Path A or Path B, 6-fold walk-forward).
+3. **The bracket advisor (`BRACKET-ADVISOR-SHADOW`, a Tier-2 proposal) logs, for 1–2 live trades per leg, the bracket the model would set beside the live bracket.** The offline harness must reproduce those values on the same bars. That is the parity read.
+4. A Tier-3 proposal with the record. Real money and prop come first. Mirrors follow by roster equality.
+
+If nothing fails, that is about 3–4 weeks: builds in week 1, rungs in week 2, confirmation and advisor in weeks 3–4. INFERRED from the Q8 cadence above, not a commitment.
+
+**What already failed, said plainly.**
+- Three LightGBM exit heads (ML-S2).
+- The whole linear first-passage line on the fixed-bracket reconstruction (d6e7-02, RQ-20261016-012/-013, 1fa6-06).
+- Path metrics once room-to-stop is controlled (EXIT-PATH-METRICS-W43).
+- The giveback-predictor gate at P ≥ 0.5 (eba2-07/-08).
+- The path-state trail gate (b7e1-04..10, FAIL ×7).
+
+Two things work today, and both are **rules**:
+- momentum/stall-keyed trails;
+- stall-keyed TP pull-ins.
+
+The honest prior for A1 is therefore *probably FAIL*, and that is why it runs first: it is cheap, and a FAIL closes the price-state model line on the legs as traded. B1 and C1 are built so that they still pay if A1 fails:
+- B1's fallback is a per-leg bucketed rule.
+- C1 chooses among rules that already work.
+
+### End measure
+
+**Net P&L per capital-day vs the bracket the leg trades today**, in R and in $, net of the full cost stack (`execution_costs.resolve_cost_policy()`), out of sample (6 purged calendar folds), per leg and pooled. Capital-days come from `scripts/capital_efficiency.py` (single home). Real money and prop come first. A paper or live book never establishes edge.
+
+**Supporting measure — the prize.** MEASURED, `docs/reviews/2026-10-21-weekly-walkthrough.md` § 3:
+- The paper+mirror book keeps about **13–15% of its peak R** (90 days, n = 328 R-graded closes).
+- Peak is an ESTIMATED lower bound, so the true giveback is at least that.
+- Real-money giveback is still `insufficient_n`.
+
+The fixed-bracket oracle saving was **0.656 R/trade** (d6e7-01, n_sl_first 2,089). That is a ceiling, not an estimate of what a model captures.
+
+### Measured state this plan is built from (re-read 2026-10-24; re-run, never quote)
+
+| fact | MEASURED where |
+|---|---|
+| Three LightGBM exit heads failed offline: donchian −14.66 R OOS; S2-exit INDETERMINATE (SOL −4.30 / XRP +0.21 / ETH −1.16); XRP multi-fold FAIL (1 of 3 folds, −1.94 R pooled) | `docs/plans/ml-plan-items.yaml` ML-S2 |
+| The linear per-bar first-passage model on the FIXED-bracket reconstruction adds nothing beyond where the trade is (K = 2 and 3, pooled and HTF), and the policy cannot pay for its exits; the same question on legs AS TRADED is **not** ruled out | row `IN-TRADE-EXIT-MODEL` note (2026-10-18 write-back) |
+| Room-to-stop is the dominant giveback predictor (AUC ~0.81). The pooled path-metric pass (+0.0115 nats, 5 of 6 folds) shrinks to +0.0022 (3 of 6) once room-to-stop is controlled. Population: 958 trades / 18,770 states on 5 money legs. | row `EXIT-PATH-METRICS-W43`, `docs/research/exit-path-metrics-2026-10-22.md` |
+| The giveback predictor has log-loss skill only (OOS R² gain ~0). The P ≥ 0.5 gate FAILED (eba2-07/-08). `RQ-20261024-9a7e-01..04` are `queued`. | row `EXIT-GIVEBACK-PREDICTOR-GATE`; `research/queue/RQ-20261024-9a7e-0*.yaml` |
+| Rule levers that confirmed out of sample: ADX trail on xrp_4h (RQ-20261016-015; its sibling corroboration 511e-01 FAILED, so it is declared on the `bybit_1` alias only); momentum-stale stop on slv_1d (RQ-20261016-016; parameter-fragile: 12 bars fails); measured-move TP w0.5 on eth_4h (RQ-20261018-007) | § "Programme review 2026-10-21" and row `MOMENTUM-LEVERS-LIVE` |
+| Live momentum levers at harness parity: #19856 MERGED (23c415ae) and DEPLOYED (diag #19870, 13:52Z 2026-10-24, live on 70815f27). **Not yet OBSERVED**: the first closed-bar trail/stale exit is owed by 2026-10-31. | row `MOMENTUM-LEVERS-PARITY` |
+| `first_passage.py` has no `--paths` input. No `*__paths.jsonl` is committed under `comms/`. `path_metric_giveback.run_leg_paths` already runs a leg config-exact with `--emit-paths` inside a unit, so no committed corpus is needed. Path rows carry `dist_to_stop_r`, `dist_to_target_r`, `atr_r` and `adx_14`. | grep of `scripts/research/first_passage.py`, `scripts/research/path_metric_giveback.py`, `scripts/research/harness_emit.py` on 2026-10-24 |
+| Live per-bar history exists: `position_path_history` holds one row per (package, bar) with sl/tp in force, peak, MAE, ATR and ADX. It is observe-only. | `src/runtime/position_path_history.py`; row `EXIT-PATH-TELEMETRY-LIVE` (`done`) |
+
+### The model ladder — cheapest and decisive first
+
+Common to every rung:
+- Population: the six money legs the trend and pullback harnesses replay: `trend_donchian_eth_4h`, `trend_donchian_xrp_4h`, `xrp_pullback_2h`, `ada_pullback_2h`, `trend_donchian_eth_prop`, `trend_donchian_sol_prop`.
+- Window: 2020-07 .. 2026-10. Folds: 6 calendar folds by entry, purged.
+- Cost and labels: the full cost stack; labels are truncation-honest (the leg's own exit, never a re-simulated barrier).
+- Learner order: linear before GBDT or sequence. A richer learner is earned by a linear PASS (plan 8.7, unchanged).
+
+1. **(a) In-trade information on the legs as traded — A1 → A1-policy → A2 → A3.**
+   - **A1** (`09a6-01`) labels each bar *"the leg's own exit loses to exiting now, net of the exit cost"*.
+     - The reference **includes** room-to-stop and room-to-target, because that is what the evidence says carries the signal.
+     - The candidate adds momentum, ADX, the 3-bar ADX slope, range contraction and close location.
+   - **A1-policy** is the already-registered `d6e7-06`: exit-now vs each leg's actual exit, ≥ 0.05 R/trade, ≥ 5 of 6 folds.
+   - **A2** (`09a6-02`) adds flow: funding, taker imbalance, OI where point-in-time history exists. It runs on any A1 verdict, because a new information class is a different question.
+   - **A3** is a GBDT twin on the same folds. It is not filed; it is earned by an A1 or A2 PASS.
+2. **(b) Moving the TP — B1** (`09a6-03`). A per-bar remaining-move quantile head.
+   - Graded **calibration first**: pinball loss vs the leg's own bucketed quantile.
+   - Then graded on money: a pull-in-only TP replay vs the leg as traded, on net R per capital-day.
+   - Pull-in only, because it is the one TP move a path replays honestly. Extensions stay with the harness `tp_revision` lever.
+   - A clause-1 FAIL makes the bucketed per-leg quantile the TP-revision answer: a rule, not a model.
+   - The entry-time sibling is `TP-PREDICT-HEAD` (`RQ-20261009-900/901`, blocked on its own corpus run).
+3. **(c) Policy over proven rules — C1** (`09a6-04`). A chooser picks per trade among the declared exit and the confirmed rule levers.
+   - Offline, every arm's outcome is observed by re-running the harness. So this is full-information cost-sensitive classification, with no propensities.
+   - `RQ-20261011-9da8-04` (doubly-robust OPE bandit) stays for the live-logged case.
+   - A PASS earns C2: per-bar switching, which needs a harness that accepts a policy. Not filed.
+4. **(d) Gates on the validated levers.** Two sets are already registered:
+   - `9a7e-01..04` (vol-controlled giveback gate vs a matched-rate random flag) are **QUEUED**, not yet run.
+   - `b7e1-04..10` (the path-state trail gate) are the seven units graded **FAIL** (their `grading` blocks, read 2026-10-24). Their build `PATHSTATE-TRAIL-GATE` is `landed_unproven`. This lane authors nothing here, to avoid duplicates. The `f08c-*` and `4ef5-*` rule variants also stay as queued.
+
+### The bracket advisor — observe-only, the parity and evidence path
+
+**`BRACKET-ADVISOR-SHADOW`** is a Tier-2 proposal. It is not built and not approved, and any PR for it is held.
+- **What it does.** On every monitor pass, for every live position, it writes the SL/TP a candidate would set (`advisor_sl_r`, `advisor_tp_r`, `advisor_source`) beside the live `sl_r` / `tp_r` on the same `position_path_history` row.
+- **How it stays safe.** It reuses the same functions the harness uses. It is never read by the exit path and never raises.
+- **Phase 0** needs no model. It shadows the rule levers that confirmed but are undeclared on a leg. That gives a live parity read *before* a Tier-3 declare instead of after it. Today's `ADA-LIVE-EXIT-REVIEW-1024`, where the operator moved a real-money stop by hand, is the case it would have logged.
+- **Phase 1** carries the output of the first rung that PASSES.
+- **The rule it serves.** No Tier-3 bracket flip of a model-driven exit without (1) an offline PASS and (2) the advisor's parity read on 1–2 live trades. That is mechanics only, never a sample size (the soak rule, OPERATING-PLAN § 2).
+
+### Data foundation and the critical path
+
+| build | why | tier | rank | state |
+|---|---|---|---|---|
+| `FIRST-PASSAGE-ON-PATHS` | reader for as-traded per-bar paths. Gates A1 and A1-policy. Spec extended 2026-10-24: as-traded label, room-to-stop reference, momentum/ADX-slope features, reuse of `run_leg_paths` | 1 | **1 — critical path** | queued |
+| `REMAINING-MOVE-HEAD` | B1's head and its pull-in replay | 1 | 2 | queued |
+| `EXIT-ARM-CHOICE-CORPUS` | C1's per-arm join and chooser grader | 1 | 3 | queued |
+| `PATH-FLOW-JOIN` | point-in-time funding, taker and OI on path rows (A2) | 1 | 4 | queued |
+| `BRACKET-ADVISOR-SHADOW` | live parity of any candidate bracket | **2** (proposal) | 5 — critical for any live flip, not for research | queued |
+| `EXIT-PATH-EMIT-OFFLINE` | the harness `--emit-paths` (built, #18536). Its close-out observation, a committed path run, is still owed; the rungs above do not need it, because each unit emits in-run | 1 | — | landed_unproven |
+| `DATA-INTRADE-LABEL-STORE` | the persisted, versioned label dataset (Programme 06 Q4). Needed for training at scale, not for the linear rungs | 1 | — | blocked |
+| `PATHSTATE-TRAIL-GATE` | rung D's harness gate | 1 | — | landed_unproven |
+
+**Write-back.** Every rung verdict is written to:
+- row `IN-TRADE-EXIT-MODEL`;
+- `ROADMAP.md` milestone L-ATM;
+- the exit-refinement coverage matrix (`exit_head_ml` column).
+
+A FAIL is written with its number and closes only the line its rule names. It never closes the family ("first test failed → variants queued", exit-refinement § "Reading a FAIL").
 
 ## Programme review 2026-10-21 (lane RESEARCH-PROGRAMME-REVIEW-1021)
 

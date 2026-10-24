@@ -11,12 +11,13 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "[2026-10-18 lane ACTIVE-MGMT-DRIVE-1018] WHY: the whole fixed-bracket Q8 line closed FAIL (d6e7-02, RQ-20261016-012/-013, 1fa6-06; see IN-TRADE-EXIT-MODEL note), and the honest residual is that the reconstruction (a fixed bracket: the stop at the entry risk, the target at K multiples of it) is not the bracket any leg trades. #18536 landed --emit-paths on backtest_trend.py + backtest_pullback.py (one row per trade x bar with the stop and target IN FORCE), but scripts/research/first_passage.py has no input for it: its argparse takes --ledgers (per-trade rows) and re-walks public candles. BUILD: a --paths <glob> input (mutually exclusive with --ledgers) that builds the per-bar events, labels (TP first / SL first / exit-by-trail / timeout, from the emitted exit) and the same feature sets from the emitted rows; the free null and the calibrated distance-only reference unchanged; a self-test that a pure random-walk path set grades no information. Then blocked/RQ-20261014-d6e7-06 promotes (git mv, run.command = first_passage.py --paths ...). Consumer: that unit; detector: tests/test_first_passage*.py; cost ~1 Opus lane / $15. Not a question (the question is d6e7-06), a build.",
-  "updated_at": "2026-10-18T06:37:14Z",
-  "updated_by": "session_013oEUJzaNgUnEAFrpHccwkx",
+  "note": "[2026-10-24 lane ATM-AI-MERGE] RANK 1 on the AI active trade management critical path (Programme 01 section 'AI active trade management'): it gates d6e7-06 and the new rung A1 (blocked/RQ-20261024-09a6-01). VERIFIED 2026-10-24: first_passage.py argparse still has no --paths (only --ledgers); no *__paths.jsonl is committed under comms/. SPEC ADDITIONS for 09a6-01: (1) no committed corpus is needed -- reuse scripts/research/path_metric_giveback.run_leg_paths, which already runs each leg config-exact with --emit-paths inside the unit; (2) an AS-TRADED label beside the TP/SL-first one: L_t = 1 if exit_r - open_r_t < -c_exit (the leg's own exit loses to exiting now, cost from resolve_cost_policy); (3) reference R0 = open_r, peak_r, bars_in, bars_since_peak, dist_to_stop_r/atr_r, dist_to_target_r/atr_r (+ absent-target indicator), leg FE -- room-to-stop is the measured dominant predictor (AUC ~0.81, EXIT-PATH-METRICS-W43) so it belongs in the reference, not the candidate; (4) R1 = R0 + momentum 3/6 bars in ATR, adx_14, 3-bar ADX slope, range contraction, close location; (5) 6 purged calendar folds, trade-cluster bootstrap. Path rows already carry dist_to_stop_r, dist_to_target_r, atr_r, adx_14 (scripts/research/harness_emit.py).",
+  "updated_at": "2026-10-24T20:36:17Z",
+  "updated_by": "session_01SKceRaKdcBrCiQ6U2MNhN3",
   "roadmap": [
     "L-ATM",
     "M23"
   ],
+  "rank": 1,
   "_seq": 559
 }
