@@ -1,0 +1,52 @@
+id: RQ-20261024-0142-19
+title: 'Command resolvability: does every queued unit''s run.command name a script that exists in the checkout?'
+status: queued
+cadence: daily
+roadmap:
+- L-OPS
+theme: infra
+priority: 2
+kind: deterministic
+question: 'Command resolvability: does every queued unit''s run.command name a script that exists in the checkout?'
+why_this_matters: 'Lane AUTHOR-FLOOR-1024: research SLO in breach on runnable_floor, authoring_supply_ratio_7d and theme_share_min_ratio on 2026-10-24; the existing
+  infra units (ae17-40..45, 3a84-12/-13) detect plumbing and supply, not unit QUALITY. This puts one more cause on the queue as a daily detector instead of a once-a-week
+  SLO read. A unit whose script path does not exist is dispatched, fails with producer_failed, and burns a fire slot that a real unit could have used.'
+why_not_inferential: 'A deterministic self-test of repo state on the runner: the property either holds or it does not. There is no sampling question to power.'
+decision_rule:
+  id: RULE-RQ202610240142-19-COMMAND-RESOLVABLE
+  registered_at: '2026-10-24'
+  registered_before_run: true
+  statistic: scripts/research/infra_selftest.py --check command_resolvable
+  rule: 'PASS IF every queued unit with a python run.command names a .py script (argv[1]) that exists. FAIL IF any does not: measurement.missing names the unit and
+    the path. A producer_failed or no_data record is NOT a verdict.'
+  what_it_does_not_do: Measures nothing about any strategy, model or market; edits no config, registry, account or queue unit.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 80
+  confidence: 0.4
+  bucket: structural
+  basis: 'infrastructure detector: a stand-in figure for the research throughput a silent pipeline fault costs, not a measured P&L'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 5
+  basis: Reads only the repo checkout on a GitHub-hosted runner; no network, no secret.
+run:
+  command:
+  - python3
+  - scripts/research/infra_selftest.py
+  - --check
+  - command_resolvable
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 20
+  inputs:
+    research_unit: RQ-20261024-0142-19
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/infra_selftest.py
+- AUTHOR-FLOOR-1024

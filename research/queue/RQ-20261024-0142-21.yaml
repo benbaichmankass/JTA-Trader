@@ -1,0 +1,53 @@
+id: RQ-20261024-0142-21
+title: 'Power declared: does every queued inferential unit carry power.expected_n and a registered-before-run decision rule?'
+status: queued
+cadence: daily
+roadmap:
+- L-OPS
+theme: infra
+priority: 2
+kind: deterministic
+question: 'Power declared: does every queued inferential unit carry power.expected_n and a registered-before-run decision rule?'
+why_this_matters: 'Lane AUTHOR-FLOOR-1024: research SLO in breach on runnable_floor, authoring_supply_ratio_7d and theme_share_min_ratio on 2026-10-24; the existing
+  infra units (ae17-40..45, 3a84-12/-13) detect plumbing and supply, not unit QUALITY. This puts one more cause on the queue as a daily detector instead of a once-a-week
+  SLO read. A unit with no declared n cannot be graded indeterminate-vs-fail correctly (the E35 floor); check_research_queue_decision_rule.py checks the rule, this
+  checks the power block.'
+why_not_inferential: 'A deterministic self-test of repo state on the runner: the property either holds or it does not. There is no sampling question to power.'
+decision_rule:
+  id: RULE-RQ202610240142-21-POWER-DECLARED
+  registered_at: '2026-10-24'
+  registered_before_run: true
+  statistic: scripts/research/infra_selftest.py --check power_declared
+  rule: 'PASS IF every queued non-generated, non-deterministic unit declares power.expected_n (a number) and decision_rule.registered_before_run is true. FAIL IF
+    any does not: measurement.sample names the unit and the missing field. A producer_failed or no_data record is NOT a verdict.'
+  what_it_does_not_do: Measures nothing about any strategy, model or market; edits no config, registry, account or queue unit.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 60
+  confidence: 0.4
+  bucket: structural
+  basis: 'infrastructure detector: a stand-in figure for the research throughput a silent pipeline fault costs, not a measured P&L'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 5
+  basis: Reads only the repo checkout on a GitHub-hosted runner; no network, no secret.
+run:
+  command:
+  - python3
+  - scripts/research/infra_selftest.py
+  - --check
+  - power_declared
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 20
+  inputs:
+    research_unit: RQ-20261024-0142-21
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/infra_selftest.py
+- AUTHOR-FLOOR-1024
