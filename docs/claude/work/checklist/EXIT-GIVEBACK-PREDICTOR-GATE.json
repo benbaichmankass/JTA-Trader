@@ -13,12 +13,20 @@
   "blocked_on": [],
   "note": "[2026-10-24 session_017YRS6YB4rwYZXqHY6YhSx4] Predictor skill is log-loss only (pooled ll_gain 0.0115/0.0145 on ~0.69 base; OOS R2 gain ~0). Gate already tested at P>=0.5 on ada/xrp pullback 2h (eba2-07/-08): both FAIL. Built vol-controlled/selective trigger flags, matched-rate random null and --vs-control (enforces the control-beating clause the harness never enforced). Pre-registered RQ-20261024-9a7e-01..04 (ada, xrp, eth pullback 2h; donchian ada 4h), all would_dispatch. WRITEBACK: docs/research/exit-giveback-predictor-gate-2026-10-24.md. OBSERVATION closing this (due_by 2026-11-07): the four 9a7e results landed and read under their registered rules; a PASS on any needs one disjoint confirmation + gap-adjusted rerun, FAIL on all four closes the gate line.",
   "priority_rank": 6,
-  "updated_at": "2026-10-24T13:34:59Z",
+  "updated_at": "2026-10-24T13:50:56Z",
   "updated_by": "session_017YRS6YB4rwYZXqHY6YhSx4",
   "roadmap": [
     "L-ATM"
   ],
   "due_by": "2026-11-07",
-  "writeback": "docs/research/exit-giveback-predictor-gate-2026-10-24.md",
+  "writeback": {
+    "roadmap": "none: a negative-leaning research test of an existing L-ATM lever, no milestone state changes until the 9a7e results land",
+    "arch": "none: no architecture change; harness flags and queue units only"
+  },
+  "observation": {
+    "what": "RQ-20261024-9a7e-01..04 results landed and read under their registered rules (MT must beat A, UT and RT in 5 of 6 folds)",
+    "how_to_check": "python3 scripts/ci/run_guards.py not needed; read research/results/RQ-20261024-9a7e-0{1,2,3,4}/ verdict rows and the queue grading field",
+    "due_by": "2026-11-07"
+  },
   "_seq": 622
 }
