@@ -1,6 +1,6 @@
 id: RQ-20261023-1d5c-01
 title: 'Path-state trail gate (variant): does an ER-gated trail tighten (only while peak >= 1.5 R and er_6 low) beat the declared real-money leg trend_donchian_xrp_4h?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -114,3 +114,16 @@ related:
 - RQ-20261022-511e-01
 - RQ-20261022-eba2-15
 last_dispatched_at: '2026-10-24T00:40:59+00:00'
+grading:
+  attested: RULE-RQ202610231D5C01-XRP4H-ERGATE
+  auto: true
+  decision_rule_id: RULE-RQ202610231D5C01-XRP4H-ERGATE
+  evidence:
+  - research/results/RQ-20261023-1d5c-01/40046223439.jsonl
+  graded_at: '2026-10-24'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

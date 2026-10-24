@@ -1,7 +1,7 @@
 id: RQ-20261023-a1f3-04
 title: 'Bank variant (first test failed -> variant): do FAR-rung, small-size partial exits (or exit + R-armed trail) replace the declared exit of trend_donchian_sol_prop
   (prop leg, drawdown matters most)?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -114,3 +114,16 @@ related:
 - RQ-20261022-eba2-14
 programme: P5
 last_dispatched_at: '2026-10-24T00:40:59+00:00'
+grading:
+  attested: RULE-RQ20261023-A1F3-04-SOLPROP-BANK-FARRUNG
+  auto: true
+  decision_rule_id: RULE-RQ20261023-A1F3-04-SOLPROP-BANK-FARRUNG
+  evidence:
+  - research/results/RQ-20261023-a1f3-04/40046219822.jsonl
+  graded_at: '2026-10-24'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

@@ -1,7 +1,7 @@
 id: RQ-20261023-a1f3-10
 title: 'Hot-vol trail variant (first test failed -> variant): does tightening the trail in the hot-ATR tail cut drawdown or add R on trend_donchian_eth_prop (prop
   leg)?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-REGIME
@@ -104,3 +104,16 @@ related:
 - RQ-20261014-470a-07
 - RQ-20261022-4b82-11
 last_dispatched_at: '2026-10-24T02:40:56+00:00'
+grading:
+  attested: RULE-RQ20261023-A1F3-10-ETHPROP-HOTVOL-TRAIL
+  auto: true
+  decision_rule_id: RULE-RQ20261023-A1F3-10-ETHPROP-HOTVOL-TRAIL
+  evidence:
+  - research/results/RQ-20261023-a1f3-10/40055224622.jsonl
+  graded_at: '2026-10-24'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
