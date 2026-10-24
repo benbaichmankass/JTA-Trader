@@ -48,7 +48,7 @@ blocked_on:
 - what: The replay-parity harness is merged (scripts/ml/replay_parity.py, ML-PRODUCERS M0) but its svble
     self-check has not been read from a recorded trainer run (ML-PARITY-HARNESS is landed_unproven), and
     no workflow runs it over the three advisory heads. _feature_parity_probe.py checks presence only.
-  ref: ML-PARITY-HARNESS (docs/claude/work/checklist/)
+  ref: 'ML-PARITY-HARNESS (docs/claude/work/checklist/, state done) -- CORRECTED by research-ops 2026-10-24: the svble self-check WAS read (funding gap reproduced) and the mes head answered OK; the remaining blocker for the two fc heads is checklist ML-PARITY-FC-SHADOWLOG (harness scope limit: no forecast join), so the first clause of the text above is stale'
   clears_when: The svble self-check run is read and reproduces the known funding gap, and a workflow or
     trainer-vm-diag recipe runs replay_parity.py over the three advisory heads; then git mv this unit to
     research/queue/ and fill run.workflow.
