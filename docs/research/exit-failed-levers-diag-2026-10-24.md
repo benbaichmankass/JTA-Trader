@@ -1,6 +1,6 @@
 # Exit levers that failed their first test (2026-10-22 batch): diagnosis and variants (2026-10-24)
 
-> **Doc status:** `live` · category `evidence` · last verified `2026-10-24` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · **nobody has verified this document's status — do not act on it as current**
 
 Lane `EXIT-FAILED-LEVERS-DIAG` (Tier 1; dispatched by Manager Session 2026-10-24; operator order "3 then 2 then 1", this row second; rule 2026-10-22: a first-test fail is diagnosed, never killed). **Nothing here retires a lever.** Every claim is marked **MEASURED** (read from a committed result, trade file or the code) or **INFERRED**.
 
