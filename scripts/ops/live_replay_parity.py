@@ -126,6 +126,12 @@ SUPPORTED_UNITS = {
 LIVE_FETCH_LIMIT = 200
 FINE_INTERVAL = "15m"
 FINE_S = 900
+# A closed-mode leg evaluates AFTER the bar closes (decision_bar_fresh_seconds
+# + a 120 s grace is the lost_bar window). The audit fetch must therefore run
+# past the analysis window's end, or the newest bar's evals are cut off and it
+# is reported lost_bar (LIVE-EVAL-GAP-1024: all 3 "fresh" lost_bars were the
+# newest closed bar of a run whose `until` equalled that bar's close).
+EVAL_TAIL_S = 900
 #: How stale a live frame can be: the candle cache TTL is min(10% of the bar,
 #: CANDLE_CACHE_TTL_MAX_S=60 by default) in src/runtime/market_data.py, but the
 #: VM value is env-overridable, so the bracket allows 300 s + fetch slop.
@@ -512,11 +518,13 @@ def fetch_bundle(f: Fetcher, legs: list[Leg], since: float, until: float) -> dic
             b["candles"][f"{sym}|{tf}"] = {"candles": [], "error": f"fetch_failed: {exc}"}
     # signals: pull a margin before `since` so the first bar's earlier ticks exist
     s_since = iso(since - 86400 * 2)
+    audit_until = min(until + EVAL_TAIL_S, datetime.now(timezone.utc).timestamp())
+    b["audit_until"] = iso(audit_until)
     for lg in legs:
         if lg.skip_reason:
             continue
         try:
-            b["signals"][lg.name] = f.audit(lg.name, s_since, iso(until))
+            b["signals"][lg.name] = f.audit(lg.name, s_since, iso(audit_until))
         except Exception as exc:  # noqa: BLE001
             b["signals"][lg.name] = {"rows": [], "error": f"fetch_failed: {exc}"}
     for table, keys in (("order_packages", ("updated_at", "created_at")),
@@ -678,6 +686,9 @@ def analyse_leg(leg: Leg, bundle: dict, since: float, until: float, *,
         return is_market_open("us_equity", datetime.fromtimestamp(t, tz=timezone.utc))
 
     # bars fully inside the window, inside the 15m reach, with 199 bars of history
+    # evals were fetched up to audit_until; a closed bar whose post-close eval
+    # window reaches past it cannot be judged lost (absent bundle key = no cap)
+    audit_until = to_epoch(bundle.get("audit_until"))
     # A leg that joined EVERY account's roster inside the window did not exist
     # live before that: its earlier bars have no evals, which is not a lost bar
     # (only the lost_bar verdict is withheld; any eval that does exist is judged).
@@ -856,7 +867,8 @@ def analyse_leg(leg: Leg, bundle: dict, since: float, until: float, *,
             evs = evals_between(b_end, b_end + fresh + 120)
             if i + 1 >= len(tf_rows):
                 continue
-            if not evs and not pre_join:
+            if not evs and not pre_join and not (
+                    audit_until is not None and b_end + fresh + 120 > audit_until):
                 kinds.append("lost_bar")
                 divs.append({"class": "lost_bar", "bar": iso(b0),
                              "detail": f"no {leg.name}_eval in the {fresh:.0f}s window after close"})

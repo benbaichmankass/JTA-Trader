@@ -2,21 +2,32 @@
   "id": "LIVE-EVAL-GAP-1024",
   "title": "Did the live trader skip bar-close evals on real-money/prop legs (ada+xrp_pullback_2h 16:00Z, eth_prop 17:00Z, 2026-10-24) and why",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "diagnosis lane",
   "lane": "session_01FcVnoSCdLiVMWfX9D1TUd7",
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 6,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    19930
+  ],
   "blocked_on": [],
-  "note": "[2026-10-24T18:52Z manager session_01EfjqotNYj6MppcEBqbGvkA] From LIVE-PARITY-DIAG-1024 (#19925, validation issue #19923): 3 fresh lost_bars, no live eval within 360s of close. 16:00Z pair coincides with the ~16:05Z deploy 022ae05e (INFERRED restart); 17:00Z has no src/config commit 16:30-17:30Z (UNEXPLAINED). Sonnet, fresh, $6; any code fix is a held Tier-2 PR.",
+  "note": "[2026-10-24T18:52Z manager session_01EfjqotNYj6MppcEBqbGvkA] From LIVE-PARITY-DIAG-1024 (#19925, validation issue #19923): 3 fresh lost_bars, no live eval within 360s of close. 16:00Z pair coincides with the ~16:05Z deploy 022ae05e (INFERRED restart); 17:00Z has no src/config commit 16:30-17:30Z (UNEXPLAINED). Sonnet, fresh, $6; any code fix is a held Tier-2 PR. [2026-10-24T19:50Z lane session_01FcVnoSCdLiVMWfX9D1TUd7] ANSWER: live did NOT skip evals; class (d) instrument false positive. Report labels bars by OPEN time, so the 3 flagged bars (ada/xrp_pullback_2h 16:00, trend_donchian_eth_prop 17:00) all closed at 18:00:00Z = the 18:28Z run's window end. OBSERVED on live VM (journalctl + audit_query; population 3 legs x the 18:00Z close): one PID 841906 across 17:57-18:07Z, no restart; signals-table eval rows at 18:00:16/23/25Z (16-25 s after close), all side=none -> no missed signal, no money impact. Cause: fetch_bundle fetched evals with until=window end, truncating post-close evals of the newest closed bar. Side-check: restart 15:59:37Z (before the 16:00 close) and another 16:05-16:55Z; every leg evaluated its next close (16:00:18-36Z, 17:01:37-47Z); RESTART-SAFE not implicated, no Tier-2 PR needed. Fix #19930 (EVAL_TAIL_S fetch past window end + horizon guard), merged with #19925 pre_join fix, 26 tests pass. MERGED/DEPLOYED/OBSERVED: none yet - landed_unproven until the observation below.",
   "priority_rank": 2,
-  "updated_at": "2026-10-24T18:52:18Z",
-  "updated_by": "session_01EfjqotNYj6MppcEBqbGvkA",
+  "updated_at": "2026-10-24T19:42:41Z",
+  "updated_by": "session_01FcVnoSCdLiVMWfX9D1TUd7",
   "roadmap": [
     "M39"
   ],
+  "writeback": {
+    "roadmap": "none: instrument fix only",
+    "arch": "none"
+  },
+  "observation": {
+    "what": "next daily LIVE-PARITY run after #19930 merges shows no lost_bars at the window-end bar",
+    "how_to_check": "comms/live_parity/latest.json lost_bar entries for the newest closed bar",
+    "due_by": "2026-10-26"
+  },
   "_seq": 633
 }
