@@ -1,0 +1,21 @@
+{
+  "based_on": "20261013T151740586380Z-85c6f62a.json",
+  "due_when": {
+    "due_date": "2026-10-20",
+    "kind": "date"
+  },
+  "filed": "2026-10-13",
+  "id": "PI-20261013-GGXCSUMP-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "by": "research-router-fix lane (session_01BwxJM5ZGymoxgagGxcSump)",
+    "kind": "session",
+    "ref": "PI-20261013-HOPS1447-0001 root-cause read of PR #17853",
+    "rerun": "grep -n 'tar xzf /tmp/payload/landing.tgz' .github/workflows/research-queue-dispatch.yml  # present = the whole-file restore still exists"
+  },
+  "routed_to": "ROUTE-CI-LANDING-FIXES (REGISTER-SWEEP-W43 2026-10-24: research-queue-dispatch land job)",
+  "severity": "low",
+  "state": "routed",
+  "tier": 1,
+  "what": "research-queue-dispatch `land` job restores the dispatch job's WHOLE research/queue/*.yaml files with `tar xzf landing.tgz` over a checkout that can be newer than the one the dispatcher read (gap ~3 min, observed run 38379540767: dispatch checkout 09:53Z, land checkout 09:55Z). Any queue-unit edit merged in that gap (a re-arm, a hand edit) is overwritten wholesale by the stamp PR. NOT the cause of the #17853 incident (that was stranded-stamp adoption, fixed by #17879) but the same failure class and still latent. Fix: carry the base stamp value in the payload and apply stamps in the land job by compare-and-set (write last_dispatched_at only if the current file still holds the value the dispatcher read), tested like tests/test_commit_to_main_stamp_race.py."
+}

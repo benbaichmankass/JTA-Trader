@@ -16,8 +16,8 @@
   ],
   "blocked_on": [],
   "note": "[2026-10-15T06:10Z lane BREAKOUT-SL-AMEND-CLICK] 1b.199 / 1b.205 MEASURED: side cell is div.ds-table-cell role=cell with no side word in any attribute, so the attribute-word read cannot work; positions_state read via the journal (ESTIMATED, ETH short 0.54 @ 2461.52). The sheet-based MEASURED side (#18114) did not open on 1b.205 (sheet_not_open); probe PR follows. [2026-10-21 WEEKLY-AUDIT-2026-10-19 C6 stale-in_flight sweep] Lane session archived (get_session: SESSION_STATUS_ARCHIVED) and PR(s) merged to main (#18109), so in_flight was false; set landed_unproven, lane nulled, spend_usd=9.67 from get_session cost_usd. Closing observation unchanged.",
-  "updated_at": "2026-10-21T18:19:28Z",
-  "updated_by": "session_014UeddhjFnc6fSA41bo5V65",
+  "updated_at": "2026-10-24T06:01:02Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "roadmap": [
     "L-PROP"
   ],
@@ -28,7 +28,13 @@
   "observation": {
     "what": "breakout_2 phone status reports positions_state=read with the ETH short parsed side=short, and fill 124 becomes MEASURED",
     "how_to_check": "GET /api/bot/prop/status?account_id=breakout_2 and /api/bot/prop/fills?account_id=breakout_2 after the operator installs the APK from run 38640497636",
-    "due_by": "2026-10-16"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-16",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
   "_seq": 496
 }

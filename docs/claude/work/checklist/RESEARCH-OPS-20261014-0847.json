@@ -14,8 +14,8 @@
   ],
   "blocked_on": [],
   "note": "Runnable 23 -> 29 on branch (floor 25). 17 results read (2 pass / 9 fail / 6 indeterminate), none changes live config. Authored 6 ml_bakeoff units RQ-20261014-4591-01..06 (4 ai_trader, 2 frontier, gpu_preferred). Tier-3 proposal noted on QUEUE-FILL-1013 (eth_pullback_2h adx_min 22). Hold PR (hand-authored units) needs manager merge. Record comms/research/ops/20261014T0930Z.json. HANDOFF (also in the run record): (1) longer-window twins for sol_pullback_2h f0e2-01/-03/-04/-06 and trend_donchian_xrp_4h f0e2-08, which sit at n=36/25 under the 39 floor on 730d; (2) blocker_watch NOT_RUNNING RQ-20261013-a793-01..03 (trainer, never dispatched) and RQ-20261014-9807-03; (3) 36 needs_review units untriaged; (4) 65cc-07/-08 Kaggle will repeat tabicl/tabpfn unavailability.",
-  "updated_at": "2026-10-14T08:55:32Z",
-  "updated_by": "research-ops-lane-20261014-0847",
+  "updated_at": "2026-10-24T06:01:10Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "roadmap": [
     "L-REGIME",
     "L-LADDER"
@@ -27,7 +27,13 @@
   "observation": {
     "what": "4591 units dispatch and land results; runnable >= 25 on main after merge",
     "how_to_check": "python3 scripts/ci/check_research_queue_throughput.py --json",
-    "due_by": "2026-10-16"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-16",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
   "_seq": 490
 }

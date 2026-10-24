@@ -4,7 +4,7 @@ theme: ml_health
 kind: experiment
 title: 'Frontier / tabular foundation model, capped-ensemble arm on the WIDER feature set: TabICL (3 x 4,000-row members) vs LightGBM on the BTC/ETH/SOL 15m
   volatility-regime head, both fed the 4 range-vol estimators (tabular_foundation_model; TabPFN rides as an observed, CPU-capped, research-only control)'
-status: queued
+status: retired
 priority: 3
 question: On the trainer's BTC/ETH/SOL 15m v002 shards (last 12,000 rows, the 6 shared features PLUS parkinson/garman_klass/rogers_satchell/yang_zhang vol given
   to BOTH arms), under identical purged folds, does a 3-member TabICL ensemble (each member fits <= 4,000 rows) beat LightGBM by >= +0.010 macro-F1 on at least
@@ -194,3 +194,4 @@ grading:
   reason: 'read_state not unanimously measured: [''producer_failed'']'
   rows: 1
   verdict: null
+retired_reason: '2026-10-24 RESEARCH-OPS-20261024-0247 needs_review triage: superseded. The only result was producer_failed (trainer 300-minute timeout, CPU TabPFN control; no outcome produced). Redesign RQ-20261022-38be-01 (same rule, CPU TabPFN control dropped) ran 2026-10-23 and is graded awaiting more_data; the question lives there. The family stays open (not retired through family_retirement_policy).'

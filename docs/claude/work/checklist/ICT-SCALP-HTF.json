@@ -18,9 +18,15 @@
   "observation": {
     "what": "A bybit_1 ict_scalp variant intent carries htf_filter_active=True in its meta (src/units/strategies/ict_scalp.py:571)",
     "how_to_check": "Deploy half DONE 2026-10-09: f4b3446a is an ancestor of main and diag version b4b29f960 is current. Owed half: pull a bybit_1 ict_scalp intent/order_package row via /api/diag/journal or audit and read meta.htf_filter_active; the field is NOT in the trader journal text (0 hits in six sampled 10-min windows), so read it from the intent record, not journalctl",
-    "due_by": "2026-10-16T00:00Z"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-16T00:00Z",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
-  "updated_at": "2026-10-09T04:36:50Z",
-  "updated_by": "session_015WZhDbDdZTbgTzGXeDzjqe",
+  "updated_at": "2026-10-24T06:01:06Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "_seq": 230
 }

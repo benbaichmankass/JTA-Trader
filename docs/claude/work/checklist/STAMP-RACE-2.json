@@ -14,19 +14,25 @@
   ],
   "blocked_on": [],
   "note": "[2026-10-12T05:57Z manager session_01G16FfyYSmDPQuuW55BuTmK, review WR-20261012-0530Z] Observed over 2026-10-11: 3 of 7 dispatcher landings failed and stamp steps took ~80 min. Several research-result PRs (#17654, #17664, #17674-6) and stamp PR #17652 sit open with auto-merge armed while main moves. Root-cause with measured run data (research-queue-dispatch runs from the last 48h), fix in workflow/tooling (Tier-1), prove on two consecutive dispatcher cycles. Predecessor STAMP-RACE (landed_unproven). [2026-10-12T05:59Z manager session_01G16FfyYSmDPQuuW55BuTmK] Dispatched lane session_01XHRZ5Eb8E2XVcJqY6Y6hAC. [2026-10-12 lane session_01XHRZ5Eb8E2XVcJqY6Y6hAC] PR #17688 (hold: R12, needs a manager merge click). MEASURED 2026-10-12 (REST, last 48h = dispatch runs 188-223 from 2026-10-10T12:08Z): 14 of 35 completed runs red, ALL in job 'land' (0 in dispatch). By cause: (a) 5 refresh hit a CONTENT conflict (runs 191,193,200,217 on research/queue/*.yaml last_dispatched_at - two stamp PRs on one unit; 209 on the receipt json), refresh=failed_conflict, PR stayed dirty; (b) 3 'local changes would be overwritten by checkout' in ~1s (caller's dirty stamp yamls differ HEAD vs main; runs 195, 202, 215); (c) 1 refresh aborted by the same dirty-tree refusal with no conflict (run 204; run 215 also hit it before its checkout failure); (d) 5 timed out at 80m: 4 with refresh=refreshed (runs 196,197,203,213; PRs #17466 #17475 #17552 #17618) and 1 with not_needed_up_to_date (run 205, #17562, adopted into #17572 - cause beyond adoption NOT established). ROOT CAUSE: commit-to-main's one-shot stale-branch refresh fires at MINS/3=27m and merges main in; pytest-run has cancel-in-progress per PR, so the refresh KILLS the half-run suite and restarts ~45m. Across 62 automation/research-* PRs since 10-10 12:00Z every PR whose main moved shows a 27m 'queue' then a full second run; open-to-merge 64-79m vs an 80m wait; pytest-run itself 27-49m vs its 50m limit (#17654 and #17664 cancelled AT 50m after the restart). strict=false, so behind-main never blocks a merge; the refresh was only ever needed for red/absent checks. FIX (Tier-1, no timeout raised): action.yml (1) all post-commit work in a clean git worktree so a dirty caller tree can never break checkout/merge; (2) refresh only when PR CONFLICTS, or at 1/3 mark when head checks finished red/absent - never while in flight or green; (3) scripts/ops/resolve_stamp_conflicts.py resolves stamp-only conflicts to the later last_dispatched_at. Tests: tests/test_commit_to_main_stamp_race.py. NOT BUILT: pytest-run runs the full suite on data-only research PRs because ^research/ and ^comms/ are in its relevance filter (tests read them) - 27-49m each; shrinking that is a separate, riskier change. R12: action.yml is LANDING_MACHINERY so this PR cannot self-land - declared hold, needs a manager/human merge click (the dispatch asked for self-landing; R12 forbids it and was not defeated).",
-  "updated_at": "2026-10-12T07:44:22Z",
-  "updated_by": "session_01XHRZ5Eb8E2XVcJqY6Y6hAC",
+  "updated_at": "2026-10-24T06:01:14Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "roadmap": [
     "M40"
   ],
-  "_seq": 418,
   "observation": {
     "what": "two consecutive research-queue-dispatch cycles (event schedule or workflow_dispatch) whose 'land' job concludes success, with every stamp and result PR they open merged within 60 min of opening (measured: median 64-79 min before the fix, 27-49 min is pytest-run alone)",
     "how_to_check": "gh api -X GET repos/benbaichmankass/Metis-Insights/actions/workflows/research-queue-dispatch.yml/runs -f per_page=20; for each run after the merge of this PR read the 'land' job conclusion; for each automation/research-* PR it opened compare created_at to merged_at (python3 scratchpad recipe: pulls?state=all, filter head.ref prefix automation/research). Also grep its 'Land' step logs for 'deferred_checks_in_flight' / 'not_needed_checks_green' and absence of a pytest-run cancelled by a 'Merge main so the required checks re-run' commit",
-    "due_by": "2026-10-19T18:00Z"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-19T18:00Z",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
   "writeback": {
     "roadmap": "M40: dispatcher landing reliability - refresh no longer cancels in-flight pytest-run; drop 'landing' tooling-gap wording from next once observed",
     "arch": "none: CI plumbing, no contract change"
-  }
+  },
+  "_seq": 418
 }

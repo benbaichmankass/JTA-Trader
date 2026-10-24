@@ -14,8 +14,8 @@
   ],
   "blocked_on": [],
   "note": "[2026-10-16 lane P4-MACRO-BACKLOG-1016] IS A GDELT ARCHIVE WORTH BUILDING, AND WHAT IS THE CHEAPEST ONE? MEASURED 2026-10-16 (HTTP content-length, 7 GKG 2.1 files sampled 2019-01-15 / 2021-06-15 / 2023-06-15 / 2025-01-15 / 2026-10-16): 3.7-8.7 MB zipped per 15-min file, mean 6.4 MB -> ~0.61 GB/day -> ~0.68 TB for 2023-10..today and ~1.7 TB for the 2019.. depth NEWS-ALPHA-CORPUS asks for (EXTRAPOLATED from 7 files). The Events export is ~0.10 MB/file (~28 GB for 2019..) but carries no per-entity tone/themes, so it serves only the macro-topic units (U06/U08). NEWS-ALPHA-CORPUS as scoped (persistent raw corpus on the trainer, 2019.., Tier-2 timer) is the EXPENSIVE build: TB-scale storage the 6 GB trainer budget cannot hold. CHEAPEST VIABLE: do not persist the corpus at all. EXACT SCOPE: (1) extend scripts/research/news_hist_fetch.py (reuse its ledger and availability rule: available_at = V2.1DATE ingest, publisher time never gates) with an --aggregate mode that streams each 15-min file and emits per (entity, ingest-hour) rows: n_articles, n_domains, V2Tone mean/sd/min, counts of a FROZEN committed theme/org keyword map (crypto20 + ETF6 + macro topics; the map is committed BEFORE any outcome is computed); (2) a workflow (Tier-1 CI) with a month matrix over 2023-10..today (37 shards, ~18 GB streamed each, nothing kept) writing one panel shard per month + a gap ledger; (3) persist the panel (ESTIMATE: ~40 entities x 26.7k hours x ~10 cols, tens of MB compressed) as a private Kaggle dataset beside metis-market-data or a release asset -- runner- and Kaggle-readable, so the units route off the trainer; (4) a daily forward-append job on the runner (removes the Tier-2 trainer timer). Depth to 2019 only if U02 (attention -> vol, the highest-prior unit) reads PASS. IS IT WORTH IT: the prior evidence is weak for RETURNS (NEWS-HIST-REPLAY title-only tone IC -0.0073, p 0.61, n 1436) but vol/volume targets (U02, U07) are untested, 8 pre-registered units plus U14 sit on this corpus, and the operator ruled news NOT retired (2026-10-12). So yes, bounded: slice 1 at 3y. BINDING BLOCKER FIRST: NEWS-ALPHA-HARNESS (scripts/research/news_alpha_ic.py) is unbuilt and gates ALL 14 NEWS-ALPHA units, including the 6 that need no GDELT at all -- build it before this. Owner of the units: NEWS-ALPHA-PROGRAM (this lane did not edit them). UNVERIFIED: runner download throughput; GitHub-hosted runner minutes being free for this public repo (INFERRED). [2026-10-16 lane NEWS-ALPHA-HARNESS-1016] BUILT: news_hist_fetch.py --aggregate + frozen map research/news_alpha/entity_map_v1.json (sha256 af3e1748...) + news-gdelt-panel.yml (daily 03:17, month matrix max-parallel 4, commit-to-main verify-merged) in #18563 (HOLD: unvouchable_paths). MEASURED in the sandbox on real GDELT: 1 day = 97 files / 175,499 rows -> 4.2 KB panel in 11 s; ~100 KB per month; 2023-10/11/12 had 2/3/0 missing (404) files. Seeded 2023-10..2026-10 here with the same code; the seed lands in the unblock PR. Persisted in the repo (not Kaggle): measured size is a few MB total, so no external store is needed. No trainer timer (the daily runner run is the forward append). UNVERIFIED: the runner throughput (first scheduled run will show it). [2026-10-16 lane NEWS-ALPHA-HARNESS-1016, correction] The seed landed IN #18563 (not the unblock PR): 37 months 2023-10..2026-10, MEASURED from the committed manifests: 26,674 hours, 26,237 fully read (98.4%), 1,691 GKG files 404, 3.6 MB. GDELT OUTAGE 2025-06-14..2025-07-02 (every file 404; spot-checked 20250615120000 -> 404): those ~18 days are NaN in every feature and fall inside the NEWS-ALPHA discovery window; trailing-window features stay NaN for up to 30 days after it.",
-  "updated_at": "2026-10-16T10:19:37Z",
-  "updated_by": "session_01NScR4y1z9Wb8UpMQUf9a3a",
+  "updated_at": "2026-10-24T06:01:07Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "roadmap": [
     "M28"
   ],
@@ -27,7 +27,13 @@
   "observation": {
     "what": "news-gdelt-panel.yml has run on its daily schedule (or a dispatch) and its commit-to-main PR landed the current month under comms/news_alpha/gdelt_panel/ (proves the runner path; the 2023-10..2026-10 seed in #18563 was built in a session sandbox with the same code)",
     "how_to_check": "git log --oneline -- comms/news_alpha/gdelt_panel | grep -i \"panel months\"; jq . comms/news_alpha/gdelt_panel/manifest_2026-10.json",
-    "due_by": "2026-10-20"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-20",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
   "_seq": 528
 }

@@ -14,8 +14,8 @@
   ],
   "blocked_on": [],
   "note": "[lane done] 14 results read since 21:15Z (p7/f5/i2): matched-risk controls -> Tier-3 note on PROP-BOOK-SEARCH-1095D (pair adds at risk<=0.0035, fails at 0.0045); xrp/ada live-vs-backtest divergence confirmed (build already filed PI-20261015-10152047-0001); f01d-01 sol_prop stage0 PASS escalated to manager (PR #18440 / mandate resolver); f01d-02 control_failed -> PI-20261016-10160247-0001; PPI->ES/NQ evidence noted on P4-MACRO-PROGRAMME. Authored RQ-20261016-001 (P2-Q4 ET/MLP n-extend, kaggle_cpu). 5 unrouted due PIs routed. runnable 8->9 vs computed floor 50 (NOT met, refill 0, 6 authoring nodes left); needs_review 0 of 32 triaged (not_run). Record comms/research/ops/20261016T0320Z.json. Hold PR (hand-authored programme node).",
-  "updated_at": "2026-10-16T02:57:56Z",
-  "updated_by": "research-ops-lane-20261016-0247",
+  "updated_at": "2026-10-24T06:01:11Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "writeback": {
     "roadmap": "none: operations pass",
     "arch": "none: no component changed"
@@ -23,7 +23,13 @@
   "observation": {
     "what": "manager merges the hold PR; RQ-20261016-001 dispatches on kaggle_cpu and lands read_state measured; manager decides PR #18440 after f01d-01",
     "how_to_check": "python3 scripts/research/dispatch_queue.py | grep 20261016-001; ls research/results/RQ-20261016-001",
-    "due_by": "2026-10-18"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-18",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
   "roadmap": [
     "L-LADDER"

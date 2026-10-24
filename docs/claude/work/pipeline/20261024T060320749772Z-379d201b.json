@@ -1,0 +1,17 @@
+{
+  "based_on": "20261012T061550192322Z-4da31153.json",
+  "due_when": {
+    "due_date": "2026-10-19",
+    "kind": "date"
+  },
+  "id": "PI-20261012-FYDXA9U5-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "REDUCE-FILL-QTY lane session_013PGJqGxzyzKVSSFydXA9U5 (PR #17691)",
+    "rerun": "pull diag journal?table=trades (all pages) + /api/bot/pnl/exchange/fills?days=90 per account x symbol; for each intent_reduce_executed row with reduce_settlement_reason fill_qty_mismatch, list allocation parents whose exit_reason != intent_reduce and compare booked pnl to the venue fills"
+  },
+  "routed_to": "ORDER-AUDIT-3 (REGISTER-SWEEP-W43 2026-10-24: journal parents open after venue close)",
+  "state": "routed",
+  "what": "9 journal parents (bybit_1 4371,4334,4324,4309,4187,4122,3929,3859; bybit_portfolio 4010; all paper) stayed open after the venue had closed their units, and were later closed with pnl priced from candle_at_close/local_markprice on those phantom units (sum booked +538.30). MEASURED 2026-10-12 (diag journal all 6576 rows + fills 90d): e.g. 4324 3.199 BTC venue-closed 2026-08-02T13:39:53 at 62971.6 (below entry 63120.5) but journal booked 'tp' +1024.55 at 2026-08-03T23:00. All 9 date 2026-07-24..08-08; none since. Decide: re-price from venue fills (ESTIMATED, dry-run-first) or kill as historical paper-book noise with that reason; and confirm the missed-venue-close detector that let rows sit open 33h is fixed (0 short-fill reduces in 35 legs since 2026-08-08 suggests yes, unproven)."
+}
