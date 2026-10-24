@@ -2,21 +2,32 @@
   "id": "REPLACE-GRADE-CONTROL-REGRADE",
   "title": "Re-grade every exit-lever 'replace' result whose decision_rule has a control clause: the grader never enforced it (found by EXIT-GIVEBACK-PREDICTOR-GATE, #19871 adds --vs-control)",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": "session_01RBNkFwxcLRmZzYHF1s5YzE",
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 6,
-  "spend_usd": null,
+  "spend_usd": 3.0,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    19880
+  ],
   "blocked_on": [],
-  "note": "[2026-10-24T13:55Z manager session_01UETC6mFiwMgXk6URsuWzZb] FINDING (lane session_017YRS6Y, reported, not yet re-verified by the manager): exit_lever_ablation's replace grade never enforced the control clause that decision rules such as eba2-07 state. As a result, earlier replace-grade FAIL or PASS verdicts may be wrong in either direction. TASK: once #19871 lands, list every result whose unit rule names a control or vs-baseline clause, re-grade each with --vs-control, and record every verdict that flips. A first-test FAIL that flips to PASS is a LEAD needing one disjoint-window confirmation. Run before or alongside RESULTS-GRADE-1025 (Sunday), so that lane grades on the corrected rule. [2026-10-24T14:06Z manager session_01UETC6mFiwMgXk6URsuWzZb] #19871 merged (cd9fdc79), so it is unblocked. Dispatched lane session_01RBNkFw (Sonnet, fresh, $6).",
+  "note": "[2026-10-24T13:55Z manager session_01UETC6mFiwMgXk6URsuWzZb] FINDING (lane session_017YRS6Y, reported, not yet re-verified by the manager): exit_lever_ablation's replace grade never enforced the control clause that decision rules such as eba2-07 state. As a result, earlier replace-grade FAIL or PASS verdicts may be wrong in either direction. TASK: once #19871 lands, list every result whose unit rule names a control or vs-baseline clause, re-grade each with --vs-control, and record every verdict that flips. A first-test FAIL that flips to PASS is a LEAD needing one disjoint-window confirmation. Run before or alongside RESULTS-GRADE-1025 (Sunday), so that lane grades on the corrected rule. [2026-10-24T14:06Z manager session_01UETC6mFiwMgXk6URsuWzZb] #19871 merged (cd9fdc79), so it is unblocked. Dispatched lane session_01RBNkFw (Sonnet, fresh, $6). [lane session_01RBNkFw]  session_01RBNkFwxcLRmZzYHF1s5YzE] 163 replace-graded units with results; 12 name an unconditional control; re-graded from their artifacts (grader reproduced the stored verdict 13/13): 0 flips, all FAIL stay FAIL, control never the binding clause. No lead (FAIL->PASS impossible by construction), no PASS->FAIL. Found: 10 queued 0142 units name a control but lack --vs-control (pipeline PI-20261024-HF1S5YZE-0001). Doc: docs/research/replace-grade-control-regrade-2026-10-24.md [2026-10-24T14:55Z lane] 0142-01..10 now carry --vs-control (PI-20261024-HF1S5YZE-0001 closed); rebuilt as v2 branch from main.",
   "priority_rank": 3,
-  "updated_at": "2026-10-24T14:06:03Z",
-  "updated_by": "session_01UETC6mFiwMgXk6URsuWzZb",
+  "updated_at": "2026-10-24T15:03:31Z",
+  "updated_by": "session_01RBNkFwxcLRmZzYHF1s5YzE",
   "roadmap": [
     "L-ATM"
   ],
+  "writeback": {
+    "roadmap": "none: a re-grade of existing L-ATM results; no milestone state changes (0 of 12 verdicts flipped)",
+    "arch": "none: no architecture change; one read-only script and one evidence doc"
+  },
+  "observation": {
+    "what": "the first RQ-20261024-0142-01..10 unit to land carries a vs_controls block in its verdict row (the clause enforced)",
+    "how_to_check": "read research/results/RQ-20261024-0142-0N/ verdict row measurement.grade.candidates.*.vs_controls",
+    "due_by": "2026-11-07"
+  },
   "_seq": 627
 }

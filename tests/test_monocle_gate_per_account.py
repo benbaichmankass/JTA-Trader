@@ -29,9 +29,13 @@ import src.runtime.pipeline as pl
 from src.runtime import strategy_monocle as sm
 from src.units.db.database import Database
 
-# slv_pullback_1d: still on the alpaca_live + alpaca_portfolio rosters. ief_pullback_1d left both on
-# 2026-10-21 (operator decision), so the Stage-1/Stage-2 shapes below need a leg that is still on them.
+# The synthetic shapes below pass explicit account scopes, so any strategy name works; slv_pullback_1d
+# is kept as the label. The one test that reads the REAL rosters (``_accounts_declaring``) needs a leg
+# on a Stage-1 soak account AND a Stage-2 live+mirror pair. Since slv_pullback_1d left alpaca_live +
+# alpaca_portfolio (operator decision 2026-10-24, after ief_pullback_1d on 2026-10-21) no Alpaca leg
+# is, so that test uses the Bybit trio (bybit_1 soak / bybit_2 live / bybit_portfolio mirror).
 STRAT, SYM = "slv_pullback_1d", "SLV"
+ROSTER_STRAT, ROSTER_SYM = "ada_pullback_2h", "ADAUSDT"
 
 
 @pytest.fixture
@@ -73,19 +77,23 @@ def audit(monkeypatch):
 # ── 1. Stage-1 soak legs block only themselves ──────────────────────────────
 
 def test_paper_soak_leg_never_blocks_live(journal, audit):
-    """The reported bug: only alpaca_paper (Stage-1) holds → alpaca_live trades."""
-    _pkg(journal, "pkg-soak")
-    _leg(journal, "pkg-soak", "alpaca_paper")
-    _leg(journal, "pkg-soak", "alpaca_live", status="rejected")
+    """The reported bug: only the Stage-1 soak account holds → the live account trades.
 
-    gate, scope = pl._open_package_round(_sig(), None)
+    Reported on alpaca_paper / alpaca_live; asserted on the Bybit trio against the
+    real rosters (see the ROSTER_STRAT note above)."""
+    kw = dict(strategy=ROSTER_STRAT, symbol=ROSTER_SYM)
+    _pkg(journal, "pkg-soak", **kw)
+    _leg(journal, "pkg-soak", "bybit_1", **kw)
+    _leg(journal, "pkg-soak", "bybit_2", status="rejected", **kw)
+
+    gate, scope = pl._open_package_round(_sig(ROSTER_STRAT, ROSTER_SYM), None)
 
     assert gate is None
-    assert {"alpaca_live", "alpaca_portfolio"} <= scope
-    assert "alpaca_paper" not in scope
-    assert scope == sm._accounts_declaring(STRAT) - {"alpaca_paper"}
+    assert {"bybit_2", "bybit_portfolio"} <= scope
+    assert "bybit_1" not in scope
+    assert scope == sm._accounts_declaring(ROSTER_STRAT) - {"bybit_1"}
     assert audit[-1]["event"] == "open_package_scoped"
-    assert audit[-1]["held_by_account"] == {"alpaca_paper": "pkg-soak"}
+    assert audit[-1]["held_by_account"] == {"bybit_1": "pkg-soak"}
 
 
 def test_soak_leg_with_an_elected_scope(journal, audit):

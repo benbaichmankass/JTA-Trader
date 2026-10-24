@@ -128,6 +128,10 @@
       "state": "needs_column",
       "reason": "MI-165 break-even FLOOR, present on donchian + pullback + squeeze: once the trade has SEEN this many R, the trailing stop may never again sit below entry. It is max()-ed against the chandelier candidate, so it is a one-directional RATCHET distinct from trail_geometry rather than a setting of it. The string `be_floor` appears ZERO times anywhere in the matrix."
     },
+    "--be-floor-lock-r": {
+      "state": "needs_column",
+      "reason": "Profit-lock STEP for --be-floor-r, pullback harness only (ADA-LIVE-EXIT-REVIEW-1024, 2026-10-24): the armed floor sits at entry + k R instead of entry; 0.0 = the plain break-even floor, byte-identical. It is a SUB-KNOB of --be-floor-r, so whoever adds the be_floor column should carry it as that column's lock level rather than a column of its own. First consumer: research/queue/RQ-20261024-4ef5-01.yaml."
+    },
     "--sim-breakeven": {
       "state": "needs_column",
       "reason": "ict_scalp only, and it SIMULATES A LIVE MECHANISM -- 'the LIVE monitor's break-even trail (monitor_breakeven_sl: once a bar closes >= 1R in favour, SL moves to entry +/- be_offset_bps from YAML)'. So unlike --timeout-bars it has a live consumer, which is what makes its absence a gap rather than an n/a. The string `sim_breakeven` appears ZERO times in the matrix, while 8 of the matrix's 52 legs are scalp legs."

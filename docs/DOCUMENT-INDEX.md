@@ -782,6 +782,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/crypto-finetune-proposals-2026-07-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/d1-cost-stack-verification-2026-09-25.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/exit-giveback-predictor-gate-2026-10-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/ada-live-exit-review-2026-10-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Live ADA short (ada_pullback_2h, 2026-10-24): trail 3.33 R behind extreme, hold-vs-tighten history, profit-lock step + trail-width units 4ef5-01/02. |
 | `docs/research/d3-realized-slippage-2026-09-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/e62-equity-futures-slippage-2026-09-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/declare-the-9-cannot-be-valued-yet-2026-08-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
@@ -941,6 +942,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/programmes/03-STRATEGY-IMPROVEMENT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Programme 03 plan (every leg pulls its own weight): Stage-0 capital-day census, S0-C fresh-window confirmation rule, Q1-Q8 ladders, 4-week backlog; units RQ-20261014-470a-01..12, row PAIRS-R-SCALE. |
 | `docs/research/programmes/RESEARCH-MAP.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | The five research programmes, their measures, cross-programme feeds and infra needs (weekly planning 2026-10-14). |
 | `docs/research/reduce-fill-qty-2026-10-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/replace-grade-control-regrade-2026-10-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/repo-private-transition-2026-10-08.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/partial-close-producer-never-fired-2026-09-09.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/pb-20260822-avax-scalp-sizing-2026-09-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
