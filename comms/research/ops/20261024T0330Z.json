@@ -1,0 +1,93 @@
+{
+ "run": "RESEARCH-OPS-20261024-0247",
+ "finished_at": "2026-10-24T03:30:00Z",
+ "by": "session_01V7gqYXmxAvnZYmyYbwMKmp",
+ "floor": 59,
+ "floor_basis": "computed_floor(fired_24h 74)",
+ "authoring_queue_depth": 32,
+ "idle_backends": [
+  "github_runner_data",
+  "kaggle",
+  "kaggle_cpu"
+ ],
+ "needs_review_triaged": 1,
+ "needs_review_left": 29,
+ "throughput": {
+  "runnable_before": 44,
+  "runnable_after": 46,
+  "queued": 132,
+  "fired_24h": 74,
+  "results_landed_24h": 74,
+  "hours_since_last_dispatch": 1.2,
+  "idle_alarm": false,
+  "after_basis": "dispatch_queue.py dry run lists RQ-20261024-001 and -002 would_dispatch on kaggle_cpu; they count runnable once this PR merges. Still 13 below the floor: H1-AUTHOR, the shortfall is authoring work, not a mechanism fault"
+ },
+ "mechanism": {
+  "dispatch_receipt": "ok (last dispatch 1.2 h before the pass)",
+  "collector": "ok (74 results landed 24h, 0 unreadable)",
+  "stranded_stamp_prs": "not listed this pass (no PR query run)",
+  "incident": null,
+  "watchdog": "not re-read this pass",
+  "blocked_audit": "blocker_watch.py re-run this pass; 71 files in research/queue/blocked/ not individually re-audited (the previous pass found all name a lever)"
+ },
+ "results_read": {
+  "pass": 0,
+  "fail": 0,
+  "indeterminate": 0,
+  "units": [],
+  "note": "Results since the 20:47Z pass were not re-read one by one: result_disposition_check shows UNGRADED 0 and needs_review UNOWNED 0 (the grader dispositioned them). RQ-20261022-38be-01 graded awaiting more_data today. No Tier-3 implication read."
+ },
+ "unlocked": [],
+ "retired": [
+  {
+   "unit": "RQ-20261022-4a3b-01",
+   "reason": "producer_failed (trainer 300-minute timeout, CPU TabPFN control), no outcome; redesign 38be-01 with the same rule ran 2026-10-23. Not a family retirement."
+  }
+ ],
+ "levers_filed": [
+  {
+   "lever": "adaptive-conformal (ACI) arm in conformal_abstain_eval.py, the drift fix 65ff-25 pointed at",
+   "ref": "no row filed: RQ-20261024-001 (global quantile) runs first; file only if it also FAILs on validity"
+  }
+ ],
+ "units_authored": [
+  "RQ-20261024-001 (conformal abstention 1h variant, mondrian none; node P2-Q1.5-fail)",
+  "RQ-20261024-002 (SOL 1h range-vol log-loss transfer of a1f3-15; node P2-Q1.6-yz-sol-logloss)"
+ ],
+ "followups_filed": [
+  {
+   "what": "65ff-25 FAIL (two passes): first-test-failed variant",
+   "ref": "RQ-20261024-001"
+  },
+  {
+   "what": "a1f3-15 PASS on BTC+ETH, BTC CI95 spans 0: third-symbol transfer",
+   "ref": "RQ-20261024-002"
+  }
+ ],
+ "authoring": {
+  "queue_depth": 32,
+  "nodes_drafted": 2,
+  "nodes": [
+   "P2-Q1.5-fail",
+   "P2-Q1.6-yz-sol-logloss"
+  ],
+  "theme_shortfall": {
+   "live_strategy": 4,
+   "ml_health": 9,
+   "infra": 6
+  },
+  "why_short": "2 programme nodes drafted (both ml_health, both on an existing driver, both land on kaggle_cpu which was idle). ml_health shortfall 9 -> 7. live_strategy and infra got none: the live_strategy head nodes (P3-Q1 live-vs-backtest stage B, the P1-Q6 declares) are gated on the LIVE-BT-STAGE-B instrument or are Tier-3 notes, and no ready node has infra theme; P2-Q4-var-price-vector and P2-Q4-cross-asset-features were NOT authored (the VAR block already exists in ml_bakeoff.py and 9da8-01 is queued; cross-asset needs an equity/DXY point-in-time data check first)."
+ },
+ "not_run": [
+  "step A: stranded automation/research-queue-* PR listing and the watchdog_incidents.jsonl read",
+  "step D: individual result reads since 20:47Z (relied on result_disposition_check: UNGRADED 0, UNOWNED 0)",
+  "authoring beyond 2 nodes: live_strategy and infra theme shortfalls untouched"
+ ],
+ "handoff": [
+  "MANAGER (held PR): merge this run PR (programme + queue edits hold under E57); merge-slot claim is committed on the branch",
+  "next research-ops: read RQ-20261024-001/-002; first confirm they fired on kaggle_cpu and landed measured",
+  "next research-ops: author infra and live_strategy units (H1-THEME shortfalls 6 and 4); P2-Q4-cross-asset-features needs the equity/DXY data check before a unit",
+  "next research-ops: step A stranded-PR list and watchdog_incidents read were not run this pass",
+  "blocker_watch.py (run 03:00Z, 774 checklist rows / 1136 research units): STALE_BLOCK 3 (MACRO-EVENT-AXIS-HARNESS, PHONE-EXEC-OBSERVABLE-1018, RESEARCH-TRIAL-LEDGER: dangling refs, manager rows), NOT_RUNNING 48 of which 47 are queued units never yet dispatched (queue depth ahead of capacity, the dispatcher fires hourly; includes 2230-01, 7e83-01/-02 from earlier passes and my two new ones) and 1 is a bad route: RQ-20260928-001 NEEDS_LANE (prose run.workflow, 26 days), already owned by checklist row HTF-FILTER-AB-LANE (lever: a verdict.json wrapper so research-script-run.yml can run it). OPERATOR_WAIT 1, UNPROVEN_OVERDUE 145 (manager rows)."
+ ]
+}
