@@ -13,11 +13,15 @@
   "blocked_on": [],
   "note": "[2026-10-24T15:58Z manager session_01UETC6mFiwMgXk6URsuWzZb] OPERATOR popups, verbatim: ADA trade -> \"Tighten SL to 0.2053\"; how -> \"Build the action now (Recommended)\". Context from ADA-LIVE-EXIT-REVIEW-1024 (exploratory, n=32 trades that reached this state): hold has mean +3.19R and worst +0.28R; tighten has mean +2.96R and worst +2.32R. The operator chose lower variance. No sanctioned path to amend a live Bybit stop existed. Dispatched lane session_015ZELX6 (Opus). The PR is held; the manager runs the action only after the operator's OK. LANE: change only state, writeback, observation and note.",
   "priority_rank": 1,
-  "updated_at": "2026-10-24T17:43:32Z",
+  "updated_at": "2026-10-24T17:52:26Z",
   "updated_by": "session_01UETC6mFiwMgXk6URsuWzZb",
   "roadmap": [
     "L-OPS"
   ],
   "observation": "OBSERVED 2026-10-24 17:4xZ: #19902 merged (171c733); dry run #19912 clean; apply #19913 moved ADAUSDT short stop 0.2149 -> 0.2053 on 3 legs (bybit_2, bybit_portfolio, bybit_1), venue read-back venue_sl=0.2053 on all three, journal trades.stop_loss + order_packages.sl written. Mark 0.2039 at apply.",
+  "writeback": {
+    "roadmap": "none: an operator ops tool (Tier-2 system-action amend-position-sl), no milestone measure moved",
+    "arch": "none: uses the existing monitor modify seam; listed in docs/claude/system-actions.md"
+  },
   "_seq": 631
 }
