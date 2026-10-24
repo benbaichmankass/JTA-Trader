@@ -99,7 +99,9 @@ Common to every rung:
    - Offline, every arm's outcome is observed by re-running the harness. So this is full-information cost-sensitive classification, with no propensities.
    - `RQ-20261011-9da8-04` (doubly-robust OPE bandit) stays for the live-logged case.
    - A PASS earns C2: per-bar switching, which needs a harness that accepts a policy. Not filed.
-4. **(d) Gates on the validated levers.** Already registered and queued: `9a7e-01..04` (vol-controlled giveback gate vs a matched-rate random flag) and `b7e1-04..10` (the path-state trail gate). All seven are graded **FAIL** (their `grading` blocks, read 2026-10-24), and their build `PATHSTATE-TRAIL-GATE` is `landed_unproven`. This lane authors nothing here, to avoid duplicates. The `f08c-*` and `4ef5-*` rule variants also stay as queued.
+4. **(d) Gates on the validated levers.** Two sets are already registered:
+   - `9a7e-01..04` (vol-controlled giveback gate vs a matched-rate random flag) are **QUEUED**, not yet run.
+   - `b7e1-04..10` (the path-state trail gate) are the seven units graded **FAIL** (their `grading` blocks, read 2026-10-24). Their build `PATHSTATE-TRAIL-GATE` is `landed_unproven`. This lane authors nothing here, to avoid duplicates. The `f08c-*` and `4ef5-*` rule variants also stay as queued.
 
 ### The bracket advisor — observe-only, the parity and evidence path
 
