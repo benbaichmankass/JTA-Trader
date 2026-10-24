@@ -1,0 +1,52 @@
+{
+  "unit": "RQ-20261024-f08c-06",
+  "run_id": "40125887606",
+  "commit_sha": "89765a70e8dcd6c10443fdae60808f6063849231",
+  "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/40125887606",
+  "timeout_minutes": 120,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/exit_lever_ablation.py",
+        "--leg",
+        "trend_donchian_sol_prop",
+        "--arm",
+        "A=",
+        "--arm",
+        "LS175=--trail-level=swing;--trail-level-tight-mult=1.75",
+        "--arm",
+        "LS25=--trail-level=swing;--trail-level-tight-mult=2.5",
+        "--arm",
+        "LF175=--trail-level=fvg;--trail-level-tight-mult=1.75",
+        "--arm",
+        "F30=--trail-level=fvg;--trail-level-tight-mult=3.0;--trail-level-lookback=120",
+        "--days",
+        "2330",
+        "--start",
+        "2020-07-01",
+        "--end",
+        "2026-10-15 23:59",
+        "--grade",
+        "sweep",
+        "--baseline",
+        "A",
+        "--delta-r",
+        "-2.0",
+        "--folds",
+        "6",
+        "--fold-majority",
+        "3",
+        "--n-floor",
+        "39",
+        "--out",
+        "comms/research/RQ-20261024-f08c-06/40125887606"
+      ],
+      "log": "comms/research/RQ-20261024-f08c-06/40125887606/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 92.1
+    }
+  ],
+  "all_ok": true
+}
