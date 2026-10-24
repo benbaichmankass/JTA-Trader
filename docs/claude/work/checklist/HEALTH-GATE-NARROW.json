@@ -13,7 +13,7 @@
   "blocked_on": [],
   "note": "[2026-10-24T14:45Z manager session_01UETC6mFiwMgXk6URsuWzZb] OPERATOR popup answer, verbatim: \"Narrow the gate (Recommended)\". Option text: count unrouted items, items whose owner row has closed, and high-severity items. Owner-routed rows become the owner's job, tracked by the UNPROVEN_OVERDUE sweep. Evidence: due items went 110 -> 256 -> 369; 349 of them route to a live owner row, 158 of which are landed_unproven.  [lane] Built gate_set()/--gate + self-test plants; 2026-10-24 gate 16 of 370 due.  [lane] Built gate_set()/--gate + self-test plants; 2026-10-24 gate 16 of 370 due.",
   "priority_rank": 2,
-  "updated_at": "2026-10-24T14:48:28Z",
+  "updated_at": "2026-10-24T15:13:48Z",
   "updated_by": "session_01RGgnWseS7bc78rC7eBugZn",
   "roadmap": [
     "L-OPS"
@@ -23,6 +23,9 @@
     "due_by": "2026-11-01T00:00Z",
     "how_to_check": "python3 scripts/ops/pipeline.py --gate; the review backlog_coverage has open_at_start == triaged and count_untriaged == 0 over the gate set"
   },
-  "writeback": "skill .claude/skills/health-review/SKILL.md section The narrowed gate; scripts/ops/pipeline.py gate_set(); comms/schema/health_review_response.template.json backlog_coverage",
+  "writeback": {
+    "roadmap": "none: process/gate change, no milestone line moves (L-OPS measure unchanged)",
+    "arch": "none: review-gate procedure lives in .claude/skills/health-review/SKILL.md, not ARCHITECTURE-CANONICAL"
+  },
   "_seq": 629
 }
