@@ -2,7 +2,7 @@ id: RQ-20261022-b7e1-09
 title: 'Q14 lever (TIME-IN-CHOP STOP): on ada_pullback_2h, once a trade has been >= 1 R up, does exiting the remainder after
   6 / 10 / 14 consecutive bars with the 6-bar efficiency ratio below 0.25 while open profit sits at or below half the peak
   beat the declared exit on net R in 5 of 6 folds?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -130,3 +130,16 @@ programme_node:
   node: P1-Q14-time-in-chop-stop-ada
   goal: G1
 last_dispatched_at: '2026-10-23T20:56:10+00:00'
+grading:
+  attested: RULE-P1-Q14-TIME-IN-CHOP-STOP-09
+  auto: true
+  decision_rule_id: RULE-P1-Q14-TIME-IN-CHOP-STOP-09
+  evidence:
+  - research/results/RQ-20261022-b7e1-09/40018605430.jsonl
+  graded_at: '2026-10-24'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

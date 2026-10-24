@@ -2,7 +2,7 @@ id: RQ-20261022-b7e1-08
 title: 'Q14 lever (SPLIT / PARTIAL EXIT GATED on the feature): on ada_pullback_2h, does banking 25% / 33% / 50% at +2.0 R
   ONLY when the 6-bar efficiency ratio is below 0.30 beat the declared exit AND the ungated far-rung bank on net R in 5 of
   6 folds?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -136,3 +136,16 @@ programme_node:
   node: P1-Q14-gated-bank-ada
   goal: G1
 last_dispatched_at: '2026-10-23T20:56:09+00:00'
+grading:
+  attested: RULE-P1-Q14-GATED-BANK-08
+  auto: true
+  decision_rule_id: RULE-P1-Q14-GATED-BANK-08
+  evidence:
+  - research/results/RQ-20261022-b7e1-08/40018602847.jsonl
+  graded_at: '2026-10-24'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

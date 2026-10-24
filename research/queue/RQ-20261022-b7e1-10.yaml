@@ -2,7 +2,7 @@ id: RQ-20261022-b7e1-10
 title: 'Q14 lever (PROP, both directions of the efficiency ratio): on trend_donchian_eth_prop, once a trade is >= 2 R up AND
   the 6-bar efficiency ratio is HIGH (> 0.60 / 0.70) or LOW (< 0.25 / 0.35), does tightening the 3.5-ATR trail to 2.5 x ATR
   beat the declared exit AND the ungated tighten, on net R in 5 of 6 folds, TP 6R untouched?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -136,3 +136,16 @@ programme_node:
   node: P1-Q14-prop-er-trail-eth
   goal: G1
 last_dispatched_at: '2026-10-23T20:56:16+00:00'
+grading:
+  attested: RULE-P1-Q14-PROP-ER-TRAIL-10
+  auto: true
+  decision_rule_id: RULE-P1-Q14-PROP-ER-TRAIL-10
+  evidence:
+  - research/results/RQ-20261022-b7e1-10/40023075668.jsonl
+  graded_at: '2026-10-24'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
