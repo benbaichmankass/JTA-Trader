@@ -383,3 +383,50 @@ def test_planted_defect_skips_a_signal_window_in_a_bar_before_since():
     res2 = P.analyse_leg(leg, b, SINCE, UNTIL)
     p2 = P.planted_defect([leg], [res2], b, SINCE, UNTIL)["plants"][0]
     assert p2["flagged"] is True, p2
+
+
+def test_fetch_bundle_pulls_evals_past_window_end():
+    """LIVE-EVAL-GAP-1024: evals logged after the newest bar's close sit beyond
+    `until`; the audit fetch must reach past it or that bar reads as lost."""
+    import time
+    seen = []
+
+    class F:
+        requests = 0
+
+        def candles(self, sym, tf):
+            return {"candles": [], "error": None}
+
+        def audit(self, strategy, since, until):
+            seen.append(P.to_epoch(until))
+            return {"rows": [], "error": None}
+
+        def journal(self, *a, **k):
+            return {"rows": [], "error": None}
+
+    past = int(time.time()) - 86400
+    b = P.fetch_bundle(F(), [_leg()], past - 86400, past)
+    assert seen[-1] == past + P.EVAL_TAIL_S
+    assert P.to_epoch(b["audit_until"]) == past + P.EVAL_TAIL_S
+    # never beyond "now": a window ending moments ago cannot have later evals
+    b = P.fetch_bundle(F(), [_leg()], past, int(time.time()))
+    assert seen[-1] <= time.time() + 1
+
+
+def test_newest_bar_with_evals_beyond_audit_horizon_is_not_lost():
+    import dataclasses
+    leg = dataclasses.replace(_leg(), decision_bar="closed")
+    rows, _ = _consistent_evals(leg)
+    b0 = UNTIL - TF_S
+    # evals for the newest bar exist live but were not fetched (horizon = UNTIL)
+    cut = [r for r in rows if P.to_epoch(r["logged_at_utc"]) < b0]
+    bundle = _bundle(cut)
+    bundle["audit_until"] = P.iso(UNTIL + 100)  # < b_end + fresh + 120
+    res = P.analyse_leg(leg, bundle, SINCE, UNTIL)
+    assert not any(d["class"] == "lost_bar" and d["bar"] == P.iso(b0)
+                   for d in res["divergence_detail"])
+    # control: same rows, horizon far past the window -> the bar IS lost
+    bundle["audit_until"] = P.iso(UNTIL + P.EVAL_TAIL_S)
+    res = P.analyse_leg(leg, bundle, SINCE, UNTIL)
+    assert any(d["class"] == "lost_bar" and d["bar"] == P.iso(b0)
+               for d in res["divergence_detail"])
