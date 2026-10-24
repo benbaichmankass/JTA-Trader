@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# wiring: manual-only - one-off evidence re-grade (REPLACE-GRADE-CONTROL-REGRADE); re-run by hand, see docs/research/replace-grade-control-regrade-2026-10-24.md
 """Re-grade committed exit-lever ``replace`` results with the control clause enforced (REPLACE-GRADE-CONTROL-REGRADE).
 
 Reads each unit's committed result artifact (``measurement.arms`` carries n / net_r / max_drawdown_r / per-fold net R,
@@ -44,8 +45,11 @@ def regrade(unit_id: str, controls: dict[str, list[str]]) -> dict:
     with open(REPO / "research/queue" / f"{unit_id}.yaml", encoding="utf-8") as fh:
         u = yaml.safe_load(fh)
     cmd = [str(c) for c in u["run"]["command"]]
-    files = sorted(glob.glob(str(REPO / "research/results" / unit_id / "*.jsonl")))
-    with open(files[-1], encoding="utf-8") as fh:
+    files = glob.glob(str(REPO / "research/results" / unit_id / "*.jsonl"))
+    if len(files) != 1:  # pinned: a unit with several landed rows must be graded by naming the row, not by picking one
+        raise SystemExit(f"{unit_id}: expected exactly 1 landed result, found {len(files)}")
+    print(f"[{unit_id}] artifact {Path(files[0]).relative_to(REPO)}")
+    with open(files[0], encoding="utf-8") as fh:
         rec = json.loads(fh.readline())
     m = rec["measurement"]
     arms, old = m["arms"], m["grade"]
@@ -83,7 +87,7 @@ def regrade(unit_id: str, controls: dict[str, list[str]]) -> dict:
             "candidates": {c: {"net_r": v["net_r"], "d_vs_A": v["delta_net_r"], "folds_ge_A": v["folds_ge_incumbent"],
                                 "dd": v["max_drawdown_r"], "dd_cap": v["max_drawdown_cap"], "passes_old": old["candidates"].get(c, {}).get("passes"),
                                 "passes_new": v["passes"], "vs_controls": v.get("vs_controls")} for c, v in new["candidates"].items()},
-            "result_file": str(Path(files[-1]).relative_to(REPO)), "n_A": arms[baseline]["n"]}
+            "result_file": str(Path(files[0]).relative_to(REPO)), "n_A": arms[baseline]["n"]}
 
 
 def main(argv=None) -> int:
