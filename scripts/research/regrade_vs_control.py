@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import glob
+import importlib
 import json
 import sys
 from pathlib import Path
@@ -20,7 +21,7 @@ import yaml
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts" / "research"))
-import exit_lever_ablation as ela
+ela = importlib.import_module("exit_lever_ablation")
 
 # unit -> {candidate-arm-or-"*": [control arms]}; "*" = every non-baseline, non-control arm. Read from each unit's
 # registered decision_rule text (the sentence naming the unconditional control), not from the harness.
