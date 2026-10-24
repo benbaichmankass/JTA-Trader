@@ -2,23 +2,27 @@
   "id": "ADA-LIVE-EXIT-REVIEW-1024",
   "title": "Live ADA position: stop has moved but not enough to secure gains. (A) recommend action now, (B) exit lessons for this strategy as pre-registered units",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": "session_0163yPhqvfe3zFmvcd4bL6Ah",
   "model": "claude-opus-5-5",
   "ceiling_usd": 12,
-  "spend_usd": null,
+  "spend_usd": 9.04,
   "tier": 3,
   "prs": [],
   "blocked_on": [],
-  "note": "[2026-10-24T15:20Z manager session_01UETC6mFiwMgXk6URsuWzZb] OPERATOR in chat, verbatim: \"Here we also have like the ADA trade right now, which is doing very well, and the stop loss has moved, but way not enough. Like, when you, this looks like a trade where at this point we should be securing most of the gains. So I want us to like review that, put a lane on that, see like A, like what they think we should do, and B, if like if it's what we can learn from this use case to like basically improve the exit strategy for this specific trading strategy.\" Dispatched lane session_0163yPhq (Opus, real money, read-only on the venue; any SL amend is the operator's call). Part A wakes the manager first. Check #19856 (closed-bar trail, deployed ~13:52Z) as a possible cause. LANE: change only state, writeback, observation and note on this row. [2026-10-24T15:58Z manager session_01UETC6mFiwMgXk6URsuWzZb] The lane corrected Part A to: LEAVE IT, data lean (the D34T15 rule: -1.98R overall). OPERATOR chose, verbatim: \"Tighten SL to 0.2053\" (lower variance). Executed via AMEND-SL-ACTION. [2026-10-24T16:25Z lane session_0163yPhqvfe3zFmvcd4bL6Ah] Part A delivered at 15:22Z, corrected at 15:28Z (leave it; tighten costs about 0.23 R expected but removes the giveback tail). Live SL 0.2154 matched the 5.0 x ATR trail to the tick: no bug, and #19856 does not touch htf_pullback_trend_2h. Part B: PR #19891 (HOLD) = doc + 2 pre-registered units (4ef5-01 profit-lock step, 4ef5-02 base trail width) + harness flag --be-floor-lock-r. Spend about $8 of the $12 ceiling (estimate).",
+  "note": "[2026-10-24T15:20Z manager session_01UETC6mFiwMgXk6URsuWzZb] OPERATOR in chat, verbatim: \"Here we also have like the ADA trade right now, which is doing very well, and the stop loss has moved, but way not enough. Like, when you, this looks like a trade where at this point we should be securing most of the gains. So I want us to like review that, put a lane on that, see like A, like what they think we should do, and B, if like if it's what we can learn from this use case to like basically improve the exit strategy for this specific trading strategy.\" Dispatched lane session_0163yPhq (Opus, real money, read-only on the venue; any SL amend is the operator's call). Part A wakes the manager first. Check #19856 (closed-bar trail, deployed ~13:52Z) as a possible cause. LANE: change only state, writeback, observation and note on this row. [2026-10-24T15:58Z manager session_01UETC6mFiwMgXk6URsuWzZb] The lane corrected Part A to: LEAVE IT, data lean (the D34T15 rule: -1.98R overall). OPERATOR chose, verbatim: \"Tighten SL to 0.2053\" (lower variance). Executed via AMEND-SL-ACTION. [2026-10-24T16:25Z lane session_0163yPhqvfe3zFmvcd4bL6Ah] Part A delivered at 15:22Z, corrected at 15:28Z (leave it; tighten costs about 0.23 R expected but removes the giveback tail). Live SL 0.2154 matched the 5.0 x ATR trail to the tick: no bug, and #19856 does not touch htf_pullback_trend_2h. Part B: PR #19891 (HOLD) = doc + 2 pre-registered units (4ef5-01 profit-lock step, 4ef5-02 base trail width) + harness flag --be-floor-lock-r. Spend about $8 of the $12 ceiling (estimate). 2026-10-24 17:4xZ operator popup \"Merge + amend to 0.2053\" (mark 0.2045, ~+2.7R open). Applied via amend-position-sl #19913: venue stop 0.2053 on bybit_2/bybit_portfolio/bybit_1, read back. Locks ~+2.5R.",
   "priority_rank": 1,
-  "updated_at": "2026-10-24T16:22:35Z",
-  "updated_by": "session_0163yPhqvfe3zFmvcd4bL6Ah",
+  "updated_at": "2026-10-24T17:44:26Z",
+  "updated_by": "session_01UETC6mFiwMgXk6URsuWzZb",
   "roadmap": [
     "L-ATM"
   ],
-  "observation": "closes when PR #19891 merges AND research/results/ carries verdicts for RQ-20261024-4ef5-01 and -02 (the live-SL decision is closed: operator chose tighten to 0.2053, executed by the manager)",
+  "observation": {
+    "what": "research verdicts for RQ-20261024-4ef5-01 (profit-lock step) and RQ-20261024-4ef5-02 (base trail width) on ada_pullback_2h; PR #19891 merged; live-SL decision closed (operator chose 0.2053, applied #19913, read back)",
+    "how_to_check": "ls research/results/ | grep 4ef5-0; read each verdict against its pre-registered rule",
+    "due_by": "2026-10-31"
+  },
   "writeback": "docs/research/ada-live-exit-review-2026-10-24.md (on PR #19891): ada_pullback_2h trail is 3.33 R behind the extreme (5.0/1.5 ATR) so it locks <= +0.67 R before the 4 R target; ~30 tested exit levers all lose to the declared exit; history at >=3.4 R: hold +3.19 R vs tighten +2.96 R (n=32)",
   "_seq": 630
 }
