@@ -111,7 +111,13 @@ grading:
   grader: scripts/research/queue_grade.py
   needs_review: true
   owner: SAME-SYMBOL-ALLOCATION
-  owner_reason: 'producer_failed TWICE (research-ops 2026-10-24 14:47Z, read from results/RQ-20261015-1631-01/): the 2026-10-16 route-fault fix works (the reason now reaches the record) and the re-run on it (2026-10-17) still reads ''no 5m candle source for the symbol: unresolved'' for ETHUSDT -- bs._backtest_data_source.resolve_or_refuse(ETHUSDT, 5m, unit data) is not ok on the runner. The stale text here said it would re-run; it already did and cadence is once, so nothing re-fires. Lever: crypto 5m candle source for same_symbol_head_to_head.py (runner-reachable Binance-Vision, as harness_stage0 / NEWS-ALPHA-HARNESS use), noted on SAME-SYMBOL-ALLOCATION; unit then needs last_dispatched_at null. Not a verdict.'
+  owner_reason: 'producer_failed TWICE (research-ops 2026-10-24 14:47Z, read from results/RQ-20261015-1631-01/):
+    the 2026-10-16 route-fault fix works (the reason now reaches the record) and the re-run on it (2026-10-17)
+    still reads ''no 5m candle source for the symbol: unresolved'' for ETHUSDT -- bs._backtest_data_source.resolve_or_refuse(ETHUSDT,
+    5m, unit data) is not ok on the runner. The stale text here said it would re-run; it already did and
+    cadence is once, so nothing re-fires. Lever: crypto 5m candle source for same_symbol_head_to_head.py
+    (runner-reachable Binance-Vision, as harness_stage0 / NEWS-ALPHA-HARNESS use), noted on SAME-SYMBOL-ALLOCATION;
+    unit then needs last_dispatched_at null. Not a verdict.'
   reason: 'read_state not unanimously measured: [''producer_failed'']'
   rows: 2
   verdict: null

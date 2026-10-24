@@ -65,3 +65,15 @@ generated:
     symbol: XRPUSDT
     timeframe: 4h
 last_dispatched_at: '2026-10-24T12:46:29+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-TPL-E35-BRACKET-IS-OOS-GATE
+  evidence:
+  - docs/research/e35-bracket-corpus.jsonl
+  graded_at: '2026-10-24'
+  grader: scripts/research/queue_grade.py
+  latest: true
+  needs_review: true
+  reason: base_oos_trades 29 < 39 (unresolvable_at_current_n)
+  rows: 199
+  verdict: indeterminate

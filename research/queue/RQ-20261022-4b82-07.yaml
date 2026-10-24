@@ -1,6 +1,6 @@
 id: RQ-20261022-4b82-07
 title: 'Prop pace VARIANT of the failed same-UTC-day-flat leg: intraday-flat Donchian-20 and a 2-bar breakout confirmation across six perps'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-PROP
@@ -119,3 +119,16 @@ related:
 - scripts/research/hyro_fit_verdict.py
 - AUTHOR-FLOOR-1022
 last_dispatched_at: '2026-10-24T12:46:29+00:00'
+grading:
+  attested: RULE-RQ20261022-4B82-07-TREND-1H-DAYFLAT
+  auto: true
+  decision_rule_id: RULE-RQ20261022-4B82-07-TREND-1H-DAYFLAT
+  evidence:
+  - research/results/RQ-20261022-4b82-07/40095360985.jsonl
+  graded_at: '2026-10-24'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
