@@ -1060,6 +1060,7 @@ accounts:
                                        # (operator-approved 2026-05-28)
       daily_usd: 200                   # absolute FALLBACK only (no equity snapshot)
       risk_pct: 0.015                   # 1.5% balance risked per trade
+      max_gross_exposure_pct: 1.5      # gross notional cap = 1.5x equity (a MULTIPLE, see exposure.py); operator 2026-10-24 "1.5× equity (Recommended)", MGC-SIZING-OVERSIZE
       daily_dd_switch:                 # The ONE automatic daily off (operator 2026-10-09, rule 7
         armed: true                    # exception). ARMED 2026-10-09 (operator: "We'll arm all of them").
         limit_pct: 0.03                # 3% of day-start equity, UTC-midnight reset; trips refuse
@@ -1103,6 +1104,7 @@ accounts:
                                        # (operator-approved 2026-05-28)
       daily_usd: 200                   # absolute FALLBACK only (no equity snapshot)
       risk_pct: 0.015                   # 1.5% balance risked per trade
+      max_gross_exposure_pct: 1.5      # gross notional cap = 1.5x equity (a MULTIPLE, see exposure.py); operator 2026-10-24 "1.5× equity (Recommended)", MGC-SIZING-OVERSIZE
       daily_dd_switch:                 # The ONE automatic daily off (operator 2026-10-09, rule 7
         armed: true                    # exception). ARMED 2026-10-09 (operator: "We'll arm all of them").
         limit_pct: 0.03                # 3% of day-start equity, UTC-midnight reset; trips refuse
