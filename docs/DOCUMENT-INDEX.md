@@ -782,6 +782,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/crypto-finetune-proposals-2026-07-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/d1-cost-stack-verification-2026-09-25.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/exit-giveback-predictor-gate-2026-10-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/ada-live-exit-review-2026-10-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | Live ADA short (ada_pullback_2h, 2026-10-24): trail 3.33 R behind extreme, hold-vs-tighten history, profit-lock step + trail-width units 4ef5-01/02. |
 | `docs/research/d3-realized-slippage-2026-09-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/e62-equity-futures-slippage-2026-09-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/declare-the-9-cannot-be-valued-yet-2026-08-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
