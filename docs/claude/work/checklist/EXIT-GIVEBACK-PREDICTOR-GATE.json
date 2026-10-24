@@ -2,21 +2,31 @@
   "id": "EXIT-GIVEBACK-PREDICTOR-GATE",
   "title": "Build on the eba2-04 / eba2-01 giveback predictor as a gate for the exit levers",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": "session_017YRS6YB4rwYZXqHY6YhSx4",
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 10,
-  "spend_usd": null,
+  "spend_usd": 2,
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "[2026-10-24T05:58Z manager session_01G3UtWJrCibCYuX2wFxsYbR] Operator popup answer 2026-10-23 ~20:15Z, relayed by outgoing manager session_01YHnEs6 in trig_015Ls6mG (which never fired; found 2026-10-24T05:58Z): exits focus order verbatim \"3 then 2 then 1\" -> (c), third. [2026-10-24T13:28Z manager session_01UETC6mFiwMgXk6URsuWzZb] Dispatched lane session_017YRS6Y (Sonnet, fresh, $10). Third in the operator's exits order.",
+  "note": "[2026-10-24 session_017YRS6YB4rwYZXqHY6YhSx4] Predictor skill is log-loss only (pooled ll_gain 0.0115/0.0145 on ~0.69 base; OOS R2 gain ~0). Gate already tested at P>=0.5 on ada/xrp pullback 2h (eba2-07/-08): both FAIL. Built vol-controlled/selective trigger flags, matched-rate random null and --vs-control. Pre-registered RQ-20261024-9a7e-01..04, all would_dispatch. Doc: docs/research/exit-giveback-predictor-gate-2026-10-24.md",
   "priority_rank": 6,
-  "updated_at": "2026-10-24T13:28:15Z",
-  "updated_by": "session_01UETC6mFiwMgXk6URsuWzZb",
+  "updated_at": "2026-10-24T13:51:22Z",
+  "updated_by": "session_017YRS6YB4rwYZXqHY6YhSx4",
   "roadmap": [
     "L-ATM"
   ],
+  "due_by": "2026-11-07",
+  "writeback": {
+    "roadmap": "none: a negative-leaning research test of an existing L-ATM lever, no milestone state changes until the 9a7e results land",
+    "arch": "none: no architecture change; harness flags and queue units only"
+  },
+  "observation": {
+    "what": "RQ-20261024-9a7e-01..04 results landed and read under their registered rules (MT must beat A, UT and RT in 5 of 6 folds)",
+    "how_to_check": "read research/results/RQ-20261024-9a7e-0{1,2,3,4}/ verdict rows and the queue grading field",
+    "due_by": "2026-11-07"
+  },
   "_seq": 622
 }
