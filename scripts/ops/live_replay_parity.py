@@ -678,6 +678,12 @@ def analyse_leg(leg: Leg, bundle: dict, since: float, until: float, *,
         return is_market_open("us_equity", datetime.fromtimestamp(t, tz=timezone.utc))
 
     # bars fully inside the window, inside the 15m reach, with 199 bars of history
+    # A leg that joined EVERY account's roster inside the window did not exist
+    # live before that: its earlier bars have no evals, which is not a lost bar
+    # (only the lost_bar verdict is withheld; any eval that does exist is judged).
+    joins = [leg.roster_from.get(a) for a in leg.accounts]
+    leg_live_from = (min(joins) + ROSTER_DEPLOY_GRACE_S
+                     if joins and all(j is not None for j in joins) else None)
     bars = []
     for i, b0 in enumerate(tf_times):
         b_end = b0 + tf_s
@@ -835,6 +841,7 @@ def analyse_leg(leg: Leg, bundle: dict, since: float, until: float, *,
     adx_gap_max = 0.0
     for i, b0 in bars:
         b_end = b0 + tf_s
+        pre_join = leg_live_from is not None and b0 < leg_live_from
         status = None
         kinds: list[str] = []
         signal_evals: list[EvalRow] = []
@@ -849,7 +856,7 @@ def analyse_leg(leg: Leg, bundle: dict, since: float, until: float, *,
             evs = evals_between(b_end, b_end + fresh + 120)
             if i + 1 >= len(tf_rows):
                 continue
-            if not evs:
+            if not evs and not pre_join:
                 kinds.append("lost_bar")
                 divs.append({"class": "lost_bar", "bar": iso(b0),
                              "detail": f"no {leg.name}_eval in the {fresh:.0f}s window after close"})
@@ -888,7 +895,7 @@ def analyse_leg(leg: Leg, bundle: dict, since: float, until: float, *,
                 bar_rows.append({"bar": iso(b0), "status": "not_comparable",
                                  "why": "before the 15m candle reach"})
                 continue
-            if traded and not evs:
+            if traded and not evs and not pre_join:
                 kinds.append("lost_bar")
                 divs.append({"class": "lost_bar", "bar": iso(b0),
                              "detail": f"{len(traded)} traded 15m candles, 0 live evals"})
@@ -1238,10 +1245,21 @@ def _bar_of(r: dict | None, t: float | None) -> dict | None:
         return None
     from src.runtime.closed_bars import TF_SECONDS
     tf_s = TF_SECONDS[r["timeframe"]]
+    # The mode live ACTUALLY ran decides which bar a package belongs to, not
+    # today's config: a closed-mode leg whose bar was judged forming (a
+    # decision_bar flip mid-window, mode_notes) sits in the bar it was created
+    # in, not the one before. Scoring history against today's config is the
+    # LIVE-PARITY-DIAG-1016 roster error again, on the decision-bar axis.
+    forming = set((r.get("mode_notes") or {}).keys())
+    for b in r["bars"]:  # a bar that ran forming owns its own interval first
+        b0 = to_epoch(b["bar"])
+        if (r["decision_bar"] != "closed" or b["bar"] in forming) and b0 <= t < b0 + tf_s:
+            return b
+    if r["decision_bar"] != "closed":
+        return None
     for b in r["bars"]:
         b0 = to_epoch(b["bar"])
-        lo, hi = (b0 + tf_s, b0 + 2 * tf_s) if r["decision_bar"] == "closed" else (b0, b0 + tf_s)
-        if lo <= t < hi:
+        if b["bar"] not in forming and b0 + tf_s <= t < b0 + 2 * tf_s:
             return b
     return None
 
