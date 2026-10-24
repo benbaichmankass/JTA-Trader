@@ -17,8 +17,8 @@
   ],
   "blocked_on": [],
   "note": "[2026-10-15] (1) arXiv 2607.05291 body READ: supports testing TTM (daily RV, 50 equities/FX/futures, no crypto, no 15m; edge mostly scale at h=1,5); TTM and TTM+HAR-RV arms added to 9da8-01 under the operator's kill rule. (2) 9da8-01..04 each still blocked, exactly: 01 = FRONTIER-LEVER-TSFM (no build_forecasts backend, no side-streams; TTM also needs granite-tsfm in the trainer venv, Tier-2); 02 = no ml_bakeoff block, no meta-label dataset path, and >=300 labelled setups unproven (RQ-20261011-17f4-02 not found in queue/results); 03 = FRONTIER-LEVER-CONFORMAL + ML-HEAD-AGREEMENT-JOIN + sequenced behind eda2-01; 04 = ML-LEG-CORPUS + EXIT-PATH-EMIT-OFFLINE. TabPFN arm pending TABPFN_TOKEN (ML-TABPFN-LICENCE). (3) RQ-20261015-eda2-01 queued (same bar as 1414-02, all rows, holdout 2026-04-01). (4) plan housekeeping in ml-plan-items.yaml. DONE WHEN: eda2-01 graded by research-ops, and the hold PR for TABPFN_TOKEN is landed by the manager. [2026-10-15 close-out] MERGED: #18171 (TTM arms, eda2-01 re-run unit, plan housekeeping), #18172 (TABPFN_TOKEN placement + redaction + guard R4), #18260 (TabPFN-only unit RQ-20261015-eda2-02, runner-waste evidence on GH-CAPACITY-RESEARCH-OFFLOAD). OPEN: #18416 (IP-IN-PUBLIC-LOGS hold, see row IP-IN-PUBLIC-LOGS). STILL UNOBSERVED: no TabPFN arm has ever run (arm_status.tabpfn not yet ok) - blocked on the trainer heavy lock (run 38706803527 waited 3600 s, exit 75); no prefix-grep with the real key done (a session cannot read the secret); RQ-20261015-eda2-01 and -02 not yet graded. NEXT SESSION PICKS UP FIRST: whether RQ-20261015-eda2-02 has run (the hourly dispatcher may have fired it) and its arm_status.tabpfn; that is the only open item that closes this row.",
-  "updated_at": "2026-10-15T18:13:28Z",
-  "updated_by": "lane-ML-FRONTIER-W42",
+  "updated_at": "2026-10-24T06:01:07Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "roadmap": [
     "M25"
   ],
@@ -29,7 +29,13 @@
   "observation": {
     "what": "RQ-20261015-eda2-01 graded (pass/fail/indeterminate with a non-empty 2026-04-01 holdout) and #18172 landed with the first token-bearing TabPFN run showing *** and no raw key in its artifact",
     "how_to_check": "research/results/RQ-20261015-eda2-01/*.jsonl verdict + research-script-run-trainer artifact grep",
-    "due_by": "2026-10-22"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-22",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
   "_seq": 507
 }

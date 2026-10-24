@@ -14,15 +14,21 @@
   ],
   "blocked_on": [],
   "note": "[2026-10-13T21:15Z lane session_01BdcEyUMZD1P1cCSdr6xtGo] MEASURED (diag direct, 21:05-21:15Z): trader active, last tick 21:05:12Z, boot 20:15:31Z, accounts.yaml digest VM == main. bybit_2/bybit_portfolio: last entry 10-12T23:06Z trend_donchian_eth_4h short (closed sl_cross 10-13T03:33Z); 20:00Z 4h close: all 4 legs evaluated, rejected by strategy (no breakout / no pullback setup / ADX 27.49<28); bybit_1 paper shows the same single directional trade in 24h -> MARKET SILENCE. alpaca_live: last package 09-23 (iaum); RTH 13:32Z today ief/slv/iaum each 'no trend-pullback-confirmation setup'; positive control spy_pullback_1h emitted a signal same window -> MARKET SILENCE. daily_dd_switch: armed, tripped=false on all 13 accounts. BUG (prop, breakout_2): ticket prop-manual-762f959676fd (ETH short 2491.47, SL 2535.25) journaled placed/UNVERIFIED 10-13T04:43Z by the unconfirmed-submit watchdog; ETH 1h 05:00Z high 2538.67 > SL; balance 4947.72 -> 4921.50 (-26.22; the ticket risked 25.00 USD at the SL on 0.57 ETH, so -26.22 = the SL loss of 24.96 plus ~1.26 fees); phone clean read = flat. fill_inference refuses (clean flat read = not filled), supersede needs a resting order -> placed blocks every later breakout_2 ETHUSDT short ticket with no time window. Fix: prop-report-close from_placed opt-in (this PR), then close the ticket ESTIMATED at the SL. [2026-10-13T22:25Z lane session_01BdcEyUMZD1P1cCSdr6xtGo] #17932 CI green on 47a7f48 (guards, pytest-run, pytest-collect, repo-inventory), mergeable clean, marked ready. NOT MERGED: this lane's merge was blocked (the merge-slot guard needs a /tmp claim marker and the session's auto-mode classifier denied writing it); merge is owed by the manager. REMAINING (in order): (1) merge #17932; (2) wait for ict-git-sync to pull main on the VM (~5 min); (3) system-action issue body: 'action: prop-report-close' / 'account: breakout_2' / 'ticket_id: prop-manual-762f959676fd' / 'from_placed: true' / 'exit_price: 2535.25' / 'closed_at: 2026-10-13T05:23:00Z' / 'reason: filled + SL on terminal; ETH 1h 05:00Z high 2538.67 > SL 2535.25; tradeify_1 same-SL leg closed 2535.30 05:23Z; balance 4947.72->4921.50; phone clean read flat (LIVE-SILENCE-DIAG)'. Run DRY first, then add apply: true; (4) verify: GET /api/bot/prop/tickets?account_id=breakout_2 shows 762f closed, and the next breakout_2 ETHUSDT short ticket emits rather than 'reticket suppressed \u2014 outstanding_ticket:placed'. Close condition for this row: step 4 observed. [2026-10-13T23:26Z lane session_01BdcEyUMZD1P1cCSdr6xtGo] #17932 MERGED (82522f388), DEPLOYED (VM git_sha_on_disk 82522f388 at ~23:19Z; the action is a script, no restart needed). prop-report-close dry-run #17940 then apply #17942: close fill 118 written (exit 2535.25, pnl -24.9546 gross, ESTIMATED, closed_at 05:23Z), ticket 762f -> closed, journal backup taken, no push/telegram. OBSERVED 23:26Z: /api/bot/prop/tickets shows 762f closed; /api/bot/prop/overview realized 7d -255.61 -> -280.56 (delta -24.95 = the close row), closed_trades 8 -> 9, open_trades 0. landed_unproven until: the next breakout_2 trend_donchian_eth_prop SHORT signal appears in /api/bot/prop/tickets?account_id=breakout_2 with status emitted (not 'reticket suppressed \u2014 outstanding_ticket:placed'). Real-money verdict unchanged: market silence.",
-  "updated_at": "2026-10-13T23:26:01Z",
-  "updated_by": "session_01BdcEyUMZD1P1cCSdr6xtGo",
+  "updated_at": "2026-10-24T06:01:06Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "roadmap": [
     "L-PROP"
   ],
   "observation": {
     "what": "next breakout_2 trend_donchian_eth_prop SHORT ticket is emitted, not suppressed by outstanding_ticket:placed",
     "how_to_check": "GET /api/bot/prop/tickets?account_id=breakout_2 (newest ETHUSDT short row status)",
-    "due_by": "2026-10-20"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-20",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
   "writeback": {
     "roadmap": "none: diagnostic lane + journal-repair action option; no L-PROP milestone measure changed",

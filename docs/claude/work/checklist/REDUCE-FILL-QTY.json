@@ -14,15 +14,21 @@
   ],
   "blocked_on": [],
   "note": "[2026-10-12T05:58Z manager session_01G16FfyYSmDPQuuW55BuTmK, review WR-20261012-0530Z] Dispatched from PI-20261011-YJAYF7GD-0001 (PERF-FU-REDUCE-PNL lane). 9 of 81 unsettled reduce legs have venue fill qty far below the journal-allocated qty (e.g. bybit_1 4518 SOLUSDT 4.6 of 1543.2). execute.py::_log_trade_to_journal passes reduce_qty=order['qty'] (requested). Root-cause partial fill vs reduce-only clamp from venue data, then prepare the fix (size the shrink from FILLED qty) as a HOLD PR with tests; order path = Tier-3, manager decides landing with the evidence. Also quantify the current journal-vs-venue position divergence per account. [2026-10-12T05:59Z manager session_01G16FfyYSmDPQuuW55BuTmK] Dispatched lane session_013PGJqGxzyzKVSSFydXA9U5. [2026-10-12T08:05Z lane session_013PGJqGxzyzKVSSFydXA9U5] VERIFIED 2026-10-12: 9/9 short fills are Bybit reduce-only cuts (venue position before = filled qty, after = exactly 0.0; one fill each), caused by phantom journal parents the venue had already closed (e.g. 4324 venue-closed 2026-08-02 13:39, journal open 33h). 0 of 35 matched reduce legs since 2026-08-08 short-filled. Current journal-vs-venue divergence 0 on all 7 open bybit (acct,symbol). PR #17691: shrink sized from the filled qty via read_reduce_fill; unknown -> requested (old behaviour). Operator account marked #17691 ready + enabled auto-merge 07:25Z. No position backfill needed; phantom-parent P&L filed PI-20261012-FYDXA9U5-0001. CLOSES WHEN: #17691 merged + deployed and a reduce leg closed after deploy carries notes.reduce_fill_state. [manager 12:25Z] #17691 merged+deployed (VM 6642f4a3). Lane session_013PGJqG archived, spend $12.02 (Opus).",
-  "updated_at": "2026-10-12T12:20:35Z",
-  "updated_by": "session_01G16FfyYSmDPQuuW55BuTmK",
+  "updated_at": "2026-10-24T06:01:10Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "roadmap": [
     "M39"
   ],
   "observation": {
     "what": "next intent_reduce on any account shrinks the parent by the FILLED qty; journal qty equals venue qty afterwards",
     "how_to_check": "diag journal trades vs /api/diag/exchange_positions for the account after the next reduce",
-    "due_by": "2026-10-19"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-19",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
   "writeback": {
     "roadmap": "none: owed at close (M39)",

@@ -14,8 +14,8 @@
   ],
   "blocked_on": [],
   "note": "[2026-10-14 lane] Dispatched by the manager (session_01G16FfyYSmDPQuuW55BuTmK) for the operator's 2026-10-14 weekly planning. Deliverables: (A) docs/research/programmes/02-AI-TRADER.md, (B) docs/research/SIGNALS-CATALOG.md + docs/research/signals-catalog.yaml, (C) first-2-week units (hand-written, hold PRs), plus the instrument scripts/research/ledger_metalabel.py (meta-label + peak-to-exit measurements over the committed per-trade ledgers). Closes to landed_unproven when the PRs merge; done when the first W1 unit lands a measured record and research-ops lists it in results_read. [2026-10-14T08:10Z lane] DONE on the lane's side: PR #18015 (draft, landing: hold) carries (A) docs/research/programmes/02-AI-TRADER.md, (B) docs/research/SIGNALS-CATALOG.md + signals-catalog.yaml (67 families), (C) RQ-20261014-9d20-01/02/03/05 queued + blocked/-04, scripts/research/ledger_metalabel.py (self-test OK), rows METALABEL-EMIT-FEATURES + HEADLINE-MEASURE-CAPITAL-DAY, plan items ML-M0..M6 + ML-F16. Local run_guards.py: every guard PASS except pytest-skip-attribution (no pytest in the sandbox; environmental). State set to blocked because nobody is working it until the manager lands the PR; the manager flips it to landed_unproven on merge. Spend: Fable, under the ~$25 ceiling (not metered here). [2026-10-14T18:10Z manager session_01VduHYzdaXe27wTDBLSu8ao] blocker-watch STALE_BLOCK cleared: PR #18015 merged 2026-10-14. landed_unproven until the first W1 unit lands a measured record and research-ops lists it in results_read. [2026-10-16 lane P2-AI-REGIME-BACKLOG-1016, PR pending] The 02 authoring queue is empty: P2-Q3.1-fail authored as three per-class unit nodes (donchian/pullback/scalp rich-state first-passage, refinement of d6e7-04 INDETERMINATE; d6e7-05 retired as moot); P2-Q2.1-fail recorded 'no cheaper step exists' and re-pointed at 9d20-04's FAIL; P2-Q1.5 registered as blocked/65ff-25 (1h conformal, scorer only); P2-Q2.5 as blocked/65ff-26 (row POOLING-PARITY-INSTRUMENT). Added Q1.3 drift (65ff-24 1h twin runnable; 65ff-27 artifact question blocked), Q4 CatBoost confirmation (65ff-30 runnable, from de02-01 PASS), Q6 off-VM training parity for the HMM and RegimeClassifier classes (65ff-20..23; the regression class has no publishable dataset -> stays on the trainer). DUPLICATE SPEND: RQ-20261016-001 (node P2-Q4-et-mlp-extend) repeats RQ-20261015-ab54-01; left for the grader, no successor node.",
-  "updated_at": "2026-10-16T07:50:30Z",
-  "updated_by": "session_01QseRmyoxCNTecxWrRma9Kc",
+  "updated_at": "2026-10-24T06:01:02Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "roadmap": [
     "M23",
     "M25",
@@ -29,7 +29,13 @@
   "observation": {
     "what": "the first W1 unit of 02-AI-TRADER lands a measured record and a research-ops pass lists it in results_read",
     "how_to_check": "ls research/results/ for the 02 plan W1 unit ids; grep comms/research/ops/*.json results_read",
-    "due_by": "2026-10-21"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-21",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
   "_seq": 477
 }

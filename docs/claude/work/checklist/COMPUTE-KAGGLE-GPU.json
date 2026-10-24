@@ -12,8 +12,8 @@
   "prs": [],
   "blocked_on": [],
   "note": "[2026-10-13T10:36Z lane] PASSED on re-dispatch (run 38383862376, after operator re-saved the repo secret): auth OK; push->run->output OK in 186 s wall; 2x Tesla T4, 3.49 TFLOPS fp32 / 17.12 fp16; quota GPU 30 h/wk (0.02 h used), refresh 2026-10-17T00:00. Results: docs/plans/COMPUTE-KAGGLE-GPU-PILOT-2026-10-13.md. Observed once; queue routing to Kaggle not built.",
-  "updated_at": "2026-10-13T10:35:37Z",
-  "updated_by": "session_01QS1CMBmvoizdwGo1vLF3zk",
+  "updated_at": "2026-10-24T06:01:03Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "roadmap": [
     "M25"
   ],
@@ -24,7 +24,13 @@
   "observation": {
     "what": "run 38383862376 returned nvidia-smi (2x Tesla T4), result.json and kaggle quota",
     "how_to_check": "artifact kaggle-gpu-pilot on run 38383862376 (14-day retention); docs/plans/COMPUTE-KAGGLE-GPU-PILOT-2026-10-13.md",
-    "due_by": "2026-10-20T00:00Z"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-20T00:00Z",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
   "_seq": 463
 }

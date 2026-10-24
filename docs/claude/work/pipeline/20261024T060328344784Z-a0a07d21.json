@@ -1,0 +1,25 @@
+{
+  "based_on": "20261017T072708737968Z-1b8eaef7.json",
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "the rerun prints nothing",
+    "due_date": "2026-10-24",
+    "kind": "date"
+  },
+  "id": "PI-20261015-OAKREDEF-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane SOAK-REDEFINE 2026-10-15 (session_01U3P3WrxwXu4Zjg6vryRGjF), PR #18445",
+    "rerun": "grep -n 'soak accrues' config/accounts.yaml"
+  },
+  "redate": {
+    "evidence": "health-review 2026-10-17 diag pulls",
+    "observation": "2026-10-17 re-read: config/accounts.yaml:229 still reads 'they STAY LIVE there while this soak accrues'. Tier-3 file; not edited by this Tier-1 lane.",
+    "observed_at": "2026-10-17"
+  },
+  "routed_to": "AUD-20261019-SOAK-ITEMS-LONG-EXIT (REGISTER-SWEEP-W43 2026-10-24: soak doc drift)",
+  "state": "routed",
+  "terminal_reason": null,
+  "what": "[doc-drift] config/accounts.yaml:229 comment teaches an accruing soak ('they STAY LIVE there while this soak accrues'), contrary to the mechanical soak rule (OPERATING-PLAN §2, SOAK-RULE-CANONICAL; PR #18445). Lane SOAK-REDEFINE was forbidden to edit accounts.yaml; a lane granted accounts.yaml rewrites the comment to the mechanical wording (a soak passes on 1-2 clean trades). Comment-only, no roster/field change."
+}
