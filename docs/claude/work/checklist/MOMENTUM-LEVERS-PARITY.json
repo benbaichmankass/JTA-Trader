@@ -2,23 +2,38 @@
   "id": "MOMENTUM-LEVERS-PARITY",
   "title": "Live-vs-harness parity for the momentum levers (ADX-tightened trail, momentum-stale time stop) \u2014 the Programme 01 build gate",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
-  "lane": "session_01AYVhF79YumXBY7ZuPNkhZr",
+  "lane": null,
   "model": "claude-opus-5-5",
   "ceiling_usd": 15,
-  "spend_usd": null,
+  "spend_usd": 10.04,
   "tier": 2,
   "prs": [
     19856
   ],
   "blocked_on": [],
-  "note": "Week plan 2026-10-22 (Mon). Programme review 2026-10-21: P1 build-gated on MOMENTUM-LEVERS-LIVE parity (week of 10-26). Opus: order/exit path. [2026-10-24T05:58Z manager session_01G3UtWJrCibCYuX2wFxsYbR] Operator popup answer 2026-10-23 ~20:15Z, relayed by outgoing manager session_01YHnEs6 in trig_015Ls6mG (which never fired; found 2026-10-24T05:58Z): exits focus order verbatim \"3 then 2 then 1\" -> (a) MOMENTUM-LEVERS-PARITY FIRST (Opus ~$15). Re-ranked 12 -> 4. [2026-10-24T12:04Z manager session_01UETC6mFiwMgXk6URsuWzZb] Dispatched lane session_01AYVhF7 (Opus, fresh, $15). Opus because it is an order/exit path. Fresh because the context is on disk. First of the operator's exits order. [2026-10-24T12:55Z manager session_01UETC6mFiwMgXk6URsuWzZb] Lane delivered #19856 (Tier 3, hold). Lever RULES at PARITY: 100% of 7,901 managed bars, Binance spot 4h 2020-07..2026-10, not recorded live bars. The live path DIVERGED on two points, both fixed in #19856: stale_stop counted the forming bar, and the trail ratcheted intrabar and included the entry bar's pre-fill range. xrp_adx25 exits 0.718 -> 1.000. OPERATOR APPROVAL by popup, verbatim: \"Merge on green (Recommended)\". Residuals filed: PI-20261024-ZUPNKHZR-0001/0002/0003.",
+  "note": "Week plan 2026-10-22 (Mon). Programme review 2026-10-21: P1 build-gated on MOMENTUM-LEVERS-LIVE parity (week of 10-26). Opus: order/exit path. [2026-10-24T05:58Z manager session_01G3UtWJrCibCYuX2wFxsYbR] Operator popup answer 2026-10-23 ~20:15Z, relayed by outgoing manager session_01YHnEs6 in trig_015Ls6mG (which never fired; found 2026-10-24T05:58Z): exits focus order verbatim \"3 then 2 then 1\" -> (a) MOMENTUM-LEVERS-PARITY FIRST (Opus ~$15). Re-ranked 12 -> 4. [2026-10-24T12:04Z manager session_01UETC6mFiwMgXk6URsuWzZb] Dispatched lane session_01AYVhF7 (Opus, fresh, $15). Opus because it is an order/exit path. Fresh because the context is on disk. First of the operator's exits order. [2026-10-24T12:55Z manager session_01UETC6mFiwMgXk6URsuWzZb] Lane delivered #19856 (Tier 3, hold). Lever RULES at PARITY: 100% of 7,901 managed bars, Binance spot 4h 2020-07..2026-10, not recorded live bars. The live path DIVERGED on two points, both fixed in #19856: stale_stop counted the forming bar, and the trail ratcheted intrabar and included the entry bar's pre-fill range. xrp_adx25 exits 0.718 -> 1.000. OPERATOR APPROVAL by popup, verbatim: \"Merge on green (Recommended)\". Residuals filed: PI-20261024-ZUPNKHZR-0001/0002/0003. [2026-10-24T13:55Z manager session_01UETC6mFiwMgXk6URsuWzZb] #19856 merged 13:41Z as 23c415ae (approved by operator popup: \"Merge on green (Recommended)\"). Deploy check is via diag #19870. Lane archived; final spend $10.04.",
   "priority_rank": 4,
-  "updated_at": "2026-10-24T13:00:05Z",
+  "updated_at": "2026-10-24T13:51:59Z",
   "updated_by": "session_01UETC6mFiwMgXk6URsuWzZb",
   "roadmap": [
     "L-ATM"
+  ],
+  "writeback": {
+    "roadmap": "L-ATM: Programme 01 build gate cleared - lever rules at parity (100% of 7,901 bars); live exit timing fixed to closed bars (#19856)",
+    "arch": "none: no component or contract change; stale_stop and trail now decide on closed bars inside the existing exit modules"
+  },
+  "observation": {
+    "what": "first trend_donchian trail ratchet or stale exit after #19856 deploy decides on a CLOSED bar (no forming-bar exit)",
+    "how_to_check": "python3 scripts/research/momentum_levers_parity.py on recorded live bars + journal exit timestamps vs bar closes for trend_donchian legs since 2026-10-24T14:00Z",
+    "due_by": "2026-10-31T00:00Z"
+  },
+  "lane_history": [
+    {
+      "lane": "session_01AYVhF79YumXBY7ZuPNkhZr",
+      "archived_at": "2026-10-24T13:51:59Z"
+    }
   ],
   "_seq": 606
 }
