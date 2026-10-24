@@ -1312,11 +1312,21 @@ accounts:
                                        # Asserted by tests/test_paper_portfolio_accounts.py::
                                        # test_alpaca_portfolio_trade_shaping_fields_equal_alpaca_live.
                                        # ROLLBACK: delete this key (and that test's side_filter row).
-    strategies:                        # alpaca_live's roster MINUS the affordability
+    strategies: []                     # alpaca_live's roster MINUS the affordability
+      # ⚠️ EXPLICIT `[]`, NOT A BARE `strategies:` — a key with only comments under it parses as
+      # null. The account loader (src/units/accounts/__init__.py) maps a present-but-null key to
+      # `[]` (block all), but src/runtime/strategy_monocle._accounts_declaring reads null as the
+      # legacy ACCEPT-ALL. `[]` means "block all" to both readers. When re-adding a leg, replace
+      # `[]` with the list.
       # 2026-10-21 OPERATOR DECISION (popup ~22:15Z, "Move to paper (Recommended)"), Tier 3: ief_pullback_1d
       # REMOVED from alpaca_portfolio (mirror of alpaca_live, strict equality). Evidence RQ-20261016-c56e-16: FAIL, net -0.85R, 3 of 8 folds, n 87.
       # It keeps trading on alpaca_paper so the record continues. REVERT = add the line back (Tier 3).
-      - slv_pullback_1d
+      # 2026-10-24 OPERATOR DECISION (popup ~15:05Z, "Demote to Stage 1 (Recommended)"), Tier 3: slv_pullback_1d
+      # REMOVED from alpaca_portfolio (mirror of alpaca_live, strict equality). Evidence (checklist SLV-PB1D-RETENTION-T3):
+      # Stage-0 FAIL at power on RQ-20261016-c56e-17, RQ-20261023-9ffb-01, -02, -03 (tune-before-demote done).
+      # It keeps trading on alpaca_paper so the record continues. REVERT = add `- slv_pullback_1d` back (Tier 3).
+      # With iaum_pullback_1d the only alpaca_live leg (a declared proxy), this mirror is now EMPTY —
+      # the operator's 2026-09-21 "equality wins, no exception" decision (see the mirror test).
       # ⚠️ CUT FROM 14 TO 2 ON 2026-09-21, BY EXPLICIT OPERATOR APPROVAL, asked
       # and answered directly. The 12 removed were:
       #   spy_trend_long_1d, qqq_trend_long_1d, gld_pullback_1d,
@@ -1593,8 +1603,11 @@ accounts:
       # 2026-10-21 OPERATOR DECISION (popup ~22:15Z, "Move to paper (Recommended)"), Tier 3: ief_pullback_1d
       # REMOVED from alpaca_live. Evidence RQ-20261016-c56e-16: FAIL, net -0.85R, 3 of 8 folds, n 87.
       # It keeps trading on alpaca_paper so the record continues. REVERT = add the line back (Tier 3).
-      - slv_pullback_1d      # SLV 1d pullback. 217/217 (1 sh, $3.54-3.90).
-                             # Already in alpaca_portfolio.
+      # 2026-10-24 OPERATOR DECISION (popup ~15:05Z, "Demote to Stage 1 (Recommended)"), Tier 3: slv_pullback_1d
+      # REMOVED from alpaca_live. Evidence (checklist SLV-PB1D-RETENTION-T3): Stage-0 FAIL at power on
+      # RQ-20261016-c56e-17, RQ-20261023-9ffb-01, -02, -03 (tune-before-demote done); the live demotion
+      # signal is unreachable at ~4 trades/yr. It keeps trading on alpaca_paper so the record continues.
+      # REVERT = add `- slv_pullback_1d` back here and on alpaca_portfolio (Tier 3).
       - iaum_pullback_1d     # IAUM 1d pullback — the declared GOLD AFFORDABILITY
                              # PROXY. 79/79 (2 sh, $3.30-3.58).
                              # ⚠️ IT IS DELIBERATELY EXEMPT FROM THE
