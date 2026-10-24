@@ -1,7 +1,7 @@
 id: RQ-20261022-3a84-03
 title: 'Trend-direction confirmation, eth_pullback_2h: does requiring the DI or EMA-slope direction filter beat the declared setting net of the full cost
   stack?'
-status: queued
+status: done
 cadence: once
 theme: regime
 priority: 2
@@ -99,3 +99,16 @@ related:
 - scripts/research/exit_lever_ablation.py
 - RQ-20261017-ae17-04..28
 last_dispatched_at: '2026-10-24T08:23:56+00:00'
+grading:
+  attested: RULE-RQ20261022-3A84-03-DIRFILTER
+  auto: true
+  decision_rule_id: RULE-RQ20261022-3A84-03-DIRFILTER
+  evidence:
+  - research/results/RQ-20261022-3a84-03/40077916442.jsonl
+  graded_at: '2026-10-24'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

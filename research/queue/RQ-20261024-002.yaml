@@ -4,7 +4,7 @@
 id: RQ-20261024-002
 title: 'Range-vol lift for the SOL 1h regime head scored on LOG-LOSS (transfer of RQ-20261023-a1f3-15):
   does lgbm_yz beat lgbm_base on SOLUSDT?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - M25
@@ -171,3 +171,13 @@ generated:
   params:
     node: P2-Q1.6-yz-sol-logloss
 last_dispatched_at: '2026-10-24T07:24:41+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P2-Q1.6-REGIME-1H-YZ-LOGLOSS-SOL
+  evidence:
+  - research/results/RQ-20261024-002/40074057575.jsonl
+  graded_at: '2026-10-24'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
