@@ -2,22 +2,34 @@
   "id": "ATM-AI-MERGE",
   "title": "Merge Programme 01 (active trade management) and Programme 02 Q3 (exit models) into one AI active-management programme: models that manage live trades and move brackets as conditions change",
   "phase": null,
-  "state": "in_flight",
+  "state": "done",
   "owner": "design lane",
-  "lane": "session_01SKceRaKdcBrCiQ6U2MNhN3",
+  "lane": null,
   "model": "claude-opus-5-5",
   "ceiling_usd": 15,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    19943
+  ],
   "blocked_on": [],
-  "note": "[2026-10-24T20:45Z manager session_01EfjqotNYj6MppcEBqbGvkA] OPERATOR in chat, verbatim: \"I want to start sort of trying to merge our two top priorities and trying to get active management, like under AI management, and seeing like what kind of models we can build to help us like with the live management of trades and moving the brackets as conditions change.\" Builds on IN-TRADE-EXIT-MODEL (north star, operator 2026-10-14), BRACKETS-AS-PREDICTIONS, TP-PREDICT-HEAD, MOMENTUM-STOP-MODEL, EXIT-GIVEBACK-PREDICTOR-GATE. Known state: 3 LightGBM exit heads failed (ML-S2); linear first-passage on FIXED-bracket reconstruction = no info beyond position (d6e7); giveback predictor log-loss-only skill; what confirms live is rule-based momentum/stall trails. Open path: as-traded paths (FIRST-PASSAGE-ON-PATHS, ML-LEG-CORPUS), richer info classes, nonlinear/sequence learners, a bandit over validated levers, shadow bracket advisor.",
+  "note": "[2026-10-24T20:45Z manager session_01EfjqotNYj6MppcEBqbGvkA] OPERATOR in chat, verbatim: \"I want to start sort of trying to merge our two top priorities and trying to get active management, like under AI management, and seeing like what kind of models we can build to help us like with the live management of trades and moving the brackets as conditions change.\" Builds on IN-TRADE-EXIT-MODEL (north star, operator 2026-10-14), BRACKETS-AS-PREDICTIONS, TP-PREDICT-HEAD, MOMENTUM-STOP-MODEL, EXIT-GIVEBACK-PREDICTOR-GATE. Known state: 3 LightGBM exit heads failed (ML-S2); linear first-passage on FIXED-bracket reconstruction = no info beyond position (d6e7); giveback predictor log-loss-only skill; what confirms live is rule-based momentum/stall trails. Open path: as-traded paths (FIRST-PASSAGE-ON-PATHS, ML-LEG-CORPUS), richer info classes, nonlinear/sequence learners, a bandit over validated levers, shadow bracket advisor. [2026-10-24T21:02Z manager session_01EfjqotNYj6MppcEBqbGvkA] DONE: #19943 merged as 1572e991 (plan of record merged into Programme 01; 02 Q3 points to it; units RQ-20261024-09a6-01..04 in blocked/; rows FIRST-PASSAGE-ON-PATHS rank 1, REMAINING-MOVE-HEAD, EXIT-ARM-CHOICE-CORPUS, PATH-FLOW-JOIN, BRACKET-ADVISOR-SHADOW). The deliverable is the merged plan and it is on main, so done (no runtime effect to observe). First build FIRST-PASSAGE-ON-PATHS dispatched (session_01PTe7ED).",
   "priority_rank": 1,
-  "updated_at": "2026-10-24T20:30:51Z",
+  "updated_at": "2026-10-24T21:02:02Z",
   "updated_by": "session_01EfjqotNYj6MppcEBqbGvkA",
   "roadmap": [
     "L-ATM",
     "M23"
+  ],
+  "writeback": {
+    "roadmap": "L-ATM: Programme 01 is now the merged AI active trade management programme (doc section, #19943 1572e991); builds FIRST-PASSAGE-ON-PATHS, REMAINING-MOVE-HEAD, EXIT-ARM-CHOICE-CORPUS, PATH-FLOW-JOIN queued, BRACKET-ADVISOR-SHADOW Tier-2 proposal",
+    "arch": "none: a plan and pre-registered units, no component change"
+  },
+  "lane_history": [
+    {
+      "lane": "session_01SKceRaKdcBrCiQ6U2MNhN3",
+      "archived_at": "2026-10-24T21:02:02Z"
+    }
   ],
   "_seq": 634
 }
