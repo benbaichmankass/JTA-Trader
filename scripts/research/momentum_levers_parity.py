@@ -42,6 +42,7 @@ Usage::
 
 Exit code: 0 PARITY, 1 DIVERGES, 2 COULD_NOT_LOOK (no managed bar compared).
 """
+# wiring: manual-only - run as a guard by tests/test_momentum_levers_parity.py (CI pytest) and by hand over recorded / downloaded bars; no scheduled runner by design
 from __future__ import annotations
 
 import argparse
@@ -297,11 +298,11 @@ def compare_trade(df: pd.DataFrame, adx_full: pd.Series, t: Any, h_stops: Dict[i
                "stale_h": bool(h_stale), "stale_l": bool(l_stale)}
         if (h_trail != l_trail or h_stale != l_stale) and first_div is None:
             first_div = {"j": j, "ts": row["ts"], "kind": "lever_decision",
-                         "cause": _lever_cause(adx_full, frame, meta, cfg, entry_i, j, df)}
+                         "cause": _lever_cause(adx_full, frame, meta, cfg, entry_i, j)}
         if not stop_match and first_div is None:
             first_div = {"j": j, "ts": row["ts"], "kind": "stop_path",
                          "cause": _stop_cause(df, entry_i, j, float(t.entry), is_long, h_stop, sl,
-                                              rows, cfg, meta)}
+                                              rows)}
         rows.append(row)
         if live_exit is not None:
             break
@@ -343,7 +344,7 @@ def compare_trade(df: pd.DataFrame, adx_full: pd.Series, t: Any, h_stops: Dict[i
             "first_divergence": first_div}
 
 
-def _stop_cause(df, entry_i, j, entry, is_long, h_stop, l_stop, rows, cfg, meta) -> str:
+def _stop_cause(df, entry_i, j, entry, is_long, h_stop, l_stop, rows) -> str:
     if h_stop is None:
         return "harness recorded no stop for this bar"
     prev = rows[-1] if rows else None
@@ -365,7 +366,7 @@ def _stop_cause(df, entry_i, j, entry, is_long, h_stop, l_stop, rows, cfg, meta)
     return f"unattributed: harness {h_stop!r} vs live {l_stop!r}"
 
 
-def _lever_cause(adx_full, frame, meta, cfg, entry_i, j, df) -> str:
+def _lever_cause(adx_full, frame, meta, cfg, entry_i, j) -> str:
     period = int(meta.get("adx_period") or cfg.get("adx_period") or 14)
     closed = frame.iloc[:-1]
     adx_l = ml.live_adx(closed, period)
