@@ -249,3 +249,40 @@ def test_mutation_dropping_the_empty_name_filter_is_load_bearing():
         "the mutant must arm on nameless stubs…"
     with pytest.raises(AssertionError):
         assert m["grade"]([{}, {"name": ""}], checks_read_ok=True)["arm"] is False
+
+
+# ── AUTOMERGE-ARMING-RACE: a PAT open is "not yet", a GITHUB_TOKEN open is "never" ──
+
+def test_pat_open_with_nothing_attached_waits_then_arms():
+    first = G.grade(SELF, checks_read_ok=True, opener="pat", waited_s=0)
+    assert first["state"] == G.NONE_ATTACHED and first["arm"] is False
+    assert first["wait"] is True
+    later = G.grade(REAL, checks_read_ok=True, opener="pat", waited_s=60)
+    assert later["state"] == G.ATTACHED and later["arm"] is True and later["wait"] is False
+
+
+def test_pat_open_never_arms_blind_when_budget_is_spent():
+    r = G.grade(SELF, checks_read_ok=True, opener="pat", waited_s=G.WAIT_BUDGET_S)
+    assert r["arm"] is False and r["wait"] is False
+
+
+@pytest.mark.parametrize("opener", ["github_token", "adopted", None])
+def test_github_token_branch_is_unchanged(opener):
+    r = G.grade(SELF, checks_read_ok=True, opener=opener, waited_s=0)
+    assert r["state"] == G.NONE_ATTACHED and r["arm"] is False and r["wait"] is False
+    assert "GITHUB_TOKEN" in r["why"]
+
+
+def test_unreadable_never_waits():
+    r = G.grade(None, checks_read_ok=False, opener="pat")
+    assert r["state"] == G.UNREADABLE and r["arm"] is False and r["wait"] is False
+
+
+def test_cli_passes_opener_and_waited_through(tmp_path):
+    f = tmp_path / "in.json"
+    f.write_text(json.dumps({"check_runs": SELF, "checks_read_ok": True,
+                             "opener": "pat", "waited_s": 5}))
+    p = subprocess.run([sys.executable, str(SCRIPT), "--input", str(f)],
+                       capture_output=True, text=True)
+    v = json.loads(p.stdout)
+    assert p.returncode == 3 and v["state"] == G.NONE_ATTACHED and v["wait"] is True
