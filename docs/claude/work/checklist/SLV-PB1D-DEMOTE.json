@@ -2,21 +2,32 @@
   "id": "SLV-PB1D-DEMOTE",
   "title": "Demote slv_pullback_1d from alpaca_live + alpaca_portfolio to Stage 1 (stays on alpaca_paper): operator decision after 4 offline Stage-0 fails",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": "session_01DFoLfXqV9thGtMbtku579D",
   "model": "claude-opus-5-5",
   "ceiling_usd": 8,
   "spend_usd": null,
   "tier": 3,
-  "prs": [],
+  "prs": [
+    19888
+  ],
   "blocked_on": [],
-  "note": "[2026-10-24T15:05Z manager session_01UETC6mFiwMgXk6URsuWzZb] OPERATOR popup answer, verbatim: \"Demote to Stage 1 (Recommended)\". The option text said: remove it from alpaca_live and from the alpaca_portfolio mirror; it stays on alpaca_paper, so it keeps a paper record; this is a de-risking change, one revertible roster PR, which the manager brings to the operator before merging. Evidence (row SLV-PB1D-RETENTION-T3): Stage-0 FAIL on c56e-17, 9ffb-01 (long-only, 4 of 8 folds, needs 5), 9ffb-02 (no eligible arm) and 9ffb-03 (ADX arms). The tune-before-demote attempts are done. The live demotion signal is unreachable: about 4 trades per year means about 10 years to 40 closed trades.",
+  "note": "[2026-10-24T15:05Z manager session_01UETC6mFiwMgXk6URsuWzZb] OPERATOR popup answer, verbatim: \"Demote to Stage 1 (Recommended)\". The option text said: remove it from alpaca_live and from the alpaca_portfolio mirror; it stays on alpaca_paper, so it keeps a paper record; this is a de-risking change, one revertible roster PR, which the manager brings to the operator before merging. Evidence (row SLV-PB1D-RETENTION-T3): Stage-0 FAIL on c56e-17, 9ffb-01 (long-only, 4 of 8 folds, needs 5), 9ffb-02 (no eligible arm) and 9ffb-03 (ADX arms). The tune-before-demote attempts are done. The live demotion signal is unreachable: about 4 trades per year means about 10 years to 40 closed trades. [2026-10-24T15:58Z manager session_01UETC6mFiwMgXk6URsuWzZb] OPERATOR popup, verbatim: \"Merge it (Recommended)\". #19888 merged as 38a75203. The Alpaca mirror is now EMPTY (equality wins, 2026-09-21), so the Alpaca Gate-2 demotion signal is dark until a leg returns.",
   "priority_rank": 1,
-  "updated_at": "2026-10-24T15:04:29Z",
+  "updated_at": "2026-10-24T15:58:15Z",
   "updated_by": "session_01UETC6mFiwMgXk6URsuWzZb",
   "roadmap": [
     "L-OPS"
   ],
+  "writeback": {
+    "roadmap": "none: roster demotion, no milestone where/next change",
+    "arch": "none: no component change; alpaca_live roster 2->1, alpaca_portfolio 1->0"
+  },
+  "observation": {
+    "what": "running trader roster for alpaca_live excludes slv_pullback_1d and trader_git_sha >= 38a75203",
+    "how_to_check": "[diag-request] version + /api/bot/config",
+    "due_by": "2026-10-25T00:00Z"
+  },
   "_seq": 629
 }
