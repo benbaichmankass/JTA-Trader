@@ -2,22 +2,32 @@
   "id": "LIVE-PARITY-DIAG-1024",
   "title": "Diagnose the LIVE-PARITY regression (2026-10-24 run: 169 divergences / 19 legs, historical_positive FAIL 20/27): instrument vs trader, fix the instrument or file the trader bug",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "diagnosis lane",
   "lane": "session_01X32HpXK6VSpTfDpvmyQVyb",
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 10,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    19925
+  ],
   "blocked_on": [],
-  "note": "[2026-10-24T18:08Z manager session_01EfjqotNYj6MppcEBqbGvkA] Owed from handoff 2026-10-24-01UETC6m item 3. Evidence: comms/live_parity/latest.json generatedAt 2026-10-24T07:18Z status divergent, historical_positive fail 20/27 packages matched, planted_defect pass. After #18569 (10-16) it was 3 divergences, all controls pass. Precedent: LIVE-PARITY-DIAG-1016 (root cause was the instrument: roster-drift scoring + control mixing). Model Sonnet (diagnosis, Tier 1; any writer/trader change is a held Tier-2 PR), fresh session (context is on disk).",
+  "note": "[2026-10-24T18:08Z manager session_01EfjqotNYj6MppcEBqbGvkA] Owed from handoff 2026-10-24-01UETC6m item 3. Evidence: comms/live_parity/latest.json generatedAt 2026-10-24T07:18Z status divergent, historical_positive fail 20/27 packages matched, planted_defect pass. After #18569 (10-16) it was 3 divergences, all controls pass. Precedent: LIVE-PARITY-DIAG-1016 (root cause was the instrument: roster-drift scoring + control mixing). Model Sonnet (diagnosis, Tier 1; any writer/trader change is a held Tier-2 PR), fresh session (context is on disk).  | [2026-10-24 lane LIVE-PARITY-DIAG-1024] INSTRUMENT, not trader. Regression began with the 10-22 run (10-17..10-21 runs: all 3 controls pass). (1) historical_positive 7/27 misses (eth_prop 5, xrp_pullback_2h 2; population: live packages in the 7d window to 10-24T06:45Z) = forming-era packages attributed under TODAY's decision_bar=closed (#19513 flipped eth_prop/xrp/ada_pullback_2h 10-22); _bar_of now uses per-bar mode_notes. (2) 30 of 169 divergences = trend_donchian_xrp_adx25 lost_bar on bars before its bybit_1 join (10-22T09:50Z): withheld before join. (3) 134 = spy_trend_long_1d (alpaca_paper) candle_mismatch on the 10-20T04 bar, side agrees, ADX gap 0.61 (tol 0.5): known ADX-residual class, unchanged; ages out ~10-27. (4) 5 ADA/XRP candle_mismatch 10-20T14: same ADX residual (PI-20261003-LRP-ADXRESIDUAL). VALIDATED on real bundle: issue #19923 run 40120536420 (branch script, 7d to 10-24T18:28Z): planted_defect/historical_positive (30/30)/liveness all PASS; divergences 169->142 (19 legs, 687 bars). OPEN, not diagnosed: 3 new lost_bar on the newest bars, ada+xrp_pullback_2h 10-24T16:00 and eth_prop 10-24T17:00 (closed-mode legs: no eval in 360s after close); possible live eval gap/restart ~16-17Z; no src/config change proposed; check = vm-diag journal around those times.",
   "priority_rank": 1,
-  "updated_at": "2026-10-24T18:02:57Z",
-  "updated_by": "session_01EfjqotNYj6MppcEBqbGvkA",
+  "updated_at": "2026-10-24T19:01:53Z",
+  "updated_by": "session_01X32HpXK6VSpTfDpvmyQVyb",
   "roadmap": [
     "M39"
   ],
-  "writeback": "LIVE-PARITY row note + M39",
+  "writeback": {
+    "roadmap": "none: Tier-1 instrument fix, no milestone line moves",
+    "arch": "none: parity script tooling only, no architecture section changes"
+  },
+  "observation": {
+    "what": "next scheduled run after merge: historical_positive pass and 0 lost_bar on closed-mode legs after 10-24T16Z",
+    "how_to_check": "python3 -c \"import json; d=json.load(open(comms/live_parity/latest.json)); print(d[controls][historical_positive][state], d[totals])\"",
+    "due_by": "2026-10-27"
+  },
   "_seq": 632
 }
