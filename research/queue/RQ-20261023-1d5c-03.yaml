@@ -1,6 +1,6 @@
 id: RQ-20261023-1d5c-03
 title: 'Path-state trail gate (variant): does an ER-gated trail tighten beat the declared real-money leg trend_donchian_eth_4h (declared stall decay)?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -113,3 +113,16 @@ related:
 - RQ-20261022-b7e1-04
 - RQ-20261022-eba2-15
 last_dispatched_at: '2026-10-24T01:41:11+00:00'
+grading:
+  attested: RULE-RQ202610231D5C03-ETH4H-ERGATE
+  auto: true
+  decision_rule_id: RULE-RQ202610231D5C03-ETH4H-ERGATE
+  evidence:
+  - research/results/RQ-20261023-1d5c-03/40050950713.jsonl
+  graded_at: '2026-10-24'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
