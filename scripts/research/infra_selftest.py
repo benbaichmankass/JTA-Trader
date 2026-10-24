@@ -16,6 +16,10 @@ shape scripts/research/script_run.py derives an E5 record from. A check that can
   machinery_selftests the grader, replenisher, runner-plan and disposition-check self-tests all pass
   blocked_over_age    units in research/queue/blocked/ older than the SLO age (research_slo.yaml blocked_over_age)
   theme_supply        every theme weighted >= 2 holds at least 3 queued authored units (weights are honoured by supply)
+  value_coverage      >= 90 % of queued authored units carry value.usd_at_stake_per_month (money-first dispatch input)
+  command_resolvable  every queued unit's python run.command names a script that exists in the checkout
+  duplicate_commands  no two queued authored units run the identical command (a re-test counted twice)
+  power_declared      every queued authored inferential unit declares power.expected_n and a registered-before-run rule
 """
 from __future__ import annotations
 
@@ -33,6 +37,7 @@ sys.path.insert(0, str(ROOT))
 RUNNER_MODULES = ("numpy", "pandas", "yaml", "requests", "dotenv", "yfinance")
 DISPOSITION_MAX = 5          # == research_slo.yaml undispositioned_24h
 COVERAGE_MIN_PCT = 75.0      # == research_slo.yaml programme_coverage_pct
+VALUE_MIN_PCT = 90.0         # registered in RQ-20261024-0142-18
 SELFTESTS = ("queue_grade.py", "queue_replenish.py", "script_run.py", "result_disposition_check.py")
 
 
@@ -169,10 +174,89 @@ def theme_supply() -> dict[str, Any]:
             "n": len(held), "measurement": {"held": held, "empty": empty}}
 
 
+def _queued_authored() -> list[tuple[str, dict[str, Any]]]:
+    """Queued, non-generated units (unparseable files are queue_integrity's finding, not this helper's)."""
+    import yaml
+    out = []
+    for f in sorted((ROOT / "research" / "queue").glob("RQ-*.yaml")):
+        try:
+            u = yaml.safe_load(f.read_text(encoding="utf-8"))
+        except (yaml.YAMLError, OSError, UnicodeDecodeError):
+            continue
+        if isinstance(u, dict) and u.get("status") == "queued" and not u.get("generated"):
+            out.append((f.stem, u))
+    return out
+
+
+def value_coverage() -> dict[str, Any]:
+    units = _queued_authored()
+    missing = [i for i, u in units if not isinstance((u.get("value") or {}).get("usd_at_stake_per_month"), (int, float))]
+    pct = round(100.0 * (len(units) - len(missing)) / len(units), 1) if units else None
+    return {"verdict": "pass" if pct is not None and pct >= VALUE_MIN_PCT else "fail",
+            "read_state": "measured" if units else "no_data",
+            "population": f"{len(units)} queued authored unit(s) in research/queue/", "n": len(units),
+            "measurement": {"with_value": len(units) - len(missing), "pct": pct, "min_pct": VALUE_MIN_PCT, "sample": missing[:10]}}
+
+
+def command_resolvable() -> dict[str, Any]:
+    units = _queued_authored()
+    checked, missing = 0, []
+    for i, u in units:
+        cmd = (u.get("run") or {}).get("command")
+        if not isinstance(cmd, list) or len(cmd) < 2 or not str(cmd[0]).startswith("python") or not str(cmd[1]).endswith(".py"):
+            continue
+        checked += 1
+        if not (ROOT / str(cmd[1])).is_file():
+            missing.append({"unit": i, "script": str(cmd[1])})
+    return {"verdict": "fail" if missing else "pass", "read_state": "measured" if checked else "no_data",
+            "population": f"{checked} queued authored unit(s) with a python run.command (of {len(units)} queued authored)",
+            "n": checked, "measurement": {"checked": checked, "missing": missing[:10], "n_missing": len(missing)}}
+
+
+def duplicate_commands() -> dict[str, Any]:
+    units = _queued_authored()
+    seen: dict[str, str] = {}
+    pairs = []
+    for i, u in units:
+        cmd = (u.get("run") or {}).get("command")
+        if not isinstance(cmd, list):
+            continue
+        # a unit can be parameterised OUTSIDE its argv (head_to_head, run.inputs): same argv != same question
+        inputs = {k: v for k, v in ((u.get("run") or {}).get("inputs") or {}).items() if k != "research_unit"}
+        key = json.dumps([[str(c).replace(i, "<id>") for c in cmd], inputs, u.get("head_to_head")], sort_keys=True, default=str)
+        if key in seen:
+            pairs.append([seen[key], i])
+        else:
+            seen[key] = i
+    return {"verdict": "fail" if pairs else "pass", "read_state": "measured" if seen else "no_data",
+            "population": f"{len(seen) + len(pairs)} queued authored unit(s) with a run.command",
+            "n": len(seen) + len(pairs), "measurement": {"duplicate_pairs": len(pairs), "pairs": pairs[:10]}}
+
+
+def power_declared() -> dict[str, Any]:
+    units = [(i, u) for i, u in _queued_authored() if u.get("kind") != "deterministic"
+             and (u.get("run") or {}).get("workflow") != "e35-bracket-sweep.yml"]
+    bad = []
+    for i, u in units:
+        dr = u.get("decision_rule") or {}
+        why = []
+        if not isinstance((u.get("power") or {}).get("expected_n"), (int, float)):
+            why.append("no power.expected_n")
+        if dr.get("registered_before_run") is not True:
+            why.append("rule not registered_before_run")
+        if why:
+            bad.append({"unit": i, "why": why})
+    return {"verdict": "fail" if bad else "pass", "read_state": "measured" if units else "no_data",
+            "population": f"{len(units)} queued authored non-deterministic unit(s)", "n": len(units),
+            "measurement": {"violations": len(bad), "sample": bad[:10]}}
+
+
 CHECKS = {"runner_deps": runner_deps, "results_readable": results_readable, "queue_integrity": queue_integrity,
           "disposition_census": disposition_census, "programme_coverage": programme_coverage,
           "machinery_selftests": machinery_selftests,
-          "blocked_over_age": blocked_over_age, "theme_supply": theme_supply}
+          "blocked_over_age": blocked_over_age, "theme_supply": theme_supply,
+          "value_coverage": value_coverage, "command_resolvable": command_resolvable,
+          "duplicate_commands": duplicate_commands, "power_declared": power_declared}
 
 
 def main() -> int:

@@ -1,0 +1,30 @@
+{
+  "id": "AUTHOR-FLOOR-1024",
+  "title": "Research runnable-floor gap 2026-10-24 (11:50Z): author ~25 pre-registered units across regime, live_strategy, infra, macro, timeframes",
+  "phase": "research",
+  "state": "landed_unproven",
+  "owner": null,
+  "lane": "session_01GdRCRrQRsYjzWfG6wtAiEP",
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 10,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "2026-10-24 lane AUTHOR-FLOOR-1024 (manager Manager Session 2026-10-24): authored 26 pre-registered units RQ-20261024-0142-01..26 (regime 10: path-state trail gates on sol_prop x3 / xrp_4h x2 / sol_4h / ada_4h / avax_4h / eth_pullback_2h / eth_4h; live_strategy 8: be-floor-r far arms on eth_pb_2h / sol_pb_2h / sol_4h / eth_4h / sol_prop, stale-exit on eth_pb_2h + sol_pb_2h, hot-vol trail on eth_pb_2h; infra 4: new infra_selftest checks value_coverage / command_resolvable / duplicate_commands / power_declared; macro 2: placebo rungs for the claims and cpi ZN=F release-day PASSes; timeframes 2: 15m long-lookback and 1d slow-Donchian variants of the failed 7c2b-05 / 7c2b-03). Each regime unit is a registered VARIANT of a 1d5c FAIL with a one-line hypothesis diagnosis (1d5c-01..06 all graded FAIL; sol_prop C75 +3.16 R 6/6 folds and xrp_4h ER +0.58 R 5/6 folds moved the right way but missed the 0.02 R/trade materiality bar, eth_4h lost 28-40 R). No duplicate of a queued unit (leg x lever token matrix over exit_lever_ablation commands checked; infra_selftest duplicate_commands run). MEASURED on this tree (check_research_queue_health.py): runnable 34 -> 60 vs floor 57; theme supply regime 4->14 (share 13), live_strategy 1+2->9+2 (share 11), infra 2->6, macro 2->4, timeframes 2->4; ml_health left at 0 (build-bound, ML-HEALTH-BUILDS-1027). All 26 would_dispatch on dispatch_queue.py dry run; decision-rule guard OK. SMOKE: every unit command was run end to end on a shortened window (600-day fetch, from 2025-03; n-floor lowered ONLY in the smoke) and exited 0 with measured verdicts and lever_fired true on gated arms; the full pinned-window runs have NOT been run. 5 pytest tests added for the 4 new infra checks. Note: value_coverage measured 74.3% (55 of 74 queued authored units) on this tree, so unit 18 will FAIL on its first run by design (it names the units lacking a value block). Landing: hold (unvouchable_paths); merged != deployed != observed.",
+  "updated_at": "2026-10-24T12:23:36Z",
+  "updated_by": "session_01GdRCRrQRsYjzWfG6wtAiEP",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "writeback": {
+    "roadmap": "none: queue supply only, no milestone where/next change",
+    "arch": "none: no component change"
+  },
+  "observation": {
+    "what": "runnable floor holds and 0142 units fire; first results graded; infra checks 18-21 land a verdict",
+    "how_to_check": "python3 scripts/ci/check_research_queue_health.py; ls research/results | grep 0142",
+    "due_by": "2026-10-27T00:00Z"
+  },
+  "_seq": 625
+}

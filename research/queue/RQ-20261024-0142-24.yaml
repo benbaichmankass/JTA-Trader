@@ -1,0 +1,117 @@
+id: RQ-20261024-0142-24
+title: 'Programme 07 Q2 variant (first test failed -> variant): does a 24 h / 48 h / 96 h Donchian lookback at 15m cut the turnover that sank the 20-bar breakout
+  on ADA/AVAX/SOL?'
+status: queued
+cadence: once
+roadmap:
+- L-TIMEFRAMES
+- M22
+theme: timeframes
+priority: 3
+kind: experiment
+question: On ADAUSDT, AVAXUSDT and SOLUSDT at 15m over 2022-01-01 .. 2026-10-20, does a Donchian entry lookback of 96 / 192 / 384 bars (24 h / 48 h / 96 h, declared
+  now) beat the family default (20 bars) pooled, net of the full cost stack, by >= 0.05 R/trade with >= 4 of 6 folds positive?
+why_this_matters: 'Lane AUTHOR-FLOOR-1024 (timeframes 2 vs share 3). RQ-20261021-7c2b-05 (cost-gated 15m Donchian-20 on ADA/AVAX/SOL) graded FAIL: ADA arm B n 4,526,
+  net -340 R, 0 of 6 folds positive, 3,724 of 4,526 exits trail_stops. DIAGNOSIS (hypothesis): a 20-bar channel at 15m is a five-hour channel, so the entry fires
+  about three times a day per symbol and the fee+slippage+funding stack is paid on every one; the vol-percentile gate (G50/G75/G90) filtered which breakouts were
+  taken but not how often the channel is re-entered. A longer lookback changes turnover directly and is the untested lever (the 30m re-ask 7c2b-01 also failed on
+  the same defaults).'
+power:
+  expected_n: 900
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: Pooled floor 88 trades (d = 0.3 at alpha 0.05 / power 0.8, the repo's standing floor for this family of units); expected_n=900 is an ESTIMATE from the first
+    test's per-cell counts (cited in the question's prior ids), not a measurement for the variant arms; below the floor the unit grades indeterminate, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ202610240142-24-15M-LONG-LOOKBACK
+  registered_at: '2026-10-24'
+  registered_before_run: true
+  statistic: scripts/research/harness_stage0.py --family trend, 15m bars on ADAUSDT,AVAXUSDT,SOLUSDT, 2022-01-01 .. 2026-10-20; pooled across symbols on ONE set of
+    6 calendar folds; net of the full cost stack the harness resolves per venue; baseline B vs candidates D96, D192, D384.
+  rule: 'Arms and thresholds are fixed now and are not changed after any result. A candidate PASSES iff it passes the pooled Stage-0 rule (pooled n >= 88, pooled
+    net_r > 0, >= 4 of 6 calendar folds net positive, >= 67 % of powered cells pass) AND beats B''s pooled net R/trade by >= 0.05 R. PASS IF one or more candidates
+    pass: the best by pooled net R is named and the follow-up is ONE confirmation unit on a disjoint window with the same statistic and bar (a pass on one window
+    is a lead), then the prop/real-money SUPERSET ladder; never a roster edit. FAIL IF every candidate fails (n >= floor) -> this variant is closed on this window
+    and the record names which arm moved closest, so the next variant is chosen from it (a 1h/2h bar with the same lookbacks, or a maker-cost arm once a maker harness
+    exists); the family is NOT retired. INDETERMINATE IF pooled n < 88: extend the window or add symbols in ONE new unit, never lower the floor.'
+  what_it_does_not_do: Edits no config and no roster, places no order, is not a promotion case; a Stage-0 pass on one window is a lead for a disjoint-window confirmation,
+    not evidence of edge.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 40
+  confidence: 0.12
+  bucket: structural
+  basis: 'stand-in: a variant of a failed Stage-0 candidate for the horizon frontier; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 90
+  why_runner: harness_stage0.py fetches keyless public candles and runs the repo harnesses; the dispatcher's idle backends cannot hold it (no published-data shard
+    for these symbols); CPU only.
+  basis: Estimate from the comparable harness_stage0 / exit_lever_ablation runs of 2026-10-16..22; the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - trend
+  - --symbols
+  - ADAUSDT,AVAXUSDT,SOLUSDT
+  - --timeframe
+  - 15m
+  - --days
+  - '1760'
+  - --start
+  - '2022-01-01'
+  - --end
+  - '2026-10-20'
+  - --arm
+  - B=
+  - --arm
+  - D96=donchian=96
+  - --arm
+  - D192=donchian=192
+  - --arm
+  - D384=donchian=384
+  - --baseline
+  - B
+  - --delta-r-per-trade
+  - '0.05'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '39'
+  - --pooled-n-floor
+  - '88'
+  - --breadth-frac
+  - '0.67'
+  - --rule-id
+  - RULE-RQ202610240142-24-15M-LONG-LOOKBACK
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261024-0142-24
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P7
+related:
+- RQ-20261021-7c2b-05
+- RQ-20261021-7c2b-01
+- RQ-20261022-4b82-18
+- scripts/research/harness_stage0.py
+- research/programmes/07-timeframes.yaml
+- AUTHOR-FLOOR-1024
