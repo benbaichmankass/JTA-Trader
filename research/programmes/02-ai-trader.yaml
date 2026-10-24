@@ -402,10 +402,304 @@ nodes:
     after:
     - unit: RQ-20261016-65ff-25
       verdict: fail
-    needs_authoring: Conformal abstention at 1h FAILED (no selective-error gain, or coverage validity broken by drift).
-      Record the configuration in families.conformal_calibration.history; register ONE refinement (Mondrian by vol
-      bucket instead of predicted class, or an adaptive-conformal ACI variant for drift) before the family is fed
-      again, or retire 9da8-03 with the reason.
+    unit:
+      theme: ml_health
+      priority: 2
+      kind: experiment
+      title: 'AI trader / conformal abstention at 1h, VARIANT (first test failed -> variant, P2-Q1.5-fail): does a GLOBAL
+        (non-Mondrian) split-conformal rule beat the plain max-probability threshold at matched coverage on the BTC/ETH/SOL
+        1h regime learner?'
+      question: 'RQ-20261016-65ff-25 (Mondrian per predicted class, 3 symbols x 3 coverage levels) closed FAIL on two
+        consecutive passes: conformal selective error was slightly HIGHER than the plain threshold at every level on BTC,
+        and empirical set coverage ran ~8-9 points under nominal at the 90% level (e.g. 0.81 vs 0.90 on BTC), i.e. the
+        calibration block does not stay exchangeable with the test block. Same shards, learner, folds, coverage levels
+        and windows, one change -- mondrian: none (a single global quantile instead of one per predicted class, which
+        halves the calibration rows per quantile): does the conformal rule give LOWER selective error than the plain threshold
+        at matched coverage on >= 2 of 3 symbols at every level, with rolling-window coverage within 2 SE of nominal in
+        >= 90% of windows?'
+      why_this_matters: 'Operator 2026-10-22: an idea that failed one test is not dead, it failed the first test. This
+        is a registered VARIANT, not a retry: per-class quantiles on a 2-class label with ~1000 calibration rows per class
+        are noisy, and the class split is the one degree of freedom in the instrument that the FAIL did not rule out.
+        Drift (the other candidate cause) is NOT addressed here -- an adaptive-conformal (ACI) arm needs an instrument
+        change that does not exist; if this variant also FAILs on validity, the next variant is that lever, filed by the
+        grader read. Prior: 65ff-25 (FAIL, Mondrian), 9da8-03 (trainer-log variant, still blocked on ML-HEAD-AGREEMENT-JOIN).
+        Trials counted: 2 conformal configurations on this corpus including this one.'
+      power:
+        expected_n: 24000
+        min_detectable_effect: 0.1
+        effect_units: sd
+        design: one_sample
+        alpha: 0.05
+        power: 0.8
+        basis: 'The selective-error comparison is PAIRED over folds and rows: a paired comparison is a one-sample test
+          on the differences, so design is one_sample (the queue''s power grader accepts one_sample | two_sample; ''paired''
+          was refused on 2026-10-18 when the unit left blocked/). Rows: tail_rows 40000 at min_train_frac 0.4 leaves ~24,000
+          OOS rows per symbol over 5 folds; d=0.1 paired needs ~785 rows, so rows are not the limit; bars are autocorrelated,
+          so the rule also needs >= 2 of 3 symbols and >= 6 windows per symbol rather than one significance test. The
+          earlier basis counted 3 symbols as n; that was the number of groups, not the sample.'
+        feasibility:
+          source: none
+          accrual_basis: Fixed published shard; nothing accrues.
+      decision_rule:
+        id: RULE-P2-Q1.5-CONFORMAL-1H-GLOBAL
+        statistic: 'Per symbol and coverage level c in {0.5, 0.7, 0.9}: selective error (misclassification among non-abstained
+          OOS rows) of (a) the plain max-probability threshold tuned on the fold''s calibration block to keep share c
+          and (b) the GLOBAL (mondrian: none) split-conformal rule whose alpha is tuned on the same calibration block
+          to keep share c (rising branch); paired over folds. Validity: per non-overlapping 30-day window of OOS rows,
+          |empirical set coverage - (1 - alpha)| <= 2 * sqrt(p(1-p)/n_window + p(1-p)/n_calibration). The fixed 3-point
+          band is reported beside it as valid_share_tol.'
+        rule: 'PASS IF on >= 2 of 3 symbols, at EVERY coverage level (50/70/90% kept) with coverage matched between the
+          two rules, the conformal rule has LOWER selective error than the plain max-probability threshold AND the conformal
+          set''s rolling-window coverage is within 2 SE of nominal in >= 90% of windows (SE combines the window''s binomial
+          term and the calibration-set term; see amendments) -- a per-trade refusal signal worth a Tier-3 proposal note
+          on FRONTIER-RESEARCH; family history conformal_calibration PASS. FAIL IF either condition fails on >= 2 symbols
+          with coverage matched (no gain, or validity broken by drift: family history FAIL with this configuration). INDETERMINATE
+          IF < 6 usable windows per symbol, the learner arm is unavailable, or coverage could not be matched at some level
+          (the model cannot keep that many singleton sets: not a comparison).'
+        min_n: 6 usable 30-day windows per symbol, >= 200 OOS rows each.
+        what_it_does_not_do: Changes no head, threshold, stage or order path; abstention is measured offline on market
+          labels only. A PASS is a lead for a disjoint-window confirmation unit and a Tier-3 proposal note, never a wiring
+          change. Does not address drift (no ACI arm). Not a P&L claim.
+      compute: auto
+      value:
+        bucket: ai_trader
+        usd_at_stake_per_month: 100
+        confidence: 0.2
+        basis: 02 node P2-Q1.5 weight; a calibrated per-trade refusal signal for the advisory heads, not a measured P&L
+      routing:
+        needs_trainer_resident_data: false
+        needs_gpu: false
+        published_data: metis-market-data
+        peak_memory_gb: 3.0
+        est_minutes: 30
+        basis: 'Estimate, NOT measured: the 65cc-10 fold plan (5 lightgbm fits per symbol) plus a 190-point alpha grid
+          over each fold''s calibration block per level; Kaggle CPU via published data. Re-declare from the first run.'
+      ml_bakeoff:
+        dataset:
+          kind: jsonl
+          groups:
+            BTCUSDT_1h:
+              path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+            ETHUSDT_1h:
+              path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+            SOLUSDT_1h:
+              path: datasets-out/market_features/SOLUSDT/1h/v002/data.jsonl
+          ts_col: ts
+          target: regime_label
+          features:
+          - rolling_log_return_vol
+          - log_return
+          - log_return_lag_1
+          - log_return_lag_2
+          - hour_of_day
+          - dayofweek
+          tail_rows: 40000
+        cv:
+          folds: 5
+          embargo_rows: 24
+          min_train_frac: 0.4
+        learners:
+          lgbm:
+            kind: lightgbm
+            params:
+              n_estimators: 200
+              learning_rate: 0.05
+              num_leaves: 31
+              min_child_samples: 50
+        note: dataset / cv / learner only (the compute router checks published-data paths here); the SCORE-STREAM test
+          is the conformal block
+      conformal:
+        learner: lgbm
+        coverage_levels:
+        - 0.5
+        - 0.7
+        - 0.9
+        calib_frac: 0.25
+        match_tol: 0.03
+        window_days: 30
+        min_window_rows: 200
+        min_windows: 6
+        validity_mode: 2se
+        validity_tol: 0.03
+        validity_min_share: 0.9
+        mondrian: none
+        rule:
+          pass_symbols_min: 2
+          fail_symbols_min: 2
+      run:
+        command:
+        - python3
+        - scripts/research/conformal_abstain_eval.py
+        - --unit
+        - '{unit}'
+        - --out
+        - '{out_dir}'
+        timeout_minutes: 60
+      lands:
+        store: research/results/
+        assert_field: read_state
+        min_rows: 1
+      roadmap:
+      - L-REGIME
+      - M25
+      related:
+      - RQ-20261016-65ff-25
+      - RQ-20261011-9da8-03
+      - FRONTIER-LEVER-CONFORMAL
+  - id: P2-Q1.6-yz-sol-logloss
+    goal: G4
+    roadmap: [M25]
+    value: {usd_at_stake_per_month: 100, confidence: 0.2}
+    after:
+    - unit: RQ-20261023-a1f3-15
+      verdict: pass
+    unit:
+      theme: ml_health
+      priority: 2
+      kind: experiment
+      title: 'Range-vol lift for the SOL 1h regime head scored on LOG-LOSS (transfer of RQ-20261023-a1f3-15): does lgbm_yz
+        beat lgbm_base on SOLUSDT?'
+      question: RQ-20261023-a1f3-15 PASSED on BTC+ETH 1h (lgbm_yz vs lgbm_base, log-loss, with the BTC CI95 spanning 0).
+        SOL was not in that unit's rule. On the SOLUSDT 1h v002 shard, same features, folds, embargo, learners and bar,
+        does lgbm_yz beat lgbm_base by >= 0.003 nats of log-loss on the CV mean with the same sign on the post-2026-07-12
+        holdout?
+      why_this_matters: 'a1f3-15''s PASS is a lead (BTC interval includes zero, two symbols). SOL is the third symbol
+        of the 1h regime head and the one where the macro-F1 test 3a84-11 passed, so this is the symbol where a log-loss
+        result is most informative: a PASS widens the lead to the full head, a FAIL says the macro-F1 pass was a metric
+        artifact there. Trials counted: 4 range-vol comparisons on this feature block (3a84-09/-10/-11 macro-F1, a1f3-15
+        log-loss) plus this one.'
+      power:
+        expected_n: 20000
+        min_detectable_effect: 0.1
+        effect_units: sd
+        design: one_sample
+        alpha: 0.05
+        power: 0.8
+        basis: 'Row floor: d=0.1 paired needs ~785 rows; rows are autocorrelated so effective n is lower. expected_n is
+          an ESTIMATE from tail_rows x folds, not a measurement; below the fold floor the unit grades indeterminate, never
+          FAIL.'
+        feasibility:
+          source: none
+          accrual_basis: 'Fixed by construction (tail_rows of a nightly-rebuilt shard): n does not grow with waiting,
+            so an underpowered result is reported as such and the follow-up is a larger or different dataset, not a re-run.'
+      decision_rule:
+        id: RULE-P2-Q1.6-REGIME-1H-YZ-LOGLOSS-SOL
+        registered_before_run: true
+        statistic: Paired purged-CV log-loss difference (lgbm_base minus lgbm_yz, positive = yz better) on identical rows,
+          and the same on the holdout, for SOLUSDT_1h.
+        rule: PASS IF lgbm_yz beats lgbm_base by >= +0.003 nats (CV mean) AND > 0 on the holdout. FAIL IF lgbm_yz does
+          not reach >= +0.001 vs lgbm_base (CV mean). INDETERMINATE otherwise, or if folds < 3, the holdout has < 20 rows,
+          or an arm is unavailable. A PASS is not a promotion.
+        min_n: 3 usable CV folds; reported n_rows.
+        what_it_does_not_do: Builds, calibrates and serves nothing, promotes nothing, touches no config; a score PASS
+          is not edge and not a P&L figure.
+      compute: auto
+      value:
+        usd_at_stake_per_month: 100
+        confidence: 0.2
+        bucket: ai_trader
+        basis: 'stand-in: gates whether the range-vol block is worth wiring into the 1h head; not a measured P&L'
+      routing:
+        needs_trainer_resident_data: false
+        needs_gpu: false
+        published_data: metis-market-data
+        peak_memory_gb: 3.0
+        est_minutes: 20
+        basis: 'Estimate, NOT measured: CPU-capable bake-off on the published 1h v002 shards the 4591 units read; compute:
+          auto routes it to the Kaggle CPU kernel (published data; idle backend per the 09:14Z health line).'
+      ml_bakeoff:
+        task: classification
+        metric: logloss
+        higher_is_better: false
+        dataset:
+          kind: jsonl
+          groups:
+            SOLUSDT_1h:
+              path: datasets-out/market_features/SOLUSDT/1h/v002/data.jsonl
+          ts_col: ts
+          target: regime_label
+          features:
+          - rolling_log_return_vol
+          - log_return
+          - log_return_lag_1
+          - log_return_lag_2
+          - hour_of_day
+          - dayofweek
+          tail_rows: 40000
+          holdout_after: '2026-07-12'
+          extra_columns:
+          - parkinson_vol
+          - garman_klass_vol
+          - rogers_satchell_vol
+          - yang_zhang_vol
+        cv:
+          folds: 5
+          embargo_rows: 96
+          min_train_frac: 0.4
+        baseline: lgbm_base
+        controls:
+        - prior
+        candidates:
+        - lgbm_yz
+        learners:
+          prior:
+            kind: prior
+          lgbm_base:
+            kind: lightgbm
+            params: &id001
+              learning_rate: 0.05
+              min_child_samples: 50
+              n_estimators: 200
+              num_leaves: 31
+          lgbm_yz:
+            kind: lightgbm
+            params: *id001
+            feature_blocks:
+            - kind: df_columns
+              columns:
+              - parkinson_vol
+              - garman_klass_vol
+              - rogers_satchell_vol
+              - yang_zhang_vol
+        rule:
+          min_folds: 3
+          pass_if:
+          - group:
+            - SOLUSDT_1h
+            vs: baseline
+            window: cv
+            op: '>='
+            value: 0.003
+          - group:
+            - SOLUSDT_1h
+            vs: baseline
+            window: holdout
+            op: '>'
+            value: 0.0
+          fail_if_no_candidate_reaches:
+          - group: any
+            vs: baseline
+            window: cv
+            op: '>='
+            value: 0.001
+      run:
+        command:
+        - python3
+        - scripts/research/ml_bakeoff.py
+        - --unit
+        - '{unit}'
+        - --out
+        - '{out_dir}'
+        timeout_minutes: 60
+      lands:
+        store: research/results/
+        assert_field: read_state
+        min_rows: 1
+      roadmap:
+      - M25
+      related:
+      - RQ-20261023-a1f3-15
+      - RQ-20261022-3a84-11
   # ── Q2.5 pooling parity (no unit yet) ───────────────────────────────────────
   - id: P2-Q2.5-pooling-parity
     goal: G4
