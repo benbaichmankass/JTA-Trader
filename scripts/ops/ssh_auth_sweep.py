@@ -51,7 +51,7 @@ def classify(ip: str, trainer_ip: str, allow: set[str]) -> str:
 
 
 def fetch_diag(path: str) -> dict:
-    p = subprocess.run(["bash", "scripts/ops/diag_fetch.sh", path], capture_output=True, text=True)
+    p = subprocess.run(["bash", "scripts/ops/diag_fetch.sh", path], capture_output=True, text=True, check=False)
     if p.returncode != 0:
         raise RuntimeError(f"diag_fetch rc={p.returncode}")
     return json.loads(p.stdout)
@@ -71,7 +71,7 @@ def sweep(since, until, trainer_ip, allow=frozenset(), window=timedelta(minutes=
         res["windows"] += 1
         try:
             d = fetch(f"journalctl?unit=ssh.service&since={iso(a)}&until={iso(b)}&lines={CAP}")
-        except Exception:
+        except (RuntimeError, ValueError):  # relay failure or non-JSON body
             d = None
         if not d or not d.get("available") or d.get("returncode") not in (0, 1):
             res["unreadable"].append([iso(a), iso(b)])
@@ -116,7 +116,8 @@ def main(argv=None) -> int:
               timedelta(minutes=a.window_minutes))
     print(json.dumps({k: v for k, v in r.items()}, indent=1))
     if r["unreadable"]:
-        print("COVERAGE INCOMPLETE: sweep is could_not_look, not clean", file=sys.stderr)
+        print(f"COVERAGE INCOMPLETE: {len(r['unreadable'])} of {r['windows']} windows unreadable (could_not_look)",
+              file=sys.stderr)
         return 2
     return 1 if r["accepts"] else 0
 
