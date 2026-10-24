@@ -179,6 +179,7 @@ on:
           - cancel-stale-tpsl-legs
           - backfill-tpsl-leg-ids
           - reattach-stranded-package-legs
+          - amend-position-sl
       reason:
         description: "Why this action is being run (audit trail; required for Tier-2)"
         required: false
@@ -692,6 +693,20 @@ jobs:
                      | grep -i -m1 '^[[:space:]]*exit_kind[[:space:]]*:' \
                      | sed -E 's/^[[:space:]]*[Ee]xit_kind[[:space:]]*:[[:space:]]*//' \
                      | tr -d '[:space:]' || true)
+            # amend-position-sl: the new (tighter) stop, the position side when
+            # no trade_id is given, and the explicit through-the-mark override.
+            new_sl=$(printf '%s\n' "${ISSUE_BODY}" \
+                     | grep -i -m1 '^[[:space:]]*new_sl[[:space:]]*:' \
+                     | sed -E 's/^[[:space:]]*[Nn]ew_sl[[:space:]]*:[[:space:]]*//' \
+                     | tr -d '[:space:]' || true)
+            side=$(printf '%s\n' "${ISSUE_BODY}" \
+                     | grep -i -m1 '^[[:space:]]*side[[:space:]]*:' \
+                     | sed -E 's/^[[:space:]]*[Ss]ide[[:space:]]*:[[:space:]]*//' \
+                     | tr -d '[:space:]' || true)
+            allow_immediate=$(printf '%s\n' "${ISSUE_BODY}" \
+                     | grep -i -m1 '^[[:space:]]*allow_immediate[[:space:]]*:' \
+                     | sed -E 's/^[[:space:]]*[Aa]llow_immediate[[:space:]]*:[[:space:]]*//' \
+                     | tr -d '[:space:]' || true)
             if [ -z "${action}" ]; then
               echo "::error::Issue body must contain a line of the form 'action: <name>'. Title was: ${ISSUE_TITLE}"
               exit 1
@@ -776,6 +791,9 @@ jobs:
           echo "ACTION_FROM_PLACED=${from_placed:-}" >>"$GITHUB_ENV"
           echo "ACTION_ROW=${row_id:-}" >>"$GITHUB_ENV"
           echo "ACTION_EXIT_KIND=${exit_kind:-}" >>"$GITHUB_ENV"
+          echo "ACTION_NEW_SL=${new_sl:-}" >>"$GITHUB_ENV"
+          echo "ACTION_SIDE=${side:-}" >>"$GITHUB_ENV"
+          echo "ACTION_ALLOW_IMMEDIATE=${allow_immediate:-}" >>"$GITHUB_ENV"
           echo ">>> Resolved ACTION=${action:-} REASON=${reason:-} ACCOUNT_ID=${account_id:-} MODE=${mode:-} TRADE_ID=${trade_id:-} SYMBOL=${symbol:-} DAYS=${days:-} WINDOWS=${windows:-} WINDOW_DAYS=${window_days:-} BT_MODE=${bt_mode:-} RECENT_ONLY_FRAC=${recent_only_frac:-} (event=${GITHUB_EVENT_NAME})"
 
       - name: Validate action and tier policy
@@ -785,7 +803,7 @@ jobs:
             status-check|verify-account-mode|disk-usage-report|list-listening-ports|gateway-logs|gateway-forensics|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|send-ping|send-prop-test-ping|phone-dry-test|phone-drill|generate-strategy-review-packets|grade-closed-trades|net-r-regrade|get-env|passkey-enrol-code)
               echo "tier=1" >>"$GITHUB_ENV"
               ;;
-            pull-and-deploy|init-web-session-pepper|install-web-api-deps|restart-bot-service|stop-bot-service|start-bot-service|reboot-vm|enable-closed-flat-invariant|disable-closed-flat-invariant|set-mobile-push-secrets|enable-insights-generator|disable-insights-generator|inspect-insights|kick-insights|enable-signal-dual-write|disable-signal-dual-write|backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|set-account-mode|fix-data-dir|rotate-account-keys|init-diag-token|set-env|unset-env|scrub-env-noncompliant|pause-autoheal|resume-autoheal|sync-clock|purge-cloudflared|purge-vm-runner|flatten-ib-position|flatten-bybit-position|switch-bybit-position-mode|flatten-alpaca-position|rearm-alpaca-protective|cancel-ib-order|attach-ib-target|close-stranded-journal-row|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|fix-prop-mislinked-close|prop-ticket-expire|prop-ticket-reissue|prop-report-close|repair-prop-fill-direction|breakout-login-check|breakout-terminal-probe|egress-landing-probe|velotrade-api-probe|velotrade-api-roundtrip|velotrade-trade-history-read|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm|cancel-stale-tpsl-legs|backfill-tpsl-leg-ids|reattach-stranded-package-legs)
+            pull-and-deploy|init-web-session-pepper|install-web-api-deps|restart-bot-service|stop-bot-service|start-bot-service|reboot-vm|enable-closed-flat-invariant|disable-closed-flat-invariant|set-mobile-push-secrets|enable-insights-generator|disable-insights-generator|inspect-insights|kick-insights|enable-signal-dual-write|disable-signal-dual-write|backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|set-account-mode|fix-data-dir|rotate-account-keys|init-diag-token|set-env|unset-env|scrub-env-noncompliant|pause-autoheal|resume-autoheal|sync-clock|purge-cloudflared|purge-vm-runner|flatten-ib-position|flatten-bybit-position|switch-bybit-position-mode|flatten-alpaca-position|rearm-alpaca-protective|cancel-ib-order|attach-ib-target|close-stranded-journal-row|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|fix-prop-mislinked-close|prop-ticket-expire|prop-ticket-reissue|prop-report-close|repair-prop-fill-direction|breakout-login-check|breakout-terminal-probe|egress-landing-probe|velotrade-api-probe|velotrade-api-roundtrip|velotrade-trade-history-read|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm|cancel-stale-tpsl-legs|backfill-tpsl-leg-ids|reattach-stranded-package-legs|amend-position-sl)
               echo "tier=2" >>"$GITHUB_ENV"
               if [ -z "${REASON// }" ]; then
                 echo "::error::Tier-2 action '${ACTION}' requires a non-empty 'reason' input."
@@ -1170,6 +1188,43 @@ jobs:
                 echo "::error::cancel-stale-tpsl-legs apply must be true or false (got '${ACTION_APPLY}')."
                 exit 1
                 ;;
+            esac
+          fi
+          # amend-position-sl: account + new_sl required; trade_id OR symbol+side.
+          # The python helper owns every money guard (looser / wrong side of the
+          # mark / missing row-package-position / non-live account); this only
+          # shape-checks so nothing unparsed reaches the VM.
+          if [ "${ACTION}" = "amend-position-sl" ]; then
+            if [ -z "${ACCOUNT_ID// }" ] || ! printf '%s' "${ACCOUNT_ID}" | grep -Eq '^[A-Za-z0-9_-]+$'; then
+              echo "::error::amend-position-sl requires a valid 'account: <id>' (allowed: A-Z a-z 0-9 _ -)."
+              exit 1
+            fi
+            if ! printf '%s' "${ACTION_NEW_SL:-}" | grep -Eq '^[0-9]+(\.[0-9]+)?$'; then
+              echo "::error::amend-position-sl requires 'new_sl: <price>' (a positive decimal; got '${ACTION_NEW_SL:-}')."
+              exit 1
+            fi
+            if [ -n "${TRADE_ID// }" ]; then
+              if ! printf '%s' "${TRADE_ID}" | grep -Eq '^[0-9]+$'; then
+                echo "::error::amend-position-sl trade_id '${TRADE_ID}' must be digits."
+                exit 1
+              fi
+            else
+              if ! printf '%s' "${ACTION_SYMBOL:-}" | grep -Eq '^[A-Za-z0-9_]+$'; then
+                echo "::error::amend-position-sl requires 'trade_id: <id>' or 'symbol: <SYM>' + 'side: long|short'."
+                exit 1
+              fi
+              case "${ACTION_SIDE:-}" in
+                long|short) ;;
+                *) echo "::error::amend-position-sl side must be long or short (got '${ACTION_SIDE:-}')."; exit 1 ;;
+              esac
+            fi
+            case "${ACTION_APPLY:-}" in
+              ""|true|false|True|False) ;;
+              *) echo "::error::amend-position-sl apply must be true or false (got '${ACTION_APPLY}')."; exit 1 ;;
+            esac
+            case "${ACTION_ALLOW_IMMEDIATE:-}" in
+              ""|true|false|True|False) ;;
+              *) echo "::error::amend-position-sl allow_immediate must be true or false (got '${ACTION_ALLOW_IMMEDIATE}')."; exit 1 ;;
             esac
           fi
           # phone-dry-test: ONE always-dry phone test ticket (meta.test, submit
@@ -1732,6 +1787,7 @@ jobs:
             validate-partial-tpsl)              SCRIPT="validate_partial_tpsl_action.sh" ;;
             validate-bybit-naked-rearm)         SCRIPT="validate_bybit_naked_rearm_action.sh" ;;
             cancel-stale-tpsl-legs)             SCRIPT="cancel_stale_tpsl_legs_action.sh" ;;
+            amend-position-sl)                  SCRIPT="amend_position_sl_action.sh" ;;
             backfill-tpsl-leg-ids)              SCRIPT="backfill_tpsl_leg_ids_action.sh" ;;
             reattach-stranded-package-legs) SCRIPT="reattach_stranded_package_legs_action.sh" ;;
             repair-prop-fill-direction)         SCRIPT="repair_prop_fill_direction_action.sh" ;;
@@ -2104,6 +2160,11 @@ jobs:
           # (bybit_1 demo) is hard-locked inside the helper.
           if [ "${ACTION}" = "cancel-stale-tpsl-legs" ]; then
             REMOTE_CMD="ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID}") ACTION_SYMBOL=$(printf '%q' "${ACTION_SYMBOL}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
+          fi
+          if [ "${ACTION}" = "amend-position-sl" ]; then
+            # The reason is the provenance written onto trades.notes, not a
+            # dispatch formality — forwarded like flatten-*'s.
+            REMOTE_CMD="ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID}") TRADE_ID=$(printf '%q' "${TRADE_ID:-}") ACTION_SYMBOL=$(printf '%q' "${ACTION_SYMBOL:-}") ACTION_SIDE=$(printf '%q' "${ACTION_SIDE:-}") ACTION_NEW_SL=$(printf '%q' "${ACTION_NEW_SL:-}") ACTION_REASON=$(printf '%q' "${REASON}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ACTION_ALLOW_IMMEDIATE=$(printf '%q' "${ACTION_ALLOW_IMMEDIATE:-}") ${REMOTE_CMD}"
           fi
           if [ "${ACTION}" = "backfill-tpsl-leg-ids" ]; then
             REMOTE_CMD="ACCOUNT_ID=$(printf '%q' "${ACCOUNT_ID}") ACTION_SYMBOL=$(printf '%q' "${ACTION_SYMBOL}") ACTION_APPLY=$(printf '%q' "${ACTION_APPLY:-}") ${REMOTE_CMD}"
