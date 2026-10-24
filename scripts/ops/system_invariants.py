@@ -1472,7 +1472,8 @@ def _self_test() -> int:
     expect("positions_state != read is not_measured, never ok", "INV-PROP-POSITIONS", _fx_prop("blind"), NOT_MEASURED)
     expect("prop_status without a journal side is not_measured", "INV-PROP-POSITIONS",
            {"prop_status": _fx_prop("good")["prop_status"]}, NOT_MEASURED)
-    nostop = _fx_prop("good"); nostop["prop_fills"]["fills"][0]["sl"] = None
+    nostop = _fx_prop("good")
+    nostop["prop_fills"]["fills"][0]["sl"] = None
     expect("open prop fill with no journaled stop FAILS", "INV-PROP-STOP", nostop, FAIL)
     expect("open prop fill with a stop PASSES", "INV-PROP-STOP", _fx_prop("good"), PASS)
     expect("absent prop_fills is not_measured", "INV-PROP-STOP", absent, NOT_MEASURED)
