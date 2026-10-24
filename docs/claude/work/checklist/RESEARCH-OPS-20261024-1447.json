@@ -2,7 +2,7 @@
   "id": "RESEARCH-OPS-20261024-1447",
   "title": "Research-ops pass 2026-10-24 14:47Z",
   "phase": "research",
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": "research-ops-lane-20261024-1447",
   "model": null,
@@ -11,11 +11,20 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "[lane] started: needs_review triage + blocked audit first",
-  "updated_at": "2026-10-24T14:51:15Z",
+  "note": "[lane] needs_review 30 -> 29 (measured; all 30 read, all owned; only retired RQ-20261022-4a3b-01 dispositionable; 1631-01/-02 stale owner text corrected, real cause = no crypto 5m source, lever on SAME-SYMBOL-ALLOCATION). blocked/ audit run on 63 blocked + 8 retired: every unit has a named lever+owner after fixes to 901, 5bd1-14, 17f4-01; no safe unlock found. Read 13 results since 09:30Z: 1 PASS (4b82-03 WIDE, one window) -> confirmation unit RQ-20261024-71e8-01 (symbol-disjoint); 9ffb-03 FAIL -> slv_pullback_1d Tier-3 question is the manager's (SLV-PB1D-RETENTION-T3). Not run: programme-node authoring (0 drafted), stranded PR re-list. Held PR (queue edits, E57). Record comms/research/ops/20261024T1530Z.json.",
+  "updated_at": "2026-10-24T14:59:53Z",
   "updated_by": "session_016Br2THxzkZkY1Fh2nXMyUG",
   "roadmap": [
     "L-LADDER"
   ],
+  "writeback": {
+    "roadmap": "none: operations pass",
+    "arch": "none: no component changed"
+  },
+  "observation": {
+    "what": "RQ-20261024-71e8-01 is dispatched and lands a measured verdict; needs_review count stays <= 29",
+    "how_to_check": "python3 scripts/research/queue_grade.py --health | head -12; ls research/results/RQ-20261024-71e8-01",
+    "due_by": "2026-10-31"
+  },
   "_seq": 628
 }
