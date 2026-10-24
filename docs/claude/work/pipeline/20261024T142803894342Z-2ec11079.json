@@ -1,0 +1,17 @@
+{
+  "based_on": "20261024T140915830894Z-bc1417b0.json",
+  "due_when": {
+    "clears_when": "every queued unit whose decision_rule names an ungated/unconditional control carries a --vs-control pair for it in run.command (grep -L -- --vs-control over those units returns nothing), or the units have run and been regraded",
+    "kind": "event"
+  },
+  "id": "PI-20261024-HF1S5YZE-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "REPLACE-GRADE-CONTROL-REGRADE docs/research/replace-grade-control-regrade-2026-10-24.md",
+    "rerun": "grep -L -- '--vs-control' research/queue/RQ-20261024-0142-*.yaml   # lists units still lacking the flag"
+  },
+  "state": "done",
+  "terminal_reason": "Fixed in PR #19876: --vs-control CAND=CTRL added to run.command of RQ-20261024-0142-01..10, pairs taken from each unit's own arm definitions (identical action params: e.g. 02 C75M20=UT20, C75M30=UT30; 04 E30M20=UT20, E30M15=UT15; 06 E20L=UTL, E20M=UTM; 10 E20L=UT40, E20M=UT35; single-control units pair every candidate with their one UT). dispatch_queue dry run: would_dispatch for all 10. Merge of #19876 pending.",
+  "what": "10 QUEUED exit-lever units RQ-20261024-0142-01..10 register a 'matching UNGATED control' clause (UT/UT20/UT30/UTL/UTM/UT15/UT35/UT40) in their decision_rule but their run.command has no --vs-control, so exit_lever_ablation --grade replace will again NOT enforce it (the gap fixed in #19871 only applies when the flag is passed). Before they dispatch: add --vs-control CAND=CTRL per the 'matching' pairs in each rule (units -02/-04/-06/-10 have two controls and need the pairing read from the rule text), or the verdicts repeat the defect this lane re-graded. RQ-20261024-9a7e-01..04 already pass the flag. The 12 already-graded control-clause units were re-graded: 0 flips (docs/research/replace-grade-control-regrade-2026-10-24.md)."
+}

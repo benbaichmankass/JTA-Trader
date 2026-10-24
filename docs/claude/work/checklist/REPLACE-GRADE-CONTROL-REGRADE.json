@@ -15,7 +15,7 @@
   "blocked_on": [],
   "note": "[2026-10-24 session_01RBNkFwxcLRmZzYHF1s5YzE] 163 replace-graded units with results; 12 name an unconditional control; re-graded from their artifacts (grader reproduced the stored verdict 13/13): 0 flips, all FAIL stay FAIL, control never the binding clause. No lead (FAIL->PASS impossible by construction), no PASS->FAIL. Found: 10 queued 0142 units name a control but lack --vs-control (pipeline PI-20261024-HF1S5YZE-0001). Doc: docs/research/replace-grade-control-regrade-2026-10-24.md",
   "priority_rank": 3,
-  "updated_at": "2026-10-24T14:23:49Z",
+  "updated_at": "2026-10-24T14:28:10Z",
   "updated_by": "session_01RBNkFwxcLRmZzYHF1s5YzE",
   "roadmap": [
     "L-ATM"
@@ -25,8 +25,8 @@
     "arch": "none: no architecture change; one read-only script and one evidence doc"
   },
   "observation": {
-    "what": "RQ-20261024-0142-01..10 carry --vs-control for their matching ungated controls (PI-20261024-HF1S5YZE-0001), and the first of them to land is graded with the clause enforced",
-    "how_to_check": "grep -L -- --vs-control research/queue/RQ-20261024-0142-*.yaml over the units naming a control; read the landed verdict rows for a vs_controls block",
+    "what": "the first RQ-20261024-0142-01..10 unit to land carries a vs_controls block in its verdict row (the clause enforced)",
+    "how_to_check": "read research/results/RQ-20261024-0142-0N/ verdict row measurement.grade.candidates.*.vs_controls",
     "due_by": "2026-11-07"
   },
   "_seq": 627
