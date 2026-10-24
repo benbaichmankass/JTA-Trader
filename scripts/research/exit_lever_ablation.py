@@ -392,7 +392,8 @@ TP_REACH_FLOOR = 0.10  # == scripts/ci/check_tp_doctrine.REACH_FLOOR (TP-REACH-F
 def grade_replace(arms: dict[str, dict[str, Any]], *, baseline: str, candidates: list[str], fold_majority: int,
                   n_floor: int, dd_tol_frac: float, control: dict[str, Any] | None,
                   tp_r_by_arm: dict[str, float | None] | None = None,
-                  delta_r_per_trade: float = 0.0) -> dict[str, Any]:
+                  delta_r_per_trade: float = 0.0,
+                  vs_controls: dict[str, list[str]] | None = None) -> dict[str, Any]:
     a = arms[baseline]
     # MATERIALITY (P1-ATM-BACKLOG-1016): an optional per-trade bar, scaled by the INCUMBENT's n, so a
     # unit can register "beats A by >= x R/trade" before n is known. 0.0 (the default) is the strict
@@ -414,11 +415,23 @@ def grade_replace(arms: dict[str, dict[str, Any]], *, baseline: str, candidates:
         wins = sum(1 for fc, fa in zip(c["folds"], a["folds"]) if fc["net_r"] >= fa["net_r"])
         ok = (c["net_r"] > a["net_r"] and d_r >= bar and wins >= fold_majority
               and c["max_drawdown_r"] <= dd_cap)
+        # EXIT-GIVEBACK-PREDICTOR-GATE: a gated candidate must ALSO beat each of its controls (the same action on
+        # every trade, and on a matched-rate random draw) on net R and in >= fold_majority folds; the harness's
+        # stop-at-stop-price fill flatters a tightened trade equally in the arm and its random control, so the
+        # contrast cancels it. Absent ``vs_controls`` this branch never runs (byte-identical to before).
+        ctl_rows: dict[str, Any] = {}
+        for ctl in (vs_controls or {}).get(cl, []):
+            ca = arms[ctl]
+            cw = sum(1 for fc, fk in zip(c["folds"], ca["folds"]) if fc["net_r"] >= fk["net_r"])
+            beat = c["net_r"] > ca["net_r"] and cw >= fold_majority
+            ctl_rows[ctl] = {"net_r": ca["net_r"], "delta_net_r": round(c["net_r"] - ca["net_r"], 4),
+                             "folds_ge_control": cw, "beats": beat}
+            ok = ok and beat
         reach = c.get("reach_ge_6r")
         tp_r = (tp_r_by_arm or {}).get(cl)
         m["candidates"][cl] = {
             "net_r": c["net_r"], "delta_net_r": d_r, "max_drawdown_r": c["max_drawdown_r"], "max_drawdown_cap": dd_cap,
-            "folds_ge_incumbent": wins, "passes": ok,
+            "folds_ge_incumbent": wins, "passes": ok, **({"vs_controls": ctl_rows} if ctl_rows else {}),
             "lever_fired": not (c["n"] == a["n"] and abs(c["net_r"] - a["net_r"]) < 1e-9),
             "tp_doctrine": {"declared_tp_r": tp_r, "reach_ge_6r": reach,
                             "satisfies_reach_floor": (None if tp_r is None or tp_r >= 50 or reach is None
@@ -719,6 +732,17 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--trigger-big-quantile", type=float, default=0.5,
                     help="with --trigger-from-path-metrics: the 'big giveback' cut, a quantile of the "
                          "TRAINING folds' giveback (the eba2-01 construction)")
+    ap.add_argument("--trigger-baseline-extra", action="append", default=[], choices=("vol_ratio_k",),
+                    help="with --trigger-from-path-metrics: move this feature into the trigger model's BASELINE "
+                         "(PATHMETRIC-VOLCTL), so the flag is the path metrics beyond it. Default none = as before.")
+    ap.add_argument("--trigger-p-threshold", type=float, default=0.5,
+                    help="with --trigger-from-path-metrics: flag a trade when its out-of-fold P(big giveback) >= this "
+                         "(default 0.5 = the eba2-07/08 construction). A higher value is a SELECTIVE gate.")
+    ap.add_argument("--trigger-shuffle-seed", type=int, default=None,
+                    help="with --trigger-from-path-metrics: also write a matched-rate RANDOM trigger file and "
+                         "substitute it for the literal token @trigger_file_random (the gate's null control)")
+    ap.add_argument("--vs-control", action="append", default=[], metavar="CAND=CTRL",
+                    help="replace: CAND must also beat arm CTRL on net R and in >= --fold-majority folds (repeatable)")
     ap.add_argument("--control-since", action="store_true",
                     help="grade the control on trades entered on/after the record's data_start (window longer than the record's)")
     ap.add_argument("--out", required=True)
@@ -794,18 +818,34 @@ def main(argv: list[str] | None = None) -> int:
             print(f"ERROR: trigger producer: {exc}", file=sys.stderr)
             _write_failure(out, {"stage": "trigger_producer", "error": str(exc)})
             return 1
-        ptable, _ex, _tot = pm.build_table(prow, a.trigger_from_path_metrics)
+        t_extra = tuple(dict.fromkeys(a.trigger_baseline_extra))
+        ptable, _ex, _tot = pm.build_table(prow, a.trigger_from_path_metrics, t_extra)
         trows = pm.oof_triggers(ptable, a.trigger_from_path_metrics, folds=a.folds,
-                                big_quantile=a.trigger_big_quantile)
+                                big_quantile=a.trigger_big_quantile, extra=t_extra,
+                                p_threshold=a.trigger_p_threshold)
+        rnd_file = None
+        if a.trigger_shuffle_seed is not None:
+            rnd_file = out / f"triggers_random__{a.leg}.jsonl"
+            rnd_file.write_text("".join(json.dumps(r) + "\n"
+                                        for r in pm.shuffle_triggers(trows, a.trigger_shuffle_seed)), encoding="utf-8")
         trig_file = out / f"triggers__{a.leg}.jsonl"
         trig_file.write_text("".join(json.dumps(r) + "\n" for r in trows), encoding="utf-8")
         trigger_meta = {"file": trig_file.name, "k": a.trigger_from_path_metrics, "n_scored": len(trows),
                         "n_flagged": sum(1 for r in trows if r["trigger"]), "folds": a.folds,
                         "big_quantile": a.trigger_big_quantile,
                         "construction": "path_metric_giveback.oof_triggers: FULL model fit on the other "
-                                        "calendar folds only; P(big giveback) >= 0.5"}
+                                        f"calendar folds only; P(big giveback) >= {a.trigger_p_threshold}"
+                                        + (f"; baseline + {list(t_extra)}" if t_extra else ""),
+                        "p_threshold": a.trigger_p_threshold, "baseline_extra": list(t_extra),
+                        "random_control_file": (rnd_file.name if rnd_file else None),
+                        "n_flagged_random": (sum(1 for r in pm.shuffle_triggers(trows, a.trigger_shuffle_seed)
+                                                 if r["trigger"]) if rnd_file else None)}
         print(f"[triggers] {trigger_meta}", flush=True)
-        specs = [(lab, st, un, [x.replace("@trigger_file", str(trig_file)) for x in ex])
+        if rnd_file is None and any("@trigger_file_random" in x for _l, _s, _u, ex in specs for x in ex):
+            print("ERROR: an arm names @trigger_file_random but --trigger-shuffle-seed was not given", file=sys.stderr)
+            return 2
+        specs = [(lab, st, un, [x.replace("@trigger_file_random", str(rnd_file or "")).replace("@trigger_file", str(trig_file))
+                                for x in ex])
                  for lab, st, un, ex in specs]
     elif any("@trigger_file" in x for _l, _s, _u, ex in specs for x in ex):
         print("ERROR: an arm names @trigger_file but --trigger-from-path-metrics K was not given",
@@ -848,11 +888,19 @@ def main(argv: list[str] | None = None) -> int:
         g = grade_stage0(arms, baseline=a.baseline, fold_majority=a.fold_majority, n_floor=a.n_floor,
                          control=control)
     elif a.grade == "replace":
-        cands = [lab for lab in labels if lab != a.baseline]
+        vs_controls: dict[str, list[str]] = {}
+        for spec in a.vs_control:
+            cand, _, ctl = spec.partition("=")
+            if cand not in labels or ctl not in labels:
+                print(f"ERROR: --vs-control {spec!r} names an undeclared arm", file=sys.stderr)
+                return 2
+            vs_controls.setdefault(cand, []).append(ctl)
+        ctl_labels = {c for cs in vs_controls.values() for c in cs}  # a control arm is never itself a candidate
+        cands = [lab for lab in labels if lab != a.baseline and lab not in ctl_labels]
         tp_by = {lab: arm_cfg(base, sets, unsets).get("tp_r") for lab, sets, unsets, _x in specs}
         g = grade_replace(arms, baseline=a.baseline, candidates=cands, fold_majority=a.fold_majority,
                           n_floor=a.n_floor, dd_tol_frac=a.dd_tol_frac, control=control, tp_r_by_arm=tp_by,
-                          delta_r_per_trade=a.delta_r_per_trade)
+                          delta_r_per_trade=a.delta_r_per_trade, vs_controls=vs_controls)
     elif a.grade == "holdout":
         g = _run_holdout(a, base, specs, labels, arms_dir, edges, arms)
     else:

@@ -282,6 +282,18 @@ def oof_triggers(table: list[dict[str, Any]], k: int, *, folds: int, big_quantil
              "p": (None if np.isnan(p[i]) else round(float(p[i]), 6))} for i, t in enumerate(table)]
 
 
+def shuffle_triggers(rows: list[dict[str, Any]], seed: int) -> list[dict[str, Any]]:
+    """MATCHED-RATE RANDOM CONTROL (EXIT-GIVEBACK-PREDICTOR-GATE): the same scored trades with the SAME number of
+    flags per calendar-ordered scored set, but WHICH trades are flagged is a seeded random draw. Reads no label,
+    no feature and no price, so it cannot leak; an unscored row (``p`` is None) stays unflagged. A predictor gate
+    that does not beat this arm on net R is not selecting anything -- it is just tightening half the trades."""
+    import random
+    scored = [i for i, r in enumerate(rows) if r.get("p") is not None]
+    n_flag = sum(1 for i in scored if rows[i]["trigger"])
+    pick = set(random.Random(seed).sample(scored, n_flag)) if n_flag <= len(scored) else set(scored)
+    return [{**r, "trigger": (i in pick), "p": r.get("p")} for i, r in enumerate(rows)]
+
+
 # ── harness run ─────────────────────────────────────────────────────────────
 def run_leg_paths(leg: str, base: dict[str, Any], *, days: int, start: str | None, end: str | None,
                   wd: Path, data_csv: str | None, non_crypto_source: str) -> tuple[list[dict[str, Any]], dict]:
