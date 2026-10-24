@@ -218,7 +218,6 @@ E: frozenset[str] = frozenset({DIM_ENTRY})  # entry_tp only: a tp_revision rule 
 BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # ── real_money ──────────────────────────────────────────────────────────
     "alpaca_live/iaum_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
-    "alpaca_live/slv_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
     "bybit_2/ada_pullback_2h": R,
     "bybit_2/trend_donchian_eth_4h": E,  # 2026-10-18 tp_revision declared (TIER3-PACKETS-1018); entry_tp still the 50 R sentinel
     "bybit_2/trend_donchian_xrp_4h": R,
@@ -248,7 +247,6 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     "velotrade_1/trend_donchian_eth_prop": ER,   # R -> ER 2026-10-15, TP-REACH-FLOOR (above)
     "velotrade_1/trend_donchian_sol_prop": ER,
     # ── mirror (paper_role: portfolio) ──────────────────────────────────────
-    "alpaca_portfolio/slv_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
     "bybit_portfolio/ada_pullback_2h": R,
     "bybit_portfolio/trend_donchian_eth_4h": E,  # 2026-10-18 tp_revision declared (TIER3-PACKETS-1018); entry_tp still the 50 R sentinel
     "bybit_portfolio/trend_donchian_xrp_4h": R,

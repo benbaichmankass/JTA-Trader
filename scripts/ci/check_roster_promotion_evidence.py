@@ -182,7 +182,8 @@ FAITHFUL = "faithful"
 #: on an `approximate` record when C5 landed (2026-10-11), each citing the unit
 #: that re-measured it with the omitted lever(s) SIMULATED. Measured by parsing
 #: config/accounts.yaml + comms/strategy_evidence on main 2026-10-11: exactly
-#: these three slots, out of 13 risk-bearing slots
+#: these three slots, out of 13 risk-bearing slots (ief left the roster 2026-10-21 and slv
+#: 2026-10-24, both by operator decision; one remains)
 #: (bybit_2/xrp_pullback_2h's record already reads `faithful` on main). Remove an entry when the
 #: leg's record is regenerated `fidelity: faithful`. Do not add one without a
 #: faithful re-measure that cleared the leg's original Stage-0 rule.
@@ -190,7 +191,6 @@ FIDELITY_BASELINE: Dict[Tuple[str, str], str] = {
     # alpaca_live — omitted trail_decay_stall_bars / trail_decay_tight_mult.
     # RQ-20261011-6707-01 faithful arm, record window, full cost stack: ief +2.33R
     # (n=8), slv +2.48R (n=11), iaum +9.85R (n=8) — all clear RULE-D1.
-    ("alpaca_live", "slv_pullback_1d"): "RQ-20261011-6707-01",
     ("alpaca_live", "iaum_pullback_1d"): "RQ-20261011-6707-01",
 }
 
@@ -762,10 +762,10 @@ def self_test() -> int:
         #     risk-bearing account is not covered by the baseline.
         approx = {**good, "fidelity": "approximate"}
         check("P8 baselined leg on a non-baselined account fails C5",
-              dict((c, o) for c, o, _ in clause_verdicts(approx, "bybit_2", "slv_pullback_1d"))["C5"],
+              dict((c, o) for c, o, _ in clause_verdicts(approx, "bybit_2", "iaum_pullback_1d"))["C5"],
               False)
         check("P8b baselined slot passes C5",
-              dict((c, o) for c, o, _ in clause_verdicts(approx, "alpaca_live", "slv_pullback_1d"))["C5"],
+              dict((c, o) for c, o, _ in clause_verdicts(approx, "alpaca_live", "iaum_pullback_1d"))["C5"],
               True)
 
         # P7: the pairs sleeve — one `account_id:` line.
