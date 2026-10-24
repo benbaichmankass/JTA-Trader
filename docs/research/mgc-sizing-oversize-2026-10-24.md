@@ -1,6 +1,8 @@
 # MGC sizing oversize — ict_scalp_mgc_15m on ib_paper (2026-10-24)
 
-> **Doc status:** `live` · category `research` · lane MGC-SIZING-OVERSIZE · measured 2026-10-24 via `scripts/ops/diag_fetch.sh 'journal?table=trades&limit=400'`.
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · **nobody has verified this document's status — do not act on it as current**
+
+Lane MGC-SIZING-OVERSIZE; measured 2026-10-24 via `scripts/ops/diag_fetch.sh 'journal?table=trades&limit=400'`.
 
 ## Answer
 The sizer did **not** misprice MGC. The INFERRED hypothesis (wrong point value / stop) is **refuted**:
