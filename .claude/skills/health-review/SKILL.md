@@ -610,6 +610,14 @@ with the `/security-review` skill (route there if a signal points at code).
   worked at all: the unit was absent from `_CANONICAL_UNITS` and every attempt
   returned HTTP 400 `unknown_unit`, so this source was unsatisfiable — if the
   probe 400s, the sweep is `could_not_look`, never `clean`.
+  ⚠️ **One pull covers ~1.5 h, not the window** (the relay returns the last
+  2000 lines; the trainer logs ~400 accepts/h — measured 2026-10-24). Sweep the
+  whole window with `python3 scripts/ops/ssh_auth_sweep.py --since <ISO> --until
+  <ISO> --trainer-ip <trainer>` (pages in 20-min windows, splits full ones, prints
+  only non-trainer accepts with a hashed source class + key last4, exits 2 if any
+  window was unreadable = `could_not_look`). A Health Snapshot run (every ~6 h)
+  legitimately produces 2 non-trainer accepts with the shared deploy key; match
+  each by time to a workflow run (SSH-LOGIN-ATTRIB-1024).
 
 **What to do:**
 
