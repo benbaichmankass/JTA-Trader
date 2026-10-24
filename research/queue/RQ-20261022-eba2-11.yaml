@@ -1,7 +1,7 @@
 id: RQ-20261022-eba2-11
 title: 'Q10 variant (combination): does a SWING-level tight trail that latches ONLY once the trade has also reached +1.5 R
   / +2.0 R replace the declared exit of xrp_pullback_2h on net R in 5 of 6 folds?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -122,4 +122,17 @@ related:
 - research/queue/RQ-20261022-511e-01.yaml
 - scripts/research/exit_lever_ablation.py
 - docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md
-last_dispatched_at: null
+last_dispatched_at: '2026-10-23T23:23:49+00:00'
+grading:
+  attested: RULE-P1-Q10V-XRPPB-LEVEL-RGATE
+  auto: true
+  decision_rule_id: RULE-P1-Q10V-XRPPB-LEVEL-RGATE
+  evidence:
+  - research/results/RQ-20261022-eba2-11/40039463980.jsonl
+  graded_at: '2026-10-24'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
