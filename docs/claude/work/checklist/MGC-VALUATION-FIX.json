@@ -2,19 +2,21 @@
   "id": "MGC-VALUATION-FIX",
   "title": "ict_scalp_mgc_15m on ib_paper: fix the mis-valued ESTIMATED PnL (56% of W30 paper+mirror loss) per PI-20261021-4ZLRFEV1-0002",
   "phase": null,
-  "state": "queued",
+  "state": "in_flight",
   "owner": "manager",
-  "lane": null,
+  "lane": "session_01WS5LdfpbvLZYUY1vHrXP7K",
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 6,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    19806
+  ],
   "blocked_on": [],
-  "note": "Week plan 2026-10-22 (Sat). Source: 2026-10-21 walkthrough PERFORMANCE.",
+  "note": "Week plan 2026-10-22 (Sat). Source: 2026-10-21 walkthrough PERFORMANCE. [2026-10-24T03:18Z manager session_01G3UtWJrCibCYuX2wFxsYbR] Dispatched lane session_01WS5Ldf (Sonnet, fresh, $6): rank 8, top of runnable queue; reporting/estimation fix, told to stop and report if it reaches the order path. Capacity 1 lane (weekly 19% at 23:34Z, reset Wed 18:00Z). [2026-10-24T03:50Z manager session_01G3UtWJrCibCYuX2wFxsYbR] Lane delivered #19806 (head 0be9f540, landing hold: Tier-2 by path, src/web/api/routers/trades_closed.py). The change is read-only and additive: a stored pnl 0.0 that classify_pnl already marks UNVERIFIED now serves realizedPnl=null, plus reconstructedPnl (ESTIMATED) from entry/exit/qty x the existing contract_value_usd_for. Manager reviewed the diff. DB backfill of the 9 zero rows is NOT done and is deliberately not proposed: writing a reconstruction into trades.pnl would fold ESTIMATED into the measured column (CLAUDE.md provenance rule); the API now serves it labelled instead. Sizing finding filed as MGC-SIZING-OVERSIZE.",
   "priority_rank": 8,
-  "updated_at": "2026-10-23T15:00:32Z",
-  "updated_by": "session_01YHnEs6mehRvD74aubi5DJw",
+  "updated_at": "2026-10-24T06:55:57Z",
+  "updated_by": "session_01UETC6mFiwMgXk6URsuWzZb",
   "roadmap": [
     "L-OPS"
   ],
