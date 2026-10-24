@@ -50,7 +50,7 @@ R is measured from the package entry 0.2162. The bybit_2 fill adds about +0.09 R
 | (a) leave it | +0.18 R | +4.0 R | **+3.19 R** |
 | (b) SL to 0.2053 (1.5 ATR above the 0.2009 low) | +2.50 R | +4.0 R | about **+2.96 R** |
 | (c) SL to 0.2031 | +3.0 R | +4.0 R | worse than (b); only 0.65 ATR of room |
-| (d) close 50% now plus (b) on the rest | +2.97 R | +3.72 R | — |
+| (d) close half the position now plus (b) on the rest | +2.97 R | +3.72 R | — |
 | (e) close all now | +3.44 R less cost | — | — |
 
 **History conditional on this state.** These are trades on the A arm whose MFE reached at least 3.4 R, n=32, net of fee 7.5 + slippage 3 bps round trip + funding 1 bps/8h:
