@@ -14,8 +14,8 @@
   ],
   "blocked_on": [],
   "note": "[lane done] runnable 64->57 vs floor 48 (7 equity units blocked, not failures); 1 result read PASS (6013-01); UNOWNED 5->0; grader defect fixed (auto:false ignored on generated units, reverted 027/028); 20 e35 underpowered dispositions; 1 node authored (P3-Q8-sol-1h-family); levers: REGIME-EQUITY-LEG-FETCH (costing runs), prop_ev_grid resume. Not run: blocked/ per-file audit, due routing, stranded-PR check, m20 read. Record comms/research/ops/20261017T2130Z.json. HELD PR.",
-  "updated_at": "2026-10-17T21:04:10Z",
-  "updated_by": "research-ops-lane-20261017-2047",
+  "updated_at": "2026-10-24T06:01:12Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "roadmap": [
     "L-LADDER"
   ],
@@ -26,7 +26,13 @@
   "observation": {
     "what": "next grader run leaves RQ-20261016-027/-028 hand grades intact",
     "how_to_check": "python3 scripts/research/result_disposition_check.py --list  (027/028 not unowned) after the next research-queue-grade run",
-    "due_by": "2026-10-19"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-19",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
   "_seq": 549
 }

@@ -1,0 +1,1646 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "family=trend timeframe=30m symbols=ADAUSDT,AVAXUSDT,SOLUSDT arms=['B', 'G50', 'G75', 'G90'] window=2022-01-01..2026-10-20 days=1760; 12 of 12 cells measured; trades net of fee+slippage+funding",
+  "n": 15612,
+  "note": "FAIL: B: pooled net_r <= 0 or folds short; G50: net_r/trade 0.0104 beats the baseline's -0.0173 by 0.0277 < the 0.05 materiality bar; G75: net_r/trade 0.0048 beats the baseline's -0.0173 by 0.0221 < the 0.05 materiality bar; G90: net_r/trade 0.0103 beats the baseline's -0.0173 by 0.0276 < the 0.05 materiality bar. Thresholds: n_floor 39, pooled_n_floor 88, folds 6 majority 4, breadth 0.67 over >= 2 powered cells, holm alpha 0.05, baseline B with materiality 0.05 R/trade. Crypto candles are Binance USD-M (PROXY for Bybit linear); the cost stack is the harness's venue-aware fee + slippage + funding. A pass is an input to a re-entry case, never a roster act.",
+  "decision_rule_id": "RULE-RQ20261023-A1F3-18-COST-GATED-30M",
+  "data_inputs": [
+    "comms/research/RQ-20261023-a1f3-18/40074060809/data/ADAUSDT_30.csv",
+    "comms/research/RQ-20261023-a1f3-18/40074060809/data/AVAXUSDT_30.csv",
+    "comms/research/RQ-20261023-a1f3-18/40074060809/data/SOLUSDT_30.csv"
+  ],
+  "measurement": {
+    "family": "trend",
+    "timeframe": "30m",
+    "params": {},
+    "best_arm": null,
+    "thresholds": {
+      "n_floor": 39,
+      "pooled_n_floor": 88,
+      "folds": 6,
+      "fold_majority": 4,
+      "breadth_frac": 0.67,
+      "min_powered_cells": 2,
+      "holm_alpha": 0.05,
+      "baseline": "B",
+      "delta_r_per_trade": 0.05
+    },
+    "arms": {
+      "B": {
+        "sets": {},
+        "unsets": [],
+        "extra_flags": [],
+        "cells": {
+          "ADAUSDT": {
+            "state": "measured",
+            "n": 2217,
+            "net_r": -55.7188,
+            "max_drawdown_r": 112.7295,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2022-01-01 00:00:00+00:00",
+                "end": "2022-10-20 04:00:00+00:00",
+                "trades": 369,
+                "net_r": -2.8645
+              },
+              {
+                "fold": 2,
+                "start": "2022-10-20 04:00:00+00:00",
+                "end": "2023-08-08 08:00:00+00:00",
+                "trades": 357,
+                "net_r": -8.6636
+              },
+              {
+                "fold": 3,
+                "start": "2023-08-08 08:00:00+00:00",
+                "end": "2024-05-26 12:00:00+00:00",
+                "trades": 389,
+                "net_r": -30.2406
+              },
+              {
+                "fold": 4,
+                "start": "2024-05-26 12:00:00+00:00",
+                "end": "2025-03-14 16:00:00+00:00",
+                "trades": 373,
+                "net_r": -19.4009
+              },
+              {
+                "fold": 5,
+                "start": "2025-03-14 16:00:00+00:00",
+                "end": "2025-12-31 20:00:00+00:00",
+                "trades": 373,
+                "net_r": -18.6192
+              },
+              {
+                "fold": 6,
+                "start": "2025-12-31 20:00:00+00:00",
+                "end": "2026-10-20 00:00:00+00:00",
+                "trades": 356,
+                "net_r": 24.0702
+              }
+            ],
+            "folds_pos": 1,
+            "net_r_per_capital_day": -0.0554,
+            "mean_bars_held": 21.776,
+            "hold_days_mean": 0.454,
+            "net_r_per_trade": -0.0251,
+            "t_one_sided_p": 0.8313115206088002,
+            "by_outcome": {
+              "trail_stop": 1861,
+              "stop": 351,
+              "timeout": 5
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "donchian": 20,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 3.0,
+              "min_confidence": 0.0
+            },
+            "data_start": "2022-01-01 00:00:00+00:00",
+            "data_end": "2026-10-20 00:00:00+00:00",
+            "grade": "fail",
+            "argv": [
+              "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+              "--donchian",
+              "20",
+              "--data",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/data/ADAUSDT_30.csv",
+              "--symbol",
+              "ADAUSDT",
+              "--resample",
+              "30m",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "3.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/cells/trend_ADAUSDT_30m_B__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/cells/trend_ADAUSDT_30m_B__bt.json",
+              "--timeframe",
+              "30m",
+              "--start",
+              "2022-01-01",
+              "--end",
+              "2026-10-20"
+            ]
+          },
+          "AVAXUSDT": {
+            "state": "measured",
+            "n": 2340,
+            "net_r": 36.558,
+            "max_drawdown_r": 51.6372,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2022-01-01 00:00:00+00:00",
+                "end": "2022-10-20 04:00:00+00:00",
+                "trades": 352,
+                "net_r": 26.4234
+              },
+              {
+                "fold": 2,
+                "start": "2022-10-20 04:00:00+00:00",
+                "end": "2023-08-08 08:00:00+00:00",
+                "trades": 381,
+                "net_r": -0.0603
+              },
+              {
+                "fold": 3,
+                "start": "2023-08-08 08:00:00+00:00",
+                "end": "2024-05-26 12:00:00+00:00",
+                "trades": 401,
+                "net_r": -6.5043
+              },
+              {
+                "fold": 4,
+                "start": "2024-05-26 12:00:00+00:00",
+                "end": "2025-03-14 16:00:00+00:00",
+                "trades": 393,
+                "net_r": 14.0034
+              },
+              {
+                "fold": 5,
+                "start": "2025-03-14 16:00:00+00:00",
+                "end": "2025-12-31 20:00:00+00:00",
+                "trades": 408,
+                "net_r": -5.7456
+              },
+              {
+                "fold": 6,
+                "start": "2025-12-31 20:00:00+00:00",
+                "end": "2026-10-20 00:00:00+00:00",
+                "trades": 405,
+                "net_r": 8.4402
+              }
+            ],
+            "folds_pos": 3,
+            "net_r_per_capital_day": 0.0365,
+            "mean_bars_held": 20.541,
+            "hold_days_mean": 0.428,
+            "net_r_per_trade": 0.0156,
+            "t_one_sided_p": 0.27646116137730153,
+            "by_outcome": {
+              "trail_stop": 1956,
+              "stop": 380,
+              "timeout": 4
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "donchian": 20,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 3.0,
+              "min_confidence": 0.0
+            },
+            "data_start": "2022-01-01 00:00:00+00:00",
+            "data_end": "2026-10-20 00:00:00+00:00",
+            "grade": "fail",
+            "argv": [
+              "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+              "--donchian",
+              "20",
+              "--data",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/data/AVAXUSDT_30.csv",
+              "--symbol",
+              "AVAXUSDT",
+              "--resample",
+              "30m",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "3.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/cells/trend_AVAXUSDT_30m_B__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/cells/trend_AVAXUSDT_30m_B__bt.json",
+              "--timeframe",
+              "30m",
+              "--start",
+              "2022-01-01",
+              "--end",
+              "2026-10-20"
+            ]
+          },
+          "SOLUSDT": {
+            "state": "measured",
+            "n": 2257,
+            "net_r": -98.4227,
+            "max_drawdown_r": 110.667,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2022-01-01 00:00:00+00:00",
+                "end": "2022-10-20 04:00:00+00:00",
+                "trades": 382,
+                "net_r": -54.551
+              },
+              {
+                "fold": 2,
+                "start": "2022-10-20 04:00:00+00:00",
+                "end": "2023-08-08 08:00:00+00:00",
+                "trades": 393,
+                "net_r": 1.9674
+              },
+              {
+                "fold": 3,
+                "start": "2023-08-08 08:00:00+00:00",
+                "end": "2024-05-26 12:00:00+00:00",
+                "trades": 375,
+                "net_r": -5.7011
+              },
+              {
+                "fold": 4,
+                "start": "2024-05-26 12:00:00+00:00",
+                "end": "2025-03-14 16:00:00+00:00",
+                "trades": 368,
+                "net_r": -13.5303
+              },
+              {
+                "fold": 5,
+                "start": "2025-03-14 16:00:00+00:00",
+                "end": "2025-12-31 20:00:00+00:00",
+                "trades": 380,
+                "net_r": -29.6168
+              },
+              {
+                "fold": 6,
+                "start": "2025-12-31 20:00:00+00:00",
+                "end": "2026-10-20 00:00:00+00:00",
+                "trades": 359,
+                "net_r": 3.0065
+              }
+            ],
+            "folds_pos": 2,
+            "net_r_per_capital_day": -0.0965,
+            "mean_bars_held": 21.689,
+            "hold_days_mean": 0.452,
+            "net_r_per_trade": -0.0436,
+            "t_one_sided_p": 0.9569728062085878,
+            "by_outcome": {
+              "trail_stop": 1870,
+              "stop": 383,
+              "timeout": 4
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "donchian": 20,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 3.0,
+              "min_confidence": 0.0
+            },
+            "data_start": "2022-01-01 00:00:00+00:00",
+            "data_end": "2026-10-20 00:00:00+00:00",
+            "grade": "fail",
+            "argv": [
+              "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+              "--donchian",
+              "20",
+              "--data",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/data/SOLUSDT_30.csv",
+              "--symbol",
+              "SOLUSDT",
+              "--resample",
+              "30m",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "3.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/cells/trend_SOLUSDT_30m_B__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/cells/trend_SOLUSDT_30m_B__bt.json",
+              "--timeframe",
+              "30m",
+              "--start",
+              "2022-01-01",
+              "--end",
+              "2026-10-20"
+            ]
+          }
+        },
+        "pooled": {
+          "n": 6814,
+          "net_r": -117.5871,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2022-01-01 00:00:00+00:00",
+              "end": "2022-10-20 04:00:00+00:00",
+              "trades": 1103,
+              "net_r": -30.9921
+            },
+            {
+              "fold": 2,
+              "start": "2022-10-20 04:00:00+00:00",
+              "end": "2023-08-08 08:00:00+00:00",
+              "trades": 1131,
+              "net_r": -6.7565
+            },
+            {
+              "fold": 3,
+              "start": "2023-08-08 08:00:00+00:00",
+              "end": "2024-05-26 12:00:00+00:00",
+              "trades": 1165,
+              "net_r": -42.446
+            },
+            {
+              "fold": 4,
+              "start": "2024-05-26 12:00:00+00:00",
+              "end": "2025-03-14 16:00:00+00:00",
+              "trades": 1134,
+              "net_r": -18.9278
+            },
+            {
+              "fold": 5,
+              "start": "2025-03-14 16:00:00+00:00",
+              "end": "2025-12-31 20:00:00+00:00",
+              "trades": 1161,
+              "net_r": -53.9816
+            },
+            {
+              "fold": 6,
+              "start": "2025-12-31 20:00:00+00:00",
+              "end": "2026-10-20 00:00:00+00:00",
+              "trades": 1120,
+              "net_r": 35.5169
+            }
+          ],
+          "folds_pos": 1,
+          "max_drawdown_r_sequential": 183.9805,
+          "net_r_per_trade": -0.0173,
+          "t_one_sided_p": 0.8749424961845261,
+          "window": [
+            "2022-01-01 00:00:00+00:00",
+            "2026-10-20 00:00:00+00:00"
+          ]
+        },
+        "grade": {
+          "verdict": "fail",
+          "cells_pass": 0,
+          "need": 3,
+          "delta_r_per_trade_vs_baseline": null,
+          "why": "pooled net_r <= 0 or folds short",
+          "role": "baseline",
+          "holm_survivors": []
+        }
+      },
+      "G50": {
+        "sets": {},
+        "unsets": [],
+        "extra_flags": [
+          "--vol-skip-below-pctl",
+          "0.5"
+        ],
+        "cells": {
+          "ADAUSDT": {
+            "state": "measured",
+            "n": 1441,
+            "net_r": -1.5165,
+            "max_drawdown_r": 54.8563,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2022-01-01 00:00:00+00:00",
+                "end": "2022-10-20 04:00:00+00:00",
+                "trades": 221,
+                "net_r": 2.7843
+              },
+              {
+                "fold": 2,
+                "start": "2022-10-20 04:00:00+00:00",
+                "end": "2023-08-08 08:00:00+00:00",
+                "trades": 239,
+                "net_r": -2.4256
+              },
+              {
+                "fold": 3,
+                "start": "2023-08-08 08:00:00+00:00",
+                "end": "2024-05-26 12:00:00+00:00",
+                "trades": 260,
+                "net_r": -32.3671
+              },
+              {
+                "fold": 4,
+                "start": "2024-05-26 12:00:00+00:00",
+                "end": "2025-03-14 16:00:00+00:00",
+                "trades": 236,
+                "net_r": 14.2996
+              },
+              {
+                "fold": 5,
+                "start": "2025-03-14 16:00:00+00:00",
+                "end": "2025-12-31 20:00:00+00:00",
+                "trades": 251,
+                "net_r": -8.443
+              },
+              {
+                "fold": 6,
+                "start": "2025-12-31 20:00:00+00:00",
+                "end": "2026-10-20 00:00:00+00:00",
+                "trades": 234,
+                "net_r": 24.6357
+              }
+            ],
+            "folds_pos": 3,
+            "net_r_per_capital_day": -0.002,
+            "mean_bars_held": 24.678,
+            "hold_days_mean": 0.514,
+            "net_r_per_trade": -0.0011,
+            "t_one_sided_p": 0.5124579884146785,
+            "by_outcome": {
+              "trail_stop": 1192,
+              "stop": 244,
+              "timeout": 5
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "donchian": 20,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 3.0,
+              "min_confidence": 0.0,
+              "vol_skip_above_pctl": 0.0,
+              "vol_skip_below_pctl": 0.5,
+              "vol_pctl_window": 200
+            },
+            "data_start": "2022-01-01 00:00:00+00:00",
+            "data_end": "2026-10-20 00:00:00+00:00",
+            "grade": "fail",
+            "argv": [
+              "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+              "--donchian",
+              "20",
+              "--data",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/data/ADAUSDT_30.csv",
+              "--symbol",
+              "ADAUSDT",
+              "--resample",
+              "30m",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "3.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/cells/trend_ADAUSDT_30m_G50__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/cells/trend_ADAUSDT_30m_G50__bt.json",
+              "--timeframe",
+              "30m",
+              "--vol-skip-below-pctl",
+              "0.5",
+              "--start",
+              "2022-01-01",
+              "--end",
+              "2026-10-20"
+            ]
+          },
+          "AVAXUSDT": {
+            "state": "measured",
+            "n": 1496,
+            "net_r": 54.535,
+            "max_drawdown_r": 34.5519,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2022-01-01 00:00:00+00:00",
+                "end": "2022-10-20 04:00:00+00:00",
+                "trades": 229,
+                "net_r": 19.0538
+              },
+              {
+                "fold": 2,
+                "start": "2022-10-20 04:00:00+00:00",
+                "end": "2023-08-08 08:00:00+00:00",
+                "trades": 251,
+                "net_r": 0.2939
+              },
+              {
+                "fold": 3,
+                "start": "2023-08-08 08:00:00+00:00",
+                "end": "2024-05-26 12:00:00+00:00",
+                "trades": 253,
+                "net_r": 10.0711
+              },
+              {
+                "fold": 4,
+                "start": "2024-05-26 12:00:00+00:00",
+                "end": "2025-03-14 16:00:00+00:00",
+                "trades": 263,
+                "net_r": 15.5676
+              },
+              {
+                "fold": 5,
+                "start": "2025-03-14 16:00:00+00:00",
+                "end": "2025-12-31 20:00:00+00:00",
+                "trades": 254,
+                "net_r": 14.2039
+              },
+              {
+                "fold": 6,
+                "start": "2025-12-31 20:00:00+00:00",
+                "end": "2026-10-20 00:00:00+00:00",
+                "trades": 246,
+                "net_r": -4.6563
+              }
+            ],
+            "folds_pos": 5,
+            "net_r_per_capital_day": 0.0723,
+            "mean_bars_held": 24.188,
+            "hold_days_mean": 0.504,
+            "net_r_per_trade": 0.0365,
+            "t_one_sided_p": 0.13358949448438434,
+            "by_outcome": {
+              "trail_stop": 1259,
+              "stop": 232,
+              "timeout": 5
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "donchian": 20,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 3.0,
+              "min_confidence": 0.0,
+              "vol_skip_above_pctl": 0.0,
+              "vol_skip_below_pctl": 0.5,
+              "vol_pctl_window": 200
+            },
+            "data_start": "2022-01-01 00:00:00+00:00",
+            "data_end": "2026-10-20 00:00:00+00:00",
+            "grade": "pass",
+            "argv": [
+              "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+              "--donchian",
+              "20",
+              "--data",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/data/AVAXUSDT_30.csv",
+              "--symbol",
+              "AVAXUSDT",
+              "--resample",
+              "30m",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "3.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/cells/trend_AVAXUSDT_30m_G50__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/cells/trend_AVAXUSDT_30m_G50__bt.json",
+              "--timeframe",
+              "30m",
+              "--vol-skip-below-pctl",
+              "0.5",
+              "--start",
+              "2022-01-01",
+              "--end",
+              "2026-10-20"
+            ]
+          },
+          "SOLUSDT": {
+            "state": "measured",
+            "n": 1490,
+            "net_r": -7.0897,
+            "max_drawdown_r": 44.8812,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2022-01-01 00:00:00+00:00",
+                "end": "2022-10-20 04:00:00+00:00",
+                "trades": 249,
+                "net_r": -34.7678
+              },
+              {
+                "fold": 2,
+                "start": "2022-10-20 04:00:00+00:00",
+                "end": "2023-08-08 08:00:00+00:00",
+                "trades": 238,
+                "net_r": 16.834
+              },
+              {
+                "fold": 3,
+                "start": "2023-08-08 08:00:00+00:00",
+                "end": "2024-05-26 12:00:00+00:00",
+                "trades": 243,
+                "net_r": 21.206
+              },
+              {
+                "fold": 4,
+                "start": "2024-05-26 12:00:00+00:00",
+                "end": "2025-03-14 16:00:00+00:00",
+                "trades": 247,
+                "net_r": -9.2732
+              },
+              {
+                "fold": 5,
+                "start": "2025-03-14 16:00:00+00:00",
+                "end": "2025-12-31 20:00:00+00:00",
+                "trades": 268,
+                "net_r": -2.4461
+              },
+              {
+                "fold": 6,
+                "start": "2025-12-31 20:00:00+00:00",
+                "end": "2026-10-20 00:00:00+00:00",
+                "trades": 245,
+                "net_r": 1.3567
+              }
+            ],
+            "folds_pos": 3,
+            "net_r_per_capital_day": -0.009,
+            "mean_bars_held": 25.387,
+            "hold_days_mean": 0.529,
+            "net_r_per_trade": -0.0048,
+            "t_one_sided_p": 0.5580043313727653,
+            "by_outcome": {
+              "trail_stop": 1237,
+              "stop": 249,
+              "timeout": 4
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "donchian": 20,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 3.0,
+              "min_confidence": 0.0,
+              "vol_skip_above_pctl": 0.0,
+              "vol_skip_below_pctl": 0.5,
+              "vol_pctl_window": 200
+            },
+            "data_start": "2022-01-01 00:00:00+00:00",
+            "data_end": "2026-10-20 00:00:00+00:00",
+            "grade": "fail",
+            "argv": [
+              "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+              "--donchian",
+              "20",
+              "--data",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/data/SOLUSDT_30.csv",
+              "--symbol",
+              "SOLUSDT",
+              "--resample",
+              "30m",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "3.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/cells/trend_SOLUSDT_30m_G50__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/cells/trend_SOLUSDT_30m_G50__bt.json",
+              "--timeframe",
+              "30m",
+              "--vol-skip-below-pctl",
+              "0.5",
+              "--start",
+              "2022-01-01",
+              "--end",
+              "2026-10-20"
+            ]
+          }
+        },
+        "pooled": {
+          "n": 4427,
+          "net_r": 45.9275,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2022-01-01 00:00:00+00:00",
+              "end": "2022-10-20 04:00:00+00:00",
+              "trades": 699,
+              "net_r": -12.9297
+            },
+            {
+              "fold": 2,
+              "start": "2022-10-20 04:00:00+00:00",
+              "end": "2023-08-08 08:00:00+00:00",
+              "trades": 728,
+              "net_r": 14.7023
+            },
+            {
+              "fold": 3,
+              "start": "2023-08-08 08:00:00+00:00",
+              "end": "2024-05-26 12:00:00+00:00",
+              "trades": 756,
+              "net_r": -1.09
+            },
+            {
+              "fold": 4,
+              "start": "2024-05-26 12:00:00+00:00",
+              "end": "2025-03-14 16:00:00+00:00",
+              "trades": 746,
+              "net_r": 20.594
+            },
+            {
+              "fold": 5,
+              "start": "2025-03-14 16:00:00+00:00",
+              "end": "2025-12-31 20:00:00+00:00",
+              "trades": 773,
+              "net_r": 3.3148
+            },
+            {
+              "fold": 6,
+              "start": "2025-12-31 20:00:00+00:00",
+              "end": "2026-10-20 00:00:00+00:00",
+              "trades": 725,
+              "net_r": 21.3361
+            }
+          ],
+          "folds_pos": 4,
+          "max_drawdown_r_sequential": 62.3043,
+          "net_r_per_trade": 0.0104,
+          "t_one_sided_p": 0.2932406929912481,
+          "window": [
+            "2022-01-01 00:00:00+00:00",
+            "2026-10-20 00:00:00+00:00"
+          ]
+        },
+        "grade": {
+          "verdict": "fail",
+          "cells_pass": 1,
+          "need": 3,
+          "delta_r_per_trade_vs_baseline": 0.0277,
+          "why": "net_r/trade 0.0104 beats the baseline's -0.0173 by 0.0277 < the 0.05 materiality bar",
+          "role": "candidate",
+          "holm_survivors": []
+        }
+      },
+      "G75": {
+        "sets": {},
+        "unsets": [],
+        "extra_flags": [
+          "--vol-skip-below-pctl",
+          "0.75"
+        ],
+        "cells": {
+          "ADAUSDT": {
+            "state": "measured",
+            "n": 927,
+            "net_r": -5.1359,
+            "max_drawdown_r": 31.427,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2022-01-01 00:00:00+00:00",
+                "end": "2022-10-20 04:00:00+00:00",
+                "trades": 146,
+                "net_r": 5.6344
+              },
+              {
+                "fold": 2,
+                "start": "2022-10-20 04:00:00+00:00",
+                "end": "2023-08-08 08:00:00+00:00",
+                "trades": 159,
+                "net_r": 3.6535
+              },
+              {
+                "fold": 3,
+                "start": "2023-08-08 08:00:00+00:00",
+                "end": "2024-05-26 12:00:00+00:00",
+                "trades": 161,
+                "net_r": -20.9088
+              },
+              {
+                "fold": 4,
+                "start": "2024-05-26 12:00:00+00:00",
+                "end": "2025-03-14 16:00:00+00:00",
+                "trades": 149,
+                "net_r": 12.3666
+              },
+              {
+                "fold": 5,
+                "start": "2025-03-14 16:00:00+00:00",
+                "end": "2025-12-31 20:00:00+00:00",
+                "trades": 155,
+                "net_r": -5.6296
+              },
+              {
+                "fold": 6,
+                "start": "2025-12-31 20:00:00+00:00",
+                "end": "2026-10-20 00:00:00+00:00",
+                "trades": 157,
+                "net_r": -0.2507
+              }
+            ],
+            "folds_pos": 3,
+            "net_r_per_capital_day": -0.0099,
+            "mean_bars_held": 26.844,
+            "hold_days_mean": 0.559,
+            "net_r_per_trade": -0.0055,
+            "t_one_sided_p": 0.5533429169314379,
+            "by_outcome": {
+              "trail_stop": 777,
+              "stop": 146,
+              "timeout": 4
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "donchian": 20,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 3.0,
+              "min_confidence": 0.0,
+              "vol_skip_above_pctl": 0.0,
+              "vol_skip_below_pctl": 0.75,
+              "vol_pctl_window": 200
+            },
+            "data_start": "2022-01-01 00:00:00+00:00",
+            "data_end": "2026-10-20 00:00:00+00:00",
+            "grade": "fail",
+            "argv": [
+              "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+              "--donchian",
+              "20",
+              "--data",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/data/ADAUSDT_30.csv",
+              "--symbol",
+              "ADAUSDT",
+              "--resample",
+              "30m",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "3.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/cells/trend_ADAUSDT_30m_G75__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/cells/trend_ADAUSDT_30m_G75__bt.json",
+              "--timeframe",
+              "30m",
+              "--vol-skip-below-pctl",
+              "0.75",
+              "--start",
+              "2022-01-01",
+              "--end",
+              "2026-10-20"
+            ]
+          },
+          "AVAXUSDT": {
+            "state": "measured",
+            "n": 940,
+            "net_r": 41.263,
+            "max_drawdown_r": 27.8645,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2022-01-01 00:00:00+00:00",
+                "end": "2022-10-20 04:00:00+00:00",
+                "trades": 143,
+                "net_r": 7.2686
+              },
+              {
+                "fold": 2,
+                "start": "2022-10-20 04:00:00+00:00",
+                "end": "2023-08-08 08:00:00+00:00",
+                "trades": 157,
+                "net_r": 7.6852
+              },
+              {
+                "fold": 3,
+                "start": "2023-08-08 08:00:00+00:00",
+                "end": "2024-05-26 12:00:00+00:00",
+                "trades": 164,
+                "net_r": 6.0532
+              },
+              {
+                "fold": 4,
+                "start": "2024-05-26 12:00:00+00:00",
+                "end": "2025-03-14 16:00:00+00:00",
+                "trades": 155,
+                "net_r": 12.4825
+              },
+              {
+                "fold": 5,
+                "start": "2025-03-14 16:00:00+00:00",
+                "end": "2025-12-31 20:00:00+00:00",
+                "trades": 167,
+                "net_r": 16.785
+              },
+              {
+                "fold": 6,
+                "start": "2025-12-31 20:00:00+00:00",
+                "end": "2026-10-20 00:00:00+00:00",
+                "trades": 154,
+                "net_r": -9.0114
+              }
+            ],
+            "folds_pos": 5,
+            "net_r_per_capital_day": 0.0786,
+            "mean_bars_held": 26.799,
+            "hold_days_mean": 0.558,
+            "net_r_per_trade": 0.0439,
+            "t_one_sided_p": 0.14034634069170776,
+            "by_outcome": {
+              "trail_stop": 810,
+              "stop": 126,
+              "timeout": 4
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "donchian": 20,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 3.0,
+              "min_confidence": 0.0,
+              "vol_skip_above_pctl": 0.0,
+              "vol_skip_below_pctl": 0.75,
+              "vol_pctl_window": 200
+            },
+            "data_start": "2022-01-01 00:00:00+00:00",
+            "data_end": "2026-10-20 00:00:00+00:00",
+            "grade": "pass",
+            "argv": [
+              "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+              "--donchian",
+              "20",
+              "--data",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/data/AVAXUSDT_30.csv",
+              "--symbol",
+              "AVAXUSDT",
+              "--resample",
+              "30m",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "3.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/cells/trend_AVAXUSDT_30m_G75__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/cells/trend_AVAXUSDT_30m_G75__bt.json",
+              "--timeframe",
+              "30m",
+              "--vol-skip-below-pctl",
+              "0.75",
+              "--start",
+              "2022-01-01",
+              "--end",
+              "2026-10-20"
+            ]
+          },
+          "SOLUSDT": {
+            "state": "measured",
+            "n": 951,
+            "net_r": -22.6336,
+            "max_drawdown_r": 49.0052,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2022-01-01 00:00:00+00:00",
+                "end": "2022-10-20 04:00:00+00:00",
+                "trades": 158,
+                "net_r": -26.5051
+              },
+              {
+                "fold": 2,
+                "start": "2022-10-20 04:00:00+00:00",
+                "end": "2023-08-08 08:00:00+00:00",
+                "trades": 145,
+                "net_r": 8.7533
+              },
+              {
+                "fold": 3,
+                "start": "2023-08-08 08:00:00+00:00",
+                "end": "2024-05-26 12:00:00+00:00",
+                "trades": 164,
+                "net_r": -3.1452
+              },
+              {
+                "fold": 4,
+                "start": "2024-05-26 12:00:00+00:00",
+                "end": "2025-03-14 16:00:00+00:00",
+                "trades": 162,
+                "net_r": -2.7788
+              },
+              {
+                "fold": 5,
+                "start": "2025-03-14 16:00:00+00:00",
+                "end": "2025-12-31 20:00:00+00:00",
+                "trades": 176,
+                "net_r": -3.0266
+              },
+              {
+                "fold": 6,
+                "start": "2025-12-31 20:00:00+00:00",
+                "end": "2026-10-20 00:00:00+00:00",
+                "trades": 146,
+                "net_r": 4.0683
+              }
+            ],
+            "folds_pos": 2,
+            "net_r_per_capital_day": -0.0407,
+            "mean_bars_held": 28.061,
+            "hold_days_mean": 0.585,
+            "net_r_per_trade": -0.0238,
+            "t_one_sided_p": 0.7258926316972842,
+            "by_outcome": {
+              "trail_stop": 792,
+              "stop": 155,
+              "timeout": 4
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "donchian": 20,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 3.0,
+              "min_confidence": 0.0,
+              "vol_skip_above_pctl": 0.0,
+              "vol_skip_below_pctl": 0.75,
+              "vol_pctl_window": 200
+            },
+            "data_start": "2022-01-01 00:00:00+00:00",
+            "data_end": "2026-10-20 00:00:00+00:00",
+            "grade": "fail",
+            "argv": [
+              "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+              "--donchian",
+              "20",
+              "--data",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/data/SOLUSDT_30.csv",
+              "--symbol",
+              "SOLUSDT",
+              "--resample",
+              "30m",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "3.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/cells/trend_SOLUSDT_30m_G75__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/cells/trend_SOLUSDT_30m_G75__bt.json",
+              "--timeframe",
+              "30m",
+              "--vol-skip-below-pctl",
+              "0.75",
+              "--start",
+              "2022-01-01",
+              "--end",
+              "2026-10-20"
+            ]
+          }
+        },
+        "pooled": {
+          "n": 2818,
+          "net_r": 13.4944,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2022-01-01 00:00:00+00:00",
+              "end": "2022-10-20 04:00:00+00:00",
+              "trades": 447,
+              "net_r": -13.6021
+            },
+            {
+              "fold": 2,
+              "start": "2022-10-20 04:00:00+00:00",
+              "end": "2023-08-08 08:00:00+00:00",
+              "trades": 461,
+              "net_r": 20.092
+            },
+            {
+              "fold": 3,
+              "start": "2023-08-08 08:00:00+00:00",
+              "end": "2024-05-26 12:00:00+00:00",
+              "trades": 489,
+              "net_r": -18.0008
+            },
+            {
+              "fold": 4,
+              "start": "2024-05-26 12:00:00+00:00",
+              "end": "2025-03-14 16:00:00+00:00",
+              "trades": 466,
+              "net_r": 22.0703
+            },
+            {
+              "fold": 5,
+              "start": "2025-03-14 16:00:00+00:00",
+              "end": "2025-12-31 20:00:00+00:00",
+              "trades": 498,
+              "net_r": 8.1288
+            },
+            {
+              "fold": 6,
+              "start": "2025-12-31 20:00:00+00:00",
+              "end": "2026-10-20 00:00:00+00:00",
+              "trades": 457,
+              "net_r": -5.1938
+            }
+          ],
+          "folds_pos": 3,
+          "max_drawdown_r_sequential": 52.8246,
+          "net_r_per_trade": 0.0048,
+          "t_one_sided_p": 0.4189087669652324,
+          "window": [
+            "2022-01-01 00:00:00+00:00",
+            "2026-10-20 00:00:00+00:00"
+          ]
+        },
+        "grade": {
+          "verdict": "fail",
+          "cells_pass": 1,
+          "need": 3,
+          "delta_r_per_trade_vs_baseline": 0.0221,
+          "why": "net_r/trade 0.0048 beats the baseline's -0.0173 by 0.0221 < the 0.05 materiality bar",
+          "role": "candidate",
+          "holm_survivors": []
+        }
+      },
+      "G90": {
+        "sets": {},
+        "unsets": [],
+        "extra_flags": [
+          "--vol-skip-below-pctl",
+          "0.9"
+        ],
+        "cells": {
+          "ADAUSDT": {
+            "state": "measured",
+            "n": 515,
+            "net_r": -10.2446,
+            "max_drawdown_r": 18.6767,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2022-01-01 00:00:00+00:00",
+                "end": "2022-10-20 04:00:00+00:00",
+                "trades": 89,
+                "net_r": -7.6697
+              },
+              {
+                "fold": 2,
+                "start": "2022-10-20 04:00:00+00:00",
+                "end": "2023-08-08 08:00:00+00:00",
+                "trades": 83,
+                "net_r": 7.4093
+              },
+              {
+                "fold": 3,
+                "start": "2023-08-08 08:00:00+00:00",
+                "end": "2024-05-26 12:00:00+00:00",
+                "trades": 90,
+                "net_r": -9.7073
+              },
+              {
+                "fold": 4,
+                "start": "2024-05-26 12:00:00+00:00",
+                "end": "2025-03-14 16:00:00+00:00",
+                "trades": 84,
+                "net_r": 10.3448
+              },
+              {
+                "fold": 5,
+                "start": "2025-03-14 16:00:00+00:00",
+                "end": "2025-12-31 20:00:00+00:00",
+                "trades": 84,
+                "net_r": 6.1007
+              },
+              {
+                "fold": 6,
+                "start": "2025-12-31 20:00:00+00:00",
+                "end": "2026-10-20 00:00:00+00:00",
+                "trades": 85,
+                "net_r": -16.7216
+              }
+            ],
+            "folds_pos": 3,
+            "net_r_per_capital_day": -0.0334,
+            "mean_bars_held": 28.577,
+            "hold_days_mean": 0.595,
+            "net_r_per_trade": -0.0199,
+            "t_one_sided_p": 0.6355401334375295,
+            "by_outcome": {
+              "trail_stop": 422,
+              "stop": 89,
+              "timeout": 4
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "donchian": 20,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 3.0,
+              "min_confidence": 0.0,
+              "vol_skip_above_pctl": 0.0,
+              "vol_skip_below_pctl": 0.9,
+              "vol_pctl_window": 200
+            },
+            "data_start": "2022-01-01 00:00:00+00:00",
+            "data_end": "2026-10-20 00:00:00+00:00",
+            "grade": "fail",
+            "argv": [
+              "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+              "--donchian",
+              "20",
+              "--data",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/data/ADAUSDT_30.csv",
+              "--symbol",
+              "ADAUSDT",
+              "--resample",
+              "30m",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "3.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/cells/trend_ADAUSDT_30m_G90__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/cells/trend_ADAUSDT_30m_G90__bt.json",
+              "--timeframe",
+              "30m",
+              "--vol-skip-below-pctl",
+              "0.9",
+              "--start",
+              "2022-01-01",
+              "--end",
+              "2026-10-20"
+            ]
+          },
+          "AVAXUSDT": {
+            "state": "measured",
+            "n": 520,
+            "net_r": 16.2428,
+            "max_drawdown_r": 16.9574,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2022-01-01 00:00:00+00:00",
+                "end": "2022-10-20 04:00:00+00:00",
+                "trades": 85,
+                "net_r": 6.688
+              },
+              {
+                "fold": 2,
+                "start": "2022-10-20 04:00:00+00:00",
+                "end": "2023-08-08 08:00:00+00:00",
+                "trades": 99,
+                "net_r": 4.5802
+              },
+              {
+                "fold": 3,
+                "start": "2023-08-08 08:00:00+00:00",
+                "end": "2024-05-26 12:00:00+00:00",
+                "trades": 96,
+                "net_r": -7.7522
+              },
+              {
+                "fold": 4,
+                "start": "2024-05-26 12:00:00+00:00",
+                "end": "2025-03-14 16:00:00+00:00",
+                "trades": 73,
+                "net_r": 10.2956
+              },
+              {
+                "fold": 5,
+                "start": "2025-03-14 16:00:00+00:00",
+                "end": "2025-12-31 20:00:00+00:00",
+                "trades": 89,
+                "net_r": 4.0244
+              },
+              {
+                "fold": 6,
+                "start": "2025-12-31 20:00:00+00:00",
+                "end": "2026-10-20 00:00:00+00:00",
+                "trades": 78,
+                "net_r": -1.5926
+              }
+            ],
+            "folds_pos": 4,
+            "net_r_per_capital_day": 0.053,
+            "mean_bars_held": 28.275,
+            "hold_days_mean": 0.589,
+            "net_r_per_trade": 0.0312,
+            "t_one_sided_p": 0.2942725898729875,
+            "by_outcome": {
+              "trail_stop": 434,
+              "stop": 83,
+              "timeout": 3
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "donchian": 20,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 3.0,
+              "min_confidence": 0.0,
+              "vol_skip_above_pctl": 0.0,
+              "vol_skip_below_pctl": 0.9,
+              "vol_pctl_window": 200
+            },
+            "data_start": "2022-01-01 00:00:00+00:00",
+            "data_end": "2026-10-20 00:00:00+00:00",
+            "grade": "pass",
+            "argv": [
+              "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+              "--donchian",
+              "20",
+              "--data",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/data/AVAXUSDT_30.csv",
+              "--symbol",
+              "AVAXUSDT",
+              "--resample",
+              "30m",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "3.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/cells/trend_AVAXUSDT_30m_G90__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/cells/trend_AVAXUSDT_30m_G90__bt.json",
+              "--timeframe",
+              "30m",
+              "--vol-skip-below-pctl",
+              "0.9",
+              "--start",
+              "2022-01-01",
+              "--end",
+              "2026-10-20"
+            ]
+          },
+          "SOLUSDT": {
+            "state": "measured",
+            "n": 518,
+            "net_r": 10.0305,
+            "max_drawdown_r": 30.3293,
+            "folds": [
+              {
+                "fold": 1,
+                "start": "2022-01-01 00:00:00+00:00",
+                "end": "2022-10-20 04:00:00+00:00",
+                "trades": 91,
+                "net_r": -19.5749
+              },
+              {
+                "fold": 2,
+                "start": "2022-10-20 04:00:00+00:00",
+                "end": "2023-08-08 08:00:00+00:00",
+                "trades": 84,
+                "net_r": 1.2472
+              },
+              {
+                "fold": 3,
+                "start": "2023-08-08 08:00:00+00:00",
+                "end": "2024-05-26 12:00:00+00:00",
+                "trades": 87,
+                "net_r": 1.2274
+              },
+              {
+                "fold": 4,
+                "start": "2024-05-26 12:00:00+00:00",
+                "end": "2025-03-14 16:00:00+00:00",
+                "trades": 83,
+                "net_r": 19.7767
+              },
+              {
+                "fold": 5,
+                "start": "2025-03-14 16:00:00+00:00",
+                "end": "2025-12-31 20:00:00+00:00",
+                "trades": 98,
+                "net_r": 3.908
+              },
+              {
+                "fold": 6,
+                "start": "2025-12-31 20:00:00+00:00",
+                "end": "2026-10-20 00:00:00+00:00",
+                "trades": 75,
+                "net_r": 3.4466
+              }
+            ],
+            "folds_pos": 5,
+            "net_r_per_capital_day": 0.0297,
+            "mean_bars_held": 31.27,
+            "hold_days_mean": 0.651,
+            "net_r_per_trade": 0.0194,
+            "t_one_sided_p": 0.3691433300423614,
+            "by_outcome": {
+              "trail_stop": 426,
+              "stop": 88,
+              "timeout": 4
+            },
+            "cost_stack": {
+              "fee_bps_roundtrip": 7.5,
+              "slippage_bps_roundtrip": 3.0,
+              "funding_bps_per_window": 1.0
+            },
+            "params": {
+              "donchian": 20,
+              "atr_stop_mult": 2.5,
+              "trail_mult": 3.0,
+              "min_confidence": 0.0,
+              "vol_skip_above_pctl": 0.0,
+              "vol_skip_below_pctl": 0.9,
+              "vol_pctl_window": 200
+            },
+            "data_start": "2022-01-01 00:00:00+00:00",
+            "data_end": "2026-10-20 00:00:00+00:00",
+            "grade": "pass",
+            "argv": [
+              "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+              "--donchian",
+              "20",
+              "--data",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/data/SOLUSDT_30.csv",
+              "--symbol",
+              "SOLUSDT",
+              "--resample",
+              "30m",
+              "--atr-period",
+              "14",
+              "--atr-stop-mult",
+              "2.5",
+              "--trail-mult",
+              "3.0",
+              "--min-confidence",
+              "0.0",
+              "--fee-bps-roundtrip",
+              "7.5",
+              "--emit-trades",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/cells/trend_SOLUSDT_30m_G90__trades.jsonl",
+              "--json",
+              "comms/research/RQ-20261023-a1f3-18/40074060809/cells/trend_SOLUSDT_30m_G90__bt.json",
+              "--timeframe",
+              "30m",
+              "--vol-skip-below-pctl",
+              "0.9",
+              "--start",
+              "2022-01-01",
+              "--end",
+              "2026-10-20"
+            ]
+          }
+        },
+        "pooled": {
+          "n": 1553,
+          "net_r": 16.0306,
+          "folds": [
+            {
+              "fold": 1,
+              "start": "2022-01-01 00:00:00+00:00",
+              "end": "2022-10-20 04:00:00+00:00",
+              "trades": 265,
+              "net_r": -20.5566
+            },
+            {
+              "fold": 2,
+              "start": "2022-10-20 04:00:00+00:00",
+              "end": "2023-08-08 08:00:00+00:00",
+              "trades": 266,
+              "net_r": 13.2367
+            },
+            {
+              "fold": 3,
+              "start": "2023-08-08 08:00:00+00:00",
+              "end": "2024-05-26 12:00:00+00:00",
+              "trades": 273,
+              "net_r": -16.2321
+            },
+            {
+              "fold": 4,
+              "start": "2024-05-26 12:00:00+00:00",
+              "end": "2025-03-14 16:00:00+00:00",
+              "trades": 240,
+              "net_r": 40.4171
+            },
+            {
+              "fold": 5,
+              "start": "2025-03-14 16:00:00+00:00",
+              "end": "2025-12-31 20:00:00+00:00",
+              "trades": 271,
+              "net_r": 14.0331
+            },
+            {
+              "fold": 6,
+              "start": "2025-12-31 20:00:00+00:00",
+              "end": "2026-10-20 00:00:00+00:00",
+              "trades": 238,
+              "net_r": -14.8676
+            }
+          ],
+          "folds_pos": 3,
+          "max_drawdown_r_sequential": 49.9405,
+          "net_r_per_trade": 0.0103,
+          "t_one_sided_p": 0.3782314737701322,
+          "window": [
+            "2022-01-01 00:00:00+00:00",
+            "2026-10-20 00:00:00+00:00"
+          ]
+        },
+        "grade": {
+          "verdict": "fail",
+          "cells_pass": 2,
+          "need": 3,
+          "delta_r_per_trade_vs_baseline": 0.0276,
+          "why": "net_r/trade 0.0103 beats the baseline's -0.0173 by 0.0276 < the 0.05 materiality bar",
+          "role": "candidate",
+          "holm_survivors": []
+        }
+      }
+    }
+  }
+}

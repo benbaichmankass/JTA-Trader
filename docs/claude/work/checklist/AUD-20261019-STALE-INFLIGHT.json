@@ -11,9 +11,9 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "[WEEKLY-AUDIT-2026-10-19, session_014UeddhjFnc6fSA41bo5V65] CLAIM: in_flight rows outlive their lanes. EVIDENCE: get_session on 5 in_flight lanes 2026-10-21 -> all SESSION_STATUS_ARCHIVED (BRACKETS-AS-PREDICTIONS + TP-REACH-FLOOR, BREAKOUT-POS-UNPARSED, ML-TABPFN-AND-STAGE-TRACE, SOAK-REDEFINE, DATA-INFRA-PROGRAMME), each with PR merged on main; corrected this session to landed_unproven/done. NOT CHECKED: PERF-FOLLOWUP-2026W41/W42, RESEARCH-CONFIRM-FRESH-WINDOW, MANAGER-PACING-STRUCTURAL, TIER3-PACKETS-1018, PACE-W40, WEEKLY-PLANNING (8 rows). BUILD: a manager-loop step (only interactive sessions hold get_session) that lists in_flight rows, reads each lane's session status, and flags archived/completed lanes; record the result on the row. DETECTOR: that step's output in the daily brief; no CI detector possible because CI runners cannot call get_session.",
-  "updated_at": "2026-10-21T18:21:13Z",
-  "updated_by": "session_014UeddhjFnc6fSA41bo5V65",
+  "note": "[WEEKLY-AUDIT-2026-10-19, session_014UeddhjFnc6fSA41bo5V65] CLAIM: in_flight rows outlive their lanes. EVIDENCE: get_session on 5 in_flight lanes 2026-10-21 -> all SESSION_STATUS_ARCHIVED (BRACKETS-AS-PREDICTIONS + TP-REACH-FLOOR, BREAKOUT-POS-UNPARSED, ML-TABPFN-AND-STAGE-TRACE, SOAK-REDEFINE, DATA-INFRA-PROGRAMME), each with PR merged on main; corrected this session to landed_unproven/done. NOT CHECKED: PERF-FOLLOWUP-2026W41/W42, RESEARCH-CONFIRM-FRESH-WINDOW, MANAGER-PACING-STRUCTURAL, TIER3-PACKETS-1018, PACE-W40, WEEKLY-PLANNING (8 rows). BUILD: a manager-loop step (only interactive sessions hold get_session) that lists in_flight rows, reads each lane's session status, and flags archived/completed lanes; record the result on the row. DETECTOR: that step's output in the daily brief; no CI detector possible because CI runners cannot call get_session. [2026-10-24 REGISTER-SWEEP-W43] SWEEP DONE on the 3 rows now in_flight: AUTOMERGE-ARMING-RACE lane archived, PR #19798 open (hold) -> queued; PACE-W40 lane RUNNING; WEEKLY-PLANNING lane is the manager. The 8 rows listed as unchecked on 10-21 are no longer in_flight. STILL OPEN: the manager-loop detector step (needs get_session) is not built; row stays queued.",
+  "updated_at": "2026-10-24T06:04:01Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "roadmap": [
     "L-OPS"
   ],

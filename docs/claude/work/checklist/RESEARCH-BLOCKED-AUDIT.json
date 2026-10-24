@@ -13,18 +13,24 @@
   "blocked_on": [],
   "note": "From research-ops #18923 and #18987, relayed by the assistant manager at 18:22Z. Both passes reported the blocked/ audit NOT RUN, and 80 files have gone unrun on consecutive passes. Queued at rank 8, NOT dispatched: weekly usage was 90% at 18:20Z and the meter allows 0.14 lanes continuous until the reset at Wed 2026-10-21 18:00Z. Dispatch one Sonnet lane after the reset. The RQ-20261018-009 ID collision is already resolved: #18978 merged at 15:0xZ. [2026-10-21 PIPELINE-HEALTH-1021] AUDIT RAN (67 blocked units after; was 76; 17 over 21 d -> 10). UNLOCKED (lever built): RQ-20260922-001/002/012 -> scripts/research/evidence_fold_robustness.py, queued with research-script-run.yml. TIME-GATED, now the dispatcher's own gate (not_before): RQ-20260930-602 (2026-12-23, n=2453 of 2828 needed), RQ-20260930-901 (2027-06-08). RETIRED with reasons: RQ-20260922-010 (harness exists, leg off every roster since 2026-10-05), -013 (avax_pullback_2h now -1.40R/n=57, unrostered), RQ-20260928-008 (ict_scalp_xrp_5m now -27.0R/n=169, unrostered), -014 (re-asked via PI-20261021-WG8OPB7N-0001, due 2026-12-26). REMAINING >21 d, each owned: see PI-20261021-WG8OPB7N-0004. Also fixed: blocker_watch tagged 33 compute-class units NEEDS_LANE (dispatch_queue said would_dispatch) and flagged not_before units NOT_RUNNING.",
   "priority_rank": 8,
-  "updated_at": "2026-10-21T18:54:21Z",
-  "updated_by": "session_01GmMQXaChSzQiiZWG8oPb7N",
+  "updated_at": "2026-10-24T06:01:10Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "roadmap": [
     "L-OPS"
   ],
   "observation": {
     "what": "blocked_over_age <= 10 on the next research-slo run after the PR merges, every remaining blocked unit >21 d has a named owner row, and RQ-20260922-001/002/012 land measured results",
     "how_to_check": "research-slo blocked_over_age; ls research/results/RQ-20260922-0{01,02,12}; PI-20261021-WG8OPB7N-0004 for the remaining 10",
-    "due_by": "2026-10-24",
+    "due_by": "2026-10-31",
     "writeback": {
       "roadmap": "none",
       "arch": "none"
+    },
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-24",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
     }
   },
   "writeback": {

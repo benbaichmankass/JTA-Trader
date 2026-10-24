@@ -1,0 +1,22 @@
+{
+  "due_when": {
+    "due_date": "2026-10-31",
+    "kind": "date"
+  },
+  "id": "PI-20261024-ONHEALTH-0003",
+  "next_action": "ask_operator",
+  "observation": {
+    "due_by": "2026-10-31T00:00Z",
+    "how_to_check": "rerun command",
+    "what": "due count below 250 or the health-review skill gate redefined on a stated population"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "HEALTH-REVIEW-20261024 lane (manager session_01UETC6mFiwMgXk6URsuWzZb)",
+    "rerun": "python3 scripts/ops/pipeline.py --stats; compare due and unrouted against 369 / 0 on 2026-10-24"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": "1",
+  "what": "[health] The health-review per-item drain gate cannot be met by volume and is getting worse: due pipeline items 110 (2026-10-17) -> 256 (10-21) -> 369 (10-24); the last two reviews walked 5/110 and 0/256. 369 due = 208 observation + 74 date + 62 event + 25 soak; 349 route to a live checklist row (queued 189 / landed_unproven 158 / in_flight 2) and 20 to RQ units or a PR; 0 unrouted (was 25). Due is computed and every row has an owner, so the count mainly measures owner rows not closing (landed_unproven=158). Bulk re-dating would repeat the BACKLOG-BURNDOWN-2 lapse wave, so this review did NOT redate. Needs a decision on what the review gate counts (unrouted + past-owner-closed + high severity, not every owner-routed row)."
+}

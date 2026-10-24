@@ -12,8 +12,8 @@
   "prs": [],
   "blocked_on": [],
   "note": "[lane done] 12 results read p9/f3 (1bf3 chain, d6e7-02 FAIL, 4591-01/-06 first kaggle_cpu dispatcher runs); 8 needs_review triaged (27 left); 1 unit authored (RQ-20261015-ab54-01, extend-n of 9d20-05 on idle kaggle_cpu); d6e7-03 retired moot; runnable 22->23 (computed floor 46 NOT met, refill capacity 0); no incident. Record comms/research/ops/20261015T1530Z.json. Hold PR.",
-  "updated_at": "2026-10-15T14:58:57Z",
-  "updated_by": "research-ops-lane-20261015-1447",
+  "updated_at": "2026-10-24T06:01:11Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "roadmap": [
     "L-LADDER"
   ],
@@ -24,7 +24,13 @@
   "observation": {
     "what": "manager merges the hold PR; RQ-20261015-ab54-01 dispatches on kaggle_cpu and lands read_state measured; RQ-20261014-d6e7-03 stays retired",
     "how_to_check": "python3 scripts/research/dispatch_queue.py | grep ab54; ls research/results/RQ-20261015-ab54-01",
-    "due_by": "2026-10-17"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-17",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
   "_seq": 518
 }

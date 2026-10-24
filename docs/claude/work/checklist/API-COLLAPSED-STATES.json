@@ -17,9 +17,15 @@
   "observation": {
     "what": "the first Hourly Snapshot after #16963 (6b57aab9e) is deployed renders the browser-prop accounts from executor status instead of 'API ERROR', and /api/bot/orders/open?account_id=alpaca_live lists held bracket legs with held_legs_state",
     "how_to_check": "scripts/ops/diag_fetch.sh version | grep 6b57aab9e; latest Hourly Snapshot ping text (comms/) has no 'API ERROR' line for breakout_2/tradeify_1; GET /api/bot/orders/open?account_id=alpaca_live -> held_legs_state present",
-    "due_by": "2026-10-22"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-22",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
-  "updated_at": "2026-10-15T06:04:54Z",
-  "updated_by": "session_01PH9KCD1r7StznkqPLzd9K1",
+  "updated_at": "2026-10-24T06:01:02Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "_seq": 324
 }

@@ -14,8 +14,8 @@
   ],
   "blocked_on": [],
   "note": "[lane done] runnable 51->52 vs floor 46; results unread 0; 1 node authored (P2-R3.c05-pass, SOL prop VH80 fresh-window confirmation). Not run: blocked/ audit, due routing (22 unrouted). Record comms/research/ops/20261018T0930Z.json. PR 18923 merged by operator (arming denied by classifier).",
-  "updated_at": "2026-10-18T10:28:41Z",
-  "updated_by": "session_01BCKs9p5mUMrwZ6XbMG7YRD",
+  "updated_at": "2026-10-24T06:01:12Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "roadmap": [
     "L-LADDER"
   ],
@@ -26,7 +26,13 @@
   "observation": {
     "what": "P2-R3.c05-pass emits RQ-20261018-005 on the next queue_replenish and that unit fires and lands a measured result",
     "how_to_check": "ls research/queue | grep 20261018-005; python3 scripts/research/result_disposition_check.py --list",
-    "due_by": "2026-10-21"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-21",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
   "_seq": 563
 }

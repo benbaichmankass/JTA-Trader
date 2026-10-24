@@ -1,0 +1,17 @@
+{
+  "based_on": "20261012T145742881132Z-d11ee8b7.json",
+  "due_when": {
+    "due_date": "2026-10-19",
+    "kind": "date"
+  },
+  "id": "PI-20261012-GNRBKIGG-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "review of PR #17745, non-blocking item 5",
+    "rerun": "python3 -c \"from src.prop import prop_journal as j, prop_overview as o; f=j.list_fills(account_id='breakout_2',limit=500); r=o.split_fills(f)[0]; import collections; print(collections.Counter((x['symbol'],x['direction']) for x in r))\" -- on the VM; holds while any (symbol, side) counts more open rows than the terminal shows positions."
+  },
+  "routed_to": "ROUTE-PROP-TRACKING (REGISTER-SWEEP-W43 2026-10-24: phone_reconcile duplicate-open risk)",
+  "state": "routed",
+  "what": "phone_reconcile duplicate-open risk (review of #17745, item 5): a live submit the phone never confirmed is journaled as `placed` by _journal_unconfirmed_submit; if the operator ALSO reports the fill by hand under a different ticket, or a synthetic unconfirmed row was minted before the placed row existed, the journal can hold two open rows for one venue position. The grouped match then hides it (both rows match one venue position), so qty_mismatch is the only trace. Build: when a group's journal qty exceeds the venue qty by a whole row's qty, name the duplicate row in the alert."
+}
