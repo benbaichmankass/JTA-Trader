@@ -58,3 +58,20 @@ def test_end_to_end_writes_a_measured_verdict(tmp_path):
     leg = v["measurement"]["per_leg"]["trend_donchian_eth_4h"]
     assert leg["n"] + leg["n_exited_by_k"] == leg["n_trades"]
     assert 0.0 < leg.get("big_share", 0.5) < 1.0
+
+
+def test_shuffle_triggers_matches_rate_and_never_flags_unscored():
+    rows = [{"trade_key": f"t{i}", "k": 6, "trigger": i % 3 == 0, "p": (None if i < 4 else 0.5)} for i in range(40)]
+    rows = [{**r, "trigger": (r["trigger"] and r["p"] is not None)} for r in rows]
+    out = pm.shuffle_triggers(rows, 7)
+    assert sum(r["trigger"] for r in out) == sum(r["trigger"] for r in rows)
+    assert not any(r["trigger"] for r in out if r["p"] is None)
+    assert [r["trade_key"] for r in out] == [r["trade_key"] for r in rows]
+    assert out != rows and out == pm.shuffle_triggers(rows, 7)  # random, but reproducible by seed
+
+
+def test_p_threshold_makes_the_gate_more_selective():
+    t, _, _ = pm.build_table(pm._synthetic(240, planted=True), k=6)
+    lo = pm.oof_triggers(t, 6, folds=6, big_quantile=0.5, p_threshold=0.5)
+    hi = pm.oof_triggers(t, 6, folds=6, big_quantile=0.5, p_threshold=0.7)
+    assert sum(r["trigger"] for r in hi) <= sum(r["trigger"] for r in lo)
