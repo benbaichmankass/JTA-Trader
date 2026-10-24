@@ -2,7 +2,7 @@ id: RQ-20261022-b7e1-04
 title: 'Q14 lever (EFFICIENCY-RATIO-GATED tight trail): on ada_pullback_2h, once a trade is >= 1.5 R up AND the 6-bar efficiency
   ratio is below 0.20 / 0.30 / 0.40, does tightening the trail to 2.5 x ATR beat the declared exit AND the same tightening
   applied ungated, on net R in 5 of 6 folds?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -140,3 +140,16 @@ programme_node:
 # here (b7e1-04..07) have lost their motivation: drop them and keep b7e1-08..10. This note changes no registered rule;
 # the drop decision is the grader's (the manager asked the builder to ship every arm), not the builder's.
 last_dispatched_at: '2026-10-23T19:07:48+00:00'
+grading:
+  attested: RULE-P1-Q14-ER-GATED-TRAIL-04
+  auto: true
+  decision_rule_id: RULE-P1-Q14-ER-GATED-TRAIL-04
+  evidence:
+  - research/results/RQ-20261022-b7e1-04/40009014432.jsonl
+  graded_at: '2026-10-24'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

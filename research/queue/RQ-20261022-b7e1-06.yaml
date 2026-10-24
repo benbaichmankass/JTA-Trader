@@ -2,7 +2,7 @@ id: RQ-20261022-b7e1-06
 title: 'Q14 lever (VOLATILITY-ADAPTIVE / Chandelier-style): on ada_pullback_2h, once a trade is >= 1.5 R up AND ATR has CONTRACTED
   to <= 0.9 / 0.8 / 0.7 of its entry value, does tightening the trail to 3.0 x ATR beat the declared exit AND the ungated
   tighten, on net R in 5 of 6 folds?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -139,3 +139,16 @@ programme_node:
 # here (b7e1-04..07) have lost their motivation: drop them and keep b7e1-08..10. This note changes no registered rule;
 # the drop decision is the grader's (the manager asked the builder to ship every arm), not the builder's.
 last_dispatched_at: '2026-10-23T19:07:48+00:00'
+grading:
+  attested: RULE-P1-Q14-ATR-CONTRACTION-TRAIL-06
+  auto: true
+  decision_rule_id: RULE-P1-Q14-ATR-CONTRACTION-TRAIL-06
+  evidence:
+  - research/results/RQ-20261022-b7e1-06/40009021478.jsonl
+  graded_at: '2026-10-24'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
