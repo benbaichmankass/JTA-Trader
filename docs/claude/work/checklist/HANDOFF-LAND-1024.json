@@ -2,7 +2,7 @@
   "id": "HANDOFF-LAND-1024",
   "title": "Land the 2026-10-24 manager handoff doc (#19817): DOCUMENT-INDEX row + landing file; manager-scope-guard refuses it from a manager",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": "session_014DAJvjJnV6qPequK5C2yxE",
   "model": "claude-haiku-4-5-20251001",
@@ -13,12 +13,21 @@
     19817
   ],
   "blocked_on": [],
-  "note": "",
+  "note": "Merged origin/main into branch; registered doc in DOCUMENT-INDEX.md; added status header; created pr-landing and pr-automerge-requests configs; claimed merge slot; committed and pushed to origin/mgr/handoff-1024; marked PR #19817 ready for review; armed auto-merge (SQUASH). Observation: PR #19817 auto-merge will fire when CI checks pass.",
   "priority_rank": 2,
-  "updated_at": "2026-10-24T12:04:22Z",
+  "updated_at": "2026-10-24T12:33:17Z",
   "updated_by": "session_01UETC6mFiwMgXk6URsuWzZb",
   "roadmap": [
     "L-OPS"
   ],
+  "writeback": {
+    "roadmap": "none: handoff record only",
+    "arch": "none: no component change"
+  },
+  "observation": {
+    "what": "docs/claude/work/handoffs/2026-10-24-01G3UtWJ-to-new.md and its docs/DOCUMENT-INDEX.md row are on main",
+    "how_to_check": "git fetch origin main && git cat-file -e origin/main:docs/claude/work/handoffs/2026-10-24-01G3UtWJ-to-new.md && grep -c 2026-10-24-01G3UtWJ-to-new docs/DOCUMENT-INDEX.md",
+    "due_by": "2026-10-25T00:00Z"
+  },
   "_seq": 626
 }
