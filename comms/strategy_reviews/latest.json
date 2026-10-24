@@ -1,14 +1,14 @@
 {
  "schema": "stage_aware_v1",
- "generated_at": "2026-10-23T05:12:54.883103+00:00",
- "utc_date": "2026-10-23",
+ "generated_at": "2026-10-24T05:15:26.722022+00:00",
+ "utc_date": "2026-10-24",
  "generated_by": "scripts/ops/strategy_review_stage_aware.py",
  "graded": 28,
- "verdict_reached": 2,
- "actionable": 2,
+ "verdict_reached": 3,
+ "actionable": 3,
  "by_action": {
-  "S1:insufficient-data": 19,
-  "S1:kill": 2,
+  "S1:insufficient-data": 18,
+  "S1:kill": 3,
   "S2:abstain": 7
  },
  "question": "Per leg, graded with the instrument its STAGE calls for: Stage 2 (bybit_2/alpaca_live + mirrors) on MONEY via R4's demotion verdict; Stage 1 (bybit_1, alpaca_paper) on MECHANICS + COST FIDELITY via R5 -- never expectancy, per root CLAUDE.md's promotion ladder ('a live or paper book never establishes edge').",
@@ -33,26 +33,12 @@
   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
   "window_hours": 168,
   "n_legs": 21,
-  "verdict_reached": 2,
-  "actionable": 2,
+  "verdict_reached": 3,
+  "actionable": 3,
   "mechanics_read_state": "measured",
   "cost_fidelity_read_state": "measured"
  },
  "rows": [
-  {
-   "stage": "S1",
-   "account": "bybit_1",
-   "strategy": "ada_pullback_2h",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:kill",
-   "verdict_reached": true,
-   "actionable": true,
-   "disposition": "kill",
-   "execution": "live",
-   "n_needed": null,
-   "eta": null,
-   "reason": "starved: 186 actionable intent(s) (19 episode(s)) in the window, 0 order(s)/ticket(s) received, held_back=0, no open position held. This leg's soak purpose (prove the pipeline works) is unmet: it never reaches an order regardless of what cost fidelity reads."
-  },
   {
    "stage": "S1",
    "account": "alpaca_paper",
@@ -65,7 +51,49 @@
    "execution": "live",
    "n_needed": null,
    "eta": null,
-   "reason": "starved: 312 actionable intent(s) (13 episode(s)) in the window, 0 order(s)/ticket(s) received, held_back=3, no open position held. This leg's soak purpose (prove the pipeline works) is unmet: it never reaches an order regardless of what cost fidelity reads."
+   "reason": "starved: 239 actionable intent(s) (9 episode(s)) in the window, 0 order(s)/ticket(s) received, held_back=2, no open position held. This leg's soak purpose (prove the pipeline works) is unmet: it never reaches an order regardless of what cost fidelity reads."
+  },
+  {
+   "stage": "S1",
+   "account": "alpaca_paper",
+   "strategy": "ief_pullback_1d",
+   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
+   "proposed_action": "S1:kill",
+   "verdict_reached": true,
+   "actionable": true,
+   "disposition": "kill",
+   "execution": "live",
+   "n_needed": null,
+   "eta": null,
+   "reason": "starved: 184 actionable intent(s) (3 episode(s)) in the window, 0 order(s)/ticket(s) received, held_back=0, no open position held. This leg's soak purpose (prove the pipeline works) is unmet: it never reaches an order regardless of what cost fidelity reads."
+  },
+  {
+   "stage": "S1",
+   "account": "alpaca_paper",
+   "strategy": "tlt_pullback_1d",
+   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
+   "proposed_action": "S1:kill",
+   "verdict_reached": true,
+   "actionable": true,
+   "disposition": "kill",
+   "execution": "live",
+   "n_needed": null,
+   "eta": null,
+   "reason": "starved: 166 actionable intent(s) (3 episode(s)) in the window, 0 order(s)/ticket(s) received, held_back=0, no open position held. This leg's soak purpose (prove the pipeline works) is unmet: it never reaches an order regardless of what cost fidelity reads."
+  },
+  {
+   "stage": "S1",
+   "account": "bybit_1",
+   "strategy": "ada_pullback_2h",
+   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
+   "proposed_action": "S1:insufficient-data",
+   "verdict_reached": false,
+   "actionable": false,
+   "disposition": "insufficient-data",
+   "execution": "live",
+   "n_needed": "needs 0 more entry fill(s) and 3 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=20, exit=7); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "eta": "re-check next scheduled pass",
+   "reason": "flowing; cost fidelity insufficient_n (entry n=20, exit n=7; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -77,9 +105,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": "needs 8 more entry fill(s) and 9 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=2, exit=1); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "n_needed": "an entry signal observed while this leg is FLAT (no open position), in some future window",
    "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity insufficient_n (entry n=2, exit n=1; need >= 10 each)"
+   "reason": "starved (200 intent(s), 0 received) but ALREADY HOLDING a position opened before the window — leg_flow_report's own caveat: this is NOT reliably 'unreached', it may simply have needed no new entry this window while flat-to-in-position. Cannot be graded kill from this window alone."
   },
   {
    "stage": "S1",
@@ -91,23 +119,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": "needs 8 more entry fill(s) and 9 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=2, exit=1); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "n_needed": "an entry signal observed while this leg is FLAT (no open position), in some future window",
    "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity insufficient_n (entry n=2, exit n=1; need >= 10 each)"
-  },
-  {
-   "stage": "S1",
-   "account": "alpaca_paper",
-   "strategy": "ief_pullback_1d",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "live",
-   "n_needed": "needs 8 more entry fill(s) and 8 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=2, exit=2); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
-   "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity insufficient_n (entry n=2, exit n=2; need >= 10 each)"
+   "reason": "starved (254 intent(s), 0 received) but ALREADY HOLDING a position opened before the window — leg_flow_report's own caveat: this is NOT reliably 'unreached', it may simply have needed no new entry this window while flat-to-in-position. Cannot be graded kill from this window alone."
   },
   {
    "stage": "S1",
@@ -224,20 +238,6 @@
   {
    "stage": "S1",
    "account": "alpaca_paper",
-   "strategy": "tlt_pullback_1d",
-   "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
-   "proposed_action": "S1:insufficient-data",
-   "verdict_reached": false,
-   "actionable": false,
-   "disposition": "insufficient-data",
-   "execution": "live",
-   "n_needed": "needs 7 more entry fill(s) and 8 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=3, exit=2); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
-   "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity insufficient_n (entry n=3, exit n=2; need >= 10 each)"
-  },
-  {
-   "stage": "S1",
-   "account": "alpaca_paper",
    "strategy": "tqqq_trend_long_1d",
    "verdict_source": "scripts/ops/soak_book_grade.py (R5)",
    "proposed_action": "S1:insufficient-data",
@@ -287,9 +287,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": "needs 4 more entry fill(s) and 4 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=6, exit=6); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "n_needed": "needs 3 more entry fill(s) and 4 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=7, exit=6); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
    "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity insufficient_n (entry n=6, exit n=6; need >= 10 each)"
+   "reason": "flowing; cost fidelity insufficient_n (entry n=7, exit n=6; need >= 10 each)"
   },
   {
    "stage": "S1",
@@ -329,9 +329,9 @@
    "actionable": false,
    "disposition": "insufficient-data",
    "execution": "live",
-   "n_needed": "needs 0 more entry fill(s) and 6 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=14, exit=4); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
+   "n_needed": "needs 0 more entry fill(s) and 6 more package-referenced exit fill(s) to clear the n=10/side floor (currently entry=13, exit=4); no fill-rate basis to date an ETA from this run alone — re-check next scheduled pass",
    "eta": "re-check next scheduled pass",
-   "reason": "flowing; cost fidelity insufficient_n (entry n=14, exit n=4; need >= 10 each)"
+   "reason": "flowing; cost fidelity insufficient_n (entry n=13, exit n=4; need >= 10 each)"
   },
   {
    "stage": "S2",
