@@ -454,6 +454,11 @@ def order_package(cfg: dict, candles_df: Optional[pd.DataFrame] = None) -> dict:
             "tp_r": tp_r,
             "risk_per_unit": float(risk),
             "entry_time": entry_time,
+            # MOMENTUM-LEVERS-PARITY: True when the entry bar had CLOSED at decision
+            # time (decision_bar: closed), so the fill came AFTER that bar's range
+            # and the trail's since-entry extreme starts at the fill price, as the
+            # harness's (`ext = entry`) does. False on a forming-bar decision.
+            "entry_bar_closed": _entry_bar_closed(df, timeframe),
             # Canonical key the order_monitor's ohlcv_fetcher reads to
             # pull fresh candles for monitor(). Without it the fetcher
             # short-circuits to None and the trail never updates.
@@ -822,6 +827,48 @@ def _revise_tp(meta, candles_df, open_pkg, current_price, direction):
         return None
 
 
+def _entry_bar_closed(df: pd.DataFrame, timeframe: str) -> bool:
+    """Had the frame's last (entry) bar closed when the package was built?"""
+    try:
+        from src.runtime.closed_bars import last_bar_is_forming
+
+        return not last_bar_is_forming(df, timeframe)
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _trail_window(meta, cfg_dict, candles_df, open_pkg):
+    """The since-entry frame the chandelier ratchets on, matching the harness
+    (MOMENTUM-LEVERS-PARITY, scripts/research/momentum_levers_parity.py):
+
+    * CLOSED bars only -- the harness ratchets once per bar, on its close, with
+      the lever mults decided on that bar. Ratcheting on the forming bar's
+      extreme applied the PREVIOUS bar's mult to it, so a momentum / decay
+      tightening ran one bar long, intrabar.
+    * When the entry bar had closed before the fill (``entry_bar_closed``), its
+      high/low predate the position: the extreme starts at the fill price
+      (harness ``ext = entry``). The row is kept, re-priced, so the peak / stall
+      arithmetic downstream (trail_decay) keeps its shape.
+
+    Packages built before the flag existed keep the entry bar's range."""
+    from src.runtime.exit_levers import closed_frame
+
+    window = _since_entry(closed_frame(candles_df, meta, cfg_dict), open_pkg)
+    if not meta.get("entry_bar_closed") or window is None or len(window) == 0:
+        return window
+    try:
+        entry = _coerce_float(open_pkg.get("entry"))
+        first = pd.to_datetime(window["timestamp"].iloc[0], utc=True)
+        if entry is None or first != pd.to_datetime(meta.get("entry_time"), utc=True):
+            return window
+        window = window.copy()
+        window.iloc[0, window.columns.get_loc("high")] = entry
+        window.iloc[0, window.columns.get_loc("low")] = entry
+    except Exception:  # noqa: BLE001 — never break the trail
+        pass
+    return window
+
+
 def _trail_verdict(meta, cfg_dict, open_pkg, candles_df, current_price, direction, sl):
     """The Chandelier ratchet (unchanged; extracted so the TP revision can merge)."""
     atr = _coerce_float(meta.get("atr"))
@@ -845,7 +892,7 @@ def _trail_verdict(meta, cfg_dict, open_pkg, candles_df, current_price, directio
         or float(_DEFAULTS["trail_mult"])
     )
 
-    window = _since_entry(candles_df, open_pkg)
+    window = _trail_window(meta, cfg_dict, candles_df, open_pkg)
     # M20 P4.1 trail-decay lever (docs/research/M20-momentum-exhaustion-
     # DESIGN.md § P4.1): the EFFECTIVE mult tightens once the move is R-armed
     # or stalls. YAML-declared per leg (Tier-3); undeclared = base mult

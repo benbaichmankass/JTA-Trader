@@ -1,7 +1,7 @@
 id: RQ-20261011-9da8-01
 title: 'Frontier: time-series foundation-model forecaster bake-off for the volatility-regime head (Chronos-2, TimesFM-2.5,
   TiRex-2, Kronos vs the shipped Chronos-Bolt-Tiny fc features, with a HAR-RV control)'
-status: queued
+status: done
 cadence: once
 theme: regime
 priority: 2
@@ -149,13 +149,12 @@ grading:
   confirmatory_run: 1
   decision_rule_id: RULE-RQ1011-9DA8-01-TSFM-BAKEOFF
   evidence:
-  - research/results/RQ-20261011-9da8-01/39844193455.jsonl
-  - research/results/RQ-20261011-9da8-01/39923386978.jsonl
+  - research/results/RQ-20261011-9da8-01/40074055932.jsonl
   first_fail: 1 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s)
     superseded)
-  graded_at: '2026-10-23'
+  graded_at: '2026-10-24'
   grader: scripts/research/queue_grade.py
-  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
-  reason: 1 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
+  reason: 1 row(s), all measured, all fail
   rows: 1
   verdict: fail
