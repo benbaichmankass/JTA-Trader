@@ -1,7 +1,7 @@
 id: RQ-20261023-a1f3-13
 title: 'Direction at 1h, RECENT window (first test failed -> variant): does the 1h direction head beat the class prior on log-loss when fit on only the last ~2 years
   (17,520 rows) of BTC, ETH, SOL?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -138,11 +138,11 @@ grading:
   confirmatory_run: 1
   decision_rule_id: RULE-RQ20261023-A1F3-13-DIR-1H-RECENT
   evidence:
-  - research/results/RQ-20261023-a1f3-13/39974459324.jsonl
+  - research/results/RQ-20261023-a1f3-13/40018608302.jsonl
   first_fail: 1 row(s), all measured, all fail
-  graded_at: '2026-10-23'
+  graded_at: '2026-10-24'
   grader: scripts/research/queue_grade.py
-  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
   reason: 1 row(s), all measured, all fail
   rows: 1
   verdict: fail

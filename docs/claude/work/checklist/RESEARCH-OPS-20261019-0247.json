@@ -14,15 +14,21 @@
   ],
   "blocked_on": [],
   "note": "[lane done] PR open (held, E57): runnable 73 -> 93 (floor 57); 20 P1-Q9 replace-grade units (14 donchian-leg lever gaps + 6 pullback tp3/timeout/giveback) cloned from existing Q9 nodes. NOT run: needs_review triage, blocked/ audit (RESEARCH-BLOCKED-AUDIT), pipeline routing. Record comms/research/ops/20261019T0300Z.json. Closes when results land: python3 scripts/ci/check_research_queue_throughput.py --json; python3 scripts/research/result_disposition_check.py --list (due 2026-10-22).",
-  "updated_at": "2026-10-19T02:54:58Z",
-  "updated_by": "session_research_ops_20261019_0247",
+  "updated_at": "2026-10-24T06:01:12Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "roadmap": [
     "L-LADDER"
   ],
   "observation": {
     "what": "20 P1-Q9 units dispatch and each lands a measured replace-grade verdict",
     "how_to_check": "python3 scripts/ci/check_research_queue_throughput.py --json; python3 scripts/research/result_disposition_check.py --list",
-    "due_by": "2026-10-22"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-22",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
   "writeback": {
     "roadmap": "none: operations pass",

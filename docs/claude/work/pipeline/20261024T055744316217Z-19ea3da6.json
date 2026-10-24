@@ -1,0 +1,18 @@
+{
+  "based_on": "20261023T145605783167Z-2bba97d6.json",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a successor unit with a registered rule that can reach pooled n >= 88 (more legs or forward window) has landed a measured verdict, or this is killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261023-3UNWZVAZ-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "RQ-20261022-38be-02:indeterminate-n67",
+    "rerun": "python3 scripts/research/result_disposition_check.py --list ; cat research/results/RQ-20261022-38be-02/39936252883.jsonl"
+  },
+  "routed_to": "ROUTE-RESEARCH-HARNESS-FIXES (re-routed 2026-10-24 REGISTER-SWEEP-W43: prior target RESEARCH-FOLLOWUPS is done; item still open) | was: RESEARCH-FOLLOWUPS",
+  "state": "routed",
+  "what": "RQ-20261022-38be-02 (Donchian-ETH-4h breadth confirmation on BNB/DOGE/LINK/LTC/BCH, 2018-01..2020-05) landed INDETERMINATE: pooled n 67 < floor 88 (n_floor 39 per cell). Never FAIL on thin n. The disjoint-window confirmation of the 7c2b-06 PASS has therefore not happened; the pre-2020-06 window cannot supply n at this config. Needs ONE new unit that adds legs or a forward window (rule: extend the window or add legs, never lower the floor). Measured by research/results/RQ-20261022-38be-02/39936252883.jsonl. Pass 2026-10-23 14:47Z."
+}

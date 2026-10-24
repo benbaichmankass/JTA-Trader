@@ -14,15 +14,21 @@
   ],
   "blocked_on": [],
   "note": "[lane] runnable 60 -> 70 (computed floor 34, fired_24h 42): 10 P1-Q9 replace-grade units for the real-money Alpaca daily legs (slv_pullback_1d via dukascopy, ief_pullback_1d), cloned from the xrppb Q9 nodes (4 folds/3-of-4 majority, timeout arms 5/10 daily bars); templates exhausted (0 candidates). NOT run per manager addendum: blocked/ audit (RESEARCH-BLOCKED-AUDIT), needs_review triage. Open: authoring queue 19 nodes gated on builds/verdicts; 18 UNGRADED result units; iaum_pullback_1d Q9 not authored (dukascopy coverage unverified). Record comms/research/ops/20261019T2100Z.json.",
-  "updated_at": "2026-10-19T20:54:55Z",
-  "updated_by": "session_01FDDM11svkhx6sjpvCW5SvR",
+  "updated_at": "2026-10-24T06:01:12Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "roadmap": [
     "L-LADDER"
   ],
   "observation": {
     "what": "10 P1-Q9 Alpaca-leg units (slv_pullback_1d, ief_pullback_1d x adx/momentum/tp3/timeout/giveback) dispatch and each lands a measured replace-grade verdict",
     "how_to_check": "python3 scripts/ci/check_research_queue_throughput.py --json; python3 scripts/research/result_disposition_check.py --list",
-    "due_by": "2026-10-23"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-23",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
   "writeback": {
     "roadmap": "none: operations pass",

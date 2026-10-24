@@ -4,7 +4,7 @@ theme: ml_health
 kind: experiment
 title: 'REDESIGN of 4a3b-01 (timed out at 300 min with the CPU TabPFN control in the run; control dropped, rule unchanged): Frontier / tabular foundation model, capped-ensemble arm on the WIDER feature set: TabICL (3 x 4,000-row members) vs LightGBM on the BTC/ETH/SOL 15m
   volatility-regime head, both fed the 4 range-vol estimators (tabular_foundation_model; TabPFN rides as an observed, CPU-capped, research-only control)'
-status: queued
+status: done
 priority: 3
 question: On the trainer's BTC/ETH/SOL 15m v002 shards (last 12,000 rows, the 6 shared features PLUS parkinson/garman_klass/rogers_satchell/yang_zhang vol given
   to BOTH arms), under identical purged folds, does a 3-member TabICL ensemble (each member fits <= 4,000 rows) beat LightGBM by >= +0.010 macro-F1 on at least
@@ -167,3 +167,17 @@ related:
 - ML-TABPFN-LICENCE
 - ML-INSTRUMENTS-W43
 last_dispatched_at: '2026-10-23T17:55:02+00:00'
+grading:
+  attested: RULE-RQ20261022-38BE-01-TABICL-ENSEMBLE-WIDE-FEATURES-15M
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261022-38BE-01-TABICL-ENSEMBLE-WIDE-FEATURES-15M
+  evidence:
+  - research/results/RQ-20261022-38be-01/39999080882.jsonl
+  graded_at: '2026-10-24'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

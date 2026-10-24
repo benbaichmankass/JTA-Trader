@@ -14,8 +14,8 @@
   ],
   "blocked_on": [],
   "note": "[lane done] runnable 69->70 vs floor 42; UNOWNED 3->0 (5bd1-07/08 graded indeterminate, c56e-19 owner-stamped and re-queued); 1 node authored (P2-R3.g06-pass, VH95 fresh-window confirmation, ada_pullback_2h). Not run: blocked/ per-file audit, due routing (135 due). Record comms/research/ops/20261018T0330Z.json. HELD PR.",
-  "updated_at": "2026-10-18T02:58:28Z",
-  "updated_by": "session_01EpYh89EKZSypJoVuQNXcDw",
+  "updated_at": "2026-10-24T06:01:12Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "roadmap": [
     "L-LADDER"
   ],
@@ -26,7 +26,13 @@
   "observation": {
     "what": "c56e-19 re-fires on the runner with yfinance and lands read_state measured, and the g06 confirmation unit emits",
     "how_to_check": "python3 scripts/research/result_disposition_check.py --list  (c56e-19 not producer_failed) and ls research/queue | grep 65ff after the next queue_replenish",
-    "due_by": "2026-10-20"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-20",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
   "_seq": 557
 }

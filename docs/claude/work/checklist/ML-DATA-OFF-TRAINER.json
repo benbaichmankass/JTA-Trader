@@ -12,8 +12,8 @@
   "prs": [],
   "blocked_on": "ML-DATA-RUNNER-FETCH",
   "note": "[2026-10-13 lane ML-DATA-OFF-TRAINER, operator direction ~15:50Z, recorded_decision operator_decision] (1) CLASSIFIED: the shards the queued ML units read (market_features BTC/ETH/SOL 15m v002, 130 cols measured on the trainer) are MARKET ONLY; OURS families (trade_outcomes, setup_labels*, conviction_meta, execution_quality, account_context, backtest_results, review_journal) never leave the trainer; exit_candidates UNVERIFIED -> treated as OURS. docs/research/ml-data-classification-2026-10-13.md. (2) PUBLISH BUILT: ml-data-export-kaggle.yml (daily 06:40Z; runner pulls the allowlisted shards over the existing SSH route at nice 19, no VM timer, no credential on the VM) -> PRIVATE Kaggle dataset metis-market-data with MANIFEST (sha256, rows, first/last ts) and integrity withholding; verify-runner and verify-kaggle (CPU kernel) jobs re-hash the published copy. NOT yet run: workflows dispatch only from main. (3) ROUTER: routing.published_data lifts needs_trainer_resident_data, checked against the exporter allowlist; such units run on research-script-run-data.yml (github_runner_data) or Kaggle (dataset mounted, ML_DATA_ROOT). RunPod is a ledger-capped FALLBACK for class gpu, manifest requests only. The 16 queue-unit compute edits are held for a SECOND PR after the first verified export (otherwise the hourly dispatcher would fire them at a missing shard and burn their 2 retries); BTC/SOL units wait for ML-SHARD-TRUNCATED. (4) TRAINER QUEUE: backends.trainer.queue windows 03-05Z, 07-24Z derived from the measured 7-day hour-of-day occupancy (comms/cloud/trainer_workload_profile.json); drift-retrain (hourly) is 63.7% of the trainer's service CPU; scheduled training is 95.3%; 00-03Z and 05-07Z are over-subscribed up to 1.96x. docs/research/trainer-workload-2026-10-13.md has options A-F with numbers for the 2026-10-14 planning. Nothing resized or rescheduled. 2026-10-14 MEASURED: first private export published (run 38507974681, export job success; dataset ready, latest version 2; 20 files shipped, SOL 15m market_raw/market_features withheld by the integrity check, BTC 15m passed at 03:00Z). VERIFIED: Kaggle-kernel re-hash 20/20 ok, 0 stale (verify-kaggle). NOT VERIFIED: GitHub-runner download. kaggle>=2.2 DownloadDataset returns 404 for this private dataset from the runner via CLI, python API, and owner/slug/<version> pin (runs 38507974681, 38512183556, 38514877849) although datasets status/list/kernel mount all work with the same token. So research-script-run-data.yml cannot fetch the data yet; the 16 queued ML units were NOT re-routed (re-routing them to a path that 404s would break them). Next: row ML-DATA-RUNNER-FETCH.",
-  "updated_at": "2026-10-14T05:07:57Z",
-  "updated_by": "session_01TLzWnNpc5nNAH52UaenHhX",
+  "updated_at": "2026-10-24T06:01:06Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "roadmap": [
     "L-OPS",
     "M14"
@@ -21,7 +21,13 @@
   "observation": {
     "what": "(1) the first ml-data-export-kaggle run publishes metis-market-data privately, verify-runner and verify-kaggle both report ok, and MANIFEST.withheld names the truncated BTC/SOL 15m shards; (2) after the unit-edit PR, an ML bake-off unit lands a research/results/<unit>/<run_id>.jsonl from research-script-run-data.yml with published-data.json beside it; (3) the weekly view (research_utilization.py --week) prints trainer_queue and the trainer's research queue is only the two prediction-market units",
     "how_to_check": "gh run list --workflow ml-data-export-kaggle.yml ; artifact ml-data-verify-runner-<run_id>/verify-runner.json ; research/results/ ; python3 scripts/research/research_utilization.py --week ; python3 scripts/research/trainer_queue.py --status",
-    "due_by": "2026-10-20"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-20",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
   "writeback": {
     "roadmap": "M14 where/next: ML/frontier research runs off the trainer on a published market-only dataset; the trainer is a windowed queue for the units that truly need it",

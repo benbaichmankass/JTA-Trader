@@ -1,0 +1,19 @@
+{
+  "based_on": "20261012T135840389591Z-9299a8ee.json",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "after the first 5 pairs_gld_gdx opens on alpaca_paper the rerun comparison has been read: 0 mismatches -> close as not-observed with that n; any mismatch -> build the per-leg fill reconciliation",
+    "kind": "observation",
+    "last_checked": "2026-10-12"
+  },
+  "id": "PI-20261012-HQ8T7BZU-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "PAIRS-ALPACA-BUILD lane, session_01P1PVxyfLMUtw6WhQ8T7BZu, manager review of PR #17747 (items 4, 5)",
+    "rerun": "On the live journal + venue: for every pairs_gld_gdx_a/_b open row on alpaca_paper, compare trades.position_size with the venue's filled qty for its order (diag relay /api/diag/alpaca_order_history or account_open_positions). Finding holds while any leg's filled qty != journal qty, or any open row has no filled order behind it."
+  },
+  "routed_to": "PAIRS-GAPS (REGISTER-SWEEP-W43 2026-10-24: alpaca pairs accepted-not-filled)",
+  "state": "routed",
+  "what": "PAIRS-ALPACA-BUILD review item 4 (INFERRED from code): accepted is not filled for a pairs leg. AlpacaClient.place polls ALPACA_PLACE_CONFIRM_S (default 3s) and refuses an order that goes rejected/canceled/expired INSIDE that window, so a fast async reject is caught and the leg-imbalance unwind runs. NOT caught: (a) a reject/cancel AFTER the window, (b) a PARTIAL fill -- execute_pkg journals the requested whole-share qty, so the two legs' filled ratio can drift from the hedge with nothing comparing them. Fix candidates: after both legs are sent, read each leg's order status/filled_qty (account_order_status) on the next tick and either top up/trim or unwind; or compare venue position qty vs journal per leg each decision."
+}

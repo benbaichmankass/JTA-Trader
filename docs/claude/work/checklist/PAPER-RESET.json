@@ -20,9 +20,15 @@
   "observation": {
     "what": "The 13:30Z SPY 8-share exit completes on alpaca_paper (-0003) and the GLD zombie OCO is cleared",
     "how_to_check": "PI-20261001 ALPACA-CLOSE-WEDGE -0003; /api/diag/exchange_positions?account_id=alpaca_paper",
-    "due_by": "2026-10-16T00:00Z"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-16T00:00Z",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
-  "updated_at": "2026-10-09T04:36:51Z",
-  "updated_by": "session_015WZhDbDdZTbgTzGXeDzjqe",
+  "updated_at": "2026-10-24T06:01:08Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "_seq": 245
 }

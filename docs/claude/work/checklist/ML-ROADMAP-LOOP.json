@@ -15,12 +15,18 @@
   ],
   "blocked_on": [],
   "note": "[2026-10-11T09:40Z operator request, close paraphrase, HIGH priority] Same as ROADMAP-LOOP but for the ML / AI-trader part. (1) A clear plan for the build, research AND infra. (2) Make sure it never gets forgotten: its items are in the work and research queues; mechanisms not just for training but for 'manual' (Claude) review and adjustment of ML research and infra progress so we stay on track: open-ended research for new ideas/builds, validating the plumbing, updating the roadmap and work queue from results. (3) Canonize it in the RECURRING workflows (fold into existing routines/skills: ml-review, research-ops, perf-followup, manager daily review, as fits) so it does not only get a burst of work when the operator remembers; add a line to CLAUDE.md; VERIFY it produces the correct, consistent workflow (show one full cycle producing queue units / rows). Coordinate with ROADMAP-LOOP (same mechanism, ML slice) and REGIME-PROGRAM (regime ML is one track). [2026-10-11 lane session_01BQ281YMGGWKPqyfDWbrKCb] Built: ROADMAP.md section 'AI trader (ML) - build plan'; docs/plans/ml-plan-items.yaml (28 items, each -> row/unit); scripts/ops/ml_plan_status.py (+tests); loop written into ml-review (step 9, 'The ML plan loop'), research-ops D, perf-followup, manager (weekly) and CLAUDE.md; cycle 1 record comms/ml-plan/20261011T1700Z.json. Filed rows: ML-PARITY-HARNESS, ML-PRODUCER-FUNDING, ML-LEG-CORPUS, ML-EXIT-HEAD-LIVENESS, ML-LABEL-WALL, ML-HEAD-AGREEMENT-JOIN; units RQ-20261011-17f4-01/-02/-03 (blocked/, hold PR). NOT done until observed: the loop runs unprompted in the 2026-10-18 Sunday /ml-review and produces a second comms/ml-plan record (plan item ML-L1). [2026-10-11 lane] #17555 MERGED (build, rows, checker, skills, CLAUDE.md, cycle-1 record). #17556 (3 blocked units + 3 plan items, hold) is the manager's to land; until it lands ml_plan_status.py reports 25 items, 28 after. Lane done; not closed until the observation above.",
-  "updated_at": "2026-10-11T12:15:23Z",
-  "updated_by": "session_01BQ281YMGGWKPqyfDWbrKCb",
+  "updated_at": "2026-10-24T06:01:07Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "observation": {
     "what": "The ML plan loop ran unprompted inside the 2026-10-18 Sunday /ml-review and wrote a second record comms/ml-plan/<stamp>.json (plan item ML-L1), with ml_plan_status.py --plumbing output and at least one idea filed or a stated none-because",
     "how_to_check": "ls comms/ml-plan/ on main (expect a file dated 2026-10-18); python3 scripts/ops/ml_plan_status.py --plumbing; plan items in docs/plans/ml-plan-items.yaml still resolve with 0 ORPHAN",
-    "due_by": "2026-10-20"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-20",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
   "_seq": 398
 }

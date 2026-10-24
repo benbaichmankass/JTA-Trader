@@ -12,12 +12,18 @@
   "prs": [],
   "blocked_on": [],
   "note": "[2026-10-17 lane] started; ceiling $6 [2026-10-17 lane] PARTIAL review: comms/reviews/health/2026-10-17-health-review.json. Filed PI-20261017-VSMHZYHF-0001 (disk 93.1%). 4 pipeline items redated. Only 5 of 110 due items walked; 105 untriaged ($6 ceiling). Observation to close: next health snapshot shows disk >=15% free or the disk item is dispositioned.",
-  "updated_at": "2026-10-17T07:37:01Z",
-  "updated_by": "session_019Aikjc9dG1NyzhvsMhzYhf",
+  "updated_at": "2026-10-24T06:01:05Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "observation": {
     "what": "disk item PI-20261017-VSMHZYHF-0001 dispositioned and the 105 unwalked due items picked up by a larger-ceiling lane",
     "how_to_check": "python3 scripts/ops/pipeline.py --due",
-    "due_by": "2026-10-24"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-24",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
   "roadmap": "L-OPS",
   "writeback": {

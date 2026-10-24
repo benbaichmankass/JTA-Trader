@@ -1,0 +1,18 @@
+{
+  "based_on": "20261021T205440162088Z-3ce9b494.json",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a 7-day audit_query shows zero status=dry_run pipeline_result rows and the status is dropped, or rows exist and the keep is recorded",
+    "kind": "observation"
+  },
+  "id": "PI-20261021-UTQZPZBN-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "session_01FShRZU9iZpU36ZuTqzpZbN (RETIRE-GLOBAL-POSCAP lane, PR #19375)",
+    "rerun": "scripts/ops/diag_fetch.sh audit_query (since=7d) and count status=dry_run; grep -rn '\"dry_run\"' src/runtime/pipeline.py"
+  },
+  "routed_to": "LIVE-SILENCE-DIAG (REGISTER-SWEEP-W43 2026-10-24: liveness watchdog dry_run rows)",
+  "state": "routed",
+  "what": "Liveness watchdog still counts a top-level status 'dry_run' audit row as actionable (liveness_watchdog._ACTIONABLE_STATUSES). RETIRE-GLOBAL-POSCAP only excludes multi_account_dispatched rows with accounts_placed == 0. Kept on purpose (the docstring wants an all-on-dry-run alarm) but unverified whether any pipeline path still writes that status after E1-F1. Check live audit rows for status=dry_run in a 7-day window; if none, drop it from the set."
+}

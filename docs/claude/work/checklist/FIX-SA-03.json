@@ -25,9 +25,15 @@
   "observation": {
     "what": "A `_check_broker_naked_equity_positions: sweep {...}` line shows rearmed, topped_up, breach_exits or cap_exits > 0",
     "how_to_check": "journalctl ict-trader-live windows via scripts/ops/diag_fetch.sh 'journalctl?unit=ict-trader-live&lines=2000&since=..&until=..'. 2026-10-09: sweep line IS emitting (4 per 10 min; checked 8, covered 8, broker_naked 0, partially_naked 0, errors 0) so the sweep half is observed; no re-arm/top-up event yet",
-    "due_by": "2026-10-23T00:00Z"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-23T00:00Z",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
-  "updated_at": "2026-10-09T04:36:50Z",
-  "updated_by": "session_015WZhDbDdZTbgTzGXeDzjqe",
+  "updated_at": "2026-10-24T06:01:05Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "_seq": 199
 }
