@@ -4,7 +4,7 @@
   "phase": null,
   "state": "in_flight",
   "owner": "manager",
-  "lane": null,
+  "lane": "session_016d4RRbe3JhJYCHKsDZiu5j",
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 6,
   "spend_usd": null,
@@ -13,10 +13,10 @@
     19926
   ],
   "blocked_on": [],
-  "note": "[2026-10-24T03:50Z manager session_01G3UtWJrCibCYuX2wFxsYbR] From lane MGC-VALUATION-FIX (#19806). MEASURED by that lane over ib_paper ict_scalp_mgc_15m closed rows with an exit price, n=11 (live pull): the valuation is correct at x10 (row 6610: 23.3 x 96 x 10 = 22,368; row 6603: 12.2 x 150 x 10 = 18,300, exact matches). The W30 loss (-40,668 on that leg) is real arithmetic on OVERSIZED qty: 96 and 150 micro contracts is ~USD 4M notional on a paper book. INFERRED, unverified: the risk-based sizer may be pricing MGC with the wrong point value or stop distance. QUESTION (Tier 1 investigation): why did RiskManager/sizing produce 96-150 contracts? Read src/units/accounts/risk.py and the MGC contract spec, and replay one entry's sizing inputs from the journal. OUTPUT: the root cause and the exact Tier-3 change (a sizing fix, or a qty/notional cap for this leg), proposed to the operator per manager SKILL 'Before any operator popup'. Never edit config/accounts.yaml, config/strategies.yaml or src/units/accounts/risk.py in the lane. [2026-10-24 lane] ROOT CAUSE (replay of rows 6603/6610, docs/research/mgc-sizing-oversize-2026-10-24.md): sizer is CORRECT (cvu=10, risk 1.5% flat, stop 0.26-0.40% of price => 5.8x/3.7x equity notional). Cause = no exposure ceiling on ib_paper + latent defect: exposure measure and clamp omit the contract multiplier so a declared ceiling could not bind on futures. Fix A (code, HELD Tier-3 PR #19926). Fix B (operator decision): declare max_gross_exposure_pct on ib_paper. No real-money/prop account measured exposed (bybit_2 max 0.87x, n=18).",
+  "note": "[2026-10-24T03:50Z manager session_01G3UtWJrCibCYuX2wFxsYbR] From lane MGC-VALUATION-FIX (#19806). MEASURED by that lane over ib_paper ict_scalp_mgc_15m closed rows with an exit price, n=11 (live pull): the valuation is correct at x10 (row 6610: 23.3 x 96 x 10 = 22,368; row 6603: 12.2 x 150 x 10 = 18,300, exact matches). The W30 loss (-40,668 on that leg) is real arithmetic on OVERSIZED qty: 96 and 150 micro contracts is ~USD 4M notional on a paper book. INFERRED, unverified: the risk-based sizer may be pricing MGC with the wrong point value or stop distance. QUESTION (Tier 1 investigation): why did RiskManager/sizing produce 96-150 contracts? Read src/units/accounts/risk.py and the MGC contract spec, and replay one entry's sizing inputs from the journal. OUTPUT: the root cause and the exact Tier-3 change (a sizing fix, or a qty/notional cap for this leg), proposed to the operator per manager SKILL 'Before any operator popup'. Never edit config/accounts.yaml, config/strategies.yaml or src/units/accounts/risk.py in the lane. [2026-10-24T18:23Z manager session_01EfjqotNYj6MppcEBqbGvkA] Dispatched: Sonnet, fresh, $6 (investigation, Tier 1; fix is Tier 3 via held PR). Second lane after the operator corrected this week's budget to 80% (was mis-recorded as 35% in the 01UETC6m handoff). [2026-10-24T18:31Z manager session_01EfjqotNYj6MppcEBqbGvkA] OPERATOR DECISION (popup, verbatim): \"1.5× equity (Recommended)\" — max_gross_exposure_pct 1.5x equity for ib_paper, and the same for ib_live before it is armed. Option text: caps this MGC leg at ~40 contracts at today's prices. Code fix #19926 (multiplier-aware exposure, Tier 3) is merged by the manager on green under the standing data-backed authorization; it is a no-op until a ceiling is declared. The config value is added to #19926 by the lane. [2026-10-24 lane] ROOT CAUSE (replay of rows 6603/6610, docs/research/mgc-sizing-oversize-2026-10-24.md): sizer is CORRECT (cvu=10, risk 1.5% flat, stop 0.26-0.40% of price => 5.8x/3.7x equity notional). Cause = no exposure ceiling on ib_paper + latent defect: exposure measure and clamp omit the contract multiplier so a declared ceiling could not bind on futures. Fix A (code, HELD Tier-3 PR #19926). Fix B (operator decision): declare max_gross_exposure_pct on ib_paper. No real-money/prop account measured exposed (bybit_2 max 0.87x, n=18).",
   "priority_rank": 7,
-  "updated_at": "2026-10-24T18:36:55Z",
-  "updated_by": "session_016d4RRbe3JhJYCHKsDZiu5j",
+  "updated_at": "2026-10-24T18:29:19Z",
+  "updated_by": "session_01EfjqotNYj6MppcEBqbGvkA",
   "roadmap": [
     "L-OPS"
   ],
