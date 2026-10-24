@@ -11,9 +11,9 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "Week plan 2026-10-22 (Sat). Source: 2026-10-21 walkthrough PERFORMANCE. [2026-10-24T03:18Z manager session_01G3UtWJrCibCYuX2wFxsYbR] Dispatched lane session_01WS5Ldf (Sonnet, fresh, $6): rank 8, top of runnable queue; reporting/estimation fix, told to stop and report if it reaches the order path. Capacity 1 lane (weekly 19% at 23:34Z, reset Wed 18:00Z).",
+  "note": "Week plan 2026-10-22 (Sat). Source: 2026-10-21 walkthrough PERFORMANCE. [2026-10-24T03:18Z manager session_01G3UtWJrCibCYuX2wFxsYbR] Dispatched lane session_01WS5Ldf (Sonnet, fresh, $6): rank 8, top of runnable queue; reporting/estimation fix, told to stop and report if it reaches the order path. Capacity 1 lane (weekly 19% at 23:34Z, reset Wed 18:00Z). [2026-10-24T03:50Z manager session_01G3UtWJrCibCYuX2wFxsYbR] Lane delivered #19806 (head 0be9f540, landing hold: Tier-2 by path, src/web/api/routers/trades_closed.py). The change is read-only and additive: a stored pnl 0.0 that classify_pnl already marks UNVERIFIED now serves realizedPnl=null, plus reconstructedPnl (ESTIMATED) from entry/exit/qty x the existing contract_value_usd_for. Manager reviewed the diff. DB backfill of the 9 zero rows is NOT done and is deliberately not proposed: writing a reconstruction into trades.pnl would fold ESTIMATED into the measured column (CLAUDE.md provenance rule); the API now serves it labelled instead. Sizing finding filed as MGC-SIZING-OVERSIZE.",
   "priority_rank": 8,
-  "updated_at": "2026-10-24T03:18:20Z",
+  "updated_at": "2026-10-24T03:47:58Z",
   "updated_by": "session_01G3UtWJrCibCYuX2wFxsYbR",
   "roadmap": [
     "L-OPS"
