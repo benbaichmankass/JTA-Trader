@@ -12,8 +12,8 @@
   "prs": [],
   "blocked_on": [],
   "note": "[2026-10-24T03:50Z manager session_01G3UtWJrCibCYuX2wFxsYbR] From lane MGC-VALUATION-FIX (#19806). MEASURED by that lane over ib_paper ict_scalp_mgc_15m closed rows with an exit price, n=11 (live pull): the valuation is correct at x10 (row 6610: 23.3 x 96 x 10 = 22,368; row 6603: 12.2 x 150 x 10 = 18,300, exact matches). The W30 loss (-40,668 on that leg) is real arithmetic on OVERSIZED qty: 96 and 150 micro contracts is ~USD 4M notional on a paper book. INFERRED, unverified: the risk-based sizer may be pricing MGC with the wrong point value or stop distance. QUESTION (Tier 1 investigation): why did RiskManager/sizing produce 96-150 contracts? Read src/units/accounts/risk.py and the MGC contract spec, and replay one entry's sizing inputs from the journal. OUTPUT: the root cause and the exact Tier-3 change (a sizing fix, or a qty/notional cap for this leg), proposed to the operator per manager SKILL 'Before any operator popup'. Never edit config/accounts.yaml, config/strategies.yaml or src/units/accounts/risk.py in the lane.",
-  "priority_rank": 6,
-  "updated_at": "2026-10-24T03:47:58Z",
+  "priority_rank": 7,
+  "updated_at": "2026-10-24T05:56:00Z",
   "updated_by": "session_01G3UtWJrCibCYuX2wFxsYbR",
   "roadmap": [
     "L-OPS"
