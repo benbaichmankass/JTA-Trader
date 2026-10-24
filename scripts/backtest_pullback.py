@@ -241,6 +241,7 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                  adx_soft_weight_min: float = 0.0,
                  direction_filter: str = "off",
                  be_floor_r: float = 0.0,
+                 be_floor_lock_r: float = 0.0,
                  stale_exit_bars: Optional[int] = None,
                  stale_exit_below_r: float = 0.0,
                  flip_exit_bars: Optional[int] = None,
@@ -775,8 +776,11 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                 # `scripts/backtest_trend.py`, which carries the full rationale —
                 # the three ratchet units share one trail geometry, so the lever
                 # must mean the same thing in each harness that models one.
+                # ADA-LIVE-EXIT-REVIEW-1024 profit-lock STEP: with
+                # be_floor_lock_r = k > 0 the armed floor sits at entry + k R
+                # instead of entry (0.0 = the plain break-even floor, unchanged).
                 if be_floor_r > 0.0 and mfe >= be_floor_r:
-                    trail = max(trail, entry)
+                    trail = max(trail, entry + be_floor_lock_r * risk)
             else:
                 if lo < ext:
                     ext, ext_j = lo, j
@@ -789,7 +793,7 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                 mfe = max(mfe, (entry - ext) / risk)
                 # MI-165 break-even FLOOR — short side; `min()` tightens here.
                 if be_floor_r > 0.0 and mfe >= be_floor_r:
-                    trail = min(trail, entry)
+                    trail = min(trail, entry - be_floor_lock_r * risk)
             # momentum_trail attribution: was the stop last moved on a bar the
             # ADX condition fired on?
             if mom_trail_on and trail != _trail_prev:
@@ -1058,6 +1062,8 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                               "atr_stop_mult": atr_stop_mult,
                               "trail_mult": trail_mult,
                               **({"be_floor_r": be_floor_r} if be_floor_r > 0.0 else {}),
+                              **({"be_floor_lock_r": be_floor_lock_r}
+                                 if be_floor_r > 0.0 and be_floor_lock_r > 0.0 else {}),
                               "min_confidence": min_confidence}
     if confirm_bars > 0:
         params["confirm_bars"] = confirm_bars
@@ -1362,6 +1368,10 @@ def main(argv: List[str]) -> int:
                    help="MI-165 break-even FLOOR (0=off, byte-identical): once "
                         "the trade has SEEN this many R, the trailing stop may "
                         "never again sit below entry.")
+    p.add_argument("--be-floor-lock-r", type=float, default=0.0,
+                   help="Profit-lock STEP for --be-floor-r (0=off, byte-identical): "
+                        "the armed floor sits at entry + this many R instead of "
+                        "entry. Must be < --be-floor-r. Pullback harness only.")
     p.add_argument("--trail-mult", type=float, default=5.0,
                    help="Chandelier trail distance in ATR (live default 5.0).")
     p.add_argument("--timeout-bars", type=int, default=200)
@@ -1721,6 +1731,7 @@ def main(argv: List[str]) -> int:
                        atr_stop_mult=args.atr_stop_mult,
                        trail_mult=args.trail_mult,
                        be_floor_r=args.be_floor_r,
+                       be_floor_lock_r=args.be_floor_lock_r,
                        timeout_bars=args.timeout_bars,
                        cooldown_bars=args.cooldown_bars,
                        timeframe=args.timeframe,
