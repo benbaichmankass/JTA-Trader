@@ -413,6 +413,18 @@ case "${action}" in
             *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
         esac
         ;;
+    amend-position-sl)
+        # 2026-10-24 (AMEND-SL-ACTION): tighten one live Bybit stop, venue +
+        # journal together; dry-run unless apply:true.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok (dry-run preview, applied+verified, or already applied)"; priority="high" ;;
+            1) result="amend FAILED or did not verify at the venue — check the stop by hand"; priority="urgent" ;;
+            2) result="refused by a guard (looser stop, wrong side of mark, missing row/position, non-live account)"; priority="high" ;;
+            3) result="COULD NOT LOOK (journal or venue unreadable) — nothing changed; re-run the dry-run"; priority="high" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
     cancel-stale-tpsl-legs)
         # 2026-07-21: cancel accumulated stale Partial-tpsl legs on one Bybit
         # symbol (BL-20260721-BYBIT2-XRP-TPSL-LEGCAP; dry-run unless apply:true;
