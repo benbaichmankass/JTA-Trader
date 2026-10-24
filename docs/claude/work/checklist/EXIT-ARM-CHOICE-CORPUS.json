@@ -2,22 +2,33 @@
   "id": "EXIT-ARM-CHOICE-CORPUS",
   "title": "Per-arm harness emits joined on entry + a state-conditioned chooser grader over validated rule exits",
   "phase": "research-infra",
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": null,
   "lane": null,
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    19966
+  ],
   "blocked_on": [],
   "note": "[2026-10-24 lane ATM-AI-MERGE] WHY: AI active trade management rung C1 (blocked/RQ-20261024-09a6-04): a policy layer choosing among already-validated rule levers (trail_decay stall, ADX trail, momentum-stale, stall pull-in TP) per trade. Offline every arm's outcome is OBSERVABLE by re-running the harness, so no propensity / DR-OPE is needed (RQ-20261011-9da8-04 keeps the live-logged OPE case). BUILD: extend exit_lever_ablation.py (or a sibling) to keep each arm's --emit-trades, join on (leg, entry_ts, side), report entry-set agreement, and grade a cost-sensitive multinomial logistic chooser on entry-bar state vs A and the train-fold best fixed arm, 6 calendar folds, capital-days. Self-tests: a planted arm x state interaction is recovered; shuffled state finds nothing. Tier 1. CLOSES WHEN: 09a6-04 leaves blocked/ with run.command set.",
   "priority_rank": 3,
-  "updated_at": "2026-10-24T20:36:16Z",
-  "updated_by": "session_01SKceRaKdcBrCiQ6U2MNhN3",
+  "updated_at": "2026-10-24T23:34:26Z",
+  "updated_by": "session_015PgrgQm11mCbUfuw4Re9W4",
   "roadmap": [
     "L-ATM",
     "M23"
   ],
+  "writeback": {
+    "roadmap": "L-ATM: rung C1 instrument exists (exit_arm_chooser.py: per-arm emit join + entry-set agreement + cost-sensitive multinomial chooser grader); RQ-20261024-09a6-04 is queued with run.command, not graded",
+    "arch": "none: offline research script + tests + queue unit; no runtime component, path or contract changed"
+  },
+  "observation": {
+    "what": "the first graded run of RQ-20261024-09a6-04 lands a verdict (research/results/RQ-20261024-09a6-04/) with entry-set agreement and the chooser vs best-fixed record",
+    "how_to_check": "ls research/results/RQ-20261024-09a6-04/ ; jq .verdict,.note,.measurement.entry_set_agreement.excluded_share research/results/RQ-20261024-09a6-04/*/verdict.json",
+    "due_by": "2026-11-02"
+  },
   "_seq": 636
 }
