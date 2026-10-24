@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "touches src/units/accounts/risk.py (exposure measure + clamp); Tier-3 sizing. The ceiling VALUE for ib_paper is a separate operator decision in config/accounts.yaml and is NOT in this PR.",
+  "why": "Makes max_gross_exposure_pct count the futures contract multiplier (qty*price*contract_value_usd). Behaviour is byte-identical for every account with no ceiling declared (all of them today) and for crypto/equity (cvu=1.0). Evidence: row MGC-SIZING-OVERSIZE."
+}
