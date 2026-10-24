@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Edits src/runtime/order_monitor.py (live monitor tick, Tier-2 by path). Bookkeeping only: a per-trade in-process dict the forward reconciler writes and the stuck-strategy watchdog reads into trades.notes['reconciler_last'] and its log line. No branch, order, gate, halt or mode change. Lane WATCHDOG-CLOSE-RECURRENCE (Manager Session 2026-10-24): manager puts it to the operator; do not self-merge.",
+  "why": "The three known stuck_strategy_watchdog closes (6528, 6549 bybit_2; 6634 bybit_1) are root-caused and their fixes (#17455, #18514) are deployed; the one thing that could not be recovered is why the forward reconciler did not close 6528/6549 first (trader journal rotated). This makes the next occurrence diagnosable from the row itself."
+}
