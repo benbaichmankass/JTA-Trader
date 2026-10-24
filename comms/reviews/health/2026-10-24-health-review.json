@@ -1,0 +1,3452 @@
+{
+ "reviewed_at": "2026-10-24T08:10:00Z",
+ "reviewer": "claude",
+ "lane": "HEALTH-REVIEW-20261024",
+ "window": {
+  "start": "2026-10-21T18:40:00Z",
+  "end": "2026-10-24T08:00:00Z",
+  "anchor": "comms/reviews/health/2026-10-21-health-review.json (newest by name)"
+ },
+ "overall_assessment": "investigate",
+ "operator_attention_required": false,
+ "coverage_statement": "Direct diag pulls: status, services, audit limit=600 (25 min tail), trades and order_packages limit=100, exchange_positions, orphan_events, ssh.service slices, /api/bot/health latest+history 336h. Not done: PRAGMA integrity_check (relay cannot), trainer-VM service touch, per-item pipeline walk, secret-scanning API.",
+ "findings": {
+  "services": {
+   "status": "ok",
+   "note": "trader-live, web-api, caddy, ssh, telegram-bot, claude-bridge active; health snapshot 07:19Z 8/8 ok."
+  },
+  "deploy_state": {
+   "status": "ok",
+   "note": "running sha 4a60daf02 vs HEAD 85bfd586: git diff --name-only shows 0 files under src/ or config/ (467 files, docs/comms/research/.github)."
+  },
+  "broker_reachability": {
+   "status": "ok",
+   "note": "exchange_positions error=null for bybit_1/2/portfolio, alpaca, ib_paper; 8/8 recorded broker-API accounts ok in snapshot; 4 manual-bridge + 2 shelved not checked (as the snapshot states)."
+  },
+  "pipeline_plumbing": {
+   "status": "ok",
+   "note": "last 100 trades rows (2026-10-15..10-23): 43 closed, 0 missing pnl/exit_reason/closed_at/exit_price, 0 closed<opened, 0 orphan markers, 7 open all with stop_loss."
+  },
+  "non_tp_sl_closes": {
+   "status": "watch",
+   "note": "43 closed: operator_flatten_reconciled x3 (ADA 10-21, rows carry operator_flatten_intent), pairs_revert x10, stuck_strategy_watchdog x1 (bybit_1 pairs 10-15); tracked by WATCHDOG-CLOSE-RECURRENCE, note appended."
+  },
+  "orphans": {
+   "status": "ok",
+   "note": "orphan_events.jsonl 61 lines, newest 2026-09-17T01:27Z, 0 since 2026-10-21; 0 orphan-marked rows in the trades pull."
+  },
+  "strategy_silence": {
+   "status": "watch",
+   "note": "audit tail is 25 min: 29 of 53 enabled strategies show *_eval; the 24 absent are 1d/1h equity legs (Saturday, market closed) or 2h/4h crypto between bar closes. Not proof either way: denominator too short."
+  },
+  "db_integrity": {
+   "status": "watch",
+   "note": "integrity_check not fetched (relay cannot). Newest trades/order_packages row 2026-10-23T23:00Z, 8 h before the pull (Saturday); 5 prop 'emitted' packages 10-15..10-20 are manual-bridge (ROUTE-PROP-TRACKING)."
+  },
+  "disk": {
+   "status": "watch",
+   "note": "26.7% free (12.0 GB) vs 15 GB free right after the 10-17 prune: ~+5 pts used in 7 d. PI-20261017-VMDGITZI-0002 redated; prevention items still undone."
+  },
+  "research_pipeline": {
+   "status": "watch",
+   "note": "monitor ran every day 10-16..10-24, max run gap 4.6 h, 0 undelivered. Red days: theme_share_min_ratio 9/9, research_ops_not_run 9/9, runnable_floor 5/9, grade_latency 5, undispositioned 2, blocked_over_age 2. Owners: AUD-20261019-RESEARCH-SLO-RED (queued), THEME-AUTHOR-1022, RESEARCH-HEALTH-W43. self-test OK."
+  },
+  "security": {
+   "status": "watch",
+   "note": "2 non-trainer ssh logins 2026-10-24 03:59Z unattributed (ONHEALTH-0001); auth sweep covered ~3.5 h of 3 days (ONHEALTH-0002)."
+  },
+  "tp_doctrine": {
+   "status": "watch",
+   "note": "check_tp_doctrine --strict: 0 compliant of 52 routings (real_money 7: 2 entry_fail, 6 revision_fail; prop 6: 6/6; mirror 6: 2/5; paper 33: 12/32). Carried by PI-20261006-5FUGHVX8-0001; no baseline line removable."
+  },
+  "pipeline_open_set": {
+   "status": "concern",
+   "note": "due 110 -> 256 -> 369 over 10-17/10-21/10-24; 0 unrouted (was 25); 158 route to landed_unproven rows. ONHEALTH-0003."
+  }
+ },
+ "security_check": {
+  "status": "watch",
+  "sources_checked": [
+   "run_secret_scanning: NOT run (tool now requires a files argument) = could_not_look",
+   "list_repository_collaborators: 1 (owner only)",
+   "git-history regexp scan for AKIA/ghp_/PEM/api_secret over non-doc paths since 2026-10-09: 0 hits",
+   "authors on origin/main since 2026-10-09: Ben 2044, Claude 14",
+   "64 commits touched .github/workflows since 10-09, 16 new workflow files, all from those two authors",
+   "ssh.service: 3 slices, ~3.5 h"
+  ],
+  "signals": [
+   "2 non-trainer accepted ssh logins 2026-10-24T03:59:04Z/03:59:06Z (unattributed)"
+  ],
+  "note": "No confirmed breach. NOT a clean bill: secret-scanning API not run, deploy keys/Actions secrets not enumerable from the lane, external-actor check by collaborator list only, auth log ~3.5 h sampled."
+ },
+ "soak_decisions_due": [
+  {
+   "what": "soak report: 7 ready, 15 dead, 0 could-not-look, 13 accruing (35 tracked; 25 soak items in the due set)",
+   "gate_met": "ready/dead per scripts/ops/soak_report.py",
+   "owner_skill": "manager / performance-review",
+   "sla_state": "owner AUD-20261019-SOAK-ITEMS-LONG-EXIT; surfaced, not decided"
+  }
+ ],
+ "new_work_compliance": {
+  "prs_audited": 0,
+  "commits_audited": 15,
+  "findings": [],
+  "note": "NOT a full audit: 2058 commits since 2026-10-09 are not individually reviewed. Audited the 15 unique commits touching config/strategies.yaml, config/accounts.yaml, src/runtime/orders.py, src/runtime/risk_counters.py; read the two without a Tier-3 tag in the title (#19403 ief to paper: 'operator 2026-10-21' + landing declaration; #19375 RETIRE-GLOBAL-POSCAP: pr-landing hold citing the verbatim popup answer). No missing approval found. #18500 (SOL prop promotion to bybit_2) not checked against its soak record."
+ },
+ "sprint_doc_review": [],
+ "backlog_coverage": {
+  "open_at_start": 369,
+  "triaged": 369,
+  "individually_revalidated": 8,
+  "resolved": 0,
+  "fixed_now": 0,
+  "closed_stale": 0,
+  "kept_open": 369,
+  "count_untriaged": 361,
+  "gate_satisfied": false,
+  "sources": [
+   "pipeline",
+   "checklist"
+  ],
+  "per_surface": {
+   "pipeline_due": 368,
+   "checklist_rows_read": 781,
+   "checklist_rows_owned_by_this_review": 1
+  },
+  "note": "GATE NOT SATISFIED, stated plainly. All due items are owner-routed (0 unrouted); each carries a computed owner-state, but only individually_revalidated were re-checked against live state. Deliberately no bulk re-date (BACKLOG-BURNDOWN-2 lapse wave). See PI-20261024-ONHEALTH-0003. (368 still due after this run; the 369th, VMDGITZI-0002, was redated with an observation.)"
+ },
+ "backlog_drain": [
+  {
+   "id": "PI-20260921-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "E9",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260921-M07",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "E14",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "OI-20260826-JOURNAL-TRUST-COVERS-ONE-ACCOUNT",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RECON",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "OI-20260902-BYBIT-COVERAGE-BASIS-MERGED-WITH-ARMING-DELIBERATELY-HELD-FOR-A-SOAK",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "COVERAGE-SOAK-MODE-SPLIT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "OI-20260903-CLOSE-WEDGE-LEDGER-MERGED-AND-HAS-NEVER-BEEN-OBSERVED-PRESENT-ON-THE-FLEET",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "OI-20260908-ALPACA-QUANTITY-COVERAGE-SHIPPED-AND-A-56-SHARE-NAKED-POSITION-IS-STANDING",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PROTECTION-HARDENING",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "OI-20260908-A-HEDGE-BOOK-FLAT-READ-IS-CLOSING-LIVE-BYBIT-POSITIONS-AND-THE-FLAP-GUARD-CANNOT-SEE-IT",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "OI-20260909-POSITION-READ-STATE-SOAK-DECIDES-WHETHER-THE-COLLAPSED-READ-EVER-FIRES",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "API-COLLAPSED-STATES",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "OI-20260909-CLOSED-FLAT-INVARIANT-CAN-FINALLY-SPEAK-AND-HAS-NOT-YET-SPOKEN",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "OI-20260910-F39-STRANDED-PACKAGE-LEGS-DETECTOR-BUILT-AND-THE-REATTACH-AWAITS-AN-OPERATOR-YES-NO",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PROTECTION-HARDENING",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "OI-20260917-THE-NETTING-POST-FIX-REMEASURE-IS-RUNNABLE-AND-UNDER-POWERED-AND-ITS-N-ARRIVES-ON-A-DATE",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "NETTED-SLICES",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260812-ACTIONS-RUNNER-TLS-VERIFY-FAILS-AS-RED",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-CI-LANDING-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260721-XRPTPSL-ENTRYCAPTURE-VERIFY",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "NETTED-SLICES",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260525-005",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PROP-MISSION-MODEL",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260726-CLAUDE-PING-INBOX-SPLIT-BRAIN",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-CI-LANDING-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260730-BYBIT1-XRP-LEG-OVERACCUM-WORSENING",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PROTECTION-HARDENING",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260730-SCALP-LONG-HOLDS-UNEXPLAINED",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "EXIT-OPS",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260801-NETTING-PARTIAL-CLOSE-ROWS-NEVER-REDUCED",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "NETTED-SLICES",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260807-SPLG-NO-CANDLES-STRATEGY-CANNOT-EVALUATE",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-LEG-EVIDENCE",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260808-GROSS-EXPOSURE-CAP-INERT-AND-UNOBSERVABLE",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ACCOUNTS-STATUS-EXPOSURE-OBSERVE",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260815-TRAINER-VM-THRASHING-4GB-SWAP-DEGRADES-EVERY-JOB",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "E6",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260816-TWO-SWEEP-DEFAULTS-ARE-TIER3-AND-LIVE-ONLY-IN-A-DATED-MEMO",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-RESEARCH-HARNESS-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260820-DIAG-FETCH-CANONICAL-BASE-VERIFIED-FROM-ONE-SESSION-ONLY",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-CI-LANDING-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260821-ICTSCALP-TP-CROSSED-BOOKED-AS-ESTIMATE",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260823-ZOMBIE-ROUTINES-ENABLED-WITH-NULL-NEXT-RUN",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-CI-LANDING-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260824-E35-SWEEP-FEED-IS-BINANCE-ONLY-FOR-A-MOSTLY-NON-CRYPTO-MATRIX",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-RESEARCH-HARNESS-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260825-TRAINER-DISK-AT-91PCT-AND-ITS-OWN-GC-RECLAIMS-ALMOST-NOTHING",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "SA-INFRA",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260825-PLACE-PROTECTIVE-COUNTS-THE-CANCEL-CALL-NOT-ITS-EFFECT",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260825-PROP-FILLS-RECORD-WHEN-THEY-WERE-REPORTED-NOT-WHEN-THEY-TRADED",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-PROP-TRACKING",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260830-CONCURRENCY-PENDING-CANCEL-IS-A-CLASS-ACROSS-THREE-WORKFLOWS",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-CI-LANDING-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260830-E35-LANDING-ASSERTION-IS-VACUOUS-ON-A-CUMULATIVE-CORPUS",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-RESEARCH-HARNESS-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260830-A-TRANSIENT-RED-BASE-PERMANENTLY-STRANDS-AN-AUTOMERGE-BRANCH",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-CI-LANDING-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260830-BROKER-TRUTH-LEDGER-STALE-59-REAL-MONEY-CLOSES-UNRECONCILED",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "LEDGER-REFRESH",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260901-SEND-PING-ACCEPTS-WHY-AND-UNPROVEN-WITHOUT-KIND-AND-SILENTLY-DISCARDS-THEM",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-CI-LANDING-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260901-SYSTEM-ACTIONS-CANCELS-A-SUPERSEDED-PENDING-RUN-AND-COMMENTS-NOTHING-BACK-SO-A-DISPATCHED-ACTION-IS-SILENTLY-LOST",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-CI-LANDING-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260902-TWO-SIBLING-HF-HARNESSES-DISAGREE-ON-SIGNAL-TTL-SEMANTICS",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-RESEARCH-HARNESS-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260903-PR-LANDING-GUARD-RED-LOCKS-EVERY-AUTOMATION-PR",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-CI-LANDING-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260903-BOARD-POST-HEADER-CLAIMS-IT-REMOVES-THE-REQUEST-AND-THE-CODE-DELIBERATELY-DOES-NOT",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-CI-LANDING-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260908-GRADE-CLOSED-TRADES-REPORTS-TRUNCATED-FALSE-WHILE-THE-ISSUE-COMMENT-DROPS-60-PERCENT-OF-THE-DELTA",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "GRADE-ALERT",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260908-PR-LANDING-ARMS-A-ROUTE-THAT-CANNOT-FIRE-ON-A-NON-CLAUDE-BRANCH",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUTOMERGE-GAPS",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260910-EXIT-EVAL-60S-BREACHES-DID-NOT-CEASE-1216-LIFETIME-MAX-120S-AND-EVERY-PRIOR-READ-WAS-A-TAIL",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260911-DB-EXPLORER-GATE-MERGED-WITH-BOTH-ITS-OWN-HELD-PRECONDITIONS-MEASURED-FALSE",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "DATA-EXPLORER",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260911-THE-SHARED-COMMIT-TO-MAIN-LANDING-STEP-IS-THE-LARGEST-SINGLE-CAUSE-OF-DISCARDED-AUTOMATION-OUTPUT",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-CI-LANDING-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260912-A-GREEN-PYTEST-RUN-REPORTS-N-SKIPPED-AND-NOTHING-ABOUT-WHICH-N-SO-A-WHOLE-GUARDS-TEST-MODULE-CAN-GO-DARK-UNNOTICED",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-CI-LANDING-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260912-NOTHING-IN-THE-ORDER-PATH-ENFORCES-THE-PROP-DRAWDOWN-FLOOR-AND-THE-RISK-COUNTERS-CANNOT-SEE-PROP-TRADES",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUD-20261019-PROP-INVARIANT-BLIND",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260912-EVERY-IB-CLOSE-IN-THE-WINDOW-RECORDS-A-PNL-OF-EXACTLY-ZERO-WHILE-THREE-OF-THEM-MOVED-35-POINTS-ON-DOZENS-OF-LOTS",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PROV-IB",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260912-THE-TRIAGE-GATE-CANNOT-TELL-AN-UNSTATED-COUNT-FROM-A-ZERO-ONE-UNTIL-REPORTS-CARRY-THE-FIELD",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-CI-LANDING-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260912-FIFTEEN-MORE-HARNESSES-LET-SYMBOL-BE-A-LABEL-OVER-A-DEFAULTED-DATA-FILE-AND-FOURTEEN-SHARE-ONE-FIXTURE",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-RESEARCH-HARNESS-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260917-MAIN-HAD-NO-CADENCE-DRIVEN-CHECK-SO-A-CORRUPT-TIP-WAS-INVISIBLE-FOR-UP-TO-SEVEN-HOURS-AND-THE-CALENDAR-CLASS-WAS-INVISIBLE-ALWAYS",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-CI-LANDING-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260917-A-LANE-IS-RESUMED-BY-DEFAULT-SO-A-FRESH-UNIT-PAYS-THE-PREDECESSORS-WHOLE-CONTEXT-AS-CACHE-READS-EVERY-TURN",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "A1",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PB-20260821-R-AND-DOLLARS-DISAGREE-IN-SIGN",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-LEG-EVIDENCE",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PB-20260822-AVAX-SCALP-SIZED-OFF-MARGIN-NOT-RISK",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "EXIT-OPS",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PB-20260830-XRP-4H-FIRST-CLOSE-UNDER-NEW-BRACKET-UNVERIFIED",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-LEG-EVIDENCE",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "MB-20260712-SHADOW-LOG-HISTORY",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "SA-DATA",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "MB-20260719-PROMOREADY-OOSEDGE-OOM",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ML-HYGIENE",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "BL-20260911-THE-DRIFT-GATE-READS-ONE-UNROTATED-FILE-SO-ITS-30-DAY-REFERENCE-WINDOW-COVERS-28-DAYS-AND-71-PERCENT-OF-THE-FLEET-IS-BLOCKED-ON-AN-UNTRUSTWORTHY-VERDICT",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ML-DRIFT-COVERED-SPAN",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260921-E16-BALANCE-FETCHER-PROP-BRANCH-RARELY-REACHED",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "EXEC-FIX",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260922-UTN353OZ-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-LEG-EVIDENCE",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260922-E45-SRC-RUNTIME-OPERATOR-OWED-IS-IMPORTED-BY-NOTHING-OUTSIDE-ITS-OWN-TEST",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "E9",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260922-E45-SESSION-END-RECONCILIATION-STILL-ROUTES-SESSIONS-TO-THREE-ARCHIVED-BACKLOGS",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "E9",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260922-E45-GREEN-IS-NOT-EVIDENCE-RULE-2-NAMES-ARTIFACT-VALIDITY-GUARD-WHICH-THE-RESET-REMOVED",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "E9",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260922-54WQNHJX-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "E30",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260922-HDZFTGH2-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "E9",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260923-JN54P2HH-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "E49",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260924-JN54P2HH-0006",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "E14",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260924-GKIASQWZ-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "DOCS-DRIFT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260924-MQ3CDMU6-0005",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-PROP-TRACKING",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260924-E51-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "GUARD-FIDELITY",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260924-E57-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-CI-LANDING-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260924-KDCZMHX8-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "GUARD-FIDELITY",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260924-GIGNEYV1-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-PROP-TRACKING",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260924-2S8DXGTZ-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-LEG-EVIDENCE",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260924-5V6UVR9J-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "SA-INFRA",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260924-PN2PXMTE-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "LEDGER-REFRESH",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260925-HVCIFOQV-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "E35",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260925-HVCIFOQV-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260925-BN2S6RQZ-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUTOMERGE-GAPS",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260925-41YPPGWO-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "GUARD-FIDELITY",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260925-41YPPGWO-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "GUARD-FIDELITY",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260925-PLUMBING-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "E6",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260925-PPXZFQSC-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUTOMERGE-GAPS",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260925-D9FNL9SC-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ML-HYGIENE",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260925-7P3VZ7EJ-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-RESEARCH-HARNESS-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260925-OOFSWEEP-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-CI-LANDING-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260925-E4-ACTION-REQUIRED-RERUN-WORKAROUND",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUTOMERGE-GAPS",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260925-HSMBU7G9-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "GUARD-FIDELITY",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-BOVNQFJU-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-EPMBGUYB-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "GUARD-FIDELITY",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-EPMBGUYB-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "GUARD-FIDELITY",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-KFWRL9R1-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PROTECTION-HARDENING",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-KFWRL9R1-0011",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PROTECTION-HARDENING",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-KFWRL9R1-0012",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PROTECTION-HARDENING",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-KFWRL9R1-0013",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PROTECTION-HARDENING",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-KFWRL9R1-0014",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-GU9VGVPE-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUTOMERGE-GAPS",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-ECILBBVH-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-ECILBBVH-0004",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-ECILBBVH-0005",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-ECILBBVH-0006",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-ECILBBVH-0007",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-ECILBBVH-0008",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-ECILBBVH-0009",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-3Z13XIHK-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "GUARD-FIDELITY",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-MJX1ZKYC-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "DOCS-DRIFT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-MJX1ZKYC-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "E9",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-RLBXQDGK-0004",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-R1DJ7SUQ-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "DOCS-DRIFT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-CAA07-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-DPSCDUBQ-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "JC-GIT",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-3WM5HADW-0004",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ML-HYGIENE",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-3WM5HADW-0005",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ML-HYGIENE",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-EJ89Y6IE-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "GUARD-FIDELITY",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-EJ89Y6IE-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "GUARD-FIDELITY",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-EJ89Y6IE-0004",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "DOCS-DRIFT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-EJ89Y6IE-0006",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "DOCS-DRIFT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-EJ89Y6IE-0007",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "DOCS-DRIFT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-4RNJRRFS-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "GUARD-FIDELITY",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-CAB09-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "DOCS-DRIFT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-CAB09-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "DOCS-DRIFT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-CAB09-0004",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "DOCS-DRIFT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-CAB09-0008",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "DOCS-DRIFT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-W6PROPO1-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-PROP-TRACKING",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260927-2SKAFUF5-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PROP-GATE-PARITY",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260928-HQDITADZ-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "GUARD-FIDELITY",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260928-4UNXYJIA-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-PROP-TRACKING",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260928-C4KXTCUS-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ACCOUNTS-STATUS-EXPOSURE-OBSERVE",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260928-TURC5MJC-0007",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUTOMERGE-GAPS",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260928-BFIXLANE-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-RESEARCH-HARNESS-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260928-3QJJAY5Y-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "FIX-SA-03",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-YGGMZWK7-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "M20-EXITS",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-EXITOPS-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "M20-DECLARE-FOLLOWUPS",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-TEKRDIIQ-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-RESEARCH-HARNESS-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-TWEW1FZJ-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-VOLSKIP-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "VOLSKIP-FORMING",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-VOLSKIP-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "VOLSKIP-FORMING",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-PXGMJYTX-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-K85Q64SF-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ML-PRODUCERS",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-K85Q64SF-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ML-PRODUCERS",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-K85Q64SF-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ML-PRODUCERS",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-K85Q64SF-0004",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ML-PRODUCERS",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-K85Q64SF-0005",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ML-HYGIENE",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-EA899ZCS-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PROV-IB",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-BTG1YDOI-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "SA-INFRA",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-RQRUN-CLOSEOUT-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-RESEARCH-HARNESS-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-HXO9WPVH-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PROV-IB",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-HXO9WPVH-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PROV-IB",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-HXO9WPVH-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "LEDGER-REFRESH",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-HXO9WPVH-0004",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PROV-IB",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-VOLSKIP-SIGNAL-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "DECISION-BAR-MATCH",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-VOLSKIP-SIGNAL-0004",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "VOLSKIP-FORMING",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-2PNSPDNU-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-PROP-TRACKING",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-VOLSKIP-SIGNAL-0007",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "B3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-AQRK6CL1-0007",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "GUARD-FIDELITY",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-QSURYUHK-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "B3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-2PNSPDNU-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-PROP-TRACKING",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-EXITOPS-0010",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "EXIT-OPS",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-AQRK6CL1-0010",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-PROP-TRACKING",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-FCJRWVAK-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "CANDLE-REFRESH",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-AQRK6CL1-0011",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-PROP-TRACKING",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260929-AQRK6CL1-0013",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PATHB-MANDATE",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260930-ZPDIPMDA-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260930-KMYJ5XC7-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-PROP-TRACKING",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260930-ZIFJ1RKM-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260930-KMYJ5XC7-0006",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PROP-EXEC-PARTIAL-FILL",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260930-MEK2XMWT-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260930-MEK2XMWT-0004",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260930-MEK2XMWT-0005",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260930-MEK2XMWT-0006",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260930-KMYJ5XC7-0008",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-PROP-TRACKING",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260930-KMYJ5XC7-0009",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PROP-EXEC-PARTIAL-FILL",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260930-39SDYWCO-0008",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PATHB-MANDATE",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20260930-ZIFJ1RKM-0006",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261001-1MX1RCZS-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "REGIME-SCOPE",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261001-E74LANE-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "E74-SOL-SHORT-PREREG",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261001-IDQ1HLJD-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261001-IDQ1HLJD-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261001-IDQ1HLJD-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "DOCS-DRIFT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261002-UBMITVIS-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-PROP-TRACKING",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261002-EFKI6YYD-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-PROP-TRACKING",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261002-APBY4NTV-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PROP-EXIT-READ",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261002-EFKI6YYD-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-PROP-TRACKING",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261003-DEIFYDRY-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-PROP-TRACKING",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-LRP-7B522184",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "LIVE-PARITY",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-LRP-4A71B0FC",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "LIVE-PARITY",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-LRP-3AFA5FB5",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "LIVE-PARITY",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-LRP-9A512273",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "LIVE-PARITY",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-LRP-DF7A0332",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "LIVE-PARITY",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-GCFA5DOR-0004",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-GCFA5DOR-0006",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "OPS-AUDIT",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-GCFA5DOR-0007",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RESTART-SAFE",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-GCFA5DOR-0010",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "OPS-AUDIT",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-PUQ1APTH-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "OPS-AUDIT",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-PUQ1APTH-0005",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-PROP-TRACKING",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-PUQ1APTH-0006",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "OPS-AUDIT",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-PUQ1APTH-0007",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "OPS-AUDIT",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-WGO5DRFX-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-PROP-TRACKING",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-GCFA5DOR-0011",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "OPS-AUDIT",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-PUQ1APTH-0008",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-CI-LANDING-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-ZBHFJG6X-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-LEG-EVIDENCE",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-ZBHFJG6X-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-ZBHFJG6X-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "GRADE-ALERT",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-ZBHFJG6X-0004",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "GRADE-ALERT",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-ZBHFJG6X-0005",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "EXIT-OPS",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-ZBHFJG6X-0006",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "EXIT-OPS",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-AHCVAAF5-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ML-HYGIENE",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-P24XMV4V-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RQ-20261007-022",
+   "owner_state": "not_a_checklist_row",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-P24XMV4V-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RQ-20261007-024",
+   "owner_state": "not_a_checklist_row",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-P24XMV4V-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RQ-20261007-025",
+   "owner_state": "not_a_checklist_row",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-P24XMV4V-0004",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RQ-20261007-023",
+   "owner_state": "not_a_checklist_row",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-SOAK-20261004-alpaca_paper-gld_pullback_1d",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUD-20261019-SOAK-ITEMS-LONG-EXIT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-SOAK-20261004-alpaca_paper-ief_pullback_1d",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUD-20261019-SOAK-ITEMS-LONG-EXIT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-SOAK-20261004-alpaca_paper-tqqq_trend_long_1d",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUD-20261019-SOAK-ITEMS-LONG-EXIT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-SOAK-20261004-bybit_1-ada_pullback_2h",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUD-20261019-SOAK-ITEMS-LONG-EXIT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-SOAK-20261004-bybit_1-trend_donchian_eth_4h",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUD-20261019-SOAK-ITEMS-LONG-EXIT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-SOAK-20261004-bybit_1-trend_donchian_xrp_4h",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUD-20261019-SOAK-ITEMS-LONG-EXIT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-SOAK-20261004-slv_trend_1h",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "Rule",
+   "owner_state": "not_a_checklist_row",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-SOAK-20261004-turtle_soup",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "Record",
+   "owner_state": "not_a_checklist_row",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-SOAK-20261004-vwap",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "No",
+   "owner_state": "not_a_checklist_row",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-JC8KDKLF-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "SOAK-GATE1-REGRADE",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-OZ9AAZSV-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-PROP-TRACKING",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-JC8KDKLF-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "SOAK-GATE1-REGRADE",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-JC8KDKLF-0004",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "SOAK-GATE1-REGRADE",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-JC8KDKLF-0010",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "SOAK-GATE1-REGRADE",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-JC8KDKLF-0011",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "SOAK-GATE1-REGRADE",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-JC8KDKLF-0014",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "SOAK-GATE1-REGRADE",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-IRWQEEXT-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "FIX-SA-03",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-IRWQEEXT-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-IRWQEEXT-0004",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "HARNESS-AUDIT-FIXES",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-IRWQEEXT-0005",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-PROP-TRACKING",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-IRWQEEXT-0007",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "LIVE-PARITY",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-APBY4NTV-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "API-COLLAPSED-STATES",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261004-KQIWJZWX-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-PROP-TRACKING",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261005-APBY4NTV-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "API-COLLAPSED-STATES",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261005-OAKGATE1-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-RESEARCH-HARNESS-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261005-MWOP8C4X-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "API-COLLAPSED-STATES",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261005-MWOP8C4X-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "API-COLLAPSED-STATES",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261006-1BPXEUJR-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RQ-20261007-031",
+   "owner_state": "not_a_checklist_row",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261006-5FUGHVX8-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "TP-DOCTRINE",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261007-ITYCHECK-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-RESEARCH-HARNESS-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261007-N6TXSAL6-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PAIRS-GAPS",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261007-N6TXSAL6-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PAIRS-GAPS",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261007-APBY4NTV-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PROP-FLOW-SEPARATION",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261007-DHGFHNOM-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "TP-DOCTRINE",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261007-QHZ61SUE-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PROP-FLOW-SEPARATION",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261008-BFOAI4ZM-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "GUARD-SUBJECT-REPOINT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261008-QAW8FBY5-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PHONE-EXEC-FLAKE",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261009-01FXMMUG-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ML-HYGIENE",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261009-GXEDZJQE-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261009-KR9P9ZKE-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "CA",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261009-72XUJX8U-0006",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "API-COLLAPSED-STATES",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261009-BKKVRSVQ-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "DAILY-DD-SWITCH",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261009-VQIPJE2H-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "CI-PYTEST-TIMEOUT-HEADROOM",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261010-JD1HZX7C-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PIPELINE-ROUTE-1017",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261010-JD1HZX7C-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ICT-SCALP-EVIDENCE",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261010-JD1HZX7C-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PIPELINE-ROUTE-1017",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261010-JD1HZX7C-0004",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-RESEARCH-HARNESS-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261010-17XH6SAQ-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "DASH-TRADES",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261010-WQAPZD8B-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "WATCHDOG-CLOSE-RECURRENCE",
+   "owner_state": "in_flight",
+   "revalidated_against_live": true,
+   "note": "owner WATCHDOG-CLOSE-RECURRENCE in_flight; third instance (trade 6634) appended to owner row"
+  },
+  {
+   "id": "PI-20261010-WQAPZD8B-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-LEG-EVIDENCE",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261010-WQAPZD8B-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-PROP-TRACKING",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261010-WQAPZD8B-0004",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-LEG-EVIDENCE",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261011-OSERECON-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "VELO-NET-PNL-CASHTX",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261011-YJAYF7GD-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PR",
+   "owner_state": "not_a_checklist_row",
+   "revalidated_against_live": true,
+   "note": "#17691 merged 2026-10-12T10:06Z; observation not done (PR state read via MCP this run)"
+  },
+  {
+   "id": "PI-20261011-JPFINTEQ-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "SIGNALS-API-TIMESTAMP",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261012-EEP21012-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PROP-GATE-UNREALIZED-DAYPNL",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261012-FYDXA9U5-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261012-GNRBKIGG-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-PROP-TRACKING",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261012-GNRBKIGG-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PROP-GATE-UNREALIZED-DAYPNL",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261012-HQ8T7BZU-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PAIRS-GAPS",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261012-UFJZ63WF-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "NEWS-VETO-EVAL",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261012-HQ8T7BZU-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PAIRS-GAPS",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261012-GNRBKIGG-0004",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-PROP-TRACKING",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261012-GNRBKIGG-0005",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-PROP-TRACKING",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261013-HOPS1447-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RESEARCH-ROUTER",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261013-GGXCSUMP-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-CI-LANDING-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261013-HOPS2047-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-RESEARCH-HARNESS-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261014-IMQACAUN-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RESEARCH-TOOLING-GAPS",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261014-ON01DGFQ-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RESEARCH-GRIDS-EXTEND",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261014-ON01DGFQ-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RESEARCH-TOOLING-GAPS",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261014-20261014-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RESEARCH-TOOLING-GAPS",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261014-7E02E0F4-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RESEARCH-OPS",
+   "owner_state": "not_a_checklist_row",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261014-WF8DYMGP-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "CAPDAY-EQUITY-DENOM",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261015-DBLSU8AO-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-LEG-EVIDENCE",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261015-DBLSU8AO-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-LEG-EVIDENCE",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261015-WNBZB5WN-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ML-SHARD-TRUNCATED",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261015-WNBZB5WN-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RESEARCH-TOOLING-GAPS",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261015-KAW9NO8R-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-CI-LANDING-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261015-WNBZB5WN-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PROP-BOOK-SEARCH-1095D",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261015-3SMHIER1-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RESEARCH-TOOLING-GAPS",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261015-PD85QJEZ-0004",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261015-N6RCMVTJ-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-CI-LANDING-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261015-SBAQDDVQ-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ML-DATA-OFF-TRAINER",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261015-KHSBUYRY-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RESTART-SAFE",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261015-JWMGXOTH-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "lane",
+   "owner_state": "not_a_checklist_row",
+   "revalidated_against_live": true,
+   "note": "#18367 merged 2026-10-15T14:42Z; deploy + first tradeify_1 trail step NOT observed (PR state read via MCP this run)"
+  },
+  {
+   "id": "PI-20261015-JWMGXOTH-0004",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "BREAKOUT-UNTRACKED-1014",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261015-VUVNMUO8-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "LIVE-BT-STAGE-B",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261015-VUVNMUO8-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "LIVE-BT-STAGE-B",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261015-VUVNMUO8-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-LEG-EVIDENCE",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261015-KXMANT1S-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "IP-IN-PUBLIC-LOGS",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261015-FOYBZ9CV-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "manager",
+   "owner_state": "not_a_checklist_row",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261015-FBLTJK1G-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "NETTED-SLICES",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261015-FBLTJK1G-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "NETTED-SLICES",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261015-OAKREDEF-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUD-20261019-SOAK-ITEMS-LONG-EXIT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261016-10160247-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-RESEARCH-HARNESS-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261016-P3PFA1GK-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RQ-20261016-65ff-20..23",
+   "owner_state": "not_a_checklist_row",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261016-LRP-EF728D79",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PR",
+   "owner_state": "not_a_checklist_row",
+   "revalidated_against_live": true,
+   "note": "#18569 merged 2026-10-16T10:25Z; next live-parity run not read (PR state read via MCP this run)"
+  },
+  {
+   "id": "PI-20261016-LRP-288AF95B",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PR",
+   "owner_state": "not_a_checklist_row",
+   "revalidated_against_live": true,
+   "note": "#18569 merged 2026-10-16T10:25Z; next live-parity run not read (PR state read via MCP this run)"
+  },
+  {
+   "id": "PI-20261016-LRP-156968F7",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PR",
+   "owner_state": "not_a_checklist_row",
+   "revalidated_against_live": true,
+   "note": "#18569 merged 2026-10-16T10:25Z; next live-parity run not read (PR state read via MCP this run)"
+  },
+  {
+   "id": "PI-20261016-X57LREEA-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PROP-GATE-PARITY",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261016-WLA6MBZD-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RESEARCH-TOOLING-GAPS",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261016-6RBHEWTW-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RESEARCH-PROGRAMME-PLANS",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261016-10160847-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RESEARCH-TOOLING-GAPS",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261016-TT4AZN7N-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RESEARCH-PIPELINE-SLO",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261016-TT4AZN7N-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PR",
+   "owner_state": "not_a_checklist_row",
+   "revalidated_against_live": true,
+   "note": "#18580 merged 2026-10-16T10:55Z; SLO half tracked by RESEARCH-PIPELINE-SLO (PR state read via MCP this run)"
+  },
+  {
+   "id": "PI-20261016-QOTFUEXV-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RESEARCH-CONFIRM-FRESH-WINDOW",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261016-QOTFUEXV-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RESEARCH-CONFIRM-FRESH-WINDOW",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261016-QOTFUEXV-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "lane",
+   "owner_state": "not_a_checklist_row",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261016-IKK5NFPO-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-RESEARCH-HARNESS-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261016-IKK5NFPO-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RESEARCH-TOOLING-GAPS",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261016-IKK5NFPO-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RESEARCH-TOOLING-GAPS",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261017-VSMHZYHF-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "HEALTH-REVIEW-20261017",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261017-RADE1017-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "QUEUE-THEME-ALIGN",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261017-RADE1017-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RESEARCH-AUTHOR-GRADE-1017",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261018-RADE1017-0005",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RESEARCH-AUTHOR-GRADE-1017",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261018-RADE1017-0006",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "RESEARCH-AUTHOR-GRADE-1017",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-SOAK-20261018-avax_pullback_2h",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUD-20261019-SOAK-ITEMS-LONG-EXIT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-SOAK-20261018-bybit_1-trend_donchian_eth_prop",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUD-20261019-SOAK-ITEMS-LONG-EXIT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-SOAK-20261018-bybit_1-trend_donchian_sol_prop",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUD-20261019-SOAK-ITEMS-LONG-EXIT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-SOAK-20261018-eth_pullback_prop_2h",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUD-20261019-SOAK-ITEMS-LONG-EXIT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-SOAK-20261018-fade_breakout_4h",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUD-20261019-SOAK-ITEMS-LONG-EXIT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-SOAK-20261018-fvg_range_15m",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUD-20261019-SOAK-ITEMS-LONG-EXIT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-SOAK-20261018-htf_pullback_trend_2h",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUD-20261019-SOAK-ITEMS-LONG-EXIT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-SOAK-20261018-ict_scalp_5m",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUD-20261019-SOAK-ITEMS-LONG-EXIT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-SOAK-20261018-ict_scalp_avax_5m",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUD-20261019-SOAK-ITEMS-LONG-EXIT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-SOAK-20261018-ict_scalp_sol_5m",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUD-20261019-SOAK-ITEMS-LONG-EXIT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-SOAK-20261018-trend_donchian_1h",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUD-20261019-SOAK-ITEMS-LONG-EXIT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-SOAK-20261018-trend_donchian_ada_4h",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUD-20261019-SOAK-ITEMS-LONG-EXIT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-SOAK-20261018-trend_donchian_avax_4h",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUD-20261019-SOAK-ITEMS-LONG-EXIT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-SOAK-20261018-trend_donchian_sol_4h",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUD-20261019-SOAK-ITEMS-LONG-EXIT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-SOAK-20261018-turtle_soup",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUD-20261019-SOAK-ITEMS-LONG-EXIT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-SOAK-20261018-vwap",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "AUD-20261019-SOAK-ITEMS-LONG-EXIT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261018-WCDIDFTE-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "DECISION-BAR-SESSION-INSTRUMENT",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261018-WH81NW96-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ML-UNBLOCK-1018",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261018-WH81NW96-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ML-UNBLOCK-1018",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261018-WH81NW96-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ML-UNBLOCK-1018",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261018-LRP-A882A1A0",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "LIVE-PARITY",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261018-DECAYOBS-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "LIVE-DECAY-MONITOR",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261019-10190247-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-CI-LANDING-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261021-LRP-8CA903B8",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "LIVE-PARITY",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261021-LRP-84007D08",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "LIVE-PARITY",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261021-LRP-3840E225",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "LIVE-PARITY",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261021-20261021-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "LIVE-SILENCE-DIAG",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261021-0261021B-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261021-41BO5V65-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-CI-LANDING-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261021-WG8OPB7N-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-RESEARCH-HARNESS-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261021-4ZLRFEV1-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "MGC-VALUATION-FIX",
+   "owner_state": "in_flight",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261021-4ZLRFEV1-0003",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-RESEARCH-HARNESS-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261021-6SBYWRKB-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "PR",
+   "owner_state": "not_a_checklist_row",
+   "revalidated_against_live": true,
+   "note": "#19423 and #19425 both merged 2026-10-22; TP-lever re-run results not read (PR state read via MCP this run)"
+  },
+  {
+   "id": "PI-20261021-UTQZPZBN-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ORDER-AUDIT-3",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261021-UTQZPZBN-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "LIVE-SILENCE-DIAG",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261022-YZEN5FU2-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "TP-DOCTRINE-W43",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261022-LRP-A5119F66",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "LIVE-PARITY",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261022-LRP-DB134A26",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "LIVE-PARITY",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261022-LRP-32329EEC",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "LIVE-PARITY",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261022-LRP-A1E25C60",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "LIVE-PARITY",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261022-LRP-DFE6D77F",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "LIVE-PARITY",
+   "owner_state": "landed_unproven",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261023-3UNWZVAZ-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-RESEARCH-HARNESS-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261023-CT11B2G6-0001",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "ROUTE-RESEARCH-HARNESS-FIXES",
+   "owner_state": "queued",
+   "revalidated_against_live": false,
+   "note": "owner state read from the checklist store this run; not re-checked against the live system"
+  },
+  {
+   "id": "PI-20261017-VMDGITZI-0002",
+   "surface": "pipeline",
+   "disposition": "kept_open",
+   "owner": "lane session_01KnbLCJ4zpEyBNivmdGitZi",
+   "owner_state": "not_a_checklist_row",
+   "revalidated_against_live": true,
+   "note": "redated with observation: disk ~68%->~73% used in 7d; prevention items not done; now due 2026-10-31"
+  }
+ ],
+ "anomalies": [
+  "The skill still tells the lane to post to the retired coordination board (#6927); not done.",
+  "mcp run_secret_scanning now requires a files argument; the skill's call shape no longer works."
+ ],
+ "filed": [
+  "PI-20261024-ONHEALTH-0001",
+  "PI-20261024-ONHEALTH-0002",
+  "PI-20261024-ONHEALTH-0003",
+  "HEALTH-REVIEW-20261024"
+ ],
+ "recommended_action": "Decide what the health-review gate counts (ONHEALTH-0003); attribute or rotate for the 03:59Z ssh login (ONHEALTH-0001); schedule disk prevention (VMDGITZI-0002)."
+}

@@ -1,0 +1,22 @@
+{
+  "due_when": {
+    "due_date": "2026-10-31",
+    "kind": "date"
+  },
+  "id": "PI-20261024-ONHEALTH-0002",
+  "next_action": "dispatch_lane",
+  "observation": {
+    "due_by": "2026-10-31T00:00Z",
+    "how_to_check": "rerun command",
+    "what": "a health review can enumerate every non-allowlisted ssh accept across its whole window in one pull"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "HEALTH-REVIEW-20261024 lane (manager session_01UETC6mFiwMgXk6URsuWzZb)",
+    "rerun": "bash scripts/ops/diag_fetch.sh \"journalctl?unit=ssh.service&since=<window start>&lines=2000\" and compare the last returned timestamp with now: coverage is complete only when it reaches the present"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": "1",
+  "what": "[health] The security-breach sweep of the live VM auth log CANNOT cover a review window: the diag journalctl relay caps at 2000 lines and the trainer VM alone logs ~400 accepted ssh sessions per hour, so a 3-15 day window is ~1.5-6 h of coverage. This review sampled 3 slices (2026-10-17 20:57-22:50Z, 10-24 03:00-04:36Z, plus the first 300 lines) = ~3.5 h of ~15 days -> auth-log check is PARTIAL by construction, which the skill would otherwise score as clean. Fix: a server-side filter (exclude the trainer source / only Accepted+Failed from non-allowlisted sources) or a daily detector that records non-allowlisted accepts to comms/."
+}
