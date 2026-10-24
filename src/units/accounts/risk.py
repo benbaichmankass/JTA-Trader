@@ -567,8 +567,13 @@ class RiskManager:
             import sqlite3
             uri = "file:%s?mode=ro" % self._risk_db_path()
             with sqlite3.connect(uri, uri=True, timeout=5) as conn:
+                # A trades table without ``symbol`` (older/minimal schema) keeps
+                # the pre-multiplier reading, factor 1.0 per row, rather than
+                # failing the whole measurement to None.
+                cols = {r[1] for r in conn.execute("PRAGMA table_info(trades)")}
+                sym_col = "symbol" if "symbol" in cols else "''"
                 rows = conn.execute(
-                    "SELECT symbol, COALESCE(position_size, 0), "
+                    "SELECT " + sym_col + ", COALESCE(position_size, 0), "
                     "COALESCE(entry_price, 0) FROM trades "
                     "WHERE account_id=? AND status='open' "
                     # ``is_backtest`` DEFAULTS TO 1 on this table, so omitting
