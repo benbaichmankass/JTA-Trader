@@ -1,0 +1,112 @@
+id: RQ-20261024-f08c-02
+title: 'Variant of eba2-05 (fractional giveback failed on ada_pullback_2h): arm the giveback only above 2.5/3.0 R, close to the 4R target'
+status: queued
+cadence: once
+roadmap:
+- L-ATM
+- M20
+theme: live_strategy
+priority: 2
+kind: experiment
+question: 'On ada_pullback_2h, does exiting when open profit falls to 60-70% of the peak, ONLY once the peak is >= 2.5/3.0 R, replace the declared
+  exit on net R in 5 of 6 folds over 2020-07..2026-10, at the venue cost stack? DIAGNOSIS of the first test (eba2-05): MEASURED in RQ-20261022-eba2-05:
+  F50/F60/F70 at min_mfe 2.0 gave dR -11.1 / -13.7 / -16.2 with take_profit exits 127 -> 106 / 99 / 85 and 64-92 giveback_stop exits: the lever
+  converts target hits into early exits. MEASURED from the A-arm trade file: of 105 trades reaching 2.0 R only 25% finished more than 1 R below
+  that mark, and 47 of 402 trades (12%) reach 3.0 R. Class: wrong parameter region (peak gate 2.0 R sits too far below the 4R target). INFERRED:
+  gated at 3.0 R the lever can only touch the 47 trades that are already near the target.'
+why_this_matters: 'Operator rule 2026-10-22: a first-test fail is diagnosed and re-asked, never retired. Lane EXIT-FAILED-LEVERS-DIAG (2026-10-24),
+  row EXIT-FAILED-LEVERS-DIAG, serves eba2-05. Diagnosis and evidence: docs/research/exit-failed-levers-diag-2026-10-24.md. Looked before authoring
+  (PLANNING s1): the queue was grepped for the same leg and lever family; no queued or done unit asks this exact arm set. Parents: research/queue/RQ-20261022-eba2-05.yaml.'
+power:
+  expected_n: 402
+  min_detectable_effect: 0.14
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'n = 402 is the MEASURED baseline trade count of ada_pullback_2h in the parent verdict(s). Unpaired one-sample MDE = 2.8/sqrt(n) = 0.14
+    sd. Arms share most trades, so the paired difference is far tighter than that (MEASURED in the diag doc: paired sd 0.06-0.5 R per entry);
+    the unit''s bar is stated in R and is not claimed to be detectable at the unpaired MDE. A unit whose lever touches a handful of trades is
+    reported with its differing-trade count.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-F08C-02
+  registered_at: '2026-10-24'
+  registered_before_run: true
+  statistic: scripts/research/exit_lever_ablation.py --grade replace on ada_pullback_2h, window 2020-07-01 .. 2026-10-15 23:59, 6 calendar folds,
+    net_r per arm net of the harness venue-aware stack (fee 7.5 bps round trip, slippage 3.0 bps round trip, funding 1.0 bps per 8h window; MEASURED
+    in the parent verdicts' cost_stack); baseline A = the leg as declared.
+  rule: 'INDETERMINATE IF n(A) < 39, or IF every C arm is byte-identical to A (the lever never fired). A candidate C PASSES iff net_r(C) > net_r(A)
+    AND delta >= 0.02 R x n(A) AND folds_ge >= 5 of 6 AND maxDD(C) <= maxDD(A) x 1.35. PASS IF one or more pass: the best by net R is named and
+    the follow-up is ONE confirmation unit on a disjoint partition (a PASS on one window is a discovery), never a config edit; before any Tier-3
+    proposal the winner is re-run with stop fills gap-adjusted (see what_it_does_not_do). FAIL IF none passes: the declared exit stands for THESE
+    arms on this leg; the idea is not retired (the operator''s 2026-10-22 rule) and the diagnosis in this unit decides the next variant. Thresholds
+    are not changed after any result.'
+what_it_does_not_do: 'Edits no config and places no order. Not a promotion case: a PASS is a discovery needing one disjoint-window confirmation.
+  HARNESS CAVEAT (code-read 2026-10-24, scripts/backtest_pullback.py / backtest_trend.py): a stop or ratcheted trail that the bar trades through
+  fills AT the stop price, not at a gap-open worse than it, and lever exits fill at the bar close; that flatters every arm in proportion to its
+  stop exits, so it favours tight-trail arms. A PASS must be re-run gap-adjusted before any Tier-3 note. '
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 300
+  confidence: 0.2
+  basis: 'stand-in: live exit lever on a rostered leg; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 40
+  why_runner: Fetches keyless public candles for a pinned window and runs the harness; reads no trainer data.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - ada_pullback_2h
+  - --arm
+  - A=
+  - --arm
+  - G60M3=--giveback-frac=0.60;--giveback-min-mfe-r=3.0
+  - --arm
+  - G70M3=--giveback-frac=0.70;--giveback-min-mfe-r=3.0
+  - --arm
+  - G70M25=--giveback-frac=0.70;--giveback-min-mfe-r=2.5
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '5'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261024-f08c-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/exit_lever_ablation.py
+- docs/research/exit-failed-levers-diag-2026-10-24.md
+- research/queue/RQ-20261022-eba2-05.yaml
+programme: P1
