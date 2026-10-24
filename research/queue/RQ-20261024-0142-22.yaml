@@ -1,0 +1,88 @@
+id: RQ-20261024-0142-22
+title: 'Placebo rung for the initial_jobless_claims -> ZN=F release-day PASS: is the edge also present ten trading days BEFORE the print (an artifact)?'
+status: queued
+cadence: once
+roadmap:
+- M28
+theme: macro
+priority: 3
+kind: experiment
+question: Does the initial_jobless_claims survey surprise 'predict' the ZN=F return in a window that ends ten trading days BEFORE the release (anchor shifted -11
+  trading days, horizon 1)? A yes means the parent RQ-20261016-1fa6-03 release-day PASS is an artifact of the surprise series, not information in the print.
+why_this_matters: Lane AUTHOR-FLOOR-1024 (macro 2 vs share 3). RQ-20261016-1fa6-03 PASSED (n 598, ic_t_eff 3.491, release-day window, ZN=F, anchor shift -1) on ONE
+  window; the research-ops rule for a PASS on one window is a discovery, and the macro event-study contract starts the kind's own placebo (anchor shifted ~-10 trading
+  days) before anything else. The same placebo exists for ppi_mom RTY=F (P4-Q2-ppi-rty-placebo) and for nothing else.
+power:
+  expected_n: 598
+  min_detectable_effect: 0.25
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 598 releases (the parent's population, MEASURED in the parent's result); floor ((2.0+0.84)/0.25)^2 = 130 is the standing macro floor, min-n 100 is the unit's.
+    Shifted bars before the panel start are dropped, so n can fall slightly; below 100 the unit grades indeterminate, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: fixed historical backfill; weekly/monthly releases accrue slowly and do not change this window.
+decision_rule:
+  id: RULE-RQ202610240142-22-INITIALJOBLESSCLAIMS-PLACEBO
+  registered_at: '2026-10-24'
+  registered_before_run: true
+  statistic: 'scripts/research/macro_event_study_run.py --kind initial_jobless_claims --symbol ZN=F --anchor-shift-td -11 --horizons 1: rank IC of the survey surprise
+    vs the 1-day forward return, overlap-corrected t (ic_t_eff), n.'
+  rule: 'The verdict is stated FOR THE PLACEBO: PASS (= the ''edge'' exists in a window that ends BEFORE the print = the parent is an ARTIFACT) IF at h=1 with n >=
+    100, |ic_t_eff| >= 2.0 AND the IC has the parent''s sign (positive). FAIL (= placebo clean, the parent survives) IF n >= 100 and it does not. INDETERMINATE IF
+    n < 100. no_data / producer_failed: a route fault, not a verdict. A placebo FAIL does not confirm the parent: it removes one explanation, and the parent still
+    needs a disjoint-window confirmation. Bars are not changed after any result.'
+  what_it_does_not_do: Is not a tradable signal, places no order and edits no config; a clean placebo is not a promotion case and the parent is not confirmed by it.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 20
+  confidence: 0.3
+  bucket: information
+  basis: 'stand-in: a falsification rung for an M28 event-surprise lead; information value, not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 15
+  why_runner: Fetches public daily candles / reads committed point-in-time files; CPU only; not trainer-resident.
+  basis: Estimate from the comparable harness_stage0 / exit_lever_ablation runs of 2026-10-16..22; the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/macro_event_study_run.py
+  - --kind
+  - initial_jobless_claims
+  - --snapshots
+  - comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl
+  - --symbol
+  - ZN=F
+  - --anchor-shift-td
+  - '-11'
+  - --horizons
+  - '1'
+  - --primary-horizons
+  - '1'
+  - --min-n
+  - '100'
+  - --t-bar
+  - '2.0'
+  - --expected-sign
+  - positive
+  - --population
+  - initial_jobless_claims releases with a defined survey surprise; PLACEBO window ends ten trading days BEFORE the print on ZN=F daily closes
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261024-0142-22
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261016-1fa6-03
+- scripts/research/macro_event_study_run.py
+- P4-Q2-ppi-rty-placebo
+- AUTHOR-FLOOR-1024

@@ -4,20 +4,23 @@
   "phase": null,
   "state": "landed_unproven",
   "owner": "manager",
-  "lane": null,
+  "lane": "session_01RFmcAWoagBipWWwcnoyjAe",
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 10,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    19865
+  ],
   "blocked_on": [],
-  "note": "[2026-10-24T05:58Z manager session_01G3UtWJrCibCYuX2wFxsYbR] Operator popup answer 2026-10-23 ~20:15Z, relayed by outgoing manager session_01YHnEs6 in trig_015Ls6mG (which never fired; found 2026-10-24T05:58Z): exits focus order verbatim \"3 then 2 then 1\" -> (b), second. Rule 2026-10-22: diagnose, research, then pre-register variants. [2026-10-24 session_01RFmcAWoagBipWWwcnoyjAe] Diagnosed 21 levers; 22 variants queued (f08c-01..22, all would_dispatch); doc docs/research/exit-failed-levers-diag-2026-10-24.md. PI-20261024-ZUPNKHZR-0001 not on main at 2d3889df; harness fill behaviour verified from code instead. landed_unproven until variant results are read.",
+  "note": "[2026-10-24T05:58Z manager session_01G3UtWJrCibCYuX2wFxsYbR] Operator popup answer 2026-10-23 ~20:15Z, relayed by outgoing manager session_01YHnEs6 in trig_015Ls6mG (which never fired; found 2026-10-24T05:58Z): exits focus order verbatim \"3 then 2 then 1\" -> (b), second. Rule 2026-10-22: diagnose, research, then pre-register variants. [2026-10-24T13:00Z manager session_01UETC6mFiwMgXk6URsuWzZb] Dispatched lane session_01RFmcAW (Sonnet, fresh, $10). Second in the operator's exits order. [lane session_01RFmcAW]  session_01RFmcAWoagBipWWwcnoyjAe] Diagnosed 21 levers; 22 variants queued (f08c-01..22, all would_dispatch); doc docs/research/exit-failed-levers-diag-2026-10-24.md. PI-20261024-ZUPNKHZR-0001 not on main at 2d3889df; harness fill behaviour verified from code instead. landed_unproven until variant results are read.",
   "priority_rank": 5,
-  "updated_at": "2026-10-24T13:13:44Z",
-  "updated_by": "session_01RFmcAWoagBipWWwcnoyjAe",
+  "updated_at": "2026-10-24T13:00:05Z",
+  "updated_by": "session_01UETC6mFiwMgXk6URsuWzZb",
   "roadmap": [
     "L-ATM"
   ],
+  "_seq": 621,
   "writeback": {
     "roadmap": "L-ATM next: 22 variant units RQ-20261024-f08c-01..22 queued from the 21 first-test fails; read their results by 2026-10-28",
     "arch": "none: no component changed"
@@ -26,6 +29,5 @@
     "what": "the 22 variant units RQ-20261024-f08c-01..22 each land a graded result under research/results/ (pass, fail or indeterminate, measured) and each is dispositioned against its pre-registered rule; a pass is a LEAD needing one disjoint-window confirmation",
     "how_to_check": "ls research/results | grep -c f08c ; grep -l f08c research/results/*/*.jsonl | head",
     "due_by": "2026-10-28"
-  },
-  "_seq": 621
+  }
 }
