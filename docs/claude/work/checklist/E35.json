@@ -17,9 +17,15 @@
   "observation": {
     "what": "A contested XRPUSDT/ETHUSDT tick is logged after the current boot with per-account election: rounds_planned == rounds_written including bybit_2",
     "how_to_check": "scripts/ops/diag_fetch.sh log_file for arbitration_fanout_soak, plus /api/bot/trades/closed?account_id=bybit_2; E35 code is deployed (live sha b4b29f960 descends from it)",
-    "due_by": "2026-10-23T00:00Z"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-23T00:00Z",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
-  "updated_at": "2026-10-09T04:36:50Z",
-  "updated_by": "session_015WZhDbDdZTbgTzGXeDzjqe",
+  "updated_at": "2026-10-24T06:01:04Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "_seq": 71
 }

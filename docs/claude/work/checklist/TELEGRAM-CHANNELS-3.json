@@ -12,15 +12,21 @@
   "prs": [],
   "blocked_on": [],
   "note": "[2026-10-11T18:45Z manager session_01G16FfyYSmDPQuuW55BuTmK] Scope from handoff \u00a72 (operator said no need yet; dispatch when capacity allows). (1) In the MANAGER update, order Blocked / In flight / Next before Shipped / Verified, and cap the last two at ~5 lines: the 4096 trim cut the Blocked item at 14:00Z. (2) Verified lines must state the outcome, not the row title. (3) The '0 queued' headline label is ambiguous. (4) The duplicate 'No new decisions' line. Also check that updates from 15:01Z show real transitions. (5) TELEGRAM-CHANNELS doc write-back, which the manager may not do. (a) docs/ARCHITECTURE-CANONICAL.md \u00a7 Operator Communication Pipeline: add a 'Telegram channels' subsection covering the three channels, routing src/runtime/telegram_channels.py, split src/runtime/telegram_split.py, settings src/runtime/telegram_settings.py + src/bot/notification_settings_menu.py, and builders scripts/ops/work_section.py and src/runtime/trades_snapshot.py. (b) Update M6 where/next in docs/roadmap/milestones.yaml, then run roadmap_map.py --write-roadmap. Draft text is in commit 79f342b9 (PR #17622). [2026-10-11T21:35Z manager] (6) FINDING, operator-reported missed hourly: the MANAGER update has been on a 4h cadence since 14:01-15:00Z. The digest log shows hourly sends through 14:01Z, then only 16:01Z and 20:01Z. The receipt at 21:01Z read skipped_cadence 'slot 20:00Z already sent'. The code default is 1h, so the stored runtime_state/telegram_settings.json was set to 4h via the /settings menu (deployed 13:26Z). WHO set it is not readable: the file is not on the /api/diag/log_file allowlist. Add telegram_settings (cadence, mutes, last_sent, by/at of the last change) to the diag allowlist, and show the active non-default cadences in the SYSTEM hourly health check, so a silenced update is visible without anyone having to read the file. [2026-10-15 lane session_01HXF6Bn49hVXXPCu4THJL8n] BUILT, tests/test_telegram_channels_3.py (6 tests) + 112 related pass. (1) work_section render order Blocked, Didn't work, In flight/Next, then Shipped, Verified; the last two capped at 5 lines. (2) Verified shows the observed outcome (observation.observed/result) else the row's last note, never the title or the planned check. (3) research headline 'N newly queued \u00b7 N newly blocked'. (4) the Needs-you section is only built when there is an ask; the header carries the no-decisions line once. (5) ARCHITECTURE-CANONICAL \u00a7 Telegram channels written from the code and M6 updated (roadmap_map --write-roadmap). NOTE the draft commit 79f342b9 named in this row is NOT in the repo (git cat-file fails after unshallow and a fetch of PR #17622's head), so the doc text is written from the modules, not copied. (6) telegram_settings added to the /api/diag/log_file allowlist (needs the web-api deploy) and SYSTEM health lists non-default cadences/mutes with updated_at/by. NOT DONE / NOT VERIFIED: the item-4 check that the 15:01Z 2026-10-11 updates showed real transitions was not re-taken (only the latest receipt is readable: 2026-10-15T15:00Z outcome sent, digestState changes_observed); WHO set the 4h cadence stays unreadable until the diag allowlist deploys. Merged is not deployed: web-api, ict-work-digest and hourly snapshot units all need the deploy.",
-  "updated_at": "2026-10-15T15:58:07Z",
-  "updated_by": "session_01HXF6Bn49hVXXPCu4THJL8n",
+  "updated_at": "2026-10-24T06:01:14Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "roadmap": [
     "M6"
   ],
   "observation": {
     "what": "After deploy, the next MANAGER update shows Blocked then In flight/Next before Shipped/Verified, Verified lines carry outcomes, no duplicate No-new-decisions line; GET /api/diag/log_file?name=telegram_settings returns the store with updated_at/updated_by; SYSTEM health lists non-default cadences",
     "how_to_check": "Read the next MANAGER Telegram update and /api/diag/log_file?name=telegram_settings after the web-api and ict-work-digest deploy",
-    "due_by": "2026-10-23T00:00Z"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-23T00:00Z",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
   "writeback": {
     "roadmap": "M6 where/next updated in docs/roadmap/milestones.yaml; ROADMAP.md regenerated",

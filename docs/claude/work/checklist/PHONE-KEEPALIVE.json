@@ -12,15 +12,21 @@
   "prs": [],
   "blocked_on": [],
   "note": "MEASURED 2026-10-13: heartbeat stopped ~15:14Z, next event app_started 18:48Z (operator reopened). Cause (supported, not fully separable): the tick loop lived in MainActivity's scope; once the Activity/process died nothing relaunched it (service only relaunched on boot/update; sticky restart with a null intent did nothing). Fix: Liveness.kt + KeepAliveService watchdog (60 s) + AlarmManager chain + loop_restarted event + heartbeat fields (battery_exempt, overlay, fgs_running, alarm_exact, last_restart_reason, restarts_24h, app_version) + tap-here notifications. Alert: the probe was NEVER muted (the glyph is the breach marker); it rode only the collapsed Manager-watch section of the hourly manager digest. scripts/ops/phone_hb_alert.py sends a standalone system-channel alert + one recovery. Operator OK for the Tier-2 change: the 2026-10-13 ask (recorded_decision operator_decision).  | OPEN FOLLOW-UP: the stale-heartbeat alert rides the hourly carrier (latency <= ~70 min); a 5-min detection needs its own timer (deploy/*.timer + cadence-liveness registration), not built. The Kotlin is compiled and unit-tested only by CI (phone-executor-apk.yml); no Android SDK in lane sandboxes. Closes when the observation holds on an installed build. [2026-10-17 RESEARCH-AUTHOR-GRADE-1017] Field state (read-only GET /api/bot/prop/status?account_id=breakout_2 at 20:58Z, and main f03d9032): the fix IS on main (tools/phone-executor/.../Liveness.kt, scripts/ops/phone_hb_alert.py wired via scripts/ops/work_digest_now.py) and the installed build reports battery_exempt/fgs_running/alarm_exact all true, app_version 1b.263/263, heartbeat age under 1 min. The 48h observation is NOT closable: the API returns ~40 events (17:04Z-20:50Z, ~3.8 h), within which heartbeat events show 8 gaps over 10 min (max ~29 min; whether heartbeat events are logged per beat or on change is not established, so this is not a measured outage), and restarts_24h=5 with last_restart_reason=app_update, two app_started at 20:47Z, i.e. APKs are being reinstalled today (BREAKOUT-SL-AMEND-CLICK work), which resets any 48h window. State moved in_flight -> landed_unproven; due_by re-dated 2026-10-21. The 5-minute detection timer remains unbuilt (alert latency ~70 min via the hourly digest).",
-  "updated_at": "2026-10-17T20:59:51Z",
-  "updated_by": "research-author-grade-1017-fork",
+  "updated_at": "2026-10-24T06:01:09Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "roadmap": [
     "L-PROP"
   ],
   "observation": {
     "what": "no phone heartbeat gap > 10 min over 48h on one installed build, or every gap self-recovered and alerted (phone_events loop_restarted/app_started + system-channel alert + recovery)",
     "how_to_check": "GET /api/bot/prop/status?account_id=breakout_2: phone_heartbeat.state.restarts_24h/last_restart_reason/app_version plus phone_events gaps; needs 48h of events, the API returns only the newest ~40",
-    "due_by": "2026-10-21T00:00Z"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-21T00:00Z",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
   "writeback": {
     "roadmap": "none: L-PROP where/next unchanged",

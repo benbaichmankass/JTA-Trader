@@ -17,9 +17,15 @@
   "observation": {
     "what": "#16952 is on main and the first sweep re-run listed on PI-20260927-ZGQPHR3D-0002..0010 completes with run_fresh (no stale-JSON reuse) and the corrected Engle-Granger critical value",
     "how_to_check": "git log --oneline -1 origin/main -- scripts/research/ | grep -i 'harness\\|EG\\|run_fresh'; grep -l 'run_fresh' research/results/*/*.jsonl | head -1; python3 scripts/ops/pipeline.py --show PI-20260927-ZGQPHR3D-0002",
-    "due_by": "2026-10-22"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-22",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
-  "updated_by": "session_01PH9KCD1r7StznkqPLzd9K1",
-  "updated_at": "2026-10-15T06:04:55Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
+  "updated_at": "2026-10-24T06:01:05Z",
   "_seq": 326
 }

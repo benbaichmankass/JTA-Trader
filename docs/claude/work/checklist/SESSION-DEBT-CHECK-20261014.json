@@ -12,8 +12,8 @@
   "prs": [],
   "blocked_on": [],
   "note": "ROOT CAUSE: work_report.session_debt() judged dispatchability by run.workflow ending .yml, but command+compute units carry no run.workflow by design: dispatch_queue injects it from compute_router.plan (f0e2-03 was dispatched 02:07Z). BEFORE (572 unit files, 256 queued): 54 bound + 122 graded = 176. AFTER on this branch: 3 bound + 122 graded = 125 (classifier now asks cr.plan; 3 are true prose-workflow notes). 23 overnight hand-written units (65cc x10, 1414 x10, 0b07 x3) lacked grading.auto so the grader could never close them; added grading.auto:true only (decision_rule untouched, +46/-0 lines). The 122 remaining graded are older units, not triaged here. Closes when: next work report after merge shows session_debt 125.",
-  "updated_at": "2026-10-14T06:04:22Z",
-  "updated_by": "session_01GwL292tgtSuRbT6Wnqowse",
+  "updated_at": "2026-10-24T06:01:13Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "roadmap": "L-OPS",
   "writeback": {
     "roadmap": "none: tooling fix to a report counter, no milestone measure changes",
@@ -22,7 +22,13 @@
   "observation": {
     "what": "work report session_debt line reads 125 (3 bound + 122 graded), not 176",
     "how_to_check": "GET /api/bot/work/brief or latest comms work report; read the Session debt line after merge",
-    "due_by": "2026-10-21T00:00Z"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-21T00:00Z",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
   "_seq": 471
 }

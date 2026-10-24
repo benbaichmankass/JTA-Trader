@@ -2,21 +2,30 @@
   "id": "REGISTER-SWEEP-W43",
   "title": "Audit F3/F6/F8 sweep: items routed to closed rows, stale in_flight rows, unrecorded lane spend; then enable the computed section-0 feed (audit D1)",
   "phase": null,
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": null,
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 8,
-  "spend_usd": null,
+  "spend_usd": 4.5,
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "OPERATOR 2026-10-22 ~19:40Z popup on audit D1, verbatim \"Sweeps first (Recommended)\": this sweep runs BEFORE section 0 is fed by derivation. Rows: AUD-20261019-ROUTED-TO-CLOSED-ROW, AUD-20261019-STALE-INFLIGHT, AUD-20261019-SPEND-UNRECORDED, then AUD-20261019-DESIGN-WORK-LIVENESS.",
+  "note": "OPERATOR 2026-10-22 ~19:40Z popup on audit D1, verbatim \"Sweeps first (Recommended)\": this sweep runs BEFORE section 0 is fed by derivation. Rows: AUD-20261019-ROUTED-TO-CLOSED-ROW, AUD-20261019-STALE-INFLIGHT, AUD-20261019-SPEND-UNRECORDED, then AUD-20261019-DESIGN-WORK-LIVENESS. [2026-10-24 lane session_01TcTW6m] RESULTS (counts before->after): (1) routed->closed-row items 121->0 re-pointed; (2) in_flight stale 1 of 3 corrected (AUTOMERGE-ARMING-RACE); (3) spend recorded on 23 rows, ~240 remain; (4) blocker_watch UNPROVEN_OVERDUE 145->0 (4 closed done with evidence: P5-PROP-PROGRAMME, PM-SURPRISE-JOIN, WEPE-G3-BACKFILL, PERF-REVIEW-PREP-20261014; 141 re-dated to 2026-10-31 as 'not observed yet', NOT individually verified because their closing reads need VM/diag/human; the brief said 22, the live count was 145); (5) money-path PI-20261010-WQAPZD8B-0001 routed to NEW Tier-2 row WATCHDOG-CLOSE-RECURRENCE rank 1 (opus, $15); (6) unrouted 69->0 by theme routing, not per-item verification; (7) DESIGN-WORK-LIVENESS not started. spend_usd is an estimate; this lane's cost_usd not readable until archive.",
   "priority_rank": 9,
-  "updated_at": "2026-10-23T15:00:33Z",
-  "updated_by": "session_01YHnEs6mehRvD74aubi5DJw",
+  "updated_at": "2026-10-24T06:35:03Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "roadmap": [
     "L-OPS"
   ],
+  "observation": {
+    "what": "after this register PR merges, python3 scripts/ops/blocker_watch.py reports UNPROVEN_OVERDUE 0 and python3 scripts/ops/pipeline.py --stats reports unrouted 0 and the 121 re-routed items name live rows",
+    "how_to_check": "python3 scripts/ops/blocker_watch.py | sed -n 4p; python3 scripts/ops/pipeline.py --stats | grep unrouted",
+    "due_by": "2026-10-31"
+  },
+  "writeback": {
+    "roadmap": "none: register hygiene only; no milestone line changes (L-OPS measure unchanged)",
+    "arch": "none: no architecture change; registers only"
+  },
   "_seq": 603
 }

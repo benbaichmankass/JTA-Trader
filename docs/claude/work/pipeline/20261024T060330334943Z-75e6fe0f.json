@@ -1,0 +1,18 @@
+{
+  "based_on": "20261019T032458414665Z-64cc4fdc.json",
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "the test passes after 2026-10-20 00:00Z AND its time-dependence is fixed (created_at tied to the injected now, or count_today bounded above), or the manager kills this item with the reason stated",
+    "kind": "observation"
+  },
+  "id": "PI-20261019-10190247-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261019-0247, PR #19070 pytest-run",
+    "rerun": "python3 -m pytest tests/test_exec_test_trades.py -k daily_cap  # red only while the real UTC date equals 2026-10-19"
+  },
+  "routed_to": "ROUTE-CI-LANDING-FIXES (REGISTER-SWEEP-W43 2026-10-24: date-bomb test)",
+  "state": "routed",
+  "what": "[ci][test-flake] tests/test_exec_test_trades.py::test_daily_cap_counts_only_tickets_that_reached_the_venue fails on any branch during the real UTC day after its fixed NOW (2026-10-18): src/prop/exec_test_trades.py::count_today has only a lower bound (created_at >= day_start) and tickets are stamped with the real wall clock, so count_today(NOW+1day) returns 6 instead of 0 on 2026-10-19. Seen red on PR #19070 pytest-run (1 failed, 23821 passed) with a research-only diff. Self-heals at 2026-10-20 00:00Z; fix = pin created_at to the injected now or add an upper bound (src/ is outside a research-ops pass)."
+}

@@ -14,15 +14,21 @@
   ],
   "blocked_on": [],
   "note": "[2026-10-15T05:55Z manager session_01VduHYzdaXe27wTDBLSu8ao] OPERATOR popup 2026-10-15 ~05:53Z, verbatim choice: '0.5% (Recommended)'. Evidence RQ-20261014-f516-05 (4,000 lives x 5 seeds, 355 trades): C050 ev 159-175 USD/life, p_alive ~0.27, breach ~0.72 vs configured 0.01 ev 117-140, p_alive ~0.00. Supersedes operator directive 2026-10-06 (0.01). Lane Sonnet $8, hold PR, manager merges. [2026-10-15 housekeeping lane PROP-HOUSEKEEP-1015] #18157 MERGED 2026-10-15T06:39Z; config/accounts.yaml velotrade_1.risk.risk_pct == 0.005 on main (read). NOT observed: no real velotrade_1 ticket since the merge (last real ticket 03:00Z was a suppressed one; only phone_test rows after). Closes on the next sized velotrade_1 ticket.",
-  "updated_at": "2026-10-15T22:32:47Z",
-  "updated_by": "session_prop_housekeep_1015",
+  "updated_at": "2026-10-24T06:01:14Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "roadmap": [
     "L-PROP"
   ],
   "observation": {
     "what": "next real velotrade_1 ticket after the 06:39Z 2026-10-15 merge is sized at risk_pct 0.005 (about 25 USD risk), not 0.01",
     "how_to_check": "GET /api/bot/prop/tickets, account_id=velotrade_1, newest non-suppressed non-phone_test row: risk_usd/qty vs entry-sl; plus /api/diag/version git_sha includes #18157",
-    "due_by": "2026-10-22"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-22",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
   "writeback": {
     "roadmap": "none: sizing parameter change under L-PROP; no milestone measure moves until a sized ticket is observed",

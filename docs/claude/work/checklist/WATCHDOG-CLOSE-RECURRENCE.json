@@ -1,0 +1,23 @@
+{
+  "id": "WATCHDOG-CLOSE-RECURRENCE",
+  "title": "REAL MONEY: root-cause why bybit_2/bybit_1 closes still end stuck_strategy_watchdog instead of TP/SL/strategy-close; fix the order_monitor path (PI-20261010-WQAPZD8B-0001)",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 15,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-24 REGISTER-SWEEP-W43, requested by manager session_01G3UtWJ] PI-20261010-WQAPZD8B-0001 (state queued, severity high, first in brief section 0) had NO workable row: WATCHDOG-PAST-STOP is done (#17455 only RELABELS closes 6528/6549 to sl via the relabel sweep; it does not stop the watchdog closing) and the item's own re-read 2026-10-17 says 'Not fixed; Tier-2 code root cause still owed' with a further stuck_strategy_watchdog close (trade 6634 bybit_1 pairs_sol_eth_b; 3 total across bybit_1/bybit_2). TASK for the lane: (1) pull bybit order history for 6528/6549/6634 and say whether the venue SL was present at close and why the stuck-strategy watchdog (src/runtime/order_monitor.py) fired instead of the venue bracket/reconciler; (2) count stuck_strategy_watchdog closes in the last 200 trades per account (rerun command = the item's origin.rerun); (3) propose the exact fix. Tier-2 order path: prepare + validate, one operator OK in chat, ship, verify post-state. Do not widen into re-pricing (that is PI-20261010-RNCT2YDP-0001). Closes when the item's clears_when holds.",
+  "priority_rank": 1,
+  "updated_at": "2026-10-24T06:01:49Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "next_action": "dispatch_lane",
+  "_seq": 620
+}

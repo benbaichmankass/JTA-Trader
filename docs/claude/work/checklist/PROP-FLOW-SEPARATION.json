@@ -17,9 +17,15 @@
   "observation": {
     "what": "after deploy, the stuck prop-manual-4fa7266cfcf0 is swept to expired on the first tick; the next velotrade_1 or breakout_2 ticket that expires unplaced ends 'expired' with no Telegram prompt and does not block the following signal; manual accounts get one 'recorded as NOT placed' notice with a single 'I did place it' button",
     "how_to_check": "GET /api/bot/prop/tickets?account_id=velotrade_1 and breakout_2 (statuses); pipeline PI-20261007-QHZ61SUE-0001",
-    "due_by": "2026-10-22"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-22",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
-  "updated_at": "2026-10-15T06:04:56Z",
-  "updated_by": "session_01PH9KCD1r7StznkqPLzd9K1",
+  "updated_at": "2026-10-24T06:01:09Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "_seq": 340
 }
