@@ -1,0 +1,96 @@
+id: RQ-20261024-09a6-01
+title: 'AI-ATM rung A1: on the money legs AS TRADED, does a per-bar state with momentum and ADX slope predict ''holding from here loses
+  to exiting now'' beyond where the trade is (open R, peak, bars, room to the IN-FORCE stop and target)? Linear first.'
+status: blocked
+cadence: once
+roadmap:
+- L-ATM
+- M23
+programme: P1
+theme: live_strategy
+priority: 1
+kind: experiment
+question: 'On config-exact harness runs of trend_donchian_eth_4h, trend_donchian_xrp_4h, xrp_pullback_2h, ada_pullback_2h, trend_donchian_eth_prop,
+  trend_donchian_sol_prop over 2020-07-01 .. 2026-10-15 23:59 with --emit-paths (the stop and target IN FORCE at every bar, so trailing,
+  stall decay, TP revision and stale exits are each leg''s own), at every bar t of every trade (the exit bar excluded), label L_t =
+  1 if the leg''s own exit loses to exiting now: exit_r - open_r_t < -c_exit, where c_exit is the extra exit cost in R from resolve_cost_policy
+  (truncation-honest: the harness''s exit, never a re-simulated barrier). Reference model R0 (logistic): open_r_t, peak_r_t, bars_in_trade,
+  bars_since_peak, dist_to_stop_r/atr_r, dist_to_target_r/atr_r (target absent -> indicator), leg fixed effects. Candidate R1 = R0 +
+  momentum (close change over 3 and 6 bars in ATR), adx_14, ADX slope (3-bar change), range contraction (3-bar range / ATR), close location
+  in bar. Six calendar folds by trade entry, purged on each trade''s last bar; fits on the other folds only. Does R1 beat R0 on trade-weighted
+  out-of-sample log-loss?'
+why_this_matters: 'The fixed-bracket line closed FAIL (d6e7-02, RQ-20261016-012/-013, 1fa6-06): on the reconstruction, state carried
+  no information beyond where the trade is. That reconstruction is not the bracket any leg trades. EXIT-PATH-METRICS-W43 then showed
+  room-to-stop is the dominant giveback predictor (AUC ~0.81) and path metrics add little once it is controlled. So this rung puts room-to-stop
+  and room-to-target INTO the reference and asks the only question still open: does momentum/ADX state add anything on the legs as traded?
+  It is the information rung under d6e7-06 (the policy rung) and the gate on every richer learner (GBDT, sequence) in the AI-ATM ladder.'
+power:
+  expected_n: 600
+  min_detectable_effect: 0.002
+  effect_units: metric
+  sd: 0.8
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED in checklist row EXIT-PATH-METRICS-W43 (path_state_giveback.py over xrp/ada pullback_2h, eth_4h, eth/sol prop, 2020-07..2026-10,
+    harness cost stack): 958 trades / 18,770 states with peak >= 1 R; every-bar states on these six legs are several times that. States
+    within a trade are autocorrelated, so power is carried by TRADES (n ~1,000 pooled; per leg 68 (xrp_4h) to ~400 (ada_pb)) and the
+    CI is a trade-cluster bootstrap.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history through config-exact harness runs on keyless public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261024-09A6-01-ASTRADED-INFO
+  registered_at: '2026-10-24'
+  registered_before_run: true
+  statistic: Trade-weighted OOS log-loss gain (nats) of R1 over R0 pooled over the six legs, trade-cluster bootstrap 95% CI (2,000 resamples),
+    per-fold gain sign, calibration slope of R1 on OOS; per-leg rows reported with their trade n, never graded under 100 trades.
+  rule: 'PASS IF pooled gain >= 0.002 nats AND CI lower bound > 0 AND gain > 0 in >= 4 of 6 folds AND R1 calibration slope in [0.7,
+    1.3]. PASS -> (a) d6e7-06''s policy clause runs with R1 as the candidate state, (b) RQ-20261024-09a6-02 (flow) uses R1 as its reference,
+    (c) a GBDT twin on the same folds is earned (programme rung A3). FAIL IF CI upper bound < 0.002 nats: on the legs as traded, price-derived
+    momentum/ADX state carries no exit information beyond where the trade sits relative to its own stop and target; the model line moves
+    to flow features (09a6-02) and the remaining-move head (09a6-03), and no GBDT/sequence learner is fitted on price state. INDETERMINATE
+    otherwise, or if fewer than 600 trades / any leg''s emit fails its parity check (max peak_r over path rows == the trade''s mfe_r
+    on >= 99% of trades). Thresholds are not changed after any result.'
+  min_n: 600 trades pooled (100 per leg reported)
+blocked_on:
+- kind: work_item
+  ref: docs/claude/work/checklist/FIRST-PASSAGE-ON-PATHS.json
+  what: first_passage.py has no --paths input (argparse takes --ledgers only; grep 2026-10-24). The as-traded label (exit_r - open_r_t
+    vs exit cost), the room-to-stop/target reference and the momentum/ADX-slope feature set are part of that build's spec as amended
+    2026-10-24 (lane ATM-AI-MERGE).
+  clears_when: first_passage.py --paths <glob> (or --harness-legs, reusing path_metric_giveback.run_leg_paths) builds per-bar events
+    from emitted rows with the as-traded label and feature sets R0/R1, and its random-walk self-test grades no information.
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.15
+  basis: 'stand-in: the prize is the giveback (book keeps ~13% of peak R, 90d paper+mirror n=328, docs/reviews/2026-10-21-weekly-walkthrough.md);
+    not a P&L measurement of this lever.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 60
+  why_runner: Keyless public candles + config-exact harness runs; reads no trainer data.
+  basis: 'Estimate: six harness passes with --emit-paths (one per leg, ~1-2 min each MEASURED for exit_lever_ablation arms 2026-10-16)
+    plus the fit.'
+run:
+  workflow: null
+  note: Null until the blocked_on build lands; then git mv to research/queue/, status queued, fill run.command.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- IN-TRADE-EXIT-MODEL
+- docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md (section 'AI active trade management')
+- docs/research/programmes/02-AI-TRADER.md (Q3)
+- research/queue/blocked/RQ-20261014-d6e7-06.yaml
+- 'scripts/research/path_metric_giveback.py (run_leg_paths: config-exact harness + --emit-paths)'
+- scripts/research/path_state_giveback.py (room-to-stop control, EXIT-PATH-METRICS-W43)
+what_it_does_not_do: 'Fits no GBDT, changes no config, places no order. It grades information, not money: a PASS earns the policy rung
+  (d6e7-06) and the richer learners; it never ships anything. Harness paths are not live paths; live parity is position_path_history''s
+  job (BRACKET-ADVISOR-SHADOW).'
+last_dispatched_at: null
