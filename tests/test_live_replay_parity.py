@@ -430,3 +430,28 @@ def test_newest_bar_with_evals_beyond_audit_horizon_is_not_lost():
     res = P.analyse_leg(leg, bundle, SINCE, UNTIL)
     assert any(d["class"] == "lost_bar" and d["bar"] == P.iso(b0)
                for d in res["divergence_detail"])
+
+def test_bar_of_follows_the_mode_live_ran_not_todays_config():
+    """LIVE-PARITY-DIAG-1024: a closed-config leg whose bar ran FORMING (a
+    decision_bar flip mid-window) owns a package created inside that bar; the
+    closed attribution (previous bar) is only for bars that really ran closed."""
+    b0 = START + 10 * TF_S
+    bars = [{"bar": P.iso(b0 + k * TF_S), "status": "matched_signal"} for k in range(3)]
+    r = {"timeframe": "4h", "decision_bar": "closed", "bars": bars,
+         "mode_notes": {bars[1]["bar"]: "forming (inferred from eval cadence)"}}
+    t = b0 + TF_S + 600  # created 10 min into bar 1, which ran forming
+    assert P._bar_of(r, t)["bar"] == bars[1]["bar"]
+    # a bar that really ran closed: created just after bar 0 closes -> bar 0
+    assert P._bar_of({**r, "mode_notes": {}}, t)["bar"] == bars[0]["bar"]
+
+
+def test_bars_before_a_legs_join_are_not_lost_bars():
+    """A leg that joined every account's roster mid-window has no evals before
+    the join; those bars must not be scored lost_bar."""
+    leg = _leg()
+    res0 = P.analyse_leg(leg, _bundle([]), SINCE, UNTIL)
+    assert res0["by_class"]["lost_bar"] > 0  # no evals at all -> every bar lost
+    leg.roster_from = {"bybit_2": UNTIL - 2 * TF_S}
+    res = P.analyse_leg(leg, _bundle([]), SINCE, UNTIL)
+    lost = [d for d in res["divergence_detail"] if d["class"] == "lost_bar"]
+    assert lost and all(P.to_epoch(d["bar"]) >= UNTIL - 2 * TF_S for d in lost)
