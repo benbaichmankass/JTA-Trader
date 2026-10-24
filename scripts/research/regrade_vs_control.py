@@ -19,7 +19,7 @@ import yaml
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts" / "research"))
-import exit_lever_ablation as ela  # noqa: E402
+import exit_lever_ablation as ela
 
 # unit -> {candidate-arm-or-"*": [control arms]}; "*" = every non-baseline, non-control arm. Read from each unit's
 # registered decision_rule text (the sentence naming the unconditional control), not from the harness.
@@ -41,19 +41,21 @@ def _flag(cmd: list[str], name: str, cast=str, default=None):
 
 
 def regrade(unit_id: str, controls: dict[str, list[str]]) -> dict:
-    u = yaml.safe_load(open(REPO / "research/queue" / f"{unit_id}.yaml", encoding="utf-8"))
+    with open(REPO / "research/queue" / f"{unit_id}.yaml", encoding="utf-8") as fh:
+        u = yaml.safe_load(fh)
     cmd = [str(c) for c in u["run"]["command"]]
     files = sorted(glob.glob(str(REPO / "research/results" / unit_id / "*.jsonl")))
-    rec = json.loads(open(files[-1], encoding="utf-8").readline())
+    with open(files[-1], encoding="utf-8") as fh:
+        rec = json.loads(fh.readline())
     m = rec["measurement"]
     arms, old = m["arms"], m["grade"]
     baseline = _flag(cmd, "--baseline")
     labels = [cmd[i + 1].split("=")[0] for i, c in enumerate(cmd) if c == "--arm"]
     folds = _flag(cmd, "--folds", int, 6)
     ela.N_FOLDS = folds
-    kw = dict(baseline=baseline, fold_majority=_flag(cmd, "--fold-majority", int, 5), n_floor=_flag(cmd, "--n-floor", int, 39),
-              dd_tol_frac=_flag(cmd, "--dd-tol-frac", float, 0.35), control=old.get("control"),
-              delta_r_per_trade=_flag(cmd, "--delta-r-per-trade", float, 0.0))
+    kw = {"baseline": baseline, "fold_majority": _flag(cmd, "--fold-majority", int, 5), "n_floor": _flag(cmd, "--n-floor", int, 39),
+          "dd_tol_frac": _flag(cmd, "--dd-tol-frac", float, 0.35), "control": old.get("control"),
+          "delta_r_per_trade": _flag(cmd, "--delta-r-per-trade", float, 0.0)}
     ctl_all = {c for cs in controls.values() for c in cs}
     vs = {}
     for cand in [lab for lab in labels if lab != baseline and lab not in ctl_all]:
@@ -68,9 +70,8 @@ def regrade(unit_id: str, controls: dict[str, list[str]]) -> dict:
         row = new["candidates"].get(cand)
         if row is None:
             continue
-        base_ok = all(row[k] for k in ()) if False else None
         cond = (row["delta_net_r"] > 0 and row["delta_net_r"] >= new["delta_r_bar"]
-                and row["folds_ge_incumbent"] >= kw["fold_majority"] and row["net_r"] <= 1e18
+                and row["folds_ge_incumbent"] >= kw["fold_majority"]
                 and row["max_drawdown_r"] <= row["max_drawdown_cap"])
         net_only[cand] = bool(cond and all(arms[cand]["net_r"] > arms[c]["net_r"] for c in ctls))
     return {"unit": unit_id, "leg": m.get("leg"), "baseline": baseline, "old_verdict": old["verdict"], "old_label": old.get("label"),
