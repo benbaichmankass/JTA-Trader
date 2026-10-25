@@ -1,0 +1,88 @@
+id: RQ-20261025-3947-17
+title: 'Macro event study: does the core_cpi_yoy surprise predict ZN=F forward returns at 1-5 trading days?'
+status: queued
+cadence: once
+roadmap:
+- M28
+theme: macro
+priority: 3
+kind: experiment
+question: Does the core_cpi_yoy surprise (actual minus point-in-time consensus) predict ZN=F forward returns at 1, 3 and 5 trading days (pre-registered horizons,
+  either sign, |t_eff| >= 3.0, n >= 100)?
+why_this_matters: 'core_cpi_mom was tested on ZN=F and ES=F (4a4c-07, 7769-09); the YoY definition has no unit. YoY and MoM are different surprise definitions with
+  different consensus formation; this is a different test, not a re-run. Look-before-you-test: grep of research/queue shows no prior unit for (core_cpi_yoy, ZN=F).
+  Lane RESEARCH-AUTHOR-1025PM (research runnable floor: 43 runnable vs computed floor 65 at the 14:47Z research-ops pass 2026-10-25, record comms/research/ops/).
+  Operator 2026-10-22: an idea that failed one test is not dead; it failed the first test. macro held 0 runnable units against a share of 3.'
+power:
+  expected_n: 269
+  min_detectable_effect: 0.2
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: n is the count of core_cpi_yoy rows carrying both a realised outcome and a PIT consensus in comms/macro/econ_calendar_snapshots*.jsonl (counted 2026-10-25);
+    r=0.2 needs ~194 observations at alpha 0.05 / power 0.8, so a thinner n grades indeterminate, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Re-reads committed point-in-time snapshots and fetches daily closes; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261025394717-CORECPIYOY
+  registered_at: '2026-10-25'
+  registered_before_run: true
+  statistic: scripts/research/macro_event_study_run.py --kind core_cpi_yoy --symbol ZN=F --horizons 1,3,5 --primary-horizons 1,3,5 --min-n 100 --t-bar 3.0 --expected-sign
+    either; surprise = actual - PIT consensus joined to daily closes (point-in-time econ_calendar_snapshots + survey backfill).
+  rule: PASS IF at some horizon in {1,3,5} with n >= 100, |ic_t_eff| >= 3.0 (either sign). FAIL IF every horizon has n >= 100 and none reaches |t_eff| >= 3.0 (a FAIL
+    closes only this surprise definition, instrument and these horizons; the family stays open). INDETERMINATE IF any horizon has n < 100. A PASS starts this kind's
+    own placebo (anchor shifted -10 trading days) and early/late sub-period rungs, and a later net-of-cost sign-book unit; the denominator for multiplicity is the
+    number of (kind, instrument) tests already run in the P4 family (reported by the reader).
+  what_it_does_not_do: 'An IC is not money: no cost stack is applied here and a PASS needs its own sign-book net-of-cost unit. The horizons and threshold are fixed
+    now. A PASS is a lead, not a finding, and not a trade case.'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 20
+  confidence: 0.12
+  bucket: information
+  basis: 'stand-in: an event-surprise lead for the M28 sleeve; low prior, information value, not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 15
+  why_runner: Fetches public candles / reads committed files; CPU only; not trainer-resident.
+  basis: Estimate from the comparable macro_event_study_run units of 2026-10-14..22; the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/macro_event_study_run.py
+  - --kind
+  - core_cpi_yoy
+  - --snapshots
+  - comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl
+  - --symbol
+  - ZN=F
+  - --horizons
+  - 1,3,5
+  - --primary-horizons
+  - 1,3,5
+  - --min-n
+  - '100'
+  - --t-bar
+  - '3.0'
+  - --expected-sign
+  - either
+  - --population
+  - core_cpi_yoy releases (live feed + survey-consensus backfill) joined to ZN=F daily closes
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261025-3947-17
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P4
+related:
+- scripts/research/macro_event_study_run.py
+- comms/macro/econ_calendar_snapshots.jsonl
+- RESEARCH-AUTHOR-1025PM
