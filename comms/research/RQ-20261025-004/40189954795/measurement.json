@@ -1,0 +1,292 @@
+{
+  "mode": "split",
+  "as_of": "2026-10-25T12:00:00+00:00",
+  "heads": [
+    "eth-regime-5m-lgbm-v1",
+    "sol-regime-15m-lgbm-fc-pcv-v1",
+    "sol-regime-15m-lgbm-fc-pcv-v2",
+    "sol-regime-5m-lgbm-v1",
+    "btc-regime-15m-lgbm-yz-v1",
+    "btc-regime-15m-lgbm-fc-pcv-v2",
+    "btc-regime-1h-lgbm-v2",
+    "btc-regime-1h-lgbm-yz-v1"
+  ],
+  "reference_window": [
+    "2026-09-04T00:00:00+00:00",
+    "2026-10-04T00:00:00+00:00"
+  ],
+  "current_window_start": "2026-10-18T12:00:00+00:00",
+  "rule_verdict": "capability_loss",
+  "per_head": {
+    "eth-regime-5m-lgbm-v1": {
+      "reference": {
+        "n_scored": 8260,
+        "n_labelled": 8260,
+        "volatile_label_share": 0.004116222760290557,
+        "auc": 0.2535468600277456,
+        "mean_score": 0.933967839069814
+      },
+      "current": {
+        "n_scored": 1994,
+        "n_labelled": 1889,
+        "volatile_label_share": 0.0037056643726839597,
+        "auc": 0.08258691361773189,
+        "mean_score": 0.9241883777806514
+      },
+      "rule_verdict": "capability_loss",
+      "why": "delta_auc=-0.171 < -0.03",
+      "delta_share": -0.00041055838760659753,
+      "delta_auc": -0.17095994641001372,
+      "score_drift": {
+        "ks": 0.10208980452252636,
+        "psi": 0.007900739426887654,
+        "overall": "moderate",
+        "ref_mean": 0.933967839069814,
+        "cur_mean": 0.9241883777806514
+      },
+      "label": {
+        "vol_threshold": 0.005,
+        "vol_threshold_source": "market_features_meta",
+        "n_label_bars": 525883,
+        "candles": "datasets-out/market_raw/ETHUSDT/5m/v002/data.jsonl"
+      }
+    },
+    "sol-regime-15m-lgbm-fc-pcv-v1": {
+      "reference": {
+        "n_scored": 3204,
+        "n_labelled": 3204,
+        "volatile_label_share": 0.055867665418227214,
+        "auc": 0.4590867537744125,
+        "mean_score": 0.805463386922701
+      },
+      "current": {
+        "n_scored": 679,
+        "n_labelled": 638,
+        "volatile_label_share": 0.0219435736677116,
+        "auc": 0.3466117216117216,
+        "mean_score": 0.8356745475458697
+      },
+      "rule_verdict": "capability_loss",
+      "why": "delta_auc=-0.112 < -0.03",
+      "delta_share": -0.03392409175051561,
+      "delta_auc": -0.11247503216269089,
+      "score_drift": {
+        "ks": 0.1037694045918302,
+        "psi": 0.04256857905089004,
+        "overall": "moderate",
+        "ref_mean": 0.805463386922701,
+        "cur_mean": 0.8356745475458697
+      },
+      "label": {
+        "vol_threshold": 0.005,
+        "vol_threshold_source": "market_features_meta",
+        "n_label_bars": 175291,
+        "candles": "datasets-out/market_raw/SOLUSDT/15m/v002/data.jsonl"
+      }
+    },
+    "sol-regime-15m-lgbm-fc-pcv-v2": {
+      "reference": {
+        "n_scored": 3204,
+        "n_labelled": 3204,
+        "volatile_label_share": 0.055867665418227214,
+        "auc": 0.4402493189897964,
+        "mean_score": 0.8093195505014265
+      },
+      "current": {
+        "n_scored": 679,
+        "n_labelled": 638,
+        "volatile_label_share": 0.0219435736677116,
+        "auc": 0.5107600732600732,
+        "mean_score": 0.8337157345065109
+      },
+      "rule_verdict": "no_explanation",
+      "why": "delta_share=-0.034, delta_auc=+0.071: mix and AUC both flat",
+      "delta_share": -0.03392409175051561,
+      "delta_auc": 0.07051075427027681,
+      "score_drift": {
+        "ks": 0.10586729768937575,
+        "psi": 0.04104674464758189,
+        "overall": "moderate",
+        "ref_mean": 0.8093195505014265,
+        "cur_mean": 0.8337157345065109
+      },
+      "label": {
+        "vol_threshold": 0.005,
+        "vol_threshold_source": "market_features_meta",
+        "n_label_bars": 175291,
+        "candles": "datasets-out/market_raw/SOLUSDT/15m/v002/data.jsonl"
+      }
+    },
+    "sol-regime-5m-lgbm-v1": {
+      "reference": {
+        "n_scored": 8173,
+        "n_labelled": 8173,
+        "volatile_label_share": 0.009421265141318977,
+        "auc": 0.28621958575021816,
+        "mean_score": 0.921775578302828
+      },
+      "current": {
+        "n_scored": 1994,
+        "n_labelled": 1889,
+        "volatile_label_share": 0.0031762837480148226,
+        "auc": 0.10240750575323065,
+        "mean_score": 0.9374807314813107
+      },
+      "rule_verdict": "capability_loss",
+      "why": "delta_auc=-0.184 < -0.03",
+      "delta_share": -0.006244981393304155,
+      "delta_auc": -0.1838120799969875,
+      "score_drift": {
+        "ks": 0.10429048064295665,
+        "psi": 0.03210327983391642,
+        "overall": "moderate",
+        "ref_mean": 0.921775578302828,
+        "cur_mean": 0.9374807314813107
+      },
+      "label": {
+        "vol_threshold": 0.005,
+        "vol_threshold_source": "market_features_meta",
+        "n_label_bars": 525883,
+        "candles": "datasets-out/market_raw/SOLUSDT/5m/v002/data.jsonl"
+      }
+    },
+    "btc-regime-15m-lgbm-yz-v1": {
+      "reference": {
+        "n_scored": 3229,
+        "n_labelled": 3229,
+        "volatile_label_share": 0.013316816351811707,
+        "auc": 0.19879852260616943,
+        "mean_score": 0.9490392750599539
+      },
+      "current": {
+        "n_scored": 684,
+        "n_labelled": 643,
+        "volatile_label_share": 0.007776049766718507,
+        "auc": 0.064576802507837,
+        "mean_score": 0.9705073638530618
+      },
+      "rule_verdict": "capability_loss",
+      "why": "delta_auc=-0.134 < -0.03",
+      "delta_share": -0.0055407665850931995,
+      "delta_auc": -0.13422172009833244,
+      "score_drift": {
+        "ks": 0.08661816614417225,
+        "psi": 0.0671743196335634,
+        "overall": "minor",
+        "ref_mean": 0.9490392750599539,
+        "cur_mean": 0.9705073638530618
+      },
+      "label": {
+        "vol_threshold": 0.005,
+        "vol_threshold_source": "market_features_meta",
+        "n_label_bars": 175291,
+        "candles": "datasets-out/market_raw/BTCUSDT/15m/v002/data.jsonl"
+      }
+    },
+    "btc-regime-15m-lgbm-fc-pcv-v2": {
+      "reference": {
+        "n_scored": 3220,
+        "n_labelled": 3220,
+        "volatile_label_share": 0.013354037267080746,
+        "auc": 0.18718844016953246,
+        "mean_score": 0.9653175847399993
+      },
+      "current": {
+        "n_scored": 683,
+        "n_labelled": 642,
+        "volatile_label_share": 0.00778816199376947,
+        "auc": 0.03233908948194662,
+        "mean_score": 0.9780210806691907
+      },
+      "rule_verdict": "capability_loss",
+      "why": "delta_auc=-0.155 < -0.03",
+      "delta_share": -0.005565875273311275,
+      "delta_auc": -0.15484935068758582,
+      "score_drift": {
+        "ks": 0.12315142366068588,
+        "psi": 0.030500432865680348,
+        "overall": "moderate",
+        "ref_mean": 0.9653175847399993,
+        "cur_mean": 0.9780210806691907
+      },
+      "label": {
+        "vol_threshold": 0.005,
+        "vol_threshold_source": "market_features_meta",
+        "n_label_bars": 175291,
+        "candles": "datasets-out/market_raw/BTCUSDT/15m/v002/data.jsonl"
+      }
+    },
+    "btc-regime-1h-lgbm-v2": {
+      "reference": {
+        "n_scored": 1363,
+        "n_labelled": 1363,
+        "volatile_label_share": 0.11518708730741012,
+        "auc": 0.30139377422864444,
+        "mean_score": 0.822327130823131
+      },
+      "current": {
+        "n_scored": 225,
+        "n_labelled": 207,
+        "volatile_label_share": 0.03864734299516908,
+        "auc": 0.8241206030150754,
+        "mean_score": 0.8239954981771231
+      },
+      "rule_verdict": "regime_mix",
+      "why": "delta_share=-0.077 (>= 0.05) and delta_auc=+0.523 (>= -0.03)",
+      "delta_share": -0.07653974431224103,
+      "delta_auc": 0.522726828786431,
+      "score_drift": {
+        "ks": 0.13373767017200622,
+        "psi": 0.14124750150381993,
+        "overall": "moderate",
+        "ref_mean": 0.822327130823131,
+        "cur_mean": 0.8239954981771231
+      },
+      "label": {
+        "vol_threshold": 0.005,
+        "vol_threshold_source": "market_features_meta",
+        "n_label_bars": 43819,
+        "candles": "datasets-out/market_raw/BTCUSDT/1h/v002/data.jsonl"
+      }
+    },
+    "btc-regime-1h-lgbm-yz-v1": {
+      "reference": {
+        "n_scored": 1363,
+        "n_labelled": 1363,
+        "volatile_label_share": 0.11518708730741012,
+        "auc": 0.3327602961836254,
+        "mean_score": 0.8332041284970566
+      },
+      "current": {
+        "n_scored": 225,
+        "n_labelled": 207,
+        "volatile_label_share": 0.03864734299516908,
+        "auc": 0.5979899497487438,
+        "mean_score": 0.8414690948947855
+      },
+      "rule_verdict": "regime_mix",
+      "why": "delta_share=-0.077 (>= 0.05) and delta_auc=+0.265 (>= -0.03)",
+      "delta_share": -0.07653974431224103,
+      "delta_auc": 0.26522965356511835,
+      "score_drift": {
+        "ks": 0.15503056982147223,
+        "psi": 0.09015586864307451,
+        "overall": "moderate",
+        "ref_mean": 0.8332041284970566,
+        "cur_mean": 0.8414690948947855
+      },
+      "label": {
+        "vol_threshold": 0.005,
+        "vol_threshold_source": "market_features_meta",
+        "n_label_bars": 43819,
+        "candles": "datasets-out/market_raw/BTCUSDT/1h/v002/data.jsonl"
+      }
+    }
+  },
+  "score_semantics": "served score = max class probability for multiclass heads (scripts/ml/_regime_score_semantics.py): the split-mode AUC is a confidence-vs-label relation, not a P(volatile) ranking",
+  "thresholds": {
+    "share_move": 0.05,
+    "auc_drop": -0.03,
+    "min_labelled": 200
+  }
+}
