@@ -3628,7 +3628,7 @@ def get_open_packages(request: Request) -> dict[str, Any]:
                 f"SELECT {trade_cols} FROM trades WHERE status = 'open' ORDER BY id DESC")]
         finally:
             conn.close()
-    except sqlite3.Error as exc:
+    except sqlite3.Error as exc:  # allow-silent: not silent -- logged with its stack and re-raised as a 503 (mirrors _journal_select); never folded into an empty set
         logger.exception("diag: open_packages sqlite read failed")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
