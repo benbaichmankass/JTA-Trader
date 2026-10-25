@@ -1,0 +1,22 @@
+{
+  "id": "DRIFT-SCAN-RETIRE",
+  "title": "Drift: retire the ~8/day ict-drift-retrain timer; run the plan-only drift scan as a step of the weekly /ml-review instead, feeding persistent drift into the workplan via drift-remediation",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 4,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR DECISION 2026-10-25 ~06:02Z (popup, relayed by Manager Session 2026-10-25 session_016v5FrVaSAmNoz8u6ct9HqC), verbatim: \"Retire the scan (Recommended)\". From PI-20261021-WG8OPB7N-0002 (MEASURED 2026-10-21: scans flag 9 manifests, retrain 0; daily cycle 67 trained). Tier-2 trainer timer change via the trainer system-action path; revert = re-enable the timer. OPERATOR CORRECTION 2026-10-25 ~06:10Z (chat, verbatim): \"Actually we still need to at least be measuring drift and using that information on the workplan, but it doesn't need to be 8 times a day\". SUPERSEDES the 06:02Z popup answer \"Retire the scan\". Scope: (1) keep RETRAIN_PLAN_ONLY=1 (measure, no auto-retrain); (2) timer cadence ~8/day -> once daily, finishing before ict-work-report 05:30Z (manager default; operator may re-set); (3) write the drifted-manifest list where the daily review reads it (work report section or comms/ml-plan record) so persistent drift becomes rows via the drift-remediation skill. Tier-2 timer change + Tier-1 reporting; revert = restore the old timer schedule. OPERATOR 2026-10-25 ~06:15Z (chat, verbatim): \"The other possibility with the drifting is just to add that as part of the regular ML review. If you think that that's often enough, then that's fine also, and then we can, you know, sort of keep things a little on the leaner side.\" MANAGER CALL (operator delegated it): weekly is enough -- the daily training cycle already retrains all manifests, so transient drift self-corrects daily; the scan's value is spotting PERSISTENT drift (capability failure), a multi-day judgement per the drift-remediation skill. FINAL SCOPE (supersedes the 06:10Z \"once daily\" scope): (1) disable the ict-drift-retrain timer on the trainer (Tier-2, revert = re-enable); (2) keep scripts/ops/run_drift_retrain.sh, plan-only; (3) add a step to .claude/skills/ml-review/SKILL.md: run the scan (plan-only) and for any manifest drifted in 2+ consecutive weekly reads, open a drift-remediation row/unit (Tier-1 skill edit).",
+  "priority_rank": 13,
+  "updated_at": "2026-10-25T06:14:47Z",
+  "updated_by": "session_016v5FrVaSAmNoz8u6ct9HqC",
+  "roadmap": [
+    "M25"
+  ],
+  "_seq": 640
+}
