@@ -209,7 +209,8 @@ def run(unit_path: Path, out_dir: Path) -> int:
     arms["together"] = one(legs)
     verdict = decide(arms, int(h.get("min_oos_trades", 20)))
     return finish(verdict, f"{symbol} legs={legs} OOS from {h['oos_start']} (candles {candles_path})",
-                  {k: v["n_oos"] for k, v in arms.items()}, arms=arms, cost_policy=cost,
+                  int(arms["together"]["n_oos"]), n_by_arm={k: v["n_oos"] for k, v in arms.items()},
+                  arms=arms, cost_policy=cost,
                   risk_pct=live.percent, oos_start=h["oos_start"])
 
 

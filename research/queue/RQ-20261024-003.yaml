@@ -67,6 +67,8 @@ generated:
 last_dispatched_at: '2026-10-24T12:46:29+00:00'
 grading:
   auto: true
+  owner: RESEARCH-OPS-20261025-0247
+  owner_reason: 'n-bound, not a defect: base_oos_trades 29 < 39 on trend_donchian_xrp_adx25 (unresolvable_at_current_n). Monthly cadence re-asks it; no instrument gap, nothing to build. It sat in needs_review with no owner because the SKILL routes unresolvable-at-current-n recurring e35 units to a 90-day recheck, yet this one was graded needs_review on 2026-10-25 -- if it is still here after the next re-ask, file the grader path as a defect.'
   decision_rule_id: RULE-TPL-E35-BRACKET-IS-OOS-GATE
   evidence:
   - docs/research/e35-bracket-corpus.jsonl

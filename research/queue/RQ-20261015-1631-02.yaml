@@ -112,13 +112,7 @@ grading:
   grader: scripts/research/queue_grade.py
   needs_review: true
   owner: SAME-SYMBOL-ALLOCATION
-  owner_reason: 'producer_failed TWICE (research-ops 2026-10-24 14:47Z, read from results/RQ-20261015-1631-02/):
-    the 2026-10-16 route-fault fix works (the reason now reaches the record) and the re-run on it (2026-10-17)
-    still reads ''no 5m candle source for the symbol: unresolved'' for XRPUSDT -- bs._backtest_data_source.resolve_or_refuse(XRPUSDT,
-    5m, unit data) is not ok on the runner. The stale text here said it would re-run; it already did and
-    cadence is once, so nothing re-fires. Lever: crypto 5m candle source for same_symbol_head_to_head.py
-    (runner-reachable Binance-Vision, as harness_stage0 / NEWS-ALPHA-HARNESS use), noted on SAME-SYMBOL-ALLOCATION;
-    unit then needs last_dispatched_at null. Not a verdict.'
+  owner_reason: 'producer_failed TWICE (research-ops 2026-10-24 14:47Z, read from results/RQ-20261015-1631-02/): the 2026-10-16 route-fault fix works (the reason now reaches the record) and the re-run on it (2026-10-17) still reads ''no 5m candle source for the symbol: unresolved'' for XRPUSDT -- bs._backtest_data_source.resolve_or_refuse(XRPUSDT, 5m, unit data) is not ok on the runner. UPDATE research-ops 2026-10-25 02:47Z: the 5m fetch (#19948) worked -- the unit was re-fired 2026-10-25T00:54Z (run 40148577750) and the run finished green, but collect_runner_results REFUSED its record (dispatch 40153686572: n emitted as a per-arm dict, research_result.py wants an int; LOST). Fixed in the same PR (same_symbol_head_to_head emits int n + n_by_arm; the collector collapses a dict n to its `together` count), so the already-finished run is collected on the next dispatch after merge with no re-fire. This gate clears when research/results/RQ-20261015-1631-02/ holds a row dated after 2026-10-25 with read_state measured. Not a verdict.'
   reason: 'read_state not unanimously measured: [''producer_failed'']'
   rows: 2
   verdict: null
