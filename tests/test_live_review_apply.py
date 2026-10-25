@@ -221,12 +221,55 @@ def test_missing_config_reads_recommend(tmp_path):
     assert lri.apply_mode_for("bybit_2", lri.load_config(tmp_path / "absent.yaml")) == "recommend"
 
 
-def test_committed_config_is_recommend_not_apply():
-    """Only an operator commit may set apply (dispatch: do not set apply_mode: apply)."""
+def _apply_grant_violations(cfg, mandates_doc):
+    """Reasons ``cfg`` selects ``apply`` without a granted MD-LIVE-TIGHTEN-SL; [] = fine."""
+    modes = [cfg.get("apply_mode")] + [(v or {}).get("apply_mode") for v in (cfg.get("accounts") or {}).values()]
+    out = [f"invalid apply_mode {m!r}" for m in modes if m is not None and m not in ("recommend", "apply")]
+    if "apply" not in modes:
+        return out
+    granted = [m for m in ((mandates_doc or {}).get("mandates") or [])
+               if isinstance(m, dict) and m.get("id") == lri.MANDATE_ID]
+    if not granted:
+        return out + [f"apply_mode: apply without {lri.MANDATE_ID} in mandates:"]
+    m = granted[0]
+    if m.get("direction") != "derisk_only":
+        out.append("mandate direction is not derisk_only")
+    if not m.get("granted_by"):
+        out.append("mandate has no granted_by")
+    if not str(m.get("source") or "").strip():
+        out.append("mandate has no source")
+    return out
+
+
+def test_committed_apply_requires_granted_mandate():
+    """apply_mode may be ``apply`` only while MD-LIVE-TIGHTEN-SL is GRANTED.
+
+    Operator approvals: PR #20139 popup ~19:57Z 2026-10-25 ("After VM dry-run
+    passes"), gate met by dry-run #20183; operator chat ~22:25Z ("go ahead with
+    the flip"). ``apply`` without the granted mandate (in ``mandates:``, not
+    ``proposed:``) is refused, so reverting the grant alone cannot leave apply live.
+    """
+    import yaml
+    from pathlib import Path
+
     cfg = lri.load_config()
-    assert cfg.get("apply_mode") == "recommend"
-    assert all((v or {}).get("apply_mode") != "apply" for v in (cfg.get("accounts") or {}).values())
+    doc = yaml.safe_load((Path(lri.CONFIG_PATH).parent / "mandates.yaml").read_text())
+    assert _apply_grant_violations(cfg, doc) == []
     assert lri.min_buffer_atr_from(cfg) == 1.0
+
+
+def test_apply_without_granted_mandate_is_a_violation(tmp_path):
+    """Negative control: apply + a mandates doc lacking the grant is reported."""
+    import yaml
+
+    cfg_path = tmp_path / "live_trade_review.yaml"
+    cfg_path.write_text("apply_mode: apply\n")
+    cfg = lri.load_config(cfg_path)
+    ungranted = yaml.safe_load(f"mandates: []\nproposed:\n  - id: {lri.MANDATE_ID}\n    direction: derisk_only\n")
+    assert _apply_grant_violations(cfg, ungranted)
+    per_account = {"apply_mode": "recommend", "accounts": {"bybit_2": {"apply_mode": "apply"}}}
+    assert _apply_grant_violations(per_account, ungranted)
+    assert _apply_grant_violations({"apply_mode": "recommend"}, ungranted) == []
 
 
 # ------------------------------------------------- per-leg floor: the monitor
