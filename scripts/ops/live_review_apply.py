@@ -38,7 +38,12 @@ script is the review's path instead:
        its own guards and never plans looser (LTR-8 minimal).
      * phone accounts — ``phone_trail.request_sl_tighten`` through the
        one-slot amend channel (+ ``meta.sl_floor`` so the trail re-emits it).
-     * Alpaca (and anything else) — refused, ``no_amend_path`` (LTR-9).
+     * Alpaca — ``src/units/accounts/alpaca_amend.exec_trade_leg`` on THAT
+       trade leg only (its own OCO legs, scoped by share count): tighten-only,
+       PATCH, then the venue read-back; ``trades.stop_loss`` +
+       ``notes.sl_amends`` + ``notes.sl_floor`` only after it matches
+       (AMEND-PARITY-ALL-ACCOUNTS, closes LTR-9).
+     * anything else — refused, ``no_amend_path``.
    Every apply is READ BACK (Bybit: the venue stop; prop VM: the ticket's
    ``meta.sl_floor``; phone: the emitted amend); a mismatch is
    ``apply_failed``. The first refuse / no-op / ``apply_failed`` on a
@@ -342,6 +347,19 @@ def _exec_bybit(db, leg: Dict[str, Any], pkg: Dict[str, Any], level: float,
     return {"result": X_APPLIED, "venue_after": after.get("venue_sl")}
 
 
+def _exec_alpaca(db, leg: Dict[str, Any], level: float,
+                 intent: lri.LiveReviewIntent) -> Dict[str, Any]:
+    """Amend ONLY this account's Alpaca trade leg through
+    ``alpaca_amend.exec_trade_leg``: tighten-only, scoped to the trade's own
+    OCO legs, read back from the venue; the journal is written only after the
+    read-back matches. Same result vocabulary as :func:`_exec_bybit`."""
+    from src.units.accounts import alpaca_amend
+
+    return alpaca_amend.exec_trade_leg(
+        db, leg["row"], level, source=lri.PROVENANCE, mandate=intent.mandate,
+        review_id=intent.review_id, evidence=intent.evidence_path, bar=intent.bar_ts)
+
+
 def _ticket_meta(ticket_id: str) -> Optional[Dict[str, Any]]:
     from src.prop import prop_journal
     from src.prop.phone_trail import _meta
@@ -513,7 +531,7 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
             view = lri.AmendAccountView(account_id=aid, account_class=cls, strategy_execution=execution,
                                         leg_sl=leg["leg_sl"], last_amend_bar=leg.get("last_bar"))
             v = _risk_manager(aid, cfg).approve_amend(intent, view)
-            if v.ok and cls in ("alpaca", "other"):
+            if v.ok and (cls == "other" or (cls == "alpaca" and leg["kind"] != "trade")):
                 v = lri.AmendVerdict(aid, lri.V_REFUSE, None, lri.R_NO_PATH)
         result: Optional[str] = None
         if v.ok and mode == "apply" and apply:
@@ -521,6 +539,8 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
                 res = {"result": X_REFUSED, "detail": f"mandate {intent.mandate!r} not granted"}
             elif cls == "bybit":
                 res = _exec_bybit(db, leg, pkg, v.level, intent)
+            elif cls == "alpaca":
+                res = _exec_alpaca(db, leg, v.level, intent)
             elif cls == "prop_vm":
                 res = _exec_prop_vm(leg, v.level, intent)
             else:  # phone
