@@ -9,9 +9,11 @@
   "ceiling_usd": 4,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    20100
+  ],
   "blocked_on": [],
-  "note": "F1-F6 + insights_history diag read done in PR. landed_unproven until merged; closes on merge. Next: CJ-2 consumes ml/datasets/claude_scores_normalise.py.",
+  "note": "F1-F6 + insights_history diag read done in PR. landed_unproven until merged; closes on merge. Next: CJ-2 consumes ml/datasets/claude_scores_normalise.py. | Dispatch note (main): From docs/plans/ml-claude-distillation-DESIGN.md \u00a7 7 (merged e8d1cf66, operator-approved). Parent ML-CLAUDE-DISTILL-DESIGN.  Dispatched 2026-10-25 14:31Z by session_01SrYqLY4Ui9RKns12r2zthj: fresh Sonnet lane (doc/rubric fixes, no order path), ceiling $4.",
   "priority_rank": 3,
   "updated_at": "2026-10-25T14:48:00Z",
   "updated_by": "session_01Qd8ZiVhVd6w91CUCmZbxhs",
@@ -22,5 +24,10 @@
     "roadmap": "M25: CJ-0 F1-F6 landed; insights_history measured 214,093 rows all template:v1 (design 1.1 #8)",
     "arch": "ARCHITECTURE-CANONICAL training workflow step 1 corrected: grades do not feed ml/"
   },
-  "_seq": 666
+  "_seq": 666,
+  "observation": {
+    "what": "next claude_strategy_scores rows written by score_order_packages/grade_closed_trades carry author_kind=rubric_script + rubric_version",
+    "how_to_check": "tail comms/claude_strategy_scores.jsonl after the next grading run",
+    "due_by": "2026-11-01T00:00Z"
+  }
 }
