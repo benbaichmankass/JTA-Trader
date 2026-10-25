@@ -2,8 +2,13 @@
 
 > **Doc status:** `unknown` · category `architecture` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · **nobody has verified this document's status — do not act on it as current**
 
-**State: DESIGN ONLY.** Nothing below is built. No checklist row, mandate, config key or queue unit
-exists for it. The operator reviews this first; § 10 lists the rows the manager files after that.
+**State: DESIGN v0.** Nothing below is built by this PR. The operator reviews it, and § 10 lists the
+rows the manager files after that.
+
+**Monday comes first** (operator deadline ~17:45Z, relayed by the manager): the desk must be
+live-capable when markets open Monday. **§ 0a is the Monday slice.** Everything marked *phase 2* is
+scoped but is not on the Monday path. The per-account apply path is being built in parallel by lane
+`LTR-6R-APPLY-PATH`, and this design adopts its interface (§ 3.0).
 Checklist row: `DESK-DESIGN` · roadmap `L-DESK` (new, G4) beside `L-ATM` · Tier 1 (a doc).
 
 **How to read the marks** (`docs/CLAUDE-RULES-CANONICAL.md` § MEASURED / INFERRED / DECIDED):
@@ -57,6 +62,35 @@ The operator asked for this in chat on 2026-10-25, ~16:12–16:30Z. The full rec
 - **The desk sits inside the promotion ladder.** It cannot be backtested, so its Stage 0 is a **blind
   replay with paired counterfactuals**. Its Stage 1 is a mechanical soak of 1–2 clean intents per account
   class. Its Stage 2 is mandate-bounded, derisk-only actions on real money. § 8.
+
+---
+
+## 0a. The Monday slice — live-capable by market open (phase 1)
+
+| piece | Monday state | owner / row |
+|---|---|---|
+| **In-trade role, live** | The standing desk session runs the `live-trade-review` skill on in-trade packets for every open real-money, prop and `bybit_1` package. Cadence: **15 min**, or LTR-4's hourly gate as the fallback if the standing session is not up. **Sonnet** decides; an **Opus** escalation confirms any non-`hold` on real money or prop. | DESK-5 (skill delta), DESK-6 (session), LTR-3 skill as is |
+| **Packets** | `scripts/ops/live_review_packet.py --all-open` (PR #20127), run from the session over the relays. It takes 36 s (MEASURED), which is fine at 15 min. A VM endpoint is phase 2. | LTR-11 |
+| **Intent → per-account gate → executor** | The LTR-6R interface (§ 3.0): a package-level `LiveReviewIntent` → `RiskManager.approve_amend(intent, account)` per account → that account's existing executor, **account-scoped**. Tighten-only. | LTR-6R (Opus, in flight) |
+| **The switch** | `config/live_trade_review.yaml::apply_mode: off \| recommend \| apply`. **Default `recommend`**, with a per-account override. Only a commit writes it; no runtime condition does. It is not a halt latch (Prime Directive rule 7), and it never stops reviewing. | LTR-6R |
+| **Evidence to apply** | Each intent cites a committed decision row: `packet_sha`, the LTR-0 option table with n ≥ 20 from this state, `ev_delta_r ≥ −0.25 R`, `worst_case_delta_r > 0`, and mechanics `match`. The account's gate verdict and the venue readback are recorded per account. | LTR-2 records + LTR-6R |
+| **Mandate to apply on real money and prop** | `MD-LIVE-TIGHTEN-SL`, `derisk_only`, bound **0.25 R** with a **0.5 R shadow arm**, rollout *"Auto from day one"*. These terms are **DECIDED** by the operator 2026-10-25 ~13:58Z (row `LTR-7-MANDATE`). It must be **written into `config/mandates.yaml`** before any account flips to `apply`. | LTR-7 (manager writes the operator's recorded grant) |
+| **Flip order** | 1. `bybit_1` → `apply` first, the sandbox (DECIDED, § 3.6). <br>2. After **1–2 clean applies** there (verdict, venue readback and divergence check all clean), `bybit_2` + `bybit_portfolio` → `apply`. This is the mechanical-soak rule; there is no calendar wait. <br>3. Prop accounts follow only when their executor path (LTR-8, plus the PHONE-AMEND fix for `breakout_2`) has had its own 1–2 clean applies. Until then they stay `recommend`. <br>Alpaca stays `recommend` until LTR-9 lands. | manager, on the evidence |
+
+**Phase 2: scoped below, not on the Monday path.**
+
+- entry review and market watch, both shadow (§ 2.1, § 2.3);
+- the short-timeframe standing lane and the short-hold work (§ 5, § 6);
+- packets built on the VM, and a VM intent intake (DESK-1, DESK-4b);
+- the blind teacher dial (§ 4.2), which can start Monday at ρ = 0.25 in recommend mode at no risk, but is not required;
+- D-S0 blind replay (DESK-7);
+- grading (DESK-9) and the ML feed (DESK-11).
+
+⚠️ **What "live-capable" does and does not mean on Monday.**
+
+- Real-money applies happen only once three things hold: `MD-LIVE-TIGHTEN-SL` is in `config/mandates.yaml`, LTR-6R has merged (a Tier-3 order-path change), and `bybit_1` has shown 1–2 clean applies.
+- Until then the desk is live in `recommend`: decisions are recorded, and asks go to the operator per the LTR Q3 ping rule ("applies and asks only").
+- The desk's own Stage 0 (D-S0, § 8) is **not** a precondition for tighten-only applies inside the operator-granted bound. That bound is the operator's priced risk preference (LTR Q1), and the LTR-0 table prices each apply against the leg's history. D-S0 gates everything **beyond** tighten-only.
 
 ---
 
@@ -157,8 +191,22 @@ action ∈ <role enum>, params {level, level_atr, frac, bars},
 judge_prior (P that the default action ends worse), confidence ∈ {measured, suggestive, anecdote},
 basis ∈ {ev_positive, preference_within_bound, insufficient_n, mechanics, operator_ask},
 rationale (text; never a feature), escalated_to (decision_id | null),
-intent_id (null when record-only), disposition {route, per_account[] (§ 3.4)}
+intent_id (null when record-only), disposition {route, per_account[] (§ 3.4)},
+external_context {used: bool, trigger: <event>, sources: [{url_or_id, title, fetched_at}],
+                  summary, reproducible: false}   — DECIDED feeds rule, below
 ```
+
+**External context (DECIDED 2026-10-25 ~17:58Z, operator popup verbatim: *"Repo feeds + logged exception (Recommended)"*).**
+
+- **The packet is the default and only feed.** A decision may pull live web/news context only on a
+  big-event exception: a `calendar` or `swing` due event, or an escalation.
+- **Every pull is logged** in `external_context`: the sources, their fetch time and a summary. The
+  pulled text is never folded into the packet, so `packet_sha` stays the reproducible input.
+- **Replays tell exception rows apart** by `external_context.used = true`. The `claude_judgments`
+  builder sets `reproducible: false` on them. D-S0 replays and the student training sets **exclude**
+  those rows by default. They are graded separately, so the value of the exception is measured
+  instead of mixed in.
+- The validator guard refuses a row with `used: true` and an empty `sources`.
 
 | role | action enum | default | applied today? |
 |---|---|---|---|
@@ -189,6 +237,32 @@ routine decisions (operator point 4).
 
 This re-scopes LTR-6, LTR-8 and LTR-9 (operator point 2; the manager's finding on `LTR-6-APPLY-PATH`).
 
+### 3.0 The adopted interface (lane `LTR-6R-APPLY-PATH`, manager relay 2026-10-25 17:37Z)
+
+The design uses LTR-6R's names and does not define a parallel set:
+
+- **`LiveReviewIntent`**, at package level. `action ∈ {tighten_sl, flag, no_action}`, plus level,
+  evidence and mandate. The desk's in-trade enum (§ 2.3) maps onto it as follows: `tighten_sl` →
+  `tighten_sl`; `flag_mechanics` → `flag`; everything else → `no_action`, which is a record only.
+- **`RiskManager.approve_amend(intent, account)`** → `approve` / `clip` / `refuse`, each with a reason.
+- **The account's existing executor:** `amend_position_sl` for Bybit, the prop trail `sl_floor` or the
+  phone amend for prop, and Alpaca later.
+- **Tighten-only**, gated by `config/live_trade_review.yaml::apply_mode`.
+
+**Four points this design requires of it.** They were sent to the manager at 18:02Z.
+
+1. **A fourth verdict, `could_not_look(reason)`.** A failed venue, mark, ATR or position read is
+   neither approve nor refuse. It means no apply, a retry next cycle, and one flag after 3 consecutive
+   cycles. This is the collapsed-states rule plus Prime Directive rule 7.
+2. **Account-scoped execution.** Today `amend_position_sl.py` writes the shared `order_packages.sl`
+   and amends every leg. After a per-account `clip` or `refuse`, that would push one account's level
+   onto accounts whose gate did not approve it. The executor must amend **only** the approved account's
+   position and record a per-account applied level. That account's trail then uses
+   max(own stop, applied level), so it never loosens back.
+3. **Mandatory readback.** A mismatch is `apply_failed`, and the first refuse, no-op or mismatch on a
+   real-money or prop account sends one ping. That is the `PHONE-AMEND-REFUSED-1025` class.
+4. **The daily-DD switch never refuses a tighten** (`evaluate(..., opening=False)` semantics).
+
 ### 3.1 The shape
 
 ```
@@ -215,7 +289,10 @@ divergence check (after every intent) ◄─────────────
 
 ### 3.2 The gate (DESK-2: pure functions, Tier 3 by path, `src/units/accounts/risk.py`)
 
-**`RiskManager.approve_amend(intent, position) -> Verdict{approve | refuse(reason) | could_not_look(reason)}`**
+**`RiskManager.approve_amend(intent, account) -> Verdict{approve | clip(level, reason) | refuse(reason) | could_not_look(reason)}`**
+
+This is the LTR-6R signature (§ 3.0). `clip` moves the level to the tightest one this account allows,
+which is still tighter than its current stop. `could_not_look` is this design's addition (§ 3.0).
 
 1. **Tighten only.** The new stop is strictly inside the account's current stop, compared against the
    **venue** stop read. Otherwise `refuse(widen)`.
@@ -283,16 +360,35 @@ project over an existing store**: `order_packages` meta, or the system-action au
 needs the operator's OK and a backfill (Rule 3). That is a rule, not a preference, so it is not asked
 in § 11.
 
-### 3.6 The sandbox
+### 3.6 The sandbox — DECIDED: shadow the `bybit_1` soak book
 
-Two choices are pending with the operator (§ 11, Q2). Both phases below work under either answer:
+**DECIDED 2026-10-25 ~17:58Z, operator popup verbatim: *"Shadow the bybit_1 soak book"*.** There is no
+new account. The desk's sandbox applies land on `bybit_1`, which is the Stage-1 soak book and carries
+the same packages as `bybit_2`.
 
-- **Phase A, pure shadow (no account):** decisions are recorded and counterfactuals are replayed. This
-  needs no execution at all and is where the pilot starts (§ 8 D-S0/D-S1a).
-- **Phase B, mechanics:** 1–2 clean intents per account class through gate → executor → readback.
-  - A dedicated sandbox paper account keeps the Stage-1 soak books clean.
-  - Shadowing `bybit_1` costs nothing to wire, but desk-touched trades on `bybit_1` stop being a clean
-    soak of the leg's own exits, because `bybit_1` carries the same packages as `bybit_2`.
+**Keeping desk effects separable from the strategy soak.** Both readings share one book, so neither may
+contaminate the other.
+
+1. **Account-scoped applies are a precondition** (§ 3.0, point 2). A sandbox apply on `bybit_1` must
+   never move `bybit_2`'s stop. Without account scoping, the sandbox would be real money.
+2. **A touch record on every desk effect.** It has `{order_package_id, account, intent_id,
+   decision_id, applied_at, level_before, level_after, verdict}`, kept in the per-account verdict and
+   apply records. It is projected over those records, not held in a new store (§ 3.5). A package-account
+   pair is **desk-touched** from its first applied intent onward.
+3. **Every grader splits touched from untouched:**
+   - `scripts/ops/soak_report.py`: a leg's mechanical soak PASS counts **untouched** trades only. A
+     desk-touched trade is reported, but it is never one of the leg's "1–2 clean trades", because its
+     exit is no longer the leg's own.
+   - Live-vs-backtest and cost-fidelity verdicts are computed on untouched trades, with touched ones
+     shown beside them.
+   - Desk grading (§ 4.4) uses touched trades for the applied effect and untouched ones as the control.
+   - The Gate-2 demotion read on `bybit_2` + `bybit_portfolio` is unaffected while they stay in
+     `recommend`, and is split the same way once they apply (LTR § 5).
+4. **Untouched trades stay the default.** INFERRED: most `bybit_1` trades are never touched, because
+   most reviews are `hold` (1 of 2 real-money LTR rows in the first run). So the soak keeps its
+   population.
+5. **The `bybit_1` mechanics evidence** for the desk is the first 1–2 clean applies: verdict, readback
+   and divergence check all clean (§ 0a flip order).
 
 ---
 
@@ -632,11 +728,25 @@ Every row carries `roadmap: [L-DESK]` (plus `L-ATM` where marked) and a `writeba
 | 10 | `DESK-9-GRADING` | Per-role grading (§ 4.4) in `/performance-review`, the counterfactual replay, calibration | 1 | Sonnet | $8 | DESK-6 records | **folds in LTR-5-GRADING** |
 | 11 | `DESK-10-CAPACITY` | Measure `k` ($/pp) and the per-tier costs; desk scale lines and the extended breach order in `spend_meter.py --capacity` | 1 | Sonnet | $4 | DESK-6 | **extends LTR-10B** |
 | 12 | `DESK-11-ML-FEED` | Desk decisions as a `claude_judgments` source (`kind: desk_*`); the three-state Claude feature for later (§ 9.4), behind CJ-4 | 1 | Opus | $10 | DESK-0, CJ-2 | **reshapes CJ-2 / CJ-5 / CJ-6**; CJ-3 (blind grade) becomes the post-trade role; CJ-7 (backfill scope) reuses DESK-7's replay harness |
-| 13 | `DESK-12-SANDBOX` | Wire the sandbox per operator Q2 (a dedicated paper account, or `bybit_1` shadow) | 2/3 | Opus | $8 | operator Q2, DESK-3 | — |
+| 13 | `DESK-12-SANDBOX` | **Monday-critical.** The `bybit_1` sandbox per the DECIDED answer: the touch record and touched/untouched splits in `soak_report.py`, live-vs-backtest, cost fidelity and desk grading (§ 3.6) | 1 (graders) | Sonnet | $6 | LTR-6R records | — |
 | 14 | `DESK-13-MANDATE` | Extend `MD-LIVE-TIGHTEN-SL` (LTR-7) to name the desk intent route; **propose** a separate `MD-DESK-SKIP` for live entry skips. **The operator grants**; the row only proposes | 3 (grant) | — | — | DESK-7 PASS | **reshapes LTR-7** |
 
 **Totals:** about $155 across 13 build rows; the mandate row carries no ceiling. **Nothing applies on real
 money before rows 3, 4, 5, 13 and 14 have landed and D-S0/D-S1b have passed.**
+
+**Phases.**
+
+- **Monday (phase 1):**
+  - LTR-6R, the in-flight Opus lane, delivers the Monday halves of DESK-2 and DESK-3 (Bybit), plus the `apply_mode` switch.
+  - LTR-7 writes the mandate.
+  - DESK-12 adds the `bybit_1` touch splits.
+  - DESK-5 and DESK-6 put the standing in-trade session up in `recommend`.
+- **Phase 2:** everything else. That includes:
+  - the prop and Alpaca executors (DESK-3 remainder, plus LTR-8/9);
+  - VM packets and intake (DESK-1, DESK-4b);
+  - entry review and market watch;
+  - D-S0 (DESK-7) and short-hold (DESK-8);
+  - grading (DESK-9) and the ML feed (DESK-11).
 
 **Order on the critical path:**
 
@@ -658,27 +768,12 @@ money before rows 3, 4, 5, 13 and 14 have landed and D-S0/D-S1b have passed.**
 
 ## 11. Open questions for the operator (preferences only; no data settles these)
 
-**Q1 (pending) — feeds: repo-curated only, or occasional live web/news context?**
+**Decided 2026-10-25 ~17:58Z (removed from the open list):**
 
-- **(a) Repo-curated only.** Every input is in the packet, point-in-time, reproducible and trainable.
-- **(b) Occasional live web/news**, on escalations only. The Opus escalation may search, and what it
-  read is attached to the decision as a cited `external_context` block.
-- **Recommended: (b), escalations only, with the citation recorded.**
-  - Live news is the one thing the repo cannot curate quickly. The calendar feed is MEASURED stale since
-    2026-07-30.
-  - Restricting it to escalations keeps 95%+ of decisions packet-pure for training.
-  - A web-informed row is flagged `external_context: true`. It is excluded from the student's training
-    set until it can be reproduced.
+- **Feeds:** *"Repo feeds + logged exception (Recommended)"* (§ 2.3, `external_context`).
+- **Sandbox:** *"Shadow the bybit_1 soak book"* (§ 3.6).
 
-**Q2 (pending) — sandbox: a dedicated sandbox paper account, or shadow `bybit_1`?**
-
-- **Recommended: a dedicated sandbox account for D-S1b only,** with D-S0/D-S1a needing no account at all.
-- **Why not `bybit_1`:** it carries the same packages as `bybit_2` (the `accounts` list on the LTR rows),
-  so desk-touched trades there stop being a clean mechanical soak of the leg's own exits. Every Stage-1
-  read on that book would need the touched/untouched split.
-- **The cost:** one paper account's credentials. Only the operator can mint those.
-
-**Q3 — may the sub-15 min path use a VM-side model call** (the M13 insights key in
+**Q1 — may the sub-15 min path use a VM-side model call** (the M13 insights key in
 `src/runtime/insights/generator.py`) instead of a session?
 
 - **Why it matters:** it removes the 60 s wake floor and the session context entirely, at ~1–2 k tokens a
@@ -691,7 +786,7 @@ money before rows 3, 4, 5, 13 and 14 have landed and D-S0/D-S1b have passed.**
 - **Recommended: not now.** Revisit only if DESK-8 passes and a 5 min short-hold leg is wanted. Until
   then, the distilled student (§ 9.3) is the sub-15 min route.
 
-**Q4 — live entry review: should `skip` ever apply on real money** (a new `MD-DESK-SKIP` mandate after
+**Q2 — live entry review: should `skip` ever apply on real money** (a new `MD-DESK-SKIP` mandate after
 D-S0 passes), or should entry review stay a shadow teacher permanently?
 
 - **Recommended: stay shadow until the D-S0 entry-review unit passes,** then decide on its numbers.
