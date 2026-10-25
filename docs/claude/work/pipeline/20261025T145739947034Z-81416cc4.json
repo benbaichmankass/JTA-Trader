@@ -1,0 +1,18 @@
+{
+  "based_on": "20261025T101855194912Z-e5380dfe.json",
+  "due_when": {
+    "clears_when": "a >=300-day 15m MGC series exists in a reachable store and rq_20260928_001_htf_wire.py has been run on ict_scalp_mgc_15m",
+    "kind": "event"
+  },
+  "id": "PI-20261025-1CZRLDTS-0001-B",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "RQ-20260928-001 via lane RQ-20260928-001-RUN; same gap as docs/research/ict-scalp-htf-filter-decision-rule-2026-10-01.md",
+    "rerun": "python3 scripts/ops/fetch_backtest_candles.py --symbol MGC --interval 15 --days 365 --source dukascopy --output /tmp/mgc15.csv"
+  },
+  "routed_2026_10_25": "Same node owns the 7th (MGC) leg; needs a reachable >=300d 15m MGC series (data row), no dispatch path today.",
+  "routed_to": "checklist:P3-STRATEGY-PROGRAMME",
+  "state": "routed",
+  "what": "ict_scalp_mgc_15m was NOT graded by RQ-20260928-001: no 15m MGC candle feed is reachable from a web container (dukascopy_python not installed and its XAU spot is a proxy not the MGC future; yfinance MGC=F is unmapped and its 15m lane is ~60d). The leg stays explicitly htf_trend_filter_enabled: false. Needs a 15m MGC feed (Databento/IB store or Kaggle published data) then the same two-arm run."
+}

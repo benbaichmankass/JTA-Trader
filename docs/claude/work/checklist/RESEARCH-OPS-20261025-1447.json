@@ -1,0 +1,30 @@
+{
+  "id": "RESEARCH-OPS-20261025-1447",
+  "title": "Research-ops pass 2026-10-25 14:47Z",
+  "phase": "research",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "session_01NgHqeQQCWkZVcLAPEPb7ye",
+  "model": null,
+  "ceiling_usd": 5,
+  "spend_usd": 2.5,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[lane session_01NgHqeQQCWkZVcLAPEPb7ye] 14:47Z pass. Prior pass not_run was empty. Results since 09:30Z: 21 units p7/f11/i3 (infra self-tests included). 0142-16 eth_pullback_2h S12 stale exit PASS = discovery (denominator 3); disjoint pre-window impossible (perp klines start 2019-12, n<39) so transfer to sol_pullback_2h authored as node P1-Q14-eth-pb-stale-transfer. Fixed roadmap str->list on 5bd1-02/-03/-04/-07/-08 (infra roadmap_ref_valid pass locally). Filed lever PI-20261025-APEPB7YE-0001 (HTF-filter confirmation has no dispatchable driver). Routed 4 pipeline items. needs_review: 25 owned / 0 unowned, no new triage write. not_run: stranded-PR list + workflow-run read. Record comms/research/ops/20261025T1500Z.json. HELD PR (unvouchable_paths): manager merge needed; merge-slot claim committed.",
+  "updated_at": "2026-10-25T14:59:12Z",
+  "updated_by": "session_01NgHqeQQCWkZVcLAPEPb7ye",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "none: operations pass",
+    "arch": "none: no component changed"
+  },
+  "observation": {
+    "what": "RQ-20261025 P1-Q14 transfer unit emitted by research-queue-replenish after 0142-16 is graded closed and lands a measured result; infra roadmap_ref_valid reads pass on main",
+    "how_to_check": "ls research/results | grep -c .; python3 scripts/research/queue_replenish.py --programme-state | grep -A4 P1-Q14-eth-pb-stale-transfer; python3 scripts/research/infra_selftest.py --check roadmap_ref_valid --out /tmp/x",
+    "due_by": "2026-11-01T00:00Z"
+  },
+  "_seq": 666
+}
