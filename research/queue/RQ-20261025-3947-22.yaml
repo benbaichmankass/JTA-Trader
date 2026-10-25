@@ -1,0 +1,147 @@
+id: RQ-20261025-3947-22
+title: 'Regime head: does CatBoost beat the shipped-shape LightGBM on logloss on the 1h published shards (all three symbols)?'
+status: queued
+cadence: once
+roadmap:
+- M23
+theme: ml_health
+priority: 2
+kind: experiment
+question: Does CatBoost lower the 3-class regime_label logloss vs lgbm_base (200 trees, 31 leaves, lr 0.05, min_child_samples 50) by >= 0.005 on the CV mean on ALL
+  THREE of BTC/ETH/SOL 1h, and by >= 0 on the holdout after 2026-07-12? Same rows for every arm, purged 5-fold walk-forward CV (embargo 24), the six shared features,
+  tail 40000 rows.
+why_this_matters: 'Ordered boosting with symmetric trees; may be unavailable on the runner (then the unit grades INDETERMINATE, not FAIL). Metric is logloss, not
+  macro-F1: on a 3-class label the class prior scores ~0.22 macro-F1 while a coin scores ~0.33, so macro-F1 vs prior can be chance (IDEA-REVIEW-1016); logloss is
+  a proper score. Look-before-you-test: LightGBM capacity brackets are RQ-20261025-001/-008/-010; this unit varies the learner family. Model-family diversity (78
+  % GBDT on 2026-10-11) is a roadmap target. Lane RESEARCH-AUTHOR-1025PM (research runnable floor: 43 runnable vs computed floor 65 at the 14:47Z research-ops pass
+  2026-10-25, record comms/research/ops/). Operator 2026-10-22: an idea that failed one test is not dead; it failed the first test.'
+power:
+  expected_n: 24000
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: Unit = OOS row per symbol. tail_rows leaves an ESTIMATED 24,000-36,000 OOS rows per symbol over 5 folds until the first run replaces it with the measured
+    n. d=0.1 needs ~785 rows so rows are not the limit; bars are autocorrelated, so the rule also requires fold-mean deltas (min_folds 3) on all three symbols.
+  feasibility:
+    source: none
+    accrual_basis: Fixed published shard; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261025394722-CATBOOST
+  statistic: 'Paired per-fold logloss difference on identical purged folds (5, embargo 24) and on the holdout (rows after 2026-07-12), per symbol: lgbm_base minus
+    the candidate (positive = candidate better); mean over folds. Reported, not graded: every arm minus the class prior.'
+  rule: 'PASS IF candidate improves logloss by >= 0.005 on the CV mean on ALL THREE symbols AND >= 0 on the holdout on all three: the learner family adds information
+    over the shipped-shape head (a disjoint-window confirmation follows before any manifest note; trial count 1). FAIL IF the candidate is worse than lgbm_base on
+    the CV mean on EVERY symbol (record the exact configuration in the plan family history; the family stays open for other configurations). INDETERMINATE otherwise,
+    or if folds < 3 or an arm is unavailable.'
+  min_n: 3 usable CV folds per symbol; holdout >= 200 rows per symbol.
+  what_it_does_not_do: Trains nothing that serves; touches no config, registry, roster or order path; compares unweighted arms on the shared features, not shipped
+    models. A learner-family result is not edge and is not a P&L claim.
+  registered_before_run: true
+  registered_at: '2026-10-25'
+compute: auto
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 50
+  confidence: 0.2
+  basis: planning weight for the regime-head quality and model-diversity line (02 Q1.3 / Q4), not a measured P&L
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  published_data: metis-market-data
+  peak_memory_gb: 4.0
+  est_minutes: 35
+  basis: 'Estimate, NOT measured: 3 shards x 2-3 arms x 5 folds, comparable to RQ-20261025-008 (30 min at 40,000 tail rows); re-declare from the first run.'
+ml_bakeoff:
+  task: classification
+  metric: logloss
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT:
+        path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+      ETHUSDT:
+        path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+      SOLUSDT:
+        path: datasets-out/market_features/SOLUSDT/1h/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    tail_rows: 40000
+    holdout_after: '2026-07-12'
+  cv:
+    folds: 5
+    embargo_rows: 24
+    min_train_frac: 0.4
+  baseline: lgbm_base
+  controls:
+  - prior
+  candidates:
+  - cand
+  learners:
+    prior:
+      kind: prior
+    lgbm_base:
+      kind: lightgbm
+      params:
+        n_estimators: 200
+        learning_rate: 0.05
+        num_leaves: 31
+        min_child_samples: 50
+    cand:
+      kind: catboost
+      params:
+        iterations: 300
+        learning_rate: 0.05
+        depth: 6
+        verbose: 0
+  rule:
+    min_folds: 3
+    pass_if:
+    - group: &id001
+      - BTCUSDT
+      - ETHUSDT
+      - SOLUSDT
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.005
+    - group: *id001
+      vs: baseline
+      window: holdout
+      op: '>='
+      value: 0.0
+    fail_if_no_candidate_reaches:
+    - group: any
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.0
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261025-3947-22
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P2
+related:
+- research/queue/RQ-20261025-008.yaml
+- research/queue/RQ-20261025-001.yaml
+- scripts/research/ml_bakeoff.py
+- RESEARCH-AUTHOR-1025PM
