@@ -72,8 +72,12 @@ def test_account_routing_and_descriptions():
     acct = yaml.safe_load(open("config/accounts.yaml"))["accounts"]["alpaca_paper"]
     # The original M15 Phase-4 legs are still routed (now alongside the
     # 2026-06-20 ETF-breadth cells iwm/tlt/ief — see test_etf_breadth_alpaca_wiring).
-    for name in ("spy_trend_long_1d", "qqq_trend_long_1d", "gld_pullback_1d"):
+    for name in ("spy_trend_long_1d", "qqq_trend_long_1d"):
         assert name in acct["strategies"]
+    # gld_pullback_1d moved to ib_paper 2026-10-25 (GLD-SOAK-REPLACE).
+    assert "gld_pullback_1d" not in acct["strategies"]
+    ib = yaml.safe_load(open("config/accounts.yaml"))["accounts"]["ib_paper"]
+    assert "gld_pullback_1d" in ib["strategies"]
     desc = json.load(open("config/strategy_descriptions.json"))
     for name in _BUILDERS:
         assert name in desc and desc[name]["short"]
