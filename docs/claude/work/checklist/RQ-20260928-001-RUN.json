@@ -1,0 +1,22 @@
+{
+  "id": "RQ-20260928-001-RUN",
+  "title": "Run RQ-20260928-001 (session-local, cannot auto-dispatch): ict_scalp HTF-filter on/off across the 7 variant legs via scripts/backtest_ict_scalp.py, land docs/research/ict-scalp-htf-filter-wiring-2026-09-28.json",
+  "phase": null,
+  "state": "queued",
+  "owner": "research lane (manager dispatch)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "BLOCKERS-1025 2026-10-25: NOT retired, because programme 03 nodes still key on this unit's pass/fail verdict (research/programmes/03-strategy-improvement.yaml). Context: ICT-SCALP-HTF (PRs #15340/#15341) already made the HTF fetch real and the filter is ON for 6 crypto variants, with an in-sample causal-harness result (OFF -336.5R vs ON -82.7R); this unit is the pre-registered question on the same-window arms and must pass explicit non-zero slippage/funding (unit design costs). Unit has no dispatchable workflow, so a lane runs it, grades per its decision_rule, and the unit then stops reading NEEDS_LANE.",
+  "priority_rank": 6,
+  "updated_at": "2026-10-25T06:49:38Z",
+  "updated_by": "session_01BjW391JCBB1J4CJeKAwW52",
+  "roadmap": [
+    "M27"
+  ],
+  "_seq": 648
+}

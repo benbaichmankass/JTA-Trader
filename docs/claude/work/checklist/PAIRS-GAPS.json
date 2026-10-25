@@ -2,7 +2,7 @@
   "id": "PAIRS-GAPS",
   "title": "Pairs follow-ups: Gate-1 cost-fidelity grader emits no pairs cell; bybit_1 pairs closes unbalanced (80/591 reconciler); pairs paper soak unregistered",
   "phase": "W6",
-  "state": "landed_unproven",
+  "state": "done",
   "owner": "unassigned",
   "lane": null,
   "model": null,
@@ -11,13 +11,17 @@
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "2026-10-11 lane session_016buW3b1Y4LykWY6zFRkkPc: -0001 cleared in field (2026-10-10 record has pairs cells, all insufficient_n, n_exit=0 structurally: spread exits carry no price reference); grader now says so; successor PI-20261011-6ZFRKKPC-0001 (pairs needs its own cost rule, Tier 3). -0002: 3 unmatched 'a' legs by pairs_group_id (journal, 611 rows, a=307/b=304), all b-never-executed -> half_open_cleanup/reconciler_filled, none after 2026-09-12; the item's 5 not reproduced (different population). No order-path fix warranted. -0003: Stage-0 005..008 all pass; soak live opens 1.3-1.6x backtest rate; cost fidelity unreadable until the successor rule. landed_unproven: grader annotation appears only in the next r3 record. [2026-10-11 ROUTE-AND-ASK-TRIAGE] PI-20261011-6ZFRKKPC-0001 routed here 2026-10-11: pairs needs its own Gate-1 cost rule (registered before the run; changing the registered rule is Tier-3)",
-  "updated_at": "2026-10-11T06:01:21Z",
-  "updated_by": "session_01BFAVovnP4UK5phrpVWnYsR",
+  "note": "2026-10-11 lane session_016buW3b1Y4LykWY6zFRkkPc: -0001 cleared in field (2026-10-10 record has pairs cells, all insufficient_n, n_exit=0 structurally: spread exits carry no price reference); grader now says so; successor PI-20261011-6ZFRKKPC-0001 (pairs needs its own cost rule, Tier 3). -0002: 3 unmatched 'a' legs by pairs_group_id (journal, 611 rows, a=307/b=304), all b-never-executed -> half_open_cleanup/reconciler_filled, none after 2026-09-12; the item's 5 not reproduced (different population). No order-path fix warranted. -0003: Stage-0 005..008 all pass; soak live opens 1.3-1.6x backtest rate; cost fidelity unreadable until the successor rule. landed_unproven: grader annotation appears only in the next r3 record. [2026-10-11 ROUTE-AND-ASK-TRIAGE] PI-20261011-6ZFRKKPC-0001 routed here 2026-10-11: pairs needs its own Gate-1 cost rule (registered before the run; changing the registered rule is Tier-3) [2026-10-25 BLOCKERS-1025] OBSERVED, closing. r3 is manual-only (no workflow or cron), so no record existed after 2026-10-10. Re-ran realized_slippage pull + r3_cost_fidelity.py this lane: comms/research/r3_cost_fidelity/2026-10-25.json; the pairs_* cells read structurally_ungradable = ['exit','exit','exit','exit']. Successor PI-20261011-6ZFRKKPC-0001 (pairs needs its own Tier-3 cost rule) is unchanged. r3 still has no recurring run.",
+  "updated_at": "2026-10-25T06:48:56Z",
+  "updated_by": "session_01BjW391JCBB1J4CJeKAwW52",
   "observation": {
     "what": "the next r3 cost-fidelity record carries structurally_ungradable on the pairs_* cells",
     "how_to_check": "python3 -c \"import json,glob;r=sorted(glob.glob(\\\"comms/research/r3_cost_fidelity/2026-*.json\\\"))[-1];d=json.load(open(r))[\\\"per_leg\\\"];print(r,[c.get(\\\"structurally_ungradable\\\") for k,v in d.items() if k.startswith(\\\"pairs_\\\") for c in v[\\\"cells\\\"]])\"",
     "due_by": "2026-10-25T00:00Z"
+  },
+  "writeback": {
+    "roadmap": "none: grader annotation, no milestone change",
+    "arch": "none: research tooling"
   },
   "_seq": 365
 }
