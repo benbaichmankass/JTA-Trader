@@ -2475,6 +2475,8 @@ class IBClient:
         symbol: Optional[str],
         side: str,
         qty: float,
+        *,
+        sibling_qty: float = 0.0,
     ) -> Dict[str, Any]:
         """Flatten an open IB position with an opposing reduce market order.
 
@@ -2494,11 +2496,28 @@ class IBClient:
              ``side`` is the side of the original entry (``"long"`` /
              ``"short"``); the close takes the reverse. ``qty`` is the
              position size to flatten (whole contracts). We size the close
-             to ``min(requested_qty, live_exchange_qty)`` read from
-             :meth:`positions` so a stale DB qty can never transmit an
+             to ``min(requested_qty, live_exchange_qty - sibling_qty)`` read
+             from :meth:`positions` so a stale DB qty can never transmit an
              order larger than what IB actually holds (which on a one-way
              futures account would *open* a reverse position rather than
-             flatten).
+             flatten) -- and, per BL-20260907-IB-CLOSE-QTY-CLAMP-IS-SYMBOL-
+             SCOPED-LIKE-THE-CONFIRMATION-WAS, tries not to eat into a
+             SIBLING journal trade's own still-open lots on the same symbol
+             by reserving ``sibling_qty`` out of ``live_exchange_qty`` first.
+             ⚠️ **That reservation can only ever fall short when the journal
+             (this trade + its recorded siblings) claims more of the symbol
+             than the venue holds — a journal-vs-venue divergence, by
+             construction.** Refusing outright in that case used to wedge
+             the exit forever (order_monitor retries an unrecognised close
+             failure every tick, with no cooldown); this method now falls
+             back to the single-trade clamp (``min(requested_qty,
+             live_exchange_qty)``) and logs a loud divergence alert instead
+             — see ``_locked_close`` Step 0.
+
+        ``sibling_qty`` — the sum of OTHER open journal trades' recorded size
+        on this symbol, supplied by the caller (``execute.close_open_position``,
+        the only place that can see the journal). Defaults to ``0.0``, which
+        is byte-for-byte the single-trade clamp this method always had.
 
         Bounded + best-effort, mirroring the rest of this client: never
         raises, reuses the existing connect / circuit-breaker / fetch
@@ -2509,13 +2528,16 @@ class IBClient:
         refusal / failure (the monitor leaves the DB row open + retries).
         """
         with self._usage_lock:
-            return self._locked_close(symbol=symbol, side=side, qty=qty)
+            return self._locked_close(
+                symbol=symbol, side=side, qty=qty, sibling_qty=sibling_qty)
 
     def _locked_close(
         self,
         symbol: Optional[str],
         side: str,
         qty: float,
+        *,
+        sibling_qty: float = 0.0,
     ) -> Dict[str, Any]:
         if self.readonly:
             return {
@@ -2549,6 +2571,38 @@ class IBClient:
         # stale/oversized DB qty can never flip the position (one-way
         # futures). When the read fails we keep the requested qty (the
         # caller's best knowledge) rather than refusing to flatten.
+        #
+        # BL-20260907-IB-CLOSE-QTY-CLAMP-IS-SYMBOL-SCOPED-LIKE-THE-
+        # CONFIRMATION-WAS. ``live_qty`` is the whole SYMBOL's aggregate
+        # position — the same scope MI-168 (two blocks below, the confirm
+        # gate) already had to move off of, for the same reason: whenever a
+        # sibling journal trade legitimately holds other lots of this symbol,
+        # a value that answers "what does the SYMBOL hold" is not the answer
+        # to "what may THIS close touch". Before this fix, ``close_qty =
+        # min(requested_qty, live_qty)`` alone meant that if journal drift
+        # ever left ``live_qty`` short of ``requested_qty + sibling_qty`` —
+        # e.g. this trade's own venue position already partially reduced
+        # elsewhere without the journal catching up — the close would size
+        # itself to whatever remained of the SYMBOL's aggregate, which could
+        # include lots that belong (in journal terms) to the sibling, not to
+        # this trade. NEVER OBSERVED IN PRODUCTION (filed from a code read,
+        # not an incident) and it fails in the SAFE direction (never flips
+        # the position), but it is not the trade-scoped clamp its own
+        # docstring claimed.
+        #
+        # ``sibling_qty`` — supplied by the caller
+        # (``execute.close_open_position``, the only place that can see the
+        # journal) — is the sum of OTHER open journal trades' recorded size
+        # on this symbol. Reserving it means ``live_qty`` is used ONLY as an
+        # upper bound on top of THIS trade's own requested qty, never as a
+        # substitute for it: this close still derives its size from
+        # ``requested_qty`` (this trade's own lots) first, and is capped
+        # by the SYMBOL total minus what a sibling needs, not by the SYMBOL
+        # total alone. Defaults to ``0.0`` — byte-for-byte the pre-fix
+        # single-trade clamp when no sibling exists (the overwhelmingly
+        # common case; MEASURED 2026-09-07: 13 (account, symbol) pairs held
+        # two-or-more simultaneously-open rows in a 28-day window, cited in
+        # the MI-168 comment below).
         try:
             live_qty = self._live_position_qty(sym)
         except Exception:  # noqa: BLE001
@@ -2558,17 +2612,78 @@ class IBClient:
                 # IB reports flat already — nothing to close. Still cancel
                 # any stray resting protective orders, then return success
                 # (idempotent close, matching the Alpaca 404 → ok mapping).
-                self._cancel_resting_orders_for_symbol(ib, sym)
+                swept = self._cancel_resting_orders_for_symbol(ib, sym)
+                # ...unless the book could not be READ: then a stray bracket
+                # may still rest over the flat position and later fill into a
+                # reverse one, so "OK" would be a claim nobody checked. Fail
+                # the same way _locked_close Step 1 does (ORDER-AUDIT-2 item 4
+                # follow-up): a failure, not a defer, so the monitor retries
+                # and pages if the Gateway stays unreadable.
+                if (swept or {}).get("verify_state") == "unreadable":
+                    return {
+                        "retCode": 1,
+                        "retMsg": (
+                            f"IBClient.close: {sym} already flat but open-order "
+                            "book unreadable — stray protective legs may still "
+                            "rest; nothing cancelled, retry next tick"
+                        ),
+                    }
                 return {
                     "retCode": 0,
                     "result": {"orderId": None, "note": "already flat"},
                     "retMsg": "OK",
                 }
-            close_qty = min(requested_qty, live_qty)
+            safe_ceiling = max(0.0, live_qty - max(0.0, float(sibling_qty or 0.0)))
+            close_qty = min(requested_qty, safe_ceiling)
         else:
             close_qty = requested_qty
 
         close_qty = float(math.floor(close_qty))
+        # ⚠️ MANAGER REVIEW (2026-09-28, BLOCK on the first version of this
+        # fix): the shortfall this branch catches — sibling_qty reserved out
+        # of live_qty leaves < 1 lot for THIS trade's own requested_qty —
+        # can ONLY happen when requested_qty + sibling_qty > live_qty, i.e.
+        # the journal (this trade plus its recorded siblings) claims more
+        # contracts on this symbol than the venue actually holds. That
+        # condition IS a journal-vs-venue divergence by construction, every
+        # time it fires — it is never a case of "protect a real sibling",
+        # because a real sibling's own accounting would already be inside
+        # live_qty. Hard-refusing here used to leave the exit permanently
+        # wedged: order_monitor retries an unrecognised close failure every
+        # tick with no cooldown (src/runtime/order_monitor.py
+        # _apply_update), so a strategy's time-stop / trailing-stop /
+        # signal-exit could never fire while the divergence persisted — the
+        # measured incident this fix responds to (OI-20260826-MGC-JOURNAL-
+        # QTY-DIVERGENT-UNOWNED: journal 54 lots across two rows, venue 11,
+        # a live protective stop resting against the unbacked 43).
+        #
+        # So: fall back to the PRE-FIX single-trade clamp
+        # (min(requested_qty, live_qty), ignoring the sibling reservation)
+        # rather than refuse — the upper-bound safety property (this close
+        # can never exceed what the venue holds, so it can never flip the
+        # position) is preserved by that clamp alone — and raise a LOUD,
+        # distinctly-greppable alert so the divergence is not silently
+        # absorbed. The systematic, scheduled journal-vs-venue detector this
+        # should ultimately route to is tracked separately and not yet built
+        # (PI-20260928-DEUTUJ78-0001); until it exists, this log line is the
+        # alert.
+        if close_qty < 1 and live_qty is not None and float(sibling_qty or 0.0) > 0:
+            fallback_qty = float(math.floor(min(requested_qty, live_qty)))
+            if fallback_qty >= 1:
+                logger.error(
+                    "IBClient.close: JOURNAL-VS-VENUE DIVERGENCE on %s — "
+                    "requested_qty=%s + sibling_qty=%s (%s) exceeds "
+                    "live_qty=%s (the journal's sibling accounting does not "
+                    "match what the venue holds). Falling back to "
+                    "min(requested_qty, live_qty)=%s rather than refusing "
+                    "and wedging this exit; see PI-20260928-DEUTUJ78-0001 "
+                    "for the durable divergence detector.",
+                    sym, requested_qty, sibling_qty,
+                    requested_qty + float(sibling_qty or 0.0), live_qty,
+                    fallback_qty,
+                )
+                close_qty = fallback_qty
+
         if close_qty < 1:
             return {
                 "retCode": 1,
@@ -2639,7 +2754,23 @@ class IBClient:
 
         # Step 1 — cancel resting protective orders for the symbol so the
         # opposing market order can't leave a naked working order behind.
-        self._cancel_resting_orders_for_symbol(ib, sym)
+        precancel = self._cancel_resting_orders_for_symbol(ib, sym)
+        # If Step 1 could not even READ the book, the bracket may still rest:
+        # flattening now could leave it over a flat position to fill later
+        # and open a reverse one. Refuse — a FAILURE, deliberately not worded
+        # as a defer, so order_monitor counts it toward the close-failure
+        # streak and pages if the Gateway stays unreadable. The position
+        # stays protected by its own bracket meanwhile (ORDER-AUDIT-2 item 4).
+        if (precancel or {}).get("verify_state") == "unreadable":
+            return {
+                "retCode": 1,
+                "retMsg": (
+                    f"IBClient.close: open-order book for {sym} unreadable — "
+                    "refusing to flatten while protective legs may still rest "
+                    "(a leftover bracket could fill into a reverse position); "
+                    "no order sent, retry next tick"
+                ),
+            }
 
         # Step 2 — opposing market order to flatten.
         try:
@@ -3123,18 +3254,22 @@ class IBClient:
         in ``refusal``, so a permanent refusal (10147) is distinguishable from a
         cancel that is merely slow — the two want opposite retry behaviour.
 
-        ⚠️ **Not yet registered with ``collapsed-state-guard``, deliberately**,
-        following the ``BYBIT_HEDGE_MODE_SYMBOLS`` precedent. ``verified`` and
-        ``unverified`` each have a real consumer branch today (the refuse-to-arm
-        invariant in :meth:`place_protective` and :meth:`_log_cancel_verdict`),
-        but ``not_attempted`` does not: the consumer that would care — "was this
-        position protected a moment ago?" — is the naked-detection path, which
-        does not call this. Registering the contract now would either fail the
-        guard or invite a decorative branch, and a guard that is cheaper to lie
-        to than to satisfy is worse than no guard. It becomes registrable in the
-        change that gives ``not_attempted`` a consumer. The state is kept in the
-        envelope regardless, because collapsing it into ``verified`` would say
-        "we looked and nothing survived" about a call that never looked.
+        ⚠️ **Registered with ``collapsed-state-guard`` as
+        ``ib_client.verify_state`` (FIX-SA-06, 2026-09-29).** This paragraph
+        used to say it was deliberately NOT registered because ``not_attempted``
+        had no consumer branch. That is still true of PRODUCTION code:
+        ``verified`` / ``unverified`` are branched on in-file
+        (:meth:`place_protective`, :meth:`_log_cancel_verdict`), and
+        ``not_attempted`` is read by nothing outside the tests. It registers
+        anyway because the guard excludes the producer file from consumers and
+        credits ``tests/test_ib_cancel_verification.py``, which asserts all
+        three; the guard's producer-integrity check (each state is emitted as a
+        ``"verify_state": "<x>"`` value) is what detects a regression that
+        folds ``unverified`` into ``verified``. A production consumer for
+        ``not_attempted`` -- "was this position protected a moment ago?" -- is
+        still owed. The state stays in the envelope because collapsing it into
+        ``verified`` would say "we looked and nothing survived" about a call
+        that never looked.
         """
         if not attempted:
             return {"verify_state": "not_attempted", "still_resting": [],
@@ -3542,9 +3677,28 @@ class IBClient:
         cancelled = 0
         failed = 0
         attempted: Dict[str, Dict[str, Any]] = {}
+        # READ THE BOOK DIRECTLY, not via ``_open_trades`` (AUD-20260927-CA-A04
+        # -ib-close-precancel-read-failure-collapsed, ORDER-AUDIT-2 item 4).
+        # ``_open_trades`` swallows an ``ib.openTrades()`` failure into ``[]``,
+        # so "the Gateway read failed" and "nothing is resting" were the same
+        # result — and ``_locked_close`` then sent the opposing MarketOrder
+        # over a bracket that could later fill and OPEN a reverse position
+        # (the BL-20260624-MHG-FLIP class). ``unreadable`` is "we did not
+        # look"; it is never folded into ``not_attempted``.
+        try:
+            book = list(ib.openTrades() or [])
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "IBClient: could not read open orders for %s before cancelling "
+                "— resting legs UNKNOWN (this is 'we did not look', NOT "
+                "'nothing is resting'): %s", sym or "(all)", exc,
+            )
+            return {"verify_state": "unreadable", "still_resting": [],
+                    "confirmed_gone": [], "seen": None, "cancelled": 0,
+                    "failed": 0, "account_wide_seen": None}
         refusals, confirmations, detach = self._cancel_error_capture(ib)
         try:
-            for trade in self._open_trades(ib):
+            for trade in book:
                 try:
                     contract = getattr(trade, "contract", None)
                     trade_sym = str(getattr(contract, "symbol", "") or "").upper()
@@ -3624,10 +3778,55 @@ class IBClient:
         except Exception as exc:  # noqa: BLE001
             return {"retCode": 1, "retMsg": f"{type(exc).__name__}: {exc}"}
         try:
-            self._cancel_resting_orders_for_symbol(ib, sym)
+            precancel = self._cancel_resting_orders_for_symbol(ib, sym)
         except Exception as exc:  # noqa: BLE001
             return {"retCode": 1, "retMsg": f"cancel-resting failed: {exc}"}
+        if (precancel or {}).get("verify_state") == "unreadable":
+            # Not "OK": nothing was cancelled because nothing could be read.
+            return {"retCode": 1, "retMsg": (
+                f"cancel-resting: open-order book for {sym} unreadable — "
+                "resting legs unknown, nothing cancelled")}
         return {"retCode": 0, "result": {"symbol": sym}, "retMsg": "OK"}
+
+    def cancel_trade_protection(
+        self, symbol: Optional[str], oca_key: Any,
+    ) -> Dict[str, Any]:
+        """Cancel ONE closed trade's own protective group — public, best-effort.
+
+        The trade-scoped counterpart of :meth:`cancel_resting_protection`: it
+        cancels only group ``oca-protect-t<oca_key>`` on *symbol*, so a sibling
+        trade's keyed group on the same netted contract survives
+        (BL-20260814-IB-PROTECTION-BOOLEAN-NOT-QUANTITY). Called by the
+        monitor's flat-close paths that finalise a trade WITHOUT going through
+        :meth:`close` — the stuck-strategy watchdog left ``oca-protect-t5836``
+        (STP + LMT, 15 MES) resting on a flat ``ib_paper`` book for 8 days
+        (CA-A01-001, measured 2026-09-27).
+
+        Returns the :meth:`_cancel_oca_group_for_symbol` verification envelope
+        under ``result``. Never raises. ``_open_trades`` is session-scoped, so
+        this sees only legs this clientId placed — which, for a trader-armed
+        bracket, is the trader's own exec client.
+        """
+        key = str(oca_key if oca_key is not None else "").strip()
+        if not key:
+            return {"retCode": 1, "retMsg": "no oca_key — refusing a symbol-wide cancel"}
+        with self._usage_lock:
+            if self.readonly:
+                return {"retCode": 1, "retMsg": "client is read-only"}
+            sym = str(symbol or self.symbol or "").upper()
+            try:
+                ib = self.connect()
+            except IBConnectionError as exc:
+                return {"retCode": 1, "retMsg": f"IB connect failed: {exc}"}
+            except Exception as exc:  # noqa: BLE001
+                return {"retCode": 1, "retMsg": f"{type(exc).__name__}: {exc}"}
+            group = f"{stray_oca_groups.KEYED_PREFIX}{key}"
+            try:
+                result = self._cancel_oca_group_for_symbol(ib, sym, group)
+            except Exception as exc:  # noqa: BLE001
+                return {"retCode": 1, "retMsg": f"cancel-group failed: {exc}"}
+            return {"retCode": 0, "retMsg": "OK",
+                    "result": {"symbol": sym, "oca_group": group, **(result or {})}}
 
     def _req_all_open_orders(self, ib: Any) -> list:
         """Force an ACCOUNT-WIDE open-order refresh, then return active trades.
@@ -3914,6 +4113,16 @@ class IBClient:
             "legs": legs,
             "unknown_qty_legs": unknown,
             "oca_groups": dict(oca_groups),
+            # {group: STOP qty} — the per-group stop side, so the naked sweep
+            # can tell WHICH journal row's own `oca-protect-t<id>` bracket is
+            # intact on a partially covered netted position (CA-A01-049).
+            # Additive; ungrouped stop legs are not in it.
+            "stop_groups": dict(stop_groups),
+            # {group: TARGET qty}, same shape. Ungrouped target legs are not in
+            # it, so `target_qty - sum(target_groups)` is the ungrouped target
+            # qty. The naked sweep uses it to refuse a re-arm that would stack
+            # a second full-qty target beside a foreign one (#16496 review).
+            "target_groups": dict(target_groups),
             # {group: clientId|None}. A `None` value is "unreadable", never
             # "this session" -- see the accumulator comment above.
             "oca_group_client_ids": dict(oca_group_client_ids),

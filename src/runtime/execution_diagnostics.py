@@ -697,47 +697,51 @@ def enqueue_stuck_package_sweep(
         return None
 
 
-def enqueue_daily_cap_alert(
+def enqueue_daily_dd_switch_alert(
     *,
     account: str,
     kind: str,
-    daily_pnl: Optional[float] = None,
-    cap_usd: Optional[float] = None,
-    demo: bool = False,
+    row: Optional[dict] = None,
+    limit_desc: str = "",
     priority: str = "high",
 ) -> Optional[Path]:
-    """Drop a Telegram ping for a daily-loss-cap state transition.
+    """Drop a Telegram ping for a daily-DD switch transition.
 
-    ``kind`` is ``"exhausted"`` (the account just hit its daily-loss cap
-    and will refuse trades until the next UTC reset) or ``"resumed"`` (the
-    cap cleared — new UTC day or a recovering PnL — and the account is
-    trading again). Fired at most once per transition by the latching
-    state in ``src.runtime.daily_cap_alert``; this function only formats +
-    queues. Never raises.
+    ``kind``: ``"trip"`` (armed switch tripped — NEW entries refused until the
+    next day boundary; open positions keep their brackets), ``"reset"`` (the
+    day rolled over, the account is taking entries again) or ``"unreadable"``
+    (the red flag: equity could not be read for several consecutive checks on
+    an ARMED switch — it cannot trip blind; checks keep running). Sent at most
+    once per transition by ``src.units.accounts.daily_dd_switch``; this only
+    formats + queues. Never raises.
     """
     try:
-        prefix = "*DEMO TRADER* " if demo else ""
-        pnl_str = f"{daily_pnl:+.2f}" if daily_pnl is not None else "?"
-        cap_str = f"{cap_usd:.2f}" if cap_usd is not None else "?"
-        if kind == "exhausted":
-            body = (
-                f"{prefix}⛔ Daily-loss cap hit\n"
-                f"Account: {account}\n"
-                f"Today's PnL: {pnl_str} USD  (cap: -{cap_str} USD)\n"
-                f"No further trades on this account today. Account stays "
-                f"live; it auto-resumes at 00:00 UTC."
-            )[:1024]
-        else:  # resumed
-            body = (
-                f"{prefix}✅ Daily-loss cap reset\n"
-                f"Account: {account}\n"
-                f"Today's PnL: {pnl_str} USD  (cap: -{cap_str} USD)\n"
-                f"Trading resumed."
-            )[:1024]
-        _append_operator_alert("daily_cap", priority, body)
+        r = row or {}
+
+        def _m(v: Any) -> str:
+            return f"${float(v):,.2f}" if v is not None else "—"
+
+        if kind == "trip":
+            head = "⛔ Daily drawdown switch TRIPPED"
+            tail = ("New entries on this account are refused until the daily reset. "
+                    "Open positions keep their SL/TP and run to normal exit.")
+        elif kind == "reset":
+            head = "✅ Daily drawdown switch reset"
+            tail = "New day: the account is taking new entries again."
+        else:
+            head = "🚩 Daily drawdown switch cannot read equity"
+            tail = (f"{r.get('unreadable_streak', '?')} consecutive checks could not read "
+                    "equity. The switch cannot trip blind; it keeps checking. Needs a look.")
+        body = (
+            f"{head}\nAccount: {account}\n"
+            f"Day: {r.get('day', '—')} | day-start equity {_m(r.get('day_start_equity'))}\n"
+            f"Loss today: {_m(r.get('loss_usd'))} | limit {_m(r.get('limit_usd'))} ({limit_desc})\n"
+            f"{tail}"
+        )[:1024]
+        _append_operator_alert("daily_dd_switch", priority, body)
         payload = {"priority": priority, "body": body}
         PENDING_PINGS_DIR.mkdir(parents=True, exist_ok=True)
-        name = f"{int(uuid.uuid4().int % 10**12):012d}-dailycap.json"
+        name = f"{int(uuid.uuid4().int % 10**12):012d}-dailydd.json"
         path = PENDING_PINGS_DIR / name
         tmp = path.with_suffix(".json.tmp")
         with tmp.open("w", encoding="utf-8") as fh:
@@ -746,9 +750,8 @@ def enqueue_daily_cap_alert(
         return path
     except Exception as exc:  # noqa: BLE001
         logger.warning(
-            "execution_diagnostics: daily-cap ping enqueue failed for "
-            "account=%s kind=%s: %s",
-            account, kind, exc,
+            "execution_diagnostics: daily-dd-switch ping enqueue failed for "
+            "account=%s kind=%s: %s", account, kind, exc,
         )
         return None
 
@@ -779,7 +782,8 @@ def enqueue_demo_trade_notification(
             f"Symbol: {symbol} | Side: {side} | Qty: {qty_str}\n"
             f"Detail: {detail}"
         )[:1024]
-        payload = {"priority": priority, "body": body}
+        payload = {"priority": priority, "body": body,
+                   "kind": "demotrade", "channel": _channel_for("demotrade")}
         PENDING_PINGS_DIR.mkdir(parents=True, exist_ok=True)
         name = f"{int(uuid.uuid4().int % 10**12):012d}-demotrade.json"
         path = PENDING_PINGS_DIR / name
@@ -1165,6 +1169,51 @@ def enqueue_naked_position_alert(
         return None
 
 
+def enqueue_bybit_protection_refused(
+    *,
+    account: str,
+    symbol: str,
+    state: str,
+    sweeps: int,
+    priority: str = "high",
+) -> Optional[Path]:
+    """Page: a Bybit symbol's protection read has been REFUSED for *sweeps*
+    consecutive broker-naked sweeps (FIX-CA-06 / CA-A01-073).
+
+    While refused, ``_check_broker_naked_bybit_positions`` cannot re-arm a
+    protective stop on that symbol at all. Fired once per episode by
+    ``order_monitor._track_bybit_protection_refusals``. Never raises.
+    """
+    try:
+        body = (
+            "⚠️ BYBIT PROTECTION UNREADABLE — no re-arm possible\n"
+            f"Account: {account}\n"
+            f"Symbol: {symbol}\n"
+            f"Refusal: {state} for {sweeps} consecutive sweeps\n"
+            "The broker-naked sweep cannot grade this symbol's stop coverage, "
+            "so a naked position here would NOT be re-protected. "
+            "Action: run the bybit-bracket-audit action and check the "
+            "position's books on the venue."
+        )[:1024]
+        _append_operator_alert("bybit_protection_refused", priority, body)
+        payload = {"priority": priority, "body": body}
+        PENDING_PINGS_DIR.mkdir(parents=True, exist_ok=True)
+        name = (f"{int(uuid.uuid4().int % 10**12):012d}"
+                "-bybit-protection-refused.json")
+        path = PENDING_PINGS_DIR / name
+        tmp = path.with_suffix(".json.tmp")
+        with tmp.open("w", encoding="utf-8") as fh:
+            json.dump(payload, fh, ensure_ascii=False)
+        os.replace(tmp, path)
+        return path
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "execution_diagnostics: bybit-protection-refused ping enqueue "
+            "failed for %s/%s: %s", account, symbol, exc,
+        )
+        return None
+
+
 def enqueue_monitor_blindness_alert(
     *,
     order_package_id: Any,
@@ -1276,10 +1325,23 @@ def _fmt_signed(value: object) -> str:
     return f"{'-' if v < 0 else '+'}${abs(v):,.2f}"
 
 
+def _channel_for(kind: str) -> str:
+    """The channel the drainer should deliver *kind* to (TELEGRAM-CHANNELS).
+    Every other enqueue here carries no ``channel`` and drains to SYSTEM, the
+    trader bot, exactly as before."""
+    try:
+        from src.runtime.telegram_channels import channel_for
+
+        return channel_for(kind)
+    except Exception:  # noqa: BLE001 — routing must never break an enqueue
+        return "system"
+
+
 def _enqueue_html_ping(body_html: str, *, kind: str, priority: str) -> Optional[Path]:
     """Atomically enqueue a self-titled HTML ping to the trader inbox."""
     try:
-        payload = {"priority": priority, "body": body_html, "parse_mode": "HTML"}
+        payload = {"priority": priority, "body": body_html, "parse_mode": "HTML",
+                   "kind": kind, "channel": _channel_for(kind)}
         PENDING_PINGS_DIR.mkdir(parents=True, exist_ok=True)
         name = f"{int(uuid.uuid4().int % 10**12):012d}-{kind}.json"
         path = PENDING_PINGS_DIR / name
@@ -1413,5 +1475,72 @@ def enqueue_trade_close(
         logger.warning(
             "execution_diagnostics: trade-close ping build failed "
             "(symbol=%s): %s", symbol, exc,
+        )
+        return None
+
+
+def enqueue_prop_sizing_refusal(
+    *,
+    account: str,
+    reason: str,
+    priority: str = "high",
+) -> Optional[Path]:
+    """Drop a Telegram-ready ping for a PROP account that cannot size.
+
+    ⚠️ **THIS IS THE SIGNAL THAT DID NOT EXIST**, and its absence is the whole
+    of ``BL-20260909-PROP-SIZING-REFUSAL-ON-A-STALE-BALANCE-IS-JOURNALED-BUT-
+    NEVER-PINGED``. ``prop_balance.prop_sizing_balance`` refuses on
+    ``stale``/``absent``/``error`` and ``Coordinator._default_balance_fetcher``
+    raises, but that raise lands in the ``sizing_failed`` branch, which writes
+    a journal rejection and a logger line and nothing else —
+    ``_emit_execution_failure_ping`` sits on the LATER ``execute_pkg`` branch
+    and is never reached. So a funded prop account could stop trading
+    indefinitely with the only evidence being a journalctl line, in a unit
+    whose journald retention was measured at ~30 minutes.
+
+    Separate from :func:`enqueue_execution_failure` rather than reusing it,
+    because that function's body says *"Order execution failed"* with a
+    strategy/symbol/side the refusal does not have: the prop refusal is not a
+    dropped order, it is an account that can place NO order until the operator
+    sends a balance. Naming it as an order failure would be this repo's
+    "unprovenanced diagnostic output" class — a label describing a cause no
+    code path tested.
+
+    Same delivery channel as every other producer here (a JSON file dropped in
+    ``runtime_logs/pending_pings/``, drained by the ``ict-telegram-bot``
+    job-queue tick), so **nothing on the order path waits on Telegram** — which
+    is why the emit lives here rather than as a direct send from
+    ``prop_balance``.
+
+    ⚠️ **THE DE-DUPLICATION IS THE CALLER'S** (``prop_balance.note_refusal``).
+    This function pages every time it is called; the refusal condition is
+    evaluated once per prop account per tick, so calling it unguarded would put
+    one condition on the whole of the operator's feed — the desensitised-alarm
+    P1 this repo has an explicit rule about.
+
+    Returns the queued file's path, or ``None`` when the enqueue itself failed.
+    Never raises.
+    """
+    try:
+        body = (
+            f"⛔ Prop account cannot size — no orders will be ticketed\n"
+            f"Account: {account}\n"
+            f"Reason: {reason}"
+        )[:1024]
+        _append_operator_alert("prop_sizing_refusal", priority, body,
+                               extra={"account": account})
+        payload = {"priority": priority, "body": body}
+        PENDING_PINGS_DIR.mkdir(parents=True, exist_ok=True)
+        name = f"{int(uuid.uuid4().int % 10**12):012d}-propsize.json"
+        path = PENDING_PINGS_DIR / name
+        tmp = path.with_suffix(".json.tmp")
+        with tmp.open("w", encoding="utf-8") as fh:
+            json.dump(payload, fh, ensure_ascii=False)
+        os.replace(tmp, path)
+        return path
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "execution_diagnostics: prop-sizing-refusal enqueue failed for "
+            "account=%s reason=%r: %s", account, str(reason)[:80], exc,
         )
         return None

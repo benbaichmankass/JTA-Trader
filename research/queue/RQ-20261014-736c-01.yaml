@@ -1,0 +1,98 @@
+id: RQ-20261014-736c-01
+title: 'ML plan X1 (ML-LEG-CORPUS): build the six-live-leg per-trade corpus (config-exact uncapped harness emits, 1830 d) that unblocks the TP-predict head and the P1 Q2/Q5 units -- is it buildable and gradable?'
+status: done
+cadence: once
+theme: ml_health
+priority: 1
+kind: deterministic
+question: >-
+  Checklist row ML-LEG-CORPUS. Can the six live legs that carry money
+  (trend_donchian_eth_4h, trend_donchian_xrp_4h, xrp_pullback_2h, ada_pullback_2h,
+  trend_donchian_eth_prop, trend_donchian_sol_prop) each be run config-exact and
+  UNCAPPED through their own harness over a 1830 d window, with every per-trade
+  row KEPT (not summarised away) and carrying all eight decision-time features of
+  RULE-RQ1009-900 (risk_frac, is_long, confidence, hour_sin, hour_cos, dow,
+  adx_at_entry, regime_weight) plus the declared-tp_r and class-default-tp_r
+  columns the B1/B2 baselines read? This is a BUILD verification, not an edge test.
+why_not_inferential: >-
+  A deterministic build of a fixed corpus: every trade the harness emits is kept,
+  nothing is sampled, and no edge is estimated. The registered bar is
+  completeness (all six legs ran, no leg has rows but zero usable ones, the
+  no-op ADX band left every leg's trade list unchanged), not a hypothesis test.
+  Strata under the 252-usable-row eval floor are REPORTED (they grade
+  INDETERMINATE in RQ-20261009-900 by its own rule); they do not fail this unit.
+decision_rule:
+  id: RULE-RQ20261014-736C-01-LEG-CORPUS-BUILD
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: >-
+    Per leg: runner state (ok / no_data / harness_failed / adx_band_not_noop),
+    emitted rows, usable rows (all eight features and mfe_r non-null). For legs
+    with no ADX lever (the four Donchian legs), whether the config-exact run and
+    the run with the no-op band `--adx-max 100` produce identical trade lists
+    (entry_time, direction, gross_r). Usable rows per stratum against the
+    252-row floor = ceil(88 / 0.35).
+  rule: >-
+    PASS IF all six legs are state ok AND every leg has >= 1 usable row AND the
+    no-op band parity holds on every Donchian leg: the corpus at
+    comms/research/RQ-20261014-736c-01/<run_id>/ml2_live_leg_corpus.jsonl is the
+    input of RQ-20261009-900/901 and the P1 Q2/Q5 units. INDETERMINATE
+    otherwise (a leg failed, a band changed a trade list, or a leg has rows but
+    none usable), and no downstream unit moves out of blocked/.
+  what_it_does_not_do: >-
+    Says nothing about whether any head beats any baseline (that is
+    RQ-20261009-900). Touches no config, no tp_r, no order path. The harness
+    cost stack (fee + slippage + funding via execution_costs.resolve_cost_policy)
+    is applied by the harness and recorded per row (net_r, cost_*_r); this unit
+    passes no override.
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 300
+  confidence: 0.4
+  basis: 'stand-in: unblocks 6 queued ML/TP units; not a measured P&L'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  basis: 'MEASURED 2026-10-14 in the authoring sandbox: fetch of 4 symbols x 1830 d plus 10 harness runs (6 legs + 4 parity re-runs) took 4m18s wall.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml2_live_leg_corpus.py
+  - --data-dir
+  - data/rq-20261014-736c-01
+  - --fetch
+  - '1830'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261014-736c-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-ATM
+- M23
+related:
+- ML-LEG-CORPUS
+- TP-PREDICT-HEAD
+- RQ-20261009-900
+- RQ-20261009-901
+- scripts/research/ml2_live_leg_corpus.py
+- scripts/research/ml2_bracket_train_eval.py
+last_dispatched_at: '2026-10-15T12:55:32+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-RQ20261014-736C-01-LEG-CORPUS-BUILD
+  evidence:
+  - research/results/RQ-20261014-736c-01/38738465656.jsonl
+  graded_at: '2026-10-15'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

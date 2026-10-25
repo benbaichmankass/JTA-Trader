@@ -1,0 +1,92 @@
+{
+  "verdict": "indeterminate",
+  "read_state": "measured",
+  "population": "1 leg(s) [trend_donchian_eth_prop], 355 committed trades in total; grade=pass_all_seeds, overall=all",
+  "n": 355,
+  "measurement": {
+    "leg_verdicts": {
+      "trend_donchian_eth_prop": "indeterminate"
+    },
+    "grade": "pass_all_seeds",
+    "overall": "all",
+    "cells": 5
+  },
+  "note": "trend_donchian_eth_prop: NULL: ev > 0 on all seeds but P(net>0) < 0.7 on at least one | RQ-20261014-f516-04: Programme 05 Q3 per-leg mixed arm, breakout_2",
+  "records": [
+    {
+      "verdict": "indeterminate",
+      "read_state": "measured",
+      "population": "trend_donchian_eth_prop: 355 committed trades from comms/strategy_evidence/runs/2026-10-05-730d/trend_donchian_eth_prop__trades.jsonl (pinned by --leg); prop_ev_sim path-mode over 1 arm(s) x 5 seed(s), --trades trend_donchian_sol_prop=comms/strategy_evidence/runs/2026-10-05-730d/trend_donchian_sol_prop__trades.jsonl --ruleset config/prop_rulesets/breakout_turbo_1step.yaml --costs breakout --swap-model prorated --funded-start fresh --lev-cap trend_donchian_eth_prop=5 --lev-cap trend_donchian_sol_prop=5",
+      "n": 355,
+      "measurement": {
+        "leg": "trend_donchian_eth_prop",
+        "trades_file": "comms/strategy_evidence/runs/2026-10-05-730d/trend_donchian_eth_prop__trades.jsonl",
+        "arms": {
+          "MIX": {
+            "1": {
+              "ev": 21.53,
+              "ev_se": 2.04,
+              "p_net_positive": 0.1575,
+              "p_alive_at_horizon": 0.0,
+              "p_pass_by_days": {
+                "30": 0.0088,
+                "90": 0.2095,
+                "180": 0.3145
+              },
+              "rule_v2_verdict": "indeterminate"
+            },
+            "2": {
+              "ev": 19.12,
+              "ev_se": 1.92,
+              "p_net_positive": 0.1603,
+              "p_alive_at_horizon": 0.0,
+              "p_pass_by_days": {
+                "30": 0.0057,
+                "90": 0.194,
+                "180": 0.3125
+              },
+              "rule_v2_verdict": "indeterminate"
+            },
+            "3": {
+              "ev": 22.35,
+              "ev_se": 2.01,
+              "p_net_positive": 0.1693,
+              "p_alive_at_horizon": 0.0,
+              "p_pass_by_days": {
+                "30": 0.0097,
+                "90": 0.2008,
+                "180": 0.3175
+              },
+              "rule_v2_verdict": "indeterminate"
+            },
+            "4": {
+              "ev": 21.03,
+              "ev_se": 1.96,
+              "p_net_positive": 0.1688,
+              "p_alive_at_horizon": 0.0,
+              "p_pass_by_days": {
+                "30": 0.0092,
+                "90": 0.2052,
+                "180": 0.3165
+              },
+              "rule_v2_verdict": "indeterminate"
+            },
+            "5": {
+              "ev": 20.66,
+              "ev_se": 2.0,
+              "p_net_positive": 0.1583,
+              "p_alive_at_horizon": 0.0,
+              "p_pass_by_days": {
+                "30": 0.0097,
+                "90": 0.1963,
+                "180": 0.3078
+              },
+              "rule_v2_verdict": "indeterminate"
+            }
+          }
+        }
+      },
+      "note": "NULL: ev > 0 on all seeds but P(net>0) < 0.7 on at least one | RQ-20261014-f516-04: Programme 05 Q3 per-leg mixed arm, breakout_2"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+# Fires the catch-up once daily at 08:00 UTC — after the primary cycle window AND the 03:00-05:00Z trainer research window.
+[Unit]
+Description=Same-day catch-up for an interrupted ICT training cycle
+
+[Timer]
+OnCalendar=*-*-* 08:00:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

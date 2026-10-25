@@ -320,17 +320,38 @@ def test_the_append_test_is_asked_BEFORE_the_register_comparison() -> None:
 
 def test_a_payload_absent_from_main_is_its_own_state(repo: Path) -> None:
     """`main has never had this file` and `neither side carries a date` both
-    make `dated_at` return None, and they are DIFFERENT FACTS."""
+    make `dated_at` return None, and they are DIFFERENT FACTS.
+
+    ⚠️ CONTRACT CHANGED 2026-10-04 (lane CI-AUTOMERGE): a PR whose ONLY payload
+    is new files now grades `refresh` -- landing a file main has never had
+    rewinds nothing, and every research result is such a file, so the old rule
+    stranded all of them. What must still hold: absent is never mis-reported as
+    `undated`, and a PR MIXING a new file with an older or undated one is never
+    refreshed (`absent_on_main`, for a human read)."""
     _branch(repo, "automation/pit",
             {"captures/US-20260909T002929Z.json": '{"generated_at": "2026-09-09T00:29:29Z"}'})
     entry = _classify(repo, 1, "automation/pit")
-    assert entry["state"] == sweep.ABSENT_ON_MAIN
+    assert entry["state"] == sweep.REFRESH
     assert entry["state"] != sweep.UNDATED_PAYLOAD, (
         "it carries a perfectly good timestamp — reporting 'no comparable "
         "timestamp' would name a cause no code path tested"
     )
-    assert entry["state"] not in sweep.ACTIONABLE
-    assert "do NOT EXIST on main" in entry["why"]
+    assert "main does not have yet" in entry["why"]
+
+    # The mixes that must NOT be refreshed: a new file beside an OLDER
+    # register (would rewind main) and beside an UNDATED one (unorderable).
+    _branch(repo, "automation/pit-plus-older",
+            {"captures/US-20260909T010000Z.json": "{}",
+             "reg.json": json.dumps({"generated_at": "2026-09-09T11:00:00Z",
+                                     "v": "old"}) + "\n"})
+    _branch(repo, "automation/pit-plus-undated",
+            {"captures/US-20260909T020000Z.json": "{}",
+             "reg.json": json.dumps({"v": "no date"}) + "\n"})
+    for n, ref in ((2, "automation/pit-plus-older"), (3, "automation/pit-plus-undated")):
+        mixed = _classify(repo, n, ref)
+        assert mixed["state"] == sweep.ABSENT_ON_MAIN, (ref, mixed)
+        assert mixed["state"] not in sweep.ACTIONABLE
+        assert "only copy" in mixed["why"]
 
 
 def test_classify_consults_the_structural_append_detector() -> None:
@@ -374,12 +395,16 @@ def test_refresh_checks_the_commit_exit_code_and_verifies_the_effect() -> None:
     body = src.split("def refresh(")[1].split("\ndef ")[0]
     push_at = body.index('"push"')
     before_push = body[:push_at]
-    assert "could not commit the re-asserted merge-slot claim" in before_push, (
+    # ⚠️ Per-branch R13 claim since 2026-10-04: the claim is WRITTEN (only when
+    # missing) at `.github/merge-slots/<slug>.json`, not re-spliced into the
+    # retired shared board -- so the message and the path name changed, and the
+    # three properties below are what still has to hold.
+    assert "could not commit the merge-slot claim" in before_push, (
         "a failed commit must abort the refresh BEFORE the push, not fall through"
     )
-    assert "merge-base" in before_push and "SLOT_FILE" in before_push, (
-        "refresh() must verify the slot file is in this branch's own diff "
-        "against the merge-base before pushing — verify the EFFECT, not the call"
+    assert "merge-base" in before_push and "_branch_slot_rel(" in before_push, (
+        "refresh() must verify the per-branch slot file is in this branch's own "
+        "diff against the merge-base before pushing — verify the EFFECT, not the call"
     )
     assert "rides someone else's claim" in before_push, (
         "refresh() must verify the committed claim names THIS branch"
@@ -397,3 +422,181 @@ def test_a_failed_refresh_leaves_the_tree_clean_for_the_next_pr() -> None:
         "the commit-failure path must reset the working tree, or the next "
         "refresh in the same run cannot check its branch out"
     )
+
+
+def test_a_failed_claim_commit_never_reaches_the_push(tmp_path: Path, monkeypatch) -> None:
+    """BEHAVIOUR, not source text: make `git commit` fail on a branch that has
+    no claim yet and prove refresh() returns False without ever calling push."""
+    calls: list = []
+
+    def fake_git(*args, cwd=None):
+        calls.append(args[0])
+        if args[0] == "commit":
+            return 1, ""
+        return 0, ""  # fetch/checkout/merge ok; merge-base ok; diff empty -> no claim yet
+
+    monkeypatch.setattr(sweep, "git", fake_git)
+    ok, note = sweep.refresh({"ref": "automation/x"}, "origin/main", "test", True,
+                             cwd=tmp_path)
+    assert ok is False
+    assert "could not commit the merge-slot claim" in note
+    assert "commit" in calls and "push" not in calls, calls
+
+
+# --- research-queue stamp PRs (PI-20261006-LCEVL8D5-0001, 2026-10-07) -----------------------
+# MEASURED on stale-automation-sweep run 37659085458: 18 of 20 open automation PRs graded
+# `undated_payload`, every dispatch-stamp PR among them, so the sweep could not say whether one
+# was superseded. A unit file that differs ONLY by `last_dispatched_at` is now datable.
+_UNIT = "research/queue/RQ-20261006-023.yaml"
+_RECEIPT = "docs/claude/work/research-queue-dispatch-receipt.json"
+
+
+def _unit(stamp: str, extra: str = "") -> str:
+    return f"id: RQ-20261006-023\nstatus: queued\n{extra}last_dispatched_at: {stamp}\n"
+
+
+def _receipt(ts: str) -> str:
+    return json.dumps({"run_id": "1", "timestamp": ts}) + "\n"
+
+
+@pytest.fixture()
+def qrepo(repo: Path) -> Path:
+    def g(*a: str) -> None:
+        subprocess.run(["git", "-C", str(repo), *a], check=True, capture_output=True, text=True)
+    (repo / "research/queue").mkdir(parents=True)
+    (repo / _UNIT).write_text(_unit("'2026-10-07T09:13:22+00:00'"))
+    (repo / _RECEIPT).parent.mkdir(parents=True, exist_ok=True)
+    (repo / _RECEIPT).write_text(_receipt("2026-10-07T17:34:39+00:00"))
+    g("add", "-A")
+    g("commit", "-q", "-m", "queue")
+    return repo
+
+
+def test_a_stamp_older_than_mains_is_superseded_not_undated(qrepo: Path) -> None:
+    _branch(qrepo, "automation/research-queue-stamp-1-1", {
+        _UNIT: _unit("'2026-10-07T08:00:00+00:00'"),
+        _RECEIPT: _receipt("2026-10-07T08:00:01+00:00")})
+    got = _classify(qrepo, 1, "automation/research-queue-stamp-1-1")
+    assert got["state"] == sweep.SUPERSEDED_OLDER, got
+
+
+def test_a_stamp_newer_than_mains_is_refreshable(qrepo: Path) -> None:
+    _branch(qrepo, "automation/research-queue-stamp-2-1", {
+        _UNIT: _unit("'2026-10-07T10:05:38+00:00'")})
+    assert _classify(qrepo, 2, "automation/research-queue-stamp-2-1")["state"] == sweep.REFRESH
+
+
+def test_a_null_stamp_is_the_oldest(qrepo: Path) -> None:
+    _branch(qrepo, "automation/research-queue-stamp-3-1", {_UNIT: _unit("null")})
+    assert _classify(qrepo, 3, "automation/research-queue-stamp-3-1")["state"] == sweep.SUPERSEDED_OLDER
+
+
+def test_a_unit_edited_beyond_the_stamp_stays_undated(qrepo: Path) -> None:
+    """A grade/result PR changes more than the stamp; the stamp's date cannot order that."""
+    _branch(qrepo, "automation/research-queue-grade-4-1", {
+        _UNIT: _unit("'2026-10-07T10:05:38+00:00'", extra="grading:\n  verdict: pass\n")})
+    assert _classify(qrepo, 4, "automation/research-queue-grade-4-1")["state"] == sweep.UNDATED_PAYLOAD
+
+
+def test_the_older_of_two_stamp_prs_is_not_elected(qrepo: Path) -> None:
+    _branch(qrepo, "automation/research-queue-stamp-5-1", {_UNIT: _unit("'2026-10-07T10:00:00+00:00'")})
+    _branch(qrepo, "automation/research-queue-stamp-5-2", {_UNIT: _unit("'2026-10-07T11:00:00+00:00'")})
+    prs = [{"number": 5, "ref": "automation/research-queue-stamp-5-1"},
+           {"number": 6, "ref": "automation/research-queue-stamp-5-2"}]
+    holders = sweep.newest_by_path(prs, "main", cwd=qrepo)
+    assert holders[_UNIT] == 6
+    assert _classify(qrepo, 5, prs[0]["ref"], holders)["state"] == sweep.SUPERSEDED_BY_OPEN_PR
+    assert _classify(qrepo, 6, prs[1]["ref"], holders)["state"] == sweep.REFRESH
+
+
+def test_a_merge_conflict_is_a_warning_not_a_failed_refresh(qrepo: Path, monkeypatch, capsys) -> None:
+    """The sweep was red on runs 110-119 for two conflicting PRs it can only leave alone."""
+    monkeypatch.setattr(sweep, "open_automation_prs",
+                        lambda supplied=None: [{"number": 9, "ref": "automation/x", "created_at": ""}])
+    monkeypatch.setattr(sweep, "git", lambda *a, **k: (0, ""))
+    monkeypatch.setattr(sweep, "newest_by_path", lambda *a, **k: {})
+    monkeypatch.setattr(sweep, "classify", lambda pr, *a, **k: {
+        "pr": 9, "ref": "automation/x", "state": sweep.REFRESH, "why": "", "files": []})
+    monkeypatch.setattr(sweep, "refresh", lambda *a, **k: (False, f"{sweep.CONFLICT_NOTE} ('f') — left alone"))
+    assert sweep.run("main", True, "t") == 0
+    assert "::warning::" in capsys.readouterr().out
+    monkeypatch.setattr(sweep, "refresh", lambda *a, **k: (False, "push failed"))
+    assert sweep.run("main", True, "t") == 1      # a REAL failure still fails the job
+
+
+def test_a_stamp_pr_is_graded_on_what_it_changed_even_after_main_moved_on(qrepo: Path) -> None:
+    """THE LIVE SHAPE (dry-run on 21 open automation PRs, 2026-10-07): the branch was cut, then
+    main's copy of the unit gained a `grading:` block. Branch-vs-main is no longer stamp-only, but
+    the PR's own change (branch vs merge-base) still is, so it must still be ordered by its stamp."""
+    def g(*a: str) -> None:
+        subprocess.run(["git", "-C", str(qrepo), *a], check=True, capture_output=True, text=True)
+    _branch(qrepo, "automation/research-queue-stamp-7-1", {
+        _UNIT: _unit("'2026-10-07T08:00:00+00:00'")})                       # a bare, OLD stamp
+    (qrepo / _UNIT).write_text(_unit("'2026-10-07T09:13:22+00:00'", extra="grading:\n  verdict: pass\n"))
+    g("add", "-A")
+    g("commit", "-q", "-m", "main moves on: unit graded")
+    assert _classify(qrepo, 7, "automation/research-queue-stamp-7-1")["state"] == sweep.SUPERSEDED_OLDER
+    # ...and a grade-style PR (its own change goes beyond the stamp) is still not ordered by it
+    _branch(qrepo, "automation/research-queue-grade-8-1", {
+        _UNIT: _unit("'2026-10-07T10:05:38+00:00'", extra="grading:\n  verdict: fail\n")})
+    assert _classify(qrepo, 8, "automation/research-queue-grade-8-1")["state"] == sweep.UNDATED_PAYLOAD
+
+
+# --------------------------------------------------------------------------
+# CONFLICTED STAMP / RECEIPT PRs (#18004, #18014, 2026-10-14) -- a data-only
+# conflict used to be "left alone for a human" and sat unmergeable for hours.
+# --------------------------------------------------------------------------
+
+def _conflict_setup(repo: Path, main_unit: str, branch_unit: str, other: dict | None = None):
+    def g(*a: str) -> int:
+        return subprocess.run(["git", "-C", str(repo), *a], capture_output=True, text=True, check=False).returncode
+    unit = "research/queue/RQ-20261006-023.yaml"
+    (repo / "research/queue").mkdir(parents=True)
+    (repo / unit).write_text("id: RQ-20261006-023\nstatus: queued\nlast_dispatched_at: null\n")
+    g("add", "-A")
+    g("commit", "-q", "-m", "unit")
+    g("checkout", "-q", "-b", "automation/research-queue-stamp-1")
+    (repo / unit).write_text(branch_unit)
+    for rel, text in (other or {}).items():
+        (repo / rel).write_text(text)
+    g("add", "-A")
+    g("commit", "-q", "-m", "stamp")
+    g("checkout", "-q", "main")
+    (repo / unit).write_text(main_unit)
+    g("add", "-A")
+    g("commit", "-q", "-m", "main edits the same unit")
+    g("checkout", "-q", "automation/research-queue-stamp-1")
+    assert g("merge", "main", "-m", "m") != 0, "setup must produce a real conflict"
+    return unit
+
+
+def _conflicted(repo: Path) -> str:
+    return subprocess.run(["git", "-C", str(repo), "diff", "--name-only", "--diff-filter=U"],
+                          capture_output=True, text=True, check=False).stdout
+
+
+def test_a_conflicting_stamp_keeps_mains_edit_and_the_branchs_stamp(repo: Path) -> None:
+    unit = _conflict_setup(
+        repo,
+        main_unit="id: RQ-20261006-023\nstatus: done\nlast_dispatched_at: null\n",
+        branch_unit="id: RQ-20261006-023\nstatus: queued\nlast_dispatched_at: '2026-10-14T06:02:00+00:00'\n")
+    assert sweep.resolve_data_conflicts(_conflicted(repo), cwd=repo) is True
+    text = (repo / unit).read_text()
+    assert "status: done" in text and "2026-10-14T06:02:00" in text and "<<<<" not in text
+    assert _conflicted(repo).strip() == ""
+
+
+def test_a_conflict_outside_regenerable_data_is_still_left_for_a_human(repo: Path) -> None:
+    def g(*a: str) -> None:
+        subprocess.run(["git", "-C", str(repo), *a], check=True, capture_output=True, text=True)
+    g("checkout", "-q", "-b", "automation/x")
+    (repo / "reg.json").write_text('{"v": "branch"}\n')
+    g("commit", "-qam", "b")
+    g("checkout", "-q", "main")
+    (repo / "reg.json").write_text('{"v": "main2"}\n')
+    g("commit", "-qam", "m")
+    g("checkout", "-q", "automation/x")
+    subprocess.run(["git", "-C", str(repo), "merge", "main", "-m", "m"], capture_output=True, check=False)
+    assert sweep.resolve_data_conflicts(_conflicted(repo), cwd=repo) is False
+    assert sweep.resolve_data_conflicts("", cwd=repo) is False
+    assert "reg.json" in _conflicted(repo)   # nothing staged on the refusal path

@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "due_date": "2026-10-27",
+    "kind": "date"
+  },
+  "id": "PI-20261024-4CGB8QKR-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-10-24 (night), session_01H99zMuLNTn3Sf14cGB8QKr; watchdog incidents dispatcher_fires@20261024T2146Z + backend:github_runner@20261024T2146Z on ops-flags #17895",
+    "rerun": "gh api 'repos/benbaichmankass/Metis-Insights/actions/workflows/research-queue-dispatch.yml/runs?per_page=20' --jq '.workflow_runs[] | [.created_at,.updated_at,.event,.conclusion] | @tsv'"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": "1",
+  "what": "[research-ops] research-queue-dispatch runs take 40-68 min end to end (MEASURED 2026-10-24: #519 17:46->18:23Z, #520 19:13->19:59Z, #521 19:31->20:19Z, #522 20:31->21:12Z, #523 21:47->22:34Z), so research compute starts are spaced ~60-90 min apart and the research watchdog's 75-min dispatcher_fires limit tripped at 21:46Z with 63 runnable units and 0 in flight; it self-cleared when #523 fired runs at 21:50Z and 22:35Z (research-script-run #784-#788). Root-cause where the 40+ min goes (collect -> grade -> fire -> receipt in one job) and either fire before the slow stages or align the watchdog limit to the measured cadence WITH evidence (thresholds change only by a PR that says why). Also note: research-script-run #786-#788 completed in ~70 s each, which may mean they no-op; check they produced results."
+}

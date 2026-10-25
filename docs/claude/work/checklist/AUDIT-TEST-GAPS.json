@@ -1,0 +1,34 @@
+{
+  "id": "AUDIT-TEST-GAPS",
+  "title": "Close the six HIGH code-audit test gaps from 2026-09-27 (CA-B07 x4, CA-A05-006, CA-B02)",
+  "phase": "W6",
+  "state": "done",
+  "owner": "lane session_01PVjNEqk5zUxHuMJwyLoy3s",
+  "lane": "session_01PVjNEqk5zUxHuMJwyLoy3s",
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 10,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    17683,
+    17684,
+    17685
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-12T06:00Z manager session_01G16FfyYSmDPQuuW55BuTmK] dispatched lane session_01PVjNEqk5zUxHuMJwyLoy3s. || Tests PR claude/audit-test-gaps-tests; HOLD PR for CA-A01-056 (unparseable Bybit stopLoss graded covered). landed_unproven closes when the tests PR is merged and the HOLD PR is merged/decided by the manager.  || 2026-10-12: #17683 tests (self); HOLD #17684 (CA-A01-056 runtime fix, stacked on #17683); HOLD #17685 (scripts/training + docstring, guard can't certify self-landing). JT7JW9CR-0002 already fixed+tested. Closes when all merged.  || CLOSED 2026-10-12: #17683, #17684 and #17685 all merged; 6 pipeline items dispositioned (0001/0002/0004 done earlier). CA-A01-056 (Bybit stopLoss refusal) is merged but NOT deployed or observed; it ships on the next deploy.",
+  "updated_at": "2026-10-12T08:38:11Z",
+  "updated_by": "session_01PVjNEqk5zUxHuMJwyLoy3s",
+  "roadmap": [
+    "M39"
+  ],
+  "writeback": {
+    "roadmap": "none: M39 where/next unchanged; test-gap closure only",
+    "arch": "none: tests, tooling and a docstring; no architecture change"
+  },
+  "observation": {
+    "what": "#17683 merged, then #17684 (CA-A01-056 runtime fix) and #17685 (training harness + docstring) decided by the manager",
+    "how_to_check": "PRs 17683/17684/17685 merged; PI-20260927-JT7JW9CR-0003, CAB02-0001, CAA05-0004 closed",
+    "due_by": "2026-10-19T00:00Z"
+  },
+  "_seq": 418
+}

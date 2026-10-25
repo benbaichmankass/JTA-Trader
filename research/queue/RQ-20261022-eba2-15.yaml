@@ -1,0 +1,141 @@
+id: RQ-20261022-eba2-15
+title: 'ADX variant (first test failed -> variant): do momentum-LOSS triggers (ADX below 20 -> tight 3.5; ADX below 30 or
+  20 AND falling over 3 bars -> tight 3.5 / 3.0) replace the declared exit of trend_donchian_eth_4h on net R in 5 of 6 folds
+  over 2020-07..2026-10?'
+status: done
+cadence: once
+roadmap:
+- L-ATM
+- M20
+theme: live_strategy
+priority: 1
+kind: experiment
+question: 'RQ-20261022-511e-01 (ADX < 25 -> tight 2.5) failed on sol_4h and eth_4h, and RQ-20261019-010 failed the ADX trail
+  on eth_4h against the current incumbent. DIAGNOSIS of the first test (RQ-20261022-511e-01, and RQ-20261019-010): the cell
+  was ADX < 25 -> tight 2.5. On 4h crypto ADX sits below 25 for a large share of bars, so the lever is close to an unconditional
+  tightening, and sol_4h / xrp_4h / eth_4h ALREADY declare their own tighteners (stall or R-armed decay; eth_4h also a TP
+  revision), which compose by minimum -- so ADX adds cuts, not information. The cell was carried over from ONE leg (xrp_4h,
+  n 68) with no parameter transfer. Practitioner rules put the exit at ADX turning DOWN from a high level (above 30; exhaustion
+  above 50 and falling) rather than at a low level, and tighten only after weakness persists for several bars; the closest
+  expressible forms (ADX below a level AND falling over k bars, the memo''s adx20_k3 notation) are untested here; a bare ''falling''
+  condition fires on roughly half of all bars, so it is never used alone. Kaufman''s efficiency ratio is the analogous trend-quality
+  filter (persistent above ~0.3-0.4 per practitioners). Over 2020-07-01 .. 2026-10-15 23:59, replace grade, 6 folds, do arms
+  M3 (ADX < 20, tight 3.5), M4 (ADX < 30 AND lower than 3 bars ago, tight 3.5) or M5 (ADX < 20 AND lower than 3 bars ago,
+  tight 3.0) beat the declared exit by >= 0.02 R/trade in >= 5 of 6 folds within the Path B drawdown bar?'
+why_this_matters: 'Operator directive 2026-10-22: the ADX-trail idea is not retired by 511e-01 (that failure only means it
+  does not go to real money yet). eth_4h is the largest real-money Donchian leg (n 270 on this window). SOURCES (practitioner/secondary
+  unless stated; none is a validated result): Osler, ''Support for Resistance'', FRBNY Economic Policy Review 6(2), 2000 (newyorkfed.org/medialibrary/media/research/epr/00v06n2/0007osle.pdf)
+  [primary]; NexusFi MFE scale-out guide; MQL5 article 24466 (R-multiple MFE percentile scale-out); LuxAlgo library ''Scaling
+  Out'' and ''MAE/MFE Distributions''; TradingView ATR Chandelier and ADX exhaustion scripts; LuxAlgo/StrategyQuant on Kaufman''s
+  efficiency ratio.'
+power:
+  expected_n: 270
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Floor (1.96 + 0.8416)^2 / 0.45^2 = 38.76 -> 39 incumbent trades; the incumbent read n 270 on this window (MEASURED,
+    a sibling unit). Trade sequences autocorrelate: the fold majority carries the rest.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-P1-Q14-ETH4H-ADX-MOMENTUM-LOSS
+  registered_at: '2026-10-22'
+  registered_before_run: true
+  statistic: 'From scripts/research/exit_lever_ablation.py --grade replace on trend_donchian_eth_4h, window 2020-07-01 ..
+    2026-10-15 23:59 (6 equal calendar folds; a trade is binned by entry time), net of the full cost stack the harness resolves
+    per venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack). Per arm: n, net_total_r (full-position
+    R), max_drawdown_r, net R per fold. A = the leg as declared in config/strategies.yaml. Per candidate C: delta = net_r(C)
+    - net_r(A); folds_ge = folds with net_r(C) >= net_r(A); maxDD(C) vs maxDD(A).'
+  rule: 'INDETERMINATE IF n(A) < 39, or IF every C arm is byte-identical to A (the lever never fired). A candidate C PASSES
+    iff net_r(C) > net_r(A) AND delta >= 0.02 R x n(A) AND folds_ge >= 5 of 6 AND maxDD(C) <= maxDD(A) x 1.35. PASS IF one
+    or more pass: the best by net R is named and the follow-up is ONE confirmation unit on a disjoint partition (a PASS on
+    one window is a discovery), never a config edit. FAIL IF none passes: the declared exit stands for THESE arms on this
+    leg; the idea is not retired (a family is not retired on one config) and the diagnosis in the unit decides the next variant.  Thresholds
+    are not changed after any result.'
+  what_it_does_not_do: 'Edits no config and places no order; a PASS needs a Tier-3 declare (and a live producer where the
+    lever has none). The declared eth_4h exit already carries a stall decay and a measured-move TP revision; arms compose
+    with them by the harness''s minimum rule. The lever has a live producer in src/runtime/momentum_levers.py (merged #18921;
+    deployment not checked this session). No look at any of these arms was taken before registration.'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 500
+  confidence: 0.2
+  basis: 'stand-in: money leg; the operator named giveback as the standing priority; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  why_runner: Fetches keyless public candles (Binance Vision) for a pinned window; reads no trainer data.
+  basis: 'One exit_lever_ablation.py invocation: one keyless candle fetch + one harness pass per arm (2 arms on xrp_pullback_2h
+    over 2020-07..2026-10 took 74 s wall MEASURED 2026-10-16).'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_eth_4h
+  - --arm
+  - A=
+  - --arm
+  - M3=--trail-adx-below=20;--trail-adx-tight-mult=3.5
+  - --arm
+  - M4=--trail-adx-below=30;--trail-adx-falling-bars=3;--trail-adx-tight-mult=3.5
+  - --arm
+  - M5=--trail-adx-below=20;--trail-adx-falling-bars=3;--trail-adx-tight-mult=3.0
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '5'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261022-eba2-15
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261022-001.yaml
+- research/queue/RQ-20261022-fd06-01.yaml
+- research/queue/RQ-20261022-511e-01.yaml
+- scripts/research/exit_lever_ablation.py
+- docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md
+last_dispatched_at: '2026-10-22T23:28:19+00:00'
+grading:
+  attested: RULE-P1-Q14-ETH4H-ADX-MOMENTUM-LOSS
+  auto: true
+  decision_rule_id: RULE-P1-Q14-ETH4H-ADX-MOMENTUM-LOSS
+  evidence:
+  - research/results/RQ-20261022-eba2-15/39872053675.jsonl
+  graded_at: '2026-10-23'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

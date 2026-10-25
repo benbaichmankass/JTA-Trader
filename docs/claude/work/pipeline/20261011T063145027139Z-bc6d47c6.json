@@ -1,0 +1,19 @@
+{
+  "due_when": {
+    "check_every_days": 17,
+    "clears_when": "the operator answers: either a PR adds the fifth clause to check_roster_promotion_evidence.py (and the affected records are listed), or the decline is recorded on RQ-20260922-004",
+    "kind": "observation",
+    "last_checked": "2026-10-04"
+  },
+  "id": "PI-20260928-HK3BKCKE-0001",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "research",
+    "ref": "lane RQ-RUN session_0179hCBVrY5PJMaHhK3BKcKe (manager session_01KAQRJxRbRwpYTkPgBjNVyQ), 2026-09-28, grading of the ran-but-ungraded queue units; research/queue/RQ-20260922-004.yaml result",
+    "rerun": "git show origin/claude/m20-sweep-corpus:docs/research/m20-sweep-corpus.jsonl | python3 -c \"import sys,json; [print(r['cell'],r['d_net_r_OOS']) for r in map(json.loads,sys.stdin) if r.get('leg')=='xrp_pullback_2h' and r.get('lever')=='trail_decay' and str(r.get('sweep_generated_at','')).startswith('2026-09-28')]\""
+  },
+  "routed_to": "GUARD-FIDELITY | closed by the C5 PR (lane session_0138CvwpMuWStDp1Ys3usyJQ)",
+  "state": "done",
+  "terminal_reason": "OPERATOR DECISION 2026-10-11 ~06:30Z, popup verbatim \"Add it, re-measure the 3 now\". Clause C5 added to scripts/ci/check_roster_promotion_evidence.py (refuses fidelity != faithful for any NEW risk-bearing roster add, fail-closed); FIDELITY_BASELINE names the 3 approximate risk-bearing slots on main (alpaca_live ief/slv/iaum_pullback_1d -> RQ-20261011-6707-01; bybit_2 xrp_pullback_2h's record already reads faithful). RQ-20261011-6707-01 faithful re-measure: all 3 PASS RULE-D1. Lane session_0138CvwpMuWStDp1Ys3usyJQ, branch claude/guard-fidelity-approximate.",
+  "what": "RQ-20260922-004 BAR FINDING (operator decision): `fidelity: approximate` is materially load-bearing on xrp_pullback_2h -- simulating the omitted trail_decay lever costs 5.6-11.0R of OOS net R on 4 of 5 cells (bar 4.10R), in the FLATTERING direction. The unit's rule says the deliverable is a proposal to add a fifth clause to scripts/ci/check_roster_promotion_evidence.py refusing `fidelity: approximate` as Stage-0 evidence for a real-money slot. Operator: accept (guard PR, Tier-1 CI change, but it would refuse existing real-money evidence records) or decline with a stated reason."
+}

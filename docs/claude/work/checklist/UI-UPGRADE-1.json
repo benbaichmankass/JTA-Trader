@@ -1,0 +1,28 @@
+{
+  "id": "UI-UPGRADE-1",
+  "title": "Dashboard UI upgrade session: fast live overview, work-queue snapshot, prop uPnL, nav order, merged Roadmap+Work tab, Google+passkey site login, signals catalog placeholder, keys admin",
+  "phase": "W41",
+  "state": "blocked",
+  "owner": "manager (dispatch after TELEGRAM-CHANNELS-2 finishes, operator 2026-10-11)",
+  "lane": null,
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 40,
+  "spend_usd": 12.85,
+  "tier": 2,
+  "prs": [
+    17573,
+    17578,
+    17579,
+    17584
+  ],
+  "blocked_on": [
+    {
+      "kind": "work_item",
+      "ref": "UI-UPGRADE-1-SPA-PATCH"
+    }
+  ],
+  "note": "[2026-10-11T09:40Z operator request; popup answers: login 'Google + passkey', keys 'View + edit, passkey each time', schedule 'Roadmap two now, UI after'] Items: (1) TOP: faster data loading; data on the page live all the time even if charts are not per-tick; cut lag (overview first) - tens of seconds for little data makes no sense. (2) Work-queue snapshot on the overview: last 5 closed, open now, next 5, plus a box for items waiting on the operator. (3) Prop accounts show no uPnL: keep a regularly updated snapshot and display it. (4) Nav order: real money, then paper, then Prop. (5) Work page 'today's brief' included in the 'last report' roster (usually the latest). (6) Fold Roadmap and Work tabs into one. (7) DB sign-in creds unclear: explain the mechanism, replace with Google OAuth to the operator's account + passkey 2FA, covering the WHOLE site, long-lived per-device session (revocable). (8) Signals catalog placeholder on the strategies/models page. (9) Admin keys tab: list keys, value hidden behind an eye icon, editable field prefilled with current value + Save; per operator: reveal/save re-prompts the passkey, values never cached client-side, every reveal/change audited + pinged to SYSTEM. Repos: benbaichmankass/ict-trader-dashboard (SPA) + this repo (API). Security items 7+9 are Tier-2/3 auth changes: ship behind tests, keep CORS intact. [2026-10-11 lane session_01McHbeefghxRy9AJPfinTeQ] DONE IN PRS (none deployed or observed yet): #17578 Tier-2 hold = server speed: /positions + /work/brief stale-while-revalidate snapshots, /signals backwards tail, new /work/snapshot. Before-timings MEASURED from a web session: positions 5-12 s cold, signals 3.1-3.5 s, work/brief 16.4 s, candles 4.4 s, the rest 0.3-0.9 s; the Overview's Promise.all gated on the slowest. After-timings are owed post-deploy (rerun the curl loop in the PR body). #17579 Tier-2 hold = prop uPnL from the executors' venue-reported prop_account_status.unrealized. #17584 Tier-1 = auth/keys design (docs/plans/ui-upgrade-1-auth-and-keys-design.md), new row UI-UPGRADE-1-AUTH (blocked on operator D1-D3 + GOOGLE_OAUTH_CLIENT_ID), and the SPA patch comms/ui-upgrade-1/ict-trader-dashboard-ui-upgrade-1.patch (items 1-client, 2, 3-display, 4 accounts order, 5 brief in Reports, 6 Roadmap folded into Work, 8 Signals Catalog placeholder; svelte-check + build + 4 SPA tests OK, not browser-verified). BLOCKER: add_repo push to ict-trader-dashboard was refused by the permission classifier in this lane, so the SPA patch is unapplied; a session with push access must git am it onto ict-trader-dashboard@f2ac028. Finding filed: PI-20261011-JPFINTEQ-0001 (/signals timestamps empty). [2026-10-25 BLOCKERS-1025] RE-SCOPED, operator wait removed. API half merged (#17578, #17579 merged 2026-10-11) and observed live 2026-10-25: positions 0.56s, signals 0.66s, work/snapshot 0.63s, work/brief 0.33s (one cold 40s timeout seen on first call) vs before-timings 5-16s. Auth/keys items are tracked on UI-UPGRADE-1-AUTH*. What remains is applying the SPA patch, now row UI-UPGRADE-1-SPA-PATCH.",
+  "updated_at": "2026-10-25T06:49:38Z",
+  "updated_by": "session_01BjW391JCBB1J4CJeKAwW52",
+  "_seq": 399
+}

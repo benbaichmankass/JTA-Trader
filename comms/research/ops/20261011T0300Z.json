@@ -1,0 +1,30 @@
+{
+  "run": "RESEARCH-OPS-20261011-0247",
+  "finished_at": "2026-10-11T03:00:00Z",
+  "by": "research-ops-0247",
+  "baseline": "comms/research/ops/20261011T0050Z.json",
+  "floor": 25,
+  "throughput": {"runnable_before": 21, "runnable_after": 27, "queued": 128, "fired_24h": 31, "fired_7d": 219, "results_landed_24h": 26, "hours_since_last_dispatch": 1.7, "idle_alarm": false, "as_of": "2026-10-11T02:48Z"},
+  "mechanism": {"dispatch_receipt": "ok (fresh, 0.82h)", "collector": "ok: 353c-01..06 results all on main (#17472-17474, #17480-17482); 353c-07/08 results sit in open PRs #17488/#17487, not yet on main", "stranded_stamp_prs": [17466], "incident": "none; #17466 is the superseded 22:08Z stamp PR (units already stamped on main via #17475); #17490 is a 2h-old fresh stamp PR, not stranded. Health check H1 fired at runnable=21 before top-up (templates hold 3 of deficit 4)."},
+  "results_read": {"pass": 4, "fail": 1, "indeterminate": 1, "units": [
+    {"unit": "RQ-20261010-353c-01", "verdict": "pass", "n": 664, "net_total_r": 43.6911, "note": "ZEC; previously read from PR, now on main"},
+    {"unit": "RQ-20261010-353c-02", "verdict": "pass", "n": 712, "net_total_r": 11.6561, "note": "UNI; now on main"},
+    {"unit": "RQ-20261010-353c-03", "verdict": "pass", "n": 727, "net_total_r": 27.4566, "note": "SUI; now on main"},
+    {"unit": "RQ-20261010-353c-05", "verdict": "pass", "n": 707, "net_total_r": 49.394, "note": "FIL trend 1h Stage-0; no config change"},
+    {"unit": "RQ-20261010-353c-06", "verdict": "fail", "n": 715, "net_total_r": -1.7605, "note": "LINK; rule: one pass, re-queue confirmatory -> RQ-20261011-8025-01"},
+    {"unit": "RQ-20261010-353c-04", "verdict": "indeterminate", "n": null, "note": "HYPE: read_state producer_failed (build job failed in fetch+run step, ~3 min, no artifact, log uninformative); 'we could not look', not a verdict -> retry RQ-20261011-8025-02"}],
+    "disposition": "mechanical rules only; no Tier-3 proposal. Passes are Stage-0 breadth evidence; prop-fit pricing of the family already passed (RQ-20261007-201/202/208). Not hand-recorded in the ledger (auto-graded units)."},
+  "unlocked": [],
+  "retired": [],
+  "blocked_audit": "no lever landed since 00:50Z; every blocked/ unit keeps its named lever and owning row (RESEARCH-NIGHT-1010). Session-bound needs-lane units unchanged: RQ-20260928-001, RQ-20261007-022/023/025/030.",
+  "levers_filed": [],
+  "units_authored": ["RQ-20261011-8025-01 trend LINK 1h (confirmatory)", "RQ-20261011-8025-02 trend HYPE 1h (retry of producer_failed)", "RQ-20261011-8025-03 trend BTC 4h", "RQ-20261011-8025-04 trend SOL 2h", "RQ-20261011-8025-05 pullback BTC 4h", "RQ-20261011-8025-06 squeeze SOL 4h"],
+  "followups_filed": [],
+  "not_run": ["HYPE build-failure root cause (log carried no error text; retry unit will show whether it recurs)"],
+  "handoff": [
+    "Next pass: read 353c-07/08 (pass, in open PRs #17488/#17487) once landed, plus 353c-09..20 and fc31-01..06.",
+    "Next pass: if 8025-02 (HYPE) again lands producer_failed, file a RESEARCH-TOOLING-GAPS note with the failing fetch step's error (HYPEUSDT 1h fetch via fetch_backtest_corpus.py).",
+    "Supply is shrinking: uncovered declared cells remain (trend 29, pullback 20, squeeze 27, mostly 5m/15m and BTC/ETH/SOL 1h-4h); a topic lane should decide which belong in the prop search.",
+    "Manager: close #17466 (superseded stamp PR)."
+  ]
+}

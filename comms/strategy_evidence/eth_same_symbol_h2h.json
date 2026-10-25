@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "id": "eth_same_symbol_h2h",
+  "symbol": "ETHUSDT",
+  "account_context": "bybit_2 / bybit_portfolio (one-way: one net ETHUSDT position)",
+  "question": "Same strategy family (trend_donchian) on ETHUSDT at two timeframes: run eth_4h alone, eth_prop (1h) alone, or both sharing one position slot?",
+  "decision_rule": {
+    "id": "RULE-ETH-SAME-SYMBOL-H2H",
+    "registered_by": "manager session_01VduHYzdaXe27wTDBLSu8ao, relaying the operator instruction of 2026-10-15 ~20:20Z",
+    "registered_at": "2026-10-15T20:16:37Z",
+    "rule": "choose the arm with the highest OOS net R per capital-day; if (c) does not beat the better single arm by > 0, run the better single arm alone"
+  },
+  "method": "Replay of the two COMMITTED harness ledgers (harness=trend, full cost stack fee 7.5 + slippage 3.0 bps rt + funding 1.0 bps/window, net_r per trade) over the eth_prop evidence window. Single slot: a trade is taken only if no position is open; same-tick ties are ordered by the live election key (-confidence, then name; declared priority is 0 for both today). Script: scripts/research/eth_same_symbol_h2h.py.",
+  "sources": [
+    "comms/strategy_evidence/runs/2026-10-07/trend_donchian_eth_prop__trades.jsonl",
+    "comms/strategy_evidence/runs/2026-10-12-1095d/trend_donchian_eth_4h__trades.jsonl"
+  ],
+  "window": [
+    "2025-10-07T00:00:00+00:00",
+    "2026-10-07T19:13:55+00:00"
+  ],
+  "window_days": 365.8,
+  "raw_overlap_check": {
+    "eth_4h_ledger_n_in_window": 43,
+    "eth_prop_ledger_n_in_window": 163,
+    "eth_4h_self_overlaps_removed": 0,
+    "eth_prop_self_overlaps_removed": 0
+  },
+  "arm_a_eth_4h_alone": {
+    "n": 43,
+    "net_r": 6.0455,
+    "net_r_per_capital_day": 0.01653,
+    "net_r_per_position_day": 0.0422,
+    "days_in_position": 143.2,
+    "max_dd_r": 12.5173,
+    "by_leg": {
+      "trend_donchian_eth_4h": 43
+    }
+  },
+  "arm_b_eth_prop_alone": {
+    "n": 163,
+    "net_r": 9.3243,
+    "net_r_per_capital_day": 0.02549,
+    "net_r_per_position_day": 0.1062,
+    "days_in_position": 87.8,
+    "max_dd_r": 13.5719,
+    "by_leg": {
+      "trend_donchian_eth_prop": 163
+    }
+  },
+  "arm_c_both_one_slot": {
+    "n": 131,
+    "net_r": 19.3555,
+    "net_r_per_capital_day": 0.05291,
+    "net_r_per_position_day": 0.1202,
+    "days_in_position": 161.0,
+    "max_dd_r": 11.0215,
+    "by_leg": {
+      "trend_donchian_eth_4h": 29,
+      "trend_donchian_eth_prop": 102
+    }
+  },
+  "tie_order_sensitivity": {
+    "same_entry_tick_collisions": 4,
+    "arm_c_net_r_live_order_confidence_then_name": 19.3555,
+    "arm_c_net_r_eth_4h_first_on_every_tie": 17.1569,
+    "arm_c_net_r_eth_prop_first_on_every_tie": 13.7243,
+    "reading": "(c) beats the better single arm (b, 9.3243R) under EVERY tie ordering; the ordering moves (c) by up to 5.6R over 4 ticks, so it should be DECLARED rather than left to the name."
+  },
+  "verdict": "arm_c",
+  "verdict_detail": "(c) 0.05291 R/capital-day vs best single (b) 0.02549 -> (c) wins by +0.02742 R/capital-day (+10.03R over the window). Per the rule: add trend_donchian_eth_prop ALONGSIDE trend_donchian_eth_4h and declare a priority so the election is not decided by name. Recommended DEFAULT_PRIORITIES: trend_donchian_eth_4h above trend_donchian_eth_prop, which reproduces the live-order arm (19.36R) on confidence ties.",
+  "limitations": [
+    "Ledger replay, not a fresh harness run: assumes each leg's entries do not depend on the other leg's position (true of Donchian breakouts; exits are per-trade).",
+    "eth_4h's trades come from its 1095d run whose fold boundaries differ from eth_prop's 365d folds; within this window both are harness out-of-sample trades, but not the same fold partition.",
+    "An opposite-direction signal while the slot is held is simply skipped; on a one-way venue it would net the position instead.",
+    "n per arm: a=43, b=163, c=131; window 365.8 days."
+  ],
+  "provenance": "MEASURED (offline replay of committed harness ledgers)",
+  "generated_at": "2026-10-15T20:25:00Z",
+  "generated_by": "lane PROMOTE-PROP-LEGS session_01TyFwUG9LYJXwJsFoyBZ9CV"
+}

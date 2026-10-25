@@ -1,0 +1,30 @@
+{
+  "based_on": "20261018T075342416651Z-a747c3a1.json",
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "one eth_4h package on bybit_2 shows the decayed trail in position_path_history (bars_since_peak >= 10 and a tightened stop), or closes on it; then the TP-DOCTRINE row records merged -> deployed -> observed with the package id",
+    "kind": "observation"
+  },
+  "evidence": "merged afdbb8a19; VM git_sha d2ab40e17 at 07:52Z (one commit behind, git-sync pending)",
+  "filed_by": "lane ACTIVE-MGMT-DRIVE-1018 session_013oEUJzaNgUnEAFrpHccwkx",
+  "id": "PI-20261018-DECAYOBS-0001",
+  "money_path": true,
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-01",
+    "how_to_check": "scripts/ops/diag_fetch.sh version | grep -o afdbb8a19 ; scripts/ops/diag_fetch.sh 'position_path_history?strategy=trend_donchian_eth_4h&limit=2000' | python3 -c \"import json,sys; rows=json.load(sys.stdin)['rows']; print([(r['order_package_id'],r['bar_ts'],r['bars_since_peak'],r['sl_r']) for r in rows if (r.get('bars_since_peak') or 0)>=10][:20])\"",
+    "what": "one trend_donchian_eth_4h package on bybit_2 shows the decayed trail in position_path_history (a bar with bars_since_peak >= 10 whose sl_r is tighter than the previous bar's, consistent with a 1.8 ATR trail), or closes on it; and VM /api/diag/version git_sha is at or past afdbb8a19"
+  },
+  "origin": {
+    "kind": "deploy",
+    "ref": "PR #18893 (afdbb8a19); evidence RQ-20261016-006 run 39103750121",
+    "rerun": "scripts/ops/diag_fetch.sh version | grep afdbb8a19 ; scripts/ops/diag_fetch.sh 'position_path_history?strategy=trend_donchian_eth_4h&limit=2000' and look for a bar with bars_since_peak >= 10 whose sl_r tightens vs the previous bar"
+  },
+  "roadmap": [
+    "L-ATM"
+  ],
+  "routed_to": "LIVE-DECAY-MONITOR",
+  "state": "routed",
+  "terminal_reason": null,
+  "what": "OBSERVE the first live effect of #18893 (merged 2026-10-18 07:51Z): trend_donchian_eth_4h now declares trail_decay_stall_bars 10 / trail_decay_tight_mult 1.8 on bybit_2 + bybit_portfolio + bybit_1. Mechanism: src/runtime/order_monitor._load_live_strategy_cfgs re-reads config/strategies.yaml by mtime on every pass, so the lever reaches monitor() for ALREADY-OPEN packages as soon as ict-git-sync pulls afdbb8a19 (no restart). Deployed = VM /api/diag/version git_sha at or past afdbb8a19. Observed = an eth_4h package whose position_path_history rows show the trail level stepping in once bars_since_peak >= 10 (the stop moving to ~1.8 ATR from the peak), or a close whose exit reason names the decayed trail. Until then this is MERGED, not deployed or observed."
+}

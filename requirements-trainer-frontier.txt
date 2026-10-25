@@ -1,0 +1,36 @@
+# Trainer-VM-only frontier research arms (FRONTIER-LEVER-TRAINER-DEPS, 2026-10-12).
+#
+# Installed ONLY by scripts/ops/trainer_bootstrap.sh, one package at a time, under a constraints
+# file frozen from the venv's existing stack (torch / transformers / huggingface-hub / numpy /
+# pandas / scipy / scikit-learn / lightgbm / chronos-forecasting), so none of these can move that
+# stack. NEVER installed on the live trader and deliberately NOT in requirements-backtest.txt
+# (that file is also installed on CI runners, which must not pull torch-dependent packages).
+# Consumers: scripts/research/ml_bakeoff.py arms (a missing arm reports "unavailable");
+# units RQ-20261011-9da8-01 (TSFM forecasters) and -02 (tabular learners).
+# Capability probe: python3 scripts/ops/trainer_capability_probe.py (run in the trainer venv).
+#
+# Compatibility target: py3.11, torch 2.9 (CPU), transformers 4.57 (needs huggingface-hub<1.0).
+# Declared deps checked on PyPI 2026-10-12 (all loose floors: torch>=2.0/2.2/2.5, hub>=0.23/0.28):
+#   catboost 1.2.10  numpy<3, pandas<4, scipy, plotly, matplotlib, graphviz   Apache-2.0
+#   timesfm 3.0.2    numpy>=1.26.4, huggingface_hub>=0.28, safetensors>=0.5.3  Apache-2.0
+#                    (torch is an extra; the venv already has it)
+#   tirex-ts 1.4.2   torch, huggingface-hub, numpy, scikit-learn   NXAI Community License
+#   tabpfn 9.1.0     torch>=2.5, einops, pydantic>=2.8, skrub<0.11, ...  Apache-2.0 code
+#   tabicl 2.2.0     torch>=2.2, einops, psutil, scikit-learn>=1.3   BSD-3-Clause
+# If any one fails to install or import it is left out and reported by the probe; the venv stack is
+# protected by the constraints, never by uninstalling.
+
+catboost==1.2.10
+timesfm==3.0.2
+
+# LICENCE: the NXAI Community License is free for research and for licensees under EUR 100M annual
+# revenue; it is NOT OSI-approved and has a "Built with technology from NXAI" attribution term.
+# Research-eval arm; installing the package does not license serving it. Re-read before any promotion.
+tirex-ts==1.4.2
+
+# LICENCE: the tabpfn PACKAGE is Apache-2.0 but the TabPFN model WEIGHTS it downloads are Prior Labs
+# non-commercial (license:other). RESEARCH-EVAL ARM ONLY -- weights must never be served in a
+# trading path. Installing the package does not license serving them.
+tabpfn==9.1.0
+
+tabicl==2.2.0

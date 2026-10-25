@@ -101,7 +101,29 @@ MATRIX = REPO / "docs" / "research" / "exit-refinement-coverage.json"
 
 # The three cuts, widest-numerator last. `blocked` is deliberately the only
 # difference between HEADLINE and DONE — see the module docstring.
-RESOLVED = ("shipped", "honest_negative", "n/a")
+#
+# ⚠️ THESE ARE INCLUSION LISTS OVER LITERALS, AND THE DENOMINATOR IS NOT.
+# `total_cells` is every cell in the matrix, so a status added to the legend and
+# NOT added here leaves the cell in the denominator while dropping it from every
+# numerator — the coverage figure falls and nothing says why. MEASURED 2026-09-25
+# (E48) by running this script over the matrix with one cell flipped
+# `shipped` -> `stripped_unreachable` before adding it below: resolved 327 -> 326,
+# validated 341 -> 340, headline 388 -> 387, `total_cells` 396 throughout. The
+# done-condition was unmoved (it is computed from OPEN_STATUSES), so the erosion
+# was visible ONLY in the three progress cuts, which is the half nobody re-derives.
+# ADD A NEW LEGEND STATUS TO EXACTLY ONE OF THESE TUPLES, OR TO OPEN_STATUSES,
+# and say which in the legend entry. (`scripts/research/m20_coverage_rollup.py`
+# is the only consumer that enumerates statuses positively;
+# `check_matrix_corpus_agreement.py`'s NEGATIVE_STATUSES / NO_OUTCOME_STATUSES
+# are exclusion sets and need no entry for a closed, non-negative status.)
+#
+# `stripped_unreachable` belongs in RESOLVED and not in VALIDATED-only: the
+# lever question for that leg is CLOSED, not awaiting anyone — it was validated,
+# shipped, then removed by a Tier-3 decision once measured unreachable under the
+# leg's current bracket. That is a resolved outcome in exactly the sense
+# `shipped` and `honest_negative` are, which is why the counts above return to
+# their pre-flip values with it listed here.
+RESOLVED = ("shipped", "honest_negative", "n/a", "stripped_unreachable")
 VALIDATED = RESOLVED + ("passed_unshipped", "shipped_gate_failed")
 HEADLINE = VALIDATED + ("blocked",)
 
@@ -271,6 +293,7 @@ GEOMETRY_LIVE_PARITY = "live_parity"
 GEOMETRY_SENSITIVE_LEVERS = frozenset({
     "trail_geometry", "stale_stop", "giveback_stop", "trail_decay",
     "vol_trail", "exit_ladder", "regime_flip_exit", "exit_head_ml",
+    "momentum_trail", "momentum_stale",
     # `bracket_geometry` (2026-08-20) is not a ninth lever but it belongs here
     # for the strongest possible reason: it SWEEPS the take-profit, so a cell
     # measured before the harness could place the live capped TP is not merely
@@ -278,6 +301,9 @@ GEOMETRY_SENSITIVE_LEVERS = frozenset({
     # cells were measured net-of-fees WITH the cap applied, so none is stale
     # today — the entry states the RULE, not a current condition.
     "bracket_geometry",
+    # GEOM-B1 (2026-10-07): the two TP-geometry columns sweep the take-profit
+    # itself, so a verdict on either is conditioned on the geometry modelled.
+    "tp_extend", "tp_retarget",
 })
 
 _DATE = re.compile(r"20\d{2}-\d{2}-\d{2}")
@@ -696,7 +722,7 @@ CORPUS_HARNESS_UNFIXED = "harness_never_modelled_the_tp"
 # to say it rather than let someone discover it at the console.
 COLUMNS_WITH_A_SWEEP_PRODUCER = frozenset({
     "stale_stop", "giveback_stop", "trail_decay", "vol_trail",
-    "trail_geometry",
+    "trail_geometry", "momentum_trail", "momentum_stale",
 })
 # Declared rather than introspected, because regexing `cells_for`'s source for
 # lever literals is a probe adjacent to the question. Kept honest by a test
@@ -711,6 +737,12 @@ _COLUMNS_WITH_THEIR_OWN_DRIVER = frozenset({
     "exit_head_ml",       # scripts/research/m20_exit_head_round.py
     "regime_flip_exit",   # scripts/research/m20_flip_replay_sweep.py
     "bracket_geometry",   # scripts/research/e35_bracket_geometry_sweep.py
+    # GEOM-B1 (2026-10-07): emitted by m20_fleet_exit_sweep.cells_for ONLY when
+    # `--levers` names them (opt-in, so no existing sweep grows), which is why
+    # the DEFAULT-emission probe in COLUMNS_WITH_A_SWEEP_PRODUCER does not list
+    # them. They have a driver; nothing has run it yet.
+    "tp_extend",          # scripts/research/m20_fleet_exit_sweep.py --levers tp_extend
+    "tp_retarget",        # scripts/research/m20_fleet_exit_sweep.py --levers tp_retarget
 })
 
 

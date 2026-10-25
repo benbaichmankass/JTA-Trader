@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "why": "DRIFT-SCAN-RETIRE, operator-approved 2026-10-25 (06:02Z popup, 06:10Z and 06:15Z chat; final scope on the row note): the ~8/day ict-drift-retrain.timer is retired (deploy/trainer timer file deleted, cloud-init mirror removed in lock-step), and the plan-only drift scan becomes a weekly step of /ml-review with a 2-consecutive-weekly-reads rule that files drift-remediation rows. RETRAIN_PLAN_ONLY stays 1. Revert: restore the timer file from git history (OnCalendar=*-*-* 00/3:05:00) and re-enable it.",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Retires a systemd timer on the trainer VM (Tier-2). The operator approved it; the manager merges, then disables the live timer via trainer-vm-diag and verifies it is gone."
+}

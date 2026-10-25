@@ -19,13 +19,36 @@ sys.path.insert(0, os.path.join(ROOT, "scripts", "ops"))
 
 import merge_json_register as M  # noqa: E402
 
+# ⚠️ FOUR PATHS REMOVED 2026-09-21 by the operating reset:
+# health-review-backlog.json, OPEN-ITEMS.json, work/SESSIONS.json and
+# work/OPEN-PRS.json are archived under
+# docs/archive/2026-09-21-operating-reset/. The round-trip proof below reads
+# the LIVE file, so it cannot run against a path that no longer exists.
+#
+# `MANAGER-CHECKLIST.json` stays, and it is the one that matters now: it is the
+# only shared register left, so it is the only one where a whole-file
+# reserialisation could turn a 4-line edit into a guaranteed conflict — which
+# is the defect this whole module exists to prevent. The property is still
+# PROVEN against a real file, not merely unit-tested against fixtures.
+#
+# ⚠️ The em-dash case OPEN-ITEMS.json used to carry — a file mixing a literal
+# and an escaped em-dash, which `json.dumps` cannot reproduce byte-for-byte —
+# is NOT lost with it. `test_round_trip_survives_mixed_escapes` below plants
+# exactly that shape as a fixture, so the hard case keeps its coverage.
 REGISTERS = [
-    "docs/claude/health-review-backlog.json",
-    "docs/claude/OPEN-ITEMS.json",
     "docs/claude/work/MANAGER-CHECKLIST.json",
-    "docs/claude/work/SESSIONS.json",
-    "docs/claude/work/OPEN-PRS.json",
 ]
+
+
+def _register_text(rel):
+    """The LIVE register's bytes. The checklist monolith FILE was deleted at the per-row
+    seed cutover (its rows are one file each now), so for that path the live bytes are
+    what the generator renders from the store -- the exact shape the monolith had."""
+    path = os.path.join(ROOT, rel)
+    if os.path.exists(path):
+        return open(path, encoding="utf-8").read()
+    from src.runtime import checklist_store
+    return checklist_store.render(__import__("pathlib").Path(ROOT))
 
 
 def doc(rows, **hdr):
@@ -324,13 +347,38 @@ def test_the_docstring_promise_matches_the_behaviour():
 
 @pytest.mark.parametrize("rel", REGISTERS)
 def test_round_trip_is_byte_identical(rel):
-    """Parse -> reassemble must reproduce the file EXACTLY.
+    """Parse -> reassemble must reproduce the LIVE file EXACTLY."""
+    text = _register_text(rel)
+    assert M.round_trip(text) == text
 
-    OPEN-ITEMS.json is NOT byte-reproducible through json.dumps (it mixes a
-    literal em-dash with an escaped one). Splicing original byte spans is what
-    makes it safe, and this is the proof.
+
+def test_round_trip_survives_mixed_escapes():
+    """The hard case, kept as a FIXTURE now that its exemplar is archived.
+
+    `OPEN-ITEMS.json` carried a literal em-dash and an escaped one IN THE SAME
+    FILE, which `json.dumps` cannot reproduce byte-for-byte whatever its
+    `ensure_ascii` setting: one spelling has to win. Splicing the original byte
+    spans is what makes the merge driver safe on such a file, and that file was
+    the proof.
+
+    It is archived under `docs/archive/2026-09-21-operating-reset/`, so the
+    proof is planted here instead rather than dropped with it. THIS IS THE
+    SHAPE, NOT A PARAPHRASE: row A holds the escaped form (`\\u2014`) and row B
+    the literal one, so any implementation that re-serialises instead of
+    splicing normalises one of them and fails.
     """
-    text = open(os.path.join(ROOT, rel), encoding="utf-8").read()
+    text = (
+        '{\n'
+        '  "items": [\n'
+        '    {"id": "A", "v": "escaped \\u2014 dash"},\n'
+        '    {"id": "B", "v": "literal \u2014 dash"}\n'
+        '  ]\n'
+        '}\n'
+    )
+    # The premise, asserted rather than assumed: a naive re-serialisation
+    # really does change these bytes. Without this the test could pass against
+    # an implementation that round-trips by luck.
+    assert json.dumps(json.loads(text), indent=2) + "\n" != text
     assert M.round_trip(text) == text
 
 
@@ -349,8 +397,7 @@ def test_untouched_rows_keep_their_exact_bytes():
 
 
 def test_real_register_merge_produces_valid_json():
-    text = open(os.path.join(ROOT, "docs/claude/work/MANAGER-CHECKLIST.json"),
-                encoding="utf-8").read()
+    text = _register_text("docs/claude/work/MANAGER-CHECKLIST.json")
     bumped = text.replace('"as_of"', '"as_of"', 1)
     out = M.merge(text, bumped, text)
     assert json.loads(out)

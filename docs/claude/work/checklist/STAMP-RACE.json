@@ -1,0 +1,35 @@
+{
+  "id": "STAMP-RACE",
+  "title": "research-queue-dispatch 'Land the dispatch stamps on main' fails on a 30-min wait race (run 70): re-check main once before failing",
+  "phase": "W7",
+  "state": "landed_unproven",
+  "owner": "fix lane",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 10,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-01T20:55Z manager session_01MM8o5js6TcDFeNAPBY4Ntv] Dispatched. Run 70 (36910217777) red although stamp PR #15276 merged 13 s after the wait expired. Manager decision: re-check once, do not raise the timeout or change stamp-PR checks. Closes PI-20261001-1MX1RCZS-0003. [2026-10-08T16:05Z manager session_01Uq7MrjPQDRWqbhCjwuMava, stale-state sweep] Lane session_01345Wffk9foaxLK53jgMBQP archived 10-01 after closing PI-0003/PI-0004 (#15298/#15313/#15328). No live lane; remaining work is PACE-W40 queue item 15. [2026-10-11 lane session_015Xpeh92c7dYBo78ro2Zjgu] VERIFIED on main: commit-to-main has the one-shot settle+re-check (sleep 45, re-read PR state, path-content landed_on_main) pinned by tests/test_gld_compat_landing.py; caller budgets pinned by tests/test_commit_to_main_callers.py (52 tests pass this session). The 10-11 'land' failures (RQ-353c-11/13) were a DIFFERENT cause: job timeout 45 < verify 80; fix 45->110 on 7 jobs is on main (verified by grep). Not built: no reproduction beyond those pinned tests; merged != observed - closing observation is the next research-harness-dispatch run whose result PR takes >45 min ending green. Residual stranded/duplicate PRs filed as PI-20261011-8RO2ZJGU-0001 (not same root cause; #17170 green+clean yet unmerged, cause unknown). [2026-10-11T14:50Z research-ops-1447] RQ-PIPELINE-FIX (#17575) check, state still landed_unproven. MEASURED this cycle from dispatch runs + main: stamps for runs 38123567703 (#17552 -> adopted into #17572), 38131113151 (#17562, opened 10:26Z, still OPEN at 14:50Z, 4.4h) and 38138582278 (#17572 merged) reached a PR; the stamp for scheduled run 38126707017 (08:58Z, concluded failure) reached NO PR and NO main commit, so RQ-20261010-353c-14/15/16 were re-fired by run 38131113151 at 10:13Z (two identical result files each: 38126807357/38131195827, 38126809190/38131197172, 38126811042/38131198672) = duplicated compute. 353c-14..16 still read last_dispatched_at null on main because their only stamp sits in #17562; it was <3h old at the 12:17Z dispatch (STRANDED_STAMP_HOURS=3.0) so adoption had not yet applied; check whether the 14:07Z dispatch (run 38145119678) adopts it. Not closed: needs one clean cycle with no duplicate result for the same unit. Observation to close: a dispatch run whose fires all show exactly one result file per unit and every fired unit shows last_dispatched_at on main within one stamp-PR merge. [2026-10-12 RESEARCH-OPS-20261012-0247] New instance: run 38182207173 (22:53Z) failed in 'Land the dispatch stamps on main' after 80m - stamp PR #17652 stayed OPEN with 'stale-branch refresh: failed_conflict' (the job log asks to check the PR's own check runs: cause (a) vs (b) NOT established this pass). Runs 38186769774 (00:06Z) and 38188631496 (00:36Z) then landed successfully but each spent ~77-80m in that step; run 38194193407 (02:01Z) in progress. fired_24h stays 33, so firing is unaffected; only the stamp landing is slow/fragile. #17652 is >3h old so the dispatcher's stale-stamp adoption now applies.",
+  "lane_history": [
+    {
+      "lane": "session_01345Wffk9foaxLK53jgMBQP",
+      "archived_at": "2026-10-08T15:55:58Z"
+    }
+  ],
+  "updated_at": "2026-10-24T06:01:14Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
+  "observation": {
+    "what": "a research-harness-dispatch (or other research_result) run whose result PR takes >45 min to merge ends green instead of cancelled",
+    "how_to_check": "gh run list --workflow research-harness-dispatch.yml; read the Land step conclusion on a run whose result PR was open >45 min",
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-18T18:00Z",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
+  },
+  "_seq": 259
+}

@@ -1,0 +1,33 @@
+{
+  "id": "PROMO-EVIDENCE-REFRESH",
+  "title": "Refresh tqqq_trend_long_1d / tlt_pullback_1d / scha_trend_long_1d Stage-0 evidence records from the at-power c56e runs, fix the resolver's tlt soak read, re-run MD-PROMOTE-S1-S2",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 8,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    19671
+  ],
+  "blocked_on": [],
+  "note": "Manager 2026-10-23 05:55Z, bucket 2 (data-missing; no popup). research-ops 20:47Z: RQ-20261016-c56e-25/24/26 PASS Stage 0 at power on an 18y disjoint window (tqqq net R 25.6 n104 8/8; tlt 21.4 n98 5/8; scha 2.3 n68 5/8 thin). mandate_resolver.py --from S1 --to S2 --account alpaca_live: tqqq REFUSE R-B1-C4 (committed record comms/strategy_evidence/tqqq_trend_long_1d.json from 2026-09-24 still verdict fail); tlt NEEDS-DATA R-SOAK-NOT-PASSED (soak state None) although the 05:34Z work report lists SOAK-stage1-alpaca_paper-tlt_pullback_1d passed (19:00Z, clean 6650). Cost basis carries the 5.0 bps equities placeholder (E62). DONE WHEN: records refreshed via the sanctioned evidence tooling, the soak-state mismatch root-caused, resolver re-run; a FIRE opens a human-merge PR (MD-PROMOTE-S1-S2 has no autoland) and the operator is pinged. LANE RESULT 2026-10-23 (resolver re-run on this branch; NO FIRE, no promotion PR). (1) Records rebuilt with build_strategy_evidence.py --days 6200 --folds 8, full cost stack (5.0 bps provisional equities slippage, E62), all fidelity=faithful, rule RULE-D1 verdict pass: tqqq net R +26.28 n118 7/8 folds; tlt +12.69 n134 5/8; scha +4.64 n78 5/8 (thin, recorded as is). Runs under comms/strategy_evidence/runs/2026-10-23-promo/. (2) tlt soak mismatch ROOT CAUSE: no resolver bug. _soak_passed reads only a committed SOAKS.json disposition or a snapshot <=7d old (newest was 2026-10-04); the live PASS (clean trade 6650) was never written back. Fixed via the sanctioned soak_mechanics_record.py --apply from a full journal pull (6724 trades, 5541 packages): tlt and tqqq now carry PASS dispositions. scha is genuinely mechanical_fail (only trade 4710 closed exchange_flat_reconciled 2026-08-24) and needs one new clean trade; trade-arrival-bound. (3) Verdicts: tqqq NEEDS-DATA R-HOLDOUT; tlt NEEDS-DATA R-HOLDOUT; scha NEEDS-DATA R-SOAK-NOT-PASSED. R-AFFORD: tqqq sizes 30 of 118 setups on alpaca_live (partial). Holdout units filed: RQ-20261023-be01-01 (tlt), RQ-20261023-be01-02 (tqqq); on a confirmed result write holdout_confirmation into the record and re-run the resolver. Both legs still carry tp_r 50.0 / unexamined TP intent for tqqq (TP doctrine non-compliant; separate). Lane session_0148RKGk archived 2026-10-23 ~15:00Z after #19671 merged (dbf133d8); final spend $3.89 (archived read).",
+  "priority_rank": 1,
+  "updated_at": "2026-10-23T15:21:15Z",
+  "updated_by": "session_01YHnEs6mehRvD74aubi5DJw",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "none: evidence refresh, no milestone moved (L-LADDER stays open until a holdout confirms)",
+    "arch": "none: no architecture change"
+  },
+  "observation": {
+    "what": "tqqq/tlt holdout units RQ-20261023-be01-01/02 produce a holdout_confirmation and mandate_resolver S1->S2 alpaca_live is re-run",
+    "how_to_check": "python3 scripts/ops/mandate_resolver.py --leg tlt_pullback_1d --from S1 --to S2 --account alpaca_live",
+    "due_by": "2026-10-30"
+  },
+  "_seq": 611
+}

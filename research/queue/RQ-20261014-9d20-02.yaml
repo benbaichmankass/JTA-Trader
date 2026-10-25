@@ -1,0 +1,121 @@
+id: RQ-20261014-9d20-02
+title: 'AI trader / meta-labeling (M23 revived): on the committed test-result ledgers, do the decision-time columns the harness emits
+  carry today (confidence, direction, entry hour/day, adx_at_entry, regime_weight) separate net-positive from net-negative trades WITHIN
+  a leg, and does skipping the bottom-scored fifth lift net R?'
+status: done
+cadence: once
+theme: ml_health
+priority: 1
+kind: experiment
+question: Within each leg with >= 100 trades in its newest committed ledger (17 legs, 3,638 trades, MEASURED 2026-10-14), under a
+  purged expanding walk-forward (4 folds, 5-trade embargo, 40% minimum train), does a numpy multinomial logit on the ledger's own
+  decision-time columns beat the class prior on AUC for the label won = (net_r > 0), AND does keeping only the trades above the
+  train-fold 20th percentile of its score raise mean net_r versus taking every trade? This is the M23 take/skip question asked on
+  TEST RESULTS (the operator's 2026-10-14 direction) instead of the ~99 closed real-money trades behind the label wall -- and it is
+  deliberately asked FIRST on the thin columns the ledgers already carry, so the answer tells us whether the emit lever
+  (METALABEL-EMIT-FEATURES) is the binding constraint.
+why_this_matters: 'M23 P1 (2026-07-17) found a pooled meta-head learns cross-cell base rates, not a within-cell edge; this unit is
+  within-leg by construction. DISCLOSED: a dry run in the authoring sandbox on 2026-10-14 (numpy_logit arm only; lightgbm is not
+  installed there or on research-script-run.yml, whose pip line is numpy pandas pyyaml requests) found no leg clearing both bars
+  (AUC gain CIs all contained 0; selection lift ranged -0.08 to +0.10 R). The registered run is the committed record. A FAIL here
+  closes ONLY these five columns and makes the emit lever the next step; it does not close meta-labeling.'
+power:
+  expected_n: 1796
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Unit = out-of-sample test trade. MEASURED 2026-10-14: 1,796 test trades over 17 legs at folds=4, embargo=5, min_train_frac=0.4
+    (scripts/research/ledger_metalabel.py over comms/strategy_evidence/runs). d=0.1 needs (1.96+0.8416)^2/0.1^2 = 785 pooled; the
+    rule is applied PER LEG (n 100-550 each), where power is lower -- so the rule requires the paired fold interval to exclude the
+    prior, and an underpowered leg reads as not-detected, never as absent.'
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Committed harness ledgers; history is fixed and nothing accrues. n is measured above, not assumed. More rows come
+      only from new evidence runs (build_strategy_evidence.py), which is the emit lever's job, not waiting.
+decision_rule:
+  id: RULE-RQ20261014-9D20-02-METALABEL-THIN-COLUMNS
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: >-
+    Per leg and per learner arm (numpy_logit; prior as the reference): fold-mean AUC minus 0.5 with a paired t-interval over
+    folds; selection_lift_r = mean net_r of test trades scored above the train-fold 20th percentile minus mean net_r of all test trades,
+    fold-mean with its interval. Computed by scripts/research/ledger_metalabel.py --mode classify.
+  rule: 'PASS IF for at least one (leg, arm) the AUC gain >= 0.05 with the interval lower bound > 0 AND selection_lift_r >= 0.05 R:
+    the thin columns already carry a within-leg take/skip signal; file the within-FAMILY confirmation on the same legs and raise
+    METALABEL-EMIT-FEATURES priority. FAIL IF every evaluated arm on every leg has an AUC interval containing 0.5: these five columns
+    carry no within-leg signal -- closes only these columns; METALABEL-EMIT-FEATURES becomes the gating lever and RQ-20261014-9d20-04
+    stays blocked on it. INDETERMINATE otherwise, or if an arm is unavailable (a FAIL requires every declared arm evaluated).'
+  min_n: 100 trades per leg; 3 usable folds per leg; reported n_test_trades.
+  what_it_does_not_do: >-
+    Trains or registers no model; touches no config, roster or sizing (Tier-3). Uses the harness net_r (fee +
+    slippage + funding), not live fills. Says nothing about cross-leg allocation (M18) or the live label wall (ML-LABEL-WALL).
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 200
+  confidence: 0.3
+  basis: 'stand-in: a within-leg skip that lifts mean net_r by 0.05 R on the real-money books is a few trades a month of avoided loss;
+    the larger value is deciding whether to spend the emit lever; not a measured P&L'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 5
+  basis: 'MEASURED in the authoring sandbox: ~90 s for 12 legs with the logit arm.'
+run:
+  command:
+  - python3
+  - scripts/research/ledger_metalabel.py
+  - --mode
+  - classify
+  - --target
+  - won
+  - --learners
+  - prior,numpy_logit
+  - --min-leg-n
+  - '100'
+  - --folds
+  - '4'
+  - --embargo
+  - '5'
+  - --skip-quantile
+  - '0.2'
+  - --auc-gain
+  - '0.05'
+  - --lift-r
+  - '0.05'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261014-9d20-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M23
+related:
+- AI-TRADER-PROGRAMME
+- METALABEL-EMIT-FEATURES
+- docs/research/programmes/02-AI-TRADER.md
+- docs/research/M23-meta-labeling-DESIGN.md
+- ML-LABEL-WALL
+- RQ-20261011-9da8-02
+last_dispatched_at: '2026-10-16T10:58:10+00:00'
+grading:
+  auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-RQ20261014-9D20-02-METALABEL-THIN-COLUMNS
+  evidence:
+  - research/results/RQ-20261014-9d20-02/38890737547.jsonl
+  first_fail: 1 row(s), all measured, all fail
+  graded_at: '2026-10-16'
+  grader: scripts/research/queue_grade.py
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

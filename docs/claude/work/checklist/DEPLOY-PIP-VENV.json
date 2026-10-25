@@ -1,0 +1,30 @@
+{
+  "id": "DEPLOY-PIP-VENV",
+  "title": "Deploy pip-installs into /usr/bin/python3 but ict-web-api runs from the repo .venv: requirements.txt additions (webauthn) never reach the web-api",
+  "phase": null,
+  "state": "queued",
+  "owner": "lane (session_01GuVUmgAYQ8Vbfe824or9fB)",
+  "lane": "session_01GuVUmgAYQ8Vbfe824or9fB",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-12 session_01GuVUmgAYQ8Vbfe824or9fB] Root cause of passkey/register/begin 500 (ModuleNotFoundError webauthn): scripts/deploy_pull_restart.sh:420 targets /usr/bin/python3, web-api traceback is /home/ubuntu/ict-trading-bot/.venv. Immediate unblock: install-web-api-deps system-action (this PR). Durable fix still owed: make deploy install into the interpreter each unit actually runs (or drop the venv split).",
+  "updated_at": "2026-10-12T11:36:43Z",
+  "updated_by": "session_01GuVUmgAYQ8Vbfe824or9fB",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "observation": {
+    "what": "A requirement added to requirements.txt is importable from the running ict-web-api after a plain deploy, without a manual action",
+    "how_to_check": "deploy a new dep; compare /proc/<web-api MainPID>/maps site-packages with the deploy pip target",
+    "due_by": "2026-10-19"
+  },
+  "writeback": {
+    "roadmap": "L-OPS: deploy installs into the right interpreter",
+    "arch": "none"
+  },
+  "_seq": 433
+}

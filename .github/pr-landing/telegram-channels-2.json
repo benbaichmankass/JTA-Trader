@@ -1,0 +1,8 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 runtime notification-path change (TELEGRAM-CHANNELS part C + content split + detailed manager WORK section). Operator request 2026-10-11 ~07:45Z is the OK (relayed by the manager, recorded on the TELEGRAM-CHANNELS row); held for the manager to merge and deploy. Restart after merge: ict-telegram-bot, ict-claude-bridge, ict-claude-decision-bot, ict-trader-live (timers ict-hourly-snapshot / ict-work-digest pick it up on their next fire).",
+  "recorded_decision": {"kind": "operator_decision", "ref": "TELEGRAM-CHANNELS"},
+  "why": "Splits the periodic Telegram updates by content (SYSTEM health check / TRADES performance snapshot / MANAGER work+research), adds ONE settings store + cadence gate + menu for per-channel type toggles and cadence, and gives the manager update a detailed WORK section. No order path, no config/strategies or accounts change; alerts stay unmutable."
+}

@@ -263,9 +263,15 @@ by the runtime pipeline. The runtime audit logger
 (`src/utils/signal_audit_logger.py`) writes
 `runtime_logs/signal_audit.jsonl` for every decision.
 
-The execution layer holds **one net position per symbol per account**
-(`src/runtime/intents.py::aggregate_intents`), so a single account running
-several strategies already routes every tick through a **decider** — today
+The execution layer holds **one net position per symbol per account**,
+and since **E35 (2026-09-25)** the election is literally per account: the
+regime gate runs once per tick (`intents.gate_intents`), then EVERY account
+elects from its own declared candidates
+(`arbitration_fanout.plan_per_account_election` → `intents.elect_from_gated`)
+and `pipeline._dispatch_rounds` routes each account its own winner. Before E35
+one GLOBAL winner per symbol was elected across all accounts and a scoped
+fan-out repaired the accounts it starved (see the Change log). So a single
+account running several strategies routes every tick through a **decider** — today
 crude: static priority (highest-priority strategy wins a conflict;
 same-direction takes max `target_qty`). This is the **single-account
 design** (operator direction 2026-05-24): one pot of capital used
@@ -285,11 +291,53 @@ is genuine selection. Design + single-account simulation:
 The decider remains research-stage — no live simulator script is wired
 yet; research harnesses live under `scripts/research/`.
 
+**Slice accounts (NETTED-SLICES, 2026-10-15, operator-ordered; Tier-2 hold
+until merged).** An account declaring `position_model: slices` in
+`config/accounts.yaml` (today: `bybit_1` only) does NOT elect one strategy per
+symbol. Operator, verbatim: *"We can have different strategies working with
+netted positions as long as we know how much of that position belongs to each
+strategy, and each piece of that position has its own brackets."* Built on what
+already existed, with no parallel allocator:
+- **Ledger and admission** extend `src/runtime/positions.py` from Option A to
+  per-slice. A slice is one open `trades` row (strategy, qty, entry, SL, TP,
+  `sl_order_id`/`tp_order_id`). The venue net must equal the signed sum of the
+  open slices (`reconcile`: reconciled / divergent / unreadable).
+- **Allocation** extends `src/runtime/allocator_ev.py` with
+  `intent_allocation_score`. It is the existing `conviction.compute_conviction`
+  blend over the stamped c_strat/c_setup/c_wr/c_reg, plus two new inputs:
+  c_bt (measured backtest expectancy) and c_live (live win rate). It also
+  records the cost-aware EV_R. Weights live in `config/slice_allocation.yaml`
+  and are Tier-3 to change.
+- **Planning.** The planner (`arbitration_fanout.plan_per_account_election`)
+  still runs `elect_from_gated` once to pick the tick's side. It then splits
+  the per-symbol risk budget across the same-side candidates by
+  `score / Σ score`, with one round per allocated strategy.
+- **Admission** (`positions.admit_slice`) runs in the coordinator after the
+  RiskManager sizes the trade. The delta basis is the strategy's OWN slice,
+  and Option A's same-strategy guard is kept. It refuses, per trade, an add
+  when:
+  - the book is divergent or unreadable;
+  - the book is non-flat and not in Partial TP/SL mode;
+  - the slice is opposite to the book on a ONE-WAY book (it is admitted on a
+    hedge book);
+  - the symbol's budget is exhausted.
+- **Brackets.** A slice is never resized or reversed by a later signal. It
+  exits through its own qty-scoped Partial bracket or its strategy's
+  per-trade close. Every other account is unchanged.
+
 ### Step 4 — Risk gating
 Before any order reaches broker execution, risk controls decide whether
 to allow the signal:
 - `RiskManager.approve()` in `src/units/accounts/risk.py` (per-account
-  caps: `pos_size`, `daily_usd`, `max_dd_pct`),
+  gates: the account-level **daily-drawdown switch**
+  `src/units/accounts/daily_dd_switch.py` — the ONE sanctioned automatic
+  off, operator 2026-10-09, default DISARMED, refuses NEW entries with
+  `DAILY_DD_SWITCH` until the day boundary when armed and the equity loss
+  from the day start reaches 3% (non-prop) or 0.8 x the firm's daily limit
+  (prop); and `GROSS_EXPOSURE_CAP`. `daily_usd` / `daily_loss_pct` /
+  `max_dd_pct` are REPORTED figures only since 2026-10-09 — the
+  DAILY_LOSS_CAP / INTRADAY_DRAWDOWN refusals and the daily-loss sizing
+  clamp were folded into the switch; `pos_size` was removed 2026-06-24),
 - prop-account logic in `src/units/accounts/prop_risk.py`,
 - runtime counters in `src/runtime/risk_counters.py`,
 - the kill-switch flag (`HALT_FLAG_PATH = /tmp/trader_halt.flag`,
@@ -461,6 +509,404 @@ unwatched (`BL-20260813-CADDY-HTTPS-TRANSPORT-UNDOCUMENTED-AND-UNWATCHED`).
    `config/accounts.yaml`, mutated only via `set-account-mode`.
 7. **Promotion decision** — Tier 3, requires explicit operator approval.
 
+### Promotion ladder, mandates and the roadmap loop
+
+*(Written back by the roadmap loop's first pass, 2026-10-11 — this map had no section for the research/decision layer.)*
+
+| Component | Where it lives | What it decides |
+|---|---|---|
+| Promotion ladder | `docs/plans/OPERATING-PLAN-2026-09-21.md` § 2; accounts and rosters in `config/accounts.yaml`, legs in `config/strategies.yaml` | Stage 0 backtest (full cost stack) → Gate 1 → Stage 1 soak (`bybit_1`, `alpaca_paper`) → Gate 2 → Stage 2 live + mirror. Edge is decided offline. **The Stage-1 soak is MECHANICAL — 1–2 clean trades, no sample size, no calendar** (operator 2026-10-15; the rule is stated once in OPERATING-PLAN § 2 "The soak is MECHANICAL"): contracts `docs/claude/work/SOAKS.json`, state `scripts/ops/soak_state.py::soak_states()`, guards `soak-contract-guard` + `soak-doctrine-guard`. Realized cost and live-vs-backtest are monitoring. **Prop rosters clear a superset (operator 2026-10-15):** everything above PLUS the prop EV/survival gate against the firm's DD limits (`comms/prop_survival/<leg>.json`); enforced by `prop-roster-gate-guard` (`scripts/ci/check_prop_roster_gate.py`). Never a lower bar than real money. Live prop trades count as Stage-1 soak trades (operator 2026-10-15; 1–2 distinct clean signals, `soak_state.grade_prop_signal`; OPERATING-PLAN § 2) and a pass feeds `MD-PROMOTE-S1-S2` after a portfolio-overlap check. **Promotion also needs a holdout pass (operator 2026-10-16, "Require holdout"):** the Stage-0 record carries `holdout_confirmation` (the configuration selected on the earliest ~75% of history, tested once on the held-back latest ~25%, full cost stack), produced by `scripts/research/exit_lever_ablation.py --grade holdout` and read by `mandate_resolver.py` clause `R-HOLDOUT`; demotion does not read it. |
+| Mandates | `config/mandates.yaml`, `scripts/ops/mandate_resolver.py` (verdicts `FIRE` / `REFUSE` / `NEEDS_DATA`) | What may be changed without asking. A mandate is not a third execution gate; the two gates stay `accounts.yaml::mode` and `strategies.yaml::execution`. |
+| Research queue | `research/queue/*.yaml` (+ `blocked/`), weights in `research/THEMES.yaml`, results in `research/results/` | Questions with a decision rule registered before the run. Mechanics: `research/queue/README.md`, `PLANNING.md`. |
+| Work queue | `docs/claude/work/checklist/` (builds), `docs/claude/work/PIPELINE.jsonl` (follow-through intake) | What is being built and by whom; what comes due. |
+| Roadmap | `docs/roadmap/milestones.yaml` → generated "Live roadmap" block in `ROADMAP.md` | The plan the two queues are built and prioritised from. |
+
+**The roadmap loop** (contract: `.claude/skills/manager/SKILL.md` § "The roadmap loop"): the roadmap's milestones are the parents of checklist rows and queue units (`roadmap` field on both); a closed row writes its outcome back to the roadmap and to this map (`writeback` field). `python3 scripts/ops/roadmap_map.py --report` shows milestones with no work and work with no milestone; guard `roadmap-map-guard` enforces the links on any diff that touches a row or a queue unit. Architecture sections a milestone touches are listed in its `architecture:` field and checked to exist.
+
+## TP doctrine — no fictional take-profits (operator directive 2026-10-06, binding)
+
+The operator, verbatim, 2026-10-06:
+
+> *"As I have said previously many times, there should be no fictional TPs —
+> even if the exit strategy is based on momentum, we need to constantly have a
+> prediction about where momentum will run out that is embodied in the TP, and
+> this also needs to move as the trade goes on (the prediction is constantly
+> updated to the most recent market conditions). This should, at this point, be
+> a canonical design doctrine that is measured against the code during audit
+> sessions, and any strategies that still don't have this need to be
+> prioritized for research and adjustment so that they comply"*
+
+The same requirement was stated on 2026-08-20 and 2026-08-23
+([`docs/design/exit-mechanism-construction-PROCESS.md`](design/exit-mechanism-construction-PROCESS.md)
+§ E3.6, [`src/runtime/target_expectation.py`](../src/runtime/target_expectation.py))
+and sat in `ROADMAP.md` M20 as *"the bracket must carry a predictive expectation
+at entry"*. It was in no canonical doc and nothing enforced it. This section is
+the doctrine; the guard below is the enforcement.
+
+### The four clauses
+
+1. **Every leg's bracket carries a REAL predictive take-profit at entry.** The
+   TP is where the strategy expects the move to run out. A sentinel TP (the
+   fleet's `tp_r: 50.0` idiom, declared or inherited from a unit's class
+   default) and a TP that rests at the venue cap (`entry × 1.099`,
+   `src/runtime/tp_venue_cap.py`) are **non-compliant**: the level that rests is
+   the exchange's rejection threshold wearing a target's label, not a prediction.
+   `tp_intent: {mode: none, reason: trail_is_the_profit_exit}` records a past
+   decision honestly and **does not exempt the leg** — see clause 3.
+2. **The TP is a LIVE prediction.** It is re-estimated through the trade's life
+   from current market conditions and moved through the existing `tp` verdict
+   path: `monitor()` returns `{"tp": <level>}` →
+   `monitor_verdict.interpret_verdict` → `order_monitor._apply_update` →
+   `execute.modify_open_order` (Bybit / IB / Alpaca). Revising a resting level
+   is not a fill and costs nothing (§ E3.6 point 3), so revision may be
+   frequent; the prediction must be conditioned on the strategy's own thesis
+   (§ E3.6 point 4), never on the trade's path alone.
+3. **A momentum or trailing exit does not exempt a leg.** A trail decides when
+   the thesis has failed; it does not say where the move was expected to end.
+   A momentum leg still predicts where momentum runs out, places that
+   prediction as its TP, and extends it when price nears the target while the
+   exhaustion condition has not fired.
+4. **Compliance is MEASURED in audits, not asserted.** The measurement is
+   `scripts/ci/check_tp_doctrine.py` (guard `tp-doctrine-guard`, every PR that
+   touches a source it reads; `--strict --json` in the `/health-review`
+   compliance-audit rotation). It grades every (account, leg) routing in
+   `config/accounts.yaml` on two dimensions, never collapsed:
+   `entry_tp` (declared · sentinel · no_target · unreachable) and `tp_revision` (a producer of
+   `tp` verdicts in the leg's monitor unit AND an exit path that forwards a TP
+   amend). Legs that fail are **prioritised for research and adjustment by
+   money at stake**: real-money and prop accounts first, then the paper
+   mirrors (`paper_role: portfolio`), then paper.
+
+   **The reach floor (TP-REACH-FLOOR, operator-approved 2026-10-14).** A
+   finite declared target that the leg's own offline harness trades reach
+   less than **10%** of the time grades `entry_tp = unreachable` and FAILS: it
+   is the sentinel under another name. The guard reads the per-leg UNCAPPED
+   reach curve P(mfe_r ≥ K) from mi307's committed record
+   (`docs/research/mi307-offline-mfe-2026-09-18.json`; `REACH_EVIDENCE` in the
+   guard), grades only on ≥ 30 uncapped trades, reports a target between grid
+   points whose bounds straddle the floor as `unresolved`, and reports a
+   declared target with no evidence row as `unmeasured` — counted beside the
+   verdict, never counted reachable. Positive control: a target reached by
+   ≥ 10% passes. Landed 2026-10-15 (lane BRACKETS-AS-PREDICTIONS); the six prop
+   routings' 6 R target was the first to fall below it (re-run the guard for
+   the figures). Deriving a REAL target per leg is research:
+   `research/queue/RQ-20261015-cab7-01..06` (`scripts/research/tp_prediction_derive.py`:
+   K* chosen on the first 60% of a leg's uncapped trades subject to the reach
+   floor and the venue cap, graded on the last 40% for calibration and net R
+   vs the current bracket; a PASS is a screen whose follow-on is the
+   harness-native e35 confirmation before any Tier-3 proposal).
+
+### What the measurement reads today, and how it ratchets
+
+MEASURED by `python3 scripts/ci/check_tp_doctrine.py` on `main` at `233c9c28`
+(2026-10-06), population every (account, leg) routing in `config/accounts.yaml`,
+all 14 accounts whatever their `mode`:
+
+| class | routings | `entry_tp` FAIL | `tp_revision` FAIL | compliant |
+|---|--:|--:|--:|--:|
+| real_money (`bybit_2`, `alpaca_live`) | 7 | 4 of 7 | 7 of 7 | 0 of 7 |
+| prop (`tradeify_1`, `velotrade_1`, `breakout_1`, `breakout_2`) | 8 | 0 of 8 | 8 of 8 | 0 of 8 |
+| mirror (`bybit_portfolio`, `alpaca_portfolio`) | 6 | 3 of 6 | 6 of 6 | 0 of 6 |
+| paper | 31 | 19 of 31 | 31 of 31 | 0 of 31 |
+| **total** | **52** (26 distinct legs) | **26 of 52** | **52 of 52** | **0 of 52** |
+
+Two structural facts behind the right-hand columns, both read from source
+rather than inferred: **no strategy module's `monitor()` has ever returned a
+`tp` verdict** (AST-read over `src/units/strategies/`; the `{"tp": float}`
+contract has been declared in `_base.monitor`'s docstring since it was written
+and `target_extension_soak` is observe-only), and **the prop exit path never
+forwards a TP** — `src/prop/prop_trail.py` calls `modify_bracket(…, None)` while
+`dxtrade_api.modify_bracket` can PUT one. So the revision half of the doctrine
+is a BUILD (a producer, and the prop TP path) before it is a research question;
+the entry half is research per leg (`research/queue/`, the exit-refinement
+harness). Re-run the guard rather than quoting this table; it moves with every
+roster edit.
+
+The guard is a **ratchet**, deliberately. The debt above is carried as one
+dated, visible line per routing in `BASELINE_2026_10_06` inside the script —
+the `check_soak_registered.py` pattern — and the guard **fails** on a NEW
+non-compliant routing (a newly rostered leg with a fictional TP), on debt
+GROWTH (a baselined routing failing a dimension it did not fail before), and on
+a STALE line (a dimension that became compliant and was not removed, or a
+routing that left the roster). The list may only shrink. Adding a baseline
+line for a real-money or prop routing is a roster decision the operator owns
+(Tier-3); the diff shows who did it. Follow-through for the current debt is
+pipeline row `PI-20261006-5FUGHVX8-0001`, which holds the ranked list and a
+disposition per leg.
+
+### B1 — the revision contract (2026-10-07, lane TP-DOCTRINE)
+
+The verdict a revising `monitor()` returns is `{"tp": <price>, "tp_reason":
+"<rule>: <why>"}`, alone or merged into its SL verdict by
+`src/runtime/tp_revision.py::merge_verdict` (a close verdict always wins). The
+prediction itself is computed in ONE place, `tp_revision.plan_tp_revision`,
+from a rule the leg DECLARES (`tp_revision: <rule>` or `{rule: <rule>, …}` in
+`config/strategies.yaml`; undeclared = no revision, and declaring one is
+Tier-3). It refuses a TP through the current price and clamps to the venue cap
+measured from the CURRENT price, saying so in the reason. Consumers:
+
+- **exchange** — `interpret_verdict` carries `tp_reason` onto
+  `VerdictDecision`; `order_monitor._apply_update` forwards `tp` to
+  `_send_modify_to_exchange` and names the reason in its log and TRADE UPDATED
+  ping. Fail-closed is the existing contract: a leg whose amend did not land
+  leaves `order_packages.tp` unchanged so the verdict re-fires.
+- **prop, API adapter** — `prop_trail._tp_step` calls the same
+  `plan_tp_revision` on a tick with no SL step due, sends a TP-only
+  `modify_bracket(page, p, None, tp)`, confirms on re-read and alerts on a
+  refusal or an unconfirmed amend (alert on the first failure, retried every
+  cycle on a capped backoff, one red flag after `RED_FLAG_AFTER` in a row —
+  never given up on, NO-HALT 2026-10-09). Asked
+  only of an adapter declaring `TP_AMEND_SUPPORTED = True` — today
+  `dxtrade_api` (velotrade_1).
+- **prop, browser `dxtrade`** (breakout_1, tradeify_1) — `TP_AMEND_SUPPORTED =
+  False`: its rollout guard admits only SL-only tightens
+  (`rollout_tighten_mismatch`), so a TP amend would be refused before any
+  click. Measured as path `absent`, not hidden.
+- **prop, phone** (breakout_2) — contract with lane PROP-TRAIL-PHONE: the phone
+  executor calls `plan_tp_revision` and sends its TP over its own amend
+  channel; the guard reads the path as `plumbed` only when it does.
+
+**Rule 1 — `donchian_measured_move`** (trend_donchian family; PR 2/2 of B1):
+after every closed bar the target is the Donchian measured move — the channel
+height (incl. that bar) carried past the channel edge, `hi + width_mult × (hi −
+lo)` for a long — taking the most favourable projection since the entry bar
+(extend-only: deciding the thesis failed is the trail's job). One pure core,
+`tp_revision.measured_move_path`, is called by `trend_donchian.monitor()`, by
+the prop trail through `plan_tp_revision`, and by `scripts/backtest_trend.py
+--tp-revision` (`tests/test_tp_revision_donchian_rule.py` pins the parity).
+**No leg declares it**: it is graded first by `research/queue/RQ-20261007-080`
+(`scripts/research/tp_revision_sweep.py`, rule registered before the run), and
+declaring it on a leg is Tier-3.
+
+**Rule 2 — `tp_extend`** (htf_pullback family; TPX-PULLBACK-PRODUCER,
+2026-10-22): the target starts at the leg's `tp_r` (or a declared `target_r`),
+clamped to `entry × (1 ± 0.099)`; after every closed bar on which price has
+travelled `approach_frac` of the way to it AND the close is still on the trend
+side of the Donchian `trend_lookback` midline (the entry's own thesis; NaN =
+never extends), it moves out by `extend_r` R, at most `max_extends` times — the
+decision is `target_expectation.evaluate_extension`, the same function
+`scripts/research/tp_geometry.TPTracker` calls. One pure core,
+`tp_revision.tp_extend_path`, replayed from the bars each tick (no state across
+restarts), is called by `htf_pullback_trend_2h.monitor()` (merged into the trail
+verdict via `merge_verdict`); `order_package` threads `tp_revision` (and, only
+when declared, `trend_lookback`) into meta. `extend_r` has no default. The rule
+emits nothing until its first extension: before that, the entry-time TP is the
+prediction. `tests/test_tp_revision_pullback_extend.py` pins parity with
+`scripts/backtest_pullback.py --tp-target-r 3 --tp-extend-r 1 --tp-approach-frac
+0.85 --tp-max-extends 3 --tp-thesis native --tp-cap-pct 0.099` (cell X6) on a
+seeded fixture: final target, extension count and every take-profit exit R.
+**No leg declares it.** Record for the xrp_pullback_2h X6 declare:
+`docs/research/evidence/tpx-xrp-family-read-2026-10-22.json`. A scratch probe
+declaring it there moves that leg's 3 routings (bybit_2, bybit_portfolio,
+bybit_1) from `no_tp_verdict` to compliant. The declare is Tier-3 and waits on
+live closed-bar trades plus operator review (operator, 2026-10-22).
+
+`tp-doctrine-guard` counts a revision only when it is produced AND consumed: the
+leg declares a registered rule, its unit's `monitor()` calls
+`plan_tp_revision` and returns through `merge_verdict` (a bare `{"tp": …}`
+literal no longer counts), and the account's own path — per prop platform, not
+one global prop state — forwards it.
+
+**What this does NOT change.** The two execution gates are unchanged (§ Mode
+Mutation Contract); the doctrine decides what a bracket must *carry*, not
+whether a leg *runs*. Flipping any leg's `tp_r`, adding a `tp` producer to a
+monitor, or wiring the prop TP amend remains Tier-3 / Tier-2 work under the
+usual evidence standard — this section makes the gap measurable, it does not
+license closing it without a record.
+
+
+## Prop ticket flow — one state machine per executor type (operator directive 2026-10-07, binding)
+
+The operator's words (2026-10-07, verbatim):
+
+> "In general, if a ticket expires and I haven't logged a trade, the system
+> should assume that the trade wasnt placed and the ticket should be kept
+> alive. And the prop accounts should have their own separate flow that isn't
+> contaminated by the telegram channels activity."
+
+**Why this exists (MEASURED, 2026-10-07).** velotrade_1's first live signal
+(ETH short, 01:59Z) waited on its entry band for all 12 executor ticks. At
+expiry the trader's Telegram prompter flipped it to `expiry_prompted`. That
+state waits for a human answer, but nobody places tickets on a REST account.
+The reticket guard counted it as outstanding for `valid_until` + 24 h, so it
+suppressed the next four ETH-short signals for 17 h.
+
+**Every prop account has one executor type.** It is read from
+`config/prop_platforms.yaml` by `src.prop.platform.ticket_flow()`:
+
+| type | which accounts | who places the order | how a fill is learned |
+|---|---|---|---|
+| `rest` | `accounts.<id>.platform` in `API_PLATFORMS` (today: velotrade_1) | the VM executor (`src/prop/prop_executor.py`) over REST | the executor's own read-back → `POST /api/bot/prop/report` |
+| `phone` | `phone_accounts.<id>` (today: breakout_2) | the app on the operator's phone (`src/prop/phone_executor.py`) | the phone's read-back → `phone/report` |
+| `browser` | `accounts.<id>.ticket_flow: browser` (today: tradeify_1) | the VM browser executor (`prop_executor` over the dxtrade adapter) | the executor's read-back → `POST /api/bot/prop/report` |
+| `manual` | `accounts.<id>.ticket_flow: manual` (today: breakout_1, which has no live executor) | a human at the terminal | the human's report: Telegram button or pasted report |
+
+`rest`, `phone` and `browser` are the **machine** types. A REST platform is
+always `rest` and a `phone_accounts` entry always `phone`. A browser-terminal
+account must declare `ticket_flow`, because whether its executor places the
+tickets is VM state (`PROP_EXECUTOR_MODE_<ACCOUNT>`) that git cannot see.
+`test_every_prop_account_declares_its_ticket_flow` fails on any
+`exchange: breakout` account in `config/accounts.yaml` with no declared flow,
+so no account lands in `manual` by omission. At runtime an undeclared account,
+or an unreadable file, reads as `manual`. That fallback is safe, because no
+state in the `manual` flow blocks a re-ticket once the ticket's validity has
+passed.
+
+tradeify_1 is `browser` on MEASURED evidence: every `ict-prop-executor@tradeify_1`
+tick logged `env_mode: live` until its feed tripped at 2026-10-06 18:27:45Z
+(rc=4 feasibility stop, never retried). While that trip held, its tickets were
+notify-only and expired unplaced; a human placing one reports it by pasting the
+fill with its ticket id. The trip latch itself is gone (NO-HALT, operator
+directive 2026-10-09, PI-20261009-72XUJX8U-0002): the feed now retries on a
+capped backoff (`<feed dir>/backoff`, one red flag, one recovery notice) and
+the executor tick no longer skips because of the feed's state.
+
+### The rules
+
+1. **Expiry with no logged fill is TERMINAL "not placed", on every path.**
+   A ticket that reaches `valid_until` with no fill reported ends in
+   `expired`, or on a REST account in `skipped` with reason
+   `expired unplaced; last verdict …`. No path parks an expired ticket in a
+   state that waits for a human.
+2. **The opportunity stays alive.** An expired ticket never blocks. The next
+   valid signal for the same (account, symbol, direction) is ticketed normally.
+3. **The busy-symbol guard is unchanged.** It still blocks while the key has:
+   - an open prop position (newest `prop_fills` row `open`/`filled`);
+   - a ticket `placed` or `awaiting_report` (it may be a live position, so
+     there is no time limit);
+   - a phone ticket `claimed` (an attempt is in flight; the claim watchdog
+     ends it within `CLAIM_TIMEOUT_S`);
+   - an `emitted`, `expiry_prompted` or `invalidated_prompted` ticket whose
+     validity has not passed, or cannot be read (fail-safe). The 24 h
+     `STALE_PROMPT_GRACE` that kept an unanswered prompt blocking past its
+     validity is retired.
+
+   This is what keeps one account from ever having two live tickets for one
+   symbol and direction.
+
+   **One exception: SUPERSEDE of a resting entry** (operator, 2026-10-08
+   ~20:03Z, verbatim "Approve as proposed (Recommended)"; pipeline item
+   PI-20261008-3QRUJSYR-0001, checklist row PROP-SUPERSEDE). A new signal
+   for the same (account, **strategy**, symbol, direction) whose outstanding
+   ticket is `placed` is still journaled `suppressed`, but emission marks it
+   `meta.supersede` (`breakout_executor._supersede_candidate`). The
+   executor that placed the old entry (`prop_executor._supersede_resting`)
+   acts only on its own terminal read, and only when that read shows
+   nothing on the venue symbol except the old ticket's one resting order
+   with its bracket. It also requires the new ticket's entry band to read
+   `ok` on the live quote. Then it does four things, in order:
+   1. cancels the entry (the #17158/#17167 `cancel_order` path);
+   2. re-reads and confirms the order is gone with no position;
+   3. reports the old ticket `skipped: superseded by <new id>`;
+   4. posts `kind: supersede`, after which `prop_supersede.release`
+      rebuilds the new ticket through the `prop-ticket-reissue` checks and
+      `rebuild_fields` and flips it to `emitted`.
+
+   Normal intake then takes the new ticket on the next cycle's fresh read.
+   Every other case keeps the block and clicks nothing:
+   - a position, either side, or a possible partial fill;
+   - an open journal position;
+   - an unreadable read or quote;
+   - an expiry cancel already in flight;
+   - another order on the symbol;
+   - another strategy or direction;
+   - a stale new ticket;
+   - a band that is not `ok`.
+
+   A cancel that does not remove the row releases nothing. The 2026-09-29
+   rule stands: a doubled position costs more than one lost signal.
+4. **Machine accounts are not driven from Telegram.** `rest`, `phone` and
+   `browser` tickets never enter `expiry_prompted`, `invalidated_prompted` or
+   `awaiting_report`. They get no Yes/No keyboard: not on the ticket, not at
+   expiry, not on price invalidation. A `propexp:*` tap naming such a ticket
+   is refused and writes nothing. Telegram only notifies for them: the ticket
+   itself, fills, refusals, the executor's NOT PLACED alert and the phone
+   alerts.
+5. **A Telegram tap never overwrites a later state.** `propexp:n` moves a
+   ticket to `expired`, and `propexp:y` moves it to `awaiting_report`, only
+   from `emitted`, `expiry_prompted`, `invalidated_prompted` or `expired`. Each
+   is a compare-and-set on the status read. A tap on a `filled`, `placed` or
+   `closed` ticket is refused.
+
+### The states, per type
+
+`T` = the trader tick (`src/prop/prop_expiry_prompt.py::run_prop_expiry_prompts`, once per trader loop).
+
+**manual**
+
+```
+emitted ──(human reports open/placed)──────────────▶ filled / placed ─▶ closed
+   │ ──(human taps ❌ on the ticket)───────────────▶ expired
+   │ ──(human taps ✅ on the ticket)───────────────▶ awaiting_report ─(fill)─▶ filled
+   │ ──(T: price left [SL,TP]; warn + ask)─────────▶ invalidated_prompted ─┐
+   └──(T: valid_until passed, no fill)─────────────▶ expired ◀────────────┘ (T, at valid_until)
+                                                        │
+                                       (human taps ✅ "I did place it", or pastes
+                                        the fill with the ticket's id) ──▶ awaiting_report / filled
+```
+
+At expiry the trader sends one notice: "expired — recorded as NOT placed".
+It carries a single ✅ "I did place it" button. The ticket is already
+`expired` and blocks nothing. Legacy `expiry_prompted` rows are retired the
+same way at the next tick: an unanswered prompt means not placed.
+
+**A late fill on a manual account** is reconciled in one of two ways:
+- The human taps ✅ on the expiry notice. The ticket moves `expired →
+  awaiting_report` and the report prompt follows.
+- The human pastes the fill with the ticket's id, which every rendered ticket
+  pre-fills in its report-back block. `match_fill_to_ticket` honours an
+  explicit id in any status, so `ingest_report` links the fill and advances
+  the ticket to `filled`.
+
+From then on the open `prop_fills` row is what blocks the key. A pasted fill
+with no ticket id is journaled but stays unlinked, because the fallback match
+never links to an `expired` ticket. The position still blocks re-tickets,
+because the guard reads `prop_fills`.
+
+**rest** (and **browser**, the same VM executor over a browser adapter)
+
+```
+emitted ──(executor: band ok, guards fit, click + read-back)──▶ filled ─▶ closed
+   │ ──(executor: refused / unconfirmed)─────────────────────▶ skipped
+   │ ──(executor intake, past valid_until)───────────────────▶ skipped  "expired unplaced; last verdict …"
+   └──(T: still emitted at valid_until + MACHINE_EXPIRY_GRACE)─▶ expired  (the executor was off / read_only)
+```
+
+**phone**
+
+```
+emitted ──(phone claim, before valid_until)──▶ claimed ──(report open)────────▶ placed ─▶ filled / closed
+   │                                              │ ──(ticket_result)──────────▶ dry_filled / refused / skipped / mismatch_flattened
+   │                                              └──(no report in CLAIM_TIMEOUT_S)─▶ skipped + alert
+   └──(T: still emitted at valid_until + MACHINE_EXPIRY_GRACE)──▶ expired  (never claimed)
+```
+
+`MACHINE_EXPIRY_GRACE` (30 min) gives the REST executor time to post its own
+`skipped` report with its verdict first. Its timer runs every few minutes. The
+trader's `expired` write is a compare-and-set on `emitted`, so it cannot
+overwrite a claim, a placement or a report.
+
+**Who makes each transition** (no other writer exists):
+- the bridge (`breakout_executor.emit_prop_ticket`): `emitted` or `suppressed`;
+- the trader tick (`prop_expiry_prompt`, `prop_invalidation_prompt`): the
+  expiry and invalidation transitions shown above;
+- the Telegram callback (`handle_expiry_callback`): manual accounts only;
+- `ingest_report`: fill-driven statuses;
+- the REST executor: `skipped`, through `ingest_report`;
+- the phone endpoints: `claimed`, the `ticket_result` statuses, `placed`;
+- the `prop-ticket-expire` system-action: a REST-only operator escape hatch.
+- the `prop-ticket-reissue` system-action (PROP-REISSUE, 2026-10-08): ONE
+  `suppressed -> emitted`, only once the ticket that blocked it is terminal,
+  rebuilt with the bridge's own sizing so the executor's intake still decides.
+
+**Observation that closes it:** the next ticket on velotrade_1 or breakout_2
+that expires unplaced reaches a terminal status, gets no Yes/No prompt, and
+does not suppress the next signal for the same key.
+
+
+
+**tradeify_1 instrument specs and how to read them (TRADEIFY-INSTR-SPECS, 2026-10-15).** The terminal has only Watchlist and Positions widgets, so the info-panel probe (`instrument-info-*`) cannot open and `link-state-dump` reads no rows. Two read-only paths exist instead: `breakout-login-check` mode `quote-spread` (`DXtradeAdapter.quote_spread` over the executor's own `read_quote`: spread in bps of mid, no click, no account figure) and `velotrade-api-probe` with `account: tradeify_1` (REST login, account-scoped instrument rows: `marginRate`, min order and step, trading hours; GETs retry on 429). The REST row carries no swap or commission field, so those stay firm-declared and unconfirmed. Measured values and run links: `docs/research/tradeify-platforms-2026-10-15.md` § 2c. The watchlist now also holds SILVER/USD, XYZ100/USD, SP500/USD and USOIL/USD (watchlist only; no roster or order path references them).
+
 ## Operator Communication Pipeline
 
 The flow is repo-driven and auditable.
@@ -488,6 +934,43 @@ The flow is repo-driven and auditable.
 Statuses: `pending`, `sent`, `partially_answered`, `answered`,
 `acknowledged`, `expired`, `cancelled`. Stuck-request alert and
 final pre-expiry alert (M1 P1-B) prevent silent expiry.
+
+### Telegram channels
+
+Outbound Telegram is split into **three channels**, each a separate bot chat
+(operator spec 2026-10-09, row `TELEGRAM-CHANNELS`):
+
+| Channel | Bot process that polls it | Carries |
+|---|---|---|
+| `trades` | `ict-claude-bridge` | trade opened / closed / updated for all accounts; the periodic performance snapshot. No prop ticket prompts (retired 2026-10-09) |
+| `system` | `ict-telegram-bot` | the periodic health check, restarts, alerts, no-halt red flags |
+| `manager` | `ict-claude-decision-bot` | the periodic manager update, PR merges, decisions taken under authority, questions for the operator |
+
+* **Routing.** `src/runtime/telegram_channels.py` holds the ONE table, event kind
+  to channel. An unknown kind routes to `system`; an undeliverable channel falls
+  back to `system`; a send that raises on another channel is retried once on
+  `system`. `tests/test_telegram_channels.py` fails when a file that sends is not
+  in the table. Alert-class kinds (`UNMUTABLE`) can never be muted.
+* **Splitting.** `src/runtime/telegram_split.py` splits any message over the
+  4096-character cap on block boundaries and delivers the parts in order; a
+  non-retryable 4xx is counted and, after `MAX_CLIENT_ERRORS`, moved aside with
+  one red flag on `system` instead of being retried forever.
+* **Settings.** `src/runtime/telegram_settings.py` is the one store
+  (`runtime_state/telegram_settings.json`: `muted`, per-update `cadence`,
+  `last_sent`, `updated_at`/`updated_by`) and the one cadence gate (`is_due`);
+  `src/bot/notification_settings_menu.py` is the one `/settings` menu mounted in
+  all three bots. Defaults are today's behaviour (nothing muted, hourly); an
+  absent or unreadable store reads as the defaults. The store is readable
+  through `GET /api/diag/log_file?name=telegram_settings`, and the `system`
+  health check lists any non-default cadence or mute with who changed it last,
+  so a slowed or silenced update is visible without reading the file.
+* **Builders.** Manager update: `scripts/ops/work_digest_now.py`
+  (`ict-work-digest.timer`) composes a needs-you section (only when there is an
+  ask), the research queue (`scripts/ops/research_digest.py`) and the work section
+  (`scripts/ops/work_section.py`: blocked, didn't work, in flight / next, then
+  shipped and verified, the last two capped at five lines so the 4096 trim cannot
+  cut a blocker). Trades snapshot: `src/runtime/trades_snapshot.py`. System health:
+  `render_system_health` in `src/runtime/hourly_report.py`.
 
 ## Deployment and Sync Pipeline
 
@@ -626,11 +1109,11 @@ inventory/labels (`repo-inventory`, `bootstrap-labels`,
 | Area | Path | Notes |
 |---|---|---|
 | Runtime pipeline | `src/runtime/` | `pipeline.py`, `orders.py`, `validation.py`, `health.py`, `heartbeat.py`, `outcomes.py` |
-| Strategies | `src/units/strategies/` | Strategy modules; wired via `config/strategies.yaml`. Two ISOLATED (non-`multi_account_execute`) sleeves live here: `pairs_executor.py`/`pairs_engine.py`/`pairs_sizing.py` (M22 2-leg pairs) and `macro_thesis/` (M28 macro/value thesis former — observe-only tick hook, no order path, import-linter-locked out of Execution). |
+| Strategies | `src/units/strategies/` | Strategy modules; wired via `config/strategies.yaml`. Two ISOLATED (non-`multi_account_execute`) sleeves live here: `pairs_executor.py`/`pairs_engine.py`/`pairs_sizing.py`/`pairs_venue.py` (M22 2-leg pairs; `pairs_venue.py` is the SESSION-venue adapter for Alpaca equity pairs) and `macro_thesis/` (M28 macro/value thesis former — observe-only tick hook, no order path, import-linter-locked out of Execution). |
 | Macro/value + sys-dynamics | `src/units/strategies/macro_thesis/`, `src/sysdyn/` | M28/M29 (NEW 2026-07): thesis former + valuation/event stores + FRED adapter + P4 thesis backtest (`macro_thesis/`); pure system-dynamics engine (`sysdyn/`, not yet tick-wired). Config `config/macro_*.yaml`; file-backed JSONL stores; import-linter-locked out of the order path. |
 | Strategy registry | `src/strategy_registry.py` | Single source of truth for which strategies exist |
 | Account / risk | `src/units/accounts/` | `risk.py`, `prop_risk.py`, `execute.py`, broker clients (`ib_client.py`/`alpaca_client.py`/`oanda_client.py`), `ib_instruments.py`, `__init__.py` (`load_accounts`). After the safeguards PR follow-on, `_DRY_RUN_OVERRIDES` and `set_account_dry_run()` are deleted; `_resolve_mode()` reads YAML directly. |
-| Prop accounts | `src/prop/` | Breakout manual-bridge — `breakout_executor.py` (Telegram-ping prop executor), `account_rulesets.py`, `multi_account_ticket.py`, `montecarlo.py`, `prop_journal.py`, `prop_report.py` |
+| Prop accounts | `src/prop/` | Breakout manual-bridge — `breakout_executor.py` (Telegram-ping prop executor), `account_rulesets.py`, `multi_account_ticket.py`, `montecarlo.py`, `prop_journal.py`, `prop_report.py`; **phone executor** (`phone_executor.py`, 2026-10-05): a prop account declared under `config/prop_platforms.yaml::phone_accounts` is driven by an app on the operator's phone (`tools/phone-executor/`) that claims its tickets over `POST /api/bot/prop/phone/*` with a per-device token (fingerprints in `config/prop_phone_devices.yaml`) — a second consumer of the same ticket/report contract, no change to `multi_account_execute` |
 | Exchange connectors | `src/exchange/` | Bybit, Binance, IB market data (`ib_connector.py`) |
 | ICT detection | `src/ict_detection/` | Reusable signal-detection components |
 | News layer | `src/news/` | `news_pipeline.py` |
@@ -976,10 +1459,39 @@ filtered to architecture-level deltas only.
 | 2026-07-26 | Full-system audit 2026-07-26 — canonical-doc + observability reconciliation | **Periodic full-system audit (all 3 repos, both VMs, canonical store).** Verdict: recent infra (M28/M27/M26/M0a-b) is **compliant** (zero Prime-Directive/Tier-3/isolation violations; 19/19 CI guards + ruff green; layer-guard enforcing). Doc/observability fixes landed this pass: (A2) this M28/M29 + M27 change-log documentation + Repo-Map row; (A4) `alpaca_live` corrected to its shelved `dry_run` state (was overstated as live real-money); (A1) strategy count 48 → 54; (A3) `layer-guard`/import-linter + `REQUIRED_CONTEXTS` added to the CI-guard list; (WS-B) diag `_CANONICAL_UNITS` gained the 3 data-ingest timers (`ict-exchange-{fills,funding}-pull`, `ict-mes-ibkr-pull`) + dropped retired `ict-heartbeat.service`; `replay-pregate-nightly` ref → `main`; 2 missing labels bootstrapped. Surfaced to operator (not self-fixed): `ict-mes-ibkr-pull.service` in `failed` state; 352 Claude-pings stranded in the pre-migration repo-path inbox; recurring bybit_2 smoke-test `place_order` NoneType failures. Program doc + per-file coverage: `docs/audits/full-system-audit-2026-07-26.md`. | `docs/ARCHITECTURE-CANONICAL.md`, `src/web/api/routers/diag.py`, `.github/workflows/{replay-pregate-nightly,bootstrap-labels}.yml`, `docs/audits/full-system-audit-2026-07-26.md`, `ROADMAP.md`, the three review backlogs | Tier-1 (docs + diag read-surface observability + CI workflow config). `diag.py` change ships via `ict-git-sync`; makes the 3 ingest timers queryable on `/api/diag/services`. No order-path/config-gate change. |
 | 2026-08-12 | M20 exit-loop decouple — **exit evaluation leaves the trader tick for its own daemon thread** | **The trader is no longer a single-threaded loop.** Exit evaluation (`monitor.strategy_monitor_loop`) moved off `src/main.py`'s tick onto a **daemon loop** (`_exit_loop`), period-targeting at `EXIT_LOOP_INTERVAL_SECONDS` (default 30 s). ⚠️ **THE GO-LIVE HEADROOM NO LONGER HOLDS — DO NOT QUOTE IT** (corrected 2026-08-16, `BL-20260816-EXIT-EVAL-INTERVAL-AT-60S-REQUIREMENT`). This row read "re-evaluated every **30.2 s observed** … worst observed interval **34.1 s**, meeting the operator's standing 60 s exit-evaluation ask with 43.1% headroom"; that was the go-live measurement and is now **stale in the dangerous direction**. Measured 2026-08-16T05:39Z over **n=694** passes on one process: `monitor.strategy_monitor_loop` **28852.0 ms mean / 58940.8 ms max**. Since the interval is `max(interval, pass)`, the worst observed inter-evaluation interval is **58.9 s against the 60 s ask — 1.1 s of margin, not 43%**. ⚠️ **The "trend across every reading" this row briefly asserted does NOT hold** (corrected 2026-08-16, same day, against a second process): that series **mixed means with maxima**, and **compared maxima across different n** where a maximum grows with sample size from a fixed distribution anyway. Separated, the means are 22.4 s (n=55) → 30.2 s → 26.6 s (n=219) → 28.9 s (n=694) → **21.6 s (n=32)** — flat and non-monotonic, newest lowest; the maxima are three points (34.1 s, 58.9 s, **41.5 s at n=38**). The 58940.8 ms observation stands and is the reason this matters; the supported reading is a **fat tail finally sampled**, not degradation. **Grade this on the MAX, never the mean** — the earlier row `BL-20260814-EXIT-PASS-SLOWER-THAN-M20` was closed on a mean that looked settled while the max kept growing, and until 2026-08-16 `exit_loop_health` could not catch it either (it graded only `fresh`/`stale` at 180 s, so a 59 s pass read healthy). **It now grades the requirement explicitly**, as a SECOND threshold beside liveness: `EXIT_EVAL_MAX_INTERVAL_SECONDS` (default 60 s) against a MEASURED completion-to-completion `max_interval_ms`, published as a four-state `requirement_state` (`within`/`breached`/`not_measured`/`unknown`, `collapsed-state-guard`-registered) that can read `breached` while liveness reads `fresh`, with a once-per-process alert. The pass is **fetch-bound**, so it shares a root with the tick regression and any TTL/fetch change reaches exit decisions. **Only the EXIT half moved**; the 13 reconcilers/sweeps stay inline on the tick, so `order_monitor` remains a tick hook and the exit-coverage invariant (2026-06-15 row) is unchanged in substance — what changed is the THREAD it is enforced from. **Two structural consequences a future session must not re-derive:** (1) **exit-loop liveness is now its own surface.** The external liveness watchdog measures the tick's heartbeat, and its coverage of exit evaluation was never a probe — it was the fact that exit evaluation ran INLINE on that tick. A stalled exit loop is therefore a condition nothing else observes, so `src/runtime/exit_loop_health.py` writes a four-state liveness record (`unknown`/`never_ran`/`fresh`/`stale`, read via `/api/diag/log_file?name=exit_loop_health`); `never_ran` is emphatically NOT healthy and is also what the rollback flag produces. (2) **per-hook cost accounting is now thread-aware** — `tick_cost` segregates off-thread hooks into a separate `offloop_hooks` table by **thread identity**, excluded from `attributed_pct`, because dividing another loop's duration by the main tick's clock is meaningless. Four coupled prerequisites shipped in the same PR because the split is unsafe without them: the active-close marker was per-TICK and crossed both halves at four sites (now lock-guarded + time-bounded); a `tick_cost` accumulator lock (**defensive only — the race was not reproduced**); the thread-identity segregation above; and an IB **`RLock`** (12 of 17 public `IBClient` methods call `connect()`; a plain `Lock` demonstrably hangs the suite). **Rollback is one env flip, no redeploy:** `EXIT_LOOP_DECOUPLE_DISABLED=1` → no thread, the tick calls `run_monitor_tick`, byte-for-byte the prior behaviour. Live-verified on `git_sha 64ee435f` (`offloop_hooks` populated at n=55 with the child absent from the main table — the direct proof segregation works rather than silently no-op'ing; `attributed_pct` 98.4). ⚠️ The design's own margin figures were derived from n=7/n=18 and are **corrected** at n=172 — whole-monitor-on-a-thread peaks at **61.82 s and FAILS the 60 s ask**, the exit half alone cleared by **41.8%** (not 53%) *at that sample — superseded, see the ⚠️ correction above: at n=694 it clears by 1.8%*, and the live loop measured 34.13 s, within 2.2% of the correction. Record: `docs/sprint-logs/S-M20-EXIT-LOOP-DECOUPLE-2026-08-12.md` + `docs/research/M20-exit-monitor-decouple-evidence-2026-08-10.md` §§ 4e–4f. **This does NOT make the tick faster** — it is still 96.5 s mean / 115.7 s max with `pipeline.signal_build` at 53.7% (`BL-20260810-TICK-CHAIN-260S-PER-TICK`, open). | `src/main.py`, `src/runtime/order_monitor.py`, `src/runtime/tick_cost.py`, `src/units/accounts/ib_client.py`, new `src/runtime/exit_loop_health.py`, `src/web/api/routers/diag.py`, `CLAUDE.md`, `ROADMAP.md` | **Tier-2** (live-service change on the money box — merging IS deploying via `ict-git-sync`), operator-approved in-conversation 2026-08-12. No `config/*.yaml`, no strategy params, no risk caps, no account-mode change; no new order path — the same `run_exit_evaluation_tick` runs, on a different thread. |
 | 2026-08-27 | R3 offload transport — **a model trained off-box now has a durable path home, and it is not armed** | `.github/workflows/trainer-offload-train.yml` gains an **opt-in `publish` job** (default `false`, so the existing path is byte-for-byte unchanged) that commits the trained run into a NEW tracked artifact, `ml/offload-inbox/` (`index.jsonl` + `<model_id>/<run_id>/{model_state,metrics,manifest}.json`). The trainer's existing 15-min `trainer_git_sync.sh` force-checkout delivers it; a NEW trainer unit `ict-offload-drain.{service,timer}` consumes it. ⚠️ **The drain carries NO registry entry across machines — it RE-REGISTERS on the trainer**, so `model_state_path.resolve()` is trainer-local by construction. That is the fix for Blocker 1 (`ml/experiments/runner.py:422` records the training machine's absolute path; a copied entry would read `/home/runner/work/...`). It is the same shape `scripts/ml/gpu_burst/ingest_bundle.py` already uses for a rented GPU pod. ⚠️ **UNARMED ON BOTH AXES**: the timer is enabled by no installer or cloud-init, and `OFFLOAD_DRAIN_APPLY` must be exactly `1`. Once armed it registers under a NAMESPACED id (`<model_id>-offload`) at a FORCED `candidate` stage — which `ml.shadow.factory` refuses — because a fresh registration defaults to `shadow`, which auto-wires onto every strategy's predictor list. It refuses to refresh an id an operator has advanced past candidate. **No stage-ladder, registry-contract, mirror or order-path change.** | `.github/workflows/trainer-offload-train.yml`, `scripts/ml/offload/{emit_bundle,drain_inbox}.py`, `scripts/ops/run_offload_drain.sh`, `deploy/trainer/ict-offload-drain.{service,timer}`, `ml/offload-inbox/`, `scripts/ci/run_guards.py`, `tests/scripts/test_offload_transport.py` | **None until deliberately armed.** Publishing is per-run opt-in; the drain writes nothing by default. ⚠️ The moment a runner-trained model first joins the live shadow fleet is **TIER-2** and needs an explicit operator OK — it is not part of this plumbing. ⚠️ Nothing here has run outside a sandbox: see `OI-20260827-OFFLOAD-TRANSPORT-HAS-NEVER-CARRIED-A-MODEL`. The first real dispatch on `main` is EXPECTED to report `pending_merge` (exit 1) because the push retargets off a protected branch. |
+| 2026-10-08 | PROP-REISSUE | New writer of prop ticket status: `prop-ticket-reissue` system-action moves ONE `suppressed` ticket to `emitted` once its blocker is terminal, rebuilt with the bridge's own sizing (parity with `emit_prop_ticket` tested). | `scripts/ops/prop_ticket_reissue*.{py,sh}`, `system-actions.yml` | A suppressed prop signal can be brought back by a dry-run-first Tier-2 dispatch instead of raw SQL. |
+| 2026-10-08 | PROP-SUPERSEDE (lane, Tier-3 hold; operator "Approve as proposed (Recommended)" ~20:03Z) | **A newer same (account, strategy, symbol, direction) signal supersedes a resting, unfilled `placed` entry** (§ "Prop ticket flow", rule 3's one exception). Emission marks the suppressed row `meta.supersede`; the executor cancels the resting entry on its own read, confirms it gone on a re-read, reports the old ticket `skipped: superseded by <new id>`, then posts the new `kind: supersede` report. `prop_supersede.release` runs the reissue checks and `rebuild_fields` and flips the ticket to `emitted`. The tickets API gains a read-only `supersede` field. Any position, possible partial fill, unreadable read or other doubt keeps the block. | `src/prop/{breakout_executor,prop_executor,prop_supersede,prop_report,prop_journal}.py`, `tests/test_prop_supersede.py` | Merged ≠ deployed: the trader (emission) and `ict-prop-executor@<acct>` both need the new code. Closes on observation: a `superseded by` skip followed by the new ticket `placed` on a live executor account. Revert: `git revert` the merge commit. |
+| 2026-10-15 | EXIT-PATH-TELEMETRY-LIVE | New journal table `position_path_history`: the append-only per-bar PATH of each open position (one row per `order_package_id` × `bar_ts`), written by the same `record_position_telemetry` hook on the same exit-loop pass and PROJECTED from the `position_telemetry` record (adds `mae_r`, `sl_r`/`tp_r`, `atr`/`atr_source`/`adx`). Observe-only; no rows after the terminal stamp; 90-day retention pruned on the write path; write failures contained per write. Read path `GET /api/diag/position_path_history` (Tier 2.5). Live side of the in-trade exit model's parity check. | `src/runtime/position_path_history.py`, `src/runtime/position_telemetry.py`, `src/units/db/database.py`, `src/web/api/routers/diag.py`, six strategy monitors (one kwarg each) | None to trading — recording only. Operator OK 2026-10-15 ("Build it (Recommended)"). |
 
 ---
 | 2026-09-02 | — | **Decision prompts move to the dedicated Claude bot, and that bot becomes POLLED.** New `ict-claude-decision-bot.service` + `src/bot/claude_decision_bot.py` poll `TELEGRAM_CLAUDE_BOT_SECRET` and dispatch `wdec` taps into the SAME `telegram_decisions.handle_decision_callback` (imported, not forked; the API route stays the one owner of every refusal). New cross-process contract `src/runtime/telegram_poll_registry.py`: a heartbeat-backed, three-state answer to *is a tap on this bot received?* — `polled_with_handler` / `token_only_not_polled` (we looked) / `unknown` (we could not look), registered with `collapsed-state-guard`. `answerable_route()` prefers the Claude bot ONLY on positive evidence and otherwise falls back to the trader bot loudly, so the wrong chat is never traded for an outage. **Delivery and answerability are different properties**: a token suffices to SEND, but an inline button is inert unless some process polls that bot — a tap then yields a `callback_query` nobody collects, with no error on any surface. | `src/bot/claude_decision_bot.py`, `deploy/ict-claude-decision-bot.service`, `src/runtime/telegram_poll_registry.py`, `src/runtime/telegram_decisions.py`, `src/bot/telegram_query_bot.py`, `src/web/api/routers/diag.py`, `scripts/install_systemd_units.sh` | **A new unit must be installed + enabled on the live VM, and `TELEGRAM_CLAUDE_BOT_SECRET` must be in its `.env`** — an operator action. Until then decision prompts keep arriving on the trader bot (reported, not silent). UNPROVEN on the fleet: no tap has been made on ClaudeBot. |
 | 2026-09-06 | MI-139 / WO-20260906-A-BYBIT-REDUCE-ONLY-CLOSE-IS-REJECTED | **The qty-legalization seam covered SIZING and never CLOSING — a Bybit reduce-only close could not be placed.** `execute.close_open_position` builds its Bybit payload as `{"qty": str(qty)}` from the journal's `position_size` and calls `exchange_client.place_order` **directly**, bypassing `_submit_order` — the only Bybit submission path wired to `qty_legalize`. MEASURED: a `bybit_1`/SOLUSDT close was refused 3 consecutive times at 2026-09-06T03:37:22Z on qty `33.299999999999955` (the IEEE-754 residue of `289.4 − 256.1`; Bybit `Qty invalid`, ErrCode 10001) and the position could not be flattened by the normal path. POPULATION for the incidence: `bybit_*`, non-backtest, `position_size > 0`, `trades` ids 4519–5518 (newest 1000 rows, `/api/diag/journal?table=trades&limit=1000`, read 2026-09-06 ~11:02Z), **n = 631 → 9 off-grid = 1.43%**, including a real-money row on `bybit_2`. **Two parts, neither subsuming the other.** (1) `apply_intent_reduce_partial_close` persisted the residual as a raw float subtraction — the ONLY unrounded `position_size` writer, the two siblings that also subtract already round at 8dp/10dp — now `round(x, 8)`, the identity on every legal quantity (finest Bybit step in play is 0.001). (2) NEW `qty_legalize.snap_artifact_qty` repairs an artifact at the wire, **inside the seam** so `qty-legalization-guard` is satisfied rather than worked around, returning three never-collapsed states `snapped` / `unchanged` / `not_graded` (the last covering both *no rule resolved — we did not look* and *genuinely off-step*, both passing through untouched so a real off-step value keeps failing LOUDLY). ⚠️ **IT SNAPS TO NEAREST AND MUST NEVER BE HARMONISED WITH `legalize_qty`, WHICH FLOORS.** Flooring is correct for an ENTRY (realised risk must not exceed the sized cap) and is the OPPOSITE for a CLOSE: flooring `33.299999999999955` to `33.2` under-closes by a full step and orphans 0.1 SOL with no journal row — a loud failure converted into a silent one. The wire string changes on the `snapped` path and NOWHERE ELSE, so the blast radius is structurally bounded to orders the venue rejects today. Also: `config/instruments.yaml` XRPUSDT `min_qty`/`qty_step` 1.0 → **0.1**, MEASURED from Bybit `/v5/market/instruments-info` (read 2026-09-06T11:03:10Z, trainer-vm-diag #11120, run 34029110078). ⚠️ **AVAXUSDT was suspected wrong and is NOT** — its sub-0.1 journal rows all carry `status='rejected'`, i.e. pre-legalization sizes that never reached the venue. **NOT widened** to the two Bybit sibling paths (`modify_open_order`'s `slSize`/`tpSize`; `_bybit_top_up_partial_sl`'s `uncovered`) — no observed failure and both are *protective* paths where a rejection fails a tightening silently; filed instead. | `src/units/accounts/{execute,qty_legalize}.py`, `config/instruments.yaml`, `tests/test_bybit_close_qty_artifact.py` (NEW), `docs/sizing-legalization-DESIGN.md` (§ 3.4, NEW), `docs/claude/work/OPEN-PRS.json`, `docs/claude/health-review-backlog.json`, this file | PR #11125 — **Tier-3, operator-approved 2026-09-06 (both parts, no condition), DRAFT pending the manager routing the merge.** No live-VM behaviour change until deployed. Nothing is currently unflattenable (0 of 29 open rows, read 2026-09-06 ~10:12Z), so this is a fix for the next occurrence. Rollback is a revert; both parts are fail-safe (unresolvable rule → passthrough, byte-identical to the pre-fix line). |
+| 2026-09-22 | E27 | **The `/api/diag/journalctl` allowlist gains `ssh.service`, so the `/health-review` breach sweep's MANDATORY sshd/auth source exists at all.** `_CANONICAL_UNITS` in `src/web/api/routers/diag.py` held only this project's own units, and it is EXACT-MATCH, so `unit=ssh` / `ssh.service` / `sshd` / `sshd.service` all returned HTTP 400 `unknown_unit` (measured 2026-09-22, control `unit=ict-web-api.service` -> 200 with journal lines) and that mandatory source had never been satisfiable. The entry is `ssh.service`, MEASURED on ict-bot-arm (Ubuntu 22.04.5): `sshd.service` is a systemd ALIAS and `journalctl -u sshd.service` returns `-- No entries --`, so the alias would answer 200 with `lines: []` — a sweep reporting CLEAN having read nothing. Only that one unit is added; no new route. Like `caddy.service`, it ships no `deploy/` unit of ours, so `check_diag_unit_allowlist.py` does not cover it — hand-maintained. ⚠️ **Read-surface/privacy change:** sshd journal lines carry source IPs and usernames, readable by anything holding the diag bearer — the cost was stated to the operator and accepted. No WRITE route and no secrets returned, so the closed diag-token rotation decision (`docs/reference/diag-access.md`) is not reopened. | `src/web/api/routers/diag.py`, `tests/test_web_api_diag.py`, `.claude/skills/health-review/SKILL.md`, `docs/ARCHITECTURE-CANONICAL.md` | Tier-2 — it changes a live service's read surface, so it is not in effect until `ict-web-api.service` is pulled and restarted. Closes when the probe that 400s today returns 200 with journal lines against the RUNNING web-api, with the `ict-web-api.service` control alongside. No order path, no config gate, no strategy or risk change. |
+| 2026-09-22 | E42 | **`config/accounts.yaml::symbols` stops being an execution gate; the tick fetch set becomes `UNION(roster-implied, declared)`.** `src/main.py::_resolve_tick_symbols` built the per-tick symbol set from each account's `symbols:` list ALONE, so a strategy on an account's `strategies:` roster whose symbol nobody had declared there got no candles, no signal and no order — while reading as wired on every surface. A third execution gate in everything but name (Prime Directive rule 6), and the same shape as the 2026-05 `MULTI_SYMBOL_ENABLED` flag that stranded MES, spelled as an omission instead of a flag. It now unions in `_symbols_for_account(...)`, so the ROSTER is the single source of truth for what trades and `symbols:` is a purely ADDITIVE **data-pull** list that legitimately names instruments nothing trades (21 such entries, measured). `intents.supported_symbols()` is widened identically and NOT optionally: `StrategyIntent.__post_init__` raises on an unaccepted symbol, so widening only the fetch set would have converted a silent no-trade into a `ValueError` on the live path. New guard `roster-symbol-reachability` fails a PR whose pull list has fallen behind a roster, and its message blames the PULL LIST — never the leg. PROVEN ADDITIVE over the checked-in config: the global fetch set is 23 symbols before and the same 23 after (0 added, 0 removed); `supported_symbols()` 24 → 24. The field is documented, not renamed — `/api/bot/config` publishes it and the SPA derives its symbol selectors from it. | `src/main.py`, `src/runtime/intents.py`, `src/web/api/routers/bot_config.py`, `scripts/ci/check_roster_symbol_reachability.py`, `scripts/ci/run_guards.py`, `tests/test_roster_symbol_union.py`, `config/accounts.yaml` (comment-only), `CLAUDE.md`, `docs/CLAUDE-RULES-CANONICAL.md`, `docs/TRADE-PIPELINE.md`, `docs/reference/bot-api-reference.md`, `docs/claude/system-actions.md` | No change to what trades today, and that is measured rather than asserted. What changes is that wiring a leg onto a roster is now SUFFICIENT for it to get data — you no longer have to remember a second list, and forgetting it fails CI instead of failing silently. Tier-2: held for operator approval, not deployed. |
+| 2026-09-25 | E35 (Tier-3, landing hold) | **Symbol arbitration is PER ACCOUNT; the global election no longer routes.** `intent_multiplexer` still gates once (`intents.gate_intents`, one `regime_hard_gate` row per candidate per tick) and still elects a global headline (audit, signal writer, allocator soak), but the dispatch is now `arbitration_fanout.plan_per_account_election` over the same gated set: each account elects from its OWN declared candidates, and `pipeline._dispatch_rounds` sends one package per distinct elected strategy with `account_scope` = the accounts that elected it (an account is in at most one round → at most one package per tick; a strategy is one package however many accounts elected it). The four per-strategy monocle gates run PER ROUND on the round's own strategy. Retired: `ARBITRATION_FANOUT_MODE` / `ARBITRATION_FANOUT_ACCOUNTS` (ignored, warned once), the all-or-nothing `accepted_rounds` reader and `_round_order_package` (which stamped the global winner's meta under another strategy's name). `arbitration_fanout_soak` is kept as a v4 record graded against the per-account routing (`starved` = elected but in no round — a defect; `global_would_drop` = what the old routing dropped). Replay over 1000 live soak rows: `scripts/research/e35_per_account_election_replay.py`. |
+| 2026-10-05 | PHONE-EXEC-1B | **Phone-executed prop account.** `breakout_2` (Breakout 1-Step Turbo $5k, `mode: dry_run`) emits tickets through the unchanged `exchange: breakout` bridge; because the VM's egress is Cloudflare-blocked from the new terminal, an Android app on the operator's phone claims them (`POST /api/bot/prop/phone/claim`, atomic `emitted→claimed`, one attempt per ticket, 3-min watchdog), fills and reads back the order ticket, and reports via `phone/report` (account forced from a per-device token whose SHA-256 fingerprint is the only thing in git). Submit is `live` only when the account is live AND the device is armed; test tickets are always dry. | `src/prop/phone_executor.py`, `src/web/api/routers/prop.py`, `config/{accounts,prop_platforms,prop_phone_devices}.yaml`, `config/prop_rulesets/breakout_turbo_1step.yaml`, `tools/phone-executor/`, `.github/workflows/phone-executor-apk.yml`, `docs/integrations/breakout-phone-executor-DESIGN.md` § 7.11 | Merged ≠ deployed: nothing runs until the web API is redeployed, a device is paired, and the account is flipped by `set-account-mode`. |
+| 2026-10-06 | TP-DOCTRINE (lane, Tier-1) | **The TP doctrine is canonical and measured.** Operator directive 2026-10-06 (verbatim in § "TP doctrine"): no fictional take-profits — every leg's bracket carries a real predictive TP at entry, the prediction is re-estimated through the trade and moved via the `tp` verdict path, a momentum/trailing exit does not exempt a leg, and compliance is measured in audits. New guard `tp-doctrine-guard` (`scripts/ci/check_tp_doctrine.py`) grades every (account, leg) routing on `entry_tp` and `tp_revision` and RATCHETS: day-one debt (52 of 52 routings fail revision, 26 of 52 fail entry, measured at `233c9c28`) is carried in a dated visible baseline; the guard fails on NEW non-compliance, debt growth, or a stale baseline line; `--strict` is the audit shape, wired into the `/health-review` compliance-audit rotation. Research units `RQ-20261006-060/061` sweep finite targets for the real-money sentinel legs; pipeline row `PI-20261006-5FUGHVX8-0001` holds the ranked debt list with a disposition per leg. | `docs/ARCHITECTURE-CANONICAL.md`, `CLAUDE.md`, `.claude/skills/exit-refinement/SKILL.md`, `.claude/skills/health-review/SKILL.md`, `scripts/ci/check_tp_doctrine.py`, `scripts/ci/run_guards.py`, `tests/test_check_tp_doctrine.py`, `research/queue/RQ-20261006-06{0,1}.yaml`, `docs/claude/work/pipeline/` | None to what trades today: docs, a CI guard and research registrations only. No order path, config, strategy or param change. The guard blocks a future PR that rosters a leg with a sentinel / no target or a family that cannot move its TP, unless its debt is added to the baseline as a visible line (Tier-3 on real-money / prop). |
+| 2026-10-15 | BRACKETS-AS-PREDICTIONS (lane, research registrations) | **Six pre-registered predictive-TP units** `RQ-20261015-cab7-01..06` (roadmap L-ATM): per real-money Bybit leg (ada/xrp pullback 2h, Donchian xrp/eth 4h), a pooled regime-conditioned unit (entry-vol × ADX terciles), and the alpaca 1d pullback family pooled (RQ-20261006-061's follow-on). Instrument `scripts/research/tp_prediction_derive.py` (uncapped config-exact replay, IS-chosen K*, OOS calibration + net R vs the current bracket). `research-script-run.yml` installs `dukascopy-python` for the equity-daily replay. | `scripts/research/tp_prediction_derive.py`, `tests/test_tp_prediction_{derive,units}.py`, `research/queue/RQ-20261015-cab7-0{1..6}.yaml`, `.github/workflows/research-script-run.yml`, `docs/research/RESEARCH-CAPABILITY-INDEX.md`, this file | None on the order path. Any TP change is a Tier-3 proposal after the e35 harness-native confirmation. |
+| 2026-10-15 | TP-REACH-FLOOR (lane BRACKETS-AS-PREDICTIONS, Tier-1) | **TP-REACH-FLOOR: a declared target reached by < 10% of the leg's uncapped harness trades grades `entry_tp = unreachable`** (§ "TP doctrine", clause 4). `check_tp_doctrine.py` reads mi307's per-leg reach curve; positive + negative controls in `--self-test` and pytest; the six prop routings re-baselined R → ER (the guard got stricter, the roster did not change). | `scripts/ci/check_tp_doctrine.py`, `tests/test_check_tp_doctrine.py`, this file | None on the order path: a CI guard. No config, roster or TP changed. |
+| 2026-10-07 | TP-DOCTRINE (lane, Tier-3 hold) | **TP doctrine B1 — the TP-revision mechanism.** New `src/runtime/tp_revision.py` owns the verdict contract (`{"tp", "tp_reason"}`), the declared-rule registry and `plan_tp_revision` (through-price refusal, venue-cap clamp from the current price). `monitor_verdict` carries `tp_reason`; `order_monitor` logs and pings it. `prop_trail` gains a TP-only amend step for adapters declaring `TP_AMEND_SUPPORTED` (`dxtrade_api`); browser `dxtrade` declares False (rollout guard). `tp-doctrine-guard` now requires produced-and-consumed (declared registered rule + `plan_tp_revision`/`merge_verdict` in `monitor()` + per-platform prop path). | `src/runtime/tp_revision.py`, `src/runtime/monitor_verdict.py`, `src/runtime/order_monitor.py`, `src/prop/prop_trail.py`, `src/prop/platform/{base,dxtrade,dxtrade_api}.py`, `scripts/ci/check_tp_doctrine.py`, `tests/test_tp_revision_contract.py` | None on merge: no leg declares a `tp_revision` rule, so no TP moves. Guard counts unchanged (52 routings, 0 compliant) except velotrade_1's path now reads `plumbed`. |
+| 2026-10-07 | TP-DOCTRINE (lane, Tier-3 hold) | **TP doctrine B1, rule 1 — `donchian_measured_move`.** `tp_revision.measured_move_path` (pure, index-based) + the registered rule; `trend_donchian.monitor()` merges the declared revision into its verdict (trail extracted to `_trail_verdict`, unchanged) and `order_package` threads `tp_revision` into meta; `scripts/backtest_trend.py` gains `--tp-revision/--tp-revision-width-mult` (default off, byte-identical; reports applied and cap-bound revisions); `scripts/research/tp_revision_sweep.py` grades it on the four money legs under `RQ-20261007-080`. | `src/runtime/tp_revision.py`, `src/units/strategies/trend_donchian.py`, `scripts/backtest_trend.py`, `scripts/research/tp_revision_sweep.py`, `research/queue/RQ-20261007-080.yaml`, `tests/test_tp_revision_donchian_rule.py` | None on merge: no leg declares the rule. Guard: the 29 trend_donchian-unit routings read `rule_undeclared` instead of `no_tp_verdict`; 0 compliant, baseline unchanged. |
+| 2026-10-22 | TPX-PULLBACK-PRODUCER (lane, Tier-2 hold) | **TP doctrine B1, rule 2 — `tp_extend`.** `tp_revision.tp_extend_path` (pure, bar-replayed) + the registered rule; `htf_pullback_trend_2h.monitor()` merges the declared revision into its trail verdict and `order_package` threads `tp_revision` (+ `trend_lookback` when declared) into meta. Parity with `backtest_pullback.py` cell X6 is pinned on a seeded fixture. | `src/runtime/tp_revision.py`, `src/units/strategies/htf_pullback_trend_2h.py`, `tests/test_tp_revision_pullback_extend.py` | None on merge: no leg declares the rule. Guard: the 20 htf_pullback-unit routings read `rule_undeclared` instead of `no_tp_verdict`; 0 compliant, baseline unchanged. |
+| 2026-10-07 | PROP-FLOW-SEPARATION (lane, Tier-2) | **One prop ticket state machine per executor type** (§ "Prop ticket flow"; operator directive 2026-10-07 verbatim there). `src.prop.platform.ticket_flow()` classifies each prop account `rest` / `phone` / `browser` / `manual` from `config/prop_platforms.yaml` (browser accounts declare `ticket_flow`; a test fails on any undeclared prop account). An expired ticket with no logged fill is now terminal `expired` (or the REST executor's `skipped expired unplaced; …`) on every path and never blocks a re-ticket; `STALE_PROMPT_GRACE` is retired. Machine (`rest`/`phone`/`browser`) tickets get no Yes/No keyboard, no expiry or invalidation prompt, and `propexp:*` taps on them are refused. Manual tickets get one "recorded as NOT placed" notice with a single late-fill button. Every sweep write and tap is a compare-and-set (`prop_journal.transition_ticket_status`). The busy-symbol guard keeps blocking on a real open position, `placed` / `awaiting_report`, and now a phone `claimed` attempt. Builds on #16947 (REST expiry terminal). | `src/prop/{platform/__init__,prop_expiry_prompt,prop_invalidation_prompt,breakout_executor,breakout_notify,prop_journal,prop_reconcile}.py`, `tests/test_prop_flow_separation.py`, `tests/test_prop_{expiry_prompt,reticket_stale_prompt}.py`, this file | Merged ≠ deployed: needs a restart of the live trader (the sweep, the guard and the ticket keyboard run there) and of the prop bot for the callback change. Closes on observation: the next unplaced expiry on velotrade_1 or breakout_2 does not suppress the following signal. Revert: `git revert` the merge commit. |
+| 2026-10-09 | DAILY-DD-SWITCH | **Account-level daily-drawdown switch** — rule 7's one sanctioned automatic off (operator verbatim in `docs/CLAUDE-RULES-CANONICAL.md`). New `config/accounts.yaml::<acct>.risk.daily_dd_switch` (`armed` defaults `false` in code; every non-retired account carries an explicit block). Per-trade `RiskManager` refusal `DAILY_DD_SWITCH` on NEW entries only (reduce-only passes; never a `mode:` flip); one alert on trip, one on reset, one red flag after 3 unreadable checks. Folds in and retires the always-on DAILY_LOSS_CAP / INTRADAY_DRAWDOWN refusals, the daily-loss sizing clamp and `daily_cap_alert`. Surfaced on `/api/bot/config` `accounts[].daily_dd_switch`. | `src/units/accounts/{daily_dd_switch,risk,prop_risk}.py`, `src/core/coordinator.py`, `src/runtime/execution_diagnostics.py`, `src/web/api/routers/{bot_config,diag}.py`, `config/accounts.yaml`, docs, tests | Disarmed by default: no account refuses on a daily loss until PR 2 arms them; the old caps stop refusing as soon as PR 1 deploys. |
+| 2026-10-11 | ROADMAP-LOOP | Roadmap ↔ work-queue ↔ architecture loop written into the manager skill; roadmap made machine-checkable (`docs/roadmap/milestones.yaml`, `scripts/ops/roadmap_map.py`, `roadmap-map-guard`); this map gains § "Promotion ladder, mandates and the roadmap loop". | `docs/ARCHITECTURE-CANONICAL.md`, `ROADMAP.md`, `docs/roadmap/milestones.yaml`, `scripts/ops/roadmap_map.py`, `.claude/skills/manager/SKILL.md` | None on the order path; Tier-1 docs/tooling. |
+| 2026-10-12 | PAIRS-ALPACA-BUILD (lane, Tier-3 hold) | **The isolated pairs order path gains a SESSION venue (Alpaca) — GLD/GDX on `alpaca_paper`, Stage-1 soak.** Operator decision 2026-10-12 ("Build, paper soak"), evidence RQ-20261007-025 PASS. Same engine and `decide_pair`; `run_pairs_tick` routes a pair whose account is Alpaca through `src/units/strategies/pairs_venue.py`: decide only inside the last `decision_window_minutes` of RTH (venue clock `AlpacaClient.clock`) on the forming daily bar, because the harness fills at the close; `max_hold_bars` / `cooldown_bars` counted in TRADING bars off candle timestamps; whole shares; short legs refused before sending on account `shorting_enabled` or asset `shortable`/`easy_to_borrow` (`AlpacaClient.asset_short_status`); pair scaled to Reg-T buying power; a pair refused when a leg symbol carries a directional open row (per-symbol netting). New per-pair config keys: `account_id` (already read), `cooldown_bars`, `leg_tp` (`backstop` default · `spread_target` = each leg's TP is the price that closes the predicted reversion gap, revised every bar via `execute.modify_open_order` — TP doctrine), `decision_window_minutes`. Every NEW pair (any venue) now reads the account `daily_dd_switch` (it bypasses `RiskManager.evaluate`) — an intended behaviour change for the Bybit sleeve. Paper-only is enforced in code: `pairs_venue.pairs_account_refusal` refuses any pair whose account is not `account_class: paper` or is a Stage-2 mirror (`paper_role: portfolio`). Session-venue half-open cleanup sends closes only in RTH; the in-window decision bar is always today's session bar (forming bar, else appended from `AlpacaClient.latest_trade`, else no decision). | `src/units/strategies/pairs_venue.py`, `src/units/strategies/pairs_executor.py`, `src/units/strategies/pairs_engine.py`, `src/units/accounts/alpaca_client.py`, `config/pairs.yaml`, `tests/test_pairs_alpaca_venue.py`, `docs/reference/signal-catalog.yaml` | On merge + deploy: `pairs_gld_gdx` decides on `alpaca_paper` (PAPER money) once per session in the close window. Bybit pairs unchanged except the daily-DD read on new opens. Not deployed or observed as of this row. |
+| 2026-10-15 | TELEGRAM-RESTART-MSG (lane, Tier-2 hold) | **One trader-restart ping replaces two.** The S-021 flat per-strategy package list and the Sprint A-3 Bybit-only ghost alert become ONE SYSTEM-channel message (kind `restart`): line 1 a ✅/❌ headline with the problem count, line 2 the restart CAUSE, then per-venue `<blockquote expandable>` sections (shared `telegram_format.render_html_fitted`). Every `mode: live` account is reconciled broker ↔ journal (positions / tracked / SL+TP at broker MEASURED from the read-only order surfaces; ghosts, untracked and missing brackets named; an unreadable account is `— (could not read)`, never 0). The unmeasured claim "Bybit holds SL/TP at the broker for every open position" is removed. A clean deploy/manual restart sends a compact two-line form. **New inter-process contract:** `runtime_logs/trader_restart_intent.json`, written by `deploy_pull_restart.sh` (deploy, sha, from), `restart_bot.sh` (manual) and `check_heartbeat.py` (watchdog_autoheal), consumed by `src/runtime/restart_cause.py`, which combines it with systemd's journal record of the previous exit (crash / OOM / clean stop) and host uptime (VM reboot); unresolvable → `cause: unknown`. | `src/runtime/{boot_audit,restart_cause}.py`, `src/main.py`, `scripts/deploy_pull_restart.sh`, `scripts/ops/restart_bot.sh`, `scripts/check_heartbeat.py`, `tests/test_boot_audit.py` | Notify path only — no order path, mode or roster change. Boot waits at most 45 s for the report (daemon thread). landed_unproven until the first real restart ping is observed. |
+| 2026-10-15 | DATA-STORE-PARQUET-GC (lane, Tier-2 hold) | **Dataset artifact layout gains an optional derived `data.parquet` beside `data.jsonl`.** Builders with `parquet_sidecar = True` (today `market_features` only) write it after the JSONL; `ml/datasets/parquet_sidecar.py::load_dataset_rows` is the one reader (training runner, `oos_edge`, `live_parity`, `market_sequences`) and prefers the sidecar only while its recorded source-JSONL size matches, else reads JSONL. JSONL remains the source of truth; the sidecar is refused (not written) for ragged or mixed-type columns so a read-back row is type-exact. Parity MEASURED on the trainer (#18162): BTC 1h v003 (43,800 rows) and BTC 15m v513 (175,272 rows) PARITY, 391 MB JSONL -> 20 MB Parquet. `scripts/ops/trainer_dataset_gc.py` keep rules now include metadata-input closure, repo refs and nightly literal paths. | `ml/datasets/parquet_sidecar.py`, `ml/datasets/builder.py`, `ml/datasets/families/market_features.py`, `ml/experiments/runner.py`, `ml/promotion/oos_edge.py`, `ml/promotion/live_parity.py`, `ml/datasets/families/market_sequences.py`, `scripts/ops/trainer_dataset_gc.py` | Trainer only; no live-VM or order path. Not merged as of this row. |
+| 2026-10-15 | TRADER-RESTART-GATE (lane, Tier-2 hold; operator "Build it (Recommended)") | **A deploy restarts `ict-trader-live` only when the diff touches something the trader loads.** `scripts/deploy_pull_restart.sh` keeps its runtime/non-runtime rule for every unit; for the trader it then restarts iff a path changed since the TRADER's own deployed sha is (a) a `.py` in the static import closure of `src/main.py` (committed `config/trader_import_closure.txt` UNION a live recompute on the VM tree; AST walk incl. function-level, relative, literal `import_module` imports and any string literal naming a repo module or package prefix such as `f"src.units.strategies.{x}"`), (b) a non-`.py` runtime path, or (c) a `.py` outside `src/` and `scripts/`. A running trader is otherwise left up; a stopped/crashed one is still started. **New per-unit marker** `runtime_logs/deployed_sha_trader.txt` (a skipped trader keeps its older sha); `deployed_sha.txt` now means every other unit. The restart intent's `from` is the trader's own sha. `/api/diag/version` gains `trader_git_sha` (from `runtime_status.json::git_sha_running`), `restart_pending_by_unit` and `deployed_sha_by_unit`; the hourly SYSTEM report's "Trader running sha" now reads `git_sha_running` (it read the checkout before). Fail-safe to RESTART on every unsure path (no/unresolvable marker, unreadable/empty diff, missing/unparsable closure, tool error). Guard `trader-import-closure`. Replay (`trader_import_closure.py replay`, first-parent merges 2026-10-08T09:40Z..10-15T09:40Z, per-merge closure): 879 merges, 711 non-runtime, 168 runtime → 49 trader-skip / 119 restart. | `scripts/deploy_pull_restart.sh`, `scripts/ops/trader_import_closure.py`, `scripts/ci/{check_trader_import_closure,run_guards}.py`, `config/trader_import_closure.txt`, `src/web/api/routers/diag.py`, `src/runtime/{hourly_report,restart_cause}.py`, tests | Deploy path only — no order path, mode or roster change. landed_unproven until one skipped and one taken trader restart are observed in the ict-git-sync deploy log. |
+| 2026-10-15 | GH-CAPACITY-PR-CI-FANOUT (lane, Tier-2 hold, #18240) | **The required `pytest-run` check now means different things on PRs and on `main`.** On `pull_request` it runs only the import-graph-affected test files (`scripts/ci/pytest_run_scope.py` `classify_affected`), falling back to the full suite on conftest/requirements/`.github`/`scripts/ci`/guard scripts/config-named or every-test modules/fan-in >50%/selector error. On `main` the full suite still runs on push, and a new 30-min `schedule` backstop (`scripts/ci/pytest_run_backstop.py`) runs it on HEAD whenever HEAD's code has no completed full run. That closes a gap: token-merged commits start no run, and the next push's `before...sha` range starts at them. A red push/schedule run pages via `claude-run-failure-alert`. | `.github/workflows/{pytest-run,claude-run-failure-alert}.yml`, `scripts/ci/{pytest_run_scope,pytest_run_backstop,check_cadence_liveness}.py`, `docs/github-actions-workflows.md`, `tests/test_pytest_run_{affected,backstop,scope}.py` | CI only; no live-VM effect. Context names unchanged. Post-merge detection bound ~30 min + suite time + queueing. Diff-scoped guards keep the token-merge gap (pipeline PI-20261015-N6RCMVTJ-0001). |
+| 2026-10-15 | SOAK-REDEFINE (lane, governance + guard, landing hold) | **The Stage-1 soak is a MECHANICAL verification passed on 1–2 clean trades — no sample size, no calendar** (operator, verbatim: "A soak is a mechanical verification that was already proven in backtesting, and nothing needs to soak for more than one or two trades"). `SOAKS.json` contracts now carry a mechanical `checklist` and `n_needed` ≤ 2; `soak-contract-guard` refuses `n_needed` > 2 and `end_date` / `duration_days` / `expected_per_week` / `power`. `soak_state.py` grades each closed trade (signal → package, size/side, at-entry SL+TP real and resting — `exit_plan` stop/final, venue ids stamped on Bybit, no `naked_rearm` repair — management, a clean exit reason with a price, pnl + fee recorded), each shadow package (complete, sized, recorded dry) and each live prop signal (`grade_prop_signal`), and computes `passed` / `mechanical_fail` / `in_progress` / `awaiting_first_trade` / `unknown`. All 50 contracts migrated; PASS dispositions cite their trades and `comms/research/soak_mechanics/2026-10-15.json`. Readers moved to the new states: the brief, the work report, the attention watch, the mandate soak snapshot, `MD-S1-CUT-ON-STAGE0-FAIL` `bar.soak_states` (re-mapped `[ready, overdue]` → `[passed, mechanical_fail]`), `prop-roster-gate-guard` (`prop_live` source = n_needed ≤ 2 + checklist). R3 / R5 / live-vs-backtest become ongoing monitoring. `MD-PROMOTE-S1-S2`'s per-leg R3 `consistent` clause is unchanged; its amendment is PROPOSED (`MD-PROMOTE-S1-S2-SOAK-AMEND`). | `scripts/ops/soak_state.py`, `scripts/ops/soak_mechanics_record.py` (NEW), `scripts/ci/check_soak_contracts.py`, `scripts/ci/check_prop_roster_gate.py`, `scripts/ops/{render_daily_brief,work_report,attention_watch,snapshot_soak_state_for_mandate,mandate_resolver,soak_book_grade}.py`, `config/mandates.yaml`, `docs/claude/work/SOAKS.json`, `comms/research/soak_mechanics/2026-10-15.json`, `docs/plans/OPERATING-PLAN-2026-09-21.md`, `CLAUDE.md`, this file | No order-path change. On merge + deploy the brief / work report / Telegram watch show the mechanical states (computed live on the VM). Not deployed or observed as of this row. |
+| 2026-10-16 | PROMOTION-BAR-HOLDOUT-1016 (lane, Tier-3 hold) | **Promotion needs a pass on a held-back span** (operator, verbatim on checklist row PROMOTION-BAR-MULTIPLICITY: "From now on, promotion needs a pass on the held-back 25% you just approved. That's one setting tested once, so no deflation is needed. Live legs are not demoted on this number (live net-of-cost results still govern demotion), but all 8 real-money legs get holdout re-runs first."). `MD-PROMOTE-S0-S1` / `MD-PROMOTE-S1-S2` bars gain `holdout_required` / `holdout_min_n: 25`; resolver clause `R-HOLDOUT`: no valid `holdout_confirmation` or too few held-back trades → `NEEDS_DATA` naming the holdout unit, a valid confirmation that failed → `REFUSE`. The ablation harness gains `--grade holdout` (boundary from entry times only; selection on discovery trades only, guarded; the selected arm read once). Holdout re-runs `RQ-20261016-077e-01..08` for the 8 real-money legs. `MD-DEMOTE-S2-S1` unchanged. | `config/mandates.yaml`, `scripts/ops/mandate_resolver.py`, `scripts/research/exit_lever_ablation.py`, `research/queue/RQ-20261016-077e-0{1..8}.yaml`, `docs/plans/OPERATING-PLAN-2026-09-21.md`, this file | No order-path or roster change. Merged ≠ observed: the clause bites on the next promotion the resolver evaluates. |
+| 2026-10-16 | PAIRS-ALPACA-BUILD-1016 (lane, Tier-3-by-path hold) | **The pairs session venue (Alpaca) refuses to size on an inflated R unit.** `pairs_engine.entry_signal` sizes and stops on `risk = stop_z · std` of the log-spread; with `hedge_beta: rolling` that std is taken over a series whose β moves every bar, so β drift × the log-price level inflates it and every leg is undersized by the same factor (checklist PAIRS-R-SCALE: ~775x measured in the harness; ~87x on the planted SOL/ETH-like fixture). New `pairs_engine.fixed_beta_risk` = `stop_z ×` std of `logA − β_entry·logB` over the same shift-1 window, β frozen at entry; `entry_signal` reports `risk_fixed_beta` and `risk_scale_ratio`, and every open/skip_size soak row on every venue carries both. `decide_pair(require_fixed_beta_risk=True)` (passed by `run_pairs_tick` for session venues only) returns `skip_risk_scale` and sizes nothing when the ratio is off 1 by more than `RISK_SCALE_TOLERANCE` (1%). `hedge_beta: one` passes by construction. Not a gate: a per-decision refusal on a measured quantity, like `skip_size`. The Bybit sleeve is unchanged (operator 2026-10-16: its paper legs keep running while PAIRS-R-SCALE is fixed); the full fix (freeze β at entry, read stop/revert on the fixed-β spread) lands with the harness fix. | `src/units/strategies/pairs_engine.py`, `src/units/strategies/pairs_executor.py`, `tests/test_pairs_risk_scale.py` | On merge + deploy: `pairs_gld_gdx` soak rows carry `risk_scale_ratio` 1.0; Bybit rows carry the measured inflation. Not deployed or observed as of this row. |
+| 2026-10-16 | PAIRS-R-SCALE-FIX-1016 (lane, Tier-3-by-path hold) | **The pairs engine and harness freeze β at entry (PAIRS-R-SCALE fix).** With `hedge_beta: rolling` the rolling-β z only triggers the entry; the R unit (`stop_z ×` fixed-β std over the shift-1 window, = `fixed_beta_risk`), the stop, the reversion z, the timeout exit spread and the spread-target TP are all read on `logA − β_entry·logB`. `OpenPair.beta_entry` carries β_entry; `_place_pair` stamps it in `order_packages.meta`, `_open_pair_from_meta` and the leg-row rebuild restore it, `_revise_leg_tps` uses it. A package stamped before this change has no `beta_entry` and exits on the legacy rolling-β basis its stop was computed on. The harness uses the same `pairs_engine.fixed_beta_window`/`fixed_beta_bar`, so live = harness (paired replay test). Sizing on every venue moves from the inflated rolling-β R unit to the fixed-β one, so Bybit leg notionals grow by the inflation factor (`risk_rolling_beta / risk` on the soak row); `risk_scale_ratio` reads 1. `hedge_beta: one` is unchanged. Harness re-run (Binance Vision 1h 2026-04-19..10-15, configured params, full cost stack): all four Bybit pairs go from +0.14..+0.38 to −0.11..−0.53 net R per trade; cost per trade 0.0006–0.0014 R → 0.44–0.66 R. Research evidence, not a promotion case. | `src/units/strategies/pairs_engine.py`, `src/units/strategies/pairs_executor.py`, `scripts/backtest_pairs.py`, `tests/test_pairs_risk_scale.py`, `tests/test_pairs_engine.py` | On merge + deploy: the first Bybit pair `open`/`skip_size` soak row with `risk_scale_ratio` ≈ 1 and a `beta_entry` field. Not deployed or observed as of this row. |
+| 2026-10-18 | DECISION-BAR-CLOSED-1018 (lane, Tier-2 hold) | **The pullback variant builder honours `decision_bar: closed|forming`** (default forming, byte-identical). Until now only `_trend_donchian_variant_builder` read the key, so a `decision_bar: closed` line on `xrp_pullback_2h` / `ada_pullback_2h` would have been a silent no-op. `_htf_pullback_variant_builder` now runs the same closed-bar path: `_closed_window_skip` (no fetch outside the window), cache-bypassed fetch, `_decision_frame` (forming row dropped), `_record_closed_decision` into the on-disk ledger once the decision completed, and the caught-up price check. Evidence for flipping any pullback leg is the holdout unit RQ-20261018-2a10-01 (separate Tier-3 PRs); this PR flips nothing. | `src/runtime/strategy_signal_builders.py`, `tests/test_pullback_decision_bar.py` | None until a pullback leg declares `decision_bar: closed` (Tier-3, operator approval). Not deployed or observed as of this row. |
+
+| 2026-10-15 | NETTED-SLICES (lane, Tier-2 hold) | **Per-strategy slices on one (account, symbol), replacing pick-one on `position_model: slices` accounts** (§ Step 3). Built by EXTENDING existing modules: `positions.py` Option A → per-slice ledger + `admit_slice` (per-trade refusals, delta basis = own slice); `allocator_ev.intent_allocation_score` = the existing `conviction` blend + c_bt + c_live (weights `config/slice_allocation.yaml`). `accounts_in_more_than_one_round` now allows an account in several rounds only when every one allocates it a share, never twice for one strategy. Brackets: existing qty-scoped Partial TP/SL with per-slice leg ids. Opposite slices are admitted only on hedge books. | `src/runtime/positions.py`, `src/runtime/allocator_ev.py`, `src/runtime/arbitration_fanout.py`, `src/runtime/intent_multiplexer.py`, `src/core/coordinator.py`, `src/units/accounts/__init__.py`, `config/accounts.yaml` (bybit_1), `config/slice_allocation.yaml` | `tests/test_slice_*.py`; mirror test `test_mirror_carries_the_same_position_model_as_live`. Live: 1–2 clean multi-slice trades on bybit_1 before bybit_2 + bybit_portfolio. |
+| 2026-10-25 | BRACKET-ADVISOR-SHADOW (lane, Tier-2 hold) | Four observe-only columns on `position_path_history`: `advisor_sl_r` / `advisor_tp_r` (the stop / target a confirmed-but-undeclared rule lever WOULD set on that bar, in R from entry, beside the live `sl_r`/`tp_r`), `advisor_source` (`<lever>@<evidence version>;advisor_v<n>`) and `advisor_state` (`computed` · `declared` · `no_lever` · `unmodelled` · `insufficient_data` · `over_budget` · `registry_unreadable` · `error`, never collapsed; all four NULL = the advisor did not run). Computed on the same monitor pass by `src/runtime/bracket_advisor.py`, which replays `scripts/backtest_trend.py`'s chandelier over the CLOSED bars after the entry bar with `trail_levers.effective_trail_mult` + `momentum_levers.live_adx` (SL side) and calls `tp_revision.plan_tp_revision` (TP side). The leg→lever mapping is a structured `advisor` spec on a `passed_unshipped` cell of `docs/research/exit-refinement-coverage.json` (today: `trend_donchian_eth_4h` RQ-20261016-005/M1, `trend_donchian_xrp_4h` RQ-20261016-015/M2, both ADX trail). No exit or order path reads the columns (pinned by `tests/test_bracket_advisor.py`); never raises; one computation per (package, closed bar). Read path unchanged: `GET /api/diag/position_path_history`. Phase 1 (model outputs) not built. | `src/runtime/bracket_advisor.py`, `src/runtime/position_path_history.py`, `src/runtime/position_telemetry.py`, `src/units/db/database.py` (DDL + `_migrate_add_path_history_advisor`), `src/web/api/routers/diag.py` (docstring), `docs/research/exit-refinement-coverage.json` (two `advisor` specs) | None to trading — recording only. Operator OK 2026-10-25 ("Build it (Recommended)"). Needs a trader restart to take effect. |
 
 ## Known gaps
 
@@ -991,7 +1503,7 @@ milestone.
 
 | Gap | Why deferred | Tracking |
 |---|---|---|
-| **Orphaned mode-override dead code in `src/`** — **RESOLVED (verified 2026-07-09, full-system audit S-AUDIT-E).** The Prime-Directive-violating vectors are gone (breaker auto-flip removed → the rejection path is alert-only; Telegram `/accounts dry\|live` removed in #1933), AND the shim code itself is now **deleted**: `_DRY_RUN_OVERRIDES` + `set_account_dry_run()` (+ the `Coordinator` wrapper) survive only as a removal docstring in `src/units/accounts/__init__.py`, with a regression test asserting their absence (`tests/test_exchange_rejection_circuit_breaker.py` — `assert not hasattr(...)`). The earlier "deletion never landed" note was itself stale. **The `account_state.yaml` dry-only override read (`src/runtime/orders.py::account_state_dry_run`, consumed in `coordinator.py`) is NOT dead code** — it is a live, intentional, Prime-Directive-compliant belt-and-suspenders gate that can only *increase* dryness (never forces a dry account live), fail-open on a missing file. It stays. | Closed — no action (the "two execution gates" wording should acknowledge `account_state.yaml` as a dry-only override; tracked in the audit findings doc as E1-F3). |
+| **Orphaned mode-override dead code in `src/`** — **RESOLVED (verified 2026-07-09, full-system audit S-AUDIT-E).** The Prime-Directive-violating vectors are gone (breaker auto-flip removed → the rejection path is alert-only; Telegram `/accounts dry\|live` removed in #1933), AND the shim code itself is now **deleted**: `_DRY_RUN_OVERRIDES` + `set_account_dry_run()` (+ the `Coordinator` wrapper) survive only as a removal docstring in `src/units/accounts/__init__.py`, with a regression test asserting their absence (`tests/test_exchange_rejection_circuit_breaker.py` — `assert not hasattr(...)`). The earlier "deletion never landed" note was itself stale. **The `account_state.yaml` dry-only override read (`src/runtime/orders.py::account_state_dry_run`, consumed in `coordinator.py`) was kept here in 2026-07 as an intentional dry-only gate. It was RETIRED on 2026-09-29 by operator decision JC-CA-06** ("Retire it"): the fold, its reader, the file and the `/api/bot/config` field are removed, and the two execution gates are the only ones. | Closed — no action (the "two execution gates" wording should acknowledge `account_state.yaml` as a dry-only override; tracked in the audit findings doc as E1-F3). |
 | **Per-trade RiskManager rejection → per-trade Telegram** | The Prime Directive (§ rules doc) requires every refusal to emit its own Telegram with account/symbol/side/qty/reason/exchange-error. Today's path uses aggregate alerts when conditions cluster. The per-trade wiring ships in the safeguards PR. | Safeguards PR. |
 | ~~**WS5 baselines not yet at `shadow` in any registry**~~ | **Resolved.** The trainer VM is provisioned and the M14 program has been running training cycles for weeks; baseline + regime heads sit at `shadow` and log predictions live (`runtime_logs/shadow_predictions.jsonl`, surfaced on `/api/bot/shadow/*` + `/api/bot/trades/scores`). | Closed (M14 in progress). |
 | **`shadow_model_ids` empty in production strategy YAML** | ~~Operator step~~. **Resolved 2026-05-19 by the default-flip + auto-wire.** Strategies that omit `shadow_model_ids` (or set it to `None`) auto-discover every model at `target_deployment_stage: shadow` and attach them as shadow predictors. The boundary between trainer-VM Claude and live trading moves from `shadow_model_ids` wiring to the `shadow → advisory` promotion gate; the latter still requires operator approval. | Closed. |

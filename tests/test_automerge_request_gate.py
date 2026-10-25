@@ -32,6 +32,16 @@ THE TWO CONTROLS ARE BOTH REQUIRED AND NEITHER IS SUFFICIENT. A test showing the
 gate refuses a merge-of-main proves nothing on its own — a gate that refuses
 everything passes it. The positive control (a genuine request still arms) is
 what separates "fixed" from "broken".
+
+⚠️ E63 (2026-09-24): the request gate now asks the API for the push's actual
+MERGE-BASE with `main` (`repos.compareCommits`) rather than diffing straight
+against `main`'s tip — PR #12858 was armed anyway because a reused lane
+branch's stale, untouched request file drifted out of sync with `main` (moved
+by a SIBLING PR from the same branch) and that drift read as a fresh ask. The
+mock's `compareCommits` defaults to returning `main` itself as the merge-base,
+so every fixture below — which keys its blobs by the literal `'main'` — keeps
+meaning exactly what it always meant; `test_negative_control_stale_request_on_a_reused_branch_does_not_arm`
+is the one that exercises a real divergence.
 """
 from __future__ import annotations
 
@@ -73,7 +83,10 @@ HEALTHY_CHECKS = [{"name": "guards"}, {"name": "open-and-automerge"}]
 def run_gate(*, branch: str, head_sha: str, blobs: dict, existing_pr=None,
              get_content_raises: bool = False, check_runs=None,
              pat: str = "", pat_create_fails: bool = False,
-             checks_raise: bool = False, cwd=None) -> dict:
+             checks_raise: bool = False, cwd=None,
+             merge_base_sha: str = "main",
+             compare_commits_raises: bool = False,
+             current_head=None, pulls_get_raises: bool = False) -> dict:
     """Evaluate the real script against a mocked API; return every call it made.
 
     `blobs` maps (ref, path) -> blob sha, modelling the two `getContent` reads.
@@ -85,10 +98,12 @@ def run_gate(*, branch: str, head_sha: str, blobs: dict, existing_pr=None,
 
     `pat` / `pat_create_fails` model `BRANCH_PROTECTION_TOKEN` in its three
     states: absent, present-and-working, and present-but-REFUSED (the PR-create
-    scope nobody has been able to verify). `@actions/github` is not installed
-    here — it ships inside `actions/github-script` — so `require` is shimmed to
-    hand back a stub client rather than being left to throw, which would make
-    every PAT path untestable instead of merely unexercised.
+    scope nobody has been able to verify). The PAT-authenticated PR-open call is
+    a single `fetch` (2026-09-27 — it no longer goes through
+    `require('@actions/github')`, which is not resolvable inside a
+    `github-script@v7` user script; see `test_automerge_pat_client_fallback.py`
+    for the incident that measured that), so `globalThis.fetch` is stubbed
+    rather than `require`.
 
     `checks_raise` models the check read FAILING, which is a third thing from
     an empty list and from a malformed payload. `cwd` runs the step from a
@@ -103,23 +118,31 @@ def run_gate(*, branch: str, head_sha: str, blobs: dict, existing_pr=None,
     const CHECKS_RAISE = %(checks_raise)s;
     const CHECK_RUNS = %(check_runs)s;
     const PAT_CREATE_FAILS = %(pat_fails)s;
+    // E63: the request gate now asks the API for the push's actual
+    // MERGE-BASE with `main`, rather than diffing against `main`'s tip
+    // directly — a reused lane branch's stale, untouched request file could
+    // otherwise drift out of sync with `main` (moved by a SIBLING PR from
+    // the same branch) and read as a fresh ask. Defaults to 'main' itself,
+    // so every existing fixture below — which keys its blobs by literal
+    // 'main' — keeps meaning exactly what it always meant; a test that wants
+    // to model a real merge-base divergence passes a different ref.
+    const MERGE_BASE_SHA = %(merge_base_sha)s;
+    const COMPARE_RAISES = %(compare_raises)s;
 
-    // `@actions/github` is bundled into actions/github-script and is NOT
-    // installed here, so a bare require would throw and no PAT path could ever
-    // be exercised. The shim is passed in as the script's own `require`.
-    const realRequire = require;
-    const patClient = { rest: { pulls: { create: async () => {
-      CALLS.push({ call: 'pat.pulls.create' });
+    // The PAT-authenticated PR-open call is a single `fetch` POST to
+    // `.../pulls` (2026-09-27) — no Octokit client, so no `require` shim is
+    // needed; the script's ambient `require` stays the real Node one, which
+    // `fs`/`child_process` (used by the arming gate, unrelated to the PAT)
+    // still need untouched.
+    globalThis.fetch = async (url, opts) => {
+      CALLS.push({ call: 'pat.pulls.create', url });
       if (PAT_CREATE_FAILS) {
-        const e = new Error('Resource not accessible by personal access token');
-        e.status = 403; throw e;
+        return { ok: false, status: 403,
+                 json: async () => ({ message: 'Resource not accessible by personal access token' }) };
       }
-      return { data: { number: 777, node_id: 'N', draft: false,
-                       head: { sha: '%(sha)s' } } };
-    } } } };
-    const requireShim = (m) => m === '@actions/github'
-      ? { getOctokit: () => { CALLS.push({ call: 'getOctokit' }); return patClient; } }
-      : realRequire(m);
+      return { ok: true, json: async () => ({ number: 777, node_id: 'N', draft: false,
+                                              head: { sha: '%(sha)s' } }) };
+    };
 
     const context = {
       ref: 'refs/heads/%(branch)s',
@@ -145,13 +168,20 @@ def run_gate(*, branch: str, head_sha: str, blobs: dict, existing_pr=None,
         return {};
       },
       rest: {
-        repos: { getContent: async ({ path, ref }) => {
-          CALLS.push({ call: 'getContent', path, ref });
-          if (RAISES) { const e = new Error('boom'); e.status = 500; throw e; }
-          const sha = BLOBS[ref + '|' + path];
-          if (!sha) { const e = new Error('Not Found'); e.status = 404; throw e; }
-          return { data: { sha } };
-        } },
+        repos: {
+          getContent: async ({ path, ref }) => {
+            CALLS.push({ call: 'getContent', path, ref });
+            if (RAISES) { const e = new Error('boom'); e.status = 500; throw e; }
+            const sha = BLOBS[ref + '|' + path];
+            if (!sha) { const e = new Error('Not Found'); e.status = 404; throw e; }
+            return { data: { sha } };
+          },
+          compareCommits: async ({ base, head }) => {
+            CALLS.push({ call: 'compareCommits', base, head });
+            if (COMPARE_RAISES) { const e = new Error('compare failed'); e.status = 500; throw e; }
+            return { data: { merge_base_commit: { sha: MERGE_BASE_SHA } } };
+          },
+        },
         pulls: {
           list: async () => { CALLS.push({ call: 'pulls.list' });
                               return { data: EXISTING ? [EXISTING] : [] }; },
@@ -159,6 +189,9 @@ def run_gate(*, branch: str, head_sha: str, blobs: dict, existing_pr=None,
                                 return { data: { number: 999, node_id: 'N', draft: false,
                                                  head: { sha: '%(sha)s' } } }; },
           merge: async () => { CALLS.push({ call: 'pulls.merge' }); return {}; },
+          get: async () => { CALLS.push({ call: 'pulls.get' });
+                             if (%(get_raises)s) { const e = new Error('get failed'); e.status = 500; throw e; }
+                             return { data: { state: 'open', head: { sha: '%(cur_head)s' } } }; },
         },
         checks: { listForRef: async () => { CALLS.push({ call: 'checks' });
                                             if (CHECKS_RAISE) { const e = new Error('checks read failed'); e.status = 500; throw e; }
@@ -167,9 +200,19 @@ def run_gate(*, branch: str, head_sha: str, blobs: dict, existing_pr=None,
     };
 
     (async () => {
-      try { await (async (require) => {
+      // The inner IIFE boundary is load-bearing, not decorative: the
+      // production script `return`s early in most of its branches (the
+      // request-gate refusal, the draft refusal, "not arming", the arm
+      // success path, ...). Inlining the script directly into THIS try block
+      // would make every one of those returns exit the harness itself,
+      // skipping the console.log below and reporting an empty result for
+      // every non-error path — which is silent, not a pass. The catch here
+      // is for the genuinely-uncaught-exception case only.
+      try {
+        await (async () => {
 %(script)s
-      })(requireShim); } catch (e) { CALLS.push({ call: 'threw', m: String(e.message) }); }
+        })();
+      } catch (e) { CALLS.push({ call: 'threw', m: String(e.message) }); }
       console.log('___RESULT___' + JSON.stringify(CALLS));
     })();
     """ % {
@@ -179,8 +222,12 @@ def run_gate(*, branch: str, head_sha: str, blobs: dict, existing_pr=None,
         "checks_raise": "true" if checks_raise else "false",
         "check_runs": json.dumps(HEALTHY_CHECKS if check_runs is None else check_runs),
         "pat_fails": "true" if pat_create_fails else "false",
+        "merge_base_sha": json.dumps(merge_base_sha),
+        "compare_raises": "true" if compare_commits_raises else "false",
         "branch": branch,
         "sha": head_sha,
+        "cur_head": current_head or head_sha,
+        "get_raises": "true" if pulls_get_raises else "false",
         "script": textwrap.indent(_script(), " " * 8),
     }
     # The script writes the gate's input file and shells out to
@@ -189,6 +236,7 @@ def run_gate(*, branch: str, head_sha: str, blobs: dict, existing_pr=None,
     with tempfile.TemporaryDirectory() as tmp:
         env = {**os.environ,
                "ARMING_INPUT": str(Path(tmp) / "automerge-arming.json"),
+               "LANDING_GATE_INPUT": str(Path(tmp) / "automerge-landing.json"),
                "PR_OPEN_PAT": pat}
         out = subprocess.run(["node", "-e", textwrap.dedent(harness)],
                              capture_output=True, text=True, timeout=60,
@@ -229,6 +277,44 @@ def test_negative_control_merge_of_main_does_not_arm():
     assert any("NO REQUEST" in c.get("m", "") for c in res["calls"])
 
 
+def test_negative_control_stale_request_on_a_reused_branch_does_not_arm():
+    """E63 / PR #12858's actual mechanism, reproduced through the shipped
+    script rather than argued about it.
+
+    `claude/tender-mayer-2g1vtq` is a reused manager lane branch: PR #12838
+    merged from it, adding the request file with content "for PR #12838". A
+    LATER, sibling PR (#12854) from the SAME branch then rewrote `main`'s
+    copy of that file to different content ("...decisions batch") — but the
+    push that became #12858 never touched the file itself; its own commit
+    still carried the stale "for PR #12838" text, unchanged since it
+    diverged from `main` at the merge-base. Comparing against `main`'s
+    EVER-MOVING TIP (the pre-E63 behaviour) would see "for PR #12838" !=
+    "...decisions batch" and read that drift as a fresh ask — a false
+    positive nobody made. Comparing against the actual merge-base (which
+    still carries "for PR #12838" too, since the branch's own history is
+    what is unchanged) correctly reads it as inherited, not asked.
+    """
+    res = run_gate(
+        branch="claude/tender-mayer-2g1vtq", head_sha="a" * 40,
+        merge_base_sha="9" * 40,
+        blobs={
+            # `main`'s CURRENT tip: rewritten by the sibling PR (#12854).
+            f"main|{REQ}/tender-mayer-2g1vtq.txt": "decisions-batch-blob",
+            # the push's own merge-base with `main`: still the OLD content —
+            # this branch's own history never touched the file after this.
+            f"{'9'*40}|{REQ}/tender-mayer-2g1vtq.txt": "stale-12838-blob",
+            # the pushed head: BYTE-IDENTICAL to the merge-base, not to `main`.
+            f"{'a'*40}|{REQ}/tender-mayer-2g1vtq.txt": "stale-12838-blob",
+        },
+    )
+    kinds = _kinds(res)
+    assert "compareCommits" in kinds, "must ask for the merge-base rather than assume `main`"
+    assert not (ACTING & set(kinds)), \
+        f"armed on a file merely inherited from an earlier PR on the same branch: {kinds}"
+    assert any("byte-identical to its copy at the merge-base" in c.get("m", "")
+               for c in res["calls"])
+
+
 def test_negative_control_inherited_identical_file_does_not_arm():
     """The subtler half: a branch whose slug-named file exists only because it
     came from `main` unchanged. Presence alone is not an ask."""
@@ -238,7 +324,8 @@ def test_negative_control_inherited_identical_file_does_not_arm():
                f"{'b'*40}|{REQ}/some-branch.txt": "same"},
     )
     assert not (ACTING & set(_kinds(res)))
-    assert any("byte-identical to main" in c.get("m", "") for c in res["calls"])
+    assert any("byte-identical to its copy at the merge-base" in c.get("m", "")
+               for c in res["calls"])
 
 
 # --------------------------------------------------------------------------
@@ -366,7 +453,6 @@ def test_a_pat_is_used_to_open_the_pr_when_one_is_present():
         pat="ghp_fake",
     )
     kinds = _kinds(res)
-    assert "getOctokit" in kinds, f"a present PAT must be used: {kinds}"
     assert "pat.pulls.create" in kinds, f"the PR must be opened UNDER the PAT: {kinds}"
     assert "pulls.create" not in kinds, "it must not also open one under GITHUB_TOKEN"
 
@@ -380,7 +466,7 @@ def test_a_missing_pat_still_opens_the_pr_and_says_so_loudly():
         pat="", check_runs=[{"name": "open-and-automerge"}],
     )
     kinds = _kinds(res)
-    assert "getOctokit" not in kinds
+    assert "pat.pulls.create" not in kinds, "no fetch should be tried with no PAT"
     assert "pulls.create" in kinds, f"a missing PAT must still open the PR: {kinds}"
     assert any(c["call"] == "warning" and "BRANCH_PROTECTION_TOKEN is NOT set" in c["m"]
                for c in res["calls"]), "the fallback must announce itself"
@@ -458,3 +544,47 @@ def test_a_failed_read_is_not_treated_as_absence():
     kinds = _kinds(res)
     assert "threw" in kinds, "a 500 must propagate and fail the run, not read as 'no request'"
     assert not (ACTING & set(kinds))
+
+
+# --------------------------------------------------------------------------
+# STALE-RUN GUARD (PI-20261008-APBY4NTV-0003) -- #17038 run 37710372952 sat
+# queued while a newer `hold` push landed, then armed NATIVE auto-merge from
+# its old head. #17124 only guarded the poll-merge path.
+# --------------------------------------------------------------------------
+
+def test_stale_run_does_not_arm_when_pr_head_has_moved():
+    res = run_gate(
+        branch="claude/some-branch", head_sha="d" * 40, current_head="e" * 40,
+        blobs={f"main|{REQ}/some-branch.txt": "old",
+               f"{'d'*40}|{REQ}/some-branch.txt": "new"},
+        existing_pr={"number": 42, "node_id": "N", "draft": False,
+                     "head": {"sha": "e" * 40}},
+    )
+    kinds = _kinds(res)
+    assert "pulls.get" in kinds
+    assert not (set(kinds) & ACTING), f"a stale run must act on nothing: {kinds}"
+
+
+def test_16984_shape_queued_self_head_now_hold_without_request_does_not_arm():
+    """#16984 run 37671365711: queued on 6efa01a3 (landing self + request), head became ef82483b
+    (landing hold, request file gone). The queued-vs-current pair is logged and nothing arms."""
+    res = run_gate(
+        branch="claude/some-branch", head_sha="6" * 40, current_head="e" * 40,
+        blobs={f"main|{REQ}/some-branch.txt": "old",
+               f"{'6'*40}|{REQ}/some-branch.txt": "new"},   # no blob at the current head
+        existing_pr={"number": 16984, "node_id": "N", "draft": False,
+                     "head": {"sha": "e" * 40}},
+    )
+    assert not (set(_kinds(res)) & ACTING)
+    assert "head check: queued=66666666 current=eeeeeeee" in json.dumps(res, default=str)
+
+
+def test_unreadable_current_head_does_not_arm():
+    res = run_gate(
+        branch="claude/some-branch", head_sha="d" * 40, pulls_get_raises=True,
+        blobs={f"main|{REQ}/some-branch.txt": "old",
+               f"{'d'*40}|{REQ}/some-branch.txt": "new"},
+        existing_pr={"number": 42, "node_id": "N", "draft": False,
+                     "head": {"sha": "d" * 40}},
+    )
+    assert "enableAutoMerge" not in _kinds(res)

@@ -1,0 +1,184 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "faithful (trail_decay simulated) vs approximate re-run of each record's own harness over its own window: ief_pullback_1d, slv_pullback_1d, iaum_pullback_1d",
+  "n": 27,
+  "note": "ief_pullback_1d=pass; slv_pullback_1d=pass; iaum_pullback_1d=pass",
+  "records": [
+    {
+      "leg": "ief_pullback_1d",
+      "rule_id": "RULE-RQ1011-001-FAITHFUL-STAGE0",
+      "record_fidelity": "approximate",
+      "record_omitted_levers": [
+        "trail_decay_stall_bars",
+        "trail_decay_tight_mult"
+      ],
+      "record_n": 3,
+      "record_net_r_oos": 4.3238,
+      "window": [
+        "2025-04-22 00:00:00+00:00",
+        "2026-10-02 00:00:00+00:00"
+      ],
+      "bars": 365,
+      "arms": {
+        "approximate": {
+          "n": 3,
+          "net_r": 4.3125,
+          "net_r_fee_only": 4.4396,
+          "cost_stack": {
+            "fees": 0.0,
+            "slippage": 5.0,
+            "funding": 0.0
+          },
+          "still_omitted": [
+            "trail_decay_stall_bars",
+            "trail_decay_tight_mult"
+          ],
+          "by_outcome": {
+            "trail_stop": 1,
+            "stop": 1,
+            "timeout": 1
+          }
+        },
+        "faithful": {
+          "n": 8,
+          "net_r": 2.3254,
+          "net_r_fee_only": 2.7383,
+          "cost_stack": {
+            "fees": 0.0,
+            "slippage": 5.0,
+            "funding": 0.0
+          },
+          "still_omitted": [],
+          "by_outcome": {
+            "trail_stop": 4,
+            "stop": 3,
+            "timeout": 1
+          }
+        }
+      },
+      "control_reproduces_record": true,
+      "delta_r": -1.9871,
+      "verdict": "pass",
+      "read_state": "measured",
+      "note": "faithful net_r_oos=2.3254 over n=8 (approximate 4.3125 over n=3; delta -1.9871R); cost_stack {'fees': 0.0, 'slippage': 5.0, 'funding': 0.0}; RULE-D1 net_r_oos > 0 -> PASS"
+    },
+    {
+      "leg": "slv_pullback_1d",
+      "rule_id": "RULE-RQ1011-001-FAITHFUL-STAGE0",
+      "record_fidelity": "approximate",
+      "record_omitted_levers": [
+        "trail_decay_stall_bars",
+        "trail_decay_tight_mult"
+      ],
+      "record_n": 11,
+      "record_net_r_oos": 2.4842,
+      "window": [
+        "2025-04-10 00:00:00+00:00",
+        "2026-09-23 00:00:00+00:00"
+      ],
+      "bars": 365,
+      "arms": {
+        "approximate": {
+          "n": 11,
+          "net_r": 2.4841,
+          "net_r_fee_only": 2.5756,
+          "cost_stack": {
+            "fees": 0.0,
+            "slippage": 5.0,
+            "funding": 0.0
+          },
+          "still_omitted": [
+            "trail_decay_stall_bars",
+            "trail_decay_tight_mult"
+          ],
+          "by_outcome": {
+            "stop": 5,
+            "take_profit": 5,
+            "timeout": 1
+          }
+        },
+        "faithful": {
+          "n": 11,
+          "net_r": 2.4841,
+          "net_r_fee_only": 2.5756,
+          "cost_stack": {
+            "fees": 0.0,
+            "slippage": 5.0,
+            "funding": 0.0
+          },
+          "still_omitted": [],
+          "by_outcome": {
+            "stop": 5,
+            "take_profit": 5,
+            "timeout": 1
+          }
+        }
+      },
+      "control_reproduces_record": true,
+      "delta_r": 0.0,
+      "verdict": "pass",
+      "read_state": "measured",
+      "note": "faithful net_r_oos=2.4841 over n=11 (approximate 2.4841 over n=11; delta +0.0R); cost_stack {'fees': 0.0, 'slippage': 5.0, 'funding': 0.0}; RULE-D1 net_r_oos > 0 -> PASS"
+    },
+    {
+      "leg": "iaum_pullback_1d",
+      "rule_id": "RULE-RQ1011-001-FAITHFUL-STAGE0",
+      "record_fidelity": "approximate",
+      "record_omitted_levers": [
+        "trail_decay_stall_bars",
+        "trail_decay_tight_mult"
+      ],
+      "record_n": 7,
+      "record_net_r_oos": 7.6621,
+      "window": [
+        "2025-04-10 00:00:00+00:00",
+        "2026-09-23 00:00:00+00:00"
+      ],
+      "bars": 365,
+      "arms": {
+        "approximate": {
+          "n": 7,
+          "net_r": 7.6621,
+          "net_r_fee_only": 7.7486,
+          "cost_stack": {
+            "fees": 0.0,
+            "slippage": 5.0,
+            "funding": 0.0
+          },
+          "still_omitted": [
+            "trail_decay_stall_bars",
+            "trail_decay_tight_mult"
+          ],
+          "by_outcome": {
+            "take_profit": 4,
+            "trail_stop": 1,
+            "stop": 1,
+            "timeout": 1
+          }
+        },
+        "faithful": {
+          "n": 8,
+          "net_r": 9.8512,
+          "net_r_fee_only": 9.962,
+          "cost_stack": {
+            "fees": 0.0,
+            "slippage": 5.0,
+            "funding": 0.0
+          },
+          "still_omitted": [],
+          "by_outcome": {
+            "trail_stop": 3,
+            "take_profit": 4,
+            "stop": 1
+          }
+        }
+      },
+      "control_reproduces_record": true,
+      "delta_r": 2.1891,
+      "verdict": "pass",
+      "read_state": "measured",
+      "note": "faithful net_r_oos=9.8512 over n=8 (approximate 7.6621 over n=7; delta +2.1891R); cost_stack {'fees': 0.0, 'slippage': 5.0, 'funding': 0.0}; RULE-D1 net_r_oos > 0 -> PASS"
+    }
+  ]
+}

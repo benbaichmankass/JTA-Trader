@@ -1,0 +1,24 @@
+{
+  "based_on": "20261018T070113124344Z-bef31dcc.json",
+  "due_when": {
+    "check_every_days": 3,
+    "due_date": "2026-10-22",
+    "kind": "date"
+  },
+  "id": "PI-20261018-WH81NW96-0004",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-UNBLOCK-1018 (session_019BtYk72AWwvaGkwH81nW96) / ML-PROMOREADY-OOSEDGE-MEASURE / trainer-vm-diag #18887 #18888",
+    "rerun": "grep -n 'PROMOREADY_OOS_EDGE' scripts/ops/run_promotion_readiness.sh; trainer-vm-diag: systemctl show ict-promotion-readiness.service --property=MemoryMax; head -c 600 runtime_logs/trainer_mirror/promotion_readiness/$(date -u +%F)/SUMMARY.md"
+  },
+  "redate": {
+    "evidence": "trainer-vm-diag #19337 #19343 (2026-10-21), #18888 (2026-10-18); deploy/trainer/ict-promotion-readiness.service",
+    "observation": "PIPELINE-HEALTH-1021 DECISION PACKET (read 2026-10-21 via trainer-vm-diag #19337/#19343 + relay #18888). CORRECTION to the item text: it says the two 5m heads 'leave < 1% margin'. They EXCEED the cap. Unit has MemoryMax=4500M (=4718592000 B = 4500 MiB, shown by `systemctl show`) and MemorySwapMax=0 (deploy/trainer/ict-promotion-readiness.service:54-55, so a breach OOM-kills, it does not swap). Measured peak RSS (GNU time, KiB): sol-regime-5m 4,690,924 KiB = 4581 MiB; eth-regime-5m 4,704,256 KiB = 4594 MiB => 81-94 MiB (1.8-2.1%) OVER the cap, per single head. Host: 5909 MiB RAM, 8 GiB swapfile (207 MiB used), MemAvailable 5.4 GiB idle; readiness runs 04:00Z under the heavy lock (serialised with other heavy jobs), 33 s CPU / ~4 min wall with OOS_EDGE off. What flipping buys: with PROMOREADY_OOS_EDGE=off (the live state; run_promotion_readiness.sh:147, log line at every run) all 21 shadow heads carry oos_edge as a blocking gate (21/21 in the 2026-10-21 SUMMARY), and 19/21 also block on live_parity and labels_accruing; the report was '0 promote, 0 demote, 97 hold'. Per-head gate-check (which has datasets-root) passed oos_edge on both 5m heads (+0.204 / +0.221 macro_f1 over 5 purged WF-CV folds). OPTIONS. (a) MemoryMax 5200M: +606 MiB (+13%) over the worst measured head, leaves ~709 MiB of 5909 for the OS, no breach of the host; reversible one-liner (Tier-2 unit edit + daemon-reload). Weakness: the figure is a SINGLE-head peak; the sweep runs all heads in one process (subprocess isolation was reverted 2026-07-27 because it did not bound a head's load) so fleet accumulation across 21 shadow heads is UNMEASURED, and 5m data grows daily. (b) cap oos_edge at ~300k rows/head: bounds memory by construction, which is what MB-20260719-PROMOREADY-OOSEDGE-OOM says closes it; but it needs a code change in ml/ and the OOS-edge number changes meaning (most-recent-300k vs full), so it must be re-measured against 0.204/0.221 before the gate is trusted. RECOMMENDATION: (a) now as the unblock, gated on ONE measurement first: run the sweep body with PROMOREADY_OOS_EDGE=on under `/usr/bin/time -v` (outside the unit, no report/ping side effects) and read the fleet peak; if peak <= ~4.9 GiB take (a) and flip the flag in the same Tier-2 change; if higher, do (b) first. Either way the failure is safe (unit fails, timer retries next day, no trading impact) and the flag flips back with one line. Needs operator OK (Tier-2). Not applied.",
+    "observed_at": "2026-10-21"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 2,
+  "what": "[ml] Tier-2 decision for the manager: flip PROMOREADY_OOS_EDGE on in scripts/ops/run_promotion_readiness.sh now that peak RSS is MEASURED (1h ~1.06 GB, 15m 2.24 GB, 5m 4.69-4.70 GB vs the 4.5 GiB MemoryMax -- the two 5m heads leave < 1% margin; population: 2 of 8 shadow heads gate-checked on the trainer 2026-10-18, relay #18888, n=2 5m heads): choose (a) raise MemoryMax to 5.2G in deploy/trainer ict-promotion-readiness.service, or (b) cap the sweep's oos_edge at ~300k rows per head. Until flipped, the daily readiness report holds every shadow head on oos_edge insufficient_data and can never propose a promotion"
+}

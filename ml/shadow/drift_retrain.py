@@ -39,8 +39,9 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
@@ -49,7 +50,12 @@ import yaml
 from ..manifest import canonical_stage
 from ..registry.model_registry import ModelRegistry
 from .adwin import DEFAULT_DELTA, DEFAULT_MAX_WINDOW, MIN_WINDOW, scan_stream
-from .inspector import ShadowRecord, filter_records, iter_records
+from .inspector import (
+    DEFAULT_ARCHIVE_LOOKBACK_DAYS as ARCHIVE_LOOKBACK_DAYS,
+    ShadowRecord,
+    filter_records,
+    iter_records_with_archives,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -62,6 +68,17 @@ _LOGGER = logging.getLogger(__name__)
 # through ``canonical_stage`` so a stage stored under an old alias still
 # matches.
 WATCHED_STAGES: frozenset[str] = frozenset({"shadow", "advisory"})
+
+# DRIFT-REMEDIATION-9 (2026-10-21). ``scan_stream`` answers "did ADWIN fire at
+# ANY point in the stream", and the stream used to be the whole 60-day archive
+# look-back. A retrain cannot rewrite past shadow scores, so a head that had one
+# excursion in August stayed flagged until the event aged out of the look-back,
+# whatever it did afterwards: the same 9 heads were flagged on ~every scan, and
+# 13.4 CPU-min of trainer time went on re-deriving it each run. A head is
+# "drifting now" only when ADWIN's LATEST cut is recent, and the stream is the
+# recent window rather than the archive.
+DEFAULT_SCAN_DAYS: float = 14.0
+DEFAULT_RECENT_DAYS: float = 3.0
 
 
 @dataclass(frozen=True)
@@ -76,8 +93,13 @@ class RetrainDecision:
     last_drift_index: int
     n_window_after: int
     mean_window_after: float
-    action: str  # "dispatch" | "skip_no_manifest" | "skip_no_drift" | "skip_thin_data"
+    # "dispatch" | "skip_no_manifest" | "skip_no_drift" | "skip_stale_drift"
+    # | "skip_thin_data"
+    action: str
     reason: str
+    # When ADWIN's latest cut fired (None = never) and how old that is.
+    last_drift_at: str | None = None
+    last_drift_age_days: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -91,6 +113,8 @@ class RetrainDecision:
             "mean_window_after": self.mean_window_after,
             "action": self.action,
             "reason": self.reason,
+            "last_drift_at": self.last_drift_at,
+            "last_drift_age_days": self.last_drift_age_days,
         }
 
 
@@ -131,13 +155,21 @@ def evaluate_models(
     min_window: int = MIN_WINDOW,
     max_window: int = DEFAULT_MAX_WINDOW,
     watched_stages: Iterable[str] = WATCHED_STAGES,
+    scan_days: float = DEFAULT_SCAN_DAYS,
+    recent_days: float = DEFAULT_RECENT_DAYS,
+    now_utc: datetime | None = None,
 ) -> list[RetrainDecision]:
     """For every deployed head, scan its real-time shadow scores and decide.
 
     Pure: reads files + the in-memory registry, returns decisions. The
     caller (orchestrator) writes the JSONL log and fires the actual
     ``python -m ml train`` subprocess for each ``action == "dispatch"``.
+
+    Only the last ``scan_days`` of real-time scores are streamed, and a head is
+    dispatched only when ADWIN's most recent cut is within ``recent_days`` of
+    ``now_utc``; an older cut is recorded as ``skip_stale_drift``.
     """
+    now = now_utc or datetime.now(timezone.utc)
     registry = ModelRegistry(Path(registry_root))
     configs_root_path = Path(configs_root)
     records: list[ShadowRecord] = []
@@ -146,9 +178,14 @@ def evaluate_models(
         # Materialize once: filter_records iterates many times (one per
         # model). Backfill records carry synthetic timestamps so they
         # pollute the chronological online detector — exclude them.
+        # Every active-log row (as before) + rotated archives written in the
+        # look-back (FIX-CA-20) — bounded so the never-pruned archive set is
+        # not materialized whole (BL-20260715).
+        since = now - timedelta(days=ARCHIVE_LOOKBACK_DAYS)
+        scan_from = now - timedelta(days=scan_days)
         records = [
-            r for r in iter_records(log_path)
-            if r.backfill_kind is None
+            r for r in iter_records_with_archives(log_path, archives_since=since)
+            if r.backfill_kind is None and r.predicted_at_utc >= scan_from
         ]
     # Normalize the watched set so a caller passing legacy alias names still
     # matches canonical registry stages.
@@ -185,8 +222,11 @@ def evaluate_models(
                 reason="no real-time shadow predictions for this head",
             ))
             continue
+        # ADWIN skips non-finite values without counting them, so its
+        # ``last_drift_index`` indexes the finite subsequence.
+        finite_records = [r for r in head_records if math.isfinite(r.score)]
         event = scan_stream(
-            (r.score for r in head_records),
+            (r.score for r in finite_records),
             model_id=entry.model_id,
             delta=delta, min_window=min_window, max_window=max_window,
         )
@@ -204,6 +244,28 @@ def evaluate_models(
                 reason=f"ADWIN found no cut over {event.n_observations} records",
             ))
             continue
+        last_at = finite_records[event.last_drift_index - 1].predicted_at_utc
+        age_days = round((now - last_at).total_seconds() / 86400.0, 3)
+        if age_days > recent_days:
+            decisions.append(RetrainDecision(
+                model_id=entry.model_id,
+                stage=entry.target_deployment_stage,
+                manifest_path=str(manifest_path) if manifest_path else None,
+                n_observations=event.n_observations,
+                drift_detected=True,
+                last_drift_index=event.last_drift_index,
+                n_window_after=event.n_window_after,
+                mean_window_after=event.mean_window_after,
+                action="skip_stale_drift",
+                reason=(
+                    f"latest ADWIN cut was {age_days:.1f}d ago "
+                    f"(> {recent_days:g}d); scores have been in the post-cut "
+                    f"regime since (n={event.n_window_after})"
+                ),
+                last_drift_at=last_at.isoformat(timespec="seconds"),
+                last_drift_age_days=age_days,
+            ))
+            continue
         if manifest_path is None:
             decisions.append(RetrainDecision(
                 model_id=entry.model_id,
@@ -219,6 +281,8 @@ def evaluate_models(
                     f"drift detected at index {event.last_drift_index} but "
                     f"no manifest found under {configs_root_path}"
                 ),
+                last_drift_at=last_at.isoformat(timespec="seconds"),
+                last_drift_age_days=age_days,
             ))
             continue
         decisions.append(RetrainDecision(
@@ -236,6 +300,8 @@ def evaluate_models(
                 f"post-cut window n={event.n_window_after}, "
                 f"mean={event.mean_window_after:.4f}"
             ),
+            last_drift_at=last_at.isoformat(timespec="seconds"),
+            last_drift_age_days=age_days,
         ))
     return decisions
 

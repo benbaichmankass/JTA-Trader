@@ -1,0 +1,134 @@
+id: RQ-20261012-2a7b-01
+title: >-
+  NEWS-HIST-REPLAY (WEPE gate G1, OFFLINE arm): does the live news layer (src/news/news_score.py) add net R when
+  replayed over 3 years of point-in-time GDELT headlines -- do longs earn less after the state the veto blocks, and
+  does the signed adjustment rank-predict the next-24h return, net of the full cost stack?
+status: done
+roadmap: M28
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+question: >-
+  Checklist row NEWS-HIST-REPLAY; operator 2026-10-12: "We need to be able to build that sleeve on backtesting not
+  just live testing". The live arm of G1 (RQ-20261009-902, owned by lane NEWS-VETO-EVAL) can only accrue from
+  runtime_logs/news_decisions.jsonl (13 veto rows in 121 days). This unit asks the same question OFFLINE: replay the
+  production scorer (feeds_for_tags -> normalize_articles -> score_news -> news_size_factor, imported, not
+  re-implemented) at every 1h bar close of BTCUSDT / ETHUSDT / SOLUSDT, 2023-10-01..2026-10-11, over a point-in-time
+  GDELT 2.0 GKG corpus of the live feeds' own domains (scripts/research/news_hist_fetch.py; an item is visible only
+  if its GDELT ingest time is strictly before the decision time). ARM E (veto, powered because the decision does not
+  depend on which strategy fired): after the news state the live veto blocks, is the net-of-cost 24h LONG return
+  lower than at baseline? ARM R (rank): does the signed adjustment rank-predict the next-24h return? ARM T (trade
+  books, descriptive): the same replay at the entry times of the committed comms/strategy_evidence trade books.
+  TWO POPULATIONS, same arms and same rule: LIVE (primary; per symbol only the domains the live path reads,
+  feeds_for_tags) and BROAD (secondary; live feeds plus a fixed list of credible finance / crypto / commodity press,
+  news_hist_fetch.BROAD_DOMAINS, for every symbol) -- BROAD exists because GKG recall of the live feeds' own domains is
+  thin (see amendment).
+why_this_matters: >-
+  WEPE gate G1 requires the news layer to be shown measurable and net-positive, or retired/replaced; the live arm
+  cannot reach its n floor before ~2027. The promotion ladder decides edge OFFLINE: a layer that gates live money
+  with no backtestable evidence is the category error the ladder exists to prevent. A PASS here is the first
+  backtest-grade evidence for any text-derived signal in this system and unblocks building the macro sleeve against
+  history; a FAIL retires or re-scopes the veto without waiting a year.
+power:
+  expected_n: 25
+  min_detectable_effect: 0.56
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    n >= (z_a/2 + z_b)^2 / d^2 = 7.85/d^2: n = 25 at d = 0.56 (the arm-E floor below; the live arm used 49 at d = 0.4).
+    PRIOR, not a measurement: the live veto fired on 13 of 13,173 logged evaluations (0.099%, RQ-20261009-902 basis);
+    ~26,300 hourly decision bars x 3 symbols = ~79k bars would give ~78 veto BARS, fewer EPISODES (consecutive veto
+    bars within 24h merge). So arm E is expected to land NEAR the floor and may read INSUFFICIENT_BASE -- which is
+    reported as such, never as a pass or a kill. The replay corpus differs from the live feed (GKG is a crawler
+    subset of RSS-published items), so the live rate is a guide to magnitude only.
+  feasibility:
+    source: GDELT 2.0 GKG 15-min files (https://data.gdeltproject.org/gdeltv2/), free and keyless; corpus built off-repo
+      by scripts/research/news_hist_fetch.py (~106k files for 2023-10-01..2026-10-12, ~2 h on 12 processes); candles from
+      scripts/research/news_hist_candles.py (Binance public mirror) or the trainer's canonical frames.
+    accrual_basis: Nothing accrues -- the history exists. The only open quantity is how many veto episodes it contains.
+decision_rule:
+  id: RULE-RQ20261012-2A7B-NEWS-OFFLINE-G1
+  registered_at: '2026-10-12'
+  registered_before_run: true
+  amendment: >-
+    AMENDED 2026-10-12, before the corpus build finished and before ANY return or net-R statistic was computed.
+    Original text: one population (LIVE). Reason: a plumbing run of the harness on the first 1,972 BTCUSDT decision
+    bars (2023-10-01..12-22; printed only bar counts and decision counts, no outcome) showed 5 non-neutral decisions
+    (4 boost, 1 reduce, 0 veto) -- GKG recall of the live feeds' own domains is far below the live RSS volume
+    (~15 coindesk and ~16 cointelegraph items/day measured on the first 85 days), so LIVE alone is likely to read
+    INSUFFICIENT_BASE. BROAD was added as a second population with the identical rule; the rule thresholds are unchanged.
+  statistic: >-
+    POPULATIONS (stated in the verdict): LIVE and BROAD (above), each over hourly decision bars (decision at bar CLOSE; forward return close[i+24]/close[i]
+    - 1) for BTCUSDT, ETHUSDT, SOLUSDT, 2023-10-01..2026-10-11, EXCLUDING any bar whose look-back window (max_age 120 min
+    + 15 min) contains a GDELT file not confirmed ok in the fetch ledger (a gap is not "no news"). Cost: execution_costs
+    fee 7.5 bps round trip + resolve_cost_policy(symbol) slippage + perp funding x (24h / 8h windows), applied to both
+    sides. ARM E: veto EPISODES = consecutive veto-state bars (live score_news veto, side-blind) merged within 24 bars,
+    anchored at the first bar; baseline = every non-veto bar outside an episode window sub-sampled at stride 24.
+    D_long = mean(net long bps | veto episode) - mean(net long bps | baseline), POOLED over the three symbols, with a
+    seeded (7) 2000-draw bootstrap 95% CI, n_episodes, and the two date-split halves (by episode time).
+    ARM R: pooled Spearman IC between score_news.adjustment (buy-side) and the 24h forward return over the stride-24
+    sub-sample restricted to bars with >= 1 scored item; n_scored; one-sided p (normal approx of t); per-symbol IC.
+    ARM T (not graded): trade-book replay at entry_time over the latest committed comms/strategy_evidence/runs/*/
+    <leg>__trades.jsonl per leg -- vetoed vs taken mean net R, rank IC, coverage -- with n stated.
+  rule: >-
+    ARM E: INSUFFICIENT_BASE if pooled n_episodes < 25 (never pass or fail). Else FAIL if D_long >= 0 (the blocked
+    longs did at least as well as baseline: the veto buys nothing). Else PASS only if ALL of: CI upper bound < 0; mean
+    net long bps of the veto episodes < 0 (the veto avoided an actual net loss, not merely a smaller gain); BOTH date
+    halves have n >= 5 and a mean net long bps below the pooled baseline mean. Else INCONCLUSIVE.
+    ARM R: INSUFFICIENT_BASE if pooled n_scored < 200. Else FAIL if IC <= 0. Else PASS only if one-sided p < 0.01 (stricter
+    than 0.05 because the three symbols are not independent) AND IC > 0 on at least 2 of 3 symbols. Else INCONCLUSIVE.
+    UNIT-LEVEL READ, written now: G1-OFFLINE PASSES iff ARM E = PASS and ARM R != FAIL. RETIRE_OR_REPLACE_REVIEW iff
+    either arm is FAIL (surfaced to the manager; nothing is switched off by this unit). Anything else leaves G1-OFFLINE
+    OPEN with the n and the reason. The unit-level read uses the LIVE population only. The BROAD population is graded by
+    the identical rule and reported as g1_offline_broad: it answers "would widening the live feed set be worth it", it
+    cannot pass G1 and cannot rescue a LIVE FAIL. Whether an offline PASS substitutes for the live arm of G1 is the manager's and
+    operator's call, not this unit's. FINDING (reported, not graded): if the veto_short diff is > 0 with CI lower bound
+    > 0 at n >= 25, the side-blind veto is also blocking profitable shorts -- file it.
+  what_it_does_not_do: >-
+    Touches no config and does not switch NEWS_VETO_ENABLED. event_risk is 0 in the influence arm (no calendar in the
+    replay). The corpus is GKG headlines of the live feeds' domains, not the RSS feed items the live path sees: coverage
+    is a subset and availability is GDELT ingest time (conservative, never early), so the replay biases toward FEWER
+    vetoes than live. Candles are Binance spot unless the trainer frames are used. Sentiment is the production keyword
+    count, so this evaluates the current scorer, not headline understanding. Arm T is descriptive and cannot power the
+    veto arm. Not a promotion case for any leg and not a calibration (no base probability is replayed).
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 150
+  basis: >-
+    Corpus fetch ~106k GKG files (~2 h on 12 processes, streamed, nothing kept but ~tens of MB of filtered JSONL); replay
+    is ~79k decide() calls (minutes). Session-local until a runner/trainer route exists for the fetch.
+run:
+  workflow: none -- session-local run of scripts/research/news_hist_fetch.py then scripts/research/news_hist_replay.py
+  commands:
+    - python3 scripts/research/news_hist_fetch.py --out $CORPUS --sources broad --start 2023-10-01T00:00 --end 2026-10-12T06:00 --workers 12 --manifest research/news_hist/MANIFEST.json
+    - python3 scripts/research/news_hist_candles.py --symbol BTCUSDT --interval 1h --start 2023-09-01 --end 2026-10-12 --out $CANDLES/BTCUSDT_1h.csv   # likewise ETHUSDT, SOLUSDT
+    - python3 scripts/research/news_hist_replay.py --corpus $CORPUS --event-study BTCUSDT=$CANDLES/BTCUSDT_1h.csv ETHUSDT=$CANDLES/ETHUSDT_1h.csv SOLUSDT=$CANDLES/SOLUSDT_1h.csv --sources live broad --bar-minutes 60 --horizon-bars 24 --trades comms/strategy_evidence/runs/*/*__trades.jsonl --out comms/research/RQ-20261012-2a7b-01/verdict.json
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/news_hist_fetch.py
+- scripts/research/news_hist_replay.py
+- tests/test_news_hist_replay.py
+- src/news/news_score.py
+- docs/claude/work/checklist/NEWS-HIST-REPLAY.json
+- docs/claude/work/checklist/WEPE-BUILDOUT.json
+- research/queue/blocked/RQ-20261009-902.yaml
+last_dispatched_at: '2026-10-12T13:35:00+00:00'
+result:
+  run: session-local, 2026-10-12 (lane NEWS-HIST-REPLAY)
+  record: research/results/RQ-20261012-2a7b-01/session-local-20261012.jsonl
+  grades: {arm_e: INSUFFICIENT_BASE, arm_r: FAIL, g1_offline: RETIRE_OR_REPLACE_REVIEW, g1_offline_broad: OPEN}
+  record_verdict: indeterminate
+  reading: >-
+    The FAIL on arm R is the registered rule applied mechanically (IC <= 0); IC = -0.0073, one-sided p = 0.61, n = 1,436
+    -- no detectable directional skill, not a demonstrated negative. Arm E could not be graded: 0 veto episodes in 78,252
+    bars, because the corpus carries titles only and the veto's single-item thresholds are unreachable on titles
+    (0 of 87,305 relevant items). So this run measures TITLE-ONLY sentiment, and says nothing about the live
+    title+summary veto. Follow-up filed in the pipeline.

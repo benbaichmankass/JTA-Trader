@@ -298,6 +298,7 @@ _EMIT = {
     "entry_time": "2026-01-02 13:45:00", "exit_time": "2026-01-02 18:00:00",
     "entry": 100.0, "sl": 98.0, "exit_reason": "trail", "direction": "long",
     "gross_r": 2.0, "net_r": 1.9, "mfe_r": 3.0, "confidence": 0.42,
+    "adx_at_entry": 27.5, "regime_weight": 1.0,
 }
 
 

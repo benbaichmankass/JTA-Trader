@@ -18,7 +18,7 @@ name: vm-ib-gateway-recover
 #   dedicated Ampere VM (`ict-ib-gateway`) on the PRIVATE subnet
 #   (10.0.0.251) with NO public IP. A GitHub runner cannot reach it
 #   directly, so this workflow SSHes to it **via ProxyJump through the live
-#   trader** (141.145.193.91), which shares the 10.0.0.0/24 subnet and
+#   trader** (<VM_SSH_HOST>), which shares the 10.0.0.0/24 subnet and
 #   already reaches 10.0.0.251:4002. The same VM_SSH_KEY authorizes both
 #   hops (both VMs were provisioned with its public half), so the runner
 #   authenticates each hop itself — the jump host never holds the key.
@@ -43,7 +43,7 @@ name: vm-ib-gateway-recover
 #                         authorizes BOTH the jump (trader) and the gateway VM.
 #
 # Optional repo variables:
-#   * VM_SSH_HOST       — the ProxyJump bastion (live trader). Default 141.145.193.91.
+#   * VM_SSH_HOST       — the ProxyJump bastion (live trader). Default <VM_SSH_HOST>.
 #   * IB_GATEWAY_HOST   — the gateway VM target. Default 10.0.0.251 (private).
 #   * VM_SSH_USER       — defaults to ubuntu (used for both hops).
 #
@@ -84,10 +84,17 @@ jobs:
     timeout-minutes: 8
     env:
       # ProxyJump bastion (live trader, public) and the gateway VM (private).
-      JUMP_HOST: ${{ vars.VM_SSH_HOST || '141.145.193.91' }}
+      JUMP_HOST: ${{ secrets.VM_SSH_HOST }}
       GATEWAY_HOST: ${{ vars.IB_GATEWAY_HOST || '10.0.0.251' }}
       VM_SSH_USER: ${{ vars.VM_SSH_USER || 'ubuntu' }}
     steps:
+      - name: Require VM host secrets (fail closed)
+        env:
+          NEED_VM_SSH_HOST: ${{ secrets.VM_SSH_HOST }}
+        run: |
+          fail=0
+          [ -n "${NEED_VM_SSH_HOST}" ] || { echo "::error::secret VM_SSH_HOST not set (Settings > Secrets and variables > Actions); refusing to continue before any ssh"; fail=1; }
+          exit "$fail"
       - name: Set up SSH key
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
@@ -241,3 +248,5 @@ jobs:
               owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number,
               state: 'closed', state_reason: 'not_planned'
             });
+
+# no-durable-result: ops recovery action, no verdict computed

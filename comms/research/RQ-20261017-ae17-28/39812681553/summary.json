@@ -1,0 +1,445 @@
+{
+  "leg": "gdx_pullback_1d",
+  "grade": {
+    "verdict": "fail",
+    "label": "no_reachable_lever_beats_removed",
+    "baseline": "B",
+    "candidates": {
+      "AX40": {
+        "delta_net_r": -2.3335,
+        "delta_max_drawdown_r": 1.2789,
+        "fold_wins": 0,
+        "passes": false
+      },
+      "AX50": {
+        "delta_net_r": 0.0,
+        "delta_max_drawdown_r": 0.0,
+        "fold_wins": 0,
+        "passes": false
+      },
+      "AX60": {
+        "delta_net_r": 0.0,
+        "delta_max_drawdown_r": 0.0,
+        "fold_wins": 0,
+        "passes": false
+      }
+    },
+    "delta_r_bar": 1.0,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": null,
+    "why": "no candidate clears the bar: the declared lever's lines are dead config and nothing reachable earns its place -- strip them (Tier-3, not done here)"
+  },
+  "arms": {
+    "B": {
+      "reach_ge_6r": 0.0,
+      "n": 192,
+      "net_r": -1.8467,
+      "net_r_fee_only": -0.2446,
+      "max_drawdown_r": 20.9338,
+      "by_outcome": {
+        "take_profit": 74,
+        "stop": 103,
+        "trail_stop": 15
+      },
+      "mean_bars_held": 11.755,
+      "net_r_per_capital_day": -0.0008,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 15,
+        "pullback_frac": 0.618,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2006-05-22 00:00:00+00:00",
+      "data_end": "2026-10-16 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2006-05-22 00:00:00+00:00",
+          "end": "2011-06-28 06:00:00+00:00",
+          "trades": 55,
+          "net_r": -6.2903
+        },
+        {
+          "fold": 2,
+          "start": "2011-06-28 06:00:00+00:00",
+          "end": "2016-08-03 12:00:00+00:00",
+          "trades": 42,
+          "net_r": -4.404
+        },
+        {
+          "fold": 3,
+          "start": "2016-08-03 12:00:00+00:00",
+          "end": "2021-09-09 18:00:00+00:00",
+          "trades": 47,
+          "net_r": -0.9698
+        },
+        {
+          "fold": 4,
+          "start": "2021-09-09 18:00:00+00:00",
+          "end": "2026-10-17 00:00:00+00:00",
+          "trades": 48,
+          "net_r": 9.8168
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "15",
+        "--pullback-frac",
+        "0.618",
+        "--data",
+        "<data>",
+        "--symbol",
+        "GDX",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261017-ae17-28/39812681553/arms/B__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261017-ae17-28/39812681553/arms/B__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "3.5",
+        "--end",
+        "2026-10-17"
+      ]
+    },
+    "AX40": {
+      "reach_ge_6r": 0.0,
+      "n": 190,
+      "net_r": -4.1802,
+      "net_r_fee_only": -2.5944,
+      "max_drawdown_r": 22.2127,
+      "by_outcome": {
+        "take_profit": 72,
+        "stop": 102,
+        "trail_stop": 16
+      },
+      "mean_bars_held": 11.805,
+      "net_r_per_capital_day": -0.0019,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 15,
+        "pullback_frac": 0.618,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0,
+        "adx_max": 40.0,
+        "adx_period": 14
+      },
+      "data_start": "2006-05-22 00:00:00+00:00",
+      "data_end": "2026-10-16 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2006-05-22 00:00:00+00:00",
+          "end": "2011-06-28 06:00:00+00:00",
+          "trades": 55,
+          "net_r": -6.2903
+        },
+        {
+          "fold": 2,
+          "start": "2011-06-28 06:00:00+00:00",
+          "end": "2016-08-03 12:00:00+00:00",
+          "trades": 41,
+          "net_r": -5.6828
+        },
+        {
+          "fold": 3,
+          "start": "2016-08-03 12:00:00+00:00",
+          "end": "2021-09-09 18:00:00+00:00",
+          "trades": 47,
+          "net_r": -0.9698
+        },
+        {
+          "fold": 4,
+          "start": "2021-09-09 18:00:00+00:00",
+          "end": "2026-10-17 00:00:00+00:00",
+          "trades": 47,
+          "net_r": 8.7621
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "15",
+        "--pullback-frac",
+        "0.618",
+        "--data",
+        "<data>",
+        "--symbol",
+        "GDX",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261017-ae17-28/39812681553/arms/AX40__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261017-ae17-28/39812681553/arms/AX40__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "3.5",
+        "--adx-max",
+        "40",
+        "--end",
+        "2026-10-17"
+      ]
+    },
+    "AX50": {
+      "reach_ge_6r": 0.0,
+      "n": 192,
+      "net_r": -1.8467,
+      "net_r_fee_only": -0.2446,
+      "max_drawdown_r": 20.9338,
+      "by_outcome": {
+        "take_profit": 74,
+        "stop": 103,
+        "trail_stop": 15
+      },
+      "mean_bars_held": 11.755,
+      "net_r_per_capital_day": -0.0008,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 15,
+        "pullback_frac": 0.618,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0,
+        "adx_max": 50.0,
+        "adx_period": 14
+      },
+      "data_start": "2006-05-22 00:00:00+00:00",
+      "data_end": "2026-10-16 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2006-05-22 00:00:00+00:00",
+          "end": "2011-06-28 06:00:00+00:00",
+          "trades": 55,
+          "net_r": -6.2903
+        },
+        {
+          "fold": 2,
+          "start": "2011-06-28 06:00:00+00:00",
+          "end": "2016-08-03 12:00:00+00:00",
+          "trades": 42,
+          "net_r": -4.404
+        },
+        {
+          "fold": 3,
+          "start": "2016-08-03 12:00:00+00:00",
+          "end": "2021-09-09 18:00:00+00:00",
+          "trades": 47,
+          "net_r": -0.9698
+        },
+        {
+          "fold": 4,
+          "start": "2021-09-09 18:00:00+00:00",
+          "end": "2026-10-17 00:00:00+00:00",
+          "trades": 48,
+          "net_r": 9.8168
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "15",
+        "--pullback-frac",
+        "0.618",
+        "--data",
+        "<data>",
+        "--symbol",
+        "GDX",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261017-ae17-28/39812681553/arms/AX50__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261017-ae17-28/39812681553/arms/AX50__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "3.5",
+        "--adx-max",
+        "50",
+        "--end",
+        "2026-10-17"
+      ]
+    },
+    "AX60": {
+      "reach_ge_6r": 0.0,
+      "n": 192,
+      "net_r": -1.8467,
+      "net_r_fee_only": -0.2446,
+      "max_drawdown_r": 20.9338,
+      "by_outcome": {
+        "take_profit": 74,
+        "stop": 103,
+        "trail_stop": 15
+      },
+      "mean_bars_held": 11.755,
+      "net_r_per_capital_day": -0.0008,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 15,
+        "pullback_frac": 0.618,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0,
+        "adx_max": 60.0,
+        "adx_period": 14
+      },
+      "data_start": "2006-05-22 00:00:00+00:00",
+      "data_end": "2026-10-16 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2006-05-22 00:00:00+00:00",
+          "end": "2011-06-28 06:00:00+00:00",
+          "trades": 55,
+          "net_r": -6.2903
+        },
+        {
+          "fold": 2,
+          "start": "2011-06-28 06:00:00+00:00",
+          "end": "2016-08-03 12:00:00+00:00",
+          "trades": 42,
+          "net_r": -4.404
+        },
+        {
+          "fold": 3,
+          "start": "2016-08-03 12:00:00+00:00",
+          "end": "2021-09-09 18:00:00+00:00",
+          "trades": 47,
+          "net_r": -0.9698
+        },
+        {
+          "fold": 4,
+          "start": "2021-09-09 18:00:00+00:00",
+          "end": "2026-10-17 00:00:00+00:00",
+          "trades": 48,
+          "net_r": 9.8168
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "15",
+        "--pullback-frac",
+        "0.618",
+        "--data",
+        "<data>",
+        "--symbol",
+        "GDX",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261017-ae17-28/39812681553/arms/AX60__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261017-ae17-28/39812681553/arms/AX60__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "3.5",
+        "--adx-max",
+        "60",
+        "--end",
+        "2026-10-17"
+      ]
+    }
+  },
+  "window": {
+    "start": null,
+    "end": "2026-10-17",
+    "fetch_days": 7300,
+    "feed": {
+      "source": "yahoo",
+      "ticker": "GDX",
+      "interval": "1d",
+      "resample": "1d"
+    },
+    "fold_edges": [
+      "2006-05-22 00:00:00+00:00",
+      "2011-06-28 06:00:00+00:00",
+      "2016-08-03 12:00:00+00:00",
+      "2021-09-09 18:00:00+00:00",
+      "2026-10-17 00:00:00+00:00"
+    ]
+  }
+}

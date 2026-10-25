@@ -39,6 +39,7 @@ silently falls back to a default is the trap wearing a helper's clothes.
 from __future__ import annotations
 
 import argparse
+import copy
 import datetime
 import json
 import pathlib
@@ -58,6 +59,9 @@ from typing import Any, Dict, Optional, Tuple
 # that exact command; an `import` smoke test from the repo root passes either
 # way, which is precisely why it is not evidence here.
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
+from scripts.ops.check_backlog_criteria import (  # noqa: I001,E402
+    workability_verdict,
+)
 from scripts.ops.system_review_checklist import (  # noqa: I001
     CLOSE_KEYS,
     CLOSED_STATUSES,
@@ -102,6 +106,37 @@ class SimilarRowExists(Exception):
     should be dropped, while a RECURRENCE is evidence the first fix did not
     hold and is one of the most valuable rows there is. Only a human reading
     both can tell, which is exactly why this raises instead of dropping the row.
+    """
+
+
+class RowNotWorkable(Exception):
+    """The row is missing a field that makes it possible to ACT on it.
+
+    `BL-20260910-THE-MANDATED-BACKLOG-WRITER-ACCEPTS-A-ROW-THAT-CI-THEN-REJECTS`.
+    ``CLAUDE.md`` mandates this writer; CI mandates
+    ``check_backlog_criteria.py``, which REJECTS a new row missing
+    ``resolution_criteria`` / ``severity`` / ``tier`` / a creation date. The
+    writer accepted all four, so the cheapest route to a required field was to
+    file the row, push, and let CI find it — which is late, and which this repo
+    calls a guard cheaper to lie to than to satisfy.
+
+    THE VERDICT IS NOT RESTATED HERE. `workability_verdict` IS
+    `check_backlog_criteria._verdict`, imported, so the writer refuses exactly
+    what the guard refuses and the two cannot drift. A second local copy of
+    "what makes a row workable" is how they would.
+
+    ⚠️ RAISE, NOT WARN — the row's own proposed fix says so, and it is right:
+    every other refusal in this module raises, and a warning printed into a
+    session's scrollback is not a mechanism. There is deliberately **no
+    override flag**: `SimilarRowExists` has one because *"the threshold will be
+    wrong sometimes"* and a recurrence is a legitimate re-file, whereas a row
+    nobody can tell is finished is never the right thing to file.
+
+    ⚠️ IT CANNOT REACH A GRANDFATHERED ROW. The guard grades only rows NEW in a
+    diff — 393 of the 1601 live health rows would fail it, and gating those
+    would red every PR in the repo. `append_row` only ever creates a row, so it
+    is inside that scope by construction; `update_row` is untouched, which is
+    what keeps amending an old row possible.
     """
 
 
@@ -181,6 +216,22 @@ def append_row(path: pathlib.Path, row: Dict[str, Any],
     _created = _creation_stamp(row)
     if _created:
         row[_created[0]] = _created[1]
+
+    # LAST, and after both stamps, because the verdict reads the fields they
+    # write: a row the caller filed with no date is dated by the stamp above
+    # and must be graded on the row as it will actually be WRITTEN, not as it
+    # arrived. Ordering this before the stamp would reject rows the writer had
+    # already made correct.
+    _unworkable = workability_verdict(row)
+    if _unworkable:
+        raise RowNotWorkable(
+            f"{row.get('id')}: {_unworkable}\n\n"
+            "check_backlog_criteria.py REJECTS this row in CI on every PR that "
+            "adds it, so filing it now only moves the failure to the push. Add "
+            "the field and re-file. The verdict above comes from that guard's "
+            "own predicate, imported — it is not a second opinion."
+        )
+
     items.append(row)
     if isinstance(doc, dict) and updated_at:
         doc["updated_at"] = updated_at
@@ -483,6 +534,14 @@ def _self_test() -> int:
     """Planted controls — including the exact failure this helper exists for."""
     import tempfile
 
+    # `append_row` now REFUSES a row the CI guard would reject, so every fixture
+    # row here has to be workable. That is the change, not noise: a fixture that
+    # could not be filed for real was never a faithful fixture.
+    def _w(**kw):
+        return {"resolution_criteria": ("what DONE looks like, stated at length "
+                                        "enough to clear the guard's floor"),
+                "severity": "medium", "tier": 1, **kw}
+
     checks = []
 
     def ck(name, ok):
@@ -496,7 +555,7 @@ def _self_test() -> int:
 
         # (1) A file written ensure_ascii=False round-trips and appends cleanly.
         p.write_text(json.dumps(doc, indent=2, ensure_ascii=False) + "\n")
-        n = append_row(p, {"id": "BL-2", "title": "new"}, updated_at="2026-01-02")
+        n = append_row(p, _w(id="BL-2", title="new"), updated_at="2026-01-02")
         after = p.read_text()
         ck("appends a row", n == 2)
         ck("non-ASCII survives unescaped", "em—dash" in after and "\\u2014" not in after)
@@ -512,7 +571,7 @@ def _self_test() -> int:
         p2.write_text(json.dumps(doc, indent=3, separators=(" ,", " : ")))
         raw2 = p2.read_text()
         try:
-            append_row(p2, {"id": "BL-3"})
+            append_row(p2, _w(id="BL-3"))
             ck("refuses an unreproducible format", False)
         except FormatNotReproducible:
             ck("refuses an unreproducible format", True)
@@ -520,7 +579,7 @@ def _self_test() -> int:
 
         # (3) Duplicate ids are refused.
         try:
-            append_row(p, {"id": "BL-2"})
+            append_row(p, _w(id="BL-2"))
             ck("refuses a duplicate id", False)
         except ValueError:
             ck("refuses a duplicate id", True)
@@ -624,7 +683,7 @@ def _self_test() -> int:
             return json.loads(p6.read_text())["items"][-1]
 
         _fresh6()
-        append_row(p6, {"id": "BL-NODATE", "title": "caller supplied no date"})
+        append_row(p6, _w(id="BL-NODATE", title="caller supplied no date"))
         got = _last6()
         ck("stamps a creation key when the caller omits one",
            isinstance(got.get(_CREATION_STAMP_KEY), str)
@@ -659,8 +718,9 @@ def _self_test() -> int:
         # SUPPLIED value SURVIVED — under every spelling the reader consults.
         for spelling in CREATION_KEYS:
             _fresh6()
-            append_row(p6, {"id": f"BL-{spelling.upper()}", "title": "caller dated it",
-                            spelling: "2026-01-02T03:04:05+00:00"})
+            append_row(p6, _w(**{"id": f"BL-{spelling.upper()}",
+                              "title": "caller dated it",
+                              spelling: "2026-01-02T03:04:05+00:00"}))
             got = _last6()
             ck(f"a caller-supplied {spelling!r} survives unchanged",
                got.get(spelling) == "2026-01-02T03:04:05+00:00")
@@ -672,10 +732,52 @@ def _self_test() -> int:
         # an append is an ADDITION and nothing pre-existing moves.
         _fresh6()
         raw6_before = json.loads(p6.read_text())["items"][0]
-        append_row(p6, {"id": "BL-ADDONLY", "title": "x"})
+        append_row(p6, _w(id="BL-ADDONLY", title="x"))
         ck("stamping still leaves pre-existing rows byte-identical",
            json.dumps(json.loads(p6.read_text())["items"][0], indent=2, ensure_ascii=False)
            == json.dumps(raw6_before, indent=2, ensure_ascii=False))
+
+        # (7) THE WORKABILITY REFUSAL — the writer refuses what CI refuses.
+        #     BL-20260910-THE-MANDATED-BACKLOG-WRITER-ACCEPTS-A-ROW-THAT-CI-THEN-REJECTS
+        p7 = pathlib.Path(td) / "workable.json"
+
+        def _fresh7():
+            p7.write_text(json.dumps(base6, indent=2, ensure_ascii=False) + "\n")
+
+        def _refused(row, label):
+            _fresh7()
+            raw7 = p7.read_text()
+            try:
+                append_row(p7, row)
+                ck(f"refuses a row with {label}", False)
+            except RowNotWorkable:
+                ck(f"refuses a row with {label}", True)
+            # A refusal that already wrote is not a refusal.
+            ck(f"the refused file is untouched ({label})", p7.read_text() == raw7)
+
+        _refused({"id": "BL-NOCRIT", "severity": "medium", "tier": 1},
+                 "no resolution_criteria")
+        _refused(_w(id="BL-NOSEV", severity=None), "no severity")
+        _refused(_w(id="BL-NOTIER", tier=None), "no tier")
+        _refused(_w(id="BL-PLACEHOLDER", resolution_criteria="TBD"),
+                 "a placeholder resolution_criteria")
+
+        # THE POSITIVE CONTROL. A refusal without a pass proves only that the
+        # writer is a wall — and it is the arm that fails if the predicate is
+        # ever made unsatisfiable.
+        _fresh7()
+        n7 = append_row(p7, _w(id="BL-WORKABLE", title="a workable row"))
+        ck("a workable row is still appended", n7 == 2)
+
+        # THE VERDICT IS THE GUARD'S, NOT A LOCAL COPY. Assert the identity
+        # rather than the behaviour: two predicates that merely agree today are
+        # exactly what drifts apart.
+        try:
+            from scripts.ops.check_backlog_criteria import _verdict as _guard_verdict
+            ck("the writer's predicate IS the guard's (same object)",
+               workability_verdict is _guard_verdict)
+        except Exception as exc:  # noqa: BLE001
+            ck(f"the writer's predicate IS the guard's (same object) [{exc}]", False)
 
         # MUTATION ARM: with the stamp removed, the first control must FAIL.
         # A control that passes on the bug is not a control.
@@ -714,6 +816,241 @@ LIVE_BACKLOGS = (
     "docs/claude/research-review-backlog.json",
 )
 
+
+
+# ---------------------------------------------------------------------------
+# THE SPLICE WRITER — amend a register that does NOT round-trip
+#
+# `update_row` above re-serialises the whole document and refuses
+# (`FormatNotReproducible`) when no candidate serialisation reproduces the file
+# byte-for-byte. That refusal is CORRECT and must stay: a reformat re-attributes
+# every pre-existing row to whoever triggered it
+# (`BL-20260820-BACKLOG-APPEND-REFORMATS-AND-REATTRIBUTES`).
+#
+# But it leaves the registers that reproduce at NOTHING with no writer at all,
+# and one of them is the file CLAUDE.md requires EVERY session to update at
+# session end. MEASURED 2026-09-17 over all 20 committed `docs/claude/*.json`
+# registers above 200 bytes, each probed against 20 candidate serialisations
+# (indent 1/2/3/4/None x ensure_ascii False/True x trailing newline or not):
+#
+#   * 17 round-trip -- at FOUR different settings, which is why a single
+#     canonical form was never going to work:
+#       13  indent=2, ensure_ascii=False, trailing newline
+#        2  ensure_ascii=TRUE      (ERROR-FEED-DIGEST, soak-doctrine-exceptions)
+#        2  NO trailing newline    (ml-review-backlog, research-review-backlog)
+#        1  indent=1               (UNCARRIED-SPEC-BASELINE)
+#   * 3 round-trip at NONE of the 20: OPEN-ITEMS.json (779,305 bytes),
+#     session-board.json, strategy-refinement-queue.json.
+#
+# So this writer NEVER SERIALISES THE DOCUMENT. It finds the exact bytes of one
+# field's value inside one row and replaces just those, then RE-PARSES and
+# proves the result differs nowhere else. Everything it cannot do unambiguously
+# it REFUSES, because a writer that guesses is worse than a hand-edit a human
+# reviewed.
+# ---------------------------------------------------------------------------
+
+class SpliceAmbiguous(Exception):
+    """The field's current bytes could not be located EXACTLY ONCE in the row.
+
+    Refusing is the whole point: a value that appears twice, or not at all in
+    the spelling this file uses, cannot be replaced without guessing which
+    occurrence was meant.
+    """
+
+
+class SpliceWouldChangeMore(Exception):
+    """The edit changed something beyond the fields asked for — nothing written.
+
+    This is the check that makes a byte splice safe to sanction at all. It is
+    not a belt-and-braces extra; without it the writer is exactly the hand-edit
+    the repo forbids, with a nicer interface.
+    """
+
+
+def _string_mask(raw: str) -> bytearray:
+    """1 where a character is inside a JSON string literal (quotes included).
+
+    One forward pass, so brace-matching below can ignore braces that live
+    inside strings — and these registers are FULL of prose containing braces.
+    """
+    mask = bytearray(len(raw))
+    in_str = False
+    esc = False
+    for i, c in enumerate(raw):
+        if in_str:
+            mask[i] = 1
+            if esc:
+                esc = False
+            elif c == "\\":
+                esc = True
+            elif c == '"':
+                in_str = False
+        elif c == '"':
+            in_str = True
+            mask[i] = 1
+    return mask
+
+
+def _row_span(raw: str, row_id: str) -> Tuple[int, int]:
+    """Byte span of the JSON object carrying `row_id`, by brace matching.
+
+    ⚠️ SCOPING TO THE ROW IS NOT AN OPTIMISATION, IT IS THE CORRECTNESS
+    ARGUMENT. A short value like `"status": "open"` occurs hundreds of times in
+    these files; only within one row's braces is it unique.
+    """
+    needle = None
+    for ea in (False, True):
+        cand = json.dumps(row_id, ensure_ascii=ea)
+        n = raw.count(cand)
+        if n == 1:
+            needle = cand
+            break
+        if n > 1:
+            raise SpliceAmbiguous(
+                f"the id {row_id!r} appears {n} times in the raw text — "
+                f"refusing rather than picking one")
+    if needle is None:
+        raise RowNotFound(f"{row_id!r} does not appear in the file's bytes")
+
+    idx = raw.index(needle)
+    mask = _string_mask(raw)
+
+    depth = 0
+    start = -1
+    for i in range(idx, -1, -1):
+        if mask[i]:
+            continue
+        if raw[i] == "}":
+            depth += 1
+        elif raw[i] == "{":
+            if depth == 0:
+                start = i
+                break
+            depth -= 1
+    if start < 0:
+        raise SpliceAmbiguous("could not find the opening brace of the row")
+
+    depth = 0
+    end = -1
+    for i in range(start, len(raw)):
+        if mask[i]:
+            continue
+        if raw[i] == "{":
+            depth += 1
+        elif raw[i] == "}":
+            depth -= 1
+            if depth == 0:
+                end = i + 1
+                break
+    if end < 0:
+        raise SpliceAmbiguous("could not find the closing brace of the row")
+    return start, end
+
+
+def _locate_value(segment: str, field: str, old_value: Any) -> Tuple[int, int, bool]:
+    """Where inside `segment` this field's CURRENT serialised value sits.
+
+    Finds the serialised KEY, steps over whitespace and the colon, and requires
+    the serialised VALUE to start there. ⚠️ Deliberately does NOT assume a
+    separator spelling: these registers use `": "`, and a writer that hardcoded
+    it would silently fail on a file written with `":"` — failing by finding
+    nothing, which is the quiet direction.
+    """
+    hits = []
+    for ea in (False, True):
+        key_ser = json.dumps(field, ensure_ascii=ea)
+        val_ser = json.dumps(old_value, ensure_ascii=ea)
+        pos = 0
+        while True:
+            k = segment.find(key_ser, pos)
+            if k < 0:
+                break
+            pos = k + 1
+            j = k + len(key_ser)
+            while j < len(segment) and segment[j] in " \t\r\n":
+                j += 1
+            if j >= len(segment) or segment[j] != ":":
+                continue
+            j += 1
+            while j < len(segment) and segment[j] in " \t\r\n":
+                j += 1
+            if segment.startswith(val_ser, j):
+                cand = (j, j + len(val_ser), ea)
+                if cand not in hits:
+                    hits.append(cand)
+        if hits:
+            break
+    # The two ensure_ascii spellings coincide for a pure-ASCII value, so the
+    # same span found twice is ONE hit — compared on span, not on the tuple.
+    spans = {(a, b) for a, b, _ in hits}
+    if len(spans) != 1:
+        raise SpliceAmbiguous(
+            f"field {field!r} located {len(spans)} time(s) in the row — "
+            f"refusing to guess which is meant")
+    return hits[0]
+
+
+def splice_row(path: pathlib.Path, row_id: str, *,
+               fields: Optional[Dict[str, Any]] = None,
+               append: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+    """Amend a row by replacing exact bytes — for registers that never reformat.
+
+    Use `update_row` first: on a register that round-trips it is simpler and
+    already proven. Reach for this ONLY when `update_row` raises
+    `FormatNotReproducible`.
+
+    Returns the amended row. Writes nothing unless every check passes.
+    """
+    if not fields and not append:
+        raise ValueError("splice_row needs `fields` or `append`")
+
+    raw = path.read_text(encoding="utf-8")
+    doc = json.loads(raw)
+    items = doc["items"] if isinstance(doc, dict) else doc
+    row = next((r for r in items if isinstance(r, dict) and r.get("id") == row_id), None)
+    if row is None:
+        raise RowNotFound(f"no row with id {row_id!r} in {path}")
+
+    changes: Dict[str, Any] = dict(fields or {})
+    for field, text in (append or {}).items():
+        if field not in row:
+            raise RowNotFound(
+                f"cannot append to {field!r}: the row has no such field. "
+                f"Creating one is `fields`, not `append` — said rather than "
+                f"silently done.")
+        if not isinstance(row[field], str):
+            raise ValueError(f"cannot append to non-string field {field!r}")
+        changes[field] = row[field] + text
+
+    for field in changes:
+        if field not in row:
+            raise RowNotFound(
+                f"{field!r} is not on the row; splice_row amends existing "
+                f"fields and cannot add one, because an absent field has no "
+                f"bytes to replace")
+
+    start, end = _row_span(raw, row_id)
+    segment = raw[start:end]
+    for field, new_value in changes.items():
+        a, b, ea = _locate_value(segment, field, row[field])
+        segment = segment[:a] + json.dumps(new_value, ensure_ascii=ea) + segment[b:]
+
+    out = raw[:start] + segment + raw[end:]
+
+    # THE PROOF. Re-parse and require the document to differ ONLY where asked.
+    after = json.loads(out)
+    expected = copy.deepcopy(doc)
+    exp_items = expected["items"] if isinstance(expected, dict) else expected
+    exp_row = next(r for r in exp_items if isinstance(r, dict) and r.get("id") == row_id)
+    exp_row.update(changes)
+    if after != expected:
+        raise SpliceWouldChangeMore(
+            "the splice altered the document beyond the requested field(s) — "
+            "nothing written")
+
+    path.write_text(out, encoding="utf-8")
+    return next(r for r in (after["items"] if isinstance(after, dict) else after)
+                if r.get("id") == row_id)
 
 def check_live_backlogs(root: Optional[pathlib.Path] = None) -> int:
     """Refuse if any live backlog no longer round-trips. Returns a exit code.

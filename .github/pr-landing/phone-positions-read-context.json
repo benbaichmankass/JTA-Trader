@@ -1,0 +1,11 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "The APK ships to the live prop phone (breakout_2). Change is read-only page-side: Positions/Closed-orders read now waits for the tab chips on the /trade terminal, can open the account's terminal href first, and a miss posts a masked diagnostic. No order path, no config, reconcile still report_only.",
+  "why": "Prop tracking is broken: positions_state=no_tab on every read since the #17793 deploy, so a filled ticket still reads as a working order (operator 2026-10-12: 'we need to be able to track the prop trades').",
+  "recorded_decision": {
+    "kind": "operator_decision",
+    "ref": "PHONE-POSITIONS-READ-CONTEXT operator 2026-10-12/13 verbatim: 'we need to be able to track the prop trades - no upnl isn't a solution', 'we need to verify that the app can fulfill this function', 'the system opened that position, it should be aware of it', 'the executor should know how to read [closed orders] as well'. Reviewed + merged by manager session_01G16FfyYSmDPQuuW55BuTmK under the 2026-09-27 data-backed Tier-2 standing authorization: read-only phone parsing, ESTIMATED-only candle inference written through ingest_report, no order path; main.py hook is try/except, rate-limited to 5 min. Revert = revert PR + reinstall prior APK (run 38335904187)."
+  }
+}

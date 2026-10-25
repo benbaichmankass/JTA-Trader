@@ -1,0 +1,32 @@
+# research/THEMES.yaml — the ONE place dispatch weights live.
+#
+# Every non-done queue unit carries `theme:` (a key below) and `priority:` (1 = most urgent .. 3 = least,
+# WITHIN its theme). The dispatcher does NOT run themes in strict order, and since 2026-10-18 it does not
+# round-robin them either: PROGRAMME PRIORITY first (operator, same day: research_compute.yaml
+# value.programme_priority, [P1, P2] -- those units rank first on every backend), then MONEY FIRST (operator,
+# "Fix now, money first") -- due units are taken across themes by
+# the router's value score (scripts/research/research_compute.yaml `value:`), a starved unit first in any theme,
+# and the weighted share over the last `share_window_hours` of stamps decides only between EQUAL scores. A theme
+# therefore gets slots by holding VALUABLE due work, or spare capacity, or starve_hours -- not by its weight alone;
+# the weights are honoured by SUPPLY (check_research_queue_health.py theme_supply names the short themes).
+# Rules and the weekly revisit: research/queue/PLANNING.md.
+#
+# Weights are the operator's 2026-09-30 order (regime first, macro last), revisited by the planning session.
+# 2026-10-05 OPERATOR DECISION (popup, verbatim "Prop first (Recommended)"): new_strategy_prop raised 2 -> 6, the
+# highest weight in the file, so prop-account strategy units lead the fair share. No other weight moved
+# (weights are a share, not a sum; nothing normalises them). Closes PI-20261005-MG7BGR46-0001.
+share_window_hours: 48      # stamps newer than this count against a theme's share
+aging_hours: 72             # every aging_hours a unit waits lowers its EFFECTIVE priority by 1 (floor 0)
+themes:
+  regime:            {weight: 5, what: "regime selectivity / classifier headroom / cell evidence"}
+  live_strategy:     {weight: 4, what: "improving legs that are live: entries, exits, re-validation"}
+  ml_health:         {weight: 3, what: "regime-head drift, exit heads, demotion proposals"}
+  new_strategy_prop: {weight: 6, what: "Stage-0 coverage, new strategies, prop-account fit"}
+  macro:             {weight: 1, what: "macro / value sleeve and event studies"}
+  infra:             {weight: 2, what: "research tooling and pipeline self-tests that are units"}
+  # 2026-10-18 OPERATOR REQUEST (relayed by the manager, lane FRONTIER-TIMEFRAMES-1018, paraphrased): "the LOWEST-priority
+  # research theme, but start planning it now and get tests into the queue soon" -- test different time frames on the
+  # frontier end (daily/weekly holds of weeks; sub-hour breakout families that clear the fee+slippage stack). Weight 1 =
+  # the floor (ties macro; a weight never goes below 1, PLANNING.md s2), so it gets slots but never leads the fair share.
+  # Programme 07: research/programmes/07-timeframes.yaml; milestone L-TIMEFRAMES.
+  timeframes:        {weight: 1, what: "horizon frontier: daily/weekly position trades and sub-hour breakout families, net of cost"}

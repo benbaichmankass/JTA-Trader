@@ -1,0 +1,167 @@
+id: RQ-20261016-077e-07
+title: 'HOLDOUT RE-RUN, real money: does slv_pullback_1d''s configuration, SELECTED on the earliest ~75% of its history, hold
+  up net of the full cost stack when tested ONCE on the held-back latest ~25%?'
+status: done
+cadence: once
+roadmap:
+- L-LADDER
+theme: live_strategy
+priority: 1
+kind: experiment
+question: slv_pullback_1d trades real money on alpaca_live + alpaca_portfolio (and alpaca_paper). Its Stage-0 record passes
+  expectancy > 0, but the trial ledger (comms/research/trial_ledger.json) finds it does not survive DSR > 0.95 with a BHY-haircut
+  expectancy > 0 once the number of configurations tried is counted (0 of 29 Stage-0 passes do). The operator chose a held-back
+  span over deflation. Select among 9 pre-registered configurations (the declared one plus a 3x3 grid on pullback_frac x atr_stop_mult)
+  on the earliest span only, then read the ONE selected configuration once on the latest span.
+why_this_matters: 'OPERATOR DECISION 2026-10-16 (popup "Require holdout", relayed by Manager Session 2026-10-16 session_01VduHYzdaXe27wTDBLSu8ao;
+  checklist row PROMOTION-BAR-MULTIPLICITY), verbatim: "From now on, promotion needs a pass on the held-back 25% you just
+  approved. That''s one setting tested once, so no deflation is needed. Live legs are not demoted on this number (live net-of-cost
+  results still govern demotion), but all 8 real-money legs get holdout re-runs first." This unit is that re-run for slv_pullback_1d.
+  MD-PROMOTE-S0-S1 / -S1-S2 now require a holdout confirmation (mandate_resolver.py R-HOLDOUT); live legs are NOT demoted
+  on it.'
+power:
+  expected_n: 28
+  min_detectable_effect: 0.57
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'expected_n is the HELD-BACK trade count, an estimate: ~110 trades over the window (ESTIMATE: the committed record''s
+    rate (11 trades over 365 d) times ~10 years, IF dukascopy carries SLV that far back (not verified here).) x the held-back
+    share. The held-back floor is 25 trades (the dispatch); at n=25 a one-sample test detects d = (1.96 + 0.8416) / sqrt(25)
+    = 0.56 -> 0.57 sd. BORDERLINE: 25% is expected to hold ~27 trades; if it holds fewer the share grows toward 40% (the run
+    records it).'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261016-077e-07
+  statistic: 'scripts/research/exit_lever_ablation.py --grade holdout on slv_pullback_1d, window 2016-10-17 .. 2026-10-15
+    23:59, every arm ONE continuous harness pass (argv via regime_debt_matrix.build_harness_cmd, the evidence builder''s own),
+    net of the full cost stack the harness resolves for Alpaca equities (fee + the operator-reaffirmed provisional 5.0 bps
+    slippage); per-trade net_r from the harness''s --emit-trades. Arms: A = the leg as declared in config/strategies.yaml;
+    C1: pullback_frac=0.5;atr_stop_mult=1.5; C2: pullback_frac=0.5;atr_stop_mult=2.0; C3: pullback_frac=0.5;atr_stop_mult=2.5;
+    C4: pullback_frac=0.618;atr_stop_mult=1.5; C5: pullback_frac=0.618;atr_stop_mult=2.5; C6: pullback_frac=0.786;atr_stop_mult=1.5;
+    C7: pullback_frac=0.786;atr_stop_mult=2.0; C8: pullback_frac=0.786;atr_stop_mult=2.5. BOUNDARY, fixed before any outcome
+    is read: the latest 25% of the calendar window, grown in 1% steps until it holds 25 of arm A''s ENTRIES (entry times only),
+    capped at 40%. DISCOVERY = trades whose entry AND exit precede the boundary (straddlers are in neither span); 4 equal
+    calendar folds of the discovery span. HOLDOUT = the selected arm''s trades entered on/after the boundary.'
+  rule: 'SELECTION (discovery only): an arm is eligible iff discovery n >= 25 AND discovery net R > 0 AND >= 3 of 4 discovery
+    folds net-positive; the eligible arm with the highest discovery net R is selected (a tie goes to A). HOLDOUT (read once):
+    INDETERMINATE/insufficient_discovery IF every arm holds < 25 discovery trades; FAIL/no_discovery IF no arm is eligible
+    otherwise; INDETERMINATE/underpowered IF the selected arm holds < 25 held-back trades; PASS/confirmed IF held-back net
+    R > 0; FAIL/not_replicated otherwise (closes that configuration, never the family). ON PASS with A selected: write the
+    verdict''s holdout_confirmation block (source_run -> the committed verdict.json) into comms/strategy_evidence/slv_pullback_1d.json.
+    ON PASS with another arm selected: the declared configuration is unconfirmed -- the result is the evidence for a Tier-3
+    config proposal, never an edit here. ON FAIL: a note on PROMOTION-BAR-MULTIPLICITY for the manager; the leg is NOT demoted
+    on it (live net-of-cost governs demotion). Thresholds are not changed after any result.'
+  what_it_does_not_do: 'Edits no config, roster or record and places no order. The declared configuration may itself have
+    been chosen on data that overlaps the held-back span (param_selection_provenance: not_established), which is why the selection
+    is re-made here on the discovery span alone; a confirmation is only as clean as that re-selection. Does not deflate: one
+    configuration is tested once.'
+  registered_before_run: true
+  registered_at: '2026-10-16'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 400
+  confidence: 0.35
+  basis: 'stand-in: a real-money leg plus its mirror; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 40
+  why_runner: Fetches keyless public candles (Binance Vision / dukascopy) for a pinned window; Kaggle CPU runs with the internet
+    off and metis-market-data carries no 2h/4h/1d candles for these legs; reads no trainer data.
+  basis: 'Runner. One exit_lever_ablation.py invocation: one candle fetch + 9 harness passes. MEASURED 2026-10-16 (RQ-20261016-008
+    power.basis): 2 arms on xrp_pullback_2h over 2020-07..2026-10 took 74 s incl. the fetch; 9 arms carry headroom.'
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - slv_pullback_1d
+  - --arm
+  - A=
+  - --arm
+  - C1=pullback_frac=0.5;atr_stop_mult=1.5
+  - --arm
+  - C2=pullback_frac=0.5;atr_stop_mult=2.0
+  - --arm
+  - C3=pullback_frac=0.5;atr_stop_mult=2.5
+  - --arm
+  - C4=pullback_frac=0.618;atr_stop_mult=1.5
+  - --arm
+  - C5=pullback_frac=0.618;atr_stop_mult=2.5
+  - --arm
+  - C6=pullback_frac=0.786;atr_stop_mult=1.5
+  - --arm
+  - C7=pullback_frac=0.786;atr_stop_mult=2.0
+  - --arm
+  - C8=pullback_frac=0.786;atr_stop_mult=2.5
+  - --days
+  - '3700'
+  - --start
+  - '2016-10-17'
+  - --end
+  - 2026-10-15 23:59
+  - --non-crypto-source
+  - dukascopy
+  - --grade
+  - holdout
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '25'
+  - --holdout-frac
+  - '0.25'
+  - --holdout-min-trades
+  - '25'
+  - --holdout-max-frac
+  - '0.40'
+  - --research-unit
+  - RQ-20261016-077e-07
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261016-077e-07
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: research/results/RQ-20261016-077e-07/<run_id>.jsonl via the batch collector; verdict.json (with measurement.holdout_confirmation)
+    + arms under comms/research/RQ-20261016-077e-07/<run_id>/.
+holdout_rerun:
+  leg: slv_pullback_1d
+  decision: PROMOTION-BAR-MULTIPLICITY (operator, 2026-10-16, "Require holdout")
+  reads_into: comms/strategy_evidence/slv_pullback_1d.json::holdout_confirmation
+  resolver_clause: R-HOLDOUT
+related:
+- PROMOTION-BAR-MULTIPLICITY
+- MD-PROMOTE-S0-S1
+- MD-PROMOTE-S1-S2
+- scripts/ops/mandate_resolver.py
+- scripts/research/exit_lever_ablation.py
+- comms/research/trial_ledger.json
+- comms/strategy_evidence/slv_pullback_1d.json
+- 'RESEARCH-CONFIRM-FRESH-WINDOW (m20 holdout, PR #18614)'
+last_dispatched_at: '2026-10-17T04:36:39+00:00'
+grading:
+  attested: RULE-RQ-20261016-077e-07
+  auto: true
+  decision_rule_id: RULE-RQ-20261016-077e-07
+  evidence:
+  - research/results/RQ-20261016-077e-07/39003233791.jsonl
+  graded_at: '2026-10-17'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

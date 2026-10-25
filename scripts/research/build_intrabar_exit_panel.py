@@ -306,6 +306,10 @@ def build_intrabar_exit_panel(
                 "size": ml.get("size"),
                 "touch": tb.get("touch"),
                 "trade_realized_r": _f(st.r_multiple),
+                # R per 1 bp of notional for THIS trade (entry / |entry-stop| / 1e4).
+                # Lets the analyzer charge a venue cost quoted in bps in each
+                # trade's own R units (FIX-CA-28) instead of one flat R figure.
+                "r_per_bp": round(entry / abs(entry - stop) / 1.0e4, 8),
             }
             # dense in-trade features (feat_ prefix); context cats carried for conditioning
             for k in INTRABAR_FEATURE_NAMES:
@@ -417,6 +421,16 @@ def write_panel(rows, manifest, out_path: Path) -> Tuple[Path, Path]:
     return out_path, manifest_path
 
 
+# --- canonical (symbol, timeframe) -> candle-file resolver -----------------
+# THE ONE WAY this harness gets candles: scripts/ops/backtest_data_source.py.
+# See docs/reference/backtest-data-loading.md.
+import importlib.util as _ilu  # noqa: E402
+_spec = _ilu.spec_from_file_location(
+    "_backtest_data_source", str(_REPO_ROOT / "scripts" / "ops" / "backtest_data_source.py"))
+_backtest_data_source = _ilu.module_from_spec(_spec)
+_spec.loader.exec_module(_backtest_data_source)  # noqa: E402
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     import os
 
@@ -428,8 +442,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         )
     )
     p.add_argument("--harness", choices=sorted(ADAPTERS), default="ict_scalp")
-    p.add_argument("--data", default=os.environ.get("BACKTEST_DATA_PATH", "data/backtest_candles.csv"))
-    p.add_argument("--symbol", default="BTCUSDT")
+    p.add_argument("--data", default=None)
+    p.add_argument("--symbol", default=None)
     p.add_argument("--timeframe", default="5m")
     p.add_argument("--stamp-regime", action=argparse.BooleanOptionalAction, default=True)
     p.add_argument("--min-confidence", type=float, default=0.0)
@@ -461,6 +475,19 @@ def main(argv: Optional[List[str]] = None) -> int:
     p.add_argument("--out", default="runtime_logs/research/exit_head_panel.jsonl")
     p.add_argument("--quiet", action="store_true")
     args = p.parse_args(argv)
+    # --- data-source resolution (row E4, docs/claude/work/MANAGER-CHECKLIST.json)
+    _src = _backtest_data_source.resolve_or_refuse(
+        args.symbol, args.timeframe, args.data,
+        legacy_default=os.environ.get("BACKTEST_DATA_PATH", "data/backtest_candles.csv"))
+    if not _src.ok:
+        print(_backtest_data_source.refusal_message(
+            _src, harness="build_intrabar_exit_panel.py",
+            legacy_default=os.environ.get("BACKTEST_DATA_PATH", "data/backtest_candles.csv")),
+            file=sys.stderr)
+        return 2
+    args.data = _src.path
+    args.symbol = args.symbol or "BTCUSDT"
+    print(_src.provenance_line(), file=sys.stderr)
 
     adapter_opts = {
         "data_path": args.data,

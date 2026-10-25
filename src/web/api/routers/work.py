@@ -55,6 +55,7 @@ from __future__ import annotations
 
 import asyncio
 import hmac
+import json
 import logging
 import os
 import re
@@ -72,6 +73,7 @@ from fastapi import APIRouter, Header, HTTPException, Request
 # The manager checklist's ONE grading owner. Imported whole rather than
 # cherry-picking helpers, so a reader of this route can see that every status
 # reading here is `manager_status`'s and none of it is re-derived locally.
+from src.web.api._swr import SWRCache
 from src.runtime import manager_status
 from src.runtime.decision_subject import (
     SUBJECT_GONE,
@@ -448,7 +450,15 @@ def _wip_block(in_flight: int) -> dict[str, Any]:
             "⚠️ Enforcement is in CI, NOT in this route — this count is still a "
             "reading and this route still gates nothing; a read path that refused "
             "something would be a second copy of the rule, free to drift from the "
-            "one that binds."
+            "one that binds. "
+            "⚠️ E9 (2026-09-21): `inFlight` counts `lifecycle: in_flight` work "
+            "objects under docs/claude/work/objects/, which the 2026-09-21 "
+            "operating reset archived without a replacement — so this number is "
+            "structurally 0 under the current MANAGER-CHECKLIST.json model, not "
+            "a live measurement of anything happening today. Whether "
+            "`enforced`/`state` above still describe scripts/ci/check_wip_ceiling.py's "
+            "actual CI wiring after the reset is filed, not verified here — see "
+            "docs/claude/work/PIPELINE.jsonl."
         ),
     }
 
@@ -484,8 +494,14 @@ def _coverage_block() -> dict[str, Any]:
             "started, and NOT queued. Carrying everything is not the same as "
             "everything being open. ⚠️ `complete` is still false: there are no "
             "`steps`, and no audit has established that every workstream has an "
-            "object. A bug to fix still goes to the review backlogs; what a "
-            "session must KNOW before it plans is still OPEN-ITEMS.json."
+            "object. ⚠️ CORRECTED 2026-09-21 (E9) — this note used to say a bug "
+            "still goes to the review backlogs and that OPEN-ITEMS.json is what "
+            "a session must know before it plans. Both were archived by the "
+            "2026-09-21 operating reset (docs/archive/2026-09-21-operating-reset/) "
+            "and nothing live reads either any more. A finding that needs picking "
+            "up later goes into docs/claude/work/PIPELINE.jsonl (via "
+            "scripts/ops/pipeline.py); a build goes into a row in "
+            "docs/claude/work/MANAGER-CHECKLIST.json. Nothing else is filing."
         ),
     }
 
@@ -876,6 +892,7 @@ def _checklist_item(
         "lane": item.get("lane"),
         "tier": item.get("tier"),
         "priority": item.get("priority"),
+        "priorityRank": item.get("priority_rank"),
         "status": {
             # `value` is what a renderer groups and labels by. `basis` says how
             # it was arrived at and is NOT inferable from `value`: an
@@ -996,10 +1013,15 @@ def _sessions_panel() -> dict[str, Any]:
 
 
 _SESSIONS_NOTE = (
-    "Session state is only as fresh as the last MANAGER OBSERVATION written "
-    "into docs/claude/work/SESSIONS.json. This is NOT a live feed: reading the "
+    "⚠️ CORRECTED 2026-09-21 (E9) — this used to read as a merely STALE "
+    "register; it is not. docs/claude/work/SESSIONS.json was archived by the "
+    "2026-09-21 operating reset (docs/archive/2026-09-21-operating-reset/) and "
+    "nothing repopulates it, so under the current model this panel reads "
+    "`present: false` PERMANENTLY, not intermittently. It is not coming back. "
+    "Session state was only ever as fresh as the last MANAGER OBSERVATION "
+    "written into that file. This is NOT a live feed: reading the "
     "platform's own session list needs `list_sessions`, an mcp__* tool no API "
-    "route holds. Read each lane's observation age beside its state."
+    "route holds."
 )
 
 
@@ -1173,6 +1195,109 @@ def get_work_checklist() -> dict[str, Any]:
     return payload
 
 
+# ── /snapshot — the Overview's work-queue glance (UI-UPGRADE-1 item 2) ─────────
+#
+# The full /checklist envelope is ~435 KB (every row with its note and lane
+# history) — far too heavy to put on the Overview. This is the four lists the
+# Overview shows, each row cut to id/title/state/owner/updated_at:
+#
+#   closedRecent    last 5 rows in a terminal state (done | dropped), newest
+#                   `updated_at` first.
+#   openNow         every in_flight row (a lane is on it now).
+#   next            the first 5 rows of the RANKED RUNNABLE QUEUE
+#                   (`checklist_store.queue`: queued, nothing in blocked_on, by
+#                   `priority_rank`, unranked last in `_seq` order) -- the order
+#                   the manager dispatches from (manager SKILL § "The operating loop").
+#   waitingOnOperator  every open row (not done/dropped) with a typed
+#                   blocked_on edge of kind `operator_decision` or `operator`.
+#                   Rows whose OWNER merely names the operator are NOT counted:
+#                   an owner is who does the work, not a pending ask.
+#
+# `landed_unproven` is open-but-merged: it is counted in `counts`, never listed
+# as closed — it is not `done` (CLAUDE.md § Every session, step 5).
+
+_SNAPSHOT_CLOSED = ("done", "dropped")
+_SNAPSHOT_OPERATOR_KINDS = ("operator_decision", "operator")
+_SNAPSHOT_CACHE_TTL_S = 20.0
+_snapshot_cache: tuple[float, dict[str, Any]] | None = None
+
+
+def _snapshot_row(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": row.get("id"),
+        "title": row.get("title"),
+        "state": row.get("state"),
+        "owner": row.get("owner"),
+        "lane": row.get("lane"),
+        "tier": row.get("tier"),
+        "priorityRank": row.get("priority_rank"),
+        "updatedAt": row.get("updated_at"),
+    }
+
+
+def _operator_edges(row: dict[str, Any]) -> list[dict[str, Any]]:
+    edges = row.get("blocked_on")
+    if not isinstance(edges, list):
+        return []
+    return [e for e in edges
+            if isinstance(e, dict) and e.get("kind") in _SNAPSHOT_OPERATOR_KINDS]
+
+
+def _work_snapshot_payload() -> dict[str, Any]:
+    from src.runtime import checklist_store
+
+    rows = [r for r in checklist_store.load(Path(repo_root())).get("items", [])
+            if isinstance(r, dict)]
+    counts: dict[str, int] = {}
+    for r in rows:
+        key = r.get("state") or "(no state)"
+        counts[key] = counts.get(key, 0) + 1
+    closed = sorted((r for r in rows if r.get("state") in _SNAPSHOT_CLOSED),
+                    key=lambda r: str(r.get("updated_at") or ""), reverse=True)
+    waiting = []
+    for r in rows:
+        if r.get("state") in _SNAPSHOT_CLOSED:
+            continue
+        edges = _operator_edges(r)
+        if edges:
+            waiting.append({**_snapshot_row(r),
+                            "asks": [{"what": e.get("what"), "ref": e.get("ref")}
+                                     for e in edges]})
+    return {
+        "present": True,
+        "reason": None,
+        "total": len(rows),
+        "counts": counts,
+        "closedRecent": [_snapshot_row(r) for r in closed[:5]],
+        "openNow": [_snapshot_row(r) for r in rows if r.get("state") == "in_flight"],
+        "next": [_snapshot_row(r) for r in checklist_store.queue({"items": rows})[:5]],
+        "waitingOnOperator": waiting,
+    }
+
+
+@router.get("/snapshot")
+def get_work_snapshot() -> dict[str, Any]:
+    """Small work-queue glance for the Overview. Read-only, file-backed.
+
+    An unreadable store degrades to ``present: false`` with a reason and EMPTY
+    lists — never lists that read as "no work".
+    """
+    global _snapshot_cache
+    now = time.monotonic()
+    cached = _snapshot_cache
+    if cached is not None and (now - cached[0]) < _SNAPSHOT_CACHE_TTL_S:
+        return cached[1]
+    try:
+        payload = _work_snapshot_payload()
+    except Exception as exc:  # noqa: BLE001  # allow-silent: not silent — logged WITH a stack and surfaced as present:false + reason; a Tier-1 read surface must not 5xx
+        logger.warning("work: snapshot build failed: %s", exc, exc_info=True)
+        return {"present": False, "reason": f"checklist read failed: {exc}",
+                "total": None, "counts": {}, "closedRecent": [], "openNow": [],
+                "next": [], "waitingOnOperator": []}
+    _snapshot_cache = (now, payload)
+    return payload
+
+
 #: Operator-facing wording per answer state. PRESENTATION for this surface; the
 #: grading itself has ONE owner in `work_decisions.grade_answer_state` and is
 #: not re-derived here or in the SPA.
@@ -1203,19 +1328,133 @@ _ANSWER_STATE_NOTES = {
 }
 
 
+def _checklist_path() -> Path:
+    return Path(repo_root()) / manager_status.CHECKLIST_RELPATH
+
+
+def _pipeline_store_path() -> Path:
+    from scripts.ops import pipeline as _pipeline
+
+    return Path(repo_root()) / _pipeline.STORE
+
+
+def _checklist_operator_decision_edges() -> tuple[list[dict[str, Any]], str, str | None]:
+    """``blocked_on`` edges of ``kind: operator_decision`` on LIVE checklist rows.
+
+    ⚠️ E15. Before this, ``_decision_inbox``'s ONLY source was
+    ``docs/claude/work/objects/*.yaml`` — a directory the 2026-09-21 operating
+    reset archived. ``_yaml_files`` on an absent directory returns ``[]``
+    silently, so the inbox read as ``present: true`` with zero requests and
+    zero edges FOREVER after — an unanswered decision and no decision at all
+    render identically, which is exactly the collapsed state
+    ``scripts/ci/check_collapsed_states.py`` exists to catch. This is one of
+    the two LIVE replacements named in the E15 scope fence (the other is
+    ``_pipeline_ask_operator_items`` below); the archived directory is never
+    resurrected.
+
+    Read state reuses ``manager_status.FileRead``'s own vocabulary
+    (``read`` / ``absent`` / ``unreadable``) rather than a second one, so "the
+    checklist declares no operator-decision edges" and "we could not read the
+    checklist" can never render alike.
+    """
+    read = manager_status.read_json_file(_checklist_path())
+    if read.state != "read":
+        return [], read.state, read.error
+    edges: list[dict[str, Any]] = []
+    items = read.data.get("items")
+    for item in items if isinstance(items, list) else []:
+        if not isinstance(item, dict):
+            continue
+        blocked = item.get("blocked_on")
+        for edge in blocked if isinstance(blocked, list) else []:
+            if not isinstance(edge, dict) or edge.get("kind") != "operator_decision":
+                continue
+            edges.append(
+                {
+                    "source": "checklist",
+                    "objectId": item.get("id"),
+                    "objectTitle": item.get("title"),
+                    "objectLifecycle": item.get("state"),
+                    "ref": edge.get("ref"),
+                    "since": None,
+                    "note": edge.get("what"),
+                }
+            )
+    return edges, "read", None
+
+
+def _pipeline_ask_operator_items() -> tuple[list[dict[str, Any]], str, int]:
+    """Open ``PIPELINE.jsonl`` items whose ``next_action`` is ``ask_operator``.
+
+    ⚠️ E15. The SECOND live replacement named in the scope fence:
+    ``next_action: ask_operator`` is a pipeline item's own declaration that it
+    needs the operator's decision — the live equivalent of what the archived
+    ``objects/*.yaml``'s ``decision_requests[]`` used to carry.
+    ``TERMINAL_STATES`` (``done`` / ``killed``) are excluded — a decision
+    already made and closed is not "waiting on you" (it is reported in
+    ``docs/claude/work/PIPELINE.jsonl``'s own audit trail instead).
+    ⚠️ Read-only: this never appends to or otherwise touches
+    ``PIPELINE.jsonl`` — a merge queue drains it concurrently.
+
+    Read state reuses ``scripts/ops/render_daily_brief.py``'s own two-value
+    vocabulary for THIS store (``read`` vs ``partial``) rather than inventing
+    a third. A genuinely never-written store still reads ``read`` with zero
+    items — ``pipeline.py``'s own docstring: an append-only log that has never
+    been written "genuinely holds nothing", which is not the same condition as
+    "we could not parse what is there" (``partial``).
+    """
+    from scripts.ops import pipeline as _pipeline
+
+    res = _pipeline.read_log(_pipeline_store_path())
+    state = "read" if res.healthy else "partial"
+    today = datetime.now(timezone.utc).date()
+    items: list[dict[str, Any]] = []
+    for item in res.items.values():
+        if item.get("next_action") != "ask_operator":
+            continue
+        if item.get("state") in _pipeline.TERMINAL_STATES:
+            continue
+        due_when = item.get("due_when") or {}
+        items.append(
+            {
+                "source": "pipeline",
+                "objectId": item.get("id"),
+                "objectTitle": item.get("what"),
+                "objectLifecycle": item.get("state"),
+                "ref": item.get("routed_to"),
+                "since": None,
+                "note": due_when.get("clears_when"),
+                "due": _pipeline.is_due(item, today),
+            }
+        )
+    # Due first — the ones asking for attention NOW lead the list.
+    items.sort(key=lambda i: (not i["due"], str(i["objectId"])))
+    return items, state, len(res.unreadable)
+
+
 def _decision_inbox() -> dict[str, Any]:
     """Every operator decision the store is waiting on, with its answer state.
 
-    Two sources of a pending decision, and they are counted separately because
-    they are different facts:
+    Three sources of a pending decision, and they are counted separately
+    because they are different facts:
 
       * a ``decision_requests[]`` entry — an ANSWERABLE question, with options
-      * a ``blocked_on`` edge of ``kind: operator_decision`` — a declared
-        dependency on the operator that carries NO answerable request
+        (from ``docs/claude/work/objects/*.yaml`` — ⚠️ E15: that directory is
+        ARCHIVED as of 2026-09-21, so this source structurally reads empty;
+        see ``sources.workObjects`` on the response, never treat the resulting
+        zero as verified)
+      * a ``blocked_on`` edge of ``kind: operator_decision`` on a LIVE
+        checklist row — a declared dependency on the operator that carries NO
+        answerable request (``_checklist_operator_decision_edges``)
+      * a LIVE pipeline item whose ``next_action`` is ``ask_operator``
+        (``_pipeline_ask_operator_items``)
 
-    The second is the one worth surfacing loudly: it is a question the operator
-    is blocking on that they cannot answer from the UI, because nobody wrote it
-    down as a request. Folding the two together would hide exactly that gap.
+    The second and third are the ones worth surfacing loudly: each is a
+    question the operator is blocking on that they cannot answer from the UI,
+    because nobody wrote it down as a request. Folding any of the three
+    together would hide exactly that gap — so they stay tagged by ``source``
+    inside ``unanswerableOperatorEdges`` rather than merged into one
+    unattributed count.
     """
     index = _get_index()
     rows, transit_state, transit_error = read_transit()
@@ -1290,6 +1529,7 @@ def _decision_inbox() -> dict[str, Any]:
                 continue
             unanswerable.append(
                 {
+                    "source": "work_object",
                     "objectId": object_id,
                     "objectTitle": obj.get("title"),
                     "objectLifecycle": obj.get("lifecycle"),
@@ -1298,6 +1538,17 @@ def _decision_inbox() -> dict[str, Any]:
                     "note": edge.get("note"),
                 }
             )
+
+    # ── E15: the two LIVE replacements for the archived objects/ directory ──
+    checklist_edges, checklist_state, checklist_error = (
+        _checklist_operator_decision_edges()
+    )
+    unanswerable.extend(checklist_edges)
+
+    pipeline_items, pipeline_state, pipeline_unreadable_records = (
+        _pipeline_ask_operator_items()
+    )
+    unanswerable.extend(pipeline_items)
 
     by_state = {state: 0 for state in ANSWER_STATES}
     by_subject = {state: 0 for state in SUBJECT_STATES}
@@ -1456,6 +1707,27 @@ def _decision_inbox() -> dict[str, Any]:
             # cannot ANSWER is worse than one that was never asked.
             "malformedRequestsDropped": malformed,
             "unanswerableOperatorEdgeCount": len(unanswerable),
+            # ⚠️ E15: the auditable split behind `unanswerableOperatorEdgeCount`
+            # — published so the count is never trusted as a single opaque
+            # number. `workObject` is structurally 0 while objects/ stays
+            # archived; that is NOT the same fact as "nothing is waiting", and
+            # `checklist` + `pipeline` are the two counts that actually move.
+            "unanswerableBySource": {
+                "workObject": sum(1 for e in unanswerable if e.get("source") == "work_object"),
+                "checklist": sum(1 for e in unanswerable if e.get("source") == "checklist"),
+                "pipeline": sum(1 for e in unanswerable if e.get("source") == "pipeline"),
+            },
+            # ⚠️ E15: THE HEADLINE NUMBER. Everything genuinely waiting on the
+            # operator, across all three sources, added rather than any one of
+            # them read alone — `actionableCount` (answerable requests) is
+            # structurally 0 today (objects/ is archived); the checklist and
+            # pipeline edges inside `unanswerableOperatorEdges` are where a
+            # real pending decision now shows up. A consumer that renders
+            # "nothing is waiting on you" must read THIS field, not
+            # `actionableCount` alone.
+            "waitingOnYouTotal": (
+                sum(1 for r in requests if r["actionable"]) + len(unanswerable)
+            ),
             "staleOpenWindows": stale_open,
             "staleAfterSeconds": STALE_TRANSIT_SECONDS,
             # Who asked, graded over EVERY request — the coverage denominator
@@ -1476,11 +1748,55 @@ def _decision_inbox() -> dict[str, Any]:
             "rowsRead": len(rows),
         },
         "writeGate": _write_gate_reading(),
+        # ⚠️ E15: per-source read-state, published so a consumer can tell "this
+        # source has nothing pending" from "we could not read this source"
+        # WITHOUT re-deriving it from `unanswerableBySource`'s counts (a count
+        # of 0 is ambiguous between the two; a state string is not). Reuses
+        # `manager_status.FileRead`'s vocabulary for the checklist and
+        # `render_daily_brief.py`'s two-value vocabulary for the pipeline
+        # store, per the E15 scope fence — neither is re-derived here.
+        "sources": {
+            "workObjects": {
+                "state": "read" if _objects_dir().exists() else "archived",
+                "note": (
+                    "docs/claude/work/objects/ was archived by the 2026-09-21 "
+                    "operating reset (see docs/plans/OPERATING-PLAN-2026-09-21.md "
+                    "and E9). `decision_requests[]` — the only source this route "
+                    "read before E15 — structurally reads empty under the "
+                    "current model. That is NOT the same fact as \"no decisions "
+                    "are pending\"; see `sources.checklist` and `sources.pipeline` "
+                    "for the two live replacements."
+                ),
+            },
+            "checklist": {
+                "state": checklist_state,
+                "error": checklist_error,
+                "path": manager_status.CHECKLIST_RELPATH,
+            },
+            "pipeline": {
+                "state": pipeline_state,
+                "unreadableRecords": pipeline_unreadable_records,
+                "path": str(_pipeline_store_path()),
+            },
+        },
         "note": (
             "The repo is the source of truth. This route reports `committed` "
             "ONLY from an `answer` block on the work object in the repo — never "
             "from the transit log — so an answer that does not commit leaves "
-            "its question UNANSWERED. Transit fails BACK, never forward."
+            "its question UNANSWERED. Transit fails BACK, never forward. "
+            "⚠️ CORRECTED 2026-09-21 (E15) — `docs/claude/work/objects/` was "
+            "archived by the operating reset and this route's ONLY source "
+            "until now, so `requests`/`actionableCount` read structurally "
+            "empty regardless of what the operator actually had pending — a "
+            "genuine unanswered decision and no decision at all rendered "
+            "identically. `unanswerableOperatorEdges` now ALSO carries live "
+            "`blocked_on: operator_decision` edges from "
+            "`docs/claude/work/MANAGER-CHECKLIST.json` and open "
+            "`next_action: ask_operator` items from "
+            "`docs/claude/work/PIPELINE.jsonl` (tagged `source`), and "
+            "`summary.waitingOnYouTotal` is the number that actually reflects "
+            "them — read that, not `actionableCount` alone, for \"is anything "
+            "waiting on me\". PIPELINE.jsonl is read-only from this route."
         ),
     }
 
@@ -1537,6 +1853,12 @@ def get_work_decisions() -> dict[str, Any]:
                 "requestCount": 0,
                 "malformedRequestsDropped": 0,
                 "unanswerableOperatorEdgeCount": 0,
+                "unanswerableBySource": {"workObject": 0, "checklist": 0, "pipeline": 0},
+                # ⚠️ NOT 0 — the build failed before this could be counted, so
+                # it is unknown, never a fabricated clean number. See the E15
+                # note on the healthy envelope: a consumer must not read an
+                # absent/None value here as "nothing is waiting".
+                "waitingOnYouTotal": None,
                 "staleOpenWindows": 0,
                 "staleAfterSeconds": STALE_TRANSIT_SECONDS,
             },
@@ -1546,6 +1868,11 @@ def get_work_decisions() -> dict[str, Any]:
                         "path": None, "rowsRead": 0},
             "writeGate": {"state": "unknown", "acceptsWrites": None,
                           "note": "inbox build failed before the gate was read"},
+            "sources": {
+                "workObjects": {"state": "unknown", "note": "inbox build failed before this was read"},
+                "checklist": {"state": "unknown", "error": None, "path": manager_status.CHECKLIST_RELPATH},
+                "pipeline": {"state": "unknown", "unreadableRecords": None, "path": None},
+            },
         }
 
 
@@ -1705,3 +2032,421 @@ async def post_work_decision(
             "question reads UNANSWERED — transit fails back, never forward."
         ),
     }
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Session receipts — MI-290, the Workflow page's third panel
+# ═════════════════════════════════════════════════════════════════════════════
+
+#: Operator directive 2026-09-17: *"i want this format of summary cannonized so
+#: that this is what i get whenever i ask a session for a 'session receipt', and
+#: this is what should be presented on the web page"*. The format's ONE owner is
+#: `.claude/skills/session-receipt/SKILL.md`; the measured half is produced by
+#: `scripts/ops/session_receipt.py`. **This route computes nothing** — it serves
+#: what a session wrote, exactly as `/checklist` serves what a manager pushed.
+#:
+#: ⚠️ ONE FILE PER SESSION, not a shared register, and the reason is measured
+#: rather than stylistic: several lanes wrap at once, and a single mutable array
+#: is the shape that made `session-board.json::merge_slot` move in 39 of the last
+#: 40 commits touching it, sending every armed branch `dirty` and restarting its
+#: CI. `docs/claude/work/README.md` states the principle — one file per object,
+#: so two sessions touching different work never conflict.
+_RECEIPTS_SUBDIR = "receipts"
+_RECEIPTS_CACHE_TTL_S = 20.0
+_receipts_cache: tuple[float, dict[str, Any]] | None = None
+
+#: A session id, and the ONLY thing accepted as a filename stem. Anchored, so a
+#: traversal (`../`) is refused at the door rather than resolved and rejected
+#: later — the same polarity `/object/{object_id}` already uses.
+_RECEIPT_STEM_RE = re.compile(r"^session_[A-Za-z0-9]+$")
+
+#: The five sections, named here so the route can report a receipt that is
+#: MISSING one rather than serving it as though it were complete. A receipt with
+#: no `errors` block reads as a claim that the session made no mistakes, which is
+#: the specific failure the skill's section E exists to prevent.
+_RECEIPT_SECTIONS = ("decisions", "sessions_spawned", "own_work", "totals", "errors")
+
+
+def _receipt_completeness(payload: dict[str, Any]) -> dict[str, Any]:
+    """Which of the five sections are present, and which are still scaffolds.
+
+    Three states, never collapsed: a section can be `complete` (the author filled
+    it), `scaffold` (the generator wrote it and nobody has completed it — NOT the
+    same as "there were none"), or `missing` (absent entirely).
+    """
+    sections: dict[str, str] = {}
+    for name in _RECEIPT_SECTIONS:
+        block = payload.get(name)
+        if not isinstance(block, dict):
+            sections[name] = "missing"
+            continue
+        if block.get("basis") == "measured":
+            sections[name] = "complete"
+        elif block.get("rows"):
+            sections[name] = "complete"
+        else:
+            # An empty narrative section is a CLAIM ("none were taken"), and the
+            # page must be able to show that it is an unfilled scaffold instead.
+            sections[name] = "scaffold"
+    return {
+        "sections": sections,
+        "complete": all(v == "complete" for v in sections.values()),
+        "note": (
+            "`scaffold` means the generator wrote the section and no author "
+            "completed it. That is NOT the same as an author stating there were "
+            "none — a receipt with an empty ERRORS section reads as a claim of "
+            "no mistakes, and this field is what keeps the two apart."
+        ),
+    }
+
+
+def _receipts_payload() -> dict[str, Any]:
+    """Build the receipts envelope. Best-effort: never raises to the caller."""
+    repo = Path(repo_root())
+    reldir = f"docs/claude/work/{_RECEIPTS_SUBDIR}"
+    directory = _work_dir() / _RECEIPTS_SUBDIR
+    tree = manager_status.read_tree_provenance(repo_dir=repo)
+
+    if not directory.is_dir():
+        # ⚠️ NOT an empty list. "no session has written a receipt yet" and "the
+        # directory could not be read" are opposite findings, and a page that
+        # renders them identically is the collapse this router already refuses
+        # three times over.
+        return {
+            "present": False,
+            "readState": "absent",
+            "reason": (
+                f"{reldir}/ does not exist on this tree. No receipt has been "
+                "written yet, OR the tree predates the directory — this is not "
+                "a claim that no session has worked."
+            ),
+            "receipts": [],
+            "readErrors": [],
+            "summary": {"receipts": 0, "population": f"files matching session_*.json in {reldir}/"},
+            "freshness": {"path": reldir, "treeState": tree.state,
+                          "treeStamp": manager_status.render_tree_stamp(tree)},
+        }
+
+    receipts: list[dict[str, Any]] = []
+    read_errors: list[dict[str, str]] = []
+    for path in sorted(directory.glob("*.json")):
+        if not _RECEIPT_STEM_RE.match(path.stem):
+            # Reported, never silently skipped — a stray file in this directory
+            # is a finding about whoever put it there.
+            read_errors.append({"file": path.name,
+                                "error": "filename stem is not a session id"})
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            # A file that fails to parse is REPORTED, never dropped — this
+            # router's own rule 1.
+            read_errors.append({"file": path.name, "error": f"{type(exc).__name__}: {exc}"})
+            continue
+        if not isinstance(payload, dict):
+            read_errors.append({"file": path.name, "error": "not a JSON object"})
+            continue
+        commit = manager_status.read_file_commit(f"{reldir}/{path.name}", repo_dir=repo)
+        receipts.append({
+            "sessionId": payload.get("session_id") or path.stem,
+            "role": payload.get("role"),
+            "generatedAt": payload.get("generated_at"),
+            "window": payload.get("window"),
+            "completeness": _receipt_completeness(payload),
+            # Verbatim. The receipt's own fields are the product; an allowlist
+            # here would silently drop the detail the page exists to show —
+            # the same reasoning `/checklist` applies to its `fields` block.
+            "receipt": payload,
+            "freshness": {
+                "commitState": commit.state,
+                "commitSha": commit.sha,
+                "committedAt": commit.committed_at,
+                "commitAgeHours": (round(commit.age_hours, 3)
+                                   if commit.age_hours is not None else None),
+                # `None` is "we could not look", never "clean".
+                "workingTreeDirty": commit.dirty,
+            },
+        })
+
+    receipts.sort(key=lambda r: (r.get("generatedAt") or ""), reverse=True)
+    return {
+        "present": True,
+        "readState": "read",
+        "receipts": receipts,
+        # Non-empty `readErrors` with `present: true` is the honest state: we
+        # read the directory AND some files in it are unreadable.
+        "readErrors": read_errors,
+        "summary": {
+            "receipts": len(receipts),
+            "unreadable": len(read_errors),
+            "incomplete": sum(1 for r in receipts if not r["completeness"]["complete"]),
+            "population": f"files matching session_*.json in {reldir}/ on this tree",
+        },
+        "format": {
+            "owner": ".claude/skills/session-receipt/SKILL.md",
+            "generator": "scripts/ops/session_receipt.py",
+            "sections": list(_RECEIPT_SECTIONS),
+        },
+        "freshness": {
+            "path": reldir,
+            "treeState": tree.state,
+            "treeStamp": manager_status.render_tree_stamp(tree),
+            "note": (
+                "Served from the VM's WORKING TREE, which ict-git-sync pulls "
+                "roughly every 5 minutes — so a receipt appears here at the "
+                "author's PUSH plus that interval, never at its authoring."
+            ),
+        },
+    }
+
+
+@router.get("/receipts")
+def get_work_receipts() -> dict[str, Any]:
+    """Session receipts — the canonical wrap-up record, one per session.
+
+    Read-only, file-backed, no DB, no secrets, no write surface. Best-effort: an
+    unreadable directory degrades to ``present: false`` WITH its read state,
+    never a 5xx and never an empty list that reads as "no session has worked".
+    """
+    global _receipts_cache
+    now = time.monotonic()
+    cached = _receipts_cache
+    if cached is not None and (now - cached[0]) < _RECEIPTS_CACHE_TTL_S:
+        return cached[1]
+    try:
+        payload = _receipts_payload()
+    except Exception as exc:  # noqa: BLE001  # allow-silent: not silent — logged WITH a stack and surfaced as present:false + reason. A Tier-1 read surface must not 5xx (roadmap.py's contract); a receipts panel that 500s is invisible rather than empty.
+        logger.warning("work: receipts read failed: %s", exc, exc_info=True)
+        return {
+            "present": False,
+            "readState": "unreadable",
+            "reason": f"receipts read failed: {exc}",
+            "receipts": [],
+            "readErrors": [],
+            "summary": {"receipts": 0,
+                        "population": "payload build failed before the directory was read"},
+        }
+    _receipts_cache = (now, payload)
+    return payload
+
+
+# ── /brief — A3, the six-section daily brief, served LIVE ──────────────────
+#
+# Added 2026-09-21 (A3a). `scripts/ops/render_daily_brief.py` builds the six
+# fixed sections (what came due / taken under mandate / decisions for you /
+# what moved / what is running / spend) from files already on this tree —
+# the pipeline store, this checklist, and `config/mandates.yaml`. There is no
+# writer step and no cron: this route calls `build()` + `render()` on every
+# request (20s cache), the same shape `/checklist` above already uses for
+# `MANAGER-CHECKLIST.json`. See the module's own docstring for why that
+# decision is safe here and was not safe for the four-section module it
+# replaced (`DECIDED 2026-09-21 (A3a) — THE SCHEDULE QUESTION`).
+#
+# Tier: 1 (read-only, file-backed, no DB, no secrets — see
+# docs/api-tier-policy.md). Deliberately does not import `render_daily_brief`
+# at module scope: it in turn imports `scripts.ops.pipeline`, and keeping
+# that import inside the request path means a bug in either module degrades
+# this one route to `present: false` rather than failing every route this
+# file serves at process start.
+
+_BRIEF_CACHE_TTL_S = 20.0
+#: Served-at-once ceiling for a brief snapshot older than the TTL. The brief is
+#: a once-a-day document; ten minutes of staleness is far inside its grain.
+_BRIEF_STALE_S = 600.0
+_BRIEF_SWR = SWRCache(name="work-brief", fresh_s=_BRIEF_CACHE_TTL_S, stale_s=_BRIEF_STALE_S)
+
+
+def _brief_payload() -> dict[str, Any]:
+    from scripts.ops import render_daily_brief as _rdb
+
+    repo = Path(repo_root())
+    b = _rdb.build(root=repo)
+    tree = manager_status.read_tree_provenance(repo_dir=repo)
+    return {
+        "present": True,
+        "readState": "read",
+        "reason": None,
+        "forDate": b["forDate"],
+        "generatedAt": b["generatedAt"],
+        "markdown": _rdb.render(b),
+        # The three input read-states, verbatim — so a consumer can grey out
+        # a section instead of trusting a brief one of its inputs could not
+        # supply. Never collapsed to a single boolean.
+        "inputs": {
+            "pipeline": "read" if b["pipeline"]["healthy"] else "partial",
+            "checklist": b["checklistState"],
+            "mandates": b["mandatesState"],
+        },
+        "pipelineStats": b["pipeline"]["stats"],
+        "coverageComplete": b["coverageComplete"],
+        "freshness": {
+            # Same working-tree discipline as `/checklist`: the route reads
+            # the VM's working tree, which `ict-git-sync` pulls roughly every
+            # 5 minutes, so the brief is exactly as fresh as the last PUSH
+            # plus that interval — never as fresh as "just now" implies.
+            "treeState": tree.state,
+            "treeStamp": manager_status.render_tree_stamp(tree),
+            "note": ("Computed live from the working tree on every request "
+                     "(20s cache) — there is no separate generation step to "
+                     "go stale between pushes."),
+        },
+    }
+
+
+@router.get("/brief")
+def get_work_brief() -> dict[str, Any]:
+    """The six-section daily brief (A3), rendered live from the pipeline
+    store, the checklist, and `config/mandates.yaml`.
+
+    Read-only, file-backed, no DB, no secrets, no write surface. Best-effort:
+    a failure to build the brief degrades to ``present: false`` WITH a
+    reason, never a 5xx and never a stale/blank page passed off as current.
+    """
+    # UI-UPGRADE-1: stale-while-revalidate. Measured 2026-10-11 the render
+    # took ~16 s, and with a plain 20 s TTL every request after expiry paid it
+    # in the request path. Now a snapshot up to _BRIEF_STALE_S old is served at
+    # once while one background render runs; the payload says how old it is.
+    try:
+        payload, age_s, state = _BRIEF_SWR.get("brief", _brief_payload)
+    except Exception as exc:  # noqa: BLE001  # allow-silent: not silent — logged WITH a stack and surfaced as present:false + reason. A Tier-1 read surface must not 5xx (roadmap.py's contract); a brief that 500s is invisible rather than absent.
+        logger.warning("work: brief build failed: %s", exc, exc_info=True)
+        return {
+            "present": False,
+            "readState": "unreadable",
+            "reason": f"brief build failed: {exc}",
+            "markdown": None,
+            "inputs": {}, "pipelineStats": None, "coverageComplete": False,
+        }
+    return {**payload, "snapshot": {"ageSeconds": round(age_s, 1), "state": state}}
+
+
+# ── /schedule — A9: cadenced sessions, decisions owed, monitoring coming ──
+# due, cron cadences. Appended at end-of-file deliberately: a concurrent
+# lane (E15) is editing `_decision_inbox` and the helpers it calls, and a
+# new handler at the end merges cleanly against that diff. Same reasoning
+# as `_brief_payload` for the deferred import: `render_schedule` in turn
+# imports `scripts.ops.pipeline`, and an import at module scope would let a
+# bug in either degrade every route this file serves at process start,
+# rather than just this one to `present: false`.
+
+_SCHEDULE_CACHE_TTL_S = 20.0
+_schedule_cache: tuple[float, dict[str, Any]] | None = None
+
+
+def _schedule_payload() -> dict[str, Any]:
+    from scripts.ops import render_schedule as _rs
+
+    repo = Path(repo_root())
+    b = _rs.build(root=repo)
+    tree = manager_status.read_tree_provenance(repo_dir=repo)
+    return {
+        "present": True,
+        "readState": "read",
+        "reason": None,
+        "forDate": b["forDate"],
+        "generatedAt": b["generatedAt"],
+        "markdown": _rs.render(b),
+        "cadencedSessions": b["cadencedSessions"],
+        "decisionsOwed": b["decisionsOwed"],
+        "monitoringDue": b["monitoringDue"],
+        "crons": b["crons"],
+        # The three input read-states, verbatim — never collapsed to one
+        # boolean, same contract as `/brief`'s `inputs`.
+        "inputs": b["inputs"],
+        "coverageComplete": b["coverageComplete"],
+        "freshness": {
+            # Same working-tree discipline as `/checklist` and `/brief`: the
+            # route reads the VM's working tree, which `ict-git-sync` pulls
+            # roughly every 5 minutes, so the schedule is exactly as fresh
+            # as the last PUSH plus that interval.
+            "treeState": tree.state,
+            "treeStamp": manager_status.render_tree_stamp(tree),
+            "note": ("Computed live from the working tree on every request "
+                     "(20s cache) — there is no separate generation step to "
+                     "go stale between pushes."),
+        },
+    }
+
+
+@router.get("/schedule")
+def get_work_schedule() -> dict[str, Any]:
+    """The work schedule (A9): cadenced sessions, decisions owed, monitoring
+    coming due, and cron cadences — rendered live from
+    `docs/claude/work/SCHEDULE.json`, the pipeline store
+    (`docs/claude/work/PIPELINE.jsonl`), and `.github/workflows/*.yml`.
+
+    Read-only, file-backed, no DB, no secrets, no write surface. Best-effort:
+    a failure to build the schedule degrades to ``present: false`` WITH a
+    reason, never a 5xx and never a stale/blank page passed off as current.
+    """
+    global _schedule_cache
+    now = time.monotonic()
+    cached = _schedule_cache
+    if cached is not None and (now - cached[0]) < _SCHEDULE_CACHE_TTL_S:
+        return cached[1]
+    try:
+        payload = _schedule_payload()
+    except Exception as exc:  # noqa: BLE001  # allow-silent: not silent — logged WITH a stack and surfaced as present:false + reason. A Tier-1 read surface must not 5xx (roadmap.py's contract); a schedule that 500s is invisible rather than absent.
+        logger.warning("work: schedule build failed: %s", exc, exc_info=True)
+        return {
+            "present": False,
+            "readState": "unreadable",
+            "reason": f"schedule build failed: {exc}",
+            "markdown": None,
+            "cadencedSessions": None, "decisionsOwed": None,
+            "monitoringDue": None, "crons": None,
+            "inputs": {}, "coverageComplete": False,
+        }
+    _schedule_cache = (now, payload)
+    return payload
+
+
+# ── /report — WORK-SYSTEM: the persisted, scheduled daily work report ───────
+#
+# Added 2026-10-04 (WORK-SYSTEM). `/brief` above is the LIVE view; this serves
+# the REVIEWED one — `scripts/ops/work_report.py`, generated daily at 05:30Z by
+# `ict-work-report.timer` and persisted under runtime_logs/work_reports/ with a
+# `report_id` (WR-YYYYMMDD-HHMMZ) and `generated_at`, so "what did the manager
+# see, and when" is answerable after the fact. `?since=` adds the hourly
+# digest log (runtime_logs/work_reports/digest_log.jsonl). Read-only, file-backed, no DB,
+# no secrets, no write surface. Absent and unreadable are reported as such,
+# never as an empty report. No cache: it is one small file read.
+
+
+@router.get("/report")
+def get_work_report(report_id: str | None = None, since: str | None = None) -> dict[str, Any]:
+    """The latest persisted work report, or one by ``report_id``.
+
+    ``since=<ISO timestamp>`` also returns ``digestLog``: every hourly digest
+    block SENT after that time (what Telegram carried, since a session cannot
+    read Telegram) — the manager passes its ``last_review.reviewed_at``."""
+    from scripts.ops import work_report as _wr
+
+    log_block: dict[str, Any] = {}
+    if since is not None:
+        try:
+            log_state, entries = _wr.read_digest_log(since)
+        except Exception as exc:  # noqa: BLE001  # allow-silent: not silent — logged and surfaced as digestLogState; a Tier-1 read surface must not 5xx.
+            logger.warning("work: digest log read failed: %s", exc, exc_info=True)
+            log_state, entries = "unreadable", []
+        log_block = {"since": since, "digestLogState": log_state, "digestLog": entries}
+
+    try:
+        if report_id:
+            state, rep = _wr.read_report(report_id)
+        else:
+            state, rep = _wr.read_latest()
+    except Exception as exc:  # noqa: BLE001  # allow-silent: not silent — logged and surfaced as present:false + readState; a Tier-1 read surface must not 5xx.
+        logger.warning("work: report read failed: %s", exc, exc_info=True)
+        state, rep = "unreadable", None
+    if rep is None:
+        return {**log_block, "present": False, "readState": state, "reportId": report_id,
+                "schedule": _wr.SCHEDULE,
+                "reason": ("no persisted report — ict-work-report has not produced one"
+                           if state == "absent" else "report file could not be parsed")}
+    return {**log_block, "present": True, "readState": "read", "reportId": rep.get("report_id"),
+            "generatedAt": rep.get("generated_at"), "schedule": rep.get("schedule"),
+            "erroredSections": rep.get("errored_sections") or [],
+            "bytes": rep.get("bytes"), "markdown": rep.get("markdown"),
+            "sections": {k: {kk: vv for kk, vv in v.items() if kk != "trace"}
+                         for k, v in (rep.get("sections") or {}).items()}}

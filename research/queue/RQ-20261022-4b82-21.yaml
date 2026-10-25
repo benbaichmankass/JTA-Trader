@@ -1,0 +1,93 @@
+id: RQ-20261022-4b82-21
+title: 'Macro SERVICES-breadth VARIANT: does the ISM services PMI surprise predict ES=F forward returns at 1-5 trading days?'
+status: queued
+cadence: once
+roadmap:
+- M28
+theme: macro
+priority: 3
+kind: experiment
+question: RQ-20261014-de02-03 (ISM manufacturing PMI surprise -> ES=F, 1-5 d) graded FAIL. Does the ism_services survey surprise predict ES=F
+  forward returns at 1, 3 and 5 trading days (pre-registered horizons, positive sign, |t_eff| >= 2.4, n >= 100)? The pre-registered hypothesis
+  is that the larger-weight growth read carries the equity-surprise signal manufacturing lacks.
+why_this_matters: 'Operator directive 2026-10-22: an idea that failed one test is not dead; it failed the first test. This unit is a registered
+  VARIANT of that first test. First test: RQ-20261014-de02-03 (ISM manufacturing PMI surprise -> ES=F, 1-5 d) graded FAIL. DIAGNOSIS (one line):
+  manufacturing is roughly a tenth of US output while services are roughly seven tenths (approximate, general knowledge), so the manufacturing
+  release is the weaker-weighted growth read; the services PMI was never run in the family. Lane AUTHOR-FLOOR-1022 (research runnable floor 33
+  vs 65 at 17:40Z). Prior ids: RQ-20261014-de02-03. macro was short in the 17:40Z health check.'
+power:
+  expected_n: 266
+  min_detectable_effect: 0.2
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: n=266 is the count of ism_services rows carrying both actual and consensus in comms/macro/econ_calendar_snapshots*.jsonl (counted 2026-10-22);
+    r=0.2 needs ~194 observations at alpha 0.05 / power 0.8, so a thinner n grades indeterminate, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Re-reads committed point-in-time snapshots and fetches daily closes; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261022-4B82-21-ISM-SERVICES-ES
+  registered_at: '2026-10-22'
+  registered_before_run: true
+  statistic: scripts/research/macro_event_study_run.py --kind ism_services --symbol ES=F --horizons 1,3,5 --primary-horizons 1,3,5 --min-n 100
+    --t-bar 2.4 --expected-sign positive; surprise = actual - PIT survey consensus joined to daily closes (point-in-time econ_calendar_snapshots
+    + survey backfill).
+  rule: PASS IF at some horizon in {1,3,5} with n >= 100, |ic_t_eff| >= 2.4 AND the sign of the IC is positive. FAIL IF every horizon has n >=
+    100 and none reaches |t_eff| >= 2.4 in the positive direction (a significant WRONG-sign horizon is reported but is not a pass; a FAIL closes
+    only this surprise definition, instrument and these horizons). INDETERMINATE IF any horizon has n < 100. A PASS starts this kind's own placebo
+    (anchor shifted -10 trading days) and early/late sub-period rungs; it is not money and not a trade case.
+  what_it_does_not_do: 'An IC is not money: no cost stack is applied here and a PASS needs its own sign-book net-of-cost unit. The horizons and
+    threshold are fixed now. Family-breadth multiplicity (the P4 event family already holds many IC tests) is reported by the reader; a PASS is
+    a lead, not a finding.'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 20
+  confidence: 0.15
+  bucket: information
+  basis: 'stand-in: a second event-surprise lead for the M28 sleeve; low prior, information value, not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 15
+  why_runner: Fetches public candles / reads committed files; CPU only; not trainer-resident.
+  basis: Estimate from the comparable harness_stage0 / exit_lever_ablation runs of 2026-10-16..22; the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/macro_event_study_run.py
+  - --kind
+  - ism_services
+  - --snapshots
+  - comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl
+  - --symbol
+  - ES=F
+  - --horizons
+  - 1,3,5
+  - --primary-horizons
+  - 1,3,5
+  - --min-n
+  - '100'
+  - --t-bar
+  - '2.4'
+  - --expected-sign
+  - positive
+  - --population
+  - ism_services releases (live feed + survey-consensus backfill) joined to ES=F daily closes
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261022-4b82-21
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P4
+related:
+- scripts/research/macro_event_study_run.py
+- comms/macro/econ_calendar_snapshots.jsonl
+- RQ-20261014-de02-03
+- AUTHOR-FLOOR-1022

@@ -1,0 +1,112 @@
+id: RQ-20261016-1fa6-03
+title: 'Positive control, weekly: does the initial-jobless-claims survey surprise move ZN=F on the RELEASE DAY with the documented positive sign (more claims = weaker
+  economy = bonds up)?'
+status: done
+cadence: once
+theme: macro
+priority: 1
+kind: experiment
+question: 'All 14 macro survey-surprise units (2026-10-13/14) measured POST-release drift: base bar = the release-day close, and every kind prints 12:30-19:00 UTC,
+  so the announcement reaction sat INSIDE the base bar and was excluded. Weekly frequency gives ~580 releases, so this control has the power the monthly kinds lack.'
+why_this_matters: The highest-n control. RQ-20261014-65cc-03 (TLT, post-release drift) printed t +1.72 -- the right sign in the wrong window. If the release-day window
+  clears, the family's instrument works and the earlier FAILs are about the window.
+power:
+  expected_n: 580
+  min_detectable_effect: 0.15
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Unit = one release with a defined survey surprise. initial_jobless_claims: 597 joined releases in RQ-20261014-65cc-01. Floor (1.96+0.84)^2/0.15^2 = 348
+    at d=0.15. The bar is the harness''s overlap-free t >= 2.4 (h=1 has no overlap), stricter than the floor''s alpha.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed historical backfill of resolved releases (comms/macro/econ_calendar_snapshots*.jsonl); nothing accrues. A short price join lands INDETERMINATE,
+      never padded.
+decision_rule:
+  id: RULE-RQ-20261016-1fa6-03
+  registered_at: '2026-10-16'
+  registered_before_run: true
+  statistic: 'macro_event_study_run.py grade(): Spearman IC of the survey surprise vs the h=1 forward return with --anchor-shift-td -1, i.e. the return from the close
+    BEFORE the release day to the release-day close (verified 2026-10-16: shift_anchor moves the base bar one trading row back, make_forward_return reads the close
+    one row later). n, ic, ic_t_eff.'
+  rule: 'PASS IF n >= 100 AND ic_t_eff >= 2.4 in magnitude with the expected sign (positive). FAIL IF n >= 100 and not PASS. INDETERMINATE IF n < 100. no_data / producer_failed:
+    a route fault, not a verdict. Bars are not changed after any result.'
+  what_it_does_not_do: 'Not a tradeable book: the release-day window starts at the PRIOR close, before the print, so it measures the announcement reaction, which
+    is not capturable at daily-close granularity (an intraday entry needs row MACRO-INTRADAY-EVENT-STUDY). It does not re-open the 13 post-release-drift FAILs by
+    itself; it is the positive control that says whether those negatives had a working instrument. No config, no leg.'
+compute: cpu_light
+value:
+  bucket: information
+  usd_at_stake_per_month: 60
+  confidence: 0.3
+  basis: 'stand-in: decides whether the macro survey-surprise family (14 units, 13 FAIL) was tested with a working instrument; information value, not a P&L claim.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 10
+  basis: Same shape as RQ-20261014-de02-04 (one daily-close fetch, a few hundred snapshot rows).
+  why_runner: public yfinance daily closes + committed snapshots; minutes of CPU, no trainer data, no GPU shape.
+run:
+  command:
+  - python3
+  - scripts/research/macro_event_study_run.py
+  - --kind
+  - initial_jobless_claims
+  - --snapshots
+  - comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl
+  - --symbol
+  - ZN=F
+  - --anchor-shift-td
+  - '-1'
+  - --horizons
+  - '1'
+  - --primary-horizons
+  - '1'
+  - --min-n
+  - '100'
+  - --t-bar
+  - '2.4'
+  - --expected-sign
+  - positive
+  - --population
+  - initial_jobless_claims releases with a defined survey surprise; RELEASE-DAY window (prior close -> release-day close) on ZN=F daily closes
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261016-1fa6-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M28
+programme: P4
+related:
+- P4-MACRO-PROGRAMME
+- docs/research/programmes/04-MACRO-SLEEVE.md
+- docs/research/idea-family-review-2026-10-16.md
+- scripts/research/macro_event_study_run.py
+- .claude/skills/macro-research/SKILL.md
+outside_evidence:
+- Balduzzi, Elton, Green 2001 JFQA -- 17 surprises significantly move Treasury prices, adjustment within ~1 minute, https://ideas.repec.org/a/cup/jfinqa/v36y2001i04p523-543_00.html
+  (primary)
+- Andersen, Bollerslev, Diebold, Vega 2003 AER 'Micro Effects of Macro Announcements' -- surprises move prices at high frequency, https://www.nber.org/system/files/working_papers/w8959/w8959.pdf
+  (primary)
+origin:
+  lane: IDEA-REVIEW-1016
+  family: macro survey-surprise event studies
+  family_verdict: A (tested the post-release drift window the literature says is empty; never the release-day reaction it says is full)
+last_dispatched_at: '2026-10-18T20:38:51+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-RQ-20261016-1fa6-03
+  evidence:
+  - research/results/RQ-20261016-1fa6-03/39164274103.jsonl
+  graded_at: '2026-10-20'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

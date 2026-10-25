@@ -1,0 +1,76 @@
+{
+ "rule_id": "RULE-RQ0922-002-FOLD-ROBUSTNESS",
+ "decision_rule": {
+  "id": "RULE-RQ0922-002-FOLD-ROBUSTNESS"
+ },
+ "tool": "scripts/research/evidence_fold_robustness.py",
+ "verdict": "indeterminate",
+ "read_state": "measured",
+ "n": 9,
+ "measurement": {
+  "fold_concentrated": 4,
+  "share": 0.4444,
+  "bars": {
+   "yes": 0.625,
+   "no": 0.25
+  },
+  "per_leg": {
+   "ada_pullback_2h": {
+    "net_r_oos": 28.1001,
+    "max_fold_net_r": 15.9404,
+    "drop_max_fold": 12.1597,
+    "fold_concentrated": false
+   },
+   "iaum_pullback_1d": {
+    "net_r_oos": 7.6621,
+    "max_fold_net_r": 3.894,
+    "drop_max_fold": 3.7681,
+    "fold_concentrated": false
+   },
+   "ief_pullback_1d": {
+    "net_r_oos": 4.3238,
+    "max_fold_net_r": 4.7342,
+    "drop_max_fold": -0.4104,
+    "fold_concentrated": true
+   },
+   "slv_pullback_1d": {
+    "net_r_oos": 2.4842,
+    "max_fold_net_r": 3.0669,
+    "drop_max_fold": -0.5827,
+    "fold_concentrated": true
+   },
+   "trend_donchian_eth_4h": {
+    "net_r_oos": 48.6398,
+    "max_fold_net_r": 24.5827,
+    "drop_max_fold": 24.0571,
+    "fold_concentrated": false
+   },
+   "trend_donchian_eth_prop": {
+    "net_r_oos": 9.3243,
+    "max_fold_net_r": 13.4762,
+    "drop_max_fold": -4.1519,
+    "fold_concentrated": true
+   },
+   "trend_donchian_sol_prop": {
+    "net_r_oos": 60.6043,
+    "max_fold_net_r": 19.0556,
+    "drop_max_fold": 41.5487,
+    "fold_concentrated": false
+   },
+   "trend_donchian_xrp_4h": {
+    "net_r_oos": 8.1437,
+    "max_fold_net_r": 3.7768,
+    "drop_max_fold": 4.3669,
+    "fold_concentrated": false
+   },
+   "xrp_pullback_2h": {
+    "net_r_oos": 7.2287,
+    "max_fold_net_r": 9.0831,
+    "drop_max_fold": -1.8544,
+    "fold_concentrated": true
+   }
+  },
+  "skipped_no_fold_detail": []
+ },
+ "population": "9 distinct legs clearing the roster-promotion bar (census passes_bar, re-derived at run time)"
+}

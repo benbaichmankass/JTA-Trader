@@ -1,0 +1,46 @@
+{
+  "id": "PAIRS-R-SCALE",
+  "title": "Build: backtest_pairs.py measures 1R on the rolling-beta spread series, so beta drift inflates risk ~775x and deflates cost-in-R; fix the R scale (risk at the entry-bar beta) and give pairs_dollar_lots.py slippage + funding",
+  "phase": "W42",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    18648,
+    18756
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-14 lane P3-STRATEGY-PROGRAMME] MEASURED: committed ledger comms/research/RQ-20261007-005/<run>/trades.jsonl (pairs_sol_eth, n=304) mean cost_r 0.0014 R per pair trade with risk_spread ~1.34; recomputed on Binance Vision SOLUSDT/ETHUSDT 1h May 2026 with the harness's _rolling_beta(15): spread std 1.63 rolling vs 0.0021 at the entry-bar beta (beta sigma 0.61 x log ETH ~7.8), so 2 x 10.5 bps costs 0.0006 R in the harness vs ~0.50 R honestly. Consequence: RQ-20261007-005..008's four PASSes (+51.8..+102.4 R) are unreadable as net-of-cost evidence; their honest sign is UNKNOWN (gross R is in the same inflated units). FIX (Tier-1 research harness, scripts/backtest_pairs.py): risk = stop_z x std over the lookback of (la - beta_entry x lb) with beta frozen at entry; P&L in R on the same fixed-beta spread; self-test plants a rolling-beta case whose cost_r is within 10% of the fixed-beta figure. Also scripts/research/pairs_dollar_lots.py: slippage + funding from execution_costs.resolve_cost_policy (fee-only today). OPEN QUESTION for this row, not established: whether src/units/strategies/pairs_executor sizes on the same rolling-beta quantity. DONE WHEN: the fix is merged with the self-test and blocked/RQ-20261014-470a-12 is moved to research/queue and lands a measured record.  [research-ops 1447] RQ-20261007-009 (pairs prop fit, 4 legs, re-run after the --costs as_given fix) now lands pass_all_seeds, measured, n 1137. It prices the pairs trades.jsonl of RQ-20261007-005..008, the same inflated-R ledgers this row says are unreadable as net-of-cost evidence, so that PASS is NOT evidence of a prop fit and no follow-up is drawn from it. Re-read after the backtest_pairs.py fixed-beta fix lands. [2026-10-16 lane PAIRS-ALPACA-BUILD-1016] OPEN QUESTION ANSWERED (read from code on main dbfc24a6, not measured on live fills): YES, the live executor sizes on the same rolling-beta quantity. pairs_engine.entry_signal sets risk = stop_z x std of s = logA - beta_t*logB with beta_t rolling (shift-1); pairs_executor.decide_pair passes sig[\"risk\"] to pairs_sizing.pair_notionals (N_A = budget / risk) and to leg_protective_levels; exit_signal compares the rolling-beta spread to stop_spread. So every bybit_1 pair with hedge_beta: rolling (all four Bybit pairs) is undersized by the inflation factor, and its stop/revert are read on the drifting series. Planted SOL/ETH-like 1h case in tests/test_pairs_risk_scale.py: first natural entry has risk/fixed-beta-risk ~87x. hedge_beta: one (pairs_gld_gdx) is unaffected by construction (ratio 1.0, tested). Operator 2026-10-16 (relayed by the manager, not found as a record on main): Bybit pairs paper legs keep running on paper while this is fixed. No fix PR exists as of 2026-10-16 15:30Z (searched PRs updated since 10-14). The live-engine fix must land WITH the harness fix (engine mirrors backtest_pairs.py): freeze beta at entry, carry beta_entry in OpenPair, read stop/revert on the fixed-beta spread. The Alpaca path cannot inherit it: the Tier-2 HELD PR on PAIRS-ALPACA-BUILD adds pairs_engine.fixed_beta_risk, both R units + ratio on every Bybit/Alpaca soak row, and skip_risk_scale on the session venue when the ratio is off 1 by >1%. [2026-10-16 lane PAIRS-R-SCALE-FIX-1016] FIX BUILT, HELD in PR #18648 (Tier 3-by-path; merged != deployed != observed: none yet). Live engine + harness both freeze beta at entry: rolling-beta z only triggers; R unit (= fixed_beta_risk), stop, reversion z, timeout spread and spread-target TP all on logA - beta_entry*logB; OpenPair.beta_entry stamped in order_packages.meta and restored (legacy stamps without it exit on their rolling basis); harness shares pairs_engine.fixed_beta_window/fixed_beta_bar; paired replay test pins live = harness on rolling-beta fixtures; risk_rolling_beta stays on soak rows. MEASURED harness re-run (Binance Vision 1h 2026-04-19..10-15, configured params, fee 7.5 + slip 3 + funding 1 bps/leg), old -> new net R/trade (n; cost R/trade): SOL/BTC +0.338 (291; 0.0006) -> -0.112 (267; 0.438); BNB/BTC +0.378 (276; 0.0009) -> -0.376 (254; 0.564); ETH/BTC +0.136 (277; 0.0008) -> -0.526 (270; 0.661); SOL/ETH +0.191 (304; 0.0014) -> -0.383 (271; 0.475). Research evidence, not a promotion case; consistent with the row's ~0.50 R honest-cost estimate. OPEN DESIGN QUESTION (reported to manager, not decided): the entry trigger is still the rolling-beta z; on the fixed-beta spread at entry the median z is ~0, 45-54% of entries are on the wrong side, 10-16% have |z|>=2, 21-27% exit after 1 bar. CONSEQUENCE on merge: Bybit paper leg notionals grow by the inflation factor; the Bybit pairs path has no notional/leverage cap. CLOSING OBSERVATION: the first Bybit pair open/skip_size soak row with risk_scale_ratio ~1 and a beta_entry field after deploy; then blocked/RQ-20261014-470a-12 runs. [2026-10-17 lane PAIRS-BYBIT-SHADOW] OPERATOR DECISION 2026-10-16 'Fix + shadow' (popup answer to the manager, relayed by the manager dispatch to this lane; this note is the record on main): (1) all four Bybit pairs (sol_btc, bnb_btc, eth_btc, sol_eth) go to execution: shadow in config/pairs.yaml in a SEPARATE PR, merged BEFORE #18648 so the beta-at-entry sizing (legs up to ~87x, no notional cap on the Bybit pairs path) never places a live paper order; bnb_btc and sol_eth were live on bybit_1 paper, sol_btc and eth_btc already shadow (G2 2026-07-16 hold); GLD/GDX untouched. (2) #18648 then merges as the fix. (3) Research unit research/queue/blocked/RQ-20261017-9582-01.yaml (roadmap M22) pre-registers the fixed-beta ENTRY-trigger test (|z| on logA - beta_entry*logB; 3y window, IS/OOS); blocked on #18648 merging and a --entry-trigger arm in backtest_pairs.py. Re-entry to live for any Bybit pair waits on its PASS. CLOSING OBSERVATION for the shadow half: after deploy, the 4 Bybit pairs write shadow soak rows and no pairs_* order on bybit_1.  [2026-10-17 lane PAIRS-BYBIT-SHADOW] MERGED + DEPLOYED + OBSERVED (shadow half): #18756 (bce6607e, shadow) merged 11:00:22Z, then #18648 (a311b596, beta at entry) 11:00:49Z. VM on-disk HEAD reached a311b596 ~11:05Z; ict-git-sync restarted the trader ~11:10-11:13Z (git_sha_running c79cc9212, later 0d2b1ec64, both contain a311b596 - read from /api/diag/status). OBSERVED /api/bot/pairs/soak: bnb_btc execution_mode shadow at 11:06:22Z (live at 11:03:57Z, pre-sync); all four Bybit pairs (sol_btc, bnb_btc, eth_btc, sol_eth) shadow at 12:03:11Z, the first tick on the new code. OBSERVED journal order_packages: newest pairs_* package 08:00:04Z (pairs_sol_eth, closed); none after it; that SOL/ETH paper pair closed 10:06Z (revert). GLD/GDX: config line unchanged on main; its daily decision (~19:51Z RTH) next runs Monday 2026-10-19, so its post-deploy behaviour is NOT yet observed (unaffected by construction, hedge_beta one, tested). STILL OPEN (landed_unproven): the #18648 engine half has not been exercised - no Bybit pair has opened or shadow_opened since the deploy. CLOSING OBSERVATION: the first Bybit shadow_open/skip_size soak row after 2026-10-17T11:13Z carrying beta_entry and risk_scale_ratio ~1; and the first GLD/GDX row after deploy. Then RQ-20261017-9582-01 and RQ-20261014-470a-12 unblock once backtest_pairs.py gains --entry-trigger.",
+  "updated_at": "2026-10-24T06:01:08Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
+  "roadmap": [
+    "M22",
+    "L-LADDER"
+  ],
+  "lane_history": [
+    {
+      "lane": "PAIRS-R-SCALE-FIX-1016",
+      "archived_at": "2026-10-17T12:04:59Z"
+    }
+  ],
+  "observation": {
+    "what": "the #18648 engine half exercised live: the first Bybit pairs shadow_open or skip_size soak row after 2026-10-17T11:13Z carries beta_entry and risk_scale_ratio ~1 (pre-fix rows read 226..1769)",
+    "how_to_check": "curl -sS 'https://ict-bot.duckdns.org/api/bot/pairs/soak?limit=200' | jq '.records[] | select(.logged_at_utc > \"2026-10-17T11:13\" and (.event==\"shadow_open\" or .event==\"skip_size\")) | {logged_at_utc,pair,beta_entry,risk_scale_ratio}'",
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-24T00:00Z",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
+  },
+  "writeback": {
+    "roadmap": "M22 where/next updated 2026-10-17 (four Bybit pairs shadow; next = entry-trigger arm + RQ-20261017-9582-01)",
+    "arch": "ARCHITECTURE-CANONICAL decision-log row 2026-10-16 PAIRS-R-SCALE-FIX-1016 (added by #18648)"
+  },
+  "_seq": 495
+}

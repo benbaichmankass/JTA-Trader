@@ -1,0 +1,139 @@
+id: WO-20260912-OPS-LANE-DRIVE-THE-HEALTH-BACKLOG-DOWN
+type: question
+parent_intent: IN-20260903-TRADING-SYSTEM-HEALTH
+title: >-
+  Ops lane: drive the health backlog down by CLASS, starting with the 20 open critical rows
+stage: INTEGRITY
+lifecycle: waiting
+owner: session_013iSqp4LsU1eq8K326eUtgj
+opened_at: 2026-09-12
+closed_at: null
+review_trigger: >-
+  Re-read at the next cycle. A captured idea is PARKED, not queued — it becomes
+  work only when it is given an owner and moved out of `dormant`.
+done_condition: >-
+  Open CRITICAL count is driven from 20 toward 0 with every closure carrying OBSERVED evidence, not a passing test; and the open count is reported as a burn-down (opened vs closed) each session so the pile cannot grow silently while rows are worked.
+
+why: >-
+  702 open rows, 20 critical and 274 high. The register is the standing to-do list and nothing has been draining it while lanes sat idle. Reviews FILL this; only a dedicated drain EMPTIES it.
+
+source: >-
+  operator 2026-09-12: we have lots of backlog work for the ops lane to be working on
+
+blocked_on: []
+blocked_on_basis: >-
+  ASSESSED 2026-09-12 by the manager (session_01HoFquGdTrD3TTGbMMRc43t). The
+  empty list is a POSITIVE finding here, not the NOT-ASSESSED default it
+  replaces: nothing blocks this object today, because MI-279 (ops lane) is RUNNING it right
+  now (session_013iSqp4LsU1eq8K326eUtgj) and was observed working - read off `list_sessions`, not inferred
+  from the registry row. This is a statement about TODAY and about THIS object
+  only. It is NOT a forecast: a Tier-2 or Tier-3 gate reached later in the
+  queue is a real future blocker and must be written as a typed edge WHEN IT
+  BINDS, never pre-emptively - a false blocker is worse than a missing one,
+  and an anticipated one is a false one until the work arrives at it.
+  (+) REASSESSED 2026-09-17 by the manager (session_01GHpyXT2qssLJsrvXBQRkQF), APPENDED and not
+  replacing the assessment(s) above — they are the record of what was true when made, and this object
+  is itself the one that names silently reverting another session's assessment as the defect to stop.
+  ⚠️ I nearly did exactly that here: my first edit REPLACED this field wholesale and was reverted
+  before it left the working tree. Recorded because the near-miss is the finding, not the fix.
+  MOVED in_flight -> waiting. `in_flight` means a session is actively working the object; session_013iSqp4LsU1eq8K326eUtgj
+  is STOPPED by DEC-20260917-LANES-AFTER-WRAP ('Stay stopped; hand off to a new manager'), so nothing
+  was moving this. The deliverables are OPEN, MERGE-CONFLICTED PRs (#12427, #12090, #12213).
+  MEASURED 2026-09-17: of the conflicts probed across these branches, every one is in a SHARED
+  REGISTER (health-review-backlog.json in 5 of 7, then CLAUDE.md, DOCUMENT-INDEX.md, OPEN-ITEMS.json,
+  one M20 work object) and ZERO are in src/, tests/, scripts/ or config/ — the work does not need
+  redoing, it needs a serialised landing pass.
+  ⚠️ NOT A DOWNGRADE OF THE WORK: this object is closer to done than most in_flight rows. Moving it to
+  `waiting` is what keeps the WIP ceiling HONEST rather than gamed — it frees a slot for a lane that
+  is genuinely being worked, instead of leaving three slots held by stopped sessions.
+captured_by: scripts/ops/capture_idea.py
+outcome_so_far: >-
+  MI-279 (session_013iSqp4LsU1eq8K326eUtgj) first pass, 2026-09-12. THE OBJECT STAYS in_flight:
+  U1/U2/U4 are done and U3 is opened and handed forward, so the lane continues.
+  BURN-DOWN: 3 CLOSED / 0 FILED / net -3. Open criticals 20 -> 17 once the in-flight PRs land.
+  !! REPORTED AS LANDED, NOT AS INTENDED: `main` read 19 open criticals at the time of writing
+  because two of the three closures were still in CI. Do not quote 17 until they merge.
+  CLOSED, each on a live observation and none on a passing test:
+  BL-20260902-TWO-OPEN-PRS-ARE-ARMED-TO-MERGE-WHILE-THEIR-OWN-BODIES-SAY-DO-NOT-MERGE (both PRs
+  had merged - the harm happened, recorded loudly per the criterion's own second branch, mechanism
+  verified fixed, residual nil);
+  BL-20260908-BYBIT-POSITION-PROTECTION-GRADES-A-SYMBOL-OFF-ROWS0-SO-A-HEDGE-BOOK-READS-FLAT-AND-A-LIVE-POSITION-IS-CLOSED
+  (5 soak rows carrying a named position_idx with non-zero exchange_qty; 0 adopt-pairs post-fix
+  against a denominator of 4, with the same probe finding 2 pre-fix);
+  BL-20260911-A-DECLARED-LIVE-ACCOUNT-CAN-BE-STARVED-FOR-TWELVE-DAYS-AND-EVERY-DETECTOR-READS-HEALTHY
+  (observed firing live on /api/bot/notifications with its denominator independently established).
+  THE OTHER 17 CRITICALS WERE READ and each now states what would close it; three came back
+  `could_not_look` (IB gateway down) and are recorded as read failures, never as clean results.
+  THE FINDING WORTH MORE THAN THE CLOSURES: two FALSE CLOSES attributed on bybit_1 by shared
+  order_package_id - -762.496 USD of ESTIMATED pnl on positions the venue never closed - against a
+  symbol-dedupe drop firing on 378 of 378 reads. Tier-2, routed to the manager, NOT taken. See
+  BL-20260909-ACCOUNT-OPEN-POSITIONS-DEDUPES-BYBIT-POSITIONS-BY-SYMBOL-SO-A-HEDGE-BOOK-IS-DROPPED-AND-THE-ORDER-STATUS-RECONCILER-CLOSES-A-LIVE-ROW.
+  HONEST CONTEXT: backlog_burndown() has September at opened 186 / closed 34 across all three
+  backlogs. Three closures do not change that, and the done_condition's burn-down clause is
+  satisfied by SAYING so rather than by the number improving.
+  !! NO ROW WAS FLIPPED TO `kept_open`. It is in the enum, but moving rows out of `open` shrinks
+  the count without closing anything, and burn-down is what this lane is measured on.
+  HANDOFF: docs/claude/high-severity-class-map-2026-09-12.md is the U3 starting point - 7 candidate
+  classes over the 274 open high rows, with its own precision measured at ~67% on n=6 hand-checked
+  rows, so its counts are a place to look and not findings.
+
+  SECOND PASS, same session, 2026-09-12 evening. THE OBJECT STAYS in_flight: U3 is running.
+  BURN-DOWN, MEASURED ON origin/main RATHER THAN INTENDED: 5 rows closed by this session are ON
+  MAIN; 12 filed. A further 4 closures sit in PRs that have not merged. So the honest net on main
+  is +7 (filed over closed), and the lane is net-POSITIVE - reported that way because the skill
+  says a drain session that files more than it closes must make that visible rather than describe
+  the touching. What I would defend: 5 of the 12 were found BY doing the closing work, not by
+  hunting.
+  LANDED THIS PASS (8 PRs on main): #12032 #12042 #12050 #12061 #12066 #12075 #11979 #12045.
+  IN FLIGHT: #12023 #12057 #12072(hold) #12079 #12086 #12088 #12090(hold) #12093 #12096.
+  INSTRUMENTS SHIPPED, because a number nobody can re-derive rots: check_backlog_unresolve.py (a
+  terminal->live status regression now fails CI), symbol_data_binding_census.py (17 sites on main,
+  15 after the fix, denominator 58 of 2269), exit_lever_map.py + docs/research/exit-lever-map.json
+  (19 mapped / 3 recorded n/a / 4 needs_column), and a test pinning the board schema to its only
+  writer. Each mutation-tested in both directions; none registered as a gate while findings remain.
+  !! TWO THINGS RECORDED AGAINST MYSELF. (1) I re-pushed PR #12045 four times WITHOUT reading its
+  CI result and so missed that it was RED - resolving conflicts is not driving to green, and the
+  queue pass now runs the two fragile guards locally before every push. (2) The guard I shipped in
+  #12061 graded against main's TIP rather than the merge base, so it reddened branches that had
+  changed nothing; that is a RECURRENCE of a class filed FOUR times the same day against
+  register-field-loss, one of them by this session. Fixed in #12093, class filed separately.
+  !! AND ONE DUPLICATE AVOIDED THE SAME WAY IT SHOULD BE: I wrote a work-object existence check
+  into session_registry and found, by RUNNING cmd_register, that spawn_gate already refuses that
+  case. Reverted before it landed - RC-BUILT-A-MECHANISM-THAT-ALREADY-EXISTED. The cheap existence
+  check CLAUDE.md prescribes caught it twice today.
+  === CLOSE-OUT 2026-09-13T08:2xZ (MI-279 OPS lane, session_013iSqp4LsU1eq8K326eUtgj). THE OBJECT
+  STAYS in_flight: this is a PAUSE, not a completion. Acting on the operator directive relayed by
+  the manager on PR #12215 (07:52Z) -- out of weekly tokens, pause all lanes, close up so no work
+  is lost. !! I NEVER RECEIVED THAT DIRECTIVE IN MY OWN CHANNEL. The manager delivered it via
+  create_trigger into live sessions and recorded that the lanes acting on it was UNOBSERVED; no
+  such prompt reached this session, and I am acting on the commit-message relay because stopping is
+  cheap to reverse and continuing spends a budget the operator said is gone. Recorded as a relay,
+  not as a directive I received.
+  NOTHING IS UNPUSHED. Everything this lane produced is on a branch and on a PR.
+  LANDED THIS PASS: #12211 (U27) merged as 475495155.
+  IN FLIGHT AND HANDED FORWARD, both pushed, both with full guard runs green locally:
+  #12213 (U28) -- Tier-1 but landing:hold, changes_landing_machinery. NEEDS A HUMAN MERGE CLICK.
+  #12216 (U29) -- Tier-1, self, armed; all four required checks green at 08:10Z, auto-merge on.
+  !! #12213 HAS A CI ANOMALY A SUCCESSOR MUST NOT READ AS GREEN. Its head carries ONLY `watch`:
+  no pull_request-event run has ever fired on that branch (measured -- 5 runs, all push or
+  pull_request_target), while the identical route on #12216 produced all four required checks
+  twice. I dispatched guards.yml, pytest-run.yml and pytest-collect.yml on the branch at ~08:2xZ
+  via workflow_dispatch, which the repo added to the required checks precisely so a dropped webhook
+  cannot block a merge. VERIFY THOSE THREE ARE GREEN BEFORE MERGING; total_count 1 is not green.
+  WHAT IS LEFT, in the order I would take it: (1) the ci/landing class -- 12 open rows, one root
+  cause, the largest cluster of open `high` rows inside a Tier-1 remit; (2) the four members of the
+  zero-CI class named in #12213's body, none of which #12213 closes, since all want an OBSERVED
+  attached check on a relay-opened head; (3) the Tier-2 proposals from U29, routed and not taken --
+  the settle-coin backfill condition in src/units/accounts/clients.py, and a read-only `symbol=`
+  parameter on /api/diag/exchange_positions without which that critical row's criterion (1) cannot
+  be checked by anyone.
+  !! THE LOUD ROW I OPENED IS THE THING TO CARRY: OI-20260913-A-BYBIT2-HEDGE-BOOK-IS-NEVER-FETCHED-AND-NO-SURFACE-IN-THIS-REPO-CAN-SAY-WHETHER-IT-IS-STILL-THERE.
+  A real-money account may hold a position no bot surface can see, and every surface reads through
+  the defective path, so their silence is not evidence it closed.
+  !! AND THE CLOSE-OUT PR ITSELF HIT THE TRAP U28 IS ABOUT, WHICH IS RECORDED RATHER THAN QUIETLY
+  FIXED. I pushed the content and the arming file in ONE push, so claude-pr-automerge found no open
+  PR and created #12220 under GITHUB_TOKEN -- born with no CI, `user.login` github-actions[bot],
+  exactly the sequence CLAUDE.md's two-push order exists to prevent and exactly what U28 measured
+  on #12087. Eighth recorded instance by the repo's own count, and the first one committed by the
+  session that had just finished writing the gate for it. The remedy is this commit: one ordinary
+  push from a real author, which is what arms CI on such a PR.

@@ -338,6 +338,8 @@ def check_seven_stage_ladder() -> list[str]:
 _HIER_KEYS = [
     ("rules", re.compile(r"CLAUDE-RULES-CANONICAL", re.I)),
     ("architecture", re.compile(r"ARCHITECTURE-CANONICAL", re.I)),
+    ("plan", re.compile(r"OPERATING-PLAN", re.I)),
+    ("checklist", re.compile(r"MANAGER-CHECKLIST", re.I)),
     ("roadmap", re.compile(r"ROADMAP", re.I)),
     ("sprintlog", re.compile(r"sprint log|sprint-logs", re.I)),
     ("skills", re.compile(r"\.claude/skills|^.*\bSkills\b", re.I)),
@@ -695,7 +697,15 @@ def check_status_enum_mirror() -> list[str]:
 # a second list here would be free to drift from the one the read path uses.
 # ---------------------------------------------------------------------------
 GET_ENV = "scripts/ops/get_env.py"
-CLAUDE_MD = "CLAUDE.md"
+
+#: ⚠️ RE-POINTED 2026-09-21 by the operating reset. This read `CLAUDE.md` until
+#: the env table — 186 KB of it, a third of that file — moved VERBATIM to
+#: `docs/reference/env-vars.md`. Leaving the constant pointing at `CLAUDE.md`
+#: would have been exactly the failure this module's own header warns about:
+#: the guard still passes (or here, still fails) because the text it reads
+#: MOVED, not because anything about the knobs changed. The name is kept so
+#: every message below still reads naturally about "the env table".
+CLAUDE_MD = "docs/reference/env-vars.md"
 
 #: THREE states, never collapsed. `silent` is the one this check exists for —
 #: it is NOT `undocumented` (the doc has a row and says nothing about the live
@@ -811,6 +821,75 @@ def check_env_knob_live_values() -> list[str]:
     return []
 
 
+# DOES A GATE INPUT FOLDED INTO effective_dry ACTUALLY GET NAMED IN THE TWO
+# GATE-DESCRIPTION DOCS?
+#
+# CA-B09-third-execution-gate-undocumented (2026-09-27, FIX-CA-32):
+# `config/account_state.yaml` was folded into `effective_dry` in
+# `Coordinator.multi_account_execute` (src/core/coordinator.py) while both
+# CLAUDE.md's "The two execution gates" and CLAUDE-RULES-CANONICAL.md's
+# Prime Directive rule 6 said "exactly two ... and no third" — and a code
+# COMMENT in src/web/runtime_status.py additionally asserted the fold "was
+# removed". Nothing mechanical would have caught a FOURTH such fold landing
+# silently; this check is that mechanism, scoped to the one gate that
+# already burned a session rather than a general effective_dry parser
+# (fragile against refactors, and not what CI needs — see the module
+# header's "known stale phrasings, not meaning" limit).
+_THIRD_GATE_CODE_SOURCE = "src/core/coordinator.py"
+_THIRD_GATE_CODE_MARKER = re.compile(r"account_state_dry_run")
+_THIRD_GATE_DOC_MARKER = re.compile(r"account_state\.yaml", re.I)
+_THIRD_GATE_DOCS = ("CLAUDE.md", "docs/CLAUDE-RULES-CANONICAL.md")
+
+
+def check_third_gate_documented() -> list[str]:
+    """If coordinator.py folds account_state.yaml into effective_dry, both
+    gate-description docs must name it — never let this specific
+    doc-vs-code gap (or its recurrence) go unmentioned again."""
+    src = ROOT / _THIRD_GATE_CODE_SOURCE
+    if not src.exists():
+        return [f"{_THIRD_GATE_CODE_SOURCE}: missing — cannot verify the "
+                f"third-gate contract"]
+    if not _THIRD_GATE_CODE_MARKER.search(src.read_text(encoding="utf-8")):
+        # The fold was retired (JC-CA-06 resolved as "retire"). Nothing to
+        # document here; check_removed_gates-style prose review handles the
+        # doc-side cleanup.
+        return []
+    fails: list[str] = []
+    for rel in _THIRD_GATE_DOCS:
+        doc = ROOT / rel
+        if not doc.exists():
+            fails.append(f"{rel}: missing — cannot verify the third-gate contract")
+            continue
+        if not _THIRD_GATE_DOC_MARKER.search(doc.read_text(encoding="utf-8")):
+            fails.append(
+                f"{rel}: {_THIRD_GATE_CODE_SOURCE} folds config/account_state.yaml "
+                "into effective_dry (a third execution-gate input, via "
+                "account_state_dry_run()) but this doc never names it — see "
+                "CA-B09-third-execution-gate-undocumented / FIX-CA-32"
+            )
+    return fails
+
+
+_SOAK_CANON = "docs/plans/OPERATING-PLAN-2026-09-21.md"
+_SOAK_POINTERS = ("CLAUDE.md", "docs/CLAUDE-RULES-CANONICAL.md", "docs/ARCHITECTURE-CANONICAL.md")
+
+
+def check_soak_rule_single_source() -> list[str]:
+    """The soak rule (operator 2026-10-15: a soak is MECHANICAL, 1-2 clean
+    trades) is stated ONCE, in OPERATING-PLAN § 2, and the three canonical docs
+    POINT at it rather than restate it — four earlier restatements drifted
+    (SOAK-REDEFINE). The long-soak language scan itself is soak-doctrine-guard."""
+    fails: list[str] = []
+    canon = ROOT / _SOAK_CANON
+    if not canon.exists() or canon.read_text(encoding="utf-8").count("SOAK-RULE-CANONICAL") != 1:
+        fails.append(f"{_SOAK_CANON}: must carry the SOAK-RULE-CANONICAL paragraph exactly once")
+    for rel in _SOAK_POINTERS:
+        t = " ".join(((ROOT / rel).read_text(encoding="utf-8") if (ROOT / rel).exists() else "").split())
+        if "The soak is MECHANICAL" not in t or "OPERATING-PLAN" not in t:
+            fails.append(f"{rel}: must point at {_SOAK_CANON} § 2 \"The soak is MECHANICAL\"")
+    return fails
+
+
 CHECKS = [
     # FIRST, because the checks below read these files' CONTENT and a
     # conflicted file makes some of their verdicts untrustworthy. It does
@@ -825,6 +904,10 @@ CHECKS = [
      check_status_enum_mirror),
     ("env knobs state their live value (ratchet + denominator)",
      check_env_knob_live_values),
+    ("account_state.yaml third-gate fold documented in both gate sections",
+     check_third_gate_documented),
+    ("soak rule stated once (OPERATING-PLAN § 2) and pointed at by the canonical docs",
+     check_soak_rule_single_source),
 ]
 
 

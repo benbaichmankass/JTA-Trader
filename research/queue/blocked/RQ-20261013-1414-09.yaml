@@ -1,0 +1,77 @@
+id: RQ-20261013-1414-09
+title: 'Frontier / covariate-native forecasters: Chronos-2 and TiRex with funding-rate and open-interest covariates vs the same forecasters
+  univariate, on the ETH/SOL 1h volatility-regime head'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 3
+kind: experiment
+question: With funding rate and open interest passed as NATIVE covariates (not bolted-on columns), do Chronos-2 and TiRex-2 beat their
+  own univariate forecasts and the funding-augmented LightGBM head by >= +0.010 macro-F1 on ETH and SOL 1h, same sign on both?
+why_this_matters: 'Frontier-scan idea #6 ("No unit yet - blocked on FUNDING-OI-DATASETS-ETH-SOL"). BTC''s funding-augmented head lifted
+  f1_volatile; ETH/SOL have no funding/OI dataset (the two queued funding-head units RQ-20260929-109/-110 are blocked on it too). Covariates
+  are native in Chronos-2 and TiRex-2, which is the information-class question (ML-R4). Filing the unit with its blocker named keeps
+  the idea on a clock instead of in a table.'
+power:
+  expected_n: 3
+  min_detectable_effect: 0.01
+  effect_units: sd
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 3 symbols x 5 purged folds; the registered quantity is the paired fold-level macro-F1 difference vs the zero-shot arm. 5 folds
+    is thin for an interval, so the rule requires the SAME sign on all three symbols rather than a significance test on one.
+  feasibility:
+    source: none
+    accrual_basis: 'A conditional unit: it cannot run until its blocker clears, and its sample is the same fixed 15m shards as RQ-20261011-9da8-01;
+      nothing accrues by waiting.'
+decision_rule:
+  id: RULE-RQ20261013-1414-09-COVARIATE-TSFM-FUNDING-OI
+  registered_at: '2026-10-13'
+  registered_before_run: true
+  statistic: 'Per symbol (ETHUSDT, SOLUSDT 1h): paired purged-CV delta macro_f1 of (covariate forecaster minus the same forecaster univariate)
+    and (covariate forecaster minus the funding-augmented LightGBM head) on identical rows; plus f1_volatile.'
+  rule: PASS IF the covariate forecaster beats BOTH its univariate self and the funding-augmented LightGBM head by >= +0.010 macro_f1
+    on ETH AND the sign is > 0 on SOL. FAIL IF it fails to beat its univariate self by > 0 on both symbols (covariates add nothing at
+    this granularity; closes only these two forecasters with funding+OI). INDETERMINATE otherwise or if the funding/OI series have gaps
+    > 5% of bars in the test window.
+  min_n: 3 usable CV folds per symbol; funding/OI coverage of the test window reported.
+  what_it_does_not_do: Needs ETH/SOL funding+OI point-in-time series that do not exist yet; serves nothing; a feature-lift PASS is not
+    edge. Touches no config or registry.
+compute: gpu_preferred
+value:
+  bucket: frontier
+  usd_at_stake_per_month: 120
+  confidence: 0.1
+  basis: 'stand-in: tests whether an exogenous-information class (funding/OI) adds to vol-regime prediction beyond price-only; not a
+    measured P&L'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 5.5
+  est_minutes: 240
+  basis: 'Estimate from the sibling fc bake-off; re-declare from the first run. Kaggle internet is off and the shards are trainer-resident,
+    so the run needs a data-bundle path: that is part of the blocker.'
+blocked_on:
+- kind: work_item
+  ref: FUNDING-OI-DATASETS-ETH-SOL
+  what: ETH/SOL funding-rate and open-interest datasets (point-in-time, aligned to the 1h shard) do not exist on the trainer; the covariate
+    forecasting backends (Chronos-2 covariate API, TiRex-2) also have no side-stream builder (FRONTIER-LEVER-TSFM).
+  clears_when: FUNDING-OI-DATASETS-ETH-SOL is done (shards carry funding/OI columns for ETH and SOL 1h) AND the 9da8-01 backend work
+    (FRONTIER-LEVER-TSFM) has landed a covariate-capable builder.
+roadmap:
+- M25
+related:
+- FUNDING-OI-DATASETS-ETH-SOL
+- RQ-20260929-109
+- RQ-20260929-110
+- RQ-20261011-9da8-01
+- ML-R4
+last_dispatched_at: null
+run:
+  workflow: null
+  note: 'Deliberately null: the instrument does not exist yet (see blocked_on). Fill in when the blocker clears.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1

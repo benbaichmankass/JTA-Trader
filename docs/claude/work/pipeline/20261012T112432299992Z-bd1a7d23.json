@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "check_every_days": 14,
+    "clears_when": "An NFP consensus feed is verified and backfilled, or the decision is recorded that NFP stays out of G3; and KXCPIYOY is either added to the backfill config or declared out of scope.",
+    "kind": "observation",
+    "last_checked": "2026-10-12"
+  },
+  "id": "PI-20261012-WEPEG3B-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "WEPE-G3-BACKFILL 2026-10-12 (PR #17742)",
+    "rerun": "grep -c nonfarm_payrolls comms/macro/econ_calendar_snapshots_survey_backfill.jsonl -- finding holds while there are 0 headline-NFP consensus rows"
+  },
+  "state": "queued",
+  "what": "WEPE G3 on history (RQ-20261012-904) cannot score headline NFP (no consensus in comms/macro) nor give CPI YoY / core CPI MoM a Kalshi arm (backfill has KXCPI = MoM only). The Kalshi-matched sample is CPI MoM (56 questions / 32 releases) + FOMC (26) only. Extending needs an NFP consensus source verified point-in-time (macro-research invariant 3) and, for CPI YoY, collecting KXCPIYOY."
+}

@@ -1,0 +1,66 @@
+{
+  "family": "trend",
+  "timeframe": "4h",
+  "params": {
+    "donchian": 20,
+    "atr_period": 14,
+    "atr_stop_mult": 1.5,
+    "trail_mult": 6.0,
+    "min_confidence": 0.6
+  },
+  "best_arm": null,
+  "thresholds": {
+    "n_floor": 39,
+    "pooled_n_floor": 88,
+    "folds": 6,
+    "fold_majority": 4,
+    "breadth_frac": 0.5,
+    "min_powered_cells": 2,
+    "holm_alpha": 0.05,
+    "baseline": null,
+    "delta_r_per_trade": 0.0
+  },
+  "arms": {
+    "B": {
+      "sets": {},
+      "unsets": [],
+      "extra_flags": [
+        "--tp-r",
+        "50.0",
+        "--trail-decay-stall-bars",
+        "10",
+        "--trail-decay-tight-mult",
+        "1.8"
+      ],
+      "cells": {
+        "BNBUSDT": {
+          "state": "harness_failed",
+          "why": "ValueError: empty window: 2022-06-06 00:00:00+00:00 .. 2020-05-31 00:00:00+00:00"
+        },
+        "DOGEUSDT": {
+          "state": "harness_failed",
+          "why": "ValueError: empty window: 2022-06-06 00:00:00+00:00 .. 2020-05-31 00:00:00+00:00"
+        },
+        "LINKUSDT": {
+          "state": "harness_failed",
+          "why": "ValueError: empty window: 2022-06-06 00:00:00+00:00 .. 2020-05-31 00:00:00+00:00"
+        },
+        "LTCUSDT": {
+          "state": "harness_failed",
+          "why": "ValueError: empty window: 2022-06-06 00:00:00+00:00 .. 2020-05-31 00:00:00+00:00"
+        },
+        "BCHUSDT": {
+          "state": "harness_failed",
+          "why": "ValueError: empty window: 2022-06-06 00:00:00+00:00 .. 2020-05-31 00:00:00+00:00"
+        }
+      },
+      "pooled": null,
+      "grade": {
+        "verdict": "indeterminate",
+        "why": "0 of 5 cells measured (< half)",
+        "role": "arm",
+        "holm_survivors": []
+      }
+    }
+  }
+}

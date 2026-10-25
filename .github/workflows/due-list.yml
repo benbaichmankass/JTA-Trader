@@ -1,5 +1,11 @@
 name: due-list
 
+# ⚠️ SCHEDULE RETIRED 2026-09-21 — operating reset.
+# This workflow served the eight-register operating model, which is archived under
+# docs/archive/2026-09-21-operating-reset/. Its cron is commented out below rather
+# than deleted, so re-arming it is one uncomment. `workflow_dispatch` still works.
+# Scope of record: docs/plans/OPERATING-PLAN-2026-09-21.md
+
 # W1 of the 2026-08-31 operations plan — the ONE surface that answers
 # "what is due right now?".
 #
@@ -38,10 +44,10 @@ name: due-list
 # beyond the PAT that opens the PR.
 
 on:
-  schedule:
-    # 05:50 UTC — before the working day and after the overnight crons have
-    # reported, so the first read of the morning is of a fresh list.
-    - cron: "50 5 * * *"
+  # schedule:
+    # # 05:50 UTC — before the working day and after the overnight crons have
+    # # reported, so the first read of the morning is of a fresh list.
+    # - cron: "50 5 * * *"
   workflow_dispatch:
   issues:
     types: [opened]
@@ -72,7 +78,7 @@ jobs:
     # 40 = ~5m of render work + the 30m wait + 5m slack. If the action's wait
     # default is ever widened, that test fails here rather than silently
     # consuming this margin, which is how gld-compat-matrix lost its own.
-    timeout-minutes: 40
+    timeout-minutes: 90  # was 60: shared commit-to-main wait 50->80 (W41)
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
@@ -151,6 +157,11 @@ jobs:
           pr-body: "Automated due-list refresh (W1). Generated artifact only; auto-merge."
           branch-prefix: automation/due-list
           verify-merged: "true"
+          # RECOMPUTE on conflict -- see error-feed-digest.yml for the measured
+          # rationale. Both declared paths are rendered wholesale by this one
+          # command, so a conflict between two due-list runs has no side to
+          # take; re-rendering over the merged registers IS the merge.
+          refresh-command: python3 scripts/ops/render_due_list.py --write
 
       - name: Comment + close issue (issue-driven path)
         if: github.event_name == 'issues'

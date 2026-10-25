@@ -230,6 +230,34 @@ def test_journalctl_unknown_unit_400(client, fake_runtime):
     assert resp.json()["detail"]["error"] == "unknown_unit"
 
 
+def test_journalctl_accepts_ssh_service_and_not_the_alias(client, fake_runtime):
+    """E27 — the health-review breach sweep's MANDATORY sshd source.
+
+    Two assertions, and the second is the load-bearing one:
+
+    1. ``ssh.service`` is accepted. Before 2026-09-22 it was not, and neither
+       was any other spelling, so `/health-review`'s § "Security-breach check"
+       source 5 (`journalctl` for sshd/auth) was unsatisfiable on every day
+       since the skill was written -- HTTP 400 `unknown_unit`, measured.
+    2. ``sshd.service`` is still REFUSED. On ict-bot-arm (Ubuntu 22.04.5) that
+       name is a systemd *alias*: `systemctl show` resolves it, but the
+       journal match does not (`journalctl -u sshd.service` -> "-- No
+       entries --"). Allowlisting it would answer HTTP 200 with `lines: []`
+       and `available: true` -- a breach sweep reporting CLEAN having read
+       nothing, which is strictly worse than the 400. A loud refusal is the
+       correct answer for the alias; do not "helpfully" add it.
+    """
+    ok = client.get("/api/diag/journalctl?unit=ssh.service&lines=5",
+                    headers=_bearer(_TOKEN))
+    assert ok.status_code == 200
+    assert ok.json()["unit"] == "ssh.service"
+
+    alias = client.get("/api/diag/journalctl?unit=sshd.service&lines=5",
+                       headers=_bearer(_TOKEN))
+    assert alias.status_code == 400
+    assert alias.json()["detail"]["error"] == "unknown_unit"
+
+
 def test_journalctl_allowlisted_unit_returns_shape(client, fake_runtime):
     # The actual journalctl call may fail in the test env (no journal access),
     # but the route should accept the unit and return a structured response.
@@ -440,26 +468,81 @@ def test_db_info_401_without_token(client, fake_runtime):
 # ``git_sha`` is now bound at import; the live resolve is ``git_sha_on_disk``.
 
 
+def _two_real_commits(tmp_path, monkeypatch, *, changed_path):
+    """A throwaway git repo with two REAL commits, the second touching
+    ``changed_path``. ``restart_pending`` is computed from ``git diff``, so the
+    shas must exist in a repo the router is pointed at -- fake shas make the diff
+    fail, which is (correctly) ``None``, not the state under test."""
+    import subprocess
+
+    def git(*a):
+        return subprocess.run(["git", *a], cwd=tmp_path, check=True,
+                              capture_output=True, text=True).stdout.strip()
+
+    git("init", "-q")
+    git("config", "user.email", "t@t")
+    git("config", "user.name", "t")
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "a.py").write_text("1")
+    git("add", ".")
+    git("commit", "-qm", "base")
+    running = git("rev-parse", "--short", "HEAD")
+    target = tmp_path / changed_path
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("2")
+    git("add", ".")
+    git("commit", "-qm", "next")
+    on_disk = git("rev-parse", "--short", "HEAD")
+    monkeypatch.setattr(diag_router, "repo_root", lambda: tmp_path)
+    monkeypatch.setattr(diag_router, "_RUNNING_GIT_SHA", running)
+    monkeypatch.setattr(diag_router, "_resolve_git_sha", lambda: on_disk)
+    return running, on_disk
+
+
 def test_version_reports_the_RUNNING_sha_not_a_live_resolve(
-    client, fake_runtime, monkeypatch
+    client, fake_runtime, monkeypatch, tmp_path
 ):
     """THE REGRESSION. A live resolve must NOT be able to move ``git_sha``."""
-    monkeypatch.setattr(diag_router, "_RUNNING_GIT_SHA", "aaaaaaa")
-    monkeypatch.setattr(diag_router, "_resolve_git_sha", lambda: "bbbbbbb")
+    running, on_disk = _two_real_commits(
+        tmp_path, monkeypatch, changed_path="src/a.py")   # a RUNTIME-path change
     resp = client.get("/api/diag/version", headers=_bearer(_TOKEN))
     assert resp.status_code == 200
     body = resp.json()
-    assert body["git_sha"] == "aaaaaaa", (
+    assert body["git_sha"] == running, (
         "git_sha must be the sha the PROCESS was loaded from; if a live "
         "resolve can move it, the endpoint is reporting disk again"
     )
-    assert body["git_sha_on_disk"] == "bbbbbbb"
+    assert body["git_sha_on_disk"] == on_disk
+    assert running != on_disk
     assert body["restart_pending"] is True, (
         "disk ahead of the running process IS the 2026-05-09 stale-code state"
     )
     assert "captured_at" in body
     # ISO-8601 UTC.
     assert body["captured_at"].endswith("+00:00") or body["captured_at"].endswith("Z")
+
+
+def test_version_docs_only_diff_is_not_restart_pending(
+    client, fake_runtime, monkeypatch, tmp_path
+):
+    """FIX-SA-11: the shas differ but only by files deploy_pull_restart.sh does
+    not restart for -> nothing stale is being served."""
+    running, on_disk = _two_real_commits(
+        tmp_path, monkeypatch, changed_path="docs/note.md")
+    body = client.get("/api/diag/version", headers=_bearer(_TOKEN)).json()
+    assert body["git_sha"] != body["git_sha_on_disk"]
+    assert body["restart_pending"] is False
+
+
+def test_version_restart_pending_is_none_when_the_diff_cannot_be_read(
+    client, fake_runtime, monkeypatch
+):
+    """Shas that exist in no repo: we could not look, which is not "no restart
+    pending". Pins the None state at the endpoint, not only the helper."""
+    monkeypatch.setattr(diag_router, "_RUNNING_GIT_SHA", "aaaaaaa")
+    monkeypatch.setattr(diag_router, "_resolve_git_sha", lambda: "bbbbbbb")
+    body = client.get("/api/diag/version", headers=_bearer(_TOKEN)).json()
+    assert body["restart_pending"] is None
 
 
 def test_version_reports_no_restart_pending_when_they_agree(
@@ -525,3 +608,414 @@ def test_version_503_when_diag_token_unset(monkeypatch, fake_runtime):
     resp = client.get("/api/diag/version", headers=_bearer(_TOKEN))
     assert resp.status_code == 503
     assert resp.json()["detail"]["error"] == "diag_disabled"
+
+
+# ---------------------------------------------------------------------------
+# MI-305 — /api/diag/journal paging.
+#
+# The defect these cover: the route took `table` + `limit` only, FastAPI
+# DISCARDED every other query parameter in silence, and the newest-`limit`
+# window's FLOOR ROSE as the table grew — so the OLDEST rows walked out of
+# reach a little more each day while callers grading before/after populations
+# had no way to know. Measured across all four allowlisted tables on the live
+# VM 2026-09-18: 83.0%–99.3% of every table unreachable, `offset=1000` and
+# `limit=2000` and an invented `bogus_param=zzz` all returning byte-identical
+# payloads (sha-equal, not merely same-length).
+# ---------------------------------------------------------------------------
+
+
+def _mk_trades(db_path: Path, n: int) -> None:
+    db = sqlite3.connect(str(db_path))
+    db.execute("CREATE TABLE trades (id INTEGER PRIMARY KEY, status TEXT, symbol TEXT)")
+    db.executemany(
+        "INSERT INTO trades (id, status, symbol) VALUES (?, ?, ?)",
+        [(i, "closed", "BTCUSDT") for i in range(1, n + 1)],
+    )
+    db.commit()
+    db.close()
+
+
+def test_journal_offset_is_honoured_and_pages_are_disjoint(client, fake_runtime):
+    """THE defect. `offset` must move the window, not be discarded."""
+    _mk_trades(fake_runtime["db_path"], 25)
+
+    page1 = client.get(
+        "/api/diag/journal?table=trades&limit=10&offset=0", headers=_bearer(_TOKEN)
+    ).json()
+    page2 = client.get(
+        "/api/diag/journal?table=trades&limit=10&offset=10", headers=_bearer(_TOKEN)
+    ).json()
+    page3 = client.get(
+        "/api/diag/journal?table=trades&limit=10&offset=20", headers=_bearer(_TOKEN)
+    ).json()
+
+    ids1 = [r["id"] for r in page1]
+    ids2 = [r["id"] for r in page2]
+    ids3 = [r["id"] for r in page3]
+
+    assert ids1 == list(range(25, 15, -1))
+    assert ids2 == list(range(15, 5, -1))
+    assert ids3 == list(range(5, 0, -1))
+    # Disjoint, and together they are the WHOLE table — the property the
+    # research population actually needs.
+    assert not set(ids1) & set(ids2)
+    assert sorted(ids1 + ids2 + ids3) == list(range(1, 26))
+    # The pre-MI-305 behaviour, asserted as a negative control: before the
+    # fix page2 was byte-identical to page1. If that ever returns, this fails.
+    assert page1 != page2
+
+
+def test_journal_offset_past_the_end_returns_empty_not_the_first_page(
+    client, fake_runtime
+):
+    _mk_trades(fake_runtime["db_path"], 5)
+    body = client.get(
+        "/api/diag/journal?table=trades&limit=10&offset=500", headers=_bearer(_TOKEN)
+    ).json()
+    assert body == []
+
+
+def test_journal_unsupported_parameter_is_refused_by_name(client, fake_runtime):
+    """Silently accepting and ignoring is the one outcome that must not survive."""
+    _mk_trades(fake_runtime["db_path"], 3)
+    for bad in ("since=2026-08-01", "until=2026-09-01", "bogus_param=zzz"):
+        resp = client.get(
+            f"/api/diag/journal?table=trades&limit=5&{bad}", headers=_bearer(_TOKEN)
+        )
+        assert resp.status_code == 400, bad
+        detail = resp.json()["detail"]
+        assert detail["error"] == "unsupported_parameter"
+        # It must NAME the offending parameter, not just refuse.
+        assert detail["unsupported"] == [bad.split("=")[0]]
+        assert "offset" in detail["supported"]
+        assert "audit_query" in detail["hint"]
+
+
+def test_journal_unsupported_parameter_refusal_is_behind_the_token(
+    client, fake_runtime
+):
+    """An unauthenticated caller must not learn the parameter vocabulary."""
+    resp = client.get("/api/diag/journal?table=trades&bogus_param=zzz")
+    assert resp.status_code in (401, 403)
+    assert "unsupported_parameter" not in resp.text
+
+
+def test_journal_default_shape_is_still_a_bare_array(client, fake_runtime):
+    """~15 in-repo consumers parse this as a JSON array. Do not break them."""
+    _mk_trades(fake_runtime["db_path"], 3)
+    body = client.get(
+        "/api/diag/journal?table=trades&limit=10", headers=_bearer(_TOKEN)
+    ).json()
+    assert isinstance(body, list)
+    assert [r["id"] for r in body] == [3, 2, 1]
+
+
+def test_journal_envelope_states_what_it_actually_returned(client, fake_runtime):
+    _mk_trades(fake_runtime["db_path"], 25)
+    body = client.get(
+        "/api/diag/journal?table=trades&limit=10&offset=0&envelope=true",
+        headers=_bearer(_TOKEN),
+    ).json()
+    assert isinstance(body, dict)
+    assert body["count"] == 10
+    assert body["total_rows"] == 25
+    assert body["total_rows_state"] == "counted"
+    assert body["has_more"] is True
+    assert body["returned_range"] == {"column": "id", "first": 25, "last": 16}
+    assert body["page_stability"] == "stable_key"
+    assert [r["id"] for r in body["rows"]] == list(range(25, 15, -1))
+
+    last = client.get(
+        "/api/diag/journal?table=trades&limit=10&offset=20&envelope=true",
+        headers=_bearer(_TOKEN),
+    ).json()
+    assert last["has_more"] is False
+
+
+def test_journal_envelope_reports_the_limit_clamp_in_three_states(
+    client, fake_runtime
+):
+    _mk_trades(fake_runtime["db_path"], 3)
+
+    def _state(q):
+        return client.get(
+            f"/api/diag/journal?table=trades&envelope=true&{q}",
+            headers=_bearer(_TOKEN),
+        ).json()
+
+    asked = _state("limit=2")
+    assert asked["limit_state"] == "as_requested" and asked["limit"] == 2
+
+    clamped = _state("limit=5000")
+    assert clamped["limit_state"] == "clamped_to_max"
+    assert clamped["limit"] == diag_router._MAX_LIMIT
+    assert clamped["limit_requested"] == 5000
+
+    defaulted = _state("limit=0")
+    assert defaulted["limit_state"] == "defaulted_invalid"
+    assert defaulted["limit"] == diag_router._DEFAULT_LIMIT
+
+
+def test_journal_empty_table_totals_zero_but_missing_db_totals_none(
+    client, fake_runtime
+):
+    """`0` is a real reading; `None` is 'we did not look'. Never conflate."""
+    # DB file absent entirely.
+    absent = client.get(
+        "/api/diag/journal?table=trades&envelope=true", headers=_bearer(_TOKEN)
+    ).json()
+    assert absent["total_rows"] is None
+    assert absent["total_rows_state"] == "db_absent"
+    assert absent["has_more"] is None
+    assert absent["returned_range"] is None
+
+    _mk_trades(fake_runtime["db_path"], 0)
+    empty = client.get(
+        "/api/diag/journal?table=trades&envelope=true", headers=_bearer(_TOKEN)
+    ).json()
+    assert empty["total_rows"] == 0
+    assert empty["total_rows_state"] == "counted"
+    assert empty["has_more"] is False
+
+
+def test_journal_order_packages_paging_is_total_even_when_updated_at_ties(
+    client, fake_runtime
+):
+    """The trap inside the fix.
+
+    `order_packages` is ordered by the MUTABLE, NON-UNIQUE
+    `datetime(updated_at)`. Adding OFFSET over a non-total order lets a page
+    boundary fall inside a tie, so rows are skipped or repeated across pages —
+    a NEW silent wrongness inside the fix for a silent wrongness. The
+    deterministic `order_package_id` tiebreaker is what prevents it.
+    """
+    db = sqlite3.connect(str(fake_runtime["db_path"]))
+    db.execute(
+        "CREATE TABLE order_packages ("
+        "order_package_id TEXT PRIMARY KEY, status TEXT, strategy_name TEXT, "
+        "updated_at TEXT NOT NULL)"
+    )
+    # Six rows sharing ONE timestamp — the whole table is a single tie, so a
+    # boundary at offset=2 and offset=4 lands inside it.
+    db.executemany(
+        "INSERT INTO order_packages "
+        "(order_package_id, status, strategy_name, updated_at) VALUES (?, ?, ?, ?)",
+        [(f"pkg-{c}", "open", "vwap", "2026-05-09T01:00:00+00:00") for c in "abcdef"],
+    )
+    db.execute("CREATE TABLE trades (id INTEGER PRIMARY KEY, status TEXT)")
+    db.commit()
+    db.close()
+
+    seen: list[str] = []
+    for off in (0, 2, 4):
+        page = client.get(
+            f"/api/diag/journal?table=order_packages&limit=2&offset={off}",
+            headers=_bearer(_TOKEN),
+        ).json()
+        seen.extend(r["order_package_id"] for r in page)
+
+    assert len(seen) == 6
+    assert len(set(seen)) == 6, f"paging skipped or repeated a tied row: {seen}"
+    assert sorted(seen) == [f"pkg-{c}" for c in "abcdef"]
+
+    # ⚠️ THE THREE ASSERTIONS ABOVE DO NOT DISCRIMINATE, AND SAYING SO IS THE
+    # POINT. Removing the tiebreaker was planted as a mutant and they all
+    # still passed: SQLite's order among tied rows is UNSPECIFIED by SQL but
+    # is in practice stable for a small single-table scan, so it hands back a
+    # consistent sequence here for free. They pin the observable behaviour and
+    # they are NOT evidence that the tiebreaker is present.
+    #
+    # What the fix actually claims is that the emitted ordering is a TOTAL
+    # order, so no page boundary can fall inside a tie at any table size or
+    # under any query plan. That claim is asserted directly — and on the
+    # PUBLIC envelope field, not a private, because `order_by` is part of what
+    # a caller is told about its own read.
+    meta = client.get(
+        "/api/diag/journal?table=order_packages&limit=2&envelope=true",
+        headers=_bearer(_TOKEN),
+    ).json()
+    assert meta["order_by"] == "datetime(updated_at) DESC, order_package_id DESC"
+    assert meta["page_key"] == "order_package_id"
+
+    # And the immutable-id tables must NOT grow a redundant second term.
+    trades_meta = client.get(
+        "/api/diag/journal?table=trades&envelope=true", headers=_bearer(_TOKEN)
+    ).json()
+    assert trades_meta["order_by"] == "id DESC"
+
+
+def test_journal_page_stability_distinguishes_mutable_from_immutable_keys(
+    client, fake_runtime
+):
+    """`order_packages` pages over a key that can CHANGE between reads; every
+    other table pages over an immutable id. A caller treating a paged pull as
+    a census needs that distinction, so it is reported rather than smoothed."""
+    db = sqlite3.connect(str(fake_runtime["db_path"]))
+    db.execute("CREATE TABLE trades (id INTEGER PRIMARY KEY, status TEXT)")
+    db.execute(
+        "CREATE TABLE order_packages ("
+        "order_package_id TEXT PRIMARY KEY, updated_at TEXT NOT NULL)"
+    )
+    db.commit()
+    db.close()
+
+    def _stab(table):
+        return client.get(
+            f"/api/diag/journal?table={table}&envelope=true", headers=_bearer(_TOKEN)
+        ).json()["page_stability"]
+
+    assert _stab("trades") == "stable_key"
+    assert _stab("order_packages") == "mutable_key"
+
+
+def test_journal_snapshot_still_serves_bare_lists(client, fake_runtime):
+    """/snapshot embeds these two tables; its shape must not change."""
+    _mk_trades(fake_runtime["db_path"], 3)
+    # /snapshot reads BOTH tables, and a missing one is a legitimate 503.
+    db = sqlite3.connect(str(fake_runtime["db_path"]))
+    db.execute(
+        "CREATE TABLE order_packages ("
+        "order_package_id TEXT PRIMARY KEY, updated_at TEXT NOT NULL)"
+    )
+    db.commit()
+    db.close()
+    body = client.get("/api/diag/snapshot?limit=5", headers=_bearer(_TOKEN)).json()
+    assert isinstance(body["trades"], list)
+    assert [r["id"] for r in body["trades"]] == [3, 2, 1]
+
+
+# ── /log_aggregate (PI-20261004-4GA8WQPA-0003) ──────────────────────────────
+def _soak_rows(path: Path, rows: list[dict]) -> None:
+    path.write_text("\n".join(json.dumps(r) for r in rows) + "\nnot json\n", encoding="utf-8")
+
+
+def test_log_aggregate_counts_across_utc_days_not_just_the_tail(client, fake_runtime, monkeypatch):
+    soak = fake_runtime["runtime_logs"] / "bybit_coverage_soak.jsonl"
+    rows = (
+        [{"logged_at_utc": f"2026-10-0{d}T0{h}:00:00+00:00", "account_id": "bybit_1",
+          "mode": "annotate", "verdicts_differ": False} for d in (1, 2, 3) for h in range(3)]
+        + [{"logged_at_utc": "2026-10-03T09:00:00+00:00", "account_id": "bybit_2",
+            "mode": "apply", "verdicts_differ": True}]
+        + [{"no_timestamp": 1}]
+    )
+    _soak_rows(soak, rows)
+    monkeypatch.setitem(diag_router._LOG_FILES, "bybit_coverage_soak", soak)
+    r = client.get("/api/diag/log_aggregate?name=bybit_coverage_soak&fields=mode&count_true=verdicts_differ",
+                   headers=_bearer(_TOKEN))
+    assert r.status_code == 200, r.text
+    b = r.json()
+    assert b["read_state"] == "complete"
+    assert b["distinct_utc_days"] == 3 and (b["first_day"], b["last_day"]) == ("2026-10-01", "2026-10-03")
+    assert b["days"]["2026-10-03"]["rows"] == 4
+    assert b["days"]["2026-10-03"]["by_account"] == {"bybit_1": 3, "bybit_2": 1}
+    assert b["days"]["2026-10-03"]["values"]["mode"] == {"annotate": 3, "apply": 1}
+    assert b["days"]["2026-10-03"]["true_counts"] == {"verdicts_differ": 1}
+    assert "true_counts" in b["days"]["2026-10-01"] and b["days"]["2026-10-01"]["true_counts"] == {}
+    assert b["unparseable_lines"] == 1 and b["rows_without_day"] == 1, "nothing is silently dropped"
+
+
+def test_log_aggregate_time_budget_is_reported_not_hidden(tmp_path):
+    p = tmp_path / "x.jsonl"
+    p.write_text("\n".join(json.dumps({"logged_at_utc": "2026-10-01T00:00:00+00:00"}) for _ in range(5000)))
+    out = diag_router.aggregate_jsonl(p, [], [], time_budget_s=-1.0)
+    assert out["read_state"] == "time_budget_hit" and out["scanned_lines"] < 5000
+
+
+def test_log_aggregate_rejects_unknown_name_bad_field_and_no_token(client, fake_runtime):
+    h = _bearer(_TOKEN)
+    assert client.get("/api/diag/log_aggregate?name=/etc/passwd", headers=h).status_code == 400
+    assert client.get("/api/diag/log_aggregate?name=audit&fields=a;b", headers=h).status_code == 400
+    assert client.get("/api/diag/log_aggregate?name=audit").status_code in (401, 403)
+
+
+# ---- TRADER-RESTART-GATE: restart_pending PER UNIT --------------------------
+
+def _trader_repo(tmp_path, monkeypatch, *, changed_path):
+    """A real two-commit repo with a fake trader (src.main -> src.core), a
+    committed trader closure, and runtime_status.json naming the trader's
+    running sha = the first commit."""
+    import json as _json
+    import subprocess
+
+    def git(*a):
+        return subprocess.run(["git", *a], cwd=tmp_path, check=True,
+                              capture_output=True, text=True).stdout.strip()
+
+    git("init", "-q")
+    git("config", "user.email", "t@t")
+    git("config", "user.name", "t")
+    files = {"src/__init__.py": "", "src/main.py": "from src import core\n",
+             "src/core.py": "X = 1\n", "src/web/__init__.py": "", "src/web/r.py": "Y = 1\n",
+             "config/trader_import_closure.txt":
+                 "src/__init__.py\nsrc/core.py\nsrc/main.py\n"}
+    for rel, text in files.items():
+        (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / rel).write_text(text)
+    git("add", ".")
+    git("commit", "-qm", "base")
+    base = git("rev-parse", "--short", "HEAD")
+    (tmp_path / changed_path).parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / changed_path).write_text("# changed\n")
+    git("add", ".")
+    git("commit", "-qm", "next")
+    head = git("rev-parse", "--short", "HEAD")
+    # The VM layout: runtime_status.json lives in runtime_logs_dir() (the DATA
+    # dir), the deploy markers in <repo>/runtime_logs (where the deploy script
+    # writes them). Two different directories -- a test that made them one
+    # directory hid the bug observed on the VM (diag issue #18314).
+    data_logs = tmp_path / "data" / "runtime_logs"
+    data_logs.mkdir(parents=True, exist_ok=True)
+    (data_logs / "runtime_status.json").write_text(_json.dumps({"git_sha": head, "git_sha_running": base}))
+    repo_logs = tmp_path / "runtime_logs"
+    repo_logs.mkdir(exist_ok=True)
+    (repo_logs / "deployed_sha.txt").write_text(head + "\n")
+    (repo_logs / "deployed_sha_trader.txt").write_text(base + "\n")
+    monkeypatch.setattr(diag_router, "repo_root", lambda: tmp_path)
+    monkeypatch.setattr(diag_router, "runtime_logs_dir", lambda: data_logs)
+    monkeypatch.setattr(diag_router, "_RUNNING_GIT_SHA", base)
+    monkeypatch.setattr(diag_router, "_resolve_git_sha", lambda: head)
+    diag_router._trader_closure_for.cache_clear()
+    return base, head
+
+
+def test_web_api_only_change_is_pending_for_the_web_api_not_the_trader(
+    client, fake_runtime, monkeypatch, tmp_path
+):
+    base, head = _trader_repo(tmp_path, monkeypatch, changed_path="src/web/r.py")
+    body = client.get("/api/diag/version", headers=_bearer(_TOKEN)).json()
+    assert body["trader_git_sha"] == base
+    assert body["restart_pending"] is True
+    assert body["restart_pending_by_unit"] == {
+        "ict-web-api.service": True, "ict-trader-live.service": False}
+    assert body["deployed_sha_by_unit"] == {
+        "ict-web-api.service": head, "ict-trader-live.service": base}
+
+
+def test_trader_loaded_change_is_pending_for_the_trader(
+    client, fake_runtime, monkeypatch, tmp_path
+):
+    _trader_repo(tmp_path, monkeypatch, changed_path="src/core.py")
+    body = client.get("/api/diag/version", headers=_bearer(_TOKEN)).json()
+    assert body["restart_pending_by_unit"]["ict-trader-live.service"] is True
+
+
+def test_trader_pending_without_a_closure_is_any_runtime_change(
+    client, fake_runtime, monkeypatch, tmp_path
+):
+    """The deploy restarts the trader on any runtime path when the closure is
+    unreadable, so diag must say pending, not skip."""
+    _trader_repo(tmp_path, monkeypatch, changed_path="src/web/r.py")
+    (tmp_path / "config" / "trader_import_closure.txt").unlink()
+    diag_router._trader_closure_for.cache_clear()
+    body = client.get("/api/diag/version", headers=_bearer(_TOKEN)).json()
+    assert body["restart_pending_by_unit"]["ict-trader-live.service"] is True
+
+
+def test_trader_pending_is_none_when_the_trader_sha_is_unreadable(
+    client, fake_runtime, monkeypatch, tmp_path
+):
+    _trader_repo(tmp_path, monkeypatch, changed_path="src/core.py")
+    (tmp_path / "data" / "runtime_logs" / "runtime_status.json").unlink()
+    body = client.get("/api/diag/version", headers=_bearer(_TOKEN)).json()
+    assert body["trader_git_sha"] == "unknown"
+    assert body["restart_pending_by_unit"]["ict-trader-live.service"] is None

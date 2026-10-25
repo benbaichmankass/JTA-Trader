@@ -1,0 +1,216 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "1 leg(s) [trend_donchian_eth_prop], 517 committed trades in total; grade=any_c_dominates, overall=all",
+  "n": 517,
+  "measurement": {
+    "leg_verdicts": {
+      "trend_donchian_eth_prop": "fail"
+    },
+    "grade": "any_c_dominates",
+    "overall": "all",
+    "cells": 15
+  },
+  "note": "trend_donchian_eth_prop: A_UNDOMINATED: no C arm dominates A on every seed (CSOL25 fails seed(s) [1, 2, 3, 4, 5], CSOL35 fails seed(s) [1, 2, 3, 4, 5]) | P5 Q3 per-leg risk, tradeify_1",
+  "records": [
+    {
+      "verdict": "fail",
+      "read_state": "measured",
+      "population": "trend_donchian_eth_prop: 517 committed trades from comms/research/RQ-20261015-1bf3-05/38713761684/arms/P__trades.jsonl (pinned by --leg); prop_ev_sim path-mode over 3 arm(s) x 5 seed(s), --trades trend_donchian_sol_prop=comms/research/RQ-20261015-1bf3-06/38730575207/arms/P__trades.jsonl --ruleset config/prop_rulesets/tradeify_247_1step.yaml --costs breakout --swap-model prorated --no-hedge --funded-start fresh --lev-cap trend_donchian_eth_prop=5 --lev-cap trend_donchian_sol_prop=2",
+      "n": 517,
+      "measurement": {
+        "leg": "trend_donchian_eth_prop",
+        "trades_file": "comms/research/RQ-20261015-1bf3-05/38713761684/arms/P__trades.jsonl",
+        "arms": {
+          "A": {
+            "1": {
+              "ev": 479.15,
+              "ev_se": 11.29,
+              "p_net_positive": 0.5978,
+              "p_alive_at_horizon": 0.3142,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.023,
+                "180": 0.1878
+              },
+              "rule_v2_verdict": "pass"
+            },
+            "2": {
+              "ev": 474.07,
+              "ev_se": 11.19,
+              "p_net_positive": 0.598,
+              "p_alive_at_horizon": 0.319,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.0215,
+                "180": 0.1812
+              },
+              "rule_v2_verdict": "indeterminate"
+            },
+            "3": {
+              "ev": 472.3,
+              "ev_se": 11.28,
+              "p_net_positive": 0.5982,
+              "p_alive_at_horizon": 0.3172,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.0238,
+                "180": 0.1913
+              },
+              "rule_v2_verdict": "indeterminate"
+            },
+            "4": {
+              "ev": 502.84,
+              "ev_se": 11.64,
+              "p_net_positive": 0.6042,
+              "p_alive_at_horizon": 0.3207,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.0255,
+                "180": 0.1893
+              },
+              "rule_v2_verdict": "pass"
+            },
+            "5": {
+              "ev": 470.74,
+              "ev_se": 11.12,
+              "p_net_positive": 0.5933,
+              "p_alive_at_horizon": 0.3242,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.0175,
+                "180": 0.1888
+              },
+              "rule_v2_verdict": "pass"
+            }
+          },
+          "CSOL25": {
+            "1": {
+              "ev": 360.12,
+              "ev_se": 9.13,
+              "p_net_positive": 0.5675,
+              "p_alive_at_horizon": 0.508,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.005,
+                "180": 0.098
+              },
+              "rule_v2_verdict": "indeterminate"
+            },
+            "2": {
+              "ev": 367.25,
+              "ev_se": 9.09,
+              "p_net_positive": 0.583,
+              "p_alive_at_horizon": 0.5128,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.003,
+                "180": 0.1052
+              },
+              "rule_v2_verdict": "indeterminate"
+            },
+            "3": {
+              "ev": 372.44,
+              "ev_se": 9.16,
+              "p_net_positive": 0.5857,
+              "p_alive_at_horizon": 0.5175,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.0053,
+                "180": 0.0948
+              },
+              "rule_v2_verdict": "indeterminate"
+            },
+            "4": {
+              "ev": 373.44,
+              "ev_se": 9.26,
+              "p_net_positive": 0.5905,
+              "p_alive_at_horizon": 0.512,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.005,
+                "180": 0.0953
+              },
+              "rule_v2_verdict": "indeterminate"
+            },
+            "5": {
+              "ev": 353.04,
+              "ev_se": 9.17,
+              "p_net_positive": 0.5625,
+              "p_alive_at_horizon": 0.5155,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.0043,
+                "180": 0.0978
+              },
+              "rule_v2_verdict": "indeterminate"
+            }
+          },
+          "CSOL35": {
+            "1": {
+              "ev": 415.44,
+              "ev_se": 10.07,
+              "p_net_positive": 0.5915,
+              "p_alive_at_horizon": 0.4385,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.0073,
+                "180": 0.1263
+              },
+              "rule_v2_verdict": "indeterminate"
+            },
+            "2": {
+              "ev": 393.07,
+              "ev_se": 9.82,
+              "p_net_positive": 0.584,
+              "p_alive_at_horizon": 0.4265,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.0103,
+                "180": 0.1283
+              },
+              "rule_v2_verdict": "indeterminate"
+            },
+            "3": {
+              "ev": 407.11,
+              "ev_se": 9.88,
+              "p_net_positive": 0.5853,
+              "p_alive_at_horizon": 0.4385,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.008,
+                "180": 0.1285
+              },
+              "rule_v2_verdict": "pass"
+            },
+            "4": {
+              "ev": 404.52,
+              "ev_se": 9.57,
+              "p_net_positive": 0.601,
+              "p_alive_at_horizon": 0.4402,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.0112,
+                "180": 0.1255
+              },
+              "rule_v2_verdict": "indeterminate"
+            },
+            "5": {
+              "ev": 438.99,
+              "ev_se": 10.39,
+              "p_net_positive": 0.5968,
+              "p_alive_at_horizon": 0.4492,
+              "p_pass_by_days": {
+                "30": 0.0,
+                "90": 0.009,
+                "180": 0.1343
+              },
+              "rule_v2_verdict": "indeterminate"
+            }
+          }
+        }
+      },
+      "note": "A_UNDOMINATED: no C arm dominates A on every seed (CSOL25 fails seed(s) [1, 2, 3, 4, 5], CSOL35 fails seed(s) [1, 2, 3, 4, 5]) | P5 Q3 per-leg risk, tradeify_1"
+    }
+  ]
+}

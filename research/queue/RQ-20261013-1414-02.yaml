@@ -1,0 +1,169 @@
+id: RQ-20261013-1414-02
+title: 'AI trader / probability quality: do the 15m regime learners beat the class prior on LOG-LOSS, not only on thresholded macro-F1?
+  (the prerequisite for conformal abstention)'
+status: done
+cadence: once
+theme: ml_health
+priority: 2
+kind: experiment
+question: On the 15m v002 shards (BTC/ETH/SOL), purged CV and holdout, does LightGBM or a numpy logit beat the class-prior probability
+  on LOG-LOSS by at least 0.005 nats on all three symbols? Macro-F1 is an operating-point metric and the volatile label has a ~4.6%
+  base rate (the base-rate cliff, ROADMAP T0.1); log-loss grades the probabilities themselves.
+why_this_matters: 'Conformal abstention (RQ-20261011-9da8-03, blocked) and any confidence-gated use of a regime head need calibrated,
+  better-than-prior probabilities. Every queued ML unit grades macro-F1; none grades probability quality. A head that wins on F1 but
+  not on log-loss is selecting a threshold, not carrying information, and the conformal lever would be built on sand. DATASET PATHS
+  UNVERIFIED FROM THIS SANDBOX: the trainer shards are not reachable here. The 15m v002 BTC/ETH/SOL shards and the base feature names
+  are the ones queued unit RQ-20261012-75b2-19..21 already declare (MEASURED present on the trainer 2026-10-11 per RQ-20261011-9da8-01);
+  a missing column lands as a dead NaN feature or producer_failed, which research-ops must read as a ROUTE FAULT (fix the path, re-queue),
+  never as a verdict.'
+power:
+  expected_n: 8640
+  min_detectable_effect: 0.05
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: Unit = bar in the final-90-day holdout (~8,640 rows = 90 d x 96 15m bars) per symbol; d=0.05 paired needs (1.96+0.8416)^2/0.05^2
+    = 3,140 rows, floor met on rows. Bars are autocorrelated so effective n is far lower; the rule therefore also requires the purged-CV
+    fold-mean delta (min_folds 3) and the first run replaces this estimate with the measured n. Log-loss is a mean over rows, so the
+    per-row paired SD is small relative to the 0.005-nat bar.
+  feasibility:
+    source: none
+    accrual_basis: 'Nightly-rebuilt shard: history for the window used is fixed, nothing needs to accrue for the rows this unit reads.'
+decision_rule:
+  id: RULE-RQ20261013-1414-02-REGIME-LOGLOSS-VS-PRIOR
+  registered_at: '2026-10-13'
+  registered_before_run: true
+  statistic: Paired per-fold difference in multiclass log-loss (prior minus learner, signed so positive = learner better) on identical
+    purged folds (5, embargo 96) and on the holdout, per symbol; mean over folds. ml_bakeoff.py evaluate_rule applies ml_bakeoff.rule.
+  rule: 'PASS IF a candidate (lgbm or logit) beats the class prior by >= +0.005 nats on the CV mean on ALL THREE symbols AND by >= 0
+    on the holdout on all three: the head carries probabilistic information, and the conformal lever is worth building. FAIL IF no candidate
+    beats the prior by >= 0 on the CV mean on ANY symbol (macro-F1 skill is a threshold artifact; the conformal lever is not worth building
+    on these heads at this feature set). INDETERMINATE otherwise, or if folds < 3 or an arm is unavailable. headline_checks reports
+    lgbm minus logit on log-loss.'
+  min_n: 3 usable CV folds per symbol; holdout >= 20 rows.
+  what_it_does_not_do: Does not build, calibrate or serve anything, promotes nothing, touches no config. A log-loss PASS says the probabilities
+    carry information over the prior on the regime LABEL; it is not edge and not a P&L figure.
+compute: needs_vm_data
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.35
+  basis: 'stand-in: decides whether the conformal-abstention lever (FRONTIER-LEVER-CONFORMAL) is worth building on the advisory heads;
+    not a measured P&L'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 25
+  basis: 'Estimate: same shape as the F1 bake-off over 3 shards.'
+ml_bakeoff:
+  task: classification
+  metric: logloss
+  higher_is_better: false
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT:
+        path: datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl
+      ETHUSDT:
+        path: datasets-out/market_features/ETHUSDT/15m/v002/data.jsonl
+      SOLUSDT:
+        path: datasets-out/market_features/SOLUSDT/15m/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    tail_rows: 60000
+    holdout_after: '2026-07-12'
+  cv:
+    folds: 5
+    embargo_rows: 96
+    min_train_frac: 0.4
+  baseline: prior
+  controls: []
+  candidates:
+  - lgbm
+  - logit
+  learners:
+    prior:
+      kind: prior
+    lgbm:
+      kind: lightgbm
+      params:
+        n_estimators: 200
+        learning_rate: 0.05
+        num_leaves: 31
+        min_child_samples: 50
+    logit:
+      kind: numpy_logit
+  rule:
+    min_folds: 3
+    pass_if:
+    - group: &id001
+      - BTCUSDT
+      - ETHUSDT
+      - SOLUSDT
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.005
+    - group: *id001
+      vs: baseline
+      window: holdout
+      op: '>='
+      value: 0.0
+    fail_if_no_candidate_reaches:
+    - group: any
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.0
+    headline_checks:
+    - name: lgbm_minus_logit_logloss
+      learner: lgbm
+      vs: logit
+      group: any
+      window: cv
+      op: '>='
+      value: 0.0
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261013-1414-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M25
+related:
+- FRONTIER-LEVER-CONFORMAL
+- RQ-20261011-9da8-03
+- scripts/research/ml_bakeoff.py
+last_dispatched_at: '2026-10-13T21:54:37+00:00'
+grading:
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261013-1414-02-REGIME-LOGLOSS-VS-PRIOR
+  evidence:
+  - research/results/RQ-20261013-1414-02/38474112471.jsonl
+  graded_at: '2026-10-14'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

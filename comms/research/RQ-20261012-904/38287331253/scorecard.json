@@ -1,0 +1,420 @@
+{
+  "by_template_n": {
+    "core_cpi_mom_ge_cons_plus_1": 126,
+    "core_cpi_mom_ge_cons_plus_2": 126,
+    "cpi_mom_ge_cons_plus_1": 125,
+    "cpi_mom_ge_cons_plus_2": 125,
+    "cpi_yoy_ge_cons_plus_1": 126,
+    "cpi_yoy_ge_cons_plus_2": 126,
+    "fomc_rate_changes": 76
+  },
+  "calibration_model": [
+    {
+      "bin": "[0.0,0.2)",
+      "freq_yes": 0.0776,
+      "mean_p": 0.0887,
+      "n": 425
+    },
+    {
+      "bin": "[0.2,0.4)",
+      "freq_yes": 0.3024,
+      "mean_p": 0.3278,
+      "n": 377
+    },
+    {
+      "bin": "[0.6,0.8)",
+      "freq_yes": 1.0,
+      "mean_p": 0.7083,
+      "n": 2
+    },
+    {
+      "bin": "[0.8,1.0)",
+      "freq_yes": 1.0,
+      "mean_p": 0.9265,
+      "n": 26
+    }
+  ],
+  "cpi_family_model_vs_base": {
+    "arm": "p_model",
+    "brier": {
+      "arm_mean": 0.14569,
+      "ci95": [
+        -0.00048,
+        0.00696
+      ],
+      "ref_mean": 0.14878,
+      "ref_minus_arm": 0.00308
+    },
+    "logloss": {
+      "arm_mean": 0.45388,
+      "ci95": [
+        0.00072,
+        0.02681
+      ],
+      "ref_mean": 0.46751,
+      "ref_minus_arm": 0.01363
+    },
+    "n": 754,
+    "n_releases": 377,
+    "ref": "p_base"
+  },
+  "fomc_model_vs_base": {
+    "arm": "p_model",
+    "brier": {
+      "arm_mean": 0.0056,
+      "ci95": [
+        0.19641,
+        0.28817
+      ],
+      "ref_mean": 0.24664,
+      "ref_minus_arm": 0.24104
+    },
+    "logloss": {
+      "arm_mean": 0.05681,
+      "ci95": [
+        0.54321,
+        0.737
+      ],
+      "ref_mean": 0.6949,
+      "ref_minus_arm": 0.63809
+    },
+    "n": 76,
+    "n_releases": 76,
+    "ref": "p_base"
+  },
+  "kalshi_dir_given": true,
+  "leakage": {
+    "asof_not_before_release": [],
+    "market_quote_after_asof": [],
+    "ok": true
+  },
+  "limits": [
+    "consensus pit_basis is fxstreet_current_state (not a vintage snapshot); leakage of the realized value into it cannot be tested here",
+    "headline NFP has no consensus in comms/macro/econ_calendar_snapshots*.jsonl: not scored",
+    "CPI questions at k=1 and k=2 share a release: questions are not independent",
+    "log-loss clips probabilities to [0.01, 0.99] for every arm"
+  ],
+  "market_matched_by_template": {
+    "core_cpi_mom_ge_cons_plus_1": 0,
+    "core_cpi_mom_ge_cons_plus_2": 0,
+    "cpi_mom_ge_cons_plus_1": 32,
+    "cpi_mom_ge_cons_plus_2": 24,
+    "cpi_yoy_ge_cons_plus_1": 0,
+    "cpi_yoy_ge_cons_plus_2": 0,
+    "fomc_rate_changes": 26
+  },
+  "market_unmatched_reasons": {
+    "KXCPI:no_event_in_window": 132,
+    "KXCPI:no_fresh_two_sided_quote_at_strike": 62,
+    "KXFEDDECISION:no_event_in_window": 49,
+    "KXFEDDECISION:no_fresh_hold_quote": 1
+  },
+  "market_vs_base": {
+    "arm": "p_market",
+    "brier": {
+      "arm_mean": 0.06543,
+      "ci95": [
+        0.04642,
+        0.11919
+      ],
+      "ref_mean": 0.1454,
+      "ref_minus_arm": 0.07997
+    },
+    "logloss": {
+      "arm_mean": 0.23861,
+      "ci95": [
+        0.12437,
+        0.31788
+      ],
+      "ref_mean": 0.45702,
+      "ref_minus_arm": 0.21841
+    },
+    "n": 82,
+    "n_releases": 58,
+    "ref": "p_base"
+  },
+  "model_vs_base": {
+    "arm": "p_model",
+    "brier": {
+      "arm_mean": 0.13287,
+      "ci95": [
+        0.01759,
+        0.03253
+      ],
+      "ref_mean": 0.15774,
+      "ref_minus_arm": 0.02487
+    },
+    "logloss": {
+      "arm_mean": 0.41752,
+      "ci95": [
+        0.05077,
+        0.09051
+      ],
+      "ref_mean": 0.48833,
+      "ref_minus_arm": 0.07081
+    },
+    "n": 830,
+    "n_releases": 453,
+    "ref": "p_base"
+  },
+  "model_vs_market": {
+    "arm": "p_model",
+    "brier": {
+      "arm_mean": 0.0811,
+      "ci95": [
+        -0.0346,
+        0.00612
+      ],
+      "ref_mean": 0.06543,
+      "ref_minus_arm": -0.01567
+    },
+    "logloss": {
+      "arm_mean": 0.28001,
+      "ci95": [
+        -0.10306,
+        0.03062
+      ],
+      "ref_mean": 0.23861,
+      "ref_minus_arm": -0.04141
+    },
+    "n": 82,
+    "n_releases": 58,
+    "ref": "p_market"
+  },
+  "model_vs_market_by_kind": {
+    "core_cpi_mom": {
+      "arm": "p_model",
+      "n": 0,
+      "n_releases": null,
+      "ref": "p_market"
+    },
+    "cpi_mom": {
+      "arm": "p_model",
+      "brier": {
+        "arm_mean": 0.11838,
+        "ci95": [
+          -0.0512,
+          0.00553
+        ],
+        "ref_mean": 0.09423,
+        "ref_minus_arm": -0.02416
+      },
+      "logloss": {
+        "arm_mean": 0.39765,
+        "ci95": [
+          -0.15205,
+          0.03994
+        ],
+        "ref_mean": 0.33408,
+        "ref_minus_arm": -0.06357
+      },
+      "n": 56,
+      "n_releases": 32,
+      "ref": "p_market"
+    },
+    "cpi_yoy": {
+      "arm": "p_model",
+      "n": 0,
+      "n_releases": null,
+      "ref": "p_market"
+    },
+    "fomc": {
+      "arm": "p_model",
+      "brier": {
+        "arm_mean": 0.00078,
+        "ci95": [
+          -0.00046,
+          0.00819
+        ],
+        "ref_mean": 0.0034,
+        "ref_minus_arm": 0.00262
+      },
+      "logloss": {
+        "arm_mean": 0.02664,
+        "ci95": [
+          -0.00996,
+          0.03338
+        ],
+        "ref_mean": 0.03297,
+        "ref_minus_arm": 0.00632
+      },
+      "n": 26,
+      "n_releases": 26,
+      "ref": "p_market"
+    }
+  },
+  "n_questions": 830,
+  "n_releases": 453,
+  "per_template_model_vs_base": {
+    "core_cpi_mom_ge_cons_plus_1": {
+      "arm": "p_model",
+      "brier": {
+        "arm_mean": 0.19951,
+        "ci95": [
+          -0.00534,
+          0.016
+        ],
+        "ref_mean": 0.20479,
+        "ref_minus_arm": 0.00528
+      },
+      "logloss": {
+        "arm_mean": 0.58814,
+        "ci95": [
+          -0.01221,
+          0.03909
+        ],
+        "ref_mean": 0.60114,
+        "ref_minus_arm": 0.01299
+      },
+      "n": 126,
+      "n_releases": 126,
+      "ref": "p_base"
+    },
+    "core_cpi_mom_ge_cons_plus_2": {
+      "arm": "p_model",
+      "brier": {
+        "arm_mean": 0.05985,
+        "ci95": [
+          -0.00383,
+          0.00563
+        ],
+        "ref_mean": 0.06022,
+        "ref_minus_arm": 0.00037
+      },
+      "logloss": {
+        "arm_mean": 0.23315,
+        "ci95": [
+          -0.01831,
+          0.05136
+        ],
+        "ref_mean": 0.24584,
+        "ref_minus_arm": 0.01269
+      },
+      "n": 126,
+      "n_releases": 126,
+      "ref": "p_base"
+    },
+    "cpi_mom_ge_cons_plus_1": {
+      "arm": "p_model",
+      "brier": {
+        "arm_mean": 0.21406,
+        "ci95": [
+          -0.008,
+          0.0231
+        ],
+        "ref_mean": 0.22125,
+        "ref_minus_arm": 0.00719
+      },
+      "logloss": {
+        "arm_mean": 0.61992,
+        "ci95": [
+          -0.01719,
+          0.07277
+        ],
+        "ref_mean": 0.64541,
+        "ref_minus_arm": 0.02549
+      },
+      "n": 125,
+      "n_releases": 125,
+      "ref": "p_base"
+    },
+    "cpi_mom_ge_cons_plus_2": {
+      "arm": "p_model",
+      "brier": {
+        "arm_mean": 0.08656,
+        "ci95": [
+          -0.00167,
+          0.00525
+        ],
+        "ref_mean": 0.08817,
+        "ref_minus_arm": 0.00161
+      },
+      "logloss": {
+        "arm_mean": 0.31519,
+        "ci95": [
+          -0.00804,
+          0.03404
+        ],
+        "ref_mean": 0.32735,
+        "ref_minus_arm": 0.01216
+      },
+      "n": 125,
+      "n_releases": 125,
+      "ref": "p_base"
+    },
+    "cpi_yoy_ge_cons_plus_1": {
+      "arm": "p_model",
+      "brier": {
+        "arm_mean": 0.2219,
+        "ci95": [
+          -0.00326,
+          0.00837
+        ],
+        "ref_mean": 0.22453,
+        "ref_minus_arm": 0.00263
+      },
+      "logloss": {
+        "arm_mean": 0.63631,
+        "ci95": [
+          -0.00728,
+          0.0183
+        ],
+        "ref_mean": 0.64207,
+        "ref_minus_arm": 0.00576
+      },
+      "n": 126,
+      "n_releases": 126,
+      "ref": "p_base"
+    },
+    "cpi_yoy_ge_cons_plus_2": {
+      "arm": "p_model",
+      "brier": {
+        "arm_mean": 0.09235,
+        "ci95": [
+          -0.00106,
+          0.0045
+        ],
+        "ref_mean": 0.0938,
+        "ref_minus_arm": 0.00145
+      },
+      "logloss": {
+        "arm_mean": 0.33078,
+        "ci95": [
+          -0.00866,
+          0.04021
+        ],
+        "ref_mean": 0.34356,
+        "ref_minus_arm": 0.01278
+      },
+      "n": 126,
+      "n_releases": 126,
+      "ref": "p_base"
+    },
+    "fomc_rate_changes": {
+      "arm": "p_model",
+      "brier": {
+        "arm_mean": 0.0056,
+        "ci95": [
+          0.19641,
+          0.28817
+        ],
+        "ref_mean": 0.24664,
+        "ref_minus_arm": 0.24104
+      },
+      "logloss": {
+        "arm_mean": 0.05681,
+        "ci95": [
+          0.54321,
+          0.737
+        ],
+        "ref_mean": 0.6949,
+        "ref_minus_arm": 0.63809
+      },
+      "n": 76,
+      "n_releases": 76,
+      "ref": "p_base"
+    }
+  },
+  "releases_loaded": 501,
+  "yes_rate": 0.2108
+}

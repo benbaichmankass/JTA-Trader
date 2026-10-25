@@ -1,0 +1,70 @@
+id: RQ-20261011-9da8-02
+title: 'Frontier: small-n tabular bake-off for the trade-outcome meta-label head (LightGBM vs CatBoost vs TabICL vs TabPFN-class
+  vs logistic) on setup-candidates-metalabel'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 2
+kind: experiment
+question: On the setup-candidates meta-label dataset, under purged walk-forward CV with identical folds, does a tabular foundation
+  model (TabICL; TabPFN-v2/3 as RESEARCH-EVAL ONLY) or CatBoost beat the incumbent LightGBM meta-label head -- and the per-setup_type
+  baseline -- on out-of-sample log-loss and top-quintile net R?
+why_this_matters: 'The binding constraint on every trade-outcome head is LABELS (~99 closed BTC trades -> n_eval 20; M19 post-mortem;
+  ML-LABEL-WALL). LightGBM is the weakest learner family in exactly the small-n regime; tabular foundation models are pretrained
+  for it. This is the only registered line whose family (tabular_foundation_model) has zero trained models. LICENCE GATE (verified
+  2026-10-11 on the Hub): TabPFN-2.5 / TabPFN-3 / TabPFN-v2 weights are listed license:other (Prior Labs; the 2.5 licence
+  is non-commercial) -- offline research evaluation is the stated permitted use, serving them live is NOT cleared and needs
+  an operator licence decision before any promotion; TabICL and CatBoost carry no such gate on this evidence (TabICL licence
+  UNVERIFIED -- check before use).'
+power:
+  expected_n: 300
+  min_detectable_effect: 0.35
+  effect_units: sd
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'Gate from ML-LABEL-WALL: pooled n >= 300 labelled setups; below it the verdict is INDETERMINATE by construction.
+    d=0.35 paired is the smallest log-loss gap worth a head swap.'
+  feasibility:
+    source: none
+    accrual_basis: Label count per cell is ML-D2's output (RQ-20261011-17f4-02); this unit consumes it.
+decision_rule:
+  id: RULE-RQ1011-9DA8-02-TABULAR-BAKEOFF
+  registered_at: '2026-10-11'
+  registered_before_run: true
+  statistic: 'Paired out-of-sample per-row log-loss difference (candidate minus incumbent LightGBM) on identical purged folds,
+    its bootstrap 95% CI, and mean net R of the top-quintile-scored trades with the label''s own cost stack (precondition:
+    verify the dataset label is NET of fees+slippage before running; if gross, the unit grades INDETERMINATE and files the
+    label fix).'
+  rule: PASS IF n >= 300 AND some non-incumbent learner has the upper bound of the paired log-loss CI < 0 AND top-quintile
+    net R is >= the incumbent's. FAIL IF n >= 300 and every non-incumbent learner has CI containing 0 or positive (the incumbent
+    stays; closes only these learners at this n). INDETERMINATE IF n < 300 or the label is not net of cost.
+  what_it_does_not_do: Does not serve any TabPFN-licensed weights live; does not touch manifests, stages or config; a PASS
+    is a candidate-stage proposal plus a licence question for the operator, not a promotion.
+blocked_on:
+- kind: work_item
+  ref: FRONTIER-LEVER-TABULAR
+  what: 'The comparison instrument now exists and is GENERIC (ML-RQ-RUNNER: scripts/research/ml_bakeoff.py has lightgbm / catboost / tabicl / tabpfn learner kinds on shared purged folds, tabpfn flagged research_only) -- NO bespoke tabular_bakeoff.py is needed. MEASURED on the trainer 2026-10-11: catboost, tabicl and tabpfn are NOT installed in its venv (lightgbm 4.6, sklearn 1.8 are); an uninstalled arm reports `unavailable` and downgrades a FAIL to INDETERMINATE. ALSO: routing.peak_memory_gb is 8.0 > the 6 GB trainer, which the router REFUSES (unroutable) -- re-declare from the first measured run (small-n tabular is far below it).'
+  clears_when: catboost + tabicl (+ tabpfn for the research-eval arm) are installed in the trainer venv (Tier-2 lever row), the unit carries an ml_bakeoff block pointing at the meta-label dataset, and RQ-20261011-17f4-02 reports >= 300 labelled setups in some cell. Then git mv and fill run.workflow (research-script-run-trainer.yml), run.command, lands.store.
+
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 120
+  basis: Estimate from the sibling fc / harness runs; the first run replaces it.
+run:
+  workflow: null
+  note: 'Deliberately null: the instrument does not exist yet (see blocked_on). Fill in when the lever row closes.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-D2
+- ML-LABEL-WALL
+- RQ-20261011-17f4-02
+- ml/configs/retired/README.md
+- docs/research/frontier-scan-2026-10-11.md
+- FRONTIER-RESEARCH
+last_dispatched_at: null

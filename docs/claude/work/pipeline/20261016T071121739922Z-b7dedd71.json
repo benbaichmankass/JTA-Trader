@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the daily live-replay-parity run reports 0 of this class for this leg, with the cause root-caused, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261016-LRP-288AF95B",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "live-replay-parity:trend_donchian_eth_prop:dropped_no_order",
+    "rerun": "python3 scripts/ops/live_replay_parity.py --base-url <tunnel to the live web-api> --days 7  (or label an issue `live-replay-parity`; the workflow .github/workflows/live-replay-parity.yml runs it daily and commits comms/live_parity/latest.json)"
+  },
+  "state": "queued",
+  "what": "Live-vs-replay parity: leg `trend_donchian_eth_prop` — dropped_no_order ×13 (paper roster) in window 2026-10-09T06:45:00+00:00..2026-10-16T06:45:00+00:00. MEASURED by scripts/ops/live_replay_parity.py; artifact comms/live_parity/2026-10-16.json. Examples: [{\"class\": \"dropped_no_order\", \"bar\": \"2026-10-10T14:00:00+00:00\", \"t\": \"2026-10-10T14:32:13+00:00\", \"detail\": {\"class\": \"dropped_no_order\", \"packages\": [\"pkg-2ba157527fdd4732\", \"pkg-7071d6188a44459c\"], \"gates\": [\"bar_debounce_blocked\"], \"orders_by_account\": {}, \"missing_accounts\": [\"bybit_1\"]}}, {\"class\": \"dropped_no_order\", \"bar\": \"2026-10-10T15:00:00+00:00\", \"t\": \"2026-10-10T15:00:46+00:00\", \"detail\": {\"class\": \"dropped_no_order\", \"packages\": [\"pkg-2ba157527fdd4732\"], \"gates\": [], \"orders_by_account\": {}, \"missing_accounts\": [\"bybit_1\"]}}, {\"class\": \"dropped_no_order\", \"bar\": \"2026-10-11T15:00:00+00:00\", \"t\": \"2026-10-11T15:45:59+00:00\", \"detail\": {\"class\": \"dropped_no_order\", \"packages\": [\"pkg-62db5d728f6e499f\"], \"gates\": [\"bar_debounce_blocked\"], \"orders_by_account\": {}, \"missing_accounts\": [\"bybit_1\"]}}]"
+}

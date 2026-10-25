@@ -1,0 +1,451 @@
+{
+  "read_state": "measured",
+  "ledger_present": true,
+  "trade_arm": {
+    "population": {
+      "n_trades_in": 333,
+      "n_excluded_window_gap": 16,
+      "n_with_scored_news": 173,
+      "legs": [
+        "htf_pullback_trend_2h:XRPUSDT",
+        "trend_donchian:ETHUSDT",
+        "trend_donchian:SOLUSDT",
+        "trend_donchian:XRPUSDT"
+      ],
+      "first": "2023-10-09T08:00:00+00:00",
+      "last": "2026-10-08T12:00:00+00:00",
+      "coverage_pct": 54.57
+    },
+    "cost_xcheck_max_abs_diff": 5e-05,
+    "cost_xcheck_n": 333,
+    "veto": {
+      "n_vetoed": 0,
+      "n_taken": 317,
+      "mean_net_r_vetoed": null,
+      "mean_net_r_taken": 0.2843,
+      "mean_diff_vetoed_minus_taken": null,
+      "boot95_ci_diff": null,
+      "total_r_removed_by_veto": 0,
+      "book_total_net_r": 90.133,
+      "date_split_halves": [
+        {
+          "n_vetoed": 0,
+          "mean_vetoed": null,
+          "mean_taken": 0.4297
+        },
+        {
+          "n_vetoed": 0,
+          "mean_vetoed": null,
+          "mean_taken": 0.1399
+        }
+      ]
+    },
+    "influence": {
+      "n_downsized": 0,
+      "delta_total_r": 0.0,
+      "event_risk": 0.0,
+      "mode": "downsize (hypothetical; production mode is off)"
+    },
+    "rank": {
+      "n_scored": 173,
+      "spearman_ic": 0.0223,
+      "one_sided_p_ic_gt_0": 0.3854,
+      "by_decision": {
+        "boost": {
+          "n": 0,
+          "mean_net_r": null
+        },
+        "reduce": {
+          "n": 0,
+          "mean_net_r": null
+        },
+        "veto": {
+          "n": 0,
+          "mean_net_r": null
+        },
+        "neutral": {
+          "n": 317,
+          "mean_net_r": 0.2843
+        }
+      }
+    },
+    "read_state": "measured"
+  },
+  "populations": {
+    "live": {
+      "event_arm": {
+        "BTCUSDT": {
+          "symbol": "BTCUSDT",
+          "horizon_bars": 24,
+          "bar_minutes": 60,
+          "cost_bps_roundtrip": 13.5,
+          "n_decision_bars": 26084,
+          "n_veto_bars": 0,
+          "n_veto_episodes": 0,
+          "n_baseline_obs": 1087,
+          "veto_long": {
+            "mean_net_bps": null,
+            "baseline_mean_net_bps": -0.77,
+            "diff_bps": null,
+            "boot95_ci_diff": null,
+            "date_split_halves": [
+              {
+                "n": 0,
+                "mean_long_net_bps": null
+              },
+              {
+                "n": 0,
+                "mean_long_net_bps": null
+              }
+            ]
+          },
+          "veto_short": {
+            "mean_net_bps": null,
+            "baseline_mean_net_bps": -26.23,
+            "diff_bps": null,
+            "boot95_ci_diff": null
+          },
+          "rank": {
+            "n_scored": 512,
+            "n_subsampled": 1087,
+            "spearman_ic_adj_vs_fwd_ret": -0.0352,
+            "one_sided_p": 0.7867
+          },
+          "by_decision_bars": {
+            "boost": 39,
+            "reduce": 16,
+            "veto": 0,
+            "neutral": 26029
+          },
+          "first": "2023-10-01T03:00:00+00:00",
+          "last": "2026-10-11T01:00:00+00:00"
+        },
+        "ETHUSDT": {
+          "symbol": "ETHUSDT",
+          "horizon_bars": 24,
+          "bar_minutes": 60,
+          "cost_bps_roundtrip": 13.5,
+          "n_decision_bars": 26084,
+          "n_veto_bars": 0,
+          "n_veto_episodes": 0,
+          "n_baseline_obs": 1087,
+          "veto_long": {
+            "mean_net_bps": null,
+            "baseline_mean_net_bps": -4.26,
+            "diff_bps": null,
+            "boot95_ci_diff": null,
+            "date_split_halves": [
+              {
+                "n": 0,
+                "mean_long_net_bps": null
+              },
+              {
+                "n": 0,
+                "mean_long_net_bps": null
+              }
+            ]
+          },
+          "veto_short": {
+            "mean_net_bps": null,
+            "baseline_mean_net_bps": -22.74,
+            "diff_bps": null,
+            "boot95_ci_diff": null
+          },
+          "rank": {
+            "n_scored": 446,
+            "n_subsampled": 1087,
+            "spearman_ic_adj_vs_fwd_ret": 0.0016,
+            "one_sided_p": 0.4864
+          },
+          "by_decision_bars": {
+            "boost": 29,
+            "reduce": 4,
+            "veto": 0,
+            "neutral": 26051
+          },
+          "first": "2023-10-01T03:00:00+00:00",
+          "last": "2026-10-11T01:00:00+00:00"
+        },
+        "SOLUSDT": {
+          "symbol": "SOLUSDT",
+          "horizon_bars": 24,
+          "bar_minutes": 60,
+          "cost_bps_roundtrip": 13.5,
+          "n_decision_bars": 26084,
+          "n_veto_bars": 0,
+          "n_veto_episodes": 0,
+          "n_baseline_obs": 1087,
+          "veto_long": {
+            "mean_net_bps": null,
+            "baseline_mean_net_bps": 10.27,
+            "diff_bps": null,
+            "boot95_ci_diff": null,
+            "date_split_halves": [
+              {
+                "n": 0,
+                "mean_long_net_bps": null
+              },
+              {
+                "n": 0,
+                "mean_long_net_bps": null
+              }
+            ]
+          },
+          "veto_short": {
+            "mean_net_bps": null,
+            "baseline_mean_net_bps": -37.27,
+            "diff_bps": null,
+            "boot95_ci_diff": null
+          },
+          "rank": {
+            "n_scored": 478,
+            "n_subsampled": 1087,
+            "spearman_ic_adj_vs_fwd_ret": 0.0105,
+            "one_sided_p": 0.409
+          },
+          "by_decision_bars": {
+            "boost": 19,
+            "reduce": 12,
+            "veto": 0,
+            "neutral": 26053
+          },
+          "first": "2023-10-01T03:00:00+00:00",
+          "last": "2026-10-11T01:00:00+00:00"
+        }
+      },
+      "event_pooled": {
+        "n_veto_episodes": 0,
+        "n_baseline_obs": 3261,
+        "veto_long": {
+          "mean_net_bps": null,
+          "baseline_mean_net_bps": 1.75,
+          "diff_bps": null,
+          "boot95_ci_diff": null,
+          "date_split_halves": [
+            {
+              "n": 0,
+              "mean_long_net_bps": null
+            },
+            {
+              "n": 0,
+              "mean_long_net_bps": null
+            }
+          ]
+        },
+        "veto_short": {
+          "mean_net_bps": null,
+          "baseline_mean_net_bps": -28.75,
+          "diff_bps": null,
+          "boot95_ci_diff": null
+        },
+        "rank": {
+          "n_scored": 1436,
+          "spearman_ic": -0.0073,
+          "one_sided_p": 0.6088,
+          "per_symbol_ic": {
+            "BTCUSDT": -0.0352,
+            "ETHUSDT": 0.0016,
+            "SOLUSDT": 0.0105
+          }
+        }
+      },
+      "grades": {
+        "arm_e": "INSUFFICIENT_BASE",
+        "arm_r": "FAIL",
+        "g1_offline": "RETIRE_OR_REPLACE_REVIEW"
+      }
+    },
+    "broad": {
+      "event_arm": {
+        "BTCUSDT": {
+          "symbol": "BTCUSDT",
+          "horizon_bars": 24,
+          "bar_minutes": 60,
+          "cost_bps_roundtrip": 13.5,
+          "n_decision_bars": 26084,
+          "n_veto_bars": 0,
+          "n_veto_episodes": 0,
+          "n_baseline_obs": 1087,
+          "veto_long": {
+            "mean_net_bps": null,
+            "baseline_mean_net_bps": -0.77,
+            "diff_bps": null,
+            "boot95_ci_diff": null,
+            "date_split_halves": [
+              {
+                "n": 0,
+                "mean_long_net_bps": null
+              },
+              {
+                "n": 0,
+                "mean_long_net_bps": null
+              }
+            ]
+          },
+          "veto_short": {
+            "mean_net_bps": null,
+            "baseline_mean_net_bps": -26.23,
+            "diff_bps": null,
+            "boot95_ci_diff": null
+          },
+          "rank": {
+            "n_scored": 1083,
+            "n_subsampled": 1087,
+            "spearman_ic_adj_vs_fwd_ret": -0.0024,
+            "one_sided_p": 0.5318
+          },
+          "by_decision_bars": {
+            "boost": 9,
+            "reduce": 2,
+            "veto": 0,
+            "neutral": 26073
+          },
+          "first": "2023-10-01T03:00:00+00:00",
+          "last": "2026-10-11T01:00:00+00:00"
+        },
+        "ETHUSDT": {
+          "symbol": "ETHUSDT",
+          "horizon_bars": 24,
+          "bar_minutes": 60,
+          "cost_bps_roundtrip": 13.5,
+          "n_decision_bars": 26084,
+          "n_veto_bars": 0,
+          "n_veto_episodes": 0,
+          "n_baseline_obs": 1087,
+          "veto_long": {
+            "mean_net_bps": null,
+            "baseline_mean_net_bps": -4.26,
+            "diff_bps": null,
+            "boot95_ci_diff": null,
+            "date_split_halves": [
+              {
+                "n": 0,
+                "mean_long_net_bps": null
+              },
+              {
+                "n": 0,
+                "mean_long_net_bps": null
+              }
+            ]
+          },
+          "veto_short": {
+            "mean_net_bps": null,
+            "baseline_mean_net_bps": -22.74,
+            "diff_bps": null,
+            "boot95_ci_diff": null
+          },
+          "rank": {
+            "n_scored": 1083,
+            "n_subsampled": 1087,
+            "spearman_ic_adj_vs_fwd_ret": 0.004,
+            "one_sided_p": 0.4475
+          },
+          "by_decision_bars": {
+            "boost": 3,
+            "reduce": 1,
+            "veto": 0,
+            "neutral": 26080
+          },
+          "first": "2023-10-01T03:00:00+00:00",
+          "last": "2026-10-11T01:00:00+00:00"
+        },
+        "SOLUSDT": {
+          "symbol": "SOLUSDT",
+          "horizon_bars": 24,
+          "bar_minutes": 60,
+          "cost_bps_roundtrip": 13.5,
+          "n_decision_bars": 26084,
+          "n_veto_bars": 0,
+          "n_veto_episodes": 0,
+          "n_baseline_obs": 1087,
+          "veto_long": {
+            "mean_net_bps": null,
+            "baseline_mean_net_bps": 10.27,
+            "diff_bps": null,
+            "boot95_ci_diff": null,
+            "date_split_halves": [
+              {
+                "n": 0,
+                "mean_long_net_bps": null
+              },
+              {
+                "n": 0,
+                "mean_long_net_bps": null
+              }
+            ]
+          },
+          "veto_short": {
+            "mean_net_bps": null,
+            "baseline_mean_net_bps": -37.27,
+            "diff_bps": null,
+            "boot95_ci_diff": null
+          },
+          "rank": {
+            "n_scored": 1084,
+            "n_subsampled": 1087,
+            "spearman_ic_adj_vs_fwd_ret": 0.0155,
+            "one_sided_p": 0.3051
+          },
+          "by_decision_bars": {
+            "boost": 0,
+            "reduce": 2,
+            "veto": 0,
+            "neutral": 26082
+          },
+          "first": "2023-10-01T03:00:00+00:00",
+          "last": "2026-10-11T01:00:00+00:00"
+        }
+      },
+      "event_pooled": {
+        "n_veto_episodes": 0,
+        "n_baseline_obs": 3261,
+        "veto_long": {
+          "mean_net_bps": null,
+          "baseline_mean_net_bps": 1.75,
+          "diff_bps": null,
+          "boot95_ci_diff": null,
+          "date_split_halves": [
+            {
+              "n": 0,
+              "mean_long_net_bps": null
+            },
+            {
+              "n": 0,
+              "mean_long_net_bps": null
+            }
+          ]
+        },
+        "veto_short": {
+          "mean_net_bps": null,
+          "baseline_mean_net_bps": -28.75,
+          "diff_bps": null,
+          "boot95_ci_diff": null
+        },
+        "rank": {
+          "n_scored": 3250,
+          "spearman_ic": 0.0079,
+          "one_sided_p": 0.3267,
+          "per_symbol_ic": {
+            "BTCUSDT": -0.0024,
+            "ETHUSDT": 0.004,
+            "SOLUSDT": 0.0155
+          }
+        }
+      },
+      "grades": {
+        "arm_e": "INSUFFICIENT_BASE",
+        "arm_r": "INCONCLUSIVE",
+        "g1_offline": "OPEN"
+      }
+    }
+  },
+  "grades": {
+    "arm_e": "INSUFFICIENT_BASE",
+    "arm_r": "FAIL",
+    "g1_offline": "RETIRE_OR_REPLACE_REVIEW"
+  },
+  "g1_offline_broad": "OPEN",
+  "corpus": "/tmp/gd/corpus",
+  "decision_lag_s": 0.0,
+  "max_age_min": 120.0
+}

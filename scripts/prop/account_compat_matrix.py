@@ -39,8 +39,24 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 import scripts.backtest_system as bt  # noqa: E402
+from src.research.run_costs import resolve_run_costs  # noqa: E402
 from src.prop.account_rulesets import all_account_units  # noqa: E402
 from src.prop.montecarlo import run_ev_montecarlo, run_montecarlo  # noqa: E402
+
+# The data-source POLICY (five states; refuses rather than falling back to a
+# fixture) — the sibling half of the fix in scripts/backtest_trend.py for
+# BL-20260813-HARNESS-SYMBOL-IS-A-LABEL-DATA-DEFAULTS-TO-BTC. It imports the ONE
+# (symbol, timeframe) -> file resolver rather than carrying a second copy.
+import importlib.util as _ilu  # noqa: E402
+_spec = _ilu.spec_from_file_location(
+    "_backtest_data_source", str(_REPO_ROOT / "scripts" / "ops" / "backtest_data_source.py"))
+_backtest_data_source = _ilu.module_from_spec(_spec)
+_spec.loader.exec_module(_backtest_data_source)  # noqa: E402
+
+#: What `--data` used to default to. Applied ONLY on the engine path and ONLY
+#: when the caller names no symbol. A named symbol that cannot be resolved is
+#: refused instead of being run against this file under its own label.
+LEGACY_DATA_DEFAULT = "/home/user/ict-trader-data/btc_5m.parquet"
 
 
 def _asset_class_for(symbol: str | None) -> str:
@@ -256,6 +272,7 @@ def run(args: argparse.Namespace) -> int:
     # every standard row by _evaluate_account).
     args.asset_class = _asset_class_for(args.symbol)
 
+    engine_costs = None  # ledger path: costs were applied upstream by the emitting harness
     if args.ledger:
         # --- harness-emit path (aliased ETF / alt cells, outside bt.ROSTER) ---
         # SKIP both the ROSTER check AND the engine run; synthesize the ledger
@@ -274,7 +291,27 @@ def run(args: argparse.Namespace) -> int:
         if args.strategy not in bt.ROSTER:
             print(f"ERROR: strategy {args.strategy!r} not in backtest ROSTER {list(bt.ROSTER)}", file=sys.stderr)
             return 2
+        # Resolve the data source BEFORE loading, so a mislabelled run cannot
+        # produce a ledger at all. Scoped to the ENGINE path deliberately: on
+        # the --ledger path `--data` is never read, so refusing there would
+        # block correct invocations for a mismatch that cannot affect them.
+        _src = _backtest_data_source.resolve_or_refuse(
+            args.symbol, args.clock_tf, args.data,
+            legacy_default=LEGACY_DATA_DEFAULT)
+        if not _src.ok:
+            print(_backtest_data_source.refusal_message(
+                _src, harness="account_compat_matrix.py",
+                legacy_default=LEGACY_DATA_DEFAULT), file=sys.stderr)
+            return 2
+        args.data = _src.path
+        print(_src.provenance_line(), file=sys.stderr)
         base5m = bt._load_candles(args.data)
+        # Full cost stack for the engine path (fee + slippage + funding, venue-aware).
+        # An explicit --fee-bps-roundtrip overrides the fee term only.
+        engine_costs = resolve_run_costs(
+            args.symbol or "BTCUSDT", fee_bps_roundtrip=args.fee_bps_roundtrip,
+            slippage_bps_roundtrip=getattr(args, "slippage_bps_roundtrip", None),
+            funding_bps_per_window=getattr(args, "funding_bps_per_window", None))
         print(f"[compat] engine run: {args.strategy} (base risk {args.base_risk_pct})", file=sys.stderr)
         summary = bt.run_system_backtest(
             base5m, roster=[args.strategy], start=args.start, end=args.end,
@@ -282,6 +319,7 @@ def run(args: argparse.Namespace) -> int:
             daily_loss_pct=3.0, signal_ttl_bars=1, overrides=overrides,
             refresh=args.refresh_signals, clock_tf=args.clock_tf,
             flip_policy="hold", reentry_policy="suppress", attach_full=True,
+            symbol=args.symbol or "BTCUSDT", costs=engine_costs, require_full_costs=True,
         )
         ledger = summary.get("closed_trades", []) or []
         data_src = args.data
@@ -301,6 +339,7 @@ def run(args: argparse.Namespace) -> int:
         "generated_at": generated_at, "strategy": label, "data": data_src,
         "symbol": args.symbol, "asset_class": args.asset_class,
         "fee_bps_roundtrip": args.fee_bps_roundtrip,
+        "cost_policy": engine_costs,
         "min_survival": args.min_survival, "max_p_breach": args.max_p_breach,
         "n_ledger_trades": len(ledger), "horizon_months": horizon,
         # PROVENANCE: a verdict computed under an override must SAY so, or it is
@@ -365,11 +404,26 @@ def main(argv: List[str]) -> int:
                         "Scores an aliased ETF / alt cell directly (SKIPS the ROSTER check + "
                         "engine run); the synthesized ledger round-trips exactly through "
                         "src.prop.montecarlo.ledger_to_r_sequence.")
-    p.add_argument("--data", default="/home/user/ict-trader-data/btc_5m.parquet")
+    # ⚠️ `None`, not the historical path — while this carried a default, the
+    # engine path could not tell "the caller named this file" from "argparse
+    # supplied it", so `--symbol SOLUSDT` ran against a BTC parquet and said
+    # SOLUSDT. Reproduced 2026-09-12: bt._load_candles was reached with
+    # '/home/user/ict-trader-data/btc_5m.parquet' under --symbol SOLUSDT.
+    # LEGACY_DATA_DEFAULT still applies when no symbol is named, so an
+    # invocation that passes neither flag is unchanged.
+    p.add_argument("--data", default=None,
+                   help="Candle file for the ENGINE path. Default: resolved from "
+                        "--symbol via the canonical resolver; REFUSES rather than "
+                        "falling back to the BTC parquet when a named symbol "
+                        "cannot be resolved. Unused on the --ledger path.")
     p.add_argument("--symbol", default=None,
                    help="Instrument symbol for this ledger (e.g. IWM, GLD). Resolves "
                         "the asset_class via src.web.api._asset_class and is stamped onto "
                         "the output + every standard row. Optional (defaults to 'unknown').")
+    p.add_argument("--slippage-bps-roundtrip", type=float, default=None,
+                   help="Engine-path slippage override; unset = venue-aware (never 0).")
+    p.add_argument("--funding-bps-per-window", type=float, default=None,
+                   help="Engine-path funding override; unset = venue-aware.")
     p.add_argument("--fee-bps-roundtrip", type=float, default=None,
                    help="Round-trip fee (bps) the emit ledger was generated at — recorded "
                         "onto the output + standard rows for provenance (the net_r already "

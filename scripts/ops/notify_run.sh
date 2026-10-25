@@ -31,6 +31,20 @@ set -uo pipefail
 REPO_DIR="${REPO_DIR:-/home/ubuntu/ict-trading-bot}"
 SEND_PING="${REPO_DIR}/scripts/send_ping.py"
 
+# PI-20261004-PUQ1APTH-0003: this script runs over a bare SSH session from
+# the system-actions / sync-vm-secrets / rotate-account-keys workflows, which
+# carry NO systemd data-dir drop-in -- so without this send_ping.py resolved
+# runtime_logs_dir() repo-relative and wrote into the LEGACY inbox, which
+# ict-telegram-bot logs as "delivering a MIS-ROUTED ping ... a writer resolved
+# runtime_logs without DATA_DIR". Load the same runtime env every other
+# wrapper does (send_ping_action.sh, prop_feed_tick.sh). Best-effort: a
+# failure here must not stop the ping (the drainer still sweeps the legacy
+# twin).
+# shellcheck source=scripts/ops/_lib.sh
+if source "${REPO_DIR}/scripts/ops/_lib.sh" 2>/dev/null; then
+    load_runtime_env || true
+fi
+
 action="${1:-unknown}"
 exit_code="${2:-0}"
 run_url="${3:-}"
@@ -56,7 +70,7 @@ if [ "${action}" = "send-ping" ]; then
 fi
 
 case "${action}" in
-    status-check|list-listening-ports|gateway-logs|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|generate-strategy-review-packets|send-prop-test-ping|grade-closed-trades|net-r-regrade|get-env)
+    status-check|disk-usage-report|list-listening-ports|gateway-logs|gateway-forensics|pull-latest-logs|inspect-closed-pnl|bybit-account-audit|bybit-bracket-audit|strategy-performance-audit|monitor-miss-analysis|vwap-backtest-sweep|generate-strategy-review-packets|send-prop-test-ping|phone-dry-test|phone-drill|grade-closed-trades|net-r-regrade|get-env)
         tier=1
         if [ "${exit_code}" -eq 0 ]; then
             result="ok"
@@ -159,22 +173,127 @@ case "${action}" in
             *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
         esac
         ;;
-    backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|fix-prop-mislinked-close|repair-prop-fill-direction|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|rotate-account-keys|init-diag-token|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm)
+    backfill-pnl-nulls|backfill-orphan-pnl|backfill-closed-null-pnl|backfill-monitor-closed-pnl|revert-backfill-monitor-closed-pnl|mark-reconciler-incomplete|mark-operator-flattened|reconcile-orphan-history|supersede-options-adoption-artifacts|supersede-reset-orphan-artifacts|supersede-intent-reduce-phantom-pnl|backfill-intent-reduce-pnl|backfill-own-fill-exits|prune-db-backups|fix-prop-mislinked-close|repair-prop-fill-direction|rebuild-pnl-from-bybit|backfill-shadow-predictions|backfill-account-class|backfill-exit-labels|backfill-closed-at|backfill-trade-costs|backfill-broker-order-id|backfill-broker-truth-costs|backfill-fabricated-exits|migrate-closed-at-iso|pull-exchange-fills|pull-bybit-transaction-log|pull-exchange-funding|pull-mes-ibkr-history|pull-mes-ibkr-history-daily|pull-ibkr-history|rotate-account-keys|init-diag-token|reset-daily-risk-state|repair-malformed-notes|repair-netted-rows|reconcile-netting-phantom-rows|reconcile-netting-rows|mark-netted-duplicate-pnl|validate-partial-tpsl|validate-bybit-naked-rearm)
         tier=2
         case "${exit_code}" in
             0) result="ok"; priority="normal" ;;
             *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
+    prop-ticket-expire)
+        # Moves ONE dead prop ticket on a REST account to `expired`
+        # (VELOTRADE-TICKET). Exit 3 is a guarded REFUSAL, nothing written.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok — ticket expired (or dry-run plan printed; see run log)"; priority="normal" ;;
+            3) result="refused — nothing written (see run log for the reason)"; priority="high" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
+    prop-report-close)
+        # Journals the CLOSE of ONE open prop position (exit optional). Exit 3 is a
+        # guarded REFUSAL, nothing written.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok — close journaled (or dry-run plan printed; see run log)"; priority="normal" ;;
+            3) result="refused — nothing written (see run log for the reason)"; priority="high" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
+    prop-ticket-reissue)
+        # Re-issues ONE suppressed prop ticket as `emitted`, rebuilt with the
+        # emission sizing (PROP-REISSUE). Exit 3 is a guarded REFUSAL, nothing written.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok — ticket re-issued (or dry-run plan printed; see run log)"; priority="normal" ;;
+            3) result="refused — nothing written (see run log for the reason)"; priority="high" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
+    breakout-terminal-probe)
+        # READ-ONLY measurement of Breakout's proprietary terminal (PROP-TERM).
+        # Exit 4 is a FEASIBILITY finding, not a crash.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok — probe completed (see run log)"; priority="normal" ;;
+            3) result="reached the terminal, read path partly unparsed"; priority="normal" ;;
+            4) result="feasibility stop (see run log)"; priority="high" ;;
+            5) result="environment — browser venv/Chromium unusable on the VM"; priority="high" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="high" ;;
+        esac
+        ;;
+    velotrade-api-roundtrip)
+        # ONE live-or-dry REST round trip on velotrade_1 (VELOTRADE-API-EXEC).
+        tier=2
+        case "${exit_code}" in
+            0) result="ok — round trip passed (or dry), account flat"; priority="normal" ;;
+            3) result="STOP RULE tripped — flattened and verified flat (see run log)"; priority="high" ;;
+            4) result="STOP RULE tripped — NOT verified flat: check velotrade_1 NOW"; priority="high" ;;
+            5) result="refused before any send (preflight / latch / confirm)"; priority="normal" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="high" ;;
+        esac
+        ;;
+    egress-landing-probe|velotrade-api-probe|velotrade-trade-history-read)
+        # READ-ONLY landing-page reachability probe of a fixed host allowlist.
+        # Any HTTP outcome is a measurement; only an environment fault fails.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok — probe completed (see run log)"; priority="normal" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="high" ;;
+        esac
+        ;;
+    breakout-login-check)
+        # READ-ONLY prop-terminal login check. Exit 4 is a FEASIBILITY finding
+        # (challenge / CAPTCHA / 2FA / login rejected), not a crash.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok — logged in and read the account"; priority="normal" ;;
+            3) result="login ok, read path partly unparsed (selector work)"; priority="normal" ;;
+            4) result="feasibility stop (see run log)"; priority="high" ;;
+            5) result="environment — Playwright/Chromium unusable on the VM"; priority="high" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="high" ;;
         esac
         ;;
     set-account-mode)
+        # JC-CA-01 (2026-09-28): exit 0 means the mode-change PR was OPENED (or
+        # main already read that mode). The account has NOT changed mode until
+        # that PR merges; verify-account-mode reports the post-state.
         tier=2
         case "${exit_code}" in
-            0) result="ok"; priority="normal" ;;
-            3) result="deferred — vm-runner active, retry later"; priority="normal" ;;
+            0) result="PR opened — mode changes when it merges"; priority="normal" ;;
             *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
         esac
         ;;
+    verify-account-mode)
+        tier=1
+        case "${exit_code}" in
+            0) result="converged — the running trader reads the new mode"; priority="normal" ;;
+            4) result="NOT CONVERGED — the VM does not run the mode main declares"; priority="urgent" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="high" ;;
+        esac
+        ;;
     set-env)
+        tier=2
+        case "${exit_code}" in
+            0) result="ok"; priority="normal" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
+    init-web-session-pepper|install-web-api-deps)
+        tier=2
+        case "${exit_code}" in
+            0) result="ok"; priority="normal" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
+    passkey-enrol-code)
+        tier=1
+        case "${exit_code}" in
+            0) result="ok"; priority="low" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="high" ;;
+        esac
+        ;;
+    unset-env)
         tier=2
         case "${exit_code}" in
             0) result="ok"; priority="normal" ;;
@@ -250,6 +369,21 @@ case "${action}" in
             *) result="FAILED/refused (exit ${exit_code})"; priority="urgent" ;;
         esac
         ;;
+    rearm-alpaca-protective)
+        # 2026-09-27: cancel the resting Alpaca protective legs and place ONE GTC
+        # OCO sized to the live net qty at the journal's SL/TP
+        # (PI-20260926-HJPL5ABP-0001). Exit codes are distinct on purpose.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok (dry-run plan, already armed, or re-armed + VERIFIED)"; priority="normal" ;;
+            1) result="new OCO REFUSED — net mode: old protection re-placed; row mode: nothing was cancelled. Still partially naked"; priority="urgent" ;;
+            2) result="COULD NOT LOOK — NOT evidence either way; nothing was changed"; priority="high" ;;
+            3) result="OCO accepted but NOT verified by re-read — inspect before re-running"; priority="urgent" ;;
+            4) result="refused by a safety guard — nothing was cancelled"; priority="high" ;;
+            5) result="NAKED or cancel unsettled — position may be UNPROTECTED, act now"; priority="urgent" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
     attach-ib-target)
         # 2026-08-16: attach the declared TP to a target-naked IB position by
         # joining the stop's existing OCA group. Cancels nothing.
@@ -274,8 +408,20 @@ case "${action}" in
             0) result="ok (dry-run preview, cancelled+verified gone, or no such order)"; priority="normal" ;;
             1) result="cancel FAILED or did not take effect — order may still be resting"; priority="urgent" ;;
             2) result="refused: bad/ambiguous id (orderId is unique only per clientId — retry with perm:)"; priority="high" ;;
-            3) result="COULD NOT LOOK or unconfirmed — NOT evidence the order is gone; re-run the dry-run"; priority="high" ;;
+            3) result="COULD NOT LOOK, unconfirmed, or cancel already in flight (PendingCancel) — NOT evidence the order is gone; re-run the dry-run"; priority="high" ;;
             4) result="refused by a safety guard (protective leg, or a trader-band clientId)"; priority="high" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
+    amend-position-sl)
+        # 2026-10-24 (AMEND-SL-ACTION): tighten one live Bybit stop, venue +
+        # journal together; dry-run unless apply:true.
+        tier=2
+        case "${exit_code}" in
+            0) result="ok (dry-run preview, applied+verified, or already applied)"; priority="high" ;;
+            1) result="amend FAILED or did not verify at the venue — check the stop by hand"; priority="urgent" ;;
+            2) result="refused by a guard (looser stop, wrong side of mark, missing row/position, non-live account)"; priority="high" ;;
+            3) result="COULD NOT LOOK (journal or venue unreadable) — nothing changed; re-run the dry-run"; priority="high" ;;
             *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
         esac
         ;;

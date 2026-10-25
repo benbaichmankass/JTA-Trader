@@ -1,0 +1,63 @@
+{
+  "kind": "ppi_mom",
+  "symbol": "RTY=F",
+  "snapshot_files": [
+    "comms/macro/econ_calendar_snapshots.jsonl",
+    "comms/macro/econ_calendar_snapshots_survey_backfill.jsonl"
+  ],
+  "releases": 71,
+  "releases_with_value": 71,
+  "price_bars": 2339,
+  "first_release": "2015-01-15",
+  "last_release": "2020-12-11",
+  "release_start": null,
+  "release_end": "2021-01-01",
+  "anchor_shift_td": 0,
+  "releases_after_window": 71,
+  "rows": [
+    {
+      "horizon_days": 3,
+      "n": 41,
+      "ic": -0.341033,
+      "ic_t": -2.266,
+      "overlap_factor": 1.0,
+      "n_eff": 41.0,
+      "ic_t_eff": -2.266,
+      "pearson": -0.453091,
+      "sign_hit_rate": 0.314286,
+      "mean_fwd_return": 0.003449
+    }
+  ],
+  "summary": {
+    "max_n": 41,
+    "min_honest_n": 12,
+    "sufficient_history": true,
+    "any_flagged_horizon": true,
+    "any_flagged_horizon_overlap_corrected": true,
+    "strongest_ic_horizon_days": 3,
+    "strongest_ic": -0.341033,
+    "strongest_ic_t": -2.266,
+    "strongest_ic_t_eff": -2.266,
+    "t_flag": 2.0,
+    "verdict": "surprise_predicts_forward_return"
+  },
+  "rule": {
+    "primary": [
+      3
+    ],
+    "min_n": 50,
+    "t_bar": 2.0,
+    "expected_sign": "negative"
+  },
+  "per_horizon": [
+    {
+      "horizon_days": 3,
+      "n": 41,
+      "ic": -0.341033,
+      "ic_t_eff": -2.266,
+      "n_ok": false,
+      "t_reached": true,
+      "sign_ok": true
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "id": "TF-ORB-COST-STACK",
+  "title": "Build: full cost stack (fee + slippage + funding in bps via execution_costs.resolve_cost_policy) and a 24h UTC-session mode for scripts/backtest_orb.py, plus --emit-trades rows harness_stage0.py can grade -- the opening-range breakout family is excluded from every promotion corpus until this lands (CLAUDE.md D1)",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager (filed by lane FRONTIER-TIMEFRAMES-1018)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Programme 07 TIMEFRAMES short arm, family: range/opening breakout (operator 2026-10-18). FIELD (read 2026-10-18): backtest_orb.py models fees in POINTS round trip (FEE_POINTS_ROUNDTRIP 0.5), no slippage, no funding, RTH-only sessions (09:30-16:00 NY) -- so it cannot price a crypto perp session open and CLAUDE.md lists it among the harnesses still lacking a full cost stack. WHAT TO BUILD: (1) --fee-bps-roundtrip / --slippage-bps-roundtrip / --funding-bps-per-window resolving through execution_costs.resolve_cost_policy (keep the points model as an explicit futures arm, never the default); (2) --session-start/--session-end in UTC with a 24h instrument mode so the opening range can be the 00:00 UTC daily open or the 13:30 UTC US cash open on a perp; (3) --emit-trades rows carrying entry_time, exit_time, net_r, gross_r, mfe_r as the other harnesses do; (4) classify() routing in regime_debt_matrix for an or_bars-keyed cfg so harness_stage0.py can run it. CLOSES WHEN: blocked/RQ-20261018-ef5d-10 can be git mv'd to research/queue/ with a run.command and its first measured record lands. Observation that closes it: that record's cost_stack block shows non-zero slippage and funding on a USDT cell.",
+  "updated_at": "2026-10-18T06:31:00Z",
+  "updated_by": "lane-FRONTIER-TIMEFRAMES-1018",
+  "roadmap": [
+    "L-TIMEFRAMES",
+    "M22"
+  ],
+  "_seq": 558
+}

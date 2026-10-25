@@ -1,0 +1,11 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-3 strategy/order-path build (checklist PAIRS-ALPACA-BUILD). The operator decision is recorded on the checklist row (2026-10-12 popup 'Build, paper soak'); the manager adds recorded_decision and lands it. The lane does not merge.",
+  "why": "Isolated Alpaca pairs executor for GLD/GDX only, routed to alpaca_paper (Stage-1 soak). Evidence RQ-20261007-025 PASS (OOS n=69 +5.25R, 8/10 years, 8/9 cells; fee 7.5 + slip 5.0 bps/leg). Reuses pairs_engine / decide_pair / run_pairs_tick; adds the session-venue adapter src/units/strategies/pairs_venue.py, AlpacaClient.clock + asset_short_status reads, the spread-target leg TP + per-bar TP revision, the account daily-DD switch read for new pairs, and the pairs_gld_gdx entry in config/pairs.yaml with the registered params. No real-money or mirror account; no new *_ENABLED flag; no self-halt. Review round 1 (manager, 2026-10-12): paper-only is now enforced IN CODE (pairs_venue.pairs_account_refusal: refuses any non-paper account and any Stage-2 mirror, per pair, one CRITICAL, no halt); half-open cleanup on Alpaca sends closes only in RTH; the in-window decision bar is guaranteed to be today's session bar (forming bar, else appended from latest trades, else no decision). INTENDED BEHAVIOUR CHANGE on the existing Bybit sleeve: a tripped account daily_dd_switch now refuses NEW pairs on bybit_1 (closes never gated; pinned by test_dd_switch_tripped_blocks_new_bybit_pairs).",
+  "recorded_decision": {
+    "kind": "operator_decision",
+    "ref": "PAIRS-ALPACA-BUILD operator popup 2026-10-12T10:40Z 'Build, paper soak (Recommended)'; paper-only code guard verified; manager + two independent reviews 2026-10-12T17:05Z"
+  }
+}

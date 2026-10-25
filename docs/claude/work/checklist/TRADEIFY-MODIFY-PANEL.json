@@ -1,0 +1,33 @@
+{
+  "id": "TRADEIFY-MODIFY-PANEL",
+  "title": "Fix tradeify_1 Position Details symbol check (venue shows ETH/USD) so trail SL modifies land, as a HELD Tier-2 PR",
+  "phase": "floor",
+  "state": "landed_unproven",
+  "owner": "build lane",
+  "lane": "session_01QAH3LPxmRL6soGbeg4L6A5",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [
+    18367,
+    18375
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-15T14:50Z lane TRADEIFY-MODIFY-PANEL session_01QAH3LPxmRL6soGbeg4L6A5] LANDED_UNPROVEN. Root cause MEASURED (#18358 run 38748442282): the panel text reads 'Position Details ETH/USD Ethereum vs United States dollar ...', and position_panel_mismatch required the literal ETHUSD, so every armed step since 03:43Z was refused (fail_streak 11). Fix #18367 merged as 228bb073: panel_names_symbol() goes through canonical_symbol() and still refuses SOL/USD, ETH/USDT and BTC/ETH/USD. Alert wording changed to 'will step toward X'. Deploy NOT observed. The ETH short was closed by the operator at 14:13Z; reconciled 14:23Z (vm-diag #18370): closed_on_terminal reason manual, exit 2370.62, bridge fill id 126, trail_state {}. CLOSES WHEN, triggered by the next tradeify_1 fill: the executor journal shows code_sha containing 228bb073, then the first tradeify_1 trail_amend returns ok, re-reads confirmed (prop_trail_last_step_tradeify_1 state != refused), fail_streak is 0, and the new SL is tighter than the resting SL. Read via vm-diag journalctl ict-prop-executor@tradeify_1 plus log_file prop_trail_last_step_tradeify_1. Pipeline: PI-20261015-JWMGXOTH-0003 (routed).",
+  "updated_at": "2026-10-15T14:46:22Z",
+  "updated_by": "session_01QAH3LPxmRL6soGbeg4L6A5",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "writeback": {
+    "roadmap": "none: matcher fix on an existing prop modify path; no L-PROP measure moves until the next tradeify_1 trail step is observed",
+    "arch": "none: no contract change; the Position Details identity check still requires the position symbol, now through canonical_symbol"
+  },
+  "_seq": 518,
+  "observation": {
+    "what": "the next tradeify_1 fill: executor code_sha contains 228bb073 and the first trail_amend returns ok, re-read confirmed, SL tightened (never loosened)",
+    "how_to_check": "vm-diag relay: prop executor journal for tradeify_1 trail_amend lines + /api/bot/prop/tickets phone/VM trail state for the next tradeify_1 ticket",
+    "due_by": "2026-10-29T00:00Z"
+  }
+}

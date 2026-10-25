@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "due_date": "2026-11-07",
+    "kind": "date"
+  },
+  "id": "PI-20261024-E4A4JHBS-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "WATCHDOG-CLOSE-RECURRENCE (session_01NXDPNA4uK5ScUke4A4Jhbs), side finding",
+    "rerun": "curl -s 'https://ict-bot.duckdns.org/api/bot/pnl/exchange/fills?days=90&account_id=bybit_1&symbol=ETH/USDT:USDT&limit=1000' | python3 -c \"import json,sys; [print(x['exec_time'],x['side'],x['qty'],x['order_id']) for x in json.load(sys.stdin)['fills'] if x['exec_time'].startswith('2026-10-15T17')]\"; scripts/ops/diag_fetch.sh 'journal?table=trades&limit=200&offset=0' | python3 -c \"import json,sys; [print(t['id'],t['exit_reason'],t['exit_price'],t['sl_order_id']) for t in json.load(sys.stdin) if t['id'] in (6622,6634)]\""
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": "2",
+  "what": "[data] bybit_1 trades 6622 and 6634 carry wrong close labels (MEASURED 2026-10-24 from the venue fills store). 6622 trend_donchian_eth_4h short 19.69 is booked sl_cross @2450.03 at 17:20:58, but its OWN sl_order_id (0cecf89f...) filled buy 19.69 @2450.54 at 2026-10-15T17:16:30.775. 6634 pairs_sol_eth_b short 0.44 is booked stuck_strategy_watchdog @2446.6 (candle_at_close), but it was flattened by a buy 0.44 @2449.99 at 17:20:57.644 on order 06f9bde4..., which is neither of its own bracket ids: 6622's sl_cross reduce-only close for 19.69, sent after 6622's own stop had filled, clamped onto the pairs leg (the SOAK-MECH-C race; prevented since #18514, deployed). The live sweep cannot correct either: sl_cross is not in _BRACKET_ORDER_RELABEL_REASONS, and 6634's closing fill is not on its own bracket order. Fix: a one-shot relabel through a reviewed data-mutation (6622 -> sl at the venue fill; 6634 -> the attribution reason for a sibling-order close, with exit 2449.99 from the fill), or kill with a stated reason if paper-only history is not worth a writeback (both are bybit_1, paper)."
+}

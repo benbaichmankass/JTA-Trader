@@ -1,0 +1,30 @@
+{
+  "id": "TRAINER-DISPATCH-1025",
+  "title": "Research watchdog: trainer backend idle with runnable units (incident backend:trainer@20261025T0927Z)",
+  "phase": null,
+  "state": "done",
+  "owner": null,
+  "lane": "TRAINER-DISPATCH-1025",
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 5,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Root cause: supply gap, not a dispatcher fault. ml_health had 0 runnable units until PR #20037 queued 3 at 08:55Z (08:52Z cycle log: trainer idle with nothing due). The first cycle after it (09:28Z) fired 6e85-01 to trainer at 09:30:47Z (trainer run 40180991259, success); max_concurrent=1 holds the other two for later cycles; dry-run shows both would_dispatch. No VM read needed; no code change.",
+  "updated_at": "2026-10-25T09:36:56Z",
+  "updated_by": "TRAINER-DISPATCH-1025",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "writeback": {
+    "roadmap": "L-OPS where/next: backend-idle incidents separate supply gaps from dispatcher faults; follow-up WATCHDOG-WINDOW-CLOCK-1025 removes the window-open clock false positive",
+    "arch": "docs/ARCHITECTURE-CANONICAL.md: none -- diagnosis only, no code change"
+  },
+  "observation": {
+    "what": "the trainer backend starts the remaining two ml_health units (RQ-20261016-65ff-27, RQ-20261011-17f4-02) within the next two dispatch cycles; run 40180991259 started RQ-20261011-6e85-01 at 09:31Z",
+    "how_to_check": "gh run list --workflow research-script-run-trainer.yml (new runs after 09:31Z 2026-10-25); watchdog_incidents.jsonl shows backend:trainer resolved",
+    "due_by": "2026-10-26"
+  },
+  "_seq": 650
+}

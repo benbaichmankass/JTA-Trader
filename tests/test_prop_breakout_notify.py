@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+import pytest
+
 from src.prop import breakout_notify
 from src.prop.breakout_ticket import BreakoutSignal, TicketConfig, build_ticket
 
@@ -22,6 +24,27 @@ def _ticket():
     return build_ticket(sig, TicketConfig(account_size_usd=5000.0, risk_pct=0.6))
 
 
+
+@pytest.fixture
+def ticket_telegram_unretired(monkeypatch):
+    """TELEGRAM-CHANNELS (operator 2026-10-09) RETIRED the Telegram prop ticket.
+    The machinery is kept (un-retiring is a one-line table edit), so the tests
+    below still pin it — with the retirement lifted for the test only."""
+    from src.runtime import telegram_channels as tc
+    monkeypatch.setitem(tc.EVENT_CHANNEL, "prop_ticket", tc.TRADES)
+
+
+def test_ticket_telegram_is_retired_by_default_push_unchanged(monkeypatch):
+    import src.runtime.mobile_push as mp
+    import src.runtime.notify as notify
+    pushed, tg = [], []
+    monkeypatch.setattr(mp, "publish_event", lambda kind, payload: pushed.append(kind))
+    monkeypatch.setattr(notify, "send_telegram_direct", lambda *a, **k: tg.append(a))
+    out = breakout_notify.emit_prop_signal(_ticket())
+    assert out == {"push": True, "telegram": False}
+    assert pushed == ["prop_signal"] and tg == []
+
+
 def test_ticket_to_fields_all_strings_with_text():
     f = breakout_notify.ticket_to_fields(_ticket())
     assert all(isinstance(v, str) for v in f.values())  # FCM string→string contract
@@ -32,7 +55,7 @@ def test_ticket_to_fields_all_strings_with_text():
     assert "BREAKOUT TRADE SETUP" in f["text"]   # full rendered ticket rides in `text`
 
 
-def test_emit_fans_out_both_legs(monkeypatch):
+def test_emit_fans_out_both_legs(monkeypatch, ticket_telegram_unretired):
     import src.runtime.mobile_push as mp
     import src.runtime.notify as notify
 
@@ -53,7 +76,7 @@ def test_emit_fans_out_both_legs(monkeypatch):
     assert "BREAKOUT TRADE SETUP" in tg["message"]
 
 
-def test_legs_are_isolated(monkeypatch):
+def test_legs_are_isolated(monkeypatch, ticket_telegram_unretired):
     import src.runtime.mobile_push as mp
     import src.runtime.notify as notify
 
@@ -71,7 +94,7 @@ def test_legs_are_isolated(monkeypatch):
     assert tg.get("ok") is True
 
 
-def test_push_only_and_telegram_only(monkeypatch):
+def test_push_only_and_telegram_only(monkeypatch, ticket_telegram_unretired):
     import src.runtime.mobile_push as mp
     import src.runtime.notify as notify
     calls = {"push": 0, "tg": 0}
@@ -83,7 +106,7 @@ def test_push_only_and_telegram_only(monkeypatch):
     assert calls == {"push": 1, "tg": 1}
 
 
-def test_telegram_routes_to_prop_bot_token(monkeypatch):
+def test_telegram_routes_to_prop_bot_token(monkeypatch, ticket_telegram_unretired):
     """The prop ping must target the dedicated PROP bot token, not the trader bot."""
     import src.runtime.mobile_push as mp
     import src.runtime.notify as notify

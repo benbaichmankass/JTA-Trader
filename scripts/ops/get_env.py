@@ -113,6 +113,9 @@ ALLOWED_KEYS: tuple[str, ...] = (
     # neither.
     # Both values are safe to publish: a fixed mode string, and an account-id
     # CSV — the same class as ACCOUNT_DOWN_ALERT_SKIP, which carries no secret.
+    # ⚠️ RETIRED BY E35 (2026-09-25): nothing reads either any more — every
+    # account elects per account and there is no allowlist. They stay readable
+    # here so the post-deploy step can CONFIRM they were unset.
     "ARBITRATION_FANOUT_MODE",
     "ARBITRATION_FANOUT_ACCOUNTS",
     # CENTRALIZED_ALLOCATOR + MULTI_STRATEGY_INTENT_LAYER (2026-09-12, MI-279):
@@ -122,7 +125,8 @@ ALLOWED_KEYS: tuple[str, ...] = (
     #
     # ⚠️ CENTRALIZED_ALLOCATOR is a PRECONDITION for reading the per-account
     # arbitration fan-out at all: `pipeline.py` takes the typed-allocator branch
-    # ABOVE `_fanout_apply_rounds`, so if it is true the fan-out never runs and
+    # INSTEAD OF the per-account rounds (`_dispatch_rounds` since E35), so if it
+    # is true the per-account election never routes and
     # a fan-out repair is the wrong fix however correct its diff. That is
     # `BL-20260912-THE-ARBITRATION-FANOUT-APPLY-PATH-HAS-NEVER-DISPATCHED-BECAUSE-APPLY-ROUNDS-DROPS-THE-GEOMETRY-ITS-OWN-READER-VALIDATES`'s
     # own stated first question, and it could not be answered from anywhere.
@@ -189,6 +193,23 @@ ALLOWED_KEYS: tuple[str, ...] = (
     # permanently disabled account, and it could not be read from outside.
     # `off`/`annotate`/`enforce` is not a secret.
     "PROP_TICKET_RISK_GATE_MODE",
+    # --- Added 2026-09-28 (PROP-EXEC): the prop executor's kill switch. `set-env` could write PROP_EXECUTOR_MODE (off |
+    # read_only | live) and nothing could read it back, so the live-test
+    # criterion "mode back to read_only, confirmed" (L8) had no reader.
+    # ict-prop-executor.service is a oneshot with no EnvironmentFile (the tick
+    # greps the repo .env itself), so read these with the default unit and
+    # trust the DECLARED side: it is the file the next tick reads. The trader's
+    # PROCESS side only reflects the .env as of its last restart, so a
+    # `set-env service: none` legitimately reads `pending_restart` there.
+    # A mode word is not a secret. PROP_EXECUTOR_SYMBOLS is deliberately NOT
+    # here: the tick loads only PROP_EXECUTOR_MODE from .env, so a .env value
+    # for it is inert and reading one back would suggest an effect it lacks
+    # (the enabled symbols come from config/prop_platforms.yaml).
+    "PROP_EXECUTOR_MODE",
+    # tradeify_1's OWN kill switch (TRADEIFY-WIRE 2026-09-30): a non-breakout
+    # prop account never reads PROP_EXECUTOR_MODE, so its mode needs its own
+    # reader for the same L8-style "mode back to read_only, confirmed" check.
+    "PROP_EXECUTOR_MODE_TRADEIFY_1",
     # PROTECTION_STRAY_GROUP_* cancels a live position's resting protective
     # legs. Its EMPTY `..._ACCOUNTS` means NONE (inverted from its
     # CONVICTION_SIZING_/NETTING_ATTRIBUTION_ siblings, where empty means ALL),
@@ -268,6 +289,13 @@ ALLOWED_KEYS: tuple[str, ...] = (
     # inference from the code rather than an observation of the fleet — and the
     # .env says only what the NEXT restart picks up.
     "EXIT_LOOP_IB_BREAKER_DISABLED",
+    # Added 2026-09-30 (DONCHIAN-PARITY, PI-20260930-GQPT6PQF-0002). The one-entry-
+    # per-bar debounce (strategy_monocle._same_bar_entry_for_strategy) is what stops
+    # a decision_bar: closed leg taking a SECOND position on the same bar across the
+    # post-close window; any non-empty value DISABLES it, and nothing could read the
+    # live value back (the review of #14800 could only say "unverified"). A boolean
+    # kill-switch: safe to publish.
+    "STRATEGY_BAR_DEBOUNCE_DISABLED",
     # --- Cadence / budget knobs (an unparseable one changes behaviour) ---
     "TICK_INTERVAL_SECONDS",
     "HEARTBEAT_INTERVAL_SECONDS",

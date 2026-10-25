@@ -420,6 +420,29 @@ def legalize_qty(
     )
 
 
+def venue_min_notional(
+    *, account_cfg: dict, symbol: str, client: Any = None,
+) -> Optional[float]:
+    """The venue's minimum order VALUE for *symbol* on this account, or ``None``.
+
+    The notional twin of ``LegalizedQty.venue_min``: a qty can clear the lot
+    minimum and still be refused for value (Bybit ErrCode 110094 — trade 6544,
+    MIRROR-QTY-DIVERGE). Bybit-only; ``None`` means we could not look, and the
+    caller must not refuse on it. Never raises.
+    """
+    exchange = str(account_cfg.get("exchange") or "bybit").strip().lower()
+    if exchange != "bybit":
+        return None
+    try:
+        from src.units.accounts.execute import _bybit_category
+        from src.units.accounts.precision import get_min_notional
+        v = get_min_notional(client, symbol, _bybit_category(account_cfg))
+        return float(v) if v is not None else None
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("venue_min_notional: lookup failed for %s: %s", symbol, exc)
+        return None
+
+
 def snap_artifact_qty(
     qty: float,
     *,

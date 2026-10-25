@@ -316,3 +316,27 @@ def test_build_config_uses_fixed_now_for_as_of(fake_configs):
         now_utc=datetime(2026, 5, 9, 12, 0, 0, tzinfo=timezone.utc),
     )
     assert payload["as_of"] == "2026-05-09T12:00:00Z"
+
+
+# ---------------------------------------------------------------------------
+# JC-CA-06 (operator decision 2026-09-29, "Retire it"): the account_state.yaml
+# dry-only fold was retired, and with it the `account_state_dry_run` field
+# FIX-CA-32 had surfaced here. A state file declaring dry_run: true must not
+# resurrect the field.
+# ---------------------------------------------------------------------------
+
+
+def test_config_no_longer_surfaces_account_state_dry_run(fake_configs, client, tmp_path, monkeypatch):
+    account_state = tmp_path / "account_state.yaml"
+    account_state.write_text(
+        yaml.safe_dump({"accounts": {"bybit_1": {"dry_run": True}}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("ACCOUNT_STATE_PATH", str(account_state))
+
+    resp = client.get("/api/bot/config")
+    assert resp.status_code == 200
+    accounts = {a["id"]: a for a in resp.json()["accounts"]}
+    assert accounts["bybit_1"]  # positive control: the account is served
+    for acct in accounts.values():
+        assert "account_state_dry_run" not in acct

@@ -1,0 +1,303 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "108 harness trades still open after bar 24 across ['trend_donchian_sol_4h', 'trend_donchian_ada_4h', 'trend_donchian_avax_4h'] (789 trades in all), window 2020-07-01 .. 2026-10-15 23:59, config-exact, net of the harness's venue-aware cost stack; features from bars 1..k only, label = the trade's own peak-to-exit R",
+  "n": 108,
+  "measurement": {
+    "k": 24,
+    "pooled": {
+      "n": 108,
+      "n_floor": 100,
+      "folds": 6,
+      "fold_majority": 4,
+      "min_r2_gain": 0.02,
+      "min_ll_gain": 0.01,
+      "big_quantile": 0.5,
+      "verdict": "fail",
+      "label": "no_gain_over_bars_and_r",
+      "why": "OOS R2 base 0.0694 full -0.0212 (gain -0.0906, 2/6 folds); log-loss base 0.6643 full 0.7212 (gain -0.0569, 3/6 folds)",
+      "r2_base": 0.0694,
+      "r2_full": -0.0212,
+      "r2_gain": -0.0906,
+      "ll_base": 0.6643,
+      "ll_full": 0.7212,
+      "ll_gain": -0.0569,
+      "r2_fold_wins": 2,
+      "ll_fold_wins": 3,
+      "usable_folds": 6,
+      "big_share": 0.5,
+      "giveback_mean": 1.2655,
+      "per_fold": [
+        {
+          "fold": 0,
+          "n": 8,
+          "usable": true,
+          "r2_base": 0.2358,
+          "r2_full": 0.2159,
+          "ll_base": 0.6036,
+          "ll_full": 0.635
+        },
+        {
+          "fold": 1,
+          "n": 13,
+          "usable": true,
+          "r2_base": 0.171,
+          "r2_full": 0.1048,
+          "ll_base": 0.5609,
+          "ll_full": 0.51
+        },
+        {
+          "fold": 2,
+          "n": 24,
+          "usable": true,
+          "r2_base": -0.1071,
+          "r2_full": -0.5096,
+          "ll_base": 0.7891,
+          "ll_full": 1.0882
+        },
+        {
+          "fold": 3,
+          "n": 22,
+          "usable": true,
+          "r2_base": -0.12,
+          "r2_full": -0.0117,
+          "ll_base": 0.7281,
+          "ll_full": 0.6798
+        },
+        {
+          "fold": 4,
+          "n": 17,
+          "usable": true,
+          "r2_base": 0.2074,
+          "r2_full": 0.289,
+          "ll_base": 0.613,
+          "ll_full": 0.4795
+        },
+        {
+          "fold": 5,
+          "n": 24,
+          "usable": true,
+          "r2_base": 0.2498,
+          "r2_full": 0.1283,
+          "ll_base": 0.5937,
+          "ll_full": 0.7065
+        }
+      ]
+    },
+    "per_leg": {
+      "trend_donchian_sol_4h": {
+        "n": 41,
+        "n_floor": 100,
+        "folds": 6,
+        "fold_majority": 4,
+        "min_r2_gain": 0.02,
+        "min_ll_gain": 0.01,
+        "big_quantile": 0.5,
+        "verdict": "indeterminate",
+        "label": "underpowered",
+        "why": "41 trades open at k < n_floor 100",
+        "n_trades": 267,
+        "n_exited_by_k": 226,
+        "cost_policy": {
+          "fee_bps_roundtrip": 7.5,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        }
+      },
+      "trend_donchian_ada_4h": {
+        "n": 53,
+        "n_floor": 100,
+        "folds": 6,
+        "fold_majority": 4,
+        "min_r2_gain": 0.02,
+        "min_ll_gain": 0.01,
+        "big_quantile": 0.5,
+        "verdict": "indeterminate",
+        "label": "underpowered",
+        "why": "53 trades open at k < n_floor 100",
+        "n_trades": 259,
+        "n_exited_by_k": 206,
+        "cost_policy": {
+          "fee_bps_roundtrip": 7.5,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        }
+      },
+      "trend_donchian_avax_4h": {
+        "n": 14,
+        "n_floor": 100,
+        "folds": 6,
+        "fold_majority": 4,
+        "min_r2_gain": 0.02,
+        "min_ll_gain": 0.01,
+        "big_quantile": 0.5,
+        "verdict": "indeterminate",
+        "label": "underpowered",
+        "why": "14 trades open at k < n_floor 100",
+        "n_trades": 263,
+        "n_exited_by_k": 249,
+        "cost_policy": {
+          "fee_bps_roundtrip": 7.5,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        }
+      }
+    },
+    "runs": {
+      "trend_donchian_sol_4h": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "SOLUSDT",
+          "--resample",
+          "4h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "1.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.6",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "/tmp/path_metric_giveback_3ffwmcex/trend_donchian_sol_4h__trades.jsonl",
+          "--json",
+          "/tmp/path_metric_giveback_3ffwmcex/trend_donchian_sol_4h__bt.json",
+          "--trail-decay-arm-r",
+          "5.57",
+          "--trail-decay-tight-mult",
+          "2.5",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--start",
+          "2020-07-01",
+          "--end",
+          "2026-10-15 23:59",
+          "--emit-paths",
+          "/tmp/path_metric_giveback_3ffwmcex/trend_donchian_sol_4h__paths.jsonl"
+        ],
+        "feed": {
+          "source": "binance",
+          "ticker": "SOLUSDT",
+          "interval": "240",
+          "resample": "4h"
+        }
+      },
+      "trend_donchian_ada_4h": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "ADAUSDT",
+          "--resample",
+          "4h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.6",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "/tmp/path_metric_giveback_3ffwmcex/trend_donchian_ada_4h__trades.jsonl",
+          "--json",
+          "/tmp/path_metric_giveback_3ffwmcex/trend_donchian_ada_4h__bt.json",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--start",
+          "2020-07-01",
+          "--end",
+          "2026-10-15 23:59",
+          "--emit-paths",
+          "/tmp/path_metric_giveback_3ffwmcex/trend_donchian_ada_4h__paths.jsonl"
+        ],
+        "feed": {
+          "source": "binance",
+          "ticker": "ADAUSDT",
+          "interval": "240",
+          "resample": "4h"
+        }
+      },
+      "trend_donchian_avax_4h": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+          "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "AVAXUSDT",
+          "--resample",
+          "4h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "1.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.7",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "/tmp/path_metric_giveback_3ffwmcex/trend_donchian_avax_4h__trades.jsonl",
+          "--json",
+          "/tmp/path_metric_giveback_3ffwmcex/trend_donchian_avax_4h__bt.json",
+          "--trail-decay-stall-bars",
+          "6",
+          "--trail-decay-tight-mult",
+          "2.5",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0",
+          "--start",
+          "2020-07-01",
+          "--end",
+          "2026-10-15 23:59",
+          "--emit-paths",
+          "/tmp/path_metric_giveback_3ffwmcex/trend_donchian_avax_4h__paths.jsonl"
+        ],
+        "feed": {
+          "source": "binance",
+          "ticker": "AVAXUSDT",
+          "interval": "240",
+          "resample": "4h"
+        }
+      }
+    },
+    "features": {
+      "base": [
+        "open_r_k",
+        "peak_r_k",
+        "bars_since_peak_k"
+      ],
+      "path": [
+        "chop_k",
+        "er_k",
+        "shape_k",
+        "early_k"
+      ]
+    }
+  },
+  "note": "FAIL / no_gain_over_bars_and_r: OOS R2 base 0.0694 full -0.0212 (gain -0.0906, 2/6 folds); log-loss base 0.6643 full 0.7212 (gain -0.0569, 3/6 folds)"
+}

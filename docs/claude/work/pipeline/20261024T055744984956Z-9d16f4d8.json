@@ -1,0 +1,18 @@
+{
+  "based_on": "20261023T205743934595Z-38358df6.json",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a crypto same-book overlap script is on main and the P3-Q8 Stage B unit is authored, or the node is killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261023-CT11B2G6-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "P3-Q8-new-symbols:no-crypto-overlap-instrument",
+    "rerun": "python3 scripts/research/queue_replenish.py --authoring-queue | grep -A3 P3-Q8-new-symbols ; ls scripts/research | grep -i overlap"
+  },
+  "routed_to": "ROUTE-RESEARCH-HARNESS-FIXES (re-routed 2026-10-24 REGISTER-SWEEP-W43: prior target RESEARCH-FOLLOWUPS is done; item still open) | was: RESEARCH-FOLLOWUPS",
+  "state": "routed",
+  "what": "INSTRUMENT GAP: programme node P3-Q8-new-symbols Stage B (per passing cell on BNB/DOGE/LINK/LTC/BCH/DOT: same-book return-correlation / overlap read against the live bybit_2 legs, then a per-symbol re-entry case) cannot be authored as a unit: scripts/research/ has only soak_equity_overlap.py (equity soak book); no crypto same-book overlap harness exists. 7c2b-06 (trend 4h) and 7c2b-10 (eth_prop 1h) both graded PASS on all six cells (single-window leads), so the node is ready except for the instrument. Build one script that joins per-cell --emit-trades to bybit_2 leg trades by day and reports daily-R correlation + shared drawdown; then author the Stage B unit. Pass RESEARCH-OPS-20261023-2047."
+}

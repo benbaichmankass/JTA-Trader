@@ -1,0 +1,20 @@
+{
+  "due_when": {
+    "due_date": "2026-10-16",
+    "kind": "date"
+  },
+  "id": "PI-20261014-ON01DGFQ-0002",
+  "next_action": "dispatch_lane",
+  "observation": {
+    "due_by": "2026-10-16",
+    "how_to_check": "python3 -c \"import json;from pathlib import Path;from src.runtime import research_catalog as rc;c=rc.build_catalog(Path('.'));us=c['units'] if isinstance(c,dict) else c;print(sum(u['status']=='dispatched' for u in us))\"",
+    "what": "count of status=dispatched units in the catalog and how many have corpus rows"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-PIPE-UNSTICK session_01DgFqpxgeEDe9nKf1aRiomG, 2026-10-14, row PI-20261014-IMQACAUN-0001",
+    "rerun": "python3 -c \"import json;from pathlib import Path;from src.runtime import research_catalog as rc;c=rc.build_catalog(Path('.'));us=c['units'] if isinstance(c,dict) else c;print([u['id'] for u in us if u['status']=='dispatched'])\""
+  },
+  "state": "queued",
+  "what": "research_catalog (src/runtime/research_catalog.py build_unit) reads results ONLY from research/results/<uid>/, so any unit whose lands.store is a corpus (docs/research/e35-bracket-corpus.jsonl, comms/macro/) reads `dispatched` with resultCount 0 for ever, even when its rows landed and were graded. MEASURED 2026-10-14: of 41 `dispatched` units, 27 e35-bracket units have corpus rows tagged research_unit=<uid> with sweep_generated_at >= their stamp (25 also carry a queue_grade verdict); RQ-20260928-023 (macro-valuation-backfill, lands comms/macro, no research_unit input) cannot be attributed at all. src/ runtime is outside the Tier-1 lane that found it. Fix: have the catalog count corpus rows keyed by research_unit (research_disposition.CORPORA already knows the stores) and treat a graded unit as `result`. Also: RQ-20260929-104 (funding_carry BNBUSDT, research-harness-dispatch) has 2 producer_failed rows ('build job concluded failure') and a third dispatch with no row; root cause of the build failure not diagnosed."
+}

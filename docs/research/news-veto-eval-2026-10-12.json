@@ -1,0 +1,120 @@
+{
+  "arm_a": {
+    "buckets_mean_net_R": {
+      "boost": {
+        "mean_net_R": 1.173354,
+        "n": 12
+      },
+      "neutral": {
+        "mean_net_R": 0.584955,
+        "n": 611
+      },
+      "reduce": {
+        "mean_net_R": -0.652957,
+        "n": 11
+      }
+    },
+    "by_account_class": {
+      "paper": 601,
+      "real_money": 33
+    },
+    "implausible_risk_basis_excluded": {
+      "n": 19,
+      "sensitivity_unfiltered": {
+        "buckets_mean_net_R": {
+          "boost": {
+            "mean_net_R": 1.173354,
+            "n": 12
+          },
+          "neutral": {
+            "mean_net_R": -7.79553,
+            "n": 630
+          },
+          "reduce": {
+            "mean_net_R": -0.652957,
+            "n": 11
+          }
+        },
+        "n": 653,
+        "spearman": {
+          "n": 653,
+          "p_one_sided": 0.657267,
+          "rho": -0.016277
+        }
+      },
+      "strategies": [
+        "ada_pullback_2h",
+        "ict_scalp_avax_5m",
+        "ict_scalp_eth_15m",
+        "ict_scalp_mgc_15m",
+        "ict_scalp_sol_15m",
+        "ict_scalp_sol_5m",
+        "ict_scalp_xrp_15m",
+        "ict_scalp_xrp_5m",
+        "mhg_pullback_1d",
+        "trend_donchian_ada_4h",
+        "uso_trend_1h"
+      ],
+      "threshold_abs_R": 20.0
+    },
+    "n_distinct_taken_packages": 634,
+    "nonzero_adjustment_rows": 359,
+    "reduce_mean_exceeds_boost_mean": false,
+    "sensitivity_signal_clusters": {
+      "n": 634,
+      "note": "same-signal packages across accounts collapsed; not the registered statistic",
+      "spearman": {
+        "n": 634,
+        "p_one_sided": 0.639918,
+        "rho": -0.013972
+      }
+    },
+    "spearman": {
+      "n": 634,
+      "p_one_sided": 0.639918,
+      "rho": -0.013972
+    },
+    "verdict": "FAIL"
+  },
+  "arm_b": {
+    "days_with_veto": 5,
+    "floor": 25,
+    "floor_basis": "rows, not distinct signals: the log writes one row per signal evaluation per tick, so this is an UPPER BOUND on accrual speed",
+    "floor_reachable_upper_bound_date": "2027-02-04",
+    "grade_attempted": false,
+    "log_span_days": 124,
+    "read_state": "complete",
+    "reason": "veto signals never become packages; the news log carries no entry/sl/tp, so the counterfactual needs a harness replay (out of scope). Counted only.",
+    "rows_per_day": 0.1048,
+    "verdict": "UNDERPOWERED",
+    "veto_log_rows": 13
+  },
+  "cost_stack": "journal fee_taker + fee_maker + funding_paid (null funding = 0) + modelled round-trip slippage (execution_costs.slippage_bps_roundtrip_for)",
+  "g1": "RETIRE_OR_REPLACE",
+  "inputs": {
+    "dropped_after_join": {
+      "backtest": 0,
+      "no_trade": 0,
+      "not_closed": 1559,
+      "r_uncomputable": 24,
+      "uncosted": 59
+    },
+    "order_packages": 5414,
+    "packages_with_news_stamp": 2456,
+    "pulled_at": "2026-10-12T16:00Z",
+    "trades": 6582
+  },
+  "not_claimed": "no Brier/ECE: no base probability is logged; Arm A is a rank/sign test",
+  "population": "closed, non-backtest trades in trade_journal.db whose order package carries a meta.news stamp and cost_source in {broker, estimate}; one row per package; paper + real_money pooled (split reported)",
+  "read_state": "complete",
+  "rule": "RULE-RQ1009-902-NEWS-VETO-NET-R",
+  "run_at": "2026-10-12T11:07:06.951976+00:00",
+  "unit": "RQ-20261009-902",
+  "veto_log": {
+    "days_with_veto": 5,
+    "first_day": "2026-06-11",
+    "last_day": "2026-10-12",
+    "log_rows": 13443,
+    "veto_rows": 13
+  }
+}

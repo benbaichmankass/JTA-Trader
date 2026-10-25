@@ -1,0 +1,169 @@
+id: RQ-20261018-ff8f-04
+cadence: once
+theme: ml_health
+kind: experiment
+title: 'Frontier / sequence model with a NEW input shape: a small GRU over 32-bar windows of the 6 shared features (plus the 4 range-vol estimators) vs
+  LightGBM on the BTC/ETH/SOL 15m regime head'
+status: done
+priority: 3
+question: Under identical purged folds on the trainer's BTC/ETH/SOL 15m v002 shards, does a 2-layer GRU (hidden 32) that reads a 32-bar window of [6 shared
+  features + 4 range-vol estimators] beat LightGBM on the same rows (which sees only the current bar and two return lags) by >= +0.010 macro-F1 on >= 2
+  of 3 symbols, same sign on the third?
+why_this_matters: 'Task 3 of lane ML-UNBLOCK-1018. deep_sequence history is one FAIL: a price-only TCN on raw 64-bar return windows (MB-20260703-001). The
+  frontier scan dropped PatchTST/iTransformer as the same input class. This unit is a genuinely different test of the family: the input is the ENGINEERED
+  feature window (the same features the GBDT wins with, plus range-vol), not raw returns, so the question is whether temporal structure in those features
+  carries information the tree cannot see from lags alone. Trading metric: a PASS releases the net-of-cost regime-cell walk-forward with the LightGBM head
+  as the baseline. torch 2.9.1+cpu is in the trainer venv.'
+power:
+  expected_n: 24000
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: tail_rows 40000 at min_train_frac 0.4 leaves ~24,000 OOS rows over 5 folds per symbol; d=0.1 needs ~785 rows; same-sign-on-all-symbols rule for
+    autocorrelation.
+  feasibility:
+    source: none
+    accrual_basis: Fixed by construction (nightly shard tail); n does not grow with waiting.
+decision_rule:
+  id: RULE-RQ20261018-FF8F-04-GRU-FEATURE-WINDOW-15M
+  registered_at: '2026-10-18'
+  registered_before_run: true
+  statistic: 'Per symbol: paired purged-CV delta macro_f1 (gru minus lightgbm) on identical rows; windows are built within each fold''s block only (the
+    first 31 rows of a test block are padded, never read from the training block).'
+  rule: 'PASS IF the GRU beats LightGBM by >= +0.010 macro_f1 on >= 2 of 3 symbols AND > 0 on the third: family history deep_sequence PASS; follow-up =
+    the net-of-cost regime-cell walk-forward with the LightGBM head as the baseline, then (only on a PASS there) a candidate manifest proposal. FAIL IF
+    the GRU does not reach > 0 on any symbol with the arm evaluated on all three: family history FAIL for a GRU on the engineered feature window (closes
+    that configuration, not the family). INDETERMINATE otherwise or if the arm is unavailable.'
+  min_n: 3 usable CV folds per symbol.
+  what_it_does_not_do: Serves and registers nothing; touches no config; a feature/architecture-lift PASS is not edge.
+compute: needs_vm_data
+value:
+  bucket: frontier
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  basis: 'stand-in: an untested input shape for a family with one FAIL; not a measured P&L'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 5.0
+  est_minutes: 240
+  basis: 'Estimate: a 2x32 GRU on 40k x 32 x 10 windows per fold on 1 OCPU; re-declare from the first run.'
+ml_bakeoff:
+  task: classification
+  metric: macro_f1
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT:
+        path: datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl
+      ETHUSDT:
+        path: datasets-out/market_features/ETHUSDT/15m/v002/data.jsonl
+      SOLUSDT:
+        path: datasets-out/market_features/SOLUSDT/15m/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    tail_rows: 40000
+    extra_columns: &id001
+    - parkinson_vol
+    - garman_klass_vol
+    - rogers_satchell_vol
+    - yang_zhang_vol
+  cv:
+    folds: 5
+    embargo_rows: 96
+    min_train_frac: 0.4
+  baseline: lightgbm
+  controls:
+  - prior
+  candidates:
+  - gru
+  learners:
+    prior:
+      kind: prior
+    lightgbm:
+      kind: lightgbm
+      params:
+        n_estimators: 200
+        learning_rate: 0.05
+        num_leaves: 31
+        min_child_samples: 50
+    gru:
+      kind: torch_gru
+      params:
+        window_bars: 32
+        hidden: 32
+        layers: 2
+        epochs: 8
+      feature_blocks:
+      - kind: df_columns
+        columns: *id001
+      note: torch_gru landed with ML-INSTRUMENTS-W43 (FRONTIER-LEVER-SEQUENCE-LEARNER); windows are built inside each fold block, test-block head edge-padded
+  rule:
+    min_folds: 3
+    pass_if:
+    - group:
+      - BTCUSDT
+      - ETHUSDT
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.01
+    - group:
+      - SOLUSDT
+      vs: baseline
+      window: cv
+      op: '>'
+      value: 0.0
+    fail_if_no_candidate_reaches:
+    - group: any
+      vs: baseline
+      window: cv
+      op: '>'
+      value: 0.0
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261018-ff8f-04
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M25
+related:
+- MB-20260703-001
+- docs/research/frontier-scan-2026-10-11.md
+- FRONTIER-LEVER-SEQUENCE-LEARNER
+- ML-UNBLOCK-1018
+last_dispatched_at: '2026-10-22T09:03:01+00:00'
+grading:
+  attested: RULE-RQ20261018-FF8F-04-GRU-FEATURE-WINDOW-15M
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261018-FF8F-04-GRU-FEATURE-WINDOW-15M
+  evidence:
+  - research/results/RQ-20261018-ff8f-04/39752478144.jsonl
+  graded_at: '2026-10-22'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

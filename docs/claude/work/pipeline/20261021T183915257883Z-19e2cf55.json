@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-10-28",
+    "kind": "date"
+  },
+  "id": "PI-20261021-WG8OPB7N-0002",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane PIPELINE-HEALTH-1021 / trainer-vm-diag #19343",
+    "rerun": "trainer-vm-diag: journalctl -u ict-drift-retrain.service -n 14 --no-pager | grep 'scan complete'  # reads dispatch_count=N plan_only=1"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 2,
+  "what": "[ml] ict-drift-retrain runs every ~3 h (13.4 CPU-min each) with RETRAIN_PLAN_ONLY=1 (the script default, scripts/ops/run_drift_retrain.sh:73, 'toggle to 0 once the operator has eyeballed a few cycles'): MEASURED 2026-10-21 15:19Z and 18:21Z, both scans flagged dispatch_count=9 manifests as drifted and retrained none. The daily cycle (ict-trainer, 01:xx, 67 trained / 0 failed on 10-18..10-21) retrains every trainable manifest regardless, so drift remediation is currently the daily retrain only. Decision for the operator (Tier-2, env on the trainer unit): arm RETRAIN_PLAN_ONLY=0, or retire the scan and its 8 daily runs as redundant with the daily cycle. Population: 2 scans read, 9 manifests each (not shown which)."
+}

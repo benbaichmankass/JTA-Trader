@@ -1,59 +1,120 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "strategy": "tqqq_trend_long_1d",
   "symbol": "TQQQ",
   "timeframe": "1d",
-  "config_fingerprint": "sha256:b3415cd1d93afafaff4d5a11001b20a7",
+  "config_fingerprint": "sha256:02b3246945f13f40d0e928cf69de65bb",
   "basis": "harness_timefolds",
   "coverage_state": "measured",
   "fidelity": "faithful",
   "omitted_levers": [],
-  "net_r_oos": 4.8234,
-  "expectancy_r_oos": 1.2058,
-  "n_trades_oos": 4,
-  "folds": 4,
+  "net_r_oos": 26.2831,
+  "expectancy_r_oos": 0.2227,
+  "n_trades_oos": 118,
+  "folds": 8,
   "fold_detail": [
     {
       "fold": 1,
-      "trades": 1,
-      "net_r": 2.7897,
-      "expectancy_r": 2.7897,
-      "start": "2025-06-10 00:00:00+00:00",
-      "end": "2025-06-10 00:00:00+00:00"
+      "trades": 14,
+      "net_r": -1.4002,
+      "expectancy_r": -0.1,
+      "start": "2010-04-22 00:00:00+00:00",
+      "end": "2012-01-25 00:00:00+00:00"
     },
     {
       "fold": 2,
-      "trades": 1,
-      "net_r": -0.7657,
-      "expectancy_r": -0.7657,
-      "start": "2025-10-24 00:00:00+00:00",
-      "end": "2025-10-24 00:00:00+00:00"
+      "trades": 14,
+      "net_r": 6.7035,
+      "expectancy_r": 0.4788,
+      "start": "2012-02-13 00:00:00+00:00",
+      "end": "2013-12-20 00:00:00+00:00"
     },
     {
       "fold": 3,
-      "trades": 1,
-      "net_r": -1.0052,
-      "expectancy_r": -1.0052,
-      "start": "2026-01-27 00:00:00+00:00",
-      "end": "2026-01-27 00:00:00+00:00"
+      "trades": 14,
+      "net_r": 1.1896,
+      "expectancy_r": 0.085,
+      "start": "2014-02-13 00:00:00+00:00",
+      "end": "2016-08-05 00:00:00+00:00"
     },
     {
       "fold": 4,
-      "trades": 1,
-      "net_r": 3.8046,
-      "expectancy_r": 3.8046,
-      "start": "2026-04-14 00:00:00+00:00",
-      "end": "2026-04-14 00:00:00+00:00"
+      "trades": 14,
+      "net_r": 5.0222,
+      "expectancy_r": 0.3587,
+      "start": "2016-09-21 00:00:00+00:00",
+      "end": "2018-06-06 00:00:00+00:00"
+    },
+    {
+      "fold": 5,
+      "trades": 14,
+      "net_r": 7.3503,
+      "expectancy_r": 0.525,
+      "start": "2018-07-12 00:00:00+00:00",
+      "end": "2020-04-29 00:00:00+00:00"
+    },
+    {
+      "fold": 6,
+      "trades": 14,
+      "net_r": 2.1083,
+      "expectancy_r": 0.1506,
+      "start": "2020-05-20 00:00:00+00:00",
+      "end": "2021-07-23 00:00:00+00:00"
+    },
+    {
+      "fold": 7,
+      "trades": 14,
+      "net_r": 3.945,
+      "expectancy_r": 0.2818,
+      "start": "2021-10-28 00:00:00+00:00",
+      "end": "2024-01-19 00:00:00+00:00"
+    },
+    {
+      "fold": 8,
+      "trades": 20,
+      "net_r": 1.3644,
+      "expectancy_r": 0.0682,
+      "start": "2024-03-01 00:00:00+00:00",
+      "end": "2026-09-21 00:00:00+00:00"
     }
   ],
-  "folds_positive": 2,
-  "window_days": 365,
+  "folds_positive": 7,
+  "window_days": 6200,
   "fee_bps_roundtrip": 0.0,
+  "path_stats": {
+    "series_location": "source_run (the per-trade rows, in order, with net_r)",
+    "n": 118,
+    "max_drawdown_r": 5.8753,
+    "max_drawdown_at_trade": 12,
+    "final_equity_r": 26.2831,
+    "max_equity_r": 27.9925,
+    "worst_trade_r": -1.0089,
+    "best_trade_r": 2.1146,
+    "worst_day_r": -1.0089,
+    "worst_day_date": "2014-12-09",
+    "trades_without_exit_time": 0,
+    "ordering": "by entry_time ascending; pooled ACROSS folds, so this is the full-window path, not a per-fold one",
+    "not_a_verdict": "Descriptive only. No bar is applied here -- the prop bar is B6's to register, and it must be registered before these numbers are read."
+  },
+  "cost_stack": {
+    "fees": 0.0,
+    "slippage": 5.0,
+    "funding": 0.0,
+    "unit": "bps_roundtrip (funding: bps per funding window)",
+    "source": "comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__bt.json"
+  },
+  "net_r_oos_fee_only": 26.9791,
+  "decision_rule": {
+    "id": "RULE-D1-STAGE0-NET-OF-FULL-COST",
+    "rule": "Stage 0 requires net_r_oos -- pooled net_total_r from the harness's out-of-sample time-folds, net of the FULL cost stack (fee + slippage + funding) -- to be > 0. Restates the existing promotion-ladder Stage-0 bar as a checkable predicate over this record's own fields; does not itself authorize or perform any roster change.",
+    "registered_at": "2026-09-22T05:34:08Z",
+    "verdict": "pass"
+  },
   "param_selection_provenance": "not_established",
-  "generated_at": "2026-09-16T19:14:35.053290+00:00",
+  "generated_at": "2026-10-23T05:59:10.127834+00:00",
   "generated_by": "scripts/ops/build_strategy_evidence.py",
-  "source_run": "/tmp/strategy_evidence_omm3li18/tqqq_trend_long_1d__trades.jsonl",
+  "source_run": "comms/strategy_evidence/runs/2026-10-23-promo/tqqq_trend_long_1d__trades.jsonl",
   "error": null,
   "harness": "trend",
-  "low_n_warning": "n_trades_oos=4 < 10; the pooled number is reported but is not a basis for a verdict."
+  "venue_bracket_arm": null
 }

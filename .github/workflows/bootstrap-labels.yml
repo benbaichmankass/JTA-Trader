@@ -45,6 +45,11 @@ jobs:
           script: |
             const LABELS = [
               {
+                name: 'journal-backup-request',
+                color: '0e8a16',
+                description: 'Dispatch journal-offvm-backup (backup | status | restore-test via a `mode:` body line). Read-only on the live VM.',
+              },
+              {
                 name: 'prune-merged-branch',
                 color: 'c2e0c6',
                 description: 'Ask prune-merged-claude-branch.yml to delete a stray claude/** branch whose content is already on main. Dry-run by default.',
@@ -168,6 +173,16 @@ jobs:
                 name: 'terminate-instance',
                 color: 'b60205',
                 description: 'Triggers terminate-instance — terminate an OCI instance by display_name (frees Ampere budget). Requires confirm: yes.',
+              },
+              {
+                name: 'oci-retire-orphan-volume',
+                color: 'b60205',
+                description: 'Triggers oci-retire-orphan-volume — back up then delete the pinned orphan ict-bot-data-vol (plan is read-only; execute needs volume_id + confirm: yes).',
+              },
+              {
+                name: 'trainer-boot-volume',
+                color: '5319e7',
+                description: 'Triggers trainer-boot-volume — measure tenancy block storage; grow the TRAINER boot volume online (resize needs confirm: yes; refused past Always Free 200 GB).',
               },
               {
                 name: 'reset-instance',
@@ -302,6 +317,11 @@ jobs:
                 description: 'Triggers vm-net-fix workflow — open VM-local firewall (ufw + iptables) for the dashboard API port.',
               },
               {
+                name: 'live-replay-parity',
+                color: '0e8a16',
+                description: 'Triggers live-replay-parity workflow — live-vs-replay decision parity over every real-money leg, landed under comms/live_parity/.',
+              },
+              {
                 name: 'strategy-review-packets',
                 color: '0e8a16',
                 description: 'Triggers strategy-review-packets workflow — M7 decision packets for every enabled strategy, landed under comms/strategy_reviews/.',
@@ -342,6 +362,16 @@ jobs:
                 description: 'Triggers trainer-capture-watch — grades the trainer order-flow capture on its DATA freshness (never ActiveState) and re-proves the alarm fires against planted staleness.',
               },
               {
+                name: 'dashboard-edge-watch-now',
+                color: '5319e7',
+                description: 'Triggers dashboard-edge-watch — outside-in HTTPS/cert-expiry/DNS-A-record/CORS probe of the SPA path (GitHub Pages -> Caddy -> ict-web-api). Read-only, off-VM.',
+              },
+              {
+                name: 'dashboard-edge-watch-alert',
+                color: 'd93f0b',
+                description: 'The outside-in dashboard-edge-watch probe (HTTPS / cert expiry / DNS A record / CORS) is not reporting ok.',
+              },
+              {
                 name: 'exit-head-replay-request',
                 color: '5319e7',
                 description: 'Triggers research-exit-head-replay-trainer — replays the PUBLISHED exit head over backtest trades on the trainer (the only place besides the live VM that holds the artifact). Read-only, light; no heavy VM lane needed.',
@@ -370,6 +400,11 @@ jobs:
                 name: 'oci-inventory',
                 color: '0075ca',
                 description: 'Triggers oci-inventory — read-only OCI compute inventory diffed against the declared topology.',
+              },
+              {
+                name: 'compute-util-telemetry',
+                color: '0075ca',
+                description: 'Triggers compute-util-telemetry — read-only daily CPU/mem/net/disk ledger for the 3 OCI VMs + Oracle idle-reclaim check + OCI limits read.',
               },
               {
                 name: 'oci-topology-drift',

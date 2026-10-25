@@ -1,0 +1,70 @@
+id: RQ-20261013-0b07-01
+title: 'RESEARCH-ROUTER smoke (GPU): a unit that declares only compute: gpu is placed by the token-free dispatcher, runs on a Kaggle GPU kernel, and lands through the shared collector (plumbing, not research)'
+status: done
+cadence: once
+theme: infra
+priority: 1
+kind: deterministic
+question: >-
+  Does a unit that declares only `compute: gpu` (no run.workflow) get dispatched by research-queue-dispatch to
+  research-script-run-kaggle.yml, run on a Kaggle GPU kernel, come back through the shared artifact -> collector path and land as an E5 record research-ops
+  can read and grade by this unit's registered rule?
+why_this_matters: >-
+  RESEARCH-ROUTER (operator 2026-10-13): Claude writes the unit, a token-free dispatcher chooses the compute. This is the
+  live proof of one class -> backend route; its PASS is part of the observation that closes checklist row RESEARCH-ROUTER.
+  It says NOTHING about any strategy or model.
+why_not_inferential: >-
+  A plumbing smoke: one short fixed matmul benchmark whose only readable outcome is whether the routed backend ran it and
+  the result landed. There is no sampling question to power.
+decision_rule:
+  id: RULE-RQ20261013-0B07-01-ROUTER-SMOKE-GPU
+  registered_at: '2026-10-13'
+  registered_before_run: true
+  statistic: 'verdict.json from scripts/research/compute_smoke.py --mode gpu'
+  rule: >-
+    PASS IF the E5 record landed via the dispatcher-chosen backend with read_state=measured and a CUDA device present and fp16_tflops > 0. FAIL IF measured
+    but no CUDA device was visible (the GPU route is wrong). A producer_failed/no_data record is NOT a verdict: it means the route is broken - read run-manifest.json
+    and the session log, fix, re-queue (last_dispatched_at: null); the rule is never edited.
+  what_it_does_not_do: >-
+    Measures nothing about any strategy, model or market; not a promotion case; touches no config, registry or account.
+compute: gpu
+value:
+  usd_at_stake_per_month: 200
+  confidence: 0.8
+  bucket: frontier
+  basis: 'infrastructure unlock: every gpu unit queued for the week depends on this route working; a stand-in figure, not a measured P&L'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: true
+  peak_memory_gb: 4.0
+  est_minutes: 10
+  basis: One 10 s fp16 4096x4096 matmul loop plus kernel start-up and queueing (about 3 min observed in the 2026-10-13 pilot).
+run:
+  command: [python3, scripts/research/compute_smoke.py, --mode, gpu, --out, '{out_dir}']
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261013-0b07-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap: [L-OPS]
+related:
+- RESEARCH-ROUTER
+- config/research_compute.yaml
+- scripts/research/compute_router.py
+last_dispatched_at: '2026-10-13T16:05:14+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-RQ20261013-0B07-01-ROUTER-SMOKE-GPU
+  evidence:
+  - research/results/RQ-20261013-0b07-01/38396475640.jsonl
+  - research/results/RQ-20261013-0b07-01/38396687976.jsonl
+  - research/results/RQ-20261013-0b07-01/38396963370.jsonl
+  - research/results/RQ-20261013-0b07-01/38397260629.jsonl
+  - research/results/RQ-20261013-0b07-01/38419107113.jsonl
+  graded_at: '2026-10-14'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass (4 earlier producer_failed / re-graded wiring_only row(s) superseded)
+  rows: 1
+  verdict: pass

@@ -1,0 +1,22 @@
+{
+  "due_when": {
+    "due_date": "2026-10-27",
+    "kind": "date"
+  },
+  "id": "PI-20261024-ONHEALTH-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-27T00:00Z",
+    "how_to_check": "the rerun command; attribution means a named workflow run id per login, or a rotation ask to the operator",
+    "what": "every non-trainer accepted ssh login in 2026-10-24 03:00-05:00Z is attributed to a workflow run, or the key is rotated"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "HEALTH-REVIEW-20261024 lane (manager session_01UETC6mFiwMgXk6URsuWzZb)",
+    "rerun": "bash scripts/ops/diag_fetch.sh \"journalctl?unit=ssh.service&since=2026-10-24T03:00:00Z&lines=2000\" and list every \"Accepted\" whose source is not the trainer VM; then match each to a workflow run (system-actions / vm-diag-snapshot / deploy) created within 2 min"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": "1",
+  "what": "[health][security] Two sshd \"Accepted publickey for ubuntu\" logins on the live VM at 2026-10-24T03:59:04Z and 03:59:06Z came from a source address that is NOT the trainer VM (trainer = the only source in the 3 other sampled hours: 2026-10-17 20:57-22:50Z, 2026-10-24 03:00-04:36Z, 1,308 of 1,309 other accepts). Not attributed this run: no issue or workflow I could enumerate at 03:30-04:10Z (git log shows only the 03:35Z research-slo commit; MCP issue search empty; Actions run listing by time not available to the lane). Likely a GitHub-hosted runner (system-action / diag relay) but UNVERIFIED. Source address deliberately not recorded in this public repo; read it from the journal."
+}

@@ -1,0 +1,110 @@
+id: RQ-20261014-4a4c-09
+title: >-
+  P4-Q3 event-scored conviction axis: does the inflation-surprise drift sign, carried as a second conviction axis on
+  the M28 5-symbol universe at the debit-vertical cost proxy, add net return over the valuation-only axis AND the naive
+  all-long floor, walk-forward? (blocked: confirmation set + lever)
+status: retired
+retired_reason: >-
+  2026-10-16 lane P4-MACRO-BACKLOG-1016: this unit's own pre-registered clause retires it -- "If 03 PASSES (artifact)
+  or 06 FAILS, this unit is RETIRED with that reason, not run." RQ-20261014-4a4c-06 FAILED its registered rule
+  (research/results/RQ-20261014-4a4c-06/38843469740.jsonl, read_state measured): sign book mean net +0.00221 per trade,
+  t 1.531 < 2.0, n=118, MES cost stack 12.5 bps; all-long floor +0.00341 (t 2.41); book minus floor -0.0012 (t -0.59).
+  The rest of the clause held (03 placebo FAIL = clean; 01 and 02 PASS), so the PPI drift is real in RANK but a
+  symmetric sign mapping -- the mapping this replay was specified with -- does not beat being long. The grader had
+  not yet closed 06 (first FAIL re-queues one confirmatory run; the inputs are fixed history plus at most one new
+  release, and 03's confirmatory run repeated its FAIL). If 06's confirmatory run reads non-FAIL the grader routes
+  it to needs_review and this retirement is re-read. The axis question is NOT dropped: programme node
+  P4-Q3-event-axis (research/programmes/04-macro-sleeve.yaml) re-authors it with a magnitude-weighted RANK-TILT
+  mapping once RQ-20261016-7769-20 passes. Lever MACRO-EVENT-AXIS-HARNESS is not built and is not needed until then.
+cadence: once
+theme: macro
+priority: 1
+kind: experiment
+requires_result: {unit: RQ-20261014-4a4c-06, verdict: pass}
+blocked_on:
+- what: >-
+    The confirmation set for the PPI lead must read out first: RQ-20261014-4a4c-06 PASS (net-of-cost sign book beats
+    the floor) AND RQ-20261014-4a4c-03 FAIL (placebo clean) AND at least one of RQ-20261014-4a4c-01/-02 PASS
+    (sub-period stability). If 03 PASSES (artifact) or 06 FAILS, this unit is RETIRED with that reason, not run.
+  ref: docs/research/programmes/04-MACRO-SLEEVE.md Q2 -> Q3
+  clears_when: research/results/ holds graded records for RQ-20261014-4a4c-01, -02, -03, -06 meeting the clause above.
+- what: >-
+    Lever (build row proposed to the manager: MACRO-EVENT-AXIS-HARNESS, Tier-1): an offline replay that forms one
+    thesis per (release, symbol) on GLD/IEF/SLV/SPY/TLT with conviction = the registered surprise-sign mapping (hot
+    inflation print: short SPY/TLT/IEF, no view on GLD/SLV unless a separate unit registers one), horizon 3 trading
+    days, through thesis_backtest.net_return at fee_frac 0.005 (the RQ-20260928-010 proxy) so the cost basis is the
+    sleeve's, plus the valuation-only axis on the same dates. Neither thesis_backtest_run.py nor build_replay_entries
+    accepts an events input today (RQ-20260928-009's blocker, verified 2026-09-28); this lever is the OFFLINE half of
+    that fix only and does not touch thesis_tick.py.
+  ref: RQ-20260928-009 / PI-20260927-CAA05-0002
+  clears_when: >-
+    a scripts/research/ script runs this replay with a test asserting the event join is non-empty end-to-end, and
+    this unit's run block is filled with its command on research-script-run.yml.
+question: >-
+  If the PPI m/m surprise drift survives its confirmation set, does it make an M28 conviction AXIS: across the 5-symbol
+  universe, does the event-scored book's mean net return per thesis exceed (a) the valuation-only axis on the same
+  dates and (b) the all-long floor, in >= 4 of 6 calendar walk-forward folds (2015-2026, ~2-year folds), net of the
+  debit-vertical cost proxy?
+why_this_matters: >-
+  M28's conviction comes only from the valuation read, which scored calibration_rank -0.0037 / edge_vs_baseline
+  -0.0047 at zero cost (n=1,104; comms/macro/thesis_p4_scorecard.json). The operator chose "Keep exploring" (not parked)
+  on 2026-10-09 and asked for a NEW conviction axis; the programme's measure is net R per conviction axis vs the naive
+  floor. This is the first axis candidate with a measured lead, and the only rung that speaks the sleeve's own unit.
+power:
+  expected_n: 139
+  min_detectable_effect: 0.25
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    Unit = one release-date cohort (the 5 symbols on one date are not independent, so the paired test is on the
+    per-release cohort mean): 139 ppi_mom releases with a defined surprise (MEASURED 2026-10-14), 118 non-zero. Floor
+    (2.80/0.25)^2 = 126 at d=0.25; the non-zero count 118 is below it, so this is UNDERPOWERED BY DESIGN at d=0.25
+    (it can PASS only on a larger effect) and the run reports its cohort n.
+  feasibility:
+    source: none
+    accrual_basis: Fixed historical backfill; ~12 releases/yr. Prices from the off-VM fetch_macro_candles.
+decision_rule:
+  id: RULE-RQ-20261014-4a4c-09
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: >-
+    Per walk-forward fold: mean net return per release cohort of the event-scored book, the valuation-only book and
+    the all-long book, all at fee_frac 0.005; paired difference event minus each comparator with a 95% bootstrap
+    interval resampling whole release cohorts (2000 draws, seed 20261014).
+  rule: >-
+    PASS (axis earns a Tier-3 proposal to add it as a c_macro conviction input on alpaca_options_paper, with this
+    record) IF the pooled paired difference vs BOTH comparators is > 0 with the interval above 0 AND the event book
+    beats both in >= 4 of 6 folds. FAIL (axis retired with the numbers as the reason) IF the pooled difference vs
+    either comparator has its interval at or below 0 and fewer than 4 folds win. INDETERMINATE otherwise or if the
+    cohort n < 100.
+  what_it_does_not_do: >-
+    No config, no roster, no sizing: a PASS is a proposal. Does not model option payoff shape (linear exposure with a
+    fee proxy). Does not wake M29 by itself; the 04 programme reads this record for the M29 wake decision.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 20
+  basis: Five daily-close fetches and ~700 thesis rows; pure python.
+run:
+  workflow: research-script-run.yml
+  command: null
+  inputs:
+    research_unit: RQ-20261014-4a4c-09
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap: [M28, M29]
+programme: P4
+related:
+- P4-MACRO-PROGRAMME
+- docs/research/programmes/04-MACRO-SLEEVE.md
+- MACRO-RESHAPE
+- RQ-20260928-009
+- RQ-20260928-010
+- RQ-20261014-4a4c-01
+- RQ-20261014-4a4c-06
+last_dispatched_at: null

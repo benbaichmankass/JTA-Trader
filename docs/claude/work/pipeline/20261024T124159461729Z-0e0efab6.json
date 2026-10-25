@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 14,
+    "clears_when": "momentum_levers_parity on trend_donchian_eth_4h shows exit match 1.0 apart from 'live price guard' cases, or the gap is killed with a reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261024-ZUPNKHZR-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "MOMENTUM-LEVERS-PARITY (session_01AYVhF79YumXBY7ZuPNkhZr)",
+    "rerun": "python3 scripts/research/momentum_levers_parity.py --candles <ETHUSDT_4h.csv> --leg trend_donchian_eth_4h --symbol ETHUSDT --set trail_adx_below=20 --set trail_adx_tight_mult=2.5  # trades with live_exit.reason == tp_cross"
+  },
+  "state": "queued",
+  "what": "[exit-path] TP-revision live/harness parity gap on trend_donchian_eth_4h (tp_revision donchian_measured_move width 0.5): after the MOMENTUM-LEVERS-PARITY fixes, 4 of 292 eth_4h trades (Binance-spot 4h, 2020-07..2026-10) still exit on a live tp_cross 6-18 bars before the harness's trail_stop -- the live revised TP (src/runtime/tp_revision.plan_tp_revision) and the harness TPTracker disagree on those trades. Not a momentum-lever divergence (lever decisions match 100%). Root-cause which side is wrong."
+}

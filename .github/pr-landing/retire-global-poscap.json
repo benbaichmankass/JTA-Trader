@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier 2 by path (src/runtime/). AUTHORITY: the operator's popup decision of 2026-10-21, answer 'Retire it', recorded verbatim on checklist row RETIRE-GLOBAL-POSCAP (PR #19345). The manager merges; a post-deploy observation closes the row (apiKey warning absent from the trader log for 1h, no false URGENT).",
+  "why": "Retire the dead MAX_OPEN_POSITIONS guard in safe_place_order (no production caller) together with the risk_counters positions fetch that could never authenticate, and fix the liveness watchdog so a dispatched round in which every account refused, ran dry or was side-filtered is not counted as an actionable signal. Sizing, the per-account RiskManager, the daily-drawdown switch and MAX_DAILY_LOSS_USD semantics are untouched."
+}

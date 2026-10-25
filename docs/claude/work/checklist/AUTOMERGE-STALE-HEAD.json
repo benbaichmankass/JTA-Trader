@@ -1,0 +1,38 @@
+{
+  "id": "AUTOMERGE-STALE-HEAD",
+  "title": "claude-pr-automerge must re-check the PR's CURRENT head before arming (a hold declared after a queued run can be armed over)",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": "session_014f4UdWRy3yTyhTLZwgNmsW",
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 12,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    18065
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-14 weekly planning] OPERATOR-APPROVED 2026-10-14. Source: PI-20261007-CJT6J2S9-0001 -- MEASURED on PR #16984: run 37671365711 queued on head 6efa01a3 (landing: self) at 19:01:47Z, executed 19:49:10Z, and armed native auto-merge although the head had become ef82483b with landing: hold and no request file. Build: the request gate and the E63 landing gate read the PR's head at execution time (pull_request_read), refuse when the request file or the self declaration is gone from that head, and log the queued-vs-current sha pair. Test with the #16984 shape. Related cluster: AUTOMERGE-GAPS. [2026-10-14 ~07:50Z manager addition, MEASURED 2026-10-14] SECOND FAILURE IN SCOPE -- a CONFLICTED stamp PR is never refreshed and nothing names it: dispatcher stamp PR #18004 (automation/research-queue-stamp-38519778952-1, created 06:23Z) conflicted with #17995 (merged 06:21Z; both edited research/queue/RQ-20261014-65cc-{01,06,09,10}.yaml), ran 0 checks and sat unmergeable ~80 min. Effect: 6 units ran at 06:02Z but their dispatch stamp never landed; the dispatcher withheld them as having an open stamp while they read as runnable; the watchdog escalated a false 'github_runner_data idle 100 min' (#17895 comment 6163466113, 07:39Z) and its self-heal dispatch could not help. Root cause: a conflicting stamp PR is neither refreshed nor re-cut, and the watchdog's stranded-stamp check is time-based only. Fix scope (added to this row): (1) the dispatcher re-cuts, or merges main into, a conflicted stamp PR on its next cycle; (2) the watchdog reports 'stamp PR #N conflicting' directly instead of an idle alarm. Hand-fixed this time by the manager: main merged into the stamp branch (commit 26ec467b, stamp + grading.auto kept), merging. [lane 2026-10-14] PR #18065 (landing: hold, R12). A already had a head-moved guard (2026-10-09); added current-head re-read + sha-pair log. B: sweeper resolves regenerable stamp/receipt conflicts, watchdog check_conflicted_automation. landed_unproven until the first conflicted stamp PR is auto-resolved/named. [2026-10-14T18:09Z manager session_01VduHYzdaXe27wTDBLSu8ao] Dispatched: Sonnet (build lane, no order path), fresh (spec is on the row), ceiling $12. [2026-10-14 manager] Scope widened per handover: also conflicted automation stamp/receipt PRs (#18004, #18014 fixed by hand) -- re-cut or merge main, and the watchdog names them.",
+  "updated_at": "2026-10-24T06:01:02Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "observation": {
+    "what": "(a) claude-pr-automerge reads the PR head at execution time and refuses to arm when that head carries landing: hold or no request file; a replay of the #16984 shape is refused and logged with the queued-vs-current sha pair. (b) a conflicted dispatcher stamp PR is re-cut or refreshed by the dispatcher on its next cycle and the research watchdog names it (stamp PR #N conflicting) instead of raising an idle alarm; verified on the first stamp conflict after the fix lands, or by a test that plants a conflicting stamp branch",
+    "how_to_check": "the workflow run log of the first PR where the head moved between queue and execution, plus the test added for the gate; for (b) the dispatcher log line + watchdog report on the next stamp conflict, and the tests for both",
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-21",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
+  },
+  "writeback": {
+    "roadmap": "none: L-OPS landing hygiene fix; no milestone where/next changes",
+    "arch": "none: hardens existing claude-pr-automerge.yml arm path, sweep_stale_automation_prs.py and research_watchdog.py checks; no new component, path or contract"
+  },
+  "_seq": 485
+}

@@ -1,0 +1,28 @@
+{
+  "id": "QUEUE-FILL-W41",
+  "title": "Fill the research queue to Wed 18:00Z per THEMES weights: regime >=15 and ml_health >=10 runnable units",
+  "phase": "R",
+  "state": "done",
+  "owner": "QUEUE-FILL-W41 lane",
+  "lane": "session_014VBo7eKnBvR9gj5ZQ46QMz",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    17795
+  ],
+  "blocked_on": [],
+  "note": "Operator 2026-10-12 19:45Z. Manager measured 170 queued: regime 0, ml_health 1 vs weights 5/3. Authoring pre-registered units on EXISTING harnesses only (regime_impact_scoping via research-script-run.yml; ml_bakeoff via research-script-run-trainer.yml). Roadmap: L-REGIME, M25. Hand-authored => landing hold; manager merges. Closes when the units are on main and dispatcher dry-run shows them runnable; landed_unproven until a result lands. PR #17795 (draft, branch claude/queue-fill-w41): 15 regime + 12 ml_health units RQ-20261012-75b2-01..27; dispatcher dry-run would_dispatch 27/27; all accruing (source none). Closes -> landed_unproven on merge; done when the first result of each theme lands and is graded. UNVERIFIED: trainer shard paths/columns for ml units (see PR). Lever filed: REGIME-WF-VERDICT-WRAPPER. [2026-10-17 RESEARCH-AUTHOR-GRADE-1017] DONE, measured on main f03d9032: PR #17795 merged 2026-10-12 21:08Z; research/queue holds RQ-20261012-75b2-01..27, all 27 status done with last_dispatched_at set and a result dir each. Grading blocks: regime 15 (14 fail, 1 pass), ml_health 12 (6 fail, 6 indeterminate); needs_review false on all 27. The close condition (first result of each theme landed and graded) is met. Population: the 27 units; the 14/15 regime FAILs are an already-null pooled arm family, not a finding.",
+  "updated_at": "2026-10-17T21:33:53Z",
+  "updated_by": "research-author-grade-1017-fork",
+  "roadmap": [
+    "L-REGIME",
+    "M25"
+  ],
+  "writeback": {
+    "roadmap": "none: operations fill of existing themes, no milestone changed",
+    "arch": "none: no component changed"
+  },
+  "_seq": 441
+}

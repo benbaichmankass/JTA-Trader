@@ -228,7 +228,8 @@ write_files:
     permissions: '0644'
     owner: root:root
     content: |
-      # Fires ict-trainer-catchup.service once daily at 05:00 UTC — well
+      # Fires ict-trainer-catchup.service once daily at 08:00 UTC (moved from 05:00Z 2026-10-14: clear of the
+      # 03:00-05:00Z trainer research window and the 05:52Z review) — well
       # after the primary ict-trainer.timer's `daily` + up to 1h
       # RandomizedDelaySec window (00:00-01:00 UTC), so a clean day's cycle
       # is long finished before this fires and finds nothing to do.
@@ -236,7 +237,7 @@ write_files:
       Description=Same-day catch-up for an interrupted ICT training cycle
 
       [Timer]
-      OnCalendar=*-*-* 05:00:00 UTC
+      OnCalendar=*-*-* 08:00:00 UTC
       Persistent=true
 
       [Install]
@@ -278,6 +279,14 @@ write_files:
       # 4h heavy-lock queue wait (BL: readiness starved behind the grown
       # nightly cycle on the default 1h wait, 2026-07-18/19).
       Environment=TRAINER_HEAVY_LOCK_WAIT_S=14400
+      # 2026-10-21 (PI-20261018-WH81NW96-0004, operator popup "Raise to 5200M" ->
+      # "Yes, measure then raise"; rule: flag only if the sweep already fits the
+      # current cap). MEASURED 2026-10-21 19:07Z (trainer relay #19365/#19377): the
+      # WHOLE sweep with oos_edge ON over 97 models ran 22m21s, exit 10, max RSS
+      # 1215 MiB, 0 OOM kills -> 3.7x margin under 4500M, so MemoryMax is unchanged
+      # and only the flag turns on. (The 5.19 GB per-head peak of 2026-08-20 predates
+      # the shard-whole/column-projection fixes.) Revert = delete this line.
+      Environment=PROMOREADY_OOS_EDGE=on
       # Hard memory bound (MB-20260719-PROMOREADY-OOSEDGE-OOM): fail fast
       # on a breach instead of D-state-thrashing the whole 6 GB box.
       MemoryMax=4500M
@@ -325,12 +334,12 @@ write_files:
       # S-MLOPT-S16 / M14 Phase 4.1: drift-triggered, recency-weighted
       # retraining.
       #
-      # DISABLED BY DEFAULT. Claude enables it autonomously via the
-      # trainer-vm-diag relay (trainer charter — trainer-side systemd
-      # changes are Tier-1 autonomous):
+      # NO TIMER since 2026-10-25 (operator, row DRIFT-SCAN-RETIRE): the
+      # ~8/day timer was retired. The plan-only scan now runs weekly as a
+      # step of /ml-review (.claude/skills/ml-review/SKILL.md § "The drift
+      # scan"), via trainer-vm-diag:
       #
-      #   trainer-vm-diag-request issue body:
-      #     cmd: sudo systemctl enable --now ict-drift-retrain.timer
+      #   cmd: sudo systemctl start ict-drift-retrain.service
       #
       # Wraps `scripts/ops/run_drift_retrain.sh`, which runs
       # `python -m ml drift-retrain` to ADWIN-scan every deployed
@@ -366,32 +375,6 @@ write_files:
 
       [Install]
       WantedBy=multi-user.target
-
-  - path: /etc/systemd/system/ict-drift-retrain.timer
-    permissions: '0644'
-    owner: root:root
-    content: |
-      # Hourly drift scan. Disabled by default at provision time;
-      # Claude enables it autonomously via the trainer-vm-diag relay:
-      #
-      #   trainer-vm-diag-request issue body:
-      #     cmd: sudo systemctl enable --now ict-drift-retrain.timer
-      #
-      # Hourly is conservative — ADWIN scans the head's full
-      # real-time score series each pass (no incremental state on
-      # disk), so cadence is purely "how often do we want to react to
-      # a fresh drift?" not a memory pressure. Composes with the
-      # daily ict-trainer.timer cron.
-      [Unit]
-      Description=Periodic ICT drift-retrain scan
-
-      [Timer]
-      OnCalendar=hourly
-      RandomizedDelaySec=5min
-      Persistent=true
-
-      [Install]
-      WantedBy=timers.target
 
   - path: /etc/systemd/system/ict-trainer-publish.service
     permissions: '0644'
@@ -470,14 +453,19 @@ write_files:
     permissions: '0644'
     owner: root:root
     content: |
-      # 15-minute cadence for the live TSFM forecast producer (the 15m bar the
-      # fc head scores). Persistent=true so a paused VM catches up on resume.
+      # Live TSFM forecast producer, BAR-ALIGNED: 30 s after each 15m bar
+      # closes (:00/:15/:30/:45), so every run forecasts a freshly CLOSED bar
+      # (FIX-CA-25 / CA-B01-fc-producer-forecasts-forming-bar). Was
+      # OnUnitActiveSec=15min, which drifts from the bar grid. AccuracySec=1s
+      # overrides systemd's 1-min default coalescing. Persistent=true so a
+      # paused VM catches up on resume.
       [Unit]
       Description=Periodic live TSFM forecast production
 
       [Timer]
       OnBootSec=90sec
-      OnUnitActiveSec=15min
+      OnCalendar=*:0/15:30
+      AccuracySec=1s
       Persistent=true
 
       [Install]
@@ -544,15 +532,14 @@ final_message: |
   ict-trainer.service: installed, disabled (Claude enables via diag relay).
   ict-trainer.timer:   installed, disabled (Claude enables via diag relay).
   ict-trainer-catchup.service: installed, disabled (Claude enables via diag relay; same-day resume of an interrupted cycle, see run_training_cycle.sh checkpoint/resume).
-  ict-trainer-catchup.timer:   installed, disabled (Claude enables via diag relay; daily 05:00 UTC).
+  ict-trainer-catchup.timer:   installed, disabled (Claude enables via diag relay; daily 08:00 UTC).
   ict-trainer-publish.service: installed, enabled (oneshot).
   ict-trainer-publish.timer:   installed, enabled (every 2 min).
   ict-trainer-forecast.service: installed, enabled (oneshot; M19 fc_* producer).
-  ict-trainer-forecast.timer:   installed, enabled (every 15 min).
+  ict-trainer-forecast.timer:   installed, enabled (bar-aligned, :00/:15/:30/:45 +30s).
   ict-promotion-readiness.service: installed, disabled (Claude enables via diag relay).
   ict-promotion-readiness.timer:   installed, disabled (Claude enables via diag relay).
-  ict-drift-retrain.service: installed, disabled (Claude enables via diag relay; RETRAIN_PLAN_ONLY=1 by default).
-  ict-drift-retrain.timer:   installed, disabled (Claude enables via diag relay).
+  ict-drift-retrain.service: installed, no timer (started on demand by the weekly /ml-review; RETRAIN_PLAN_ONLY=1).
   Live trader status: this VM is NOT the live trader.
   Claude enables training autonomously via trainer-vm-diag:
     cmd: sudo systemctl enable --now ict-trainer.timer

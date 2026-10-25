@@ -1,0 +1,117 @@
+id: RQ-20261024-f08c-22
+title: 'Variant of eba2-02 (path metrics at bar 12 failed on the prop legs): read the metrics LATER, at bar 24, when more of the path exists'
+status: done
+cadence: once
+roadmap:
+- L-ATM
+- M20
+theme: live_strategy
+priority: 3
+kind: experiment
+question: 'On trend_donchian_eth_prop and trend_donchian_sol_prop (1h), do path metrics read at bar 24 predict peak-to-exit giveback beyond bars-in-trade
+  and current R, by R2 >= 0.02 or log-loss >= 0.01 in >= 4 of 6 folds? DIAGNOSIS of the first test (eba2-02): MEASURED in RQ-20261022-eba2-02:
+  at k=12, 523 of 1085 eth_prop trades had already exited, leaving a survivor pool with 4 of 6 folds on R2 but gain +0.0014. Reading later keeps
+  only longer trades (fewer, so n may fall under the 100 floor and read INDETERMINATE) but gives the features more path. Class: wrong parameter
+  region; this unit brackets k from the other side of 12 so the two units together show whether any k carries information on the prop legs.'
+why_this_matters: 'Operator rule 2026-10-22: a first-test fail is diagnosed and re-asked, never retired. Lane EXIT-FAILED-LEVERS-DIAG (2026-10-24),
+  row EXIT-FAILED-LEVERS-DIAG, serves eba2-02. Diagnosis and evidence: docs/research/exit-failed-levers-diag-2026-10-24.md. Looked before authoring
+  (PLANNING s1): the queue was grepped for the same leg and lever family; no queued or done unit asks this exact arm set. Parents: research/queue/RQ-20261022-eba2-02.yaml,
+  research/queue/RQ-20261022-007.yaml, research/queue/RQ-20261022-eba2-01.yaml.'
+power:
+  expected_n: 796
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'n = 796 is the MEASURED baseline trade count of trend_donchian_eth_prop + trend_donchian_sol_prop in the parent verdict(s). Unpaired
+    one-sample MDE = 2.8/sqrt(n) = 0.1 sd. Arms share most trades, so the paired difference is far tighter than that (MEASURED in the diag doc:
+    paired sd 0.06-0.5 R per entry); the unit''s bar is stated in R and is not claimed to be detectable at the unpaired MDE. A unit whose lever
+    touches a handful of trades is reported with its differing-trade count.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-F08C-22
+  registered_at: '2026-10-24'
+  registered_before_run: true
+  statistic: 'scripts/research/path_metric_giveback.py (the SAME features, label, ridge/logistic models as RQ-20261022-eba2-02) at k=24 bars (1h),
+    legs trend_donchian_eth_prop and trend_donchian_sol_prop, window 2020-07-01 .. 2026-10-15 23:59, 6 calendar folds, pooled over legs: r2_gain,
+    ll_gain, fold wins, net of the harness venue-aware stack (fee 7.5 bps round trip, slippage 3.0 bps round trip, funding 1.0 bps per 8h window;
+    MEASURED in the parent verdicts'' cost_stack).'
+  rule: 'INDETERMINATE IF pooled n < 100. PASS IF (r2_gain >= 0.02 AND r2 fold wins >= 4 of 6) OR (ll_gain >= 0.01 AND ll fold wins >= 4 of 6),
+    the SAME bar as eba2-02: the metric carries information on the prop legs at this k; a lever-arm unit is then pre-registered, never a config
+    change. FAIL otherwise; the idea is not retired. Thresholds are not changed after any result.'
+what_it_does_not_do: 'Edits no config and places no order. Not a promotion case: a PASS is a discovery needing one disjoint-window confirmation.
+  HARNESS CAVEAT (code-read 2026-10-24, scripts/backtest_pullback.py / backtest_trend.py): a stop or ratcheted trail that the bar trades through
+  fills AT the stop price, not at a gap-open worse than it, and lever exits fill at the bar close; that flatters every arm in proportion to its
+  stop exits, so it favours tight-trail arms. A PASS must be re-run gap-adjusted before any Tier-3 note. A label study: edits no config, places
+  no order. k is a single pre-registered choice. Volatility is an uncontrolled confound on these legs.'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 300
+  confidence: 0.2
+  basis: 'stand-in: live exit lever on a rostered leg; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  why_runner: Fetches keyless public candles for a pinned window and runs the harness; reads no trainer data.
+run:
+  command:
+  - python3
+  - scripts/research/path_metric_giveback.py
+  - --leg
+  - trend_donchian_eth_prop
+  - --leg
+  - trend_donchian_sol_prop
+  - --k
+  - '24'
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '100'
+  - --min-r2-gain
+  - '0.02'
+  - --min-ll-gain
+  - '0.01'
+  - --big-quantile
+  - '0.5'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261024-f08c-22
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/exit_lever_ablation.py
+- docs/research/exit-failed-levers-diag-2026-10-24.md
+- research/queue/RQ-20261022-eba2-02.yaml
+- research/queue/RQ-20261022-007.yaml
+- research/queue/RQ-20261022-eba2-01.yaml
+programme: P1
+last_dispatched_at: '2026-10-24T16:01:34+00:00'
+grading:
+  attested: RULE-F08C-22
+  auto: true
+  decision_rule_id: RULE-F08C-22
+  evidence:
+  - research/results/RQ-20261024-f08c-22/40109678159.jsonl
+  graded_at: '2026-10-24'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

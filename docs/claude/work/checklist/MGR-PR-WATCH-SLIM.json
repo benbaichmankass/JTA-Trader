@@ -1,0 +1,30 @@
+{
+  "id": "MGR-PR-WATCH-SLIM",
+  "title": "Manager subscribes only to ops-flags + its own PRs; lanes wake on green (context-overhead cut)",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator 2026-10-25 ~10:25Z (chat, verbatim): \"I just want to make sure that the overhead changes aren't putting any work at risk - as long as it's fine that your not subscribed, then let's make that change.\" Risk check: lanes stay subscribed to their own PRs and fix red CI; lanes wake the manager on green for hold PRs; the 3-hourly check-in lands any green PR waiting on the manager; a lane is never archived while it owns an unmerged PR. Worst case of a missed wake is one check-in interval of merge delay, no dropped work. Rule in .claude/skills/manager/SKILL.md \u00a7 Manager <-> lane.",
+  "updated_at": "2026-10-25T10:30:04Z",
+  "updated_by": "session_01XhMPopphHY7qu8H8NqJqqC",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "writeback": {
+    "roadmap": "none: process rule in the manager skill; L-OPS where/next unchanged",
+    "arch": "none: no component, path or contract changed"
+  },
+  "observation": {
+    "what": "the next manager session grows context slower than ~150k tokens/h (2026-10-25 baseline, session_01XhMPop: 75k->587k in 3.3h) and no lane PR waits on the manager more than one check-in interval",
+    "how_to_check": "get_session used_tokens vs created_at on the next Manager Session at its first rotation; open PRs with landing hold older than 3h at each check-in",
+    "due_by": "2026-10-28T00:00Z"
+  },
+  "_seq": 652
+}

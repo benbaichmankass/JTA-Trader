@@ -1,0 +1,144 @@
+{
+ "run": "RESEARCH-OPS-20261014-2047",
+ "finished_at": "2026-10-14T21:10:00Z",
+ "by": "research-ops-lane-20261014-2047",
+ "baseline": "comms/research/ops/20261014T1500Z.json",
+ "floor": 25,
+ "throughput": {
+  "runnable_before": 27,
+  "runnable_after": 28,
+  "queued": 244,
+  "units": 688,
+  "fired_24h": 87,
+  "fired_7d": 319,
+  "results_landed_24h": 99,
+  "result_files_unreadable": 0,
+  "hours_since_last_dispatch": 0.6,
+  "idle_alarm": false,
+  "as_of": "2026-10-14T20:48Z",
+  "note": "MEASURED on origin/main 318690b1: runnable 27 (floor met). After this PR the 2 new units add 2 (dry run: both would_dispatch on github_runner); 29 is the dry-run expectation, not an observation. Revised after dedupe: one new unit (77dc-02), so 28 expected, not 29."
+ },
+ "mechanism": {
+  "dispatch_receipt": "ok: check_research_queue_dispatch_liveness fresh; throughput last dispatch 20:13Z",
+  "collector": "ok: result_files_unreadable 0; 15 verdict.json committed since 15:05Z",
+  "stranded_stamp_prs": "not listed this pass (GitHub PR list not queried)",
+  "watchdog": "tail only: newest row read is the 2026-10-13T19:16Z backend:trainer self_healed row; no escalated row seen in the last 5",
+  "incident": "none"
+ },
+ "results_read": {
+  "pass": 2,
+  "fail": 4,
+  "indeterminate": 9,
+  "producer_failed": 0,
+  "population": "15 verdict.json files under comms/research/ committed since 2026-10-14T15:05Z, all read_state measured",
+  "units": [
+   {
+    "unit": "RQ-20261014-de02-01",
+    "verdict": "pass",
+    "detail": "catboost beats LightGBM on BOTH BTC and ETH 1h regime (n=48000), arm_status all ok (engine fix from the 14:47 pass confirmed). Rule earns a candidate-manifest note only; nothing swapped."
+   },
+   {
+    "unit": "RQ-20261014-de02-04",
+    "verdict": "pass",
+    "detail": "PPI m/m surprise vs ES=F, negative sign, t_eff -2.17/-3.43/-2.98 at 1/3/5d (n=139). Only pass of 14 survey-surprise event studies this cycle; multiple-comparison exposure noted. Follow-ups 77dc-01 (post-2021 split) and 77dc-02 (placebo). Not a promotion case."
+   },
+   {
+    "unit": "RQ-20261014-de02-02",
+    "verdict": "fail",
+    "detail": "NFP/ES=F n=140, no horizon reached t bar in the positive direction."
+   },
+   {
+    "unit": "RQ-20261014-de02-03",
+    "verdict": "fail",
+    "detail": "ISM manufacturing/ES=F n=141, same."
+   },
+   {
+    "unit": "RQ-20261014-de02-05",
+    "verdict": "fail",
+    "detail": "ADP/ES=F n=139, same."
+   },
+   {
+    "unit": "RQ-20261014-de02-06",
+    "verdict": "fail",
+    "detail": "API crude/CL=F n=106, same."
+   },
+   {
+    "unit": "RQ-20261014-002",
+    "verdict": "indeterminate",
+    "detail": "prop fit trend_donchian_eth_4h n=116: NULL, ev>0 on all seeds but P(net>0)<0.7 on at least one. Rule: no roster proposal."
+   },
+   {
+    "unit": "RQ-20261014-003",
+    "verdict": "indeterminate",
+    "detail": "twin of 002 (confirmatory), n=116, same NULL."
+   },
+   {
+    "unit": "RQ-20261014-004",
+    "verdict": "indeterminate",
+    "detail": "prop fit trend_donchian_eth_prop n=163: NULL, same shape."
+   },
+   {
+    "unit": "RQ-20261014-005",
+    "verdict": "indeterminate",
+    "detail": "twin of 004, n=163, same NULL."
+   },
+   {
+    "unit": "RQ-20261013-1414-03",
+    "verdict": "indeterminate",
+    "detail": "non-boosted families vs prior on direction (n=62280): between bar and floor. ML-F9 stays open."
+   },
+   {
+    "unit": "RQ-20261013-a793-01",
+    "verdict": "indeterminate",
+    "detail": "HAR-RV regressors, 15m regime (n=36000): between bar and floor."
+   },
+   {
+    "unit": "RQ-20261013-a793-02",
+    "verdict": "indeterminate",
+    "detail": "same family, n=36000, between bar and floor."
+   },
+   {
+    "unit": "RQ-20261013-a793-03",
+    "verdict": "indeterminate",
+    "detail": "same family, n=72000, between bar and floor. The a793 NOT_RUNNING handoff item is cleared: all three landed."
+   },
+   {
+    "unit": "RQ-20261014-65cc-07",
+    "verdict": "indeterminate",
+    "detail": "tabicl/tabpfn both 'not importable'; not a FAIL by rule. FRONTIER-LEVER-TABULAR note appended."
+   }
+  ],
+  "note": "pass 2 + fail 4 + indeterminate 9 = 15 (= the 15 verdict.json files). Each was read against its own registered decision_rule; the prop-fit NULLs are an engine verdict on P(net>0), not a config change. No result changes live config. News layer and WEPE are NOT retired on these results. Dispositions in research_disposition.py are for the e35/m20/gld corpora, which these units are not in, so none were recorded there."
+ },
+ "unlocked": [],
+ "retired": [],
+ "levers_filed": [
+  {
+   "lever": "tabicl/tabpfn packages on the research envs",
+   "ref": "FRONTIER-LEVER-TABULAR (note appended, third observation)"
+  }
+ ],
+ "units_authored": [
+  "RQ-20261014-77dc-02 (PPI placebo, anchor +10 trading days; parent de02-04)"
+ ],
+ "followups_filed": [
+  "ML-F9 close text updated in docs/plans/ml-plan-items.yaml (indeterminate, stays open)",
+  "RESEARCH-OPS-20261014-1447 closed done: observation met",
+  "RQ-20261014-77dc-01 (post-2021 split) REMOVED on manager review: duplicate of RQ-20261014-4a4c-01 (P4, #18073, merged 19:05Z), which already queues the same ppi_mom >=2021-01-01 half. The replication question is covered by 4a4c-01; 77dc-02 complements 4a4c-03 (-10d pre-release placebo)."
+ ],
+ "not_run": [
+  "stranded-PR listing via GitHub MCP",
+  "full watchdog_incidents.jsonl read",
+  "blocked/ audit beyond blocker_watch.py (30+ files in research/queue/blocked/ not individually reopened)",
+  "needs_review triage (37 units)",
+  "unrouted-pipeline routing pass (pipeline.py --stats not run)",
+  "full pytest (only tests/test_research_queue.py run: 91 passed)"
+ ],
+ "handoff": [
+  "Manager: hold PR #18098 (one hand-authored unit, 77dc-02, E57). It is a placebo, so a PASS there counts against de02-04.",
+  "blocker_watch NOT_RUNNING: RQ-20261014-f516-04..10 (never dispatched; check route), RQ-20261014-470a-11 and RQ-20260928-001 (NEEDS_LANE, empty or prose run.workflow).",
+  "blocker_watch UNPROVEN_OVERDUE (9 rows past due_by, incl. WEPE-G3-BACKFILL: RQ-20261012-904 not yet graded): manager to disposition.",
+  "ml_plan_status shows CLOSED-OPEN for ML-R3, ML-N2, ML-F7 (not touched by this pass): their refs are done but the plan items still say open.",
+  "37 grading.needs_review units still untriaged; longer-window twins for sol_pullback_2h / trend_donchian_xrp_4h (n < 39 at 730d)."
+ ]
+}

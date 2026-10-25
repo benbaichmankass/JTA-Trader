@@ -1,5 +1,11 @@
 name: work-decision-commit
 
+# ⚠️ SCHEDULE RETIRED 2026-09-21 — operating reset.
+# This workflow served the eight-register operating model, which is archived under
+# docs/archive/2026-09-21-operating-reset/. Its cron is commented out below rather
+# than deleted, so re-arming it is one uncomment. `workflow_dispatch` still works.
+# Scope of record: docs/plans/OPERATING-PLAN-2026-09-21.md
+
 # Phase H — the half that makes a SUBMITTED decision TRUE.
 #
 # WHY IT EXISTS, and why it ships in the same change as the write route.
@@ -42,11 +48,11 @@ name: work-decision-commit
 # make decisions; it records ones the operator already made.
 
 on:
-  schedule:
-    # Every 2h at :35. Offset off the :20 slots work-digest uses so a digest
-    # rendered right after a commit sees the landed answer rather than racing
-    # it — the same ordering argument work-digest makes about probes/due-list.
-    - cron: "35 1,3,5,7,9,11,13,15,17,19,21,23 * * *"
+  # schedule:
+    # # Every 2h at :35. Offset off the :20 slots work-digest uses so a digest
+    # # rendered right after a commit sees the landed answer rather than racing
+    # # it — the same ordering argument work-digest makes about probes/due-list.
+    # - cron: "35 1,3,5,7,9,11,13,15,17,19,21,23 * * *"
   workflow_dispatch:
 
 permissions:
@@ -64,8 +70,15 @@ jobs:
     # verify-merged waits up to 30m for the auto-merge PR. A budget under 35
     # kills the job mid-wait and reports failure for a merge about to succeed.
     # This is the value tests/test_commit_to_main_callers.py pins.
-    timeout-minutes: 40
+    timeout-minutes: 90  # was 60: shared commit-to-main wait 50->80 (W41)
     steps:
+      - name: Require VM host secrets (fail closed)
+        env:
+          NEED_VM_SSH_HOST: ${{ secrets.VM_SSH_HOST }}
+        run: |
+          fail=0
+          [ -n "${NEED_VM_SSH_HOST}" ] || { echo "::error::secret VM_SSH_HOST not set (Settings > Secrets and variables > Actions); refusing to continue before any ssh"; fail=1; }
+          exit "$fail"
       - name: Checkout main
         uses: actions/checkout@v4
         with:
@@ -83,7 +96,7 @@ jobs:
       - name: Prepare SSH
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
-          VM_SSH_HOST: ${{ vars.VM_SSH_HOST || '141.145.193.91' }}
+          VM_SSH_HOST: ${{ secrets.VM_SSH_HOST }}
         run: |
           set -euo pipefail
           if [ -z "${VM_SSH_KEY}" ]; then
@@ -99,7 +112,7 @@ jobs:
         id: pull
         env:
           DIAG_READ_TOKEN: ${{ secrets.DIAG_READ_TOKEN }}
-          VM_SSH_HOST: ${{ vars.VM_SSH_HOST || '141.145.193.91' }}
+          VM_SSH_HOST: ${{ secrets.VM_SSH_HOST }}
           VM_SSH_USER: ${{ vars.VM_SSH_USER || 'ubuntu' }}
         run: |
           set -euo pipefail

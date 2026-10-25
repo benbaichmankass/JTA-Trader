@@ -1,0 +1,82 @@
+{
+  "run": "RESEARCH-OPS-20261011-2047",
+  "finished_at": "2026-10-11T21:10:00Z",
+  "by": "research-ops-2047",
+  "baseline": "comms/research/ops/20261011T1500Z.json",
+  "floor": 25,
+  "throughput": {
+    "runnable_before": 17,
+    "runnable_after": 25,
+    "queued": 144,
+    "fired_24h": 34,
+    "fired_7d": 222,
+    "results_landed_24h": 43,
+    "hours_since_last_dispatch": 1.0,
+    "idle_alarm": false,
+    "as_of": "2026-10-11T20:49Z",
+    "note": "runnable_after = 17 measured + 8 authored (RQ-20261011-8753-01..08); to be re-measured by the next pass. The templates hold 3 points (refill daily 05:50Z) so the true supply is ~28."
+  },
+  "mechanism": {
+    "dispatch_receipt": "ok (fresh, 7.3h at 21:00Z; the receipt is stamped per run, not per cycle)",
+    "collector": "ok: batch PR #17629 (run 38171810585) and result PR #17630 opened 20:24Z, CI pending at 21:00Z",
+    "stranded_stamp_prs": [17562, 17591],
+    "closed_prs": {
+      "17562": "stamps for 353c-14..16 now on main (last_dispatched_at 2026-10-11T10:13:35Z on all three); superseded",
+      "17591": "stale liveness receipt from run 38145119678; a fresher receipt is on main"
+    },
+    "left_open": {
+      "17629/17630": "fresh (<1h) result PRs, auto-landing",
+      "17170/17085": "result PRs for RQ-20261005-814 / RQ-20261007-004, read_state not_attempted, open since Oct 8, not mine to close without reading why they never landed (handoff)",
+      "17287/17138/17339/17326/17342/16874/16798/16779/17346/17048/17012/16826/16792/17051": "older automation PRs; NOT audited this pass (a first attempt at a bulk audit script was malformed and its output was discarded); handoff"
+    },
+    "incident": "Dispatch stall 17:53Z -> 19:50Z, run 38161538083 (landing step waited on stamp PR #17618 while main's guards were red). Run 38169703925 (workflow_dispatch, 19:50Z) completed success and fired 0ac8-01 and 1fce-04/05; its stamps landed via #17626 at 20:36Z; #17618 (stamps of the failed run) merged. Scheduled run 38171810585 started 20:20Z and landed result PRs. VERDICT: the dispatcher RESUMED after the incident; no new pipeline defect found.",
+    "dispatcher_resumed": true
+  },
+  "results_read": {
+    "pass": 2,
+    "fail": 8,
+    "indeterminate": 0,
+    "units": [
+      {"unit": "RQ-20261011-0ac8-01", "verdict": "pass", "read_from": "open PR #17629 (record not yet on main)", "n": 2880, "rule": "RULE-RQ1011-0AC8-01-ML-RUNNER-SMOKE applied verbatim: logit minus prior macro_f1 +0.1586 (G0) and +0.1341 (G1) >= +0.05 on BOTH groups, 4 folds each, read_state measured, lightgbm control status ok (installed on the trainer). Plumbing PASS only; says nothing about any model. ML-F6 closes once the record is on main."},
+      {"unit": "RQ-20261011-8025-02", "verdict": "pass", "net_total_r": 0.3992, "n": 321, "note": "trend HYPEUSDT 1h, 0.0012 R/trade ~ zero edge; passes the rule, Stage-0 evidence only; no action, because the rule names no follow-up for a pass and the effect is indistinguishable from zero"},
+      {"unit": "RQ-20261011-1fce-04", "verdict": "fail", "net_total_r": -118.6625, "n": 1395, "note": "squeeze ADA 15m -> confirmatory RQ-20261011-8753-01"},
+      {"unit": "RQ-20261011-1fce-05", "verdict": "fail", "net_total_r": -70.9534, "n": 1391, "note": "squeeze DOGE 15m -> RQ-20261011-8753-02"},
+      {"unit": "RQ-20261011-6897-04", "verdict": "fail", "net_total_r": -33.1585, "n": 1838, "note": "trend DOGE 15m -> RQ-20261011-8753-03"},
+      {"unit": "RQ-20261011-6897-05", "verdict": "fail", "net_total_r": -209.4255, "n": 1955, "note": "trend BNB 15m -> RQ-20261011-8753-04"},
+      {"unit": "RQ-20261011-6897-06", "verdict": "fail", "net_total_r": -9.5708, "n": 968, "note": "pullback ADA 15m -> RQ-20261011-8753-05"},
+      {"unit": "RQ-20261011-6897-07", "verdict": "fail", "net_total_r": -2.4593, "n": 716, "note": "trend AAVE 1h -> RQ-20261011-8753-06"},
+      {"unit": "RQ-20261011-6897-08", "verdict": "fail", "net_total_r": -33.6949, "n": 533, "note": "squeeze AAVE 1h -> RQ-20261011-8753-07"},
+      {"unit": "RQ-20261011-8025-01", "verdict": "fail", "net_total_r": -1.6029, "n": 716, "note": "trend LINK 1h -> RQ-20261011-8753-08"}
+    ],
+    "rule_applied": "each breadth unit's registered rule: PASS net>0 and n>=39 (Stage-0 only); FAIL net<=0 with n>=39 is ONE pass and re-queues a confirmatory run before it is read as a kill. Confirmatory units carry the stricter clause that a second FAIL closes the cell. Caveat carried from 1fce-01: the dispatch has no window input, so a re-run confirms reproducibility, not generality.",
+    "not_read": "RQ-20261011-8025-03 (indeterminate, in open PR #17630, not on main) and the historical e35/m20 'unread' rows in research_disposition.py --unread-only (leg-level, not queue results; out of this pass)"
+  },
+  "unlocked": [],
+  "blocked_audit": {
+    "RQ-20261011-9da8-01": "stays blocked: FRONTIER-LEVER-TSFM backend (build_forecasts --backend chronos-2) + side-stream; trainer route no longer a blocker",
+    "RQ-20261011-9da8-02": "stays blocked: catboost/tabicl/tabpfn not installed on trainer (FRONTIER-LEVER-TRAINER-DEPS) and 17f4-02 label census",
+    "RQ-20261011-9da8-03": "stays blocked: conformal_abstain_eval.py + ML-HEAD-AGREEMENT-JOIN",
+    "RQ-20261011-9da8-04": "stays blocked: ML-LEG-CORPUS (per-trade corpus)",
+    "RQ-20261011-9da8-05": "stays blocked: cost half landed (#17608) but the question is a TSMOM signal and backtest_vol_target.py is a book-level overlay with no entry signal; filed FRONTIER-LEVER-XSEC-RUNNER",
+    "RQ-20261011-9da8-06": "stays blocked: xsec harness has no verdict.json wrapper, no runner-fetched daily corpus or funding series; same lever",
+    "RQ-20261011-9da8-07": "stays blocked: FRONTIER-LEVER-LEADLAG (no harness)",
+    "other_blocked": "the ~36 older blocked/ units (RQ-2026092x..1009) were not re-audited this pass; blocker_watch.py reports 7 NOT_RUNNING (8025-06 and fc31-01..06) which are in fact dispatchable (dry run lists them would_dispatch; last_dispatched_at null because they have not yet been reached), and 22 UNPROVEN_OVERDUE checklist rows that are the manager's"
+  },
+  "retired": [],
+  "levers_filed": [
+    {"lever": "runner wrapper + daily corpus + funding series for xsec_momentum; TSMOM signal harness for 9da8-05", "ref": "FRONTIER-LEVER-XSEC-RUNNER"}
+  ],
+  "units_authored": [
+    "RQ-20261011-8753-01", "RQ-20261011-8753-02", "RQ-20261011-8753-03", "RQ-20261011-8753-04",
+    "RQ-20261011-8753-05", "RQ-20261011-8753-06", "RQ-20261011-8753-07", "RQ-20261011-8753-08"
+  ],
+  "authoring_note": "8 units (above the ~6 cap) because all 8 are rule-mandated confirmatory follow-ups of FAILs, each cloned from the shape of RQ-20261011-1fce-01..03, roadmap L-PROP. Hand-authored, so E57 holds them for a human merge if the landing guard says so.",
+  "followups_filed": ["FRONTIER-LEVER-XSEC-RUNNER"],
+  "not_run": ["bulk audit of the 14 older automation/* PRs", "re-audit of the older blocked/ units", "ML plan write-back of ML-F6 (waits for the smoke record to be on main)"],
+  "handoff": [
+    "Next pass: confirm PR #17629 landed and research/results/RQ-20261011-0ac8-01/ is on main; then list it as results_read, close ML-F6 / ML-RQ-RUNNER in docs/plans/ml-plan-items.yaml and the checklist row, and add the 0ac8 smoke to the roadmap M25 measured-state table.",
+    "Next pass: grade the 8753-01..08 results; a second FAIL closes the cell with a stated reason (kill).",
+    "Next pass: audit the older automation/* PRs (#17287 #17138 #17339 #17326 #17342 #16874 #16798 #16779 #17346 #17048 #17012 #16826 #16792 #17051 #17170 #17085) against main one by one; close those whose content is on main.",
+    "Re-measure runnable: it should read ~25 after the 8753 units merge; the daily replenish (05:50Z) adds up to 3."
+  ]
+}

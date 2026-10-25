@@ -1,0 +1,18 @@
+{
+  "id": "EXIT-HEAD-PULLBACK-DRIVER",
+  "title": "Lever: committed driver running backtest_pullback.py through the exit-head replay (sibling of exit_head_prop_swap_feasibility.py) so RQ-20261008-901 can run",
+  "phase": "W6",
+  "state": "queued",
+  "owner": "unassigned",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-10 RESEARCH-NIGHT-1010] RQ-20261008-901 (blocked) - scripts/ml/exit_head_replay.py loads backtest_trend.py only (HARNESS_REL). No row referenced the unit. Observation that would close: RQ-20261008-901 out of blocked/ with run.workflow set. [2026-10-18 lane ML-UNBLOCK-1018] Reviewed, not built: the driver needs backtest_pullback.py's trade list in exit_head_replay.replay_trade's shape plus a golden byte-identity test against the harness (1,583-line harness; scripts/research/exit_head_prop_swap_feasibility.py is the trend sibling to copy). Owner: manager dispatch (Sonnet, ceiling $8). Due: before RQ-20261008-901 ages past 30 days in blocked/ (2026-11-07); if not dispatched by then, ML-S2 closes by its registered exhaustion text ('line is exhausted on current features').",
+  "updated_at": "2026-10-18T07:01:10Z",
+  "updated_by": "session_019BtYk72AWwvaGkwH81nW96",
+  "_seq": 382
+}

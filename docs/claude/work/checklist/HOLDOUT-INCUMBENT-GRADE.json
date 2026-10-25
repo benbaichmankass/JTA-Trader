@@ -1,0 +1,22 @@
+{
+  "id": "HOLDOUT-INCUMBENT-GRADE",
+  "title": "Holdout bar vs the incumbent: exit_lever_ablation --grade holdout must report the declared arm A's held-back n/net_r, and a 'replace-holdout' grade must exist so each money-leg Q9 PASS gets a real confirmation (PI-20261018-SALS1018-0001, PI-20261021-IGHT1021-0001)",
+  "phase": null,
+  "state": "queued",
+  "owner": "lane (sonnet)",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 10,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-25 ROUTE-1025] Owns PI-20261018-SALS1018-0001 and PI-20261021-IGHT1021-0001 (same code: scripts/research/exit_lever_ablation.py --grade holdout). RE-CHECKED on main 2026-10-25: scripts/research/holdout_incumbent_compare.py exists, but exit_lever_ablation.py has no incumbent-on-held-back-span output and no 'confirmed_not_better' / replace-holdout grade (grep); and all 10 queue units named in IGHT1021-0001 (RQ-20261018-035, RQ-20261019-001/013/016/017/021/026, RQ-20261020-006/014, RQ-20261018-053) still lack a confirm_unit (grep -L confirm_unit returned all 10). BUILD (Tier 1 research tooling): (1) --grade holdout also reads the declared arm A on the held-back span (A is fixed before the run, so reading it is not a second selection) and labels a PASS whose selected arm trails A as 'confirmed_not_better'; (2) add a 'replace-holdout' grade: boundary fixed from baseline entry times, select among candidates on discovery trades only with the replace rule, apply the replace rule ONCE on the held-back span (incumbent vs selected); (3) author one confirmation node per money-leg PASS (xrp4h x3, ief1d, slv1d x2; gld1d paper last; ada4h/sol4h are on no roster) -- hand-authored queue units need landing=hold. Also re-read slv1d momentum_stale 8/20 (RQ-20261016-016 PASS) beside the failing 12/20 arm (RQ-20261019-028) under the same grade before any declare. Measured obstacles from IGHT1021-0001 stand (no earlier disjoint window; forward windows take years). Tier-3 bar note (R-HOLDOUT for config-CHANGE proposals) goes to the operator with the exact text, not merged here.",
+  "priority_rank": 23,
+  "updated_at": "2026-10-25T06:05:43Z",
+  "updated_by": "session_01MCfi31EKuoRfriU5E7yj2e",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "_seq": 642
+}

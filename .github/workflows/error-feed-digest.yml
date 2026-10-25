@@ -1,5 +1,11 @@
 name: error-feed-digest
 
+# ⚠️ SCHEDULE RETIRED 2026-09-21 — operating reset.
+# This workflow served the eight-register operating model, which is archived under
+# docs/archive/2026-09-21-operating-reset/. Its cron is commented out below rather
+# than deleted, so re-arming it is one uncomment. `workflow_dispatch` still works.
+# Scope of record: docs/plans/OPERATING-PLAN-2026-09-21.md
+
 # Feed the trader's ERROR FEED to the manager session, grouped for triage.
 #
 # WHY (operator ask, 2026-09-02)
@@ -43,13 +49,13 @@ name: error-feed-digest
 # no VM mutation, no config write, and nothing here can fire a job.
 
 on:
-  schedule:
-    # Hourly at :35. The repo minimum is hourly, and :35 keeps this clear of
-    # the :00 rush where every other cron in the org lands. It is deliberately
-    # NOT aligned to `due-list` at 05:50 — that run re-renders DUE.md from
-    # whatever digest is committed, so the two are coupled through the artifact
-    # rather than through a schedule that has been measured not to hold.
-    - cron: "35 * * * *"
+  # schedule:
+    # # Hourly at :35. The repo minimum is hourly, and :35 keeps this clear of
+    # # the :00 rush where every other cron in the org lands. It is deliberately
+    # # NOT aligned to `due-list` at 05:50 — that run re-renders DUE.md from
+    # # whatever digest is committed, so the two are coupled through the artifact
+    # # rather than through a schedule that has been measured not to hold.
+    # - cron: "35 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -63,7 +69,7 @@ concurrency:
 jobs:
   digest:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 90  # was 60: shared commit-to-main wait 50->80 (W41)
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
@@ -168,3 +174,13 @@ jobs:
             (digest + the due-list rendered over it); auto-merge.
           branch-prefix: automation/error-feed-digest
           verify-merged: "true"
+          # RECOMPUTE, so a conflict on a generated artifact is resolvable.
+          # Every path above is rendered by these two commands, so when a
+          # merge of `main` conflicts there is no side to take -- the correct
+          # merge is to re-run the renderer over the merged inputs. Without
+          # this the action ABORTS and the branch strands: 23 of these PRs
+          # had stacked up unmerged since 2026-09-13, each an hourly run
+          # conflicting with every earlier unmerged run of ITSELF.
+          refresh-command: >-
+            python3 scripts/ops/error_feed_digest.py --write
+            && python3 scripts/ops/render_due_list.py --write

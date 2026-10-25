@@ -1,0 +1,36 @@
+{
+  "run": "RESEARCH-OPS-20261025-0847", "finished_at": "2026-10-25T09:30:00Z", "by": "session_01VNfPdKo6kgRxDjjbYM55Q3",
+  "floor": 57, "floor_basis": "computed_floor(fired_24h 72)", "authoring_queue_depth": 34,
+  "idle_backends": ["github_runner_data", "kaggle", "kaggle_cpu", "trainer"],
+  "needs_review_triaged": 8, "needs_review_left": 28,
+  "throughput": {"runnable_before": 50, "runnable_after": 50, "queued": 147, "fired_24h": 72, "results_landed_24h": 69, "hours_since_last_dispatch": 0.9, "idle_alarm": false,
+                 "after_basis": "check_research_queue_throughput 08:49Z on the pre-PR tree; the new programme-node unit (P1-Q11-transfer-read -> next RQ id) is emitted by the next research-queue-replenish run after merge, so it counts only then"},
+  "mechanism": {"dispatch_receipt": "ok (fresh, 4.94 h at 08:50Z)", "collector": "ok (0 unreadable result files)", "stranded_stamp_prs": [],
+                "watchdog_open_incidents": 0, "incident": null,
+                "note": "open automation PRs #20009 (receipt) and #20011 (SLO status) are >3 h old and #20009 is mergeable_state dirty; the receipt on main is fresh, so superseded not a defect (the 05:25Z receipt was overtaken by later ones)"},
+  "results_read": {"pass": 5, "fail": 12, "indeterminate": 4,
+                   "units": ["since 03:30Z, 22 files / 21 units; ungraded-yet (queued with a landed row; research-queue-grade.yml closes them): 0142-02 fail, 0142-04 PASS, 0142-13 fail, 001 fail (VAR floor), 002 PASS, d7e6-10 fail, d7e6-11 fail",
+                             "graded already: 65ff-21/-23 indeterminate (Kaggle parity re-fire), ae17-43/-44/-45 pass (self-tests), 0142-01/-14/-15 fail, 09a6-02/-04 indeterminate, 1eb9-01 fail, f08c-15/-16/-17 fail"]},
+  "dispositions": [
+    {"unit": "RQ-20261024-0142-04", "verdict": "PASS (E30M20: 15.88 vs A 14.30 R, +1.58 vs bar 1.36, 6/6 folds, maxDD 4.30 vs 4.57, beats UT20 by 5.36; E30M15 +0.12 not a pass)", "follow_up": "discovery on the same n 68 window, multiple-testing denominator 3; written to programme node P1-Q6-xrp4h-declare STATUS: confirmation = same gate/dose on sol_4h/eth_4h (n 68 cannot be split); no live producer (MOMENTUM-LEVERS-LIVE); NO Tier-3 proposal yet"},
+    {"unit": "RQ-20261025-002", "verdict": "PASS (ppi_mom -> ES=F later half, h=3 n 69, IC -0.253, t_eff -2.145)", "follow_up": "the rule's own: placebo/cost rungs may proceed; RQ-20261025-003 is the next rung (already queued); still never a config edit; sub-window of the parent sample, a stability read"},
+    {"unit": "RQ-20261022-eba2-07", "verdict": "FAIL (read from 10-24; near miss on MT 2.5xATR: +4.59 R, 4/6 folds, maxDD 18.0 vs 21.3, beats UT by 25.8; MB -12.4)", "follow_up": "fail-is-not-dead: variants authored as the P1-Q11-transfer-read node unit, rule RULE-P1-Q11-R2-ADA-DOSE (MT20/MT35 + controls, same window, discovery grade)"}
+  ],
+  "unlocked": [], "retired": [],
+  "levers_filed": [],
+  "units_authored": [{"node": "P1-Q11-transfer-read", "unit": "emitted by next replenish (planned RQ-20261025-004 at 08:55Z dry run)", "rule": "RULE-P1-Q11-R2-ADA-DOSE"}],
+  "followups_filed": [{"what": "xrp_4h ER-gate dose PASS write-back", "ref": "research/programmes/01-active-trade-management.yaml P1-Q6-xrp4h-declare"}],
+  "authoring": {"queue_depth": 36, "nodes_drafted": 1, "nodes": ["P1-Q11-transfer-read"], "nodes_mooted": ["P2-Q4-tsfm-read (PASS-only branch; 9da8-01 graded FAIL, ML-F1 already written back)"],
+                "queue_depth_after": 34, "theme_shortfall": {"regime": 4, "ml_health": 8, "infra": 6},
+                "why_short": "budget: one drafted + one mooted; remaining shortfall is H1-THEME ml_health 8 and infra 6 -- no ready node maps to those themes (ml_health: P2 nodes are read-only/waiting; infra: P6 has none ready). That is a node-supply gap for the next pass or a topic lane, not an idle choice."},
+  "9807_04_cell_derivation": {"status": "run, cannot derive", "evidence": "RQ-20261014-9807-01 latest row research/results/RQ-20261014-9807-01/39743805939.jsonl: measured pass, but every real-money leg row is read_state insufficient_n (ada_pullback_2h n_closed 18 < min_n 20) and peak_lower_bound_share is 1.0 on all strategy rows, i.e. giveback is a lower bound; the harness-ledger route was already shown unusable (blocked_on, 2026-10-16). Cells stay un-keyed; the path-metric chain (eba2-01/-04 PASS, -07/-08 FAIL) superseded the census-keyed-stop idea. 9807-04 stays in blocked/ on EXIT-PATH-EMIT-OFFLINE (landed_unproven).", "decision": "unit not edited; consider retiring 9807-04 as superseded by Q11 at the next topic lane"},
+  "not_run": [],
+  "handoff": [
+    "next research-ops: verify RQ-20261015-1631-01/-02 and RQ-20261018-001 land measured after the collector fix (row RESEARCH-OPS-20261025-0247 observation, due 10-31)",
+    "next research-ops: read the P1-Q11 DOSE unit (RULE-P1-Q11-R2-ADA-DOSE) once emitted; apply its rule verbatim",
+    "next research-ops: author the xrp_4h ER-gate confirmation on sol_4h/eth_4h (node P1-Q6-xrp4h-declare STATUS) -- first authoring choice",
+    "node supply for H1-THEME ml_health (8) and infra (6): no ready node; needs programme authoring in P2/P6 or checklist-row units",
+    "RQ-20261009-900 grader (blocked/, live_strategy / TP doctrine) still the largest blocked/ unblock; PI-20261022-HOPS2047-0001 due 2026-10-27",
+    "6 of the oldest needs_review units share the RESEARCH-TOOLING-GAPS owner (roster-walkforward rule vs whole-window payload): they re-fire and land wiring_only weekly; the lever is the fix, not more reads"
+  ]
+}

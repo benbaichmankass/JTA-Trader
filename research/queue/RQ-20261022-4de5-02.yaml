@@ -1,0 +1,112 @@
+id: RQ-20261022-4de5-02
+title: >-
+  trend_donchian_eth_prop tp_r 2.5 vs the incumbent tp_r 6.0, through the prop EV/survival sim against
+  EACH firm's DD limits (breakout_2, tradeify_1, velotrade_1), on the decision bar the leg will trade
+  -> declare tp_r 2.5 as the leg's predictive TP, or not.
+status: done
+cadence: once
+roadmap:
+- L-PROP
+theme: live_strategy
+priority: 1
+kind: experiment
+
+question: >-
+  Lane DECISION-BAR-MATCH / TP-ETHPROP-2P5 (manager session_01CSwhZWiw15rVCkjsJ8Cpuh, 2026-10-22).
+  Operator decision 2026-10-22 ~06:40Z (checklist TP-ETHPROP-2P5, verbatim): "Prop cost test first
+  (Recommended)" -- run the prop EV/survival check against the firms' DD limits, then declare.
+  RQ-20261016-007 derived K* = 2.5R (IS reach 0.130, OOS reach 0.135, calibration gap 0.005) but
+  graded INDETERMINATE: OOS per-trade delta vs tp_r 6.0 = -0.028R, CI95 [-0.066, +0.006] on the Bybit
+  stack. tp_r 6.0 is non-compliant with the TP doctrine (OOS reach 0.034; check_tp_doctrine reads
+  `unreachable`). Does tp_r 2.5 survive each firm's DD limits at least as well as 6.0 without giving
+  up material EV?
+
+why_this_matters: >-
+  Prop money on three accounts; the TP doctrine (operator 2026-10-06) requires a real predictive TP at
+  entry, and the leg has none. The prop accounts' DD limits are where a TP that banks gains earlier
+  could matter more than its per-trade R suggests.
+
+power:
+  expected_n: 1170
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    Full-window ledger on the adopted bar (~1172 closed / ~1682 forming trades, 2026-10-18 record);
+    the sim bootstraps day blocks from it. The rule grades seed-level EV / survival, not a t-test; the
+    power line is an ESTIMATE for the paired per-trade R difference.
+  feasibility:
+    source: none
+    accrual_basis: Replay + Monte-Carlo over public 1m klines pinned to 2026-10-20 23:59Z; nothing accrues.
+
+design:
+  ledgers: >-
+    scripts/research/decision_bar_match.py --tp-variant trend_donchian_eth_prop=2.5 runs the leg's arms a
+    second time with tp_r 2.5 (every other lever config-exact). T6 = the arm ledger at tp_r 6.0, T25 = at
+    tp_r 2.5, BOTH on the decision bar RQ-20261022-4de5-01 adopts for this leg (if that unit returns
+    DEMOTE_CANDIDATE this unit reports and proposes nothing).
+  sim: >-
+    prop_ev_grid.py -> prop_ev_sim.py, per firm, arms T6 and T25, same common args as
+    RULE-P5-GATE-BRK-PER-LEG: --sizing start --risk-pct <account risk_pct> --dd-switch-frac 0.8,
+    --ruleset <firm ruleset> --costs breakout --swap-model prorated --funded-start fresh --lev-cap 5,
+    seeds 1-5, path mode. breakout_2: breakout_turbo_1step, 0.0035; tradeify_1: tradeify_247_1step,
+    0.005; velotrade_1: velotrade_classic_1step, 0.005 (config/accounts.yaml, read 2026-10-22).
+
+decision_rule:
+  id: RULE-RQ-20261022-4de5-02
+  registered_at: '2026-10-22'
+  registered_before_run: true
+  statistic: >-
+    Per firm and seed (path mode): ev_net_usd_per_life and p_alive_at_horizon of T25 and T6.
+    Seed-median of each. Reported, never gating: full-window net R and expectancy of T25 vs T6 on the
+    Bybit stack, and P(reach 2.5R).
+  rule: >-
+    DECLARE_2P5 iff on EVERY firm (a) T25 has ev > 0 on all 5 seeds (pass_all_seeds, p_floor 0.0, n_floor
+    88) AND (b) seed-median p_alive(T25) >= seed-median p_alive(T6) - 0.02 AND (c) seed-median ev(T25) >=
+    seed-median ev(T6) - 0.10 x |seed-median ev(T6)|. -> Tier-3 proposal: tp_r 2.5 (tp_intent declared
+    predictive) on trend_donchian_eth_prop; revert = restore tp_r 6.0. NOT_DECLARED if any firm fails
+    (a), (b) or (c) -> no change; the leg's doctrine route stays the per-bar revision rule / in-trade
+    exit model (row TP-DOCTRINE); that firm's failure is named. INDETERMINATE if any firm's ledger n <
+    88 or a sim cell fails to run. Thresholds are not changed after any result.
+  what_it_does_not_do: >-
+    Edits no config; the proposal goes to the manager. Does not test any other TP level (2.5 was
+    selected by RQ-20261016-007's own pre-registered IS rule; this unit does not re-select).
+
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.3
+  bucket: own_losses
+  basis: three prop accounts on one leg; an estimate.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: prop_ev_grid 5 seeds x 2 arms x 3 firms; session-local.
+  why_runner: session-local in lane DECISION-BAR-MATCH.
+run:
+  workflow: none — session-local, scripts/research/decision_bar_match.py + scripts/research/prop_ev_grid.py
+lands:
+  store: docs/research/evidence/decision-bar-match-2026-10-22.json
+  assert_field: tp_eth_prop_2p5
+  note: ledgers comms/research/RQ-20261022-4de5-01/eth/arms/trend_donchian_eth_prop{,__tp2.5}__A_closed__trades.jsonl;
+    sim cells comms/research/RQ-20261022-4de5-01/prop/{eth_T6,eth_T25}/<firm>/.
+related:
+- research/queue/RQ-20261016-007.yaml
+- research/queue/RQ-20261022-4de5-01.yaml
+- docs/claude/work/checklist/TP-ETHPROP-2P5.json
+last_dispatched_at: '2026-10-22T07:00:00+00:00'
+verdict: NOT_DECLARED
+result: >-
+  docs/research/evidence/decision-bar-match-2026-10-22.json (tp_eth_prop_2p5). Bar = closed
+  (RQ-20261022-4de5-01 SWITCH_TO_CLOSED). Seed-median path EV USD/life and p_alive, T25 vs T6:
+  breakout_2 +40.7 vs +65.4, 0.437 vs 0.402; tradeify_1 +125.4 vs +217.9, 0.619 vs 0.598;
+  velotrade_1 +100.8 vs +154.0, 0.723 vs 0.712. (a) EV > 0 on all seeds: pass on every firm;
+  (b) survival non-inferior: pass on every firm (2.5R is slightly safer); (c) EV within 10%:
+  FAIL on every firm (-38% / -42% / -35%). -> NOT_DECLARED: no change; tp_r 2.5 is not the leg's
+  predictive TP at prop cost. Reported: full-window net R on the Bybit stack, closed arm, tp 2.5
+  +69.96R (n 1184) vs tp 6.0 +86.27R (n 1175); record window +0.88R vs +10.26R. The TP-doctrine
+  gap stays open on row TP-DOCTRINE (per-bar revision / in-trade exit model).

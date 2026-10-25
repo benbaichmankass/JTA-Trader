@@ -1,0 +1,157 @@
+id: RQ-20261018-ef5d-09
+title: >-
+  Programme 07 TIMEFRAMES, short arm B3: LIQUIDITY-SWEEP reversal (failed Donchian-20 break that pierces >= 0.25 ATR and closes
+  back inside) on 1h bars for the six Bybit perps, 2021-01-01..2026-10-17 -- far-side target vs a 1R catch-the-wave target
+  -- vs the default fade
+status: done
+cadence: once
+theme: timeframes
+priority: 2
+kind: experiment
+question: >-
+  On Binance USD-M 1h candles for BTC/ETH/SOL/XRP/ADA/AVAX over 2021-01-01..2026-10-17, with baseline arm FAR = scripts/backtest_fade.py
+  at harness defaults (Donchian 20, pierce_min 0, 0.5 x ATR stop buffer, exit far side of the channel, 48-bar timeout), do
+  the candidate arms SWEEP (pierce_min 0.25 ATR, exit far) or SWEEP_TP1 (pierce_min 0.25, --exit-style tp1r --tp-r 1.0) pass
+  the pooled Stage-0 rule AND beat FAR's pooled net R per trade by >= 0.05 R? A real sweep (a pierce deep enough to take stops)
+  that fails is the reversal signal; the 1R arm takes only the snap-back.
+why_this_matters: >-
+  Operator 2026-10-18 lists liquidity-sweep reversals among the breakout families to test. The ICT sweep CONCEPT (ict_scalp)
+  retired in the 2026-10-16 review for want of any independent evidence, but the failed-breakout fade is a different, documented
+  mechanism (fade_breakout_4h is a live shadow leg at 4h; the harness is cost-complete) and has never been run at 1h or with
+  a pierce-depth floor: RQ-20260930-504 ran it at <=30m with pierce_min 0. Prior short-horizon work this builds on and does
+  NOT repeat: RQ-20260930-504 (<=1h discovery grid at live/default params, FAIL at taker cost; squeeze/fade/pullback/fvg/chop
+  had NO Stage-A survivor at 5m-30m), blocked/RQ-20260930-505 (its 1m arm), RQ-20261016-1fa6-07 (maker entries do not rescue
+  the 15m scalp book, FAIL), the 2026-10-06 prop breadth batch RQ-20261006-005..031 (5m-15m taker FAIL as a configuration
+  class), docs/research/idea-family-review-2026-10-16.md s13/s16, rows IR-CRYPTO-DAILY-TREND and IR-INTRADAY-SEASONALITY-HARNESS.
+requires_result:
+  unit: RQ-20261018-ef5d-02
+power:
+  expected_n: 300
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    88 pooled trades at d=0.3. expected_n=300 is an ESTIMATE: the 15m ETH smoke (29 days) made 94 fades; 1h over 5.8 years
+    x 6 symbols clears 88 pooled by a wide margin even at pierce_min 0.25.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on fetched Binance Vision 1h candles (2200 d) over a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-P7-B3-SWEEP-REVERSAL-1H
+  registered_at: '2026-10-18'
+  registered_before_run: true
+  statistic: >-
+    harness_stage0.py --family fade --timeframe 1h --baseline FAR --delta-r-per-trade 0.05, arms FAR, SWEEP, SWEEP_TP1; per
+    cell n, net_r, max_drawdown_r, 6 calendar folds, hold; pooled; delta vs FAR. Note the fade harness emits no net_r_per_capital_day;
+    hold is read from the trade rows.
+  rule: >-
+    Arms fixed now: FAR (baseline), SWEEP, SWEEP_TP1 (candidates). Flags: --folds 6 --fold-majority 4 --n-floor 39 --pooled-n-floor
+    88 --breadth-frac 0.5 --baseline FAR --delta-r-per-trade 0.05. A candidate passes iff it passes the pooled Stage-0 rule
+    AND beats FAR's pooled net R/trade by >= 0.05 R. PASS iff any candidate passes -> node P7-B3-confirm (the passing arm
+    alone vs FAR at 15m and 4h, and against fade_breakout_4h's own 4h record). FAIL iff every candidate fails -> the sweep-depth
+    condition does not lift the 1h fade over its cost; closed at these arms on this window. INDETERMINATE otherwise. Verdicts
+    are the script's own (scripts/research/harness_stage0.py, grades fixed by these flags): per CELL pass iff n >= n_floor
+    AND net_r > 0 AND >= fold_majority of folds calendar folds net > 0, fail iff n >= n_floor and not, indeterminate iff n
+    < n_floor; per ARM pass iff pooled n >= pooled_n_floor AND pooled net_r > 0 AND pooled folds >= fold_majority AND >= half
+    the POWERED cells (n >= n_floor) pass, indeterminate iff pooled n < pooled_n_floor or < 2 powered cells or < half the
+    declared cells measured (a fetch/harness fault is recorded per cell, never dropped), fail otherwise. Holm-corrected one-sided
+    t p-values across the arm's cells are REPORTED, not graded. A PASS is a LEAD: it opens the programme-07 node named in
+    the tree (a same-symbol overlap read against the live legs, then a re-entry case under MD-PROMOTE-S0-S1 built as a new
+    evidence record), never a roster act; a FAIL closes the CONFIGURATION on this window, never the family (idea-family review
+    2026-10-16 negative-result protocol). Thresholds are not changed after any result.
+  what_it_does_not_do: >-
+    Does not edit config/strategies.yaml, config/accounts.yaml or any roster; does not tune beyond the fixed arms listed;
+    does not pool windows with any committed record; is not a promotion case. Candles are Binance USD-M (a PROXY for Bybit
+    linear; prices track within a few bps) and the funding term is a directionless magnitude (execution_costs P1), both stated
+    in the record.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 120
+  confidence: 0.2
+  bucket: frontier
+  basis: 'stand-in: a candidate 1h reversal leg for bybit_1 / prop; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: 6 x 1h fetches over 2200 d x 3 arms = 18 fade passes (~1 min each). Estimate.
+  why_runner: >-
+    harness_stage0.py fetches public candles and runs the repo harnesses; XRP/ADA/AVAX 1h are not in metis-market-data.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - fade
+  - --symbols
+  - BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,ADAUSDT,AVAXUSDT
+  - --timeframe
+  - 1h
+  - --days
+  - '2200'
+  - --start
+  - '2021-01-01'
+  - --end
+  - '2026-10-17'
+  - --arm
+  - FAR=
+  - --arm
+  - SWEEP=pierce_min=0.25
+  - --arm
+  - SWEEP_TP1=pierce_min=0.25;--exit-style=tp1r;--tp-r=1.0
+  - --baseline
+  - FAR
+  - --delta-r-per-trade
+  - '0.05'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '39'
+  - --pooled-n-floor
+  - '88'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-P7-B3-SWEEP-REVERSAL-1H
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261018-ef5d-09
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-TIMEFRAMES
+- M22
+programme: P7
+related:
+- RQ-20261018-ef5d-02
+- RQ-20260930-504
+- scripts/research/harness_stage0.py
+- scripts/backtest_fade.py
+- docs/audits/fade-breakout-complement-2026-05-24.md
+- docs/research/programmes/07-TIMEFRAMES.md
+- research/programmes/07-timeframes.yaml
+last_dispatched_at: '2026-10-18T19:13:09+00:00'
+grading:
+  attested: RULE-P7-B3-SWEEP-REVERSAL-1H
+  auto: true
+  decision_rule_id: RULE-P7-B3-SWEEP-REVERSAL-1H
+  evidence:
+  - research/results/RQ-20261018-ef5d-09/39157781583.jsonl
+  graded_at: '2026-10-20'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

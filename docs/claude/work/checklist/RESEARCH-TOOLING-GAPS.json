@@ -1,0 +1,18 @@
+{
+  "id": "RESEARCH-TOOLING-GAPS",
+  "title": "Research tooling gaps: roster-walkforward units can never auto-grade; backtest_orb.py lacks the full cost stack and a gradable summary; research-harness-dispatch lacks an extra_args input",
+  "phase": "W6",
+  "state": "queued",
+  "owner": "unassigned",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-11 RESEARCH-OPS-20261011-0030] LEVER (Tier-1 tooling): scripts/ops/fetch_backtest_corpus.py CANDIDATE_PAIRS declares only 1h for ZEC/UNI/SUI/HYPE/FIL/AVAX/AAVE/TRX, so the 1h PASS cells (pullback ZEC/UNI/SUI/AVAX/TRX, squeeze ZEC/UNI/AVAX, trend ZEC/UNI/SUI 353c-01..03) cannot be tested at 2h/4h through research-harness-dispatch.yml. After RESEARCH-OPS authored the last uncovered declared cells (RQ-20261011-fc31-01..06) the queue has no more dispatchable breadth: the next top-up needs this extension (add 2h/4h pairs, check Bybit/Binance-vision availability per symbol). Done when: CANDIDATE_PAIRS has the 2h/4h rows and a dispatch of one new cell lands read_state measured. [research-ops 2026-10-16 02:47Z] routed here: PI-20261014-20261014-0001 (dispatch receipt-PR skip), PI-20261014-IMQACAUN-0001 (41 dispatched-no-result units), PI-20261014-ON01DGFQ-0002 (research_catalog reads only research/results), PI-20261015-3SMHIER1-0001 (session_debt over-counts post-#18189). New: RQ-20261015-f01d-02 landed control_failed (PI-20261016-10160247-0001). [2026-10-16 RESEARCH-OPS-0847] (1) needs_review triage found 14 units = wiring_only roster-walkforward rows (PI-20261006-1VPYTX8E-0001, due 10-29: template rule says OOS R but the harness payload carries only whole-window net_total_r) -- decide: re-register the template on the mapper's shape or add an OOS figure to the payload; (2) NEW PI-20261016-10160847-0001: grader cannot refresh stale needs_review on E35 units whose corpus rows were superseded; (3) RQ-20260927-003 (prop exit-head feasibility) has 2 producer_failed rows: the committed driver cannot finish inside a trainer-vm-diag window -- lever = declare compute: cpu_long and route off the diag path, then re-queue; not a verdict. [research-ops 2026-10-17T20:47Z] (1) FIXED in this pass's PR: queue_grade.py ignored grading.auto:false on template-generated units, so run 39062231812 (#18805) reverted the hand grades of RQ-20261016-027/-028; guard added to grade_unit_full + a self-test case that fails without it; grades restored. (2) OPEN: prop_ev_grid has no resume-from-existing-sims; RQ-20261016-024 timed out at 240 min with 12 of 15 sims written (est_minutes 110 under-predicted ~2x), owner-stamped here. A re-fire repeats the same 240 min until resume or a seeds split exists.",
+  "updated_at": "2026-10-17T20:54:46Z",
+  "updated_by": "research-ops-lane-20261017-2047",
+  "_seq": 364
+}

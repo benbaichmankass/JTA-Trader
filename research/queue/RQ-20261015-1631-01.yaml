@@ -1,0 +1,126 @@
+id: RQ-20261015-1631-01
+title: 'Same-symbol allocation input, ETHUSDT: per-leg OOS net R per capital-day (solo vs shared slot) for trend_donchian_eth_4h, trend_donchian_eth_prop'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 2
+kind: experiment
+question: On ETHUSDT (bybit_1), what is each of trend_donchian_eth_4h, trend_donchian_eth_prop's OOS net R per capital-day when it has the slot
+  to itself, and what is the combined book's when all share one slot under the live election, net of the full cost stack? (A backtest-quality
+  input to the existing allocator; no winner is picked.)
+why_this_matters: 'Operator, 2026-10-15 (first ask, since re-scoped): ''If we''re running the same strategy and symbol on 2 different timeframes,
+  than we need to make sure that we know how to allocate the trades properly (and not, say alphabetically), or we need to choose the better one
+  based on testing on run with that one''. MEASURED by the manager: src/runtime/intents.py::_election_sort_key ranks by -confidence (about 50%
+  exact ties), then declared priority, then 3-day realized PnL, then timestamp, then the NAME — no backtest-quality term. Roster inventory by
+  lane SAME-SYMBOL-ALLOCATION over config/accounts.yaml x config/strategies.yaml symbols (HEAD of 2026-10-15). bybit_2 ETHUSDT (same pair) is
+  owned by lane PROMOTE-PROP-LEGS and is excluded from this lane; this unit measures the pair on the harness, so it also informs that case but
+  is not its authority. RE-SCOPED by the operator ~20:25Z: ''We can have different strategies working with netted positions as long as we know
+  how much of that position belongs to each strategy ... it should be based on those other things, not just backtesting. It''s just that backtesting
+  is also a parameter here.'' Per the operator''s ''work based on what we''ve already built'', the allocator''s live contest data (src/runtime/allocator_soak.py
+  -> runtime_logs/allocator_soak.jsonl, /api/bot/allocator/soak) is the first source for how often these pairs actually contest; it WAS read this
+  session: allocator_soak (live /api/bot/allocator/soak, read 2026-10-15, LAST 500 records 2026-07-05..10-15, all symbols): 11 ticks where >=2
+  of this leg set were candidates on ETHUSDT (executed trend_donchian_eth_4h 6, trend_donchian_eth 5; allocator agreed 7, regret>0 on 4). Records
+  carry NO account field and an ex-ante EV score, not realised outcomes. That gives contest frequency and ex-ante regret, not per-leg realised/backtest
+  outcomes, so this unit stays as the backtest-quality input. This unit supplies only the input that module lacks: per-leg backtest quality on
+  the shared symbol.'
+power:
+  expected_n: 40
+  min_detectable_effect: 0.5
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: Unit = OOS closed trade per arm; min_oos_trades 20 per arm is a floor on reporting a usable input, not a significance claim. No effect
+    is tested and nothing is ranked, so a narrow gap is simply a narrow gap. Bars are autocorrelated; treat per-leg figures as noisy.
+  feasibility:
+    source: none
+    accrual_basis: No observed per-leg OOS trade count for the combined election arm exists; the first run reports each arm's n_oos, and an arm
+      below 20 returns indeterminate rather than a winner.
+decision_rule:
+  id: RULE-RQ-20261015-1631-01-SAME-SYMBOL-REPORT
+  registered_at: '2026-10-15'
+  registered_before_run: true
+  statistic: Per-leg and combined-book OOS net R per capital-day (scripts/research/same_symbol_head_to_head.py), full venue cost stack via execution_costs,
+    live risk basis.
+  rule: 'Arms (fixed now): solo:<leg> for each leg (the independent-slice proxy until lane NETTED-SLICES'' slice model exists) and together (all
+    legs under the live aggregate_intents election, one shared slot). Metric per arm: OOS net R per capital-day = sum(pnl/(qty*|entry-entry_stop|))
+    / sum(holding days), pnl net of fee+slippage+funding, OOS = entries on/after oos_start. REPORT each leg''s solo metric and the combined book''s.
+    IF every arm has >= min_oos_trades OOS trades THEN verdict pass (inputs usable); IF any arm is below min_oos_trades or has zero capital-days
+    THEN indeterminate, naming the starved arm. NO winner and NO exclusion verdict, whatever the numbers. read_state unavailable (no candles /
+    leg not in ROSTER) is a ROUTE/HARNESS FAULT, never a verdict.'
+  what_it_does_not_do: Picks no leg and cuts no leg. It is ONE input (backtest quality) to the existing allocator (src/runtime/allocator_ev.py,
+    allocator_corr.py, allocator_soak.py, conviction_*) alongside its live factors; the split itself is the allocator/NETTED-SLICES' job. Edits
+    no config. Not live P&L, not a promotion.
+compute: cpu_long
+head_to_head:
+  symbol: ETHUSDT
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_eth_prop
+  accounts:
+  - bybit_1
+  oos_start: '2025-01-01'
+  min_oos_trades: 20
+  clock_tf: 15m
+  risk_account: bybit_1
+  initial_balance: 10000.0
+value:
+  bucket: structural
+  usd_at_stake_per_month: 0
+  confidence: 0.3
+  basis: 'stand-in: removes an arbitrary (confidence-tie then name) allocation on a live slot; not a measured P&L'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 60
+  basis: 'Estimate. UNVERIFIED: whether the GitHub runner can obtain 5m candles for this symbol. If not, the driver lands read_state: unavailable
+    (a route fault to fix, never a verdict).'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/same_symbol_head_to_head.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261015-1631-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M18
+related:
+- SAME-SYMBOL-ALLOCATION
+- scripts/research/same_symbol_head_to_head.py
+- scripts/ci/check_same_symbol_allocation.py
+- src/runtime/intents.py
+last_dispatched_at: '2026-10-25T00:54:47+00:00'
+grading:
+  attested: RULE-RQ-20261015-1631-01-SAME-SYMBOL-REPORT
+  auto: true
+  decision_rule_id: RULE-RQ-20261015-1631-01-SAME-SYMBOL-REPORT
+  evidence:
+  - research/results/RQ-20261015-1631-01/38835234592.jsonl
+  - research/results/RQ-20261015-1631-01/39073141515.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  needs_review: true
+  owner: SAME-SYMBOL-ALLOCATION
+  owner_reason: 'producer_failed TWICE (research-ops 2026-10-24 14:47Z, read from results/RQ-20261015-1631-01/):
+    the 2026-10-16 route-fault fix works (the reason now reaches the record) and the re-run on it (2026-10-17)
+    still reads ''no 5m candle source for the symbol: unresolved'' for ETHUSDT -- bs._backtest_data_source.resolve_or_refuse(ETHUSDT,
+    5m, unit data) is not ok on the runner. UPDATE research-ops 2026-10-25 02:47Z: the 5m fetch (#19948)
+    worked -- the unit was re-fired 2026-10-25T00:54Z (run 40148576330) and the run finished green, but
+    collect_runner_results REFUSED its record (dispatch 40153686572: n emitted as a per-arm dict, research_result.py
+    wants an int; LOST). Fixed in the same PR (same_symbol_head_to_head emits int n + n_by_arm; the collector
+    collapses a dict n to its `together` count), so the already-finished run is collected on the next
+    dispatch after merge with no re-fire. This gate clears when research/results/RQ-20261015-1631-01/
+    holds a row dated after 2026-10-25 with read_state measured. Not a verdict.'
+  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  rows: 2
+  verdict: null

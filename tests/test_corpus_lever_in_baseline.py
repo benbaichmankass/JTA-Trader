@@ -56,12 +56,62 @@ CORPUS = REPO / "docs" / "research" / "m20-sweep-corpus.jsonl"
 # `EXPECTED_OWN_LEVER_DROPPED` (41) and the ten zero-delta rows are both unmoved,
 # which is the check that the corpus grew without disturbing the finding's
 # own population.
+#
+# RE-MEASURED 2026-09-29 when the corpus grew 1376 -> 1379: three
+# `spy_pullback_1h`/`vol_trail` rows (vt_hot90_t2.5, vt_hot80_t2.5,
+# vt_cold10_t2.5; run_id 2026-09-28T14:16:04.794618Z) landed via
+# `scripts/research/m20_corpus_union.py`, resolving a coverage-matrix
+# misclassification (the cell read `passed_unshipped` off a leg-level
+# "passing_cells" summary that only meant the weaker `candidate`/IS-OOS
+# stage; the per-cell verdict was `wf_fail` on all three independent
+# measurements of it, corrected to `honest_negative`). All three rows'
+# `declared_levers_present`/`declared_levers_dropped` are `[]` (vol_trail is
+# undeclared on every live leg), so they grade `lever_absent_from_baseline`
+# -- the +3 lands entirely in that bucket (474 -> 477); `lever_in_baseline`
+# (61), `unknown` (841) and `EXPECTED_OWN_LEVER_DROPPED` (41) are all
+# unmoved. NOTE: this correction and the 2026-09-29 `ada_pullback_2h`
+# correction (1376 -> 1377, PR #14053, still unmerged at the time this was
+# written) both grow the SAME baseline independently -- whichever merges
+# second needs a rebase and a re-measured total, not a naive sum of the two
+# deltas, since a merge can itself deduplicate or reorder rows.
+#
+# RE-MEASURED 2026-09-29 (same day, a later lane pass) when the corpus grew
+# 1379 -> 1382: three `qqq_trend_long_1d`/`vol_trail` rows (vt_hot90_t2,
+# vt_hot80_t2, vt_cold10_t2; run_id 2026-08-29T10:47:02.683729Z) landed via
+# `scripts/research/m20_corpus_union.py`, resolving a SECOND coverage-matrix
+# misclassification: the cell read `passed_unshipped` citing "walk-forward
+# 6/6" and "awaiting Tier-3 apply", but the fold-level detail on the one run
+# that actually clears MIN_OOS_TRADES=25 (base_oos=40) shows all 6 of 6 folds
+# `inert` (d_net_r=0.0 every year) -- wf_wins_effective reads "0/6", the
+# opposite of what the summary implied. Status intentionally left
+# `passed_unshipped` (matching the existing `gdx_pullback_1d`/`vol_trail`
+# precedent in the same file: a cell that mechanically clears the gate at an
+# inert cadence stays `passed_unshipped` with the caveat inline, not
+# `honest_negative`, since the gate formula genuinely passed). These three
+# rows' `declared_levers_present` is `["trail_decay"]` (qqq_trend_long_1d
+# does declare trail_decay) but never `"vol_trail"`, so `vol_trail` -- the
+# row's own lever -- is still absent from what's declared and all three
+# grade `lever_absent_from_baseline` (477 -> 480); `lever_in_baseline` (61),
+# `unknown` (841) and `EXPECTED_OWN_LEVER_DROPPED` (41) are all unmoved.
+#
+# RE-MEASURED 2026-10-02 (lane M20-EXITS-4) when the corpus grew 1382 -> 1413: the
+# `m20-exit-lever-sweep` run 37037846659 (run_ids 2026-10-02T17:03:41 / 17:03:50 /
+# 17:05:01; legs iaum_pullback_1d, ief_pullback_1d, trend_donchian_xrp_4h, live
+# parity tp_cap_pct 0.099) merged 48 cell rows, 17 of which replaced same-key rows
+# already in the corpus, so the net is +31. MEASURED by re-running the shipped
+# predicate over the committed corpus: lever_in_baseline 61 -> 65 (+4),
+# lever_absent_from_baseline 480 -> 507 (+27), unknown 841 unmoved. The exactly-
+# zero-delta self-baselined population goes 10 -> 11 and every one still grades
+# `lever_in_baseline`.
+# 2026-10-04 (RESEARCH-RUN, RQ-20261004-753/654 XRP trail4 confirmation sweeps): +2 cell rows,
+# MEASURED by re-running the shipped predicate over the committed corpus:
+# lever_absent_from_baseline 507 -> 509 (+2); in_baseline 65 and unknown 841 unmoved; total 1413 -> 1415.
 EXPECTED_PARTITION = {
-    "lever_in_baseline": 61,
-    "lever_absent_from_baseline": 474,
+    "lever_in_baseline": 65,
+    "lever_absent_from_baseline": 584,
     "unknown": 841,
 }
-EXPECTED_TOTAL = 1376
+EXPECTED_TOTAL = 1490
 # Rows where the row's own lever was DROPPED — the population the naive
 # predicate gets wrong, and the reason `dropped` is consulted first.
 EXPECTED_OWN_LEVER_DROPPED = 41
@@ -164,14 +214,14 @@ def test_partition_over_the_committed_corpus():
 def test_the_ten_zero_delta_rows_are_all_genuinely_self_baselined():
     """The finding's own population, re-checked through the shipped predicate.
 
-    All 10 exactly-zero rows must grade `lever_in_baseline` — if any graded
+    All 11 exactly-zero rows must grade `lever_in_baseline` — if any graded
     `absent`, the finding would have been counting a real measurement.
     """
     f = _extract().lever_in_baseline
     zero = [r for r in _cells()
             if r.get("d_net_r_IS") == 0.0 and r.get("d_net_r_OOS") == 0.0
             and r.get("lever") in (r.get("declared_levers_present") or [])]
-    assert len(zero) == 10
+    assert len(zero) == 11
     assert all(f(r.get("lever"), r.get("declared_levers_present"),
                  r.get("declared_levers_dropped")) == "lever_in_baseline"
                for r in zero)

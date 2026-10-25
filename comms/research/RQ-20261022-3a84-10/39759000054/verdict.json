@@ -1,0 +1,246 @@
+{
+  "verdict": "indeterminate",
+  "read_state": "measured",
+  "n": 24000,
+  "population": "1 group(s) ['ETHUSDT']; baseline lgbm_base; candidates ['lgbm_yz']; metric macro_f1; n = baseline OOS test rows summed over groups; cv folds per group >= 5",
+  "note": "between the pass bar and the fail floor",
+  "measurement": {
+    "engine": "scripts/research/ml_bakeoff.py",
+    "metric": "macro_f1",
+    "higher_is_better": true,
+    "delta_sign": "positive = learner better than reference",
+    "baseline": "lgbm_base",
+    "controls": [
+      "prior"
+    ],
+    "candidates": [
+      "lgbm_yz"
+    ],
+    "arm_status": {
+      "lgbm_base": "ok",
+      "lgbm_yz": "ok",
+      "prior": "ok"
+    },
+    "groups": {
+      "ETHUSDT": {
+        "n_rows": 40000,
+        "classes": [
+          "range",
+          "volatile"
+        ],
+        "arms": {
+          "lgbm_base": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.6451480600442949,
+                  0.6657149138800662,
+                  0.6641541478117554,
+                  0.6726936879396777,
+                  0.6280283818985969
+                ],
+                "n_test_rows": 24000
+              },
+              "holdout": {
+                "fold_metric": [
+                  0.5811519908008236
+                ],
+                "n_test_rows": 2419
+              }
+            }
+          },
+          "lgbm_yz": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek",
+              "parkinson_vol",
+              "garman_klass_vol",
+              "rogers_satchell_vol",
+              "yang_zhang_vol"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.6496624920732623,
+                  0.6642503436199658,
+                  0.6749493149437309,
+                  0.690493228080115,
+                  0.6392993623998315
+                ],
+                "n_test_rows": 24000
+              },
+              "holdout": {
+                "fold_metric": [
+                  0.6025930363633383
+                ],
+                "n_test_rows": 2419
+              }
+            }
+          },
+          "prior": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.3885350318471338,
+                  0.3630573248407643,
+                  0.3532740501212611,
+                  0.36966513460275774,
+                  0.43747802648540957
+                ],
+                "n_test_rows": 24000
+              },
+              "holdout": {
+                "fold_metric": [
+                  0.45147392290249433
+                ],
+                "n_test_rows": 2419
+              }
+            }
+          }
+        }
+      }
+    },
+    "deltas": {
+      "ETHUSDT": {
+        "cv": {
+          "lgbm_yz": {
+            "lgbm_base": {
+              "n_folds": 5,
+              "mean": 0.008583109908502907,
+              "ci95": [
+                -0.000509517978773761,
+                0.017675737795779575
+              ],
+              "sign_consistent": false
+            },
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.2813290346439158,
+              "ci95": [
+                0.21829442529040255,
+                0.344363643997429
+              ],
+              "sign_consistent": true
+            }
+          },
+          "prior": {
+            "lgbm_base": {
+              "n_folds": 5,
+              "mean": -0.27274592473541287,
+              "ci95": [
+                -0.33568936760201995,
+                -0.20980248186880576
+              ],
+              "sign_consistent": true
+            },
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "sign_consistent": false
+            }
+          }
+        },
+        "holdout": {
+          "lgbm_yz": {
+            "lgbm_base": {
+              "n_folds": 1,
+              "mean": 0.021441045562514693,
+              "ci95": null,
+              "note": "single fold: no interval"
+            },
+            "prior": {
+              "n_folds": 1,
+              "mean": 0.15111911346084395,
+              "ci95": null,
+              "note": "single fold: no interval"
+            }
+          },
+          "prior": {
+            "lgbm_base": {
+              "n_folds": 1,
+              "mean": -0.12967806789832925,
+              "ci95": null,
+              "note": "single fold: no interval"
+            },
+            "prior": {
+              "n_folds": 1,
+              "mean": 0.0,
+              "ci95": null,
+              "note": "single fold: no interval"
+            }
+          }
+        }
+      }
+    },
+    "rule_evaluation": {
+      "verdict": "indeterminate",
+      "why": "between the pass bar and the fail floor",
+      "candidates": {
+        "lgbm_yz": {
+          "evaluated": true,
+          "passes_all": false,
+          "clauses": [
+            {
+              "holds": false,
+              "what": "['ETHUSDT'] >= 0.01 vs lgbm_base/cv"
+            },
+            {
+              "holds": true,
+              "what": "['ETHUSDT'] > 0.0 vs lgbm_base/holdout"
+            }
+          ]
+        }
+      }
+    },
+    "headline_checks": [],
+    "licences": {
+      "lgbm_base": {
+        "kind": "lightgbm",
+        "licence": "MIT",
+        "research_only": false,
+        "weights": ""
+      },
+      "lgbm_yz": {
+        "kind": "lightgbm",
+        "licence": "MIT",
+        "research_only": false,
+        "weights": ""
+      },
+      "prior": {
+        "kind": "prior",
+        "licence": "n/a",
+        "research_only": false,
+        "weights": ""
+      }
+    },
+    "n_folds_cv_min_over_groups": 5,
+    "seconds": 20.8
+  }
+}

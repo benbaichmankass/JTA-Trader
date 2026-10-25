@@ -1,0 +1,21 @@
+{
+  "id": "SIGNALS-API-TIMESTAMP",
+  "title": "GET /api/bot/signals serves timestamp '' and a fresh uuid id on every row: map the writer's real time key (PI-20261011-JPFINTEQ-0001)",
+  "phase": "ops",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-18 lane RESEARCH-AUTHOR-GRADE-1017] Owns PI-20261011-JPFINTEQ-0001 (found by UI-UPGRADE-1). ROOT CAUSE CONFIRMED FROM CODE on main: src/utils/signal_audit_logger.py:55 log_signal stamps payload.setdefault('logged_at_utc', ...) and no 'ts'/'timestamp'; src/web/api/routers/dashboard.py:996-1025 get_signals reads e.get('ts', e.get('timestamp','')) and id e.get('id', str(uuid.uuid4())), so every row serves '' and a new uuid. Second defect (from the item, not re-measured): it tails 50 raw lines of which only ~2 are buy/sell, so scan back until N signals. Fix: read logged_at_utc (fallback ts/timestamp), derive a stable id (hash of logged_at_utc+strategy+symbol+side), tail until N signals, with a test. Tier-1 read path, but deployed API: ship through the web-api deploy. Closes when /api/bot/signals returns non-empty timestamps and stable ids across two calls.",
+  "updated_at": "2026-10-18T00:03:35Z",
+  "updated_by": "research-pipeline-route-1018-fork",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 556
+}

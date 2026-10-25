@@ -30,8 +30,9 @@ Checks:
       name still reads like a request is a trap).
   C3  the job body derives a slug FROM THE BRANCH and looks up a request file
       named for it — the ask is branch-scoped.
-  C4  the job body compares the request file at the pushed head against `main`,
-      so a file merely inherited by a merge is not an ask.
+  C4  the job body compares the request file at the pushed head against its
+      merge-base with `main` (not `main`'s ever-moving tip — see the E63 note
+      at C4's implementation below), so a file merely inherited is not an ask.
   C5  the job body's executable code never calls `markPullRequestReadyForReview`
       (comments naming it are fine and are stripped before the check — an
       assertion that punished the explanation would train the next editor to
@@ -125,12 +126,44 @@ def check(root: Path) -> list[str]:
             "`.github/pr-automerge-requests/${slug}.txt`. Without a branch-scoped "
             "request file, another branch's ask arms yours — the 2026-09-02 defect.")
 
-    # C4 — presence is not an ask; it must differ from main.
-    if "blobSha('main')" not in code or "blobSha(context.sha)" not in code:
+    # C4 — presence is not an ask; it must differ from the branch's own
+    # merge-base with `main`.
+    #
+    # ⚠️ UPDATED 2026-09-24 (E63). This used to assert the LITERAL
+    # `blobSha('main')`, comparing the request file at the pushed head
+    # against `main`'s ever-moving TIP. PR #12858 was armed and squash-merged
+    # despite declaring `landing: "hold"` because a reused lane branch's
+    # STALE request file — untouched since an earlier PR on that same branch
+    # — happened to differ from `main`'s tip (which a SIBLING PR from the
+    # SAME branch had since rewritten), and that drift read as a fresh ask.
+    # Comparing against the push's actual merge-base with `main` instead (via
+    # `compareCommits`, since `fetch-depth: 1` leaves no local history for a
+    # real `git merge-base`) closes that false positive without weakening
+    # what C4 protects: a file merely inherited — from `main`'s tip, or
+    # carried forward stale from an earlier PR on the same branch — is still
+    # not an ask.
+    compares_to_main_base = (
+        "repos.compareCommits" in code
+        # tied to the compareCommits call specifically — `base: 'main'` alone
+        # also matches the unrelated `pulls.create` call a few lines down and
+        # would pass even after this exact anchor was mutated away.
+        and "base: 'main', head: context.sha" in code
+        and "merge_base_commit" in code
+    )
+    compares_head_to_base = (
+        "blobSha(context.sha)" in code
+        and re.search(r"blobSha\(\s*mergeBaseRef\s*\)", code) is not None
+    )
+    if not (compares_to_main_base and compares_head_to_base):
         fails.append(
-            "C4 the job body does not compare the request file against `main`. A file "
-            "inherited unchanged by a merge of `main` is not a request, and treating "
-            "presence alone as the ask reintroduces the defect through the front door.")
+            "C4 the job body does not compare the request file at the pushed head "
+            "against its merge-base with `main` (compareCommits against base "
+            f"'main': {compares_to_main_base}; blobSha(context.sha) vs "
+            f"blobSha(mergeBaseRef): {compares_head_to_base}). A file merely "
+            "inherited — from `main`'s tip, or carried forward stale from an "
+            "earlier PR on the same reused branch — is not a request, and "
+            "treating presence alone as the ask reintroduces the defect through "
+            "the front door (E63 / PR #12858).")
 
     # C5 — never silently un-draft.
     if "markPullRequestReadyForReview" in code:
@@ -141,19 +174,34 @@ def check(root: Path) -> list[str]:
             "help because it gates on checks. #10788 and #10764 were both armed this "
             "way while their own bodies said not to merge.")
 
-    # C6 — the PR is opened by a PAT-authenticated client when one is available.
+    # C6 — the PR is opened by a PAT-authenticated request when one is available.
+    #
+    # ⚠️ NOT `getOctokit(patToken)` ANY MORE (2026-09-27,
+    # PI-20260926-DP2BHGT3-0001). That construction ROUTED through
+    # `require('@actions/github')`, which throws `Cannot find module
+    # '@actions/github'` inside a `github-script@v7` user script — MEASURED on
+    # every PR this job opened (#13000, #13003, #13018, #13019, #13021,
+    # #13027), where `BRANCH_PROTECTION_TOKEN` was present the whole time and
+    # the client construction still failed and fell back to GITHUB_TOKEN. The
+    # replacement builds the same PAT-authenticated `pulls.create` call with
+    # the runtime's own global `fetch`, so this check now looks for THAT
+    # literal instead — matching what actually executes, not what merely
+    # reads as an attempt.
     pat_read = "PR_OPEN_PAT" in code
-    pat_client = "getOctokit(patToken)" in code
+    pat_client = "Bearer ${patToken}" in code
     pat_used = "opener.rest.pulls.create" in code
     if not (pat_read and pat_client and pat_used):
         fails.append(
             "C6 the job body no longer opens the PR through a PAT-authenticated "
-            "client (reads PR_OPEN_PAT: "
-            f"{pat_read}; builds getOctokit(patToken): {pat_client}; calls "
-            f"opener.rest.pulls.create: {pat_used}). GitHub suppresses workflow "
-            "triggers for the built-in GITHUB_TOKEN, so a PR opened with it is "
-            "born with ZERO attached checks — measured in pr-opener.yml's header "
-            "on #10079 and #10683. Reverting to `github.rest.pulls.create` "
+            "request (reads PR_OPEN_PAT: "
+            f"{pat_read}; builds an `Authorization: Bearer ${{patToken}}` "
+            f"request: {pat_client}; calls opener.rest.pulls.create: "
+            f"{pat_used}). GitHub suppresses workflow triggers for the "
+            "built-in GITHUB_TOKEN, so a PR opened with it is born with ZERO "
+            "attached checks — measured in pr-opener.yml's header on #10079 "
+            "and #10683, and again in this job's own run log for #13027 "
+            "(job 108498515118) after the PREVIOUS Octokit-based construction "
+            "silently stopped working. Reverting to `github.rest.pulls.create` "
             "restores that, and C7 would then withhold every arming.")
 
     # C7 — arming goes through the gate, and the refusal path RETURNS.
@@ -233,8 +281,12 @@ def self_test() -> int:
             r / LEGACY_REL).write_text("x", encoding="utf-8"),
         "C3 slug lookup removed": lambda r: _mutate_script(
             r, "pr-automerge-requests/${slug}.txt", "pr-automerge-request"),
-        "C4 main comparison removed": lambda r: _mutate_script(
-            r, "await blobSha('main')", "null"),
+        "C4 merge-base comparison removed": lambda r: _mutate_script(
+            r, "const atBase = await blobSha(mergeBaseRef);",
+            "const atBase = await blobSha('main');"),
+        "C4 merge-base no longer anchored to main": lambda r: _mutate_script(
+            r, "base: 'main', head: context.sha });",
+            "base: 'HEAD', head: context.sha });"),
         "C5 un-draft restored": lambda r: _mutate_script(
             r, "            // 3b. enable native auto-merge.",
             "            await github.graphql(`mutation($id:ID!){ "
@@ -244,14 +296,12 @@ def self_test() -> int:
         # that makes every PR born with zero checks.
         "C6 PR opened with GITHUB_TOKEN again": lambda r: _mutate_script(
             r, "await opener.rest.pulls.create", "await github.rest.pulls.create"),
-        # ⚠️ EVERY construction site, not the first. The workflow builds the
-        # client through two `require` spellings (the plain one, and the
-        # `__original_require__` that survives actions/github-script's module
-        # shim), so removing one leaves C6's literal still present and the
-        # plant escapes. Matching the EXACT string C6 tests for keeps the
-        # plant and the check from drifting apart.
+        # Matching the EXACT string C6 tests for keeps the plant and the check
+        # from drifting apart — this is the literal the 2026-09-27 fetch-based
+        # replacement actually builds, not one of several equivalent spellings.
         "C6 PAT client construction removed": lambda r: _mutate_script(
-            r, "getOctokit(patToken)", "github", all_occurrences=True),
+            r, "Authorization: `Bearer ${patToken}`,",
+            "Authorization: `token GITHUB_TOKEN`,"),
         # C7 — the two ways the gate gets neutered: not consulted, or consulted
         # and ignored. Both must fail, because a gate whose verdict nobody reads
         # is decoration.

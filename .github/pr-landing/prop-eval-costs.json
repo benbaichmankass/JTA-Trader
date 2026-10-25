@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Research-tooling change (portfolio/prop evaluators + a new read-only costs: block in prop rulesets + src/research/run_costs.py + a CI guard). No order path, live config, or strategy/risk parameter is touched, but several paths sit outside the guard's Tier-1 surface, so a human reads it before merge.",
+  "why": "Research-tooling only: portfolio/prop evaluators (backtest_system callers) now carry fee+slippage+funding via execution_costs.resolve_cost_policy and refuse a fee-only stack; new CI guard; cost-incomplete registry; pipeline close."
+}

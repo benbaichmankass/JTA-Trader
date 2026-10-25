@@ -1,0 +1,20 @@
+{
+  "id": "VELO-CLOSE-RECON",
+  "title": "velotrade_1 close reconciliation from venue fills (ETH prop-manual-6fbebc711fa6 + PI-ZRM27CBW/WPBHWTHS)",
+  "phase": null,
+  "state": "done",
+  "owner": "session_01RWg7kVbhDTsptgKjFCkV8x",
+  "lane": "VELO-CLOSE-RECON",
+  "model": null,
+  "ceiling_usd": 8,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [
+    17515
+  ],
+  "blocked_on": [],
+  "note": "PR #17515 (HELD, manager merges). MEASURED: closed 2026-10-11 03:52:42Z SELL 3.44 @ 2499.37 on the trailed SL (2499.69), gross -34.50 (#17505/#17512). Closes when, after deploy, prop fill 97 reads exit_price 2499.37 / reason sl / pnl -34.5. Follow-up PI-20261011-OSERECON-0001 (net P&L). [2026-10-11T07:06Z manager] #17515 MERGED (eb5949f2). Deploys by git-sync (ict-prop-executor@ is oneshot per tick; no restart). Observation pending: fill 97 reads exit 2499.37 / sl / -34.5. Note: VELOTRADE-RECON folded in here. [2026-10-11T07:24Z manager] DONE, OBSERVED live: VM at 52a65129f (contains eb5949f2). GET /api/bot/prop/fills?account_id=velotrade_1 -> fill id 97 status closed exit_price 2499.37 reason sl pnl -34.5 closed_at 2026-10-11T03:52:42.51Z (corrected in place, same id; no duplicate close). /prop/overview 7d realized -57.05 (1 unpriced) -> -91.55 (2 priced, 0 unpriced); delta -34.50 matches. Lane archived, spend $7.71. Follow-up PI-20261011-OSERECON-0001 (net P&L, ~$9.49 commission/financing).",
+  "updated_at": "2026-10-11T08:13:19Z",
+  "updated_by": "session_01Uq7MrjPQDRWqbhCjwuMava",
+  "_seq": 390
+}

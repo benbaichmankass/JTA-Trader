@@ -423,3 +423,42 @@ def test_the_publish_gate_only_fires_when_opted_in_and_a_run_exists(
     pairs = dict(ln.split("=", 1) for ln in out.strip().splitlines() if "=" in ln)
     got = pairs["publish"]
     assert got == expect, f"{case}: expected publish={expect}, got {got}"
+
+
+# ------------------------------------------- --only (KAGGLE-TRAIN-RUNNER-FIRST, 2026-10-16)
+def _two_drops(tmp_path: Path) -> Path:
+    inbox = tmp_path / "inbox"
+    for mid in (MID, "eth-regime-1h-lgbm-v1"):
+        rd = _make_run(tmp_path / "src", model_id=mid)
+        state, note, _ = emit_bundle.emit(
+            run_dir=rd, inbox=inbox, source="t", code_revision="c", run_url="",
+            symbol="", timeframe="", dataset_version="", emitted_at="")
+        assert state == emit_bundle.EMITTED, note
+    return inbox
+
+
+def test_only_drains_the_named_drop_and_leaves_the_other(tmp_path):
+    inbox = _two_drops(tmp_path)
+    reg_root = tmp_path / "registry-store"
+    rc = drain_inbox.main(["--inbox", str(inbox), "--registry-root", str(reg_root),
+                           "--experiments-root", str(tmp_path / "exp"), "--apply",
+                           "--only", f"eth-regime-1h-lgbm-v1/{RUN}"])
+    assert rc == 0
+    reg = ModelRegistry(reg_root)
+    assert reg.get(f"eth-regime-1h-lgbm-v1{drain_inbox.OFFLOAD_SUFFIX}") is not None
+    try:
+        other = reg.get(f"{MID}{drain_inbox.OFFLOAD_SUFFIX}")
+    except Exception:  # noqa: BLE001 -- an absent entry may raise; either way it must not exist
+        other = None
+    assert other is None, "--only ingested a drop it did not name"
+
+
+def test_only_naming_an_absent_drop_is_an_error_not_nothing_pending(tmp_path, capsys):
+    inbox = _two_drops(tmp_path)
+    reg_root = tmp_path / "registry-store"
+    rc = drain_inbox.main(["--inbox", str(inbox), "--registry-root", str(reg_root),
+                           "--experiments-root", str(tmp_path / "exp"), "--apply",
+                           "--only", "nope/20990101T000000Z"])
+    assert rc == 2
+    assert "not in the index" in capsys.readouterr().out
+    assert not list(reg_root.glob("**/*.json")), "an --only miss wrote to the registry"

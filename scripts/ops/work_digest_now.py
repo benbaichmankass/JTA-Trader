@@ -155,6 +155,13 @@ def run(dry_run: bool = False, force: bool = False) -> int:
                        lastSentHour=prior.get("lastSentHour"))
         return 0
 
+    due, why = _cadence_gate(force)
+    if not due:
+        print(f"work-digest-now: not due at the operator's cadence ({why}) — not sending")
+        _write_receipt(outcome="skipped_cadence", hour=hour, cadence=why,
+                       lastSentHour=prior.get("lastSentHour"))
+        return 0
+
     base, basis = _resolve_base()
     if base is None:
         # We could not establish a window. That is NOT a quiet hour, and it must
@@ -170,33 +177,212 @@ def run(dry_run: bool = False, force: bool = False) -> int:
               f"to the root commit — this digest covers ALL history.")
 
     digest = build_digest(base, "HEAD")
-    message = render(digest)
+    aw, prep = _attention_prepare(dry_run)
+    research, rsnap = _research_prepare()
+    work, wsnap = _work_prepare()
+    message = compose_update(hour, prep, render(digest), digest, research, work)
+    priority = prep["priority"]
     print(message)
 
     if dry_run:
         _write_receipt(outcome="dry_run", hour=hour, base=base, windowBasis=basis,
                        digestState=digest.get("digestState"),
                        lastSentHour=prior.get("lastSentHour"))
+        if aw:
+            aw.commit(prep, "dry_run")
         return 0
+
+    # PHONE-KEEPALIVE: a stale phone heartbeat is its own SYSTEM-channel alert (+ one recovery message), not only a
+    # line in the collapsed "Manager watch" section below. Never raises.
+    try:
+        from scripts.ops import phone_hb_alert  # noqa: PLC0415
+        phone_hb_alert.run()
+    except Exception as exc:  # noqa: BLE001
+        print(f"work-digest-now: phone-hb-alert failed: {exc}")
 
     from send_ping import enqueue  # noqa: PLC0415
 
     try:
-        path = enqueue(message, priority="normal", target="claude")
+        # TELEGRAM-CHANNELS: the MANAGER channel (the Claude bot), sent as
+        # Telegram HTML so its sections collapse.
+        path = enqueue(message, priority=priority, target="manager",
+                       parse_mode="HTML")
     except (OSError, ValueError) as exc:
         print(f"work-digest-now: FAILED to enqueue: {exc}")
         _write_receipt(outcome="enqueue_failed", hour=hour, base=base,
                        windowBasis=basis, error=str(exc),
                        lastSentHour=prior.get("lastSentHour"))
+        if aw:
+            aw.commit(prep, "enqueue_failed")  # receipt only; state NOT advanced
         return 1
 
     # lastSentHour advances ONLY after a successful enqueue, so a failed run is
     # retried by the next firing rather than latched out of it.
     _write_receipt(outcome="sent", hour=hour, lastSentHour=hour, base=base,
                    windowBasis=basis, digestState=digest.get("digestState"),
-                   queued=str(path))
+                   queued=str(path), attention="committed" if aw else "failed")
+    if aw:
+        aw.commit(prep, "sent")
+    if rsnap is not None:
+        from scripts.ops import research_digest  # noqa: PLC0415
+        research_digest.commit(rsnap, path=RESEARCH_CURSOR)
+    if wsnap is not None:
+        from scripts.ops import work_section  # noqa: PLC0415
+        work_section.commit(wsnap, path=WORK_CURSOR)
+    _mark_sent()
     print(f"work-digest-now: queued {path} — the bot drains within ~5s")
-    return 0
+    return 0 if aw else 1
+
+
+#: TELEGRAM-CHANNELS (2026-10-11): the research-queue section's cursor. Module
+#: attribute so tests can point it at a tmp dir; advanced only after a send.
+RESEARCH_CURSOR = REPO_ROOT / "runtime_logs" / "research_digest_cursor.json"
+
+
+#: TELEGRAM-CHANNELS (2026-10-11): the WORK section's cursor (same pattern).
+WORK_CURSOR = REPO_ROOT / "runtime_logs" / "work_section_cursor.json"
+
+
+def _work_prepare():
+    """``(section_data, snapshot)`` for the WORK section, or an error dict —
+    a failure is SAID in the message, never rendered as "nothing new"."""
+    try:
+        from scripts.ops import work_section  # noqa: PLC0415
+        d = work_section.build(prev=work_section.read_cursor(WORK_CURSOR))
+        return d, d["snapshot"]
+    except Exception as exc:  # noqa: BLE001
+        print(f"work-digest-now: work section FAILED: {exc}")
+        return {"error": f"{type(exc).__name__}: {exc}"}, None
+
+
+def _cadence_gate(force: bool) -> tuple[bool, str]:
+    """Part C: the ONE shared gate (src/runtime/telegram_settings.is_due)
+    decides whether the MANAGER update is due at the operator's cadence."""
+    if force:
+        return True, "forced"
+    try:
+        from src.runtime import telegram_settings  # noqa: PLC0415
+        return telegram_settings.is_due("manager_update")
+    except Exception as exc:  # noqa: BLE001 — a broken gate SENDS
+        return True, f"gate unreadable ({type(exc).__name__}) — sending"
+
+
+def _mark_sent() -> None:
+    try:
+        from src.runtime import telegram_settings  # noqa: PLC0415
+        telegram_settings.mark_sent("manager_update")
+    except Exception as exc:  # noqa: BLE001
+        print(f"work-digest-now: WARNING could not stamp cadence: {exc}")
+
+
+def _research_prepare():
+    """``(section_data, snapshot)`` for the RESEARCH QUEUE section, or
+    ``(None, None)`` when building it failed — which the message then SAYS
+    (a failure here must not stop the update, nor read as "nothing new")."""
+    try:
+        from scripts.ops import research_digest  # noqa: PLC0415
+        prev = research_digest.read_cursor(RESEARCH_CURSOR)
+        d = research_digest.build(prev=prev)
+        return d, d["snapshot"]
+    except Exception as exc:  # noqa: BLE001 — loud, in the message itself
+        print(f"work-digest-now: research section FAILED: {exc}")
+        return {"error": f"{type(exc).__name__}: {exc}"}, None
+
+
+#: The "nothing to decide" line. It rides the HEADER; the Needs-you section is
+#: only built when there is an ask, or the same line printed twice.
+NO_ASK_PREFIX = "🟢 No new decisions for you"
+
+
+def route_attention(prep: dict) -> tuple[str, str, str]:
+    """Split the attention pass's messages by WHO acts (operator, 2026-10-11):
+    ``Needs you`` holds ONLY genuine operator decisions (❓ ask_operator);
+    research units needing a read (🔎 needs_review) are research-ops' job and
+    ride the research section; everything else (soaks, blocker-watch, silence
+    alarms, the daily summary) is the manager's and rides "Manager watch".
+    Returns ``(needs_you, research_ops, watch)``."""
+    msgs = prep.get("msgs")
+    if msgs is None:   # an older prepare() without the split: keep its block
+        return str(prep.get("block") or "—"), "", ""
+    ask = [m for m in msgs if m.startswith("❓")]
+    rops = [m for m in msgs if m.startswith("🔎")]
+    rest = [m for m in msgs if not m.startswith(("❓", "🔎"))]
+    n_open = (prep.get("receipt") or {}).get("ask_operator_open")
+    tail = f"open ask_operator items: {'—' if n_open is None else n_open} (GET /api/bot/work/report)"
+    needs = ("\n".join(ask) + "\n" + tail) if ask else f"{NO_ASK_PREFIX} · {tail}"
+    return needs, "\n".join(rops), "\n\n".join(rest)
+
+
+def compose_update(hour: str, prep: dict, work_text: str, digest: dict,
+                   research: dict | None, work: dict | None = None) -> str:
+    """The MANAGER channel's regular status update — operator 2026-10-11:
+    *"divided into clear collapsible sections"*. A visible 1–3 line headline,
+    then named expandable sections; fitted to Telegram's 4096-char cap by
+    trimming section bodies with an explicit count of what was dropped.
+    """
+    from scripts.ops import research_digest  # noqa: PLC0415
+    from src.units.ui.telegram_format import Section, render_html_fitted  # noqa: PLC0415
+
+    needs, research_ops, watch = route_attention(prep)
+    attention_line = (needs.splitlines() or ["—"])[0][:200]
+    # No ask -> the header already says so; a collapsed section repeating it
+    # is the duplicate "No new decisions" line (TELEGRAM-CHANNELS-3 item 4).
+    needs_section = not needs.startswith(NO_ASK_PREFIX)
+    if research is None or "error" in (research or {}):
+        r_head = "🔬 research: ⛔ section FAILED to build — queue NOT checked"
+        r_body = ("⛔ The research-queue section failed to build "
+                  f"({(research or {}).get('error', 'unknown')}). This is 'we could "
+                  "not look', NOT 'nothing new'.")
+    else:
+        r_head = research_digest.headline(research)
+        r_body = research_digest.render_body(research)
+    # TELEGRAM-CHANNELS (2026-10-11): the WORK section carries the same detail
+    # as the research one (scripts/ops/work_section.py). The legacy register
+    # diff (``work_text``) is the fallback only when that section failed —
+    # its standing close-wedge block now rides the SYSTEM health check.
+    from scripts.ops import work_section  # noqa: PLC0415
+    if work is not None and "error" not in work:
+        w_head = work_section.headline(work)
+        w_body = work_section.render_body(work)
+    else:
+        w_head = "🛠 work: ⛔ section FAILED to build — checklist NOT checked"
+        w_body = ("⛔ The work section failed to build "
+                  f"({(work or {}).get('error', 'not built')}). This is 'we could not "
+                  "look', NOT 'nothing new'. Legacy register diff "
+                  f"(state {digest.get('digestState') or '—'}) follows:\n" + work_text)
+    header = "\n".join([f"🧭 Manager update · {hour[:10]} {hour[11:13]}:00Z",
+                        attention_line, f"{r_head} · {w_head}"])
+    if research_ops:
+        r_body = (r_body + "\n\n🔎 For research-ops (not you):\n" + research_ops).strip()
+    sections = [Section(summary="Needs you — decisions only", body=needs, priority=10)] \
+        if needs_section else []
+    sections += [
+        Section(summary="Research queue — new since last update", body=r_body, priority=20),
+        Section(summary="Work — blocked · didn't work · in flight · next · shipped · verified",
+                body=w_body, priority=30),
+    ]
+    if watch:
+        sections.append(Section(summary="Manager watch — FYI, the manager acts on these",
+                                body=watch, priority=40))
+    return render_html_fitted(header=header, sections=sections)
+
+
+def _attention_prepare(dry_run: bool):
+    """WORK-SYSTEM (operator decision 2026-10-04 ~15:30Z): this ONE hourly
+    message also carries the attention block — NEW actionable items first
+    (new ask_operator, soak transitions, silence alarms), the daily ranked
+    summary once a day, else one quiet line. ``attention_watch.prepare()``
+    writes nothing; ``commit()`` runs only after the enqueue succeeds. A
+    failure here must not stop the change digest, so it is isolated and the
+    message SAYS the block is missing rather than omitting it silently."""
+    try:
+        from scripts.ops import attention_watch  # noqa: PLC0415
+        return attention_watch, attention_watch.prepare(dry_run=dry_run)
+    except Exception as exc:  # noqa: BLE001 — loud, in the message itself
+        print(f"work-digest-now: attention block FAILED: {exc}")
+        return None, {"block": f"⛔ attention block FAILED to build ({type(exc).__name__}: "
+                               f"{exc}) — due items, soaks and alarms NOT checked this hour.",
+                      "priority": "high"}
 
 
 def _self_test() -> int:

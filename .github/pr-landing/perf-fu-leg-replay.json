@@ -1,0 +1,8 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "Lane dispatch instruction: ready PR, CI green, the manager merges. Moves three research-queue units out of blocked/ into the live queue, and queued units cannot self-land.",
+  "recorded_decision": {"kind": "operator_decision", "ref": "PERF-FU-LEG-REPLAY"},
+  "why": "New research tooling (scripts/research/leg_replay_emit.py + tests) and three queue units moved from research/queue/blocked/ to research/queue/ with run.command wired; decision_rule/power/question blocks unchanged (verified by yaml equality against HEAD). No config, order path, or live runtime touched."
+}

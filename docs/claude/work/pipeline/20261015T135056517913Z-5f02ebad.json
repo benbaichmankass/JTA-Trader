@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-10-22",
+    "kind": "date"
+  },
+  "id": "PI-20261015-KHSBUYRY-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "session_013LfwP31TKTdoH5kHsBUyry",
+    "rerun": "python3 scripts/ops/trader_import_closure.py replay --since <7d ago> --until <now> (top_restart_forcing_areas_by_merge lists comms/* and other non-closure forcing areas); for candidates: git ls-files | grep -vE <deploy non-runtime regex> then grep each path across src scripts/ops scripts/ml scripts/macro scripts/prop deploy bin *.sh"
+  },
+  "state": "queued",
+  "what": "TRADER-RESTART-GATE PHASE 2 + SAFE-SET CANDIDATES (lane session_013LfwP31TKTdoH5kHsBUyry, manager 13:51Z). The deploy (scripts/deploy_pull_restart.sh) still restarts EVERY ict-* unit, the live trader included, for paths no VM process reads. (1) PHASE 2, the comms/* data-file reader map. Over first-parent merges 2026-10-08T09:40Z..10-15T09:40Z (scripts/ops/trader_import_closure.py replay, merges per forcing area), these comms paths forced trader restarts: comms/claude_strategy_scores.jsonl 8, comms/live_parity 7, comms/strategy_reviews 7, comms/cloud 5, comms/ml-plan 3. For each comms/<subdir>, map its readers in src/, scripts/ops, scripts/ml, scripts/macro, scripts/prop and deploy/: none, read-per-call (no import-time cache), or cached at import. Add the 'none' and 'per-call' ones to the non-runtime set (deploy grep + diag._NON_RUNTIME_PATHS_RE + trader_import_closure.NON_RUNTIME_PATHS_RE, pinned by tests/test_diag_restart_pending_lockstep.py), following the comms/macro precedent (proof written in the deploy script comment). Rule out runtime-built paths first. (2) CANDIDATES the regex treats as runtime with no VM reader found by a first grep (listed in PR #18338 body; NOT changed): tools/gemini_delegate.ipynb, requirements-dev.txt, requirements-test.txt (the deploy installs only requirements.txt, no -r includes), ruff.toml, .mcp.json, Dockerfile, .dockerignore. Each needs its own VM-reader grep before it joins the safe set. Tier-2 (deploy path), hold PR."
+}

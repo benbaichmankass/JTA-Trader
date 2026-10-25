@@ -1,0 +1,76 @@
+{
+  "run": "RESEARCH-OPS-20261012-0847",
+  "finished_at": "2026-10-12T09:30:00Z",
+  "by": "session_01K3YNoSWcFrHPY45DzknGf4",
+  "baseline": "comms/research/ops/20261012T0330Z.json",
+  "floor": 25,
+  "throughput": {
+    "runnable_before": 19,
+    "runnable_after": 23,
+    "queued": 164,
+    "fired_24h": 31,
+    "fired_7d": 221,
+    "results_landed_24h": 33,
+    "hours_since_last_dispatch": 3.9,
+    "idle_alarm": false,
+    "as_of": "2026-10-12T08:57Z",
+    "note": "runnable_after is MEASURED on the branch tree (check_research_queue_throughput.py), 19 + 4 new units. Still 2 under the floor of 25: intake sources are exhausted (IDEAS.md has no 'new' rows; the CANDIDATE_PAIRS x {trend,pullback,squeeze} grid is now fully queued; the two rule-mandated confirmatory re-runs were authored). The binding constraint is the dispatcher, not supply: all 19 pre-existing runnable units are would_dispatch with last_dispatched_at null (8753-01..08, ca47-01..06, 1fce-01..03, 353c-19/-20), i.e. fired ~1/run at one run per ~1h."
+  },
+  "mechanism": {
+    "dispatch_receipt": "ok (liveness fresh 1.61h; run 38217667840 in progress since 07:25Z)",
+    "collector": "ok: result PRs for fc31-02/-04/-05/-06 and 353c-17 landed on main since 03:30Z; grading #17701 landed",
+    "stranded_stamp_prs": [17652],
+    "incident": "No dispatcher outage. Dispatch runs 222-224 (04:52Z, 05:53Z, 06:59Z) succeeded; runs 217/215/213 failed earlier in landing (already on row STAMP-RACE; STAMP-RACE-2 #17688 owns the fix, not touched). Stamp PR #17652 (23:01Z yesterday) still open ~10h, units it stamps (8753-era dispatch of 22:53Z) now show last_dispatched_at on main only for those already adopted; not re-diagnosed, owned by STAMP-RACE-2.",
+    "fresh_units_fired": "NO: the 19 fresh units (8753-01..08, ca47-01..06, 1fce-01..03, 353c-19/-20) have last_dispatched_at null on main as of 08:50Z; dispatch_queue.py dry run lists every one as would_dispatch route=runner. They are supply, waiting on dispatcher throughput (~1.3 fires/h => ~14h to drain)."
+  },
+  "results_read": {
+    "pass": 6,
+    "fail": 2,
+    "indeterminate": 0,
+    "no_action_warranted": 1,
+    "units": [
+      {"unit": "RQ-20261007-022", "verdict": "no_action_warranted (KEEP)", "n": 50, "rule": "RULE-RQ1007-ADA-M8-TUNE-BEFORE-DEMOTE verbatim: current-value OOS n 50 >= 39 so not underpowered; current OOS net +14.97R so not TUNED-AND-STILL-FAILS; no TUNE-CANDIDATE because the only robust (4/4 fold) alternatives adx_min 32 (n 32) and 36 (n 25) are under the 39 floor and adx_min 22 (n 77, +30.45R) is 3/4 folds. KEEP: ada_pullback_2h stays, the tune attempt is on record. The harness's own advisory 'propose adx_min 36' does NOT clear the registered rule. RAN IN-SESSION by this pass."},
+      {"unit": "RQ-20261007-023", "verdict": "pass", "n": 46, "rule": "RULE-RQ1007-XRP4H-STAGE0-1460D: faithful, n 46 >= 30, expectancy +0.177R, 3/4 folds. Record replaces the 365d one. RAN IN-SESSION."},
+      {"unit": "RQ-20261007-025", "verdict": "pass", "n": 69, "rule": "RULE-RQ1007-GLD-GDX-PAIRS-CONFIRMATORY: OOS n 69 net +5.25R; 8/10 years positive; 8/9 cells positive. RAN IN-SESSION (21 harness runs)."},
+      {"unit": "RQ-20261007-030", "verdict": "pass", "n": 116, "rule": "RULE-RQ1007-ETH-SOL-4H-ADMIT-1095D per leg: eth_4h n 116 +0.287R 4/4, sol_4h n 116 +0.390R 3/4, both faithful: ADMIT to the candidate pool. RAN IN-SESSION."},
+      {"unit": "RQ-20261010-353c-17", "verdict": "fail", "net_total_r": -8.4868, "n": 63, "note": "pullback BTC 1h; rule re-queues one confirmatory run -> RQ-20261012-1469-03."},
+      {"unit": "RQ-20261011-fc31-05", "verdict": "fail", "net_total_r": -1.7747, "n": 191, "note": "trend BNB 4h; confirmatory -> RQ-20261012-1469-04."},
+      {"unit": "RQ-20261011-fc31-06", "verdict": "pass", "net_total_r": 2.1101, "n": 98, "note": "pullback BNB 4h; Stage-0 only; no follow-up named by the rule; no 4h donor in the prop-fit screen, so no prop-fit unit (not authored)."}
+    ],
+    "rule_applied": "each unit's registered rule verbatim; Stage-0 breadth verdicts are the harness_dispatch_result.py mechanical grade. fc31-02/-04 and 353c-17 landed on main; fc31-02 and -04 were already read in the 02:47Z pass.",
+    "not_read": "8753-01..08, ca47-01..06, 1fce-01..03, 353c-19/-20 have not fired. research_disposition.py --unread-only still lists the 27 e35/m20 leg-level rows (not queue results), unchanged."
+  },
+  "needs_lane_audit": {
+    "RQ-20261007-022": "RAN in-session (egress to binance_vision works from a web session). done.",
+    "RQ-20261007-023": "RAN in-session (~1 min). done.",
+    "RQ-20261007-025": "RAN in-session after pip install yfinance (21 runs, seconds). done.",
+    "RQ-20261007-030": "RAN in-session (~2 min). done.",
+    "RQ-20260928-001": "NOT run, NOT retired: 14 invocations (~90 min est.), no CLI switch for the filter arm. Lever filed ONCE as checklist row HTF-FILTER-AB-LANE (owner manager). Stays queued/NEEDS_LANE with that owner."
+  },
+  "unlocked": [],
+  "retired": [],
+  "blocked_audit": {
+    "RQ-20261011-9da8-01..07": "FRONTIER-LEVER-TRAINER-DEPS is not done on main (its done PR #17708 is open); not re-checked per instruction, stay blocked.",
+    "blocker_watch": "NOT_RUNNING 24 at 08:48Z (19 fresh awaiting dispatch + 5 NEEDS_LANE; after this pass 19 + 1 NEEDS_LANE + 4 new fresh, 4 NEEDS_LANE units done); STALE_BLOCK 0; UNPROVEN_OVERDUE 24 (manager's, UNPROVEN-SWEEP-2 owns)."
+  },
+  "levers_filed": [
+    {"lever": "arm-toggle / ~90 min lane for the 7-leg ict_scalp HTF A/B", "ref": "HTF-FILTER-AB-LANE"},
+    {"lever": "prop_book_search follow-on over admitted ETH/SOL/XRP 4h legs", "ref": "PROP-BOOK-SEARCH-1095D"},
+    {"lever": "mandate-resolver pin re-stated from the 1460d xrp_4h record", "ref": "XRP4H-PIN-RESTATE"},
+    {"lever": "operator preference: Alpaca pairs executor build (GLD/GDX PASS)", "ref": "PAIRS-ALPACA-BUILD-QUESTION"}
+  ],
+  "units_authored": ["RQ-20261012-1469-01", "RQ-20261012-1469-02", "RQ-20261012-1469-03", "RQ-20261012-1469-04"],
+  "authoring_note": "1469-01/-02 = last two never-queued CANDIDATE_PAIRS cells (BNB 5m pullback, squeeze; expected FAIL, grid closure). 1469-03/-04 = rule-mandated confirmatory re-runs of 353c-17 and fc31-05. Roadmap L-PROP on all four. Hand-authored => E57 HOLD.",
+  "artifacts": "Session-local run artifacts: comms/research/RQ-20261007-022/ro0847 (the M8 packets; runtime_logs/ is gitignored so the unit's declared store runtime_logs/strategy_tunes/ cannot be committed without force: copied here instead, the API route /api/bot/strategies/ada_pullback_2h/tune will NOT serve them), comms/research/RQ-20261007-025/ro0847, comms/strategy_evidence/runs/2026-10-12-{1460d,1095d}. Canonical records comms/strategy_evidence/trend_donchian_{xrp,eth,sol}_4h.json overwritten measured -> measured (the unit's declared path).",
+  "not_run": [
+    "audit of the 12 older automation/* PRs from the 02:47Z handoff (shallow clone, no merge base)",
+    "roadmap M25 measured-state table / ml-plan-items: none of today's graded units carry an ML plan ref"
+  ],
+  "handoff": [
+    "Manager: #17652 stamp PR open ~10h (STAMP-RACE-2 owns); 17170 and 17085 stranded measured results still open.",
+    "Manager/operator: PAIRS-ALPACA-BUILD-QUESTION (bucket-3 preference, Tier 3); XRP4H-PIN-RESTATE and PROP-BOOK-SEARCH-1095D are Tier-1 lanes.",
+    "Manager: HTF-FILTER-AB-LANE needs a ~90 min lane (or the wrapper build) to close RQ-20260928-001.",
+    "ADA tune follow-up (idea, not authored): adx_min 32/36 are 4/4-fold robust but n 32/25 < 39 at 730d; a longer-window re-run would be a new pre-registered unit and a Tier-3 tune hypothesis; the dispatcher has no data-fetch route for it today.",
+    "Next pass: grade the 19+4 fresh units as they fire; second FAIL on 1469-03/-04 or ca47-01 closes the cell (kill, stated reason); re-measure runnable (floor 25 needs a new intake source: perf-followup output, a 2h/4h prop-fit donor, or the ML plan units once trainer deps land)."
+  ]
+}

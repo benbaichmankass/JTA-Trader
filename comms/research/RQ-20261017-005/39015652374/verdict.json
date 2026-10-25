@@ -1,0 +1,169 @@
+{
+  "verdict": "indeterminate",
+  "read_state": "measured",
+  "population": "newest committed ledger per leg (comms/strategy_evidence/runs/*/*__trades.jsonl), USDT legs whose re-walk passes the MFE control; 620 trades on 4 legs; fixed-bracket reconstruction (initial SL = -1 R, TP = K R), not the leg as traded",
+  "n": 620,
+  "measurement": {
+    "legs": [
+      {
+        "leg": "ict_scalp_5m",
+        "symbol": "BTCUSDT",
+        "tf": "5m",
+        "n_ledger": 145,
+        "horizon_bars": 25,
+        "n_walked": 145,
+        "n_unaligned": 0,
+        "control_n": 140,
+        "control_match_share": 0.786,
+        "state": "control_failed",
+        "data_start": "2025-09-23 00:00:00+00:00",
+        "data_end": "2026-10-16 23:55:00+00:00"
+      },
+      {
+        "leg": "ict_scalp_avax_5m",
+        "symbol": "AVAXUSDT",
+        "tf": "5m",
+        "n_ledger": 177,
+        "horizon_bars": 25,
+        "n_walked": 177,
+        "n_unaligned": 0,
+        "control_n": 174,
+        "control_match_share": 0.833,
+        "state": "included",
+        "data_start": "2025-09-24 00:00:00+00:00",
+        "data_end": "2026-10-16 23:55:00+00:00"
+      },
+      {
+        "leg": "ict_scalp_eth_15m",
+        "symbol": "ETHUSDT",
+        "tf": "15m",
+        "n_ledger": 78,
+        "horizon_bars": 25,
+        "n_walked": 78,
+        "n_unaligned": 0,
+        "control_n": 78,
+        "control_match_share": 0.795,
+        "state": "control_failed",
+        "data_start": "2025-09-25 00:00:00+00:00",
+        "data_end": "2026-10-16 23:45:00+00:00"
+      },
+      {
+        "leg": "ict_scalp_sol_15m",
+        "symbol": "SOLUSDT",
+        "tf": "15m",
+        "n_ledger": 84,
+        "horizon_bars": 25,
+        "n_walked": 84,
+        "n_unaligned": 0,
+        "control_n": 84,
+        "control_match_share": 0.821,
+        "state": "included",
+        "data_start": "2025-09-27 00:00:00+00:00",
+        "data_end": "2026-10-16 23:45:00+00:00"
+      },
+      {
+        "leg": "ict_scalp_sol_5m",
+        "symbol": "SOLUSDT",
+        "tf": "5m",
+        "n_ledger": 190,
+        "horizon_bars": 25,
+        "n_walked": 190,
+        "n_unaligned": 0,
+        "control_n": 187,
+        "control_match_share": 0.818,
+        "state": "included",
+        "data_start": "2025-09-23 00:00:00+00:00",
+        "data_end": "2026-10-16 23:55:00+00:00"
+      },
+      {
+        "leg": "ict_scalp_xrp_15m",
+        "symbol": "XRPUSDT",
+        "tf": "15m",
+        "n_ledger": 76,
+        "horizon_bars": 25,
+        "n_walked": 76,
+        "n_unaligned": 0,
+        "control_n": 72,
+        "control_match_share": 0.736,
+        "state": "control_failed",
+        "data_start": "2025-09-23 00:00:00+00:00",
+        "data_end": "2026-10-15 23:45:00+00:00"
+      },
+      {
+        "leg": "ict_scalp_xrp_5m",
+        "symbol": "XRPUSDT",
+        "tf": "5m",
+        "n_ledger": 169,
+        "horizon_bars": 25,
+        "n_walked": 169,
+        "n_unaligned": 0,
+        "control_n": 165,
+        "control_match_share": 0.83,
+        "state": "included",
+        "data_start": "2025-09-25 00:00:00+00:00",
+        "data_end": "2026-10-15 23:55:00+00:00"
+      }
+    ],
+    "skipped": [],
+    "construction": "fixed_bracket_reconstruction_from_ledger_plus_public_candles",
+    "model": {
+      "n_oos_trades": 212,
+      "mean_gain_nats": -0.0119,
+      "ci95": [
+        -0.02612,
+        0.00221
+      ],
+      "folds_positive": 1,
+      "folds": [
+        {
+          "fold": 0,
+          "n_train_trades": 124,
+          "n_test_trades": 52,
+          "gain_vs_ref_nats": 0.00865,
+          "gain_vs_base_nats": 0.21982
+        },
+        {
+          "fold": 1,
+          "n_train_trades": 246,
+          "n_test_trades": 53,
+          "gain_vs_ref_nats": -0.0373,
+          "gain_vs_base_nats": 0.19195
+        },
+        {
+          "fold": 2,
+          "n_train_trades": 371,
+          "n_test_trades": 50,
+          "gain_vs_ref_nats": -0.00804,
+          "gain_vs_base_nats": 0.165
+        },
+        {
+          "fold": 3,
+          "n_train_trades": 496,
+          "n_test_trades": 57,
+          "gain_vs_ref_nats": -0.01043,
+          "gain_vs_base_nats": 0.24615
+        }
+      ],
+      "calibration_slope": 0.967,
+      "reference": "model",
+      "features": [
+        "logit_p0",
+        "dist_tp_atr",
+        "dist_sl_atr",
+        "log_bars",
+        "open_r",
+        "log_since_peak",
+        "giveback",
+        "mom3_atr",
+        "mom6_atr",
+        "adx",
+        "adx_slope3",
+        "range3_atr",
+        "clv",
+        "atr_pct"
+      ],
+      "K": 2.0
+    }
+  },
+  "note": "baseline: n_oos_trades 212 < 300"
+}

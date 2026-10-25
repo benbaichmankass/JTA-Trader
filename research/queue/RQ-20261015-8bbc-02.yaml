@@ -1,0 +1,83 @@
+id: RQ-20261015-8bbc-02
+title: 'ada_pullback_2h live-vs-backtest divergence (stage A): does BELOW_BACKTEST persist on bybit_2 realMoney as n grows? (-7.04R over 15, 4.7th pct on 2026-10-15)'
+status: queued
+cadence: weekly
+kind: experiment
+theme: live_strategy
+priority: 1
+roadmap:
+- L-LADDER
+question: 'Re-running scripts/research/live_vs_backtest.py for ada_pullback_2h on the realMoney book (bybit_2 live, bybit_portfolio mirror): is the live cumulative net R still below
+  the p5 of the bootstrap of the leg''s committed Stage-0 per-trade net_r at the live trade count?'
+why_this_matters: 'PI-20261015-VUVNMUO8-0002 (operator standing first step for underperformers, 2026-10-15: live_vs_backtest "should be a first step for any underperforming strategy").
+  On 2026-10-15 the check read BELOW_BACKTEST (-7.04R, n=15, 4.7th percentile); this unit RE-ASKS it weekly as n accrues so the next step (cause-naming: execution / cost / regime / overfit)
+  is only opened on a divergence that persists, and the PI is cleared by a CONSISTENT read. DISCLOSED BEFORE REGISTRATION: the 2026-10-15 numbers are known (reproduced by the adapter
+  this session against the public route); the book is bybit_2/bybit_portfolio (Stage 2), NOT bybit_1 as an earlier note said. i.i.d. bootstrap ignores regime clustering and param-selection
+  on the backtest window; ~10% of healthy legs flag by chance (live_vs_backtest.py docstring).'
+power:
+  expected_n: 15
+  min_detectable_effect: 0.5
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: Unit = live closed trade with an R basis (n=15 on 2026-10-15, growing). The test is a percentile of a bootstrap band, not a t-test; the declared MDE is a stand-in. Below MIN_N=5
+    the adapter returns indeterminate.
+  feasibility:
+    source: none
+    accrual_basis: Live closes on the leg; the weekly re-ask reads whatever has accrued.
+decision_rule:
+  id: RULE-RQ-20261015-8bbc-02-LVB-STAGE-A
+  registered_at: '2026-10-15'
+  registered_before_run: true
+  statistic: live_vs_backtest.run() verdict for the leg on the realMoney book, graded by scripts/research/live_vs_backtest_verdict.py::grade (r_trades >= 5).
+  rule: FAIL (divergence confirmed) IF BELOW_BACKTEST on realMoney -> open the cause-naming work filed under PI-20261015-10152047-0001 (per-trade live-vs-backtest comparison, regime
+    cell, TP/SL parity); no roster or config change, R4 threshold unchanged. PASS IF CONSISTENT or ABOVE_BACKTEST on realMoney -> divergence not established at this n; clear PI-20261015-VUVNMUO8-0002.
+    INDETERMINATE if INSUFFICIENT_N or the live route could not be read (verdict not_applicable / no_data is "could not look", never a pass).
+  min_n: '5'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 0.5
+  est_minutes: 3
+  basis: One GET of /api/bot/performance/recent plus a 20k-draw bootstrap; measured locally this session in a few seconds.
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 150
+  confidence: 0.3
+  basis: 'stand-in: a real-money Stage-2 leg reading below its own backtest; not a measured P&L'
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 20
+  command:
+  - python3
+  - scripts/research/live_vs_backtest_verdict.py
+  - --leg
+  - ada_pullback_2h
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261015-8bbc-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/live_vs_backtest.py
+- scripts/research/live_vs_backtest_verdict.py
+what_it_does_not_do: Does not tune, demote or edit any roster/config; does not name the cause (that is the follow-up build); does not replace R4 (which abstains below 40 trades). A FAIL
+  here is not a demotion signal.
+last_dispatched_at: '2026-10-23T03:27:35+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-RQ-20261015-8bbc-02-LVB-STAGE-A
+  evidence:
+  - research/results/RQ-20261015-8bbc-02/39895172104.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  latest: true
+  needs_review: false
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

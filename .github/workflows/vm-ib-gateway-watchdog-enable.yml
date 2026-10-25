@@ -15,10 +15,10 @@ name: vm-ib-gateway-watchdog-enable
 # (private 10.0.0.251, no public IP; role=gateway) since the 2026-06-10
 # gateway-isolation split — so this enable must land there, NOT on the trader.
 # A GitHub runner can't reach the private gateway directly, so we SSH via
-# ProxyJump through the live trader (141.145.193.91), which shares the
+# ProxyJump through the live trader (<VM_SSH_HOST>), which shares the
 # 10.0.0.0/24 subnet — the same pattern as vm-ib-gateway-recover.yml.
 # Optional repo variables: VM_SSH_HOST = ProxyJump bastion / live trader
-# (default 141.145.193.91), IB_GATEWAY_HOST = gateway target (default
+# (default <VM_SSH_HOST>), IB_GATEWAY_HOST = gateway target (default
 # 10.0.0.251), VM_SSH_USER (default ubuntu). Was defaulted at the terminated
 # x86 micro 158.178.210.252 pre-2026-06-14 cutover (BL-20260707-WORKFLOW-STALE-MICRO-DEFAULTS).
 
@@ -52,10 +52,17 @@ jobs:
     timeout-minutes: 4
     env:
       # ProxyJump bastion (live trader, public) + the gateway VM (private).
-      JUMP_HOST: ${{ vars.VM_SSH_HOST || '141.145.193.91' }}
+      JUMP_HOST: ${{ secrets.VM_SSH_HOST }}
       GATEWAY_HOST: ${{ vars.IB_GATEWAY_HOST || '10.0.0.251' }}
       VM_SSH_USER: ${{ vars.VM_SSH_USER || 'ubuntu' }}
     steps:
+      - name: Require VM host secrets (fail closed)
+        env:
+          NEED_VM_SSH_HOST: ${{ secrets.VM_SSH_HOST }}
+        run: |
+          fail=0
+          [ -n "${NEED_VM_SSH_HOST}" ] || { echo "::error::secret VM_SSH_HOST not set (Settings > Secrets and variables > Actions); refusing to continue before any ssh"; fail=1; }
+          exit "$fail"
       - name: Set up SSH key
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}

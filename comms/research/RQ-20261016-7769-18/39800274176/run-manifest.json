@@ -1,0 +1,40 @@
+{
+  "unit": "RQ-20261016-7769-18",
+  "run_id": "39800274176",
+  "commit_sha": "727517c11788524a214bf5ddd5970ea5c31fb99b",
+  "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/39800274176",
+  "timeout_minutes": 30,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/macro_event_study_run.py",
+        "--kind",
+        "ny_empire_state_manufacturing_index",
+        "--snapshots",
+        "comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl",
+        "--symbol",
+        "ES=F",
+        "--horizons",
+        "1,3,5",
+        "--primary-horizons",
+        "3",
+        "--min-n",
+        "100",
+        "--t-bar",
+        "3.0",
+        "--expected-sign",
+        "either",
+        "--population",
+        "ny_empire_state_manufacturing_index releases (live + survey backfill) joined to ES=F daily closes",
+        "--out",
+        "comms/research/RQ-20261016-7769-18/39800274176"
+      ],
+      "log": "comms/research/RQ-20261016-7769-18/39800274176/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 1.7
+    }
+  ],
+  "all_ok": true
+}

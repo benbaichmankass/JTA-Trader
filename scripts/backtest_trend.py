@@ -33,7 +33,7 @@ import sys
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
 import pandas as pd
 
@@ -41,20 +41,68 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import candle_io  # noqa: E402  (shared OHLCV reader; see _load_candles)
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
+# The repo root goes FIRST even when it is already on sys.path (PYTHONPATH=<repo>, as
+# pytest-run sets): otherwise scripts/ (inserted above) shadows the top-level `ml`
+# package with scripts/ml, and --emit-paths dies on `ml.datasets` (harness_emit ->
+# src.runtime.regime_shadow). Same remove-then-insert as scripts/backtest_pullback.py.
+if str(_REPO_ROOT) in sys.path:
+    sys.path.remove(str(_REPO_ROOT))
+sys.path.insert(0, str(_REPO_ROOT))
 
 from src.runtime import execution_costs  # noqa: E402  (the ONE shared cost model)
+from src.research.metric_trigger import TriggerPlan, trigger_flag_errors  # noqa: E402  (HARNESS-METRIC-TRIGGER)
+from src.research.path_state_gate import (  # noqa: E402  (PATHSTATE-TRAIL-GATE)
+    FEATURES as PS_FEATURES, OPS as PS_OPS, build_gate as build_path_state_gate, gate_row as path_state_row,
+    path_state_flag_errors)
 from src.research.trail_levers import (  # noqa: E402  (the ONE trail-lever rule)
     effective_trail_mult,
+    giveback_fires,
+    giveback_flag_errors,
+    level_flag_errors,
+    level_r_gate_open,
+    level_touched,
+    level_trail_armed,
+    momentum_flag_errors,
+    momentum_stale_armed,
+    momentum_stale_fires,
+    momentum_trail_armed,
+    momentum_trail_fired,
+    trade_level,
     vol_trail_armed,
 )
+# scripts/research/, not src/research/ — this is Tier-1 backtest-only tooling
+# (TIER1_SURFACE covers `scripts/research/**`, not `src/**`; check_pr_landing.py
+# would bar a self-land PR that touched anything under `src/`). Loaded by
+# inserting its directory and importing the bare module name, matching the
+# convention `scripts/ops/recombination_sweep.py` already uses for
+# `classify_strategy_tier` — never `import scripts.research...`, which would
+# collide with the top-level `research/` (queue) directory on the path.
+sys.path.insert(0, str(_REPO_ROOT / "scripts" / "research"))  # noqa: E402
+from regime_weight import soft_regime_weight, soft_weight_armed  # noqa: E402
+import tp_geometry as _tpg  # noqa: E402  (GEOM-B1: a take-profit that moves; every lever off by default)
 # The ONE definition of (r_to_stop, r_to_target, rr_from_here) — imported from
 # the LIVE telemetry module that computes it on the trader, so the `rr_floor`
 # lever below measures the same quantity production records rather than a second
 # derivation of it. See src/runtime/position_telemetry.py::r_distances.
 from src.runtime.position_telemetry import r_distances  # noqa: E402
+from src.runtime.tp_revision import (  # noqa: E402  (the ONE TP-revision rule)
+    RULE_DONCHIAN_MEASURED_MOVE, clamp_to_venue_cap, measured_move_path,
+    tp_revision_rejection)
 import capital_efficiency  # noqa: E402  (the ONE capital-efficiency definition)
+# The data-source POLICY (five states, refuses rather than falling back to a
+# fixture). It imports the ONE (symbol, timeframe) -> file resolver rather than
+# carrying a second copy — see that module's docstring.
+import importlib.util as _ilu  # noqa: E402
+_spec = _ilu.spec_from_file_location(
+    "_backtest_data_source", str(_REPO_ROOT / "scripts" / "ops" / "backtest_data_source.py"))
+_backtest_data_source = _ilu.module_from_spec(_spec)
+_spec.loader.exec_module(_backtest_data_source)  # noqa: E402
+
+#: What `--data` used to default to. Applied ONLY when the caller names no
+#: symbol; a named symbol that cannot be resolved is refused instead.
+LEGACY_DATA_DEFAULT = "data/backtest_candles.csv"
+#: What `--symbol` used to default to — a DISPLAY label, which is the defect.
+LEGACY_SYMBOL_LABEL = "BTCUSDT"
 
 # Execution-realism cost knobs (P1, FAITHFUL-BACKTEST-PLATFORM-DESIGN § 3.B).
 # main() (the CLI path) resolves unset --slippage/--funding flags to the
@@ -85,6 +133,28 @@ class Trade:
     # Live-parity confidence (trend_donchian.order_package): breakout depth
     # past the channel / ATR, clamped [0,1].
     confidence: float = 0.0
+    # MOMENTUM-TRAIL-LEVER attribution; None unless a momentum lever is armed.
+    mom: Optional[Dict[str, Any]] = None
+    # P1-Q10 level-triggered trail attribution; None unless --trail-level is armed.
+    level: Optional[Dict[str, Any]] = None
+    # SRQ-20260618-001 soft regime-weight refinement (scripts/research/regime_weight.py):
+    # the entry-bar ADX (None when never computed) and the continuous weight
+    # applied to r_multiple. weight is always 1.0 when the lever is unset, so
+    # r_multiple already reflects it and no consumer needs to re-derive it —
+    # these two fields are reporting/diagnostic, not a second source of truth.
+    adx_at_entry: Optional[float] = None
+    regime_weight: float = 1.0
+    # GEOM-B1 TP geometry (scripts/research/tp_geometry.py). All None unless a
+    # --tp-* lever is armed, so a default run's Trade rows are unchanged.
+    final_target_r: Optional[float] = None
+    n_extends: Optional[int] = None
+    n_retargets: Optional[int] = None
+    tp_exit_r: Optional[float] = None
+    # EXIT-PATH-EMIT-OFFLINE / METALABEL-EMIT-FEATURES (scripts/research/
+    # harness_emit.py): mae_r plus the decision-time f_* columns. None unless
+    # --emit-paths or --emit-features is passed, so a default emit row is
+    # byte-identical.
+    extra: Optional[Dict[str, Any]] = None
 
 
 def _load_candles(path: str) -> pd.DataFrame:
@@ -190,6 +260,36 @@ def _adx(df: pd.DataFrame, period: int) -> pd.Series:
 _effective_trail_mult = effective_trail_mult
 
 
+def _forming_bar_entries():
+    """scripts/research/forming_bar_entries.py, loaded by FILE (the decision
+    mode's one implementation; see run_backtest(decision_bar=...))."""
+    mod = sys.modules.get("forming_bar_entries")
+    if mod is None:
+        import importlib.util as _ilu
+        _spec = _ilu.spec_from_file_location(
+            "forming_bar_entries",
+            Path(__file__).resolve().parent / "research" / "forming_bar_entries.py")
+        mod = _ilu.module_from_spec(_spec)
+        sys.modules["forming_bar_entries"] = mod
+        _spec.loader.exec_module(mod)
+    return mod
+
+
+def _parse_hhmm(s: Optional[str]) -> Optional[int]:
+    """'HH:MM' -> minutes after UTC midnight; empty/None -> None (lever off). Refuses garbage."""
+    s = str(s or "").strip()
+    if not s:
+        return None
+    try:
+        hh, mm = s.split(":")
+        v = int(hh) * 60 + int(mm)
+    except ValueError as exc:
+        raise ValueError(f"expected HH:MM, got {s!r}") from exc
+    if not 0 <= v < 1440:
+        raise ValueError(f"HH:MM out of range: {s!r}")
+    return v
+
+
 def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                  atr_stop_mult: float, trail_mult: float, timeout_bars: int,
                  cooldown_bars: int, timeframe: str, symbol: str,
@@ -201,6 +301,9 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                  adx_min: Optional[float] = None,
                  adx_max: Optional[float] = None,
                  adx_period: int = 14,
+                 adx_soft_weight_floor: Optional[float] = None,
+                 adx_soft_weight_ceiling: Optional[float] = None,
+                 adx_soft_weight_min: float = 0.0,
                  direction_filter: str = "off",
                  stale_exit_bars: Optional[int] = None,
                  stale_exit_below_r: float = 0.0,
@@ -216,14 +319,74 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                  rr_floor: float = 0.0,
                  confirm_bars: int = 0,
                  skip_hours: str = "",
+                 flat_at_utc: str = "",
+                 no_entry_after_utc: str = "",
+                 bar_label: str = "open",
                  vol_skip_above_pctl: float = 0.0,
                  vol_skip_below_pctl: float = 0.0,
                  vol_pctl_window: int = 200,
                  trail_vol_above_pctl: float = 0.0,
                  trail_vol_below_pctl: float = 0.0,
                  trail_vol_tight_mult: float = 0.0,
+                 trail_adx_below: float = 0.0,
+                 trail_adx_falling_bars: int = 0,
+                 trail_adx_tight_mult: float = 0.0,
+                 trail_level: str = "",
+                 trail_level_tight_mult: float = 0.0,
+                 trail_level_lookback: int = 60,
+                 trail_level_pivot_k: int = 3,
+                 trail_level_round_step: float = 0.0,
+                 trail_level_min_r: float = 0.0,
+                 giveback_frac: float = 0.0,
+                 trigger_action: str = "",
+                 trigger_file: str = "",
+                 trigger_all: int = 0,
+                 trail_state_feature: str = "", trail_state_window: int = 6, trail_state_op: str = "",
+                 trail_state_thr: float = 0.0, trail_state_arm_r: float = 0.0, trail_state_tight_mult: float = 0.0,
+                 bank_state_feature: str = "", bank_state_window: int = 6, bank_state_op: str = "",
+                 bank_state_thr: float = 0.0, bank_state_arm_r: float = 0.0,
+                 chop_stop_feature: str = "", chop_stop_window: int = 6, chop_stop_op: str = "",
+                 chop_stop_thr: float = 0.0, chop_stop_bars: int = 0, chop_stop_min_peak_r: float = 0.0,
+                 chop_stop_max_open_frac: float = 1.0,
+                 momentum_stale_bars: int = 0,
+                 momentum_stale_adx_below: float = 0.0,
                  be_floor_r: float = 0.0,
-                 trades_out: Optional[List["Trade"]] = None) -> Dict[str, Any]:
+                 tp_revision: str = "",
+                 tp_revision_width_mult: float = 1.0,
+                 tp_geometry: Optional[_tpg.TPGeometrySpec] = None,
+                 trades_out: Optional[List["Trade"]] = None,
+                 vol_pctl_override: Optional[Sequence[float]] = None,
+                 entry_override: Optional[Dict[int, Dict[str, Any]]] = None,
+                 decision_bar: str = "closed",
+                 decision_1m: Optional[pd.DataFrame] = None,
+                 decision_cfg: Optional[Dict[str, Any]] = None,
+                 decision_workers: int = 4,
+                 emit_paths_path: Optional[str] = None,
+                 emit_features: bool = False) -> Dict[str, Any]:
+    # FORMING-BAR DECISION MODE (PI-20260929-VOLSKIP-SIGNAL-0002; default
+    # "closed" = byte-identical). Live evaluates the WHOLE entry signal on the
+    # still-forming bar every ~2 min; "forming" replays that decision with the
+    # live unit's own order_package from 1m data (`decision_1m`) and the leg's
+    # config/strategies.yaml block (`decision_cfg`) via
+    # scripts/research/forming_bar_entries.py — the ONE implementation, shared
+    # with the RQ-20260929-301/-302 replays — and feeds it through
+    # `entry_override`. The unit already applied every entry gate, so the
+    # harness's own copies are switched off; exits and costs are unchanged.
+    decision_bar = str(decision_bar or "closed").lower()
+    if decision_bar == "forming":
+        if decision_1m is None or decision_cfg is None:
+            raise ValueError("decision_bar='forming' needs decision_1m and decision_cfg")
+        entry_override = _forming_bar_entries().forming_entry_override(
+            df, decision_1m, decision_cfg, family="trend", label=strategy_name,
+            workers=decision_workers)
+        adx_min = adx_max = None
+        min_confidence = 0.0
+        vol_skip_above_pctl = vol_skip_below_pctl = 0.0
+        skip_hours = ""
+        side_filter = "both"
+        long_only = False
+    elif decision_bar != "closed":
+        raise ValueError(f"unknown decision_bar {decision_bar!r} (expected closed|forming)")
     """Run the Donchian trend backtest and return its summary dict.
 
     ``trades_out`` — when a list is passed, the engine's ``Trade`` objects are
@@ -249,6 +412,10 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
     byte-identical to a levers-unset run.
     """
     df = df.reset_index(drop=True)
+    tp_geom = tp_geometry or _tpg.TPGeometrySpec()
+    _refused = _tpg.refusal(tp_geom, has_target=tp_cap_pct > 0.0)
+    if _refused:
+        raise ValueError(_refused)
     df["atr"] = _atr(df, atr_period)
     # Channel from the PRIOR N bars only (shift(1)) — no lookahead. Same
     # construction as the live strategy and the fade mirror.
@@ -256,9 +423,45 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
     df["dc_lo"] = df["low"].rolling(donchian).min().shift(1)
     # ADX regime filter (recombination lever): only computed/consulted when a
     # band is set, so the default (None/None) run is byte-identical to before.
-    adx_active = adx_min is not None or adx_max is not None
+    # SRQ-20260618-001/-002 refinement: the SOFT weight lever (continuous R
+    # scaling by entry-bar ADX, scripts/research/regime_weight.py) also needs the
+    # series, so it shares the same activation flag rather than gating on the
+    # hard band alone — a soft-weight-only run must not skip the computation.
+    soft_weight_on = soft_weight_armed(adx_soft_weight_floor, adx_soft_weight_ceiling)
+    adx_active = adx_min is not None or adx_max is not None or soft_weight_on
     if adx_active:
         df["adx"] = _adx(df, adx_period)
+    # MOMENTUM-TRAIL-LEVER (default off = byte-identical): the momentum-keyed
+    # exits read the SAME Wilder ADX series, but arming them must NOT turn on
+    # the ENTRY band (`adx_active` also gates admission and warm-up), so they
+    # get their own flags and entries stay untouched.
+    mom_trail_on = momentum_trail_armed(trail_adx_below, trail_adx_falling_bars,
+                                        trail_adx_tight_mult)
+    mom_stale_on = momentum_stale_armed(momentum_stale_bars,
+                                        momentum_stale_adx_below)
+    mom_any = mom_trail_on or mom_stale_on
+    # P1-Q10 level-triggered trail (default off = byte-identical): ONE structural
+    # level per trade, fixed at entry (src/research/trail_levers.trade_level); on
+    # the first bar that trades through it the trail tightens to
+    # trail_level_tight_mult x ATR for the rest of the trade (latched).
+    level_on = level_trail_armed(trail_level, trail_level_tight_mult)
+    # HARNESS-METRIC-TRIGGER (default off = byte-identical): act only on trades an out-of-fold
+    # metric flagged (or on every trade open at bar K, the control); src/research/metric_trigger.py.
+    _trig = TriggerPlan(trigger_action, trigger_file, trigger_all)
+    if _trig.on:
+        from harness_emit import trade_key as _trigger_trade_key  # same key --emit-trades / paths use
+    # PATHSTATE-TRAIL-GATE (default off = byte-identical): gates on the trade's own in-trade path state;
+    # features come from scripts/research/path_state_giveback.py::state_at (bars <= t only).
+    _psg = build_path_state_gate(
+        trail_state_feature, trail_state_window, trail_state_op, trail_state_thr, trail_state_arm_r,
+        trail_state_tight_mult, bank_state_feature, bank_state_window, bank_state_op, bank_state_thr,
+        bank_state_arm_r, chop_stop_feature, chop_stop_window, chop_stop_op, chop_stop_thr, chop_stop_bars,
+        chop_stop_min_peak_r, chop_stop_max_open_frac)
+    _lv_hi = df["high"].to_numpy() if level_on else None
+    _lv_lo = df["low"].to_numpy() if level_on else None
+    adx_series = None
+    if mom_any:
+        adx_series = df["adx"] if adx_active else _adx(df, adx_period)
     # Direction-aware regime filter (Phase 2, BL-20260717-REGIME-COVERAGE-DEBT):
     # ADX is direction-blind, so skip a long in a DOWN regime / a short in an UP
     # regime. `off` = byte-identical (no series computed). `di` = Wilder +DI/-DI
@@ -273,6 +476,34 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
     # M21 E-2 time-of-day entry lever (empty = off, byte-identical): skip any NEW
     # entry whose SIGNAL bar's UTC hour is in the CSV set. Exits are never touched.
     skip_hour_set = {int(h) for h in str(skip_hours or "").split(",") if str(h).strip() != ""}
+    # SAME-UTC-DAY-FLAT levers (RQ-20260930-503; both empty = off, byte-identical).
+    # `no_entry_after_utc` "HH:MM": skip a NEW entry whose ENTRY MOMENT (the close of the
+    # entry bar, which is when this harness fills) falls later than HH:MM UTC of its own day.
+    # `flat_at_utc` "HH:MM": force-close any open position at the CLOSE of the last bar that
+    # ends at or before HH:MM UTC of the entry moment's day, reason `day_flat`. On 1h bars a
+    # 23:45 flatten therefore happens at 23:00, up to one bar EARLY -- the safe side of the
+    # rule, never late. Ordering is stop -> target -> the other levers -> flatten, so the
+    # flatten never pre-empts a stop that the same bar hit. A position with no bar left to
+    # flatten on (the entry bar is already at or past the flatten bar) is NOT entered.
+    #
+    # `bar_label` says what a row's timestamp MEANS: "open" (native exchange candles: the bar starts at the
+    # stamp, so it closes one bar later) or "close" (this harness's own `_resample`, which stamps each bar at
+    # its CLOSE: label="right"). main() sets "close" whenever --resample is used. Reading a close-stamped bar
+    # as open-stamped would add one bar and flatten/cut EARLY by a whole bar (never late, but biased).
+    # The day is always the UTC day: a tz-aware column in another zone is converted first.
+    _flat_min = _parse_hhmm(flat_at_utc)
+    _nea_min = _parse_hhmm(no_entry_after_utc)
+    if bar_label not in ("open", "close"):
+        raise ValueError(f"bar_label must be 'open' or 'close', got {bar_label!r}")
+    _close_idx = None
+    if _flat_min is not None or _nea_min is not None:
+        _ts_idx = pd.DatetimeIndex(df["timestamp"])
+        if _ts_idx.tz is not None:
+            _ts_idx = _ts_idx.tz_convert("UTC")
+        _bar = pd.Series(_ts_idx).diff().median()
+        if pd.isna(_bar) or _bar >= pd.Timedelta(days=1):
+            raise ValueError("flat_at_utc / no_entry_after_utc need intraday bars (< 1d)")
+        _close_idx = _ts_idx if bar_label == "close" else _ts_idx + _bar
     # M21 E-2 vol-at-entry + M20-X vol-conditional-trail levers share ONE trailing
     # ATR-percentile series: rank of ATR[j] within the previous `vol_pctl_window`
     # bars (causal, includes the bar itself; NaN until the window fills → never
@@ -285,6 +516,15 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
     if vol_skip_above_pctl > 0.0 or vol_skip_below_pctl > 0.0 or vol_trail_on:
         atr_pctl = df["atr"].rolling(vol_pctl_window,
                                      min_periods=vol_pctl_window).rank(pct=True)
+    # Research-only hook (None = byte-identical): replace the percentile the
+    # vol gate reads with an externally computed per-bar series (positional,
+    # len(df)). scripts/research/vol_skip_forming_bar_replay.py uses it to
+    # replay the gate on the percentile the LIVE frame sees when its last row
+    # is a still-forming bar (PI-20260929-EXITOPS-0005). NaN = never skip.
+    if vol_pctl_override is not None and atr_pctl is not None:
+        if len(vol_pctl_override) != len(df):
+            raise ValueError("vol_pctl_override must have one value per bar")
+        atr_pctl = pd.Series([float(v) for v in vol_pctl_override], dtype=float)
     # M20 P4.1 trail-decay is armed by R or by a stall in new favourable extremes;
     # `tight_mult <= 0` disables the whole lever (the effective mult stays
     # `trail_mult`, so the trail arithmetic below is unchanged).
@@ -316,10 +556,37 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
     else:
         rr_floor_state = "unmeasurable_no_tp_cap"
     trades: List[Trade] = []
+    # OPT-IN research emits (scripts/research/harness_emit.py; both None by
+    # default, so nothing below allocates or changes on a flag-off run).
+    # The recorder is driven from THIS loop -- no re-walk -- and reads the
+    # engine's own `mfe`/`trail`/`tp_price`/`peak_j`.
+    _prec = _dctx = None
+    if emit_paths_path or emit_features:
+        import harness_emit as _he
+        _prec = _he.PathRecorder(df, strategy=strategy_name, symbol=symbol,
+                                 keep_rows=bool(emit_paths_path))
+        if emit_features:
+            _dctx = _he.DecisionContext(df)
     # Per-entry live-TP distance in R. Answers 'does the 9.9% clamp actually
     # BIND on this leg' from the leg's own frame, instead of from an assumed
     # ATR%. Empty when --tp-cap-pct is off.
     _tp_r_effective: List[float] = []
+    # TP doctrine B1 lever: only the trend family's own rule is modelled here.
+    # Two movers on one target would each overwrite `tp_price` every bar and
+    # the result would measure neither: the B1 rule and the GEOM-B1 levers are
+    # separate arms, never one run.
+    if tp_revision and tp_geom.armed:
+        raise ValueError("tp_revision and a GEOM-B1 tp_geometry lever cannot both be armed "
+                         "in one run: each moves tp_price")
+    if tp_revision and tp_revision != RULE_DONCHIAN_MEASURED_MOVE:
+        raise ValueError(f"tp_revision {tp_revision!r}: this harness models only "
+                         f"{RULE_DONCHIAN_MEASURED_MOVE!r}")
+    _tp_revisions = 0
+    # How many applied revisions the venue cap bound: when most do, the arms
+    # measure a re-anchored cap, not the measured move -- report it, never infer.
+    _tp_revisions_clamped = 0
+    _highs = df["high"].to_numpy()
+    _lows = df["low"].to_numpy()
     # Per-trade MINIMUM `rr_from_here` seen while open. This is the lever's
     # REACHABILITY diagnostic and it is computed whenever a capped TP exists,
     # independently of `rr_floor` — a floor F can only ever fire on a trade
@@ -356,6 +623,20 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
         elif c < lo:
             direction = "short"
             breakout_depth = (lo - c) / atr
+        # Research-only hook (None = byte-identical) — same contract as the
+        # pullback harness's entry_override: the ENTRY decision per bar comes
+        # from outside ({bar_index: {"direction", "entry", "atr", optional
+        # "rest_high"/"rest_low"}}), a bar not in it is skipped, and exits,
+        # costs and bookkeeping stay this harness's own. Used by
+        # scripts/research/whole_signal_forming_bar_replay.py
+        # (PI-20260929-VOLSKIP-0001), which disables the gates it applied.
+        _ov = None
+        if entry_override is not None:
+            _ov = entry_override.get(i)
+            direction = None if _ov is None else str(_ov["direction"])
+            if _ov is not None:
+                c, atr = float(_ov["entry"]), float(_ov["atr"])
+                breakout_depth = ((c - hi) if direction == "long" else (lo - c)) / atr
         if direction is None:
             i += 1
             continue
@@ -465,10 +746,34 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                 i += 1
                 continue
             c = float(df["close"].iloc[entry_i])
+        _flat_jf = None
+        if _close_idx is not None:
+            _em = _close_idx[entry_i]
+            _day0 = _em.normalize()
+            if _nea_min is not None and (_em - _day0) > pd.Timedelta(minutes=_nea_min):
+                i += 1
+                continue
+            if _flat_min is not None:
+                _flat_jf = int(_close_idx.searchsorted(_day0 + pd.Timedelta(minutes=_flat_min),
+                                                       side="right")) - 1
+                if _flat_jf <= entry_i:      # no bar left to flatten on: not entered
+                    i += 1
+                    continue
         entry = c
-        sl = entry - atr_stop_mult * atr if direction == "long" else entry + atr_stop_mult * atr
-        risk = abs(entry - sl)
-        if risk <= 0:
+        # entry_override only, optional ``sl_anchor`` (None = byte-identical):
+        # live places a Market order whose SL/TP were computed from the SIGNAL
+        # price (order_package entry = the decision bar's close) and does not
+        # re-anchor them to the fill (src/units/accounts/execute.py sends
+        # order["sl"]/order["tp"] as-is), so the stop/target/risk anchor is the
+        # signal price while the position, trail and P&L run from the fill.
+        _anc = entry
+        if _ov is not None and _ov.get("sl_anchor") is not None:
+            _anc = float(_ov["sl_anchor"])
+        sl = _anc - atr_stop_mult * atr if direction == "long" else _anc + atr_stop_mult * atr
+        risk = abs(_anc - sl)
+        if risk <= 0 or (direction == "long" and entry <= sl) or (direction == "short" and entry >= sl):
+            # a fill already through the stop is refused by the venue (Bybit
+            # 10001 SL-side guard); with no anchor entry==_anc so never trips.
             i += 1
             continue
         # LIVE-PARITY TAKE-PROFIT. Tracking id on its own line, never wrapped:
@@ -484,11 +789,22 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
         tp_price: Optional[float] = None
         if tp_cap_pct > 0.0:
             if direction == "long":
-                tp_price = min(entry * (1.0 + tp_cap_pct), entry + tp_r * risk)
+                tp_price = min(_anc * (1.0 + tp_cap_pct), _anc + tp_r * risk)
             else:
-                tp_price = max(entry * (1.0 - tp_cap_pct), entry - tp_r * risk)
+                tp_price = max(_anc * (1.0 - tp_cap_pct), _anc - tp_r * risk)
         # Distance of the live TP in R — the measurement that says whether the
         # clamp binds on THIS leg's own frame instead of an assumed ATR%.
+        # GEOM-B1: a finite entry-time target and/or a target that moves
+        # (scripts/research/tp_geometry.py). Skipped entirely at default, so the
+        # legacy `tp_price` above is untouched.
+        _tpt = None
+        if tp_geom.armed:
+            tp_price = _tpg.entry_target(
+                tp_geom, anchor=_anc, risk=risk, is_long=(direction == "long"),
+                tp_cap_pct=tp_cap_pct, legacy_tp=tp_price)
+            _tpt = _tpg.TPTracker(
+                tp_geom, anchor=_anc, sl=sl, risk=risk, is_long=(direction == "long"),
+                tp_cap_pct=tp_cap_pct, target=tp_price, atr0=atr)
         if tp_price is not None:
             _tp_r_effective.append(abs(tp_price - entry) / risk)
         ext = entry
@@ -500,39 +816,94 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
         peak_j = entry_i          # bar of the last NEW favourable extreme
         banked = False            # M20 partial-TP rung filled?
         rr_min: Optional[float] = None   # lowest rr_from_here seen while open
-        for j in range(entry_i + 1, min(entry_i + timeout_bars + 1, n)):
+        mom_fired_bars = 0        # momentum_trail attribution (only read if armed)
+        mom_tightened = False
+        _trail_prev = trail
+        _lvl = (trade_level(trail_level, _lv_hi, _lv_lo, entry_i, entry, direction == "long",
+                            trail_level_lookback, trail_level_pivot_k, trail_level_round_step)
+                if level_on else None)
+        _lvl_touch_j: Optional[int] = None
+        _trig_k = (_trig.k_for(_trigger_trade_key(strategy_name, symbol, df["timestamp"].iloc[entry_i],
+                                                  direction)) if _trig.on else None)
+        _trig_live = False        # the trigger bar has closed; the action binds from the next bar
+        _psg.start()
+
+        def _trig_tight(m: float) -> float:
+            # --trigger-action tight: from the bar after the trigger bar the mult is at most the tight one
+            m = min(m, trail_decay_tight_mult) if (_trig_live and trigger_action == "tight") else m
+            return _psg.tight(m)      # PATHSTATE-TRAIL-GATE: by MINIMUM; identity unless armed
+        # entry_override only: a stop/target touched in the entry bar's range
+        # AFTER the entry tick exits on the entry bar (SL-first, no ratchet on
+        # that remainder — conservative). None on every harness-decided entry.
+        # The ONE stop/target test (SL-first), shared by the bar loop and the
+        # entry_override remainder check -- tests/test_backtest_trend_live_tp.py
+        # pins that each direction has exactly one site. Reads the CURRENT
+        # `trail` at call time.
+        def _stop_or_target(h: float, lo: float):
+            if direction == "long":
+                if lo <= trail:                       # SL-first (conservative)
+                    return trail, ("trail_stop" if trail > sl else "stop")
+                if tp_price is not None and h >= tp_price:
+                    # Checked AFTER the stop so the conservative SL-first
+                    # intrabar convention is unchanged: a bar that trades
+                    # through both still takes the stop.
+                    return tp_price, "take_profit"
+            else:
+                if h >= trail:
+                    return trail, ("trail_stop" if trail < sl else "stop")
+                if tp_price is not None and lo <= tp_price:
+                    return tp_price, "take_profit"
+            return None
+
+        _rest_hit = None
+        if _ov is not None and _ov.get("rest_high") is not None:
+            # The harness's ONE stop/target test (trail == sl here, so a hit
+            # reads "stop"); tests/test_backtest_trend_live_tp.py pins that it
+            # is the only SL-first site.
+            _rest_hit = _stop_or_target(float(_ov["rest_high"]), float(_ov["rest_low"]))
+        if _prec is not None:
+            _prec.start(trade_key=_he.trade_key(strategy_name, symbol,
+                                                df["timestamp"].iloc[entry_i], direction),
+                        entry_i=entry_i, entry=entry, risk=risk,
+                        is_long=(direction == "long"))
+        for j in range(entry_i + 1, min(entry_i + timeout_bars + 1, n)) if _rest_hit is None else ():
+            if _prec is not None:
+                # Closes bar j-1's row with the state as it stands now (its end
+                # state) and opens bar j with the stop/target it is tested against.
+                _prec.bar(j, stop=trail, target=tp_price, peak_r=mfe, peak_j=peak_j)
             bh, bl = float(df["high"].iloc[j]), float(df["low"].iloc[j])
             # M20 partial-TP bank lever (0 = off, byte-identical): bank
             # `bank_frac` of the position when price touches entry ± bank_at_r ×
             # risk. Checked BEFORE the stop so a bar that trades through the rung
             # and then stops out still credits the banked fraction at the rung —
             # the conservative reading (the remainder takes the stop).
-            if bank_frac > 0.0 and not banked:
+            if bank_frac > 0.0 and not banked and (trigger_action != "bank" or _trig_live) and _psg.bank_allowed():
                 rung = (entry + bank_at_r * risk if direction == "long"
                         else entry - bank_at_r * risk)
                 if (bh >= rung) if direction == "long" else (bl <= rung):
                     banked = True
+            _hit = _stop_or_target(bh, bl)
+            if _hit is not None:
+                exit_price, exit_reason = _hit
+                exit_idx = j
+                break
             if direction == "long":
-                if bl <= trail:                       # SL-first (conservative)
-                    exit_price, exit_idx = trail, j
-                    exit_reason = "trail_stop" if trail > sl else "stop"
-                    break
-                if tp_price is not None and bh >= tp_price:
-                    # Checked AFTER the stop so the conservative SL-first
-                    # intrabar convention is unchanged: a bar that trades
-                    # through both still takes the stop.
-                    exit_price, exit_idx = tp_price, j
-                    exit_reason = "take_profit"
-                    break
                 if bh > ext:
                     peak_j = j
                 ext = max(ext, bh)
-                trail = max(trail, ext - _effective_trail_mult(
+                trail = max(trail, ext - _trig_tight(_effective_trail_mult(
                     trail_mult, (ext - entry) / risk, j - peak_j,
                     trail_decay_on, trail_decay_arm_r, trail_decay_stall_bars,
                     trail_decay_tight_mult, vol_trail_on, atr_pctl, j,
                     trail_vol_above_pctl, trail_vol_below_pctl,
-                    trail_vol_tight_mult) * atr)
+                    trail_vol_tight_mult, mom_trail_on, adx_series,
+                    trail_adx_below, trail_adx_falling_bars,
+                    trail_adx_tight_mult)) * atr)
+                if level_on and (_lvl_touch_j is not None or (
+                        level_touched(_lvl, True, bh, bl)
+                        and level_r_gate_open(trail_level_min_r, (ext - entry) / risk))):
+                    _lvl_touch_j = j if _lvl_touch_j is None else _lvl_touch_j
+                    trail = max(trail, ext - trail_level_tight_mult * atr)
                 mfe = max(mfe, (ext - entry) / risk)
                 # MI-165 break-even FLOOR lever (0 = off, byte-identical).
                 # Once the trade has SEEN >= be_floor_r R, the stop may never
@@ -547,28 +918,58 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                 if be_floor_r > 0.0 and mfe >= be_floor_r:
                     trail = max(trail, entry)
             else:
-                if bh >= trail:
-                    exit_price, exit_idx = trail, j
-                    exit_reason = "trail_stop" if trail < sl else "stop"
-                    break
-                if tp_price is not None and bl <= tp_price:
-                    exit_price, exit_idx = tp_price, j
-                    exit_reason = "take_profit"
-                    break
                 if bl < ext:
                     peak_j = j
                 ext = min(ext, bl)
-                trail = min(trail, ext + _effective_trail_mult(
+                trail = min(trail, ext + _trig_tight(_effective_trail_mult(
                     trail_mult, (entry - ext) / risk, j - peak_j,
                     trail_decay_on, trail_decay_arm_r, trail_decay_stall_bars,
                     trail_decay_tight_mult, vol_trail_on, atr_pctl, j,
                     trail_vol_above_pctl, trail_vol_below_pctl,
-                    trail_vol_tight_mult) * atr)
+                    trail_vol_tight_mult, mom_trail_on, adx_series,
+                    trail_adx_below, trail_adx_falling_bars,
+                    trail_adx_tight_mult)) * atr)
+                if level_on and (_lvl_touch_j is not None or (
+                        level_touched(_lvl, False, bh, bl)
+                        and level_r_gate_open(trail_level_min_r, (entry - ext) / risk))):
+                    _lvl_touch_j = j if _lvl_touch_j is None else _lvl_touch_j
+                    trail = min(trail, ext + trail_level_tight_mult * atr)
                 mfe = max(mfe, (entry - ext) / risk)
                 # MI-165 break-even FLOOR — short side. `min()` is the
                 # tightening direction here, mirroring the ratchet above.
                 if be_floor_r > 0.0 and mfe >= be_floor_r:
                     trail = min(trail, entry)
+            # GEOM-B1 target revision (off unless --tp-extend-r / --tp-retarget-mode).
+            # On the bar's CLOSE, after its own stop/target test; the revised level
+            # binds from the NEXT bar. NOT a levered exit: it only moves tp_price.
+            # Native thesis = the Donchian continuation test, as REGISTERED in
+            # RQ-20261007-001/-002: "the channel extreme has moved further in the
+            # trade direction since the approach bar". At the approach bar itself
+            # nothing has moved yet, so the first approach can never extend --
+            # a conservative, literal reading, not an oversight.
+            if _tpt is not None and tp_geom.revises:
+                def _donchian_thesis(_ab, _j=j, _long=(direction == "long")):
+                    if _ab is None:
+                        return None
+                    _now = df["dc_hi" if _long else "dc_lo"].iloc[_j]
+                    _then = df["dc_hi" if _long else "dc_lo"].iloc[_ab]
+                    if pd.isna(_now) or pd.isna(_then):
+                        return None
+                    return (float(_now) > float(_then)) if _long else (float(_now) < float(_then))
+                _tpt.on_bar_close(close=float(df["close"].iloc[j]), ext=ext,
+                                  bars_since_peak=j - peak_j,
+                                  atr_now=float(df["atr"].iloc[j]),
+                                  thesis_fn=_donchian_thesis, bar_index=j)
+                tp_price = _tpt.target
+            # momentum_trail attribution: bars on which the ADX condition fired,
+            # and whether the FINAL stop was last moved on a fired bar.
+            if mom_trail_on:
+                _mf = momentum_trail_fired(adx_series, j, trail_adx_below,
+                                           trail_adx_falling_bars)
+                mom_fired_bars += int(_mf)
+                if trail != _trail_prev:
+                    mom_tightened = _mf
+                _trail_prev = trail
             # M20 giveback-stop lever (0 = off, byte-identical): once the trade has
             # SEEN >= giveback_min_mfe_r R of open profit, exit at CLOSE when it has
             # handed back >= giveback_r R from that peak. An R-based profit lock,
@@ -578,7 +979,7 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                 bc = float(df["close"].iloc[j])
                 r_close = ((bc - entry) / risk if direction == "long"
                            else (entry - bc) / risk)
-                if mfe >= giveback_min_mfe_r and (mfe - r_close) >= giveback_r:
+                if giveback_fires(mfe, r_close, giveback_min_mfe_r, giveback_r, giveback_frac):
                     exit_price, exit_idx = bc, j
                     exit_reason = "giveback_stop"
                     break
@@ -598,6 +999,17 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                     exit_price, exit_idx = bc, j
                     exit_reason = "stale_stop"
                     break
+            # MOMENTUM-TRAIL-LEVER `momentum_stale` (off = byte-identical): time
+            # stop keyed to MOMENTUM decay, not open R — closes at bar CLOSE once
+            # ADX has fallen below its entry reading AND under the bound, after
+            # N bars. After the existing stale check, before rr_floor, so
+            # composing it cannot re-grade a shipped lever's recorded verdict.
+            if mom_stale_on and momentum_stale_fires(
+                    adx_series, j, entry_i, momentum_stale_bars,
+                    momentum_stale_adx_below):
+                exit_price, exit_idx = float(df["close"].iloc[j]), j
+                exit_reason = "momentum_stale"
+                break
             # M31 P5 candidate — the `rr_from_here` FLOOR (0 = off,
             # byte-identical). Close at bar CLOSE once the upside remaining to
             # the capped TP no longer justifies the give-back at risk to the
@@ -631,25 +1043,105 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                         exit_price, exit_idx = _bc, j
                         exit_reason = "rr_floor_exit"
                         break
+            # SAME-UTC-DAY FLATTEN (off unless flat_at_utc is set): LAST in the precedence
+            # chain, so it can never pre-empt a stop, target or lever the same bar hit.
+            if _flat_jf is not None and j >= _flat_jf:
+                exit_price, exit_idx = float(df["close"].iloc[j]), j
+                exit_reason = "day_flat"
+                break
+            # TP DOCTRINE B1 — the declared TP-revision rule ("" = off,
+            # byte-identical). After bar j CLOSES (every exit test above has
+            # passed), re-estimate the target with the SAME pure core the live
+            # unit and the prop trail call (src/runtime/tp_revision.py), so it
+            # binds from bar j+1 -- the bar a live amend placed now would rest
+            # on. Clamped to the venue cap from bar j's close when the capped-TP
+            # path is on; a target already through that close is not placed
+            # (live refuses it too) and the resting tp_price stays.
+            if tp_revision:
+                _rev = measured_move_path(
+                    _highs, _lows, start=entry_i, end=j, n=donchian,
+                    direction=direction, width_mult=tp_revision_width_mult)
+                if _rev is not None:
+                    _cand, _ = _rev
+                    _bc = float(df["close"].iloc[j])
+                    _clamped = False
+                    if tp_cap_pct > 0.0:
+                        _cand, _clamped = clamp_to_venue_cap(direction, _cand, _bc, tp_cap_pct)
+                    if tp_revision_rejection(direction, _cand, _bc) is None:
+                        tp_price = _cand
+                        _tp_revisions += 1
+                        _tp_revisions_clamped += int(_clamped)
+            # HARNESS-METRIC-TRIGGER: the trade survived bar offset k's close, so the metric's
+            # decision exists now; the action binds from bar k+1.
+            if _trig_k is not None and not _trig_live and (j - entry_i) == _trig_k:
+                _trig_live = True
+                _trig.n_acted += 1
+            # PATHSTATE-TRAIL-GATE time-in-chop stop (off = byte-identical): the state is read at THIS bar's
+            # close (bars <= j only); the exit is at that close, after every other test above.
+            if _psg.on:
+                _bc = float(df["close"].iloc[j])
+                if _psg.on_bar_close(path_state_row(
+                        entry, risk, direction == "long", _bc, float(df["high"].iloc[j]), float(df["low"].iloc[j]),
+                        mfe, j - peak_j, float(df["atr"].iloc[j]), trail)):
+                    exit_price, exit_idx = _bc, j
+                    exit_reason = "chop_stop"
+                    break
+        if _rest_hit is not None:
+            exit_price, exit_reason = _rest_hit
+            exit_idx = entry_i
         if rr_min is not None:
             _rr_min_per_trade.append(rr_min)
         if exit_price is None:
             exit_price = float(df["close"].iloc[exit_idx])
+        _extra = None
+        if _prec is not None:
+            _extra = {"mae_r": _prec.finish(exit_idx, exit_price, exit_reason,
+                                            peak_r=mfe, peak_j=peak_j)["mae_r"]}
+            if _dctx is not None:
+                _extra.update(_dctx.at(entry_i))
         r = ((exit_price - entry) / risk if direction == "long"
              else (entry - exit_price) / risk)
+        _tp_exit_r = r      # raw price R, before bank / regime weighting (calibration)
         # M20 bank lever: a filled rung realises `bank_frac` of the position at
         # +bank_at_r; the remainder realises the exit R. No-op when bank_frac is 0.
         if banked:
             r = bank_frac * bank_at_r + (1.0 - bank_frac) * r
+        # SRQ-20260618-001 soft regime-weight lever: scale realized R by a
+        # continuous function of the ENTRY bar's ADX (never the exit bar — the
+        # sizing decision is made at entry, exactly like a live order's
+        # position size). No-op (weight=1.0, byte-identical r) when the lever
+        # is not declared.
+        adx_at_entry = None
+        regime_weight = 1.0
+        if adx_active:
+            _adx_entry = df["adx"].iloc[entry_i]
+            adx_at_entry = None if pd.isna(_adx_entry) else float(_adx_entry)
+            if soft_weight_on:
+                regime_weight = soft_regime_weight(
+                    adx_at_entry, adx_soft_weight_floor, adx_soft_weight_ceiling,
+                    weight_min=adx_soft_weight_min)
+                r = r * regime_weight
         trades.append(Trade(
             entry_index=entry_i, entry_time=df["timestamp"].iloc[entry_i],
             direction=direction,
             entry=entry, sl=sl, risk=risk, exit_index=exit_idx,
             exit_time=df["timestamp"].iloc[exit_idx], exit_price=exit_price,
             outcome=exit_reason, r_multiple=round(r, 4), mfe_r=round(mfe, 3),
-            confidence=confidence))
+            confidence=confidence, adx_at_entry=adx_at_entry,
+            regime_weight=round(regime_weight, 4),
+            mom=_mom_attribution(adx_series, entry_i, exit_idx, mom_fired_bars,
+                                 mom_tightened) if mom_any else None,
+            level=({"level_price": _lvl, "level_touched": _lvl_touch_j is not None,
+                    "level_touch_bars": (None if _lvl_touch_j is None else _lvl_touch_j - entry_i)}
+                   if level_on else None),
+            **({} if _tpt is None else dict(
+                final_target_r=_tpt.final_target_r, n_extends=_tpt.n_extends,
+                n_retargets=_tpt.n_retargets, tp_exit_r=round(_tp_exit_r, 4))),
+            extra=_extra))
         next_idx = exit_idx + 1 + cooldown_bars
         i = next_idx
+    if emit_paths_path and _prec is not None:
+        _prec.write(emit_paths_path)
     if trades_out is not None:
         trades_out.extend(trades)
     if emit_path:
@@ -716,7 +1208,12 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                     "cost_slippage_r": round(cb["slippage_r"], 5),
                     "cost_funding_r": round(cb["funding_r"], 5),
                     "funding_windows": round(cb["funding_windows"], 3),
-                    "confidence": t.confidence}, default=str) + "\n")
+                    "confidence": t.confidence, "adx_at_entry": t.adx_at_entry,
+                    "regime_weight": t.regime_weight,
+                    **(t.mom or {}),
+                    **(t.level or {}),
+                    **(_tpg_row(t) if tp_geom.armed else {}),
+                    **(t.extra or {})}, default=str) + "\n")
     params: Dict[str, Any] = {"donchian": donchian, "atr_stop_mult": atr_stop_mult,
                               "trail_mult": trail_mult, "min_confidence": min_confidence}
     if adx_min is not None:
@@ -725,6 +1222,10 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
         params["adx_max"] = adx_max
     if adx_active:
         params["adx_period"] = adx_period
+    if soft_weight_on:
+        params["adx_soft_weight_floor"] = adx_soft_weight_floor
+        params["adx_soft_weight_ceiling"] = adx_soft_weight_ceiling
+        params["adx_soft_weight_min"] = adx_soft_weight_min
     if direction_filter != "off":
         params["direction_filter"] = direction_filter
     if stale_exit_bars is not None:
@@ -738,18 +1239,51 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
     if giveback_min_mfe_r:
         params["giveback_min_mfe_r"] = giveback_min_mfe_r
         params["giveback_r"] = giveback_r
+    if giveback_frac > 0.0:
+        params["giveback_frac"] = giveback_frac
+    if level_on and trail_level_min_r > 0.0:
+        params["trail_level_min_r"] = trail_level_min_r
+    if _trig.on:
+        params["trigger_action"] = trigger_action
+        params["trigger_all"] = trigger_all
+    if _psg.on:
+        params["path_state_gate"] = {k: v for k, v in {
+            "trail": [trail_state_feature, trail_state_window, _psg.trail.op, trail_state_thr, trail_state_arm_r,
+                      trail_state_tight_mult] if _psg.trail else None,
+            "bank": [bank_state_feature, bank_state_window, _psg.bank.op, bank_state_thr, bank_state_arm_r]
+            if _psg.bank else None,
+            "chop_stop": [chop_stop_feature, chop_stop_window, _psg.chop.op, chop_stop_thr, chop_stop_bars,
+                          chop_stop_min_peak_r, chop_stop_max_open_frac] if _psg.chop else None}.items() if v}
     if trail_decay_on:
         params["trail_decay_arm_r"] = trail_decay_arm_r
         params["trail_decay_stall_bars"] = trail_decay_stall_bars
         params["trail_decay_tight_mult"] = trail_decay_tight_mult
     if rr_floor_on:
         params["rr_floor"] = rr_floor
+    if mom_trail_on:
+        params["trail_adx_below"] = trail_adx_below
+        params["trail_adx_falling_bars"] = trail_adx_falling_bars
+        params["trail_adx_tight_mult"] = trail_adx_tight_mult
+        params["adx_period"] = adx_period
+    if level_on:
+        params.update(trail_level=trail_level, trail_level_tight_mult=trail_level_tight_mult,
+                      trail_level_lookback=trail_level_lookback, trail_level_pivot_k=trail_level_pivot_k,
+                      trail_level_round_step=trail_level_round_step)
+    if mom_stale_on:
+        params["momentum_stale_bars"] = momentum_stale_bars
+        params["momentum_stale_adx_below"] = momentum_stale_adx_below
+        params["adx_period"] = adx_period
     if be_floor_r > 0.0:
         params["be_floor_r"] = be_floor_r
+    params.update(tp_geom.params())
     if confirm_bars:
         params["confirm_bars"] = confirm_bars
     if skip_hour_set:
         params["skip_hours"] = skip_hours
+    if _flat_min is not None:
+        params["flat_at_utc"] = flat_at_utc
+    if _nea_min is not None:
+        params["no_entry_after_utc"] = no_entry_after_utc
     if vol_skip_above_pctl or vol_skip_below_pctl:
         params["vol_skip_above_pctl"] = vol_skip_above_pctl
         params["vol_skip_below_pctl"] = vol_skip_below_pctl
@@ -759,10 +1293,42 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
         params["trail_vol_below_pctl"] = trail_vol_below_pctl
         params["trail_vol_tight_mult"] = trail_vol_tight_mult
         params["vol_pctl_window"] = vol_pctl_window
-    return _summarize(trades, df, timeframe=timeframe, symbol=symbol, params=params,
-                      tp_r_effective=_tp_r_effective,
-                      rr_min_per_trade=_rr_min_per_trade,
-                      rr_floor_state=rr_floor_state)
+    if tp_revision:
+        params["tp_revision"] = tp_revision
+        params["tp_revision_width_mult"] = tp_revision_width_mult
+        params["tp_revisions_applied"] = _tp_revisions
+        params["tp_revisions_clamped"] = _tp_revisions_clamped
+    _summary = _summarize(trades, df, timeframe=timeframe, symbol=symbol, params=params,
+                          tp_r_effective=_tp_r_effective,
+                          rr_min_per_trade=_rr_min_per_trade,
+                          rr_floor_state=rr_floor_state)
+    if level_on:
+        _with = [t for t in trades if t.level and t.level["level_price"] is not None]
+        _summary["level_trail"] = {
+            "kind": trail_level, "n_trades": len(trades), "n_with_level": len(_with),
+            "n_touched": sum(1 for t in _with if t.level["level_touched"])}
+    if _trig.on:
+        _summary["metric_trigger"] = _trig.summary()
+    if tp_geom.armed:
+        _summary["tp_geometry"] = _tpg.summarize_geometry([
+            {**_tpg_row(t), "outcome": t.outcome} for t in trades])
+    return _summary
+
+
+def _tpg_row(t: "Trade") -> Dict[str, Any]:
+    """The TP-geometry fields of one trade (only emitted when a lever is armed)."""
+    return {"final_target_r": t.final_target_r, "n_extends": t.n_extends,
+            "n_retargets": t.n_retargets, "exit_r": t.tp_exit_r}
+
+
+def _mom_attribution(adx_series, entry_i: int, exit_idx: int, fired_bars: int,
+                     tightened: bool) -> Dict[str, Any]:
+    """Per-trade momentum-lever attribution (emitted only when a lever is armed)."""
+    def _at(k):
+        v = adx_series.iloc[k]
+        return None if pd.isna(v) else round(float(v), 4)
+    return {"trail_adx_fired_bars": fired_bars, "trail_adx_tightened": tightened,
+            "adx_entry_bar": _at(entry_i), "adx_at_exit": _at(exit_idx)}
 
 
 def _fee_only_r(t: Trade) -> float:
@@ -986,9 +1552,26 @@ def _fmt_sweep(sw: Dict[str, Any]) -> str:
 def main(argv: List[str]) -> int:
     global FEE_BPS_ROUNDTRIP, SLIPPAGE_BPS_ROUNDTRIP, FUNDING_BPS_PER_WINDOW, FUNDING_WINDOW_HOURS
     p = argparse.ArgumentParser(description="Donchian trend-follower backtest (net-of-cost: fee+slippage+funding).")
-    p.add_argument("--data", default=os.environ.get("BACKTEST_DATA_PATH", "data/backtest_candles.csv"))
+    # ⚠️ BOTH DEFAULTS ARE `None` ON PURPOSE, and that is the load-bearing half
+    # of BL-20260813-HARNESS-SYMBOL-IS-A-LABEL-DATA-DEFAULTS-TO-BTC. While
+    # `--data` carried a default, this harness could not tell "the caller named
+    # this file" from "argparse supplied it", so EVERY run looked explicit and
+    # a `--symbol` that contradicted the default was never noticed. The
+    # historical values live in LEGACY_DATA_DEFAULT / LEGACY_SYMBOL_LABEL below
+    # and are still applied when the caller expresses no opinion, so an
+    # invocation that passes neither flag behaves exactly as before.
+    # `BACKTEST_DATA_PATH` is unchanged and still honoured — it is a FLEET-WIDE
+    # knob read by 23 files, not an M5 leftover (CLAUDE.md § Environment
+    # Variables corrects that misreading in terms).
+    p.add_argument("--data", default=None,
+                   help="Candle file. Default: resolved from --symbol/--timeframe "
+                        "via the canonical resolver; REFUSES rather than falling "
+                        "back to a fixture when a named symbol cannot be resolved.")
     p.add_argument("--timeframe", default="1h")
-    p.add_argument("--symbol", default="BTCUSDT")
+    p.add_argument("--symbol", default=None,
+                   help=f"Instrument symbol. Unset behaves as {LEGACY_SYMBOL_LABEL!r} "
+                        f"against the legacy fixture; NAMING a symbol makes it a "
+                        f"constraint on the data, not a display label.")
     p.add_argument("--resample", default=None, help="Resample to this rule first (e.g. 1h, 2h).")
     p.add_argument("--start", default=None, help="Walk-forward window start (ISO date, inclusive).")
     p.add_argument("--end", default=None, help="Walk-forward window end (ISO date, inclusive).")
@@ -1025,6 +1608,20 @@ def main(argv: List[str]) -> int:
                    help="Regime filter: skip entries whose Wilder ADX is above this (None=off).")
     p.add_argument("--adx-period", type=int, default=14,
                    help="Wilder ADX period for the regime filter (default 14).")
+    p.add_argument("--adx-soft-weight-floor", type=float, default=None,
+                   help="SRQ-20260618-001 soft regime-weight lever: entry-bar ADX at/below "
+                        "which regime_weight == --adx-soft-weight-min. Requires "
+                        "--adx-soft-weight-ceiling too; both None (default) is byte-identical "
+                        "to no lever (weight always 1.0). Continuous alternative to the "
+                        "refuted hard --adx-min/--adx-max gate.")
+    p.add_argument("--adx-soft-weight-ceiling", type=float, default=None,
+                   help="Entry-bar ADX at/above which regime_weight == 1.0. See "
+                        "--adx-soft-weight-floor.")
+    p.add_argument("--adx-soft-weight-min", type=float, default=0.0,
+                   help="Weight floor for the soft regime-weight lever (default 0.0, i.e. can "
+                        "size a weak-regime trade all the way to zero contribution — the "
+                        "continuous analogue of the hard gate's skip). Only consulted when "
+                        "both --adx-soft-weight-floor/-ceiling are set.")
     p.add_argument("--stale-exit-bars", type=int, default=None,
                    help="M20 exit lever: close at bar N after entry when open "
                         "R is below --stale-exit-below-r (None=off, legacy "
@@ -1061,11 +1658,18 @@ def main(argv: List[str]) -> int:
                    help="The leg's declared tp_r sentinel (default 50R). Only "
                         "consulted when --tp-cap-pct > 0; the cap is what "
                         "normally binds.")
+    _tpg.add_cli_flags(p)
     p.add_argument("--giveback-min-mfe-r", type=float, default=0.0,
                    help="M20 giveback-stop: arm once peak open profit reaches "
                         "this many R (0=off, byte-identical).")
     p.add_argument("--giveback-r", type=float, default=1.0,
                    help="R handed back from the peak that triggers the exit.")
+    p.add_argument("--tp-revision", default="",
+                   help="TP doctrine B1: re-estimate the TP after every closed bar with "
+                        "the declared rule (only 'donchian_measured_move'). Default off "
+                        "(byte-identical). Combine with --tp-cap-pct for the live clamp.")
+    p.add_argument("--tp-revision-width-mult", type=float, default=1.0,
+                   help="Measured-move multiple of the channel height (default 1.0).")
     p.add_argument("--trail-decay-arm-r", type=float, default=0.0,
                    help="M20 P4.1 trail-decay: tighten the trail once peak open "
                         "profit reaches this many R (0=off for this arm).")
@@ -1100,6 +1704,13 @@ def main(argv: List[str]) -> int:
     p.add_argument("--skip-hours", default="",
                    help="M21 E-2 time-of-day entry lever (empty=off): CSV of UTC "
                         "hours whose SIGNAL bars never enter.")
+    p.add_argument("--flat-at-utc", default="", metavar="HH:MM",
+                   help="RQ-20260930-503 same-day-flat lever (empty=off): force-close an open "
+                        "position at the close of the last bar ending at or before HH:MM UTC of "
+                        "its entry day (reason day_flat; on 1h bars up to one bar early).")
+    p.add_argument("--no-entry-after-utc", default="", metavar="HH:MM",
+                   help="RQ-20260930-503 (empty=off): skip entries whose entry moment (close of "
+                        "the entry bar) is later than HH:MM UTC of its own day.")
     p.add_argument("--vol-skip-above-pctl", type=float, default=0.0,
                    help="M21 E-2 vol-at-entry (0=off): skip entries whose "
                         "signal-bar ATR trailing percentile exceeds this.")
@@ -1117,9 +1728,93 @@ def main(argv: List[str]) -> int:
     p.add_argument("--trail-vol-tight-mult", type=float, default=0.0,
                    help="The tightened trail mult while the vol condition fires "
                         "(0 disables the lever).")
+    p.add_argument("--trail-adx-below", type=float, default=0.0,
+                   help="MOMENTUM-TRAIL-LEVER `momentum_trail` (0=off, "
+                        "byte-identical): tighten the trail mult to "
+                        "--trail-adx-tight-mult on bars where ADX < this.")
+    p.add_argument("--trail-adx-falling-bars", type=int, default=0,
+                   help="momentum_trail: also (AND) require ADX_j < ADX_{j-k}. "
+                        "0 = no falling test. Alone (with --trail-adx-below 0) "
+                        "it is the falling-only condition.")
+    p.add_argument("--trail-adx-tight-mult", type=float, default=0.0,
+                   help="The tightened trail mult while the momentum condition "
+                        "fires (0 disables the lever; must be < --trail-mult).")
+    p.add_argument("--trail-level", choices=["swing", "fvg", "round"], default="",
+                   help="P1-Q10 level-triggered trail ('' = off, byte-identical): ONE level per "
+                        "trade fixed at entry -- the prior confirmed swing extreme beyond entry, the "
+                        "nearest unfilled opposing FVG, or the next round number -- and on first "
+                        "touch the trail tightens to --trail-level-tight-mult x ATR (latched). The "
+                        "R-armed variant is --trail-decay-arm-r.")
+    p.add_argument("--trail-level-tight-mult", type=float, default=0.0,
+                   help="Trail mult after the level is touched (must be < --trail-mult).")
+    p.add_argument("--trail-level-lookback", type=int, default=60,
+                   help="Bars before entry searched for a swing / FVG level.")
+    p.add_argument("--trail-level-pivot-k", type=int, default=3,
+                   help="Swing pivot half-width in bars (confirmed before the entry bar).")
+    p.add_argument("--trail-level-round-step", type=float, default=0.0,
+                   help="Round-number step in price (0 = auto: one decade below the price's "
+                        "leading digit, e.g. ETH 2500 -> 100).")
+    p.add_argument("--trail-level-min-r", type=float, default=0.0,
+                   help="LEVEL-TRAIL-R-GATE (0 = off, byte-identical): a level touch latches the tight "
+                        "trail only once the trade's peak open profit has reached this many R (AND, not "
+                        "the OR a --trail-decay-arm-r composition gives). Needs --trail-level.")
+    p.add_argument("--giveback-frac", type=float, default=0.0,
+                   help="GIVEBACK-FRAC-FLAG (0 = off, byte-identical): giveback stop as a SHARE of the "
+                        "peak -- exit at the bar close when open R <= F x peak R, armed by "
+                        "--giveback-min-mfe-r. Replaces the absolute --giveback-r when set.")
+    p.add_argument("--trigger-action", choices=["bank", "tight"], default="",
+                   help="HARNESS-METRIC-TRIGGER: the action applied to triggered trades only ('bank' = the "
+                        "--bank-frac/--bank-at-r rung; 'tight' = trail mult -> --trail-decay-tight-mult), "
+                        "from the bar after the trigger bar. Needs --trigger-file or --trigger-all.")
+    p.add_argument("--trigger-file", default="",
+                   help="JSONL of {trade_key, k, trigger, p} from path_metric_giveback.py --emit-triggers.")
+    p.add_argument("--trigger-all", type=int, default=0,
+                   help="Unconditional control: act on every trade still open at bar offset K.")
+    p.add_argument("--trail-state-feature", choices=list(PS_FEATURES), default="",
+                   help="PATHSTATE-TRAIL-GATE (off = byte-identical): tighten the trail on bars where peak R >= "
+                        "--trail-state-arm-r AND this in-trade path feature (er = Kaufman efficiency ratio, chop = "
+                        "choppiness, atr_ratio = ATR now / ATR at entry, dist_atr = (peak-open)/ATR) satisfies "
+                        "--trail-state-op/--trail-state-thr over the last --trail-state-window bars, read at the "
+                        "previous close. Composes by MINIMUM with the other tighteners. Needs --trail-state-tight-mult.")
+    p.add_argument("--trail-state-window", type=int, default=6)
+    p.add_argument("--trail-state-op", choices=list(PS_OPS), default="",
+                   help="lt|gt; default per feature: er/atr_ratio lt, chop/dist_atr gt.")
+    p.add_argument("--trail-state-thr", type=float, default=0.0)
+    p.add_argument("--trail-state-arm-r", type=float, default=0.0)
+    p.add_argument("--trail-state-tight-mult", type=float, default=0.0)
+    p.add_argument("--bank-state-feature", choices=list(PS_FEATURES), default="",
+                   help="PATHSTATE-TRAIL-GATE (off = byte-identical): the --bank-frac/--bank-at-r rung may only "
+                        "fill on bars where this path-state condition held at the previous close.")
+    p.add_argument("--bank-state-window", type=int, default=6)
+    p.add_argument("--bank-state-op", choices=list(PS_OPS), default="")
+    p.add_argument("--bank-state-thr", type=float, default=0.0)
+    p.add_argument("--bank-state-arm-r", type=float, default=0.0)
+    p.add_argument("--chop-stop-feature", choices=list(PS_FEATURES), default="",
+                   help="PATHSTATE-TRAIL-GATE time-in-chop stop (off = byte-identical): close at the bar close "
+                        "after --chop-stop-bars consecutive bars on which the feature condition holds while "
+                        "peak R >= --chop-stop-min-peak-r and open R <= --chop-stop-max-open-frac x peak R.")
+    p.add_argument("--chop-stop-window", type=int, default=6)
+    p.add_argument("--chop-stop-op", choices=list(PS_OPS), default="")
+    p.add_argument("--chop-stop-thr", type=float, default=0.0)
+    p.add_argument("--chop-stop-bars", type=int, default=0)
+    p.add_argument("--chop-stop-min-peak-r", type=float, default=0.0)
+    p.add_argument("--chop-stop-max-open-frac", type=float, default=1.0)
+    p.add_argument("--momentum-stale-bars", type=int, default=0,
+                   help="MOMENTUM-TRAIL-LEVER `momentum_stale` (0=off, "
+                        "byte-identical): close at bar CLOSE after N bars once "
+                        "ADX < ADX at entry and ADX < --momentum-stale-adx-below, "
+                        "regardless of open R.")
+    p.add_argument("--momentum-stale-adx-below", type=float, default=0.0,
+                   help="See --momentum-stale-bars (0 disables the lever).")
     p.add_argument("--confidence-sweep", default=None, metavar="GRID",
                    help="Sweep min_confidence over GRID ('0:0.5:0.05' or '0,0.1,0.2') and tabulate.")
     p.add_argument("--json", dest="json_out", default=None)
+    p.add_argument("--decision-bar", choices=["closed", "forming"], default="closed",
+                   help="closed (default, Stage 0) or forming: replay the LIVE unit's "
+                        "decision on the still-forming bar at the 2-min tick cadence "
+                        "(needs --klines-1m-dir and --strategy-name <leg>)")
+    p.add_argument("--klines-1m-dir", default=None, metavar="DIR",
+                   help="Binance USD-M <SYMBOL>-1m-*.zip archives for --decision-bar forming")
     p.add_argument("--strategy-name", default="trend_donchian", metavar="NAME",
                    help="Leg name stamped on every emitted row's `strategy` "
                         "field. Defaults to the historical literal so an "
@@ -1130,7 +1825,48 @@ def main(argv: List[str]) -> int:
                         "describes the run, not a per-leg trade.")
     p.add_argument("--emit-trades", default=None, metavar="PATH",
                    help="Write per-trade {entry_time, net_r, confidence} JSONL for portfolio_combine.")
+    p.add_argument("--emit-paths", default=None, metavar="PATH",
+                   help="EXIT-PATH-EMIT-OFFLINE (opt-in): write one JSONL row per (trade, "
+                        "in-trade bar) -- bar in R, stop/target in force, open/peak/mae R, "
+                        "bars_since_peak, ATR, ADX (scripts/research/harness_emit.py). "
+                        "Also adds mae_r to every --emit-trades row. Off = byte-identical.")
+    p.add_argument("--emit-features", action="store_true",
+                   help="METALABEL-EMIT-FEATURES (opt-in): add mae_r and the decision-time "
+                        "f_* context columns (ADX-14 + label, ATR pct/percentile/bucket, "
+                        "regime cell proxy, rolling log-return vol, 20-bar return, UTC "
+                        "hour/dow) to every --emit-trades row. Existing keys unchanged.")
     args = p.parse_args(argv[1:])
+    # The ATR percentile these flags compare against is rolling rank(pct=True), a 0-1 scale.
+    # A value > 1 (e.g. "50" meant as the 50th percentile) skips every bar once the window
+    # fills, so the run silently measures only warm-up entries (RQ-20261018-ef5d-06/-07).
+    for _flag in ("vol_skip_above_pctl", "vol_skip_below_pctl",
+                  "trail_vol_above_pctl", "trail_vol_below_pctl"):
+        _v = getattr(args, _flag, 0.0) or 0.0
+        if not 0.0 <= float(_v) <= 1.0:
+            p.error(f"--{_flag.replace('_', '-')} {_v} is outside [0, 1]: the ATR percentile is a 0-1 rank")
+    # --- data-source resolution (BL-20260813-HARNESS-SYMBOL-IS-A-LABEL-DATA-DEFAULTS-TO-BTC)
+    # Runs BEFORE any other validation so a mislabelled run cannot get far enough
+    # to print a result. The policy lives in scripts/ops/backtest_data_source.py;
+    # the (symbol, timeframe) -> file mapping is NOT re-derived there — it is the
+    # one in scripts/research/m20_fleet_exit_sweep.py::resolve_data.
+    _src = _backtest_data_source.resolve_or_refuse(
+        args.symbol, args.timeframe, args.data,
+        legacy_default=LEGACY_DATA_DEFAULT)
+    if not _src.ok:
+        print(_backtest_data_source.refusal_message(
+            _src, harness="backtest_trend.py",
+            legacy_default=LEGACY_DATA_DEFAULT), file=sys.stderr)
+        return 2
+    args.data = _src.path
+    # The label follows the data, never the other way round. An unset --symbol
+    # keeps the historical label so existing output is byte-comparable.
+    args.symbol = args.symbol or LEGACY_SYMBOL_LABEL
+    args.data_source_state = _src.state
+    args.data_provenance_line = _src.provenance_line()
+    # To STDERR, deliberately: several callers parse this harness's stdout, and a
+    # provenance line is worthless if adding it breaks the consumers that would
+    # have read it. It still lands in every captured log and every CI run.
+    print(_src.provenance_line(), file=sys.stderr)
     # REFUSE the structurally-unmeasurable combination rather than run it. With
     # no capped TP there is no r_to_target, so `--rr-floor` cannot fire and the
     # run returns exactly-zero deltas indistinguishable from a lever that was
@@ -1139,11 +1875,47 @@ def main(argv: List[str]) -> int:
     # BL-20260817-A-SHIPPED-LEVER-RE-SWEPT-AGAINST-ITSELF-READS-AS-A-MEASURED-NO-OP
     # (kept on ONE line: a wrapped tracking id resolves to no filed row).
     # Refusing costs one command line; a silent inert row costs a wrong verdict.
+    _mom_errs = momentum_flag_errors(
+        args.trail_mult, args.trail_adx_below, args.trail_adx_falling_bars,
+        args.trail_adx_tight_mult, args.momentum_stale_bars,
+        args.momentum_stale_adx_below)
+    if _mom_errs:
+        for _e in _mom_errs:
+            print(f"ERROR: {_e}", file=sys.stderr)
+        return 2
+    _lvl_errs = level_flag_errors(args.trail_level, args.trail_level_tight_mult, args.trail_mult,
+                                  args.trail_level_lookback, args.trail_level_pivot_k,
+                                  args.trail_level_round_step, args.trail_level_min_r)
+    _lvl_errs += giveback_flag_errors(args.giveback_min_mfe_r, args.giveback_frac)
+    _lvl_errs += trigger_flag_errors(
+        args.trigger_action, args.trigger_file, args.trigger_all, args.bank_frac, args.bank_at_r,
+        args.trail_mult, args.trail_decay_tight_mult, args.trail_decay_arm_r, args.trail_decay_stall_bars)
+    _lvl_errs += path_state_flag_errors(
+        args.trail_state_feature, args.trail_state_window, args.trail_state_op, args.trail_state_thr,
+        args.trail_state_arm_r, args.trail_state_tight_mult,
+        args.bank_state_feature, args.bank_state_window, args.bank_state_op, args.bank_state_thr,
+        args.bank_state_arm_r, args.bank_frac, args.bank_at_r,
+        args.chop_stop_feature, args.chop_stop_window, args.chop_stop_op, args.chop_stop_thr,
+        args.chop_stop_bars, args.chop_stop_min_peak_r, args.chop_stop_max_open_frac,
+        args.trail_mult, args.trail_decay_tight_mult)
+    if _lvl_errs:
+        for _e in _lvl_errs:
+            print(f"ERROR: {_e}", file=sys.stderr)
+        return 2
     if args.rr_floor > 0.0 and args.tp_cap_pct <= 0.0:
         print("ERROR: --rr-floor requires --tp-cap-pct > 0 (production uses "
               "0.099). Without a capped TP there is no r_to_target, so the "
               "lever cannot fire and the run would report a zero delta that is "
               "NOT a measurement of it.", file=sys.stderr)
+        return 2
+    try:
+        args.tp_geometry = _tpg.spec_from_args(args)
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+    _tpg_refusal = _tpg.refusal(args.tp_geometry, has_target=args.tp_cap_pct > 0.0)
+    if _tpg_refusal:
+        print(f"ERROR: {_tpg_refusal}", file=sys.stderr)
         return 2
     FEE_BPS_ROUNDTRIP = args.fee_bps_roundtrip
     # Mandatory venue-aware cost policy: unset flags resolve to the venue-aware
@@ -1170,11 +1942,16 @@ def main(argv: List[str]) -> int:
                      side_filter=args.side_filter,
                      adx_min=args.adx_min, adx_max=args.adx_max,
                      adx_period=args.adx_period,
+                     adx_soft_weight_floor=args.adx_soft_weight_floor,
+                     adx_soft_weight_ceiling=args.adx_soft_weight_ceiling,
+                     adx_soft_weight_min=args.adx_soft_weight_min,
                      direction_filter=args.direction_filter,
                      stale_exit_bars=args.stale_exit_bars,
                      stale_exit_below_r=args.stale_exit_below_r,
                      bank_frac=args.bank_frac, bank_at_r=args.bank_at_r,
                      tp_cap_pct=args.tp_cap_pct, tp_r=args.tp_r,
+                     tp_revision=args.tp_revision,
+                     tp_revision_width_mult=args.tp_revision_width_mult,
                      giveback_min_mfe_r=args.giveback_min_mfe_r,
                      giveback_r=args.giveback_r,
                      trail_decay_arm_r=args.trail_decay_arm_r,
@@ -1184,17 +1961,56 @@ def main(argv: List[str]) -> int:
                      be_floor_r=args.be_floor_r,
                      confirm_bars=args.confirm_bars,
                      skip_hours=args.skip_hours,
+                     flat_at_utc=args.flat_at_utc,
+                     no_entry_after_utc=args.no_entry_after_utc,
+                     bar_label=("close" if args.resample else "open"),
                      vol_skip_above_pctl=args.vol_skip_above_pctl,
                      vol_skip_below_pctl=args.vol_skip_below_pctl,
                      vol_pctl_window=args.vol_pctl_window,
                      trail_vol_above_pctl=args.trail_vol_above_pctl,
                      trail_vol_below_pctl=args.trail_vol_below_pctl,
-                     trail_vol_tight_mult=args.trail_vol_tight_mult)
+                     trail_vol_tight_mult=args.trail_vol_tight_mult,
+                     tp_geometry=args.tp_geometry,
+                     trail_adx_below=args.trail_adx_below,
+                     trail_adx_falling_bars=args.trail_adx_falling_bars,
+                     trail_adx_tight_mult=args.trail_adx_tight_mult,
+                     trail_level=args.trail_level,
+                     trail_level_tight_mult=args.trail_level_tight_mult,
+                     trail_level_lookback=args.trail_level_lookback,
+                     trail_level_pivot_k=args.trail_level_pivot_k,
+                     trail_level_round_step=args.trail_level_round_step,
+                     trail_level_min_r=args.trail_level_min_r,
+                     giveback_frac=args.giveback_frac,
+                     trigger_action=args.trigger_action,
+                     trigger_file=args.trigger_file,
+                     trigger_all=args.trigger_all,
+                     trail_state_feature=args.trail_state_feature, trail_state_window=args.trail_state_window,
+                     trail_state_op=args.trail_state_op, trail_state_thr=args.trail_state_thr,
+                     trail_state_arm_r=args.trail_state_arm_r, trail_state_tight_mult=args.trail_state_tight_mult,
+                     bank_state_feature=args.bank_state_feature, bank_state_window=args.bank_state_window,
+                     bank_state_op=args.bank_state_op, bank_state_thr=args.bank_state_thr,
+                     bank_state_arm_r=args.bank_state_arm_r,
+                     chop_stop_feature=args.chop_stop_feature, chop_stop_window=args.chop_stop_window,
+                     chop_stop_op=args.chop_stop_op, chop_stop_thr=args.chop_stop_thr,
+                     chop_stop_bars=args.chop_stop_bars, chop_stop_min_peak_r=args.chop_stop_min_peak_r,
+                     chop_stop_max_open_frac=args.chop_stop_max_open_frac,
+                     momentum_stale_bars=args.momentum_stale_bars,
+                     momentum_stale_adx_below=args.momentum_stale_adx_below)
+    decision_kw: Dict[str, Any] = {}
+    if args.decision_bar == "forming":
+        if not args.klines_1m_dir:
+            print("ERROR: --decision-bar forming requires --klines-1m-dir", file=sys.stderr)
+            return 1
+        _m1, _block = _forming_bar_entries().cli_inputs(args.klines_1m_dir, args.strategy_name)
+        decision_kw = dict(decision_bar="forming", decision_1m=_m1, decision_cfg=_block)
     if args.confidence_sweep:
         out = _confidence_sweep(df, _parse_grid(args.confidence_sweep), bt_kwargs)
         print(_fmt_sweep(out))
     else:
         out = run_backtest(df, emit_path=args.emit_trades, strategy_name=args.strategy_name,
+                           emit_paths_path=args.emit_paths,
+                           emit_features=args.emit_features,
+                           **decision_kw,
                            min_confidence=args.min_confidence, **bt_kwargs)
         print(_fmt(out))
     if args.json_out:

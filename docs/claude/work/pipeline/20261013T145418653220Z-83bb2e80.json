@@ -1,0 +1,23 @@
+{
+  "based_on": "20261013T145403943701Z-b41efa0f.json",
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "75b2-20 and 75b2-21 land a measured verdict or are retired with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261013-HOPS1447-0003",
+  "next_action": "dispatch_lane",
+  "observation": {
+    "due_by": "2026-10-16",
+    "how_to_check": "ls research/results/RQ-20261012-75b2-20 research/results/RQ-20261012-75b2-21  # a row with read_state measured",
+    "what": "75b2-20 and 75b2-21 land a measured verdict or are retired with a stated reason"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261013-1447 research-ops lane",
+    "rerun": "grep -n 'timed_out' comms/research/RQ-20261012-75b2-2[01]/*/run-manifest.json"
+  },
+  "routed_to": "RESEARCH-ROUTER",
+  "state": "routed",
+  "what": "ml_bakeoff units on research-script-run-trainer.yml time out at their 45 min budget: 75b2-19, 75b2-20 and 75b2-21 (manifests: exit=None timed_out=true seconds=2700). 75b2-20 and 75b2-21 were NOT re-armed this pass: re-firing the same command on the same route with the same timeout reproduces the failure. They need the cmd-0.log cause read (checklist row RESEARCH-ROUTER) and then a higher timeout_minutes or a runner route, hand-edited by a human lane."
+}

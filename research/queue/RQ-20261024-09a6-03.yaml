@@ -1,0 +1,155 @@
+id: RQ-20261024-09a6-03
+title: 'AI-ATM rung B1: a remaining-move quantile head that PULLS the TP in to where the move is now expected to run out -- calibration
+  first, then net R per capital-day vs the leg as traded (truncation-honest, pull-in only).'
+status: done
+cadence: once
+roadmap:
+- L-ATM
+- M23
+programme: P1
+theme: live_strategy
+priority: 1
+kind: experiment
+question: 'On trend_donchian_eth_4h, trend_donchian_xrp_4h, xrp_pullback_2h, ada_pullback_2h, trend_donchian_eth_prop, trend_donchian_sol_prop
+  as traded (2020-07-01 .. 2026-10-15 23:59, --emit-paths), at every bar t define the remaining favourable move M_t = max(peak over
+  bars t+1..exit) - open_r_t in R (the harness''s own path; zero if the peak never rises again). Head Q_tau (linear quantile regression,
+  tau in {0.5, 0.7}) on the 09a6-01 R1 state; reference Q0_tau = the leg''s training-fold empirical tau-quantile of M_t within open_r_t
+  buckets (<0, 0-1, 1-2, >=2 R). Six calendar folds by entry, purged. Clause 1 (calibration): is Q''s OOS pinball loss lower than Q0''s,
+  with empirical coverage within +-0.05 of tau? Clause 2 (money): policy P_tau sets TP_t = min(TP_{t-1}, target in force, open_r_t +
+  Q_tau(t)) whenever that is below the in-force target and at least 0.25 ATR above the bar-t close; the TP only ever moves DOWN, so
+  the replay is truncation-honest: the trade exits at TP_t on the first later bar whose favourable extreme reaches it (filled at TP
+  less the venue slippage), otherwise its own exit stands unchanged. Does P_tau beat the leg as traded on net R per capital-day without
+  giving up net R?'
+why_this_matters: 'The operator''s two asks are ''brackets as predictions'' (BRACKETS-AS-PREDICTIONS) and a TP that moves with conditions
+  (DECIDED 2026-10-16 on IN-TRADE-EXIT-MODEL: a moving TP based on where we think we should exit is preferred). TP-PREDICT-HEAD asks
+  this at ENTRY (RQ-20261009-900/901); this asks it at every bar, which is where the giveback happens (peak reached, move exhausted,
+  stop far below). Pull-in-only is a deliberate restriction: it is the one TP move a harness path can replay honestly, and it is exactly
+  the stall TP pull-in family that already confirmed as a rule (xrp_4h R1 stall_pull_in, RQ-20261016-015).'
+power:
+  expected_n: 600
+  min_detectable_effect: 0.05
+  effect_units: metric
+  sd: 0.8
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED in checklist row EXIT-PATH-METRICS-W43 (path_state_giveback.py over xrp/ada pullback_2h, eth_4h, eth/sol prop, 2020-07..2026-10,
+    harness cost stack): 958 trades / 18,770 states with peak >= 1 R; every-bar states on these six legs are several times that. States
+    within a trade are autocorrelated, so power is carried by TRADES (n ~1,000 pooled; per leg 68 (xrp_4h) to ~400 (ada_pb)) and the
+    CI is a trade-cluster bootstrap.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history through config-exact harness runs on keyless public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261024-09A6-03-REMAINING-MOVE-TP
+  registered_at: '2026-10-24'
+  registered_before_run: true
+  statistic: 'Per tau: OOS pinball loss Q vs Q0 (pooled, per fold), empirical coverage; policy vs as-traded per trade: net R and capital-days
+    (scripts/capital_efficiency.py definitions), trade-cluster bootstrap CI on the per-trade net R difference, per-fold net R per capital-day,
+    maxDD, the share of trades whose TP was pulled in and the share that then filled at it.'
+  rule: 'Each tau graded separately; a family PASS needs one tau to pass. INDETERMINATE IF < 600 trades pooled or the pulled-in TP filled
+    on < 5% of trades (the head never bound). PASS IF clause 1 (pinball loss lower than Q0 in >= 4 of 6 folds AND |coverage - tau| <=
+    0.05) AND clause 2 (net R per capital-day of P_tau > as traded in >= 5 of 6 folds AND per-trade net R difference >= -0.02 R with
+    CI lower bound >= -0.05 R AND maxDD <= 1.35x as traded). PASS -> per-leg harness-native confirmation as a tp_revision mode (a model-driven
+    retarget) under the exit-refinement P2 gate, then the bracket advisor''s shadow column, then a Tier-3 proposal. FAIL IF clause 1
+    fails: the remaining move is not predictable beyond the leg''s own bucketed distribution, and the per-leg bucketed quantile (Q0)
+    is the TP-revision answer (a rule, cheaper than a model). P&L WITHOUT PREDICTION (clause 2 passes, clause 1 fails) is a FAIL by
+    the TP doctrine. Thresholds are not changed after any result.'
+  min_n: 600 trades pooled
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.15
+  basis: 'stand-in: the prize is the giveback (book keeps ~13% of peak R, 90d paper+mirror n=328, docs/reviews/2026-10-21-weekly-walkthrough.md);
+    not a P&L measurement of this lever.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 90
+  why_runner: Keyless public candles + config-exact harness runs; reads no trainer data.
+  basis: 'Estimate: six harness passes with --emit-paths (one per leg, ~1-2 min each MEASURED for exit_lever_ablation arms 2026-10-16)
+    plus the fit.'
+run:
+  command:
+  - python3
+  - scripts/research/remaining_move_head.py
+  - --leg
+  - trend_donchian_eth_4h
+  - --leg
+  - trend_donchian_xrp_4h
+  - --leg
+  - xrp_pullback_2h
+  - --leg
+  - ada_pullback_2h
+  - --leg
+  - trend_donchian_eth_prop
+  - --leg
+  - trend_donchian_sol_prop
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - '2026-10-15 23:59'
+  - --tau
+  - '0.5'
+  - --tau
+  - '0.7'
+  - --folds
+  - '6'
+  - --clause1-folds
+  - '4'
+  - --clause2-folds
+  - '5'
+  - --cov-tol
+  - '0.05'
+  - --atr-buffer
+  - '0.25'
+  - --min-diff
+  - '-0.02'
+  - --ci-lb
+  - '-0.05'
+  - --dd-mult
+  - '1.35'
+  - --min-trades
+  - '600'
+  - --min-fill-share
+  - '0.05'
+  - --bootstrap
+  - '2000'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261024-09a6-03
+  timeout_minutes: 120
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- IN-TRADE-EXIT-MODEL
+- docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md (section 'AI active trade management')
+- docs/research/programmes/02-AI-TRADER.md (Q3)
+- research/queue/blocked/RQ-20261014-d6e7-06.yaml
+- 'scripts/research/path_metric_giveback.py (run_leg_paths: config-exact harness + --emit-paths)'
+- research/queue/blocked/RQ-20261009-900.yaml
+- research/queue/blocked/RQ-20261009-901.yaml
+- docs/claude/work/checklist/BRACKETS-AS-PREDICTIONS.json
+what_it_does_not_do: Never moves a TP up (an extension needs the harness to re-simulate past the old target; that is the tp_revision
+  harness lever's job). Changes no config; a PASS is a lead for a harness-native confirmation, never a declare.
+last_dispatched_at: '2026-10-24T23:33:59+00:00'
+grading:
+  attested: RULE-RQ20261024-09A6-03-REMAINING-MOVE-TP
+  auto: true
+  decision_rule_id: RULE-RQ20261024-09A6-03-REMAINING-MOVE-TP
+  evidence:
+  - research/results/RQ-20261024-09a6-03/40143287810.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

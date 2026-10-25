@@ -1,0 +1,25 @@
+{
+  "id": "DATA-INTRADE-LABEL-STORE",
+  "title": "Persisted per-bar first-passage label family (intrade_first_passage): one row per (trade, bar) with state + P(SL before TP) target, ties resolved, from harness path emits x the 1m archive",
+  "phase": "build",
+  "state": "blocked",
+  "owner": "build lane dispatched by the manager, after EXIT-PATH-EMIT-OFFLINE",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [
+    "EXIT-PATH-EMIT-OFFLINE",
+    "DATA-KLINE-ARCHIVE",
+    "DATA-LABEL-TIES"
+  ],
+  "note": "[2026-10-14 lane DATA-INFRA-PROGRAMME, plan docs/research/programmes/06-DATA-INFRA.md, milestone L-DATA] Programme 06 Q4. Data plumbing UNDER row IN-TRADE-EXIT-MODEL (that lane owns the model and scripts/research/first_passage.py; this row owns the persisted, versioned label dataset it and M23 train from). Today 165k per-(trade,bar) rows exist on the trainer under datasets-out/exit_head/ (MEASURED diag #18108), but their label is a truncation observable (holding_pays = final_R - mark_R(t) >= 0.25, scripts/ml/build_exit_head_dataset.py), not first passage, they carry no stop/target in force, and they are OURS-classified. BUILD: a dataset family in ml/datasets/families/ that joins EXIT-PATH-EMIT-OFFLINE path rows (stop and target IN FORCE per bar) with DATA-KLINE-ARCHIVE 1m to label first passage per bar via DATA-LABEL-TIES; harness-sourced rows are market-derived and may be published; live-sourced rows stay on the trainer. Alignment: ledger entry_time is the OPEN-time label of the entry bar -- walking from entry_time breaches the initial SL before the exit bar on 27/44 trades of trend_donchian_xrp_4h vs 0/44 from entry_time+1 bar (MEASURED this lane); the family must carry that control. BLOCKED ON: EXIT-PATH-EMIT-OFFLINE (PR #18104, unmerged at filing), DATA-KLINE-ARCHIVE, DATA-LABEL-TIES. Tier-1 builder. DONE WHEN: the family builds for the 4 bybit_2 legs with the control passing and IN-TRADE-EXIT-MODEL reads it.",
+  "updated_at": "2026-10-14T21:42:33Z",
+  "updated_by": "session_016Csv2rRGUB5JorxKavz8rY",
+  "roadmap": [
+    "L-DATA"
+  ],
+  "_seq": 501
+}

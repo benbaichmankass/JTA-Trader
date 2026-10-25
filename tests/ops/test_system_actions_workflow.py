@@ -50,11 +50,15 @@ DOC = REPO_ROOT / "docs" / "claude" / "system-actions.md"
 EXPECTED_ACTIONS = {
     # Tier 1 — read-only / analysis
     "status-check": "status_check.sh",
+    # Read-only du breakdown of the live VM disk (PI-20261017-VSMHZYHF-0001).
+    "disk-usage-report": "disk_usage_report.sh",
     # Read-only listening-port + host-firewall inventory (security audit 2026-06-28).
     "list-listening-ports": "list_listening_ports.sh",
     "pull-latest-logs": "pull_logs.sh",
     # PR #1698: read-only IB Gateway container status + recent logs.
     "gateway-logs": "gateway_logs.sh",
+    # Read-only restart forensics for the ib-gateway container + its watchdog/reset timers.
+    "gateway-forensics": "gateway_forensics.sh",
     "inspect-closed-pnl": "inspect_closed_pnl_action.sh",
     "bybit-account-audit": "bybit_account_audit_action.sh",
     # Read-only broker-truth audit of Bybit protective-bracket COVERAGE
@@ -145,18 +149,34 @@ EXPECTED_ACTIONS = {
     # 2026-07-07 — generalized symbol-parameterized sibling so MGC/MHG (metals
     # sleeve) can be backfilled from native IBKR history, not just MES (#5851).
     "pull-ibkr-history": "pull_mes_ibkr_history.sh",
-    "set-account-mode": "set_account_mode.sh",
+    # JC-CA-01 (2026-09-28): the flip is a PR to main; on the VM both actions
+    # only READ the converged state (set-account-mode records it as pending).
+    "set-account-mode": "verify_account_mode.sh",
+    "verify-account-mode": "verify_account_mode.sh",
     # enable-mes / disable-mes removed 2026-05-22 — they flipped a
     # forbidden second gate (MULTI_SYMBOL_ENABLED). The traded-symbol set
     # is now derived from accounts.yaml; MES gating is the account `mode:`.
     "fix-data-dir": "fix_data_dir.sh",
     "rotate-account-keys": "rotate_account_keys.sh",
     "init-diag-token": "init_diag_token.sh",
+    # UI-UPGRADE-1-AUTH-CONFIG (2026-10-12): site sign-in provisioning.
+    "init-web-session-pepper": "init_web_session_pepper.sh",   # Tier 2
+    "install-web-api-deps": "install_web_api_deps.sh",         # Tier 2
+    "passkey-enrol-code": "passkey_enrol_code_action.sh",       # Tier 1
     # 2026-05-24 bots overhaul — autonomous Claude infra.
     "send-ping": "send_ping_action.sh",   # Tier 1: immediate ping, no restart
     # 2026-06-17 — fire one TEST prop ticket through the real prop_signal path
     # (FCM + prop Telegram bot). Tier 1: notify-only, nothing journaled.
     "send-prop-test-ping": "send_prop_test_ping_action.sh",
+    # 2026-10-06 (PI-20261006-APBY4NTV-0009) — write ONE always-dry PHONE test
+    # ticket (meta.test, submit forced dry) for a phone_accounts entry, through
+    # the same writer as the in-app Dry test button. Tier 1: one prop_tickets
+    # row, no exchange socket, no non-test path; account + symbol allowlisted.
+    "phone-dry-test": "phone_dry_test_action.sh",
+    # 2026-10-18 (PHONE-EXEC-OBSERVABLE-1018) — ONE phone rehearsal-drill request
+    # file beside the journal (src.prop.phone_drill). Tier 1: a file write, the
+    # account allowlisted against phone_accounts; no exchange socket.
+    "phone-drill": "phone_drill_action.sh",
     # M7 — autonomous strategy-review-packet generator (Tier 1: read-only
     # SQL + write to runtime_logs/strategy_reviews/).
     "generate-strategy-review-packets": "generate_strategy_review_packets_action.sh",
@@ -171,6 +191,13 @@ EXPECTED_ACTIONS = {
     # pending restart. No write, no restart, no socket; secret-NAMED keys are
     # fingerprinted, never printed (this action's stdout lands on a public issue).
     "get-env": "get_env_action.sh",
+    # 2026-09-25 (issue #12938) — the DELETE half neither set-env nor get-env
+    # provide. set-env's empty-value guard correctly refuses to blank a key,
+    # which also means it cannot retire one; this removes a key's line(s)
+    # from an env file (fixed RETIRABLE_KEYS allowlist inside the script,
+    # same doctrine as get_env.py::ALLOWED_KEYS) and restarts the service.
+    # Tier 2: .env mutation + service restart.
+    "unset-env": "unset_env.sh",
     # 2026-05-27 — strips systemd-EnvironmentFile-noncompliant lines from .env
     # (the orphan FCM-JSON-blob case that bled a PEM private key into the
     # journalctl tail on issue #2157). Tier 2: .env mutation + service restart.
@@ -217,6 +244,11 @@ EXPECTED_ACTIONS = {
     # reserving protective bracket (held_for_orders) then market-closes — the
     # on-demand fix for BL-20260708-ALPACA-CLOSE-QTY-AVAILABLE.
     "flatten-alpaca-position": "flatten_alpaca_position_action.sh",
+    # 2026-09-27 — re-arm ONE GTC OCO sized to an Alpaca position's live net
+    # qty, SL/TP from the journal (never caller-supplied). Cancels the stale
+    # protective legs first; refuses on a non-protective order, an unreadable
+    # read, missing/ambiguous levels (PI-20260926-HJPL5ABP-0001).
+    "rearm-alpaca-protective": "rearm_alpaca_protective_action.sh",
     # 2026-07-15 — JOURNAL-side companion to flatten-alpaca-position: close a
     # stranded open journal row whose broker position is already flat (the
     # shelved-dry_run-account gap where the reconciler can't close-on-disappear).
@@ -246,11 +278,25 @@ EXPECTED_ACTIONS = {
     # backup; optional ids: / equal_only: narrowing. Void-flags ONLY the reduce
     # leg, never the parent close.
     "supersede-intent-reduce-phantom-pnl": "supersede_intent_reduce_phantom_pnl_action.sh",
+    "backfill-intent-reduce-pnl": "backfill_intent_reduce_pnl_action.sh",
+    "backfill-own-fill-exits": "backfill_own_fill_exits_action.sh",
+    "prune-db-backups": "prune_db_backups.sh",
     # 2026-07-06 — one-shot repair of the mis-linked ETH prop close
     # (BL-20260706-PROP-CLOSE-MISLINK; root cause fixed in #5744): relink the
     # close fill to the real position ticket, close it, restore the phantom.
     # DRY-RUN by default; apply gated + DB backup; guarded + idempotent.
     "fix-prop-mislinked-close": "prop_fix_mislinked_close_action.sh",
+    # 2026-10-07 — VELOTRADE-TICKET: move ONE dead prop ticket on a REST-
+    # executed account (expiry_prompted, or emitted past valid_until) to
+    # `expired`. DRY-RUN by default; apply gated + DB backup; every other
+    # transition, a non-REST account, or a ticket with fills is refused.
+    "prop-ticket-expire": "prop_ticket_expire_action.sh",
+    # 2026-10-08 — PROP-REISSUE: re-issue ONE `suppressed` prop ticket whose
+    # blocking ticket is terminal, rebuilt with emission's own sizing so the
+    # executor's intake (band, expiry, guards) decides placement. DRY-RUN by
+    # default; apply gated + DB backup; every other case refused.
+    "prop-ticket-reissue": "prop_ticket_reissue_action.sh",
+    "prop-report-close": "prop_report_close_action.sh",
     # 2026-08-20 — prop-journal hygiene for fills admitted with NO direction
     # (BL-20260820-PROP-FILL-DIRECTION-ADMISSION-GAP). _position_key needs
     # (account, symbol, direction) but ingest_report only validates the first
@@ -260,6 +306,23 @@ EXPECTED_ACTIONS = {
     # not a row id. DRY-RUN by default; apply gated + DB backup; guarded +
     # idempotent; touches prop_fills only.
     "repair-prop-fill-direction": "repair_prop_fill_direction_action.sh",
+    # 2026-09-27 — READ-ONLY prop-terminal login check (probe step 1 of the
+    # Breakout DXtrade automation, docs/research/prop-automation-options-2026-09-27.md).
+    # Logs in to breakout_1 and reads balance/positions/orders; no order control.
+    "breakout-login-check": "breakout_login_check_action.sh",
+    # 2026-09-28 — READ-ONLY measurement of Breakout's proprietary terminal
+    # (lane PROP-TERM): landing shape, optional ONE login + Open Terminal,
+    # optional read-only ticket probe. No order control in its code path.
+    "breakout-terminal-probe": "breakout_terminal_probe_action.sh",
+    # 2026-09-30 — READ-ONLY landing-page reachability probe of a FIXED host
+    # allowlist from the VM egress (PROP-DXTRADE-FIRMS). GET only, no creds.
+    "egress-landing-probe": "egress_landing_probe_action.sh",
+    # 2026-10-05 — READ-ONLY Velotrade DXtrade REST probe (VELOTRADE-API-PROBE).
+    "velotrade-api-probe": "velotrade_api_probe_action.sh",
+    # 2026-10-05 — ONE REST round trip on velotrade_1, dry unless apply=live (VELOTRADE-API-EXEC).
+    "velotrade-api-roundtrip": "velotrade_api_roundtrip_action.sh",
+    # 2026-10-07 — READ-ONLY REST trade-history read (VELOTRADE-RECON).
+    "velotrade-trade-history-read": "velotrade_trade_history_read_action.sh",
     # 2026-06-30 — clear the daily_risk_state row for one account so
     # INTRADAY_DRAWDOWN counters reset without a full service restart.
     "reset-daily-risk-state": "reset_daily_risk_state.sh",
@@ -312,6 +375,9 @@ EXPECTED_ACTIONS = {
     # a flat position, ambiguous (>1) live legs of one type, or more than
     # one open untracked trade row.
     "backfill-tpsl-leg-ids": "backfill_tpsl_leg_ids_action.sh",
+    # 2026-10-24 — AMEND-SL-ACTION: tighten one live Bybit stop, venue +
+    # journal (order_packages.sl + trades.stop_loss) together; refuses looser.
+    "amend-position-sl": "amend_position_sl_action.sh",
     # Audit F-39 / MI-241. Re-attaches the three order_packages rows that were
     # flipped to `closed` while their legs were still OPEN, so order_monitor's
     # `status="open"` selector can never pick them up and those legs are managed
@@ -365,7 +431,10 @@ TIER_2_ACTIONS = {
     "fix-data-dir",
     "rotate-account-keys",
     "init-diag-token",
+    "init-web-session-pepper",
+    "install-web-api-deps",
     "set-env",
+    "unset-env",
     "scrub-env-noncompliant",
     "pause-autoheal",
     "resume-autoheal",
@@ -378,13 +447,26 @@ TIER_2_ACTIONS = {
     "flatten-bybit-position",
     "switch-bybit-position-mode",
     "flatten-alpaca-position",
+    "rearm-alpaca-protective",
     "close-stranded-journal-row",
     "reconcile-orphan-history",
     "supersede-options-adoption-artifacts",
     "supersede-reset-orphan-artifacts",
     "supersede-intent-reduce-phantom-pnl",
+    "backfill-intent-reduce-pnl",
+    "backfill-own-fill-exits",
+    "prune-db-backups",
     "fix-prop-mislinked-close",
+    "prop-ticket-expire",
+    "prop-ticket-reissue",
+    "prop-report-close",
     "repair-prop-fill-direction",
+    "breakout-login-check",
+    "breakout-terminal-probe",
+    "egress-landing-probe",
+    "velotrade-api-probe",
+    "velotrade-api-roundtrip",
+    "velotrade-trade-history-read",
     "reset-daily-risk-state",
     "repair-malformed-notes",
     "repair-netted-rows",
@@ -396,6 +478,7 @@ TIER_2_ACTIONS = {
     "cancel-stale-tpsl-legs",
     "backfill-tpsl-leg-ids",
     "reattach-stranded-package-legs",
+    "amend-position-sl",
 }
 
 
@@ -1001,3 +1084,48 @@ def test_every_wrapper_that_reads_ACTION_DAYS_has_it_FORWARDED() -> None:
         f"(preferred), or forward it in its own if-branch alongside whatever "
         f"else it needs."
     )
+
+
+def test_every_breakout_executor_mode_is_in_the_workflow_apply_allowlist():
+    # PROP-ETH-DOM 2026-09-30: #14885 wired apply: symbol-switch-dry into the
+    # action script but not into this workflow's allowlist, so the first
+    # operator-approved dispatch (issue #14944) died in validation. Every mode
+    # the wrapper accepts must also pass the workflow's gate.
+    root = Path(__file__).resolve().parents[2]
+    sh = (root / "scripts" / "ops" / "breakout_login_check_action.sh").read_text()
+    loop = re.search(r"for m in (.*?); do", sh, re.S)
+    assert loop, "the wrapper's executor-mode loop moved"
+    modes = [m for m in loop.group(1).replace("\\\n", " ").split() if m]
+    wf = (root / ".github" / "workflows" / "system-actions.yml").read_text()
+    gate = re.search(r"grep -Eq '\^\((install-deps\|[^)]*)\)", wf)
+    assert gate, "the breakout-login-check apply gate moved"
+    allowed = set(gate.group(1).split("|"))
+    missing = [m for m in modes if m not in allowed]
+    assert not missing, f"executor modes missing from the workflow apply allowlist: {missing}"
+
+
+def test_notify_run_loads_runtime_env_before_send_ping() -> None:
+    """PI-20261004-PUQ1APTH-0003: notify_run.sh runs over bare SSH with no
+    data-dir drop-in; without load_runtime_env send_ping.py writes the legacy
+    repo-relative inbox (a MIS-ROUTED ping)."""
+    text = (OPS_DIR / "notify_run.sh").read_text()
+    assert "load_runtime_env" in text
+    assert text.index("load_runtime_env") < text.index('"${SEND_PING}"')
+
+
+def test_no_long_run_script_holds_an_expression() -> None:
+    """GitHub evaluates a `run:` script that contains any `${{ }}` expression
+    as ONE template, capped at 21000 chars after escaping. The Resolve step
+    crossed it on 2026-10-17 (a6f9a1707): GitHub rejected the whole workflow
+    and no system-action ran. Long scripts read context through env vars
+    (e.g. $GITHUB_EVENT_NAME) instead."""
+    if yaml is None:
+        pytest.skip("pyyaml not installed")
+    wf = yaml.safe_load(WORKFLOW.read_text())
+    offenders = [
+        (job, step.get("name"), len(step["run"]))
+        for job, spec in wf["jobs"].items()
+        for step in spec.get("steps", [])
+        if "run" in step and len(step["run"]) > 15000 and "${{" in step["run"]
+    ]
+    assert not offenders, offenders

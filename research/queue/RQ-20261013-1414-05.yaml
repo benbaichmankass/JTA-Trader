@@ -1,0 +1,152 @@
+id: RQ-20261013-1414-05
+title: 'AI trader / small-n equity: on the MES 1d regime head (~2k daily rows), is LightGBM the right learner or does a logit / ExtraTrees
+  / MLP match it?'
+status: done
+cadence: once
+theme: ml_health
+priority: 3
+kind: experiment
+question: On datasets-out/market_features/MES/1d/v002 (the shard mes-regime-1d-lgbm-v2 trains on), under purged CV and a 2026 holdout,
+  does any of numpy logit, ExtraTrees or a small MLP come within 0.01 macro-F1 of unweighted LightGBM? At n of a few thousand daily
+  rows boosted trees are at their weakest relative to simpler learners.
+why_this_matters: 'The only non-crypto regime head is a shadow GBDT trained on a small sample. Small-n is exactly where model-family
+  choice matters most and where the 78% GBDT concentration is least justified; this is the cheapest diversity test on a different asset
+  class. DATASET PATHS UNVERIFIED FROM THIS SANDBOX: the trainer shards are not reachable here. The 15m v002 BTC/ETH/SOL shards and
+  the base feature names are the ones queued unit RQ-20261012-75b2-19..21 already declare (MEASURED present on the trainer 2026-10-11
+  per RQ-20261011-9da8-01); a missing column lands as a dead NaN feature or producer_failed, which research-ops must read as a ROUTE
+  FAULT (fix the path, re-queue), never as a verdict. MES shard path/columns follow ml/configs/mes-regime-1d-lgbm-v2.yaml (vol_bucket
+  is categorical and excluded; hour_of_day is structurally constant on daily bars and excluded).'
+power:
+  expected_n: 190
+  min_detectable_effect: 0.2
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Holdout = 2026-01-01.. on ~190 daily bars (a floor: d=0.2 needs (1.96+0.8416)^2/0.2^2 = 196, so the holdout alone is borderline
+    UNDERPOWERED and the rule rests on the CV mean over 5 folds of ~300 rows). Rows are autocorrelated, true requirement higher; the
+    first run replaces this with the measured n_rows.'
+  feasibility:
+    source: none
+    accrual_basis: MES daily history is fixed; the shard is rebuilt nightly. n is bounded by the length of the MES continuous history
+      (a data limit, not an accrual wait), so a thin result is reported as such, never padded.
+decision_rule:
+  id: RULE-RQ20261013-1414-05-MES-1D-SMALL-N-FAMILY
+  registered_at: '2026-10-13'
+  registered_before_run: true
+  statistic: Paired per-fold macro-F1 difference (candidate minus unweighted LightGBM) on identical purged folds (5, embargo 5 rows,
+    min_train_frac 0.4) and on the 2026 holdout; mean over folds.
+  rule: PASS (a simpler or different family is non-inferior at small n) IF some candidate is >= -0.010 vs LightGBM on the CV mean AND
+    >= -0.010 on the holdout. FAIL IF no candidate is >= -0.030 vs LightGBM on the CV mean (LightGBM is clearly better here; closes
+    only these three arms on these 5 features). INDETERMINATE otherwise, or if folds < 3 or an arm is unavailable.
+  min_n: 3 usable CV folds; holdout >= 20 rows (reported n_rows; a short MES history lands INDETERMINATE).
+  what_it_does_not_do: Touches no registry, manifest, stage or config; promotes nothing. Grades the regime label, not P&L; MES is a
+    shadow context head.
+compute: needs_vm_data
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 60
+  confidence: 0.2
+  basis: 'stand-in: MES heads are shadow context signals; this decides which family to spend on for small-n equity heads; not a measured
+    P&L'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 15
+  basis: 'Estimate: ~2k rows x 4 arms x 5 folds; seconds to a few minutes of CPU.'
+ml_bakeoff:
+  task: classification
+  metric: macro_f1
+  dataset:
+    kind: jsonl
+    path: datasets-out/market_features/MES/1d/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - dayofweek
+    holdout_after: '2026-01-01'
+  cv:
+    folds: 5
+    embargo_rows: 5
+    min_train_frac: 0.4
+  baseline: lgbm
+  controls:
+  - prior
+  candidates:
+  - logit
+  - et
+  - mlp
+  learners:
+    prior:
+      kind: prior
+    lgbm:
+      kind: lightgbm
+      params:
+        n_estimators: 150
+        learning_rate: 0.05
+        num_leaves: 15
+        min_child_samples: 20
+    logit:
+      kind: numpy_logit
+    et:
+      kind: sklearn_extratrees
+      params:
+        min_samples_leaf: 10
+    mlp:
+      kind: sklearn_mlp
+      params: {}
+  rule:
+    min_folds: 3
+    pass_if:
+    - group: ALL
+      vs: baseline
+      window: cv
+      op: '>='
+      value: -0.01
+    - group: ALL
+      vs: baseline
+      window: holdout
+      op: '>='
+      value: -0.01
+    fail_if_no_candidate_reaches:
+    - group: ALL
+      vs: baseline
+      window: cv
+      op: '>='
+      value: -0.03
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261013-1414-05
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M25
+related:
+- ML-RQ-RUNNER
+- ml/configs/mes-regime-1d-lgbm-v2.yaml
+last_dispatched_at: '2026-10-14T13:08:39+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-RQ20261013-1414-05-MES-1D-SMALL-N-FAMILY
+  evidence:
+  - research/results/RQ-20261013-1414-05/38569417134.jsonl
+  graded_at: '2026-10-14'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

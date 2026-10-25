@@ -1,0 +1,350 @@
+#!/usr/bin/env python3
+"""READ-ONLY probe of Velotrade's DXtrade REST API (/dxsca-web).
+
+Lane VELOTRADE-API-PROBE (2026-10-05, pipeline PI-20261005-APBY4NTV-0004).
+Answers: does the trader login the web terminal accepts also work on the REST
+API from this VM's egress, and what instrument specs does it return?
+
+Safety, enforced in code (``_call``), not by convention:
+  * the ONLY non-GET requests are POST ``/login`` and POST ``/logout``;
+  * no path containing ``/orders`` (place / modify / cancel) is ever requested,
+    and the GET set is a fixed allowlist of read resources;
+  * nothing secret is printed: username, password, domain, session token and
+    account codes are redacted from every printed string; accounts are counted,
+    never named.
+
+``--account {velotrade_1,tradeify_1}`` (default velotrade_1) picks the host and env
+prefix via ``resolve_account``; output is booleans + shapes + one ``summary:`` JSON
+line, never balances, ids or tokens. ``read_state`` is one of env_absent (credentials
+not on the VM; says nothing about the login), unreachable, login_rejected, login_ok.
+
+Exit codes: 0 = login accepted and reads done, 3 = login rejected / no usable
+API (a MEASUREMENT, reported), 2 = no credentials (env_absent), 1 = environment /
+account refused.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+from pathlib import Path
+
+# DXTRADE-PROBE-ACCOUNT (2026-10-08): the probe serves a FIXED choice of accounts.
+# Host and env-var names are resolved from config/prop_platforms.yaml; the choice is
+# argparse ``choices`` (never free text), and the hosts below are the only ones the
+# resolver will accept, so a config edit cannot point this probe at an arbitrary host.
+ACCOUNT_CHOICES = ("velotrade_1", "tradeify_1")
+DEFAULT_ACCOUNT = "velotrade_1"
+ALLOWED_HOSTS = {"velotrade_1": "dx.velotrade.com", "tradeify_1": "dx.tradeify247.co"}
+# Both are DXtrade deployments; tradeify_1 is still on the browser platform (`dxtrade`)
+# until this probe says otherwise, so the family is accepted, not only `dxtrade_api`.
+DXTRADE_PLATFORMS = ("dxtrade", "dxtrade_api")
+PLATFORMS_YAML = Path(__file__).resolve().parents[2] / "config" / "prop_platforms.yaml"
+BASE = "https://dx.velotrade.com/dxsca-web"  # set by main() from the resolved account
+SYMBOLS = ["ETHUSD", "SOLUSD", "XRPUSD", "BTCUSD", "ETH/USD", "SOL/USD", "XRP/USD"]
+WANTED = ("ETH", "SOL", "XRP")
+# TRADEIFY-INSTR-SPECS (2026-10-15, manager go 20:21Z): the symbols tradeify_1 lists that the
+# non-crypto research units price (SILVER/USD, XYZ100/USD, SP500/USD, USOIL/USD) + ETH/USD as
+# the positive control. Used ONLY for account tradeify_1; velotrade_1 keeps SYMBOLS above.
+# Both spellings, because the REST symbol may be slashed (as the terminal shows) or not.
+TRADEIFY_SYMBOLS = ["ETH/USD", "ETHUSD", "SILVER/USD", "SILVERUSD", "XYZ100/USD", "XYZ100USD",
+                    "SP500/USD", "SP500USD", "USOIL/USD", "USOILUSD"]
+TRADEIFY_WANTED = ("ETH", "SIL", "XYZ", "SP5", "USO")
+# Account fields that describe the account's TYPE, not its identity. Printed by
+# value; anything not listed here (account code, owner, ids) is never printed.
+# `isPositionBased` is the spec's name (rest/types/account-details.md: "shows if the
+# account is Position-based or Net-based"); `positionBased` kept in case the server differs.
+ACCOUNT_TYPE_FIELDS = ("isPositionBased", "positionBased", "accountStatus", "baseCurrency",
+                       "accountType", "type", "status", "marginMode", "marginCalculationType", "hedging")
+SPEC_FIELDS = (
+    "symbol", "type", "currency", "lotSize", "multiplier", "priceIncrement",
+    "pipSize", "quantityIncrement", "assetClass", "tradingStatus",
+    "minOrderSize", "maxOrderSize", "minOrderSizeIncrement", "marginRate",
+    # names the web terminal's own endpoint uses (seen in the login-check output)
+    "minVolume", "maxVolume", "volumeStep", "pricePrecision", "quantityPrecision",
+    "financingMode", "swapRateLong", "swapRateShort", "spreadType",
+    # TRADEIFY-INSTR-SPECS: candidate names for the cost / hours fields; whichever the server
+    # returns is printed. The row's full KEY NAMES are printed too (row_keys), so a field
+    # missing from this list is still discoverable on the next run.
+    "leverage", "maxLeverage", "contractSize", "commission", "tradingHours", "tradingSchedule",
+    "schedule", "sessions", "swapType", "swapLong", "swapShort", "tripleSwapDay", "spread",
+    "description", "name",
+)
+UA = "metis-insights-velotrade-api-probe/1 (read-only; contact: repo owner)"
+RETRY_429_S = (1.0, 2.0, 4.0)
+GET_GAP_S = 0.3
+_SECRETS: list[str] = []
+
+
+class AccountRefused(Exception):
+    """The requested account cannot be probed (unknown, wrong platform, bad host)."""
+
+
+def resolve_account(account: str, platforms: dict | None = None) -> dict:
+    """Resolve ``account`` to ``{base, username_env, password_env, domain_env}``.
+
+    ``platforms`` is the parsed ``prop_platforms.yaml`` mapping (read from disk when
+    omitted). Refuses an account outside ACCOUNT_CHOICES, one whose platform is not a
+    DXtrade platform, one missing its env names, and any host but the fixed one.
+    """
+    if account not in ACCOUNT_CHOICES:
+        raise AccountRefused(f"account {account!r} is not one of {list(ACCOUNT_CHOICES)}")
+    if platforms is None:
+        import yaml  # local: only the resolver needs it
+
+        platforms = yaml.safe_load(PLATFORMS_YAML.read_text()) or {}
+    block = (platforms.get("accounts") or {}).get(account)
+    if not isinstance(block, dict):
+        raise AccountRefused(f"{account} has no block in prop_platforms.yaml")
+    if block.get("platform") not in DXTRADE_PLATFORMS:
+        raise AccountRefused(f"{account} platform {block.get('platform')!r} is not a DXtrade platform")
+    parsed = urllib.parse.urlparse(str(block.get("login_url") or ""))
+    if parsed.scheme != "https" or parsed.hostname != ALLOWED_HOSTS[account]:
+        raise AccountRefused(f"{account} login_url host is not the fixed {ALLOWED_HOSTS[account]}")
+    u_env, p_env = block.get("username_env"), block.get("password_env")
+    if not (isinstance(u_env, str) and isinstance(p_env, str) and u_env.endswith("_USERNAME")):
+        raise AccountRefused(f"{account} has no username_env/password_env")
+    return {
+        "base": f"https://{parsed.hostname}/dxsca-web",
+        "username_env": u_env,
+        "password_env": p_env,
+        "domain_env": u_env[: -len("_USERNAME")] + "_DOMAIN",
+    }
+
+
+def _redact(text: str) -> str:
+    for s in _SECRETS:
+        if s and len(s) >= 3:
+            text = text.replace(s, "<redacted>")
+            text = text.replace(urllib.parse.quote(s, safe=""), "<redacted>")
+    return text
+
+
+def _out(msg: str) -> None:
+    print(_redact(msg))
+
+
+def _call(method: str, path: str, token: str | None = None, body: dict | None = None):
+    """The single HTTP choke point. Returns (status, parsed_json_or_None, text)."""
+    p = path.split("?", 1)[0]
+    if method == "POST":
+        if p not in ("/login", "/logout"):
+            raise RuntimeError(f"refused: POST {p} (only /login, /logout)")
+    elif method != "GET":
+        raise RuntimeError(f"refused method {method}")
+    if "/orders" in p:
+        raise RuntimeError("refused: orders resource is never touched by this probe")
+    data = json.dumps(body).encode() if body is not None else None
+    hdrs = {"Accept": "application/json", "User-Agent": UA}
+    if data is not None:
+        hdrs["Content-Type"] = "application/json"
+    if token:
+        hdrs["Authorization"] = f"DXAPI {token}"
+    req = urllib.request.Request(BASE + path, data=data, headers=hdrs, method=method)
+    # TRADEIFY-INSTR-SPECS (run 38808598907): 40 back-to-back GETs drew HTTP 429 on 15 of them, which left
+    # the two indices without their account-scoped margin rate / minimum order size. GETs only (never the
+    # login/logout POSTs) are retried on 429 with the same 1/2/4 s schedule dxtrade_api.py uses, and each
+    # GET is followed by a short pause.
+    for attempt in range(len(RETRY_429_S) + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=25) as r:
+                status, text = r.status, r.read().decode("utf-8", "replace")
+        except urllib.error.HTTPError as e:
+            status, text = e.code, e.read().decode("utf-8", "replace")
+        except Exception as e:  # network / TLS
+            return 0, None, f"{type(e).__name__}: {e}"
+        if status == 429 and method == "GET" and attempt < len(RETRY_429_S):
+            time.sleep(RETRY_429_S[attempt])
+            continue
+        break
+    if method == "GET":
+        time.sleep(GET_GAP_S)
+    try:
+        return status, json.loads(text), text
+    except ValueError:
+        return status, None, text
+
+
+def _err(status, js, text) -> str:
+    if isinstance(js, dict):
+        return f"http={status} errorCode={js.get('errorCode')} description={str(js.get('description'))[:120]!r}"
+    return f"http={status} body={text[:120]!r}"
+
+
+def _shape(o, depth=0):
+    if depth > 3:
+        return "..."
+    if isinstance(o, dict):
+        return {k: _shape(v, depth + 1) for k, v in o.items()}
+    if isinstance(o, list):
+        return [_shape(o[0], depth + 1)] if o else []
+    return type(o).__name__
+
+
+def _specs(js) -> list[dict]:
+    """Instrument rows from a bare list, a single row, or a dict wrapping a list
+    under ANY key (the account-scoped view's wrapper key is not documented)."""
+    if isinstance(js, dict) and "symbol" in js:
+        return [js]
+    if isinstance(js, dict):
+        for v in js.values():
+            if isinstance(v, list) and v and isinstance(v[0], dict):
+                return [i for i in v if isinstance(i, dict)]
+        return []
+    return [i for i in (js or []) if isinstance(i, dict)]
+
+
+def main(argv: list[str] | None = None) -> int:
+    global BASE
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("--account", choices=ACCOUNT_CHOICES, default=DEFAULT_ACCOUNT)
+    account = ap.parse_args(argv).account
+    try:
+        cfg = resolve_account(account)
+    except AccountRefused as e:
+        _out(f"account: {account} refused ({e})")
+        _out("read_state: account_refused")
+        return 1
+    BASE = cfg["base"]
+    _out(f"account: {account} (host fixed by the resolver; credentials from the VM .env)")
+    user = os.environ.get(cfg["username_env"], "")
+    pw = os.environ.get(cfg["password_env"], "")
+    env_domain = os.environ.get(cfg["domain_env"], "")
+    _SECRETS.extend([user, pw, env_domain])
+    _out(f"credentials: username {'set' if user else 'MISSING'}, password {'set' if pw else 'MISSING'} (values never printed)")
+    if not (user and pw):
+        # Its own read_state: we did NOT look, so this says nothing about the login.
+        _out("read_state: env_absent")
+        _out("feasibility: no_credentials")
+        _out("summary: " + json.dumps({"account": account, "read_state": "env_absent", "reachable": None,
+                                       "login_ok": None, "account_model": None, "symbols_present": None}))
+        return 2
+    reachable = False
+    login_ok = False
+    account_model = None
+    present: dict[str, bool] = {}
+
+    # Domain is a required login field. Try a configured one, then the platform default.
+    login_user, dom_from_user = (user.split("@", 1) + [""])[:2] if "@" in user else (user, "")
+    domains = [d for d in dict.fromkeys([env_domain, dom_from_user, "default"]) if d]
+    _SECRETS.extend([login_user, dom_from_user])
+    token = None
+    domain_used = None
+    for i, dom in enumerate(domains):
+        st, js, tx = _call("POST", "/login", body={"username": login_user, "domain": dom, "password": pw})
+        reachable = reachable or st > 0
+        _out(f"login attempt {i + 1}/{len(domains)} (domain source: {'env' if dom == env_domain else 'user-suffix' if dom == dom_from_user else 'default'}): {_err(st, js, tx) if not (isinstance(js, dict) and js.get('sessionToken')) else 'http=%d sessionToken present' % st}")
+        if isinstance(js, dict) and js.get("sessionToken"):
+            token, domain_used = js["sessionToken"], dom
+            _SECRETS.append(token)
+            _out(f"login: accepted (timeout={js.get('timeout')!r})")
+            break
+    if not token:
+        _out("login: rejected / unusable" if reachable else "login: host unreachable")
+        _out("read_state: " + ("login_rejected" if reachable else "unreachable"))
+        _out("feasibility: rest_login_failed")
+        _out("summary: " + json.dumps({"account": account, "read_state": "login_rejected" if reachable else "unreachable",
+                                       "reachable": reachable, "login_ok": False, "account_model": None,
+                                       "symbols_present": None}))
+        return 3
+    login_ok = True
+
+    try:
+        full_user = f"{login_user}@{domain_used}"
+        st, js, tx = _call("GET", "/users/" + urllib.parse.quote(full_user, safe=""), token)
+        _out(f"users: http={st} shape={type(js).__name__} keys={sorted(js.keys()) if isinstance(js, dict) else 'n/a'}")
+        def _find_accounts(o):
+            if isinstance(o, dict):
+                if isinstance(o.get("accounts"), list):
+                    return o["accounts"]
+                for v in o.values():
+                    r = _find_accounts(v)
+                    if r:
+                        return r
+            elif isinstance(o, list):
+                for v in o:
+                    r = _find_accounts(v)
+                    if r:
+                        return r
+            return []
+
+        accounts = _find_accounts(js)
+        _out(f"users: accounts={len(accounts)} shape={json.dumps(_shape(js), sort_keys=True)[:600]}")
+        codes = []
+        for a in accounts:
+            c = a.get("accountCode") or a.get("account") or a.get("code") if isinstance(a, dict) else a
+            if isinstance(c, str) and c:
+                codes.append(c)
+        _SECRETS.extend(codes)
+        if accounts and isinstance(accounts[0], dict):
+            _out(f"account_keys: {sorted(accounts[0].keys())}")
+            # Non-identifying account TYPE fields only (VELOTRADE-WIRE, API order path):
+            # order groups (IF-THEN brackets) are valid only on a position-based account.
+            # Booleans / short enums from a fixed allowlist; never codes, names or ids.
+            for n, a in enumerate(accounts, 1):
+                if isinstance(a, dict):
+                    kept = {k: a[k] for k in ACCOUNT_TYPE_FIELDS
+                            if k in a and isinstance(a[k], (bool, int, float, str)) and len(str(a[k])) <= 32}
+                    _out(f"account#{n} type: {json.dumps(kept, sort_keys=True)}")
+                    pb = kept.get("isPositionBased", kept.get("positionBased"))
+                    if n == 1 and isinstance(pb, bool):
+                        account_model = "positionBased" if pb else "netBased"
+
+        for n, code in enumerate(codes, 1):
+            q = urllib.parse.quote(code, safe="")
+            st, js, tx = _call("GET", f"/accounts/{q}/portfolio", token)
+            if isinstance(js, dict):
+                pf = js.get("portfolios", [js])
+                pos = sum(len((p or {}).get("positions") or []) for p in pf)
+                orders = sum(len((p or {}).get("orders") or []) for p in pf)
+                _out(f"account#{n} portfolio: http={st} positions={pos} orders={orders}")
+            else:
+                _out(f"account#{n} portfolio: {_err(st, js, tx)}")
+            st, js, tx = _call("GET", f"/accounts/{q}/metrics", token)
+            if isinstance(js, dict):
+                m = js.get("metrics", [js])
+                m0 = (m[0] if m else {}) or {}
+                # Key NAMES only: balances / equity are never printed (DXTRADE-PROBE-ACCOUNT).
+                _out(f"account#{n} metrics: http={st} keys={sorted(m0.keys())}")
+            else:
+                _out(f"account#{n} metrics: {_err(st, js, tx)}")
+
+        # Reference data: global instruments, then the account-scoped view.
+        symbols = TRADEIFY_SYMBOLS if account == "tradeify_1" else SYMBOLS
+        wanted = TRADEIFY_WANTED if account == "tradeify_1" else WANTED
+        for sym in symbols:
+            qs = urllib.parse.quote(sym, safe="")
+            for label, path in [("instruments", f"/instruments/query?symbols={qs}"), ("instrument-by-symbol", f"/instruments/{qs}")] + [
+                (f"acct#{n}-instruments", f"/accounts/{urllib.parse.quote(c, safe='')}/instruments/query?symbols={qs}")
+                for n, c in enumerate(codes[:1], 1)
+            ] + [
+                (f"acct#{n}-instrument-by-symbol", f"/accounts/{urllib.parse.quote(c, safe='')}/instruments/{qs}")
+                for n, c in enumerate(codes[:1], 1)
+            ]:
+                st, js, tx = _call("GET", path, token)
+                rows = [i for i in _specs(js) if str(i.get("symbol", "")).upper() == sym] if js is not None else []
+                if rows:
+                    present[sym.replace("/", "")[:3]] = True
+                    _out(f"spec[{label}]: " + json.dumps({k: rows[0][k] for k in SPEC_FIELDS if k in rows[0]}, sort_keys=True))
+                    if account == "tradeify_1":
+                        _out(f"row_keys[{label}] {sym}: {sorted(rows[0].keys())}")
+                else:
+                    _out(f"spec[{label}] {sym}: no exact row ({_err(st, js, tx)}) shape={json.dumps(_shape(js), sort_keys=True)[:300]}")
+    finally:
+        st, js, tx = _call("POST", "/logout", token)
+        _out(f"logout: http={st}")
+    _out("read_state: login_ok")
+    _out("summary: " + json.dumps({
+        "account": account, "read_state": "login_ok", "reachable": reachable, "login_ok": login_ok,
+        "account_model": account_model or "unknown",
+        "symbols_present": {b: bool(present.get(b)) for b in wanted}}, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

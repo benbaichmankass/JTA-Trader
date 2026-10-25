@@ -24,6 +24,19 @@ import pytest
 from src.core.coordinator import Coordinator, OrderPackage, _PAUSED_ACCOUNTS
 
 
+@pytest.fixture(autouse=True)
+def _fresh_prop_snapshot(monkeypatch):
+    """Every declared prop account now consults the operator-reported status
+    snapshot before sizing, on every path (PI-20260921-E16, 2026-09-28). These
+    tests are about dispatch, not freshness, so give them a FRESH snapshot;
+    the refusal side is pinned in tests/test_prop_balance_all_paths.py."""
+    import src.prop.prop_balance as _pb
+    monkeypatch.setattr(_pb, "prop_sizing_balance",
+                        lambda account_id: ("ok", 5000.0, {"account_id": account_id,
+                                                           "source": "equity"}))
+    monkeypatch.setattr(_pb, "note_refusal", lambda *a, **k: False)
+
+
 # ---------------------------------------------------------------------------
 # Shared fixtures
 # ---------------------------------------------------------------------------
@@ -139,6 +152,17 @@ def coord(units_yaml, tmp_path):
 # Flow 1: strategy → coordinator → dry-run account_execute → alert
 # ---------------------------------------------------------------------------
 
+
+
+def _trip_dd_switch(account) -> None:
+    """Trip an ARMED daily-DD switch on ``account`` (2026-10-09: the switch
+    replaced the journal-rebuilt DAILY_LOSS_CAP these tests used to breach)."""
+    from src.units.accounts import daily_dd_switch as dd
+    account.risk_manager.dd_switch = dd.DailyDDSwitch(
+        account.name, dd.parse_config({"armed": True}), alert=lambda *a: None,
+    )
+    account.risk_manager.dd_switch.observe(10_000.0)
+    account.risk_manager.dd_switch.observe(9_000.0)
 
 class TestStrategyToAccountFlow:
     def test_turtle_soup_order_package_routed_through_coordinator(self, coord):
@@ -641,7 +665,7 @@ class TestMultiAccountExecuteFlow:
         _seed_breach_trade(prop_journal, "prop_breakout_1")
         accounts = load_accounts(accounts_yaml)
         prop = next(a for a in accounts if a.name == "prop_breakout_1")
-        assert prop.risk_manager.daily_pnl == pytest.approx(-200.0)
+        _trip_dd_switch(prop)
 
         # monkeypatch load_accounts inside coordinator to return accounts with breached one
         with patch("src.units.accounts.load_accounts", return_value=accounts):
@@ -660,9 +684,7 @@ class TestMultiAccountExecuteFlow:
         # breach only prop account — via real journal state
         _seed_breach_trade(prop_journal, "prop_breakout_1")
         accounts = load_accounts(accounts_yaml)
-        assert next(
-            a for a in accounts if a.name == "prop_breakout_1"
-        ).risk_manager.daily_pnl == pytest.approx(-200.0)
+        _trip_dd_switch(next(a for a in accounts if a.name == "prop_breakout_1"))
 
         with patch("src.units.accounts.load_accounts", return_value=accounts):
             results = coord.multi_account_execute(

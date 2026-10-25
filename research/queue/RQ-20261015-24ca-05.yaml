@@ -1,0 +1,161 @@
+id: RQ-20261015-24ca-05
+title: 'Tradeify non-crypto Stage 0 + prop survival: uso_trend_1h params on USO 1h priced as USOIL/USD (WTI)'
+status: done
+cadence: once
+theme: new_strategy_prop
+priority: 2
+kind: experiment
+roadmap:
+- L-PROP
+question: >-
+  Does the live uso_trend_1h geometry (donchian 24, atr_stop 2.0, trail 4.0, tp_r 4.0, giveback 1.0R after 1.0R MFE, long-only; backtest_trend.py)
+  show net edge on USO 1h at Tradeify's declared costs and survive Tradeify's 1-Step rules, as the proxy for the USOIL/USD (WTI) synthetic perp
+  the tradeify_1 terminal lists?
+why_this_matters: >-
+  uso_trend_1h was the only non-crypto live leg with a positive point estimate in RQ-20260928-013 (+372..+403 per life, n=56, UNDERPOWERED and
+  explicitly flagged there as a poor CL/WTI proxy: USO holds rolling front-month futures and carries roll/contango drag that a spot-tracking synthetic
+  perp does not). USO 1h pullback FAILED Stage 0 (RQ-20261006-032, two consecutive passes). Tradeify lists USOIL/USD (WTI) and UKOIL/USD (Brent)
+  (issue #18401, 2026-10-15), both 'synthetic perp via Hyperliquid'. The trainer's USO_1h.csv covers 2017-03-01 -> 2026-06-18 (13,808 rows, #18392).
+  Brent (UKOIL) has no USO-like proxy in the corpus (no BNO file) and is not tested here.
+power:
+  expected_n: 120
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    d=0.3 needs ~87-90 observations at alpha 0.05 / power 0.8 (the repo's prop-fit floor, RQ-20260928-011/-012/-013). expected_n=120 is a cadence
+    GUESS, not a measurement: this (leg, symbol, timeframe) at Tradeify costs has not been run on the trainer's 2018-2026 history. Below 88 the
+    unit grades UNDERPOWERED (indeterminate), never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: >-
+      Bounded by the history requested: USO_1h.csv has 13,808 rows (2017-03-01 -> 2026-06-18, MEASURED by trainer-diag #18392). USO is an imperfect
+      proxy for WTI spot; a PASS here is evidence about USO's price path, and the unit's population string must say so.
+decision_rule:
+  id: RULE-RQ-20261015-24ca-05
+  registered_at: '2026-10-15'
+  registered_before_run: true
+  statistic: >-
+    Per seed 1-5: prop_ev_sim path-mode ev_net_usd_per_life and p_net_positive over the leg's trade ledger (n = ledger rows), as graded by scripts/research/prop_ev_grid.py
+    --grade pass_all_seeds.
+  rule: >-
+    PASS IF n_trades >= 88 AND ev_net_usd_per_life > 0 on ALL 5 seeds AND p_net_positive >= 0.70 on ALL 5 seeds (prop_ev_sim path mode, config/prop_rulesets/tradeify_247_1step.yaml,
+    flat 0.5% risk, --lev-cap uso_trend_1h=2, --no-hedge, prorated swap, funded-start fresh, Tradeify cost stack 8 bps commission round trip +
+    3 bps declared slippage + 0.033%/day swap re-applied by the sim to the harness gross_r). FAIL IF ev_net_usd_per_life <= 0 on ANY seed (one
+    pass: re-queues once for a confirmatory run before it is read as a kill). INDETERMINATE (UNDERPOWERED) IF n_trades < 88; INDETERMINATE (NULL)
+    IF ev > 0 on all seeds but p_net_positive < 0.70 on any seed. The harness's own Stage-0 number (net_total_r at the same declared costs) is
+    written to harness.json beside the verdict and is reported, not graded separately: a leg with no net edge cannot show ev > 0 on all 5 seeds.
+    OPERATOR RULE (2026-10-15, relayed by the manager; binding on every prop leg): a prop leg clears the full real-money path, not a shortcut.
+    STAGE 0 backtest net of the full cost stack, THEN a SOAK (live prop trading on the account counts as the soak), THEN COST FIDELITY (realized
+    cost vs the declared cost used here), PLUS prop DD SURVIVAL under the account's rules. This unit is the first and last-but-one of those only:
+    it supplies Stage 0 and the prop-survival simulation. A PASS authorizes NO roster edit, NO account opening and NO order; soak, cost fidelity
+    and the Tier-3 roster decision stay open.
+  what_it_does_not_do: >-
+    Does not touch config/strategies.yaml, config/accounts.yaml or config/prop_platforms.yaml, places no order, and does not claim Tradeify's
+    quoted spread: the per-instrument spread/commission/swap/leverage/hours shown by the terminal are UNMEASURED (the terminal's instrument-info
+    panel is reachable only after a watchlist add, a UI mutation this lane did not perform); the costs above are the firm-declared rule-page figures
+    (docs/research/tradeify-portfolio-feasibility-2026-09-30.md, config/prop_rulesets/tradeify_247_1step.yaml, unconfirmed: true) plus a DECLARED
+    3 bps slippage. Candles are the trainer's data/<SYM>_<tf>.csv (1h to 2026-06-18, verified by trainer-diag #18392 on 2026-10-15), i.e. an ETF
+    proxy, not the Hyperliquid-fed synthetic perp's own price history.
+compute: needs_vm_data
+value:
+  bucket: structural
+  usd_at_stake_per_month: 100
+  confidence: 0.15
+  basis: >-
+    stand-in, not a measurement: a non-crypto prop leg widens tradeify_1 beyond ETH/SOL (2 legs, P(net>0)~0.37 min-seed, RQ-20261005-902); information
+    value of a leg that diversifies inactivity gaps and drawdown clustering
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 25
+  basis: >-
+    Harness over ~8 years of 1h/1d candles (single symbol) + 5 prop_ev_sim seeds; reads trainer-resident data/<SYM>_<tf>.csv (not in metis-market-data,
+    so not Kaggle-CPU routable).
+run:
+  commands:
+  - - python3
+    - scripts/backtest_trend.py
+    - --symbol
+    - USO
+    - --timeframe
+    - 1h
+    - --long-only
+    - --donchian
+    - '24'
+    - --atr-period
+    - '14'
+    - --atr-stop-mult
+    - '2.0'
+    - --trail-mult
+    - '4.0'
+    - --tp-r
+    - '4.0'
+    - --giveback-min-mfe-r
+    - '1.0'
+    - --giveback-r
+    - '1.0'
+    - --fee-bps-roundtrip
+    - '8.0'
+    - --slippage-bps-roundtrip
+    - '3.0'
+    - --funding-bps-per-window
+    - '3.3'
+    - --funding-window-hours
+    - '24'
+    - --emit-trades
+    - '{out_dir}/trades.jsonl'
+    - --json
+    - '{out_dir}/harness.json'
+  - - python3
+    - scripts/research/prop_ev_grid.py
+    - --leg
+    - uso_trend_1h={out_dir}/trades.jsonl
+    - --arm
+    - A=--sizing balance --risk-pct 0.005
+    - --common
+    - >-
+      --ruleset config/prop_rulesets/tradeify_247_1step.yaml --lev-cap uso_trend_1h=2 --no-hedge --swap-model prorated --funded-start fresh
+    - --seeds
+    - 1,2,3,4,5
+    - --grade
+    - pass_all_seeds
+    - --p-floor
+    - '0.70'
+    - --n-floor
+    - '88'
+    - --out
+    - '{out_dir}'
+    - --jobs
+    - '2'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261015-24ca-05
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- TRADEIFY-PLATFORMS
+- docs/research/tradeify-platforms-2026-10-15.md
+- config/prop_rulesets/tradeify_247_1step.yaml
+- research/queue/RQ-20261005-902.yaml
+- research/queue/RQ-20260928-013.yaml
+- research/queue/RQ-20261006-032.yaml
+last_dispatched_at: '2026-10-17T03:02:58+00:00'
+grading:
+  attested: RULE-RQ-20261015-24ca-05
+  auto: true
+  decision_rule_id: RULE-RQ-20261015-24ca-05
+  evidence:
+  - research/results/RQ-20261015-24ca-05/38997305143.jsonl
+  graded_at: '2026-10-17'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

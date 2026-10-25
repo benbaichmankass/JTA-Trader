@@ -1,0 +1,88 @@
+id: RQ-20261014-9d20-04
+title: 'AI trader / meta-labeling M23 P3 on test results: with the harness emits widened to the signals catalog''s decision-time
+  features, does a WITHIN-FAMILY take/skip head beat take-all on net R and max drawdown in >= 2/3 purged walk-forward folds?'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 1
+kind: experiment
+question: For each strategy family with >= 300 trades in the newest committed ledgers (trend_donchian 1,393, pullback 2,012, ict_scalp
+  919, squeeze 559 on 2026-10-14), once every emitted row carries the catalog's decision-time features (ADX-14 label, ATR percentile,
+  vol bucket, regime cell, session hour, funding z where available, confidence components, fc_* where served, mae_r), does a take/skip
+  head trained within the family (leg one-hots as controls, never pooled across families) beat take-all on mean net_r AND on max
+  drawdown in >= 2 of 3 purged walk-forward folds, with per-fold AUC >= 0.55? This is M23 P3's gate applied to TEST RESULTS, so the
+  label wall is not the limit.
+why_this_matters: 'Operator 2026-10-14: meta-labeling should never have gone dormant, it merges with the signals catalog, and the
+  AI trader is fed all test results and trade outcomes. The emits are the join between the three. The authoring dry run on the
+  THIN columns (RQ-20261014-9d20-02) is the control this unit must beat: if the widened features add nothing over confidence
+  alone, the catalog''s signals do not help a take/skip decision on these families.'
+power:
+  expected_n: 1800
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Unit = out-of-sample test trade within a family; ~60% of 4,883 family trades fall in test folds at min_train_frac 0.4.
+    d=0.1 needs 785 pooled per family; trend_donchian and pullback clear it, ict_scalp and squeeze are borderline and read as not-detected
+    when short. Re-measure from the widened ledgers before dispatch.'
+  feasibility:
+    source: none
+    accrual_basis: >-
+      The widened ledgers do not exist yet; METALABEL-EMIT-FEATURES produces them from fresh evidence runs over fixed history.
+decision_rule:
+  id: RULE-RQ20261014-9D20-04-M23-P3-ON-TEST-RESULTS
+  registered_at: '2026-10-14'
+  registered_before_run: true
+  statistic: >-
+    Per family, per fold, for the candidate head vs take-all and vs the confidence-only control: mean net_r of kept trades,
+    max drawdown in R of the kept sequence, AUC on won. Folds are purged expanding walk-forward (3 folds, embargo 5 trades).
+  rule: 'PASS IF, for some family, the head beats take-all on mean net_r AND on max drawdown in >= 2 of 3 folds, per-fold AUC >= 0.55,
+    AND beats the confidence-only control on net_r in >= 2 of 3 folds: file the shadow-registration proposal (M23 P4, Tier-3 note on
+    the owning row) and the backtest-vs-live parity check for that family. FAIL IF no family clears take-all in >= 2 of 3 folds: the
+    catalog features do not support a take/skip head on test results for these families; record the per-family numbers, close the
+    M23 test-results route for them and leave only the live-label route (ML-LABEL-WALL). INDETERMINATE otherwise or when a family
+    is under the n floor.'
+  what_it_does_not_do: >-
+    Registers nothing, gates nothing (P5 is Tier-3 and operator-gated); a PASS is a shadow proposal plus a parity
+    check, never an entry gate. Harness net_r, not live fills.
+blocked_on:
+- kind: work_item
+  ref: METALABEL-EMIT-FEATURES
+  what: >-
+    The harness --emit-trades rows carry only confidence / direction / entry_time / adx_at_entry (null ~96%) / regime_weight
+    (MEASURED 2026-10-14 over 13,070 committed rows). The within-family head needs the catalog's decision-time features on every
+    row, plus mae_r. scripts/research/ledger_metalabel.py --features takes any column list, so no new harness is needed once the
+    emits exist.
+  clears_when: >-
+    The lever row is done (fresh ledgers per family with the new columns non-null on >= 90% of rows), this unit's
+    --features list is filled from the actual column names, power.expected_n is re-measured, and the file is git mv'd to research/queue/.
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.3
+  basis: 'stand-in: the first M23 result that could reach a shadow head; a 0.05 R per-trade skip lift across the real-money books; not a measured P&L'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 15
+  basis: 'Estimate from 9d20-02 (~90 s) times the wider feature set; the first run replaces it.'
+run:
+  workflow: null
+  note: 'Deliberately null until the lever clears: the command will be scripts/research/ledger_metalabel.py --mode classify --target won
+    --features <widened list> --learners prior,numpy_logit (lightgbm only where the runner installs it).'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M23
+related:
+- METALABEL-EMIT-FEATURES
+- RQ-20261014-9d20-02
+- AI-TRADER-PROGRAMME
+- docs/research/M23-meta-labeling-DESIGN.md
+- docs/research/SIGNALS-CATALOG.md
+last_dispatched_at: null

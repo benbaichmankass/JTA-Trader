@@ -1,5 +1,11 @@
 name: probes
 
+# ⚠️ SCHEDULE RETIRED 2026-09-21 — operating reset.
+# This workflow served the eight-register operating model, which is archived under
+# docs/archive/2026-09-21-operating-reset/. Its cron is commented out below rather
+# than deleted, so re-arming it is one uncomment. `workflow_dispatch` still works.
+# Scope of record: docs/plans/OPERATING-PLAN-2026-09-21.md
+
 # W2 of the 2026-08-31 operations plan — run the declared probes on the
 # `monitoring` rows of docs/claude/OPEN-ITEMS.json and land the results.
 #
@@ -43,10 +49,10 @@ name: probes
 # path, no mutation, no VM write, and nothing here can fire a job.
 
 on:
-  schedule:
-    # 05:20 UTC — 30 minutes before `due-list` at 05:50, so the due-list of the
-    # morning renders against probe results from the same morning.
-    - cron: "20 5 * * *"
+  # schedule:
+    # # 05:20 UTC — 30 minutes before `due-list` at 05:50, so the due-list of the
+    # # morning renders against probe results from the same morning.
+    # - cron: "20 5 * * *"
   workflow_dispatch:
   issues:
     types: [opened]
@@ -82,7 +88,7 @@ jobs:
     # not the census is what this number is derived from. Do not "correct" it
     # to the current count.
     # 60 = ~22m worst-case probe work + the 30m `verify-merged` wait + slack.
-    timeout-minutes: 60
+    timeout-minutes: 110  # was 80: shared commit-to-main wait 50->80 (W41)
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
@@ -198,6 +204,11 @@ jobs:
           pr-body: "Automated probe run (W2). Results only — no row is cleared by this. Auto-merge."
           branch-prefix: automation/probes
           verify-merged: "true"
+          # RECOMPUTE on conflict -- see error-feed-digest.yml. PROBES.json and
+          # STUCK-BRANCHES.json are written by the steps above in this same job;
+          # only the due-list is re-rendered here, so a conflict on those two
+          # still aborts rather than being silently recomputed from nothing.
+          refresh-command: python3 scripts/ops/render_due_list.py --write
 
       - name: Comment + close issue (issue-driven path)
         if: github.event_name == 'issues'

@@ -1,0 +1,160 @@
+id: RQ-20261013-1414-03
+title: 'AI trader / direction: does ANY non-boosted family (logit, ExtraTrees, MLP) beat the class prior on direction_label for ETH
+  1h and BTC 15m?'
+status: done
+cadence: once
+theme: ml_health
+priority: 3
+kind: experiment
+question: The shipped direction heads (btc-direction-15m-lgbm-base-v003, eth-direction-1h-lgbm-v1) showed no lift over the prior (BTC
+  fc direction head -0.001 macro-F1; ROADMAP T0.1). Is that a property of LightGBM or of the label+features? Under purged CV and a holdout,
+  does a numpy logit, a bagged-tree ExtraTrees or a small MLP beat the class prior on direction_label macro-F1 by >= 0.01 on BOTH ETHUSDT
+  1h and BTCUSDT 15m?
+why_this_matters: 'Direction is the most valuable head if it exists and the cheapest to close if it does not: three non-GBDT families
+  have never been tried on it. A clean FAIL here retires the direction line by evidence (and stops capacity going to it); a PASS is
+  the first sign the label carries signal for a different inductive bias. DATASET PATHS UNVERIFIED FROM THIS SANDBOX: the trainer shards
+  are not reachable here. The 15m v002 BTC/ETH/SOL shards and the base feature names are the ones queued unit RQ-20261012-75b2-19..21
+  already declare (MEASURED present on the trainer 2026-10-11 per RQ-20261011-9da8-01); a missing column lands as a dead NaN feature
+  or producer_failed, which research-ops must read as a ROUTE FAULT (fix the path, re-queue), never as a verdict. The BTC 15m path is
+  the v003 dataset the shipped direction manifest names (version v003); the ETH 1h path is v002 per eth-direction-1h-lgbm-v1.yaml.'
+power:
+  expected_n: 8640
+  min_detectable_effect: 0.05
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: Unit = bar in the final-90-day holdout (~8,640 rows = 90 d x 96 15m bars) per symbol; d=0.05 paired needs (1.96+0.8416)^2/0.05^2
+    = 3,140 rows, floor met on rows. Bars are autocorrelated so effective n is far lower; the rule therefore also requires the purged-CV
+    fold-mean delta (min_folds 3) and the first run replaces this estimate with the measured n. ETH 1h has ~1/4 the rows of a 15m shard
+    for the same window; holdout n is then ~2,160.
+  feasibility:
+    source: none
+    accrual_basis: 'Nightly-rebuilt shard: history for the window used is fixed, nothing needs to accrue for the rows this unit reads.'
+decision_rule:
+  id: RULE-RQ20261013-1414-03-DIRECTION-NONBOOSTED-VS-PRIOR
+  registered_at: '2026-10-13'
+  registered_before_run: true
+  statistic: Paired per-fold macro-F1 difference (candidate minus class prior) on identical purged folds (5, embargo 24 rows) and on
+    the holdout, per dataset; mean over folds.
+  rule: PASS IF a candidate beats the class prior by >= +0.010 macro-F1 on the CV mean on BOTH datasets AND by >= 0 on the holdout on
+    both. FAIL IF no candidate beats the prior by >= +0.003 on the CV mean on EITHER dataset (a FAIL closes only these three families,
+    on this feature set, label horizon and the two datasets). INDETERMINATE otherwise, or if folds < 3 or an arm is unavailable.
+  min_n: 3 usable CV folds per dataset; holdout >= 20 rows.
+  what_it_does_not_do: Touches no registry, manifest or config; a PASS earns a candidate manifest and the downstream net-of-cost walk-forward
+    only, never a stage move. Says nothing about the fc_* direction variants or other horizons/labels.
+compute: needs_vm_data
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 80
+  confidence: 0.15
+  basis: 'stand-in: bounds how much capacity the direction line deserves; closing it by evidence frees trainer slots; not a measured
+    P&L'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 3.5
+  est_minutes: 40
+  basis: 'Estimate: two shards, ExtraTrees 300 trees + a (32,16) MLP x 5 folds; CPU, single-threaded.'
+ml_bakeoff:
+  task: classification
+  metric: macro_f1
+  dataset:
+    kind: jsonl
+    groups:
+      ETHUSDT_1h:
+        path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+      BTCUSDT_15m:
+        path: datasets-out/market_features/BTCUSDT/15m/v003/data.jsonl
+    ts_col: ts
+    target: direction_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    tail_rows: 60000
+    holdout_after: '2026-07-12'
+  cv:
+    folds: 5
+    embargo_rows: 24
+    min_train_frac: 0.4
+  baseline: prior
+  controls: []
+  candidates:
+  - logit
+  - et
+  - mlp
+  learners:
+    prior:
+      kind: prior
+    logit:
+      kind: numpy_logit
+    et:
+      kind: sklearn_extratrees
+      params: {}
+    mlp:
+      kind: sklearn_mlp
+      params: {}
+  rule:
+    min_folds: 3
+    pass_if:
+    - group:
+      - ETHUSDT_1h
+      - BTCUSDT_15m
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.01
+    - group:
+      - ETHUSDT_1h
+      - BTCUSDT_15m
+      vs: baseline
+      window: holdout
+      op: '>='
+      value: 0.0
+    fail_if_no_candidate_reaches:
+    - group:
+      - ETHUSDT_1h
+      - BTCUSDT_15m
+      vs: baseline
+      window: cv
+      op: '>='
+      value: 0.003
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261013-1414-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M25
+related:
+- ML-RQ-RUNNER
+- ml/configs/btc-direction-15m-lgbm-base-v003.yaml
+- ml/configs/eth-direction-1h-lgbm-v1.yaml
+last_dispatched_at: '2026-10-14T13:54:26+00:00'
+grading:
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261013-1414-03-DIRECTION-NONBOOSTED-VS-PRIOR
+  evidence:
+  - research/results/RQ-20261013-1414-03/38575869226.jsonl
+  graded_at: '2026-10-14'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

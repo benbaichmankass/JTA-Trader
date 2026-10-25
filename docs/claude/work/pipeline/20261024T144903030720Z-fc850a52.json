@@ -1,0 +1,24 @@
+{
+  "based_on": "20261024T073124751007Z-a193af7b.json",
+  "due_when": {
+    "due_date": "2026-10-27",
+    "kind": "date"
+  },
+  "id": "PI-20261024-ONHEALTH-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-27T00:00Z",
+    "how_to_check": "the rerun command; attribution means a named workflow run id per login, or a rotation ask to the operator",
+    "what": "every non-trainer accepted ssh login in 2026-10-24 03:00-05:00Z is attributed to a workflow run, or the key is rotated"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "HEALTH-REVIEW-20261024 lane (manager session_01UETC6mFiwMgXk6URsuWzZb)",
+    "rerun": "bash scripts/ops/diag_fetch.sh \"journalctl?unit=ssh.service&since=2026-10-24T03:00:00Z&lines=2000\" and list every \"Accepted\" whose source is not the trainer VM; then match each to a workflow run (system-actions / vm-diag-snapshot / deploy) created within 2 min"
+  },
+  "severity": "medium",
+  "state": "done",
+  "terminal_reason": "Attributed (lane SSH-LOGIN-ATTRIB-1024): both non-trainer accepts (03:59:04Z, 03:59:06Z; publickey, user ubuntu, same key as the trainer's, last4 Xoek) match Health Snapshot run 40060466668 (schedule), whose 'Collect snapshot from VM' step began 03:59:02Z and 'Run pipeline test on VM' 03:59:05Z - the job's two ssh calls to the live VM. Corroborated by run 40086578106 (steps 10:37:05Z/10:37:07Z) -> 2 non-trainer accepts 10:37:06Z/10:37:08Z, same key. Source address is outside the api.github.com/meta actions ranges (not exhaustive for hosted runners), so attribution rests on time + count + key + workflow, not address. No rotation needed.",
+  "tier": "1",
+  "what": "[health][security] Two sshd \"Accepted publickey for ubuntu\" logins on the live VM at 2026-10-24T03:59:04Z and 03:59:06Z came from a source address that is NOT the trainer VM (trainer = the only source in the 3 other sampled hours: 2026-10-17 20:57-22:50Z, 2026-10-24 03:00-04:36Z, 1,308 of 1,309 other accepts). Not attributed this run: no issue or workflow I could enumerate at 03:30-04:10Z (git log shows only the 03:35Z research-slo commit; MCP issue search empty; Actions run listing by time not available to the lane). Likely a GitHub-hosted runner (system-action / diag relay) but UNVERIFIED. Source address deliberately not recorded in this public repo; read it from the journal. || CORRECTION (same run): the sentence above says the trainer is the only source in 'the 3 other sampled hours' with '1,308 of 1,309' accepts - wrong. MEASURED over the sampled slices (2026-10-17 20:57-22:50Z and 2026-10-24 03:00-04:36Z): 1,404 accepted logins, 1,402 from the trainer VM and these 2 from another source."
+}

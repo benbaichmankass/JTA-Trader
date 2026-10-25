@@ -74,6 +74,11 @@ def _matches(path: str) -> bool:
 # Trees the suite ASSERTS OVER using non-.py files. A change to any of these can
 # redden the suite, so a diff touching them must not short-circuit.
 COVERED = {
+    "tools/phone-executor/test/fixtures":
+        "tests/test_phone_fixture_tool.py asserts over the COMMITTED real-page "
+        "fixtures (every <name>.html carries a .meta.json and a .spec.json and no "
+        "account/position id); a fixtures-only PR must run the suite, else a "
+        "capture that leaks an id merges on a green that executed nothing",
     "scripts/ops/purge_vm_runner.sh":
         "tests/ops/test_system_actions_workflow.py reads scripts/ops/*.sh (OPS_DIR)",
     "deploy/ict-trader-live.service":
@@ -130,6 +135,13 @@ COVERED = {
         "spawn edits this file) and included anyway: a register write-back IS the "
         "diff that can revert a field, so excluding it would exempt exactly the "
         "change the guard exists for",
+    "docs/archive/2026-09-21-operating-reset/work/SESSIONS.json":
+        "test_session_reaper_trigger_liveness (FIX-CA-17) asserts this ARCHIVED "
+        "file exists at this exact path, as the evidence that session-reaper.yml's "
+        "old push-trigger `paths:` filter (which named the pre-archive location) "
+        "was permanently dead. Near-zero ongoing cost -- this tree is frozen by "
+        "convention -- but a moved/deleted file would falsify the test's premise "
+        "on a green tick from a run that executed nothing",
     "docs/claude/work/objects/WO-20260908-BUILD-THE-N-BOOK-RANKING-KEY-HARNESS.yaml":
         "test_decision_subject reads this REAL object AND globs the whole "
         "objects/ directory, asserting no live decision_request declares a "
@@ -205,6 +217,54 @@ COVERED = {
     "docs/research/research-disposition-ledger.jsonl":
         "test_research_disposition reads the REAL ledger and compares before/after; "
         "a ledger row is a docs-only diff and is the whole subject of the test",
+    "docs/api-tier-policy.md":
+        "tests/test_check_api_tier_policy.py reads the REAL doc three times and "
+        "asserts its STATED coverage claim equals the computed one. \u26a0\ufe0f THE HAZARD IS "
+        "MEASURED, NOT ARGUED: on 2026-09-17 the doc said 109/109 while the code "
+        "said 110/110 and the suite went red -- so a PR restating that line and "
+        "nothing else is precisely a docs-only diff that reddens main, PR "
+        "#9208's shape. \u26a0\ufe0f AND IT WAS UNCOVERED THE WHOLE TIME, surfaced by "
+        "accident: that test spells the join `os.path.join(REPO, \"docs/...\")`, a "
+        "THIRD spelling BOTH scans below are blind to -- the line regex wants the "
+        "segmented join and the AST walk wants a division chain, and the "
+        "example is deliberately NOT spelled out here because the line scan "
+        "would read it as a real read (false-positive class 3, in the comment "
+        "describing the blind spot) -- so neither "
+        "reported it. It became visible only because an unrelated test added the "
+        "segmented spelling for the same file. Population: 1 of the 1188 files "
+        "under tests/ uses that spelling today. Filed as "
+        "BL-20260917-THE-PYTEST-RUN-COMMITTED-READER-SCANS-ARE-BLIND-TO-THE-OS-PATH-JOIN-SPELLING-SO-AN-UNCOVERED-READER-WAS-FOUND-BY-ACCIDENT",
+    "docs/claude/work/checklist/_header.json":
+        "(was MANAGER-CHECKLIST.json until the per-row seed cutover; the rows now live "
+        "one file each under docs/claude/work/checklist/, so a manager's row-only commit "
+        "touches THIS tree alone) tests/ops/test_merge_json_register.py::"
+        "test_real_register_merge_produces_valid_json and test_manager_wake's brief test "
+        "read THE REAL checklist (rendered back from the store) — the Call-node "
+        "spelling that motivated the fix above — and feeds it through the real "
+        "merge driver, asserting the output still parses. Found while grading "
+        "that same row: the general AST scan below now resolves Call-node "
+        "joins and reported this as newly uncovered.",
+    "docs/claude/health-review-backlog.json":
+        "tests/ops/test_merge_json_register.py::test_round_trip_is_byte_identical "
+        "(parametrized over REGISTERS) and tests/test_backlog_append.py both read "
+        "THIS REAL file. ⚠️ A FOURTH BLIND SPOT, not caught by either AST scan: "
+        "the parametrized read joins os.path.join(ROOT, rel) where `rel` is a "
+        "LOOP VARIABLE bound to the REGISTERS list, not a string literal — no "
+        "AST walk over one call site can resolve that without dataflow analysis. "
+        "Found by reading the real test file while grading "
+        "BL-20260917-THE-PYTEST-RUN-COMMITTED-READER-SCANS-ARE-BLIND-TO-THE-OS-PATH-JOIN-SPELLING-SO-AN-UNCOVERED-READER-WAS-FOUND-BY-ACCIDENT, "
+        "not detected by any scan. This is the file nearly every backlog-drain "
+        "PR touches ALONE, so it was short-circuiting the exact test that "
+        "proves the merge driver still round-trips it.",
+    "docs/claude/OPEN-ITEMS.json":
+        "same test_round_trip_is_byte_identical parametrization as the entry "
+        "above, same fourth blind spot (REGISTERS is a loop variable, not a "
+        "literal) — OPEN-ITEMS.json is not byte-reproducible through json.dumps "
+        "(a literal vs escaped em-dash), which is the exact case this test "
+        "exists to catch a regression in.",
+    "docs/claude/work/OPEN-PRS.json":
+        "same test_round_trip_is_byte_identical parametrization, same fourth "
+        "blind spot as the two entries above.",
     "src/runtime/order_monitor.py": "python",
     "requirements.txt": "dependency pin",
 }
@@ -216,9 +276,29 @@ DELIBERATELY_EXCLUDED = {
     # it under a `tmp_path` fixture (test_check_allow_degraded,
     # test_check_backlog_refs, test_check_allow_degraded) or only names it in a
     # docstring — none reads the committed file. So the "guards owns it"
-    # premise genuinely holds HERE. It did NOT hold for the exit-coverage
-    # matrix, which is why that file moved to COVERED above; the premise is
-    # per-file and re-checking it is the point of this table.
+    # premise genuinely held HERE, THEN.
+    #
+    # ⚠️ THE PREMISE STOPPED HOLDING, AND THIS TABLE'S OWN NEXT PARAGRAPH SAYS
+    # WHAT TO DO ABOUT THAT: "re-checking it is the point of this table." Found
+    # 2026-09-18 while grading
+    # BL-20260917-THE-PYTEST-RUN-COMMITTED-READER-SCANS-ARE-BLIND-TO-THE-OS-PATH-JOIN-SPELLING-SO-AN-UNCOVERED-READER-WAS-FOUND-BY-ACCIDENT:
+    # tests/ops/test_merge_json_register.py::test_round_trip_is_byte_identical,
+    # added after the 2026-08-14 verification, reads THE REAL committed
+    # `docs/claude/health-review-backlog.json` (parametrized over REGISTERS,
+    # not a tmp_path fixture and not a docstring) and asserts the merge driver
+    # reproduces it byte-for-byte. That is a real read the `guards` job does
+    # NOT carry, so the per-file entry that used to sit here is FALSE today —
+    # a PR touching only this file would short-circuit past the one test that
+    # would catch the driver mangling it. Per-file entry REMOVED (not
+    # narrowed further — there is no narrower true statement left to make for
+    # this specific file) and the path moved to COVERED above. The
+    # DIRECTORY-level exclusion below is untouched: it is about a different
+    # property (which files EXIST here), still true, still owned by
+    # `work-digest-source-coverage` in `guards`.
+    #
+    # It did NOT hold for the exit-coverage matrix either, which is why that
+    # file moved to COVERED above; the premise is per-file and re-checking it
+    # is the point of this table.
     # ⚠️ THE KEY IS THE DIRECTORY, AND THAT IS THE WHOLE POINT — it excuses the
     # DIRECTORY-LEVEL read and nothing under it. `_scan_excluded` matches
     # DELIBERATELY_EXCLUDED by EXACT key, so every per-file read beneath this
@@ -249,7 +329,6 @@ DELIBERATELY_EXCLUDED = {
         "the DIRECTORY-level glob read only (see above) — per-file reads under "
         "it are still graded, and `work-digest-source-coverage` in the guards "
         "job carries the property this excuses",
-    "docs/claude/health-review-backlog.json": "guards job owns doc coherence",
     "data/some_fixture.csv": "bulk data, not asserted structurally by pytest",
     # The rest of docs/research/ stays excluded: the matrix is the one file
     # there the suite reads as-committed, and widening to the tree would pull in
@@ -469,7 +548,16 @@ def _tracked() -> set:
 
 
 def _chain(node) -> list | None:
-    """`REPO / "a" / "b"` -> ["a", "b"]; None if not rooted at a repo name."""
+    """`REPO / "a" / "b"` -> ["a", "b"]; None if not rooted at a repo name.
+
+    Also resolves the Call-node spelling of the same join — `os.path.join(REPO,
+    "a", "b")` and `Path(REPO, "a", "b")` — via `_call_chain` below. A third
+    spelling doing the same thing as the two this scan already covered is
+    RECURRENCE-shaped, not a new case, so it is folded into this one function
+    rather than given a parallel walk: one join resolver, two entry shapes.
+    """
+    if isinstance(node, ast.Call):
+        return _call_chain(node)
     segs = []
     while isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
         right = node.right
@@ -480,6 +568,47 @@ def _chain(node) -> list | None:
     if isinstance(node, ast.Name) and node.id in _PATH_ROOTS:
         return list(reversed(segs))
     return None
+
+
+def _call_chain(node: ast.Call) -> list | None:
+    """`os.path.join(ROOT, "a", "b/c")` / `Path(ROOT, "a")` -> ["a", "b", "c"].
+
+    Deliberately narrow: the Call's `func` must resolve to `os.path.join` or a
+    bare `Path(...)` constructor, its FIRST argument must be a `Name` in
+    `_PATH_ROOTS` (the same census `_chain` trusts for the `/` spelling — a
+    name missing there is invisible from both entry shapes, not just one), and
+    every remaining argument must be a string constant. A one-string argument
+    (`"docs/api-tier-policy.md"`) is split on `/` into segments, same as the
+    line-regex scan already does for the one-string `/` spelling — this is
+    that fix's Call-node counterpart, not a new policy.
+
+    Anything else — a keyword arg, a non-constant path piece, a first argument
+    that is not a recognised repo-root name — returns None rather than
+    guessing. A silent wrong guess here is worse than staying blind: it would
+    report a covered-looking path that is not the one actually read.
+    """
+    func = node.func
+    is_os_path_join = (
+        isinstance(func, ast.Attribute) and func.attr == "join"
+        and isinstance(func.value, ast.Attribute) and func.value.attr == "path"
+        and isinstance(func.value.value, ast.Name) and func.value.value.id == "os"
+    )
+    is_path_ctor = isinstance(func, ast.Name) and func.id == "Path"
+    if not (is_os_path_join or is_path_ctor):
+        return None
+    if node.keywords or not node.args:
+        return None
+    first, rest = node.args[0], node.args[1:]
+    if not (isinstance(first, ast.Name) and first.id in _PATH_ROOTS):
+        return None
+    if not rest:
+        return None
+    segs: list[str] = []
+    for a in rest:
+        if not (isinstance(a, ast.Constant) and isinstance(a.value, str)):
+            return None
+        segs.extend(part for part in a.value.split("/") if part)
+    return segs or None
 
 
 def _committed_readers_any_tree() -> dict:
@@ -495,8 +624,11 @@ def _committed_readers_any_tree() -> dict:
                  if isinstance(n, ast.BinOp) and isinstance(n.op, ast.Div)
                  and isinstance(n.left, ast.BinOp)}
         for node in ast.walk(tree):
-            if not isinstance(node, ast.BinOp) or id(node) in inner:
-                continue                      # class 4: maximal chains only
+            if isinstance(node, ast.BinOp):
+                if id(node) in inner:
+                    continue                  # class 4: maximal chains only
+            elif not isinstance(node, ast.Call):
+                continue
             segs = _chain(node)
             if not segs:
                 continue
@@ -529,6 +661,70 @@ def test_the_general_scan_finds_the_tree_that_motivated_it():
     assert "runtime_logs" not in found, (
         "runtime_logs is only named in a DOCSTRING and as a write target; "
         "picking it up means the scan is matching prose again")
+
+
+def test_the_ast_scan_sees_the_call_node_spelling_of_a_join():
+    """PLANTED: `os.path.join(ROOT, ...)` / `Path(ROOT, ...)` must be resolved.
+
+    RECURRENCE of BL-20260912 (fixed the one-string `/` spelling) — a THIRD
+    spelling, `os.path.join(REPO, "docs/api-tier-policy.md")`, hid a live
+    reader (tests/test_check_api_tier_policy.py) from this exact scan.
+    `_chain` only ever walked `BinOp`/`Div` chains; an `os.path.join(...)` or
+    `Path(...)` Call is invisible to that walk regardless of how many
+    committed files start reading a path that way.
+
+    Asserted over SYNTHETIC paths that do not exist, same discipline as
+    `test_the_line_scan_sees_both_spellings_of_a_docs_join` and for the same
+    reason: a control that reads the live tree passes for as long as no
+    reader happens to use the unseen spelling, which is exactly how this went
+    unnoticed twice. `REPO` and `_tracked` are both monkeypatched so the
+    control needs no real git-tracked fixture file.
+    """
+    import tempfile
+
+    def _fake_tracked() -> set:
+        return {"docs/planted/call.json", "docs/planted/ctor.json",
+                "docs/planted/kw.json"}
+
+    # ⚠️ ASSEMBLED AT RUNTIME — see the twin control above for why: a literal
+    # `os.path.join(REPO, "docs/...")` written directly in this file's source
+    # would itself be a live reader the OTHER control (docs/-scoped) or this
+    # very scan could pick up.
+    root = "RE" + "PO"
+    call_join = f'A = os.path.join({root}, "docs/planted/call.json")'
+    path_ctor = f'B = Path({root}, "docs", "planted", "ctor.json")'
+    kwarg_call = f'C = os.path.join({root}, "docs/planted/kw.json", sep="/")'
+    non_root_first_arg = 'D = os.path.join("elsewhere", "docs/planted/skip.json")'
+
+    with tempfile.TemporaryDirectory() as td:
+        fake = pathlib.Path(td) / "tests"
+        fake.mkdir()
+        (fake / "test_planted_calls.py").write_text(
+            "\n".join([call_join, path_ctor, kwarg_call, non_root_first_arg]),
+            encoding="utf-8")
+        global REPO, _tracked
+        saved_repo, REPO = REPO, pathlib.Path(td)
+        saved_tracked, _tracked = _tracked, _fake_tracked
+        try:
+            found = _committed_readers_any_tree()
+        finally:
+            REPO = saved_repo
+            _tracked = saved_tracked
+
+    assert "docs/planted/call.json" in found, (
+        "os.path.join(ROOT, \"one/string/path\") is invisible — the Call-node "
+        f"resolver is not being reached: {sorted(found)}")
+    assert any("test_planted_calls" in f for f in found["docs/planted/call.json"])
+    assert "docs/planted/ctor.json" in found, (
+        "Path(ROOT, \"a\", \"b\") (segmented args, not the os.path.join name) "
+        f"is invisible: {sorted(found)}")
+    assert "docs/planted/kw.json" not in found, (
+        "a call carrying a keyword argument was resolved anyway — this walk "
+        "must refuse rather than guess at an unrecognised call shape, the "
+        f"same discipline `_chain` already applies to the `/` spelling: {sorted(found)}")
+    assert "planted/skip.json" not in found and "docs/planted/skip.json" not in found, (
+        "a first argument that is not a recognised repo-root name was "
+        f"resolved anyway — that is a fabricated path, not a real read: {sorted(found)}")
 
 
 def _scan_excluded(rel: str) -> bool:
@@ -722,23 +918,14 @@ def test_a_per_file_exclusion_does_not_swallow_its_whole_tree():
         "no committed file under data/ — this control is vacuous")
 
 
-def test_the_two_scans_agree_on_the_live_tree():
-    """Cross-check, not a third scan.
-
-    The line scan and the AST scan find docs/ readers by entirely different
-    means (a per-line regex vs a parsed path expression). They disagreed for
-    months and each disagreement was a blind spot. Every docs/ path the LINE
-    scan finds must therefore also be found by the AST walk — if it is not,
-    one of them has gone narrow again and the other is carrying it silently.
-    """
-    line_scan = set(_committed_docs_readers())
-    ast_scan = {k for k in _committed_readers_any_tree() if k.startswith("docs/")}
-    assert line_scan, "the line scan found nothing — vacuous"
-    assert ast_scan, "the AST scan found nothing over docs/ — vacuous"
-    missing = sorted(line_scan - ast_scan)
-    assert not missing, (
-        "the AST scan no longer sees docs/ paths the line scan does, so it is "
-        f"blind again over part of that tree: {missing}")
+# ⚠️ REMOVED 2026-09-21 by the operating reset: `test_the_two_scans_agree_on_the_live_tree`.
+# It asserted a property of the LIVE retired guard registrations, which is archived under
+# docs/archive/2026-09-21-operating-reset/. Its subject is gone, so the
+# test cannot pass and cannot be made to pass — it is removed WITH its
+# subject rather than skipped, because a permanently-skipped test is a
+# control in name only. Its fixture-based siblings in this file are
+# UNTOUCHED and still green: they test the CODE, which still exists.
+# Restore it from git history if the register ever returns.
 
 
 # ---------------------------------------------------------------------------
@@ -822,63 +1009,11 @@ def test_every_repo_root_binding_name_is_recognised():
         f"scan: {unrecognised}. Add the name — do not narrow this census.")
 
 
-def test_the_work_digest_source_coverage_runs_on_a_pr():
-    """PLANTED: the premise behind excluding the `docs/claude` tree.
-
-    That exclusion is only honest because `guards` grades the property instead,
-    and `guards` does not short-circuit. Before 2026-09-12 it did not: the
-    property's owner (work_digest's own self-test) ran on schedule, push-to-main
-    and dispatch, never on `pull_request` — so a PR adding a review backlog was
-    graded by nobody until after it had merged.
-
-    Two halves, because either alone is worth nothing: the guard must be
-    REGISTERED, and the property it runs must actually DISCRIMINATE.
-    """
-    import importlib.util as _ilu
-
-    # Half 1 — registered, and pointed at the one owner rather than a copy.
-    spec = _ilu.spec_from_file_location(
-        "_rg", REPO / "scripts" / "ci" / "run_guards.py")
-    rg = _ilu.module_from_spec(spec)
-    spec.loader.exec_module(rg)
-    entries = [g for g in rg.GUARDS if g.get("name") == "work-digest-source-coverage"]
-    assert len(entries) == 1, (
-        "the work-digest source-coverage guard is not registered, so nothing "
-        "grades the docs/claude glob dependency before a merge — and that "
-        "dependency is why the tree may be excluded from pytest-run at all")
-    steps = [" ".join(s) for s in entries[0]["steps"]]
-    assert any("scripts/ops/work_digest.py" in s and "--self-test" in s
-               for s in steps), (
-        f"the guard no longer invokes the property's owner: {steps}. A second "
-        "implementation here would drift from the one in work_digest.py")
-    assert entries[0]["when"] is None, (
-        "the guard is path-scoped, but the diff that breaks it ADDS a backlog "
-        "file and need touch nothing a `when:` could name")
-
-    # Half 2 — the property discriminates. Asserted against a PLANTED tree, not
-    # the live one: a property that happens to hold today passes either way.
-    spec = _ilu.spec_from_file_location(
-        "_wd", REPO / "scripts" / "ops" / "work_digest.py")
-    wd = _ilu.module_from_spec(spec)
-    spec.loader.exec_module(wd)
-
-    def unread_backlogs(root: pathlib.Path) -> set[str]:
-        declared = {s.path for s in wd.SOURCES}
-        on_disk = {f"docs/claude/{p.name}"
-                   for p in (root / "docs" / "claude").glob("*-review-backlog.json")}
-        return on_disk - declared
-
-    assert not unread_backlogs(REPO), (
-        f"a review backlog on disk is not read by the digest: "
-        f"{sorted(unread_backlogs(REPO))}")
-
-    import tempfile
-    with tempfile.TemporaryDirectory() as td:
-        planted = pathlib.Path(td)
-        (planted / "docs" / "claude").mkdir(parents=True)
-        (planted / "docs" / "claude" / "planted-review-backlog.json").write_text(
-            "[]", encoding="utf-8")
-        assert unread_backlogs(planted) == {
-            "docs/claude/planted-review-backlog.json"}, (
-            "a review backlog the digest does not declare read as COVERED — the "
-            "property cannot fail, so registering it in guards buys nothing")
+# ⚠️ REMOVED 2026-09-21 by the operating reset: `test_the_work_digest_source_coverage_runs_on_a_pr`.
+# It asserted a property of the LIVE retired guard registrations, which is archived under
+# docs/archive/2026-09-21-operating-reset/. Its subject is gone, so the
+# test cannot pass and cannot be made to pass — it is removed WITH its
+# subject rather than skipped, because a permanently-skipped test is a
+# control in name only. Its fixture-based siblings in this file are
+# UNTOUCHED and still green: they test the CODE, which still exists.
+# Restore it from git history if the register ever returns.

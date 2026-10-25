@@ -1,0 +1,183 @@
+id: RQ-20261016-65ff-25
+title: 'AI trader / conformal abstention at 1h on PUBLISHED data: does split-conformal abstention on the BTC/ETH/SOL 1h regime learner beat a plain max-probability
+  threshold at matched coverage? (P2-Q1.5, the 1h variant of RQ-20261011-9da8-03)'
+status: done
+cadence: once
+theme: ml_health
+priority: 2
+kind: experiment
+question: On the published BTC/ETH/SOL 1h v002 market_features shards (regime_label, the six shared features), with a LightGBM learner fit under the same
+  purged walk-forward folds as RQ-20261014-65cc-10, does a split-conformal (Mondrian per predicted class) abstention rule give a LOWER selective error than
+  the plain max-probability threshold at the SAME coverage (50 / 70 / 90 %), while empirical coverage stays within 3 points of nominal in >= 90% of rolling
+  30-day windows?
+why_this_matters: '65cc-10, 4591-01, 4591-06 and eda2-01 all PASSED (the regime learners beat the class prior on LOG-LOSS) -- the condition 02 s6 W3 #20
+  set for releasing conformal abstention. RQ-20261011-9da8-03 asks it on the trainer-resident shadow log and needs TWO levers (the scorer AND the realised-label
+  joiner ML-HEAD-AGREEMENT-JOIN). This 1h variant reads labelled published shards, so it needs ONLY the scorer: it removes the joiner from the critical
+  path and runs off the saturated trainer. conformal_calibration has 0 registered models (ml_plan_status --diversity).'
+power:
+  expected_n: 24000
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'The selective-error comparison is PAIRED over folds and rows: a paired comparison is a one-sample test on the differences, so design is one_sample
+    (the queue''s power grader accepts one_sample | two_sample; ''paired'' was refused on 2026-10-18 when the unit left blocked/). Rows: tail_rows 40000
+    at min_train_frac 0.4 leaves ~24,000 OOS rows per symbol over 5 folds; d=0.1 paired needs ~785 rows, so rows are not the limit; bars are autocorrelated,
+    so the rule also needs >= 2 of 3 symbols and >= 6 windows per symbol rather than one significance test. The earlier basis counted 3 symbols as n; that
+    was the number of groups, not the sample.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed published shard; nothing accrues.
+decision_rule:
+  id: RULE-RQ2026101665ff25-CONFORMAL-1H
+  statistic: 'Per symbol and coverage level c in {0.5, 0.7, 0.9}: selective error (misclassification among non-abstained OOS rows) of (a) the plain max-probability
+    threshold tuned on the fold''s calibration block to keep share c and (b) the Mondrian (per predicted class) split-conformal rule whose alpha is tuned
+    on the same calibration block to keep share c (rising branch); paired over folds. Validity: per non-overlapping 30-day window of OOS rows, |empirical
+    set coverage - (1 - alpha)| <= 2 * sqrt(p(1-p)/n_window + p(1-p)/n_calibration). The fixed 3-point band is reported beside it as valid_share_tol.'
+  rule: 'PASS IF on >= 2 of 3 symbols, at EVERY coverage level (50/70/90% kept) with coverage matched between the two rules, the conformal rule has LOWER
+    selective error than the plain max-probability threshold AND the conformal set''s rolling-window coverage is within 2 SE of nominal in >= 90% of windows
+    (SE combines the window''s binomial term and the calibration-set term; see amendments) -- a per-trade refusal signal worth a Tier-3 proposal note on
+    FRONTIER-RESEARCH; family history conformal_calibration PASS. FAIL IF either condition fails on >= 2 symbols with coverage matched (no gain, or validity
+    broken by drift: family history FAIL with this configuration). INDETERMINATE IF < 6 usable windows per symbol, the learner arm is unavailable, or coverage
+    could not be matched at some level (the model cannot keep that many singleton sets: not a comparison).'
+  min_n: 6 usable 30-day windows per symbol, >= 200 OOS rows each.
+  what_it_does_not_do: Changes no head, threshold, stage or order path; 'abstain' is measured offline on market labels only. Wiring abstention as a RiskManager
+    refusal is a separate Tier-3 proposal. Not a P&L claim.
+  registered_at: '2026-10-16'
+  registered_before_run: true
+amendments:
+- at: '2026-10-18'
+  by: lane ML-UNBLOCK-1018
+  before_any_run: true
+  what: 'validity criterion: fixed +/-3 points -> within 2 combined SE of nominal; added the matched-coverage precondition'
+  why: 'MEASURED on exchangeable synthetic data while building the scorer (scripts/research/conformal_abstain_eval.py --self-test): split-conformal coverage
+    given ONE calibration set is Beta-distributed around nominal, so at this unit''s window size (~720 1h rows) a fixed 3-point band is ~1.5 SE and a PERFECTLY
+    valid rule fails it in ~13% of windows by chance -- the registered >= 90% share would then grade validity as a coin flip. The 2-SE band tests what the
+    clause means (exchangeability holds inside the window). Matched coverage was implicit in ''at the SAME coverage''; a weak model cannot keep 90% singleton
+    sets, and comparing unmatched kept shares is not the registered comparison. The unit had not run; no result was seen.'
+- at: '2026-10-18'
+  by: lane ML-UNBLOCK-1018
+  before_any_run: true
+  what: 'power block: design paired -> one_sample; expected_n 3 -> 24000 (OOS rows per symbol), d 0.3 -> 0.1'
+  why: tests/test_research_queue.py::test_every_committed_job_is_both_powered_and_routable refused 'paired' (unverifiable) once the unit entered the dispatch
+    queue; the paired design is a one-sample test on differences, and the sample is rows, not symbols. No result was seen.
+compute: auto
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.3
+  basis: 'stand-in (02 node P2-Q1.5 weight): a calibrated refusal signal for the advisory heads; not a measured P&L'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  published_data: metis-market-data
+  peak_memory_gb: 3.0
+  est_minutes: 30
+  basis: 'Estimate, NOT measured: the 65cc-10 fold plan (5 lightgbm fits per symbol) plus a 190-point alpha grid over each fold''s calibration block per
+    level; Kaggle CPU via published data. Re-declare from the first run.'
+ml_bakeoff:
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT_1h:
+        path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+      ETHUSDT_1h:
+        path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+      SOLUSDT_1h:
+        path: datasets-out/market_features/SOLUSDT/1h/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    tail_rows: 40000
+  cv:
+    folds: 5
+    embargo_rows: 24
+    min_train_frac: 0.4
+  learners:
+    lgbm:
+      kind: lightgbm
+      params:
+        n_estimators: 200
+        learning_rate: 0.05
+        num_leaves: 31
+        min_child_samples: 50
+  note: dataset / cv / learner only (the compute router checks published-data paths here); the SCORE-STREAM test is the conformal block
+conformal:
+  learner: lgbm
+  coverage_levels:
+  - 0.5
+  - 0.7
+  - 0.9
+  calib_frac: 0.25
+  match_tol: 0.03
+  window_days: 30
+  min_window_rows: 200
+  min_windows: 6
+  validity_mode: 2se
+  validity_tol: 0.03
+  validity_min_share: 0.9
+  mondrian: predicted_class
+  rule:
+    pass_symbols_min: 2
+    fail_symbols_min: 2
+run:
+  command:
+  - python3
+  - scripts/research/conformal_abstain_eval.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261016-65ff-25
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-REGIME
+- M25
+related:
+- FRONTIER-LEVER-CONFORMAL
+- P2-AI-REGIME-BACKLOG-1016
+- RQ-20261011-9da8-03
+- RQ-20261014-65cc-10
+- RQ-20261015-eda2-01
+programme_link:
+  programme: P2
+  node: P2-Q1.5-conformal
+blocked_on_history:
+- kind: work_item
+  ref: FRONTIER-LEVER-CONFORMAL
+  what: 'The scorer scripts/research/conformal_abstain_eval.py does not exist. For THIS unit it needs a --published mode: read the shards from $ML_DATA_ROOT
+    like ml_bakeoff.py, fit LightGBM on the 65cc-10 folds, then split-conformal vs plain threshold at matched coverage, rolling-window coverage, verdict.json
+    in the E5 shape. The realised-label joiner (ML-HEAD-AGREEMENT-JOIN) is NOT needed here (the shards carry regime_label).'
+  clears_when: conformal_abstain_eval.py merged with a synthetic-exchangeable self-test showing nominal coverage; then git mv this unit to research/queue/,
+    status queued, run.command [python3, scripts/research/conformal_abstain_eval.py, --unit, '{unit}', --out, '{out_dir}'].
+unblocked:
+  at: '2026-10-18'
+  by: lane ML-UNBLOCK-1018
+  how: scripts/research/conformal_abstain_eval.py merged (FRONTIER-LEVER-CONFORMAL, published mode)
+last_dispatched_at: '2026-10-18T14:40:13+00:00'
+grading:
+  attested: RULE-RQ2026101665ff25-CONFORMAL-1H
+  auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-RQ2026101665ff25-CONFORMAL-1H
+  evidence:
+  - research/results/RQ-20261016-65ff-25/39135610259.jsonl
+  first_fail: 1 row(s), all measured, all fail
+  graded_at: '2026-10-20'
+  grader: scripts/research/queue_grade.py
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

@@ -1,0 +1,31 @@
+{
+  "id": "NEWS-ALPHA-SRC-WIKI",
+  "title": "Lever: Wikimedia per-article daily pageview collector (2015-07-..) with a frozen article->asset map for crypto20 + S&P100",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-12 lane NEWS-ALPHA-PROGRAM] Per-article granularity is daily (hourly only via the bulk dumps); day t's count is usable only after 00:00 UTC t+1 -- encode that as available_at. Keyless REST API; set a descriptive User-Agent. Serves units listed in docs/research/news-alpha-program-2026-10-12.md; program row NEWS-ALPHA-PROGRAM.",
+  "updated_at": "2026-10-12T14:01:54Z",
+  "updated_by": "session_01SPre8cB96Nn4sUTry1KAiX",
+  "roadmap": [
+    "M28"
+  ],
+  "priority": "high",
+  "writeback": {
+    "roadmap": "none: lever row; M28 write-back happens on NEWS-ALPHA-PROGRAM",
+    "arch": "none: research tooling, no runtime contract"
+  },
+  "observation": {
+    "what": "Daily pageviews for every mapped article with available_at stamped",
+    "how_to_check": "collector prints per-asset day counts and gaps",
+    "due_by": "2026-11-16"
+  },
+  "_seq": 440
+}
