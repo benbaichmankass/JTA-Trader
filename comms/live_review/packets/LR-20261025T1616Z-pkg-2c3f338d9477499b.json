@@ -1,0 +1,68 @@
+{
+ "account_bounds": [
+  {
+   "account_class": "prop",
+   "account_id": "breakout_2",
+   "evidence": "the package exit intent (stop to price+buffer 2346.33) was refused by this account's phone executor: amend #a6 refused, fails 6; refusal reason not readable from a session (/api/bot/prop/phone/pending needs device auth); last reported reason on #a4 was sheet_not_open",
+   "read": "refused_by_account_risk"
+  },
+  {
+   "account_class": "prop",
+   "account_id": "tradeify_1",
+   "evidence": "ticket closed/sl_cross; this account's status carries no positions field, so its venue position could not be confirmed",
+   "read": "unknown"
+  },
+  {
+   "account_class": "prop",
+   "account_id": "velotrade_1",
+   "evidence": "ticket closed/sl_cross; this account's status carries no positions field, so its venue position could not be confirmed",
+   "read": "unknown"
+  },
+  {
+   "account_class": "paper",
+   "account_id": "bybit_1",
+   "evidence": "bybit_1 leg closed (telemetry final, stamped 2026-10-24T20:02Z); no venue position",
+   "read": "no_action"
+  }
+ ],
+ "assembled_by": "hand (LTR-3 first live run); generator scripts/ops/live_review_packet.py not built yet",
+ "cost": {
+  "basis": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 4,
+  "giveback_r": 1.3694,
+  "open_r": 0.5943,
+  "peak_r": 1.9637,
+  "r_to_stop": 0.0561,
+  "r_to_target": 4.8564
+ },
+ "info_cutoff_at": "2026-10-25T16:16:30Z",
+ "leg": "trend_donchian_eth_prop",
+ "mechanics": {
+  "evidence": "order_packages status=closed close_reason=sl_cross at 2026-10-24T20:02Z (package sl 2342.6725, ~+0.56R locked; telemetry on the bybit_1 leg final), tradeify_1 and velotrade_1 tickets closed/sl_cross -- but breakout_2's account_status (16:04Z, /api/bot/prop/status) still reports 1 open ETHUSDT short, fill 2367.4, mark 2341.36, with the ORIGINAL stop 2409.58 (-1.0R). phone_trail: last_plan_action exit ('trail crossed: replayed stop 2313.58 is through the current price'), amend #a6 2409.58->2346.33 emitted 15:01Z, amend_status refused, fails 6. Tracked as PI-20261025-KERS1025-0002 (sheet_not_open).",
+  "verdict": "mismatch"
+ },
+ "order_package_id": "pkg-2c3f338d9477499b",
+ "packet_version": 1,
+ "priced_options": null,
+ "regime": {
+  "atr_now_over_entry": null,
+  "cell_entry": "chop/calm",
+  "cell_now": null
+ },
+ "review_id": "LR-20261025T1616Z-pkg-2c3f338d9477499b",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": null,
+  "giveback_r": 1.3694,
+  "open_r": 0.5943,
+  "peak_provenance": "estimated",
+  "peak_r": 1.9637,
+  "regime_cell_entry": "chop/calm",
+  "regime_cell_now": null,
+  "sl": 2409.58,
+  "tp": 2132.47779
+ }
+}

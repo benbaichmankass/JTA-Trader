@@ -122,6 +122,9 @@ milestones:
       readers (scripts/research/pool_arm_diff.py), exit arms of the two underpowered prop-pace units on disjoint baskets,
       and design fixes for A2 (OI-era window) and C1 (entry-set-clean arms). B1 remaining-move head failed on edge
       (pulled-in TP 51 R vs 409 R as traded).
+      2026-10-25 (LTR-2-RECORDS, done; landed with LTR-3 in #20121): live trade review records layer -- comms/live_review/{reviews,outcomes}.jsonl +
+      comms/schema/live_review.schema.json + live-review-records-guard; applied 0.25R bound and shadow 0.5R arm on every row.
+      The 9 real rows of the first live run (LTR-3 skill, 2026-10-25 16:16Z) validate; LTR-3 added no_recommendation, record_only and per-account account_reads.
     architecture: ["TP doctrine"]
     owner: manager
     reviewed: 2026-10-14
@@ -429,6 +432,29 @@ milestones:
     no_rows_reason: scoping only -- the frontier-scan question is pipeline item PI-20261022-J9X7ACR3-0001, not a build row
     owner: ML-ROADMAP-LOOP lane
     reviewed: 2026-10-22
+  - id: L-DESK
+    goal: G4
+    name: Claude trading desk -- desk-manager session over specialist lanes, package intents through per-account risk
+    status: active
+    where: >-
+      Opened 2026-10-25 (operator chat ~16:12-16:30Z; row DESK-DESIGN, priority over other builds from ~17:35Z). Design
+      docs/plans/claude-trading-desk-DESIGN.md (design only, awaiting operator review): one standing Sonnet desk session
+      (roles market watch / entry review / in-trade = LTR / exit), Opus escalations + a blind teacher sample (dial rho),
+      one packet schema shared by Claude and ML (= the claude_judgments dataset schema), and the path package intent ->
+      each account's RiskManager.approve_amend -> each account's executor (re-scopes LTR-6/8/9). Sits inside the
+      promotion ladder: D-S0 blind replay with paired counterfactuals, D-S1 mechanical shadow + sandbox, D-S2
+      mandate-bounded derisk-only live. Short-hold (10 min - 1 h) lane NOT piloted: no <=1h leg clears Stage 0 today
+      (comms/strategy_evidence, 5m ict_scalp 0/4 folds positive). Complements L-ATM (exits) on the live-management side.
+    next: >-
+      MONDAY 2026-10-26 (operator deadline): live-capable in-trade desk in apply_mode recommend; LTR-6R per-account
+      apply path; MD-LIVE-TIGHTEN-SL written; bybit_1 sandbox (DECIDED) first, then bybit_2+portfolio after 1-2 clean
+      applies. Operator decided feeds (repo + logged exception) and sandbox (shadow bybit_1) 2026-10-25 ~17:58Z; two
+      preference questions remain. The manager files DESK-0..DESK-13 (design section 10). First measured numbers come from DESK-6 (15 min shadow pilot: latency per stage, $ per wake,
+      context growth, rotation). Done-condition: D-S0 PASS on at least one role and a desk intent applied on real money
+      under a granted mandate with per-account verdicts and readback recorded.
+    no_rows_reason: design only -- build rows DESK-0..DESK-13 are listed in the design doc and filed by the manager after operator review
+    owner: manager
+    reviewed: 2026-10-25
   # ── G5 ──────────────────────────────────────────────────────────────────
   - id: L-PROGRAMMES
     goal: G5

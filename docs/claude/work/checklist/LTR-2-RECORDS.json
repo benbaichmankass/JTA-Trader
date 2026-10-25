@@ -2,21 +2,33 @@
   "id": "LTR-2-RECORDS",
   "title": "Live trade review: comms/live_review/{reviews,outcomes}.jsonl + schema + validator guard; records the applied 0.25R policy AND a shadow 0.5R-policy arm per review (operator: track both)",
   "phase": null,
-  "state": "in_flight",
+  "state": "done",
   "owner": "build lane (manager dispatch)",
-  "lane": "session_01VNo37PHyN1Y37vcgh1Duxj",
+  "lane": "session_01VNo37PHyN1Y37vcgh1Duxj (built); absorbed by session_01R3JNyuLvWTXNqU8HKspiHP",
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 6,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    20112,
+    20121
+  ],
   "blocked_on": [],
-  "note": "From docs/plans/live-trade-review-DESIGN.md \u00a7 8 (merged c5d8d225, operator-approved 2026-10-25 ~13:58Z). Parent LIVE-TRADE-REVIEW-DESIGN. Operator Q1: apply bound 0.25R, and record what a 0.5R bound would have done on every review so the two can be compared over time. [2026-10-25 ~14:32Z session_01SrYqLY4Ui9RKns12r2zthj] CJ-1-LTR2-ML-FIELDS is FOLDED INTO THIS ROW (not started yet): implement the docs/plans/ml-claude-distillation-DESIGN.md \u00a7 4.4 fields in the reviews/outcomes schema and validator.",
+  "note": "From docs/plans/live-trade-review-DESIGN.md \u00a7 8 (merged c5d8d225, operator-approved 2026-10-25 ~13:58Z). Parent LIVE-TRADE-REVIEW-DESIGN. Operator Q1: apply bound 0.25R, and record what a 0.5R bound would have done on every review so the two can be compared over time. [2026-10-25 ~14:32Z session_01SrYqLY4Ui9RKns12r2zthj] CJ-1-LTR2-ML-FIELDS is FOLDED INTO THIS ROW (not started yet): implement the docs/plans/ml-claude-distillation-DESIGN.md \u00a7 4.4 fields in the reviews/outcomes schema and validator. [2026-10-25 ~16:40Z session_01R3JNyuLvWTXNqU8HKspiHP] DONE. Manager decision 16:31Z: #20112 was ABSORBED into #20121 (LTR-3) and closed. #20121 carries all of LTR-2: the schema, the empty outcomes.jsonl, the validator with self-test, the live-review-records-guard entry in run_guards.py, the tests, and the roadmap/ARCH writeback. CLOSING OBSERVATION MET: comms/live_review/reviews.jsonl holds 9 real rows from LTR-3's first live run (2026-10-25 ~16:16Z), and python3 scripts/ci/check_live_review_records.py exits 0 on them. The guard runs in CI on this PR. LTR-3 extended the schema: action no_recommendation, basis record_only, required account_reads, plus validator rules (insufficient_n is never hold; account_reads covers exactly the accounts in accounts). Follow-up: no packet_hash field yet (see LTR-3 note).",
   "priority_rank": 3,
-  "updated_at": "2026-10-25T16:03:28Z",
-  "updated_by": "session_01UKBXozpiJicMHHyMp47MnN",
+  "updated_at": "2026-10-25T16:32:31Z",
+  "updated_by": "session_01R3JNyuLvWTXNqU8HKspiHP",
   "roadmap": [
     "L-ATM"
   ],
+  "observation": {
+    "what": "the first real review row appended to comms/live_review/reviews.jsonl validates against comms/schema/live_review.schema.json on main",
+    "how_to_check": "python3 scripts/ci/check_live_review_records.py && wc -l comms/live_review/reviews.jsonl",
+    "due_by": "2026-11-08"
+  },
+  "writeback": {
+    "roadmap": "L-ATM: 2026-10-25 LTR-2-RECORDS entry (done; landed with LTR-3 in #20121)",
+    "arch": "ARCHITECTURE-CANONICAL.md change-log row 2026-10-25 LTR-2-RECORDS"
+  },
   "_seq": 656
 }

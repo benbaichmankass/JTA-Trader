@@ -211,6 +211,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `.claude/skills/git-actions/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/health-review/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/llm-delegate/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
+| `.claude/skills/live-trade-review/SKILL.md` | instruction | live | — | 2026-10-25 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/macro-research/SKILL.md` | instruction | live | — | 2026-09-07 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/manager/SKILL.md` | instruction | live | — | 2026-09-21 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
 | `.claude/skills/frontier-research/SKILL.md` | instruction | live | — | 2026-10-11 | `dir:skills-are-binding-workflows / harness:skill-is-loaded-and-invocable` | — |
@@ -568,6 +569,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/plans/OPS-AUTOMATION-INVENTORY-2026-10-13.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/plans/RESEARCH-PLAN-2026-09-21.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |
 | `docs/plans/SYSTEM-AUDIT-PROPOSAL-2026-09-27.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
+| `docs/plans/claude-trading-desk-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/plans/live-trade-review-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/plans/ml-claude-distillation-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
 | `docs/plans/ml-producers-milestones-2026-10-08.md` | plan | unknown | — | never | `name:plan-is-a-forward-commitment / not-assessed` | — |

@@ -1,0 +1,81 @@
+id: RQ-20261025-3947-27
+title: 'Momentum-trail ATTRIBUTION re-run (PI-20261009-NKGUCEDN-0001): for the 5 e5-passing ADX cells, do the ADX-tightened exits net non-negative and beat baseline
+  A on the same entries?'
+status: queued
+cadence: once
+roadmap:
+- L-ATM
+- M20
+theme: live_strategy
+priority: 1
+kind: experiment
+question: 'For the five e5-passing momentum_trail cells (eth_4h adx20_k0_t2.5; xrp_4h adx25_k0_t2.5 and adx20_k0_t2.5; eth_prop adx25_k0_t1.8 and adx25_k3_t1.8),
+  split each cell''s net R by trail_adx_tightened (scripts/backtest_trend.py --emit-trades, via exit_lever_ablation): do the trades whose stop was last moved on an
+  ADX-tightened bar net >= 0 R AND beat the same entries under the declared exit A?'
+why_this_matters: 'Closes the data task of pipeline item PI-20261009-NKGUCEDN-0001 (lane EXIT-EVIDENCE-FOLDS 2026-10-09): the folds of these cells were settled but
+  the ATTRIBUTION clause of RQ-20261007-042 (trail_adx_tightened exits net non-negative) was NOT_EVIDENCED, because the sweep records cell aggregates only. A cell
+  whose tightened exits net negative does not pass; a cell that passes becomes a Tier-3 declare proposal (prop legs in their own PR). Related: RQ-20261016-005 (eth_4h
+  M1 CONFIRMED on folds), RQ-20261022-511e-01 (xrp_4h adx25 failed on sol_4h/eth_4h corroboration). Lane RESEARCH-AUTHOR-1025PM (floor 43 vs 65). Operator 2026-10-22:
+  a first-test fail is not a dead idea.'
+power:
+  expected_n: 250
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Per cell the unit is the tightened trades. expected_n=250 is the whole-cell trade count (RQ-20261016-005: 262-270 on eth_4h), of which the tightened subset
+    is an ESTIMATE until the first run; the registered floor is n_tightened >= 30 per cell, below which the cell grades indeterminate, never FAIL.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ202610253947-27-MOMTRAIL-ATTRIBUTION
+  registered_at: '2026-10-25'
+  registered_before_run: true
+  statistic: 'scripts/research/momentum_trail_attribution.py (wraps exit_lever_ablation; window 2020-07-01 .. 2026-10-15 23:59, 6 folds, harness cost stack). Per
+    cell: n_T = trades with trail_adx_tightened true; net_T = their summed net_r; matched = tightened entries also in baseline arm A (key entry_time + direction);
+    delta_T = net_T minus the same entries'' net R under A.'
+  rule: 'CELL PASSES iff n_T >= 30 AND net_T >= 0 AND matched >= 80 % of n_T AND delta_T > 0. CELL FAILS iff n_T >= 30 AND (net_T < 0 OR (matched >= 80 % AND delta_T
+    <= 0)). Otherwise the cell is INDETERMINATE (n_T < 30, trail_adx_tightened absent, or matched < 80 % with net_T >= 0). UNIT: PASS iff >= 1 cell passes (each passing
+    cell is named; follow-up = ONE confirmation unit on a disjoint window per passing cell, denominator 5 cells, prop legs in their own PR, then a live-producer check,
+    then a Tier-3 declare PROPOSAL with the mirror in the same PR, never a config edit); FAIL iff every cell is evaluable and none passes (these cells are closed
+    on this window; the momentum_trail family stays open: next variants = other ADX thresholds / falling-bar counts); else INDETERMINATE. Thresholds are not changed
+    after any result. The fold evidence already settled (RQ-20261007-042 records) is not re-graded here.'
+  what_it_does_not_do: Edits no config and no roster, places no order, is not a promotion case. It adds the ATTRIBUTION clause only; it does not re-grade the folds.
+    A passing cell still needs its own disjoint-window confirmation and a live producer (trend_donchian.monitor() reads only trail_decay_* today).
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  bucket: own_losses
+  basis: 'stand-in: a momentum-exit declare on a bybit_2 leg (eth_4h, xrp_4h) and the prop eth leg; an estimate of monthly net-R at stake, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 45
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data; CPU only.
+  basis: 'Estimate: three exit_lever_ablation invocations (eth_4h, xrp_4h, eth_prop 1h), each one candle fetch and 2-3 harness arms; comparable to RQ-20261022-511e-01
+    (20 min for two legs x two arms).'
+run:
+  command:
+  - python3
+  - scripts/research/momentum_trail_attribution.py
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 150
+  inputs:
+    research_unit: RQ-20261025-3947-27
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P1
+related:
+- PI-20261009-NKGUCEDN-0001
+- RQ-20261007-042
+- RQ-20261016-005
+- RQ-20261022-511e-01
+- scripts/research/momentum_trail_attribution.py
+- RESEARCH-AUTHOR-1025PM
