@@ -11,6 +11,9 @@ An account whose read fails is reported as UNREAD, never as clean. Read-only.
 
     python3 scripts/ops/check_ticket_package_divergence.py            # exit 1 when any ticket diverges or any read fails
     python3 scripts/ops/check_ticket_package_divergence.py --json
+
+# wiring: manual-only - a session read (health-review / live-trade-review / incident lanes); the runtime half of this
+# detector is the one-per-ticket alert in src/prop/phone_trail.py::_note_divergence, which runs on every phone poll.
 """
 from __future__ import annotations
 
@@ -22,16 +25,17 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
-import yaml
-
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 BASE = "https://ict-bot.duckdns.org/api/bot/prop/tickets"
 OPEN_TICKET = ("placed", "filled")      # the phone/executor reported the order on the venue
 CLOSED_PACKAGE = ("closed",)
 
 
-def prop_accounts(path: Path = ROOT / "config" / "accounts.yaml") -> list[str]:
-    accts = (yaml.safe_load(path.read_text()) or {}).get("accounts") or {}
+def prop_accounts() -> list[str]:
+    from src.config.accounts_loader import load_accounts_dict
+    accts = load_accounts_dict()
     return sorted(a for a, v in accts.items() if isinstance(v, dict) and str(v.get("type") or "") == "prop")
 
 
