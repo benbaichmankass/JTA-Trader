@@ -1,7 +1,7 @@
 id: RQ-20261024-09a6-02
 title: 'AI-ATM rung A2: does FLOW (funding, taker imbalance, open interest where history exists) add per-bar exit information beyond
   the price state, on the crypto money legs as traded?'
-status: blocked
+status: queued
 cadence: once
 roadmap:
 - L-ATM
@@ -47,17 +47,7 @@ decision_rule:
     shadow (Programme 02 Q6). FAIL IF CI upper < 0.002 nats: flow adds no exit information on these legs at bar resolution; the class
     is recorded in families history and the signals catalog as no_lift for exits.'
   min_n: 600 trades pooled
-blocked_on:
-- kind: work_item
-  ref: docs/claude/work/checklist/PATH-FLOW-JOIN.json
-  what: No point-in-time join of funding / taker flow / OI onto harness path rows exists. Funding/OI datasets exist for BTC 1h only
-    (Programme 02 Q5).
-  clears_when: 'PATH-FLOW-JOIN lands a point-in-time join (no look-ahead: funding = last settled at or before the bar close) on the
-    six legs'' path rows with a coverage report, and a test that a shifted-forward flow column is refused.'
-- kind: result
-  ref: research/queue/blocked/RQ-20261024-09a6-01.yaml
-  what: The reference model is chosen by 09a6-01's verdict.
-  clears_when: 09a6-01 is graded (any verdict).
+blocked_on: []
 compute: cpu_light
 value:
   bucket: ai_trader
@@ -74,8 +64,40 @@ routing:
   basis: 'Estimate: six harness passes with --emit-paths (one per leg, ~1-2 min each MEASURED for exit_lever_ablation arms 2026-10-16)
     plus the fit.'
 run:
-  workflow: null
-  note: Null until the blocked_on build lands; then git mv to research/queue/, status queued, fill run.command.
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/path_flow_join.py
+  - --harness-legs
+  - trend_donchian_eth_4h,trend_donchian_xrp_4h,xrp_pullback_2h,ada_pullback_2h,trend_donchian_eth_prop,trend_donchian_sol_prop
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --mode
+  - grade
+  - --reference
+  - auto
+  - --min-coverage
+  - '0.8'
+  - --min-gain-nats
+  - '0.002'
+  - --min-folds
+  - '4'
+  - --min-n
+  - '600'
+  - --n-folds
+  - '6'
+  - --n-boot
+  - '2000'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261024-09a6-02
+  note: 'PATH-FLOW-JOIN (scripts/research/path_flow_join.py). --reference auto = R1 if 09a6-01''s own rule (same code, same thresholds) passes R1 vs R0 on these trades, else R0. Funding/OI/taker come from Binance Vision (keyless). The unit''s decision_rule is applied literally: a leg with any flow column on < 80% of states is dropped and named.'
 lands:
   store: research/results/
   assert_field: read_state
