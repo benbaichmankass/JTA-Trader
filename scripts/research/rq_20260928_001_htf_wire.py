@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# wiring: manual-only — a session-local two-arm (HTF filter ON vs forced OFF) re-run of one ict_scalp leg; origin.rerun of PI-20261025-1CZRLDTS-0001-A/-B and RQ-20260928-001; no scheduled consumer.
 """RQ-20260928-001 driver: ict_scalp HTF trend filter OFF vs ON on the 7 variant legs.
 
 Invokes ``scripts/backtest_ict_scalp.py`` in-process exactly as
