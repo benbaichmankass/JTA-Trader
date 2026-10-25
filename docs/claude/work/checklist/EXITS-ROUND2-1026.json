@@ -2,21 +2,33 @@
   "id": "EXITS-ROUND2-1026",
   "title": "Second exits variant round from Sunday's graded results",
   "phase": null,
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": null,
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 10,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    20008
+  ],
   "blocked_on": [],
-  "note": "Week plan 2026-10-22 (Mon).",
+  "note": "Tier-3 notes: none. Population: 29 exit units in RESULTS-GRADE-1025 (3 pass, 24 fail, 2 underpowered); 35 eba2 arms read from committed emits: 7 edge-failed, 7 resolved null, 21 design-unresolved. Authored d7e6-01..11 (all would_dispatch; -01/-07 gated on inputs by design). Not authored: f08c-13 confirm (effect 0.6 R/yr, unresolvable), entry-side underpowered baskets (pipeline PI-20261025-TSROUND2-0001). Spend not metered in-session. Detail: docs/research/exits-round2-1026.md",
   "priority_rank": 13,
-  "updated_at": "2026-10-23T15:00:33Z",
-  "updated_by": "session_01YHnEs6mehRvD74aubi5DJw",
+  "updated_at": "2026-10-25T05:22:37Z",
+  "updated_by": "session_01SD42SVzXQYWRgdgcxc3xt5",
   "roadmap": [
     "L-ATM"
   ],
+  "writeback": {
+    "roadmap": "L-ATM: added the 2026-10-25 EXITS-ROUND2-1026 paragraph to its where: (35-arm design-vs-edge read, round-2 units d7e6-01..11)",
+    "arch": "none: research units and a Tier-1 research script only; no architecture contract moved"
+  },
+  "observation": {
+    "what": "Units RQ-20261025-d7e6-02..06, -08..-11 dispatch and land read_state=measured records; the pooled readers -01 and -07 fire after their inputs land (not_before 2026-10-27) and return a verdict or an explicit MDE-above-bar INDETERMINATE.",
+    "how_to_check": "python3 scripts/research/dispatch_queue.py --json | grep d7e6; ls research/results | grep d7e6; python3 scripts/research/pool_arm_diff.py --self-test",
+    "due_by": "2026-10-30"
+  },
+  "tier3_notes": [],
   "_seq": 607
 }
