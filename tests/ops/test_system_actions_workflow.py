@@ -378,6 +378,9 @@ EXPECTED_ACTIONS = {
     # 2026-10-24 — AMEND-SL-ACTION: tighten one live Bybit stop, venue +
     # journal (order_packages.sl + trades.stop_loss) together; refuses looser.
     "amend-position-sl": "amend_position_sl_action.sh",
+    # 2026-10-25 — LTR-6R-APPLY-PATH: READ-ONLY per-account dry-run of the
+    # live-review apply path (scripts/ops/live_review_apply.py --dry-run).
+    "live-review-dry-run": "live_review_dry_run_action.sh",
     # Audit F-39 / MI-241. Re-attaches the three order_packages rows that were
     # flipped to `closed` while their legs were still OPEN, so order_monitor's
     # `status="open"` selector can never pick them up and those legs are managed
@@ -479,6 +482,7 @@ TIER_2_ACTIONS = {
     "backfill-tpsl-leg-ids",
     "reattach-stranded-package-legs",
     "amend-position-sl",
+    "live-review-dry-run",
 }
 
 

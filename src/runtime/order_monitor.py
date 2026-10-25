@@ -1695,13 +1695,36 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
     # integration has no modify op — a known P2 shortfall, not a live error).
     leg_outcomes: List[Dict[str, Any]] = []
     for leg in legs:
+        # LTR-6R: a leg a live-review amend tightened carries `notes.sl_floor`
+        # (its own account approved it; a sibling account may have refused, so
+        # the shared package stop did not move). A trail candidate looser than
+        # that floor must not reach THIS leg — it would undo the amend. The leg
+        # is `held_by_floor`: it counts as landed for the package write (the
+        # trail keeps working for the other legs), and its stop is unchanged.
+        leg_updates = dict(updates)
+        leg_floor = None
+        if "sl" in leg_updates:
+            from src.runtime.live_review_intent import floor_blocks, sl_floor_from
+            leg_floor = sl_floor_from(leg.get("notes"))
+            if floor_blocks(leg.get("direction"), leg_updates["sl"], leg_floor):
+                leg_updates.pop("sl")
+        if not leg_updates:
+            logger.info(
+                "order_monitor: pkg=%s trade=%s account=%s held at its sl_floor %s "
+                "(candidate sl %s is looser)", pkg_id, leg.get("id"),
+                leg.get("account_id"), leg_floor, updates.get("sl"),
+            )
+            leg_outcomes.append({"leg": leg, "outcome": "held_by_floor",
+                                 "updates": {}})
+            continue
         ex_result = _send_modify_to_exchange(
             leg,
-            sl=updates.get("sl"),
-            tp=updates.get("tp"),
+            sl=leg_updates.get("sl"),
+            tp=updates.get("tp"),  # the floor only ever drops "sl"
             side=leg.get("direction"),
             qty=_coerce_float(leg.get("position_size")),
-            cur_sl=_coerce_float(open_pkg.get("sl")),
+            cur_sl=(leg_floor if "sl" not in leg_updates and leg_floor is not None
+                    else _coerce_float(open_pkg.get("sl"))),
             cur_tp=_coerce_float(open_pkg.get("tp")),
         )
         logger.info(
@@ -1710,7 +1733,8 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
             f" (tp_reason: {decision.tp_reason})" if decision.tp_reason else "",
         )
         if ex_result.get("ok"):
-            leg_outcomes.append({"leg": leg, "outcome": "applied"})
+            leg_outcomes.append({"leg": leg, "outcome": "applied",
+                                 "updates": leg_updates})
             continue
         err_str = ex_result.get("error") or "unknown"
         if _is_unsupported_op_error(err_str):
@@ -1736,7 +1760,8 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
                                  "error": err_str})
 
     applied = [o for o in leg_outcomes if o["outcome"] == "applied"]
-    not_applied = [o for o in leg_outcomes if o["outcome"] != "applied"]
+    not_applied = [o for o in leg_outcomes
+                   if o["outcome"] not in ("applied", "held_by_floor")]
 
     # Sync `trades.stop_loss`/`take_profit_1` for the legs that ACTUALLY
     # landed, before deciding the package write. A leg whose amend failed must
@@ -1748,10 +1773,11 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
             trade_id = o["leg"].get("id")
             if trade_id is not None:
                 trade_sync: Dict[str, Any] = {}
-                if "sl" in updates:
-                    trade_sync["stop_loss"] = updates["sl"]
-                if "tp" in updates:
-                    trade_sync["take_profit_1"] = updates["tp"]
+                sent = o.get("updates", updates)
+                if "sl" in sent:
+                    trade_sync["stop_loss"] = sent["sl"]
+                if "tp" in sent:
+                    trade_sync["take_profit_1"] = sent["tp"]
                 if trade_sync:
                     db.update_trade(int(trade_id), trade_sync)
         except Exception as exc:  # noqa: BLE001

@@ -413,6 +413,16 @@ case "${action}" in
             *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
         esac
         ;;
+    live-review-dry-run)
+        # 2026-10-25 (LTR-6R-APPLY-PATH): READ-ONLY. What each account's own
+        # RiskManager.approve_amend WOULD do for every open package.
+        tier=1
+        case "${exit_code}" in
+            0) result="ok (per-account verdicts printed; nothing applied)"; priority="normal" ;;
+            3) result="COULD NOT LOOK for at least one account (prop journal unreadable) — see the run"; priority="normal" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="high" ;;
+        esac
+        ;;
     amend-position-sl)
         # 2026-10-24 (AMEND-SL-ACTION): tighten one live Bybit stop, venue +
         # journal together; dry-run unless apply:true.
