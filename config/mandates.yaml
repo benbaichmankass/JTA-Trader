@@ -1080,6 +1080,44 @@ mandates:
       Per drill: the ticket id (exec-test-*), the per-step capture run id, the
       open and close fills, and the Telegram line.
 
+  - id: MD-LIVE-TIGHTEN-SL
+    grants: tighten the protective stop of an OPEN order package on every account that carries it
+    direction: derisk_only
+    proposed_by: session_01354wy5zWA5J3AcLp2NbdKo (lane LTR-6R-APPLY-PATH, PR #20139 body)
+    proposed_at: '2026-10-25'
+    granted_by: operator (Ben)
+    granted_at: '2026-10-25'
+    source: >-
+      Operator popup on PR #20139, ~19:57Z 2026-10-25, in manager session
+      session_01MdQiC8UqKBLj287KWFWN71, answered verbatim "After VM dry-run
+      passes (Recommended)": the manager grants MD-LIVE-TIGHTEN-SL and flips
+      apply_mode to apply once a VM live-review-dry-run shows a correct verdict
+      for every account (recorded on row LTR-6R-APPLY-PATH). Scope "All
+      accounts" (operator, earlier popup). Alpaca joins the same switch per the
+      operator popup on #20150 ~21:00Z, verbatim "Merge + deploy (Recommended)"
+      (row AMEND-PARITY-ALL-ACCOUNTS). Gate met: system-action #20183,
+      2026-10-25 22:16Z, after deploy #20182 (#20168 + #20150): Bybit 6/6
+      approve within_bounds; alpaca_paper 3 approve within_bounds + 1 refuse
+      would_loosen (correct); ib_paper 2 refuse no_amend_path with a successful
+      mark/ATR read (no IB executor in the apply path; honest refusal, not
+      bad_input). Operator confirmed in chat ~22:25Z, verbatim "go ahead with
+      the flip". Committed by manager session_01AZiErvK92E59gCqBV5GoQX.
+    scope: >-
+      Each account through its own RiskManager.approve_amend and existing
+      executor (scripts/ops/live_review_apply.py --apply): Bybit leg modify,
+      Alpaca alpaca_amend.exec_trade_leg (tighten-only, venue read-back), prop
+      VM meta.sl_floor, phone request_sl_tighten. IB refuses no_amend_path until
+      an IB executor is wired.
+    fires_when:
+      - a committed live-review row (comms/live_review/reviews.jsonl) whose LTR-0 outcome table (evidence path on main) has n >= 20 from this state
+      - recommendation.action == tighten_sl, ev_delta_r >= -0.25 (Q1 bound), worst_case_delta_r > 0
+      - mechanics.verdict == match
+      - config/live_trade_review.yaml apply_mode == apply for the account (global apply covers all accounts)
+      - the account's approve_amend returns approve or clip (tighten-only, >= min_buffer_atr x ATR beyond the mark, <= 1 amend per package per closed bar, account live, leg not shadow); could_not_look never applies
+    never: [widen a stop, move a TP, change size, close or partial-close, add an entry, act on a read that could not look, act with n below the floor, write mode or execution]
+    notify: trade-update ping tagged with the mandate per applied account; ONE ping per refuse / no-op / apply_failed on a real-money or prop account; ONE flag after 3 consecutive could_not_look cycles; brief section 1 line with the review row and table path
+    revert: a tightened stop that is hit cannot be undone; disarm by committing apply_mode recommend in config/live_trade_review.yaml
+
 # MD-PROMOTE-S1-S2-SOAK-AMEND (proposed 2026-10-15 by lane SOAK-REDEFINE) was
 # GRANTED by the operator the same day and folded into MD-PROMOTE-S1-S2 above
 # -- see that entry's `amended_at` / `amendment_source`.
