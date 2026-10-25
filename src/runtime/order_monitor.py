@@ -1720,7 +1720,7 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
         ex_result = _send_modify_to_exchange(
             leg,
             sl=leg_updates.get("sl"),
-            tp=leg_updates.get("tp"),
+            tp=updates.get("tp"),  # the floor only ever drops "sl"
             side=leg.get("direction"),
             qty=_coerce_float(leg.get("position_size")),
             cur_sl=(leg_floor if "sl" not in leg_updates and leg_floor is not None
