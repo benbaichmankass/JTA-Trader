@@ -39,3 +39,24 @@ due:
   # Per-package cooldown: at most one review per closed bar of the leg's
   # timeframe, except for these events.
   cooldown_exempt: [giveback, mechanics]
+
+# -- apply (LTR-6R-APPLY-PATH; design § 4, desk design § 3.0) -----------------
+# apply_mode is a sanctioned *_MODE selector (CLAUDE-RULES-CANONICAL § Prime
+# Directive rule 6), NOT a gate on trading and NOT a halting latch:
+#   off       — nothing is computed per account
+#   recommend — each account's RiskManager.approve_amend is computed and
+#               recorded (account_reads); nothing is sent to any venue
+#   apply     — an approved/clipped amend goes to THAT account's executor, and
+#               ONLY under a granted mandate (config/mandates.yaml,
+#               MD-LIVE-TIGHTEN-SL); apply_mode alone never applies anything
+# ONLY A COMMIT CHANGES THIS. No runtime code writes it. Setting `apply` is
+# the operator's act (Tier 3).
+apply_mode: recommend
+# Per-account override (same three values); absent = inherit the global.
+#   accounts:
+#     bybit_portfolio: {apply_mode: off}
+accounts: {}
+# Noise floor (design § 3 guardrails): a review stop sits at least this many x
+# the leg's ATR beyond the mark. An account may RAISE its own floor with
+# config/accounts.yaml::<acct>.risk.live_review_min_buffer_atr.
+min_buffer_atr: 1.0

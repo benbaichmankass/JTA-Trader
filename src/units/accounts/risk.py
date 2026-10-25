@@ -392,6 +392,13 @@ class RiskManager:
         # share one basis or margin use would read as a loss.
         self._live_equity: Optional[float] = None
         self.risk_pct: float = float(config.get("risk_pct", 0.01))
+        # LTR-6R: this account's own noise floor for a live-review stop amend
+        # (a multiple of the leg's ATR beyond the mark). Unset = the review's
+        # global ``min_buffer_atr``; an account can only make it stricter.
+        self.live_review_min_buffer_atr: Optional[float] = (
+            float(config["live_review_min_buffer_atr"])
+            if config.get("live_review_min_buffer_atr") is not None else None
+        )
         # ── Per-account EXPOSURE ceiling (2026-08-07, operator-directed) ────
         # Gross open notional, as a MULTIPLE OF EQUITY, that this account may
         # carry. ``0`` / unset = no ceiling (behaviour byte-for-byte unchanged
@@ -876,6 +883,27 @@ class RiskManager:
     def approve(self, order: OrderPackage) -> bool:
         ok, _reason = self.evaluate(order)
         return ok
+
+    def approve_amend(self, intent: Any, account: Any) -> Any:
+        """Per-account gate for a live-trade-review AMEND of an OPEN package
+        (LTR-6R-APPLY-PATH; operator directive 2026-10-25: the review acts at
+        the package level and each account decides inside its own bounds).
+
+        ``intent`` is a ``LiveReviewIntent``, ``account`` this account's
+        ``AmendAccountView``. Returns an ``AmendVerdict`` -- approve / clip /
+        refuse / could_not_look, with a reason. It enforces tighten-only, the
+        ``min_buffer_atr`` noise floor (the larger of the intent's and this
+        account's own ``risk.live_review_min_buffer_atr``), one amend per
+        package per closed bar, the account mode and the strategy's
+        ``execution: shadow``. The daily-DD switch is NOT consulted: a tighten
+        only reduces risk, so it has ``evaluate(..., opening=False)``
+        semantics (manager decision 2026-10-25). Never a halt; never writes
+        ``mode``; a refusal is for this intent on this account only."""
+        from src.runtime import live_review_intent as _lri
+
+        own = getattr(self, "live_review_min_buffer_atr", None)
+        return _lri.decide_amend(intent, account, dry_run=self.dry_run,
+                                 account_min_buffer_atr=own)
 
     def note_live_equity(self, equity_usd: Optional[float]) -> None:
         """Feed this dispatch's live TOTAL equity to the daily-DD switch."""

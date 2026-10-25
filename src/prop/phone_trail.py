@@ -502,8 +502,10 @@ def _plan_one(conn: Any, r: Any, account_id: str, now: datetime, legs: Mapping[s
     except Exception as exc:  # noqa: BLE001
         out["log"].append({"ticket_id": tid, "why": f"candles failed ({type(exc).__name__})"})
         return  # last_bar not advanced: re-tried on the next claim
+    from src.runtime.live_review_intent import sl_floor_from
     plan = prop_trail.plan_trail(leg=leg, direction=direction, entry=entry, initial_sl=isl, signal_time=sig,
-                                 resting_sl=resting_sl, candles=candles, now=now, price_step=step)
+                                 resting_sl=resting_sl, candles=candles, now=now, price_step=step,
+                                 sl_floor=sl_floor_from(m))
     tr["last_bar"] = bar
     tr["last_plan"] = {"at": now.isoformat(), "action": plan.action, "why": plan.why, "replay_sl": plan.replay_sl,
                        "bars": plan.bars, "close_lever": plan.close_lever, "mfe_r": plan.detail.get("mfe_r")}
@@ -592,6 +594,64 @@ def request_tp_amend(account_id: str, ticket_id: str, tp: float, *, reason: str,
                        "reason": str(reason or "tp revision")[:200]}
         ok = _cas(conn, ticket_id, r["meta"], {**m, KEY: tr})
         return {"ok": ok, "amend_id": tr["amend"]["id"] if ok else None, "why": "" if ok else "concurrent write"}
+    finally:
+        conn.close()
+
+
+def request_sl_tighten(account_id: str, ticket_id: str, sl: float, *, reason: str, review_id: str,
+                       now: Optional[datetime] = None) -> Dict[str, Any]:
+    """Publish a live-review stop TIGHTEN for one open phone ticket through the one-slot amend channel
+    (LTR-6R / design § 4 "Prop, phone account"), as :func:`request_tp_amend` does for a TP. The caller has
+    already run this account's ``RiskManager.approve_amend``. It also records ``meta.sl_floor`` so the phone
+    trail's next plans tighten TO the floor and re-emit it if this attempt fails (the retry rides the trail's own
+    cadence; nothing latches). Refused, never queued, when an amend is outstanding, a human's stop is held, or
+    the stop would not tighten the resting SL. The TP is carried unchanged and the phone verifies both before
+    any click (its pre-click check and the ``human_moved`` rules apply unchanged)."""
+    from src.prop import prop_trail
+
+    now = now or _now()
+    slf = _f(sl)
+    if slf is None or slf <= 0:
+        raise ValueError("sl must be a positive price")
+    conn = prop_journal._connect()
+    try:
+        prop_journal.ensure_tables(conn)
+        r = conn.execute("SELECT * FROM prop_tickets WHERE ticket_id = ? AND account_id = ?",
+                         (ticket_id, account_id)).fetchone()
+        if r is None or r["status"] not in PARENT_STATUSES:
+            return {"ok": False, "why": "no placed/filled ticket with that id on this account"}
+        m = _meta(r["meta"])
+        if m.get("test"):
+            return {"ok": False, "why": "test ticket"}
+        tr = _load_trail(m, ticket_id)
+        if tr.get("human_hold"):
+            return {"ok": False, "why": f"a human's stop is held: {tr['human_hold']}"}
+        step = _price_step(account_id, r["symbol"])
+        cur_sl, cur_tp = _levels(r, tr, step)
+        direction = str(r["direction"] or "").lower()
+        # Round on the LOOSE side so the typed stop is never tighter than what the account approved.
+        if step and step > 0:
+            new_sl = (round(math.floor(slf / step + 1e-9) * step, 10) if direction == "long"
+                      else round(math.ceil(slf / step - 1e-9) * step, 10))
+        else:
+            new_sl = slf
+        if not prop_trail.tightens(direction, cur_sl, new_sl, step):
+            return {"ok": False, "why": f"{new_sl} does not tighten the resting SL {cur_sl}"}
+        new_meta = {**m, "sl_floor": {"level": new_sl, "source": "live_review_mandate",
+                                      "review_id": str(review_id or "")[:120], "at": now.isoformat()}}
+        if (tr.get("amend") or {}).get("status") in ("emitted", "claimed"):
+            # The floor is still recorded: the trail re-emits toward it once the slot frees.
+            ok = _cas(conn, ticket_id, r["meta"], {**new_meta, KEY: tr})
+            return {"ok": False, "floor_recorded": ok, "why": "an amend is outstanding for this ticket"}
+        seq = int(tr.get("seq") or 0) + 1
+        tr["seq"] = seq
+        tr["amend"] = {"id": f"{ticket_id}#a{seq}", "status": "emitted", "kind": "sl", "from_sl": cur_sl,
+                       "sl": new_sl, "from_tp": cur_tp, "tp": cur_tp, "emitted_at": now.isoformat(),
+                       "valid_until": (now + timedelta(seconds=AMEND_VALID_S)).isoformat(),
+                       "reason": f"live review {review_id}: {reason}"[:200]}
+        ok = _cas(conn, ticket_id, r["meta"], {**new_meta, KEY: tr})
+        return {"ok": ok, "amend_id": tr["amend"]["id"] if ok else None, "sl": new_sl,
+                "why": "" if ok else "concurrent write"}
     finally:
         conn.close()
 
