@@ -1,0 +1,22 @@
+{
+  "id": "REDUCE-LEG-PRICING",
+  "title": "Reduce-leg pricing: fully consumed intent_reduce parents still priced from pkg.entry, and 3 bybit_1 reduce legs lost intent_reduce_allocations to the 500-char notes cap (PI-20261011-YJAYF7GD-0002 / -0004)",
+  "phase": null,
+  "state": "queued",
+  "owner": "lane (opus)",
+  "lane": null,
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 12,
+  "spend_usd": null,
+  "tier": 2,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-25 ROUTE-1025] Owns PI-20261011-YJAYF7GD-0002 and -0004. Both RE-MEASURED 2026-10-25 via diag journal?table=trades (all 6,736 rows). (a) -0002: exit_reason='intent_reduce' n=41; notes.exit_price_source/pnl_source = recorded_exit_price/local_compute on 40, absent on 1 -- unchanged from the 2026-10-11 figure (40 of 41), so the fully-consumed-parent population was NOT touched by PERF-FU-REDUCE-PNL's reduce_leg_settlement (which covers the 'intent_reduce_executed' legs: of 114, 68 settled+exchange_fill, 33 local_markprice phantoms, 13 unverified). Build: re-price each from the reduce order's own fill (exchange_fills, order_id = the reduce leg's notes.trade_id; same join as src/runtime/reduce_leg_settlement.py), provenance MEASURED, via a backfill with a dry-run (Tier-2 data mutation: operator OK before apply). (b) -0004: bybit_1 6047, 5917, 5838 are still intent_reduce_executed with notes._truncated=true, exit_price_source=exchange_fill and NO intent_reduce_allocations; 45 reduce rows in total lack the key (ids 3756..6047, bybit_1 mostly; 1 bybit_portfolio). Find the writer that rewrites notes through dump_capped(notes, 500) after the audit row is written (first suspect scripts/ops/backfill_fabricated_exits.py; execute.py writes the audit row with dump_capped(audit_notes, 2000)) and make it preserve/skip reduce legs. Related: PERF-FU-REDUCE-PNL (landed_unproven), REDUCE-READERS-INCLUDE. DONE WHEN: the 40 rows re-priced or documented as unrecoverable, and the writer fixed with a test that a reduce leg's allocations survive the rewrite. [2026-10-25 ROUTE-1025 CORRECTION] Population for -0004 by exit_reason (all 6,736 rows): the key is missing on 4 'intent_reduce_executed' rows (bybit_1 6047, 5917, 5838 -- all three named in the item -- plus 3654, 2026-07-18, exit_price_source local_markprice, _truncated=true) and on 41 'intent_reduce' rows (39 bybit_1, 1 bybit_portfolio, 1 bybit_2), which are the fully-consumed-parent shape and not expected to carry allocations; so the notes-cap defect is 4 rows, not 45. Ignore the '45' in the note above.",
+  "priority_rank": 22,
+  "updated_at": "2026-10-25T06:06:03Z",
+  "updated_by": "session_01MCfi31EKuoRfriU5E7yj2e",
+  "roadmap": [
+    "M39"
+  ],
+  "_seq": 641
+}
