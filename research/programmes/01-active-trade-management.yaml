@@ -2649,7 +2649,7 @@ nodes:
   after:
   - node: P1-Q4-xrp4h-exit-confirm
     verdict: pass
-  needs_authoring: 'STATUS 2026-10-22: FIRST CORROBORATION FAILED -> VARIANTS QUEUED (not retired; operator 2026-10-22: a first-test fail is not a dead idea). RQ-20261022-511e-01 graded UNIT FAIL (M2 adx25_k0_t2.5 fails on sol_4h, 1 of 4 folds, and eth_4h), so the real-money declare stays OFF (xrp_4h ADX trail on the bybit_1 alias trend_donchian_xrp_adx25 only). DIAGNOSIS: ADX < 25 on 4h crypto holds for a large share of bars (near-unconditional); sol_4h / eth_4h / xrp_4h already carry their own tighteners that compose by minimum; the cell was carried from ONE n 68 leg. VARIANTS: RQ-20261022-eba2-15 (momentum LOSS on eth_4h: ADX < 20; ADX < 30 or 20 AND falling 3 bars). Next: read eba2-15; a PASS there is the corroboration this node waits for (then a sibling/xrp_4h cell on the same trigger), a FAIL leaves this node open for a further variant (sol_4h, other thresholds). UPDATE 2026-10-23: eba2-15 read FAIL on eth_4h (M3 +1.56 R, M5 +0.50 R vs a 5.5 R bar, 6 and 5 of 6 folds, DD not worse -- small and consistent, not refuted); the sibling-leg variant is RQ-20261023-8961-01 (same arms, sol_4h). Read it next; a PASS there is the corroboration this node waits for. ORIGINAL TEXT: CONFIRMED 2026-10-18 (RQ-20261016-015, run 39103754166, n 68): M2 trail_adx_below 25 / tight 2.5 17.07 vs
+  needs_authoring: 'STATUS 2026-10-22: FIRST CORROBORATION FAILED -> VARIANTS QUEUED (not retired; operator 2026-10-22: a first-test fail is not a dead idea). RQ-20261022-511e-01 graded UNIT FAIL (M2 adx25_k0_t2.5 fails on sol_4h, 1 of 4 folds, and eth_4h), so the real-money declare stays OFF (xrp_4h ADX trail on the bybit_1 alias trend_donchian_xrp_adx25 only). DIAGNOSIS: ADX < 25 on 4h crypto holds for a large share of bars (near-unconditional); sol_4h / eth_4h / xrp_4h already carry their own tighteners that compose by minimum; the cell was carried from ONE n 68 leg. VARIANTS: RQ-20261022-eba2-15 (momentum LOSS on eth_4h: ADX < 20; ADX < 30 or 20 AND falling 3 bars). Next: read eba2-15; a PASS there is the corroboration this node waits for (then a sibling/xrp_4h cell on the same trigger), a FAIL leaves this node open for a further variant (sol_4h, other thresholds). UPDATE 2026-10-23: eba2-15 read FAIL on eth_4h (M3 +1.56 R, M5 +0.50 R vs a 5.5 R bar, 6 and 5 of 6 folds, DD not worse -- small and consistent, not refuted); the sibling-leg variant is RQ-20261023-8961-01 (same arms, sol_4h). Read it next; a PASS there is the corroboration this node waits for. UPDATE 2026-10-25 (research-ops 08:47Z): RQ-20261024-0142-04 (xrp_4h ER-gate dose, er_6 < 0.30, arm 1.5 R) read PASS under its own rule: E30M20 (tight 2.0 x ATR) 15.88 vs A 14.30 R (+1.58 R, bar 1.36), 6 of 6 folds, maxDD 4.30 vs 4.57, beats UT20 by 5.36 R; E30M15 did not pass (+0.12 R). It is a DISCOVERY on the SAME n 68 window (the 2.5 x ATR version of this gate missed the bar, so 2 doses and the earlier 2.5 were looked at on this leg -- multiple-testing denominator 3), NOT a confirmation of the ADX cell above. n 68 cannot be split further, so the confirmation is the same gate/dose on a different leg or forward accrual: author ONE unit on the sol_4h/eth_4h legs (same er_6 < 0.30, 1.5 R, 2.0 x ATR, unconditional UT20 control) before any Tier-3 proposal; no live producer exists for er-gated tightening (MOMENTUM-LEVERS-LIVE). ORIGINAL TEXT: CONFIRMED 2026-10-18 (RQ-20261016-015, run 39103754166, n 68): M2 trail_adx_below 25 / tight 2.5 17.07 vs
     14.30 R, 4 of 4 folds, DD 4.15 vs 4.57; M1 (adx 20) also passes; R1 tp_retarget stall_pull_in (target 3 R, 10
     bars) 16.55 R, 3 of 4 folds, DD 4.04 -- the one TP-side pass on a real-money leg today. The corroboration this
     node asked for EXISTS: the ADX-trail family passed on trend_donchian_eth_4h the same day (RQ-20261016-005 M1,
@@ -15613,11 +15613,122 @@ nodes:
   after:
   - unit: RQ-20261022-eba2-01
     verdict: any
-  needs_authoring: 'Read RQ-20261022-eba2-01 (hand unit; nothing to draft until it closes). PASS -> the 007 PASS transfers to six
-    legs it was not selected on: build HARNESS-METRIC-TRIGGER, then promote blocked/RQ-20261022-eba2-07 and -08 (git mv, status
-    queued, substitute {trigger_file}); if eba2-04 (vol-controlled) has run, its verdict is read with this one. FAIL -> rung 2 is not
-    built on 007; record the exact configuration and leave the family open only through eba2-04. INDETERMINATE (pooled n < 100) ->
-    extend the window or add legs in ONE new unit, never lower the floor.'
+  # AUTHORED 2026-10-25 (research-ops 08:47Z). State of the tree: eba2-01 PASS and eba2-04 PASS (path metrics carry giveback
+  # information on the transfer legs AND beyond vol_ratio); rung 2 ran on ada (eba2-07) and xrp (eba2-08) and both read FAIL.
+  # eba2-08 (xrp) is a clean FAIL on every arm (MB -12.5, MT -9.9 R). eba2-07 (ada) is a NEAR MISS on MT only: +4.59 R over
+  # A (92.09 -> 96.69), 4 of 6 folds (bar 5), maxDD 18.0 vs 21.3, and +25.8 R over its unconditional control UT; MB -12.4 R.
+  # FAIL IS NOT DEAD (operator 2026-10-22): the rule's live/config question is answered (declared exit stands); this unit asks
+  # the next question the near miss raises -- is the MT effect real and where is its dose, or noise at the 2.5 x ATR point.
+  # Multiple-testing denominator: 3 tight-trail multipliers will have been looked at on this leg and window (2.5 read in
+  # eba2-07; 2.0 and 3.5 here) -- a PASS is a discovery, never a declare.
+  unit:
+    theme: live_strategy
+    priority: 1
+    kind: experiment
+    cadence: once
+    title: 'Programme 01 Q11 rung 2 DOSE (variants after the eba2-07 near miss): on ada_pullback_2h does the metric-TRIGGERED
+      tight trail at a different dose (2.0 x ATR or 3.5 x ATR instead of 2.5) beat the declared exit AND its own unconditional
+      control, on net R in 5 of 6 folds over 2020-07..2026-10?'
+    question: 'eba2-07 read FAIL on ada_pullback_2h but its MT arm (flagged trades tighten the trail to 2.5 x ATR at bar 6) was
+      +4.59 R over A with 4 of 6 folds and lower drawdown, and beat UT by 25.8 R; the bank arm MB lost 12.4 R. Is that a real
+      dose-response? Same window (2020-07-01 .. 2026-10-15 23:59), same out-of-fold trigger construction (bar 6, P(big giveback)
+      >= 0.5, 6 folds), arms A, MT20 (2.0 x ATR) with control UT20 (2.0 x ATR on every trade open at bar 6), MT35 (3.5 x ATR)
+      with control UT35. Does either candidate beat A by >= 0.02 R x n(A) in >= 5 of 6 folds within 1.35 x A drawdown AND beat
+      its own control?'
+    why_this_matters: The declared wide trail earns its R in the right tail; selective tightening is the only giveback lever not
+      refuted outright (fixed bank, level-triggered tightening and the 1R giveback stop all FAILED by -3 to -68 R). The n
+      difference MT 421 vs A 402 in eba2-07 means tightening re-opens extra entries, so the arm is not a pure exit change; the
+      rule reads full-position net R, which includes that effect, and the result row must report it (n per arm).
+    power:
+      why_runner: Fetches keyless public candles (Binance Vision) for a pinned window; reads no trainer data.
+      basis: One exit_lever_ablation.py invocation, five arms on one leg (eba2-07 ran five arms the same way in one cycle).
+    decision_rule:
+      id: RULE-P1-Q11-R2-ADA-DOSE
+      registered_at: '2026-10-25'
+      registered_before_run: true
+      statistic: 'From scripts/research/exit_lever_ablation.py --grade replace on ada_pullback_2h with arms A, MT20, UT20, MT35,
+        UT35 (trigger file from --trigger-from-path-metrics 6, identical construction to eba2-07), window 2020-07-01 ..
+        2026-10-15 23:59, 6 equal calendar folds, net of the full cost stack recorded per arm. Per arm: n, net_total_r,
+        max_drawdown_r, net R per fold.'
+      rule: 'INDETERMINATE IF n(A) < 39 or IF a candidate arm is byte-identical to A. Candidate C in {MT20, MT35} PASSES iff
+        net_r(C) > net_r(A) AND delta vs A >= 0.02 R x n(A) AND folds_ge(A) >= 5 of 6 AND maxDD(C) <= maxDD(A) x 1.35 AND
+        net_r(C) > net_r(its unconditional control, UT20 for MT20, UT35 for MT35). PASS IF one or more pass: ONE confirmation
+        unit on a disjoint or most-recent partition the PASS did not see, same statistic and bar (a PASS on this window is
+        a discovery; the denominator is 3 doses tried on this leg), then Q6 parity and a Tier-3 proposal -- never a config
+        edit. FAIL IF none passes: the 2.5 x ATR near miss was noise at that dose; selective tightening on these triggers
+        does not pay on ada_pullback_2h and the declared exit stands. Thresholds are not changed after any result.'
+      what_it_does_not_do: 'Edits no config, places no order, is not a promotion case. Same window as eba2-07, so it is not a
+        confirmation of anything; it widens the dose grid only. A PASS needs a live producer for the path metrics (the monitor
+        does not read position_path_history for exits) and a Tier-3 declare with the mirror in the same PR.'
+    compute: cpu_light
+    value:
+      bucket: own_losses
+      usd_at_stake_per_month: 500
+      confidence: 0.15
+      basis: 'stand-in: real-money leg; giveback is the operator standing priority; not a P&L measurement.'
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 2.0
+      est_minutes: 30
+      why_runner: Fetches keyless public candles (Binance Vision) for a pinned window; reads no trainer data.
+      basis: eba2-07 ran the same five-arm shape on this leg and window (one run, collected green).
+    run:
+      command:
+      - python3
+      - scripts/research/exit_lever_ablation.py
+      - --leg
+      - ada_pullback_2h
+      - --trigger-from-path-metrics
+      - '6'
+      - --arm
+      - A=
+      - --arm
+      - MT20=--trigger-action=tight;--trail-decay-tight-mult=2.0;--trigger-file=@trigger_file
+      - --arm
+      - UT20=--trigger-action=tight;--trail-decay-tight-mult=2.0;--trigger-all=6
+      - --arm
+      - MT35=--trigger-action=tight;--trail-decay-tight-mult=3.5;--trigger-file=@trigger_file
+      - --arm
+      - UT35=--trigger-action=tight;--trail-decay-tight-mult=3.5;--trigger-all=6
+      - --days
+      - '2330'
+      - --start
+      - '2020-07-01'
+      - --end
+      - 2026-10-15 23:59
+      - --grade
+      - replace
+      - --baseline
+      - A
+      - --delta-r
+      - '0'
+      - --delta-r-per-trade
+      - '0.02'
+      - --folds
+      - '6'
+      - --fold-majority
+      - '5'
+      - --dd-tol-frac
+      - '0.35'
+      - --n-floor
+      - '39'
+      - --out
+      - '{out_dir}'
+      timeout_minutes: 120
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    roadmap:
+    - L-ATM
+    - M20
+    related:
+    - research/queue/RQ-20261022-eba2-07.yaml
+    - research/queue/RQ-20261022-eba2-08.yaml
+    - research/queue/RQ-20261022-eba2-01.yaml
+    - research/queue/RQ-20261022-eba2-04.yaml
+
 - id: P1-Q11-prop-rung2
   goal: G1
   roadmap:
