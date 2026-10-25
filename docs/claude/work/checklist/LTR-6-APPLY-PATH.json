@@ -11,12 +11,12 @@
   "tier": 2,
   "prs": [],
   "blocked_on": [
-    "LTR-2-RECORDS"
+    "DESK-DESIGN"
   ],
-  "note": "From docs/plans/live-trade-review-DESIGN.md \u00a7 8 (merged c5d8d225, operator-approved 2026-10-25 ~13:58Z). Parent LIVE-TRADE-REVIEW-DESIGN. Design \u00a7 4. Tier 2 (order path): landing hold, manager merge on data.",
+  "note": "From docs/plans/live-trade-review-DESIGN.md \u00a7 8 (merged c5d8d225, operator-approved 2026-10-25 ~13:58Z). Parent LIVE-TRADE-REVIEW-DESIGN. Design \u00a7 4. Tier 2 (order path): landing hold, manager merge on data. [2026-10-25 LTR-3-SKILL, session_01R3JNyuLvWTXNqU8HKspiHP] FINDING (operator structural directive ~16:15Z: the review is package-level; each account applies an intent ONLY through its own risk layer/executor, within its own bounds, DD limits and prop rules, so each prop account can decide for itself). The design section 4 apply path does NOT do that. scripts/ops/amend_position_sl.py moves the shared order_packages.sl and every leg's stop (live + mirror + soak) in one pass, and it calls no RiskManager. RiskManager.approve() (src/units/accounts/risk.py, def approve -> evaluate) is only reached for NEW order packages. So an open-trade amend today bypasses per-account risk entirely, and a prop account cannot refuse a package-level tighten on its own rules. LTR-6 (Bybit), LTR-8 (prop) and LTR-9 (Alpaca) each need a per-account apply hook: the account's risk layer evaluates an amend intent (tighten-only, min_buffer_atr, daily-loss/DD distance) and returns apply or refuse with a reason, and the result is written back to the review row's account_reads. NOT built by LTR-3. The skill records account_reads read-only and labels a Bybit would_apply as 'the shared amend would reach this leg', not 'the account's risk layer approved it'. [2026-10-25 16:14Z session_01UKBXozpiJicMHHyMp47MnN] OPERATOR STRUCTURAL DIRECTIVE 2026-10-25 ~16:12Z (paraphrase of chat, binding on LTR-6/8/9): the Claude review acts at the strategy ticket / order package level (the trade and market conditions) and never does per-account risk management; every action it takes must still be routed through EACH account's risk manager so each account (bybit_2, mirror, each prop account) decides within its own bounds and drawdown limits. FINDING (MEASURED, read of design \u00a74 + src/units/accounts/risk.py:876): the design's apply path (amend_position_sl.py moving the shared package SL on every leg) does not pass through RiskManager; RiskManager.approve() covers new packages only. LTR-6 must be re-scoped before dispatch: package-level amend intent -> per-account risk gate (approve_amend) -> per-account executor; one path for Bybit, prop (LTR-8) and Alpaca (LTR-9).",
   "priority_rank": 9,
-  "updated_at": "2026-10-25T13:57:29Z",
-  "updated_by": "session_01SrYqLY4Ui9RKns12r2zthj",
+  "updated_at": "2026-10-25T18:35:03Z",
+  "updated_by": "session_01UKBXozpiJicMHHyMp47MnN",
   "roadmap": [
     "L-ATM"
   ],

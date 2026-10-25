@@ -2,21 +2,32 @@
   "id": "LTR-1-DUE-WATCH",
   "title": "Live trade review: GET /api/diag/live_review_due (pure read) + scripts/ops/live_review_due.py + attention_watch backstop probe; thresholds in config/live_trade_review.yaml",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "build lane (manager dispatch)",
   "lane": "session_0189hvc7Y8WficPsWafqNRmP",
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 8,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    20115
+  ],
   "blocked_on": [],
-  "note": "From docs/plans/live-trade-review-DESIGN.md \u00a7 8 (merged c5d8d225, operator-approved 2026-10-25 ~13:58Z). Parent LIVE-TRADE-REVIEW-DESIGN. Design \u00a7\u00a7 1-2.",
+  "note": "From docs/plans/live-trade-review-DESIGN.md \u00a7 8 (merged c5d8d225, operator-approved 2026-10-25 ~13:58Z). Parent LIVE-TRADE-REVIEW-DESIGN. Design \u00a7\u00a7 1-2. BUILT on branch lane/ltr-1-due-watch (landing: hold, manager merges). GET /api/diag/live_review_due (src/runtime/live_review_due.py, thresholds config/live_trade_review.yaml), scripts/ops/live_review_due.py (exit 0 due / 10 nothing due / 11 could not look), tests/test_live_review_due.py. Events evaluated: r_milestone, new_peak, giveback, near_target, daily_floor; NOT yet evaluated (reported in events_not_evaluated): swing, vol_regime, funding, calendar, mechanics. NOT built here: the attention_watch backstop probe (title lists it, task scope did not) -> follow-up. CLOSING OBSERVATION (not yet made): after merge+deploy, GET /api/diag/live_review_due on the live VM returns read_state=looked with a real open package listed.",
   "priority_rank": 4,
-  "updated_at": "2026-10-25T16:03:28Z",
-  "updated_by": "session_01UKBXozpiJicMHHyMp47MnN",
+  "updated_at": "2026-10-25T16:29:14Z",
+  "updated_by": "session_0189hvc7Y8WficPsWafqNRmP",
   "roadmap": [
     "L-ATM"
   ],
+  "writeback": {
+    "roadmap": "L-ATM: live trade review L0 (due computation) built; the milestone updates when the first live review runs",
+    "arch": "none: a read-only diag route (api-tier-policy row added) and a declared-thresholds YAML; no pipeline component changed"
+  },
+  "observation": {
+    "what": "GET /api/diag/live_review_due answers on the live VM with read_state=looked and lists/counts a real open order package",
+    "how_to_check": "scripts/ops/diag_fetch.sh live_review_due -> read_state looked, open_count >= 1",
+    "due_by": "2026-10-27T00:00Z"
+  },
   "_seq": 657
 }

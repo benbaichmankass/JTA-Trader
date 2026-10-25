@@ -1,0 +1,18 @@
+{
+  "based_on": "20261025T142124021026Z-3d419461.json",
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-01",
+    "kind": "date"
+  },
+  "id": "PI-20261025-XHRNL1IB-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "checklist LTR-0-CONDITIONAL-OUTCOMES / PR #20097",
+    "rerun": "python3 -m pytest tests/test_live_review_outcomes.py -k parity -rs  (skipped = still open; passes = closed)"
+  },
+  "state": "done",
+  "terminal_reason": "fixture_committed_hold_parity_reproduced_tighten_not: tests/fixtures/ada_pullback_2h_eba2_03_trades.jsonl (402 trades, copied from committed comms/research/RQ-20261022-eba2-03/39871237340/arms/A__trades.jsonl) + regenerated full-window ADAUSDT 2h Binance-vision candles (27912 bars, 2020-06-03..2026-10-15) now run the parity test. MEASURED n=32 of 402, HOLD mean_r 3.1885 (=3.19, reproduces); TIGHTEN atr:1.5 at stop-mult 1.5 = 2.8697 (hand calc said 2.96, does NOT reproduce; 2.958 appears only at atr:1.0). Tighten finding carried on checklist LTR-0 observation.",
+  "what": "[LTR-0 data gap] The ADA parity for scripts/research/live_review_outcomes.py (n=32, hold +3.19, tighten +2.96) cannot run: the n=402 per-trade list of RQ-20261022-eba2-03 arm A is not committed (aggregates only). Regenerate it from the harness run that produced the ADA evidence record (scripts/backtest_pullback.py, 2020-07-01..2026-10-15, 2h ADAUSDT, arm A) and commit it as tests/fixtures/ada_pullback_2h_eba2_03_trades.jsonl (entry/exit times, entry, sl, direction, net_r, mfe_r, cost columns) so the skipped parity test in tests/test_live_review_outcomes.py runs; the test also needs the 2020+ ADAUSDT 2h candles. MEASURED: with only the 61 committed Stage-0 trades the tool returns insufficient_n at MFE>=3.4 (n=7). LTR-3/LTR-4 must treat insufficient_n as NO RECOMMENDATION, never as a hold."
+}

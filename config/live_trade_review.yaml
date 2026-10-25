@@ -1,0 +1,41 @@
+# Live trade review -- declared defaults (docs/plans/live-trade-review-DESIGN.md).
+#
+# This file is READ-ONLY configuration for the due computation
+# (GET /api/diag/live_review_due, src/runtime/live_review_due.py). Nothing here
+# gates trading, moves a stop or halts anything: it only decides which open
+# packages are SURFACED for review. Every threshold is a proposed default from
+# design section 2, registered here BEFORE the first run so the due log can
+# later be compared against it. Edit by commit only.
+#
+# Sibling sections (reserve, apply_mode) are added by LTR-10 / LTR-6 and are
+# not read by the due computation.
+due:
+  # Timeframe of a leg when its name carries no _1h/_2h/_4h/_1d suffix.
+  default_timeframe: 2h
+  # An open telemetry row not refreshed for this long is still evaluated but
+  # flagged `telemetry_stale` (the exit loop writes it every pass).
+  telemetry_max_age_minutes: 30
+  events:
+    r_milestone:
+      first_r: 1.0      # first level; then every `step_r`
+      step_r: 1.0
+    new_peak:
+      step_r: 0.5       # peak_r >= last reviewed peak + step
+    giveback:
+      min_peak_r: 1.0
+      min_giveback_r: 0.5
+      giveback_frac_of_peak: 0.30   # threshold = max(min_giveback_r, frac * peak_r)
+    near_target:
+      max_r_to_target: 0.5
+    daily_floor:
+      hours: 24
+      # Real-money and prop accounts only (design section 2 "Floor"). Each id
+      # must exist in config/accounts.yaml (tests/test_live_review_due.py).
+      accounts: [bybit_2, bybit_portfolio, alpaca_live, breakout_1, breakout_2, tradeify_1, velotrade_1]
+  # Events the design names whose inputs the due computation does not read yet
+  # (candles, funding, calendar, venue). Surfaced as `events_not_evaluated`
+  # so "not checked" is never read as "did not fire".
+  not_evaluated: [swing, vol_regime, funding, calendar, mechanics]
+  # Per-package cooldown: at most one review per closed bar of the leg's
+  # timeframe, except for these events.
+  cooldown_exempt: [giveback, mechanics]
