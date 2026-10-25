@@ -2,17 +2,31 @@
   "id": "ML-LABEL-WALL",
   "title": "ML plan D2: label wall -- per-cell count of MEASURED closed trades + backtest-augmented labels vs the n>=300 pooled / n>=1000 conviction gates",
   "phase": "W41",
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "manager (dispatch by capacity)",
   "lane": null,
   "model": null,
   "ceiling_usd": null,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    20037
+  ],
   "blocked_on": [],
-  "note": "[2026-10-11 ML-ROADMAP-LOOP] Plan item ML-D2 (= ML-PRODUCERS M5 + ROADMAP M23 P2 / M24 P3 gates). The binding constraint on every trade-outcome / meta-label / conviction head is labels, not compute (M19 post-mortem: conviction-meta n_eval=20; M23: n~78 per cell). Nothing currently MEASURES where each cell stands against its gate. Deliverable: a committed read-only script + one run producing a table (strategy x symbol: n closed MEASURED trades, n backtest-augmented, parity state) and a statement per gate (go / not yet / needs-backfill and which). Establish what bounds n BEFORE saying 'wait for accrual' (RULES-CANONICAL Green-is-not-evidence #5): backtest rows are unbounded by schedule. Tier-1, Sonnet, ceiling $5. Observation that would close: the table committed under comms/ or docs/research/ and referenced here. [2026-10-16 lane P2-AI-REGIME-BACKLOG-1016] MEASURED: RQ-20261011-17f4-01/02/03 (02 s3 Q0.4 label census, value-equal parity audit, head-agreement) exist ONLY on held draft PR #17556 (branch claude/ml-plan-units, open since 2026-10-11) -- absent from research/queue, blocked/ and research/results on main. 02-AI-TRADER.md calls 17f4-02 'queued'. Manager: merge or close #17556; this lane did not re-author them (would duplicate the PR). [2026-10-18 lane ML-UNBLOCK-1018] CORRECTION to the 10-16 note: RQ-20261011-17f4-01/02/03 ARE on main under research/queue/blocked/ (ls 2026-10-18; ml_plan_status resolves them as blocked), so #17556 is not what holds them. 17f4-02 waits only on this row's count script (per cell: n MEASURED closed trades via src/runtime/provenance.classify_pnl over trades.notes, n backtest-augmented with parity state, n_pooled; GO/PARK/NEEDS-BACKFILL by its rule). Not built in this lane. Owner: manager dispatch (Sonnet, ceiling $5), runs needs_vm_data (journal never leaves the VM). Due 2026-10-25 (next ml-review).",
-  "updated_at": "2026-10-18T07:01:10Z",
-  "updated_by": "session_019BtYk72AWwvaGkwH81nW96",
+  "note": "[2026-10-11 ML-ROADMAP-LOOP] Plan item ML-D2 (= ML-PRODUCERS M5 + ROADMAP M23 P2 / M24 P3 gates). The binding constraint on every trade-outcome / meta-label / conviction head is labels, not compute (M19 post-mortem: conviction-meta n_eval=20; M23: n~78 per cell). Nothing currently MEASURES where each cell stands against its gate. Deliverable: a committed read-only script + one run producing a table (strategy x symbol: n closed MEASURED trades, n backtest-augmented, parity state) and a statement per gate (go / not yet / needs-backfill and which). Establish what bounds n BEFORE saying 'wait for accrual' (RULES-CANONICAL Green-is-not-evidence #5): backtest rows are unbounded by schedule. Tier-1, Sonnet, ceiling $5. Observation that would close: the table committed under comms/ or docs/research/ and referenced here. [2026-10-16 lane P2-AI-REGIME-BACKLOG-1016] MEASURED: RQ-20261011-17f4-01/02/03 (02 s3 Q0.4 label census, value-equal parity audit, head-agreement) exist ONLY on held draft PR #17556 (branch claude/ml-plan-units, open since 2026-10-11) -- absent from research/queue, blocked/ and research/results on main. 02-AI-TRADER.md calls 17f4-02 'queued'. Manager: merge or close #17556; this lane did not re-author them (would duplicate the PR). [2026-10-18 lane ML-UNBLOCK-1018] CORRECTION to the 10-16 note: RQ-20261011-17f4-01/02/03 ARE on main under research/queue/blocked/ (ls 2026-10-18; ml_plan_status resolves them as blocked), so #17556 is not what holds them. 17f4-02 waits only on this row's count script (per cell: n MEASURED closed trades via src/runtime/provenance.classify_pnl over trades.notes, n backtest-augmented with parity state, n_pooled; GO/PARK/NEEDS-BACKFILL by its rule). Not built in this lane. Owner: manager dispatch (Sonnet, ceiling $5), runs needs_vm_data (journal never leaves the VM). Due 2026-10-25 (next ml-review). [2026-10-25 ML-HEALTH-BUILDS-1027] Census script built (scripts/research/label_wall_census.py); 17f4-02 moved to queued. Closes when its first trainer run's table is read; parity is unmeasured so no cell can read GO until POOLING-PARITY-INSTRUMENT.",
+  "updated_at": "2026-10-25T07:43:14Z",
+  "updated_by": "session_01WHECg9ey5pPngrEhWED1EM",
+  "observation": {
+    "what": "first trainer runs of RQ-20261011-6e85-01 (split, pinned as-of reproduces SOL KS ~0.230), RQ-20261016-65ff-27 (9-head by-version verdict) and RQ-20261011-17f4-02 (label census) land under research/results/ with read_state measured",
+    "how_to_check": "ls research/results/RQ-20261011-6e85-01 research/results/RQ-20261016-65ff-27 research/results/RQ-20261011-17f4-02; read each verdict.json measurement against its pre-registered rule (6e85-01: measurement.per_head.*.score_drift.ks vs 0.230; 65ff-27: measurement.tally)",
+    "due_by": "2026-11-01"
+  },
+  "writeback": {
+    "roadmap": "M23: label_wall_census.py merged; 17f4-02 leaves blocked/ (milestone updates when its table is read)",
+    "arch": "none: offline research tooling, no component or contract changed"
+  },
+  "roadmap": [
+    "M23"
+  ],
   "_seq": 404
 }

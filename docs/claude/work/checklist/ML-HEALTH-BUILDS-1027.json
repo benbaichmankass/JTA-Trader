@@ -2,21 +2,32 @@
   "id": "ML-HEALTH-BUILDS-1027",
   "title": "Two builds that make ml_health units runnable (all 15 are build-bound per programme review 2026-10-21)",
   "phase": null,
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "manager",
-  "lane": null,
+  "lane": "session_01WHECg9ey5pPngrEhWED1EM",
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 15,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    20037
+  ],
   "blocked_on": [],
-  "note": "Week plan 2026-10-22 (Tue).",
+  "note": "Week plan 2026-10-22 (Tue). [2026-10-25 lane] Built scripts/research/drift_regime_mix.py (--mode split|by-version) and scripts/research/label_wall_census.py with tests/test_ml_health_builds_1027.py; moved RQ-20261011-6e85-01, RQ-20261016-65ff-27, RQ-20261011-17f4-02 blocked/ -> queued (decision_rules untouched); dispatch_queue dry-run: all three would_dispatch on the trainer. Not built (not Tier-1-cheap or fewer units per build): POOLING-PARITY-INSTRUMENT (1 unit), EXIT-HEAD-PULLBACK-DRIVER (1 unit, 1,583-line harness), ML-HEAD-AGREEMENT-JOIN (2 units, but 9da8-03 also needs a conformal loader and 17f4-03 a common-clock join). landed_unproven: no run has read real shadow-log/journal data; the by-version version assignment is INFERRED (log has no model-version field).",
   "priority_rank": 14,
-  "updated_at": "2026-10-23T15:00:33Z",
-  "updated_by": "session_01YHnEs6mehRvD74aubi5DJw",
+  "updated_at": "2026-10-25T07:43:14Z",
+  "updated_by": "session_01WHECg9ey5pPngrEhWED1EM",
   "roadmap": [
     "M25"
   ],
+  "observation": {
+    "what": "first trainer runs of RQ-20261011-6e85-01 (split, pinned as-of reproduces SOL KS ~0.230), RQ-20261016-65ff-27 (9-head by-version verdict) and RQ-20261011-17f4-02 (label census) land under research/results/ with read_state measured",
+    "how_to_check": "ls research/results/RQ-20261011-6e85-01 research/results/RQ-20261016-65ff-27 research/results/RQ-20261011-17f4-02; read each verdict.json measurement against its pre-registered rule (6e85-01: measurement.per_head.*.score_drift.ks vs 0.230; 65ff-27: measurement.tally)",
+    "due_by": "2026-11-01"
+  },
+  "writeback": {
+    "roadmap": "M25: three ml_health units (RQ-20261011-6e85-01, RQ-20261016-65ff-27, RQ-20261011-17f4-02) leave blocked/ via drift_regime_mix.py + label_wall_census.py; ml_health build-bound count 13 -> 10 blocked; milestone updates when their verdicts land",
+    "arch": "none: offline research tooling only, no component or contract changed"
+  },
   "_seq": 608
 }
