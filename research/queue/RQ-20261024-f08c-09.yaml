@@ -1,7 +1,7 @@
 id: RQ-20261024-f08c-09
 title: 'Variant of eba2-13 (far-rung bank failed the 0.02 R/trade bar on xrp_pullback_2h but was positive in 5 of 6 folds): rung and size scan,
   graded as a LEAD'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -113,3 +113,16 @@ related:
 - research/queue/RQ-20261023-a1f3-01.yaml
 programme: P1
 last_dispatched_at: '2026-10-24T20:34:25+00:00'
+grading:
+  attested: RULE-F08C-09
+  auto: true
+  decision_rule_id: RULE-F08C-09
+  evidence:
+  - research/results/RQ-20261024-f08c-09/40130416688.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

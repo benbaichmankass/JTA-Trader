@@ -1,7 +1,7 @@
 id: RQ-20261024-09a6-03
 title: 'AI-ATM rung B1: a remaining-move quantile head that PULLS the TP in to where the move is now expected to run out -- calibration
   first, then net R per capital-day vs the leg as traded (truncation-honest, pull-in only).'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -140,3 +140,16 @@ related:
 what_it_does_not_do: Never moves a TP up (an extension needs the harness to re-simulate past the old target; that is the tp_revision
   harness lever's job). Changes no config; a PASS is a lead for a harness-native confirmation, never a declare.
 last_dispatched_at: '2026-10-24T23:33:59+00:00'
+grading:
+  attested: RULE-RQ20261024-09A6-03-REMAINING-MOVE-TP
+  auto: true
+  decision_rule_id: RULE-RQ20261024-09A6-03-REMAINING-MOVE-TP
+  evidence:
+  - research/results/RQ-20261024-09a6-03/40143287810.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

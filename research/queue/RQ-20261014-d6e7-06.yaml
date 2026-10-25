@@ -2,7 +2,7 @@ id: RQ-20261014-d6e7-06
 title: >-
   In-trade exit line, rung 6: the first-passage census and the exit-now policy on HARNESS-NATIVE per-bar paths of the real-money
   legs -- the leg as it trades, not a fixed bracket. BLOCKED: no harness emits per-bar paths (EXIT-PATH-EMIT-OFFLINE)
-status: queued
+status: done
 status_reason: >-
   2026-10-24 lane FIRST-PASSAGE-ON-PATHS: promoted from blocked/ -- first_passage.py --harness-legs (scripts/research/first_passage_paths.py)
   builds per-bar as-traded events from config-exact harness --emit-paths rows; its self-test grades a driftless walk FAIL/INDETERMINATE
@@ -122,3 +122,16 @@ related:
 - EXIT-PATH-EMIT-OFFLINE
 - FIRST-PASSAGE-ON-PATHS
 last_dispatched_at: '2026-10-24T23:33:59+00:00'
+grading:
+  attested: RULE-RQ20261014-D6E7-06-HARNESS-NATIVE-EXIT-POLICY
+  auto: true
+  decision_rule_id: RULE-RQ20261014-D6E7-06-HARNESS-NATIVE-EXIT-POLICY
+  evidence:
+  - research/results/RQ-20261014-d6e7-06/40143284987.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
