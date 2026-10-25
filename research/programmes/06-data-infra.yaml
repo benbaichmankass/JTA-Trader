@@ -205,3 +205,189 @@ nodes:
     needs_authoring: Derivatives metrics add no log-loss information to the 1h regime heads. Record it on DATA-DERIV-ARCHIVE
       (archive stays for the giveback / exit question, 02 Q3.1) and register the same metrics as features for the
       in-trade first-passage model instead.
+  # ── AUTHORED 2026-10-25 (lane THEME-AUTHOR-1025, research SLO breach 09:14Z): infra had no ready node ──
+  - id: P6-Q6-roadmap-ref-valid
+    goal: G4
+    roadmap:
+    - L-OPS
+    value:
+      usd_at_stake_per_month: 60
+      confidence: 0.4
+    unit:
+      theme: infra
+      priority: 2
+      kind: deterministic
+      cadence: daily
+      title: 'Roadmap refs valid: does every queued authored unit carry `roadmap:` as a list of milestone
+        ids that exist in docs/roadmap/milestones.yaml?'
+      question: Does every queued authored unit's `roadmap:` parse as a list whose every element is a milestone
+        id in docs/roadmap/milestones.yaml?
+      why_this_matters: 'Lane THEME-AUTHOR-1025 (research SLO breach 2026-10-25). The roadmap loop (CLAUDE.md)
+        builds units FROM milestones and writes outcomes back to them; a bare string (`roadmap: M28` on
+        five NEWS-ALPHA units, found by this check on its first run and corrected in the same PR) iterates
+        as characters in code that expects a list and breaks the unit -> milestone map silently. Detects
+        the next one the day it is authored instead of at the weekly roadmap pass.'
+      why_not_inferential: 'A deterministic self-test of repo state on the runner: the property either holds
+        or it does not. There is no sampling question to power.'
+      decision_rule:
+        id: RULE-P6-Q6-ROADMAP-REF-VALID
+        registered_at: '2026-10-25'
+        statistic: scripts/research/infra_selftest.py --check roadmap_ref_valid
+        rule: 'PASS IF every queued authored unit that declares `roadmap:` declares a list of ids all present
+          in milestones.yaml. FAIL IF any does not: measurement.sample names the unit and the fault (not
+          a list, or the unknown id). A producer_failed or no_data record is NOT a verdict.'
+        what_it_does_not_do: Measures nothing about any strategy, model or market; edits no config, registry,
+          account or queue unit.
+      compute: cpu_light
+      value:
+        usd_at_stake_per_month: 60
+        confidence: 0.4
+        bucket: structural
+        basis: 'infrastructure detector: a stand-in figure for the research throughput a silent queue fault
+          costs, not a measured P&L'
+      routing:
+        needs_trainer_resident_data: false
+        needs_gpu: false
+        peak_memory_gb: 1.0
+        est_minutes: 5
+        basis: Reads only the repo checkout on a GitHub-hosted runner; no network, no secret.
+      run:
+        command:
+        - python3
+        - scripts/research/infra_selftest.py
+        - --check
+        - roadmap_ref_valid
+        - --out
+        - '{out_dir}'
+        timeout_minutes: 20
+      lands:
+        store: research/results/
+        assert_field: read_state
+        min_rows: 1
+      related:
+      - scripts/research/infra_selftest.py
+      - docs/roadmap/milestones.yaml
+      - THEME-AUTHOR-1025
+  - id: P6-Q6-never-dispatched-age
+    goal: G4
+    roadmap:
+    - L-OPS
+    value:
+      usd_at_stake_per_month: 70
+      confidence: 0.4
+    unit:
+      theme: infra
+      priority: 2
+      kind: deterministic
+      cadence: daily
+      title: 'Starvation: are at most 10 queued authored units, free of any requires_result gate, left undispatched
+        for more than 7 days?'
+      question: Do at most 10 queued authored units without a requires_result gate sit with no last_dispatched_at
+        more than 7 days after their id date?
+      why_this_matters: Lane THEME-AUTHOR-1025. The dispatcher ranks by value, so a low-value unit can wait
+        indefinitely while the runnable-floor count still reads healthy; starve_hours exists in the router
+        but nothing counted how many units it is failing. A queued unit that never fires is authoring spend
+        with no result. The threshold (10) and age (7 d) are registered here before the first run and not
+        tuned after it.
+      why_not_inferential: 'A deterministic self-test of repo state on the runner: the property either holds
+        or it does not. There is no sampling question to power.'
+      decision_rule:
+        id: RULE-P6-Q6-NEVER-DISPATCHED-AGE
+        registered_at: '2026-10-25'
+        statistic: scripts/research/infra_selftest.py --check never_dispatched_age
+        rule: 'PASS IF the count of queued authored units with no last_dispatched_at, no requires_result
+          and an id date more than 7 days old is <= 10. FAIL IF > 10: measurement.sample lists up to ten
+          of them for the next research-ops pass to fire, unblock or retire. A producer_failed or no_data
+          record is NOT a verdict.'
+        what_it_does_not_do: Measures nothing about any strategy, model or market; edits no config, registry,
+          account or queue unit.
+      compute: cpu_light
+      value:
+        usd_at_stake_per_month: 70
+        confidence: 0.4
+        bucket: structural
+        basis: 'infrastructure detector: a stand-in figure for the research throughput a silent queue fault
+          costs, not a measured P&L'
+      routing:
+        needs_trainer_resident_data: false
+        needs_gpu: false
+        peak_memory_gb: 1.0
+        est_minutes: 5
+        basis: Reads only the repo checkout on a GitHub-hosted runner; no network, no secret.
+      run:
+        command:
+        - python3
+        - scripts/research/infra_selftest.py
+        - --check
+        - never_dispatched_age
+        - --out
+        - '{out_dir}'
+        timeout_minutes: 20
+      lands:
+        store: research/results/
+        assert_field: read_state
+        min_rows: 1
+      related:
+      - scripts/research/infra_selftest.py
+      - scripts/research/dispatch_queue.py
+      - THEME-AUTHOR-1025
+  - id: P6-Q6-related-paths-exist
+    goal: G4
+    roadmap:
+    - L-OPS
+    value:
+      usd_at_stake_per_month: 40
+      confidence: 0.4
+    unit:
+      theme: infra
+      priority: 2
+      kind: deterministic
+      cadence: daily
+      title: 'Related paths: does every path-shaped `related:` entry of a queued authored unit exist in
+        the checkout?'
+      question: Does every `related:` entry that is shaped like a repo path (contains a / and ends in .py
+        .md .yaml .yml .json .jsonl .sh .ts) exist?
+      why_this_matters: Lane THEME-AUTHOR-1025. `related:` is how a reader of a result finds the instrument,
+        the plan and the sibling units; a dead path sends the grader or the next session to a file that
+        moved. command_resolvable (RQ-20261024-0142-19) covers run.command only. Cheap to detect, and each
+        dead pointer is a re-derivation cost on a later session.
+      why_not_inferential: 'A deterministic self-test of repo state on the runner: the property either holds
+        or it does not. There is no sampling question to power.'
+      decision_rule:
+        id: RULE-P6-Q6-RELATED-PATHS-EXIST
+        registered_at: '2026-10-25'
+        statistic: scripts/research/infra_selftest.py --check related_paths_exist
+        rule: 'PASS IF every path-shaped related: entry exists. FAIL IF any does not: measurement.missing
+          names the unit and the path. Entries that are unit ids, checklist ids or free text are not paths
+          and are not checked. A producer_failed or no_data record is NOT a verdict.'
+        what_it_does_not_do: Measures nothing about any strategy, model or market; edits no config, registry,
+          account or queue unit.
+      compute: cpu_light
+      value:
+        usd_at_stake_per_month: 40
+        confidence: 0.4
+        bucket: structural
+        basis: 'infrastructure detector: a stand-in figure for the research throughput a silent queue fault
+          costs, not a measured P&L'
+      routing:
+        needs_trainer_resident_data: false
+        needs_gpu: false
+        peak_memory_gb: 1.0
+        est_minutes: 5
+        basis: Reads only the repo checkout on a GitHub-hosted runner; no network, no secret.
+      run:
+        command:
+        - python3
+        - scripts/research/infra_selftest.py
+        - --check
+        - related_paths_exist
+        - --out
+        - '{out_dir}'
+        timeout_minutes: 20
+      lands:
+        store: research/results/
+        assert_field: read_state
+        min_rows: 1
+      related:
+      - scripts/research/infra_selftest.py
+      - THEME-AUTHOR-1025

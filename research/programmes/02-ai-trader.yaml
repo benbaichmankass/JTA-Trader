@@ -1479,3 +1479,578 @@ nodes:
       proposal is noted on row RESULTS-GRADE-1025 (Tier 3, nothing applied). BTC 1h FAILED (3a84-09, no clause) and ETH 15m/1h read INDETERMINATE between the pass bar and fail floor (3a84-08/-10).
       The SOL lift appeared where the longer tail was added: author the c584-shaped longer-tail unit for ETH 1h and for BTC 1h (same arms, same pre-registered pass_if, folds >= 3), so the first test''s thin
       history is separated from the absence of a lift. Model-family diversity: the lift is a LightGBM feature lift; pair with one non-GBDT arm per frontier-research.'
+  # ── AUTHORED 2026-10-25 (lane THEME-AUTHOR-1025, research SLO breach 09:14Z): ml_health had no ready node ──
+  - id: P2-Q1.3-drift-split-persistence
+    goal: G4
+    roadmap:
+    - M23
+    value:
+      usd_at_stake_per_month: 120
+      confidence: 0.3
+    unit:
+      theme: ml_health
+      priority: 1
+      kind: deterministic
+      cadence: once
+      title: 'Regime-head drift (Q1.3), persistence read at 2026-10-25: across the eight crypto heads the
+        shadow scan flags, is the live score drift input-mix shift, or does the head''s AUC against realised
+        labels fall?'
+      question: 'RQ-20261011-6e85-01 split the drift on the SOL and BTC 15m v2 heads at 2026-10-11 and RQ-20261016-65ff-27
+        reads the nine flagged heads by model version, but no unit asks the volatile-share / AUC split on
+        the OTHER advisory and research heads, nor whether the 10-11 read persists two weeks on. Same instrument
+        and thresholds (scripts/research/drift_regime_mix.py --mode split), reference window 2026-09-04..2026-10-04,
+        current window the 7 days to 2026-10-25T12:00Z, on eth-regime-5m-lgbm-v1, sol-regime-15m-lgbm-fc-pcv-v1,
+        sol-regime-15m-lgbm-fc-pcv-v2, sol-regime-5m-lgbm-v1, btc-regime-15m-lgbm-yz-v1, btc-regime-15m-lgbm-fc-pcv-v2,
+        btc-regime-1h-lgbm-v2 and btc-regime-1h-lgbm-yz-v1: how many heads read regime_mix, no_explanation,
+        capability_loss or underpowered?'
+      why_this_matters: '`ml stage-guard` proposes a demote on drift `significant` for an advisory head,
+        and drift-remediation says to separate mix drift (self-corrects, no action) from capability loss
+        (needs a refinement shipped as a new version) BEFORE demoting. Today that split exists for two heads
+        on one date. A capability_loss on any head here opens a [refinement] pipeline row; an all-regime_mix
+        read lets the review stop re-arguing demotion for these heads. Symbol/timeframe per head is taken
+        from the model id (INFERRED from its name); the MES and setup-quality heads are left out because
+        they have no crypto candle file.'
+      why_not_inferential: Recomputes stated statistics over a fixed, complete set of already-labelled shadow
+        rows with a pinned --as-of; no sample is drawn.
+      decision_rule:
+        id: RULE-P2-Q1.3-DRIFT-SPLIT-PERSISTENCE
+        registered_at: '2026-10-25'
+        statistic: 'Per head, the script''s own per-head rule_verdict (RULE-RQ1011-6E85-DRIFT-SPLIT: delta_share
+          = volatile_label_share(cur) - (ref); delta_auc = auc(cur) - auc(ref); thresholds 0.05 / -0.03
+          / 200 labelled rows, fixed in the script and never overridden by this unit), with delta_share,
+          delta_auc and the API''s KS/PSI reported beside it.'
+        rule: 'FAIL IF any head reads capability_loss (delta_auc < -0.03): open one [refinement] pipeline
+          row per such head under drift-remediation step 3 and leave its stage to the next /ml-review (this
+          unit demotes nothing). INDETERMINATE IF no head reads capability_loss and at least one reads underpowered
+          (< 200 labelled rows in a window): the unit re-queues after 7 more days. NO_ACTION otherwise (every
+          head regime_mix or no_explanation): record the per-head labels; a head reading no_explanation
+          (shift present, mix and AUC both flat) stays HOLD with the numbers recorded. For sol-regime-15m-lgbm-fc-pcv-v2
+          and btc-regime-15m-lgbm-fc-pcv-v2 also record whether the 2026-10-11 label (6e85-01) persisted.'
+        what_it_does_not_do: Does not demote, promote, retrain or edit a stage, timer or config; every outcome
+          that touches a stage is a Tier-3 proposal in the next /ml-review. The reference window is fixed,
+          so it does not re-baseline a head.
+      compute: needs_vm_data
+      value:
+        bucket: ai_trader
+        usd_at_stake_per_month: 120
+        confidence: 0.3
+        basis: 'planning weight: gates whether the review proposes demoting order-influencing advisory heads
+          on drift alone'
+      routing:
+        needs_trainer_resident_data: true
+        needs_gpu: false
+        peak_memory_gb: 1.0
+        est_minutes: 15
+        basis: Reads the shadow log (active + gz archives) joined to realised labels from market_raw candles;
+          both live on the trainer, not on a runner (6e85-01 budgeted 10 min for two heads).
+      run:
+        command:
+        - python3
+        - scripts/research/drift_regime_mix.py
+        - --mode
+        - split
+        - --head
+        - eth-regime-5m-lgbm-v1=ETHUSDT/5m
+        - --head
+        - sol-regime-15m-lgbm-fc-pcv-v1=SOLUSDT/15m
+        - --head
+        - sol-regime-15m-lgbm-fc-pcv-v2=SOLUSDT/15m
+        - --head
+        - sol-regime-5m-lgbm-v1=SOLUSDT/5m
+        - --head
+        - btc-regime-15m-lgbm-yz-v1=BTCUSDT/15m
+        - --head
+        - btc-regime-15m-lgbm-fc-pcv-v2=BTCUSDT/15m
+        - --head
+        - btc-regime-1h-lgbm-v2=BTCUSDT/1h
+        - --head
+        - btc-regime-1h-lgbm-yz-v1=BTCUSDT/1h
+        - --as-of
+        - '2026-10-25T12:00:00Z'
+        - --out
+        - '{out_dir}'
+        timeout_minutes: 30
+      lands:
+        store: research/results/
+        assert_field: read_state
+        min_rows: 1
+      related:
+      - research/queue/RQ-20261011-6e85-01.yaml
+      - research/queue/RQ-20261016-65ff-27.yaml
+      - scripts/research/drift_regime_mix.py
+      - .claude/skills/drift-remediation/SKILL.md
+      power:
+        expected_n: 8
+        effect_units: heads
+        design: deterministic
+        basis: 'kind: deterministic -- a per-head census against fixed thresholds over complete windows.'
+  - id: P2-Q4-lgbm-capacity-small
+    goal: G4
+    roadmap:
+    - M23
+    value:
+      usd_at_stake_per_month: 60
+      confidence: 0.25
+    unit:
+      theme: ml_health
+      priority: 2
+      kind: experiment
+      cadence: once
+      title: 'Is the shipped regime-head LightGBM over-capacity: does a much smaller one (100 trees, 7 leaves,
+        min_child_samples 200) stay within 0.01 macro_f1 of it on the 1h published shards?'
+      question: 'Is the shipped regime-head LightGBM over-capacity: does a much smaller one (100 trees,
+        7 leaves, min_child_samples 200) stay within 0.01 macro_f1 of it on the 1h published shards? Same
+        rows for every arm, purged 5-fold walk-forward CV (embargo 24) plus the holdout after 2026-07-12,
+        the six shared features, BTC/ETH/SOL 1h v002 published shards, tail 40,000 rows.'
+      why_this_matters: 'If a 7-leaf model matches the 31-leaf shipped config within the non-inferiority
+        margin, the shipped heads carry capacity that the data does not reward, which is the first suspect
+        for the persistent score drift on the advisory heads (RQ-20261011-6e85-01 / 65ff-27 ask what the
+        drift IS; this asks whether the model is brittle enough to produce it). A smaller head is also cheaper
+        to retrain daily. Non-inferiority margins follow the programme''s own convention (plan Q4: +-0.01
+        pass, -0.03 fail).'
+      power:
+        expected_n: 24000
+        min_detectable_effect: 0.1
+        effect_units: sd
+        design: one_sample
+        alpha: 0.05
+        power: 0.8
+        basis: Unit = OOS row per symbol. tail_rows 40000 at min_train_frac 0.4 leaves ~24,000 OOS rows
+          per symbol over 5 folds (same plan as RQ-20261016-65ff-25, ESTIMATE until the first run replaces
+          it with the measured n). d=0.1 needs ~785 rows so rows are not the limit; bars are autocorrelated,
+          so the rule also requires fold-mean deltas (min_folds 3) on all three symbols.
+        feasibility:
+          source: none
+          accrual_basis: Fixed published shard; nothing accrues.
+      decision_rule:
+        id: RULE-P2-Q4-LGBM-CAPACITY-SMALL-1H
+        statistic: 'Paired per-fold macro_f1 difference on identical purged folds (5, embargo 24) and on
+          the holdout (rows after 2026-07-12), per symbol: lgbm_small minus lgbm_base; mean over folds.
+          Reported, not graded: every arm minus the class prior.'
+        rule: 'PASS IF lgbm_small - lgbm_base >= -0.01 on the CV mean on ALL THREE symbols AND >= -0.02
+          on the holdout on all three: the smaller head is non-inferior, so the shipped capacity is not
+          earning its keep (a disjoint-window confirmation unit follows before any manifest note; ONE configuration,
+          trial count 1). FAIL IF lgbm_small - lgbm_base < -0.03 on the CV mean on EVERY symbol (the capacity
+          is earning its keep; record in families.gbdt.history). INDETERMINATE otherwise (mixed by symbol),
+          or if folds < 3 or an arm is unavailable.'
+        min_n: 3 usable CV folds per symbol; holdout >= 200 rows per symbol.
+        what_it_does_not_do: Trains nothing that serves; touches no config, registry, roster or order path;
+          compares unweighted LightGBM arms on the shared features, not shipped models. A feature/capacity
+          result is not edge and is not a P&L claim.
+      compute: auto
+      value:
+        bucket: ai_trader
+        usd_at_stake_per_month: 60
+        confidence: 0.25
+        basis: planning weight for the regime-head quality line (02 Q1.3 / Q4), not a measured P&L
+      routing:
+        needs_trainer_resident_data: false
+        needs_gpu: false
+        published_data: metis-market-data
+        peak_memory_gb: 4.0
+        est_minutes: 30
+        basis: 'Estimate, NOT measured: 3 shards x 3 LightGBM arms x 5 folds at 40,000 tail rows, no VAR
+          refit (25-001 budgeted 45 min with one); re-declare from the first run.'
+      ml_bakeoff:
+        task: classification
+        metric: macro_f1
+        dataset:
+          kind: jsonl
+          groups:
+            BTCUSDT:
+              path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+            ETHUSDT:
+              path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+            SOLUSDT:
+              path: datasets-out/market_features/SOLUSDT/1h/v002/data.jsonl
+          ts_col: ts
+          target: regime_label
+          features:
+          - rolling_log_return_vol
+          - log_return
+          - log_return_lag_1
+          - log_return_lag_2
+          - hour_of_day
+          - dayofweek
+          tail_rows: 40000
+          holdout_after: '2026-07-12'
+        cv:
+          folds: 5
+          embargo_rows: 24
+          min_train_frac: 0.4
+        baseline: lgbm_base
+        controls:
+        - prior
+        candidates:
+        - lgbm_small
+        learners:
+          prior:
+            kind: prior
+          lgbm_base:
+            kind: lightgbm
+            params:
+              n_estimators: 200
+              learning_rate: 0.05
+              num_leaves: 31
+              min_child_samples: 50
+          lgbm_small:
+            kind: lightgbm
+            params:
+              n_estimators: 100
+              learning_rate: 0.05
+              num_leaves: 7
+              min_child_samples: 200
+        rule:
+          min_folds: 3
+          pass_if:
+          - group:
+            - BTCUSDT
+            - ETHUSDT
+            - SOLUSDT
+            vs: baseline
+            window: cv
+            op: '>='
+            value: -0.01
+          - group:
+            - BTCUSDT
+            - ETHUSDT
+            - SOLUSDT
+            vs: baseline
+            window: holdout
+            op: '>='
+            value: -0.02
+          fail_if_no_candidate_reaches:
+          - group: any
+            vs: baseline
+            window: cv
+            op: '>='
+            value: -0.03
+      run:
+        command:
+        - python3
+        - scripts/research/ml_bakeoff.py
+        - --unit
+        - '{unit}'
+        - --out
+        - '{out_dir}'
+        timeout_minutes: 120
+      lands:
+        store: research/results/
+        assert_field: read_state
+        min_rows: 1
+      related:
+      - research/queue/RQ-20261025-001.yaml
+      - research/queue/RQ-20261011-6e85-01.yaml
+      - research/queue/RQ-20261016-65ff-27.yaml
+  - id: P2-Q4-lgbm-capacity-big
+    goal: G4
+    roadmap:
+    - M23
+    value:
+      usd_at_stake_per_month: 60
+      confidence: 0.25
+    unit:
+      theme: ml_health
+      priority: 2
+      kind: experiment
+      cadence: once
+      title: 'Is the shipped regime-head LightGBM under-capacity: does a larger one (400 trees, 63 leaves,
+        min_child_samples 20) lift macro_f1 by >= 0.005 on the 1h published shards on all three symbols?'
+      question: 'Is the shipped regime-head LightGBM under-capacity: does a larger one (400 trees, 63 leaves,
+        min_child_samples 20) lift macro_f1 by >= 0.005 on the 1h published shards on all three symbols?
+        Same rows for every arm, purged 5-fold walk-forward CV (embargo 24) plus the holdout after 2026-07-12,
+        the six shared features, BTC/ETH/SOL 1h v002 published shards, tail 40,000 rows.'
+      why_this_matters: The other side of the capacity bracket opened by P2-Q4-lgbm-capacity-small. If the
+        shipped head is under-capacity, a bigger model is a free lift for every regime head; if neither
+        side moves, capacity is not the lever and the head-quality work (Q1.3) belongs on features and labels.
+        Registered together with the small arm so the bracket is pre-registered, not mined.
+      power:
+        expected_n: 24000
+        min_detectable_effect: 0.1
+        effect_units: sd
+        design: one_sample
+        alpha: 0.05
+        power: 0.8
+        basis: Unit = OOS row per symbol. tail_rows 40000 at min_train_frac 0.4 leaves ~24,000 OOS rows
+          per symbol over 5 folds (same plan as RQ-20261016-65ff-25, ESTIMATE until the first run replaces
+          it with the measured n). d=0.1 needs ~785 rows so rows are not the limit; bars are autocorrelated,
+          so the rule also requires fold-mean deltas (min_folds 3) on all three symbols.
+        feasibility:
+          source: none
+          accrual_basis: Fixed published shard; nothing accrues.
+      decision_rule:
+        id: RULE-P2-Q4-LGBM-CAPACITY-BIG-1H
+        statistic: 'Paired per-fold macro_f1 difference on identical purged folds (5, embargo 24) and on
+          the holdout (rows after 2026-07-12), per symbol: lgbm_big minus lgbm_base; mean over folds. Reported,
+          not graded: every arm minus the class prior.'
+        rule: 'PASS IF lgbm_big - lgbm_base >= +0.005 on the CV mean on ALL THREE symbols AND >= 0 on the
+          holdout on all three: the shipped head is under-capacity (disjoint-window confirmation follows
+          before any manifest note; ONE configuration, trial count 1). FAIL IF lgbm_big - lgbm_base < 0
+          on the CV mean on EVERY symbol (more capacity adds nothing; record in families.gbdt.history).
+          INDETERMINATE otherwise, or if folds < 3 or an arm is unavailable.'
+        min_n: 3 usable CV folds per symbol; holdout >= 200 rows per symbol.
+        what_it_does_not_do: Trains nothing that serves; touches no config, registry, roster or order path;
+          compares unweighted LightGBM arms on the shared features, not shipped models. A feature/capacity
+          result is not edge and is not a P&L claim.
+      compute: auto
+      value:
+        bucket: ai_trader
+        usd_at_stake_per_month: 60
+        confidence: 0.25
+        basis: planning weight for the regime-head quality line (02 Q1.3 / Q4), not a measured P&L
+      routing:
+        needs_trainer_resident_data: false
+        needs_gpu: false
+        published_data: metis-market-data
+        peak_memory_gb: 4.0
+        est_minutes: 30
+        basis: 'Estimate, NOT measured: 3 shards x 3 LightGBM arms x 5 folds at 40,000 tail rows, no VAR
+          refit (25-001 budgeted 45 min with one); re-declare from the first run.'
+      ml_bakeoff:
+        task: classification
+        metric: macro_f1
+        dataset:
+          kind: jsonl
+          groups:
+            BTCUSDT:
+              path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+            ETHUSDT:
+              path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+            SOLUSDT:
+              path: datasets-out/market_features/SOLUSDT/1h/v002/data.jsonl
+          ts_col: ts
+          target: regime_label
+          features:
+          - rolling_log_return_vol
+          - log_return
+          - log_return_lag_1
+          - log_return_lag_2
+          - hour_of_day
+          - dayofweek
+          tail_rows: 40000
+          holdout_after: '2026-07-12'
+        cv:
+          folds: 5
+          embargo_rows: 24
+          min_train_frac: 0.4
+        baseline: lgbm_base
+        controls:
+        - prior
+        candidates:
+        - lgbm_big
+        learners:
+          prior:
+            kind: prior
+          lgbm_base:
+            kind: lightgbm
+            params:
+              n_estimators: 200
+              learning_rate: 0.05
+              num_leaves: 31
+              min_child_samples: 50
+          lgbm_big:
+            kind: lightgbm
+            params:
+              n_estimators: 400
+              learning_rate: 0.05
+              num_leaves: 63
+              min_child_samples: 20
+        rule:
+          min_folds: 3
+          pass_if:
+          - group:
+            - BTCUSDT
+            - ETHUSDT
+            - SOLUSDT
+            vs: baseline
+            window: cv
+            op: '>='
+            value: 0.005
+          - group:
+            - BTCUSDT
+            - ETHUSDT
+            - SOLUSDT
+            vs: baseline
+            window: holdout
+            op: '>='
+            value: 0.0
+          fail_if_no_candidate_reaches:
+          - group: any
+            vs: baseline
+            window: cv
+            op: '>='
+            value: 0.0
+      run:
+        command:
+        - python3
+        - scripts/research/ml_bakeoff.py
+        - --unit
+        - '{unit}'
+        - --out
+        - '{out_dir}'
+        timeout_minutes: 120
+      lands:
+        store: research/results/
+        assert_field: read_state
+        min_rows: 1
+      related:
+      - research/queue/RQ-20261025-001.yaml
+      - research/queue/RQ-20261011-6e85-01.yaml
+      - research/queue/RQ-20261016-65ff-27.yaml
+  - id: P2-Q4-lgbm-regularised
+    goal: G4
+    roadmap:
+    - M23
+    value:
+      usd_at_stake_per_month: 50
+      confidence: 0.25
+    unit:
+      theme: ml_health
+      priority: 2
+      kind: experiment
+      cadence: once
+      title: Does heavier regularisation (min_child_samples 200, reg_lambda 5, same trees and leaves) generalise
+        to the post-2026-07-12 holdout at least as well as the shipped head on the 1h published shards,
+        without losing more than 0.005 macro_f1 in CV?
+      question: Does heavier regularisation (min_child_samples 200, reg_lambda 5, same trees and leaves)
+        generalise to the post-2026-07-12 holdout at least as well as the shipped head on the 1h published
+        shards, without losing more than 0.005 macro_f1 in CV? Same rows for every arm, purged 5-fold walk-forward
+        CV (embargo 24) plus the holdout after 2026-07-12, the six shared features, BTC/ETH/SOL 1h v002
+        published shards, tail 40,000 rows.
+      why_this_matters: Drift between a head's training window and live data is a generalisation question.
+        Same tree shape, only the leaf-size and L2 terms differ, so a holdout win with a flat CV isolates
+        regularisation from capacity (the two capacity units move tree size). A PASS is a lead for the daily-retrain
+        manifest, never a config edit.
+      power:
+        expected_n: 24000
+        min_detectable_effect: 0.1
+        effect_units: sd
+        design: one_sample
+        alpha: 0.05
+        power: 0.8
+        basis: Unit = OOS row per symbol. tail_rows 40000 at min_train_frac 0.4 leaves ~24,000 OOS rows
+          per symbol over 5 folds (same plan as RQ-20261016-65ff-25, ESTIMATE until the first run replaces
+          it with the measured n). d=0.1 needs ~785 rows so rows are not the limit; bars are autocorrelated,
+          so the rule also requires fold-mean deltas (min_folds 3) on all three symbols.
+        feasibility:
+          source: none
+          accrual_basis: Fixed published shard; nothing accrues.
+      decision_rule:
+        id: RULE-P2-Q4-LGBM-REGULARISED-1H
+        statistic: 'Paired per-fold macro_f1 difference on identical purged folds (5, embargo 24) and on
+          the holdout (rows after 2026-07-12), per symbol: lgbm_reg minus lgbm_base; mean over folds. Reported,
+          not graded: every arm minus the class prior.'
+        rule: 'PASS IF lgbm_reg - lgbm_base >= 0 on the holdout on ALL THREE symbols AND >= -0.005 on the
+          CV mean on all three: heavier regularisation generalises to the later window at no CV cost (disjoint-window
+          confirmation follows; ONE configuration, trial count 1). FAIL IF lgbm_reg - lgbm_base < -0.005
+          on the holdout on EVERY symbol. INDETERMINATE otherwise, or if folds < 3 or an arm is unavailable.'
+        min_n: 3 usable CV folds per symbol; holdout >= 200 rows per symbol.
+        what_it_does_not_do: Trains nothing that serves; touches no config, registry, roster or order path;
+          compares unweighted LightGBM arms on the shared features, not shipped models. A feature/capacity
+          result is not edge and is not a P&L claim.
+      compute: auto
+      value:
+        bucket: ai_trader
+        usd_at_stake_per_month: 50
+        confidence: 0.25
+        basis: planning weight for the regime-head quality line (02 Q1.3 / Q4), not a measured P&L
+      routing:
+        needs_trainer_resident_data: false
+        needs_gpu: false
+        published_data: metis-market-data
+        peak_memory_gb: 4.0
+        est_minutes: 30
+        basis: 'Estimate, NOT measured: 3 shards x 3 LightGBM arms x 5 folds at 40,000 tail rows, no VAR
+          refit (25-001 budgeted 45 min with one); re-declare from the first run.'
+      ml_bakeoff:
+        task: classification
+        metric: macro_f1
+        dataset:
+          kind: jsonl
+          groups:
+            BTCUSDT:
+              path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+            ETHUSDT:
+              path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+            SOLUSDT:
+              path: datasets-out/market_features/SOLUSDT/1h/v002/data.jsonl
+          ts_col: ts
+          target: regime_label
+          features:
+          - rolling_log_return_vol
+          - log_return
+          - log_return_lag_1
+          - log_return_lag_2
+          - hour_of_day
+          - dayofweek
+          tail_rows: 40000
+          holdout_after: '2026-07-12'
+        cv:
+          folds: 5
+          embargo_rows: 24
+          min_train_frac: 0.4
+        baseline: lgbm_base
+        controls:
+        - prior
+        candidates:
+        - lgbm_reg
+        learners:
+          prior:
+            kind: prior
+          lgbm_base:
+            kind: lightgbm
+            params:
+              n_estimators: 200
+              learning_rate: 0.05
+              num_leaves: 31
+              min_child_samples: 50
+          lgbm_reg:
+            kind: lightgbm
+            params:
+              n_estimators: 200
+              learning_rate: 0.05
+              num_leaves: 31
+              min_child_samples: 200
+              reg_lambda: 5.0
+        rule:
+          min_folds: 3
+          pass_if:
+          - group:
+            - BTCUSDT
+            - ETHUSDT
+            - SOLUSDT
+            vs: baseline
+            window: holdout
+            op: '>='
+            value: 0.0
+          - group:
+            - BTCUSDT
+            - ETHUSDT
+            - SOLUSDT
+            vs: baseline
+            window: cv
+            op: '>='
+            value: -0.005
+          fail_if_no_candidate_reaches:
+          - group: any
+            vs: baseline
+            window: holdout
+            op: '>='
+            value: -0.005
+      run:
+        command:
+        - python3
+        - scripts/research/ml_bakeoff.py
+        - --unit
+        - '{unit}'
+        - --out
+        - '{out_dir}'
+        timeout_minutes: 120
+      lands:
+        store: research/results/
+        assert_field: read_state
+        min_rows: 1
+      related:
+      - research/queue/RQ-20261025-001.yaml
+      - research/queue/RQ-20261011-6e85-01.yaml
+      - research/queue/RQ-20261016-65ff-27.yaml
