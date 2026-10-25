@@ -110,7 +110,7 @@ Also, at no cost: the hourly `ict-work-digest` carrier gains one line, `🔎 liv
 ### Decision framework (in order; the skill makes it binding)
 
 1. **Mechanics first.** Does the live SL/TP equal what the leg's code would place? Do venue, journal and mirror agree? If not, the output is `flag_mechanics` and it goes to the order-path owner. No exit judgment is made on a broken trade.
-2. **Price the options from history** (LTR-0). If n from this state is below a floor (proposed: 20), the verdict is `hold` + `insufficient_n`. The skill files the data question instead of guessing. That is the 2026-09-29 rule: *"either we have enough data to decide, or we don't and then getting that data becomes a task."*
+2. **Price the options from history** (LTR-0). If n from this state is below a floor (proposed: 20), the verdict is `no_recommendation` + `insufficient_n` (*corrected 2026-10-25: insufficient_n is never `hold`; see the skill*). The skill files the data question instead of guessing. That is the 2026-09-29 rule: *"either we have enough data to decide, or we don't and then getting that data becomes a task."*
 3. **Overlay what the backtest could not see**, each item with its evidence: a regime or vol cell change since entry, funding outside the assumption, a calendar event, correlated exposure, and a live-vs-backtest verdict showing that this leg's live exits differ from the harness.
 4. **Classify the recommendation:**
    - `hold` — the default.
@@ -134,12 +134,12 @@ Also, at no cost: the hourly `ict-work-digest` carrier gains one line, `🔎 liv
             "atr_now_over_entry": 1.0, "regime_cell_now": "…", "regime_cell_entry": "…"},
   "mechanics": {"verdict": "match", "evidence": "trail 5.0×ATR from extreme = venue SL"},
   "options": [
-    {"action": "hold", "n": 32, "mean_r": 3.19, "sd_r": 1.35, "worst_r": 0.28},
-    {"action": "tighten_sl", "level": 0.2053, "n": 32, "mean_r": 2.96, "sd_r": 0.56, "worst_r": 2.32}
+    {"action": "hold", "n": 32, "mean_r": 3.19, "sd_r": 1.37, "worst_r": 0.28},
+    {"action": "tighten_sl", "level": 0.2053, "n": 32, "mean_r": 2.94, "sd_r": 0.81, "worst_r": 1.31}
   ],
   "outcome_table_source": "comms/live_review/tables/<review_id>.json",
   "recommendation": {"action": "tighten_sl", "level": 0.2053,
-                     "ev_delta_r": -0.23, "worst_case_delta_r": 2.04,
+                     "ev_delta_r": -0.25, "worst_case_delta_r": 1.03,
                      "basis": "preference_within_bound | ev_positive | operator_ask",
                      "confidence": "measured | suggestive | anecdote"},
   "context_flags": ["correlated: xrp_pullback_2h short open"],
@@ -150,7 +150,14 @@ Also, at no cost: the hourly `ict-work-digest` carrier gains one line, `🔎 liv
 }
 ```
 
-(The values are the ADA case, to show the shape; they are not new measurements.)
+(The values are the ADA case, to show the shape.)
+
+⚠️ **CORRECTED 2026-10-25 (LTR-3-SKILL).** The example above first carried the hand-calculated tighten from the ADA review: mean +2.96 R, sd 0.56, worst +2.32 R, `ev_delta_r` −0.23, `worst_case_delta_r` +2.04. **That calculation does not reproduce.** MEASURED with `scripts/research/live_review_outcomes.py` on the eba2-03 arm-A list (402 trades, fixture `tests/fixtures/ada_pullback_2h_eba2_03_trades.jsonl`, PR #20114, at peak ≥ 3.4 R):
+- HOLD reproduces: n=32, mean +3.19 R, sd 1.37, worst +0.28 R.
+- At the level the operator set (0.2053, a fixed +2.5 R), the tighten gives `r:2.5`: mean +2.94 R, sd 0.81, worst +1.31 R. The trailing equivalent, `atr:1.5`, gives +2.87 R.
+- +2.96 appears only at `atr:1.0`, which is not that level.
+
+The numbers above are now the tool's. See row `LTR-0-CONDITIONAL-OUTCOMES`. **Reviews quote the tool, never a hand calculation**, and `insufficient_n` means *no recommendation*, never `hold`. Both are binding in `.claude/skills/live-trade-review/SKILL.md`. The § 0 and § 7 Q1 prose keep the original figures as the record of what was said at the time.
 
 ### Guardrails (in code where possible; the prompt is the last line, never the only one)
 
@@ -338,7 +345,7 @@ Rows 1–6 produce a working **recommend-only** reviewer, entirely Tier 1. Auto-
 |---|---|
 | **The reviewer second-guesses validated exits.** Live results drift from Stage 0, and the Gate-2 demotion read is contaminated. | Applies only inside the Q1 bound. Touched and untouched trades are split in every verdict. Repeats become exit rules, which are backtested like any other (§ 5). |
 | **Noise stop-outs from a tight stop** | `min_buffer_atr` and once-per-bar, enforced in code. The ADA history showed the harness fills a stop at the stop price, so the real cost of tightening is, if anything, larger than the table says. LTR-0 must state that bias, not hide it. |
-| **Thin history** (most leg × state cells have small n) | An n floor gives `hold` + `insufficient_n`, and the data question is filed. No verdict is invented. |
+| **Thin history** (most leg × state cells have small n) | An n floor gives `no_recommendation` + `insufficient_n` (never `hold`), and the data question is filed. No verdict is invented. |
 | **Stale or estimated inputs** (`peak_r` comes from bar extremes; L0 lags `main` by about 5 min) | Every apply re-reads the venue first (the script already does). A peak marked `estimated` is never treated as measured. |
 | **Fighting the monitor's own trail** | Solved on Bybit by moving `order_packages.sl`. Prop needs LTR-8 before any prop apply. |
 | **Spend creep, or the allowance running out near the reset** | The § 6 reserve (net-rate capacity, degrade-don't-skip on breach). A Haiku gate, a Sonnet triage tier, events plus cooldown, one batched session per tick, a red flag at 15 sessions a day (never a stop), and the meter read after week 1. |
