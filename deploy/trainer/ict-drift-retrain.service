@@ -20,9 +20,14 @@
 # never picks it up.
 #
 # Save to (trainer VM): /etc/systemd/system/ict-drift-retrain.service
-# Install:  cp deploy/trainer/ict-drift-retrain.{service,timer} /etc/systemd/system/
+# Install:  cp deploy/trainer/ict-drift-retrain.service /etc/systemd/system/
 #           && systemctl daemon-reload
-#           && systemctl enable --now ict-drift-retrain.timer
+# NO TIMER since 2026-10-25 (operator, row DRIFT-SCAN-RETIRE): the ~8/day
+# ict-drift-retrain.timer was retired and its file deleted so no deploy can
+# re-enable it. The plan-only scan is started on demand by the weekly
+# /ml-review: `systemctl start ict-drift-retrain.service`. Do NOT add a timer
+# back without reopening that decision. Revert = restore the timer file
+# from git history (deploy/trainer/ict-drift-retrain.timer, OnCalendar=*-*-* 00/3:05:00).
 #
 # Mirrors the unit embedded in deploy/training-vm-cloud-init.yaml so a
 # freshly provisioned trainer + a long-running trainer end up with the
