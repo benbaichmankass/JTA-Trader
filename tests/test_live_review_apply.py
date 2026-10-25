@@ -320,6 +320,9 @@ def wired(monkeypatch):
             {"sl_floor": {"level": level}})})
         return {"result": "applied", "venue_after": level}
     monkeypatch.setattr(lra, "_exec_bybit", _bybit)
+    monkeypatch.setattr(lra, "_exec_alpaca",
+                        lambda db, leg, level, intent: state["exec"].append(("alpaca", leg["account_id"], level))
+                        or {"result": lra.X_APPLIED, "venue_after": level})
     monkeypatch.setattr(lra, "_exec_prop_vm",
                         lambda leg, level, intent: state["exec"].append(("prop_vm", leg["account_id"], level))
                         or {"result": lra.X_APPLIED})
@@ -391,11 +394,12 @@ def test_account_types_route_to_their_own_executors(wired):
          "sl": 0.2200, "meta": json.dumps({"phone_trail": {"resting_sl": 0.2180}})}]
     res = _run(db, wired)
     by = {a["account_id"]: a for a in res["accounts"]}
-    assert by["alpaca_live"]["reason"] == lri.R_NO_PATH and by["alpaca_live"]["read"] == "no_action"
+    # AMEND-PARITY-ALL-ACCOUNTS: Alpaca has its own executor now (was no_amend_path).
+    assert by["alpaca_live"]["account_class"] == "alpaca" and by["alpaca_live"]["executed"] is True
     assert by["tradeify_1"]["account_class"] == "prop_vm" and by["tradeify_1"]["executed"] is True
     assert by["breakout_2"]["account_class"] == "phone" and by["breakout_2"]["executed"] is True
-    assert sorted(e[0] for e in wired["exec"]) == ["bybit", "phone", "prop_vm"]
-    assert res["package_sl_moved"] is False        # the alpaca trade leg did not apply
+    assert sorted(e[0] for e in wired["exec"]) == ["alpaca", "bybit", "phone", "prop_vm"]
+    assert res["package_sl_moved"] is True         # both trade legs applied the same level
 
 
 def test_recommend_mode_computes_but_never_executes(wired):

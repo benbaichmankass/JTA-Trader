@@ -67,10 +67,12 @@ and 0 orders**, so a dry run over the open positions changes nothing. The CLI
 itself needs the account's keys and runs on the VM; it has not been run there
 (not verified).
 
-## Wiring into LTR-6R (#20139) — follow-up, not an edit of #20139
+## Wiring into LTR-6R (#20139) — DONE in this PR, stacked on #20139
 
-Once #20139 lands, `scripts/ops/live_review_apply.py::run` replaces the
-`cls in ("alpaca", "other")` → `no_amend_path` refusal for `alpaca` with:
+Manager decision 2026-10-25 19:13Z: this lane wires it. #20139 was still open,
+so #20150 merges #20139's branch and adds the wiring on top (it lands after,
+or with, #20139). `scripts/ops/live_review_apply.py::run` now routes an
+Alpaca TRADE leg to `_exec_alpaca`, which is:
 
 ```python
 elif cls == "alpaca":
@@ -87,8 +89,7 @@ floor on its next move.
 ## Not done here, stated
 
 * The monitor trail's own Alpaca call (`modify_protective`) still has no
-  read-back. Routing it through `alpaca_amend.tighten` is a live-path change
-  to the highest-frequency Alpaca call; it is filed as part of row
-  `AMEND-PARITY-ALL-ACCOUNTS`, not slipped in here.
+  read-back. Manager decision 2026-10-25: not in this PR; filed as row
+  `AMEND-PARITY-ALPACA-TRAIL-READBACK` (Tier 3) with the diff sketch.
 * Live exercise of the IB and prop-VM modify paths was not re-read this
   session.
