@@ -2,21 +2,30 @@
   "id": "RQ-20260928-001-RUN",
   "title": "Run RQ-20260928-001 (session-local, cannot auto-dispatch): ict_scalp HTF-filter on/off across the 7 variant legs via scripts/backtest_ict_scalp.py, land docs/research/ict-scalp-htf-filter-wiring-2026-09-28.json",
   "phase": null,
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "research lane (manager dispatch)",
-  "lane": null,
-  "model": null,
-  "ceiling_usd": null,
-  "spend_usd": null,
+  "lane": "session_01BzTTXpd6ik4TCL1czrLdtS",
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 6,
+  "spend_usd": 2.5,
   "tier": 1,
   "prs": [],
   "blocked_on": [],
-  "note": "BLOCKERS-1025 2026-10-25: NOT retired, because programme 03 nodes still key on this unit's pass/fail verdict (research/programmes/03-strategy-improvement.yaml). Context: ICT-SCALP-HTF (PRs #15340/#15341) already made the HTF fetch real and the filter is ON for 6 crypto variants, with an in-sample causal-harness result (OFF -336.5R vs ON -82.7R); this unit is the pre-registered question on the same-window arms and must pass explicit non-zero slippage/funding (unit design costs). Unit has no dispatchable workflow, so a lane runs it, grades per its decision_rule, and the unit then stops reading NEEDS_LANE.",
+  "note": "BLOCKERS-1025 2026-10-25: NOT retired, because programme 03 nodes still key on this unit's pass/fail verdict (research/programmes/03-strategy-improvement.yaml). Context: ICT-SCALP-HTF (PRs #15340/#15341) already made the HTF fetch real and the filter is ON for 6 crypto variants, with an in-sample causal-harness result (OFF -336.5R vs ON -82.7R); this unit is the pre-registered question on the same-window arms and must pass explicit non-zero slippage/funding (unit design costs). Unit has no dispatchable workflow, so a lane runs it, grades per its decision_rule, and the unit then stops reading NEEDS_LANE. LANE RESULT 2026-10-25: verdict PASS on 6/7 legs (mgc_15m no_data). n both arms 263-747 per leg; cost 7.5/3.0/1.0 bps explicit; 365d Binance spot. ON net-R vs OFF: sol_5m -24.5 vs -115.9, xrp_5m -24.2 vs -75.1, avax_5m -38.4 vs -75.5, xrp_15m +0.4 vs -27.3, eth_15m -1.0 vs -10.1, sol_15m -10.2 vs -14.3. Loss-cutting not edge. Tier-3 proposal (keep ON, no flip) filed as pipeline PI-20261025-1CZRLDTS-0001-A; MGC data gap -B. landed_unproven until PR merges.",
   "priority_rank": 6,
-  "updated_at": "2026-10-25T06:49:38Z",
-  "updated_by": "session_01BjW391JCBB1J4CJeKAwW52",
+  "updated_at": "2026-10-25T10:19:09Z",
+  "updated_by": "session_01BzTTXpd6ik4TCL1czrLdtS",
   "roadmap": [
     "M27"
   ],
+  "writeback": {
+    "roadmap": "M27: RQ-20260928-001 graded pass on 6/7 ict_scalp variant legs (mgc_15m no_data); PASS is loss-cutting, ON still net-negative on 5/6",
+    "arch": "no ARCHITECTURE-CANONICAL change: filter-ON state already shipped by ICT-SCALP-HTF; evidence docs/research/ict-scalp-htf-filter-wiring-2026-09-28.json"
+  },
+  "observation": {
+    "what": "PR merged; unit reads done (not NEEDS_LANE) and node P3-M27-htf-pass is emitted by queue_replenish",
+    "how_to_check": "git cat-file -p origin/main:research/queue/RQ-20260928-001.yaml | grep ^status; python3 scripts/research/queue_replenish.py --help for the programme source",
+    "due_by": "2026-10-28"
+  },
   "_seq": 648
 }
