@@ -82,6 +82,9 @@ PARENT_STATUSES = ("placed", "filled")
 RESULTS = ("amended", "dry_amended", "refused", "no_position", "human_moved", "mismatch")
 UNREAD = "unread"                # recorded status of a human_moved report that read nothing (never a hold)
 QUOTE_BUFFER_ATR = 0.1           # prop_trail.QUOTE_BUFFER_ATR: the new stop clears the price by this many ATRs
+EXIT_BUF_FRAC = 0.002            # a trail-EXIT stop clears the FEED price by 0.2%: twice the app's own through-price
+                                 # guard (MainActivity.PRICE_BUF_FRAC 0.1%, checked against the VENUE mark), so a
+                                 # feed-vs-venue gap of under 0.1% does not refuse it (PHONE-AMEND-REFUSED-1025)
 _HISTORY_MAX = 12
 
 
@@ -355,6 +358,42 @@ def plan_amends(account_id: str, *, now: Optional[datetime] = None,
     return out
 
 
+def _package_state(conn: Any, opid: Any) -> Optional[Dict[str, Any]]:
+    """The ticket's order package (status, close_reason, updated_at), or None when there is none or it cannot be read."""
+    if not opid:
+        return None
+    try:
+        row = conn.execute("SELECT status, close_reason, updated_at FROM order_packages WHERE order_package_id = ?",
+                           (opid,)).fetchone()
+    except Exception:  # noqa: BLE001  # allow-silent: no order_packages table (tests, fresh DB) = could not look
+        return None
+    return {"status": row[0], "close_reason": row[1], "updated_at": row[2]} if row else None
+
+
+def _note_divergence(conn: Any, r: Any, raw: Any, m: Dict[str, Any], tr: Dict[str, Any], now: datetime,
+                     out: Dict[str, Any]) -> tuple:
+    """DETECTOR (PHONE-AMEND-REFUSED-1025): a ticket the phone placed/filled whose ORDER PACKAGE is closed means the
+    strategy has exited and the terminal still holds the position. MEASURED 2026-10-25: breakout_2
+    prop-manual-2e786ef17c05 stayed open ~20h after pkg-2c3f338d9477499b closed sl_cross, and nothing said so in
+    those words. ONE alert per ticket names it (with the trail's state); the trail keeps working the exit stop.
+    Returns the (raw, meta) the caller continues with."""
+    pkg = _package_state(conn, r["order_package_id"])
+    if not pkg or str(pkg.get("status") or "") != "closed" or tr.get("diverged"):
+        return raw, m
+    tr["diverged"] = {"at": now.isoformat(), "package_status": pkg["status"], "close_reason": pkg.get("close_reason"),
+                      "package_updated_at": pkg.get("updated_at")}
+    m2 = {**m, KEY: tr}
+    if not _cas(conn, r["ticket_id"], raw, m2):
+        tr.pop("diverged", None)
+        return raw, m
+    am = tr.get("amend") or {}
+    out["alerts"].append(
+        f"{r['ticket_id']}: OPEN on the terminal but its order package {r['order_package_id']} is CLOSED "
+        f"({pkg.get('close_reason')}, {pkg.get('updated_at')}): the strategy has exited. The trail works the exit "
+        f"stop every closed bar (last amend {am.get('id')} {am.get('status')}, fails {tr.get('fails') or 0})")
+    return json.dumps(m2), m2
+
+
 def _plan_one(conn: Any, r: Any, account_id: str, now: datetime, legs: Mapping[str, Mapping[str, Any]],
               candles_fn: Optional[Callable[[str, str], Any]], out: Dict[str, Any]) -> None:
     from src.prop import prop_trail
@@ -370,6 +409,7 @@ def _plan_one(conn: Any, r: Any, account_id: str, now: datetime, legs: Mapping[s
     if not leg:
         return
     tr = _load_trail(m, tid)
+    raw, m = _note_divergence(conn, r, raw, m, tr, now, out)
     gate = _sheet_edit_gate(account_id)
     if not gate.get("enabled"):
         # THE GATE (PHONE-EXEC-OBSERVABLE-1018): the app refuses the pencil click until the server's sheet_edit says
@@ -431,7 +471,11 @@ def _plan_one(conn: Any, r: Any, account_id: str, now: datetime, legs: Mapping[s
         return
     bo = tr.get("backoff") or {}
     since = _parse(bo.get("since"))
-    if since is not None and now < since + timedelta(minutes=tf_min * _backoff_bars(int(bo.get("n") or 1))):
+    # A trail-EXIT amend (the harness has exited; exit_alerted) or a ticket whose package is closed retries EVERY
+    # closed bar: each skipped bar is live prop exposure the strategy no longer holds (MEASURED 2026-10-25: 6
+    # attempts in ~24h on breakout_2 prop-manual-2e786ef17c05). Still per-attempt, never a latch.
+    wait_bars = 1 if (tr.get("exit_alerted") or tr.get("diverged")) else _backoff_bars(int(bo.get("n") or 1))
+    if since is not None and now < since + timedelta(minutes=tf_min * wait_bars):
         # backing off after a failed attempt: retried once the wait has passed, never dropped. ONE exception
         # (operator 2026-10-18, breakout_2 #a8 at fails=7 = an 8-bar wait): a NEW signed exec.js is a new reader,
         # so the wait is waived ONCE per served version — the fix is tried on the next plan, not tomorrow.
@@ -486,7 +530,7 @@ def _plan_one(conn: Any, r: Any, account_id: str, now: datetime, legs: Mapping[s
         # to the feed price + buffer (short) / - buffer (long), tighten-only, through the same amend channel. The
         # phone re-checks it against the venue's own price before any click.
         px = float(candles["close"].iloc[-1])
-        tgt = prop_trail.exit_stop(direction, px, step, plan.detail.get("atr"))
+        tgt = prop_trail.exit_stop(direction, px, step, plan.detail.get("atr"), frac=EXIT_BUF_FRAC)
         if prop_trail.tightens(direction, resting_sl, tgt, step):
             new, exit_ = tgt, True
             if not tr.get("exit_alerted"):

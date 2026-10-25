@@ -464,8 +464,10 @@ def test_short_trail_crossed_emits_a_tighten_only_exit_amend_and_alerts_once(_is
     out = ptr.plan_amends("breakout_2", now=NOW, candles_fn=lambda s, tf: CROSSED_SHORT)
     am = _trail()["amend"]
     assert out["emitted"] == ["T1#a1"] and am["kind"] == "sl" and am["from_sl"] == 2550.0
-    # 2485 + max(2 steps, 0.001 x 2485 = 2.485, 0.1 x 20 = 2.0) = 2487.485 -> rounded up to the step
-    assert 2487.48 < am["sl"] <= 2487.5 and am["sl"] < 2550.0
+    # 2485 + max(2 steps, ptr.EXIT_BUF_FRAC 0.002 x 2485 = 4.97, 0.1 x 20 = 2.0) = 2489.97 -> rounded up to the step.
+    # 0.2% is twice the app's own venue-mark guard (PRICE_BUF_FRAC 0.1%): at 0.1% the server's stop sat exactly on the
+    # app's refusal line, so any venue mark above the feed refused it (PHONE-AMEND-REFUSED-1025).
+    assert am["sl"] == pytest.approx(2489.97) and am["sl"] < 2550.0
     assert am["reason"].startswith("trail crossed")
     assert _trail()["last_plan"]["action"] == "exit"
     assert sum("trail CROSSED" in x for x in out["alerts"]) == 1
@@ -477,7 +479,7 @@ def test_long_trail_crossed_exit_amend_sits_under_the_price():
     out = ptr.plan_amends("breakout_2", now=NOW, candles_fn=lambda s, tf: c)
     am = _trail()["amend"]
     assert out["emitted"] == ["T1#a1"] and am["from_sl"] == 2450.0
-    assert 2512.4 <= am["sl"] < 2512.52 and am["sl"] > 2450.0          # 2515 - 2.515, floored
+    assert am["sl"] == pytest.approx(2509.97) and am["sl"] > 2450.0     # 2515 - 0.002 x 2515 = 5.03, floored
 
 
 def test_trail_crossed_no_amend_when_the_resting_stop_is_already_tighter():
@@ -486,6 +488,83 @@ def test_trail_crossed_no_amend_when_the_resting_stop_is_already_tighter():
     tr = _trail()
     assert out["emitted"] == [] and "amend" not in tr
     assert tr["last_plan"]["action"] == "exit" and "already at or inside" in tr["last_plan"]["why"]
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# PHONE-AMEND-REFUSED-1025 (2026-10-25): breakout_2 kept an ETH short ~20h after its package closed sl_cross. An exit
+# amend retries every closed bar (no 1/2/4/8 backoff while the strategy is flat), and a placed/filled ticket whose
+# order package is closed raises ONE divergence alert.
+# ---------------------------------------------------------------------------------------------------------------
+def _exit_attempt(hours, result="refused", reason="sheet volume 0.4 != ticket qty 0.40899796"):
+    t = NOW + timedelta(hours=hours)
+    out = ptr.plan_amends("breakout_2", now=t, candles_fn=lambda s, tf: CROSSED_SHORT)
+    a = ptr.claim_amend(_dev(), now=t)
+    if a is not None:
+        _report(a, result, reason=reason)
+    return a, out
+
+
+def test_failed_exit_amend_retries_every_closed_bar_not_with_backoff():
+    _parent(direction="short")
+    got = [_exit_attempt(h)[0] for h in range(0, 6)]
+    # one attempt per closed bar, every bar: with the old 1/2/4/8 backoff only hours 0, 1, 3 would have emitted
+    assert all(a is not None for a in got), [a and a["amend_id"] for a in got]
+    assert _trail()["fails"] == 6 and _trail()["flagged"]          # still ONE red flag at FLAG_AFTER, never a latch
+
+
+def test_non_exit_amend_keeps_its_backoff():
+    _parent()
+    assert _attempt(0) is not None
+    assert _attempt(1) is not None       # backoff 1 bar after the first failure
+    assert _attempt(2) is None           # backoff 2 bars after the second
+
+
+def _order_package(opid, status, close_reason=None):
+    conn = prop_journal._connect()
+    try:
+        conn.execute("CREATE TABLE IF NOT EXISTS order_packages (order_package_id TEXT PRIMARY KEY, status TEXT, "
+                     "close_reason TEXT, updated_at TEXT)")
+        conn.execute("INSERT OR REPLACE INTO order_packages VALUES (?, ?, ?, ?)",
+                     (opid, status, close_reason, "2026-10-24T20:02:00+00:00"))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _set_opid(tid, opid):
+    conn = prop_journal._connect()
+    try:
+        conn.execute("UPDATE prop_tickets SET order_package_id = ? WHERE ticket_id = ?", (opid, tid))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def test_ticket_open_while_its_package_is_closed_alerts_once_and_retries_every_bar(_iso):
+    _parent(direction="short")
+    _set_opid("T1", "pkg-1")
+    _order_package("pkg-1", "closed", "sl_cross")
+    a, out = _exit_attempt(0)
+    assert sum("is CLOSED" in x and "sl_cross" in x for x in out["alerts"]) == 1
+    assert _trail()["diverged"]["close_reason"] == "sl_cross"
+    _, out2 = _exit_attempt(1)
+    assert not any("is CLOSED" in x for x in out2["alerts"])        # once per ticket
+    assert _trail()["seq"] == 2                                       # retried the very next bar
+
+
+def test_open_package_is_not_a_divergence():
+    _parent(direction="short")
+    _set_opid("T1", "pkg-2")
+    _order_package("pkg-2", "open")
+    _, out = _exit_attempt(0)
+    assert not any("is CLOSED" in x for x in out["alerts"]) and "diverged" not in _trail()
+
+
+def test_no_order_packages_table_is_not_a_divergence():
+    _parent(direction="short")
+    _set_opid("T1", "pkg-3")
+    _, out = _exit_attempt(0)
+    assert "diverged" not in _trail() and out["emitted"] == ["T1#a1"]
 
 
 # ---------------------------------------------------------------------------------------------------------------
