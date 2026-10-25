@@ -1,0 +1,64 @@
+{
+  "run": "RESEARCH-OPS-20261025-0247",
+  "finished_at": "2026-10-25T03:30:00Z",
+  "by": "session_01Uk5ZdKwWbn8mfcEi4wEtqf",
+  "floor": 52,
+  "floor_basis": "SLO runnable_floor threshold 52 (health 2026-10-25); dispatch log: computed_floor(fired_24h 68) = 54",
+  "authoring_queue_depth": null,
+  "idle_backends": ["github_runner_data", "kaggle", "kaggle_cpu", "trainer"],
+  "needs_review_triaged": 5,
+  "needs_review_left": 30,
+  "needs_review_note": "Triage WRITES this pass (grading blocks in research/queue, held PR): 1631-01 and 1631-02 owner_reason rewritten (stale 'nothing re-fires' -> the run finished and the collector refused it; fixed here); 65ff-21 and 65ff-23 owner_reason corrected (the 'unit re-asks itself' text was false: cadence once) and last_dispatched_at reset to null because the reference artifacts they lacked on 2026-10-16 are on main; 20261024-003 given an owner (it sat in needs_review with none). The other 25 were re-read: 14 share one instrument gap (ROSTER-WALKFORWARD payload has whole-window net only, no OOS split; RESEARCH-TOOLING-GAPS), the rest carry specific named gaps; none is closable by applying its rule. 'Left' counts the bucket as queue_grade --health reports it (30) because the triaged units stay in it until their re-run grades.",
+  "throughput": {
+    "runnable_before": 56,
+    "runnable_after": 58,
+    "queued": 143,
+    "fired_24h": 65,
+    "results_landed_24h": 61,
+    "hours_since_last_dispatch": 0.7,
+    "idle_alarm": false,
+    "after_basis": "check_research_queue_throughput 03:20Z on the pre-PR tree; this PR's 2 stamp resets (65ff-21/-23) count runnable only after merge"
+  },
+  "mechanism": {
+    "dispatch_receipt": "ok (run 40153686572 receipt landed, fresh)",
+    "collector": "INCIDENT: dispatch run 40153686572 job 'dispatch' red at 'Fail the job if the collector lost a run's rows'. collect_runner_results landed=0 skipped=220 lost=3: runs 40148576330/-77750/-78991 (RQ-20261015-1631-01/-02, RQ-20261018-001, the re-fired same-symbol units) finished green but research_result.py --emit refused each ('--n must be an integer or null, got a dict'), because same_symbol_head_to_head.py emitted a per-arm dict as n. collect_count came out empty, so the batch landing was skipped. Root cause fixed in this PR (script emits int n + n_by_arm; collector collapses a dict n to its together count; tests/test_collect_scalar_n.py). Until it merges every dispatch cycle will re-list the 3 as LOST and the dispatch job will stay red; the run artifacts are retained so no re-fire is needed.",
+    "stranded_stamp_prs": [],
+    "stranded_stamp_prs_note": "list_pull_requests (open, 13): no automation/research-queue head; the only automation-adjacent open PR is #17895 ops-flags (do not merge), standing.",
+    "incident": "collector refuses same-symbol records (fixed in this PR; needs a manager merge: held PR)",
+    "watchdog": "comms/research/ops/watchdog_incidents.jsonl not re-read this pass"
+  },
+  "results_read": {"pass": 0, "fail": 0, "indeterminate": 0, "units": [], "note": "RQ-20261015-1631-01/-02 and RQ-20261018-001 produced verdict.json files (in the 40153686572 landing payload) but were never collected, so nothing could be read; they are read next pass. #19953/#19955/#19966/#19975 research tools: results of the five blocked/ units those left are not queued yet (units still in blocked/). Read cap: no new result row on main since the 22:00Z record besides RQ-20261014-d6e7-06 / 20261024-09a6-01 / -09a6-03 (landed 01:11Z, auto-graded, PATH-FLOW-JOIN lane's)."},
+  "unlocked": [
+    {"unit": "RQ-20261016-65ff-21", "how": "last_dispatched_at null: reference artifacts RQ-20261016-65ff-20 now on main"},
+    {"unit": "RQ-20261016-65ff-23", "how": "last_dispatched_at null: reference artifacts RQ-20261016-65ff-22 now on main"}
+  ],
+  "retired": [],
+  "blocked_audit": {
+    "population": "71 files in research/queue/blocked/ (59 status blocked, 12 retired); each blocked_on block parsed for named checklist rows and RQ results",
+    "unlockable_now": ["RQ-20261009-900: clears_when met (736c-01 measured pass, corpus on main) but its remaining clause is a build -- the verdict grader for ml2_bracket_train_eval --outcome mfe_r; already filed TWICE (PI-20261022-HOPS2047-0001, PI-20261022-HOPS0847-0001; not filed a third time)"],
+    "still_blocked_checked": ["RQ-20261007-033 (research-harness-dispatch.yml has no window input: grep)", "RQ-20261007-044 (m20_fleet_exit_sweep has no flip cell: grep)", "RQ-20260930-505 (504 ran, 2 fail rows; DATA-KLINE-ARCHIVE still queued)", "RQ-20261014-9807-04 (9807-01 now has measured pass rows, but its cells need EXIT-PATH-EMIT-OFFLINE, landed_unproven; derivation not done this pass)"]
+  },
+  "levers_filed": [{"lever": "collector refused dict n", "ref": "BUILT in this PR"}],
+  "units_authored": [],
+  "followups_filed": [
+    {"what": "re-read 1631-01/-02/20261018-001 once collected", "ref": "checklist RESEARCH-OPS-20261025-0247 observation (due 2026-10-31)"},
+    {"what": "9807-04 cells derivation now that 9807-01 has measured pass rows", "ref": "handoff"}
+  ],
+  "authoring": {
+    "queue_depth": null,
+    "nodes_drafted": 0,
+    "nodes": [],
+    "theme_shortfall": {"ml_health": 8, "infra": 4},
+    "why_short": "Operator brief for this pass: finish the not_run steps and do NOT start a second authoring lane or duplicate the 05:53Z daily research authoring routine (it covers authoring_supply, theme_share and PI-20261025-4CGB8QKR-0001). authoring_queue depth not re-measured. OPS-AUTHOR-SKIPPED stays live by design this pass."
+  },
+  "not_run": [
+    "step E authoring (nodes_drafted 0): deliberately left to the 05:53Z authoring routine per the dispatching brief",
+    "RQ-20261014-9807-04 cell derivation (needs reading the 9807-01 per-leg rows; ~budget)"
+  ],
+  "handoff": [
+    "MANAGER (held PR): merge this run PR. It carries the collector fix; until it merges the dispatch job stays red each cycle on the 3 lost same-symbol runs",
+    "next research-ops: verify RQ-20261015-1631-01/-02 and RQ-20261018-001 land measured (not producer_failed) after merge; apply each unit's own rule",
+    "next research-ops: read the re-fired RQ-20261016-65ff-21/-23 (Kaggle parity); if no_data again the reference path in the unit command is wrong",
+    "next research-ops: RQ-20261009-900 grader is the single highest-priority unblock in blocked/ (live_strategy, TP doctrine); PI-20261022-HOPS2047-0001 due 2026-10-27"
+  ]
+}

@@ -166,6 +166,18 @@ def pending_in_open_batches(repo_slug: str) -> Optional[set]:
     return pending
 
 
+def _scalar_n(rec: Dict[str, Any]) -> Dict[str, Any]:
+    """The E5 record's `n` is one integer. A producer that emitted a per-arm dict (same_symbol_head_to_head
+    before 2026-10-25 -- runs 40148576330/-77750/-78991, all refused as LOST) is collected with the dict's
+    `together` count (the combined-book sample the unit's power rule reads), else `null`; the per-arm detail
+    stays in the run's measurement.json. Anything else passes through for research_result.py to judge."""
+    n = rec.get("n")
+    if not isinstance(n, dict):
+        return rec
+    together = n.get("together")
+    return {**rec, "n": together if isinstance(together, int) and not isinstance(together, bool) else None}
+
+
 def emit_record(root: Path, rec: Dict[str, Any], *, run: Dict[str, Any], repo_slug: str) -> Optional[str]:
     """Write the E5 record through research_result.py; returns its repo path."""
     run_id = str(run["databaseId"])
@@ -173,6 +185,7 @@ def emit_record(root: Path, rec: Dict[str, Any], *, run: Dict[str, Any], repo_sl
            "--workflow", str(run.get("_workflow_name") or WORKFLOW_NAME), "--run-id", run_id, "--run-attempt", "1",
            "--run-url", str(run.get("url") or f"https://github.com/{repo_slug}/actions/runs/{run_id}"),
            "--commit-sha", str(run.get("headSha") or "")]
+    rec = _scalar_n(rec)
     for k in _EMIT_FIELDS:
         cmd += [f"--{k.replace('_', '-')}", str(rec.get(k, "") if rec.get(k) is not None else "null" if k == "n" else "")]
     if root != _REPO:

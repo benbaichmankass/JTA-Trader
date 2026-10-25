@@ -1,0 +1,34 @@
+{
+  "id": "RESEARCH-OPS-20261025-0247",
+  "title": "Research-ops pass 2026-10-25 02:47Z",
+  "phase": "research",
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "research-ops-lane-20261025-0247",
+  "model": null,
+  "ceiling_usd": 5,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    19985
+  ],
+  "blocked_on": [
+    "held PR (E57): needs manager merge; observation: RQ-20261015-1631-01/-02 and RQ-20261018-001 land read_state measured after merge, due 2026-10-31"
+  ],
+  "note": "[lane] 02:47Z pass. FIRST (SLO research_ops_not_run 3): (1) SAME-SYMBOL end to end -- the three re-fired runs finished green but the collector REFUSED them (dict n, dispatch 40153686572 red, landed=0 lost=3); root-caused and fixed in the PR (script int n + n_by_arm, collector collapses dict n, test); they collect on the next dispatch after merge. (2) blocked/ audit re-run in full (71 files; 0 unlockable without a build; RQ-20261009-900 grader already filed x2). (3) needs_review: 5 triage writes (1631-01/-02 reasons, 65ff-21/-23 re-queued, 20261024-003 owner). NOT run: step E authoring (brief: 05:53Z routine owns it), 9807-04 cell derivation. Held PR: needs manager merge; the red dispatch job persists until it does. Record comms/research/ops/20261025T0330Z.json.",
+  "updated_at": "2026-10-25T02:57:53Z",
+  "updated_by": "session_01Uk5ZdKwWbn8mfcEi4wEtqf",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "writeback": {
+    "roadmap": "none: operations pass",
+    "arch": "none: no component changed"
+  },
+  "observation": {
+    "what": "RQ-20261015-1631-01/-02 and RQ-20261018-001 land read_state measured (not producer_failed, not LOST) after the collector fix merges",
+    "how_to_check": "rerun command: python3 scripts/ci/check_research_queue_throughput.py --json; ls research/results/RQ-20261015-1631-01",
+    "due_by": "2026-10-31T00:00Z"
+  },
+  "_seq": 638
+}
