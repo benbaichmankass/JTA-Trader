@@ -1,27 +1,62 @@
-# Live trade review — apply switch (LTR-6R-APPLY-PATH; design
-# docs/plans/live-trade-review-DESIGN.md § 4).
+# Live trade review -- declared defaults (docs/plans/live-trade-review-DESIGN.md).
 #
+# This file is READ-ONLY configuration for the due computation
+# (GET /api/diag/live_review_due, src/runtime/live_review_due.py). Nothing here
+# gates trading, moves a stop or halts anything: it only decides which open
+# packages are SURFACED for review. Every threshold is a proposed default from
+# design section 2, registered here BEFORE the first run so the due log can
+# later be compared against it. Edit by commit only.
+#
+# Sibling sections (reserve, apply_mode) are added by LTR-10 / LTR-6 and are
+# not read by the due computation.
+due:
+  # Timeframe of a leg when its name carries no _1h/_2h/_4h/_1d suffix.
+  default_timeframe: 2h
+  # An open telemetry row not refreshed for this long is still evaluated but
+  # flagged `telemetry_stale` (the exit loop writes it every pass).
+  telemetry_max_age_minutes: 30
+  events:
+    r_milestone:
+      first_r: 1.0      # first level; then every `step_r`
+      step_r: 1.0
+    new_peak:
+      step_r: 0.5       # peak_r >= last reviewed peak + step
+    giveback:
+      min_peak_r: 1.0
+      min_giveback_r: 0.5
+      giveback_frac_of_peak: 0.30   # threshold = max(min_giveback_r, frac * peak_r)
+    near_target:
+      max_r_to_target: 0.5
+    daily_floor:
+      hours: 24
+      # Real-money and prop accounts only (design section 2 "Floor"). Each id
+      # must exist in config/accounts.yaml (tests/test_live_review_due.py).
+      accounts: [bybit_2, bybit_portfolio, alpaca_live, breakout_1, breakout_2, tradeify_1, velotrade_1]
+  # Events the design names whose inputs the due computation does not read yet
+  # (candles, funding, calendar, venue). Surfaced as `events_not_evaluated`
+  # so "not checked" is never read as "did not fire".
+  not_evaluated: [swing, vol_regime, funding, calendar, mechanics]
+  # Per-package cooldown: at most one review per closed bar of the leg's
+  # timeframe, except for these events.
+  cooldown_exempt: [giveback, mechanics]
+
+# -- apply (LTR-6R-APPLY-PATH; design § 4, desk design § 3.0) -----------------
 # apply_mode is a sanctioned *_MODE selector (CLAUDE-RULES-CANONICAL § Prime
 # Directive rule 6), NOT a gate on trading and NOT a halting latch:
-#   off       — the review still runs and records; nothing is computed per account
-#   recommend — each account's RiskManager.approve_amend is computed and recorded
-#               (account_reads), nothing is sent to any venue
-#   apply     — an approved/clipped amend is handed to that account's executor,
-#               and ONLY under a granted mandate (config/mandates.yaml,
-#               MD-LIVE-TIGHTEN-SL) — apply_mode alone never applies anything
-#
-# ONLY A COMMIT CHANGES THIS FILE. No runtime code writes it. It never stops
-# trading and never stops reviewing; it only decides whether a recommendation
-# is applied. Setting `apply` is the operator's act (Tier 3).
+#   off       — nothing is computed per account
+#   recommend — each account's RiskManager.approve_amend is computed and
+#               recorded (account_reads); nothing is sent to any venue
+#   apply     — an approved/clipped amend goes to THAT account's executor, and
+#               ONLY under a granted mandate (config/mandates.yaml,
+#               MD-LIVE-TIGHTEN-SL); apply_mode alone never applies anything
+# ONLY A COMMIT CHANGES THIS. No runtime code writes it. Setting `apply` is
+# the operator's act (Tier 3).
 apply_mode: recommend
-
-# Per-account override (same three values). An account absent here inherits
-# the global value. Example (NOT active):
+# Per-account override (same three values); absent = inherit the global.
 #   accounts:
 #     bybit_portfolio: {apply_mode: off}
 accounts: {}
-
-# Noise floor (design § 3 guardrails): a review stop must sit at least this
-# many x the leg's ATR beyond the mark. An account may raise its own floor with
-# config/accounts.yaml::<acct>.risk.live_review_min_buffer_atr (never lower it).
+# Noise floor (design § 3 guardrails): a review stop sits at least this many x
+# the leg's ATR beyond the mark. An account may RAISE its own floor with
+# config/accounts.yaml::<acct>.risk.live_review_min_buffer_atr.
 min_buffer_atr: 1.0
