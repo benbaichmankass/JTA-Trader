@@ -256,6 +256,9 @@ def test_history_still_writes_on_a_pre_advisor_table(tmp_path, series):
         c.execute("CREATE UNIQUE INDEX u ON position_path_history(order_package_id, bar_ts)")
     pph._has_advisor_cols.clear()
     frame, pkg = _fixture_pkg(series)
+    # collapsed-state: measured — a fixture for the WRITE path only; the advisor
+    # never reads peak_state, and the history row's own states are pinned in
+    # tests/test_position_path_history.py.
     rec = {"order_package_id": "p", "direction": "short", "entry": pkg["entry"],
            "risk_per_unit": 0.03, "peak_state": "measured"}
     row = pph.build_history_row(rec, window=frame, candles_df=frame,
