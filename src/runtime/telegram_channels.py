@@ -129,6 +129,7 @@ SENDERS: Final[dict[str, tuple[str, ...]]] = {
     "src/runtime/execution_diagnostics.py": (
         "trade-open", "trade-close", "trade-update", "demotrade", "execution_alert"),
     "scripts/ops/amend_position_sl.py": ("trade-update",),   # AMEND-SL-ACTION: one SL-moved ping via enqueue_trade_update
+    "scripts/ops/live_review_apply.py": ("trade-update",),   # LTR-6R: SL-moved ping per applied account + ONE not-applied alert, both via enqueue_trade_update
     "src/prop/breakout_notify.py": (
         "prop_fill", "prop_monitor", "prop_ticket", "prop_expiry_prompt",
         "prop_expiry_notice", "prop_invalidation_prompt", "prop_alert",
