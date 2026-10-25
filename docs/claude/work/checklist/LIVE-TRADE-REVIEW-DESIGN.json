@@ -1,0 +1,22 @@
+{
+  "id": "LIVE-TRADE-REVIEW-DESIGN",
+  "title": "Design doc: a Claude routine that reviews OPEN live trades in real time against market conditions (trigger only when trades are open, timer + event cadence, data/params, auto-apply mechanisms, feed into the weekly performance review)",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "design lane (manager dispatch)",
+  "lane": "session_01HT5BA9YNCeiCjG8Z4RFmP2",
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 10,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR 2026-10-25 ~13:30Z in chat, verbatim: \"I also want us to create a routine for having a Claude session that reviews live trades. We recently had an ADAUSDT trade that looked like the sl was too far and we needed to start banking R - Claude suggested to tighten and we did, and helped lock in gains. I want a routine that checks live trades to check the strategies real time performance against market conditions so that we can improve performance - it seems like we're somewhat limited in that we only review results and not real-time performance, which could be a strong lever for improving strategy and ml performance. I want us to come up with a design doc first that covers: 1. Trigger mechanism, to make sure it only runs when trades are open 2. Frequency - how often should this happen? Should it be only timer based, or also on events like big price swings? 4. What exactly will the session do - what data and parameters will it use to analyze and recommend action on live trades? 5. What mechanisms do we need to build so the system can automatically implement the recommendations? 4. What flow ensures that this analysis will then go into the weekly performance review for higher level analysis and optimization?\" Design doc FIRST; no build until the operator approves it. Precedent: ADA-LIVE-EXIT-REVIEW-1024 + AMEND-SL-ACTION (scripts/ops/amend_position_sl.py). Dispatched 2026-10-25 13:24Z by session_01SrYqLY4Ui9RKns12r2zthj: fresh Opus lane (real-money trade-management judgment), ceiling $10, design doc only (docs/plans/live-trade-review-DESIGN.md), PR held for operator review.",
+  "priority_rank": 1,
+  "updated_at": "2026-10-25T13:23:59Z",
+  "updated_by": "session_01SrYqLY4Ui9RKns12r2zthj",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "_seq": 654
+}
