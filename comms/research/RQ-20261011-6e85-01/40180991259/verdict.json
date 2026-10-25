@@ -1,0 +1,94 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "n": 8010,
+  "population": "2 head(s), shadow-log real-time rows 2026-09-04..2026-10-11 joined to realised forward-vol labels from market_raw; 8010 rows read",
+  "measurement": {
+    "mode": "split",
+    "as_of": "2026-10-11T09:45:00+00:00",
+    "heads": [
+      "sol-regime-15m-lgbm-fc-pcv-v2",
+      "btc-regime-15m-lgbm-fc-pcv-v2"
+    ],
+    "reference_window": [
+      "2026-09-04T00:00:00+00:00",
+      "2026-10-04T00:00:00+00:00"
+    ],
+    "current_window_start": "2026-10-04T09:45:00+00:00",
+    "rule_verdict": "capability_loss",
+    "per_head": {
+      "sol-regime-15m-lgbm-fc-pcv-v2": {
+        "reference": {
+          "n_scored": 3204,
+          "n_labelled": 3204,
+          "volatile_label_share": 0.055867665418227214,
+          "auc": 0.4402493189897964,
+          "mean_score": 0.8093195505014265
+        },
+        "current": {
+          "n_scored": 750,
+          "n_labelled": 750,
+          "volatile_label_share": 0.02,
+          "auc": 0.4055328798185941,
+          "mean_score": 0.8766036395175365
+        },
+        "rule_verdict": "capability_loss",
+        "why": "delta_auc=-0.035 < -0.03",
+        "delta_share": -0.03586766541822721,
+        "delta_auc": -0.03471643917120232,
+        "score_drift": {
+          "ks": 0.2400699126092385,
+          "psi": 0.21169384413850872,
+          "overall": "significant",
+          "ref_mean": 0.8093195505014265,
+          "cur_mean": 0.8766036395175365
+        },
+        "label": {
+          "vol_threshold": 0.005,
+          "vol_threshold_source": "market_features_meta",
+          "n_label_bars": 175291,
+          "candles": "datasets-out/market_raw/SOLUSDT/15m/v002/data.jsonl"
+        }
+      },
+      "btc-regime-15m-lgbm-fc-pcv-v2": {
+        "reference": {
+          "n_scored": 3220,
+          "n_labelled": 3220,
+          "volatile_label_share": 0.013354037267080746,
+          "auc": 0.18718844016953246,
+          "mean_score": 0.9653175847399993
+        },
+        "current": {
+          "n_scored": 752,
+          "n_labelled": 752,
+          "volatile_label_share": 0.0,
+          "auc": null,
+          "mean_score": 0.9727781681207559
+        },
+        "rule_verdict": "underpowered",
+        "why": "one window has a single label class, AUC undefined",
+        "delta_share": -0.013354037267080746,
+        "score_drift": {
+          "ks": 0.11490187656931411,
+          "psi": 0.006751916888337292,
+          "overall": "moderate",
+          "ref_mean": 0.9653175847399993,
+          "cur_mean": 0.9727781681207559
+        },
+        "label": {
+          "vol_threshold": 0.005,
+          "vol_threshold_source": "market_features_meta",
+          "n_label_bars": 175291,
+          "candles": "datasets-out/market_raw/BTCUSDT/15m/v002/data.jsonl"
+        }
+      }
+    },
+    "score_semantics": "served score = max class probability for multiclass heads (scripts/ml/_regime_score_semantics.py): the split-mode AUC is a confidence-vs-label relation, not a P(volatile) ranking",
+    "thresholds": {
+      "share_move": 0.05,
+      "auc_drop": -0.03,
+      "min_labelled": 200
+    }
+  },
+  "note": "served score = max class probability for multiclass heads (scripts/ml/_regime_score_semantics.py): the split-mode AUC is a confidence-vs-label relation, not a P(volatile) ranking. Recomputes statistics only; demotes/promotes/retrains nothing (every stage change is a Tier-3 proposal)."
+}
