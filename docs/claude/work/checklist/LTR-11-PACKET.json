@@ -1,0 +1,31 @@
+{
+  "id": "LTR-11-PACKET",
+  "title": "Live trade review: scripts/ops/live_review_packet.py, the repo-built decision packet per open package (state, features, LTR-0 table, regime, mechanics, cost, per-account bounds, info_cutoff_at, packet hash); spec = LTR-3's hand-assembled-inputs list. Before LTR-4.",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 8,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-25 session_017YfAAmprJiMhCa8BrwED6k] scripts/ops/live_review_packet.py <order_package_id>|--all-open [--write] built; tests/test_live_review_packet.py (14 cases) reproduce the golden packets' fields from fixtures of the same state. LIVE RUN 16:4xZ: --all-open found the SAME 9 packages as the hand run (telemetry open 7 + prop filled ticket + GLD from the journal), all 9 mechanics verdicts equal the golden verdicts, 36 s, 3 journal pages max with early stop. Packet v2 = strict superset of the v1 keys; packet_sha = sha256 of canonical JSON, same as check_live_review_records.packet_problems.\nFILLED vs the hand run: (a) atr_now_over_entry from /api/bot/candles, ATR formula checked EXACT against meta.atr at entry (0.012007142857142852); regime.trend_now = ADX-14 via the live detector; (c) calendar from config/economic_calendar.yaml with an explicit state; (d) phone amend refusal reason from prop status phone_events ('sheet volume 0.4 = ticket qty 0.*'); news decision per symbol; previous review; correlated open packages. Open set from telemetry + public positions + prop tickets, no 2000-row trade paging.\nSTILL NULL, each with a reason in packet.missing_inputs (could-not-look != zero): (1) perp FUNDING: Bybit public API is geo-blocked from session networks and no diag route carries it; (2) regime.vol_now / cell_now: calm/volatile uses frozen bucket edges that live only in the VM model registry; (3) context.calendar is STALE: config/economic_calendar.yaml newest event is 2026-07-30, so 'no events' is NOT known (the producer is not refreshing it); (4) tradeify_1 / velotrade_1 venue positions: their status carries no positions field; (5) per-account amend risk read: read_if_amend is a best-effort, not RiskManager (LTR-6); (6) live-vs-backtest verdict not assembled; (7) GLD mark not reconstructed.\nCompanion: diag route open_packages (one cheap read of every open package+trade) is a separate landing:hold PR, src/web/api; the generator works without it.",
+  "priority_rank": 4,
+  "updated_at": "2026-10-25T16:21:33Z",
+  "updated_by": "session_017YfAAmprJiMhCa8BrwED6k",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "_seq": 677,
+  "observation": {
+    "what": "LTR-4 (the routine) consumes this generator's packets unattended: a reviewer session spawned by the LTR-4 gate reads a packet produced by scripts/ops/live_review_packet.py (assembled_by starts with 'generator') and appends a schema-valid reviews.jsonl row whose packet_sha matches that packet",
+    "how_to_check": "grep -c '\"assembled_by\": \"generator' comms/live_review/packets/*.json; python3 scripts/ci/check_live_review_records.py exits 0 on rows whose packet is generator-assembled",
+    "due_by": "2026-11-08T00:00Z"
+  },
+  "writeback": {
+    "roadmap": "L-ATM: scripts/ops/live_review_packet.py landed (repo-built decision packet, packet_version 2)",
+    "arch": "none: a read-only ops script + tests, no runtime component"
+  }
+}
