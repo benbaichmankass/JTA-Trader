@@ -20,6 +20,9 @@ shape scripts/research/script_run.py derives an E5 record from. A check that can
   command_resolvable  every queued unit's python run.command names a script that exists in the checkout
   duplicate_commands  no two queued authored units run the identical command (a re-test counted twice)
   power_declared      every queued authored inferential unit declares power.expected_n and a registered-before-run rule
+  roadmap_ref_valid   every queued authored unit's `roadmap:` is a list of milestone ids that exist in docs/roadmap/milestones.yaml
+  never_dispatched_age  at most 10 queued authored units, free of any requires_result gate, sit undispatched for > 7 days (id date)
+  related_paths_exist every path-shaped `related:` entry of a queued authored unit exists in the checkout
 """
 from __future__ import annotations
 
@@ -251,12 +254,64 @@ def power_declared() -> dict[str, Any]:
             "measurement": {"violations": len(bad), "sample": bad[:10]}}
 
 
+NEVER_DISPATCHED_DAYS = 7    # registered in RQ-THEME-AUTHOR-1025 infra unit never_dispatched_age
+NEVER_DISPATCHED_MAX = 10
+_PATH_SUFFIXES = (".py", ".md", ".yaml", ".yml", ".json", ".jsonl", ".sh", ".ts")
+
+
+def roadmap_ref_valid() -> dict[str, Any]:
+    import yaml
+    ms = yaml.safe_load((ROOT / "docs" / "roadmap" / "milestones.yaml").read_text(encoding="utf-8")) or {}
+    known = {m.get("id") for m in ms.get("milestones") or [] if isinstance(m, dict)}
+    units, bad = _queued_authored(), {}
+    for i, u in units:
+        rm = u.get("roadmap")
+        if rm is None:
+            continue       # a missing roadmap ref is queue_integrity / roadmap_map's finding, not this check's
+        if not isinstance(rm, list):
+            bad[i] = f"roadmap is {type(rm).__name__}, not a list"
+        elif [r for r in rm if r not in known]:
+            bad[i] = "unknown milestone id(s): " + ",".join(str(r) for r in rm if r not in known)
+    return {"verdict": "fail" if bad else "pass", "read_state": "measured" if units and known else "no_data",
+            "population": f"{len(units)} queued authored unit(s) against {len(known)} milestone id(s)", "n": len(units),
+            "measurement": {"violations": len(bad), "sample": dict(list(bad.items())[:10])}}
+
+
+def never_dispatched_age() -> dict[str, Any]:
+    import re
+    from datetime import date, datetime, timezone
+    today = datetime.now(timezone.utc).date()
+    units, old = _queued_authored(), []
+    for i, u in units:
+        m = re.match(r"RQ-(\d{4})(\d{2})(\d{2})", i)
+        if not m or u.get("last_dispatched_at") or u.get("requires_result"):
+            continue
+        if (today - date(int(m[1]), int(m[2]), int(m[3]))).days > NEVER_DISPATCHED_DAYS:
+            old.append(i)
+    return {"verdict": "fail" if len(old) > NEVER_DISPATCHED_MAX else "pass", "read_state": "measured" if units else "no_data",
+            "population": f"{len(units)} queued authored unit(s); undispatched, ungated and older than {NEVER_DISPATCHED_DAYS} d counted",
+            "n": len(units), "measurement": {"over_age": len(old), "max": NEVER_DISPATCHED_MAX, "sample": old[:10]}}
+
+
+def related_paths_exist() -> dict[str, Any]:
+    units, missing = _queued_authored(), []
+    for i, u in units:
+        for r in u.get("related") or []:
+            if isinstance(r, str) and "/" in r and r.endswith(_PATH_SUFFIXES) and not (ROOT / r).exists():
+                missing.append({"unit": i, "path": r})
+    return {"verdict": "fail" if missing else "pass", "read_state": "measured" if units else "no_data",
+            "population": f"{len(units)} queued authored unit(s); path-shaped related: entries checked", "n": len(units),
+            "measurement": {"n_missing": len(missing), "missing": missing[:10]}}
+
+
 CHECKS = {"runner_deps": runner_deps, "results_readable": results_readable, "queue_integrity": queue_integrity,
           "disposition_census": disposition_census, "programme_coverage": programme_coverage,
           "machinery_selftests": machinery_selftests,
           "blocked_over_age": blocked_over_age, "theme_supply": theme_supply,
           "value_coverage": value_coverage, "command_resolvable": command_resolvable,
-          "duplicate_commands": duplicate_commands, "power_declared": power_declared}
+          "duplicate_commands": duplicate_commands, "power_declared": power_declared,
+          "roadmap_ref_valid": roadmap_ref_valid, "never_dispatched_age": never_dispatched_age,
+          "related_paths_exist": related_paths_exist}
 
 
 def main() -> int:

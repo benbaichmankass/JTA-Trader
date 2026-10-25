@@ -48,3 +48,25 @@ def test_power_declared_skips_deterministic_and_flags_missing_n(monkeypatch):
                          ("RQ-C", {"kind": "deterministic"})])
     v = ist.power_declared()
     assert v["n"] == 2 and v["measurement"]["sample"][0]["unit"] == "RQ-B"
+
+
+def test_roadmap_ref_valid_flags_string_and_unknown_ids(monkeypatch):
+    _patch(monkeypatch, [("RQ-A", {"roadmap": ["L-OPS"]}), ("RQ-B", {"roadmap": "M28"}), ("RQ-C", {"roadmap": ["NOPE"]}),
+                         ("RQ-D", {})])
+    v = ist.roadmap_ref_valid()
+    assert v["verdict"] == "fail" and set(v["measurement"]["sample"]) == {"RQ-B", "RQ-C"}
+
+
+def test_never_dispatched_age_skips_dispatched_and_gated(monkeypatch):
+    _patch(monkeypatch, [("RQ-20200101-001", {}), ("RQ-20200101-002", {"last_dispatched_at": "x"}),
+                         ("RQ-20200101-003", {"requires_result": {"unit": "RQ-Z"}})])
+    v = ist.never_dispatched_age()
+    assert v["measurement"]["over_age"] == 1 and v["verdict"] == "pass"
+    monkeypatch.setattr(ist, "NEVER_DISPATCHED_MAX", 0)
+    assert ist.never_dispatched_age()["verdict"] == "fail"
+
+
+def test_related_paths_exist_flags_a_missing_path_only(monkeypatch):
+    _patch(monkeypatch, [("RQ-A", {"related": ["scripts/research/infra_selftest.py", "RQ-20260101-001", "docs/nope.md"]})])
+    v = ist.related_paths_exist()
+    assert v["verdict"] == "fail" and v["measurement"]["missing"] == [{"unit": "RQ-A", "path": "docs/nope.md"}]
