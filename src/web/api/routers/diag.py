@@ -3593,6 +3593,51 @@ def get_position_telemetry(
     return read_records(limit=limit, strategy=strategy)
 
 
+@router.get("/open_packages")
+def get_open_packages(request: Request) -> dict[str, Any]:
+    """LTR-11 -- every OPEN order package and every OPEN trade row, in one cheap read.
+
+    ``/journal?table=trades`` is newest-first with a 1000-row clamp, so finding an open trade that
+    opened months ago meant paging ~1.4 MB per page to offset 2000 (measured by hand on 2026-10-25:
+    the costliest step of assembling the live-review decision packet). This filters in SQL.
+
+    * ``packages`` -- ``order_packages`` rows with ``status = 'open'`` (id, leg, symbol, direction,
+      entry/sl/tp, ``meta``, timestamps).
+    * ``open_trades`` -- ``trades`` rows with ``status = 'open'`` (one per account carrying a package).
+    * ``counts`` and ``db_state`` say what was read; ``db_state: db_absent`` is "could not look", never
+      an empty set.
+
+    A package that is closed in ``order_packages`` while an account still holds it (a prop ticket, a
+    missed close) appears here only through its ``open_trades`` row, so the caller reconciles the two.
+    One read-only SQLite connection, no socket, no order path. Tier 1, token-gated.
+    """
+    _require_diag_token(request)
+    if not _DB_PATH.exists():
+        return {"db_state": "db_absent", "packages": [], "open_trades": [], "counts": None}
+    pkg_cols = ("order_package_id, strategy_name, symbol, direction, entry, sl, tp, status, close_reason, "
+                "created_at, updated_at, linked_trade_id, meta")
+    trade_cols = ("id, order_package_id, account_id, account_class, strategy_name, symbol, direction, "
+                  "entry_price, stop_loss, take_profit_1, timestamp, status")
+    try:
+        conn = sqlite3.connect(f"file:{_DB_PATH}?mode=ro", uri=True)
+        try:
+            conn.row_factory = sqlite3.Row
+            packages = [dict(r) for r in conn.execute(
+                f"SELECT {pkg_cols} FROM order_packages WHERE status = 'open' ORDER BY updated_at DESC")]
+            trades = [dict(r) for r in conn.execute(
+                f"SELECT {trade_cols} FROM trades WHERE status = 'open' ORDER BY id DESC")]
+        finally:
+            conn.close()
+    except sqlite3.Error as exc:  # allow-silent: not silent -- logged with its stack and re-raised as a 503 (mirrors _journal_select); never folded into an empty set
+        logger.exception("diag: open_packages sqlite read failed")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"error": "open_packages_unavailable", "detail": f"{type(exc).__name__}: {exc}"},
+        ) from exc
+    return {"db_state": "read", "packages": packages, "open_trades": trades,
+            "counts": {"packages": len(packages), "open_trades": len(trades)}}
+
+
 @router.get("/position_path_history")
 def get_position_path_history(
     request: Request,
