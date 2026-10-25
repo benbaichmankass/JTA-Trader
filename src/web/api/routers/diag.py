@@ -3619,6 +3619,13 @@ def get_position_path_history(
     whether ATR is the trail's own (``monitor``), recomputed
     (``computed_wilder14``), or ``unavailable``.
 
+    BRACKET-ADVISOR-SHADOW: ``advisor_sl_r``/``advisor_tp_r`` are the stop and
+    target a confirmed-but-undeclared lever WOULD set on that bar (same harness
+    functions; ``src/runtime/bracket_advisor.py``), ``advisor_source`` names the
+    lever and its evidence version, and ``advisor_state`` says why a value is
+    absent (enum in the envelope's ``advisor_states``). All four NULL = the
+    advisor did not run on that row. No exit path reads them.
+
     Observe-only: one read-only SQLite connection, no socket, no order path.
     Tier 2.5, token-gated.
     """
