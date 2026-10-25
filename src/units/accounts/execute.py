@@ -2584,6 +2584,13 @@ def _log_trade_to_journal(
                     "account_id": resolved_account_id,
                     "notes": dump_capped(audit_notes, 2000),
                     "order_package_id": pkg_id,
+                    # XRP-REDUCE-OTHER-CLOSES: the reduce order's venue orderId,
+                    # same join key the legacy insert below stamps. Without it
+                    # every reduce leg read broker_order_id NULL although
+                    # notes.trade_id held the filled order (bybit_2 6533/6539,
+                    # both Filled at the venue), so the broker-truth cost sweep
+                    # could never reach a reduce leg. Observability-only.
+                    "broker_order_id": trade_id,
                 })
                 # Reduce handled as a partial close — done. The package
                 # linked_trade_id slot is owned by the primary entry, not a

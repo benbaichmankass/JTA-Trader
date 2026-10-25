@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Order-path file (src/units/accounts/execute.py), Tier 3 per the lane dispatch (XRP-REDUCE-OTHER-CLOSES). The change is one observability column on the intent-reduce audit row (broker_order_id = the reduce order's venue orderId, the same key the legacy insert already stamps); no order, size, price, SL/TP or parent shrink changes. Manager relays to the operator with the venue evidence in the PR body; do not merge without that OK.",
+  "why": "Root-cause of bybit_2 6533/6539: both reduce orders FILLED at the venue and the journal matches the venue; the NULL broker_order_id was the reduce partial-close insert omitting the column. Stamp it, and keep reduce fills out of realized_slippage entry samples."
+}
