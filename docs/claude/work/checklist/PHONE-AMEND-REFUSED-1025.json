@@ -2,7 +2,7 @@
   "id": "PHONE-AMEND-REFUSED-1025",
   "title": "breakout_2 ETH short left open after the strategy exited: every phone exit amend refused on qty (amend carries raw ticket qty 0.40899796; phone typed the floored 0.40; app 2% check)",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "lane PHONE-AMEND-REFUSED-1025",
   "lane": "session_01E6AQpa6i4TYdGD11corkkG",
   "model": null,
@@ -13,8 +13,8 @@
     20122
   ],
   "blocked_on": [],
-  "note": "2026-10-25 MEASURED (live /api/bot/prop/tickets + /status, /api/diag/phone_captures): pkg-2c3f338d9477499b closed sl_cross 10-24 20:02Z; breakout_2 ticket prop-manual-2e786ef17c05 still open on the venue (stop 2409.58 = -1R). 6 exit amends: #a2-#a4 sheet_not_open (tap target covered; PI-20261025-11CORKKG-0001), #a1/#a5/#a6 refused 'sheet volume 0.4 != ticket qty 0.40899796' (floor error 2.2% > app QTY_TOL_FRAC 2%). Only exposed account: tradeify_1/velotrade_1 venue-flat (open_positions [] 16:21Z), breakout_1 no open tickets. Operator 16:22Z via manager: system must resolve it, no hand action. PR #20122 (landing: hold, Tier 3): (1) amend claim carries the venue-floored qty; (2) exit amend retries every closed bar (was 1/2/4/8 backoff; PI-...-0002 done); (3) phone exit buffer 0.2% of feed price (was 0.1% = the app's own refusal line vs venue mark); (4) detector: one trail alert per ticket open past its closed package + scripts/ops/check_ticket_package_divergence.py (live run: 1 divergent of 449 tickets, this one). Closes when: deployed AND this ticket's next amend reports amended AND the checker exits 0 (or the position closes on its stop and the ticket reconciles).",
-  "updated_at": "2026-10-25T16:36:45Z",
+  "note": "MERGED #20122 (5cb2b0b48) 17:42Z; DEPLOYED: /api/diag/version 18:33Z ict-web-api.service at 4d0b01957 (contains the fix). OBSERVED 18:33Z (/api/bot/prop/tickets): breakout_2 prop-manual-2e786ef17c05 exit amends #a7 and #a8 both 'amended' and read back on the terminal; resting stop 2409.58 (-1R) -> 2362.79 -> 2361.92 (inside the 2367.4 entry: the stop now locks a small profit), fails 0. Venue 18:28Z: short still open, mark 2354.43. The ticket remains open-vs-closed-package BY DESIGN until that stop fills (no close control on the phone path). CLOSES WHEN: python3 scripts/ops/check_ticket_package_divergence.py exits 0 (the stop filled and the ticket reconciled). Follow-up PI-20261025-11CORKKG-0001 (sheet_not_open) open; PI-...-0002 done.",
+  "updated_at": "2026-10-25T18:33:58Z",
   "updated_by": "session_01E6AQpa6i4TYdGD11corkkG",
   "roadmap": [
     "L-PROP"
