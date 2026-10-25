@@ -6,6 +6,11 @@
   },
   "id": "PI-20261018-ARBVJQYT-0001",
   "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-10-29",
+    "how_to_check": "python3 scripts/research/research_slo.py --json --no-gh | grep theme_share_min_ratio",
+    "what": "research SLO theme_share_min_ratio >= 0.5 after THEME-AUTHOR-1022 units fire; if still red with no theme at 0 fires, decide starve_hours <= 168 or restate the SLO threshold (not silently)"
+  },
   "origin": {
     "kind": "session",
     "ref": "lane DISPATCH-MONEY-FIRST-1018 (manager session_01VduHYzdaXe27wTDBLSu8ao, operator popup 2026-10-18 ~06:40Z)",
