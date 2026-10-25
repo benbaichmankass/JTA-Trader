@@ -76,7 +76,7 @@ def read_journal(db: str) -> Tuple[Dict[Cell, Dict[str, Any]], Optional[str]]:
         rows = con.execute(
             "SELECT strategy_name, symbol, notes, pnl, timestamp, closed_at FROM trades "
             "WHERE status = 'closed' AND COALESCE(is_backtest, 0) = 0").fetchall()
-    except sqlite3.Error as exc:
+    except sqlite3.Error as exc:  # allow-silent: unreadable journal is returned as an explicit "journal unreadable" why, never empty-as-zero
         return {}, f"journal unreadable: {type(exc).__name__}: {exc}"
     out: Dict[Cell, Dict[str, Any]] = {}
     for r in rows:

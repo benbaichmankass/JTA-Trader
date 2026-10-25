@@ -316,9 +316,16 @@ def _default_paths() -> Tuple[Path, Path]:
     return runtime_logs_dir() / "shadow_predictions.jsonl", Path(factory._resolve_default_registry_root())
 
 
-def _latest_candles(symbol: str, tf: str) -> Optional[Path]:
+def _latest_candles(symbol: str, tf: str, version: Optional[str] = None) -> Optional[Path]:
+    """Declared dataset version when given; otherwise the alphabetically-last one, printed so the pick is never silent."""
     import glob
-    c = sorted(glob.glob(str(REPO / "datasets-out" / "market_raw" / symbol / tf / "*" / "data.jsonl")))
+    base = REPO / "datasets-out" / "market_raw" / symbol / tf
+    if version:
+        pinned = base / version / "data.jsonl"
+        print(f"[input] {symbol}/{tf}: {pinned} (declared --dataset-version)", file=sys.stderr)
+        return pinned if pinned.is_file() else None
+    c = sorted(glob.glob(str(base / "*" / "data.jsonl")))
+    print(f"[input] {symbol}/{tf}: {c[-1] if c else '(none)'} (alphabetically last of {len(c)}; pin with --dataset-version)", file=sys.stderr)
     return Path(c[-1]) if c else None
 
 
@@ -346,7 +353,7 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
             if sym_tf is None:
                 per_head[mid] = {"rule_verdict": "underpowered", "why": "no SYMBOL/tf given: cannot resolve the label candles"}
                 continue
-            candles = _latest_candles(*sym_tf)
+            candles = _latest_candles(*sym_tf, version=args.dataset_version)
             if candles is None:
                 per_head[mid] = {"rule_verdict": "underpowered", "why": f"no market_raw candles for {sym_tf[0]}/{sym_tf[1]}"}
                 continue
@@ -394,6 +401,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--ref-start", default="2026-09-04T00:00:00Z")
     ap.add_argument("--ref-end", default="2026-10-04T00:00:00Z")
     ap.add_argument("--cur-days", type=float, default=7.0)
+    ap.add_argument("--dataset-version", help="market_raw version directory to pin (default: alphabetically last, printed)")
     ap.add_argument("--forward-m", type=int, default=5)
     ap.add_argument("--vol-threshold", type=float, default=None)
     ap.add_argument("--scan-days", type=float, default=SCAN_DAYS)
