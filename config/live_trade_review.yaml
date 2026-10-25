@@ -1,0 +1,27 @@
+# Live trade review — apply switch (LTR-6R-APPLY-PATH; design
+# docs/plans/live-trade-review-DESIGN.md § 4).
+#
+# apply_mode is a sanctioned *_MODE selector (CLAUDE-RULES-CANONICAL § Prime
+# Directive rule 6), NOT a gate on trading and NOT a halting latch:
+#   off       — the review still runs and records; nothing is computed per account
+#   recommend — each account's RiskManager.approve_amend is computed and recorded
+#               (account_reads), nothing is sent to any venue
+#   apply     — an approved/clipped amend is handed to that account's executor,
+#               and ONLY under a granted mandate (config/mandates.yaml,
+#               MD-LIVE-TIGHTEN-SL) — apply_mode alone never applies anything
+#
+# ONLY A COMMIT CHANGES THIS FILE. No runtime code writes it. It never stops
+# trading and never stops reviewing; it only decides whether a recommendation
+# is applied. Setting `apply` is the operator's act (Tier 3).
+apply_mode: recommend
+
+# Per-account override (same three values). An account absent here inherits
+# the global value. Example (NOT active):
+#   accounts:
+#     bybit_portfolio: {apply_mode: off}
+accounts: {}
+
+# Noise floor (design § 3 guardrails): a review stop must sit at least this
+# many x the leg's ATR beyond the mark. An account may raise its own floor with
+# config/accounts.yaml::<acct>.risk.live_review_min_buffer_atr (never lower it).
+min_buffer_atr: 1.0

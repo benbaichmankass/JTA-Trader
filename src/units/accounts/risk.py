@@ -392,6 +392,13 @@ class RiskManager:
         # share one basis or margin use would read as a loss.
         self._live_equity: Optional[float] = None
         self.risk_pct: float = float(config.get("risk_pct", 0.01))
+        # LTR-6R: this account's own noise floor for a live-review stop amend
+        # (a multiple of the leg's ATR beyond the mark). Unset = the review's
+        # global ``min_buffer_atr``; an account can only make it stricter.
+        self.live_review_min_buffer_atr: Optional[float] = (
+            float(config["live_review_min_buffer_atr"])
+            if config.get("live_review_min_buffer_atr") is not None else None
+        )
         # ── Per-account EXPOSURE ceiling (2026-08-07, operator-directed) ────
         # Gross open notional, as a MULTIPLE OF EQUITY, that this account may
         # carry. ``0`` / unset = no ceiling (behaviour byte-for-byte unchanged
@@ -876,6 +883,41 @@ class RiskManager:
     def approve(self, order: OrderPackage) -> bool:
         ok, _reason = self.evaluate(order)
         return ok
+
+    def approve_amend(self, intent: Any, account: Any) -> Any:
+        """Per-account gate for a live-trade-review AMEND of an OPEN package
+        (LTR-6R-APPLY-PATH; operator directive 2026-10-25: the review acts at
+        the package level and each account decides inside its own bounds).
+
+        ``intent`` is a ``LiveReviewIntent``, ``account`` this account's
+        ``AmendAccountView``. Returns an ``AmendVerdict`` — approve / clip /
+        refuse, with a reason. It enforces tighten-only, the ``min_buffer_atr``
+        noise floor (the larger of the intent's and this account's own
+        ``risk.live_review_min_buffer_atr``), one amend per package per closed
+        bar, the account mode, the strategy's ``execution: shadow`` and the
+        daily-DD switch ("keep open, block new": a tripped account's open
+        positions keep their SL/TP until the reset). Never a halt; never
+        writes ``mode``; a refusal is for this intent on this account only."""
+        from src.runtime import live_review_intent as _lri
+
+        # The switch as the trader LAST OBSERVED it (no observe() here: an
+        # amend gate must not move the switch's own state or send its alerts).
+        dd_blocks: Optional[bool]
+        if not self.dd_switch.cfg.armed:
+            dd_blocks = False
+        else:
+            try:
+                blocks = self.dd_switch.blocks_new_entries()
+                read = (self.dd_switch.status() or {}).get("read_state")
+                dd_blocks = None if (not blocks and read in (
+                    _dd.READ_UNREADABLE, _dd.READ_NOT_OBSERVED)) else blocks
+            except Exception as exc:  # noqa: BLE001 — could not look, never "clear"
+                logger.warning("approve_amend: dd switch read failed for %s: %s",
+                               self.account_id, exc)
+                dd_blocks = None
+        own = getattr(self, "live_review_min_buffer_atr", None)
+        return _lri.decide_amend(intent, account, dry_run=self.dry_run,
+                                 dd_blocks=dd_blocks, account_min_buffer_atr=own)
 
     def note_live_equity(self, equity_usd: Optional[float]) -> None:
         """Feed this dispatch's live TOTAL equity to the daily-DD switch."""

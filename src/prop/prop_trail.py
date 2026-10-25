@@ -133,8 +133,15 @@ def _floor_tf(t: datetime, tf_min: int) -> datetime:
 
 def plan_trail(*, leg: Mapping[str, Any], direction: str, entry: float, initial_sl: float,
                signal_time: datetime, resting_sl: Optional[float], candles: Optional[pd.DataFrame],
-               now: datetime, price_step: Optional[float] = None) -> TrailPlan:
+               now: datetime, price_step: Optional[float] = None,
+               sl_floor: Optional[float] = None) -> TrailPlan:
     """Replay ``scripts/backtest_trend.py``'s trail for one open trade.
+
+    ``sl_floor`` (LTR-6R / LTR-8 minimal): a stop a live-review amend asked for
+    on this ticket (``meta.sl_floor``), already approved by THIS account's own
+    ``RiskManager.approve_amend``. The planned stop is never looser than it, so
+    the trail TIGHTENS TO the floor through the same guards as any trail step
+    (venue-quote buffer, bounded rollout, re-read) and never fights it.
 
     ``entry`` / ``initial_sl`` are the TICKET's (the strategy's decision-bar
     close and its ATR stop); the harness's ``entry``/``sl`` are the same two
@@ -198,7 +205,13 @@ def plan_trail(*, leg: Mapping[str, Any], direction: str, entry: float, initial_
             trail = min(trail, ext + tm * atr)
             mfe = max(mfe, (entry - ext) / risk)
 
+    floor = _f(sl_floor)
+    floored = False
+    if floor is not None and floor > 0 and ((long_ and floor > trail) or (not long_ and floor < trail)):
+        trail, floored = floor, True
     detail = {"atr": atr, "ext": ext, "mfe_r": round(mfe, 4), "trail_mult_last": None if not len(bars) else tm}
+    if floored:
+        detail["sl_floor"] = floor
     close_lever = None
     n = len(bars)
     if n:
@@ -442,7 +455,8 @@ def run_trail_step(*, adapter: Any, page: Any, api: Any, cfg: ExecutorConfig, mo
             res.log("trail_skip", ticket_id=tid, why=f"candles failed ({type(exc).__name__})")
         plan = plan_trail(leg=leg, direction=p.side or "", entry=entry, initial_sl=isl,
                           signal_time=sig_t, resting_sl=p.stop_loss, candles=candles, now=now,
-                          price_step=_f((cfg.symbols.get(bot_sym) or {}).get("price_step")))
+                          price_step=_f((cfg.symbols.get(bot_sym) or {}).get("price_step")),
+                          sl_floor=_f(t.get("sl_floor")))
         tst = st.setdefault(str(tid), {})
         res.log("trail_plan", ticket_id=tid, venue=venue, action=plan.action, why=plan.why,
                 resting_sl=p.stop_loss, new_sl=plan.sl, replay_sl=plan.replay_sl, bars=plan.bars,
