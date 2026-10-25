@@ -9,11 +9,13 @@
   "ceiling_usd": 6,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    20163
+  ],
   "blocked_on": [],
   "note": "[2026-10-25 session_01KpCVKE91s6Km3dqFV8dShz] Built: comms/schema/desk_packet.schema.json (packet v3: entry/in_trade/exit block matrix, outcome T1 exit-only, explicit ML absence), comms/schema/desk_decision.schema.json (closed action enum per role, role->packet-kind map, external_context rule, bybit_1 touch records), comms/desk/ (decisions.jsonl, touches.jsonl, packets/; empty), scripts/ci/check_desk_records.py = guard desk-records-guard (sibling; live-review-records-guard unchanged and still green on the 9 real rows) with --self-test (57 planted-bad/good cases), tests/test_desk_records.py. features_at_review projection = check_desk_records.project_features. NOT done / deferred: no generator emits v3 packets yet (live_review_packet.py is still v2; DESK-1/DESK-5 build v3 from it); no desk row exists on main yet. Merged != deployed != observed: this is schema+guard only, nothing to deploy.",
   "priority_rank": 4,
-  "updated_at": "2026-10-25T20:23:01Z",
+  "updated_at": "2026-10-25T20:33:28Z",
   "updated_by": "session_01KpCVKE91s6Km3dqFV8dShz",
   "roadmap": [
     "L-DESK",
