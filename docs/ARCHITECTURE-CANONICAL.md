@@ -1142,12 +1142,14 @@ training sessions follow the established workflow:
    [`comms/claude_strategy_scores.jsonl`](../comms/claude_strategy_scores.jsonl)
    (the durable, repo-tracked score log; supersedes the older
    `comms/claude_trade_scores.jsonl` keyed by `trade_id`, which carried
-   no real rows). These labelled grades flow into the `trade_outcomes`
-   family
-   ([`ml/datasets/families/trade_outcomes.py`](../ml/datasets/families/trade_outcomes.py))
-   and the `setup_labels` family
-   ([`ml/datasets/families/setup_labels.py`](../ml/datasets/families/setup_labels.py))
-   as their primary label source.
+   no real rows; retired 2026-10-25). ⚠️ **These grades do NOT flow into
+   `ml/` today** (corrected 2026-10-25, CJ-0 F2; this step read "flow into the
+   `trade_outcomes` family and the `setup_labels` family as their primary label
+   source"). MEASURED: `grep -rn "claude_strategy_scores\|claude_trade_scores" ml/`
+   returns nothing, and `trade_outcomes` / `setup_labels` read the journal's
+   realized outcomes. 4,127 of 4,347 rows are a deterministic rubric script,
+   not Claude judgment. The planned path is the `claude_judgments` family:
+   [`docs/plans/ml-claude-distillation-DESIGN.md`](plans/ml-claude-distillation-DESIGN.md).
 2. **Build datasets.** `python -m ml.datasets build <family>` writes
    versioned artifacts under `<output>/<family>/<scope>/<tf>/<version>/`
    with mandatory metadata + leakage discipline. Buildable families:

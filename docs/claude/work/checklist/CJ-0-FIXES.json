@@ -2,21 +2,38 @@
   "id": "CJ-0-FIXES",
   "title": "Claude->ML: design \u00a7 5 fixes F1-F6 (retire claude_trade_scores, correct ARCHITECTURE/training-center claims, fix baseline-setup-quality-audit.yaml description, author_kind + rubric_version in the rubric, retire review_journal family, vocab/dedupe) + diag read of insights_history row count",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "build lane (manager dispatch)",
-  "lane": "session_01Qd8ZiVhVd6w91CUCmZbxhs",
+  "lane": null,
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 4,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    20100
+  ],
   "blocked_on": [],
-  "note": "From docs/plans/ml-claude-distillation-DESIGN.md \u00a7 7 (merged e8d1cf66, operator-approved). Parent ML-CLAUDE-DISTILL-DESIGN.  Dispatched 2026-10-25 14:31Z by session_01SrYqLY4Ui9RKns12r2zthj: fresh Sonnet lane (doc/rubric fixes, no order path), ceiling $4.",
+  "note": "F1-F6 + insights_history diag read done in PR. landed_unproven until merged; closes on merge. Next: CJ-2 consumes ml/datasets/claude_scores_normalise.py. | Dispatch note (main): From docs/plans/ml-claude-distillation-DESIGN.md \u00a7 7 (merged e8d1cf66, operator-approved). Parent ML-CLAUDE-DISTILL-DESIGN.  Dispatched 2026-10-25 14:31Z by session_01SrYqLY4Ui9RKns12r2zthj: fresh Sonnet lane (doc/rubric fixes, no order path), ceiling $4. [2026-10-25 16:05Z session_01UKBXozpiJicMHHyMp47MnN] merged #20100 squash 6052b1d by manager; lane archived, final spend $2.22.",
   "priority_rank": 3,
-  "updated_at": "2026-10-25T14:31:33Z",
-  "updated_by": "session_01SrYqLY4Ui9RKns12r2zthj",
+  "updated_at": "2026-10-25T16:03:29Z",
+  "updated_by": "session_01Qd8ZiVhVd6w91CUCmZbxhs",
   "roadmap": [
     "M25"
+  ],
+  "writeback": {
+    "roadmap": "M25: CJ-0 F1-F6 landed; insights_history measured 214,093 rows all template:v1 (design 1.1 #8)",
+    "arch": "ARCHITECTURE-CANONICAL training workflow step 1 corrected: grades do not feed ml/"
+  },
+  "observation": {
+    "what": "next claude_strategy_scores rows written by score_order_packages/grade_closed_trades carry author_kind=rubric_script + rubric_version",
+    "how_to_check": "tail comms/claude_strategy_scores.jsonl after the next grading run",
+    "due_by": "2026-11-01T00:00Z"
+  },
+  "lane_history": [
+    {
+      "lane": "session_01Qd8ZiVhVd6w91CUCmZbxhs",
+      "archived_at": "2026-10-25T16:03:29Z"
+    }
   ],
   "_seq": 666
 }

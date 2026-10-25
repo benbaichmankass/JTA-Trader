@@ -1,4 +1,8 @@
 {
+  "status": "retired",
+  "retired_at": "2026-10-25",
+  "superseded_by": "comms/schema/claude_strategy_scores.schema.json",
+  "retired_reason": "0 rows ever written (one _meta line). Per-trade grading moved into comms/claude_strategy_scores.jsonl with keyed_on=linked_trade_id (JC-SA-01, 2026-09-29). Nothing writes comms/claude_trade_scores.jsonl; the file is kept (append-only history), do not delete or fill it. Design: docs/plans/ml-claude-distillation-DESIGN.md section 5 F1.",
   "_comment": "Schema for comms/claude_trade_scores.jsonl — the durable, repo-tracked log of Claude's per-trade decision scores produced by .claude/skills/health-review/SKILL.md. APPEND-ONLY JSONL: one JSON object per graded trade, keyed by `trade_id` so it cross-references trade_journal.db::trades. The file may carry a single leading {\"_meta\": ...} line (skip rows without `trade_id`). This is the Tier-1 repo-artifact persistence path (operator decision 2026-05-24): scores live here now and are ingestible by the trainer (the repo is git-pulled onto the trainer VM each cycle). PLANNED Tier-2 follow-up: ingest these rows into their OWN table (`claude_trade_scores`, separate from `trades`) in the canonical store, cross-referenced by trade_id, and surface the score alongside trade data in the dashboard app. `decision_grade_score` mirrors the review_journal family mapping (A/B/C/D/F -> 4/3/2/1/0) so that ingestion is a straight column copy. This file is documentation only — it is not validated as a JSON Schema.",
   "schema_version": 1,
   "record": {

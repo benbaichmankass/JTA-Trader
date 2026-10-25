@@ -47,6 +47,11 @@ register, never in a session's head or a trigger prompt: a new manager inherits 
    `(100 − weekly%) / days to reset`, and converts it to a suggested lane count using the measured cost per
    lane-hour. Choose 1–5 lanes from that by judgment. A missing or stale reading is the first thing to
    fix; until then run one lane. Fable has its own weekly bar; it is not free capacity (§ "Model by task class").
+   **The rate is net of the live-trade-review reserve** (`docs/plans/live-trade-review-DESIGN.md` § 6.4):
+   pass `--live-open N` (open live/prop packages, from `live_review_due`); without it the state reads
+   `exposure_unknown` and the reserve is sized at the roster bound, never 0. When the output prints
+   `RESERVE BREACHED`, start no new non-routine lanes and count the review routine as the always-one-lane
+   (§ 6.6, operator Q5). Report gross, reserve and net in step 6.
 3. **DISPATCH.** While fewer lanes run than step 2 chose, take the top row of `checklist.py queue`
    (`queued`, nothing in `blocked_on`, lowest `priority_rank`), set it `in_flight` with its `lane`, and
    dispatch it (§ "Spawning", § "Required dispatch block"). **Never zero lanes while the queue is

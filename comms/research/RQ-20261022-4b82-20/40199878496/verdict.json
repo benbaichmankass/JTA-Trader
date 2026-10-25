@@ -1,0 +1,114 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "michigan_sentiment releases (live feed + survey-consensus backfill) joined to TLT daily closes",
+  "n": 278,
+  "measurement": {
+    "kind": "michigan_sentiment",
+    "symbol": "TLT",
+    "snapshot_files": [
+      "comms/macro/econ_calendar_snapshots.jsonl",
+      "comms/macro/econ_calendar_snapshots_survey_backfill.jsonl"
+    ],
+    "releases": 279,
+    "releases_with_value": 279,
+    "price_bars": 5487,
+    "first_release": "2015-01-16",
+    "last_release": "2026-10-23",
+    "release_start": null,
+    "release_end": null,
+    "anchor_shift_td": 0,
+    "releases_after_window": 279,
+    "rows": [
+      {
+        "horizon_days": 1,
+        "n": 278,
+        "ic": -0.007924,
+        "ic_t": -0.132,
+        "overlap_factor": 1.0,
+        "n_eff": 278.0,
+        "ic_t_eff": -0.132,
+        "pearson": 0.041421,
+        "sign_hit_rate": 0.443636,
+        "mean_fwd_return": -0.000605
+      },
+      {
+        "horizon_days": 3,
+        "n": 278,
+        "ic": -0.108849,
+        "ic_t": -1.819,
+        "overlap_factor": 1.0,
+        "n_eff": 278.0,
+        "ic_t_eff": -1.819,
+        "pearson": -0.057684,
+        "sign_hit_rate": 0.458182,
+        "mean_fwd_return": -0.000397
+      },
+      {
+        "horizon_days": 5,
+        "n": 278,
+        "ic": -0.082269,
+        "ic_t": -1.371,
+        "overlap_factor": 1.0,
+        "n_eff": 278.0,
+        "ic_t_eff": -1.371,
+        "pearson": -0.041457,
+        "sign_hit_rate": 0.454545,
+        "mean_fwd_return": 0.000396
+      }
+    ],
+    "summary": {
+      "max_n": 278,
+      "min_honest_n": 12,
+      "sufficient_history": true,
+      "any_flagged_horizon": false,
+      "any_flagged_horizon_overlap_corrected": false,
+      "strongest_ic_horizon_days": 3,
+      "strongest_ic": -0.108849,
+      "strongest_ic_t": -1.819,
+      "strongest_ic_t_eff": -1.819,
+      "t_flag": 2.0,
+      "verdict": "no_edge_at_tested_horizons"
+    },
+    "rule": {
+      "primary": [
+        1,
+        3,
+        5
+      ],
+      "min_n": 100,
+      "t_bar": 3.0,
+      "expected_sign": "either"
+    },
+    "per_horizon": [
+      {
+        "horizon_days": 1,
+        "n": 278,
+        "ic": -0.007924,
+        "ic_t_eff": -0.132,
+        "n_ok": true,
+        "t_reached": false,
+        "sign_ok": true
+      },
+      {
+        "horizon_days": 3,
+        "n": 278,
+        "ic": -0.108849,
+        "ic_t_eff": -1.819,
+        "n_ok": true,
+        "t_reached": false,
+        "sign_ok": true
+      },
+      {
+        "horizon_days": 5,
+        "n": 278,
+        "ic": -0.082269,
+        "ic_t_eff": -1.371,
+        "n_ok": true,
+        "t_reached": false,
+        "sign_ok": true
+      }
+    ]
+  },
+  "note": "no pre-registered horizon reached the t-bar in the expected sign"
+}

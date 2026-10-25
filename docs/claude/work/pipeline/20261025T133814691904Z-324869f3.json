@@ -1,0 +1,17 @@
+{
+  "based_on": "20261025T092228569625Z-aa1d3702.json",
+  "due_when": {
+    "due_date": "2026-11-01",
+    "kind": "date"
+  },
+  "id": "PI-20261025-FQCEYPUY-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane OLD-PR-SWEEP-1025 disposition of PR #16233",
+    "rerun": "read PR #16233 (pull_request_read get: state, mergeable_state) and grep origin/main for the files it adds"
+  },
+  "state": "done",
+  "terminal_reason": "PR #16233 merged 2026-10-25 12:49Z (bounded replay_trade lookback); RQ-20260927-003 was still queued with a failed producer, so the fix was wanted.",
+  "what": "exit_head_replay.replay_trade on main still has no lookback (full-prefix ATR, O(history x bars held)); PR #16233 adds opt-in lookback=500 plus an equality test and wires scripts/research/exit_head_prop_swap_feasibility.py. Tier-1. Merge main and land, unless RQ-20260927-003 has already completed (2 result files under research/results; not read by this lane)."
+}

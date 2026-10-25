@@ -1,0 +1,17 @@
+{
+  "based_on": "20261025T092229887859Z-a2a49678.json",
+  "due_when": {
+    "due_date": "2026-11-01",
+    "kind": "date"
+  },
+  "id": "PI-20261025-FQCEYPUY-0007",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane OLD-PR-SWEEP-1025 disposition of PR #11933",
+    "rerun": "read PR #11933 (pull_request_read get: state, mergeable_state) and grep origin/main for the files it adds"
+  },
+  "state": "done",
+  "terminal_reason": "PR #11933 merged to main 2026-10-25 (d2e7eb8a, the superset); PR #12158 closed as superseded by it.",
+  "what": "Decision: PRs #11933 (M20 U3, 73 commits, 4064 lines) and #12158 (U30) both add --tp-at-r to scripts/backtest_ict_scalp.py (outside TIER1_SURFACE, human merge click), and main has no such flag; they conflict. #11933 holds the ict_scalp exit-lever sweep verdicts plus two mutually exclusive Tier-3 proposals (xrp_15m tp_at_r 1.25 vs stop buffer 0.10; one withdrawn). Pick one to land (#11933 is the superset), mine the evidence into research/queue units, then close the other."
+}

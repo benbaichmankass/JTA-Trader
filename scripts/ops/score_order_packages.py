@@ -101,6 +101,14 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 SCHEMA_VERSION = 1
+# CJ-0 F4 (docs/plans/ml-claude-distillation-DESIGN.md § 5): rows written by
+# this script are a deterministic rubric, not an LLM judgment. They say so, and
+# carry the rubric's version so a rubric change is separable from a market
+# change. Bump RUBRIC_VERSION whenever _grade_package's thresholds or
+# per-strategy baselines change. Existing rows are append-only and untouched;
+# the dataset builder derives author_kind for them.
+RUBRIC_VERSION = "1"
+AUTHOR_KIND = "rubric_script"
 SOURCE = "health-review-retroactive"
 
 _LETTER_TO_SCORE = {"A": 4, "B": 3, "C": 2, "D": 1, "F": 0}
@@ -347,7 +355,9 @@ def _iter_delta_records(con: sqlite3.Connection, *, skip_ids: set,
             "order_package_id": d.get("order_package_id"),
             "linked_trade_id": d.get("linked_trade_id"),
             "reviewed_at": reviewed_at,
-            "reviewer": "claude",
+            "reviewer": AUTHOR_KIND,
+            "author_kind": AUTHOR_KIND,
+            "rubric_version": RUBRIC_VERSION,
             "source": "grade-closed-trades-action",
             "strategy_name": d.get("strategy_name"),
             "symbol": d.get("symbol"),
@@ -479,7 +489,9 @@ def _iter_trade_delta_records(con: sqlite3.Connection, *, skip_trade_ids: set,
             "order_package_id": d.get("order_package_id"),
             "linked_trade_id": tid,
             "reviewed_at": reviewed_at,
-            "reviewer": "claude",
+            "reviewer": AUTHOR_KIND,
+            "author_kind": AUTHOR_KIND,
+            "rubric_version": RUBRIC_VERSION,
             "source": "grade-closed-trades-by-trade",
             "keyed_on": "linked_trade_id",
             "account_id": d.get("account_id"),
@@ -668,7 +680,9 @@ def main() -> int:
                 "order_package_id": d.get("order_package_id"),
                 "linked_trade_id": d.get("linked_trade_id"),
                 "reviewed_at": reviewed_at,
-                "reviewer": "claude",
+                "reviewer": AUTHOR_KIND,
+                "author_kind": AUTHOR_KIND,
+                "rubric_version": RUBRIC_VERSION,
                 "source": SOURCE,
                 "strategy_name": d.get("strategy_name"),
                 "symbol": d.get("symbol"),
