@@ -1,0 +1,21 @@
+{
+  "id": "PHONE-AMEND-REFUSED-1025",
+  "title": "breakout_2 ETH short left open after the strategy exited: every phone exit amend refused on qty (amend carries raw ticket qty 0.40899796; phone typed the floored 0.40; app 2% check)",
+  "phase": null,
+  "state": "in_flight",
+  "owner": "lane PHONE-AMEND-REFUSED-1025",
+  "lane": "session_01E6AQpa6i4TYdGD11corkkG",
+  "model": null,
+  "ceiling_usd": 12,
+  "spend_usd": null,
+  "tier": 3,
+  "prs": [],
+  "blocked_on": [],
+  "note": "2026-10-25 MEASURED (live /api/bot/prop/tickets + /status, /api/diag/phone_captures): pkg-2c3f338d9477499b closed sl_cross 10-24 20:02Z; breakout_2 ticket prop-manual-2e786ef17c05 still open on the venue (stop 2409.58 = -1R). 6 exit amends: #a2-#a4 sheet_not_open (tap target covered), #a1/#a5/#a6 refused 'sheet volume 0.4 != ticket qty 0.40899796' (floor error 2.2% > app QTY_TOL_FRAC 2%). Only exposed account: tradeify_1/velotrade_1 venue-flat (open_positions [] 16:21Z), breakout_1 no open tickets. Fix: claim_amend sends the venue-floored qty (src/prop/phone_trail.py::_venue_qty). Operator pinged #20117 to act by hand.",
+  "updated_at": "2026-10-25T16:30:12Z",
+  "updated_by": "session_01E6AQpa6i4TYdGD11corkkG",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "_seq": 675
+}
