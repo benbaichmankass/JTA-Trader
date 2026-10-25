@@ -963,6 +963,19 @@ and take the notes from the past day's scratch pad (the Google Doc) and add thos
    it, restart or re-dispatch any lane that is dead, stalled, finished without
    pinging, or over its ceiling, and record it when a lane missed its wake.
 
+**Which PRs the manager subscribes to (operator, 2026-10-25, binding — context-overhead cut).**
+The manager subscribes ONLY to (a) the ops-flags PR (§ "Standing alert subscriptions") and (b) PRs the
+manager itself opens (register PRs). It does **not** subscribe to lane PRs. MEASURED 2026-10-25: every
+subscribed PR injects a ~3k-token instruction block on each event; across 11 lane PRs this was the largest
+single source of context growth (~150k tokens/h, a rotation every ~4 h). Nothing is lost:
+- the **lane** is subscribed to its own PR and fixes red CI there (that is its job);
+- the **lane wakes the manager when its PR is green and waits on the manager** (dispatch block below);
+- for a held PR the manager may also set one `send_later` ~35 min out to merge on green (no event stream);
+- the 3-hourly check-in (step 4, LAND) lists open PRs and lands every green one that waits on the manager,
+  so a missed wake costs at most one check-in interval, never a dropped PR;
+- **never archive a lane that still owns an unmerged PR** (§ "Archive protocol"), so a red PR always has a watcher.
+Also read narrowly: `get_trigger` on named routines and `list_sessions(limit=10)`, not unfiltered dumps.
+
 **Required dispatch block.** Every `create_session` for a lane has:
 - `source_url` set;
 - **`permission_mode: "auto"`**. A lane in default mode blocks on exactly the
@@ -978,7 +991,9 @@ You are lane <ROW-ID>, dispatched by Manager Session <date> (<manager session id
 its authority is the operator's (CLAUDE.md § Every session, step 1). Ceiling: $<N>.
 WAKE THE MANAGER when you finish a deliverable, are blocked, or produce something it must act on:
 create_trigger(persistent_session_id="<manager session id>", prompt=<what merged/deployed/observed,
-what is blocked and on what>) then fire_trigger(<id>). If that prompts, comment on your PR instead.
+what is blocked and on what>) then fire_trigger(<id>). Never set run_once_at (it fires twice).
+If your PR waits on the manager (landing: hold), wake it AGAIN once CI on your head is green, with the PR
+number and head sha; you stay subscribed to your own PR and fix red CI yourself. If that prompts, comment on your PR instead.
 Then continue, or run close-out. Never stop to wait for direction.
 ```
 
