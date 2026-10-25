@@ -366,6 +366,15 @@ GUARDS: List[Dict[str, Any]] = [
                   ["python3", "scripts/ci/check_checklist_readers.py"]],
     },
     {
+        # LTR-2-RECORDS: comms/live_review/{reviews,outcomes}.jsonl must satisfy
+        # comms/schema/live_review.schema.json (0.25R apply bound + 0.5R shadow arm on every row).
+        "name": "live-review-records-guard",
+        "when": {"globs": ["comms/live_review/**", "comms/schema/live_review.schema.json",
+                           "scripts/ci/check_live_review_records.py"]},
+        "steps": [["python3", "scripts/ci/check_live_review_records.py", "--self-test"],
+                  ["python3", "scripts/ci/check_live_review_records.py"]],
+    },
+    {
         # ROADMAP-LOOP (operator, 2026-10-11): milestone <-> checklist row <-> queue unit is a FIELD
         # (`roadmap`), closing rows carry `writeback`, and the ROADMAP.md live block is generated.
         # Whole-store checks always; enforcement on rows/units the DIFF touches only.
