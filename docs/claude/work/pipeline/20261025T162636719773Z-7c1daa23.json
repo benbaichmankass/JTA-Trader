@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-11-01",
+    "kind": "date"
+  },
+  "id": "PI-20261025-LTR3SKIL-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "checklist LTR-3-SKILL / review LR-20261025T1616Z-pkg-465a5d7d27644027",
+    "rerun": "python3 scripts/research/live_review_outcomes.py --leg ada_pullback_2h --side short --open-r 0.21 --peak-r 0.85 --bars-held 11 --atr-stop-mult 1.5 --json | python3 -c \"import json,sys;d=json.load(sys.stdin);print(d['read_state'],d['population']['comparable'])\"  (insufficient_n = still open)"
+  },
+  "state": "queued",
+  "what": "[LTR-3 data question] ada_pullback_2h (real money, bybit_2 + mirror) has no priced live-review table at early states: scripts/research/live_review_outcomes.py on the leg's evidence corpus (comms/strategy_evidence/runs/2026-10-18/ada_pullback_2h__trades.jsonl, 61 trades, 35 short) gives 18 comparable trades at peak>=0.85R (2026-10-25 16:16Z live state of pkg-465a5d7d27644027), below the n floor 20, so the review recorded no_recommendation/insufficient_n. A 402-trade list of the same leg family exists (eba2-03 arm A, tests/fixtures/ada_pullback_2h_eba2_03_trades.jsonl via PR #20114) but is a research arm, not the leg's Stage-0 evidence record. Decide and build ONE: (a) regenerate the leg's evidence trade list over the full 2020+ window with the live params so live tables price at early states, or (b) give the tool a declared --corpus override with the corpus named in the review row. Never lower the n floor."
+}

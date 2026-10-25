@@ -1,0 +1,177 @@
+{
+ "account_bounds": [
+  {
+   "account_class": "paper",
+   "account_id": "alpaca_paper",
+   "evidence": "record-only paper review; nothing to apply",
+   "read": "no_action"
+  }
+ ],
+ "assembled_by": "hand (LTR-3 first live run); generator scripts/ops/live_review_packet.py not built yet",
+ "cost": {
+  "basis": "evidence-record net_r per trade (fee + slippage + funding, execution_costs.resolve_cost_policy)"
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 0,
+  "giveback_r": 0.2476,
+  "open_r": 1.2963,
+  "peak_r": 1.5439,
+  "r_to_stop": 1.7524,
+  "r_to_target": 0.3798
+ },
+ "info_cutoff_at": "2026-10-25T16:16:30Z",
+ "leg": "gdx_pullback_1d",
+ "mechanics": {
+  "evidence": "package sl 89.19 / tp 78.2519 = Alpaca bracket stop 89.19 (held) / limit 78.25 (alpaca_open_orders 16:16Z)",
+  "verdict": "match"
+ },
+ "order_package_id": "pkg-23929c3f526440c3",
+ "packet_version": 1,
+ "priced_options": {
+  "biases": [
+   "stop fills at the stop price (a gap fills at the open): flatters every tighten, so the real cost of tightening is, if anything, larger",
+   "the original trail path is not recorded: on the recorded exit bar a touched tightened stop is taken as hit (SL-first)",
+   "live peak_r is a lower bound on true MFE",
+   "one leg, one window, i.i.d. trades; parameter selection on the window is not undone"
+  ],
+  "corpus": "comms/strategy_evidence/runs/2026-10-22-odc1022/gdx_pullback_1d__trades.jsonl",
+  "n_floor": 20,
+  "options": [
+   {
+    "action": "hold",
+    "mean_r": null,
+    "n": 0,
+    "n_floor": 20,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "sd_r": null,
+    "state": "insufficient_n",
+    "worst_r": null
+   },
+   {
+    "action": "tighten",
+    "ev_cost_r": null,
+    "ev_cost_se_r": null,
+    "mean_r": null,
+    "n": 0,
+    "n_floor": 20,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "reason": "no_candles",
+    "sd_r": null,
+    "spec": "atr:1.0",
+    "state": "could_not_look",
+    "stop_at_r_now": 1.0439,
+    "within_auto_bound": null,
+    "within_shadow_bound": null,
+    "worst_case_gain_r": null,
+    "worst_r": null
+   },
+   {
+    "action": "tighten",
+    "ev_cost_r": null,
+    "ev_cost_se_r": null,
+    "mean_r": null,
+    "n": 0,
+    "n_floor": 20,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "reason": "no_candles",
+    "sd_r": null,
+    "spec": "atr:1.5",
+    "state": "could_not_look",
+    "stop_at_r_now": 0.7939,
+    "within_auto_bound": null,
+    "within_shadow_bound": null,
+    "worst_case_gain_r": null,
+    "worst_r": null
+   },
+   {
+    "action": "tighten",
+    "ev_cost_r": null,
+    "ev_cost_se_r": null,
+    "mean_r": null,
+    "n": 0,
+    "n_floor": 20,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "reason": "no_candles",
+    "sd_r": null,
+    "spec": "atr:2.0",
+    "state": "could_not_look",
+    "stop_at_r_now": 0.5439,
+    "within_auto_bound": null,
+    "within_shadow_bound": null,
+    "worst_case_gain_r": null,
+    "worst_r": null
+   },
+   {
+    "action": "tighten",
+    "ev_cost_r": null,
+    "ev_cost_se_r": null,
+    "mean_r": null,
+    "n": 0,
+    "n_floor": 20,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "reason": "no_candles",
+    "sd_r": null,
+    "spec": "r:1.0",
+    "state": "could_not_look",
+    "stop_at_r_now": 1.0,
+    "within_auto_bound": null,
+    "within_shadow_bound": null,
+    "worst_case_gain_r": null,
+    "worst_r": null
+   },
+   {
+    "action": "tighten",
+    "ev_cost_r": null,
+    "ev_cost_se_r": null,
+    "mean_r": null,
+    "n": 0,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "sd_r": null,
+    "spec": "r:2.0",
+    "state": "invalid_level",
+    "stop_at_r_now": 2.0,
+    "within_auto_bound": null,
+    "within_shadow_bound": null,
+    "worst_case_gain_r": null,
+    "worst_r": null
+   }
+  ],
+  "population": {
+   "beyond_bars_slack": 0,
+   "comparable": 0,
+   "corpus_trades": 10,
+   "mfe_replay_mismatch": 0,
+   "never_reached_peak": 4,
+   "no_candles": 0,
+   "side_excluded": 6,
+   "side_filter": "short"
+  },
+  "read_state": "insufficient_n",
+  "source": "comms/live_review/tables/LR-20261025T1616Z-pkg-23929c3f526440c3.json"
+ },
+ "regime": {
+  "atr_now_over_entry": null,
+  "cell_entry": null,
+  "cell_now": null
+ },
+ "review_id": "LR-20261025T1616Z-pkg-23929c3f526440c3",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 6,
+  "giveback_r": 0.2476,
+  "open_r": 1.2963,
+  "peak_provenance": "estimated",
+  "peak_r": 1.5439,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 89.19,
+  "tp": 78.25185
+ }
+}
