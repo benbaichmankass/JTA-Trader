@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "due_date": "2026-10-26",
+    "kind": "date"
+  },
+  "id": "PI-20261025-4CGB8QKR-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-10-24 (night), session_01H99zMuLNTn3Sf14cGB8QKr; lane PATH-FLOW-JOIN report on PR #19975 (2026-10-25 01:10Z)",
+    "rerun": "python3 scripts/research/dispatch_queue.py --json | jq '.[]? | select(.id|startswith(\"RQ-20261024-09a6-02\"))'; ls research/queue/ | grep -i 09a6-02"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": "1",
+  "what": "[research authoring] Pre-register a SIBLING of RQ-20261024-09a6-02 (AI-ATM rung A2, flow adds per-bar exit information beyond price state) in which OI is OPTIONAL: an OI-present indicator + OI change where history exists, never imputed 0; taker imbalance and settled funding stay required. Keep 09a6-02's thresholds, folds, cost stack and power basis unchanged otherwise. WHY: the registered 09a6-02 rule drops any leg whose flow column covers <80% of states; OI history starts 2021-12-01 (coverage 74-85%), so 4 of 6 legs drop (471 trades < min 600) and 09a6-02 is INDETERMINATE by construction (MEASURED by lane PATH-FLOW-JOIN over 2,627 trades: taker 100%, funding 99.3-99.8%, OI 74-85%). 09a6-02 itself runs as registered, unedited. DISCLOSE in the new unit: an ungraded ex-OI sensitivity was already seen (6 legs, 2,558 OOS trades, gain -0.00087 nats, CI [-0.00204, 0.00035], 2/6 folds positive) -- unfavourable and CI spans 0, so writing the rule after it is not cherry-picking, but the record must say it. Apply the same power rule as PI-20261024-FPPATHS-0001 (no inflated sd; grade only if realised n clears the measured-sd floor). Route: the daily research authoring lane (trigger 'Daily research authoring lane', 05:53Z) or the next research-ops pass."
+}
