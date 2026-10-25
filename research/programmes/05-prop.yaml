@@ -1206,3 +1206,50 @@ nodes:
   needs_authoring: 'Gradable prop closes exist and match the sim. Per 05 Q7: re-run RQ-20261007-002 (P1-Q7 TP extension
     on the prop routings) against the measured closes, now that a TP revision on dxtrade/phone can be graded; coordinate
     with Programme 01''s Q7 node rather than duplicating it.'
+# ── RESULTS-GRADE-1025 (2026-10-25): variants of the first-test FAILs / underpowered reads of 2026-10-21..23 ──
+- id: P5-RG1025-trend-pooled
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 200
+    confidence: 0.25
+  after:
+  - unit: RQ-20261022-4b82-05
+    verdict: any
+  needs_authoring: 'Trend-Donchian prop-pace candidates read UNDERPOWERED, not dead: 4b82-01/-02/-05/-06/-07 and 7c2b-02/-03 failed or passed
+    a 0.05 R/trade (0.10 for the daily cells) materiality bar at a pooled n_B below the floor computed from the MEASURED per-trade sd
+    (1.25-2.3 R: 4.7k-17.7k per arm; realised 0.3k-8.9k). 4b82-05 D55 (+0.0698 vs B +0.0269 R/trade at 2h, 3 of 6 cells) is the nearest lead.
+    Author ONE unit: D55 vs B on the SAME six perps pooled across the 1h+2h+4h bars as one test (n_B >= 18k), the bar and sd floor registered
+    before the run, cells-pass breadth unchanged. Do not widen the arm set; no Tier-3 change from a read this thin.'
+- id: P5-RG1025-squeeze-wide-confirm
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 150
+    confidence: 0.3
+  after:
+  - unit: RQ-20261022-4b82-09
+    verdict: any
+  needs_authoring: 'RQ-20261022-4b82-03 arm WIDE (squeeze 1h, break-even floor + stale exit + wider compression) PASSED the pooled rule (net_r 43.5R)
+    but at n_B 6.9k < the 9.5k floor for its 0.05 R bar, so it is a LEAD, not a result (squeeze 1h defaults and 4h defaults both FAILED: 326f-10/-12).
+    Author the ONE confirmation the PASS rule requires: arm WIDE vs B on a disjoint window (the most recent 24 months not scored as a tuning window)
+    plus the 2h cell 4b82-09 queues, same statistic and bar, n_B >= 9.5k pooled. Number of cells/arms the lead was chosen from: 4 arms x 6 symbols (multiple-testing denominator).'
+- id: P5-RG1025-fade-pullback-1h
+  goal: G2
+  theme: new_strategy_prop
+  roadmap:
+  - L-PROP
+  value:
+    usd_at_stake_per_month: 50
+    confidence: 0.1
+  after:
+  - unit: RQ-20261022-4b82-08
+    verdict: any
+  needs_authoring: 'Fade (326f-09, 4b82-04: B -0.163 R/trade at n 13k, a well-powered negative) and pullback-1h (4b82-02/-08: B ~0)
+    show NO baseline edge at 1h on these six perps; the lever variants cannot lift a baseline that is not positive. Diagnosis: entry edge absent at the
+    1h bar, not a management problem. Author ONE unit that asks the entry question only: the fade harness range-only gate (ADX <= 20) on the 4h bar,
+    where the squeeze and pullback harnesses were the only ones to show a positive 4h baseline (326f-11 PASS, net 89R). Close the 1h management variants of both without further units.'
