@@ -2,7 +2,7 @@ id: RQ-20261024-9a7e-03
 title: 'EXIT-GIVEBACK-PREDICTOR-GATE: on eth_pullback_2h, does tightening the trail ONLY on trades a vol-controlled giveback
   predictor flags (P>=0.6 at bar 6) beat the declared exit, the same tightening on every trade, AND the same tightening on
   a matched-rate random draw, net R in 5 of 6 folds?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -143,3 +143,16 @@ what_it_does_not_do: 'Edits no config (no src/, no config/), places no order. Ou
   to prove the flags wire up; it graded the control arms UT/RT as candidates (since fixed: control arms are excluded from
   candidates) so its verdict is void, and no number from it was used to choose any threshold.'
 last_dispatched_at: '2026-10-25T17:31:00+00:00'
+grading:
+  attested: RULE-9A7E-03-ETH-PULLBACK-2H
+  auto: true
+  decision_rule_id: RULE-9A7E-03-ETH-PULLBACK-2H
+  evidence:
+  - research/results/RQ-20261024-9a7e-03/40216892378.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

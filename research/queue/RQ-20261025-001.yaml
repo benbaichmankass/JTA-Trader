@@ -5,7 +5,7 @@ id: RQ-20261025-001
 title: 'AI trader / linear floor (P2-Q4-var-price-vector): does a causal rolling VAR price-vector feature
   set lift the BTC/ETH/SOL 1h regime head over the six shared features, and over a HAR-RV control, on
   the PUBLISHED shards?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - M23
@@ -212,11 +212,11 @@ grading:
   confirmatory_run: 1
   decision_rule_id: RULE-P2-Q4-VAR-PRICE-VECTOR-1H-FEATURE-LIFT
   evidence:
-  - research/results/RQ-20261025-001/40171276840.jsonl
+  - research/results/RQ-20261025-001/40199876608.jsonl
   first_fail: 1 row(s), all measured, all fail
   graded_at: '2026-10-25'
   grader: scripts/research/queue_grade.py
-  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
   reason: 1 row(s), all measured, all fail
   rows: 1
   verdict: fail
