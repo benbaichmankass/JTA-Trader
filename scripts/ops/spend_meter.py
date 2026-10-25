@@ -88,6 +88,7 @@ Record:     python3 scripts/ops/spend_meter.py --record --window weekly \\
                 --percent 68 --read-at 2026-09-21T14:00:00Z --recorded-by operator
 Section 5:  python3 scripts/ops/spend_meter.py --section-5 [--session-costs FILE]
 Capacity:   python3 scripts/ops/spend_meter.py --capacity [--reset-at ISO] [--pp-per-lane-hour X]
+                [--live-open N]
             (step 2 of the manager's operating loop: sustainable rate -> lane count)
 """
 from __future__ import annotations
@@ -320,11 +321,37 @@ LANES_MIN, LANES_MAX = 1, 5
 READING_STALE_H = 12.0
 _RESET_IN_NOTE = re.compile(r"reset\s+(?:[A-Za-z]{3}\s+)?(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2})Z?")
 
+# ── the live-trade-review reserve (docs/plans/live-trade-review-DESIGN.md § 6.4) ────────────
+#
+# Operator, 2026-10-25: leave enough spare that the live-trade-review routine can always run,
+# even just before the reset. R = F + D*(g + c_typ*n) + min(D,1)*(c_stress - c_typ)*max(n, n_peak).
+# Every value is the design's PROPOSED default (INFERRED from 38 days of exposure, § 6.1-6.3),
+# kept here as module constants until config/live_trade_review.yaml exists (LTR-1); the
+# per-tier session costs behind c_typ / c_stress are replaced by measured records later.
+RESERVE_FLOOR_PP = 2.0          # F
+RESERVE_GATE_PP_DAY = 0.5       # g
+RESERVE_TYPICAL_PP_DAY = 0.75   # c_typ, per open package
+RESERVE_STRESS_PP_DAY = 2.5     # c_stress, per open package
+RESERVE_N_PEAK = 4              # max concurrent real-money packages, last 38 days
+#: worst-case roster bound, used as ``n`` when the open count could not be read
+RESERVE_ROSTER_BOUND = 12
+
+
+def reserve_pp(days_left: float, n: int) -> float:
+    """The design's § 6.4 reserve for ``days_left`` days and ``n`` open live/prop packages."""
+    stress = (RESERVE_STRESS_PP_DAY - RESERVE_TYPICAL_PP_DAY) * max(n, RESERVE_N_PEAK)
+    return (RESERVE_FLOOR_PP
+            + days_left * (RESERVE_GATE_PP_DAY + RESERVE_TYPICAL_PP_DAY * n)
+            + min(days_left, 1.0) * stress)
+
 
 def capacity(log: LoadResult, *, reset_at: str | None = None,
              pp_per_lane_hour: float = PP_PER_LANE_HOUR,
+             live_open: int | None = None,
              now: datetime | None = None) -> dict:
-    """The sustainable rate and the lane count it supports. ``state`` is one of
+    """The sustainable rate and the lane count it supports, net of the live-review reserve.
+    ``live_open`` is the count of open live/prop packages; ``None`` means it could not be read,
+    which sizes the reserve at the roster bound and reads ``exposure_unknown`` -- never 0. ``state`` is one of
     ``ok`` / ``never_recorded`` / ``reset_unknown`` / ``reading_from_past_week``; only
     ``ok`` carries numbers -- a missing input is named, never filled with a guess."""
     now = now or datetime.now(timezone.utc)
@@ -344,9 +371,21 @@ def capacity(log: LoadResult, *, reset_at: str | None = None,
     days_left = max((reset - now).total_seconds() / 86400, 1 / 24)
     # usage since the reading is unknown; spreading the remainder over the time left from NOW
     # is the conservative reading of a dated observation
-    rate_day = max(100.0 - out["weekly_pct"], 0.0) / days_left
+    if live_open is not None and live_open < 0:
+        raise ValueError("live_open must be >= 0")
+    n = RESERVE_ROSTER_BOUND if live_open is None else live_open
+    remaining = max(100.0 - out["weekly_pct"], 0.0)
+    reserve = reserve_pp(days_left, n)
+    rate_gross = remaining / days_left
+    rate_day = max(remaining - reserve, 0.0) / days_left
     raw_lanes = rate_day / 24 / pp_per_lane_hour
     return {**out, "state": "ok", "reset_at": raw_reset, "days_to_reset": round(days_left, 2),
+            "rate_gross_pp_per_day": round(rate_gross, 2),
+            "reserve_pp": round(reserve, 2),
+            "reserve_basis": {"n": n, "exposure": "exposure_unknown" if live_open is None else "measured"},
+            # § 6.6: breached = the remaining allowance is below the reserve. While it is, the
+            # live-review routine counts as the operating loop's always-one-lane (operator Q5).
+            "reserve_breached": remaining < reserve,
             "rate_pp_per_day": round(rate_day, 2), "pp_per_lane_hour": pp_per_lane_hour,
             "lanes_raw": round(raw_lanes, 2),
             "lanes": min(max(round(raw_lanes), LANES_MIN), LANES_MAX),
@@ -366,10 +405,21 @@ def render_capacity(c: dict) -> list[str]:
                 f"ONE lane (the floor), never zero and never a guessed count."]
     L = [f"CAPACITY: weekly {c['weekly_pct']:.0f}% as of {c['read_at']} ({c['reading_age_h']:.1f}h old); "
          f"reset {c['reset_at']} ({c['days_to_reset']:.2f}d)",
-         f"  sustainable rate = (100 - {c['weekly_pct']:.0f}) / {c['days_to_reset']:.2f}d = "
+         f"  sustainable rate (gross) = (100 - {c['weekly_pct']:.0f}) / {c['days_to_reset']:.2f}d = "
+         f"{c['rate_gross_pp_per_day']:.1f} pp/day",
+         f"  reserve for live review = {c['reserve_pp']:.1f} pp (n_open={c['reserve_basis']['n']}, "
+         f"{c['reserve_basis']['exposure']})",
+         f"  net rate = (100 - {c['weekly_pct']:.0f} - {c['reserve_pp']:.1f}) / {c['days_to_reset']:.2f}d = "
          f"{c['rate_pp_per_day']:.1f} pp/day",
          f"  at {c['pp_per_lane_hour']:.2f} pp per lane-hour that is {c['lanes_raw']:.2f} lanes "
          f"continuous -> suggest {c['lanes']} (floor {LANES_MIN}, judgment up to {LANES_MAX}; not a cap)"]
+    if c["reserve_breached"]:
+        L.append(f"  🚩 RESERVE BREACHED: {100 - c['weekly_pct']:.1f} pp left is below the {c['reserve_pp']:.1f} pp "
+                 f"reserve. No new non-routine lanes; the live-review routine counts as the operating "
+                 f"loop's always-one-lane (design § 6.6, operator Q5).")
+    if c["reserve_basis"]["exposure"] == "exposure_unknown":
+        L.append("  ⚠️ exposure_unknown: --live-open not given, so n = roster bound "
+                 f"({RESERVE_ROSTER_BOUND}); pass the open live/prop package count to size it")
     if c["stale"]:
         L.append(f"  ⚠️ reading is over {READING_STALE_H:.0f}h old -- ask for a fresh one before adding lanes")
     return L
@@ -585,6 +635,13 @@ def _selftest() -> int:
     check("a well-formed reading validates (positive control)",
           validate_reading(base(), now=now) is not None)
 
+    def _raises(fn: Any) -> bool:
+        try:
+            fn()
+        except ValueError:
+            return True
+        return False
+
     def refuses(label: str, rec: dict, needle: str) -> None:
         try:
             validate_reading(rec, now=now)
@@ -695,10 +752,11 @@ def _selftest() -> int:
     c = capacity(LoadResult(records=[wk]), now=cap_now)
     check("reset time is read from the reading's note",
           c["state"] == "ok" and c["reset_at"] == "2026-10-21T18:00:00Z")
-    check("rate = (100 - weekly%) / days to reset",
-          abs(c["rate_pp_per_day"] - 27 / 3.375) < 0.01)
+    check("gross rate = (100 - weekly%) / days to reset",
+          abs(c["rate_gross_pp_per_day"] - 27 / 3.375) < 0.01)
     check("a low rate still suggests the one-lane floor, never zero", c["lanes"] == 1)
-    c2 = capacity(LoadResult(records=[dict(wk, percent=10.0)]), now=cap_now, pp_per_lane_hour=0.2)
+    c2 = capacity(LoadResult(records=[dict(wk, percent=10.0)]), now=cap_now, pp_per_lane_hour=0.2,
+                  live_open=0)
     check("a high rate suggests at most 5 lanes (advice for judgment, not a cap)", c2["lanes"] == 5)
     check("a reading with no reset named is reset_unknown, not a guess",
           capacity(LoadResult(records=[dict(wk, note=None)]), now=cap_now)["state"] == "reset_unknown")
@@ -706,6 +764,39 @@ def _selftest() -> int:
           capacity(LoadResult(records=[wk]), reset_at="2026-10-14T18:00:00Z",
                    now=cap_now)["state"] == "reading_from_past_week")
     check("render names the formula", "(100 - 73)" in "\n".join(render_capacity(c)))
+
+    print("— reserve: headroom for the live-trade-review routine (design § 6.4) —")
+    check("design worked value: D=3.19, n=2 -> 15.4 pp", abs(reserve_pp(3.19, 2) - 15.4) < 0.05)
+    check("design worked value: last 24h, n=2 -> ~11 pp", abs(reserve_pp(1.0, 2) - 11.0) < 0.05)
+    check("final hour, n=2 -> ~2.4 pp (floor + a sliver)", abs(reserve_pp(1 / 24, 2) - 2.4) < 0.05)
+    check("reserve is non-decreasing in n", reserve_pp(2.0, 3) > reserve_pp(2.0, 2) > reserve_pp(2.0, 0))
+    cm = capacity(LoadResult(records=[wk]), now=cap_now, live_open=2)
+    check("a supplied count reads measured, with that n",
+          cm["reserve_basis"] == {"n": 2, "exposure": "measured"})
+    check("reserve_pp matches the formula", abs(cm["reserve_pp"] - round(reserve_pp(3.375, 2), 2)) < 0.01)
+    check("net rate = (100 - weekly% - reserve) / days",
+          abs(cm["rate_pp_per_day"] - max(27 - cm["reserve_pp"], 0) / 3.375) < 0.02)
+    check("27 pp left > 15.7 pp reserve -> not breached", cm["reserve_breached"] is False)
+    cb = capacity(LoadResult(records=[dict(wk, percent=90.0)]), now=cap_now, live_open=2)
+    check("10 pp left < reserve -> breached", cb["reserve_breached"] is True)
+    check("breached: render says so and names the always-one-lane doctrine",
+          "RESERVE BREACHED" in "\n".join(render_capacity(cb))
+          and "always-one-lane" in "\n".join(render_capacity(cb)))
+    check("breached: net rate is 0 and the suggestion is still the one-lane floor, never zero",
+          cb["rate_pp_per_day"] == 0 and cb["lanes"] == 1)
+    cu = capacity(LoadResult(records=[wk]), now=cap_now)
+    check("no --live-open -> exposure_unknown, n = roster bound, never 0",
+          cu["reserve_basis"] == {"n": RESERVE_ROSTER_BOUND, "exposure": "exposure_unknown"})
+    check("could-not-look reserves MORE than a measured zero",
+          cu["reserve_pp"] > capacity(LoadResult(records=[wk]), now=cap_now, live_open=0)["reserve_pp"])
+    check("render prints the one reserve line",
+          "reserve for live review = " in "\n".join(render_capacity(cu))
+          and "exposure_unknown" in "\n".join(render_capacity(cu)))
+    cl = capacity(LoadResult(records=[dict(wk, percent=5.0)]), now=cap_now, live_open=1)
+    check("plenty of allowance -> not breached, net rate below gross",
+          cl["reserve_breached"] is False and cl["rate_pp_per_day"] < cl["rate_gross_pp_per_day"])
+    check("a negative count is refused", _raises(lambda: capacity(LoadResult(records=[wk]),
+                                                                  now=cap_now, live_open=-1)))
 
     print()
     if failures:
@@ -752,6 +843,9 @@ def main(argv: list[str] | None = None) -> int:
                     help="sustainable rate and suggested lane count (manager operating loop, step 2)")
     ap.add_argument("--reset-at", default=None, help="weekly reset time (ISO); else read from the reading's note")
     ap.add_argument("--pp-per-lane-hour", type=float, default=PP_PER_LANE_HOUR)
+    ap.add_argument("--live-open", type=int, default=None,
+                    help="with --capacity: open live/prop packages (from live_review_due); "
+                         "absent = exposure_unknown (reserve sized at the roster bound)")
     ap.add_argument("--json", action="store_true", help="with --capacity: print the dict")
     ap.add_argument("--session-costs", default=None,
                      help="path to a pasted get_session/list_sessions result, or '-' for stdin")
@@ -785,8 +879,11 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.capacity:
+        if args.live_open is not None and args.live_open < 0:
+            print("spend_meter: --live-open must be >= 0", file=sys.stderr)
+            return 2
         c = capacity(read_readings(store), reset_at=args.reset_at,
-                     pp_per_lane_hour=args.pp_per_lane_hour)
+                     pp_per_lane_hour=args.pp_per_lane_hour, live_open=args.live_open)
         print(json.dumps(c, indent=2) if args.json else "\n".join(render_capacity(c)))
         return 0
 

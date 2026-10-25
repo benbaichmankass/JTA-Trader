@@ -2,21 +2,32 @@
   "id": "LTR-10-CAPACITY-RESERVE",
   "title": "Live trade review: reserve_pp in spend_meter.py --capacity (--live-open, exposure_unknown, self-test), config reserve params, manager SKILL step 2 + weekly planning text, live_review_reserve probe, per-tier session-cost records",
   "phase": null,
-  "state": "in_flight",
+  "state": "landed_unproven",
   "owner": "build lane (manager dispatch)",
   "lane": "session_01Lx5riX4Egpn6eWJnvKMDH1",
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 6,
   "spend_usd": null,
   "tier": 1,
-  "prs": [],
+  "prs": [
+    20113
+  ],
   "blocked_on": [],
-  "note": "From docs/plans/live-trade-review-DESIGN.md \u00a7 8 (merged c5d8d225, operator-approved 2026-10-25 ~13:58Z). Parent LIVE-TRADE-REVIEW-DESIGN. Design \u00a7 6. Operator Q5: while the reserve is breached the routine counts as the operating loop's always-one-lane.",
+  "note": "From docs/plans/live-trade-review-DESIGN.md \u00a7 8 (merged c5d8d225, operator-approved 2026-10-25 ~13:58Z). Parent LIVE-TRADE-REVIEW-DESIGN. Design \u00a7 6. Operator Q5: while the reserve is breached the routine counts as the operating loop's always-one-lane. [2026-10-25 lane session_01Lx5riX4Egpn6eWJnvKMDH1] LANDED (pending merge): reserve_pp, rate_gross, reserve_basis (measured|exposure_unknown), reserve_breached, --live-open in spend_meter.py --capacity; self-test; manager SKILL loop step 2 text. Parameters are module constants in spend_meter.py (no config/ edit allowed this lane). STILL OPEN under this row title: config/live_trade_review.yaml::reserve, Thursday weekly-planning text (part 4), live_review_reserve attention probe, per-tier session-cost records -- not built here.",
   "priority_rank": 6,
-  "updated_at": "2026-10-25T16:03:28Z",
-  "updated_by": "session_01UKBXozpiJicMHHyMp47MnN",
+  "updated_at": "2026-10-25T16:26:51Z",
+  "updated_by": "session_01Lx5riX4Egpn6eWJnvKMDH1",
   "roadmap": [
     "L-ATM"
   ],
+  "writeback": {
+    "roadmap": "none: L-ATM milestone text unchanged; the reserve is a pacing input, not a measure",
+    "arch": "none: no component changed; design is docs/plans/live-trade-review-DESIGN.md section 6"
+  },
+  "observation": {
+    "what": "the first spend_meter.py --capacity run that prints reserve_pp from a real reading",
+    "how_to_check": "python3 scripts/ops/spend_meter.py --capacity --live-open N (N from live_review_due) after this PR is on main; the reserve line must print n_open and measured/exposure_unknown. Seen once on this branch 2026-10-25 against the 34% weekly reading: reserve 15.2 pp at n=2, 52.3 pp exposure_unknown",
+    "due_by": "2026-11-01"
+  },
   "_seq": 659
 }
