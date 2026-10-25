@@ -1,0 +1,93 @@
+{
+  "run": "RESEARCH-OPS-20261025-1447",
+  "finished_at": "2026-10-25T15:00:00Z",
+  "by": "session_01NgHqeQQCWkZVcLAPEPb7ye",
+  "floor": 65,
+  "floor_basis": "computed_floor(fired_24h 82)",
+  "authoring_queue_depth": 35,
+  "idle_backends": ["github_runner_data", "kaggle", "trainer"],
+  "needs_review_triaged": 0,
+  "needs_review_left": 28,
+  "needs_review_note": "result_disposition_check --list at 14:58Z: needs_review owned 25 / UNOWNED 0 / UNGRADED 0. The 8 oldest (0927-003, 0928-030/-031, 0929-009/-016/-017/-018, 1003-011) each already carry grading.owner + owner_reason naming a specific gap: 6 are the roster-walkforward rule vs whole-window payload (PI-20261006-1VPYTX8E-0001, due 2026-10-29), 0929-009 is the MGC feed (ICT-SCALP-EVIDENCE), 0927-003 is a prose run.workflow (RESEARCH-TOOLING-GAPS). No new write: no unit lacked a disposition; reading them again would only repeat the owner text.",
+  "throughput": {
+    "runnable_before": 43,
+    "runnable_after": 43,
+    "queued": 135,
+    "fired_24h": 82,
+    "results_landed_24h": 82,
+    "hours_since_last_dispatch": 0.9,
+    "idle_alarm": false,
+    "after_basis": "check_research_queue_throughput 14:58Z on the pre-PR tree; node P1-Q14-eth-pb-stale-transfer is state waiting (its prerequisite 0142-16 is not yet graded closed), so it adds nothing to runnable until the grader closes 0142-16. Runnable stays 43 vs floor 65 (H1-AUTHOR, H1-THEME regime/live_strategy/ml_health/macro short)."
+  },
+  "mechanism": {
+    "dispatch_receipt": "ok (fresh, 0.91 h at 14:49Z)",
+    "collector": "ok (0 unreadable result files)",
+    "stranded_stamp_prs": [],
+    "watchdog_open_incidents": 0,
+    "incident": null,
+    "note": "check_research_queue_health: no page; warnings H1-AUTHOR, H1-THEME x5, OPS-AUTHOR-SKIPPED (the 03:30Z record; the 09:30Z record drafted a node). Stranded automation/research-queue-* PR list NOT run: the GitHub actions_list/PR listing was not queried this pass, the dispatch receipt freshness and collector counts are the evidence for the mechanism."
+  },
+  "results_read": {
+    "pass": 7,
+    "fail": 11,
+    "indeterminate": 3,
+    "units": [
+      "since 09:30Z, 21 files / 21 units across 6 landing commits (#20052, #20057, #20061, #20065, #20079, #20092; listed with git diff-tree on those commits, because the shallow clone's root commit makes git log --name-only list every file as added)",
+      "PASS: 0142-16 (eth_pullback_2h S12 stale exit), 0928-001 (ict_scalp HTF filter, 6 of 7 legs), 20261025-005 and -007 (infra self-tests)",
+      "FAIL: 0142-10, 0142-11, d7e6-02..-06 (bank selector x5), 4b82-09, 17f4-02, 6e85-01, 20261025-004, -006 (infra), -008",
+      "INDETERMINATE: 20261025-009, -010, 65ff-27"
+    ]
+  },
+  "dispositions": [
+    {
+      "unit": "RQ-20261024-0142-16",
+      "verdict": "PASS (eth_pullback_2h, 371 trades, 2020-07..2026-10, net of fee+slippage+funding): S12 net R 21.07 vs A 0.99, 4/6 folds, maxDD 12.8 vs 29.0 (cap 39.2). S8 10.33 and S20 9.85 failed at 3/6 folds.",
+      "follow_up": "a discovery on one window, denominator 3 (arms S8/S12/S20). The pre-2020-07 ETH window cannot be the disjoint partition (perp klines start 2019-12, ~34 trades < floor 39), so the transfer to sol_pullback_2h, A vs S12 only, is authored as programme node P1-Q14-eth-pb-stale-transfer (rule RULE-P1-Q14-SOL-PB-STALE-TRANSFER; emitted once 0142-16 is graded closed). NO Tier-3 proposal: no live stale-exit producer was checked and S8 re-opens 230 more entries than A, so it is not a pure exit change."
+    },
+    {
+      "unit": "RQ-20260928-001",
+      "verdict": "PASS 6 of 7 legs (already dispositioned by lane RQ-20260928-001-RUN, #20057; ON still net-negative on 5 of 6 legs, so loss-cutting not edge)",
+      "follow_up": "the confirmation unit cannot be authored: rq_20260928_001_htf_wire.py is manual-only (csv argument, no window flags, no verdict.json). Lever filed as PI-20261025-APEPB7YE-0001, routed to P3-STRATEGY-PROGRAMME; node P3-M27-htf-pass stays in the authoring queue until a dispatchable driver exists."
+    },
+    {"unit": "RQ-20261024-0142-10", "verdict": "FAIL", "follow_up": "configuration closed: eth_4h exit lever arm grid of 0142-10; family trend exits stays open; next test = the other eth_4h levers already queued (P1-Q6-eth4h-*)"},
+    {"unit": "RQ-20261024-0142-11", "verdict": "FAIL", "follow_up": "configuration closed: pullback break-even floor arms of 0142-11; family pullback exits stays open; next test = the stale-exit transfer P1-Q14-eth-pb-stale-transfer"},
+    {"unit": "RQ-20261025-d7e6-02..-06", "verdict": "FAIL x5 (incumbent stands on ada/xrp/eth/sol/avax pullback_2h)", "follow_up": "configuration closed: the bank-selector exit arm set of d7e6 on the five pullback_2h legs; family exit-bank selection stays open; next test = the stale-exit lever (0142-16 PASS on eth, P1-Q14 transfer to sol)"},
+    {"unit": "RQ-20261022-4b82-09", "verdict": "FAIL (squeeze 2h: B pooled +142.6 R, 4 folds positive, 4 of 6 powered cells pass, but BE1 -0.0014, WIDE -0.1264, STOP35 -0.0201 R/trade vs baseline 0.0406 against a 0.05 materiality bar)", "follow_up": "configuration closed: BE1/WIDE/STOP35 variants on squeeze 2h; family squeeze stays open; the baseline B itself clears its breadth floor and is a re-examination input, not a promotion (no unit authored: P3-RG1025-lever-pooled already owns pooling these single-leg lever tests)"},
+    {"unit": "RQ-20261011-17f4-02", "verdict": "FAIL/PARK (0 of 47 cells meet n_pooled>=300 with parity held; 6 would if parity held and parity is unmeasured)", "follow_up": "no action, because the rule's PARK reading is the registered outcome and the missing input (live/backtest parity per cell) is what the P3 live-vs-backtest node P3-Q1-live-bt-stage-b is waiting on (build row LIVE-BT-STAGE-B)"},
+    {"unit": "RQ-20261011-6e85-01 and RQ-20261025-004", "verdict": "FAIL (drift split read on max-class-probability score, n 8010 and 55142 shadow rows)", "follow_up": "ML plan item ML-N5 (ML-DRIFT-SPLIT-INSTRUMENT) not touched: its close text requires a read of the sol and btc advisory heads recorded by run id, which this pass did not extract from the rows. Left for /ml-review; not written back."},
+    {"unit": "RQ-20261025-008/-009/-010", "verdict": "FAIL / INDETERMINATE / INDETERMINATE (P2-Q4 LightGBM capacity and regularisation arms, macro_f1)", "follow_up": "family gbdt stays open; indeterminate arms between the pass bar and the fail floor wait on the P2-Q4 tabular-read node; no unit authored (queue has no ml_health node ready to draft)"},
+    {"unit": "RQ-20261025-005/-006/-007", "verdict": "infra self-tests: 005 pass, 007 pass, 006 FAIL (5 queued units carried roadmap as a string)", "follow_up": "FIXED in this PR: RQ-20261012-5bd1-02/-03/-04/-07/-08 roadmap changed to a list; local infra_selftest --check roadmap_ref_valid = pass (77 units). Pipeline item PI-20261025-THEMEAUTHOR1025-0001 routed to this row; closes on the next main run."}
+  ],
+  "unlocked": [],
+  "retired": [],
+  "levers_filed": [
+    {"lever": "dispatchable driver for the ict_scalp HTF-filter disjoint-window confirmation", "ref": "PI-20261025-APEPB7YE-0001"}
+  ],
+  "units_authored": [
+    {"node": "P1-Q14-eth-pb-stale-transfer", "unit": "emitted by the next research-queue-replenish after RQ-20261024-0142-16 is graded closed", "rule": "RULE-P1-Q14-SOL-PB-STALE-TRANSFER"}
+  ],
+  "followups_filed": [
+    {"what": "pipeline routing: 4 items routed (THEMEAUTHOR1025-0001 -> this row; 1CZRLDTS-0001-A/-B and the new lever -> P3-STRATEGY-PROGRAMME). Unrouted 7 -> 4; the 4 left are not research: BHYHMK2C-0001 (sed delimiter in sync_vm_secrets.sh, oldest unrouted 25 d, breaches the 7 d alarm), NKGUCEDN-0001 (queued with routed_to=manager, state not routed), KERS1025-0001/-0002 (BLOCKERS-1025 trading findings)", "ref": "python3 scripts/ops/pipeline.py --stats"}
+  ],
+  "authoring": {
+    "queue_depth": 35,
+    "nodes_drafted": 1,
+    "nodes": ["P1-Q14-eth-pb-stale-transfer"],
+    "nodes_blocked": ["P3-M27-htf-pass (no dispatchable driver; PI-20261025-APEPB7YE-0001)"],
+    "queue_depth_after": 35,
+    "theme_shortfall": {"regime": 8, "live_strategy": 4, "ml_health": 8, "new_strategy_prop": 1, "macro": 3},
+    "why_short": "budget: one node drafted. The new node is state waiting, so queue_depth is unchanged until it is emitted. Remaining shortfall is node supply: ml_health has P2-Q4-cross-asset-features (needs a metis-market-data point-in-time check for the ES/DXY/gold daily series first) and no other ready node; macro has no ready node."
+  },
+  "not_run": [
+    "stranded automation/research-queue-* PR listing and the research-queue-dispatch/grade/replenish workflow-run read via the GitHub MCP (mechanism judged from the dispatch receipt, the throughput counters and the 6 landing commits instead)",
+    "needs_review triage writes (no unit lacked an owner; see needs_review_note)"
+  ],
+  "handoff": [
+    "next research-ops: read the P1-Q14 transfer unit once emitted (after 0142-16 closes); apply RULE-P1-Q14-SOL-PB-STALE-TRANSFER verbatim",
+    "next research-ops: author P2-Q4-cross-asset-features (ml_health) after the data check on ES/DXY/gold daily in metis-market-data; macro has no ready node",
+    "list open automation/research-queue-* PRs and the three research workflows' recent runs (not run this pass)",
+    "ML-N5: /ml-review to read the sol and btc heads from RQ-20261011-6e85-01 and record the run id",
+    "6 roster-walkforward needs_review units re-fire weekly and land wiring_only until PI-20261006-1VPYTX8E-0001 (due 2026-10-29) is fixed",
+    "manager: PI-20260930-BHYHMK2C-0001 is the oldest unrouted item (25 d) and is not research"
+  ]
+}

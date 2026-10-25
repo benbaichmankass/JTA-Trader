@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a research-script-run unit with a verdict.json for the ict_scalp HTF filter on a window disjoint from the 365d of RQ-20260928-001 has landed measured, or the node P3-M27-htf-pass is killed with a reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261025-APEPB7YE-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "research-ops 2026-10-25 14:47Z (RQ-20260928-001 PASS follow-up)",
+    "rerun": "python3 scripts/research/queue_replenish.py --authoring-queue | grep -A3 P3-M27-htf-pass; grep -n \"add_argument\\|usage\" scripts/research/rq_20260928_001_htf_wire.py"
+  },
+  "routed_2026_10_25": "Owner = the programme checklist row that holds the M27 node.",
+  "routed_to": "checklist:P3-STRATEGY-PROGRAMME",
+  "state": "routed",
+  "what": "Lever for node P3-M27-htf-pass: the ict_scalp HTF-filter disjoint-window confirmation cannot be a queue unit because scripts/research/rq_20260928_001_htf_wire.py is manual-only (usage: <leg> <csv> <outdir>; no --start/--end, no verdict.json, wiring header says \"no scheduled consumer\"). Build: a dispatchable driver that fetches candles for a pinned disjoint window, runs both arms per leg, writes verdict.json with the unit rule (n_off+n_on>=175, ON total net-R > OFF, mean-R clause 0.3) and the outlier-removed re-grade (ICT-SCALP-EVIDENCE). Then author the confirmation as a unit. Found by research-ops 14:47Z while trying to draft the node."
+}
