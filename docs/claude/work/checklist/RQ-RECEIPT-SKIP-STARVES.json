@@ -1,0 +1,22 @@
+{
+  "id": "RQ-RECEIPT-SKIP-STARVES",
+  "title": "research-queue-dispatch: a single conflicted receipt PR blocks every later liveness receipt (skip-if-any-open gate); supersede or close the stale receipt PR instead",
+  "phase": null,
+  "state": "queued",
+  "owner": null,
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 3,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Found 2026-10-25 by manager 01MdQiC8 after watchdog incident conflicted_automation@20261025T1954Z (ops-flags #17895). Cause: .github/workflows/research-queue-dispatch.yml lines 553-556 count open automation/research-queue-receipt* PRs and set skip=true when there are any. Receipt PR #20130 (run 40211858088, receipt 16:31Z) sat merge-conflicted from 16:57Z to 20:14Z, so runs 40216654057 (17:28Z), 40223174908 (18:50Z) and 40227221845 (19:41Z) all logged 'open receipt PRs: 1' and landed no receipt. Main's receipt stayed at 16:00Z until the manager resolved the conflict (0993c550) and #20130 merged at 20:14Z. Receipts are latest-wins, so an older open receipt PR is always stale. Fix: when an open receipt PR exists, close it, or refresh its branch onto main with the new receipt, instead of skipping. Add a test or self-test in the workflow tests. Observation: two consecutive dispatcher runs each land a receipt while an older receipt PR exists.",
+  "priority_rank": 20,
+  "updated_at": "2026-10-25T20:44:07Z",
+  "updated_by": "session_01MdQiC8UqKBLj287KWFWN71",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 694
+}
