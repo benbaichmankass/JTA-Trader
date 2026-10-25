@@ -1,23 +1,24 @@
 {
   "id": "LTR-6R-APPLY-PATH",
-  "title": "Live trade review: per-account apply path \u2014 LiveReviewIntent + RiskManager.approve_amend (approve/clip/refuse) + per-account executors (Bybit leg modify, prop VM meta.sl_floor, phone request_sl_tighten, Alpaca no_amend_path) + apply_mode selector + read-only dry-run CLI",
+  "title": "Live trade review: per-account apply path (package LiveReviewIntent -> RiskManager.approve_amend per account -> account executor), apply_mode off|recommend|apply default recommend; supersedes LTR-6 apply mechanics",
   "phase": null,
   "state": "in_flight",
-  "owner": "lane LTR-6R-APPLY-PATH (manager dispatch)",
+  "owner": "manager",
   "lane": "session_01354wy5zWA5J3AcLp2NbdKo",
-  "model": null,
-  "ceiling_usd": null,
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 18,
   "spend_usd": null,
   "tier": 3,
   "prs": [
     20139
   ],
   "blocked_on": [],
-  "note": "Dispatched by Manager Session 2026-10-25 (session_01UKBXozpiJicMHHyMp47MnN). SUPERSEDES LTR-6-APPLY-PATH's apply mechanics: the review no longer moves the shared package stop through amend_position_sl.py; it decides per account through each account's own RiskManager.approve_amend and hands off to that account's existing executor (operator structural directive 2026-10-25, relayed by the manager: the review acts at the strategy ticket / order package level and never does per-account risk management; each account decides within its own bounds and drawdown limits). Tier 3 (live order path: order_monitor, prop trail, phone trail): landing hold, manager handles approval. apply_mode committed as recommend; apply additionally needs MD-LIVE-TIGHTEN-SL in config/mandates.yaml (operator grant; drafted in the PR body, not written). Closing observation: after merge+deploy, the read-only dry-run CLI run on the live VM (scripts/ops/live_review_apply.py --dry-run, via a system-action) prints one verdict per account per open package.",
-  "updated_at": "2026-10-25T17:56:42Z",
+  "note": "Lane session_01354wy5zWA5J3AcLp2NbdKo: PR #20139 (Tier 3, landing: hold). Built: LiveReviewIntent; RiskManager.approve_amend -> approve/clip/refuse/could_not_look (collapsed-state contract; 3-cycle flag); per-account executors (Bybit leg modify + venue readback, prop VM meta.sl_floor, phone request_sl_tighten, Alpaca no_amend_path); per-leg sl_floor held by order monitor + prop trail; apply_mode=recommend in config/live_trade_review.yaml (apply also needs granted MD-LIVE-TIGHTEN-SL; flip diff in PR body); live-review-dry-run Tier-1 system-action. Manager design-review changes 1-4 and operator scope 'All accounts' folded in. Closing observation: after merge+deploy, action live-review-dry-run on the VM prints one verdict per account per open package.",
+  "priority_rank": 2,
+  "updated_at": "2026-10-25T19:26:48Z",
   "updated_by": "session_01354wy5zWA5J3AcLp2NbdKo",
   "roadmap": [
     "L-ATM"
   ],
-  "_seq": 676
+  "_seq": 679
 }
