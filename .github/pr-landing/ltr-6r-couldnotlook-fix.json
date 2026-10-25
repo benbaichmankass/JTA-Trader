@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier3_needs_operator_approval",
+  "hold_text": "Correctness fix inside the operator-approved LTR-6R design (#20139): a failed mark/ATR read is could_not_look, not bad_input; and the live-review candle read uses its own IB clientId instead of colliding with the trader's market-data socket. No verdict rule changed except the could_not_look ordering; apply_mode stays recommend; no mandate written.",
+  "why": "Touches src/runtime/live_review_intent.py (the amend decision) and the live-review apply path, so Tier-3 by path. Merge only on the manager's / operator's word."
+}
