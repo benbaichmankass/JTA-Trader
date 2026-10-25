@@ -548,6 +548,24 @@ def closed_verdict(u: Optional[Dict[str, Any]]) -> Optional[str]:
     return None
 
 
+def chain_verdict(u: Optional[Dict[str, Any]]) -> Optional[str]:
+    """The verdict a prerequisite offers a chained node: `closed_verdict`, or -- for a RECURRING unit,
+    which never reaches `done` -- its latest graded verdict once a grade exists and needs no review.
+
+    Without this a node chained after a weekly/monthly unit waited forever: P1-Q11 sat `waiting` behind
+    the weekly giveback census RQ-20261014-9807-01 (graded PASS 2026-10-15) and the monthly
+    RQ-20260928-019 (graded PASS) although both had answered (EXITS-OVERNIGHT-1021)."""
+    v = closed_verdict(u)
+    if v is not None or not isinstance(u, dict):
+        return v
+    if str(u.get("cadence") or "once") == "once" or u.get("status") not in (None, "queued"):
+        return None
+    g = u.get("grading") if isinstance(u.get("grading"), dict) else {}
+    if g.get("verdict") and not g.get("needs_review"):
+        return str(g["verdict"])
+    return None
+
+
 def node_state(node: Dict[str, Any], units: Dict[str, Dict[str, Any]], by_key: Dict[str, str]) -> Tuple[str, List[str]]:
     """('ready'|'waiting'|'moot', reasons). moot = a prerequisite closed with a verdict this
     node's `after` does not accept (or was retired): the branch was not taken."""
@@ -556,7 +574,7 @@ def node_state(node: Dict[str, Any], units: Dict[str, Dict[str, Any]], by_key: D
     for a in node.get("after") or []:
         uid = str(a.get("unit") or by_key.get(node_key(str(a.get("node") or ""))) or "")
         want = str(a["verdict"])
-        got = closed_verdict(units.get(uid)) if uid else None
+        got = chain_verdict(units.get(uid)) if uid else None
         label = a.get("unit") or f"node {a.get('node')}"
         if got is None:
             state = "waiting" if state != "moot" else state
@@ -586,7 +604,12 @@ def render_node(node: Dict[str, Any], prog_path: str, prog_sha: str, programme: 
     rule.setdefault("registered_at", day)
     unit["decision_rule"] = rule
     run = dict(unit.get("run") or {})
-    if run.get("workflow") == "research-script-run.yml":
+    # A node cannot know its own id, and script_run.py --check refuses a command unit whose
+    # run.inputs.research_unit differs from it. Inject it for the explicit research-script-run
+    # workflow AND for a router-resolved command unit (no run.workflow, a run.command/commands):
+    # the router only ever sends those to the research-script-run* family (P1-ATM-BACKLOG-1016).
+    if run.get("workflow") == "research-script-run.yml" or (
+            not run.get("workflow") and (run.get("command") or run.get("commands"))):
         run["inputs"] = {**dict(run.get("inputs") or {}), "research_unit": unit_id}
     if run:
         unit["run"] = run
@@ -867,7 +890,11 @@ def _self_test() -> int:
         p2 = plan(er, day="2030-01-01", target=25)
     assert [u["text"] for u in p1["new_units"]] == [u["text"] for u in p2["new_units"]], "not deterministic"
     assert p1["new_units"], "the live templates generate nothing from an empty queue -- a template or a grid source is broken"
-    assert plan(root, day="2030-01-01", target=live_have)["new_units"] == [], "a full queue must generate nothing"
+    # A full queue generates no TEMPLATE units. Ready programme nodes are emitted whatever the floor (plan()'s own
+    # comment), so on the live repo a node unlocked by a grade that has not been replenished yet is legitimate here
+    # -- asserting [] over them failed every branch that graded an unlocking unit (P1-ATM-BACKLOG-1016).
+    full = plan(root, day="2030-01-01", target=live_have)["new_units"]
+    assert [u for u in full if not u["family"].startswith(PROGRAMME_FAMILY + ":")] == [], "a full queue must generate no template units"
     # every generated unit is valid queue schema + a pre-registered rule
     from scripts.research.research_queue import validate, grade_power, grade_route
     yaml = _yaml()
@@ -1040,6 +1067,8 @@ def _self_test() -> int:
         y = _yaml().safe_load(newu["text"])
         assert y["decision_rule"]["registered_before_run"] is True and y["roadmap"] == ["M20"] and y["value"]["usd_at_stake_per_month"] == 100
         assert y["generated"]["key"] == "programme:P1-Q1.fail" and y["programme_node"]["goal"] == "G1"
+        # a router-resolved command unit carries its own id (script_run.py --check requires it)
+        assert y["run"]["inputs"]["research_unit"] == newu["id"], y["run"]
         git("checkout", "-q", "-b", "gen")
         (r / QUEUE / f"{newu['id']}.yaml").write_text(newu["text"], encoding="utf-8")
         git("add", "-A")

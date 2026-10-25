@@ -1,0 +1,22 @@
+{
+  "based_on": "20261013T205052240461Z-8410b3aa.json",
+  "due_when": {
+    "due_date": "2026-10-15",
+    "kind": "date"
+  },
+  "id": "PI-20261013-HOPS2047-0001",
+  "next_action": "dispatch_lane",
+  "observation": {
+    "due_by": "2026-10-15",
+    "how_to_check": "grep -n stale_exit research/queue/RQ-20261007-002.yaml",
+    "what": "does RQ-20261007-002 still reference a stripped lever"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "research-ops-lane-20261013-2047, 2026-10-13",
+    "rerun": "grep -n stale_exit research/queue/RQ-20261007-002.yaml; grep -n stale_exit config/strategies.yaml | head"
+  },
+  "routed_to": "ROUTE-RESEARCH-HARNESS-FIXES (re-routed 2026-10-24 REGISTER-SWEEP-W43: prior target RESEARCH-OPS-20261013-2047 is done; item still open) | was: RESEARCH-OPS-20261013-2047",
+  "state": "routed",
+  "what": "Queued RQ-20261007-002 (m20-exit-lever-sweep.yml) registers 'eth: stale_exit_bars 12' among the declared levers it keeps, but #17002 stripped that lever from trend_donchian_eth_prop on 2026-10-07. Unverified whether the sweep reads levers from config (B0 silently loses the lever) or from the rule text. Retire and re-register as a new unit if affected; never edit the registered rule."
+}

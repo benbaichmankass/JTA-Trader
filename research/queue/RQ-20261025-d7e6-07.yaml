@@ -1,0 +1,106 @@
+id: RQ-20261025-d7e6-07
+title: 'POOLED read of the giveback SELECTOR bank (d7e6-02..06): does MB beat A, the unconditional bank UB and the random flag RB across the five pullback-2h legs together?'
+status: queued
+cadence: once
+roadmap:
+- L-ATM
+theme: live_strategy
+priority: 1
+kind: experiment
+question: Units d7e6-02..06 run the 25% bank at +1 R on trades flagged at P >= 0.7 on ada, xrp, eth, sol and avax pullback 2h (one leg each, because one leg cannot resolve a 0.03 R/trade
+  effect). Pooled over the five legs (n ~1900) does MB - A reach 0.03 R per baseline trade, with the CI lower bound above 0, 5 of 6 pooled folds, pooled maxDD within 1.35x, and MB above
+  both UB and RB?
+why_this_matters: The decision unit for the bank selector (P1-RG1025-giveback-trigger-variant). The node asked for one pooled unit; harness_lever takes one --leg per command (RESEARCH-MULTICMD-OUTDIR),
+  so the five legs run as five units and this reads them together.
+power:
+  expected_n: 1900
+  min_detectable_effect: 0.03
+  effect_units: R per trade
+  sd: 0.37
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: PAIRED sd 0.366 R MEASURED (bank MB50 vs A, ada+xrp pooled n 796). n(A) ~ 402 + 394 + 371 + sol/avax estimated ~1900 (units -05/-06 will record the actual counts; below 1500
+    the script returns INDETERMINATE). Repo floor for d = 0.03/0.37 = 0.081 is 1195 trades; one-sided MDE at n 1900 = 0.021 R/trade <= the 0.03 bar.
+  feasibility:
+    source: none
+    accrual_basis: Re-reads the kept arm emits of units that replay history on pinned public candles; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261025-D7E6-07-POOLED-BANK-SELECTOR
+  registered_at: '2026-10-25'
+  registered_before_run: true
+  statistic: 'scripts/research/pool_arm_diff.py: the arms are paired on (leg, entry_time, direction) across the legs'' kept emits (comms/research/<unit>/<run>/arms/<ARM>__trades.jsonl),
+    a side missing from one arm counts 0 R; pooled diff per baseline trade, month-block bootstrap CI (4000 resamples, seed 20261025), 6 calendar folds by entry, pooled maxDD, minimum
+    detectable effect 2.487 x paired sd / sqrt(n(A)). Candidate MB, baseline A, controls UB, RB.'
+  rule: 'INDETERMINATE (read_state unmeasured: re-fire, not a verdict) IF any leg''s arm emits are missing; INDETERMINATE IF pooled n(A) < 1500 OR the MDE exceeds the bar 0.03 R/trade
+    (the pool cannot resolve the bar: said so, never graded). PASS IF pooled MB - A >= 0.03 R per baseline trade AND the bootstrap CI lower bound > 0 AND >= 5 of 6 pooled folds MB >=
+    A AND pooled maxDD(MB) <= 1.35 x maxDD(A) AND for every control (UB, RB) MB - control > 0 with >= 5 of 6 folds. FAIL IF the CI upper bound of (MB - A) < 0.03. OTHERWISE INDETERMINATE
+    (unresolved; the rule has no third outcome, so none is invented). Thresholds are not changed after any result. PASS -> ONE confirmation unit on a disjoint window or legs, then Q6
+    live parity and a Tier-3 proposal; never a config edit.'
+  what_it_does_not_do: 'Edits no config (no src/, no config/), places no order, is not a promotion case. Reads only emits the per-leg units already produced; fetches no data. The harness
+    fills a stop at the stop price, not at a gap (the controls share that artifact; A does not, so cand - A is biased toward the lever and cand - control is not). Does not pool with
+    any committed record outside the named units. Does not graduate a lead from a single leg: a PASS needs the pool.'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 200
+  confidence: 0.2
+  basis: 'stand-in: the pooled read is what lets the lever family be decided at all (per-leg MDE 0.05-0.09 R/trade vs the 0.02 bar); not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  why_runner: Fetches keyless public candles (Binance Vision) for a pinned window and reads no trainer data; CPU only, minutes.
+  est_minutes: 5
+  basis: Reads ~10 small jsonl files and bootstraps 4000 month-block resamples; seconds on a runner (smoke on the 796-trade eba2-07/-08 pool, 2026-10-25).
+run:
+  command:
+  - python3
+  - scripts/research/pool_arm_diff.py
+  - --unit
+  - ada_pullback_2h=RQ-20261025-d7e6-02
+  - --unit
+  - xrp_pullback_2h=RQ-20261025-d7e6-03
+  - --unit
+  - eth_pullback_2h=RQ-20261025-d7e6-04
+  - --unit
+  - sol_pullback_2h=RQ-20261025-d7e6-05
+  - --unit
+  - avax_pullback_2h=RQ-20261025-d7e6-06
+  - --baseline
+  - A
+  - --candidate
+  - MB
+  - --control
+  - UB
+  - --control
+  - RB
+  - --bar
+  - '0.03'
+  - --min-n
+  - '1500'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '5'
+  - --dd-mult
+  - '1.35'
+  - --seed
+  - '20261025'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261025-d7e6-07
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/pool_arm_diff.py
+- tests/test_pool_arm_diff.py
+- comms/research/grading/RESULTS-GRADE-1025.json
+requires_result:
+  unit: RQ-20261025-d7e6-06
+not_before: '2026-10-27T00:00:00Z'
+programme: P1

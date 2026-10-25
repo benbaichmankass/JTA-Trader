@@ -136,8 +136,10 @@ strategy_modules:
     runtime_imports:
     - src.runtime.entry_head_pwin
     - src.runtime.exit_levers
+    - src.runtime.momentum_levers
     - src.runtime.position_telemetry
     - src.runtime.target_extension_soak
+    - src.runtime.tp_revision
     - src.runtime.tp_venue_cap
     - src.runtime.trail_decay
     - src.runtime.trail_vol
@@ -272,10 +274,12 @@ strategy_modules:
     - low
     - timestamp
     runtime_imports:
+    - src.runtime.closed_bars
     - src.runtime.entry_head_pwin
     - src.runtime.exit_head_apply
     - src.runtime.exit_head_shadow
     - src.runtime.exit_levers
+    - src.runtime.momentum_levers
     - src.runtime.position_telemetry
     - src.runtime.target_extension_soak
     - src.runtime.tp_revision

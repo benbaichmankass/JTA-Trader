@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-10-27",
+    "kind": "date"
+  },
+  "id": "PI-20261025-ALQWWPXT-0001",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "session",
+    "ref": "checklist ALPACA-SILENCE-1025 / comms/health/alpaca-silence-20261025.json",
+    "rerun": "scripts/ops/diag_fetch.sh 'alpaca_open_orders?account_id=alpaca_paper' | grep -c 2e843e04-5487-470c-a702-70e796fbd05e"
+  },
+  "state": "queued",
+  "what": "[alpaca/paper soak] The alpaca_paper GLD 39-sh zombie OCO kept by operator decision 2026-10-02 ('Mark it, keep going', PI-20260930-ZIFJ1RKM-0001) has a consequence that decision did not name. It takes alpaca_paper's GLD slot, so the ROSTERED Stage-1 leg gld_pullback_1d is refused on every GLD signal. MEASURED order_packages read 2026-10-25: 10-16 short intent_noop flip_suppressed_hold_policy (current long qty=39.0); 10-19/10-20 risk_refused (buying power). leg_flow_report --window-hours 816 grades it starved. SOAK-MECH-B's close condition (gld_pullback_1d's next clean trade) and PAPER-RESET's observation ('GLD zombie OCO cleared') are unreachable while it stands; the venue still shows OCO 2e843e04 'new' and stop leg 891ddff0 'held' at 2026-10-25T06:35Z. A choice no data settles: (a) an Alpaca support ticket or paper reset, (b) accept that gld_pullback_1d cannot soak on alpaca_paper and say so on SOAK-MECH-B, or (c) re-place that soak. Evidence: comms/health/alpaca-silence-20261025.json finding F2."
+}

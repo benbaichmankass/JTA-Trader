@@ -2,7 +2,7 @@ id: RQ-20261016-e2db-02
 title: >-
   Tradeify NEW-strategy search, non-crypto: volatility-compression breakout (squeeze) (backtest_squeeze, harness defaults) on USO 1h priced as USOIL/USD -- a family
   no live leg runs on this instrument
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 1
@@ -129,4 +129,17 @@ related:
 - config/prop_rulesets/tradeify_247_1step.yaml
 - research/queue/RQ-20261015-24ca-01.yaml
 - research/queue/RQ-20261015-ca42-01.yaml
-last_dispatched_at: null
+last_dispatched_at: '2026-10-16T17:02:14+00:00'
+grading:
+  attested: RULE-RQ-20261016-e2db-02
+  auto: true
+  decision_rule_id: RULE-RQ-20261016-e2db-02
+  evidence:
+  - research/results/RQ-20261016-e2db-02/38936629024.jsonl
+  graded_at: '2026-10-17'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

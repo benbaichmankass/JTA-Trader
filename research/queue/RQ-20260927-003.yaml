@@ -265,9 +265,14 @@ grading:
   evidence:
   - research/results/RQ-20260927-003/36302282489.jsonl
   - research/results/RQ-20260927-003/session2-producer-failed-20260927.jsonl
-  graded_at: '2026-10-16'
+  graded_at: '2026-10-25'
   grader: scripts/research/queue_grade.py
   needs_review: true
+  owner: RESEARCH-TOOLING-GAPS
+  owner_reason: 'Rule cannot be applied: 4 rows, all producer_failed (ETH run timed out at the 55-min
+    trainer-vm-diag window; SOL not attempted). run.workflow is prose (''trainer-vm-diag (issue label
+    ...)''), so the dispatcher can never re-fire it. Lever (RESEARCH-TOOLING-GAPS note, 2026-10-16 08:47):
+    declare compute: cpu_long / a real workflow off the diag path, then re-queue. Not a verdict.'
   reason: 'read_state not unanimously measured: [''producer_failed'']'
   rows: 4
   verdict: null

@@ -8,6 +8,7 @@ from scripts.research import research_watchdog as w
 
 NOW = datetime(2026, 10, 13, 16, 0, tzinfo=timezone.utc)
 CFG = w.load_config()
+_REAL_QUEUE_FACTS = w.queue_facts
 TH = CFG["thresholds"]
 
 
@@ -69,6 +70,30 @@ def test_fires_ok_paths_and_cnl():
 
 def test_fires_ignores_ancient_stuck_runs_as_load():
     assert w.check_fires(5, [run(1, 3000, "in_progress")], NOW, TH)["state"] == w.BAD
+
+
+def test_fires_counts_every_workflow_a_runnable_unit_routes_to():
+    # MEASURED 2026-10-16 09:36Z: the dispatcher fired 8 research-harness-dispatch.yml runs at 08:57Z (in flight),
+    # but the watchdog listed only the four research-script-run* files and escalated "no research compute run
+    # started for 160 min". Workflows named by queue_facts' compute_workflows must be listed and counted.
+    harness = "research-harness-dispatch.yml"
+    assert harness in w.compute_workflows({"compute_workflows": [harness]})
+    assert set(w.RESEARCH_WORKFLOWS) <= set(w.compute_workflows(None))         # unreadable facts keep the floor
+    fx = {"workflow_runs": {w.DISPATCH_WORKFLOW: [run(1, 20)], harness: [run(50, 40, "in_progress")],
+                            **{wf: [run(10 + i, 160)] for i, wf in enumerate(w.RESEARCH_WORKFLOWS)}},
+          "run_jobs": {"1": [job(20)]}}
+    facts = dict(HEALTHY, compute_workflows=[harness])
+    fires = next(v for v in w.evaluate(w.FixtureProbe(fx), CFG, NOW, facts) if v["check"] == "dispatcher_fires")
+    assert fires["state"] == w.OK and harness in fires["evidence"]["workflows_counted"]
+    without = next(v for v in w.evaluate(w.FixtureProbe(fx), CFG, NOW, dict(HEALTHY)) if v["check"] == "dispatcher_fires")
+    assert without["state"] == w.BAD                                            # the 09:36Z false escalation, reproduced
+
+
+def test_queue_facts_names_the_workflows_runnable_units_resolve_to():
+    # reads the checked-in queue (the autouse fixture patches the module attribute, not this captured original)
+    f = _REAL_QUEUE_FACTS(w._REPO, datetime.now(timezone.utc))
+    assert f is not None and isinstance(f["compute_workflows"], list) and f["compute_workflows"]
+    assert all((w._REPO / ".github" / "workflows" / wf).is_file() for wf in f["compute_workflows"])
 
 
 # ── queue ──
@@ -340,3 +365,19 @@ def test_windows_do_not_hide_an_active_run_or_change_unwindowed_backends():
 def test_the_router_config_declares_the_trainer_windows_the_watchdog_reads():
     from scripts.research import compute_router as cr
     assert cr.load_config()["backends"]["trainer"]["queue"]["windows_utc"] == WIN
+
+
+# ── due now vs due within the refill horizon (EXITS-OVERNIGHT-1021, 2026-10-22) ──
+def test_backend_with_only_not_yet_due_units_is_ok_not_idle():
+    # the 2026-10-21 23:20Z false escalation: the weekly census was due at 04:43Z, inside the 6 h refill horizon
+    v = w.check_backend("trainer", 0, [run(1, 984)], NOW, TH, due_later=1)
+    assert v["state"] == w.OK and "none is due yet" in v["detail"]
+    assert v["evidence"]["due_within_refill_horizon"] == 1
+    assert w.check_backend("trainer", 1, [run(1, 984)], NOW, TH, due_later=0)["state"] == w.BAD
+
+
+def test_queue_facts_due_now_never_exceeds_the_horizon_count():
+    f = _REAL_QUEUE_FACTS(w._REPO, datetime.now(timezone.utc))
+    assert f is not None
+    for be, n in f["by_backend_due_now"].items():
+        assert n <= f["by_backend"].get(be, 0)

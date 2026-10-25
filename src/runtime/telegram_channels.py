@@ -128,6 +128,7 @@ SENDERS: Final[dict[str, tuple[str, ...]]] = {
     "src/runtime/mobile_push/trade_events.py": ("trade_opened", "trade_closed", "trade_updated"),
     "src/runtime/execution_diagnostics.py": (
         "trade-open", "trade-close", "trade-update", "demotrade", "execution_alert"),
+    "scripts/ops/amend_position_sl.py": ("trade-update",),   # AMEND-SL-ACTION: one SL-moved ping via enqueue_trade_update
     "src/prop/breakout_notify.py": (
         "prop_fill", "prop_monitor", "prop_ticket", "prop_expiry_prompt",
         "prop_expiry_notice", "prop_invalidation_prompt", "prop_alert",
@@ -151,6 +152,7 @@ SENDERS: Final[dict[str, tuple[str, ...]]] = {
     "src/prop/prop_fills_staleness.py": ("prop_alert",),
     "src/prop/phone_executor.py": ("prop_alert",),
     "src/prop/phone_trail.py": ("prop_alert",),
+    "src/prop/phone_drill.py": ("prop_alert",),
     "scripts/check_heartbeat.py": ("alert",),
     "scripts/check_ib_gateway.py": ("alert",),
     "scripts/check_web_api.py": ("alert",),

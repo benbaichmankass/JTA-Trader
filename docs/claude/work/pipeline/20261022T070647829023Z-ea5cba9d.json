@@ -1,0 +1,18 @@
+{
+  "based_on": "20261021T190143493743Z-8d3f8445.json",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "live_vs_backtest reads CONSISTENT for both legs on bybit_2, or a research/queue unit has attributed the gap to regime|cost|execution|overfit and its disposition is recorded",
+    "kind": "observation"
+  },
+  "id": "PI-20261021-4ZLRFEV1-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "PERF-REVIEW-PREP-20261021:live_vs_backtest",
+    "rerun": "python3 scripts/research/live_vs_backtest.py --leg xrp_pullback_2h --leg ada_pullback_2h"
+  },
+  "state": "done",
+  "terminal_reason": "Attribution COMPLETE before this item was filed, then extended (lane PERF-FOLLOWUP-2026W43, 2026-10-22). (1) Cause named 2026-10-18 by scripts/research/live_bt_trade_join.py (PI-20261015-10152047-0001, comms/research/live_bt_join/2026-10-18/): ENTRY -- both legs carry no decision_bar, so live decides on the FORMING 2h bar while the Stage-0 records score CLOSED bars; EXIT and EXECUTION gaps ~0. (2) This lane bootstrapped live real-money R (walk-through 2026-10-21: xrp -9.92R n=17, ada -6.91R n=15) against the arm each leg ACTUALLY trades (forming-bar arm of RQ-20261018-2a10-01, Binance 1m proxy, full cost stack, i.i.d., 20000 draws, EXPLORATORY): ada pct 11.0 (full history n=656) / 12.4 (latest 25%) -> CONSISTENT with what it trades; xrp pct 1.8 (full n=499) / 4.2 (latest 25%, n=125, mean +0.001 R/trade) -> still at the edge. (3) As-traded Stage 0 (scripts/research/as_traded_stage0.py on the same arms, 4 calendar folds, latest-25% holdout): ada PASS (+63.8R, holdout +10.1R, 3/4 folds); xrp MIXED (+26.2R but folds 3-4 at -0.04/-0.86R, holdout +0.17R over 125 trades). The decision this feeds is the operator's 2026-10-22 'match the bar' answer on checklist DECISION-BAR-MATCH (xrp_pullback_2h is named there); the extension to the other forming-bar money legs is PI filed by the same lane. ada: no action, because live is consistent with its as-traded band -- keep accruing, R4 decides at its threshold. The candle_mismatch finding PI-20261021-LRP-8CA903B8 is a separate parity item, unchanged.",
+  "what": "[performance] Real-money legs BELOW_BACKTEST on live_vs_backtest: bybit_2 xrp_pullback_2h (n=17, -9.92R, pct 2.2) and ada_pullback_2h (n=15, -6.91R, pct 3.3); mirrors CONSISTENT. Needs a fidelity/regime/cost/execution attribution unit, NOT a demote. Related open item PI-20261021-LRP-8CA903B8 (ada_pullback_2h candle_mismatch x3). MEASURED 2026-10-21, whole-history live R per book; see docs/reviews/2026-10-21-weekly-walkthrough.md (PR #19362)."
+}

@@ -1,0 +1,31 @@
+{
+  "id": "ALPACA-SILENCE-1025",
+  "title": "Why has Alpaca (alpaca_live first) taken almost no trades for weeks while markets moved? Correct quiet vs fault, per leg, config->data->signal->risk->order->service",
+  "phase": "W6",
+  "state": "done",
+  "owner": "lane",
+  "lane": "session_01K1jp2SACfikkR3ALqWwpxt",
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 12,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "OPERATOR REQUEST 2026-10-25 ~06:17Z (chat, verbatim): \"let's dispatch the lane to investigate why Alpaca hasn't been trading. I do think that that's something we need to investigate. It could just be that it's been quiet, but markets have actually been pretty moving lately, so we should double check why we're not getting any trades on, at least on the live money account. There's like no trades on Alpaca for, it feels like, weeks at this point.\" Dispatched fresh (Opus, real-money path) to session_01K1jp2SACfikkR3ALqWwpxt. Evidence prompting it: SOAK-MECH-A/FIX-SA-03 note only 1 Alpaca entry filled since 2026-09-29. || [2026-10-25T06:45Z lane session_01K1jp2SACfikkR3ALqWwpxt] Dispatched by Manager Session 2026-10-25 (session_016v5FrVaSAmNoz8u6ct9HqC) on the operator's chat ask 06:17Z. VERDICT alpaca_live: CORRECT-QUIET, no fault at any stage (record comms/health/alpaca-silence-20261025.json). Roster = 1 leg (iaum_pullback_1d), long-only cash book, venue shorting disabled. MEASURED alpaca_order_history after 09-15: 3 filled bracket entries (SLV 09-17, TLT 09-18, IAUM 09-23), 0 rejected, none after 09-23. 7 shorts routed, all journalled dry_run_no_order_placed. 4 longs (SLV 09-21/25/28, IAUM 09-21) were open-package blocks, silent before #14565. DATA 25/25 sessions ticked, 0 stale bars; independent Yahoo replay of each leg's order_package() agrees with the live evals. alpaca_portfolio [] by decision (B2). alpaca_paper: refusals are holds, venue buying power at 0, and the GLD zombie OCO. Filed: PI-20261025-ALQWWPXT-0001 (GLD wedge blocks the gld_pullback_1d soak, ask_operator), -0002 (paper buying-power starvation), -0003 (alpaca_live near-idle roster, decision for the operator). Closed PI-20260926-X3QEGPJL-0004 (answered: buying power; leg now receiving, trade 6655).",
+  "priority_rank": 2,
+  "updated_at": "2026-10-25T06:39:35Z",
+  "updated_by": "session_01K1jp2SACfikkR3ALqWwpxt",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "_seq": 641,
+  "writeback": {
+    "roadmap": "none: L-LADDER next is unchanged; this row answers a liveness question and its one roadmap-relevant output (alpaca_live near-idle, Gate-2 mirror empty) is filed as PI-20261025-ALQWWPXT-0003 for the operator decision",
+    "arch": "none: no runtime component, path or contract changed by this row"
+  },
+  "observation": {
+    "what": "alpaca_live correct-quiet verdict holds: every long setup on a leg rostered there either reaches the venue as a bracket order or is refused with a logged reason (open_package_blocked/scoped, side_filter dry_cause)",
+    "how_to_check": "scripts/ops/diag_fetch.sh alpaca_order_history?account_id=alpaca_live&after=<date>; compare with audit_query?strategy=iaum_pullback_1d&side=buy&since=<date>; python3 scripts/ops/leg_flow_report.py --window-hours 168 (alpaca_live legs not starved)",
+    "due_by": "2026-11-08T00:00Z"
+  }
+}

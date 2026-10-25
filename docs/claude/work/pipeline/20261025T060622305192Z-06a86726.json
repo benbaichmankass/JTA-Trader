@@ -1,0 +1,25 @@
+{
+  "based_on": "20261018T112842084301Z-328742f6.json",
+  "due_when": {
+    "due_date": "2026-10-25",
+    "kind": "date"
+  },
+  "evidence": "issue #18954 result comment, run 39122591821",
+  "filed_by": "lane ACTIVE-MGMT-DRIVE-1018 session_013oEUJzaNgUnEAFrpHccwkx",
+  "id": "PI-20261018-MARKSQLITE-0001",
+  "money_path": false,
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ACTIVE-MGMT-DRIVE-1018 read of system-action run 39122591821 (issue #18954)",
+    "rerun": "grep -n 'sqlite3 ' scripts/ops/mark_operator_flattened_action.sh scripts/ops/*_action.sh | head; and the next mark-operator-flattened run's comment: holds while it prints 'sqlite3: command not found'"
+  },
+  "roadmap": [
+    "M39"
+  ],
+  "routed_2026_10_25": "Checked on main 2026-10-25: sqlite3 CLI still at lines 81 and 100 of mark_operator_flattened_action.sh.",
+  "routed_to": "checklist:MARK-FLATTENED-SQLITE-PREVIEW",
+  "state": "routed",
+  "terminal_reason": null,
+  "what": "FIX (Tier 1, tooling): scripts/ops/mark_operator_flattened_action.sh prints its BEFORE/AFTER tables with the sqlite3 CLI, which is not installed on the live VM ('sqlite3: command not found', lines 81 and 100, run 39122591821, 2026-10-18). The python plan/apply/self-test ran and the mark landed, so the action is sound, but the audit record the wrapper promises (the rows as they stand, before and after) is missing from every run on this box. Replace the two shell previews with the python sqlite3 module (same SELECT) or make the wrapper fail loudly when the preview cannot be produced. Check the sibling *_action.sh wrappers for the same idiom."
+}

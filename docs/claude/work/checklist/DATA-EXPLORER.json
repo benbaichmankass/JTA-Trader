@@ -21,8 +21,8 @@
     "PI-20261014-IMQACAUN-0001 (41 stuck-dispatched research units) routed by manager"
   ],
   "note": "[2026-10-14 final lane note] DEPLOYED+OBSERVED: GET /api/bot/research/catalog (#17869) 200 (619 units, 486 result at 01:03Z); GET /api/bot/db/overview (#17956) merged 00:58Z, live and GATED: 401 without bearer and with a bad bearer from 01:02Z; /api/bot/db/tables 401 without bearer; wrong-password login 401 invalid_credentials (was 500). Auth set-env #17905/#17906/#17907 landed 2026-10-13. NOT observed: overview CONTENT (gated, no token), real login mint, SPA, human render. Not provided by overview by design: 24h/7d growth, stale verdict. Caught by test-schema-fidelity-guard: signals timestamp column is logged_at_utc, not ts. [2026-10-14 ~05:20Z, REPORTED BY THE MANAGER from the operator's phone - not observed by this lane] FIRST HUMAN RENDER: the operator, signed in, saw the Research catalog (629 total / 523 result / 8 dispatched / 96 stuck) and the Database-health overview (21 tables, 2 empty: backtest_results + learning_progress, 0 unknown counts, trade_journal 1.9 GB, WAL 0 B, signals 4,069,705 rows) render; the overview took a noticeable wait to load. That also shows a real login minted a usable token and the gate accepted it. #17965 (e35 corpus as a result source) merged+deployed (live dispatched 32 -> 5). This PR makes the overview cheap: per-table COUNT budget with labelled estimates, timing in the payload + one journal line per build, longer cache. STILL NOT OBSERVED: the authenticated overview latency after this change, the SPA client timeout / relative-age fixes (dashboard session).",
-  "updated_at": "2026-10-14T05:25:22Z",
-  "updated_by": "session_01EUNwHBF7sHQp1DimqACauN",
+  "updated_at": "2026-10-24T06:01:03Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "roadmap": [
     "M6"
   ],
@@ -30,7 +30,13 @@
   "observation": {
     "what": "A human opens the deployed SPA Data Explorer, logs in, and sees the Research catalog default sub-tab with rows (and Signals/Trades/Raw tables load); wrong password returns 401 not 500; /api/bot/db/tables returns 200 with a bearer and 401 without",
     "how_to_check": "curl -s -o /dev/null -w %{http_code} -X POST https://ict-bot.duckdns.org/api/auth/login -H Content-Type:application/json -d {\"email\":\"ben.baichmankass@gmail.com\",\"password\":\"wrong\"} -> 401; GET /api/bot/research/catalog?limit=1 -> present:true; human confirms render",
-    "due_by": "2026-10-20"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-20",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
   "writeback": {
     "roadmap": "M6 where/next: Data Explorer research catalog landed (owed at close)",

@@ -9,14 +9,18 @@ question: >-
   Does {leg} ({symbol} {timeframe}, Breakout market {breakout_market}) clear the
   operator's prop bar -- E[net $ banked before the account dies] > 0 with
   P(net>0) >= 0.70 on every seed -- under Breakout's own cost stack
-  (config/prop_rulesets/breakout.yaml, --costs breakout, swap model
+  (config/prop_rulesets/breakout_turbo_1step.yaml -- breakout_2's ruleset, --costs breakout, swap model
   {swap_model}) when sized {sizing_arm}? Re-prices the leg's committed
   trade evidence; no new backtest.
 why_this_matters: >-
   Breakout prop is the operator's priority-1 fit target (weight 30 of 100).
   Every leg with committed evidence and a Breakout-mappable symbol gets one
-  row per sizing arm so the roster proposal for breakout_1 can be made from
-  a record, never from a memo.
+  row per sizing arm so the roster proposal for breakout_2 (Turbo) can be made
+  from a record, never from a memo. RETARGETED 2026-10-16 (lane
+  P5-PROP-BACKLOG-1016): until then this priced Classic breakout.yaml for the
+  retired breakout_1 (RQ-20261016-002/003 had already run when this was
+  fixed: their numbers are valid Classic-ruleset prices, but a PASS from them is not
+  actionable for breakout_2).
 power:
   expected_n: "{n_trades}"
   min_detectable_effect: 0.3
@@ -42,7 +46,7 @@ decision_rule:
     PASS IF ev_net_usd_per_life > 0 on ALL 5 seeds AND P(net>0) >= 0.70 on
     ALL 5 seeds. UNDERPOWERED (indeterminate) IF n < 88. FAIL IF ev <= 0 on
     any seed. NULL (indeterminate) otherwise. A PASS is a Tier-3 roster
-    proposal for breakout_1, not applied by this unit; a FAIL is one pass and
+    proposal for breakout_2, not applied by this unit; a FAIL is one pass and
     re-queues for a confirmatory run before it is read as a kill.
 routing:
   needs_trainer_resident_data: false
@@ -61,7 +65,7 @@ run:
     - --arm
     - "A={sizing_arm_args}"
     - --common
-    - "--ruleset config/prop_rulesets/breakout.yaml --costs breakout --funded-start fresh --swap-model {swap_model}"
+    - "--ruleset config/prop_rulesets/breakout_turbo_1step.yaml --costs breakout --funded-start fresh --swap-model {swap_model}"
     - --seeds
     - "1,2,3,4,5"
     - --grade

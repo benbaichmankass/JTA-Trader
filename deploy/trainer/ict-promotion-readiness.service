@@ -46,6 +46,14 @@ Environment=VM_SSH_KEY=/home/ubuntu/.ssh/id_ed25519
 # retime of 2026-07-17 fixed the CONCURRENT-memory collision; this fixes the
 # serialized-starvation half.)
 Environment=TRAINER_HEAVY_LOCK_WAIT_S=14400
+# 2026-10-21 (PI-20261018-WH81NW96-0004, operator popup "Raise to 5200M" ->
+# "Yes, measure then raise"; rule: flag only if the sweep already fits the
+# current cap). MEASURED 2026-10-21 19:07Z (trainer relay #19365/#19377): the
+# WHOLE sweep with oos_edge ON over 97 models ran 22m21s, exit 10, max RSS
+# 1215 MiB, 0 OOM kills -> 3.7x margin under 4500M, so MemoryMax is unchanged
+# and only the flag turns on. (The 5.19 GB per-head peak of 2026-08-20 predates
+# the shard-whole/column-projection fixes.) Revert = delete this line.
+Environment=PROMOREADY_OOS_EDGE=on
 # Hard memory bound (MB-20260719-PROMOREADY-OOSEDGE-OOM): the sweep
 # D-state-thrashed the whole 6 GB box at ~5 GB RSS twice on 2026-07-19 with
 # nothing to stop it. A breach now OOM-kills the service fast (unit fails,

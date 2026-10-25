@@ -1,0 +1,26 @@
+{
+  "based_on": "20261025T060917198033Z-27d7a5cb.json",
+  "due_when": {
+    "check_every_days": 7,
+    "due_date": "2026-10-25",
+    "kind": "date"
+  },
+  "id": "PI-20261021-WG8OPB7N-0002",
+  "next_action": "dispatch_lane",
+  "note": " [2026-10-25] OPERATOR DECISION (popup via manager session_016v5FrVaSAmNoz8u6ct9HqC), verbatim: \"Retire the scan (Recommended)\". Routed to checklist DRIFT-SCAN-RETIRE. [2026-10-25 ~06:10Z] OPERATOR CORRECTION (chat): keep measuring drift and use it on the workplan, just not 8x/day. Supersedes \"retire\". Row DRIFT-SCAN-RETIRE re-scoped: plan-only, once daily before 05:30Z, results surfaced to the daily review. [2026-10-25 ~06:15Z] FINAL (operator offered, manager chose): retire the ~8/day timer; drift scan runs as a step of the weekly /ml-review (plan-only), persistent drift -> drift-remediation rows. Row DRIFT-SCAN-RETIRE.",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane PIPELINE-HEALTH-1021 / trainer-vm-diag #19343",
+    "rerun": "trainer-vm-diag: journalctl -u ict-drift-retrain.service -n 14 --no-pager | grep 'scan complete'  # reads dispatch_count=N plan_only=1"
+  },
+  "redate": {
+    "evidence": "manager relay 2026-10-21 ~19:10Z (operator popup answers)",
+    "observation": "OPERATOR ANSWER relayed by the manager 2026-10-21 ~19:10Z, verbatim: \"Diagnose, then arm (Recommended)\". Routed by the manager to a separate drift-remediation lane on the 9 heads: PI-20261016-P3PFA1GK-0001. NOTHING IS ARMED by this lane; RETRAIN_PLAN_ONLY stays 1 until that lane diagnoses.",
+    "observed_at": "2026-10-21"
+  },
+  "routed_to": "checklist:DRIFT-SCAN-RETIRE",
+  "severity": "medium",
+  "state": "routed",
+  "tier": 2,
+  "what": "[ml] ict-drift-retrain runs every ~3 h (13.4 CPU-min each) with RETRAIN_PLAN_ONLY=1 (the script default, scripts/ops/run_drift_retrain.sh:73, 'toggle to 0 once the operator has eyeballed a few cycles'): MEASURED 2026-10-21 15:19Z and 18:21Z, both scans flagged dispatch_count=9 manifests as drifted and retrained none. The daily cycle (ict-trainer, 01:xx, 67 trained / 0 failed on 10-18..10-21) retrains every trainable manifest regardless, so drift remediation is currently the daily retrain only. Decision for the operator (Tier-2, env on the trainer unit): arm RETRAIN_PLAN_ONLY=0, or retire the scan and its 8 daily runs as redundant with the daily cycle. Population: 2 scans read, 9 manifests each (not shown which)."
+}

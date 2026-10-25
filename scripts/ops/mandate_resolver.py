@@ -66,7 +66,12 @@ added 2026-09-30, PI-20260928-E8Y3BGBS-0003) splits the same way: an equity
 reading that is absent or older than ``ACCOUNT_SNAPSHOT_MAX_AGE_DAYS`` is
 ``NEEDS_DATA``; a measured account on which NONE of the leg's permitted setups
 sizes above zero through ``RiskManager.position_size`` is ``REFUSE``, and it is
-decided BEFORE cost fidelity so an unaffordable leg never files a data task. Everything else that
+decided BEFORE cost fidelity so an unaffordable leg never files a data task. ``R-HOLDOUT``
+(both promotions, when ``bar.holdout_required``; operator decision 2026-10-16, "Require
+holdout") splits the same way: a record with no valid ``holdout_confirmation``, or too few
+held-back trades to read, is ``NEEDS_DATA`` naming the holdout re-run unit; a valid
+confirmation whose selected configuration was not positive net of cost is ``REFUSE``. See
+``_holdout``. Everything else that
 was a REFUSE before this change (mandate not granted or blocked, wrong
 account or account-class drift, an unknown transition, a config-fingerprint
 mismatch, B1's own four clauses, a computed expectancy or fold count that is
@@ -1045,6 +1050,13 @@ def _add_risk(leg: str, frm: str, to: str, account: str, exchange: str,
     if (frm, to) == ("S1", "S2"):
         _affordability(leg, account, exchange, record, acfg, root, ctx)
 
+    # ── holdout confirmation (both promotions, bar.holdout_required) ────────
+    # After affordability for the same reason cost fidelity is: an unaffordable
+    # leg must never file a data task (here, a holdout re-run) towards a
+    # promotion that can never trade.
+    if bar.get("holdout_required"):
+        _holdout(leg, frm, to, record, bar, m, root, ctx)
+
     # ── Stage-1 cost fidelity (S1 -> S2 only) ───────────────────────────────
     if (frm, to) == ("S1", "S2"):
         _cost_fidelity(leg, venue, record, m, root, ctx)
@@ -1073,6 +1085,150 @@ def _add_risk(leg: str, frm: str, to: str, account: str, exchange: str,
     if used > share * budget + 1e-12:
         raise _Refuse("R-CAP", f"auto-promoted declared risk {used:.4f} > {share:.0%} of "
                                f"{account}'s budget {budget:.4f} ({auto_after}/{roster_after} legs)")
+
+
+# ── R-HOLDOUT: a pass on a pre-registered, never-seen latest span ────────────
+# OPERATOR DECISION 2026-10-16 (popup "Require holdout", relayed by Manager
+# Session 2026-10-16 session_01VduHYzdaXe27wTDBLSu8ao; recorded on checklist row
+# PROMOTION-BAR-MULTIPLICITY), verbatim: "From now on, promotion needs a pass on
+# the held-back 25% you just approved. That's one setting tested once, so no
+# deflation is needed. Live legs are not demoted on this number (live
+# net-of-cost results still govern demotion), but all 8 real-money legs get
+# holdout re-runs first." It answers the trial-ledger measurement that 0 of 29
+# Stage-0 PASS records survive DSR > 0.95 with a BHY-haircut expectancy > 0.
+#
+# The confirmation is a block on the Stage-0 record, `holdout_confirmation`:
+# the configuration SELECTED on the earliest span, evaluated ONCE on a
+# pre-registered latest span no selection step read, with the same rule and
+# the full cost stack. Where the three verdicts fall:
+#   NEEDS_DATA  no block; a block that is not a valid confirmation (malformed,
+#               evaluated more than once, rule not registered before the run,
+#               source not committed, cost stack incomplete, spans overlapping,
+#               a different configuration than the record's); or too few
+#               held-back trades to read. "Without it the resolver returns
+#               NEEDS_DATA ... never REFUSE" (the dispatch).
+#   REFUSE      a VALID confirmation that decisively failed: the selected
+#               configuration was not positive net of cost on the held-back
+#               span at n >= the floor, or nothing survived selection.
+#   pass        a valid `confirmed` block, net R > 0 at n >= the floor.
+# Demotion never reads this block: MD-DEMOTE-S2-S1 stays on live net-of-cost.
+HOLDOUT_FIELD = "holdout_confirmation"
+HOLDOUT_CLAUSE = "R-HOLDOUT"
+HOLDOUT_PASS = "confirmed"
+HOLDOUT_FAIL = ("not_replicated", "no_discovery")
+HOLDOUT_THIN = ("underpowered", "insufficient_discovery")
+QUEUE_DIR_REL = "research/queue"
+
+
+def holdout_unit_for(leg: str, root: Path) -> Optional[str]:
+    """The research/queue unit that re-runs `leg` under the holdout protocol,
+    found by its `holdout_rerun.leg` field, or None. The newest id wins."""
+    qdir = root / QUEUE_DIR_REL
+    if not qdir.is_dir():
+        return None
+    hits = []
+    for p in sorted(qdir.glob("RQ-*.yaml")):
+        try:
+            text = p.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        if "holdout_rerun:" not in text or leg not in text:
+            continue
+        doc = _yaml(root, f"{QUEUE_DIR_REL}/{p.name}") or {}
+        hr = doc.get("holdout_rerun") if isinstance(doc, dict) else None
+        if isinstance(hr, dict) and hr.get("leg") == leg:
+            hits.append(str(doc.get("id") or p.stem))
+    return hits[-1] if hits else None
+
+
+def _holdout_data_task(leg: str, frm: str, to: str, why: str, root: Path) -> Dict[str, Any]:
+    unit = holdout_unit_for(leg, root)
+    run = (f"run research unit {unit} ({QUEUE_DIR_REL}/{unit}.yaml)" if unit else
+           f"author and run a holdout re-run unit for {leg} in {QUEUE_DIR_REL}/ (holdout_rerun.leg: "
+           f"{leg}; scripts/research/exit_lever_ablation.py --grade holdout)")
+    return {
+        "what": (f"{leg} needs a holdout confirmation before {frm} -> {to} can be decided ({why}): "
+                 f"select the configuration on the earliest ~75% of history, then evaluate the "
+                 f"selected configuration ONCE on the pre-registered latest ~25% (grown to 25 trades, "
+                 f"capped at 40%), same rule, full cost stack -- {run}; then write the result into "
+                 f"{EVIDENCE_DIR_REL}/{leg}.json as `{HOLDOUT_FIELD}`."),
+        "clears_when": (f"{EVIDENCE_DIR_REL}/{leg}.json carries a valid `{HOLDOUT_FIELD}` block "
+                        f"(verdict {HOLDOUT_PASS!r} or a decisive fail) for the record's own "
+                        f"config_fingerprint"),
+        "check_every_days": 7,
+        "next_action": "dispatch_lane",
+        "research_unit": unit,
+    }
+
+
+def _holdout(leg: str, frm: str, to: str, record: Dict[str, Any], bar: Dict[str, Any],
+             m: Dict[str, Any], root: Path, ctx: Dict[str, Any]) -> None:
+    hc = record.get(HOLDOUT_FIELD)
+    floor = bar.get("holdout_min_n", 25)
+    if not isinstance(floor, int) or isinstance(floor, bool) or floor < 1:
+        raise _Refuse("R-MANDATE-NOT-GRANTED", f"{m['id']} bar.holdout_min_n={floor!r} is not a "
+                                               "positive integer")
+    ev: Dict[str, Any] = {"required": True, "min_n": floor, "unit": holdout_unit_for(leg, root)}
+    ctx["evidence"]["holdout"] = ev
+
+    def need(why: str) -> None:
+        ev["why"] = why
+        raise _NeedsData(HOLDOUT_CLAUSE, f"{leg}: {why}", _holdout_data_task(leg, frm, to, why, root))
+
+    if not isinstance(hc, dict):
+        need(f"the Stage-0 record carries no `{HOLDOUT_FIELD}` -- no configuration has been "
+             "tested once on a held-back span")
+    ev["block"] = {k: hc.get(k) for k in ("verdict", "research_unit", "n_holdout", "net_r_holdout",
+                                          "expectancy_r_holdout", "selected_from", "source_run")}
+    verdict = hc.get("verdict")
+    if verdict not in (HOLDOUT_PASS,) + HOLDOUT_FAIL + HOLDOUT_THIN:
+        need(f"`{HOLDOUT_FIELD}.verdict`={verdict!r} is not one of "
+             f"{(HOLDOUT_PASS,) + HOLDOUT_FAIL + HOLDOUT_THIN}")
+    # no_discovery / insufficient_discovery never read the held-back span (nothing was selected), so 0 is its only
+    # honest count; every other verdict read it, and exactly once.
+    want_evals = 0 if verdict in ("no_discovery", "insufficient_discovery") else 1
+    if hc.get("evaluations_on_holdout") != want_evals:
+        need(f"evaluations_on_holdout={hc.get('evaluations_on_holdout')!r} (verdict {verdict!r} "
+             f"needs {want_evals}) -- the held-back span must be read exactly once, or it is no "
+             "longer never-seen")
+    rule = hc.get("decision_rule") or {}
+    if not (isinstance(rule, dict) and rule.get("id") and rule.get("registered_before_run") is True):
+        need("the holdout decision rule is not stated as registered before the run")
+    if not in_repo(root, hc.get("source_run")):
+        need(f"source_run {hc.get('source_run')!r} is not a committed file")
+    cs = hc.get("cost_stack") or {}
+    if not (isinstance(cs, dict) and _num(cs.get("fees")) and cs["fees"] > 0
+            and _num(cs.get("slippage")) and "funding" in cs):
+        need(f"cost_stack={cs!r} is not the full stack (fees > 0, slippage, funding stated)")
+    disc, hold = hc.get("discovery") or {}, hc.get("holdout") or {}
+    d_end, h_start = _parse_ts(disc.get("end")), _parse_ts(hold.get("start"))
+    if d_end is None or h_start is None or not d_end < h_start:
+        need(f"discovery.end={disc.get('end')!r} is not strictly before holdout.start="
+             f"{hold.get('start')!r} -- the spans are not disjoint")
+    if verdict == "insufficient_discovery":
+        need("too few discovery trades to select a configuration: it cannot decide")
+    if verdict == "no_discovery":
+        # Decisive: the candidate set the unit selected from includes the declared configuration,
+        # and none of them -- the declared one included -- cleared discovery.
+        raise _Refuse(HOLDOUT_CLAUSE, f"{leg}: no configuration survived selection on the discovery "
+                                      "span, so there was nothing to confirm")
+    if hc.get("selected_config_fingerprint") != record.get("config_fingerprint"):
+        need(f"the holdout selected config {hc.get('selected_config_fingerprint')!r}, not this "
+             f"record's {record.get('config_fingerprint')!r} -- the leg's configuration is unconfirmed")
+    n, net = hc.get("n_holdout"), hc.get("net_r_holdout")
+    if not isinstance(n, int) or isinstance(n, bool) or not _finite(net):
+        need(f"n_holdout={n!r}, net_r_holdout={net!r} -- not stated")
+    if verdict in HOLDOUT_THIN or n < floor:
+        need(f"the held-back span holds n={n} trades, below the floor of {floor}: it cannot decide")
+    exp = hc.get("expectancy_r_holdout")
+    if not _finite(exp) or abs(net / n - exp) > 0.01:
+        need(f"expectancy_r_holdout={exp!r} != net_r_holdout/n = {net / n:.4f} -- the block "
+             "disagrees with itself")
+    if verdict in HOLDOUT_FAIL or net <= 0:
+        raise _Refuse(HOLDOUT_CLAUSE, f"{leg}: the selected configuration read net_r={net} over "
+                                      f"n={n} held-back trades (verdict {verdict!r}) -- not > 0 net "
+                                      "of the full cost stack")
+    ev["passed"] = True
 
 
 def _stale_against_record(r3: Dict[str, Any], modelled: Any) -> Optional[str]:

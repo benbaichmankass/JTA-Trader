@@ -1,0 +1,179 @@
+id: RQ-20261018-ff8f-03
+cadence: once
+theme: ml_health
+kind: experiment
+title: 'Frontier / calibrated LINEAR head: is an isotonic-calibrated multinomial logit non-inferior to LightGBM on LOG-LOSS and BRIER for the BTC/ETH/SOL
+  1h volatility-regime head? (linear_logit; numpy-servable on the money box)'
+status: done
+priority: 2
+question: 'On the published BTC/ETH/SOL 1h v002 shards (6 shared features, tail_rows 40000, holdout after 2025-10-01), on identical purged folds: is a standardised
+  multinomial logistic regression with isotonic calibration (sklearn_logit_calibrated) within 0.005 nats of LightGBM''s log-loss AND within 0.005 of its
+  Brier score on all three symbols, while beating the class prior by >= 0.005 nats?'
+why_this_matters: 'Task 3 of lane ML-UNBLOCK-1018. linear_logit history is [FAIL, FAIL, PASS, INDETERMINATE, INDETERMINATE]: ML-F7 found the uncalibrated
+  numpy logit within noise of LightGBM on macro-F1 (BTC +0.009, CI crossing 0) and ML-F17 found it beats the prior on log-loss on all three symbols. Nobody
+  has tested a CALIBRATED linear head on probability quality, and probability quality is what a conformal/abstention lever (65ff-25) and a p_volatile threshold
+  consume. A non-inferior linear head is the cheapest family to SERVE (numpy at inference, no lightgbm on the money box) and the natural baseline every
+  GBDT variant should have to beat. Trading metric: non-inferiority here releases the same net-of-cost regime-cell walk-forward with the LightGBM head as
+  the baseline (decision_rule).'
+power:
+  expected_n: 24000
+  min_detectable_effect: 0.1
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'As RQ-20261014-4591-01: tail_rows 40000 at min_train_frac 0.4 leaves ~24,000 OOS rows over 5 folds per symbol; d=0.1 paired needs ~785 rows; the
+    rule requires the condition on all three symbols rather than a single test.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed by construction (tail_rows of the nightly-rebuilt published shard); n does not grow with waiting.
+decision_rule:
+  id: RULE-RQ20261018-FF8F-03-CALIBRATED-LINEAR-NONINFERIOR
+  registered_at: '2026-10-18'
+  registered_before_run: true
+  statistic: 'Per symbol: paired purged-CV delta log-loss (positive = lower loss than the reference) of cal_logit vs lightgbm and vs the prior, on identical
+    rows, plus the holdout; Brier reported through the headline checks on the same folds via a second metric run is NOT possible in one unit, so Brier is
+    the registered follow-up metric (unit -04 of this family) and this unit''s rule is on log-loss.'
+  rule: 'PASS (non-inferior) IF on all three symbols cal_logit''s CV-mean log-loss is within 0.005 nats of lightgbm (delta vs lightgbm >= -0.005) AND beats
+    the prior by >= 0.005 nats AND the holdout delta vs lightgbm >= -0.005: family history linear_logit PASS; follow-up = the net-of-cost regime-cell walk-forward
+    with the LightGBM head as the baseline to beat, and only a PASS there is a candidate-manifest (Tier-3) proposal. FAIL IF cal_logit is worse than lightgbm
+    by > 0.02 nats on >= 2 symbols: closes the calibrated linear head on these 6 features at 1h (family history FAIL). INDETERMINATE otherwise, if folds
+    < 3, or if an arm is unavailable.'
+  min_n: 3 usable CV folds per symbol; holdout >= 20 test rows.
+  what_it_does_not_do: Builds, serves and registers nothing; touches no config. Probability quality is not edge; the walk-forward net of cost decides anything
+    that reaches an order.
+compute: auto
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 100
+  confidence: 0.25
+  basis: 'stand-in: a servable, calibrated regime head; not a measured P&L'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  published_data: metis-market-data
+  peak_memory_gb: 3.0
+  est_minutes: 30
+  basis: 'Estimate, NOT measured: the 4591-01 shape plus a 5-fold calibration inside each training fold; Kaggle CPU via published data.'
+ml_bakeoff:
+  task: classification
+  metric: logloss
+  higher_is_better: false
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT_1h:
+        path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+      ETHUSDT_1h:
+        path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+      SOLUSDT_1h:
+        path: datasets-out/market_features/SOLUSDT/1h/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    tail_rows: 40000
+    holdout_after: '2025-10-01'
+  cv:
+    folds: 5
+    embargo_rows: 24
+    min_train_frac: 0.4
+  baseline: lightgbm
+  controls:
+  - prior
+  candidates:
+  - cal_logit
+  learners:
+    prior:
+      kind: prior
+    lightgbm:
+      kind: lightgbm
+      params:
+        n_estimators: 200
+        learning_rate: 0.05
+        num_leaves: 31
+        min_child_samples: 50
+    cal_logit:
+      kind: sklearn_logit_calibrated
+      params:
+        method: isotonic
+        cv: 5
+        C: 1.0
+  rule:
+    min_folds: 3
+    pass_if:
+    - group:
+      - BTCUSDT_1h
+      - ETHUSDT_1h
+      - SOLUSDT_1h
+      vs: baseline
+      window: cv
+      op: '>='
+      value: -0.005
+    - group:
+      - BTCUSDT_1h
+      - ETHUSDT_1h
+      - SOLUSDT_1h
+      vs: prior
+      window: cv
+      op: '>='
+      value: 0.005
+    - group:
+      - BTCUSDT_1h
+      - ETHUSDT_1h
+      - SOLUSDT_1h
+      vs: baseline
+      window: holdout
+      op: '>='
+      value: -0.005
+    fail_if_no_candidate_reaches:
+    - group:
+      - BTCUSDT_1h
+      - ETHUSDT_1h
+      vs: baseline
+      window: cv
+      op: '>='
+      value: -0.02
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 90
+  inputs:
+    research_unit: RQ-20261018-ff8f-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M25
+related:
+- RQ-20261013-1414-01
+- RQ-20261015-eda2-01
+- RQ-20261016-65ff-25
+- ML-UNBLOCK-1018
+last_dispatched_at: '2026-10-20T09:53:34+00:00'
+grading:
+  attested: RULE-RQ20261018-FF8F-03-CALIBRATED-LINEAR-NONINFERIOR
+  auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-RQ20261018-FF8F-03-CALIBRATED-LINEAR-NONINFERIOR
+  evidence:
+  - research/results/RQ-20261018-ff8f-03/39404046651.jsonl
+  first_fail: 1 row(s), all measured, all fail (2 earlier producer_failed / re-graded wiring_only row(s)
+    superseded)
+  graded_at: '2026-10-20'
+  grader: scripts/research/queue_grade.py
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

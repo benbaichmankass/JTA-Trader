@@ -1,0 +1,22 @@
+{
+  "id": "PROP-GATE-ADA-XRP",
+  "title": "Run the prop survival gate for ada_pullback_2h, xrp_pullback_2h, trend_donchian_xrp_4h (never run) and re-read the high p_breach on the grandfathered eth/sol_prop records",
+  "phase": "next",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Operator 2026-10-18 ~14:10Z asked why ADA/XRP trade on bybit_2 but not on prop, and why breakout_2 runs an ETH trade bybit_2 does not. MEASURED on main: comms/prop_survival/ holds records only for trend_donchian_eth_4h (p_breach 0.63), eth_prop (0.934), sol_4h (0.4823) and sol_prop (0.5952). NO record exists for ada_pullback_2h, xrp_pullback_2h or trend_donchian_xrp_4h, so they were never gated for prop: not tested, not rejected. eth_prop and sol_prop are grandfathered (exemptions lapse 2026-11-07 and 2026-12-11, row PROP-GATE-PARITY). Their p_breach values look high; their meaning and horizon must be read before anyone relies on them. WORK: produce the three missing records through the Programme 05 P5-GATE nodes (research/programmes/05-prop.yaml), with the full cost stack and a rule registered before the run, and interpret the eth_prop/sol_prop p_breach against the firm's DD limits. A pass feeds a prop-roster add, which is Tier 3 with operator approval. Separate issue, not this row: the ETH leg on breakout_2 is trend_donchian_eth_prop, which is absent from bybit_2 because bybit_2 already trades ETH through trend_donchian_eth_4h. That path is NETTED-SLICES, then the eth_prop promotion.",
+  "priority_rank": 15,
+  "updated_at": "2026-10-23T15:00:33Z",
+  "updated_by": "session_01YHnEs6mehRvD74aubi5DJw",
+  "roadmap": [
+    "L-PROP"
+  ],
+  "_seq": 566
+}

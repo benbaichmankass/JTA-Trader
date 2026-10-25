@@ -19,9 +19,15 @@
   "observation": {
     "what": "An unattended ict-candle-refresh.timer fire extends the trainer 15m CSVs without truncating them",
     "how_to_check": "trainer-vm-diag: systemctl list-timers ict-candle-refresh + tail of the 15m CSV end timestamp; first unattended fire was due 2026-10-01 03:28Z (PI-20260930-DVZQD9II-0001). Relay not run by this sweep (needs a labelled issue)",
-    "due_by": "2026-10-16T00:00Z"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-16T00:00Z",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
-  "updated_at": "2026-10-09T04:36:50Z",
-  "updated_by": "session_015WZhDbDdZTbgTzGXeDzjqe",
+  "updated_at": "2026-10-24T06:01:03Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "_seq": 223
 }

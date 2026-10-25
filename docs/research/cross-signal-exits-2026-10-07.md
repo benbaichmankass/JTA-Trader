@@ -173,3 +173,16 @@ What would **support** it: 040 confirms **and** ≥ 1 sibling in 041 passes, **o
 - Spend: estimated **≈ $9** of the $25 ceiling (token-based estimate; the lane has no meter).
 
 **Readout owner and date:** pipeline item `PI-20261007-9ARZOHV6-0001` (due 2026-10-21) re-reads `research/results/RQ-20261007-040/` and `-041/`, applies the rules above verbatim, updates the coverage rows, and checks whether a build row for § 4.1 has been opened.
+
+## 8. Readout applied 2026-10-22 (RESEARCH-OPS-20261022-0847, item `PI-20261007-9ARZOHV6-0001`)
+
+Rules of § 5 / § 6 applied verbatim to the landed records; no rule was edited and no number was re-run.
+
+| unit | record | read | disposition under the § 5 rule |
+|---|---|---|---|
+| RQ-20261007-040 (`ada_pullback_2h`, `vol_trail`) | `research/results/RQ-20261007-040/37729696957.jsonl` | 3 cells swept, 1 cleared the IS/OOS gate: `vt_hot90_t2.5`; base OOS 49 trades (>= 25), base OOS net R 19.66 | PASS on the registered cell with base OOS >= 25: the follow-up is a **Tier-3 declare proposal**, carried by the manager, never applied here. A confirmation on the third window is exactly what this unit was. |
+| RQ-20261007-041 (three real-money siblings) | `research/results/RQ-20261007-041/37752835337.jsonl` | `xrp_pullback_2h` base OOS 49, `trend_donchian_eth_4h` base OOS 49, `trend_donchian_xrp_4h` base OOS 31: all three gradeable (>= 25), **0 of 9 cells cleared** the gate | per leg `no_action_warranted` (honest negative). |
+
+**Joint reading (§ 6 item 2, written before the run):** 040 passes and 041 lands 0 passes on 3 gradeable siblings, so the ADA result is read as **instrument-specific, not a property of crossing signal families**. The memo's principle claim ("vol-keyed trail generalises across the pullback/Donchian real-money legs") is **withdrawn**. What survives is at most a one-leg question on `ada_pullback_2h` that the operator decides; the bybit-trio declare proposal that § 5 names for a 040 PASS is **not** supported, because the siblings did not follow. Selection denominator for the ADA cell: 3 cells swept on this window (1 passed), after two earlier passes on other windows.
+
+**Build rows asked for in the item:** lever spec 4.1 (ADX-conditioned trail, unblocks RQ-20261007-042) exists as checklist row `MOMENTUM-LEVERS-LIVE` (`landed_unproven`; harness lever landed 2026-10-18, live producer still missing) and the `flip_exit` cell (4.3, unblocks -044) as `M20-FLIP-EXIT-CELL` (`queued`). Not done in this readout: the `docs/research/exit-refinement-coverage.json` rows for these two units, which stay on the pipeline item.

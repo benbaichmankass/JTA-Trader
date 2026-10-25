@@ -99,16 +99,28 @@ related:
 - scripts/research/same_symbol_head_to_head.py
 - scripts/ci/check_same_symbol_allocation.py
 - src/runtime/intents.py
-last_dispatched_at: '2026-10-16T01:27:20+00:00'
+last_dispatched_at: '2026-10-25T00:54:47+00:00'
 grading:
   attested: RULE-RQ-20261015-1631-01-SAME-SYMBOL-REPORT
   auto: true
   decision_rule_id: RULE-RQ-20261015-1631-01-SAME-SYMBOL-REPORT
   evidence:
   - research/results/RQ-20261015-1631-01/38835234592.jsonl
-  graded_at: '2026-10-16'
+  - research/results/RQ-20261015-1631-01/39073141515.jsonl
+  graded_at: '2026-10-25'
   grader: scripts/research/queue_grade.py
   needs_review: true
+  owner: SAME-SYMBOL-ALLOCATION
+  owner_reason: 'producer_failed TWICE (research-ops 2026-10-24 14:47Z, read from results/RQ-20261015-1631-01/):
+    the 2026-10-16 route-fault fix works (the reason now reaches the record) and the re-run on it (2026-10-17)
+    still reads ''no 5m candle source for the symbol: unresolved'' for ETHUSDT -- bs._backtest_data_source.resolve_or_refuse(ETHUSDT,
+    5m, unit data) is not ok on the runner. UPDATE research-ops 2026-10-25 02:47Z: the 5m fetch (#19948)
+    worked -- the unit was re-fired 2026-10-25T00:54Z (run 40148576330) and the run finished green, but
+    collect_runner_results REFUSED its record (dispatch 40153686572: n emitted as a per-arm dict, research_result.py
+    wants an int; LOST). Fixed in the same PR (same_symbol_head_to_head emits int n + n_by_arm; the collector
+    collapses a dict n to its `together` count), so the already-finished run is collected on the next
+    dispatch after merge with no re-fire. This gate clears when research/results/RQ-20261015-1631-01/
+    holds a row dated after 2026-10-25 with read_state measured. Not a verdict.'
   reason: 'read_state not unanimously measured: [''producer_failed'']'
-  rows: 1
+  rows: 2
   verdict: null

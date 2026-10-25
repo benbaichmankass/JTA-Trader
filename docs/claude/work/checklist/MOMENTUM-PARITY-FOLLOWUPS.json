@@ -1,0 +1,22 @@
+{
+  "id": "MOMENTUM-PARITY-FOLLOWUPS",
+  "title": "Harness<->live parity gaps left by MOMENTUM-LEVERS-PARITY: stop gap-fill in backtest_trend, forming-bar use in giveback/pullback trail, eth_4h tp_revision tp_cross disagreement (PI-20261024-ZUPNKHZR-0001/-0002/-0003)",
+  "phase": null,
+  "state": "queued",
+  "owner": "lane (opus)",
+  "lane": null,
+  "model": "claude-opus-5-5",
+  "ceiling_usd": 12,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-25 ROUTE-1025] Owns PI-20261024-ZUPNKHZR-0001, -0002, -0003. RE-CHECKED on main 2026-10-25 by code (the parity reruns need candle CSVs this lane did not fetch, so the MEASURED divergence counts below are the filing lane's, not re-run): (-0001) scripts/backtest_trend.py has no gap-fill / fill-at-open path for a stop already beyond the bar open (grep gap_fill|fill_at_open|stop_gap = nothing; the only 'through the stop' text is the entry-side refusal at ~L775). (-0002) src/runtime/exit_levers.py:275 (giveback_verdict) still calls since_entry(candles_df, open_pkg) on the raw frame, not closed_frame(); src/units/strategies/htf_pullback_trend_2h.py:752 calls _since_entry(candles_df, open_pkg) the same way -- the rerun's 'any hit not routed through closed_frame' holds for both. (-0003) root cause not established: live plan_tp_revision vs harness TPTracker disagree on 4 of 292 eth_4h trades (filing lane). WORK (Tier 1 harness/parity; any change to src/runtime or a strategy monitor is Tier 2/3 -> HOLD PR + evidence): (1) default-off gap-fill flag in backtest_trend, measure the corpus re-grade before flipping the default; (2) extend scripts/research/momentum_levers_parity.py to the pullback harness and fix giveback/pullback forming-bar use; (3) say which side of the eth_4h tp_cross disagreement is wrong. Related: MOMENTUM-LEVERS-LIVE (landed_unproven).",
+  "priority_rank": 27,
+  "updated_at": "2026-10-25T06:05:44Z",
+  "updated_by": "session_01MCfi31EKuoRfriU5E7yj2e",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "_seq": 646
+}

@@ -58,3 +58,15 @@ def test_keeper_workflow_pages_only_on_its_paging_cron():
     page = [s for s in d["jobs"]["keep"]["steps"] if s.get("name", "").startswith("Page")][0]
     assert any(c in page["if"] for c in crons)
     assert "push" in d[True], "the keeper must not depend only on the scheduler it compensates for"
+
+
+def test_research_slo_is_kept_planted_and_clean():
+    """research-slo's `41 */2` cron never fired (2026-10-16): it must stay a keeper target.
+
+    planted: the real target is registered with a 2-hourly-fit stale window and a declared dedupe.
+    clean: a workflow that is NOT a target (a made-up one) is absent, so the check can fail.
+    """
+    t = sk.TARGETS["research-slo.yml"]
+    assert t["stale_hours"] == 3
+    assert t["self_dedupes"]
+    assert "research-slo-not-a-real-workflow.yml" not in sk.TARGETS

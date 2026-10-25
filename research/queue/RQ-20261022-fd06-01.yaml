@@ -1,0 +1,148 @@
+id: RQ-20261022-fd06-01
+title: 'Operator ''split into two trades'' idea, re-asked on a CAPPED tail: now that ada_pullback_2h declares a finite TP
+  (tp_r 4), does banking half the position at +1.0/+1.5 R (remainder on the declared exit) replace the declared exit on net
+  R in 5 of 6 calendar folds over 2020-07..2026-10, at the venue cost stack?'
+status: done
+cadence: once
+roadmap:
+- L-ATM
+- M20
+theme: live_strategy
+priority: 2
+kind: experiment
+question: 'Operator idea (docs/claude/work/IDEAS.md 2026-10-21, the live ADA trade: ''if we had split into two trades we would
+  have already made like twice as much profit''). On ada_pullback_2h (bybit_2 real money + bybit_portfolio mirror), over 2020-07-01
+  .. 2026-10-15 23:59 (replace grade, 6 calendar folds by entry time, the same candles and cost stack as the leg''s Q10 unit),
+  does any of three arms -- B1 bank 50% at +1.0 R, B15 bank 50% at +1.5 R, B1E bank 50% at +1.0 R with a break-even floor
+  at +1.0 R -- with the remainder on the declared exit (tp_r 4, trail as declared), beat the declared exit (A) by >= 0.02
+  R/trade in >= 5 of 6 folds within the Path B drawdown bar? R is on the FULL initial position''s risk.'
+why_this_matters: 'The July answer to this idea (docs/research/M20-exit-refinement-2026-07-12.md section 6.2: banking lowered
+  net R in 20 of 20 cells) was measured when the pullback/donchian legs carried NO finite TP (50R sentinel), and its stated
+  reason was that banking gives away the uncapped fat right tail. This leg now declares a finite TP, which caps that tail,
+  so the July reason no longer applies as stated -- that is the changed hypothesis, not a re-run. Giveback is the operator''s
+  standing priority; MEASURED this lane (forming-bar arm of RQ-20261018-2a10-01, gross basis) the leg''s own backtest gives
+  back most of its peak, so only a different exit shape changes the giveback.'
+power:
+  expected_n: 402
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Floor (1.96 + 0.8416)^2 / 0.45^2 = 38.76 -> 39 incumbent trades; the incumbent read n 402 over this window in the
+    sibling Q10 unit RQ-20261022-001 (MEASURED). Trade sequences autocorrelate: the floor is necessary, the calendar-fold
+    majority carries the rest.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-PERF-FU-W43-BANK-ADA-PULLBACK-2H
+  registered_at: '2026-10-22'
+  registered_before_run: true
+  statistic: 'From scripts/research/exit_lever_ablation.py --grade replace on ada_pullback_2h, window 2020-07-01 .. 2026-10-15
+    23:59 (6 equal calendar folds; a trade is binned by entry time), net of the full cost stack the harness resolves per venue
+    (execution_costs.resolve_cost_policy, recorded per arm as cost_stack). Per arm: n, net_total_r (full-position R; the harness
+    credits bank_frac x bank_at_r + (1 - bank_frac) x remainder R), max_drawdown_r, net R per fold. A = the leg as declared
+    in config/strategies.yaml. Per candidate C: delta = net_r(C) - net_r(A); folds_ge = folds with net_r(C) >= net_r(A); maxDD(C)
+    vs maxDD(A).'
+  rule: 'INDETERMINATE IF n(A) < 39, or IF every C arm is byte-identical to A (the bank flags were not applied). A candidate
+    C PASSES iff net_r(C) > net_r(A) AND delta >= 0.02 R x n(A) AND folds_ge >= 5 of 6 AND maxDD(C) <= maxDD(A) x 1.35. PASS
+    IF one or more pass: the best by net R is named, and the follow-up is ONE confirmation unit on a disjoint partition with
+    the same statistic and bar (a PASS on one window is a discovery), never a config edit. FAIL IF none passes: the July banking
+    verdict extends to this leg''s capped-TP exit, and the operator''s split idea is answered for a FIXED threshold here (a
+    metric-TRIGGERED split stays with Programme 01 Q11 rung 2). Thresholds are not changed after any result.'
+  what_it_does_not_do: 'Edits no config and places no order. A PASS also needs a live producer (no monitor places a second
+    TP leg for one entry), the mirror carried in the same PR, and a Tier-3 declare. HARNESS CAVEAT, stated: the bank rung
+    is tested at the top of each bar BEFORE the stop test, so a bar that prints both the rung and the stop credits the bank
+    (optimistic for C; it can only flatter a candidate, so a FAIL is robust and a PASS is checked by its confirmation). Cost:
+    closing in two pieces pays the same exit notional, so the cost stack is not understated. No exploratory look at any bank
+    arm on this leg was taken before registration; the 20 July cells were on other legs/geometries. Not a capital-per-day
+    test: the harness does not record when the banked half was freed.'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 500
+  confidence: 0.25
+  basis: 'stand-in: money leg; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 30
+  why_runner: Fetches keyless public candles (Binance Vision) for a pinned window; reads no trainer data.
+  basis: 'One exit_lever_ablation.py invocation: one keyless candle fetch + one harness pass per arm (2 arms on xrp_pullback_2h
+    over 2020-07..2026-10 took 74 s wall MEASURED 2026-10-16).'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - ada_pullback_2h
+  - --arm
+  - A=
+  - --arm
+  - B1=--bank-frac=0.5;--bank-at-r=1.0
+  - --arm
+  - B15=--bank-frac=0.5;--bank-at-r=1.5
+  - --arm
+  - B1E=--bank-frac=0.5;--bank-at-r=1.0;--be-floor-r=1.0
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '5'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261022-fd06-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- docs/claude/work/IDEAS.md
+- docs/research/M20-exit-refinement-2026-07-12.md
+- docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md
+- scripts/research/exit_lever_ablation.py
+- research/queue/RQ-20261022-007.yaml
+- comms/perf_followup/perf-followup-20261021-walkthrough.json
+last_dispatched_at: '2026-10-22T13:53:29+00:00'
+grading:
+  auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-PERF-FU-W43-BANK-ADA-PULLBACK-2H
+  evidence:
+  - research/results/RQ-20261022-fd06-01/39790948838.jsonl
+  first_fail: 1 row(s), all measured, all fail
+  graded_at: '2026-10-22'
+  grader: scripts/research/queue_grade.py
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
+  disposition: 'REGISTERED VERDICT: fail. Rule applied verbatim (ada_pullback_2h, window 2020-07-01..2026-10-15, 6 folds, net of
+      fee+slippage+funding). A net_r 92.09; B1 35.12 (delta -56.97, 0/6 folds), B15 49.29 (-42.80, 0/6), B1E 23.79 (-68.30,
+      1/6). No bank arm clears the 0.02 R/trade materiality bar or the 5-of-6 fold majority. The grader''s ''first FAIL
+      -> confirmatory re-run'' is WAIVED: the harness is deterministic over a pinned window (RQ-20261022-003..006 closed
+      the same way, #18557), so a same-window replay cannot change the verdict. Family not retired: a FIXED threshold
+      is answered here; a metric-TRIGGERED split stays with Q11 rung 2 (RQ-20261022-eba2-07/-08).'
+  graded_by: lane EXITS-GIVEBACK-W43 (session_013boLrFb4hM4JJ2Naq19bqS); confirmatory re-run done by queue_grade on main

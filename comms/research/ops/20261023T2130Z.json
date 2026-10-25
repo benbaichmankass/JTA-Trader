@@ -1,0 +1,40 @@
+{
+  "run": "RESEARCH-OPS-20261023-2047", "finished_at": "2026-10-23T21:30:00Z", "by": "session_01YLY3opb8YEeBMhcT11B2g6",
+  "floor": 54, "floor_basis": "computed_floor(fired_24h 67)", "authoring_queue_depth": 32,
+  "idle_backends": ["github_runner_data", "kaggle"], "needs_review_triaged": 1, "needs_review_left": 30,
+  "throughput": {"runnable_before": 50, "runnable_after": 50, "queued": 131, "fired_24h": 67, "results_landed_24h": 75, "hours_since_last_dispatch": 1.7, "idle_alarm": false,
+                 "after_basis": "dispatch_queue.py dry run lists be01-02 and 2230-01 would_dispatch; they count runnable once this PR merges"},
+  "mechanism": {"dispatch_receipt": "ok (fresh, 1.71 h)", "collector": "ok (75 results landed 24h, 0 unreadable)", "stranded_stamp_prs": [], "incident": null,
+                "watchdog": "newest watchdog_incidents.jsonl row is 2026-10-17; no open escalation"},
+  "results_read": {"pass": 4, "fail": 14, "indeterminate": 4, "producer_failed": 1,
+                   "units": ["RQ-20261016-6013-01 pass (trial-ledger build, infra)", "RQ-20261022-3a84-01 pass (DI direction filter, xrp_pullback_2h, +5.56 R, lead)",
+                             "RQ-20261022-eba2-04 pass (vol-controlled path metrics vs giveback; log-loss gain +0.0145, 5/6 folds; r2 gain -0.0005)",
+                             "RQ-20261023-a1f3-15 pass (lgbm_yz vs lgbm_base 1h regime head, log-loss; BTC CI95 includes 0, not a promotion)",
+                             "RQ-20261017-006 indeterminate", "RQ-20261022-c0d3-01 indeterminate", "RQ-20261023-a1f3-12 indeterminate", "RQ-20261023-be01-01 indeterminate (tlt holdout)",
+                             "fail x14: 3a84-02, b7e1-01..06, eba2-05/-06, a1f3-01/-07/-08/-13/-14/-16",
+                             "RQ-20261023-be01-02 producer_failed (tqqq holdout: dukascopy refuses leveraged TQQQ)"],
+                   "note": "Grades are the mechanism's, not re-done. 3a84-01 PASS is contradicted by 3a84-02 (ada DI FAIL -4.68 R): a mixed record, 1 pass of 2 symbols. eba2-04 is a PASS on the log-loss clause only; the R2 clause went slightly negative, so it is a lead for the P1-Q11 transfer read, not a deployable signal. FAILs feed variant queues per fail-is-not-dead; the b7e1 (path-state/ER trail) and a1f3 (1h direction head) families are untouched by retirement."},
+  "unlocked": [{"unit": "RQ-20261023-be01-02", "how": "route repaired: dropped --non-crypto-source dukascopy (auto resolves TQQQ to yahoo), last_dispatched_at null; rule and boundary unchanged, no outcome was ever produced"}],
+  "retired": [],
+  "levers_filed": [{"lever": "crypto same-book overlap instrument for P3-Q8 Stage B", "ref": "PI-20261023-CT11B2G6-0001"}],
+  "units_authored": ["RQ-20261023-2230-01 (eth_pullback_2h DI direction-filter cross-symbol confirmation of the 3a84-01 lead)"],
+  "followups_filed": [
+    {"what": "3a84-01 DI PASS: ONE confirmation unit on a third symbol (history not splittable; feed starts 2020); trial denominator 4 comparisons, 1 pass", "ref": "RQ-20261023-2230-01"},
+    {"what": "eba2-04 PASS: feeds programme node P1-Q11-transfer-read (already in the authoring queue); no new unit this pass", "ref": "P1-Q11-transfer-read"},
+    {"what": "a1f3-15 PASS: ml_health lead, not a promotion; weekly /ml-review owns the family history entry", "ref": "no action, because ml-plan-items.yaml carries no item for a1f3-15"}
+  ],
+  "authoring": {"queue_depth": 32, "nodes_drafted": 0, "nodes": [],
+                "theme_shortfall": {"regime": 2, "ml_health": 5, "new_strategy_prop": 8},
+                "why_short": "0 programme nodes drafted, stated plainly: P3-Q8-new-symbols (ready: 7c2b-06 and -10 closed pass) needs a crypto same-book overlap instrument that does not exist; filed once as PI-20261023-CT11B2G6-0001 rather than authoring a unit that cannot run. The other head nodes remain gated on LIVE-BT-STAGE-B / Tier-3 notes (same reasons as the 14:47Z record). Budget went to the step-D follow-up (2230-01, regime theme) and the be01-02 route repair."},
+  "not_run": [
+    "authoring of programme nodes from the authoring queue (0 drafted; see authoring.why_short)",
+    "needs_review triage beyond RQ-20261023-be01-02 (the only unowned unit; the other 30 are owned with a named gap, not re-audited)",
+    "blocked/ audit: blocker_watch.py not re-run this pass (previous pass: 77 units, all name a lever)"
+  ],
+  "handoff": [
+    "MANAGER (held PR): merge this run PR; it hand-edits RQ-20261023-be01-02 and hand-authors RQ-20261023-2230-01 (landing hold unvouchable_paths, E57); merge-slot claim is committed on the branch",
+    "MANAGER: the 7e83-01/-02 units from the 14:47Z pass were not yet on main-dispatched results at 21:00Z; if that PR is still unmerged, merge it first",
+    "next research-ops: read 2230-01, 7e83-01/-02 and be01-02 (tqqq holdout); build or delegate the crypto overlap instrument (PI-20261023-CT11B2G6-0001) so P3-Q8 Stage B can be authored; run blocker_watch.py",
+    "No Tier-3 change is implied by any result this pass"
+  ]
+}

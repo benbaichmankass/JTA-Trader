@@ -2156,6 +2156,12 @@ def trend_donchian_xrp_4h_signal_builder(settings: dict) -> Dict[str, Any]:
     return _trend_donchian_variant_builder("trend_donchian_xrp_4h", settings)
 
 
+def trend_donchian_xrp_adx25_signal_builder(settings: dict) -> Dict[str, Any]:
+    """trend_donchian on XRPUSDT 4h with the ADX-tightened trail declared — bybit_1
+    (Bybit demo) soak alias of trend_donchian_xrp_4h (OPERATOR-DECISIONS-1022)."""
+    return _trend_donchian_variant_builder("trend_donchian_xrp_adx25", settings)
+
+
 def trend_donchian_ada_4h_signal_builder(settings: dict) -> Dict[str, Any]:
     """trend_donchian on ADAUSDT 4h — bybit_1 demo soak (paper_ready)."""
     return _trend_donchian_variant_builder("trend_donchian_ada_4h", settings)
@@ -5834,8 +5840,27 @@ def _htf_pullback_variant_builder(
 
     timeframe = str(cfg_yaml.get("timeframe") or "2h")
 
+    # decision_bar: closed|forming (DECISION-BAR-CLOSED-1018; default forming =
+    # byte-identical). Mirrors _trend_donchian_variant_builder: a closed leg
+    # evaluates only while its latest closed bar is undecided and inside the
+    # staleness bound (_closed_window_skip), fetches with the cache bypassed so
+    # the closed bar is read from a frame fetched AFTER the close, trims the
+    # forming row (_decision_frame) and records the decided bar in the on-disk
+    # ledger once the decision COMPLETED (_record_closed_decision).
+    _closed = str(cfg_yaml.get("decision_bar") or "forming").lower() == "closed"
+    import time as _time
+    _now = _time.time()
+    if _closed:
+        _skip = _closed_window_skip(timeframe, cfg_yaml, name=name, now=_now)
+        if _skip is not None:
+            return _with_signal_package(name, {
+                "symbol": symbol, "side": "none",
+                "meta": {"strategy_name": name, "reason": _skip},
+            })
+
     exchange = _build_killzone_exchange(settings)
-    candles_df = fetch_candles(symbol, timeframe, exchange_client=exchange, limit=200)
+    candles_df = fetch_candles(symbol, timeframe, exchange_client=exchange, limit=200,
+                               **({"bypass_cache": True} if _closed else {}))
     if candles_df is None:
         raise RuntimeError(
             f"{name}: no candle data returned for symbol={symbol} "
@@ -5848,9 +5873,22 @@ def _htf_pullback_variant_builder(
     cfg: Dict[str, Any] = {"symbol": symbol, "timeframe": timeframe, **cfg_yaml}
     cfg["strategy_label"] = name
 
+    _fetched_df = candles_df
+    candles_df, _skip = _decision_frame(candles_df, timeframe, cfg_yaml, name=name, now=_now,
+                                        record=False)
+    if _skip is not None:
+        return _with_signal_package(name, {
+            "symbol": symbol, "side": "none",
+            "meta": {"strategy_name": name, "reason": _skip},
+        })
+    _catchup_age = (_closed_catchup_age(candles_df, timeframe, cfg_yaml, _now)
+                    if _closed else None)
+
     try:
         pkg = order_package(cfg, candles_df=candles_df)
     except ValueError as exc:
+        if _closed:   # a clean no-signal IS a completed decision
+            _record_closed_decision(name, candles_df, timeframe, cfg_yaml, _now)
         logger.info("%s: no actionable signal (%s)", name, exc)
         try:
             log_signal(_stamp_regime({
@@ -5868,6 +5906,34 @@ def _htf_pullback_variant_builder(
             "side": "none",
             "meta": {"strategy_name": name, "reason": str(exc)},
         })
+
+    if _closed:   # the decision completed (any other exception above retries)
+        _record_closed_decision(name, candles_df, timeframe, cfg_yaml, _now)
+
+    # A caught-up closed-bar decision enters at TODAY's price, not the close the
+    # strategy read: refuse it unless the live price (the forming bar the venue
+    # just returned) is still inside the trade's brackets and near its entry
+    # (decision_bar_ledger, bound 2). Unreadable price = refused (fail closed).
+    if _catchup_age is not None:
+        from src.runtime import decision_bar_ledger as _ledger
+        try:
+            _cur = float(_fetched_df["close"].iloc[-1])
+        except Exception:  # noqa: BLE001
+            _cur = None
+        _ok, _why = _ledger.catchup_price_check(
+            pkg["direction"], pkg["entry"], pkg["sl"], pkg.get("tp"), _cur,
+            float(cfg_yaml.get("decision_bar_catchup_max_drift_stop_frac")
+                  or _ledger.DEFAULT_MAX_DRIFT_STOP_FRAC))
+        if not _ok:
+            logger.warning(
+                "%s: caught-up %s signal skipped as stale — %s (bar closed %.0fs ago)",
+                name, pkg["direction"], _why, _catchup_age)
+            return _with_signal_package(name, {
+                "symbol": symbol, "side": "none",
+                "meta": {"strategy_name": name,
+                         "reason": f"closed_bar_catchup_stale_price: {_why}"},
+            })
+        logger.info("%s: caught-up %s signal accepted — %s", name, pkg["direction"], _why)
 
     # DIRECTIONAL gate (side_filter, Tier-3 per-variant). Default ``both`` — the
     # pullback family was two-sided until now, so omitting the key is byte-for-byte
@@ -6046,6 +6112,7 @@ for _builder, _monitor_unit in (
     (trend_donchian_eth_4h_signal_builder, "trend_donchian"),
     (trend_donchian_sol_4h_signal_builder, "trend_donchian"),
     (trend_donchian_xrp_4h_signal_builder, "trend_donchian"),
+    (trend_donchian_xrp_adx25_signal_builder, "trend_donchian"),
     (trend_donchian_ada_4h_signal_builder, "trend_donchian"),
     (trend_donchian_avax_4h_signal_builder, "trend_donchian"),
     (mes_trend_long_1d_signal_builder, "trend_donchian"),

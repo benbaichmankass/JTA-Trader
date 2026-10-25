@@ -1,0 +1,37 @@
+{
+  "id": "SSH-LOGIN-ATTRIB-1024",
+  "title": "Attribute the 2 unattributed non-trainer SSH logins on the live VM at 2026-10-24 03:59Z (PI-20261024-ONHEALTH-0001); lift the 2000-line auth-log relay cap (ONHEALTH-0002)",
+  "phase": null,
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 5,
+  "spend_usd": 2.03,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-24T14:45Z manager session_01UETC6mFiwMgXk6URsuWzZb] OPERATOR popup answer, verbatim: \"Investigate (Recommended)\". The operator did not recognise the logins. Security watch item, rank 1. [lane session_01BTEZ5DrYrbkRSqV25SSwkH] ATTRIBUTED: both logins = Health Snapshot run 40060466668 (ssh steps 03:59:02/03:59:05Z; accepts 03:59:04/06Z, key last4 Xoek, same key as trainer's); recurs 10:37Z (run 40086578106). Not an intrusion; no rotation. Cap fixed client-side: scripts/ops/ssh_auth_sweep.py (+test). WRITEBACK: health-review SKILL ssh sweep uses it. OBSERVATION to close: next /health-review runs the sweep over its whole window with unreadable=[] (due 2026-10-31).",
+  "priority_rank": 1,
+  "updated_at": "2026-10-24T18:14:51Z",
+  "updated_by": "session_01UETC6mFiwMgXk6URsuWzZb",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "writeback": {
+    "roadmap": "none: ops security attribution, no milestone moved",
+    "arch": "none: no architecture change; health-review skill updated"
+  },
+  "observation": {
+    "what": "next /health-review runs scripts/ops/ssh_auth_sweep.py over its whole window with unreadable=[]",
+    "how_to_check": "python3 scripts/ops/ssh_auth_sweep.py --since <window start> --until <now> --trainer-ip <trainer>; exit 0/1 with unreadable empty",
+    "due_by": "2026-10-31T00:00Z"
+  },
+  "lane_history": [
+    {
+      "lane": "session_01BTEZ5DrYrbkRSqV25SSwkH",
+      "archived_at": "2026-10-24T18:14:51Z"
+    }
+  ],
+  "_seq": 628
+}

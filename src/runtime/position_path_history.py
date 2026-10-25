@@ -74,6 +74,10 @@ _TAIL = 120
 #: trail used, and "we had no frame" is not an ATR of 0.
 ATR_SOURCES = ("monitor", "computed_wilder14", "unavailable")
 
+#: BRACKET-ADVISOR-SHADOW columns. OBSERVE-ONLY: no exit or order path reads
+#: them (tests/test_bracket_advisor.py pins it).
+ADVISOR_COLS = ("advisor_sl_r", "advisor_tp_r", "advisor_source", "advisor_state")
+
 _last_prune: dict[str, float] = {}
 _warned: set = set()
 
@@ -185,8 +189,14 @@ def _atr_adx(candles_df, monitor_atr: float | None) -> tuple:
 def build_history_row(record: dict[str, Any], *, window=None, candles_df=None,
                       stop: float | None = None, target: float | None = None,
                       atr: float | None = None,
-                      now: datetime | None = None) -> dict[str, Any] | None:
+                      now: datetime | None = None,
+                      advisor: dict[str, Any] | None = None) -> dict[str, Any] | None:
     """The history row for one pass, projected from a telemetry ``record``.
+
+    ``advisor`` is ``bracket_advisor.advise``'s output (BRACKET-ADVISOR-SHADOW):
+    the stop/target a confirmed-but-undeclared lever WOULD set on this bar,
+    stored beside ``sl_r``/``tp_r``. ``None`` (the advisor did not run) leaves
+    all four ``advisor_*`` columns NULL — distinct from any ``advisor_state``.
 
     Returns ``None`` when the pass cannot be attributed to a package AND a bar
     — an unkeyable row is worse than no row. Pure; never raises.
@@ -238,6 +248,7 @@ def build_history_row(record: dict[str, Any], *, window=None, candles_df=None,
             "atr": _r(atr_v, 8),
             "atr_source": atr_src,
             "adx": _r(adx, 2),
+            **{k: (advisor or {}).get(k) for k in ADVISOR_COLS},
             "first_seen_at": ts,
             "written_at": ts,
         }
@@ -251,23 +262,38 @@ _COLS = ("order_package_id", "bar_ts", "trade_id", "account_id", "strategy",
          "peak_r", "peak_state", "mae_r", "giveback_r", "bars_held",
          "bars_since_peak", "sl_price", "tp_price", "sl_r", "tp_r", "r_to_stop",
          "r_to_target", "rr_from_here", "atr", "atr_source", "adx",
-         "first_seen_at", "written_at")
+         *ADVISOR_COLS, "first_seen_at", "written_at")
 
-_UPDATABLE = [c for c in _COLS
-              if c not in ("order_package_id", "bar_ts", "first_seen_at")]
+def _upsert_sql(cols: tuple) -> str:
+    updatable = [c for c in cols
+                 if c not in ("order_package_id", "bar_ts", "first_seen_at")]
+    return (
+        f"INSERT INTO {TABLE} ({', '.join(cols)}, passes) "
+        f"VALUES ({', '.join(':' + c for c in cols)}, 1) "
+        f"ON CONFLICT(order_package_id, bar_ts) DO UPDATE SET "
+        + ", ".join(
+            # COALESCE on the identity columns only: a later pass whose enrichment
+            # missed must not wipe an account or trade id already established.
+            f"{c}=COALESCE(excluded.{c}, {TABLE}.{c})"
+            if c in ("trade_id", "account_id") else f"{c}=excluded.{c}"
+            for c in updatable)
+        + f", passes={TABLE}.passes + 1"
+    )
 
-_UPSERT = (
-    f"INSERT INTO {TABLE} ({', '.join(_COLS)}, passes) "
-    f"VALUES ({', '.join(':' + c for c in _COLS)}, 1) "
-    f"ON CONFLICT(order_package_id, bar_ts) DO UPDATE SET "
-    + ", ".join(
-        # COALESCE on the identity columns only: a later pass whose enrichment
-        # missed must not wipe an account or trade id already established.
-        f"{c}=COALESCE(excluded.{c}, {TABLE}.{c})"
-        if c in ("trade_id", "account_id") else f"{c}=excluded.{c}"
-        for c in _UPDATABLE)
-    + f", passes={TABLE}.passes + 1"
-)
+
+_UPSERT = _upsert_sql(_COLS)
+#: The same statement without the advisor columns, for a journal whose table
+#: predates them (``Database`` adds them on its next init). Chosen per path,
+#: once per process, so a missing column never costs the history row itself.
+_UPSERT_NO_ADVISOR = _upsert_sql(tuple(c for c in _COLS if c not in ADVISOR_COLS))
+_has_advisor_cols: dict[str, bool] = {}
+
+
+def _upsert_for(conn: sqlite3.Connection, path: str) -> str:
+    if path not in _has_advisor_cols:
+        cols = {r[1] for r in conn.execute(f"PRAGMA table_info({TABLE})").fetchall()}
+        _has_advisor_cols[path] = set(ADVISOR_COLS) <= cols
+    return _UPSERT if _has_advisor_cols[path] else _UPSERT_NO_ADVISOR
 
 
 def _is_final(conn: sqlite3.Connection, pkg_id: str) -> bool:
@@ -312,7 +338,8 @@ def write_history(row: dict[str, Any] | None,
                         row = dict(row, account_id=hit[0])
                 except (sqlite3.Error, TypeError, ValueError):
                     pass  # allow-silent: enrichment only — the row still writes
-            conn.execute(_UPSERT, row)
+            conn.execute(_upsert_for(conn, path),
+                         {**{c: None for c in ADVISOR_COLS}, **row})
             mono = time.monotonic()
             if mono - _last_prune.get(path, -_PRUNE_EVERY_S - 1) >= _PRUNE_EVERY_S:
                 _last_prune[path] = mono
@@ -322,6 +349,14 @@ def write_history(row: dict[str, Any] | None,
         _warn_once("write", "position_path_history: write failed "
                             "(contained; trading unaffected; retried next pass)")
         return False
+
+
+def _advisor_states() -> tuple:
+    try:
+        from src.runtime.bracket_advisor import ADVISOR_STATES
+        return ADVISOR_STATES
+    except Exception:  # noqa: BLE001 — the read path must not fail on this
+        return ()
 
 
 def read_history(db_path: str | None = None, *,
@@ -340,6 +375,7 @@ def read_history(db_path: str | None = None, *,
         "present": False, "count": 0, "packages": 0, "rows": [],
         "retention_days": RETENTION_DAYS, "atr_sources": list(ATR_SOURCES),
         "peak_provenance": "estimated", "error": None,
+        "advisor_states": list(_advisor_states()),
     }
     try:
         from src.utils.paths import trade_journal_db_path

@@ -1,0 +1,21 @@
+{
+  "id": "AUD-20261019-SPEND-UNRECORDED",
+  "title": "Per-lane spend is recorded on 166 of 411 laned checklist rows; SOAK-REDEFINE cost $42.65 against no ceiling",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[WEEKLY-AUDIT-2026-10-19, session_014UeddhjFnc6fSA41bo5V65] CLAIM: C7 spend-vs-plan cannot be computed from the checklist. EVIDENCE: checklist scan 2026-10-21 over rows in in_flight/landed_unproven/done with lane or lane_history: n=411, ceiling_usd set 325, spend_usd set 166. get_session cost_usd: SOAK-REDEFINE 42.65 (ceiling null), BRACKETS-AS-PREDICTIONS 13.54 (ceiling 25), DATA-INFRA-PROGRAMME 13.27 (25), BREAKOUT-POS-UNPARSED 9.67 (15). spend_meter.py section 5(b) reports per-lane dollars not_observed; last weekly usage reading 90.0% at 2026-10-18T18:20Z (reset 2026-10-21 18:00Z). BUILD: manager close of a lane writes spend_usd from get_session; checklist.py --check warns on a closed laned row with spend_usd null. DETECTOR: that --check warning. [2026-10-24 REGISTER-SWEEP-W43] PARTIAL: 270 done/landed_unproven laned rows have spend_usd null; 212 name a session id. get_session cost_usd recorded for 23 rows (22 sessions) of the most recent; 189 session-id lanes + ~58 rows whose lane is a label not a session id remain (a manager-side loop needs the id). Ceiling overruns found: ACTIVE-MGMT-DRIVE-1018 134.28 vs 40, BREAKOUT-SL-AMEND-CLICK 32.25 vs 20, DECISION-BAR-MATCH 27.12 vs 20, OPERATOR-DECISIONS-1022 22.64 vs 20, MIRROR-QTY-DIVERGE 12.45 vs 15 ok. Stays queued; the checklist.py --check warning is not built.",
+  "updated_at": "2026-10-24T06:04:01Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 583
+}

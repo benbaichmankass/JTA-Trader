@@ -158,6 +158,9 @@ def test_drift_retrain_n_includes_archived_rows(tmp_path: Path):
     decisions = evaluate_models(
         registry_root=_stage_guard_registry(tmp_path),
         shadow_log=active, configs_root=tmp_path / "configs",
+        # The planted archive spans ~25 d; the default 14 d scan window would
+        # (correctly) leave part of it out. This test is about archives being READ.
+        scan_days=60.0,
     )
     assert decisions[0].n_observations == 80
 

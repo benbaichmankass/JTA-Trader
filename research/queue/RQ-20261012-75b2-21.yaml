@@ -2,7 +2,7 @@ id: RQ-20261012-75b2-21
 title: >-
   Learner-family check: SOLUSDT 15m regime_label, sklearn HistGradientBoosting vs the incumbent LightGBM on identical
   purged folds
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -104,23 +104,19 @@ ml_bakeoff:
     - {group: ALL, vs: baseline, window: cv, op: '>=', value: 0.0}
 roadmap: [M25]
 related: [ML-RQ-RUNNER, scripts/research/ml_bakeoff.py, ml/configs/btc-regime-15m-lgbm-fc-pcv-v2.yaml, .claude/skills/ml-review/SKILL.md]
-last_dispatched_at: null
+last_dispatched_at: '2026-10-16T14:09:54+00:00'
 grading:
   attested: RULE-RQ1012-75B2-21-ML-FAMILY-SOL
   auto: true
   confirmatory_run: 1
   decision_rule_id: RULE-RQ1012-75B2-21-ML-FAMILY-SOL
   evidence:
-  - research/results/RQ-20261012-75b2-21/38353918962.jsonl
-  - research/results/RQ-20261012-75b2-21/38747784421.jsonl
+  - research/results/RQ-20261012-75b2-21/38913591978.jsonl
   first_fail: 1 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s)
     superseded)
   graded_at: '2026-10-16'
   grader: scripts/research/queue_grade.py
-  note: 'RE-QUEUED 2026-10-16 (RQ-CONFIRM-SELFREAD, lane RESEARCH-FOLLOWUP-1016): the earlier ''two consecutive
-    FAIL passes'' close re-read run 1 as its own confirmation (stamp repaired to run 1''s generated_at);
-    this unit''s input window is not pinned, so a real second run can differ. Awaiting the confirmatory
-    run; evidence lists the files already read.'
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
   reason: 1 row(s), all measured, all fail
   rows: 1
   verdict: fail

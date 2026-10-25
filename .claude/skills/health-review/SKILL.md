@@ -272,6 +272,26 @@ Status grades: `ok` (nothing to flag) / `watch` (bounded anomaly) /
 Overall: `healthy` (all ok) / `caution` (≥1 watch, no concern) /
 `investigate` (any concern).
 
+## Research pipeline health (MANDATORY — 2026-10-16)
+
+The research pipeline is graded like the trading pipeline (operator, 2026-10-16: *"It's a pipeline like the other
+pipelines and needs the same infra setup as the trading pipeline."*). Grade one dimension `research_pipeline` ∈
+`ok | watch | concern`:
+
+1. Read every `comms/research/health/<date>.json` since the last review (`latest`, `runs`, `alert_state`; SLOs in
+   `scripts/research/research_slo.yaml`). No file for a day, or a `runs` gap > 4 h, means the monitor itself was
+   down — that is a `concern` and a finding on its own.
+2. For **every** SLO that was `breach` or `could_not_look` in the window: name the value, the threshold, how long it
+   was red, and its disposition — fixed (commit), a checklist row / pipeline item that moves it (with a near
+   `due_when`), or a reasoned threshold change in a PR. "Noted" is not a disposition (manager § "Research SLO
+   escalation").
+3. Check the alert actually reached the operator: each `change` / `reminder` run should carry
+   `delivered.telegram: true`; a false is an alert-delivery finding, same class as an undelivered trade ping.
+4. Positive control before reporting "all ok": `python3 scripts/research/research_slo.py --self-test`.
+
+`ok` = no red SLO in the window. `watch` = red SLOs, each with a dispatched lane. `concern` = a red SLO with no
+disposition, a missing status day, or an undelivered alert.
+
 ## Trainer service touch
 
 Grade exactly one dimension: `trainer_service` ∈
@@ -590,6 +610,14 @@ with the `/security-review` skill (route there if a signal points at code).
   worked at all: the unit was absent from `_CANONICAL_UNITS` and every attempt
   returned HTTP 400 `unknown_unit`, so this source was unsatisfiable — if the
   probe 400s, the sweep is `could_not_look`, never `clean`.
+  ⚠️ **One pull covers ~1.5 h, not the window** (the relay returns the last
+  2000 lines; the trainer logs ~400 accepts/h — measured 2026-10-24). Sweep the
+  whole window with `python3 scripts/ops/ssh_auth_sweep.py --since <ISO> --until
+  <ISO> --trainer-ip <trainer>` (pages in 20-min windows, splits full ones, prints
+  only non-trainer accepts with a hashed source class + key last4, exits 2 if any
+  window was unreadable = `could_not_look`). A Health Snapshot run (every ~6 h)
+  legitimately produces 2 non-trainer accepts with the shared deploy key; match
+  each by time to a workflow run (SSH-LOGIN-ATTRIB-1024).
 
 **What to do:**
 
@@ -672,8 +700,23 @@ declared:**
 
 | surface | what to take from it | how |
 |---|---|---|
-| [`docs/claude/work/PIPELINE.jsonl`](../../../docs/claude/work/PIPELINE.jsonl) | every item **due** and not closed | `python3 scripts/ops/pipeline.py --due` (and `--stats` for the denominator) |
+| [`docs/claude/work/PIPELINE.jsonl`](../../../docs/claude/work/PIPELINE.jsonl) | the **gate set** — due items that are unrouted, whose owner row has closed, or high-severity (§ "The narrowed gate" below) | `python3 scripts/ops/pipeline.py --gate` (and `--stats` for the due total) |
 | [`docs/claude/work/MANAGER-CHECKLIST.json`](../../../docs/claude/work/MANAGER-CHECKLIST.json) | every row this review OWNS — `state` not in `done`/`dropped` **and** whose subject is technical/pipeline/data health | read the file; a row owned by another lane is context, not yours |
+
+⚠️ **The narrowed gate (operator, 2026-10-24, "Narrow the gate (Recommended)"; row
+`HEALTH-GATE-NARROW`).** The per-item walk covers ONLY the gate set, computed by
+`pipeline.gate_set()` / `pipeline.py --gate`: (1) **unrouted** due items (state not
+`routed`, or an owner that resolves to no checklist row, research unit or PR);
+(2) due items whose **owner checklist row has closed** (`done`/`dropped`);
+(3) **high-severity** due items. Owner-routed items whose owner is live are the
+owner's job; the `UNPROVEN_OVERDUE` sweep (`scripts/ops/blocker_watch.py`) tracks
+them. **Why:** due went 110 → 256 → 369 over three reviews, which walked 5/110 and
+0/256; 349 of the 369 route to a live owner and 158 of those rows are
+`landed_unproven` — a gate counting every due item could not be met, and bulk
+re-dating is the failure BACKLOG-BURNDOWN-2 already showed. **The denominator is
+never silent:** `--gate` prints `due`, `gate`, the per-class counts and
+`excluded` by reason; record all of them in `backlog_coverage`. No other
+threshold changes.
 
 ⚠️ **`due` is COMPUTED and that is the point** — an item becomes due because the
 clock or its condition says so, whether or not anybody chose to look. Do not
@@ -694,8 +737,9 @@ their gates are broken in exactly this way and are NOT fixed by this edit.** See
 
 **The procedure — enumerate the FULL open set, then walk it 100%:**
 
-1. **Count first.** Compute the open set from both surfaces above, dedupe by
-   id, and record `open_at_start`. This is your denominator — you must touch
+1. **Count first.** Compute the open set from both surfaces above (pipeline =
+   the gate set), dedupe by id, and record `open_at_start`; record `due_total` and
+   `excluded` from `--gate` beside it. This is your denominator — you must touch
    every one, and you **state the population**: which surfaces, and what the
    count was on each.
 2. **For EACH open item** (all of them, oldest to newest):
@@ -826,7 +870,8 @@ shape (post-2026-05-26 split):
 - `backlog_drain[]` — one entry per OPEN item (array length ==
   `open_at_start`); the full-triage record (§ "Driving the open items").
 - `backlog_coverage` — `{open_at_start, triaged, resolved, fixed_now,
-  closed_stale, kept_open, count_untriaged}`. The completion gate:
+  closed_stale, kept_open, count_untriaged, due_total, excluded}` (`due_total` and
+  `excluded` come from `pipeline.py --gate`; `open_at_start` counts the gate set). The completion gate:
   `count_untriaged` MUST be 0. A review with `count_untriaged > 0` is
   incomplete and must not be reported as done.
 - `anomalies[]` — free-form notable items.

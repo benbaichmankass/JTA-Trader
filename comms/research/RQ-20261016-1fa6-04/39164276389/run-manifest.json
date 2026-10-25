@@ -1,0 +1,46 @@
+{
+  "unit": "RQ-20261016-1fa6-04",
+  "run_id": "39164276389",
+  "commit_sha": "423a28d29e6015d40dc7b31ec6b0733ef88dde55",
+  "run_url": "https://github.com/benbaichmankass/Metis-Insights/actions/runs/39164276389",
+  "timeout_minutes": 30,
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/macro_event_study_run.py",
+        "--kind",
+        "initial_jobless_claims",
+        "--snapshots",
+        "comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl",
+        "--symbol",
+        "ES=F",
+        "--anchor-shift-td",
+        "-1",
+        "--horizons",
+        "1",
+        "--primary-horizons",
+        "1",
+        "--min-n",
+        "100",
+        "--t-bar",
+        "2.4",
+        "--expected-sign",
+        "positive",
+        "--release-start",
+        "2015-01-01",
+        "--release-end",
+        "2020-01-01",
+        "--population",
+        "initial_jobless_claims releases with a defined survey surprise; RELEASE-DAY window (prior close -> release-day close) on ES=F daily closes",
+        "--out",
+        "comms/research/RQ-20261016-1fa6-04/39164276389"
+      ],
+      "log": "comms/research/RQ-20261016-1fa6-04/39164276389/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 2.2
+    }
+  ],
+  "all_ok": true
+}

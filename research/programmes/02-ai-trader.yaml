@@ -3,82 +3,478 @@
 # Read by scripts/research/queue_replenish.py (programme source, RESEARCH-LOOP-AUDIT RC2/RC3);
 # see research/programmes/01-active-trade-management.yaml for the contract. Landing machinery:
 # every edit holds for a human merge. `value` figures are INFERRED planning weights.
+# 2026-10-16 lane P2-AI-REGIME-BACKLOG-1016: authored the four authoring-queue nodes (Q2.1/Q3.1/Q1.5/Q2.5), added Q1.3 drift,
+# Q4 successor and Q6 parity branches. The regime half (L-REGIME, REGIME-PROGRAM) lives in 02-ai-trader.yaml (regime section) (same programme).
+# P2-Q4-et-mlp-extend REMOVED (manager directive 2026-10-16, audit s5.6): it materialised RQ-20261016-001, which repeated
+# RQ-20261015-ab54-01 (both tail_rows 43000); that unit is already closed by the grader, so it stays done (not re-graded). The
+# ensemble_stack line (ExtraTrees/MLP at 1h) is stopped: three INDETERMINATEs at two n; no further node.
 programme: P2
 plan: docs/research/programmes/02-AI-TRADER.md
+questions:
+  Q0:
+    state: carried
+    by: HEADLINE-MEASURE-CAPITAL-DAY, ML-LABEL-WALL, ML-SHARD-TRUNCATED, SIGNAL-CATALOG
+    why: 'Q0 rungs are builds (headline measure, label census, shard repair, signals catalog) plus closed census
+      units 9d20-01 (PASS) and d6e7-01 (PASS); the Q0.4 label census units RQ-20261011-17f4-01..03 sit on held PR
+      #17556.'
+  Q6:
+    state: carried
+    by: ML-PARITY-HARNESS, ML-PRODUCER-FUNDING, ML-PRODUCERS
+    why: Serve parity is a build track (02 s3 Q6). Its off-VM TRAINING-parity half is also covered by nodes P2-Q6-parity-*.
+  Q7:
+    state: by_design
+    by: ML-S3 (docs/plans/ml-plan-items.yaml)
+    why: '02 s3: the proposer stays parked; it unparks only on a PASS from Q2.3, Q3.4/3.5 or Q5 (ML-S3''s registered
+      gate). No unit in the next four weeks.'
+  Q8:
+    state: by_design
+    by: M18 / E50
+    why: '02 s3: the portfolio layer reopens only after the arbitration soak is observed writing again (E50). No
+      unit in the next four weeks.'
 nodes:
   # ── Q2 meta-labeling: 9d20-02 (thin-column baseline) closed FAIL ────────────
   - id: P2-Q2.1-fail
     goal: G4
-    roadmap: [M23]
-    value: {usd_at_stake_per_month: 300, confidence: 0.3}
-    after: [{unit: RQ-20261014-9d20-02, verdict: fail}]
-    needs_authoring: >-
-      The meta-label head on the thin committed columns FAILED. 02 § 6 already names the refinement:
-      widen the emits (row METALABEL-EMIT-FEATURES) and re-test as 9d20-04 (blocked on that row). Until
-      the row lands, register the cheapest measurable step that does not need it (e.g. the same head on
-      the families whose emits already carry the regime/vol columns) or state why none exists.
+    roadmap:
+    - M23
+    value:
+      usd_at_stake_per_month: 300
+      confidence: 0.3
+    after:
+    - unit: RQ-20261014-9d20-02
+      verdict: fail
+    - unit: RQ-20261014-9d20-04
+      verdict: fail
+    needs_authoring: 'AUTHORED 2026-10-16 (lane P2-AI-REGIME-BACKLOG-1016) as ''no cheaper step exists'': 9d20-02
+      already evaluated the pullback legs whose emits carry a real adx_at_entry (eth_pullback_2h, pullback_ada/doge/link_1h,
+      in its 17 legs at n >= 100), so ''the same head on families with regime columns'' has run and failed. The only
+      route is METALABEL-EMIT-FEATURES -> RQ-20261014-9d20-04 (blocked/). This node now waits on 9d20-04 FAILING too:
+      then register the M23 kill-or-redirect -- a pooled head on live+backtest labels gated by the pooling-parity
+      result (RQ-20261016-65ff-26), or a recorded exhaustion of the test-results route for the families that failed,
+      with the numbers.'
+  - id: P2-Q2.3-pass
+    goal: G4
+    roadmap:
+    - M23
+    value:
+      usd_at_stake_per_month: 400
+      confidence: 0.3
+    after:
+    - unit: RQ-20261014-9d20-04
+      verdict: pass
+    needs_authoring: M23 P3 PASSED for at least one family on the widened emits. Register (a) the disjoint-window
+      confirmation of the passing family's take/skip head, and (b) the shadow-registration proposal (P4, Tier-3 note
+      on AI-TRADER-PROGRAMME) only after (a) and the pooling-parity read (RQ-20261016-65ff-26) for that family.
   # ── Q3 giveback predictable at entry: 9d20-03 closed FAIL ───────────────────
   - id: P2-Q3.1-fail
     goal: G1
-    roadmap: [M23]
-    value: {usd_at_stake_per_month: 300, confidence: 0.3}
-    after: [{unit: RQ-20261014-9d20-03, verdict: fail}]
-    needs_authoring: >-
-      Large peak-to-exit giveback is NOT predictable at entry on the committed columns. That moves the
-      question in-trade: register the link to P1-Q8 (per-bar state, d6e7-02/04) rather than an entry-time
-      re-test, or a refinement with features the census says differ (01's census by class).
-  # ── Q4 family diversity: 9d20-05 closed INDETERMINATE ───────────────────────
-  - id: P2-Q4-et-mlp-extend
-    goal: G4
-    roadmap: [M23]
-    value: {usd_at_stake_per_month: 150, confidence: 0.3}
-    after: [{unit: RQ-20261014-9d20-05, verdict: indeterminate}]
+    roadmap:
+    - M23
+    - L-ATM
+    value:
+      usd_at_stake_per_month: 300
+      confidence: 0.3
+    after:
+    - unit: RQ-20261014-9d20-03
+      verdict: fail
+    - unit: RQ-20261014-d6e7-04
+      verdict: indeterminate
     unit:
       theme: ml_health
-      priority: 2
-      title: 'AI trader / family diversity, n EXTENDED: do ExtraTrees or a small MLP come within 0.01 macro-F1
-        of LightGBM on the BTC and ETH 1h volatility-regime head over the FULL published history (tail_rows
-        43000 vs 20000)? (re-test of 9d20-05, which closed INDETERMINATE)'
-      question: RQ-20261014-9d20-05 closed INDETERMINATE (MLP -0.020 vs LightGBM on BTC cv, CI spanning 0;
-        ExtraTrees -0.142, sign-consistent worse). Same learners, same six features, same rule and thresholds,
-        same folds/embargo/holdout; the only change is tail_rows 20000 -> 43000 (the whole published 1h v002
-        shard, ~43,800 rows per symbol) so each CV fold and the holdout carry ~2x the rows. Changing nothing
-        else keeps the two records comparable.
-      why_this_matters: ensemble_stack has 0 registered models (ml_plan_status.py --diversity); the 9d20-05
-        INDETERMINATE says n was the limit, not that the family is dead. A FAIL here closes these two learners
-        at these settings with the exact configuration written to families.ensemble_stack.history; a PASS
-        files a candidate-manifest note, never a registration.
+      priority: 1
+      title: 'AI trader / exit line, class split (P2-Q3.1): does the RICH in-trade state carry information about SL-before-TP
+        beyond where the trade is, on the DONCHIAN family alone? (refinement of RQ-20261014-d6e7-04, which was INDETERMINATE
+        pooled)'
+      question: 'RQ-20261014-9d20-03 FAILED (giveback is not predictable at entry), so the question moved in-trade
+        (02 s3 Q3 destination). RQ-20261014-d6e7-04 asked it pooled over every family and closed INDETERMINATE (gain
+        0.00054 nats, CI [-0.00118, 0.00245]). Same script, features, reference, K, folds and bar, restricted to the
+        donchian legs (--leg-re ''trend_donchian''): does the rich state beat the calibrated distance-only reference
+        by >= 0.002 nats with CI lower bound > 0?'
+      why_this_matters: 'A pooled null can hide a class that carries the signal and a class that carries none (01''s
+        census differs by class: pullback headroom 1.54 R/trade in 9d20-01). The three class units (P2-Q3.1-fail donchian,
+        -b pullback, -c scalp) are registered together, so the split is pre-registered, not mined; a single-class
+        PASS is a lead for a policy unit, confirmed on a disjoint window before anything else.'
       power:
-        expected_n: 16000
-        min_detectable_effect: 0.05
+        expected_n: 550
+        min_detectable_effect: 0.1
         effect_units: sd
         design: one_sample
         alpha: 0.05
         power: 0.8
-        basis: tail_rows 43000 per symbol at min_train_frac 0.4 leaves ~26,000 test rows per symbol over 5
-          folds plus the ~90-day holdout; ESTIMATE, bars autocorrelated so effective n is lower. Nothing accrues
-          (fixed published shard).
+        basis: 'Unit = OOS test trade. d6e7-01''s census walked donchian legs for ~1100 trades; 4 of 5 time blocks
+          tested and timeouts excluded -> ~550 OOS trades (ESTIMATE). A 0.1 sd per-trade gain needs ~785, so this
+          class is near or below that: the rule grades INDETERMINATE under the 300 floor and a CI that spans the bar,
+          never FAIL on thin n.'
         feasibility:
           source: none
-          accrual_basis: 'Nightly-rebuilt published shard: the history read is fixed, nothing accrues.'
+          accrual_basis: Committed ledgers + public candles; nothing accrues.
+      decision_rule:
+        id: RULE-P2-Q3.1-RICHSTATE-DONCHIAN
+        statistic: 'Per OOS trade: mean over its bar events of logloss(reference dist) - logloss(model rich), trade-weighted;
+          pooled mean with a 1,000-draw trade bootstrap 95% CI; sign per fold (4 expanding purged time folds); calibration
+          slope. Identical to RQ-20261014-d6e7-04''s statistic, restricted by --leg-re.'
+        rule: 'PASS IF gain >= 0.002 nats AND CI lower bound > 0 AND gain > 0 in >= 3 of 4 folds AND calibration slope
+          in [0.7, 1.3]: the donchian family''s in-trade state carries information -> author the exit-now POLICY unit
+          for this class only (the d6e7-05 shape, requires this PASS) and a disjoint-window confirmation. FAIL IF
+          the CI upper bound < 0.002 nats: closes the rich state for this class on this corpus (note on IN-TRADE-EXIT-MODEL).
+          INDETERMINATE otherwise or under 300 OOS trades.'
+        min_n: 300 OOS trades in the class.
+        what_it_does_not_do: Trains nothing that serves; edits no exit lever, config or roster; the 0.002-nat bar,
+          K and folds are d6e7-04's, unchanged. Not a P&L claim -- the policy unit owns net R.
+      compute: cpu_light
+      value:
+        bucket: ai_trader
+        usd_at_stake_per_month: 300
+        confidence: 0.2
+        basis: 02 node P2-Q3.1 planning weight; the probability model behind the exit-now mechanism, per class.
+      routing:
+        needs_trainer_resident_data: false
+        needs_gpu: false
+        peak_memory_gb: 3.0
+        est_minutes: 60
+        basis: d6e7-04 budgeted 90 min for every family; a class subset fetches fewer symbols x timeframes.
+        why_runner: public candles + committed ledgers only; numpy IRLS -- no published shard covers 5m/2h/4h and
+          no GPU is useful.
+      run:
+        command:
+        - python3
+        - scripts/research/first_passage.py
+        - --mode
+        - baseline
+        - --features
+        - rich
+        - --ref
+        - dist
+        - --leg-re
+        - trend_donchian
+        - --policy-tp-r
+        - '2.0'
+        - --min-gain-nats
+        - '0.002'
+        - --min-folds
+        - '3'
+        - --min-n
+        - '300'
+        - --cache-dir
+        - '{out_dir}/candles'
+        - --out
+        - '{out_dir}'
+        timeout_minutes: 240
+      lands:
+        store: research/results/
+        assert_field: read_state
+        min_rows: 1
+      related:
+      - RQ-20261014-d6e7-04
+      - RQ-20261014-9d20-03
+      - IN-TRADE-EXIT-MODEL
+      - P2-AI-REGIME-BACKLOG-1016
+  - id: P2-Q3.1b-pullback
+    goal: G1
+    roadmap:
+    - M23
+    - L-ATM
+    value:
+      usd_at_stake_per_month: 300
+      confidence: 0.3
+    after:
+    - unit: RQ-20261014-9d20-03
+      verdict: fail
+    - unit: RQ-20261014-d6e7-04
+      verdict: indeterminate
+    unit:
+      theme: ml_health
+      priority: 1
+      title: 'AI trader / exit line, class split (P2-Q3.1): does the RICH in-trade state carry information about SL-before-TP
+        beyond where the trade is, on the PULLBACK family alone? (refinement of RQ-20261014-d6e7-04, which was INDETERMINATE
+        pooled)'
+      question: 'RQ-20261014-9d20-03 FAILED (giveback is not predictable at entry), so the question moved in-trade
+        (02 s3 Q3 destination). RQ-20261014-d6e7-04 asked it pooled over every family and closed INDETERMINATE (gain
+        0.00054 nats, CI [-0.00118, 0.00245]). Same script, features, reference, K, folds and bar, restricted to the
+        pullback legs (--leg-re ''pullback''): does the rich state beat the calibrated distance-only reference by
+        >= 0.002 nats with CI lower bound > 0?'
+      why_this_matters: 'A pooled null can hide a class that carries the signal and a class that carries none (01''s
+        census differs by class: pullback headroom 1.54 R/trade in 9d20-01). The three class units (P2-Q3.1-fail donchian,
+        -b pullback, -c scalp) are registered together, so the split is pre-registered, not mined; a single-class
+        PASS is a lead for a policy unit, confirmed on a disjoint window before anything else.'
+      power:
+        expected_n: 800
+        min_detectable_effect: 0.1
+        effect_units: sd
+        design: one_sample
+        alpha: 0.05
+        power: 0.8
+        basis: 'Unit = OOS test trade. d6e7-01''s census walked pullback legs for ~1600 trades; 4 of 5 time blocks
+          tested and timeouts excluded -> ~800 OOS trades (ESTIMATE). A 0.1 sd per-trade gain needs ~785, so this
+          class is near or below that: the rule grades INDETERMINATE under the 300 floor and a CI that spans the bar,
+          never FAIL on thin n.'
+        feasibility:
+          source: none
+          accrual_basis: Committed ledgers + public candles; nothing accrues.
+      decision_rule:
+        id: RULE-P2-Q3.1-RICHSTATE-PULLBACK
+        statistic: 'Per OOS trade: mean over its bar events of logloss(reference dist) - logloss(model rich), trade-weighted;
+          pooled mean with a 1,000-draw trade bootstrap 95% CI; sign per fold (4 expanding purged time folds); calibration
+          slope. Identical to RQ-20261014-d6e7-04''s statistic, restricted by --leg-re.'
+        rule: 'PASS IF gain >= 0.002 nats AND CI lower bound > 0 AND gain > 0 in >= 3 of 4 folds AND calibration slope
+          in [0.7, 1.3]: the pullback family''s in-trade state carries information -> author the exit-now POLICY unit
+          for this class only (the d6e7-05 shape, requires this PASS) and a disjoint-window confirmation. FAIL IF
+          the CI upper bound < 0.002 nats: closes the rich state for this class on this corpus (note on IN-TRADE-EXIT-MODEL).
+          INDETERMINATE otherwise or under 300 OOS trades.'
+        min_n: 300 OOS trades in the class.
+        what_it_does_not_do: Trains nothing that serves; edits no exit lever, config or roster; the 0.002-nat bar,
+          K and folds are d6e7-04's, unchanged. Not a P&L claim -- the policy unit owns net R.
+      compute: cpu_light
+      value:
+        bucket: ai_trader
+        usd_at_stake_per_month: 300
+        confidence: 0.2
+        basis: 02 node P2-Q3.1 planning weight; the probability model behind the exit-now mechanism, per class.
+      routing:
+        needs_trainer_resident_data: false
+        needs_gpu: false
+        peak_memory_gb: 3.0
+        est_minutes: 60
+        basis: d6e7-04 budgeted 90 min for every family; a class subset fetches fewer symbols x timeframes.
+        why_runner: public candles + committed ledgers only; numpy IRLS -- no published shard covers 5m/2h/4h and
+          no GPU is useful.
+      run:
+        command:
+        - python3
+        - scripts/research/first_passage.py
+        - --mode
+        - baseline
+        - --features
+        - rich
+        - --ref
+        - dist
+        - --leg-re
+        - pullback
+        - --policy-tp-r
+        - '2.0'
+        - --min-gain-nats
+        - '0.002'
+        - --min-folds
+        - '3'
+        - --min-n
+        - '300'
+        - --cache-dir
+        - '{out_dir}/candles'
+        - --out
+        - '{out_dir}'
+        timeout_minutes: 240
+      lands:
+        store: research/results/
+        assert_field: read_state
+        min_rows: 1
+      related:
+      - RQ-20261014-d6e7-04
+      - RQ-20261014-9d20-03
+      - IN-TRADE-EXIT-MODEL
+      - P2-AI-REGIME-BACKLOG-1016
+  - id: P2-Q3.1c-scalp
+    goal: G1
+    roadmap:
+    - M23
+    - L-ATM
+    value:
+      usd_at_stake_per_month: 200
+      confidence: 0.3
+    after:
+    - unit: RQ-20261014-9d20-03
+      verdict: fail
+    - unit: RQ-20261014-d6e7-04
+      verdict: indeterminate
+    unit:
+      theme: ml_health
+      priority: 2
+      title: 'AI trader / exit line, class split (P2-Q3.1): does the RICH in-trade state carry information about SL-before-TP
+        beyond where the trade is, on the SCALP family alone? (refinement of RQ-20261014-d6e7-04, which was INDETERMINATE
+        pooled)'
+      question: 'RQ-20261014-9d20-03 FAILED (giveback is not predictable at entry), so the question moved in-trade
+        (02 s3 Q3 destination). RQ-20261014-d6e7-04 asked it pooled over every family and closed INDETERMINATE (gain
+        0.00054 nats, CI [-0.00118, 0.00245]). Same script, features, reference, K, folds and bar, restricted to the
+        scalp legs (--leg-re ''ict_scalp''): does the rich state beat the calibrated distance-only reference by >=
+        0.002 nats with CI lower bound > 0?'
+      why_this_matters: 'A pooled null can hide a class that carries the signal and a class that carries none (01''s
+        census differs by class: pullback headroom 1.54 R/trade in 9d20-01). The three class units (P2-Q3.1-fail donchian,
+        -b pullback, -c scalp) are registered together, so the split is pre-registered, not mined; a single-class
+        PASS is a lead for a policy unit, confirmed on a disjoint window before anything else.'
+      power:
+        expected_n: 460
+        min_detectable_effect: 0.1
+        effect_units: sd
+        design: one_sample
+        alpha: 0.05
+        power: 0.8
+        basis: 'Unit = OOS test trade. d6e7-01''s census walked scalp legs for ~920 trades; 4 of 5 time blocks tested
+          and timeouts excluded -> ~460 OOS trades (ESTIMATE). A 0.1 sd per-trade gain needs ~785, so this class is
+          near or below that: the rule grades INDETERMINATE under the 300 floor and a CI that spans the bar, never
+          FAIL on thin n.'
+        feasibility:
+          source: none
+          accrual_basis: Committed ledgers + public candles; nothing accrues.
+      decision_rule:
+        id: RULE-P2-Q3.1-RICHSTATE-SCALP
+        statistic: 'Per OOS trade: mean over its bar events of logloss(reference dist) - logloss(model rich), trade-weighted;
+          pooled mean with a 1,000-draw trade bootstrap 95% CI; sign per fold (4 expanding purged time folds); calibration
+          slope. Identical to RQ-20261014-d6e7-04''s statistic, restricted by --leg-re.'
+        rule: 'PASS IF gain >= 0.002 nats AND CI lower bound > 0 AND gain > 0 in >= 3 of 4 folds AND calibration slope
+          in [0.7, 1.3]: the scalp family''s in-trade state carries information -> author the exit-now POLICY unit
+          for this class only (the d6e7-05 shape, requires this PASS) and a disjoint-window confirmation. FAIL IF
+          the CI upper bound < 0.002 nats: closes the rich state for this class on this corpus (note on IN-TRADE-EXIT-MODEL).
+          INDETERMINATE otherwise or under 300 OOS trades.'
+        min_n: 300 OOS trades in the class.
+        what_it_does_not_do: Trains nothing that serves; edits no exit lever, config or roster; the 0.002-nat bar,
+          K and folds are d6e7-04's, unchanged. Not a P&L claim -- the policy unit owns net R.
+      compute: cpu_light
+      value:
+        bucket: ai_trader
+        usd_at_stake_per_month: 300
+        confidence: 0.2
+        basis: 02 node P2-Q3.1 planning weight; the probability model behind the exit-now mechanism, per class.
+      routing:
+        needs_trainer_resident_data: false
+        needs_gpu: false
+        peak_memory_gb: 3.0
+        est_minutes: 60
+        basis: d6e7-04 budgeted 90 min for every family; a class subset fetches fewer symbols x timeframes.
+        why_runner: public candles + committed ledgers only; numpy IRLS -- no published shard covers 5m/2h/4h and
+          no GPU is useful.
+      run:
+        command:
+        - python3
+        - scripts/research/first_passage.py
+        - --mode
+        - baseline
+        - --features
+        - rich
+        - --ref
+        - dist
+        - --leg-re
+        - ict_scalp
+        - --policy-tp-r
+        - '2.0'
+        - --min-gain-nats
+        - '0.002'
+        - --min-folds
+        - '3'
+        - --min-n
+        - '300'
+        - --cache-dir
+        - '{out_dir}/candles'
+        - --out
+        - '{out_dir}'
+        timeout_minutes: 240
+      lands:
+        store: research/results/
+        assert_field: read_state
+        min_rows: 1
+      related:
+      - RQ-20261014-d6e7-04
+      - RQ-20261014-9d20-03
+      - IN-TRADE-EXIT-MODEL
+      - P2-AI-REGIME-BACKLOG-1016
+  # ── Q4 family diversity: 9d20-05 closed INDETERMINATE ───────────────────────
+  # ── Q1.5 conformal abstention: heads beat the prior on log-loss at 1h ───────
+  - id: P2-Q1.5-conformal
+    goal: G4
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 150
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-25
+      verdict: pass
+    needs_authoring: 'AUTHORED 2026-10-16: 9da8-03 is scoped to the 15m shadow log and needs two levers, so the 1h
+      published-data variant was registered as blocked/RQ-20261016-65ff-25 (needs only the scorer, FRONTIER-LEVER-CONFORMAL).
+      On its PASS: register the disjoint-window confirmation, then the Tier-3 proposal of abstention as a per-trade
+      RiskManager refusal on the advisory heads (never a mode flip), and re-ask 9da8-03 on the 15m shadow log once
+      ML-HEAD-AGREEMENT-JOIN lands.'
+  - id: P2-Q1.5-fail
+    goal: G4
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 100
+      confidence: 0.2
+    after:
+    - unit: RQ-20261016-65ff-25
+      verdict: fail
+    unit:
+      theme: ml_health
+      priority: 2
+      kind: experiment
+      title: 'AI trader / conformal abstention at 1h, VARIANT (first test failed -> variant, P2-Q1.5-fail): does a GLOBAL
+        (non-Mondrian) split-conformal rule beat the plain max-probability threshold at matched coverage on the BTC/ETH/SOL
+        1h regime learner?'
+      question: 'RQ-20261016-65ff-25 (Mondrian per predicted class, 3 symbols x 3 coverage levels) closed FAIL on two
+        consecutive passes: conformal selective error was slightly HIGHER than the plain threshold at every level on BTC,
+        and empirical set coverage ran ~8-9 points under nominal at the 90% level (e.g. 0.81 vs 0.90 on BTC), i.e. the
+        calibration block does not stay exchangeable with the test block. Same shards, learner, folds, coverage levels
+        and windows, one change -- mondrian: none (a single global quantile instead of one per predicted class, which
+        halves the calibration rows per quantile): does the conformal rule give LOWER selective error than the plain threshold
+        at matched coverage on >= 2 of 3 symbols at every level, with rolling-window coverage within 2 SE of nominal in
+        >= 90% of windows?'
+      why_this_matters: 'Operator 2026-10-22: an idea that failed one test is not dead, it failed the first test. This
+        is a registered VARIANT, not a retry: per-class quantiles on a 2-class label with ~1000 calibration rows per class
+        are noisy, and the class split is the one degree of freedom in the instrument that the FAIL did not rule out.
+        Drift (the other candidate cause) is NOT addressed here -- an adaptive-conformal (ACI) arm needs an instrument
+        change that does not exist; if this variant also FAILs on validity, the next variant is that lever, filed by the
+        grader read. Prior: 65ff-25 (FAIL, Mondrian), 9da8-03 (trainer-log variant, still blocked on ML-HEAD-AGREEMENT-JOIN).
+        Trials counted: 2 conformal configurations on this corpus including this one.'
+      power:
+        expected_n: 24000
+        min_detectable_effect: 0.1
+        effect_units: sd
+        design: one_sample
+        alpha: 0.05
+        power: 0.8
+        basis: 'The selective-error comparison is PAIRED over folds and rows: a paired comparison is a one-sample test
+          on the differences, so design is one_sample (the queue''s power grader accepts one_sample | two_sample; ''paired''
+          was refused on 2026-10-18 when the unit left blocked/). Rows: tail_rows 40000 at min_train_frac 0.4 leaves ~24,000
+          OOS rows per symbol over 5 folds; d=0.1 paired needs ~785 rows, so rows are not the limit; bars are autocorrelated,
+          so the rule also needs >= 2 of 3 symbols and >= 6 windows per symbol rather than one significance test. The
+          earlier basis counted 3 symbols as n; that was the number of groups, not the sample.'
+        feasibility:
+          source: none
+          accrual_basis: Fixed published shard; nothing accrues.
+      decision_rule:
+        id: RULE-P2-Q1.5-CONFORMAL-1H-GLOBAL
+        statistic: 'Per symbol and coverage level c in {0.5, 0.7, 0.9}: selective error (misclassification among non-abstained
+          OOS rows) of (a) the plain max-probability threshold tuned on the fold''s calibration block to keep share c
+          and (b) the GLOBAL (mondrian: none) split-conformal rule whose alpha is tuned on the same calibration block
+          to keep share c (rising branch); paired over folds. Validity: per non-overlapping 30-day window of OOS rows,
+          |empirical set coverage - (1 - alpha)| <= 2 * sqrt(p(1-p)/n_window + p(1-p)/n_calibration). The fixed 3-point
+          band is reported beside it as valid_share_tol.'
+        rule: 'PASS IF on >= 2 of 3 symbols, at EVERY coverage level (50/70/90% kept) with coverage matched between the
+          two rules, the conformal rule has LOWER selective error than the plain max-probability threshold AND the conformal
+          set''s rolling-window coverage is within 2 SE of nominal in >= 90% of windows (SE combines the window''s binomial
+          term and the calibration-set term; see amendments) -- a per-trade refusal signal worth a Tier-3 proposal note
+          on FRONTIER-RESEARCH; family history conformal_calibration PASS. FAIL IF either condition fails on >= 2 symbols
+          with coverage matched (no gain, or validity broken by drift: family history FAIL with this configuration). INDETERMINATE
+          IF < 6 usable windows per symbol, the learner arm is unavailable, or coverage could not be matched at some level
+          (the model cannot keep that many singleton sets: not a comparison).'
+        min_n: 6 usable 30-day windows per symbol, >= 200 OOS rows each.
+        what_it_does_not_do: Changes no head, threshold, stage or order path; abstention is measured offline on market
+          labels only. A PASS is a lead for a disjoint-window confirmation unit and a Tier-3 proposal note, never a wiring
+          change. Does not address drift (no ACI arm). Not a P&L claim.
       compute: auto
       value:
-        bucket: frontier
-        usd_at_stake_per_month: 120
-        confidence: 0.25
-        basis: 'stand-in: a non-inferior non-boosted family is a second opinion for the advisory heads and
-          a diversity record either way; not a measured P&L'
+        bucket: ai_trader
+        usd_at_stake_per_month: 100
+        confidence: 0.2
+        basis: 02 node P2-Q1.5 weight; a calibrated per-trade refusal signal for the advisory heads, not a measured P&L
       routing:
         needs_trainer_resident_data: false
         needs_gpu: false
         published_data: metis-market-data
-        peak_memory_gb: 4.0
-        est_minutes: 70
-        basis: 'Estimate, NOT measured: 9d20-05 at 20k rows was budgeted 40 min; ~2.15x rows -> ~70 min. The
-          first run replaces it.'
+        peak_memory_gb: 3.0
+        est_minutes: 30
+        basis: 'Estimate, NOT measured: the 65cc-10 fold plan (5 lightgbm fits per symbol) plus a 190-point alpha grid
+          over each fold''s calibration block per level; Kaggle CPU via published data. Re-declare from the first run.'
       ml_bakeoff:
-        task: classification
-        metric: macro_f1
         dataset:
           kind: jsonl
           groups:
@@ -86,6 +482,8 @@ nodes:
               path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
             ETHUSDT_1h:
               path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+            SOLUSDT_1h:
+              path: datasets-out/market_features/SOLUSDT/1h/v002/data.jsonl
           ts_col: ts
           target: regime_label
           features:
@@ -95,21 +493,12 @@ nodes:
           - log_return_lag_2
           - hour_of_day
           - dayofweek
-          tail_rows: 43000
-          holdout_after: '2026-07-12'
+          tail_rows: 40000
         cv:
           folds: 5
           embargo_rows: 24
           min_train_frac: 0.4
-        baseline: lgbm
-        controls:
-        - prior
-        candidates:
-        - extratrees
-        - mlp
         learners:
-          prior:
-            kind: prior
           lgbm:
             kind: lightgbm
             params:
@@ -117,42 +506,183 @@ nodes:
               learning_rate: 0.05
               num_leaves: 31
               min_child_samples: 50
-          extratrees:
-            kind: sklearn_extratrees
-            params:
-              n_estimators: 300
-              min_samples_leaf: 20
-          mlp:
-            kind: sklearn_mlp
-            params:
-              hidden_layer_sizes:
-              - 64
-              - 64
-              max_iter: 300
+        note: dataset / cv / learner only (the compute router checks published-data paths here); the SCORE-STREAM test
+          is the conformal block
+      conformal:
+        learner: lgbm
+        coverage_levels:
+        - 0.5
+        - 0.7
+        - 0.9
+        calib_frac: 0.25
+        match_tol: 0.03
+        window_days: 30
+        min_window_rows: 200
+        min_windows: 6
+        validity_mode: 2se
+        validity_tol: 0.03
+        validity_min_share: 0.9
+        mondrian: none
+        rule:
+          pass_symbols_min: 2
+          fail_symbols_min: 2
+      run:
+        command:
+        - python3
+        - scripts/research/conformal_abstain_eval.py
+        - --unit
+        - '{unit}'
+        - --out
+        - '{out_dir}'
+        timeout_minutes: 60
+      lands:
+        store: research/results/
+        assert_field: read_state
+        min_rows: 1
+      roadmap:
+      - L-REGIME
+      - M25
+      related:
+      - RQ-20261016-65ff-25
+      - RQ-20261011-9da8-03
+      - FRONTIER-LEVER-CONFORMAL
+  - id: P2-Q1.6-yz-sol-logloss
+    goal: G4
+    roadmap: [M25]
+    value: {usd_at_stake_per_month: 100, confidence: 0.2}
+    after:
+    - unit: RQ-20261023-a1f3-15
+      verdict: pass
+    unit:
+      theme: ml_health
+      priority: 2
+      kind: experiment
+      title: 'Range-vol lift for the SOL 1h regime head scored on LOG-LOSS (transfer of RQ-20261023-a1f3-15): does lgbm_yz
+        beat lgbm_base on SOLUSDT?'
+      question: RQ-20261023-a1f3-15 PASSED on BTC+ETH 1h (lgbm_yz vs lgbm_base, log-loss, with the BTC CI95 spanning 0).
+        SOL was not in that unit's rule. On the SOLUSDT 1h v002 shard, same features, folds, embargo, learners and bar,
+        does lgbm_yz beat lgbm_base by >= 0.003 nats of log-loss on the CV mean with the same sign on the post-2026-07-12
+        holdout?
+      why_this_matters: 'a1f3-15''s PASS is a lead (BTC interval includes zero, two symbols). SOL is the third symbol
+        of the 1h regime head and the one where the macro-F1 test 3a84-11 passed, so this is the symbol where a log-loss
+        result is most informative: a PASS widens the lead to the full head, a FAIL says the macro-F1 pass was a metric
+        artifact there. Trials counted: 4 range-vol comparisons on this feature block (3a84-09/-10/-11 macro-F1, a1f3-15
+        log-loss) plus this one.'
+      power:
+        expected_n: 20000
+        min_detectable_effect: 0.1
+        effect_units: sd
+        design: one_sample
+        alpha: 0.05
+        power: 0.8
+        basis: 'Row floor: d=0.1 paired needs ~785 rows; rows are autocorrelated so effective n is lower. expected_n is
+          an ESTIMATE from tail_rows x folds, not a measurement; below the fold floor the unit grades indeterminate, never
+          FAIL.'
+        feasibility:
+          source: none
+          accrual_basis: 'Fixed by construction (tail_rows of a nightly-rebuilt shard): n does not grow with waiting,
+            so an underpowered result is reported as such and the follow-up is a larger or different dataset, not a re-run.'
+      decision_rule:
+        id: RULE-P2-Q1.6-REGIME-1H-YZ-LOGLOSS-SOL
+        registered_before_run: true
+        statistic: Paired purged-CV log-loss difference (lgbm_base minus lgbm_yz, positive = yz better) on identical rows,
+          and the same on the holdout, for SOLUSDT_1h.
+        rule: PASS IF lgbm_yz beats lgbm_base by >= +0.003 nats (CV mean) AND > 0 on the holdout. FAIL IF lgbm_yz does
+          not reach >= +0.001 vs lgbm_base (CV mean). INDETERMINATE otherwise, or if folds < 3, the holdout has < 20 rows,
+          or an arm is unavailable. A PASS is not a promotion.
+        min_n: 3 usable CV folds; reported n_rows.
+        what_it_does_not_do: Builds, calibrates and serves nothing, promotes nothing, touches no config; a score PASS
+          is not edge and not a P&L figure.
+      compute: auto
+      value:
+        usd_at_stake_per_month: 100
+        confidence: 0.2
+        bucket: ai_trader
+        basis: 'stand-in: gates whether the range-vol block is worth wiring into the 1h head; not a measured P&L'
+      routing:
+        needs_trainer_resident_data: false
+        needs_gpu: false
+        published_data: metis-market-data
+        peak_memory_gb: 3.0
+        est_minutes: 20
+        basis: 'Estimate, NOT measured: CPU-capable bake-off on the published 1h v002 shards the 4591 units read; compute:
+          auto routes it to the Kaggle CPU kernel (published data; idle backend per the 09:14Z health line).'
+      ml_bakeoff:
+        task: classification
+        metric: logloss
+        higher_is_better: false
+        dataset:
+          kind: jsonl
+          groups:
+            SOLUSDT_1h:
+              path: datasets-out/market_features/SOLUSDT/1h/v002/data.jsonl
+          ts_col: ts
+          target: regime_label
+          features:
+          - rolling_log_return_vol
+          - log_return
+          - log_return_lag_1
+          - log_return_lag_2
+          - hour_of_day
+          - dayofweek
+          tail_rows: 40000
+          holdout_after: '2026-07-12'
+          extra_columns:
+          - parkinson_vol
+          - garman_klass_vol
+          - rogers_satchell_vol
+          - yang_zhang_vol
+        cv:
+          folds: 5
+          embargo_rows: 96
+          min_train_frac: 0.4
+        baseline: lgbm_base
+        controls:
+        - prior
+        candidates:
+        - lgbm_yz
+        learners:
+          prior:
+            kind: prior
+          lgbm_base:
+            kind: lightgbm
+            params: &id001
+              learning_rate: 0.05
+              min_child_samples: 50
+              n_estimators: 200
+              num_leaves: 31
+          lgbm_yz:
+            kind: lightgbm
+            params: *id001
+            feature_blocks:
+            - kind: df_columns
+              columns:
+              - parkinson_vol
+              - garman_klass_vol
+              - rogers_satchell_vol
+              - yang_zhang_vol
         rule:
           min_folds: 3
           pass_if:
-          - group: &id001
-            - BTCUSDT_1h
-            - ETHUSDT_1h
+          - group:
+            - SOLUSDT_1h
             vs: baseline
             window: cv
             op: '>='
-            value: -0.01
-          - group: *id001
+            value: 0.003
+          - group:
+            - SOLUSDT_1h
             vs: baseline
             window: holdout
-            op: '>='
-            value: -0.01
+            op: '>'
+            value: 0.0
           fail_if_no_candidate_reaches:
           - group: any
             vs: baseline
             window: cv
             op: '>='
-            value: -0.03
+            value: 0.001
       run:
-        inputs:
-          research_unit: RQ-20261016-001
         command:
         - python3
         - scripts/research/ml_bakeoff.py
@@ -160,53 +690,1370 @@ nodes:
         - '{unit}'
         - --out
         - '{out_dir}'
-        timeout_minutes: 240
+        timeout_minutes: 60
       lands:
         store: research/results/
         assert_field: read_state
         min_rows: 1
-      decision_rule:
-        id: RULE-P2-Q4-ET-MLP-EXTEND-1H
-        registered_at: '2026-10-16'
-        registered_before_run: true
-        registered_before_run_note: Thresholds and rule text are byte-identical to RULE-RQ20261014-9D20-05-EXTRATREES-MLP-1H;
-          only n (tail_rows 43000) differs. Registered before this unit has run.
-        statistic: Paired per-fold macro-F1 difference (candidate minus LightGBM) on identical purged folds
-          and on the holdout, per symbol; mean over folds; applied by ml_bakeoff.py evaluate_rule from this
-          unit's ml_bakeoff.rule.
-        rule: 'PASS (non-inferior or better) IF a candidate reaches >= -0.010 vs LightGBM on the CV mean AND
-          on the holdout on BOTH symbols: the family is a registrable alternative; file the candidate-manifest
-          proposal (Tier-3 note on FRONTIER-RESEARCH) and append families.ensemble_stack.history PASS. FAIL
-          IF no candidate reaches >= -0.030 vs LightGBM on the CV mean on any symbol AND both arms were evaluated:
-          closes these two learners at these settings on this feature set (history FAIL). INDETERMINATE otherwise,
-          if folds < 3, or if an arm is unavailable.'
-        min_n: 3 usable CV folds per symbol; holdout >= 20 rows.
-        what_it_does_not_do: Trains or registers nothing, touches no manifest, stage or config; unweighted
-          LightGBM incumbent (a family comparison, not a re-grade of the shipped heads). Says nothing about
-          trade P&L.
       roadmap:
       - M25
       related:
-      - RQ-20261014-9d20-05
-      - RQ-20261013-1414-07
-      - FRONTIER-RESEARCH
-      - AI-TRADER-PROGRAMME
-  # ── Q1.5 conformal abstention: heads beat the prior on log-loss at 1h ───────
-  - id: P2-Q1.5-conformal
-    goal: G4
-    roadmap: [L-REGIME]
-    value: {usd_at_stake_per_month: 150, confidence: 0.3}
-    after: [{unit: RQ-20261014-65cc-10, verdict: pass}]
-    needs_authoring: >-
-      65cc-10 PASSED (1h heads beat the class prior on log-loss). 02 § 6 W3 #20 releases conformal
-      abstention RQ-20261011-9da8-03 on this condition: re-check it is dispatchable (blocked/ or queued)
-      and unlock it, or register the 1h conformal unit if 9da8-03 is scoped to 15m only.
+      - RQ-20261023-a1f3-15
+      - RQ-20261022-3a84-11
   # ── Q2.5 pooling parity (no unit yet) ───────────────────────────────────────
   - id: P2-Q2.5-pooling-parity
     goal: G4
+    roadmap:
+    - M23
+    value:
+      usd_at_stake_per_month: 200
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-26
+      verdict: pass
+    needs_authoring: 'AUTHORED 2026-10-16 as blocked/RQ-20261016-65ff-26 (instrument row POOLING-PARITY-INSTRUMENT,
+      needs_vm_data). On PASS (parity holds): register the pooled within-family meta-label head with a source indicator,
+      live labels weighted, graded on live-only OOS folds.'
+  - id: P2-Q2.5-fail
+    goal: G4
+    roadmap:
+    - M23
+    value:
+      usd_at_stake_per_month: 150
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-26
+      verdict: fail
+    needs_authoring: 'Pooling parity FAILED (net R or features differ live vs backtest): do NOT pool. Register the
+      backtest-fidelity unit for the legs whose net R rejects (cost or fill model gap) and keep M23 on live labels
+      per GO cell from the label census.'
+  # ── Q1.3 drift (PI-20261016-P3PFA1GK-0001): branches of the 1h drift twin and the drift-artifact question ──
+  - id: P2-Q1.3-drift-1h-fail
+    goal: G4
+    roadmap:
+    - M25
+    value:
+      usd_at_stake_per_month: 100
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-24
+      verdict: fail
+    needs_authoring: '1h regime skill does not hold on the last 90 days for at least one symbol (persistent at 1h).
+      Per the drift-remediation skill: register the feature/label fix test for that symbol (e.g. HAR-RV horizons,
+      recency-weighted training, a vol-target re-definition) as an off-trainer bake-off; demotion only as interim
+      safety and operator-gated.'
+  - id: P2-Q1.3-drift-artifact
+    goal: G4
+    roadmap:
+    - M25
+    value:
+      usd_at_stake_per_month: 150
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-27
+      verdict: pass
+    needs_authoring: 'The persistent drift flag is mostly an instrument artifact or input-mix shift. Not a research
+      question: file the scan fix on ML-DRIFT-SPLIT-INSTRUMENT (version-pure scoring) and close PI-20261016-P3PFA1GK-0001
+      with the per-head reading; author a research unit only for the heads read DECAY.'
+  - id: P2-Q1.3-drift-decay
+    goal: G4
+    roadmap:
+    - M25
+    value:
+      usd_at_stake_per_month: 200
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-27
+      verdict: fail
+    needs_authoring: '>= 4 of the 9 flagged heads read DECAY. Register one drift-remediation bake-off per decayed
+      family (features, label, training window), off the trainer where the data is published; the advisory sol-regime-15m-lgbm-fc-pcv-v2
+      first.'
+  # ── Q4 family diversity: successors of the CatBoost confirmation and the two blocked frontier bake-offs ──
+  - id: P2-Q4-catboost-confirmed
+    goal: G4
+    roadmap:
+    - M25
+    value:
+      usd_at_stake_per_month: 80
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-30
+      verdict: pass
+    needs_authoring: 'CatBoost''s 1h regime log-loss win confirmed out of time and on SOL. Not another bake-off: the
+      Tier-3 candidate-manifest note on FRONTIER-RESEARCH; then register the net-of-cost question -- does the CatBoost
+      head''s vol label separate trades better than LightGBM''s (an arm of the RQ-20261016-65ff-28 classifier comparison).'
+  - id: P2-Q4-tabular-read
+    goal: G4
+    roadmap:
+    - M25
+    value:
+      usd_at_stake_per_month: 120
+      confidence: 0.25
+    after:
+    - unit: RQ-20261011-9da8-02
+      verdict: any
+    needs_authoring: The small-n tabular bake-off (TabICL / TabPFN / CatBoost vs LightGBM on the meta-label dataset)
+      closed. Write the verdict to families.tabular_foundation_model.history and register the next rung per the frontier
+      skill table (PASS -> candidate note + per-cell live-label head for the GO cells of the label census; FAIL ->
+      the exact configuration, family not closed).
+  - id: P2-Q4-tsfm-read
+    goal: G4
+    roadmap:
+    - M25
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 120
+      confidence: 0.25
+    # 2026-10-25 research-ops: 9da8-01 graded FAIL (2 consecutive passes, Chronos-2 zero-shot). The FAIL branch is written back
+    # (ML-F1 closed, families.ts_foundation_model.history += FAIL, TimesFM/TiRex/Kronos/TTM loaders = FRONTIER-LEVER-TSFM, ML-F28).
+    # This node is the PASS branch only (LoRA rung 1414-08), so it is moot, not unread. 1414-08/-09 stay in blocked/.
+    after:
+    - unit: RQ-20261011-9da8-01
+      verdict: pass
+    needs_authoring: The TSFM forecaster bake-off for the vol head closed (with the HAR-RV control). PASS -> the LoRA
+      rung (blocked/RQ-20261013-1414-08) and a serve-parity row; FAIL -> families.ts_foundation_model.history; the
+      covariate-native rung (1414-09) waits on FUNDING-OI-DATASETS-ETH-SOL either way.
+  # ── Q6 off-VM training parity per manifest class (PI-20261016-P3PFA1GK-0002). The regression class has NO parity unit:
+  #    all 15 regression manifests train on setup_candidates / setup_labels (OURS data, never published), so they stay on the
+  #    trainer by construction -- the stated reason that clears that half of the pipeline item. ──
+  - id: P2-Q6-parity-hmm-pass
+    goal: G4
+    roadmap:
+    - M25
+    value:
+      usd_at_stake_per_month: 100
+      confidence: 0.4
+    after:
+    - unit: RQ-20261016-65ff-21
+      verdict: pass
+    needs_authoring: 'Off-VM training parity PASSED for the HMM class. Not a research question: note it on KAGGLE-TRAIN-RUNNER-FIRST
+      and PI-20261016-P3PFA1GK-0002 (one class cleared); the one operator-gated off-VM registry write for this class
+      is a Tier-2 ask.'
+  - id: P2-Q6-parity-hmm-fail
+    goal: G4
+    roadmap:
+    - M25
+    value:
+      usd_at_stake_per_month: 100
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-21
+      verdict: fail
+    needs_authoring: Off-VM training parity FAILED for the HMM class on identical rows. Register the root-cause measurement
+      (library version / platform float drift / an unseeded path) as a unit before the class is moved; it stays on
+      the trainer.
+  - id: P2-Q6-parity-regimeclf-pass
+    goal: G4
+    roadmap:
+    - M25
+    value:
+      usd_at_stake_per_month: 100
+      confidence: 0.4
+    after:
+    - unit: RQ-20261016-65ff-23
+      verdict: pass
+    needs_authoring: 'Off-VM training parity PASSED for the RegimeClassifier class. Not a research question: note
+      it on KAGGLE-TRAIN-RUNNER-FIRST and PI-20261016-P3PFA1GK-0002 (one class cleared); the one operator-gated off-VM
+      registry write for this class is a Tier-2 ask.'
+  - id: P2-Q6-parity-regimeclf-fail
+    goal: G4
+    roadmap:
+    - M25
+    value:
+      usd_at_stake_per_month: 100
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-23
+      verdict: fail
+    needs_authoring: Off-VM training parity FAILED for the RegimeClassifier class on identical rows. Register the
+      root-cause measurement (library version / platform float drift / an unseeded path) as a unit before the class
+      is moved; it stays on the trainer.
+  # ── Q1 REGIME half (L-REGIME, checklist row REGIME-PROGRAM), moved here from 02-ai-trader.yaml (regime section) on 2026-10-16:
+  #    scripts/research/programme_coverage.py keys a tree by its 2-char file prefix, so a second 02* file
+  #    shadowed this one and P2 read 9/9 uncovered. One file per programme. Original header follows. ──
+  # REGIME half (milestone L-REGIME, checklist row REGIME-PROGRAM): the machine-readable question tree for
+  # docs/research/programmes/02-AI-TRADER.md s3 Q1 and REGIME-PROGRAM deliverables 2-5. Same contract as 02-ai-trader.yaml
+  # (read by scripts/research/queue_replenish.py; every edit holds for a human merge; `value` figures are INFERRED weights).
+  # Authored 2026-10-16 by lane P2-AI-REGIME-BACKLOG-1016 (manager session_01VduHYzdaXe27wTDBLSu8ao).
+  #
+  # What is already answered (MEASURED, research/results/): TREND axis pooled -- 16 of 17 FAIL (RQ-20260930-701/703,
+  # RQ-20261012-75b2-01..15; the one PASS 75b2-05 fails at min_cell_n 20). Per-leg session/vol skips: PASS 407c-13/14/15/21,
+  # f0e2-10 (NOT confirmed by 470a-10); the rest FAIL or underpowered. The regime ML heads beat the class prior on log-loss
+  # (65cc-10, 4591-01/06, eda2-01) but not on 15m macro-F1 drift (75b2-16..18).
+  #
+  # The work queued from this tree (deliverable 5), every unit pre-registered:
+  #   RQ-20261016-65ff-01..04  fresh-window CONFIRMATIONS of the four unconfirmed regime-lever PASSes (manager audit s4.1)
+  #   RQ-20261016-65ff-05      TRANSFER of the sol VH90 gate to trend_donchian_sol_prop (real money + prop)
+  #   RQ-20261016-65ff-06..08  per-leg good-vs-bad trade conditions on the real-money PULLBACK legs (hot / cold vol; 07 grades
+  #                            ada's declared live cold-tail skip) (deliverable 3)
+  #   DROPPED before merge (2026-10-16, manager relay of IDEA-REVIEW-1016 s11): 11 donchian-leg SKIP units (session / hot vol /
+  #   cold vol / ADX floor on eth_4h, xrp_4h, sol_prop, eth_prop). In-repo evidence already reads against skips on trend legs
+  #   (donchian session 0/5 pass: 407c-10/11/12/19, f0e2-02; donchian hot-vol 1 pass of 6, not confirmed: 470a-10; trend axis
+  #   [ndon] FAIL: 75b2-01/02) and the literature predicts it (crisis alpha). The open regime question on trend legs is
+  #   continuous vol-TARGET SIZING, row IR-VOL-TARGET-SIZING-STAGE0 (IDEA-REVIEW-1016) -- not duplicated here; node P2-R5 waits on it.
+  #   blocked/RQ-20261016-65ff-28  classifier comparison on TRADE SEPARATION (ML vol head vs HMM vs ATR control; deliverable 2)
+  #   blocked/RQ-20261016-65ff-29  the real-money equity legs (alpaca_live)
+  #   blocked/RQ-20260927-006..009, RQ-20260928-ae17-01 (was a second RQ-20260928-006, renamed 2026-10-17), RQ-20260929-109/110  retagged theme: regime, owner rows named
+  # Nodes below are the branches those results open. Builds are rows, not nodes: REGIME-WEIGHT-VARIANTS, REGIME-WF-VERDICT-WRAPPER,
+  # REGIME-VOL-LABELS-EXPORT, REGIME-EQUITY-LEG-FETCH, FUNDING-OI-DATASETS-ETH-SOL.
+  - id: P2-R3.c01-pass
+    question: Q1
+    goal: G1
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 150
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-01
+      verdict: pass
+    needs_authoring: 'RQ-20261016-65ff-01 CONFIRMED the first-window regime gate on xrp_pullback_2h on a disjoint
+      window. Not another backtest: prepare the regime-selectivity Tier-3 PACKET as a note on REGIME-PROGRAM (both
+      windows'' numbers, the account_compat_matrix, the exact strategies.yaml line it would change) for the manager;
+      the operator flips. A data-backed Tier-3 call may be taken under the 2026-09-27 standing authorization only
+      with the committed records of BOTH windows.'
+  - id: P2-R3.c02-pass
+    question: Q1
+    goal: G1
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 120
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-02
+      verdict: pass
+    needs_authoring: 'RQ-20261016-65ff-02 CONFIRMED the first-window regime gate on ada_pullback_2h on a disjoint
+      window. Not another backtest: prepare the regime-selectivity Tier-3 PACKET as a note on REGIME-PROGRAM (both
+      windows'' numbers, the account_compat_matrix, the exact strategies.yaml line it would change) for the manager;
+      the operator flips. A data-backed Tier-3 call may be taken under the 2026-09-27 standing authorization only
+      with the committed records of BOTH windows.'
+  - id: P2-R3.c03-pass
+    question: Q1
+    goal: G4
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 60
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-03
+      verdict: pass
+    needs_authoring: 'RQ-20261016-65ff-03 CONFIRMED the first-window regime gate on eth_pullback_2h on a disjoint
+      window. Not another backtest: prepare the regime-selectivity Tier-3 PACKET as a note on REGIME-PROGRAM (both
+      windows'' numbers, the account_compat_matrix, the exact strategies.yaml line it would change) for the manager;
+      the operator flips. A data-backed Tier-3 call may be taken under the 2026-09-27 standing authorization only
+      with the committed records of BOTH windows.'
+  - id: P2-R3.c04-pass
+    question: Q1
+    goal: G4
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 80
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-04
+      verdict: pass
+    needs_authoring: 'RQ-20261016-65ff-04 CONFIRMED the first-window regime gate on trend_donchian_sol on a disjoint
+      window. Not another backtest: prepare the regime-selectivity Tier-3 PACKET as a note on REGIME-PROGRAM (both
+      windows'' numbers, the account_compat_matrix, the exact strategies.yaml line it would change) for the manager;
+      the operator flips. A data-backed Tier-3 call may be taken under the 2026-09-27 standing authorization only
+      with the committed records of BOTH windows.'
+  - id: P2-R3.c05-pass
+    question: Q1
+    goal: G1
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 250
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-05
+      verdict: pass
+    unit:
+      theme: regime
+      priority: 1
+      kind: experiment
+      cadence: once
+      title: 'CONFIRM RQ-20261016-65ff-05 on a fresh window: does trend_donchian_sol_prop with VH80 (--vol-skip-above-pctl=0.8) still beat the declared leg
+        on the 730 days BEFORE the window it was chosen on, net of the full cost stack, with no re-selection?'
+      question: 'RQ-20261016-65ff-05 PASSED (VH80 = --vol-skip-above-pctl=0.8: dR +4.90 R vs baseline, no worse drawdown, >= 3/4 folds, n(B)=136) as the best of THREE arms
+        (VH80/VH90/VH95) on 2022-10-05..2024-10-04; its rule makes that a LEAD. Re-ask the single chosen arm (VH80) against the declared leg on the disjoint preceding
+        window 2020-10-05 .. 2022-10-04 23:59: dR >= 2.0 R, no worse drawdown, >= 3 of 4 calendar folds.'
+      why_this_matters: trend_donchian_sol_prop is a prop leg (prop legs clear a SUPERSET of the real-money ladder, CLAUDE.md). regime-selectivity Rule 2
+        (walk-forward before Tier-3) and the f0e2-10 -> 470a-10 reversal (a best-of-N single-window pass that did NOT confirm) are why a first-window pass is a lead,
+        not a gate. The first-window PASS was chosen from 3 arms (multiple-testing denominator 3, row RESEARCH-TRIAL-LEDGER); a pass here is evidence for a Tier-3
+        packet note to the manager only, and the prop EV/survival gate against the firm's DD limits is a separate, still-required step.
+      power:
+        expected_n: 100
+        min_detectable_effect: 0.45
+        effect_units: sd
+        design: one_sample
+        alpha: 0.05
+        power: 0.8
+        basis: 'd=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo''s standing E35 floor). expected_n=100 is an ESTIMATE: from the first window''s
+          n(B) over the same 730-day length; crypto history before 2024 had fewer trending months so it may be lower. Below 39 baseline trades the
+          unit grades indeterminate (underpowered), never FAIL. The R bar is a MATERIALITY bar over the whole window, not a significance test; the
+          3-of-4 calendar-fold majority refuses a one-period artifact.'
+        feasibility:
+          source: none
+          accrual_basis: Re-measurement on freshly fetched keyless Binance Vision candles over a pinned window; the harness replays history, nothing
+            accrues.
+      decision_rule:
+        id: RULE-RQ2026101665ff05-REGIME-VOLHOT-CONFIRM2
+        registered_at: '2026-10-18'
+        registered_before_run: true
+        statistic: 'Per arm, from the harness''s own --json summary (argv built by regime_debt_matrix.build_harness_cmd plus the arm''s tokens; full
+          cost stack: fee + resolved slippage + funding via execution_costs.resolve_cost_policy, never a zero default): total_trades, net_total_r,
+          max_drawdown_r, plus net_r per fold over FOUR equal calendar spans (same boundaries every arm). Arms: B = leg as declared; VH80 = --vol-skip-above-pctl=0.8.
+          Per candidate C: dR = net_r(C) - net_r(B); dDD = maxDD(C) - maxDD(B); fold_wins = folds in which C out-earns B. Also reported per arm, not
+          graded: net_r_per_capital_day (the programme headline measure).'
+        rule: 'indeterminate IF n(B) < 39 (no committed record exists on this exact window, so arm B is reported as the baseline itself) (underpowered:
+          no verdict, never FAIL on thin n). A candidate C PASSES iff dR >= 2.0 R AND dDD <= 0 AND fold_wins >= 3 of 4. PASS reads CONFIRMED (both
+          windows) -> a regime-selectivity Tier-3 PACKET note on REGIME-PROGRAM for the manager (walk-forward already satisfied by two disjoint windows),
+          never a config edit. FAIL reads NOT CONFIRMED: the first-window pass is recorded as a selection/period artifact and no packet is filed.
+          indeterminate is reported as such and extends n via the next preceding window in a new node, nothing else changed. The 2.0 R bar, the drawdown clause, the 3-of-4 fold
+          majority and the 39 floor are not changed after any result.'
+        what_it_does_not_do: 'Does not mine values: the arms are fixed here and may not be edited after any result. Does not edit config/strategies.yaml,
+          config/regime_policy.yaml or any roster; a pass is a lead/packet for the manager (Tier-3), never a promotion case. Live/paper P&L plays
+          no part. Tests no other axis.'
+      compute: cpu_light
+      value:
+        usd_at_stake_per_month: 250
+        confidence: 0.3
+        bucket: own_losses
+        basis: 'stand-in: real-money/prop leg; a gate that removes a repeatable drag on trend_donchian_sol_prop; estimate, not a measurement.'
+      routing:
+        needs_trainer_resident_data: false
+        needs_gpu: false
+        peak_memory_gb: 2.0
+        est_minutes: 45
+        basis: One keyless Binance Vision fetch of ~2250 days and 2 harness passes; GitHub-hosted runner, no trainer data.
+        why_runner: the harness fetches public Binance Vision candles itself and needs no published shard, no trainer data and no GPU; the runner
+          is the only backend whose env carries the harness deps.
+      run:
+        command:
+        - python3
+        - scripts/research/exit_lever_ablation.py
+        - --leg
+        - trend_donchian_sol_prop
+        - --arm
+        - B=
+        - --arm
+        - VH80=--vol-skip-above-pctl=0.8
+        - --days
+        - '2250'
+        - --start
+        - '2020-10-05'
+        - --end
+        - 2022-10-04 23:59
+        - --grade
+        - sweep
+        - --baseline
+        - B
+        - --delta-r
+        - '2.0'
+        - --fold-majority
+        - '3'
+        - --n-floor
+        - '39'
+        - --out
+        - '{out_dir}'
+        timeout_minutes: 90
+      lands:
+        store: research/results/
+        assert_field: read_state
+        min_rows: 1
+      roadmap:
+      - L-REGIME
+      related:
+      - REGIME-PROGRAM
+      - P2-AI-REGIME-BACKLOG-1016
+      - scripts/research/exit_lever_ablation.py
+      - .claude/skills/regime-selectivity/SKILL.md
+      - RQ-20261016-65ff-05
+  - id: P2-R3.g06-pass
+    question: Q1
+    goal: G1
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 120
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-06
+      verdict: pass
+    unit:
+      theme: regime
+      priority: 1
+      kind: experiment
+      cadence: once
+      title: 'CONFIRM RQ-20261016-65ff-06 on a fresh window: does ada_pullback_2h with VH95 (--vol-skip-above-pctl=0.95) still beat the declared leg
+        on the 730 days BEFORE the window it was chosen on, net of the full cost stack, with no re-selection?'
+      question: 'RQ-20261016-65ff-06 PASSED (VH95: dR +7.27 R, dDD -2.01 R, 3/4 folds) as the best of THREE arms (VH80/VH90/VH95; VH80 and VH90 did
+        not pass) on 2024-10-05..2026-10-04. Re-ask the single chosen arm (VH95 = --vol-skip-above-pctl=0.95) against the declared leg on the disjoint
+        preceding window 2022-10-05 .. 2024-10-04 23:59: dR >= 1.0 R, no worse drawdown, >= 3 of 4 calendar folds.'
+      why_this_matters: ada_pullback_2h trades real money (bybit_2 + bybit_portfolio mirror). regime-selectivity Rule 2 (walk-forward before Tier-3)
+        and the f0e2-10 -> 470a-10 reversal (a best-of-N single-window pass that did NOT confirm) are why a first-window pass is a lead, not a gate.
+        The first-window PASS was chosen from 3 arms (multiple-testing denominator 3, row RESEARCH-TRIAL-LEDGER); 65ff-02, the SU confirmation on
+        the same leg, read FAIL, so a second regime gate on this leg is not presumed.
+      power:
+        expected_n: 100
+        min_detectable_effect: 0.45
+        effect_units: sd
+        design: one_sample
+        alpha: 0.05
+        power: 0.8
+        basis: 'd=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo''s standing E35 floor). expected_n=100 is an ESTIMATE: from the first window''s
+          n(B) over the same 730-day length; crypto history before 2024 had fewer trending months so it may be lower. Below 39 baseline trades the
+          unit grades indeterminate (underpowered), never FAIL. The R bar is a MATERIALITY bar over the whole window, not a significance test; the
+          3-of-4 calendar-fold majority refuses a one-period artifact.'
+        feasibility:
+          source: none
+          accrual_basis: Re-measurement on freshly fetched keyless Binance Vision candles over a pinned window; the harness replays history, nothing
+            accrues.
+      decision_rule:
+        id: RULE-RQ2026101665ff06-REGIME-VOLHOT-CONFIRM
+        registered_at: '2026-10-18'
+        registered_before_run: true
+        statistic: 'Per arm, from the harness''s own --json summary (argv built by regime_debt_matrix.build_harness_cmd plus the arm''s tokens; full
+          cost stack: fee + resolved slippage + funding via execution_costs.resolve_cost_policy, never a zero default): total_trades, net_total_r,
+          max_drawdown_r, plus net_r per fold over FOUR equal calendar spans (same boundaries every arm). Arms: B = leg as declared; VH95 = --vol-skip-above-pctl=0.95.
+          Per candidate C: dR = net_r(C) - net_r(B); dDD = maxDD(C) - maxDD(B); fold_wins = folds in which C out-earns B. Also reported per arm, not
+          graded: net_r_per_capital_day (the programme headline measure).'
+        rule: 'indeterminate IF n(B) < 39 (no committed record exists on this exact window, so arm B is reported as the baseline itself) (underpowered:
+          no verdict, never FAIL on thin n). A candidate C PASSES iff dR >= 1.0 R AND dDD <= 0 AND fold_wins >= 3 of 4. PASS reads CONFIRMED (both
+          windows) -> a regime-selectivity Tier-3 PACKET note on REGIME-PROGRAM for the manager (walk-forward already satisfied by two disjoint windows),
+          never a config edit. FAIL reads NOT CONFIRMED: the first-window pass is recorded as a selection/period artifact and no packet is filed.
+          indeterminate re-asks once on 2020-10-05 .. 2022-10-04 23:59, nothing else changed. The 1.0 R bar, the drawdown clause, the 3-of-4 fold
+          majority and the 39 floor are not changed after any result.'
+        what_it_does_not_do: 'Does not mine values: the arms are fixed here and may not be edited after any result. Does not edit config/strategies.yaml,
+          config/regime_policy.yaml or any roster; a pass is a lead/packet for the manager (Tier-3), never a promotion case. Live/paper P&L plays
+          no part. Tests no other axis.'
+      compute: cpu_light
+      value:
+        usd_at_stake_per_month: 120
+        confidence: 0.3
+        bucket: own_losses
+        basis: 'stand-in: real-money/prop leg; a gate that removes a repeatable drag on ada_pullback_2h; estimate, not a measurement.'
+      routing:
+        needs_trainer_resident_data: false
+        needs_gpu: false
+        peak_memory_gb: 2.0
+        est_minutes: 30
+        basis: One keyless Binance Vision fetch of ~1480 days and 2 harness passes; GitHub-hosted runner, no trainer data.
+        why_runner: the harness fetches public Binance Vision candles itself and needs no published shard, no trainer data and no GPU; the runner
+          is the only backend whose env carries the harness deps.
+      run:
+        command:
+        - python3
+        - scripts/research/exit_lever_ablation.py
+        - --leg
+        - ada_pullback_2h
+        - --arm
+        - B=
+        - --arm
+        - VH95=--vol-skip-above-pctl=0.95
+        - --days
+        - '1480'
+        - --start
+        - '2022-10-05'
+        - --end
+        - 2024-10-04 23:59
+        - --grade
+        - sweep
+        - --baseline
+        - B
+        - --delta-r
+        - '1.0'
+        - --fold-majority
+        - '3'
+        - --n-floor
+        - '39'
+        - --out
+        - '{out_dir}'
+        timeout_minutes: 90
+      lands:
+        store: research/results/
+        assert_field: read_state
+        min_rows: 1
+      roadmap:
+      - L-REGIME
+      related:
+      - REGIME-PROGRAM
+      - P2-AI-REGIME-BACKLOG-1016
+      - scripts/research/exit_lever_ablation.py
+      - .claude/skills/regime-selectivity/SKILL.md
+      - RQ-20261016-65ff-06
+  - id: P2-R3.g07-pass
+    question: Q1
+    goal: G1
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 120
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-07
+      verdict: pass
+    needs_authoring: 'RQ-20261016-65ff-07 (ada_pullback_2h, volcold axis) PASSED on 2024-10-05..2026-10-04 (or its
+      pinned window). Register the fresh-window CONFIRMATION exactly like RQ-20261016-65ff-01..04: the single chosen
+      arm only, B vs that arm, on the disjoint preceding 730 days, same bar / drawdown clause / 3-of-4 folds / 39
+      floor. Nothing goes to a packet before it confirms.'
+  - id: P2-R3.g08-pass
+    question: Q1
+    goal: G1
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 150
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-08
+      verdict: pass
+    needs_authoring: 'RQ-20261016-65ff-08 (xrp_pullback_2h, volcold axis) PASSED on 2024-10-05..2026-10-04 (or its
+      pinned window). Register the fresh-window CONFIRMATION exactly like RQ-20261016-65ff-01..04: the single chosen
+      arm only, B vs that arm, on the disjoint preceding 730 days, same bar / drawdown clause / 3-of-4 folds / 39
+      floor. Nothing goes to a packet before it confirms.'
+  - id: P2-R2-classifier-pass
+    question: Q1
+    goal: G1
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 300
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-28
+      verdict: pass
+    needs_authoring: 'A regime classifier''s label separates money-losing entries out of sample. Per regime-selectivity
+      Rule 2: register the regime_cell_walkforward.py run on the actual 2-D (trend, vol) cell with --vol-labels from
+      THAT classifier (*_stable_drag under FOLD_PANEL 3/4/5, both directions read), via the REGIME-WF-VERDICT-WRAPPER
+      instrument.'
+  - id: P2-R2-classifier-fail
+    question: Q1
+    goal: G4
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 150
+      confidence: 0.2
+    after:
+    - unit: RQ-20261016-65ff-28
+      verdict: fail
+    needs_authoring: 'No classifier label (ML vol head, HMM, ATR control) separates trades on the vol axis. With the
+      trend axis already null (75b2-01..15), register the remaining regime-program question: per-LEG (not pooled)
+      conditions only -- the per-leg pullback units RQ-20261016-65ff-06..08 and the vol-target sizing line P2-R5 are
+      that line -- and a new information class (funding/OI, P2-R4) before any further pooled classifier work.'
+  - id: P2-R3-equity-read
+    question: Q1
+    goal: G1
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 100
+      confidence: 0.2
+    after:
+    - unit: RQ-20261016-65ff-29
+      verdict: any
+    needs_authoring: The real-money equity legs' vol-axis read closed. Per passing leg/arm register a fresh-window
+      confirmation (2006-2016 daily); a FAIL records the axis honest_negative for alpaca_live.
+  - id: P2-R1-softweight-read
+    question: Q1
+    goal: G4
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 120
+      confidence: 0.2
+    after:
+    - unit: RQ-20260927-006
+      verdict: any
+    - unit: RQ-20260927-009
+      verdict: any
+    needs_authoring: 'The two vol-axis SOFT-weight variants (advisory-head predict_proba, realised-vol percentile)
+      closed. Compare them to the HARD vol skips the per-leg units measured (65ff-06..08 and the 407c/f0e2/470a skips):
+      a soft weight that beats the hard skip on the same leg and window is the sizing-side regime lever (Tier-3 via
+      advisory_sizing), else record that hard skips suffice.'
+  - id: P2-R1-volcells-parity-read
+    question: Q1
+    goal: G1
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 150
+      confidence: 0.3
+    after:
+    - unit: RQ-20260928-ae17-01
+      verdict: any
+    needs_authoring: 'The offline parity re-check of the three volatile-keyed trend_vol OFF-cells closed. A cell that
+      is not *_stable_drag is a cosmetic cell (regime-selectivity Rule 1): register its removal packet (Tier-3) on
+      REGIME-PROGRAM; a cell that holds stays and is noted.'
+  - id: P2-R5-voltarget-sizing
+    question: Q1
+    goal: G1
+    roadmap:
+    - L-REGIME
+    value:
+      usd_at_stake_per_month: 300
+      confidence: 0.3
+    after:
+    - unit: RQ-20261016-65ff-04
+      verdict: any
+    needs_authoring: Per-leg continuous vol-TARGET SIZING on the real-money trend legs is the regime question the
+      skip units cannot answer. Its build is row IR-VOL-TARGET-SIZING-STAGE0 (vol_target_verdict.py over backtest_vol_target.py;
+      rule PASS iff dSharpe >= +0.10 net AND maxDD no worse AND dSharpe > 0 in >= 3/4 blocks, n >= 100/leg). Once
+      that row lands, author one unit per real-money trend leg (trend_donchian_eth_4h, _xrp_4h, _sol_prop, _eth_prop),
+      paired on the same window with the skip verdicts already on record, so sizing and gating are compared like for
+      like. Waits on 65ff-04 only so it surfaces once the last hot-skip lead on a trend leg is read.
+  - id: P2-R4-direction-baseline
+    question: Q5
+    goal: G4
+    roadmap:
+    - L-REGIME
+    - M23
+    value:
+      usd_at_stake_per_month: 150
+      confidence: 0.2
+    after:
+    - unit: RQ-20260929-109
+      verdict: any
+    - unit: RQ-20260929-110
+      verdict: any
+    needs_authoring: 'REGIME-PROGRAM deliverable 4 (a baseline structure + momentum direction model). On PRICE-ONLY
+      inputs it is answered: RQ-20261014-4591-02 FAIL (no learner beats the class prior on the 1h direction label),
+      1414-03 / 4591-05 INDETERMINATE -- so no further price-only direction unit (manager audit 2026-10-16 s5.6).
+      This node re-opens it only with a NEW information class: once the ETH/SOL funding-augmented heads (109/110)
+      have run, register the direction baseline with funding/OI covariates (logit first, then LightGBM) graded on
+      LOG-LOSS vs the class prior (never macro-F1 vs the prior: IDEA-REVIEW-1016 s9 metric artifact; row IR-DIRECTION-LABEL-V2),
+      then net of cost on a take-the-signal overlay, as the documented reference other work is measured against.'
+  # ── Operator ideas inbox (manager routing 2026-10-21, docs/claude/work/IDEAS.md via PR #19342) ──────────────────────
+  - id: P2-Q4-var-price-vector
+    goal: G4
     roadmap: [M23]
-    value: {usd_at_stake_per_month: 200, confidence: 0.3}
+    value: {usd_at_stake_per_month: 80, confidence: 0.3}
+    after: []
+    unit:
+      theme: ml_health
+      priority: 2
+      kind: experiment
+      title: 'AI trader / linear floor (P2-Q4-var-price-vector): does a causal rolling VAR price-vector feature set lift the BTC/ETH/SOL 1h regime head over the six shared features, and over a HAR-RV control, on the PUBLISHED shards?'
+      question: 'On the published 1h v002 market_features shards (regime_label, the six shared features), under purged 5-fold walk-forward CV with the same rows for every arm, does adding the causal rolling ridge VAR(4) next-bar [return, |return|] vector for BTC/ETH/SOL (refit every 24 bars on the trailing 2000, block var_price_vector) lift LightGBM macro_f1 over (a) the six shared features alone and (b) the same features plus HAR-RV regressors (day/week/month realised variance, 24 bars per day)?'
+      why_this_matters: 'Operator idea 2026-10-21 (IDEAS.md): a multivariate linear price-vector model is the honest linear floor every TSFM / GBDT forecaster must beat. RQ-20261011-9da8-01 ran it as a control arm at 15m on the trainer only (headline checks har_rv_ge_incumbent_btc / var_ge_incumbent_btc did not hold on BTC; no grade on the VAR arm itself at 1h). This is its 1h, off-trainer twin on published data, so the floor is measured at the timeframe the regime-cell work uses and without a trainer slot. SCOPE, stated: this grades the feature-lift on the existing head metric (macro_f1), NOT the out-of-fold price MSE / directional log-loss vs AR(p) and a random walk that the plan node names; that forecaster-metric grading needs a regression task in ml_bakeoff.py that does not exist -- filed as the lever below, not hidden.'
+      power:
+        expected_n: 24000
+        min_detectable_effect: 0.1
+        effect_units: sd
+        design: one_sample
+        alpha: 0.05
+        power: 0.8
+        basis: 'Unit = OOS row per symbol. tail_rows 40000 at min_train_frac 0.4 leaves ~24,000 OOS rows per symbol over 5 folds (same plan as RQ-20261016-65ff-25, ESTIMATE until the first run replaces it with the measured n). d=0.1 needs ~785 rows so rows are not the limit; bars are autocorrelated, so the rule also requires fold-mean deltas (min_folds 3) on all three symbols.'
+        feasibility:
+          source: none
+          accrual_basis: Fixed published shard; nothing accrues.
+      decision_rule:
+        id: RULE-P2-Q4-VAR-PRICE-VECTOR-1H-FEATURE-LIFT
+        statistic: 'Paired per-fold macro_f1 difference on identical purged folds (5, embargo 24) and on the holdout (rows after 2026-07-12), per symbol: lgbm_var minus lgbm_base, and lgbm_var minus lgbm_har (the HAR-RV control); mean over folds. Reported, not graded: every arm minus the class prior.'
+        rule: 'PASS IF lgbm_var - lgbm_base >= +0.005 on the CV mean on ALL THREE symbols AND lgbm_var - lgbm_har >= 0 on the CV mean on all three AND lgbm_var - lgbm_base >= 0 on the holdout on all three: the linear price vector adds information the shared features and a classical volatility control do not (a disjoint-window confirmation unit follows before any candidate-manifest note; this PASS was chosen from ONE configuration, trial count 1). FAIL IF lgbm_var - lgbm_base < 0 on the CV mean on EVERY symbol (the linear floor adds nothing at 1h; record the exact configuration in families.linear_logit.history, family not closed: another lag order or a return-only vector is a variant unit). INDETERMINATE otherwise (mixed by symbol), or if folds < 3 or an arm is unavailable.'
+        min_n: 3 usable CV folds per symbol; holdout >= 200 rows per symbol.
+        what_it_does_not_do: Trains nothing that serves; touches no config, registry, roster or order path; compares feature sets on unweighted LightGBM arms (the shipped heads weight classes), not shipped models. A feature-lift PASS is not edge and is not a P&L claim. Does not grade price-forecast MSE vs AR(p) / random walk (no regression task in the engine -- lever row ML-BAKEOFF-REGRESSION-TASK).
+      compute: auto
+      value:
+        bucket: ai_trader
+        usd_at_stake_per_month: 80
+        confidence: 0.3
+        basis: 02 node P2-Q4-var-price-vector planning weight; the linear floor for the forecaster track, not a measured P&L
+      routing:
+        needs_trainer_resident_data: false
+        needs_gpu: false
+        published_data: metis-market-data
+        peak_memory_gb: 4.0
+        est_minutes: 45
+        basis: 'Estimate, NOT measured: 3 shards x 3 LightGBM arms x 5 folds at 40,000 tail rows (65ff-25 plan) plus a VAR refit every 24 bars over ~40,000 rows (1,700 ridge solves of a 24 x 24 system per symbol, the VAR peers stream only ts + log_return). Re-declare from the first run.'
+      ml_bakeoff:
+        task: classification
+        metric: macro_f1
+        dataset:
+          kind: jsonl
+          groups:
+            BTCUSDT:
+              path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+            ETHUSDT:
+              path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+            SOLUSDT:
+              path: datasets-out/market_features/SOLUSDT/1h/v002/data.jsonl
+          ts_col: ts
+          target: regime_label
+          features:
+          - rolling_log_return_vol
+          - log_return
+          - log_return_lag_1
+          - log_return_lag_2
+          - hour_of_day
+          - dayofweek
+          tail_rows: 40000
+          holdout_after: '2026-07-12'
+        cv:
+          folds: 5
+          embargo_rows: 24
+          min_train_frac: 0.4
+        baseline: lgbm_base
+        controls:
+        - prior
+        - lgbm_har
+        candidates:
+        - lgbm_var
+        learners:
+          prior:
+            kind: prior
+          lgbm_base:
+            kind: lightgbm
+            params: &lgbm
+              n_estimators: 200
+              learning_rate: 0.05
+              num_leaves: 31
+              min_child_samples: 50
+          lgbm_har:
+            kind: lightgbm
+            params: *lgbm
+            feature_blocks:
+            - {kind: har_rv, d: 1, w: 5, m: 22, bars_per_unit: 24}
+          lgbm_var:
+            kind: lightgbm
+            params: *lgbm
+            feature_blocks:
+            - kind: var_price_vector
+              own: '<group>'
+              lags: 4
+              window: 2000
+              refit_every: 24
+              peer_tail_rows: 40000
+              peers:
+                BTCUSDT: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+                ETHUSDT: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+                SOLUSDT: datasets-out/market_features/SOLUSDT/1h/v002/data.jsonl
+        rule:
+          min_folds: 3
+          pass_if:
+          - {group: [BTCUSDT, ETHUSDT, SOLUSDT], vs: baseline, window: cv, op: '>=', value: 0.005}
+          - {group: [BTCUSDT, ETHUSDT, SOLUSDT], vs: lgbm_har, window: cv, op: '>=', value: 0.0}
+          - {group: [BTCUSDT, ETHUSDT, SOLUSDT], vs: baseline, window: holdout, op: '>=', value: 0.0}
+          fail_if_no_candidate_reaches:
+          - {group: any, vs: baseline, window: cv, op: '>=', value: 0.0}
+      run:
+        command: [python3, scripts/research/ml_bakeoff.py, --unit, '{unit}', --out, '{out_dir}']
+        timeout_minutes: 120
+      lands:
+        store: research/results/
+        assert_field: read_state
+        min_rows: 1
+      related:
+      - RQ-20261011-9da8-01
+      - ML-F1
+      - docs/claude/work/IDEAS.md
+  - id: P2-Q4-cross-asset-features
+    goal: G4
+    roadmap: [M23]
+    value: {usd_at_stake_per_month: 100, confidence: 0.25}
+    after: []
     needs_authoring: >-
-      Pooling parity: KS on feature marginals and realised-R per cell, test results vs live trade
-      outcomes (02 § 6 W3 #17; compute needs_vm_data -> trainer, which has idle windows). Decides whether
-      backtest-augmented labels can train the M23 head.
+      OPERATOR IDEA (IDEAS.md 2026-10-21): cross-symbol and cross-asset CORRELATION features beyond
+      FRONTIER-LEVER-LEADLAG (which covers only BTC->alt 5m lead-lag). Candidates, each fixed before the run: rolling 1h
+      correlation of the symbol to BTC and to the alt basket (24 / 168 bars), its change, the basket's first principal
+      component share (a crowding/regime read), and ES/DXY/gold 1d returns joined point-in-time for the crypto heads. Rung
+      1: add the set to the 1h regime learner (same folds as RQ-20261014-65cc-10) and grade the LOG-LOSS gain over the
+      six shared features on >= 2 of 3 symbols; a PASS feeds the P3 portfolio-overlap reads as well (programme 03 Q7).
+      Data check first: the equity/DXY daily series must be in metis-market-data point-in-time, else file the data row.
+
+  # ── RESULTS-GRADE-1025 (2026-10-25) ──
+  - id: P2-RG1025-yz-longtail-eth-btc
+    goal: G1
+    theme: ml_health
+    roadmap:
+    - L-PROGRAMMES
+    value:
+      usd_at_stake_per_month: 100
+      confidence: 0.25
+    after:
+    - unit: RQ-20261022-3a84-10
+      verdict: any
+    needs_authoring: 'Range-vol (yz/parkinson/rs/gk) lift on the regime head: SOL 1h PASSED (3a84-11) and its longer-tail CONFIRMATION also PASSED (c584-01, ~20k earlier bars never seen) -> a candidate-manifest
+      proposal is noted on row RESULTS-GRADE-1025 (Tier 3, nothing applied). BTC 1h FAILED (3a84-09, no clause) and ETH 15m/1h read INDETERMINATE between the pass bar and fail floor (3a84-08/-10).
+      The SOL lift appeared where the longer tail was added: author the c584-shaped longer-tail unit for ETH 1h and for BTC 1h (same arms, same pre-registered pass_if, folds >= 3), so the first test''s thin
+      history is separated from the absence of a lift. Model-family diversity: the lift is a LightGBM feature lift; pair with one non-GBDT arm per frontier-research.'
+  # ── AUTHORED 2026-10-25 (lane THEME-AUTHOR-1025, research SLO breach 09:14Z): ml_health had no ready node ──
+  - id: P2-Q1.3-drift-split-persistence
+    goal: G4
+    roadmap:
+    - M23
+    value:
+      usd_at_stake_per_month: 120
+      confidence: 0.3
+    unit:
+      theme: ml_health
+      priority: 1
+      kind: deterministic
+      cadence: once
+      title: 'Regime-head drift (Q1.3), persistence read at 2026-10-25: across the eight crypto heads the
+        shadow scan flags, is the live score drift input-mix shift, or does the head''s AUC against realised
+        labels fall?'
+      question: 'RQ-20261011-6e85-01 split the drift on the SOL and BTC 15m v2 heads at 2026-10-11 and RQ-20261016-65ff-27
+        reads the nine flagged heads by model version, but no unit asks the volatile-share / AUC split on
+        the OTHER advisory and research heads, nor whether the 10-11 read persists two weeks on. Same instrument
+        and thresholds (scripts/research/drift_regime_mix.py --mode split), reference window 2026-09-04..2026-10-04,
+        current window the 7 days to 2026-10-25T12:00Z, on eth-regime-5m-lgbm-v1, sol-regime-15m-lgbm-fc-pcv-v1,
+        sol-regime-15m-lgbm-fc-pcv-v2, sol-regime-5m-lgbm-v1, btc-regime-15m-lgbm-yz-v1, btc-regime-15m-lgbm-fc-pcv-v2,
+        btc-regime-1h-lgbm-v2 and btc-regime-1h-lgbm-yz-v1: how many heads read regime_mix, no_explanation,
+        capability_loss or underpowered?'
+      why_this_matters: '`ml stage-guard` proposes a demote on drift `significant` for an advisory head,
+        and drift-remediation says to separate mix drift (self-corrects, no action) from capability loss
+        (needs a refinement shipped as a new version) BEFORE demoting. Today that split exists for two heads
+        on one date. A capability_loss on any head here opens a [refinement] pipeline row; an all-regime_mix
+        read lets the review stop re-arguing demotion for these heads. Symbol/timeframe per head is taken
+        from the model id (INFERRED from its name); the MES and setup-quality heads are left out because
+        they have no crypto candle file.'
+      why_not_inferential: Recomputes stated statistics over a fixed, complete set of already-labelled shadow
+        rows with a pinned --as-of; no sample is drawn.
+      decision_rule:
+        id: RULE-P2-Q1.3-DRIFT-SPLIT-PERSISTENCE
+        registered_at: '2026-10-25'
+        statistic: 'Per head, the script''s own per-head rule_verdict (RULE-RQ1011-6E85-DRIFT-SPLIT: delta_share
+          = volatile_label_share(cur) - (ref); delta_auc = auc(cur) - auc(ref); thresholds 0.05 / -0.03
+          / 200 labelled rows, fixed in the script and never overridden by this unit), with delta_share,
+          delta_auc and the API''s KS/PSI reported beside it.'
+        rule: 'FAIL IF any head reads capability_loss (delta_auc < -0.03): open one [refinement] pipeline
+          row per such head under drift-remediation step 3 and leave its stage to the next /ml-review (this
+          unit demotes nothing). INDETERMINATE IF no head reads capability_loss and at least one reads underpowered
+          (< 200 labelled rows in a window): the unit re-queues after 7 more days. NO_ACTION otherwise (every
+          head regime_mix or no_explanation): record the per-head labels; a head reading no_explanation
+          (shift present, mix and AUC both flat) stays HOLD with the numbers recorded. For sol-regime-15m-lgbm-fc-pcv-v2
+          and btc-regime-15m-lgbm-fc-pcv-v2 also record whether the 2026-10-11 label (6e85-01) persisted.'
+        what_it_does_not_do: Does not demote, promote, retrain or edit a stage, timer or config; every outcome
+          that touches a stage is a Tier-3 proposal in the next /ml-review. The reference window is fixed,
+          so it does not re-baseline a head.
+      compute: needs_vm_data
+      value:
+        bucket: ai_trader
+        usd_at_stake_per_month: 120
+        confidence: 0.3
+        basis: 'planning weight: gates whether the review proposes demoting order-influencing advisory heads
+          on drift alone'
+      routing:
+        needs_trainer_resident_data: true
+        needs_gpu: false
+        peak_memory_gb: 1.0
+        est_minutes: 15
+        basis: Reads the shadow log (active + gz archives) joined to realised labels from market_raw candles;
+          both live on the trainer, not on a runner (6e85-01 budgeted 10 min for two heads).
+      run:
+        command:
+        - python3
+        - scripts/research/drift_regime_mix.py
+        - --mode
+        - split
+        - --head
+        - eth-regime-5m-lgbm-v1=ETHUSDT/5m
+        - --head
+        - sol-regime-15m-lgbm-fc-pcv-v1=SOLUSDT/15m
+        - --head
+        - sol-regime-15m-lgbm-fc-pcv-v2=SOLUSDT/15m
+        - --head
+        - sol-regime-5m-lgbm-v1=SOLUSDT/5m
+        - --head
+        - btc-regime-15m-lgbm-yz-v1=BTCUSDT/15m
+        - --head
+        - btc-regime-15m-lgbm-fc-pcv-v2=BTCUSDT/15m
+        - --head
+        - btc-regime-1h-lgbm-v2=BTCUSDT/1h
+        - --head
+        - btc-regime-1h-lgbm-yz-v1=BTCUSDT/1h
+        - --as-of
+        - '2026-10-25T12:00:00Z'
+        - --out
+        - '{out_dir}'
+        timeout_minutes: 30
+      lands:
+        store: research/results/
+        assert_field: read_state
+        min_rows: 1
+      related:
+      - research/queue/RQ-20261011-6e85-01.yaml
+      - research/queue/RQ-20261016-65ff-27.yaml
+      - scripts/research/drift_regime_mix.py
+      - .claude/skills/drift-remediation/SKILL.md
+      power:
+        expected_n: 8
+        effect_units: heads
+        design: deterministic
+        basis: 'kind: deterministic -- a per-head census against fixed thresholds over complete windows.'
+  - id: P2-Q4-lgbm-capacity-small
+    goal: G4
+    roadmap:
+    - M23
+    value:
+      usd_at_stake_per_month: 60
+      confidence: 0.25
+    unit:
+      theme: ml_health
+      priority: 2
+      kind: experiment
+      cadence: once
+      title: 'Is the shipped regime-head LightGBM over-capacity: does a much smaller one (100 trees, 7 leaves,
+        min_child_samples 200) stay within 0.01 macro_f1 of it on the 1h published shards?'
+      question: 'Is the shipped regime-head LightGBM over-capacity: does a much smaller one (100 trees,
+        7 leaves, min_child_samples 200) stay within 0.01 macro_f1 of it on the 1h published shards? Same
+        rows for every arm, purged 5-fold walk-forward CV (embargo 24) plus the holdout after 2026-07-12,
+        the six shared features, BTC/ETH/SOL 1h v002 published shards, tail 40,000 rows.'
+      why_this_matters: 'If a 7-leaf model matches the 31-leaf shipped config within the non-inferiority
+        margin, the shipped heads carry capacity that the data does not reward, which is the first suspect
+        for the persistent score drift on the advisory heads (RQ-20261011-6e85-01 / 65ff-27 ask what the
+        drift IS; this asks whether the model is brittle enough to produce it). A smaller head is also cheaper
+        to retrain daily. Non-inferiority margins follow the programme''s own convention (plan Q4: +-0.01
+        pass, -0.03 fail).'
+      power:
+        expected_n: 24000
+        min_detectable_effect: 0.1
+        effect_units: sd
+        design: one_sample
+        alpha: 0.05
+        power: 0.8
+        basis: Unit = OOS row per symbol. tail_rows 40000 at min_train_frac 0.4 leaves ~24,000 OOS rows
+          per symbol over 5 folds (same plan as RQ-20261016-65ff-25, ESTIMATE until the first run replaces
+          it with the measured n). d=0.1 needs ~785 rows so rows are not the limit; bars are autocorrelated,
+          so the rule also requires fold-mean deltas (min_folds 3) on all three symbols.
+        feasibility:
+          source: none
+          accrual_basis: Fixed published shard; nothing accrues.
+      decision_rule:
+        id: RULE-P2-Q4-LGBM-CAPACITY-SMALL-1H
+        statistic: 'Paired per-fold macro_f1 difference on identical purged folds (5, embargo 24) and on
+          the holdout (rows after 2026-07-12), per symbol: lgbm_small minus lgbm_base; mean over folds.
+          Reported, not graded: every arm minus the class prior.'
+        rule: 'PASS IF lgbm_small - lgbm_base >= -0.01 on the CV mean on ALL THREE symbols AND >= -0.02
+          on the holdout on all three: the smaller head is non-inferior, so the shipped capacity is not
+          earning its keep (a disjoint-window confirmation unit follows before any manifest note; ONE configuration,
+          trial count 1). FAIL IF lgbm_small - lgbm_base < -0.03 on the CV mean on EVERY symbol (the capacity
+          is earning its keep; record in families.gbdt.history). INDETERMINATE otherwise (mixed by symbol),
+          or if folds < 3 or an arm is unavailable.'
+        min_n: 3 usable CV folds per symbol; holdout >= 200 rows per symbol.
+        what_it_does_not_do: Trains nothing that serves; touches no config, registry, roster or order path;
+          compares unweighted LightGBM arms on the shared features, not shipped models. A feature/capacity
+          result is not edge and is not a P&L claim.
+      compute: auto
+      value:
+        bucket: ai_trader
+        usd_at_stake_per_month: 60
+        confidence: 0.25
+        basis: planning weight for the regime-head quality line (02 Q1.3 / Q4), not a measured P&L
+      routing:
+        needs_trainer_resident_data: false
+        needs_gpu: false
+        published_data: metis-market-data
+        peak_memory_gb: 4.0
+        est_minutes: 30
+        basis: 'Estimate, NOT measured: 3 shards x 3 LightGBM arms x 5 folds at 40,000 tail rows, no VAR
+          refit (25-001 budgeted 45 min with one); re-declare from the first run.'
+      ml_bakeoff:
+        task: classification
+        metric: macro_f1
+        dataset:
+          kind: jsonl
+          groups:
+            BTCUSDT:
+              path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+            ETHUSDT:
+              path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+            SOLUSDT:
+              path: datasets-out/market_features/SOLUSDT/1h/v002/data.jsonl
+          ts_col: ts
+          target: regime_label
+          features:
+          - rolling_log_return_vol
+          - log_return
+          - log_return_lag_1
+          - log_return_lag_2
+          - hour_of_day
+          - dayofweek
+          tail_rows: 40000
+          holdout_after: '2026-07-12'
+        cv:
+          folds: 5
+          embargo_rows: 24
+          min_train_frac: 0.4
+        baseline: lgbm_base
+        controls:
+        - prior
+        candidates:
+        - lgbm_small
+        learners:
+          prior:
+            kind: prior
+          lgbm_base:
+            kind: lightgbm
+            params:
+              n_estimators: 200
+              learning_rate: 0.05
+              num_leaves: 31
+              min_child_samples: 50
+          lgbm_small:
+            kind: lightgbm
+            params:
+              n_estimators: 100
+              learning_rate: 0.05
+              num_leaves: 7
+              min_child_samples: 200
+        rule:
+          min_folds: 3
+          pass_if:
+          - group:
+            - BTCUSDT
+            - ETHUSDT
+            - SOLUSDT
+            vs: baseline
+            window: cv
+            op: '>='
+            value: -0.01
+          - group:
+            - BTCUSDT
+            - ETHUSDT
+            - SOLUSDT
+            vs: baseline
+            window: holdout
+            op: '>='
+            value: -0.02
+          fail_if_no_candidate_reaches:
+          - group: any
+            vs: baseline
+            window: cv
+            op: '>='
+            value: -0.03
+      run:
+        command:
+        - python3
+        - scripts/research/ml_bakeoff.py
+        - --unit
+        - '{unit}'
+        - --out
+        - '{out_dir}'
+        timeout_minutes: 120
+      lands:
+        store: research/results/
+        assert_field: read_state
+        min_rows: 1
+      related:
+      - research/queue/RQ-20261025-001.yaml
+      - research/queue/RQ-20261011-6e85-01.yaml
+      - research/queue/RQ-20261016-65ff-27.yaml
+  - id: P2-Q4-lgbm-capacity-big
+    goal: G4
+    roadmap:
+    - M23
+    value:
+      usd_at_stake_per_month: 60
+      confidence: 0.25
+    unit:
+      theme: ml_health
+      priority: 2
+      kind: experiment
+      cadence: once
+      title: 'Is the shipped regime-head LightGBM under-capacity: does a larger one (400 trees, 63 leaves,
+        min_child_samples 20) lift macro_f1 by >= 0.005 on the 1h published shards on all three symbols?'
+      question: 'Is the shipped regime-head LightGBM under-capacity: does a larger one (400 trees, 63 leaves,
+        min_child_samples 20) lift macro_f1 by >= 0.005 on the 1h published shards on all three symbols?
+        Same rows for every arm, purged 5-fold walk-forward CV (embargo 24) plus the holdout after 2026-07-12,
+        the six shared features, BTC/ETH/SOL 1h v002 published shards, tail 40,000 rows.'
+      why_this_matters: The other side of the capacity bracket opened by P2-Q4-lgbm-capacity-small. If the
+        shipped head is under-capacity, a bigger model is a free lift for every regime head; if neither
+        side moves, capacity is not the lever and the head-quality work (Q1.3) belongs on features and labels.
+        Registered together with the small arm so the bracket is pre-registered, not mined.
+      power:
+        expected_n: 24000
+        min_detectable_effect: 0.1
+        effect_units: sd
+        design: one_sample
+        alpha: 0.05
+        power: 0.8
+        basis: Unit = OOS row per symbol. tail_rows 40000 at min_train_frac 0.4 leaves ~24,000 OOS rows
+          per symbol over 5 folds (same plan as RQ-20261016-65ff-25, ESTIMATE until the first run replaces
+          it with the measured n). d=0.1 needs ~785 rows so rows are not the limit; bars are autocorrelated,
+          so the rule also requires fold-mean deltas (min_folds 3) on all three symbols.
+        feasibility:
+          source: none
+          accrual_basis: Fixed published shard; nothing accrues.
+      decision_rule:
+        id: RULE-P2-Q4-LGBM-CAPACITY-BIG-1H
+        statistic: 'Paired per-fold macro_f1 difference on identical purged folds (5, embargo 24) and on
+          the holdout (rows after 2026-07-12), per symbol: lgbm_big minus lgbm_base; mean over folds. Reported,
+          not graded: every arm minus the class prior.'
+        rule: 'PASS IF lgbm_big - lgbm_base >= +0.005 on the CV mean on ALL THREE symbols AND >= 0 on the
+          holdout on all three: the shipped head is under-capacity (disjoint-window confirmation follows
+          before any manifest note; ONE configuration, trial count 1). FAIL IF lgbm_big - lgbm_base < 0
+          on the CV mean on EVERY symbol (more capacity adds nothing; record in families.gbdt.history).
+          INDETERMINATE otherwise, or if folds < 3 or an arm is unavailable.'
+        min_n: 3 usable CV folds per symbol; holdout >= 200 rows per symbol.
+        what_it_does_not_do: Trains nothing that serves; touches no config, registry, roster or order path;
+          compares unweighted LightGBM arms on the shared features, not shipped models. A feature/capacity
+          result is not edge and is not a P&L claim.
+      compute: auto
+      value:
+        bucket: ai_trader
+        usd_at_stake_per_month: 60
+        confidence: 0.25
+        basis: planning weight for the regime-head quality line (02 Q1.3 / Q4), not a measured P&L
+      routing:
+        needs_trainer_resident_data: false
+        needs_gpu: false
+        published_data: metis-market-data
+        peak_memory_gb: 4.0
+        est_minutes: 30
+        basis: 'Estimate, NOT measured: 3 shards x 3 LightGBM arms x 5 folds at 40,000 tail rows, no VAR
+          refit (25-001 budgeted 45 min with one); re-declare from the first run.'
+      ml_bakeoff:
+        task: classification
+        metric: macro_f1
+        dataset:
+          kind: jsonl
+          groups:
+            BTCUSDT:
+              path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+            ETHUSDT:
+              path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+            SOLUSDT:
+              path: datasets-out/market_features/SOLUSDT/1h/v002/data.jsonl
+          ts_col: ts
+          target: regime_label
+          features:
+          - rolling_log_return_vol
+          - log_return
+          - log_return_lag_1
+          - log_return_lag_2
+          - hour_of_day
+          - dayofweek
+          tail_rows: 40000
+          holdout_after: '2026-07-12'
+        cv:
+          folds: 5
+          embargo_rows: 24
+          min_train_frac: 0.4
+        baseline: lgbm_base
+        controls:
+        - prior
+        candidates:
+        - lgbm_big
+        learners:
+          prior:
+            kind: prior
+          lgbm_base:
+            kind: lightgbm
+            params:
+              n_estimators: 200
+              learning_rate: 0.05
+              num_leaves: 31
+              min_child_samples: 50
+          lgbm_big:
+            kind: lightgbm
+            params:
+              n_estimators: 400
+              learning_rate: 0.05
+              num_leaves: 63
+              min_child_samples: 20
+        rule:
+          min_folds: 3
+          pass_if:
+          - group:
+            - BTCUSDT
+            - ETHUSDT
+            - SOLUSDT
+            vs: baseline
+            window: cv
+            op: '>='
+            value: 0.005
+          - group:
+            - BTCUSDT
+            - ETHUSDT
+            - SOLUSDT
+            vs: baseline
+            window: holdout
+            op: '>='
+            value: 0.0
+          fail_if_no_candidate_reaches:
+          - group: any
+            vs: baseline
+            window: cv
+            op: '>='
+            value: 0.0
+      run:
+        command:
+        - python3
+        - scripts/research/ml_bakeoff.py
+        - --unit
+        - '{unit}'
+        - --out
+        - '{out_dir}'
+        timeout_minutes: 120
+      lands:
+        store: research/results/
+        assert_field: read_state
+        min_rows: 1
+      related:
+      - research/queue/RQ-20261025-001.yaml
+      - research/queue/RQ-20261011-6e85-01.yaml
+      - research/queue/RQ-20261016-65ff-27.yaml
+  - id: P2-Q4-lgbm-regularised
+    goal: G4
+    roadmap:
+    - M23
+    value:
+      usd_at_stake_per_month: 50
+      confidence: 0.25
+    unit:
+      theme: ml_health
+      priority: 2
+      kind: experiment
+      cadence: once
+      title: Does heavier regularisation (min_child_samples 200, reg_lambda 5, same trees and leaves) generalise
+        to the post-2026-07-12 holdout at least as well as the shipped head on the 1h published shards,
+        without losing more than 0.005 macro_f1 in CV?
+      question: Does heavier regularisation (min_child_samples 200, reg_lambda 5, same trees and leaves)
+        generalise to the post-2026-07-12 holdout at least as well as the shipped head on the 1h published
+        shards, without losing more than 0.005 macro_f1 in CV? Same rows for every arm, purged 5-fold walk-forward
+        CV (embargo 24) plus the holdout after 2026-07-12, the six shared features, BTC/ETH/SOL 1h v002
+        published shards, tail 40,000 rows.
+      why_this_matters: Drift between a head's training window and live data is a generalisation question.
+        Same tree shape, only the leaf-size and L2 terms differ, so a holdout win with a flat CV isolates
+        regularisation from capacity (the two capacity units move tree size). A PASS is a lead for the daily-retrain
+        manifest, never a config edit.
+      power:
+        expected_n: 24000
+        min_detectable_effect: 0.1
+        effect_units: sd
+        design: one_sample
+        alpha: 0.05
+        power: 0.8
+        basis: Unit = OOS row per symbol. tail_rows 40000 at min_train_frac 0.4 leaves ~24,000 OOS rows
+          per symbol over 5 folds (same plan as RQ-20261016-65ff-25, ESTIMATE until the first run replaces
+          it with the measured n). d=0.1 needs ~785 rows so rows are not the limit; bars are autocorrelated,
+          so the rule also requires fold-mean deltas (min_folds 3) on all three symbols.
+        feasibility:
+          source: none
+          accrual_basis: Fixed published shard; nothing accrues.
+      decision_rule:
+        id: RULE-P2-Q4-LGBM-REGULARISED-1H
+        statistic: 'Paired per-fold macro_f1 difference on identical purged folds (5, embargo 24) and on
+          the holdout (rows after 2026-07-12), per symbol: lgbm_reg minus lgbm_base; mean over folds. Reported,
+          not graded: every arm minus the class prior.'
+        rule: 'PASS IF lgbm_reg - lgbm_base >= 0 on the holdout on ALL THREE symbols AND >= -0.005 on the
+          CV mean on all three: heavier regularisation generalises to the later window at no CV cost (disjoint-window
+          confirmation follows; ONE configuration, trial count 1). FAIL IF lgbm_reg - lgbm_base < -0.005
+          on the holdout on EVERY symbol. INDETERMINATE otherwise, or if folds < 3 or an arm is unavailable.'
+        min_n: 3 usable CV folds per symbol; holdout >= 200 rows per symbol.
+        what_it_does_not_do: Trains nothing that serves; touches no config, registry, roster or order path;
+          compares unweighted LightGBM arms on the shared features, not shipped models. A feature/capacity
+          result is not edge and is not a P&L claim.
+      compute: auto
+      value:
+        bucket: ai_trader
+        usd_at_stake_per_month: 50
+        confidence: 0.25
+        basis: planning weight for the regime-head quality line (02 Q1.3 / Q4), not a measured P&L
+      routing:
+        needs_trainer_resident_data: false
+        needs_gpu: false
+        published_data: metis-market-data
+        peak_memory_gb: 4.0
+        est_minutes: 30
+        basis: 'Estimate, NOT measured: 3 shards x 3 LightGBM arms x 5 folds at 40,000 tail rows, no VAR
+          refit (25-001 budgeted 45 min with one); re-declare from the first run.'
+      ml_bakeoff:
+        task: classification
+        metric: macro_f1
+        dataset:
+          kind: jsonl
+          groups:
+            BTCUSDT:
+              path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+            ETHUSDT:
+              path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+            SOLUSDT:
+              path: datasets-out/market_features/SOLUSDT/1h/v002/data.jsonl
+          ts_col: ts
+          target: regime_label
+          features:
+          - rolling_log_return_vol
+          - log_return
+          - log_return_lag_1
+          - log_return_lag_2
+          - hour_of_day
+          - dayofweek
+          tail_rows: 40000
+          holdout_after: '2026-07-12'
+        cv:
+          folds: 5
+          embargo_rows: 24
+          min_train_frac: 0.4
+        baseline: lgbm_base
+        controls:
+        - prior
+        candidates:
+        - lgbm_reg
+        learners:
+          prior:
+            kind: prior
+          lgbm_base:
+            kind: lightgbm
+            params:
+              n_estimators: 200
+              learning_rate: 0.05
+              num_leaves: 31
+              min_child_samples: 50
+          lgbm_reg:
+            kind: lightgbm
+            params:
+              n_estimators: 200
+              learning_rate: 0.05
+              num_leaves: 31
+              min_child_samples: 200
+              reg_lambda: 5.0
+        rule:
+          min_folds: 3
+          pass_if:
+          - group:
+            - BTCUSDT
+            - ETHUSDT
+            - SOLUSDT
+            vs: baseline
+            window: holdout
+            op: '>='
+            value: 0.0
+          - group:
+            - BTCUSDT
+            - ETHUSDT
+            - SOLUSDT
+            vs: baseline
+            window: cv
+            op: '>='
+            value: -0.005
+          fail_if_no_candidate_reaches:
+          - group: any
+            vs: baseline
+            window: holdout
+            op: '>='
+            value: -0.005
+      run:
+        command:
+        - python3
+        - scripts/research/ml_bakeoff.py
+        - --unit
+        - '{unit}'
+        - --out
+        - '{out_dir}'
+        timeout_minutes: 120
+      lands:
+        store: research/results/
+        assert_field: read_state
+        min_rows: 1
+      related:
+      - research/queue/RQ-20261025-001.yaml
+      - research/queue/RQ-20261011-6e85-01.yaml
+      - research/queue/RQ-20261016-65ff-27.yaml

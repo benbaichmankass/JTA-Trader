@@ -3349,3 +3349,99 @@ nodes:
   - {unit: RQ-20261016-7769-21, verdict: fail}
   needs_authoring: Re-priced as verticals the three legs do NOT clear. Register the per-leg refinement (wider verticals, longer DTE, or linear shares instead
     of verticals for the 1d legs) as a unit, and put the express_as choice for these legs to the operator as a Tier-3 proposal with this record.
+- id: P4-Q2-ppi-es-late
+  goal: G6
+  roadmap: [M28]
+  value: {usd_at_stake_per_month: 60, confidence: 0.2}
+  after:
+  - {unit: RQ-20261023-a1f3-17, verdict: pass}
+  unit:
+    title: 'P4-Q2 CONFIRMATION for RQ-20261023-a1f3-17 (ppi_mom -> ES=F PASS, IC -0.287, t -3.52, n 140, one full-sample read): does it hold in the LATER (releases >= 2021-01-01) sub-period alone?'
+    theme: macro
+    priority: 2
+    kind: experiment
+    question: On ppi_mom releases >= 2021-01-01 only (a sub-window of the PASS sample, so a stability read, not an independent sample), is the IC of (surprise, ES=F forward return from the release-day close) at h=3 NEGATIVE with |ic_t_eff| >= 2.0, n >= 50?
+    why_this_matters: 'A PASS on one window is a discovery, not a confirmation (research-ops step D). The PASS was chosen from 2 instruments (RTY=F h=3 fail in both halves, ES=F h=3 pass): multiple-testing denominator >= 2 instruments x the family BH count of 64 (rank-1 |t| ~3.36). The RTY sibling failed this exact later half, so a clean ES later half is the discriminating read.'
+    power:
+      expected_n: 70
+      min_detectable_effect: 0.35
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: 'later-half releases of the 140 (parent population, MEASURED 2026-10-24); floor ((2.0+0.84)/0.35)^2 = 66; the RTY later half (20261020-002) was gated n >= 50 on the same releases'
+      feasibility: {source: none, accrual_basis: fixed historical backfill; ~12 releases/yr accrue}
+    decision_rule:
+      id: RULE-P4-Q2-ppi-es-late
+      statistic: scripts/research/macro_event_study_run.py grade() at horizon 3 with --symbol ES=F --release-start 2021-01-01 --expected-sign negative --min-n 50 --t-bar 2.0 (single primary horizon).
+      rule: 'PASS IF at h=3 n >= 50 and |ic_t_eff| >= 2.0 AND the IC is negative: the ES lead survives its own later half and the placebo/cost rungs may proceed (still never a config edit). FAIL IF n >= 50 and not PASS (a significant wrong-sign IC is reported, not a pass): the a1f3-17 PASS is read as an early-sample effect and the ES lead is a variant-queue item, not closed (family retirement only via family_retirement_policy.yaml). INDETERMINATE IF n < 50. no_data/producer_failed is a route fault, not a verdict. Thresholds are not changed after any result.'
+      what_it_does_not_do: Says nothing about cost; edits no config; a sub-window of the parent sample is a stability read, not an independent sample.
+      registered_at: '2026-10-24'
+      registered_before_run: true
+    compute: cpu_light
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 1.0
+      est_minutes: 10
+      basis: same shape as the parent (minutes on the runner)
+      why_runner: off-VM yfinance fetch + committed snapshots; no idle backend holds these instruments
+    run:
+      command: [python3, scripts/research/macro_event_study_run.py, --kind, ppi_mom, --snapshots, 'comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl',
+        --symbol, ES=F, --horizons, '3', --primary-horizons, '3', --min-n, '50', --t-bar, '2.0', --expected-sign, negative, --release-start, '2021-01-01',
+        --population, 'ppi_mom releases LATER (releases >= 2021-01-01), joined to ES=F daily closes', --out, '{out_dir}']
+      timeout_minutes: 30
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    programme: P4
+    related: [RQ-20261023-a1f3-17, RQ-20261020-002, research/programmes/04-macro-sleeve.yaml]
+- id: P4-Q2-ppi-es-placebo
+  goal: G6
+  roadmap: [M28]
+  value: {usd_at_stake_per_month: 60, confidence: 0.2}
+  after:
+  - {unit: RQ-20261023-a1f3-17, verdict: pass}
+  unit:
+    title: 'P4-Q2 placebo for RQ-20261023-a1f3-17 (ppi_mom -> ES=F): does the surprise ''predict'' ES=F over a window that ENDS BEFORE the release (anchor -10 trading days)? Expected FAIL'
+    theme: macro
+    priority: 2
+    kind: experiment
+    question: With every ppi_mom release's base bar moved 10 trading days earlier, is the ES=F IC at h=3 NEGATIVE with |ic_t_eff| >= 2.0, n >= 100? A PASS means the a1f3-17 IC is a sample artifact.
+    why_this_matters: 'The RTY=F sibling placebo (P4-Q2-ppi-rty-placebo) pre-registered the same rung; the ES result is a single full-sample read (t -3.52 over 140 releases), so a pre-print placebo decides whether it is a release effect at all.'
+    power:
+      expected_n: 140
+      min_detectable_effect: 0.25
+      effect_units: sd
+      design: one_sample
+      alpha: 0.05
+      power: 0.8
+      basis: '140 releases (a1f3-17 population, MEASURED 2026-10-24); floor ((2.0+0.84)/0.25)^2 = 130: CLEARED. Shifted bars before the panel start are dropped.'
+      feasibility: {source: none, accrual_basis: fixed historical backfill; ~12 releases/yr accrue}
+    decision_rule:
+      id: RULE-P4-Q2-ppi-es-placebo
+      statistic: scripts/research/macro_event_study_run.py grade() with --anchor-shift-td -10 at horizon 3 on ES=F.
+      rule: 'The verdict is stated FOR THE PLACEBO: PASS (= the ''edge'' exists in a window that ends BEFORE the print = a1f3-17 is an ARTIFACT) IF at h=3 with n >= 100, |ic_t_eff| >= 2.0 AND the IC is negative. FAIL (= placebo clean, the lead survives) IF n >= 100 and it does not. INDETERMINATE IF n < 100. no_data/producer_failed: a route fault, not a verdict.'
+      what_it_does_not_do: Rules a sample artifact in or out; tests nothing post-release; edits no config.
+      registered_at: '2026-10-24'
+      registered_before_run: true
+    compute: cpu_light
+    routing:
+      needs_trainer_resident_data: false
+      needs_gpu: false
+      peak_memory_gb: 1.0
+      est_minutes: 10
+      basis: same shape as the parent (minutes on the runner)
+      why_runner: off-VM yfinance fetch + committed snapshots; no idle backend holds these instruments
+    run:
+      command: [python3, scripts/research/macro_event_study_run.py, --kind, ppi_mom, --snapshots, 'comms/macro/econ_calendar_snapshots.jsonl,comms/macro/econ_calendar_snapshots_survey_backfill.jsonl',
+        --symbol, ES=F, --horizons, '3', --primary-horizons, '3', --min-n, '100', --t-bar, '2.0', --expected-sign, negative, --anchor-shift-td, '-10',
+        --population, 'ppi_mom releases, ES=F base bar shifted -10 trading days (placebo)', --out, '{out_dir}']
+      timeout_minutes: 30
+    lands:
+      store: research/results/
+      assert_field: read_state
+      min_rows: 1
+    programme: P4
+    related: [RQ-20261023-a1f3-17, research/programmes/04-macro-sleeve.yaml]

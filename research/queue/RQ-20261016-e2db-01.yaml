@@ -2,7 +2,7 @@ id: RQ-20261016-e2db-01
 title: >-
   Tradeify NEW-strategy search, non-crypto: volatility-compression breakout (squeeze) (backtest_squeeze, harness defaults) on SLV 1h priced as SILVER/USD -- a family
   no live leg runs on this instrument
-status: queued
+status: done
 cadence: once
 theme: new_strategy_prop
 priority: 1
@@ -128,4 +128,17 @@ related:
 - config/prop_rulesets/tradeify_247_1step.yaml
 - research/queue/RQ-20261015-24ca-01.yaml
 - research/queue/RQ-20261015-ca42-01.yaml
-last_dispatched_at: null
+last_dispatched_at: '2026-10-16T16:06:10+00:00'
+grading:
+  attested: RULE-RQ-20261016-e2db-01
+  auto: true
+  decision_rule_id: RULE-RQ-20261016-e2db-01
+  evidence:
+  - research/results/RQ-20261016-e2db-01/38929320721.jsonl
+  graded_at: '2026-10-16'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

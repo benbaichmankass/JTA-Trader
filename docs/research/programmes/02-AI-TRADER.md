@@ -8,6 +8,44 @@
 
 ---
 
+## Programme review 2026-10-21 (lane RESEARCH-PROGRAMME-REVIEW-1021)
+
+Population: units whose `grading.graded_at` is 2026-10-14..2026-10-21 and whose file names this programme (`programme:` or `programme_node.programme`), read from `research/queue/*.yaml` on main at 2026-10-21 ~18Z. Units with no programme field (486 of the 657 graded in the window) are counted in the research map, not here.
+
+**Graded in the window: 7** — 1 pass, 2 fail, 4 indeterminate. ml_health-theme units with no programme field graded 58: 14 pass,
+13 fail, 28 indeterminate, 3 open.
+
+**What was learned**
+- Regime gating transfers unevenly: VH95 on `ada_pullback_2h` CONFIRMED on a disjoint window (RQ-20261018-002). The line is MERGED
+  on main (`ada_pullback_2h: vol_skip_above_pctl: 0.95`), though its comment still reads "HOLD for operator approval" -- field
+  beats comment; deployed/observed not checked this review, while VH80 on `trend_donchian_sol_prop` FAILED its fresh window (RQ-20261018-008).
+- The rich in-trade state (P2-Q3.1, RQ-20261017-003/-004/-005) read INDETERMINATE on all three families: the samples are bounded by
+  one year of live ledger (e.g. 73 trend_donchian closes on BTC 1h, 57 per pullback leg). More ledger is the only fix; a
+  re-run before ~2026-12 would re-measure the same n.
+- Conformal abstention at 1h FAILED (RQ-20261016-65ff-25): the conformal rule had HIGHER selective error than the plain
+  max-probability threshold on BTC at matched coverage, and coverage was not matched at every level. With two classes the
+  Mondrian-per-class rule is close to a threshold; `conformal_abstain_eval.py` supports only `predicted_class | none`, so the
+  vol-bucket refinement P2-Q1.5-fail asks for is a scorer build, not a unit.
+- Learner family is second-order (RQ-20261016-1fa6-08 FAIL; ExtraTrees/MLP vs LightGBM indeterminate, RQ-20261016-001).
+
+**Answered / unlocked / retired**
+- Answered: P2-R3.c03 / c04 PASS -> Tier-3 packets (not units). P2-R3.c05 (sol_prop VH80) FAIL -> that gate stays off.
+- Not authored, and why: ml_health supply is **build-bound** — every blocked ml_health unit (15) waits on a build (label
+  joiner, exit-head transfer, TSFM serving, pooling parity). No runnable ml_health unit worth its compute could be written
+  this review; the H1-THEME ml_health shortfall (0 of 5) is a build-queue fact for the manager, not an authoring gap.
+
+**Next 3–4 weeks**
+- P2-R5 vol-target sizing waits on IR-VOL-TARGET-SIZING-STAGE0 (verdict wrapper over `backtest_vol_target.py`).
+- Re-ask P2-Q3.1 only when the ledger has grown ~50% (≈ 2026-12); file nothing earlier.
+
+**Operator ideas folded in (IDEAS.md, manager routing 2026-10-21)**
+- `P2-Q4-var-price-vector`: a multivariate linear/VAR next-bar price-vector arm as the linear baseline in the ML-F1 bake-off.
+- `P2-Q4-cross-asset-features`: rolling cross-symbol correlation, basket PC1 share and point-in-time ES/DXY/gold returns as
+  regime-learner features, graded on log-loss gain. It goes beyond FRONTIER-LEVER-LEADLAG's BTC->alt 5m lead-lag.
+
+**Cross-programme feeds**
+- → P1/P5: VH95 ada packet (live leg) and the failed sol_prop VH80 both belong on REGIME-PROGRAM's Tier-3 list.
+
 ## 0. Operator direction this programme is built from (2026-10-14, relayed by the manager)
 
 1. Research is the main focus: a long-term, deep, well-researched roster per goal; no one-off queue filler.
@@ -85,6 +123,8 @@ The secondary head: *given this strategy's own signal, act or stand aside*. With
 | 2.6 | Shadow soak → advisory (P4) and a reductive-only live skip (P5) | live agreement + net-R lift; A/B PASS + operator | Tier-3, operator-gated | — | not before a 2.3 PASS |
 
 ### Q3 — Exit models fed by active-management labels (peak-to-exit)
+
+> **MERGED 2026-10-24 (lane `ATM-AI-MERGE`, operator direction verbatim on that row):** this question is now part of ONE programme, [`01-ACTIVE-TRADE-MANAGEMENT.md`](01-ACTIVE-TRADE-MANAGEMENT.md) § "AI active trade management — the merged programme". The model ladder (A1/A2 in-trade information on the legs as traded, B1 remaining-move TP head, C1 policy over proven rule exits, D gates), the observe-only bracket advisor and the critical-path builds live there. The table below is kept as history; where it and that section disagree, that section wins. Do not author exit-model units against this section.
 
 Three exit heads on price features failed (ML-S2). The new information is the **peak-to-exit label** (how much of the in-trade peak was given back) and, once recorded, the **per-bar in-trade trajectory**. The ATM plan (parallel lane) owns the live levers; this programme owns the labels and the models.
 
@@ -167,6 +207,23 @@ Rule of thumb this fortnight: **if a unit can be asked on the committed ledgers 
 ## 6. Backlog — 3 to 4 weeks (W1 = 2026-10-14..20)
 
 Status key: **queued** (dispatchable now) · **blocked** (named blocker) · **row** (a build). Everything marked *new* was landed by this lane; everything else already existed and is named so the backlog is the whole picture, not only this lane's additions.
+
+### Update 2026-10-16 (lane P2-AI-REGIME-BACKLOG-1016) — read this before the W1–W4 tables
+
+The tables below are the 2026-10-14 plan; several "queued" items have since closed (manager audit `docs/research/programmes/reviews/2026-10-16/02-AI-REGIME-DATA.md`). The live tree is now machine-read: `research/programmes/02-ai-trader.yaml` (AI trader), `research/programmes/02-ai-trader.yaml (regime section)` (the regime half, L-REGIME) and `research/programmes/06-data-infra.yaml` (programme 06). Added on 2026-10-16, held for a human merge:
+
+| what | units | state |
+|---|---|---|
+| Regime: fresh-window confirmations of the four unconfirmed lever PASSes + the sol VH90 transfer to the prop leg | `RQ-20261016-65ff-01..05` | runnable |
+| Regime: per-leg good-vs-bad trade conditions on the real-money pullback legs (hot / cold vol; 07 grades ada's declared cold skip). 11 donchian-leg skip units were dropped before merge (IDEA-REVIEW-1016 s11: skips are predicted to fail on trend legs and already read so in-repo); the trend-leg question is vol-target SIZING, row `IR-VOL-TARGET-SIZING-STAGE0`, node `P2-R5-voltarget-sizing` | `RQ-20261016-65ff-06..08` | runnable |
+| Regime: classifier comparison on trade separation (ML vol head vs HMM vs ATR control); the alpaca_live equity legs | `blocked/RQ-20261016-65ff-28`, `-29` | blocked on `REGIME-VOL-LABELS-EXPORT`, `REGIME-EQUITY-LEG-FETCH` |
+| Q6 off-VM training parity, HMM + RegimeClassifier classes (regression class: OURS data, stays on the trainer) | `RQ-20261016-65ff-20..23` | runnable (21/23 gated on 20/22) |
+| Q1.3 drift: 1h twin on published data; drift-flag artifact question for the 9 flagged heads | `RQ-20261016-65ff-24`; `blocked/-27` | runnable; blocked on `ML-DRIFT-SPLIT-INSTRUMENT` |
+| Q4 CatBoost confirmation out of time and on SOL (from `de02-01` PASS) | `RQ-20261016-65ff-30` | runnable |
+| Q1.5 conformal at 1h (scorer only); Q2.5 pooling parity | `blocked/RQ-20261016-65ff-25`, `-26` | blocked on `FRONTIER-LEVER-CONFORMAL`, `POOLING-PARITY-INSTRUMENT` |
+| Q3.1 rich in-trade state per class (refines `d6e7-04` INDETERMINATE; `d6e7-05` retired as moot) | nodes `P2-Q3.1-fail`, `-b-pullback`, `-c-scalp` | emitted by the next replenish |
+
+Corrections to the tables below: `RQ-20261011-17f4-02` (Q0.4) is **not** queued — it exists only on held PR #17556. The `75b2`/`1414` units listed as queued are done. `P2-Q2.1-fail`: no cheaper step than `METALABEL-EMIT-FEATURES` exists (9d20-02 already covered the legs whose emits carry `adx_at_entry`).
 
 ### W1 (Oct 14–20) — fix the labels, measure the headroom, run what the free compute can run
 

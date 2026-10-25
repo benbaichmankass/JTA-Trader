@@ -14,8 +14,8 @@
   ],
   "blocked_on": [],
   "note": "[lane done] 13 results read p6/f6/census1; 2 S0-C confirmation units authored (4941-01/-02); 4 producer_failed units root-caused and re-queued (080 dotenv import on the runner, 009 prop_ev_sim --costs, 4591-01/-06 old Kaggle GPU route); runnable 24->31 (static floor 25 met; computed floor 54 NOT, refill capacity 0); ML-TABPFN-LICENCE blocked_on named; no incident. Record comms/research/ops/20261015T0915Z.json. Hold PR.",
-  "updated_at": "2026-10-15T09:04:19Z",
-  "updated_by": "research-ops-lane-20261015-0847",
+  "updated_at": "2026-10-24T06:01:11Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "roadmap": [
     "L-LADDER"
   ],
@@ -26,7 +26,13 @@
   "observation": {
     "what": "manager merges the hold PR; RQ-20261015-4941-01/-02 and the re-queued RQ-20261007-080/-009 and RQ-20261014-4591-01/-06 dispatch and land read_state measured (080 no longer producer_failed on the dotenv import)",
     "how_to_check": "python3 scripts/ci/check_research_queue_throughput.py --json; ls comms/research/RQ-20261015-4941-0* comms/research/RQ-20261007-080",
-    "due_by": "2026-10-17"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-17",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
   "_seq": 512
 }

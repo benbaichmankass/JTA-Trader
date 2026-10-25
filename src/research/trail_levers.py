@@ -184,3 +184,173 @@ def momentum_flag_errors(trail_mult: float, adx_below: float,
         errs.append("--momentum-stale-bars and --momentum-stale-adx-below must "
                     "be declared together: a half-declared momentum_stale is inert")
     return errs
+
+
+# ── P1-Q10 level-triggered trail (operator idea, IDEAS.md 2026-10-21) ────────
+#: Structural levels the trail can key on. The R-armed variant ("tighten once
+#: R >= N") is NOT re-implemented here: it is `effective_trail_mult`'s
+#: ``decay_arm_r`` with ``decay_stall_bars = 0`` (``--trail-decay-arm-r N
+#: --trail-decay-tight-mult M``), and a second spelling of one rule is the defect
+#: this module exists to prevent.
+LEVEL_KINDS = ("swing", "fvg", "round")
+
+
+def level_trail_armed(kind: str, tight_mult: float) -> bool:
+    """Is the level-triggered trail declared? Needs a kind AND a tight mult."""
+    return bool(kind) and tight_mult > 0.0
+
+
+def level_flag_errors(kind: str, tight_mult: float, trail_mult: float,
+                      lookback: int, pivot_k: int, round_step: float,
+                      min_r: float = 0.0) -> list:
+    """Refusals for a half-declared / inert level trail (same contract as
+    `momentum_flag_errors`: a lever that cannot act reports a zero delta that is
+    NOT a measurement of it)."""
+    errs = []
+    if kind and kind not in LEVEL_KINDS:
+        errs.append(f"--trail-level must be one of {LEVEL_KINDS}, got {kind!r}")
+    if bool(kind) != (tight_mult > 0.0):
+        errs.append("--trail-level and --trail-level-tight-mult must be declared together: "
+                    "a half-declared level trail is inert")
+    if tight_mult > 0.0 and tight_mult >= trail_mult:
+        errs.append(f"--trail-level-tight-mult ({tight_mult}) must be < --trail-mult "
+                    f"({trail_mult}): the lever can only tighten")
+    if lookback < 3 or pivot_k < 1:
+        errs.append("--trail-level-lookback must be >= 3 and --trail-level-pivot-k >= 1")
+    if round_step < 0.0:
+        errs.append("--trail-level-round-step must be >= 0 (0 = auto from the entry price)")
+    if min_r < 0.0:
+        errs.append("--trail-level-min-r must be >= 0 (0 = no R gate, byte-identical)")
+    if min_r > 0.0 and not kind:
+        errs.append("--trail-level-min-r needs --trail-level: an R gate on an undeclared level is inert")
+    return errs
+
+
+def level_r_gate_open(min_r: float, peak_r: float) -> bool:
+    """LEVEL-TRAIL-R-GATE: may a level touch LATCH the tight trail on this bar?
+
+    The level trail and the R-armed decay trail are independent tighteners that
+    compose by minimum (OR). The operator's framing for Q10-variant is AND: the
+    level counts only once the trade has ALSO reached ``min_r`` R of peak open
+    profit. ``peak_r`` is the trade's running peak INCLUDING the current bar. A touch on
+    a bar where the gate is shut does not latch; the level is a price, so it is
+    re-tested on every later bar and latches the first bar the gate is open AND
+    price is at or through it. ``min_r <= 0`` is always open (byte-identical)."""
+    return min_r <= 0.0 or peak_r >= min_r
+
+
+def giveback_fires(mfe: float, open_r: float, min_mfe_r: float, giveback_r: float,
+                   frac: float = 0.0) -> bool:
+    """The ONE giveback-stop firing rule, absolute or as a share of the peak.
+
+    Armed once the peak open profit ``mfe`` reaches ``min_mfe_r`` (> 0; 0 = off).
+    Absolute (``frac`` 0, the legacy rule, byte-identical): fires when ``giveback_r``
+    R has been surrendered, ``mfe - open_r >= giveback_r``. Fractional (GIVEBACK-FRAC-FLAG,
+    ``0 < frac < 1``): fires when open profit has fallen to ``frac`` of the peak,
+    ``open_r <= frac * mfe``; the absolute ``giveback_r`` is then NOT consulted (a
+    fractional arm must not also carry a default 1 R absolute stop). Both read a bar
+    CLOSE and are the caller's to apply only when the protective stop did not hit."""
+    if min_mfe_r <= 0.0 or mfe < min_mfe_r:
+        return False
+    if frac > 0.0:
+        return open_r <= frac * mfe
+    return (mfe - open_r) >= giveback_r
+
+
+def giveback_flag_errors(min_mfe_r: float, frac: float) -> list:
+    """Refusals for an inert / malformed fractional giveback (same contract as the
+    other ``*_flag_errors``: a lever that cannot act reports a zero delta that is
+    NOT a measurement of it)."""
+    errs = []
+    if frac < 0.0 or frac >= 1.0:
+        errs.append(f"--giveback-frac must be in [0, 1) (0 = off), got {frac}")
+    if frac > 0.0 and min_mfe_r <= 0.0:
+        errs.append("--giveback-frac needs --giveback-min-mfe-r > 0: it is the arming peak, and "
+                    "without it the lever never arms")
+    return errs
+
+
+def auto_round_step(price: float) -> float:
+    """One decade below the price's leading digit: ETH 2,500 -> 100, BTC 60,000 ->
+    1,000, ADA 0.45 -> 0.01. Fixed rule, not a fit; an explicit step overrides it."""
+    import math
+    if not price > 0.0:
+        raise ValueError(f"round level needs a positive price, got {price!r}")
+    return 10.0 ** (math.floor(math.log10(price)) - 1)
+
+
+def round_level(entry: float, is_long: bool, step: float = 0.0) -> float:
+    """The first round multiple of ``step`` strictly BEYOND entry in the trade's
+    direction (above for a long, below for a short)."""
+    import math
+    s = step if step > 0.0 else auto_round_step(entry)
+    k = math.floor(entry / s) + 1 if is_long else math.ceil(entry / s) - 1
+    return round(k * s, 12)
+
+
+def swing_level(high, low, entry_i: int, entry: float, is_long: bool,
+                lookback: int, pivot_k: int):
+    """The most recent CONFIRMED swing extreme beyond entry, or None.
+
+    Long: a pivot high (``high[i]`` >= every high within ``pivot_k`` bars each side)
+    strictly above ``entry``; short: a pivot low strictly below. Only pivots whose
+    right-hand ``pivot_k`` bars closed BEFORE the entry bar are eligible (``i +
+    pivot_k < entry_i``), so nothing is read from the future. Searched over the
+    ``lookback`` bars before entry, most recent first. ``high``/``low`` are
+    positional sequences (numpy arrays or lists)."""
+    lo_i = max(pivot_k, entry_i - lookback)
+    for i in range(entry_i - pivot_k - 1, lo_i - 1, -1):
+        if is_long:
+            v = float(high[i])
+            if v > entry and all(v >= float(high[x]) for x in range(i - pivot_k, i + pivot_k + 1)):
+                return v
+        else:
+            v = float(low[i])
+            if v < entry and all(v <= float(low[x]) for x in range(i - pivot_k, i + pivot_k + 1)):
+                return v
+    return None
+
+
+def fvg_level(high, low, entry_i: int, entry: float, is_long: bool, lookback: int):
+    """The NEAREST unfilled OPPOSING fair-value gap beyond entry, or None.
+
+    Long: a bearish FVG above price -- bar ``i`` with ``high[i] < low[i-2]`` (a gap
+    down), zone ``(high[i], low[i-2])``; the level is the zone's near edge
+    ``high[i]``. Short: a bullish FVG below -- ``low[i] > high[i-2]``, level
+    ``low[i]``. Formed within ``lookback`` bars before entry (``i <= entry_i - 1``,
+    closed bars only) and UNFILLED up to the entry bar: no bar in ``(i, entry_i)``
+    traded back to the near edge. Computed on the harness's own bars -- the node
+    names a 1h FVG; on a 4h/2h leg the leg's own timeframe is used, stated in the
+    unit, because the harness holds one candle stream."""
+    best = None
+    for i in range(max(2, entry_i - lookback), entry_i):
+        if is_long:
+            if float(high[i]) < float(low[i - 2]):
+                edge = float(high[i])
+                if edge > entry and all(float(high[x]) < edge for x in range(i + 1, entry_i)):
+                    best = edge if best is None or edge < best else best
+        else:
+            if float(low[i]) > float(high[i - 2]):
+                edge = float(low[i])
+                if edge < entry and all(float(low[x]) > edge for x in range(i + 1, entry_i)):
+                    best = edge if best is None or edge > best else best
+    return best
+
+
+def trade_level(kind: str, high, low, entry_i: int, entry: float, is_long: bool,
+                lookback: int, pivot_k: int, round_step: float):
+    """The one structural level for a trade, fixed AT ENTRY (never re-read later)."""
+    if kind == "round":
+        return round_level(entry, is_long, round_step)
+    if kind == "swing":
+        return swing_level(high, low, entry_i, entry, is_long, lookback, pivot_k)
+    if kind == "fvg":
+        return fvg_level(high, low, entry_i, entry, is_long, lookback)
+    raise ValueError(f"unknown level kind {kind!r}")
+
+
+def level_touched(level, is_long: bool, bar_high: float, bar_low: float) -> bool:
+    """Did this bar trade AT or THROUGH the level? None (no level) never touches."""
+    if level is None:
+        return False
+    return bar_high >= level if is_long else bar_low <= level

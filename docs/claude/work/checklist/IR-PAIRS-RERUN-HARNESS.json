@@ -1,0 +1,21 @@
+{
+  "id": "IR-PAIRS-RERUN-HARNESS",
+  "title": "Build: verdict.json wrapper + two-leg LIMIT fill model for backtest_pairs.py, so pairs can be re-tested with formation/lookback/folds at maker cost",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager (filed by lane IDEA-REVIEW-1016)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Family: pairs (A, docs/research/idea-family-review-2026-10-16.md). RQ-20261007-014/015/016 ran defaults (lookback 20, hedge_beta one, taker) and lost on cost; PAIRS-R-SCALE affects only rolling-beta legs (RQ-20261007-005..009). Fil & Kristoufek 2020: crypto distance pairs ~-0.07%/month daily vs +11.6%/month at 5m and highly cost-sensitive; Leung & Nguyen 2019: cointegrated crypto portfolios profitable across configs. research-harness-dispatch.yml cannot pass --lookback/--hedge-beta and script_run lands a run without verdict.json as producer_failed. FIRST STEP: scripts/research/pairs_fold_verdict.py running backtest_pairs.py over N contiguous --start/--end folds and writing verdict.json (pooled net R, folds positive, n); then port backtest_ict_scalp.py's --entry-mode limit fill into backtest_pairs.py. THEN author: XRP/ADA 1h fixed beta, lookback 120, entry-z 2.5, exit-z 0, 4 folds, PASS iff pooled net R > 0 AND >= 3/4 folds AND n >= 88.",
+  "updated_at": "2026-10-16T09:08:34Z",
+  "updated_by": "lane-IDEA-REVIEW-1016",
+  "roadmap": [
+    "M22"
+  ],
+  "_seq": 535
+}

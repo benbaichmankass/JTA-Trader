@@ -47,6 +47,15 @@ thinking is wasteful -- it may mean we tested it wrong"): a test-design check, b
 instruments, outside evidence with sources (this skill's scan is where that evidence comes from), and a stated
 reason the idea itself is dead -- `scripts/research/family_retirement_policy.yaml`, enforced by `family-retirement-guard`.
 
+### Step 0b — standing scoping questions (read the pipeline)
+
+Run `python3 scripts/ops/pipeline.py --due` and take any due item whose `origin.ref` names a roadmap milestone
+scoping question for this scan. Standing now: **`PI-20261022-J9X7ACR3-0001` (M41, production-ready local LLM,
+operator 2026-10-22)** -- what would a local LLM do for us, what does it cost, can it run on our VMs. Answer it
+with the same four gates as Step 3 and record the verdict in the scan doc and the run record; close the item
+`done` (verdict + evidence) or `killed` (no use case clears a gate), and set M41's `next` in
+`docs/roadmap/milestones.yaml` to match.
+
 ## Step 1 — measure where we are concentrated
 
 ```

@@ -1,0 +1,94 @@
+id: RQ-20261016-65ff-27
+title: 'Drift remediation (PI-20261016-P3PFA1GK-0001): is the persistent drift flag on the same 9 heads an INSTRUMENT artifact (scores pooled across model
+  versions / input mix) or model decay?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+kind: experiment
+question: 'For each of the 9 heads the hourly ict-drift-retrain scan flags on every pass (eth-regime-5m-lgbm-v1, mes-regime-5m-baseline-v1, setup-quality-baseline-v0,
+  sol-regime-15m-lgbm-fc-pcv-v1, sol-regime-15m-lgbm-fc-pcv-v2 (ADVISORY), sol-regime-5m-lgbm-v1, btc-regime-15m-lgbm-yz-v1, btc-regime-1h-lgbm-v2, btc-regime-1h-lgbm-yz-v1):
+  recomputed on scores from ONE model version at a time (and on a fixed input-mix reference window), does the drift statistic still exceed its threshold?'
+why_this_matters: '16-17 consecutive scans flag the same 9 and nothing has ever retrained (plan-only). The drift-remediation skill forbids reflexive demotion
+  and arming a retrain (TRAINER-DRIFT-NEXT Q2, operator 2026-10-16 ''Hold; diagnose first'') before the cause is known. INFERRED, unverified on the pipeline
+  item: the ADWIN scan reads shadow scores across model versions. This unit makes that a measurement.'
+power:
+  expected_n: 9
+  min_detectable_effect: 0.5
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Unit = head (9). Not a significance test across heads: per head a deterministic recompute of the scan''s own statistic on a version-pure score
+    stream.'
+  feasibility:
+    source: none
+    accrual_basis: Reads the retained shadow log (since 2026-09-26) and drift_retrain.jsonl; nothing accrues.
+decision_rule:
+  id: RULE-RQ2026101665ff27-DRIFT-ARTIFACT
+  statistic: 'Per head: the scan''s drift statistic and threshold on (a) the scan''s own input (as today), (b) scores from the newest model_version only,
+    (c) newest version with the input mix re-weighted to the training window''s symbol/session mix.'
+  rule: 'Per head, ARTIFACT IF (a) exceeds the threshold and (b) does not: the flag is the instrument -> fix the scan (Tier-1, row ML-DRIFT-SPLIT-INSTRUMENT),
+    no model action. MIX IF (b) exceeds and (c) does not: input-mix shift -> drift-remediation ''transient'' disposition. DECAY IF (c) still exceeds: persistent
+    capability loss -> drift-remediation ''persistent'' (feature/label fix shipped as a new version; demote only as interim safety, operator-gated). The
+    unit PASSES (instrument explains it) IF >= 6 of 9 heads read ARTIFACT or MIX; FAILS IF >= 4 of 9 read DECAY; INDETERMINATE otherwise or if a head has
+    < 500 scored rows on the newest version.'
+  min_n: 500 scored rows per head on its newest version.
+  what_it_does_not_do: Retrains, demotes and promotes nothing; arms no retrain; edits no timer, stage or config.
+  registered_at: '2026-10-16'
+  registered_before_run: true
+compute: needs_vm_data
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 200
+  confidence: 0.4
+  basis: 'stand-in: one advisory head reaches size via advisory_sizing; the scan''s CPU is 63.7% of the trainer (KAGGLE design doc s1)'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 1.5
+  est_minutes: 20
+  basis: Reads trainer-resident runtime_logs/shadow_predictions.jsonl (+gz archives) and drift_retrain.jsonl; trainer idle window.
+run:
+  command:
+  - python3
+  - scripts/research/drift_regime_mix.py
+  - --mode
+  - by-version
+  - --head
+  - eth-regime-5m-lgbm-v1
+  - --head
+  - mes-regime-5m-baseline-v1
+  - --head
+  - setup-quality-baseline-v0
+  - --head
+  - sol-regime-15m-lgbm-fc-pcv-v1
+  - --head
+  - sol-regime-15m-lgbm-fc-pcv-v2
+  - --head
+  - sol-regime-5m-lgbm-v1
+  - --head
+  - btc-regime-15m-lgbm-yz-v1
+  - --head
+  - btc-regime-1h-lgbm-v2
+  - --head
+  - btc-regime-1h-lgbm-yz-v1
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261016-65ff-27
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- M25
+related:
+- PI-20261016-P3PFA1GK-0001
+- RQ-20261011-6e85-01
+- TRAINER-DRIFT-NEXT
+- ML-REGIME-15M-DRIFT
+- .claude/skills/drift-remediation/SKILL.md
+- RQ-20261016-65ff-24
+- P2-AI-REGIME-BACKLOG-1016

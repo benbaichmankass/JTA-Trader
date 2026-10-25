@@ -91,6 +91,15 @@ import kotlin.math.round
  * page: every page call goes through [cur] (the kiosk page, or the engine's while a background ticket runs), so each
  * gate, read-back, server verify and go-token is unchanged. Bring-to-front is the fallback (BgTicket): no engine, no
  * claim reached, or a bad background result (6 h). The heartbeat reports bg_tickets / bg_ticket_last / bg_ticket_off_min.
+ *
+ * OBSERVABLE AND TESTABLE (PHONE-EXEC-OBSERVABLE-1018, operator 2026-10-18 after four guess-fix APKs on one click):
+ *   - every flow records a STEP CAPTURE at each step (Capture.kt: an off-screen draw of the WebView with the
+ *     redaction boxes painted, plus exec.js's sanitized DOM snapshot) to the VM, quietly; nothing is shown;
+ *   - a server-issued REHEARSAL DRILL (executeDrill) runs the whole stop-amend flow on the real open position up to
+ *     the final Confirm, then cancels and closes the sheet, and reports pass/fail per step with captures;
+ *   - exec.js is fetched SIGNED from our own API and swapped in without an APK (RemoteJs.kt); Kotlin still needs one;
+ *   - the sheet's pencil / Confirm gate is the SERVER's (claim config `sheet_edit`, flipped by drill passes), not a
+ *     build constant: the live amend runs on the same logic the drill proved.
  */
 class MainActivity : Activity() {
     private lateinit var web: WebView
@@ -137,6 +146,12 @@ class MainActivity : Activity() {
     // BACKGROUND TICKETS (PHONE-FGS-EXEC): the page every ticket call drives; fg except while an engine ticket runs
     private lateinit var cur: Page
     private var lastClaimId = ""; private var lastClaimKind = ""   // what the last claimAndRun() claimed ("" = nothing)
+    // PHONE-EXEC-OBSERVABLE-1018: signed remote exec.js refresh, capture cadence for routine reads, drill wake cadence
+    private var lastJsRefreshMs = 0L; private var jsRefresh = ""
+    private var lastPosCapMs = 0L
+    private var drillFrontNextMs = 0L
+    private var drillsRun = 0; private var drillLast = ""
+    private var curAmendCap: CaptureRun? = null   // the running amend's capture run: its id rides the amend_result
     private var bgTickets = 0; private var bgTicketLast = ""
     private var bgTicketOffUntilMs = 0L // tickets go to the front until this (BgTicket fallback)
     private var bgTicketNextMs = 0L     // an engine ticket job that reached no claim is not repeated before this
@@ -154,9 +169,10 @@ class MainActivity : Activity() {
         const val ACCT_MS = 300_000L
         const val CHIPS_WAIT_MS = 12_000L               // Positions/Closed read: wait this long for the tab chips to render
         const val POS_MISS_MS = 1_800_000L   // a Positions read that failed is reported (masked dump) at most every 30 min
-        // BREAKOUT-SL-AMEND-CLICK: the sheet's pencil click (and Confirm) stays OFF until a live amend_sheet_unmeasured
-        // dump has shown the Stop row's icons (the ⓧ next to the pencil CANCELS the stop); the read path runs live
-        const val SHEET_EDIT_MEASURED = false
+        // BREAKOUT-SL-AMEND-CLICK -> PHONE-EXEC-OBSERVABLE-1018: the sheet's pencil click (and Confirm) is gated by the
+        // SERVER's claim config `sheet_edit` (true once the rehearsal drill passed 3x in a row, or set by hand), never
+        // by a build constant: the live amend runs on the logic the drill proved, with no reinstall in between.
+        const val POS_CAP_MS = 60 * 60_000L            // a routine Positions / sheet read records a capture run at most hourly
         const val SHEET_MISS_MS = 600_000L              // a sheet read that failed is dumped at most every 10 min
         const val QTY_TOL_FRAC = 0.02                   // sheet "Total open volume" vs the ticket qty (venue rounding)
         const val PRICE_BUF_FRAC = 0.001                // the new stop clears the venue's current price by max(2 steps, 0.1%)
@@ -197,10 +213,13 @@ class MainActivity : Activity() {
         api = Api(this); ledger = Ledger(this)
         Store.setFlag(this, Store.RELOGIN_LATCHED, false)   // an older build's latch must not survive the update
         execSrc = assets.open("exec.js").bufferedReader().readText()
+        // the page-side script: bundled, or the cached SIGNED remote one when it re-verifies and is newer (RemoteJs)
+        RemoteJs.load(this, execSrc)
 
         web = WebView(this)
-        fg = Page(web, execSrc)
+        fg = Page(web)
         cur = fg
+        Capture.fgPage = fg
         // TOUCH-HOLD counts only a real finger-down on the page (fix 2026-10-06 09:06Z: the operator saw "paused because
         // you are using it" with the app open and untouched; Activity.onUserInteraction also fires for keys, resumes and
         // system-dispatched events). Our own dispatchKeyEvent typing never reaches a touch listener.
@@ -249,6 +268,8 @@ class MainActivity : Activity() {
             if (stuck.isNotEmpty()) api.event("error", "restart found unresolved tickets; not retried; check the terminal", stuck.first())
             // the last watchdog/boot/sticky restart reason rides the event, so a restart is explained, not just seen
             api.event("app_started", Liveness.lastRestartReason(this@MainActivity))
+            // PHONE-EXEC-OBSERVABLE-1018: ask our API for a newer signed exec.js right away (then every REFRESH_MS)
+            jsRefresh = RemoteJs.refresh(this@MainActivity, api); lastJsRefreshMs = System.currentTimeMillis()
         }
         startLoop()
         // relaunched by the watchdog (not by the operator): hand the screen back unless it was touched
@@ -399,6 +420,7 @@ class MainActivity : Activity() {
         busy = true
         claimedThisTick = false
         loginAttempted = false
+        refreshJs()
         var st = "unread"
         var s: JSONObject? = null
         try {
@@ -459,14 +481,15 @@ class MainActivity : Activity() {
     private suspend fun backgroundTick() {
         busy = true
         try {
+            refreshJs()
             val p = api.pendingInfo()
-            val n = p?.first
-            statusStaleH = p?.second ?: -1.0
+            val n = p?.n
+            statusStaleH = p?.statusAgeH ?: -1.0
             lastPending = n ?: -1
             // PHONE-FGS-EXEC step 2: an AMEND needs an on-screen view (the position sheet is opened by a native tap, and on
             // the overlay elementFromPoint returned null, MEASURED 1b.233 10:40Z), so amends go to the front. The app cannot
             // tell an amend from an entry before claiming, so it asks twice: with and without accepts=amend.
-            val nEntries = if ((n ?: 0) > 0) api.pendingInfo(amends = false)?.first else n
+            val nEntries = if ((n ?: 0) > 0) api.pendingInfo(amends = false)?.n else n
             val amendsToFront = BgTicket.frontForAmends(n, nEntries)
             val now = System.currentTimeMillis()
             // LOGIN CHECK (PI-20261010-GKFNZSH4-0001): the page is never read in the background, so a logout is only
@@ -483,6 +506,9 @@ class MainActivity : Activity() {
             when {
                 paused() -> setStatus("background: paused" + if ((n ?: 0) > 0) " ($n ticket(s) waiting)" else "")
                 now < bgWakeUntilMs -> setStatus("background: bring-to-front already requested")
+                // PHONE-EXEC-OBSERVABLE-1018: a REHEARSAL drill waits; like an amend it needs the on-screen view (asked
+                // again at most every 10 min while it stays unclaimed)
+                p?.drill != null && now >= drillFrontNextMs -> { drillFrontNextMs = now + 10 * 60_000L; ticketToFront("rehearsal drill ${p.drill} waiting (the position sheet needs the screen)") }
                 // tickets run in the background engine (PHONE-FGS-EXEC); the front is the fallback (BgTicket)
                 amendsToFront -> ticketToFront(if (nEntries == null) "$n ticket(s) waiting, kinds unread (entry-only peek failed)" else "${n!! - nEntries} amend(s) waiting (the position sheet needs the screen)")
                 (n ?: 0) > 0 && now < bgTicketNextMs -> setStatus("background: $n ticket(s) waiting; engine retry in ${(bgTicketNextMs - now) / 1000 + 1} s")
@@ -503,7 +529,7 @@ class MainActivity : Activity() {
      *  the terminal and post account_status. Never a ticket. A job whose page never answers counts toward the
      *  bring-to-front fallback (2 in a row), which resets the count so the engine is tried again afterwards. */
     private suspend fun bgJob(why: String, ticket: Boolean = false) {
-        val p = BgWeb.attach(this, execSrc)
+        val p = BgWeb.attach(this)
         bgRuns += 1; bgLastMs = System.currentTimeMillis()
         if (p == null) { bgLast = "no_engine"; bgNoAnswer = 2; setStatus("background: $why; engine could not be created"); if (ticket) ticketToFront("$why; engine could not be created"); return }
         setStatus("background: $why; checking in the background engine (${BgWeb.engine})")
@@ -638,6 +664,11 @@ class MainActivity : Activity() {
             .put("alarm_exact", KeepAliveService.exactAlarmOk(this))
             .put("last_restart_reason", Liveness.lastRestartReason(this)).put("restarts_24h", Liveness.restarts24h(this))
             .put("app_version", appVersion())
+            // PHONE-EXEC-OBSERVABLE-1018: which page-side script runs (version, bundled|remote, last refresh answer),
+            // captures posted this process (+ the last capture error), drills run and the last drill's outcome
+            .put("exec_js", ExecJs.version).put("exec_src", ExecJs.source).put("js_refresh", jsRefresh.take(30))
+            .put("captures", Capture.posted).put("capture_err", Capture.lastError.take(40))
+            .put("drills", drillsRun).put("drill_last", drillLast.take(40))
         // never touch the WebView while backgrounded (jsObj is bounded anyway and yields null on a timeout)
         if (resumed) jsObj("__ex.terminal()")?.let { tm ->
             for (k in listOf("ready", "probe", "panels", "orderControl", "ticketOpen", "buySell")) state.put(k, tm.optBoolean(k))
@@ -698,6 +729,8 @@ class MainActivity : Activity() {
             lastPosMissMs = System.currentTimeMillis()
             api.positionsMiss((ps + " " + (pos?.optString("detail") ?: "")).trim(), pos?.optJSONArray("headers") ?: JSONArray(), pos?.optJSONArray("controls") ?: JSONArray(),
                 pos?.optJSONArray("cells") ?: JSONArray())
+            // the page as the reader saw it (PHONE-EXEC-OBSERVABLE-1018): a miss is fixed from this, not from a 40-char line
+            cap(CaptureRun("positions", ps), p, "positions_miss", false, (ps + " " + (pos?.optString("detail") ?: "")).trim())
         }
         api.accountStatus(bal, eq, if (eqRead != null) "equity" else "portfolio", d(a, "unrealized"), pos, closed)
         return if (ps == "read") "posted" else "posted_pos_$ps"
@@ -988,7 +1021,7 @@ class MainActivity : Activity() {
                 android.view.View.MeasureSpec.makeMeasureSpec(dm.heightPixels, android.view.View.MeasureSpec.EXACTLY))
             w.layout(0, 0, dm.widthPixels, dm.heightPixels)
             w.onResume(); w.resumeTimers()
-            val aside = Page(w, "")
+            val aside = Page(w)
             w.loadUrl(url)
             val end = System.currentTimeMillis() + 25_000L
             delay(2_000L)
@@ -1096,7 +1129,11 @@ class MainActivity : Activity() {
         claim5xx = 0; claimBackoffUntilMs = 0L
         claimedThisTick = true
         val t = r.optJSONObject("ticket")
-        if (t == null) { setStatus("logged in · waiting for a ticket (none queued) · ${java.text.DateFormat.getTimeInstance().format(Date())}"); return }
+        if (t == null) {
+            // PHONE-EXEC-OBSERVABLE-1018: no ticket waits -> a REHEARSAL drill may (foreground only: the sheet needs the screen)
+            if (cur === fg && tryDrill(r.optJSONObject("config") ?: JSONObject())) return
+            setStatus("logged in · waiting for a ticket (none queued) · ${java.text.DateFormat.getTimeInstance().format(Date())}"); return
+        }
         lastClaimKind = if (t.optString("kind") == "amend") "amend" else "entry"
         lastClaimId = if (lastClaimKind == "amend") t.optString("amend_id") else t.optString("ticket_id")
         if (t.optString("kind") == "amend") {
@@ -1133,6 +1170,7 @@ class MainActivity : Activity() {
         val id = t.getString("ticket_id")
         if (ledger.seen(id)) { report(id, "skipped", "ledger already holds this ticket", null); return }
         ledger.append(id, "intended")
+        val cap = CaptureRun("entry", id)
         val meta = t.optJSONObject("meta") ?: JSONObject()
         val test = meta.optBoolean("test")
         val live = t.optString("submit") == "live" && !test
@@ -1167,8 +1205,9 @@ class MainActivity : Activity() {
         var reset = ""
         if (cur !== fg) { reset = "cancelled " + js("__ex.cancelModals()") + "; "; js("__ex.escape()"); delay(400); ensure() }
         var route = reset + selectSymbol(venue, base)
-        if (js("__ex.openTicket()") == "no_order_control") return refuse(id, "order control not found (symbol route: $route)", jsObj("__ex.ticket()"))
+        if (js("__ex.openTicket()") == "no_order_control") return refuse(id, "order control not found (symbol route: $route)", jsObj("__ex.ticket()"), cap)
         delay(1500); ensure()
+        cap(cap, cur, "ticket_open", null, "route $route")
         var shown = js("__ex.symbolOnTicket()")
         if (!shown.uppercase().contains(base)) {
             // second round with the ticket open: its own header may be the symbol picker
@@ -1176,39 +1215,41 @@ class MainActivity : Activity() {
             if (js("__ex.openTicket()") == "clicked") delay(1500)
             shown = js("__ex.symbolOnTicket()")
         }
-        var tk = jsObj("__ex.ticket()") ?: return refuse(id, "ticket unreadable", null)
-        if (!tk.optBoolean("open")) return refuse(id, "ticket not open (symbol route: $route)", tk)
-        if (!shown.uppercase().contains(base)) return refuse(id, "symbol $base not on the submit label (ticket shows '${shown.ifEmpty { "?" }}'; symbol route: $route)", tk)
+        var tk = jsObj("__ex.ticket()") ?: return refuse(id, "ticket unreadable", null, cap)
+        if (!tk.optBoolean("open")) return refuse(id, "ticket not open (symbol route: $route)", tk, cap)
+        if (!shown.uppercase().contains(base)) return refuse(id, "symbol $base not on the submit label (ticket shows '${shown.ifEmpty { "?" }}'; symbol route: $route)", tk, cap)
         // the market chip, when the page has exactly one, must agree with the submit label (both read, before any typing)
         val chip = js("__ex.marketShown()")
-        if (chip.isNotEmpty() && chip != base) return refuse(id, "market chip shows '$chip', submit label shows '$shown' (expected $base; symbol route: $route)", tk)
+        if (chip.isNotEmpty() && chip != base) return refuse(id, "market chip shows '$chip', submit label shows '$shown' (expected $base; symbol route: $route)", tk, cap)
         // 2. type + side
         js("__ex.tab('Limit')"); delay(500); js("__ex.tab(${q(sideTab)})"); delay(700)
-        if (js("__ex.tabSelected('Limit')") != "true" || js("__ex.tabSelected(${q(sideTab)})") != "true") return refuse(id, "Limit/$sideTab tab not selected", jsObj("__ex.ticket()"))
-        if (!js("__ex.symbolOnTicket()").uppercase().contains(base)) return refuse(id, "submit label lost $base after the tabs", jsObj("__ex.ticket()"))
+        if (js("__ex.tabSelected('Limit')") != "true" || js("__ex.tabSelected(${q(sideTab)})") != "true") return refuse(id, "Limit/$sideTab tab not selected", jsObj("__ex.ticket()"), cap)
+        if (!js("__ex.symbolOnTicket()").uppercase().contains(base)) return refuse(id, "submit label lost $base after the tabs", jsObj("__ex.ticket()"), cap)
+        cap(cap, cur, "tabs", true, "Limit/$sideTab")
         // 3. price + quantity, BY LABEL (never by index alone): each field is located by its label at the moment it
         //    is typed and again when it is read back; n != 1 (missing or ambiguous label) refuses with the labels seen.
         val fPrice = Field("Limit price", "limit price"); val fQty = Field("Quantity", "quantity")
-        for (f in listOf(fPrice, fQty)) { val n = readField(f)?.optInt("n", 0) ?: 0; if (n != 1) return refuse(id, "${f.name} field not unique (n=$n)", jsObj("__ex.ticket()")) }
-        if (!typeInto(fPrice, fmt(entry, pStep), entry, pStep)) return refuse(id, "limit price did not read back", jsObj("__ex.ticket()"))
+        for (f in listOf(fPrice, fQty)) { val n = readField(f)?.optInt("n", 0) ?: 0; if (n != 1) return refuse(id, "${f.name} field not unique (n=$n)", jsObj("__ex.ticket()"), cap) }
+        if (!typeInto(fPrice, fmt(entry, pStep), entry, pStep)) return refuse(id, "limit price did not read back", jsObj("__ex.ticket()"), cap)
         // quantity UNIT before the quantity is typed (MEASURED am-3 09:16Z: a "Toggle quantity unit" button reading
         // "USD", so 0.01 would have been $0.01). Toggle ONCE to the base asset and verify; never convert to a notional.
         val unit0 = js("__ex.qtyUnit()")
         if (unit0.isNotEmpty() && !unit0.uppercase().contains(base)) {
-            if (js("__ex.toggleQtyUnit()") != "clicked") return refuse(id, "quantity unit toggle not clickable (shows '$unit0')", jsObj("__ex.ticket()"))
+            if (js("__ex.toggleQtyUnit()") != "clicked") return refuse(id, "quantity unit toggle not clickable (shows '$unit0')", jsObj("__ex.ticket()"), cap)
             delay(800); ensure()
             val unit1 = js("__ex.qtyUnit()")
-            if (!unit1.uppercase().contains(base)) return refuse(id, "quantity unit toggle did not reach $base (was '$unit0', now '$unit1')", jsObj("__ex.ticket()"))
+            if (!unit1.uppercase().contains(base)) return refuse(id, "quantity unit toggle did not reach $base (was '$unit0', now '$unit1')", jsObj("__ex.ticket()"), cap)
         }
-        if (!typeInto(fQty, fmt(qty, qStep), qty, qStep)) return refuse(id, "quantity did not read back", jsObj("__ex.ticket()"))
+        if (!typeInto(fQty, fmt(qty, qStep), qty, qStep)) return refuse(id, "quantity did not read back", jsObj("__ex.ticket()"), cap)
+        cap(cap, cur, "price_qty", true, "")
         // quantity unit verified AFTER typing: the unit toggle names the base asset, else (no toggle on this layout) the
         // "Quantity ... available" alert or the field's own adornment must; the refusal carries all three texts.
-        tk = jsObj("__ex.ticket()") ?: return refuse(id, "ticket unreadable", null)
+        tk = jsObj("__ex.ticket()") ?: return refuse(id, "ticket unreadable", null, cap)
         val alerts = (tk.optJSONArray("alerts")?.toString() ?: "").uppercase()
         val qNear = (readField(fQty)?.optString("near") ?: "").uppercase()
         val unitNow = js("__ex.qtyUnit()").uppercase()
         val unitOk = if (unitNow.isNotEmpty()) unitNow.contains(base) else (alerts.contains(base) || qNear.contains(base))
-        if (!unitOk) return refuse(id, "quantity unit not verified as $base (toggle '$unitNow'; alerts $alerts; near '$qNear')", tk)
+        if (!unitOk) return refuse(id, "quantity unit not verified as $base (toggle '$unitNow'; alerts $alerts; near '$qNear')", tk, cap)
         // 4. TP/SL: open the section (checkbox or the "TP/SL" control, MEASURED am-3), then the fields BY LABEL
         // one move per step with read-back (am-4 09:48Z: box checked but the section stayed collapsed)
         // deterministic candidates by attempt (exec.js openTpsl), each followed by a ~3 s poll for "Take profit price"
@@ -1223,26 +1264,28 @@ class MainActivity : Activity() {
             for (w in 0 until 6) { delay(500); ensure(); if (js("__ex.readByLabel('take ?profit|\\\\btp\\\\b','price').n") != "0") { shown = true; break } }
             if (shown) { tpslSeq += ">ok"; break }
         }
-        if (!tpslSeq.endsWith("ok")) return refuse(id, "TP/SL section not opened ($tpslSeq)", jsObj("__ex.ticket()"))
+        if (!tpslSeq.endsWith("ok")) return refuse(id, "TP/SL section not opened ($tpslSeq)", jsObj("__ex.ticket()"), cap)
+        cap(cap, cur, "tpsl_open", true, tpslSeq)
         val fTp = Field("TP price", "take ?profit|\\btp\\b", "price"); val fSl = Field("SL price", "stop ?loss|\\bsl\\b", "price")
-        for (f in listOf(fTp, fSl)) { val r = readField(f); if (r?.optInt("n", 0) != 1) return refuse(id, "${f.name} field not unique (n=${r?.optInt("n", 0) ?: 0}, labels ${r?.optJSONArray("labels")})", jsObj("__ex.ticket()")) }
-        if (!typeInto(fTp, fmt(tp, pStep), tp, pStep)) return refuse(id, "TP did not read back", jsObj("__ex.ticket()"))
-        if (!typeInto(fSl, fmt(sl, pStep), sl, pStep)) return refuse(id, "SL did not read back", jsObj("__ex.ticket()"))
+        for (f in listOf(fTp, fSl)) { val r = readField(f); if (r?.optInt("n", 0) != 1) return refuse(id, "${f.name} field not unique (n=${r?.optInt("n", 0) ?: 0}, labels ${r?.optJSONArray("labels")})", jsObj("__ex.ticket()"), cap) }
+        if (!typeInto(fTp, fmt(tp, pStep), tp, pStep)) return refuse(id, "TP did not read back", jsObj("__ex.ticket()"), cap)
+        if (!typeInto(fSl, fmt(sl, pStep), sl, pStep)) return refuse(id, "SL did not read back", jsObj("__ex.ticket()"), cap)
         // 5. full read-back, by label, all four at once; the four labels must resolve to four DIFFERENT inputs
         delay(500)
-        tk = jsObj("__ex.ticket()") ?: return refuse(id, "ticket unreadable", null)
+        tk = jsObj("__ex.ticket()") ?: return refuse(id, "ticket unreadable", null, cap)
         val fields = listOf(fPrice, fQty, fTp, fSl); val wants = listOf(entry, qty, tp, sl); val steps = listOf(pStep, qStep, pStep, pStep)
         val reads = fields.map { readField(it) }
         val ks = reads.map { it?.optInt("k", -1) ?: -1 }
-        if (ks.any { it < 0 } || ks.toSet().size != 4) return refuse(id, "fields not unique or collide at read-back (k=$ks)", tk)
+        if (ks.any { it < 0 } || ks.toSet().size != 4) return refuse(id, "fields not unique or collide at read-back (k=$ks)", tk, cap)
         val ok = reads.indices.all { close(num(reads[it]?.optString("value")), wants[it], steps[it]) }
         val sub = tk.optJSONObject("submit")
         val subText = sub?.optString("text") ?: ""
-        if (!ok) return refuse(id, "read-back mismatch", tk)
-        if (!subText.uppercase().contains(base)) return refuse(id, "submit label lost $base at read-back", tk)
-        if (tk.optBoolean("tpsl") != true) return refuse(id, "TP/SL box not on at read-back", tk)
-        if (!sideRe.containsMatchIn(subText) || oppRe.containsMatchIn(subText)) return refuse(id, "submit label does not match the side", tk)
-        if (sub?.optBoolean("disabled") != false) return refuse(id, "submit disabled after fill", tk)
+        if (!ok) return refuse(id, "read-back mismatch", tk, cap)
+        if (!subText.uppercase().contains(base)) return refuse(id, "submit label lost $base at read-back", tk, cap)
+        if (tk.optBoolean("tpsl") != true) return refuse(id, "TP/SL box not on at read-back", tk, cap)
+        if (!sideRe.containsMatchIn(subText) || oppRe.containsMatchIn(subText)) return refuse(id, "submit label does not match the side", tk, cap)
+        if (sub?.optBoolean("disabled") != false) return refuse(id, "submit disabled after fill", tk, cap)
+        cap(cap, cur, "readback", true, "")
         // 5b. SERVER read-back (design 3.4, PHONE-GO-TOKEN): a SECOND, independent check; every phone-side check above
         //     stays. The phone posts what the page SHOWS (raw strings); the server re-verifies it against the ticket and
         //     the venue steps and issues ONE token bound to the ticket id + the read-back hash (30 s). No token
@@ -1252,11 +1295,12 @@ class MainActivity : Activity() {
         val rb = readBack(id, tk, fieldsRb, unitSrc)
         val rbHash = sha256(readBackLines(rb))
         val v = api.post("verify", JSONObject().put("ticket_id", id).put("readback", rb).put("readback_sha256", rbHash))
-            ?: return refuse(id, "server verify unreachable (no go-token; not submitted)", tk)
-        if (!v.optBoolean("ok")) return refuse(id, "server read-back refused: ${v.optJSONArray("reasons")?.toString()?.take(200) ?: "http " + v.optInt("http")}", tk)
+            ?: return refuse(id, "server verify unreachable (no go-token; not submitted)", tk, cap)
+        if (!v.optBoolean("ok")) return refuse(id, "server read-back refused: ${v.optJSONArray("reasons")?.toString()?.take(200) ?: "http " + v.optInt("http")}", tk, cap)
         val token = v.optString("token")
         val serverLive = v.optString("mode") == "live"
-        if (token.isEmpty() || v.optString("readback_sha256") != rbHash) return refuse(id, "server verify answered without a token bound to this read-back", tk)
+        if (token.isEmpty() || v.optString("readback_sha256") != rbHash) return refuse(id, "server verify answered without a token bound to this read-back", tk, cap)
+        cap(cap, cur, "verify", true, "mode ${v.optString("mode")}")
 
         if (!live || !serverLive) {
             // exercise the redeem on the dry path too: a DRY token must answer go=false (never a click either way). A LIVE
@@ -1268,23 +1312,26 @@ class MainActivity : Activity() {
             report(id, "dry_filled", (if (test) "test ticket (always dry)" else "server mode dry") + "; server verify ok, ${v.optString("mode")} token, $goTxt", tk)
             api.event("dry_fill_ok", engTag() + "filled + read back + SERVER verified (${v.optString("mode")} token, $goTxt), NOT submitted: $sideTab ${fmt(qty, qStep)} $venue lim ${fmt(entry, pStep)} tp ${fmt(tp, pStep)} sl ${fmt(sl, pStep)}", id)
             js("__ex.setByLabel('quantity', '', '')")
+            cap(cap, cur, "dry_filled", true, goTxt)
             setStatus("DRY ticket $id filled and read back; not submitted")
             return
         }
         // 6. LIVE submit: re-read the form NOW, re-hash, redeem the token (one-shot, server-side); click only on go=true
-        val tkNow = jsObj("__ex.ticket()") ?: return refuse(id, "ticket unreadable before submit", null)
+        val tkNow = jsObj("__ex.ticket()") ?: return refuse(id, "ticket unreadable before submit", null, cap)
         val hashNow = sha256(readBackLines(readBack(id, tkNow, fieldsRb, unitSrc)))
-        if (hashNow != rbHash) return refuse(id, "form changed since the server verified it (not submitted)", tkNow)
+        if (hashNow != rbHash) return refuse(id, "form changed since the server verified it (not submitted)", tkNow, cap)
         val go = api.post("go", JSONObject().put("ticket_id", id).put("token", token).put("readback_sha256", hashNow))
-            ?: return refuse(id, "go-token redeem unreachable (not submitted)", tkNow)
-        if (!go.optBoolean("go")) return refuse(id, "go-token refused: ${go.optString("reason").ifEmpty { "http " + go.optInt("http") }}", tkNow)
+            ?: return refuse(id, "go-token redeem unreachable (not submitted)", tkNow, cap)
+        if (!go.optBoolean("go")) return refuse(id, "go-token refused: ${go.optString("reason").ifEmpty { "http " + go.optInt("http") }}", tkNow, cap)
         ledger.append(id, "submitted")
-        if (js("__ex.submit()") != "clicked") { ledger.append(id, "refused"); return refuse(id, "submit not clickable", tk) }
+        if (js("__ex.submit()") != "clicked") { ledger.append(id, "refused"); return refuse(id, "submit not clickable", tk, cap) }
         delay(1500)
+        cap(cap, cur, "submit_click", null, "")
         jsObj("__ex.dialog()")?.let { d ->
             if (sideRe.containsMatchIn(d.optString("text")) && !oppRe.containsMatchIn(d.optString("text"))) js("__ex.dialogClick('confirm|place|submit|yes|ok')")
-            else { js("__ex.dialogClick('cancel|close|no')"); api.event("mismatch", "unexpected confirmation dialog; cancelled", id); return refuse(id, "unexpected confirmation dialog", tk) }
+            else { js("__ex.dialogClick('cancel|close|no')"); api.event("mismatch", "unexpected confirmation dialog; cancelled", id); return refuse(id, "unexpected confirmation dialog", tk, cap) }
             delay(1500)
+            cap(cap, cur, "confirm_dialog", null, "")
         }
         // 7. confirm by re-read
         for (attempt in 0 until 3) {
@@ -1304,10 +1351,12 @@ class MainActivity : Activity() {
                     js("__ex.rowClose(${q(venue)}, ${q(oppRe.pattern)})"); delay(1200); js("__ex.dialogClick('confirm|close|yes|ok')")
                     ledger.append(id, "contained")
                     api.event("flattened", "opposite-side position found after submit; close clicked; CHECK the terminal", id)
+                    cap(cap, cur, "flattened", false, "opposite side seen")
                     report(id, "mismatch_flattened", "opposite side seen", tk); return
                 }
                 if (hit || gridHit) {
                     ledger.append(id, "placed")
+                    cap(cap, cur, "placed", true, "seen in ${view.trim('^', '$')}")
                     api.post("report", JSONObject().put("kind", "fill").put("status", "placed").put("ticket_id", id)
                         .put("symbol", sym).put("direction", if (long) "long" else "short")
                         .put("entry", entry).put("sl", sl).put("tp", tp).put("qty", qty).put("source", "phone_executor"))
@@ -1319,6 +1368,7 @@ class MainActivity : Activity() {
         }
         ledger.append(id, "unconfirmed")
         api.event("mismatch", "submitted but not found in Open orders/Positions after 3 reads; CHECK the terminal", id)
+        cap(cap, cur, "unconfirmed", false, "not found after 3 reads")
         setStatus("ticket $id UNCONFIRMED — operator check")
     }
 
@@ -1347,6 +1397,10 @@ class MainActivity : Activity() {
         val fromSl = t.optDouble("from_sl", Double.NaN); val sl = t.optDouble("sl", Double.NaN)
         val fromTp = t.optDouble("from_tp", Double.NaN); val tp = t.optDouble("tp", Double.NaN)
         if (fromSl.isNaN() || sl.isNaN()) return amendRefuse(t, "amend has no from_sl/sl", null)
+        val cap = CaptureRun("amend", aid)
+        curAmendCap = cap
+        // the sheet's pencil / Confirm gate is the SERVER's claim config (PHONE-EXEC-OBSERVABLE-1018), never a build constant
+        val sheetEdit = cfg.optBoolean("sheet_edit", false)
         val tpChange = !tp.isNaN() && !(!fromTp.isNaN() && close(tp, fromTp, pStep))
         // never loosen: the trail only tightens; a TP revision carries the SL unchanged
         if (if (long) sl < fromSl - pStep / 2 else sl > fromSl + pStep / 2) return amendRefuse(t, "amend would loosen the stop", null)
@@ -1354,9 +1408,10 @@ class MainActivity : Activity() {
         // 1. the position row
         js("__ex.clickText('^positions$')"); delay(1500); ensure()
         var pos = jsObj("__ex.posInfo(${q(venue)}, ${q(sideRe)})") ?: return amendRefuse(t, "positions unreadable", null)
+        cap(cap, cur, "positions_read", null, "n=${pos.optInt("n")} layout=${pos.optString("layout")}")
         // BREAKOUT-SL-AMEND-CLICK: the live Positions view is a div grid with no side text and no edit control, so a
         // row it cannot match (n=0) or a grid row goes to the position SHEET, which reads side + volume MEASURED
-        if (pos.optInt("n") == 0 || pos.optString("layout") == "div_grid") return executeAmendSheet(t, live, venue, long, pStep, fromSl, sl, tpChange)
+        if (pos.optInt("n") == 0 || pos.optString("layout") == "div_grid") return executeAmendSheet(t, live, venue, long, pStep, fromSl, sl, tpChange, cap, sheetEdit)
         if (pos.optInt("n") != 1) return amendRefuse(t, "position row not unique (n=${pos.optInt("n")})", pos)
         // 2. the terminal must show the stop/target the VM believes is resting (row columns, when the layout has them)
         val rowSl = firstNum(pos.optString("sl", "")); val rowTp = firstNum(pos.optString("tp", ""))
@@ -1441,14 +1496,14 @@ class MainActivity : Activity() {
      *  shows). The child row ("ETH 5x") is tapped first, then the group row ("ETH 1"); which one opened the sheet is
      *  reported as opened_by (unmeasured until the first live run). Returns the details (ok, side, qty, entry, mark,
      *  upnl, upnl_signed, opened_by, tries) or {ok:false, why, tries}; the sheet is left OPEN only when ok. */
-    private suspend fun sheetRead(p: Page, sym: String): JSONObject {
+    private suspend fun sheetRead(p: Page, sym: String, cap: CaptureRun? = null): JSONObject {
         val tries = JSONArray()
         // BREAKOUT-SL-AMEND-CLICK (manager 11:02Z: an "Edit Take profit" modal was seen open on the engine page, origin
         // unknown): an open Edit Stop loss / Edit Take profit modal is dismissed (its Cancel, else Escape -- never
         // Confirm) before any sheet attempt, and the attempt does not run while one is still open
         val m0 = dismissModal(p)
         if (m0.isNotEmpty()) tries.put("modal_pre:$m0".take(40))
-        if (m0.endsWith("still_open")) return JSONObject().put("ok", false).put("why", "modal_open").put("tries", tries)
+        if (m0.endsWith("still_open")) { cap(cap, p, "modal_open_pre", false, m0); return JSONObject().put("ok", false).put("why", "modal_open").put("tries", tries) }
         var opened = ""
         // REUSE (manager 12:47Z; operator screenshot 12:43Z: a sheet a human opened was left open on the kiosk): a sheet
         // that is ALREADY open for THIS symbol (title == the symbol, one sheet) is read as-is -- no touch needed. Any
@@ -1462,39 +1517,60 @@ class MainActivity : Activity() {
         // opened no sheet (the group tap only expanded the row). Each row is now touched NATIVELY (a MotionEvent the
         // WebView receives as a trusted touch) at the centre exec.js re-checked; every miss still records what the page
         // showed after it (viewport, new visible texts, the touched cell's ancestor chain)
+        // TARGETS (2026-10-17, 1b.253 08:03Z + 12:03Z MEASURED): the Market cell got a fully trusted finger touch
+        // (pdown:touch w9 tr1 .. click:touch tr1) and opened nothing, while click() on the group cell reaches the row's
+        // handler; so the cell was wrong, not the touch. 1b.261 20:03Z (hd: map) MEASURED why: the Market cell is an
+        // <a> with its own onClick and the ROW holds the opener. The child row is tried at its Opening price cell, then
+        // its "n TP / n SL" text, then (last) its Market cell. The GROUP row only toggles expand: it is touched ONLY when no child
+        // row is in the DOM (to expand it, then the child targets run), never while one is (08:03Z: that collapsed it).
         var probe: JSONObject? = null
-        for (which in if (opened.isEmpty()) listOf("child", "group") else emptyList()) {
+        val queue = ArrayDeque(if (opened.isEmpty()) listOf("child_entry", "child_tpsl", "child") else emptyList())
+        var grouped = false
+        while (queue.isNotEmpty()) {
+            val which = queue.removeFirst()
             p.js("__ex.domMark()")
             val r = nativeTap(p, sym, which)
             tries.put("$which/native:$r".take(40))
             lastTapGeom.forEach { tries.put(it.take(40)) }
-            if (!r.startsWith("touched")) { if (r == "no_grid") break; continue }
+            if (!r.startsWith("touched")) {
+                cap(cap, p, "target_$which", false, "$r ${lastTapGeom.joinToString(" ")}")
+                if (r == "no_grid" || (which == "group" && r == "none")) break
+                if ((which == "child_entry" || which == "child") && r == "none" && !grouped) { grouped = true; queue.clear(); queue.addAll(listOf("group", "child_entry", "child_tpsl", "child")) }
+                continue
+            }
             delay(1200); p.ensure()
             // which touch preceded a modal (manager 11:58Z: attribute any Edit SL/TP modal to the tap that opened it); a
             // modal is dismissed (Cancel/Escape, never Confirm) and NOTHING further is attempted on this read
             if ((p.obj("__ex.modalsOpen()")?.optInt("n") ?: 0) > 0) {
+                cap(cap, p, "tap_${which}_modal", false, "a modal opened after the touch; dismissed (never Confirm)")
                 tries.put("modal_after:$which/native".take(40)); tries.put("modal_dismiss:${dismissModal(p)}".take(40))
                 return JSONObject().put("ok", false).put("why", "modal_after_tap").put("tries", tries)
             }
             if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") == true) { opened = "$which/native"; break }
             delay(1500); p.ensure()
             if (p.obj("__ex.sheetInfo(${q(sym)})")?.optBoolean("open") == true) { opened = "$which/native"; break }
-            tries.put("$which/native:no_sheet")
             probe = p.obj("__ex.domDiff()")?.put("at", "$which/native")
+            // per touch: how many elements appeared and whether a [Position details] tab did (a sheet the reader missed)
+            tries.put("$which/native:no_sheet n${probe?.optInt("n_new") ?: -1} d${probe?.optInt("details_tabs") ?: -1}".take(40))
+            // the page AFTER a touch that opened nothing: the whole point of the capture (what was under the finger)
+            cap(cap, p, "tap_$which", false, "touched $r; no sheet; new=${probe?.optInt("n_new") ?: -1} ev=${probe?.optJSONArray("ev")?.toString()?.take(80) ?: ""}")
         }
         if (opened.isEmpty()) {
             val m1 = dismissModal(p)
             if (m1.isNotEmpty()) tries.put("modal_post:$m1".take(40))
         }
-        if (opened.isEmpty()) return JSONObject().put("ok", false).put("why", "sheet_not_open").put("tries", tries).apply { if (probe != null) put("probe", probe) }
+        if (opened.isEmpty()) { cap(cap, p, "sheet_not_open", false, tries.toString().take(200)); return JSONObject().put("ok", false).put("why", "sheet_not_open").put("tries", tries).apply { if (probe != null) put("probe", probe) } }
+        cap(cap, p, "sheet_open", true, "opened_by $opened")
         val si = p.obj("__ex.sheetInfo(${q(sym)})") ?: JSONObject()
         if (!si.optBoolean("title_ok")) {
+            cap(cap, p, "sheet_title", false, "title is not $sym")
             val c = sheetClose(p, sym)
             return JSONObject().put("ok", false).put("why", "sheet_title").put("info", si).put("tries", tries).put("close", c)
         }
         p.js("__ex.sheetTab('details')"); delay(800); p.ensure()
         val d = p.obj("__ex.sheetDetails()") ?: JSONObject().put("ok", false).put("why", "details_unanswered")
         d.put("opened_by", opened).put("tries", tries)
+        cap(cap, p, "sheet_details", d.optBoolean("ok"), if (d.optBoolean("ok")) "side ${d.optString("side")}" else "miss ${d.optJSONArray("miss") ?: d.optString("why")}")
         if (!d.optBoolean("ok")) { if (!d.has("why")) d.put("why", "details_unread"); d.put("close", sheetClose(p, sym)) }
         return d
     }
@@ -1507,19 +1583,41 @@ class MainActivity : Activity() {
     private var lastTapGeom: List<String> = emptyList()
     private suspend fun nativeTap(p: Page, sym: String, which: String): String {
         lastTapGeom = emptyList()
+        // a refusal from EITHER call carries its geometry and the element on top (1b.263 05:00Z: two "covered" from the
+        // scroll call posted neither, so the miss could not be placed)
+        fun refused(o: JSONObject): String {
+            lastTapGeom = listOf(o.optString("g1"), o.optString("g2"), o.optString("g3"), p.viewInfo() + (if (p === fg) " fg" else " bg")).filter { it.isNotEmpty() }
+            return o.optString("why", "refused") + (if (o.optString("top").isNotEmpty()) "@" + o.optString("top") else "")
+        }
         val s = p.obj("__ex.sheetTarget(${q(sym)}, ${q(which)}, true)") ?: return "unanswered"
-        if (!s.optBoolean("ok")) return s.optString("why", "refused")
+        if (!s.optBoolean("ok")) return if (s.optString("why") in listOf("none", "no_grid")) s.optString("why") else refused(s)
         delay(350)
         val r = p.obj("__ex.sheetTarget(${q(sym)}, ${q(which)}, false)") ?: return "unanswered"
-        if (!r.optBoolean("ok")) {
-            // geometry of a covered point (measure-only; 1b.233 read "covered" with nothing at the centre)
-            lastTapGeom = listOf(r.optString("g1"), r.optString("g2"), p.viewInfo() + (if (p === fg) " fg" else " bg")).filter { it.isNotEmpty() }
-            return r.optString("why", "refused") + (if (r.optString("top").isNotEmpty()) "@" + r.optString("top") else "")
-        }
+        if (!r.optBoolean("ok")) return if (r.optString("why") in listOf("none", "no_grid")) r.optString("why") else refused(r)
         // which WebView took the touch (PHONE-FGS-EXEC: the background engine's non-touchable overlay or the kiosk);
         // MotionEvents go to the view directly, never through the window, but the two are measured apart
         return p.tap(r.getDouble("x"), r.getDouble("y"), r.getDouble("vw")) + (if (p === fg) " fg" else " bg")
     }
+
+    /** One NATIVE touch on the Stop row's pencil (2026-10-18 drill 1 on 1b.300 + exec.js .4 FAILED at modal_open: the
+     *  pencil rowIcons returned was the span[tabindex] WRAPPING the "Edit order" button, click() on the wrapper never
+     *  reached the button's handler, and the terminal opened nothing). exec.js .5 resolves the control (the button) and
+     *  gives its point the way sheetTarget gives the row's: denylist-checked, elementFromPoint re-checked, asked once to
+     *  bring it into view and again right before the touch; then the same trusted finger the row needed. "touched k=.."
+     *  or why not; a geometry refusal (covered / clipped) falls back to the synthetic click on the control itself and the
+     *  note carries both ("covered@div click:clicked"). */
+    private suspend fun pencilTap(p: Page): String {
+        val s = p.obj("__ex.sheetEditStopTarget(true)") ?: return "unanswered"
+        if (!s.optBoolean("ok")) return s.optString("why", "refused")
+        delay(350)
+        val r = p.obj("__ex.sheetEditStopTarget(false)") ?: return "unanswered"
+        if (!r.optBoolean("ok")) {
+            val why = r.optString("why", "refused") + (if (r.optString("top").isNotEmpty()) "@" + r.optString("top") else "") + (if (r.optString("g1").isNotEmpty()) " " + r.optString("g1") else "")
+            return if (why.startsWith("covered") || why.startsWith("clipped")) "$why click:${p.js("__ex.sheetEditStop()")}" else why
+        }
+        return p.tap(r.getDouble("x"), r.getDouble("y"), r.getDouble("vw"))
+    }
+    private fun pencilOk(e: String): Boolean = e.startsWith("touched") || e.endsWith("click:clicked")
 
     /** Stray-modal dismiss before / after a sheet attempt: exec.js dismissModals (the ONE rule cancelModals also uses --
      *  each open non-form dialog / Edit SL/TP modal gets its own exactly-one "Cancel" clicked, NEVER Confirm; Escape if
@@ -1558,7 +1656,9 @@ class MainActivity : Activity() {
         d.optJSONObject("probe")?.let { pr ->
             ctl.put("${pr.optString("at")} w=${pr.optInt("w")} h=${pr.optInt("h")} new=${pr.optInt("n_new")} dlg=${pr.optInt("dialogs")}".take(40))
             ctl.put("tabs details=${pr.optInt("details_tabs")} tpsl=${pr.optInt("tpsl_tabs")}")
-            pr.optJSONArray("leaves")?.let { a -> for (i in 0 until a.length()) ctl.put("new: " + a.optString(i).take(34)) }
+            pr.optJSONArray("ev")?.let { a -> for (i in 0 until a.length()) ctl.put("ev: " + a.optString(i).take(35)) }
+            pr.optJSONArray("hd")?.let { a -> for (i in 0 until a.length()) ctl.put("hd: " + a.optString(i).take(35)) }
+            pr.optJSONArray("leaves")?.let { a -> for (i in 0 until minOf(a.length(), 10)) ctl.put("new: " + a.optString(i).take(34)) }
             pr.optJSONArray("chain")?.let { a -> for (i in 0 until a.length()) ctl.put("up: " + a.optString(i).take(35)) }
         }
         orders?.optJSONArray("rows")?.let { rs ->
@@ -1621,10 +1721,13 @@ class MainActivity : Activity() {
             pre.put("hdr=${cs.optInt("hdr")} grp=${cs.optInt("groups")} child=${cs.optInt("child_rows")} sides=${cs.optJSONArray("sides")?.length() ?: 0}")
         }
         val out = JSONArray()
+        // a routine sheet read records a capture run at most hourly (every tap / open / details step), so a miss here is
+        // diagnosable from evidence without an amend having to fail first
+        val capRun = if (System.currentTimeMillis() - lastPosCapMs >= POS_CAP_MS) { lastPosCapMs = System.currentTimeMillis(); CaptureRun("positions", syms.joinToString("-")) } else null
         for (i in 0 until rows.length()) {
             val r = JSONObject(rows.getJSONObject(i).toString())
             if (!r.isNull("side") && r.optString("side").isNotEmpty()) { out.put(r); continue }
-            val d = sheetRead(p, syms[i])
+            val d = sheetRead(p, syms[i], capRun)
             if (!d.optBoolean("ok")) {
                 if (pre.length() > 0) { val tr = JSONArray(); for (j in 0 until pre.length()) tr.put(pre.get(j))
                     d.optJSONArray("tries")?.let { a -> for (j in 0 until a.length()) tr.put(a.get(j)) }; d.put("tries", tr) }
@@ -1645,10 +1748,11 @@ class MainActivity : Activity() {
      *  edit control and no side text, so the stop is edited where the venue puts it. Every step is asserted before the
      *  next: the sheet's side + total volume == the ticket's; the [1 TP / 1 SL] tab holds ONE Stop row whose trigger is
      *  the stop the VM believes is resting (else human_moved); the new stop is tighter AND clear of the venue's current
-     *  price; then -- only when SHEET_EDIT_MEASURED -- the Stop row's ONE pencil, the "Edit Stop loss" modal (header side
+     *  price; then -- only when the server's sheet_edit says so (drill-proven) -- the Stop row's ONE pencil, the "Edit Stop loss" modal (header side
      *  + qty asserted), ONLY the Trigger typed and read back (quantity unchanged), Confirm, and the Stop row re-read. */
     private suspend fun executeAmendSheet(t: JSONObject, live: Boolean, venue: String, long: Boolean, pStep: Double,
-                                          fromSl: Double, sl: Double, tpChange: Boolean) {
+                                          fromSl: Double, sl: Double, tpChange: Boolean, cap: CaptureRun? = null,
+                                          sheetEdit: Boolean = false) {
         val aid = t.getString("amend_id")
         val want = if (long) "long" else "short"
         if (tpChange) return amendRefuse(t, "the sheet path edits the stop only; a TP revision is not built", null)
@@ -1656,7 +1760,7 @@ class MainActivity : Activity() {
         if (cur !== fg) return amendRefuse(t, "sheet path runs on the foreground view only (engine page: not hit-testable)", null)
         if (if (long) sl <= fromSl + pStep / 2 else sl >= fromSl - pStep / 2) return amendRefuse(t, "sheet path: the new stop is not tighter", null)
         // 1-2. the sheet and its [Position details], MEASURED
-        val d = sheetRead(cur, venue)
+        val d = sheetRead(cur, venue, cap)
         if (!d.optBoolean("ok")) {
             val tries = d.optJSONArray("tries")?.let { a -> (0 until a.length()).map { a.optString(it) } } ?: emptyList()
             if (d.optString("why") == "sheet_not_open" && tries.all { it.endsWith(":none") || it.endsWith(":no_grid") }) {
@@ -1666,7 +1770,7 @@ class MainActivity : Activity() {
             sheetMiss("amend_sheet_${d.optString("why")}", d, force = true)
             return amendRefuse(t, "position sheet unread: ${d.optString("why")} ${d.optJSONArray("miss") ?: ""} ${tries.joinToString(" ")}", d)
         }
-        suspend fun bail(why: String, dump: JSONObject?) { val c = sheetClose(cur, venue); amendRefuse(t, "$why (sheet close: $c)", dump) }
+        suspend fun bail(why: String, dump: JSONObject?) { cap(cap, cur, "refused", false, why); val c = sheetClose(cur, venue); amendRefuse(t, "$why (sheet close: $c)", dump) }
         val tq = t.optDouble("qty", Double.NaN); val sq = d.optDouble("qty", Double.NaN)
         if (d.optString("side") != want) return bail("sheet side ${d.optString("side")} != ticket $want", d)
         if (tq.isNaN() || sq.isNaN() || abs(sq - tq) > max(1e-9, QTY_TOL_FRAC * tq)) return bail("sheet volume $sq != ticket qty $tq", d)
@@ -1677,32 +1781,54 @@ class MainActivity : Activity() {
         // 3. [1 TP / 1 SL]: the ONE Stop row, its trigger == the resting stop the VM expects
         cur.js("__ex.sheetTab('tpsl')"); delay(800); ensure()
         val so = jsObj("__ex.sheetOrders()") ?: return bail("sheet orders unanswered", d)
+        cap(cap, cur, "stop_row", so.optInt("n_stop") == 1, "stops n=${so.optInt("n_stop")} takes n=${so.optInt("n_take")}")
         if (so.optInt("n_stop") != 1) return bail("sheet stop rows n=${so.optInt("n_stop")}", so)
         val rs = so.optJSONArray("rows") ?: JSONArray()
         val stop = (0 until rs.length()).map { rs.optJSONObject(it) }.first { it?.optString("type") == "stop" }!!
         val trig = if (stop.isNull("trigger")) null else stop.optDouble("trigger")
+        // UNREAD is not a human move (operator 2026-10-18, breakout_2 #a7 on 1b.265: "terminal stop null" was reported
+        // human_moved and the server held a trail nobody had touched). A Stop row whose trigger did not read (0 or 2+
+        // price cells: n_px / why from exec.js) is a REFUSED attempt — retried with backoff — never human_moved.
+        if (trig == null) {
+            val why = "stop trigger UNREAD on the sheet (price cells n=${stop.optInt("n_px", -1)} ${stop.optString("why")} shapes=${stop.optJSONArray("px_shapes") ?: ""})"
+            return bail(why, so)
+        }
         if (!close(trig, fromSl, pStep)) {
+            // 2026-10-18 (drill 2): the terminal already shows the ASKED level -- an earlier attempt's Confirm landed but
+            // its read-back missed (Confirm / Cancel close the whole sheet, measured). That is our own move, read back
+            // now: never a human hold on the level we asked for.
+            if (close(trig, sl, pStep)) {
+                cap(cap, cur, "stop_already_at_target", true, "terminal stop $trig == asked ${fmt(sl, pStep)} (expected from ${fmt(fromSl, pStep)})")
+                val c = sheetClose(cur, venue); ledger.append(aid, "amended")
+                amendResult(t, "amended", "the terminal already shows the asked stop ${fmt(sl, pStep)} (from ${fmt(fromSl, pStep)}): read back, nothing typed (sheet close: $c)", trig, null, so)
+                setStatus("amend $aid: SL already ${fmt(sl, pStep)} on the terminal"); return
+            }
+            cap(cap, cur, "human_moved", false, "terminal stop $trig != expected ${fmt(fromSl, pStep)}")
             val c = sheetClose(cur, venue)
             return amendHuman(t, "terminal stop $trig != expected ${fmt(fromSl, pStep)} (sheet close: $c)", so)
         }
-        // FIRST-RUN GATE (BREAKOUT-SL-AMEND-CLICK): the read path above runs live; the pencil sits next to the ⓧ that
-        // CANCELS the stop, and no capture has shown the live icons, so nothing is clicked until their dump is reviewed
-        if (!SHEET_EDIT_MEASURED) {
+        // THE GATE (BREAKOUT-SL-AMEND-CLICK -> PHONE-EXEC-OBSERVABLE-1018): the pencil sits next to the ⓧ that CANCELS the
+        // stop. Nothing past this line is clicked until the SERVER says so (claim config `sheet_edit`: the rehearsal drill
+        // passed 3x in a row on this phone, or the operator set it); the drill rehearses exactly these steps minus Confirm.
+        if (!sheetEdit) {
             sheetMiss("amend_sheet_unmeasured", d, so, force = true)
-            return bail("sheet read verified (side, volume, stop ${fmt(fromSl, pStep)} MEASURED); the pencil click is gated until its icon dump is reviewed", so)
+            return bail("sheet read verified (side, volume, stop ${fmt(fromSl, pStep)} MEASURED); the pencil click waits for the server's sheet_edit (drill passes)", so)
         }
         // 4. the Stop row's ONE pencil -> the ONE "Edit Stop loss" modal
         if (stop.optInt("pencils") != 1) return bail("stop row pencils n=${stop.optInt("pencils")}", so)
-        val e = js("__ex.sheetEditStop()")
-        if (e != "clicked") return bail("stop edit control: $e", so)
+        val e = pencilTap(cur)
+        if (!pencilOk(e)) return bail("stop edit control: $e", so)
         delay(1200); ensure()
-        suspend fun mbail(why: String, dump: JSONObject?) { val c = js("__ex.modalCancel()"); delay(600); bail("$why (modal cancel: $c)", dump) }
+        suspend fun mbail(why: String, dump: JSONObject?) { cap(cap, cur, "modal_refused", false, why); val c = js("__ex.modalCancel()"); delay(600); bail("$why (modal cancel: $c)", dump) }
+        cap(cap, cur, "pencil", true, e)
         val m0 = jsObj("__ex.modalInfo()") ?: return mbail("edit modal unanswered", so)
+        cap(cap, cur, "modal_open", m0.optInt("n") == 1 && m0.optString("kind") == "stop", "n=${m0.optInt("n")} kind=${m0.optString("kind")} triggers=${m0.optInt("triggers")}")
         if (m0.optInt("n") != 1 || m0.optString("kind") != "stop") return mbail("edit modal n=${m0.optInt("n")} kind=${m0.optString("kind")}", m0)
         val mq = m0.optDouble("qty", Double.NaN)
         if (m0.optString("side") != want || mq.isNaN() || abs(mq - sq) > max(1e-9, QTY_TOL_FRAC * sq)) return mbail("modal header ${m0.optString("side")} $mq != $want $sq", m0)
         if (m0.optInt("triggers") != 1) return mbail("modal Trigger inputs n=${m0.optInt("triggers")}", m0)
         val mt = num(jsObj("__ex.modalTrigger()")?.optString("value"))
+        if (mt == null) return mbail("modal trigger UNREAD (the Trigger input carried no number): not a human move", m0)
         if (!close(mt, fromSl, pStep)) { js("__ex.modalCancel()"); delay(600); val c = sheetClose(cur, venue); return amendHuman(t, "modal trigger $mt != expected ${fmt(fromSl, pStep)} (sheet close: $c)", m0) }
         fun qtyField(m: JSONObject?): String {
             val ins = m?.optJSONArray("inputs") ?: return "?"
@@ -1717,8 +1843,10 @@ class MainActivity : Activity() {
         val m1 = jsObj("__ex.modalInfo()")
         if (st?.optInt("n") != 1 || !close(tr, sl, pStep)) return mbail("trigger read-back $tr", m1)
         if (qtyField(m1) != q0) return mbail("modal quantity changed ($q0 -> ${qtyField(m1)})", m1)
+        cap(cap, cur, "trigger_set", true, "typed ${fmt(sl, pStep)} read $tr")
         if (!live) {
             val c = js("__ex.modalCancel()"); delay(600); val sc = sheetClose(cur, venue)
+            cap(cap, cur, "modal_cancel", true, "dry: cancel $c sheet $sc")
             ledger.append(aid, "dry_amended")
             amendResult(t, "dry_amended", "sheet: trigger typed + read back, NOT confirmed (server mode dry; cancel: $c, sheet close: $sc)", tr, null, m1)
             setStatus("DRY amend $aid read back on the sheet; not saved"); return
@@ -1727,26 +1855,317 @@ class MainActivity : Activity() {
         val cf = js("__ex.modalConfirm()")
         if (cf != "clicked") { ledger.append(aid, "refused"); return mbail("modal confirm control: $cf", m1) }
         delay(1500); ensure()
+        cap(cap, cur, "confirm", null, "live: confirm $cf")
         if ((jsObj("__ex.modalInfo()")?.optInt("n") ?: 0) > 0) {
             js("__ex.modalCancel()"); delay(600); val c = sheetClose(cur, venue); ledger.append(aid, "unconfirmed")
             return amendResult(t, "mismatch", "edit modal still open after Confirm (sheet close: $c)", null, null, jsObj("__ex.modalInfo()"))
         }
-        // 6. re-read the Stop row on the sheet
+        // 6. re-read the Stop row on the sheet -- re-opened first: Confirm closes the whole sheet, as Cancel does
+        //    (MEASURED 2026-10-18 drill 2, captures 014-modal_cancel / 015-stop_unchanged: trigger null, no sheet)
+        val ro = sheetEnsureOpen(venue, cap)
         cur.js("__ex.sheetTab('tpsl')"); delay(1000); ensure()
         val so2 = jsObj("__ex.sheetOrders()")
         val rs2 = so2?.optJSONArray("rows") ?: JSONArray()
         val stops2 = (0 until rs2.length()).map { rs2.optJSONObject(it) }.filter { it?.optString("type") == "stop" }
         val vSl = if (stops2.size == 1 && !stops2[0]!!.isNull("trigger")) stops2[0]!!.optDouble("trigger") else null
+        cap(cap, cur, "stop_reread", close(vSl, sl, pStep), "stop $vSl asked ${fmt(sl, pStep)} sheet $ro")
         val c = sheetClose(cur, venue)
         if (close(vSl, sl, pStep)) {
             ledger.append(aid, "amended")
-            amendResult(t, "amended", "confirmed and read back on the position sheet (sheet close: $c)", vSl, null, so2)
+            amendResult(t, "amended", "confirmed and read back on the position sheet (sheet $ro; close: $c)", vSl, null, so2)
             setStatus("LIVE amend $aid: SL ${fmt(sl, pStep)} read back")
         } else {
             ledger.append(aid, "unconfirmed")
-            amendResult(t, "mismatch", "after Confirm the sheet shows stop $vSl (asked ${fmt(sl, pStep)}; stops n=${stops2.size}; sheet close: $c)", vSl, null, so2)
+            amendResult(t, "mismatch", "after Confirm the sheet shows stop $vSl (asked ${fmt(sl, pStep)}; stops n=${stops2.size}; sheet $ro; close: $c)", vSl, null, so2)
             setStatus("amend $aid NOT VERIFIED — operator check")
         }
+    }
+
+    // ---------------- observable + testable (PHONE-EXEC-OBSERVABLE-1018) ----------------
+    /** One step capture on [p] (Capture.kt), quietly; a bitmap only while the terminal reads logged in and FLAG_SECURE is off
+     *  (never a credential screen). Never throws into the flow. */
+    private suspend fun cap(run: CaptureRun?, p: Page, step: String, ok: Boolean?, note: String = "", scope: String = "page") {
+        if (run == null) return
+        try {
+            val allow = lastState == "logged_in" && !(p === fg && secureOn) && p.web.width > 0
+            Capture.step(api, p, run, step, ok, note, allow, scope, appVersion())
+        } catch (e: Exception) { Capture.lastError = "cap:" + e.javaClass.simpleName }
+    }
+
+    /** The signed remote exec.js refresh, at most every RemoteJs.REFRESH_MS, on any tick path. */
+    private suspend fun refreshJs() {
+        val now = System.currentTimeMillis()
+        if (now - lastJsRefreshMs < RemoteJs.REFRESH_MS) return
+        lastJsRefreshMs = now
+        jsRefresh = try { RemoteJs.refresh(this, api) } catch (e: Exception) { "err:" + e.javaClass.simpleName }
+    }
+
+    /** Claim and run a REHEARSAL drill when the server has one waiting. True when one was claimed (run or not). */
+    private suspend fun tryDrill(cfg: JSONObject): Boolean {
+        val r = api.drillClaim() ?: return false
+        val d = r.optJSONObject("drill") ?: return false
+        claimedThisTick = true
+        drillsRun += 1
+        executeDrill(d, cfg)
+        return true
+    }
+
+    /** THE REHEARSAL DRILL (operator decision 2026-10-18): the full stop-amend flow on a REAL open position up to the final
+     *  Confirm -- Positions tab, row target + native touch, the sheet, [Position details], [n TP / n SL], the Stop row, its
+     *  pencil, the "Edit Stop loss" modal, ONLY the Trigger typed and read back -- then the modal is CANCELLED, the Stop row is
+     *  re-read unchanged and the sheet is closed. Pass/fail per step, a capture at each step, the result posted to the VM.
+     *  NEVER modalConfirm, never a close/cancel-order control (the denylist refuses them), no ledger entry, no order change.
+     *  Server-driven: the drill carries the position the server expects (symbol, direction, qty, its resting stop) when it
+     *  has one; without it the one open position on the sheet is rehearsed as read.
+     *
+     *  A DRILL WITH A TEST TRADE (operator grant MD-EXEC-DEV-TEST-TRADES, 2026-10-18; server `test_trade.confirm`): the
+     *  drill first claims and places ITS OWN minimum-size ticket (the server wrote it at claim, bounds checked), then runs
+     *  the same flow and, on that position only, presses the final Confirm, reads the new stop back, and CLOSES the position
+     *  through the sheet's "Close position" (armed for this symbol for one click; every other close stays refused). The
+     *  outcome (placed / amended stop / closed / exit) rides the result; a position left open is reported, never hidden. */
+    /** One drill's state, shared by its three halves (prepare / stop flow / finish) so no single suspend method grows past
+     *  the JVM's 64 KB method limit (the state machine of one monolithic executeDrill did, 2026-10-18). */
+    private inner class Drill(val did: String, val run: CaptureRun, d: JSONObject) {
+        val steps = JSONArray(); var pass = true
+        var sheetOpened = false; var modalOpened = false
+        var venue = d.optString("venue_symbol")
+        val want = d.optString("direction").lowercase()
+        val wantQty = d.optDouble("qty", Double.NaN)
+        val restingSl = d.optDouble("resting_sl", Double.NaN)
+        var pStep = d.optDouble("price_step", Double.NaN)
+        // the test trade (MD-EXEC-DEV-TEST-TRADES): only when the SERVER says so, on the drill's own ticket
+        val tt: JSONObject? = d.optJSONObject("test_trade")
+        val ttId = tt?.optString("ticket_id").orEmpty()
+        val ttConfirm = tt != null && tt.optBoolean("confirm") && ttId.isNotEmpty()
+        var ttPlaced = false; var ttClosed = false; var ttAmendedSl: Double? = null; var ttEntry: Double? = null
+        val baseSym = venue.uppercase().removeSuffix("USDT").removeSuffix("USD")
+        // the sheet's details, read in the prepare half and used by the stop flow
+        var side = ""; var mark_ = Double.NaN
+        suspend fun mark(step: String, ok: Boolean?, why: String = ""): Boolean {
+            steps.put(JSONObject().put("step", step).put("ok", ok ?: JSONObject.NULL).put("why", why.take(160)))
+            if (ok == false) pass = false
+            cap(run, cur, step, ok, why)
+            setStatus("drill $did: $step ${if (ok == null) "" else if (ok) "ok" else "FAIL"} $why".take(160))
+            return ok != false
+        }
+    }
+
+    private suspend fun executeDrill(d: JSONObject, cfg: JSONObject) {
+        val did = d.optString("id").ifEmpty { "drill" }
+        val x = Drill(did, CaptureRun("drill", did), d)
+        drillLast = "$did running"
+        try {
+            if (drillPrepare(x, d, cfg)) drillStopFlow(x)
+        } catch (e: JsTimeout) {
+            x.mark("js_timeout", false, "page stopped answering")
+        } finally {
+            drillFinish(x)
+        }
+    }
+
+    /** Terminal, (the test entry), Positions, the sheet and its [Position details]. True when the stop flow may run. */
+    private suspend fun drillPrepare(x: Drill, d: JSONObject, cfg: JSONObject): Boolean {
+        val tm = jsObj("__ex.terminal()")
+        if (!x.mark("terminal", tm?.optBoolean("ready") == true && tm.optBoolean("ticketOpen") != true, "ready=${tm?.optBoolean("ready")} ticketOpen=${tm?.optBoolean("ticketOpen")}")) return false
+        val m0 = dismissModal(cur)
+        if (m0.endsWith("still_open")) { x.mark("modal_pre", false, m0); return false }
+        if (x.ttConfirm) {
+            // 0. THE TEST ENTRY: claim and place the drill's own ticket exactly as any entry (a strategy ticket that
+            //    happens to be waiting is executed first, never dropped: a claim is one attempt)
+            val got = drillClaimTestTicket(x.ttId, cfg)
+            if (!x.mark("test_ticket_claim", got != null, if (got != null) "served" else "test ticket not served by the claim")) return false
+            x.ttPlaced = ledger.last(x.ttId) == "placed"
+            x.ttEntry = got!!.optDouble("entry", Double.NaN).takeIf { !it.isNaN() }
+            if (!x.mark("test_entry_placed", x.ttPlaced, "ledger ${ledger.last(x.ttId)}")) return false
+            delay(2500); ensure()
+        }
+        js("__ex.clickText('^positions$')"); delay(1500); ensure()
+        val pr = jsObj("__ex.positionsRead()")
+        val rows = pr?.optJSONArray("rows") ?: JSONArray()
+        val prOk = pr?.optString("state") in listOf("read", "side_unread") && rows.length() >= 1
+        if (!x.mark("positions_read", prOk, "state=${pr?.optString("state")} rows=${rows.length()}")) return false
+        if (x.venue.isEmpty()) {
+            if (rows.length() != 1) { x.mark("position_pick", false, "no symbol from the server and ${rows.length()} rows"); return false }
+            x.venue = rows.optJSONObject(0)?.optString("symbol") ?: ""
+            if (x.venue.isEmpty()) { x.mark("position_pick", false, "row without a symbol"); return false }
+        }
+        if (x.pStep.isNaN()) x.pStep = cfg.optJSONObject("instruments")?.optJSONObject(d.optString("symbol").uppercase())?.optDouble("price_step", Double.NaN) ?: Double.NaN
+        if (x.pStep.isNaN()) x.pStep = 0.01
+        // the sheet + [Position details] (sheetRead records target / tap / open / details captures on `run`)
+        val sd = sheetRead(cur, x.venue, x.run)
+        if (!x.mark("sheet", sd.optBoolean("ok"), if (sd.optBoolean("ok")) "opened_by ${sd.optString("opened_by")}" else "${sd.optString("why")} ${sd.optJSONArray("tries") ?: ""}")) return false
+        x.sheetOpened = true
+        x.side = sd.optString("side"); val sq = sd.optDouble("qty", Double.NaN); x.mark_ = sd.optDouble("mark", Double.NaN)
+        val sideOk = x.want.isEmpty() || x.side == x.want
+        val qtyOk = x.wantQty.isNaN() || sq.isNaN() || abs(sq - x.wantQty) <= max(1e-9, QTY_TOL_FRAC * x.wantQty)
+        return x.mark("details_match", sideOk && qtyOk, "side ${x.side}${if (x.want.isNotEmpty()) " want ${x.want}" else ""} qty $sq${if (!x.wantQty.isNaN()) " want ${x.wantQty}" else ""}")
+    }
+
+    /** [n TP / n SL], the Stop row, its pencil, the "Edit Stop loss" modal, ONLY the Trigger typed and read back; then
+     *  CANCEL (a rehearsal: the stop is re-read unchanged) or, on the drill's own test position only, the final Confirm,
+     *  the read-back and the close. */
+    private suspend fun drillStopFlow(x: Drill) {
+        val pStep = x.pStep; val venue = x.venue
+        cur.js("__ex.sheetTab('tpsl')"); delay(800); ensure()
+        val so = jsObj("__ex.sheetOrders()")
+        val rs = so?.optJSONArray("rows") ?: JSONArray()
+        val stop = (0 until rs.length()).map { rs.optJSONObject(it) }.firstOrNull { it?.optString("type") == "stop" }
+        val trig = if (stop == null || stop.isNull("trigger")) null else stop.optDouble("trigger")
+        if (!x.mark("stop_row", so?.optInt("n_stop") == 1 && trig != null, "stops n=${so?.optInt("n_stop")} trigger $trig pencils ${stop?.optInt("pencils")}")) return
+        // informational: does the terminal's stop agree with the server's resting stop? (a human-moved stop is not a
+        // mechanics failure; ok=null records it without failing the drill)
+        if (!x.restingSl.isNaN()) x.mark("stop_matches_server", if (close(trig, x.restingSl, pStep)) true else null, "terminal $trig server ${fmt(x.restingSl, pStep)}")
+        if (!x.mark("pencil_unique", stop!!.optInt("pencils") == 1, "pencils=${stop.optInt("pencils")} icons=${stop.optJSONArray("icon_lines")?.toString()?.take(100)}")) return
+        val e = pencilTap(cur)
+        if (!x.mark("pencil", pencilOk(e), e)) return
+        delay(1200); ensure()
+        x.modalOpened = true
+        val mi = jsObj("__ex.modalInfo()")
+        val mOk = mi?.optInt("n") == 1 && mi.optString("kind") == "stop" && mi.optInt("triggers") == 1
+        if (!x.mark("modal_open", mOk, "n=${mi?.optInt("n")} kind=${mi?.optString("kind")} triggers=${mi?.optInt("triggers")} side=${mi?.optString("side")} qty=${mi?.optDouble("qty")}")) return
+        val mt = num(jsObj("__ex.modalTrigger()")?.optString("value"))
+        x.mark("modal_trigger_matches_row", if (close(mt, trig!!, pStep)) true else null, "modal $mt row $trig")
+        fun qtyField(m: JSONObject?): String {
+            val ins = m?.optJSONArray("inputs") ?: return "?"
+            return (0 until ins.length()).map { ins.optJSONObject(it) }.filter { Regex("(?i)quantity|\\bqty\\b|size").containsMatchIn(it?.optString("label") ?: "") }.map { it!!.optString("value") }.joinToString("|")
+        }
+        val q0 = qtyField(mi)
+        // the rehearsal value: the stop tightened by two steps when that stays clear of the current price, else the
+        // same value (typing + read-back are the mechanics; a rehearsal never confirms)
+        val long = (if (x.want.isNotEmpty()) x.want else x.side) == "long"
+        var drillSl = if (long) trig + 2 * pStep else trig - 2 * pStep
+        val buf = if (x.mark_.isNaN()) Double.NaN else max(2 * pStep, x.mark_ * PRICE_BUF_FRAC)
+        if (buf.isNaN() || (if (long) drillSl > x.mark_ - buf else drillSl < x.mark_ + buf)) drillSl = trig
+        val st = jsObj("__ex.modalSetTrigger(${q(fmt(drillSl, pStep))})")
+        delay(400)
+        val tr = num(jsObj("__ex.modalTrigger()")?.optString("value"))
+        val m1 = jsObj("__ex.modalInfo()")
+        if (!x.mark("trigger_set", st?.optInt("n") == 1 && close(tr, drillSl, pStep), "typed ${fmt(drillSl, pStep)} read $tr")) return
+        if (!x.mark("qty_unchanged", qtyField(m1) == q0, "$q0 -> ${qtyField(m1)}")) return
+        if (x.ttConfirm) {
+            // THE FINAL CONFIRM, on the drill's own test position only (server test_trade.confirm); then the stop is
+            // read back off the sheet and the position is CLOSED
+            val cfm = drillConfirmStop(venue, x.run)
+            x.modalOpened = cfm.optInt("left") != 0
+            if (!x.mark("modal_confirm", cfm.optString("confirm") == "clicked" && cfm.optInt("left") == 0, "confirm ${cfm.optString("confirm")} modals left ${cfm.optInt("left")}")) return
+            val trig3 = if (cfm.isNull("trigger")) null else cfm.optDouble("trigger")
+            x.ttAmendedSl = trig3
+            if (!x.mark("stop_reread", close(trig3, drillSl, pStep), "asked ${fmt(drillSl, pStep)} read $trig3 sheet ${cfm.optString("sheet")}")) return
+            val cl = drillCloseTest(venue, x.baseSym, x.run)
+            x.ttClosed = cl == "closed"
+            x.sheetOpened = jsObj("__ex.sheetInfo(${q(venue)})")?.optBoolean("open") == true
+            if (!x.mark("position_closed", x.ttClosed, cl)) return
+            val cr = jsObj("__ex.closedRead()")
+            x.mark("closed_read", null, "state=${cr?.optString("state")} rows=${cr?.optJSONArray("rows")?.length() ?: 0}")
+            x.mark("sheet_close", !x.sheetOpened, if (x.sheetOpened) "still_open" else "closed")
+            return
+        }
+        // UP TO the final Confirm: here the rehearsal turns back
+        val c = js("__ex.modalCancel()"); delay(700); ensure()
+        val left = jsObj("__ex.modalInfo()")?.optInt("n") ?: -1
+        x.modalOpened = left != 0
+        if (!x.mark("modal_cancel", c == "clicked" && left == 0, "cancel $c modals left $left")) return
+        // MEASURED 2026-10-18 drill 2 (19:00Z): Cancel closed the WHOLE position sheet, not just the modal, and the
+        // re-read found no sheet (trigger null). The sheet is re-opened first (recorded, never a failure by itself).
+        val ro = sheetEnsureOpen(venue, x.run)
+        x.mark("sheet_after_cancel", if (ro == "open") true else null, ro)
+        cur.js("__ex.sheetTab('tpsl')"); delay(800); ensure()
+        val so2 = jsObj("__ex.sheetOrders()")
+        val rs2 = so2?.optJSONArray("rows") ?: JSONArray()
+        val stop2 = (0 until rs2.length()).map { rs2.optJSONObject(it) }.firstOrNull { it?.optString("type") == "stop" }
+        val trig2 = if (stop2 == null || stop2.isNull("trigger")) null else stop2.optDouble("trigger")
+        if (!x.mark("stop_unchanged", close(trig2, trig, pStep), "before $trig after $trig2 sheet $ro${if (so2?.has("why") == true) " " + so2.optString("why") else ""}")) return
+        val sc = sheetClose(cur, venue)
+        x.sheetOpened = sc.startsWith("still_open")
+        x.mark("sheet_close", !x.sheetOpened, sc)
+    }
+
+    /** Leave the terminal as found (no modal, no sheet; a TEST position still open gets ONE more close attempt and is
+     *  reported either way), post the result, record the outcome. */
+    private suspend fun drillFinish(x: Drill) {
+        try { if (x.modalOpened) { js("__ex.modalCancel()"); delay(600) } } catch (e: Exception) { }
+        if (x.ttConfirm && x.ttPlaced && !x.ttClosed) {
+            try { val cl2 = drillCloseTest(x.venue, x.baseSym, x.run); x.ttClosed = cl2 == "closed"; x.mark("position_closed_retry", x.ttClosed, cl2) } catch (e: Exception) { }
+        }
+        try { if (x.sheetOpened || jsObj("__ex.sheetInfo(${q(x.venue)})")?.optBoolean("open") == true) sheetClose(cur, x.venue) } catch (e: Exception) { }
+        drillLast = "${x.did} ${if (x.pass) "PASS" else "FAIL"}"
+        val body = JSONObject().put("drill_id", x.did).put("run_id", x.run.id).put("pass", x.pass).put("steps", x.steps)
+            .put("captures", x.run.posted).put("app_version", appVersion()).put("exec_js", ExecJs.version)
+        if (x.tt != null) body.put("test_trade", JSONObject().put("ticket_id", x.ttId).put("placed", x.ttPlaced).put("closed", x.ttClosed)
+            .put("amended_sl", x.ttAmendedSl ?: JSONObject.NULL).put("entry_price", x.ttEntry ?: JSONObject.NULL))
+        api.drillResult(body)
+        api.event("drill", "${x.did} ${if (x.pass) "PASS" else "FAIL"} (${x.steps.length()} steps, ${x.run.posted} captures)", x.did)
+        setStatus("drill ${x.did} ${if (x.pass) "PASS" else "FAIL"}; captures ${x.run.posted}")
+    }
+
+    /** The test entry (MD-EXEC-DEV-TEST-TRADES): claim until the drill's own ticket is served (at most 3 claims), executing
+     *  whatever ticket the claim returns -- a strategy ticket that happens to wait is placed first, never dropped. Returns
+     *  the test ticket, or null when the claim never served it. */
+    private suspend fun drillClaimTestTicket(ttId: String, cfg: JSONObject): JSONObject? {
+        for (i in 0 until 3) {
+            val cr = api.post("claim", JSONObject().put("accepts", JSONArray())) ?: return null
+            val t = cr.optJSONObject("ticket") ?: return null
+            execute(t, cr.optJSONObject("config") ?: cfg)
+            if (t.optString("ticket_id") == ttId) return t
+        }
+        return null
+    }
+
+    /** The final Confirm of the Edit Stop loss modal (test position only), then the Stop row re-read off [n TP / n SL].
+     *  {confirm: clicked|…, left: modals still open, trigger: the stop read back or null} */
+    private suspend fun drillConfirmStop(venue: String, run: CaptureRun): JSONObject {
+        val cf = js("__ex.modalConfirm()"); delay(1500); ensure()
+        val left = jsObj("__ex.modalInfo()")?.optInt("n") ?: -1
+        val ro = sheetEnsureOpen(venue, run)   // Confirm closes the sheet as Cancel does (drill 2): re-open before the read
+        cur.js("__ex.sheetTab('tpsl')"); delay(1000); ensure()
+        val so = jsObj("__ex.sheetOrders()")
+        val rs = so?.optJSONArray("rows") ?: JSONArray()
+        val stop = (0 until rs.length()).map { rs.optJSONObject(it) }.firstOrNull { it?.optString("type") == "stop" }
+        val trig = if (stop == null || stop.isNull("trigger")) null else stop.optDouble("trigger")
+        return JSONObject().put("confirm", cf).put("left", left).put("trigger", trig ?: JSONObject.NULL).put("sheet", ro)
+    }
+
+    /** The position sheet, re-opened when the terminal closed it. MEASURED 2026-10-18 drill 2 (19:00Z, captures
+     *  014-modal_cancel / 015-stop_unchanged): the edit modal's Cancel closed the WHOLE sheet, not just the modal, so the
+     *  stop re-read found no sheet and returned null (and the live amend's read-back after Confirm reads the same way).
+     *  Every Stop-row re-read after a modal goes through here first: "open" when the sheet is still there, "reopened <by>"
+     *  after the same native touch the first open used (captures on [run]), else "not_open <why>" -- nothing is read off
+     *  a closed sheet. */
+    private suspend fun sheetEnsureOpen(venue: String, run: CaptureRun?): String {
+        if (jsObj("__ex.sheetInfo(${q(venue)})")?.optBoolean("open") == true) return "open"
+        val sd = sheetRead(cur, venue, run)
+        return if (sd.optBoolean("ok")) "reopened ${sd.optString("opened_by")}" else "not_open ${sd.optString("why")}"
+    }
+
+    /** The ONE deliberate close, on the test position only: the open sheet's "Close position" (armed for this symbol for
+     *  one click), its confirmation dialog, then Positions re-read until no row for the symbol remains.
+     *  closed | still_open | sheet_not_open … | close_button <why> */
+    private suspend fun drillCloseTest(venue: String, baseSym: String, run: CaptureRun): String {
+        if (jsObj("__ex.sheetInfo(${q(venue)})")?.optBoolean("open") != true) {
+            val sd = sheetRead(cur, venue, run)
+            if (!sd.optBoolean("ok")) return "sheet_not_open ${sd.optString("why")}"
+        }
+        cur.js("__ex.sheetTab('details')"); delay(600); ensure()
+        js("__ex.allowClose(${q(venue)})")
+        val r1 = js("__ex.sheetClosePosition(${q(venue)})")
+        if (r1 != "clicked") return "close_button $r1"
+        delay(1200); ensure()
+        jsObj("__ex.dialog()")?.let { dg ->
+            val dc = js("__ex.dialogClick('confirm|close|yes|ok')"); delay(1500); ensure()
+            cap(run, cur, "close_dialog", null, "$dc ${dg.optString("text").take(60)}")
+        }
+        for (i in 0 until 3) {
+            delay(1500); ensure()
+            js("__ex.clickText('^positions$')"); delay(1200); ensure()
+            val p2 = jsObj("__ex.positionsRead()")
+            val rs = p2?.optJSONArray("rows") ?: JSONArray()
+            val still = (0 until rs.length()).any { k ->
+                val s = rs.optJSONObject(k)?.optString("symbol")?.uppercase() ?: ""
+                s.isNotEmpty() && (s.contains(venue.uppercase()) || (baseSym.isNotEmpty() && s.contains(baseSym)))
+            }
+            if (p2?.optString("state") == "read" && !still) return "closed"
+        }
+        return "still_open"
     }
 
     private suspend fun dlgField(f: Field): JSONObject? = jsObj("__ex.dlgRead(${q(f.re)}, ${q(f.prefer)})")
@@ -1784,6 +2203,8 @@ class MainActivity : Activity() {
     private suspend fun amendResult(t: JSONObject, result: String, why: String, slRead: Double?, tpRead: Double?, dump: JSONObject?) {
         val b = JSONObject().put("kind", "amend_result").put("ticket_id", t.optString("ticket_id"))
             .put("amend_id", t.optString("amend_id")).put("result", result).put("reason", why).put("form", dump ?: JSONObject())
+            // PHONE-EXEC-OBSERVABLE-1018: the capture run that recorded this amend's steps (the refusal alert links it)
+            .put("capture_run", curAmendCap?.takeIf { it.posted > 0 }?.id ?: "")
         if (slRead != null) b.put("sl_read", slRead)
         if (tpRead != null) b.put("tp_read", tpRead)
         api.post("report", b)
@@ -1849,8 +2270,9 @@ class MainActivity : Activity() {
         return close(num(readField(f)?.optString("value")), want, step)
     }
 
-    private suspend fun refuse(id: String, why: String, dump: JSONObject?) {
+    private suspend fun refuse(id: String, why: String, dump: JSONObject?, cap: CaptureRun? = null) {
         ledger.append(id, "refused")
+        cap(cap, cur, "refused", false, why)
         report(id, "refused", why, dump)
         api.event("refusal", engTag() + why, id)
         try { js("(function(){var t=__ex.ticket();t.inputs.forEach(function(i){if(/quantity/i.test(i.label))__ex.setInput(i.k,'')});return 'ok'})()") } catch (_: Exception) {}

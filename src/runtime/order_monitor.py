@@ -2912,6 +2912,41 @@ _RESET_SUSPECT_FLAGGED: set = set()
 # finalizes early).
 _PENDING_WATCHDOG_FLAT_CONFIRM: Dict[int, datetime] = {}
 
+# What the forward reconciler last concluded about each OPEN trade it walked
+# (keyed by trades.id): a short verdict such as ``order_read_failed``,
+# ``order_live:new``, ``flat_pending_confirm`` or ``close_write_failed:<exc>``.
+# Read ONLY by :func:`_watchdog_stuck_strategies` when it finalises a trade the
+# reconciler should have closed first, so that close carries the reason the
+# reconciler did not (WATCHDOG-CLOSE-RECURRENCE). Bybit trades 6528 and 6549
+# (bybit_2) were finalised by the watchdog ~2.4 min after their own venue stop
+# filled, and by the time anyone looked the trader journal had rotated past
+# them, so why the reconciler (which runs EARLIER in the same tick, with the
+# same flat confirm) did not close them first could not be recovered.
+# Bookkeeping only: nothing branches on it. In-process; a restart starts empty
+# and the watchdog then records ``not_seen_this_process``.
+_RECONCILER_LAST_SEEN: Dict[int, str] = {}
+_RECONCILER_LAST_SEEN_CAP = 5000
+
+
+def _note_reconciler_seen(trade_id: Any, verdict: str) -> None:
+    """Record the forward reconciler's last verdict for an open trade. Never
+    raises; bounded so a long-lived process cannot grow it without limit."""
+    try:
+        tid = int(trade_id)
+    except (TypeError, ValueError):
+        return
+    if (tid not in _RECONCILER_LAST_SEEN
+            and len(_RECONCILER_LAST_SEEN) >= _RECONCILER_LAST_SEEN_CAP):
+        _RECONCILER_LAST_SEEN.pop(next(iter(_RECONCILER_LAST_SEEN)), None)
+    _RECONCILER_LAST_SEEN[tid] = str(verdict)[:60]
+
+
+def _reconciler_last_seen(trade_id: Any) -> str:
+    try:
+        return _RECONCILER_LAST_SEEN.get(int(trade_id), "not_seen_this_process")
+    except (TypeError, ValueError):
+        return "not_seen_this_process"
+
 # Per-tick set of ``(account_id, symbol)`` the monitor ATTEMPTED an active close
 # on this tick (BL-20260708-ALPACA-REARM-VS-CLOSE-FIGHT). Cleared at the top of
 # every ``run_monitor_tick``, populated in ``_apply_update`` just before the
@@ -5709,6 +5744,7 @@ def _reconcile_open_trades(db) -> Dict[str, int]:
             and (now - created).total_seconds() < grace_seconds
         ):
             summary["skipped_recent"] += 1
+            _note_reconciler_seen(r["id"], "grace_window")
             continue
         ripe_rows.append(r)
 
@@ -5737,9 +5773,13 @@ def _reconcile_open_trades(db) -> Dict[str, int]:
         cfg = cfgs.get(aid)
         if cfg is None:
             summary["skipped_no_cfg"] += len(trade_rows)
+            for _r in trade_rows:
+                _note_reconciler_seen(_r.get("id"), "account_no_cfg")
             continue
         if str(cfg.get("mode") or "live").lower() in {"dry", "dry_run", "dry-run", "paper"}:
             summary["skipped_dry"] += len(trade_rows)
+            for _r in trade_rows:
+                _note_reconciler_seen(_r.get("id"), "account_dry")
             continue
 
         # Lazy positions cross-check cache: at most ONE call to
@@ -5759,12 +5799,14 @@ def _reconcile_open_trades(db) -> Dict[str, int]:
                 # which also rejected Bybit V5 UUID-format orderIds
                 # and silently turned this reconciler into a no-op
                 # for every linear-perp account; see _is_real_order_id.
+                _note_reconciler_seen(row.get("id"), "non_order_id")
                 summary["skipped_non_numeric"] += 1
                 continue
 
             order_status = account_order_status(cfg, trade_id_str)
             if order_status is None:
                 # Read failure → skip conservatively.
+                _note_reconciler_seen(row.get("id"), "order_read_failed")
                 summary["skipped_no_creds"] += 1
                 continue
 
@@ -5773,6 +5815,7 @@ def _reconcile_open_trades(db) -> Dict[str, int]:
 
             if status_str in _BYBIT_LIVE_ORDER_STATUSES:
                 # Order still live on Bybit — leave the DB row alone.
+                _note_reconciler_seen(row.get("id"), f"order_live:{status_str}")
                 continue
 
             # Order is in a terminal state OR genuinely unknown.
@@ -5805,11 +5848,13 @@ def _reconcile_open_trades(db) -> Dict[str, int]:
                         )
                     if positions_cache is None:
                         # Could not look → never orphan on a half-known view.
+                        _note_reconciler_seen(row.get("id"), "not_found_positions_unreadable")
                         summary["skipped_no_creds"] += 1
                         continue
                     if row.get("symbol") in unreadable_syms:
                         # FIX-CA-08: absent on an unreadable symbol is not
                         # "position absent" — no orphan, no confirm armed.
+                        _note_reconciler_seen(row.get("id"), "not_found_symbol_unreadable")
                         summary["skipped_no_creds"] += 1
                         continue
                     _nf_tid = row.get("id")
@@ -5823,15 +5868,18 @@ def _reconcile_open_trades(db) -> Dict[str, int]:
                             "%s %s OPEN", trade_id_str, _nf_tid, aid,
                             row.get("symbol"), _nf_side,
                         )
+                        _note_reconciler_seen(row.get("id"), "not_found_position_alive")
                         continue
                     if _nf_tid is not None:
                         _nf_first = _PENDING_CLOSE_CONFIRM.get(int(_nf_tid))
                         if _nf_first is None:
                             _PENDING_CLOSE_CONFIRM[int(_nf_tid)] = now
+                            _note_reconciler_seen(row.get("id"), "not_found_pending_confirm")
                             summary["pending_close"] += 1
                             continue
                         if ((now - _nf_first).total_seconds()
                                 < _close_confirm_seconds()):
+                            _note_reconciler_seen(row.get("id"), "not_found_pending_confirm")
                             summary["pending_close"] += 1
                             continue
                         _PENDING_CLOSE_CONFIRM.pop(int(_nf_tid), None)
@@ -5884,6 +5932,7 @@ def _reconcile_open_trades(db) -> Dict[str, int]:
             if positions_cache is None:
                 # Position-read failed → skip conservatively (don't
                 # close on a half-known view).
+                _note_reconciler_seen(row.get("id"), "positions_read_failed")
                 summary["skipped_no_creds"] += 1
                 continue
 
@@ -5891,6 +5940,7 @@ def _reconcile_open_trades(db) -> Dict[str, int]:
             if sym in unreadable_syms:
                 # FIX-CA-08: this symbol's read failed — absent is not flat.
                 # Skip: no close, and no close-confirm armed on it.
+                _note_reconciler_seen(row.get("id"), "symbol_unreadable")
                 summary["skipped_no_creds"] += 1
                 continue
             side = str(row["direction"] or "").lower()
@@ -5904,6 +5954,7 @@ def _reconcile_open_trades(db) -> Dict[str, int]:
                 # reconciler half — only a flat that PERSISTS closes a trade.
                 if _tid is not None:
                     _PENDING_CLOSE_CONFIRM.pop(int(_tid), None)
+                _note_reconciler_seen(row.get("id"), "position_alive")
                 continue
 
             # Order filled, position flat → trade closed by exchange
@@ -5924,11 +5975,13 @@ def _reconcile_open_trades(db) -> Dict[str, int]:
                     # First net-flat observation — arm the confirmation and
                     # wait for the next tick to confirm.
                     _PENDING_CLOSE_CONFIRM[_tid_int] = now
+                    _note_reconciler_seen(row.get("id"), "flat_pending_confirm")
                     summary["pending_close"] += 1
                     continue
                 if (now - _first_flat).total_seconds() < _close_confirm_seconds():
                     # Seen flat before but the confirm window hasn't elapsed
                     # yet — keep waiting (still might recover to open).
+                    _note_reconciler_seen(row.get("id"), "flat_pending_confirm")
                     summary["pending_close"] += 1
                     continue
                 # Flat confirmed across the window → close, clear the pending.
@@ -5947,6 +6000,7 @@ def _reconcile_open_trades(db) -> Dict[str, int]:
                     "trade_id=%s account=%s symbol=%s: %s",
                     row.get("id"), aid, sym, exc,
                 )
+                _note_reconciler_seen(row.get("id"), f"close_write_failed:{type(exc).__name__}")
                 summary["errors"] += 1
                 continue
 
@@ -7194,6 +7248,13 @@ def _watchdog_stuck_strategies(db) -> Dict[str, int]:
                     db, trade_row, cfg, now_iso,
                 )
                 if recovered is not None:
+                    try:
+                        _rnotes = _decode_notes(recovered.get("notes"))
+                        _rnotes["reconciler_last"] = _reconciler_last_seen(
+                            trade_row["id"])
+                        recovered["notes"] = dump_capped(_rnotes, 500)
+                    except Exception:  # noqa: BLE001 — a stamp never blocks the close
+                        pass
                     db.update_trade(int(trade_row["id"]), recovered)
                     # CA-A01-001: flat-finalise → cancel THIS trade's own
                     # resting protection (keyed group / tracked legs).
@@ -7211,9 +7272,10 @@ def _watchdog_stuck_strategies(db) -> Dict[str, int]:
                         "_watchdog_stuck_strategies: RECOVERED close via "
                         "broker closed-pnl instead of orphaning — trade_id=%s "
                         "account=%s symbol=%s side=%s pnl=%s (position flat at "
-                        "exchange; Bybit closed-pnl confirmed a real close)",
+                        "exchange; Bybit closed-pnl confirmed a real close; "
+                        "reconciler_last=%s)",
                         trade_row["id"], aid, symbol, direction,
-                        recovered.get("pnl"),
+                        recovered.get("pnl"), _reconciler_last_seen(trade_row["id"]),
                     )
                 else:
                     # Position CONFIRMED FLAT at the exchange + package stuck >
@@ -7253,6 +7315,8 @@ def _watchdog_stuck_strategies(db) -> Dict[str, int]:
                             f"account); package stuck > {int(threshold_minutes)} "
                             "min; finalized closed with local-compute pnl"
                         ),
+                        # Why the forward reconciler had not closed it first.
+                        "reconciler_last": _reconciler_last_seen(trade_row["id"]),
                     })
                     # package-cascade: HANDLED, not missing. The package was
                     # already force-closed ABOVE on this same branch
@@ -7280,8 +7344,9 @@ def _watchdog_stuck_strategies(db) -> Dict[str, int]:
                         "account=%s symbol=%s side=%s (position flat at exchange; "
                         "broker closed-pnl unmatched — expected per-leg on a "
                         "netting account; _sweep_local_pnl_for_unpriced prices it "
-                        "next tick)",
+                        "next tick; reconciler_last=%s)",
                         trade_row["id"], aid, symbol, direction,
+                        _reconciler_last_seen(trade_row["id"]),
                     )
         except Exception as exc:  # noqa: BLE001
             logger.warning(
@@ -14319,7 +14384,7 @@ def _sweep_local_pnl_for_unpriced(db) -> Dict[str, int]:
             contract_value_usd_for,
         )
         from src.runtime.exit_anchor import ANCHOR_SOURCE, AnchorBudget, bar_close_at
-        from src.runtime.fills_pnl import FILL_EXIT_SOURCE
+        from src.runtime.fills_pnl import FILL_EXIT_SOURCE, exit_from_one_order_fills
         from src.runtime.provenance import UNMEASURED_MARKER
         from src.units.accounts.clients import account_has_broker_pnl_reader
     except Exception as exc:  # noqa: BLE001
@@ -14409,6 +14474,39 @@ def _sweep_local_pnl_for_unpriced(db) -> Dict[str, int]:
             # not where THIS order filled.
             exit_price = _safe_float(row.get("exit_price"))
             exit_source = "recorded_exit_price"
+            own_fill: Optional[Dict[str, Any]] = None
+            if (not exit_price or exit_price <= 0) and row.get("closed_at"):
+                # SOAK-MECH-B / PI-20261010-RNCT2YDP-0001: before the candle,
+                # the ONE venue order that closed this row. The broker sweep's
+                # cumulative fills read refuses on a netted position (a
+                # sibling's fills overshoot the qty), which is how bybit_1 6171
+                # was booked at the 1.5399 candle with its 1.5428 fill on disk.
+                # Bounded by the close (+60 s skew), never open-ended.
+                _open_ms = _isoformat_to_ms(row.get("created_at"))
+                _close_ms = _isoformat_to_ms(row.get("closed_at"))
+                if _open_ms is not None and _close_ms is not None:
+                    _own_ids: tuple = ()
+                    try:
+                        _c = db.connect()
+                        try:
+                            _r = _c.execute(
+                                "SELECT sl_order_id, tp_order_id FROM trades "
+                                " WHERE id = ?", (int(row["id"]),)).fetchone()
+                        finally:
+                            _c.close()
+                        _own_ids = tuple(_r) if _r else ()
+                    except Exception:  # noqa: BLE001 — no leg ids: qty match only
+                        _own_ids = ()
+                    own_fill = exit_from_one_order_fills(
+                        account_id=str(aid or ""), symbol=symbol,
+                        direction=str(row.get("direction") or ""),
+                        opened_at_ms=_open_ms, closed_at_ms=_close_ms + 60_000,
+                        qty=qty,
+                        own_order_ids=_own_ids,
+                    )
+                if own_fill:
+                    exit_price = _safe_float(own_fill.get("avg_exit_price"))
+                    exit_source = FILL_EXIT_SOURCE
             if not exit_price or exit_price <= 0:
                 anchored, anchor_status = bar_close_at(
                     symbol, row.get("closed_at"), budget=anchor_budget,
@@ -14463,6 +14561,13 @@ def _sweep_local_pnl_for_unpriced(db) -> Dict[str, int]:
 
             notes = _decode_notes(row.get("notes"))
             updates_exit_reason: Optional[str] = None
+            if own_fill:
+                notes["close_fees_usd"] = own_fill.get("fees") or 0.0
+                # Detail only: unprotected, so the 500-char cap may shed it;
+                # exit_price_source (protected) is what consumers grade.
+                notes["exit_fill"] = {"order_id": own_fill.get("order_id"),
+                                      "match": own_fill.get("match")}
+                notes["exit_price_source"] = FILL_EXIT_SOURCE
             # Net out the close-side fees when the exit came from real fills
             # that recorded them (stamped at close by the fills resolver). This
             # arithmetic was fee-BLIND, and that is a CORRECTNESS bug, not a
@@ -14501,7 +14606,7 @@ def _sweep_local_pnl_for_unpriced(db) -> Dict[str, int]:
             # branch did not — it only read a number already on the row — so it
             # must not claim to know where that number came from, and must
             # leave any existing stamp alone.
-            if exit_source == ANCHOR_SOURCE or not notes.get("exit_price_source"):
+            if exit_source in (ANCHOR_SOURCE, FILL_EXIT_SOURCE) or not notes.get("exit_price_source"):
                 notes["exit_price_source"] = exit_source
             notes["contract_value_usd"] = cvu
             # A row that previously declared itself unmeasured and has now been

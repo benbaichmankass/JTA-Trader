@@ -1,6 +1,6 @@
 id: RQ-20261012-5bd1-14
-title: 'NEWS-ALPHA U14: if news attention forecasts vol (U02 PASS), does a news-augmented vol forecast reduce the
-  R-variance of our existing book when used for sizing?'
+title: 'NEWS-ALPHA U14: if news attention forecasts vol (U02 PASS), does a news-augmented vol forecast reduce the R-variance
+  of our existing book when used for sizing?'
 status: blocked
 roadmap: M28
 program: NEWS-ALPHA-PROGRAM
@@ -11,10 +11,10 @@ priority: 3
 requires_result:
   unit: RQ-20261012-5bd1-02
   verdict: pass
-question: On the committed evidence-trade corpus, size each trade by 1/forecast-vol with (a) HAR-RV and (b) HAR-RV
-  + the U02 surviving feature; compare realized net-R variance and mean net R at equal average risk.
-why_this_matters: 'Turns a vol PASS into the usability question for sizing -- the first route by which news can
-  help the book without predicting direction. Program index: docs/research/news-alpha-program-2026-10-12.md.'
+question: On the committed evidence-trade corpus, size each trade by 1/forecast-vol with (a) HAR-RV and (b) HAR-RV + the U02
+  surviving feature; compare realized net-R variance and mean net R at equal average risk.
+why_this_matters: 'Turns a vol PASS into the usability question for sizing -- the first route by which news can help the book
+  without predicting direction. Program index: docs/research/news-alpha-program-2026-10-12.md.'
 populations: committed evidence trades (same corpus as RQ-20261012-2a7b-01, ~333 trades) and their symbols' candles
 grid:
   arms:
@@ -31,10 +31,10 @@ power:
   design: one_sample
   alpha: 0.05
   power: 0.8
-  basis: 'Effect is a rank correlation r treated as d (n ~ 7.85/r^2): floor 348.8 at d=0.15. ~333 committed evidence
-    trades (RQ-20261012-2a7b-01 replayed 333, 317 gapless); floor 348.9 at d=0.15 -> marginally UNDERPOWERED, stated.
-    The floor is per-test and unadjusted; the unit''s 1 cells are controlled by the family BH over 600 declared
-    tests (rule), so survival needs |t| well above 2 -- the conservative direction.'
+  basis: 'Effect is a rank correlation r treated as d (n ~ 7.85/r^2): floor 348.8 at d=0.15. ~333 committed evidence trades
+    (RQ-20261012-2a7b-01 replayed 333, 317 gapless); floor 348.9 at d=0.15 -> marginally UNDERPOWERED, stated. The floor is
+    per-test and unadjusted; the unit''s 1 cells are controlled by the family BH over 600 declared tests (rule), so survival
+    needs |t| well above 2 -- the conservative direction.'
   feasibility:
     source: none
     accrual_basis: Grows with the evidence corpus.
@@ -42,43 +42,40 @@ decision_rule:
   id: RULE-RQ1012-5bd1-14-NEWS-ALPHA
   registered_at: '2026-10-12'
   registered_before_run: true
-  statistic: 'Per registered cell (feature x target x horizon x population, enumerated in `grid` and counted in
-    `grid_cells`): on the DISCOVERY window only, the cell statistic named in `cell_statistic` with its two-sided
-    p from a Newey-West t (lag = ceil(1.5 x horizon in bars)) for time-series cells, from the NW t of the per-period
-    cross-sectional IC series for cross-sectional cells, and from a 2,000-resample day-block bootstrap against the
-    matched non-event baseline for event cells; n stated per cell. Discovery survivors = cells whose p <= 0.10 x
-    r / 600 where r is the cell''s p-rank WITHIN THIS UNIT (family BH at q=0.10 over the declared wave-1 budget
-    of 600 tests, unrun cells counted as p=1 -- conservative and computable per unit). Each survivor gets ONE confirmatory
-    test on the sealed holdout 2025-10-01..2026-09-30 (same cell, same sign required), Holm-adjusted across ALL
-    program holdout tests at alpha 0.05, cap 20 holdout tests in wave 1, logged in research/news_alpha/TEST-LEDGER.jsonl.
-    Leakage tests run before any statistic and gate the run (failure => read_state producer_failed): (L1) every
-    feature row asserts max(item available_at) < the bar time the target window opens (GDELT: V2.1DATE ingest time;
-    publisher time is never used for availability); (L2) a +1-bar FUTURE-shifted feature is computed and reported
-    -- if the true feature''s IC is not materially below the future-shifted one on the volatility cells, the alignment
-    is suspect and is reported; (L3) a circular-shift placebo (shift by a random offset >= 30 days, 200 draws) must
-    put the true cell outside the placebo''s central 95% to count; (L4) holdout rows are not readable in --phase
-    discovery (harness refuses).'
-  rule: 'ELIGIBLE only after RQ-20261012-5bd1-02 lands a vol PASS (requires_result). PASS IF the (b)/(a) variance
-    ratio''s 95% interval lies below 1.0 with mean net R not lower by more than 0.02R; else FAIL.  DIRECTION cells
-    (target = forward return): PASS additionally requires the sign-of-feature (time-series) or quintile long-short
-    (cross-sectional) strategy''s holdout mean return NET of the full cost stack (src/runtime/execution_costs.resolve_cost_policy
-    per symbol: fee + slippage + perp funding, charged per unit turnover) to have NW t >= 2.0 and the discovery-window
-    net mean > 0; a cell that confirms in rank but not net of cost reads PASS_RANK_ONLY (information, not edge).
-    VOL/VOLUME cells (target = realized vol, |return| or volume): graded SEPARATELY -- PASS iff the holdout QLIKE
-    (vol) or MSE-of-log (volume) loss of baseline+feature beats the declared baseline (HAR-RV for vol; AR(5) of
-    log volume for volume) by >= 2% with a one-sided Diebold-Mariano p < 0.05 after the same Holm adjustment; a
-    vol PASS is a sizing/risk input, never direction. VERDICTS: pass = >= 1 cell PASS (direction or vol, reported
-    separately); fail = n >= the unit floor on every primary cell AND no discovery survivor, or every survivor fails
-    its holdout (a DISCOVERY_ONLY cell is a FAIL for that exact configuration); indeterminate = any primary cell
-    below its n floor, or a leakage check fails (then read_state producer_failed, never a verdict). Cells with unadjusted
-    p < 0.05 that do not survive are reported as LEADS: they may seed a wave-2 unit only on data the discovery window
-    did not touch. A FAIL closes ONLY the configuration tested (feature definition, source, population, horizon)
-    -- never ''news''. Every PASS also files a PROSPECTIVE unit graded on data after 2026-10-12 (the holdout window
-    was partly viewed by RQ-20261012-2a7b-01, disclosed in docs/research/news-alpha-program-2026-10-12.md).'
-  what_it_does_not_do: 'Touches no config, no order path, no NEWS_VETO_ENABLED, no roster. A PASS is not a promotion:
-    a direction PASS earns a Stage-0 new_strategy unit on an existing cost-complete harness; a vol PASS earns a
-    sizing/risk research unit. Does not evaluate the live veto overlay (that is RQ-20261009-902 / RQ-20261012-2a7b-01).
-    Does not retire the news layer on a FAIL (operator 2026-10-12: retirement is off the table).'
+  statistic: 'Per registered cell (feature x target x horizon x population, enumerated in `grid` and counted in `grid_cells`):
+    on the DISCOVERY window only, the cell statistic named in `cell_statistic` with its two-sided p from a Newey-West t (lag
+    = ceil(1.5 x horizon in bars)) for time-series cells, from the NW t of the per-period cross-sectional IC series for cross-sectional
+    cells, and from a 2,000-resample day-block bootstrap against the matched non-event baseline for event cells; n stated
+    per cell. Discovery survivors = cells whose p <= 0.10 x r / 600 where r is the cell''s p-rank WITHIN THIS UNIT (family
+    BH at q=0.10 over the declared wave-1 budget of 600 tests, unrun cells counted as p=1 -- conservative and computable per
+    unit). Each survivor gets ONE confirmatory test on the sealed holdout 2025-10-01..2026-09-30 (same cell, same sign required),
+    Holm-adjusted across ALL program holdout tests at alpha 0.05, cap 20 holdout tests in wave 1, logged in research/news_alpha/TEST-LEDGER.jsonl.
+    Leakage tests run before any statistic and gate the run (failure => read_state producer_failed): (L1) every feature row
+    asserts max(item available_at) < the bar time the target window opens (GDELT: V2.1DATE ingest time; publisher time is
+    never used for availability); (L2) a +1-bar FUTURE-shifted feature is computed and reported -- if the true feature''s
+    IC is not materially below the future-shifted one on the volatility cells, the alignment is suspect and is reported; (L3)
+    a circular-shift placebo (shift by a random offset >= 30 days, 200 draws) must put the true cell outside the placebo''s
+    central 95% to count; (L4) holdout rows are not readable in --phase discovery (harness refuses).'
+  rule: 'ELIGIBLE only after RQ-20261012-5bd1-02 lands a vol PASS (requires_result). PASS IF the (b)/(a) variance ratio''s
+    95% interval lies below 1.0 with mean net R not lower by more than 0.02R; else FAIL.  DIRECTION cells (target = forward
+    return): PASS additionally requires the sign-of-feature (time-series) or quintile long-short (cross-sectional) strategy''s
+    holdout mean return NET of the full cost stack (src/runtime/execution_costs.resolve_cost_policy per symbol: fee + slippage
+    + perp funding, charged per unit turnover) to have NW t >= 2.0 and the discovery-window net mean > 0; a cell that confirms
+    in rank but not net of cost reads PASS_RANK_ONLY (information, not edge). VOL/VOLUME cells (target = realized vol, |return|
+    or volume): graded SEPARATELY -- PASS iff the holdout QLIKE (vol) or MSE-of-log (volume) loss of baseline+feature beats
+    the declared baseline (HAR-RV for vol; AR(5) of log volume for volume) by >= 2% with a one-sided Diebold-Mariano p < 0.05
+    after the same Holm adjustment; a vol PASS is a sizing/risk input, never direction. VERDICTS: pass = >= 1 cell PASS (direction
+    or vol, reported separately); fail = n >= the unit floor on every primary cell AND no discovery survivor, or every survivor
+    fails its holdout (a DISCOVERY_ONLY cell is a FAIL for that exact configuration); indeterminate = any primary cell below
+    its n floor, or a leakage check fails (then read_state producer_failed, never a verdict). Cells with unadjusted p < 0.05
+    that do not survive are reported as LEADS: they may seed a wave-2 unit only on data the discovery window did not touch.
+    A FAIL closes ONLY the configuration tested (feature definition, source, population, horizon) -- never ''news''. Every
+    PASS also files a PROSPECTIVE unit graded on data after 2026-10-12 (the holdout window was partly viewed by RQ-20261012-2a7b-01,
+    disclosed in docs/research/news-alpha-program-2026-10-12.md).'
+  what_it_does_not_do: 'Touches no config, no order path, no NEWS_VETO_ENABLED, no roster. A PASS is not a promotion: a direction
+    PASS earns a Stage-0 new_strategy unit on an existing cost-complete harness; a vol PASS earns a sizing/risk research unit.
+    Does not evaluate the live veto overlay (that is RQ-20261009-902 / RQ-20261012-2a7b-01). Does not retire the news layer
+    on a FAIL (operator 2026-10-12: retirement is off the table).'
 routing:
   needs_trainer_resident_data: false
   needs_gpu: false
@@ -86,19 +83,19 @@ routing:
   est_minutes: 30
   basis: Panel IC / event study over a precomputed feature panel; no model fitting beyond HAR/AR baselines.
 blocked_on:
-- what: RQ-20261012-5bd1-02 vol PASS
-  ref: RQ-20261012-5bd1-02
-  clears_when: that unit lands a measured pass on a vol cell
-- what: Generic signal->target harness with sealed holdout, BH/Holm, HAC p, net-of-cost and HAR/AR baselines
-  ref: checklist NEWS-ALPHA-HARNESS (scripts/research/news_alpha_ic.py)
-  clears_when: 'NEWS-ALPHA-HARNESS is done: writes a script_run verdict.json and appends to research/news_alpha/TEST-LEDGER.jsonl'
+- what: A measured U02 vol PASS (RQ-20261012-5bd1-02, now runnable) and an arm-comparison mode in the harness (har_only vs
+    har_plus_news net-R variance on the committed evidence trades)
+  ref: 'RQ-20261012-5bd1-02 (graded by owner checklist NEWS-ALPHA-CORPUS; MEASURED 2026-10-24 research-ops: 0 of 36 cells PASS, 30 fail + 6 indeterminate, so the vol-PASS prerequisite is unmet today). The arm-comparison build is deliberately NOT filed as a row until 5bd1-02 shows a vol PASS or its owner grades it FAIL, at which point this unit is retired as moot.'
+  clears_when: U02 lands a measured pass on a vol cell AND the variance-ratio arm is built
+  updated_at: '2026-10-16'
+  updated_by: lane NEWS-ALPHA-HARNESS-1016
 run:
   workflow: null
   inputs:
     research_unit: RQ-20261012-5bd1-14
-  note: Becomes research-script-run.yml with run.command [python3, scripts/research/news_alpha_ic.py, --unit, '{unit}',
-    --phase, discovery, --out, '{out_dir}'] once the blocked_on rows land; the holdout phase is a second, ledgered
-    invocation (--phase holdout) on discovery survivors only.
+  note: Becomes research-script-run.yml with run.command [python3, scripts/research/news_alpha_ic.py, --unit, '{unit}', --phase,
+    discovery, --out, '{out_dir}'] once the blocked_on rows land; the holdout phase is a second, ledgered invocation (--phase
+    holdout) on discovery survivors only.
 lands:
   store: research/results/
   assert_field: read_state
@@ -109,3 +106,9 @@ related:
 - docs/claude/work/checklist/NEWS-ALPHA-PROGRAM.json
 - docs/claude/work/checklist/WEPE-BUILDOUT.json
 last_dispatched_at: null
+resolved_blockers:
+- what: Generic signal->target harness with sealed holdout, BH/Holm, HAC p, net-of-cost and HAR/AR baselines
+  ref: checklist NEWS-ALPHA-HARNESS (scripts/research/news_alpha_ic.py)
+  clears_when: 'NEWS-ALPHA-HARNESS is done: writes a script_run verdict.json and appends to research/news_alpha/TEST-LEDGER.jsonl'
+  resolved_by: 'NEWS-ALPHA-HARNESS (scripts/research/news_alpha_ic.py, PR #18558, merged 2026-10-16)'
+  resolved_at: '2026-10-16'

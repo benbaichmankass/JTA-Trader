@@ -3,7 +3,11 @@
 // Nothing here reads cookies, storage or credentials. Values returned are OUR OWN typed order values and the
 // visible control labels; account numbers and balances are never returned.
 (function () {
-  if (window.__ex) return;
+  // PHONE-EXEC-OBSERVABLE-1018: this file is also served SIGNED by our own API and swapped in at runtime
+  // (RemoteJs.kt): a newer version replaces the installed helpers on the next ensure(); the same version is
+  // never injected twice. Bump on every change (CI signs the file; the app pins by version).
+  var EXEC_VERSION = "2026-10-18.6";
+  if (window.__ex && window.__ex.version === EXEC_VERSION) return;
   function hostOk() { return /(^|\.)breakoutprop\.com$/.test(location.hostname || ""); }
   function vis(el) { if (!el) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }
   function t(el) { return ((el && (el.innerText || el.textContent)) || "").replace(/\s+/g, " ").trim(); }
@@ -703,6 +707,22 @@
     x.dispatchEvent(new MouseEvent("click", o));
     return "tapped";
   }
+  // MEASURE (2026-10-17, native touches "touched" both rows and opened no sheet): what the page actually RECEIVED from
+  // the next native touch -- event type, pointerType, contact size and isTrusted -- so a miss tells whether the press
+  // looked like a finger to the page. Capture phase on window, passive, never stops or changes an event. Read by domDiff.
+  function evWatch() {
+    window.__exEv = [];
+    if (!window.__exEvOn) {
+      window.__exEvOn = true;
+      ["pointerdown", "pointerup", "touchstart", "touchend", "click"].forEach(function (k) {
+        window.addEventListener(k, function (e) {
+          var a = window.__exEv; if (!a || a.length >= 6) return;
+          var pt = e.pointerType !== undefined ? (e.pointerType || "none") : (e.touches !== undefined ? "touchev" : "-");
+          a.push((k.replace("pointer", "p").replace("touch", "t") + ":" + pt + " w" + Math.round(e.width || 0) + " tr" + (e.isTrusted ? 1 : 0)).slice(0, 24));
+        }, {capture: true, passive: true});
+      });
+    }
+  }
   function textEls(root, re, max) {   // innermost visible elements whose own text matches re
     return innermost(Array.prototype.slice.call((root || document).querySelectorAll("*")).filter(function (e) {
       if (!vis(e)) return false; var s = t(e); return s.length > 0 && s.length <= (max || 40) && re.test(s);
@@ -711,7 +731,17 @@
   // the ONE Positions row cell to tap for `sym`: which = "child" -> the position row's Market cell ("ETH 5x", a
   // leverage badge); "group" -> the group row's ("ETH 1", the symbol + a count). Only inside the Positions grid panel.
   // The element, or why not: no_grid | no_panel | none | rows_<n>
+  // MEASURED 1b.261 20:03Z (hd: map): the Market cell's content is an <a> with its OWN onClick ("upe a Click") and
+  // the ROW carries the opener ("uph div Click"), so a touch on the Market cell never reaches the row; a plain cell
+  // (Opening price / Current price: no in-cell handler) does.
+  // which = "child_entry" / "child_tpsl" (2026-10-17, 1b.253 08:03Z): the child row's Market cell received click(), a
+  // synthetic pointer tap AND a trusted finger touch (pdown:touch w9 tr1 ... click:touch tr1) and none opened the sheet,
+  // while click() on the group cell did reach the row's handler (it expanded). So the event was never the problem; the
+  // element was. Other cells of the SAME child row are tapped: "Opening price" (a plain value cell, reaches a row-level
+  // handler) and the "n TP / n SL" text of the TP / SL cell (the operator's own sheet, 2026-10-15 12:43Z, was showing
+  // that tab). The TP / SL target is only the element whose text IS "n TP / n SL" -- never an empty cell or an icon.
   function sheetHit(sym, which) {
+    if (which === "child_entry" || which === "child_tpsl") return rowCell(sym, which.slice(6));
     var g = gridHeaders(POS_COLS); if (g.length !== 1) return "no_grid";
     var panel = gridPanel(g[0]); if (!panel) return "no_panel";
     var b = base(sym).replace(/[^A-Z0-9]/g, ""), sfx = "(USD[TC]?|PERP)?";
@@ -720,6 +750,78 @@
     var hits = textEls(panel, re, 24).filter(function (e) { return !g[0].contains(e); });
     if (!hits.length) return "none"; if (hits.length > 1) return "rows_" + hits.length;
     return hits[0];
+  }
+  // the part of x's box a touch can reach: its rect clipped by the viewport and by every ancestor that clips overflow
+  // ({l,t,r,b} in CSS px), or null when nothing of it is visible
+  function visibleRect(x) {
+    var r = x.getBoundingClientRect(), v = {l: Math.max(r.left, 0), t: Math.max(r.top, 0), r: Math.min(r.right, window.innerWidth), b: Math.min(r.bottom, window.innerHeight)};
+    for (var a = x.parentElement; a && a !== document.body && a !== document.documentElement; a = a.parentElement) {
+      var cs = gcs(a);
+      if (!/(hidden|auto|scroll|clip)/.test(cs.overflowX + " " + cs.overflowY)) continue;
+      var ar = a.getBoundingClientRect();
+      v = {l: Math.max(v.l, ar.left), t: Math.max(v.t, ar.top), r: Math.min(v.r, ar.right), b: Math.min(v.b, ar.bottom)};
+    }
+    return (v.r - v.l >= 2 && v.b - v.t >= 2) ? v : null;
+  }
+  // the first point inside visible rect v (its centre, then a 5x3 grid nearest-first) whose topmost element is x or
+  // inside it: {x, y}; {why: "point_deny_*"} as soon as a hit's chain up to x holds a denied control; null when none
+  function pointIn(x, v) {
+    var fx = [0.5, 0.3, 0.7, 0.15, 0.85], fy = [0.5, 0.3, 0.7];
+    for (var j = 0; j < fy.length; j++) for (var i = 0; i < fx.length; i++) {
+      var px = v.l + (v.r - v.l) * fx[i], py = v.t + (v.b - v.t) * fy[j], pe = document.elementFromPoint(px, py);
+      if (!pe || !x.contains(pe)) continue;
+      for (var e = pe; e && e !== x.parentElement; e = e.parentElement) { var de = denied(e); if (de) return {why: "point_" + de}; }
+      return {x: px, y: py};
+    }
+    return null;
+  }
+  // the child row that holds the ONE Market hit for `sym`, and in it the cell under the header for key ("entry" ->
+  // Opening price, "tpsl" -> TP / SL). The element, or why not: the sheetHit reasons | no_row | no_col | no_cell | no_tpsl
+  function rowCell(sym, key) {
+    var m = sheetHit(sym, "child"); if (typeof m === "string") return m;
+    var h = gridHeaders(POS_COLS)[0], hs = kids(h).map(t), n = hs.length;
+    // the row is the hit's nearest ancestor with the header's cell count (1b.261 20:03Z: the grid-row pool missed the
+    // expanded child row -> no_row, while this same walk in handlerMap found it and its onClick, "uph div Click")
+    var row = null;
+    for (var a = m.parentElement, k = 0; a && k < 12 && a !== document.body; a = a.parentElement, k++) {
+      if (a.contains(h)) break;
+      if (kids(a).length === n) { row = isGroupRow(a) ? null : a; break; }
+    }
+    if (!row) return "no_row";
+    var idx = -1; hs.forEach(function (s, i) { if (idx < 0 && (key === "tpsl" ? /^tp\s*\/\s*sl$/i.test(s) : colKey(s, POS_COLS) === key)) idx = i; });
+    if (idx < 0) return "no_col";
+    var cell = kids(row)[idx]; if (!cell) return "no_cell";
+    if (key !== "tpsl") return cell;
+    var tx = textEls(cell, SHEET_TAB.tpsl, 20); return tx.length === 1 ? tx[0] : "no_tpsl";
+  }
+  // MEASURE (passive): the page's own handlers. React keeps each element's props on a "__reactProps$*" key (React 16:
+  // "__reactEventHandlers$*"); a function there is a handler the app wired. Names only, abbreviated. [] when none.
+  var RH = ["onClick", "onPointerUp", "onPointerDown", "onMouseUp", "onMouseDown", "onTouchEnd", "onTouchStart"];
+  function reactHandlers(e) {
+    var k = Object.keys(e).filter(function (x) { return x.indexOf("__reactProps$") === 0 || x.indexOf("__reactEventHandlers$") === 0; })[0];
+    if (!k) return null;
+    var pr = e[k] || {};
+    return RH.filter(function (n) { return typeof pr[n] === "function"; }).map(function (n) { return n.slice(2).replace("Pointer", "P").replace("Mouse", "M").replace("Touch", "T"); });
+  }
+  // for the tapped element: each ancestor with handlers ("up<a..j> <tag> Click") and, in its Positions row, every cell
+  // whose subtree holds a handler ("<col key> cell|in Click"). "no_react" when no element on the way carries React props.
+  function handlerMap(x) {
+    var out = [], react = false, L = "abcdefghij", row = null, h = gridHeaders(POS_COLS)[0], n = h ? kids(h).length : -1;
+    for (var e = x, k = 0; e && k < 10 && e !== document.body; e = e.parentElement, k++) {
+      var hd = reactHandlers(e); if (hd) react = true;
+      if (hd && hd.length) out.push(("up" + L[k] + " " + e.tagName.toLowerCase() + " " + hd.join("+")).slice(0, 34));
+      if (!row && h && e !== x && kids(e).length === n && !e.contains(h)) row = e;
+    }
+    if (row) kids(row).forEach(function (c, i) {
+      var hx = t(kids(h)[i]), key = /^tp\s*\/\s*sl$/i.test(hx) ? "tpsl" : (colKey(hx, POS_COLS) || ("c" + L[i % 10]));
+      [c].concat(Array.prototype.slice.call(c.querySelectorAll("*")).slice(0, 40)).some(function (e) {
+        var hd = reactHandlers(e); if (hd) react = true;
+        if (hd && hd.length) { out.push((key + " " + (e === c ? "cell" : "in") + " " + hd.join("+")).slice(0, 34)); return true; }
+        return false;
+      });
+    });
+    if (!react) out.push("no_react");
+    return out.slice(0, 12);
   }
   // stray-modal roots (see cancelModals): open non-form dialogs + Edit SL/TP modals, outermost first, no duplicates
   function strayRoots() {
@@ -761,17 +863,39 @@
     return {n: 1, value: null, why: "no_value"};
   }
   var PRICE_LEAF = /^[-+−]?\s*\d[\d,]*(\.\d+)?\s*(USD[TC]?)?$/i;
-  // the [n TP / n SL] tab's order rows: each TYPE cell ("Stop l…" / "Take p…") and its smallest ancestor holding ONE
-  // price and no other TYPE cell
+  var QUOTE_UNIT = /^USD[TC]?$/i;
+  // The unit beside a bare number: in its own text ("2,452.65 USD"), else the first word that follows it in the
+  // nearest ancestor whose text starts with it ("2,452.65" + "USD" in sibling spans -> "USD"; "0.52" + "ETH" -> "ETH").
+  // MEASURED 2026-10-18 (1b.300 amend #a8, capture 003-stop_row): the [1 TP / 1 SL] Stop row is "Long | Stop loss |
+  // 2,452.65 USD | 0.52 ETH" with number and unit in separate spans, so the QUANTITY cell is a second bare
+  // price-shaped leaf and the trigger read null -> reported as a human move. The quote unit decides.
+  function unitOf(leaf) {
+    var s = t(leaf), m = /\s([A-Z]{2,6})$/i.exec(s);
+    if (m) return m[1].toUpperCase();
+    for (var a = leaf.parentElement, k = 0; a && k < 3; a = a.parentElement, k++) {
+      var w = t(a);
+      if (w.length > s.length && w.indexOf(s) === 0) return (w.slice(s.length).trim().split(/\s+/)[0] || "").toUpperCase();
+      if (w !== s) break;
+    }
+    return "";
+  }
+  // the [n TP / n SL] tab's order rows: each TYPE cell ("Stop l…" / "Take p…") and its smallest ancestor holding at
+  // least one price-shaped leaf and no other TYPE cell. `usd` = the leaves whose unit is the quote currency: the
+  // trigger is the ONE of those; with no units at all the ONE bare leaf still counts (synthetic pages).
   function sheetOrderRows(root) {
     var types = textEls(root, /^(stop|take)\b/i, 30), out = [];
     types.forEach(function (ty) {
       for (var a = ty.parentElement, k = 0; a && k < 5 && a !== root; a = a.parentElement, k++) {
         if (types.some(function (o) { return o !== ty && a.contains(o); })) break;
         var px = textEls(a, PRICE_LEAF);
-        if (px.length) { out.push({type: /^stop/i.test(t(ty)) ? "stop" : "take", el: a, typeEl: ty, px: px}); return; }
+        if (px.length) {
+          var usd = px.filter(function (p) { return QUOTE_UNIT.test(unitOf(p)); });
+          out.push({type: /^stop/i.test(t(ty)) ? "stop" : "take", el: a, typeEl: ty, px: px, usd: usd,
+            pick: usd.length === 1 ? usd[0] : (px.length === 1 ? px[0] : null)});
+          return;
+        }
       }
-      out.push({type: /^stop/i.test(t(ty)) ? "stop" : "take", el: null, typeEl: ty, px: []});
+      out.push({type: /^stop/i.test(t(ty)) ? "stop" : "take", el: null, typeEl: ty, px: [], usd: [], pick: null});
     });
     return out;
   }
@@ -790,6 +914,27 @@
     return u.filter(function (x) { return !u.some(function (o) { return o !== x && o.contains(x); }); });
   }
   function isPencil(x) { var s = t(x); return (PENCIL_GLYPH.test(s) || /\b(edit|pencil|modify)\b/i.test(ctlWords(x))) && !denied(x); }
+  // The element to CLICK / TOUCH for an icon rowIcons returned. MEASURED 2026-10-18 (drill 1 on 1b.300 + exec.js .4,
+  // captures 009-pencil / 010-modal_open): the real Stop row's edit control is span[tabindex] > button[aria-label=
+  // "Edit order"] > svg. rowIcons keeps the OUTERMOST interactive element (the span), and click() on an ancestor never
+  // reaches the button's handler (events bubble up, not down): the terminal opened nothing. So: the icon itself when it
+  // IS a button / role=button / link, else its ONE visible button / role=button / link inside, else the icon.
+  function ctlOf(x) {
+    if (!x || !x.querySelectorAll) return x;
+    if (x.matches && x.matches("button,[role=button],a")) return x;
+    var b = Array.prototype.slice.call(x.querySelectorAll("button,[role=button],a")).filter(vis);
+    return b.length === 1 ? b[0] : x;
+  }
+  // the ONE pencil of the ONE Stop row, resolved to its control (ctlOf), or why not: no_sheet | stops_<n> | no_edit |
+  // ambiguous. Shared by the click (sheetEditStop) and the native-tap target (sheetEditStopTarget).
+  function stopPencil() {
+    var r = sheetRoot(); if (!r) return "no_sheet";
+    var st = sheetOrderRows(r).filter(function (o) { return o.type === "stop"; });
+    if (st.length !== 1 || !st[0].el) return "stops_" + st.length;
+    var p = rowIcons(st[0].el, [st[0].typeEl].concat(st[0].px)).filter(isPencil);
+    if (!p.length) return "no_edit"; if (p.length > 1) return "ambiguous";
+    return ctlOf(p[0]);
+  }
   function iconDump(x) {
     var m = function (s) { return (s || "").replace(/\d/g, "#"); };
     return {tag: x.tagName.toLowerCase(), role: x.getAttribute("role") || "", text: m(t(x)).slice(0, 8),
@@ -814,7 +959,200 @@
   var MODAL_HDR = /^(long|short)\s+(\d[\d,]*(?:\.\d+)?)\s*([A-Za-z]{2,8})?\s*@\s*(\d[\d,]*(?:\.\d+)?)\s*(USD[TC]?)?$/i;
   function modalInputs(root) { return inputs(root).map(function (i) { return {label: labelFor(i).replace(/\s+/g, " ").trim().slice(0, 40), value: i.value}; }); }
   function triggerInput(root) { return inputs(root).filter(function (i) { var l = labelFor(i); return /trigger/i.test(l) && !/distance|%|r\s*:\s*r|quantity/i.test(l); }); }
+  // ---- DOM SNAPSHOT (PHONE-EXEC-OBSERVABLE-1018, operator 2026-10-18: the app records what it did, right and
+  // wrong, without anything on screen). A sanitized, geometry-carrying tree of the VISIBLE page that the server
+  // stores for 7 days and tools/phone-executor/test/fixture_from_capture.py turns into a fixture with the numbers
+  // replaced, so a fix is proven in CI against the real Breakout page instead of guessed per APK.
+  // REDACTION HAPPENS HERE, ON THE DEVICE (operator decision): account ids (the URL's /account/<id>/, the sheet's
+  // "Position – <id>"), balances, equity, portfolio and every P&L / value / margin figure are masked before the
+  // snapshot leaves the phone. Digits survive ONLY in a text whose column header, field label or detail label is a
+  // price / quantity / trigger / leverage context (KEEP_CTX; the Value column too -- it is qty x mark, both kept, and
+  // positionsRead's only qty source on the grid); everything else has its digits turned into "#". Counts the
+  // readers key on ("1 TP / 1 SL", "Positions 1", "ETH 5x") are kept: a masked tab blinds sheetInfo on a fixture.
+  // Each masked element's rect is returned in `redact` so the app paints a box over it on the bitmap.
+  var KEEP_CTX = /opening price|current price|avg\.?\s*opening|entry price|mark price|trigger|limit price|^price$|quantity|\bqty\b|total open volume|^value$|\bsize\b|stop\s*loss|take\s*profit|^tp\s*\/\s*sl$|^sl\s*\/\s*tp$|^lev|distance|\bsl\b|\btp\b|^market$/i;
+  var MASK_CTX = /balance|equity|portfolio|p\s*&\s*l|pnl|value|margin|roe|fee|funding|liq|notional|time|date|position\s*[–—-]|order id|id$/i;
+  var SNAP_ATTRS = ["role", "type", "name", "placeholder", "disabled", "aria-disabled", "aria-selected", "aria-expanded",
+    "aria-checked", "aria-label", "aria-labelledby", "aria-controls", "aria-haspopup", "aria-modal", "title", "alt", "tabindex",
+    "for", "id", "href", "data-state", "data-testid", "data-radix-collection-item", "data-orientation", "checked", "value"];
+  var SNAP_SKIP = /^(SCRIPT|STYLE|NOSCRIPT|TEMPLATE|LINK|META|HEAD|PATH|G|DEFS|USE|CIRCLE|RECT|LINE|POLYGON|POLYLINE|CLIPPATH|MASK|LINEARGRADIENT|STOP|TITLE|DESC|SYMBOL|FILTER|FEGAUSSIANBLUR|FEOFFSET|FEBLEND|FEMERGE|FEMERGENODE|FECOLORMATRIX)$/i;
+  function maskDigits(s) { return (s || "").replace(/\d/g, "#"); }
+  function gridCtxOf(el) {   // the column header text over a grid cell (div grid or table), "" when not in one
+    var g = gridHeaders(POS_COLS).concat(gridHeaders(CLOSED_COLS));
+    for (var i = 0; i < g.length; i++) {
+      var h = g[i], n = kids(h).length, panel = gridPanel(h) || h.parentElement;
+      if (!panel.contains(el) || h.contains(el)) continue;   // only a cell INSIDE that grid's panel, never the header
+      for (var a = el, k = 0; a && k < 10 && a !== panel; a = a.parentElement, k++) {
+        if (a.parentElement && kids(a.parentElement).length === n && !a.parentElement.contains(h)) {
+          var idx = kids(a.parentElement).indexOf(a); if (idx >= 0) return t(kids(h)[idx]) || "";
+        }
+      }
+    }
+    // a column header ROW over a sibling row (the sheet's [n TP / n SL] list: SIDE | TYPE | TRIGGER PRICE): the first
+    // digit-free sibling with the same cell count, read at the cell's index
+    for (var b = el, j = 0; b && j < 4 && b !== document.body; b = b.parentElement, j++) {
+      var row = b.parentElement; if (!row || !row.parentElement) continue;
+      var cells = kids(row), ci = cells.indexOf(b); if (ci < 0 || cells.length < 2) continue;
+      var sibs = kids(row.parentElement);
+      for (var q = 0; q < sibs.length; q++) {
+        var sr = sibs[q]; if (sr === row) continue;
+        var hs = kids(sr).map(t);   // a header row has no digits and at least as many cells as this cell's index
+        if (hs.length < 2 || hs.length > cells.length || ci >= hs.length || hs.some(function (x) { return /\d/.test(x) || !x; })) continue;
+        return hs[ci] || "";
+      }
+    }
+    var td = el.closest("td,[role=cell],[role=gridcell]");
+    if (td) {
+      var tb = td.closest("table,[role=table],[role=grid]"), hs = tb ? Array.prototype.slice.call(tb.querySelectorAll("th,[role=columnheader]")).map(t) : [];
+      var row = td.parentElement, ci = row ? Array.prototype.slice.call(row.children).indexOf(td) : -1;
+      if (ci >= 0 && hs[ci]) return hs[ci];
+    }
+    return "";
+  }
+  function labelCtxOf(el) {   // a sheet detail / modal header label near a value, or an input's label
+    if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") return labelFor(el);
+    var keys = Object.keys(DETAIL_LABELS);
+    for (var a = el.parentElement, k = 0; a && k < 3 && a !== document.body; a = a.parentElement, k++) {
+      for (var i = 0; i < keys.length; i++) { var ls = textEls(a, DETAIL_LABELS[keys[i]]); if (ls.length === 1 && ls[0] !== el) return t(ls[0]); }
+      var lab = Array.prototype.slice.call(a.querySelectorAll("label")).filter(vis)[0]; if (lab && lab !== el && t(lab).length <= 40) return t(lab);
+    }
+    return "";
+  }
+  function ownText(el) {
+    var out = [];
+    for (var i = 0; i < el.childNodes.length; i++) { var n = el.childNodes[i]; if (n.nodeType === 3 && n.nodeValue.trim()) out.push(n.nodeValue.trim()); }
+    return out.join(" ").replace(/\s+/g, " ").trim();
+  }
+  // the redaction decision for one text in one element: {text, masked}
+  function redactText(s, el) {
+    if (!s || !/\d/.test(s)) return {text: s, masked: false};
+    if (SUBTITLE_RE.test(s)) return {text: s.replace(/^(position\s*[–—-]\s*)\S+/i, "$1ID"), masked: true};
+    // counts the readers key on, never money: the sheet's "1 TP / 1 SL" tab, the "Positions 1" tab, "ETH 5x"
+    if (SHEET_TAB.tpsl.test(s) || /^positions\s*\d*$/i.test(s) || /^[A-Z]{2,8}\s+\d{1,3}x$/i.test(s) || /^\d{1,3}x$/i.test(s)) return {text: s, masked: false};
+    var ctx = gridCtxOf(el) || labelCtxOf(el);
+    var hdr = ctx || "";
+    var cellIsLabel = /^[A-Za-z .\/&%()-]+$/.test(s);           // "Opening price" itself: no digits anyway
+    if (cellIsLabel) return {text: s, masked: false};
+    if (!hdr) {
+      // no context: a price-looking leaf next to a price label (modal header "Short 0.54 ETH @ 2,461.52 USD")
+      if (MODAL_HDR.test(s)) return {text: s, masked: false};
+      return {text: maskDigits(s), masked: true};
+    }
+    if (MASK_CTX.test(hdr) && !KEEP_CTX.test(hdr)) return {text: maskDigits(s), masked: true};
+    if (KEEP_CTX.test(hdr)) return {text: s, masked: false};
+    return {text: maskDigits(s), masked: true};
+  }
+  function snapAttrs(e, isInput) {
+    var o = {};
+    SNAP_ATTRS.forEach(function (k) {
+      if (k === "value" && !isInput) return;
+      var v = e.getAttribute(k); if (v == null) return;
+      if (k === "href") { try { var u = new URL(v, location.href); v = u.pathname.replace(/\/account\/[^\/]+/, "/account/ACCT").replace(/\d/g, "#").slice(0, 60); } catch (x) { v = "#"; } }
+      else if (k === "id" || k === "for" || k === "aria-controls" || k === "aria-labelledby") v = v.slice(0, 40);
+      else if (k === "value") v = redactText(String(e.value != null ? e.value : v), e).text.slice(0, 40);
+      else v = maskDigits(String(v)).slice(0, 60);
+      o[k] = v;
+    });
+    var cls = typeof e.className === "string" ? e.className : (e.getAttribute("class") || "");
+    if (cls) o["class"] = cls.split(/\s+/).filter(Boolean).slice(0, 8).map(function (c) { return c.slice(0, 32); }).join(" ");
+    if (isInput && typeof e.checked === "boolean" && e.type === "checkbox") o.checked = String(e.checked);
+    if (isInput && e.value != null && !("value" in o)) o.value = redactText(String(e.value), e).text.slice(0, 40);
+    if (e.hasAttribute("onclick")) o.onclick = "1";
+    return o;
+  }
+  function snapStyle(e) {
+    var cs = gcs(e), o = {};
+    if (/(hidden|auto|scroll|clip)/.test(cs.overflowX + " " + cs.overflowY)) o.ov = (cs.overflowX + "/" + cs.overflowY).replace(/visible/g, "v");
+    if (cs.position && cs.position !== "static") o.pos = cs.position;
+    if (cs.zIndex && cs.zIndex !== "auto") o.z = cs.zIndex;
+    if (cs.pointerEvents === "none") o.pe = "none";
+    if (cs.display === "none") o.d = "none"; else if (/^(flex|grid|inline-flex|inline-grid|inline-block|inline|table|table-cell|table-row)$/.test(cs.display)) o.d = cs.display;
+    if (cs.visibility && cs.visibility !== "visible") o.vis = cs.visibility;
+    if (cs.opacity && cs.opacity !== "1") o.op = cs.opacity;
+    if (cs.cursor === "pointer") o.cur = "p";
+    return o;
+  }
+  function snapNode(e, budget, redact, depth) {
+    if (budget.n >= budget.max) { budget.cut = true; return null; }
+    if (SNAP_SKIP.test(e.tagName) || !vis(e)) return null;
+    budget.n++;
+    var r = e.getBoundingClientRect(), isInput = e.tagName === "INPUT" || e.tagName === "TEXTAREA" || e.tagName === "SELECT";
+    var node = {t: e.tagName.toLowerCase(), r: [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)]};
+    var a = snapAttrs(e, isInput); if (Object.keys(a).length) node.a = a;
+    var st = snapStyle(e); if (Object.keys(st).length) node.s = st;
+    var hd = reactHandlers(e); if (hd && hd.length) node.h = hd;
+    var tx = ownText(e);
+    if (tx) { var rd = redactText(tx.slice(0, 80), e); node.x = rd.text; if (rd.masked && redact.length < 200) redact.push(node.r); }
+    if (e.tagName === "SVG" || e.tagName === "svg") { node.svg = 1; return node; }
+    if (depth >= 40) return node;
+    var c = [];
+    for (var i = 0; i < e.children.length; i++) { var ch = snapNode(e.children[i], budget, redact, depth + 1); if (ch) c.push(ch); if (budget.cut) break; }
+    if (c.length) node.c = c;
+    return node;
+  }
+  function snapshot(scope, maxNodes) {
+    var redact = [], budget = {n: 0, max: maxNodes || 2200, cut: false};
+    var roots = [];
+    // the parts a fixture must keep intact come first with their own share: the sheet, the edit modals, dialogs,
+    // the Positions / Closed grid panel, the order form; then the page body with those subtrees cut out
+    var pri = [];
+    sheetRoots().forEach(function (r) { pri.push({k: "sheet", el: r}); });
+    modalRoot().forEach(function (m) { pri.push({k: "modal", el: m.root}); });
+    dialogs().forEach(function (d) { pri.push({k: "dialog", el: d}); });
+    gridHeaders(POS_COLS).forEach(function (h) { var p = gridPanel(h) || h.parentElement; pri.push({k: "grid", el: p}); });
+    gridHeaders(CLOSED_COLS).forEach(function (h) { var p = gridPanel(h) || h.parentElement; pri.push({k: "closed", el: p}); });
+    var f = form(); if (f) pri.push({k: "form", el: f});
+    pri = pri.filter(function (x, i) { return x.el && !pri.some(function (y, j) { return j < i && (y.el === x.el || y.el.contains(x.el)); }); });
+    var taken = pri.map(function (x) { return x.el; });
+    pri.forEach(function (x) {
+      var b2 = {n: 0, max: Math.max(Math.floor(budget.max / 2), Math.min(300, budget.max)), cut: false};
+      var tree = snapNode(x.el, b2, redact, 0);
+      budget.n += b2.n;
+      if (tree) roots.push({k: x.k, chain: chainOf(x.el), cut: b2.cut, tree: tree});
+      if (b2.cut) budget.cut = true;
+    });
+    if (scope !== "roots") {
+      var body = snapNodeSkipping(document.body, budget, redact, taken);
+      if (body) roots.push({k: "body", cut: budget.cut, tree: body});
+    }
+    var vv = window.visualViewport;
+    return {v: EXEC_VERSION, host: location.hostname, path: (location.pathname || "/").replace(/\/account\/[^\/]+/, "/account/ACCT").replace(/\d/g, "#").slice(0, 80),
+      vw: window.innerWidth, vh: window.innerHeight, dpr: window.devicePixelRatio || 1,
+      vv: vv ? [Math.round(vv.offsetLeft), Math.round(vv.offsetTop), Math.round(vv.width), Math.round(vv.height), Math.round(vv.scale * 100) / 100] : null,
+      scroll: [Math.round(window.scrollX || 0), Math.round(window.scrollY || 0)], nodes: budget.n, cut: budget.cut,
+      redact: redact, roots: roots};
+  }
+  function chainOf(el) {   // tag/role/first class of each ancestor to body, outermost first (where the subtree sits)
+    var out = [];
+    for (var a = el.parentElement, k = 0; a && a !== document.body && k < 12; a = a.parentElement, k++) {
+      var cls = (typeof a.className === "string" ? a.className : "").split(/\s+/).filter(Boolean)[0] || "";
+      out.unshift((a.tagName.toLowerCase() + (a.getAttribute("role") ? "/" + a.getAttribute("role") : "") + (cls ? "." + cls.slice(0, 24) : "")).slice(0, 40));
+    }
+    return out;
+  }
+  function snapNodeSkipping(e, budget, redact, taken) {
+    if (taken.indexOf(e) >= 0) { budget.n++; return {t: e.tagName.toLowerCase(), ref: taken.indexOf(e), r: [0, 0, 0, 0]}; }
+    if (budget.n >= budget.max) { budget.cut = true; return null; }
+    if (SNAP_SKIP.test(e.tagName) || !vis(e)) return null;
+    budget.n++;
+    var r = e.getBoundingClientRect(), isInput = e.tagName === "INPUT" || e.tagName === "TEXTAREA" || e.tagName === "SELECT";
+    var node = {t: e.tagName.toLowerCase(), r: [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)]};
+    var a = snapAttrs(e, isInput); if (Object.keys(a).length) node.a = a;
+    var st = snapStyle(e); if (Object.keys(st).length) node.s = st;
+    var hd = reactHandlers(e); if (hd && hd.length) node.h = hd;
+    var tx = ownText(e);
+    if (tx) { var rd = redactText(tx.slice(0, 80), e); node.x = rd.text; if (rd.masked && redact.length < 200) redact.push(node.r); }
+    if (e.tagName === "SVG" || e.tagName === "svg") { node.svg = 1; return node; }
+    var c = [];
+    for (var i = 0; i < e.children.length; i++) { var ch = snapNodeSkipping(e.children[i], budget, redact, taken); if (ch) c.push(ch); if (budget.cut) break; }
+    if (c.length) node.c = c;
+    return node;
+  }
   window.__ex = {
+    version: EXEC_VERSION,
+    // PHONE-EXEC-OBSERVABLE-1018: the sanitized DOM snapshot (see the section above). scope "page" (default) =
+    // the priority roots + the body; "roots" = the sheet / modal / dialog / grid / form subtrees only.
+    snapshot: function (scope, maxNodes) { try { return snapshot(scope || "page", maxNodes); } catch (e) { return {v: EXEC_VERSION, error: String(e && e.message || e).slice(0, 80), roots: [], redact: []}; } },
     state: function () {
       var pw = all("input[type=password]").length > 0;
       var email = all("input[type=email],input[autocomplete=email],input[name*=mail i]").length > 0;
@@ -1365,22 +1703,35 @@
       var h = sheetHit(sym, which); if (typeof h === "string") return {ok: false, why: h};
       window.__exTap = h;
       var d = denied(h); if (d) return {ok: false, why: d};
-      if (scroll && h.scrollIntoView) h.scrollIntoView({block: "center", inline: "nearest"});
+      // 1b.263 05:00Z: child_entry AND child_tpsl both read "covered" from the SCROLL call (its geometry was never
+      // posted), i.e. the centre was checked right after scrollIntoView, before the grid settled, and only the centre
+      // was tried. Now: centre the cell both ways, and in the scroll call never refuse on the point (the caller waits
+      // and asks again); the decision is the second call's, which tries the centre of the cell's VISIBLE part (the cell
+      // clipped by the viewport and by every overflow-clipping ancestor, e.g. the grid's horizontal scroller or a sticky
+      // column) and then a few more points inside it, each re-checked with elementFromPoint and the denylist.
+      if (scroll && h.scrollIntoView) h.scrollIntoView({block: "center", inline: "center"});
       var r = h.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
-      if (!(r.width > 0 && r.height > 0) || x < 0 || y < 0 || x >= window.innerWidth || y >= window.innerHeight) return {ok: false, why: "offscreen"};
-      var pe = document.elementFromPoint(x, y);
-      if (!pe || !h.contains(pe)) {
+      var vr = visibleRect(h), pt = vr ? pointIn(h, vr) : null;
+      if (pt && pt.why) return {ok: false, why: pt.why};
+      if (pt) { x = pt.x; y = pt.y; }
+      else if (scroll) return {ok: true, pending: true, x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, vw: window.innerWidth, vh: window.innerHeight};
+      else {
         // MEASURE (1b.233 10:40Z: both rows "covered" with NO element at the centre): the geometry, so the next build
         // is fixed from evidence -- point vs viewport vs the cell's rect, the visual viewport, how many elements the
-        // point hits at all, and the page scroll. Numbers only, joined with the server scrub's kept characters (_ / x).
+        // point hits at all, the page scroll, and the visible part (g3). Numbers only, joined with the scrub's kept chars.
+        if (!(r.width > 0 && r.height > 0) || x < 0 || y < 0 || x >= window.innerWidth || y >= window.innerHeight) {
+          if (!vr) return {ok: false, why: "offscreen"};
+        }
+        var pe = (x >= 0 && y >= 0 && x < window.innerWidth && y < window.innerHeight) ? document.elementFromPoint(x, y) : null;
         var vv = window.visualViewport, se = document.scrollingElement || document.documentElement, f = function (n) { return Math.round(n); };
         var efp = document.elementsFromPoint ? document.elementsFromPoint(x, y).length : -1;
-        return {ok: false, why: "covered", top: pe ? (pe.tagName.toLowerCase() + (pe.getAttribute("role") ? "/" + pe.getAttribute("role") : "")).slice(0, 20) : "",
+        return {ok: false, why: vr ? "covered" : "clipped", top: pe ? (pe.tagName.toLowerCase() + (pe.getAttribute("role") ? "/" + pe.getAttribute("role") : "")).slice(0, 20) : "",
           g1: ("p" + f(x) + "_" + f(y) + " v" + window.innerWidth + "x" + window.innerHeight + " r" + f(r.left) + "_" + f(r.top) + "_" + f(r.width) + "x" + f(r.height)).slice(0, 40),
           g2: ("vv" + (vv ? f(vv.width) + "x" + f(vv.height) + "/" + f(vv.offsetLeft) + "_" + f(vv.offsetTop) + "s" + vv.scale.toFixed(2) : "-") +
-            " e" + efp + " sc" + f(se.scrollTop) + " dpr" + (window.devicePixelRatio || 0).toFixed(2) + (document.hidden ? " hid" : "")).slice(0, 40)};
+            " e" + efp + " sc" + f(se.scrollTop) + " dpr" + (window.devicePixelRatio || 0).toFixed(2) + (document.hidden ? " hid" : "")).slice(0, 40),
+          g3: vr ? ("vis " + f(vr.l) + "_" + f(vr.t) + "_" + f(vr.r - vr.l) + "x" + f(vr.b - vr.t)) : "vis none"};
       }
-      for (var e = pe; e && e !== h.parentElement; e = e.parentElement) { var de = denied(e); if (de) return {ok: false, why: "point_" + de}; }
+      if (!scroll) evWatch();
       return {ok: true, x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, vw: window.innerWidth, vh: window.innerHeight};
     },
     // MEASURE (BREAKOUT-NATIVE-TAP finding a): after the group row expands, the child row shows the side as TEXT
@@ -1416,6 +1767,7 @@
           (e.hasAttribute("tabindex") ? " ti" : "") + (e.getAttribute("data-state") ? " ds=" + e.getAttribute("data-state") : "")).slice(0, 40));
       }
       return {w: window.innerWidth, h: window.innerHeight, n_new: nw.length, dialogs: dialogs().length, leaves: leaves.slice(0, 15),
+        ev: (window.__exEv || []).slice(0, 6), hd: window.__exTap ? handlerMap(window.__exTap) : [],
         details_tabs: textEls(document, SHEET_TAB.details).length, tpsl_tabs: textEls(document, SHEET_TAB.tpsl).length, chain: chain};
     },
     // The open sheet: {open, n, title_ok (a title equal to the symbol), subtitle (digits masked), tabs present}
@@ -1463,22 +1815,51 @@
       var rows = sheetOrderRows(r).map(function (o) {
         if (!o.el) return {type: o.type, trigger: null, why: "no_row"};
         var ic = rowIcons(o.el, [o.typeEl].concat(o.px)).map(iconDump);
-        return {type: o.type, trigger: o.px.length === 1 ? firstNumber(t(o.px[0])) : null, n_px: o.px.length,
+        // trigger reads ONLY from exactly one price cell; otherwise null with `why` + the cells' digit-masked shapes,
+        // so an UNREAD stop is diagnosable from the dump and is never mistaken for a moved one (2026-10-18, #a7).
+        return {type: o.type, trigger: o.pick ? firstNumber(t(o.pick)) : null, n_px: o.px.length, n_usd: o.usd.length,
+          why: o.pick ? undefined : (o.px.length ? (o.usd.length ? "many_quote_prices" : "many_prices_no_unit") : "no_price"),
+          px_shapes: o.px.slice(0, 4).map(function (x) {
+            var s = t(x).replace(/\d/g, "d"), u = unitOf(x);
+            return (u && !new RegExp("\\b" + u + "$", "i").test(s) ? s + " " + u : s).trim().slice(0, 20);
+          }),
           close_side: sideOf(wt(o.el)) || "", icons: ic, icon_lines: iconLines(ic), pencils: ic.filter(function (c) { return c.pencil; }).length};
       });
       return {ok: true, n_stop: rows.filter(function (x) { return x.type === "stop"; }).length,
         n_take: rows.filter(function (x) { return x.type === "take"; }).length, rows: rows};
     },
-    // Click the ONE pencil of the ONE Stop row (never the ⓧ next to it). clicked | no_sheet | stops_<n> | no_edit |
-    // ambiguous | deny_*
+    // Click the ONE pencil of the ONE Stop row (never the ⓧ next to it) -- its CONTROL (ctlOf: the button inside the
+    // icon's wrapper, 2026-10-18 drill 1), never the wrapper. clicked | no_sheet | stops_<n> | no_edit | ambiguous |
+    // deny_*
     sheetEditStop: function () {
       if (!hostOk()) return "bad_host";
-      var r = sheetRoot(); if (!r) return "no_sheet";
-      var st = sheetOrderRows(r).filter(function (o) { return o.type === "stop"; });
-      if (st.length !== 1 || !st[0].el) return "stops_" + st.length;
-      var p = rowIcons(st[0].el, [st[0].typeEl].concat(st[0].px)).filter(isPencil);
-      if (!p.length) return "no_edit"; if (p.length > 1) return "ambiguous";
-      return safeClick(p[0]);
+      var h = stopPencil(); if (typeof h === "string") return h;
+      return safeClick(h);
+    },
+    // NATIVE TAP target for that pencil (2026-10-18 drill 1: click() on the pencil's wrapper opened no modal; the app
+    // touches the control the way it touches the Positions row -- sheetTarget's rules: the ONE control, denylist-
+    // checked, the point re-checked with elementFromPoint, scroll=true brings it into view first and the caller asks
+    // again right before it touches). {ok, x, y, vw, vh, tag, label (masked)} in CSS px, or {ok:false, why}:
+    // bad_host | modal_open | no_sheet | stops_<n> | no_edit | ambiguous | deny_* | point_deny_* | covered | clipped
+    sheetEditStopTarget: function (scroll) {
+      if (!hostOk()) return {ok: false, why: "bad_host"};
+      if (modalRoot().length) return {ok: false, why: "modal_open"};
+      var h = stopPencil(); if (typeof h === "string") return {ok: false, why: h};
+      var d = denied(h); if (d) return {ok: false, why: d};
+      if (scroll && h.scrollIntoView) h.scrollIntoView({block: "nearest", inline: "nearest"});
+      var r = h.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2, f = function (n) { return Math.round(n * 10) / 10; };
+      var vr = visibleRect(h), pt = vr ? pointIn(h, vr) : null;
+      if (pt && pt.why) return {ok: false, why: pt.why};
+      if (pt) { x = pt.x; y = pt.y; }
+      else if (scroll) return {ok: true, pending: true, x: f(x), y: f(y), vw: window.innerWidth, vh: window.innerHeight};
+      else {
+        var pe = (x >= 0 && y >= 0 && x < window.innerWidth && y < window.innerHeight) ? document.elementFromPoint(x, y) : null;
+        return {ok: false, why: vr ? "covered" : "clipped", top: pe ? (pe.tagName.toLowerCase() + (pe.getAttribute("role") ? "/" + pe.getAttribute("role") : "")).slice(0, 20) : "",
+          g1: ("p" + Math.round(x) + "_" + Math.round(y) + " v" + window.innerWidth + "x" + window.innerHeight + " r" + Math.round(r.left) + "_" + Math.round(r.top) + "_" + Math.round(r.width) + "x" + Math.round(r.height)).slice(0, 40)};
+      }
+      if (!scroll) evWatch();
+      return {ok: true, x: f(x), y: f(y), vw: window.innerWidth, vh: window.innerHeight, tag: h.tagName.toLowerCase(),
+        label: (h.getAttribute("aria-label") || t(h) || "").replace(/\d/g, "#").slice(0, 20)};
     },
     // The edit modal: {n, kind stop|take, side, qty, unit, entry (from the "Short 0.54 ETH @ 2,461.52 USD" header),
     // inputs [{label, value}], triggers (count of the Trigger input), buttons (masked)}
@@ -1486,16 +1867,34 @@
       var ms = modalRoot(); if (ms.length !== 1) return {n: ms.length};
       var r = ms[0].root, kind = /stop/i.test(t(ms[0].title)) ? "stop" : "take";
       var h = textEls(r, MODAL_HDR, 60), m = h.length === 1 ? MODAL_HDR.exec(t(h[0])) : null;
+      var ti = triggerInput(r);
       return {n: 1, kind: kind, title: t(ms[0].title).slice(0, 30), hdr_n: h.length,
         side: m ? m[1].toLowerCase() : null, qty: m ? parseFloat(m[2].replace(/,/g, "")) : null, unit: m ? (m[3] || "") : "",
-        entry: m ? parseFloat(m[4].replace(/,/g, "")) : null, inputs: modalInputs(r), triggers: triggerInput(r).length,
+        entry: m ? parseFloat(m[4].replace(/,/g, "")) : null, inputs: modalInputs(r), triggers: ti.length,
+        // the resolved Trigger input's name / type and how many sliders (input type=range) the modal holds that are
+        // NOT targets (2026-10-18: the operator must be able to see the slider is seen and left alone)
+        trigger_name: ti.length === 1 ? (ti[0].name || "") : "", trigger_type: ti.length === 1 ? (ti[0].type || "text") : "",
+        sliders: Array.prototype.slice.call(r.querySelectorAll("input[type=range],[role=slider]")).filter(vis).length,
         buttons: Array.prototype.slice.call(r.querySelectorAll("button,[role=button]")).filter(vis).map(function (x) { return t(x).replace(/\d/g, "#").slice(0, 20); }).slice(0, 10)};
     },
-    // Set ONLY the modal's ONE Trigger input. {n, value} (n = how many Trigger inputs matched; nothing typed unless 1)
+    // Set ONLY the modal's ONE Trigger PRICE input. MEASURED 2026-10-18 drill 2 (19:00Z, capture 010-modal_open, fixture
+    // breakout-modal-edit-stop-loss): the real "Edit Stop loss" modal holds Quantity (name protectionStopLossSize),
+    // Trigger (name protectionStopLossPrice, unit USD), Entry distance (name protectionStopLossDistance, %), and UNDER
+    // them the "Stop loss Entry distance" SLIDER (input type=range inside div.ds-slider). The slider is never a target:
+    // inputs() drops type=range, and the one Trigger match is refused unless it is a typeable text input outside any
+    // slider. The field is focused (what a finger's tap does), selected whole, set through the native value setter with
+    // input + change (the terminal recomputed its "Est. maximum loss" from the typed price on the phone), read back,
+    // then blurred. {n, value, name, type} (n = how many Trigger inputs matched; nothing typed unless exactly 1;
+    // n: -1 + why when the one match is not a typeable price input)
     modalSetTrigger: function (v) {
       var ms = modalRoot(); if (ms.length !== 1) return {n: -ms.length};
       var ins = triggerInput(ms[0].root); if (ins.length !== 1) return {n: ins.length};
-      var i = ins[0]; i.focus(); setVal(i, String(v)); i.blur(); return {n: 1, value: i.value};
+      var i = ins[0], ty = (i.type || "text").toLowerCase();
+      if (ty !== "text" && ty !== "number" && ty !== "tel") return {n: -1, why: "not_text_input:" + ty};
+      if (i.closest("[role=slider],.ds-slider,[class*=slider]")) return {n: -1, why: "in_slider"};
+      i.focus(); try { i.select(); } catch (e) {}
+      setVal(i, String(v)); i.blur();
+      return {n: 1, value: i.value, name: i.name || "", type: ty};
     },
     modalTrigger: function () {
       var ms = modalRoot(); if (ms.length !== 1) return {n: -ms.length};
@@ -1539,6 +1938,22 @@
     // the denylist, exposed for the test: why `sel`'s ONE element must never be clicked, or "" when it may be
     deniedSel: function (sel) { var e = document.querySelectorAll(sel); return e.length === 1 ? (denied(e[0]) || "") : "n" + e.length; },
     safeClickSel: function (sel) { var e = document.querySelectorAll(sel); return e.length === 1 ? safeClick(e[0]) : "n" + e.length; },
+    // TEST-TRADE CLOSE (MD-EXEC-DEV-TEST-TRADES, operator grant 2026-10-18): the ONE deliberate exception to the denylist.
+    // The app arms it for exactly one symbol right before the click (allowClose); sheetClosePosition then clicks the
+    // open sheet's ONE "Close position" text button only if that sheet is titled with the armed symbol. The arm is
+    // spent by the call whether or not it lands and dies after 15 s. Every other path keeps refusing every close /
+    // cancel control (denied()). not_armed | no_sheet | sheet_symbol_mismatch | n<count> | clicked
+    allowClose: function (sym) { window.__exCloseArm = {sym: norm(sym || ""), at: Date.now()}; return "armed"; },
+    sheetClosePosition: function (sym) {
+      var arm = window.__exCloseArm; window.__exCloseArm = null;
+      if (!arm || !arm.sym || arm.sym !== norm(sym || "") || Date.now() - arm.at > 15000) return "not_armed";
+      var r = sheetRoot(); if (!r) return "no_sheet";
+      var b = base(sym).replace(/[^A-Z0-9]/g, "");
+      if (!textEls(r, new RegExp("^" + b + "(USD[TC]?|PERP)?$", "i"), 16).length) return "sheet_symbol_mismatch";
+      var btns = Array.prototype.slice.call(r.querySelectorAll("button,[role=button]")).filter(function (x) { return vis(x) && /^close\s*position$/i.test(t(x)); });
+      if (btns.length !== 1) return "n" + btns.length;
+      btns[0].click(); return "clicked";
+    },
     rowClose: function (sym, sideRe) {
       var n = norm(sym); var rx = new RegExp(sideRe, "i");
       var r = all("tr,[role=row]").filter(function (r) { var s = t(r); return norm(s).indexOf(n) >= 0 && rx.test(s); })[0];

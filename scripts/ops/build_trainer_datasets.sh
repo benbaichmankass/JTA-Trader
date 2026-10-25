@@ -154,7 +154,26 @@ overall_rc=0
 # build_family: run one dataset build; logs result; updates overall_rc on failure.
 build_family() {
   local family="$1"; shift
-  emit "$(printf '{"ts":"%s","status":"building","family":"%s"}' "$(iso_now)" "$family")"
+  # Symbol / timeframe context for the log row. The `failed` emit below used
+  # to carry only the family, so 12 `market_raw` failures (2026-10-13..18,
+  # Bybit retCode 10016) could not be attributed to a (symbol, timeframe)
+  # from the log alone -- the builder's own --symbol-scope / --timeframe args
+  # are the truth, so read them off "$@" rather than a global.
+  local ctx_symbol="" ctx_tf="" _prev=""
+  for _arg in "$@"; do
+    case "$_prev" in
+      --symbol-scope) ctx_symbol="$_arg" ;;
+      --timeframe)    ctx_tf="$_arg" ;;
+    esac
+    _prev="$_arg"
+  done
+  emit "$(python3 -c "
+import json, sys
+ts, fam, sym, tf = sys.argv[1:]
+row = {'ts': ts, 'status': 'building', 'family': fam}
+if sym: row['symbol'] = sym
+if tf: row['timeframe'] = tf
+print(json.dumps(row))" "$(iso_now)" "$family" "$ctx_symbol" "$ctx_tf")"
   set +e
   python -m ml build-dataset "$family" "$@" \
     >"/tmp/bld_${family}_$$.out" 2>"/tmp/bld_${family}_$$.err"
@@ -201,9 +220,12 @@ print(json.dumps(row))" \
     err="$(tail -n 3 "/tmp/bld_${family}_$$.err" 2>/dev/null | tr '\n' ' ' | head -c 400)"
     emit "$(python3 -c "
 import json, sys
-ts, fam, rc, err = sys.argv[1:]
-print(json.dumps({'ts': ts, 'status': 'failed', 'family': fam, 'exit_code': int(rc), 'stderr_tail': err}))" \
-      "$(iso_now)" "$family" "$rc" "$err")"
+ts, fam, rc, err, sym, tf = sys.argv[1:]
+row = {'ts': ts, 'status': 'failed', 'family': fam, 'exit_code': int(rc), 'stderr_tail': err}
+if sym: row['symbol'] = sym
+if tf: row['timeframe'] = tf
+print(json.dumps(row))" \
+      "$(iso_now)" "$family" "$rc" "$err" "$ctx_symbol" "$ctx_tf")"
     overall_rc=1
   fi
   rm -f "/tmp/bld_${family}_$$.out" "/tmp/bld_${family}_$$.err"

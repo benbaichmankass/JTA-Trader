@@ -1,0 +1,82 @@
+id: RQ-20261023-2230-01
+title: 'CROSS-SYMBOL CONFIRMATION of the 3a84-01 direction-filter PASS (DI on xrp_pullback_2h): does requiring the +DI/-DI direction filter also beat eth_pullback_2h as declared?'
+status: queued
+cadence: once
+roadmap:
+- L-REGIME
+theme: regime
+priority: 2
+kind: experiment
+question: RQ-20261022-3a84-01 graded PASS for arm DI (--direction-filter=di) on xrp_pullback_2h (+5.56 R vs B, 2020-01..2026-10-22, 3 of 4 folds) while RQ-20261022-3a84-02 graded FAIL for the same arm on ada_pullback_2h (-4.68 R). On eth_pullback_2h (a third symbol, same family, real money), over the same calendar span and the harness's venue-aware fee + slippage + funding stack, does DI, fixed from that lead and not re-searched, beat the leg as declared (B) by >= 1.0 R net in >= 3 of 4 folds with max drawdown no worse?
+why_this_matters: 'A PASS read on one window is a discovery, not a confirmation (research-ops step D). The xrp DI lead was chosen from 2 candidate arms (DI, SL) and is contradicted by ada, so the symbol-selection denominator is 2 symbols x 2 arms = 4 comparisons with 1 pass. The history is not splittable (the data feed starts 2020 for these legs), so the independent read is a third symbol. A Tier-3 note needs a majority of symbols, not one. Lane RESEARCH-OPS-20261023-2047. Prior: RQ-20261022-3a84-01, RQ-20261022-3a84-02.'
+power:
+  expected_n: 120
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo's standing E35 floor). expected_n is an ESTIMATE scaled from the sibling pullback_2h legs over a 6.8 y window, not a measurement; below 39 the unit grades indeterminate, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261023-2230-01-ETHPB2H-DIRFILTER
+  registered_at: '2026-10-23'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_lever_ablation.py --leg eth_pullback_2h --grade sweep, baseline B = the leg as declared in config/strategies.yaml, one candidate arm fixed now (from the 3a84-01 lead, not re-searched): DI=--direction-filter=di; --folds 4 --fold-majority 3 --n-floor 39 --delta-r 1.0; per arm: n, net_total_r, max_drawdown_r, net R per fold; dR = net_r(DI) - net_r(B), dDD = maxDD(DI) - maxDD(B).'
+  rule: 'INDETERMINATE IF n(B) < 39 (underpowered; never FAIL on thin n). DI PASSES iff dR >= 1.0 R AND dDD <= 0 AND DI beats B in >= 3 of 4 folds. PASS IF DI passes: a second-symbol replication (xrp pass, ada fail, eth pass = 2 of 3) which becomes a Tier-3 PROPOSAL note on the owning checklist row for the manager only after the mixed record is stated in it, never a config edit. FAIL IF it does not pass with n(B) >= 39: the xrp lead stands as a single-symbol result (1 of 3) and the axis is recorded honest_negative across symbols. Thresholds are fixed now and not changed after any result.'
+  what_it_does_not_do: 'Edits no config and no roster, places no order. One arm is the whole search: no arm is added after the run, and the baseline is the declared leg. A PASS is not a promotion case; a direction filter also needs a live producer and a Tier-3 declare with the mirror in the same PR.'
+  min_n: '39'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 100
+  confidence: 0.15
+  bucket: own_losses
+  basis: 'stand-in: a direction filter on a real-money pullback leg; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 40
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data; CPU only.
+  basis: Estimate from the comparable exit_lever_ablation runs of 2026-10-22 (3a84-01, 3 arms); the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - eth_pullback_2h
+  - --arm
+  - B=
+  - --arm
+  - DI=--direction-filter=di
+  - --days
+  - '7300'
+  - --end
+  - '2026-10-22'
+  - --grade
+  - sweep
+  - --baseline
+  - B
+  - --delta-r
+  - '1.0'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261023-2230-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P3
+related:
+- scripts/research/exit_lever_ablation.py
+- RQ-20261022-3a84-01
+- RQ-20261022-3a84-02
+- RESEARCH-OPS-20261023-2047

@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "due_date": "2026-10-19",
+    "kind": "date"
+  },
+  "evidence": "comms/research/RQ-20261016-007/39103745017/verdict.json (lands at the 07:20Z collector); checklist PROP-EXIT-UNITS note 2026-10-18",
+  "filed_by": "lane ACTIVE-MGMT-DRIVE-1018 session_013oEUJzaNgUnEAFrpHccwkx",
+  "id": "PI-20261018-ROPKSTAR-0001",
+  "money_path": true,
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "research",
+    "ref": "research/results/RQ-20261016-007 (run 39103745017)",
+    "rerun": "python3 scripts/research/tp_prediction_derive.py --legs trend_donchian_eth_prop --days 1830"
+  },
+  "roadmap": [
+    "L-ATM"
+  ],
+  "routed_to": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "what": "OPERATOR DECISION (TP doctrine, prop): declare tp_r 2.5 as trend_donchian_eth_prop's predictive TP (breakout_2 / tradeify_1 / velotrade_1; bybit_1 soak) in place of the 6 R target the guard grades unreachable (reach 3.4% OOS) -- or keep 6 R. RQ-20261016-007 is INDETERMINATE at n 870 (OOS 348, 2021-10..2026-10): K* = 2.5 R reaches 13.5% OOS, calibration gap 0.005, OOS delta -0.028 R/trade, CI [-0.066, +0.006]. The point estimate says the reachable target COSTS ~0.03 R/trade versus the sentinel-like 6 R; the CI does not exclude zero. Prop legs clear a SUPERSET, so YES still routes through the prop-cost ablation + prop_ev_grid per firm (nodes as for sol_prop) before any declare; NO -> recorded on TP-DOCTRINE / PROP-EXIT-UNITS as an accepted doctrine debt with this record, and the leg's route is a revision rule or Q8. sol_prop's K* = 2.5 PASSED the same screen and needs no decision (unit P1-Q2-solprop-confirm-kstar)."
+}

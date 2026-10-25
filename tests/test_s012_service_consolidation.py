@@ -180,6 +180,13 @@ EXPECTED_SERVICES = {
     # used, read from the published trainer_status.json mirror. Live-trader-box
     # only; in deploy_pull_restart.sh DEFAULT_SKIP.
     "ict-trainer-disk-alarm.service",
+    # 2026-10-18 (PHONE-EXEC-OBSERVABLE-1018): daily oneshot
+    # (ict-phone-capture-purge.timer) that deletes phone step captures older
+    # than 7 days under <trade_journal.db dir>/phone_captures (operator: stored
+    # on the server only, auto-deleted after 7 days). Live-trader-box only; in
+    # deploy_pull_restart.sh DEFAULT_SKIP (a deploy never fires an unscheduled
+    # purge). The capture POST runs the same purge at most hourly.
+    "ict-phone-capture-purge.service",
 }
 
 # Trader-side units (i.e. units that run trading-strategy code). Used to

@@ -137,6 +137,16 @@ weekend: services, heartbeats, alert delivery, DB integrity, relay health — th
 `health-review` § checks as the list. Anything it found Saturday that is still open and unrowed is a finding
 here; anything fixed is verified fixed (read the field, not the PR).
 
+### C8b. Research pipeline health (operator, 2026-10-16)
+
+Read the last 7 days of `comms/research/health/<date>.json` (written every 2 h by `research-slo.yml`; SLOs and
+thresholds in `scripts/research/research_slo.yaml`). Report, per SLO: days red / 7, current value, and whether a
+lane was dispatched the same day it went red (manager § "Research SLO escalation"). **Every breach and every
+`could_not_look` in the window needs a disposition** — a fix merged, a checklist row or pipeline item with a near
+`due_when`, or a reasoned threshold change in a PR. A missing day's file, or `runs` with gaps > 4 h, is itself a
+finding (the monitor is a pipeline too). Positive control: `python3 scripts/research/research_slo.py --self-test`
+(a planted starved queue must alert) — paste its line beside a "no breaches" verdict.
+
 ### C9. RECURRENCE — the anti-treadmill step (never skipped)
 
 For every finding that **closed in the last 7 days** (checklist rows moved to `done`, pipeline `done`):

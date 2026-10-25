@@ -87,6 +87,19 @@ def _coerce_int(value: Any) -> Optional[int]:
         return None
 
 
+def closed_frame(candles_df: Any, meta: Dict[str, Any], cfg_dict: Dict[str, Any]) -> Any:
+    """``candles_df`` without its still-forming last bar, keyed on the leg's
+    ``timeframe`` (meta first, then cfg). Unchanged when the timeframe is unknown
+    or the last bar has closed. Never raises."""
+    try:
+        from src.runtime.closed_bars import drop_forming_bar
+
+        tf = str((meta or {}).get("timeframe") or (cfg_dict or {}).get("timeframe") or "")
+        return drop_forming_bar(candles_df, tf) if tf else candles_df
+    except Exception:  # noqa: BLE001 — trimming must never break a lever
+        return candles_df
+
+
 def since_entry(candles_df: pd.DataFrame, open_pkg: Dict[str, Any]) -> pd.DataFrame:
     """Restrict the candle window to bars at/after the package entry time.
 
@@ -158,11 +171,18 @@ def stale_stop_verdict(
             return None
         if not meta.get("entry_time"):
             return None  # age unknowable — fail-safe skip
-        window = since_entry(candles_df, open_pkg)
+        # MOMENTUM-LEVERS-PARITY (2026-10-24): decide on CLOSED bars, as the
+        # harnesses do (close at bar CLOSE once j - entry_i >= N). Counting the
+        # still-forming bar made the live age one bar older than the harness's and
+        # tested an intrabar price, so the stop fired up to one bar early
+        # (measured: scripts/research/momentum_levers_parity.py). A frame with no
+        # declared timeframe passes through unchanged (the pre-fix behaviour).
+        closed = closed_frame(candles_df, meta, cfg_dict)
+        window = since_entry(closed, open_pkg)
         # _since_entry falls back to the FULL frame when the entry time can't
         # be matched; that would fake a huge age, so require a real restriction
         # (or a genuinely long-lived trade spanning the whole fetch window).
-        if len(window) >= len(candles_df) and len(candles_df) > 0:
+        if len(window) >= len(closed) and len(closed) > 0:
             # Ambiguous: either fallback or a trade older than the fetch
             # window (limit≈200 bars ≫ any sane stale_exit_bars). Treat a
             # full-window match as "at least window-length old" ONLY when the
@@ -170,11 +190,14 @@ def stale_stop_verdict(
             # guarantees that when it actually filtered, so equality here
             # means fallback — skip (fail-safe).
             return None
-        age_bars = max(0, len(window) - 1)  # bars strictly after the entry bar
+        age_bars = max(0, len(window) - 1)  # CLOSED bars strictly after the entry bar
         if age_bars < n_bars:
             return None
-        open_r = ((current_price - entry) if direction == "long"
-                  else (entry - current_price)) / risk
+        bar_close = _coerce_float(closed["close"].iloc[-1])
+        if bar_close is None:
+            return None
+        open_r = ((bar_close - entry) if direction == "long"
+                  else (entry - bar_close)) / risk
         if open_r >= threshold:
             return None
         if declared_bars is not None:

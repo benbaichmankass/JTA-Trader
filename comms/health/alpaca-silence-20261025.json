@@ -1,0 +1,360 @@
+{
+ "id": "ALPACA-SILENCE-1025",
+ "kind": "health_investigation",
+ "as_of_utc": "2026-10-25T06:40Z",
+ "lane": "session_01K1jp2SACfikkR3ALqWwpxt",
+ "manager": "session_016v5FrVaSAmNoz8u6ct9HqC",
+ "question": "Why has Alpaca, alpaca_live above all, taken almost no trades for weeks while markets moved? Correct quiet or fault?",
+ "window": {
+  "from": "2026-09-21T13:30Z (first US session after 2026-09-20)",
+  "to": "2026-10-23T20:00Z (last session before read)",
+  "us_sessions": 25
+ },
+ "verdicts": {
+  "alpaca_live": {
+   "verdict": "correct_quiet",
+   "stage": null,
+   "summary": "No fault at any stage. The roster narrowed by operator Tier-3 removals to ONE leg (iaum_pullback_1d) on a long-only cash account with venue shorting disabled. Since 2026-09-28 no long setup fired on any leg rostered there; every routed package was a short and was journalled dry_run_no_order_placed.",
+   "venue_orders_since_0915": {
+    "entries_filled": 3,
+    "rejected": 0,
+    "orders_after_0923": 0,
+    "entries": [
+     "SLV 2026-09-17 (trade 5875, closed sl 09-28)",
+     "TLT 2026-09-18 (trade 5924, closed sl_cross 09-22)",
+     "IAUM 2026-09-23 (trade 6097, closed sl 09-28)"
+    ],
+    "source": "/api/diag/alpaca_order_history?account_id=alpaca_live&after=2026-09-15T00:00:00Z, read 2026-10-25T06:31Z"
+   },
+   "short_signals_routed_and_side_filtered": "7 routed, all journalled dry_run_no_order_placed; 6 of 7 stamp dry_cause side_filter:long; trade 6067 (2026-09-22) carries no dry_cause field (the stamp did not exist yet)",
+   "long_signals_blocked_by_open_package": "4 (SLV 09-21/25/28 while alpaca_live itself held SLV trade 5875; IAUM 09-21 while pkg-5352 was open). Pre-#14565 the open-package gate wrote no audit row, so these read as vanished.",
+   "account_flags": "ACTIVE, trading_blocked false, flat, shorting_enabled false (/api/diag/broker_account_status, /api/diag/exchange_positions, read 2026-10-25 ~06:35Z)"
+  },
+  "alpaca_portfolio": {
+   "verdict": "correct_quiet_by_config",
+   "stage": "config",
+   "summary": "strategies: [] on main and in the running process. Strict mirror equality minus the affordability proxies leaves nothing, because alpaca_live's only leg is the declared proxy iaum_pullback_1d. That consequence was DECIDED 2026-09-21 (B2: equality wins, empty mirror accepted). Its 3 rows in the window are ief_pullback_1d shorts side-filtered before 10-21."
+  },
+  "alpaca_paper": {
+   "verdict": "mostly_correct_quiet; one decided-but-unaccounted blockage",
+   "stage": "routing (symbol slot) + sizing (venue buying power)",
+   "summary": "14 legs. 9 closed and 2 open trades since 09-20. Refusals are holds (the leg or a same-symbol leg is already in a position), venue buying power at 0 while large bond shorts held the book, and the GLD zombie OCO (decided keep 2026-10-02), which takes the GLD slot so gld_pullback_1d cannot trade.",
+   "venue_positions_reconcile": "4/4 venue positions match open journal trades (GDX short 6660, IAUM short 6655, SPY long 4347, GLD long 5209)"
+  }
+ },
+ "stages": {
+  "config": "MEASURED config/accounts.yaml @ origin/main 3a59ae2b1 + /api/diag/status 06:19Z (process roster equals main): alpaca_live mode live, side_filter long, daily_dd_switch armed limit 3%, strategies [iaum_pullback_1d]; alpaca_portfolio []; alpaca_paper 14 legs, 13 execution live + slv_trend_1h shadow. Removals in window: tlt_pullback_1h + tlt_pullback_1d (09-21, A6), ief_pullback_1d (10-21), slv_pullback_1d (10-24), all operator Tier-3. Roster-symbol reachability: every roster symbol is in the account's symbols list.",
+  "data": "MEASURED /api/diag/audit_query per leg (iaum/ief/slv_pullback_1d, all eval rows): 25 of 25 weekdays ticked, 153-199 evals/day, UTC hours 13-19 only (US session gate); on all 15 days whose rows carry bar_open_ts the bar is that day's bar (0 stale).",
+  "signal": "MEASURED audit_query side=buy|sell per strategy for 18 legs (13 rostered + 5 legacy); INDEPENDENT REPLAY: each leg's own order_package() with its config/strategies.yaml block over Yahoo daily bars (query1.finance.yahoo.com v8 chart, range 1y, fetched 2026-10-25), last-close per session. SPLG not replayed (no Yahoo series returned).",
+  "replay_actionable_closes": {
+   "iaum_pullback_1d": [
+    [
+     "2026-09-22",
+     "long"
+    ],
+    [
+     "2026-10-16",
+     "short"
+    ],
+    [
+     "2026-10-19",
+     "short"
+    ]
+   ],
+   "ief_pullback_1d": [
+    [
+     "2026-10-09",
+     "short"
+    ],
+    [
+     "2026-10-19",
+     "short"
+    ],
+    [
+     "2026-10-21",
+     "short"
+    ]
+   ],
+   "slv_pullback_1d": [
+    [
+     "2026-09-25",
+     "long"
+    ]
+   ],
+   "gld_pullback_1d": [
+    [
+     "2026-09-22",
+     "long"
+    ],
+    [
+     "2026-10-16",
+     "short"
+    ],
+    [
+     "2026-10-19",
+     "short"
+    ]
+   ],
+   "gdx_pullback_1d": [
+    [
+     "2026-09-25",
+     "long"
+    ],
+    [
+     "2026-10-19",
+     "short"
+    ],
+    [
+     "2026-10-20",
+     "short"
+    ]
+   ],
+   "tlt_pullback_1d": [
+    [
+     "2026-09-22",
+     "short"
+    ],
+    [
+     "2026-10-19",
+     "short"
+    ]
+   ],
+   "spy_trend_long_1d": [
+    [
+     "2026-10-06",
+     "long"
+    ]
+   ],
+   "qqq_trend_long_1d": [
+    [
+     "2026-09-21",
+     "long"
+    ],
+    [
+     "2026-09-22",
+     "long"
+    ],
+    [
+     "2026-10-02",
+     "long"
+    ],
+    [
+     "2026-10-05",
+     "long"
+    ],
+    [
+     "2026-10-06",
+     "long"
+    ]
+   ],
+   "iwm_trend_long_1d": [
+    [
+     "2026-10-14",
+     "short(long_only->none)"
+    ]
+   ],
+   "tqqq_trend_long_1d": [
+    [
+     "2026-09-21",
+     "long"
+    ],
+    [
+     "2026-09-22",
+     "long"
+    ],
+    [
+     "2026-10-05",
+     "long"
+    ],
+    [
+     "2026-10-06",
+     "long"
+    ],
+    [
+     "2026-10-22",
+     "short(long_only->none)"
+    ]
+   ],
+   "qld_trend_long_1d": [
+    [
+     "2026-09-21",
+     "long"
+    ],
+    [
+     "2026-09-22",
+     "long"
+    ],
+    [
+     "2026-10-02",
+     "long"
+    ],
+    [
+     "2026-10-05",
+     "long"
+    ],
+    [
+     "2026-10-06",
+     "long"
+    ]
+   ],
+   "scha_trend_long_1d": [
+    [
+     "2026-10-14",
+     "short(long_only->none)"
+    ]
+   ]
+  },
+  "routing_risk": "order_packages fully paged (5,549 rows, read 2026-10-25 ~06:30Z), 65 on Alpaca symbols created since 09-20; trades table ids 2740-6739.",
+  "leg_day_classification": {
+   "population": "leg-days with >=1 actionable eval, 18 legs, 2026-09-21..10-23",
+   "counts": {
+    "PACKAGE": 50,
+    "VANISHED": 19,
+    "BLOCKED_LOGGED": 11,
+    "DISPATCH_NOPKG": 36
+   },
+   "vanished": [
+    {
+     "leg": "qqq_trend_long_1d",
+     "side": "buy",
+     "day": "2026-09-22"
+    },
+    {
+     "leg": "qqq_trend_long_1d",
+     "side": "buy",
+     "day": "2026-09-23"
+    },
+    {
+     "leg": "gld_pullback_1d",
+     "side": "buy",
+     "day": "2026-09-21"
+    },
+    {
+     "leg": "tlt_pullback_1d",
+     "side": "sell",
+     "day": "2026-09-22"
+    },
+    {
+     "leg": "tlt_pullback_1d",
+     "side": "sell",
+     "day": "2026-09-23"
+    },
+    {
+     "leg": "slv_pullback_1d",
+     "side": "buy",
+     "day": "2026-09-21"
+    },
+    {
+     "leg": "slv_pullback_1d",
+     "side": "buy",
+     "day": "2026-09-25"
+    },
+    {
+     "leg": "slv_pullback_1d",
+     "side": "buy",
+     "day": "2026-09-28"
+    },
+    {
+     "leg": "gdx_pullback_1d",
+     "side": "buy",
+     "day": "2026-09-22"
+    },
+    {
+     "leg": "gdx_pullback_1d",
+     "side": "buy",
+     "day": "2026-09-25"
+    },
+    {
+     "leg": "gdx_pullback_1d",
+     "side": "buy",
+     "day": "2026-09-28"
+    },
+    {
+     "leg": "qld_trend_long_1d",
+     "side": "buy",
+     "day": "2026-09-22"
+    },
+    {
+     "leg": "qld_trend_long_1d",
+     "side": "buy",
+     "day": "2026-09-23"
+    },
+    {
+     "leg": "iaum_pullback_1d",
+     "side": "buy",
+     "day": "2026-09-21"
+    },
+    {
+     "leg": "spy_pullback_1h",
+     "side": "buy",
+     "day": "2026-09-23"
+    },
+    {
+     "leg": "spy_pullback_1h",
+     "side": "buy",
+     "day": "2026-09-28"
+    },
+    {
+     "leg": "spy_pullback_1h",
+     "side": "buy",
+     "day": "2026-09-29"
+    },
+    {
+     "leg": "qqq_pullback_1h",
+     "side": "buy",
+     "day": "2026-09-23"
+    },
+    {
+     "leg": "qqq_pullback_1h",
+     "side": "buy",
+     "day": "2026-09-29"
+    }
+   ],
+   "vanished_explanation": "19/19 VANISHED leg-days fall 09-21..09-29 and each had a same-leg package already open; #14565 (merged 2026-09-30) made the open-package gate write open_package_blocked, and 0 vanished after 09-29 (10 of the 11 BLOCKED_LOGGED leg-days are open_package_blocked rows dated 2026-09-30..10-14; the 11th, iaum_pullback_1d 09-22, is a bar_debounce_blocked row). INFERRED: they were silent open-package blocks, by date coincidence plus open-package overlap; journalctl does not reach back to 09-21 to show it directly.",
+   "dispatch_nopkg_explanation": "36 DISPATCH_NOPKG leg-days are all 1h legs (tlt/spy/qqq_pullback_1h, uso_trend_1h) on no Alpaca roster: correct, nothing to route."
+  },
+  "order": "MEASURED alpaca_order_history (alpaca_live, after 09-15): 3 filled bracket entries, 0 rejected, nothing after 09-23.",
+  "service": "MEASURED /api/diag/status 06:19Z: heartbeat 44s, last_tick 06:19:30Z, all four Alpaca accounts live:true; pipeline_result rows for IAUM/SLV/IEF continue to 2026-10-25T06:21Z."
+ },
+ "cross_checks": {
+  "leg_flow_report": "scripts/ops/leg_flow_report.py --window-hours 816: alpaca_live iaum_pullback_1d flowing (received 1). It flags 4 alpaca_paper/options legs as starved, each explained: spy_trend_long_1d holds SPY 4347 since 08-03; slv_pullback_1d's entry predates the window (5873, 09-17); gld_pullback_1d is blocked by the GLD wedge (finding F2); alpaca_options_paper slv/gdx come from options_expression no_selection and slv_trend_1h shadow, outside this question."
+ },
+ "findings": [
+  {
+   "id": "F1",
+   "severity": "none (historical, fixed)",
+   "what": "Open-package gate dropped intents with no audit row until #14565 (2026-09-30); 19 leg-days read as vanished, 4 of them on alpaca_live.",
+   "disposition": "fixed and observed: 10 open_package_blocked leg-days 2026-09-30..10-14, 0 vanished after 09-29. No action."
+  },
+  {
+   "id": "F2",
+   "severity": "paper soak blocked",
+   "what": "alpaca_paper's GLD 39-sh zombie OCO (venue cancel_accepted_ineffective; stop 416.09 never executed, GLD ~366) was kept by operator decision 2026-10-02 ('Mark it, keep going'). It takes the GLD slot, so rostered gld_pullback_1d is refused on every GLD signal (10-16 flip_suppressed qty=39), and SOAK-MECH-B's close condition for gld_pullback_1d and PAPER-RESET's observation ('zombie OCO cleared') cannot be reached.",
+   "disposition": "pipeline item, ask_operator via the manager"
+  },
+  {
+   "id": "F3",
+   "severity": "paper soak throughput",
+   "what": "alpaca_paper risk_refused with venue buying_power 0 on 7 packages (09-21..09-24) and near 0 on 10-19/10-20 (gld_pullback_1d), while bond shorts sized 579-876 sh (tlt/ief_pullback_1d) held most of the margin book.",
+   "disposition": "pipeline item, check_observation"
+  },
+  {
+   "id": "F4",
+   "severity": "decision for the operator",
+   "what": "alpaca_live executable flow is about one long a month (1 leg, long-only, cash), and the Gate-2 mirror is empty by decision, so the real-money book now gives neither a mechanics nor a demotion signal at any useful rate.",
+   "disposition": "pipeline item, ask_operator via the manager (a Tier-3 roster question, not a fix)"
+  },
+  {
+   "id": "F5",
+   "severity": "diagnostic clarity, not filed",
+   "what": "empty_sizing_map labels an account removed by the per-account open-package gate as outside_account_scope, the same label E35 uses for losing an election.",
+   "disposition": "not filed: the open_package_scoped audit row keeps the two distinguishable, and nothing decides on the label"
+  }
+ ],
+ "rerun": [
+  "scripts/ops/diag_fetch.sh 'audit_query?strategy=<leg>&side=buy&since=<from>&limit=1000' (and side=sell)",
+  "scripts/ops/diag_fetch.sh 'journal?table=order_packages&limit=1000&offset=<0..5000>'",
+  "scripts/ops/diag_fetch.sh 'alpaca_order_history?account_id=alpaca_live&after=<from>&limit=500'",
+  "python3 scripts/ops/leg_flow_report.py --window-hours <h> --json"
+ ]
+}

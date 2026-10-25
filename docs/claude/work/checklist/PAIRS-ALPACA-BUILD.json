@@ -10,19 +10,26 @@
   "spend_usd": null,
   "tier": 3,
   "prs": [
-    17747
+    17747,
+    18635
   ],
   "blocked_on": [],
-  "note": "OPERATOR DECISION 2026-10-12T10:40Z (popup, verbatim choice 'Build, paper soak (Recommended)'): build an isolated Alpaca pairs executor for GLD/GDX ONLY, routed to alpaca_paper (Stage 1 soak); promotion follows the normal ladder (Gate 2 needs realized-cost match). Evidence: RQ-20261007-025 PASS (OOS 2022-01..2026-10 n=69 net +5.25R; 8/10 years positive; 8/9 neighbourhood cells positive; fee 7.5 + slip 5.0 bps/leg). SPY/QQQ 1h sibling FAILED -121.96R -> not in scope. Constraints: mirror pattern of src.units.strategies.pairs_executor (isolated 2-leg path, gate in config/pairs.yaml, single-account by construction E36); no real-money account; TP doctrine applies to legs; no new *_ENABLED flag. Source question row PAIRS-ALPACA-BUILD-QUESTION (on #17722). [manager 17:55Z] #17747 merged 17:44Z after two independent reviews (blocking real-money gap fixed: pairs_account_refusal code guard, runtime-tested vs alpaca_live/alpaca_portfolio/bybit_2). Lane session_01P1PVxy spend ~$11.4+.  || [2026-10-15 DUE-ROUTE-20261015] RE-DATED to 2026-10-22; READ: MEASURED: zero pairs_* rows on account alpaca_paper in the last 1000 trades journal rows; no GLD/GDX pairs decision observed yet.",
-  "updated_at": "2026-10-15T06:04:56Z",
-  "updated_by": "session_01PH9KCD1r7StznkqPLzd9K1",
+  "note": "OPERATOR DECISION 2026-10-12T10:40Z (popup, verbatim choice 'Build, paper soak (Recommended)'): build an isolated Alpaca pairs executor for GLD/GDX ONLY, routed to alpaca_paper (Stage 1 soak); promotion follows the normal ladder (Gate 2 needs realized-cost match). Evidence: RQ-20261007-025 PASS (OOS 2022-01..2026-10 n=69 net +5.25R; 8/10 years positive; 8/9 neighbourhood cells positive; fee 7.5 + slip 5.0 bps/leg). SPY/QQQ 1h sibling FAILED -121.96R -> not in scope. Constraints: mirror pattern of src.units.strategies.pairs_executor (isolated 2-leg path, gate in config/pairs.yaml, single-account by construction E36); no real-money account; TP doctrine applies to legs; no new *_ENABLED flag. Source question row PAIRS-ALPACA-BUILD-QUESTION (on #17722). [manager 17:55Z] #17747 merged 17:44Z after two independent reviews (blocking real-money gap fixed: pairs_account_refusal code guard, runtime-tested vs alpaca_live/alpaca_portfolio/bybit_2). Lane session_01P1PVxy spend ~$11.4+.  || [2026-10-15 DUE-ROUTE-20261015] RE-DATED to 2026-10-22; READ: MEASURED: zero pairs_* rows on account alpaca_paper in the last 1000 trades journal rows; no GLD/GDX pairs decision observed yet. [2026-10-16 lane PAIRS-ALPACA-BUILD-1016] Operator re-answered the build question 2026-10-16 (\"Build, paper first\"; verbatim on PAIRS-ALPACA-BUILD-QUESTION). The build is already this row (#17747). Added: #18635 (Tier-3-by-path HOLD): Alpaca session venue refuses to size on an inflated rolling-beta R unit (skip_risk_scale), both R units on every soak row; PAIRS-R-SCALE cannot recur here. HOLDOUT ANSWER: RQ-20261007-025 OOS span does NOT serve as the R-HOLDOUT confirmation -- params were harness defaults (not tuned), but 2022..2026 was read by RQ-20260929-105 (the pooled pass that selected GLD/GDX) and 10x more by 025 itself. Holdout unit filed: RQ-20261016-7ea6-01 (2006-05-22..2016-10-05, never read, read once at the confirmed config, PASS iff net R>0 at n>=25); open for the manager whether a backward span meets \"held-back 25%\". Real money also needs the 1-2 trade mechanical soak (observation below) then Stage 2.",
+  "updated_at": "2026-10-24T06:01:08Z",
+  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
   "roadmap": [
     "M22"
   ],
   "observation": {
     "what": "first alpaca_paper GLD/GDX pairs decision tick in market hours after deploy: decision logged with decision_bar_source, no refusal for alpaca_paper, refusal path silent",
     "how_to_check": "diag journalctl ict-trader-live grep pairs + journal order packages for setup pairs on alpaca_paper",
-    "due_by": "2026-10-22"
+    "due_by": "2026-10-31",
+    "redated": {
+      "on": "2026-10-24",
+      "from": "2026-10-22",
+      "by": "REGISTER-SWEEP-W43",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    }
   },
   "writeback": {
     "roadmap": "none: owed at close (M22 pairs sleeve gains an Alpaca GLD/GDX Stage-1 leg)",

@@ -1,0 +1,168 @@
+{
+  "leg": "iwm_trend_long_1d",
+  "grade": {
+    "verdict": "pass",
+    "label": "stage0_edge",
+    "baseline": "B",
+    "net_r": 15.6542,
+    "n": 84,
+    "max_drawdown_r": 7.9681,
+    "folds_positive": 6,
+    "n_folds": 8,
+    "fold_majority": 5,
+    "n_floor": 39,
+    "control": null,
+    "why": "net_r=15.6542 > 0 with 6/8 positive folds at this arm's cost stack"
+  },
+  "arms": {
+    "B": {
+      "reach_ge_6r": 0.0,
+      "n": 84,
+      "net_r": 15.6542,
+      "net_r_fee_only": 16.9895,
+      "max_drawdown_r": 7.9681,
+      "by_outcome": {
+        "stop": 29,
+        "trail_stop": 40,
+        "take_profit": 15
+      },
+      "mean_bars_held": 19.75,
+      "net_r_per_capital_day": 0.0094,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "donchian": 30,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0,
+        "trail_decay_arm_r": 0.0,
+        "trail_decay_stall_bars": 10,
+        "trail_decay_tight_mult": 2.0
+      },
+      "data_start": "2006-10-02 00:00:00+00:00",
+      "data_end": "2025-04-09 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2006-10-02 00:00:00+00:00",
+          "end": "2009-01-24 12:00:00+00:00",
+          "trades": 8,
+          "net_r": -4.6274
+        },
+        {
+          "fold": 2,
+          "start": "2009-01-24 12:00:00+00:00",
+          "end": "2011-05-20 00:00:00+00:00",
+          "trades": 12,
+          "net_r": 7.2346
+        },
+        {
+          "fold": 3,
+          "start": "2011-05-20 00:00:00+00:00",
+          "end": "2013-09-11 12:00:00+00:00",
+          "trades": 11,
+          "net_r": 4.5701
+        },
+        {
+          "fold": 4,
+          "start": "2013-09-11 12:00:00+00:00",
+          "end": "2016-01-05 00:00:00+00:00",
+          "trades": 13,
+          "net_r": -7.9681
+        },
+        {
+          "fold": 5,
+          "start": "2016-01-05 00:00:00+00:00",
+          "end": "2018-04-29 12:00:00+00:00",
+          "trades": 9,
+          "net_r": 7.3271
+        },
+        {
+          "fold": 6,
+          "start": "2018-04-29 12:00:00+00:00",
+          "end": "2020-08-22 00:00:00+00:00",
+          "trades": 8,
+          "net_r": 6.1496
+        },
+        {
+          "fold": 7,
+          "start": "2020-08-22 00:00:00+00:00",
+          "end": "2022-12-15 12:00:00+00:00",
+          "trades": 12,
+          "net_r": 2.0245
+        },
+        {
+          "fold": 8,
+          "start": "2022-12-15 12:00:00+00:00",
+          "end": "2025-04-09 00:00:00+00:00",
+          "trades": 11,
+          "net_r": 0.9441
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+        "/home/runner/work/Metis-Insights/Metis-Insights/scripts/backtest_trend.py",
+        "--donchian",
+        "30",
+        "--data",
+        "<data>",
+        "--symbol",
+        "IWM",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.0",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261016-c56e-22/39470074338/arms/B__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261016-c56e-22/39470074338/arms/B__bt.json",
+        "--long-only",
+        "--trail-decay-stall-bars",
+        "10",
+        "--trail-decay-tight-mult",
+        "2.0",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "3.0",
+        "--start",
+        "2006-10-02",
+        "--end",
+        "2025-04-09"
+      ]
+    }
+  },
+  "window": {
+    "start": "2006-10-02",
+    "end": "2025-04-09",
+    "fetch_days": 7414,
+    "feed": {
+      "source": "yahoo",
+      "ticker": "IWM",
+      "interval": "1d",
+      "resample": "1d"
+    },
+    "fold_edges": [
+      "2006-10-02 00:00:00+00:00",
+      "2009-01-24 12:00:00+00:00",
+      "2011-05-20 00:00:00+00:00",
+      "2013-09-11 12:00:00+00:00",
+      "2016-01-05 00:00:00+00:00",
+      "2018-04-29 12:00:00+00:00",
+      "2020-08-22 00:00:00+00:00",
+      "2022-12-15 12:00:00+00:00",
+      "2025-04-09 00:00:00+00:00"
+    ]
+  }
+}

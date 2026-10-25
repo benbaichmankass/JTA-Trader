@@ -1,0 +1,126 @@
+id: RQ-20261023-1d5c-04
+title: 'Path-state trail gate (variant): does a CHOP-gated trail tighten beat the declared prop leg trend_donchian_sol_prop?'
+status: done
+cadence: once
+roadmap:
+- L-REGIME
+- L-PROP
+theme: regime
+priority: 2
+kind: experiment
+question: On trend_donchian_sol_prop (prop leg), does a trail that tightens to 2.5 x ATR only while peak_r >= 1.5 AND chop_6 > thr (thr 0.55 / 0.65 / 0.75 declared
+  now) beat the declared exit A by >= 0.02 R/trade in >= 4 of 6 folds within the Path B drawdown bar, AND beat the ungated R-armed tight trail UT?
+why_this_matters: 'Operator directive 2026-10-22: an idea that failed one test is not dead; it failed the first test. This unit is a registered VARIANT/EXTENSION.
+  Lane AUTHOR-FLOOR-1023B (research runnable floor 47 vs 59 at 18:45Z; regime 8 vs share 14, new_strategy_prop 7 vs 17). First test(s): RQ-20261023-a1f3-11 (hot-vol
+  trail on sol_prop, queued) and the ADX-trail first tests on the 4h/prop legs. Diagnosis (one line, a hypothesis not a finding): the hot-vol trail and ADX trail
+  arms on sol_prop are queued or failed on a volatility/strength axis; the chop gate conditions on the realised path of THIS trade, and on a prop leg with a daily-drawdown
+  limit a give-back cut after a profitable run is worth most'
+power:
+  expected_n: 120
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo's standing E35 floor). expected_n=120 is an ESTIMATE from sibling units on this leg/window, not
+    a measurement; below 39 the unit grades indeterminate, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ202610231D5C04-SOLPROP-CHOPGATE
+  registered_at: '2026-10-23'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_lever_ablation.py --leg trend_donchian_sol_prop --grade replace, window 2020-07-01 .. 2026-10-15 23:59, 6 equal calendar folds
+    by entry time, net of the full cost stack the harness resolves per venue (execution_costs.resolve_cost_policy, recorded per arm as cost_stack). Arms fixed now:
+    A = the leg as declared in config/strategies.yaml; candidates C55, C65, C75; control UT. The gate flags are the PATHSTATE-TRAIL-GATE contract. Per arm: n, net_total_r,
+    max_drawdown_r, net R per fold.'
+  rule: 'INDETERMINATE IF n(A) < 39 or IF every candidate arm is byte-identical to A (the lever never fired). A candidate C PASSES iff net_r(C) > net_r(A) AND delta
+    >= 0.02 R x n(A) AND net R(C) >= net R(A) in >= 4 of 6 folds AND maxDD(C) <= maxDD(A) x 1.35 AND net_r(C) > net_r(UT) (the UNCONDITIONAL control UT: the same
+    action on every trade the gate would reach, so a PASS cannot be ''any early action''). PASS IF one or more pass: the best by net R is named and the follow-up
+    is ONE confirmation unit on a disjoint partition (a PASS on one window is a discovery), then a live-producer check and a Tier-3 declare PROPOSAL with the mirror
+    in the same PR, never a config edit. FAIL IF none passes with n(A) >= 39: this arm grid is closed on trend_donchian_sol_prop for this window and the family is
+    NOT retired; the record names the arm that moved closest and the next variant (chop window 12, tight mult 3.5, or an ER-feature gate). Thresholds and the arm
+    grid are not changed after any result.'
+  what_it_does_not_do: 'Edits no config and no roster, places no order, is not a promotion case. A PASS also needs a live producer for the lever (check the leg''s
+    monitor) and a Tier-3 declare. The arm grid is the whole search: no arm is added after the run, and the baseline is the declared leg, not a tuned one. prop leg.'
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 300
+  confidence: 0.15
+  bucket: own_losses
+  basis: 'stand-in: a regime-conditioned exit lever on a money/prop leg; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 40
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data; CPU only.
+  basis: Estimate from the comparable harness_stage0 / exit_lever_ablation runs of 2026-10-16..22; the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_sol_prop
+  - --arm
+  - A=
+  - --arm
+  - C55=--trail-state-feature=chop;--trail-state-window=6;--trail-state-op=gt;--trail-state-thr=0.55;--trail-state-arm-r=1.5;--trail-state-tight-mult=2.5
+  - --arm
+  - C65=--trail-state-feature=chop;--trail-state-window=6;--trail-state-op=gt;--trail-state-thr=0.65;--trail-state-arm-r=1.5;--trail-state-tight-mult=2.5
+  - --arm
+  - C75=--trail-state-feature=chop;--trail-state-window=6;--trail-state-op=gt;--trail-state-thr=0.75;--trail-state-arm-r=1.5;--trail-state-tight-mult=2.5
+  - --arm
+  - UT=--trail-decay-arm-r=1.5;--trail-decay-tight-mult=2.5
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 150
+  inputs:
+    research_unit: RQ-20261023-1d5c-04
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P5
+related:
+- scripts/research/exit_lever_ablation.py
+- AUTHOR-FLOOR-1023B
+- RQ-20261022-b7e1-04
+- RQ-20261023-a1f3-11
+last_dispatched_at: '2026-10-24T01:41:11+00:00'
+grading:
+  attested: RULE-RQ202610231D5C04-SOLPROP-CHOPGATE
+  auto: true
+  decision_rule_id: RULE-RQ202610231D5C04-SOLPROP-CHOPGATE
+  evidence:
+  - research/results/RQ-20261023-1d5c-04/40050952170.jsonl
+  graded_at: '2026-10-24'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

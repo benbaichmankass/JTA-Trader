@@ -557,6 +557,8 @@ fi
 # OPT-IN timer. A cycle can PLACE ORDERS on a live prop account when
 # PROP_EXECUTOR_MODE=live, so a deploy must never fire one: only its timer or
 # an explicit system-action runs it.
+# ict-phone-capture-purge.service (PHONE-EXEC-OBSERVABLE-1018) is a daily
+# oneshot owned by its timer; a deploy never fires an unscheduled purge.
 # ict-ib-executions-pull.service is a oneshot owned by
 # ict-ib-executions-pull.timer (hourly) — restarting it on every deploy would
 # open an unscheduled IB GATEWAY connection each time. That is the costliest
@@ -570,7 +572,7 @@ fi
 # because instance names vary: the restart loop below skips every `@` unit
 # outright, since restarting one would send a bogus "unit FAILED" ping.
 # ---------------------------------------------------------------------------
-DEFAULT_SKIP="ict-smoke-once.service ict-env-check.service ict-hourly-snapshot.service ict-heartbeat.service ict-git-sync.service ict-mes-ibkr-pull.service ict-exchange-fills-pull.service ict-alpaca-fills-pull.service ict-ib-executions-pull.service ict-prop-feed.service ict-prop-executor.service ict-trainer-disk-alarm.service"
+DEFAULT_SKIP="ict-smoke-once.service ict-env-check.service ict-hourly-snapshot.service ict-heartbeat.service ict-git-sync.service ict-mes-ibkr-pull.service ict-exchange-fills-pull.service ict-alpaca-fills-pull.service ict-ib-executions-pull.service ict-prop-feed.service ict-prop-executor.service ict-trainer-disk-alarm.service ict-phone-capture-purge.service"
 SKIP_LIST="${DEPLOY_RESTART_SKIP:-${DEFAULT_SKIP}}"
 
 # list-units --all surfaces inactive units too; --type=service excludes

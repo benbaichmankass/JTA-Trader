@@ -1,0 +1,161 @@
+{
+ "verdict": "pass",
+ "read_state": "measured",
+ "n": 314,
+ "population": "trend_donchian_sol_prop 2021-10-13..2026-10-17 (1830 d), config-exact UNCAPPED no-TP harness replay, 314 trades, rule=unconditioned: {'trend_donchian_sol_prop': 'PASS_NONINFERIOR'}",
+ "note": "tp-prediction-derive: counterfactual TP net of the row's own cost stack; a PASS is a screen -- its follow-on is the harness-native e35 tp_r confirmation of K* before any Tier-3 proposal",
+ "measurement": {
+  "window": "2021-10-13..2026-10-17 (1830 d)",
+  "rule": "unconditioned",
+  "pooled": false,
+  "per_leg": {
+   "trend_donchian_sol_prop": {
+    "n": 314,
+    "n_is": 188,
+    "n_oos": 126,
+    "base_tp_r": 6.0,
+    "mfe_r_quantiles": {
+     "p50": 1.037,
+     "p60": 1.4071999999999998,
+     "p70": 1.763,
+     "p80": 2.5730000000000004,
+     "p90": 3.4566999999999997
+    },
+    "reach_all_uncapped": {
+     "1.0": 0.5095541401273885,
+     "1.25": 0.4426751592356688,
+     "1.5": 0.36942675159235666,
+     "1.75": 0.3057324840764331,
+     "2.0": 0.267515923566879,
+     "2.5": 0.20382165605095542,
+     "3.0": 0.15286624203821655,
+     "3.5": 0.09872611464968153,
+     "4.0": 0.07006369426751592,
+     "5.0": 0.028662420382165606,
+     "6.0": 0.01592356687898089,
+     "8.0": 0.0031847133757961785
+    },
+    "selection": {
+     "cap_r_median_is": 2.926756561085986,
+     "curve": [
+      {
+       "k": 1.0,
+       "reach_is": 0.5106382978723404,
+       "mean_net_is": 0.045392021276595744,
+       "eligible": true
+      },
+      {
+       "k": 1.25,
+       "reach_is": 0.44148936170212766,
+       "mean_net_is": 0.06394578923894373,
+       "eligible": true
+      },
+      {
+       "k": 1.5,
+       "reach_is": 0.39893617021276595,
+       "mean_net_is": 0.10639312966447562,
+       "eligible": true
+      },
+      {
+       "k": 1.75,
+       "reach_is": 0.324468085106383,
+       "mean_net_is": 0.09023589195755524,
+       "eligible": true
+      },
+      {
+       "k": 2.0,
+       "reach_is": 0.2872340425531915,
+       "mean_net_is": 0.10569559583710816,
+       "eligible": true
+      },
+      {
+       "k": 2.5,
+       "reach_is": 0.22872340425531915,
+       "mean_net_is": 0.11723031443293995,
+       "eligible": true
+      },
+      {
+       "k": 3.0,
+       "reach_is": 0.19148936170212766,
+       "mean_net_is": 0.1211537003669187,
+       "eligible": false
+      },
+      {
+       "k": 3.5,
+       "reach_is": 0.18617021276595744,
+       "mean_net_is": 0.14338260664307054,
+       "eligible": false
+      },
+      {
+       "k": 4.0,
+       "reach_is": 0.18085106382978725,
+       "mean_net_is": 0.15590788523238616,
+       "eligible": false
+      },
+      {
+       "k": 5.0,
+       "reach_is": 0.17553191489361702,
+       "mean_net_is": 0.1673307678884539,
+       "eligible": false
+      },
+      {
+       "k": 6.0,
+       "reach_is": 0.17553191489361702,
+       "mean_net_is": 0.1673307678884539,
+       "eligible": false
+      },
+      {
+       "k": 8.0,
+       "reach_is": 0.17553191489361702,
+       "mean_net_is": 0.1673307678884539,
+       "eligible": false
+      }
+     ]
+    },
+    "k_star": 2.5,
+    "oos_mean_net_kstar": 0.09617978072721711,
+    "oos_mean_net_base": 0.055590628021399704,
+    "oos_delta_mean": 0.04058915270581742,
+    "oos_delta_ci95": [
+     -0.02535822951562844,
+     0.11122977394713997
+    ],
+    "reach_is_kstar": 0.22872340425531915,
+    "reach_oos_kstar": 0.23015873015873015,
+    "calibration_gap": 0.001435325903411,
+    "reach_oos_base": 0.09523809523809523,
+    "outcome": "PASS_NONINFERIOR",
+    "verdict": "pass",
+    "why": "K*=2.5 reach IS 0.229 / OOS 0.230, delta CI [-0.025, 0.111]"
+   }
+  },
+  "unreadable_rows": {
+   "trend_donchian_sol_prop": 0
+  },
+  "constants": {
+   "grid": [
+    1.0,
+    1.25,
+    1.5,
+    1.75,
+    2.0,
+    2.5,
+    3.0,
+    3.5,
+    4.0,
+    5.0,
+    6.0,
+    8.0
+   ],
+   "reach_floor": 0.1,
+   "is_frac": 0.6,
+   "min_oos": 39,
+   "noninf_margin_r": 0.05,
+   "cal_tol": 0.1,
+   "min_cell_is": 30,
+   "boot": 2000,
+   "seed": 20261015,
+   "venue_cap_pct": 0.099
+  }
+ }
+}

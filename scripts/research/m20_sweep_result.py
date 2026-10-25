@@ -147,6 +147,25 @@ def summarize(rows: Iterable[Dict[str, Any]], *, legs: List[str],
             "passing_cells": sorted({str(r.get("cell")) for r in passed})[:20],
             "run_stamp": run_stamp or None,
         }
+        # PRE-REGISTERED HOLDOUT (RESEARCH-CONFIRM-FRESH-WINDOW, operator 2026-10-16): when the
+        # run held the latest span back before selection, the leg's discovery verdict above was
+        # read on the earlier span only, and `confirmation` is the selected cells' one grade on
+        # the held-back span. queue_grade reads it: confirmed / not_replicated / underpowered /
+        # no_discovery. Absent on a run without a holdout.
+        _h = next((r for r in legrows if r.get("holdout_boundary")), None)
+        if _h is not None:
+            record["measurement"]["holdout"] = {
+                "boundary": _h.get("holdout_boundary"), "share_used": _h.get("holdout_share_used"),
+                "state": _h.get("holdout_state"), "span": _h.get("holdout_span"),
+                "discovery_span": _h.get("holdout_discovery_span"),
+                "base_trades": _as_int(_h.get("holdout_base_trades")),
+                "selected_from": _as_int(_h.get("holdout_selected_from")),
+                "confirmation": _h.get("holdout_confirmation"),
+                "confirmed_cells": sorted({str(r.get("cell")) for r in cells
+                                           if r.get("holdout_verdict") == "holdout_pass"})[:20],
+            }
+            record["note"] += (f" HOLDOUT from {_h.get('holdout_boundary')}: "
+                               f"{_h.get('holdout_confirmation')}.")
         record["artifact_store"] = "docs/research/m20-sweep-corpus.jsonl"
         record["artifact_locator"] = (
             f"rows with leg={leg!r} and sweep_generated_at={run_stamp or '<this run>'}. "

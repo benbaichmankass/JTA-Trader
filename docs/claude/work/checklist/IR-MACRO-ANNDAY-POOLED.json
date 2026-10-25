@@ -1,0 +1,21 @@
+{
+  "id": "IR-MACRO-ANNDAY-POOLED",
+  "title": "Build: --kinds (pooled list) + a floor-only grading arm in macro_event_study_run.py, so the unconditional announcement-day premium (Savor-Wilson 2013) can be tested at power",
+  "phase": null,
+  "state": "queued",
+  "owner": "manager (filed by lane IDEA-REVIEW-1016)",
+  "lane": null,
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "Family: macro (A, docs/research/idea-family-review-2026-10-16.md). Savor & Wilson 2013 JFQA: 11.4 bps excess on announcement days vs 1.1 bps otherwise. Never tested here (searched queue/docs/scripts/comms for savor / announcement-day / pre-FOMC). One kind (~139 monthly releases) cannot reach t>=2 at ~11 bps on ~1% daily sd; pooled cpi_mom+nfp+ppi_mom+fomc (~550 days) can. The PPI sign book lost to all-long partly because 69/140 PPI windows contain CPI or FOMC within 5 days -- the long floor is collecting this premium. FIRST STEP: accept a comma list in --kind (dedupe by date) and add --grade floor (mean/t of the all-long release-day book vs a -6 td placebo), then author the unit (choose pre-2021, confirm post-2021). Pre-FOMC drift is NOT the target: Kurov-Wolfe-Gilbert 2021 show it vanished after 2015.",
+  "updated_at": "2026-10-16T09:08:34Z",
+  "updated_by": "lane-IDEA-REVIEW-1016",
+  "roadmap": [
+    "M28"
+  ],
+  "_seq": 533
+}

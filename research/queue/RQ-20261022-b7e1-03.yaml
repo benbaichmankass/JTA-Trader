@@ -1,0 +1,135 @@
+id: RQ-20261022-b7e1-03
+title: 'Programme 01 Q11 rung 1e (PER-BAR STATE, stop-room controlled): at any bar of a trade already >= 1 R up, does a trailing
+  12-bar path state (efficiency ratio, choppiness, realised-vol ratio, ATR-vs-entry ratio, distance from peak in ATR) predict
+  "gives back >= 1.0 R from here" beyond open R, peak R, bars-since-peak, bars-in-trade AND room-to-stop, on the eth/sol prop
+  legs (1h, finite 6R TP) at a 12-bar window?'
+status: done
+cadence: once
+roadmap:
+- L-ATM
+- M20
+theme: live_strategy
+priority: 1
+kind: experiment
+question: 'Rung 1 (007) read each trade once at bar 6. A lever acts on a STATE, so this asks the per-state question on harness
+  paths (--emit-paths, config-exact, net of the venue cost stack) over 2020-07-01 .. 2026-10-15 23:59: for every (trade, bar)
+  with peak_r >= 1.0 that is not the exit bar, does adding er_w, chop_w, vol_ratio_t, atr_ratio_t, dist_atr_t, dd_frac_t (window
+  12, bars <= t only) to a baseline of open_r, peak_r, bars_since_peak, bars_in_trade and dist_to_stop_r lower OUT-OF-SAMPLE
+  log-loss on the label exit_r <= open_r - 1.0 (the trade''s own harness exit) by >= 0.01 in >= 4 of 6 calendar folds (by
+  entry time), pooled over the legs?'
+why_this_matters: 'Giveback is the operator''s standing priority. The 2026-10-22 discovery measurement (docs/research/exit-path-metrics-2026-10-22.md,
+  five legs, X in {0.5,1.0,1.5} read, NOT registered) found a pooled X=1.5 log-loss pass (+0.0115, 5 of 6 folds) -- and the
+  SAME run with room-to-stop (dist_to_stop_r) added to the baseline reads FAIL (+0.0022, 3 of 6 folds, AUC 0.784 -> 0.778):
+  room-to-stop alone is the strongest predictor (AUC 0.81, 6 of 6 folds). Only ada_pullback_2h keeps a small gain (+0.0087,
+  5 of 6 folds, under the 0.01 bar). Neither run was registered; this unit is the registered test of whether any path state
+  carries information beyond stop room, and the prior is FAIL. PROP legs (1h, 3.5-ATR trail, 6R TP): the discovery run found
+  NO prop state giving back >= 1.5 R from here (base rate 0.0 for both legs), so this unit grades X=1.0 (base rate 2.5% eth,
+  10.8% sol; baseline AUC 0.85 / 0.84 already) with stop room controlled; positives are scarce, INDETERMINATE is a live outcome
+  and is not a fail. Prop legs clear a superset of the ladder: a PASS opens a lever unit, never a declare.'
+power:
+  expected_n: 500
+  min_detectable_effect: 0.15
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'Floor (1.96 + 0.8416)^2 / 0.15^2 = 349 pooled trades for a 0.15 sd partial effect; states autocorrelate within a
+    trade, so n is graded on TRADES with a qualifying state (n_floor 100) and the fold majority carries the clustering. Discovery
+    run: 958 trades / 18,770 states across five legs.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history on freshly fetched public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-P1-Q11-R1E-PATHSTATE-03
+  registered_at: '2026-10-22'
+  registered_before_run: true
+  statistic: 'From scripts/research/path_state_giveback.py: window w=12, min_peak 1.0 R, X=1.0 R (the ONLY X graded; no other
+    X is run), 6 calendar folds by entry time, leave-one-fold-out logistic (ridge 1) on standardised features. Baseline =
+    open_r, peak_r, bars_since_peak, bars_in_trade, dist_to_stop_r; full = baseline + er_w, chop_w, vol_ratio_t, atr_ratio_t,
+    dist_atr_t, dd_frac_t. ll_gain = logloss_oos(baseline) - logloss_oos(full) pooled over held-out states; fold wins = folds
+    with gain > 0. Population = harness trades with at least one qualifying state, net of the harness cost stack.'
+  rule: 'INDETERMINATE IF trades-with-a-state < 100. PASS IF ll_gain >= 0.01 AND fold wins >= 4 of 6 AND pooled OOS AUC(full)
+    >= AUC(baseline): the path state carries information beyond stop room, and the gated-lever units that name this unit in
+    programme_node.after keep their arms. FAIL otherwise: the discovery pass was stop-room mechanics; lever units keep only
+    arms that do not depend on the failed feature (the ungated control arms stay). Per-leg and per-feature results are REPORTED,
+    not graded. Thresholds are not changed after any result.'
+  what_it_does_not_do: 'A label study, not a lever: edits no config, places no order, tests no exit. A PASS says information,
+    not causation (volatility and stop distance both move with the path). Harness paths are not live paths. Feature sign differs
+    by leg (efficiency ratio: lower on ada/xrp pullbacks, HIGHER on the prop legs, discovery run), which is why this is graded
+    pooled for information and the lever units declare direction per leg.'
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 500
+  confidence: 0.1
+  basis: 'stand-in: money/prop leg; the operator named giveback the standing priority; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 45
+  why_runner: Fetches keyless public candles (Binance Vision) for a pinned window; reads no trainer data.
+  basis: One harness invocation per arm on freshly fetched public candles (74 s wall for 2 arms on xrp_pullback_2h MEASURED
+    2026-10-16; the 5-leg path_state_giveback measurement run took ~15 min wall, 1h legs dominating).
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/path_state_giveback.py
+  - --leg
+  - trend_donchian_eth_prop
+  - --leg
+  - trend_donchian_sol_prop
+  - --window
+  - '12'
+  - --min-peak
+  - '1.0'
+  - --x
+  - '1.0'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '100'
+  - --min-ll-gain
+  - '0.01'
+  - --stop-room-control
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261022-b7e1-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- docs/claude/work/IDEAS.md
+- scripts/research/path_state_giveback.py
+- research/queue/RQ-20261022-007.yaml
+- docs/research/exit-path-metrics-2026-10-22.md
+programme_node:
+  programme: P1
+  node: P1-Q13-pathstate-prop
+  goal: G1
+last_dispatched_at: '2026-10-23T14:59:38+00:00'
+grading:
+  attested: RULE-P1-Q11-R1E-PATHSTATE-03
+  auto: true
+  decision_rule_id: RULE-P1-Q11-R1E-PATHSTATE-03
+  evidence:
+  - research/results/RQ-20261022-b7e1-03/39974450524.jsonl
+  graded_at: '2026-10-23'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

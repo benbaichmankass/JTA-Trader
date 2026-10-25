@@ -151,8 +151,28 @@ limits:
 #   hand_written   someone ASKED this question; a template refill did not (kept from the 2026-10-04 measurement)
 #   age_boost      1 + age_step per aging step waited (aging_hours in THEMES.yaml)
 #   cost           (1 + est_hours) * backend.cost_weight   -- est_hours from routing.est_minutes
-# starve_hours: a unit waiting longer than this sorts ahead of every score inside its theme. Nothing starves.
+# starve_hours: a unit DUE longer than this sorts ahead of every score, in its theme and across themes. Nothing starves.
+#
+# MONEY FIRST (operator 2026-10-18, popup verbatim "Fix now, money first"; lane DISPATCH-MONEY-FIRST-1018). This score
+# orders due units ACROSS themes, not only inside one. Until then dispatch_queue.fair_order round-robined the themes
+# by (fires in THEMES.yaml share_window_hours + picks) / weight and the score ordered units only within a theme:
+# run 39098686264 (2026-10-18 04:56Z) gave github_runner's 3 slots to two regime units scoring 6.5 and one infra unit
+# at 30.7 while the P1 real-money units (own_losses, 141.9 down) deferred on "at capacity". The operator declined to
+# raise the runner cap. Now: starved first, then the operator's programme_priority (below), then the highest score in
+# any theme; theme share (THEMES.yaml weight)
+# only breaks an EQUAL score; inside a theme an asked unit (authored or programme node) still precedes a template
+# refill. Consequence, stated on purpose: a theme holding only low-value units fires when capacity is spare or when
+# its units reach starve_hours, so research_slo.yaml theme_share_min_ratio recovers more slowly (supply of VALUABLE
+# units in a short theme is how it recovers; check_research_queue_health.py theme_supply names the short themes).
 value:
+  # PROGRAMME PRIORITY (operator 2026-10-18 ~06:20Z, verbatim: "Those two items are our highest priority, we need to make sure
+  # we're pushing forward on them" -- P1 active trade management, P2 AI trader; relayed by the manager to lane
+  # DISPATCH-MONEY-FIRST-1018). An ORDERED list of programme ids (research/programmes/*.yaml `programme:`). A due unit of a
+  # listed programme (`programme_node.programme`, or `generated.family: programme:<id>`) ranks FIRST on every backend --
+  # above every other theme and programme, earlier entries before later ones -- then the money-first value order below,
+  # then theme share for ties / spare capacity. Only a STARVED unit (starve_hours) goes ahead of it: nothing waits forever.
+  # Edit this list to change the operator's priority; the dispatcher prints `pick=programme:<id>` on each such decision line.
+  programme_priority: [P1, P2]
   default_confidence: 0.3
   priority_usd: {1: 300, 2: 100, 3: 30}     # stand-ins when a unit carries no value block; derived from priority only
   hand_written_boost: 1.25

@@ -6,11 +6,29 @@
 
 How this fits the work system: a programme is a *plan*, not a third category of work (CLAUDE.md § "Two categories"). Each question below becomes a `research/queue/` unit and each build a checklist row, every one carrying a `roadmap` milestone ref. Full plan per programme: `01-ACTIVE-TRADE-MANAGEMENT.md`, `02-AI-TRADER.md`, `03-STRATEGY-IMPROVEMENT.md` (lane P3-STRATEGY-PROGRAMME), `04-MACRO-SLEEVE.md` (lane P4-MACRO-PROGRAMME) and `05-PROP.md` (lane P5-PROP-PROGRAMME) are all landed (2026-10-14); none is owed.
 
+## Programme review 2026-10-21 (lane RESEARCH-PROGRAMME-REVIEW-1021)
+
+**Population:** every unit in `research/queue/*.yaml` with `grading.graded_at` 2026-10-14..2026-10-21, read on main at ~18Z:
+**657 graded** -- 171 carry a programme field (P1 122, P2 7, P3 2, P4 20, P5 10, P6 1, P7 9) and 486 do not (by theme:
+new_strategy_prop 157, live_strategy 170, ml_health 58, regime 53, macro 22, infra 13, none 13). Per-programme readings are in
+each plan's "Programme review 2026-10-21" section.
+
+| feed | from -> to | state |
+|---|---|---|
+| momentum/stall-keyed exit levers confirmed on eth_4h, xrp_4h, slv_1d (+ Q9 leads) | P1 -> live roster | build-gated: MOMENTUM-LEVERS-LIVE, `stall_pull_in` TP rule |
+| trail 4.5 on eth_prop, priced on three prop books | P1 -> P5 | EV read done; adoption is a P5/Tier-3 call |
+| breakout_2 sizing 0.5% -> 0.35% dominates (RQ-20261016-029) | P5 -> config | NOT applied; rung 2 queued (7c2b-12) |
+| family breadth on new perps (7c2b-06..-10, -13, -14) | P3 -> P5 (1h cells), P1 (exit processing of any new leg) | queued |
+| daily Donchian D55 / LONG filter transfers (7c2b-03/-04) | P7 -> P3 overlap read | queued |
+| ATR-percentile scale error (ef5d-06/-07) | P7 -> P3 Q5 instrument fidelity | harness guard landed; re-asks 7c2b-01/-02 |
+| PPI drift real but sub-cost | P4 -> (an ES/NQ leg to tilt) | parked until such a leg exists |
+| ml_health supply | P2 -> infra builds | build-bound: 15 blocked ml_health units, 0 runnable |
+
 ## 1. The programmes, in order
 
 | # | programme | goal | the measure it moves | roadmap | core questions, in dependency order |
 |---|---|---|---|---|---|
-| **P1** | **Active trade management** (merges M20 + M31; "brackets as predictions") | Every leg carries a real TP at entry, revises it through the trade, and stops waiting on a rule — and the giveback shrinks | **Net R per capital-day per leg**, real money first; giveback R (peak − realised) per leg; `check_tp_doctrine.py` compliant routings (MEASURED 2026-10-14 07:28Z: **0 of 50**; real money + prop 13 routings, 4 real-money with a sentinel TP, 13 with no TP revision) | M20, M31 | Q1 giveback census → Q2 entry TP from the leg's own MFE distribution, conditioned on vol/regime → Q3 per-bar TP revision rule → Q4 SL "stop waiting" rule → Q5 the momentum-turn detector → Q6 producer + live parity → Q7 prop paths. **Destination (2026-10-14, row `IN-TRADE-EXIT-MODEL`): Q8 — per-bar P(SL before TP \| state now) and an exit-now rule, net of cost** (`RQ-20261014-d6e7-01..06`) |
+| **P1** | **Active trade management** (merges M20 + M31; "brackets as predictions") | Every leg carries a real TP at entry, revises it through the trade, and stops waiting on a rule — and the giveback shrinks | **Net R per capital-day per leg**, real money first; giveback R (peak − realised) per leg; `check_tp_doctrine.py` compliant routings (MEASURED 2026-10-14 07:28Z: **0 of 50**; re-run 2026-10-16T07:15Z: **0 of 54**; real money + prop 13 routings, 4 real-money with a sentinel TP, 13 with no TP revision) | M20, M31 | Q1 giveback census → Q2 entry TP from the leg's own MFE distribution, conditioned on vol/regime → Q3 per-bar TP revision rule → Q4 SL "stop waiting" rule → Q5 the momentum-turn detector → Q6 producer + live parity → Q7 prop paths. **Destination (2026-10-14, row `IN-TRADE-EXIT-MODEL`): Q8 — per-bar P(SL before TP \| state now) and an exit-now rule, net of cost** (`RQ-20261014-d6e7-01..06`) |
 | **P2** | **AI trader** (M23 meta-labeling revived, with the signals catalog; M25, L-REGIME) | One learner that reads every signal and every test result, and separates a leg's good trades from its bad ones net of cost | Net R per capital-day of the *filtered* book vs the unfiltered book, per leg; advisory-head log-loss vs class prior; model-family diversity (`ml_plan_status.py --diversity`, 78 % GBDT on 2026-10-11) | M23, M25, L-REGIME, M41 | labels (the label wall, ML-D2) → signals catalog as the feature contract (`docs/reference/signal-catalog.yaml`, 334 entries 2026-10-08) → meta-label head on P1's per-trade paths → regime good-vs-bad (REGIME-PROGRAM) → frontier families (ML-F1..F15) → proposer line (ML-S3, parked) |
 | **P3** | **Strategy improvement** (M21 entries, M22 small-TF/pairs, M27 scalps, perf-followup) | Every live leg pulls its own weight; losers are tuned or retired on evidence | Per-leg net R per capital-day (real, mirror, paper separately); Stage-0 pass rate at configured params (MEASURED 2026-10-14, `stage0_capital_day_census.py`: real money 3 of 7 legs pull weight, 1 drag, 3 underpowered; prop 0 of 2, both drag on 2/4 folds); perf-review grade | M21, M22, M27, L-LADDER | per-leg weight (same census as P1-Q1) → tune-before-retire (perf-followup Track 1) → lessons → extrapolate (Track 3) → new families at Stage 0 → portfolio overlap/concentration (Track 4) |
 | **P4** | **Macro sleeve** (M28, M29, WEPE) | A thesis-driven, weeks-horizon sleeve whose conviction axes add net R through defined-risk instruments | Net R of `alpaca_options_paper` per conviction axis vs the naive floor; event-surprise hit rate | M28, M29 | MACRO-RESHAPE wire-and-rescore → PM-surprise (RQ-20261009-903) → news veto / standalone news edge (NEWS-ALPHA-PROGRAM) → M29 wakes only on a read-out |

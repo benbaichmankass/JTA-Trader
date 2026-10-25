@@ -567,10 +567,14 @@ class RiskManager:
             import sqlite3
             uri = "file:%s?mode=ro" % self._risk_db_path()
             with sqlite3.connect(uri, uri=True, timeout=5) as conn:
-                row = conn.execute(
-                    "SELECT COALESCE(SUM(ABS("
-                    "  COALESCE(position_size, 0) * COALESCE(entry_price, 0)"
-                    ")), 0.0) FROM trades "
+                # A trades table without ``symbol`` (older/minimal schema) keeps
+                # the pre-multiplier reading, factor 1.0 per row, rather than
+                # failing the whole measurement to None.
+                cols = {r[1] for r in conn.execute("PRAGMA table_info(trades)")}
+                sym_col = "symbol" if "symbol" in cols else "''"
+                rows = conn.execute(
+                    "SELECT " + sym_col + ", COALESCE(position_size, 0), "
+                    "COALESCE(entry_price, 0) FROM trades "
                     "WHERE account_id=? AND status='open' "
                     # ``is_backtest`` DEFAULTS TO 1 on this table, so omitting
                     # this predicate would count backtest rows as live exposure
@@ -579,8 +583,15 @@ class RiskManager:
                     # (positions.py, dashboard.py) so NULL reads as live.
                     "AND COALESCE(is_backtest, 0) = 0",
                     (self.account_id,),
-                ).fetchone()
-            return float(row[0]) if row and row[0] is not None else 0.0
+                ).fetchall()
+            # Notional = qty x price x contract_value_usd (1.0 for crypto/equity,
+            # so those are byte-identical; 10 for MGC, 5 for MES). Without the
+            # factor a futures leg was counted at 1/10 (MGC) of its real size and
+            # a declared ceiling could never bind on it (MGC-SIZING-OVERSIZE).
+            return float(sum(
+                abs(float(q or 0) * float(e or 0) * contract_value_usd_for(sym or ""))
+                for sym, q, e in rows
+            ))
         except Exception:
             return None  # journal unavailable — ceiling left unenforced
 
@@ -635,7 +646,8 @@ class RiskManager:
                     "AND COALESCE(is_backtest, 1) = 0",
                     (self.account_id, symbol),
                 ).fetchone()
-            return float(row[0]) if row and row[0] is not None else 0.0
+            base = float(row[0]) if row and row[0] is not None else 0.0
+            return base * contract_value_usd_for(symbol)  # same basis as the total
         except Exception:  # noqa: BLE001  # allow-silent: unknown, not zero — the caller branches on None
             return None
 
@@ -1345,7 +1357,7 @@ class RiskManager:
         # the correct composition.
         headroom = self.exposure_headroom_usd()
         if headroom is not None and package.entry:
-            max_qty_by_exposure = headroom / package.entry
+            max_qty_by_exposure = headroom / (package.entry * cvu)
             if qty > max_qty_by_exposure:
                 capped = _floor_to_step(max_qty_by_exposure, eff_precision)
                 if capped < eff_min_qty:

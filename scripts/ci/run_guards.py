@@ -1376,6 +1376,19 @@ GUARDS: List[Dict[str, Any]] = [
                   ["python3", "scripts/research/family_retirement_guard.py", "--base", "origin/{base_ref}"]],
     },
     {
+        # RESEARCH-ENGINE-1016 (2026-10-16): every question a programme PLAN asks
+        # (docs/research/programmes/<NN>-*.md) must have a node in its machine-read tree
+        # (research/programmes/<NN>-*.yaml), or nothing ever reaches the authoring queue. A
+        # RATCHET (scripts/research/programme_coverage_baseline.json): today's gap is work for
+        # the programme lanes, so the guard fails only when the uncovered count RISES.
+        "name": "programme-coverage",
+        "when": {"globs": ["docs/research/programmes/**", "research/programmes/**",
+                            "scripts/research/programme_coverage.py",
+                            "scripts/research/programme_coverage_baseline.json"]},
+        "steps": [["python3", "scripts/research/programme_coverage.py", "--self-test"],
+                  ["python3", "scripts/research/programme_coverage.py", "--check"]],
+    },
+    {
         # RQ-RUN (2026-09-28): the queue's self-replenishment + mechanical
         # grading + health alarm. Self-tests only: the live health read is
         # the DISPATCHER's alarm (it pages), not a PR gate -- a PR must not go
@@ -1386,6 +1399,8 @@ GUARDS: List[Dict[str, Any]] = [
             ["python3", "scripts/research/queue_replenish.py", "--self-test"],
             ["python3", "scripts/research/queue_grade.py", "--self-test"],
             ["python3", "scripts/ci/check_research_queue_health.py", "--self-test"],
+            ["python3", "scripts/research/result_disposition_check.py", "--self-test"],
+            ["python3", "scripts/research/research_slo.py", "--self-test"],
         ],
     },
     {
@@ -2258,6 +2273,24 @@ GUARDS: List[Dict[str, Any]] = [
         "name": "secret-scan",
         "when": None,
         "steps": [["python3", "scripts/secret_scan.py"]],
+    },
+    {
+        "name": "lane-reconcile-guard",
+        # 2026-10-18: the manager's CLOSE step (§ "Archive protocol") archives only what
+        # lane_reconcile lists, so its archive-scope test (operator: archive ONLY this project's
+        # sessions; a foreign repo is never eligible) must not silently regress.
+        "when": {"regex": r"^scripts/ops/lane_reconcile\.py$"},
+        "steps": [["python3", "scripts/ops/lane_reconcile.py", "--self-test"]],
+    },
+    {
+        "name": "manager-pacing-guard",
+        # 2026-10-18 (MANAGER-PACING-STRUCTURAL): the manager's pacing is stated ONCE, in manager
+        # SKILL.md § "The operating loop". Fails if a live doc/skill/the spend meter brings back a
+        # retired idiom ("dispatch in parallel", "spend the daily budget", ...) or the section or
+        # its Start-of-session pointer goes missing. Self-test plants each retired idiom + controls.
+        "when": None,
+        "steps": [["python3", "scripts/ci/check_manager_pacing.py", "--self-test"],
+                  ["python3", "scripts/ci/check_manager_pacing.py"]],
     },
     {
         "name": "silent-empty-guard",

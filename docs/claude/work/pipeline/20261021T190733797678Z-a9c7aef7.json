@@ -1,0 +1,25 @@
+{
+  "based_on": "20261021T183915609887Z-67226c32.json",
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "python3 scripts/research/research_slo.py --no-gh --json shows theme_share_min_ratio >= 0.5 (or the root cause below is fixed and one 7-day window has rolled)",
+    "kind": "observation",
+    "last_checked": "2026-10-21"
+  },
+  "id": "PI-20261021-WG8OPB7N-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane PIPELINE-HEALTH-1021 / research SLO theme_share_min_ratio 0.23",
+    "rerun": "python3 scripts/research/research_slo.py --no-gh --json | python3 -c \"import sys,json;[print(s['evidence']['per_theme']) for s in json.load(sys.stdin)['table'] if s['slo']=='theme_share_min_ratio']\""
+  },
+  "redate": {
+    "evidence": "manager relay 2026-10-21 ~19:10Z (operator popup answers)",
+    "observation": "MANAGER DECISION 2026-10-21 ~19:10Z on the runner cap: keep github_runner max_concurrent at 3. The 2026-10-13 measurement (CI p90 16 of ~20 shared slots) still holds; re-measure before any raise. Recorded here per the manager's instruction.",
+    "observed_at": "2026-10-21"
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "[research] ANSWER for the authoring lane. theme_share_min_ratio 0.23 is `regime` (weight share 0.227, fire share 0.052, 21 of 403 themed fires in 7 d) -- and regime is NOT short of units: it holds 17 runnable authored units (RQ-20261017-ae17-12..28, cpu_light, $60 x conf 0.2 => score 33.8) that have NEVER been dispatched since 2026-10-17. Cause chain: github_runner capacity 3 fires/cycle; 33 units due; money-first ranking takes the $100 infra/macro/live_strategy units (scores 107-115) first; and cycles are ~15/day not 24 (the cron/keeper gap, PR research-queue-chain). Themes actually SHORT of supply (H1-THEME, 2026-10-21): new_strategy_prop 0/10, ml_health 0/5, timeframes 0/2, live_strategy 3(+3 gen)/7, infra 3/4 -- the first two are blocked behind builds (ml_health: 20+ blocked units, new_strategy_prop: harness-cost levers). So: (1) author value-bearing units in new_strategy_prop and ml_health, not regime; (2) the regime units need an honest higher `value:` or spare capacity -- do not lower the SLO; (3) the manager option NOT taken here (operator chose supply over cap, research_slo.yaml): github_runner max_concurrent 3 -> 6 would drain the 33 due in ~6 cycles instead of 11; platform concurrency is 20 and research_inflight 0."
+}

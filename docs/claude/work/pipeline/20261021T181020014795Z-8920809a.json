@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "check_liveness() returns fired=False for the 2026-10-19 window with a regression test per refusal cause, and no false URGENT liveness ping in 7 days, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261021-20261021-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "liveness-watchdog-false-urgent-2026-10-19",
+    "rerun": "grep -n 'actionable signals fired' src/runtime/liveness_watchdog.py; replay the 2026-10-19 12:30-13:30Z signal_audit window through check_liveness() and confirm fired=False"
+  },
+  "state": "queued",
+  "what": "Liveness watchdog false URGENT (2026-10-19 ~13:30Z): src/runtime/liveness_watchdog.py::_count_actionable_signals counts every signal_audit row with status in {submitted, multi_account_dispatched, dry_run} as 'actionable', but a dispatched signal can be correctly refused, dry or side-filtered per account. The 5 signals that alarmed: IAUM and IEF shorts (dry on alpaca_live and alpaca_portfolio); GLD short (spot risk_refused on alpaca_paper); TLT (no account in scope); XRP (open package exists); GDX (sent to alpaca_options_paper). Zero trades was the correct outcome. Not a quick fix: signal_audit rows do not carry per-account outcomes, so the fix is to count only signals with >=1 account actually eligible to trade (live, in scope, side allowed, no open package) or to subtract journaled refusals by cause; needs a test per cause above. Tier-1 (alerting only)."
+}

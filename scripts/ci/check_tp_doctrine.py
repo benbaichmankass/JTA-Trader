@@ -214,13 +214,12 @@ class Paths:
 #: the scan itself: a line that no longer matches FAILS the guard.
 R: frozenset[str] = frozenset({DIM_REVISION})
 ER: frozenset[str] = frozenset({DIM_ENTRY, DIM_REVISION})
+E: frozenset[str] = frozenset({DIM_ENTRY})  # entry_tp only: a tp_revision rule is declared and plumbed
 BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     # ── real_money ──────────────────────────────────────────────────────────
-    "alpaca_live/iaum_pullback_1d": ER,
-    "alpaca_live/ief_pullback_1d": ER,
-    "alpaca_live/slv_pullback_1d": ER,
+    "alpaca_live/iaum_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
     "bybit_2/ada_pullback_2h": R,
-    "bybit_2/trend_donchian_eth_4h": ER,
+    "bybit_2/trend_donchian_eth_4h": E,  # 2026-10-18 tp_revision declared (TIER3-PACKETS-1018); entry_tp still the 50 R sentinel
     "bybit_2/trend_donchian_xrp_4h": R,
     "bybit_2/xrp_pullback_2h": R,
     # 2026-10-15 PROMOTE-PROP-LEGS (Tier-3, operator pre-authorized): trend_donchian_sol_prop is
@@ -248,40 +247,40 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     "velotrade_1/trend_donchian_eth_prop": ER,   # R -> ER 2026-10-15, TP-REACH-FLOOR (above)
     "velotrade_1/trend_donchian_sol_prop": ER,
     # ── mirror (paper_role: portfolio) ──────────────────────────────────────
-    "alpaca_portfolio/ief_pullback_1d": ER,
-    "alpaca_portfolio/slv_pullback_1d": ER,
     "bybit_portfolio/ada_pullback_2h": R,
-    "bybit_portfolio/trend_donchian_eth_4h": ER,
+    "bybit_portfolio/trend_donchian_eth_4h": E,  # 2026-10-18 tp_revision declared (TIER3-PACKETS-1018); entry_tp still the 50 R sentinel
     "bybit_portfolio/trend_donchian_xrp_4h": R,
     "bybit_portfolio/xrp_pullback_2h": R,
     "bybit_portfolio/trend_donchian_sol_prop": ER,   # mirrors bybit_2 (PROMOTE-PROP-LEGS, above)
     # ── paper ───────────────────────────────────────────────────────────────
-    "alpaca_options_paper/gdx_pullback_1d": ER,
-    "alpaca_options_paper/slv_pullback_1d": ER,
+    "alpaca_options_paper/gdx_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
+    "alpaca_options_paper/slv_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
     "alpaca_options_paper/slv_trend_1h": ER,
-    "alpaca_paper/gdx_pullback_1d": ER,
-    "alpaca_paper/gld_pullback_1d": ER,
-    "alpaca_paper/iaum_pullback_1d": ER,
-    "alpaca_paper/ief_pullback_1d": ER,
+    "alpaca_paper/gdx_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
+    "alpaca_paper/gld_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
+    "alpaca_paper/iaum_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
+    "alpaca_paper/ief_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
     "alpaca_paper/iwm_trend_long_1d": R,
     "alpaca_paper/qld_trend_long_1d": ER,
     "alpaca_paper/qqq_trend_long_1d": R,
     "alpaca_paper/scha_trend_long_1d": R,
-    "alpaca_paper/slv_pullback_1d": ER,
+    "alpaca_paper/slv_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
     "alpaca_paper/slv_trend_1h": ER,
     "alpaca_paper/splg_trend_long_1d": ER,
     "alpaca_paper/spy_trend_long_1d": R,
-    "alpaca_paper/tlt_pullback_1d": ER,
+    "alpaca_paper/tlt_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
     "alpaca_paper/tqqq_trend_long_1d": ER,
     "bybit_1/ada_pullback_2h": R,
     "bybit_1/trend_donchian_1h": ER,
-    "bybit_1/trend_donchian_eth_4h": ER,
+    "bybit_1/trend_donchian_eth_4h": E,  # 2026-10-18 tp_revision declared (TIER3-PACKETS-1018); entry_tp still the 50 R sentinel
     # 2026-10-15 PROP-GATE-PARITY: the two prop legs enter the Stage-1 soak on bybit_1 with the
     # SAME exit recipe they run on the prop books (declared 6 R target, TP-REACH-FLOOR fail), so
     # they inherit the breakout_2 debt lines above verbatim. A visible, deliberate line.
     "bybit_1/trend_donchian_eth_prop": ER,
     "bybit_1/trend_donchian_sol_prop": ER,
-    "bybit_1/trend_donchian_xrp_4h": R,
+    # 2026-10-22 OPERATOR-DECISIONS-1022: the incumbent leaves bybit_1 for its soak alias (same tp_r 3,
+    # plus the declared ADX trail); tp_revision is still undeclared, so the debt is unchanged.
+    "bybit_1/trend_donchian_xrp_adx25": R,
     "bybit_1/xrp_pullback_2h": R,
     "ib_paper/ict_scalp_mgc_15m": R,
     "ib_paper/iwm_trend_long_1d": R,
@@ -291,7 +290,7 @@ BASELINE_2026_10_06: dict[str, frozenset[str]] = {
     "ib_paper/mhg_pullback_1d": ER,
     "ib_paper/qqq_trend_long_1d": R,
     "ib_paper/spy_trend_long_1d": R,
-    "ib_paper/tlt_pullback_1d": ER,
+    "ib_paper/tlt_pullback_1d": R,  # 2026-10-22 tp_r 3.5 declared (OPERATOR-DECISIONS-1022); tp_revision still undeclared
 }
 
 
@@ -380,6 +379,10 @@ def monitor_produces_tp(unit_src: str) -> bool | None:
 
 
 _RULE_RE = re.compile(r"@register_rule\(\s*[\"']([A-Za-z0-9_]+)[\"']\s*\)")
+#: `@register_rule(RULE_X)` where `RULE_X = "name"` is a module constant in the same file
+#: (donchian_measured_move registers this way; the literal-only regex read it as unregistered).
+_RULE_NAME_RE = re.compile(r"@register_rule\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)")
+_CONST_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*[\"']([A-Za-z0-9_]+)[\"']\s*$", re.MULTILINE)
 
 
 def read_registered_rules(*sources: Path) -> set[str]:
@@ -387,7 +390,10 @@ def read_registered_rules(*sources: Path) -> set[str]:
     names: set[str] = set()
     for src in sources:
         try:
-            names |= set(_RULE_RE.findall(src.read_text(encoding="utf-8")))
+            text = src.read_text(encoding="utf-8")
+            names |= set(_RULE_RE.findall(text))
+            consts = dict(_CONST_RE.findall(text))
+            names |= {consts[n] for n in _RULE_NAME_RE.findall(text) if n in consts}
         except OSError:
             continue
     return names

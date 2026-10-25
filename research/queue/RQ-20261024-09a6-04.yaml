@@ -1,0 +1,154 @@
+id: RQ-20261024-09a6-04
+title: 'AI-ATM rung C1: a policy layer -- per trade, can a state-conditioned chooser pick among the already-validated rule exits (stall
+  trail decay, ADX trail, momentum-stale, measured-move / stall pull-in TP) better than the best single fixed choice? Full-information
+  counterfactuals, no propensities.'
+status: done
+cadence: once
+roadmap:
+- L-ATM
+- M23
+programme: P1
+theme: live_strategy
+priority: 1
+kind: experiment
+question: 'For trend_donchian_eth_4h, trend_donchian_xrp_4h, xrp_pullback_2h, ada_pullback_2h, trend_donchian_eth_prop, trend_donchian_sol_prop
+  over 2020-07-01 .. 2026-10-15 23:59, run each leg once per arm with --emit-trades: A (declared exit) and the rule levers that confirmed
+  on at least one leg in Programme 01 (D trail_decay stall 10 / tight 1.8; M ADX trail below 25 / tight 2.5; S momentum-stale 8 bars
+  / ADX 20; T tp_revision stall_pull_in where the harness accepts it alongside the leg''s declared TP mover, else omitted and named).
+  Join arms on (leg, entry_ts, side); a trade present in every arm carries each arm''s net R and capital-days (full-information: every
+  arm''s outcome is observed, so no propensity model is needed). Chooser: cost-sensitive multinomial logistic on the state at the ENTRY
+  bar (atr percentile, adx_14 and its 3-bar slope, leg fixed effect, vol regime), fit on the other calendar folds. Does the chooser
+  beat (i) A and (ii) the single best fixed arm chosen on the training folds, out of sample?'
+why_this_matters: 'The levers that confirm are rules, keyed to momentum and stall, and each one won on some legs and lost on others
+  (ADX trail: PASS xrp_4h, superseded on eth_4h, FAIL on sol_4h/eth_4h siblings, 511e-01). That pattern is what a policy layer is for:
+  the operator''s ''models that move the brackets as conditions change'' can be a chooser over proven rules before it is a free-form
+  model. RQ-20261011-9da8-04 asks the bandit version with doubly-robust OPE over the exit ladder; offline, every arm''s outcome can
+  be OBSERVED by re-running the harness, which removes the propensity/overlap problem that unit has to solve. 9da8-04 stays for the
+  live-logged case.'
+power:
+  expected_n: 600
+  min_detectable_effect: 0.03
+  effect_units: metric
+  sd: 0.8
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED in checklist row EXIT-PATH-METRICS-W43 (path_state_giveback.py over xrp/ada pullback_2h, eth_4h, eth/sol prop, 2020-07..2026-10,
+    harness cost stack): 958 trades / 18,770 states with peak >= 1 R; every-bar states on these six legs are several times that. States
+    within a trade are autocorrelated, so power is carried by TRADES (n ~1,000 pooled; per leg 68 (xrp_4h) to ~400 (ada_pb)) and the
+    CI is a trade-cluster bootstrap.'
+  feasibility:
+    source: none
+    accrual_basis: Replays history through config-exact harness runs on keyless public candles for a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261024-09A6-04-ARM-CHOOSER
+  registered_at: '2026-10-24'
+  registered_before_run: true
+  statistic: 'Per trade OOS: chooser net R minus (i) A and (ii) the train-fold best fixed arm; trade-cluster bootstrap CI; per-fold
+    sign; net R per capital-day both arms; the oracle (best arm per trade in hindsight) reported as the ceiling, never graded; the share
+    of trades excluded because arms changed the entry set.'
+  rule: 'INDETERMINATE IF > 10% of trades are excluded by the entry join (arms change re-entry), or < 600 joined trades. PASS IF chooser
+    - best fixed >= +0.03 R/trade with CI lower > 0 AND >= 4 of 6 folds positive AND net R per capital-day >= best fixed AND maxDD <=
+    1.35x best fixed. PASS -> a per-bar switching harness (the expensive rung C2) is earned and the chooser''s pick is the advisor''s
+    phase-1 output. FAIL IF the CI upper bound of (chooser - best fixed) < 0.03 R: entry state does not tell which proven rule fits
+    a trade; ship rules per leg by their own records (exit-refinement), and no policy model is built on these arms. Thresholds are not
+    changed after any result.'
+  min_n: 600 joined trades pooled
+blocked_on: []
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.15
+  basis: 'stand-in: the prize is the giveback (book keeps ~13% of peak R, 90d paper+mirror n=328, docs/reviews/2026-10-21-weekly-walkthrough.md);
+    not a P&L measurement of this lever.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 120
+  why_runner: Keyless public candles + config-exact harness runs; reads no trainer data.
+  basis: 'Estimate: six harness passes with --emit-paths (one per leg, ~1-2 min each MEASURED for exit_lever_ablation arms 2026-10-16)
+    plus the fit.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/exit_arm_chooser.py
+  - --leg
+  - trend_donchian_eth_4h
+  - --leg
+  - trend_donchian_xrp_4h
+  - --leg
+  - xrp_pullback_2h
+  - --leg
+  - ada_pullback_2h
+  - --leg
+  - trend_donchian_eth_prop
+  - --leg
+  - trend_donchian_sol_prop
+  - --arm
+  - A=
+  - --arm
+  - D=--trail-decay-stall-bars=10;--trail-decay-tight-mult=1.8
+  - --arm
+  - M=--trail-adx-below=25;--trail-adx-tight-mult=2.5
+  - --arm
+  - S=--momentum-stale-bars=8;--momentum-stale-adx-below=20
+  - --arm
+  - T=--tp-target-r=3;--tp-retarget-mode=stall_pull_in;--tp-retarget-stall-bars=10
+  - --baseline
+  - A
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --n-folds
+  - '6'
+  - --n-boot
+  - '2000'
+  - --min-n
+  - '600'
+  - --max-excluded
+  - '0.10'
+  - --min-gain-r
+  - '0.03'
+  - --min-folds
+  - '4'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261024-09a6-04
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- IN-TRADE-EXIT-MODEL
+- docs/research/programmes/01-ACTIVE-TRADE-MANAGEMENT.md (section 'AI active trade management')
+- docs/research/programmes/02-AI-TRADER.md (Q3)
+- research/queue/blocked/RQ-20261014-d6e7-06.yaml
+- 'scripts/research/path_metric_giveback.py (run_leg_paths: config-exact harness + --emit-paths)'
+- research/queue/blocked/RQ-20261011-9da8-04.yaml
+- scripts/research/exit_lever_ablation.py
+- src/research/trail_levers.py
+what_it_does_not_do: Chooses at the entry bar only (per-bar switching needs a harness that takes a policy; that is rung C2, earned by
+  a PASS). Changes no config.
+last_dispatched_at: '2026-10-25T02:16:53+00:00'
+grading:
+  attested: RULE-RQ20261024-09A6-04-ARM-CHOOSER
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261024-09A6-04-ARM-CHOOSER
+  evidence:
+  - research/results/RQ-20261024-09a6-04/40153889868.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

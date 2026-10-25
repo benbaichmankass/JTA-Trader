@@ -1,0 +1,123 @@
+id: RQ-20261022-326f-09
+title: >-
+  Prop pace: does the fade harness at its defaults on 1h clear Stage 0 on six alt perps no committed record covers?
+status: done
+cadence: once
+theme: new_strategy_prop
+priority: 1
+kind: experiment
+question: >-
+  On Binance USD-M 1h candles for BNBUSDT,DOGEUSDT,LINKUSDT,LTCUSDT,BCHUSDT,DOTUSDT over 2020-06-01..2026-10-22, does the fade family at harness defaults pass the
+  pooled Stage-0 rule with breadth?
+why_this_matters: >-
+  fade has one committed timeframe record (ef5d-09, the six majors at 1h); the alt perps the prop books can trade are untested for it. A different entry logic from
+  the pullback/trend legs also diversifies the prop candidate pool. Lane THEME-AUTHOR-1022 (new_strategy_prop weight 6 held 7 runnable vs a computed share of 13 at
+  09:26Z). Prior ids: RQ-20261018-ef5d-09 (fade 1h, majors).
+power:
+  expected_n: 600
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: >-
+    Pooled floor 88 trades (the harness default for this family of units) vs 6 cells x ~6 y of history; expected_n=600 is an ESTIMATE from the batch-1 per-symbol
+    entry counts (RQ-20261006 cells), not a measurement for this family/timeframe; below the pooled floor the arm grades indeterminate, never FAIL.
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on fetched public candles over a pinned window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261022-326F-09-FADE-1H
+  registered_at: '2026-10-22'
+  registered_before_run: true
+  statistic: >-
+    harness_stage0.py --family fade --timeframe 1h, one arm B (harness defaults, no --param); per cell and pooled across 6 cells.
+  rule: >-
+    PASS iff B passes (pooled + breadth) -> the passing cells are prop candidates: node P5-Q6 (prop EV/survival on the B6 bar) and a same-book overlap read against
+    the live legs of the same family; they must clear the prop SUPERSET ladder (CLAUDE.md prop legs) before any roster act. FAIL -> no Stage-0 edge for this family/timeframe
+    on these cells at the harness defaults. INDETERMINATE otherwise. Verdicts are the script own (scripts/research/harness_stage0.py, grades fixed by these flags):
+    per CELL pass iff n >= n_floor AND net_r > 0 AND >= fold_majority of the calendar folds net > 0, fail iff n >= n_floor and not, indeterminate iff n < n_floor;
+    per ARM pass iff pooled n >= pooled_n_floor AND pooled net_r > 0 AND pooled folds >= fold_majority AND >= breadth_frac of the POWERED cells pass, indeterminate
+    iff pooled n < pooled_n_floor or < 2 powered cells or < half the declared cells measured (a fetch/harness fault is recorded per cell, never dropped), fail otherwise.
+    Holm-corrected one-sided t p-values are REPORTED, not graded. Thresholds are not changed after any result.
+  what_it_does_not_do: >-
+    Does not edit config/strategies.yaml, config/accounts.yaml or any roster; does not tune beyond the single arm listed; does not pool windows with any committed
+    record; is not a promotion case. Candles are Binance USD-M (a PROXY for Bybit linear) and the funding term is a directionless magnitude (execution_costs P1),
+    both stated in the record.
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 120
+  confidence: 0.15
+  bucket: structural
+  basis: 'stand-in: a new prop-book strategy family candidate; an estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 90
+  basis: >-
+    Estimate from the ef5d/7c2b harness_stage0 runs (2026-10-18..21) scaled by cells x bars; the first run replaces it.
+  why_runner: >-
+    harness_stage0.py fetches public candles and runs the repo harnesses; CPU-only; not trainer-resident.
+run:
+  command:
+  - python3
+  - scripts/research/harness_stage0.py
+  - --family
+  - fade
+  - --symbols
+  - BNBUSDT,DOGEUSDT,LINKUSDT,LTCUSDT,BCHUSDT,DOTUSDT
+  - --timeframe
+  - 1h
+  - --days
+  - '2400'
+  - --start
+  - '2020-06-01'
+  - --end
+  - '2026-10-22'
+  - --arm
+  - B=
+  - --folds
+  - '6'
+  - --fold-majority
+  - '4'
+  - --n-floor
+  - '39'
+  - --pooled-n-floor
+  - '88'
+  - --breadth-frac
+  - '0.5'
+  - --rule-id
+  - RULE-RQ20261022-326F-09-FADE-1H
+  - --data-dir
+  - '{out_dir}/data'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261022-326f-09
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+roadmap:
+- L-PROP
+programme: P5
+related:
+- scripts/research/harness_stage0.py
+- RQ-20261021-7c2b-14
+- THEME-AUTHOR-1022
+last_dispatched_at: '2026-10-23T11:57:44+00:00'
+grading:
+  attested: RULE-RQ20261022-326F-09-FADE-1H
+  auto: true
+  decision_rule_id: RULE-RQ20261022-326F-09-FADE-1H
+  evidence:
+  - research/results/RQ-20261022-326f-09/39949844865.jsonl
+  graded_at: '2026-10-23'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

@@ -71,6 +71,7 @@ __all__ = [
     "FILL_EXIT_SOURCE",
     "IB_EXIT_SOURCE",
     "exit_from_fills",
+    "exit_from_one_order_fills",
 ]
 
 #: ``exit_price_source`` for an exit price derived from real exchange fills that
@@ -265,4 +266,121 @@ def exit_from_fills(
         "side": side,
         "closed_at": matched[-1][2],
         "source": IB_EXIT_SOURCE if require_realized else FILL_EXIT_SOURCE,
+    }
+
+
+def exit_from_one_order_fills(
+    *,
+    account_id: str,
+    symbol: str,
+    direction: str,
+    opened_at_ms: int,
+    closed_at_ms: int,
+    qty: Optional[float],
+    own_order_ids: Any = (),
+    conn_factory: Optional[Callable[[], Any]] = None,
+) -> Optional[Dict[str, Any]]:
+    """One journal trade's close, priced from the ONE venue order that closed it.
+
+    :func:`exit_from_fills` sums every close-side fill in the trade's window, so
+    it refuses on a NETTED position: when a same-side sibling's fills land in
+    the window the cumulative qty overshoots. MEASURED (SOAK-MECH-C): bybit_1
+    trade 6171 (xrp_pullback_2h, long 1221.9) shared a one-way XRPUSDT
+    position with 6193 (87674.6). 6193's stop sold 87674.6 at 09:11:18, then a
+    reduce-only sell of exactly 1221.9 @ 1.5428 ended 6171 at 09:11:56. The
+    cumulative read stopped at 87674.6 and refused, and the row was booked at
+    the 1.5399 close-time candle (ESTIMATED) though its fill was on disk.
+
+    This groups the close-side fills by venue ``order_id`` and accepts:
+
+    1. the trade's OWN bracket order (``own_order_ids``: its ``sl_order_id`` /
+       ``tp_order_id``) when exactly one of them filled the whole position;
+    2. otherwise the single order in the window whose fills sum to the
+       trade's qty (within :data:`QTY_TOLERANCE`).
+
+    ``closed_at_ms`` is REQUIRED: an open-ended window would admit later
+    trades' closes. Refuses (``None``) on: no store, no close-side fill, any
+    unusable fill, two or more qualifying orders (ambiguous: which one is
+    ours?), or none. Same return contract as :func:`exit_from_fills` plus
+    ``order_id`` and ``match`` (``own_bracket_order`` | ``single_order_qty``).
+    A local SQLite read, never a broker call. Never raises.
+    """
+    side = {"long": "sell", "short": "buy"}.get(str(direction or "").lower())
+    want_sym = normalize_symbol(symbol)
+    acct = str(account_id or "").strip()
+    target = _f(qty)
+    if not side or not want_sym or not acct or not target or target <= 0:
+        return None
+    try:
+        start_ms = int(opened_at_ms) - _OPEN_SLACK_MS
+        end_ms = int(closed_at_ms)
+    except (TypeError, ValueError):
+        return None
+    if end_ms <= start_ms:
+        return None
+
+    try:
+        conn = _open_ro(conn_factory)
+        if conn is None:
+            return None
+        try:
+            rows = [
+                r for r in conn.execute(
+                    "SELECT price, qty, exec_time, order_id, symbol, fee "
+                    "  FROM exchange_fills "
+                    " WHERE account_id = ? AND side = ? "
+                    "   AND datetime(exec_time) >= datetime(?) "
+                    "   AND datetime(exec_time) <= datetime(?) "
+                    " ORDER BY datetime(exec_time) ASC",
+                    (acct, side, _iso(start_ms), _iso(end_ms)),
+                ).fetchall()
+                if normalize_symbol(r[4]) == want_sym
+            ]
+        finally:
+            try:
+                conn.close()
+            except Exception:  # noqa: BLE001
+                pass
+    except Exception:  # noqa: BLE001 — a store read never breaks the monitor tick
+        return None
+
+    by_order: Dict[str, List[tuple]] = {}
+    for price, fqty, exec_time, order_id, _sym, fee in rows:
+        p, q = _f(price), _f(fqty)
+        if p is None or q is None or p <= 0 or q <= 0:
+            return None
+        by_order.setdefault(str(order_id or ""), []).append(
+            (p, q, exec_time, _f(fee) or 0.0))
+    by_order.pop("", None)
+    if not by_order:
+        return None
+
+    def _full(oid: str) -> bool:
+        filled = sum(q for _p, q, _t, _fe in by_order.get(oid, ()))
+        return abs(filled - target) <= target * QTY_TOLERANCE
+
+    own = [str(o) for o in (own_order_ids or ()) if o]
+    hits = [o for o in dict.fromkeys(own) if _full(o)]
+    match = "own_bracket_order"
+    if len(hits) != 1:
+        if hits:
+            return None
+        hits = [o for o in by_order if _full(o)]
+        match = "single_order_qty"
+        if len(hits) != 1:
+            return None
+    oid = hits[0]
+    fills = by_order[oid]
+    filled = sum(q for _p, q, _t, _fe in fills)
+    return {
+        "avg_exit_price": sum(p * q for p, q, _t, _fe in fills) / filled,
+        "fees": sum(fe for _p, _q, _t, fe in fills),
+        "avg_entry_price": None,
+        "closed_pnl": None,
+        "qty": filled,
+        "side": side,
+        "closed_at": fills[-1][2],
+        "source": FILL_EXIT_SOURCE,
+        "order_id": oid,
+        "match": match,
     }

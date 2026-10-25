@@ -1,0 +1,32 @@
+{
+  "id": "GIVEBACK-FRAC-FLAG",
+  "title": "Harness: fractional giveback exit --giveback-frac (exit when open R falls to f x peak once peak >= giveback-min-mfe-r)",
+  "phase": "Research",
+  "state": "landed_unproven",
+  "owner": "unassigned (filed by EXITS-GIVEBACK-W43)",
+  "lane": "EXITS-GIVEBACK-W43",
+  "model": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [
+    19739
+  ],
+  "blocked_on": [],
+  "note": "[2026-10-22 EXITS-GIVEBACK-W43] Instrument for blocked units RQ-20261022-eba2-05/-06. Every giveback stop tested (RQ-20261019-004/-018) is an ABSOLUTE R; the census measures giveback as a SHARE of peak. BUILD: --giveback-frac F in backtest_pullback.py and backtest_trend.py (default 0 = off, byte-identical), exit at the bar close when open R <= F x peak_r once peak_r >= --giveback-min-mfe-r. DONE WHEN: tests show off-by-default byte-identity and a planted peak-then-fade path exits at F x peak; exit_lever_ablation.py accepts the arm string used in eba2-05. [2026-10-23 EXIT-BUILDS-W43] BUILT in PR #19739 (merged != observed). Flags default-off, byte-identical (old-vs-new main on armed configs), tests/test_exit_builds_w43.py. Unit(s) eba2-05/-06 moved out of blocked/, dispatch_queue dry run would_dispatch. CLOSES (done) when eba2-05/-06 lands its first result carrying the new flag in its recorded argv.",
+  "updated_at": "2026-10-23T17:04:55Z",
+  "updated_by": "session_01WJ6zAKX6HBJBgdJWsCd6P3",
+  "roadmap": [
+    "L-ATM"
+  ],
+  "observation": {
+    "what": "first result of the unblocked unit(s) eba2-05,-06 (RQ-20261022-) lands in research/results/ with a graded verdict whose recorded argv carries the new flag",
+    "how_to_check": "ls research/results/ for the unit ids; python3 scripts/research/result_disposition_check.py --list",
+    "due_by": "2026-10-27"
+  },
+  "writeback": {
+    "roadmap": "none: research harness flag only, no milestone where/next change",
+    "arch": "none: research tooling, no runtime component/path/contract change"
+  },
+  "_seq": 600
+}

@@ -1,0 +1,110 @@
+id: RQ-20261016-c56e-20
+title: 'Re-validation at power, soak book: does qqq_trend_long_1d AS DECLARED clear Stage 0 on the disjoint window before its committed record (2006-10-02
+  .. 2025-04-09), net of the full cost stack?'
+status: done
+cadence: once
+theme: live_strategy
+priority: 2
+kind: experiment
+question: On 2006-10-02 .. 2025-04-09 (disjoint from, and immediately preceding, the committed record's window), is qqq_trend_long_1d at its configured
+  params net-positive with >= 5 of 8 calendar folds net > 0, at n >= 39?
+why_this_matters: 'Programme 03 Q3 (power): every alpaca 1d leg is `underpowered` in the census (n 3-12 on a 365d record), so it cannot be graded, tuned
+  or promoted. 1d ETF history goes back decades -- the limit is the window, not the data. qqq_trend_long_1d sits on the soak books (alpaca_paper, ib_paper)
+  with n=8.'
+power:
+  expected_n: 148
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'd=0.45 at alpha 0.05 / power 0.8 needs 39 trades (the repo''s standing E35 floor). expected_n=148 is an ESTIMATE: the 365d record''s 8 trades
+    x 18.5 yr. Cost stack: Alpaca equity fee 0 + the provisional 5 bps slippage (E62) + no funding. Window 2006-10-02 (after the instrument''s listing)
+    .. 2025-04-09 (the day before every 1d record''s data_start 2025-04-10). Folds 8, majority 5.'
+  feasibility:
+    source: none
+    accrual_basis: Re-measurement on freshly fetched keyless candles over a pinned historical window; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261016c56e20
+  registered_at: '2026-10-16'
+  registered_before_run: true
+  statistic: 'ONE arm B = the leg exactly as declared in config/strategies.yaml (argv built by regime_debt_matrix.build_harness_cmd; full cost stack fee
+    + resolved slippage + funding via execution_costs.resolve_cost_policy), graded by exit_lever_ablation.py --grade stage0: net_total_r, n, max_drawdown_r,
+    and net_r per fold over 8 equal calendar spans of the window. Reported, not graded: net_r_per_capital_day. NO positive control: no committed record
+    exists on this window (it is disjoint from and immediately precedes the leg''s record), the precedent being RQ-20261014-470a-01; the argv is built by
+    the same builder the committed record used, from the same config keys.'
+  rule: 'indeterminate IF n(B) < 39 (underpowered: no verdict, never FAIL on thin n). PASS IF net_r(B) > 0 AND >= 5 of 8 calendar folds net > 0: the leg
+    is graded at power for the first time: Stage-0 evidence at n >= 39 over 18.5 years -- the evidence a soak-book leg needs before any Gate-2 case. FAIL
+    IF n >= 39 and that does not hold: the leg has no fold-consistent edge over 18.5 years at its configured params -- it has no path to Stage 2 at these
+    params; recorded on L-LADDER. Windows are never pooled with the committed record''s; the record keeps its own grade. The 0 R bar, the 5-of-8 fold majority
+    and the 39 floor are not changed after any result.'
+  what_it_does_not_do: Does not edit config or any roster, does not tune (one arm, as declared), does not pool windows. Not a promotion case.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 40
+  confidence: 0.25
+  bucket: information
+  basis: 'stand-in: information value for the soak-book ladder (paper); estimate, not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 10
+  basis: One keyless candle fetch of ~7414 days and ONE harness pass over the pinned window.
+  why_runner: exit_lever_ablation.py fetches its own keyless candles (Binance Vision / Yahoo) and runs the repo harnesses; the symbol/timeframe is not in
+    metis-market-data and the script has no published-data input, so the Kaggle-CPU and trainer backends cannot take it.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - qqq_trend_long_1d
+  - --arm
+  - B=
+  - --days
+  - '7414'
+  - --start
+  - '2006-10-02'
+  - --end
+  - '2025-04-09'
+  - --grade
+  - stage0
+  - --baseline
+  - B
+  - --delta-r
+  - '0'
+  - --folds
+  - '8'
+  - --fold-majority
+  - '5'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261016-c56e-20
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+  note: research/results/RQ-20261016-c56e-20/<run_id>.jsonl via the batch collector; per-arm summaries and verdict.json under comms/research/RQ-20261016-c56e-20/<run_id>/.
+roadmap:
+- L-LADDER
+related:
+- P3-STRATEGY-BACKLOG-1016
+- docs/research/programmes/03-STRATEGY-IMPROVEMENT.md
+- research/programmes/03-strategy-improvement.yaml
+- scripts/research/exit_lever_ablation.py
+last_dispatched_at: '2026-10-20T16:58:19+00:00'
+grading:
+  attested: RULE-RQ20261016c56e20
+  auto: true
+  decision_rule_id: RULE-RQ20261016c56e20
+  evidence:
+  - research/results/RQ-20261016-c56e-20/39462143593.jsonl
+  graded_at: '2026-10-20'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

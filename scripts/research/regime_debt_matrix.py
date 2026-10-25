@@ -166,7 +166,11 @@ _TREND_PLAIN = {"model", "signal_prefixes", "enabled", "execution", "timeframe",
                 # decision_bar: closed == what THIS harness does by construction (it
                 # decides on the closed bar, i.e. Stage 0). An explicit `forming` is
                 # NOT modelled and is added to the omitted set in build_harness_cmd.
-                "decision_bar"}
+                "decision_bar",
+                # tp_revision (TP doctrine B1): modelled via `_tp_revision_flags`
+                # (--tp-revision / --tp-revision-width-mult), the same flags
+                # exit_lever_ablation's arms use, so a declaring leg stays faithful.
+                "tp_revision"}
 # Trend lever config-key -> harness flag (levers the trend harness DOES model,
 # so a trend strategy carrying ONLY these is faithful, not approximate). The
 # stale-exit lever was ported into scripts/backtest_trend.py as the rec #5
@@ -213,6 +217,14 @@ _TREND_LEVER_FLAG = {
     "trail_vol_above_pctl": "--trail-vol-above-pctl",
     "trail_vol_below_pctl": "--trail-vol-below-pctl",
     "trail_vol_tight_mult": "--trail-vol-tight-mult",
+    # MOMENTUM-LEVERS-LIVE (2026-10-18): once a leg declares the ADX trail or the
+    # momentum-keyed time stop, a config-exact A arm must carry it, or every
+    # later ablation would measure the leg without the lever it trades.
+    "trail_adx_below": "--trail-adx-below",
+    "trail_adx_falling_bars": "--trail-adx-falling-bars",
+    "trail_adx_tight_mult": "--trail-adx-tight-mult",
+    "momentum_stale_bars": "--momentum-stale-bars",
+    "momentum_stale_adx_below": "--momentum-stale-adx-below",
 }
 # Pullback lever config-key -> harness flag (these the pullback harness DOES model).
 _PB_LEVER_FLAG = {
@@ -221,11 +233,23 @@ _PB_LEVER_FLAG = {
     "trail_vol_below_pctl": "--trail-vol-below-pctl", "trail_vol_above_pctl": "--trail-vol-above-pctl",
     "trail_vol_tight_mult": "--trail-vol-tight-mult", "vol_pctl_window": "--vol-pctl-window",
     "side_filter": "--side-filter",  # see the note on _TREND_LEVER_FLAG above
+    # MOMENTUM-LEVERS-LIVE (2026-10-18), as on _TREND_LEVER_FLAG.
+    "trail_adx_below": "--trail-adx-below",
+    "trail_adx_falling_bars": "--trail-adx-falling-bars",
+    "trail_adx_tight_mult": "--trail-adx-tight-mult",
+    "momentum_stale_bars": "--momentum-stale-bars",
+    "momentum_stale_adx_below": "--momentum-stale-adx-below",
 }
 _PB_PLAIN = {"model", "signal_prefixes", "enabled", "execution", "timeframe", "symbols",
              "trend_lookback", "pullback_lookback", "pullback_frac", "atr_period",
              "atr_stop_mult", "trail_mult", "tp_r", "min_confidence", "adx_min",
-             "adx_max", "adx_period", "shadow_model_ids", "description", "tp_intent"}
+             "adx_max", "adx_period", "shadow_model_ids", "description", "tp_intent",
+             # decision_bar: closed == what the pullback harness does by construction
+             # (closed bar, Stage 0), as for _TREND_PLAIN; an explicit `forming` is NOT
+             # modelled and is added to the omitted set in build_harness_cmd. Without
+             # this, xrp/ada_pullback_2h's operator-approved `decision_bar: closed`
+             # (DECISION-BAR-MATCH, 2026-10-22) graded their records `approximate`.
+             "decision_bar"}
 # Squeeze (TTM-style BB-inside-KC) lever config-key -> harness flag. The squeeze
 # harness (scripts/backtest_squeeze.py) is the SAME harness that validated the
 # strategy in docs/audits/squeeze-breakout-complement-2026-05-24.md — it was simply
@@ -821,6 +845,23 @@ def _tp_venue_cap_pct() -> float:
     return TP_VENUE_CAP_PCT
 
 
+def _tp_revision_flags(cfg: dict) -> List[str]:
+    """`--tp-revision <rule> [--tp-revision-width-mult <w>]` for a leg that declares
+    `tp_revision` (string or `{rule, width_mult}` mapping), else `[]`. Only the rule
+    scripts/backtest_trend.py implements is forwarded; an unknown rule is returned as
+    an omission by `conditional_omissions`-style callers via the unchanged
+    `_TREND_PLAIN` miss, so we forward nothing for it rather than abort the harness."""
+    raw = cfg.get("tp_revision")
+    rule = raw.get("rule") if isinstance(raw, dict) else raw
+    if rule != "donchian_measured_move":
+        return []
+    flags = ["--tp-revision", str(rule)]
+    width = raw.get("width_mult") if isinstance(raw, dict) else None
+    if width is not None:
+        flags += ["--tp-revision-width-mult", str(width)]
+    return flags
+
+
 def _tp_r_flags(cfg: dict) -> List[str]:
     """``--tp-cap-pct``/``--tp-r`` argv, or ``[]`` when the leg declares no `tp_r`.
 
@@ -873,7 +914,8 @@ def _tp_r_flags(cfg: dict) -> List[str]:
 
 def build_harness_cmd(name: str, cfg: dict, harness: str, csv: str, resample: str,  # inert: name — the argv is built from cfg/harness/csv; the cell name is used by the CALLER for reporting, never by the command
                       emit: str, jout: str,
-                      fee_override: Optional[float] = None
+                      fee_override: Optional[float] = None,
+                      research_emits: bool = False
                       ) -> tuple[list[str], bool, list[str]]:
     """Return (argv, faithful, omitted_levers).
 
@@ -920,6 +962,7 @@ def build_harness_cmd(name: str, cfg: dict, harness: str, csv: str, resample: st
         # E55 — model the leg's declared tp_r (the live-capped TP formula).
         # See `_tp_r_flags`. `[]` when the leg declares no tp_r.
         argv += _tp_r_flags(cfg)
+        argv += _tp_revision_flags(cfg)
         omitted = sorted(set(k for k in cfg
                              if k not in _TREND_PLAIN and k not in _TREND_LEVER_FLAG)
                          | set(conditional_omissions("trend", cfg, argv))
@@ -1055,9 +1098,24 @@ def build_harness_cmd(name: str, cfg: dict, harness: str, csv: str, resample: st
         argv += _tp_r_flags(cfg)
         omitted = sorted(set(k for k in cfg
                              if k not in _PB_PLAIN and k not in _PB_LEVER_FLAG)
-                         | set(conditional_omissions("pullback", cfg, argv)))
+                         | set(conditional_omissions("pullback", cfg, argv))
+                         | ({"decision_bar"}
+                            if str(cfg.get("decision_bar") or "").lower() == "forming" else set()))
         faithful = not omitted
+    # EXIT-PATH-EMIT-OFFLINE / METALABEL-EMIT-FEATURES (opt-in, default False =
+    # byte-identical argv): ask the trend/pullback harnesses for the per-bar path
+    # file (beside `emit`, `__paths.jsonl`) and the decision-time f_* columns.
+    # Appended AFTER fidelity is graded -- they change what is WRITTEN, never
+    # which trades exist (tests/test_harness_emit.py pins that).
+    if research_emits and harness in ("trend", "pullback"):
+        argv += ["--emit-features", "--emit-paths", research_paths_file(emit)]
     return argv, faithful, omitted
+
+
+def research_paths_file(emit: str) -> str:
+    """Where `research_emits` writes the per-bar path rows for a trades emit."""
+    stem = emit[:-len("__trades.jsonl")] if emit.endswith("__trades.jsonl") else emit
+    return stem + "__paths.jsonl"
 
 
 def _regime_tag(csv: str, emit: str, resample: str, label: str) -> dict:
@@ -1185,7 +1243,7 @@ def emit_trades_for(name: str, cfg: dict, workdir: str, days: int, *,
 
 
 def run_one(name: str, cfg: dict, workdir: str, days: int,
-            fee_arms: Optional[list] = None) -> dict:
+            fee_arms: Optional[list] = None, research_emits: bool = False) -> dict:
     harness = classify(cfg)
     sym = (cfg.get("symbols") or [None])[0]
     tf = cfg.get("timeframe")
@@ -1205,7 +1263,8 @@ def run_one(name: str, cfg: dict, workdir: str, days: int,
         row["error"] = f"fetch failed: {type(e).__name__}: {e}"
         return row
     argv, faithful, omitted = build_harness_cmd(name, cfg, harness, csv,
-                                                feed["resample"], emit, jout)
+                                                feed["resample"], emit, jout,
+                                                research_emits=research_emits)
     row["fidelity"] = "faithful" if faithful else "approximate"
     row["omitted_levers"] = omitted
     annotate_exit_head_replayability(cfg, row, omitted)

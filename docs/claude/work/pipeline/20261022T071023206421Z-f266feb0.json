@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "due_date": "2026-11-05",
+    "kind": "date"
+  },
+  "filed": "2026-10-22",
+  "id": "PI-20261022-LOWUPW43-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "lane PERF-FOLLOWUP-2026W43 (dispatch_queue dry run of its own units)",
+    "rerun": "grep -l 'nothing accrues' research/queue/*.yaml | wc -l; python3 scripts/research/dispatch_queue.py --json | python3 -c \"import json,sys;print(sum(1 for x in json.load(sys.stdin)['decisions'] if x.get('power_state')=='accruing'))\""
+  },
+  "severity": "medium",
+  "state": "queued",
+  "tier": 1,
+  "what": "[research][infra] Historical-replay units are admitted as power_state ACCRUING ('RUNS, and its output must not be read as a test result') and then graded and acted on as tests. Every unit that grounds power with feasibility.source: none + accrual_basis 'Replays history on freshly fetched public candles for a pinned window; nothing accrues.' takes the accruing branch of research_queue.grade_power (the only admissible branch for source: none). MEASURED 2026-10-22: dispatch_queue.py --json labels RQ-20261022-fd06-01..03 accruing; the same block on RQ-20261016-005 / -015 was auto-graded pass and RQ-20261016-015 is the evidence for the operator's 2026-10-22 xrp_4h ADX-trail decision (OPERATOR-DECISIONS-1022). Either the label is wrong (a pinned-window replay is a test whose n is known from the window, not accrual) or the grading is -- the record and the queue disagree. Fix (Tier 1): a feasibility source for a pinned historical replay (e.g. source: replay with the window and the incumbent's measured n), graded as a test; or research_disposition refuses accruing results. Count the affected units with the rerun."
+}

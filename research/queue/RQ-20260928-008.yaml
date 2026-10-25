@@ -1,6 +1,6 @@
 id: RQ-20260928-008
 title: Re-grade ict_scalp_xrp_5m on its gated/off_cells variant (PI-20260922-UTN353OZ-0001)
-status: blocked
+status: retired
 cadence: once
 theme: live_strategy
 priority: 2
@@ -126,3 +126,10 @@ related:
   - MI-321 (scripts/research/mi321_ict_scalp_seam.py)
   - comms/strategy_evidence/ict_scalp_xrp_5m.json
 last_dispatched_at: null
+retired_reason: >-
+  2026-10-21 PIPELINE-HEALTH-1021: premise superseded and nothing money-bearing rides on it. The unit re-tested
+  ict_scalp_xrp_5m with off_cells gating on the strength of net_r -0.9172 / n=243 (2026-09-25). The regenerated
+  record (comms/strategy_evidence/ict_scalp_xrp_5m.json, 2026-10-02) reads net_r_oos -26.9959 / n_trades_oos 169,
+  and config/accounts.yaml routes the leg to no account (no uncommented roster line). The harness gap it named
+  (no off_cells suppression in scripts/backtest_ict_scalp.py) is real but belongs to the regime lane, not to a
+  leg that is already off every book. The registered rule stays in this file.

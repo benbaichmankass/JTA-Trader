@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "live_vs_backtest reads CONSISTENT for both legs on bybit_2, or a research/queue unit has attributed the gap to regime|cost|execution|overfit and its disposition is recorded",
+    "kind": "observation"
+  },
+  "id": "PI-20261021-4ZLRFEV1-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "PERF-REVIEW-PREP-20261021:live_vs_backtest",
+    "rerun": "python3 scripts/research/live_vs_backtest.py --leg xrp_pullback_2h --leg ada_pullback_2h"
+  },
+  "state": "queued",
+  "what": "[performance] Real-money legs BELOW_BACKTEST on live_vs_backtest: bybit_2 xrp_pullback_2h (n=17, -9.92R, pct 2.2) and ada_pullback_2h (n=15, -6.91R, pct 3.3); mirrors CONSISTENT. Needs a fidelity/regime/cost/execution attribution unit, NOT a demote. Related open item PI-20261021-LRP-8CA903B8 (ada_pullback_2h candle_mismatch x3). MEASURED 2026-10-21, whole-history live R per book; see docs/reviews/2026-10-21-weekly-walkthrough.md (PR #19362)."
+}
