@@ -1,0 +1,17 @@
+{
+  "based_on": "20261025T092227749234Z-8584a35b.json",
+  "due_when": {
+    "due_date": "2026-10-31",
+    "kind": "date"
+  },
+  "id": "PI-20261025-FQCEYPUY-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane OLD-PR-SWEEP-1025 disposition of PR #17874",
+    "rerun": "read PR #17874 (pull_request_read get: state, mergeable_state) and grep origin/main for the files it adds"
+  },
+  "state": "done",
+  "terminal_reason": "First-run evidence for JOURNAL-OFFVM-BACKUP (run 38406257010 success, issue #17870) verified and recorded as a checklist note; PR #17874 closed as superseded (it edited the retired single-file checklist).",
+  "what": "JOURNAL-OFFVM-BACKUP first-run evidence (run 38406257010, issue #17870, restore test 0 mismatches, per PR #17874 body; NOT verified by this lane) is not on the row on main. The PR edits the retired single-file checklist, so it cannot apply: record it with scripts/ops/checklist.py note JOURNAL-OFFVM-BACKUP, then close the PR. Row observation due_by 2026-10-31."
+}

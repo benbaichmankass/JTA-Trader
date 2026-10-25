@@ -1,0 +1,17 @@
+{
+  "based_on": "20261025T092227303284Z-155bd161.json",
+  "due_when": {
+    "due_date": "2026-11-01",
+    "kind": "date"
+  },
+  "id": "PI-20261025-FQCEYPUY-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane OLD-PR-SWEEP-1025 disposition of PR #18557",
+    "rerun": "read PR #18557 (pull_request_read get: state, mergeable_state) and grep origin/main for the files it adds"
+  },
+  "state": "done",
+  "terminal_reason": "PR #18557 merged to main 2026-10-25 (b8d1d551) after main was merged into its branch and the guard self-tests passed; lane OLD-PR-FOLLOWUPS-1025.",
+  "what": "research: family-retirement guard (policy yaml, family_reviews README, family_retirement_guard.py) is absent from main though research/queue/PLANNING.md already cites research/family_reviews/. PR #18557 is dirty (draft, 2026-10-16). Tier-1: merge main into its branch, re-run the guard --self-test, land. Not pushed by lane OLD-PR-SWEEP-1025."
+}

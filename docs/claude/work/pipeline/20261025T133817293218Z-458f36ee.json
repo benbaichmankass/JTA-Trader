@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-08",
+    "kind": "date"
+  },
+  "id": "PI-20261025-WUPS1025-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane OLD-PR-FOLLOWUPS-1025 disposition of PR #12213 (closed as superseded)",
+    "rerun": "read scripts/ci/automerge_arming.py grade() on main: does an opener of kind github_token with only non-required foreign check runs (e.g. armed-branch-push-watch `watch`) still grade `attached`; is there a C8 in scripts/ci/check_automerge_trigger.py"
+  },
+  "state": "queued",
+  "what": "Landing machinery (human merge, Tier-1 hold). Residual of closed PR #12213: on main, grade() takes opener only to decide WAIT for a pat open; a github_token open whose only foreign run is the non-required `watch` job still grades `attached` and arms, though nothing required will ever attach. #12213 proposed an `opener_cannot_attach` state checked first plus check_automerge_trigger C8 (a source assertion that the PAT client works without @actions/github). Decide whether to port that onto the current wait-budget design; PAT opens were measured working 2026-10-24, so the exposure is only the GITHUB_TOKEN fallback path."
+}

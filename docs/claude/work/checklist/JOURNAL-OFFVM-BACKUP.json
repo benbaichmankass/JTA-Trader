@@ -13,9 +13,9 @@
     17847
   ],
   "blocked_on": [],
-  "note": "Operator-approved 2026-10-13 ('yes make the off-vm backup'). Actions cron 03:23Z SSHes live VM read-only, online-backup snapshot + integrity_check, uploads to bucket ict-journal-backups (NoPublicAccess, versioning on); 30d daily + 12w weekly pruning. Not observed until first run + restore test. Revert: delete journal-offvm-backup.yml.",
-  "updated_at": "2026-10-24T06:01:06Z",
-  "updated_by": "session_01TcTW6muiYDAQFZz2qdhTEW",
+  "note": "Operator-approved 2026-10-13 ('yes make the off-vm backup'). Actions cron 03:23Z SSHes live VM read-only, online-backup snapshot + integrity_check, uploads to bucket ict-journal-backups (NoPublicAccess, versioning on); 30d daily + 12w weekly pruning. Not observed until first run + restore test. Revert: delete journal-offvm-backup.yml. FIRST RUN OBSERVED 2026-10-13 (verified 2026-10-25: run 38406257010 conclusion=success on main 6cc27be0; issue #17870 closed, bot comment): bucket ict-journal-backups created; trade_journal raw 2,019,954,688 B -> gz 220,906,826 B, integrity ok, 17 tables; trainer_store gz 4,359,097 B, integrity ok, 7 tables; restore test from stored object: 0 count mismatches vs snapshot on both, shrunk_in_live=0. Still landed_unproven: needs 7 consecutive daily objects (consecutive_daily=1 at first run). Capacity ~221 MB/day => ~9 GB steady vs 20 GB Always Free. Supersedes PR #17874 (edited the retired single-file checklist), proposed close.",
+  "updated_at": "2026-10-25T12:25:54Z",
+  "updated_by": "session_OLD-PR-FOLLOWUPS-1025",
   "roadmap": [
     "L-OPS"
   ],

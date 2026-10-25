@@ -1,0 +1,17 @@
+{
+  "based_on": "20261025T092228958224Z-e8852b83.json",
+  "due_when": {
+    "due_date": "2026-11-01",
+    "kind": "date"
+  },
+  "id": "PI-20261025-FQCEYPUY-0005",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane OLD-PR-SWEEP-1025 disposition of PR #14692",
+    "rerun": "read PR #14692 (pull_request_read get: state, mergeable_state) and grep origin/main for the files it adds"
+  },
+  "state": "done",
+  "terminal_reason": "PR #14692 merged 2026-10-25 (44e12c9b, manager Tier-2 call): the no_credentials message names the account's own env vars; the sed '|' escape bug remains tracked as PI-20260930-BHYHMK2C-0001.",
+  "what": "Decision (Tier-2): PR #14692 changes the login-check system-action wrapper. Its per-account dump dir item is already on main (accounts/<acct>/last-run, breakout_login_check_action.sh). Still open: no_credentials message names BREAKOUT_DX_* (line ~446), sync-vm-secrets.yml comments still name an ict-prop-feed@tradeify_1 feed (lines 267, 358), and the sed '|' escape bug in sync_vm_secrets.sh _patch_env_var (PI-20260930-BHYHMK2C-0001, not found on main). Operator OK to ship a trimmed PR, or drop."
+}
