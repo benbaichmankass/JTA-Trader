@@ -1,0 +1,22 @@
+{
+  "id": "DASHBOARD-RESET-ORPHANS",
+  "title": "Dashboard repo still links the retired registers (Runbooks.svelte x4) and says 'review backlogs' (Work.svelte) -- needs a ict-trader-dashboard PR (PI-20260921-0005)",
+  "phase": null,
+  "state": "queued",
+  "owner": "lane (sonnet)",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "ceiling_usd": 5,
+  "spend_usd": null,
+  "tier": 1,
+  "prs": [],
+  "blocked_on": [],
+  "note": "[2026-10-25 ROUTE-1025] Owns PI-20260921-0005. RE-RAN origin.rerun against a fresh shallow clone of benbaichmankass/ict-trader-dashboard on 2026-10-25 (anonymous read via add_repo): still applies. webapp/src/routes/Runbooks.svelte lines 27, 33, 40, 47, 54 still carry the coordination-board entry and links to docs/claude/DUE.md, PROBES.json, OPEN-ITEMS.json, operator-owed-register.json; webapp/src/routes/Work.svelte:1018 still says 'A bug to fix still goes to the review backlogs'; Work.svelte:824 comment and :80 refer to SESSIONS.json / the board (comments only); nav.ts:52 describes Runbooks as 'the coordination board'. BUILD: one PR in the dashboard repo (the lane needs add_repo access=push; A3b proved a lane can open one) replacing the dead links with the live successors (docs/claude/work/PIPELINE.jsonl, docs/claude/work/checklist/) or docs/archive/2026-09-21-operating-reset/ marked historical, and rewording the Work.svelte sentence to 'file it in the pipeline or on the checklist'. A UI change is deployed by the dashboard repo's Pages workflow; verify on the live page after merge.",
+  "priority_rank": 26,
+  "updated_at": "2026-10-25T06:05:44Z",
+  "updated_by": "session_01MCfi31EKuoRfriU5E7yj2e",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "_seq": 645
+}
