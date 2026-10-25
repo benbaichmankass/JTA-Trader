@@ -375,6 +375,16 @@ GUARDS: List[Dict[str, Any]] = [
                   ["python3", "scripts/ci/check_live_review_records.py"]],
     },
     {
+        # DESK-0-SCHEMA: comms/desk/{packets,decisions.jsonl,touches.jsonl} must satisfy
+        # comms/schema/desk_*.schema.json (closed enums per role, external_context, bybit_1 touch tag).
+        # Sibling of live-review-records-guard; it does not touch comms/live_review/.
+        "name": "desk-records-guard",
+        "when": {"globs": ["comms/desk/**", "comms/schema/desk_*.schema.json",
+                           "scripts/ci/check_desk_records.py", "scripts/ci/check_live_review_records.py"]},
+        "steps": [["python3", "scripts/ci/check_desk_records.py", "--self-test"],
+                  ["python3", "scripts/ci/check_desk_records.py"]],
+    },
+    {
         # ROADMAP-LOOP (operator, 2026-10-11): milestone <-> checklist row <-> queue unit is a FIELD
         # (`roadmap`), closing rows carry `writeback`, and the ROADMAP.md live block is generated.
         # Whole-store checks always; enforcement on rows/units the DIFF touches only.

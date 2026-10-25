@@ -1,0 +1,170 @@
+{
+  "_comment": "DESK-0-SCHEMA: decision packet v3 (docs/plans/claude-trading-desk-DESIGN.md section 2.2). ONE envelope, three kinds (entry / in_trade / exit). Extends the LTR-11 packet v2 (scripts/ops/live_review_packet.py, PACKET_VERSION 2): v2 packets under comms/live_review/packets/ are NOT rewritten and are NOT validated by this schema. Packets live at comms/desk/packets/<packet_id>.json; packet_sha = sha256 of the canonical JSON (sort_keys, compact separators), exactly as for v2. BINDING RULES: (1) could-not-look is never zero -- an unreadable field is null AND is named in meta.missing_inputs; (2) every packet carries meta.info_cutoff_at; a packet that carries `outcome` is T1 (kind exit only), never a feature; (3) the ML feature view is a projection of the packet -- `features_at_review`, flat numeric-or-null, built from the same packet the teacher saw; (4) which blocks each kind carries is enforced by scripts/ci/check_desk_records.py (BLOCKS_BY_KIND), because the schema dialect has no conditionals. Public repo: no account numbers, balances or secrets. Validated by guard `desk-records-guard`.",
+  "schema_version": 1,
+  "packet_version": 3,
+  "enums": {
+    "packet_kind": ["entry", "in_trade", "exit"],
+    "read_state": ["read", "could_not_look", "not_applicable"],
+    "peak_provenance": ["measured", "estimated", "fabricated", "unverified"],
+    "mechanics_verdict": ["match", "mismatch", "could_not_look"],
+    "side": ["long", "short"],
+    "account_class": ["real_money", "prop", "paper", "soak"],
+    "account_mode": ["live", "dry_run"],
+    "gate_verdict": ["approve", "clip", "refuse", "could_not_look", "error", "not_available"],
+    "ml_stage": ["candidate", "shadow", "advisory"],
+    "ml_state": ["present", "absent"],
+    "news_state": ["read", "could_not_look", "none_found"],
+    "outcome_provenance": ["measured", "estimated", "fabricated", "unverified"]
+  },
+  "packet": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["schema_version", "meta", "package", "market", "features_at_review"],
+    "properties": {
+      "schema_version": {"type": "integer", "enum": [1]},
+      "meta": {
+        "type": "object", "additionalProperties": false,
+        "required": ["packet_id", "packet_kind", "packet_version", "built_at", "info_cutoff_at", "generator", "missing_inputs"],
+        "properties": {
+          "packet_id": {"type": "string", "pattern": "^DP-[0-9]{8}T[0-9]{4}Z-.+$"},
+          "packet_kind": {"type": "string", "enum_ref": "packet_kind"},
+          "packet_version": {"type": "integer", "enum": [3]},
+          "built_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$"},
+          "info_cutoff_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$"},
+          "generator": {"type": "string", "minLength": 1},
+          "missing_inputs": {"type": "array", "items": {"type": "string", "minLength": 1}}
+        }
+      },
+      "package": {
+        "type": "object", "additionalProperties": false,
+        "required": ["order_package_id", "leg", "symbol", "side", "timeframe", "signal_logic", "entry", "sl", "tp", "risk_per_unit", "accounts"],
+        "properties": {
+          "order_package_id": {"type": "string", "minLength": 1},
+          "leg": {"type": "string", "minLength": 1},
+          "symbol": {"type": "string", "minLength": 1},
+          "side": {"type": "string", "enum_ref": "side"},
+          "timeframe": {"type": ["string", "null"]},
+          "signal_logic": {"type": ["string", "null"]},
+          "entry": {"type": ["number", "null"]},
+          "sl": {"type": ["number", "null"]},
+          "tp": {"type": ["number", "null"]},
+          "risk_per_unit": {"type": ["number", "null"]},
+          "accounts": {"type": "array", "items": {"type": "object", "additionalProperties": false,
+            "required": ["account_id", "account_class"],
+            "properties": {"account_id": {"type": "string", "minLength": 1}, "account_class": {"type": "string", "enum_ref": "account_class"}}}}
+        }
+      },
+      "state": {
+        "_comment": "in_trade: live state. exit: the FINAL state at close. Absent on entry.",
+        "type": "object", "additionalProperties": false,
+        "required": ["open_r", "peak_r", "peak_provenance", "giveback_r", "bars_held", "bars_since_peak", "r_to_stop", "r_to_target", "sl_live", "tp_live"],
+        "properties": {
+          "open_r": {"type": ["number", "null"]},
+          "peak_r": {"type": ["number", "null"]},
+          "peak_provenance": {"type": "string", "enum_ref": "peak_provenance"},
+          "giveback_r": {"type": ["number", "null"]},
+          "bars_held": {"type": ["integer", "null"], "minimum": 0},
+          "bars_since_peak": {"type": ["integer", "null"], "minimum": 0},
+          "r_to_stop": {"type": ["number", "null"]},
+          "r_to_target": {"type": ["number", "null"]},
+          "sl_live": {"type": ["number", "null"]},
+          "tp_live": {"type": ["number", "null"]}
+        }
+      },
+      "market": {
+        "type": "object", "additionalProperties": false,
+        "required": ["atr_now", "atr_entry", "htf_trend", "regime_cell_now", "regime_cell_entry", "funding", "calendar", "news"],
+        "properties": {
+          "atr_now": {"type": ["number", "null"]},
+          "atr_entry": {"type": ["number", "null"]},
+          "htf_trend": {"type": ["string", "null"]},
+          "regime_cell_now": {"type": ["string", "null"]},
+          "regime_cell_entry": {"type": ["string", "null"]},
+          "funding": {"type": "object", "additionalProperties": false, "required": ["read_state", "rate", "vs_assumption"],
+            "properties": {"read_state": {"type": "string", "enum_ref": "read_state"}, "rate": {"type": ["number", "null"]}, "vs_assumption": {"type": ["number", "null"]}}},
+          "calendar": {"type": "object", "additionalProperties": false, "required": ["read_state", "events_next_bar"],
+            "properties": {"read_state": {"type": "string", "enum_ref": "read_state"}, "events_next_bar": {"type": ["array", "null"], "items": {"type": "string"}}}},
+          "news": {"type": "object", "additionalProperties": false, "required": ["state", "decision"],
+            "properties": {"state": {"type": "string", "enum_ref": "news_state"}, "decision": {"type": ["string", "null"]}}}
+        }
+      },
+      "history": {
+        "_comment": "entry / in_trade only. The LTR-0 conditional outcome table (in_trade) or the leg's Stage-0 expectancy and selection-lift table (entry), net of the full cost stack.",
+        "type": "object", "additionalProperties": false,
+        "required": ["source", "read_state", "population", "n_floor", "net_of_full_cost_stack", "options"],
+        "properties": {
+          "source": {"type": ["string", "null"]},
+          "read_state": {"type": "string", "enum_ref": "read_state"},
+          "population": {"type": ["string", "null"]},
+          "n_floor": {"type": ["integer", "null"], "minimum": 0},
+          "net_of_full_cost_stack": {"type": ["boolean", "null"]},
+          "options": {"type": "array", "items": {"type": "object", "additionalProperties": false,
+            "required": ["action", "n", "mean_r", "sd_r", "worst_r"],
+            "properties": {"action": {"type": "string", "minLength": 1}, "level": {"type": ["number", "null"]},
+                           "n": {"type": ["integer", "null"], "minimum": 0}, "mean_r": {"type": ["number", "null"]},
+                           "sd_r": {"type": ["number", "null"]}, "worst_r": {"type": ["number", "null"]}}}},
+          "biases": {"type": "array", "items": {"type": "string"}}
+        }
+      },
+      "book": {
+        "_comment": "entry / in_trade only. Correlated open packages, same and other accounts.",
+        "type": "object", "additionalProperties": false, "required": ["read_state", "correlated_open"],
+        "properties": {
+          "read_state": {"type": "string", "enum_ref": "read_state"},
+          "correlated_open": {"type": ["array", "null"], "items": {"type": "object", "additionalProperties": false,
+            "required": ["order_package_id", "symbol", "side"],
+            "properties": {"order_package_id": {"type": "string"}, "symbol": {"type": "string"}, "side": {"type": "string", "enum_ref": "side"}}}}
+        }
+      },
+      "per_account": {
+        "_comment": "entry / in_trade only. Per account: mode, venue SL/TP/size read WITH its read state, and the gate's READ-ONLY preview. Claude never sets or reasons about an account's risk bounds (design 3.1).",
+        "type": "array",
+        "items": {"type": "object", "additionalProperties": false,
+          "required": ["account_id", "account_class", "mode", "venue_read_state", "venue_sl", "venue_tp", "venue_size", "gate_preview"],
+          "properties": {
+            "account_id": {"type": "string", "minLength": 1},
+            "account_class": {"type": "string", "enum_ref": "account_class"},
+            "mode": {"type": ["string", "null"], "enum_ref": "account_mode"},
+            "venue_read_state": {"type": "string", "enum_ref": "read_state"},
+            "venue_sl": {"type": ["number", "null"]},
+            "venue_tp": {"type": ["number", "null"]},
+            "venue_size": {"type": ["number", "null"]},
+            "gate_preview": {"type": "object", "additionalProperties": false, "required": ["verdict", "reason"],
+              "properties": {"verdict": {"type": "string", "enum_ref": "gate_verdict"}, "reason": {"type": ["string", "null"]}}}
+          }}
+      },
+      "mechanics": {
+        "_comment": "in_trade / exit only.",
+        "type": "object", "additionalProperties": false, "required": ["verdict", "evidence"],
+        "properties": {"verdict": {"type": "string", "enum_ref": "mechanics_verdict"}, "evidence": {"type": ["string", "null"]}}
+      },
+      "ml": {
+        "_comment": "entry / in_trade only. Served heads' predictions at their ladder stage. ABSENT IS EXPLICIT (state absent, prediction null), never imputed (design 9.4).",
+        "type": "array",
+        "items": {"type": "object", "additionalProperties": false, "required": ["head", "stage", "state", "prediction"],
+          "properties": {"head": {"type": "string", "minLength": 1}, "stage": {"type": "string", "enum_ref": "ml_stage"},
+                         "state": {"type": "string", "enum_ref": "ml_state"}, "prediction": {"type": ["number", "null"]}}}
+      },
+      "prior_decisions": {
+        "_comment": "in_trade / exit only. Earlier desk decisions on this package and whether each was applied.",
+        "type": "array",
+        "items": {"type": "object", "additionalProperties": false, "required": ["decision_id", "judged_at", "action", "applied"],
+          "properties": {"decision_id": {"type": "string", "minLength": 1}, "judged_at": {"type": "string"},
+                         "action": {"type": "string", "minLength": 1}, "applied": {"type": "boolean"}}}
+      },
+      "outcome": {
+        "_comment": "exit only, and only AFTER info_cutoff_at: this block is T1 -- a label, never a feature.",
+        "type": "object", "additionalProperties": false,
+        "required": ["t1", "closed_at", "net_r", "provenance", "exit_reason"],
+        "properties": {
+          "t1": {"type": "boolean", "enum": [true]},
+          "closed_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$"},
+          "net_r": {"type": ["number", "null"]},
+          "provenance": {"type": "string", "enum_ref": "outcome_provenance"},
+          "exit_reason": {"type": ["string", "null"]}
+        }
+      },
+      "features_at_review": {"type": "object", "values": {"type": ["number", "null"]}}
+    }
+  }
+}

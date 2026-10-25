@@ -1,0 +1,118 @@
+{
+  "_comment": "DESK-0-SCHEMA: desk decision records (docs/plans/claude-trading-desk-DESIGN.md sections 2.3, 3.4, 3.6). comms/desk/decisions.jsonl and comms/desk/touches.jsonl are APPEND-ONLY JSONL, one object per line, both start EMPTY; a leading {\"_meta\": ...} line is skipped. The envelope extends comms/schema/live_review.schema.json; live_review rows are NOT desk rows and are NOT re-validated here. CLOSED ENUMS: prose is bookkeeping, never a label. `action` is closed PER ROLE (role_actions); no enum contains a size change, a new entry, a widened stop, a mode/execution change or a halt (Prime Directive rules 2 and 7) -- the closed enum IS that rule. `model` is a TIER, never a model identifier (public repo). COLLAPSED-STATE RULE: unmeasured is null, never 0. EXTERNAL CONTEXT (DECIDED 2026-10-25, 'Repo feeds + logged exception'): the packet is the default and only feed; a pull is allowed only on a calendar / swing due event or an escalation, is logged with sources and fetch time, never folds into the packet, and marks the row reproducible=false so replays and training sets can exclude it. SANDBOX TOUCH (DESIGN 3.6, DESK-12): every applied desk effect on an account writes a touch row; a package-account pair is desk-touched from its first applied intent, and graders split touched from untouched. Cross-file and conditional rules live in scripts/ci/check_desk_records.py (guard `desk-records-guard`).",
+  "schema_version": 1,
+  "sandbox_account": "bybit_1",
+  "enums": {
+    "role": ["market_watch", "entry_review", "in_trade", "exit", "post_trade"],
+    "packet_kind": ["entry", "in_trade", "exit"],
+    "model_tier": ["haiku-tier", "sonnet-tier", "opus-tier"],
+    "confidence": ["measured", "suggestive", "anecdote"],
+    "basis": ["ev_positive", "preference_within_bound", "insufficient_n", "mechanics", "operator_ask", "default_hold", "record_only"],
+    "route": ["auto_applied", "recommended", "operator_ask", "none"],
+    "label_provenance": ["judgment", "computed", "measured"],
+    "ext_trigger": ["calendar", "swing", "escalation"],
+    "gate_verdict": ["approve", "clip", "refuse", "could_not_look", "error", "not_available"],
+    "readback": ["match", "mismatch", "could_not_look", "not_applicable"],
+    "account_class": ["real_money", "prop", "paper", "soak"],
+    "side": ["long", "short"]
+  },
+  "role_actions": {
+    "market_watch": ["no_action", "watch_note", "delay_candidate", "veto_candidate"],
+    "entry_review": ["take", "skip", "delay", "no_recommendation"],
+    "in_trade": ["hold", "tighten_sl", "tp_revise", "flag_mechanics", "no_recommendation", "file_hypothesis"],
+    "exit": ["hold", "partial_close", "close"],
+    "post_trade": ["blind_grade", "revealed_grade"]
+  },
+  "role_packet_kinds": {
+    "market_watch": ["entry"],
+    "entry_review": ["entry"],
+    "in_trade": ["in_trade"],
+    "exit": ["in_trade"],
+    "post_trade": ["exit"]
+  },
+  "decisions": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["schema_version", "decision_id", "packet_id", "packet_sha", "packet_kind", "role", "order_package_id", "judged_at", "info_cutoff_at", "trigger_event", "model", "session", "prompt_sha", "skill_sha", "label_version", "label_provenance", "action", "params", "judge_prior", "confidence", "basis", "rationale", "escalated_to", "intent_id", "disposition", "external_context"],
+    "properties": {
+      "schema_version": {"type": "integer", "enum": [1]},
+      "decision_id": {"type": "string", "pattern": "^DD-[0-9]{8}T[0-9]{4}Z-.+$"},
+      "packet_id": {"type": "string", "pattern": "^DP-[0-9]{8}T[0-9]{4}Z-.+$"},
+      "packet_sha": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+      "packet_kind": {"type": "string", "enum_ref": "packet_kind"},
+      "role": {"type": "string", "enum_ref": "role"},
+      "order_package_id": {"type": "string", "minLength": 1},
+      "judged_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$"},
+      "info_cutoff_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$"},
+      "trigger_event": {"type": "string", "minLength": 1},
+      "model": {"type": "string", "enum_ref": "model_tier"},
+      "session": {"type": "string", "minLength": 1},
+      "prompt_sha": {"type": ["string", "null"]},
+      "skill_sha": {"type": ["string", "null"]},
+      "label_version": {"type": "integer", "minimum": 1},
+      "label_provenance": {"type": "string", "enum_ref": "label_provenance"},
+      "action": {"type": "string", "minLength": 1},
+      "params": {"type": "object", "additionalProperties": false, "required": ["level", "level_atr", "frac", "bars"],
+        "properties": {"level": {"type": ["number", "null"]}, "level_atr": {"type": ["number", "null"]},
+                       "frac": {"type": ["number", "null"], "minimum": 0, "maximum": 1}, "bars": {"type": ["integer", "null"], "minimum": 1}}},
+      "judge_prior": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+      "confidence": {"type": "string", "enum_ref": "confidence"},
+      "basis": {"type": "string", "enum_ref": "basis"},
+      "rationale": {"_comment": "prose is bookkeeping, never a label or a feature", "type": "string"},
+      "escalated_to": {"type": ["string", "null"], "pattern": "^DD-[0-9]{8}T[0-9]{4}Z-.+$"},
+      "intent_id": {"type": ["string", "null"], "minLength": 1},
+      "disposition": {
+        "type": "object", "additionalProperties": false, "required": ["route", "per_account"],
+        "properties": {
+          "route": {"type": "string", "enum_ref": "route"},
+          "per_account": {"type": "array", "items": {"type": "object", "additionalProperties": false,
+            "required": ["account_id", "account_class", "verdict", "reason", "applied", "level_before", "level_after", "readback", "desk_touched"],
+            "properties": {
+              "account_id": {"type": "string", "minLength": 1},
+              "account_class": {"type": "string", "enum_ref": "account_class"},
+              "verdict": {"type": "string", "enum_ref": "gate_verdict"},
+              "reason": {"type": ["string", "null"]},
+              "applied": {"type": "boolean"},
+              "level_before": {"type": ["number", "null"]},
+              "level_after": {"type": ["number", "null"]},
+              "readback": {"type": "string", "enum_ref": "readback"},
+              "desk_touched": {"type": "boolean"}
+            }}}
+        }
+      },
+      "external_context": {
+        "type": "object", "additionalProperties": false, "required": ["used", "trigger", "sources", "summary", "reproducible"],
+        "properties": {
+          "used": {"type": "boolean"},
+          "trigger": {"type": ["string", "null"], "enum_ref": "ext_trigger"},
+          "sources": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["url_or_id", "title", "fetched_at"],
+            "properties": {"url_or_id": {"type": "string", "minLength": 1}, "title": {"type": ["string", "null"]},
+                           "fetched_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$"}}}},
+          "summary": {"type": ["string", "null"]},
+          "reproducible": {"type": "boolean"}
+        }
+      }
+    }
+  },
+  "touches": {
+    "_comment": "DESIGN 3.6 point 2: {order_package_id, account, intent_id, decision_id, applied_at, level_before, level_after, verdict}. A touch row exists only for an APPLIED desk effect, so verdict is approve or clip. `sandbox` is true exactly when account == sandbox_account (bybit_1) -- the DECIDED 'shadow the bybit_1 soak book'; soak_report.py / live-vs-backtest / cost-fidelity graders split touched from untouched on it.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["schema_version", "touch_id", "order_package_id", "account", "account_class", "side", "intent_id", "decision_id", "applied_at", "level_before", "level_after", "verdict", "sandbox"],
+    "properties": {
+      "schema_version": {"type": "integer", "enum": [1]},
+      "touch_id": {"type": "string", "pattern": "^DT-[0-9]{8}T[0-9]{4}Z-.+$"},
+      "order_package_id": {"type": "string", "minLength": 1},
+      "account": {"type": "string", "minLength": 1},
+      "account_class": {"type": "string", "enum_ref": "account_class"},
+      "side": {"type": "string", "enum_ref": "side"},
+      "intent_id": {"type": "string", "minLength": 1},
+      "decision_id": {"type": "string", "pattern": "^DD-[0-9]{8}T[0-9]{4}Z-.+$"},
+      "applied_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$"},
+      "level_before": {"type": "number"},
+      "level_after": {"type": "number"},
+      "verdict": {"type": "string", "enum": ["approve", "clip"]},
+      "sandbox": {"type": "boolean"}
+    }
+  }
+}
