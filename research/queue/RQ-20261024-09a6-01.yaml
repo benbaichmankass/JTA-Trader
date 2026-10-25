@@ -1,7 +1,7 @@
 id: RQ-20261024-09a6-01
 title: 'AI-ATM rung A1: on the money legs AS TRADED, does a per-bar state with momentum and ADX slope predict ''holding from here loses
   to exiting now'' beyond where the trade is (open R, peak, bars, room to the IN-FORCE stop and target)? Linear first.'
-status: queued
+status: done
 status_reason: >-
   2026-10-24 lane FIRST-PASSAGE-ON-PATHS: promoted from blocked/ -- first_passage.py --harness-legs (scripts/research/first_passage_paths.py)
   builds per-bar as-traded events from config-exact harness --emit-paths rows; its self-test grades a driftless walk FAIL/INDETERMINATE
@@ -125,3 +125,14 @@ what_it_does_not_do: 'Fits no GBDT, changes no config, places no order. It grade
   (d6e7-06) and the richer learners; it never ships anything. Harness paths are not live paths; live parity is position_path_history''s
   job (BRACKET-ADVISOR-SHADOW).'
 last_dispatched_at: '2026-10-24T23:33:59+00:00'
+grading:
+  attested: RULE-RQ20261024-09A6-01-ASTRADED-INFO
+  auto: true
+  decision_rule_id: RULE-RQ20261024-09A6-01-ASTRADED-INFO
+  evidence:
+  - research/results/RQ-20261024-09a6-01/40143286436.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

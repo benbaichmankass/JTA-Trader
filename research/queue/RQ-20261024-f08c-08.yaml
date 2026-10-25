@@ -1,7 +1,7 @@
 id: RQ-20261024-f08c-08
 title: 'Variant of fd06-02 (banking at +1.0/+1.5 R failed on xrp_pullback_2h): bank on a leg whose target is widened from 3R to 5R (control A5
   = wide target alone)'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -114,3 +114,16 @@ related:
 - research/queue/RQ-20261022-eba2-13.yaml
 programme: P1
 last_dispatched_at: '2026-10-24T19:33:48+00:00'
+grading:
+  attested: RULE-F08C-08
+  auto: true
+  decision_rule_id: RULE-F08C-08
+  evidence:
+  - research/results/RQ-20261024-f08c-08/40125891351.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
