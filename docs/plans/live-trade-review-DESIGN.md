@@ -3,7 +3,7 @@
 > **Doc status:** `unknown` · category `architecture` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · **nobody has verified this document's status — do not act on it as current**
 
 **State: DESIGN ONLY. Nothing below is built, and no checklist row or mandate exists for it yet.**
-The operator reviews this first; § 7 lists the rows to file once it is approved.
+The operator reviews this first; § 8 lists the rows to file once it is approved.
 Checklist row: `LIVE-TRADE-REVIEW-DESIGN` · roadmap `L-ATM` · Tier 1 (a doc).
 
 ## 0. The request, and the precedent
@@ -23,7 +23,7 @@ The precedent is `ADA-LIVE-EXIT-REVIEW-1024` ([`docs/research/ada-live-exit-revi
 Two lessons follow, and the rest of this design rests on them:
 
 - **A live review is a pricing exercise, not a hunch.** Its core is *"what did this leg's own history do from this exact state?"* That needs a tool; today a lane did it by hand for about $8.
-- **The ADA tighten was a risk preference, not an edge call.** Automating it means the operator states that preference **once, with a price on it** (§ 6, Q1). A session must never decide, trade by trade, that variance matters more than EV.
+- **The ADA tighten was a risk preference, not an edge call.** Automating it means the operator states that preference **once, with a price on it** (§ 7, Q1). A session must never decide, trade by trade, that variance matters more than EV.
 
 ## 1. Trigger — run only when there are open trades AND something changed
 
@@ -39,7 +39,8 @@ A second fact, MEASURED from `/api/diag/position_telemetry?limit=300` at about 1
 |---|---|---|---|
 | **L0 — due computation** | `GET /api/diag/live_review_due`, a **pure read**. It joins `position_telemetry` (open rows), the open `order_packages` and closed candles. It subtracts what the last review already covered, read from `comms/live_review/reviews.jsonl` on `main`, which `ict-git-sync` pulls every ~5 min. It returns the due packages with the event that made each due (§ 2). It writes nothing and adds no writer to the exit loop. | live VM, FastAPI | $0 |
 | **L1 — gate routine** | A recurring routine: `create_trigger`, `create_new_session_on_fire: true`, **Haiku**, hourly at :04. That minute is after the 2h, 4h and 1d Bybit closes on the hour and after the 20:00/21:00Z US-equity close. Its whole job: `scripts/ops/diag_fetch.sh live_review_due`. **Empty → it ends its turn at once.** Non-empty → it calls `create_session` for one reviewer (L2), passing the due list, and ends. | Claude routine | one short Haiku session an hour |
-| **L2 — reviewer** | One session reviews **the whole due set together**, because correlated open positions are part of the input. Model per the manager's model table: **Opus** when any due package is on a real-money or prop account; Sonnet when only paper is due (if paper is in scope at all, Q2). | Claude session | § 2 estimate |
+| **L2a — triage reviewer** | One **Sonnet** session reviews **the whole due set together**, because correlated open positions are part of the input. It runs the mechanics check and the LTR-0 pricing table for every due package, and records the review. When every package comes out `hold` (most reviews), it ends there. | Claude session | § 2, § 6 |
+| **L2b — Opus escalation** | Spawned by L2a only for a **real-money or prop** package whose candidate is not `hold` (a tighten, a TP question, a close), or that has a `mechanics` mismatch. That makes it a real-money judgment, which the manager's model table assigns to Opus. A `hold`, which touches nothing, does not need it. | Claude session | § 2, § 6 |
 
 Also, at no cost: the hourly `ict-work-digest` carrier gains one line, `🔎 live review due: N packages (oldest Xh)`, when L0 has been non-empty for 2 hours or more with no review recorded. That is the backstop if the routine dies. It is one more `attention_watch` probe, in the existing ok / breached / unknown shape.
 
@@ -87,6 +88,7 @@ Also, at no cost: the hourly `ict-work-digest` carrier gains one line, `🔎 liv
 - Reviewer: with about 7 open packages (today's count) and the event filter, I expect **3–8 reviewer sessions a day**. No measurement exists; L0's due log will give the real number within days.
 - Plan bar, using `spend_meter.py --capacity`'s own unit: it read *weekly 34%, sustainable rate 20.7 pp/day, 1.00 pp per lane-hour* at 12:30Z today (MEASURED). A reviewer session should take 10–15 min, so about 0.2 pp. That gives **0.6–1.6 pp a day**, plus about 0.3 pp a day for the gate: **roughly 4–9% of the sustainable daily rate**. The real check is reading the meter after the first week.
 - Dollars, INFERRED by scaling from the ADA lane: about $8 for a full review **plus** five backtest arms. A routine review uses a precomputed pricing tool (§ 3), so I expect about $1–2 on Opus. With the gate at about $0.05–0.15 a run, that is **about $25–110 a week**. This is an estimate to be replaced by the meter, not a budget.
+- With the triage tier (L2a Sonnet, L2b Opus only on a non-`hold` candidate), most reviews never reach Opus. § 6 prices both tiers and sets the capacity reserve this needs.
 - **No cap that stops reviewing.** If reviewer sessions exceed 15 in a day, that is one red flag to the manager (a threshold mis-set, or a market event), and the routine keeps running (Prime Directive rule 7).
 
 ## 3. What the session does
@@ -201,7 +203,100 @@ Also, at no cost: the hourly `ict-work-digest` carrier gains one line, `🔎 liv
 
 **The loop's own alarm:** if applied actions net Δ R < 0 over the last 20 or more applies, the next performance review proposes `apply_mode: recommend`. That is a proposal through the normal path, never an automatic flip.
 
-## 6. Open questions for the operator (preferences only; no data settles these)
+## 6. Capacity reserve — keep headroom so the routine can always run, even near the reset
+
+The operator, 2026-10-25, verbatim (relayed by the manager): *"Another thing that I forgot for the design doc is how much capacity we need to leave spare for the routine to be able to run without us going over the limit between resets, so that we can make sure that we base our work plans around pacing ourselves to leave that headroom, so that we know that that option will be there whenever we have live trades running, even towards the reset."*
+
+### 6.1 How much exposure there is (MEASURED)
+
+| quantity | value |
+|---|---|
+| real-money positions | **31** (bybit_2: 28 · alpaca_live: 3) over **38.0 days** = **0.82 opened a day** |
+| holding time | median **16 h** · p90 **120 h** · max **264 h** |
+| hourly concurrency, over 912 hours | at least one open **72.9%** of hours · mean **1.31** · max **4** |
+| prop | **UNMEASURED.** 22 rows on tradeify_1 / breakout_1 / breakout_2, all `rejected`. Prop fills are recorded in `prop_tickets`, which I did not read this session. |
+| roster bound (worst case) | bybit_2: 5 legs (the mirror shares the package) + alpaca_live: 1 + 3 live prop accounts × 2 legs = **12 open packages** |
+
+How the real-money figures were measured:
+- **Source:** `/api/diag/journal?table=trades&limit=1000`. The endpoint caps at 1000 rows across all accounts, so the window starts at the oldest row returned, 2026-09-17T13:36Z.
+- **Rows kept:** accounts `bybit_2` and `alpaca_live`, status `open` or `closed`, one per `(account, order_package_id)`.
+- **The mirror is not double-counted:** bybit_portfolio shares bybit_2's packages, and one review covers both.
+
+### 6.2 Per-session cost by tier (INFERRED; the meter's unit)
+
+The meter's **1.0 pp per lane-hour** is MEASURED (2026-10-18, 6 lanes of mixed models) and blended across models. The per-model multipliers below are my estimate. LTR-10 replaces them with per-session cost records (`spend_meter.py --session-costs`).
+
+| tier | length | × blended rate | pp per session |
+|---|---|---|---|
+| L1 gate (Haiku) | ~2 min | ≤ 0.5× | ≤ 0.02 |
+| L2a triage (Sonnet) | ~10 min | 1× | 0.17 |
+| L2b escalation (Opus) | ~15 min | 2× | 0.5 |
+
+### 6.3 Weekly spend
+
+| case | assumptions | pp a day | pp a week |
+|---|---|---|---|
+| **typical** (measured exposure) | 24 gates (0.5) + ~4 triage sessions (0.7) + ~0.5 escalations a day (0.25) | **~1.5** | **~10** |
+| **stress day** (the measured peak of 4 packages; something due every hour; an escalation every other hour) | 0.5 + 24 × 0.17 + 12 × 0.5 | **~10.6** | (a day, not a week) |
+| **absolute worst** (12 packages; every tick due; every tick escalates; bigger batches) | 0.5 + 24 × 0.33 + 24 × 0.83 | **~28** | more than today's whole sustainable rate (20.7 pp a day) |
+
+The typical figure is about 7% of today's sustainable rate. Without the triage tier, every review would be Opus, and the typical case would roughly triple. The absolute worst cannot be reserved for. It is the reason § 6.5 exists.
+
+### 6.4 The reserve rule
+
+The reserve is computed every time capacity is read:
+
+```
+R = F  +  D · (g + c_typ · n)  +  min(D, 1) · (c_stress − c_typ) · max(n, n_peak)
+```
+
+| symbol | meaning | proposed value |
+|---|---|---|
+| F | fixed floor | 2 pp |
+| D | days to the weekly reset | — |
+| g | gate cost a day | 0.5 pp |
+| c_typ | typical cost per open package per day | 0.75 pp |
+| c_stress | stress cost per open package per day | 2.5 pp |
+| n | open real-money + prop packages now | from L0 |
+| n_peak | measured max concurrent in the last 38 days | 4, re-measured weekly |
+
+The parameters live in `config/live_trade_review.yaml::reserve`.
+
+- **What it does:** it reserves the routine's typical spend for the **whole time left to the reset**, plus a stress buffer for the **next 24 h**. **The last 24 h therefore always holds at least F + g + c_typ·n + (c_stress − c_typ)·max(n, n_peak) unspent.**
+- **Worked values:**
+
+| moment | R |
+|---|---|
+| now (D = 3.19, n = 2 bybit_2 packages) | 2 + 6.4 + 7 = **15.4 pp**; net rate (66 − 15.4) / 3.19 = **15.9 pp a day**, against 20.7 gross |
+| last 24 h, same n | **11 pp** kept back |
+| final hour | **~2.4 pp** |
+| fresh week (D ≈ 6 at Thursday planning, n = 1.3) | **~18 pp** |
+
+- **`n` unreadable:** if L0 cannot be read, `n` is the roster bound (12) and the state reads `exposure_unknown`, never 0. *"We could not look"* must not size the reserve as "nothing open".
+- **Paper is not reserved for.** Paper reviews (Q2) are dataset-building, and they are the first thing § 6.5 drops.
+
+### 6.5 Where it plugs in
+
+1. **`scripts/ops/spend_meter.py --capacity`** (LTR-10):
+   - `capacity()` gains `reserve_pp` and computes `rate_day = max(100 − weekly% − reserve_pp, 0) / days_left`, so the suggested lane count comes from the **net** rate.
+   - The output carries `rate_gross`, `reserve_pp` and `reserve_basis` (`n`, and `measured` or `exposure_unknown`), and the render prints one line: `reserve for live review = X pp (n_open=…)`.
+   - Input: `--live-open N`, which the manager takes from `live_review_due`. When it is absent, the state is `exposure_unknown`, with `n` = 12.
+   - A self-test covers both.
+2. **Manager SKILL § "The operating loop", step 2:** the rate is net of the live-review reserve, and the manager passes `--live-open`. Step 6's capacity line reports gross, reserve and net.
+3. **Thursday weekly planning** (§ "Weekly planning", part 4 Workplan): allotments are sized to `100 − post-review reading − R` at planning time, where R is computed with the week's mean exposure for the days term and `n_peak` for the stress term (about 18 pp on today's numbers). The routine's own line in the workplan is the typical ~10 pp a week, reserved and not allotted to other work.
+
+### 6.6 If the reserve is breached anyway
+
+**Breach** means the remaining allowance, `100 − weekly%`, is below R. These responses apply in order, and every one keeps reviewing:
+
+1. **No new non-routine lanes.** Lanes already running finish their current step and land; nothing is killed. This conflicts with the operating loop's *"at least one lane always runs"*. I propose that while the reserve is breached, the routine counts as that lane (Q5).
+2. **Degrade the tier, never skip.** Every due event on an open real-money or prop package still gets an L2a review.
+   - L2b escalations run on **Sonnet in recommend-only mode**, and anything that would have auto-applied goes to the operator as a popup instead. That keeps the model table's Opus-on-real-money rule intact, because no unattended apply happens without Opus.
+   - Paper reviews become L0-only records, with no session.
+3. **One red flag.** An `attention_watch` probe `live_review_reserve` puts one line in the hourly digest and sends the operator a push. One clear line follows on recovery, in the existing ok / breached / unknown shape.
+4. **If the allowance actually runs out (100%), or the session window walls,** no session can start. That is a platform limit; the reserve exists to make it rare. The venue SL/TP and the VM trail keep protecting every position. L0 keeps recording due events, so the first session after the reset reviews them oldest first.
+
+## 7. Open questions for the operator (preferences only; no data settles these)
 
 **Q1 — Variance vs EV: how much expected R may an automatic tighten give up to cut the worst case?** ADA cost about −0.23 R for worst case +0.28 → +2.32 R.
 - (a) **0**: auto-apply only when history says tightening is EV-neutral or better. Every ADA-type case is then still asked.
@@ -216,7 +311,10 @@ Also, at no cost: the hourly `ict-work-digest` carrier gains one line, `🔎 liv
 
 **Q4 — First applies: should the first few mandate applies go out as a one-click popup** ("apply this tighten?") before full auto, to check the plumbing on real money? Recommended: **the first 2 applies by popup, then auto.** That mirrors the mechanical soak rule: 1–2 clean executions, no calendar.
 
-## 7. Build plan (rows to file after approval; NOT filed by this PR)
+**Q5 — While the capacity reserve is breached (§ 6.6), does the live-review routine count as the operating loop's "at least one lane always runs"?** The alternative keeps one other lane running too, which eats further into the reserve.
+- Recommended: **yes, the routine counts as that lane while breached**, and normal dispatch resumes when the breach clears.
+
+## 8. Build plan (rows to file after approval; NOT filed by this PR)
 
 | order | id | what | tier | model | ceiling |
 |---|---|---|---|---|---|
@@ -224,7 +322,8 @@ Also, at no cost: the hourly `ict-work-digest` carrier gains one line, `🔎 liv
 | 2 | `LTR-2-RECORDS` | `comms/live_review/{reviews,outcomes}.jsonl` + schema + a validator guard | 1 | Sonnet | $4 |
 | 3 | `LTR-1-DUE-WATCH` | `GET /api/diag/live_review_due` (pure read) + `scripts/ops/live_review_due.py` + the `attention_watch` backstop probe; thresholds in `config/live_trade_review.yaml` | 1 (read path) | Sonnet | $8 |
 | 4 | `LTR-3-SKILL` | `.claude/skills/live-trade-review/SKILL.md`: the § 3 procedure, binding | 1 | Opus | $6 |
-| 5 | `LTR-4-ROUTINE` | The manager creates the hourly Haiku gate routine; reviewers spawn per § 1; **`apply_mode: recommend`** | 1 | Haiku (gate) / Opus (reviewer) | $3 to set up |
+| 4b | `LTR-10-CAPACITY-RESERVE` | § 6: `reserve_pp` in `spend_meter.py --capacity` (`--live-open`, `exposure_unknown`, self-test), the `config/live_trade_review.yaml::reserve` parameters, manager SKILL step 2 + weekly planning text, the `live_review_reserve` attention probe, and per-tier session-cost records to replace § 6.2's estimates. Before the routine goes live (row 5). | 1 | Sonnet | $6 |
+| 5 | `LTR-4-ROUTINE` | The manager creates the hourly Haiku gate routine; Sonnet triage and Opus escalation spawn per § 1; **`apply_mode: recommend`**; it goes live only after LTR-10 | 1 | Haiku / Sonnet / Opus | $3 to set up |
 | 6 | `LTR-5-GRADING` | Counterfactual replay + the "Live review" section in `/performance-review` + `/perf-followup` Track 2 hooks | 1 | Sonnet | $8 |
 | 7 | `LTR-6-APPLY-PATH` | `amend_position_sl.py` `--mandate/--evidence`, provenance `live_review_mandate`, `min_buffer_atr` + once-per-bar bounds in code, the evidence-on-main check in the workflow, the `apply_mode` switch | 2 | Opus | $10 |
 | 8 | `LTR-7-MANDATE` | Propose `MD-LIVE-TIGHTEN-SL` with the Q1 bound; **the operator grants it** | 3 (grant) | — | — |
@@ -233,7 +332,7 @@ Also, at no cost: the hourly `ict-work-digest` carrier gains one line, `🔎 liv
 
 Rows 1–6 produce a working **recommend-only** reviewer, entirely Tier 1. Auto-apply begins at rows 7–8. Every row carries `roadmap: [L-ATM]` and a `writeback` to the L-ATM milestone and to `ARCHITECTURE-CANONICAL.md` (order monitor / TP doctrine neighbourhood).
 
-## 8. Risks
+## 9. Risks
 
 | risk | mitigation |
 |---|---|
@@ -242,12 +341,12 @@ Rows 1–6 produce a working **recommend-only** reviewer, entirely Tier 1. Auto-
 | **Thin history** (most leg × state cells have small n) | An n floor gives `hold` + `insufficient_n`, and the data question is filed. No verdict is invented. |
 | **Stale or estimated inputs** (`peak_r` comes from bar extremes; L0 lags `main` by about 5 min) | Every apply re-reads the venue first (the script already does). A peak marked `estimated` is never treated as measured. |
 | **Fighting the monitor's own trail** | Solved on Bybit by moving `order_packages.sl`. Prop needs LTR-8 before any prop apply. |
-| **Spend creep** | A Haiku gate, events plus cooldown, one batched session per tick, a red flag at 15 sessions a day (never a stop), and the meter read after week 1. |
+| **Spend creep, or the allowance running out near the reset** | The § 6 reserve (net-rate capacity, degrade-don't-skip on breach). A Haiku gate, a Sonnet triage tier, events plus cooldown, one batched session per tick, a red flag at 15 sessions a day (never a stop), and the meter read after week 1. |
 | **The routine dies silently** | The `attention_watch` "review due ≥ 2 h, none recorded" line in the hourly digest. |
 | **Confident wrong recommendations** | Mechanics-first, a table-backed price on every option, calibration graded weekly, and a `confidence` field that may say `anecdote`. |
 | **Coverage gap** | `position_telemetry` is written for the donchian/pullback family (its own docstring). Today's real-money roster is entirely that family (INFERRED from the leg names), but a new family needs telemetry before it can be reviewed. L0 must report "not covered", never treat it as "nothing due". |
 
-## 9. What this lane did and did not do
+## 10. What this lane did and did not do
 
-- **Did:** read the rules, tiers, mandates, the amend and trail paths, the telemetry record and the ADA precedent. Took one read-only diag pull (`position_telemetry`), whose population is stated above, and one `spend_meter.py --capacity` reading.
-- **Did not:** place or amend anything, edit any config, file any row or mandate, or measure reviewer cost (§ 2's figures are INFERRED).
+- **Did:** read the rules, tiers, mandates, the amend and trail paths, the telemetry record and the ADA precedent. Took two read-only diag pulls (`position_telemetry` and `journal?table=trades&limit=1000`), whose populations are stated above, and one `spend_meter.py --capacity` reading.
+- **Did not:** place or amend anything, edit any config, file any row or mandate, measure reviewer cost (§ 2's and § 6.2's figures are INFERRED), or read prop exposure from `prop_tickets` (§ 6.1).
