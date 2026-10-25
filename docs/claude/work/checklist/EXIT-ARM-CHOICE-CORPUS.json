@@ -4,19 +4,19 @@
   "phase": "research-infra",
   "state": "landed_unproven",
   "owner": "session_015PgrgQm11mCbUfuw4Re9W4",
-  "lane": "session_015PgrgQm11mCbUfuw4Re9W4",
+  "lane": null,
   "model": "claude-sonnet-5-5",
   "ceiling_usd": 12,
-  "spend_usd": null,
+  "spend_usd": 2.66,
   "tier": 1,
   "prs": [
     19966
   ],
   "blocked_on": [],
-  "note": "[2026-10-24 lane ATM-AI-MERGE] WHY: AI active trade management rung C1 (blocked/RQ-20261024-09a6-04): a policy layer choosing among already-validated rule levers (trail_decay stall, ADX trail, momentum-stale, stall pull-in TP) per trade. Offline every arm's outcome is OBSERVABLE by re-running the harness, so no propensity / DR-OPE is needed (RQ-20261011-9da8-04 keeps the live-logged OPE case). BUILD: extend exit_lever_ablation.py (or a sibling) to keep each arm's --emit-trades, join on (leg, entry_ts, side), report entry-set agreement, and grade a cost-sensitive multinomial logistic chooser on entry-bar state vs A and the train-fold best fixed arm, 6 calendar folds, capital-days. Self-tests: a planted arm x state interaction is recovered; shuffled state finds nothing. Tier 1. CLOSES WHEN: 09a6-04 leaves blocked/ with run.command set. [2026-10-24 22:45Z manager 01H99zMu] Dispatched as a FRESH Sonnet lane, $12 ceiling, because the spec is fully on disk in this note and in blocked/RQ-20261024-09a6-04 (no context needed from a prior session). Capacity: weekly 26% at 18:19Z, budget 80%, so 1 lane.",
+  "note": "[2026-10-24 lane ATM-AI-MERGE] WHY: AI active trade management rung C1 (blocked/RQ-20261024-09a6-04): a policy layer choosing among already-validated rule levers (trail_decay stall, ADX trail, momentum-stale, stall pull-in TP) per trade. Offline every arm's outcome is OBSERVABLE by re-running the harness, so no propensity / DR-OPE is needed (RQ-20261011-9da8-04 keeps the live-logged OPE case). BUILD: extend exit_lever_ablation.py (or a sibling) to keep each arm's --emit-trades, join on (leg, entry_ts, side), report entry-set agreement, and grade a cost-sensitive multinomial logistic chooser on entry-bar state vs A and the train-fold best fixed arm, 6 calendar folds, capital-days. Self-tests: a planted arm x state interaction is recovered; shuffled state finds nothing. Tier 1. CLOSES WHEN: 09a6-04 leaves blocked/ with run.command set. [2026-10-24 22:45Z manager 01H99zMu] Dispatched as a FRESH Sonnet lane, $12 ceiling, because the spec is fully on disk in this note and in blocked/RQ-20261024-09a6-04 (no context needed from a prior session). Capacity: weekly 26% at 18:19Z, budget 80%, so 1 lane. [2026-10-25 00:08Z manager 01H99zMu] #19966 merged as 08e18fd7. Lane archived; final spend $2.66 against the $12 ceiling. POWER: 09a6-04 also reads accruing (declared sd 0.8 -> required_n ~5581). The same rule as PI-20261024-FPPATHS-0001 applies: the pre-registered power block is not edited, and a pass or fail verdict is allowed only via research_disposition accrual_override_reason, if the realised n clears the floor computed from the MEASURED per-trade sd. Otherwise the verdict is underpowered.",
   "priority_rank": 3,
-  "updated_at": "2026-10-24T23:35:16Z",
-  "updated_by": "session_015PgrgQm11mCbUfuw4Re9W4",
+  "updated_at": "2026-10-25T00:09:02Z",
+  "updated_by": "session_01H99zMuLNTn3Sf14cGB8QKr",
   "roadmap": [
     "L-ATM",
     "M23"
@@ -30,5 +30,11 @@
     "how_to_check": "ls research/results/RQ-20261024-09a6-04/ ; jq .verdict,.note,.measurement.entry_set_agreement.excluded_share research/results/RQ-20261024-09a6-04/*/verdict.json",
     "due_by": "2026-11-02"
   },
+  "lane_history": [
+    {
+      "lane": "session_015PgrgQm11mCbUfuw4Re9W4",
+      "archived_at": "2026-10-25T00:09:02Z"
+    }
+  ],
   "_seq": 636
 }
