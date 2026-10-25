@@ -4,7 +4,7 @@
 id: RQ-20261025-008
 title: 'Is the shipped regime-head LightGBM under-capacity: does a larger one (400 trees, 63 leaves, min_child_samples
   20) lift macro_f1 by >= 0.005 on the 1h published shards on all three symbols?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - M23
@@ -174,11 +174,11 @@ grading:
   confirmatory_run: 1
   decision_rule_id: RULE-P2-Q4-LGBM-CAPACITY-BIG-1H
   evidence:
-  - research/results/RQ-20261025-008/40186640359.jsonl
+  - research/results/RQ-20261025-008/40206616628.jsonl
   first_fail: 1 row(s), all measured, all fail
   graded_at: '2026-10-25'
   grader: scripts/research/queue_grade.py
-  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
   reason: 1 row(s), all measured, all fail
   rows: 1
   verdict: fail
