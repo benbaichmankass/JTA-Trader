@@ -1,6 +1,6 @@
 id: RQ-20261024-0142-04
 title: 'ER-gate strength variant on trend_donchian_xrp_4h: does a harder tighten (2.0 / 1.5 x ATR) at er_6 < 0.30 clear the bar the 2.5 x ATR version missed?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -118,3 +118,14 @@ related:
 - scripts/research/exit_lever_ablation.py
 - AUTHOR-FLOOR-1024
 last_dispatched_at: '2026-10-25T06:06:44+00:00'
+grading:
+  attested: RULE-RQ20261024014204-XRP4HERSTRENGTH
+  auto: true
+  decision_rule_id: RULE-RQ20261024014204-XRP4HERSTRENGTH
+  evidence:
+  - research/results/RQ-20261024-0142-04/40167969021.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

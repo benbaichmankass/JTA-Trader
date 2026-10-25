@@ -1,6 +1,6 @@
 id: RQ-20261024-0142-02
 title: 'Chop-gate lever-strength variant: at the near-miss threshold 0.75, does a tighter (2.0) or looser (3.0) tight multiple clear the bar on trend_donchian_sol_prop?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -116,3 +116,16 @@ related:
 - scripts/research/exit_lever_ablation.py
 - AUTHOR-FLOOR-1024
 last_dispatched_at: '2026-10-25T06:06:44+00:00'
+grading:
+  attested: RULE-RQ20261024014202-SOLPROPCHOPSTRENGT
+  auto: true
+  decision_rule_id: RULE-RQ20261024014202-SOLPROPCHOPSTRENGT
+  evidence:
+  - research/results/RQ-20261024-0142-02/40167967605.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

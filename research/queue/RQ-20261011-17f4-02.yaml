@@ -1,6 +1,6 @@
 id: RQ-20261011-17f4-02
 title: 'ML label wall: does any strategy x symbol cell reach the pooled-label gate (n>=300 parity-held) that a per-cell take/skip head needs?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -53,3 +53,16 @@ related:
 last_dispatched_at: '2026-10-25T10:53:29+00:00'
 roadmap:
 - M23
+grading:
+  attested: RULE-RQ1011-17F4-02-LABEL-GATE-CENSUS
+  auto: true
+  decision_rule_id: RULE-RQ1011-17F4-02-LABEL-GATE-CENSUS
+  evidence:
+  - research/results/RQ-20261011-17f4-02/40186638972.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

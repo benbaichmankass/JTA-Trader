@@ -5,7 +5,7 @@ id: RQ-20261025-004
 title: 'Regime-head drift (Q1.3), persistence read at 2026-10-25: across the eight crypto heads the shadow
   scan flags, is the live score drift input-mix shift, or does the head''s AUC against realised labels
   fall?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - M23
@@ -117,3 +117,15 @@ generated:
   params:
     node: P2-Q1.3-drift-split-persistence
 last_dispatched_at: '2026-10-25T11:41:22+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P2-Q1.3-DRIFT-SPLIT-PERSISTENCE
+  evidence:
+  - research/results/RQ-20261025-004/40189954795.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

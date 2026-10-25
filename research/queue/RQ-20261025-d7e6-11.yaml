@@ -1,7 +1,7 @@
 id: RQ-20261025-d7e6-11
 title: 'AI-ATM rung C1 VARIANT (entry-set-clean arms): with arms A, D and M only, can an entry-bar chooser beat the best fixed arm by >= 0.03 R/trade without more than 10% of entries
   excluded by the join?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -118,3 +118,16 @@ related:
 - comms/research/grading/RESULTS-GRADE-1025.json
 top_notdo: Chooses at the entry bar only (per-bar switching needs a harness that takes a policy; that is rung C2, earned by a PASS). Changes no config.
 last_dispatched_at: '2026-10-25T07:01:43+00:00'
+grading:
+  attested: RULE-RQ20261025-D7E6-11-C1-CLEAN-ARMS
+  auto: true
+  decision_rule_id: RULE-RQ20261025-D7E6-11-C1-CLEAN-ARMS
+  evidence:
+  - research/results/RQ-20261025-d7e6-11/40171279656.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

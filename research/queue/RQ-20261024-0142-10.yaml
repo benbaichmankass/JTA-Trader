@@ -1,6 +1,6 @@
 id: RQ-20261024-0142-10
 title: 'Milder, later ER gate on trend_donchian_eth_4h: after the early gate lost 28-40 R, does a 3.0 R-armed 4.0 x ATR tighten stop the damage and still add?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-ATM
@@ -116,3 +116,16 @@ related:
 - scripts/research/exit_lever_ablation.py
 - AUTHOR-FLOOR-1024
 last_dispatched_at: '2026-10-25T09:30:47+00:00'
+grading:
+  attested: RULE-RQ20261024014210-ETH4HERMILDLATE
+  auto: true
+  decision_rule_id: RULE-RQ20261024014210-ETH4HERMILDLATE
+  evidence:
+  - research/results/RQ-20261024-0142-10/40180992616.jsonl
+  graded_at: '2026-10-25'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
